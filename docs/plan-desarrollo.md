@@ -28,6 +28,25 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
 - **Hito de salida de esta fase**: jugarlo vos mismo (o con 1 amigo en el mismo teclado
   dividido, si es posible) y confirmar que "se siente bien" antes de seguir.
 
+### Definition of Done — Fase 1
+- [ ] `VehicleBody3D` responde a `drive_accelerate`/`drive_brake`/`drive_steer`/
+      `drive_handbrake` (Input Map de `docs/convenciones-godot.md`) con sensación de
+      manejo aceptable (no necesita estar pulido, sí ser controlable).
+- [ ] `Package` con `FragileTrapBehavior` implementado usando los parámetros de
+      `docs/parametros-diseno.md` sección 1 (medidor de integridad, no falla binaria).
+- [ ] El paquete reacciona visiblemente (aunque sea con color/debug draw) a los tres
+      estados: OK / EnRiesgo / Arruinado.
+- [ ] `EventBus` emite `package_state_changed` y `package_ruined`, y al menos un
+      listener de prueba (print en consola) confirma que se reciben.
+- [ ] Se puede completar una ruta placeholder de punta a punta y ver un resultado
+      simple (texto en consola o UI mínima: "entregado intacto" / "arruinado").
+- [ ] Capas de física configuradas según `docs/convenciones-godot.md` sección 2 (el
+      vehículo no atraviesa el paquete, el paquete no se cae del mundo).
+- [ ] **Criterio subjetivo (el más importante)**: jugarlo se siente tenso/divertido
+      al menos en su forma más básica. Si no, ajustar parámetros de
+      `parametros-diseno.md` antes de pasar a la Fase 2 — no seguir sumando features
+      sobre una base que no genera diversión.
+
 ## Fase 2 — Sumar las trampas restantes (single-player)
 - Implementar los otros 2-3 tipos de trampa del catálogo (Peso creciente, Equilibrio,
   Ruidoso/vivo), como el sistema modular de "plugins" que definimos en
