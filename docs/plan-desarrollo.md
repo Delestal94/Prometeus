@@ -1,0 +1,103 @@
+# Plan de desarrollo por fases — Delivery Chaos Co-op
+
+> Basado en: `docs/requerimientos-tecnicos.md` (Godot 4.x, física real de vehículo +
+> streaming de tramos, confirmado 2026-09-20).
+> Última actualización: 2026-09-20
+> Principio guía: validar el loop central (conducir + manejar paquetes) lo antes
+> posible, **antes** de invertir en multiplayer, arte final o contenido extra. El
+> multiplayer y el arte son las partes más caras de rehacer si el loop no es divertido.
+
+## Fase 0 — Setup técnico
+- Proyecto Godot 4.x, activar motor de física **Jolt**.
+- Escena base: un `VehicleBody3D` controlable con teclado, sobre un tramo de camino
+  simple (bloque gris, sin arte).
+- Definir la escala/unidades del mundo (importante para que la física de vehículo y de
+  paquetes se sienta bien desde el principio, más fácil de ajustar ahora que después).
+
+## Fase 1 — Loop central en single-player, sin arte ni multiplayer
+Objetivo: **responder la pregunta más importante del proyecto** — ¿es divertido manejar
+mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás importa.
+
+- Un solo tipo de trampa implementado de punta a punta (recomendado: **"Frágil"**, es
+  la más simple de programar: `RigidBody3D` + detección de impacto por umbral de
+  fuerza).
+- Camino armado con 3-5 tramos placeholder puestos a mano (sin streaming todavía).
+- Condición de victoria/derrota simple: llegar al final con el paquete intacto.
+- **Sin UI pulida, sin arte, sin sonido** — bloques grises y cápsulas. La única
+  pregunta que importa acá es si la mecánica en sí genera tensión/diversión.
+- **Hito de salida de esta fase**: jugarlo vos mismo (o con 1 amigo en el mismo teclado
+  dividido, si es posible) y confirmar que "se siente bien" antes de seguir.
+
+## Fase 2 — Sumar las trampas restantes (single-player)
+- Implementar los otros 2-3 tipos de trampa del catálogo (Peso creciente, Equilibrio,
+  Ruidoso/vivo), como el sistema modular de "plugins" que definimos en
+  `requerimientos-tecnicos.md` sección 4.
+- Probar combinaciones de 2-3 trampas simultáneas en single-player (simulando qué pasa
+  cuando haya varios jugadores) para validar que el caos escale bien y no se vuelva
+  injusto o imposible de seguir.
+
+## Fase 3 — Streaming de tramos (mundo "interminable")
+- Implementar generación/instanciado de tramos por delante del vehículo y eliminación
+  de los tramos que quedaron atrás, usando la posición real del `VehicleBody3D` en el
+  mundo (según lo definido en la decisión de arquitectura de movimiento).
+- Sistema de combinación de tramos curados (rectas, curvas, puentes angostos, badenes)
+  con reglas simples de qué tramo puede seguir a cuál.
+- Esta fase es la base técnica tanto para las rutas del modo normal como para el modo
+  endless (sección 3.5 del doc técnico).
+
+## Fase 4 — Multiplayer
+> Se deja para después de validar el loop y las trampas en solitario, porque el
+> networking es la parte más costosa de depurar y no tiene sentido pagar ese costo
+> sobre una mecánica que todavía no sabemos si es divertida.
+
+- Integrar la API de multiplayer de Godot (host-cliente), empezando con 2 jugadores
+  (conductor + 1 pasajero) antes de escalar a 5.
+- Sincronizar: transform del vehículo (autoridad del host), estado de cada paquete,
+  resultado de cada puzzle individual.
+- Probar específicamente cómo se siente la latencia en la física del vehículo (es lo
+  más sensible a lag) y ajustar si hace falta interpolación/predicción del lado del
+  cliente.
+
+## Fase 5 — Meta-progresión y UI
+- Sistema de desbloqueos (nuevas trampas, vehículos, cosméticos) — sección 3.2 del doc
+  técnico.
+- Menú de partida, lobby multiplayer, pantalla de resultados con puntaje.
+- Leaderboard simple (al menos local; global si el scope lo permite).
+
+## Fase 6 — Pase de arte (estilo PEAK)
+> Deliberadamente tarde: todo lo anterior se probó y ajustó con arte placeholder para
+> no gastar tiempo de arte en mecánicas que todavía podían cambiar.
+
+- Reemplazar placeholders por low-poly (Kenney.nl / packs compatibles) para vehículo,
+  entorno y paquetes.
+- Personajes con ragdoll físico y diseño simple.
+- Pase de efectos "clipeables": fallas exageradas visualmente, cámara reactiva a
+  golpes (sección 3.4 del doc técnico).
+
+## Fase 7 — Pulido y preparación de Early Access
+- Balance de dificultad con playtesting real (grupos de amigos jugando).
+- Sonido y música (recordar: presupuestar esto para encargar, según el patrón
+  confirmado en `checklist-exito.md`).
+- Página de Steam, trailer, precio definido ($8-15 según lo acordado).
+- Lanzar en Early Access con el contenido mínimo (1 vehículo, 1 set de tramos, 3-4
+  trampas) e iterar con feedback real antes de sumar contenido extra.
+
+---
+
+## Por qué este orden (resumen de la lógica)
+
+1. **Loop antes que contenido**: fases 1-2 validan la mecánica central sin gastar
+   tiempo en arte/red.
+2. **Contenido antes que infraestructura cara**: el streaming de tramos (fase 3) se
+   construye recién cuando ya sabemos que el loop funciona.
+3. **Multiplayer al final de la parte técnica, no al principio**: es lo más caro de
+   depurar y lo que menos conviene tocar mientras el diseño del loop todavía puede
+   cambiar.
+4. **Arte al final**: coherente con todo el patrón de la investigación — el arte no es
+   el cuello de botella, el diseño de sistemas sí.
+
+## Próximo paso
+Si querés, el siguiente documento puede ser un detalle técnico de implementación de la
+Fase 1 (estructura de nodos/escenas concreta en Godot para el `VehicleBody3D` + el
+primer paquete "Frágil"), para tener algo directamente accionable al sentarte a
+programar.

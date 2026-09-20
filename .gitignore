@@ -1,0 +1,26 @@
+# Godot 4+ specific ignores
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+
+# Godot-generated translation files
+*.translation
+
+# Imported/compiled binaries
+*.import
+
+# Mono/C# specific
+.mono/
+data_*/
+mono_crash.*.json
+
+# OS/editor clutter
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/
+
+# Claude Code local settings (herramienta, no proyecto)
+.claude/
