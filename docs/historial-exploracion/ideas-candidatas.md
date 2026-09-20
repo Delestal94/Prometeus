@@ -1,5 +1,10 @@
 # 10 ideas de juego (sin restricción de tiempo)
 
+> ⚠️ **ARCHIVADO — superado por decisión posterior.** Ninguna de estas 10 ideas es el
+> proyecto final. El proyecto pivoteó a un concepto propuesto por el usuario fuera de
+> esta lista (delivery cooperativo — ver `docs/definicion-proyecto.md`). Se conserva
+> como registro del proceso, no como referencia vigente.
+>
 > Basado en: `docs/mecanicas-candidatas.md` (banco de mecánicas transversales) y los
 > patrones de `docs/checklist-exito.md`.
 > Última actualización: 2026-09-20

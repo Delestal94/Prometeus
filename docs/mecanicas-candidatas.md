@@ -79,6 +79,10 @@ da al jugador sensación de progreso intelectual propio, no solo mecánico.
 Ninguna de estas mecánicas es un juego por sí sola — son **piezas para cruzar** con un
 tema/género ya elegido. El patrón de los éxitos que investigamos (Balatro = cartas +
 poker + roguelike; Lethal Company = horror + comedia + proximity chat) es siempre un
-**cruce de 2 ideas simples**, no una mecánica nueva de cero. Para la Opción A
-(aseguradora paranormal) que veníamos armando, las mecánicas **1, 4, 5 y 10** ya están
-implícitas en el diseño — son las más directamente aplicables ahora mismo.
+**cruce de 2 ideas simples**, no una mecánica nueva de cero.
+
+> Nota: este banco se usó durante la exploración inicial (ver
+> `docs/historial-exploracion/`) y sigue siendo un recurso de referencia general para
+> futuras decisiones de diseño, aunque el proyecto actual (**Do Not Drop**, ver
+> `docs/definicion-proyecto.md`) nació de una idea propuesta directamente por el
+> usuario, no de un cruce armado a partir de esta lista.

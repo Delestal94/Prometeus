@@ -1,5 +1,10 @@
 # MVP candidatos
 
+> ⚠️ **ARCHIVADO — superado por decisión posterior.** Este documento recomendaba el
+> Candidato 3 (puzzle/narrativa). El proyecto pivoteó después a un concepto distinto
+> (delivery cooperativo — ver `docs/definicion-proyecto.md`). Se conserva como registro
+> del proceso de decisión, no como referencia vigente.
+>
 > Basado en: `docs/investigacion-mercado.md` y `docs/checklist-exito.md`.
 > Última actualización: 2026-09-20
 > Estado: propuestas para decidir — ninguna elegida todavía.

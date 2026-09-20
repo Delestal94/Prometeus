@@ -12,15 +12,16 @@ jugadores: 1 conduce, hasta 4 llevan un paquete con una "trampa" cada uno (ver
 Godot 4.x
 
 ## Documentación
-Toda la investigación, decisiones de diseño y arquitectura técnica están en `docs/`:
 
+### Vigente (proyecto actual: Do Not Drop)
 - `docs/investigacion-mercado.md` — investigación de 20 juegos de Steam hechos por 1-2
-  personas: equipo, ventas, motor, tiempo de desarrollo.
+  personas: equipo, ventas, motor, tiempo de desarrollo. (Contexto general, sigue
+  vigente como referencia de fondo.)
 - `docs/checklist-exito.md` — items replicables extraídos de esa investigación.
-- `docs/mvp-candidatos.md` — evaluación de candidatos de MVP por género.
-- `docs/mecanicas-candidatas.md` — banco de mecánicas transversales reutilizables.
-- `docs/ideas-candidatas.md` — 10 ideas de juego concretas evaluadas.
-- `docs/definicion-proyecto.md` — definición del concepto elegido.
+  (Igual de vigente, son patrones generales.)
+- `docs/mecanicas-candidatas.md` — banco de mecánicas transversales reutilizables
+  (recurso de referencia general para futuras decisiones).
+- `docs/definicion-proyecto.md` — **definición del concepto actual** (Do Not Drop).
 - `docs/requerimientos-tecnicos.md` — stack técnico, motor, networking, arte, diseño
   de adicción/rejugabilidad.
 - `docs/arquitectura.md` — arquitectura de software del proyecto (componentes,
@@ -31,3 +32,9 @@ Toda la investigación, decisiones de diseño y arquitectura técnica están en 
 - `docs/controles-y-ui.md` — esquema de controles y flujo de UI/lobby.
 - `docs/convenciones-godot.md` — Input Map, capas de física, estructura real de
   carpetas y convenciones de nombres dentro del proyecto Godot (`do-not-drop/`).
+
+### Archivado (`docs/historial-exploracion/`)
+Documentos de una etapa de exploración anterior, **superados** por el pivote a
+"Do Not Drop". Se conservan como registro del proceso, no como referencia vigente:
+- `mvp-candidatos.md`, `ideas-candidatas.md`,
+  `opcion-descartada-aseguradora-paranormal.md`.

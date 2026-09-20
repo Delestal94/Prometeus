@@ -1,82 +1,46 @@
-# Definición de proyecto — Tema y mecánica central
+# Definición de proyecto — Do Not Drop (vigente)
 
-> Basado en: `docs/mvp-candidatos.md` (Candidato 3 elegido: puzzle/narrativa de autor,
-> con rejugabilidad ligera).
 > Última actualización: 2026-09-20
-> Estado: eligiendo tema + mecánica central (la "lente") antes de pasar a requerimientos.
+> Este es el concepto **definitivo** del proyecto. El proceso de exploración previo
+> (candidatos de MVP, banco de ideas, y un concepto de puzzle/narrativa descartado) se
+> conserva en `docs/historial-exploracion/` solo como registro histórico.
 
-## Contexto de búsqueda
+## Concepto
 
-Revisé el estado actual del género (deducción/verificación narrativa) para no proponer
-algo ya saturado. Encontré casos recientes como *Clues by Sam* (deducción por
-constraints, 50k jugadores diarios) y *TR-49* (explorar una base de datos tipo
-"Wikipedia rabbit hole" para investigar) — el espacio sigue activo pero sin un patrón
-de clones masivos como los otros géneros. Buena señal para el Candidato 3.
+**Do Not Drop** (nombre de trabajo): delivery cooperativo de hasta 5 jugadores. Uno
+conduce una camioneta, los demás (hasta 4) llevan un paquete cada uno. Cada paquete
+tiene una "trampa" — una regla individual que el pasajero debe manejar mientras el
+vehículo se mueve. El caos surge del cruce entre la conducción (afecta físicamente a
+todos los paquetes a la vez) y las reglas individuales de cada pasajero.
 
-## Opciones propuestas (tema + mecánica)
+Propuesto directamente por el usuario, no derivado del banco de ideas generado
+previamente — coincide con el patrón más fuerte de toda la investigación de mercado:
+el dev hace el juego que él mismo quiere jugar (ver `docs/checklist-exito.md`).
 
-### Opción A — Aseguradora de lo paranormal ⭐ (recomendada)
-- **Tema**: trabajás como perito de una aseguradora que cubre eventos "imposibles"
-  (algo se comió el auto, la casa cambió de lugar, un familiar juró que lo secuestraron
-  ovnis). Tenés que decidir si el reclamo es legítimo según la póliza y la evidencia.
-- **Mecánica/lente**: cruzar testimonios contradictorios, fotos, recibos y cláusulas de
-  la póliza para aprobar, rechazar o investigar más un reclamo. La dificultad escala
-  agregando cláusulas nuevas, testigos que mienten, o reclamos con capas de fraude
-  encubierto (igual que Papers Please escala reglas de frontera).
-- **Por qué es fuerte**: el contenido es absurdo por diseño → genera **momentos
-  clipeables** naturalmente (la debilidad típica del género), sin necesitar sistemas
-  emergentes. Además permite un **modo "endless" con reclamos generados combinando
-  piezas** (testigo + objeto + causa) para sumar la rejugabilidad ligera que
-  recomendamos — barato de producir, ya que son combinaciones de texto/ítems, no arte
-  nuevo por caso.
-- **Riesgo**: hay que escribir bien el humor/tono para que no se sienta repetitivo.
+## Por qué este concepto (resumen de la evaluación)
+- Cruza dos referencias con demanda actual probada: el "caos físico cooperativo" tipo
+  **PEAK** (5M copias en menos de un mes, 2025) y el género de delivery físico
+  cooperativo tipo **Totally Reliable Delivery Service** (14M descargas).
+- Diferenciación real frente a la ola de "chaos co-op" reciente (Drive Together,
+  Co-Drive Chaos, Deliver Together): esos juegos son de **control compartido
+  simétrico** de un mismo vehículo; Do Not Drop propone **roles asimétricos** (un
+  conductor normal + pasajeros con mini-puzzles individuales), que no encontramos
+  replicado en ningún juego existente al momento de la investigación.
+- Rating de evaluación: 8/10 (ver el análisis completo en el historial de la
+  conversación de diseño — no está en un documento de "ideas candidatas" porque nació
+  fuera de ese proceso).
 
-### Opción B — Restaurador/tasador de objetos falsificados
-- **Tema**: trabajás en una casa de subastas o anticuario, autenticando piezas antes de
-  la venta.
-- **Mecánica/lente**: comparar la pieza con el catálogo/procedencia, detectar
-  inconsistencias de estilo, época o material, decidir si es auténtica, falsificada, o
-  robada.
-- **Por qué podría funcionar**: apela a fans de "detective visual" (como Obra Dinn), con
-  fuerte componente de observación.
-- **Riesgo**: más difícil de generar contenido variado sin arte nuevo por caso (cada
-  objeto necesita diseño único) — mayor carga de producción visual que la Opción A.
+## Documentos que desarrollan este concepto
+- `docs/requerimientos-tecnicos.md` — stack técnico (Godot), arte (estilo PEAK),
+  diseño de adicción/rejugabilidad.
+- `docs/arquitectura.md` — arquitectura de software (componentes, patrones).
+- `docs/plan-desarrollo.md` — plan de desarrollo por fases + Definition of Done.
+- `docs/parametros-diseno.md` — valores numéricos iniciales de cada trampa.
+- `docs/controles-y-ui.md` — controles y flujo de UI/lobby.
+- `docs/convenciones-godot.md` — convenciones técnicas concretas del proyecto Godot.
 
-### Opción C — Curador de mensajes/cartas de un pueblo aislado
-- **Tema**: sos el/la encargado/a de la oficina de correos (o de una radio) de un pueblo
-  remoto con secretos, decidiendo qué correspondencia dejar pasar.
-- **Mecánica/lente**: similar en estructura a Papers Please (revisar documento contra
-  reglas), aplicado a cartas/mensajes en vez de pasaportes.
-- **Por qué podría funcionar**: tono íntimo, dilemas morales fuertes.
-- **Riesgo**: estructuralmente muy cercano a Papers Please — menos diferenciado, mayor
-  riesgo de sentirse "clon con skin nueva" (el mismo problema que detectamos en el
-  género roguelike saturado).
-
-### Opción D — Investigador/a de reclamos de seguros médicos imposibles (variante de A)
-- Similar a la A pero con tono más oscuro/serio (bioética en vez de humor paranormal).
-- Se descarta como primera opción: mismo esqueleto que A pero con tono más pesado y
-  menos "clipeable", que es justo lo que buscamos reforzar en este candidato.
-
-## Comparación rápida
-
-| | A: Seguros paranormales | B: Tasador de falsificaciones | C: Correo de pueblo aislado |
-|---|---|---|---|
-| Diferenciación vs. referentes | Alta | Media | Baja (muy cerca de Papers Please) |
-| Carga de producción visual | Baja (documentos/texto + iconos) | Alta (arte único por objeto) | Baja-media |
-| Potencial de humor/viralidad | Alto | Bajo-medio | Bajo |
-| Facilidad de generar rejugabilidad ligera | Alta (combinatoria de reclamos) | Media | Media |
-
-## Recomendación
-
-**Opción A (Aseguradora de lo paranormal)** es la que mejor cumple los criterios del
-Candidato 3 reforzado: bajo costo de producción, mayor diferenciación, y resuelve la
-debilidad estructural del género (poca viralidad) con humor absurdo integrado al propio
-tema, no como añadido artificial.
-
-## Próximo paso
-Si se confirma la Opción A, pasar a definir en `docs/requerimientos.md`:
-- Estructura exacta de un "caso" (qué piezas de evidencia, cuántas por caso, cómo se
-  presentan).
-- Reglas de la "póliza" inicial y cómo escalan de complejidad.
-- Diseño del modo endless/rejugable.
-- Tono narrativo y referencia visual (paleta, estilo de documentos).
+## Estado de decisiones abiertas
+- Nombre definitivo: "Do Not Drop" es el nombre de trabajo (ya usado en el proyecto
+  Godot real). Puede cambiar antes del lanzamiento sin afectar el desarrollo.
+- Resto de las decisiones de diseño (parámetros, controles, arquitectura) ya están
+  cerradas en los documentos listados arriba.
