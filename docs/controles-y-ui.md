@@ -15,6 +15,8 @@
 | Girar izquierda/derecha | A / D | Stick izquierdo |
 | Freno de mano | Espacio | Botón A/X (según plataforma) |
 | Bocina (feedback/comedia) | Click medio / H | Botón B/círculo |
+| Mirar alrededor (asiento, primera persona) | Mouse | Stick derecho |
+| Centrar la vista | C | Clic del stick derecho |
 
 ### Pasajero (interacción con su paquete)
 Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de controles
