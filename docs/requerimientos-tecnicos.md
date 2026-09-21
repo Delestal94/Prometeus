@@ -204,8 +204,16 @@ nada extra, para que la repetición no canse.
 - Paquetes con **fallas visualmente exageradas** (explosión de confeti/objetos si se
   arruinan, en vez de solo un mensaje de "perdiste") — refuerza que sea "divertido de
   mirar" en streams, patrón confirmado en Lethal Company/Megabonk.
+  **[x] Implementado (2026-09-21)**: `package_feedback.gd` dispara un burst de
+  `GPUParticles3D` (cubitos de colores) al recibir `package_ruined`, en la posición
+  real del paquete; se limpia solo. Ver `tests/test_ruin_feedback.gd`.
 - Cámara que reaccione a los golpes fuertes del vehículo (shake, slow-mo breve) para
   amplificar los momentos de caos.
+  **[x] El shake ya estaba implementado** (`first_person_camera.gd`, reacciona a
+  `vehicle_impact`). **[ ] El slow-mo breve queda pendiente** — tocar
+  `Engine.time_scale` globalmente afectaría la física host-autoritativa en
+  multijugador, así que necesita diseñarse con cuidado (¿solo cosmético del lado
+  del cliente, sin tocar el timestep real?) antes de implementarlo.
 
 ### 3.5 Rejugabilidad a largo plazo
 - **Modo "endless"/contrarreloj** una vez agotado el contenido curado inicial,

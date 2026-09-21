@@ -66,6 +66,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_streaming.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
+<godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -100,6 +101,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_ping` — el sistema de pings: `EventBus.request_ping()` atribuye
   correctamente al emisor, y `Player._send_ping()` llega hasta ahí con la
   posición y el mensaje reales.
+- `test_ruin_feedback` — el paquete arruinado explota en confeti una sola vez,
+  en su propia posición (no en el origen del mundo), y se limpia solo al
+  terminar.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.
