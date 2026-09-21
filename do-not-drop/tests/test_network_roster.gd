@@ -33,6 +33,29 @@ func _initialize() -> void:
 	# The van seats five, so that's the cap the session advertises.
 	_expect(int(network.get(&"MAX_PLAYERS")) == 5, "The session caps at the five seats in the van")
 
+	# Transport picking: Steam when it's really there, ENet otherwise. This
+	# machine has no GodotSteam extension, so AUTO has to land on ENet --
+	# and, crucially, the script still compiles and runs without it.
+	var steam_here: bool = bool(network.call(&"steam_available"))
+	_expect(steam_here == ClassDB.class_exists(&"SteamMultiplayerPeer"),
+		"Steam counts as available only when the extension is actually installed")
+	var auto_choice: int = int(network.call(&"chosen_transport"))
+	_expect(auto_choice == (1 if steam_here else 2),
+		"AUTO picks Steam when present and falls back to ENet when not")
+	network.set(&"transport", 2)  # ENET
+	_expect(int(network.call(&"chosen_transport")) == 2, "Forcing ENet overrides the automatic choice")
+	network.set(&"transport", 0)  # back to AUTO
+
+	# Asking for Steam without the extension fails loudly instead of hanging.
+	if not steam_here:
+		var reasons: Array = []
+		network.connect(&"session_failed", func(reason: String) -> void: reasons.append(reason))
+		network.set(&"transport", 1)  # STEAM
+		var error: int = int(network.call(&"host_session"))
+		_expect(error != OK, "Hosting over Steam without the extension reports an error")
+		_expect(reasons.size() == 1, "...and says why, instead of failing silently")
+		network.set(&"transport", 0)
+
 	network.call(&"leave_session")
 	_expect((network.get(&"peer_ids") as Array) == [1], "Leaving resets the roster to a session of one")
 

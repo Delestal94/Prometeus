@@ -73,22 +73,46 @@ headless de Godot no captura el mouse. Se abre brevemente y se cierra sola:
 Comprueba mouse/stick, límites de giro, centrado, orientación relativa al asiento,
 sacudidas, bloqueo en pausa/menús, movimiento a pie y velocidad de giro a 30/120 FPS.
 
-### Prueba de conexión (manual, dos procesos)
+## Multijugador
 
-La conectividad real necesita dos procesos y no se puede verificar desde un
-entorno sin permisos de red. Corré el anfitrión en una terminal y el cliente en
-otra:
+Hay dos transportes detrás de la misma interfaz `MultiplayerPeer` de Godot, y
+`NetworkManager` elige solo:
+
+- **Steam (así se juega de verdad).** Sala de Steam relayeada por Valve: sin
+  abrir puertos, sin firewall, con NAT punch-through. Es lo que usan PEAK y
+  Lethal Company. Requiere tener instalada la extensión **GodotSteam** (la 4.20
+  en adelante soporta Godot 4.7 y ya trae el `SteamMultiplayerPeer` incorporado).
+- **ENet (desarrollo local).** Un socket UDP común contra `127.0.0.1`. Se queda
+  porque para probar dos instancias en la misma máquina Steam es incómodo: P2P
+  entre dos copias con la misma cuenta no funciona bien.
+
+El proyecto **compila y testea sin GodotSteam instalado** — todo lo de Steam se
+alcanza por `Engine.get_singleton` / `ClassDB.instantiate`, nunca por nombre. Si
+la extensión no está, `NetworkManager` cae a ENet solo.
+
+### Instalar GodotSteam (pendiente, lo tenés que hacer vos)
+
+1. Bajá la GDExtension de GodotSteam para Godot 4.7 y descomprimila en
+   `do-not-drop/addons/`.
+2. `steam_appid.txt` ya está en el repo con **480** (Spacewar, la app de ejemplo
+   de Valve). Sirve para desarrollo: da P2P y NAT punch-through sin tener un app
+   id propio. **No se puede publicar con ese id** — cuando haya app id real, se
+   reemplaza.
+3. Steam tiene que estar abierto y con sesión iniciada.
+
+### Prueba de conexión local (manual, dos procesos)
+
+Para el transporte ENet, corré el anfitrión en una terminal y el cliente en otra:
 
 ```
 <godot> --headless --path do-not-drop --script res://tests/net_smoke.gd -- --host
 <godot> --headless --path do-not-drop --script res://tests/net_smoke.gd -- --client
 ```
 
-Ambos imprimen `PASS` si se encuentran. **Si falla, lo primero a revisar es el
-firewall de Windows**: la primera vez que Godot abre un puerto suele pedir
-permiso, y si el proceso corre sin ventana el pedido nunca aparece y la conexión
-queda bloqueada en silencio. En esta máquina el puerto se abre correctamente
-pero el cliente no llega, que es exactamente ese síntoma.
+Ambos imprimen `PASS` si se encuentran. **Si falla, revisá el firewall de
+Windows**: la primera vez que Godot abre un puerto suele pedir permiso, y si el
+proceso corre sin ventana el pedido nunca aparece y la conexión queda bloqueada
+en silencio. Ese es exactamente el síntoma que dio en esta máquina.
 
 Para levantar el juego salteando la fase de carga a pie (útil al iterar sobre el
 manejo):
