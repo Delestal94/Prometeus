@@ -371,6 +371,8 @@ position = Vector3(-0.55, 1.0, 0.15)
 rotation_degrees = Vector3(0, -90, 0)
 
 [node name="FirstPersonCamera" parent="CargoBay/LeftSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+shake_position_scale = 0.0156
+shake_rotation_scale_deg = 2.08
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat1EyePoint"]
 script = ExtResource("4_seat")
@@ -411,6 +413,8 @@ position = Vector3(-0.55, 1.0, 1.35)
 rotation_degrees = Vector3(0, -90, 0)
 
 [node name="FirstPersonCamera" parent="CargoBay/LeftSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+shake_position_scale = 0.0192
+shake_rotation_scale_deg = 2.56
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat2EyePoint"]
 script = ExtResource("4_seat")
@@ -451,6 +455,8 @@ position = Vector3(0.55, 1.0, 0.15)
 rotation_degrees = Vector3(0, 90, 0)
 
 [node name="FirstPersonCamera" parent="CargoBay/RightSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+shake_position_scale = 0.0156
+shake_rotation_scale_deg = 2.08
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat1EyePoint"]
 script = ExtResource("4_seat")
@@ -491,6 +497,8 @@ position = Vector3(0.55, 1.0, 1.35)
 rotation_degrees = Vector3(0, 90, 0)
 
 [node name="FirstPersonCamera" parent="CargoBay/RightSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+shake_position_scale = 0.0192
+shake_rotation_scale_deg = 2.56
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat2EyePoint"]
 script = ExtResource("4_seat")

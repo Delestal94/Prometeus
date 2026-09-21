@@ -126,11 +126,11 @@ dónde empezar, es por ahí.
 |---|---|---|
 | 61 | ~~La cámara propia ve su propio cuerpo.~~ **[x] Hecho (2026-09-21)** — `render_layers.gd` separa capa `LOCAL_BODY` (excluida del `cull_mask` de la propia cámara) de `WORLD` (visible para las demás). Cada jugador deja de ver su propia cápsula; sigue viendo la de los demás. | **A** |
 | 62 | ~~Transición al sentarse es un corte seco.~~ **[x] Hecho (2026-09-21), con otra técnica.** Interpolar la cámara no tenía sentido acá: son dos `Camera3D` distintas (la del jugador y la del asiento), no una sola que se mueve — Godot no mezcla entre cámaras. En cambio, `board_seat()` dispara un fundido a negro rápido (`EventBus.quick_fade_requested`, 0.2s) justo antes de cambiar de cámara, que tapa el corte en vez de suavizarlo. Mismo mecanismo que el #77. | **A** |
-| 63 | Head bob al caminar a pie — hoy el desplazamiento es perfectamente plano y se siente a patines. | **A** |
-| 64 | FOV distinto por contexto: caminando, conduciendo y sosteniendo un paquete no deberían compartir el mismo encuadre. | **A** |
+| 63 | ~~Head bob al caminar a pie.~~ **[x] Hecho (2026-09-21)** — onda senoidal vertical sobre la cámara propia del jugador (`player.gd`), con fade in/out según velocidad real, no un interruptor. Como el paquete cargado sigue el punto de agarre de la cámara, también bobea con vos. | **A** |
+| 64 | ~~FOV distinto por contexto.~~ **[x] Hecho (2026-09-21)** — tres valores ahora: caminando 78° (`player.gd`), manejando 82° (`FirstPersonCamera.BASE_FOV`, más amplio, más conciencia espacial para maniobrar), cargando un paquete 70° (más cerrado, más "cuidado"). Transición suave, no un salto. | **A** |
 | 65 | **FOV configurable por el jugador.** No hay pantalla de opciones todavía; cuando exista, esto va primero (accesibilidad y mareo). | **B** |
-| 66 | **Intensidad de sacudida distinta por asiento**: atrás se siente más que adelante. Hoy todos los asientos comparten los mismos valores. | **A** |
-| 67 | Sacudida de cámara también al arruinarse un paquete, no solo al golpear el vehículo. | **A** |
+| 66 | ~~Intensidad de sacudida distinta por asiento.~~ **[x] Hecho (2026-09-21)** — `vehicle.tscn`: conductor y asientos delanteros con los valores base, los dos asientos traseros (más cerca del eje trasero, que es donde más se sienten los baches) con 1.3x y 1.6x de sacudida. | **A** |
+| 67 | ~~Sacudida de cámara también al arruinarse un paquete.~~ **[x] Hecho (2026-09-21)** — `first_person_camera.gd` escucha `package_ruined` además de `vehicle_impact`. Sin el golpe de FOV (ese queda reservado para colisiones físicas reales, no diluirlo en cualquier mala noticia). | **A** |
 | 68 | Manera de mirar hacia atrás: los espejos (#9) o una tecla dedicada. Hoy el yaw llega a ±160°, que alcanza pero es incómodo. | **B** |
 | 69 | Cámara de resultados: un plano cinematográfico de la furgoneta al terminar, en vez del overlay sobre la vista congelada. | **C** |
 | 70 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. | **C** |

@@ -17,6 +17,19 @@ const MOUSE_SENSITIVITY: float = 0.0028
 const PITCH_LIMIT: float = 1.4  # radians, ~80 degrees
 @export var stick_sensitivity: float = 2.4
 
+## Three contexts, three frames -- walking, driving (FirstPersonCamera's own
+## BASE_FOV) and carrying a package don't feel like the same view even
+## though they used to share one flat 78°.
+const WALK_FOV: float = 78.0
+const CARRY_FOV: float = 70.0
+const FOV_SMOOTH_SPEED: float = 6.0
+## Footstep bob: a small vertical sine wave on the camera itself, so a held
+## package (which follows the camera's hold point) bobs with it too --
+## before this, walking anywhere felt perfectly flat, "on rails."
+const BOB_AMPLITUDE: float = 0.045
+const BOB_FREQUENCY: float = 9.0
+const BOB_SMOOTH_SPEED: float = 8.0
+
 ## One color per player so teammates can be told apart at a glance -- there's
 ## no cosmetics system yet (docs/plan-desarrollo.md Fase 5), so this is the
 ## cheapest thing that actually solves "who is that". Same palette family as
@@ -41,6 +54,8 @@ var _nearby: Array[Node] = []
 var _last_prompt: String = ""
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 var _body_visual: MeshInstance3D = null
+var _bob_time: float = 0.0
+var _bob_amount: float = 0.0
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -166,6 +181,8 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_direction.z * WALK_SPEED
 	velocity.y = -0.2 if is_on_floor() else velocity.y - GRAVITY * delta
 	move_and_slide()
+	_apply_head_bob(delta, Vector2(velocity.x, velocity.z).length())
+	_apply_context_fov(delta)
 	if carried_package != null:
 		_update_carried_package()
 	var target: Node = _closest_interactable()
@@ -176,6 +193,28 @@ func _apply_look(motion: Vector2) -> void:
 	rotate_y(-motion.x)
 	_pitch = clampf(_pitch - motion.y, -PITCH_LIMIT, PITCH_LIMIT)
 	_head.rotation.x = _pitch
+
+
+## Only runs on foot (the seated/driving path returns early above, and
+## FirstPersonCamera -- a different node entirely -- has its own shake
+## instead). A footstep sine wave that fades in/out with actual ground
+## speed rather than snapping on the instant a key is pressed.
+func _apply_head_bob(delta: float, ground_speed: float) -> void:
+	# No is_on_floor() gate: there's no jump in this game, gravity always
+	# eventually grounds the player, and requiring floor contact here would
+	# only mean a player who spawns a frame before the ground settles under
+	# them gets a flat glide instead of a bob for no real reason.
+	var moving: bool = ground_speed > 0.3
+	var target_amount: float = 1.0 if moving else 0.0
+	_bob_amount = move_toward(_bob_amount, target_amount, BOB_SMOOTH_SPEED * delta)
+	if moving:
+		_bob_time += delta * BOB_FREQUENCY * clampf(ground_speed / WALK_SPEED, 0.4, 1.0)
+	_camera.position.y = sin(_bob_time * TAU) * BOB_AMPLITUDE * _bob_amount
+
+
+func _apply_context_fov(delta: float) -> void:
+	var target_fov: float = CARRY_FOV if carried_package != null else WALK_FOV
+	_camera.fov = move_toward(_camera.fov, target_fov, FOV_SMOOTH_SPEED * delta)
 
 
 func _gather_package_input() -> Dictionary:

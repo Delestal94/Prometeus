@@ -21,7 +21,10 @@ extends Camera3D
 @export_range(0.0, 180.0) var yaw_limit_degrees: float = 160.0
 @export_range(0.0, 89.0) var pitch_limit_degrees: float = 80.0
 
-const BASE_FOV: float = 78.0
+## Wider than Player's own on-foot WALK_FOV (78°) -- item #64: driving
+## shouldn't share the exact same frame as walking, and a touch more field
+## of view suits the extra spatial awareness manoeuvring the van needs.
+const BASE_FOV: float = 82.0
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 
 var _shake_strength: float = 0.0
@@ -47,6 +50,7 @@ func _ready() -> void:
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.connect("vehicle_impact", _on_vehicle_impact)
+		bus.connect("package_ruined", _on_package_ruined)
 
 
 func activate() -> void:
@@ -126,3 +130,15 @@ func _on_vehicle_impact(strength: float, _impact_position: Vector3) -> void:
 		return
 	_shake_strength = clampf(_shake_strength + strength * 0.15, 0.0, 1.0)
 	fov = BASE_FOV + impact_fov_kick_degrees * _shake_strength
+
+
+## A ruined package deserves its own jolt (docs/especificaciones-visuales.md
+## #67) -- until now only an actual vehicle collision could shake the
+## camera, so losing cargo to a trap running out (Ruidoso escaping, say,
+## with no fresh impact involved) felt weightless by comparison. No FOV
+## kick here on purpose: that's reserved for the physical punch of a real
+## collision, not diluted into every kind of bad news.
+func _on_package_ruined(_package_id: StringName, _cause: String) -> void:
+	if not current:
+		return
+	_shake_strength = clampf(_shake_strength + 0.6, 0.0, 1.0)
