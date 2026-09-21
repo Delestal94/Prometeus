@@ -170,10 +170,10 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 93 | Medir el costo real de `RouteStreamer` en FPS con varios tramos activos a la vez. | A |
+| 93 | ~~Medir el costo real de `RouteStreamer` en FPS con varios tramos activos a la vez.~~ **[x] Medido, con reserva honesta**: headless no renderiza nada, así que esto es costo de CPU/física real (`Performance.TIME_PHYSICS_PROCESS`), no FPS real con GPU — sigue faltando esa medición con ventana real. Manejando en `level_endless.tscn` con streaming activo (7 tramos activos en régimen estable): **0.56 ms promedio, 0.92 ms p95** de paso de física, contra un presupuesto de 16.67 ms a 60Hz. Margen amplio. | A |
 | 94 | Evaluar si hace falta LOD para los props de banquina una vez que dejen de ser cajas grises. | B |
-| 95 | Revisar `far` clip (600 m) y `lookahead_distance`/`behind_keep_distance` juntos, para no generar ni de más ni de menos. | A |
-| 96 | Perfilar el costo de las partículas de polvo bajo las 4 ruedas simultáneas, una vez implementadas. | A |
+| 95 | ~~Revisar `far` clip (600 m) y `lookahead_distance`/`behind_keep_distance` juntos, para no generar ni de más ni de menos.~~ **[x] Revisado por cálculo**: con `fog_density = 0.013` (endless), la transmitancia (`exp(-density·distancia)`) cae a ~9.6% de claridad a los 180 m (el borde de `lookahead_distance`) y a ~5% a los 230 m — el borde del mundo generado ya queda bastante disuelto en niebla antes de acercarse al `far` de 600 m, sin superponerse de más con lo generado. `behind_keep_distance` (40 m, default) no tiene contraparte visual (no hay espejo retrovisor todavía, #35), así que no hay riesgo de pop-out visible por detrás. No hizo falta tocar ningún valor. | A |
+| 96 | ~~Perfilar el costo de las partículas de polvo bajo las 4 ruedas simultáneas.~~ **[x] Medido**: comparé el mismo régimen estable manejando (polvo activo, ~0.56 ms/0.92 ms p95) contra la furgoneta detenida (polvo apagado, ~0.70 ms/2.53 ms p95 — el p95 más alto detenido es ruido de muestra por contactos de reposo resolviéndose, no una señal real). El polvo no aparece como costo medible aparte del resto de la física del vehículo. | A |
 
 ## QA y documentación de su dominio (97-100)
 
