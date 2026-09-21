@@ -10,6 +10,10 @@
 albedo_color = Color(0.025, 0.51, 0.56, 1)
 roughness = 0.72
 
+[sub_resource type="StandardMaterial3D" id="Material_lower_band"]
+albedo_color = Color(0.78, 0.82, 0.48, 1)
+roughness = 0.75
+
 [sub_resource type="StandardMaterial3D" id="Material_light_body"]
 albedo_color = Color(0.93, 0.91, 0.83, 1)
 roughness = 0.7
@@ -156,6 +160,7 @@ shape = SubResource("Shape_back")
 
 [node name="Chassis" type="MeshInstance3D" parent="BodyVisuals"]
 position = Vector3(0, -0.14, 0)
+material_override = SubResource("Material_lower_band")
 mesh = SubResource("Mesh_chassis")
 
 [node name="Cabin" type="MeshInstance3D" parent="BodyVisuals"]
@@ -219,14 +224,17 @@ material_override = SubResource("Material_dark")
 mesh = SubResource("Mesh_unit")
 
 [node name="SteeringColumn" type="MeshInstance3D" parent="CabinInterior"]
-position = Vector3(-0.45, 0.85, -1.78)
+position = Vector3(-0.45, 0.72, -1.68)
 rotation_degrees = Vector3(35, 0, 0)
 scale = Vector3(0.06, 0.06, 0.3)
 material_override = SubResource("Material_dark")
 mesh = SubResource("Mesh_unit")
 
 [node name="SteeringWheel" type="MeshInstance3D" parent="CabinInterior"]
-position = Vector3(-0.45, 1.0, -1.65)
+## Kept well below and away from DriverEyePoint (y=1.15, z=-1.35) -- the
+## wheel's own ring used to sit dead-center on the eye's line of sight,
+## putting the camera almost inside the torus (the "sees nothing" bug).
+position = Vector3(-0.45, 0.85, -1.55)
 rotation_degrees = Vector3(80, 0, 0)
 mesh = SubResource("Mesh_steering_wheel")
 
