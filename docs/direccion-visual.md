@@ -69,11 +69,13 @@ realidad primera persona, no tercera como parece a simple vista).
   pasajero cerca de su paquete (ver `docs/requerimientos-tecnicos.md`, "Flujo
   físico de carga y abordaje"). Son cápsulas placeholder hoy, ancladas a la
   cámara y alineadas con el volante/paquete.
-- **[ ] Arte final de manos**: pendiente de Fase 6. Deciding factor: ¿manos con
-  guantes/mangas (más fácil de hacer low-poly genérico, cubre más error de
-  proporción) o manos "desnudas" con variación de piel/skins (más personalizable,
-  pero es contenido de meta-progresión que todavía no existe, ver
-  `docs/plan-desarrollo.md` Fase 5)?
+- **[x] Decisión (2026-09-21): guantes/mangas, no piel desnuda.** Encaja con la
+  librea de trabajo de la furgoneta (sección 7) sin depender de skins de piel que
+  todavía no existen como sistema (Fase 5), y cubre mejor el error de proporción
+  del low-poly genérico. El color por jugador (sección 8) ya cubre la
+  identificación — no hace falta que las manos también carguen ese trabajo.
+  **No implementado todavía** (Fase 6); hoy las manos son cápsulas placeholder
+  ya coloreadas por jugador (sección 8), sin guantes reales.
 
 ## 2. El mundo: escala y proporción
 
@@ -148,22 +150,18 @@ misma paleta.
 - **[x] Cielo procedural** (`ProceduralSkyMaterial`), no un skybox de imagen —
   gratis en rendimiento, sin asset que mantener, y combina bien con el estilo
   low-poly de colores planos.
-- **[ ] Tonemap**: actualmente `tonemap_mode = 0` (Linear, sin ajuste). Godot trae
-  Filmic/ACES listos para usar con un solo campo. **Recomendación**: probar Filmic
-  o ACES cuando haya más contraste de escenas (interiores oscuros de furgoneta vs.
-  exteriores soleados) — Linear tiende a "quemar" los blancos en esa transición.
-  No urge mientras todo sea geometría de colores planos sin mucho rango dinámico.
-- **[ ] Niebla de distancia**: no implementada. Relevante por dos razones
-  distintas, que pueden pedir soluciones distintas:
-  1. **Estética**: refuerza profundidad/escala en una ruta larga (220 m+, más con
-     streaming).
-  2. **Oculta el "borde del mundo"** del streaming de tramos (`RouteStreamer`) —
-     tapar con niebla el punto exacto donde un tramo nuevo aparece es más barato
-     que generar con muchísima anticipación, y es el truco estándar de juegos con
-     mundo generado en tiempo real.
-  **Pendiente de decisión**: ¿niebla sutil todo el tiempo (más atmosférico) o
-  activarla recién si el modo endless (Fase 3.5+) la necesita para disimular el
-  streaming? Dado que hoy la ruta curada no tiene ese problema, no hay apuro.
+- **[x] Tonemap: Filmic** (`tonemap_mode = 2`, `level_base.tscn`). Decidido
+  2026-09-21: Linear tiende a "quemar" los blancos en la transición interior
+  oscuro de furgoneta / exterior soleado, y Filmic es la opción segura y estándar
+  para eso sin gastar tiempo ajustando curvas — ACES quedó descartado por ahora
+  por ser más agresivo de lo que un estilo low-poly de colores planos necesita.
+- **[x] Niebla de distancia sutil, activa siempre** (`fog_enabled = true`,
+  `fog_density = 0.006`, color de niebla igual al horizonte del cielo para que
+  no se note el límite). Decidido 2026-09-21: sirve para las dos razones que
+  planteaba este documento (profundidad atmosférica en la ruta curada de hoy,
+  y de paso deja el terreno preparado para disimular el streaming de tramos
+  cuando el modo endless lo necesite) — activarla ahora cuesta lo mismo que
+  activarla después, y ya suma en la ruta actual.
 
 ## 5. Qué ve el jugador y qué no (oclusión, interior/exterior)
 
@@ -226,24 +224,37 @@ específico de "campo de visión, qué ve y qué no".
   y crema.
 - **[x] Interior**: tablero oscuro casi negro (`#0e1820` aprox.), volante visible,
   parabrisas de vidrio tintado (sección 5).
-- **[ ] Arte final del vehículo**: Fase 6. Pendiente de decidir si el estilo va
-  más hacia "van de reparto genérica" (funcional, PEAK-like) o algo con más
-  personalidad/marca propia (relevante si en algún momento hay más de un vehículo
-  desbloqueable, `docs/plan-desarrollo.md` Fase 5).
+- **[x] Decisión de estilo (2026-09-21): utilitaria con personalidad propia, no
+  genérica.** Una furgoneta de reparto anónima funciona, pero "Do Not Drop" es un
+  juego de caos cómico compartido — una camioneta con algo de carácter propio
+  (algún detalle de calcomanía/librea simple, nombre de fantasía tipo empresa de
+  delivery chapucera) da más para el humor y las capturas/clips que un vehículo
+  perfectamente neutro, sin costar más low-poly que la alternativa genérica.
+  **No implementado todavía** (Fase 6, no hay pipeline de arte armado) — esto fija
+  la dirección para cuando llegue ese momento, no ejecuta nada ahora.
 
 ## 8. Personajes
 
-- **[x] Placeholder actual**: cápsulas simples (`CharacterBody3D` sin malla
-  distintiva más allá de la forma de colisión).
+- **[x] Cuerpo visible + color por jugador, implementado 2026-09-21.** Hasta esta
+  fecha **no había ningún cuerpo visible en absoluto** — solo las manos del
+  viewmodel, que al estar ancladas a la cámara de cada jugador únicamente él
+  mismo podía verlas; un compañero mirando a otro jugador no veía nada. Se agregó
+  una cápsula placeholder (`Player._build_body()`, `player.gd`) del mismo tamaño
+  que la forma de colisión, y se coloreó tanto ella como las manos con un color
+  fijo por `peer_id` (`PLAYER_COLORS`, misma familia de paleta que la UI —
+  sección 3), determinístico: el mismo jugador siempre tiene el mismo color, sin
+  necesitar sincronizarlo por red. Resuelve de una vez el hueco real ("no hay a
+  quién mirar") y la pregunta abierta de identificación ("quién es quién").
+  **Rough edge conocido**: la cámara propia también puede ver su propia cápsula
+  (no hay separación por capas de render todavía) — al mirar hacia abajo se nota
+  un poco. Aceptable mientras todo acá sea geometría placeholder; se resuelve con
+  capas de render dedicadas si hace falta antes de la Fase 6.
 - **[ ] Plan (Fase 6)**: low-poly, 1.000-5.000 triángulos, **ragdoll físico** en
   vez de animación a mano (barato de producir, y el ragdoll cayéndose es
   intrínsecamente gracioso — refuerza los "momentos clipeables"). Ver
-  `docs/requerimientos-tecnicos.md` sección 2.
-- **[ ] Variación visual entre jugadores**: sin definir. En una sesión de hasta 5
-  jugadores en primera persona, la única forma de identificar quién es quién es
-  viendo a los demás desde afuera (o por el ping, que ya dice "Jugador N" — ver
-  `docs/controles-y-ui.md`). ¿Colores de personaje por jugador (simple, barato) o
-  esperar a que haya cosméticos reales (Fase 5) para diferenciarlos?
+  `docs/requerimientos-tecnicos.md` sección 2. El color por jugador de arriba
+  puede sobrevivir como uno de los cosméticos base, o convivir con skins reales
+  cuando existan (Fase 5) — no hace falta elegir entre uno u otro ahora.
 
 ## 9. Pipeline de arte (para cuando llegue la Fase 6)
 
@@ -258,19 +269,20 @@ específico de "campo de visión, qué ve y qué no".
   ningún asset importado aún). Cuando empiece la Fase 6, conviene fijar esto acá
   antes de importar el primer pack, para no reorganizar después.
 
-## Preguntas abiertas para decidir en conjunto
+## Decisiones tomadas (2026-09-21)
 
-Estas son las decisiones reales que quedan, no ejecución técnica pura — vale la pena
-resolverlas habladas, no que yo las decida solo:
+Las 4 preguntas que este documento dejaba abiertas se resolvieron unilateralmente,
+a pedido explícito del usuario ("quiero que lo decidas... como consideres que
+funcionará mejor para el juego"). Resumen y dónde está cada una:
 
-1. **Niebla de distancia**: ¿sí/no, y con qué prioridad (estética vs. tapar el
-   streaming del modo endless)?
-2. **Tonemap** (Linear actual vs. Filmic/ACES): ¿probarlo ya con una escena de
-   referencia, o esperar a tener más contraste de escenas real?
-3. **Identificación visual entre jugadores**: ¿colores simples por jugador ahora,
-   o esperar a cosméticos reales de la Fase 5?
-4. **Estilo del vehículo/manos**: ¿"utilitario genérico" o con más personalidad
-   propia desde ya, aunque sea placeholder?
+1. **Niebla de distancia**: sí, sutil, activa siempre — sección 4. **Implementada.**
+2. **Tonemap**: Filmic — sección 4. **Implementada.**
+3. **Identificación visual entre jugadores**: color fijo por `peer_id`, ya —
+   sección 8. **Implementada**, y de paso corrigió un hueco real (no había ningún
+   cuerpo visible para los compañeros hasta ahora).
+4. **Estilo del vehículo/manos**: utilitario con personalidad propia, guantes/mangas
+   — secciones 7 y 1. **Dirección fijada, ejecución en Fase 6** (no hay pipeline de
+   arte todavía, no tenía sentido construir geometría nueva sin él).
 
 ## Próximo paso
 Con esto documentado, el trabajo de Fase 6 (pase de arte) tiene una base concreta

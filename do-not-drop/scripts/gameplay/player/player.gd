@@ -17,6 +17,15 @@ const MOUSE_SENSITIVITY: float = 0.0028
 const PITCH_LIMIT: float = 1.4  # radians, ~80 degrees
 @export var stick_sensitivity: float = 2.4
 
+## One color per player so teammates can be told apart at a glance -- there's
+## no cosmetics system yet (docs/plan-desarrollo.md Fase 5), so this is the
+## cheapest thing that actually solves "who is that". Same palette family as
+## the rest of the UI (docs/direccion-visual.md), picked by peer id so it's
+## stable and doesn't need any network sync of its own.
+const PLAYER_COLORS: Array[Color] = [
+	Color("83e2ba"), Color("f4c562"), Color("f47e6d"), Color("6db3d6"), Color("c9a0e0"),
+]
+
 @onready var _head: Node3D = $Head
 @onready var _camera: Camera3D = $Head/Camera3D
 @onready var _hold_point: Marker3D = $Head/Camera3D/HoldPoint
@@ -33,6 +42,7 @@ var _last_prompt: String = ""
 
 
 func _ready() -> void:
+	_build_body()
 	# Only the player this peer controls owns the view and reads input;
 	# everyone else's body is here to be seen, not driven.
 	if not is_local():
@@ -42,6 +52,33 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_probe.area_entered.connect(_on_probe_entered)
 	_probe.area_exited.connect(_on_probe_exited)
+
+
+## A placeholder capsule matching the collision shape, so teammates actually
+## have someone to see at all -- until now only the viewmodel hands existed,
+## which are attached to this player's own camera and so only ever visible
+## to themselves. Colored per peer_id (see PLAYER_COLORS) doubles as the
+## simplest possible "who is that" cue. Own camera can see its own body too
+## (no per-camera render-layer split yet) -- a minor rough edge, acceptable
+## while everything here is still placeholder geometry.
+func _build_body() -> void:
+	var color: Color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.8
+	var mesh := MeshInstance3D.new()
+	var capsule := CapsuleMesh.new()
+	capsule.radius = 0.32
+	capsule.height = 1.6
+	mesh.mesh = capsule
+	mesh.material_override = material
+	mesh.position = Vector3(0.0, 0.8, 0.0)
+	add_child(mesh)
+	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
+		var hand_material := StandardMaterial3D.new()
+		hand_material.albedo_color = color.lightened(0.3)
+		hand_material.roughness = 0.85
+		hand.material_override = hand_material
 
 
 func is_local() -> bool:

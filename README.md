@@ -69,6 +69,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_horn.gd
+<godot> --headless --path do-not-drop --script res://tests/test_player_colors.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -108,6 +109,8 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   terminar.
 - `test_horn` — la bocina atribuye correctamente a quien la toca (aunque no
   sea el host) y el "honk" sintetizado en código es audio real, no silencio.
+- `test_player_colors` — cada jugador tiene un cuerpo visible (antes no había
+  ninguno) con un color distinto y determinístico por `peer_id`.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.
