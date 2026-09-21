@@ -22,7 +22,7 @@ var _impact_cooldown: float = 0.0
 var _telemetry_time: float = 0.0
 var _settling_time: float = 1.0
 
-@onready var _package_spawn: Marker3D = $CargoBay/PackageSpawn
+@onready var _package_spawn: Marker3D = $CargoBay/LeftSeat1PackageMount
 
 
 func set_controls(throttle: float, steering_input: float, handbrake: bool) -> void:

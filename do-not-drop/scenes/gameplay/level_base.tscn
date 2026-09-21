@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_vehicle"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/package/package.tscn" id="3_package"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/route/route.tscn" id="4_route"]
-[ext_resource type="Script" path="res://scripts/presentation/chase_camera.gd" id="5_camera"]
+[ext_resource type="PackedScene" path="res://scenes/presentation/first_person_camera.tscn" id="5_camera"]
 [ext_resource type="Script" path="res://scripts/ui/prototype_hud.gd" id="6_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
@@ -47,9 +47,8 @@ directional_shadow_max_distance = 100.0
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment")
 
-[node name="ChaseCamera" type="Camera3D" parent="."]
-script = ExtResource("5_camera")
-target_path = NodePath("../World/Vehicle")
+[node name="FirstPersonCamera" parent="." instance=ExtResource("5_camera")]
+seat_path = NodePath("../World/Vehicle/CabinInterior/DriverEyePoint")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 process_mode = 3

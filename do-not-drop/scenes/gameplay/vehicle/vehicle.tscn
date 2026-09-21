@@ -39,6 +39,13 @@ albedo_color = Color(0.95, 0.17, 0.1, 1)
 emission_enabled = true
 emission = Color(0.8, 0.06, 0.025, 1)
 
+[sub_resource type="TorusMesh" id="Mesh_steering_wheel"]
+material = SubResource("Material_dark")
+inner_radius = 0.155
+outer_radius = 0.19
+rings = 8
+ring_segments = 16
+
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_body"]
 friction = 0.7
 bounce = 0.0
@@ -193,10 +200,46 @@ scale = Vector3(2.19, 0.19, 0.22)
 material_override = SubResource("Material_dark")
 mesh = SubResource("Mesh_unit")
 
-[node name="CargoBay" type="Node3D" parent="."]
+[node name="CabinInterior" type="Node3D" parent="."]
+## Solid Cabin mesh is invisible from inside (default backface culling) — the
+## driver's camera sees straight through it to the windows and the road ahead.
 
-[node name="PackageSpawn" type="Marker3D" parent="CargoBay"]
-position = Vector3(0, 0.9, 0.85)
+[node name="Dashboard" type="MeshInstance3D" parent="CabinInterior"]
+position = Vector3(0, 0.85, -1.85)
+scale = Vector3(1.85, 0.35, 0.45)
+material_override = SubResource("Material_dark")
+mesh = SubResource("Mesh_unit")
+
+[node name="SteeringColumn" type="MeshInstance3D" parent="CabinInterior"]
+position = Vector3(-0.45, 0.85, -1.78)
+rotation_degrees = Vector3(35, 0, 0)
+scale = Vector3(0.06, 0.06, 0.3)
+material_override = SubResource("Material_dark")
+mesh = SubResource("Mesh_unit")
+
+[node name="SteeringWheel" type="MeshInstance3D" parent="CabinInterior"]
+position = Vector3(-0.45, 1.0, -1.65)
+rotation_degrees = Vector3(80, 0, 0)
+mesh = SubResource("Mesh_steering_wheel")
+
+[node name="DriverSeatCushion" type="MeshInstance3D" parent="CabinInterior"]
+position = Vector3(-0.45, 0.5, -1.1)
+scale = Vector3(0.55, 0.14, 0.55)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="DriverSeatBackrest" type="MeshInstance3D" parent="CabinInterior"]
+position = Vector3(-0.45, 0.95, -0.86)
+scale = Vector3(0.55, 0.75, 0.12)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="DriverEyePoint" type="Marker3D" parent="CabinInterior"]
+## Forward stays -Z (no rotation): matches the vehicle's own forward axis,
+## so the driver looks straight out through the windshield.
+position = Vector3(-0.45, 1.15, -1.35)
+
+[node name="CargoBay" type="Node3D" parent="."]
 
 [node name="Floor" type="MeshInstance3D" parent="CargoBay"]
 position = Vector3(0, 0.19, 0.925)
@@ -231,6 +274,90 @@ position = Vector3(0.85, 0.43, 2.207)
 scale = Vector3(0.19, 0.27, 0.06)
 material_override = SubResource("Material_tail_light")
 mesh = SubResource("Mesh_unit")
+
+## Four passenger seats along the side walls, facing inward toward the aisle.
+## Each has its own eye point (first-person anchor) and a package mount right
+## in front of it — one seat, one paquete-trampa, as in docs/definicion-proyecto.md.
+
+[node name="LeftSeat1Cushion" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(-0.72, 0.5, 0.15)
+scale = Vector3(0.35, 0.12, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="LeftSeat1Backrest" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(-0.88, 0.85, 0.15)
+scale = Vector3(0.08, 0.55, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="LeftSeat1EyePoint" type="Marker3D" parent="CargoBay"]
+position = Vector3(-0.55, 1.0, 0.15)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="LeftSeat1PackageMount" type="Marker3D" parent="CargoBay"]
+position = Vector3(-0.25, 0.8, 0.15)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="LeftSeat2Cushion" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(-0.72, 0.5, 1.35)
+scale = Vector3(0.35, 0.12, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="LeftSeat2Backrest" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(-0.88, 0.85, 1.35)
+scale = Vector3(0.08, 0.55, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="LeftSeat2EyePoint" type="Marker3D" parent="CargoBay"]
+position = Vector3(-0.55, 1.0, 1.35)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="LeftSeat2PackageMount" type="Marker3D" parent="CargoBay"]
+position = Vector3(-0.25, 0.8, 1.35)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="RightSeat1Cushion" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.72, 0.5, 0.15)
+scale = Vector3(0.35, 0.12, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="RightSeat1Backrest" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.88, 0.85, 0.15)
+scale = Vector3(0.08, 0.55, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="RightSeat1EyePoint" type="Marker3D" parent="CargoBay"]
+position = Vector3(0.55, 1.0, 0.15)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="RightSeat1PackageMount" type="Marker3D" parent="CargoBay"]
+position = Vector3(0.25, 0.8, 0.15)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="RightSeat2Cushion" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.72, 0.5, 1.35)
+scale = Vector3(0.35, 0.12, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="RightSeat2Backrest" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.88, 0.85, 1.35)
+scale = Vector3(0.08, 0.55, 0.5)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_unit")
+
+[node name="RightSeat2EyePoint" type="Marker3D" parent="CargoBay"]
+position = Vector3(0.55, 1.0, 1.35)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="RightSeat2PackageMount" type="Marker3D" parent="CargoBay"]
+position = Vector3(0.25, 0.8, 1.35)
+rotation_degrees = Vector3(0, 90, 0)
 
 [node name="FrontLeftWheel" type="VehicleWheel3D" parent="."]
 position = Vector3(-1.12, -0.1, -1.5)

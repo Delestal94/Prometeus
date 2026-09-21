@@ -90,6 +90,34 @@ simple es un "rebase" ocasional del origen (mover todo el set de objetos activos
 vuelta cerca de (0,0,0) cuando la camioneta se aleja mucho, no en cada frame) — mucho
 más simple que invertir el modelo de movimiento del juego entero.
 
+### Decisión de cámara: primera persona por asiento (confirmado 2026-09-20)
+
+**PEAK es en realidad un juego en primera persona**, no en tercera persona con cámara
+externa (verificado — es un malentendido común). Esto encaja directamente con el
+pedido de que "el conductor debe ver dentro de la cabina": cada jugador ve el mundo
+desde los ojos de su personaje, sentado en su lugar dentro de la furgoneta.
+
+- **La furgoneta tiene interior real**: cabina del conductor con tablero y volante
+  visibles, y hasta 4 asientos de pasajero en los laterales de la zona de carga, cada
+  uno con su propio paquete-trampa enfrente (ver `Vehicle` en
+  `docs/arquitectura.md` sección 3 — los asientos son `Marker3D` hijos del vehículo,
+  no entidades separadas por ahora).
+- **Cámara rígida, sin suavizado**: la cámara sigue el transform del asiento
+  directamente, frame a frame, sin interpolar. Es deliberado — PEAK vende su caos
+  físico dejando que la cámara "sienta" cada golpe sin filtrar, y acá el golpe es
+  literalmente la mecánica central (el paquete se rompe por los mismos impactos que
+  sacuden al jugador). Se suma un shake corto sobre la señal `vehicle_impact` ya
+  existente en el `EventBus`, para reforzar ese feedback sin inventar un sistema
+  nuevo.
+- **Manos visibles (viewmodel)**: como en PEAK, el jugador ve sus propias manos —
+  del conductor sosteniendo el volante, del pasajero cerca de su paquete. Por ahora
+  son cápsulas placeholder (arte final en la Fase 6), pero ya están ancladas a la
+  cámara y alineadas con el volante.
+- **Por asiento, no por jugador único**: la cámara es un componente reutilizable
+  (`FirstPersonCamera`, `scenes/presentation/first_person_camera.tscn`) que recibe
+  qué asiento seguir (`seat_path`) — el mismo componente sirve para el conductor hoy y
+  para cada pasajero cuando se sume el multiplayer (Fase 4), sin duplicar código.
+
 ---
 
 ## 2. Arte — pipeline estilo PEAK
