@@ -51,6 +51,12 @@ func _ready() -> void:
 	_horn_player = AudioStreamPlayer3D.new()
 	_horn_player.stream = SynthAudio.honk_horn()
 	_horn_player.unit_size = 15.0
+	# No volume_db was ever set here -- defaulted to 0 dB, dramatically
+	# louder than every other sound in the mix (engine peaks around -21 dB;
+	# the impact thud, the loudest deliberate peak elsewhere, around -6 dB).
+	# Matched to the impact thud's peak: loud and attention-grabbing on
+	# purpose, not an accident of an unset property.
+	_horn_player.volume_db = -6.0
 	add_child(_horn_player)
 	EventBus.horn_honked.connect(_on_horn_honked)
 

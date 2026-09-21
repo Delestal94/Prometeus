@@ -147,10 +147,10 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 80 | Crear buses de audio "Interior" y "Exterior" en Godot. | A |
-| 81 | Rutear motor/neumáticos/impacto por el bus correcto según si la cámara activa está adentro o afuera. | A |
-| 82 | Reverb distinta por bus (metálica/cerrada adentro, abierta afuera). | B |
-| 83 | Mezcla general de volúmenes relativos (motor vs. ambiente vs. trampas vs. bocina) — pasada de balance, no de implementación. | A |
+| 80 | ~~Crear buses de audio "Interior" y "Exterior".~~ **[x] Hecho** — `default_bus_layout.tres`, registrado en `project.godot`. | A |
+| 81 | ~~Rutear motor/neumáticos/impacto por el bus correcto según la cámara activa.~~ **[x] Hecho** para motor/impacto/chirrido (`VehiclePresentation`). La bocina (`vehicle.gd`) queda sin rutear — vive en otro archivo, follow-up chico. | A |
+| 82 | ~~Reverb distinta por bus.~~ **[x] Hecho de una vez con el #80**, no hizo falta separarlo — cada bus ya trae su propio `AudioEffectReverb` (interior más cerrado y húmedo, exterior más abierto y seco) en el mismo `.tres`. | B |
+| 83 | ~~Mezcla general de volúmenes relativos.~~ **[x] Parcial, honesto sobre el límite**: no puedo "escuchar" el juego para juzgar el balance de verdad — lo que hice fue revisar los valores en busca de inconsistencias objetivas. Encontré una real: la bocina (`vehicle.gd`) nunca tuvo `volume_db` seteado, quedaba en el default de 0dB, mucho más fuerte que todo lo demás sin que fuera intencional (nada en el código sugería que "la bocina debe ser así de fuerte"). La empardé con el pico del golpe de impacto (-6dB), el más fuerte del resto de la mezcla a propósito. Una pasada de balance real con oído sigue pendiente y necesita a alguien escuchando el juego, no edición de valores a ciegas. | A |
 | 84 | Gancho de "riesgo acumulado" para la música de tensión — coordinar con Slatex, que vive del lado de paquetes/`RunManager`. | B |
 
 ## Vehículos adicionales (85-92)

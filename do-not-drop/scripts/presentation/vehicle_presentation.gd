@@ -55,6 +55,14 @@ var _dust_emitters: Array[GPUParticles3D] = []
 var _dev_camera: Camera3D
 var _dev_camera_active: bool = false
 var _dev_camera_previous: Camera3D = null
+## Every seat camera this vehicle owns (found by walking the tree, not a
+## hardcoded list of paths -- so a second vehicle with a different seat
+## count doesn't need this file touched at all, see docs/tareas-nacho.md
+## item #87). Used only to decide "Interior" vs. "Exterior" audio bus
+## routing for this vehicle's own sounds (#80/#81) -- each client checks
+## its own active camera independently, no networking involved.
+var _seat_cameras: Array[Camera3D] = []
+var _last_bus: StringName = &""
 var _flicker_remaining: float = 0.0
 var _motor_mix: float = 0.0
 var _screech_mix: float = 0.0
@@ -107,6 +115,7 @@ func _ready() -> void:
 		if wheel is VehicleWheel3D:
 			_wheels.append(wheel)
 	_build_dust_emitters()
+	_collect_seat_cameras(vehicle)
 	if OS.is_debug_build():
 		_build_dev_camera()
 	var bus: Node = get_node_or_null("/root/EventBus")
@@ -130,6 +139,7 @@ func update_presentation(delta: float) -> void:
 		_front_materials[index].emission_energy_multiplier = 0.8 * flicker if running else 0.0
 	for material: StandardMaterial3D in _rear_materials:
 		material.emission_energy_multiplier = 2.4 if vehicle.presentation_braking else (0.18 if running else 0.0)
+	_apply_bus_routing()
 	_update_engine(delta, running)
 	_update_screech(delta)
 	_apply_body_lean(delta)
@@ -242,6 +252,29 @@ func _apply_dust() -> void:
 		var intensity: float = clampf(maxf(speed_factor, skid) if grounded else 0.0, 0.0, 1.0)
 		particles.emitting = intensity > 0.05
 		particles.amount_ratio = maxf(intensity, 0.15)
+
+
+func _collect_seat_cameras(node: Node) -> void:
+	if node is Camera3D and node != _dev_camera:
+		_seat_cameras.append(node)
+	for child: Node in node.get_children():
+		_collect_seat_cameras(child)
+
+
+## Interior vs. exterior (#80/#81): whichever bus applies is whatever this
+## client is currently listening through, not a property of the sound
+## source -- so this checks the local Viewport's own active camera, not
+## anything replicated. Only writes .bus when it actually changes to avoid
+## needless AudioServer churn every single frame.
+func _apply_bus_routing() -> void:
+	var current_camera: Camera3D = get_viewport().get_camera_3d()
+	var inside: bool = current_camera != null and current_camera in _seat_cameras
+	var target_bus: StringName = &"Interior" if inside else &"Exterior"
+	if target_bus == _last_bus:
+		return
+	_last_bus = target_bus
+	for player: AudioStreamPlayer3D in [engine_player, impact_player, screech_player]:
+		player.bus = target_bus
 
 
 func _build_dev_camera() -> void:

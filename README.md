@@ -83,6 +83,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_body_lean_sink.gd
 <godot> --headless --path do-not-drop --script res://tests/test_dust_and_ambience.gd
 <godot> --headless --path do-not-drop --script res://tests/test_dev_camera.gd
+<godot> --headless --path do-not-drop --script res://tests/test_audio_bus_routing.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -165,6 +166,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_dev_camera` — la cámara de tercera persona de desarrollo (F9, solo
   en build de debug) prende, apaga y restaura la cámara anterior
   correctamente.
+- `test_audio_bus_routing` — el motor, el golpe de impacto y el chirrido de
+  neumáticos rutean al bus "Interior" o "Exterior" según si la cámara
+  activa de ese cliente está adentro de la furgoneta o no.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.
