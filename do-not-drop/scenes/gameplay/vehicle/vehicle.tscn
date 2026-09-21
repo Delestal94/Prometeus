@@ -1,10 +1,11 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=31 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle.gd" id="1_vehicle"]
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_input_component.gd" id="2_input"]
 [ext_resource type="PackedScene" path="res://scenes/presentation/first_person_camera.tscn" id="3_fp_camera"]
 [ext_resource type="Script" path="res://scripts/gameplay/interaction/seat_point.gd" id="4_seat"]
 [ext_resource type="Script" path="res://scripts/gameplay/interaction/package_mount_point.gd" id="5_mount"]
+[ext_resource type="Script" path="res://scripts/presentation/vehicle_presentation.gd" id="6_presentation"]
 
 [sub_resource type="SceneReplicationConfig" id="Repl_vehicle"]
 properties/0/path = NodePath(".:position")
@@ -22,6 +23,30 @@ properties/3/replication_mode = 1
 properties/4/path = NodePath(".:driver_peer_id")
 properties/4/spawn = true
 properties/4/replication_mode = 2
+properties/5/path = NodePath(".:steering")
+properties/5/spawn = true
+properties/5/replication_mode = 1
+properties/6/path = NodePath(".:engine_force")
+properties/6/spawn = true
+properties/6/replication_mode = 1
+properties/7/path = NodePath(".:presentation_engine_running")
+properties/7/spawn = true
+properties/7/replication_mode = 2
+properties/8/path = NodePath(".:presentation_braking")
+properties/8/spawn = true
+properties/8/replication_mode = 2
+properties/9/path = NodePath("FrontLeftWheel:transform")
+properties/9/spawn = true
+properties/9/replication_mode = 1
+properties/10/path = NodePath("FrontRightWheel:transform")
+properties/10/spawn = true
+properties/10/replication_mode = 1
+properties/11/path = NodePath("RearLeftWheel:transform")
+properties/11/spawn = true
+properties/11/replication_mode = 1
+properties/12/path = NodePath("RearRightWheel:transform")
+properties/12/spawn = true
+properties/12/replication_mode = 1
 
 [sub_resource type="StandardMaterial3D" id="Material_body"]
 albedo_color = Color(0.025, 0.51, 0.56, 1)
@@ -151,7 +176,11 @@ controls_enabled = false
 [node name="VehicleInputComponent" type="Node" parent="."]
 script = ExtResource("2_input")
 
+[node name="VehiclePresentation" type="Node3D" parent="."]
+script = ExtResource("6_presentation")
+
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_interval = 0.05
 replication_config = SubResource("Repl_vehicle")
 
 [node name="ChassisCollision" type="CollisionShape3D" parent="."]

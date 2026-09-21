@@ -71,6 +71,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_horn.gd
 <godot> --headless --path do-not-drop --script res://tests/test_player_colors.gd
 <godot> --headless --path do-not-drop --script res://tests/test_impact_feedback.gd
+<godot> --headless --path do-not-drop --script res://tests/test_vehicle_presentation.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -115,6 +116,12 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_impact_feedback` — el golpe de FOV al chocar: solo reacciona la cámara
   del asiento que estás usando, vuelve sola a su valor base, y nunca toca
   `Engine.time_scale` (eso frenaría la física de todos, no solo tu vista).
+- `test_vehicle_presentation` — ruedas y volante rotan de verdad (nativo de
+  `VehicleWheel3D`), la dirección del volante sigue a la de la rueda, los
+  faros iluminan y parpadean en impactos fuertes, las luces de freno
+  reaccionan al frenado real, y el motor sintetizado responde a velocidad y
+  carga. `tests/run_vehicle_network.ps1` corre lo mismo en dos procesos
+  reales para confirmar que se replica al cliente, no solo al host.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

@@ -22,6 +22,7 @@ extends Camera3D
 @export_range(0.0, 89.0) var pitch_limit_degrees: float = 80.0
 
 const BASE_FOV: float = 78.0
+const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 
 var _shake_strength: float = 0.0
 var _rng := RandomNumberGenerator.new()
@@ -31,6 +32,8 @@ var _look_pitch: float = 0.0
 
 
 func _ready() -> void:
+	RenderLayers.configure_first_person(self)
+	RenderLayers.show_viewmodel(self, current)
 	fov = BASE_FOV
 	near = 0.03
 	# Explicit far plane instead of the engine default: the route is 220 m and
@@ -49,10 +52,12 @@ func _ready() -> void:
 func activate() -> void:
 	reset_look()
 	current = true
+	RenderLayers.show_viewmodel(self, true)
 
 
 func deactivate() -> void:
 	current = false
+	RenderLayers.show_viewmodel(self, false)
 	_shake_strength = 0.0
 	fov = BASE_FOV
 	reset_look()
@@ -91,6 +96,7 @@ func _look_transform() -> Transform3D:
 
 
 func _process(delta: float) -> void:
+	RenderLayers.show_viewmodel(self, current)
 	if not current:
 		return
 	if get_tree().paused:

@@ -4,6 +4,25 @@ extends RefCounted
 ## assets -- same "no art yet, code is the source of truth" convention as
 ## route.gd's boxes and package_feedback.gd's confetti cubes.
 
+## Quiet harmonic exhaust loop. Integer periods keep the seam continuous;
+## pitch and volume are adjusted by VehiclePresentation, not by simulation.
+static func engine_loop() -> AudioStreamWAV:
+	const RATE: int = 22050
+	var data := PackedByteArray()
+	data.resize(RATE * 2)
+	for index: int in range(RATE):
+		var phase: float = TAU * 48.0 * float(index) / float(RATE)
+		var wave: float = sin(phase) * 0.46 + sin(phase * 2.0) * 0.22 + sin(phase * 3.0) * 0.10 + sin(phase * 0.5) * 0.10
+		data.encode_s16(index * 2, roundi(wave * 20000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = RATE
+	return stream
+
 
 ## A classic two-tone car horn: two square waves close enough in pitch to
 ## beat against each other, with a short fade in/out so it doesn't click.

@@ -39,10 +39,10 @@ dónde empezar, es por ahí.
 
 | # | Especificación | Prio |
 |---|---|---|
-| 1 | **Las ruedas no giran.** `VehicleWheel3D` no rota las mallas hijas por su cuenta; hay que rotar `Tire`/`Hub` según `get_rpm()`. Hoy la camioneta se desplaza con las ruedas congeladas — es lo primero que delata que algo no está vivo. | **A** |
-| 2 | **Las ruedas delanteras no giran al doblar.** La física dirige (`steering`), pero la malla apunta siempre al frente. Rotar el nodo de la rueda en Y según el ángulo de dirección. | **A** |
-| 3 | **El volante no se mueve.** El toroide de `SteeringWheel` es estático. Rotarlo en su eje proporcional a `steering`, con un multiplicador (una vuelta de volante ≈ mucho más que el ángulo real de rueda). | **A** |
-| 4 | **Suspensión sin recorrido visual.** Las ruedas están en posición fija; deberían subir y bajar con el recorrido real de la suspensión al pasar un badén. | **A** |
+| 1 | ~~Las ruedas no giran.~~ **[x] Hecho (2026-09-21).** El diagnóstico original (vía grep) estaba incompleto: `VehicleWheel3D` sí rota sus mallas hijas nativamente, pero solo en el peer con autoridad física (el host) — un cliente viendo manejar a otro jugador veía las ruedas congeladas porque solo se replicaba la posición del chasis, no la de cada rueda. Se agregó replicación del `transform` de las 4 ruedas (`vehicle.tscn`), así que ahora gira para todos, no solo para quien maneja. Cubierto por `tests/test_vehicle_presentation.gd` y `tests/vehicle_network_probe.gd` (dos procesos reales). | **A** |
+| 2 | ~~Las ruedas delanteras no giran al doblar.~~ **[x] Hecho** — mismo fix que el #1: es nativo de `VehicleWheel3D`, solo hacía falta replicar el transform para que se vea en el cliente. | **A** |
+| 3 | ~~El volante no se mueve.~~ **[x] Hecho (2026-09-21).** `VehiclePresentation` (`vehicle_presentation.gd`) rota el volante según `vehicle.steering * steering_ratio` (7:1 — una vuelta de volante notoria por un giro real de rueda chico). | **A** |
+| 4 | ~~Suspensión sin recorrido visual.~~ **[x] Hecho** — consecuencia directa del #1: al replicarse el transform completo de cada rueda (no solo su rotación), el recorrido de suspensión también viaja. | **A** |
 | 5 | Silueta de la furgoneta: hoy es una caja sobre otra caja. Necesita biselado de aristas, trompa levemente inclinada y proporciones de vehículo real. | **B** |
 | 6 | Guardabarros / arcos de rueda: las ruedas flotan junto a un panel plano, sin hueco que las contenga. | **B** |
 | 7 | Neumático con dibujo y llanta diferenciada. Hoy son dos cilindros concéntricos lisos. | **B** |
@@ -51,7 +51,7 @@ dónde empezar, es por ahí.
 | 10 | Puertas traseras reales en la zona de carga (hoy `Tailgate` es una caja fija). | **B** |
 | 11 | Mampara entre cabina y zona de carga: hoy son dos volúmenes conceptualmente separados sin nada que los divida visualmente. | **B** |
 | 12 | Tablero: hoy es una sola caja oscura. Necesita tablero de instrumentos, rejillas de ventilación, guantera, palanca de cambios. | **B** |
-| 13 | Volante con rayos y cubo central — el toroide de 8 anillos se lee como un anillo flotante. | **B** |
+| 13 | ~~Volante con rayos y cubo central.~~ **[x] Hecho (2026-09-21)** — `VehiclePresentation._build_steering_details()` agrega 3 rayos y un cubo central al toroide. | **B** |
 | 14 | Pedales: ausentes. Se ven al mirar hacia abajo desde el asiento del conductor. | **C** |
 | 15 | Asientos con apoyacabezas y estructura; hoy son dos cajas (almohadón + respaldo). | **B** |
 | 16 | Cinturones de seguridad — venden "estoy atado a esto" en un juego que trata de sacudidas. | **C** |
@@ -76,8 +76,8 @@ dónde empezar, es por ahí.
 | 24 | **Peso Creciente debería verse crecer**: escalar la caja progresivamente y hundirla contra el piso a medida que el temporizador avanza. Hoy el peso cambia solo como número. | **A** |
 | 25 | **Equilibrio debería verse inclinarse**: la caja tendría que ladearse visiblemente según el ángulo acumulado, antes de fallar. | **A** |
 | 26 | **Ruidoso debería moverse solo**: sacudidas cortas y aleatorias desde adentro, más frecuentes cuanto más agitado. | **A** |
-| 27 | Parpadeo de faros al recibir un impacto fuerte. | **A** |
-| 28 | Luces de freno que se encienden al frenar de verdad (hoy las traseras son emisivas fijas). | **A** |
+| 27 | ~~Parpadeo de faros al recibir un impacto fuerte.~~ **[x] Hecho** — `VehiclePresentation._on_impact()` atenúa los faros un instante (`impact_flicker_seconds`) en golpes fuertes cerca del vehículo, nunca repetido. | **A** |
+| 28 | ~~Luces de freno que se encienden al frenar de verdad.~~ **[x] Hecho** — `presentation_braking` (replicado) sube la emisión de las luces traseras cuando `brake > 3.0` de verdad, no un valor fijo. | **A** |
 | 29 | Ciclo de caminata del jugador a pie. | **B** |
 | 30 | Idle con respiración — sin él, un personaje quieto se lee como muerto. | **B** |
 | 31 | Transición de sentarse: hoy abordar un asiento es un corte instantáneo de cámara. | **B** |
@@ -97,14 +97,14 @@ dónde empezar, es por ahí.
 
 | # | Especificación | Prio |
 |---|---|---|
-| 41 | **Sonido de motor ligado a la velocidad.** Hoy el único audio del juego es la bocina. Es probablemente el agujero sensorial más grande que queda. | **A** |
+| 41 | ~~Sonido de motor ligado a la velocidad.~~ **[x] Hecho (2026-09-21)** — `SynthAudio.engine_loop()` (armónicos sintetizados, sin asset) + `VehiclePresentation._update_engine()`: el pitch y volumen siguen velocidad y carga del motor en tiempo real. | **A** |
 | 42 | **Sonido de impacto** al golpear algo, escalado por fuerza — la señal `vehicle_impact` ya existe y ya lleva la magnitud. | **A** |
 | 43 | **Sonidos por trampa**: vidrio tintineando, algo vivo quejándose, peso crujiendo. Refuerza qué paquete está en problemas sin mirar el HUD. | **A** |
 | 44 | Chirrido de neumáticos al derrapar o frenar fuerte. | **A** |
 | 45 | Ambiente exterior: viento, pájaros, ruido lejano de ruta. | **A** |
 | 46 | **Reverb distinta dentro de la furgoneta vs. afuera** — barato en Godot (buses de audio) y vende muchísimo el "estoy adentro de una caja de metal". | **B** |
 | 47 | Música: al menos un tema de tensión que suba con el riesgo acumulado de la carga. | **B** |
-| 48 | **Los faros no iluminan.** Son cajas emisivas sin `SpotLight3D` detrás. Hoy no aportan nada funcional. | **A** |
+| 48 | ~~Los faros no iluminan.~~ **[x] Hecho (2026-09-21)** — dos `SpotLight3D` reales por faro, que se apagan/encienden con `presentation_engine_running`. | **A** |
 | 49 | Partículas de polvo/tierra bajo las ruedas al acelerar o derrapar. | **A** |
 | 50 | Humo de escape en el caño trasero. | **C** |
 | 51 | Marcas de neumático en el asfalto al frenar. | **C** |
@@ -124,7 +124,7 @@ dónde empezar, es por ahí.
 
 | # | Especificación | Prio |
 |---|---|---|
-| 61 | **La cámara propia ve su propio cuerpo.** Documentado como rough edge conocido en `docs/direccion-visual.md` §8: hace falta separar por capas de render (`VisualInstance3D.layers` + `Camera3D.cull_mask`) para ocultar el cuerpo propio sin ocultar el de los demás. | **A** |
+| 61 | ~~La cámara propia ve su propio cuerpo.~~ **[x] Hecho (2026-09-21)** — `render_layers.gd` separa capa `LOCAL_BODY` (excluida del `cull_mask` de la propia cámara) de `WORLD` (visible para las demás). Cada jugador deja de ver su propia cápsula; sigue viendo la de los demás. | **A** |
 | 62 | **Transición al sentarse es un corte seco.** Una interpolación corta de la cámara al asiento se siente mucho mejor y cuesta poco. | **A** |
 | 63 | Head bob al caminar a pie — hoy el desplazamiento es perfectamente plano y se siente a patines. | **A** |
 | 64 | FOV distinto por contexto: caminando, conduciendo y sosteniendo un paquete no deberían compartir el mismo encuadre. | **A** |
@@ -151,7 +151,7 @@ dónde empezar, es por ahí.
 
 | # | Especificación | Prio |
 |---|---|---|
-| 81 | **Los jugadores sentados son invisibles.** `board_seat()` hace `visible = false` al abordar: nadie ve a nadie durante el viaje entero, que es justo cuando la tensión compartida importa. Debería ocultarse solo el cuerpo propio (ver #61), no el de todos. | **A** |
+| 81 | **Los jugadores sentados son invisibles.** `board_seat()` hace `visible = false` al abordar: nadie ve a nadie durante el viaje entero, que es justo cuando la tensión compartida importa. El #61 ya resuelve "que cada uno deje de ver su propio cuerpo"; este es el otro lado — que los demás sí vean el suyo. Requiere que el cuerpo del jugador siga la pose del asiento (probablemente reparentándolo al `Marker3D` del asiento), con cuidado de no romper la replicación de posición en red. **Siguiente en la cola.** | **A** |
 | 82 | El paquete sostenido flota frente a la cámara sin contacto con las manos; debería verse agarrado. | **B** |
 | 83 | Abolladuras o deformación progresiva del paquete según el daño acumulado — hoy solo cambia de color. | **B** |
 | 84 | Los paquetes deberían chocar entre sí de forma visible y encadenar caos (ya comparten capa de física). | **A** |
@@ -176,16 +176,15 @@ dónde empezar, es por ahí.
 
 ## Por dónde empezaría
 
-Si hubiera que elegir cinco de los 100 para hacer mañana, serían estos — todos **A**,
-todos sin pipeline de arte, y los cinco atacan la sensación de "esto no está vivo":
+> Actualizado 2026-09-21: los primeros tres de la lista original de cinco ya están
+> hechos (#1/#2/#3, #41, y la mitad de #61+#81). Quedan estos:
 
-1. **#1, #2, #3** — ruedas que giran, ruedas que doblan, volante que se mueve. Son
-   tres rotaciones de malla. Es la diferencia más grande por menos código que hay en
-   toda la lista.
-2. **#41** — sonido de motor. El juego hoy es mudo salvo la bocina.
-3. **#61 + #81** — separar capas de render para que cada uno deje de ver su propio
-   cuerpo y empiece a ver el de los demás. Un juego cooperativo donde nadie ve a
-   nadie durante el viaje entero está desperdiciando su mecánica central.
+1. ~~**#1, #2, #3** — ruedas que giran, ruedas que doblan, volante que se mueve.~~
+   **Hecho.**
+2. ~~**#41** — sonido de motor.~~ **Hecho.**
+3. **#81** — la otra mitad de "que cada uno deje de ver su propio cuerpo y empiece a
+   ver el de los demás" (#61 ya está). Sentados siguen invisibles para todos. Es el
+   siguiente en la cola.
 4. **#24, #25, #26** — que cada trampa se vea hacer lo que hace. Hoy tres de las
    cuatro solo existen como números.
 5. **#60** — oclusión ambiental. Una línea de configuración que hace que todo deje

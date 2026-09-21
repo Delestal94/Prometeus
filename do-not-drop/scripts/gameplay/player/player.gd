@@ -39,10 +39,21 @@ var _seated: bool = false
 var _pitch: float = 0.0
 var _nearby: Array[Node] = []
 var _last_prompt: String = ""
+const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+
+
+func _enter_tree() -> void:
+	# Spawner replicates the name. Resolve authority before children/_ready on every peer.
+	if String(name).begins_with("Player_"):
+		var peer: int = int(String(name).trim_prefix("Player_"))
+		if peer > 0:
+			set_multiplayer_authority(peer)
 
 
 func _ready() -> void:
 	_build_body()
+	RenderLayers.configure_first_person(_camera)
+	RenderLayers.show_viewmodel(_camera, is_local())
 	# Only the player this peer controls owns the view and reads input;
 	# everyone else's body is here to be seen, not driven.
 	if not is_local():
@@ -71,6 +82,8 @@ func _build_body() -> void:
 	capsule.radius = 0.32
 	capsule.height = 1.6
 	mesh.mesh = capsule
+	mesh.name = "BodyVisual"
+	mesh.layers = RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD
 	mesh.material_override = material
 	mesh.position = Vector3(0.0, 0.8, 0.0)
 	add_child(mesh)

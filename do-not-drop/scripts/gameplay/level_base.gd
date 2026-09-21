@@ -64,8 +64,8 @@ func _sync_players(peer_ids: Array) -> void:
 		var player: Node = load("res://scenes/gameplay/player/player.tscn").instantiate()
 		player.name = _player_name(id)
 		player.set(&"position", SPAWN_POINTS[index % SPAWN_POINTS.size()])
-		_world.add_child(player, true)
 		player.set_multiplayer_authority(id)
+		_world.add_child(player, true)
 	for child: Node in _world.get_children():
 		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
 			child.queue_free()

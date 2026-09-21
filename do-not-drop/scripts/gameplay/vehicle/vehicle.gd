@@ -19,6 +19,9 @@ extends VehicleBody3D
 @export var braking_force: float = 55.0
 @export var maximum_steering: float = 0.42
 @export var steering_response: float = 2.0
+## Replicated facts for presentation on frozen client copies.
+var presentation_engine_running: bool = false
+var presentation_braking: bool = false
 
 var speed_kmh: float:
 	get:
@@ -87,6 +90,7 @@ func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
 		return
 	var running: bool = RunManager.is_running
+	presentation_engine_running = running
 	var forward_speed: float = linear_velocity.dot(-global_basis.z)
 	var throttle: float = _throttle if running else 0.0
 	var steer_input: float = _steering_input if running else 0.0
@@ -107,6 +111,7 @@ func _physics_process(delta: float) -> void:
 		engine_force = -throttle * maximum_engine_force * 0.55
 	elif absf(throttle) < 0.01:
 		brake = 0.6
+	presentation_braking = running and brake > 3.0
 
 	_telemetry_time += delta
 	if _telemetry_time >= 0.1:
