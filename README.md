@@ -241,6 +241,9 @@ manejo):
 - `docs/direccion-visual.md` — punto de vista del jugador (FOV, límites de cámara),
   paleta de colores, iluminación, qué se ve y qué no, efectos visuales y pipeline de
   arte para la Fase 6.
+- `docs/especificaciones-visuales.md` — inventario numerado de 100 mejoras concretas
+  de modelado, animación, ambientación, cámara e interacción entre modelos, con
+  prioridad por costo/impacto.
 
 ### Archivado (`docs/historial-exploracion/`)
 Documentos de una etapa de exploración anterior, **superados** por el pivote a
