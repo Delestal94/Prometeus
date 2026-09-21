@@ -9,6 +9,16 @@ const LOST_CARGO_DISTANCE: float = 8.0
 @onready var vehicle: VehicleBody3D = $World/Vehicle
 @onready var route: Node3D = $World/Route
 @onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
+@onready var _world: Node3D = $World
+## Spawn spots are handed out in order, so nobody lands inside anybody else.
+const SPAWN_POINTS: Array[Vector3] = [
+	Vector3(2.2, 1.0, 3.2),
+	Vector3(3.4, 1.0, 3.2),
+	Vector3(2.2, 1.0, 4.4),
+	Vector3(3.4, 1.0, 4.4),
+	Vector3(1.0, 1.0, 3.8),
+]
+var local_player: Node = null
 var packages: Array[Node] = []
 var stopped_seconds: float = 0.0
 var tipped_seconds: float = 0.0
@@ -29,16 +39,57 @@ func _ready() -> void:
 	EventBus.restart_requested.connect(restart_delivery)
 	EventBus.pause_requested.connect(toggle_pause)
 	EventBus.run_ended.connect(_on_run_ended)
+	NetworkManager.roster_changed.connect(_on_roster_changed)
+	# Offline is a session of one, so this same call covers both paths.
+	if NetworkManager.is_host():
+		_sync_players(NetworkManager.peer_ids)
 	# Command line shortcut for smoke checks and development: skips the
 	# on-foot loading entirely, same as the HUD's debug button.
 	if "--autostart" in OS.get_cmdline_user_args():
 		start_debug_delivery.call_deferred()
 
 
+func _on_roster_changed(peer_ids: Array) -> void:
+	if NetworkManager.is_host():
+		_sync_players(peer_ids)
+
+
+func _sync_players(peer_ids: Array) -> void:
+	# Only the host spawns: MultiplayerSpawner replicates the result to
+	# everyone, so clients never invent players of their own.
+	for index: int in range(peer_ids.size()):
+		var id: int = int(peer_ids[index])
+		if _world.has_node(NodePath(_player_name(id))):
+			continue
+		var player: Node = load("res://scenes/gameplay/player/player.tscn").instantiate()
+		player.name = _player_name(id)
+		player.set(&"position", SPAWN_POINTS[index % SPAWN_POINTS.size()])
+		_world.add_child(player, true)
+		player.set_multiplayer_authority(id)
+	for child: Node in _world.get_children():
+		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
+			child.queue_free()
+	_refresh_local_player()
+
+
+func _refresh_local_player() -> void:
+	local_player = _world.get_node_or_null(NodePath(_player_name(NetworkManager.local_id())))
+
+
+func _player_name(id: int) -> String:
+	return "Player_%d" % id
+
+
+func _id_from_name(value: String) -> int:
+	return int(value.trim_prefix("Player_"))
+
+
 func start_debug_delivery() -> void:
 	if RunManager.is_running or not RunManager.results.is_empty():
 		return
-	var player: Node = $World/Player
+	var player: Node = local_player
+	if player == null:
+		return
 	if _loaded_count == 0 and not packages.is_empty():
 		var mount: Node = get_tree().get_first_node_in_group(&"package_mount")
 		player.call(&"pick_up", packages[0])

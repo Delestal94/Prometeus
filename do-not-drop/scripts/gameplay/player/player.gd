@@ -26,14 +26,23 @@ var _last_prompt: String = ""
 
 
 func _ready() -> void:
+	# Only the player this peer controls owns the view and reads input;
+	# everyone else's body is here to be seen, not driven.
+	if not is_local():
+		_camera.current = false
+		return
 	_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_probe.area_entered.connect(_on_probe_entered)
 	_probe.area_exited.connect(_on_probe_exited)
 
 
+func is_local() -> bool:
+	return is_multiplayer_authority()
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if _seated or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if not is_local() or _seated or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		_apply_look(event.relative * MOUSE_SENSITIVITY)
@@ -45,6 +54,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if not is_local():
+		return
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		_publish_prompt("")
 		return

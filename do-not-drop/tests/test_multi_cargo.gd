@@ -34,7 +34,7 @@ func _initialize() -> void:
 			seats.append(node)
 	_expect(seats.size() == 4, "There are four passenger seats to take (got %d)" % seats.size())
 
-	var player: Node = level.get_node(^"World/Player")
+	var player: Node = level.local_player
 	var manager: Node = root.get_node(^"/root/RunManager")
 
 	# Load two different traps, leaving the other two behind on the rack.

@@ -42,6 +42,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_interaction.gd
 <godot> --headless --path do-not-drop --script res://tests/test_loading_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/test_multi_cargo.gd
+<godot> --headless --path do-not-drop --script res://tests/test_network_roster.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
 ```
@@ -53,6 +54,8 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_interaction` — agarrar, dejar en el asiento y subirse a manejar.
 - `test_multi_cargo` — varias trampas a la vez, y que perder una no termine
   la entrega de todos.
+- `test_network_roster` — quién está en la sesión, quién es anfitrión, y que
+  jugar solo siga siendo "una sesión de uno" (sin abrir sockets).
 - `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
   prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
@@ -69,6 +72,23 @@ headless de Godot no captura el mouse. Se abre brevemente y se cierra sola:
 
 Comprueba mouse/stick, límites de giro, centrado, orientación relativa al asiento,
 sacudidas, bloqueo en pausa/menús, movimiento a pie y velocidad de giro a 30/120 FPS.
+
+### Prueba de conexión (manual, dos procesos)
+
+La conectividad real necesita dos procesos y no se puede verificar desde un
+entorno sin permisos de red. Corré el anfitrión en una terminal y el cliente en
+otra:
+
+```
+<godot> --headless --path do-not-drop --script res://tests/net_smoke.gd -- --host
+<godot> --headless --path do-not-drop --script res://tests/net_smoke.gd -- --client
+```
+
+Ambos imprimen `PASS` si se encuentran. **Si falla, lo primero a revisar es el
+firewall de Windows**: la primera vez que Godot abre un puerto suele pedir
+permiso, y si el proceso corre sin ventana el pedido nunca aparece y la conexión
+queda bloqueada en silencio. En esta máquina el puerto se abre correctamente
+pero el cliente no llega, que es exactamente ese síntoma.
 
 Para levantar el juego salteando la fase de carga a pie (útil al iterar sobre el
 manejo):

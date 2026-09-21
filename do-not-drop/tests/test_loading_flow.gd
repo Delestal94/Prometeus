@@ -14,7 +14,7 @@ func _run() -> void:
 	current_scene = level
 	await process_frame
 	var manager: Node = root.get_node("RunManager")
-	var player: Node = level.get_node("World/Player")
+	var player: Node = level.local_player
 	var package: Node = level.get_node("World/Package")
 	var vehicle: Node = level.get_node("World/Vehicle")
 	var seat: Node = vehicle.get_node("CabinInterior/DriverEyePoint/InteractionArea")

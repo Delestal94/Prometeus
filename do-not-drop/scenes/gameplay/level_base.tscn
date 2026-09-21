@@ -55,8 +55,9 @@ position = Vector3(3.1, 0.75, 1.4)
 package_id = &"noisy_01"
 trap_definition = ExtResource("9_noisy")
 
-[node name="Player" parent="World" instance=ExtResource("5_player")]
-position = Vector3(2.2, 1.0, 3.2)
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="World"]
+_spawnable_scenes = PackedStringArray("res://scenes/gameplay/player/player.tscn")
+spawn_path = NodePath("..")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-48, -28, 0)
