@@ -20,6 +20,16 @@ const WOBBLE_AMPLITUDE: float = 0.028
 ## distress roughly one every 0.8s, calm but not fresh roughly one every 4s.
 const CREAK_INTERVAL_MAX: float = 4.0
 const CREAK_INTERVAL_MIN: float = 0.8
+## A one-shot decaying jitter on any hit (item #23), on top of Ruidoso's own
+## continuous agitation wobble -- both read from the same _wobble_nodes.
+const IMPACT_SHAKE_DECAY: float = 5.0
+const IMPACT_SHAKE_PER_DAMAGE: float = 0.05
+## Settle bounce when placed (item #22): a quick squash that overshoots
+## back to normal instead of just appearing locked in place.
+const BOUNCE_DURATION: float = 0.4
+const BOUNCE_AMPLITUDE: float = -0.16
+const BOUNCE_DECAY: float = 9.0
+const BOUNCE_FREQUENCY: float = 16.0
 
 @export var box_mesh_path: NodePath = ^"../Box"
 @export var status_label_path: NodePath = ^"../Status"
@@ -41,6 +51,9 @@ var _chime_player: AudioStreamPlayer3D
 var _groan_player: AudioStreamPlayer3D
 var _creak_player: AudioStreamPlayer3D
 var _creak_countdown: float = 0.0
+var _impact_shake_strength: float = 0.0
+var _growth_scale: float = 1.0
+var _bounce_time: float = -1.0  ## negative: no bounce in progress
 
 
 func _ready() -> void:
@@ -56,12 +69,14 @@ func _ready() -> void:
 	_material.roughness = 0.95
 	_box.material_override = _material
 	_label = get_node(status_label_path) as Label3D
+	# Populated for every trap type, not just Ruidoso -- item #23's impact
+	# shake rides the same nodes regardless of what the package's trap is.
+	for wobble_name: StringName in WOBBLE_NODE_NAMES:
+		var node: Node3D = get_node_or_null(NodePath("../" + String(wobble_name))) as Node3D
+		if node != null:
+			_wobble_nodes[wobble_name] = {"node": node, "base_position": node.position}
 	match _trap_id:
 		&"noisy":
-			for wobble_name: StringName in WOBBLE_NODE_NAMES:
-				var node: Node3D = get_node_or_null(NodePath("../" + String(wobble_name))) as Node3D
-				if node != null:
-					_wobble_nodes[wobble_name] = {"node": node, "base_position": node.position}
 			_groan_player = _make_player(SynthAudio.creature_groan(), -60.0)
 		&"fragile":
 			_chime_player = _make_player(SynthAudio.glass_chime(), -8.0)
@@ -74,6 +89,8 @@ func _ready() -> void:
 		bus.connect("package_state_changed", _on_package_state_changed)
 		bus.connect("package_ruined", _on_package_ruined)
 		bus.connect("package_integrity_changed", _on_integrity_changed)
+		bus.connect("package_damaged", _on_package_damaged)
+		bus.connect("package_placed", _on_package_placed)
 
 
 func _make_player(stream: AudioStreamWAV, volume_db: float) -> AudioStreamPlayer3D:
@@ -111,10 +128,28 @@ func _on_integrity_changed(id: StringName, integrity: float, maximum: float) -> 
 		_apply_growth()
 
 
+## Item #23: any hit visibly rattles the box a little, on its own mesh, not
+## only in the camera shake -- a fragile package taking a hit and a noisy
+## one getting bumped both react, not just whichever trap already had a
+## continuous effect running.
+func _on_package_damaged(id: StringName, damage: float) -> void:
+	if id != _package_id:
+		return
+	_impact_shake_strength = clampf(_impact_shake_strength + damage * IMPACT_SHAKE_PER_DAMAGE, 0.0, 1.0)
+
+
+## Item #22: a quick settle bounce instead of the box appearing locked in
+## place the instant it's set down.
+func _on_package_placed(id: StringName) -> void:
+	if id == _package_id:
+		_bounce_time = 0.0
+
+
 func _process(delta: float) -> void:
+	_apply_jitter(delta)
+	_apply_bounce(delta)
 	match _trap_id:
 		&"noisy":
-			_apply_wobble(delta)
 			_apply_groan()
 		&"growing_weight":
 			_apply_creak(delta)
@@ -123,22 +158,51 @@ func _process(delta: float) -> void:
 ## Peso Creciente: the crate visibly swells and settles lower as its mass
 ## multiplier climbs, instead of only the HUD number changing. Straps stay
 ## their original size on purpose -- them visibly failing to contain a
-## growing box reads as more urgent than if they grew to match it.
+## growing box reads as more urgent than if they grew to match it. Scale is
+## tracked separately from the bounce's own scale pulse (_update_box_scale
+## combines them) so placing a Peso Creciente package mid-grow doesn't have
+## the two fight over Box.scale.
 func _apply_growth() -> void:
-	var scale_factor: float = lerpf(1.0, GROWING_WEIGHT_MAX_SCALE, _distress)
-	_box.scale = Vector3.ONE * scale_factor
+	_growth_scale = lerpf(1.0, GROWING_WEIGHT_MAX_SCALE, _distress)
 	_box.position.y = -GROWING_WEIGHT_SINK * _distress
+	_update_box_scale()
 
 
-## Ruidoso: a small continuous shudder scaled by agitation, on every visible
-## part of the crate. Position-only and purely local (never touches the
-## RigidBody3D's real transform), so it can't desync physics or networking --
-## every client computes its own wobble independently from the same
-## already-replicated integrity value.
-func _apply_wobble(delta: float) -> void:
-	if _distress <= 0.0:
-		# Calmed down (or freshly initialized): snap back to rest instead of
-		# leaving whatever jitter offset was last applied.
+func _update_box_scale() -> void:
+	_box.scale = Vector3.ONE * _growth_scale * _bounce_scale_factor()
+
+
+## Item #22: a quick damped squash-and-settle, roughly a classic spring
+## curve, instead of a hard scale snap. Only touches Box's scale (position
+## and the other nodes are untouched), so it composes cleanly with growth's
+## own scale via _update_box_scale().
+func _apply_bounce(delta: float) -> void:
+	if _bounce_time < 0.0:
+		return
+	_bounce_time += delta
+	if _bounce_time >= BOUNCE_DURATION:
+		_bounce_time = -1.0
+	_update_box_scale()
+
+
+func _bounce_scale_factor() -> float:
+	if _bounce_time < 0.0:
+		return 1.0
+	return 1.0 + BOUNCE_AMPLITUDE * exp(-BOUNCE_DECAY * _bounce_time) * cos(BOUNCE_FREQUENCY * _bounce_time)
+
+
+## Combines Ruidoso's continuous agitation wobble with the universal,
+## decaying impact shake (item #23) -- both move the same nodes, additively,
+## so a Ruidoso box that also just got hit shudders harder for a moment
+## rather than one effect silently overwriting the other. Position-only and
+## purely local (never touches the RigidBody3D's real transform), so it
+## can't desync physics or networking -- every client computes this
+## independently from the same already-replicated integrity/damage events.
+func _apply_jitter(delta: float) -> void:
+	_impact_shake_strength = maxf(0.0, _impact_shake_strength - IMPACT_SHAKE_DECAY * delta)
+	var wobble_amount: float = _distress if _trap_id == &"noisy" else 0.0
+	var total: float = clampf(wobble_amount + _impact_shake_strength, 0.0, 1.5)
+	if total <= 0.0:
 		for entry: Dictionary in _wobble_nodes.values():
 			(entry["node"] as Node3D).position = entry["base_position"]
 		return
@@ -150,7 +214,7 @@ func _apply_wobble(delta: float) -> void:
 			sin(_wobble_seed * 1.7 + base.x * 10.0),
 			sin(_wobble_seed * 2.3 + base.y * 10.0),
 			sin(_wobble_seed * 1.3 + base.z * 10.0),
-		) * WOBBLE_AMPLITUDE * _distress
+		) * WOBBLE_AMPLITUDE * total
 		node.position = base + jitter
 
 

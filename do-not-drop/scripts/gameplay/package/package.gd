@@ -178,6 +178,7 @@ func place_at(mount: Node3D) -> void:
 	is_loaded = true
 	# Stays frozen until level_base.gd starts the run -- see docs/plan-desarrollo.md.
 	freeze = true
+	_emit_event(&"package_placed", [package_id])
 
 
 func _is_run_active() -> bool:
