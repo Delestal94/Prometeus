@@ -371,7 +371,8 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	overlay_body.text = ("Llegaron %d de %d paquetes, %d intactos." % [total - ruined, total, intact]) if success else results["reason"]
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
-	overlay_stats.text = "%d PUNTOS     /     %.1f s\n\nCarga: %d pts   +   Rapidez: %d pts%s" % [score, results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], chaos_line]
+	var best_line: String = "\n\n¡NUEVO RÉCORD!" if bool(results.get("is_new_best", false)) else "\n\nRécord: %d pts" % int(results.get("best_score", 0))
+	overlay_stats.text = "%d PUNTOS     /     %.1f s\n\nCarga: %d pts   +   Rapidez: %d pts%s%s" % [score, results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], chaos_line, best_line]
 	action_button.text = "Volver a intentar"
 	second_button.hide()
 	action_button.grab_focus()

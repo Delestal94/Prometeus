@@ -81,7 +81,7 @@ antes que el pase de arte).
 | Autoload | Responsabilidad | Estado |
 |---|---|---|
 | `EventBus` | Señales globales desacopladas (ver sección 5). Único punto de "broadcast" del juego. | Registrado |
-| `RunManager` | Estado de la partida en curso: ruta actual, paquetes activos, puntaje, tiempo. Se resetea entre partidas. | Registrado |
+| `RunManager` | Estado de la partida en curso (ruta actual, paquetes activos, puntaje, tiempo — se resetea entre partidas) **y** el leaderboard local persistente (top 10, `user://leaderboard.json`, sobrevive entre partidas y reinicios de la app). | Registrado |
 | `NetworkManager` | Setup de host/cliente (Steam y ENet), conexión de jugadores, mapeo de autoridad. | Registrado |
 | `GameManager` | Estado de alto nivel del flujo del juego (menú → lobby → en partida → resultados). Máquina de estados. | **No existe aún** — el flujo de menú/nivel hoy lo maneja `main_menu.gd` + `get_tree().change_scene_to_file()`, sin autoload propio. |
 | `UnlockManager` | Progreso meta del jugador (trampas/vehículos/cosméticos desbloqueados) + guardado/carga. | **No existe aún** — no hay progresión persistente todavía (Fase 5). |

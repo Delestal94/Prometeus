@@ -134,6 +134,22 @@ exigente que la versión solo.
 - Menú de partida, lobby multiplayer, pantalla de resultados con puntaje.
 - Leaderboard simple (al menos local; global si el scope lo permite).
 
+### Estado (2026-09-21)
+- [x] Menú de partida (jugar solo / crear sala / unirse por IP) — `main_menu.gd`.
+- [x] Pantalla de resultados con puntaje — overlay de `prototype_hud.gd`, ya mostraba
+      el desglose de puntaje; ahora también muestra "¡NUEVO RÉCORD!" o el récord
+      actual.
+- [x] Leaderboard local — `RunManager` guarda el top 10 de puntajes en
+      `user://leaderboard.json`, persiste entre sesiones, cubierto por
+      `tests/test_leaderboard.gd`. Global queda fuera de alcance por ahora (no hay
+      backend).
+- [ ] Sistema de desbloqueos (`UnlockManager`) — no existe todavía, no hay contenido
+      que desbloquear más allá de las 4 trampas, que ya están todas disponibles desde
+      el arranque.
+- [ ] Lobby multiplayer con pantalla de espera — no hace falta con el diseño actual
+      (el host entra directo al nivel y los demás se suman dinámicamente, ver
+      `main_menu.gd`), así que esto puede no ser necesario en absoluto.
+
 ## Fase 6 — Pase de arte (estilo PEAK)
 > Deliberadamente tarde: todo lo anterior se probó y ajustó con arte placeholder para
 > no gastar tiempo de arte en mecánicas que todavía podían cambiar.

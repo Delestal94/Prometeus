@@ -10,6 +10,7 @@ const PAR_SECONDS: float = 75.0
 const POINTS_INTACT: int = 100
 const POINTS_AT_RISK: int = 50
 const CHAOS_MULTIPLIER: float = 1.2
+const MAX_LEADERBOARD_ENTRIES: int = 10
 
 var is_running: bool = false
 var elapsed_seconds: float = 0.0
@@ -20,11 +21,19 @@ var cargo: Dictionary = {}
 ## score rewards it: surviving a shared scare is the story people retell.
 var had_simultaneous_risk: bool = false
 
+## Overridable so tests don't read/write the real save file on disk --
+## user:// is a real per-project directory, not an in-memory sandbox.
+var save_path: String = "user://leaderboard.json"
+## [{"score": int, "date": String}, ...] sorted best-first, capped at
+## MAX_LEADERBOARD_ENTRIES. Local-only for now (no accounts/backend yet).
+var leaderboard: Array = []
+
 
 func _ready() -> void:
 	EventBus.package_integrity_changed.connect(_on_integrity_changed)
 	EventBus.package_state_changed.connect(_on_state_changed)
 	EventBus.package_ruined.connect(_on_package_ruined)
+	_load_leaderboard()
 
 
 func _physics_process(delta: float) -> void:
@@ -70,6 +79,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	var time_bonus: int = roundi(50.0 * clampf(1.0 - elapsed_seconds / PAR_SECONDS, 0.0, 1.0)) if successful else 0
 	var multiplier: float = CHAOS_MULTIPLIER if (successful and had_simultaneous_risk) else 1.0
 	var score: int = roundi((cargo_points + time_bonus) * multiplier)
+	var is_new_best: bool = _record_score(score)
 	results = {
 		"delivered": successful,
 		"reason": reason,
@@ -81,9 +91,47 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"time_bonus": time_bonus,
 		"chaos_multiplier": multiplier,
 		"score": score,
+		"is_new_best": is_new_best,
+		"best_score": best_score(),
 	}
 	print("[Run] ", results)
 	EventBus.run_ended.emit(score, results.duplicate(true))
+
+
+## Local top-N high scores, kept across runs and across app restarts. Every
+## finished run gets recorded (even a 0-point failure) -- sorting keeps the
+## list meaningful on its own, no need to filter before inserting.
+func best_score() -> int:
+	return int(leaderboard[0]["score"]) if not leaderboard.is_empty() else 0
+
+
+func _record_score(score: int) -> bool:
+	var is_new_best: bool = score > best_score()
+	leaderboard.append({"score": score, "date": Time.get_date_string_from_system()})
+	leaderboard.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["score"]) > int(b["score"]))
+	if leaderboard.size() > MAX_LEADERBOARD_ENTRIES:
+		leaderboard.resize(MAX_LEADERBOARD_ENTRIES)
+	_save_leaderboard()
+	return is_new_best
+
+
+func _load_leaderboard() -> void:
+	leaderboard = []
+	if not FileAccess.file_exists(save_path):
+		return
+	var file: FileAccess = FileAccess.open(save_path, FileAccess.READ)
+	if file == null:
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if parsed is Array:
+		leaderboard = parsed
+
+
+func _save_leaderboard() -> void:
+	var file: FileAccess = FileAccess.open(save_path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify(leaderboard))
 
 
 ## Worst state across the cargo, for readouts that only have room for one.

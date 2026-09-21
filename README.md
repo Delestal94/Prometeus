@@ -60,6 +60,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_hint_relay.gd
 <godot> --headless --path do-not-drop --script res://tests/test_main_menu.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_streaming.gd
+<godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -87,6 +88,10 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   quedaron muy atrás y nunca repita el mismo tipo dos veces seguidas. Es
   aparte de la ruta curada a mano (`route.gd`), que sigue siendo la que se
   juega hoy.
+- `test_leaderboard` — el top de puntajes local de `RunManager`: ordena,
+  recorta a 10 entradas, marca correctamente un nuevo récord y sobrevive a
+  guardar/cargar de disco (usa un archivo de prueba aparte, no el guardado
+  real).
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.
