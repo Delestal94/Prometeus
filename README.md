@@ -11,14 +11,35 @@ jugadores: 1 conduce, hasta 4 llevan un paquete con una "trampa" cada uno (ver
 ## Motor
 Godot 4.x — el proyecto del juego vive en `do-not-drop/`.
 
+## Probar el prototipo
+
+Abrí `do-not-drop/project.godot` en Godot y ejecutá con **F5**. Elegí
+**Preparar entrega**, caminá con WASD y mirá con el mouse. Al acercarte a un
+objeto aparece la acción disponible: **E** agarra el paquete, lo deja en su
+lugar dentro de la furgoneta y permite tomar el volante una vez cargado.
+
+La entrega empieza al sentarte con la carga a bordo. Usá W/S para acelerar,
+frenar y retroceder, A/D para girar y Espacio como freno de mano. Detenete un
+segundo en la zona de entrega. Esc pausa también durante la preparación;
+R reinicia. Por ahora el paquete queda asignado al soporte al cargarlo y
+no se puede volver a agarrar, ni bajar del asiento durante la entrega.
+
+Podés mirar alrededor desde el asiento con el mouse; **C** vuelve a centrar la
+vista hacia el frente del vehículo. Con gamepad, el **stick izquierdo** camina
+o gira la camioneta, el **stick derecho** mira, su **clic** centra la vista,
+los **gatillos** aceleran/frenan y el **botón sur** interactúa a pie o activa
+el freno de mano al conducir. Mirar desde el asiento no cambia la dirección
+del vehículo. La mirada se conserva después de las sacudidas de los impactos.
+
 ## Tests
 
-Todos corren headless, sin abrir el editor. Reemplazá `<godot>` por la ruta a tu
+Las pruebas de lógica corren headless, sin abrir el editor. Reemplazá `<godot>` por la ruta a tu
 ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 
 ```
 <godot> --headless --path do-not-drop --script res://tests/test_fragile.gd
 <godot> --headless --path do-not-drop --script res://tests/test_interaction.gd
+<godot> --headless --path do-not-drop --script res://tests/test_loading_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
 ```
@@ -27,10 +48,22 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 
 - `test_fragile` — umbrales de daño, estados e independencia entre paquetes.
 - `test_interaction` — agarrar, dejar en el asiento y subirse a manejar.
+- `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
+  prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.
 - `route_smoke_check` — colisiones de la ruta y detección de la zona de entrega.
+
+La prueba de controles de cámara requiere una ventana real: el controlador
+headless de Godot no captura el mouse. Se abre brevemente y se cierra sola:
+
+```
+<godot> --path do-not-drop --resolution 320x180 --script res://tests/test_look_controls.gd
+```
+
+Comprueba mouse/stick, límites de giro, centrado, orientación relativa al asiento,
+sacudidas, bloqueo en pausa/menús, movimiento a pie y velocidad de giro a 30/120 FPS.
 
 Para levantar el juego salteando la fase de carga a pie (útil al iterar sobre el
 manejo):

@@ -15,6 +15,18 @@
   paquetes se sienta bien desde el principio, más fácil de ajustar ahora que después).
 
 ## Fase 1 — Loop central en single-player, sin arte ni multiplayer
+
+Estado de implementación: existe un prototipo con conducción en primera persona,
+preparación a pie (agarrar → cargar → abordar), ruta, daño del paquete y resultados.
+La preparación incluye indicaciones contextuales, pausa y controles para evitar
+abordar antes de cargar. El atajo `--autostart` realiza la carga y el abordaje.
+Las pruebas automatizadas están listadas en el README; la validación subjetiva
+del manejo y la diversión sigue pendiente de playtesting. No se considera cerrada
+esta fase ni se adelanta por eso el multiplayer.
+La cámara de asiento permite mirar con mouse/stick derecho y recentrar con
+C/clic del stick derecho, conservando la mirada después de impactos. A pie,
+el gamepad usa stick izquierdo para caminar y derecho para mirar.
+
 Objetivo: **responder la pregunta más importante del proyecto** — ¿es divertido manejar
 mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás importa.
 

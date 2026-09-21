@@ -7,6 +7,7 @@ const MUTED: Color = Color("acc1bd")
 const MINT: Color = Color("83e2ba")
 const YELLOW: Color = Color("f4c562")
 const RED: Color = Color("f47e6d")
+const DRIVE_HINT: String = "W/S acelerar y frenar · A/D girar · Mouse mirar · C centrar vista"
 
 var root: Control
 var dashboard: VBoxContainer
@@ -28,6 +29,7 @@ var second_button: Button
 var overlay_mode: String = "start"
 var damage_flash: float = 0.0
 var in_delivery: bool = false
+var interaction_label: Label
 
 
 func _ready() -> void:
@@ -40,6 +42,7 @@ func _ready() -> void:
 	EventBus.delivery_status_changed.connect(_on_delivery)
 	EventBus.run_started.connect(_on_started)
 	EventBus.run_ended.connect(_on_ended)
+	EventBus.interaction_prompt_changed.connect(_on_interaction_prompt)
 	_show_start()
 
 
@@ -88,8 +91,18 @@ func _build_ui() -> void:
 	section_label = _label(delivery, "01  /  SALIDA", 13, MINT)
 	distance_label = _label(delivery, "220 m hasta la entrega", 24, PAPER)
 	route_bar = _bar(delivery, MINT)
-	hint_label = _label(delivery, "W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano", 14, MUTED)
-	_label(dashboard, "R  reiniciar entrega     /     ESC  pausa     /     Prototipo local · Fase 1", 13, PAPER)
+	hint_label = _label(delivery, DRIVE_HINT, 14, MUTED)
+	_label(dashboard, "Espacio  freno de mano   /   R  reiniciar   /   ESC  pausa   /   Gamepad: stick derecho para mirar", 13, PAPER)
+	interaction_label = _label(root, "", 22, PAPER)
+	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	interaction_label.offset_left = -260
+	interaction_label.offset_right = 260
+	interaction_label.offset_top = 45
+	interaction_label.offset_bottom = 85
+	interaction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	interaction_label.add_theme_color_override("font_outline_color", INK)
+	interaction_label.add_theme_constant_override("outline_size", 8)
+	interaction_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	overlay = ColorRect.new()
 	root.add_child(overlay)
@@ -184,13 +197,14 @@ func _button(parent: Node, value: String, primary: bool) -> Button:
 
 
 func _show_start() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	overlay_mode = "start"
 	overlay.visible = true
 	dashboard.visible = false
 	overlay_body.text = "Cargá el paquete y subite a manejar.\nLa entrega arranca sola apenas estés al volante con la carga a bordo."
-	overlay_stats.text = "Caminá hasta el paquete y presioná E para agarrarlo.\nLlevalo hasta la furgoneta y presioná E de nuevo para dejarlo en su lugar.\nSubite al asiento del conductor y presioná E para tomar el volante.\n\nWASD caminar     Mouse mirar     E interactuar\nR reiniciar     Esc pausa\n\n¿Probando rápido? El botón de abajo salta directo a manejar."
+	overlay_stats.text = "Caminá hasta el paquete y presioná E para agarrarlo.\nLlevalo hasta la furgoneta y presioná E para dejarlo en su lugar.\nAcercate al asiento del conductor y presioná E para tomar el volante.\n\nWASD caminar     Mouse mirar     E interactuar\nR reiniciar     Esc pausa\n\nSeguí la indicación que aparece al acercarte a cada objeto."
 	second_button.visible = false
-	action_button.text = "Saltar (debug)"
+	action_button.text = "Preparar entrega"
 	action_button.grab_focus()
 
 
@@ -199,14 +213,16 @@ func _process(delta: float) -> void:
 	if damage_flash > 0.0:
 		damage_flash -= delta
 		if damage_flash <= 0.0 and not in_delivery:
-			hint_label.text = "W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano"
+			hint_label.text = DRIVE_HINT
 	if overlay_mode == "pause" and not get_tree().paused:
 		overlay.hide()
-		overlay_mode = "run"
+		overlay_mode = "run" if RunManager.is_running else "preparation"
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_pause"):
+		if overlay_mode == "start" or overlay_mode == "results":
+			return
 		EventBus.pause_requested.emit()
 		if get_tree().paused:
 			overlay_mode = "pause"
@@ -225,9 +241,21 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _primary_action() -> void:
 	match overlay_mode:
-		"start": EventBus.start_requested.emit()
+		"start":
+			overlay.hide()
+			overlay_mode = "preparation"
+			dashboard.show()
+			action_button.release_focus()
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			section_label.text = "PREPARACIÓN"
+			distance_label.text = "Cargá el paquete y tomá el volante"
+			hint_label.text = "WASD / stick izquierdo caminar · Mouse / stick derecho mirar · E / A interactuar"
 		"pause": EventBus.pause_requested.emit()
 		"results": EventBus.restart_requested.emit()
+
+
+func _on_interaction_prompt(prompt: String) -> void:
+	interaction_label.text = "[ E / A ]  " + prompt if not prompt.is_empty() else ""
 
 
 func _on_started(_route: StringName, _players: Array) -> void:
@@ -235,6 +263,8 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	overlay_mode = "run"
 	dashboard.show()
 	action_button.release_focus()
+	interaction_label.text = ""
+	hint_label.text = DRIVE_HINT
 	_on_integrity(&"fragile_01", RunManager.package_integrity, RunManager.package_maximum)
 
 

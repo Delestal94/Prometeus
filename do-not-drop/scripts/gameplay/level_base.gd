@@ -22,14 +22,26 @@ func _ready() -> void:
 	package.freeze = true
 	_driver_seat.interacted.connect(_on_driver_seated)
 	_package_mount.interacted.connect(_on_package_loaded)
-	EventBus.start_requested.connect(start_delivery)
+	EventBus.start_requested.connect(start_debug_delivery)
 	EventBus.restart_requested.connect(restart_delivery)
 	EventBus.pause_requested.connect(toggle_pause)
 	EventBus.run_ended.connect(_on_run_ended)
 	# Command line shortcut for smoke checks and development: skips the
 	# on-foot loading entirely, same as the HUD's debug button.
 	if "--autostart" in OS.get_cmdline_user_args():
-		start_delivery.call_deferred()
+		start_debug_delivery.call_deferred()
+
+
+func start_debug_delivery() -> void:
+	if RunManager.is_running or not RunManager.results.is_empty():
+		return
+	var player: Node = $World/Player
+	if not _package_loaded:
+		player.pick_up(package)
+		_package_mount.interact(player)
+	if not _driver_seated:
+		_driver_seat.interact(player)
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _on_driver_seated(_player: Node) -> void:
@@ -48,7 +60,7 @@ func _maybe_start() -> void:
 
 
 func start_delivery() -> void:
-	if RunManager.is_running or not RunManager.results.is_empty():
+	if RunManager.is_running or not RunManager.results.is_empty() or not (_driver_seated and _package_loaded):
 		return
 	vehicle.freeze = false
 	package.freeze = false
@@ -62,7 +74,7 @@ func restart_delivery() -> void:
 
 
 func toggle_pause() -> void:
-	if RunManager.is_running:
+	if RunManager.results.is_empty():
 		get_tree().paused = not get_tree().paused
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if get_tree().paused else Input.MOUSE_MODE_CAPTURED
 
@@ -93,6 +105,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Defer rigid-body changes: failure can originate in physics integration.
 	vehicle.set_deferred("freeze", true)
 	package.set_deferred("freeze", true)

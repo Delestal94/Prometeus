@@ -6,6 +6,7 @@ extends "res://scripts/gameplay/interaction/interactable.gd"
 @export var role: StringName = &"driver"  ## "driver" or "passenger"
 @export var seat_camera_path: NodePath
 @export var vehicle_path: NodePath
+@export var required_mount_path: NodePath
 
 var occupant: Node = null
 
@@ -16,8 +17,17 @@ func get_prompt() -> String:
 	return "Subirse a manejar" if role == &"driver" else "Sentarse"
 
 
+func can_interact(player: Node) -> bool:
+	if occupant != null or player.get(&"carried_package") != null:
+		return false
+	if not required_mount_path.is_empty():
+		var mount: Node = get_node_or_null(required_mount_path)
+		return mount != null and is_instance_valid(mount.get(&"occupied_by"))
+	return true
+
+
 func interact(player: Node) -> void:
-	if occupant != null:
+	if not can_interact(player):
 		return
 	occupant = player
 	var camera: Node = get_node_or_null(seat_camera_path)

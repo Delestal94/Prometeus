@@ -14,3 +14,4 @@ signal delivery_status_changed(in_zone: bool, stopped_seconds: float)
 signal start_requested
 signal restart_requested
 signal pause_requested
+signal interaction_prompt_changed(prompt: String)

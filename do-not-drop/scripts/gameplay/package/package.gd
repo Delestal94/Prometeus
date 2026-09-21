@@ -9,6 +9,7 @@ extends RigidBody3D
 
 var trap_behavior: Resource
 var is_held: bool = false
+var is_loaded: bool = false
 var integrity: float:
 	get:
 		return float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
@@ -92,6 +93,7 @@ func set_held(held: bool) -> void:
 func place_at(mount: Node3D) -> void:
 	global_transform = mount.global_transform
 	set_held(false)
+	is_loaded = true
 	# Stays frozen until level_base.gd starts the run -- see docs/plan-desarrollo.md.
 	freeze = true
 

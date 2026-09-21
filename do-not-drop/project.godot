@@ -80,6 +80,35 @@ interact={
 ]
 }
 
+look_left={
+"deadzone": 0.2,
+"events": [Object(InputEventJoypadMotion,"axis":2,"axis_value":-1.0)]
+}
+walk_forward={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":87), Object(InputEventJoypadMotion,"axis":1,"axis_value":-1.0)]
+}
+walk_backward={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":83), Object(InputEventJoypadMotion,"axis":1,"axis_value":1.0)]
+}
+look_right={
+"deadzone": 0.2,
+"events": [Object(InputEventJoypadMotion,"axis":2,"axis_value":1.0)]
+}
+look_up={
+"deadzone": 0.2,
+"events": [Object(InputEventJoypadMotion,"axis":3,"axis_value":-1.0)]
+}
+look_down={
+"deadzone": 0.2,
+"events": [Object(InputEventJoypadMotion,"axis":3,"axis_value":1.0)]
+}
+look_center={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":67), Object(InputEventJoypadButton,"button_index":8)]
+}
+
 [layer_names]
 
 3d_physics/layer_1="environment"

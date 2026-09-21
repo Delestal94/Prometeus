@@ -262,6 +262,7 @@ script = ExtResource("4_seat")
 role = &"driver"
 seat_camera_path = NodePath("../FirstPersonCamera")
 vehicle_path = NodePath("../../..")
+required_mount_path = NodePath("../../../CargoBay/LeftSeat1PackageMount/InteractionArea")
 prompt = "Subirse a manejar"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CabinInterior/DriverEyePoint/InteractionArea"]

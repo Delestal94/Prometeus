@@ -20,5 +20,9 @@ func get_prompt() -> String:
 	return prompt
 
 
+func can_interact(_player: Node) -> bool:
+	return not get_prompt().is_empty()
+
+
 func interact(player: Node) -> void:
 	interacted.emit(player)
