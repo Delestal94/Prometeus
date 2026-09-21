@@ -138,10 +138,10 @@
 |---|---|---|
 | 74 | Modelar/colocar 3-4 variantes de auto estacionado como props de banquina (placeholder hasta tener arte final). | B |
 | 75 | Reglas de colocación: nunca bloquear el carril completo, variar el lado de la ruta. | A |
-| 76 | Decidir si vale la pena tráfico en movimiento o si es demasiado para el alcance actual — documentar la decisión, no asumir que hay que construirlo. | A |
-| 77 | Si se decide sumar tráfico en movimiento: diseño mínimo de IA (waypoints simples, sin pathfinding complejo). | B |
-| 78 | Capa de colisión para vehículos estacionados/tráfico, coherente con `docs/convenciones-godot.md`. | A |
-| 79 | Playtesting: ¿el tráfico agrega tensión divertida o es solo un obstáculo molesto? Ajustar según el resultado. | A |
+| 76 | ~~Decidir si vale la pena tráfico en movimiento o si es demasiado para el alcance actual.~~ **[x] Decidido: no por ahora.** Tráfico en movimiento suma IA de waypoints, una capa de colisión dinámica nueva, y un playtesting propio de "tensión divertida vs. molesta" (#79) — alcance real para un prototipo solo con asistencia de IA que todavía no tiene ni autos estacionados construidos (#74, bloqueado por arte) ni un segundo vehículo (#85-91). Los vehículos estacionados como props de banquina estática (#74/#75/#78) ya cubren la sensación de "ruta habitada" sin ese costo. Revisar esta decisión recién si el modo endless necesita más variedad después de tener contenido curado real. | A |
+| 77 | Diseño mínimo de IA para tráfico en movimiento (waypoints simples, sin pathfinding complejo) — **no construir todavía**, ver #76. Dejar esta fila como semilla de diseño si la decisión cambia más adelante. | B |
+| 78 | Capa de colisión para vehículos estacionados/tráfico, coherente con `docs/convenciones-godot.md`. Aplica igual a los props estáticos de #74 aunque el tráfico en movimiento (#76) esté deferido. | A |
+| 79 | Playtesting: ¿el tráfico agrega tensión divertida o es solo un obstáculo molesto? **No aplica hasta que #76 se reconsidere** — no hay tráfico en movimiento que probar. | A |
 
 ## Audio: buses y mezcla (80-84)
 
@@ -159,12 +159,12 @@
 |---|---|---|
 | 85 | Diseñar un segundo vehículo (manejo distinto: más lento y estable, o más rápido y nervioso) como contenido de desbloqueo — coordinar con el sistema de desbloqueos de Slatex. | B |
 | 86 | Definir sus parámetros de física sin romper el balance ya afinado del vehículo actual. | A |
-| 87 | Adaptar `VehiclePresentation` para que sea reutilizable entre vehículos, no hardcodeada a los nombres de nodo del actual. | A |
+| 87 | ~~Adaptar `VehiclePresentation` para que sea reutilizable entre vehículos, no hardcodeada a los nombres de nodo del actual.~~ **[x] Hecho** — reemplazadas las rutas fijas (`"CabinInterior/SteeringWheel"`, `"BodyVisuals/" + side + "Headlight"`, `"CargoBay/" + side + "TailLight"`) por búsquedas por nombre/patrón (`find_child`/`find_children`) en cualquier parte del árbol. Convención documentada en `docs/agregar-vehiculo.md` (#92). | A |
 | 88 | Selección de vehículo en el menú, una vez exista más de uno — coordinar con Slatex si toca `main_menu.gd`. | B |
 | 89 | Librea/calcomanía simple como personalización visual (dirección ya fijada en `docs/direccion-visual.md` §7). | B |
 | 90 | Decidir si las libreas son cosméticos desbloqueables (coordinar con Slatex) o variantes de color fijas. | A |
-| 91 | Probar que el segundo vehículo respete todo lo ya construido (ruedas, sacudida por asiento, indicador de asiento ocupado) sin reimplementar nada. | A |
-| 92 | Documentar "cómo agregar un vehículo nuevo" para no redescubrirlo cada vez. | A |
+| 91 | Probar que el segundo vehículo respete todo lo ya construido (ruedas, sacudida por asiento, indicador de asiento ocupado) sin reimplementar nada. **Bloqueado, no pendiente por diseño**: no hay segundo vehículo todavía (#85 es arte/diseño, prioridad B) — nada que probar hasta que exista. | A |
+| 92 | ~~Documentar "cómo agregar un vehículo nuevo" para no redescubrirlo cada vez.~~ **[x] Hecho** — `docs/agregar-vehiculo.md`. | A |
 
 ## Optimización / tooling de mundo (93-96)
 

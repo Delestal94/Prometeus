@@ -325,6 +325,9 @@ manejo):
 - `docs/tareas-nacho.md` / `docs/tareas-slatex.md` — 100 tareas cada una, repartidas
   por dominio (vehículo/ruta/ambientación vs. jugador/paquetes/interacción/UI/
   progresión) para minimizar conflictos al trabajar en paralelo.
+- `docs/agregar-vehiculo.md` — convención que `VehiclePresentation` espera de
+  cualquier vehículo (nombres de nodo, no rutas fijas) para sumar uno nuevo sin
+  tocar ese script.
 
 ### Archivado (`docs/historial-exploracion/`)
 Documentos de una etapa de exploración anterior, **superados** por el pivote a

@@ -33,9 +33,15 @@ extends Node3D
 @export var dust_color: Color = Color("9c8060")
 @export var dust_min_speed_kmh: float = 6.0
 
+## Reusable across vehicles (docs/tareas-nacho.md #87): everything this
+## script needs from its parent is found by node name/pattern anywhere under
+## it, not by a fixed path like "CabinInterior/SteeringWheel" -- a second
+## vehicle only needs to name its own nodes "SteeringWheel", "BodyVisuals",
+## and any number of "*Headlight"/"*TailLight" meshes; it doesn't need the
+## same folder structure as vehicle.tscn at all.
 @onready var vehicle: VehicleBody3D = get_parent()
-@onready var steering_wheel: MeshInstance3D = vehicle.get_node("CabinInterior/SteeringWheel")
-@onready var body_visuals: Node3D = vehicle.get_node("BodyVisuals")
+@onready var steering_wheel: MeshInstance3D = vehicle.find_child("SteeringWheel", true, false)
+@onready var body_visuals: Node3D = vehicle.find_child("BodyVisuals", true, false)
 var headlights: Array[SpotLight3D] = []
 var engine_player: AudioStreamPlayer3D
 var impact_player: AudioStreamPlayer3D
@@ -75,20 +81,21 @@ func _ready() -> void:
 	_steering_rest = steering_wheel.basis
 	_build_wheel_details()
 	_build_steering_details()
-	for side: String in ["Left", "Right"]:
-		var front: MeshInstance3D = vehicle.get_node("BodyVisuals/" + side + "Headlight")
-		_front_materials.append(_unique_material(front))
+	for front: Node in vehicle.find_children("*Headlight", "MeshInstance3D", true, false):
+		var front_mesh: MeshInstance3D = front
+		_front_materials.append(_unique_material(front_mesh))
 		var beam := SpotLight3D.new()
-		beam.name = side + "HeadlightBeam"
-		beam.position = front.position + Vector3(0.0, 0.0, -0.07)
+		beam.name = front_mesh.name + "Beam"
+		beam.position = front_mesh.position + Vector3(0.0, 0.0, -0.07)
 		beam.light_color = Color("ffe9b0")
 		beam.spot_range = 24.0
 		beam.spot_angle = 32.0
 		beam.spot_attenuation = 1.2
 		beam.shadow_enabled = false
-		front.get_parent().add_child(beam)
+		front_mesh.get_parent().add_child(beam)
 		headlights.append(beam)
-		_rear_materials.append(_unique_material(vehicle.get_node("CargoBay/" + side + "TailLight")))
+	for rear: Node in vehicle.find_children("*TailLight", "MeshInstance3D", true, false):
+		_rear_materials.append(_unique_material(rear))
 	engine_player = AudioStreamPlayer3D.new()
 	engine_player.name = "EngineAudio"
 	engine_player.position = Vector3(0.0, 0.0, -1.4)
