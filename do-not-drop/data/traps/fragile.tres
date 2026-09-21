@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="TrapDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/traps/trap_definition.gd" id="1_definition"]
+[ext_resource type="Script" path="res://scripts/gameplay/traps/fragile_trap_behavior.gd" id="2_behavior"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"fragile"
+display_name = "Frágil"
+behavior_script = ExtResource("2_behavior")
+difficulty = 1
+params = {
+"integrity_max": 100.0,
+"impact_damage_light": 10.0,
+"impact_damage_heavy": 35.0,
+"impact_threshold_light": 3.0,
+"impact_threshold_heavy": 7.0,
+"at_risk_at": 40.0,
+"ruined_at": 0.0
+}

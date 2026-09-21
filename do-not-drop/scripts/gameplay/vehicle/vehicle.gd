@@ -1,0 +1,76 @@
+extends VehicleBody3D
+## A deliberately forgiving first delivery van, with physical, loose cargo.
+## Visual front is local -Z; VehicleBody3D's native engine direction is +Z.
+
+@export var controls_enabled: bool = true
+@export var maximum_engine_force: float = 1700.0
+@export var maximum_speed_kmh: float = 72.0
+@export var reverse_speed_kmh: float = 18.0
+@export var braking_force: float = 55.0
+@export var maximum_steering: float = 0.42
+@export var steering_response: float = 2.0
+
+var speed_kmh: float:
+	get:
+		return linear_velocity.length() * 3.6
+
+var _throttle: float = 0.0
+var _steering_input: float = 0.0
+var _handbrake: bool = false
+var _previous_velocity: Vector3 = Vector3.ZERO
+var _impact_cooldown: float = 0.0
+var _telemetry_time: float = 0.0
+var _settling_time: float = 1.0
+
+@onready var _package_spawn: Marker3D = $CargoBay/PackageSpawn
+
+
+func set_controls(throttle: float, steering_input: float, handbrake: bool) -> void:
+	_throttle = clampf(throttle, -1.0, 1.0)
+	_steering_input = clampf(steering_input, -1.0, 1.0)
+	_handbrake = handbrake
+	if absf(_throttle) > 0.01 or absf(_steering_input) > 0.01:
+		sleeping = false
+
+
+func get_cargo_spawn_transform() -> Transform3D:
+	return _package_spawn.global_transform
+
+
+func _physics_process(delta: float) -> void:
+	var running: bool = RunManager.is_running
+	var forward_speed: float = linear_velocity.dot(-global_basis.z)
+	var throttle: float = _throttle if running else 0.0
+	var steer_input: float = _steering_input if running else 0.0
+	var steering_scale: float = lerpf(1.0, 0.48, clampf(speed_kmh / maximum_speed_kmh, 0.0, 1.0))
+	steering = move_toward(steering, -steer_input * maximum_steering * steering_scale, steering_response * delta)
+	engine_force = 0.0
+	brake = 0.0
+
+	if not running or _handbrake:
+		brake = braking_force
+	elif throttle < -0.01 and forward_speed > 0.7:
+		brake = braking_force * absf(throttle)
+	elif throttle > 0.01 and forward_speed < -0.7:
+		brake = braking_force * throttle
+	elif throttle > 0.01 and forward_speed * 3.6 < maximum_speed_kmh:
+		engine_force = -throttle * maximum_engine_force
+	elif throttle < -0.01 and forward_speed * 3.6 > -reverse_speed_kmh:
+		engine_force = -throttle * maximum_engine_force * 0.55
+	elif absf(throttle) < 0.01:
+		brake = 0.6
+
+	_telemetry_time += delta
+	if _telemetry_time >= 0.1:
+		_telemetry_time = 0.0
+		EventBus.vehicle_telemetry.emit(speed_kmh)
+
+	# Velocity discontinuities give the package system a tunable shake signal.
+	# Ignore the initial settling fall and continuous gravity while airborne.
+	_settling_time = maxf(0.0, _settling_time - delta)
+	_impact_cooldown = maxf(0.0, _impact_cooldown - delta)
+	var velocity_change: float = (linear_velocity - _previous_velocity).length()
+	if running and _settling_time <= 0.0 and _impact_cooldown <= 0.0 and velocity_change >= 3.0:
+		EventBus.vehicle_impact.emit(velocity_change, global_position)
+		_impact_cooldown = 0.3
+	_previous_velocity = linear_velocity

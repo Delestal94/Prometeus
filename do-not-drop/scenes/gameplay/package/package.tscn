@@ -1,0 +1,72 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/package/package.gd" id="1_package"]
+[ext_resource type="Script" path="res://scripts/gameplay/package/package_feedback.gd" id="2_feedback"]
+[ext_resource type="Resource" path="res://data/traps/fragile.tres" id="3_trap"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_crate"]
+friction = 0.70
+bounce = 0.06
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_crate"]
+size = Vector3(0.65, 0.65, 0.65)
+
+[sub_resource type="BoxMesh" id="BoxMesh_crate"]
+size = Vector3(0.65, 0.65, 0.65)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_strap"]
+albedo_color = Color(0.23, 0.14, 0.09, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_strap_x"]
+material = SubResource("StandardMaterial3D_strap")
+size = Vector3(0.08, 0.66, 0.66)
+
+[sub_resource type="BoxMesh" id="BoxMesh_strap_z"]
+material = SubResource("StandardMaterial3D_strap")
+size = Vector3(0.66, 0.66, 0.08)
+
+[node name="Package" type="RigidBody3D"]
+collision_layer = 4
+collision_mask = 7
+mass = 8.0
+physics_material_override = SubResource("PhysicsMaterial_crate")
+linear_damp = 0.12
+angular_damp = 0.8
+continuous_cd = true
+contact_monitor = true
+max_contacts_reported = 8
+script = ExtResource("1_package")
+trap_definition = ExtResource("3_trap")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_crate")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_crate")
+
+[node name="StrapX" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_strap_x")
+
+[node name="StrapZ" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_strap_z")
+
+[node name="Status" type="Label3D" parent="."]
+position = Vector3(0, 0.018, 0.332)
+text = "FRÁGIL\n↑ ↑"
+font_size = 52
+pixel_size = 0.0032
+modulate = Color(0.22, 0.10, 0.045, 1)
+outline_size = 0
+
+[node name="TopMark" type="Label3D" parent="."]
+position = Vector3(0, 0.334, 0)
+rotation = Vector3(-1.570796, 0, 0)
+text = "!"
+font_size = 80
+pixel_size = 0.004
+modulate = Color(0.78, 0.15, 0.10, 1)
+outline_size = 0
+
+[node name="PackageFeedbackComponent" type="Node" parent="."]
+script = ExtResource("2_feedback")
