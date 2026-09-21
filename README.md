@@ -73,6 +73,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_impact_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_presentation.gd
 <godot> --headless --path do-not-drop --script res://tests/test_seated_body.gd
+<godot> --headless --path do-not-drop --script res://tests/test_trap_visual_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -126,6 +127,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_seated_body` — un jugador sentado ya no desaparece: su cuerpo sigue
   la pose del asiento cuadro a cuadro (incluso cuando la furgoneta se
   mueve), sin reparentar el nodo replicado.
+- `test_trap_visual_feedback` — Peso Creciente se ve crecer y hundirse, y
+  Ruidoso se ve temblar (con fase propia por paquete); ninguno toca el
+  `RigidBody3D` real.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

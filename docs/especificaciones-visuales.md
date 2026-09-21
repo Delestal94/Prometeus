@@ -73,9 +73,9 @@ dónde empezar, es por ahí.
 | 21 | **Balanceo de carrocería exagerado** en curvas y frenadas, por encima de lo que ya hace la física — vende el peso de la furgoneta. | **A** |
 | 22 | **Asentamiento del paquete**: al apoyarlo en su soporte debería acomodarse con un pequeño rebote, no aparecer clavado. | **A** |
 | 23 | **Sacudida del paquete proporcional al golpe**, visible en su propia malla, no solo en la cámara. | **A** |
-| 24 | **Peso Creciente debería verse crecer**: escalar la caja progresivamente y hundirla contra el piso a medida que el temporizador avanza. Hoy el peso cambia solo como número. | **A** |
-| 25 | **Equilibrio debería verse inclinarse**: la caja tendría que ladearse visiblemente según el ángulo acumulado, antes de fallar. | **A** |
-| 26 | **Ruidoso debería moverse solo**: sacudidas cortas y aleatorias desde adentro, más frecuentes cuanto más agitado. | **A** |
+| 24 | ~~Peso Creciente debería verse crecer.~~ **[x] Hecho (2026-09-21)** — `package_feedback.gd` escala la caja hasta 1.35x y la hunde contra el piso según la distancia a fallar (derivada de `package_integrity_changed`, ya relayeado, no hace falta una señal nueva). | **A** |
+| 25 | ~~Equilibrio debería verse inclinarse.~~ **[x] Ya lo hacía, sin código nuevo.** El paquete es un `RigidBody3D` real y la trampa ya rota su `global_transform` de verdad (`balance_trap_behavior.gd`) — lo que la física dibuja ya era el ángulo real. No había nada que visualizar aparte. | **A** |
+| 26 | ~~Ruidoso debería moverse solo.~~ **[x] Hecho (2026-09-21)** — `package_feedback.gd` sacude Box/correas/etiquetas con una fase distinta por paquete (para que dos Ruidosos juntos no tiemblen al unísono), proporcional a la agitación. Nunca toca el `RigidBody3D` real, así que no puede desincronizar física ni red. | **A** |
 | 27 | ~~Parpadeo de faros al recibir un impacto fuerte.~~ **[x] Hecho** — `VehiclePresentation._on_impact()` atenúa los faros un instante (`impact_flicker_seconds`) en golpes fuertes cerca del vehículo, nunca repetido. | **A** |
 | 28 | ~~Luces de freno que se encienden al frenar de verdad.~~ **[x] Hecho** — `presentation_braking` (replicado) sube la emisión de las luces traseras cuando `brake > 3.0` de verdad, no un valor fijo. | **A** |
 | 29 | Ciclo de caminata del jugador a pie. | **B** |
@@ -184,10 +184,10 @@ dónde empezar, es por ahí.
 2. ~~**#41** — sonido de motor.~~ **Hecho.**
 3. ~~**#61 + #81** — que cada uno deje de ver su propio cuerpo y los demás sí vean
    el de cada uno mientras viajan sentados.~~ **Hecho.**
-4. **#24, #25, #26** — que cada trampa se vea hacer lo que hace. Hoy tres de las
-   cuatro solo existen como números.
+4. ~~**#24, #25, #26** — que cada trampa se vea hacer lo que hace.~~ **Hecho** (el
+   #25 ya lo hacía solo, sin código nuevo).
 5. **#60** — oclusión ambiental. Una línea de configuración que hace que todo deje
-   de flotar.
+   de flotar. El único de los cinco originales que sigue pendiente.
 
 ## Próximo paso
 Esta lista es el inventario para la Fase 6 (`docs/plan-desarrollo.md`). Los ítems **A**
