@@ -74,12 +74,34 @@ func get_prompt() -> String:
 
 
 func can_interact(player: Node) -> bool:
-	if occupant != null or player.get(&"carried_package") != null:
+	if occupant != null:
 		return false
+	var carried: Node = player.get(&"carried_package")
+	if role == &"driver":
+		# The driver's required_mount_path isn't "their" mount -- it's a
+		# readiness gate borrowed from seat 1 ("don't let the driver sit
+		# until at least one package is loaded somewhere"). A driver never
+		# carries cargo into the seat: board_seat()/interact() have nowhere
+		# to put it, so it would just hang there, still "carried" by a now
+		# invisible, seated player.
+		if not required_mount_path.is_empty():
+			var gate_mount: Node = get_node_or_null(required_mount_path)
+			if gate_mount == null or not is_instance_valid(gate_mount.get(&"occupied_by")):
+				return false
+		return carried == null
 	if not required_mount_path.is_empty():
+		# A passenger's tending mount can be filled two ways: someone already
+		# left the package there, or this player is still holding it and
+		# boards with it in hand -- interact() settles it onto the mount as
+		# part of sitting down, so there's never a bare "put it down first"
+		# step where it could be dropped and broken.
 		var mount: Node = get_node_or_null(required_mount_path)
-		return mount != null and is_instance_valid(mount.get(&"occupied_by"))
-	return true
+		if mount == null:
+			return false
+		if is_instance_valid(mount.get(&"occupied_by")):
+			return carried == null
+		return carried != null
+	return carried == null
 
 
 func interact(player: Node) -> void:
@@ -106,6 +128,17 @@ func interact(player: Node) -> void:
 		# their input is what keeps that trap under control.
 		var mount: Node = get_node_or_null(required_mount_path)
 		var package: Node = mount.get(&"occupied_by") if mount != null else null
+		if package == null:
+			# Boarded with it still in hand: settle it onto the mount now,
+			# right as they sit, instead of requiring them to put it down
+			# unattended first (see can_interact() above).
+			var carried: Node = player.get(&"carried_package")
+			if carried != null and mount != null:
+				carried.call(&"place_at", mount)
+				mount.set(&"occupied_by", carried)
+				package = carried
+				if player.has_method(&"drop_carried"):
+					player.rpc_id(peer_id, &"drop_carried")
 		if package != null and player.has_method(&"tend_package"):
 			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 	interacted.emit(player)
