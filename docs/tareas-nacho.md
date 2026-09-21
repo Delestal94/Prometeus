@@ -179,7 +179,7 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 97 | Bug bash de física del vehículo: saltos, vuelcos, quedarse atascado, comportamiento en los bordes de la ruta. | A |
+| 97 | ~~Bug bash de física del vehículo: saltos, vuelcos, quedarse atascado, comportamiento en los bordes de la ruta.~~ **[x] Hecho, automatizado en vez de manual una sola vez** — `tests/test_vehicle_stress.gd`: 60s de aceleración a fondo con dirección oscilante (no recta, para chocar contra el chicane/obras/puente de verdad) a través de los 7 tipos de tramo, revisando posición/velocidad finitas (sin NaN/Inf) cada frame y que la red de seguridad de "fuera de la ruta" (`level_endless.gd`, y<-8/\|x\|>42) atrape una caída antes de que se vuelva una caída real a través del mundo. Encontré un bug real en el test, no en el juego, al escribirlo: el umbral inicial de Y no daba margen para el frame en que la propia red de seguridad todavía está cayendo antes de frenar — corregido. | A |
 | 98 | Playtesting de variedad de ruta: ¿los tramos curados se sienten repetitivos después de varias vueltas? | A |
 | 99 | Verificar que `test_vehicle_presentation`, `test_vehicle_audio`, `test_route_streaming` y `check_driver_sightline` sigan pasando después de cada tarea grande. | A |
 | 100 | Mantener actualizadas las filas de vehículo/ambientación en `docs/especificaciones-visuales.md` y `docs/direccion-visual.md` a medida que se completan tareas. | A |

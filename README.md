@@ -96,6 +96,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_audio_bus_routing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_level_endless.gd
 <godot> --headless --path do-not-drop --script res://tests/test_new_route_segments.gd
+<godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -190,6 +191,11 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   solo lado en vez de alternar, y el ripio efectivamente baja
   `wheel_friction_slip` al entrar y lo restaura al salir (verificado con
   frames de física reales, no solo que el `Area3D` exista).
+- `test_vehicle_stress` — bug bash automatizado: 60s de aceleración a fondo
+  con dirección oscilante a través de los 7 tipos de tramo, revisando que
+  posición/velocidad nunca exploten a NaN/Inf y que la red de seguridad de
+  "fuera de la ruta" atrape una caída antes de que se vuelva una caída real
+  a través del mundo.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.
