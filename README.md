@@ -283,6 +283,12 @@ manejo):
 - `docs/especificaciones-visuales.md` — inventario numerado de 100 mejoras concretas
   de modelado, animación, ambientación, cámara e interacción entre modelos, con
   prioridad por costo/impacto.
+- `docs/colaboracion-equipo.md` — cómo se reparte el trabajo entre dos personas en
+  paralelo (Nacho y Slatex): división por dominio de archivos, zona compartida y
+  flujo de trabajo sugerido.
+- `docs/tareas-nacho.md` / `docs/tareas-slatex.md` — 100 tareas cada una, repartidas
+  por dominio (vehículo/ruta/ambientación vs. jugador/paquetes/interacción/UI/
+  progresión) para minimizar conflictos al trabajar en paralelo.
 
 ### Archivado (`docs/historial-exploracion/`)
 Documentos de una etapa de exploración anterior, **superados** por el pivote a
