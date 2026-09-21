@@ -13,8 +13,22 @@ Godot 4.x — el proyecto del juego vive en `do-not-drop/`.
 
 ## Probar el prototipo
 
-Abrí `do-not-drop/project.godot` en Godot y ejecutá con **F5**. Elegí
-**Preparar entrega**, caminá con WASD y mirá con el mouse. Al acercarte a un
+Abrí `do-not-drop/project.godot` en Godot y ejecutá con **F5**. Arranca en un
+**menú principal**: "Jugar solo" entra directo sin sesión de red (el
+comportamiento de siempre); "Crear sala" hostea con el transporte que esté
+disponible (Steam si está corriendo, si no LAN) y entra directo a la
+furgoneta sin esperar en ninguna sala — los que se sumen después aparecen
+dinámicamente; "Unirse por IP" fuerza LAN y conecta a la dirección que
+escribas. Los amigos de Steam también pueden sumarse aceptando una
+invitación desde la lista de amigos en cualquier momento.
+
+Atajos de línea de comandos para probar rápido sin clickear:
+`-- --autostart` (solo, salteando la carga a pie), `-- --host-lan` (fuerza
+LAN, sin depender de que Steam esté corriendo) y `-- --join=<ip>` (se une
+por LAN a esa dirección).
+
+Una vez en la furgoneta: elegí **Preparar entrega**, caminá con WASD y mirá
+con el mouse. Al acercarte a un
 objeto aparece la acción disponible: **E** agarra el paquete, lo deja en su
 lugar dentro de la furgoneta y permite tomar el volante una vez cargado.
 
@@ -44,6 +58,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_multi_cargo.gd
 <godot> --headless --path do-not-drop --script res://tests/test_network_roster.gd
 <godot> --headless --path do-not-drop --script res://tests/test_hint_relay.gd
+<godot> --headless --path do-not-drop --script res://tests/test_main_menu.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -61,6 +76,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_hint_relay` — el texto de ayuda de una trampa (ej. la cuenta
   regresiva del peso creciente) le llega a todos, no solo se lee del lado
   del anfitrión.
+- `test_main_menu` — que el menú cargue y que cada botón/atajo elija el
+  transporte que promete (crítico: "Crear sala" y "Unirse por IP" tienen que
+  terminar en el mismo transporte o nunca se van a encontrar).
 - `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
   prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
