@@ -74,7 +74,7 @@
 |---|---|---|
 | 35 | Manera de mirar hacia atrás: espejos (#5 de esta lista) o una tecla dedicada. (#68) | B |
 | 36 | Cámara de resultados: plano cinematográfico de la furgoneta al terminar. (#69) | C |
-| 37 | Cámara en tercera persona alternable, solo para desarrollo. (#75) | A |
+| 37 | ~~Cámara en tercera persona alternable, solo para desarrollo.~~ **[x] Hecho** — F9, solo se construye en build de debug. (#75) | A |
 | 38 | Límite de pitch contextual dentro de la cabina (`first_person_camera.gd` es archivo compartido — avisar antes de tocarlo). (#78) | C |
 
 ## Interacción vehículo-mundo (39-40)

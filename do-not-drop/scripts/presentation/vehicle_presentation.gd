@@ -45,6 +45,16 @@ var _front_materials: Array[StandardMaterial3D] = []
 var _rear_materials: Array[StandardMaterial3D] = []
 var _wheels: Array[VehicleWheel3D] = []
 var _dust_emitters: Array[GPUParticles3D] = []
+## Development-only third-person view (#75): only ever built in a debug
+## build (OS.is_debug_build() -- editor runs and non-optimized exports, off
+## in a real release export), so it never ships as a real feature for
+## players. Toggling only ever changes *this* client's own Viewport.current
+## camera, never anything replicated -- safe to leave input-unhandled and
+## read directly, same as any other purely local camera swap in this
+## project (see Player/FirstPersonCamera's own activate()/deactivate()).
+var _dev_camera: Camera3D
+var _dev_camera_active: bool = false
+var _dev_camera_previous: Camera3D = null
 var _flicker_remaining: float = 0.0
 var _motor_mix: float = 0.0
 var _screech_mix: float = 0.0
@@ -97,6 +107,8 @@ func _ready() -> void:
 		if wheel is VehicleWheel3D:
 			_wheels.append(wheel)
 	_build_dust_emitters()
+	if OS.is_debug_build():
+		_build_dev_camera()
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.vehicle_impact.connect(_on_impact)
@@ -230,6 +242,34 @@ func _apply_dust() -> void:
 		var intensity: float = clampf(maxf(speed_factor, skid) if grounded else 0.0, 0.0, 1.0)
 		particles.emitting = intensity > 0.05
 		particles.amount_ratio = maxf(intensity, 0.15)
+
+
+func _build_dev_camera() -> void:
+	_dev_camera = Camera3D.new()
+	_dev_camera.name = "DevThirdPersonCamera"
+	_dev_camera.current = false
+	# Behind and above (forward is local -Z), tilted down to frame the van --
+	# fixed offset instead of look_at(), which needs the node in the tree.
+	_dev_camera.position = Vector3(0.0, 2.6, 6.5)
+	_dev_camera.rotation_degrees = Vector3(-16.0, 180.0, 0.0)
+	add_child(_dev_camera)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _dev_camera != null and event.is_action_pressed(&"dev_camera_toggle"):
+		_toggle_dev_camera()
+
+
+func _toggle_dev_camera() -> void:
+	if _dev_camera_active:
+		_dev_camera.current = false
+		if _dev_camera_previous != null and is_instance_valid(_dev_camera_previous):
+			_dev_camera_previous.current = true
+		_dev_camera_active = false
+	else:
+		_dev_camera_previous = get_viewport().get_camera_3d()
+		_dev_camera.current = true
+		_dev_camera_active = true
 
 
 func _on_impact(strength: float, impact_position: Vector3) -> void:

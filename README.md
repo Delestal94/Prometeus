@@ -82,6 +82,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_package_bounce_shake.gd
 <godot> --headless --path do-not-drop --script res://tests/test_body_lean_sink.gd
 <godot> --headless --path do-not-drop --script res://tests/test_dust_and_ambience.gd
+<godot> --headless --path do-not-drop --script res://tests/test_dev_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -161,6 +162,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   real del vehículo.
 - `test_dust_and_ambience` — hay viento de ambiente siempre sonando, y las
   ruedas levantan polvo al andar y dejan de hacerlo al frenar del todo.
+- `test_dev_camera` — la cámara de tercera persona de desarrollo (F9, solo
+  en build de debug) prende, apaga y restaura la cámara anterior
+  correctamente.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

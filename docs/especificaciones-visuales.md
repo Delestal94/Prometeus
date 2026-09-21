@@ -138,7 +138,7 @@ dónde empezar, es por ahí.
 | 72 | Aberración cromática breve en impactos muy fuertes. | **C** |
 | 73 | Motion blur por velocidad, sutil. | **C** |
 | 74 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. | **B** |
-| 75 | Cámara en tercera persona alternable, solo para desarrollo — hoy es imposible ver la furgoneta desde afuera sin editar la escena. | **A** |
+| 75 | ~~Cámara en tercera persona alternable, solo para desarrollo.~~ **[x] Hecho (2026-09-21)** — `VehiclePresentation` arma una cámara detrás/arriba de la furgoneta, activable con F9, y solo se construye si `OS.is_debug_build()` es verdadero (nunca en una build de release real). Restaura la cámara que estaba activa antes al desactivarla. | **A** |
 | 76 | Modo foto: aporta directamente al objetivo de "momentos clipeables" (`docs/requerimientos-tecnicos.md` §3.4). | **C** |
 | 77 | ~~Fundido a negro al reiniciar la partida.~~ **[x] Hecho (2026-09-21)** — `restart_delivery()` dispara el mismo fundido que el #62 y espera la mitad de ida (0.15s) antes de recargar la escena, para que el `reload_current_scene()` pase mientras la pantalla está negra. | **A** |
 | 78 | Límite de pitch contextual: mirar 80° hacia arriba adentro de la cabina sigue sin aportar nada, aun con el techo ya corregido. | **C** |
