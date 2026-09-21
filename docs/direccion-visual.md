@@ -87,6 +87,15 @@ realidad primera persona, no tercera como parece a simple vista).
 - Ruta actual (`route.gd`, curada a mano): 220 m, ancho de calzada 12 m en tramo
   normal, se angosta a 5.8 m en el puente (fuerza precisión de manejo), badenes de
   0.17-0.22 m de alto.
+- **[x] Altura de la cabina corregida (2026-09-21)**: tenía solo 0.275 m entre el
+  ojo del conductor y el techo — con FOV 78° y hasta 80° de inclinación vertical al
+  mirar, apenas se miraba hacia arriba el techo llenaba casi toda la pantalla (se
+  ve además verdoso ahí, por el rebote de la luz ambiente del cielo, cuyo
+  `ground_bottom_color` es un verde oliva). Se subió el techo de la cabina
+  (`Cabin`/`CabinCollision`/`CabinRoof` y las ventanas, `vehicle.tscn`) de 1.38 m a
+  1.68 m de alto interior, dejando 0.61 m de espacio para el conductor y 0.76 m
+  para los pasajeros — verificado que sigue pasando `check_driver_sightline.gd` y
+  el resto de la suite.
 - **[ ] Escala de personajes/props**: sin definir formalmente todavía (no hay
   personaje con arte final). Referencia implícita por los `Marker3D` de asiento y
   la altura de cámara: un adulto promedio, ~1.7-1.8 m de alto de ojos parado.

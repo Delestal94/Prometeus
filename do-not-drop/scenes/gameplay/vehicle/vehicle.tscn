@@ -86,7 +86,7 @@ bounce = 0.0
 size = Vector3(2.1, 0.28, 4.35)
 
 [sub_resource type="BoxShape3D" id="Shape_cabin"]
-size = Vector3(2.02, 1.38, 1.65)
+size = Vector3(2.02, 1.68, 1.65)
 
 [sub_resource type="BoxShape3D" id="Shape_floor"]
 size = Vector3(2.08, 0.18, 2.45)
@@ -120,7 +120,7 @@ size = Vector3(2.1, 0.28, 4.35)
 
 [sub_resource type="BoxMesh" id="Mesh_cabin"]
 material = SubResource("Material_body")
-size = Vector3(2.02, 1.38, 1.65)
+size = Vector3(2.02, 1.68, 1.65)
 
 [sub_resource type="BoxMesh" id="Mesh_floor"]
 material = SubResource("Material_cargo")
@@ -159,7 +159,7 @@ position = Vector3(0, -0.14, 0)
 shape = SubResource("Shape_chassis")
 
 [node name="CabinCollision" type="CollisionShape3D" parent="."]
-position = Vector3(0, 0.77, -1.25)
+position = Vector3(0, 0.92, -1.25)
 shape = SubResource("Shape_cabin")
 
 [node name="FloorCollision" type="CollisionShape3D" parent="."]
@@ -186,30 +186,30 @@ material_override = SubResource("Material_lower_band")
 mesh = SubResource("Mesh_chassis")
 
 [node name="Cabin" type="MeshInstance3D" parent="BodyVisuals"]
-position = Vector3(0, 0.77, -1.25)
+position = Vector3(0, 0.92, -1.25)
 mesh = SubResource("Mesh_cabin")
 
 [node name="CabinRoof" type="MeshInstance3D" parent="BodyVisuals"]
-position = Vector3(0, 1.49, -1.25)
+position = Vector3(0, 1.825, -1.25)
 scale = Vector3(2.1, 0.13, 1.76)
 material_override = SubResource("Material_light_body")
 mesh = SubResource("Mesh_unit")
 
 [node name="Windshield" type="MeshInstance3D" parent="BodyVisuals"]
-position = Vector3(0, 1.075, -2.083)
-scale = Vector3(1.71, 0.58, 0.035)
+position = Vector3(0, 1.2225, -2.083)
+scale = Vector3(1.71, 0.875, 0.035)
 material_override = SubResource("Material_window")
 mesh = SubResource("Mesh_unit")
 
 [node name="LeftWindow" type="MeshInstance3D" parent="BodyVisuals"]
-position = Vector3(-1.025, 1.07, -1.28)
-scale = Vector3(0.035, 0.57, 1.12)
+position = Vector3(-1.025, 1.2225, -1.28)
+scale = Vector3(0.035, 0.875, 1.12)
 material_override = SubResource("Material_window")
 mesh = SubResource("Mesh_unit")
 
 [node name="RightWindow" type="MeshInstance3D" parent="BodyVisuals"]
-position = Vector3(1.025, 1.07, -1.28)
-scale = Vector3(0.035, 0.57, 1.12)
+position = Vector3(1.025, 1.2225, -1.28)
+scale = Vector3(0.035, 0.875, 1.12)
 material_override = SubResource("Material_window")
 mesh = SubResource("Mesh_unit")
 
