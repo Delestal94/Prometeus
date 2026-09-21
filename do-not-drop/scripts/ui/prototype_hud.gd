@@ -38,6 +38,7 @@ var in_delivery: bool = false
 var interaction_label: Label
 var ping_label: Label
 var ping_seconds_left: float = 0.0
+var fade_rect: ColorRect
 
 
 func _ready() -> void:
@@ -54,6 +55,7 @@ func _ready() -> void:
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.package_hint_changed.connect(_on_package_hint)
 	EventBus.ping_sent.connect(_on_ping)
+	EventBus.quick_fade_requested.connect(_on_quick_fade_requested)
 	_show_start()
 
 
@@ -151,6 +153,15 @@ func _build_ui() -> void:
 	action_button.pressed.connect(_primary_action)
 	second_button = _button(actions, "Reiniciar", false)
 	second_button.pressed.connect(func() -> void: EventBus.restart_requested.emit())
+
+	# Added last so it paints over everything else, including the pause/
+	# results overlay above -- a quick black flash to soften a hard camera
+	# cut (boarding a seat) or a scene reload (restarting), not a UI panel.
+	fade_rect = ColorRect.new()
+	fade_rect.color = Color(0, 0, 0, 0)
+	fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(fade_rect)
 
 
 func _panel(parent: Node, minimum: Vector2) -> VBoxContainer:
@@ -294,6 +305,17 @@ func _on_ping(peer_id: int, _position: Vector3, label: String) -> void:
 	var who: String = "Vos" if peer_id == NetworkManager.local_id() else "Jugador %d" % peer_id
 	ping_label.text = "📍 %s: %s" % [who, label]
 	ping_seconds_left = PING_DISPLAY_SECONDS
+
+
+## Softens a hard camera cut: fades to black and back over `seconds` total.
+## Purely cosmetic (a Tween on a ColorRect's alpha) -- never blocks whatever
+## triggered it, so boarding a seat or reloading the level doesn't have to
+## wait on this to actually happen.
+func _on_quick_fade_requested(seconds: float) -> void:
+	var half: float = maxf(seconds * 0.5, 0.01)
+	var tween: Tween = create_tween()
+	tween.tween_property(fade_rect, ^"color:a", 1.0, half)
+	tween.tween_property(fade_rect, ^"color:a", 0.0, half)
 
 
 func _on_started(_route: StringName, _players: Array) -> void:

@@ -33,6 +33,11 @@ signal ping_sent(peer_id: int, position: Vector3, label: String)
 ## Same shape as ping_sent, same reason: whoever's driving might not be the
 ## host, but everyone should hear the horn.
 signal horn_honked(peer_id: int)
+## A quick black flash to soften a hard camera cut (boarding a seat) or a
+## scene reload (restarting) -- purely local presentation, like
+## interaction_prompt_changed, so a plain emit() is enough: nobody else's
+## screen should flash because of what happens on this one client.
+signal quick_fade_requested(seconds: float)
 
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts

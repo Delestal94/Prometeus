@@ -305,6 +305,12 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	# (RenderLayers.LOCAL_BODY, set once in _build_body()).
 	_camera.current = false
 	seat_node_path = seat_path
+	# board_seat() only ever runs on the boarding peer's own client (it's a
+	# targeted RPC, not a broadcast -- see seat_point.gd), so this is
+	# guaranteed to be the local player's own view swapping cameras. A quick
+	# fade softens what would otherwise be an instant teleport-cut from
+	# standing on foot to sitting in the seat.
+	EventBus.emit_signal(&"quick_fade_requested", 0.2)
 	var seat_camera: Node = get_node_or_null(seat_camera_path)
 	if seat_camera != null and seat_camera.has_method(&"activate"):
 		seat_camera.call(&"activate")

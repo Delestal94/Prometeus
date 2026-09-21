@@ -76,6 +76,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_trap_visual_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_audio.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
+<godot> --headless --path do-not-drop --script res://tests/test_screen_fade.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -139,6 +140,8 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   Frágil (más grave si se arruina), gemido para Ruidoso que sube con la
   agitación, crujido para Peso Creciente que se reinicia al resolver el
   puzzle.
+- `test_screen_fade` — el fundido a negro (al sentarse, al reiniciar) se
+  oscurece y vuelve solo a transparente.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

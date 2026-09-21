@@ -131,6 +131,12 @@ func start_delivery() -> void:
 
 func restart_delivery() -> void:
 	get_tree().paused = false
+	# Fade out before reloading instead of the instant hard cut a bare
+	# reload_current_scene() would be -- only waits out the fade-to-black
+	# half (see prototype_hud.gd's _on_quick_fade_requested), since the
+	# fade-back-in half is moot once the whole tree gets torn down anyway.
+	EventBus.emit_signal(&"quick_fade_requested", 0.3)
+	await get_tree().create_timer(0.15).timeout
 	RunManager.reset_run()
 	get_tree().reload_current_scene()
 

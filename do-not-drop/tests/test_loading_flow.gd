@@ -59,7 +59,10 @@ func _run() -> void:
 	_expect(hud.overlay.visible and hud.overlay_mode == "results", "Result screen opens")
 	_expect(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Results release mouse")
 	level.restart_delivery()
-	await process_frame
+	# restart_delivery() now fades to black before reloading (see
+	# level_base.gd) -- waits out that real 0.15s delay instead of the
+	# reload happening on the very next frame.
+	await create_timer(0.2).timeout
 	await process_frame
 	level = current_scene
 	_expect(not manager.is_running and manager.results.is_empty(), "Restart resets the full run")

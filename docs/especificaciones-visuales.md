@@ -125,7 +125,7 @@ dónde empezar, es por ahí.
 | # | Especificación | Prio |
 |---|---|---|
 | 61 | ~~La cámara propia ve su propio cuerpo.~~ **[x] Hecho (2026-09-21)** — `render_layers.gd` separa capa `LOCAL_BODY` (excluida del `cull_mask` de la propia cámara) de `WORLD` (visible para las demás). Cada jugador deja de ver su propia cápsula; sigue viendo la de los demás. | **A** |
-| 62 | **Transición al sentarse es un corte seco.** Una interpolación corta de la cámara al asiento se siente mucho mejor y cuesta poco. | **A** |
+| 62 | ~~Transición al sentarse es un corte seco.~~ **[x] Hecho (2026-09-21), con otra técnica.** Interpolar la cámara no tenía sentido acá: son dos `Camera3D` distintas (la del jugador y la del asiento), no una sola que se mueve — Godot no mezcla entre cámaras. En cambio, `board_seat()` dispara un fundido a negro rápido (`EventBus.quick_fade_requested`, 0.2s) justo antes de cambiar de cámara, que tapa el corte en vez de suavizarlo. Mismo mecanismo que el #77. | **A** |
 | 63 | Head bob al caminar a pie — hoy el desplazamiento es perfectamente plano y se siente a patines. | **A** |
 | 64 | FOV distinto por contexto: caminando, conduciendo y sosteniendo un paquete no deberían compartir el mismo encuadre. | **A** |
 | 65 | **FOV configurable por el jugador.** No hay pantalla de opciones todavía; cuando exista, esto va primero (accesibilidad y mareo). | **B** |
@@ -140,7 +140,7 @@ dónde empezar, es por ahí.
 | 74 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. | **B** |
 | 75 | Cámara en tercera persona alternable, solo para desarrollo — hoy es imposible ver la furgoneta desde afuera sin editar la escena. | **A** |
 | 76 | Modo foto: aporta directamente al objetivo de "momentos clipeables" (`docs/requerimientos-tecnicos.md` §3.4). | **C** |
-| 77 | Fundido a negro al reiniciar la partida, en vez del salto brusco actual. | **A** |
+| 77 | ~~Fundido a negro al reiniciar la partida.~~ **[x] Hecho (2026-09-21)** — `restart_delivery()` dispara el mismo fundido que el #62 y espera la mitad de ida (0.15s) antes de recargar la escena, para que el `reload_current_scene()` pase mientras la pantalla está negra. | **A** |
 | 78 | Límite de pitch contextual: mirar 80° hacia arriba adentro de la cabina sigue sin aportar nada, aun con el techo ya corregido. | **C** |
 | 79 | Retroalimentación de cámara al pingear: un destello o marca en el borde de pantalla apuntando hacia quién pingeó. | **B** |
 | 80 | Evitar que la cámara atraviese geometría cercana al mirar en diagonal dentro de la cabina (fade o retroceso). | **B** |
