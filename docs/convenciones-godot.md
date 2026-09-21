@@ -41,6 +41,7 @@
 | `look_left` / `look_right` / `look_up` / `look_down` | — (mouse, delta directo) | Stick derecho (ejes X/Y) |
 | `look_center` | C | Clic del stick derecho |
 | `package_action_primary` | Clic izquierdo | Gatillo derecho (a pie, con paquete en mano) |
+| `ui_ping` | Clic de la rueda del mouse | Botón D-pad arriba |
 | `ui_pause` | Esc | Start |
 | `run_restart` | R | Botón Oeste (X/Cuadrado) |
 
@@ -52,8 +53,11 @@ persona con mouse no pasa por el Input Map para el delta continuo (se lee direct
 (una tecla/botón discreto).
 
 Pendiente de implementar (documentado en `docs/controles-y-ui.md` como diseño, todavía
-no en `project.godot`): `drive_horn`, un control de trampa secundario por tipo, y
-`ui_ping`.
+no en `project.godot`): `drive_horn` y un control de trampa secundario por tipo.
+
+`ui_ping` es deliberadamente un solo mensaje fijo ("¡Cuidado!"), no una rueda de
+opciones — cubre la necesidad real (avisar a los compañeros) sin sumar UI de
+selección todavía. Ver `Player._send_ping()` en `player.gd`.
 
 ## 2. Capas de física (Project Settings → Layer Names → 3D Physics)
 

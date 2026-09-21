@@ -36,6 +36,8 @@ var overlay_mode: String = "start"
 var damage_flash: float = 0.0
 var in_delivery: bool = false
 var interaction_label: Label
+var ping_label: Label
+var ping_seconds_left: float = 0.0
 
 
 func _ready() -> void:
@@ -51,6 +53,7 @@ func _ready() -> void:
 	EventBus.interaction_prompt_changed.connect(_on_interaction_prompt)
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.package_hint_changed.connect(_on_package_hint)
+	EventBus.ping_sent.connect(_on_ping)
 	_show_start()
 
 
@@ -102,7 +105,7 @@ func _build_ui() -> void:
 	distance_label = _label(delivery, "220 m hasta la entrega", 24, PAPER)
 	route_bar = _bar(delivery, MINT)
 	hint_label = _label(delivery, DRIVE_HINT, 14, MUTED)
-	_label(dashboard, "Espacio  freno de mano   /   R  reiniciar   /   ESC  pausa   /   Gamepad: stick derecho para mirar", 13, PAPER)
+	_label(dashboard, "Espacio  freno de mano   /   R  reiniciar   /   ESC  pausa   /   Click rueda  ping   /   Gamepad: stick derecho para mirar", 13, PAPER)
 	interaction_label = _label(root, "", 22, PAPER)
 	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	interaction_label.offset_left = -260
@@ -113,6 +116,17 @@ func _build_ui() -> void:
 	interaction_label.add_theme_color_override("font_outline_color", INK)
 	interaction_label.add_theme_constant_override("outline_size", 8)
 	interaction_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	ping_label = _label(root, "", 22, YELLOW)
+	ping_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	ping_label.offset_left = -260
+	ping_label.offset_right = 260
+	ping_label.offset_top = 20
+	ping_label.offset_bottom = 60
+	ping_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ping_label.add_theme_color_override("font_outline_color", INK)
+	ping_label.add_theme_constant_override("outline_size", 8)
+	ping_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	overlay = ColorRect.new()
 	root.add_child(overlay)
@@ -228,6 +242,10 @@ func _process(delta: float) -> void:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
 	_refresh_cargo_hint()
+	if ping_seconds_left > 0.0:
+		ping_seconds_left -= delta
+		if ping_seconds_left <= 0.0:
+			ping_label.text = ""
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -267,6 +285,15 @@ func _primary_action() -> void:
 
 func _on_interaction_prompt(prompt: String) -> void:
 	interaction_label.text = "[ E / A ]  " + prompt if not prompt.is_empty() else ""
+
+
+const PING_DISPLAY_SECONDS: float = 2.5
+
+
+func _on_ping(peer_id: int, _position: Vector3, label: String) -> void:
+	var who: String = "Vos" if peer_id == NetworkManager.local_id() else "Jugador %d" % peer_id
+	ping_label.text = "📍 %s: %s" % [who, label]
+	ping_seconds_left = PING_DISPLAY_SECONDS
 
 
 func _on_started(_route: StringName, _players: Array) -> void:

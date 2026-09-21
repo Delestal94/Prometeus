@@ -49,7 +49,14 @@ func is_local() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_local() or _seated or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if not is_local() or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		return
+	# Ping works seated or not -- it's communication, not a physical action,
+	# so it's checked before the _seated gate below applies to the rest.
+	if event.is_action_pressed(&"ui_ping"):
+		_send_ping()
+		return
+	if _seated:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		_apply_look(event.relative * MOUSE_SENSITIVITY)
@@ -132,6 +139,20 @@ func _update_carried_package() -> void:
 	# host-authoritative and only it should ever move the real one.
 	var carry_transform := Transform3D(global_basis, _hold_point.global_position)
 	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform)
+
+
+## MVP has a single, always-available ping ("¡Cuidado!") instead of a wheel
+## of options -- docs/controles-y-ui.md sketches "¡ayuda!"/"¡cuidado!" as
+## examples, not a mandate, and one message covers the actual need (warn
+## teammates) without a second input to design around it.
+const PING_LABEL: String = "¡Cuidado!"
+
+
+func _send_ping() -> void:
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		EventBus.rpc_id(1, &"request_ping", global_position, PING_LABEL)
+	else:
+		EventBus.call(&"request_ping", global_position, PING_LABEL)
 
 
 func _try_interact() -> void:

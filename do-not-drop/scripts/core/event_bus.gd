@@ -26,6 +26,10 @@ signal start_requested
 signal restart_requested
 signal pause_requested
 signal interaction_prompt_changed(prompt: String)
+## Non-verbal communication (docs/controles-y-ui.md): any player can ping,
+## not just the host, so this needs its own client->host->everyone hop
+## instead of relay() (which only ever originates from host-run simulation).
+signal ping_sent(peer_id: int, position: Vector3, label: String)
 
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts
@@ -41,3 +45,17 @@ func relay(event_name: StringName, args: Array = []) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _relay(event_name: StringName, args: Array) -> void:
 	callv(&"emit_signal", [event_name] + args)
+
+
+## Any peer calls this (directly if it's already the host, via rpc_id(1, ...)
+## otherwise -- see Player._send_ping()). The host is the only one allowed to
+## decide a ping actually happened, same authority rule as every other
+## player-initiated action in this project, then relay()s it as a fact so
+## everyone's HUD (including the sender's) reacts identically.
+@rpc("any_peer", "call_remote", "reliable")
+func request_ping(position: Vector3, label: String) -> void:
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender_id if sender_id != 0 else NetworkManager.local_id()
+	relay(&"ping_sent", [peer_id, position, label])
