@@ -151,7 +151,7 @@ dónde empezar, es por ahí.
 
 | # | Especificación | Prio |
 |---|---|---|
-| 81 | **Los jugadores sentados son invisibles.** `board_seat()` hace `visible = false` al abordar: nadie ve a nadie durante el viaje entero, que es justo cuando la tensión compartida importa. El #61 ya resuelve "que cada uno deje de ver su propio cuerpo"; este es el otro lado — que los demás sí vean el suyo. Requiere que el cuerpo del jugador siga la pose del asiento (probablemente reparentándolo al `Marker3D` del asiento), con cuidado de no romper la replicación de posición en red. **Siguiente en la cola.** | **A** |
+| 81 | ~~Los jugadores sentados son invisibles.~~ **[x] Hecho (2026-09-21).** `board_seat()` ya no hace `visible = false`. En cambio, cada `Player` guarda `seat_node_path` (nueva propiedad replicada) y en `_process()` — en la copia de **cada** peer, no solo la del que se sentó — posiciona su `BodyVisual` en la pose del asiento cada frame. No se reparentó el nodo (habría roto la replicación de posición, que es local al padre actual); en cambio se dejó la posición/rotación real del `Player` sin tocar y solo se reposiciona la malla visual, que no es una propiedad de red. Cubierto por `tests/test_seated_body.gd`. | **A** |
 | 82 | El paquete sostenido flota frente a la cámara sin contacto con las manos; debería verse agarrado. | **B** |
 | 83 | Abolladuras o deformación progresiva del paquete según el daño acumulado — hoy solo cambia de color. | **B** |
 | 84 | Los paquetes deberían chocar entre sí de forma visible y encadenar caos (ya comparten capa de física). | **A** |
@@ -176,15 +176,14 @@ dónde empezar, es por ahí.
 
 ## Por dónde empezaría
 
-> Actualizado 2026-09-21: los primeros tres de la lista original de cinco ya están
-> hechos (#1/#2/#3, #41, y la mitad de #61+#81). Quedan estos:
+> Actualizado 2026-09-21: los cinco de la lista original ya están hechos
+> (#1/#2/#3, #41, #61+#81). Los siguientes dos candidatos:
 
 1. ~~**#1, #2, #3** — ruedas que giran, ruedas que doblan, volante que se mueve.~~
    **Hecho.**
 2. ~~**#41** — sonido de motor.~~ **Hecho.**
-3. **#81** — la otra mitad de "que cada uno deje de ver su propio cuerpo y empiece a
-   ver el de los demás" (#61 ya está). Sentados siguen invisibles para todos. Es el
-   siguiente en la cola.
+3. ~~**#61 + #81** — que cada uno deje de ver su propio cuerpo y los demás sí vean
+   el de cada uno mientras viajan sentados.~~ **Hecho.**
 4. **#24, #25, #26** — que cada trampa se vea hacer lo que hace. Hoy tres de las
    cuatro solo existen como números.
 5. **#60** — oclusión ambiental. Una línea de configuración que hace que todo deje

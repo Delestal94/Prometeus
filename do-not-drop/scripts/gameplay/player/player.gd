@@ -40,6 +40,15 @@ var _pitch: float = 0.0
 var _nearby: Array[Node] = []
 var _last_prompt: String = ""
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+var _body_visual: MeshInstance3D = null
+## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
+## player is sitting at, empty when on foot. board_seat() only ever runs on
+## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
+## this is how every *other* client learns to start posing this player's
+## body at the seat too -- it's a plain property write on this node's own
+## authority (the boarding peer), which the MultiplayerSynchronizer already
+## propagates to everyone, the same way driver_peer_id works on the vehicle.
+var seat_node_path: NodePath = NodePath()
 
 
 func _enter_tree() -> void:
@@ -87,6 +96,7 @@ func _build_body() -> void:
 	mesh.material_override = material
 	mesh.position = Vector3(0.0, 0.8, 0.0)
 	add_child(mesh)
+	_body_visual = mesh
 	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
 		var hand_material := StandardMaterial3D.new()
 		hand_material.albedo_color = color.lightened(0.3)
@@ -115,6 +125,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		_head.rotation.x = 0.0
 	elif event.is_action_pressed(&"interact"):
 		_try_interact()
+
+
+## Runs on every peer's copy of this player, seated or driving, local or
+## not -- posing BodyVisual at the seat is pure presentation, so it doesn't
+## need authority the way movement/input do.
+func _process(_delta: float) -> void:
+	if seat_node_path.is_empty():
+		return
+	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
+	if seat == null:
+		return
+	# Seat anchors are eye height (where the camera goes); a seated torso
+	# centers noticeably lower than that.
+	_body_visual.global_transform = seat.global_transform.translated_local(Vector3(0.0, -0.55, 0.0))
 
 
 func _physics_process(delta: float) -> void:
@@ -268,15 +292,19 @@ func tend_package(package_path: NodePath) -> void:
 
 
 @rpc("any_peer", "call_local", "reliable")
-func board_seat(seat_camera_path: NodePath) -> void:
+func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	if not _from_host():
 		return
 	_seated = true
 	collision_layer = 0
 	collision_mask = 0
 	velocity = Vector3.ZERO
-	visible = false
+	# Visible stays true now -- BodyVisual tracks the seat (see _process())
+	# instead of disappearing, so teammates actually have someone to look at
+	# during the ride. Only this player's own camera stops rendering it
+	# (RenderLayers.LOCAL_BODY, set once in _build_body()).
 	_camera.current = false
+	seat_node_path = seat_path
 	var seat_camera: Node = get_node_or_null(seat_camera_path)
 	if seat_camera != null and seat_camera.has_method(&"activate"):
 		seat_camera.call(&"activate")

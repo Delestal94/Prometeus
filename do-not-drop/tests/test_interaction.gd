@@ -48,10 +48,12 @@ func _initialize() -> void:
 	# here since this test calls board_seat directly, bypassing the seat.
 	vehicle.set(&"controls_enabled", true)
 	vehicle.set(&"driver_peer_id", 1)
-	player.call(&"board_seat", camera.get_path())
+	var seat: Node = camera.get_parent()  # DriverEyePoint, the seat anchor
+	player.call(&"board_seat", camera.get_path(), seat.get_path())
 	_expect(bool(camera.get(&"current")), "Boarding activates the seat's camera")
 	_expect(bool(vehicle.get(&"controls_enabled")), "Boarding as driver enables the vehicle's controls")
-	_expect(not bool(player.get(&"visible")), "Seated player hides their on-foot body")
+	_expect(bool(player.get(&"visible")), "Seated player stays visible -- teammates should see them, not just an empty seat")
+	_expect(NodePath(player.get(&"seat_node_path")) == seat.get_path(), "Player remembers which seat it's tracking")
 
 	player.free()
 	package.free()

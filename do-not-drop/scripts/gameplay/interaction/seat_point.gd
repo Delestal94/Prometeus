@@ -45,7 +45,11 @@ func interact(player: Node) -> void:
 		vehicle.set(&"driver_peer_id", peer_id)
 	if player.has_method(&"board_seat"):
 		var camera_path: NodePath = camera.get_path() if camera != null else NodePath()
-		player.rpc_id(peer_id, &"board_seat", camera_path)
+		# The seat anchor itself (this Area3D's parent, e.g. DriverEyePoint) --
+		# an absolute path so it resolves the same way from the player's own
+		# position in the tree, which is a sibling of the vehicle, not a child.
+		var seat_path: NodePath = get_parent().get_path()
+		player.rpc_id(peer_id, &"board_seat", camera_path, seat_path)
 	if role != &"driver" and not required_mount_path.is_empty():
 		# A passenger takes charge of the package at their own seat: from here
 		# their input is what keeps that trap under control.

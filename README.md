@@ -72,6 +72,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_player_colors.gd
 <godot> --headless --path do-not-drop --script res://tests/test_impact_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_presentation.gd
+<godot> --headless --path do-not-drop --script res://tests/test_seated_body.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -122,6 +123,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   reaccionan al frenado real, y el motor sintetizado responde a velocidad y
   carga. `tests/run_vehicle_network.ps1` corre lo mismo en dos procesos
   reales para confirmar que se replica al cliente, no solo al host.
+- `test_seated_body` — un jugador sentado ya no desaparece: su cuerpo sigue
+  la pose del asiento cuadro a cuadro (incluso cuando la furgoneta se
+  mueve), sin reparentar el nodo replicado.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

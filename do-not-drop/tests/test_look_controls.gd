@@ -85,7 +85,11 @@ func _run() -> void:
 	player._physics_process(0.1)
 	_expect(player.velocity.z < 0.0, "On-foot forward action walks toward camera forward")
 	Input.action_release(&"walk_forward")
-	player.board_seat(camera, false, null)
+	# Empty paths: this test only cares that seating suppresses on-foot look,
+	# not the seat camera/body-tracking wiring (covered elsewhere). The
+	# original call here passed stale, mistyped arguments -- board_seat is an
+	# @rpc(NodePath, NodePath) now, never a Camera3D instance.
+	player.board_seat(NodePath(), NodePath())
 	var player_rotation: Vector3 = player.rotation
 	Input.action_press(&"look_right")
 	player._physics_process(0.1)
