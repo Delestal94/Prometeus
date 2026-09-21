@@ -80,6 +80,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_camera_polish.gd
 <godot> --headless --path do-not-drop --script res://tests/test_interaction_highlight.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_bounce_shake.gd
+<godot> --headless --path do-not-drop --script res://tests/test_body_lean_sink.gd
+<godot> --headless --path do-not-drop --script res://tests/test_dust_and_ambience.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -154,6 +156,11 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_package_bounce_shake` — el paquete rebota al apoyarlo y tiembla al
   recibir un golpe (para cualquier trampa, no solo Ruidoso), y ninguno de
   los dos efectos pisa la escala que ya usa Peso Creciente.
+- `test_body_lean_sink` — la carrocería exterior se inclina en curvas y
+  frenadas y se hunde con el peso de la carga, sin tocar nunca la física
+  real del vehículo.
+- `test_dust_and_ambience` — hay viento de ambiente siempre sonando, y las
+  ruedas levantan polvo al andar y dejan de hacerlo al frenar del todo.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

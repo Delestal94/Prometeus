@@ -186,3 +186,31 @@ static func honk_horn() -> AudioStreamWAV:
 	stream.stereo = false
 	stream.data = data
 	return stream
+
+
+## World ambience (item #45): soft looping wind, low-passed white noise
+## instead of raw hiss -- a one-pole filter (y[n] = y[n-1]*a + x[n]*(1-a))
+## smooths it into something that reads as air movement, not static. A
+## slow amplitude drift on top keeps it from feeling like a dead-flat loop.
+static func ambient_wind() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 4.0
+	const FILTER_A: float = 0.985
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var filtered: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		filtered = filtered * FILTER_A + randf_range(-1.0, 1.0) * (1.0 - FILTER_A)
+		var drift: float = 0.7 + 0.3 * sin(TAU * 0.13 * t)
+		var sample: float = clampf(filtered * 5.0 * drift, -1.0, 1.0)
+		data.encode_s16(i * 2, int(sample * 32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = sample_count
+	return stream

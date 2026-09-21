@@ -29,11 +29,11 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 12 | Balanceo de carrocería exagerado en curvas y frenadas, por encima de lo que ya hace la física real. (#21) | A |
+| 12 | ~~Balanceo de carrocería exagerado en curvas y frenadas.~~ **[x] Hecho** (#21, ver detalle en `docs/especificaciones-visuales.md`). | A |
 | 13 | Aberración cromática breve en impactos muy fuertes. (#72) | C |
 | 14 | Motion blur por velocidad, sutil. (#73) | C |
 | 15 | Evitar que la cámara atraviese geometría cercana al mirar en diagonal dentro de la cabina (fade o retroceso). (#80) | B |
-| 16 | La furgoneta se hunde levemente según el peso total de la carga (conecta con Peso Creciente — coordinar el dato con Slatex, que es dueño de `package.gd`). (#96) | A |
+| 16 | ~~La furgoneta se hunde levemente según el peso total de la carga.~~ **[x] Hecho** — no hizo falta coordinar con Slatex, `mass` de `package.gd` ya era legible desde el grupo `cargo` sin tocar ese archivo. (#96) | A |
 
 ## Vehículo — detalle interior/exterior (17-19)
 
@@ -47,7 +47,7 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 20 | Ambiente exterior: viento, pájaros, ruido lejano de ruta. (#45) | A |
+| 20 | ~~Ambiente exterior.~~ **[x] Parcial** — viento en loop hecho, faltan pájaros y ruido lejano de ruta (queda como pendiente menor). (#45) | A |
 | 21 | Reverb distinta dentro de la furgoneta vs. afuera (buses de audio). (#46) | B |
 | 22 | Música de tensión que suba con el riesgo acumulado de la carga. (#47) | B |
 
@@ -55,7 +55,7 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 23 | Partículas de polvo/tierra bajo las ruedas al acelerar o derrapar. (#49) | A |
+| 23 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho.** (#49) | A |
 | 24 | Humo de escape en el caño trasero. (#50) | C |
 | 25 | Marcas de neumático en el asfalto al frenar. (#51) | C |
 | 26 | Props de banquina: árboles, postes, carteles, cercas, tachos — hoy son 10 cajas grises. (#52) | B |

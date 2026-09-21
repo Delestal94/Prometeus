@@ -27,6 +27,7 @@ func _ready() -> void:
 	_build_bridge()
 	_build_delivery()
 	_build_landmarks()
+	_build_ambience()
 
 
 func get_progress(world_position: Vector3) -> float:
@@ -169,6 +170,22 @@ func _build_landmarks() -> void:
 		var side: float = -1.0 if index % 2 == 0 else 1.0
 		var height: float = 2.5 + float(index % 3)
 		_box("LandscapeBlock", Vector3(6.0 + float(index % 3), height, 7.0), Vector3(side * (19.0 + float(index % 4) * 4.0), height * 0.5 - 0.3, -18.0 - float(index) * 23.0), Color("839184"))
+
+
+## World ambience (item #45): a quiet, looping wind bed. Non-positional
+## (AudioStreamPlayer, not the 3D variant) -- it's meant to sit under
+## everything else no matter where the camera is, not attenuate with
+## distance from some single point in space. Splitting this by interior vs.
+## exterior (item #46, buses) is a separate follow-up once those buses
+## exist; for now it's just always-on world presence instead of dead
+## silence outside the vehicle.
+func _build_ambience() -> void:
+	var player := AudioStreamPlayer.new()
+	player.name = "AmbientWind"
+	player.stream = SynthAudio.ambient_wind()
+	player.volume_db = -26.0
+	player.autoplay = true
+	add_child(player)
 
 
 func _on_delivery_body_entered(body: Node3D) -> void:

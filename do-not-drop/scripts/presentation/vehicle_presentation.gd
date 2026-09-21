@@ -10,8 +10,32 @@ extends Node3D
 @export var screech_volume_db: float = -14.0
 @export var audio_enabled: bool = true
 
+## Exaggerated exterior lean beyond what the real suspension already does
+## (docs/especificaciones-visuales.md #21). Deliberately scoped to
+## BodyVisuals only, not CabinInterior/CargoBay -- rotating the seats would
+## also rotate every FirstPersonCamera anchored under them, stacking a third
+## continuous motion on top of the shake and head bob those already have.
+## This reads for passengers glancing out a window, for other players
+## watching the van drive by, and for the dev third-person camera (#75);
+## the driver's own felt sense of weight is a separate, riskier follow-up.
+@export var max_roll_degrees: float = 6.0
+@export var max_pitch_degrees: float = 3.0
+@export var lean_smooth_speed: float = 5.0
+## Cargo sink (#96): how far the body visibly settles per kg of cargo
+## currently aboard, capped so a maxed-out Peso Creciente box can't sink the
+## whole van through the road.
+@export var cargo_sink_per_kg: float = 0.0025
+@export var cargo_sink_max: float = 0.08
+@export var sink_smooth_speed: float = 2.0
+## Dust under the wheels (#49): a continuous, low-key puff while grounded
+## and moving, ramping up with skid. Not a one-shot burst like the confetti
+## on a ruined package -- a steady trickle, on or off.
+@export var dust_color: Color = Color("9c8060")
+@export var dust_min_speed_kmh: float = 6.0
+
 @onready var vehicle: VehicleBody3D = get_parent()
 @onready var steering_wheel: MeshInstance3D = vehicle.get_node("CabinInterior/SteeringWheel")
+@onready var body_visuals: Node3D = vehicle.get_node("BodyVisuals")
 var headlights: Array[SpotLight3D] = []
 var engine_player: AudioStreamPlayer3D
 var impact_player: AudioStreamPlayer3D
@@ -20,9 +44,13 @@ var _steering_rest: Basis
 var _front_materials: Array[StandardMaterial3D] = []
 var _rear_materials: Array[StandardMaterial3D] = []
 var _wheels: Array[VehicleWheel3D] = []
+var _dust_emitters: Array[GPUParticles3D] = []
 var _flicker_remaining: float = 0.0
 var _motor_mix: float = 0.0
 var _screech_mix: float = 0.0
+var _roll: float = 0.0
+var _pitch: float = 0.0
+var _sink: float = 0.0
 
 
 func _ready() -> void:
@@ -68,6 +96,7 @@ func _ready() -> void:
 	for wheel: Node in vehicle.get_children():
 		if wheel is VehicleWheel3D:
 			_wheels.append(wheel)
+	_build_dust_emitters()
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.vehicle_impact.connect(_on_impact)
@@ -91,6 +120,36 @@ func update_presentation(delta: float) -> void:
 		material.emission_energy_multiplier = 2.4 if vehicle.presentation_braking else (0.18 if running else 0.0)
 	_update_engine(delta, running)
 	_update_screech(delta)
+	_apply_body_lean(delta)
+	_apply_cargo_sink(delta)
+	_apply_dust()
+
+
+func _apply_body_lean(delta: float) -> void:
+	var speed_factor: float = clampf(vehicle.speed_kmh / maxf(vehicle.maximum_speed_kmh, 1.0), 0.0, 1.0)
+	var target_roll: float = -vehicle.steering * speed_factor
+	var target_pitch: float = 0.0
+	if vehicle.presentation_braking:
+		target_pitch = -1.0  # nose dips down under hard braking
+	elif vehicle.presentation_engine_running and vehicle.engine_force < -1.0:
+		target_pitch = 0.35  # slight nose-up squat while accelerating
+	_roll = move_toward(_roll, target_roll, lean_smooth_speed * delta)
+	_pitch = move_toward(_pitch, target_pitch, lean_smooth_speed * delta)
+	body_visuals.rotation = Vector3(deg_to_rad(max_pitch_degrees) * _pitch, 0.0, deg_to_rad(max_roll_degrees) * _roll)
+
+
+## Total mass of whatever cargo is actually aboard right now -- packages
+## aren't children of the vehicle in the scene tree (they're independent
+## RigidBody3D resting on the CargoBay floor via contact), so this asks the
+## "cargo" group directly rather than walking the vehicle's own children.
+func _apply_cargo_sink(delta: float) -> void:
+	var total_mass: float = 0.0
+	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
+		if bool(package.get(&"is_loaded")):
+			total_mass += float(package.get(&"mass"))
+	var target_sink: float = clampf(total_mass * cargo_sink_per_kg, 0.0, cargo_sink_max)
+	_sink = move_toward(_sink, target_sink, sink_smooth_speed * delta)
+	body_visuals.position.y = -_sink
 
 
 func _update_engine(delta: float, running: bool) -> void:
@@ -130,6 +189,47 @@ func _update_screech(delta: float) -> void:
 		return
 	screech_player.volume_db = screech_volume_db + linear_to_db(_screech_mix)
 	screech_player.pitch_scale = lerpf(0.85, 1.15, _screech_mix)
+
+
+## One small dust puff per wheel, parented to the wheel itself so it rides
+## along with suspension travel and steering for free -- no particle texture
+## needed, same tiny-box-mesh trick as the confetti burst on a ruined package.
+func _build_dust_emitters() -> void:
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = Vector3.UP
+	process_material.spread = 35.0
+	process_material.initial_velocity_min = 0.4
+	process_material.initial_velocity_max = 1.4
+	process_material.gravity = Vector3(0.0, -3.5, 0.0)
+	process_material.color = dust_color
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3.ONE * 0.05
+	for wheel: VehicleWheel3D in _wheels:
+		var particles := GPUParticles3D.new()
+		particles.name = "DustEmitter"
+		particles.emitting = false
+		particles.amount = 14
+		particles.lifetime = 0.55
+		particles.explosiveness = 0.0
+		particles.process_material = process_material
+		particles.draw_pass_1 = mesh
+		particles.position = Vector3(0.0, -wheel.wheel_radius, 0.0)
+		wheel.add_child(particles)
+		_dust_emitters.append(particles)
+
+
+## Continuous, not a one-shot burst: on while grounded, moving and (mostly)
+## on the road, ramping up with skid rather than snapping to full intensity.
+func _apply_dust() -> void:
+	var speed_factor: float = clampf((vehicle.speed_kmh - dust_min_speed_kmh) / 20.0, 0.0, 1.0)
+	for index: int in range(_wheels.size()):
+		var wheel: VehicleWheel3D = _wheels[index]
+		var particles: GPUParticles3D = _dust_emitters[index]
+		var grounded: bool = wheel.is_in_contact()
+		var skid: float = (1.0 - wheel.get_skidinfo()) if grounded else 0.0
+		var intensity: float = clampf(maxf(speed_factor, skid) if grounded else 0.0, 0.0, 1.0)
+		particles.emitting = intensity > 0.05
+		particles.amount_ratio = maxf(intensity, 0.15)
 
 
 func _on_impact(strength: float, impact_position: Vector3) -> void:
