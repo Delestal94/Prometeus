@@ -59,6 +59,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_network_roster.gd
 <godot> --headless --path do-not-drop --script res://tests/test_hint_relay.gd
 <godot> --headless --path do-not-drop --script res://tests/test_main_menu.gd
+<godot> --headless --path do-not-drop --script res://tests/test_route_streaming.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -81,6 +82,11 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   terminar en el mismo transporte o nunca se van a encontrar).
 - `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
   prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
+- `test_route_streaming` — la pieza base de streaming de tramos (Fase 3): que
+  `RouteStreamer` genere tramos por delante de un objetivo, libere los que
+  quedaron muy atrás y nunca repita el mismo tipo dos veces seguidas. Es
+  aparte de la ruta curada a mano (`route.gd`), que sigue siendo la que se
+  juega hoy.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.
@@ -135,10 +141,13 @@ comprobar en qué estado está con:
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 ```
 
-> Si clonás el repo en otra máquina, corré una vez
+> Si clonás el repo en otra máquina (o agregaste algún script con
+> `class_name` nuevo), corré una vez
 > `<godot> --headless --path do-not-drop --import` antes de los tests: Godot
-> registra las GDExtensions al importar el proyecto, y sin ese paso la
-> extensión no carga aunque los archivos estén.
+> registra ahí tanto las GDExtensions como las clases globales
+> (`class_name`), y sin ese paso ni la extensión de Steam carga ni un
+> `class_name` nuevo se puede referenciar por nombre, aunque los archivos
+> estén.
 
 > Al exportar, usá las **plantillas normales de Godot**, no las de GodotSteam.
 > Con la versión GDExtension, mezclarlas trae problemas.

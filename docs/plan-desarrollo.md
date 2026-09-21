@@ -87,6 +87,24 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
 - Esta fase es la base técnica tanto para las rutas del modo normal como para el modo
   endless (sección 3.5 del doc técnico).
 
+### Estado (2026-09-21): pieza base construida y probada en aislamiento, no integrada al juego
+- [x] `RouteSegment` (`scripts/gameplay/route/route_segment.gd`) — base chainable:
+      cada tramo se autoconstruye entre z=0 (entrada) y z=-length (salida), sin
+      conocer al tramo anterior ni al siguiente.
+- [x] Cuatro tipos concretos en `scripts/gameplay/route/segments/`: recta, badén,
+      chicana y puente angosto — cada uno un script chico, `class_name` propio.
+- [x] `RouteStreamer` (`scripts/gameplay/route/route_streamer.gd`) — instancia tramos
+      por delante de un `target` (pensado para el vehículo), libera los que quedaron
+      atrás, y aplica la regla de combinación más simple posible: nunca repetir el
+      mismo tipo dos veces seguidas.
+- [x] `tests/test_route_streaming.gd` cubre spawn/cull/no-repetición con un `Node3D`
+      de prueba en vez del vehículo real.
+- [ ] **No reemplaza todavía la ruta curada a mano** (`route.gd`/`route.tscn`), que
+      sigue siendo la que juega `level_base.gd` — integrarlo (conectar `start()` al
+      vehículo real, decidir cómo conviven tramos curados fijos con streaming
+      aleatorio en el modo normal) queda pendiente, junto con el criterio subjetivo:
+      ningún test puede decir si la variedad procedural se siente bien.
+
 ## Fase 4 — Multiplayer
 > Se deja para después de validar el loop y las trampas en solitario, porque el
 > networking es la parte más costosa de depurar y no tiene sentido pagar ese costo

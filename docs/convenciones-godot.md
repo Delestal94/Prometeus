@@ -140,8 +140,15 @@ do-not-drop/
         balance_trap_behavior.gd
         noisy_trap_behavior.gd
       route/
-        route.gd
+        route.gd                 # ruta curada a mano, la que se juega hoy
         route_smoke_check.gd
+        route_segment.gd         # base chainable para streaming (Fase 3)
+        route_streamer.gd        # spawn/cull de tramos, no integrado al juego todavía
+        segments/
+          straight_segment.gd
+          speed_bump_segment.gd
+          chicane_segment.gd
+          narrow_bridge_segment.gd
   data/
     traps/
       fragile.tres
