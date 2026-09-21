@@ -27,6 +27,13 @@ func _initialize() -> void:
 	var package: RigidBody3D = PACKAGE_SCENE.instantiate()
 	root.add_child(package)
 	package.global_position = Vector3(3.0, 0.0, -8.0)
+	# Frozen: this test only cares about a fixed reference position for the
+	# burst, not real physics. Left unfrozen, gravity can nudge it during the
+	# await below -- how much depends on whether a physics tick happens to
+	# land inside that one process_frame, which is exactly non-deterministic
+	# enough to make this assertion flaky (caught by running it repeatedly,
+	# ~1 in 5 failures even before any of this file's other changes).
+	package.freeze = true
 	await process_frame
 	package.call(&"initialize_trap")
 

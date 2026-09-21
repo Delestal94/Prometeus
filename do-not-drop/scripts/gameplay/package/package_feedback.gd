@@ -16,6 +16,10 @@ const WOBBLE_NODE_NAMES: Array[StringName] = [&"Box", &"StrapX", &"StrapZ", &"St
 const GROWING_WEIGHT_MAX_SCALE: float = 1.35
 const GROWING_WEIGHT_SINK: float = 0.09
 const WOBBLE_AMPLITUDE: float = 0.028
+## Creaks retrigger more often the closer the box is to failing -- at full
+## distress roughly one every 0.8s, calm but not fresh roughly one every 4s.
+const CREAK_INTERVAL_MAX: float = 4.0
+const CREAK_INTERVAL_MIN: float = 0.8
 
 @export var box_mesh_path: NodePath = ^"../Box"
 @export var status_label_path: NodePath = ^"../Status"
@@ -33,6 +37,10 @@ var _distress: float = 0.0
 var _trap_id: StringName = &""
 var _wobble_nodes: Dictionary = {}  ## name -> {"node": Node3D, "base_position": Vector3}
 var _wobble_seed: float = 0.0
+var _chime_player: AudioStreamPlayer3D
+var _groan_player: AudioStreamPlayer3D
+var _creak_player: AudioStreamPlayer3D
+var _creak_countdown: float = 0.0
 
 
 func _ready() -> void:
@@ -48,11 +56,18 @@ func _ready() -> void:
 	_material.roughness = 0.95
 	_box.material_override = _material
 	_label = get_node(status_label_path) as Label3D
-	if _trap_id == &"noisy":
-		for wobble_name: StringName in WOBBLE_NODE_NAMES:
-			var node: Node3D = get_node_or_null(NodePath("../" + String(wobble_name))) as Node3D
-			if node != null:
-				_wobble_nodes[wobble_name] = {"node": node, "base_position": node.position}
+	match _trap_id:
+		&"noisy":
+			for wobble_name: StringName in WOBBLE_NODE_NAMES:
+				var node: Node3D = get_node_or_null(NodePath("../" + String(wobble_name))) as Node3D
+				if node != null:
+					_wobble_nodes[wobble_name] = {"node": node, "base_position": node.position}
+			_groan_player = _make_player(SynthAudio.creature_groan(), -60.0)
+		&"fragile":
+			_chime_player = _make_player(SynthAudio.glass_chime(), -8.0)
+		&"growing_weight":
+			_creak_player = _make_player(SynthAudio.wood_creak(), -10.0)
+			_creak_countdown = CREAK_INTERVAL_MAX
 	_set_state(0)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
@@ -61,9 +76,26 @@ func _ready() -> void:
 		bus.connect("package_integrity_changed", _on_integrity_changed)
 
 
+func _make_player(stream: AudioStreamWAV, volume_db: float) -> AudioStreamPlayer3D:
+	var player := AudioStreamPlayer3D.new()
+	player.stream = stream
+	player.volume_db = volume_db
+	player.unit_size = 6.0
+	player.max_distance = 20.0
+	add_child(player)
+	return player
+
+
 func _on_package_state_changed(id: StringName, new_state: int) -> void:
-	if id == _package_id:
-		_set_state(new_state)
+	if id != _package_id:
+		return
+	_set_state(new_state)
+	# Frágil's audible cue (docs/especificaciones-visuales.md #43): a bright
+	# chime on the way into AT_RISK, the same clip pitched down a fourth for
+	# RUINED so the two severities are easy to tell apart by ear alone.
+	if _trap_id == &"fragile" and new_state != 0:
+		_chime_player.pitch_scale = 1.0 if new_state == 1 else 0.75
+		_chime_player.play()
 
 
 func _on_package_ruined(id: StringName, _cause: String) -> void:
@@ -80,8 +112,12 @@ func _on_integrity_changed(id: StringName, integrity: float, maximum: float) -> 
 
 
 func _process(delta: float) -> void:
-	if _trap_id == &"noisy":
-		_apply_wobble(delta)
+	match _trap_id:
+		&"noisy":
+			_apply_wobble(delta)
+			_apply_groan()
+		&"growing_weight":
+			_apply_creak(delta)
 
 
 ## Peso Creciente: the crate visibly swells and settles lower as its mass
@@ -116,6 +152,33 @@ func _apply_wobble(delta: float) -> void:
 			sin(_wobble_seed * 1.3 + base.z * 10.0),
 		) * WOBBLE_AMPLITUDE * _distress
 		node.position = base + jitter
+
+
+## Ruidoso's audible half of the same distress that drives the wobble:
+## louder and higher-pitched the more agitated it is, silent at rest so a
+## calm crate isn't moaning in the background the whole ride.
+func _apply_groan() -> void:
+	if _distress <= 0.0:
+		_groan_player.stop()
+		return
+	if not _groan_player.playing:
+		_groan_player.play()
+	_groan_player.volume_db = lerpf(-40.0, -6.0, _distress)
+	_groan_player.pitch_scale = lerpf(0.85, 1.3, _distress)
+
+
+## Peso Creciente's audible half: a creak burst, retriggered on its own
+## schedule rather than every frame -- real creaking is intermittent, and
+## the interval itself shortens as the box gets closer to unmanageable.
+func _apply_creak(delta: float) -> void:
+	if _distress <= 0.0:
+		_creak_countdown = CREAK_INTERVAL_MAX
+		return
+	_creak_countdown -= delta
+	if _creak_countdown <= 0.0:
+		_creak_countdown = lerpf(CREAK_INTERVAL_MAX, CREAK_INTERVAL_MIN, _distress)
+		_creak_player.pitch_scale = randf_range(0.9, 1.1)
+		_creak_player.play()
 
 
 ## A handful of tiny colored cubes flung outward and pulled down by gravity --

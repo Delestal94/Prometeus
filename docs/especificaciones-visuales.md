@@ -98,9 +98,9 @@ dónde empezar, es por ahí.
 | # | Especificación | Prio |
 |---|---|---|
 | 41 | ~~Sonido de motor ligado a la velocidad.~~ **[x] Hecho (2026-09-21)** — `SynthAudio.engine_loop()` (armónicos sintetizados, sin asset) + `VehiclePresentation._update_engine()`: el pitch y volumen siguen velocidad y carga del motor en tiempo real. | **A** |
-| 42 | **Sonido de impacto** al golpear algo, escalado por fuerza — la señal `vehicle_impact` ya existe y ya lleva la magnitud. | **A** |
-| 43 | **Sonidos por trampa**: vidrio tintineando, algo vivo quejándose, peso crujiendo. Refuerza qué paquete está en problemas sin mirar el HUD. | **A** |
-| 44 | Chirrido de neumáticos al derrapar o frenar fuerte. | **A** |
+| 42 | ~~Sonido de impacto al golpear algo, escalado por fuerza.~~ **[x] Hecho (2026-09-21)** — `SynthAudio.impact_thud()` (sintetizado, mezcla de golpe grave + ruido filtrado), volumen según la magnitud del golpe, mismo umbral y radio de distancia que ya usaba el parpadeo de faros. | **A** |
+| 43 | ~~Sonidos por trampa.~~ **[x] Hecho (2026-09-21)** — `package_feedback.gd`: Frágil tiene una campanita que suena al entrar en riesgo y una versión más grave al arruinarse; Ruidoso tiene un gemido grave en loop que sube de volumen/tono con la agitación; Peso Creciente tiene un crujido que se repite cada vez más seguido cuanto más cerca está de fallar. Los tres sintetizados en código (`synth_audio.gd`), sin assets. | **A** |
+| 44 | ~~Chirrido de neumáticos al derrapar o frenar fuerte.~~ **[x] Hecho (2026-09-21)** — `VehiclePresentation` promedia el patinaje real de las 4 ruedas (`VehicleWheel3D.get_skidinfo()`, ya nativo, no hubo que calcular deslizamiento a mano) y lo usa para mezclar el volumen/tono de un loop de chirrido. | **A** |
 | 45 | Ambiente exterior: viento, pájaros, ruido lejano de ruta. | **A** |
 | 46 | **Reverb distinta dentro de la furgoneta vs. afuera** — barato en Godot (buses de audio) y vende muchísimo el "estoy adentro de una caja de metal". | **B** |
 | 47 | Música: al menos un tema de tensión que suba con el riesgo acumulado de la carga. | **B** |

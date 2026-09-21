@@ -6,17 +6,23 @@ extends Node3D
 @export var headlight_energy: float = 1.6
 @export var impact_flicker_seconds: float = 0.16
 @export var engine_volume_db: float = -21.0
+@export var impact_thud_volume_db: float = -6.0
+@export var screech_volume_db: float = -14.0
 @export var audio_enabled: bool = true
 
 @onready var vehicle: VehicleBody3D = get_parent()
 @onready var steering_wheel: MeshInstance3D = vehicle.get_node("CabinInterior/SteeringWheel")
 var headlights: Array[SpotLight3D] = []
 var engine_player: AudioStreamPlayer3D
+var impact_player: AudioStreamPlayer3D
+var screech_player: AudioStreamPlayer3D
 var _steering_rest: Basis
 var _front_materials: Array[StandardMaterial3D] = []
 var _rear_materials: Array[StandardMaterial3D] = []
+var _wheels: Array[VehicleWheel3D] = []
 var _flicker_remaining: float = 0.0
 var _motor_mix: float = 0.0
+var _screech_mix: float = 0.0
 
 
 func _ready() -> void:
@@ -45,6 +51,23 @@ func _ready() -> void:
 	engine_player.max_distance = 45.0
 	engine_player.volume_db = -60.0
 	add_child(engine_player)
+	impact_player = AudioStreamPlayer3D.new()
+	impact_player.name = "ImpactAudio"
+	impact_player.stream = preload("res://scripts/presentation/synth_audio.gd").impact_thud()
+	impact_player.unit_size = 10.0
+	impact_player.max_distance = 60.0
+	add_child(impact_player)
+	screech_player = AudioStreamPlayer3D.new()
+	screech_player.name = "ScreechAudio"
+	screech_player.position = Vector3(0.0, -0.3, 1.2)
+	screech_player.stream = preload("res://scripts/presentation/synth_audio.gd").tire_screech()
+	screech_player.unit_size = 8.0
+	screech_player.max_distance = 35.0
+	screech_player.volume_db = -60.0
+	add_child(screech_player)
+	for wheel: Node in vehicle.get_children():
+		if wheel is VehicleWheel3D:
+			_wheels.append(wheel)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.vehicle_impact.connect(_on_impact)
@@ -67,6 +90,7 @@ func update_presentation(delta: float) -> void:
 	for material: StandardMaterial3D in _rear_materials:
 		material.emission_energy_multiplier = 2.4 if vehicle.presentation_braking else (0.18 if running else 0.0)
 	_update_engine(delta, running)
+	_update_screech(delta)
 
 
 func _update_engine(delta: float, running: bool) -> void:
@@ -84,10 +108,37 @@ func _update_engine(delta: float, running: bool) -> void:
 	engine_player.volume_db = engine_volume_db + linear_to_db(maxf(_motor_mix, 0.001)) + load_amount * 3.0
 
 
+## Average skid across every wheel touching the ground -- VehicleWheel3D's
+## own get_skidinfo() (0 = full grip, 1 = full slide), so this needs no
+## separate slip calculation of its own. Screeching while airborne would be
+## wrong, so wheels not in contact just don't count.
+func _update_screech(delta: float) -> void:
+	var skid_total: float = 0.0
+	var grounded_count: int = 0
+	for wheel: VehicleWheel3D in _wheels:
+		if wheel.is_in_contact():
+			skid_total += 1.0 - wheel.get_skidinfo()
+			grounded_count += 1
+	var average_skid: float = skid_total / grounded_count if grounded_count > 0 else 0.0
+	var moving: bool = vehicle.linear_velocity.length() > 1.5
+	var target_mix: float = average_skid if (moving and audio_enabled) else 0.0
+	_screech_mix = move_toward(_screech_mix, target_mix, delta * 4.0)
+	if _screech_mix > 0.02 and not screech_player.playing:
+		screech_player.play()
+	if _screech_mix <= 0.02:
+		screech_player.stop()
+		return
+	screech_player.volume_db = screech_volume_db + linear_to_db(_screech_mix)
+	screech_player.pitch_scale = lerpf(0.85, 1.15, _screech_mix)
+
+
 func _on_impact(strength: float, impact_position: Vector3) -> void:
 	if strength >= 7.0 and vehicle.global_position.distance_to(impact_position) < 5.0:
 		# One brief dip, not repeated flashes. It never affects physics or visibility masks.
 		_flicker_remaining = impact_flicker_seconds
+		impact_player.volume_db = impact_thud_volume_db + linear_to_db(clampf(strength / 15.0, 0.2, 1.0))
+		impact_player.pitch_scale = randf_range(0.92, 1.08)
+		impact_player.play()
 
 
 func _unique_material(mesh: MeshInstance3D) -> StandardMaterial3D:
