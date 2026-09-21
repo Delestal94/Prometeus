@@ -80,8 +80,8 @@ Hay dos transportes detrás de la misma interfaz `MultiplayerPeer` de Godot, y
 
 - **Steam (así se juega de verdad).** Sala de Steam relayeada por Valve: sin
   abrir puertos, sin firewall, con NAT punch-through. Es lo que usan PEAK y
-  Lethal Company. Requiere tener instalada la extensión **GodotSteam** (la 4.20
-  en adelante soporta Godot 4.7 y ya trae el `SteamMultiplayerPeer` incorporado).
+  Lethal Company. Requiere tener instalada la extensión **GodotSteam**, que ya
+  trae el `SteamMultiplayerPeer` incorporado.
 - **ENet (desarrollo local).** Un socket UDP común contra `127.0.0.1`. Se queda
   porque para probar dos instancias en la misma máquina Steam es incómodo: P2P
   entre dos copias con la misma cuenta no funciona bien.
@@ -92,13 +92,21 @@ la extensión no está, `NetworkManager` cae a ENet solo.
 
 ### Instalar GodotSteam (pendiente, lo tenés que hacer vos)
 
-1. Bajá la GDExtension de GodotSteam para Godot 4.7 y descomprimila en
+Este proyecto usa **Godot 4.7.2**. La versión que le corresponde es
+**GodotSteam 4.22** (hay un release que acompaña puntualmente a 4.7.2).
+
+1. En el editor de Godot, pestaña **AssetLib**, buscá
+   **"GodotSteam GDExtension 4.4+"**. Descargala y copiá el contenido en
    `do-not-drop/addons/`.
-2. `steam_appid.txt` ya está en el repo con **480** (Spacewar, la app de ejemplo
+2. Activala en **Proyecto → Configuración del proyecto → Plugins**.
+3. `steam_appid.txt` ya está en el repo con **480** (Spacewar, la app de ejemplo
    de Valve). Sirve para desarrollo: da P2P y NAT punch-through sin tener un app
    id propio. **No se puede publicar con ese id** — cuando haya app id real, se
    reemplaza.
-3. Steam tiene que estar abierto y con sesión iniciada.
+4. Steam tiene que estar abierto y con sesión iniciada.
+
+> Al exportar, usá las **plantillas normales de Godot**, no las de GodotSteam.
+> Con la versión GDExtension, mezclarlas trae problemas.
 
 ### Prueba de conexión local (manual, dos procesos)
 
