@@ -52,6 +52,7 @@ var _seated: bool = false
 var _pitch: float = 0.0
 var _nearby: Array[Node] = []
 var _last_prompt: String = ""
+var _highlighted: Node = null
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 var _body_visual: MeshInstance3D = null
 var _bob_time: float = 0.0
@@ -187,6 +188,7 @@ func _physics_process(delta: float) -> void:
 		_update_carried_package()
 	var target: Node = _closest_interactable()
 	_publish_prompt(str(target.call(&"get_prompt")) if target != null else "")
+	_update_highlight(target)
 
 
 func _apply_look(motion: Vector2) -> void:
@@ -241,6 +243,20 @@ func _publish_prompt(value: String) -> void:
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.emit_signal(&"interaction_prompt_changed", value)
+
+
+## A visible glow on whatever the player is currently looking at (item #98),
+## instead of only the HUD's text prompt. Duck-typed via has_method(): not
+## every Interactable bothers implementing highlight() (a package mount is
+## an empty slot, nothing to glow), so this is opt-in per type.
+func _update_highlight(target: Node) -> void:
+	if target == _highlighted:
+		return
+	if is_instance_valid(_highlighted) and _highlighted.has_method(&"highlight"):
+		_highlighted.call(&"highlight", false)
+	_highlighted = target
+	if is_instance_valid(_highlighted) and _highlighted.has_method(&"highlight"):
+		_highlighted.call(&"highlight", true)
 
 
 func _update_carried_package() -> void:

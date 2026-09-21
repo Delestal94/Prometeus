@@ -7,6 +7,16 @@ extends "res://scripts/gameplay/interaction/interactable.gd"
 ## a separate concern, targeted at their own peer.
 
 @onready var _package: Node = get_parent()
+@onready var _feedback: Node = _package.get_node_or_null(^"PackageFeedbackComponent")
+
+
+## Called by whoever's tracking "am I looking at this" (see player.gd's
+## _physics_process) -- delegates to the sibling component that already
+## owns the Box's material, so this doesn't fight it over who controls
+## material_override.
+func highlight(enabled: bool) -> void:
+	if _feedback != null:
+		_feedback.call(&"highlight", enabled)
 
 
 func get_prompt() -> String:

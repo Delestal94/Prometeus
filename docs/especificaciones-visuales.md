@@ -164,11 +164,11 @@ dónde empezar, es por ahí.
 | 91 | Rayones y abolladuras acumuladas en la carrocería a lo largo de la entrega. | **C** |
 | 92 | Un paquete suelto debería poder golpear a un jugador y empujarlo (con ragdoll, #37, es humor gratis). | **B** |
 | 93 | Traspaso de paquete entre jugadores mano a mano, sin pasar por el piso. | **C** |
-| 94 | Indicación visual de asiento ocupado vs. libre, más allá del texto del prompt. | **A** |
+| 94 | ~~Indicación visual de asiento ocupado vs. libre.~~ **[x] Hecho (2026-09-21)** — una esfera emisiva por asiento (verde libre, roja ocupado, `seat_point.gd`), derivada del `seat_node_path` replicado de cada jugador (mismo dato que ya usa el #81) en vez de la variable `occupant`, que solo existe en la copia del host — así se ve igual en todos los clientes, no solo en el anfitrión. | **A** |
 | 95 | Las manos del conductor deberían ser visibles para los pasajeros — hoy nadie ve a nadie conducir. | **B** |
 | 96 | La furgoneta debería hundirse levemente según el peso total de la carga (conecta directo con la trampa de Peso Creciente). | **A** |
 | 97 | Sombras de los personajes proyectadas dentro de la cabina, para que se sientan presentes en el espacio. | **B** |
-| 98 | Resaltado del objeto interactuable al apuntarlo (outline), en vez de solo el texto del prompt. | **A** |
+| 98 | ~~Resaltado del objeto interactuable al apuntarlo (outline).~~ **[x] Hecho (2026-09-21), con otra técnica — solo paquetes por ahora.** Un verdadero outline (casco invertido) necesita geometría extra por tipo de objeto; en cambio, `player.gd` llama `highlight(bool)` (duck-typed, `has_method`) sobre lo que esté mirando, y `package_pickup_point.gd` lo delega al `PackageFeedbackComponent` del paquete, que le suma un glow de emisión sin pelear con el color de estado que ya controla. Asientos y soportes de montaje no tienen todavía un `highlight()` propio — un soporte vacío no tiene qué brillar, y los asientos ya tienen el indicador del #94. | **A** |
 | 99 | Reacción del paquete al input del jugador: que se vea sostenido, calmado o corregido cuando presionás. | **A** |
 | 100 | Marcador sobre el compañero que pingeó, visible a través de la carrocería, para ubicarlo sin tener que girar la cámara. | **B** |
 

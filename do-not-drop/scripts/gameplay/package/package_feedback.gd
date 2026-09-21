@@ -214,6 +214,17 @@ func _burst_confetti() -> void:
 	particles.finished.connect(particles.queue_free)
 
 
+## Called by package_pickup_point.gd while this package is (or stops being)
+## the player's current interaction target -- a highlight instead of only
+## the HUD's text prompt saying "Agarrar paquete" (item #98). An emission
+## overlay, not a swapped albedo: the box's real color already carries its
+## trap state, this just glows on top without fighting _set_state() for it.
+func highlight(enabled: bool) -> void:
+	_material.emission_enabled = enabled
+	_material.emission = Color.WHITE
+	_material.emission_energy_multiplier = 0.9 if enabled else 0.0
+
+
 func _set_state(new_state: int) -> void:
 	match new_state:
 		0:
