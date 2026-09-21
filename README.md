@@ -38,8 +38,10 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 
 ```
 <godot> --headless --path do-not-drop --script res://tests/test_fragile.gd
+<godot> --headless --path do-not-drop --script res://tests/test_traps.gd
 <godot> --headless --path do-not-drop --script res://tests/test_interaction.gd
 <godot> --headless --path do-not-drop --script res://tests/test_loading_flow.gd
+<godot> --headless --path do-not-drop --script res://tests/test_multi_cargo.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
 ```
@@ -47,7 +49,10 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 
 - `test_fragile` — umbrales de daño, estados e independencia entre paquetes.
+- `test_traps` — las otras tres trampas: peso creciente, equilibrio y ruidoso.
 - `test_interaction` — agarrar, dejar en el asiento y subirse a manejar.
+- `test_multi_cargo` — varias trampas a la vez, y que perder una no termine
+  la entrega de todos.
 - `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
   prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor

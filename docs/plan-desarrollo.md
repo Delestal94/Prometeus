@@ -67,6 +67,17 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
   cuando haya varios jugadores) para validar que el caos escale bien y no se vuelva
   injusto o imposible de seguir.
 
+### Estado (2026-09-20): implementada, falta validarla jugando
+- [x] Las tres trampas restantes, cada una como script + `.tres`, sin tocar el loop.
+- [x] Los cuatro asientos de pasajero son ocupables y cada uno queda a cargo del
+      paquete de su soporte; el input del pasajero llega a su trampa.
+- [x] El nivel lleva los cuatro paquetes a la vez y el marcador puntúa por carga.
+- [x] `tests/test_traps.gd` y `tests/test_multi_cargo.gd` cubren la lógica headless.
+- [ ] **Criterio subjetivo, pendiente**: jugarlo y ver si el caos con 2-3 trampas
+      simultáneas se siente divertido o solo abrumador. Ningún test puede responder
+      esto; si se siente injusto, los números están en `parametros-diseno.md` y se
+      ajustan sin tocar código.
+
 ## Fase 3 — Streaming de tramos (mundo "interminable")
 - Implementar generación/instanciado de tramos por delante del vehículo y eliminación
   de los tramos que quedaron atrás, usando la posición real del `VehicleBody3D` en el

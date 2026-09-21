@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" path="res://scenes/gameplay/route/route.tscn" id="4_route"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/player/player.tscn" id="5_player"]
 [ext_resource type="Script" path="res://scripts/ui/prototype_hud.gd" id="6_hud"]
+[ext_resource type="Resource" path="res://data/traps/growing_weight.tres" id="7_growing"]
+[ext_resource type="Resource" path="res://data/traps/balance.tres" id="8_balance"]
+[ext_resource type="Resource" path="res://data/traps/noisy.tres" id="9_noisy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.28, 0.46, 0.53, 1)
@@ -36,6 +39,21 @@ position = Vector3(0, 0.9, 0)
 
 [node name="Package" parent="World" instance=ExtResource("3_package")]
 position = Vector3(2.2, 0.75, 0.5)
+
+[node name="PackageGrowingWeight" parent="World" instance=ExtResource("3_package")]
+position = Vector3(3.1, 0.75, 0.5)
+package_id = &"growing_weight_01"
+trap_definition = ExtResource("7_growing")
+
+[node name="PackageBalance" parent="World" instance=ExtResource("3_package")]
+position = Vector3(2.2, 0.75, 1.4)
+package_id = &"balance_01"
+trap_definition = ExtResource("8_balance")
+
+[node name="PackageNoisy" parent="World" instance=ExtResource("3_package")]
+position = Vector3(3.1, 0.75, 1.4)
+package_id = &"noisy_01"
+trap_definition = ExtResource("9_noisy")
 
 [node name="Player" parent="World" instance=ExtResource("5_player")]
 position = Vector3(2.2, 1.0, 3.2)

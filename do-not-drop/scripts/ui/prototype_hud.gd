@@ -15,8 +15,10 @@ var speed_label: Label
 var time_label: Label
 var distance_label: Label
 var section_label: Label
-var integrity_label: Label
-var integrity_bar: ProgressBar
+var cargo_rows_box: VBoxContainer
+var cargo_hint_label: Label
+## package id -> {"label": Label, "bar": ProgressBar}
+var cargo_rows: Dictionary = {}
 var route_bar: ProgressBar
 var hint_label: Label
 var overlay: ColorRect
@@ -43,6 +45,7 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_started)
 	EventBus.run_ended.connect(_on_ended)
 	EventBus.interaction_prompt_changed.connect(_on_interaction_prompt)
+	EventBus.cargo_registered.connect(_on_cargo_registered)
 	_show_start()
 
 
@@ -80,12 +83,14 @@ func _build_ui() -> void:
 	var bottom := HBoxContainer.new()
 	dashboard.add_child(bottom)
 	bottom.add_theme_constant_override("separation", 16)
-	var cargo := _panel(bottom, Vector2(285, 0))
-	_label(cargo, "CARGA  /  FRÁGIL", 13, MUTED)
-	integrity_label = _label(cargo, "100%  ·  ESTABLE", 24, MINT)
-	integrity_bar = _bar(cargo, MINT)
-	integrity_bar.value = 100
-	_label(cargo, "Cada golpe deja huella.", 14, MUTED)
+	var cargo := _panel(bottom, Vector2(310, 0))
+	_label(cargo, "CARGA", 13, MUTED)
+	cargo_rows_box = VBoxContainer.new()
+	cargo_rows_box.add_theme_constant_override("separation", 6)
+	cargo.add_child(cargo_rows_box)
+	cargo_hint_label = _label(cargo, "", 14, MUTED)
+	cargo_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cargo_hint_label.custom_minimum_size.x = 265
 	var delivery := _panel(bottom, Vector2.ZERO)
 	delivery.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	section_label = _label(delivery, "01  /  SALIDA", 13, MINT)
@@ -217,6 +222,7 @@ func _process(delta: float) -> void:
 	if overlay_mode == "pause" and not get_tree().paused:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
+	_refresh_cargo_hint()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -265,28 +271,47 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	action_button.release_focus()
 	interaction_label.text = ""
 	hint_label.text = DRIVE_HINT
-	_on_integrity(&"fragile_01", RunManager.package_integrity, RunManager.package_maximum)
 
 
 func _on_speed(speed: float) -> void:
 	speed_label.text = "%02d km/h" % roundi(absf(speed))
 
 
-func _on_integrity(_id: StringName, integrity: float, maximum: float) -> void:
-	integrity_bar.value = integrity / maximum * 100.0
-	_update_integrity_text(integrity)
+func _on_cargo_registered(id: StringName, display_name: String) -> void:
+	if cargo_rows.has(id):
+		return
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 2)
+	cargo_rows_box.add_child(row)
+	var label: Label = _label(row, "%s  ·  100%%" % display_name.to_upper(), 17, MINT)
+	var bar: ProgressBar = _bar(row, MINT)
+	bar.value = 100
+	cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper()}
 
 
-func _on_package_state(_id: StringName, _state: int) -> void:
-	_update_integrity_text(RunManager.package_integrity)
+func _on_integrity(id: StringName, integrity: float, maximum: float) -> void:
+	if not cargo_rows.has(id):
+		return
+	(cargo_rows[id]["bar"] as ProgressBar).value = integrity / maxf(maximum, 0.01) * 100.0
+	_refresh_row(id)
 
 
-func _update_integrity_text(integrity: float) -> void:
-	var state: int = RunManager.package_state
+func _on_package_state(id: StringName, _state: int) -> void:
+	_refresh_row(id)
+
+
+func _refresh_row(id: StringName) -> void:
+	if not cargo_rows.has(id):
+		return
+	var entry: Dictionary = RunManager.cargo.get(id, {})
+	var state: int = int(entry.get("state", 0))
+	var integrity: float = float(entry.get("integrity", 100.0))
 	var color: Color = [MINT, YELLOW, RED][state]
-	integrity_label.text = "%d%%  ·  %s" % [roundi(integrity), ["ESTABLE", "EN RIESGO", "ARRUINADO"][state]]
-	integrity_label.add_theme_color_override("font_color", color)
-	(integrity_bar.get_theme_stylebox("fill") as StyleBoxFlat).bg_color = color
+	var row: Dictionary = cargo_rows[id]
+	var label: Label = row["label"]
+	label.text = "%s  ·  %d%%  %s" % [row["name"], roundi(integrity), ["", "· EN RIESGO", "· PERDIDO"][state]]
+	label.add_theme_color_override("font_color", color)
+	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = color
 
 
 func _on_damage(_id: StringName, damage: float) -> void:
@@ -308,13 +333,41 @@ func _on_delivery(in_zone: bool, stopped: float) -> void:
 	in_delivery = in_zone
 
 
+func _refresh_cargo_hint() -> void:
+	# Only the most urgent box gets the hint line: with four of them there's
+	# no room for four, and the one in trouble is what the player needs now.
+	if cargo_hint_label == null or not RunManager.is_running:
+		return
+	var worst_id: StringName = &""
+	var worst_integrity: float = INF
+	for id: StringName in RunManager.cargo:
+		var entry: Dictionary = RunManager.cargo[id]
+		if int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED:
+			continue
+		var value: float = float(entry.get("integrity", 100.0))
+		if value < worst_integrity:
+			worst_integrity = value
+			worst_id = id
+	var hint: String = ""
+	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
+		if StringName(package.get(&"package_id")) == worst_id:
+			hint = String(package.call(&"get_hint"))
+			break
+	cargo_hint_label.text = hint
+
+
 func _on_ended(score: int, results: Dictionary) -> void:
 	overlay_mode = "results"
 	overlay.show()
 	var success: bool = results["delivered"]
+	var total: int = int(results.get("cargo_total", 0))
+	var intact: int = int(results.get("cargo_intact", 0))
+	var ruined: int = int(results.get("cargo_ruined", 0))
 	overlay_title.text = "¡ENTREGADO!" if success else "OTRA VUELTA"
-	overlay_body.text = ("El paquete llegó %s." % ("en buen estado" if results["package_state"] == 0 else "en riesgo, pero llegó")) if success else results["reason"]
-	overlay_stats.text = "%d PUNTOS     /     %d%% INTEGRIDAD     /     %.1f s\n\nEntrega: %d pts   +   Rapidez: %d pts" % [score, roundi(results["integrity"]), results["elapsed_seconds"], results["package_points"], results["time_bonus"]]
+	overlay_body.text = ("Llegaron %d de %d paquetes, %d intactos." % [total - ruined, total, intact]) if success else results["reason"]
+	var chaos: float = float(results.get("chaos_multiplier", 1.0))
+	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
+	overlay_stats.text = "%d PUNTOS     /     %.1f s\n\nCarga: %d pts   +   Rapidez: %d pts%s" % [score, results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], chaos_line]
 	action_button.text = "Volver a intentar"
 	second_button.hide()
 	action_button.grab_focus()

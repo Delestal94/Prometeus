@@ -108,6 +108,10 @@ look_center={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":67), Object(InputEventJoypadButton,"button_index":8)]
 }
+package_action_primary={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"button_index":1,"pressed":false), Object(InputEventJoypadMotion,"axis":5,"axis_value":1.0)]
+}
 
 [layer_names]
 

@@ -1,6 +1,7 @@
 extends Node
 ## Facts shared by simulation and presentation. UI requests are separate from facts.
 
+signal cargo_registered(package_id: StringName, display_name: String)
 signal package_state_changed(package_id: StringName, new_state: int)
 signal package_integrity_changed(package_id: StringName, integrity: float, maximum: float)
 signal package_ruined(package_id: StringName, cause: String)

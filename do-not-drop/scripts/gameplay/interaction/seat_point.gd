@@ -33,4 +33,10 @@ func interact(player: Node) -> void:
 	var camera: Node = get_node_or_null(seat_camera_path)
 	var vehicle: Node = get_node_or_null(vehicle_path)
 	player.call(&"board_seat", camera, role == &"driver", vehicle)
+	if role != &"driver" and not required_mount_path.is_empty():
+		# A passenger takes charge of the package at their own seat: from here
+		# their input is what keeps that trap under control.
+		var mount: Node = get_node_or_null(required_mount_path)
+		if mount != null and player.has_method(&"tend_package"):
+			player.call(&"tend_package", mount.get(&"occupied_by"))
 	interacted.emit(player)

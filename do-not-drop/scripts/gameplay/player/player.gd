@@ -16,6 +16,9 @@ const PITCH_LIMIT: float = 1.4  # radians, ~80 degrees
 @onready var _probe: Area3D = $Head/InteractionProbe
 
 var carried_package: Node = null
+## The package at this player's seat, once they sit down as a passenger.
+## Their input reaches its trap through here.
+var tended_package: Node = null
 var _seated: bool = false
 var _pitch: float = 0.0
 var _nearby: Array[Node] = []
@@ -49,6 +52,8 @@ func _physics_process(delta: float) -> void:
 		_publish_prompt("")
 		if carried_package != null:
 			_update_carried_package()
+		if tended_package != null:
+			tended_package.set(&"player_input", _gather_package_input())
 		return
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	_apply_look(stick * stick_sensitivity * delta)
@@ -72,6 +77,28 @@ func _apply_look(motion: Vector2) -> void:
 	rotate_y(-motion.x)
 	_pitch = clampf(_pitch - motion.y, -PITCH_LIMIT, PITCH_LIMIT)
 	_head.rotation.x = _pitch
+
+
+func _gather_package_input() -> Dictionary:
+	# One held action covers every "keep it under control" trap, and the walk
+	# keys double as the sequence input -- a seated passenger isn't using them
+	# to move. Plain data, so the host can apply a remote client's input the
+	# same way once networking lands.
+	var holding: bool = Input.is_action_pressed(&"package_action_primary")
+	var direction: Variant = null
+	if Input.is_action_just_pressed(&"walk_forward"):
+		direction = &"up"
+	elif Input.is_action_just_pressed(&"walk_backward"):
+		direction = &"down"
+	elif Input.is_action_just_pressed(&"drive_left"):
+		direction = &"left"
+	elif Input.is_action_just_pressed(&"drive_right"):
+		direction = &"right"
+	return {"steady": holding, "calm": holding, "direction_pressed": direction}
+
+
+func tend_package(package: Node) -> void:
+	tended_package = package
 
 
 func _publish_prompt(value: String) -> void:

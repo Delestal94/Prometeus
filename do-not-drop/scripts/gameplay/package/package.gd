@@ -21,7 +21,12 @@ var integrity_max: float:
 		return float(trap_behavior.get("integrity_max")) if trap_behavior != null else 100.0
 var trap_state: int:
 	get:
+		if _lost:
+			return ITrapBehavior.TrapState.RUINED
 		return int(trap_behavior.call("get_state")) if trap_behavior != null else 0
+## A package can be written off for reasons no trap knows about -- falling out
+## of the van, say -- without every trap needing its own concept of that.
+var _lost: bool = false
 
 var _previous_velocity: Vector3 = Vector3.ZERO
 var _has_previous_velocity: bool = false
@@ -43,8 +48,7 @@ func initialize_trap() -> void:
 	_age = 0.0
 	_impact_cooldown_remaining = 0.0
 	_has_previous_velocity = false
-	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
-	_emit_event(&"package_state_changed", [package_id, trap_state])
+	_lost = false
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -82,6 +86,24 @@ func apply_impact(delta_velocity: float) -> void:
 	var before_state: int = trap_state
 	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0))
 	_report_change(before_integrity, before_state, "El paquete sufrió demasiados golpes.")
+
+
+## Announces this package to the run. Called when the delivery starts, not at
+## _ready: packages load before the level resets the run, and only cargo
+## actually aboard should count toward the score.
+func report_to_run() -> void:
+	_emit_event(&"cargo_registered", [package_id, String(trap_definition.get("display_name"))])
+	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
+	_emit_event(&"package_state_changed", [package_id, trap_state])
+
+
+func mark_lost(cause: String) -> void:
+	if _lost:
+		return
+	var before_integrity: float = integrity
+	var before_state: int = trap_state
+	_lost = true
+	_report_change(before_integrity, before_state, cause)
 
 
 func get_hint() -> String:

@@ -321,11 +321,24 @@ mesh = SubResource("Mesh_unit")
 position = Vector3(-0.55, 1.0, 0.15)
 rotation_degrees = Vector3(0, -90, 0)
 
+[node name="FirstPersonCamera" parent="CargoBay/LeftSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat1EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+required_mount_path = NodePath("../../LeftSeat1PackageMount/InteractionArea")
+prompt = "Sentarse y cuidar la carga"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat1EyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
+
 [node name="LeftSeat1PackageMount" type="Marker3D" parent="CargoBay"]
 position = Vector3(-0.25, 0.8, 0.15)
 rotation_degrees = Vector3(0, -90, 0)
 
-[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat1PackageMount"]
+[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat1PackageMount" groups=["package_mount"]]
 script = ExtResource("5_mount")
 prompt = "Dejar paquete acá"
 
@@ -348,9 +361,29 @@ mesh = SubResource("Mesh_unit")
 position = Vector3(-0.55, 1.0, 1.35)
 rotation_degrees = Vector3(0, -90, 0)
 
+[node name="FirstPersonCamera" parent="CargoBay/LeftSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat2EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+required_mount_path = NodePath("../../LeftSeat2PackageMount/InteractionArea")
+prompt = "Sentarse y cuidar la carga"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat2EyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
+
 [node name="LeftSeat2PackageMount" type="Marker3D" parent="CargoBay"]
 position = Vector3(-0.25, 0.8, 1.35)
 rotation_degrees = Vector3(0, -90, 0)
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat2PackageMount" groups=["package_mount"]]
+script = ExtResource("5_mount")
+prompt = "Dejar paquete acá"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat2PackageMount/InteractionArea"]
+shape = SubResource("Shape_seat_interact_mount")
 
 [node name="RightSeat1Cushion" type="MeshInstance3D" parent="CargoBay"]
 position = Vector3(0.72, 0.5, 0.15)
@@ -368,9 +401,29 @@ mesh = SubResource("Mesh_unit")
 position = Vector3(0.55, 1.0, 0.15)
 rotation_degrees = Vector3(0, 90, 0)
 
+[node name="FirstPersonCamera" parent="CargoBay/RightSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat1EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+required_mount_path = NodePath("../../RightSeat1PackageMount/InteractionArea")
+prompt = "Sentarse y cuidar la carga"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat1EyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
+
 [node name="RightSeat1PackageMount" type="Marker3D" parent="CargoBay"]
 position = Vector3(0.25, 0.8, 0.15)
 rotation_degrees = Vector3(0, 90, 0)
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat1PackageMount" groups=["package_mount"]]
+script = ExtResource("5_mount")
+prompt = "Dejar paquete acá"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat1PackageMount/InteractionArea"]
+shape = SubResource("Shape_seat_interact_mount")
 
 [node name="RightSeat2Cushion" type="MeshInstance3D" parent="CargoBay"]
 position = Vector3(0.72, 0.5, 1.35)
@@ -388,9 +441,29 @@ mesh = SubResource("Mesh_unit")
 position = Vector3(0.55, 1.0, 1.35)
 rotation_degrees = Vector3(0, 90, 0)
 
+[node name="FirstPersonCamera" parent="CargoBay/RightSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat2EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+required_mount_path = NodePath("../../RightSeat2PackageMount/InteractionArea")
+prompt = "Sentarse y cuidar la carga"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat2EyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
+
 [node name="RightSeat2PackageMount" type="Marker3D" parent="CargoBay"]
 position = Vector3(0.25, 0.8, 1.35)
 rotation_degrees = Vector3(0, 90, 0)
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat2PackageMount" groups=["package_mount"]]
+script = ExtResource("5_mount")
+prompt = "Dejar paquete acá"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat2PackageMount/InteractionArea"]
+shape = SubResource("Shape_seat_interact_mount")
 
 [node name="FrontLeftWheel" type="VehicleWheel3D" parent="."]
 position = Vector3(-1.12, -0.1, -1.5)

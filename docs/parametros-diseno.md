@@ -75,6 +75,20 @@ El multiplicador de "caos simultáneo" está para reforzar el diseño de momento
 clipeables (sección 3.4 del doc técnico) — recompensa los momentos de tensión múltiple,
 no solo la entrega prolija.
 
+### Reglas que surgieron al implementarlo (2026-09-20)
+
+- **Arruinar un paquete ya no termina la entrega.** Con hasta cuatro pasajeros, que el
+  error de uno le corte la partida a todos sería miserable. La entrega sigue y
+  simplemente se puntúa menos; solo termina si se pierde *toda* la carga.
+- **Solo puntúa la carga que subió a la furgoneta.** Un paquete que quedó en el depósito
+  nunca fue parte de la entrega, así que no cuenta ni a favor ni en contra.
+- **Un paquete puede darse por perdido por fuera de su trampa** (por ejemplo, si se cae
+  de la furgoneta en marcha). Eso lo decide el paquete, no la trampa: ninguna trampa
+  necesita saber que existe esa forma de fallar.
+- **La trampa ruidosa no se calma sola al máximo.** El decaimiento pasivo se pausa una
+  vez que llega al tope: si nadie la atiende, se escapa. Sin esto bajaba del máximo el
+  mismo frame y era literalmente imposible de perder.
+
 ## Próximo paso
 Estos valores van directo a los `TrapDefinition.tres` que se crean en la Fase 1-2 del
 plan de desarrollo. Cualquier ajuste posterior se hace editando esos Resources, sin
