@@ -33,12 +33,13 @@ func _initialize() -> void:
 	# The van seats five, so that's the cap the session advertises.
 	_expect(int(network.get(&"MAX_PLAYERS")) == 5, "The session caps at the five seats in the van")
 
-	# Transport picking: Steam when it's really there, ENet otherwise. This
-	# machine has no GodotSteam extension, so AUTO has to land on ENet --
-	# and, crucially, the script still compiles and runs without it.
+	# Transport picking: Steam when it's really usable, ENet otherwise.
+	# "Extension installed" and "Steam usable" are different things -- the
+	# extension can be in place while Steam isn't running -- so availability
+	# implies the class exists, but not the other way round.
 	var steam_here: bool = bool(network.call(&"steam_available"))
-	_expect(steam_here == ClassDB.class_exists(&"SteamMultiplayerPeer"),
-		"Steam counts as available only when the extension is actually installed")
+	_expect(not steam_here or ClassDB.class_exists(&"SteamMultiplayerPeer"),
+		"Steam can only be available when the extension is actually installed")
 	var auto_choice: int = int(network.call(&"chosen_transport"))
 	_expect(auto_choice == (1 if steam_here else 2),
 		"AUTO picks Steam when present and falls back to ENet when not")

@@ -44,6 +44,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_multi_cargo.gd
 <godot> --headless --path do-not-drop --script res://tests/test_network_roster.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
+<godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
 ```
 
@@ -90,20 +91,32 @@ El proyecto **compila y testea sin GodotSteam instalado** — todo lo de Steam s
 alcanza por `Engine.get_singleton` / `ClassDB.instantiate`, nunca por nombre. Si
 la extensión no está, `NetworkManager` cae a ENet solo.
 
-### Instalar GodotSteam (pendiente, lo tenés que hacer vos)
+### GodotSteam (ya instalado)
 
-Este proyecto usa **Godot 4.7.2**. La versión que le corresponde es
-**GodotSteam 4.22** (hay un release que acompaña puntualmente a 4.7.2).
+**GodotSteam GDExtension 4.22.1** está en `do-not-drop/addons/godotsteam/`, con
+binarios precompilados para Windows, Linux, macOS y Android. Declara
+`compatibility_minimum = 4.4`, así que funciona con nuestro 4.7.2.
 
-1. En el editor de Godot, pestaña **AssetLib**, buscá
-   **"GodotSteam GDExtension 4.4+"**. Descargala y copiá el contenido en
-   `do-not-drop/addons/`.
-2. Activala en **Proyecto → Configuración del proyecto → Plugins**.
-3. `steam_appid.txt` ya está en el repo con **480** (Spacewar, la app de ejemplo
-   de Valve). Sirve para desarrollo: da P2P y NAT punch-through sin tener un app
-   id propio. **No se puede publicar con ese id** — cuando haya app id real, se
-   reemplaza.
-4. Steam tiene que estar abierto y con sesión iniciada.
+No hace falta activar ningún plugin: el `plugin.cfg` que trae es solo un
+*actualizador* opcional, y la GDExtension carga sola desde su `.gdextension`.
+
+`steam_appid.txt` está en el repo con **480** (Spacewar, la app de ejemplo de
+Valve). Sirve para desarrollo: da P2P y NAT punch-through sin tener un app id
+propio. **No se puede publicar con ese id** — cuando haya app id real, se
+reemplaza.
+
+Para que Steam funcione de verdad hace falta, además, **tener Steam abierto y
+con sesión iniciada**. Si no lo está, `NetworkManager` cae a ENet solo; podés
+comprobar en qué estado está con:
+
+```
+<godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
+```
+
+> Si clonás el repo en otra máquina, corré una vez
+> `<godot> --headless --path do-not-drop --import` antes de los tests: Godot
+> registra las GDExtensions al importar el proyecto, y sin ese paso la
+> extensión no carga aunque los archivos estén.
 
 > Al exportar, usá las **plantillas normales de Godot**, no las de GodotSteam.
 > Con la versión GDExtension, mezclarlas trae problemas.
