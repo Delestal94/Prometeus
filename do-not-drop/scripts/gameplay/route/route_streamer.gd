@@ -12,6 +12,7 @@ class_name RouteStreamer
 
 @export var segment_scripts: Array[Script] = [
 	StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
+	SCurveSegment, GravelSegment, ConstructionZoneSegment,
 ]
 @export var lookahead_distance: float = 60.0
 @export var behind_keep_distance: float = 40.0

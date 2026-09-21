@@ -95,6 +95,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_dev_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_bus_routing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_level_endless.gd
+<godot> --headless --path do-not-drop --script res://tests/test_new_route_segments.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -184,6 +185,11 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   streaming de tramos con el vehículo real, la distancia recorrida se
   trackea de verdad, y una sesión larga simulada no acumula segmentos ni
   nodos sin liberar.
+- `test_new_route_segments` — los tres tramos más nuevos: la curva en S
+  alterna 4 bloques (el doble que el chicane), la zona de obras angosta un
+  solo lado en vez de alternar, y el ripio efectivamente baja
+  `wheel_friction_slip` al entrar y lo restaura al salir (verificado con
+  frames de física reales, no solo que el `Area3D` exista).
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

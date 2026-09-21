@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta y Ambientación
 
-> Última actualización: 2026-09-21
+> Última actualización: 2026-09-21 (curva en S, ripio y zona de obras sumadas)
 > Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
 > compartida. Las tareas 1-40 vienen directo de `docs/especificaciones-visuales.md`
 > (número original entre paréntesis); 41-100 son backlog nuevo del proyecto,
@@ -94,7 +94,7 @@
 | 44 | Adaptar `RunManager` para puntaje por distancia en modo endless, sin romper el puntaje por entrega del modo normal (coordinar con Slatex, que es dueño de la UI de resultados). | B |
 | 45 | Botón "Modo Endless" en el menú principal — `main_menu.gd` es de Slatex, coordinar antes de tocarlo. | A |
 | 46 | ~~Ajustar `lookahead_distance` contra el far clip.~~ **[x] Hecho** — 180 m (era 60 m), niebla más densa en la escena endless (0.013 vs. 0.006) para que se disuelva antes de llegar al far clip. | A |
-| 47 | Reglas de combinación más allá de "nunca repetir el mismo tipo": evitar 3 obstáculos difíciles seguidos. | B |
+| 47 | Reglas de combinación más allá de "nunca repetir el mismo tipo": evitar 3 obstáculos difíciles seguidos. Más urgente ahora que el pool default de `RouteStreamer` creció a 7 tipos (#57, #61, #64 sumados). | B |
 | 48 | ~~Integrar la niebla de distancia también en la escena endless.~~ **[x] Hecho de una vez con el #46.** | A |
 | 49 | Balancear la dificultad progresiva del modo endless. | B |
 | 50 | Probar el modo endless con las 4 trampas activas simultáneamente a velocidad sostenida. | A |
@@ -109,14 +109,14 @@
 | # | Tarea | Prio |
 |---|---|---|
 | 56 | Tramo de subida/bajada (pendiente) — afecta el manejo y la trampa de Peso Creciente distinto que uno plano. | B |
-| 57 | Tramo de curva en S (doble chicana en direcciones opuestas). | A |
+| 57 | ~~Tramo de curva en S (doble chicana en direcciones opuestas).~~ **[x] Hecho** — `SCurveSegment`, 4 bloques alternados en vez de los 2 del chicane. | A |
 | 58 | Tramo de túnel corto (oscuridad parcial, eco de audio distinto). | B |
 | 59 | Puente de un solo carril con prioridad de paso. | B |
 | 60 | Rotonda simple. | B |
-| 61 | Tramo de ripio/tierra con fricción distinta a la ruta pavimentada. | A |
+| 61 | ~~Tramo de ripio/tierra con fricción distinta a la ruta pavimentada.~~ **[x] Hecho** — `GravelSegment`. Verificado antes de implementar que `PhysicsMaterial.friction` del suelo **no** afecta `VehicleWheel3D.get_skidinfo()` en este motor; el único control real es `wheel_friction_slip` por rueda. El tramo usa un `Area3D` que lo reduce al entrar y lo restaura al salir (con red de seguridad en `_exit_tree()` por si el streamer libera el tramo con el vehículo todavía encima). | A |
 | 62 | Tramo nocturno (probar junto con el ciclo día/noche). | B |
 | 63 | Cruce de vías de tren con barrera (parada forzada ocasional). | B |
-| 64 | Zona de obras con conos y carril reducido. | A |
+| 64 | ~~Zona de obras con conos y carril reducido.~~ **[x] Hecho** — `ConstructionZoneSegment`, barrera lateral sostenida (no alternada, a diferencia del chicane/curva en S) + fila de conos marcando el borde. | A |
 | 65 | Curva peraltada (banked turn) que favorece tomarla rápido. | B |
 
 ## Clima y ciclo día/noche (66-73)
