@@ -19,6 +19,10 @@ var cargo_rows_box: VBoxContainer
 var cargo_hint_label: Label
 ## package id -> {"label": Label, "bar": ProgressBar}
 var cargo_rows: Dictionary = {}
+## package id -> hint text, kept fresh by package_hint_changed rather than
+## read straight off the package node -- on a client, that node is a frozen
+## puppet whose trap never advances locally, so its hint would never change.
+var cargo_hints: Dictionary = {}
 var route_bar: ProgressBar
 var hint_label: Label
 var overlay: ColorRect
@@ -46,6 +50,7 @@ func _ready() -> void:
 	EventBus.run_ended.connect(_on_ended)
 	EventBus.interaction_prompt_changed.connect(_on_interaction_prompt)
 	EventBus.cargo_registered.connect(_on_cargo_registered)
+	EventBus.package_hint_changed.connect(_on_package_hint)
 	_show_start()
 
 
@@ -333,6 +338,10 @@ func _on_delivery(in_zone: bool, stopped: float) -> void:
 	in_delivery = in_zone
 
 
+func _on_package_hint(package_id: StringName, hint: String) -> void:
+	cargo_hints[package_id] = hint
+
+
 func _refresh_cargo_hint() -> void:
 	# Only the most urgent box gets the hint line: with four of them there's
 	# no room for four, and the one in trouble is what the player needs now.
@@ -348,12 +357,7 @@ func _refresh_cargo_hint() -> void:
 		if value < worst_integrity:
 			worst_integrity = value
 			worst_id = id
-	var hint: String = ""
-	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
-		if StringName(package.get(&"package_id")) == worst_id:
-			hint = String(package.call(&"get_hint"))
-			break
-	cargo_hint_label.text = hint
+	cargo_hint_label.text = String(cargo_hints.get(worst_id, ""))
 
 
 func _on_ended(score: int, results: Dictionary) -> void:

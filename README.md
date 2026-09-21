@@ -43,6 +43,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_loading_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/test_multi_cargo.gd
 <godot> --headless --path do-not-drop --script res://tests/test_network_roster.gd
+<godot> --headless --path do-not-drop --script res://tests/test_hint_relay.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -57,6 +58,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   la entrega de todos.
 - `test_network_roster` — quién está en la sesión, quién es anfitrión, y que
   jugar solo siga siendo "una sesión de uno" (sin abrir sockets).
+- `test_hint_relay` — el texto de ayuda de una trampa (ej. la cuenta
+  regresiva del peso creciente) le llega a todos, no solo se lee del lado
+  del anfitrión.
 - `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
   prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor

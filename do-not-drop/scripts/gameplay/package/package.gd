@@ -36,6 +36,8 @@ var _previous_velocity: Vector3 = Vector3.ZERO
 var _has_previous_velocity: bool = false
 var _age: float = 0.0
 var _impact_cooldown_remaining: float = 0.0
+const HINT_RELAY_INTERVAL: float = 0.25
+var _hint_relay_time: float = 0.0
 
 
 func _ready() -> void:
@@ -83,6 +85,14 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		# Traps that bleed over time (tilt, weight, agitation) change integrity
 		# here rather than on impact, so the same events still have to fire.
 		_report_change(before_integrity, before_state, "El paquete no aguantó el viaje.")
+		_hint_relay_time += state.step
+		if _hint_relay_time >= HINT_RELAY_INTERVAL:
+			_hint_relay_time = 0.0
+			# get_hint() reads trap_behavior directly, which only ever advances
+			# here, on the host -- a client's own local copy is frozen and never
+			# runs this, so its hint text would otherwise sit stale forever
+			# (a countdown that never counts down, for instance).
+			_emit_event(&"package_hint_changed", [package_id, get_hint()])
 
 
 func apply_impact(delta_velocity: float) -> void:
@@ -101,6 +111,8 @@ func report_to_run() -> void:
 	_emit_event(&"cargo_registered", [package_id, String(trap_definition.get("display_name"))])
 	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
 	_emit_event(&"package_state_changed", [package_id, trap_state])
+	_emit_event(&"package_hint_changed", [package_id, get_hint()])
+	_hint_relay_time = 0.0
 
 
 func mark_lost(cause: String) -> void:

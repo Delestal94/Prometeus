@@ -8,6 +8,10 @@ extends Node
 ## friends) with plain emit() as before -- those are per-peer, not facts.
 
 signal cargo_registered(package_id: StringName, display_name: String)
+## Low-rate (a few times a second, not every physics tick): a trap's hint
+## text can change every frame (a countdown, say), and relaying that at full
+## physics rate would spam the network for a label nobody reads that closely.
+signal package_hint_changed(package_id: StringName, hint: String)
 signal package_state_changed(package_id: StringName, new_state: int)
 signal package_integrity_changed(package_id: StringName, integrity: float, maximum: float)
 signal package_ruined(package_id: StringName, cause: String)
