@@ -1,4 +1,4 @@
-# Plan de desarrollo por fases — Delivery Chaos Co-op
+# Plan de desarrollo por fases — Do Not Drop
 
 > Basado en: `docs/requerimientos-tecnicos.md` (Godot 4.x, física real de vehículo +
 > streaming de tramos, confirmado 2026-09-20).
@@ -41,18 +41,18 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
   dividido, si es posible) y confirmar que "se siente bien" antes de seguir.
 
 ### Definition of Done — Fase 1
-- [ ] `VehicleBody3D` responde a `drive_accelerate`/`drive_brake`/`drive_steer`/
-      `drive_handbrake` (Input Map de `docs/convenciones-godot.md`) con sensación de
-      manejo aceptable (no necesita estar pulido, sí ser controlable).
-- [ ] `Package` con `FragileTrapBehavior` implementado usando los parámetros de
+- [x] `VehicleBody3D` responde a `drive_accelerate`/`drive_brake`/`drive_left`/
+      `drive_right`/`drive_handbrake` (Input Map de `docs/convenciones-godot.md`) con
+      sensación de manejo aceptable (no necesita estar pulido, sí ser controlable).
+- [x] `Package` con `FragileTrapBehavior` implementado usando los parámetros de
       `docs/parametros-diseno.md` sección 1 (medidor de integridad, no falla binaria).
-- [ ] El paquete reacciona visiblemente (aunque sea con color/debug draw) a los tres
+- [x] El paquete reacciona visiblemente (aunque sea con color/debug draw) a los tres
       estados: OK / EnRiesgo / Arruinado.
-- [ ] `EventBus` emite `package_state_changed` y `package_ruined`, y al menos un
-      listener de prueba (print en consola) confirma que se reciben.
-- [ ] Se puede completar una ruta placeholder de punta a punta y ver un resultado
+- [x] `EventBus` emite `package_state_changed` y `package_ruined` (y varias más, ver
+      `docs/arquitectura.md` sección de señales), confirmado por `tests/test_fragile.gd`.
+- [x] Se puede completar una ruta placeholder de punta a punta y ver un resultado
       simple (texto en consola o UI mínima: "entregado intacto" / "arruinado").
-- [ ] Capas de física configuradas según `docs/convenciones-godot.md` sección 2 (el
+- [x] Capas de física configuradas según `docs/convenciones-godot.md` sección 2 (el
       vehículo no atraviesa el paquete, el paquete no se cae del mundo).
 - [ ] **Criterio subjetivo (el más importante)**: jugarlo se siente tenso/divertido
       al menos en su forma más básica. Si no, ajustar parámetros de
@@ -91,6 +91,16 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
 > Se deja para después de validar el loop y las trampas en solitario, porque el
 > networking es la parte más costosa de depurar y no tiene sentido pagar ese costo
 > sobre una mecánica que todavía no sabemos si es divertida.
+
+**Estado (2026-09-21): implementada fuera de orden.** El networking host-autoritativo
+(vehículo, paquetes, interacciones), los dos transportes (Steam vía Spacewar/480 y
+ENet para LAN) y el menú principal para crear/unirse a una sala ya están funcionando
+y verificados con una conexión real de dos procesos — ver README sección
+"Multijugador". Se adelantó porque en la práctica jugar solo (single-player) y con
+más gente comparten el mismo código de simulación, y quedó más simple integrarlo ya
+que separarlo. Esto **no** reemplaza el criterio subjetivo pendiente de las Fases 1-2:
+seguir siendo divertido con varios jugadores reales es, si acaso, una pregunta más
+exigente que la versión solo.
 
 - Integrar la API de multiplayer de Godot (host-cliente), empezando con 2 jugadores
   (conductor + 1 pasajero) antes de escalar a 5.

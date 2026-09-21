@@ -1,4 +1,4 @@
-# Requerimientos técnicos y funcionales — Delivery Chaos Co-op
+# Requerimientos técnicos y funcionales — Do Not Drop
 
 > Basado en: `docs/definicion-proyecto.md` (idea base: delivery cooperativo, 1 conductor +
 > hasta 4 pasajeros con paquetes-trampa) y `docs/mecanicas-candidatas.md`.

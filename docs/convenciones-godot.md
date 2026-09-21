@@ -26,7 +26,7 @@
 
 ## 1. Input Map (Project Settings → Input Map)
 
-> Actualizado 2026-09-20 para reflejar lo que realmente está implementado en
+> Actualizado 2026-09-21 para reflejar lo que realmente está implementado en
 > `project.godot` (la tabla original era el plan previo a programar; difiere en
 > algunos nombres — p.ej. `drive_left`/`drive_right` en vez de un solo `drive_steer`).
 
@@ -37,18 +37,23 @@
 | `drive_left` / `drive_right` | A / D | Stick izquierdo (eje X) |
 | `drive_handbrake` | Espacio | Botón Sur (A/X) |
 | `interact` | E | Botón Sur (A/X) — agarrar, dejar y sentarse, a pie |
+| `walk_forward` / `walk_backward` | W / S | Stick izquierdo (eje Y) |
+| `look_left` / `look_right` / `look_up` / `look_down` | — (mouse, delta directo) | Stick derecho (ejes X/Y) |
+| `look_center` | C | Clic del stick derecho |
+| `package_action_primary` | Clic izquierdo | Gatillo derecho (a pie, con paquete en mano) |
 | `ui_pause` | Esc | Start |
 | `run_restart` | R | Botón Oeste (X/Cuadrado) |
-| *(mirada en primera persona, a pie)* | Mouse (delta directo, no es una Input Action) | — pendiente para Fase 4 |
+
+Caminar y conducir comparten `W`/`S`: nunca están activos a la vez, porque un jugador
+es conductor o pasajero a pie, no ambos en la misma escena. La mirada en primera
+persona con mouse no pasa por el Input Map para el delta continuo (se lee directo de
+`InputEventMouseMotion`); `look_left/right/up/down` cubre el equivalente en gamepad, y
+`look_center` es la única parte de "mirar" que sí necesita una Input Action mapeable
+(una tecla/botón discreto).
 
 Pendiente de implementar (documentado en `docs/controles-y-ui.md` como diseño, todavía
-no en `project.godot`): `drive_horn`, controles de trampa específicos por tipo
-(`package_action_primary`/`secondary`), y `ui_ping`. Se agregan cuando la Fase 2 sume
-las trampas restantes.
-
-**Nota**: `package_direction` y `drive_steer` pueden convivir sin conflicto porque
-nunca están activos en el mismo cliente a la vez (un jugador es conductor O pasajero,
-no ambos en la misma partida).
+no en `project.godot`): `drive_horn`, un control de trampa secundario por tipo, y
+`ui_ping`.
 
 ## 2. Capas de física (Project Settings → Layer Names → 3D Physics)
 
@@ -73,68 +78,84 @@ no ambos en la misma partida).
 
 ## 3. Organización de escenas dentro de `do-not-drop/`
 
+> Actualizado 2026-09-21 para reflejar la estructura real del proyecto, no el plan
+> previo a programar. Dos diferencias de fondo con ese plan original: (1) no hay
+> escenas separadas para menú/HUD/resultados — `main_menu.tscn` es un wrapper mínimo
+> que arma toda la UI en código (`main_menu.gd`), y el HUD (`prototype_hud.gd`) y la
+> pantalla de resultados viven igual, sin `.tscn` propio; (2) los "componentes" de
+> paquete/vehículo no se separaron en nodos/scripts independientes por responsabilidad
+> como sugería el plan — cada entidad (`package.gd`, `vehicle.gd`, `player.gd`) es un
+> único script que concentra su estado, networking e input. Fue la decisión pragmática
+> mientras el proyecto es un prototipo de 1-2 fases; si la complejidad lo justifica más
+> adelante, se puede partir en componentes reales sin romper la interfaz pública de
+> cada entidad.
+
 ```
 do-not-drop/
   scenes/
-    main_menu/
-      main_menu.tscn
-    lobby/
-      lobby.tscn
+    ui/
+      main_menu.tscn            # wrapper mínimo, la UI se arma en main_menu.gd
     gameplay/
-      level_base.tscn          # composición de ruta + spawns + reglas de partida
+      level_base.tscn           # composición de ruta + spawns + reglas de partida
       vehicle/
         vehicle.tscn
       package/
-        package_base.tscn      # Package genérico, la trampa se inyecta como recurso
+        package.tscn
       player/
         player.tscn
-    ui/
-      hud.tscn
-      results_screen.tscn
+      route/
+        route.tscn
+    presentation/
+      first_person_camera.tscn
   scripts/
     core/
-      state_machine.gd
-      event_bus.gd            # autoload
-      game_manager.gd         # autoload
-      run_manager.gd          # autoload
-      unlock_manager.gd       # autoload
-      network_manager.gd      # autoload
+      event_bus.gd             # autoload
+      run_manager.gd           # autoload
+      network_manager.gd       # autoload
+    ui/
+      main_menu.gd
+      prototype_hud.gd          # HUD + resultados, sin escena propia
+    presentation/
+      first_person_camera.gd
     gameplay/
+      level_base.gd
       vehicle/
+        vehicle.gd
         vehicle_input_component.gd
       package/
-        package_state_component.gd
-        package_net_sync_component.gd
+        package.gd
+        package_feedback.gd
+      player/
+        player.gd
+      interaction/
+        interactable.gd         # clase base para puntos interactuables
+        package_mount_point.gd
+        package_pickup_point.gd
+        seat_point.gd
       traps/
-        i_trap_behavior.gd     # clase base abstracta
+        i_trap_behavior.gd      # clase base abstracta
+        trap_definition.gd
         fragile_trap_behavior.gd
         growing_weight_trap_behavior.gd
         balance_trap_behavior.gd
         noisy_trap_behavior.gd
       route/
-        route_segment.gd
-        route_streamer.gd
+        route.gd
+        route_smoke_check.gd
   data/
     traps/
       fragile.tres
       growing_weight.tres
       balance.tres
       noisy.tres
-    vehicles/
-      van_default.tres
-    route_segments/
-      straight.tres
-      curve_left.tres
-      curve_right.tres
-      narrow_bridge.tres
-      speed_bump.tres
+  tests/
+    test_*.gd, check_*.gd       # scripts SceneTree, corren headless (ver README)
 ```
 
-Esto es la traducción concreta de la estructura conceptual definida en
-`docs/arquitectura.md` sección 1, ya adaptada a cómo se ve dentro de un proyecto Godot
-real (Godot mezcla naturalmente `scenes/` y `scripts/` como carpetas de primer nivel,
-en vez de una sola jerarquía por feature — se mantiene la separación por dominio
-dentro de cada una).
+`GameManager`, `UnlockManager`, `AudioManager` y un `StateMachine` genérico aparecían
+en el plan original pero **no existen todavía** — no hicieron falta para las Fases 1-2
+(sin progresión persistente ni música/sfx dinámicos aún). Se agregan cuando esa
+funcionalidad entre en alcance, no antes.
 
 ## 4. Convenciones de nombres
 
@@ -149,15 +170,15 @@ dentro de cada una).
 - **Resources de datos** (`.tres`): nombre descriptivo en `snake_case`
   (`fragile.tres`, `van_default.tres`), ubicados en `data/<categoría>/`.
 
-## 5. Autoloads a registrar (Project Settings → Autoload)
+## 5. Autoloads registrados (Project Settings → Autoload)
 
-Orden de registro (importa si hay dependencias en `_ready()`):
+Orden real en `project.godot` (importa por dependencias en `_ready()`):
 1. `EventBus`
-2. `UnlockManager` (lee guardado en disco)
-3. `GameManager`
-4. `RunManager`
-5. `NetworkManager`
-6. `AudioManager`
+2. `NetworkManager`
+3. `RunManager`
+
+`GameManager`, `UnlockManager` y `AudioManager` están en el plan original pero no se
+registraron — no existen todavía (ver nota de la sección 3).
 
 ## Próximo paso
 Con esto, la Fase 1 del plan de desarrollo tiene todo lo necesario para arrancar sin

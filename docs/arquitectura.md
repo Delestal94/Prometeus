@@ -1,4 +1,4 @@
-# Arquitectura del proyecto — Delivery Chaos Co-op
+# Arquitectura del proyecto — Do Not Drop
 
 > Basado en: `docs/requerimientos-tecnicos.md` y `docs/plan-desarrollo.md`.
 > Última actualización: 2026-09-20
@@ -31,6 +31,13 @@
 ---
 
 ## 1. Estructura de carpetas
+
+> Este es el diseño conceptual original. La estructura real dentro de `do-not-drop/`
+> (que es lo que hay que mirar para ubicar un archivo) está en
+> `docs/convenciones-godot.md` sección 3 — Godot mezcla `scenes/`/`scripts/` como
+> carpetas de primer nivel en vez de esta jerarquía por dominio, y varias carpetas de
+> acá (`networking/`, `progression/`, `ui/menus/`) no llegaron a crearse porque su
+> contenido todavía no existe (ver sección 2 de más abajo).
 
 ```
 res://
@@ -71,14 +78,14 @@ antes que el pase de arte).
 
 ## 2. Autoloads (singletons globales)
 
-| Autoload | Responsabilidad |
-|---|---|
-| `EventBus` | Señales globales desacopladas (ver sección 5). Único punto de "broadcast" del juego. |
-| `GameManager` | Estado de alto nivel del flujo del juego (menú → lobby → en partida → resultados). Máquina de estados. |
-| `RunManager` | Estado de la partida en curso: ruta actual, paquetes activos, puntaje, tiempo. Se resetea entre partidas. |
-| `UnlockManager` | Progreso meta del jugador (trampas/vehículos/cosméticos desbloqueados) + guardado/carga. |
-| `NetworkManager` | Setup de host/cliente, conexión de jugadores, mapeo de autoridad. |
-| `AudioManager` | Reproducción de música/SFX desacoplada, escucha del `EventBus`. |
+| Autoload | Responsabilidad | Estado |
+|---|---|---|
+| `EventBus` | Señales globales desacopladas (ver sección 5). Único punto de "broadcast" del juego. | Registrado |
+| `RunManager` | Estado de la partida en curso: ruta actual, paquetes activos, puntaje, tiempo. Se resetea entre partidas. | Registrado |
+| `NetworkManager` | Setup de host/cliente (Steam y ENet), conexión de jugadores, mapeo de autoridad. | Registrado |
+| `GameManager` | Estado de alto nivel del flujo del juego (menú → lobby → en partida → resultados). Máquina de estados. | **No existe aún** — el flujo de menú/nivel hoy lo maneja `main_menu.gd` + `get_tree().change_scene_to_file()`, sin autoload propio. |
+| `UnlockManager` | Progreso meta del jugador (trampas/vehículos/cosméticos desbloqueados) + guardado/carga. | **No existe aún** — no hay progresión persistente todavía (Fase 5). |
+| `AudioManager` | Reproducción de música/SFX desacoplada, escucha del `EventBus`. | **No existe aún** — no hay música/sfx dinámicos todavía. |
 
 Ninguno de estos conoce los detalles internos de los otros — se comunican por señales
 o por métodos públicos mínimos y bien definidos.
@@ -86,6 +93,17 @@ o por métodos públicos mínimos y bien definidos.
 ---
 
 ## 3. Entidades como composición de componentes
+
+> **Estado real (2026-09-21)**: esta sección describe el diseño planeado antes de
+> programar. En la implementación actual, cada entidad concentra su estado, input y
+> sincronización de red en **un solo script** (`vehicle.gd`, `package.gd`,
+> `player.gd`) en vez de partirse en los componentes/nodos separados de abajo — fue
+> la decisión pragmática mientras el proyecto es un prototipo de 1-2 personas en
+> Fases 1-2, evita el overhead de coordinar señales entre varios nodos por una
+> ganancia de modularidad que todavía no hace falta. Los árboles de componentes de
+> esta sección quedan como **diseño de referencia**, útil si la complejidad futura lo
+> justifica (ver `docs/convenciones-godot.md` sección 3), no como lo que hay que leer
+> en el código hoy.
 
 ### Vehículo
 ```
@@ -161,18 +179,38 @@ sin conocer los detalles de cada comportamiento.
 
 ## 5. Event Bus (señales globales)
 
-Ejemplos de señales centrales que desacoplan sistemas:
+Señales reales declaradas en `event_bus.gd` (16, actualizado 2026-09-21):
 
-- `EventBus.package_state_changed(package_id, new_state)`
-- `EventBus.package_ruined(package_id, cause)`
-- `EventBus.run_started(route_id, players)`
-- `EventBus.run_ended(score, results)`
-- `EventBus.vehicle_impact(force, position)`
+- `cargo_registered(package_id, display_name)`
+- `package_hint_changed(package_id, hint)`
+- `package_state_changed(package_id, new_state)`
+- `package_integrity_changed(package_id, integrity, maximum)`
+- `package_ruined(package_id, cause)`
+- `package_damaged(package_id, damage)`
+- `vehicle_telemetry(speed_kmh)`
+- `vehicle_impact(strength, impact_position)`
+- `run_started(route_id, players)`
+- `run_ended(score, results)`
+- `route_progress_changed(progress, remaining_meters, section)`
+- `delivery_status_changed(in_zone, stopped_seconds)`
+- `start_requested`
+- `restart_requested`
+- `pause_requested`
+- `interaction_prompt_changed(prompt)`
 
-`AudioManager`, `presentation/vfx`, el HUD, el sistema de puntaje y el `NetworkManager`
-escuchan estas señales cada uno por su cuenta. Ninguno le pide nada directamente a
-`Package` ni a `Vehicle` — esto es lo que permite tocar/reemplazar cualquiera de esos
-sistemas sin romper a los demás (clave para trabajar de a partes con asistencia de IA).
+El HUD, `RunManager` y el `NetworkManager` escuchan estas señales cada uno por su
+cuenta. Ninguno le pide nada directamente a `Package` ni a `Vehicle` — esto es lo que
+permite tocar/reemplazar cualquiera de esos sistemas sin romper a los demás (clave
+para trabajar de a partes con asistencia de IA). `AudioManager` no existe todavía
+(ver sección 3 de `docs/convenciones-godot.md`).
+
+**Patrón de relay para multijugador**: una señal emitida localmente en el host no
+llega sola a los clientes — `EventBus` expone un método `relay()` que envuelve la
+emisión en una RPC (`@rpc("authority", "call_local", ...)`), así que el host la
+retransmite explícitamente a todos los peers y cada cliente la recibe como si la
+hubiera emitido localmente. `package_hint_changed`, por ejemplo, se relayea con un
+throttle de 0.25s (`HINT_RELAY_INTERVAL` en `package.gd`) para que el texto de ayuda
+de una trampa no quede desactualizado en clientes que no son el host.
 
 ---
 
