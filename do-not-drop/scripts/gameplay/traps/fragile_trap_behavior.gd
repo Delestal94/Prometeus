@@ -1,5 +1,7 @@
 class_name FragileTrapBehavior
 extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+## Loses integrity on impacts. Nothing the passenger does protects it, so
+## the only defence is the driver taking the bumps slowly.
 
 var _threshold_light: float = 3.0
 var _threshold_heavy: float = 7.0
@@ -22,14 +24,11 @@ func on_setup(package: Node, config: Dictionary) -> void:
 func on_impact(delta_velocity: float) -> float:
 	if get_state() == TrapState.RUINED:
 		return 0.0
-	var damage: float = 0.0
 	if delta_velocity >= _threshold_heavy:
-		damage = _damage_heavy
-	elif delta_velocity >= _threshold_light:
-		damage = _damage_light
-	var previous_integrity: float = integrity
-	integrity = clampf(integrity - damage, 0.0, integrity_max)
-	return previous_integrity - integrity
+		return damage(_damage_heavy)
+	if delta_velocity >= _threshold_light:
+		return damage(_damage_light)
+	return 0.0
 
 
 func get_state() -> int:
@@ -38,3 +37,7 @@ func get_state() -> int:
 	if integrity <= _at_risk_at:
 		return TrapState.AT_RISK
 	return TrapState.OK
+
+
+func get_hint() -> String:
+	return "Cada golpe deja huella."

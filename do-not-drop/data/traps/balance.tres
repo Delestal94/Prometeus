@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="TrapDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/traps/trap_definition.gd" id="1_definition"]
+[ext_resource type="Script" path="res://scripts/gameplay/traps/balance_trap_behavior.gd" id="2_behavior"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"balance"
+display_name = "Equilibrio"
+behavior_script = ExtResource("2_behavior")
+difficulty = 2
+params = {
+"integrity_max": 100.0,
+"angle_ok_max": 15.0,
+"angle_at_risk_max": 30.0,
+"angle_fail_seconds": 1.5,
+"damage_per_second_at_risk": 20.0,
+"correction_strength": 20.0
+}

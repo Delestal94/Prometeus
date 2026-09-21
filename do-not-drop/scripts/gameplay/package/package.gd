@@ -10,6 +10,9 @@ extends RigidBody3D
 var trap_behavior: Resource
 var is_held: bool = false
 var is_loaded: bool = false
+## Written each frame by whoever is tending this package. Plain data, so the
+## host can apply a remote client's input the same way once networking lands.
+var player_input: Dictionary = {}
 var integrity: float:
 	get:
 		return float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
@@ -60,25 +63,41 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	_previous_velocity = current_velocity
 	_has_previous_velocity = true
 	if trap_behavior != null and _is_run_active():
+		var before_integrity: float = integrity
+		var before_state: int = trap_state
 		trap_behavior.call("on_physics_process", self, state.step, {
 			"linear_velocity": current_velocity,
 			"angular_velocity": state.angular_velocity,
+			"input": player_input,
 		})
+		# Traps that bleed over time (tilt, weight, agitation) change integrity
+		# here rather than on impact, so the same events still have to fire.
+		_report_change(before_integrity, before_state, "El paquete no aguantó el viaje.")
 
 
 func apply_impact(delta_velocity: float) -> void:
 	if trap_behavior == null or not _is_run_active():
 		return
-	var previous_state: int = trap_state
-	var damage: float = float(trap_behavior.call("on_impact", maxf(delta_velocity, 0.0)))
-	if damage <= 0.0:
-		return
-	_emit_event(&"package_damaged", [package_id, damage])
-	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
-	if trap_state != previous_state:
+	var before_integrity: float = integrity
+	var before_state: int = trap_state
+	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0))
+	_report_change(before_integrity, before_state, "El paquete sufrió demasiados golpes.")
+
+
+func get_hint() -> String:
+	return String(trap_behavior.call("get_hint")) if trap_behavior != null else ""
+
+
+func _report_change(before_integrity: float, before_state: int, ruin_cause: String) -> void:
+	var lost: float = before_integrity - integrity
+	if lost > 0.0:
+		_emit_event(&"package_damaged", [package_id, lost])
+	if not is_equal_approx(before_integrity, integrity):
+		_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
+	if trap_state != before_state:
 		_emit_event(&"package_state_changed", [package_id, trap_state])
-		if trap_state == 2:
-			_emit_event(&"package_ruined", [package_id, "El paquete sufrió demasiados golpes."])
+		if trap_state == ITrapBehavior.TrapState.RUINED:
+			_emit_event(&"package_ruined", [package_id, ruin_cause])
 
 
 func set_held(held: bool) -> void:
