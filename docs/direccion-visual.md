@@ -55,14 +55,14 @@ realidad primera persona, no tercera como parece a simple vista).
 - **[x] `C`/clic del stick derecho recentra la vista** al frente del asiento —
   necesario porque sin él, en un yaw de ±160°, sería fácil perderse mirando hacia
   atrás sin saber cómo volver al frente rápido.
-- **[ ] Far clip / distancia de dibujo**: no está fijado explícitamente (usa el
-  default del motor). Con el streaming de tramos de la Fase 3 (`RouteStreamer`,
-  ver `docs/plan-desarrollo.md`) esto va a importar de verdad — un tramo
-  apareciendo de la nada a poca distancia se nota mucho más que uno curado a mano.
-  **Pendiente de decidir**: ¿niebla de distancia para disimular el borde de lo
-  generado (ver sección 4), o simplemente generar con suficiente anticipación
-  (`lookahead_distance` ya es ajustable en `RouteStreamer`) para que nunca se vea
-  el borde?
+- **[x] Far clip fijado en 600 m** (2026-09-21, `first_person_camera.gd`). La ruta
+  mide 220 m y los bloques de escenografía a los costados llegan a ~250 m, así que
+  600 m deja todo a la vista con margen de sobra. Se fija ahora, con el streaming
+  de tramos ya construido (`RouteStreamer`): un default sin límite explícito es
+  exactamente el tipo de cosa que recién da problemas cuando el mundo deja de ser
+  colocado a mano. La estrategia contra el "borde de lo generado" queda en dos
+  patas que ya existen: la niebla de distancia (sección 4) y el
+  `lookahead_distance` ajustable del streamer.
 
 ### Manos / viewmodel
 - **[x] El jugador ve sus propias manos** — del conductor en el volante, del
@@ -215,11 +215,15 @@ específico de "campo de visión, qué ve y qué no".
   3.4) en vez de solo cambiar un color.
 - **[x] Color + texto del paquete según estado** (sección 3, tabla de estados) —
   feedback legible a distancia, no depende de leer una barra de progreso.
-- **[ ] Slow-mo breve en golpes fuertes**: en el plan original (3.4) pero no
-  implementado — tocar `Engine.time_scale` globalmente afectaría la física
-  host-autoritativa en multijugador, así que necesita diseñarse como un efecto
-  puramente cosmético del lado del cliente (interpolación visual, no del timestep
-  real) antes de construirse. Ver `docs/requerimientos-tecnicos.md` 3.4.
+- **[x] Golpe de FOV en impactos, en lugar del slow-mo** (2026-09-21,
+  `first_person_camera.gd`): el FOV salta hacia afuera en proporción a la fuerza
+  del golpe y vuelve solo. Decidido así porque el slow-mo literal del plan
+  original (3.4) exige `Engine.time_scale`, que frenaría también la física
+  host-autoritativa — es decir, la partida entera de todos, no un efecto visual.
+  El golpe de FOV se lee como el mismo tipo de puñetazo, es puramente local (cada
+  cliente el suyo) y no toca la simulación. Cubierto por
+  `tests/test_impact_feedback.gd`, que verifica explícitamente que
+  `Engine.time_scale` nunca se modifica.
 - **[ ] Post-processing adicional** (viñeta, chromatic aberration en impactos,
   motion blur): no evaluado. Encaja con la filosofía "cámara vende el caos", pero
   cada uno tiene costo de rendimiento y de "ruido visual" — mejor evaluarlos

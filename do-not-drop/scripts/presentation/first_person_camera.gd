@@ -9,10 +9,19 @@ extends Camera3D
 @export var shake_decay: float = 6.0
 @export var shake_position_scale: float = 0.012
 @export var shake_rotation_scale_deg: float = 1.6
+## A brief FOV kick on impact, standing in for the "slow-mo breve" of
+## docs/requerimientos-tecnicos.md 3.4: real slow motion would mean touching
+## Engine.time_scale, which also slows the host-authoritative physics for
+## everyone. This reads as the same kind of punch, costs nothing, and is
+## purely local -- nobody else's game is affected by what this camera does.
+@export var impact_fov_kick_degrees: float = 7.0
+@export var fov_recover_speed: float = 5.0
 @export var mouse_sensitivity: float = 0.0028
 @export var stick_sensitivity: float = 2.4  ## Radians per second at full deflection.
 @export_range(0.0, 180.0) var yaw_limit_degrees: float = 160.0
 @export_range(0.0, 89.0) var pitch_limit_degrees: float = 80.0
+
+const BASE_FOV: float = 78.0
 
 var _shake_strength: float = 0.0
 var _rng := RandomNumberGenerator.new()
@@ -22,8 +31,14 @@ var _look_pitch: float = 0.0
 
 
 func _ready() -> void:
-	fov = 78.0
+	fov = BASE_FOV
 	near = 0.03
+	# Explicit far plane instead of the engine default: the route is 220 m and
+	# the scenery blocks beside it reach ~250 m, so this keeps everything in
+	# view with room to spare. Worth pinning down now that RouteStreamer can
+	# generate road indefinitely -- an unbounded default is the kind of thing
+	# that only shows up as a problem once the world stops being hand-placed.
+	far = 600.0
 	_base_transform = transform
 	_rng.randomize()
 	var bus: Node = get_node_or_null("/root/EventBus")
@@ -39,6 +54,7 @@ func activate() -> void:
 func deactivate() -> void:
 	current = false
 	_shake_strength = 0.0
+	fov = BASE_FOV
 	reset_look()
 
 
@@ -83,6 +99,8 @@ func _process(delta: float) -> void:
 		var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 		_apply_look(stick * stick_sensitivity * delta)
 	var look_pose: Transform3D = _look_transform()
+	if not is_equal_approx(fov, BASE_FOV):
+		fov = move_toward(fov, BASE_FOV, fov_recover_speed * absf(fov - BASE_FOV) * delta + 0.01)
 	_shake_strength = maxf(0.0, _shake_strength - shake_decay * delta)
 	if _shake_strength <= 0.0:
 		transform = look_pose
@@ -98,5 +116,7 @@ func _process(delta: float) -> void:
 
 
 func _on_vehicle_impact(strength: float, _impact_position: Vector3) -> void:
-	if current:
-		_shake_strength = clampf(_shake_strength + strength * 0.15, 0.0, 1.0)
+	if not current:
+		return
+	_shake_strength = clampf(_shake_strength + strength * 0.15, 0.0, 1.0)
+	fov = BASE_FOV + impact_fov_kick_degrees * _shake_strength
