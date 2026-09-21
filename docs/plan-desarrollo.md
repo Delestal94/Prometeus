@@ -87,23 +87,47 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
 - Esta fase es la base técnica tanto para las rutas del modo normal como para el modo
   endless (sección 3.5 del doc técnico).
 
-### Estado (2026-09-21): pieza base construida y probada en aislamiento, no integrada al juego
+### Estado (2026-09-21): pieza base construida, ahora integrada en un modo jugable aparte
 - [x] `RouteSegment` (`scripts/gameplay/route/route_segment.gd`) — base chainable:
       cada tramo se autoconstruye entre z=0 (entrada) y z=-length (salida), sin
       conocer al tramo anterior ni al siguiente.
 - [x] Cuatro tipos concretos en `scripts/gameplay/route/segments/`: recta, badén,
       chicana y puente angosto — cada uno un script chico, `class_name` propio.
 - [x] `RouteStreamer` (`scripts/gameplay/route/route_streamer.gd`) — instancia tramos
-      por delante de un `target` (pensado para el vehículo), libera los que quedaron
-      atrás, y aplica la regla de combinación más simple posible: nunca repetir el
-      mismo tipo dos veces seguidas.
+      por delante de un `target` (el vehículo real, ya conectado — ver más abajo),
+      libera los que quedaron atrás, y aplica dos reglas de combinación: nunca repetir
+      el mismo tipo dos veces seguidas, y el primer tramo siempre es una recta
+      (`first_segment_script`, default `StraightSegment`) — encontrado al conectar
+      esto a un vehículo real por primera vez: una chicana o un puente angosto como
+      tramo #1 le tira un obstáculo a un conductor que recién agarra el volante.
 - [x] `tests/test_route_streaming.gd` cubre spawn/cull/no-repetición con un `Node3D`
-      de prueba en vez del vehículo real.
-- [ ] **No reemplaza todavía la ruta curada a mano** (`route.gd`/`route.tscn`), que
-      sigue siendo la que juega `level_base.gd` — integrarlo (conectar `start()` al
-      vehículo real, decidir cómo conviven tramos curados fijos con streaming
-      aleatorio en el modo normal) queda pendiente, junto con el criterio subjetivo:
-      ningún test puede decir si la variedad procedural se siente bien.
+      de prueba; `tests/test_level_endless.gd` cubre la integración real (vehículo de
+      verdad, sesión larga simulada, conteo de nodos acotado).
+- [x] **Modo Endless jugable** (`scenes/gameplay/level_endless.tscn` +
+      `scripts/gameplay/level_endless.gd`, docs/tareas-nacho.md #41-55): mismo flujo
+      de carga a pie / asiento del conductor / carga de paquetes que `level_base.gd`,
+      pero `RouteStreamer` reemplaza a la ruta curada. Niebla y `lookahead_distance`
+      ajustados juntos (180 m de anticipación, niebla más densa que el modo normal)
+      para que nunca se vea el borde de lo generado con el far clip actual (600 m).
+      Deliberadamente **no** comparte código con `level_base.gd` todavía (duplicación
+      aceptada a propósito en vez de refactorizar un archivo del que también depende
+      Slatex, a mitad de proyecto sin coordinar) — revisar una vez que los dos modos
+      estén estables.
+- [ ] **Sin punto de entrada desde el menú todavía** (`main_menu.gd` es de Slatex,
+      coordinar antes de tocarlo — docs/tareas-nacho.md #45). Se juega hoy pasando la
+      escena directo: `<godot> --path do-not-drop res://scenes/gameplay/level_endless.tscn -- --autostart`.
+- [ ] **Sin puntaje propio todavía, a propósito**: terminar una entrega en Fase 1-2
+      usa `RunManager.finish_run(delivered: bool, ...)`, que solo puntúa cuando
+      `delivered = true` (llegar a una zona de entrega que en Endless no existe). Acá
+      el run siempre termina en `finish_run(false, ...)` (se perdió toda la carga, se
+      volcó, o se salió de la ruta), así que el puntaje muestra 0 sin importar cuánto
+      se haya avanzado. `distance_traveled` ya se trackea en `level_endless.gd`
+      (público, listo para usarse), pero una fórmula de puntaje por distancia y una
+      categoría de leaderboard separada (docs/tareas-nacho.md #52) quedan pendientes
+      a propósito — no se improvisó una fórmula a ciegas.
+- [ ] **Criterio subjetivo, sin resolver**: ningún test puede decir si la variedad
+      procedural se siente bien, ni si el ritmo de dificultad es justo. Playtesting
+      real pendiente (docs/tareas-nacho.md #55).
 
 ## Fase 4 — Multiplayer
 > Se deja para después de validar el loop y las trampas en solitario, porque el

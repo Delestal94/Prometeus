@@ -27,6 +27,16 @@ Atajos de línea de comandos para probar rápido sin clickear:
 LAN, sin depender de que Steam esté corriendo) y `-- --join=<ip>` (se une
 por LAN a esa dirección).
 
+**Modo Endless (en construcción, todavía sin botón en el menú)**: genera
+tramos indefinidamente en vez de la ruta curada de 220 m, y el run termina
+perdiendo (carga perdida, vuelco o salir de la ruta), nunca entregando —
+ver `docs/plan-desarrollo.md` Fase 3 para el estado completo. Se prueba
+pasando la escena directo:
+
+```
+<godot> --path do-not-drop res://scenes/gameplay/level_endless.tscn -- --autostart
+```
+
 Una vez en la furgoneta: elegí **Preparar entrega**, caminá con WASD y mirá
 con el mouse. Al acercarte a un
 objeto aparece la acción disponible: **E** agarra el paquete, lo deja en su
@@ -84,6 +94,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_dust_and_ambience.gd
 <godot> --headless --path do-not-drop --script res://tests/test_dev_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_bus_routing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_level_endless.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -169,6 +180,10 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_audio_bus_routing` — el motor, el golpe de impacto y el chirrido de
   neumáticos rutean al bus "Interior" o "Exterior" según si la cámara
   activa de ese cliente está adentro de la furgoneta o no.
+- `test_level_endless` — el modo endless (`level_endless.tscn`) arranca el
+  streaming de tramos con el vehículo real, la distancia recorrida se
+  trackea de verdad, y una sesión larga simulada no acumula segmentos ni
+  nodos sin liberar.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

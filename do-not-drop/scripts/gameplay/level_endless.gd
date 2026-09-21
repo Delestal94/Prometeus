@@ -1,0 +1,198 @@
+extends Node3D
+## Modo Endless (docs/plan-desarrollo.md Fase 3.5, docs/tareas-nacho.md
+## #41-55): same on-foot loading / driver-seat / cargo-loading flow as
+## level_base.gd, but RouteStreamer generates road indefinitely instead of
+## a fixed curated route.tscn with a delivery zone. Deliberately NOT
+## refactored to share a base class with level_base.gd yet -- the two only
+## diverge in _physics_process (no delivery zone, no "arrived" success
+## state) and start_delivery (has to kick off the streamer); duplicating
+## that little is safer than restructuring a file Slatex also depends on
+## mid-project. Revisit once both modes are stable.
+##
+## Known gap, on purpose: ending a run here always calls
+## RunManager.finish_run(false, ...) (cargo lost, tipped over, or fell off)
+## -- there's no "arrived" state to award the existing delivered=true score
+## formula, so the score reads 0. A real distance-based score and a
+## separate endless leaderboard category are docs/tareas-nacho.md #52,
+## explicitly flagged B-priority/deferred -- not silently hacked in here.
+## _distance_traveled is already tracked and public for whenever that
+## lands.
+
+const LOST_CARGO_DISTANCE: float = 8.0
+const OUT_OF_BOUNDS_X: float = 42.0
+@onready var vehicle: VehicleBody3D = $World/Vehicle
+@onready var _streamer: RouteStreamer = $World/RouteStreamer
+@onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
+@onready var _world: Node3D = $World
+## Same spawn spots as level_base.gd -- kept identical on purpose so the
+## on-foot loading area feels like the same place.
+## Same relative layout as level_base.gd's SPAWN_POINTS, shifted to sit
+## behind the vehicle's own start position (-10 on this route's first
+## segment) instead of world origin -- there's no road at all past z=0
+## here (RouteStreamer only ever builds forward, toward -Z, unlike
+## route.gd's handcrafted ground which extends well behind the start too).
+const SPAWN_POINTS: Array[Vector3] = [
+	Vector3(2.2, 1.0, -6.8),
+	Vector3(3.4, 1.0, -6.8),
+	Vector3(2.2, 1.0, -5.6),
+	Vector3(3.4, 1.0, -5.6),
+	Vector3(1.0, 1.0, -6.2),
+]
+var local_player: Node = null
+var packages: Array[Node] = []
+var tipped_seconds: float = 0.0
+var _driver_seated: bool = false
+var _loaded_count: int = 0
+var _streaming_started: bool = false
+var _last_vehicle_z: float = 0.0
+## Public, meters -- how far the van has actually driven this run. Reset in
+## _ready(), only advances while RunManager.is_running.
+var distance_traveled: float = 0.0
+
+
+func _ready() -> void:
+	RunManager.reset_run()
+	vehicle.freeze = true
+	packages.assign(get_tree().get_nodes_in_group(&"cargo"))
+	for package: Node in packages:
+		package.set(&"freeze", true)
+	_driver_seat.interacted.connect(_on_driver_seated)
+	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
+		mount.connect(&"interacted", _on_package_loaded)
+	EventBus.start_requested.connect(start_debug_delivery)
+	EventBus.restart_requested.connect(restart_delivery)
+	EventBus.pause_requested.connect(toggle_pause)
+	EventBus.run_ended.connect(_on_run_ended)
+	NetworkManager.roster_changed.connect(_on_roster_changed)
+	if NetworkManager.is_host():
+		_sync_players(NetworkManager.peer_ids)
+	if "--autostart" in OS.get_cmdline_user_args():
+		start_debug_delivery.call_deferred()
+
+
+func _on_roster_changed(peer_ids: Array) -> void:
+	if NetworkManager.is_host():
+		_sync_players(peer_ids)
+
+
+func _sync_players(peer_ids: Array) -> void:
+	for index: int in range(peer_ids.size()):
+		var id: int = int(peer_ids[index])
+		if _world.has_node(NodePath(_player_name(id))):
+			continue
+		var player: Node = load("res://scenes/gameplay/player/player.tscn").instantiate()
+		player.name = _player_name(id)
+		player.set(&"position", SPAWN_POINTS[index % SPAWN_POINTS.size()])
+		player.set_multiplayer_authority(id)
+		_world.add_child(player, true)
+	for child: Node in _world.get_children():
+		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
+			child.queue_free()
+	_refresh_local_player()
+
+
+func _refresh_local_player() -> void:
+	local_player = _world.get_node_or_null(NodePath(_player_name(NetworkManager.local_id())))
+
+
+func _player_name(id: int) -> String:
+	return "Player_%d" % id
+
+
+func _id_from_name(value: String) -> int:
+	return int(value.trim_prefix("Player_"))
+
+
+func start_debug_delivery() -> void:
+	if RunManager.is_running or not RunManager.results.is_empty():
+		return
+	var player: Node = local_player
+	if player == null:
+		return
+	if _loaded_count == 0 and not packages.is_empty():
+		var mount: Node = get_tree().get_first_node_in_group(&"package_mount")
+		player.call(&"pick_up", packages[0].get_path())
+		mount.call(&"interact", player)
+	if not _driver_seated:
+		_driver_seat.interact(player)
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func _on_driver_seated(_player: Node) -> void:
+	_driver_seated = true
+	_maybe_start()
+
+
+func _on_package_loaded(_player: Node) -> void:
+	_loaded_count += 1
+	_maybe_start()
+
+
+func _maybe_start() -> void:
+	if _driver_seated and _loaded_count > 0:
+		start_delivery()
+
+
+func start_delivery() -> void:
+	if RunManager.is_running or not RunManager.results.is_empty():
+		return
+	if not _driver_seated or _loaded_count == 0:
+		return
+	vehicle.freeze = false
+	for package: Node in packages:
+		if bool(package.get(&"is_loaded")):
+			package.set(&"freeze", false)
+			package.call(&"report_to_run")
+	RunManager.start_run()
+	_last_vehicle_z = vehicle.global_position.z
+	distance_traveled = 0.0
+	_streamer.start(vehicle)
+	_streaming_started = true
+
+
+func restart_delivery() -> void:
+	get_tree().paused = false
+	EventBus.emit_signal(&"quick_fade_requested", 0.3)
+	await get_tree().create_timer(0.15).timeout
+	RunManager.reset_run()
+	get_tree().reload_current_scene()
+
+
+func toggle_pause() -> void:
+	if RunManager.results.is_empty():
+		get_tree().paused = not get_tree().paused
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if get_tree().paused else Input.MOUSE_MODE_CAPTURED
+
+
+func _physics_process(delta: float) -> void:
+	if not RunManager.is_running:
+		return
+	# Route moves toward -Z, same convention as route.gd's get_progress().
+	var current_z: float = vehicle.global_position.z
+	distance_traveled += maxf(_last_vehicle_z - current_z, 0.0)
+	_last_vehicle_z = current_z
+	_check_lost_cargo()
+	if vehicle.global_basis.y.dot(Vector3.UP) < 0.25:
+		tipped_seconds += delta
+	else:
+		tipped_seconds = 0.0
+	if tipped_seconds > 4.0:
+		RunManager.finish_run(false, "La camioneta volcó. Tomá las curvas más despacio.")
+	elif vehicle.global_position.y < -8.0 or absf(vehicle.global_position.x) > OUT_OF_BOUNDS_X:
+		RunManager.finish_run(false, "Te saliste de la ruta. Reiniciá para intentarlo de nuevo.")
+
+
+func _check_lost_cargo() -> void:
+	for package: Node in packages:
+		if not bool(package.get(&"is_loaded")):
+			continue
+		var distance: float = (package.get(&"global_position") as Vector3).distance_to(vehicle.global_position)
+		if distance > LOST_CARGO_DISTANCE:
+			package.call(&"mark_lost", "Se cayó de la furgoneta.")
+
+
+func _on_run_ended(_score: int, _results: Dictionary) -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	vehicle.set_deferred("freeze", true)
+	for package: Node in packages:
+		package.set_deferred("freeze", true)

@@ -15,6 +15,13 @@ class_name RouteStreamer
 ]
 @export var lookahead_distance: float = 60.0
 @export var behind_keep_distance: float = 40.0
+## The very first segment ignores the random pick and is always this one
+## (default: plain Straight) -- found the hard way while wiring this up to
+## a real vehicle for the first time: a chicane or narrow bridge picked as
+## segment #1 throws an obstacle at a driver who hasn't even had a second
+## to get their bearings yet. Null disables this and goes fully random from
+## the start, if a test genuinely needs that.
+@export var first_segment_script: Script = StraightSegment
 
 var target: Node3D = null
 
@@ -22,6 +29,10 @@ var _active: Array[RouteSegment] = []
 var _next_z: float = 0.0
 var _last_script: Script = null
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Tracks "has anything ever spawned", separately from _active.is_empty() --
+## _active shrinks as segments get culled behind, so it stops meaning
+## "nothing has spawned yet" well before the run is actually over.
+var _spawned_any: bool = false
 
 
 func _ready() -> void:
@@ -47,7 +58,8 @@ func _fill_ahead() -> void:
 
 
 func _spawn_next() -> void:
-	var script: Script = _pick_next_script()
+	var script: Script = first_segment_script if (first_segment_script != null and not _spawned_any) else _pick_next_script()
+	_spawned_any = true
 	var segment: RouteSegment = script.new()
 	segment.position = Vector3(0.0, 0.0, _next_z)
 	add_child(segment)

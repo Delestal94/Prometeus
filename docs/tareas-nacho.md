@@ -88,20 +88,20 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 41 | Conectar `RouteStreamer.start()` al vehículo real en una escena jugable — hoy solo se prueba con un `Node3D` de prueba (`test_route_streaming.gd`). | A |
-| 42 | Crear `level_endless.tscn`/`level_endless.gd` a partir de `level_base.gd`, reemplazando `route.tscn` por `RouteStreamer`. | A |
-| 43 | Definir la condición de fin de partida para endless (no hay zona de entrega fija: ¿sobrevivir X tiempo? ¿distancia recorrida?). | A |
+| 41 | ~~Conectar `RouteStreamer.start()` al vehículo real.~~ **[x] Hecho.** | A |
+| 42 | ~~Crear `level_endless.tscn`/`level_endless.gd`.~~ **[x] Hecho** — duplica algo de `level_base.gd` a propósito en vez de refactorizar un archivo del que Slatex también depende. | A |
+| 43 | ~~Definir la condición de fin de partida para endless.~~ **[x] Decidido: se pierde (carga perdida, vuelco, salir de la ruta), nunca "se entrega".** El puntaje por distancia queda para el #52, ver detalle en `docs/plan-desarrollo.md` Fase 3. | A |
 | 44 | Adaptar `RunManager` para puntaje por distancia en modo endless, sin romper el puntaje por entrega del modo normal (coordinar con Slatex, que es dueño de la UI de resultados). | B |
 | 45 | Botón "Modo Endless" en el menú principal — `main_menu.gd` es de Slatex, coordinar antes de tocarlo. | A |
-| 46 | Ajustar `lookahead_distance` del streamer contra el far clip de la cámara (600 m) para que nunca se vea el borde generado. | A |
+| 46 | ~~Ajustar `lookahead_distance` contra el far clip.~~ **[x] Hecho** — 180 m (era 60 m), niebla más densa en la escena endless (0.013 vs. 0.006) para que se disuelva antes de llegar al far clip. | A |
 | 47 | Reglas de combinación más allá de "nunca repetir el mismo tipo": evitar 3 obstáculos difíciles seguidos. | B |
-| 48 | Integrar la niebla de distancia (ya activa en `level_base.tscn`) también en la escena endless. | A |
+| 48 | ~~Integrar la niebla de distancia también en la escena endless.~~ **[x] Hecho de una vez con el #46.** | A |
 | 49 | Balancear la dificultad progresiva del modo endless. | B |
 | 50 | Probar el modo endless con las 4 trampas activas simultáneamente a velocidad sostenida. | A |
-| 51 | Verificar que `RouteStreamer._cull_behind()` libere a tiempo en una sesión larga (posible fuga de memoria si no). | A |
+| 51 | ~~Verificar que `RouteStreamer._cull_behind()` libere a tiempo.~~ **[x] Verificado** — sin fuga: conteo de segmentos activos y de hijos de `World` acotados tras una sesión larga simulada (`test_level_endless.gd`). | A |
 | 52 | Sumar el modo endless al leaderboard local existente, como categoría separada del modo normal (coordinar con Slatex, dueño de `run_manager.gd` en la zona compartida). | B |
-| 53 | Test automatizado de una sesión larga de endless simulada, verificando que no crezca la cantidad de nodos activos. | A |
-| 54 | Documentar el modo endless en `docs/plan-desarrollo.md` Fase 3.5 una vez armado. | A |
+| 53 | ~~Test automatizado de una sesión larga de endless simulada.~~ **[x] Hecho** — `tests/test_level_endless.gd`. | A |
+| 54 | ~~Documentar el modo endless en `docs/plan-desarrollo.md` Fase 3.~~ **[x] Hecho.** | A |
 | 55 | Playtesting real del modo endless: ¿se siente bien la variedad aleatoria o hace falta más curaduría? | A |
 
 ## Contenido de ruta nuevo (56-65)

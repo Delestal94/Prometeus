@@ -1,0 +1,80 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/level_endless.gd" id="1_level"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_vehicle"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/package/package.tscn" id="3_package"]
+[ext_resource type="Script" path="res://scripts/gameplay/route/route_streamer.gd" id="4_streamer"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/player/player.tscn" id="5_player"]
+[ext_resource type="Script" path="res://scripts/ui/prototype_hud.gd" id="6_hud"]
+[ext_resource type="Resource" path="res://data/traps/growing_weight.tres" id="7_growing"]
+[ext_resource type="Resource" path="res://data/traps/balance.tres" id="8_balance"]
+[ext_resource type="Resource" path="res://data/traps/noisy.tres" id="9_noisy"]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
+sky_top_color = Color(0.28, 0.46, 0.53, 1)
+sky_horizon_color = Color(0.72, 0.8, 0.79, 1)
+ground_bottom_color = Color(0.24, 0.32, 0.28, 1)
+ground_horizon_color = Color(0.72, 0.8, 0.79, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("Sky_material")
+
+[sub_resource type="Environment" id="Environment"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.76, 0.86, 0.9, 1)
+ambient_light_energy = 0.65
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.72, 0.8, 0.79, 1)
+fog_density = 0.013
+fog_sky_affect = 0.0
+
+[node name="EndlessPrototype" type="Node3D"]
+script = ExtResource("1_level")
+
+[node name="World" type="Node3D" parent="."]
+
+[node name="RouteStreamer" type="Node3D" parent="World"]
+script = ExtResource("4_streamer")
+lookahead_distance = 180.0
+
+[node name="Vehicle" parent="World" instance=ExtResource("2_vehicle")]
+position = Vector3(0, 0.9, -10)
+
+[node name="Package" parent="World" instance=ExtResource("3_package")]
+position = Vector3(2.2, 0.75, -9.5)
+
+[node name="PackageGrowingWeight" parent="World" instance=ExtResource("3_package")]
+position = Vector3(3.1, 0.75, -9.5)
+package_id = &"growing_weight_01"
+trap_definition = ExtResource("7_growing")
+
+[node name="PackageBalance" parent="World" instance=ExtResource("3_package")]
+position = Vector3(2.2, 0.75, -8.6)
+package_id = &"balance_01"
+trap_definition = ExtResource("8_balance")
+
+[node name="PackageNoisy" parent="World" instance=ExtResource("3_package")]
+position = Vector3(3.1, 0.75, -8.6)
+package_id = &"noisy_01"
+trap_definition = ExtResource("9_noisy")
+
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="World"]
+_spawnable_scenes = PackedStringArray("res://scenes/gameplay/player/player.tscn")
+spawn_path = NodePath("..")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-48, -28, 0)
+light_color = Color(1, 0.93, 0.8, 1)
+light_energy = 1.2
+shadow_enabled = true
+directional_shadow_max_distance = 100.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+process_mode = 3
+script = ExtResource("6_hud")
