@@ -116,7 +116,7 @@ dónde empezar, es por ahí.
 | 57 | Clima: lluvia, asfalto mojado con reflejos. Cambia por completo el tono y agrega dificultad natural. | **C** |
 | 58 | Nubes en el cielo procedural — hoy es un degradé liso. | **C** |
 | 59 | Silueta de horizonte / terreno lejano, para que el mundo no termine en una línea plana. | **B** |
-| 60 | Oclusión ambiental (SSAO): sin ella, las cajas apoyadas sobre otras cajas flotan visualmente. | **A** |
+| 60 | Oclusión ambiental (SSAO): sin ella, las cajas apoyadas sobre otras cajas flotan visualmente. **Bloqueado, no es tan "A" como parecía**: probado en 2026-09-21 — el proyecto usa `renderer/rendering_method = "gl_compatibility"` (`project.godot`), y ese renderer **no soporta SSAO en absoluto** en Godot 4 (ni SSIL, SSR, SDFGI ni niebla volumétrica; solo Forward+ los soporta). Activar `ssao_enabled` ahí no rompe nada ni tira error, simplemente no hace nada — se comprobó booteando el juego real y revirtiendo el cambio al no encontrar ninguna diferencia posible de verificar. Para tenerlo de verdad hay que migrar a Forward+, que es un cambio de renderer con impacto más amplio (compatibilidad de hardware, otros efectos), no una línea de configuración suelta. | **B** |
 
 ---
 
@@ -186,8 +186,10 @@ dónde empezar, es por ahí.
    el de cada uno mientras viajan sentados.~~ **Hecho.**
 4. ~~**#24, #25, #26** — que cada trampa se vea hacer lo que hace.~~ **Hecho** (el
    #25 ya lo hacía solo, sin código nuevo).
-5. **#60** — oclusión ambiental. Una línea de configuración que hace que todo deje
-   de flotar. El único de los cinco originales que sigue pendiente.
+5. ~~**#60** — oclusión ambiental.~~ **Resultó no ser tan simple**: el renderer
+   actual (`gl_compatibility`) no soporta SSAO en absoluto en Godot 4. No es una
+   línea de configuración, es un cambio de renderer — bajado de prioridad a **B**
+   y anotado en su fila.
 
 ## Próximo paso
 Esta lista es el inventario para la Fase 6 (`docs/plan-desarrollo.md`). Los ítems **A**
