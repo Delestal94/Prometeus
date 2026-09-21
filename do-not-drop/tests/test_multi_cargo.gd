@@ -38,9 +38,12 @@ func _initialize() -> void:
 	var manager: Node = root.get_node(^"/root/RunManager")
 
 	# Load two different traps, leaving the other two behind on the rack.
-	player.call(&"pick_up", packages[0])
+	# pick_up is an @rpc now (called with rpc_id() from package_pickup_point.gd
+	# normally); calling it directly here, with no RPC in flight, is what a
+	# host's own local interaction looks like -- _from_host() allows it.
+	player.call(&"pick_up", packages[0].get_path())
 	mounts[0].call(&"interact", player)
-	player.call(&"pick_up", packages[1])
+	player.call(&"pick_up", packages[1].get_path())
 	mounts[1].call(&"interact", player)
 	_expect(bool(packages[0].get(&"is_loaded")) and bool(packages[1].get(&"is_loaded")), "Both boxes report loaded")
 	_expect(not bool(packages[2].get(&"is_loaded")), "The box left on the rack stays unloaded")

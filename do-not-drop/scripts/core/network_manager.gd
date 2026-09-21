@@ -141,10 +141,19 @@ func _init_steam() -> bool:
 	var response: Variant = _steam.call(&"steamInitEx") if _steam.has_method(&"steamInitEx") else _steam.call(&"steamInit")
 	# steamInitEx reports a dictionary; the older steamInit a plain status.
 	var status: int = int(response.get("status", 0)) if response is Dictionary else int(response)
-	_steam_ready = status == 0
-	if _steam_ready:
-		_connect_steam_signals()
-	return _steam_ready
+	if status != 0:
+		return false
+	# A successful status here only means steam_appid.txt was readable and
+	# the SDK found a locally cached Steam id -- it does NOT mean the Steam
+	# client is actually running. Trusting it alone picks STEAM as the
+	# transport even with Steam closed, and every lobby call after that
+	# just hangs forever with nothing to answer it. isSteamRunning() checks
+	# for the live client process, which is what we actually need.
+	if _steam.has_method(&"isSteamRunning") and not bool(_steam.call(&"isSteamRunning")):
+		return false
+	_steam_ready = true
+	_connect_steam_signals()
+	return true
 
 
 func _connect_steam_signals() -> void:

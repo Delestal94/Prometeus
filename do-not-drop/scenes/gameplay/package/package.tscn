@@ -30,6 +30,26 @@ size = Vector3(0.66, 0.66, 0.08)
 [sub_resource type="SphereShape3D" id="Shape_pickup"]
 radius = 0.55
 
+[sub_resource type="SceneReplicationConfig" id="Repl_package"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:linear_velocity")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+properties/3/path = NodePath(".:angular_velocity")
+properties/3/spawn = true
+properties/3/replication_mode = 1
+properties/4/path = NodePath(".:is_held")
+properties/4/spawn = true
+properties/4/replication_mode = 2
+properties/5/path = NodePath(".:is_loaded")
+properties/5/spawn = true
+properties/5/replication_mode = 2
+
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4
 collision_mask = 7
@@ -42,6 +62,9 @@ contact_monitor = true
 max_contacts_reported = 8
 script = ExtResource("1_package")
 trap_definition = ExtResource("3_trap")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("Repl_package")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_crate")

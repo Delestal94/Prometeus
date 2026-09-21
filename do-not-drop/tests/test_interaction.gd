@@ -24,10 +24,14 @@ func _initialize() -> void:
 
 	_expect(not bool(package.get(&"is_held")), "Package starts unheld")
 
-	player.call(&"pick_up", package)
-	_expect(bool(package.get(&"is_held")), "pick_up marks the package as held")
+	# pick_up/board_seat are @rpc methods now, called from seat_point.gd /
+	# package_pickup_point.gd with rpc_id(). Calling them directly here (no
+	# active RPC in flight) makes get_remote_sender_id() report 0, which
+	# _from_host() treats as a genuine local call -- exactly what a
+	# single-player host doing its own interactions looks like.
+	player.call(&"pick_up", package.get_path())
+	_expect(bool(package.get(&"is_held")) == false, "pick_up alone doesn't touch the package -- the caller (package_pickup_point.gd) sets is_held directly")
 	_expect(player.get(&"carried_package") == package, "Player tracks the carried package")
-	_expect(bool(package.get(&"freeze")), "Held package freezes so it stops fighting physics")
 
 	var mount: Node = vehicle.get_node(^"CargoBay/LeftSeat1PackageMount")
 	package.call(&"place_at", mount)
@@ -39,7 +43,12 @@ func _initialize() -> void:
 	_expect(not bool(camera.get(&"current")), "Seat camera starts inactive")
 	_expect(not bool(vehicle.get(&"controls_enabled")), "Vehicle ignores input until a driver boards")
 
-	player.call(&"board_seat", camera, true, vehicle)
+	# seat_point.gd sets these two directly on the (host-authoritative)
+	# vehicle before RPC'ing board_seat to the boarding peer -- simulated
+	# here since this test calls board_seat directly, bypassing the seat.
+	vehicle.set(&"controls_enabled", true)
+	vehicle.set(&"driver_peer_id", 1)
+	player.call(&"board_seat", camera.get_path())
 	_expect(bool(camera.get(&"current")), "Boarding activates the seat's camera")
 	_expect(bool(vehicle.get(&"controls_enabled")), "Boarding as driver enables the vehicle's controls")
 	_expect(not bool(player.get(&"visible")), "Seated player hides their on-foot body")

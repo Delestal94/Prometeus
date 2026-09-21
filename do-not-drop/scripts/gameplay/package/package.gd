@@ -1,6 +1,10 @@
 class_name DeliveryPackage
 extends RigidBody3D
 ## Physical entity and trap integration. Presentation subscribes independently.
+##
+## Host-authoritative, like the van: authority defaults to the host since
+## this is a static, non-spawned node. Non-host peers freeze it and let
+## their MultiplayerSynchronizer puppet the transform instead.
 
 @export var package_id: StringName = &"fragile_01"
 @export var trap_definition: Resource = preload("res://data/traps/fragile.tres")
@@ -35,6 +39,8 @@ var _impact_cooldown_remaining: float = 0.0
 
 
 func _ready() -> void:
+	if not is_multiplayer_authority():
+		freeze = true
 	initialize_trap()
 
 
@@ -122,6 +128,29 @@ func _report_change(before_integrity: float, before_state: int, ruin_cause: Stri
 			_emit_event(&"package_ruined", [package_id, ruin_cause])
 
 
+## Whoever is tending this package calls this on their own client every
+## physics frame; only takes effect on the host, which is the only place
+## trap_behavior should actually read it. Same unreliable-ordered reasoning
+## as the van's driver input -- a dropped sample is superseded a frame later.
+@rpc("any_peer", "call_local", "unreliable_ordered")
+func submit_tender_input(input: Dictionary) -> void:
+	if not is_multiplayer_authority():
+		return
+	player_input = input
+
+
+## Whoever is carrying this package (on foot, not yet mounted) calls this
+## every physics frame instead of setting global_transform directly -- the
+## package is host-authoritative, so only the host's copy moving is real;
+## everyone else, carrier included, sees it through the MultiplayerSynchronizer.
+@rpc("any_peer", "call_local", "unreliable_ordered")
+func submit_carry_transform(carry_transform: Transform3D) -> void:
+	if not is_multiplayer_authority():
+		return
+	if is_held:
+		global_transform = carry_transform
+
+
 func set_held(held: bool) -> void:
 	is_held = held
 	freeze = held
@@ -151,4 +180,4 @@ func _emit_event(event_name: StringName, arguments: Array) -> void:
 		return
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null and bus.has_signal(event_name):
-		bus.callv("emit_signal", [event_name] + arguments)
+		bus.call(&"relay", event_name, arguments)

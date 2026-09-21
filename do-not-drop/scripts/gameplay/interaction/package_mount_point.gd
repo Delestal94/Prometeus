@@ -1,6 +1,11 @@
 extends "res://scripts/gameplay/interaction/interactable.gd"
 ## Lets a player carrying a package leave it here, if the mount is free.
 ## The mount marker itself is the parent -- this only adds the interaction.
+##
+## interact() only ever runs on the host (see interactable.gd). The package
+## itself is host-authoritative too, so place_at() here is the real thing,
+## not a copy -- but telling that player their hands are empty again is
+## their own local state, so that part goes out as a targeted RPC.
 
 var occupied_by: Node = null
 
@@ -23,5 +28,5 @@ func interact(player: Node) -> void:
 	carried.call(&"place_at", mount)
 	occupied_by = carried
 	if player.has_method(&"drop_carried"):
-		player.call(&"drop_carried")
+		player.rpc_id(int(player.get_multiplayer_authority()), &"drop_carried")
 	interacted.emit(player)

@@ -123,17 +123,33 @@ comprobar en qué estado está con:
 
 ### Prueba de conexión local (manual, dos procesos)
 
-Para el transporte ENet, corré el anfitrión en una terminal y el cliente en otra:
+El test siempre fuerza el transporte **ENet** (no AUTO), a propósito: si Steam
+está corriendo en la máquina, AUTO elegiría Steam, y el P2P de Steam entre dos
+instancias con la misma cuenta no anda bien — no tiene sentido pelear con esa
+limitación acá, cuando lo que este test verifica es la conectividad local.
+
+Corré el anfitrión en una terminal y el cliente en otra:
 
 ```
 <godot> --headless --path do-not-drop --script res://tests/net_smoke.gd -- --host
 <godot> --headless --path do-not-drop --script res://tests/net_smoke.gd -- --client
 ```
 
-Ambos imprimen `PASS` si se encuentran. **Si falla, revisá el firewall de
-Windows**: la primera vez que Godot abre un puerto suele pedir permiso, y si el
-proceso corre sin ventana el pedido nunca aparece y la conexión queda bloqueada
-en silencio. Ese es exactamente el síntoma que dio en esta máquina.
+Ambos imprimen `PASS` si se encuentran.
+
+**Usá el ejecutable normal de Godot, no el que termina en `_console.exe`.**
+En Windows, las reglas del firewall quedan atadas a la ruta exacta del
+ejecutable — una regla aprobada para `Godot_v4.7.2-stable_win64.exe` no cubre
+`Godot_v4.7.2-stable_win64_console.exe`, aunque sean la misma versión. Con el
+binario equivocado, el anfitrión abre el puerto pero nunca ve llegar a nadie,
+en silencio (sin ventana, tampoco hay pop-up de permiso que aceptar). Podés
+revisar qué reglas tenés con:
+
+```powershell
+Get-NetFirewallRule -DisplayName "Godot Engine" | Get-NetFirewallApplicationFilter
+```
+
+Si ninguna regla apunta al ejecutable que estás usando, esa es la causa.
 
 Para levantar el juego salteando la fase de carga a pie (útil al iterar sobre el
 manejo):

@@ -3,6 +3,13 @@ extends CharacterBody3D
 ## On-foot, first-person controller for the loading area: walk up to a
 ## package or a seat and press interact. WASD/left stick walk, mouse/right
 ## stick look. The on-foot controller stops consuming input once seated.
+##
+## Movement/look/camera stay authoritative on the owning peer -- client-side,
+## like most co-op party games, since nothing here is competitive enough to
+## be worth fighting latency over. Game *decisions* (did the interaction
+## succeed, who's carrying what) are the host's call; see interactable.gd
+## and the RPC methods below, which the host calls on this specific peer to
+## announce the outcome.
 
 const WALK_SPEED: float = 3.6
 const GRAVITY: float = 18.0
@@ -64,7 +71,7 @@ func _physics_process(delta: float) -> void:
 		if carried_package != null:
 			_update_carried_package()
 		if tended_package != null:
-			tended_package.set(&"player_input", _gather_package_input())
+			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
 		return
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	_apply_look(stick * stick_sensitivity * delta)
@@ -93,8 +100,7 @@ func _apply_look(motion: Vector2) -> void:
 func _gather_package_input() -> Dictionary:
 	# One held action covers every "keep it under control" trap, and the walk
 	# keys double as the sequence input -- a seated passenger isn't using them
-	# to move. Plain data, so the host can apply a remote client's input the
-	# same way once networking lands.
+	# to move.
 	var holding: bool = Input.is_action_pressed(&"package_action_primary")
 	var direction: Variant = null
 	if Input.is_action_just_pressed(&"walk_forward"):
@@ -106,10 +112,6 @@ func _gather_package_input() -> Dictionary:
 	elif Input.is_action_just_pressed(&"drive_right"):
 		direction = &"right"
 	return {"steady": holding, "calm": holding, "direction_pressed": direction}
-
-
-func tend_package(package: Node) -> void:
-	tended_package = package
 
 
 func _publish_prompt(value: String) -> void:
@@ -124,13 +126,21 @@ func _publish_prompt(value: String) -> void:
 func _update_carried_package() -> void:
 	# Position follows the hold point (in front of the camera, so it bobs
 	# naturally with head look), but rotation stays tied to the body's yaw
-	# only -- looking down doesn't swing the box's face into the lens.
-	carried_package.set(&"global_transform", Transform3D(global_basis, _hold_point.global_position))
+	# only -- looking down doesn't swing the box's face into the lens. Goes
+	# through the host either way (rpc_id(1, ...) with call_local resolves to
+	# a direct call when this peer already is the host), since the package is
+	# host-authoritative and only it should ever move the real one.
+	var carry_transform := Transform3D(global_basis, _hold_point.global_position)
+	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform)
 
 
 func _try_interact() -> void:
 	var target: Node = _closest_interactable()
-	if target != null:
+	if target == null:
+		return
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		target.rpc_id(1, &"request_interact")
+	else:
 		target.call(&"interact", self)
 
 
@@ -158,23 +168,49 @@ func _on_probe_exited(area: Area3D) -> void:
 	_nearby.erase(area)
 
 
-func pick_up(package: Node) -> void:
-	carried_package = package
-	package.call(&"set_held", true)
+## The host announces the outcome of an interaction by calling these on the
+## specific peer they concern (rpc_id(target_peer, ...)), never broadcast --
+## nobody else needs to know that *I* am now holding this box, only that the
+## box itself moved (which its own MultiplayerSynchronizer already covers).
+## _from_host() guards every one, since any_peer is required for the host to
+## reach a peer that isn't itself the authority of this node.
+
+@rpc("any_peer", "call_local", "reliable")
+func pick_up(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	carried_package = get_node_or_null(package_path)
 
 
+@rpc("any_peer", "call_local", "reliable")
 func drop_carried() -> void:
+	if not _from_host():
+		return
 	carried_package = null
 
 
-func board_seat(seat_camera: Node, is_driver: bool, vehicle: Node) -> void:
+@rpc("any_peer", "call_local", "reliable")
+func tend_package(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	tended_package = get_node_or_null(package_path)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func board_seat(seat_camera_path: NodePath) -> void:
+	if not _from_host():
+		return
 	_seated = true
 	collision_layer = 0
 	collision_mask = 0
 	velocity = Vector3.ZERO
 	visible = false
 	_camera.current = false
+	var seat_camera: Node = get_node_or_null(seat_camera_path)
 	if seat_camera != null and seat_camera.has_method(&"activate"):
 		seat_camera.call(&"activate")
-	if is_driver and vehicle != null:
-		vehicle.set(&"controls_enabled", true)
+
+
+func _from_host() -> bool:
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	return sender_id == 0 or sender_id == 1  # 0: a genuine local call (offline).

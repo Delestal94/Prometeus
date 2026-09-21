@@ -1,5 +1,10 @@
 extends "res://scripts/gameplay/interaction/interactable.gd"
 ## Lets a nearby player pick up the package this is attached to.
+##
+## interact() only ever runs on the host (see interactable.gd), where the
+## package is the real, authoritative thing -- set_held() here is applied
+## directly, not RPC'd. The picking-up player's own local carry state is
+## a separate concern, targeted at their own peer.
 
 @onready var _package: Node = get_parent()
 
@@ -15,6 +20,7 @@ func can_interact(player: Node) -> bool:
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
+	_package.call(&"set_held", true)
 	if player.has_method(&"pick_up"):
-		player.call(&"pick_up", _package)
+		player.rpc_id(int(player.get_multiplayer_authority()), &"pick_up", _package.get_path())
 	interacted.emit(player)

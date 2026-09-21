@@ -1,5 +1,10 @@
 extends Node
 ## Input is isolated so tests and future network drivers can use set_controls().
+##
+## This runs identically on every peer's copy of the (shared, non-spawned)
+## Vehicle node -- so it has to work out on its own whether *this* peer is
+## the one currently driving, and if it isn't the host, forward the reading
+## to the host instead of touching the vehicle directly.
 
 @onready var _vehicle: VehicleBody3D = get_parent() as VehicleBody3D
 
@@ -7,11 +12,22 @@ extends Node
 func _physics_process(_delta: float) -> void:
 	if not _vehicle.controls_enabled:
 		return
-	if not RunManager.is_running:
-		_vehicle.set_controls(0.0, 0.0, false)
+	if not _is_local_driver():
 		return
-	_vehicle.set_controls(
-		Input.get_axis("drive_brake", "drive_accelerate"),
-		Input.get_axis("drive_left", "drive_right"),
-		Input.is_action_pressed("drive_handbrake")
-	)
+	var throttle: float = 0.0
+	var steer: float = 0.0
+	var handbrake: bool = false
+	if RunManager.is_running:
+		throttle = Input.get_axis("drive_brake", "drive_accelerate")
+		steer = Input.get_axis("drive_left", "drive_right")
+		handbrake = Input.is_action_pressed("drive_handbrake")
+	if _vehicle.is_multiplayer_authority():
+		_vehicle.set_controls(throttle, steer, handbrake)
+	else:
+		_vehicle.rpc_id(1, &"submit_driver_input", throttle, steer, handbrake)
+
+
+func _is_local_driver() -> bool:
+	if not NetworkManager.is_online():
+		return true
+	return _vehicle.driver_peer_id == NetworkManager.local_id()
