@@ -42,10 +42,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if _seated:
 		if carried_package != null:
-			carried_package.set(&"global_transform", _hold_point.global_transform)
+			_update_carried_package()
 		return
+	# get_vector's y is -1 for "accelerate" (forward) and +1 for "brake" (back);
+	# local forward is -Z, so the two negatives cancel out to a plain +basis.z.
 	var input_vector: Vector2 = Input.get_vector(&"drive_left", &"drive_right", &"drive_accelerate", &"drive_brake")
-	var move_direction: Vector3 = (global_basis.x * input_vector.x) - (global_basis.z * input_vector.y)
+	var move_direction: Vector3 = (global_basis.x * input_vector.x) + (global_basis.z * input_vector.y)
 	if move_direction.length() > 1.0:
 		move_direction = move_direction.normalized()
 	velocity.x = move_direction.x * WALK_SPEED
@@ -53,7 +55,14 @@ func _physics_process(delta: float) -> void:
 	velocity.y = -0.2 if is_on_floor() else velocity.y - GRAVITY * delta
 	move_and_slide()
 	if carried_package != null:
-		carried_package.set(&"global_transform", _hold_point.global_transform)
+		_update_carried_package()
+
+
+func _update_carried_package() -> void:
+	# Position follows the hold point (in front of the camera, so it bobs
+	# naturally with head look), but rotation stays tied to the body's yaw
+	# only -- looking down doesn't swing the box's face into the lens.
+	carried_package.set(&"global_transform", Transform3D(global_basis, _hold_point.global_position))
 
 
 func _try_interact() -> void:

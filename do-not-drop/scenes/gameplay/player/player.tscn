@@ -45,7 +45,7 @@ rotation_degrees = Vector3(75, 0, -12)
 mesh = SubResource("Mesh_hand")
 
 [node name="HoldPoint" type="Marker3D" parent="Head/Camera3D"]
-position = Vector3(0, -0.15, -0.55)
+position = Vector3(0, -0.3, -0.95)
 
 [node name="InteractionProbe" type="Area3D" parent="Head"]
 position = Vector3(0, 0, -0.6)
