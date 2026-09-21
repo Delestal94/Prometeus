@@ -20,6 +20,18 @@ extends Node3D
 
 const LOST_CARGO_DISTANCE: float = 8.0
 const OUT_OF_BOUNDS_X: float = 42.0
+## #97's automated bug bash found a real gap: driving unbraked into repeated
+## SpeedBumpSegments at sustained top speed can launch the van hard enough
+## that it lands wedged against route geometry -- upright (never trips the
+## tip-over check) and inside bounds (never trips the out-of-bounds check),
+## just permanently stopped with no way out and the run silently still
+## "running" forever. 6s of being effectively stationary is long enough that
+## no real player deliberately idles that long mid-drive (there's no reason
+## to stop in endless mode at all -- unlike level_base.gd's delivery zone,
+## there's no destination to sit still at).
+const STUCK_SPEED_THRESHOLD: float = 0.3
+const STUCK_SECONDS: float = 6.0
+var _stuck_seconds: float = 0.0
 @onready var vehicle: VehicleBody3D = $World/Vehicle
 @onready var _streamer: RouteStreamer = $World/RouteStreamer
 @onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
@@ -146,6 +158,7 @@ func start_delivery() -> void:
 	RunManager.start_run()
 	_last_vehicle_z = vehicle.global_position.z
 	distance_traveled = 0.0
+	_stuck_seconds = 0.0
 	_streamer.start(vehicle)
 	_streaming_started = true
 
@@ -176,10 +189,16 @@ func _physics_process(delta: float) -> void:
 		tipped_seconds += delta
 	else:
 		tipped_seconds = 0.0
+	if vehicle.linear_velocity.length() < STUCK_SPEED_THRESHOLD:
+		_stuck_seconds += delta
+	else:
+		_stuck_seconds = 0.0
 	if tipped_seconds > 4.0:
 		RunManager.finish_run(false, "La camioneta volcó. Tomá las curvas más despacio.")
 	elif vehicle.global_position.y < -8.0 or absf(vehicle.global_position.x) > OUT_OF_BOUNDS_X:
 		RunManager.finish_run(false, "Te saliste de la ruta. Reiniciá para intentarlo de nuevo.")
+	elif _stuck_seconds > STUCK_SECONDS:
+		RunManager.finish_run(false, "La camioneta quedó atascada contra la ruta. Reiniciá para intentarlo de nuevo.")
 
 
 func _check_lost_cargo() -> void:

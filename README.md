@@ -95,6 +95,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_dev_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_bus_routing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_level_endless.gd
+<godot> --headless --path do-not-drop --script res://tests/test_endless_multi_cargo.gd
 <godot> --headless --path do-not-drop --script res://tests/test_new_route_segments.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
@@ -196,6 +197,9 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   posición/velocidad nunca exploten a NaN/Inf y que la red de seguridad de
   "fuera de la ruta" atrape una caída antes de que se vuelva una caída real
   a través del mundo.
+- `test_endless_multi_cargo` — las 4 trampas activas a la vez en modo
+  endless, durante 20s de manejo sostenido real: nada se rompe, ninguna
+  trampa deja de trackearse.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

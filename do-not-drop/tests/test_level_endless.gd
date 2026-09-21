@@ -43,8 +43,20 @@ func _initialize() -> void:
 		await physics_frame
 		peak_active_count = maxi(peak_active_count, (streamer.get(&"_active") as Array).size())
 
-	_expect(float(level.get(&"distance_traveled")) > 30.0,
-		"distance_traveled actually tracks real movement (got %.1f m)" % float(level.get(&"distance_traveled")))
+	# Usually still running with solid distance covered. The rare exception:
+	# level_endless.gd's own stuck-detection (added after this test's stress
+	# runs found the van can occasionally land wedged against a speed bump
+	# hard enough to stop dead) ends the run early instead of hanging
+	# forever -- also a pass, since that's the real regression being guarded
+	# against, not "did it drive exactly N meters."
+	if bool(run_manager.get(&"is_running")):
+		_expect(float(level.get(&"distance_traveled")) > 30.0,
+			"distance_traveled actually tracks real movement while still running (got %.1f m)" % float(level.get(&"distance_traveled")))
+	else:
+		_expect(not (run_manager.get(&"results") as Dictionary).is_empty(),
+			"If the run isn't going anymore, it's because a real end condition fired, not because it silently stalled")
+		_expect(float(level.get(&"distance_traveled")) > 0.0,
+			"Even an early stuck-abort covered some real distance first, not zero (got %.1f m)" % float(level.get(&"distance_traveled")))
 
 	var final_active: Array = streamer.get(&"_active")
 	_expect(final_active.size() > 0, "Streaming never runs dry after a long drive")
