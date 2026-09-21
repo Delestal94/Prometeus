@@ -1,6 +1,6 @@
 # Controles y flujo de UI/lobby — Do Not Drop
 
-> Última actualización: 2026-09-20
+> Última actualización: 2026-09-21
 > Cada jugador juega desde su propio dispositivo/cliente (no split-screen local) —
 > esto simplifica el esquema de controles: cada uno usa su teclado+mouse o gamepad
 > completo, no hay que repartir un solo teclado entre varios jugadores.
@@ -46,6 +46,11 @@ mejora post-launch, no bloqueante para el MVP.
 
 ## 2. Flujo de UI
 
+> **Estado real (2026-09-21)**: esto era el plan antes de programar. La implementación
+> real (`main_menu.gd`) diverge a propósito en un punto central — no hay pantalla de
+> lobby. El diagrama y la sección "Lobby" de abajo quedan como diseño de referencia
+> para cuando haya algo que elegir en un lobby (vehículo, modo); por ahora no aplican.
+
 ```
 Main Menu
   ├── Jugar
@@ -58,38 +63,66 @@ Main Menu
   └── Opciones (audio, controles, video)
 ```
 
-### Lobby
+### Lo que hay en cambio
+- Tres botones directos: **Jugar solo** (sin sesión), **Crear sala** (hostea y entra
+  directo a la furgoneta, sin esperar a nadie) y **Unirse por IP**.
+- El host nunca espera en un lobby: `level_base.gd` ya spawnea jugadores dinámicamente
+  a medida que se suman (`_sync_players`), así que entrar directo y dejar que los demás
+  se sumen después ya funciona sin necesitar una pantalla de espera.
+- No hay tutorial ("Cómo jugar"), pantalla de progreso ni opciones todavía — solo las
+  tres acciones de arriba. Ver README sección "Probar el prototipo".
+- **Conexión real**: Steam (relayeado, sin abrir puertos) o IP directa por LAN (ENet) —
+  la elección es automática (Steam si está corriendo) salvo en "Unirse por IP", que
+  siempre fuerza LAN. Ver README sección "Multijugador".
+
+### Lobby (diseño de referencia, no implementado)
 - Lista de jugadores conectados (nombre + listo/no listo).
 - Host elige: vehículo (si hay más de uno desbloqueado) y ruta/modo (normal vs.
   endless, si ya está implementado).
 - Botón "Listo" por jugador; el host inicia cuando todos están listos.
-- **MVP de conexión**: código de sala simple o IP directa (Godot ENet) — sin
-  integración con matchmaking de Steam en el MVP, para no sumar esa complejidad antes
-  de validar el juego. Se evalúa sumar Steam networking/matchmaking después del EA si
-  hace falta.
+- Tendría sentido el día que haya algo real que elegir (vehículo desbloqueado, modo
+  endless) — hasta entonces, agregar esta pantalla sería fricción sin función.
 
 ### Asignación de roles y paquetes
 - Al empezar la partida, un jugador es conductor (rotable entre partidas o elegido en
   el lobby, a definir con playtesting) y el resto recibe un paquete cada uno.
+  **[x] Parcial**: cualquier jugador puede sentarse a conducir (primero en llegar, sin
+  rotación automática todavía) y tomar cualquier paquete disponible.
 - Las trampas asignadas a cada paquete salen de las desbloqueadas hasta el momento,
   con las reglas de balance de `requerimientos-tecnicos.md` sección 3.3 (no combinar
-  demasiadas trampas de alta dificultad en partidas tempranas).
+  demasiadas trampas de alta dificultad en partidas tempranas). **[ ] No implementado**:
+  hoy `level_base.tscn` trae los cuatro paquetes fijos, uno por cada trampa del
+  catálogo completo, siempre los mismos — no hay asignación semi-aleatoria ni reglas
+  de balance porque no hay desbloqueos que balancear todavía.
 
 ### HUD durante la partida
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.
+  **[x] Implementado** (`prototype_hud.gd`: `speed_label`, `distance_label`).
 - **Pasajero**: su propio paquete en pantalla con el medidor de integridad/agitación
   visible (barra de color: verde=OK, amarillo=EnRiesgo, rojo=Arruinado), y el prompt de
-  la acción correspondiente a su trampa.
+  la acción correspondiente a su trampa. **[x] Implementado** (`cargo_hint_label`,
+  `interaction_label`).
 - **Compartido**: mini resumen del estado de todos los paquetes (iconos chicos) para
   que todos vean cuándo un compañero está en problemas — esto refuerza la tensión
-  social/cooperativa (mecánica #8 del banco: riesgo compartido).
+  social/cooperativa (mecánica #8 del banco: riesgo compartido). **[x] Implementado**:
+  `cargo_rows_box` escucha `cargo_registered`/`package_integrity_changed` para **toda**
+  la carga a bordo, no solo la propia — cada cliente ve el estado de los cuatro
+  paquetes, con barra de color por integridad.
 
 ### Pantalla de resultados
 - Desglose de puntaje por paquete (según fórmula de `parametros-diseno.md`).
-- Progreso de desbloqueos ganado en esta partida.
+  **[x] Implementado** (overlay de resultados de `prototype_hud.gd`).
+- Récord local. **[x] Implementado** (no estaba en el plan original, se sumó después:
+  "¡NUEVO RÉCORD!" o el récord actual, ver `RunManager` y README sección Tests /
+  `test_leaderboard`).
+- Progreso de desbloqueos ganado en esta partida. **[ ] No implementado** — no hay
+  desbloqueos todavía (ver `docs/plan-desarrollo.md` Fase 5).
 - Botones: "Jugar de nuevo" (mismo lobby) / "Volver al lobby" / "Salir".
+  **[x] Parcial**: "Volver a intentar" reinicia la misma sesión (no hay lobby al que
+  volver, ver más arriba); no hay botón "Salir" propio, se usa Alt+F4/cerrar ventana.
 
 ## Próximo paso
-Con esto ya están definidos controles y flujo de UI necesarios para implementar la
-Fase 5 del plan de desarrollo (meta-progresión y UI) sin ambigüedad, y suficiente
-información para armar el Input Map de Godot (ver `docs/convenciones-godot.md`).
+La mayor parte de esto ya está implementado (ver los `[x]`/`[ ]` de cada sección); lo
+que falta reflejado acá es contenido, no diseño: desbloqueos reales (Fase 5, pendiente
+de decidir qué se desbloquea) y, si hace falta, un lobby real cuando haya algo que
+elegir en él.
