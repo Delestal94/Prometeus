@@ -114,9 +114,34 @@ desde los ojos de su personaje, sentado en su lugar dentro de la furgoneta.
   son cápsulas placeholder (arte final en la Fase 6), pero ya están ancladas a la
   cámara y alineadas con el volante.
 - **Por asiento, no por jugador único**: la cámara es un componente reutilizable
-  (`FirstPersonCamera`, `scenes/presentation/first_person_camera.tscn`) que recibe
-  qué asiento seguir (`seat_path`) — el mismo componente sirve para el conductor hoy y
-  para cada pasajero cuando se sume el multiplayer (Fase 4), sin duplicar código.
+  (`FirstPersonCamera`, `scenes/presentation/first_person_camera.tscn`) que vive como
+  hija directa del `Marker3D` del asiento (hereda su transform gratis por jerarquía de
+  escena) y arranca inactiva — una interacción de "sentarse" la activa
+  (`activate()`). El mismo componente sirve para el conductor hoy y para cada
+  pasajero cuando se sume el multiplayer (Fase 4), sin duplicar código.
+
+### Flujo físico de carga y abordaje (agregado 2026-09-20)
+
+El loop no arranca con el jugador ya manejando — hay una fase previa a pie, a pedido
+explícito del usuario ("debería haber un lobby donde uno cargue los paquetes... deciden
+quién carga los paquetes y quién se sube a conducir"):
+
+1. El jugador aparece **a pie, en primera persona** (mismo estilo PEAK), cerca de la
+   furgoneta y de un paquete apoyado en un punto de carga.
+2. Camina hasta el paquete y presiona **interact** (`E`) para agarrarlo — lo lleva
+   frente a la cámara (viewmodel), igual que las manos del volante.
+3. Camina hasta la furgoneta y presiona interact junto a un asiento vacío para dejarlo.
+4. Presiona interact junto al asiento del conductor para subirse: ahí recién la cámara
+   cambia a primera persona *dentro* de la cabina y se habilita el manejo.
+5. La entrega **arranca sola** apenas hay conductor sentado y el paquete está a bordo
+   — sin pantalla de "empezar" de por medio (ver `docs/plan-desarrollo.md`).
+6. **En multiplayer (Fase 4) no hay asignación de roles**: cualquier jugador puede
+   caminar a cualquier asiento — el primero que se sienta en el volante conduce, el
+   resto carga paquetes. El rol lo decide la acción física, no un menú.
+
+Técnicamente esto se resuelve con un patrón `Interactable` genérico (`Area3D` con
+`interact(player)`), reutilizable para paquetes, puntos de montaje y asientos — ver
+`docs/arquitectura.md`.
 
 ---
 

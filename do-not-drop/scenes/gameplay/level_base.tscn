@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_vehicle"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/package/package.tscn" id="3_package"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/route/route.tscn" id="4_route"]
-[ext_resource type="PackedScene" path="res://scenes/presentation/first_person_camera.tscn" id="5_camera"]
+[ext_resource type="PackedScene" path="res://scenes/gameplay/player/player.tscn" id="5_player"]
 [ext_resource type="Script" path="res://scripts/ui/prototype_hud.gd" id="6_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
@@ -35,7 +35,10 @@ script = ExtResource("1_level")
 position = Vector3(0, 0.9, 0)
 
 [node name="Package" parent="World" instance=ExtResource("3_package")]
-position = Vector3(0, 1.8, 0.85)
+position = Vector3(2.2, 0.75, 0.5)
+
+[node name="Player" parent="World" instance=ExtResource("5_player")]
+position = Vector3(2.2, 1.0, 3.2)
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-48, -28, 0)
@@ -46,9 +49,6 @@ directional_shadow_max_distance = 100.0
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment")
-
-[node name="FirstPersonCamera" parent="." instance=ExtResource("5_camera")]
-seat_path = NodePath("../World/Vehicle/CabinInterior/DriverEyePoint")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 process_mode = 3

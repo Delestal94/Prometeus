@@ -1,7 +1,10 @@
-[gd_scene load_steps=26 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle.gd" id="1_vehicle"]
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_input_component.gd" id="2_input"]
+[ext_resource type="PackedScene" path="res://scenes/presentation/first_person_camera.tscn" id="3_fp_camera"]
+[ext_resource type="Script" path="res://scripts/gameplay/interaction/seat_point.gd" id="4_seat"]
+[ext_resource type="Script" path="res://scripts/gameplay/interaction/package_mount_point.gd" id="5_mount"]
 
 [sub_resource type="StandardMaterial3D" id="Material_body"]
 albedo_color = Color(0.025, 0.51, 0.56, 1)
@@ -38,6 +41,12 @@ emission_energy_multiplier = 0.6
 albedo_color = Color(0.95, 0.17, 0.1, 1)
 emission_enabled = true
 emission = Color(0.8, 0.06, 0.025, 1)
+
+[sub_resource type="SphereShape3D" id="Shape_seat_interact_driver"]
+radius = 0.8
+
+[sub_resource type="SphereShape3D" id="Shape_seat_interact_mount"]
+radius = 0.8
 
 [sub_resource type="TorusMesh" id="Mesh_steering_wheel"]
 material = SubResource("Material_dark")
@@ -114,6 +123,7 @@ linear_damp = 0.08
 angular_damp = 0.6
 can_sleep = false
 script = ExtResource("1_vehicle")
+controls_enabled = false
 
 [node name="VehicleInputComponent" type="Node" parent="."]
 script = ExtResource("2_input")
@@ -201,8 +211,6 @@ material_override = SubResource("Material_dark")
 mesh = SubResource("Mesh_unit")
 
 [node name="CabinInterior" type="Node3D" parent="."]
-## Solid Cabin mesh is invisible from inside (default backface culling) — the
-## driver's camera sees straight through it to the windows and the road ahead.
 
 [node name="Dashboard" type="MeshInstance3D" parent="CabinInterior"]
 position = Vector3(0, 0.85, -1.85)
@@ -235,9 +243,19 @@ material_override = SubResource("Material_cargo")
 mesh = SubResource("Mesh_unit")
 
 [node name="DriverEyePoint" type="Marker3D" parent="CabinInterior"]
-## Forward stays -Z (no rotation): matches the vehicle's own forward axis,
-## so the driver looks straight out through the windshield.
 position = Vector3(-0.45, 1.15, -1.35)
+
+[node name="FirstPersonCamera" parent="CabinInterior/DriverEyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CabinInterior/DriverEyePoint"]
+script = ExtResource("4_seat")
+role = &"driver"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+prompt = "Subirse a manejar"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CabinInterior/DriverEyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
 
 [node name="CargoBay" type="Node3D" parent="."]
 
@@ -275,9 +293,6 @@ scale = Vector3(0.19, 0.27, 0.06)
 material_override = SubResource("Material_tail_light")
 mesh = SubResource("Mesh_unit")
 
-## Four passenger seats along the side walls, facing inward toward the aisle.
-## Each has its own eye point (first-person anchor) and a package mount right
-## in front of it — one seat, one paquete-trampa, as in docs/definicion-proyecto.md.
 
 [node name="LeftSeat1Cushion" type="MeshInstance3D" parent="CargoBay"]
 position = Vector3(-0.72, 0.5, 0.15)
@@ -298,6 +313,13 @@ rotation_degrees = Vector3(0, -90, 0)
 [node name="LeftSeat1PackageMount" type="Marker3D" parent="CargoBay"]
 position = Vector3(-0.25, 0.8, 0.15)
 rotation_degrees = Vector3(0, -90, 0)
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat1PackageMount"]
+script = ExtResource("5_mount")
+prompt = "Dejar paquete acá"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat1PackageMount/InteractionArea"]
+shape = SubResource("Shape_seat_interact_mount")
 
 [node name="LeftSeat2Cushion" type="MeshInstance3D" parent="CargoBay"]
 position = Vector3(-0.72, 0.5, 1.35)

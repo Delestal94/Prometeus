@@ -8,6 +8,7 @@ extends RigidBody3D
 @export_range(0.0, 2.0, 0.05) var impact_cooldown: float = 0.30
 
 var trap_behavior: Resource
+var is_held: bool = false
 var integrity: float:
 	get:
 		return float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
@@ -77,6 +78,22 @@ func apply_impact(delta_velocity: float) -> void:
 		_emit_event(&"package_state_changed", [package_id, trap_state])
 		if trap_state == 2:
 			_emit_event(&"package_ruined", [package_id, "El paquete sufrió demasiados golpes."])
+
+
+func set_held(held: bool) -> void:
+	is_held = held
+	freeze = held
+	# Disabled while carried: a held package following the hold point every
+	# frame shouldn't shove the player or clip weirdly through the world.
+	collision_layer = 0 if held else 4
+	collision_mask = 0 if held else 7
+
+
+func place_at(mount: Node3D) -> void:
+	global_transform = mount.global_transform
+	set_held(false)
+	# Stays frozen until level_base.gd starts the run -- see docs/plan-desarrollo.md.
+	freeze = true
 
 
 func _is_run_active() -> bool:

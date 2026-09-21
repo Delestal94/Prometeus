@@ -5,20 +5,46 @@
 > Godot necesarias antes de programar (Input Map, capas de física, convenciones de
 > nombres y organización real de escenas dentro de `do-not-drop/`).
 
+## 0. Gotchas encontrados (para no repetirlos)
+
+- **Nunca usar `#`/`##` dentro de un archivo `.tscn`.** El formato de escena de Godot
+  no es GDScript — sus comentarios (si hacen falta) van con `;`, como en
+  `project.godot`. Un comentario `##` estilo GDScript pegado antes de un bloque
+  `[node ...]` corrompe el parseo silenciosamente: el nodo siguiente puede
+  directamente no cargarse (sin error claro) o generar errores de física
+  aparentemente no relacionados (nos pasó: un `##` corrompió la carga de `Package` y
+  produjo un error de escala de Jolt en un nodo completamente distinto). Si hace
+  falta explicar una decisión de una escena, el lugar correcto es el script `.gd`
+  asociado, no el `.tscn`.
+- **Las propiedades custom (`@export var`) de un nodo deben ir *después* de la línea
+  `script = ExtResource(...)` en el bloque `[node ...]`.** Godot parece aplicar las
+  propiedades en el orden en que aparecen en el archivo; si una propiedad custom
+  aparece antes de que el script esté asignado, el nodo todavía no la reconoce como
+  válida y el valor se pierde silenciosamente (nos pasó con `controls_enabled` en
+  `vehicle.tscn`: quedaba en su default `true` pese a tener `controls_enabled = false`
+  escrito, porque estaba antes de `script =`).
+
 ## 1. Input Map (Project Settings → Input Map)
+
+> Actualizado 2026-09-20 para reflejar lo que realmente está implementado en
+> `project.godot` (la tabla original era el plan previo a programar; difiere en
+> algunos nombres — p.ej. `drive_left`/`drive_right` en vez de un solo `drive_steer`).
 
 | Acción (nombre interno) | Input por defecto (teclado) | Input por defecto (gamepad) |
 |---|---|---|
 | `drive_accelerate` | W | Gatillo derecho |
 | `drive_brake` | S | Gatillo izquierdo |
-| `drive_steer` (input vectorial, eje) | A/D | Stick izquierdo (eje X) |
+| `drive_left` / `drive_right` | A / D | Stick izquierdo (eje X) |
 | `drive_handbrake` | Espacio | Botón Sur (A/X) |
-| `drive_horn` | H | Botón Este (B/Círculo) |
-| `package_action_primary` (hold) | Click izquierdo | Gatillo derecho |
-| `package_action_secondary` (tap) | E / Click derecho | Botón Sur (A/X) |
-| `package_direction` (eje, reusa WASD/stick) | WASD | Stick izquierdo |
-| `ui_ping` | Rueda click | D-pad (cualquier dirección) |
+| `interact` | E | Botón Sur (A/X) — agarrar, dejar y sentarse, a pie |
 | `ui_pause` | Esc | Start |
+| `run_restart` | R | Botón Oeste (X/Cuadrado) |
+| *(mirada en primera persona, a pie)* | Mouse (delta directo, no es una Input Action) | — pendiente para Fase 4 |
+
+Pendiente de implementar (documentado en `docs/controles-y-ui.md` como diseño, todavía
+no en `project.godot`): `drive_horn`, controles de trampa específicos por tipo
+(`package_action_primary`/`secondary`), y `ui_ping`. Se agregan cuando la Fase 2 sume
+las trampas restantes.
 
 **Nota**: `package_direction` y `drive_steer` pueden convivir sin conflicto porque
 nunca están activos en el mismo cliente a la vez (un jugador es conductor O pasajero,

@@ -1,8 +1,9 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/package/package.gd" id="1_package"]
 [ext_resource type="Script" path="res://scripts/gameplay/package/package_feedback.gd" id="2_feedback"]
 [ext_resource type="Resource" path="res://data/traps/fragile.tres" id="3_trap"]
+[ext_resource type="Script" path="res://scripts/gameplay/interaction/package_pickup_point.gd" id="4_pickup"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_crate"]
 friction = 0.70
@@ -25,6 +26,9 @@ size = Vector3(0.08, 0.66, 0.66)
 [sub_resource type="BoxMesh" id="BoxMesh_strap_z"]
 material = SubResource("StandardMaterial3D_strap")
 size = Vector3(0.66, 0.66, 0.08)
+
+[sub_resource type="SphereShape3D" id="Shape_pickup"]
+radius = 0.55
 
 [node name="Package" type="RigidBody3D"]
 collision_layer = 4
@@ -70,3 +74,10 @@ outline_size = 0
 
 [node name="PackageFeedbackComponent" type="Node" parent="."]
 script = ExtResource("2_feedback")
+
+[node name="InteractionArea" type="Area3D" parent="."]
+script = ExtResource("4_pickup")
+prompt = "Agarrar paquete"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="InteractionArea"]
+shape = SubResource("Shape_pickup")

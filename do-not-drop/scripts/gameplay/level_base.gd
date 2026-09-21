@@ -1,27 +1,50 @@
 extends Node3D
 ## Composes the phase-1 sandbox. Physics, trap logic and HUD remain separate.
+## The run now starts on its own once the driver's seat and the package
+## mount both report an interaction -- no button needed for the real flow.
 
 const STOP_SECONDS: float = 1.0
 const DELIVERY_MAX_SPEED: float = 1.5
 @onready var vehicle: VehicleBody3D = $World/Vehicle
 @onready var package: RigidBody3D = $World/Package
 @onready var route: Node3D = $World/Route
+@onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
+@onready var _package_mount: Area3D = $World/Vehicle/CargoBay/LeftSeat1PackageMount/InteractionArea
 var stopped_seconds: float = 0.0
 var tipped_seconds: float = 0.0
+var _driver_seated: bool = false
+var _package_loaded: bool = false
 
 
 func _ready() -> void:
 	RunManager.reset_run()
 	vehicle.freeze = true
 	package.freeze = true
-	package.global_transform = vehicle.get_cargo_spawn_transform()
+	_driver_seat.interacted.connect(_on_driver_seated)
+	_package_mount.interacted.connect(_on_package_loaded)
 	EventBus.start_requested.connect(start_delivery)
 	EventBus.restart_requested.connect(restart_delivery)
 	EventBus.pause_requested.connect(toggle_pause)
 	EventBus.run_ended.connect(_on_run_ended)
-	# Command line shortcut for smoke checks and development.
+	# Command line shortcut for smoke checks and development: skips the
+	# on-foot loading entirely, same as the HUD's debug button.
 	if "--autostart" in OS.get_cmdline_user_args():
 		start_delivery.call_deferred()
+
+
+func _on_driver_seated(_player: Node) -> void:
+	_driver_seated = true
+	_maybe_start()
+
+
+func _on_package_loaded(_player: Node) -> void:
+	_package_loaded = true
+	_maybe_start()
+
+
+func _maybe_start() -> void:
+	if _driver_seated and _package_loaded:
+		start_delivery()
 
 
 func start_delivery() -> void:
@@ -41,6 +64,7 @@ func restart_delivery() -> void:
 func toggle_pause() -> void:
 	if RunManager.is_running:
 		get_tree().paused = not get_tree().paused
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if get_tree().paused else Input.MOUSE_MODE_CAPTURED
 
 
 func _physics_process(delta: float) -> void:

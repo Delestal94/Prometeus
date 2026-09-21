@@ -187,9 +187,10 @@ func _show_start() -> void:
 	overlay_mode = "start"
 	overlay.visible = true
 	dashboard.visible = false
-	overlay_body.text = "Una camioneta. Un paquete frágil.\nLlegá con la carga entera."
-	overlay_stats.text = "220 metros de lomadas, obstáculos y un puente angosto.\nFrená dentro de la zona de entrega para terminar.\n\nW / S  acelerar, frenar y retroceder     A / D  girar\nEspacio  freno de mano     R  reiniciar     Esc  pausa\nGamepad: gatillos, stick izquierdo y botón sur."
+	overlay_body.text = "Cargá el paquete y subite a manejar.\nLa entrega arranca sola apenas estés al volante con la carga a bordo."
+	overlay_stats.text = "Caminá hasta el paquete y presioná E para agarrarlo.\nLlevalo hasta la furgoneta y presioná E de nuevo para dejarlo en su lugar.\nSubite al asiento del conductor y presioná E para tomar el volante.\n\nWASD caminar     Mouse mirar     E interactuar\nR reiniciar     Esc pausa\n\n¿Probando rápido? El botón de abajo salta directo a manejar."
 	second_button.visible = false
+	action_button.text = "Saltar (debug)"
 	action_button.grab_focus()
 
 

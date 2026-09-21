@@ -12,8 +12,6 @@ radius = 0.045
 height = 0.24
 
 [node name="FirstPersonCamera" type="Camera3D"]
-## Viewmodel hands: parented to the camera, so they stay put in the frame
-## exactly like PEAK's — the world moves, your hands on the wheel don't.
 script = ExtResource("1_camera")
 
 [node name="LeftHand" type="MeshInstance3D" parent="."]
