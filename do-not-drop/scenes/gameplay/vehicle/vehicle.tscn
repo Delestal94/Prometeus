@@ -23,9 +23,11 @@ albedo_color = Color(0.055, 0.095, 0.12, 1)
 roughness = 0.9
 
 [sub_resource type="StandardMaterial3D" id="Material_window"]
-albedo_color = Color(0.08, 0.21, 0.29, 1)
+transparency = 1
+albedo_color = Color(0.42, 0.62, 0.68, 0.18)
 metallic = 0.35
 roughness = 0.28
+cull_mode = 2
 
 [sub_resource type="StandardMaterial3D" id="Material_cargo"]
 albedo_color = Color(0.78, 0.72, 0.57, 1)
@@ -218,8 +220,8 @@ mesh = SubResource("Mesh_unit")
 [node name="CabinInterior" type="Node3D" parent="."]
 
 [node name="Dashboard" type="MeshInstance3D" parent="CabinInterior"]
-position = Vector3(0, 0.85, -1.85)
-scale = Vector3(1.85, 0.35, 0.45)
+position = Vector3(0, 0.65, -1.85)
+scale = Vector3(1.85, 0.22, 0.45)
 material_override = SubResource("Material_dark")
 mesh = SubResource("Mesh_unit")
 
