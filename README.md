@@ -231,6 +231,9 @@ manejo):
 - `docs/controles-y-ui.md` — esquema de controles y flujo de UI/lobby.
 - `docs/convenciones-godot.md` — Input Map, capas de física, estructura real de
   carpetas y convenciones de nombres dentro del proyecto Godot (`do-not-drop/`).
+- `docs/direccion-visual.md` — punto de vista del jugador (FOV, límites de cámara),
+  paleta de colores, iluminación, qué se ve y qué no, efectos visuales y pipeline de
+  arte para la Fase 6.
 
 ### Archivado (`docs/historial-exploracion/`)
 Documentos de una etapa de exploración anterior, **superados** por el pivote a
