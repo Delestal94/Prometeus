@@ -21,6 +21,8 @@ func _physics_process(_delta: float) -> void:
 		throttle = Input.get_axis("drive_brake", "drive_accelerate")
 		steer = Input.get_axis("drive_left", "drive_right")
 		handbrake = Input.is_action_pressed("drive_handbrake")
+		if Input.is_action_just_pressed(&"drive_horn"):
+			_send_horn()
 	if _vehicle.is_multiplayer_authority():
 		_vehicle.set_controls(throttle, steer, handbrake)
 	else:
@@ -31,3 +33,13 @@ func _is_local_driver() -> bool:
 	if not NetworkManager.is_online():
 		return true
 	return _vehicle.driver_peer_id == NetworkManager.local_id()
+
+
+## Same call-direct-or-rpc_id(1,...) split as every other player-initiated
+## action that needs the host to decide it "really happened" -- see
+## Player._send_ping() for the identical pattern.
+func _send_horn() -> void:
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		EventBus.rpc_id(1, &"request_horn")
+	else:
+		EventBus.call(&"request_horn")

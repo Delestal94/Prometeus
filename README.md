@@ -33,8 +33,9 @@ objeto aparece la acción disponible: **E** agarra el paquete, lo deja en su
 lugar dentro de la furgoneta y permite tomar el volante una vez cargado.
 
 La entrega empieza al sentarte con la carga a bordo. Usá W/S para acelerar,
-frenar y retroceder, A/D para girar y Espacio como freno de mano. Detenete un
-segundo en la zona de entrega. Esc pausa también durante la preparación;
+frenar y retroceder, A/D para girar y Espacio como freno de mano. **H** toca
+bocina (todos la escuchan, venga de quien venga, no solo del host). Detenete
+un segundo en la zona de entrega. Esc pausa también durante la preparación;
 R reinicia. Por ahora el paquete queda asignado al soporte al cargarlo y
 no se puede volver a agarrar, ni bajar del asiento durante la entrega.
 
@@ -67,6 +68,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
+<godot> --headless --path do-not-drop --script res://tests/test_horn.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -104,6 +106,8 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 - `test_ruin_feedback` — el paquete arruinado explota en confeti una sola vez,
   en su propia posición (no en el origen del mundo), y se limpia solo al
   terminar.
+- `test_horn` — la bocina atribuye correctamente a quien la toca (aunque no
+  sea el host) y el "honk" sintetizado en código es audio real, no silencio.
 - `check_driver_sightline` — verifica que nada tape la vista del conductor
   (tablero, volante, o un "vidrio" que en realidad sea opaco). Las mallas
   transparentes y la carrocería vista desde adentro no cuentan como bloqueo.

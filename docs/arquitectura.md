@@ -179,7 +179,7 @@ sin conocer los detalles de cada comportamiento.
 
 ## 5. Event Bus (señales globales)
 
-Señales reales declaradas en `event_bus.gd` (17, actualizado 2026-09-21):
+Señales reales declaradas en `event_bus.gd` (18, actualizado 2026-09-21):
 
 - `cargo_registered(package_id, display_name)`
 - `package_hint_changed(package_id, hint)`
@@ -198,6 +198,7 @@ Señales reales declaradas en `event_bus.gd` (17, actualizado 2026-09-21):
 - `pause_requested`
 - `interaction_prompt_changed(prompt)`
 - `ping_sent(peer_id, position, label)`
+- `horn_honked(peer_id)`
 
 El HUD, `RunManager` y el `NetworkManager` escuchan estas señales cada uno por su
 cuenta. Ninguno le pide nada directamente a `Package` ni a `Vehicle` — esto es lo que
@@ -214,11 +215,12 @@ throttle de 0.25s (`HINT_RELAY_INTERVAL` en `package.gd`) para que el texto de a
 de una trampa no quede desactualizado en clientes que no son el host.
 
 `relay()` asume que el hecho se originó en el host (la simulación es host-autoritativa).
-`ping_sent` es la excepción: cualquier jugador puede pingear, no solo el host, así que
-necesita un salto extra antes de poder usar `relay()` — `EventBus.request_ping()` es un
-`@rpc("any_peer", ...)` al que cualquier cliente llama con `rpc_id(1, ...)` (el host lo
-llama directo); recién ahí el host decide que el ping "pasó de verdad" y lo relayea a
-todos, incluido quien lo mandó.
+`ping_sent` y `horn_honked` son la excepción: cualquier jugador puede pingear o tocar
+bocina, no solo el host, así que necesitan un salto extra antes de poder usar `relay()`
+— `EventBus.request_ping()`/`request_horn()` son `@rpc("any_peer", ...)` a los que
+cualquier cliente llama con `rpc_id(1, ...)` (el host los llama directo); recién ahí el
+host decide que el hecho "pasó de verdad" y lo relayea a todos, incluido quien lo
+mandó.
 
 ---
 

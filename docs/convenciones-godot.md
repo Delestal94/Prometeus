@@ -42,6 +42,7 @@
 | `look_center` | C | Clic del stick derecho |
 | `package_action_primary` | Clic izquierdo | Gatillo derecho (a pie, con paquete en mano) |
 | `ui_ping` | Clic de la rueda del mouse | Botón D-pad arriba |
+| `drive_horn` | H | Botón Este (B/Círculo) |
 | `ui_pause` | Esc | Start |
 | `run_restart` | R | Botón Oeste (X/Cuadrado) |
 
@@ -53,7 +54,7 @@ persona con mouse no pasa por el Input Map para el delta continuo (se lee direct
 (una tecla/botón discreto).
 
 Pendiente de implementar (documentado en `docs/controles-y-ui.md` como diseño, todavía
-no en `project.godot`): `drive_horn` y un control de trampa secundario por tipo.
+no en `project.godot`): un control de trampa secundario por tipo.
 
 `ui_ping` es deliberadamente un solo mensaje fijo ("¡Cuidado!"), no una rueda de
 opciones — cubre la necesidad real (avisar a los compañeros) sin sumar UI de
@@ -121,6 +122,7 @@ do-not-drop/
       prototype_hud.gd          # HUD + resultados, sin escena propia
     presentation/
       first_person_camera.gd
+      synth_audio.gd            # waveforms generadas en código (bocina), sin assets
     gameplay/
       level_base.gd
       vehicle/

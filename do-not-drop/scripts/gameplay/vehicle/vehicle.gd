@@ -33,6 +33,7 @@ var _telemetry_time: float = 0.0
 var _settling_time: float = 1.0
 
 @onready var _package_spawn: Marker3D = $CargoBay/LeftSeat1PackageMount
+var _horn_player: AudioStreamPlayer3D
 
 
 func _ready() -> void:
@@ -41,6 +42,18 @@ func _ready() -> void:
 		# the MultiplayerSynchronizer. Letting the physics engine run too would
 		# fight the incoming synced transform every frame.
 		freeze = true
+	# Runs on every peer's copy of the van -- horn_honked is already relayed
+	# to everyone (see EventBus.request_horn()), so whoever's driving doesn't
+	# need to be this peer, or the host, for it to be heard here too.
+	_horn_player = AudioStreamPlayer3D.new()
+	_horn_player.stream = SynthAudio.honk_horn()
+	_horn_player.unit_size = 15.0
+	add_child(_horn_player)
+	EventBus.horn_honked.connect(_on_horn_honked)
+
+
+func _on_horn_honked(_peer_id: int) -> void:
+	_horn_player.play()
 
 
 func set_controls(throttle: float, steering_input: float, handbrake: bool) -> void:

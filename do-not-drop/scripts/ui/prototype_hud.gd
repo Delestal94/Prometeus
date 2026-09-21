@@ -105,7 +105,7 @@ func _build_ui() -> void:
 	distance_label = _label(delivery, "220 m hasta la entrega", 24, PAPER)
 	route_bar = _bar(delivery, MINT)
 	hint_label = _label(delivery, DRIVE_HINT, 14, MUTED)
-	_label(dashboard, "Espacio  freno de mano   /   R  reiniciar   /   ESC  pausa   /   Click rueda  ping   /   Gamepad: stick derecho para mirar", 13, PAPER)
+	_label(dashboard, "Espacio  freno de mano   /   H  bocina   /   R  reiniciar   /   ESC  pausa   /   Click rueda  ping   /   Gamepad: stick derecho para mirar", 13, PAPER)
 	interaction_label = _label(root, "", 22, PAPER)
 	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	interaction_label.offset_left = -260

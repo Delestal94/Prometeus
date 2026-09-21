@@ -30,6 +30,9 @@ signal interaction_prompt_changed(prompt: String)
 ## not just the host, so this needs its own client->host->everyone hop
 ## instead of relay() (which only ever originates from host-run simulation).
 signal ping_sent(peer_id: int, position: Vector3, label: String)
+## Same shape as ping_sent, same reason: whoever's driving might not be the
+## host, but everyone should hear the horn.
+signal horn_honked(peer_id: int)
 
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts
@@ -59,3 +62,13 @@ func request_ping(position: Vector3, label: String) -> void:
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else NetworkManager.local_id()
 	relay(&"ping_sent", [peer_id, position, label])
+
+
+## Same client->host->everyone shape as request_ping(), for the driver's horn.
+@rpc("any_peer", "call_remote", "reliable")
+func request_horn() -> void:
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender_id if sender_id != 0 else NetworkManager.local_id()
+	relay(&"horn_honked", [peer_id])
