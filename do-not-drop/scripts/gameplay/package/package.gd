@@ -172,6 +172,18 @@ func set_held(held: bool) -> void:
 	collision_mask = 0 if held else 7
 
 
+## A carrier can always put a box back on the floor. Unlike a mount this
+## keeps it loose and physical, so a mistaken pickup never traps the player.
+@rpc("any_peer", "call_local", "reliable")
+func request_drop(drop_transform: Transform3D) -> void:
+	if not is_multiplayer_authority() or not is_held:
+		return
+	global_transform = drop_transform
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	set_held(false)
+
+
 func place_at(mount: Node3D) -> void:
 	global_transform = mount.global_transform
 	set_held(false)

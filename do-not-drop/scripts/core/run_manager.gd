@@ -75,6 +75,7 @@ func start_run(mode: StringName = MODE_DELIVERY) -> void:
 	current_mode = mode
 	current_distance = 0.0
 	EventBus.run_started.emit(&"test_route", [1])
+	RouteEventManager.begin_random()
 
 
 func finish_run(delivered: bool, reason: String = "") -> void:
@@ -150,6 +151,7 @@ func _finish_endless_run(reason: String) -> void:
 		"best_score": best_score(MODE_ENDLESS),
 	}
 	print("[Run] ", results)
+	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 

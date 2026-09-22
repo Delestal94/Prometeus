@@ -18,7 +18,12 @@ func _initialize() -> void:
 	var mounts: Array[Node] = []
 	mounts.assign(root.get_tree().get_nodes_in_group(&"package_mount"))
 	_expect(packages.size() == 4, "The level ships four packages, one per trap (got %d)" % packages.size())
-	_expect(mounts.size() == 4, "Every passenger seat has its own mount (got %d)" % mounts.size())
+	_expect(mounts.size() == 6, "Four seat mounts plus two shelf mounts are available (got %d)" % mounts.size())
+	var seat_mounts: Array[Node] = []
+	for mount: Node in mounts:
+		if String(mount.get_parent().name).contains("Seat"):
+			seat_mounts.append(mount)
+	_expect(seat_mounts.size() == 4, "Every cargo-tending seat keeps its own mount")
 
 	var trap_ids: Array = []
 	for package: Node in packages:
@@ -43,9 +48,9 @@ func _initialize() -> void:
 	# normally); calling it directly here, with no RPC in flight, is what a
 	# host's own local interaction looks like -- _from_host() allows it.
 	player.call(&"pick_up", packages[0].get_path())
-	mounts[0].call(&"interact", player)
+	seat_mounts[0].call(&"interact", player)
 	player.call(&"pick_up", packages[1].get_path())
-	mounts[1].call(&"interact", player)
+	seat_mounts[1].call(&"interact", player)
 	_expect(bool(packages[0].get(&"is_loaded")) and bool(packages[1].get(&"is_loaded")), "Both boxes report loaded")
 	_expect(not bool(packages[2].get(&"is_loaded")), "The box left on the rack stays unloaded")
 
@@ -68,7 +73,7 @@ func _initialize() -> void:
 	var seat_for_mount_two: Node = null
 	for seat: Node in seats:
 		var required: NodePath = seat.get(&"required_mount_path")
-		if not required.is_empty() and seat.get_node_or_null(required) == mounts[1]:
+		if not required.is_empty() and seat.get_node_or_null(required) == seat_mounts[1]:
 			seat_for_mount_two = seat
 			break
 	_expect(seat_for_mount_two != null, "The seat tied to the second mount can be found")

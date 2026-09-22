@@ -30,6 +30,10 @@ const BOUNCE_DURATION: float = 0.4
 const BOUNCE_AMPLITUDE: float = -0.16
 const BOUNCE_DECAY: float = 9.0
 const BOUNCE_FREQUENCY: float = 16.0
+const CARD_BOARD: Color = Color("7a5a36")
+const INK: Color = Color("24150b")
+const DANGER: Color = Color("bd4237")
+const LABEL_DROP_DAMAGE: float = 18.0
 
 @export var box_mesh_path: NodePath = ^"../Box"
 @export var status_label_path: NodePath = ^"../Status"
@@ -54,6 +58,10 @@ var _creak_countdown: float = 0.0
 var _impact_shake_strength: float = 0.0
 var _growth_scale: float = 1.0
 var _bounce_time: float = -1.0  ## negative: no bounce in progress
+var _shipping_label: RigidBody3D
+var _label_detached: bool = false
+var _dent_pieces: Array[MeshInstance3D] = []
+var _impact_damage_visual: float = 0.0
 
 
 func _ready() -> void:
@@ -69,6 +77,7 @@ func _ready() -> void:
 	_material.roughness = 0.95
 	_box.material_override = _material
 	_label = get_node(status_label_path) as Label3D
+	call_deferred(&"_apply_identity", parent)
 	# Populated for every trap type, not just Ruidoso -- item #23's impact
 	# shake rides the same nodes regardless of what the package's trap is.
 	for wobble_name: StringName in WOBBLE_NODE_NAMES:
@@ -91,6 +100,141 @@ func _ready() -> void:
 		bus.connect("package_integrity_changed", _on_integrity_changed)
 		bus.connect("package_damaged", _on_package_damaged)
 		bus.connect("package_placed", _on_package_placed)
+
+
+func _apply_identity(package: Node) -> void:
+	var box_mesh := BoxMesh.new()
+	var shape_size := Vector3(0.65, 0.65, 0.65)
+	var shipping_data: String = "4 kg · M\nFRÁGIL"
+	match _trap_id:
+		&"noisy":
+			shipping_data = "6 kg · M\nVENTILADO"
+			_add_vent_marks()
+		&"balance":
+			shape_size = Vector3(0.42, 0.98, 0.42)
+			shipping_data = "3 kg · ALTO\nVERTICAL"
+			_add_balance_seal()
+		&"growing_weight":
+			shape_size = Vector3(0.95, 0.42, 0.95)
+			shipping_data = "? kg · XL\nDENSO"
+			_add_weight_bands()
+		_:
+			_add_fragile_marks()
+	box_mesh.size = shape_size
+	_box.mesh = box_mesh
+	_box.material_override = _material
+	var collider: CollisionShape3D = package.get_node_or_null(^"CollisionShape3D") as CollisionShape3D
+	if collider != null:
+		var shape := BoxShape3D.new()
+		shape.size = shape_size
+		collider.shape = shape
+	_label.visible = false
+	var top: Label3D = package.get_node_or_null(^"TopMark") as Label3D
+	if top != null:
+		top.visible = false
+	_add_shipping_label(package, shipping_data)
+	_add_dent_pieces()
+
+
+func _add_dent_pieces() -> void:
+	var dents := _identity_root(&"DamageDents")
+	for position: Vector3 in [Vector3(-0.24, 0.20, 0.337), Vector3(0.24, -0.18, 0.337), Vector3(0.33, 0.12, -0.20)]:
+		var dent := _box_piece(Vector3(0.16, 0.12, 0.018), Color("79522e"))
+		dent.position = position
+		dent.rotation.z = 0.45
+		dent.scale = Vector3.ZERO
+		dents.add_child(dent)
+		_dent_pieces.append(dent)
+
+
+func _add_shipping_label(package: Node, shipping_data: String) -> void:
+	_shipping_label = RigidBody3D.new()
+	_shipping_label.name = "ShippingLabel"
+	_shipping_label.freeze = true
+	# While attached this is paper painted on the box, not a second solid
+	# object for the carrier to collide with. Collision is enabled only once
+	# a hard impact tears it free.
+	_shipping_label.collision_layer = 0
+	_shipping_label.collision_mask = 0
+	_shipping_label.position = Vector3(0.0, 0.0, 0.342)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(0.46, 0.30, 0.02)
+	collision.shape = shape
+	_shipping_label.add_child(collision)
+	var paper := _box_piece(Vector3(0.46, 0.25, 0.012), Color("efe2bd"))
+	paper.position = Vector3(0.0, 0.0, 0.006)
+	_shipping_label.add_child(paper)
+	var text := Label3D.new()
+	text.text = shipping_data
+	text.font_size = 17
+	text.pixel_size = 0.0015
+	text.outline_size = 1
+	text.modulate = INK
+	text.position = Vector3(0.0, 0.0, 0.014)
+	_shipping_label.add_child(text)
+	package.add_child(_shipping_label)
+
+
+func _add_fragile_marks() -> void:
+	var marks := _identity_root(&"FragileGlassMarks")
+	for angle: float in [-0.7, 0.7]:
+		var crack := _box_piece(Vector3(0.04, 0.04, 0.46), DANGER)
+		crack.position = Vector3(0.0, 0.0, 0.335)
+		crack.rotation.z = angle
+		marks.add_child(crack)
+
+
+func _add_vent_marks() -> void:
+	var vents := _identity_root(&"NoisyVentMarks")
+	for x: float in [-0.18, -0.06, 0.06, 0.18]:
+		var hole := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.035
+		mesh.bottom_radius = 0.035
+		mesh.height = 0.015
+		hole.mesh = mesh
+		hole.material_override = _flat_material(INK)
+		hole.position = Vector3(x, 0.0, 0.334)
+		hole.rotation.x = PI * 0.5
+		vents.add_child(hole)
+
+
+func _add_balance_seal() -> void:
+	var seal := _box_piece(Vector3(0.13, 0.13, 0.025), DANGER)
+	seal.position = Vector3(0.0, 0.0, 0.336)
+	_identity_root(&"BalanceSeal").add_child(seal)
+
+
+func _add_weight_bands() -> void:
+	var bands := _identity_root(&"WeightBands")
+	for z: float in [-0.28, 0.28]:
+		var band := _box_piece(Vector3(0.98, 0.08, 0.06), INK)
+		band.position = Vector3(0.0, 0.0, z)
+		bands.add_child(band)
+
+
+func _identity_root(identity_name: StringName) -> Node3D:
+	var root := Node3D.new()
+	root.name = identity_name
+	get_parent().add_child(root)
+	return root
+
+
+func _box_piece(size: Vector3, color: Color) -> MeshInstance3D:
+	var piece := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	piece.mesh = mesh
+	piece.material_override = _flat_material(color)
+	return piece
+
+
+func _flat_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.9
+	return material
 
 
 func _make_player(stream: AudioStreamWAV, volume_db: float) -> AudioStreamPlayer3D:
@@ -136,6 +280,34 @@ func _on_package_damaged(id: StringName, damage: float) -> void:
 	if id != _package_id:
 		return
 	_impact_shake_strength = clampf(_impact_shake_strength + damage * IMPACT_SHAKE_PER_DAMAGE, 0.0, 1.0)
+	_impact_damage_visual = clampf(_impact_damage_visual + damage * 0.035, 0.0, 1.0)
+	_apply_damage_deformation()
+	if damage >= LABEL_DROP_DAMAGE:
+		_detach_shipping_label()
+
+
+func _apply_damage_deformation() -> void:
+	for index: int in _dent_pieces.size():
+		var threshold: float = float(index) * 0.28
+		var amount: float = clampf((_impact_damage_visual - threshold) / 0.45, 0.0, 1.0)
+		_dent_pieces[index].scale = Vector3.ONE * amount
+
+
+func _detach_shipping_label() -> void:
+	if _label_detached or _shipping_label == null:
+		return
+	var package: Node3D = get_parent() as Node3D
+	var world: Node = package.get_parent()
+	if world == null:
+		return
+	var drop_transform: Transform3D = _shipping_label.global_transform
+	_shipping_label.reparent(world)
+	_shipping_label.global_transform = drop_transform
+	_shipping_label.freeze = false
+	_shipping_label.collision_layer = 4
+	_shipping_label.collision_mask = 7
+	_shipping_label.linear_velocity = (package as RigidBody3D).linear_velocity + Vector3(0.0, 1.2, 0.4)
+	_label_detached = true
 
 
 ## Item #22: a quick settle bounce instead of the box appearing locked in
