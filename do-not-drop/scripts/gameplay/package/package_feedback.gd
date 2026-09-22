@@ -60,6 +60,8 @@ var _growth_scale: float = 1.0
 var _bounce_time: float = -1.0  ## negative: no bounce in progress
 var _shipping_label: RigidBody3D
 var _label_detached: bool = false
+var _dent_pieces: Array[MeshInstance3D] = []
+var _impact_damage_visual: float = 0.0
 
 
 func _ready() -> void:
@@ -131,6 +133,18 @@ func _apply_identity(package: Node) -> void:
 	if top != null:
 		top.visible = false
 	_add_shipping_label(package, shipping_data)
+	_add_dent_pieces()
+
+
+func _add_dent_pieces() -> void:
+	var dents := _identity_root(&"DamageDents")
+	for position: Vector3 in [Vector3(-0.24, 0.20, 0.337), Vector3(0.24, -0.18, 0.337), Vector3(0.33, 0.12, -0.20)]:
+		var dent := _box_piece(Vector3(0.16, 0.12, 0.018), Color("79522e"))
+		dent.position = position
+		dent.rotation.z = 0.45
+		dent.scale = Vector3.ZERO
+		dents.add_child(dent)
+		_dent_pieces.append(dent)
 
 
 func _add_shipping_label(package: Node, shipping_data: String) -> void:
@@ -266,8 +280,17 @@ func _on_package_damaged(id: StringName, damage: float) -> void:
 	if id != _package_id:
 		return
 	_impact_shake_strength = clampf(_impact_shake_strength + damage * IMPACT_SHAKE_PER_DAMAGE, 0.0, 1.0)
+	_impact_damage_visual = clampf(_impact_damage_visual + damage * 0.035, 0.0, 1.0)
+	_apply_damage_deformation()
 	if damage >= LABEL_DROP_DAMAGE:
 		_detach_shipping_label()
+
+
+func _apply_damage_deformation() -> void:
+	for index: int in _dent_pieces.size():
+		var threshold: float = float(index) * 0.28
+		var amount: float = clampf((_impact_damage_visual - threshold) / 0.45, 0.0, 1.0)
+		_dent_pieces[index].scale = Vector3.ONE * amount
 
 
 func _detach_shipping_label() -> void:
