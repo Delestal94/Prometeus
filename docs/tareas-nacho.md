@@ -58,10 +58,10 @@
 | 23 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho.** (#49) | A |
 | 24 | Humo de escape en el caño trasero. (#50) | C |
 | 25 | Marcas de neumático en el asfalto al frenar. (#51) | C |
-| 26 | Props de banquina: árboles, postes, carteles, cercas, tachos — hoy son 10 cajas grises. (#52) | B |
+| 26 | ~~Props de banquina: árboles, postes, carteles, cercas, tachos — hoy son 10 cajas grises.~~ **[x] Hecho** — bosque completo (`_build_forest`) + farolas/bancos/buzones/conos/barrera (`_build_landmarks`, ahora `RoadsideDressing`), reemplazando las 10 cajas grises. Sin colisión, mismo criterio que el bosque. (#52) | A |
 | 27 | Cableado eléctrico entre postes. (#53) | B |
-| 28 | Edificios con ventanas, techos y puertas — hoy son cajas grises lisas. (#54) | B |
-| 29 | Vehículos estacionados al costado de la ruta. (#55) | B |
+| 28 | ~~Edificios con ventanas, techos y puertas — hoy son cajas grises lisas.~~ **[x] Hecho** — las 3 casas de entrega (`DeliveryHouse`) son GLB con techo a dos aguas, porche, puerta, ventanas y chimenea, alternando variante sin cambiar colisión/timbre. (#54) | A |
+| 29 | ~~Vehículos estacionados al costado de la ruta.~~ **[x] Hecho** — hatchback y pickup GLB, uno cada ~55m alternando lados (`_build_landmarks`). (#55) | A |
 | 30 | Variación de hora del día — el sol está fijo en un solo ángulo. (#56) | C |
 | 31 | Clima: lluvia, asfalto mojado con reflejos. (#57) | C |
 | 32 | Nubes en el cielo procedural — hoy es un degradé liso. (#58) | C |
@@ -91,15 +91,15 @@
 | 41 | ~~Conectar `RouteStreamer.start()` al vehículo real.~~ **[x] Hecho.** | A |
 | 42 | ~~Crear `level_endless.tscn`/`level_endless.gd`.~~ **[x] Hecho** — duplica algo de `level_base.gd` a propósito en vez de refactorizar un archivo del que Slatex también depende. | A |
 | 43 | ~~Definir la condición de fin de partida para endless.~~ **[x] Decidido: se pierde (carga perdida, vuelco, salir de la ruta), nunca "se entrega".** El puntaje por distancia queda para el #52, ver detalle en `docs/plan-desarrollo.md` Fase 3. | A |
-| 44 | Adaptar `RunManager` para puntaje por distancia en modo endless, sin romper el puntaje por entrega del modo normal (coordinar con Slatex, que es dueño de la UI de resultados). | B |
-| 45 | Botón "Modo Endless" en el menú principal — `main_menu.gd` es de Slatex, coordinar antes de tocarlo. | A |
+| 44 | ~~Adaptar `RunManager` para puntaje por distancia en modo endless, sin romper el puntaje por entrega del modo normal.~~ **[x] Hecho** (2026-09-22) — `run_manager.gd` es de Slatex/zona compartida; decisión explícita de Nacho de avanzar igual. `current_mode`/`MODE_ENDLESS`, `_finish_endless_run()` separado de `finish_run()`, `DISTANCE_POINTS_PER_METER` (placeholder ajustable). Modo delivery sin cambios de comportamiento, tests existentes verifican esto. | A |
+| 45 | ~~Botón "Modo Endless" en el menú principal.~~ **[x] Hecho** (2026-09-22) — `main_menu.gd` es de Slatex; decisión explícita de Nacho de avanzar igual sin esperar coordinación previa. Botón "Modo Endless (solo)" + atajo `--autostart-endless`. | A |
 | 46 | ~~Ajustar `lookahead_distance` contra el far clip.~~ **[x] Hecho** — 180 m (era 60 m), niebla más densa en la escena endless (0.013 vs. 0.006) para que se disuelva antes de llegar al far clip. | A |
 | 47 | ~~Reglas de combinación más allá de "nunca repetir el mismo tipo": evitar 3 obstáculos difíciles seguidos.~~ **[x] Hecho** — `RouteStreamer.hard_segments` (chicane, puente angosto, curva en S, ripio, zona de obras) fuerza un respiro después de 2 difíciles seguidos. "Difícil" definido igual que ya lo trataban los propios tests (lo que un manejo sin dirección no puede sobrevivir), no un criterio nuevo aparte. Encontré y corregí un bug real al implementarlo: `const HARD_SEGMENTS` referenciando varios `class_name` globales en un array no compila en GDScript ("no es una expresión constante") — silenciosamente no falló en `--import` pero sí al usarse de verdad, colgando el proceso. Pasado a una `var` poblada en `_ready()`. | A |
 | 48 | ~~Integrar la niebla de distancia también en la escena endless.~~ **[x] Hecho de una vez con el #46.** | A |
 | 49 | Balancear la dificultad progresiva del modo endless. | B |
 | 50 | ~~Probar el modo endless con las 4 trampas activas simultáneamente a velocidad sostenida.~~ **[x] Automatizado** — `tests/test_endless_multi_cargo.gd`. Cobertura funcional (nada explota, las 4 trampas siguen activas durante 20s de manejo sostenido), no si la mezcla aleatoria "se siente bien" con las 4 activas (eso es el playtesting real del #55, deferido). Encontrar esto reveló un bug real, ver nota en #97. | A |
 | 51 | ~~Verificar que `RouteStreamer._cull_behind()` libere a tiempo.~~ **[x] Verificado** — sin fuga: conteo de segmentos activos y de hijos de `World` acotados tras una sesión larga simulada (`test_level_endless.gd`). | A |
-| 52 | Sumar el modo endless al leaderboard local existente, como categoría separada del modo normal (coordinar con Slatex, dueño de `run_manager.gd` en la zona compartida). | B |
+| 52 | ~~Sumar el modo endless al leaderboard local existente, como categoría separada del modo normal.~~ **[x] Hecho junto con el #44** — cada entrada del leaderboard guarda `mode`; `best_score(mode)` y el cap de `MAX_LEADERBOARD_ENTRIES` son por-modo (un modo no puede desplazar las entradas del otro del `.json` guardado). | A |
 | 53 | ~~Test automatizado de una sesión larga de endless simulada.~~ **[x] Hecho** — `tests/test_level_endless.gd`. | A |
 | 54 | ~~Documentar el modo endless en `docs/plan-desarrollo.md` Fase 3.~~ **[x] Hecho.** | A |
 | 55 | Playtesting real del modo endless: ¿se siente bien la variedad aleatoria o hace falta más curaduría? | A |
@@ -205,3 +205,24 @@
 | 106 | **Gap real encontrado, no resuelto a propósito**: hoy no se puede volver a levantar un paquete ya montado (`is_loaded`) para bajarlo caminando y entregarlo en una casa — `package_pickup_point.gd.can_interact()` bloquea el pickup si `is_loaded` es true. Sin esto, un jugador no puede sacar su paquete de la furgoneta para tocar el timbre. Es un cambio chico y aislado (ensanchar una condición, no romper nada existente) pero vive en archivo de Slatex — avisar antes de tocarlo. | A |
 | 107 | Asignar qué paquete corresponde a qué casa (`DeliveryHouse.assigned_package_id` ya existe como campo, sin usar todavía) — depende de #104/#105 para tener sentido real. | B |
 | 108 | Sumar un hecho a `EventBus` (`house_delivery_resolved`) para que el HUD muestre "casa 2: ✅/💀" en vivo — deliberadamente no agregado todavía (`EventBus` es zona compartida); `route.house_resolved` ya expone la misma info localmente mientras tanto. | B |
+
+## Ruta procedural con curvas reales (109-114) — pedido directo del usuario, 2026-09-22
+
+> "No quiero que sean tramos rectos, además me gustaría que sean tramos
+> mucho más largos entre casa, que sean mini aventuras." Reemplaza el
+> trazado recto hecho a mano (una sola caja de asfalto en línea) por un
+> generador procedural: cada tramo entre casas (y del arranque a la
+> primera, y de la última a la meta) es 400-600m armados encadenando
+> `RouteSegment`s reales, ahora incluyendo `CurveSegment` -- el único tipo
+> que cambia el rumbo del camino de verdad, no solo agrega obstáculos
+> dentro de un carril recto. Construido enteramente del lado de Nacho
+> (`route.gd`, `route_segment.gd`, `segments/curve_segment.gd`).
+
+| # | Tarea | Prio |
+|---|---|---|
+| 109 | ~~`CurveSegment`: un tramo que dobla el rumbo real del camino.~~ **[x] Hecho** — encadena cuerdas rectas cortas (~10m, una cada ~12°) rotando progresivamente; `exit_offset`/`exit_turn` (nuevos en `route_segment.gd`, default recto/0° para los otros 7 tipos, ninguno tocado) le dicen a quien encadena dónde y hacia dónde sigue el camino después. | A |
+| 110 | ~~Encadenar segmentos con posición + rumbo (Transform3D), no solo un offset en -Z.~~ **[x] Hecho** — `route.gd` camina un cursor `Transform3D`; cada segmento se sigue construyendo en su propio espacio local sin cambios (ni siquiera los 7 tipos viejos lo notaron). | A |
+| 111 | ~~Tramos mucho más largos entre casas (mini aventura).~~ **[x] Hecho** — 400-600m por tramo (antes 24m, casas casi pegadas); con 3 casas por default el recorrido total ronda ~2000m en vez de 220m. | A |
+| 112 | ~~Bosque/props siguiendo la curva en vez de flotar en línea recta.~~ **[x] Hecho** — `RouteSegment.get_dressing_slots()` (nuevo) da transforms locales a lo largo del camino real de cada segmento; `CurveSegment` lo sobreescribe caminando su propia cadena de cuerdas. | A |
+| 113 | ~~Red de seguridad "te saliste de la ruta" (`level_base.gd`) medía `abs(x mundial) > 42`, roto apenas el camino dobla.~~ **[x] Hecho** — `route.distance_from_path()` mide distancia real al camino generado (~10m de densidad), no a un eje fijo del mundo. Encontrado por regresión real en `test_vehicle_presentation.gd`/`test_dust_and_ambience.gd`, no hipotético. | A |
+| 114 | **Sin extender a Modo Endless todavía, a propósito** — `RouteStreamer` sigue siendo un camino recto que hace streaming/cull por -Z; darle curvas reales necesita que su lookahead/cull dejen de asumir un solo eje, un cambio más arriesgado que este (streaming infinito vs. construir todo una vez). Queda como follow-up separado, no mezclado con este pedido. | B |

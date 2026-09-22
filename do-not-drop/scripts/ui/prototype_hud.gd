@@ -412,6 +412,17 @@ func _refresh_cargo_hint() -> void:
 func _on_ended(score: int, results: Dictionary) -> void:
 	overlay_mode = "results"
 	overlay.show()
+	var best_line: String = "\n\n¡NUEVO RÉCORD!" if bool(results.get("is_new_best", false)) else "\n\nRécord: %d pts" % int(results.get("best_score", 0))
+	if results.has("distance_traveled"):
+		# Endless (docs/tareas-nacho.md #52): no delivery zone, so there's no
+		# "success" state, only how far the run got before it ended.
+		overlay_title.text = "FIN DEL RECORRIDO"
+		overlay_body.text = String(results["reason"])
+		overlay_stats.text = "%d PUNTOS     /     %.0f m recorridos     /     %.1f s%s" % [score, float(results["distance_traveled"]), results["elapsed_seconds"], best_line]
+		action_button.text = "Volver a intentar"
+		second_button.hide()
+		action_button.grab_focus()
+		return
 	var success: bool = results["delivered"]
 	var total: int = int(results.get("cargo_total", 0))
 	var intact: int = int(results.get("cargo_intact", 0))
@@ -420,7 +431,6 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	overlay_body.text = ("Llegaron %d de %d paquetes, %d intactos." % [total - ruined, total, intact]) if success else results["reason"]
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
-	var best_line: String = "\n\n¡NUEVO RÉCORD!" if bool(results.get("is_new_best", false)) else "\n\nRécord: %d pts" % int(results.get("best_score", 0))
 	overlay_stats.text = "%d PUNTOS     /     %.1f s\n\nCarga: %d pts   +   Rapidez: %d pts%s%s" % [score, results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], chaos_line, best_line]
 	action_button.text = "Volver a intentar"
 	second_button.hide()

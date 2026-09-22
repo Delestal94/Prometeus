@@ -9,14 +9,14 @@ extends Node3D
 ## that little is safer than restructuring a file Slatex also depends on
 ## mid-project. Revisit once both modes are stable.
 ##
-## Known gap, on purpose: ending a run here always calls
-## RunManager.finish_run(false, ...) (cargo lost, tipped over, or fell off)
-## -- there's no "arrived" state to award the existing delivered=true score
-## formula, so the score reads 0. A real distance-based score and a
-## separate endless leaderboard category are docs/tareas-nacho.md #52,
-## explicitly flagged B-priority/deferred -- not silently hacked in here.
-## _distance_traveled is already tracked and public for whenever that
-## lands.
+## Ending a run here always calls RunManager.finish_run(false, ...) (cargo
+## lost, tipped over, or fell off) -- there's no "arrived" state to award
+## the delivery-mode score formula. RunManager scores endless runs by
+## distance instead (docs/tareas-nacho.md #52): start_run(MODE_ENDLESS)
+## below switches it into that mode, and RunManager.current_distance is
+## kept in sync with distance_traveled every physics frame so finish_run()
+## has it however the run ends -- including the "all cargo ruined" path,
+## which fires from inside RunManager itself, not from this file.
 
 const LOST_CARGO_DISTANCE: float = 8.0
 const OUT_OF_BOUNDS_X: float = 42.0
@@ -155,7 +155,7 @@ func start_delivery() -> void:
 		if bool(package.get(&"is_loaded")):
 			package.set(&"freeze", false)
 			package.call(&"report_to_run")
-	RunManager.start_run()
+	RunManager.start_run(RunManager.MODE_ENDLESS)
 	_last_vehicle_z = vehicle.global_position.z
 	distance_traveled = 0.0
 	_stuck_seconds = 0.0
@@ -184,6 +184,7 @@ func _physics_process(delta: float) -> void:
 	var current_z: float = vehicle.global_position.z
 	distance_traveled += maxf(_last_vehicle_z - current_z, 0.0)
 	_last_vehicle_z = current_z
+	RunManager.current_distance = distance_traveled
 	_check_lost_cargo()
 	if vehicle.global_basis.y.dot(Vector3.UP) < 0.25:
 		tipped_seconds += delta

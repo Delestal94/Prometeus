@@ -113,18 +113,19 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
       aceptada a propósito en vez de refactorizar un archivo del que también depende
       Slatex, a mitad de proyecto sin coordinar) — revisar una vez que los dos modos
       estén estables.
-- [ ] **Sin punto de entrada desde el menú todavía** (`main_menu.gd` es de Slatex,
-      coordinar antes de tocarlo — docs/tareas-nacho.md #45). Se juega hoy pasando la
-      escena directo: `<godot> --path do-not-drop res://scenes/gameplay/level_endless.tscn -- --autostart`.
-- [ ] **Sin puntaje propio todavía, a propósito**: terminar una entrega en Fase 1-2
-      usa `RunManager.finish_run(delivered: bool, ...)`, que solo puntúa cuando
-      `delivered = true` (llegar a una zona de entrega que en Endless no existe). Acá
-      el run siempre termina en `finish_run(false, ...)` (se perdió toda la carga, se
-      volcó, o se salió de la ruta), así que el puntaje muestra 0 sin importar cuánto
-      se haya avanzado. `distance_traveled` ya se trackea en `level_endless.gd`
-      (público, listo para usarse), pero una fórmula de puntaje por distancia y una
-      categoría de leaderboard separada (docs/tareas-nacho.md #52) quedan pendientes
-      a propósito — no se improvisó una fórmula a ciegas.
+- [x] **Punto de entrada desde el menú** (2026-09-22): botón "Modo Endless (solo)"
+      en `main_menu.gd`, más el atajo `-- --autostart-endless`. Coordinar con Slatex
+      sigue pendiente como buena práctica (es su archivo), pero ya no bloquea probar
+      el modo — antes solo se llegaba pasando la escena directo (docs/tareas-nacho.md #45).
+- [x] **Puntaje por distancia** (2026-09-22, docs/tareas-nacho.md #44/#52): `RunManager`
+      distingue `MODE_DELIVERY`/`MODE_ENDLESS`; en modo endless, `finish_run()` puntúa
+      con `current_distance * DISTANCE_POINTS_PER_METER` (placeholder ajustable, sin
+      tocar lógica) en vez de la fórmula de carga/tiempo, que no tiene sentido sin zona
+      de entrega. `current_distance` se mantiene sincronizado con `distance_traveled`
+      de `level_endless.gd` cuadro a cuadro, así que también queda correcto cuando el
+      run termina por dentro de `RunManager` (toda la carga arruinada). El leaderboard
+      local guarda `mode` por entrada y cachea el top 10 de cada modo por separado, sin
+      que uno desplace al otro.
 - [ ] **Criterio subjetivo, sin resolver**: ningún test puede decir si la variedad
       procedural se siente bien, ni si el ritmo de dificultad es justo. Playtesting
       real pendiente (docs/tareas-nacho.md #55).

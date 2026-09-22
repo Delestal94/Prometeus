@@ -170,7 +170,7 @@ func _physics_process(delta: float) -> void:
 		tipped_seconds = 0.0
 	if tipped_seconds > 4.0:
 		RunManager.finish_run(false, "La camioneta volcó. Tomá las curvas más despacio.")
-	elif vehicle.global_position.y < -8.0 or absf(vehicle.global_position.x) > 42.0:
+	elif vehicle.global_position.y < -8.0 or route.distance_from_path(vehicle.global_position) > 42.0:
 		RunManager.finish_run(false, "Te saliste de la ruta. Reiniciá para intentarlo de nuevo.")
 
 

@@ -23,6 +23,7 @@ const MUTED: Color = Color("acc1bd")
 const MINT: Color = Color("83e2ba")
 const RED: Color = Color("f47e6d")
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
+const ENDLESS_LEVEL_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
 
 var _status_label: Label
 var _address_field: LineEdit
@@ -42,6 +43,9 @@ func _handle_cmdline_args() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	if "--autostart" in args:
 		_play_solo()
+		return
+	if "--autostart-endless" in args:
+		_play_endless()
 		return
 	if "--host" in args:
 		_host_session()
@@ -94,6 +98,7 @@ func _build_ui() -> void:
 	_spacer(column, 10)
 
 	_button(column, "Jugar solo", true).pressed.connect(_play_solo)
+	_button(column, "Modo Endless (solo)", false).pressed.connect(_play_endless)
 	_button(column, "Crear sala (con amigos)", false).pressed.connect(_host_session)
 
 	_spacer(column, 6)
@@ -114,7 +119,13 @@ func _build_ui() -> void:
 func _play_solo() -> void:
 	if _busy:
 		return
-	_go_to_level()
+	_go_to_level(LEVEL_SCENE)
+
+
+func _play_endless() -> void:
+	if _busy:
+		return
+	_go_to_level(ENDLESS_LEVEL_SCENE)
 
 
 func _host_session(transport: int = NetworkManager.Transport.AUTO) -> void:
@@ -152,7 +163,7 @@ func _on_session_ready(is_host: bool) -> void:
 	if is_host:
 		var hint: String = _lan_hint() if NetworkManager.active_transport == NetworkManager.Transport.ENET else "Invitá amigos desde la lista de amigos de Steam."
 		_set_status("Sala lista. %s" % hint, MINT)
-	_go_to_level()
+	_go_to_level(LEVEL_SCENE)
 
 
 func _on_session_failed(reason: String) -> void:
@@ -160,12 +171,12 @@ func _on_session_failed(reason: String) -> void:
 	_set_status(reason, RED)
 
 
-func _go_to_level() -> void:
+func _go_to_level(scene_path: String) -> void:
 	# Deferred: this can be reached from _ready() (the --autostart/--host/
 	# --join shortcuts), and the tree is still mid-setup at that point --
 	# change_scene_to_file() removing this node right then errors ("Parent
 	# node is busy adding/removing children").
-	get_tree().change_scene_to_file.call_deferred(LEVEL_SCENE)
+	get_tree().change_scene_to_file.call_deferred(scene_path)
 
 
 func _lan_hint() -> String:

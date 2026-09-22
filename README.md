@@ -27,15 +27,31 @@ Atajos de línea de comandos para probar rápido sin clickear:
 LAN, sin depender de que Steam esté corriendo) y `-- --join=<ip>` (se une
 por LAN a esa dirección).
 
-**Modo Endless (en construcción, todavía sin botón en el menú)**: genera
-tramos indefinidamente en vez de la ruta curada de 220 m, y el run termina
+**Modo Endless (en construcción, ya con botón en el menú)**: genera tramos
+indefinidamente en vez de la ruta curada de 220 m, y el run termina
 perdiendo (carga perdida, vuelco o salir de la ruta), nunca entregando —
-ver `docs/plan-desarrollo.md` Fase 3 para el estado completo. Se prueba
-pasando la escena directo:
+ver `docs/plan-desarrollo.md` Fase 3 para el estado completo. Se entra con
+el botón "Modo Endless (solo)" del menú principal, o directo por línea de
+comandos:
+
+```
+<godot> --path do-not-drop -- --autostart-endless
+```
+
+(el atajo anterior pasando la escena directo con `--autostart` sigue
+funcionando igual, salteando también la carga a pie:)
 
 ```
 <godot> --path do-not-drop res://scenes/gameplay/level_endless.tscn -- --autostart
 ```
+
+**La ruta se genera al azar en cada partida** (2026-09-22): en vez de un
+trazado fijo, cada tramo entre una casa y la siguiente son 400-600m armados
+encadenando tipos de segmento (recta, badén, chicana, puente angosto, curva
+en S, ripio, zona de obras y curvas reales que doblan el rumbo del camino de
+verdad) -- con 3 casas de entrega por default, un recorrido completo ronda
+los 2000m. `CurveSegment` es el único tipo que cambia la dirección del
+camino; los demás siguen siendo obstáculos dentro de un carril recto.
 
 Una vez en la furgoneta: elegí **Preparar entrega**, caminá con WASD y mirá
 con el mouse. Al acercarte a un
