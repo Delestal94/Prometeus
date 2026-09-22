@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta y Ambientación
 
-> Última actualización: 2026-09-21 (curva en S, ripio y zona de obras sumadas)
+> Última actualización: 2026-09-21 (sistema de casas de entrega sumado)
 > Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
 > compartida. Las tareas 1-40 vienen directo de `docs/especificaciones-visuales.md`
 > (número original entre paréntesis); 41-100 son backlog nuevo del proyecto,
@@ -183,3 +183,25 @@
 | 98 | Playtesting de variedad de ruta: ¿los tramos curados se sienten repetitivos después de varias vueltas? | A |
 | 99 | Verificar que `test_vehicle_presentation`, `test_vehicle_audio`, `test_route_streaming` y `check_driver_sightline` sigan pasando después de cada tarea grande. | A |
 | 100 | Mantener actualizadas las filas de vehículo/ambientación en `docs/especificaciones-visuales.md` y `docs/direccion-visual.md` a medida que se completan tareas. | A |
+
+## Sistema de casas de entrega (101-108) — pedido directo del usuario, 2026-09-21
+
+> Reemplaza el único "Warehouse" al final de la ruta curada por `house_count`
+> casas separadas a lo largo del tramo final, cada una con timbre propio.
+> Al tocar el timbre, quien atiende reacciona según el estado del paquete
+> que se le entregó (o no se le entregó nada). Construido enteramente del
+> lado de Nacho (`route.gd`, `delivery_house.gd`, `doorbell_point.gd`) para
+> no interferir con lo que Slatex está tocando ahora mismo (expansión a 8
+> jugadores). `doorbell_point.gd` extiende `interactable.gd` (base de
+> Slatex) solo por lectura, mismo patrón que `package_mount_point.gd`.
+
+| # | Tarea | Prio |
+|---|---|---|
+| 101 | ~~Casas separadas a lo largo de la ruta en vez de una única zona de entrega.~~ **[x] Hecho** — `route.gd` construye `house_count` `DeliveryHouse` alternando lados de la ruta, terminando en una meta (`GoalArea`) que reemplaza el viejo `DeliveryArea`/Warehouse, mismo contrato (`is_vehicle_in_delivery`) que ya usaba `level_base.gd`, sin tocar ese archivo. | A |
+| 102 | ~~Timbre que reacciona al estado del paquete entregado (bien = gracioso, mal = consecuencia).~~ **[x] Hecho, parcial a propósito** — `DeliveryHouse._resolve()` reacciona con sonido distinto y consume la caja según `trap_state` (OK/AT_RISK vs. RUINED), y emite `resolved`/`route.house_resolved` con el desenlace (`delivered_ok`/`delivered_ruined`/`missed`). **No inventé reglas de vida/puntaje** — esa es zona de juego compartida (`RunManager`/economía, ver `docs/economia-y-contramedidas.md` de Slatex); dejé el hook limpio para que se conecte ahí. | A |
+| 103 | ~~"Si te olvidaste un paquete, tenés que bajarte a tocar el timbre igual y sufrir las consecuencias."~~ **[x] Hecho** — al llegar a la meta, cualquier casa que nadie tocó se resuelve automáticamente como `"missed"` (`force_resolve_if_missed()`), no queda colgada para siempre. | A |
+| 104 | Cantidad de casas = jugadores conectados - 1 (- 0 si jugás solo), calculada en vivo al arrancar la partida. **Abierto a propósito** — `route.configure_houses(count)` ya existe y funciona (ver `test_delivery_houses.gd`), pero conectarlo a `NetworkManager.peer_ids.size()` significa tocar `level_base.gd`, que es zona compartida. Necesita avisar antes. Mientras tanto `house_count` queda en 3 por default (el ejemplo que dio el usuario). | B |
+| 105 | Cantidad de paquetes por casa dinámica (hoy la escena sigue instanciando 4 paquetes fijos, sin relación con `house_count`). **Bloqueado**: es dominio de paquetes/progresión de Slatex (`do-not-drop/scenes/gameplay/package/`), no tocado acá. | B |
+| 106 | **Gap real encontrado, no resuelto a propósito**: hoy no se puede volver a levantar un paquete ya montado (`is_loaded`) para bajarlo caminando y entregarlo en una casa — `package_pickup_point.gd.can_interact()` bloquea el pickup si `is_loaded` es true. Sin esto, un jugador no puede sacar su paquete de la furgoneta para tocar el timbre. Es un cambio chico y aislado (ensanchar una condición, no romper nada existente) pero vive en archivo de Slatex — avisar antes de tocarlo. | A |
+| 107 | Asignar qué paquete corresponde a qué casa (`DeliveryHouse.assigned_package_id` ya existe como campo, sin usar todavía) — depende de #104/#105 para tener sentido real. | B |
+| 108 | Sumar un hecho a `EventBus` (`house_delivery_resolved`) para que el HUD muestre "casa 2: ✅/💀" en vivo — deliberadamente no agregado todavía (`EventBus` es zona compartida); `route.house_resolved` ya expone la misma info localmente mientras tanto. | B |

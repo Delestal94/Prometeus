@@ -3,9 +3,25 @@ extends Node3D
 
 signal delivery_entered
 signal delivery_exited
+## Fires whenever any house resolves (delivered ok/ruined/missed) -- forwards
+## DeliveryHouse.resolved so level_base.gd or the HUD can react without
+## walking the house list themselves.
+signal house_resolved(house_index: int, outcome: StringName)
 
 @export var route_length: float = 220.0
+## How many delivery houses this run has -- one per package, per package per
+## player minus the driver (docs/tareas-nacho.md: house delivery system).
+## Defaults to 3 (the "4 players, 1 drives" example) since nothing wires
+## live roster size into this yet -- that's the coordination point noted in
+## tareas-nacho.md, not guessed at here. Call configure_houses() before this
+## node enters the tree to override.
+@export var house_count: int = 3
 var is_vehicle_in_delivery: bool = false
+var houses: Array[DeliveryHouse] = []
+const HOUSE_SPACING: float = 24.0
+const HOUSES_START_Z: float = -196.0
+const GOAL_CLEARANCE: float = 24.0
+var _goal_z: float = 0.0
 
 const ROAD := Color("394a50")
 const SHOULDER := Color("63736f")
@@ -18,14 +34,24 @@ var _materials: Dictionary = {}
 var _delivery_vehicles: Array[Node3D] = []
 
 
+## Overrides house_count before the node builds itself. Call before
+## add_child()-ing this into the tree -- _ready() already builds geometry
+## from house_count, same convention as any other @export here.
+func configure_houses(count: int) -> void:
+	house_count = maxi(count, 1)
+
+
 func _ready() -> void:
+	_goal_z = HOUSES_START_Z - float(house_count) * HOUSE_SPACING - GOAL_CLEARANCE
+	route_length = -_goal_z
 	_build_ground()
 	_build_road()
 	_build_training()
 	_build_bumps()
 	_build_chicane()
 	_build_bridge()
-	_build_delivery()
+	_build_houses()
+	_build_goal()
 	_build_landmarks()
 	_build_ambience()
 
@@ -44,28 +70,43 @@ func get_section_name(world_position: Vector3) -> String:
 		return "03 · Chicana"
 	if distance < 185.0:
 		return "04 · Puente angosto"
-	return "05 · Zona de entrega"
+	var houses_start_distance: float = -HOUSES_START_Z
+	if distance < houses_start_distance + float(house_count) * HOUSE_SPACING:
+		var house_index: int = clampi(int((distance - houses_start_distance) / HOUSE_SPACING), 0, house_count - 1)
+		return "05 · Entregas (casa %d/%d)" % [house_index + 1, house_count]
+	return "06 · Meta"
 
 
 func _build_ground() -> void:
-	_box("Ground", Vector3(180.0, 1.0, 340.0), Vector3(0.0, -0.8, -120.0), SHOULDER, true)
+	# Long enough to cover the houses stretch + goal, whatever house_count
+	# makes that add up to -- fixed 340m only fit the old, always-3-houses
+	# layout, so this now derives from the same route_length the road does.
+	var ground_length: float = 170.0 + route_length
+	var ground_center_z: float = 50.0 - ground_length * 0.5
+	_box("Ground", Vector3(180.0, 1.0, ground_length), Vector3(0.0, -0.8, ground_center_z), SHOULDER, true)
+	var shoulder_length: float = route_length + 20.0
+	var shoulder_center_z: float = 8.0 - shoulder_length * 0.5
 	# A shallow shoulder keeps an off-road mistake recoverable in the prototype.
-	_box("LeftShoulder", Vector3(8.0, 0.2, 262.0), Vector3(-10.0, -0.2, -116.0), Color("879182"), true)
-	_box("RightShoulder", Vector3(8.0, 0.2, 262.0), Vector3(10.0, -0.2, -116.0), Color("879182"), true)
+	_box("LeftShoulder", Vector3(8.0, 0.2, shoulder_length), Vector3(-10.0, -0.2, shoulder_center_z), Color("879182"), true)
+	_box("RightShoulder", Vector3(8.0, 0.2, shoulder_length), Vector3(10.0, -0.2, shoulder_center_z), Color("879182"), true)
 
 
 func _build_road() -> void:
 	_box("RoadFirstThreeSections", Vector3(12.0, 0.4, 152.0), Vector3(0.0, -0.2, -64.0), ROAD, true)
 	_box("BridgeDeck", Vector3(6.0, 0.4, 45.0), Vector3(0.0, -0.2, -162.5), ROAD, true)
-	_box("DeliveryApproach", Vector3(12.0, 0.4, 62.0), Vector3(0.0, -0.2, -216.0), ROAD, true)
-	for z: int in range(8, -246, -6):
+	# Covers the houses stretch and the goal, however long house_count makes
+	# that -- replaces the old fixed-length DeliveryApproach + Warehouse.
+	var houses_road_length: float = route_length - 185.0
+	var houses_road_center_z: float = -185.0 - houses_road_length * 0.5
+	_box("HousesRoad", Vector3(12.0, 0.4, houses_road_length), Vector3(0.0, -0.2, houses_road_center_z), ROAD, true)
+	for z: int in range(8, int(_goal_z) - 4, -6):
 		var half_width: float = 2.65 if z <= -140 and z >= -185 else 5.7
 		for side: float in [-1.0, 1.0]:
 			_box("EdgeMarking", Vector3(0.12, 0.015, 4.0), Vector3(side * half_width, 0.011, float(z)), MARKING)
-		if z > -95 or (z < -185 and z > -211):
+		if z > -95 or (z < -185 and z > int(_goal_z) + 6):
 			_box("CenterMarking", Vector3(0.12, 0.012, 2.0), Vector3(0.0, 0.009, float(z)), Color("8c9994"))
-	# A broad stop wall beyond the bay prevents the route simply ending in a void.
-	_box("EndBarrier", Vector3(15.0, 1.0, 0.6), Vector3(0.0, 0.5, -245.0), CONCRETE, true)
+	# A broad stop wall beyond the goal prevents the route simply ending in a void.
+	_box("EndBarrier", Vector3(15.0, 1.0, 0.6), Vector3(0.0, 0.5, _goal_z - 10.0), CONCRETE, true)
 
 
 func _build_training() -> void:
@@ -137,26 +178,42 @@ func _build_bridge() -> void:
 	_box("WaterPlaceholder", Vector3(37.0, 0.025, 33.0), Vector3(0.0, -0.27, -162.5), Color("4d7d80"))
 
 
-func _build_delivery() -> void:
-	_sign("EntregaAviso", "05 / ENTREGA\nFRENÁ EN EL RECUADRO", Vector3(7.8, 0.0, -192.0), TEAL)
-	_box("DeliveryBayPaint", Vector3(7.7, 0.012, 12.0), Vector3(0.0, 0.012, -220.0), Color("466e63"))
-	for x: float in [-4.0, 4.0]:
-		_box("DeliveryBaySide", Vector3(0.16, 0.022, 12.0), Vector3(x, 0.022, -220.0), TEAL)
-	for z: float in [-214.0, -226.0]:
-		_box("DeliveryBayEnd", Vector3(8.0, 0.022, 0.16), Vector3(0.0, 0.022, z), TEAL)
-	_box("Warehouse", Vector3(12.0, 5.0, 8.0), Vector3(0.0, 2.5, -251.0), Color("74817a"), true)
-	_box("WarehouseDoor", Vector3(6.0, 3.5, 0.04), Vector3(0.0, 1.75, -246.95), Color("415a59"))
-	_label("DeliveryTitle", "ENTREGAS", Vector3(0.0, 4.2, -246.9), 0.012, TEAL)
-	_label("DeliveryStop", "FRENÁ ACÁ", Vector3(0.0, 2.2, -229.0), 0.011, TEAL)
+## One house per package (docs/tareas-nacho.md house delivery system):
+## alternating sides of the road like a real street, each with its own
+## doorbell. house_count is currently a fixed default (see the @export
+## comment) -- wiring live "players minus the driver" is the coordination
+## point noted there, not guessed at here.
+func _build_houses() -> void:
+	_sign("EntregaAviso", "05 / ENTREGAS\nBAJATE Y TOCÁ EL TIMBRE", Vector3(7.8, 0.0, HOUSES_START_Z + 8.0), TEAL)
+	houses.clear()
+	for index: int in range(house_count):
+		var z: float = HOUSES_START_Z - float(index) * HOUSE_SPACING
+		var side: float = -1.0 if index % 2 == 0 else 1.0
+		var house := DeliveryHouse.new()
+		house.name = "House%d" % index
+		house.position = Vector3(side * 9.0, 0.0, z)
+		house.rotation.y = PI if side < 0.0 else 0.0
+		add_child(house)
+		houses.append(house)
+		var captured_index: int = index
+		house.resolved.connect(func(outcome: StringName) -> void: house_resolved.emit(captured_index, outcome))
+		_label("HouseNumber%d" % index, "CASA %d" % (index + 1), Vector3(side * 9.0, 4.0, z + 2.6), 0.01, TEAL)
+
+
+func _build_goal() -> void:
+	_box("GoalArchLeft", Vector3(0.5, 4.0, 0.5), Vector3(-4.5, 2.0, _goal_z), CONCRETE, true)
+	_box("GoalArchRight", Vector3(0.5, 4.0, 0.5), Vector3(4.5, 2.0, _goal_z), CONCRETE, true)
+	_box("GoalArchTop", Vector3(9.6, 0.5, 0.5), Vector3(0.0, 4.0, _goal_z), TEAL, true)
+	_label("GoalTitle", "META", Vector3(0.0, 4.9, _goal_z), 0.014, TEAL)
 	var area := Area3D.new()
-	area.name = "DeliveryArea"
-	area.position = Vector3(0.0, 2.0, -220.0)
+	area.name = "GoalArea"
+	area.position = Vector3(0.0, 2.0, _goal_z + 3.0)
 	area.collision_layer = 32
 	area.collision_mask = 2
 	area.monitorable = false
 	var collider := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(8.0, 4.0, 12.0)
+	shape.size = Vector3(9.0, 4.0, 6.0)
 	collider.shape = shape
 	area.add_child(collider)
 	add_child(area)
@@ -194,6 +251,11 @@ func _on_delivery_body_entered(body: Node3D) -> void:
 	if not is_vehicle_in_delivery:
 		is_vehicle_in_delivery = true
 		delivery_entered.emit()
+		# Reaching the goal is the honest ending, even for a house nobody
+		# rang -- "te olvidaste un paquete, bajate a dar explicaciones,"
+		# forced automatically instead of just letting it go unresolved.
+		for house: DeliveryHouse in houses:
+			house.force_resolve_if_missed()
 
 
 func _on_delivery_body_exited(body: Node3D) -> void:

@@ -51,6 +51,25 @@ debería romper nada de presentación por sí solo. Si el modelo nuevo cambia la
 cantidad/posición de asientos o el layout de `CargoBay`, sí conviene avisar
 antes de asumir que todo sigue funcionando igual.
 
+## Aviso activo: sistema de casas de entrega (route.gd) necesita un cambio chico de Slatex
+
+`route.gd` ahora construye `house_count` casas con timbre a lo largo de la
+ruta en vez de una única zona de entrega (pedido del usuario, 2026-09-21;
+detalle completo en `docs/tareas-nacho.md` #101-108). Construido entero del
+lado de Nacho, sin tocar ningún archivo de Slatex. Pero hay un gap real que
+bloquea el flujo completo: hoy no se puede volver a levantar un paquete ya
+montado en la furgoneta (`is_loaded == true`) para bajarlo caminando y
+entregarlo en una casa —
+`do-not-drop/scripts/gameplay/interaction/package_pickup_point.gd.can_interact()`
+bloquea el pickup en ese caso. Es un cambio chico y aislado (ensanchar esa
+condición, no romper el caso existente), pero vive en zona de Slatex — avisar
+antes de tocarlo, o que lo agregue Slatex directamente.
+
+También quedan dos puntos de coordinación para cuando haya lugar:
+cantidad de casas dinámica según jugadores conectados (`route.configure_houses()`
+ya existe, falta llamarlo desde `level_base.gd`) y cantidad de paquetes por
+partida (hoy fija en 4 en la escena, sin relación con `house_count`).
+
 ## Zona compartida — avisar antes de tocar
 
 Estos archivos los puede necesitar cualquiera de los dos. Regla simple: **el que va a
