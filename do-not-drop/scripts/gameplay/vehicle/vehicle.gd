@@ -19,6 +19,14 @@ extends VehicleBody3D
 @export var braking_force: float = 55.0
 @export var maximum_steering: float = 0.42
 @export var steering_response: float = 2.0
+## Open while loading so everybody can walk into the rear cargo bay.  This is
+## replicated just like the driver state, therefore all peers see the same door.
+@export var rear_cargo_open: bool = true:
+	set(value):
+		rear_cargo_open = value
+		var reference_truck := get_node_or_null("ReferenceTruck")
+		if reference_truck != null:
+			reference_truck.call(&"set_rear_doors_open", value)
 ## Replicated facts for presentation on frozen client copies.
 var presentation_engine_running: bool = false
 var presentation_braking: bool = false
@@ -59,6 +67,15 @@ func _ready() -> void:
 	_horn_player.volume_db = -6.0
 	add_child(_horn_player)
 	EventBus.horn_honked.connect(_on_horn_honked)
+	var reference_truck := preload("res://scripts/presentation/reference_truck.gd").new()
+	reference_truck.name = "ReferenceTruck"
+	add_child(reference_truck)
+
+
+func set_rear_cargo_open(open: bool) -> void:
+	if not is_multiplayer_authority():
+		return
+	rear_cargo_open = open
 
 
 func _on_horn_honked(_peer_id: int) -> void:
