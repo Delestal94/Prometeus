@@ -14,6 +14,17 @@ class_name RouteStreamer
 	StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
 	SCurveSegment, GravelSegment, ConstructionZoneSegment,
 ]
+## "Hard" = needs real steering/braking to survive, matching exactly what
+## the tests already treat as unsafe for an un-steered drive (see
+## test_level_endless.gd/test_endless_multi_cargo.gd restricting themselves
+## to Straight/SpeedBump) -- not a separate, arbitrary judgment call.
+## docs/tareas-nacho.md #47: avoid three of these back to back, since the
+## pool grew to 7 types and that got a lot more likely to happen by chance.
+## Built in _ready(), not as a top-level const -- GDScript can't fold a
+## const array referencing several global class_names at parse time (hit
+## "Assigned value... isn't a constant expression"), so this is a plain
+## @onready-style var populated once instead.
+var hard_segments: Array[Script] = []
 @export var lookahead_distance: float = 60.0
 @export var behind_keep_distance: float = 40.0
 ## The very first segment ignores the random pick and is always this one
@@ -29,6 +40,7 @@ var target: Node3D = null
 var _active: Array[RouteSegment] = []
 var _next_z: float = 0.0
 var _last_script: Script = null
+var _hard_streak: int = 0
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Tracks "has anything ever spawned", separately from _active.is_empty() --
 ## _active shrinks as segments get culled behind, so it stops meaning
@@ -38,6 +50,7 @@ var _spawned_any: bool = false
 
 func _ready() -> void:
 	_rng.randomize()
+	hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment]
 
 
 func start(tracked: Node3D) -> void:
@@ -67,12 +80,19 @@ func _spawn_next() -> void:
 	_active.append(segment)
 	_next_z -= segment.length
 	_last_script = script
+	_hard_streak = _hard_streak + 1 if hard_segments.has(script) else 0
 
 
 func _pick_next_script() -> Script:
 	var candidates: Array[Script] = segment_scripts
 	if segment_scripts.size() > 1 and _last_script != null:
-		candidates = segment_scripts.filter(func(s: Script) -> bool: return s != _last_script)
+		candidates = candidates.filter(func(s: Script) -> bool: return s != _last_script)
+	if _hard_streak >= 2:
+		# Two hard segments back to back already -- force a breather instead
+		# of risking a third, unless the pool genuinely has nothing easy left.
+		var easy_candidates: Array[Script] = candidates.filter(func(s: Script) -> bool: return not hard_segments.has(s))
+		if not easy_candidates.is_empty():
+			candidates = easy_candidates
 	return candidates[_rng.randi() % candidates.size()]
 
 

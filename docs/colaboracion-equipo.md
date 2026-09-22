@@ -37,6 +37,20 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: Slatex va a reemplazar el modelo del camión
+
+`do-not-drop/scenes/gameplay/vehicle/vehicle.tscn` es dominio de Nacho por esta
+tabla, pero Slatex va a tocarlo para cambiar el modelo real del vehículo —
+excepción coordinada, no un choque de dominios sin avisar. Mientras tanto,
+Nacho evita tocar `vehicle.tscn`/`vehicle.gd` para no pisarse con ese cambio en
+curso. `scripts/presentation/vehicle_presentation.gd` ya no depende de rutas
+fijas de nodo (ver `docs/agregar-vehiculo.md`, #87) — solo necesita que el
+modelo nuevo tenga nodos llamados `SteeringWheel`, `BodyVisuals`, y cualquier
+cantidad de meshes `*Headlight`/`*TailLight`, así que un modelo nuevo no
+debería romper nada de presentación por sí solo. Si el modelo nuevo cambia la
+cantidad/posición de asientos o el layout de `CargoBay`, sí conviene avisar
+antes de asumir que todo sigue funcionando igual.
+
 ## Zona compartida — avisar antes de tocar
 
 Estos archivos los puede necesitar cualquiera de los dos. Regla simple: **el que va a
