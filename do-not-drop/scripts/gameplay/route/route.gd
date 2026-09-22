@@ -64,8 +64,8 @@ const MAX_STRAIGHT_STREAK: int = 2
 const CURVE_TURN_MIN_DEG: float = 25.0
 const CURVE_TURN_MAX_DEG: float = 70.0
 
-const TREE_ROW_SPACING: float = 3.1
-const PLANT_SPACING: float = 0.43  # ~2.3 plants/m, matching the old density
+const TREE_ROW_SPACING: float = 5.5
+const PLANT_SPACING: float = 0.9
 
 ## Where the goal actually ended up -- with a curved, randomized-length road
 ## this is no longer reliably near world (0,0,something), so anything that
@@ -109,6 +109,9 @@ var _tree_index: int = 0
 var _plant_index: int = 0
 var _furniture_index: int = 0
 var _vehicle_index: int = 0
+const Terrain = preload("res://scripts/gameplay/route/route_terrain.gd")
+var terrain: Node3D
+var _segments: Array[RouteSegment] = []
 ## Distance from the very start that only gets Straight/SpeedBump/Gravel/
 ## NarrowBridge -- segments that don't need steering input to survive.
 ## Matches (with margin) how far the old handcrafted route's first real
@@ -146,6 +149,9 @@ func _ready() -> void:
 		CurveSegment, CurveSegment,  # weighted up: this is the one that turns
 	]
 	_spine_hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment]
+	terrain = Terrain.new()
+	terrain.name = "ContinuousTerrain"
+	add_child(terrain)
 	var cursor: Transform3D = Transform3D.IDENTITY
 	_progress_samples.append({"cumulative": 0.0, "position": cursor.origin, "leg_index": 0})
 	_start_leg(cursor)
@@ -155,6 +161,7 @@ func _ready() -> void:
 			cursor = _build_house(cursor, leg_index)
 	goal_transform = cursor
 	_build_goal(cursor)
+	_finish_terrain()
 	_build_ambience()
 
 
@@ -167,8 +174,7 @@ func _ready() -> void:
 ## test_vehicle_presentation.gd and test_dust_and_ambience.gd: the vehicle
 ## fell out from under them before their checks ever ran).
 func _start_leg(cursor: Transform3D) -> void:
-	_box("StartApronGround", Vector3(24.0, 1.0, 20.0), cursor.origin + Vector3(0.0, -0.8, 9.5), SHOULDER, true)
-	_box("StartApronRoad", Vector3(12.0, 0.4, 20.0), cursor.origin + Vector3(0.0, -0.2, 9.5), ROAD, true)
+	terrain.add_span(cursor.origin + Vector3(0.0, 0.0, 20.0), cursor.origin)
 	_sign("Salida", "SALIDA\nCuidá la carga -- el camino serpentea", cursor.origin + Vector3(-7.6, 0.0, -5.0), TEAL)
 	_box("StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.015, -4.0), TEAL)
 
@@ -182,9 +188,14 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 	while leg_length < target_length:
 		var script: Script = _pick_spine_script()
 		var segment: RouteSegment = _instantiate_spine_segment(script)
+		segment.continuous_terrain = true
 		segment.transform = cursor
 		add_child(segment)
-		_dress_segment(segment)
+		_segments.append(segment)
+		var road_slots: Array[Transform3D] = segment.get_dressing_slots(10.0)
+		road_slots.append(Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset))
+		for i: int in range(road_slots.size() - 1):
+			terrain.add_span((cursor * road_slots[i]).origin, (cursor * road_slots[i + 1]).origin, segment is GravelSegment, 3.0 if segment is NarrowBridgeSegment else 6.0)
 		for slot: Transform3D in segment.get_dressing_slots(10.0):
 			_path_points.append((cursor * slot).origin)
 		leg_length += segment.length
@@ -249,21 +260,13 @@ func _build_house(cursor: Transform3D, index: int) -> Transform3D:
 ## A narrow worn path makes each stop feel connected to the road. It stops
 ## at the shoulder rather than widening the driving lane or blocking traffic.
 func _build_house_path(cursor: Transform3D, index: int, side: float) -> void:
-	var path_height: float = 0.025
-	var path_transform: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(side * HOUSE_PATH_LATERAL_OFFSET, _ground_height_at(HOUSE_PATH_LATERAL_OFFSET) + path_height * 0.5, 0.0))
-	var path := Node3D.new()
-	path.name = "HousePath%d" % index
-	path.transform = path_transform
-	add_child(path)
-	var mesh := MeshInstance3D.new()
-	var box_mesh := BoxMesh.new()
-	box_mesh.size = Vector3(4.0, path_height, 1.45)
-	mesh.mesh = box_mesh
-	mesh.material_override = _material(Color("716b54"))
-	path.add_child(mesh)
+	var a: Vector3 = cursor * Vector3(side * 5.8, 0.0, 0.0)
+	var b: Vector3 = cursor * Vector3(side * HOUSE_LATERAL_OFFSET, 0.0, 0.0)
+	terrain.paths.append({"a": Vector2(a.x, a.z), "b": Vector2(b.x, b.z)})
 
 
 func _build_goal(cursor: Transform3D) -> void:
+	terrain.add_span(cursor.origin, cursor * Vector3(0.0, 0.0, -18.0))
 	var arch_left: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(-4.5, 2.0, 0.0))
 	var arch_right: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(4.5, 2.0, 0.0))
 	var arch_top: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 4.0, 0.0))
@@ -344,6 +347,57 @@ func distance_from_path(world_position: Vector3) -> float:
 func _dress_segment(segment: RouteSegment) -> void:
 	_dress_forest(segment)
 	_dress_landmarks(segment)
+	for group_name: String in ["ForestDressing", "RoadsideDressing"]:
+		var group: Node = segment.get_node_or_null(NodePath(group_name))
+		if group == null:
+			continue
+		for prop: Node3D in group.get_children():
+			var p: Vector3 = to_local(prop.global_position)
+			var clearance: float = terrain.nearest(Vector2(p.x, p.z)).x
+			var obstructs_house: bool = false
+			for house: Node3D in houses:
+				if Vector2(p.x - house.position.x, p.z - house.position.z).length() < 6.0:
+					obstructs_house = true
+			# Curves can place the inner tree rows on another part of the road.
+			if clearance < 7.0 or obstructs_house:
+				prop.free()
+				continue
+			p.y = terrain.height_at(p) - 0.025
+			prop.global_position = to_global(p)
+			if group_name == "RoadsideDressing":
+				var right: Vector3 = prop.global_basis.x.normalized()
+				var forward: Vector3 = prop.global_basis.z.normalized()
+				var rise_x: float = terrain.height_at(p + right) - terrain.height_at(p - right)
+				var rise_z: float = terrain.height_at(p + forward) - terrain.height_at(p - forward)
+				prop.rotate_object_local(Vector3.FORWARD, -atan(rise_x * 0.5))
+				prop.rotate_object_local(Vector3.RIGHT, -atan(rise_z * 0.5))
+
+
+func _finish_terrain() -> void:
+	# Level building pads blend back into the landscape, so the doorstep and
+	# access path remain walkable even on a hillside.
+	for house: Node3D in houses:
+		var p: Vector3 = house.position
+		p.y = terrain.base_height(Vector2(p.x, p.z)) - 0.08
+		terrain.pads.append(p)
+	terrain.build()
+	for child: Node in get_children():
+		if child == terrain or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):
+			continue
+		terrain.conform_geometry(child)
+	for house: Node3D in houses:
+		house.position.y = terrain.height_at(house.position)
+		var label: Node3D = get_node(NodePath("HouseNumber%d" % house.house_index))
+		label.position.y = house.position.y + 4.0
+	for segment: RouteSegment in _segments:
+		_dress_segment(segment)
+	for i: int in range(_path_points.size()):
+		_path_points[i].y = terrain.height_at(_path_points[i])
+	for sample: Dictionary in _progress_samples:
+		var p: Vector3 = sample.position
+		p.y = terrain.height_at(p)
+		sample.position = p
+	goal_transform.origin.y = terrain.height_at(goal_transform.origin)
 
 
 const TREE_PATHS: Array[String] = [
@@ -382,13 +436,13 @@ func _dress_forest(segment: RouteSegment) -> void:
 		segment.add_child(forest)
 	for row: int in range(slots.size()):
 		for side: float in [-1.0, 1.0]:
-			for layer: int in range(4):
+			for layer: int in range(3):
 				var index: int = _tree_index
 				_tree_index += 1
 				var tree := _instantiate_dressing(TREE_PATHS[index % TREE_PATHS.size()])
 				if tree == null:
 					continue
-				var lateral: float = 8.0 + float(layer) * 5.1 + float((index * 7) % 5) * 0.45
+				var lateral: float = 10.0 + float(layer) * 7.2 + float((index * 7) % 5) * 0.7
 				var offset := Vector3(side * lateral, _ground_height_at(side * lateral), float((index * 11) % 7) * -0.24)
 				tree.transform = slots[row] * Transform3D(Basis(Vector3.UP, deg_to_rad(float((index * 37) % 360))), offset)
 				var tree_scale: float = 0.82 + float((index * 17) % 54) / 100.0

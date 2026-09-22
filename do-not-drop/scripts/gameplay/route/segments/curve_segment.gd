@@ -75,10 +75,11 @@ func _build_chord(chord: Node3D) -> void:
 	# rectangles sharing only a single edge point don't tile cleanly, and a
 	# gap in the *collision* there is a real "wheel drops through" risk, not
 	# just a visual seam.
-	var ground := _chord_box(Vector3(24.0, 1.0, CHORD_LENGTH + 3.0), Vector3(0.0, -0.8, -CHORD_LENGTH * 0.5), SHOULDER, true)
-	chord.add_child(ground)
-	var road := _chord_box(Vector3(12.0, 0.4, CHORD_LENGTH + 3.0), Vector3(0.0, -0.2, -CHORD_LENGTH * 0.5), ROAD, true)
-	chord.add_child(road)
+	if not continuous_terrain:
+		var ground := _chord_box(Vector3(24.0, 1.0, CHORD_LENGTH + 3.0), Vector3(0.0, -0.8, -CHORD_LENGTH * 0.5), SHOULDER, true)
+		chord.add_child(ground)
+		var road := _chord_box(Vector3(12.0, 0.4, CHORD_LENGTH + 3.0), Vector3(0.0, -0.2, -CHORD_LENGTH * 0.5), ROAD, true)
+		chord.add_child(road)
 	var edge_marking := _chord_box(Vector3(0.12, 0.015, CHORD_LENGTH - 1.0), Vector3(5.7, 0.011, -CHORD_LENGTH * 0.5), MARKING)
 	chord.add_child(edge_marking)
 	var edge_marking_other := _chord_box(Vector3(0.12, 0.015, CHORD_LENGTH - 1.0), Vector3(-5.7, 0.011, -CHORD_LENGTH * 0.5), MARKING)

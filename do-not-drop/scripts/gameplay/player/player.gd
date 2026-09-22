@@ -90,6 +90,7 @@ var _anim_lock_until_msec: int = 0
 var _bob_time: float = 0.0
 var _bob_amount: float = 0.0
 var _interact_was_down: bool = false
+var _last_safe_ground: Vector3 = Vector3.ZERO
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -109,6 +110,7 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	_last_safe_ground = global_position
 	_build_body()
 	RenderLayers.configure_first_person(_camera)
 	RenderLayers.show_viewmodel(_camera, is_local())
@@ -269,6 +271,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y -= GRAVITY * delta
 	move_and_slide()
+	_update_ground_safety()
 	var ground_speed: float = Vector2(velocity.x, velocity.z).length()
 	_apply_head_bob(delta, ground_speed)
 	_update_movement_anim(ground_speed)
@@ -278,6 +281,15 @@ func _physics_process(delta: float) -> void:
 	var target: Node = _closest_interactable()
 	_publish_prompt(str(target.call(&"get_prompt")) if target != null else "")
 	_update_highlight(target)
+
+
+func _update_ground_safety() -> void:
+	# A last grounded position also works on hills, unlike an absolute Y cutoff.
+	if global_position.y < _last_safe_ground.y - 15.0:
+		global_position = _last_safe_ground + Vector3.UP * 0.5
+		velocity = Vector3.ZERO
+	elif is_on_floor():
+		_last_safe_ground = global_position
 
 
 func _is_interact_event(event: InputEvent) -> bool:

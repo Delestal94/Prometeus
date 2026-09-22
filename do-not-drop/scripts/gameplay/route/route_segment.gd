@@ -20,6 +20,7 @@ class_name RouteSegment
 ## matter which kind of segment came before it.
 var exit_offset: Vector3
 var exit_turn: float = 0.0
+var continuous_terrain: bool = false
 
 const ROAD := Color("394a50")
 const SHOULDER := Color("63736f")
@@ -55,6 +56,8 @@ func _build() -> void:
 
 
 func _box(node_name: String, size: Vector3, location: Vector3, color: Color, solid: bool = false) -> Node3D:
+	if continuous_terrain and node_name in ["Ground", "Road", "BridgeDeck", "WaterPlaceholder"]:
+		return null
 	var root: Node3D = StaticBody3D.new() if solid else Node3D.new()
 	root.name = node_name
 	root.position = location

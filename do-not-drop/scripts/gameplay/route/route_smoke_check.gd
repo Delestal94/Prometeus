@@ -49,7 +49,9 @@ func _check_route() -> void:
 		var ray := PhysicsRayQueryParameters3D.create(position + Vector3.UP * 4, position + Vector3.DOWN * 2, 1)
 		var result: Dictionary = state.intersect_ray(ray)
 		assert(not result.is_empty(), "Missing ground at sampled path point %s" % position)
-		assert(result.position.y > -0.5, "Unsafe road/shoulder drop at %s" % position)
+		# Road hazards may sit above the pavement; the landscape may not fall
+		# below its sampled surface. Exact mesh agreement is in test_route_terrain.
+		assert(result.position.y >= position.y - 0.02, "Road collision is below terrain at %s" % position)
 		checked += 1
 	assert(checked >= 10, "Should have actually checked several path points (got %d)" % checked)
 
