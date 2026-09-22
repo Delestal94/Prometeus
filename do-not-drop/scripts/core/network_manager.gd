@@ -24,7 +24,7 @@ extends Node
 enum Transport { AUTO, STEAM, ENET }
 
 const DEFAULT_PORT: int = 7777
-const MAX_PLAYERS: int = 5
+const MAX_PLAYERS: int = 8
 const HOST_ID: int = 1
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.

@@ -30,8 +30,8 @@ func _initialize() -> void:
 	_expect(announced.size() == 4, "Every roster change is announced (got %d)" % announced.size())
 	_expect(announced[-1] == [1, 33], "The announcement carries the current roster")
 
-	# The van seats five, so that's the cap the session advertises.
-	_expect(int(network.get(&"MAX_PLAYERS")) == 5, "The session caps at the five seats in the van")
+	# The enlarged crew van holds a driver plus seven passengers.
+	_expect(int(network.get(&"MAX_PLAYERS")) == 8, "The session caps at eight players")
 
 	# Transport picking: Steam when it's really usable, ENet otherwise.
 	# "Extension installed" and "Steam usable" are different things -- the
