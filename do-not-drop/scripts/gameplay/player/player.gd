@@ -60,7 +60,33 @@ var _nearby: Array[Node] = []
 var _last_prompt: String = ""
 var _highlighted: Node = null
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
-var _body_visual: MeshInstance3D = null
+## Rigged low-poly character (2026-09-22), replaces the old placeholder
+## capsule -- see assets/README.md "Personajes" for what the 5 baked clips
+## (Idle/Walk/Jump/PickUpPackage/Die) actually contain. Die isn't wired to
+## anything here: there's no player-death state in this game yet (packages
+## get ruined, not players), so it's just available on the AnimationPlayer
+## for whenever that changes instead of invented on the spot.
+const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
+const ANIM_IDLE: StringName = &"Idle"
+const ANIM_WALK: StringName = &"Walk"
+const ANIM_JUMP: StringName = &"Jump"
+const ANIM_PICKUP: StringName = &"PickUpPackage"
+## Slightly under the clips' real length (1.67s each) so the lock releases
+## right as the last frame settles, instead of holding an extra beat on the
+## final pose before movement can take over again.
+const JUMP_ANIM_LOCK_MS: int = 1500
+const PICKUP_ANIM_LOCK_MS: int = 1550
+var _body_visual: Node3D = null
+var _anim_player: AnimationPlayer = null
+## Replicated (see player.tscn) so every peer's own copy of this player's
+## AnimationPlayer plays the same clip -- movement/jump/pickup state is only
+## ever computed on the owning peer (is_local()), same authority split as
+## seat_node_path above.
+var anim_state: StringName = ANIM_IDLE
+## While in the future (Time.get_ticks_msec()), a one-shot clip (Jump,
+## PickUpPackage) is playing and the per-frame movement state (Idle/Walk)
+## must not stomp over it.
+var _anim_lock_until_msec: int = 0
 var _bob_time: float = 0.0
 var _bob_amount: float = 0.0
 var _interact_was_down: bool = false
@@ -97,34 +123,67 @@ func _ready() -> void:
 	_probe.area_exited.connect(_on_probe_exited)
 
 
-## A placeholder capsule matching the collision shape, so teammates actually
-## have someone to see at all -- until now only the viewmodel hands existed,
-## which are attached to this player's own camera and so only ever visible
-## to themselves. Colored per peer_id (see PLAYER_COLORS) doubles as the
-## simplest possible "who is that" cue. Own camera can see its own body too
-## (no per-camera render-layer split yet) -- a minor rough edge, acceptable
-## while everything here is still placeholder geometry.
+## The rigged low-poly character, so teammates actually have someone to see
+## at all -- until this, only the viewmodel hands existed, which are
+## attached to this player's own camera and so only ever visible to
+## themselves. Colored per peer_id (see PLAYER_COLORS) doubles as the
+## simplest possible "who is that" cue: the imported suit material gets
+## duplicated per instance (a surface override, not a mutation of the
+## shared glTF resource) before recoloring, so tinting one player's suit
+## never bleeds into every other instance of the same imported material.
+## Own camera can see its own body too (no per-camera render-layer split
+## yet) -- a minor rough edge, carried over unchanged from the placeholder.
 func _build_body() -> void:
 	var color: Color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.8
-	var mesh := MeshInstance3D.new()
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.32
-	capsule.height = 1.6
-	mesh.mesh = capsule
-	mesh.name = "BodyVisual"
-	mesh.layers = RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD
-	mesh.material_override = material
-	mesh.position = Vector3(0.0, 0.8, 0.0)
-	add_child(mesh)
-	_body_visual = mesh
+	var visual: Node3D = CHARACTER_SCENE.instantiate()
+	visual.name = "BodyVisual"
+	add_child(visual)
+	_body_visual = visual
+
+	var mesh_instance: MeshInstance3D = _find_mesh_instance(visual)
+	if mesh_instance != null:
+		mesh_instance.layers = RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD
+		var suit_material: Material = mesh_instance.mesh.surface_get_material(0)
+		if suit_material != null:
+			suit_material = suit_material.duplicate()
+			(suit_material as StandardMaterial3D).albedo_color = color
+			mesh_instance.set_surface_override_material(0, suit_material)
+
+	_anim_player = _find_animation_player(visual)
+	if _anim_player != null:
+		# The glTF importer doesn't carry Blender's "this clip loops" flag,
+		# so it's set here once instead of needing a manual editor step
+		# every time the source .blend is re-exported.
+		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK]:
+			if _anim_player.has_animation(loop_clip):
+				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
+		_anim_player.play(ANIM_IDLE)
+
 	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
 		var hand_material := StandardMaterial3D.new()
 		hand_material.albedo_color = color.lightened(0.3)
 		hand_material.roughness = 0.85
 		hand.material_override = hand_material
+
+
+func _find_mesh_instance(node: Node) -> MeshInstance3D:
+	if node is MeshInstance3D:
+		return node
+	for child: Node in node.get_children():
+		var found: MeshInstance3D = _find_mesh_instance(child)
+		if found != null:
+			return found
+	return null
+
+
+func _find_animation_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node
+	for child: Node in node.get_children():
+		var found: AnimationPlayer = _find_animation_player(child)
+		if found != null:
+			return found
+	return null
 
 
 func is_local() -> bool:
@@ -159,6 +218,12 @@ func _unhandled_input(event: InputEvent) -> void:
 ## not -- posing BodyVisual at the seat is pure presentation, so it doesn't
 ## need authority the way movement/input do.
 func _process(_delta: float) -> void:
+	# Runs for every peer's copy of this player, local or not -- anim_state
+	# is only ever written by the owning peer (see _update_movement_anim()
+	# and pick_up() below) and reaches everyone else through the
+	# MultiplayerSynchronizer, same as seat_node_path.
+	if _anim_player != null and _anim_player.current_animation != String(anim_state):
+		_anim_player.play(String(anim_state))
 	if seat_node_path.is_empty():
 		return
 	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
@@ -196,11 +261,17 @@ func _physics_process(delta: float) -> void:
 	if is_on_floor():
 		# Keep the body snapped to slopes when walking, but preserve a newly
 		# requested jump impulse instead of immediately overwriting it.
-		velocity.y = JUMP_VELOCITY if Input.is_action_just_pressed(&"jump") else -0.2
+		if Input.is_action_just_pressed(&"jump"):
+			velocity.y = JUMP_VELOCITY
+			_play_one_shot(ANIM_JUMP, JUMP_ANIM_LOCK_MS)
+		else:
+			velocity.y = -0.2
 	else:
 		velocity.y -= GRAVITY * delta
 	move_and_slide()
-	_apply_head_bob(delta, Vector2(velocity.x, velocity.z).length())
+	var ground_speed: float = Vector2(velocity.x, velocity.z).length()
+	_apply_head_bob(delta, ground_speed)
+	_update_movement_anim(ground_speed)
 	_apply_context_fov(delta)
 	if carried_package != null:
 		_update_carried_package()
@@ -251,6 +322,22 @@ func _apply_head_bob(delta: float, ground_speed: float) -> void:
 	# Always write the offset so it eases back to eye height after stopping or
 	# jumping; previously it could freeze at the final high/low bob position.
 	_camera.position.y = sin(_bob_time * TAU) * BOB_AMPLITUDE * _bob_amount
+
+
+## Idle/Walk while on foot, unless a one-shot (Jump, PickUpPackage) locked
+## anim_state a moment ago -- checked every physics frame but only actually
+## writes (and re-replicates) anim_state when the target state changes.
+func _update_movement_anim(ground_speed: float) -> void:
+	if Time.get_ticks_msec() < _anim_lock_until_msec:
+		return
+	var next_state: StringName = ANIM_WALK if (ground_speed > 0.3 and is_on_floor()) else ANIM_IDLE
+	if anim_state != next_state:
+		anim_state = next_state
+
+
+func _play_one_shot(clip: StringName, lock_ms: int) -> void:
+	anim_state = clip
+	_anim_lock_until_msec = Time.get_ticks_msec() + lock_ms
 
 
 func _apply_context_fov(delta: float) -> void:
@@ -377,7 +464,13 @@ func _on_probe_exited(area: Area3D) -> void:
 func pick_up(package_path: NodePath) -> void:
 	if not _from_host():
 		return
+	var was_empty: bool = carried_package == null
 	carried_package = get_node_or_null(package_path)
+	# Only the owning peer drives anim_state (see _update_movement_anim) --
+	# this RPC reaches every peer that can see the pickup, but the write
+	# below only matters, and only actually replicates, from is_local()'s copy.
+	if is_local() and was_empty and carried_package != null:
+		_play_one_shot(ANIM_PICKUP, PICKUP_ANIM_LOCK_MS)
 
 
 @rpc("any_peer", "call_local", "reliable")

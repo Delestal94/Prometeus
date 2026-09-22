@@ -34,7 +34,10 @@ func _initialize() -> void:
 	await process_frame
 
 	_expect(bool(player.get(&"visible")), "Still visible after boarding -- no more disappearing")
-	var body: MeshInstance3D = player.get_node(^"BodyVisual")
+	# Node3D, not MeshInstance3D: BodyVisual is now the rigged character
+	# scene's root (2026-09-22), a plain Node3D holding a Skeleton3D/mesh,
+	# not a bare mesh itself.
+	var body: Node3D = player.get_node(^"BodyVisual")
 	var offset: Vector3 = body.global_position - seat.global_position
 	_expect(offset.length() < 1.0 and offset.y < -0.2,
 		"BodyVisual sits at the seat, lower than the eye point (got offset %s)" % offset)
