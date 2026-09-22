@@ -9,7 +9,7 @@ func _initialize() -> void:
 	await process_frame
 	_expect_identity(level.get_node("World/Package"), Vector3(0.65, 0.65, 0.65), &"FragileGlassMarks")
 	_expect_identity(level.get_node("World/PackageNoisy"), Vector3(0.65, 0.65, 0.65), &"NoisyVentMarks")
-	_expect_identity(level.get_node("World/PackageBalance"), Vector3(0.42, 0.98, 0.42), &"BalanceCap")
+	_expect_identity(level.get_node("World/PackageBalance"), Vector3(0.42, 0.98, 0.42), &"BalanceSeal")
 	_expect_identity(level.get_node("World/PackageGrowingWeight"), Vector3(0.95, 0.42, 0.95), &"WeightBands")
 	if failures == 0:
 		print("PASS: every trap has a distinct package silhouette and visual mark")

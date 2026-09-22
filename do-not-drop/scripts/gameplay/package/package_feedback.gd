@@ -103,26 +103,18 @@ func _ready() -> void:
 func _apply_identity(package: Node) -> void:
 	var box_mesh := BoxMesh.new()
 	var shape_size := Vector3(0.65, 0.65, 0.65)
-	var status: String = "FRÁGIL\n↑ ↑"
-	var top_mark: String = "!"
-	var shipping_data: String = "PESO 4 kg\nTAM M · FRÁGIL\n↑ MANTENER ARRIBA"
+	var shipping_data: String = "4 kg · M\nFRÁGIL"
 	match _trap_id:
 		&"noisy":
-			status = "RUIDOSO\n♫"
-			top_mark = "•••"
-			shipping_data = "PESO 6 kg\nTAM M · VENTILADO\n⚠ NO SACUDIR"
+			shipping_data = "6 kg · M\nVENTILADO"
 			_add_vent_marks()
 		&"balance":
 			shape_size = Vector3(0.42, 0.98, 0.42)
-			status = "EQUILIBRIO\n↕"
-			top_mark = "△"
-			shipping_data = "PESO 3 kg\nTAM ALTO · EQUILIBRIO\n↕ VERTICAL"
-			_add_balance_cap()
+			shipping_data = "3 kg · ALTO\nVERTICAL"
+			_add_balance_seal()
 		&"growing_weight":
 			shape_size = Vector3(0.95, 0.42, 0.95)
-			status = "PESO\n↑"
-			top_mark = "■"
-			shipping_data = "PESO VARIABLE\nTAM XL · DENSO\n⚠ DOS PERSONAS"
+			shipping_data = "? kg · XL\nDENSO"
 			_add_weight_bands()
 		_:
 			_add_fragile_marks()
@@ -134,10 +126,10 @@ func _apply_identity(package: Node) -> void:
 		var shape := BoxShape3D.new()
 		shape.size = shape_size
 		collider.shape = shape
-	_label.text = status
+	_label.visible = false
 	var top: Label3D = package.get_node_or_null(^"TopMark") as Label3D
 	if top != null:
-		top.text = top_mark
+		top.visible = false
 	_add_shipping_label(package, shipping_data)
 
 
@@ -153,11 +145,14 @@ func _add_shipping_label(package: Node, shipping_data: String) -> void:
 	shape.size = Vector3(0.46, 0.30, 0.02)
 	collision.shape = shape
 	_shipping_label.add_child(collision)
+	var paper := _box_piece(Vector3(0.46, 0.25, 0.012), Color("efe2bd"))
+	paper.position = Vector3(0.0, 0.0, 0.006)
+	_shipping_label.add_child(paper)
 	var text := Label3D.new()
 	text.text = shipping_data
-	text.font_size = 29
-	text.pixel_size = 0.0025
-	text.outline_size = 2
+	text.font_size = 17
+	text.pixel_size = 0.0015
+	text.outline_size = 1
 	text.modulate = INK
 	text.position = Vector3(0.0, 0.0, 0.014)
 	_shipping_label.add_child(text)
@@ -188,10 +183,10 @@ func _add_vent_marks() -> void:
 		vents.add_child(hole)
 
 
-func _add_balance_cap() -> void:
-	var cap := _box_piece(Vector3(0.5, 0.08, 0.5), CARD_BOARD)
-	cap.position.y = 0.51
-	_identity_root(&"BalanceCap").add_child(cap)
+func _add_balance_seal() -> void:
+	var seal := _box_piece(Vector3(0.13, 0.13, 0.025), DANGER)
+	seal.position = Vector3(0.0, 0.0, 0.336)
+	_identity_root(&"BalanceSeal").add_child(seal)
 
 
 func _add_weight_bands() -> void:
