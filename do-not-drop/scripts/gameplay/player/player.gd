@@ -63,6 +63,7 @@ const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 var _body_visual: MeshInstance3D = null
 var _bob_time: float = 0.0
 var _bob_amount: float = 0.0
+var _interact_was_down: bool = false
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -139,7 +140,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_send_ping()
 		return
 	if _seated:
-		if event.is_action_pressed(&"interact"):
+		if _is_interact_event(event):
 			leave_seat()
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -147,7 +148,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"look_center"):
 		_pitch = 0.0
 		_head.rotation.x = 0.0
-	elif event.is_action_pressed(&"interact"):
+	elif _is_interact_event(event):
 		_try_interact()
 
 
@@ -178,6 +179,7 @@ func _physics_process(delta: float) -> void:
 		if tended_package != null:
 			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
 		return
+	_poll_interact()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	_apply_look(stick * stick_sensitivity * delta)
 	# get_vector's y is -1 for forward and +1 for back;
@@ -202,6 +204,24 @@ func _physics_process(delta: float) -> void:
 	var target: Node = _closest_interactable()
 	_publish_prompt(str(target.call(&"get_prompt")) if target != null else "")
 	_update_highlight(target)
+
+
+func _is_interact_event(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"interact"):
+		return true
+	if event is InputEventKey and event.pressed and not event.echo:
+		return event.keycode == KEY_E or event.physical_keycode == KEY_E
+	return false
+
+
+func _poll_interact() -> void:
+	# Keeps interaction responsive even if another Control consumes the input
+	# event first. The explicit E fallback also supports keyboards that report
+	# a logical keycode instead of the physical layout saved in project.godot.
+	var is_down: bool = Input.is_action_pressed(&"interact") or Input.is_key_pressed(KEY_E)
+	if is_down and not _interact_was_down:
+		_try_interact()
+	_interact_was_down = is_down
 
 
 func _apply_look(motion: Vector2) -> void:
