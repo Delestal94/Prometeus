@@ -42,6 +42,15 @@ signal horn_honked(peer_id: int)
 ## interaction_prompt_changed, so a plain emit() is enough: nobody else's
 ## screen should flash because of what happens on this one client.
 signal quick_fade_requested(seconds: float)
+signal team_money_changed(amount: int)
+signal merit_changed(peer_id: int, total: int)
+signal card_changed(peer_id: int, card: int)
+signal shop_opened(offers: Dictionary)
+signal shop_vote_changed(peer_id: int, offer_id: StringName)
+signal shop_resolved(offer_id: StringName, offer: Dictionary)
+signal route_event_started(event_id: StringName, event: Dictionary)
+signal route_event_updated(event_id: StringName, event: Dictionary)
+signal route_event_resolved(event_id: StringName, success: bool, peer_id: int)
 
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts

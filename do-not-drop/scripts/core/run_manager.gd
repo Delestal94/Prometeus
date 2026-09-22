@@ -54,6 +54,7 @@ func start_run() -> void:
 		return
 	is_running = true
 	EventBus.run_started.emit(&"test_route", [1])
+	RouteEventManager.begin_random()
 
 
 func finish_run(delivered: bool, reason: String = "") -> void:
@@ -95,6 +96,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"best_score": best_score(),
 	}
 	print("[Run] ", results)
+	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 

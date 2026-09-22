@@ -13,6 +13,7 @@ var root: Control
 var dashboard: VBoxContainer
 var speed_label: Label
 var time_label: Label
+var economy_label: Label
 var distance_label: Label
 var section_label: Label
 var cargo_rows_box: VBoxContainer
@@ -56,6 +57,11 @@ func _ready() -> void:
 	EventBus.package_hint_changed.connect(_on_package_hint)
 	EventBus.ping_sent.connect(_on_ping)
 	EventBus.quick_fade_requested.connect(_on_quick_fade_requested)
+	EventBus.team_money_changed.connect(_on_team_money_changed)
+	EventBus.merit_changed.connect(_on_merit_changed)
+	EventBus.card_changed.connect(_on_card_changed)
+	EventBus.route_event_started.connect(_on_route_event_started)
+	EventBus.route_event_resolved.connect(_on_route_event_resolved)
 	_show_start()
 
 
@@ -86,6 +92,7 @@ func _build_ui() -> void:
 	var metrics := _panel(top, Vector2(190, 0))
 	speed_label = _label(metrics, "00 km/h", 28, PAPER)
 	time_label = _label(metrics, "TIEMPO   00:00", 14, MUTED)
+	economy_label = _label(metrics, "EQUIPO  $%d" % CrewProgression.team_money, 14, MINT)
 	var space := Control.new()
 	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -325,6 +332,30 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	action_button.release_focus()
 	interaction_label.text = ""
 	hint_label.text = DRIVE_HINT
+
+
+func _on_team_money_changed(amount: int) -> void:
+	economy_label.text = "EQUIPO  $%d" % amount
+
+
+func _on_merit_changed(peer_id: int, total: int) -> void:
+	if peer_id == NetworkManager.local_id():
+		ping_label.text = "★ Mérito +  ·  %d" % total
+		ping_seconds_left = PING_DISPLAY_SECONDS
+
+
+func _on_card_changed(peer_id: int, card: int) -> void:
+	if peer_id == NetworkManager.local_id() and card >= 0:
+		ping_label.text = "🃏 Carta obtenida"
+		ping_seconds_left = PING_DISPLAY_SECONDS
+
+
+func _on_route_event_started(_event_id: StringName, event: Dictionary) -> void:
+	interaction_label.text = "[ EVENTO ]  %s — %s" % [event.get("title", "Evento"), event.get("prompt", "")]
+
+
+func _on_route_event_resolved(_event_id: StringName, success: bool, _peer_id: int) -> void:
+	interaction_label.text = "Evento resuelto" if success else "Evento fallido"
 
 
 func _on_speed(speed: float) -> void:

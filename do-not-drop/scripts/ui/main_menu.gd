@@ -90,7 +90,7 @@ func _build_ui() -> void:
 	panel.add_child(column)
 
 	_label(column, "DO NOT DROP", 36, PAPER)
-	_label(column, "Delivery cooperativo · hasta 5 jugadores", 14, MUTED)
+	_label(column, "Delivery cooperativo · hasta 8 jugadores", 14, MUTED)
 	_spacer(column, 10)
 
 	_button(column, "Jugar solo", true).pressed.connect(_play_solo)

@@ -20,6 +20,9 @@ config/icon="res://icon.svg"
 EventBus="*res://scripts/core/event_bus.gd"
 NetworkManager="*res://scripts/core/network_manager.gd"
 RunManager="*res://scripts/core/run_manager.gd"
+CrewProgression="*res://scripts/core/crew_progression.gd"
+ShopVoteManager="*res://scripts/core/shop_vote_manager.gd"
+RouteEventManager="*res://scripts/core/route_event_manager.gd"
 
 [display]
 
