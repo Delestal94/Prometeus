@@ -391,6 +391,7 @@ func leave_seat() -> void:
 	if not _seated:
 		return
 	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
+	_release_seat_occupant(seat)
 	if seat != null:
 		global_position = seat.global_position + seat.global_basis.z * 0.45
 	var seat_camera: Node = get_node_or_null(_seat_camera_path)
@@ -403,6 +404,19 @@ func leave_seat() -> void:
 	collision_layer = 8
 	collision_mask = 7
 	_camera.current = true
+
+
+func _release_seat_occupant(seat: Node3D) -> void:
+	if seat == null:
+		return
+	var interaction: Node = seat.get_node_or_null(^"InteractionArea")
+	if interaction == null or not interaction.has_method(&"release_occupant"):
+		return
+	var peer_id: int = get_multiplayer_authority()
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		interaction.rpc_id(1, &"release_occupant", peer_id)
+	else:
+		interaction.call(&"release_occupant", peer_id)
 
 
 func _from_host() -> bool:

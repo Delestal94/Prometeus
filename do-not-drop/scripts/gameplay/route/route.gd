@@ -193,11 +193,10 @@ func _build_houses() -> void:
 		var house := DeliveryHouse.new()
 		house.name = "House%d" % index
 		house.visual_variant = index
-		# DeliveryHouse's entrance and doorbell are on its local +Z. Rotate
-		# that face toward the asphalt rather than along the road, so stops read
-		# as homes addressing the route and not abandoned side-facing props.
+		# The house model's entrance is on local -Z. Rotate that face toward the
+		# asphalt rather than along the road, so stops address the route.
 		house.position = Vector3(side * 10.5, 0.0, z)
-		house.rotation.y = -side * PI * 0.5
+		house.rotation.y = side * PI * 0.5
 		add_child(house)
 		houses.append(house)
 		_build_house_path(index, side, z)

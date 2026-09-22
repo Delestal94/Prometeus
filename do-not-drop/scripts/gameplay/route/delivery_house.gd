@@ -107,7 +107,10 @@ func _build_house() -> void:
 	resident_mesh.radius = 0.35
 	resident_mesh.height = 1.3
 	_resident.mesh = resident_mesh
-	_resident.position = Vector3(0.0, 0.85, 2.7)
+	# The imported house fronts face local -Z (the same direction set by
+	# Route._build_houses()), so keep the resident and interaction point on
+	# the actual porch instead of behind the building.
+	_resident.position = Vector3(0.0, 0.85, -2.7)
 	_resident.material_override = _material(Color("d9b48f"))
 	_resident.visible = false
 	add_child(_resident)
@@ -115,7 +118,7 @@ func _build_house() -> void:
 
 	doorbell = DoorbellPoint.new()
 	doorbell.name = "Doorbell"
-	doorbell.position = Vector3(0.7, 1.1, 2.6)
+	doorbell.position = Vector3(-0.7, 1.1, -2.6)
 	var bell_shape := SphereShape3D.new()
 	bell_shape.radius = 1.6
 	var bell_collider := CollisionShape3D.new()

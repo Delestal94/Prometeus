@@ -142,3 +142,24 @@ func interact(player: Node) -> void:
 		if package != null and player.has_method(&"tend_package"):
 			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 	interacted.emit(player)
+
+
+## The player owns the local "leave seat" gesture, but driving state is host
+## authoritative. Clearing it here prevents the same WASD input from being
+## read by both the on-foot controller and the van after the driver exits.
+@rpc("any_peer", "call_local", "reliable")
+func release_occupant(peer_id: int) -> void:
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != 0 and sender_id != peer_id:
+		return
+	if occupant != null and int(occupant.get_multiplayer_authority()) == peer_id:
+		occupant = null
+	if role != &"driver":
+		return
+	var vehicle: Node = get_node_or_null(vehicle_path)
+	if vehicle == null or int(vehicle.get(&"driver_peer_id")) != peer_id:
+		return
+	vehicle.set(&"driver_peer_id", 0)
+	vehicle.set(&"controls_enabled", false)
+	if vehicle.has_method(&"set_controls"):
+		vehicle.call(&"set_controls", 0.0, 0.0, true)

@@ -58,6 +58,7 @@ func _initialize() -> void:
 	_expect(NodePath(player.get(&"seat_node_path")).is_empty(), "Leaving clears the occupied seat")
 	_expect(int(player.get(&"collision_layer")) == 8, "Leaving restores the player's physical collider")
 	_expect(bool(camera.get(&"current")) == false, "Leaving deactivates the seat camera")
+	_expect(not bool(vehicle.get(&"controls_enabled")) and int(vehicle.get(&"driver_peer_id")) == 0, "Leaving the driver seat revokes vehicle controls")
 
 	player.free()
 	package.free()
