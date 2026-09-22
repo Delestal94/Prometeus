@@ -1,0 +1,32 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/environment/tx_env_metal_256.png" id="1_metal"]
+
+[sub_resource type="StandardMaterial3D" id="Material_metal"]
+albedo_texture = ExtResource("1_metal")
+metallic = 0.3
+roughness = 0.68
+
+[sub_resource type="CylinderMesh" id="Mesh_bin"]
+top_radius = 0.33
+bottom_radius = 0.28
+height = 0.72
+radial_segments = 10
+material = SubResource("Material_metal")
+
+[sub_resource type="CylinderMesh" id="Mesh_lid"]
+top_radius = 0.36
+bottom_radius = 0.36
+height = 0.08
+radial_segments = 10
+material = SubResource("Material_metal")
+
+[node name="SM_EnvTrashBin" type="Node3D"]
+
+[node name="Bin" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.36, 0)
+mesh = SubResource("Mesh_bin")
+
+[node name="Lid" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.74, 0)
+mesh = SubResource("Mesh_lid")

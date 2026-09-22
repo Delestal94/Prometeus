@@ -18,10 +18,16 @@ const WALL := Color("9c8a6f")
 const ROOF := Color("6b4f3a")
 const DOOR := Color("46342a")
 const PORCH := Color("7a8a7f")
+const HOUSE_VISUALS: Array[String] = [
+	"res://assets/models/architecture/sm_arch_delivery_house_cottage.glb",
+	"res://assets/models/architecture/sm_arch_delivery_house_cabin.glb",
+	"res://assets/models/architecture/sm_arch_delivery_house_bungalow.glb",
+]
 
 signal resolved(outcome: StringName)  # &"delivered_ok", &"delivered_ruined", or &"missed"
 
 var delivered: bool = false
+var visual_variant: int = 0
 var doorbell: DoorbellPoint
 var _resident: MeshInstance3D
 var _bell_player: AudioStreamPlayer3D
@@ -81,43 +87,17 @@ func _build_house() -> void:
 	body.collision_layer = 1
 	body.collision_mask = 6
 	add_child(body)
-	var wall_mesh := MeshInstance3D.new()
-	var wall_box := BoxMesh.new()
-	wall_box.size = Vector3(6.0, 3.2, 5.0)
-	wall_mesh.mesh = wall_box
-	wall_mesh.position = Vector3(0.0, 1.6, 0.0)
-	wall_mesh.material_override = _material(WALL)
-	body.add_child(wall_mesh)
 	var collider := CollisionShape3D.new()
 	var box_shape := BoxShape3D.new()
-	box_shape.size = wall_box.size
-	collider.position = wall_mesh.position
+	box_shape.size = Vector3(6.0, 3.2, 5.0)
+	collider.position = Vector3(0.0, 1.6, 0.0)
 	collider.shape = box_shape
 	body.add_child(collider)
-
-	var roof_mesh := MeshInstance3D.new()
-	var roof_box := BoxMesh.new()
-	roof_box.size = Vector3(6.8, 0.6, 5.6)
-	roof_mesh.mesh = roof_box
-	roof_mesh.position = Vector3(0.0, 3.5, 0.0)
-	roof_mesh.material_override = _material(ROOF)
-	add_child(roof_mesh)
-
-	var door_mesh := MeshInstance3D.new()
-	var door_box := BoxMesh.new()
-	door_box.size = Vector3(1.1, 2.1, 0.08)
-	door_mesh.mesh = door_box
-	door_mesh.position = Vector3(0.0, 1.05, 2.54)
-	door_mesh.material_override = _material(DOOR)
-	add_child(door_mesh)
-
-	var porch_mesh := MeshInstance3D.new()
-	var porch_box := BoxMesh.new()
-	porch_box.size = Vector3(3.0, 0.1, 2.0)
-	porch_mesh.mesh = porch_box
-	porch_mesh.position = Vector3(0.0, 0.05, 3.5)
-	porch_mesh.material_override = _material(PORCH)
-	add_child(porch_mesh)
+	var visual := load(HOUSE_VISUALS[posmod(visual_variant, HOUSE_VISUALS.size())]) as PackedScene
+	if visual != null:
+		var visual_instance := visual.instantiate()
+		visual_instance.name = "HouseVisual"
+		add_child(visual_instance)
 
 	# The resident (placeholder, no art pipeline yet) stays hidden until
 	# someone actually rings -- popping out is the whole point of the joke.

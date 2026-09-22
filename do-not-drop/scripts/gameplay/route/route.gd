@@ -53,6 +53,7 @@ func _ready() -> void:
 	_build_houses()
 	_build_goal()
 	_build_landmarks()
+	_build_forest()
 	_build_ambience()
 
 
@@ -191,6 +192,7 @@ func _build_houses() -> void:
 		var side: float = -1.0 if index % 2 == 0 else 1.0
 		var house := DeliveryHouse.new()
 		house.name = "House%d" % index
+		house.visual_variant = index
 		house.position = Vector3(side * 9.0, 0.0, z)
 		house.rotation.y = PI if side < 0.0 else 0.0
 		add_child(house)
@@ -227,6 +229,59 @@ func _build_landmarks() -> void:
 		var side: float = -1.0 if index % 2 == 0 else 1.0
 		var height: float = 2.5 + float(index % 3)
 		_box("LandscapeBlock", Vector3(6.0 + float(index % 3), height, 7.0), Vector3(side * (19.0 + float(index % 4) * 4.0), height * 0.5 - 0.3, -18.0 - float(index) * 23.0), Color("839184"))
+
+
+## Deterministic forest dressing for the first map. The GLB models deliberately
+## have no collision, preserving the established route physics and readability.
+func _build_forest() -> void:
+	var tree_paths: Array[String] = [
+		"res://assets/models/environment/forest/sm_env_forest_oak.glb",
+		"res://assets/models/environment/forest/sm_env_forest_birch.glb",
+		"res://assets/models/environment/forest/sm_env_forest_pine_tall.glb",
+		"res://assets/models/environment/forest/sm_env_forest_maple.glb",
+		"res://assets/models/environment/forest/sm_env_forest_dead.glb",
+		"res://assets/models/environment/forest/sm_env_forest_pine_sapling.glb",
+	]
+	var ground_paths: Array[String] = [
+		"res://assets/models/environment/forest/sm_env_forest_bush_round.glb",
+		"res://assets/models/environment/forest/sm_env_forest_fern.glb",
+		"res://assets/models/environment/forest/sm_env_forest_grass_clump.glb",
+		"res://assets/models/environment/forest/sm_env_forest_wildflower.glb",
+		"res://assets/models/environment/forest/sm_env_forest_mushroom.glb",
+		"res://assets/models/environment/forest/sm_env_forest_fallen_log.glb",
+		"res://assets/models/environment/forest/sm_env_forest_rock.glb",
+	]
+	var forest := Node3D.new()
+	forest.name = "ForestDressing"
+	add_child(forest)
+	for index: int in range(68):
+		var side: float = -1.0 if index % 2 == 0 else 1.0
+		var tree := _instantiate_dressing(tree_paths[index % tree_paths.size()])
+		if tree == null:
+			continue
+		var row: int = index / 2
+		tree.position = Vector3(side * (15.0 + float((index * 7) % 32)), 0.0, -6.0 - float(row) * 8.5)
+		tree.rotation.y = deg_to_rad(float((index * 37) % 360))
+		var tree_scale: float = 0.72 + float((index * 13) % 45) / 100.0
+		tree.scale = Vector3.ONE * tree_scale
+		forest.add_child(tree)
+	for index: int in range(96):
+		var side: float = -1.0 if index % 2 == 0 else 1.0
+		var plant := _instantiate_dressing(ground_paths[index % ground_paths.size()])
+		if plant == null:
+			continue
+		plant.position = Vector3(side * (8.0 + float((index * 11) % 24)), 0.0, -4.0 - float((index * 17) % int(route_length - 8.0)))
+		plant.rotation.y = deg_to_rad(float((index * 53) % 360))
+		var plant_scale: float = 0.65 + float((index * 19) % 55) / 100.0
+		plant.scale = Vector3.ONE * plant_scale
+		forest.add_child(plant)
+
+
+func _instantiate_dressing(path: String) -> Node3D:
+	var packed := load(path) as PackedScene
+	if packed == null:
+		return null
+	return packed.instantiate() as Node3D
 
 
 ## World ambience (item #45): a quiet, looping wind bed. Non-positional

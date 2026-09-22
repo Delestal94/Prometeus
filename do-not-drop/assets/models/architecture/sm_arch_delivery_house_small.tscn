@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://csj63m03p6dla"]
+
+[ext_resource type="Texture2D" uid="uid://ciq2de3gfrvyf" path="res://assets/textures/architecture/tx_arch_plaster_256.png" id="1_plaster"]
+[ext_resource type="Texture2D" uid="uid://cs6taiy8353lb" path="res://assets/textures/architecture/tx_arch_roof_256.png" id="2_roof"]
+[ext_resource type="Texture2D" uid="uid://dpyn4l2c7yk8c" path="res://assets/textures/environment/tx_env_wood_256.png" id="3_wood"]
+
+[sub_resource type="StandardMaterial3D" id="Material_plaster"]
+albedo_texture = ExtResource("1_plaster")
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="Mesh_walls"]
+material = SubResource("Material_plaster")
+size = Vector3(5.2, 3.2, 4.2)
+
+[sub_resource type="StandardMaterial3D" id="Material_roof"]
+albedo_texture = ExtResource("2_roof")
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="Mesh_roof"]
+material = SubResource("Material_roof")
+size = Vector3(5.8, 0.35, 4.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_wood"]
+albedo_texture = ExtResource("3_wood")
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_door"]
+material = SubResource("Material_wood")
+size = Vector3(1.05, 2.05, 0.12)
+
+[sub_resource type="BoxMesh" id="Mesh_window"]
+material = SubResource("Material_roof")
+size = Vector3(0.95, 0.85, 0.08)
+
+[node name="SM_ArchDeliveryHouseSmall" type="Node3D" unique_id=309665862]
+
+[node name="Walls" type="MeshInstance3D" parent="." unique_id=627504018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+mesh = SubResource("Mesh_walls")
+
+[node name="Roof" type="MeshInstance3D" parent="." unique_id=1909106988]
+transform = Transform3D(0.99026805, -0.1391731, 0, 0.1391731, 0.99026805, 0, 0, 0, 1, 0, 3.38, 0)
+mesh = SubResource("Mesh_roof")
+
+[node name="Door" type="MeshInstance3D" parent="." unique_id=1946824198]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.025, 2.16)
+mesh = SubResource("Mesh_door")
+
+[node name="WindowLeft" type="MeshInstance3D" parent="." unique_id=2112458331]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 1.9, 2.13)
+mesh = SubResource("Mesh_window")
+
+[node name="WindowRight" type="MeshInstance3D" parent="." unique_id=1713955664]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 1.9, 2.13)
+mesh = SubResource("Mesh_window")

@@ -1,0 +1,46 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/environment/tx_env_wood_256.png" id="1_wood"]
+[ext_resource type="Texture2D" path="res://assets/textures/environment/tx_env_metal_256.png" id="2_metal"]
+
+[sub_resource type="StandardMaterial3D" id="Material_wood"]
+albedo_texture = ExtResource("1_wood")
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Material_metal"]
+albedo_texture = ExtResource("2_metal")
+metallic = 0.35
+roughness = 0.7
+
+[sub_resource type="CylinderMesh" id="Mesh_pole"]
+top_radius = 0.12
+bottom_radius = 0.16
+height = 6.5
+material = SubResource("Material_wood")
+
+[sub_resource type="BoxMesh" id="Mesh_crossbar"]
+size = Vector3(2.5, 0.15, 0.15)
+material = SubResource("Material_metal")
+
+[sub_resource type="SphereMesh" id="Mesh_insulator"]
+radius = 0.14
+height = 0.28
+material = SubResource("Material_metal")
+
+[node name="SM_EnvUtilityPole" type="Node3D"]
+
+[node name="Pole" type="MeshInstance3D" parent="."]
+position = Vector3(0, 3.25, 0)
+mesh = SubResource("Mesh_pole")
+
+[node name="Crossbar" type="MeshInstance3D" parent="."]
+position = Vector3(0, 6.05, 0)
+mesh = SubResource("Mesh_crossbar")
+
+[node name="InsulatorLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-0.9, 6.23, 0)
+mesh = SubResource("Mesh_insulator")
+
+[node name="InsulatorRight" type="MeshInstance3D" parent="."]
+position = Vector3(0.9, 6.23, 0)
+mesh = SubResource("Mesh_insulator")

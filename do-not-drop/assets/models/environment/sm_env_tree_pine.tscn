@@ -1,0 +1,46 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/environment/tx_env_foliage_256.png" id="1_foliage"]
+[ext_resource type="Texture2D" path="res://assets/textures/environment/tx_env_wood_256.png" id="2_wood"]
+
+[sub_resource type="StandardMaterial3D" id="Material_foliage"]
+albedo_texture = ExtResource("1_foliage")
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="Material_wood"]
+albedo_texture = ExtResource("2_wood")
+roughness = 0.9
+
+[sub_resource type="CylinderMesh" id="Mesh_trunk"]
+top_radius = 0.16
+bottom_radius = 0.24
+height = 2.4
+material = SubResource("Material_wood")
+
+[sub_resource type="CylinderMesh" id="Mesh_foliage_low"]
+top_radius = 0.12
+bottom_radius = 1.15
+height = 2.1
+radial_segments = 8
+material = SubResource("Material_foliage")
+
+[sub_resource type="CylinderMesh" id="Mesh_foliage_high"]
+top_radius = 0.05
+bottom_radius = 0.85
+height = 1.9
+radial_segments = 8
+material = SubResource("Material_foliage")
+
+[node name="SM_EnvTreePine" type="Node3D"]
+
+[node name="Trunk" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.2, 0)
+mesh = SubResource("Mesh_trunk")
+
+[node name="FoliageLow" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.25, 0)
+mesh = SubResource("Mesh_foliage_low")
+
+[node name="FoliageHigh" type="MeshInstance3D" parent="."]
+position = Vector3(0, 3.45, 0)
+mesh = SubResource("Mesh_foliage_high")

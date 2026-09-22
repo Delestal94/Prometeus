@@ -151,10 +151,6 @@ dev_camera_toggle={
 3d_physics/layer_5="interaction_area"
 3d_physics/layer_6="route_trigger"
 
-[audio]
-
-buses/default_bus_layout="res://default_bus_layout.tres"
-
 [physics]
 
 3d/physics_engine="Jolt Physics"
