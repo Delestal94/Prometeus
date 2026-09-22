@@ -296,7 +296,7 @@ func _primary_action() -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			section_label.text = "PREPARACIÓN"
 			distance_label.text = "Cargá el paquete y tomá el volante"
-			hint_label.text = "WASD / stick izquierdo caminar · Espacio / X saltar · Mouse / stick derecho mirar · E / A interactuar"
+			hint_label.text = "WASD / stick izquierdo caminar · Espacio / X saltar · Mouse / stick derecho mirar · E / A interactuar · Q soltar paquete"
 		"pause": EventBus.pause_requested.emit()
 		"results": EventBus.restart_requested.emit()
 

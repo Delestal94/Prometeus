@@ -361,6 +361,26 @@ position = Vector3(0.34, 0.63, 3.75)
 material_override = SubResource("Material_dark")
 mesh = SubResource("Mesh_cargo_shelf_lip")
 
+[node name="LeftShelfPackageMount" type="Marker3D" parent="CargoBay"]
+position = Vector3(-0.65, 0.72, 3.15)
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftShelfPackageMount" groups=["package_mount"]]
+script = ExtResource("5_mount")
+prompt = "Guardar paquete en anaquel"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftShelfPackageMount/InteractionArea"]
+shape = SubResource("Shape_seat_interact_mount")
+
+[node name="RightShelfPackageMount" type="Marker3D" parent="CargoBay"]
+position = Vector3(0.65, 0.72, 3.15)
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RightShelfPackageMount" groups=["package_mount"]]
+script = ExtResource("5_mount")
+prompt = "Guardar paquete en anaquel"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightShelfPackageMount/InteractionArea"]
+shape = SubResource("Shape_seat_interact_mount")
+
 
 [node name="ShelfPhysics" type="StaticBody3D" parent="CargoBay"]
 collision_layer = 2

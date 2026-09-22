@@ -139,6 +139,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_ping"):
 		_send_ping()
 		return
+	if _is_drop_event(event):
+		_drop_carried()
+		return
 	if _seated:
 		if _is_interact_event(event):
 			leave_seat()
@@ -212,6 +215,10 @@ func _is_interact_event(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
 		return event.keycode == KEY_E or event.physical_keycode == KEY_E
 	return false
+
+
+func _is_drop_event(event: InputEvent) -> bool:
+	return event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_Q or event.physical_keycode == KEY_Q)
 
 
 func _poll_interact() -> void:
@@ -324,6 +331,15 @@ func _try_interact() -> void:
 		target.rpc_id(1, &"request_interact")
 	else:
 		target.call(&"interact", self)
+
+
+func _drop_carried() -> void:
+	if carried_package == null:
+		return
+	var drop_position: Vector3 = global_position + (-global_basis.z * 0.8) + Vector3.UP * 0.35
+	var drop_transform := Transform3D(global_basis, drop_position)
+	carried_package.rpc_id(1, &"request_drop", drop_transform)
+	carried_package = null
 
 
 func _closest_interactable() -> Node:

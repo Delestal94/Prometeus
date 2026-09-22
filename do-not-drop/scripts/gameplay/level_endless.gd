@@ -122,7 +122,7 @@ func start_debug_delivery() -> void:
 	if player == null:
 		return
 	if _loaded_count == 0 and not packages.is_empty():
-		var mount: Node = get_tree().get_first_node_in_group(&"package_mount")
+		var mount: Node = vehicle.get_node_or_null(^"CargoBay/LeftSeat1PackageMount/InteractionArea")
 		player.call(&"pick_up", packages[0].get_path())
 		mount.call(&"interact", player)
 	if not _driver_seated:
