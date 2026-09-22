@@ -11,10 +11,10 @@
 [ext_resource type="Resource" path="res://data/traps/noisy.tres" id="9_noisy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
-sky_top_color = Color(0.28, 0.46, 0.53, 1)
-sky_horizon_color = Color(0.72, 0.8, 0.79, 1)
-ground_bottom_color = Color(0.24, 0.32, 0.28, 1)
-ground_horizon_color = Color(0.72, 0.8, 0.79, 1)
+sky_top_color = Color(0.11, 0.2, 0.2, 1)
+sky_horizon_color = Color(0.29, 0.39, 0.35, 1)
+ground_bottom_color = Color(0.07, 0.12, 0.09, 1)
+ground_horizon_color = Color(0.25, 0.34, 0.29, 1)
 
 [sub_resource type="Sky" id="Sky"]
 sky_material = SubResource("Sky_material")
@@ -23,13 +23,14 @@ sky_material = SubResource("Sky_material")
 background_mode = 2
 sky = SubResource("Sky")
 ambient_light_source = 3
-ambient_light_color = Color(0.76, 0.86, 0.9, 1)
-ambient_light_energy = 0.65
+ambient_light_color = Color(0.39, 0.53, 0.46, 1)
+ambient_light_energy = 0.34
 tonemap_mode = 2
+tonemap_exposure = 0.82
 fog_enabled = true
-fog_light_color = Color(0.72, 0.8, 0.79, 1)
-fog_density = 0.006
-fog_sky_affect = 0.0
+fog_light_color = Color(0.23, 0.33, 0.28, 1)
+fog_density = 0.018
+fog_sky_affect = 0.55
 
 [node name="DeliveryPrototype" type="Node3D"]
 script = ExtResource("1_level")
@@ -64,11 +65,11 @@ _spawnable_scenes = PackedStringArray("res://scenes/gameplay/player/player.tscn"
 spawn_path = NodePath("..")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-48, -28, 0)
-light_color = Color(1, 0.93, 0.8, 1)
-light_energy = 1.2
+rotation_degrees = Vector3(-52, -32, 0)
+light_color = Color(0.72, 0.82, 0.67, 1)
+light_energy = 0.82
 shadow_enabled = true
-directional_shadow_max_distance = 100.0
+directional_shadow_max_distance = 140.0
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment")

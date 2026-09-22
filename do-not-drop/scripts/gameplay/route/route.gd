@@ -193,13 +193,23 @@ func _build_houses() -> void:
 		var house := DeliveryHouse.new()
 		house.name = "House%d" % index
 		house.visual_variant = index
-		house.position = Vector3(side * 9.0, 0.0, z)
-		house.rotation.y = PI if side < 0.0 else 0.0
+		# DeliveryHouse's entrance and doorbell are on its local +Z. Rotate
+		# that face toward the asphalt rather than along the road, so stops read
+		# as homes addressing the route and not abandoned side-facing props.
+		house.position = Vector3(side * 10.5, 0.0, z)
+		house.rotation.y = -side * PI * 0.5
 		add_child(house)
 		houses.append(house)
+		_build_house_path(index, side, z)
 		var captured_index: int = index
 		house.resolved.connect(func(outcome: StringName) -> void: house_resolved.emit(captured_index, outcome))
-		_label("HouseNumber%d" % index, "CASA %d" % (index + 1), Vector3(side * 9.0, 4.0, z + 2.6), 0.01, TEAL)
+		_label("HouseNumber%d" % index, "CASA %d" % (index + 1), Vector3(side * 10.5, 4.0, z + 2.6), 0.01, TEAL)
+
+
+## A narrow worn path makes each stop feel connected to the road. It stops
+## at the shoulder rather than widening the driving lane or blocking traffic.
+func _build_house_path(index: int, side: float, z: float) -> void:
+	_box("HousePath%d" % index, Vector3(4.0, 0.025, 1.45), Vector3(side * 7.9, 0.025, z), Color("716b54"))
 
 
 func _build_goal() -> void:
@@ -254,23 +264,35 @@ func _build_forest() -> void:
 	var forest := Node3D.new()
 	forest.name = "ForestDressing"
 	add_child(forest)
-	for index: int in range(68):
-		var side: float = -1.0 if index % 2 == 0 else 1.0
-		var tree := _instantiate_dressing(tree_paths[index % tree_paths.size()])
-		if tree == null:
-			continue
-		var row: int = index / 2
-		tree.position = Vector3(side * (15.0 + float((index * 7) % 32)), 0.0, -6.0 - float(row) * 8.5)
-		tree.rotation.y = deg_to_rad(float((index * 37) % 360))
-		var tree_scale: float = 0.72 + float((index * 13) % 45) / 100.0
-		tree.scale = Vector3.ONE * tree_scale
-		forest.add_child(tree)
-	for index: int in range(96):
+	# Four irregular layers per side form a tight tree corridor. The nearest
+	# trunks sit inside the shoulder instead of beyond it: the asphalt remains
+	# clear, but branches and undergrowth press into the driver's peripheral
+	# vision like a real narrow forest road.
+	for row: int in range(96):
+		for side: float in [-1.0, 1.0]:
+			for layer: int in range(4):
+				var index: int = row * 8 + (0 if side < 0.0 else 4) + layer
+				var tree := _instantiate_dressing(tree_paths[index % tree_paths.size()])
+				if tree == null:
+					continue
+				var lateral: float = 8.0 + float(layer) * 5.1 + float((index * 7) % 5) * 0.45
+				var depth: float = -4.0 - float(row) * 3.10 - float((index * 11) % 7) * 0.24
+				tree.position = Vector3(side * lateral, 0.0, depth)
+				tree.rotation.y = deg_to_rad(float((index * 37) % 360))
+				# Uniform scale preserves each source model's silhouette. A 0.82–1.35
+				# range still yields younger and tall mature trees without stretching
+				# their trunks or turning their crowns into needles.
+				var tree_scale: float = 0.82 + float((index * 17) % 54) / 100.0
+				tree.scale = Vector3.ONE * tree_scale
+				forest.add_child(tree)
+	# Low vegetation fills the gaps at the road edge, hiding the flat ground
+	# plane without blocking exits from the vehicle or the delivery houses.
+	for index: int in range(520):
 		var side: float = -1.0 if index % 2 == 0 else 1.0
 		var plant := _instantiate_dressing(ground_paths[index % ground_paths.size()])
 		if plant == null:
 			continue
-		plant.position = Vector3(side * (8.0 + float((index * 11) % 24)), 0.0, -4.0 - float((index * 17) % int(route_length - 8.0)))
+		plant.position = Vector3(side * (6.7 + float((index * 11) % 25)), 0.0, -4.0 - float((index * 17) % int(route_length - 8.0)))
 		plant.rotation.y = deg_to_rad(float((index * 53) % 360))
 		var plant_scale: float = 0.65 + float((index * 19) % 55) / 100.0
 		plant.scale = Vector3.ONE * plant_scale

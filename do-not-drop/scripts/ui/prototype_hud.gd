@@ -237,7 +237,7 @@ func _show_start() -> void:
 	overlay.visible = true
 	dashboard.visible = false
 	overlay_body.text = "Cargá el paquete y subite a manejar.\nLa entrega arranca sola apenas estés al volante con la carga a bordo."
-	overlay_stats.text = "Caminá hasta el paquete y presioná E para agarrarlo.\nLlevalo hasta la furgoneta y presioná E para dejarlo en su lugar.\nAcercate al asiento del conductor y presioná E para tomar el volante.\n\nWASD caminar     Mouse mirar     E interactuar\nR reiniciar     Esc pausa\n\nSeguí la indicación que aparece al acercarte a cada objeto."
+	overlay_stats.text = "Caminá hasta el paquete y presioná E para agarrarlo.\nLlevalo hasta la furgoneta y presioná E para dejarlo en su lugar.\nAcercate al asiento del conductor y presioná E para tomar el volante.\n\nWASD caminar     Espacio saltar     Mouse mirar     E interactuar\nR reiniciar     Esc pausa\n\nSeguí la indicación que aparece al acercarte a cada objeto."
 	second_button.visible = false
 	action_button.text = "Preparar entrega"
 	action_button.grab_focus()
@@ -289,7 +289,7 @@ func _primary_action() -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			section_label.text = "PREPARACIÓN"
 			distance_label.text = "Cargá el paquete y tomá el volante"
-			hint_label.text = "WASD / stick izquierdo caminar · Mouse / stick derecho mirar · E / A interactuar"
+			hint_label.text = "WASD / stick izquierdo caminar · Espacio / X saltar · Mouse / stick derecho mirar · E / A interactuar"
 		"pause": EventBus.pause_requested.emit()
 		"results": EventBus.restart_requested.emit()
 

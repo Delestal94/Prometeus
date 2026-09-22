@@ -13,6 +13,9 @@ extends CharacterBody3D
 
 const WALK_SPEED: float = 3.6
 const GRAVITY: float = 18.0
+## Roughly 1.25 metres high: enough to clear a fallen branch or a small
+## roadside obstacle without turning the on-foot traversal into floaty parkour.
+const JUMP_VELOCITY: float = 6.7
 const MOUSE_SENSITIVITY: float = 0.0028
 const PITCH_LIMIT: float = 1.4  # radians, ~80 degrees
 @export var stick_sensitivity: float = 2.4
@@ -26,9 +29,11 @@ const FOV_SMOOTH_SPEED: float = 6.0
 ## Footstep bob: a small vertical sine wave on the camera itself, so a held
 ## package (which follows the camera's hold point) bobs with it too --
 ## before this, walking anywhere felt perfectly flat, "on rails."
-const BOB_AMPLITUDE: float = 0.045
-const BOB_FREQUENCY: float = 9.0
-const BOB_SMOOTH_SPEED: float = 8.0
+## Keep the first-person walk almost still. The former values read as a hard
+## camera thump rather than natural gait, especially at the short walk speed.
+const BOB_AMPLITUDE: float = 0.008
+const BOB_FREQUENCY: float = 3.2
+const BOB_SMOOTH_SPEED: float = 3.0
 
 ## One color per player so teammates can be told apart at a glance -- there's
 ## no cosmetics system yet (docs/plan-desarrollo.md Fase 5), so this is the
@@ -183,7 +188,12 @@ func _physics_process(delta: float) -> void:
 		move_direction = move_direction.normalized()
 	velocity.x = move_direction.x * WALK_SPEED
 	velocity.z = move_direction.z * WALK_SPEED
-	velocity.y = -0.2 if is_on_floor() else velocity.y - GRAVITY * delta
+	if is_on_floor():
+		# Keep the body snapped to slopes when walking, but preserve a newly
+		# requested jump impulse instead of immediately overwriting it.
+		velocity.y = JUMP_VELOCITY if Input.is_action_just_pressed(&"jump") else -0.2
+	else:
+		velocity.y -= GRAVITY * delta
 	move_and_slide()
 	_apply_head_bob(delta, Vector2(velocity.x, velocity.z).length())
 	_apply_context_fov(delta)
@@ -205,15 +215,14 @@ func _apply_look(motion: Vector2) -> void:
 ## instead). A footstep sine wave that fades in/out with actual ground
 ## speed rather than snapping on the instant a key is pressed.
 func _apply_head_bob(delta: float, ground_speed: float) -> void:
-	# No is_on_floor() gate: there's no jump in this game, gravity always
-	# eventually grounds the player, and requiring floor contact here would
-	# only mean a player who spawns a frame before the ground settles under
-	# them gets a flat glide instead of a bob for no real reason.
-	var moving: bool = ground_speed > 0.3
+	# Do not bob while airborne: the jump already provides the vertical motion.
+	var moving: bool = ground_speed > 0.3 and is_on_floor()
 	var target_amount: float = 1.0 if moving else 0.0
 	_bob_amount = move_toward(_bob_amount, target_amount, BOB_SMOOTH_SPEED * delta)
 	if moving:
-		_bob_time += delta * BOB_FREQUENCY * clampf(ground_speed / WALK_SPEED, 0.4, 1.0)
+		_bob_time += delta * BOB_FREQUENCY * clampf(ground_speed / WALK_SPEED, 0.45, 1.0)
+	# Always write the offset so it eases back to eye height after stopping or
+	# jumping; previously it could freeze at the final high/low bob position.
 	_camera.position.y = sin(_bob_time * TAU) * BOB_AMPLITUDE * _bob_amount
 
 
