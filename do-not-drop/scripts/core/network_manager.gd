@@ -39,6 +39,22 @@ var transport: Transport = Transport.AUTO
 var active_transport: Transport = Transport.ENET
 var lobby_id: int = 0
 var peer_ids: Array[int] = [HOST_ID]
+## The number every peer's procedural world is built from.
+##
+## route.gd and route_streamer.gd used to call _rng.randomize() on each
+## machine independently, which meant **every player got a different road**:
+## the van's transform replicates from the host, so a client watched it
+## drive through houses that weren't there and off a road that ran somewhere
+## else entirely. Nothing caught it because both sides individually worked.
+## The host picks the seed and hands it to each joiner before they load the
+## level; 0 means "no session decided one", i.e. solo play, where randomize()
+## is exactly right.
+var world_seed: int = 0
+## How long a joiner waits for the host to hand over that seed before giving
+## up. Joining without it would build the wrong world, so this is a real
+## failure to report, not something to paper over.
+const JOIN_HANDSHAKE_TIMEOUT: float = 8.0
+var _awaiting_handshake: bool = false
 
 var _steam: Object = null
 var _steam_ready: bool = false
@@ -78,6 +94,9 @@ func chosen_transport() -> Transport:
 
 func host_session(port: int = DEFAULT_PORT) -> Error:
 	_ensure_signals()
+	# Decided once, here, so every joiner gets the same one no matter which
+	# transport they arrive on. Never 0: that value means "solo".
+	world_seed = randi() | 1
 	if chosen_transport() == Transport.STEAM:
 		return _host_steam()
 	return _host_enet(port)
@@ -93,6 +112,8 @@ func join_session(target: String, port: int = DEFAULT_PORT) -> Error:
 
 
 func leave_session() -> void:
+	world_seed = 0
+	_awaiting_handshake = false
 	if lobby_id != 0 and _steam != null:
 		_steam.call(&"leaveLobby", lobby_id)
 		lobby_id = 0
@@ -240,6 +261,19 @@ func _on_peer_connected(id: int) -> void:
 	if not peer_ids.has(id):
 		peer_ids.append(id)
 	roster_changed.emit(peer_ids.duplicate())
+	if multiplayer.is_server():
+		_accept_joiner.rpc_id(id, world_seed)
+
+
+## The host's half of the join handshake. Until this lands the joiner has no
+## idea which world to build, so it deliberately hasn't loaded the level yet.
+@rpc("authority", "call_remote", "reliable")
+func _accept_joiner(seed_value: int) -> void:
+	if not _awaiting_handshake:
+		return
+	_awaiting_handshake = false
+	world_seed = seed_value
+	session_ready.emit(false)
 
 
 func _on_peer_disconnected(id: int) -> void:
@@ -255,7 +289,22 @@ func _on_connected_to_server() -> void:
 	if id != HOST_ID:
 		peer_ids.append(id)
 	roster_changed.emit(peer_ids.duplicate())
-	session_ready.emit(false)
+	# session_ready waits for _accept_joiner(): loading the level before the
+	# host says which seed to use is what built a different world on every
+	# machine.
+	_awaiting_handshake = true
+	_fail_if_handshake_times_out()
+
+
+func _fail_if_handshake_times_out() -> void:
+	await get_tree().create_timer(JOIN_HANDSHAKE_TIMEOUT).timeout
+	if not _awaiting_handshake:
+		return
+	_awaiting_handshake = false
+	if multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer.close()
+	multiplayer.multiplayer_peer = null
+	session_failed.emit("El anfitrión aceptó la conexión pero nunca mandó la partida. ¿Están en la misma versión del juego?")
 
 
 func _on_connection_failed() -> void:

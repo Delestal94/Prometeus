@@ -24,9 +24,27 @@ const HOUSE_VISUALS: Array[String] = [
 	"res://assets/models/architecture/sm_arch_delivery_house_bungalow.glb",
 ]
 
-signal resolved(outcome: StringName)  # &"delivered_ok", &"delivered_ruined", or &"missed"
+signal resolved(outcome: StringName, package_id: StringName)  # see OUTCOMES below
+
+## Every way a stop can end. A dented box is its own outcome rather than
+## being rounded up to "fine": it's the case the delivery photo exists for
+## (the resident may complain about it afterwards), so collapsing it into
+## delivered_ok would quietly disable half the mechanic.
+const OUTCOME_OK: StringName = &"delivered_ok"
+const OUTCOME_AT_RISK: StringName = &"delivered_at_risk"
+const OUTCOME_RUINED: StringName = &"delivered_ruined"
+const OUTCOME_MISSED: StringName = &"missed"
 
 var delivered: bool = false
+## Which stop this is along the route (route.gd sets it). The phone camera
+## files a photo against this number, so it has to match the index route.gd
+## reports through house_resolved.
+var house_index: int = 0
+## What actually happened here, once it did -- kept so the photo the player
+## takes afterwards can be filed against this specific delivery (the photo
+## is what refutes a complaint at the results screen).
+var outcome: StringName = &""
+var delivered_package_id: StringName = &""
 var visual_variant: int = 0
 var doorbell: DoorbellPoint
 var _resident: MeshInstance3D
@@ -35,6 +53,10 @@ var _reaction_player: AudioStreamPlayer3D
 
 
 func _ready() -> void:
+	# Findable without walking route.gd's house list: the phone camera looks
+	# for the nearest door it can document, and it has no business knowing
+	# how the route is built.
+	add_to_group(&"delivery_house")
 	_build_house()
 	_bell_player = AudioStreamPlayer3D.new()
 	_bell_player.stream = SynthAudio.glass_chime()
@@ -52,7 +74,7 @@ func _ready() -> void:
 ## (see route.gd's goal zone).
 func force_resolve_if_missed() -> void:
 	if not delivered:
-		_resolve(&"missed", null)
+		_resolve(OUTCOME_MISSED, null)
 
 
 func _on_doorbell_rung(carried_package: Node) -> void:
@@ -60,25 +82,37 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 		return
 	_bell_player.play()
 	if carried_package == null:
-		_resolve(&"missed", null)
+		_resolve(OUTCOME_MISSED, null)
 		return
 	var state: int = int(carried_package.get(&"trap_state"))
-	if state == ITrapBehavior.TrapState.RUINED:
-		_resolve(&"delivered_ruined", carried_package)
-	else:
-		_resolve(&"delivered_ok", carried_package)
+	match state:
+		ITrapBehavior.TrapState.RUINED:
+			_resolve(OUTCOME_RUINED, carried_package)
+		ITrapBehavior.TrapState.AT_RISK:
+			_resolve(OUTCOME_AT_RISK, carried_package)
+		_:
+			_resolve(OUTCOME_OK, carried_package)
 
 
-func _resolve(outcome: StringName, package: Node) -> void:
+func _resolve(result: StringName, package: Node) -> void:
 	delivered = true
+	outcome = result
 	if package != null:
+		var id: Variant = package.get(&"package_id")
+		delivered_package_id = StringName(id) if id != null else &""
 		# The resident takes the box, one way or another -- consumed either
 		# way, matching "se come la caja" for the good outcome; the ruined
-		# case still hands it off, just with a worse reaction.
-		package.queue_free()
-	_reaction_player.stream = SynthAudio.creature_groan() if outcome == &"delivered_ruined" else SynthAudio.honk_horn()
+		# case still hands it off, just with a worse reaction. Deferred so
+		# this never frees a node mid-signal, while whoever is listening
+		# (level_base.gd -> RunManager) still sees a valid package.
+		package.call_deferred(&"queue_free")
+	# The resident's reaction follows what they were actually handed: a groan
+	# for a wreck, the same groan quieter for something dented, a cheer for
+	# a box that made it.
+	_reaction_player.stream = SynthAudio.creature_groan() if result in [OUTCOME_RUINED, OUTCOME_AT_RISK] else SynthAudio.honk_horn()
+	_reaction_player.volume_db = -6.0 if result == OUTCOME_AT_RISK else 0.0
 	_reaction_player.play()
-	resolved.emit(outcome)
+	resolved.emit(result, delivered_package_id)
 
 
 func _build_house() -> void:
@@ -114,7 +148,7 @@ func _build_house() -> void:
 	_resident.material_override = _material(Color("d9b48f"))
 	_resident.visible = false
 	add_child(_resident)
-	resolved.connect(func(_outcome: StringName) -> void: _resident.visible = true)
+	resolved.connect(func(_outcome: StringName, _package_id: StringName) -> void: _resident.visible = true)
 
 	doorbell = DoorbellPoint.new()
 	doorbell.name = "Doorbell"
@@ -126,6 +160,13 @@ func _build_house() -> void:
 	doorbell.add_child(bell_collider)
 	add_child(doorbell)
 	doorbell.rung.connect(_on_doorbell_rung)
+
+
+## Where a photo of this delivery should be aimed: the porch, where the
+## resident pops out and the box changes hands -- not the roof ridge that
+## the node origin sits under.
+func porch_position() -> Vector3:
+	return _resident.global_position if is_instance_valid(_resident) else global_position
 
 
 func _material(color: Color) -> StandardMaterial3D:

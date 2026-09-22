@@ -1,12 +1,14 @@
 extends CanvasLayer
 ## Lightweight prototype UI: no gameplay decisions or direct physics references.
 
-const INK: Color = Color("132a31")
-const PAPER: Color = Color("edf2e8")
-const MUTED: Color = Color("acc1bd")
-const MINT: Color = Color("83e2ba")
-const YELLOW: Color = Color("f4c562")
-const RED: Color = Color("f47e6d")
+# Shared with the main menu through ui_theme.gd instead of a second copy
+# of the same constants (docs/direccion-visual.md section 3).
+const INK: Color = UiTheme.INK
+const PAPER: Color = UiTheme.PAPER
+const MUTED: Color = UiTheme.MUTED
+const MINT: Color = UiTheme.MINT
+const YELLOW: Color = UiTheme.YELLOW
+const RED: Color = UiTheme.RED
 const DRIVE_HINT: String = "W/S acelerar y frenar · A/D girar · Mouse mirar · C centrar vista"
 
 var root: Control
@@ -33,13 +35,33 @@ var overlay_body: Label
 var overlay_stats: Label
 var action_button: Button
 var second_button: Button
+var options_button: Button
+var menu_button: Button
+var options_panel: OptionsPanel
 var overlay_mode: String = "start"
 var damage_flash: float = 0.0
 var in_delivery: bool = false
 var interaction_label: Label
 var ping_label: Label
 var ping_seconds_left: float = 0.0
+## Route events used to overwrite interaction_label, and merit/card notices
+## used to overwrite ping_label -- so an event banner erased "[E] Agarrar
+## paquete" mid-reach, and a teammate's ping vanished behind a card notice.
+## Each kind of message gets its own line and its own clock now.
+var event_label: Label
+var event_seconds_left: float = 0.0
+var toast_label: Label
+var toast_seconds_left: float = 0.0
+var complaints_label: Label
+var photo_strip: HBoxContainer
 var fade_rect: ColorRect
+## The keyboard cheat sheet along the bottom. It used to sit there for the
+## whole run, competing with everything else on screen long after anyone
+## needed it (docs/critica-diseno-abogado-del-diablo.md section 5). It fades
+## out once the run has been going a while and comes straight back whenever
+## the game is paused, which is when someone is actually looking for it.
+var shortcut_label: Label
+const SHORTCUT_VISIBLE_SECONDS: float = 25.0
 
 
 func _ready() -> void:
@@ -114,7 +136,7 @@ func _build_ui() -> void:
 	distance_label = _label(delivery, "220 m hasta la entrega", 24, PAPER)
 	route_bar = _bar(delivery, MINT)
 	hint_label = _label(delivery, DRIVE_HINT, 14, MUTED)
-	_label(dashboard, "Espacio  freno de mano   /   H  bocina   /   R  reiniciar   /   ESC  pausa   /   Click rueda  ping   /   Gamepad: stick derecho para mirar", 13, PAPER)
+	shortcut_label = _label(dashboard, "Espacio  freno de mano   /   F  celular   /   H  bocina   /   R  reiniciar   /   ESC  pausa   /   Click rueda  ping   /   Gamepad: stick derecho para mirar", 13, PAPER)
 	interaction_label = _label(root, "", 22, PAPER)
 	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	interaction_label.offset_left = -260
@@ -137,6 +159,29 @@ func _build_ui() -> void:
 	ping_label.add_theme_constant_override("outline_size", 8)
 	ping_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+	event_label = _label(root, "", 20, YELLOW)
+	event_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	event_label.offset_left = -360
+	event_label.offset_right = 360
+	event_label.offset_top = 96
+	event_label.offset_bottom = 136
+	event_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	event_label.add_theme_color_override("font_outline_color", INK)
+	event_label.add_theme_constant_override("outline_size", 8)
+	event_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	toast_label = _label(root, "", 18, MINT)
+	toast_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	toast_label.offset_left = -260
+	toast_label.offset_right = 260
+	toast_label.offset_top = 60
+	toast_label.offset_bottom = 92
+	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast_label.add_theme_color_override("font_outline_color", INK)
+	toast_label.add_theme_constant_override("outline_size", 8)
+	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	overlay = ColorRect.new()
 	root.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -153,6 +198,16 @@ func _build_ui() -> void:
 	overlay_body.custom_minimum_size.x = 545
 	overlay_stats = _label(card, "", 16, MUTED)
 	overlay_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# What the residents had to say, and the photos that answer them. Both
+	# stay hidden unless the run actually produced any.
+	complaints_label = _label(card, "", 16, YELLOW)
+	complaints_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	complaints_label.custom_minimum_size.x = 545
+	complaints_label.visible = false
+	photo_strip = HBoxContainer.new()
+	photo_strip.add_theme_constant_override("separation", 10)
+	photo_strip.visible = false
+	card.add_child(photo_strip)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
 	card.add_child(actions)
@@ -160,6 +215,19 @@ func _build_ui() -> void:
 	action_button.pressed.connect(_primary_action)
 	second_button = _button(actions, "Reiniciar", false)
 	second_button.pressed.connect(func() -> void: EventBus.restart_requested.emit())
+	# Pausing was a dead end: continue or restart, with no way to reach the
+	# options or leave the level at all
+	# (docs/critica-diseno-abogado-del-diablo.md section 4).
+	options_button = _button(actions, "Opciones", false)
+	options_button.pressed.connect(_open_options)
+	options_button.visible = false
+	menu_button = _button(actions, "Menú", false)
+	menu_button.pressed.connect(_leave_to_menu)
+	menu_button.visible = false
+
+	options_panel = OptionsPanel.new()
+	options_panel.name = "OptionsPanel"
+	root.add_child(options_panel)
 
 	# Added last so it paints over everything else, including the pause/
 	# results overlay above -- a quick black flash to soften a hard camera
@@ -172,70 +240,19 @@ func _build_ui() -> void:
 
 
 func _panel(parent: Node, minimum: Vector2) -> VBoxContainer:
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = minimum
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(INK, 0.94)
-	style.border_color = Color("365458")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(8)
-	style.content_margin_left = 22
-	style.content_margin_right = 22
-	style.content_margin_top = 18
-	style.content_margin_bottom = 18
-	panel.add_theme_stylebox_override("panel", style)
-	parent.add_child(panel)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
-	panel.add_child(column)
-	return column
+	return UiTheme.panel(parent, minimum)
 
 
 func _label(parent: Node, value: String, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	parent.add_child(label)
-	return label
+	return UiTheme.label(parent, value, font_size, color)
 
 
 func _bar(parent: Node, color: Color) -> ProgressBar:
-	var bar := ProgressBar.new()
-	bar.custom_minimum_size.y = 8
-	bar.show_percentage = false
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color("2e454b")
-	bg.set_corner_radius_all(4)
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = color
-	fill.set_corner_radius_all(4)
-	bar.add_theme_stylebox_override("background", bg)
-	bar.add_theme_stylebox_override("fill", fill)
-	parent.add_child(bar)
-	return bar
+	return UiTheme.bar(parent, color)
 
 
 func _button(parent: Node, value: String, primary: bool) -> Button:
-	var button := Button.new()
-	button.text = value
-	button.custom_minimum_size = Vector2(190, 48)
-	button.add_theme_font_size_override("font_size", 18)
-	var style := StyleBoxFlat.new()
-	style.bg_color = MINT if primary else Color("30474d")
-	style.set_corner_radius_all(5)
-	style.content_margin_left = 18
-	style.content_margin_right = 18
-	button.add_theme_stylebox_override("normal", style)
-	var hover: StyleBoxFlat = style.duplicate()
-	hover.bg_color = style.bg_color.lightened(0.12)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", hover)
-	button.add_theme_color_override("font_color", INK if primary else PAPER)
-	button.add_theme_color_override("font_hover_color", INK if primary else PAPER)
-	button.add_theme_color_override("font_pressed_color", INK if primary else PAPER)
-	parent.add_child(button)
-	return button
+	return UiTheme.button(parent, value, primary, Vector2(190, 48))
 
 
 func _show_start() -> void:
@@ -246,6 +263,8 @@ func _show_start() -> void:
 	overlay_body.text = "Cargá el paquete y subite a manejar.\nLa entrega arranca sola apenas estés al volante con la carga a bordo."
 	overlay_stats.text = "Caminá hasta el paquete y presioná E para agarrarlo.\nLlevalo hasta la furgoneta y presioná E para dejarlo en su lugar.\nAcercate al asiento del conductor y presioná E para tomar el volante.\n\nWASD caminar     Espacio saltar     Mouse mirar     E interactuar\nR reiniciar     Esc pausa\n\nSeguí la indicación que aparece al acercarte a cada objeto."
 	second_button.visible = false
+	options_button.visible = true
+	menu_button.visible = true
 	action_button.text = "Preparar entrega"
 	action_button.grab_focus()
 
@@ -256,6 +275,7 @@ func _process(delta: float) -> void:
 		damage_flash -= delta
 		if damage_flash <= 0.0 and not in_delivery:
 			hint_label.text = DRIVE_HINT
+	_refresh_shortcuts()
 	if overlay_mode == "pause" and not get_tree().paused:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
@@ -264,6 +284,25 @@ func _process(delta: float) -> void:
 		ping_seconds_left -= delta
 		if ping_seconds_left <= 0.0:
 			ping_label.text = ""
+	if toast_seconds_left > 0.0:
+		toast_seconds_left -= delta
+		if toast_seconds_left <= 0.0:
+			toast_label.text = ""
+	if event_seconds_left > 0.0:
+		event_seconds_left -= delta
+		if event_seconds_left <= 0.0:
+			event_label.text = ""
+
+
+## Full strength while paused or before the run starts, faded to a hint
+## once the run is under way. Never hidden outright: a player who forgets
+## which key honks shouldn't have to pause to find out.
+func _refresh_shortcuts() -> void:
+	if shortcut_label == null:
+		return
+	var learning: bool = get_tree().paused or not RunManager.is_running or RunManager.elapsed_seconds < SHORTCUT_VISIBLE_SECONDS
+	var target: float = 1.0 if learning else 0.25
+	shortcut_label.modulate.a = move_toward(shortcut_label.modulate.a, target, 0.02)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -279,11 +318,29 @@ func _unhandled_input(event: InputEvent) -> void:
 			overlay_stats.text = "Esc para volver a la ruta."
 			action_button.text = "Continuar"
 			second_button.show()
+			options_button.show()
+			menu_button.show()
 			action_button.grab_focus()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("run_restart"):
 		EventBus.restart_requested.emit()
 		get_viewport().set_input_as_handled()
+
+
+func _open_options() -> void:
+	options_panel.open()
+
+
+## Leaving mid-run has to put the session back the way the menu expects it:
+## unpaused, with the cursor back, and with no half-finished run left in
+## RunManager for the next level to inherit.
+func _leave_to_menu() -> void:
+	get_tree().paused = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	RunManager.reset_run()
+	if NetworkManager.is_online():
+		NetworkManager.leave_session()
+	get_tree().change_scene_to_file.call_deferred("res://scenes/ui/main_menu.tscn")
 
 
 func _primary_action() -> void:
@@ -306,6 +363,8 @@ func _on_interaction_prompt(prompt: String) -> void:
 
 
 const PING_DISPLAY_SECONDS: float = 2.5
+## Long enough to read a two-clause event line without it becoming furniture.
+const EVENT_DISPLAY_SECONDS: float = 6.0
 
 
 func _on_ping(peer_id: int, _position: Vector3, label: String) -> void:
@@ -340,22 +399,27 @@ func _on_team_money_changed(amount: int) -> void:
 
 func _on_merit_changed(peer_id: int, total: int) -> void:
 	if peer_id == NetworkManager.local_id():
-		ping_label.text = "★ Mérito +  ·  %d" % total
-		ping_seconds_left = PING_DISPLAY_SECONDS
+		_toast("★ Mérito +  ·  %d" % total)
 
 
 func _on_card_changed(peer_id: int, card: int) -> void:
 	if peer_id == NetworkManager.local_id() and card >= 0:
-		ping_label.text = "🃏 Carta obtenida"
-		ping_seconds_left = PING_DISPLAY_SECONDS
+		_toast("🃏 Carta obtenida")
+
+
+func _toast(text: String) -> void:
+	toast_label.text = text
+	toast_seconds_left = PING_DISPLAY_SECONDS
 
 
 func _on_route_event_started(_event_id: StringName, event: Dictionary) -> void:
-	interaction_label.text = "[ EVENTO ]  %s — %s" % [event.get("title", "Evento"), event.get("prompt", "")]
+	event_label.text = "[ EVENTO ]  %s — %s" % [event.get("title", "Evento"), event.get("prompt", "")]
+	event_seconds_left = EVENT_DISPLAY_SECONDS
 
 
 func _on_route_event_resolved(_event_id: StringName, success: bool, _peer_id: int) -> void:
-	interaction_label.text = "Evento resuelto" if success else "Evento fallido"
+	event_label.text = "Evento resuelto" if success else "Evento fallido"
+	event_seconds_left = PING_DISPLAY_SECONDS
 
 
 func _on_speed(speed: float) -> void:
@@ -458,11 +522,77 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var total: int = int(results.get("cargo_total", 0))
 	var intact: int = int(results.get("cargo_intact", 0))
 	var ruined: int = int(results.get("cargo_ruined", 0))
+	var delivered_doors: int = int(results.get("houses_delivered", 0))
+	var missed_doors: int = int(results.get("houses_missed", 0))
 	overlay_title.text = "¡ENTREGADO!" if success else "OTRA VUELTA"
-	overlay_body.text = ("Llegaron %d de %d paquetes, %d intactos." % [total - ruined, total, intact]) if success else results["reason"]
+	overlay_body.text = _delivery_summary(delivered_doors, missed_doors, total, ruined, intact) if success else String(results["reason"])
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
-	overlay_stats.text = "%d PUNTOS     /     %.1f s\n\nCarga: %d pts   +   Rapidez: %d pts%s%s" % [score, results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], chaos_line, best_line]
+	var door_line: String = "\nPuertas: %d pts" % int(results.get("delivery_points", 0)) if results.has("delivery_points") else ""
+	overlay_stats.text = "%d PUNTOS     /     %.1f s\n\nCarga: %d pts   +   Rapidez: %d pts%s%s%s" % [score, results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, best_line]
+	_show_complaints(results.get("complaints", []))
+	_show_photos()
 	action_button.text = "Volver a intentar"
 	second_button.hide()
+	options_button.hide()
+	menu_button.show()
 	action_button.grab_focus()
+
+
+## The headline leads with the doors, because that's where the run is
+## actually won -- what's still in the van is the leftover, not the point.
+func _delivery_summary(delivered_doors: int, missed_doors: int, aboard: int, ruined: int, intact: int) -> String:
+	var lines: PackedStringArray = []
+	if delivered_doors > 0:
+		lines.append("Entregaste en %d puerta%s." % [delivered_doors, "" if delivered_doors == 1 else "s"])
+	if missed_doors > 0:
+		lines.append("%d vecino%s se quedó esperando." % [missed_doors, "" if missed_doors == 1 else "s"])
+	if aboard > 0:
+		lines.append("Volvieron %d paquetes en la furgoneta, %d intactos." % [aboard - ruined, intact])
+	return "\n".join(lines) if not lines.is_empty() else "Llegaste, y eso ya es algo."
+
+
+## Residents who got a battered box speak up afterwards. The photo taken at
+## their door is what settles it -- that's the whole reason to stop and take
+## one instead of running straight back to the van.
+func _show_complaints(complaints: Array) -> void:
+	if complaints.is_empty():
+		complaints_label.visible = false
+		return
+	var lines: PackedStringArray = []
+	for complaint: Dictionary in complaints:
+		var house: int = int(complaint["house"]) + 1
+		if bool(complaint["dismissed"]):
+			lines.append("Casa %d reclamó que llegó roto — les mostraste la foto. Caso cerrado." % house)
+		else:
+			lines.append("Casa %d reclamó que llegó roto y no tenías foto. Te lo descuentan." % house)
+	complaints_label.text = "\n".join(lines)
+	complaints_label.visible = true
+
+
+## The shots themselves, as a contact sheet under the numbers. Nothing is
+## drawn headless (no framebuffer to capture), so this simply stays hidden.
+func _show_photos() -> void:
+	for child: Node in photo_strip.get_children():
+		child.queue_free()
+	var photos: Dictionary = RunManager.delivery_photos
+	if photos.is_empty():
+		photo_strip.visible = false
+		return
+	var houses: Array = photos.keys()
+	houses.sort()
+	for house: int in houses:
+		var frame := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(PAPER, 0.9)
+		style.set_corner_radius_all(4)
+		style.set_content_margin_all(4)
+		frame.add_theme_stylebox_override("panel", style)
+		var thumbnail := TextureRect.new()
+		thumbnail.texture = photos[house]
+		thumbnail.custom_minimum_size = Vector2(160, 90)
+		thumbnail.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		frame.add_child(thumbnail)
+		photo_strip.add_child(frame)
+	photo_strip.visible = true

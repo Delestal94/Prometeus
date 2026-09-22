@@ -88,6 +88,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _apply_look(motion: Vector2) -> void:
+	# Sensitivity and Y inversion are player settings now (GameSettings), and
+	# both get applied in this one place so mouse and stick stay consistent
+	# with each other. 1.0 / not-inverted is exactly the tuning this shipped
+	# with, so the defaults change nothing.
+	motion.x *= GameSettings.look_sensitivity
+	motion.y *= GameSettings.look_sensitivity * GameSettings.look_y_sign()
 	_look_yaw = clampf(_look_yaw - motion.x, -deg_to_rad(yaw_limit_degrees), deg_to_rad(yaw_limit_degrees))
 	_look_pitch = clampf(_look_pitch - motion.y, -deg_to_rad(pitch_limit_degrees), deg_to_rad(pitch_limit_degrees))
 

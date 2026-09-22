@@ -5,6 +5,12 @@ extends "res://scripts/gameplay/interaction/interactable.gd"
 ## package is the real, authoritative thing -- set_held() here is applied
 ## directly, not RPC'd. The picking-up player's own local carry state is
 ## a separate concern, targeted at their own peer.
+##
+## A box already mounted in the van can be taken back out: that's the only
+## way to walk one up to a DeliveryHouse's door and actually deliver it
+## (docs/colaboracion-equipo.md flagged this as the gap that blocked the
+## whole house flow -- every house resolved as "missed" because no package
+## could ever leave the van).
 
 @onready var _package: Node = get_parent()
 @onready var _feedback: Node = _package.get_node_or_null(^"PackageFeedbackComponent")
@@ -20,7 +26,9 @@ func highlight(enabled: bool) -> void:
 
 
 func get_prompt() -> String:
-	return "" if bool(_package.get("is_held")) or bool(_package.get("is_loaded")) else "Agarrar paquete"
+	if bool(_package.get("is_held")):
+		return ""
+	return "Bajar paquete" if bool(_package.get("is_loaded")) else "Agarrar paquete"
 
 
 func can_interact(player: Node) -> bool:
@@ -30,7 +38,19 @@ func can_interact(player: Node) -> bool:
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
+	if bool(_package.get("is_loaded")):
+		_release_mount()
+		_package.set(&"is_loaded", false)
 	_package.call(&"set_held", true)
 	if player.has_method(&"pick_up"):
 		player.rpc_id(int(player.get_multiplayer_authority()), &"pick_up", _package.get_path())
 	interacted.emit(player)
+
+
+## Taking a box back out frees the shelf slot it was sitting in. Without
+## this the mount stays marked occupied forever and nothing can ever be
+## placed there again -- including this same box on the way back.
+func _release_mount() -> void:
+	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
+		if mount.get(&"occupied_by") == _package:
+			mount.set(&"occupied_by", null)

@@ -48,8 +48,17 @@ func _run() -> void:
 	_expect(mount.occupied_by == package and package.is_loaded, "Shelf mount records loaded crate")
 	_expect(package.global_position.distance_to(vehicle.get_node("CargoBay/LeftShelfPackageMount").global_position) < 0.1, "Loaded crate rests on the shelf")
 	_expect(player.carried_package == null, "Mount releases player's hands")
+	# Taking a loaded crate back out is the only way a package ever reaches a
+	# DeliveryHouse's door, so it's allowed on purpose now -- it frees the
+	# shelf slot and stops counting as loaded, and putting it back restores
+	# both. Before this, every house on the route resolved as "missed"
+	# because no box could ever leave the van.
 	pickup.interact(player)
-	_expect(player.carried_package == null, "Loaded crate cannot be taken and invalidate loading state")
+	_expect(player.carried_package == package, "A loaded crate can be taken back out to walk it to a door")
+	_expect(mount.occupied_by == null and not package.is_loaded, "Taking a crate out frees the shelf slot it was in")
+	mount.interact(player)
+	_expect(mount.occupied_by == package and package.is_loaded, "Putting it back re-occupies the same slot")
+	_expect(player.carried_package == null, "Mount releases the player's hands again")
 	_expect(not manager.is_running, "Loading alone does not start the run")
 	seat.interact(player)
 	_expect(manager.is_running, "Boarding after loading starts delivery")

@@ -21,7 +21,7 @@ signal delivery_exited
 ## Fires whenever any house resolves (delivered ok/ruined/missed) -- forwards
 ## DeliveryHouse.resolved so level_base.gd or the HUD can react without
 ## walking the house list themselves.
-signal house_resolved(house_index: int, outcome: StringName)
+signal house_resolved(house_index: int, outcome: StringName, package_id: StringName)
 
 @export var route_length: float = 0.0
 ## How many delivery houses this run has -- one per package, per package per
@@ -132,7 +132,14 @@ func configure_houses(count: int) -> void:
 
 
 func _ready() -> void:
-	_rng.randomize()
+	# One seed per session, not per machine: see NetworkManager.world_seed.
+	# Solo play leaves it at 0, which still means "a different route every
+	# time you press play".
+	var session_seed: int = _session_seed()
+	if session_seed != 0:
+		_rng.seed = session_seed
+	else:
+		_rng.randomize()
 	_spine_segment_scripts = [
 		StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
 		SCurveSegment, GravelSegment, ConstructionZoneSegment,
@@ -225,6 +232,7 @@ func _build_house(cursor: Transform3D, index: int) -> Transform3D:
 	var house := DeliveryHouse.new()
 	house.name = "House%d" % index
 	house.visual_variant = index
+	house.house_index = index
 	# The house model's entrance is on local -Z. Rotate that face toward the
 	# asphalt rather than along the road, so stops address the route.
 	house.transform = cursor * Transform3D(Basis(Vector3.UP, side * PI * 0.5), Vector3(side * HOUSE_LATERAL_OFFSET, _ground_height_at(HOUSE_LATERAL_OFFSET), 0.0))
@@ -232,7 +240,7 @@ func _build_house(cursor: Transform3D, index: int) -> Transform3D:
 	houses.append(house)
 	_build_house_path(cursor, index, side)
 	var captured_index: int = index
-	house.resolved.connect(func(outcome: StringName) -> void: house_resolved.emit(captured_index, outcome))
+	house.resolved.connect(func(outcome: StringName, package_id: StringName) -> void: house_resolved.emit(captured_index, outcome, package_id))
 	var label_transform: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(side * HOUSE_LATERAL_OFFSET, _ground_height_at(HOUSE_LATERAL_OFFSET) + 4.0, 2.6))
 	_label("HouseNumber%d" % index, "CASA %d" % (index + 1), label_transform.origin, 0.01, TEAL)
 	return cursor
@@ -576,3 +584,13 @@ func _material(color: Color) -> StandardMaterial3D:
 		material.cull_mode = BaseMaterial3D.CULL_DISABLED
 		_materials[color] = material
 	return _materials[color] as StandardMaterial3D
+
+
+## Looked up by node path rather than by the NetworkManager identifier on
+## purpose. A test that names this script's class_name compiles it before
+## the autoloads exist, and a bare `NetworkManager.world_seed` is a compile
+## error at that point -- the same node-path pattern the rest of the project
+## already uses for EventBus.
+func _session_seed() -> int:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	return int(network.get(&"world_seed")) if network != null else 0

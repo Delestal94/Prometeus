@@ -48,6 +48,14 @@ signal card_changed(peer_id: int, card: int)
 signal shop_opened(offers: Dictionary)
 signal shop_vote_changed(peer_id: int, offer_id: StringName)
 signal shop_resolved(offer_id: StringName, offer: Dictionary)
+## A house resolved (delivered ok/ruined, or driven past). Host-side fact,
+## relayed, so every passenger's HUD reacts to a door they weren't standing
+## at. photo_available says whether there's still something worth
+## photographing there -- the phone camera uses it to offer the shot.
+signal house_delivery_recorded(house_index: int, outcome: StringName, package_id: StringName)
+## The delivery photo was filed against a door (or wasn't -- accepted says
+## which), so the HUD can confirm the shot landed.
+signal delivery_photo_taken(house_index: int, accepted: bool)
 signal route_event_started(event_id: StringName, event: Dictionary)
 signal route_event_updated(event_id: StringName, event: Dictionary)
 signal route_event_resolved(event_id: StringName, success: bool, peer_id: int)

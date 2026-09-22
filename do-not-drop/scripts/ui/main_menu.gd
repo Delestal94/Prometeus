@@ -17,16 +17,20 @@ extends Control
 ## spawns players dynamically as the roster changes, so jumping straight into
 ## the level and letting friends join mid-session already works.
 
-const INK: Color = Color("132a31")
-const PAPER: Color = Color("edf2e8")
-const MUTED: Color = Color("acc1bd")
-const MINT: Color = Color("83e2ba")
-const RED: Color = Color("f47e6d")
+# Colours and widgets live in ui_theme.gd now: this screen and the in-game
+# HUD used to keep their own copies of the same five constants and drift
+# apart one tweak at a time (docs/direccion-visual.md section 3).
+const INK: Color = UiTheme.INK
+const PAPER: Color = UiTheme.PAPER
+const MUTED: Color = UiTheme.MUTED
+const MINT: Color = UiTheme.MINT
+const RED: Color = UiTheme.RED
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const ENDLESS_LEVEL_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
 
 var _status_label: Label
 var _address_field: LineEdit
+var _options: OptionsPanel
 var _busy: bool = false
 
 
@@ -94,7 +98,7 @@ func _build_ui() -> void:
 	panel.add_child(column)
 
 	_label(column, "DO NOT DROP", 36, PAPER)
-	_label(column, "Delivery cooperativo · hasta 8 jugadores", 14, MUTED)
+	_label(column, "Delivery cooperativo · hasta 5 jugadores", 14, MUTED)
 	_spacer(column, 10)
 
 	_button(column, "Jugar solo", true).pressed.connect(_play_solo)
@@ -112,8 +116,27 @@ func _build_ui() -> void:
 	_button(join_row, "Unirse", false).pressed.connect(_join_by_address)
 
 	_spacer(column, 10)
+	_button(column, "Opciones", false).pressed.connect(_open_options)
+	# A game you can only leave with Alt+F4 reads as unfinished before a
+	# player has pressed anything (docs/critica-diseno-abogado-del-diablo.md
+	# section 4).
+	_button(column, "Salir", false).pressed.connect(_quit_game)
+
+	_spacer(column, 10)
 	_status_label = _label(column, "", 14, MUTED)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+	_options = OptionsPanel.new()
+	_options.name = "OptionsPanel"
+	add_child(_options)
+
+
+func _open_options() -> void:
+	_options.open()
+
+
+func _quit_game() -> void:
+	get_tree().quit()
 
 
 func _play_solo() -> void:
@@ -192,30 +215,11 @@ func _set_status(text: String, color: Color) -> void:
 
 
 func _label(parent: Node, text: String, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	parent.add_child(label)
-	return label
+	return UiTheme.label(parent, text, font_size, color)
 
 
 func _button(parent: Node, text: String, primary: bool) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.custom_minimum_size = Vector2(0, 44)
-	var style := StyleBoxFlat.new()
-	style.bg_color = MINT if primary else Color("30474d")
-	style.set_corner_radius_all(5)
-	button.add_theme_stylebox_override("normal", style)
-	var hover: StyleBoxFlat = style.duplicate()
-	hover.bg_color = style.bg_color.lightened(0.12)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", hover)
-	button.add_theme_color_override("font_color", INK if primary else PAPER)
-	button.add_theme_color_override("font_hover_color", INK if primary else PAPER)
-	parent.add_child(button)
-	return button
+	return UiTheme.button(parent, text, primary)
 
 
 func _spacer(parent: Node, height: int) -> void:

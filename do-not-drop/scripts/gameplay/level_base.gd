@@ -42,6 +42,13 @@ func _ready() -> void:
 	EventBus.restart_requested.connect(restart_delivery)
 	EventBus.pause_requested.connect(toggle_pause)
 	EventBus.run_ended.connect(_on_run_ended)
+	# The doors are where the run is actually won: route.gd owns the houses,
+	# RunManager owns the scoring, and this is the one place that knows both.
+	# Without this the houses resolved into nothing and every delivery was
+	# worth exactly as much as driving past (docs/colaboracion-equipo.md).
+	if route.has_signal(&"house_resolved"):
+		route.connect(&"house_resolved", _on_house_resolved)
+		RunManager.expected_houses = (route.get(&"houses") as Array).size()
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	# Offline is a session of one, so this same call covers both paths.
 	if NetworkManager.is_host():
@@ -106,6 +113,12 @@ func start_debug_delivery() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
+## Only the host resolves doors (Interactable.interact() is host-only), and
+## RunManager relays the record to everyone from there.
+func _on_house_resolved(house_index: int, outcome: StringName, package_id: StringName) -> void:
+	RunManager.register_delivery(house_index, outcome, package_id)
+
+
 func _on_driver_seated(_player: Node) -> void:
 	_driver_seated = true
 	_maybe_start()
@@ -128,7 +141,7 @@ func start_delivery() -> void:
 		return
 	vehicle.freeze = false
 	for package: Node in packages:
-		if bool(package.get(&"is_loaded")):
+		if is_instance_valid(package) and bool(package.get(&"is_loaded")):
 			package.set(&"freeze", false)
 			# Only what's aboard counts: a box left on the rack was never
 			# part of this delivery, so it shouldn't drag the score down.
@@ -182,6 +195,11 @@ func _check_lost_cargo() -> void:
 	# A box that falls out is written off on its own. Only losing every last
 	# one ends the delivery, and RunManager decides that.
 	for package: Node in packages:
+		# A box handed over at a door is freed on the spot -- this list
+		# outlives it, so skip what's already gone instead of reading a
+		# freed node's properties.
+		if not is_instance_valid(package):
+			continue
 		if not bool(package.get(&"is_loaded")):
 			continue
 		var distance: float = (package.get(&"global_position") as Vector3).distance_to(vehicle.global_position)
@@ -194,4 +212,5 @@ func _on_run_ended(_score: int, _results: Dictionary) -> void:
 	# Defer rigid-body changes: failure can originate in physics integration.
 	vehicle.set_deferred("freeze", true)
 	for package: Node in packages:
-		package.set_deferred("freeze", true)
+		if is_instance_valid(package):
+			package.set_deferred("freeze", true)

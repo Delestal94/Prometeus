@@ -45,7 +45,13 @@ funcionando igual, salteando también la carga a pie:)
 <godot> --path do-not-drop res://scenes/gameplay/level_endless.tscn -- --autostart
 ```
 
-**La ruta se genera al azar en cada partida** (2026-09-22): en vez de un
+**La ruta se genera al azar en cada partida** (2026-09-22), pero **una sola
+vez por sesión**: el anfitrión elige la semilla y se la pasa a cada uno que
+se suma antes de que cargue el nivel (`NetworkManager.world_seed`). Hasta el
+2026-09-22 cada máquina sorteaba la suya, así que en multijugador **cada
+jugador veía un camino distinto** y el cliente miraba la furgoneta del
+anfitrión atravesar casas que de su lado no estaban. Jugando solo la semilla
+queda en 0 y la ruta se sortea fresca cada vez, como antes. en vez de un
 trazado fijo, cada tramo entre una casa y la siguiente son 400-600m armados
 encadenando tipos de segmento (recta, badén, chicana, puente angosto, curva
 en S, ripio, zona de obras y curvas reales que doblan el rumbo del camino de
@@ -60,10 +66,24 @@ lugar dentro de la furgoneta y permite tomar el volante una vez cargado.
 
 La entrega empieza al sentarte con la carga a bordo. Usá W/S para acelerar,
 frenar y retroceder, A/D para girar y Espacio como freno de mano. **H** toca
-bocina (todos la escuchan, venga de quien venga, no solo del host). Detenete
-un segundo en la zona de entrega. Esc pausa también durante la preparación;
-R reinicia. Por ahora el paquete queda asignado al soporte al cargarlo y
-no se puede volver a agarrar, ni bajar del asiento durante la entrega.
+bocina (todos la escuchan, venga de quien venga, no solo del host). Esc pausa
+también durante la preparación; R reinicia.
+
+**Entregar en las casas** (2026-09-22): frená cerca de una casa, bajate,
+**E** sobre un paquete lo saca de su estante (libera el lugar y deja de
+contar como carga a bordo), llevalo hasta el porche y **E** en el timbre se
+lo da al vecino. El estado del paquete al momento de tocar decide la
+reacción, y pasar de largo una casa penaliza: el vecino se quedó esperando.
+Hasta esta versión esto era imposible — no se podía sacar un paquete ya
+cargado, así que las tres casas de la ruta eran decorado y todas terminaban
+como "no entregada" sin que nada lo puntuara.
+
+**El celular y la foto de entrega**: con **F** sacás el celular y la pantalla
+pasa a modo cámara; **click** (o RB) saca la foto de la entrega que acabás de
+hacer. Da puntos por sí sola, pero lo importante viene al final: los clientes
+cuyo paquete llegó golpeado se quejan en la pantalla de resultados, y la foto
+de su propia puerta es lo único que cierra el reclamo. Sin foto, te lo
+descuentan. Las fotos tomadas se muestran al terminar.
 
 Podés mirar alrededor desde el asiento con el mouse; **C** vuelve a centrar la
 vista hacia el frente del vehículo. Con gamepad, el **stick izquierdo** camina
@@ -71,6 +91,11 @@ o gira la camioneta, el **stick derecho** mira, su **clic** centra la vista,
 los **gatillos** aceleran/frenan y el **botón sur** interactúa a pie o activa
 el freno de mano al conducir. Mirar desde el asiento no cambia la dirección
 del vehículo. La mirada se conserva después de las sacudidas de los impactos.
+
+**Opciones y salir**: el menú principal tiene **Opciones** (volumen,
+sensibilidad de la mirada, invertir eje Y, pantalla completa — se guardan en
+`user://settings.cfg`) y **Salir**. Desde la pausa se llega a las mismas
+opciones y a **Menú**, que deja la sesión limpia antes de volver.
 
 Cualquier jugador puede pingear "¡Cuidado!" con el clic de la rueda del mouse (o
 D-pad arriba en gamepad) para avisar a los demás sin depender de voice chat externo —
@@ -115,6 +140,12 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_new_route_segments.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_difficulty.gd
 <godot> --headless --path do-not-drop --script res://tests/test_delivery_houses.gd
+<godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
+<godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
+<godot> --headless --path do-not-drop --script res://tests/test_settings.gd
+<godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
+<godot> --headless --path do-not-drop --script res://tests/test_settings.gd
+<godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
@@ -123,6 +154,25 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 
 Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
 
+- `test_house_delivery_flow` — el loop entero de una entrega: cargar una
+  caja, volver a sacarla en la parada, que llevarla a pie no cuente como
+  carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
+  estaba roto o sin puntuar antes de existir este test.
+- `test_phone_camera` — el celular elige la puerta correcta, archiva una
+  sola foto por entrega, y la foto es lo que hace caer el reclamo del
+  cliente al final (sin ella, el reclamo descuenta).
+- `test_world_seed` — que todos los peers construyan el **mismo** mundo: misma
+  semilla, misma ruta; semilla distinta, ruta distinta; y que jugar solo
+  (semilla 0) siga variando entre partidas.
+- `test_settings` — las opciones del jugador: que el volumen llegue al bus
+  de audio de verdad, que los valores se recorten en vez de dejar el juego
+  mudo o imposible de mirar, y que sobrevivan a cerrar el juego.
+- `test_world_seed` — que todos los peers construyan el **mismo** mundo: misma
+  semilla, misma ruta; semilla distinta, ruta distinta; y que jugar solo
+  (semilla 0) siga variando entre partidas.
+- `test_settings` — las opciones del jugador: que el volumen llegue al bus
+  de audio de verdad, que los valores se recorten en vez de dejar el juego
+  mudo o imposible de mirar, y que sobrevivan a cerrar el juego.
 - `test_fragile` — umbrales de daño, estados e independencia entre paquetes.
 - `test_traps` — las otras tres trampas: peso creciente, equilibrio y ruidoso.
 - `test_interaction` — agarrar, dejar en el asiento y subirse a manejar.

@@ -49,7 +49,14 @@ var _spawned_any: bool = false
 
 
 func _ready() -> void:
-	_rng.randomize()
+	# One seed per session, not per machine: see NetworkManager.world_seed.
+	# Solo play leaves it at 0, which still means "a different route every
+	# time you press play".
+	var session_seed: int = _session_seed()
+	if session_seed != 0:
+		_rng.seed = session_seed
+	else:
+		_rng.randomize()
 	hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment]
 
 
@@ -102,3 +109,13 @@ func _cull_behind() -> void:
 		if target.global_position.z < exit_z - behind_keep_distance:
 			_active.erase(segment)
 			segment.queue_free()
+
+
+## Looked up by node path rather than by the NetworkManager identifier on
+## purpose. A test that names this script's class_name compiles it before
+## the autoloads exist, and a bare `NetworkManager.world_seed` is a compile
+## error at that point -- the same node-path pattern the rest of the project
+## already uses for EventBus.
+func _session_seed() -> int:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	return int(network.get(&"world_seed")) if network != null else 0

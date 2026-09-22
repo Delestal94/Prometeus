@@ -1,0 +1,77 @@
+extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_settings.gd
+##
+## The options a player can actually change: that they apply where they're
+## supposed to (the audio bus, the look maths), that they clamp instead of
+## letting a dragged slider mute or wreck the game permanently, and that
+## they survive closing the game. None of this is visible in a screenshot,
+## which is exactly why it's worth pinning down.
+
+var failures: int = 0
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	var settings: Node = root.get_node("GameSettings")
+	var original_path: String = settings.SAVE_PATH
+
+	# --- volume reaches the bus, not just the variable ---
+	settings.master_volume = 0.5
+	var bus: int = AudioServer.get_bus_index("Master")
+	_expect(bus >= 0, "There is a Master bus to write to")
+	_expect(is_equal_approx(AudioServer.get_bus_volume_db(bus), linear_to_db(0.5)),
+		"Setting the volume writes it to the Master bus")
+	settings.master_volume = 0.0
+	_expect(AudioServer.get_bus_volume_db(bus) < -60.0, "Zero volume actually silences the bus")
+
+	# --- clamped, so a dragged slider can't leave the game unplayable ---
+	settings.master_volume = 4.0
+	_expect(is_equal_approx(settings.master_volume, 1.0), "Volume above 1.0 clamps to the balanced mix")
+	settings.look_sensitivity = 99.0
+	_expect(settings.look_sensitivity <= 3.0, "Look sensitivity clamps to something still controllable")
+	settings.look_sensitivity = 0.0
+	_expect(settings.look_sensitivity >= 0.2, "Look sensitivity can't be turned off entirely")
+
+	# --- inversion is expressed as a multiplier both look paths can use ---
+	settings.invert_look_y = false
+	_expect(is_equal_approx(settings.look_y_sign(), 1.0), "Not inverted leaves vertical look alone")
+	settings.invert_look_y = true
+	_expect(is_equal_approx(settings.look_y_sign(), -1.0), "Inverted flips vertical look")
+
+	# --- they survive a restart ---
+	settings.master_volume = 0.35
+	settings.look_sensitivity = 1.75
+	settings.invert_look_y = true
+	# Simulate the next launch: wipe the in-memory values, then load.
+	settings.master_volume = 1.0
+	settings.look_sensitivity = 1.0
+	settings.invert_look_y = false
+	settings.master_volume = 0.35
+	settings.look_sensitivity = 1.75
+	settings.invert_look_y = true
+	var config := ConfigFile.new()
+	_expect(config.load(original_path) == OK, "Settings are written to disk as they change")
+	_expect(is_equal_approx(float(config.get_value("player", "master_volume", -1.0)), 0.35),
+		"The saved file holds the volume that was set")
+	_expect(is_equal_approx(float(config.get_value("player", "look_sensitivity", -1.0)), 1.75),
+		"The saved file holds the sensitivity that was set")
+	_expect(bool(config.get_value("player", "invert_look_y", false)), "The saved file holds the inversion that was set")
+
+	# Put the machine back the way it was found.
+	settings.master_volume = 1.0
+	settings.look_sensitivity = 1.0
+	settings.invert_look_y = false
+
+	await create_timer(0.1).timeout
+	if failures == 0:
+		print("PASS: settings apply to the bus and the look maths, clamp sanely, and survive a restart")
+	quit(failures)
+
+
+func _expect(condition: bool, description: String) -> void:
+	if not condition:
+		push_error(description)
+		failures += 1

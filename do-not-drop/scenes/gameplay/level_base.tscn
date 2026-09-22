@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/level_base.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_vehicle"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/gameplay/route/route.tscn" id="4_route"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/player/player.tscn" id="5_player"]
 [ext_resource type="Script" path="res://scripts/ui/prototype_hud.gd" id="6_hud"]
+[ext_resource type="Script" path="res://scripts/presentation/phone_camera.gd" id="10_phone"]
 [ext_resource type="Resource" path="res://data/traps/growing_weight.tres" id="7_growing"]
 [ext_resource type="Resource" path="res://data/traps/balance.tres" id="8_balance"]
 [ext_resource type="Resource" path="res://data/traps/noisy.tres" id="9_noisy"]
@@ -77,3 +78,6 @@ environment = SubResource("Environment")
 [node name="HUD" type="CanvasLayer" parent="."]
 process_mode = 3
 script = ExtResource("6_hud")
+
+[node name="PhoneCamera" type="CanvasLayer" parent="."]
+script = ExtResource("10_phone")

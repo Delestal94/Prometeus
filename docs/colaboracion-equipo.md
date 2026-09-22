@@ -56,14 +56,34 @@ antes de asumir que todo sigue funcionando igual.
 `route.gd` ahora construye `house_count` casas con timbre a lo largo de la
 ruta en vez de una única zona de entrega (pedido del usuario, 2026-09-21;
 detalle completo en `docs/tareas-nacho.md` #101-108). Construido entero del
-lado de Nacho, sin tocar ningún archivo de Slatex. Pero hay un gap real que
-bloquea el flujo completo: hoy no se puede volver a levantar un paquete ya
-montado en la furgoneta (`is_loaded == true`) para bajarlo caminando y
-entregarlo en una casa —
-`do-not-drop/scripts/gameplay/interaction/package_pickup_point.gd.can_interact()`
-bloquea el pickup en ese caso. Es un cambio chico y aislado (ensanchar esa
-condición, no romper el caso existente), pero vive en zona de Slatex — avisar
-antes de tocarlo, o que lo agregue Slatex directamente.
+lado de Nacho, sin tocar ningún archivo de Slatex.
+
+**Resuelto (2026-09-22), tocando archivos de Slatex por decisión explícita
+del usuario** ("pulir todo a nivel profesional"). El gap que bloqueaba el
+flujo completo era que no se podía volver a levantar un paquete ya montado
+(`is_loaded == true`) para bajarlo caminando hasta una casa, así que **las
+tres casas de la ruta eran inalcanzables y todas resolvían como "missed"** —
+y nada escuchaba `route.house_resolved` de todos modos, así que entregar
+bien, entregar roto o pasar de largo daban el mismo puntaje. Archivos de
+Slatex modificados, todos con cambios chicos y aislados:
+
+- `scripts/gameplay/interaction/package_pickup_point.gd` — se ensanchó
+  `get_prompt()`/`interact()` para poder bajar un paquete cargado, liberando
+  el `occupied_by` del mount del que salió. El caso original (agarrar del
+  piso) no cambió.
+- `scripts/ui/prototype_hud.gd` — resultados con puertas, quejas de clientes
+  y fotos; etiquetas separadas para eventos de ruta y avisos (antes se
+  pisaban entre sí y con el prompt de interacción); botones de Opciones y de
+  volver al menú en la pausa.
+- `scripts/ui/main_menu.gd` — botones Opciones y Salir; la paleta pasó a
+  `scripts/ui/ui_theme.gd`, ahora compartida con el HUD en vez de duplicada.
+- `scripts/gameplay/player/player.gd` — dos líneas en `_apply_look()` para
+  respetar la sensibilidad e inversión de `GameSettings`.
+
+Zona compartida tocada en el mismo pase: `event_bus.gd` (dos señales nuevas
+de entrega), `run_manager.gd` (registro y puntaje de entregas, quejas y
+fotos), `level_base.gd` (conecta las casas con el puntaje) y
+`scripts/presentation/first_person_camera.gd` (la misma sensibilidad).
 
 También quedan dos puntos de coordinación para cuando haya lugar:
 cantidad de casas dinámica según jugadores conectados (`route.configure_houses()`

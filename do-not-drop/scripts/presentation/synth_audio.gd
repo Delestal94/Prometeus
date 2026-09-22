@@ -214,3 +214,26 @@ static func ambient_wind() -> AudioStreamWAV:
 	stream.loop_begin = 0
 	stream.loop_end = sample_count
 	return stream
+
+## Two hard clicks a few milliseconds apart -- a shutter opening and closing.
+## Short and dry on purpose: it has to read as a phone taking a picture over
+## whatever ambience is playing, without becoming another sustained sound.
+static func camera_shutter() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.16
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var second_click: float = 0.075
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var first: float = exp(-t * 220.0)
+		var second: float = exp(-maxf(t - second_click, 0.0) * 180.0) if t >= second_click else 0.0
+		var envelope: float = maxf(first, second * 0.7)
+		var wave: float = (randf() * 2.0 - 1.0) * 0.6 + sin(TAU * 2600.0 * t) * 0.4
+		data.encode_s16(i * 2, roundi(clampf(wave * envelope, -1.0, 1.0) * 17000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream

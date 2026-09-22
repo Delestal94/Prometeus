@@ -59,6 +59,53 @@ mientras se gestiona un paquete-trampa? Si esto no funciona, nada de lo demás i
       `parametros-diseno.md` antes de pasar a la Fase 2 — no seguir sumando features
       sobre una base que no genera diversión.
 
+### El loop de entrega, de verdad (2026-09-22)
+
+Hasta esta fecha "entregar" era **frenar en una zona al final de la ruta**.
+Las tres casas con timbre que `route.gd` construye desde el 2026-09-21 eran
+inalcanzables: `package_pickup_point.gd` no dejaba volver a levantar un
+paquete ya montado, así que ninguna caja podía salir de la furgoneta, así
+que toda casa resolvía `missed` — y nada escuchaba `route.house_resolved` de
+todos modos, con lo cual entregar bien, entregar roto o pasar de largo daban
+exactamente el mismo puntaje. Era un agujero de loop, no una feature a medio
+hacer, y ningún test lo cubría porque cada pieza por separado funcionaba.
+
+Lo que hay ahora:
+
+- [x] Bajar una caja en una parada, llevarla a pie y tocar el timbre. Sacarla
+      libera el estante y deja de contar como carga a bordo; llevarla lejos
+      de la furgoneta ya no la marca como perdida (el vigilante de
+      `LOST_CARGO_DISTANCE` ignora lo que alguien tiene en las manos).
+- [x] Puntaje por puerta en `RunManager`, aparte de la carga que vuelve en la
+      furgoneta: 150 intacto / 75 en riesgo / 20 roto / −60 por vecino que se
+      quedó esperando. Una casa nunca atendida penaliza aunque el run termine
+      volcando antes de llegar (`expected_houses`, independiente de cómo
+      terminó la partida).
+- [x] **Celular con modo cámara** (F) y foto de entrega (click). Da bonus, y
+      es la prueba que hace caer el reclamo del cliente al final: un paquete
+      entregado roto siempre genera queja, uno en riesgo a veces, y sin foto
+      de esa puerta el reclamo descuenta. Pedido directo del usuario.
+- [x] Cubierto por `tests/test_house_delivery_flow.gd` (el loop entero) y
+      `tests/test_phone_camera.gd` (la foto y el reclamo).
+- [ ] La meta al final de la ruta sigue cerrando el run, por decisión
+      explícita del usuario. Cuántas casas por partida (hoy 3 fijas contra 4
+      paquetes fijos) sigue abierto — `docs/tareas-nacho.md` #104/#105/#121.
+
+### Lo que un jugador puede tocar (2026-09-22)
+
+Antes de este pase no había forma de bajar el volumen, cambiar la
+sensibilidad del mouse, ni **salir del juego** sin Alt+F4, y desde la pausa
+no se podía volver al menú. Ahora: `GameSettings` (autoload, guardado en
+`user://settings.cfg`) + `scripts/ui/options_panel.gd`, alcanzable desde el
+menú principal y desde la pausa, con volumen, sensibilidad de mirada,
+invertir Y y pantalla completa; más botones de Salir y de volver al menú.
+La paleta de UI dejó de estar duplicada entre menú y HUD
+(`scripts/ui/ui_theme.gd`), y las etiquetas del HUD que se pisaban entre sí
+(eventos de ruta sobre el prompt de interacción, avisos de mérito sobre los
+pings) tienen cada una su propia línea y su propio reloj. Cubierto por
+`tests/test_settings.gd`.
+
+
 ## Fase 2 — Sumar las trampas restantes (single-player)
 - Implementar los otros 2-3 tipos de trampa del catálogo (Peso creciente, Equilibrio,
   Ruidoso/vivo), como el sistema modular de "plugins" que definimos en
