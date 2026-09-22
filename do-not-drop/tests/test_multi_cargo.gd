@@ -27,12 +27,13 @@ func _initialize() -> void:
 	_expect(trap_ids == ["balance", "fragile", "growing_weight", "noisy"],
 		"All four trap types are represented (got %s)" % str(trap_ids))
 
-	# Every passenger seat can be sat in, and each one is tied to its own mount.
+	# Seven passenger places fit behind the driver; the four outer seats own
+	# cargo mounts while the remaining three are free crew seats.
 	var seats: Array[Node] = []
 	for node: Node in _all_nodes(level):
 		if node.get(&"role") == &"passenger":
 			seats.append(node)
-	_expect(seats.size() == 4, "There are four passenger seats to take (got %d)" % seats.size())
+	_expect(seats.size() == 7, "There are seven passenger seats to take (got %d)" % seats.size())
 
 	var player: Node = level.local_player
 	var manager: Node = root.get_node(^"/root/RunManager")

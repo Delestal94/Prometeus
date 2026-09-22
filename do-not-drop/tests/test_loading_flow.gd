@@ -18,7 +18,9 @@ func _run() -> void:
 	var package: Node = level.get_node("World/Package")
 	var vehicle: Node = level.get_node("World/Vehicle")
 	var seat: Node = vehicle.get_node("CabinInterior/DriverEyePoint/InteractionArea")
-	var mount: Node = vehicle.get_node("CargoBay/LeftSeat1PackageMount/InteractionArea")
+	# Loading a seat other than the first one must still unlock the driver's
+	# seat; otherwise the loading flow depends on an arbitrary cargo slot.
+	var mount: Node = vehicle.get_node("CargoBay/LeftSeat2PackageMount/InteractionArea")
 	var pickup: Node = package.get_node("InteractionArea")
 	var hud: Node = level.get_node("HUD")
 	_expect(not manager.is_running, "No run behind the introduction")

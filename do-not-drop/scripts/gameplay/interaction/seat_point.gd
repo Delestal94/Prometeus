@@ -68,26 +68,26 @@ func _is_occupied() -> bool:
 
 
 func get_prompt() -> String:
-	if occupant != null:
+	if _is_occupied():
 		return ""
 	return "Subirse a manejar" if role == &"driver" else "Sentarse"
 
 
 func can_interact(player: Node) -> bool:
-	if occupant != null:
+	if _is_occupied():
 		return false
 	var carried: Node = player.get(&"carried_package")
 	if role == &"driver":
-		# The driver's required_mount_path isn't "their" mount -- it's a
-		# readiness gate borrowed from seat 1 ("don't let the driver sit
-		# until at least one package is loaded somewhere"). A driver never
-		# carries cargo into the seat: board_seat()/interact() have nowhere
-		# to put it, so it would just hang there, still "carried" by a now
-		# invisible, seated player.
-		if not required_mount_path.is_empty():
-			var gate_mount: Node = get_node_or_null(required_mount_path)
-			if gate_mount == null or not is_instance_valid(gate_mount.get(&"occupied_by")):
-				return false
+		# Any loaded passenger position makes the van ready. Requiring the
+		# first seat's mount made a valid package on the other three seats
+		# leave the driver prompt unavailable.
+		var has_loaded_cargo: bool = false
+		for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
+			if is_instance_valid(mount.get(&"occupied_by")):
+				has_loaded_cargo = true
+				break
+		if not has_loaded_cargo:
+			return false
 		return carried == null
 	if not required_mount_path.is_empty():
 		# A passenger's tending mount can be filled two ways: someone already

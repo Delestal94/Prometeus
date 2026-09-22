@@ -49,6 +49,7 @@ var carried_package: Node = null
 ## Their input reaches its trap through here.
 var tended_package: Node = null
 var _seated: bool = false
+var _seat_camera_path: NodePath = NodePath()
 var _pitch: float = 0.0
 var _nearby: Array[Node] = []
 var _last_prompt: String = ""
@@ -133,6 +134,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_send_ping()
 		return
 	if _seated:
+		if event.is_action_pressed(&"interact"):
+			leave_seat()
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		_apply_look(event.relative * MOUSE_SENSITIVITY)
@@ -360,6 +363,7 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	# (RenderLayers.LOCAL_BODY, set once in _build_body()).
 	_camera.current = false
 	seat_node_path = seat_path
+	_seat_camera_path = seat_camera_path
 	# board_seat() only ever runs on the boarding peer's own client (it's a
 	# targeted RPC, not a broadcast -- see seat_point.gd), so this is
 	# guaranteed to be the local player's own view swapping cameras. A quick
@@ -369,6 +373,27 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	var seat_camera: Node = get_node_or_null(seat_camera_path)
 	if seat_camera != null and seat_camera.has_method(&"activate"):
 		seat_camera.call(&"activate")
+
+
+## Seats are a temporary safe spot, not a lock-in. Leaving restores the
+## on-foot controller at the seat's location, so passengers can react to
+## loose cargo while the van is moving.
+func leave_seat() -> void:
+	if not _seated:
+		return
+	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
+	if seat != null:
+		global_position = seat.global_position + seat.global_basis.z * 0.45
+	var seat_camera: Node = get_node_or_null(_seat_camera_path)
+	if seat_camera != null and seat_camera.has_method(&"deactivate"):
+		seat_camera.call(&"deactivate")
+	_seated = false
+	tended_package = null
+	seat_node_path = NodePath()
+	_seat_camera_path = NodePath()
+	collision_layer = 8
+	collision_mask = 7
+	_camera.current = true
 
 
 func _from_host() -> bool:

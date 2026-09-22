@@ -17,6 +17,9 @@ const SPAWN_POINTS: Array[Vector3] = [
 	Vector3(2.2, 1.0, 4.4),
 	Vector3(3.4, 1.0, 4.4),
 	Vector3(1.0, 1.0, 3.8),
+	Vector3(4.6, 1.0, 3.2),
+	Vector3(4.6, 1.0, 4.4),
+	Vector3(1.0, 1.0, 5.0),
 ]
 var local_player: Node = null
 var packages: Array[Node] = []

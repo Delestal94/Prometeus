@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3]
+[gd_scene load_steps=37 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle.gd" id="1_vehicle"]
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_input_component.gd" id="2_input"]
@@ -114,16 +114,34 @@ size = Vector3(2.1, 0.28, 4.35)
 size = Vector3(2.02, 1.68, 1.65)
 
 [sub_resource type="BoxShape3D" id="Shape_floor"]
-size = Vector3(2.08, 0.18, 2.45)
+size = Vector3(2.08, 0.18, 5.4)
 
 [sub_resource type="BoxShape3D" id="Shape_side"]
-size = Vector3(0.14, 0.66, 2.45)
+size = Vector3(0.14, 1.5, 5.4)
 
 [sub_resource type="BoxShape3D" id="Shape_back"]
 size = Vector3(2.08, 0.52, 0.14)
 
+[sub_resource type="BoxShape3D" id="Shape_cargo_shelf"]
+size = Vector3(0.55, 0.12, 2.4)
+
+[sub_resource type="BoxShape3D" id="Shape_cargo_shelf_lip"]
+size = Vector3(0.08, 0.16, 2.4)
+
 [sub_resource type="BoxMesh" id="Mesh_unit"]
 size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_cargo_shelf"]
+size = Vector3(0.55, 0.12, 2.4)
+
+[sub_resource type="BoxMesh" id="Mesh_cargo_shelf_lip"]
+size = Vector3(0.08, 0.16, 2.4)
+
+[sub_resource type="BoxMesh" id="Mesh_passenger_seat"]
+size = Vector3(0.35, 0.12, 0.42)
+
+[sub_resource type="BoxMesh" id="Mesh_center_passenger_seat"]
+size = Vector3(0.45, 0.12, 0.35)
 
 [sub_resource type="CylinderMesh" id="Mesh_wheel"]
 material = SubResource("Material_dark")
@@ -149,11 +167,11 @@ size = Vector3(2.02, 1.68, 1.65)
 
 [sub_resource type="BoxMesh" id="Mesh_floor"]
 material = SubResource("Material_cargo")
-size = Vector3(2.08, 0.18, 2.45)
+size = Vector3(2.08, 0.18, 5.4)
 
 [sub_resource type="BoxMesh" id="Mesh_side"]
 material = SubResource("Material_body")
-size = Vector3(0.14, 0.66, 2.45)
+size = Vector3(0.14, 1.5, 5.4)
 
 [sub_resource type="BoxMesh" id="Mesh_back"]
 material = SubResource("Material_body")
@@ -161,7 +179,7 @@ size = Vector3(2.08, 0.52, 0.14)
 
 [node name="DeliveryVan" type="VehicleBody3D" groups=["vehicle"]]
 collision_layer = 2
-collision_mask = 5
+collision_mask = 13
 mass = 950.0
 physics_material_override = SubResource("PhysicsMaterial_body")
 center_of_mass_mode = 1
@@ -192,20 +210,21 @@ position = Vector3(0, 0.92, -1.25)
 shape = SubResource("Shape_cabin")
 
 [node name="FloorCollision" type="CollisionShape3D" parent="."]
-position = Vector3(0, 0.19, 0.925)
+position = Vector3(0, 0.19, 2.35)
 shape = SubResource("Shape_floor")
 
 [node name="LeftWallCollision" type="CollisionShape3D" parent="."]
-position = Vector3(-1.0, 0.61, 0.925)
+position = Vector3(-1.0, 0.85, 2.35)
 shape = SubResource("Shape_side")
 
 [node name="RightWallCollision" type="CollisionShape3D" parent="."]
-position = Vector3(1.0, 0.61, 0.925)
+position = Vector3(1.0, 0.85, 2.35)
 shape = SubResource("Shape_side")
 
 [node name="TailgateCollision" type="CollisionShape3D" parent="."]
-position = Vector3(0, 0.54, 2.12)
+position = Vector3(0, 0.54, 5.05)
 shape = SubResource("Shape_back")
+disabled = true
 
 [node name="BodyVisuals" type="Node3D" parent="."]
 
@@ -319,36 +338,81 @@ shape = SubResource("Shape_seat_interact_driver")
 
 [node name="CargoBay" type="Node3D" parent="."]
 
+## Low physical shelves keep cargo in place during normal driving, but their
+## inner lips are deliberately short: a hard stop or impact can throw a box
+## into the centre aisle for passengers to recover.
+[node name="LeftShelf" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(-0.65, 0.5, 3.75)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_cargo_shelf")
+
+[node name="LeftShelfLip" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(-0.34, 0.63, 3.75)
+material_override = SubResource("Material_dark")
+mesh = SubResource("Mesh_cargo_shelf_lip")
+
+[node name="RightShelf" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.65, 0.5, 3.75)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_cargo_shelf")
+
+[node name="RightShelfLip" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.34, 0.63, 3.75)
+material_override = SubResource("Material_dark")
+mesh = SubResource("Mesh_cargo_shelf_lip")
+
+
+[node name="ShelfPhysics" type="StaticBody3D" parent="CargoBay"]
+collision_layer = 2
+collision_mask = 5
+
+[node name="LeftShelf" type="CollisionShape3D" parent="CargoBay/ShelfPhysics"]
+position = Vector3(-0.65, 0.5, 3.75)
+shape = SubResource("Shape_cargo_shelf")
+
+[node name="LeftLip" type="CollisionShape3D" parent="CargoBay/ShelfPhysics"]
+position = Vector3(-0.34, 0.63, 3.75)
+shape = SubResource("Shape_cargo_shelf_lip")
+
+[node name="RightShelf" type="CollisionShape3D" parent="CargoBay/ShelfPhysics"]
+position = Vector3(0.65, 0.5, 3.75)
+shape = SubResource("Shape_cargo_shelf")
+
+[node name="RightLip" type="CollisionShape3D" parent="CargoBay/ShelfPhysics"]
+position = Vector3(0.34, 0.63, 3.75)
+shape = SubResource("Shape_cargo_shelf_lip")
+
 [node name="Floor" type="MeshInstance3D" parent="CargoBay"]
-position = Vector3(0, 0.19, 0.925)
+position = Vector3(0, 0.19, 2.35)
 mesh = SubResource("Mesh_floor")
 
 [node name="LeftWall" type="MeshInstance3D" parent="CargoBay"]
-position = Vector3(-1.0, 0.61, 0.925)
+position = Vector3(-1.0, 0.85, 2.35)
 mesh = SubResource("Mesh_side")
 
 [node name="RightWall" type="MeshInstance3D" parent="CargoBay"]
-position = Vector3(1.0, 0.61, 0.925)
+position = Vector3(1.0, 0.85, 2.35)
 mesh = SubResource("Mesh_side")
 
 [node name="Tailgate" type="MeshInstance3D" parent="CargoBay"]
-position = Vector3(0, 0.54, 2.12)
+position = Vector3(0, 0.54, 5.05)
 mesh = SubResource("Mesh_back")
+visible = false
 
 [node name="TailgateStripe" type="MeshInstance3D" parent="CargoBay"]
-position = Vector3(0, 0.54, 2.195)
+position = Vector3(0, 0.54, 5.125)
 scale = Vector3(1.4, 0.17, 0.015)
 material_override = SubResource("Material_orange")
 mesh = SubResource("Mesh_unit")
 
 [node name="LeftTailLight" type="MeshInstance3D" parent="CargoBay"]
-position = Vector3(-0.85, 0.43, 2.207)
+position = Vector3(-0.85, 0.43, 5.137)
 scale = Vector3(0.19, 0.27, 0.06)
 material_override = SubResource("Material_tail_light")
 mesh = SubResource("Mesh_unit")
 
 [node name="RightTailLight" type="MeshInstance3D" parent="CargoBay"]
-position = Vector3(0.85, 0.43, 2.207)
+position = Vector3(0.85, 0.43, 5.137)
 scale = Vector3(0.19, 0.27, 0.06)
 material_override = SubResource("Material_tail_light")
 mesh = SubResource("Mesh_unit")
@@ -386,7 +450,7 @@ prompt = "Sentarse y cuidar la carga"
 shape = SubResource("Shape_seat_interact_driver")
 
 [node name="LeftSeat1PackageMount" type="Marker3D" parent="CargoBay"]
-position = Vector3(-0.25, 0.8, 0.15)
+position = Vector3(-0.65, 0.9, 0.15)
 rotation_degrees = Vector3(0, -90, 0)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat1PackageMount" groups=["package_mount"]]
@@ -428,7 +492,7 @@ prompt = "Sentarse y cuidar la carga"
 shape = SubResource("Shape_seat_interact_driver")
 
 [node name="LeftSeat2PackageMount" type="Marker3D" parent="CargoBay"]
-position = Vector3(-0.25, 0.8, 1.35)
+position = Vector3(-0.65, 0.9, 1.35)
 rotation_degrees = Vector3(0, -90, 0)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat2PackageMount" groups=["package_mount"]]
@@ -470,7 +534,7 @@ prompt = "Sentarse y cuidar la carga"
 shape = SubResource("Shape_seat_interact_driver")
 
 [node name="RightSeat1PackageMount" type="Marker3D" parent="CargoBay"]
-position = Vector3(0.25, 0.8, 0.15)
+position = Vector3(0.65, 0.9, 0.15)
 rotation_degrees = Vector3(0, 90, 0)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat1PackageMount" groups=["package_mount"]]
@@ -512,7 +576,7 @@ prompt = "Sentarse y cuidar la carga"
 shape = SubResource("Shape_seat_interact_driver")
 
 [node name="RightSeat2PackageMount" type="Marker3D" parent="CargoBay"]
-position = Vector3(0.25, 0.8, 1.35)
+position = Vector3(0.65, 0.9, 1.35)
 rotation_degrees = Vector3(0, 90, 0)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat2PackageMount" groups=["package_mount"]]
@@ -521,6 +585,72 @@ prompt = "Dejar paquete acá"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat2PackageMount/InteractionArea"]
 shape = SubResource("Shape_seat_interact_mount")
+
+## Three extra passenger places make the enlarged crew van seat seven people
+## behind the driver. They are deliberately in the front half, keeping the
+## rear aisle clear for loose cargo and the shelves.
+[node name="LeftSeat3Cushion" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(-0.72, 0.5, 0.75)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_passenger_seat")
+
+[node name="LeftSeat3EyePoint" type="Marker3D" parent="CargoBay"]
+position = Vector3(-0.55, 1.0, 0.75)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="FirstPersonCamera" parent="CargoBay/LeftSeat3EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat3EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+prompt = "Sentarse"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat3EyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
+
+[node name="RightSeat3Cushion" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.72, 0.5, 0.75)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_passenger_seat")
+
+[node name="RightSeat3EyePoint" type="Marker3D" parent="CargoBay"]
+position = Vector3(0.55, 1.0, 0.75)
+rotation_degrees = Vector3(0, 90, 0)
+
+[node name="FirstPersonCamera" parent="CargoBay/RightSeat3EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat3EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+prompt = "Sentarse"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat3EyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
+
+[node name="CenterSeatCushion" type="MeshInstance3D" parent="CargoBay"]
+position = Vector3(0.0, 0.5, 1.9)
+material_override = SubResource("Material_cargo")
+mesh = SubResource("Mesh_center_passenger_seat")
+
+[node name="CenterSeatEyePoint" type="Marker3D" parent="CargoBay"]
+position = Vector3(0.0, 1.0, 1.9)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="FirstPersonCamera" parent="CargoBay/CenterSeatEyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/CenterSeatEyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+prompt = "Sentarse"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/CenterSeatEyePoint/InteractionArea"]
+shape = SubResource("Shape_seat_interact_driver")
 
 [node name="FrontLeftWheel" type="VehicleWheel3D" parent="."]
 position = Vector3(-1.12, -0.1, -1.5)
@@ -567,7 +697,7 @@ rotation = Vector3(0, 0, 1.5707963)
 mesh = SubResource("Mesh_hub")
 
 [node name="RearLeftWheel" type="VehicleWheel3D" parent="."]
-position = Vector3(-1.12, -0.1, 1.5)
+position = Vector3(-1.12, -0.1, 3.7)
 use_as_traction = true
 wheel_radius = 0.42
 wheel_rest_length = 0.29
@@ -588,7 +718,7 @@ rotation = Vector3(0, 0, 1.5707963)
 mesh = SubResource("Mesh_hub")
 
 [node name="RearRightWheel" type="VehicleWheel3D" parent="."]
-position = Vector3(1.12, -0.1, 1.5)
+position = Vector3(1.12, -0.1, 3.7)
 use_as_traction = true
 wheel_radius = 0.42
 wheel_rest_length = 0.29
