@@ -29,6 +29,7 @@ const MARKING := Color("d4d9c2")
 const WARNING := Color("e7be51")
 const TEAL := Color("65b5a1")
 const CONCRETE := Color("8c9791")
+const FOREST_GROUND_SHADER := preload("res://shaders/forest_ground.gdshader")
 
 var _materials: Dictionary = {}
 var _delivery_vehicles: Array[Node3D] = []
@@ -85,11 +86,33 @@ func _build_ground() -> void:
 	var ground_length: float = 170.0 + route_length
 	var ground_center_z: float = 50.0 - ground_length * 0.5
 	_box("Ground", Vector3(180.0, 1.0, ground_length), Vector3(0.0, -0.8, ground_center_z), SHOULDER, true)
+	_build_forest_terrain(ground_length, ground_center_z)
 	var shoulder_length: float = route_length + 20.0
 	var shoulder_center_z: float = 8.0 - shoulder_length * 0.5
 	# A shallow shoulder keeps an off-road mistake recoverable in the prototype.
 	_box("LeftShoulder", Vector3(8.0, 0.2, shoulder_length), Vector3(-10.0, -0.2, shoulder_center_z), Color("879182"), true)
 	_box("RightShoulder", Vector3(8.0, 0.2, shoulder_length), Vector3(10.0, -0.2, shoulder_center_z), Color("879182"), true)
+
+
+## Continuous terrain overlay with seamless texture splatting. It remains
+## below road/shoulder geometry and has no collider, so the driving surface
+## is unchanged while the forest floor gains texture blending and microrelief.
+func _build_forest_terrain(length: float, center_z: float) -> void:
+	var terrain := MeshInstance3D.new()
+	terrain.name = "ForestGroundSurface"
+	var mesh := PlaneMesh.new()
+	mesh.size = Vector2(180.0, length)
+	mesh.subdivide_width = 90
+	mesh.subdivide_depth = maxi(int(length / 2.0), 1)
+	terrain.mesh = mesh
+	terrain.position = Vector3(0.0, -0.295, center_z)
+	var material := ShaderMaterial.new()
+	material.shader = FOREST_GROUND_SHADER
+	material.set_shader_parameter(&"soil_texture", load("res://assets/textures/terrain/tx_terrainsoilseamless.png"))
+	material.set_shader_parameter(&"moss_texture", load("res://assets/textures/terrain/tx_terrainmossseamless.png"))
+	material.set_shader_parameter(&"gravel_texture", load("res://assets/textures/terrain/tx_terraingravelseamless.png"))
+	terrain.material_override = material
+	add_child(terrain)
 
 
 func _build_road() -> void:
@@ -195,20 +218,22 @@ func _build_houses() -> void:
 		house.visual_variant = index
 		# The house model's entrance is on local -Z. Rotate that face toward the
 		# asphalt rather than along the road, so stops address the route.
-		house.position = Vector3(side * 10.5, 0.0, z)
+		house.position = Vector3(side * 10.5, _ground_height_at(side * 10.5), z)
 		house.rotation.y = side * PI * 0.5
 		add_child(house)
 		houses.append(house)
 		_build_house_path(index, side, z)
 		var captured_index: int = index
 		house.resolved.connect(func(outcome: StringName) -> void: house_resolved.emit(captured_index, outcome))
-		_label("HouseNumber%d" % index, "CASA %d" % (index + 1), Vector3(side * 10.5, 4.0, z + 2.6), 0.01, TEAL)
+		_label("HouseNumber%d" % index, "CASA %d" % (index + 1), Vector3(side * 10.5, _ground_height_at(side * 10.5) + 4.0, z + 2.6), 0.01, TEAL)
 
 
 ## A narrow worn path makes each stop feel connected to the road. It stops
 ## at the shoulder rather than widening the driving lane or blocking traffic.
 func _build_house_path(index: int, side: float, z: float) -> void:
-	_box("HousePath%d" % index, Vector3(4.0, 0.025, 1.45), Vector3(side * 7.9, 0.025, z), Color("716b54"))
+	var path_height: float = 0.025
+	var path_x: float = side * 7.9
+	_box("HousePath%d" % index, Vector3(4.0, path_height, 1.45), Vector3(path_x, _ground_height_at(path_x) + path_height * 0.5, z), Color("716b54"))
 
 
 func _build_goal() -> void:
@@ -259,6 +284,12 @@ func _build_forest() -> void:
 		"res://assets/models/environment/forest/sm_env_forest_mushroom.glb",
 		"res://assets/models/environment/forest/sm_env_forest_fallen_log.glb",
 		"res://assets/models/environment/forest/sm_env_forest_rock.glb",
+		"res://assets/models/environment/forest/sm_env_forest_bramble_thicket.glb",
+		"res://assets/models/environment/forest/sm_env_forest_tall_fern_cluster.glb",
+		"res://assets/models/environment/forest/sm_env_forest_mossy_stump.glb",
+		"res://assets/models/environment/forest/sm_env_forest_mossy_rock_cluster.glb",
+		"res://assets/models/environment/forest/sm_env_forest_deadfall_branch.glb",
+		"res://assets/models/environment/forest/sm_env_forest_tall_grass_clump.glb",
 	]
 	var forest := Node3D.new()
 	forest.name = "ForestDressing"
@@ -276,7 +307,7 @@ func _build_forest() -> void:
 					continue
 				var lateral: float = 8.0 + float(layer) * 5.1 + float((index * 7) % 5) * 0.45
 				var depth: float = -4.0 - float(row) * 3.10 - float((index * 11) % 7) * 0.24
-				tree.position = Vector3(side * lateral, 0.0, depth)
+				tree.position = Vector3(side * lateral, _ground_height_at(side * lateral), depth)
 				tree.rotation.y = deg_to_rad(float((index * 37) % 360))
 				# Uniform scale preserves each source model's silhouette. A 0.82–1.35
 				# range still yields younger and tall mature trees without stretching
@@ -291,7 +322,8 @@ func _build_forest() -> void:
 		var plant := _instantiate_dressing(ground_paths[index % ground_paths.size()])
 		if plant == null:
 			continue
-		plant.position = Vector3(side * (6.7 + float((index * 11) % 25)), 0.0, -4.0 - float((index * 17) % int(route_length - 8.0)))
+		var lateral: float = side * (6.7 + float((index * 11) % 25))
+		plant.position = Vector3(lateral, _ground_height_at(lateral), -4.0 - float((index * 17) % int(route_length - 8.0)))
 		plant.rotation.y = deg_to_rad(float((index * 53) % 360))
 		var plant_scale: float = 0.65 + float((index * 19) % 55) / 100.0
 		plant.scale = Vector3.ONE * plant_scale
@@ -303,6 +335,18 @@ func _instantiate_dressing(path: String) -> Node3D:
 	if packed == null:
 		return null
 	return packed.instantiate() as Node3D
+
+
+## The road, shoulder and terrain sit at three distinct elevations. Imported
+## props have their local origin at their base, so every dressed object needs
+## to be placed on the surface below it instead of blindly at world y = 0.
+func _ground_height_at(x: float) -> float:
+	var lateral: float = absf(x)
+	if lateral <= 6.0:
+		return 0.0
+	if lateral <= 14.0:
+		return -0.1
+	return -0.3
 
 
 ## World ambience (item #45): a quiet, looping wind bed. Non-positional
@@ -365,10 +409,11 @@ func _box(node_name: String, size: Vector3, location: Vector3, color: Color, sol
 
 
 func _sign(node_name: String, caption: String, location: Vector3, accent: Color) -> void:
-	_box(node_name + "Post", Vector3(0.16, 2.4, 0.16), location + Vector3(0.0, 1.2, 0.0), CONCRETE, true)
-	_box(node_name + "Board", Vector3(4.6, 1.4, 0.12), location + Vector3(0.0, 2.65, 0.0), Color("263b3e"))
-	_box(node_name + "Stripe", Vector3(4.6, 0.10, 0.13), location + Vector3(0.0, 3.3, 0.0), accent)
-	_label(node_name + "Text", caption, location + Vector3(0.0, 2.65, 0.08), 0.0065, MARKING)
+	var ground_y: float = _ground_height_at(location.x)
+	_box(node_name + "Post", Vector3(0.16, 2.4, 0.16), location + Vector3(0.0, ground_y + 1.2, 0.0), CONCRETE, true)
+	_box(node_name + "Board", Vector3(4.6, 1.4, 0.12), location + Vector3(0.0, ground_y + 2.65, 0.0), Color("263b3e"))
+	_box(node_name + "Stripe", Vector3(4.6, 0.10, 0.13), location + Vector3(0.0, ground_y + 3.3, 0.0), accent)
+	_label(node_name + "Text", caption, location + Vector3(0.0, ground_y + 2.65, 0.08), 0.0065, MARKING)
 
 
 func _label(node_name: String, caption: String, location: Vector3, pixel_size: float, color: Color) -> void:
