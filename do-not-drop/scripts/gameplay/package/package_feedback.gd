@@ -137,8 +137,11 @@ func _add_shipping_label(package: Node, shipping_data: String) -> void:
 	_shipping_label = RigidBody3D.new()
 	_shipping_label.name = "ShippingLabel"
 	_shipping_label.freeze = true
-	_shipping_label.collision_layer = 4
-	_shipping_label.collision_mask = 7
+	# While attached this is paper painted on the box, not a second solid
+	# object for the carrier to collide with. Collision is enabled only once
+	# a hard impact tears it free.
+	_shipping_label.collision_layer = 0
+	_shipping_label.collision_mask = 0
 	_shipping_label.position = Vector3(0.0, 0.0, 0.342)
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -278,6 +281,8 @@ func _detach_shipping_label() -> void:
 	_shipping_label.reparent(world)
 	_shipping_label.global_transform = drop_transform
 	_shipping_label.freeze = false
+	_shipping_label.collision_layer = 4
+	_shipping_label.collision_mask = 7
 	_shipping_label.linear_velocity = (package as RigidBody3D).linear_velocity + Vector3(0.0, 1.2, 0.4)
 	_label_detached = true
 

@@ -21,8 +21,10 @@ func _expect_identity(package: Node, expected_size: Vector3, marker: StringName)
 	_expect(mesh != null and mesh.size.is_equal_approx(expected_size), "%s has its own silhouette" % package.name)
 	_expect(package.has_node(NodePath(marker)), "%s has a visible identity mark" % package.name)
 	var feedback: Node = package.get_node("PackageFeedbackComponent")
+	_expect(feedback._shipping_label.collision_layer == 0, "%s label does not block its carrier" % package.name)
 	feedback._on_package_damaged(package.get("package_id"), 20.0)
 	_expect(feedback._shipping_label.get_parent() == package.get_parent(), "%s drops its detailed shipping label after a strong hit" % package.name)
+	_expect(feedback._shipping_label.collision_layer == 4, "%s fallen label becomes physical" % package.name)
 
 func _expect(condition: bool, message: String) -> void:
 	if not condition:
