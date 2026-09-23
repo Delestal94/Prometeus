@@ -96,6 +96,7 @@ var _last_safe_ground: Vector3 = Vector3.ZERO
 var _package_hit_cooldown: float = 0.0
 var _seat_pose_blend: float = 0.0
 var _flinch_time: float = 0.0
+var _ragdolled: bool = false
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -777,6 +778,20 @@ func receive_package_hit(push: Vector3) -> void:
 	velocity += push + Vector3.UP * 1.4
 	if is_local():
 		_play_one_shot(ANIM_JUMP, 420)
+	if push.length() >= 2.2:
+		_activate_ragdoll(push)
+
+
+func _activate_ragdoll(push: Vector3) -> void:
+	if _ragdolled:
+		return
+	_ragdolled = true
+	var ragdoll := preload("res://scripts/gameplay/player/player_ragdoll.gd").new()
+	get_parent().add_child(ragdoll)
+	ragdoll.setup(self)
+	ragdoll.fall(push)
+	await get_tree().create_timer(2.8).timeout
+	_ragdolled = false
 
 
 ## The host announces the outcome of an interaction by calling these on the
