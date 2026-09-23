@@ -70,6 +70,7 @@ var _lid_action: String = ""
 var _lid_inside: String = ""
 var _carrying: bool = false
 var ping_label: Label
+var ping_indicator: Label
 var ping_seconds_left: float = 0.0
 ## Route events used to overwrite interaction_label, and merit/card notices
 ## used to overwrite ping_label -- so an event banner erased "[E] Agarrar
@@ -253,6 +254,12 @@ func _build_ui() -> void:
 	shortcut_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 
 	ping_label = UiTheme.floating_label(hud_layer, "", 26, YELLOW, 560, 20)
+	ping_indicator = UiTheme.floating_label(hud_layer, "", 34, YELLOW, 260, 0)
+	ping_indicator.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	ping_indicator.offset_left = -130
+	ping_indicator.offset_right = 130
+	ping_indicator.offset_top = -190
+	ping_indicator.offset_bottom = -145
 	toast_label = UiTheme.floating_label(hud_layer, "", 21, MINT, 560, 64)
 	event_label = UiTheme.floating_label(hud_layer, "", 23, YELLOW, 760, 104)
 	interaction_label = UiTheme.floating_label(hud_layer, "", 25, PAPER, 560, 0)
@@ -437,6 +444,7 @@ func _process(delta: float) -> void:
 		ping_seconds_left -= delta
 		if ping_seconds_left <= 0.0:
 			ping_label.text = ""
+			ping_indicator.text = ""
 	if toast_seconds_left > 0.0:
 		toast_seconds_left -= delta
 		if toast_seconds_left <= 0.0:
@@ -718,7 +726,18 @@ func _on_ping(peer_id: int, _position: Vector3, label: String) -> void:
 	# every machine -- a box glyph in front of a ping reads as a bug.
 	var who: String = "Vos" if peer_id == NetworkManager.local_id() else "Jugador %d" % peer_id
 	ping_label.text = "%s:  %s" % [who, label]
+	ping_indicator.text = _ping_arrow(_position) + "  PING"
 	ping_seconds_left = PING_DISPLAY_SECONDS
+
+
+func _ping_arrow(world_position: Vector3) -> String:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return "PING"
+	var local: Vector3 = camera.global_transform.basis.inverse() * (world_position - camera.global_position)
+	if absf(local.x) > absf(local.y):
+		return "→" if local.x > 0.0 else "←"
+	return "↓" if local.y > 0.0 else "↑"
 
 
 ## Softens a hard camera cut: fades to black and back over `seconds` total.
