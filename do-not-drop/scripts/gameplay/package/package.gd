@@ -343,6 +343,7 @@ func request_drop(drop_transform: Transform3D) -> void:
 		return
 	_release_carrier()
 	global_transform = drop_transform
+	reset_physics_interpolation()
 	set_held(false)
 
 
@@ -353,6 +354,7 @@ func drop_loose(drop_transform: Transform3D) -> void:
 		return
 	carrier = null
 	global_transform = drop_transform
+	reset_physics_interpolation()
 	set_held(false)
 
 
@@ -363,6 +365,8 @@ func drop_loose(drop_transform: Transform3D) -> void:
 func place_at(mount: Node3D, mount_point: Node = null) -> void:
 	_release_carrier()
 	global_transform = mount.global_transform
+	# Snapped onto the shelf: drawn there at once, not slid in from the hands.
+	reset_physics_interpolation()
 	set_held(false)
 	is_loaded = true
 	current_mount = mount_point if mount_point != null else mount

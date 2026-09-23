@@ -40,6 +40,8 @@ var _hop_time: float = -1.0
 var _animator: AnimationPlayer
 var _current_animation: StringName = &""
 var _idle_timer: float = 0.0
+var _far_recheck: float = 0.0
+const FAR_RECHECK_SECONDS: float = 0.25
 
 ## The Stag is authored ~5 m tall facing +Z; a deer here stands ~1.2 m at the
 ## shoulder facing -Z like every other model.
@@ -52,6 +54,7 @@ const RIGGED_BLEND: float = 0.25
 
 func _ready() -> void:
 	_animator = find_child("AnimationPlayer", true, false) as AnimationPlayer
+	_limit_draw_distance(DEER_DRAW_DISTANCE if _animator != null else SMALL_DRAW_DISTANCE)
 	if _animator != null:
 		_setup_rigged()
 		return
@@ -73,6 +76,19 @@ func _ready() -> void:
 	var seed_value: int = hash(Vector3i(global_position.round()))
 	_phase = float(absi(seed_value) % 1000) / 1000.0 * TAU
 	_hop_timer = 1.5 + float(absi(seed_value) % 400) / 100.0
+
+
+## Every joint is its own mesh, so a rabbit is a dozen draw calls -- and a
+## route has around a hundred animals. Past these distances they're a few
+## pixels at most, so they simply aren't drawn.
+const SMALL_DRAW_DISTANCE: float = 75.0
+const DEER_DRAW_DISTANCE: float = 170.0
+
+
+func _limit_draw_distance(distance: float) -> void:
+	for node: Node in find_children("*", "GeometryInstance3D", true, false):
+		(node as GeometryInstance3D).visibility_range_end = distance
+		(node as GeometryInstance3D).visibility_range_end_margin = 5.0
 
 
 func _setup_rigged() -> void:
@@ -119,12 +135,19 @@ func idle() -> void:
 
 func _process(delta: float) -> void:
 	if mode == Mode.GONE or (_body == null and _animator == null):
+		set_process(false)  # Fled out of sight, or nothing to animate: done for good.
+		return
+	if _far_recheck > 0.0:
+		_far_recheck -= delta
 		return
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var near: bool = camera == null or camera.global_position.distance_squared_to(global_position) <= ANIMATE_DISTANCE * ANIMATE_DISTANCE
 	if _animator != null:
 		_animator.active = near  # A skinned deer nobody can see costs nothing.
 	if not near:
+		# Most of a route's animals are far away at any moment; they only need
+		# to notice the camera arriving, which a few checks a second catch.
+		_far_recheck = FAR_RECHECK_SECONDS
 		return
 	_time += delta
 	if not steered:

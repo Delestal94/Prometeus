@@ -158,6 +158,9 @@ func _build_house() -> void:
 		visual_instance.name = "HouseVisual"
 		LowpolyMaterials.apply(visual_instance)
 		add_child(visual_instance)
+		# A few hundred authored parts, none of which ever move: one draw
+		# call per material instead of one per part.
+		DressingBatcher.merge_into_one(visual_instance)
 
 	# The resident (placeholder, no art pipeline yet) stays hidden until
 	# someone actually rings -- popping out is the whole point of the joke.

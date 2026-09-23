@@ -187,6 +187,7 @@ func _on_package_placed(package_id: StringName) -> void:
 		var half_height: float = (package.call(&"get_half_extents") as Vector3).y
 		var offset: float = half_height - MOUNT_REFERENCE_HALF_HEIGHT
 		(package as Node3D).global_position = marker.global_transform * Vector3(0.0, offset, 0.0)
+		(package as Node3D).reset_physics_interpolation()
 
 
 ## A heavy truck left with nobody at the wheel doesn't roll: VehicleBody3D's
@@ -229,6 +230,19 @@ func _snap_to_ground() -> void:
 ## hang at their suspension attach points (tucked up into the arches). Put
 ## them where the settled suspension holds them instead; the moment the
 ## truck unfreezes VehicleBody3D takes the wheel transforms back over.
+## Physics interpolation (project.godot) draws the moving truck smoothly
+## between ticks, but a FROZEN truck's wheels got drawn stacked at its centre
+## (a VehicleWheel3D + interpolation engine quirk -- why the setting was once
+## dropped). A frozen truck is parked, or a remote peer's copy positioned by
+## the network, so it gains nothing from interpolation: it's switched off
+## for the whole truck while frozen and back on, reset, once it's released.
+func _match_interpolation_to_freeze() -> void:
+	var wanted: Node.PhysicsInterpolationMode = PHYSICS_INTERPOLATION_MODE_OFF if freeze else PHYSICS_INTERPOLATION_MODE_INHERIT
+	if physics_interpolation_mode != wanted:
+		physics_interpolation_mode = wanted
+		reset_physics_interpolation()
+
+
 func _pose_frozen_wheels() -> void:
 	for wheel: VehicleWheel3D in _wheel_mounts:
 		var mount: Vector3 = _wheel_mounts[wheel]
@@ -268,6 +282,7 @@ func get_cargo_spawn_transform() -> Transform3D:
 
 
 func _physics_process(delta: float) -> void:
+	_match_interpolation_to_freeze()
 	if not is_multiplayer_authority():
 		return
 	if not _grounded_once:

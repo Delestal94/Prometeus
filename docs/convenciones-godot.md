@@ -1,6 +1,6 @@
 # Convenciones técnicas del proyecto Godot — Take My Package
 
-> Última actualización: 2026-09-20
+> Última actualización: 2026-09-23
 > Complementa `docs/arquitectura.md` con las decisiones concretas de configuración de
 > Godot necesarias antes de programar (Input Map, capas de física, convenciones de
 > nombres y organización real de escenas dentro de `do-not-drop/`).
@@ -23,6 +23,36 @@
   válida y el valor se pierde silenciosamente (nos pasó con `controls_enabled` en
   `vehicle.tscn`: quedaba en su default `true` pese a tener `controls_enabled = false`
   escrito, porque estaba antes de `script =`).
+
+## 0.1 Rendimiento (2026-09-23, medido con `tests/bench_drive.gd`)
+
+- **La interpolación de física está activada** (`physics/common/physics_interpolation`,
+  con `physics_jitter_fix = 0`). La física corre a 60 Hz pero lo que se ve se dibuja
+  interpolado entre ticks; sin esto la cámara del conductor quedaba quieta en el 64%
+  de los frames y saltaba en el resto (el "tirón" al ir rápido). Consecuencias:
+  - Todo lo que **se teletransporta** (soltar o montar una caja, bajarse de un asiento,
+    rescatar a alguien que cayó, un nodo recién creado al que después se le pone
+    posición) lleva `reset_physics_interpolation()` justo después, o se dibuja un
+    frame "barriendo" desde donde estaba.
+  - Lo que tiene que viajar **pegado a algo físico** (el cuerpo de un jugador sentado
+    en el camión) se posa en `_physics_process`, no en `_process`: así se interpola
+    igual que el camión. Posado cada frame quedaría en la pose cruda del tick y
+    temblaría contra la cabina.
+  - Mirar con mouse/stick en `_input`/`_process` sigue siendo inmediato; no hace falta
+    tocar las cámaras.
+- **El decorado de la ruta se hornea para dibujarlo** (`dressing_batcher.gd`): después
+  de que `RouteDresser` coloca cada pieza, todo lo estático (sin script, sin animación,
+  sin colisión, no espejado) se funde en `MultiMeshInstance3D` por modelo y por parche
+  de 48 m, las casas en una malla cada una y los bordes/líneas de cada tramo en una
+  malla por material. Si agregás un prop que **se mueve o reacciona**, dale un script
+  (o un nodo que no sea `Node3D`/`MeshInstance3D`) y queda como nodo; si no, se hornea.
+  Los tests que inspeccionan piezas sueltas construyen la ruta con
+  `batch_dressing = false`.
+- En GL Compatibility **cada `MeshInstance3D` visible es un draw call** (y otra vez por
+  cada cascada de sombra). Un modelo armado con muchas partes cuesta una llamada por
+  parte: para cosas que se repiten, preferí fusionarlas o hornearlas.
+- `SynthAudio` genera cada sonido una sola vez y lo comparte (hasta 12 ms por sonido
+  en GDScript); no mutes el `AudioStreamWAV` que devuelve.
 
 ## 1. Input Map (Project Settings → Input Map)
 

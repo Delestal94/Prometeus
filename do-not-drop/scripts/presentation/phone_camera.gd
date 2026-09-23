@@ -195,7 +195,8 @@ func _open() -> void:
 	if _previous_camera == null:
 		return
 	_match_lens(_previous_camera)
-	_camera.global_transform = _previous_camera.global_transform
+	_camera.global_transform = _previous_camera.get_global_transform_interpolated()
+	_camera.reset_physics_interpolation()
 	_camera.current = true
 	is_open = true
 	_hud = get_parent().get_node_or_null(^"HUD") as CanvasLayer if get_parent() != null else null
@@ -242,7 +243,8 @@ func _process(_delta: float) -> void:
 		return
 	# Tracks the player's own head rather than moving on its own: looking
 	# around and walking keep working exactly as they do without the phone.
-	_camera.global_transform = _previous_camera.global_transform
+	# The interpolated pose is what that head camera is actually drawn from.
+	_camera.global_transform = _previous_camera.get_global_transform_interpolated()
 	_refresh_status()
 
 

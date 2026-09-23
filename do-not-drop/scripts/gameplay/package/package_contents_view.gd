@@ -268,6 +268,7 @@ func _debris_body(world: Node, at: Transform3D) -> RigidBody3D:
 	body.collision_mask = DEBRIS_MASK
 	world.add_child(body, true)
 	body.global_transform = at
+	body.reset_physics_interpolation()
 	get_tree().create_timer(DEBRIS_LIFETIME).timeout.connect(body.queue_free)
 	return body
 

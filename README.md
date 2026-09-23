@@ -161,6 +161,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_legacy_user_data.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_dressing_assets.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_placement_rules.gd
+<godot> --headless --path do-not-drop --script res://tests/test_render_batching.gd
 <godot> --headless --path do-not-drop --script res://tests/test_reference_truck.gd
 <godot> --headless --path do-not-drop --script res://tests/test_wildlife_crossing.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
@@ -169,6 +170,28 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 ```
 
 Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
+
+### Rendimiento
+
+`bench_drive.gd` construye el nivel real, sienta al conductor y deja que un piloto
+automático recorra la ruta entera a fondo mientras mide cada frame. Corre **sin**
+`--headless` (mide el render de verdad):
+
+```
+<godot> --path do-not-drop --script res://tests/bench_drive.gd -- --seconds=150
+```
+
+Imprime ms por frame (promedio, p50/p95/p99, máximo), draw calls, costo de física por
+tick, *judder* de la cámara (qué tan parejo avanza lo que se ve: 0 es perfecto) y cada
+frame que supere `--hitch=33` ms con su contexto. `--experiment=noshadow|shadow2|noplants|nodress|nohouses|nosegvis|notruck`
+apaga una fuente de costo para medir cuánto vale. El piloto no esquiva chicanas: si se
+traba lo reubica más adelante (cuenta como `rescues`).
+`check_interpolation.gd` (también con ventana) verifica la interpolación física: ruedas del
+camión estacionado, puertas que se abren, caja montada y la vista del conductor avanzando en
+cada frame; guarda capturas `check_interpolation_*.png` en `user://` para mirarlas. Referencia del 2026-09-23 en la
+máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, p95 22 ms,
+~6.200 draw calls y la cámara quieta en el 64% de los frames; después ~3,6–6 ms, p95
+~6,5–8 ms, ~1.500 draw calls y ningún frame quieto.
 
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
@@ -290,6 +313,13 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   solo en su zona (faroles y paradas en el pueblo, fardos
   en el campo), la ruta pasa por más de un tipo de lugar, y la misma semilla
   arma exactamente el mismo mundo en todos los jugadores.
+- `test_render_batching` — que el horneado del decorado para render
+  (`dressing_batcher.gd`, 2026-09-23) sea solo eso: la misma semilla armada
+  con piezas sueltas y horneada da exactamente las mismas piezas en las
+  mismas posiciones (nada perdido, movido ni duplicado), las mismas
+  colisiones, los animales siguen siendo nodos, las casas quedan en una sola
+  malla y todo se dibuja con una fracción de las instancias. También que los
+  sonidos sintetizados se generen una sola vez.
 - `test_route_dressing_assets` — que el arte nuevo de la ruta (2026-09-23) caiga donde
   significa algo: cada tramo peligroso con su señal mirando al conductor, la flecha
   de curva doblando para el mismo lado que la ruta, el cartel "entrega adelante" del

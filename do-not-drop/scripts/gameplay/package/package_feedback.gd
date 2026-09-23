@@ -388,6 +388,7 @@ func _detach_shipping_label() -> void:
 	_shipping_label.reparent(world)
 	# Drop the Box's pulse/growth scale: a loose physics body must be unscaled.
 	_shipping_label.global_transform = drop_transform.orthonormalized()
+	_shipping_label.reset_physics_interpolation()
 	_shipping_label.freeze = false
 	_shipping_label.collision_layer = 4
 	_shipping_label.collision_mask = 7
@@ -687,6 +688,7 @@ func _burst_confetti() -> void:
 	var container: Node = get_tree().current_scene if get_tree().current_scene != null else get_tree().root
 	container.add_child(particles)
 	particles.global_position = origin
+	particles.reset_physics_interpolation()
 	particles.emitting = true
 	particles.finished.connect(particles.queue_free)
 

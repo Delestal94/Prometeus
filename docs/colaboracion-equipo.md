@@ -99,6 +99,20 @@ Nacho cambió el nombre oficial en la zona compartida y en dos archivos de Slate
   largo en un panel de 240 px: si se corta, ajustarlo es de Slatex.
 - La carpeta `do-not-drop/` **no** se renombra.
 
+## Aviso activo: optimización de rendimiento, con archivos de Slatex (2026-09-23)
+
+Pedido del usuario: tirones al manejar rápido. Detalle y reglas nuevas en
+`docs/convenciones-godot.md` §0.1; benchmark en `tests/bench_drive.gd` (README → Rendimiento).
+Del lado de Nacho: `route.gd` + `dressing_batcher.gd` nuevo (decorado horneado en MultiMesh),
+`delivery_house.gd`, `vehicle.gd`, `synth_audio.gd`, `wildlife_animal.gd`, `project.godot`.
+En archivos de Slatex, cambios chicos por la interpolación física:
+- `player/player.gd`: el cuerpo sentado se posa en `_physics_process` (con interpolación);
+  `reset_physics_interpolation()` al bajarse del asiento y en el rescate de caída.
+- `package/package.gd`, `package_feedback.gd`, `package_contents_view.gd`:
+  `reset_physics_interpolation()` tras cada teletransporte (soltar, montar, restos, etiqueta).
+- `interaction/seat_point.gd`: el indicador solo reescribe su material cuando cambia.
+- `presentation/phone_camera.gd`: sigue la pose interpolada de la cámara que reemplaza.
+
 ## Aviso activo: segunda pasada del camión, con archivos de Slatex (2026-09-24)
 
 Pedido del usuario tras probarlo. Nacho tocó, además del camión:
@@ -121,6 +135,10 @@ Pedido del usuario tras probarlo. Nacho tocó, además del camión:
   su lado (máscara 5): un jugador dentro de su colisión lo hacía salir despedido.
 - Se probó la interpolación física y se descartó: con el camión congelado mandaba las
   ruedas al origen del mundo y ocultaba las animaciones de puertas y el paquete al dejarlo.
+  **Reactivada el 2026-09-23** (optimización): era la causa del tirón al manejar rápido (la
+  cámara quedaba quieta en el 64% de los frames). Las ruedas: `vehicle.gd` saca al camión
+  de la interpolación mientras está congelado (`_match_interpolation_to_freeze`). Puertas y
+  paquete montado se verifican con `tests/check_interpolation.gd` (con ventana, deja capturas).
 - Puertas: responden solo si se las mira (ya no se roban la E de paquetes y asientos).
 
 ## Aviso activo: camión de referencia integrado y pulido (2026-09-23)

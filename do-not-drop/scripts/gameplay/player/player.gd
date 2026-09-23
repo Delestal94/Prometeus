@@ -269,6 +269,15 @@ func _process(_delta: float) -> void:
 	# MultiplayerSynchronizer, same as seat_node_path.
 	if _anim_player != null and _anim_player.current_animation != String(anim_state):
 		_anim_player.play(String(anim_state))
+	if not get_tree().physics_interpolation:
+		_pose_seated_body()
+
+
+## With physics interpolation on, the van is drawn between its physics ticks.
+## A body snapped to the seat every rendered frame would sit at the raw tick
+## pose instead and shake against the smoothly drawn cab, so it's posed on
+## the ticks (from _physics_process) and interpolated right along with it.
+func _pose_seated_body() -> void:
 	if seat_node_path.is_empty():
 		return
 	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
@@ -281,6 +290,8 @@ func _process(_delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_package_hit_cooldown = maxf(0.0, _package_hit_cooldown - delta)
+	if get_tree().physics_interpolation:
+		_pose_seated_body()
 	if not is_local():
 		return
 	if carried_package != null and not is_instance_valid(carried_package):
@@ -338,6 +349,7 @@ func _update_ground_safety() -> void:
 	if global_position.y < _last_safe_ground.y - 15.0:
 		global_position = _last_safe_ground + Vector3.UP * 0.5
 		velocity = Vector3.ZERO
+		reset_physics_interpolation()  # A rescue, not a fall: no streak between the two spots.
 	elif is_on_floor():
 		_last_safe_ground = global_position
 
@@ -830,6 +842,7 @@ func leave_seat() -> void:
 	_release_seat_occupant(seat)
 	if seat != null:
 		global_position = _seat_exit_position(seat)
+		reset_physics_interpolation()
 	var seat_camera: Node = get_node_or_null(_seat_camera_path)
 	if seat_camera != null and seat_camera.has_method(&"deactivate"):
 		seat_camera.call(&"deactivate")

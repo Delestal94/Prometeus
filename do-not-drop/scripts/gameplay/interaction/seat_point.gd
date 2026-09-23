@@ -58,12 +58,21 @@ func _build_indicator() -> void:
 	_update_indicator()
 
 
+var _indicator_occupied: Variant = null
+
+
 func _process(_delta: float) -> void:
 	_update_indicator()
 
 
 func _update_indicator() -> void:
-	var color: Color = Color("f47e6d") if _is_occupied() else Color("83e2ba")
+	var occupied: bool = _is_occupied()
+	# Rewriting the material every frame re-uploaded it for nothing; the
+	# colour only changes when someone sits down or gets up.
+	if occupied == _indicator_occupied:
+		return
+	_indicator_occupied = occupied
+	var color: Color = Color("f47e6d") if occupied else Color("83e2ba")
 	_indicator_material.albedo_color = color
 	_indicator_material.emission = color
 

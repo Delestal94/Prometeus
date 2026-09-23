@@ -14,6 +14,9 @@ func _run() -> void:
 		quit(2)
 		return
 	var level: Node3D = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	# Keep every placed piece a node, so the shots below can find a guardrail
+	# or a landmark by its model file (batched, they'd be MultiMesh instances).
+	level.get_node(^"World/Route").set(&"batch_dressing", false)
 	root.add_child(level)
 	current_scene = level
 	level.get_node("HUD").hide()

@@ -117,6 +117,8 @@ func _run() -> void:
 func _build() -> Node3D:
 	var route: Node3D = load("res://scenes/gameplay/route/route.tscn").instantiate() as Node3D
 	route.set(&"house_count", 5)
+	# These are the dresser's own promises, piece by piece: keep them nodes.
+	route.set(&"batch_dressing", false)
 	root.add_child(route)
 	await process_frame
 	return route

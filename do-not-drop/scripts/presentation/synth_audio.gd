@@ -4,9 +4,27 @@ extends RefCounted
 ## assets -- same "no art yet, code is the source of truth" convention as
 ## route.gd's boxes and package_feedback.gd's confetti cubes.
 
+## Every sound is synthesized sample by sample in GDScript -- up to ~12 ms
+## for the wind bed -- so each one is built once and shared: a stream is
+## read-only data, and every AudioStreamPlayer keeps its own playback of it.
+## Without this, opening a box or ringing a door re-synthesized its sound on
+## the very frame it had to play.
+static var _cache: Dictionary = {}
+
+
+static func _cached(key: StringName, build: Callable) -> AudioStreamWAV:
+	if not _cache.has(key):
+		_cache[key] = build.call()
+	return _cache[key]
+
+
 ## Quiet harmonic exhaust loop. Integer periods keep the seam continuous;
 ## pitch and volume are adjusted by VehiclePresentation, not by simulation.
 static func engine_loop() -> AudioStreamWAV:
+	return _cached(&"engine_loop", _make_engine_loop)
+
+
+static func _make_engine_loop() -> AudioStreamWAV:
 	const RATE: int = 22050
 	var data := PackedByteArray()
 	data.resize(RATE * 2)
@@ -29,6 +47,10 @@ static func engine_loop() -> AudioStreamWAV:
 ## plays at all is VehiclePresentation's call (it already gates on strength);
 ## this only shapes what a single hit sounds like.
 static func impact_thud() -> AudioStreamWAV:
+	return _cached(&"impact_thud", _make_impact_thud)
+
+
+static func _make_impact_thud() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.22
 	var sample_count: int = int(RATE * DURATION)
@@ -53,6 +75,10 @@ static func impact_thud() -> AudioStreamWAV:
 ## to have its pitch/volume driven externally by wheel skid amount rather
 ## than baking speed into the clip itself.
 static func tire_screech() -> AudioStreamWAV:
+	return _cached(&"tire_screech", _make_tire_screech)
+
+
+static func _make_tire_screech() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.5
 	var sample_count: int = int(RATE * DURATION)
@@ -80,6 +106,10 @@ static func tire_screech() -> AudioStreamWAV:
 ## RUINED vs. AT_RISK by whoever plays it (see package_feedback.gd), so
 ## the same clip reads as two different severities.
 static func glass_chime() -> AudioStreamWAV:
+	return _cached(&"glass_chime", _make_glass_chime)
+
+
+static func _make_glass_chime() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.5
 	const PARTIALS: Array[float] = [1800.0, 2650.0, 3400.0]
@@ -105,6 +135,10 @@ static func glass_chime() -> AudioStreamWAV:
 ## a slow vibrato and a little noise, meant to be pitched/mixed by agitation
 ## rather than describing intensity itself.
 static func creature_groan() -> AudioStreamWAV:
+	return _cached(&"creature_groan", _make_creature_groan)
+
+
+static func _make_creature_groan() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 1.2
 	var sample_count: int = int(RATE * DURATION)
@@ -134,6 +168,10 @@ static func creature_groan() -> AudioStreamWAV:
 ## retriggered every so often while the crate is under distress rather than
 ## looped continuously (real creaking isn't constant).
 static func wood_creak() -> AudioStreamWAV:
+	return _cached(&"wood_creak", _make_wood_creak)
+
+
+static func _make_wood_creak() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.35
 	var sample_count: int = int(RATE * DURATION)
@@ -219,6 +257,10 @@ static func hostile_hiss() -> AudioStreamWAV:
 ## A classic two-tone car horn: two square waves close enough in pitch to
 ## beat against each other, with a short fade in/out so it doesn't click.
 static func honk_horn() -> AudioStreamWAV:
+	return _cached(&"honk_horn", _make_honk_horn)
+
+
+static func _make_honk_horn() -> AudioStreamWAV:
 	const SAMPLE_RATE: int = 22050
 	const DURATION: float = 0.42
 	const FREQ_A: float = 311.0
@@ -253,6 +295,10 @@ static func honk_horn() -> AudioStreamWAV:
 ## smooths it into something that reads as air movement, not static. A
 ## slow amplitude drift on top keeps it from feeling like a dead-flat loop.
 static func ambient_wind() -> AudioStreamWAV:
+	return _cached(&"ambient_wind", _make_ambient_wind)
+
+
+static func _make_ambient_wind() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 4.0
 	const FILTER_A: float = 0.985
@@ -279,6 +325,10 @@ static func ambient_wind() -> AudioStreamWAV:
 ## Short and dry on purpose: it has to read as a phone taking a picture over
 ## whatever ambience is playing, without becoming another sustained sound.
 static func camera_shutter() -> AudioStreamWAV:
+	return _cached(&"camera_shutter", _make_camera_shutter)
+
+
+static func _make_camera_shutter() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.16
 	var sample_count: int = int(RATE * DURATION)
@@ -302,6 +352,10 @@ static func camera_shutter() -> AudioStreamWAV:
 ## Packing tape torn off a box: a run of short, rough noise bursts that
 ## speeds up as the tape lets go -- the first time a box is opened.
 static func tape_rip() -> AudioStreamWAV:
+	return _cached(&"tape_rip", _make_tape_rip)
+
+
+static func _make_tape_rip() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.42
 	var sample_count: int = int(RATE * DURATION)
@@ -326,6 +380,10 @@ static func tape_rip() -> AudioStreamWAV:
 
 ## A cardboard flap folding over: a soft, papery thump.
 static func cardboard_flap() -> AudioStreamWAV:
+	return _cached(&"cardboard_flap", _make_cardboard_flap)
+
+
+static func _make_cardboard_flap() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.2
 	var sample_count: int = int(RATE * DURATION)

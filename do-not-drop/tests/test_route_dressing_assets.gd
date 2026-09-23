@@ -31,6 +31,8 @@ func _run() -> void:
 	var route: Node3D = load("res://scenes/gameplay/route/route.tscn").instantiate() as Node3D
 	# Five houses so the deck deals every model once.
 	route.set(&"house_count", 5)
+	# Checks individual signs, rails and yard pieces: keep them nodes.
+	route.set(&"batch_dressing", false)
 	root.add_child(route)
 	for _i: int in range(3):
 		await process_frame

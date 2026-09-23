@@ -31,6 +31,11 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 ## tareas-nacho.md, not guessed at here. Call configure_houses() before this
 ## node enters the tree to override.
 @export var house_count: int = 3
+## Folds the static dressing into MultiMesh batches once it's placed, and
+## each segment's road furniture into one mesh (see dressing_batcher.gd) --
+## the difference between ~16k draw calls a frame and a couple of thousand.
+## Tests that inspect individual placed pieces turn it off.
+@export var batch_dressing: bool = true
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 
@@ -541,6 +546,10 @@ func _finish_terrain() -> void:
 	# can never change the road itself -- and every peer gets the same draw.
 	dresser = RouteDresser.new(self, terrain, _rng.randi())
 	dresser.dress(_segments, houses, _clear_zones)
+	if batch_dressing:
+		var yards: Array = houses.map(func(house: DeliveryHouse) -> Node: return house.get_node_or_null(^"Yard"))
+		DressingBatcher.bake(self, _segments, yards)
+		DressingBatcher.merge_segment_geometry(_segments)
 	for i: int in range(_path_points.size()):
 		_path_points[i].y = terrain.height_at(_path_points[i])
 	for sample: Dictionary in _progress_samples:
