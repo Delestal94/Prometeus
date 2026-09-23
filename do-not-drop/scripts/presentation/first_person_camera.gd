@@ -37,7 +37,7 @@ var _look_pitch: float = 0.0
 func _ready() -> void:
 	RenderLayers.configure_first_person(self)
 	RenderLayers.show_viewmodel(self, current)
-	fov = BASE_FOV
+	fov = GameSettings.preferred_fov
 	near = 0.03
 	# Explicit far plane instead of the engine default: the route is 220 m and
 	# the scenery blocks beside it reach ~250 m, so this keeps everything in
@@ -63,7 +63,7 @@ func deactivate() -> void:
 	current = false
 	RenderLayers.show_viewmodel(self, false)
 	_shake_strength = 0.0
-	fov = BASE_FOV
+	fov = GameSettings.preferred_fov
 	reset_look()
 
 
@@ -115,8 +115,9 @@ func _process(delta: float) -> void:
 		var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 		_apply_look(stick * stick_sensitivity * delta)
 	var look_pose: Transform3D = _look_transform()
-	if not is_equal_approx(fov, BASE_FOV):
-		fov = move_toward(fov, BASE_FOV, fov_recover_speed * absf(fov - BASE_FOV) * delta + 0.01)
+	var preferred_fov: float = GameSettings.preferred_fov
+	if not is_equal_approx(fov, preferred_fov):
+		fov = move_toward(fov, preferred_fov, fov_recover_speed * absf(fov - preferred_fov) * delta + 0.01)
 	_shake_strength = maxf(0.0, _shake_strength - shake_decay * delta)
 	if _shake_strength <= 0.0:
 		transform = look_pose
@@ -134,8 +135,8 @@ func _process(delta: float) -> void:
 func _on_vehicle_impact(strength: float, _impact_position: Vector3) -> void:
 	if not current:
 		return
-	_shake_strength = clampf(_shake_strength + strength * 0.15, 0.0, 1.0)
-	fov = BASE_FOV + impact_fov_kick_degrees * _shake_strength
+	_shake_strength = clampf(_shake_strength + strength * 0.15 * GameSettings.camera_shake_scale, 0.0, 1.0)
+	fov = GameSettings.preferred_fov + impact_fov_kick_degrees * _shake_strength * GameSettings.camera_shake_scale
 
 
 ## A ruined package deserves its own jolt (docs/especificaciones-visuales.md
@@ -147,4 +148,4 @@ func _on_vehicle_impact(strength: float, _impact_position: Vector3) -> void:
 func _on_package_ruined(_package_id: StringName, _cause: String) -> void:
 	if not current:
 		return
-	_shake_strength = clampf(_shake_strength + 0.6, 0.0, 1.0)
+	_shake_strength = clampf(_shake_strength + 0.6 * GameSettings.camera_shake_scale, 0.0, 1.0)

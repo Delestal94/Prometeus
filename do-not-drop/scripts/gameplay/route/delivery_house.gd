@@ -72,11 +72,13 @@ func _ready() -> void:
 	add_to_group(&"delivery_house")
 	_build_house()
 	_bell_player = AudioStreamPlayer3D.new()
+	_bell_player.bus = &"SFX"
 	_bell_player.stream = SynthAudio.glass_chime()
 	_bell_player.unit_size = 8.0
 	_bell_player.max_distance = 25.0
 	add_child(_bell_player)
 	_reaction_player = AudioStreamPlayer3D.new()
+	_reaction_player.bus = &"Voice"
 	_reaction_player.unit_size = 8.0
 	_reaction_player.max_distance = 25.0
 	add_child(_reaction_player)

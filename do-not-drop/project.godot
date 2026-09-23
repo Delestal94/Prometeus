@@ -18,6 +18,10 @@ boot_splash/stretch_mode=4
 boot_splash/image="res://assets/ui/backgrounds/tx_ui_boot_splash_1920.png"
 config/icon="res://icon.png"
 
+[audio]
+
+default_bus_layout="res://default_bus_layout.tres"
+
 [autoload]
 
 EventBus="*res://scripts/core/event_bus.gd"

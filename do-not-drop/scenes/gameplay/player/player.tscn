@@ -37,6 +37,9 @@ properties/4/replication_mode = 2
 properties/5/path = NodePath(".:anim_state")
 properties/5/spawn = true
 properties/5/replication_mode = 2
+properties/6/path = NodePath(".:cosmetic_id")
+properties/6/spawn = true
+properties/6/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 8

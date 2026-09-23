@@ -17,7 +17,7 @@ func _initialize() -> void:
 	packages.assign(root.get_tree().get_nodes_in_group(&"cargo"))
 	var mounts: Array[Node] = []
 	mounts.assign(root.get_tree().get_nodes_in_group(&"package_mount"))
-	_expect(packages.size() == 4, "The level ships four packages, one per trap (got %d)" % packages.size())
+	_expect(packages.size() == 7, "The level ships seven packages, one per trap (got %d)" % packages.size())
 	_expect(mounts.size() == 6, "Four seat mounts plus two shelf mounts are available (got %d)" % mounts.size())
 	var seat_mounts: Array[Node] = []
 	for mount: Node in mounts:
@@ -29,8 +29,8 @@ func _initialize() -> void:
 	for package: Node in packages:
 		trap_ids.append(String(package.get(&"trap_definition").get(&"id")))
 	trap_ids.sort()
-	_expect(trap_ids == ["balance", "fragile", "growing_weight", "noisy"],
-		"All four trap types are represented (got %s)" % str(trap_ids))
+	_expect(trap_ids == ["balance", "explosive", "fragile", "growing_weight", "hostile", "liquid", "noisy"],
+		"All seven trap types are represented (got %s)" % str(trap_ids))
 
 	# Seven passenger places fit behind the driver; the four outer seats own
 	# cargo mounts while the remaining three are free crew seats.
@@ -93,7 +93,7 @@ func _initialize() -> void:
 	level.free()
 	second_player.free()
 	if _failures == 0:
-		print("PASS: four traps ride together, one loss doesn't end the run, seats hand over their package")
+		print("PASS: seven traps ride together, one loss doesn't end the run, seats hand over their package")
 	quit(_failures)
 
 

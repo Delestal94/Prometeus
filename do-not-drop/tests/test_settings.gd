@@ -34,6 +34,16 @@ func _run() -> void:
 	_expect(settings.look_sensitivity <= 3.0, "Look sensitivity clamps to something still controllable")
 	settings.look_sensitivity = 0.0
 	_expect(settings.look_sensitivity >= 0.2, "Look sensitivity can't be turned off entirely")
+	settings.preferred_fov = 120.0
+	_expect(is_equal_approx(settings.preferred_fov, 100.0), "FOV clamps to a comfortable maximum")
+	settings.preferred_fov = 40.0
+	_expect(is_equal_approx(settings.preferred_fov, 65.0), "FOV clamps to a comfortable minimum")
+	settings.camera_shake_scale = -1.0
+	_expect(is_zero_approx(settings.camera_shake_scale), "Camera shake can be disabled for accessibility")
+	settings.effects_volume = 0.4
+	settings.voice_volume = 0.6
+	_expect(is_equal_approx(settings.effects_volume, 0.4), "Effects volume is stored independently")
+	_expect(is_equal_approx(settings.voice_volume, 0.6), "Voice volume is stored independently")
 
 	# --- inversion is expressed as a multiplier both look paths can use ---
 	settings.invert_look_y = false
@@ -58,6 +68,10 @@ func _run() -> void:
 	settings.invert_look_y = true
 	# Simulate the next launch: wipe the in-memory values, then load.
 	settings.master_volume = 1.0
+	settings.preferred_fov = 82.0
+	settings.camera_shake_scale = 1.0
+	settings.effects_volume = 1.0
+	settings.voice_volume = 1.0
 	settings.look_sensitivity = 1.0
 	settings.invert_look_y = false
 	settings.master_volume = 0.35

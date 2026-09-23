@@ -53,6 +53,7 @@ func _ready() -> void:
 	_build_camera()
 	_build_ui()
 	_shutter = AudioStreamPlayer.new()
+	_shutter.bus = &"SFX"
 	_shutter.stream = SynthAudio.camera_shutter()
 	_shutter.volume_db = -6.0
 	add_child(_shutter)

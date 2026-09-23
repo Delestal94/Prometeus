@@ -101,6 +101,12 @@ var _last_safe_ground: Vector3 = Vector3.ZERO
 ## authority (the boarding peer), which the MultiplayerSynchronizer already
 ## propagates to everyone, the same way driver_peer_id works on the vehicle.
 var seat_node_path: NodePath = NodePath()
+## Selected locally before a match, then replicated so every passenger sees
+## the same uniform.
+var cosmetic_id: StringName = &"mint_uniform":
+	set(value):
+		cosmetic_id = value
+		_apply_cosmetic()
 
 
 func _enter_tree() -> void:
@@ -124,6 +130,8 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	_last_safe_ground = global_position
+	if is_local():
+		cosmetic_id = UnlockManager.selected_cosmetic
 	_build_body()
 	RenderLayers.configure_first_person(_camera)
 	RenderLayers.show_viewmodel(_camera, is_local())
@@ -149,7 +157,6 @@ func _ready() -> void:
 ## Own camera can see its own body too (no per-camera render-layer split
 ## yet) -- a minor rough edge, carried over unchanged from the placeholder.
 func _build_body() -> void:
-	var color: Color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
 	var visual: Node3D = CHARACTER_SCENE.instantiate()
 	visual.name = "BodyVisual"
 	add_child(visual)
@@ -158,11 +165,7 @@ func _build_body() -> void:
 	var mesh_instance: MeshInstance3D = _find_mesh_instance(visual)
 	if mesh_instance != null:
 		mesh_instance.layers = RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD
-		var suit_material: Material = mesh_instance.mesh.surface_get_material(0)
-		if suit_material != null:
-			suit_material = suit_material.duplicate()
-			(suit_material as StandardMaterial3D).albedo_color = color
-			mesh_instance.set_surface_override_material(0, suit_material)
+	_apply_cosmetic()
 
 	_anim_player = _find_animation_player(visual)
 	if _anim_player != null:
@@ -174,6 +177,19 @@ func _build_body() -> void:
 				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 		_anim_player.play(ANIM_IDLE)
 
+
+
+func _apply_cosmetic() -> void:
+	if _body_visual == null:
+		return
+	var color: Color = UnlockManager.cosmetic_color(cosmetic_id)
+	var mesh_instance: MeshInstance3D = _find_mesh_instance(_body_visual)
+	if mesh_instance != null and mesh_instance.mesh != null:
+		var suit_material: Material = mesh_instance.mesh.surface_get_material(0)
+		if suit_material != null:
+			suit_material = suit_material.duplicate()
+			(suit_material as StandardMaterial3D).albedo_color = color
+			mesh_instance.set_surface_override_material(0, suit_material)
 	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
 		var hand_material := StandardMaterial3D.new()
 		hand_material.albedo_color = color.lightened(0.3)
@@ -439,7 +455,11 @@ func _play_one_shot(clip: StringName, lock_ms: int) -> void:
 
 
 func _apply_context_fov(delta: float) -> void:
-	var target_fov: float = CARRY_FOV if carried_package != null else WALK_FOV
+	# The options FOV is the neutral reference. Carrying still narrows the
+	# view by the same readable amount, rather than silently ignoring a
+	# player's accessibility preference.
+	var fov_offset: float = GameSettings.preferred_fov - 82.0
+	var target_fov: float = (CARRY_FOV if carried_package != null else WALK_FOV) + fov_offset
 	_camera.fov = move_toward(_camera.fov, target_fov, FOV_SMOOTH_SPEED * delta)
 
 

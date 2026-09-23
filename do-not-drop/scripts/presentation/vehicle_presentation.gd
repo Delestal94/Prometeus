@@ -88,6 +88,7 @@ func _ready() -> void:
 		vehicle.find_children("*Headlight", "MeshInstance3D", true, false),
 		vehicle.find_children("*TailLight", "MeshInstance3D", true, false))
 	engine_player = AudioStreamPlayer3D.new()
+	engine_player.bus = &"SFX"
 	engine_player.name = "EngineAudio"
 	engine_player.position = Vector3(0.0, 0.0, -1.4)
 	engine_player.stream = preload("res://scripts/presentation/synth_audio.gd").engine_loop()
@@ -96,12 +97,14 @@ func _ready() -> void:
 	engine_player.volume_db = -60.0
 	add_child(engine_player)
 	impact_player = AudioStreamPlayer3D.new()
+	impact_player.bus = &"SFX"
 	impact_player.name = "ImpactAudio"
 	impact_player.stream = preload("res://scripts/presentation/synth_audio.gd").impact_thud()
 	impact_player.unit_size = 10.0
 	impact_player.max_distance = 60.0
 	add_child(impact_player)
 	screech_player = AudioStreamPlayer3D.new()
+	screech_player.bus = &"SFX"
 	screech_player.name = "ScreechAudio"
 	screech_player.position = Vector3(0.0, -0.3, 1.2)
 	screech_player.stream = preload("res://scripts/presentation/synth_audio.gd").tire_screech()

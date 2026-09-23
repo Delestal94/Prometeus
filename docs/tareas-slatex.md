@@ -47,7 +47,7 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 17 | FOV configurable por el jugador — depende de la pantalla de opciones (ver sección propia más abajo). (#65) | B | Pendiente |
+| 17 | FOV configurable por el jugador — depende de la pantalla de opciones (ver sección propia más abajo). (#65) | B | ✅ Hecho (`GameSettings`, `options_panel.gd`) |
 | 18 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. (#70) | C | Pendiente |
 | 19 | Viñeta que se intensifica cuando la carga está en riesgo — comunica tensión sin texto. (#71) | B | Pendiente |
 | 20 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. (#74) | B | Pendiente |
@@ -150,24 +150,24 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 72 | Selección de color/piel de personaje en el menú, más allá del color automático por `peer_id` ya implementado. | B | Pendiente |
-| 73 | Integrar cosméticos con el sistema de desbloqueos (Fase 5). | B | Pendiente |
-| 74 | UI de selección de cosmético. | B | Pendiente |
-| 75 | Persistencia de la elección del jugador (mismo guardado JSON del progreso). | A | Pendiente |
-| 76 | Decidir si los cosméticos son solo de color o incluyen geometría/accesorios (depende de cuándo llegue el modelo humanoide, #3). | A | Pendiente |
-| 77 | Vista previa del cosmético antes de confirmarlo (un espejo simple o un modelo girando). | C | Pendiente |
-| 78 | Sincronizar la elección de cosmético en red, mismo patrón que el color por `peer_id` ya replicado. | B | Pendiente |
-| 79 | Test automatizado de que la elección persiste y se ve igual en todos los clientes. | A | Pendiente |
+| 72 | Selección de color/piel de personaje en el menú, más allá del color automático por `peer_id` ya implementado. | B | ✅ Hecho (Uniforme) |
+| 73 | Integrar cosméticos con el sistema de desbloqueos (Fase 5). | B | ✅ Hecho (`UnlockManager`) |
+| 74 | UI de selección de cosmético. | B | ✅ Hecho (`cosmetics_panel.gd`) |
+| 75 | Persistencia de la elección del jugador (mismo guardado JSON del progreso). | A | ✅ Hecho |
+| 76 | Decidir si los cosméticos son solo de color o incluyen geometría/accesorios (depende de cuándo llegue el modelo humanoide, #3). | A | ✅ Hecho: color de uniforme para MVP; accesorios requieren arte dedicado |
+| 77 | Vista previa del cosmético antes de confirmarlo (un espejo simple o un modelo girando). | C | 🟡 Los botones muestran el color; falta preview 3D dedicado |
+| 78 | Sincronizar la elección de cosmético en red, mismo patrón que el color por `peer_id` ya replicado. | B | ✅ Hecho (`cosmetic_id` replicado en Player) |
+| 79 | Test automatizado de que la elección persiste y se ve igual en todos los clientes. | A | 🟡 Persistencia cubierta; falta test de dos clientes reales |
 
 ## Pantalla de opciones (80-87)
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 80 | Armar la pantalla de opciones (no existe todavía, solo el menú principal). | A | ✅ Hecho (`options_panel.gd`) |
-| 81 | Slider de FOV (depende del ítem #17 de esta lista). | B | Pendiente |
-| 82 | Sliders de volumen: general, música, efectos, voces/pings. | A | 🟡 Parcial: general y música; faltan efectos y voces/pings |
+| 81 | Slider de FOV (depende del ítem #17 de esta lista). | B | ✅ Hecho |
+| 82 | Sliders de volumen: general, música, efectos, voces/pings. | A | ✅ Hecho (buses Music/SFX/Voice) |
 | 83 | Reasignación de teclas — al menos las acciones más usadas (interactuar, ping, bocina). | B | Pendiente |
-| 84 | Opciones de accesibilidad: reducir sacudida de cámara, reducir el golpe de FOV en impactos. | B | Pendiente |
+| 84 | Opciones de accesibilidad: reducir sacudida de cámara, reducir el golpe de FOV en impactos. | B | ✅ Hecho (slider Sacudida de cámara) |
 | 85 | Persistencia de las opciones elegidas (archivo de configuración separado del progreso). | A | ✅ Hecho (`GameSettings`) |
 | 86 | Aplicar las opciones en caliente, sin necesitar reiniciar el juego. | A | ✅ Hecho (sin botón aplicar) |
 | 87 | Test automatizado: las opciones se guardan y se aplican correctamente al recargar. | A | ✅ Hecho (`test_settings.gd`) |
@@ -176,7 +176,7 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 88 | Pantalla de leaderboard dedicada (hoy el récord solo se ve en la pantalla de resultados de la propia partida). | B | Pendiente |
+| 88 | Pantalla de leaderboard dedicada (hoy el récord solo se ve en la pantalla de resultados de la propia partida). | B | ✅ Hecho (`leaderboard_panel.gd`) |
 | 89 | Desglose más claro del puntaje en resultados (ya existe la base, pulir legibilidad). | A | Pendiente |
 | 90 | Indicador compartido más legible del estado de todos los paquetes (ya existe `cargo_rows_box`, evaluar si hace falta iconografía en vez de solo texto). | B | ✅ Hecho (íconos de trampa en el HUD, `c77194f`) |
 | 91 | Feedback visual cuando alguien más resuelve su trampa a tiempo (reforzar la cooperación, no solo el riesgo). | B | Pendiente |
@@ -189,13 +189,13 @@
 |---|---|---|---|
 | 94 | Playtesting de cada trampa nueva en aislamiento antes de combinarla con las demás. | A | Pendiente |
 | 95 | Playtesting de las 7 trampas combinadas (4 actuales + 3 nuevas) en una sola entrega. | A | Pendiente |
-| 96 | Bug bash de interacción: soltar un paquete a mitad de traspaso, cambiar de asiento en medio de una acción, dos jugadores interactuando con el mismo objeto a la vez. | A | Pendiente |
-| 97 | Verificar que `test_interaction`, `test_multi_cargo`, `test_trap_visual_feedback`, `test_trap_audio` y `test_interaction_highlight` sigan pasando después de cada trampa nueva. | A | Pendiente |
+| 96 | Bug bash de interacción: soltar un paquete a mitad de traspaso, cambiar de asiento en medio de una acción, dos jugadores interactuando con el mismo objeto a la vez. | A | 🟡 Cubierto por regresiones automatizadas; el caso de dos jugadores requiere playtest de red |
+| 97 | Verificar que `test_interaction`, `test_multi_cargo`, `test_trap_visual_feedback`, `test_trap_audio` y `test_interaction_highlight` sigan pasando después de cada trampa nueva. | A | ✅ Hecho: suite verde el 2026-09-23 |
 | 98 | Playtesting específico de multijugador real (4-5 personas) una vez sumadas las trampas nuevas y la progresión. | A | Pendiente |
 
 ## Documentación de su dominio (99-100)
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 99 | Mantener actualizadas las filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md`. | A | Pendiente |
-| 100 | Escribir la guía "cómo agregar una trampa nueva" (`i_trap_behavior.gd` + `.tres` + integración) para no redescubrirla cada vez — usar las 3 trampas nuevas de esta lista como los primeros casos reales. | A | Pendiente |
+| 99 | Mantener actualizadas las filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md`. | A | 🟡 Actualizada la lista de entrega; faltan assets/animaciones pendientes |
+| 100 | Escribir la guía "cómo agregar una trampa nueva" (`i_trap_behavior.gd` + `.tres` + integración) para no redescubrirla cada vez — usar las 3 trampas nuevas de esta lista como los primeros casos reales. | A | ✅ Hecho (`docs/como-agregar-una-trampa.md`) |

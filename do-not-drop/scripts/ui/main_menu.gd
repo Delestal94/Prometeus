@@ -28,12 +28,16 @@ const ENDLESS_LEVEL_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
 const MENU_ART: Texture2D = preload("res://assets/ui/backgrounds/tx_ui_menu_background_1920.png")
 const PROGRESS_PANEL_SCRIPT := preload("res://scripts/ui/progress_panel.gd")
 const TUTORIAL_PANEL_SCRIPT := preload("res://scripts/ui/tutorial_panel.gd")
+const COSMETICS_PANEL_SCRIPT := preload("res://scripts/ui/cosmetics_panel.gd")
+const LEADERBOARD_PANEL_SCRIPT := preload("res://scripts/ui/leaderboard_panel.gd")
 
 var _status_label: Label
 var _address_field: LineEdit
 var _options: OptionsPanel
 var _progress: Control
 var _tutorial: Control
+var _cosmetics: Control
+var _leaderboard: Control
 var _play_button: Button
 var _cancel_button: Button
 ## Everything that starts a session or opens another screen. Disabled while
@@ -169,6 +173,12 @@ func _build_ui() -> void:
 	var tutorial_button: Button = _button(column, "Cómo jugar", false)
 	tutorial_button.pressed.connect(_open_tutorial)
 	_entry_buttons.append(tutorial_button)
+	var cosmetics_button: Button = _button(column, "Uniforme", false)
+	cosmetics_button.pressed.connect(_open_cosmetics)
+	_entry_buttons.append(cosmetics_button)
+	var leaderboard_button: Button = _button(column, "Récords", false)
+	leaderboard_button.pressed.connect(_open_leaderboard)
+	_entry_buttons.append(leaderboard_button)
 	# A game you can only leave with Alt+F4 reads as unfinished before a
 	# player has pressed anything (docs/critica-diseno-abogado-del-diablo.md
 	# section 4).
@@ -205,6 +215,16 @@ func _build_ui() -> void:
 	_tutorial.name = "TutorialPanel"
 	add_child(_tutorial)
 	_tutorial.connect(&"closed", tutorial_button.grab_focus)
+	_cosmetics = COSMETICS_PANEL_SCRIPT.new()
+	_cosmetics.name = "CosmeticsPanel"
+	add_child(_cosmetics)
+	_cosmetics.hide()
+	_cosmetics.connect(&"closed", cosmetics_button.grab_focus)
+	_leaderboard = LEADERBOARD_PANEL_SCRIPT.new()
+	_leaderboard.name = "LeaderboardPanel"
+	add_child(_leaderboard)
+	_leaderboard.hide()
+	_leaderboard.connect(&"closed", leaderboard_button.grab_focus)
 	# A gamepad player has no cursor: without a focused button, the menu
 	# ignored every press until someone reached for the mouse.
 	_play_button.grab_focus.call_deferred()
@@ -220,6 +240,14 @@ func _open_progress() -> void:
 
 func _open_tutorial() -> void:
 	_tutorial.call(&"open")
+
+
+func _open_cosmetics() -> void:
+	_cosmetics.show()
+
+
+func _open_leaderboard() -> void:
+	_leaderboard.call(&"open")
 
 
 func _quit_game() -> void:

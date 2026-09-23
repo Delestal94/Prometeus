@@ -312,6 +312,7 @@ func _flat_material(color: Color) -> StandardMaterial3D:
 
 func _make_player(stream: AudioStreamWAV, volume_db: float) -> AudioStreamPlayer3D:
 	var player := AudioStreamPlayer3D.new()
+	player.bus = &"SFX"
 	player.stream = stream
 	player.volume_db = volume_db
 	player.unit_size = 6.0

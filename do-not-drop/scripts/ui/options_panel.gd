@@ -13,6 +13,10 @@ signal closed
 var _volume_slider: HSlider
 var _sensitivity_slider: HSlider
 var _music_slider: HSlider
+var _effects_slider: HSlider
+var _voice_slider: HSlider
+var _fov_slider: HSlider
+var _shake_slider: HSlider
 var _hud_scale_slider: HSlider
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
@@ -46,6 +50,14 @@ func _build() -> void:
 
 	_music_slider = UiTheme.slider_row(column, "Volumen de la música", 0.0, 1.0, 0.05, GameSettings.music_volume)
 	_music_slider.value_changed.connect(func(value: float) -> void: GameSettings.music_volume = value)
+	_effects_slider = UiTheme.slider_row(column, "Volumen de efectos", 0.0, 1.0, 0.05, GameSettings.effects_volume)
+	_effects_slider.value_changed.connect(func(value: float) -> void: GameSettings.effects_volume = value)
+	_voice_slider = UiTheme.slider_row(column, "Volumen de voces/pings", 0.0, 1.0, 0.05, GameSettings.voice_volume)
+	_voice_slider.value_changed.connect(func(value: float) -> void: GameSettings.voice_volume = value)
+	_fov_slider = UiTheme.slider_row(column, "Campo de visión", 65.0, 100.0, 1.0, GameSettings.preferred_fov)
+	_fov_slider.value_changed.connect(func(value: float) -> void: GameSettings.preferred_fov = value)
+	_shake_slider = UiTheme.slider_row(column, "Sacudida de cámara", 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
+	_shake_slider.value_changed.connect(func(value: float) -> void: GameSettings.camera_shake_scale = value)
 
 	_sensitivity_slider = UiTheme.slider_row(column, "Sensibilidad de la mirada", 0.2, 3.0, 0.05, GameSettings.look_sensitivity)
 	_sensitivity_slider.value_changed.connect(func(value: float) -> void: GameSettings.look_sensitivity = value)
@@ -101,6 +113,14 @@ func _sync_from_settings() -> void:
 	_volume_slider.value_changed.emit(GameSettings.master_volume)
 	_music_slider.set_value_no_signal(GameSettings.music_volume)
 	_music_slider.value_changed.emit(GameSettings.music_volume)
+	_effects_slider.set_value_no_signal(GameSettings.effects_volume)
+	_effects_slider.value_changed.emit(GameSettings.effects_volume)
+	_voice_slider.set_value_no_signal(GameSettings.voice_volume)
+	_voice_slider.value_changed.emit(GameSettings.voice_volume)
+	_fov_slider.set_value_no_signal(GameSettings.preferred_fov)
+	_fov_slider.value_changed.emit(GameSettings.preferred_fov)
+	_shake_slider.set_value_no_signal(GameSettings.camera_shake_scale)
+	_shake_slider.value_changed.emit(GameSettings.camera_shake_scale)
 	_sensitivity_slider.set_value_no_signal(GameSettings.look_sensitivity)
 	_sensitivity_slider.value_changed.emit(GameSettings.look_sensitivity)
 	_hud_scale_slider.set_value_no_signal(GameSettings.hud_scale)

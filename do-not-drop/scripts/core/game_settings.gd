@@ -29,6 +29,24 @@ var music_volume: float = MUSIC_VOLUME_DEFAULT:
 		_apply_music_volume()
 		_save()
 const MUSIC_VOLUME_DEFAULT: float = 0.7
+var effects_volume: float = 1.0:
+	set(value):
+		effects_volume = clampf(value, 0.0, 1.0)
+		_apply_bus("SFX", effects_volume)
+		_save()
+var voice_volume: float = 1.0:
+	set(value):
+		voice_volume = clampf(value, 0.0, 1.0)
+		_apply_bus("Voice", voice_volume)
+		_save()
+var preferred_fov: float = 82.0:
+	set(value):
+		preferred_fov = clampf(value, 65.0, 100.0)
+		_save()
+var camera_shake_scale: float = 1.0:
+	set(value):
+		camera_shake_scale = clampf(value, 0.0, 1.0)
+		_save()
 
 ## Multiplies whatever each look implementation already uses, so 1.0 is
 ## exactly today's feel and nobody has to re-tune the defaults.
@@ -119,6 +137,10 @@ func reset_to_defaults() -> void:
 	_loading = true
 	master_volume = 1.0
 	music_volume = MUSIC_VOLUME_DEFAULT
+	effects_volume = 1.0
+	voice_volume = 1.0
+	preferred_fov = 82.0
+	camera_shake_scale = 1.0
 	look_sensitivity = 1.0
 	invert_look_y = false
 	fullscreen = false
@@ -147,6 +169,11 @@ func _apply_music_volume() -> void:
 	if bus >= 0:
 		AudioServer.set_bus_volume_db(bus, linear_to_db(music_volume))
 
+func _apply_bus(name: String, volume: float) -> void:
+	var bus := AudioServer.get_bus_index(name)
+	if bus >= 0:
+		AudioServer.set_bus_volume_db(bus, linear_to_db(volume))
+
 
 func _apply_fullscreen() -> void:
 	if DisplayServer.get_name() == "headless":
@@ -162,10 +189,16 @@ func _load() -> void:
 	if config.load(SAVE_PATH) != OK:
 		_apply_volume()
 		_apply_music_volume()
+		_apply_bus("SFX", effects_volume)
+		_apply_bus("Voice", voice_volume)
 		return
 	_loading = true
 	master_volume = float(config.get_value(SECTION, "master_volume", 1.0))
 	music_volume = float(config.get_value(SECTION, "music_volume", MUSIC_VOLUME_DEFAULT))
+	effects_volume = float(config.get_value(SECTION, "effects_volume", 1.0))
+	voice_volume = float(config.get_value(SECTION, "voice_volume", 1.0))
+	preferred_fov = float(config.get_value(SECTION, "preferred_fov", 82.0))
+	camera_shake_scale = float(config.get_value(SECTION, "camera_shake_scale", 1.0))
 	look_sensitivity = float(config.get_value(SECTION, "look_sensitivity", 1.0))
 	invert_look_y = bool(config.get_value(SECTION, "invert_look_y", false))
 	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
@@ -178,6 +211,8 @@ func _load() -> void:
 	_loading = false
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
 		_save()
+	_apply_bus("SFX", effects_volume)
+	_apply_bus("Voice", voice_volume)
 
 
 func _save() -> void:
@@ -186,6 +221,10 @@ func _save() -> void:
 	var config := ConfigFile.new()
 	config.set_value(SECTION, "master_volume", master_volume)
 	config.set_value(SECTION, "music_volume", music_volume)
+	config.set_value(SECTION, "effects_volume", effects_volume)
+	config.set_value(SECTION, "voice_volume", voice_volume)
+	config.set_value(SECTION, "preferred_fov", preferred_fov)
+	config.set_value(SECTION, "camera_shake_scale", camera_shake_scale)
 	config.set_value(SECTION, "look_sensitivity", look_sensitivity)
 	config.set_value(SECTION, "invert_look_y", invert_look_y)
 	config.set_value(SECTION, "fullscreen", fullscreen)
