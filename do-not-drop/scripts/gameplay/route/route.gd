@@ -24,13 +24,12 @@ signal delivery_exited
 signal house_resolved(house_index: int, outcome: StringName, package_id: StringName)
 
 @export var route_length: float = 0.0
-## How many delivery houses this run has -- one per package, per package per
-## player minus the driver (docs/tareas-nacho.md: house delivery system).
-## Defaults to 3 (the "4 players, 1 drives" example) since nothing wires
-## live roster size into this yet -- that's the coordination point noted in
-## tareas-nacho.md, not guessed at here. Call configure_houses() before this
-## node enters the tree to override.
-@export var house_count: int = 3
+## How many delivery houses this run has: one per passenger, i.e. players
+## minus the driver, never fewer than one (docs/tareas-nacho.md #104). 0 means
+## "work it out from the crew" when the route builds -- every peer loads the
+## level with the same roster, so every peer builds the same number. Set it
+## (or call configure_houses()) before this node enters the tree to force one.
+@export var house_count: int = 0
 ## Folds the static dressing into MultiMesh batches once it's placed, and
 ## each segment's road furniture into one mesh (see dressing_batcher.gd) --
 ## the difference between ~16k draw calls a frame and a couple of thousand.
@@ -164,6 +163,25 @@ func configure_houses(count: int) -> void:
 	house_count = maxi(count, 1)
 
 
+## Players minus the driver, at least one house even playing alone.
+static func crew_house_count(player_count: int) -> int:
+	return maxi(player_count - 1, 1)
+
+
+## Which box each house is waiting for, decided once the run starts (see
+## level_base.gd): [[package_id, display_name], ...] in house order. A house
+## past the end of the list takes whatever it's handed, as before.
+func assign_packages(assignments: Array) -> void:
+	for index: int in range(houses.size()):
+		var house: DeliveryHouse = houses[index]
+		var entry: Array = assignments[index] if index < assignments.size() else []
+		house.assigned_package_id = StringName(entry[0]) if entry.size() > 0 else &""
+		house.assigned_label = String(entry[1]) if entry.size() > 1 else ""
+		var label := get_node_or_null(NodePath("HouseNumber%d" % index)) as Label3D
+		if label != null:
+			label.text = "CASA %d" % (index + 1) if house.assigned_label.is_empty() else "CASA %d%s%s" % [index + 1, NEWLINE, house.assigned_label.to_upper()]
+
+
 func _ready() -> void:
 	# One seed per session, not per machine: see NetworkManager.world_seed.
 	# Solo play leaves it at 0, which still means "a different route every
@@ -173,12 +191,15 @@ func _ready() -> void:
 		_rng.seed = session_seed
 	else:
 		_rng.randomize()
+	if house_count <= 0:
+		house_count = crew_house_count(_crew_size())
 	_spine_segment_scripts = [
 		StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
 		SCurveSegment, GravelSegment, ConstructionZoneSegment,
 		CurveSegment, CurveSegment,  # weighted up: this is the one that turns
+		HillSegment, TunnelSegment, RailCrossingSegment,
 	]
-	_spine_hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment]
+	_spine_hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment, RailCrossingSegment]
 	_house_deck = _shuffled_house_variants()
 	terrain = Terrain.new()
 	terrain.name = "ContinuousTerrain"
@@ -257,6 +278,9 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 			terrain.add_span((cursor * road_slots[i]).origin, (cursor * road_slots[i + 1]).origin, segment is GravelSegment, 3.0 if segment is NarrowBridgeSegment else 6.0)
 		for slot: Transform3D in segment.get_dressing_slots(10.0):
 			_path_points.append((cursor * slot).origin)
+		if segment is HillSegment:
+			var exit: Vector3 = (cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)).origin
+			terrain.crests.append({"a": Vector2(cursor.origin.x, cursor.origin.z), "b": Vector2(exit.x, exit.z), "height": (segment as HillSegment).crest_height})
 		leg_length += segment.length
 		route_length += segment.length
 		cursor = cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)
@@ -533,11 +557,23 @@ func _finish_terrain() -> void:
 		var p: Vector3 = house.position
 		p.y = terrain.base_height(Vector2(p.x, p.z)) - 0.08
 		terrain.pads.append(p)
+	# Level crossings: the ground along the tracks is levelled to the road, so
+	# the train runs flat instead of through the roadside hills.
+	for segment: RouteSegment in _segments:
+		if segment is RailCrossingSegment:
+			var centre: Vector3 = segment.transform * Vector3(0.0, 0.0, (segment as RailCrossingSegment).track_z)
+			var level: float = terrain.base_height(Vector2(centre.x, centre.z))
+			for pad: Vector3 in (segment as RailCrossingSegment).track_pads():
+				terrain.pads.append(Vector3(pad.x, level, pad.z))
 	terrain.build()
 	for child: Node in get_children():
 		if child == terrain or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):
 			continue
 		terrain.conform_geometry(child)
+	for segment: RouteSegment in _segments:
+		if segment is RailCrossingSegment:
+			var track: Vector3 = segment.transform * Vector3(0.0, 0.0, (segment as RailCrossingSegment).track_z)
+			segment.set_meta(&"track_height", terrain.height_at(track))
 	for house: Node3D in houses:
 		house.position.y = terrain.height_at(house.position)
 		var label: Node3D = get_node(NodePath("HouseNumber%d" % house.house_index))
@@ -745,3 +781,8 @@ func _material(color: Color) -> StandardMaterial3D:
 func _session_seed() -> int:
 	var network: Node = get_node_or_null(^"/root/NetworkManager")
 	return int(network.get(&"world_seed")) if network != null else 0
+
+
+func _crew_size() -> int:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	return (network.get(&"peer_ids") as Array).size() if network != null else 1

@@ -75,6 +75,11 @@ func _ready() -> void:
 	EventBus.restart_requested.connect(restart_delivery)
 	EventBus.pause_requested.connect(toggle_pause)
 	EventBus.run_ended.connect(_on_run_ended)
+	# The host brings its own truck and paint; replication hands them to
+	# every client (vehicle.gd variant_id/paint_id).
+	if NetworkManager.is_host():
+		vehicle.variant_id = UnlockManager.selected_truck
+		vehicle.paint_id = UnlockManager.selected_paint
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	if NetworkManager.is_host():
 		_sync_players(NetworkManager.peer_ids)

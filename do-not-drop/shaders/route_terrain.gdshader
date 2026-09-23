@@ -17,6 +17,9 @@ uniform float grass_tile = 3.5;
 uniform float gravel_tile = 2.0;
 // Detail maps average ~0.86; this brings the average back to 1.
 uniform float detail_gain = 1.16;
+// Rain (world_mood.gd): 0 dry, 1 soaked. Darkens and polishes the road so
+// it catches the sky and the headlights, with puddle-ish patches.
+uniform float wetness : hint_range(0.0, 1.0) = 0.0;
 
 float noise2(vec2 p) {
 	return sin(p.x * 1.17 + sin(p.y * 0.83)) * 0.5 + sin(p.y * 1.61 - p.x * 0.71) * 0.25;
@@ -47,6 +50,12 @@ void fragment() {
 	lawn += grain * 0.006;
 	vec3 ground = mix(mix(asphalt, earth, shoulder), lawn, grass);
 	ground = mix(ground, earth, COLOR.r * smoothstep(5.7, 7.2, edge));
+	float road = (1.0 - shoulder) * (1.0 - grass);
+	float puddles = smoothstep(-0.1, 0.45, broad + grain * 0.15);
+	float wet_road = wetness * road * mix(0.65, 1.0, puddles) * (1.0 - gravel_mix * 0.6);
+	float wet_ground = wetness * (1.0 - road) * 0.35;
+	ground *= 1.0 - wet_road * 0.32 - wet_ground * 0.25;
 	ALBEDO = ground;
-	ROUGHNESS = 0.96;
+	ROUGHNESS = mix(0.96, 0.16, wet_road);
+	SPECULAR = mix(0.5, 0.75, wet_road);
 }

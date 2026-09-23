@@ -75,7 +75,16 @@ func _run() -> void:
 			break
 
 	# 3. Collision untouched.
-	_expect(_shape_signature(batched) == plain_shapes, "Batching leaves every collision shape as it was (%d shapes)" % plain_shapes.size())
+	# The dressing now brings collision of its own (trees, rails, loose props);
+	# everything the route had before batching must still be there, unmoved.
+	var batched_shapes: Array = _shape_signature(batched)
+	var missing: int = 0
+	for entry: String in plain_shapes:
+		if not entry in batched_shapes:
+			missing += 1
+	_expect(missing == 0, "Batching keeps every collision shape the route already had (%d missing of %d)" % [missing, plain_shapes.size()])
+	_expect(batched.find_children("DressingColliders", "StaticBody3D", true, false).size() > 0, "Trees and rails are solid now")
+	_expect(batched.find_children("Knockable*", "RigidBody3D", true, false).size() > 20, "Loose roadside props can be knocked over")
 
 	# 4. Far fewer things to draw.
 	var batched_meshes: int = batched.find_children("*", "MeshInstance3D", true, false).size() + batched.find_children("*", "MultiMeshInstance3D", true, false).size()
@@ -119,7 +128,12 @@ func _piece_transforms(route: Node3D) -> Dictionary:
 			continue
 		if parent_name == "BatchedDressing" or node.find_children("*", "MeshInstance3D", true, false).is_empty():
 			continue
-		var key: String = _key(inverse * (node as Node3D).global_transform)
+		# A knockable prop (a sleeping rigid body) is compared where it was
+		# placed: physics may legitimately have nudged it since.
+		var xform: Transform3D = inverse * (node as Node3D).global_transform
+		if node.has_meta(&"placed_transform"):
+			xform = inverse * (node.get_parent() as Node3D).global_transform * (node.get_meta(&"placed_transform") as Transform3D)
+		var key: String = _key(xform)
 		result[key] = int(result.get(key, 0)) + 1
 	return result
 

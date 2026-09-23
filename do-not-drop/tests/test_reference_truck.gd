@@ -358,7 +358,8 @@ func _test_packages_rest_on_deck() -> void:
 	var packages: Array[Node] = []
 	packages.assign(root.get_tree().get_nodes_in_group(&"cargo"))
 	var index := 0
-	for package: Node in packages:
+	# More trap types (7) than rack bays (6): every bay gets a box.
+	for package: Node in packages.slice(0, MOUNTS.size()):
 		var mount_name: String = MOUNTS[index]
 		index += 1
 		var marker := van.get_node(NodePath("CargoBay/" + mount_name)) as Node3D

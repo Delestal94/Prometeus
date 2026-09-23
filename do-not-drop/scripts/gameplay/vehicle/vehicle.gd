@@ -53,6 +53,29 @@ extends VehicleBody3D
 		var reference_truck := get_node_or_null(^"ReferenceTruck")
 		if reference_truck != null:
 			reference_truck.call(&"set_ramp_deployed", value)
+## Which truck and paint the crew is driving (docs/tareas-nacho.md #85-#89),
+## chosen by the host from its unlocks (UnlockManager) and replicated, so
+## every peer drives and draws the same one. The variant is a tuning of this
+## same model -- no second set of art -- and the paint recolours its body.
+const VARIANTS: Dictionary = {
+	&"classic": {"maximum_speed_kmh": 72.0, "maximum_engine_force": 1700.0, "maximum_steering": 0.42, "steering_response": 2.0, "mass": 950.0, "trim": Color("6186b5")},
+	# Lighter and quicker, with twitchier steering: fast, and a lot less
+	# forgiving with fragile cargo.
+	&"agile": {"maximum_speed_kmh": 84.0, "maximum_engine_force": 1850.0, "maximum_steering": 0.5, "steering_response": 2.9, "mass": 800.0, "trim": Color("f08a24")},
+}
+const PAINTS: Dictionary = {
+	&"white": Color("dde2e8"),
+	&"violet": Color("7b52b9"),
+}
+@export var variant_id: StringName = &"classic":
+	set(value):
+		variant_id = value if VARIANTS.has(value) else &"classic"
+		_apply_variant()
+@export var paint_id: StringName = &"white":
+	set(value):
+		paint_id = value if PAINTS.has(value) else &"white"
+		_apply_paint()
+
 ## Replicated facts for presentation on frozen client copies.
 var presentation_engine_running: bool = false
 var presentation_braking: bool = false
@@ -248,6 +271,22 @@ func _pose_frozen_wheels() -> void:
 		var mount: Vector3 = _wheel_mounts[wheel]
 		wheel.position = Vector3(mount.x, TIRE_RADIUS - RIDE_HEIGHT, mount.z)
 		wheel.rotation = Vector3.ZERO
+
+
+func _apply_variant() -> void:
+	var tuning: Dictionary = VARIANTS[variant_id]
+	maximum_speed_kmh = tuning["maximum_speed_kmh"]
+	maximum_engine_force = tuning["maximum_engine_force"]
+	maximum_steering = tuning["maximum_steering"]
+	steering_response = tuning["steering_response"]
+	mass = tuning["mass"]
+	_apply_paint()
+
+
+func _apply_paint() -> void:
+	var reference_truck := get_node_or_null(^"ReferenceTruck")
+	if reference_truck != null:
+		reference_truck.call(&"set_paint", PAINTS[paint_id], VARIANTS[variant_id]["trim"])
 
 
 func _on_horn_honked(_peer_id: int) -> void:

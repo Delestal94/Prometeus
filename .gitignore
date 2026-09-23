@@ -30,6 +30,7 @@ Thumbs.db
 
 # Claude Code local settings (herramienta, no proyecto)
 .claude/
+.codex/
 
 # Godot's native-library hot-reload backup files
 ~*.dll

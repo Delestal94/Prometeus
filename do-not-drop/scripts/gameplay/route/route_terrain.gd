@@ -8,6 +8,13 @@ const CELLS: int = 16
 var spans: Array[Dictionary] = []
 var pads: Array[Vector3] = []
 var paths: Array[Dictionary] = []
+## Crests the road climbs over (HillSegment, tareas #56): {"a", "b": Vector2
+## ends of that stretch of road, "height": metres at the top}. The rise
+## follows the road's length as sin^2 (flat at both ends, so it joins the
+## neighbouring segments smoothly) and fades out sideways, so the ground
+## beside the road climbs with it.
+var crests: Array[Dictionary] = []
+const HILL_FLANK: float = 55.0
 var _buckets: Dictionary = {}
 var _tiles: Dictionary = {}
 var _samples: Dictionary = {}
@@ -53,7 +60,19 @@ func nearest(p: Vector2) -> Vector3:
 func base_height(p: Vector2) -> float:
 	# Flat loading apron; long, gentle climbs with no change to the route's yaw.
 	var fade: float = smoothstep(120.0, 210.0, p.length())
-	return fade * (2.6 * sin(p.x * 0.014 + p.y * 0.019) + 1.4 * sin(p.y * 0.031 - p.x * 0.011))
+	return fade * (2.6 * sin(p.x * 0.014 + p.y * 0.019) + 1.4 * sin(p.y * 0.031 - p.x * 0.011)) + _hill_height(p)
+
+
+func _hill_height(p: Vector2) -> float:
+	var total: float = 0.0
+	for hill: Dictionary in crests:
+		var a: Vector2 = hill.a
+		var edge: Vector2 = hill.b - a
+		var t: float = clampf((p - a).dot(edge) / maxf(edge.length_squared(), 0.001), 0.0, 1.0)
+		var side: float = p.distance_to(a + edge * t)
+		var along: float = sin(PI * t)
+		total += float(hill.height) * along * along * (1.0 - smoothstep(8.0, HILL_FLANK, side))
+	return total
 
 
 func _sample(key: Vector2i) -> Vector3:
@@ -190,7 +209,9 @@ func conform_geometry(node: Node) -> void:
 					child.shape = mesh.create_trimesh_shape()
 					child.transform = node.transform
 		return
-	if node is Area3D or node is Label3D:
+	# Parts that move later (a barrier arm, a train car) ride the terrain as
+	# rigid pieces: warping their vertices would bend them out of shape.
+	if node is Area3D or node is Label3D or (node is Node3D and node.has_meta(&"animated")):
 		var p: Vector3 = to_local(node.global_position)
 		node.global_position.y += height_at(p)
 		return

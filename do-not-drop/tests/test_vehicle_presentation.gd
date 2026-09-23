@@ -50,9 +50,11 @@ func _run() -> void:
 	_expect(visual._rear_materials[0].emission_energy_multiplier > baseline_rear, "Actual handbraking increases tail light emission")
 	visual._on_impact(10.0, van.global_position)
 	visual.update_presentation(0.01)
-	_expect(visual.headlights[0].light_energy < visual.headlight_energy, "Strong impact briefly dims headlights")
+	# The route's weather/time of day scales the beams (world_mood.gd).
+	var full_beam: float = visual.headlight_energy * float(WorldMood.active.get("headlight_boost", 1.0))
+	_expect(visual.headlights[0].light_energy < full_beam, "Strong impact briefly dims headlights")
 	visual.update_presentation(0.3)
-	_expect(is_equal_approx(visual.headlights[0].light_energy, visual.headlight_energy), "Headlights recover without persistent flashing")
+	_expect(is_equal_approx(visual.headlights[0].light_energy, full_beam), "Headlights recover without persistent flashing")
 	var original_velocity: Vector3 = van.linear_velocity
 	van.linear_velocity = Vector3.ZERO
 	van.engine_force = 0.0

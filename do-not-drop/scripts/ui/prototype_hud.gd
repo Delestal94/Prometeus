@@ -137,6 +137,15 @@ func _ready() -> void:
 	EventBus.route_event_started.connect(_on_route_event_started)
 	EventBus.route_event_resolved.connect(_on_route_event_resolved)
 	EventBus.unlock_earned.connect(_on_unlock_earned)
+	var truck_view: Node = get_tree().get_first_node_in_group(&"vehicle")
+	if truck_view != null:
+		var spectator: Node = truck_view.find_child("SpectatorCamera", true, false)
+		if spectator != null:
+			spectator.connect(&"availability_changed", func(available: bool) -> void:
+				if available:
+					_toast("Tu caja ya no tiene arreglo  ·  %s: ver desde afuera" % _key("Tab", "Back")))
+	EventBus.house_refused_package.connect(func(house_index: int, expected: String) -> void:
+		_toast("Casa %d: \"Ese no es mío, pedí %s\"" % [house_index + 1, expected.to_lower()]))
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	NetworkManager.session_failed.connect(_on_connection_lost)
 	GameSettings.input_device_changed.connect(_on_input_device_changed)
@@ -474,6 +483,7 @@ func _refresh_shortcut_text() -> void:
 		_key("F  celular", "LB  celular"),
 		_key("Click rueda  ping", "D-pad arriba  ping"),
 		_key("C  centrar vista", "Clic stick der.  centrar vista"),
+		_key("%s  mirar atrás" % GameSettings.binding_label(&"look_back"), "Clic stick izq.  mirar atrás"),
 		_key("Esc  pausa", "Start  pausa"),
 	]
 	if _can_restart():
@@ -728,6 +738,37 @@ func _on_ping(peer_id: int, _position: Vector3, label: String) -> void:
 	ping_label.text = "%s:  %s" % [who, label]
 	ping_indicator.text = _ping_arrow(_position) + "  PING"
 	ping_seconds_left = PING_DISPLAY_SECONDS
+	if peer_id != NetworkManager.local_id():
+		_mark_pinger(peer_id)
+
+
+## A marker over whoever pinged (tareas de Slatex #32), drawn through the
+## truck's walls, so you know who called without turning around to look.
+func _mark_pinger(peer_id: int) -> void:
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		if player.get_multiplayer_authority() != peer_id or not player is Node3D:
+			continue
+		var old: Node = player.get_node_or_null(^"PingMarker")
+		if old != null:
+			old.free()
+		var marker := Label3D.new()
+		marker.name = "PingMarker"
+		marker.text = "!"
+		marker.font = load(UiTheme.DISPLAY_FONT_PATH)
+		marker.font_size = 110
+		marker.outline_size = 18
+		marker.modulate = UiTheme.YELLOW
+		marker.outline_modulate = UiTheme.INK
+		marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		marker.no_depth_test = true
+		marker.fixed_size = true
+		marker.pixel_size = 0.0009
+		marker.position = Vector3(0.0, 2.25, 0.0)
+		player.add_child(marker)
+		var tween := marker.create_tween()
+		tween.tween_interval(PING_DISPLAY_SECONDS - 0.6)
+		tween.tween_property(marker, ^"modulate:a", 0.0, 0.6)
+		tween.tween_callback(marker.queue_free)
 
 
 func _ping_arrow(world_position: Vector3) -> String:
@@ -752,6 +793,8 @@ func _on_quick_fade_requested(seconds: float) -> void:
 
 
 func _on_started(_route: StringName, _players: Array) -> void:
+	if WorldMood.active.has("description"):
+		_toast("Ruta de hoy: %s" % String(WorldMood.active["description"]).to_lower())
 	overlay.hide()
 	overlay_mode = "run"
 	dashboard.show()
@@ -822,7 +865,7 @@ func _on_cargo_registered(id: StringName, display_name: String) -> void:
 	var label: Label = UiTheme.title(column, "%s  ·  100%%" % display_name.to_upper(), 18)
 	var bar: ProgressBar = UiTheme.bar(column, MINT, 12)
 	bar.value = 100
-	cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "icon": icon}
+	cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "icon": icon, "row": row}
 
 
 func _on_integrity(id: StringName, integrity: float, maximum: float) -> void:
@@ -851,8 +894,37 @@ func _vignette_material() -> ShaderMaterial:
 	return material
 
 
-func _on_package_state(id: StringName, _state: int) -> void:
+func _on_package_state(id: StringName, state: int) -> void:
+	var previous: int = int(_last_states.get(id, 0))
+	_last_states[id] = state
 	_refresh_row(id)
+	if previous == 1 and state == 0 and RunManager.is_running:
+		_celebrate_rescue(id)
+
+
+## Somebody pulled a box back from the brink (tareas de Slatex #91): the
+## whole crew hears a bright chime, its row flashes and a toast names it --
+## the save gets as much attention as the scare did.
+var _last_states: Dictionary = {}
+var _rescue_player: AudioStreamPlayer
+
+
+func _celebrate_rescue(id: StringName) -> void:
+	var name_text: String = String(cargo_rows[id]["name"]) if cargo_rows.has(id) else "LA CARGA"
+	_toast("¡%s a salvo!" % name_text.capitalize())
+	if _rescue_player == null:
+		_rescue_player = AudioStreamPlayer.new()
+		_rescue_player.stream = SynthAudio.glass_chime()
+		_rescue_player.pitch_scale = 1.5
+		_rescue_player.volume_db = -9.0
+		_rescue_player.bus = &"SFX" if AudioServer.get_bus_index(&"SFX") >= 0 else &"Master"
+		add_child(_rescue_player)
+	_rescue_player.play()
+	if cargo_rows.has(id):
+		var row: Control = cargo_rows[id]["row"]
+		var flash := row.create_tween()
+		flash.tween_property(row, ^"modulate", Color(0.6, 1.6, 1.1), 0.12)
+		flash.tween_property(row, ^"modulate", Color.WHITE, 0.5)
 
 
 func _refresh_row(id: StringName) -> void:
@@ -968,10 +1040,27 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
 	var door_line: String = "\nPuertas: %d pts" % int(results.get("delivery_points", 0)) if results.has("delivery_points") else ""
-	overlay_stats.text = "En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s%s%s" % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, best_line, client_line]
+	if results.has("breakdown"):
+		overlay_stats.text = score_breakdown_text(results, score) + best_line + client_line
+	else:
+		overlay_stats.text = "En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s%s%s" % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, best_line, client_line]
 	_show_complaints(results.get("complaints", []))
 	_show_photos()
 	_set_buttons(retry, false, false, true)
+
+
+## The score as a sum you can check (tareas de Slatex #89): one line per
+## thing that earned or cost points, the shared-chaos multiplier, the total.
+static func score_breakdown_text(results: Dictionary, score: int) -> String:
+	var lines: PackedStringArray = ["En ruta: %.1f s" % float(results.get("elapsed_seconds", 0.0))]
+	for line: Dictionary in results.get("breakdown", []):
+		var points: int = int(line["points"])
+		lines.append("%s   %s%d" % [String(line["label"]), "+" if points >= 0 else "−", absi(points)])
+	var chaos: float = float(results.get("chaos_multiplier", 1.0))
+	if chaos > 1.0:
+		lines.append("Caos compartido   ×%.1f" % chaos)
+	lines.append("Total   %d pts" % score)
+	return "\n".join(lines)
 
 
 ## The headline leads with the doors, because that's where the run is

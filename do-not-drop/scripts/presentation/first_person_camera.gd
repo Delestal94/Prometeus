@@ -32,6 +32,11 @@ var _rng := RandomNumberGenerator.new()
 var _base_transform: Transform3D
 var _look_yaw: float = 0.0
 var _look_pitch: float = 0.0
+## Holding "look_back" swings the view over the shoulder toward the cargo
+## (tareas de Nacho #35) and lets go back to wherever you were looking.
+var _look_back: float = 0.0
+const LOOK_BACK_YAW_DEGREES: float = 155.0
+const LOOK_BACK_SPEED: float = 6.0
 
 
 func _ready() -> void:
@@ -46,6 +51,10 @@ func _ready() -> void:
 	# that only shows up as a problem once the world stops being hand-placed.
 	far = 600.0
 	_base_transform = transform
+	# Look and shake move this camera every rendered frame (_process), not on
+	# physics ticks. Off, it still rides the seat's interpolated pose -- the
+	# van stays smooth -- but its own turn applies the frame it happens.
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	_rng.randomize()
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
@@ -101,7 +110,11 @@ func _apply_look(motion: Vector2) -> void:
 func _look_transform() -> Transform3D:
 	# Look is relative to the seat; head rotation must not rotate the eye position.
 	var pose := _base_transform
-	pose.basis = _base_transform.basis * Basis(Vector3.UP, _look_yaw) * Basis(Vector3.RIGHT, _look_pitch)
+	# Over whichever shoulder you were already turned toward (left by default).
+	var back_yaw: float = deg_to_rad(LOOK_BACK_YAW_DEGREES) * (-1.0 if _look_yaw < -0.05 else 1.0)
+	var yaw: float = lerp_angle(_look_yaw, back_yaw, _look_back)
+	var pitch: float = lerpf(_look_pitch, 0.0, _look_back)
+	pose.basis = _base_transform.basis * Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch)
 	return pose
 
 
@@ -114,6 +127,8 @@ func _process(delta: float) -> void:
 	if _can_look():
 		var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 		_apply_look(stick * stick_sensitivity * delta)
+	var wants_back: bool = _can_look() and InputMap.has_action(&"look_back") and Input.is_action_pressed(&"look_back")
+	_look_back = move_toward(_look_back, 1.0 if wants_back else 0.0, LOOK_BACK_SPEED * delta)
 	var look_pose: Transform3D = _look_transform()
 	var preferred_fov: float = GameSettings.preferred_fov
 	if not is_equal_approx(fov, preferred_fov):

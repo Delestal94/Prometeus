@@ -12,7 +12,7 @@ class_name RouteStreamer
 
 @export var segment_scripts: Array[Script] = [
 	StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
-	SCurveSegment, GravelSegment, ConstructionZoneSegment,
+	SCurveSegment, GravelSegment, ConstructionZoneSegment, TunnelSegment,
 ]
 ## "Hard" = needs real steering/braking to survive, matching exactly what
 ## the tests already treat as unsafe for an un-steered drive (see
@@ -118,6 +118,19 @@ func _maybe_add_crossing(segment: RouteSegment) -> void:
 	_last_crossing_z = segment.position.z
 
 
+## Endless difficulty ramp (docs/tareas-nacho.md #49): hard segments start
+## at a quarter of the odds of an easy one and reach 2.5x the odds by
+## DIFFICULTY_RAMP_METERS, so the first minutes teach and the long run tests.
+## The no-repeat and no-three-hard-in-a-row rules still apply on top.
+const HARD_WEIGHT_START: float = 0.25
+const HARD_WEIGHT_END: float = 2.5
+const DIFFICULTY_RAMP_METERS: float = 2000.0
+
+
+func hard_weight_at(distance: float) -> float:
+	return lerpf(HARD_WEIGHT_START, HARD_WEIGHT_END, clampf(distance / DIFFICULTY_RAMP_METERS, 0.0, 1.0))
+
+
 func _pick_next_script() -> Script:
 	var candidates: Array[Script] = segment_scripts
 	if segment_scripts.size() > 1 and _last_script != null:
@@ -128,7 +141,16 @@ func _pick_next_script() -> Script:
 		var easy_candidates: Array[Script] = candidates.filter(func(s: Script) -> bool: return not hard_segments.has(s))
 		if not easy_candidates.is_empty():
 			candidates = easy_candidates
-	return candidates[_rng.randi() % candidates.size()]
+	var hard_weight: float = hard_weight_at(-_next_z)
+	var total: float = 0.0
+	for script: Script in candidates:
+		total += hard_weight if hard_segments.has(script) else 1.0
+	var roll: float = _rng.randf() * total
+	for script: Script in candidates:
+		roll -= hard_weight if hard_segments.has(script) else 1.0
+		if roll <= 0.0:
+			return script
+	return candidates[-1]
 
 
 func _cull_behind() -> void:

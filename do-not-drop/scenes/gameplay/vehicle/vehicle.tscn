@@ -60,6 +60,12 @@ properties/15/replication_mode = 2
 properties/16/path = NodePath(".:rear_ramp_deployed")
 properties/16/spawn = true
 properties/16/replication_mode = 2
+properties/17/path = NodePath(".:variant_id")
+properties/17/spawn = true
+properties/17/replication_mode = 2
+properties/18/path = NodePath(".:paint_id")
+properties/18/spawn = true
+properties/18/replication_mode = 2
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_body"]
 friction = 0.7

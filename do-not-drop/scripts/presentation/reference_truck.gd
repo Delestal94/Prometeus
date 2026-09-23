@@ -76,6 +76,7 @@ func _ready() -> void:
 	_build_cargo_fittings()
 	_build_jump_seats()
 	_build_ramp()
+	_build_bulkhead_collision()
 	_bind_presentation()
 
 
@@ -92,6 +93,25 @@ func _load_model() -> Node3D:
 	if document.append_from_file(TRUCK_PATH, state) != OK:
 		return null
 	return document.generate_scene(state) as Node3D
+
+
+## The wall between cab and cargo bay was drawn but not solid: a loose box
+## (or anything else) braking hard slid straight through it into the cab.
+## One box per authored panel, on the truck's own body, in vehicle space;
+## the communication window between them stays open.
+func _build_bulkhead_collision() -> void:
+	var to_vehicle: Transform3D = vehicle.global_transform.affine_inverse()
+	for mesh: Node in model.find_children("Bulkhead*", "MeshInstance3D", true, false):
+		var box: AABB = (to_vehicle * (mesh as Node3D).global_transform) * (mesh as MeshInstance3D).get_aabb()
+		var shape := CollisionShape3D.new()
+		shape.name = "%sCollision" % mesh.name
+		var box_shape := BoxShape3D.new()
+		# Panels are thin art; give the solid a little depth so fast objects
+		# can't slip through between two physics steps.
+		box_shape.size = Vector3(box.size.x, box.size.y, maxf(box.size.z, 0.12))
+		shape.shape = box_shape
+		shape.position = box.get_center()
+		vehicle.add_child(shape)
 
 
 func _meshes() -> Array[Node]:
@@ -438,6 +458,7 @@ func _dress_cab() -> void:
 	knob.material_override = _accent
 	knob.position = Vector3(2.885, 1.83, 0.0)
 	dressing.add_child(knob)
+	_build_pedals(dressing)
 	_prop_box(dressing, Vector3(0.28, 0.04, 0.05), Vector3(2.45, 1.54, 0.07), _dark, Vector3(0.0, 0.0, deg_to_rad(18.0)))
 	# Coffee in the cup holder.
 	_prop_cylinder(dressing, 0.04, 0.13, Vector3(2.32, 1.56, -0.06), Vector3.ZERO, cup)
@@ -560,6 +581,32 @@ func _prop_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, r
 ## so they never narrow the aisle; they drop down when somebody sits.
 const JUMP_SEAT_FOLDED := -PI * 0.5
 var _jump_seats: Array = []
+## Clutch, brake and accelerator under the dash (docs/tareas-nacho.md #9).
+## Brake and accelerator dip with what the truck is actually doing, so a
+## passenger glancing down sees the driver's feet at work.
+var _brake_pedal: Node3D
+var _gas_pedal: Node3D
+const PEDAL_REST: float = deg_to_rad(-28.0)
+const PEDAL_PRESSED: float = deg_to_rad(-8.0)
+
+
+## Each pedal hangs from a pivot at its top, in the model's space (x front,
+## y up, z right): the driver sits at z -0.62, the cab floor is at y 1.18.
+func _build_pedals(parent: Node3D) -> void:
+	var rubber := _flat_material(Color("2a2d2e"))
+	for entry: Array in [["Clutch", -0.8], ["Brake", -0.63], ["Gas", -0.45]]:
+		var pivot := Node3D.new()
+		pivot.name = "Pedal%s" % entry[0]
+		pivot.position = Vector3(3.36, 1.52, float(entry[1]))
+		pivot.rotation.z = PEDAL_REST
+		parent.add_child(pivot)
+		_add_box(pivot, Vector3(0.025, 0.26, 0.025), Vector3(0.0, -0.13, 0.0), _steel)
+		var pad_size := Vector3(0.03, 0.1, 0.07) if entry[0] != "Gas" else Vector3(0.03, 0.16, 0.06)
+		_add_box(pivot, pad_size, Vector3(-0.02, -0.26, 0.0), rubber)
+		if entry[0] == "Brake":
+			_brake_pedal = pivot
+		elif entry[0] == "Gas":
+			_gas_pedal = pivot
 
 func _build_jump_seats() -> void:
 	var seat_color: Material = _material_named("DT_Seat")
@@ -583,6 +630,11 @@ func _build_jump_seats() -> void:
 
 
 func _process(delta: float) -> void:
+	if _brake_pedal != null and vehicle != null:
+		var braking: bool = bool(vehicle.get(&"presentation_braking"))
+		var accelerating: bool = absf(vehicle.engine_force) > 1.0
+		_brake_pedal.rotation.z = move_toward(_brake_pedal.rotation.z, PEDAL_PRESSED if braking else PEDAL_REST, delta * 3.0)
+		_gas_pedal.rotation.z = move_toward(_gas_pedal.rotation.z, PEDAL_PRESSED if accelerating else PEDAL_REST, delta * 3.0)
 	if _jump_seats.is_empty():
 		return
 	var occupied: Array = []
@@ -683,6 +735,30 @@ func _pose_ramp(amount: float) -> void:
 	var stowed: Vector3 = _ramp_out_position - ramp_visual.transform.basis.z.normalized() * _ramp_length
 	ramp_visual.position = stowed.lerp(_ramp_out_position, amount)
 	ramp_visual.visible = amount > 0.02
+
+
+## Body colour and trim colour (vehicle.gd: paint and variant). The model's
+## "DT_White" panels and "DT_Blue" trim get their own copies once, so the
+## shared imported materials are never changed.
+var _paint_materials: Dictionary = {}
+
+
+func set_paint(body: Color, trim: Color) -> void:
+	if model == null:
+		return
+	for pair: Array in [["DT_White", body], ["DT_Blue", trim]]:
+		var name_: String = pair[0]
+		if not _paint_materials.has(name_):
+			var source := _material_named(name_) as BaseMaterial3D
+			if source == null:
+				continue
+			var copy := source.duplicate() as BaseMaterial3D
+			_paint_materials[name_] = copy
+			for mesh: MeshInstance3D in _meshes():
+				for surface: int in range(mesh.mesh.get_surface_count()):
+					if mesh.mesh.surface_get_material(surface) == source:
+						mesh.set_surface_override_material(surface, copy)
+		(_paint_materials[name_] as BaseMaterial3D).albedo_color = pair[1]
 
 
 func set_ramp_deployed(deployed: bool) -> void:

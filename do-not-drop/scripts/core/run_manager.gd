@@ -211,10 +211,25 @@ func _resolve_deliveries() -> Dictionary:
 	var unreached: int = maxi(expected_houses - deliveries.size(), 0)
 	missed += unreached
 	points -= unreached * PENALTY_MISSED_HOUSE
+	var unanswered: int = 0
 	for complaint: Dictionary in complaints:
 		if not bool(complaint["dismissed"]):
 			points -= COMPLAINT_PENALTY
+			unanswered += 1
+	# Line by line, for the results screen (tareas de Slatex #89): the same
+	# sums as `points`, so the lines always add up to the score shown.
+	var counts: Dictionary = {}
+	for entry: Dictionary in deliveries:
+		counts[StringName(entry["outcome"])] = int(counts.get(StringName(entry["outcome"]), 0)) + 1
+	var breakdown: Array = []
+	_add_line(breakdown, "Entregas perfectas", int(counts.get(&"delivered_ok", 0)), POINTS_DELIVERED_INTACT)
+	_add_line(breakdown, "Entregas abolladas", int(counts.get(&"delivered_at_risk", 0)), POINTS_DELIVERED_AT_RISK)
+	_add_line(breakdown, "Entregas arruinadas", int(counts.get(&"delivered_ruined", 0)), POINTS_DELIVERED_RUINED)
+	_add_line(breakdown, "Fotos de entrega", photos, POINTS_PHOTO_BONUS)
+	_add_line(breakdown, "Vecinos sin su paquete", missed, -PENALTY_MISSED_HOUSE)
+	_add_line(breakdown, "Reclamos sin foto", unanswered, -COMPLAINT_PENALTY)
 	return {
+		"breakdown": breakdown,
 		"delivery_points": points,
 		"houses_delivered": delivered_count,
 		"houses_missed": missed,
@@ -225,6 +240,11 @@ func _resolve_deliveries() -> Dictionary:
 
 ## A photo of the doorstep is proof of what was handed over, so a complaint
 ## filed against a delivery that has one is dismissed on the spot.
+func _add_line(breakdown: Array, label: String, count: int, each: int) -> void:
+	if count > 0:
+		breakdown.append({"label": "%s (%d)" % [label, count], "points": count * each})
+
+
 func _complaint(entry: Dictionary, has_photo: bool) -> Dictionary:
 	return {
 		"house": int(entry["house"]),
@@ -268,6 +288,11 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	var time_bonus: int = roundi(50.0 * clampf(1.0 - elapsed_seconds / PAR_SECONDS, 0.0, 1.0)) if successful else 0
 	var multiplier: float = CHAOS_MULTIPLIER if (successful and had_simultaneous_risk) else 1.0
 	var score: int = maxi(roundi((cargo_points + time_bonus + delivery_points) * multiplier), 0)
+	var breakdown: Array = (doors["breakdown"] as Array).duplicate(true)
+	if cargo_points > 0:
+		breakdown.append({"label": "Carga que volvió sana (%d)" % (aboard - ruined), "points": cargo_points})
+	if time_bonus > 0:
+		breakdown.append({"label": "Rapidez", "points": time_bonus})
 	var is_new_best: bool = _record_score(score, MODE_DELIVERY)
 	results = {
 		"delivered": successful,
@@ -280,6 +305,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"time_bonus": time_bonus,
 		"chaos_multiplier": multiplier,
 		"delivery_points": delivery_points,
+		"breakdown": breakdown,
 		"houses_delivered": houses_delivered,
 		"houses_missed": int(doors["houses_missed"]),
 		"photos": int(doors["photos"]),

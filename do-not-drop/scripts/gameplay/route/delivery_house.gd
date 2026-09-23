@@ -59,6 +59,11 @@ var house_index: int = 0
 var outcome: StringName = &""
 var delivered_package_id: StringName = &""
 var visual_variant: int = 0
+## The box this house ordered (route.assign_packages()), or empty for "any".
+## Ringing with somebody else's box gets it handed straight back.
+var assigned_package_id: StringName = &""
+var assigned_label: String = ""
+signal wrong_package_offered(expected_label: String)
 var doorbell: DoorbellPoint
 var _resident: MeshInstance3D
 var _bell_player: AudioStreamPlayer3D
@@ -99,6 +104,14 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 	if carried_package == null:
 		_resolve(OUTCOME_MISSED, null)
 		return
+	if assigned_package_id != &"" and StringName(carried_package.get(&"package_id")) != assigned_package_id:
+		# Not theirs: the resident shakes their head and the box stays with
+		# whoever brought it -- the delivery isn't spent on a mix-up.
+		_reaction_player.stream = SynthAudio.creature_groan()
+		_reaction_player.volume_db = -10.0
+		_reaction_player.play()
+		wrong_package_offered.emit(assigned_label)
+		return
 	var state: int = int(carried_package.get(&"trap_state"))
 	match state:
 		ITrapBehavior.TrapState.RUINED:
@@ -126,7 +139,7 @@ func _resolve(result: StringName, package: Node) -> void:
 		# (level_base.gd -> RunManager) still sees a valid package. consume()
 		# also empties the carrier's hands, which a bare free never did.
 		if package.has_method(&"consume"):
-			package.call(&"consume")
+			package.call(&"consume", _resident.global_position)
 		else:
 			package.call_deferred(&"queue_free")
 	# The resident's reaction follows what they were actually handed: a groan

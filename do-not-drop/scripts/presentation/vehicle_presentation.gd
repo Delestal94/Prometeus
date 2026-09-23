@@ -80,6 +80,15 @@ var _roll: float = 0.0
 var _pitch: float = 0.0
 var _sink: float = 0.0
 var _driver_hands: Node3D
+## Chase view for a passenger with nothing left to save (spectator_camera.gd).
+var spectator_camera: Camera3D
+## The driver's right hand, and how much it's still pressing the horn (tareas
+## de Slatex #11): the hand leaves the rim for the hub while the horn sounds.
+var _horn_hand: Node3D
+var _horn_hand_rest: Vector3
+var _horn_press: float = 0.0
+const HORN_PRESS_SECONDS: float = 0.45
+const HORN_HAND_AT := Vector3(0.03, 0.05, -0.02)
 
 
 func _ready() -> void:
@@ -118,11 +127,25 @@ func _ready() -> void:
 			_wheels.append(wheel)
 	_build_dust_emitters()
 	_collect_seat_cameras(vehicle)
+	var effects: Node = preload("res://scripts/presentation/vehicle_effects.gd").new()
+	effects.name = "VehicleEffects"
+	add_child(effects)
+	var clutter: Node = preload("res://scripts/presentation/cargo_clutter.gd").new()
+	clutter.name = "CargoClutter"
+	add_child(clutter)
+	spectator_camera = preload("res://scripts/presentation/spectator_camera.gd").new()
+	spectator_camera.vehicle = vehicle
+	add_child(spectator_camera)
 	if OS.is_debug_build():
 		_build_dev_camera()
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.vehicle_impact.connect(_on_impact)
+		bus.horn_honked.connect(func(_peer_id: int) -> void: _horn_press = HORN_PRESS_SECONDS)
+		bus.run_ended.connect(func(_score: int, _results: Dictionary) -> void:
+			if spectator_camera != null and spectator_camera.current:
+				spectator_camera.call(&"stop")
+			preload("res://scripts/presentation/spectator_camera.gd").orbit_results(vehicle))
 	update_presentation(0.0)
 
 
@@ -174,11 +197,20 @@ func update_presentation(delta: float) -> void:
 		steering_wheel.basis = _steering_rest * Basis(Vector3.UP, -vehicle.steering * steering_ratio)
 		if _driver_hands != null:
 			_driver_hands.rotation.z = sin(vehicle.steering * 2.0) * 0.12
+		if _horn_hand != null:
+			_horn_press = maxf(0.0, _horn_press - delta)
+			var reach: float = clampf(_horn_press / HORN_PRESS_SECONDS * 3.0, 0.0, 1.0)
+			_horn_hand.position = _horn_hand_rest.lerp(HORN_HAND_AT, reach)
 	_flicker_remaining = maxf(0.0, _flicker_remaining - delta)
 	var running: bool = vehicle.presentation_engine_running
 	var flicker: float = 0.3 if _flicker_remaining > 0.0 else 1.0
+	# At night, in rain or fog the beams reach further and burn brighter
+	# (world_mood.gd, tareas de Nacho #70): there they're how you see the road.
+	var boost: float = float(WorldMood.active.get("headlight_boost", 1.0))
 	for index: int in range(headlights.size()):
-		headlights[index].light_energy = headlight_energy * flicker if running else 0.0
+		headlights[index].light_energy = headlight_energy * boost * flicker if running else 0.0
+		headlights[index].spot_range = 24.0 * minf(boost, 2.2)
+		headlights[index].spot_angle = 32.0 + minf(boost - 1.0, 1.5) * 6.0
 		_front_materials[index].emission_energy_multiplier = 0.8 * flicker if running else 0.0
 	for material: StandardMaterial3D in _rear_materials:
 		material.emission_energy_multiplier = 2.4 if vehicle.presentation_braking else (0.18 if running else 0.0)
@@ -209,6 +241,9 @@ func _build_driver_hands() -> void:
 		hand.position = Vector3(side * 0.19, 0.0, -0.03)
 		hand.rotation_degrees = Vector3(78, 0, side * 38)
 		_driver_hands.add_child(hand)
+		if side > 0.0:
+			_horn_hand = hand
+			_horn_hand_rest = hand.position
 
 
 

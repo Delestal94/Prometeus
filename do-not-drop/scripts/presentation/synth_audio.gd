@@ -402,3 +402,101 @@ static func _make_cardboard_flap() -> AudioStreamWAV:
 	stream.mix_rate = RATE
 	stream.data = data
 	return stream
+
+
+## Tension bed under the music (tareas de Nacho #22): a low drone with a
+## double heartbeat thump, two seconds, looping seamlessly. Its volume is
+## driven by how much trouble the cargo is in (see ingame_music.gd).
+static func tension_pulse() -> AudioStreamWAV:
+	return _cached(&"tension_pulse", _make_tension_pulse)
+
+
+static func _make_tension_pulse() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 2.0
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		# Whole periods in 2 s (55 Hz, 82.5 Hz) keep the loop seam silent.
+		var drone: float = sin(TAU * 55.0 * t) * 0.28 + sin(TAU * 82.5 * t) * 0.12
+		var beat: float = 0.0
+		for onset: float in [0.0, 0.28, 1.0, 1.28]:
+			var since: float = t - onset
+			if since >= 0.0 and since < 0.25:
+				beat += sin(TAU * 48.0 * since) * exp(-since * 22.0) * (1.0 if int(onset) == int(onset + 0.5) else 0.7)
+		var sample: float = clampf(drone * (0.75 + 0.25 * sin(TAU * 0.5 * t)) + beat * 0.8, -1.0, 1.0)
+		data.encode_s16(i * 2, roundi(sample * 20000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = sample_count
+	return stream
+
+
+## Rain (docs/tareas-nacho.md #68): a dense hiss of drops, two seconds,
+## looping. Played louder and through the Interior bus when heard from inside
+## the truck, where it drums on the roof (route_sky.gd).
+static func rain_loop() -> AudioStreamWAV:
+	return _cached(&"rain_loop", _make_rain_loop)
+
+
+static func _make_rain_loop() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 2.0
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var hiss: float = 0.0
+	var drop: float = 0.0
+	for i: int in range(sample_count):
+		hiss = lerpf(hiss, rng.randf_range(-1.0, 1.0), 0.45)
+		# Individual drops: a sparse scatter of tiny clicks over the hiss.
+		if rng.randf() < 0.004:
+			drop = rng.randf_range(0.4, 0.9)
+		drop *= 0.93
+		var sample: float = hiss * 0.32 + drop * rng.randf_range(-1.0, 1.0)
+		# Fade the first and last 20 ms into each other so the loop never clicks.
+		var edge: float = minf(float(i), float(sample_count - i)) / (RATE * 0.02)
+		data.encode_s16(i * 2, roundi(clampf(sample * minf(edge, 1.0), -1.0, 1.0) * 17000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = sample_count
+	return stream
+
+
+## Level crossing bell (rail_crossing_segment.gd): a bright ding twice a
+## second, looping for as long as the barriers are moving or down.
+static func crossing_bell() -> AudioStreamWAV:
+	return _cached(&"crossing_bell", _make_crossing_bell)
+
+
+static func _make_crossing_bell() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.5
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var envelope: float = exp(-t * 9.0)
+		var ding: float = sin(TAU * 1320.0 * t) * 0.5 + sin(TAU * 1980.0 * t) * 0.25 + sin(TAU * 2640.0 * t) * 0.12
+		data.encode_s16(i * 2, roundi(clampf(ding * envelope, -1.0, 1.0) * 16000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = sample_count
+	return stream

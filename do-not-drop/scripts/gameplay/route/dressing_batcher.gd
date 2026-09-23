@@ -33,6 +33,21 @@ const ANIMATED_PARTS: Array[String] = ["WindmillRotor"]
 ## transforms back, so when set each batch also keeps a copy as metadata.
 static var record_instances: bool = false
 
+## Collision for the dressing (docs/tareas-nacho.md #39). Until this nothing
+## on the roadside was solid: the truck drove through trees, rails and parked
+## cars alike. Solid kinds get one shape each in a single StaticBody per
+## patch (cheap: static, never moving); a tree is a trunk cylinder, the rest
+## the box of their model. Small loose things become sleeping rigid bodies
+## instead, so the truck knocks them flying rather than stopping dead.
+const SOLID_RULES: Array[StringName] = [&"tree", &"landmark", &"parked_vehicle", &"guardrail", &"bus_stop", &"hazard_sign", &"delivery_sign", &"crossing_sign"]
+const KNOCKABLE_RULES: Array[StringName] = [&"roadworks", &"village_furniture", &"farm_props", &"milestone", &"yard"]
+## Bigger than this and it isn't something a truck bats aside (a barn).
+const KNOCKABLE_MAX_SIZE: float = 2.5
+const TRUNK_RADIUS: float = 0.3
+const TRUNK_HEIGHT: float = 4.0
+const KNOCKABLE_DENSITY: float = 140.0
+const SINK_CLEARANCE: float = 0.1
+
 ## Merged model meshes, shared by every route: scene file -> Mesh.
 static var _model_cache: Dictionary = {}
 
@@ -52,17 +67,26 @@ static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> in
 	for group: Node in extra_groups:
 		if group != null:
 			groups.append(group)
+	var solids: Dictionary = {}
 	for group: Node in groups:
 		for piece: Node in group.get_children():
 			var parts: Array[MeshInstance3D] = _static_parts(piece)
 			if parts.is_empty():
+				continue
+			var rule: StringName = StringName(piece.get_meta(&"rule", &""))
+			var mesh: Mesh = _model_mesh(piece as Node3D, parts)
+			if rule in KNOCKABLE_RULES and not piece.get_meta(&"on_porch", false) and mesh.get_aabb().get_longest_axis_size() < KNOCKABLE_MAX_SIZE:
+				_make_knockable(piece as Node3D, mesh.get_aabb())
 				continue
 			var origin: Vector3 = to_route * (piece as Node3D).global_position
 			var cell := Vector2i(floori(origin.x / CELL), floori(origin.z / CELL))
 			if not cells.has(cell):
 				cells[cell] = {}
 			var batches: Dictionary = cells[cell]
-			var mesh: Mesh = _model_mesh(piece as Node3D, parts)
+			if rule in SOLID_RULES:
+				if not solids.has(cell):
+					solids[cell] = []
+				(solids[cell] as Array).append([rule, to_route * (piece as Node3D).global_transform, mesh.get_aabb()])
 			var shadow: int = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			for part: MeshInstance3D in parts:
 				shadow = maxi(shadow, part.cast_shadow)
@@ -83,7 +107,71 @@ static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> in
 		var batches: Dictionary = cells[cell]
 		for key: String in batches:
 			cell_node.add_child(_multimesh_instance(batches[key]))
+		if solids.has(cell):
+			cell_node.add_child(_colliders(solids[cell]))
 	return baked
+
+
+## One static body holding every solid piece of a patch.
+static func _colliders(pieces: Array) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.name = "DressingColliders"
+	body.collision_layer = 1
+	body.collision_mask = 0
+	for entry: Array in pieces:
+		var rule: StringName = entry[0]
+		var xform: Transform3D = entry[1]
+		var bounds: AABB = entry[2]
+		var scale: Vector3 = xform.basis.get_scale()
+		var shape := CollisionShape3D.new()
+		if rule == &"tree":
+			var trunk := CylinderShape3D.new()
+			trunk.radius = TRUNK_RADIUS * scale.x
+			trunk.height = TRUNK_HEIGHT * scale.y
+			shape.shape = trunk
+			# Upright whatever the tree's lean: it's the trunk that stops you.
+			shape.transform = Transform3D(Basis.IDENTITY, xform.origin + Vector3.UP * trunk.height * 0.5)
+		else:
+			var box := BoxShape3D.new()
+			box.size = (bounds.size * scale).max(Vector3.ONE * 0.1)
+			shape.shape = box
+			shape.transform = Transform3D(xform.basis.orthonormalized(), xform * bounds.get_center())
+		body.add_child(shape)
+	return body
+
+
+## A loose roadside thing (a cone, a bench, a hay bale) as a real body, asleep
+## until something hits it. The model rides inside unchanged.
+static func _make_knockable(piece: Node3D, bounds: AABB) -> void:
+	var group: Node = piece.get_parent()
+	var scale: Vector3 = piece.basis.get_scale()
+	var body := RigidBody3D.new()
+	body.name = "Knockable" + String(piece.name)
+	body.transform = Transform3D(piece.basis.orthonormalized(), piece.position)
+	body.collision_layer = 1
+	body.collision_mask = 1 | 2
+	var size: Vector3 = (bounds.size * scale).max(Vector3.ONE * 0.1)
+	body.mass = clampf(size.x * size.y * size.z * KNOCKABLE_DENSITY, 4.0, 90.0)
+	body.can_sleep = true
+	for meta: StringName in piece.get_meta_list():
+		body.set_meta(meta, piece.get_meta(meta))
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	shape.shape = box
+	# Pieces are sunk a few centimetres so no foot floats; the box starts just
+	# above that, or the solver would pop every cone out of the ground at load.
+	shape.position = bounds.get_center() * scale + Vector3.UP * SINK_CLEARANCE
+	box.size.y = maxf(box.size.y - SINK_CLEARANCE, 0.1)
+	body.add_child(shape)
+	group.remove_child(piece)
+	piece.transform = Transform3D(Basis.from_scale(scale), Vector3.ZERO)
+	body.add_child(piece)
+	group.add_child(body)
+	# Where it was placed, before physics had any say (tests compare this).
+	body.set_meta(&"placed_transform", body.transform)
+	# Asleep only once in the world: set any earlier and the body wakes anyway.
+	body.sleeping = true
 
 
 ## The piece's meshes, or [] when it can't be batched: anything scripted,
@@ -247,7 +335,7 @@ static func _segment_parts(segment: Node) -> Array[MeshInstance3D]:
 		var owned: bool = true
 		var ancestor: Node = part.get_parent()
 		while ancestor != segment:
-			if ancestor.get_script() != null or String(ancestor.name).ends_with("Dressing") or not (ancestor as Node3D).visible:
+			if ancestor.get_script() != null or String(ancestor.name).ends_with("Dressing") or not (ancestor as Node3D).visible or ancestor.has_meta(&"animated"):
 				owned = false
 				break
 			ancestor = ancestor.get_parent()

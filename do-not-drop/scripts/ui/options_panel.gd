@@ -78,7 +78,7 @@ func _build() -> void:
 	UiTheme.tag(column, "CONTROLES", UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
-	for pair: Array in [[&"interact", "Interactuar"], [&"ui_ping", "Ping"], [&"drive_horn", "Bocina"]]:
+	for pair: Array in [[&"interact", "Interactuar"], [&"ui_ping", "Ping"], [&"drive_horn", "Bocina"], [&"look_back", "Mirar atrás"]]:
 		var row := HBoxContainer.new()
 		column.add_child(row)
 		UiTheme.label(row, String(pair[1]), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL

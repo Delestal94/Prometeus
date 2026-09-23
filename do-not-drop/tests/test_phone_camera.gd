@@ -20,6 +20,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	# A four-player crew's worth of houses (solo play builds only one).
+	level.get_node(^"World/Route").set(&"house_count", 3)
 	root.add_child(level)
 	current_scene = level
 	await process_frame

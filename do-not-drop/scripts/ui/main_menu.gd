@@ -173,7 +173,7 @@ func _build_ui() -> void:
 	var tutorial_button: Button = _button(column, "Cómo jugar", false)
 	tutorial_button.pressed.connect(_open_tutorial)
 	_entry_buttons.append(tutorial_button)
-	var cosmetics_button: Button = _button(column, "Uniforme", false)
+	var cosmetics_button: Button = _button(column, "Apariencia", false)
 	cosmetics_button.pressed.connect(_open_cosmetics)
 	_entry_buttons.append(cosmetics_button)
 	var leaderboard_button: Button = _button(column, "Récords", false)

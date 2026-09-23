@@ -107,7 +107,7 @@ var _ragdolled: bool = false
 var seat_node_path: NodePath = NodePath()
 ## Selected locally before a match, then replicated so every passenger sees
 ## the same uniform.
-var cosmetic_id: StringName = &"mint_uniform":
+var cosmetic_id: StringName = &"team_color":
 	set(value):
 		cosmetic_id = value
 		_apply_cosmetic()
@@ -189,7 +189,11 @@ func _apply_cosmetic() -> void:
 	if _body_visual == null:
 		return
 	var profile: Node = get_node_or_null("/root/UnlockManager")
-	var color: Color = profile.call(&"cosmetic_color", cosmetic_id) if profile != null else PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
+	# The default ("team_color") keeps the per-peer crew colour, so teammates
+	# can be told apart; a uniform someone picked replaces it.
+	var color: Color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
+	if profile != null and not bool(profile.call(&"cosmetic_is_auto", cosmetic_id)):
+		color = profile.call(&"cosmetic_color", cosmetic_id)
 	var mesh_instance: MeshInstance3D = _find_mesh_instance(_body_visual)
 	if mesh_instance != null and mesh_instance.mesh != null:
 		var suit_material: Material = mesh_instance.mesh.surface_get_material(0)
@@ -318,7 +322,9 @@ func _physics_process(delta: float) -> void:
 		if carried_package != null:
 			_update_carried_package()
 		if tended_package != null:
-			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
+			var tending: Dictionary = _gather_package_input()
+			tended_package.rpc_id(1, &"submit_tender_input", tending)
+			_pose_tending_hands(tending, delta)
 		return
 	_poll_interact()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
@@ -568,6 +574,41 @@ func _pose_viewmodel_hands(half_extents: Vector3) -> void:
 	right.position = right.position.lerp(Vector3(spread, -0.36, -0.76), 0.25)
 	left.rotation_degrees = left.rotation_degrees.lerp(Vector3(62, 0, 30), 0.25)
 	right.rotation_degrees = right.rotation_degrees.lerp(Vector3(62, 0, -30), 0.25)
+
+
+## The seat camera's hands answer the trap controls (tareas de Slatex #10):
+## holding the action leans both of them onto the box, pressing a direction
+## gives it a quick tap that way. Rest pose is whatever the seat authored.
+var _tending_rest: Dictionary = {}
+var _tending_tap: Vector3 = Vector3.ZERO
+const TENDING_PRESS := Vector3(0.0, -0.12, -0.2)
+const TENDING_TAP_DISTANCE: float = 0.09
+const TENDING_TAP_DIRECTIONS: Dictionary = {
+	&"up": Vector3(0.0, 0.0, -1.0), &"down": Vector3(0.0, 0.0, 1.0),
+	&"left": Vector3(-1.0, 0.0, 0.0), &"right": Vector3(1.0, 0.0, 0.0),
+}
+
+
+func _pose_tending_hands(tending: Dictionary, delta: float) -> void:
+	var seat_camera: Node = get_node_or_null(_seat_camera_path)
+	if seat_camera == null:
+		return
+	var direction: Variant = tending.get("direction_pressed")
+	if direction != null:
+		_tending_tap = TENDING_TAP_DIRECTIONS.get(direction, Vector3.ZERO) * TENDING_TAP_DISTANCE
+	_tending_tap = _tending_tap.move_toward(Vector3.ZERO, 0.6 * delta)
+	var pressing: bool = bool(tending.get("steady", false))
+	for hand_name: String in ["LeftHand", "RightHand"]:
+		var hand := seat_camera.get_node_or_null(NodePath(hand_name)) as Node3D
+		if hand == null:
+			continue
+		var key: String = "%s:%s" % [seat_camera.get_path(), hand_name]
+		if not _tending_rest.has(key):
+			_tending_rest[key] = hand.position
+		var rest: Vector3 = _tending_rest[key]
+		var tap: Vector3 = _tending_tap if (hand_name == "RightHand") == (_tending_tap.x >= 0.0) else Vector3.ZERO
+		var goal: Vector3 = rest + (TENDING_PRESS if pressing else Vector3.ZERO) + tap
+		hand.position = hand.position.lerp(goal, clampf(14.0 * delta, 0.0, 1.0))
 
 
 func _reset_viewmodel_hands() -> void:

@@ -75,6 +75,11 @@ signal route_event_started(event_id: StringName, event: Dictionary)
 signal route_event_updated(event_id: StringName, event: Dictionary)
 signal route_event_resolved(event_id: StringName, success: bool, peer_id: int)
 signal unlock_earned(unlock_id: StringName, title: String)
+## Which box each house waits for, decided by the host when the run starts:
+## [[package_id, display_name], ...] in house order (route.assign_packages()).
+signal houses_assigned(assignments: Array)
+## Somebody rang with a box the house didn't order; it was handed back.
+signal house_refused_package(house_index: int, expected_label: String)
 
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts

@@ -49,6 +49,16 @@ func _ready() -> void:
 	if route.has_signal(&"house_resolved"):
 		route.connect(&"house_resolved", _on_house_resolved)
 		RunManager.expected_houses = (route.get(&"houses") as Array).size()
+		EventBus.houses_assigned.connect(func(assignments: Array) -> void: route.call(&"assign_packages", assignments))
+		for house: Node in route.get(&"houses"):
+			var index: int = int(house.get(&"house_index"))
+			house.connect(&"wrong_package_offered", func(expected: String) -> void:
+				EventBus.relay(&"house_refused_package", [index, expected]))
+	# The host brings its own truck and paint; replication hands them to
+	# every client (vehicle.gd variant_id/paint_id).
+	if NetworkManager.is_host():
+		vehicle.variant_id = UnlockManager.selected_truck
+		vehicle.paint_id = UnlockManager.selected_paint
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	# Offline is a session of one, so this same call covers both paths.
 	if NetworkManager.is_host():
@@ -156,7 +166,20 @@ func start_delivery() -> void:
 			# Only what's aboard counts: a box left on the rack was never
 			# part of this delivery, so it shouldn't drag the score down.
 			package.report_to_run()
+	EventBus.relay(&"houses_assigned", [_house_assignments()])
 	RunManager.start_run()
+
+
+## One loaded box per house, in rack order: the first bay's box goes to the
+## first house, and so on. Boxes beyond the house count ride to the goal as
+## plain cargo; houses beyond the box count take whatever they're handed.
+func _house_assignments() -> Array:
+	var assignments: Array = []
+	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
+		for package: DeliveryPackage in packages:
+			if is_instance_valid(package) and package.is_loaded and package.current_mount == mount:
+				assignments.append([package.package_id, String(package.trap_definition.get(&"display_name"))])
+	return assignments
 
 
 func restart_delivery() -> void:

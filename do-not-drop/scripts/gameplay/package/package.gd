@@ -378,10 +378,29 @@ func place_at(mount: Node3D, mount_point: Node = null) -> void:
 
 ## A resident took the box at the door. Its carrier's hands have to empty on
 ## every peer before the node goes away, or they keep "holding" a freed box.
-func consume() -> void:
+##
+## With `hand_over_at` (the resident at the door) it doesn't just vanish
+## (tareas de Slatex #15): it floats from the hands to the doorway and the
+## resident takes it in, then it's gone. Already out of play from the first
+## frame -- no collisions, no longer cargo -- so nothing can grab it back.
+const HAND_OVER_SECONDS: float = 0.45
+const TAKE_IN_SECONDS: float = 0.3
+
+
+func consume(hand_over_at: Variant = null) -> void:
 	_release_carrier()
 	release_mount()
-	call_deferred(&"queue_free")
+	if hand_over_at == null or not is_inside_tree():
+		call_deferred(&"queue_free")
+		return
+	remove_from_group(&"cargo")
+	set_deferred(&"freeze", true)
+	collision_layer = 0
+	collision_mask = 0
+	var tween := create_tween()
+	tween.tween_property(self, ^"global_position", hand_over_at as Vector3, HAND_OVER_SECONDS) 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, ^"scale", Vector3.ONE * 0.05, TAKE_IN_SECONDS) 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.tween_callback(queue_free)
 
 
 ## Trap types reshape the collider at runtime (package_feedback.gd), so this

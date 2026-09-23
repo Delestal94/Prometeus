@@ -18,25 +18,38 @@ func _initialize() -> void:
 
 	var packages: Array[Node] = []
 	packages.assign(root.get_tree().get_nodes_in_group(&"cargo"))
-	_expect(packages.size() == 4, "The endless level also ships all four trap types (got %d)" % packages.size())
-
+	# Every trap that exists (data/traps/) ships in endless too -- the catalogue
+	# grew from four to seven (liquid, explosive, hostile), and nothing here
+	# should need editing each time another one is added.
+	var expected_ids: Array = []
+	for file: String in DirAccess.get_files_at("res://data/traps"):
+		if file.ends_with(".tres"):
+			expected_ids.append(String((load("res://data/traps/" + file) as Resource).get(&"id")))
+	expected_ids.sort()
 	var trap_ids: Array = []
 	for package: Node in packages:
 		trap_ids.append(String(package.get(&"trap_definition").get(&"id")))
 	trap_ids.sort()
-	_expect(trap_ids == ["balance", "fragile", "growing_weight", "noisy"],
-		"All four trap types are represented in the endless level too (got %s)" % str(trap_ids))
+	_expect(trap_ids == expected_ids, "Every trap type is represented in the endless level (got %s, expected %s)" % [str(trap_ids), str(expected_ids)])
 
 	var mounts: Array[Node] = []
 	mounts.assign(root.get_tree().get_nodes_in_group(&"package_mount"))
-	_expect(mounts.size() >= 4, "At least four mounts to seat all four traps (got %d)" % mounts.size())
+	_expect(mounts.size() >= 4, "At least four mounts to seat four traps (got %d)" % mounts.size())
 
-	var player: Node = level.local_player
-	for index: int in range(4):
-		player.call(&"pick_up", packages[index].get_path())
-		mounts[index].call(&"interact", player)
+	# The four original traps ride along: they keep ticking with nobody
+	# tending them, which is what a passenger-less straight drive can test.
+	# (Explosive/hostile need a passenger's input to survive by design.)
+	var aboard: Array[Node] = []
 	for package: Node in packages:
+		if String(package.get(&"trap_definition").get(&"id")) in ["balance", "fragile", "growing_weight", "noisy"]:
+			aboard.append(package)
+	var player: Node = level.local_player
+	for index: int in range(aboard.size()):
+		player.call(&"pick_up", aboard[index].get_path())
+		mounts[index].call(&"interact", player)
+	for package: Node in aboard:
 		_expect(bool(package.get(&"is_loaded")), "%s is loaded aboard" % package.name)
+	packages = aboard
 
 	var manager: Node = root.get_node(^"/root/RunManager")
 	var driver_seat: Node = level.get_node(^"World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea")

@@ -11,13 +11,20 @@ var _received: Array = []
 
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _on_hint(id: StringName, hint: String) -> void:
+	_received.append([id, hint])
+
+
+func _run() -> void:
 	await process_frame
 	var run_manager: Node = root.get_node(^"/root/RunManager")
 	run_manager.call(&"start_run")
 
 	var bus: Node = root.get_node(^"/root/EventBus")
-	bus.connect(&"package_hint_changed", func(id: StringName, hint: String) -> void:
-		_received.append([id, hint]))
+	bus.connect(&"package_hint_changed", _on_hint)
 
 	var package: RigidBody3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
 	package.set(&"trap_definition", load("res://data/traps/growing_weight.tres"))
@@ -37,7 +44,17 @@ func _initialize() -> void:
 		await physics_frame
 	_expect(_received.size() >= 2, "the throttle fires again after ~1s of real physics (got %d events total)" % _received.size())
 
-	package.free()
+	# Not free(): this resumes inside a physics step, and freeing a rigid
+	# body mid-step crashed Jolt on exit about half the time. Same deferred
+	# removal the game itself uses for a delivered box.
+	package.queue_free()
+	await process_frame
+	await process_frame
+	# Leave the autoloads as they were: a run left going and a listener on a
+	# script that's about to go away made shutdown crash about half the time.
+	bus.disconnect(&"package_hint_changed", _on_hint)
+	run_manager.call(&"reset_run")
+	await process_frame
 	if _failures == 0:
 		print("PASS: package hints report to the run immediately and relay again on a throttle")
 	quit(_failures)

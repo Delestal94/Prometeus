@@ -48,8 +48,8 @@ var camera_shake_scale: float = 1.0:
 		camera_shake_scale = clampf(value, 0.0, 1.0)
 		_save()
 
-const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn"]
-const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H}
+const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn", &"look_back"]
+const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B}
 var key_bindings: Dictionary = DEFAULT_KEY_BINDINGS.duplicate():
 	set(value):
 		key_bindings = value.duplicate()
