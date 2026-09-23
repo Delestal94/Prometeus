@@ -21,6 +21,8 @@ var _hud_scale_slider: HSlider
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
 var _controls_label: Label
+var _binding_buttons: Dictionary = {}
+var _listening_action: StringName = &""
 
 
 func _ready() -> void:
@@ -76,6 +78,13 @@ func _build() -> void:
 	UiTheme.tag(column, "CONTROLES", UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
+	for pair: Array in [[&"interact", "Interactuar"], [&"ui_ping", "Ping"], [&"drive_horn", "Bocina"]]:
+		var row := HBoxContainer.new()
+		column.add_child(row)
+		UiTheme.label(row, String(pair[1]), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var bind: Button = UiTheme.button(row, GameSettings.binding_label(pair[0]), false, Vector2(150, 38))
+		bind.pressed.connect(func(action: StringName = pair[0]) -> void: _listen_for_key(action))
+		_binding_buttons[pair[0]] = bind
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
@@ -99,6 +108,26 @@ func _refresh_controls() -> void:
 
 func _on_input_device_changed(_gamepad: bool) -> void:
 	_refresh_controls()
+
+
+func _listen_for_key(action: StringName) -> void:
+	_listening_action = action
+	(_binding_buttons[action] as Button).text = "Presioná una tecla…"
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if not _listening_action.is_empty():
+		if event is InputEventKey and event.pressed and not event.echo and event.keycode != KEY_ESCAPE:
+			GameSettings.bind_key(_listening_action, event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode)
+			(_binding_buttons[_listening_action] as Button).text = GameSettings.binding_label(_listening_action)
+			_listening_action = &""
+			get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel"):
+		close()
+		get_viewport().set_input_as_handled()
 
 
 func _reset() -> void:
@@ -127,6 +156,8 @@ func _sync_from_settings() -> void:
 	_hud_scale_slider.value_changed.emit(GameSettings.hud_scale)
 	_invert_check.set_pressed_no_signal(GameSettings.invert_look_y)
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
+	for action: StringName in _binding_buttons:
+		(_binding_buttons[action] as Button).text = GameSettings.binding_label(action)
 
 
 ## Shown over a paused game as often as over the menu, so it has to keep
@@ -145,8 +176,3 @@ func close() -> void:
 	hide()
 	closed.emit()
 
-
-func _unhandled_input(event: InputEvent) -> void:
-	if visible and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
-		close()
-		get_viewport().set_input_as_handled()

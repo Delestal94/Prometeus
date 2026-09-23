@@ -48,6 +48,15 @@ var camera_shake_scale: float = 1.0:
 		camera_shake_scale = clampf(value, 0.0, 1.0)
 		_save()
 
+const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn"]
+const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H}
+var key_bindings: Dictionary = DEFAULT_KEY_BINDINGS.duplicate():
+	set(value):
+		key_bindings = value.duplicate()
+		for action: StringName in REBINDABLE_ACTIONS:
+			_apply_key_binding(action, int(key_bindings.get(action, DEFAULT_KEY_BINDINGS[action])))
+		_save()
+
 ## Multiplies whatever each look implementation already uses, so 1.0 is
 ## exactly today's feel and nobody has to re-tune the defaults.
 var look_sensitivity: float = 1.0:
@@ -145,6 +154,7 @@ func reset_to_defaults() -> void:
 	invert_look_y = false
 	fullscreen = false
 	hud_scale = HUD_SCALE_DEFAULT
+	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
 	_loading = false
 	_save()
 
@@ -153,6 +163,29 @@ func reset_to_defaults() -> void:
 ## ask for this rather than each deciding what "inverted" means.
 func look_y_sign() -> float:
 	return -1.0 if invert_look_y else 1.0
+
+
+func bind_key(action: StringName, keycode: Key) -> void:
+	if action not in REBINDABLE_ACTIONS or keycode == KEY_NONE:
+		return
+	key_bindings[action] = keycode
+	_apply_key_binding(action, keycode)
+	_save()
+
+
+func binding_label(action: StringName) -> String:
+	return OS.get_keycode_string(int(key_bindings.get(action, DEFAULT_KEY_BINDINGS.get(action, KEY_NONE))))
+
+
+func _apply_key_binding(action: StringName, keycode: Key) -> void:
+	if not InputMap.has_action(action):
+		return
+	for event: InputEvent in InputMap.action_get_events(action):
+		if event is InputEventKey:
+			InputMap.action_erase_event(action, event)
+	var key_event := InputEventKey.new()
+	key_event.physical_keycode = keycode
+	InputMap.action_add_event(action, key_event)
 
 
 func _apply_volume() -> void:
@@ -208,6 +241,11 @@ func _load() -> void:
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
 		hud_scale = HUD_SCALE_DEFAULT
 	last_join_address = String(config.get_value(SECTION, "last_join_address", ""))
+	var saved_bindings: Dictionary = Dictionary(config.get_value(SECTION, "key_bindings", DEFAULT_KEY_BINDINGS))
+	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
+	for action: StringName in REBINDABLE_ACTIONS:
+		key_bindings[action] = int(saved_bindings.get(action, DEFAULT_KEY_BINDINGS[action]))
+		_apply_key_binding(action, int(key_bindings[action]))
 	_loading = false
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
 		_save()
@@ -231,4 +269,5 @@ func _save() -> void:
 	config.set_value(SECTION, "hud_scale", hud_scale)
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
+	config.set_value(SECTION, "key_bindings", key_bindings)
 	config.save(SAVE_PATH)

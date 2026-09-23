@@ -44,6 +44,14 @@ func _run() -> void:
 	settings.voice_volume = 0.6
 	_expect(is_equal_approx(settings.effects_volume, 0.4), "Effects volume is stored independently")
 	_expect(is_equal_approx(settings.voice_volume, 0.6), "Voice volume is stored independently")
+	settings.bind_key(&"interact", KEY_F)
+	_expect(settings.binding_label(&"interact") == "F", "Interact can be rebound to a keyboard key")
+	var has_rebound_key: bool = false
+	for event: InputEvent in InputMap.action_get_events(&"interact"):
+		if event is InputEventKey and (event as InputEventKey).physical_keycode == KEY_F:
+			has_rebound_key = true
+	_expect(has_rebound_key, "The rebound key is applied to InputMap immediately")
+	settings.bind_key(&"interact", KEY_E)
 
 	# --- inversion is expressed as a multiplier both look paths can use ---
 	settings.invert_look_y = false
