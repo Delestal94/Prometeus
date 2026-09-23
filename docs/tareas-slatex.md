@@ -82,21 +82,21 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 33 | Decidir qué se desbloquea primero (trampas nuevas, vehículos, cosméticos) — decisión de contenido, no solo técnica; no arrancar la implementación sin esto resuelto. | A | Pendiente |
-| 34 | Diseñar `UnlockManager` (autoload): API mínima de qué está desbloqueado y cómo se marca algo como tal. | A | Pendiente |
-| 35 | Guardado persistente de progreso en `user://`, mismo patrón JSON ya usado por el leaderboard en `run_manager.gd` (zona compartida: avisar si hace falta tocar `run_manager.gd`). | A | Pendiente |
-| 36 | Definir condiciones de desbloqueo (¿puntaje acumulado? ¿cantidad de entregas exitosas? ¿logros puntuales?). | A | Pendiente |
-| 37 | Pantalla de "Progreso" (ya estaba en el flujo de UI original, `docs/controles-y-ui.md`, nunca implementada). | B | Pendiente |
-| 38 | Agregar el botón "Progreso" al menú principal. | A | Pendiente |
-| 39 | Notificación al desbloquear algo, reutilizando el patrón de fundido/toast ya existente (`quick_fade_requested`, `ping_sent`). | A | Pendiente |
-| 40 | Test automatizado de `UnlockManager`: guardar, cargar, no perder progreso entre sesiones. | A | Pendiente |
-| 41 | Balancear la curva de desbloqueos: que las primeras partidas no se sientan vacías ni las últimas triviales. | B | Pendiente |
-| 42 | Documentar el sistema de desbloqueos en `docs/plan-desarrollo.md` Fase 5 una vez armado. | A | Pendiente |
-| 43 | Documentar la decisión de perfil local vs. cuenta (fuera de alcance del MVP, pero dejarlo explícito). | A | Pendiente |
-| 44 | Pantalla "Cómo jugar" / tutorial (mencionada en el flujo de UI original, nunca implementada). | B | Pendiente |
-| 45 | Contenido del tutorial: explicar las 4 trampas y los controles básicos sin asumir que el jugador ya sabe jugar. | A | Pendiente |
-| 46 | Decidir si el tutorial es una pantalla estática o un mini-nivel interactivo — documentar la decisión antes de construir. | A | Pendiente |
-| 47 | Playtesting del tutorial con alguien que nunca vio el juego. | A | Pendiente |
+| 33 | Decidir qué se desbloquea primero (trampas nuevas, vehículos, cosméticos) — decisión de contenido, no solo técnica; no arrancar la implementación sin esto resuelto. | A | ✅ Hecho: Líquido, pintura violeta, Explosivo y Hostil |
+| 34 | Diseñar `UnlockManager` (autoload): API mínima de qué está desbloqueado y cómo se marca algo como tal. | A | ✅ Hecho (`unlock_manager.gd`) |
+| 35 | Guardado persistente de progreso en `user://`, mismo patrón JSON ya usado por el leaderboard en `run_manager.gd` (zona compartida: avisar si hace falta tocar `run_manager.gd`). | A | ✅ Hecho (`user://unlock_progress.json`) |
+| 36 | Definir condiciones de desbloqueo (¿puntaje acumulado? ¿cantidad de entregas exitosas? ¿logros puntuales?). | A | ✅ Hecho: entregas exitosas + puntaje acumulado |
+| 37 | Pantalla de "Progreso" (ya estaba en el flujo de UI original, `docs/controles-y-ui.md`, nunca implementada). | B | ✅ Hecho (`progress_panel.gd`) |
+| 38 | Agregar el botón "Progreso" al menú principal. | A | ✅ Hecho |
+| 39 | Notificación al desbloquear algo, reutilizando el patrón de fundido/toast ya existente (`quick_fade_requested`, `ping_sent`). | A | ✅ Hecho (toast en HUD) |
+| 40 | Test automatizado de `UnlockManager`: guardar, cargar, no perder progreso entre sesiones. | A | ✅ Hecho (`test_unlock_manager.gd`) |
+| 41 | Balancear la curva de desbloqueos: que las primeras partidas no se sientan vacías ni las últimas triviales. | B | 🟡 Parámetros iniciales documentados; falta playtesting |
+| 42 | Documentar el sistema de desbloqueos en `docs/plan-desarrollo.md` Fase 5 una vez armado. | A | ✅ Hecho |
+| 43 | Documentar la decisión de perfil local vs. cuenta (fuera de alcance del MVP, pero dejarlo explícito). | A | ✅ Hecho: perfil local para el MVP |
+| 44 | Pantalla "Cómo jugar" / tutorial (mencionada en el flujo de UI original, nunca implementada). | B | ✅ Hecho (`tutorial_panel.gd`) |
+| 45 | Contenido del tutorial: explicar las 4 trampas y los controles básicos sin asumir que el jugador ya sabe jugar. | A | ✅ Hecho |
+| 46 | Decidir si el tutorial es una pantalla estática o un mini-nivel interactivo — documentar la decisión antes de construir. | A | ✅ Hecho: pantalla estática para MVP |
+| 47 | Playtesting del tutorial con alguien que nunca vio el juego. | A | Pendiente: requiere una persona externa |
 
 ## Contenido nuevo — trampa "Líquido" (48-55)
 

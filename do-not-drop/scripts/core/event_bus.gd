@@ -73,6 +73,7 @@ signal delivery_photo_taken(house_index: int, accepted: bool)
 signal route_event_started(event_id: StringName, event: Dictionary)
 signal route_event_updated(event_id: StringName, event: Dictionary)
 signal route_event_resolved(event_id: StringName, success: bool, peer_id: int)
+signal unlock_earned(unlock_id: StringName, title: String)
 
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts

@@ -1,5 +1,14 @@
 # Plan de desarrollo por fases — Take My Package
 
+## Fase 5 — Progresión local del MVP
+
+El MVP usa un **perfil local persistente**, no una cuenta. Entregas exitosas y
+puntaje acumulado desbloquean contenido permanentemente: Líquido (3 entregas,
+250 puntos), pintura violeta (5, 450), Explosivo (7, 750) y Hostil (12, 1500).
+El dinero y las cartas permanecen en la campaña cooperativa, separados del
+progreso individual. El tutorial inicial es una pantalla estática del menú;
+un mini-nivel interactivo queda para una iteración posterior.
+
 > Basado en: `docs/requerimientos-tecnicos.md` (Godot 4.x, física real de vehículo +
 > streaming de tramos, confirmado 2026-09-20).
 > Última actualización: 2026-09-20

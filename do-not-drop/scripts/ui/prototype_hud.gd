@@ -131,6 +131,7 @@ func _ready() -> void:
 	EventBus.card_changed.connect(_on_card_changed)
 	EventBus.route_event_started.connect(_on_route_event_started)
 	EventBus.route_event_resolved.connect(_on_route_event_resolved)
+	EventBus.unlock_earned.connect(_on_unlock_earned)
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	NetworkManager.session_failed.connect(_on_connection_lost)
 	GameSettings.input_device_changed.connect(_on_input_device_changed)
@@ -744,6 +745,10 @@ func _on_merit_changed(peer_id: int, total: int) -> void:
 func _on_card_changed(peer_id: int, card_id: int) -> void:
 	if peer_id == NetworkManager.local_id() and card_id >= 0:
 		_toast("Carta obtenida")
+
+
+func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
+	_toast("¡Desbloqueaste %s!" % title)
 
 
 func _toast(text: String) -> void:

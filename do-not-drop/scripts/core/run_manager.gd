@@ -289,6 +289,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"best_score": best_score(MODE_DELIVERY),
 	}
 	print("[Run] ", results)
+	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 

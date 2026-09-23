@@ -27,6 +27,7 @@ CrewProgression="*res://scripts/core/crew_progression.gd"
 ShopVoteManager="*res://scripts/core/shop_vote_manager.gd"
 RouteEventManager="*res://scripts/core/route_event_manager.gd"
 GameSettings="*res://scripts/core/game_settings.gd"
+UnlockManager="*res://scripts/core/unlock_manager.gd"
 
 [display]
 

@@ -26,10 +26,14 @@ const RED: Color = UiTheme.RED
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const ENDLESS_LEVEL_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
 const MENU_ART: Texture2D = preload("res://assets/ui/backgrounds/tx_ui_menu_background_1920.png")
+const PROGRESS_PANEL_SCRIPT := preload("res://scripts/ui/progress_panel.gd")
+const TUTORIAL_PANEL_SCRIPT := preload("res://scripts/ui/tutorial_panel.gd")
 
 var _status_label: Label
 var _address_field: LineEdit
 var _options: OptionsPanel
+var _progress: Control
+var _tutorial: Control
 var _play_button: Button
 var _cancel_button: Button
 ## Everything that starts a session or opens another screen. Disabled while
@@ -158,6 +162,13 @@ func _build_ui() -> void:
 	options_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	options_button.pressed.connect(_open_options)
 	_entry_buttons.append(options_button)
+	var progress_button: Button = _button(bottom_row, "Progreso", false)
+	progress_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	progress_button.pressed.connect(_open_progress)
+	_entry_buttons.append(progress_button)
+	var tutorial_button: Button = _button(column, "Cómo jugar", false)
+	tutorial_button.pressed.connect(_open_tutorial)
+	_entry_buttons.append(tutorial_button)
 	# A game you can only leave with Alt+F4 reads as unfinished before a
 	# player has pressed anything (docs/critica-diseno-abogado-del-diablo.md
 	# section 4).
@@ -186,6 +197,14 @@ func _build_ui() -> void:
 	_options.name = "OptionsPanel"
 	add_child(_options)
 	_options.closed.connect(options_button.grab_focus)
+	_progress = PROGRESS_PANEL_SCRIPT.new()
+	_progress.name = "ProgressPanel"
+	add_child(_progress)
+	_progress.connect(&"closed", progress_button.grab_focus)
+	_tutorial = TUTORIAL_PANEL_SCRIPT.new()
+	_tutorial.name = "TutorialPanel"
+	add_child(_tutorial)
+	_tutorial.connect(&"closed", tutorial_button.grab_focus)
 	# A gamepad player has no cursor: without a focused button, the menu
 	# ignored every press until someone reached for the mouse.
 	_play_button.grab_focus.call_deferred()
@@ -193,6 +212,14 @@ func _build_ui() -> void:
 
 func _open_options() -> void:
 	_options.open()
+
+
+func _open_progress() -> void:
+	_progress.call(&"open")
+
+
+func _open_tutorial() -> void:
+	_tutorial.call(&"open")
 
 
 func _quit_game() -> void:
