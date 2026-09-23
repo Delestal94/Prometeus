@@ -82,6 +82,10 @@ var toast_seconds_left: float = 0.0
 var complaints_label: Label
 var photo_strip: HBoxContainer
 var fade_rect: ColorRect
+## A peripheral warning leaves the center clear for lifting/aiming. It is
+## driven from the authoritative cargo records rather than a local guessed
+## trap state, so every passenger sees the same urgency.
+var risk_vignette: ColorRect
 ## The keyboard cheat sheet along the bottom. It used to sit there for the
 ## whole run, competing with everything else on screen long after anyone
 ## needed it (docs/critica-diseno-abogado-del-diablo.md section 5). It fades
@@ -149,6 +153,12 @@ func _build_ui() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiTheme.apply(root)
 	add_child(root)
+	risk_vignette = ColorRect.new()
+	risk_vignette.color = Color(0.62, 0.05, 0.04, 0.0)
+	risk_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	risk_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	risk_vignette.material = _vignette_material()
+	root.add_child(risk_vignette)
 	hud_layer = Control.new()
 	hud_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(hud_layer)
@@ -411,6 +421,7 @@ func _process(delta: float) -> void:
 	_refresh_hint(delta)
 	_refresh_shortcuts()
 	_refresh_restart_hold(delta)
+	_refresh_risk_vignette(delta)
 	if overlay_mode == "pause" and not _soft_pause and not get_tree().paused:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
@@ -800,6 +811,25 @@ func _on_integrity(id: StringName, integrity: float, maximum: float) -> void:
 		return
 	(cargo_rows[id]["bar"] as ProgressBar).value = integrity / maxf(maximum, 0.01) * 100.0
 	_refresh_row(id)
+
+
+func _refresh_risk_vignette(delta: float) -> void:
+	var risk: float = 0.0
+	for entry: Dictionary in RunManager.cargo.values():
+		if int(entry.get("state", 0)) == 2:
+			continue
+		var ratio: float = float(entry.get("integrity", 100.0)) / maxf(float(entry.get("maximum", 100.0)), 0.01)
+		risk = maxf(risk, clampf((0.6 - ratio) / 0.6, 0.0, 1.0))
+	var target_alpha: float = risk * 0.38
+	risk_vignette.color.a = move_toward(risk_vignette.color.a, target_alpha, delta * 1.8)
+
+
+func _vignette_material() -> ShaderMaterial:
+	var shader := Shader.new()
+	shader.code = "shader_type canvas_item; void fragment(){ vec2 p = UV * 2.0 - 1.0; float edge = smoothstep(0.28, 1.25, dot(p,p)); COLOR = texture(TEXTURE, UV) * COLOR; COLOR.a *= edge; }"
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	return material
 
 
 func _on_package_state(id: StringName, _state: int) -> void:
