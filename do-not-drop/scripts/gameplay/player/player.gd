@@ -93,6 +93,7 @@ var _bob_time: float = 0.0
 var _bob_amount: float = 0.0
 var _interact_was_down: bool = false
 var _last_safe_ground: Vector3 = Vector3.ZERO
+var _package_hit_cooldown: float = 0.0
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -131,7 +132,9 @@ func _exit_tree() -> void:
 func _ready() -> void:
 	_last_safe_ground = global_position
 	if is_local():
-		cosmetic_id = UnlockManager.selected_cosmetic
+		var profile: Node = get_node_or_null("/root/UnlockManager")
+		if profile != null:
+			cosmetic_id = profile.get("selected_cosmetic")
 	_build_body()
 	RenderLayers.configure_first_person(_camera)
 	RenderLayers.show_viewmodel(_camera, is_local())
@@ -182,7 +185,8 @@ func _build_body() -> void:
 func _apply_cosmetic() -> void:
 	if _body_visual == null:
 		return
-	var color: Color = UnlockManager.cosmetic_color(cosmetic_id)
+	var profile: Node = get_node_or_null("/root/UnlockManager")
+	var color: Color = profile.call(&"cosmetic_color", cosmetic_id) if profile != null else PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
 	var mesh_instance: MeshInstance3D = _find_mesh_instance(_body_visual)
 	if mesh_instance != null and mesh_instance.mesh != null:
 		var suit_material: Material = mesh_instance.mesh.surface_get_material(0)
@@ -276,6 +280,7 @@ func _process(_delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_package_hit_cooldown = maxf(0.0, _package_hit_cooldown - delta)
 	if not is_local():
 		return
 	if carried_package != null and not is_instance_valid(carried_package):
@@ -415,8 +420,11 @@ func _apply_look(motion: Vector2) -> void:
 	# both get applied in this one place so mouse and stick stay consistent
 	# with each other. 1.0 / not-inverted is exactly the tuning this shipped
 	# with, so the defaults change nothing.
-	motion.x *= GameSettings.look_sensitivity
-	motion.y *= GameSettings.look_sensitivity * GameSettings.look_y_sign()
+	var settings: Node = get_node_or_null("/root/GameSettings")
+	var sensitivity: float = float(settings.get("look_sensitivity")) if settings != null else 1.0
+	var y_sign: float = float(settings.call(&"look_y_sign")) if settings != null else 1.0
+	motion.x *= sensitivity
+	motion.y *= sensitivity * y_sign
 	rotate_y(-motion.x)
 	_pitch = clampf(_pitch - motion.y, -PITCH_LIMIT, PITCH_LIMIT)
 	_head.rotation.x = _pitch
@@ -458,7 +466,9 @@ func _apply_context_fov(delta: float) -> void:
 	# The options FOV is the neutral reference. Carrying still narrows the
 	# view by the same readable amount, rather than silently ignoring a
 	# player's accessibility preference.
-	var fov_offset: float = GameSettings.preferred_fov - 82.0
+	var settings: Node = get_node_or_null("/root/GameSettings")
+	var preferred_fov: float = float(settings.get("preferred_fov")) if settings != null else 82.0
+	var fov_offset: float = preferred_fov - 82.0
 	var target_fov: float = (CARRY_FOV if carried_package != null else WALK_FOV) + fov_offset
 	_camera.fov = move_toward(_camera.fov, target_fov, FOV_SMOOTH_SPEED * delta)
 
@@ -572,17 +582,22 @@ const PING_LABEL: String = "¡Cuidado!"
 
 
 func _send_ping() -> void:
-	if NetworkManager.is_online() and not NetworkManager.is_host():
-		EventBus.rpc_id(1, &"request_ping", global_position, PING_LABEL)
+	var network: Node = get_node_or_null("/root/NetworkManager")
+	var bus: Node = get_node_or_null("/root/EventBus")
+	if bus == null:
+		return
+	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
+		bus.rpc_id(1, &"request_ping", global_position, PING_LABEL)
 	else:
-		EventBus.call(&"request_ping", global_position, PING_LABEL)
+		bus.call(&"request_ping", global_position, PING_LABEL)
 
 
 func _try_interact() -> void:
 	var target: Node = _closest_interactable()
 	if target == null:
 		return
-	if NetworkManager.is_online() and not NetworkManager.is_host():
+	var network: Node = get_node_or_null("/root/NetworkManager")
+	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
 		target.rpc_id(1, &"request_interact")
 	else:
 		target.call(&"interact", self)
@@ -681,6 +696,20 @@ func _on_probe_exited(area: Area3D) -> void:
 	_nearby.erase(area)
 
 
+## A loose package can bowl somebody over. This intentionally stays a
+## controllable knockback with the current rig; a real ragdoll needs a
+## dedicated physical skeleton asset rather than faking one by deleting the
+## controller under a networked player.
+@rpc("any_peer", "call_local", "unreliable")
+func receive_package_hit(push: Vector3) -> void:
+	if _package_hit_cooldown > 0.0 or _seated:
+		return
+	_package_hit_cooldown = 0.45
+	velocity += push + Vector3.UP * 1.4
+	if is_local():
+		_play_one_shot(ANIM_JUMP, 420)
+
+
 ## The host announces the outcome of an interaction by calling these on the
 ## peers they concern. pick_up/drop_carried are broadcast: the host's own copy
 ## of a remote player has to know what that player holds, or every mount and
@@ -735,7 +764,9 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	# guaranteed to be the local player's own view swapping cameras. A quick
 	# fade softens what would otherwise be an instant teleport-cut from
 	# standing on foot to sitting in the seat.
-	EventBus.emit_signal(&"quick_fade_requested", 0.2)
+	var bus: Node = get_node_or_null("/root/EventBus")
+	if bus != null:
+		bus.emit_signal(&"quick_fade_requested", 0.2)
 	var seat_camera: Node = get_node_or_null(seat_camera_path)
 	if seat_camera != null and seat_camera.has_method(&"activate"):
 		seat_camera.call(&"activate")
@@ -782,7 +813,8 @@ func _release_seat_occupant(seat: Node3D) -> void:
 	if interaction == null or not interaction.has_method(&"release_occupant"):
 		return
 	var peer_id: int = get_multiplayer_authority()
-	if NetworkManager.is_online() and not NetworkManager.is_host():
+	var network: Node = get_node_or_null("/root/NetworkManager")
+	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
 		interaction.rpc_id(1, &"release_occupant", peer_id)
 	else:
 		interaction.call(&"release_occupant", peer_id)

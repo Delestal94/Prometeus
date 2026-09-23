@@ -84,10 +84,13 @@ var _explosive_tick_timer: float = 0.0
 var _hostile_eyes: Node3D
 var _hostile_hiss_player: AudioStreamPlayer3D
 var _hostile_last_attack_count: int = 0
+var _shelf_straps: Array[MeshInstance3D] = []
+var _package: DeliveryPackage
 
 
 func _ready() -> void:
 	var parent: Node = get_parent()
+	_package = parent as DeliveryPackage
 	_package_id = parent.get("package_id")
 	var definition: Resource = parent.get(&"trap_definition") as Resource
 	_trap_id = StringName(definition.get(&"id")) if definition != null else &""
@@ -148,6 +151,7 @@ func _apply_identity(package: Node) -> void:
 	# Box GLBs sit on their base; the package's origin is its centre.
 	model.position.y = -shape_size.y * 0.5
 	_box.add_child(model)
+	_build_shelf_straps(shape_size)
 	_adopt_box_material(model)
 	var collider: CollisionShape3D = package.get_node_or_null(^"CollisionShape3D") as CollisionShape3D
 	if collider != null:
@@ -401,6 +405,7 @@ func _on_package_placed(id: StringName) -> void:
 func _process(delta: float) -> void:
 	_apply_jitter(delta)
 	_apply_bounce(delta)
+	_apply_shelf_straps()
 	match _trap_id:
 		&"noisy":
 			_apply_groan()
@@ -412,6 +417,33 @@ func _process(delta: float) -> void:
 			_apply_explosive(delta)
 		&"hostile":
 			_apply_hostile()
+
+
+func _build_shelf_straps(shape_size: Vector3) -> void:
+	var strap_material := StandardMaterial3D.new()
+	strap_material.albedo_color = Color("25343b")
+	strap_material.roughness = 0.55
+	for x: float in [-shape_size.x * 0.32, shape_size.x * 0.32]:
+		var strap := MeshInstance3D.new()
+		strap.name = "ShelfStrap"
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.045, shape_size.y + 0.06, 0.035)
+		strap.mesh = mesh
+		strap.material_override = strap_material
+		strap.position = Vector3(x, 0.0, -shape_size.z * 0.51)
+		strap.visible = false
+		_box.add_child(strap)
+		_shelf_straps.append(strap)
+
+
+func _apply_shelf_straps() -> void:
+	if _package == null:
+		return
+	var mounted: bool = _package.is_loaded and _package.current_mount != null
+	var tension: float = clampf(_package.linear_velocity.length() * 0.025 + _package.angular_velocity.length() * 0.012, 0.0, 0.12)
+	for strap: MeshInstance3D in _shelf_straps:
+		strap.visible = mounted
+		strap.scale.y = 1.0 + tension
 
 
 func _build_hostile_eyes() -> void:

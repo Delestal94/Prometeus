@@ -22,6 +22,8 @@ const OPEN_REACH: float = 3.0
 const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
 const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
 const PACKAGE_COLLISION_COOLDOWN: float = 0.16
+const PLAYER_HIT_MIN_SPEED: float = 4.0
+const PLAYER_HIT_PUSH_SCALE: float = 0.38
 
 var trap_behavior: Resource
 var is_held: bool = false
@@ -144,6 +146,9 @@ func apply_impact(delta_velocity: float) -> void:
 
 
 func _on_body_entered(body: Node) -> void:
+	if body is Player:
+		_hit_player(body as Player)
+		return
 	var other := body as DeliveryPackage
 	if other == null or other == self or is_held or other.is_held or freeze or other.freeze:
 		return
@@ -168,6 +173,17 @@ func _on_body_entered(body: Node) -> void:
 	other.apply_impact(damage_speed)
 	_emit_event(&"package_collision", [package_id, other.package_id, strength])
 	_emit_event(&"package_collision", [other.package_id, package_id, strength])
+
+
+func _hit_player(player: Player) -> void:
+	if is_held or freeze or not _is_run_active():
+		return
+	var speed: float = linear_velocity.length()
+	if speed < PLAYER_HIT_MIN_SPEED:
+		return
+	var push: Vector3 = linear_velocity.normalized() * minf(speed * PLAYER_HIT_PUSH_SCALE, 5.0)
+	player.rpc(&"receive_package_hit", push)
+	apply_impact(speed * 0.35)
 
 
 ## Announces this package to the run. Called when the delivery starts, not at
