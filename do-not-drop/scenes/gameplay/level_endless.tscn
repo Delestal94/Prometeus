@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/level_endless.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_vehicle"]
@@ -11,6 +11,7 @@
 [ext_resource type="Resource" path="res://data/traps/noisy.tres" id="9_noisy"]
 [ext_resource type="Resource" path="res://data/traps/liquid.tres" id="11_liquid"]
 [ext_resource type="Resource" path="res://data/traps/explosive.tres" id="12_explosive"]
+[ext_resource type="Resource" path="res://data/traps/hostile.tres" id="13_hostile"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.11, 0.2, 0.2, 1)
@@ -73,6 +74,11 @@ trap_definition = ExtResource("11_liquid")
 position = Vector3(4.9, 0.75, -8.6)
 package_id = &"explosive_01"
 trap_definition = ExtResource("12_explosive")
+
+[node name="PackageHostile" parent="World" instance=ExtResource("3_package")]
+position = Vector3(5.8, 0.75, -8.6)
+package_id = &"hostile_01"
+trap_definition = ExtResource("13_hostile")
 
 [node name="PlayerSpawner" type="MultiplayerSpawner" parent="World"]
 _spawnable_scenes = PackedStringArray("res://scenes/gameplay/player/player.tscn")

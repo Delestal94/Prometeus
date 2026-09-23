@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="TrapDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/traps/trap_definition.gd" id="1_definition"]
+[ext_resource type="Script" path="res://scripts/gameplay/traps/hostile_trap_behavior.gd" id="2_behavior"]
+[ext_resource type="Resource" path="res://data/contents/hen.tres" id="3_content"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"hostile"
+display_name = "Hostil"
+behavior_script = ExtResource("2_behavior")
+difficulty = 4
+params = {
+"integrity_max": 100.0,
+"command_seconds": 2.8,
+"correct_decay": 13.0,
+"wrong_gain": 22.0,
+"passive_gain": 3.5
+}
+contents = Array[Resource]([ExtResource("3_content")])

@@ -81,6 +81,9 @@ var _liquid_last_slosh_level: float = 0.0
 var _explosive_display: Label3D
 var _explosive_tick_player: AudioStreamPlayer3D
 var _explosive_tick_timer: float = 0.0
+var _hostile_eyes: Node3D
+var _hostile_hiss_player: AudioStreamPlayer3D
+var _hostile_last_attack_count: int = 0
 
 
 func _ready() -> void:
@@ -115,6 +118,9 @@ func _ready() -> void:
 		&"explosive":
 			_build_explosive_display()
 			_explosive_tick_player = _make_player(SynthAudio.explosive_tick(), -14.0)
+		&"hostile":
+			_build_hostile_eyes()
+			_hostile_hiss_player = _make_player(SynthAudio.hostile_hiss(), -13.0)
 	_set_state(0)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
@@ -403,6 +409,52 @@ func _process(delta: float) -> void:
 			_apply_liquid()
 		&"explosive":
 			_apply_explosive(delta)
+		&"hostile":
+			_apply_hostile()
+
+
+func _build_hostile_eyes() -> void:
+	_hostile_eyes = Node3D.new()
+	_hostile_eyes.name = "HostileEyes"
+	_hostile_eyes.position = Vector3(0.0, 0.04, -0.34)
+	var eye_material := StandardMaterial3D.new()
+	eye_material.albedo_color = Color("ff5e5b")
+	eye_material.emission_enabled = true
+	eye_material.emission = Color("ff2020")
+	eye_material.emission_energy_multiplier = 1.8
+	for x: float in [-0.10, 0.10]:
+		var eye := MeshInstance3D.new()
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.035
+		sphere.height = 0.07
+		eye.mesh = sphere
+		eye.material_override = eye_material
+		eye.position = Vector3(x, 0.06, 0.0)
+		_hostile_eyes.add_child(eye)
+	for x: float in [-0.18, 0.0, 0.18]:
+		var tentacle := MeshInstance3D.new()
+		var bar := BoxMesh.new()
+		bar.size = Vector3(0.025, 0.16, 0.025)
+		tentacle.mesh = bar
+		tentacle.material_override = eye_material
+		tentacle.position = Vector3(x, -0.06, 0.0)
+		_hostile_eyes.add_child(tentacle)
+	_box.add_child(_hostile_eyes)
+
+
+func _apply_hostile() -> void:
+	if _hostile_eyes == null:
+		return
+	var package := get_parent() as DeliveryPackage
+	if package == null or package.trap_behavior == null:
+		return
+	var aggression: float = float(package.trap_behavior.get("aggression")) / maxf(package.integrity_max, 1.0)
+	_hostile_eyes.visible = aggression > 0.04
+	_hostile_eyes.scale = Vector3.ONE * lerpf(0.35, 1.25, aggression)
+	var attacks: int = int(package.trap_behavior.get("attack_count"))
+	if attacks > _hostile_last_attack_count:
+		_hostile_last_attack_count = attacks
+		_hostile_hiss_player.play()
 
 
 func _build_explosive_display() -> void:

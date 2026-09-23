@@ -137,14 +137,14 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 64 | Diseñar la mecánica exacta: qué input es "correcto" vs. "incorrecto", y qué penalidad tiene fallarlo. | A | Pendiente |
-| 65 | `hostile_trap_behavior.gd`. | A | Pendiente |
-| 66 | `data/traps/hostile.tres`. | A | Pendiente |
-| 67 | Balance: que la penalidad por error se sienta justa, no punitiva al azar. | B | Pendiente |
-| 68 | Identidad visual: algo que se asome/reaccione agresivamente desde la caja. | B | Pendiente |
-| 69 | Sonido propio: gruñido/siseo, siguiendo `SynthAudio`. | A | Pendiente |
-| 70 | Test automatizado. | A | Pendiente |
-| 71 | Sumarlo al catálogo jugable. | A | Pendiente |
+| 64 | Diseñar la mecánica exacta: qué input es "correcto" vs. "incorrecto", y qué penalidad tiene fallarlo. | A | ✅ Hecho: alterna CALMÁ/NO TOCAR; fallar provoca ataque |
+| 65 | `hostile_trap_behavior.gd`. | A | ✅ Hecho |
+| 66 | `data/traps/hostile.tres`. | A | ✅ Hecho |
+| 67 | Balance: que la penalidad por error se sienta justa, no punitiva al azar. | B | 🟡 Parámetros iniciales; falta playtesting |
+| 68 | Identidad visual: algo que se asome/reaccione agresivamente desde la caja. | B | ✅ Hecho: ojos y tentáculos rojos |
+| 69 | Sonido propio: gruñido/siseo, siguiendo `SynthAudio`. | A | ✅ Hecho (`hostile_hiss`) |
+| 70 | Test automatizado. | A | ✅ Hecho (`test_hostile_trap.gd`, `test_hostile_visual.gd`) |
+| 71 | Sumarlo al catálogo jugable. | A | ✅ Hecho: disponible en entrega y Endless |
 
 ## Personajes y cosméticos (72-79)
 

@@ -196,6 +196,26 @@ static func explosive_tick() -> AudioStreamWAV:
 	return stream
 
 
+static func hostile_hiss() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.32
+	var data := PackedByteArray()
+	var count: int = int(RATE * DURATION)
+	data.resize(count * 2)
+	var noise: float = 0.0
+	for i: int in count:
+		var t: float = float(i) / RATE
+		noise = lerpf(noise, randf_range(-1.0, 1.0), 0.35)
+		var envelope: float = sin(t / DURATION * PI)
+		var tone: float = sin(TAU * (480.0 + t * 900.0) * t) * 0.22
+		data.encode_s16(i * 2, roundi(clampf((noise * 0.7 + tone) * envelope, -1.0, 1.0) * 18000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream
+
+
 ## A classic two-tone car horn: two square waves close enough in pitch to
 ## beat against each other, with a short fade in/out so it doesn't click.
 static func honk_horn() -> AudioStreamWAV:
