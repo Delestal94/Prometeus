@@ -20,7 +20,7 @@ func _build() -> void:
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(620, 0), 28)
 	UiTheme.title(column, "Cómo jugar", 38)
 	UiTheme.tag(column, "COOPEREN O SE CAE TODO", UiTheme.YELLOW, -1.0, 14)
-	var text := UiTheme.label(column, "1. Carguen paquetes en los anaqueles o llévenlos en mano.\n2. Un jugador conduce; los demás vigilan la carga incluso durante la marcha.\n3. Frágil: evitá golpes. Ruidoso: calmalo. Equilibrio: mantenelo derecho. Peso creciente: movelo pronto. Líquido: no lo inclines y secá el charco.\n4. Las buenas acciones dan mérito individual; las entregas dan dinero al equipo.\n5. Entre entregas voten mejoras. Una carta de prioridad puede cambiar el resultado.", 17, UiTheme.INK)
+	var text := UiTheme.label(column, "1. Carguen paquetes en los anaqueles o llévenlos en mano.\n2. Un jugador conduce; los demás vigilan la carga incluso durante la marcha.\n3. Frágil: evitá golpes. Ruidoso: calmalo. Equilibrio: mantenelo derecho. Peso creciente: movelo pronto. Líquido: no lo inclines y secá el charco. Explosivo: seguí la secuencia antes de que llegue a cero.\n4. Las buenas acciones dan mérito individual; las entregas dan dinero al equipo.\n5. Entre entregas voten mejoras. Una carta de prioridad puede cambiar el resultado.", 17, UiTheme.INK)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var back := UiTheme.button(column, "Entendido", true)
 	back.pressed.connect(close)

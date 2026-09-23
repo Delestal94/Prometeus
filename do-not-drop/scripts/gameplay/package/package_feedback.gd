@@ -78,6 +78,9 @@ var _impact_damage_visual: float = 0.0
 var _liquid_puddle: MeshInstance3D
 var _liquid_slosh_player: AudioStreamPlayer3D
 var _liquid_last_slosh_level: float = 0.0
+var _explosive_display: Label3D
+var _explosive_tick_player: AudioStreamPlayer3D
+var _explosive_tick_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -109,6 +112,9 @@ func _ready() -> void:
 		&"liquid":
 			_build_liquid_puddle(parent as DeliveryPackage)
 			_liquid_slosh_player = _make_player(SynthAudio.liquid_slosh(), -16.0)
+		&"explosive":
+			_build_explosive_display()
+			_explosive_tick_player = _make_player(SynthAudio.explosive_tick(), -14.0)
 	_set_state(0)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
@@ -395,6 +401,44 @@ func _process(delta: float) -> void:
 			_apply_creak(delta)
 		&"liquid":
 			_apply_liquid()
+		&"explosive":
+			_apply_explosive(delta)
+
+
+func _build_explosive_display() -> void:
+	_explosive_display = Label3D.new()
+	_explosive_display.name = "ExplosiveCountdown"
+	_explosive_display.font_size = 64
+	_explosive_display.pixel_size = 0.006
+	_explosive_display.outline_size = 6
+	_explosive_display.modulate = Color("ff5e5b")
+	_explosive_display.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_explosive_display.position = Vector3(0.0, 0.16, -0.34)
+	_box.add_child(_explosive_display)
+
+
+func _apply_explosive(delta: float) -> void:
+	if _explosive_display == null:
+		return
+	var package := get_parent() as DeliveryPackage
+	if package == null or package.trap_behavior == null:
+		return
+	var seconds: float = float(package.trap_behavior.get("seconds_left"))
+	var direction: StringName = StringName(package.trap_behavior.call("next_direction"))
+	var state: int = int(package.trap_behavior.call("get_state"))
+	_explosive_display.text = "DEFUSE\n%02d  %s" % [ceili(seconds), _explosive_arrow(direction)]
+	_explosive_display.modulate = UiTheme.RED if state == ITrapBehavior.TrapState.AT_RISK else UiTheme.YELLOW
+	if seconds <= 0.0 or direction == &"":
+		return
+	_explosive_tick_timer -= delta
+	var interval: float = lerpf(0.16, 0.46, clampf(seconds / 14.0, 0.0, 1.0))
+	if _explosive_tick_timer <= 0.0:
+		_explosive_tick_timer = interval
+		_explosive_tick_player.play()
+
+
+func _explosive_arrow(direction: StringName) -> String:
+	return {&"up": "↑", &"down": "↓", &"left": "←", &"right": "→"}.get(direction, "✓")
 
 
 func _build_liquid_puddle(package: DeliveryPackage) -> void:

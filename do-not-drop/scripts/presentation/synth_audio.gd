@@ -178,6 +178,24 @@ static func liquid_slosh() -> AudioStreamWAV:
 	return stream
 
 
+static func explosive_tick() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.07
+	var data := PackedByteArray()
+	var count: int = int(RATE * DURATION)
+	data.resize(count * 2)
+	for i: int in count:
+		var t: float = float(i) / RATE
+		var envelope: float = exp(-t * 55.0)
+		var sample: float = sin(TAU * 980.0 * t) * envelope
+		data.encode_s16(i * 2, roundi(sample * 22000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream
+
+
 ## A classic two-tone car horn: two square waves close enough in pitch to
 ## beat against each other, with a short fade in/out so it doesn't click.
 static func honk_horn() -> AudioStreamWAV:

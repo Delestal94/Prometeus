@@ -121,14 +121,14 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 56 | Diseñar la mecánica exacta: duración del temporizador, cómo se desactiva, si se puede reiniciar el conteo. | A | Pendiente |
-| 57 | `explosive_trap_behavior.gd`. | A | Pendiente |
-| 58 | `data/traps/explosive.tres`. | A | Pendiente |
-| 59 | Balance: que la presión de tiempo real sea justa en multijugador (el pasajero puede estar atendiendo otra cosa). | B | Pendiente |
-| 60 | Identidad visual: contador numérico o barra de mecha visible en la caja. | B | Pendiente |
-| 61 | Sonido propio: tictac que acelera, siguiendo `SynthAudio`. | A | Pendiente |
-| 62 | Test automatizado. | A | Pendiente |
-| 63 | Sumarlo al catálogo jugable. | A | Pendiente |
+| 56 | Diseñar la mecánica exacta: duración del temporizador, cómo se desactiva, si se puede reiniciar el conteo. | A | ✅ Hecho: 14 s, secuencia de direcciones; error resta tiempo |
+| 57 | `explosive_trap_behavior.gd`. | A | ✅ Hecho |
+| 58 | `data/traps/explosive.tres`. | A | ✅ Hecho |
+| 59 | Balance: que la presión de tiempo real sea justa en multijugador (el pasajero puede estar atendiendo otra cosa). | B | 🟡 Parámetros iniciales; falta playtesting multijugador |
+| 60 | Identidad visual: contador numérico o barra de mecha visible en la caja. | B | ✅ Hecho: contador y flecha de secuencia |
+| 61 | Sonido propio: tictac que acelera, siguiendo `SynthAudio`. | A | ✅ Hecho (`explosive_tick`) |
+| 62 | Test automatizado. | A | ✅ Hecho (`test_explosive_trap.gd`, `test_explosive_visual.gd`) |
+| 63 | Sumarlo al catálogo jugable. | A | ✅ Hecho: disponible en entrega y Endless |
 
 ## Contenido nuevo — trampa "Hostil" (64-71)
 
