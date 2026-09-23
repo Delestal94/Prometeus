@@ -11,7 +11,9 @@ $testHost = $null
 $testClient = $null
 try {
     $testHost = Start-Process -FilePath $Godot -ArgumentList ($commonArgs + '--host') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $testLogPath 'host.log') -RedirectStandardError (Join-Path $testLogPath 'host.err')
+    $null = $testHost.Handle  # Without touching Handle first, ExitCode reads back empty.
     $testClient = Start-Process -FilePath $Godot -ArgumentList ($commonArgs + '--client') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $testLogPath 'client.log') -RedirectStandardError (Join-Path $testLogPath 'client.err')
+    $null = $testClient.Handle  # Without touching Handle first, ExitCode reads back empty.
     $clientExited = $testClient.WaitForExit(20000)
     # The host waits ~0.5s after the client's ack before leaving its own
     # session and quitting (vehicle_network_probe.gd), plus real network

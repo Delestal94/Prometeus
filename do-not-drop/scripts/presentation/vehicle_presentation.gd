@@ -18,6 +18,10 @@ extends Node3D
 ## This reads for passengers glancing out a window, for other players
 ## watching the van drive by, and for the dev third-person camera (#75);
 ## the driver's own felt sense of weight is a separate, riskier follow-up.
+## BodyVisuals now holds the whole authored truck, interior included, so the
+## lean and sink only play for a viewer outside it: from a seat or the cargo
+## aisle the walls, rack and seats must stay put against the physics the
+## crew and the boxes actually touch.
 @export var max_roll_degrees: float = 6.0
 @export var max_pitch_degrees: float = 3.0
 @export var lean_smooth_speed: float = 5.0
@@ -40,7 +44,7 @@ extends Node3D
 ## and any number of "*Headlight"/"*TailLight" meshes; it doesn't need the
 ## same folder structure as vehicle.tscn at all.
 @onready var vehicle: VehicleBody3D = get_parent()
-@onready var steering_wheel: MeshInstance3D = vehicle.find_child("SteeringWheel", true, false)
+@onready var steering_wheel: Node3D = vehicle.find_child("SteeringWheel", true, false)
 @onready var body_visuals: Node3D = vehicle.find_child("BodyVisuals", true, false)
 var headlights: Array[SpotLight3D] = []
 var engine_player: AudioStreamPlayer3D
@@ -78,24 +82,11 @@ var _sink: float = 0.0
 
 
 func _ready() -> void:
-	_steering_rest = steering_wheel.basis
-	_build_wheel_details()
-	_build_steering_details()
-	for front: Node in vehicle.find_children("*Headlight", "MeshInstance3D", true, false):
-		var front_mesh: MeshInstance3D = front
-		_front_materials.append(_unique_material(front_mesh))
-		var beam := SpotLight3D.new()
-		beam.name = front_mesh.name + "Beam"
-		beam.position = front_mesh.position + Vector3(0.0, 0.0, -0.07)
-		beam.light_color = Color("ffe9b0")
-		beam.spot_range = 24.0
-		beam.spot_angle = 32.0
-		beam.spot_attenuation = 1.2
-		beam.shadow_enabled = false
-		front_mesh.get_parent().add_child(beam)
-		headlights.append(beam)
-	for rear: Node in vehicle.find_children("*TailLight", "MeshInstance3D", true, false):
-		_rear_materials.append(_unique_material(rear))
+	# A vehicle whose art is hung at runtime (reference_truck.gd) calls
+	# bind_model() once it exists; one authored in the scene binds right here.
+	bind_model(steering_wheel,
+		vehicle.find_children("*Headlight", "MeshInstance3D", true, false),
+		vehicle.find_children("*TailLight", "MeshInstance3D", true, false))
 	engine_player = AudioStreamPlayer3D.new()
 	engine_player.name = "EngineAudio"
 	engine_player.position = Vector3(0.0, 0.0, -1.4)
@@ -135,9 +126,47 @@ func _process(delta: float) -> void:
 	update_presentation(delta)
 
 
+## Points presentation at the vehicle's art: a steering wheel whose local Y
+## is its column axis (pointing away from the driver), and the lens meshes
+## that glow as head and tail lights. Safe to call again with new art.
+func bind_model(wheel: Node3D, front_lenses: Array, rear_lenses: Array) -> void:
+	steering_wheel = wheel
+	if steering_wheel != null:
+		_steering_rest = steering_wheel.basis
+	for beam: SpotLight3D in headlights:
+		beam.queue_free()
+	headlights.clear()
+	_front_materials.clear()
+	_rear_materials.clear()
+	for front: Node in front_lenses:
+		var front_mesh: MeshInstance3D = front
+		var material: StandardMaterial3D = _unique_material(front_mesh)
+		material.emission_enabled = true
+		material.emission = Color("ffe2a0")
+		_front_materials.append(material)
+		# Beams hang in BodyVisuals space, aimed down the road (-Z) whatever
+		# axes the lens mesh itself was authored with.
+		var beam := SpotLight3D.new()
+		beam.name = front_mesh.name + "Beam"
+		body_visuals.add_child(beam)
+		beam.position = body_visuals.to_local(front_mesh.global_position) + Vector3(0.0, 0.0, -0.07)
+		beam.rotation = Vector3(deg_to_rad(-4.0), 0.0, 0.0)
+		beam.light_color = Color("ffe9b0")
+		beam.spot_range = 24.0
+		beam.spot_angle = 32.0
+		beam.spot_attenuation = 1.2
+		beam.shadow_enabled = false
+		headlights.append(beam)
+	for rear: Node in rear_lenses:
+		var material: StandardMaterial3D = _unique_material(rear as MeshInstance3D)
+		material.emission_enabled = true
+		material.emission = Color("e2261a")
+		_rear_materials.append(material)
+
+
 func update_presentation(delta: float) -> void:
-	# TorusMesh lies in its local XZ plane: its axle is local Y, even when tilted.
-	steering_wheel.basis = _steering_rest * Basis(Vector3.UP, -vehicle.steering * steering_ratio)
+	if steering_wheel != null:
+		steering_wheel.basis = _steering_rest * Basis(Vector3.UP, -vehicle.steering * steering_ratio)
 	_flicker_remaining = maxf(0.0, _flicker_remaining - delta)
 	var running: bool = vehicle.presentation_engine_running
 	var flicker: float = 0.3 if _flicker_remaining > 0.0 else 1.0
@@ -162,6 +191,9 @@ func _apply_body_lean(delta: float) -> void:
 		target_pitch = -1.0  # nose dips down under hard braking
 	elif vehicle.presentation_engine_running and vehicle.engine_force < -1.0:
 		target_pitch = 0.35  # slight nose-up squat while accelerating
+	if _viewer_inside():
+		target_roll = 0.0
+		target_pitch = 0.0
 	_roll = move_toward(_roll, target_roll, lean_smooth_speed * delta)
 	_pitch = move_toward(_pitch, target_pitch, lean_smooth_speed * delta)
 	body_visuals.rotation = Vector3(deg_to_rad(max_pitch_degrees) * _pitch, 0.0, deg_to_rad(max_roll_degrees) * _roll)
@@ -177,8 +209,22 @@ func _apply_cargo_sink(delta: float) -> void:
 		if bool(package.get(&"is_loaded")):
 			total_mass += float(package.get(&"mass"))
 	var target_sink: float = clampf(total_mass * cargo_sink_per_kg, 0.0, cargo_sink_max)
+	if _viewer_inside():
+		target_sink = 0.0
 	_sink = move_toward(_sink, target_sink, sink_smooth_speed * delta)
 	body_visuals.position.y = -_sink
+
+
+## Whether this client's own camera is in one of the vehicle's seats or
+## standing inside its cab/cargo box. Purely local, like the audio bus pick.
+func _viewer_inside() -> bool:
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera == null or camera == _dev_camera:
+		return false
+	if camera in _seat_cameras:
+		return true
+	var local: Vector3 = vehicle.to_local(camera.global_position)
+	return absf(local.x) < 1.15 and local.y > -0.3 and local.y < 2.7 and local.z > -2.9 and local.z < 4.6
 
 
 func _update_engine(delta: float, running: bool) -> void:
@@ -325,50 +371,3 @@ func _unique_material(mesh: MeshInstance3D) -> StandardMaterial3D:
 	var material: StandardMaterial3D = mesh.get_active_material(0).duplicate()
 	mesh.material_override = material
 	return material
-
-
-func _build_wheel_details() -> void:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("d4d9c2")
-	material.roughness = 0.6
-	for wheel: Node in vehicle.get_children():
-		if not wheel is VehicleWheel3D:
-			continue
-		# Radial spokes make existing wheel motion readable on the smooth cylinders.
-		for index: int in range(3):
-			var spoke := MeshInstance3D.new()
-			spoke.name = "VisualSpoke%d" % index
-			var box := BoxMesh.new()
-			box.size = Vector3(0.018, 0.035, 0.38)
-			spoke.mesh = box
-			spoke.material_override = material
-			spoke.position.x = signf(wheel.position.x) * 0.175
-			spoke.rotation.x = float(index) * PI / 3.0
-			wheel.add_child(spoke)
-
-
-func _build_steering_details() -> void:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("42575b")
-	material.roughness = 0.8
-	for index: int in range(3):
-		var spoke := MeshInstance3D.new()
-		spoke.name = "Spoke%d" % index
-		var box := BoxMesh.new()
-		box.size = Vector3(0.025, 0.025, 0.15)
-		spoke.mesh = box
-		spoke.material_override = material
-		var angle: float = float(index) * TAU / 3.0
-		spoke.position = Vector3(sin(angle), 0.0, cos(angle)) * 0.075
-		spoke.rotation.y = angle
-		steering_wheel.add_child(spoke)
-	var hub := MeshInstance3D.new()
-	hub.name = "Hub"
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = 0.055
-	cylinder.bottom_radius = 0.055
-	cylinder.height = 0.045
-	cylinder.radial_segments = 12
-	hub.mesh = cylinder
-	hub.material_override = material
-	steering_wheel.add_child(hub)

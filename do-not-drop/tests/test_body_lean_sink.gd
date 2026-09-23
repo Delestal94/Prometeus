@@ -18,6 +18,10 @@ func _initialize() -> void:
 	van.controls_enabled = false  # deterministic driver, same trick every vehicle test uses
 	var visual: Node3D = van.get_node(^"VehiclePresentation")
 	var body: Node3D = van.get_node(^"BodyVisuals")
+	# Lean and sink are for viewers outside the truck; from inside it (seat or
+	# aisle) the interior must stay put against the physics. Watch from the
+	# dev third-person camera, as another player by the road would.
+	visual.call(&"_toggle_dev_camera")
 
 	_test_lean(van, visual, body)
 	_test_sink(level, van, visual, body)
@@ -44,7 +48,7 @@ func _test_lean(van: VehicleBody3D, visual: Node3D, body: Node3D) -> void:
 	# Whatever BodyVisuals does, the real physics body's own transform is a
 	# sibling, untouched by this presentation-only effect.
 	var chassis_collision: CollisionShape3D = van.get_node(^"ChassisCollision")
-	_expect(chassis_collision.position == Vector3(0, -0.14, 0), "Physics collision shapes are never moved by lean/sink")
+	_expect(chassis_collision.position == Vector3(0, -0.03, 0.8), "Physics collision shapes are never moved by lean/sink")
 
 	van.set_controls(0.0, 0.0, true)
 	for _i: int in range(30):
