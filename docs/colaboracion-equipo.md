@@ -37,19 +37,84 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
-## Aviso activo: Slatex va a reemplazar el modelo del camión
+## Aviso activo: paquetes que se abren (2026-09-23)
 
-`do-not-drop/scenes/gameplay/vehicle/vehicle.tscn` es dominio de Nacho por esta
-tabla, pero Slatex va a tocarlo para cambiar el modelo real del vehículo —
-excepción coordinada, no un choque de dominios sin avisar. Mientras tanto,
-Nacho evita tocar `vehicle.tscn`/`vehicle.gd` para no pisarse con ese cambio en
-curso. `scripts/presentation/vehicle_presentation.gd` ya no depende de rutas
-fijas de nodo (ver `docs/agregar-vehiculo.md`, #87) — solo necesita que el
-modelo nuevo tenga nodos llamados `SteeringWheel`, `BodyVisuals`, y cualquier
-cantidad de meshes `*Headlight`/`*TailLight`, así que un modelo nuevo no
-debería romper nada de presentación por sí solo. Si el modelo nuevo cambia la
-cantidad/posición de asientos o el layout de `CargoBay`, sí conviene avisar
-antes de asumir que todo sigue funcionando igual.
+Pedido del usuario: los paquetes tenían que abrirse y mostrar el contenido, a nivel
+profesional. Nacho lo hizo en archivos de Slatex:
+- `scenes/gameplay/package/package.tscn`: `Box` pasó a `Node3D` (contiene el modelo); se
+  quitaron `StrapX`, `StrapZ`, `Status` y `TopMark`; nuevo nodo `PackageContentsView`; se
+  replican `is_open` y `contents_spilled`.
+- `scripts/gameplay/package/package.gd`: `content`, `is_open`, `request_set_open()` (RPC al
+  host, con chequeo de distancia), `spill_contents()` al volcarse o golpearse abierta.
+- `scripts/gameplay/package/package_feedback.gd`: instancia la caja GLB según el contenido;
+  un material por paquete (resaltado + tinte de estado); etiqueta de envío texturizada en el
+  dorso; sin las marcas procedurales viejas.
+- Nuevos: `package_content.gd`, `package_contents_view.gd`, `data/contents/*.tres`;
+  `trap_definition.gd` suma `contents` y `pick_content()`.
+- `scripts/gameplay/player/player.gd`: tecla `package_open` (T / D-pad abajo) y la señal local
+  `package_lid_hint_changed`; `scripts/ui/prototype_hud.gd` la muestra bajo el prompt.
+- Del lado de Nacho: `delivery_house.gd` (caja abierta = entrega con reparos),
+  `synth_audio.gd` (`tape_rip`, `cardboard_flap`), `event_bus.gd` y `project.godot` (acción).
+
+## Aviso activo: rediseño de la UI (2026-09-23)
+
+Pedido del usuario: la UI se veía vieja. Nacho rehízo el sistema visual en archivos de Slatex:
+- `scripts/ui/ui_theme.gd`: estilo "etiqueta de envío" (tarjetas crema con borde y sombra de
+  sticker, cintas, botones que se hunden), tipografías Lilita One + Nunito (`assets/fonts/`),
+  paleta nueva (`docs/direccion-visual.md` §3). Mismos nombres de funciones y constantes; nuevas:
+  `title`, `tag`, `chip`, `logo`, `keycaps`, `trap_icon`, `apply`. Ojo: los paneles ahora son
+  claros, así que el texto sobre ellos va en `INK`, no en `PAPER`.
+- `scripts/ui/main_menu.gd`: logo a la izquierda, tarjeta de menú a la derecha.
+- `scripts/ui/prototype_hud.gd`: HUD con íconos de trampa, velocímetro, fichas de tiempo y
+  dinero, teclas dibujadas; resultados con puntaje destacado. `hint_label` y `shortcut_label`
+  pasaron a `RichTextLabel`. Se corrigió el "DO NOT DROP" que quedaba en la pantalla previa.
+- `scripts/ui/options_panel.gd`: mismo estilo.
+Todos los tests de UI pasan; capturas con `tests/render_main_menu.gd` y `tests/render_hud.gd`.
+
+## Aviso activo: assets nuevos para el dominio de Slatex (2026-09-23)
+
+Nacho generó assets que caen en el dominio de Slatex. Ya están en el repo pero **sin
+enchufar** (detalle en `docs/inventario-assets.md` secciones 1-3):
+- Guantes del viewmodel (`models/characters/sm_char_viewmodel_glove_{left,right}.glb`) y el
+  celular (`models/props/handheld/sm_prop_phone.glb`).
+- Íconos de las 4 trampas (`assets/ui/icons/tx_ui_trap_*_256.png`) para el HUD.
+- Recordatorio: las cajas por trampa `models/cargo/sm_cargo_package_*.glb` existen desde el
+  lote 1 y `package.tscn` todavía no las usa.
+
+Lo que sí tocó Nacho en archivos de Slatex: `scripts/ui/main_menu.gd` ahora pone de fondo la
+ilustración `assets/ui/backgrounds/tx_ui_menu_background_1920.png` (un `TextureRect` más un tinte,
+por encima del `ColorRect` de siempre). También `project.godot` (zona compartida): ícono nuevo
+(`icon.png`) y splash de arranque propio.
+
+## Aviso activo: el juego se llama "Take My Package" (2026-09-22)
+
+Nacho cambió el nombre oficial en la zona compartida y en dos archivos de Slatex:
+- `project.godot` → `config/name="Take My Package"`. Eso mueve la carpeta `user://`;
+  `scripts/core/legacy_user_data.gd` copia una sola vez `settings.cfg` y
+  `leaderboard.json` desde la carpeta vieja ("Do Not Drop"), llamado desde
+  `GameSettings._load()` y `RunManager._load_leaderboard()`.
+- `export_presets.cfg` → `product_name` y el ejecutable pasa a `TakeMyPackage.exe`.
+- `scripts/ui/main_menu.gd` (título) y `scripts/ui/prototype_hud.gd` (esquina de
+  marca): el texto `"DO NOT DROP"` pasó a `"TAKE MY PACKAGE"`. Es un texto más
+  largo en un panel de 240 px: si se corta, ajustarlo es de Slatex.
+- La carpeta `do-not-drop/` **no** se renombra.
+
+## Aviso activo: camión de referencia integrado y pulido (2026-09-23)
+
+El modelo de Slatex (`assets/models/truck_reference_lowpoly.glb`, commit 177d82c) ya está
+integrado; Nacho vuelve a ser dueño de `vehicle.tscn`/`vehicle.gd`. Lo que cambió:
+- `vehicle.tscn` se rehízo sobre el modelo: colisiones que calzan con lo que se ve (cabina
+  convexa, piso, paredes, techo, pasos de rueda, filas de asientos), ruedas físicas sobre los
+  ejes del modelo, asientos en los 7 asientos reales, y un rack profundo de 2 niveles × 3 bahías
+  en la pared izquierda (las 6 `*PackageMount` de siempre, mismos nombres). Entran las tres
+  formas de caja (0.65, alta 0.98, plana 0.95) y el pasillo queda ≥ 0.85 m.
+- Puertas: traseras y las dos de cabina se abren/cierran (`vehicle_door_interaction.gd`,
+  estado replicado en `vehicle.gd`). Reemplaza a `interaction/rear_cargo_door.gd` (borrado).
+  Rampa trasera cuando las puertas están abiertas y el camión parado.
+- `vehicle.gd` reasienta en la bahía los paquetes altos/planos (escucha `package_placed`):
+  no hace falta tocar `package_mount_point.gd`.
+- `vehicle_presentation.gd`: `bind_model()`; la inclinación/hundimiento solo se ve desde afuera.
+- Detalle y medidas: `scripts/presentation/reference_truck.gd` y `tests/test_reference_truck.gd`.
 
 ## Aviso activo: sistema de casas de entrega (route.gd) necesita un cambio chico de Slatex
 

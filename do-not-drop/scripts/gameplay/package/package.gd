@@ -10,13 +10,35 @@ extends RigidBody3D
 @export var trap_definition: Resource = preload("res://data/traps/fragile.tres")
 @export_range(0.0, 5.0, 0.05) var spawn_grace_time: float = 1.25
 @export_range(0.0, 2.0, 0.05) var impact_cooldown: float = 0.30
+## What's inside (PackageContent). Left empty, the trap picks one from its
+## own list -- see content_definition().
+@export var content: Resource = null
+## An open box tips its contents out past this tilt from upright (~70°)...
+@export_range(0.0, 1.0, 0.01) var spill_tilt_cos: float = 0.34
+## ...or when a hit this hard (change in velocity, m/s) catches it open.
+@export_range(0.0, 30.0, 0.5) var spill_impact: float = 9.0
+## How close a player has to be to open or close it.
+const OPEN_REACH: float = 3.0
 
 var trap_behavior: Resource
 var is_held: bool = false
 var is_loaded: bool = false
+## Set by place_at(), cleared by release_mount(). Lets a pickup free its
+## shelf slot with a direct reference instead of scanning every mount in
+## the "package_mount" group to find whichever one claims this package.
+var current_mount: Node = null
+## Host-only: the player holding this box right now. Clients never set it.
+var carrier: Node = null
 ## Written each frame by whoever is tending this package. Plain data, so the
 ## host can apply a remote client's input the same way once networking lands.
 var player_input: Dictionary = {}
+## Lid state, host-authoritative and replicated (see package.tscn). Opening
+## lets the crew check what they're carrying; an open box can spill, and
+## the resident notices one that shows up open.
+var is_open: bool = false
+## Replicated too: once the contents are on the floor there's nothing left
+## to close the box on.
+var contents_spilled: bool = false
 var integrity: float:
 	get:
 		return float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
@@ -72,6 +94,12 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 			apply_impact(collision_delta.length())
 			if integrity < previous_integrity:
 				_impact_cooldown_remaining = impact_cooldown
+	if is_open and not contents_spilled and not is_held:
+		var hit: float = 0.0
+		if _has_previous_velocity and _age >= spawn_grace_time:
+			hit = (current_velocity - _previous_velocity - state.total_gravity * state.step).length()
+		if state.transform.basis.y.normalized().dot(Vector3.UP) < spill_tilt_cos or hit > spill_impact:
+			spill_contents(current_velocity)
 	_previous_velocity = current_velocity
 	_has_previous_velocity = true
 	if trap_behavior != null and _is_run_active():
@@ -124,6 +152,50 @@ func mark_lost(cause: String) -> void:
 	_report_change(before_integrity, before_state, cause)
 
 
+func content_definition() -> Resource:
+	if content == null and trap_definition != null and trap_definition.has_method(&"pick_content"):
+		content = trap_definition.call(&"pick_content", package_id)
+	return content
+
+
+## Any peer asks; only the host decides. call_local, so the host's own
+## player goes through the same checks (rpc_id(1, ...) resolves locally).
+@rpc("any_peer", "call_local", "reliable")
+func request_set_open(open: bool) -> void:
+	if not is_multiplayer_authority():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != 0 and not _peer_within_reach(sender_id):
+		return
+	set_open(open)
+
+
+## Host-only. A box whose contents already fell out stays open.
+func set_open(open: bool) -> void:
+	if contents_spilled or open == is_open:
+		return
+	is_open = open
+	_emit_event(&"package_lid_changed", [package_id, open])
+
+
+## Host-only: the open box went over (or took a hit) and what was inside is
+## now on the floor. Presentation throws the actual pieces (every peer does
+## its own, like the torn-off shipping label); the package itself is a loss.
+func spill_contents(velocity: Vector3 = Vector3.ZERO) -> void:
+	if contents_spilled:
+		return
+	contents_spilled = true
+	_emit_event(&"package_contents_spilled", [package_id, velocity, trap_state])
+	mark_lost("Se le cayó el contenido.")
+
+
+func _peer_within_reach(peer_id: int) -> bool:
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		if player.get_multiplayer_authority() == peer_id:
+			return (player as Node3D).global_position.distance_to(global_position) <= OPEN_REACH
+	return false
+
+
 func get_hint() -> String:
 	return String(trap_behavior.call("get_hint")) if trap_behavior != null else ""
 
@@ -170,6 +242,22 @@ func set_held(held: bool) -> void:
 	# frame shouldn't shove the player or clip weirdly through the world.
 	collision_layer = 0 if held else 4
 	collision_mask = 0 if held else 7
+	# The velocity sampled before a pickup has nothing to do with the first
+	# physics step after a drop; comparing the two read as a hard impact.
+	_has_previous_velocity = false
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+
+
+## Host-only: pickup points call this instead of set_held(true) directly, so
+## the package knows who has it -- needed to validate drop requests and to
+## clear that player's hands on every peer when the box leaves them.
+func take_by(player: Node) -> void:
+	if is_loaded:
+		release_mount()
+	set_held(true)
+	carrier = player
+	player.rpc(&"pick_up", get_path())
 
 
 ## A carrier can always put a box back on the floor. Unlike a mount this
@@ -178,19 +266,71 @@ func set_held(held: bool) -> void:
 func request_drop(drop_transform: Transform3D) -> void:
 	if not is_multiplayer_authority() or not is_held:
 		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != 0 and carrier != null and int(carrier.get_multiplayer_authority()) != sender_id:
+		return
+	_release_carrier()
 	global_transform = drop_transform
-	linear_velocity = Vector3.ZERO
-	angular_velocity = Vector3.ZERO
 	set_held(false)
 
 
-func place_at(mount: Node3D) -> void:
+## For when the carrier goes away (disconnect) rather than letting go: the
+## box must not stay frozen mid-air with collisions off forever.
+func drop_loose(drop_transform: Transform3D) -> void:
+	if not is_held:
+		return
+	carrier = null
+	global_transform = drop_transform
+	set_held(false)
+
+
+## `mount` gives the transform to snap to (the marker); `mount_point` is the
+## Interactable that actually tracks occupancy (its InteractionArea child --
+## see package_mount_point.gd's `occupied_by`). They're usually different
+## nodes, so release_mount() needs the latter, not the former.
+func place_at(mount: Node3D, mount_point: Node = null) -> void:
+	_release_carrier()
 	global_transform = mount.global_transform
 	set_held(false)
 	is_loaded = true
-	# Stays frozen until level_base.gd starts the run -- see docs/plan-desarrollo.md.
-	freeze = true
+	current_mount = mount_point if mount_point != null else mount
+	# Frozen while loading, until level_base.gd starts the run. A box put back
+	# mid-run has to ride physically like the rest, not stay glued to the shelf.
+	freeze = not _is_run_active()
 	_emit_event(&"package_placed", [package_id])
+
+
+## A resident took the box at the door. Its carrier's hands have to empty on
+## every peer before the node goes away, or they keep "holding" a freed box.
+func consume() -> void:
+	_release_carrier()
+	release_mount()
+	call_deferred(&"queue_free")
+
+
+## Trap types reshape the collider at runtime (package_feedback.gd), so this
+## reads the live shape instead of assuming one box size.
+func get_half_extents() -> Vector3:
+	var collider: CollisionShape3D = get_node_or_null(^"CollisionShape3D") as CollisionShape3D
+	if collider != null and collider.shape is BoxShape3D:
+		return (collider.shape as BoxShape3D).size * 0.5
+	return Vector3.ONE * 0.325
+
+
+func _release_carrier() -> void:
+	if carrier != null and is_instance_valid(carrier) and carrier.is_inside_tree():
+		carrier.rpc(&"drop_carried")
+	carrier = null
+
+
+## Frees the shelf slot this package occupies, if any. Without this the mount
+## stays marked occupied forever and nothing can ever be placed there again --
+## including this same box on the way back (docs/colaboracion-equipo.md).
+func release_mount() -> void:
+	if current_mount != null and is_instance_valid(current_mount):
+		current_mount.set(&"occupied_by", null)
+	current_mount = null
+	is_loaded = false
 
 
 func _is_run_active() -> bool:

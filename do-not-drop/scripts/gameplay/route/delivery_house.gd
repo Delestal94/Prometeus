@@ -22,6 +22,19 @@ const HOUSE_VISUALS: Array[String] = [
 	"res://assets/models/architecture/sm_arch_delivery_house_cottage.glb",
 	"res://assets/models/architecture/sm_arch_delivery_house_cabin.glb",
 	"res://assets/models/architecture/sm_arch_delivery_house_bungalow.glb",
+	"res://assets/models/architecture/sm_arch_delivery_house_two_story.glb",
+	"res://assets/models/architecture/sm_arch_delivery_house_farmhouse.glb",
+]
+## Solid volumes per visual, [size, centre] pairs matching the walls only --
+## never the porch, so the doorbell stays reachable. The first three share
+## the original 6x5 box; the farmhouse is wider and has a wing out back
+## (Blender -Y becomes Godot +Z on import).
+const HOUSE_COLLIDERS: Array = [
+	[[Vector3(6.0, 3.2, 5.0), Vector3(0.0, 1.6, 0.0)]],
+	[[Vector3(6.0, 3.2, 5.0), Vector3(0.0, 1.6, 0.0)]],
+	[[Vector3(6.0, 3.2, 5.0), Vector3(0.0, 1.6, 0.0)]],
+	[[Vector3(6.0, 5.6, 5.0), Vector3(0.0, 2.8, 0.0)]],
+	[[Vector3(7.0, 3.2, 4.6), Vector3(0.0, 1.6, 0.0)], [Vector3(2.6, 2.8, 3.4), Vector3(2.24, 1.4, 3.22)]],
 ]
 
 signal resolved(outcome: StringName, package_id: StringName)  # see OUTCOMES below
@@ -91,7 +104,11 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 		ITrapBehavior.TrapState.AT_RISK:
 			_resolve(OUTCOME_AT_RISK, carried_package)
 		_:
-			_resolve(OUTCOME_OK, carried_package)
+			# Whatever's inside may be perfect, but a box handed over open
+			# has obviously been gone through: it counts as delivered with
+			# reservations, same as a dented one.
+			var opened: bool = carried_package.get(&"is_open") == true
+			_resolve(OUTCOME_AT_RISK if opened else OUTCOME_OK, carried_package)
 
 
 func _resolve(result: StringName, package: Node) -> void:
@@ -104,8 +121,12 @@ func _resolve(result: StringName, package: Node) -> void:
 		# way, matching "se come la caja" for the good outcome; the ruined
 		# case still hands it off, just with a worse reaction. Deferred so
 		# this never frees a node mid-signal, while whoever is listening
-		# (level_base.gd -> RunManager) still sees a valid package.
-		package.call_deferred(&"queue_free")
+		# (level_base.gd -> RunManager) still sees a valid package. consume()
+		# also empties the carrier's hands, which a bare free never did.
+		if package.has_method(&"consume"):
+			package.call(&"consume")
+		else:
+			package.call_deferred(&"queue_free")
 	# The resident's reaction follows what they were actually handed: a groan
 	# for a wreck, the same groan quieter for something dented, a cheer for
 	# a box that made it.
@@ -121,16 +142,19 @@ func _build_house() -> void:
 	body.collision_layer = 1
 	body.collision_mask = 6
 	add_child(body)
-	var collider := CollisionShape3D.new()
-	var box_shape := BoxShape3D.new()
-	box_shape.size = Vector3(6.0, 3.2, 5.0)
-	collider.position = Vector3(0.0, 1.6, 0.0)
-	collider.shape = box_shape
-	body.add_child(collider)
-	var visual := load(HOUSE_VISUALS[posmod(visual_variant, HOUSE_VISUALS.size())]) as PackedScene
+	var variant: int = posmod(visual_variant, HOUSE_VISUALS.size())
+	for volume: Array in HOUSE_COLLIDERS[variant]:
+		var collider := CollisionShape3D.new()
+		var box_shape := BoxShape3D.new()
+		box_shape.size = volume[0]
+		collider.position = volume[1]
+		collider.shape = box_shape
+		body.add_child(collider)
+	var visual := load(HOUSE_VISUALS[variant]) as PackedScene
 	if visual != null:
 		var visual_instance := visual.instantiate()
 		visual_instance.name = "HouseVisual"
+		LowpolyMaterials.apply(visual_instance)
 		add_child(visual_instance)
 
 	# The resident (placeholder, no art pipeline yet) stays hidden until

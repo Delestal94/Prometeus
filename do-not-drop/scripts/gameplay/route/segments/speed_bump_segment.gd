@@ -14,16 +14,16 @@ func _build() -> void:
 	var bump_z: float = -length * 0.5
 	_build_bump(bump_z)
 	for stripe: int in range(7):
-		_box("BumpApproachStripe", Vector3(0.7, 0.015, 0.3), Vector3(-4.5 + float(stripe) * 1.5, 0.012, bump_z + 3.2), WARNING)
+		_box("BumpApproachStripe", Vector3(0.7, 0.015, 0.3), Vector3(-4.5 + float(stripe) * 1.5, 0.03, bump_z + 3.2), WARNING)
 
 
 func _build_bump(z: float) -> void:
 	# Bevelled trapezoid: 1.45 m ramps and a 0.7 m flat crown, no vertical lip.
 	var points := PackedVector3Array([
-		Vector3(-5.6, 0.005, 1.8), Vector3(5.6, 0.005, 1.8),
+		Vector3(-5.6, -0.03, 1.8), Vector3(5.6, -0.03, 1.8),
 		Vector3(-5.6, 0.19, 0.35), Vector3(5.6, 0.19, 0.35),
 		Vector3(-5.6, 0.19, -0.35), Vector3(5.6, 0.19, -0.35),
-		Vector3(-5.6, 0.005, -1.8), Vector3(5.6, 0.005, -1.8),
+		Vector3(-5.6, -0.03, -1.8), Vector3(5.6, -0.03, -1.8),
 	])
 	var body := StaticBody3D.new()
 	body.name = "SpeedBump"
@@ -44,5 +44,10 @@ func _build_bump(z: float) -> void:
 	surface.generate_normals()
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.mesh = surface.commit()
-	mesh_instance.material_override = _material(WARNING)
+	# Its own double-sided copy: the hand-listed triangles above don't share
+	# one winding, and the base sits just under the ground so the underside
+	# never shows through the terrain.
+	var bump_material := _material(WARNING).duplicate() as StandardMaterial3D
+	bump_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh_instance.material_override = bump_material
 	body.add_child(mesh_instance)

@@ -20,4 +20,4 @@ func _build() -> void:
 		var z: float = -length * offsets[index]
 		var name_suffix: String = str(index)
 		_box("SCurveBlock" + name_suffix, Vector3(4.4, 0.8, 1.0), Vector3(side * 3.8, 0.4, z), CONCRETE, true)
-		_box("SCurveWarning" + name_suffix, Vector3(4.4, 0.24, 1.02), Vector3(side * 3.8, 0.61, z), WARNING)
+		_box("SCurveWarning" + name_suffix, Vector3(4.44, 0.24, 1.02), Vector3(side * 3.8, 0.61, z), WARNING)

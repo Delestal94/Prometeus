@@ -78,6 +78,19 @@ func local_id() -> int:
 	return multiplayer.get_unique_id() if is_online() else HOST_ID
 
 
+## The address friends on the same network should type into "Unirse", or ""
+## when this machine has no private LAN address at all.
+func lan_address() -> String:
+	for address: String in IP.get_local_addresses():
+		if address.begins_with("192.168.") or address.begins_with("10."):
+			return address
+		if address.begins_with("172."):
+			var second: int = int(address.get_slice(".", 1))
+			if second >= 16 and second <= 31:
+				return address
+	return ""
+
+
 ## Whether this build can actually use Steam right now: the extension is
 ## present, and Steam itself is running and logged in.
 func steam_available() -> bool:

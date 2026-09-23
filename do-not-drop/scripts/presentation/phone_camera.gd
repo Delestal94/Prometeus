@@ -22,16 +22,21 @@ const FLASH_SECONDS: float = 0.28
 ## Thumbnails, not screenshots -- a handful of these live in memory until
 ## the results screen and then go away with the run.
 const PHOTO_SIZE: Vector2i = Vector2i(384, 216)
+## Darker than UiTheme.INK on purpose: this is the phone's body, not a panel.
 const INK: Color = Color("0a1418")
-const PAPER: Color = Color("edf2e8")
-const MINT: Color = Color("83e2ba")
-const MUTED: Color = Color("acc1bd")
-const RED: Color = Color("f47e6d")
+const PAPER: Color = UiTheme.PAPER
+const MINT: Color = UiTheme.MINT
+const MUTED: Color = UiTheme.MUTED
+const RED: Color = UiTheme.RED
 
 var is_open: bool = false
 
 var _camera: Camera3D
 var _previous_camera: Camera3D
+## The level's HUD, hidden while the phone is up: it's a different screen,
+## and the run's cards would otherwise sit on top of the viewfinder and end
+## up in every photo.
+var _hud: CanvasLayer
 var _frame: Control
 var _status_label: Label
 var _hint_label: Label
@@ -42,6 +47,9 @@ var _busy: bool = false
 
 func _ready() -> void:
 	layer = 5
+	# Keeps running while paused so it can put itself away the moment a
+	# pause starts -- otherwise the pause menu would open on a hidden HUD.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_camera()
 	_build_ui()
 	_shutter = AudioStreamPlayer.new()
@@ -112,13 +120,19 @@ func _build_ui() -> void:
 	_hint_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	_hint_label.offset_top = -40
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint_label.text = "[ Click / RB ]  sacar foto        [ F / LB ]  guardar el celular"
+	_refresh_hint()
 
 	_flash = ColorRect.new()
 	_flash.color = Color(1, 1, 1, 0)
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_flash)
+
+
+func _refresh_hint() -> void:
+	_hint_label.text = GameSettings.prompt(
+		"[ Click ]  sacar foto        [ F ]  guardar el celular",
+		"[ RB ]  sacar foto        [ LB ]  guardar el celular")
 
 
 func _bracket(corner: Vector2) -> void:
@@ -179,10 +193,15 @@ func _open() -> void:
 	_previous_camera = get_viewport().get_camera_3d()
 	if _previous_camera == null:
 		return
+	_match_lens(_previous_camera)
 	_camera.global_transform = _previous_camera.global_transform
 	_camera.current = true
 	is_open = true
+	_hud = get_parent().get_node_or_null(^"HUD") as CanvasLayer if get_parent() != null else null
+	if _hud != null:
+		_hud.visible = false
 	_frame.visible = true
+	_refresh_hint()
 	_refresh_status()
 
 
@@ -192,12 +211,30 @@ func _close() -> void:
 	is_open = false
 	_frame.visible = false
 	_camera.current = false
+	if _hud != null and is_instance_valid(_hud):
+		_hud.visible = true
+	_hud = null
 	if _previous_camera != null and is_instance_valid(_previous_camera):
 		_previous_camera.current = true
 
 
+## Sees what the eyes it replaces see. The first-person camera culls the
+## local player's own body (RenderLayers.LOCAL_BODY); a fresh Camera3D renders
+## every layer, so without this the lens would be looking out from inside
+## the player's head.
+func _match_lens(source: Camera3D) -> void:
+	_camera.cull_mask = source.cull_mask
+	_camera.near = source.near
+	_camera.far = source.far
+	_camera.environment = source.environment
+	_camera.attributes = source.attributes
+
+
 func _process(_delta: float) -> void:
 	if not is_open:
+		return
+	if get_tree().paused:
+		_close()
 		return
 	if _previous_camera == null or not is_instance_valid(_previous_camera):
 		_close()

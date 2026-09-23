@@ -83,6 +83,6 @@ poker + roguelike; Lethal Company = horror + comedia + proximity chat) es siempr
 
 > Nota: este banco se usó durante la exploración inicial (ver
 > `docs/historial-exploracion/`) y sigue siendo un recurso de referencia general para
-> futuras decisiones de diseño, aunque el proyecto actual (**Do Not Drop**, ver
+> futuras decisiones de diseño, aunque el proyecto actual (**Take My Package**, ver
 > `docs/definicion-proyecto.md`) nació de una idea propuesta directamente por el
 > usuario, no de un cruce armado a partir de esta lista.

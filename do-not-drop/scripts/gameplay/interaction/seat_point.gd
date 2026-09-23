@@ -133,12 +133,14 @@ func interact(player: Node) -> void:
 			# right as they sit, instead of requiring them to put it down
 			# unattended first (see can_interact() above).
 			var carried: Node = player.get(&"carried_package")
-			if carried != null and mount != null:
-				carried.call(&"place_at", mount)
-				mount.set(&"occupied_by", carried)
+			if carried != null and mount != null and mount.has_method(&"store"):
+				mount.call(&"store", carried)
 				package = carried
-				if player.has_method(&"drop_carried"):
-					player.rpc_id(peer_id, &"drop_carried")
+				if player.get(&"carried_package") == carried:
+					player.rpc(&"drop_carried")
+				# Same signal a hand-placed box sends, so the level counts it
+				# as loaded cargo and the driver can actually start the run.
+				mount.emit_signal(&"interacted", player)
 		if package != null and player.has_method(&"tend_package"):
 			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 	interacted.emit(player)

@@ -1,6 +1,6 @@
-# Controles y flujo de UI/lobby — Do Not Drop
+# Controles y flujo de UI/lobby — Take My Package
 
-> Última actualización: 2026-09-21
+> Última actualización: 2026-09-22
 > Cada jugador juega desde su propio dispositivo/cliente (no split-screen local) —
 > esto simplifica el esquema de controles: cada uno usa su teclado+mouse o gamepad
 > completo, no hay que repartir un solo teclado entre varios jugadores.
@@ -13,8 +13,8 @@
 | Acelerar | W | Gatillo derecho (RT) |
 | Frenar/retroceder | S | Gatillo izquierdo (LT) |
 | Girar izquierda/derecha | A / D | Stick izquierdo |
-| Freno de mano | Espacio | Botón A/X (según plataforma) |
-| Bocina (feedback/comedia) | Click medio / H | Botón B/círculo |
+| Freno de mano | Espacio | Botón X (no A: A es "interactuar", y sentado eso te baja del asiento) |
+| Bocina (feedback/comedia) | H | Botón B/círculo |
 | Mirar alrededor (asiento, primera persona) | Mouse | Stick derecho |
 | Centrar la vista | C | Clic del stick derecho |
 
@@ -27,12 +27,15 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 | Acción primaria (mantener) | Click izquierdo (mantener) | Gatillo derecho (mantener) | Equilibrio: sostener: Ruidoso: calmar |
 | Acción secundaria (tap) | Click derecho / E | Botón A/X | Confirmar paso de secuencia (Peso creciente) |
 | Movimiento/dirección | WASD o mouse | Stick izquierdo | Input de secuencia (Peso creciente), dirección de corrección (Equilibrio) |
+| Abrir/cerrar la caja | T | D-pad abajo | Cualquier trampa: mirar el contenido. La del asiento, la que tenés en la mano o la que mirás. Abierta se puede derramar, y entregada abierta cuenta "con reparos" |
 
 ### General (todos los jugadores)
 | Acción | Input |
 |---|---|
 | Ping/emote rápido | Rueda del mouse click / D-pad | Sistema de comunicación no verbal para MVP (ver nota abajo) |
 | Pausa/menú | Esc / Start | — |
+| Reiniciar | **Mantener** R / Y (en pausa o resultados, instantáneo) | Solo solo o anfitrión |
+| Pantalla completa | F11 | — |
 
 ### Nota sobre comunicación entre jugadores
 Para el MVP **no se implementa voice chat propio** (agrega complejidad de red y de
@@ -69,8 +72,18 @@ Main Menu
 - El host nunca espera en un lobby: `level_base.gd` ya spawnea jugadores dinámicamente
   a medida que se suman (`_sync_players`), así que entrar directo y dejar que los demás
   se sumen después ya funciona sin necesitar una pantalla de espera.
-- No hay tutorial ("Cómo jugar"), pantalla de progreso ni opciones todavía — solo las
-  tres acciones de arriba. Ver README sección "Probar el prototipo".
+- **Opciones** (menú y pausa): volumen, sensibilidad, invertir Y, pantalla completa,
+  restablecer, y la lista de controles del dispositivo en uso. **Salir** cierra el juego.
+- No hay tutorial ("Cómo jugar") ni pantalla de progreso todavía.
+- Las ayudas en pantalla muestran solo la tecla del dispositivo que se tocó último
+  (teclado o gamepad, `GameSettings.using_gamepad`) y cambian según el rol: a pie,
+  conductor o pasajero.
+- Online, Esc abre el menú **sin pausar** (pausar el árbol congelaba al anfitrión para
+  todos); solo el anfitrión puede reiniciar (un cliente que recarga su nivel se queda
+  sin jugadores); si se cae el anfitrión, el cliente ve una pantalla "Sin conexión".
+  **Pendiente**: el reinicio del anfitrión todavía no recarga el mundo de los clientes.
+- El HUD muestra arriba a la izquierda el modo y la sesión; hosteando por LAN, la IP
+  para pasarle a los amigos.
 - **Conexión real**: Steam (relayeado, sin abrir puertos) o IP directa por LAN (ENet) —
   la elección es automática (Steam si está corriendo) salvo en "Unirse por IP", que
   siempre fuerza LAN. Ver README sección "Multijugador".
@@ -119,7 +132,7 @@ Main Menu
   desbloqueos todavía (ver `docs/plan-desarrollo.md` Fase 5).
 - Botones: "Jugar de nuevo" (mismo lobby) / "Volver al lobby" / "Salir".
   **[x] Parcial**: "Volver a intentar" reinicia la misma sesión (no hay lobby al que
-  volver, ver más arriba); no hay botón "Salir" propio, se usa Alt+F4/cerrar ventana.
+  volver, ver más arriba) y "Menú" vuelve al menú principal.
 
 ## Próximo paso
 La mayor parte de esto ya está implementado (ver los `[x]`/`[ ]` de cada sección); lo

@@ -91,6 +91,8 @@ func height_at(p: Vector3) -> float:
 func build() -> void:
 	_material = ShaderMaterial.new()
 	_material.shader = preload("res://shaders/route_terrain.gdshader")
+	for surface: String in ["asphalt", "earth", "grass", "gravel"]:
+		_material.set_shader_parameter(surface + "_detail", load("res://assets/textures/detail/tx_detail_%s_512.png" % surface))
 	for key: Vector2i in _tiles:
 		_build_tile(key)
 
@@ -174,12 +176,12 @@ func conform_geometry(node: Node) -> void:
 			p.y += height_at(p)
 			vertices[i] = node.to_local(to_global(p))
 		arrays[Mesh.ARRAY_VERTEX] = vertices
+		# Keep the source's own normals. Regenerating them here merged every
+		# vertex that shares a position, so a box's corners got averaged and
+		# barriers, cones and rails shaded like soft pillows. The ground under
+		# them is gentle enough that unwarped normals light them correctly.
 		var mesh := ArrayMesh.new()
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		var shaded := SurfaceTool.new()
-		shaded.create_from(mesh, 0)
-		shaded.generate_normals()
-		mesh = shaded.commit()
 		node.mesh = mesh
 		var parent: Node = node.get_parent()
 		if parent is StaticBody3D:

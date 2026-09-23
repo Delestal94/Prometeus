@@ -40,13 +40,80 @@ var fullscreen: bool = false:
 		_apply_fullscreen()
 		_save()
 
+## Size of the in-game HUD (panels, banners, prompts) relative to how it
+## was laid out. Menus and the pause/results card keep their size: they're
+## centred and already sized to fit, it's the corners that crowd a small
+## screen or vanish on a TV across the room.
+const HUD_SCALE_MIN: float = 0.6
+const HUD_SCALE_MAX: float = 1.5
+var hud_scale: float = 1.0:
+	set(value):
+		hud_scale = clampf(value, HUD_SCALE_MIN, HUD_SCALE_MAX)
+		hud_scale_changed.emit(hud_scale)
+		_save()
+signal hud_scale_changed(scale: float)
+
+## The last address typed into "Unirse", so rejoining the same friend's LAN
+## game doesn't mean typing their IP again every session.
+var last_join_address: String = "":
+	set(value):
+		last_join_address = value.strip_edges()
+		_save()
+
+## Not a saved setting: which device the player touched last. Every on-screen
+## prompt asks this instead of printing "E / A" and making the player work
+## out which half applies to them.
+var using_gamepad: bool = false
+signal input_device_changed(gamepad: bool)
+
 ## Guards the setters while loading, so reading the file back doesn't write
 ## it again four times.
 var _loading: bool = false
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_load()
+
+
+func _input(event: InputEvent) -> void:
+	var gamepad: bool = using_gamepad
+	if event is InputEventJoypadButton:
+		gamepad = true
+	elif event is InputEventJoypadMotion:
+		# Stick drift sits well under this, and shouldn't flip the prompts
+		# back while someone is typing on the keyboard.
+		gamepad = gamepad or absf((event as InputEventJoypadMotion).axis_value) > 0.5
+	elif event is InputEventKey or event is InputEventMouseButton:
+		gamepad = false
+	if gamepad != using_gamepad:
+		using_gamepad = gamepad
+		input_device_changed.emit(gamepad)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# The shortcut every PC player tries first; it works on any screen.
+	if event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_F11:
+		fullscreen = not fullscreen
+		get_viewport().set_input_as_handled()
+
+
+## Picks the half of a prompt that matches the device in hand.
+func prompt(keyboard: String, gamepad: String) -> String:
+	return gamepad if using_gamepad else keyboard
+
+
+## Back to how the game ships, for anyone who dragged a slider somewhere
+## they can't get back from.
+func reset_to_defaults() -> void:
+	_loading = true
+	master_volume = 1.0
+	look_sensitivity = 1.0
+	invert_look_y = false
+	fullscreen = false
+	hud_scale = 1.0
+	_loading = false
+	_save()
 
 
 ## The sign to multiply vertical look motion by. Both look implementations
@@ -73,6 +140,7 @@ func _apply_fullscreen() -> void:
 
 
 func _load() -> void:
+	LegacyUserData.migrate()
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK:
 		_apply_volume()
@@ -82,6 +150,8 @@ func _load() -> void:
 	look_sensitivity = float(config.get_value(SECTION, "look_sensitivity", 1.0))
 	invert_look_y = bool(config.get_value(SECTION, "invert_look_y", false))
 	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
+	hud_scale = float(config.get_value(SECTION, "hud_scale", 1.0))
+	last_join_address = String(config.get_value(SECTION, "last_join_address", ""))
 	_loading = false
 
 
@@ -93,4 +163,6 @@ func _save() -> void:
 	config.set_value(SECTION, "look_sensitivity", look_sensitivity)
 	config.set_value(SECTION, "invert_look_y", invert_look_y)
 	config.set_value(SECTION, "fullscreen", fullscreen)
+	config.set_value(SECTION, "hud_scale", hud_scale)
+	config.set_value(SECTION, "last_join_address", last_join_address)
 	config.save(SAVE_PATH)

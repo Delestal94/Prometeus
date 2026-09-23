@@ -1,4 +1,4 @@
-# Arquitectura del proyecto — Do Not Drop
+# Arquitectura del proyecto — Take My Package
 
 > Basado en: `docs/requerimientos-tecnicos.md` y `docs/plan-desarrollo.md`.
 > Última actualización: 2026-09-20

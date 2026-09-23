@@ -1,4 +1,4 @@
-# Abogado del diablo — crítica de diseño de Do Not Drop
+# Abogado del diablo — crítica de diseño de Take My Package
 
 > Encargado explícitamente por el usuario: "quiero que seas el abogado del diablo
 > a nivel de diseño... y seas crítico con absolutamente todo, desde la interfaz,

@@ -20,13 +20,13 @@ func _build() -> void:
 
 	var barrier_center_z: float = -length * 0.5
 	_box("ConstructionBarrier", Vector3(5.0, 0.9, _barrier_length), Vector3(2.5, 0.45, barrier_center_z), CONCRETE, true)
-	_box("ConstructionBarrierStripe", Vector3(5.04, 0.12, _barrier_length), Vector3(2.5, 0.92, barrier_center_z), WARNING)
+	_box("ConstructionBarrierStripe", Vector3(5.04, 0.12, _barrier_length + 0.04), Vector3(2.5, 0.92, barrier_center_z), WARNING)
 
 	var barrier_start_z: float = barrier_center_z + _barrier_length * 0.5
 	var barrier_end_z: float = barrier_center_z - _barrier_length * 0.5
 	var cone_z: float = barrier_start_z - 1.5
 	var index: int = 0
 	while cone_z > barrier_end_z:
-		_box("ConstructionCone" + str(index), Vector3(0.5, 0.7, 0.5), Vector3(-0.1, 0.35, cone_z), CONE, true)
+		_box("ConstructionCone" + str(index), Vector3(0.5, 0.7, 0.5), Vector3(-0.4, 0.35, cone_z), CONE, true)
 		cone_z -= 3.0
 		index += 1

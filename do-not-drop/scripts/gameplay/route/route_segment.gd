@@ -85,6 +85,8 @@ func _material(color: Color) -> StandardMaterial3D:
 		var material := StandardMaterial3D.new()
 		material.albedo_color = color
 		material.roughness = 0.95
-		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		# Back faces culled: double-sided, the underside of every flat marking
+		# z-fought the terrain a few millimetres below it (flicker) and box
+		# sides shadowed themselves in fine stripes.
 		_materials[color] = material
 	return _materials[color] as StandardMaterial3D

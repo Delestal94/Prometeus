@@ -20,6 +20,13 @@ signal package_damaged(package_id: StringName, damage: float)
 ## settle-bounce presentation (docs/especificaciones-visuales.md #22), not a
 ## fact anything else needs.
 signal package_placed(package_id: StringName)
+## The lid opened or closed (host decides, relayed): drives the flap
+## animation and what the crew can see inside.
+signal package_lid_changed(package_id: StringName, open: bool)
+## An open box tipped over or took a hard hit and its contents fell out.
+## state is the trap state right before, so the pieces thrown out match
+## what was in there (a whole vase, or its shards).
+signal package_contents_spilled(package_id: StringName, velocity: Vector3, state: int)
 signal vehicle_telemetry(speed_kmh: float)
 signal vehicle_impact(strength: float, impact_position: Vector3)
 signal run_started(route_id: StringName, players: Array)
@@ -30,6 +37,13 @@ signal start_requested
 signal restart_requested
 signal pause_requested
 signal interaction_prompt_changed(prompt: String)
+## Local-only, like interaction_prompt_changed: whether this client's own
+## player has a box in hand, so the HUD can show how to set it down.
+signal carry_changed(carrying: bool)
+## Local-only too: the box this player could open or close right now (in
+## hand, at their seat, or looked at). action is "Abrir caja"/"Cerrar caja"
+## or empty; inside is what they can see in it while it's open.
+signal package_lid_hint_changed(action: String, inside: String)
 ## Non-verbal communication (docs/controles-y-ui.md): any player can ping,
 ## not just the host, so this needs its own client->host->everyone hop
 ## instead of relay() (which only ever originates from host-run simulation).

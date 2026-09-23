@@ -21,6 +21,11 @@ class_name CurveSegment
 const DEGREES_PER_CHORD: float = 12.0
 const CHORD_LENGTH: float = 10.0
 const MIN_CHORDS: int = 3
+const EDGE_LINE_OFFSET: float = 5.7
+const EDGE_LINE_WIDTH: float = 0.12
+const EDGE_LINE_HEIGHT: float = 0.03
+## 2 m steps: the terrain's own grid spacing, so the warped line hugs it.
+const EDGE_LINE_STEPS: int = 5
 
 ## Each chord's own local transform (pre-advance cursor), for
 ## get_dressing_slots() below -- dressing needs to walk the same bent path
@@ -57,6 +62,8 @@ func _build() -> void:
 
 	exit_offset = cursor.origin
 	exit_turn = turn_per_chord * float(chord_count)
+	for side: float in [-1.0, 1.0]:
+		_build_edge_line(side * EDGE_LINE_OFFSET, cursor)
 
 
 func get_dressing_slots(spacing: float) -> Array[Transform3D]:
@@ -80,10 +87,60 @@ func _build_chord(chord: Node3D) -> void:
 		chord.add_child(ground)
 		var road := _chord_box(Vector3(12.0, 0.4, CHORD_LENGTH + 3.0), Vector3(0.0, -0.2, -CHORD_LENGTH * 0.5), ROAD, true)
 		chord.add_child(road)
-	var edge_marking := _chord_box(Vector3(0.12, 0.015, CHORD_LENGTH - 1.0), Vector3(5.7, 0.011, -CHORD_LENGTH * 0.5), MARKING)
-	chord.add_child(edge_marking)
-	var edge_marking_other := _chord_box(Vector3(0.12, 0.015, CHORD_LENGTH - 1.0), Vector3(-5.7, 0.011, -CHORD_LENGTH * 0.5), MARKING)
-	chord.add_child(edge_marking_other)
+
+
+## One unbroken painted line along the whole bend, `offset` metres off the
+## centreline. A straight stick per chord (the old way) left a gap and a
+## visible kink at every pivot; here the line's corners are mitred -- pushed
+## out along the bisector by 1/cos(half the kink) -- so neighbouring pieces
+## meet exactly, and each chord is cut into short steps so the line can
+## follow the terrain once conform_geometry() warps it.
+func _build_edge_line(offset: float, exit: Transform3D) -> void:
+	var frames: Array[Transform3D] = _chord_transforms.duplicate()
+	frames.append(exit)
+	var corners: Array[Vector3] = []
+	for index: int in range(frames.size()):
+		var right: Vector3 = frames[index].basis.x
+		var miter: float = 1.0
+		# The exit mitres too: the last chord points one turn step short of
+		# the exit heading the next segment continues along.
+		if index > 0:
+			right = (frames[index - 1].basis.x + frames[index].basis.x).normalized()
+			miter = 1.0 / maxf(right.dot(frames[index].basis.x), 0.5)
+		corners.append(right * miter)
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	surface.set_normal(Vector3.UP)
+	var half_width: float = EDGE_LINE_WIDTH * 0.5
+	for index: int in range(frames.size() - 1):
+		var a: Vector3 = frames[index].origin
+		var b: Vector3 = frames[index + 1].origin
+		for step: int in range(EDGE_LINE_STEPS):
+			var t0: float = float(step) / float(EDGE_LINE_STEPS)
+			var t1: float = float(step + 1) / float(EDGE_LINE_STEPS)
+			var left0: Vector3 = a.lerp(b, t0) + corners[index].lerp(corners[index + 1], t0) * (offset - half_width)
+			var right0: Vector3 = a.lerp(b, t0) + corners[index].lerp(corners[index + 1], t0) * (offset + half_width)
+			var left1: Vector3 = a.lerp(b, t1) + corners[index].lerp(corners[index + 1], t1) * (offset - half_width)
+			var right1: Vector3 = a.lerp(b, t1) + corners[index].lerp(corners[index + 1], t1) * (offset + half_width)
+			# Clockwise seen from above (Godot's front face), travelling -Z.
+			for vertex: Vector3 in [left0, left1, right0, right0, left1, right1]:
+				surface.add_vertex(vertex + Vector3(0.0, EDGE_LINE_HEIGHT, 0.0))
+	# The mitred exit corner sits a little off the square-across point where
+	# the next segment's own line starts: short of it on the inside of the
+	# bend (bridge that gap), past it on the outside (this quad then faces
+	# away and is culled -- the line already covers that stretch).
+	var last: Vector3 = corners[corners.size() - 1]
+	var tail: Array[Vector3] = [
+		exit.origin + last * (offset - half_width), exit.origin + exit.basis.x * (offset - half_width),
+		exit.origin + last * (offset + half_width), exit.origin + exit.basis.x * (offset + half_width),
+	]
+	for vertex: Vector3 in [tail[0], tail[1], tail[2], tail[2], tail[1], tail[3]]:
+		surface.add_vertex(vertex + Vector3(0.0, EDGE_LINE_HEIGHT, 0.0))
+	var line := MeshInstance3D.new()
+	line.name = "EdgeLine"
+	line.mesh = surface.commit()
+	line.material_override = _material(MARKING)
+	add_child(line)
 
 
 ## Same shape as RouteSegment._box(), but returns the node instead of

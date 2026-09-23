@@ -1,4 +1,4 @@
-# Definición de proyecto — Do Not Drop (vigente)
+# Definición de proyecto — Take My Package (vigente)
 
 > Última actualización: 2026-09-20
 > Este es el concepto **definitivo** del proyecto. El proceso de exploración previo
@@ -7,7 +7,7 @@
 
 ## Concepto
 
-**Do Not Drop** (nombre de trabajo): delivery cooperativo de hasta 5 jugadores. Uno
+**Take My Package** (nombre oficial desde 2026-09-22; nombre de trabajo anterior: "Do Not Drop"): delivery cooperativo de hasta 5 jugadores. Uno
 conduce una camioneta, los demás (hasta 4) llevan un paquete cada uno. Cada paquete
 tiene una "trampa" — una regla individual que el pasajero debe manejar mientras el
 vehículo se mueve. El caos surge del cruce entre la conducción (afecta físicamente a
@@ -23,7 +23,7 @@ el dev hace el juego que él mismo quiere jugar (ver `docs/checklist-exito.md`).
   cooperativo tipo **Totally Reliable Delivery Service** (14M descargas).
 - Diferenciación real frente a la ola de "chaos co-op" reciente (Drive Together,
   Co-Drive Chaos, Deliver Together): esos juegos son de **control compartido
-  simétrico** de un mismo vehículo; Do Not Drop propone **roles asimétricos** (un
+  simétrico** de un mismo vehículo; Take My Package propone **roles asimétricos** (un
   conductor normal + pasajeros con mini-puzzles individuales), que no encontramos
   replicado en ningún juego existente al momento de la investigación.
 - Rating de evaluación: 8/10 (ver el análisis completo en el historial de la
@@ -40,7 +40,8 @@ el dev hace el juego que él mismo quiere jugar (ver `docs/checklist-exito.md`).
 - `docs/convenciones-godot.md` — convenciones técnicas concretas del proyecto Godot.
 
 ## Estado de decisiones abiertas
-- Nombre definitivo: "Do Not Drop" es el nombre de trabajo (ya usado en el proyecto
-  Godot real). Puede cambiar antes del lanzamiento sin afectar el desarrollo.
+- Nombre definitivo: **cerrado el 2026-09-22 — "Take My Package"**. Reemplaza al nombre de
+  trabajo "Do Not Drop"; la carpeta `do-not-drop/` conserva el nombre viejo a propósito
+  (renombrarla toca rutas en todo el repo sin beneficio para el jugador).
 - Resto de las decisiones de diseño (parámetros, controles, arquitectura) ya están
   cerradas en los documentos listados arriba.

@@ -20,18 +20,30 @@ extends Control
 # Colours and widgets live in ui_theme.gd now: this screen and the in-game
 # HUD used to keep their own copies of the same five constants and drift
 # apart one tweak at a time (docs/direccion-visual.md section 3).
-const INK: Color = UiTheme.INK
-const PAPER: Color = UiTheme.PAPER
 const MUTED: Color = UiTheme.MUTED
 const MINT: Color = UiTheme.MINT
 const RED: Color = UiTheme.RED
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const ENDLESS_LEVEL_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
+const MENU_ART: Texture2D = preload("res://assets/ui/backgrounds/tx_ui_menu_background_1920.png")
 
 var _status_label: Label
 var _address_field: LineEdit
 var _options: OptionsPanel
-var _busy: bool = false
+var _play_button: Button
+var _cancel_button: Button
+## Everything that starts a session or opens another screen. Disabled while
+## a connection is in flight, so a second click can't start a second one.
+var _entry_buttons: Array[Button] = []
+var _busy: bool = false:
+	set(value):
+		_busy = value
+		for button: Button in _entry_buttons:
+			button.disabled = value
+		if _address_field != null:
+			_address_field.editable = not value
+		if _cancel_button != null:
+			_cancel_button.visible = value
 
 
 func _ready() -> void:
@@ -70,65 +82,113 @@ func _handle_cmdline_args() -> void:
 
 func _build_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	UiTheme.apply(self)
 	var bg := ColorRect.new()
-	bg.color = Color("0d1f24")
+	bg.color = UiTheme.BACKDROP
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	# Key art (2026-09-23): the first thing a player sees should say "delivery
+	# van losing its cargo", not a flat colour. The backdrop stays underneath
+	# so a missing texture still leaves a usable menu.
+	var art := TextureRect.new()
+	art.texture = MENU_ART
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(art)
 
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	# Logo over the open sky, top left; the menu card on the right, so the
+	# van spilling boxes (the whole joke) stays in view.
+	var brand := VBoxContainer.new()
+	brand.add_theme_constant_override("separation", 14)
+	brand.position = Vector2(64, 48)
+	add_child(brand)
+	UiTheme.logo(brand, 78)
+	var chips := HBoxContainer.new()
+	chips.add_theme_constant_override("separation", 10)
+	brand.add_child(chips)
+	UiTheme.tag(chips, "DELIVERY COOPERATIVO", MINT, -2.0, 16)
+	UiTheme.tag(chips, "1 A 5 JUGADORES", UiTheme.SKY, 1.5, 16)
+	var stamp: Label = UiTheme.tag(brand, "¡NO LO DEJES CAER!", RED, -5.0, 18)
+	stamp.get_parent().size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(460, 0)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(INK, 0.95)
-	style.border_color = Color("365458")
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(10)
-	style.content_margin_left = 32
-	style.content_margin_right = 32
-	style.content_margin_top = 28
-	style.content_margin_bottom = 28
-	panel.add_theme_stylebox_override("panel", style)
-	center.add_child(panel)
+	var side := MarginContainer.new()
+	side.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
+	side.offset_left = -500
+	side.add_theme_constant_override("margin_right", 64)
+	side.add_theme_constant_override("margin_top", 40)
+	side.add_theme_constant_override("margin_bottom", 40)
+	add_child(side)
+	var holder := CenterContainer.new()
+	side.add_child(holder)
+	var column: VBoxContainer = UiTheme.panel(holder, Vector2(420, 0), 28)
+	column.add_theme_constant_override("separation", 12)
+	UiTheme.tag(column, "¿LISTOS PARA REPARTIR?", UiTheme.YELLOW, -1.5, 17)
+	_spacer(column, 2)
 
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 14)
-	panel.add_child(column)
+	_play_button = UiTheme.button(column, "Jugar solo", true, Vector2(0, 62))
+	_play_button.add_theme_font_size_override("font_size", 26)
+	_play_button.pressed.connect(_play_solo)
+	_entry_buttons.append(_play_button)
+	_entry_buttons.append(_button(column, "Modo Endless", false))
+	_entry_buttons[-1].pressed.connect(_play_endless)
+	_entry_buttons.append(_button(column, "Crear sala con amigos", false))
+	_entry_buttons[-1].pressed.connect(_host_session)
 
-	_label(column, "DO NOT DROP", 36, PAPER)
-	_label(column, "Delivery cooperativo · hasta 5 jugadores", 14, MUTED)
-	_spacer(column, 10)
-
-	_button(column, "Jugar solo", true).pressed.connect(_play_solo)
-	_button(column, "Modo Endless (solo)", false).pressed.connect(_play_endless)
-	_button(column, "Crear sala (con amigos)", false).pressed.connect(_host_session)
+	_spacer(column, 4)
+	_label(column, "Unirse por LAN", 15, MUTED)
+	var join_row := HBoxContainer.new()
+	join_row.add_theme_constant_override("separation", 10)
+	column.add_child(join_row)
+	_address_field = UiTheme.line_edit(join_row, "IP del anfitrión")
+	_address_field.text = GameSettings.last_join_address
+	_address_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Enter in the field is the obvious way to confirm an address; it used
+	# to do nothing and leave the player hunting for the button.
+	_address_field.text_submitted.connect(func(_text: String) -> void: _join_by_address())
+	_entry_buttons.append(_button(join_row, "Unirse", false))
+	_entry_buttons[-1].pressed.connect(_join_by_address)
 
 	_spacer(column, 6)
-	var join_row := HBoxContainer.new()
-	join_row.add_theme_constant_override("separation", 8)
-	column.add_child(join_row)
-	_address_field = LineEdit.new()
-	_address_field.placeholder_text = "IP del anfitrión (LAN)"
-	_address_field.custom_minimum_size.x = 260
-	join_row.add_child(_address_field)
-	_button(join_row, "Unirse", false).pressed.connect(_join_by_address)
-
-	_spacer(column, 10)
-	_button(column, "Opciones", false).pressed.connect(_open_options)
+	var bottom_row := HBoxContainer.new()
+	bottom_row.add_theme_constant_override("separation", 10)
+	column.add_child(bottom_row)
+	var options_button: Button = _button(bottom_row, "Opciones", false)
+	options_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	options_button.pressed.connect(_open_options)
+	_entry_buttons.append(options_button)
 	# A game you can only leave with Alt+F4 reads as unfinished before a
 	# player has pressed anything (docs/critica-diseno-abogado-del-diablo.md
 	# section 4).
-	_button(column, "Salir", false).pressed.connect(_quit_game)
+	var quit_button: Button = _button(bottom_row, "Salir", false)
+	quit_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quit_button.pressed.connect(_quit_game)
 
-	_spacer(column, 10)
-	_status_label = _label(column, "", 14, MUTED)
+	_status_label = _label(column, "", 15, MUTED)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_status_label.visible = false
+	# Only while a connection is in flight: a join to a wrong IP used to
+	# leave every button dead until the timeout, with no way back out.
+	_cancel_button = _button(column, "Cancelar", false)
+	_cancel_button.pressed.connect(_cancel_connection)
+	_cancel_button.visible = false
+
+	var footer: Label = UiTheme.chip(self, "Prototipo 0.1   ·   F11 pantalla completa", UiTheme.WHITE, 14)
+	var footer_holder: Control = footer.get_parent()
+	footer_holder.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	footer_holder.offset_left = 24
+	footer_holder.offset_top = -52
+	footer_holder.offset_bottom = -20
+	footer_holder.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 	_options = OptionsPanel.new()
 	_options.name = "OptionsPanel"
 	add_child(_options)
+	_options.closed.connect(options_button.grab_focus)
+	# A gamepad player has no cursor: without a focused button, the menu
+	# ignored every press until someone reached for the mouse.
+	_play_button.grab_focus.call_deferred()
 
 
 func _open_options() -> void:
@@ -182,11 +242,22 @@ func _join_by_address() -> void:
 		_set_status("No se pudo conectar (error %d)." % error, RED)
 
 
+## The LAN address to share used to be printed here, one frame before the
+## level replaced the menu -- nobody ever saw it. The in-game HUD shows it
+## for as long as the session lasts instead.
 func _on_session_ready(is_host: bool) -> void:
-	if is_host:
-		var hint: String = _lan_hint() if NetworkManager.active_transport == NetworkManager.Transport.ENET else "Invitá amigos desde la lista de amigos de Steam."
-		_set_status("Sala lista. %s" % hint, MINT)
+	if not is_host:
+		GameSettings.last_join_address = _address_field.text
+	_set_status("Entrando…", MINT)
 	_go_to_level(LEVEL_SCENE)
+
+
+func _cancel_connection() -> void:
+	NetworkManager.leave_session()
+	NetworkManager.transport = NetworkManager.Transport.AUTO
+	_busy = false
+	_set_status("Conexión cancelada.", MUTED)
+	_play_button.grab_focus()
 
 
 func _on_session_failed(reason: String) -> void:
@@ -202,15 +273,9 @@ func _go_to_level(scene_path: String) -> void:
 	get_tree().change_scene_to_file.call_deferred(scene_path)
 
 
-func _lan_hint() -> String:
-	for address: String in IP.get_local_addresses():
-		if address.begins_with("192.168.") or address.begins_with("10.") or address.begins_with("172."):
-			return "Pasales esta IP: %s" % address
-	return "No se encontró una IP de LAN -- puede que solo funcione en esta máquina."
-
-
 func _set_status(text: String, color: Color) -> void:
 	_status_label.text = text
+	_status_label.visible = not text.is_empty()
 	_status_label.add_theme_color_override("font_color", color)
 
 

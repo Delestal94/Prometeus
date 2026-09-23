@@ -1,4 +1,4 @@
-# Plan de desarrollo por fases — Do Not Drop
+# Plan de desarrollo por fases — Take My Package
 
 > Basado en: `docs/requerimientos-tecnicos.md` (Godot 4.x, física real de vehículo +
 > streaming de tramos, confirmado 2026-09-20).

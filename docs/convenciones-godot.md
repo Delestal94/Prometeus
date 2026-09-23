@@ -1,4 +1,4 @@
-# Convenciones técnicas del proyecto Godot — Do Not Drop
+# Convenciones técnicas del proyecto Godot — Take My Package
 
 > Última actualización: 2026-09-20
 > Complementa `docs/arquitectura.md` con las decisiones concretas de configuración de

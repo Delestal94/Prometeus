@@ -5,13 +5,13 @@ extends "res://scripts/gameplay/interaction/interactable.gd"
 ## interact() only ever runs on the host (see interactable.gd). The package
 ## itself is host-authoritative too, so place_at() here is the real thing,
 ## not a copy -- but telling that player their hands are empty again is
-## their own local state, so that part goes out as a targeted RPC.
+## their own local state, so place_at() broadcasts that to every peer.
 
 var occupied_by: Node = null
 
 
 func get_prompt() -> String:
-	return "" if occupied_by != null else "Dejar paquete acá"
+	return "" if occupied_by != null else prompt
 
 
 func can_interact(player: Node) -> bool:
@@ -21,12 +21,19 @@ func can_interact(player: Node) -> bool:
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
-	var carried: Node = player.get(&"carried_package")
+	var carried: DeliveryPackage = player.get(&"carried_package") as DeliveryPackage
 	if carried == null:
 		return
-	var mount: Node3D = get_parent() as Node3D
-	carried.call(&"place_at", mount)
-	occupied_by = carried
-	if player.has_method(&"drop_carried"):
-		player.rpc_id(int(player.get_multiplayer_authority()), &"drop_carried")
+	store(carried)
+	# place_at() already empties a carrier's hands; this covers a package
+	# handed over without a pickup (the debug start's direct pick_up()).
+	if player.get(&"carried_package") == carried:
+		player.rpc(&"drop_carried")
 	interacted.emit(player)
+
+
+## The one way a package ends up in this slot, whether a player set it down
+## here or boarded the matching seat with it in hand (seat_point.gd).
+func store(package: DeliveryPackage) -> void:
+	package.place_at(get_parent() as Node3D, self)
+	occupied_by = package

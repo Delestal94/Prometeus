@@ -35,3 +35,6 @@ Thumbs.db
 ~*.dll
 ~*.so
 ~*.dylib
+
+# Python bytecode (Blender imports lowpoly_kit.py)
+__pycache__/

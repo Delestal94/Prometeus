@@ -1,4 +1,4 @@
-# 100 especificaciones visuales a mejorar — Do Not Drop
+# 100 especificaciones visuales a mejorar — Take My Package
 
 > Última actualización: 2026-09-21
 > Complementa `docs/direccion-visual.md` (que define *cómo se ve y por qué*) con una

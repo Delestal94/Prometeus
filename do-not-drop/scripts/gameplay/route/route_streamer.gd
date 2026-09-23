@@ -58,6 +58,9 @@ func _ready() -> void:
 	else:
 		_rng.randomize()
 	hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment]
+	var sky := RouteSky.new()
+	sky.name = "Sky"
+	add_child(sky)
 
 
 func start(tracked: Node3D) -> void:

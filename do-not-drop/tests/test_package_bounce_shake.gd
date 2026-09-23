@@ -23,7 +23,7 @@ func _test_settle_bounce() -> void:
 	root.add_child(package)
 	package.global_position = Vector3(0.0, 2.0, 0.0)
 	await process_frame
-	var box: MeshInstance3D = package.get_node(^"Box")
+	var box: Node3D = package.get_node(^"Box")
 	_expect(box.scale.is_equal_approx(Vector3.ONE), "Box starts at normal scale")
 
 	var mount := Node3D.new()
@@ -50,7 +50,7 @@ func _test_impact_shake() -> void:
 	var package: RigidBody3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
 	root.add_child(package)
 	await process_frame
-	var box: MeshInstance3D = package.get_node(^"Box")
+	var box: Node3D = package.get_node(^"Box")
 	var base: Vector3 = box.position
 	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
 
@@ -79,7 +79,7 @@ func _test_bounce_and_growth_dont_fight() -> void:
 	package.set(&"trap_definition", load("res://data/traps/growing_weight.tres"))
 	root.add_child(package)
 	await process_frame
-	var box: MeshInstance3D = package.get_node(^"Box")
+	var box: Node3D = package.get_node(^"Box")
 	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
 	var package_id: StringName = package.get(&"package_id")
 

@@ -1,9 +1,10 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/package/package.gd" id="1_package"]
 [ext_resource type="Script" path="res://scripts/gameplay/package/package_feedback.gd" id="2_feedback"]
 [ext_resource type="Resource" path="res://data/traps/fragile.tres" id="3_trap"]
 [ext_resource type="Script" path="res://scripts/gameplay/interaction/package_pickup_point.gd" id="4_pickup"]
+[ext_resource type="Script" path="res://scripts/gameplay/package/package_contents_view.gd" id="5_contents"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_crate"]
 friction = 0.70
@@ -11,21 +12,6 @@ bounce = 0.06
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_crate"]
 size = Vector3(0.65, 0.65, 0.65)
-
-[sub_resource type="BoxMesh" id="BoxMesh_crate"]
-size = Vector3(0.65, 0.65, 0.65)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_strap"]
-albedo_color = Color(0.23, 0.14, 0.09, 1)
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="BoxMesh_strap_x"]
-material = SubResource("StandardMaterial3D_strap")
-size = Vector3(0.08, 0.66, 0.66)
-
-[sub_resource type="BoxMesh" id="BoxMesh_strap_z"]
-material = SubResource("StandardMaterial3D_strap")
-size = Vector3(0.66, 0.66, 0.08)
 
 [sub_resource type="SphereShape3D" id="Shape_pickup"]
 radius = 0.55
@@ -49,6 +35,12 @@ properties/4/replication_mode = 2
 properties/5/path = NodePath(".:is_loaded")
 properties/5/spawn = true
 properties/5/replication_mode = 2
+properties/6/path = NodePath(".:is_open")
+properties/6/spawn = true
+properties/6/replication_mode = 2
+properties/7/path = NodePath(".:contents_spilled")
+properties/7/spawn = true
+properties/7/replication_mode = 2
 
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4
@@ -69,34 +61,13 @@ replication_config = SubResource("Repl_package")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_crate")
 
-[node name="Box" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_crate")
-
-[node name="StrapX" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_strap_x")
-
-[node name="StrapZ" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_strap_z")
-
-[node name="Status" type="Label3D" parent="."]
-position = Vector3(0, 0.018, 0.332)
-text = "FRÁGIL\n↑ ↑"
-font_size = 52
-pixel_size = 0.0032
-modulate = Color(0.22, 0.10, 0.045, 1)
-outline_size = 0
-
-[node name="TopMark" type="Label3D" parent="."]
-position = Vector3(0, 0.334, 0)
-rotation = Vector3(-1.570796, 0, 0)
-text = "!"
-font_size = 80
-pixel_size = 0.004
-modulate = Color(0.78, 0.15, 0.10, 1)
-outline_size = 0
+[node name="Box" type="Node3D" parent="."]
 
 [node name="PackageFeedbackComponent" type="Node" parent="."]
 script = ExtResource("2_feedback")
+
+[node name="PackageContentsView" type="Node" parent="."]
+script = ExtResource("5_contents")
 
 [node name="InteractionArea" type="Area3D" parent="."]
 script = ExtResource("4_pickup")

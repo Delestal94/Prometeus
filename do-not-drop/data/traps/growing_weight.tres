@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="TrapDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="TrapDefinition" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/traps/trap_definition.gd" id="1_definition"]
 [ext_resource type="Script" path="res://scripts/gameplay/traps/growing_weight_trap_behavior.gd" id="2_behavior"]
+[ext_resource type="Resource" path="res://data/contents/sourdough.tres" id="3_content"]
 
 [resource]
 script = ExtResource("1_definition")
@@ -18,3 +19,4 @@ params = {
 "weight_fail_threshold": 2.5,
 "weight_at_risk_threshold": 1.5
 }
+contents = Array[Resource]([ExtResource("3_content")])

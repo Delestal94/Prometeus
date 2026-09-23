@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PackageContent" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/package/package_content.gd" id="1_content"]
+[ext_resource type="PackedScene" path="res://assets/models/cargo/contents/sm_cargo_content_sourdough.glb" id="2_model"]
+[ext_resource type="PackedScene" path="res://assets/models/cargo/sm_cargo_box_flat.glb" id="3_box"]
+
+[resource]
+script = ExtResource("1_content")
+id = &"sourdough"
+display_name = "Masa madre de la abuela"
+declared_weight = "? kg"
+handling = "PESADO"
+condition_texts = PackedStringArray("leudando", "desbordándose", "fuera de control")
+model = ExtResource("2_model")
+box_model = ExtResource("3_box")
+box_size = Vector3(0.95, 0.42, 0.95)

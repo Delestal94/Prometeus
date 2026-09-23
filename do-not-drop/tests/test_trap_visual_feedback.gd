@@ -32,7 +32,7 @@ func _test_growing_weight_visuals() -> void:
 	await process_frame
 
 	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
-	var box: MeshInstance3D = package.get_node(^"Box")
+	var box: Node3D = package.get_node(^"Box")
 	_expect(box.scale.is_equal_approx(Vector3.ONE), "Starts at normal size")
 
 	var package_id: StringName = package.get(&"package_id")
@@ -57,7 +57,7 @@ func _test_noisy_wobble() -> void:
 	await process_frame
 
 	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
-	var box: MeshInstance3D = package.get_node(^"Box")
+	var box: Node3D = package.get_node(^"Box")
 	var base: Vector3 = box.position
 	var package_id: StringName = package.get(&"package_id")
 

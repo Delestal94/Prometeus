@@ -29,6 +29,16 @@ func _run() -> void:
 	var houses: Array = (level.get_node("World/Route")).get(&"houses")
 	_expect(houses.size() >= 2, "The route built enough houses to tell them apart (got %d)" % houses.size())
 
+	# --- the lens sees what the player's eyes see, not the inside of their head ---
+	var eyes := Camera3D.new()
+	eyes.cull_mask = 0xFFFFF & ~2
+	eyes.near = 0.03
+	level.add_child(eyes)
+	phone.call(&"_match_lens", eyes)
+	_expect((lens as Camera3D).cull_mask == eyes.cull_mask, "The lens culls the local body like the first-person camera does")
+	_expect(is_equal_approx((lens as Camera3D).near, 0.03), "The lens keeps the first-person near plane")
+	eyes.queue_free()
+
 	# --- nothing delivered yet: there's nothing to document anywhere ---
 	lens.global_position = houses[0].call(&"porch_position")
 	_expect(phone.subject_house() == -1, "A door nobody delivered to is not a photo subject")

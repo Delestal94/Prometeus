@@ -9,11 +9,27 @@ const MUTED: Color = UiTheme.MUTED
 const MINT: Color = UiTheme.MINT
 const YELLOW: Color = UiTheme.YELLOW
 const RED: Color = UiTheme.RED
-const DRIVE_HINT: String = "W/S acelerar y frenar · A/D girar · Mouse mirar · C centrar vista"
+const ORANGE: Color = UiTheme.ORANGE
+## Package state (OK / at risk / ruined) as bar fill and as text on cream --
+## the text versions are darker so they stay readable on the card.
+const STATE_FILL: Array[Color] = [UiTheme.MINT, UiTheme.ORANGE, UiTheme.RED]
+const STATE_TEXT: Array[Color] = [UiTheme.INK, Color("c26a00"), Color("c73431")]
+
+## Where the local player is, which decides what the hint line teaches.
+## Every seated passenger used to be told "W/S acelerar y frenar" for the
+## whole run, and the driver was told nothing about the horn.
+enum Role { ON_FOOT, DRIVER, PASSENGER }
 
 var root: Control
+## Everything that sits over the game while playing -- the corner panels,
+## the banners, the interaction prompt -- lives here so GameSettings.hud_scale
+## can resize it as one. The pause/results card and the options stay on
+## root at their own size.
+var hud_layer: Control
 var dashboard: VBoxContainer
+var session_label: Label
 var speed_label: Label
+var speed_unit_label: Label
 var time_label: Label
 var economy_label: Label
 var distance_label: Label
@@ -27,21 +43,32 @@ var cargo_rows: Dictionary = {}
 ## puppet whose trap never advances locally, so its hint would never change.
 var cargo_hints: Dictionary = {}
 var route_bar: ProgressBar
-var hint_label: Label
+## Rich text so each key in the hint line can be drawn as a keycap.
+var hint_label: RichTextLabel
 var overlay: ColorRect
 var card: VBoxContainer
+var overlay_kicker: Label
 var overlay_title: Label
 var overlay_body: Label
 var overlay_stats: Label
+## Results only: the score as the hero of the card, and the record ribbon.
+var score_label: Label
+var record_label: Label
 var action_button: Button
 var second_button: Button
 var options_button: Button
 var menu_button: Button
 var options_panel: OptionsPanel
+## "start", "preparation", "run", "pause", "results" or "disconnected".
 var overlay_mode: String = "start"
-var damage_flash: float = 0.0
 var in_delivery: bool = false
 var interaction_label: Label
+## The raw prompt from the interactable, so it can be re-rendered with the
+## other device's button the moment the player switches.
+var _interaction_prompt: String = ""
+var _lid_action: String = ""
+var _lid_inside: String = ""
+var _carrying: bool = false
 var ping_label: Label
 var ping_seconds_left: float = 0.0
 ## Route events used to overwrite interaction_label, and merit/card notices
@@ -60,11 +87,29 @@ var fade_rect: ColorRect
 ## needed it (docs/critica-diseno-abogado-del-diablo.md section 5). It fades
 ## out once the run has been going a while and comes straight back whenever
 ## the game is paused, which is when someone is actually looking for it.
-var shortcut_label: Label
+var shortcut_label: RichTextLabel
 const SHORTCUT_VISIBLE_SECONDS: float = 25.0
+
+## A hit or the delivery zone briefly takes over the hint line; once the
+## clock runs out it goes back to teaching whatever the player is doing.
+var _hint_override: String = ""
+var _hint_override_seconds: float = 0.0
+var _role: int = Role.ON_FOOT
+## Online, pausing the tree would freeze the host's simulation for everyone
+## (or desync a client), so the menu opens over a game that keeps running.
+var _soft_pause: bool = false
+## R used to restart on the spot, mid-run, with no way back: one stray key
+## (or Y on a gamepad) threw the whole delivery away. During play it has to
+## be held now; on the pause and results screens it's still instant, since
+## that's a menu choice rather than a slip.
+const RESTART_HOLD_SECONDS: float = 0.9
+var _restart_hold: float = 0.0
+var _is_endless: bool = false
 
 
 func _ready() -> void:
+	var level: Node = get_parent()
+	_is_endless = level != null and &"distance_traveled" in level
 	_build_ui()
 	EventBus.vehicle_telemetry.connect(_on_speed)
 	EventBus.package_integrity_changed.connect(_on_integrity)
@@ -75,6 +120,8 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_started)
 	EventBus.run_ended.connect(_on_ended)
 	EventBus.interaction_prompt_changed.connect(_on_interaction_prompt)
+	EventBus.carry_changed.connect(_on_carry_changed)
+	EventBus.package_lid_hint_changed.connect(_on_lid_hint_changed)
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.package_hint_changed.connect(_on_package_hint)
 	EventBus.ping_sent.connect(_on_ping)
@@ -84,6 +131,14 @@ func _ready() -> void:
 	EventBus.card_changed.connect(_on_card_changed)
 	EventBus.route_event_started.connect(_on_route_event_started)
 	EventBus.route_event_resolved.connect(_on_route_event_resolved)
+	NetworkManager.roster_changed.connect(_on_roster_changed)
+	NetworkManager.session_failed.connect(_on_connection_lost)
+	GameSettings.input_device_changed.connect(_on_input_device_changed)
+	GameSettings.hud_scale_changed.connect(func(_scale: float) -> void: _apply_hud_scale())
+	root.resized.connect(_apply_hud_scale)
+	_apply_hud_scale()
+	_refresh_session()
+	_refresh_shortcut_text()
 	_show_start()
 
 
@@ -91,121 +146,146 @@ func _build_ui() -> void:
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiTheme.apply(root)
 	add_child(root)
+	hud_layer = Control.new()
+	hud_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(hud_layer)
 	var margin := MarginContainer.new()
-	root.add_child(margin)
+	hud_layer.add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 26)
+		margin.add_theme_constant_override("margin_" + side, 24)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard = VBoxContainer.new()
 	margin.add_child(dashboard)
 	dashboard.add_theme_constant_override("separation", 12)
 	dashboard.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# --- Top: who's playing (left), the van's numbers (right) ---
 	var top := HBoxContainer.new()
 	dashboard.add_child(top)
 	top.add_theme_constant_override("separation", 16)
-	var brand := _panel(top, Vector2(240, 0))
-	_label(brand, "DO NOT DROP", 26, PAPER)
-	_label(brand, "PRUEBA DE RUTA  /  01", 12, MINT)
+	# This corner used to be a permanent "DO NOT DROP / PRUEBA DE RUTA / 01"
+	# logo. It says who's in the session now -- and, hosting over LAN, the
+	# IP friends need, which the menu only ever showed for the single frame
+	# before loading the level.
+	var brand := _panel(top, Vector2.ZERO)
+	brand.get_parent().size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	brand.add_theme_constant_override("separation", 6)
+	UiTheme.title(brand, "TAKE MY PACKAGE", 22)
+	session_label = UiTheme.tag(brand, "", MINT, -1.5, 14)
 	var stretch := Control.new()
 	stretch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stretch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(stretch)
-	var metrics := _panel(top, Vector2(190, 0))
-	speed_label = _label(metrics, "00 km/h", 28, PAPER)
-	time_label = _label(metrics, "TIEMPO   00:00", 14, MUTED)
-	economy_label = _label(metrics, "EQUIPO  $%d" % CrewProgression.team_money, 14, MINT)
+	var metrics := _panel(top, Vector2(210, 0))
+	metrics.get_parent().size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	metrics.add_theme_constant_override("separation", 6)
+	var speed_row := HBoxContainer.new()
+	speed_row.add_theme_constant_override("separation", 6)
+	metrics.add_child(speed_row)
+	speed_label = UiTheme.title(speed_row, "00", 50)
+	speed_unit_label = UiTheme.label(speed_row, "km/h", 16, MUTED)
+	speed_unit_label.size_flags_vertical = Control.SIZE_SHRINK_END
+	var chips := HBoxContainer.new()
+	chips.add_theme_constant_override("separation", 8)
+	metrics.add_child(chips)
+	time_label = UiTheme.chip(chips, "00:00", UiTheme.SKY, 17)
+	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, 17)
+
 	var space := Control.new()
 	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(space)
+
+	# --- Bottom: the cargo (left), the objective (right) ---
 	var bottom := HBoxContainer.new()
 	dashboard.add_child(bottom)
 	bottom.add_theme_constant_override("separation", 16)
-	var cargo := _panel(bottom, Vector2(310, 0))
-	_label(cargo, "CARGA", 13, MUTED)
+	var cargo := _panel(bottom, Vector2(330, 0))
+	cargo.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
+	UiTheme.tag(cargo, "CARGA", UiTheme.CARDBOARD, -2.0, 15)
 	cargo_rows_box = VBoxContainer.new()
-	cargo_rows_box.add_theme_constant_override("separation", 6)
+	cargo_rows_box.add_theme_constant_override("separation", 10)
 	cargo.add_child(cargo_rows_box)
-	cargo_hint_label = _label(cargo, "", 14, MUTED)
+	cargo_hint_label = _label(cargo, "", 15, MUTED)
 	cargo_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	cargo_hint_label.custom_minimum_size.x = 265
+	cargo_hint_label.custom_minimum_size.x = 285
 	var delivery := _panel(bottom, Vector2.ZERO)
 	delivery.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	section_label = _label(delivery, "01  /  SALIDA", 13, MINT)
-	distance_label = _label(delivery, "220 m hasta la entrega", 24, PAPER)
-	route_bar = _bar(delivery, MINT)
-	hint_label = _label(delivery, DRIVE_HINT, 14, MUTED)
-	shortcut_label = _label(dashboard, "Espacio  freno de mano   /   F  celular   /   H  bocina   /   R  reiniciar   /   ESC  pausa   /   Click rueda  ping   /   Gamepad: stick derecho para mirar", 13, PAPER)
-	interaction_label = _label(root, "", 22, PAPER)
+	delivery.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
+	delivery.add_theme_constant_override("separation", 8)
+	section_label = UiTheme.tag(delivery, "PREPARACIÓN", MINT, -1.5, 15)
+	# Used to open on "220 m hasta la entrega", a leftover from the fixed
+	# route: the real one is random and runs closer to 2000 m.
+	distance_label = UiTheme.title(delivery, "", 30)
+	route_bar = UiTheme.bar(delivery, MINT, 16)
+	route_bar.visible = not _is_endless
+	hint_label = _rich(delivery, 16)
+
+	var shortcut_pill := PanelContainer.new()
+	var pill_style := StyleBoxFlat.new()
+	pill_style.bg_color = Color(INK, 0.82)
+	pill_style.set_corner_radius_all(99)
+	pill_style.content_margin_left = 18
+	pill_style.content_margin_right = 18
+	pill_style.content_margin_top = 5
+	pill_style.content_margin_bottom = 6
+	shortcut_pill.add_theme_stylebox_override("panel", pill_style)
+	shortcut_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	shortcut_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dashboard.add_child(shortcut_pill)
+	shortcut_label = _rich(shortcut_pill, 15)
+	shortcut_label.add_theme_color_override("default_color", PAPER)
+	shortcut_label.fit_content = true
+	shortcut_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+
+	ping_label = UiTheme.floating_label(hud_layer, "", 26, YELLOW, 560, 20)
+	toast_label = UiTheme.floating_label(hud_layer, "", 21, MINT, 560, 64)
+	event_label = UiTheme.floating_label(hud_layer, "", 23, YELLOW, 760, 104)
+	interaction_label = UiTheme.floating_label(hud_layer, "", 25, PAPER, 560, 0)
+	# Just under the crosshair, where the eye already is when reaching for
+	# something -- not with the banners along the top.
 	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	interaction_label.offset_left = -260
-	interaction_label.offset_right = 260
+	interaction_label.offset_left = -280
+	interaction_label.offset_right = 280
 	interaction_label.offset_top = 45
-	interaction_label.offset_bottom = 85
-	interaction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	interaction_label.add_theme_color_override("font_outline_color", INK)
-	interaction_label.add_theme_constant_override("outline_size", 8)
-	interaction_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	ping_label = _label(root, "", 22, YELLOW)
-	ping_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	ping_label.offset_left = -260
-	ping_label.offset_right = 260
-	ping_label.offset_top = 20
-	ping_label.offset_bottom = 60
-	ping_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ping_label.add_theme_color_override("font_outline_color", INK)
-	ping_label.add_theme_constant_override("outline_size", 8)
-	ping_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	event_label = _label(root, "", 20, YELLOW)
-	event_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	event_label.offset_left = -360
-	event_label.offset_right = 360
-	event_label.offset_top = 96
-	event_label.offset_bottom = 136
-	event_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	event_label.add_theme_color_override("font_outline_color", INK)
-	event_label.add_theme_constant_override("outline_size", 8)
-	event_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	toast_label = _label(root, "", 18, MINT)
-	toast_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	toast_label.offset_left = -260
-	toast_label.offset_right = 260
-	toast_label.offset_top = 60
-	toast_label.offset_bottom = 92
-	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast_label.add_theme_color_override("font_outline_color", INK)
-	toast_label.add_theme_constant_override("outline_size", 8)
-	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interaction_label.offset_bottom = 95
 
 	overlay = ColorRect.new()
 	root.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.color = Color(0.035, 0.09, 0.11, 0.78)
+	overlay.color = Color(UiTheme.BACKDROP, 0.72)
 	var center := CenterContainer.new()
 	overlay.add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	card = _panel(center, Vector2(610, 0))
-	card.add_theme_constant_override("separation", 18)
-	_label(card, "PROMETEUS   /   PROTOTIPO 0.1", 13, MINT)
-	overlay_title = _label(card, "DO NOT\nDROP", 64, PAPER)
-	overlay_body = _label(card, "", 20, PAPER)
+	card = _panel(center, Vector2(640, 0))
+	card.add_theme_constant_override("separation", 14)
+	overlay_kicker = UiTheme.tag(card, "", YELLOW, -2.0, 16)
+	overlay_title = UiTheme.title(card, "¡A REPARTIR!", 62)
+	var hero := HBoxContainer.new()
+	hero.add_theme_constant_override("separation", 14)
+	card.add_child(hero)
+	score_label = UiTheme.chip(hero, "", YELLOW, 40)
+	record_label = UiTheme.tag(hero, "¡NUEVO RÉCORD!", UiTheme.GRAPE, 4.0, 20)
+	record_label.add_theme_color_override("font_color", UiTheme.WHITE)
+	record_label.get_parent().size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_set_hero(false)
+	overlay_body = _label(card, "", 21, INK)
 	overlay_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	overlay_body.custom_minimum_size.x = 545
-	overlay_stats = _label(card, "", 16, MUTED)
+	overlay_body.custom_minimum_size.x = 575
+	overlay_stats = _label(card, "", 17, MUTED)
 	overlay_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	overlay_stats.custom_minimum_size.x = 575
 	# What the residents had to say, and the photos that answer them. Both
 	# stay hidden unless the run actually produced any.
-	complaints_label = _label(card, "", 16, YELLOW)
+	complaints_label = _label(card, "", 17, STATE_TEXT[1])
 	complaints_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	complaints_label.custom_minimum_size.x = 545
+	complaints_label.custom_minimum_size.x = 575
 	complaints_label.visible = false
 	photo_strip = HBoxContainer.new()
-	photo_strip.add_theme_constant_override("separation", 10)
+	photo_strip.add_theme_constant_override("separation", 14)
 	photo_strip.visible = false
 	card.add_child(photo_strip)
 	var actions := HBoxContainer.new()
@@ -214,20 +294,23 @@ func _build_ui() -> void:
 	action_button = _button(actions, "Empezar entrega", true)
 	action_button.pressed.connect(_primary_action)
 	second_button = _button(actions, "Reiniciar", false)
-	second_button.pressed.connect(func() -> void: EventBus.restart_requested.emit())
+	second_button.pressed.connect(_request_restart)
 	# Pausing was a dead end: continue or restart, with no way to reach the
 	# options or leave the level at all
 	# (docs/critica-diseno-abogado-del-diablo.md section 4).
 	options_button = _button(actions, "Opciones", false)
 	options_button.pressed.connect(_open_options)
-	options_button.visible = false
 	menu_button = _button(actions, "Menú", false)
 	menu_button.pressed.connect(_leave_to_menu)
-	menu_button.visible = false
 
 	options_panel = OptionsPanel.new()
 	options_panel.name = "OptionsPanel"
 	root.add_child(options_panel)
+	# Back to the button that opened it: otherwise a gamepad player comes
+	# back from the options with nothing focused and no way to move.
+	options_panel.closed.connect(func() -> void:
+		if overlay.visible:
+			options_button.grab_focus())
 
 	# Added last so it paints over everything else, including the pause/
 	# results overlay above -- a quick black flash to soften a hard camera
@@ -237,6 +320,41 @@ func _build_ui() -> void:
 	fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fade_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(fade_rect)
+
+
+## Scaling a full-rect Control would push its right and bottom edges off
+## screen, so the layer is laid out at screen size / scale and then scaled
+## back up (or down) to cover the screen exactly -- anchored panels stay in
+## their corners at any size.
+func _apply_hud_scale() -> void:
+	if hud_layer == null:
+		return
+	var hud_scale: float = GameSettings.hud_scale
+	hud_layer.position = Vector2.ZERO
+	hud_layer.scale = Vector2(hud_scale, hud_scale)
+	hud_layer.size = root.size / hud_scale
+
+
+## The score chip and record ribbon only belong on the results card.
+func _set_hero(visible_: bool, score: int = 0, new_best: bool = false) -> void:
+	var hero: Control = score_label.get_parent().get_parent() as Control
+	hero.visible = visible_
+	score_label.text = "%d PTS" % score
+	record_label.get_parent().get_parent().visible = new_best
+
+
+func _rich(parent: Node, font_size: int) -> RichTextLabel:
+	var node := RichTextLabel.new()
+	node.bbcode_enabled = true
+	node.fit_content = true
+	node.scroll_active = false
+	node.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	node.add_theme_font_size_override("normal_font_size", font_size)
+	node.add_theme_font_override("normal_font", UiTheme.body_font(700))
+	node.add_theme_color_override("default_color", INK)
+	parent.add_child(node)
+	return node
 
 
 func _panel(parent: Node, minimum: Vector2) -> VBoxContainer:
@@ -252,7 +370,25 @@ func _bar(parent: Node, color: Color) -> ProgressBar:
 
 
 func _button(parent: Node, value: String, primary: bool) -> Button:
-	return UiTheme.button(parent, value, primary, Vector2(190, 48))
+	return UiTheme.button(parent, value, primary, Vector2(150, 52))
+
+
+## Shorthand for the device-appropriate half of a prompt.
+func _key(keyboard: String, gamepad: String) -> String:
+	return GameSettings.prompt(keyboard, gamepad)
+
+
+## One place decides which overlay buttons exist on each screen -- the
+## endless results used to inherit whatever the start screen had left on.
+## An empty primary text hides the primary button.
+func _set_buttons(primary: String, restart: bool, options: bool, menu: bool) -> void:
+	action_button.visible = not primary.is_empty()
+	action_button.text = primary
+	second_button.visible = restart and _can_restart()
+	options_button.visible = options
+	menu_button.visible = menu
+	var first: Button = action_button if action_button.visible else menu_button
+	first.grab_focus()
 
 
 func _show_start() -> void:
@@ -260,26 +396,26 @@ func _show_start() -> void:
 	overlay_mode = "start"
 	overlay.visible = true
 	dashboard.visible = false
+	overlay_kicker.text = "%s  ·  PROTOTIPO 0.1" % ("MODO ENDLESS" if _is_endless else "PRUEBA DE RUTA")
+	overlay_title.text = "¡A REPARTIR!"
+	_set_hero(false)
 	overlay_body.text = "Cargá el paquete y subite a manejar.\nLa entrega arranca sola apenas estés al volante con la carga a bordo."
-	overlay_stats.text = "Caminá hasta el paquete y presioná E para agarrarlo.\nLlevalo hasta la furgoneta y presioná E para dejarlo en su lugar.\nAcercate al asiento del conductor y presioná E para tomar el volante.\n\nWASD caminar     Espacio saltar     Mouse mirar     E interactuar\nR reiniciar     Esc pausa\n\nSeguí la indicación que aparece al acercarte a cada objeto."
-	second_button.visible = false
-	options_button.visible = true
-	menu_button.visible = true
-	action_button.text = "Preparar entrega"
-	action_button.grab_focus()
+	overlay_stats.text = "1.  Caminá hasta un paquete y presioná %s para agarrarlo.\n2.  Llevalo a la furgoneta y presioná %s para dejarlo en su lugar.\n3.  Acercate al asiento del conductor y presioná %s para tomar el volante.\n\nCada objeto te muestra su indicación cuando te acercás." % [_key("E", "A"), _key("E", "A"), _key("E", "A")]
+	_set_buttons("Preparar entrega", false, true, true)
 
 
 func _process(delta: float) -> void:
-	time_label.text = "TIEMPO   %02d:%02d" % [int(RunManager.elapsed_seconds) / 60, int(RunManager.elapsed_seconds) % 60]
-	if damage_flash > 0.0:
-		damage_flash -= delta
-		if damage_flash <= 0.0 and not in_delivery:
-			hint_label.text = DRIVE_HINT
+	time_label.text = "%02d:%02d" % [int(RunManager.elapsed_seconds) / 60, int(RunManager.elapsed_seconds) % 60]
+	_refresh_role()
+	_refresh_hint(delta)
 	_refresh_shortcuts()
-	if overlay_mode == "pause" and not get_tree().paused:
+	_refresh_restart_hold(delta)
+	if overlay_mode == "pause" and not _soft_pause and not get_tree().paused:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
 	_refresh_cargo_hint()
+	if _is_endless and RunManager.is_running:
+		distance_label.text = "%d m recorridos" % roundi(float(get_parent().get(&"distance_traveled")))
 	if ping_seconds_left > 0.0:
 		ping_seconds_left -= delta
 		if ping_seconds_left <= 0.0:
@@ -302,29 +438,197 @@ func _refresh_shortcuts() -> void:
 		return
 	var learning: bool = get_tree().paused or not RunManager.is_running or RunManager.elapsed_seconds < SHORTCUT_VISIBLE_SECONDS
 	var target: float = 1.0 if learning else 0.25
-	shortcut_label.modulate.a = move_toward(shortcut_label.modulate.a, target, 0.02)
+	var pill: Control = shortcut_label.get_parent() as Control
+	pill.modulate.a = move_toward(pill.modulate.a, target, 0.02)
+
+
+## The things you can do from anywhere. What depends on where you are (the
+## pedals, the package, the seat) lives in the hint line above instead.
+func _refresh_shortcut_text() -> void:
+	var items: PackedStringArray = [
+		_key("F  celular", "LB  celular"),
+		_key("Click rueda  ping", "D-pad arriba  ping"),
+		_key("C  centrar vista", "Clic stick der.  centrar vista"),
+		_key("Esc  pausa", "Start  pausa"),
+	]
+	if _can_restart():
+		items.append(_key("Mantener R  reiniciar", "Mantener Y  reiniciar"))
+	shortcut_label.text = UiTheme.keycaps("   ·   ".join(items), true)
+
+
+func _refresh_role() -> void:
+	_role = _local_role()
+
+
+func _local_role() -> int:
+	var level: Node = get_parent()
+	if level == null:
+		return Role.ON_FOOT
+	var player: Variant = level.get(&"local_player")
+	if not is_instance_valid(player):
+		return Role.ON_FOOT
+	var seat: String = String((player as Node).get(&"seat_node_path"))
+	if seat.is_empty():
+		return Role.ON_FOOT
+	return Role.DRIVER if seat.contains("DriverEyePoint") else Role.PASSENGER
+
+
+func _flash_hint(text: String, seconds: float) -> void:
+	_hint_override = text
+	_hint_override_seconds = seconds
+
+
+func _refresh_hint(delta: float) -> void:
+	if _hint_override_seconds > 0.0:
+		_hint_override_seconds -= delta
+		hint_label.text = "[b]%s[/b]" % _hint_override
+		hint_label.add_theme_color_override("default_color", STATE_TEXT[1])
+		return
+	hint_label.text = UiTheme.keycaps(_base_hint())
+	hint_label.add_theme_color_override("default_color", MUTED)
+
+
+func _base_hint() -> String:
+	var waiting: bool = not RunManager.is_running and RunManager.results.is_empty()
+	match _role:
+		Role.DRIVER:
+			if waiting:
+				# Seated with nothing aboard is the one way the run silently
+				# never starts -- say so instead of teaching the pedals.
+				return "Todavía no hay carga a bordo  ·  %s bajarte a buscar un paquete" % _key("E", "A")
+			return _key(
+				"W/S  acelerar y frenar   ·   A/D  girar   ·   Espacio  freno de mano   ·   H  bocina   ·   E  bajarte",
+				"RT  acelerar   ·   LT  frenar   ·   Stick izq.  girar   ·   X  freno de mano   ·   B  bocina   ·   A  bajarte")
+		Role.PASSENGER:
+			return _key(
+				"Click izq. (mantener)  cuidar tu paquete   ·   WASD  secuencias   ·   E  bajarte",
+				"RT (mantener)  cuidar tu paquete   ·   Stick izq.  secuencias   ·   A  bajarte")
+	if waiting:
+		return _key(
+			"WASD  caminar   ·   Espacio  saltar   ·   E  agarrar / dejar   ·   Q  soltar paquete",
+			"Stick izq.  caminar   ·   X  saltar   ·   A  agarrar / dejar")
+	return _key(
+		"WASD  caminar   ·   E  interactuar   ·   F  sacar una foto de la entrega",
+		"Stick izq.  caminar   ·   A  interactuar   ·   LB  sacar una foto de la entrega")
+
+
+## Online, only the host may restart: a client reloading its own copy of
+## the level tears down the spawner the host replicates players into, and
+## comes back to an empty world.
+func _can_restart() -> bool:
+	return not NetworkManager.is_online() or NetworkManager.is_host()
+
+
+func _request_restart() -> void:
+	if _can_restart():
+		EventBus.restart_requested.emit()
+
+
+func _refresh_restart_hold(delta: float) -> void:
+	var playing: bool = overlay_mode == "run" or overlay_mode == "preparation"
+	if playing and _can_restart() and Input.is_action_pressed(&"run_restart"):
+		_restart_hold += delta
+		toast_label.text = "Reiniciando…  soltá para cancelar"
+		toast_seconds_left = 0.2
+		if _restart_hold >= RESTART_HOLD_SECONDS:
+			_restart_hold = 0.0
+			_request_restart()
+	else:
+		_restart_hold = 0.0
+
+
+func _on_input_device_changed(_gamepad: bool) -> void:
+	_refresh_shortcut_text()
+	_render_interaction_prompt()
+	if overlay_mode == "start":
+		_show_start()
+	elif overlay_mode == "pause":
+		overlay_stats.text = _pause_stats()
+
+
+func _on_roster_changed(_peer_ids: Array) -> void:
+	_refresh_session()
+
+
+func _refresh_session() -> void:
+	if session_label == null:
+		return
+	var mode: String = "ENDLESS" if _is_endless else "ENTREGA"
+	if not NetworkManager.is_online():
+		session_label.text = "%s  ·  SOLO" % mode
+		_session_color(MINT)
+		return
+	var count: int = NetworkManager.peer_ids.size()
+	var players: String = "%d jugador%s" % [count, "" if count == 1 else "es"]
+	if not NetworkManager.is_host():
+		session_label.text = "EN SALA  ·  %s" % players
+		_session_color(UiTheme.SKY)
+	elif NetworkManager.active_transport == NetworkManager.Transport.ENET:
+		var address: String = NetworkManager.lan_address()
+		session_label.text = "SALA LAN  ·  %s\nIP  %s" % [players, address if not address.is_empty() else "sin red local"]
+		_session_color(UiTheme.SKY)
+	else:
+		session_label.text = "SALA STEAM  ·  %s\nInvitá desde la lista de amigos" % players
+		_session_color(UiTheme.GRAPE)
+
+
+## The session tape changes colour with the mode: mint solo, sky on LAN or
+## as a guest, grape on Steam -- readable at a glance before the words are.
+func _session_color(color: Color) -> void:
+	var holder: PanelContainer = session_label.get_parent() as PanelContainer
+	var style: StyleBoxFlat = holder.get_theme_stylebox("panel").duplicate()
+	style.bg_color = color
+	holder.add_theme_stylebox_override("panel", style)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_pause"):
-		if overlay_mode == "start" or overlay_mode == "results":
-			return
-		EventBus.pause_requested.emit()
-		if get_tree().paused:
-			overlay_mode = "pause"
-			overlay.show()
-			overlay_title.text = "EN PAUSA"
-			overlay_body.text = "Tu entrega puede esperar."
-			overlay_stats.text = "Esc para volver a la ruta."
-			action_button.text = "Continuar"
-			second_button.show()
-			options_button.show()
-			menu_button.show()
-			action_button.grab_focus()
+		match overlay_mode:
+			"pause":
+				_resume()
+			"run", "preparation":
+				_pause()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("run_restart"):
-		EventBus.restart_requested.emit()
-		get_viewport().set_input_as_handled()
+		# Instant only where it's clearly a menu choice; during play it's the
+		# hold in _refresh_restart_hold().
+		if overlay_mode == "pause" or overlay_mode == "results":
+			_request_restart()
+			get_viewport().set_input_as_handled()
+
+
+func _pause() -> void:
+	if NetworkManager.is_online():
+		_soft_pause = true
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	else:
+		EventBus.pause_requested.emit()
+		if not get_tree().paused:
+			return
+	overlay_mode = "pause"
+	overlay.show()
+	overlay_kicker.text = "PAUSA"
+	overlay_title.text = "EN PAUSA" if not _soft_pause else "MENÚ"
+	overlay_body.text = "Tu entrega puede esperar." if not _soft_pause else "La partida sigue corriendo para el resto del equipo."
+	overlay_stats.text = _pause_stats()
+	complaints_label.visible = false
+	photo_strip.visible = false
+	_set_hero(false)
+	_set_buttons("Continuar", true, true, true)
+
+
+func _pause_stats() -> String:
+	return "%s para volver a la ruta." % _key("Esc", "Start")
+
+
+func _resume() -> void:
+	if _soft_pause:
+		_soft_pause = false
+		overlay.hide()
+		overlay_mode = "run" if RunManager.is_running else "preparation"
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	else:
+		EventBus.pause_requested.emit()
 
 
 func _open_options() -> void:
@@ -353,13 +657,38 @@ func _primary_action() -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			section_label.text = "PREPARACIÓN"
 			distance_label.text = "Cargá el paquete y tomá el volante"
-			hint_label.text = "WASD / stick izquierdo caminar · Espacio / X saltar · Mouse / stick derecho mirar · E / A interactuar · Q soltar paquete"
-		"pause": EventBus.pause_requested.emit()
-		"results": EventBus.restart_requested.emit()
+		"pause": _resume()
+		"results": _request_restart()
+		"disconnected": _leave_to_menu()
 
 
 func _on_interaction_prompt(prompt: String) -> void:
-	interaction_label.text = "[ E / A ]  " + prompt if not prompt.is_empty() else ""
+	_interaction_prompt = prompt
+	_render_interaction_prompt()
+
+
+func _on_carry_changed(carrying: bool) -> void:
+	_carrying = carrying
+	_render_interaction_prompt()
+
+
+func _render_interaction_prompt() -> void:
+	var lines: PackedStringArray = []
+	if not _interaction_prompt.is_empty():
+		lines.append("[ %s ]  %s" % [_key("E", "A"), _interaction_prompt])
+	if _carrying:
+		lines.append("[ %s ]  Soltar paquete" % _key("Q", "B"))
+	if not _lid_action.is_empty():
+		lines.append("[ %s ]  %s" % [_key("T", "D-pad abajo"), _lid_action])
+	if not _lid_inside.is_empty():
+		lines.append("Adentro:  %s" % _lid_inside)
+	interaction_label.text = "\n".join(lines)
+
+
+func _on_lid_hint_changed(action: String, inside: String) -> void:
+	_lid_action = action
+	_lid_inside = inside
+	_render_interaction_prompt()
 
 
 const PING_DISPLAY_SECONDS: float = 2.5
@@ -368,8 +697,10 @@ const EVENT_DISPLAY_SECONDS: float = 6.0
 
 
 func _on_ping(peer_id: int, _position: Vector3, label: String) -> void:
+	# No emoji: the default font has none, and a fallback isn't guaranteed on
+	# every machine -- a box glyph in front of a ping reads as a bug.
 	var who: String = "Vos" if peer_id == NetworkManager.local_id() else "Jugador %d" % peer_id
-	ping_label.text = "📍 %s: %s" % [who, label]
+	ping_label.text = "%s:  %s" % [who, label]
 	ping_seconds_left = PING_DISPLAY_SECONDS
 
 
@@ -389,22 +720,25 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	overlay_mode = "run"
 	dashboard.show()
 	action_button.release_focus()
+	_interaction_prompt = ""
 	interaction_label.text = ""
-	hint_label.text = DRIVE_HINT
+	if _is_endless:
+		section_label.text = "ENDLESS"
+		distance_label.text = "0 m recorridos"
 
 
 func _on_team_money_changed(amount: int) -> void:
-	economy_label.text = "EQUIPO  $%d" % amount
+	economy_label.text = "$%d" % amount
 
 
 func _on_merit_changed(peer_id: int, total: int) -> void:
 	if peer_id == NetworkManager.local_id():
-		_toast("★ Mérito +  ·  %d" % total)
+		_toast("Mérito sumado  ·  total %d" % total)
 
 
-func _on_card_changed(peer_id: int, card: int) -> void:
-	if peer_id == NetworkManager.local_id() and card >= 0:
-		_toast("🃏 Carta obtenida")
+func _on_card_changed(peer_id: int, card_id: int) -> void:
+	if peer_id == NetworkManager.local_id() and card_id >= 0:
+		_toast("Carta obtenida")
 
 
 func _toast(text: String) -> void:
@@ -413,29 +747,42 @@ func _toast(text: String) -> void:
 
 
 func _on_route_event_started(_event_id: StringName, event: Dictionary) -> void:
-	event_label.text = "[ EVENTO ]  %s — %s" % [event.get("title", "Evento"), event.get("prompt", "")]
+	event_label.text = "EVENTO  ·  %s — %s" % [event.get("title", "Evento"), event.get("prompt", "")]
+	event_label.add_theme_color_override("font_color", YELLOW)
 	event_seconds_left = EVENT_DISPLAY_SECONDS
 
 
 func _on_route_event_resolved(_event_id: StringName, success: bool, _peer_id: int) -> void:
 	event_label.text = "Evento resuelto" if success else "Evento fallido"
+	event_label.add_theme_color_override("font_color", MINT if success else RED)
 	event_seconds_left = PING_DISPLAY_SECONDS
 
 
 func _on_speed(speed: float) -> void:
-	speed_label.text = "%02d km/h" % roundi(absf(speed))
+	speed_label.text = "%02d" % roundi(absf(speed))
 
 
 func _on_cargo_registered(id: StringName, display_name: String) -> void:
 	if cargo_rows.has(id):
 		return
-	var row := VBoxContainer.new()
-	row.add_theme_constant_override("separation", 2)
+	# One row per box: its trap's icon, name and health, then a chunky bar.
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
 	cargo_rows_box.add_child(row)
-	var label: Label = _label(row, "%s  ·  100%%" % display_name.to_upper(), 17, MINT)
-	var bar: ProgressBar = _bar(row, MINT)
+	var icon := TextureRect.new()
+	icon.texture = UiTheme.trap_icon(display_name)
+	icon.custom_minimum_size = Vector2(42, 42)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	row.add_child(icon)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(column)
+	var label: Label = UiTheme.title(column, "%s  ·  100%%" % display_name.to_upper(), 18)
+	var bar: ProgressBar = UiTheme.bar(column, MINT, 12)
 	bar.value = 100
-	cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper()}
+	cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "icon": icon}
 
 
 func _on_integrity(id: StringName, integrity: float, maximum: float) -> void:
@@ -453,19 +800,19 @@ func _refresh_row(id: StringName) -> void:
 	if not cargo_rows.has(id):
 		return
 	var entry: Dictionary = RunManager.cargo.get(id, {})
-	var state: int = int(entry.get("state", 0))
+	var state: int = clampi(int(entry.get("state", 0)), 0, 2)
 	var integrity: float = float(entry.get("integrity", 100.0))
-	var color: Color = [MINT, YELLOW, RED][state]
 	var row: Dictionary = cargo_rows[id]
 	var label: Label = row["label"]
-	label.text = "%s  ·  %d%%  %s" % [row["name"], roundi(integrity), ["", "· EN RIESGO", "· PERDIDO"][state]]
-	label.add_theme_color_override("font_color", color)
-	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = color
+	label.text = "%s  ·  %d%%  %s" % [row["name"], roundi(integrity), ["", "· ¡EN RIESGO!", "· PERDIDO"][state]]
+	label.add_theme_color_override("font_color", STATE_TEXT[state])
+	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = STATE_FILL[state]
+	# A lost box's icon greys out, so the row reads "gone" before the words do.
+	(row["icon"] as TextureRect).modulate = Color(1, 1, 1, 0.35) if state == 2 else Color.WHITE
 
 
 func _on_damage(_id: StringName, damage: float) -> void:
-	damage_flash = 2.5
-	hint_label.text = "¡Golpe!  −%d de integridad. Bajá la velocidad antes del próximo obstáculo." % roundi(damage)
+	_flash_hint("¡Golpe!  −%d de integridad. Bajá la velocidad antes del próximo obstáculo." % roundi(damage), 2.5)
 
 
 func _on_progress(progress: float, meters: float, section: String) -> void:
@@ -476,9 +823,11 @@ func _on_progress(progress: float, meters: float, section: String) -> void:
 
 func _on_delivery(in_zone: bool, stopped: float) -> void:
 	if in_zone:
-		hint_label.text = "Mantené la camioneta detenida…" if stopped > 0.0 else "¡Llegaste! Frená dentro de la zona marcada para entregar."
+		# Re-sent every physics frame while inside, so a short clock is
+		# enough to keep it up and lets it lapse the moment the van leaves.
+		_flash_hint("Mantené la camioneta detenida…" if stopped > 0.0 else "¡Llegaste! Frená dentro de la zona marcada para entregar.", 0.25)
 	elif in_delivery:
-		hint_label.text = "Volvé a la zona de entrega y detené la camioneta."
+		_flash_hint("Volvé a la zona de entrega y detené la camioneta.", 3.0)
 	in_delivery = in_zone
 
 
@@ -504,19 +853,43 @@ func _refresh_cargo_hint() -> void:
 	cargo_hint_label.text = String(cargo_hints.get(worst_id, ""))
 
 
+## A client whose host vanished used to be left driving a frozen puppet van
+## with no word of what happened and only Alt+F4 to get out.
+func _on_connection_lost(reason: String) -> void:
+	get_tree().paused = false
+	_soft_pause = false
+	overlay_mode = "disconnected"
+	overlay.show()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	overlay_kicker.text = "MULTIJUGADOR"
+	overlay_title.text = "SIN CONEXIÓN"
+	overlay_body.text = reason
+	overlay_stats.text = "La partida del anfitrión ya no está disponible."
+	_set_hero(false)
+	complaints_label.visible = false
+	photo_strip.visible = false
+	_set_buttons("Volver al menú", false, false, false)
+
+
 func _on_ended(score: int, results: Dictionary) -> void:
+	_soft_pause = false
 	overlay_mode = "results"
 	overlay.show()
-	var best_line: String = "\n\n¡NUEVO RÉCORD!" if bool(results.get("is_new_best", false)) else "\n\nRécord: %d pts" % int(results.get("best_score", 0))
+	overlay_kicker.text = "RESULTADO"
+	var new_best: bool = bool(results.get("is_new_best", false))
+	_set_hero(true, score, new_best)
+	var best_line: String = "" if new_best else "\nRécord: %d pts" % int(results.get("best_score", 0))
+	var retry: String = "Volver a intentar" if _can_restart() else ""
+	var client_line: String = "" if _can_restart() else "\n\nSolo el anfitrión puede reiniciar. Para otra vuelta, volvé al menú y unite de nuevo a la sala."
 	if results.has("distance_traveled"):
 		# Endless (docs/tareas-nacho.md #52): no delivery zone, so there's no
 		# "success" state, only how far the run got before it ended.
 		overlay_title.text = "FIN DEL RECORRIDO"
 		overlay_body.text = String(results["reason"])
-		overlay_stats.text = "%d PUNTOS     /     %.0f m recorridos     /     %.1f s%s" % [score, float(results["distance_traveled"]), results["elapsed_seconds"], best_line]
-		action_button.text = "Volver a intentar"
-		second_button.hide()
-		action_button.grab_focus()
+		overlay_stats.text = "%.0f m recorridos   ·   %.1f s%s%s" % [float(results["distance_traveled"]), results["elapsed_seconds"], best_line, client_line]
+		complaints_label.visible = false
+		photo_strip.visible = false
+		_set_buttons(retry, false, false, true)
 		return
 	var success: bool = results["delivered"]
 	var total: int = int(results.get("cargo_total", 0))
@@ -524,19 +897,22 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var ruined: int = int(results.get("cargo_ruined", 0))
 	var delivered_doors: int = int(results.get("houses_delivered", 0))
 	var missed_doors: int = int(results.get("houses_missed", 0))
-	overlay_title.text = "¡ENTREGADO!" if success else "OTRA VUELTA"
+	# Reaching the end without a single door isn't a delivery, whatever the
+	# run's own success flag says -- the headline shouldn't cheer over it.
+	if not success:
+		overlay_title.text = "OTRA VUELTA"
+	elif delivered_doors == 0 and missed_doors > 0:
+		overlay_title.text = "RUTA TERMINADA"
+	else:
+		overlay_title.text = "¡ENTREGADO!"
 	overlay_body.text = _delivery_summary(delivered_doors, missed_doors, total, ruined, intact) if success else String(results["reason"])
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
 	var door_line: String = "\nPuertas: %d pts" % int(results.get("delivery_points", 0)) if results.has("delivery_points") else ""
-	overlay_stats.text = "%d PUNTOS     /     %.1f s\n\nCarga: %d pts   +   Rapidez: %d pts%s%s%s" % [score, results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, best_line]
+	overlay_stats.text = "En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s%s%s" % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, best_line, client_line]
 	_show_complaints(results.get("complaints", []))
 	_show_photos()
-	action_button.text = "Volver a intentar"
-	second_button.hide()
-	options_button.hide()
-	menu_button.show()
-	action_button.grab_focus()
+	_set_buttons(retry, false, false, true)
 
 
 ## The headline leads with the doors, because that's where the run is
@@ -546,9 +922,13 @@ func _delivery_summary(delivered_doors: int, missed_doors: int, aboard: int, rui
 	if delivered_doors > 0:
 		lines.append("Entregaste en %d puerta%s." % [delivered_doors, "" if delivered_doors == 1 else "s"])
 	if missed_doors > 0:
-		lines.append("%d vecino%s se quedó esperando." % [missed_doors, "" if missed_doors == 1 else "s"])
+		lines.append("1 vecino se quedó esperando." if missed_doors == 1 else "%d vecinos se quedaron esperando." % missed_doors)
 	if aboard > 0:
-		lines.append("Volvieron %d paquetes en la furgoneta, %d intactos." % [aboard - ruined, intact])
+		var back: int = aboard - ruined
+		if back == 1:
+			lines.append("Volvió 1 paquete en la furgoneta%s." % (", intacto" if intact >= 1 else ""))
+		elif back > 1:
+			lines.append("Volvieron %d paquetes en la furgoneta, %d intactos." % [back, intact])
 	return "\n".join(lines) if not lines.is_empty() else "Llegaste, y eso ya es algo."
 
 
@@ -581,13 +961,22 @@ func _show_photos() -> void:
 		return
 	var houses: Array = photos.keys()
 	houses.sort()
-	for house: int in houses:
+	for index: int in range(houses.size()):
+		var house: int = houses[index]
+		# Polaroids, each stuck on at its own slight angle.
 		var frame := PanelContainer.new()
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color(PAPER, 0.9)
-		style.set_corner_radius_all(4)
-		style.set_content_margin_all(4)
+		style.bg_color = UiTheme.WHITE
+		style.border_color = INK
+		style.set_border_width_all(2)
+		style.set_corner_radius_all(3)
+		style.set_content_margin_all(6)
+		style.content_margin_bottom = 22
+		style.shadow_color = INK
+		style.shadow_size = 1
+		style.shadow_offset = Vector2(0, 4)
 		frame.add_theme_stylebox_override("panel", style)
+		frame.rotation_degrees = [-3.0, 2.0, -1.5, 3.0][index % 4]
 		var thumbnail := TextureRect.new()
 		thumbnail.texture = photos[house]
 		thumbnail.custom_minimum_size = Vector2(160, 90)

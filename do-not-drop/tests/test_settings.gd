@@ -41,6 +41,17 @@ func _run() -> void:
 	settings.invert_look_y = true
 	_expect(is_equal_approx(settings.look_y_sign(), -1.0), "Inverted flips vertical look")
 
+	# --- HUD scale clamps to something still readable and still on screen ---
+	settings.hud_scale = 10.0
+	_expect(is_equal_approx(settings.hud_scale, settings.HUD_SCALE_MAX), "HUD scale clamps at the maximum")
+	settings.hud_scale = 0.0
+	_expect(is_equal_approx(settings.hud_scale, settings.HUD_SCALE_MIN), "HUD scale clamps at the minimum")
+	settings.hud_scale = 0.8
+	var saved := ConfigFile.new()
+	saved.load(original_path)
+	_expect(is_equal_approx(float(saved.get_value("player", "hud_scale", -1.0)), 0.8), "The saved file holds the HUD scale that was set")
+	settings.hud_scale = 1.0
+
 	# --- they survive a restart ---
 	settings.master_volume = 0.35
 	settings.look_sensitivity = 1.75

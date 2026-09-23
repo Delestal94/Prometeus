@@ -1,4 +1,4 @@
-"""Build the authored low-poly GLB library for Do Not Drop.
+"""Build the authored low-poly GLB library for Take My Package.
 
 Run with Blender in background mode from this folder's project root.  Materials
 are embedded in each GLB so Godot can import every model without an external
@@ -175,8 +175,10 @@ def parked_car(kind):
     for x in (-1.25,1.25):
         for y in (-.88,.88):
             wheel=cone("Wheel",(x,y,.38),.42,.42,.22,"rubber",10); wheel.rotation_euler[0]=math.pi/2
-    for x in (-1.85,1.85):
-        cube("Light",(x,-.01,.73),(.10,1.25,.19),"lamp" if x<0 else "danger",.03)
+    # Proud of the body by 4 cm: centred at +-1.85 their outer face sat exactly
+    # on the bumper (x = +-1.9) and z-fought into flickering stripes.
+    for x in (-1.9,1.9):
+        cube("Light",(x,0,.73),(.08,1.25,.19),"lamp" if x<0 else "danger",.02)
     if kind == "pickup": cube("CargoBed", (1.15,0,1.0), (1.25,1.55,.42), "car_red", .07)
     export(os.path.join(VEHICLES, "sm_vehicle_parked_%s.glb" % kind))
 
@@ -198,14 +200,9 @@ def roadside_prop(kind):
         for x in (-.75,.75): cube("BenchLeg",(x,0,.3),(.12,.42,.6),"metal")
     export(os.path.join(PROPS, "sm_env_prop_%s.glb" % kind))
 
-for name in ("cottage", "cabin", "bungalow"): house(name)
-for name, fn in {
-    "oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine,
-    "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling,
-    "bush_round": bush, "fern": fern, "grass_clump": grass,
-    "wildflower": flowers, "mushroom": mushroom, "fallen_log": log, "rock": rock,
-}.items():
-    fn(); export(os.path.join(FOREST, "sm_env_forest_%s.glb" % name))
+# Houses, the forest set and the roadside props moved to
+# build_lowpoly_refined.py (2026-09-23), which overwrites the same paths with
+# more detailed versions. This batch still owns the cargo boxes and the parked
+# cars; the old functions above stay only as reference.
 for name in ("fragile", "vented", "balance", "heavy"): cargo_box(name)
 for name in ("hatchback", "pickup"): parked_car(name)
-for name in ("traffic_cone", "road_barrier", "mailbox", "street_lamp", "bench"): roadside_prop(name)

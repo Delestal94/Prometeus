@@ -4,7 +4,7 @@ Proyecto de desarrollo de un videojuego indie (desarrollo en solitario, asistido
 IA), con el objetivo de aplicar patrones de éxito observados en juegos de Steam hechos
 por 1-2 personas.
 
-Nombre del juego (de trabajo): **Do Not Drop** — delivery cooperativo de hasta 5
+Nombre oficial del juego: **Take My Package** (desde 2026-09-22; antes el nombre de trabajo era "Do Not Drop", por eso el proyecto Godot sigue en `do-not-drop/`) — delivery cooperativo de hasta 5
 jugadores: 1 conduce, hasta 4 llevan un paquete con una "trampa" cada uno (ver
 `docs/definicion-proyecto.md` y `docs/requerimientos-tecnicos.md`).
 
@@ -78,6 +78,14 @@ Hasta esta versión esto era imposible — no se podía sacar un paquete ya
 cargado, así que las tres casas de la ruta eran decorado y todas terminaban
 como "no entregada" sin que nada lo puntuara.
 
+**Abrir los paquetes** (2026-09-23): **T** (D-pad abajo) abre o cierra la
+caja que tenés en las manos, la de tu asiento o la que estás mirando. Las
+solapas se abren de verdad y adentro está lo que se lleva (jarrón de
+porcelana, gallina, torta de bodas, masa madre), en el mismo estado que el
+paquete: fisuras si está en riesgo, pedazos si se arruinó. Una caja abierta
+que se vuelca o se golpea fuerte **derrama el contenido** como piezas físicas
+y el paquete se pierde; y entregarla abierta baja la entrega a "con reparos".
+
 **El celular y la foto de entrega**: con **F** sacás el celular y la pantalla
 pasa a modo cámara; **click** (o RB) saca la foto de la entrega que acabás de
 hacer. Da puntos por sí sola, pero lo importante viene al final: los clientes
@@ -115,6 +123,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_network_roster.gd
 <godot> --headless --path do-not-drop --script res://tests/test_hint_relay.gd
 <godot> --headless --path do-not-drop --script res://tests/test_main_menu.gd
+<godot> --headless --path do-not-drop --script res://tests/test_hud_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_streaming.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
@@ -141,12 +150,17 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_difficulty.gd
 <godot> --headless --path do-not-drop --script res://tests/test_delivery_houses.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
+<godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
+<godot> --headless --path do-not-drop --script res://tests/test_legacy_user_data.gd
+<godot> --headless --path do-not-drop --script res://tests/test_route_dressing_assets.gd
+<godot> --headless --path do-not-drop --script res://tests/test_route_placement_rules.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -158,6 +172,12 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
   estaba roto o sin puntuar antes de existir este test.
+- `test_package_unboxing` — abrir y cerrar una caja (solapas y contenido),
+  que el contenido siga el estado del paquete, que una caja abierta volcada
+  derrame el contenido como cuerpos físicos (y una cerrada no), y que el
+  vecino note una caja entregada abierta.
+- `test_package_identity` — cada trampa viaja en su propia caja impresa, con
+  su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una
   sola foto por entrega, y la foto es lo que hace caer el reclamo del
   cliente al final (sin ella, el reclamo descuenta).
@@ -260,6 +280,26 @@ Cada uno imprime `PASS` y devuelve exit code 0 si está todo bien.
   solo lado en vez de alternar, y el ripio efectivamente baja
   `wheel_friction_slip` al entrar y lo restaura al salir (verificado con
   frames de física reales, no solo que el `Area3D` exista).
+- `test_route_placement_rules` — las reglas de generación del decorado
+  (`route_dresser.gd`, 2026-09-23): nada invade la ruta (una cerca de jardín
+  llegó a quedar sobre el asfalto), ningún objeto sólido se pisa con otro,
+  todo apoya en el suelo por cada uno de sus pies (puntas de raíz, ruedas,
+  ambos extremos de un tronco) y no solo por el centro, cada cosa aparece
+  solo en su zona (faroles y paradas en el pueblo, fardos
+  en el campo), la ruta pasa por más de un tipo de lugar, y la misma semilla
+  arma exactamente el mismo mundo en todos los jugadores.
+- `test_route_dressing_assets` — que el arte nuevo de la ruta (2026-09-23) caiga donde
+  significa algo: cada tramo peligroso con su señal mirando al conductor, la flecha
+  de curva doblando para el mismo lado que la ruta, el cartel "entrega adelante" del
+  lado de la casa, guardarraíl del lado de afuera de cada curva, jardines apoyados en
+  el terreno, el granero junto a la casa de campo, el molino girando y el cielo
+  (montañas + nubes pintadas por shader) presente en la ruta y en el endless.
+  Semilla fija.
+- `test_legacy_user_data` — al renombrar el juego a "Take My Package" (2026-09-22)
+  Godot empezó a guardar en otra carpeta de `user://`, y las opciones y el
+  leaderboard parecían borrados. Verifica que se copien una sola vez desde la
+  carpeta vieja ("Do Not Drop"), sin pisar datos nuevos ni volver a aparecer
+  después de un reset.
 - `test_vehicle_stress` — bug bash automatizado: 60s de aceleración a fondo
   con dirección oscilante a través de los 7 tipos de tramo, revisando que
   posición/velocidad nunca exploten a NaN/Inf y que la red de seguridad de
@@ -379,7 +419,7 @@ manejo):
 
 ## Documentación
 
-### Vigente (proyecto actual: Do Not Drop)
+### Vigente (proyecto actual: Take My Package)
 - `docs/investigacion-mercado.md` — investigación de 20 juegos de Steam hechos por 1-2
   personas: equipo, ventas, motor, tiempo de desarrollo. (Contexto general, sigue
   vigente como referencia de fondo.)
@@ -387,7 +427,8 @@ manejo):
   (Igual de vigente, son patrones generales.)
 - `docs/mecanicas-candidatas.md` — banco de mecánicas transversales reutilizables
   (recurso de referencia general para futuras decisiones).
-- `docs/definicion-proyecto.md` — **definición del concepto actual** (Do Not Drop).
+- `docs/definicion-proyecto.md` — **definición del concepto actual** (Take My Package).
+- `docs/inventario-assets.md` — **la lista de assets**: qué existe, qué falta integrar y qué falta crear.
 - `docs/requerimientos-tecnicos.md` — stack técnico, motor, networking, arte, diseño
   de adicción/rejugabilidad.
 - `docs/arquitectura.md` — arquitectura de software del proyecto (componentes,
@@ -416,6 +457,6 @@ manejo):
 
 ### Archivado (`docs/historial-exploracion/`)
 Documentos de una etapa de exploración anterior, **superados** por el pivote a
-"Do Not Drop". Se conservan como registro del proceso, no como referencia vigente:
+"Do Not Drop" (hoy Take My Package). Se conservan como registro del proceso, no como referencia vigente:
 - `mvp-candidatos.md`, `ideas-candidatas.md`,
   `opcion-descartada-aseguradora-paranormal.md`.

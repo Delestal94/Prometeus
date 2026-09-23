@@ -1,4 +1,4 @@
-# Assets de Do Not Drop
+# Assets de Take My Package
 
 Assets propios del juego. El proyecto usa Godot 4.x y renderer GL Compatibility;
 por eso los modelos base son escenas nativas `.tscn` compuestas por mallas
@@ -32,6 +32,81 @@ veintisiete piezas GLB con Blender 5.2. Además de casas y bosque, incluye
 (dos vehículos estacionados) y `models/environment/props/` (conos, barrera,
 mailbox, farol y banco). No hace falta ejecutarlo para abrir el
 proyecto: Godot importa directamente los `.glb` ya exportados.
+
+## Segundo lote (2026-09-23)
+
+`tools/build_lowpoly_glb_assets_batch2.py` (helpers compartidos en `tools/lowpoly_kit.py`)
+genera 31 piezas más, sin volver a exportar el primer lote:
+
+- `models/environment/signs/`: una señal por tipo de tramo (curva, lomo de burro, puente
+  angosto, ripio, obras) y el cartel "entrega adelante". Se leen de frente mirando a −Z.
+- `models/environment/props/`: guardarraíl (4 m), baranda de puente (6 m), fardo, cajón,
+  pallet, hidrante, parada de colectivo y mojón.
+- `models/environment/yard/`: cerca de estacas, maceta, enano de jardín, cucha y felpudo.
+- `models/architecture/`: casa de dos pisos, casa de campo con galería y granero.
+- `models/environment/landmarks/`: tanque de agua y molino (`WindmillRotor` gira sobre su Z local en Godot).
+- `models/environment/sky/`: tres nubes y el anillo de montañas del horizonte (radio 450 m).
+- `models/props/handheld/sm_prop_phone.glb` y `models/characters/sm_char_viewmodel_glove_*.glb`
+  (origen en la muñeca; la manga usa el material `PlayerTint` para teñirla por jugador).
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_lowpoly_glb_assets_batch2.py
+```
+
+Todos quedan por debajo de 600 triángulos. Qué está integrado y qué no está en
+`docs/inventario-assets.md`.
+
+## Modelos refinados (2026-09-23)
+
+`tools/build_lowpoly_refined.py` pasó a ser la fuente de casas y granero, todo el bosque,
+señales, mobiliario de ruta y jardín: techos a dos aguas cerrados con alero, ventanas con
+marco y postigos, porches con baranda, cabaña de troncos, copas de árbol irregulares, pinos
+con pisos caídos, símbolos de señal como contornos extruidos y guardarraíl de doble onda.
+Sobrescribe las mismas rutas y nombres de material, así que el juego no cambió.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_lowpoly_refined.py -- houses trees plants signs props yard
+```
+
+## Paquetes abribles (2026-09-23)
+
+Dos pasos, los dos reproducibles:
+
+```
+D:/Programas/comfy-venv/Scripts/python.exe art/tools/make_cargo_textures.py
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_cargo_packages.py -- boxes contents
+```
+
+1. `make_cargo_textures.py` (PIL) pinta un atlas 2048 por caja con la impresión de marca
+   (logo, símbolos de manejo ISO, código de barras, sello del fondo, cinta amarilla) y escribe
+   `tools/cargo_layout.json` con medidas y rectángulos UV. Es la única fuente de las medidas.
+2. `build_cargo_packages.py` arma `models/cargo/sm_cargo_box_*.glb` (84 triángulos: cuerpo con
+   interior, cuatro solapas con el origen en la bisagra, media cinta en cada solapa exterior) y
+   `models/cargo/contents/sm_cargo_content_*.glb` (1000-2000 triángulos, nodos `Filler`,
+   `Intact`, `Damage`, `Ruined`).
+
+Para sumar un contenido nuevo: una función en `build_cargo_packages.py`, un
+`data/contents/<id>.tres` (`PackageContent`) y agregarlo a `contents` de la trampa.
+
+## Texturas de detalle (`textures/detail/`)
+
+Mapas en gris que solo modulan el brillo (el color sale de la paleta): asfalto, tierra, pasto
+y grava para el terreno; tablas, tejas, revoque, corteza, follaje y piedra para los modelos,
+aplicados por `scripts/presentation/lowpoly_materials.gd` según el nombre del material.
+Se regeneran con `art/tools/make_detail_textures.py`. Las de `textures/terrain/` quedaron
+en desuso.
+
+## Tipografías (`fonts/`)
+
+Lilita One (títulos) y Nunito variable (texto), ambas de Google Fonts con licencia SIL Open
+Font License 1.1 (`*-OFL.txt` al lado): se pueden usar y distribuir en un juego comercial.
+Las carga `scripts/ui/ui_theme.gd`.
+
+## Interfaz (`ui/`)
+
+Imágenes generadas con ComfyUI + Z-Image Turbo (Apache 2.0), registradas en
+`art/ai-registro.md`: fondo del menú, splash de arranque, ícono de la app (`.png` y `.ico`)
+e íconos de las cuatro trampas.
 
 ## Personajes
 

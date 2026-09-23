@@ -1,4 +1,4 @@
-# Dirección visual — Do Not Drop
+# Dirección visual — Take My Package
 
 > Última actualización: 2026-09-21
 > Complementa `docs/requerimientos-tecnicos.md` sección 2 (pipeline de arte, low-poly
@@ -126,15 +126,30 @@ en vez de mantenerlas duplicadas por archivo.
 | Luz ambiente | `#c2dbe6`, energía 0.65 |
 | Sol (`DirectionalLight3D`) | `#ffedcc` aprox. (1, 0.93, 0.8), energía 1.2, rotación -48°/-28°, sombras activas hasta 100 m |
 
-### UI (compartida entre `main_menu.gd` y `prototype_hud.gd`)
+### UI — estilo "etiqueta de envío" (2026-09-23, `scripts/ui/ui_theme.gd`)
+
+Tarjetas crema como etiqueta de paquete, borde de tinta de 3 px y sombra dura desplazada
+(tipo sticker); cintas de color levemente torcidas para títulos y estados; botones gruesos que
+se hunden al apretarlos; anillo de foco celeste para gamepad. Divertido porque el juego trata de
+una furgoneta perdiendo la carga; profesional porque es un solo sistema: una paleta, un grosor de
+borde, un radio (16 px), una escala tipográfica. Todas las pantallas lo toman de `UiTheme`.
+
 | Nombre | Hex | Uso |
 |---|---|---|
-| INK | `#132a31` | Fondo de paneles, texto sobre superficies claras |
-| PAPER | `#edf2e8` | Texto principal sobre fondo oscuro |
-| MUTED | `#acc1bd` | Texto secundario |
-| MINT | `#83e2ba` | Acento primario, botones activos, récords |
-| YELLOW | `#f4c562` | Alertas suaves (pings) |
-| RED | `#f47e6d` | Alertas fuertes, errores, "en riesgo" |
+| INK | `#1e2235` | Bordes, texto sobre tarjetas, sombras, teclas dibujadas |
+| PAPER | `#fff6e6` | Relleno de tarjetas; texto claro sobre el mundo 3D (con contorno de tinta) |
+| MUTED | `#857a6e` | Texto secundario sobre crema |
+| MINT | `#2dd4a3` | Acción principal, "OK", modo solo |
+| YELLOW | `#ffc93c` | Cinta, dinero, puntaje, pings |
+| RED | `#ff5e5b` | Peligro, paquete perdido, errores |
+| ORANGE | `#ff9f1c` | Paquete en riesgo |
+| SKY | `#4cc9f0` | Información, tiempo, foco de gamepad, sala LAN |
+| GRAPE | `#9b5de5` | Especial: récord, sala Steam |
+| CARDBOARD | `#e0a867` | El color de la caja (cinta "CARGA") |
+
+Tipografías (OFL, uso comercial libre, en `assets/fonts/`): **Lilita One** para títulos, números,
+botones y cintas; **Nunito** (variable, peso 700 por defecto) para el texto. El logo se arma con
+tipografía (`UiTheme.logo()`): "TAKE MY" sobre "PACKAGE" en cinta amarilla, todo algo torcido.
 
 ### Estado de los paquetes (`package_feedback.gd`)
 | Estado | Color | Hex |
@@ -238,7 +253,7 @@ específico de "campo de visión, qué ve y qué no".
 - **[x] Interior**: tablero oscuro casi negro (`#0e1820` aprox.), volante visible,
   parabrisas de vidrio tintado (sección 5).
 - **[x] Decisión de estilo (2026-09-21): utilitaria con personalidad propia, no
-  genérica.** Una furgoneta de reparto anónima funciona, pero "Do Not Drop" es un
+  genérica.** Una furgoneta de reparto anónima funciona, pero "Take My Package" es un
   juego de caos cómico compartido — una camioneta con algo de carácter propio
   (algún detalle de calcomanía/librea simple, nombre de fantasía tipo empresa de
   delivery chapucera) da más para el humor y las capturas/clips que un vehículo

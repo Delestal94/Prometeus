@@ -10,9 +10,9 @@ const CONFETTI_COLORS: Array[Color] = [Color("f47e6d"), Color("f4c562"), Color("
 const CONFETTI_COUNT: int = 28
 const CONFETTI_LIFETIME: float = 1.1
 
-## Nodes wobbled for the Ruidoso trap -- every sibling that's actually part
-## of the crate's look, so the whole box seems agitated, not just one plate.
-const WOBBLE_NODE_NAMES: Array[StringName] = [&"Box", &"StrapX", &"StrapZ", &"Status", &"TopMark"]
+## Nodes wobbled for the Ruidoso trap and on impacts: Box holds the whole
+## cardboard model and what's inside it, so everything shudders together.
+const WOBBLE_NODE_NAMES: Array[StringName] = [&"Box"]
 const GROWING_WEIGHT_MAX_SCALE: float = 1.35
 const GROWING_WEIGHT_SINK: float = 0.09
 const WOBBLE_AMPLITUDE: float = 0.028
@@ -30,18 +30,24 @@ const BOUNCE_DURATION: float = 0.4
 const BOUNCE_AMPLITUDE: float = -0.16
 const BOUNCE_DECAY: float = 9.0
 const BOUNCE_FREQUENCY: float = 16.0
-const CARD_BOARD: Color = Color("7a5a36")
-const INK: Color = Color("24150b")
-const DANGER: Color = Color("bd4237")
+const INK: Color = Color("1e2235")
 const LABEL_DROP_DAMAGE: float = 18.0
+const LABEL_TEXTURE: Texture2D = preload("res://assets/textures/cargo/tx_cargo_shipping_label_512.png")
+const LABEL_ASPECT: float = 320.0 / 512.0
+## Fallback when a package has no PackageContent: the fragile box.
+const DEFAULT_BOX_MODEL: String = "res://assets/models/cargo/sm_cargo_box_cube.glb"
+## Printed cardboard is tinted, not repainted, by trap state: the print stays
+## readable while the box still reads as "worried" or "wrecked" at a glance.
+const STATE_TINT: Array[Color] = [Color(1, 1, 1), Color(1.0, 0.88, 0.76), Color(0.8, 0.64, 0.6)]
 
-@export var box_mesh_path: NodePath = ^"../Box"
-@export var status_label_path: NodePath = ^"../Status"
+@export var box_node_path: NodePath = ^"../Box"
 
+## One per package, shared by every surface of its box model: highlight
+## (emission) and the state tint change it per instance.
 var _material: StandardMaterial3D
 var _package_id: StringName
-var _label: Label3D
-var _box: MeshInstance3D
+var _box: Node3D
+var _state: int = 0
 ## Distress reported per-frame via package_integrity_changed (already
 ## relayed to every client for the HUD) -- 0 fresh, 1 about to fail. Reused
 ## here as a generic "how bad is it" scalar instead of adding new signals:
@@ -72,11 +78,9 @@ func _ready() -> void:
 	# Distinct phase per package so several Ruidoso boxes riding together
 	# don't all shudder in perfect unison.
 	_wobble_seed = randf() * TAU
-	_box = get_node(box_mesh_path) as MeshInstance3D
+	_box = get_node(box_node_path) as Node3D
 	_material = StandardMaterial3D.new()
-	_material.roughness = 0.95
-	_box.material_override = _material
-	_label = get_node(status_label_path) as Label3D
+	_material.roughness = 0.9
 	call_deferred(&"_apply_identity", parent)
 	# Populated for every trap type, not just Ruidoso -- item #23's impact
 	# shake rides the same nodes regardless of what the package's trap is.
@@ -103,51 +107,73 @@ func _ready() -> void:
 
 
 func _apply_identity(package: Node) -> void:
-	var box_mesh := BoxMesh.new()
+	var content: Resource = package.call(&"content_definition") if package.has_method(&"content_definition") else null
 	var shape_size := Vector3(0.65, 0.65, 0.65)
-	var shipping_data: String = "4 kg · M\nFRÁGIL"
-	match _trap_id:
-		&"noisy":
-			shipping_data = "6 kg · M\nVENTILADO"
-			_add_vent_marks()
-		&"balance":
-			shape_size = Vector3(0.42, 0.98, 0.42)
-			shipping_data = "3 kg · ALTO\nVERTICAL"
-			_add_balance_seal()
-		&"growing_weight":
-			shape_size = Vector3(0.95, 0.42, 0.95)
-			shipping_data = "? kg · XL\nDENSO"
-			_add_weight_bands()
-		_:
-			_add_fragile_marks()
-	box_mesh.size = shape_size
-	_box.mesh = box_mesh
-	_box.material_override = _material
+	var box_scene: PackedScene = null
+	var shipping_data: String = "Contenido sin declarar"
+	if content != null:
+		shape_size = content.get(&"box_size")
+		box_scene = content.get(&"box_model")
+		shipping_data = "%s\n%s · %s" % [content.get(&"display_name"), content.get(&"declared_weight"), content.get(&"handling")]
+	if box_scene == null:
+		box_scene = load(DEFAULT_BOX_MODEL)
+	var model: Node3D = box_scene.instantiate()
+	model.name = "Model"
+	# Box GLBs sit on their base; the package's origin is its centre.
+	model.position.y = -shape_size.y * 0.5
+	_box.add_child(model)
+	_adopt_box_material(model)
 	var collider: CollisionShape3D = package.get_node_or_null(^"CollisionShape3D") as CollisionShape3D
 	if collider != null:
 		var shape := BoxShape3D.new()
 		shape.size = shape_size
 		collider.shape = shape
-	_label.visible = false
-	var top: Label3D = package.get_node_or_null(^"TopMark") as Label3D
-	if top != null:
-		top.visible = false
-	_add_shipping_label(package, shipping_data)
-	_add_dent_pieces()
+	_add_shipping_label(package, shipping_data, shape_size)
+	_add_dent_pieces(shape_size * 0.5)
 
 
-func _add_dent_pieces() -> void:
-	var dents := _identity_root(&"DamageDents")
-	for position: Vector3 in [Vector3(-0.24, 0.20, 0.337), Vector3(0.24, -0.18, 0.337), Vector3(0.33, 0.12, -0.20)]:
-		var dent := _box_piece(Vector3(0.16, 0.12, 0.018), Color("79522e"))
-		dent.position = position
-		dent.rotation.z = 0.45
+## Every surface of the box shares one imported material (the printed
+## atlas); this swaps in a per-package copy so glowing or tinting one box
+## never touches the others.
+func _adopt_box_material(model: Node) -> void:
+	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		for surface: int in mesh_instance.mesh.get_surface_count():
+			var source := mesh_instance.mesh.surface_get_material(surface) as StandardMaterial3D
+			if source != null and _material.albedo_texture == null:
+				var copy := source.duplicate() as StandardMaterial3D
+				copy.emission_enabled = _material.emission_enabled
+				copy.emission = _material.emission
+				copy.emission_energy_multiplier = _material.emission_energy_multiplier
+				_material = copy
+			mesh_instance.set_surface_override_material(surface, _material)
+	_set_state(_state)
+
+
+func _add_dent_pieces(half: Vector3) -> void:
+	var dents := Node3D.new()
+	dents.name = "DamageDents"
+	_box.add_child(dents)
+	var spots: Array = [
+		[Vector3(-half.x * 0.55, half.y * 0.45, half.z + 0.004), 0.0],
+		[Vector3(half.x * 0.5, -half.y * 0.4, half.z + 0.004), 0.0],
+		[Vector3(half.x + 0.004, half.y * 0.3, -half.z * 0.4), PI * 0.5],
+	]
+	for spot: Array in spots:
+		var dent := _box_piece(Vector3(0.14, 0.1, 0.012), Color("6e4a2a"))
+		dent.position = spot[0]
+		dent.rotation = Vector3(0.0, spot[1], 0.45)
 		dent.scale = Vector3.ZERO
 		dents.add_child(dent)
 		_dent_pieces.append(dent)
 
 
-func _add_shipping_label(package: Node, shipping_data: String) -> void:
+## The courier's label, stuck on the back of the box: printed paper plus the
+## declared contents written on it. Same detachable rigid body as before --
+## a hard enough hit tears it off.
+func _add_shipping_label(package: Node, shipping_data: String, box_size: Vector3) -> void:
+	var width: float = minf(0.4, box_size.x * 0.78)
+	var height: float = width * LABEL_ASPECT
 	_shipping_label = RigidBody3D.new()
 	_shipping_label.name = "ShippingLabel"
 	_shipping_label.freeze = true
@@ -156,69 +182,43 @@ func _add_shipping_label(package: Node, shipping_data: String) -> void:
 	# a hard impact tears it free.
 	_shipping_label.collision_layer = 0
 	_shipping_label.collision_mask = 0
-	_shipping_label.position = Vector3(0.0, 0.0, 0.342)
+	_shipping_label.position = Vector3(0.0, -box_size.y * 0.5 + minf(box_size.y * 0.42, height * 0.5 + 0.06), -box_size.z * 0.5 - 0.003)
+	_shipping_label.rotation.y = PI
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(0.46, 0.30, 0.02)
+	shape.size = Vector3(width, height, 0.01)
 	collision.shape = shape
 	_shipping_label.add_child(collision)
-	var paper := _box_piece(Vector3(0.46, 0.25, 0.012), Color("efe2bd"))
-	paper.position = Vector3(0.0, 0.0, 0.006)
+	var paper := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(width, height)
+	paper.mesh = quad
+	paper.material_override = _label_material()
 	_shipping_label.add_child(paper)
 	var text := Label3D.new()
 	text.text = shipping_data
-	text.font_size = 17
-	text.pixel_size = 0.0015
-	text.outline_size = 1
+	text.font_size = 32
+	text.pixel_size = width / 512.0 * 0.62
+	text.outline_size = 0
 	text.modulate = INK
-	text.position = Vector3(0.0, 0.0, 0.014)
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	text.width = 480.0
+	# Under "CONTENIDO DECLARADO", on the left of the printed label.
+	text.position = Vector3(-width * 0.04, -height * 0.11, 0.002)
 	_shipping_label.add_child(text)
 	package.add_child(_shipping_label)
 
 
-func _add_fragile_marks() -> void:
-	var marks := _identity_root(&"FragileGlassMarks")
-	for angle: float in [-0.7, 0.7]:
-		var crack := _box_piece(Vector3(0.04, 0.04, 0.46), DANGER)
-		crack.position = Vector3(0.0, 0.0, 0.335)
-		crack.rotation.z = angle
-		marks.add_child(crack)
+static var _label_material_cache: StandardMaterial3D
 
 
-func _add_vent_marks() -> void:
-	var vents := _identity_root(&"NoisyVentMarks")
-	for x: float in [-0.18, -0.06, 0.06, 0.18]:
-		var hole := MeshInstance3D.new()
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = 0.035
-		mesh.bottom_radius = 0.035
-		mesh.height = 0.015
-		hole.mesh = mesh
-		hole.material_override = _flat_material(INK)
-		hole.position = Vector3(x, 0.0, 0.334)
-		hole.rotation.x = PI * 0.5
-		vents.add_child(hole)
-
-
-func _add_balance_seal() -> void:
-	var seal := _box_piece(Vector3(0.13, 0.13, 0.025), DANGER)
-	seal.position = Vector3(0.0, 0.0, 0.336)
-	_identity_root(&"BalanceSeal").add_child(seal)
-
-
-func _add_weight_bands() -> void:
-	var bands := _identity_root(&"WeightBands")
-	for z: float in [-0.28, 0.28]:
-		var band := _box_piece(Vector3(0.98, 0.08, 0.06), INK)
-		band.position = Vector3(0.0, 0.0, z)
-		bands.add_child(band)
-
-
-func _identity_root(identity_name: StringName) -> Node3D:
-	var root := Node3D.new()
-	root.name = identity_name
-	get_parent().add_child(root)
-	return root
+func _label_material() -> StandardMaterial3D:
+	if _label_material_cache == null:
+		_label_material_cache = StandardMaterial3D.new()
+		_label_material_cache.albedo_texture = LABEL_TEXTURE
+		_label_material_cache.roughness = 0.8
+		_label_material_cache.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _label_material_cache
 
 
 func _box_piece(size: Vector3, color: Color) -> MeshInstance3D:
@@ -230,11 +230,21 @@ func _box_piece(size: Vector3, color: Color) -> MeshInstance3D:
 	return piece
 
 
+## Shared across every package instance, keyed by color: these decorative
+## pieces (the dents) are never
+## mutated after creation, unlike _box's own _material (highlight/state
+## color do change that one per-instance) -- so unlike that one, these are
+## safe to reuse instead of allocating a fresh StandardMaterial3D per box.
+static var _flat_material_cache: Dictionary = {}
+
+
 func _flat_material(color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.9
-	return material
+	if not _flat_material_cache.has(color):
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.roughness = 0.9
+		_flat_material_cache[color] = material
+	return _flat_material_cache[color]
 
 
 func _make_player(stream: AudioStreamWAV, volume_db: float) -> AudioStreamPlayer3D:
@@ -462,13 +472,5 @@ func highlight(enabled: bool) -> void:
 
 
 func _set_state(new_state: int) -> void:
-	match new_state:
-		0:
-			_material.albedo_color = Color("e8be77")
-			_label.text = "FRÁGIL\n↑ ↑"
-		1:
-			_material.albedo_color = Color("ff883d")
-			_label.text = "¡CUIDADO!\n↑ ↑"
-		2:
-			_material.albedo_color = Color("9a4547")
-			_label.text = "ROTO\n× ×"
+	_state = new_state
+	_material.albedo_color = STATE_TINT[clampi(new_state, 0, STATE_TINT.size() - 1)]

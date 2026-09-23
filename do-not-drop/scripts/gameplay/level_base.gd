@@ -22,19 +22,18 @@ const SPAWN_POINTS: Array[Vector3] = [
 	Vector3(1.0, 1.0, 5.0),
 ]
 var local_player: Node = null
-var packages: Array[Node] = []
+var packages: Array[DeliveryPackage] = []
 var stopped_seconds: float = 0.0
 var tipped_seconds: float = 0.0
 var _driver_seated: bool = false
-var _loaded_count: int = 0
 
 
 func _ready() -> void:
 	RunManager.reset_run()
 	vehicle.freeze = true
 	packages.assign(get_tree().get_nodes_in_group(&"cargo"))
-	for package: Node in packages:
-		package.set(&"freeze", true)
+	for package: DeliveryPackage in packages:
+		package.freeze = true
 	_driver_seat.interacted.connect(_on_driver_seated)
 	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
 		mount.connect(&"interacted", _on_package_loaded)
@@ -100,7 +99,7 @@ func start_debug_delivery() -> void:
 	var player: Node = local_player
 	if player == null:
 		return
-	if _loaded_count == 0 and not packages.is_empty():
+	if not _has_loaded_cargo() and not packages.is_empty():
 		# The debug route needs a deterministic, protected cargo position.
 		# Shelf slots remain available in normal play, where loose cargo may
 		# genuinely fall after rough driving.
@@ -125,27 +124,35 @@ func _on_driver_seated(_player: Node) -> void:
 
 
 func _on_package_loaded(_player: Node) -> void:
-	_loaded_count += 1
 	_maybe_start()
 
 
 func _maybe_start() -> void:
-	if _driver_seated and _loaded_count > 0:
+	if _driver_seated and _has_loaded_cargo():
 		start_delivery()
+
+
+## Read from the boxes themselves rather than counting mount events: a box
+## can be loaded and taken back out again before anyone takes the wheel.
+func _has_loaded_cargo() -> bool:
+	for package: DeliveryPackage in packages:
+		if is_instance_valid(package) and package.is_loaded:
+			return true
+	return false
 
 
 func start_delivery() -> void:
 	if RunManager.is_running or not RunManager.results.is_empty():
 		return
-	if not _driver_seated or _loaded_count == 0:
+	if not _driver_seated or not _has_loaded_cargo():
 		return
 	vehicle.freeze = false
-	for package: Node in packages:
-		if is_instance_valid(package) and bool(package.get(&"is_loaded")):
-			package.set(&"freeze", false)
+	for package: DeliveryPackage in packages:
+		if is_instance_valid(package) and package.is_loaded:
+			package.freeze = false
 			# Only what's aboard counts: a box left on the rack was never
 			# part of this delivery, so it shouldn't drag the score down.
-			package.call(&"report_to_run")
+			package.report_to_run()
 	RunManager.start_run()
 
 
@@ -194,23 +201,23 @@ func _physics_process(delta: float) -> void:
 func _check_lost_cargo() -> void:
 	# A box that falls out is written off on its own. Only losing every last
 	# one ends the delivery, and RunManager decides that.
-	for package: Node in packages:
+	for package: DeliveryPackage in packages:
 		# A box handed over at a door is freed on the spot -- this list
 		# outlives it, so skip what's already gone instead of reading a
 		# freed node's properties.
 		if not is_instance_valid(package):
 			continue
-		if not bool(package.get(&"is_loaded")):
+		if not package.is_loaded:
 			continue
-		var distance: float = (package.get(&"global_position") as Vector3).distance_to(vehicle.global_position)
+		var distance: float = package.global_position.distance_to(vehicle.global_position)
 		if distance > LOST_CARGO_DISTANCE:
-			package.call(&"mark_lost", "Se cayó de la furgoneta.")
+			package.mark_lost("Se cayó de la furgoneta.")
 
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Defer rigid-body changes: failure can originate in physics integration.
 	vehicle.set_deferred("freeze", true)
-	for package: Node in packages:
+	for package: DeliveryPackage in packages:
 		if is_instance_valid(package):
 			package.set_deferred("freeze", true)

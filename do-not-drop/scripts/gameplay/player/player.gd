@@ -49,15 +49,17 @@ const PLAYER_COLORS: Array[Color] = [
 @onready var _hold_point: Marker3D = $Head/Camera3D/HoldPoint
 @onready var _probe: Area3D = $Head/InteractionProbe
 
-var carried_package: Node = null
+var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
 ## Their input reaches its trap through here.
-var tended_package: Node = null
+var tended_package: DeliveryPackage = null
 var _seated: bool = false
 var _seat_camera_path: NodePath = NodePath()
 var _pitch: float = 0.0
 var _nearby: Array[Node] = []
 var _last_prompt: String = ""
+var _last_carrying: bool = false
+var _last_lid_hint: String = ""
 var _highlighted: Node = null
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 ## Rigged low-poly character (2026-09-22), replaces the old placeholder
@@ -107,6 +109,17 @@ func _enter_tree() -> void:
 		var peer: int = int(String(name).trim_prefix("Player_"))
 		if peer > 0:
 			set_multiplayer_authority(peer)
+
+
+## A player who disconnects mid-carry must not leave their box frozen in the
+## air with collisions off. package.carrier is only ever set on the host, so
+## this only acts there.
+func _exit_tree() -> void:
+	if not is_instance_valid(carried_package) or carried_package.carrier != self:
+		return
+	if not carried_package.is_inside_tree() or carried_package.is_queued_for_deletion():
+		return
+	carried_package.drop_loose(Transform3D(global_basis, global_position + Vector3.UP * 0.5))
 
 
 func _ready() -> void:
@@ -203,6 +216,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _is_drop_event(event):
 		_drop_carried()
 		return
+	if _is_open_event(event):
+		_toggle_package_lid()
+		return
 	if _seated:
 		if _is_interact_event(event):
 			leave_seat()
@@ -239,11 +255,16 @@ func _process(_delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if not is_local():
 		return
+	if carried_package != null and not is_instance_valid(carried_package):
+		carried_package = null
+	_publish_carry(carried_package != null)
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		_publish_prompt("")
+		_publish_lid_hint(null)
 		return
 	if _seated:
 		_publish_prompt("")
+		_publish_lid_hint(_lid_target())
 		if carried_package != null:
 			_update_carried_package()
 		if tended_package != null:
@@ -281,6 +302,7 @@ func _physics_process(delta: float) -> void:
 	var target: Node = _closest_interactable()
 	_publish_prompt(str(target.call(&"get_prompt")) if target != null else "")
 	_update_highlight(target)
+	_publish_lid_hint(_lid_target(target))
 
 
 func _update_ground_safety() -> void:
@@ -301,7 +323,58 @@ func _is_interact_event(event: InputEvent) -> bool:
 
 
 func _is_drop_event(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"package_drop"):
+		return true
+	# Same logical-keycode fallback as _is_interact_event().
 	return event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_Q or event.physical_keycode == KEY_Q)
+
+
+func _is_open_event(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"package_open"):
+		return true
+	# Same logical-keycode fallback as _is_interact_event().
+	return event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_T or event.physical_keycode == KEY_T)
+
+
+## The box a lid action applies to: the one in hand first, then the one at
+## this player's seat, then whichever package they're looking at.
+func _lid_target(aimed: Node = null) -> DeliveryPackage:
+	if is_instance_valid(carried_package):
+		return carried_package
+	if _seated:
+		return tended_package if is_instance_valid(tended_package) else null
+	if aimed == null:
+		aimed = _closest_interactable()
+	if aimed != null and aimed.get_parent() is DeliveryPackage:
+		return aimed.get_parent() as DeliveryPackage
+	return null
+
+
+## Opening goes through the host like everything else that changes a
+## package (rpc_id(1, ...) resolves to a local call on the host itself).
+func _toggle_package_lid() -> void:
+	var package: DeliveryPackage = _lid_target()
+	if package == null or package.contents_spilled:
+		return
+	package.rpc_id(1, &"request_set_open", not package.is_open)
+
+
+func _publish_lid_hint(package: DeliveryPackage) -> void:
+	var action: String = ""
+	var inside: String = ""
+	if package != null:
+		if not package.contents_spilled:
+			action = "Cerrar caja" if package.is_open else "Abrir caja"
+		var view: Node = package.get_node_or_null(^"PackageContentsView")
+		if view != null:
+			inside = str(view.call(&"describe"))
+	var key: String = action + "|" + inside
+	if key == _last_lid_hint:
+		return
+	_last_lid_hint = key
+	var bus: Node = get_node_or_null("/root/EventBus")
+	if bus != null:
+		bus.emit_signal(&"package_lid_hint_changed", action, inside)
 
 
 func _poll_interact() -> void:
@@ -380,6 +453,15 @@ func _gather_package_input() -> Dictionary:
 	return {"steady": holding, "calm": holding, "direction_pressed": direction}
 
 
+func _publish_carry(carrying: bool) -> void:
+	if carrying == _last_carrying:
+		return
+	_last_carrying = carrying
+	var bus: Node = get_node_or_null("/root/EventBus")
+	if bus != null:
+		bus.emit_signal(&"carry_changed", carrying)
+
+
 func _publish_prompt(value: String) -> void:
 	if value == _last_prompt:
 		return
@@ -410,8 +492,43 @@ func _update_carried_package() -> void:
 	# through the host either way (rpc_id(1, ...) with call_local resolves to
 	# a direct call when this peer already is the host), since the package is
 	# host-authoritative and only it should ever move the real one.
-	var carry_transform := Transform3D(global_basis, _hold_point.global_position)
+	var carry_transform := Transform3D(global_basis, _carry_position())
 	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform)
+
+
+## Collisions are off while carried, so without this the box pokes straight
+## through the van's walls, doors and shelves whenever the player faces them.
+## Pulls it back toward the camera until its front face sits against whatever
+## is in the way, never closer than CARRY_MIN_DISTANCE -- face-planted into a
+## wall there's no room for the box at all, and a sliver of clipping reads
+## better than a crate filling the whole screen.
+const CARRY_MIN_DISTANCE: float = 0.3
+const WORLD_BLOCKING_MASK: int = 1 | 2 | 4  # environment, vehicle, packages
+
+
+func _carry_position() -> Vector3:
+	var from: Vector3 = _camera.global_position
+	var target: Vector3 = _hold_point.global_position
+	var offset: Vector3 = target - from
+	var reach: float = offset.length()
+	if reach < 0.001:
+		return target
+	var direction: Vector3 = offset / reach
+	# The box keeps the body's yaw, so its half depth lies along the flat
+	# forward axis; along a ray angled down toward the hold point it's longer.
+	var flat_forward: Vector3 = -global_basis.z
+	var along_ray: float = maxf(absf(direction.dot(flat_forward)), 0.3)
+	var half_depth: float = carried_package.get_half_extents().z / along_ray
+	var hit: Dictionary = _raycast(from, target + direction * half_depth, WORLD_BLOCKING_MASK)
+	if hit.is_empty():
+		return target
+	var allowed: float = from.distance_to(hit["position"]) - half_depth - 0.02
+	return from + direction * clampf(allowed, CARRY_MIN_DISTANCE, reach)
+
+
+func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
+	var query := PhysicsRayQueryParameters3D.create(from, to, mask, [get_rid()])
+	return get_world_3d().direct_space_state.intersect_ray(query)
 
 
 ## MVP has a single, always-available ping ("¡Cuidado!") instead of a wheel
@@ -438,26 +555,69 @@ func _try_interact() -> void:
 		target.call(&"interact", self)
 
 
+## The box is set down just clear of the player's own capsule, then settled
+## onto whatever is actually under that spot: terrain, the van's cargo floor
+## or a shelf, or another box (so boxes can be stacked by hand).
+const BODY_RADIUS: float = 0.35
+const DROP_GAP: float = 0.1
+const DROP_CHEST_HEIGHT: float = 1.0
+## How far below the chest the ground probe may look. Past this (dropping
+## over an edge) the box is released at chest height and simply falls.
+const DROP_GROUND_PROBE: float = 2.5
+const DROP_SETTLE_MARGIN: float = 0.02
+
+
 func _drop_carried() -> void:
 	if carried_package == null:
 		return
-	var drop_position: Vector3 = global_position + (-global_basis.z * 0.8) + Vector3.UP * 0.35
-	var drop_transform := Transform3D(global_basis, drop_position)
+	var drop_transform := Transform3D(global_basis, _drop_position(carried_package.get_half_extents()))
 	carried_package.rpc_id(1, &"request_drop", drop_transform)
+	# The host confirms by clearing this on every peer; clearing it here too
+	# just keeps the local hands responsive while that RPC is in flight.
 	carried_package = null
+
+
+func _drop_position(half_extents: Vector3) -> Vector3:
+	var forward: Vector3 = -global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized() if forward.length_squared() > 0.0001 else Vector3.FORWARD
+	var chest: Vector3 = global_position + Vector3.UP * DROP_CHEST_HEIGHT
+	var distance: float = BODY_RADIUS + DROP_GAP + half_extents.z
+	# A wall, the van's side or a door in front: set it down short of that
+	# instead of spawning the box half inside it.
+	var wall: Dictionary = _raycast(chest, chest + forward * (distance + half_extents.z), WORLD_BLOCKING_MASK)
+	if not wall.is_empty():
+		distance = maxf(chest.distance_to(wall["position"]) - half_extents.z - DROP_SETTLE_MARGIN, 0.0)
+	var spot: Vector3 = chest + forward * distance
+	var ground: Dictionary = _raycast(spot, spot - Vector3.UP * DROP_GROUND_PROBE, WORLD_BLOCKING_MASK)
+	if ground.is_empty():
+		return spot
+	return Vector3(spot.x, (ground["position"] as Vector3).y + half_extents.y + DROP_SETTLE_MARGIN, spot.z)
+
+
+## What gets the interact prompt: whatever the player is looking at most
+## directly, not just whatever is nearest their feet -- the van's six cargo
+## slots sit close enough together that nearest-first made it impossible to
+## choose which one a box went into.
+const AIM_DISTANCE_WEIGHT: float = 0.3
 
 
 func _closest_interactable() -> Node:
 	var best: Node = null
-	var best_distance: float = INF
+	var best_score: float = -INF
+	var eye: Vector3 = _camera.global_position
+	var look: Vector3 = -_camera.global_basis.z
 	for area: Node in _nearby:
 		if not is_instance_valid(area):
 			continue
 		if not bool(area.call(&"can_interact", self)):
 			continue
-		var distance: float = global_position.distance_to((area as Node3D).global_position)
-		if distance < best_distance:
-			best_distance = distance
+		var to_target: Vector3 = (area as Node3D).global_position - eye
+		var distance: float = to_target.length()
+		var alignment: float = look.dot(to_target / distance) if distance > 0.001 else 1.0
+		var score: float = alignment - distance * AIM_DISTANCE_WEIGHT
+		if score > best_score:
+			best_score = score
 			best = area
 	return best
 
@@ -472,9 +632,9 @@ func _on_probe_exited(area: Area3D) -> void:
 
 
 ## The host announces the outcome of an interaction by calling these on the
-## specific peer they concern (rpc_id(target_peer, ...)), never broadcast --
-## nobody else needs to know that *I* am now holding this box, only that the
-## box itself moved (which its own MultiplayerSynchronizer already covers).
+## peers they concern. pick_up/drop_carried are broadcast: the host's own copy
+## of a remote player has to know what that player holds, or every mount and
+## pickup check it runs for them reads empty hands. The rest are targeted.
 ## _from_host() guards every one, since any_peer is required for the host to
 ## reach a peer that isn't itself the authority of this node.
 
@@ -483,7 +643,7 @@ func pick_up(package_path: NodePath) -> void:
 	if not _from_host():
 		return
 	var was_empty: bool = carried_package == null
-	carried_package = get_node_or_null(package_path)
+	carried_package = get_node_or_null(package_path) as DeliveryPackage
 	# Only the owning peer drives anim_state (see _update_movement_anim) --
 	# this RPC reaches every peer that can see the pickup, but the write
 	# below only matters, and only actually replicates, from is_local()'s copy.
@@ -502,7 +662,7 @@ func drop_carried() -> void:
 func tend_package(package_path: NodePath) -> void:
 	if not _from_host():
 		return
-	tended_package = get_node_or_null(package_path)
+	tended_package = get_node_or_null(package_path) as DeliveryPackage
 
 
 @rpc("any_peer", "call_local", "reliable")

@@ -38,19 +38,5 @@ func can_interact(player: Node) -> bool:
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
-	if bool(_package.get("is_loaded")):
-		_release_mount()
-		_package.set(&"is_loaded", false)
-	_package.call(&"set_held", true)
-	if player.has_method(&"pick_up"):
-		player.rpc_id(int(player.get_multiplayer_authority()), &"pick_up", _package.get_path())
+	_package.call(&"take_by", player)
 	interacted.emit(player)
-
-
-## Taking a box back out frees the shelf slot it was sitting in. Without
-## this the mount stays marked occupied forever and nothing can ever be
-## placed there again -- including this same box on the way back.
-func _release_mount() -> void:
-	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
-		if mount.get(&"occupied_by") == _package:
-			mount.set(&"occupied_by", null)

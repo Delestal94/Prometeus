@@ -237,3 +237,50 @@ static func camera_shutter() -> AudioStreamWAV:
 	stream.mix_rate = RATE
 	stream.data = data
 	return stream
+
+
+## Packing tape torn off a box: a run of short, rough noise bursts that
+## speeds up as the tape lets go -- the first time a box is opened.
+static func tape_rip() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.42
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var smooth: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		# Burst rate climbs from ~25 Hz to ~70 Hz: tape peeling faster.
+		var phase: float = t * (25.0 + t * 110.0)
+		var burst: float = pow(maxf(0.0, sin(phase * TAU)), 6.0)
+		var envelope: float = minf(t * 40.0, 1.0) * (1.0 - t / DURATION)
+		smooth = lerpf(smooth, randf_range(-1.0, 1.0), 0.45)
+		var sample: float = smooth * (0.25 + burst) * envelope
+		data.encode_s16(i * 2, roundi(clampf(sample, -1.0, 1.0) * 20000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream
+
+
+## A cardboard flap folding over: a soft, papery thump.
+static func cardboard_flap() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.2
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var smooth: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var envelope: float = exp(-t * 26.0)
+		smooth = lerpf(smooth, randf_range(-1.0, 1.0), 0.3)
+		var thump: float = sin(TAU * 110.0 * t) * exp(-t * 40.0) * 0.6
+		var sample: float = (smooth * 0.55 + thump) * envelope
+		data.encode_s16(i * 2, roundi(clampf(sample, -1.0, 1.0) * 18000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream

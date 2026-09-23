@@ -364,6 +364,7 @@ func _trim_leaderboard() -> void:
 
 
 func _load_leaderboard() -> void:
+	LegacyUserData.migrate()
 	leaderboard = []
 	if not FileAccess.file_exists(save_path):
 		return

@@ -1,0 +1,9 @@
+Common suffix (STYLE): Stylized low-poly 3D render with flat-shaded faces and simple geometric shapes, in the style of the game PEAK. Single object centered, filling most of the frame, three-quarter view, soft warm key light, clean readable silhouette, on a perfectly plain flat dark teal background (#0d1f24), no floor, no shadow on background. Game icon. No text, no letters, no logo, no watermark.
+
+app_icon (seeds 5 8 13 21, kept 8): A chunky cardboard delivery package wrapped with bright mint green tape, tilted mid-air as if just tossed, with a little white shipping label and small motion streaks, cheerful and slightly chaotic.
+trap_fragile (seeds 3 9, kept 9): A warm amber cardboard box with a delicate glass wine goblet balanced on top, a thin crack running down the glass, tiny glass sparkles.
+trap_balance (seeds 3 9, kept 9): A very tall and narrow amber cardboard box tipping precariously on one corner, about to fall over, with a curved arrow showing the tilt.
+trap_growing_weight (seeds 3 9, kept 9): A short, wide, very heavy amber cardboard box pressing down into the ground, with a dark iron kettlebell sitting on top of it, the box bulging under the weight.
+trap_noisy (seeds 3 9, kept 9): An amber cardboard box with round ventilation holes, shaking and rattling, two glowing curious eyes peeking out from one of the holes, little shake lines around it.
+
+All 1024x1024, 8 steps, CFG 1.
