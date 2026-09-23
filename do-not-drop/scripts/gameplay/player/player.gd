@@ -94,6 +94,8 @@ var _bob_amount: float = 0.0
 var _interact_was_down: bool = false
 var _last_safe_ground: Vector3 = Vector3.ZERO
 var _package_hit_cooldown: float = 0.0
+var _seat_pose_blend: float = 0.0
+var _flinch_time: float = 0.0
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -262,7 +264,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Runs on every peer's copy of this player, seated or driving, local or
 ## not -- posing BodyVisual at the seat is pure presentation, so it doesn't
 ## need authority the way movement/input do.
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_flinch_time = maxf(_flinch_time - delta, 0.0)
 	# Runs for every peer's copy of this player, local or not -- anim_state
 	# is only ever written by the owning peer (see _update_movement_anim()
 	# and pick_up() below) and reaches everyone else through the
@@ -270,28 +273,35 @@ func _process(_delta: float) -> void:
 	if _anim_player != null and _anim_player.current_animation != String(anim_state):
 		_anim_player.play(String(anim_state))
 	if not get_tree().physics_interpolation:
-		_pose_seated_body()
+		_pose_seated_body(delta)
 
 
 ## With physics interpolation on, the van is drawn between its physics ticks.
 ## A body snapped to the seat every rendered frame would sit at the raw tick
 ## pose instead and shake against the smoothly drawn cab, so it's posed on
 ## the ticks (from _physics_process) and interpolated right along with it.
-func _pose_seated_body() -> void:
+func _pose_seated_body(delta: float) -> void:
 	if seat_node_path.is_empty():
+		if _body_visual != null:
+			_body_visual.position.y = sin(_bob_time * TAU) * 0.025 * _bob_amount
+			var flinch: float = sin(_flinch_time / 0.32 * PI) * 0.26
+			_body_visual.rotation.x = move_toward(_body_visual.rotation.x, flinch, delta * 12.0)
 		return
 	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
 	if seat == null:
 		return
 	# Seat anchors are eye height (where the camera goes); a seated torso
 	# centers noticeably lower than that.
-	_body_visual.global_transform = seat.global_transform.translated_local(Vector3(0.0, -0.55, 0.0))
+	_seat_pose_blend = minf(_seat_pose_blend + delta * 7.0, 1.0)
+	var target_pose := seat.global_transform.translated_local(Vector3(0.0, -0.55, 0.0))
+	_body_visual.global_transform = _body_visual.global_transform.interpolate_with(target_pose, _seat_pose_blend)
+	_body_visual.rotation.x = 0.18 + sin(Time.get_ticks_msec() * 0.008) * 0.025
 
 
 func _physics_process(delta: float) -> void:
 	_package_hit_cooldown = maxf(0.0, _package_hit_cooldown - delta)
 	if get_tree().physics_interpolation:
-		_pose_seated_body()
+		_pose_seated_body(delta)
 	if not is_local():
 		return
 	if carried_package != null and not is_instance_valid(carried_package):
@@ -763,6 +773,7 @@ func receive_package_hit(push: Vector3) -> void:
 	if _package_hit_cooldown > 0.0 or _seated:
 		return
 	_package_hit_cooldown = 0.45
+	_flinch_time = 0.32
 	velocity += push + Vector3.UP * 1.4
 	if is_local():
 		_play_one_shot(ANIM_JUMP, 420)
@@ -809,6 +820,7 @@ func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	if not _from_host():
 		return
 	_seated = true
+	_seat_pose_blend = 0.0
 	collision_layer = 0
 	collision_mask = 0
 	velocity = Vector3.ZERO
