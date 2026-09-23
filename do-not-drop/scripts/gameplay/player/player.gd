@@ -614,6 +614,11 @@ func _send_ping() -> void:
 
 
 func _try_interact() -> void:
+	if carried_package != null:
+		var teammate := _transfer_target()
+		if teammate != null:
+			carried_package.rpc_id(1, &"request_transfer", teammate.get_path())
+			return
 	var target: Node = _closest_interactable()
 	if target == null:
 		return
@@ -622,6 +627,26 @@ func _try_interact() -> void:
 		target.rpc_id(1, &"request_interact")
 	else:
 		target.call(&"interact", self)
+
+
+func _transfer_target() -> Player:
+	var eye: Vector3 = _camera.global_position
+	var forward: Vector3 = -_camera.global_basis.z
+	var best: Player = null
+	var best_score: float = 0.7
+	for node: Node in get_tree().get_nodes_in_group(&"player"):
+		var teammate := node as Player
+		if teammate == null or teammate == self or teammate.carried_package != null:
+			continue
+		var to_teammate: Vector3 = teammate.global_position - eye
+		var distance: float = to_teammate.length()
+		if distance > 2.4 or distance < 0.05:
+			continue
+		var score: float = forward.dot(to_teammate / distance)
+		if score > best_score:
+			best_score = score
+			best = teammate
+	return best
 
 
 ## The box is set down just clear of the player's own capsule, then settled

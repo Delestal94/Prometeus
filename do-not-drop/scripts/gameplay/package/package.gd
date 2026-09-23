@@ -19,6 +19,7 @@ extends RigidBody3D
 @export_range(0.0, 30.0, 0.5) var spill_impact: float = 9.0
 ## How close a player has to be to open or close it.
 const OPEN_REACH: float = 3.0
+const TRANSFER_REACH: float = 2.4
 const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
 const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
 const PACKAGE_COLLISION_COOLDOWN: float = 0.16
@@ -312,6 +313,23 @@ func take_by(player: Node) -> void:
 	set_held(true)
 	carrier = player
 	player.rpc(&"pick_up", get_path())
+
+
+## Hand-to-hand transfer. The host checks both the caller's ownership and
+## physical distance, so a client cannot pass cargo across the map.
+@rpc("any_peer", "call_local", "reliable")
+func request_transfer(recipient_path: NodePath) -> void:
+	if not is_multiplayer_authority() or not is_held or carrier == null:
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != 0 and int(carrier.get_multiplayer_authority()) != sender_id:
+		return
+	var recipient := get_node_or_null(recipient_path) as Player
+	if recipient == null or recipient == carrier or recipient.carried_package != null:
+		return
+	if (recipient as Node3D).global_position.distance_to((carrier as Node3D).global_position) > TRANSFER_REACH:
+		return
+	take_by(recipient)
 
 
 ## A carrier can always put a box back on the floor. Unlike a mount this

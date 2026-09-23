@@ -32,6 +32,14 @@ func _initialize() -> void:
 	player.call(&"pick_up", package.get_path())
 	_expect(bool(package.get(&"is_held")) == false, "pick_up alone doesn't touch the package -- the caller (package_pickup_point.gd) sets is_held directly")
 	_expect(player.get(&"carried_package") == package, "Player tracks the carried package")
+	var teammate: Node = player_scene.instantiate()
+	teammate.position = player.position + Vector3(0.0, 0.0, -1.0)
+	root.add_child(teammate)
+	await process_frame
+	package.call(&"take_by", player)
+	package.call(&"request_transfer", teammate.get_path())
+	_expect(package.get(&"carrier") == teammate, "A nearby teammate becomes the package carrier after a hand transfer")
+	_expect(teammate.get(&"carried_package") == package, "The receiver holds the transferred package")
 
 	var mount: Node = vehicle.get_node(^"CargoBay/LeftSeat1PackageMount")
 	package.call(&"place_at", mount)
@@ -61,6 +69,7 @@ func _initialize() -> void:
 	_expect(not bool(vehicle.get(&"controls_enabled")) and int(vehicle.get(&"driver_peer_id")) == 0, "Leaving the driver seat revokes vehicle controls")
 
 	player.free()
+	teammate.free()
 	package.free()
 	vehicle.free()
 	if _failures == 0:
