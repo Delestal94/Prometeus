@@ -14,6 +14,7 @@ const SHOTS := [
 	["highlighted_box", Vector3(0.1, 1.3, 2.9), Vector3(-0.52, 0.8, 2.305)],
 	["side_window_outside", Vector3(-3.0, 1.9, -1.2), Vector3(-1.0, 1.55, -1.5)],
 	["cab_from_passenger", Vector3(0.45, 1.5, -0.9), Vector3(-0.6, 1.1, -2.0)],
+	["cab_through_door", Vector3(-1.9, 1.3, -0.7), Vector3(0.2, 0.9, -1.6)],
 	["cab_doors_open", Vector3(-5.2, 2.2, -4.6), Vector3(0.0, 1.0, -1.2)],
 ]
 

@@ -70,7 +70,11 @@ rotation_degrees = Vector3(-52, -32, 0)
 light_color = Color(0.92, 0.91, 0.85, 1)
 light_energy = 0.65
 shadow_enabled = true
-directional_shadow_max_distance = 140.0
+shadow_bias = 0.06
+shadow_normal_bias = 2.4
+shadow_blur = 1.6
+directional_shadow_blend_splits = true
+directional_shadow_max_distance = 90.0
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment")

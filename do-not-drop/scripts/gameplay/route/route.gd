@@ -651,12 +651,50 @@ func _box_at(node_name: String, size: Vector3, transform_: Transform3D, color: C
 	return root
 
 
+const SIGN_FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
+const SIGN_BOARD_SIZE := Vector2(4.6, 1.4)
+const NEWLINE: String = "\n"
+
+
+## A route board: the first caption line is the big title, the rest a
+## smaller message wrapped to the board's width, both in the game's cartoon
+## display font. The post stands behind the board (text faces +Z), so it
+## never shows through the face.
 func _sign(node_name: String, caption: String, location: Vector3, accent: Color) -> void:
 	var ground_y: float = _ground_height_at(location.x)
-	_box(node_name + "Post", Vector3(0.16, 2.4, 0.16), location + Vector3(0.0, ground_y + 1.2, 0.0), CONCRETE, true)
-	_box(node_name + "Board", Vector3(4.6, 1.4, 0.12), location + Vector3(0.0, ground_y + 2.65, 0.0), Color("263b3e"))
-	_box(node_name + "Stripe", Vector3(4.6, 0.10, 0.13), location + Vector3(0.0, ground_y + 3.3, 0.0), accent)
-	_label(node_name + "Text", caption, location + Vector3(0.0, ground_y + 2.65, 0.08), 0.0065, MARKING)
+	var board_center_y: float = ground_y + 2.65
+	var board_top: float = board_center_y + SIGN_BOARD_SIZE.y * 0.5
+	_box(node_name + "Post", Vector3(0.16, board_top - 0.1 - ground_y, 0.16), location + Vector3(0.0, ground_y + (board_top - 0.1 - ground_y) * 0.5, -0.15), CONCRETE, true)
+	_box(node_name + "Board", Vector3(SIGN_BOARD_SIZE.x, SIGN_BOARD_SIZE.y, 0.12), location + Vector3(0.0, board_center_y, 0.0), Color("263b3e"))
+	_box(node_name + "Stripe", Vector3(SIGN_BOARD_SIZE.x, 0.10, 0.13), location + Vector3(0.0, board_top - 0.05, 0.0), accent)
+	var lines: PackedStringArray = caption.split(NEWLINE, false, 1)
+	var title: String = lines[0]
+	var message: String = lines[1].replace(" -- ", " · ") if lines.size() > 1 else ""
+	var face_z: float = 0.075
+	if message.is_empty():
+		_sign_text(node_name + "Title", title, location + Vector3(0.0, board_center_y - 0.03, face_z), 84, MARKING)
+	else:
+		_sign_text(node_name + "Title", title, location + Vector3(0.0, board_center_y + 0.26, face_z), 76, MARKING)
+		_sign_text(node_name + "Text", message, location + Vector3(0.0, board_center_y - 0.26, face_z), 44, accent.lerp(MARKING, 0.35))
+
+
+func _sign_text(node_name: String, text: String, location: Vector3, font_size: int, color: Color) -> void:
+	var label := Label3D.new()
+	label.name = node_name
+	label.text = text
+	label.font = SIGN_FONT
+	label.font_size = font_size
+	label.pixel_size = 0.0055
+	label.modulate = color
+	label.outline_size = 10
+	label.outline_modulate = Color("16252a")
+	# Wraps inside the board with a margin instead of running off its edges.
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.width = (SIGN_BOARD_SIZE.x - 0.4) / label.pixel_size
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.position = location
+	add_child(label)
 
 
 func _label(node_name: String, caption: String, location: Vector3, pixel_size: float, color: Color, face_camera: bool = false) -> void:

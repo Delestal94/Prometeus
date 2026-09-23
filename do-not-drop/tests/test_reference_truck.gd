@@ -61,6 +61,7 @@ func _run() -> void:
 	await _test_sit_with_the_cargo()
 	await _test_getting_up_lands_somewhere_clear()
 	await _test_only_what_is_in_reach()
+	await _test_parked_truck_stays_put()
 	if _failures == 0:
 		print("PASS: truck art, glass, doors, ramp, wheels, steering, rack fit, aisle and seats all line up")
 	quit(_failures)
@@ -226,6 +227,17 @@ func _test_doors(van: VehicleBody3D, adapter: Node) -> void:
 		await create_timer(0.8).timeout
 		_expect(absf(hinge.rotation.y) > 1.0 if was_open else absf(hinge.rotation.y) < 0.01, "%s door returns" % door)
 	_expect(control_prompt(van, "RearDoorControl") == "Cerrar puertas traseras", "Door prompt reflects its state")
+	# Open leaves are solid where they are drawn: the right rear leaf swung
+	# out behind the truck stops a ray (and so a player or a carried box).
+	var space := van.get_world_3d().direct_space_state
+	var right_leaf := model.find_child("RearDoor_Right", true, false) as MeshInstance3D
+	var leaf_center: Vector3 = (right_leaf.global_transform * right_leaf.get_aabb()).get_center()
+	var probe := PhysicsRayQueryParameters3D.create(leaf_center + Vector3(0.0, 0.0, 3.0), leaf_center - Vector3(0.0, 0.0, 3.0), 2)
+	var through := space.intersect_ray(probe)
+	var probe_x := PhysicsRayQueryParameters3D.create(leaf_center + van.global_basis.x * 3.0, leaf_center - van.global_basis.x * 3.0, 2)
+	var across := space.intersect_ray(probe_x)
+	_expect((not through.is_empty() and through.collider != van) or (not across.is_empty() and across.collider != van),
+		"An open rear door leaf has collision where it is drawn")
 
 
 ## A door ignores a player who isn't looking at it, so it can't swallow the
@@ -417,6 +429,39 @@ func _test_only_what_is_in_reach() -> void:
 	await physics_frame
 	camera.look_at(seat.global_position)
 	_expect(bool(player.call(&"_within_reach", seat)), "Through the open door the driver's seat is in reach")
+	level.free()
+
+
+## A delivery in progress, nobody at the wheel: the truck holds still like a
+## parked heavy vehicle, and drives off again once somebody takes the wheel.
+func _test_parked_truck_stays_put() -> void:
+	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	root.add_child(level)
+	for tick in range(10):
+		await physics_frame
+	var van: VehicleBody3D = level.vehicle
+	var player: Node = level.local_player
+	var package: Node = root.get_tree().get_nodes_in_group(&"cargo")[0]
+	player.call(&"pick_up", package.get_path())
+	van.get_node(^"CargoBay/LeftShelfPackageMount/InteractionArea").call(&"interact", player)
+	van.set_door_open(&"cab_left", true)
+	var seat: Node = van.get_node(^"CabinInterior/DriverEyePoint/InteractionArea")
+	seat.call(&"interact", player)
+	for tick in range(90):
+		await physics_frame
+	player.call(&"leave_seat")
+	for tick in range(30):
+		await physics_frame
+	var parked_at: Vector3 = van.global_position
+	for tick in range(180):
+		await physics_frame
+	_expect(van.freeze and van.global_position.distance_to(parked_at) < 0.005, "Driverless mid-delivery, the truck stays exactly where it was left")
+	seat.call(&"interact", player)
+	van.controls_enabled = false  # Scripted throttle instead of the keyboard.
+	van.set_controls(0.7, 0.0, false)
+	for tick in range(90):
+		await physics_frame
+	_expect(not van.freeze and van.speed_kmh > 5.0, "Back at the wheel, it drives off again")
 	level.free()
 
 

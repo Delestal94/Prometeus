@@ -69,6 +69,10 @@ var _impact_cooldown: float = 0.0
 var _telemetry_time: float = 0.0
 var _settling_time: float = 1.0
 var _grounded_once: bool = false
+## Nobody at the wheel and stopped: the truck is held still (see
+## _update_parking) instead of creeping downhill on its brakes.
+var _parked: bool = false
+const PARK_SPEED_KMH: float = 3.0
 ## Suspension attach points as authored; see _pose_frozen_wheels().
 var _wheel_mounts: Dictionary = {}
 
@@ -184,6 +188,30 @@ func _on_package_placed(package_id: StringName) -> void:
 		(package as Node3D).global_position = marker.global_transform * Vector3(0.0, offset, 0.0)
 
 
+## A heavy truck left with nobody at the wheel doesn't roll: VehicleBody3D's
+## brake never quite holds, so it crept off a few centimetres a second (more
+## on a slope), out from under the crew and away from the door they'd just
+## climbed out of. Once it's slow and driverless it is frozen in place, and
+## let go the moment somebody takes the wheel. Only during a delivery --
+## before and after one, the level freezes and releases the truck itself.
+func _update_parking() -> void:
+	if not RunManager.is_running:
+		_parked = false
+		return
+	var commanded: bool = driver_peer_id != 0 or absf(_throttle) > 0.01
+	if _parked:
+		if commanded:
+			_parked = false
+			freeze = false
+			sleeping = false
+		return
+	if not commanded and not freeze and speed_kmh < PARK_SPEED_KMH:
+		_parked = true
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+		freeze = true
+
+
 ## Host only, first physics tick: sit the truck on whatever ground is under
 ## its spawn point, so it never hovers while frozen for loading or drops with
 ## a thud when the delivery starts.
@@ -243,7 +271,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if not _grounded_once:
 		_snap_to_ground()
-	if freeze:
+	_update_parking()
+	if freeze and not _parked:
 		_pose_frozen_wheels()
 	if rear_ramp_deployed and (not rear_cargo_open or speed_kmh > RAMP_STOW_SPEED):
 		rear_ramp_deployed = false

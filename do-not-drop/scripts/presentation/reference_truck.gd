@@ -139,6 +139,10 @@ func _make_glass_transparent() -> void:
 	glass.cull_mode = BaseMaterial3D.CULL_DISABLED
 	# Shadow maps drew stair-stepped pillar shadows across every pane.
 	glass.disable_receive_shadows = true
+	# Writes depth like a solid: overlapping panes (the sliding communication
+	# window, glass seen through glass) otherwise swap draw order as the
+	# camera moves and flicker.
+	glass.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_ALWAYS
 	for mesh: MeshInstance3D in _meshes():
 		if _uses_material(mesh, GLASS_MATERIAL):
 			mesh.material_override = glass
@@ -258,6 +262,7 @@ func _collect_doors() -> void:
 			var hinge := model.find_child(entry[0], true, false) as Node3D
 			if hinge != null:
 				leaves.append([hinge, float(entry[1])])
+				_add_leaf_collision(hinge)
 		_hinges[door] = leaves
 		var open := bool(vehicle.call(&"is_door_open", door))
 		_door_state[door] = open
@@ -273,6 +278,35 @@ func _collect_doors() -> void:
 		# itself, so the van's own direct children stay just its gameplay parts.
 		add_child(audio)
 		_door_audio[door] = audio
+
+
+## A solid slab the size of the door leaf, hanging from its hinge so it
+## swings with the animation: an open door stops players and the box in
+## their hands instead of being walked (or carried) straight through. On
+## the vehicle layer with no mask of its own, like the ramp: it never
+## touches the road or pushes the truck.
+func _add_leaf_collision(hinge: Node3D) -> void:
+	var bounds := AABB()
+	var first: bool = true
+	var to_hinge: Transform3D = hinge.global_transform.affine_inverse()
+	for node: Node in hinge.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var box: AABB = to_hinge * mesh.global_transform * mesh.get_aabb()
+		bounds = box if first else bounds.merge(box)
+		first = false
+	if first:
+		return
+	var body := StaticBody3D.new()
+	body.name = "LeafCollision"
+	body.collision_layer = 2
+	body.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var slab := BoxShape3D.new()
+	slab.size = bounds.size
+	shape.shape = slab
+	shape.position = bounds.get_center()
+	body.add_child(shape)
+	hinge.add_child(body)
 
 
 func _pose_door(amount: float, door: StringName) -> void:
@@ -444,6 +478,53 @@ func _dress_cab() -> void:
 	_prop_box(dressing, Vector3(0.3, 0.22, 0.3), Vector3(2.38, 1.8, 0.62), cardboard, Vector3(0.0, deg_to_rad(-8.0), 0.0))
 	for mat_z: float in [-0.62, 0.62]:
 		_prop_box(dressing, Vector3(0.7, 0.012, 0.5), Vector3(3.0, 1.186, mat_z), _dark)
+	_close_cab(dressing, seat_color)
+	_add_cab_details(dressing)
+
+
+## The authored cab is a shell of separate plates: from the seat you could
+## see grass under the dashboard, the white hood behind it, the painted
+## fenders poking up through the floor and bare white door skins. These
+## panels close it into one interior.
+func _close_cab(dressing: Node3D, trim: Material) -> void:
+	var liner := _flat_material(Color("2b353c"))
+	# Firewall under the dashboard, floor to dash, wall to wall.
+	_prop_box(dressing, Vector3(0.1, 0.92, 2.42), Vector3(3.67, 1.64, 0.0), liner)
+	# Dash top: covers the white hood seen through the windshield base.
+	_prop_box(dressing, Vector3(0.36, 0.05, 2.3), Vector3(3.66, 2.275, 0.0), _dark)
+	# Wheel-well humps over the front fenders, which rise above the floor.
+	for side: float in [-1.0, 1.0]:
+		_prop_box(dressing, Vector3(1.8, 0.42, 0.2), Vector3(2.63, 1.39, side * 1.15), liner)
+	# Inner door trims ride on the door hinges, so they swing with the door.
+	for side_name: String in ["Left", "Right"]:
+		var hinge := model.find_child("CabDoor_%s_HINGE_Z" % side_name, true, false) as Node3D
+		if hinge == null:
+			continue
+		var inward: float = 1.0 if side_name == "Left" else -1.0
+		var trims := Node3D.new()
+		trims.name = "DoorTrim_" + side_name
+		trims.position = -hinge.position
+		hinge.add_child(trims)
+		var z: float = -1.215 if side_name == "Left" else 1.215
+		_prop_box(trims, Vector3(2.3, 0.72, 0.02), Vector3(2.5, 1.96, z), trim)
+		_prop_box(trims, Vector3(0.9, 0.06, 0.1), Vector3(2.4, 2.02, z + 0.05 * inward), liner)  # Armrest.
+		_prop_box(trims, Vector3(0.12, 0.05, 0.04), Vector3(1.75, 2.12, z + 0.03 * inward), _steel)  # Handle.
+
+
+## Pedals, a fire extinguisher and a first-aid kit on the bulkhead.
+func _add_cab_details(dressing: Node3D) -> void:
+	var rubber := _flat_material(Color("1b1f23"))
+	for pedal: Array in [[-0.44, Vector3(0.05, 0.16, 0.08)], [-0.66, Vector3(0.05, 0.12, 0.12)], [-0.86, Vector3(0.05, 0.12, 0.12)]]:
+		var z: float = pedal[0]
+		_prop_box(dressing, Vector3(0.03, 0.5, 0.03), Vector3(3.5, 1.62, z), _dark, Vector3(0.0, 0.0, deg_to_rad(-20.0)))
+		_prop_box(dressing, pedal[1], Vector3(3.42, 1.36, z), rubber, Vector3(0.0, 0.0, deg_to_rad(-35.0)))
+	var red := _flat_material(Color("c8302b"))
+	_prop_cylinder(dressing, 0.06, 0.34, Vector3(1.32, 1.4, 0.95), Vector3.ZERO, red)
+	_prop_cylinder(dressing, 0.025, 0.06, Vector3(1.32, 1.6, 0.95), Vector3.ZERO, _dark)
+	var first_aid := _flat_material(Color("f2f0ea"))
+	_prop_box(dressing, Vector3(0.06, 0.2, 0.28), Vector3(1.29, 2.5, 0.8), first_aid)
+	_prop_box(dressing, Vector3(0.065, 0.04, 0.12), Vector3(1.29, 2.5, 0.8), red)
+	_prop_box(dressing, Vector3(0.065, 0.12, 0.04), Vector3(1.29, 2.5, 0.8), red)
 
 
 func _flat_material(color: Color) -> StandardMaterial3D:
