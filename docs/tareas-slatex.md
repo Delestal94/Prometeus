@@ -179,7 +179,7 @@
 | 88 | Pantalla de leaderboard dedicada (hoy el récord solo se ve en la pantalla de resultados de la propia partida). | B | ✅ Hecho (`leaderboard_panel.gd`) |
 | 89 | Desglose más claro del puntaje en resultados (ya existe la base, pulir legibilidad). | A | ✅ Hecho (`run_manager.gd`, `prototype_hud.gd`): líneas por entrega, puertas no atendidas y fotos, más multiplicador y total; `test_score_breakdown.gd` comprueba que suma exactamente el resultado. |
 | 90 | Indicador compartido más legible del estado de todos los paquetes (ya existe `cargo_rows_box`, evaluar si hace falta iconografía en vez de solo texto). | B | ✅ Hecho (íconos de trampa en el HUD, `c77194f`) |
-| 91 | Feedback visual cuando alguien más resuelve su trampa a tiempo (reforzar la cooperación, no solo el riesgo). | B | Pendiente |
+| 91 | Feedback visual cuando alguien más resuelve su trampa a tiempo (reforzar la cooperación, no solo el riesgo). | B | ✅ Hecho (`prototype_hud.gd`: toast, chime y destello de fila al volver de riesgo a seguro) |
 | 92 | Revisar la consistencia de la paleta de colores del HUD contra `docs/direccion-visual.md` §3 (hoy duplicada entre `main_menu.gd` y `prototype_hud.gd` — considerar unificar en un archivo de constantes compartido). | A | ✅ Hecho (`ui_theme.gd` compartido) |
 | 93 | Pantalla de pausa: agregar acceso directo a opciones (depende de que exista la pantalla de opciones). | A | ✅ Hecho (botón Opciones en pausa) |
 
