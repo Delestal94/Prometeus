@@ -16,6 +16,7 @@ signal package_state_changed(package_id: StringName, new_state: int)
 signal package_integrity_changed(package_id: StringName, integrity: float, maximum: float)
 signal package_ruined(package_id: StringName, cause: String)
 signal package_damaged(package_id: StringName, damage: float)
+signal package_collision(package_id: StringName, other_package_id: StringName, strength: float)
 ## Fires once, right as the package lands on its mount -- purely for the
 ## settle-bounce presentation (docs/especificaciones-visuales.md #22), not a
 ## fact anything else needs.

@@ -60,7 +60,7 @@
 |---|---|---|---|
 | 23 | El paquete sostenido flota frente a la cámara sin contacto con las manos — debería verse agarrado. (#82) | B | Pendiente |
 | 24 | Abolladuras o deformación progresiva del paquete según el daño acumulado — hoy solo cambia de color. (#83) | B | ✅ Hecho (`acccb84`) |
-| 25 | Los paquetes deberían chocar entre sí de forma visible y encadenar caos (ya comparten capa de física). (#84) | A | Pendiente |
+| 25 | Los paquetes deberían chocar entre sí de forma visible y encadenar caos (ya comparten capa de física). (#84) | A | ✅ Hecho: rebote, giro, daño encadenado y test físico |
 | 26 | El cuerpo del jugador debería colisionar con el interior de la furgoneta, no atravesarlo. (#85) | A | ✅ Hecho (`a834da1`, cabina cerrada y puertas sólidas) |
 | 27 | Correas o amarres que sujeten los paquetes al soporte, visiblemente tensas en las curvas. (#86) | B | Pendiente |
 | 28 | Un paquete suelto puede golpear a un jugador y empujarlo (con ragdoll, humor gratis). (#92) | B | Pendiente |

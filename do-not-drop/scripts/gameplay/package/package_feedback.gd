@@ -110,6 +110,7 @@ func _ready() -> void:
 		bus.connect("package_ruined", _on_package_ruined)
 		bus.connect("package_integrity_changed", _on_integrity_changed)
 		bus.connect("package_damaged", _on_package_damaged)
+		bus.connect("package_collision", _on_package_collision)
 		bus.connect("package_placed", _on_package_placed)
 
 
@@ -338,6 +339,12 @@ func _on_package_damaged(id: StringName, damage: float) -> void:
 	_apply_damage_deformation()
 	if damage >= LABEL_DROP_DAMAGE:
 		_detach_shipping_label()
+
+
+func _on_package_collision(id: StringName, _other_id: StringName, strength: float) -> void:
+	if id != _package_id:
+		return
+	_impact_shake_strength = clampf(_impact_shake_strength + strength * 0.025, 0.0, 1.0)
 
 
 func _apply_damage_deformation() -> void:

@@ -19,6 +19,9 @@ extends RigidBody3D
 @export_range(0.0, 30.0, 0.5) var spill_impact: float = 9.0
 ## How close a player has to be to open or close it.
 const OPEN_REACH: float = 3.0
+const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
+const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
+const PACKAGE_COLLISION_COOLDOWN: float = 0.16
 
 var trap_behavior: Resource
 var is_held: bool = false
@@ -60,12 +63,14 @@ var _age: float = 0.0
 var _impact_cooldown_remaining: float = 0.0
 const HINT_RELAY_INTERVAL: float = 0.25
 var _hint_relay_time: float = 0.0
+var _package_hit_cooldowns: Dictionary = {}
 
 
 func _ready() -> void:
 	if not is_multiplayer_authority():
 		freeze = true
 	initialize_trap()
+	body_entered.connect(_on_body_entered)
 
 
 func initialize_trap() -> void:
@@ -85,6 +90,12 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	var current_velocity: Vector3 = state.linear_velocity
 	_age += state.step
 	_impact_cooldown_remaining = maxf(0.0, _impact_cooldown_remaining - state.step)
+	for other_id: int in _package_hit_cooldowns.keys():
+		var seconds: float = float(_package_hit_cooldowns[other_id]) - state.step
+		if seconds <= 0.0:
+			_package_hit_cooldowns.erase(other_id)
+		else:
+			_package_hit_cooldowns[other_id] = seconds
 	if _has_previous_velocity and _age >= spawn_grace_time and _is_run_active():
 		# Gravity during free fall is not an impact. Collision resolution changes
 		# velocity suddenly, while this subtraction removes the expected gravity step.
@@ -130,6 +141,33 @@ func apply_impact(delta_velocity: float) -> void:
 	var before_state: int = trap_state
 	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0))
 	_report_change(before_integrity, before_state, "El paquete sufrió demasiados golpes.")
+
+
+func _on_body_entered(body: Node) -> void:
+	var other := body as DeliveryPackage
+	if other == null or other == self or is_held or other.is_held or freeze or other.freeze:
+		return
+	if not _is_run_active() or not other._is_run_active():
+		return
+	var other_id: int = other.get_instance_id()
+	if _package_hit_cooldowns.has(other_id):
+		return
+	var relative_velocity: Vector3 = linear_velocity - other.linear_velocity
+	var strength: float = relative_velocity.length()
+	if strength < PACKAGE_COLLISION_MIN_SPEED:
+		return
+	_package_hit_cooldowns[other_id] = PACKAGE_COLLISION_COOLDOWN
+	other._package_hit_cooldowns[get_instance_id()] = PACKAGE_COLLISION_COOLDOWN
+	# The normal physics bounce remains authoritative.  Adding a little spin
+	# lets a hard hit visibly cascade through a stack of loose cargo.
+	var spin: Vector3 = relative_velocity.normalized().cross(Vector3.UP)
+	apply_torque_impulse(spin * strength * 0.12)
+	other.apply_torque_impulse(-spin * strength * 0.12)
+	var damage_speed: float = strength * PACKAGE_COLLISION_DAMAGE_SCALE
+	apply_impact(damage_speed)
+	other.apply_impact(damage_speed)
+	_emit_event(&"package_collision", [package_id, other.package_id, strength])
+	_emit_event(&"package_collision", [other.package_id, package_id, strength])
 
 
 ## Announces this package to the run. Called when the delivery starts, not at
