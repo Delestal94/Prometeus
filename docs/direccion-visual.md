@@ -1,6 +1,6 @@
 # Dirección visual — Take My Package
 
-> Última actualización: 2026-09-21
+> Última actualización: 2026-09-23
 > Complementa `docs/requerimientos-tecnicos.md` sección 2 (pipeline de arte, low-poly
 > estilo PEAK) y la sección "Decisión de cámara" de ese mismo doc. Ese documento dice
 > *qué estilo* usar en términos generales; este detalla *cómo se ve y se siente* en
@@ -218,7 +218,9 @@ específico de "campo de visión, qué ve y qué no".
   relevante recién si el modo endless genera muchos tramos activos a la vez
   (`RouteStreamer.lookahead_distance` + `behind_keep_distance` ya limitan cuántos
   hay vivos, pero cada uno todavía se dibuja entero mientras existe).
-- **[ ] Niebla/oclusión intencional del streaming**: ver sección 4.
+- **[x] Niebla/oclusión intencional del streaming**: Endless genera 180 m por delante
+  y usa niebla de densidad 0.013; la geometría termina disuelta mucho antes del far
+  clip de 600 m. El modo curado conserva 0.006.
 
 ## 6. Efectos y feedback visual
 
@@ -239,17 +241,18 @@ específico de "campo de visión, qué ve y qué no".
   cliente el suyo) y no toca la simulación. Cubierto por
   `tests/test_impact_feedback.gd`, que verifica explícitamente que
   `Engine.time_scale` nunca se modifica.
-- **[ ] Post-processing adicional** (viñeta, chromatic aberration en impactos,
-  motion blur): no evaluado. Encaja con la filosofía "cámara vende el caos", pero
-  cada uno tiene costo de rendimiento y de "ruido visual" — mejor evaluarlos
-  después de tener personajes/props con arte final, cuando haya más base visual
-  sobre la que juzgar si suman o distraen.
+- **[x] Viñeta de riesgo**: el HUD la intensifica con el riesgo de la carga para dar
+  tensión sin depender de texto.
+- **[x] Aberración cromática de impacto**: `vehicle_effects.gd` la dispara sólo en
+  golpes fuertes y la deja decaer rápido.
+- **[ ] Motion blur por velocidad**: pendiente; requiere validación visual y de
+  rendimiento antes de sumarlo al estilo.
 
 ## 7. Vehículo — exterior e interior
 
-- **[x] Exterior**: furgoneta simple, geometría de cajas (placeholder). Colores
-  actuales: carrocería teal oscuro (`#06828f` aprox.), detalles en amarillo verdoso
-  y crema.
+- **[x] Exterior**: camión low-poly refinado con paneles, guardabarros, ruedas,
+  faros y detalles de cabina. La pintura blanca inicial y la violeta desbloqueable se
+  aplican por instancia, sin mutar el material importado compartido.
 - **[x] Interior**: tablero oscuro casi negro (`#0e1820` aprox.), volante visible,
   parabrisas de vidrio tintado (sección 5).
 - **[x] Decisión de estilo (2026-09-21): utilitaria con personalidad propia, no
@@ -258,8 +261,8 @@ específico de "campo de visión, qué ve y qué no".
   (algún detalle de calcomanía/librea simple, nombre de fantasía tipo empresa de
   delivery chapucera) da más para el humor y las capturas/clips que un vehículo
   perfectamente neutro, sin costar más low-poly que la alternativa genérica.
-  **No implementado todavía** (Fase 6, no hay pipeline de arte armado) — esto fija
-  la dirección para cuando llegue ese momento, no ejecuta nada ahora.
+  **Implementado parcialmente**: pintura blanca/violeta y una variante ágil; las
+  calcomanías/identidad de empresa siguen siendo contenido futuro.
 
 ## 8. Personajes
 

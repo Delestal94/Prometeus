@@ -1,6 +1,6 @@
 # 100 especificaciones visuales a mejorar — Take My Package
 
-> Última actualización: 2026-09-21
+> Última actualización: 2026-09-23
 > Complementa `docs/direccion-visual.md` (que define *cómo se ve y por qué*) con una
 > lista concreta y numerada de *qué falta*, para poder decir "hagamos el 47" sin
 > ambigüedad. Escrito leyendo el estado real del proyecto hoy, no como checklist
@@ -103,19 +103,19 @@ dónde empezar, es por ahí.
 | 44 | ~~Chirrido de neumáticos al derrapar o frenar fuerte.~~ **[x] Hecho (2026-09-21)** — `VehiclePresentation` promedia el patinaje real de las 4 ruedas (`VehicleWheel3D.get_skidinfo()`, ya nativo, no hubo que calcular deslizamiento a mano) y lo usa para mezclar el volumen/tono de un loop de chirrido. | **A** |
 | 45 | ~~Ambiente exterior: viento, pájaros, ruido lejano de ruta.~~ **[x] Parcial (2026-09-21)** — viento sintetizado en loop (`SynthAudio.ambient_wind()`, ruido filtrado con un pasabajos de un polo), siempre presente vía `route.gd`. Pájaros y ruido lejano de ruta quedan pendientes; separar por bus interior/exterior también (#46, todavía no construido). | **A** |
 | 46 | ~~Reverb distinta dentro de la furgoneta vs. afuera.~~ **[x] Hecho (2026-09-21)** — buses "Interior" (`AudioEffectReverb` cerrado y húmedo) y "Exterior" (abierto y seco), `default_bus_layout.tres`. `VehiclePresentation` rutea motor/impacto/chirrido según si la cámara activa de cada cliente es un asiento propio de la furgoneta — cada cliente decide su propio ruteo, sin red. | **B** |
-| 47 | Música: al menos un tema de tensión que suba con el riesgo acumulado de la carga. | **B** |
+| 47 | ~~Música de tensión que sube con el riesgo acumulado.~~ **[x] Hecho (2026-09-23)** — `ingame_music.gd` ajusta la capa de tensión al riesgo de la carga. | **B** |
 | 48 | ~~Los faros no iluminan.~~ **[x] Hecho (2026-09-21)** — dos `SpotLight3D` reales por faro, que se apagan/encienden con `presentation_engine_running`. | **A** |
 | 49 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho (2026-09-21)** — un emisor por rueda, anidado como hijo de cada `VehicleWheel3D` (sigue la suspensión y la dirección gratis), activo mientras hay velocidad o patinaje. Mismo truco sin textura que el confeti del paquete arruinado. | **A** |
-| 50 | Humo de escape en el caño trasero. | **C** |
+| 50 | ~~Humo de escape en el caño trasero.~~ **[x] Hecho (2026-09-23)** — `vehicle_effects.gd` lo emite con el motor encendido. | **C** |
 | 51 | Marcas de neumático en el asfalto al frenar. | **C** |
 | 52 | **Props de banquina**: árboles, postes, carteles, cercas, tachos. Hoy solo hay 10 cajas grises como referencia de escala. | **B** |
 | 53 | Cableado eléctrico entre postes — barato y da muchísima lectura de profundidad y velocidad. | **B** |
 | 54 | Edificios con ventanas, techos y puertas; hoy los "edificios" son cajas grises lisas. | **B** |
 | 55 | Vehículos estacionados al costado de la ruta (y, más adelante, tráfico en movimiento). | **B** |
-| 56 | Variación de hora del día: el sol está fijo en un solo ángulo (-48°/-28°). | **C** |
-| 57 | Clima: lluvia, asfalto mojado con reflejos. Cambia por completo el tono y agrega dificultad natural. | **C** |
-| 58 | Nubes en el cielo procedural — hoy es un degradé liso. | **C** |
-| 59 | Silueta de horizonte / terreno lejano, para que el mundo no termine en una línea plana. | **B** |
+| 56 | ~~Variación de hora del día.~~ **[x] Hecho (2026-09-23)** — `WorldMood` fija día, atardecer o noche por semilla de sesión. | **C** |
+| 57 | ~~Clima: lluvia y asfalto mojado.~~ **[x] Hecho (2026-09-23)** — presets soleado/nublado/lluvia/niebla, gotas y `wetness` en el terreno. | **C** |
+| 58 | ~~Nubes en el cielo procedural.~~ **[x] Hecho (2026-09-23)** — shader ajustado por clima. | **C** |
+| 59 | ~~Silueta de horizonte / terreno lejano.~~ **[x] Hecho (2026-09-23)** — horizonte low-poly integrado con niebla. | **B** |
 | 60 | Oclusión ambiental (SSAO): sin ella, las cajas apoyadas sobre otras cajas flotan visualmente. **Bloqueado, no es tan "A" como parecía**: probado en 2026-09-21 — el proyecto usa `renderer/rendering_method = "gl_compatibility"` (`project.godot`), y ese renderer **no soporta SSAO en absoluto** en Godot 4 (ni SSIL, SSR, SDFGI ni niebla volumétrica; solo Forward+ los soporta). Activar `ssao_enabled` ahí no rompe nada ni tira error, simplemente no hace nada — se comprobó booteando el juego real y revirtiendo el cambio al no encontrar ninguna diferencia posible de verificar. Para tenerlo de verdad hay que migrar a Forward+, que es un cambio de renderer con impacto más amplio (compatibilidad de hardware, otros efectos), no una línea de configuración suelta. | **B** |
 
 ---
@@ -128,16 +128,16 @@ dónde empezar, es por ahí.
 | 62 | ~~Transición al sentarse es un corte seco.~~ **[x] Hecho (2026-09-21), con otra técnica.** Interpolar la cámara no tenía sentido acá: son dos `Camera3D` distintas (la del jugador y la del asiento), no una sola que se mueve — Godot no mezcla entre cámaras. En cambio, `board_seat()` dispara un fundido a negro rápido (`EventBus.quick_fade_requested`, 0.2s) justo antes de cambiar de cámara, que tapa el corte en vez de suavizarlo. Mismo mecanismo que el #77. | **A** |
 | 63 | ~~Head bob al caminar a pie.~~ **[x] Hecho (2026-09-21)** — onda senoidal vertical sobre la cámara propia del jugador (`player.gd`), con fade in/out según velocidad real, no un interruptor. Como el paquete cargado sigue el punto de agarre de la cámara, también bobea con vos. | **A** |
 | 64 | ~~FOV distinto por contexto.~~ **[x] Hecho (2026-09-21)** — tres valores ahora: caminando 78° (`player.gd`), manejando 82° (`FirstPersonCamera.BASE_FOV`, más amplio, más conciencia espacial para maniobrar), cargando un paquete 70° (más cerrado, más "cuidado"). Transición suave, no un salto. | **A** |
-| 65 | **FOV configurable por el jugador.** No hay pantalla de opciones todavía; cuando exista, esto va primero (accesibilidad y mareo). | **B** |
+| 65 | ~~FOV configurable por el jugador.~~ **[x] Hecho** — slider persistente en Opciones. | **B** |
 | 66 | ~~Intensidad de sacudida distinta por asiento.~~ **[x] Hecho (2026-09-21)** — `vehicle.tscn`: conductor y asientos delanteros con los valores base, los dos asientos traseros (más cerca del eje trasero, que es donde más se sienten los baches) con 1.3x y 1.6x de sacudida. | **A** |
 | 67 | ~~Sacudida de cámara también al arruinarse un paquete.~~ **[x] Hecho (2026-09-21)** — `first_person_camera.gd` escucha `package_ruined` además de `vehicle_impact`. Sin el golpe de FOV (ese queda reservado para colisiones físicas reales, no diluirlo en cualquier mala noticia). | **A** |
 | 68 | Manera de mirar hacia atrás: los espejos (#9) o una tecla dedicada. Hoy el yaw llega a ±160°, que alcanza pero es incómodo. | **B** |
-| 69 | Cámara de resultados: un plano cinematográfico de la furgoneta al terminar, en vez del overlay sobre la vista congelada. | **C** |
+| 69 | ~~Cámara de resultados.~~ **[x] Hecho (2026-09-23)** — órbita lenta alrededor de la furgoneta detrás del overlay. | **C** |
 | 70 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. | **C** |
-| 71 | Viñeta que se intensifica cuando la carga está en riesgo — comunica tensión sin texto. | **B** |
-| 72 | Aberración cromática breve en impactos muy fuertes. | **C** |
+| 71 | ~~Viñeta de riesgo.~~ **[x] Hecho** — el HUD la intensifica con la carga en riesgo. | **B** |
+| 72 | ~~Aberración cromática en impactos fuertes.~~ **[x] Hecho (2026-09-23)** — `vehicle_effects.gd`, breve y proporcional. | **C** |
 | 73 | Motion blur por velocidad, sutil. | **C** |
-| 74 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. | **B** |
+| 74 | ~~Modo espectador tras perder el paquete.~~ **[x] Hecho (2026-09-23)** — Tab/Back alterna una persecución local si el pasajero sigue sentado y no tiene carga que atender. | **B** |
 | 75 | ~~Cámara en tercera persona alternable, solo para desarrollo.~~ **[x] Hecho (2026-09-21)** — `VehiclePresentation` arma una cámara detrás/arriba de la furgoneta, activable con F9, y solo se construye si `OS.is_debug_build()` es verdadero (nunca en una build de release real). Restaura la cámara que estaba activa antes al desactivarla. | **A** |
 | 76 | Modo foto: aporta directamente al objetivo de "momentos clipeables" (`docs/requerimientos-tecnicos.md` §3.4). | **C** |
 | 77 | ~~Fundido a negro al reiniciar la partida.~~ **[x] Hecho (2026-09-21)** — `restart_delivery()` dispara el mismo fundido que el #62 y espera la mitad de ida (0.15s) antes de recargar la escena, para que el `reload_current_scene()` pase mientras la pantalla está negra. | **A** |

@@ -195,10 +195,10 @@ do-not-drop/
     test_*.gd, check_*.gd       # scripts SceneTree, corren headless (ver README)
 ```
 
-`GameManager`, `UnlockManager`, `AudioManager` y un `StateMachine` genérico aparecían
-en el plan original pero **no existen todavía** — no hicieron falta para las Fases 1-2
-(sin progresión persistente ni música/sfx dinámicos aún). Se agregan cuando esa
-funcionalidad entre en alcance, no antes.
+`UnlockManager` sí existe desde la Fase 5: centraliza el perfil local, los desbloqueos
+y las elecciones persistentes. `GameManager`, `AudioManager` y un `StateMachine`
+genérico siguen siendo diseño futuro; la música y los efectos actuales viven en los
+componentes de presentación.
 
 ## 4. Convenciones de nombres
 
@@ -219,9 +219,11 @@ Orden real en `project.godot` (importa por dependencias en `_ready()`):
 1. `EventBus`
 2. `NetworkManager`
 3. `RunManager`
+4. `GameSettings`
+5. `UnlockManager`
 
-`GameManager`, `UnlockManager` y `AudioManager` están en el plan original pero no se
-registraron — no existen todavía (ver nota de la sección 3).
+`GameManager` y `AudioManager` siguen en el plan original pero no están registrados.
+`UnlockManager` y `GameSettings` sí lo están (ver nota de la sección 3).
 
 ## Próximo paso
 Con esto, la Fase 1 del plan de desarrollo tiene todo lo necesario para arrancar sin

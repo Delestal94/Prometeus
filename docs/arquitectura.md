@@ -1,7 +1,7 @@
 # Arquitectura del proyecto — Take My Package
 
 > Basado en: `docs/requerimientos-tecnicos.md` y `docs/plan-desarrollo.md`.
-> Última actualización: 2026-09-20
+> Última actualización: 2026-09-23
 > Objetivo: arquitectura modular, reutilizable y con buenas prácticas profesionales,
 > pensada para que agregar contenido (trampas, vehículos, tramos) no requiera tocar
 > el código central, y para que la IA pueda asistirte trabajando sobre piezas
@@ -84,7 +84,7 @@ antes que el pase de arte).
 | `RunManager` | Estado de la partida en curso (ruta actual, paquetes activos, puntaje, tiempo — se resetea entre partidas) **y** el leaderboard local persistente (top 10, `user://leaderboard.json`, sobrevive entre partidas y reinicios de la app). | Registrado |
 | `NetworkManager` | Setup de host/cliente (Steam y ENet), conexión de jugadores, mapeo de autoridad. | Registrado |
 | `GameManager` | Estado de alto nivel del flujo del juego (menú → lobby → en partida → resultados). Máquina de estados. | **No existe aún** — el flujo de menú/nivel hoy lo maneja `main_menu.gd` + `get_tree().change_scene_to_file()`, sin autoload propio. |
-| `UnlockManager` | Progreso meta del jugador (trampas/vehículos/cosméticos desbloqueados) + guardado/carga. | **No existe aún** — no hay progresión persistente todavía (Fase 5). |
+| `UnlockManager` | Progreso meta local, desbloqueos y elecciones de uniforme/vehículo/pintura; guarda JSON versionado en `user://unlock_progress.json`. | Registrado |
 | `AudioManager` | Reproducción de música/SFX desacoplada, escucha del `EventBus`. | **No existe aún** — no hay música/sfx dinámicos todavía. |
 
 Ninguno de estos conoce los detalles internos de los otros — se comunican por señales
@@ -156,6 +156,9 @@ abstracta en GDScript (`class_name ITrapBehavior extends Resource`):
 - `GrowingWeightTrapBehavior`
 - `BalanceTrapBehavior`
 - `NoisyTrapBehavior`
+- `LiquidTrapBehavior`
+- `ExplosiveTrapBehavior`
+- `HostileTrapBehavior`
 
 Cada una es un script chico e independiente. **Agregar una trampa nueva post-launch =
 crear un script que implemente `ITrapBehavior` + un Resource `.tres` con sus

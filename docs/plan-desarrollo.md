@@ -11,7 +11,7 @@ un mini-nivel interactivo queda para una iteración posterior.
 
 > Basado en: `docs/requerimientos-tecnicos.md` (Godot 4.x, física real de vehículo +
 > streaming de tramos, confirmado 2026-09-20).
-> Última actualización: 2026-09-20
+> Última actualización: 2026-09-23
 > Principio guía: validar el loop central (conducir + manejar paquetes) lo antes
 > posible, **antes** de invertir en multiplayer, arte final o contenido extra. El
 > multiplayer y el arte son las partes más caras de rehacer si el loop no es divertido.
@@ -96,7 +96,7 @@ Lo que hay ahora:
       de esa puerta el reclamo descuenta. Pedido directo del usuario.
 - [x] Cubierto por `tests/test_house_delivery_flow.gd` (el loop entero) y
       `tests/test_phone_camera.gd` (la foto y el reclamo).
-- [ ] La meta al final de la ruta sigue cerrando el run, por decisión
+- [x] La meta al final de la ruta sigue cerrando el run, por decisión
       explícita del usuario. Cuántas casas por partida (hoy 3 fijas contra 4
       paquetes fijos) sigue abierto — `docs/tareas-nacho.md` #104/#105/#121.
 
@@ -215,7 +215,7 @@ exigente que la versión solo.
 - Menú de partida, lobby multiplayer, pantalla de resultados con puntaje.
 - Leaderboard simple (al menos local; global si el scope lo permite).
 
-### Estado (2026-09-21)
+### Estado (2026-09-23)
 - [x] Menú de partida (jugar solo / crear sala / unirse por IP) — `main_menu.gd`.
 - [x] Pantalla de resultados con puntaje — overlay de `prototype_hud.gd`, ya mostraba
       el desglose de puntaje; ahora también muestra "¡NUEVO RÉCORD!" o el récord
@@ -224,9 +224,14 @@ exigente que la versión solo.
       `user://leaderboard.json`, persiste entre sesiones, cubierto por
       `tests/test_leaderboard.gd`. Global queda fuera de alcance por ahora (no hay
       backend).
-- [ ] Sistema de desbloqueos (`UnlockManager`) — no existe todavía, no hay contenido
-      que desbloquear más allá de las 4 trampas, que ya están todas disponibles desde
-      el arranque.
+- [x] Sistema de desbloqueos (`UnlockManager`) — perfil local JSON en
+      `user://unlock_progress.json`, con entregas exitosas y puntaje acumulado. Parte
+      del catálogo está disponible de inicio y se desbloquean: uniforme coral (2/150),
+      Líquido (3/250), Furgoneta ágil (4/350), pintura violeta (5/450), Explosivo
+      (7/750), uniforme cielo (9/1000) y Hostil (12/1500). Incluye migración del perfil
+      v1 y tests de persistencia/elección.
+- [x] Pantallas de Progreso, Cómo jugar y Cosméticos — la última elige uniforme,
+      vehículo y pintura; una opción bloqueada no puede seleccionarse.
 - [ ] Lobby multiplayer con pantalla de espera — no hace falta con el diseño actual
       (el host entra directo al nivel y los demás se suman dinámicamente, ver
       `main_menu.gd`), así que esto puede no ser necesario en absoluto.

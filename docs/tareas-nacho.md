@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta y Ambientación
 
-> Última actualización: 2026-09-21 (sistema de casas de entrega sumado)
+> Última actualización: 2026-09-23 (estado sincronizado con `6f4ec56`)
 > Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
 > compartida. Las tareas 1-40 vienen directo de `docs/especificaciones-visuales.md`
 > (número original entre paréntesis); 41-100 son backlog nuevo del proyecto,
@@ -30,7 +30,7 @@
 | # | Tarea | Prio |
 |---|---|---|
 | 12 | ~~Balanceo de carrocería exagerado en curvas y frenadas.~~ **[x] Hecho** (#21, ver detalle en `docs/especificaciones-visuales.md`). | A |
-| 13 | Aberración cromática breve en impactos muy fuertes. (#72) | C |
+| 13 | ~~Aberración cromática breve en impactos muy fuertes.~~ **[x] Hecho** — `vehicle_effects.gd` la activa sólo ante impactos fuertes. (#72) | C |
 | 14 | Motion blur por velocidad, sutil. (#73) | C |
 | 15 | Evitar que la cámara atraviese geometría cercana al mirar en diagonal dentro de la cabina (fade o retroceso). (#80) | B |
 | 16 | ~~La furgoneta se hunde levemente según el peso total de la carga.~~ **[x] Hecho** — no hizo falta coordinar con Slatex, `mass` de `package.gd` ya era legible desde el grupo `cargo` sin tocar ese archivo. (#96) | A |
@@ -40,8 +40,8 @@
 | # | Tarea | Prio |
 |---|---|---|
 | 17 | Si la puerta trasera está abierta, la carga suelta puede salirse. (#87) | B |
-| 18 | Objetos sueltos en la zona de carga que traqueteen con los golpes (herramientas, un termo). (#88) | B |
-| 19 | Rayones y abolladuras acumuladas en la carrocería a lo largo de la entrega. (#91) | C |
+| 18 | ~~Objetos sueltos en la zona de carga que traqueteen con los golpes.~~ **[x] Hecho** — `cargo_clutter.gd` añade utilería visual que responde a la aceleración, sin participar en la física de la carga. (#88) | B |
+| 19 | ~~Rayones y abolladuras acumuladas en la carrocería a lo largo de la entrega.~~ **[x] Hecho** — `vehicle_effects.gd` acumula marcas visuales a partir de impactos. (#91) | C |
 
 ## Vehículo — sonido (20-22)
 
@@ -49,23 +49,23 @@
 |---|---|---|
 | 20 | ~~Ambiente exterior.~~ **[x] Parcial** — viento en loop hecho, faltan pájaros y ruido lejano de ruta (queda como pendiente menor). (#45) | A |
 | 21 | Reverb distinta dentro de la furgoneta vs. afuera (buses de audio). (#46) | B |
-| 22 | Música de tensión que suba con el riesgo acumulado de la carga. (#47) | B |
+| 22 | ~~Música de tensión que suba con el riesgo acumulado de la carga.~~ **[x] Hecho** — `ingame_music.gd` adapta la capa de tensión al riesgo de la carga. (#47) | B |
 
 ## Ruta y ambientación (23-34)
 
 | # | Tarea | Prio |
 |---|---|---|
 | 23 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho.** (#49) | A |
-| 24 | Humo de escape en el caño trasero. (#50) | C |
+| 24 | ~~Humo de escape en el caño trasero.~~ **[x] Hecho** — `vehicle_effects.gd` lo emite mientras el motor está activo. (#50) | C |
 | 25 | Marcas de neumático en el asfalto al frenar. (#51) | C |
 | 26 | ~~Props de banquina: árboles, postes, carteles, cercas, tachos — hoy son 10 cajas grises.~~ **[x] Hecho** — bosque completo (`_build_forest`) + farolas/bancos/buzones/conos/barrera (`_build_landmarks`, ahora `RoadsideDressing`), reemplazando las 10 cajas grises. Sin colisión, mismo criterio que el bosque. (#52) | A |
 | 27 | Cableado eléctrico entre postes. (#53) | B |
 | 28 | ~~Edificios con ventanas, techos y puertas — hoy son cajas grises lisas.~~ **[x] Hecho** — las 3 casas de entrega (`DeliveryHouse`) son GLB con techo a dos aguas, porche, puerta, ventanas y chimenea, alternando variante sin cambiar colisión/timbre. (#54) | A |
 | 29 | ~~Vehículos estacionados al costado de la ruta.~~ **[x] Hecho** — hatchback y pickup GLB, uno cada ~55m alternando lados (`_build_landmarks`). (#55) | A |
-| 30 | Variación de hora del día — el sol está fijo en un solo ángulo. (#56) | C |
-| 31 | Clima: lluvia, asfalto mojado con reflejos. (#57) | C |
-| 32 | Nubes en el cielo procedural — hoy es un degradé liso. (#58) | C |
-| 33 | Silueta de horizonte / terreno lejano. (#59) | B |
+| 30 | ~~Variación de hora del día.~~ **[x] Hecho** — `WorldMood` elige día/atardecer/noche por semilla de sesión y ajusta sol, ambiente, cielo y faros. (#56) | C |
+| 31 | ~~Clima: lluvia, asfalto mojado con reflejos.~~ **[x] Hecho** — presets soleado/nublado/lluvia/niebla; la lluvia humedece el material de terreno y sigue la cámara. (#57) | C |
+| 32 | ~~Nubes en el cielo procedural.~~ **[x] Hecho** — el shader de cielo recibe cobertura y color de nubes según `WorldMood`. (#58) | C |
+| 33 | ~~Silueta de horizonte / terreno lejano.~~ **[x] Hecho** — `route_dresser.gd` construye horizonte y lo integra con la niebla. (#59) | B |
 | 34 | SSAO: confirmado bloqueado por el renderer (`gl_compatibility`, ver fila #60 de `docs/especificaciones-visuales.md`) — no reabrir sin decidir primero migrar a Forward+. | B |
 
 ## Cámara de manejo (35-38)
@@ -73,7 +73,7 @@
 | # | Tarea | Prio |
 |---|---|---|
 | 35 | Manera de mirar hacia atrás: espejos (#5 de esta lista) o una tecla dedicada. (#68) | B |
-| 36 | Cámara de resultados: plano cinematográfico de la furgoneta al terminar. (#69) | C |
+| 36 | ~~Cámara de resultados: plano cinematográfico de la furgoneta al terminar.~~ **[x] Hecho** — órbita lenta local de `results_orbit.gd` alrededor del camión al finalizar. (#69) | C |
 | 37 | ~~Cámara en tercera persona alternable, solo para desarrollo.~~ **[x] Hecho** — F9, solo se construye en build de debug. (#75) | A |
 | 38 | Límite de pitch contextual dentro de la cabina (`first_person_camera.gd` es archivo compartido — avisar antes de tocarlo). (#78) | C |
 
@@ -108,14 +108,14 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 56 | Tramo de subida/bajada (pendiente) — afecta el manejo y la trampa de Peso Creciente distinto que uno plano. | B |
+| 56 | ~~Tramo de subida/bajada.~~ **[x] Hecho** — `HillSegment` registra una cresta de hasta 6 m en el terreno y vuelve a nivel en ambos extremos. | B |
 | 57 | ~~Tramo de curva en S (doble chicana en direcciones opuestas).~~ **[x] Hecho** — `SCurveSegment`, 4 bloques alternados en vez de los 2 del chicane. | A |
-| 58 | Tramo de túnel corto (oscuridad parcial, eco de audio distinto). | B |
+| 58 | ~~Tramo de túnel corto.~~ **[x] Hecho** — `TunnelSegment` tiene paredes/techo sólidos e iluminación interior; el eco dedicado queda para una pasada de audio. | B |
 | 59 | Puente de un solo carril con prioridad de paso. | B |
 | 60 | Rotonda simple. | B |
 | 61 | ~~Tramo de ripio/tierra con fricción distinta a la ruta pavimentada.~~ **[x] Hecho** — `GravelSegment`. Verificado antes de implementar que `PhysicsMaterial.friction` del suelo **no** afecta `VehicleWheel3D.get_skidinfo()` en este motor; el único control real es `wheel_friction_slip` por rueda. El tramo usa un `Area3D` que lo reduce al entrar y lo restaura al salir (con red de seguridad en `_exit_tree()` por si el streamer libera el tramo con el vehículo todavía encima). | A |
 | 62 | Tramo nocturno (probar junto con el ciclo día/noche). | B |
-| 63 | Cruce de vías de tren con barrera (parada forzada ocasional). | B |
+| 63 | ~~Cruce de vías de tren con barrera.~~ **[x] Hecho** — `RailCrossingSegment` avisa, baja una barrera sólida, deja pasar el tren y la reabre; puede no activarse según semilla. | B |
 | 64 | ~~Zona de obras con conos y carril reducido.~~ **[x] Hecho** — `ConstructionZoneSegment`, barrera lateral sostenida (no alternada, a diferencia del chicane/curva en S) + fila de conos marcando el borde. | A |
 | 65 | Curva peraltada (banked turn) que favorece tomarla rápido. | B |
 
@@ -123,14 +123,14 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 66 | Diseñar 3-4 presets de clima (soleado, nublado, lluvia leve, niebla densa) como variaciones del `Environment` actual. | B |
-| 67 | Implementar lluvia: partículas simples + asfalto mojado con más reflejo especular. | B |
-| 68 | Sonido de lluvia sobre el techo, distinto adentro que afuera (coordinar con la sección de audio). | B |
-| 69 | Ciclo día/noche opcional, interpolando `DirectionalLight3D` y los colores del cielo a lo largo de una partida larga (relevante para endless). | B |
-| 70 | Ajustar los faros ya implementados para que se sientan necesarios de noche, no solo decorativos. | A |
-| 71 | Nubes procedurales en el cielo. | B |
-| 72 | Probar la niebla de distancia combinada con cada preset de clima. | A |
-| 73 | Documentar los presets de clima en `docs/direccion-visual.md`. | A |
+| 66 | ~~Diseñar presets de clima.~~ **[x] Hecho** — soleado 45%, nublado 25%, lluvia 18%, niebla 12%; se eligen determinísticamente con la semilla de sesión. | B |
+| 67 | ~~Implementar lluvia.~~ **[x] Hecho** — gotas que siguen cámara + parámetro `wetness` del shader de terreno. | B |
+| 68 | Sonido de lluvia sobre el techo, distinto adentro que afuera. | B |
+| 69 | ~~Ciclo día/noche opcional.~~ **[x] Resuelto con una decisión más estable**: cada sesión fija día (60%), atardecer (25%) o noche (15%) por semilla, en vez de cambiar de luz durante la partida. | B |
+| 70 | ~~Ajustar faros para la noche.~~ **[x] Hecho** — `WorldMood.headlight_boost()` aumenta intensidad/alcance hasta 4× de noche. | A |
+| 71 | ~~Nubes procedurales en el cielo.~~ **[x] Hecho** — shader de cielo con cobertura dependiente del clima. | B |
+| 72 | ~~Probar niebla con cada preset.~~ **[x] Hecho** — `test_world_mood.gd` cubre aplicación de lluvia/noche, densidad y aislamiento del `Environment` entre cargas. | A |
+| 73 | ~~Documentar presets de clima.~~ **[x] Hecho** — `docs/direccion-visual.md` §4. | A |
 
 ## Tráfico y vehículos estacionados (74-79)
 
@@ -157,13 +157,13 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 85 | Diseñar un segundo vehículo (manejo distinto: más lento y estable, o más rápido y nervioso) como contenido de desbloqueo — coordinar con el sistema de desbloqueos de Slatex. | B |
-| 86 | Definir sus parámetros de física sin romper el balance ya afinado del vehículo actual. | A |
+| 85 | ~~Diseñar un segundo vehículo.~~ **[x] Hecho** — la Furgoneta ágil es más rápida, liviana y con más giro; se desbloquea con 4 entregas y 350 puntos. | B |
+| 86 | ~~Definir sus parámetros de física.~~ **[x] Hecho** — variantes declarativas en `vehicle.gd`; `test_truck_variant.gd` verifica que la ágil cambie velocidad, masa y giro frente a la clásica. | A |
 | 87 | ~~Adaptar `VehiclePresentation` para que sea reutilizable entre vehículos, no hardcodeada a los nombres de nodo del actual.~~ **[x] Hecho** — reemplazadas las rutas fijas (`"CabinInterior/SteeringWheel"`, `"BodyVisuals/" + side + "Headlight"`, `"CargoBay/" + side + "TailLight"`) por búsquedas por nombre/patrón (`find_child`/`find_children`) en cualquier parte del árbol. Convención documentada en `docs/agregar-vehiculo.md` (#92). | A |
-| 88 | Selección de vehículo en el menú, una vez exista más de uno — coordinar con Slatex si toca `main_menu.gd`. | B |
-| 89 | Librea/calcomanía simple como personalización visual (dirección ya fijada en `docs/direccion-visual.md` §7). | B |
+| 88 | ~~Selección de vehículo en el menú.~~ **[x] Hecho** — el panel de cosméticos permite elegir vehículo y pintura, respetando los desbloqueos. | B |
+| 89 | ~~Librea/calcomanía simple.~~ **[x] Hecho** — pintura blanca inicial y violeta desbloqueable (5 entregas, 450 puntos), aplicada por instancia sin modificar el material importado compartido. | B |
 | 90 | ~~Decidir si las libreas son cosméticos desbloqueables o variantes de color fijas.~~ **[x] Decidido: variantes de color fijas primero.** No existe ningún sistema de desbloqueos todavía (ni de Slatex ni de nadie), así que atarle la librea a uno que no existe bloquearía esta tarea sin necesidad. Variantes fijas dan valor real sin depender de nada ajeno; si más adelante Slatex arma un sistema de desbloqueos genérico, la librea puede sumarse ahí después sin haber sido diseño perdido — es la misma lógica que la decisión del #76 sobre tráfico. | A |
-| 91 | Probar que el segundo vehículo respete todo lo ya construido (ruedas, sacudida por asiento, indicador de asiento ocupado) sin reimplementar nada. **Bloqueado, no pendiente por diseño**: no hay segundo vehículo todavía (#85 es arte/diseño, prioridad B) — nada que probar hasta que exista. | A |
+| 91 | ~~Probar que el segundo vehículo respete lo ya construido.~~ **[x] Hecho** — `test_truck_variant.gd` comprueba variante, pintura, replicación y bloqueo de elecciones no desbloqueadas. | A |
 | 92 | ~~Documentar "cómo agregar un vehículo nuevo" para no redescubrirlo cada vez.~~ **[x] Hecho** — `docs/agregar-vehiculo.md`. | A |
 
 ## Optimización / tooling de mundo (93-96)

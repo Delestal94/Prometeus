@@ -1,6 +1,6 @@
 # Controles y flujo de UI/lobby — Take My Package
 
-> Última actualización: 2026-09-22
+> Última actualización: 2026-09-23
 > Cada jugador juega desde su propio dispositivo/cliente (no split-screen local) —
 > esto simplifica el esquema de controles: cada uno usa su teclado+mouse o gamepad
 > completo, no hay que repartir un solo teclado entre varios jugadores.
@@ -74,7 +74,8 @@ Main Menu
   se sumen después ya funciona sin necesitar una pantalla de espera.
 - **Opciones** (menú y pausa): volumen, sensibilidad, invertir Y, pantalla completa,
   restablecer, y la lista de controles del dispositivo en uso. **Salir** cierra el juego.
-- No hay tutorial ("Cómo jugar") ni pantalla de progreso todavía.
+- Hay pantallas de **Cómo jugar** (tutorial estático) y **Progreso**, accesibles desde
+  el menú principal. El perfil local muestra entregas, puntaje, desbloqueos y elecciones.
 - Las ayudas en pantalla muestran solo la tecla del dispositivo que se tocó último
   (teclado o gamepad, `GameSettings.using_gamepad`) y cambian según el rol: a pie,
   conductor o pasajero.
@@ -101,12 +102,10 @@ Main Menu
   el lobby, a definir con playtesting) y el resto recibe un paquete cada uno.
   **[x] Parcial**: cualquier jugador puede sentarse a conducir (primero en llegar, sin
   rotación automática todavía) y tomar cualquier paquete disponible.
-- Las trampas asignadas a cada paquete salen de las desbloqueadas hasta el momento,
-  con las reglas de balance de `requerimientos-tecnicos.md` sección 3.3 (no combinar
-  demasiadas trampas de alta dificultad en partidas tempranas). **[ ] No implementado**:
-  hoy `level_base.tscn` trae los cuatro paquetes fijos, uno por cada trampa del
-  catálogo completo, siempre los mismos — no hay asignación semi-aleatoria ni reglas
-  de balance porque no hay desbloqueos que balancear todavía.
+- Las trampas disponibles respetan `UnlockManager`: Frágil, Peso creciente, Equilibrio
+  y Ruidoso están disponibles desde el inicio; Líquido, Explosivo y Hostil se habilitan
+  con el progreso local. La asignación todavía conserva paquetes fijos por nivel, por lo
+  que la selección semi-aleatoria y sus reglas de balance siguen pendientes.
 
 ### HUD durante la partida
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.
@@ -128,8 +127,9 @@ Main Menu
 - Récord local. **[x] Implementado** (no estaba en el plan original, se sumó después:
   "¡NUEVO RÉCORD!" o el récord actual, ver `RunManager` y README sección Tests /
   `test_leaderboard`).
-- Progreso de desbloqueos ganado en esta partida. **[ ] No implementado** — no hay
-  desbloqueos todavía (ver `docs/plan-desarrollo.md` Fase 5).
+- Progreso de desbloqueos ganado en esta partida. **[x] Implementado** —
+  `UnlockManager` acumula puntaje/entregas en `user://unlock_progress.json` y el HUD
+  muestra un toast cuando se habilita contenido.
 - Botones: "Jugar de nuevo" (mismo lobby) / "Volver al lobby" / "Salir".
   **[x] Parcial**: "Volver a intentar" reinicia la misma sesión (no hay lobby al que
   volver, ver más arriba) y "Menú" vuelve al menú principal.

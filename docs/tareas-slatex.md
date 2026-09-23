@@ -1,6 +1,6 @@
 # Tareas de Slatex — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-23 (estado sincronizado con `f86676d`)
+> Última actualización: 2026-09-23 (estado sincronizado con `6f4ec56`)
 > Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
 > compartida. Las tareas 1-32 vienen directo de `docs/especificaciones-visuales.md`
 > (número original entre paréntesis); 33-100 son backlog nuevo del proyecto,
@@ -50,7 +50,7 @@
 | 17 | FOV configurable por el jugador — depende de la pantalla de opciones (ver sección propia más abajo). (#65) | B | ✅ Hecho (`GameSettings`, `options_panel.gd`) |
 | 18 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. (#70) | C | Pendiente |
 | 19 | Viñeta que se intensifica cuando la carga está en riesgo — comunica tensión sin texto. (#71) | B | ✅ Hecho (`674d8b1`) |
-| 20 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. (#74) | B | Pendiente |
+| 20 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. (#74) | B | ✅ Hecho (`spectator_camera.gd`): Tab/Back alterna una cámara de persecución local cuando el pasajero está sentado, no conduce y su paquete está arruinado o ya no tiene uno. |
 | 21 | Modo foto. (#76) | C | ✅ Hecho (`phone_camera.gd`) |
 | 22 | Retroalimentación de cámara al pingear: destello o marca en el borde de pantalla apuntando hacia quién pingeó. (#79) | B | ✅ Hecho (`ee06b29`) |
 
@@ -177,7 +177,7 @@
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 88 | Pantalla de leaderboard dedicada (hoy el récord solo se ve en la pantalla de resultados de la propia partida). | B | ✅ Hecho (`leaderboard_panel.gd`) |
-| 89 | Desglose más claro del puntaje en resultados (ya existe la base, pulir legibilidad). | A | Pendiente |
+| 89 | Desglose más claro del puntaje en resultados (ya existe la base, pulir legibilidad). | A | ✅ Hecho (`run_manager.gd`, `prototype_hud.gd`): líneas por entrega, puertas no atendidas y fotos, más multiplicador y total; `test_score_breakdown.gd` comprueba que suma exactamente el resultado. |
 | 90 | Indicador compartido más legible del estado de todos los paquetes (ya existe `cargo_rows_box`, evaluar si hace falta iconografía en vez de solo texto). | B | ✅ Hecho (íconos de trampa en el HUD, `c77194f`) |
 | 91 | Feedback visual cuando alguien más resuelve su trampa a tiempo (reforzar la cooperación, no solo el riesgo). | B | Pendiente |
 | 92 | Revisar la consistencia de la paleta de colores del HUD contra `docs/direccion-visual.md` §3 (hoy duplicada entre `main_menu.gd` y `prototype_hud.gd` — considerar unificar en un archivo de constantes compartido). | A | ✅ Hecho (`ui_theme.gd` compartido) |

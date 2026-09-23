@@ -27,7 +27,7 @@ Atajos de línea de comandos para probar rápido sin clickear:
 LAN, sin depender de que Steam esté corriendo) y `-- --join=<ip>` (se une
 por LAN a esa dirección).
 
-**Modo Endless (en construcción, ya con botón en el menú)**: genera tramos
+**Modo Endless**: genera tramos
 indefinidamente en vez de la ruta curada de 220 m, y el run termina
 perdiendo (carga perdida, vuelco o salir de la ruta), nunca entregando —
 ver `docs/plan-desarrollo.md` Fase 3 para el estado completo. Se entra con
@@ -108,6 +108,14 @@ opciones y a **Menú**, que deja la sesión limpia antes de volver.
 Cualquier jugador puede pingear "¡Cuidado!" con el clic de la rueda del mouse (o
 D-pad arriba en gamepad) para avisar a los demás sin depender de voice chat externo —
 aparece arriba de la pantalla de todos por unos segundos, con quién lo mandó.
+
+**Progreso, variantes y espectador** (2026-09-23): las entregas exitosas y el puntaje
+acumulado se guardan en `user://unlock_progress.json`. Desde **Progreso** y
+**Cosméticos** del menú se consultan los desbloqueos y se eligen uniforme, pintura y
+vehículo; la Furgoneta ágil se desbloquea con 4 entregas y 350 puntos. Si sos pasajero,
+tu paquete se arruinó y seguís sentado, **Tab** (Back en gamepad) alterna una cámara
+espectadora detrás de la furgoneta. La pantalla de resultados ahora desglosa cada fuente
+del puntaje — entregas, vecinos sin atender, fotos y multiplicador — además del total.
 
 ## Tests
 
