@@ -79,6 +79,7 @@ var _screech_mix: float = 0.0
 var _roll: float = 0.0
 var _pitch: float = 0.0
 var _sink: float = 0.0
+var _driver_hands: Node3D
 
 
 func _ready() -> void:
@@ -136,6 +137,7 @@ func bind_model(wheel: Node3D, front_lenses: Array, rear_lenses: Array) -> void:
 	steering_wheel = wheel
 	if steering_wheel != null:
 		_steering_rest = steering_wheel.basis
+		_build_driver_hands()
 	for beam: SpotLight3D in headlights:
 		beam.queue_free()
 	headlights.clear()
@@ -170,6 +172,8 @@ func bind_model(wheel: Node3D, front_lenses: Array, rear_lenses: Array) -> void:
 func update_presentation(delta: float) -> void:
 	if steering_wheel != null:
 		steering_wheel.basis = _steering_rest * Basis(Vector3.UP, -vehicle.steering * steering_ratio)
+		if _driver_hands != null:
+			_driver_hands.rotation.z = sin(vehicle.steering * 2.0) * 0.12
 	_flicker_remaining = maxf(0.0, _flicker_remaining - delta)
 	var running: bool = vehicle.presentation_engine_running
 	var flicker: float = 0.3 if _flicker_remaining > 0.0 else 1.0
@@ -184,6 +188,27 @@ func update_presentation(delta: float) -> void:
 	_apply_body_lean(delta)
 	_apply_cargo_sink(delta)
 	_apply_dust()
+
+
+func _build_driver_hands() -> void:
+	if _driver_hands != null:
+		_driver_hands.queue_free()
+	_driver_hands = Node3D.new()
+	_driver_hands.name = "DriverHands"
+	steering_wheel.add_child(_driver_hands)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color("83e2ba")
+	material.roughness = 0.82
+	for side: float in [-1.0, 1.0]:
+		var hand := MeshInstance3D.new()
+		var mesh := CapsuleMesh.new()
+		mesh.radius = 0.055
+		mesh.height = 0.24
+		hand.mesh = mesh
+		hand.material_override = material
+		hand.position = Vector3(side * 0.19, 0.0, -0.03)
+		hand.rotation_degrees = Vector3(78, 0, side * 38)
+		_driver_hands.add_child(hand)
 
 
 
