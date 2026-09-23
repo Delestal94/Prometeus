@@ -156,6 +156,28 @@ static func wood_creak() -> AudioStreamWAV:
 	return stream
 
 
+## Liquid's wet slosh: a short low filtered-noise wobble, used only when
+## the puddle grows so it signals trouble without becoming a constant loop.
+static func liquid_slosh() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.28
+	var data := PackedByteArray()
+	var count: int = int(RATE * DURATION)
+	data.resize(count * 2)
+	var smooth: float = 0.0
+	for i: int in count:
+		var t: float = float(i) / RATE
+		smooth = lerpf(smooth, randf_range(-1.0, 1.0), 0.12)
+		var envelope: float = sin(clampf(t / DURATION, 0.0, 1.0) * PI)
+		var wave: float = smooth * 0.75 + sin(TAU * (92.0 + t * 60.0) * t) * 0.25
+		data.encode_s16(i * 2, roundi(clampf(wave * envelope, -1.0, 1.0) * 17000.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream
+
+
 ## A classic two-tone car horn: two square waves close enough in pitch to
 ## beat against each other, with a short fade in/out so it doesn't click.
 static func honk_horn() -> AudioStreamWAV:

@@ -105,14 +105,14 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 48 | Diseñar la mecánica exacta: qué cuenta como "inclinación peligrosa", cómo se acumula el derrame, cómo se corrige. | A | Pendiente |
-| 49 | `liquid_trap_behavior.gd`, siguiendo el contrato de `i_trap_behavior.gd` ya establecido. | A | Pendiente |
-| 50 | `data/traps/liquid.tres` con sus parámetros iniciales. | A | Pendiente |
-| 51 | Balance de parámetros: que no se sienta redundante con Equilibrio. | B | Pendiente |
-| 52 | Identidad visual: charquito/mancha creciendo en la caja, o una etiqueta "LÍQUIDO" con nivel visible. | B | Pendiente |
-| 53 | Sonido propio: chapoteo, siguiendo el patrón `SynthAudio` ya usado para las otras 4 trampas. | A | Pendiente |
-| 54 | Test automatizado, siguiendo el patrón de `test_traps.gd`. | A | Pendiente |
-| 55 | Sumarlo al catálogo jugable (`level_base.tscn` o el sistema de asignación que exista una vez armada la progresión). | A | Pendiente |
+| 48 | Diseñar la mecánica exacta: qué cuenta como "inclinación peligrosa", cómo se acumula el derrame, cómo se corrige. | A | ✅ Hecho: inclinación/golpe derraman; mantener seca el charco |
+| 49 | `liquid_trap_behavior.gd`, siguiendo el contrato de `i_trap_behavior.gd` ya establecido. | A | ✅ Hecho |
+| 50 | `data/traps/liquid.tres` con sus parámetros iniciales. | A | ✅ Hecho |
+| 51 | Balance de parámetros: que no se sienta redundante con Equilibrio. | B | 🟡 Parámetros iniciales: acumula derrame y se seca, no endereza la caja |
+| 52 | Identidad visual: charquito/mancha creciendo en la caja, o una etiqueta "LÍQUIDO" con nivel visible. | B | ✅ Hecho: charco azul creciente |
+| 53 | Sonido propio: chapoteo, siguiendo el patrón `SynthAudio` ya usado para las otras 4 trampas. | A | ✅ Hecho (`liquid_slosh`) |
+| 54 | Test automatizado, siguiendo el patrón de `test_traps.gd`. | A | ✅ Hecho (`test_liquid_trap.gd`, `test_liquid_visual.gd`) |
+| 55 | Sumarlo al catálogo jugable (`level_base.tscn` o el sistema de asignación que exista una vez armada la progresión). | A | ✅ Hecho: disponible en entrega y Endless |
 
 ## Contenido nuevo — trampa "Explosivo" (56-63)
 

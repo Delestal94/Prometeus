@@ -75,6 +75,9 @@ var _shipping_label: RigidBody3D
 var _label_detached: bool = false
 var _dent_pieces: Array[MeshInstance3D] = []
 var _impact_damage_visual: float = 0.0
+var _liquid_puddle: MeshInstance3D
+var _liquid_slosh_player: AudioStreamPlayer3D
+var _liquid_last_slosh_level: float = 0.0
 
 
 func _ready() -> void:
@@ -103,6 +106,9 @@ func _ready() -> void:
 		&"growing_weight":
 			_creak_player = _make_player(SynthAudio.wood_creak(), -10.0)
 			_creak_countdown = CREAK_INTERVAL_MAX
+		&"liquid":
+			_build_liquid_puddle(parent as DeliveryPackage)
+			_liquid_slosh_player = _make_player(SynthAudio.liquid_slosh(), -16.0)
 	_set_state(0)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
@@ -387,6 +393,50 @@ func _process(delta: float) -> void:
 			_apply_groan()
 		&"growing_weight":
 			_apply_creak(delta)
+		&"liquid":
+			_apply_liquid()
+
+
+func _build_liquid_puddle(package: DeliveryPackage) -> void:
+	if package == null:
+		return
+	var puddle_mesh := CylinderMesh.new()
+	puddle_mesh.top_radius = 1.0
+	puddle_mesh.bottom_radius = 1.0
+	puddle_mesh.height = 0.025
+	puddle_mesh.radial_segments = 16
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(0.12, 0.68, 0.88, 0.52)
+	material.metallic = 0.18
+	material.roughness = 0.18
+	_liquid_puddle = MeshInstance3D.new()
+	_liquid_puddle.name = "LiquidPuddle"
+	_liquid_puddle.mesh = puddle_mesh
+	_liquid_puddle.material_override = material
+	_liquid_puddle.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_liquid_puddle.position.y = -package.get_half_extents().y + 0.015
+	_liquid_puddle.scale = Vector3.ZERO
+	_box.add_child(_liquid_puddle)
+
+
+func _apply_liquid() -> void:
+	if _liquid_puddle == null:
+		return
+	var package := get_parent() as DeliveryPackage
+	if package == null or package.trap_behavior == null:
+		return
+	var amount: float = float(package.trap_behavior.get("spill_amount"))
+	var ratio: float = clampf(amount / maxf(package.integrity_max, 1.0), 0.0, 1.0)
+	var radius: float = lerpf(0.02, 0.52, ratio)
+	_liquid_puddle.scale = Vector3(radius, 1.0, radius)
+	_liquid_puddle.visible = ratio > 0.015
+	if ratio > _liquid_last_slosh_level + 0.12:
+		_liquid_last_slosh_level = ratio
+		if _liquid_slosh_player != null:
+			_liquid_slosh_player.play()
+	elif ratio < _liquid_last_slosh_level:
+		_liquid_last_slosh_level = ratio
 
 
 ## Peso Creciente: the crate visibly swells and settles lower as its mass
