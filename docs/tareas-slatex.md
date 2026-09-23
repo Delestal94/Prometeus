@@ -1,6 +1,6 @@
 # Tareas de Slatex — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-23
+> Última actualización: 2026-09-23 (estado sincronizado con `f86676d`)
 > Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
 > compartida. Las tareas 1-32 vienen directo de `docs/especificaciones-visuales.md`
 > (número original entre paréntesis); 33-100 son backlog nuevo del proyecto,
@@ -32,16 +32,16 @@
 |---|---|---|---|
 | 5 | Ciclo de caminata a pie. (#29) | B | ✅ Hecho (`d4a7885`, anim Walk) |
 | 6 | Idle con respiración. (#30) | B | ✅ Hecho (`d4a7885`, anim Idle) |
-| 7 | Transición de sentarse: hoy abordar un asiento es un corte instantáneo de cámara (el fundido a negro ya tapa el corte de cámara — esto es la animación del cuerpo en sí, no la cámara). (#31) | B | Pendiente |
-| 8 | Manos del conductor siguiendo el volante con IK. (#32) | B | Pendiente |
-| 9 | Manos del pasajero agarrando físicamente su paquete mientras lo sostiene. (#33) | B | Pendiente |
+| 7 | Transición de sentarse: hoy abordar un asiento es un corte instantáneo de cámara (el fundido a negro ya tapa el corte de cámara — esto es la animación del cuerpo en sí, no la cámara). (#31) | B | ✅ Hecho (`da9d75d`, pose interpolada) |
+| 8 | Manos del conductor siguiendo el volante con IK. (#32) | B | 🟡 Manos procedurales visibles y siguiendo el volante (`e22452f`); falta IK del esqueleto |
+| 9 | Manos del pasajero agarrando físicamente su paquete mientras lo sostiene. (#33) | B | ✅ Hecho (`990987c`, agarre según ancho) |
 | 10 | Animación de la acción de trampa (mantener/calmar/corregir) — hoy el input no tiene contraparte visual en el personaje. (#34) | B | Pendiente |
 | 11 | Gesto de brazo al tocar bocina. (#35) | C | Pendiente |
-| 12 | Reacción de flinch/encogerse ante un golpe fuerte. (#36) | B | Pendiente |
-| 13 | Ragdoll físico al fallar (ya decidido en `docs/requerimientos-tecnicos.md` §2). (#37) | B | Pendiente |
-| 14 | Apertura y cierre de puertas al subir o bajar. (#38) | C | Pendiente |
+| 12 | Reacción de flinch/encogerse ante un golpe fuerte. (#36) | B | ✅ Hecho (`da9d75d`) |
+| 13 | Ragdoll físico al fallar (ya decidido en `docs/requerimientos-tecnicos.md` §2). (#37) | B | ✅ Hecho (`f86676d`, cuerpo físico temporal) |
+| 14 | Apertura y cierre de puertas al subir o bajar. (#38) | C | ✅ Hecho (`reference_truck.gd`) |
 | 15 | Animación de entrega exitosa: el paquete siendo depositado, no desapareciendo. (#39) | C | Pendiente |
-| 16 | Head bob de la malla del personaje (la cámara ya bobea — esto es sincronizar el cuerpo visible, para cuando exista #3). (#40) | B | Pendiente |
+| 16 | Head bob de la malla del personaje (la cámara ya bobea — esto es sincronizar el cuerpo visible, para cuando exista #3). (#40) | B | ✅ Hecho (`da9d75d`) |
 
 ## Cámara y HUD — contexto jugador (17-22)
 
@@ -49,23 +49,23 @@
 |---|---|---|---|
 | 17 | FOV configurable por el jugador — depende de la pantalla de opciones (ver sección propia más abajo). (#65) | B | ✅ Hecho (`GameSettings`, `options_panel.gd`) |
 | 18 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. (#70) | C | Pendiente |
-| 19 | Viñeta que se intensifica cuando la carga está en riesgo — comunica tensión sin texto. (#71) | B | Pendiente |
+| 19 | Viñeta que se intensifica cuando la carga está en riesgo — comunica tensión sin texto. (#71) | B | ✅ Hecho (`674d8b1`) |
 | 20 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. (#74) | B | Pendiente |
-| 21 | Modo foto. (#76) | C | Pendiente |
-| 22 | Retroalimentación de cámara al pingear: destello o marca en el borde de pantalla apuntando hacia quién pingeó. (#79) | B | Pendiente |
+| 21 | Modo foto. (#76) | C | ✅ Hecho (`phone_camera.gd`) |
+| 22 | Retroalimentación de cámara al pingear: destello o marca en el borde de pantalla apuntando hacia quién pingeó. (#79) | B | ✅ Hecho (`ee06b29`) |
 
 ## Interacción paquete-jugador (23-30)
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 23 | El paquete sostenido flota frente a la cámara sin contacto con las manos — debería verse agarrado. (#82) | B | Pendiente |
+| 23 | El paquete sostenido flota frente a la cámara sin contacto con las manos — debería verse agarrado. (#82) | B | ✅ Hecho (`990987c`) |
 | 24 | Abolladuras o deformación progresiva del paquete según el daño acumulado — hoy solo cambia de color. (#83) | B | ✅ Hecho (`acccb84`) |
 | 25 | Los paquetes deberían chocar entre sí de forma visible y encadenar caos (ya comparten capa de física). (#84) | A | ✅ Hecho: rebote, giro, daño encadenado y test físico |
 | 26 | El cuerpo del jugador debería colisionar con el interior de la furgoneta, no atravesarlo. (#85) | A | ✅ Hecho (`a834da1`, cabina cerrada y puertas sólidas) |
-| 27 | Correas o amarres que sujeten los paquetes al soporte, visiblemente tensas en las curvas. (#86) | B | Pendiente |
-| 28 | Un paquete suelto puede golpear a un jugador y empujarlo (con ragdoll, humor gratis). (#92) | B | Pendiente |
-| 29 | Traspaso de paquete entre jugadores mano a mano, sin pasar por el piso. (#93) | C | Pendiente |
-| 30 | Las manos del conductor deberían ser visibles para los pasajeros — hoy nadie ve a nadie conducir. (#95) | B | Pendiente |
+| 27 | Correas o amarres que sujeten los paquetes al soporte, visiblemente tensas en las curvas. (#86) | B | ✅ Hecho (`c027586`) |
+| 28 | Un paquete suelto puede golpear a un jugador y empujarlo (con ragdoll, humor gratis). (#92) | B | ✅ Hecho (`c027586`, `f86676d`) |
+| 29 | Traspaso de paquete entre jugadores mano a mano, sin pasar por el piso. (#93) | C | ✅ Hecho (`eea8f5c`) |
+| 30 | Las manos del conductor deberían ser visibles para los pasajeros — hoy nadie ve a nadie conducir. (#95) | B | ✅ Hecho (`e22452f`) |
 
 ## Presencia social (31-32)
 
@@ -166,7 +166,7 @@
 | 80 | Armar la pantalla de opciones (no existe todavía, solo el menú principal). | A | ✅ Hecho (`options_panel.gd`) |
 | 81 | Slider de FOV (depende del ítem #17 de esta lista). | B | ✅ Hecho |
 | 82 | Sliders de volumen: general, música, efectos, voces/pings. | A | ✅ Hecho (buses Music/SFX/Voice) |
-| 83 | Reasignación de teclas — al menos las acciones más usadas (interactuar, ping, bocina). | B | Pendiente |
+| 83 | Reasignación de teclas — al menos las acciones más usadas (interactuar, ping, bocina). | B | ✅ Hecho (`7b036fe`) |
 | 84 | Opciones de accesibilidad: reducir sacudida de cámara, reducir el golpe de FOV en impactos. | B | ✅ Hecho (slider Sacudida de cámara) |
 | 85 | Persistencia de las opciones elegidas (archivo de configuración separado del progreso). | A | ✅ Hecho (`GameSettings`) |
 | 86 | Aplicar las opciones en caliente, sin necesitar reiniciar el juego. | A | ✅ Hecho (sin botón aplicar) |
