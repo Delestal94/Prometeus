@@ -531,6 +531,27 @@ func _update_carried_package() -> void:
 	# host-authoritative and only it should ever move the real one.
 	var carry_transform := Transform3D(global_basis, _carry_position())
 	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform)
+	_pose_viewmodel_hands(carried_package.get_half_extents())
+
+
+func _pose_viewmodel_hands(half_extents: Vector3) -> void:
+	# The gloves now meet the sides of the actual box rather than floating
+	# near the camera. A wider package spreads the hands a little, which is
+	# enough visual grounding without inventing a second animation rig.
+	var spread: float = clampf(half_extents.x + 0.04, 0.22, 0.42)
+	var left: MeshInstance3D = _camera.get_node(^"LeftHand") as MeshInstance3D
+	var right: MeshInstance3D = _camera.get_node(^"RightHand") as MeshInstance3D
+	left.position = left.position.lerp(Vector3(-spread, -0.36, -0.76), 0.25)
+	right.position = right.position.lerp(Vector3(spread, -0.36, -0.76), 0.25)
+	left.rotation_degrees = left.rotation_degrees.lerp(Vector3(62, 0, 30), 0.25)
+	right.rotation_degrees = right.rotation_degrees.lerp(Vector3(62, 0, -30), 0.25)
+
+
+func _reset_viewmodel_hands() -> void:
+	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
+		var side: float = -1.0 if hand.name == &"LeftHand" else 1.0
+		hand.position = Vector3(side * 0.16, -0.2, -0.3)
+		hand.rotation_degrees = Vector3(75, 0, -side * 12)
 
 
 ## Collisions are off while carried, so without this the box pokes straight
@@ -735,6 +756,8 @@ func drop_carried() -> void:
 	if not _from_host():
 		return
 	carried_package = null
+	if is_local():
+		_reset_viewmodel_hands()
 
 
 @rpc("any_peer", "call_local", "reliable")
