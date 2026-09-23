@@ -42,6 +42,7 @@ func _passenger_boarding_with_box_counts_as_cargo() -> void:
 	driver.name = "Driver"
 	level.get_node("World").add_child(driver)
 	await process_frame
+	level.get_node("World/Vehicle").call(&"set_door_open", &"cab_left", true)  # Seat is behind the cab door.
 	level.get_node("World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea").interact(driver)
 	_expect(manager.is_running, "A box loaded by boarding is enough for the driver to start the run")
 	await _unload_level(level)
@@ -56,6 +57,7 @@ func _remounting_mid_run_and_dropping() -> void:
 	var pickup: Node = package.get_node("InteractionArea")
 	var mount: Node = vehicle.get_node("CargoBay/LeftShelfPackageMount/InteractionArea")
 	var seat: Node = vehicle.get_node("CabinInterior/DriverEyePoint/InteractionArea")
+	vehicle.call(&"set_door_open", &"cab_left", true)  # The seat is behind the cab door.
 	pickup.interact(player)
 	mount.interact(player)
 	_expect(package.freeze, "A box loaded before the run waits frozen on its shelf")

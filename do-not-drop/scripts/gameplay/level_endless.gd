@@ -63,6 +63,7 @@ var distance_traveled: float = 0.0
 
 func _ready() -> void:
 	RunManager.reset_run()
+	add_child(preload("res://scripts/presentation/ingame_music.gd").new())
 	vehicle.freeze = true
 	packages.assign(get_tree().get_nodes_in_group(&"cargo"))
 	for package: DeliveryPackage in packages:
@@ -125,6 +126,8 @@ func start_debug_delivery() -> void:
 		player.call(&"pick_up", packages[0].get_path())
 		mount.call(&"interact", player)
 	if not _driver_seated:
+		# The driver's seat is only reachable through its open door.
+		vehicle.call(&"set_door_open", &"cab_left", true)
 		_driver_seat.interact(player)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 

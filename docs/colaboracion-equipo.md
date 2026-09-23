@@ -99,6 +99,30 @@ Nacho cambió el nombre oficial en la zona compartida y en dos archivos de Slate
   largo en un panel de 240 px: si se corta, ajustarlo es de Slatex.
 - La carpeta `do-not-drop/` **no** se renombra.
 
+## Aviso activo: segunda pasada del camión, con archivos de Slatex (2026-09-24)
+
+Pedido del usuario tras probarlo. Nacho tocó, además del camión:
+- `interaction/seat_point.gd`: `tend_mount_paths` (un asiento cuida la columna de bahías
+  que tiene enfrente; lo usan los 3 asientos rebatibles `RackSeat*` frente al rack).
+- `package/package_feedback.gd`: el resaltado ya no pone la caja blanca; muestra un borde
+  cálido fino (`HighlightOutline`, casco invertido del tamaño del cuerpo de la caja).
+- `core/game_settings.gd`: HUD por defecto al 60 %, mínimo 35 %. Los `settings.cfg` viejos
+  (sin la marca `hud_scale_default_60`) pasan una vez al 60 %.
+- `ui/prototype_hud.gd`: con un panel con botones abierto (inicio, pausa, resultados) el
+  cursor queda visible aunque el jugador local lo capture al aparecer.
+- `player/player.gd`: una E ya no dispara dos interacciones (el evento de tecla y el sondeo
+  de física disparaban ambos: guardaba el paquete y lo volvía a agarrar, abría y cerraba la
+  puerta); la caja en mano nunca se acerca tanto que la cámara quede adentro; al levantarse
+  de un asiento se para en el piso delante (o en `ExitPoint` si el asiento tiene uno: el
+  conductor baja por su puerta); solo se interactúa con lo que se tiene al alcance (nada a
+  través de paredes, `_within_reach`).
+- `seat_point.gd`: `required_door` -- el asiento del conductor pide la puerta abierta; se
+  cierra sola al sentarse y se abre al bajar. El camión ya no colisiona con jugadores desde
+  su lado (máscara 5): un jugador dentro de su colisión lo hacía salir despedido.
+- Se probó la interpolación física y se descartó: con el camión congelado mandaba las
+  ruedas al origen del mundo y ocultaba las animaciones de puertas y el paquete al dejarlo.
+- Puertas: responden solo si se las mira (ya no se roban la E de paquetes y asientos).
+
 ## Aviso activo: camión de referencia integrado y pulido (2026-09-23)
 
 El modelo de Slatex (`assets/models/truck_reference_lowpoly.glb`, commit 177d82c) ya está

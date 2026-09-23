@@ -18,6 +18,7 @@ func _run() -> void:
 	var package: Node = level.get_node("World/Package")
 	var vehicle: Node = level.get_node("World/Vehicle")
 	var seat: Node = vehicle.get_node("CabinInterior/DriverEyePoint/InteractionArea")
+	vehicle.call(&"set_door_open", &"cab_left", true)  # The seat is behind the cab door.
 	# Loading a seat other than the first one must still unlock the driver's
 	# seat; otherwise the loading flow depends on an arbitrary cargo slot.
 	var mount: Node = vehicle.get_node("CargoBay/LeftShelfPackageMount/InteractionArea")

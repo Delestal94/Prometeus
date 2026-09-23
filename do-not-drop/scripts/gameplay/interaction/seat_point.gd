@@ -12,6 +12,14 @@ extends "res://scripts/gameplay/interaction/interactable.gd"
 @export var seat_camera_path: NodePath
 @export var vehicle_path: NodePath
 @export var required_mount_path: NodePath
+## A seat beside the cargo (the truck's fold-down seats facing the rack):
+## instead of one mount of its own it looks after whichever box sits in any
+## of these mounts -- the bay column right in front of it. Sitting is always
+## allowed; a box in hand is shelved in the first free bay of the column.
+@export var tend_mount_paths: Array[NodePath] = []
+## A seat behind one of the vehicle's doors (the driver's, behind the cab
+## door) can only be reached with that door open.
+@export var required_door: StringName = &""
 
 ## Host-only: interact() (and so this) only ever runs on the host, so other
 ## clients' copies of this same node never see it change. Fine for the
@@ -70,12 +78,18 @@ func _is_occupied() -> bool:
 func get_prompt() -> String:
 	if _is_occupied():
 		return ""
-	return "Subirse a manejar" if role == &"driver" else "Sentarse"
+	if role == &"driver":
+		return "Subirse a manejar"
+	return "Sentarse junto a la carga" if not tend_mount_paths.is_empty() else "Sentarse"
 
 
 func can_interact(player: Node) -> bool:
 	if _is_occupied():
 		return false
+	if required_door != &"":
+		var door_vehicle: Node = get_node_or_null(vehicle_path)
+		if door_vehicle != null and door_vehicle.has_method(&"is_door_open") and not bool(door_vehicle.call(&"is_door_open", required_door)):
+			return false
 	var carried: Node = player.get(&"carried_package")
 	if role == &"driver":
 		# Any loaded passenger position makes the van ready. Requiring the
@@ -89,6 +103,8 @@ func can_interact(player: Node) -> bool:
 		if not has_loaded_cargo:
 			return false
 		return carried == null
+	if not tend_mount_paths.is_empty():
+		return carried == null or _first_mount(false) != null
 	if not required_mount_path.is_empty():
 		# A passenger's tending mount can be filled two ways: someone already
 		# left the package there, or this player is still holding it and
@@ -123,7 +139,24 @@ func interact(player: Node) -> void:
 		# position in the tree, which is a sibling of the vehicle, not a child.
 		var seat_path: NodePath = get_parent().get_path()
 		player.rpc_id(peer_id, &"board_seat", camera_path, seat_path)
-	if role != &"driver" and not required_mount_path.is_empty():
+	if role != &"driver" and not tend_mount_paths.is_empty():
+		var package: Node = null
+		var carried: Node = player.get(&"carried_package")
+		if carried != null:
+			var free_mount: Node = _first_mount(false)
+			if free_mount != null:
+				free_mount.call(&"store", carried)
+				package = carried
+				if player.get(&"carried_package") == carried:
+					player.rpc(&"drop_carried")
+				free_mount.emit_signal(&"interacted", player)
+		else:
+			var full_mount: Node = _first_mount(true)
+			if full_mount != null:
+				package = full_mount.get(&"occupied_by")
+		if package != null and player.has_method(&"tend_package"):
+			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
+	elif role != &"driver" and not required_mount_path.is_empty():
 		# A passenger takes charge of the package at their own seat: from here
 		# their input is what keeps that trap under control.
 		var mount: Node = get_node_or_null(required_mount_path)
@@ -144,6 +177,16 @@ func interact(player: Node) -> void:
 		if package != null and player.has_method(&"tend_package"):
 			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 	interacted.emit(player)
+
+
+## First mount of this seat's column that is occupied (or free), in the
+## order listed -- lower bay before upper.
+func _first_mount(occupied: bool) -> Node:
+	for path: NodePath in tend_mount_paths:
+		var mount: Node = get_node_or_null(path)
+		if mount != null and is_instance_valid(mount.get(&"occupied_by")) == occupied:
+			return mount
+	return null
 
 
 ## The player owns the local "leave seat" gesture, but driving state is host

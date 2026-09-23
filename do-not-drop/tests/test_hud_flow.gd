@@ -44,13 +44,15 @@ func _run() -> void:
 	_expect(hud.interaction_label.text == "", "An empty prompt clears the line")
 
 	# --- the in-game HUD scales as one layer, still covering the screen ---
+	# Put back whatever the player had: this writes their real settings file.
+	var player_hud_scale: float = settings.hud_scale
 	settings.hud_scale = 0.75
 	var layer: Control = hud.hud_layer
 	_expect(is_equal_approx(layer.scale.x, 0.75), "HUD scale setting resizes the HUD layer live")
 	_expect(layer.size.is_equal_approx(hud.root.size / 0.75), "A scaled HUD still spans the whole screen")
 	_expect(hud.overlay.get_parent() == hud.root and is_equal_approx(hud.overlay.get_global_transform().get_scale().x, 1.0),
 		"The pause/results card keeps its own size")
-	settings.hud_scale = 1.0
+	settings.hud_scale = player_hud_scale
 
 	# --- restart has to be held during play ---
 	hud._primary_action()

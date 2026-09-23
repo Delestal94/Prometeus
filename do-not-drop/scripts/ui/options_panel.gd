@@ -12,6 +12,7 @@ signal closed
 
 var _volume_slider: HSlider
 var _sensitivity_slider: HSlider
+var _music_slider: HSlider
 var _hud_scale_slider: HSlider
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
@@ -42,6 +43,9 @@ func _build() -> void:
 
 	_volume_slider = UiTheme.slider_row(column, "Volumen general", 0.0, 1.0, 0.05, GameSettings.master_volume)
 	_volume_slider.value_changed.connect(func(value: float) -> void: GameSettings.master_volume = value)
+
+	_music_slider = UiTheme.slider_row(column, "Volumen de la música", 0.0, 1.0, 0.05, GameSettings.music_volume)
+	_music_slider.value_changed.connect(func(value: float) -> void: GameSettings.music_volume = value)
 
 	_sensitivity_slider = UiTheme.slider_row(column, "Sensibilidad de la mirada", 0.2, 3.0, 0.05, GameSettings.look_sensitivity)
 	_sensitivity_slider.value_changed.connect(func(value: float) -> void: GameSettings.look_sensitivity = value)
@@ -95,6 +99,8 @@ func _reset() -> void:
 func _sync_from_settings() -> void:
 	_volume_slider.set_value_no_signal(GameSettings.master_volume)
 	_volume_slider.value_changed.emit(GameSettings.master_volume)
+	_music_slider.set_value_no_signal(GameSettings.music_volume)
+	_music_slider.value_changed.emit(GameSettings.music_volume)
 	_sensitivity_slider.set_value_no_signal(GameSettings.look_sensitivity)
 	_sensitivity_slider.value_changed.emit(GameSettings.look_sensitivity)
 	_hud_scale_slider.set_value_no_signal(GameSettings.hud_scale)

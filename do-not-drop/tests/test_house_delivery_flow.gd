@@ -29,6 +29,7 @@ func _run() -> void:
 	var pickup: Node = package.get_node("InteractionArea")
 	var mount: Node = vehicle.get_node("CargoBay/LeftShelfPackageMount/InteractionArea")
 	var seat: Node = vehicle.get_node("CabinInterior/DriverEyePoint/InteractionArea")
+	vehicle.call(&"set_door_open", &"cab_left", true)  # The seat is behind the cab door.
 	var package_id: StringName = StringName(package.get(&"package_id"))
 
 	# --- load it, start the run, then take it back out at the stop ---

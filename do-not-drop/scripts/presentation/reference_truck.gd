@@ -68,10 +68,13 @@ func _ready() -> void:
 	_accent.roughness = 0.6
 	_remove_authored_shelving()
 	_make_glass_transparent()
+	_reshape_side_windows()
 	_attach_wheel_visuals()
 	_build_steering_pivot()
+	_dress_cab()
 	_collect_doors()
 	_build_cargo_fittings()
+	_build_jump_seats()
 	_build_ramp()
 	_bind_presentation()
 
@@ -134,6 +137,8 @@ func _make_glass_transparent() -> void:
 	glass.metallic_specular = 0.9
 	glass.roughness = 0.06
 	glass.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Shadow maps drew stair-stepped pillar shadows across every pane.
+	glass.disable_receive_shadows = true
 	for mesh: MeshInstance3D in _meshes():
 		if _uses_material(mesh, GLASS_MATERIAL):
 			mesh.material_override = glass
@@ -155,29 +160,31 @@ func _attach_wheel_visuals() -> void:
 		art.transform = Transform3D(axle_basis, Vector3.ZERO)
 
 
-## The authored steering wheel is loose rim and spoke pieces. They're gathered
-## under one pivot on the column axis (local Y pointing away from the driver,
-## the convention VehiclePresentation turns it by), plus a small hub.
+## The authored steering wheel is twelve straight rim segments with gaps at
+## every joint. It's measured (centre, column axis, radius) and rebuilt as a
+## round rim with three spokes and a hub, all under one pivot whose local Y
+## is the column axis pointing away from the driver -- the convention
+## VehiclePresentation turns it by.
 func _build_steering_pivot() -> void:
 	var pieces: Array[Node3D] = []
 	for node: Node in model.find_children("Steering*", "MeshInstance3D", true, false):
 		if not String(node.name).begins_with("SteeringColumn"):
 			pieces.append(node as Node3D)
-	if pieces.size() < 3:
-		return
-	var parent := pieces[0].get_parent() as Node3D
-	var center := Vector3.ZERO
 	var rim: Array[Vector3] = []
+	var center := Vector3.ZERO
 	for piece: Node3D in pieces:
 		if String(piece.name).begins_with("SteeringRim"):
 			rim.append(piece.position)
 			center += piece.position
 	if rim.size() < 3:
 		return
+	var parent := pieces[0].get_parent() as Node3D
 	center /= float(rim.size())
 	var first := rim[0] - center
 	var normal := Vector3.ZERO
+	var radius := 0.0
 	for point: Vector3 in rim:
+		radius += point.distance_to(center) / float(rim.size())
 		var candidate := first.cross(point - center)
 		if candidate.length() > normal.length():
 			normal = candidate
@@ -187,22 +194,61 @@ func _build_steering_pivot() -> void:
 		normal = -normal
 	var side := Vector3(0.0, 0.0, 1.0)
 	side = (side - normal * side.dot(normal)).normalized()
+	for piece: Node3D in pieces:
+		piece.get_parent().remove_child(piece)
+		piece.queue_free()
 	steering_wheel = Node3D.new()
 	steering_wheel.name = "SteeringWheel"
 	steering_wheel.transform = Transform3D(Basis(side, normal, side.cross(normal)), center)
 	parent.add_child(steering_wheel)
-	for piece: Node3D in pieces:
-		piece.reparent(steering_wheel, true)
+	var grip := StandardMaterial3D.new()
+	grip.albedo_color = Color("20262c")
+	grip.roughness = 0.55
+	var ring := MeshInstance3D.new()
+	ring.name = "Rim"
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius - 0.03
+	torus.outer_radius = radius + 0.03
+	torus.rings = 32
+	torus.ring_segments = 10
+	ring.mesh = torus
+	ring.material_override = grip
+	steering_wheel.add_child(ring)
+	# T-shaped spokes: left, right and the one toward the driver's knees.
+	var down_is_plus_z: bool = steering_wheel.transform.basis.z.y < 0.0
+	for direction: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.BACK if down_is_plus_z else Vector3.FORWARD]:
+		var spoke := MeshInstance3D.new()
+		var bar := CylinderMesh.new()
+		bar.top_radius = 0.02
+		bar.bottom_radius = 0.026
+		bar.height = radius
+		bar.radial_segments = 8
+		spoke.mesh = bar
+		spoke.material_override = _dark
+		var along := direction.normalized()
+		var across := Vector3.UP.cross(along).normalized()
+		spoke.transform = Transform3D(Basis(across, along, across.cross(along)), along * radius * 0.5)
+		steering_wheel.add_child(spoke)
 	var hub := MeshInstance3D.new()
 	hub.name = "Hub"
 	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = 0.07
-	cylinder.bottom_radius = 0.07
-	cylinder.height = 0.06
-	cylinder.radial_segments = 10
+	cylinder.top_radius = 0.075
+	cylinder.bottom_radius = 0.085
+	cylinder.height = 0.07
+	cylinder.radial_segments = 16
 	hub.mesh = cylinder
 	hub.material_override = _dark
 	steering_wheel.add_child(hub)
+	var horn := MeshInstance3D.new()
+	var cap := CylinderMesh.new()
+	cap.top_radius = 0.055
+	cap.bottom_radius = 0.06
+	cap.height = 0.02
+	cap.radial_segments = 16
+	horn.mesh = cap
+	horn.material_override = _accent
+	horn.position = Vector3(0.0, -0.045, 0.0)  # Driver's side of the hub.
+	steering_wheel.add_child(horn)
 
 
 func _collect_doors() -> void:
@@ -269,6 +315,204 @@ func _play_door_sound(audio: AudioStreamPlayer3D, pitch: float, volume_db: float
 	audio.play()
 
 
+## The authored side glass is a plain rectangle that runs forward past the
+## door's slanted front pillar, so its top corner hung out over the
+## windshield. Each pane is re-cut to the real opening -- back pillar to the
+## slanted front pillar, sill to header -- and framed with a rubber seal.
+## Coordinates are the model's (x front, y up), measured from the door frame.
+const WINDOW_OPENING := [Vector2(1.53, 2.34), Vector2(3.76, 2.34), Vector2(3.15, 3.21), Vector2(1.53, 3.21)]
+const WINDOW_PLANE_Z := 1.27
+
+func _reshape_side_windows() -> void:
+	var seal := _flat_material(Color("1b2025"))
+	for side_name: String in ["Left", "Right"]:
+		var pane := model.find_child("SideWindow_" + side_name, true, false) as MeshInstance3D
+		var hinge := model.find_child("CabDoor_%s_HINGE_Z" % side_name, true, false) as Node3D
+		if pane == null or hinge == null:
+			continue
+		var outward: float = -1.0 if side_name == "Left" else 1.0
+		var z: float = WINDOW_PLANE_Z * outward - hinge.position.z
+		var corners: Array[Vector3] = []
+		for corner: Vector2 in WINDOW_OPENING:
+			corners.append(Vector3(corner.x - hinge.position.x, corner.y - hinge.position.y, z) - pane.position)
+		var normals := PackedVector3Array()
+		for index in range(6):
+			normals.append(Vector3(0.0, 0.0, outward))
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([corners[0], corners[1], corners[2], corners[0], corners[2], corners[3]])
+		arrays[Mesh.ARRAY_NORMAL] = normals
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		pane.mesh = mesh
+		for index in range(4):
+			var a: Vector3 = corners[index]
+			var b: Vector3 = corners[(index + 1) % 4]
+			var strip := MeshInstance3D.new()
+			var box := BoxMesh.new()
+			box.size = Vector3(a.distance_to(b) + 0.035, 0.035, 0.05)
+			strip.mesh = box
+			strip.material_override = seal
+			var along := (b - a).normalized()
+			strip.transform = Transform3D(Basis(along, Vector3(0.0, 0.0, 1.0).cross(along), Vector3(0.0, 0.0, 1.0)), (a + b) * 0.5)
+			pane.add_child(strip)
+
+
+## Life in the cab: a passenger seat, centre console with gear stick,
+## handbrake and coffee, gauges, radio, rear-view mirror with an air
+## freshener, sun visors, a clipboard of deliveries and floor mats. Built in
+## the model's own space (x front, y up, z right), sized from its dashboard.
+func _dress_cab() -> void:
+	var dashboard := model.find_child("Dashboard", true, false) as MeshInstance3D
+	if dashboard == null:
+		return
+	var cab := dashboard.get_parent() as Node3D
+	var dressing := Node3D.new()
+	dressing.name = "CabDressing"
+	cab.add_child(dressing)
+	var seat_color: Material = _material_named("DT_Seat")
+	var paper := _flat_material(Color("f2eee2"))
+	var cardboard := _flat_material(Color("b98a52"))
+	var green := _flat_material(Color("3fae5a"))
+	var screen := _flat_material(Color("1d6f78"))
+	screen.emission_enabled = true
+	screen.emission = Color("39c4c9")
+	screen.emission_energy_multiplier = 0.6
+	var dial := _flat_material(Color("f5f1e6"))
+	var needle := _flat_material(Color("e2402f"))
+	var cup := _flat_material(Color("f4f1ea"))
+	var lid := _flat_material(Color("6b4a33"))
+	# Passenger seat: a copy of the driver's, mirrored across the cab.
+	for part_name: String in ["DriverSeat", "DriverBackrest", "DriverSeatBase"]:
+		var part := model.find_child(part_name, true, false) as MeshInstance3D
+		if part != null:
+			var copy := part.duplicate() as MeshInstance3D
+			copy.name = part_name.replace("Driver", "Passenger") + "_Cab"
+			copy.position.z = -part.position.z
+			dressing.add_child(copy)
+	# Centre console between the seats, with the gear stick and handbrake.
+	_prop_box(dressing, Vector3(0.72, 0.3, 0.3), Vector3(2.6, 1.33, 0.0), _dark)
+	_prop_box(dressing, Vector3(0.64, 0.02, 0.24), Vector3(2.6, 1.49, 0.0), seat_color)
+	_prop_cylinder(dressing, 0.018, 0.34, Vector3(2.92, 1.66, 0.0), Vector3(0.0, 0.0, deg_to_rad(12.0)), _dark)
+	var knob := MeshInstance3D.new()
+	var ball := SphereMesh.new()
+	ball.radius = 0.045
+	ball.height = 0.09
+	ball.radial_segments = 12
+	ball.rings = 6
+	knob.mesh = ball
+	knob.material_override = _accent
+	knob.position = Vector3(2.885, 1.83, 0.0)
+	dressing.add_child(knob)
+	_prop_box(dressing, Vector3(0.28, 0.04, 0.05), Vector3(2.45, 1.54, 0.07), _dark, Vector3(0.0, 0.0, deg_to_rad(18.0)))
+	# Coffee in the cup holder.
+	_prop_cylinder(dressing, 0.04, 0.13, Vector3(2.32, 1.56, -0.06), Vector3.ZERO, cup)
+	_prop_cylinder(dressing, 0.043, 0.02, Vector3(2.32, 1.63, -0.06), Vector3.ZERO, lid)
+	# Two round gauges in the instrument cluster, facing the driver.
+	for offset: float in [-0.1, 0.1]:
+		var gauge_z: float = -0.64 + offset
+		_prop_cylinder(dressing, 0.055, 0.012, Vector3(3.235, 2.255, gauge_z), Vector3(0.0, 0.0, PI * 0.5), dial)
+		_prop_box(dressing, Vector3(0.006, 0.045, 0.008), Vector3(3.228, 2.27, gauge_z + 0.01), needle, Vector3(deg_to_rad(35.0), 0.0, 0.0))
+	# Radio with a lit screen, centre of the dash.
+	_prop_box(dressing, Vector3(0.05, 0.12, 0.3), Vector3(3.33, 2.13, 0.0), _dark)
+	_prop_box(dressing, Vector3(0.01, 0.06, 0.16), Vector3(3.303, 2.15, 0.0), screen)
+	# Rear-view mirror and a pine-tree air freshener hanging from it.
+	_prop_box(dressing, Vector3(0.03, 0.12, 0.05), Vector3(3.22, 3.24, 0.0), _dark)
+	_prop_box(dressing, Vector3(0.05, 0.11, 0.34), Vector3(3.19, 3.13, 0.0), _dark)
+	_prop_box(dressing, Vector3(0.005, 0.09, 0.3), Vector3(3.164, 3.13, 0.0), _steel)
+	_prop_box(dressing, Vector3(0.004, 0.14, 0.004), Vector3(3.17, 3.0, 0.1), _dark)
+	var tree := MeshInstance3D.new()
+	var prism := PrismMesh.new()
+	prism.size = Vector3(0.08, 0.12, 0.01)
+	tree.mesh = prism
+	tree.material_override = green
+	tree.position = Vector3(3.17, 2.87, 0.1)
+	tree.rotation.y = PI * 0.5
+	dressing.add_child(tree)
+	# Sun visors folded up against the headliner.
+	for visor_z: float in [-0.6, 0.6]:
+		_prop_box(dressing, Vector3(0.3, 0.025, 0.62), Vector3(3.08, 3.3, visor_z), seat_color, Vector3(0.0, 0.0, deg_to_rad(-12.0)))
+	# Delivery clipboard on the passenger side of the dash.
+	var clipboard := Node3D.new()
+	clipboard.position = Vector3(3.5, 2.265, 0.62)
+	clipboard.rotation = Vector3(0.0, deg_to_rad(14.0), 0.0)
+	dressing.add_child(clipboard)
+	_prop_box(clipboard, Vector3(0.3, 0.015, 0.22), Vector3.ZERO, cardboard)
+	_prop_box(clipboard, Vector3(0.26, 0.006, 0.19), Vector3(-0.01, 0.01, 0.0), paper)
+	_prop_box(clipboard, Vector3(0.04, 0.02, 0.1), Vector3(0.12, 0.015, 0.0), _steel)
+	# A parcel riding shotgun, and rubber mats on the cab floor.
+	_prop_box(dressing, Vector3(0.3, 0.22, 0.3), Vector3(2.38, 1.8, 0.62), cardboard, Vector3(0.0, deg_to_rad(-8.0), 0.0))
+	for mat_z: float in [-0.62, 0.62]:
+		_prop_box(dressing, Vector3(0.7, 0.012, 0.5), Vector3(3.0, 1.186, mat_z), _dark)
+
+
+func _flat_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.7
+	return material
+
+
+func _prop_box(parent: Node3D, size: Vector3, at: Vector3, material: Material, rotation_euler: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mesh := _add_box(parent, size, at, material)
+	mesh.rotation = rotation_euler
+	return mesh
+
+
+func _prop_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, rotation_euler: Vector3, material: Material) -> MeshInstance3D:
+	var mesh := MeshInstance3D.new()
+	var cylinder := CylinderMesh.new()
+	cylinder.top_radius = radius
+	cylinder.bottom_radius = radius
+	cylinder.height = height
+	cylinder.radial_segments = 12
+	mesh.mesh = cylinder
+	mesh.material_override = material
+	mesh.position = at
+	mesh.rotation = rotation_euler
+	parent.add_child(mesh)
+	return mesh
+
+
+## Folding jump seats on the right wall, facing the rack, one per bay column
+## (vehicle.tscn RackSeat*EyePoint). Folded flat against the wall while free,
+## so they never narrow the aisle; they drop down when somebody sits.
+const JUMP_SEAT_FOLDED := -PI * 0.5
+var _jump_seats: Array = []
+
+func _build_jump_seats() -> void:
+	var seat_color: Material = _material_named("DT_Seat")
+	var fittings := vehicle.get_node(^"BodyVisuals/CargoFittings") as Node3D
+	for marker: Node in vehicle.get_node(^"CargoBay").get_children():
+		if not String(marker.name).begins_with("RackSeat"):
+			continue
+		var z: float = (marker as Node3D).position.z
+		var hinge := Node3D.new()
+		hinge.name = String(marker.name).replace("EyePoint", "Fold")
+		hinge.position = Vector3(0.985, 0.66, z)
+		hinge.rotation.z = JUMP_SEAT_FOLDED
+		fittings.add_child(hinge)
+		# The cushion hangs off the hinge toward the aisle (-X) when down.
+		_add_box(hinge, Vector3(0.36, 0.06, 0.42), Vector3(-0.18, 0.0, 0.0), seat_color)
+		_add_box(hinge, Vector3(0.03, 0.04, 0.38), Vector3(-0.35, -0.03, 0.0), _dark)
+		# Backrest pad and mounting plate stay on the wall.
+		_add_box(fittings, Vector3(0.05, 0.42, 0.4), Vector3(0.97, 0.98, z), seat_color)
+		_add_box(fittings, Vector3(0.02, 0.62, 0.46), Vector3(0.99, 0.86, z), _dark)
+		_jump_seats.append([hinge, marker.get_path()])
+
+
+func _process(delta: float) -> void:
+	if _jump_seats.is_empty():
+		return
+	var occupied: Array = []
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		occupied.append(NodePath(player.get(&"seat_node_path")))
+	for entry: Array in _jump_seats:
+		var hinge: Node3D = entry[0]
+		var target: float = 0.0 if entry[1] in occupied else JUMP_SEAT_FOLDED
+		hinge.rotation.z = move_toward(hinge.rotation.z, target, delta * 6.0)
+
+
 ## Rack decks, end frames and wheel-well humps are drawn from the collision
 ## shapes themselves, so the boxes can never look like they float above or
 ## sink into a shelf.
@@ -285,9 +529,12 @@ func _build_cargo_fittings() -> void:
 		var at: Vector3 = deck.position
 		var top: float = at.y + size.y * 0.5
 		var aisle_edge: float = at.x + size.x * 0.5
-		_add_box(fittings, Vector3(size.x, 0.03, size.z), Vector3(at.x, top - 0.015, at.z), _steel)
-		# Orange load beam under the aisle edge of every deck.
-		_add_box(fittings, Vector3(0.05, 0.07, size.z), Vector3(aisle_edge - 0.025, top - 0.065, at.z), _accent)
+		# Dark deck plate: a light one showed as a bright strip under every box,
+		# which read as the box hovering above the shelf.
+		_add_box(fittings, Vector3(size.x, 0.03, size.z), Vector3(at.x, top - 0.015, at.z), _dark)
+		# Orange load beam along the aisle edge, its top flush with the deck
+		# and a centimetre proud of it, so the box visibly sits on the beam line.
+		_add_box(fittings, Vector3(0.05, 0.07, size.z), Vector3(aisle_edge - 0.015, top - 0.035, at.z), _accent)
 	for shape_name: String in ["RackFrontEndCollision", "RackRearEndCollision"]:
 		var frame := _box_shape(shape_name)
 		if frame.is_empty():

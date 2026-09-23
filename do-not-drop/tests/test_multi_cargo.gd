@@ -38,7 +38,7 @@ func _initialize() -> void:
 	for node: Node in _all_nodes(level):
 		if node.get(&"role") == &"passenger":
 			seats.append(node)
-	_expect(seats.size() == 7, "There are seven passenger seats to take (got %d)" % seats.size())
+	_expect(seats.size() == 10, "Seven passenger seats plus three fold-down seats by the rack (got %d)" % seats.size())
 
 	var player: Node = level.local_player
 	var manager: Node = root.get_node(^"/root/RunManager")
@@ -56,6 +56,7 @@ func _initialize() -> void:
 
 	# Taking the wheel with cargo aboard starts the delivery.
 	var driver_seat: Node = level.get_node(^"World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea")
+	driver_seat.get_parent().get_parent().get_parent().call(&"set_door_open", &"cab_left", true)  # Seat is behind the cab door.
 	driver_seat.call(&"interact", player)
 	_expect(bool(manager.get(&"is_running")), "Delivery starts once a driver sits with cargo aboard")
 	_expect((manager.get(&"cargo") as Dictionary).size() == 2,

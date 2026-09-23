@@ -10,6 +10,10 @@ const SHOTS := [
 	["rear_open", Vector3(3.6, 2.4, 10.2), Vector3(0.0, 0.9, 3.4)],
 	["rack_from_doorway", Vector3(0.55, 1.75, 5.3), Vector3(-0.45, 0.9, 2.6)],
 	["aisle_from_seats", Vector3(0.1, 1.55, 0.3), Vector3(0.1, 0.9, 4.4)],
+	["upper_shelf_from_aisle", Vector3(0.45, 1.05, 3.9), Vector3(-0.52, 1.75, 3.2)],
+	["highlighted_box", Vector3(0.1, 1.3, 2.9), Vector3(-0.52, 0.8, 2.305)],
+	["side_window_outside", Vector3(-3.0, 1.9, -1.2), Vector3(-1.0, 1.55, -1.5)],
+	["cab_from_passenger", Vector3(0.45, 1.5, -0.9), Vector3(-0.6, 1.1, -2.0)],
 	["cab_doors_open", Vector3(-5.2, 2.2, -4.6), Vector3(0.0, 1.0, -1.2)],
 ]
 
@@ -60,7 +64,13 @@ func _run() -> void:
 	for tick in range(120):
 		await physics_frame
 	_van.freeze = true
-	_load_rack(world)
+	await _load_rack(world)
+	# One box shown as targeted, and one fold-down seat lowered as if taken.
+	var first: Node = get_nodes_in_group(&"cargo")[0]
+	first.get_node(^"InteractionArea").call(&"highlight", true)
+	var adapter: Node = _van.get_node(^"ReferenceTruck")
+	adapter.set_process(false)
+	(_van.get_node(^"BodyVisuals/CargoFittings/RackSeat3Fold") as Node3D).rotation.z = 0.0
 	_camera = Camera3D.new()
 	_camera.fov = 70.0
 	_camera.near = 0.03
@@ -75,6 +85,9 @@ func _run() -> void:
 		_camera.global_position = _van.to_global(shot[1])
 		_camera.look_at(_van.to_global(shot[2]))
 		await _save(shot[0])
+	_van.set_door_open(&"cab_left", false)
+	_van.set_door_open(&"cab_right", false)
+	await create_timer(0.8).timeout
 	# The driver's own view, straight through the windshield.
 	var eye := _van.get_node(^"CabinInterior/DriverEyePoint") as Node3D
 	_camera.global_transform = eye.global_transform
@@ -92,6 +105,8 @@ func _load_rack(world: Node3D) -> void:
 		package.set(&"trap_definition", load("res://data/traps/%s.tres" % traps[index]))
 		package.freeze = true
 		world.add_child(package)
+		# The trap shape (tall, flat...) is applied a frame after spawning.
+		await process_frame
 		var marker := _van.get_node(NodePath("CargoBay/" + mounts[index])) as Node3D
 		var half: Vector3 = package.call(&"get_half_extents")
 		package.global_transform = marker.global_transform.translated_local(Vector3(0.0, half.y - 0.325, 0.0))

@@ -11,7 +11,15 @@ extends VehicleBody3D
 ## Which peer currently holds the wheel, synced to everyone so each client's
 ## VehicleInputComponent knows whether it's the one that should be reading
 ## input at all. 0 means nobody's driving.
-@export var driver_peer_id: int = 0
+@export var driver_peer_id: int = 0:
+	set(value):
+		var changed: bool = value != driver_peer_id
+		driver_peer_id = value
+		# The driver got in through the open door: it shuts behind them. When
+		# they get out it opens to let them climb down. Host decides, and the
+		# door state replicates like any other door toggle.
+		if changed and is_node_ready() and is_multiplayer_authority():
+			set_door_open(&"cab_left", value == 0)
 @export var controls_enabled: bool = true
 @export var maximum_engine_force: float = 1700.0
 @export var maximum_speed_kmh: float = 72.0

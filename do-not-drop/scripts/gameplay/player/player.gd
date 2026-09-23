@@ -221,6 +221,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _seated:
 		if _is_interact_event(event):
+			# Mark this press as used, or _poll_interact() would read the
+			# still-held E on the next physics tick and sit right back down.
+			_interact_was_down = true
 			leave_seat()
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -229,6 +232,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_pitch = 0.0
 		_head.rotation.x = 0.0
 	elif _is_interact_event(event):
+		# Same press must not also reach _poll_interact() on the next physics
+		# tick: two interactions per E put a box on the shelf and grabbed it
+		# straight back, or opened a door and shut it again.
+		_interact_was_down = true
 		_try_interact()
 
 
@@ -503,6 +510,8 @@ func _update_carried_package() -> void:
 ## wall there's no room for the box at all, and a sliver of clipping reads
 ## better than a crate filling the whole screen.
 const CARRY_MIN_DISTANCE: float = 0.3
+## Room between the camera and the near face of a carried box.
+const CARRY_FACE_CLEARANCE: float = 0.12
 const WORLD_BLOCKING_MASK: int = 1 | 2 | 4  # environment, vehicle, packages
 
 
@@ -514,16 +523,20 @@ func _carry_position() -> Vector3:
 	if reach < 0.001:
 		return target
 	var direction: Vector3 = offset / reach
-	# The box keeps the body's yaw, so its half depth lies along the flat
-	# forward axis; along a ray angled down toward the hold point it's longer.
-	var flat_forward: Vector3 = -global_basis.z
-	var along_ray: float = maxf(absf(direction.dot(flat_forward)), 0.3)
-	var half_depth: float = carried_package.get_half_extents().z / along_ray
-	var hit: Dictionary = _raycast(from, target + direction * half_depth, WORLD_BLOCKING_MASK)
+	# How far the box reaches from its centre toward the camera along this
+	# ray: the box keeps the body's yaw, so project each half extent onto
+	# the ray. The camera must stay outside that, or you see from inside
+	# the box (looking up with it at head height, or up against a wall).
+	var half: Vector3 = carried_package.get_half_extents()
+	var support: float = (absf(direction.dot(global_basis.x)) * half.x
+		+ absf(direction.dot(global_basis.y)) * half.y
+		+ absf(direction.dot(global_basis.z)) * half.z)
+	var min_distance: float = maxf(CARRY_MIN_DISTANCE, support + CARRY_FACE_CLEARANCE)
+	var hit: Dictionary = _raycast(from, target + direction * support, WORLD_BLOCKING_MASK)
 	if hit.is_empty():
-		return target
-	var allowed: float = from.distance_to(hit["position"]) - half_depth - 0.02
-	return from + direction * clampf(allowed, CARRY_MIN_DISTANCE, reach)
+		return from + direction * maxf(reach, min_distance)
+	var allowed: float = from.distance_to(hit["position"]) - support - 0.02
+	return from + direction * clampf(allowed, min_distance, maxf(reach, min_distance))
 
 
 func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
@@ -600,6 +613,13 @@ func _drop_position(half_extents: Vector3) -> Vector3:
 ## slots sit close enough together that nearest-first made it impossible to
 ## choose which one a box went into.
 const AIM_DISTANCE_WEIGHT: float = 0.3
+## How far forward of a seat a passenger stands up (see _seat_exit_position).
+const SEAT_EXIT_STEP: float = 0.55
+## Only what's physically within reach can be used: something solid between
+## the eyes and the target blocks it (a seat or shelf through the truck's
+## wall). A hit this close to the target doesn't count -- door handles and
+## seats reached through an open door sit right on a surface.
+const REACH_SURFACE_TOLERANCE: float = 0.3
 
 
 func _closest_interactable() -> Node:
@@ -612,6 +632,8 @@ func _closest_interactable() -> Node:
 			continue
 		if not bool(area.call(&"can_interact", self)):
 			continue
+		if not _within_reach(area as Node3D):
+			continue
 		var to_target: Vector3 = (area as Node3D).global_position - eye
 		var distance: float = to_target.length()
 		var alignment: float = look.dot(to_target / distance) if distance > 0.001 else 1.0
@@ -620,6 +642,14 @@ func _closest_interactable() -> Node:
 			best_score = score
 			best = area
 	return best
+
+
+func _within_reach(target: Node3D) -> bool:
+	var eye: Vector3 = _camera.global_position
+	var hit: Dictionary = _raycast(eye, target.global_position, 1 | 2)
+	if hit.is_empty():
+		return true
+	return (hit["position"] as Vector3).distance_to(target.global_position) <= REACH_SURFACE_TOLERANCE
 
 
 func _on_probe_entered(area: Area3D) -> void:
@@ -700,7 +730,7 @@ func leave_seat() -> void:
 	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
 	_release_seat_occupant(seat)
 	if seat != null:
-		global_position = seat.global_position + seat.global_basis.z * 0.45
+		global_position = _seat_exit_position(seat)
 	var seat_camera: Node = get_node_or_null(_seat_camera_path)
 	if seat_camera != null and seat_camera.has_method(&"deactivate"):
 		seat_camera.call(&"deactivate")
@@ -711,6 +741,18 @@ func leave_seat() -> void:
 	collision_layer = 8
 	collision_mask = 7
 	_camera.current = true
+
+
+## Where to stand when getting up: the seat's own "ExitPoint" if it has one
+## (the driver climbs out through the cab door), otherwise a step forward
+## from the seat, into the aisle it faces. Either way, dropped onto whatever
+## floor is under that spot -- never left at eye height or inside a wall.
+func _seat_exit_position(seat: Node3D) -> Vector3:
+	var exit_point := seat.get_node_or_null(^"ExitPoint") as Node3D
+	var spot: Vector3 = exit_point.global_position if exit_point != null else seat.global_position - seat.global_basis.z * SEAT_EXIT_STEP
+	var query := PhysicsRayQueryParameters3D.create(spot + Vector3.UP * 0.2, spot + Vector3.DOWN * 3.0, 1 | 2, [get_rid()])
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+	return (hit["position"] as Vector3) + Vector3.UP * 0.02 if not hit.is_empty() else spot
 
 
 func _release_seat_occupant(seat: Node3D) -> void:

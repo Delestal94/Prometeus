@@ -40,6 +40,7 @@ func _initialize() -> void:
 
 	var manager: Node = root.get_node(^"/root/RunManager")
 	var driver_seat: Node = level.get_node(^"World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea")
+	driver_seat.get_parent().get_parent().get_parent().call(&"set_door_open", &"cab_left", true)  # Seat is behind the cab door.
 	driver_seat.call(&"interact", player)
 	_expect(bool(manager.get(&"is_running")), "Delivery starts with all four traps aboard")
 	_expect((manager.get(&"cargo") as Dictionary).size() == 4,

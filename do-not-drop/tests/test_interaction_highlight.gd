@@ -23,12 +23,13 @@ func _test_package_highlight() -> void:
 	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
 	var material: StandardMaterial3D = feedback.get(&"_material")
 
-	_expect(not material.emission_enabled, "No glow before anyone looks at it")
+	var outline: Node3D = feedback.get(&"_outline")
+	_expect(outline != null and not outline.visible, "No outline before anyone looks at it")
 	pickup.call(&"highlight", true)
-	_expect(material.emission_enabled and material.emission_energy_multiplier > 0.0,
-		"Highlighting the pickup point actually glows the package's own material")
+	_expect(outline.visible, "Aiming at the pickup point outlines the package")
+	_expect(not material.emission_enabled, "The box itself isn't washed out white -- only a soft rim shows")
 	pickup.call(&"highlight", false)
-	_expect(is_equal_approx(material.emission_energy_multiplier, 0.0), "Turns back off when no longer the target")
+	_expect(not outline.visible, "Turns back off when no longer the target")
 	package.free()
 
 

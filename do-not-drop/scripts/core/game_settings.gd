@@ -22,6 +22,14 @@ var master_volume: float = 1.0:
 		_apply_volume()
 		_save()
 
+## Background music on its own bus, under the master volume.
+var music_volume: float = MUSIC_VOLUME_DEFAULT:
+	set(value):
+		music_volume = clampf(value, 0.0, 1.0)
+		_apply_music_volume()
+		_save()
+const MUSIC_VOLUME_DEFAULT: float = 0.7
+
 ## Multiplies whatever each look implementation already uses, so 1.0 is
 ## exactly today's feel and nobody has to re-tune the defaults.
 var look_sensitivity: float = 1.0:
@@ -44,9 +52,11 @@ var fullscreen: bool = false:
 ## was laid out. Menus and the pause/results card keep their size: they're
 ## centred and already sized to fit, it's the corners that crowd a small
 ## screen or vanish on a TV across the room.
-const HUD_SCALE_MIN: float = 0.6
+const HUD_SCALE_MIN: float = 0.35
 const HUD_SCALE_MAX: float = 1.5
-var hud_scale: float = 1.0:
+const HUD_SCALE_DEFAULT: float = 0.6
+const HUD_DEFAULT_MARKER: String = "hud_scale_default_60"
+var hud_scale: float = HUD_SCALE_DEFAULT:
 	set(value):
 		hud_scale = clampf(value, HUD_SCALE_MIN, HUD_SCALE_MAX)
 		hud_scale_changed.emit(hud_scale)
@@ -108,10 +118,11 @@ func prompt(keyboard: String, gamepad: String) -> String:
 func reset_to_defaults() -> void:
 	_loading = true
 	master_volume = 1.0
+	music_volume = MUSIC_VOLUME_DEFAULT
 	look_sensitivity = 1.0
 	invert_look_y = false
 	fullscreen = false
-	hud_scale = 1.0
+	hud_scale = HUD_SCALE_DEFAULT
 	_loading = false
 	_save()
 
@@ -131,6 +142,12 @@ func _apply_volume() -> void:
 	AudioServer.set_bus_volume_db(bus, linear_to_db(master_volume))
 
 
+func _apply_music_volume() -> void:
+	var bus: int = AudioServer.get_bus_index("Music")
+	if bus >= 0:
+		AudioServer.set_bus_volume_db(bus, linear_to_db(music_volume))
+
+
 func _apply_fullscreen() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
@@ -144,15 +161,23 @@ func _load() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK:
 		_apply_volume()
+		_apply_music_volume()
 		return
 	_loading = true
 	master_volume = float(config.get_value(SECTION, "master_volume", 1.0))
+	music_volume = float(config.get_value(SECTION, "music_volume", MUSIC_VOLUME_DEFAULT))
 	look_sensitivity = float(config.get_value(SECTION, "look_sensitivity", 1.0))
 	invert_look_y = bool(config.get_value(SECTION, "invert_look_y", false))
 	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
-	hud_scale = float(config.get_value(SECTION, "hud_scale", 1.0))
+	hud_scale = float(config.get_value(SECTION, "hud_scale", HUD_SCALE_DEFAULT))
+	# Files saved before the HUD default dropped to 60 % hold the old 100 %
+	# default, not a choice anyone made: move them to the new one, once.
+	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
+		hud_scale = HUD_SCALE_DEFAULT
 	last_join_address = String(config.get_value(SECTION, "last_join_address", ""))
 	_loading = false
+	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
+		_save()
 
 
 func _save() -> void:
@@ -160,9 +185,11 @@ func _save() -> void:
 		return
 	var config := ConfigFile.new()
 	config.set_value(SECTION, "master_volume", master_volume)
+	config.set_value(SECTION, "music_volume", music_volume)
 	config.set_value(SECTION, "look_sensitivity", look_sensitivity)
 	config.set_value(SECTION, "invert_look_y", invert_look_y)
 	config.set_value(SECTION, "fullscreen", fullscreen)
 	config.set_value(SECTION, "hud_scale", hud_scale)
+	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
 	config.save(SAVE_PATH)

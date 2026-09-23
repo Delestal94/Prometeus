@@ -413,6 +413,11 @@ func _process(delta: float) -> void:
 	if overlay_mode == "pause" and not _soft_pause and not get_tree().paused:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
+	# A panel with buttons keeps the cursor free, even if something captured
+	# it after the panel opened (the local player spawns after the start
+	# screen shows, and its _ready() grabs the mouse for looking around).
+	if overlay.visible and overlay_mode in ["start", "pause", "results", "disconnected"] 			and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_refresh_cargo_hint()
 	if _is_endless and RunManager.is_running:
 		distance_label.text = "%d m recorridos" % roundi(float(get_parent().get(&"distance_traveled")))

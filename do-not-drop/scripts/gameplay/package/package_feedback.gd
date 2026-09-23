@@ -45,6 +45,13 @@ const STATE_TINT: Array[Color] = [Color(1, 1, 1), Color(1.0, 0.88, 0.76), Color(
 ## One per package, shared by every surface of its box model: highlight
 ## (emission) and the state tint change it per instance.
 var _material: StandardMaterial3D
+## Soft rim shown while a player is aiming at this box (see highlight()).
+## Built with the box model, which only exists a frame after spawning; a
+## highlight asked for before that is remembered and applied then.
+var _outline: Node3D
+var _outline_wanted: bool = false
+const OUTLINE_WIDTH: float = 0.012
+const OUTLINE_COLOR := Color(1.0, 0.84, 0.48)
 var _package_id: StringName
 var _box: Node3D
 var _state: int = 0
@@ -130,6 +137,38 @@ func _apply_identity(package: Node) -> void:
 		collider.shape = shape
 	_add_shipping_label(package, shipping_data, shape_size)
 	_add_dent_pieces(shape_size * 0.5)
+	_build_outline(shape_size)
+
+
+## An inverted hull: a plain box a hair larger than the box body, drawn
+## only from the inside and opaque, so it shows as a thin warm rim around the
+## silhouette and never over the printed faces. It's sized from the body
+## mesh (the model is hollow -- it opens for unboxing -- so its own mesh
+## can't be reused as the hull without its inner walls showing through).
+func _build_outline(shape_size: Vector3) -> void:
+	var body_bounds := AABB(Vector3(-shape_size.x, 0.0, -shape_size.z) * 0.5, shape_size)
+	var body := _box.find_child("Body", true, false) as MeshInstance3D
+	if body != null:
+		body_bounds = _box.global_transform.affine_inverse() * body.global_transform * body.get_aabb()
+	var hull := BoxMesh.new()
+	hull.size = body_bounds.size + Vector3.ONE * OUTLINE_WIDTH * 2.0
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_FRONT
+	material.albedo_color = OUTLINE_COLOR
+	_outline = MeshInstance3D.new()
+	_outline.name = "HighlightOutline"
+	(_outline as MeshInstance3D).mesh = hull
+	(_outline as MeshInstance3D).material_override = material
+	(_outline as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_outline.position = body_bounds.get_center()
+	_box.add_child(_outline)
+	_apply_outline()
+
+
+func _apply_outline() -> void:
+	if _outline != null:
+		_outline.visible = _outline_wanted
 
 
 ## Every surface of the box shares one imported material (the printed
@@ -182,7 +221,9 @@ func _add_shipping_label(package: Node, shipping_data: String, box_size: Vector3
 	# a hard impact tears it free.
 	_shipping_label.collision_layer = 0
 	_shipping_label.collision_mask = 0
-	_shipping_label.position = Vector3(0.0, -box_size.y * 0.5 + minf(box_size.y * 0.42, height * 0.5 + 0.06), -box_size.z * 0.5 - 0.003)
+	# A few millimetres proud of the face: closer than this and depth
+	# precision at a few metres makes box and paper fight (flicker).
+	_shipping_label.position = Vector3(0.0, -box_size.y * 0.5 + minf(box_size.y * 0.42, height * 0.5 + 0.06), -box_size.z * 0.5 - 0.006)
 	_shipping_label.rotation.y = PI
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -204,9 +245,12 @@ func _add_shipping_label(package: Node, shipping_data: String, box_size: Vector3
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	text.width = 480.0
 	# Under "CONTENIDO DECLARADO", on the left of the printed label.
-	text.position = Vector3(-width * 0.04, -height * 0.11, 0.002)
+	text.position = Vector3(-width * 0.04, -height * 0.11, 0.004)
 	_shipping_label.add_child(text)
-	package.add_child(_shipping_label)
+	# On the Box, not the package root: the box wobbles, bounces and grows
+	# (traps, impacts, placing it down), and a label left behind had the box
+	# face sweeping back and forth through it -- the label kept vanishing.
+	_box.add_child(_shipping_label)
 
 
 static var _label_material_cache: StandardMaterial3D
@@ -312,7 +356,8 @@ func _detach_shipping_label() -> void:
 		return
 	var drop_transform: Transform3D = _shipping_label.global_transform
 	_shipping_label.reparent(world)
-	_shipping_label.global_transform = drop_transform
+	# Drop the Box's pulse/growth scale: a loose physics body must be unscaled.
+	_shipping_label.global_transform = drop_transform.orthonormalized()
 	_shipping_label.freeze = false
 	_shipping_label.collision_layer = 4
 	_shipping_label.collision_mask = 7
@@ -466,9 +511,8 @@ func _burst_confetti() -> void:
 ## overlay, not a swapped albedo: the box's real color already carries its
 ## trap state, this just glows on top without fighting _set_state() for it.
 func highlight(enabled: bool) -> void:
-	_material.emission_enabled = enabled
-	_material.emission = Color.WHITE
-	_material.emission_energy_multiplier = 0.9 if enabled else 0.0
+	_outline_wanted = enabled
+	_apply_outline()
 
 
 func _set_state(new_state: int) -> void:

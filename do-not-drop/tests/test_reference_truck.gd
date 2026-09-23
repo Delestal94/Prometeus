@@ -42,17 +42,25 @@ func _run() -> void:
 		return
 
 	_test_glass(model)
+	_test_side_windows_fit_frame(model)
+	_expect(model.find_child("CabDressing", true, false) != null and model.find_child("CabDressing", true, false).get_child_count() > 20,
+		"The cab is dressed (console, gear stick, gauges, mirror, visors, clipboard...)")
 	_test_wheel_art(van)
 	_test_steering(van)
 	_test_rack_fits_every_shape(van)
 	_test_aisle_is_walkable(van)
 	_test_seats_match_model(van, model)
 	await _test_doors(van, adapter)
+	await _test_door_needs_aim(van)
+	await _test_boarding_swings_driver_door(van, model)
 	await _test_tires_on_ground(van)
 	await _test_ramp(van)
 
 	world.free()
 	await _test_packages_rest_on_deck()
+	await _test_sit_with_the_cargo()
+	await _test_getting_up_lands_somewhere_clear()
+	await _test_only_what_is_in_reach()
 	if _failures == 0:
 		print("PASS: truck art, glass, doors, ramp, wheels, steering, rack fit, aisle and seats all line up")
 	quit(_failures)
@@ -68,6 +76,20 @@ func _test_glass(model: Node3D) -> void:
 	for frame_name: String in ["CabDoorWindowHeader_Left", "CommunicationWindowJamb", "WindowGrip"]:
 		var frame := model.find_child(frame_name, true, false) as MeshInstance3D
 		_expect(frame != null and frame.material_override == null, "%s (frame, not glass) stays opaque" % frame_name)
+
+
+## The re-cut side glass stays inside the door opening: behind the slanted
+## front pillar at the top, instead of hanging out over the windshield.
+func _test_side_windows_fit_frame(model: Node3D) -> void:
+	for side_name: String in ["Left", "Right"]:
+		var pane := model.find_child("SideWindow_" + side_name, true, false) as MeshInstance3D
+		var pillar := model.find_child("CabDoorFrontPillar_" + side_name, true, false) as MeshInstance3D
+		var pane_box: AABB = pane.global_transform * pane.get_aabb()
+		var pillar_box: AABB = pillar.global_transform * pillar.get_aabb()
+		# Front = -Z in the vehicle. The pane's front edge may reach the
+		# pillar's bottom but never past its front face.
+		_expect(pane_box.position.z >= pillar_box.position.z - 0.01, "%s side glass ends at its front pillar" % side_name)
+		_expect(pane.get_child_count() == 4, "%s side glass has a rubber seal all around" % side_name)
 
 
 func _test_wheel_art(van: VehicleBody3D) -> void:
@@ -90,7 +112,9 @@ func _test_steering(van: VehicleBody3D) -> void:
 	_expect(wheel != null and wheel.is_inside_tree() and wheel.has_node(^"Hub"), "Presentation drives the model's steering wheel")
 	if wheel == null:
 		return
-	_expect(wheel.find_children("SteeringRim*", "MeshInstance3D", true, false).size() >= 10, "All rim pieces turn together")
+	var rim := wheel.get_node_or_null(^"Rim") as MeshInstance3D
+	_expect(rim != null and rim.mesh is TorusMesh, "Steering wheel has a round, gapless rim")
+	_expect(van.find_children("SteeringRim*", "MeshInstance3D", true, false).is_empty(), "The segmented authored rim is gone")
 	var eye := van.get_node(^"CabinInterior/DriverEyePoint") as Node3D
 	var axis: Vector3 = wheel.global_basis.y.normalized()
 	_expect(axis.dot((wheel.global_position - eye.global_position).normalized()) > 0.5,
@@ -164,6 +188,8 @@ func _test_seats_match_model(van: VehicleBody3D, model: Node3D) -> void:
 	_expect(cushions.size() == 7, "The model has seven passenger seats (got %d)" % cushions.size())
 	var used: Array[int] = []
 	for seat: Node in van.get_node(^"CargoBay").find_children("*EyePoint", "Marker3D", false, false):
+		if String(seat.name).begins_with("RackSeat"):
+			continue  # Fold-down seats by the rack, not the model's benches.
 		var eye := (seat as Node3D).global_position
 		var best := -1
 		for index in range(cushions.size()):
@@ -200,6 +226,76 @@ func _test_doors(van: VehicleBody3D, adapter: Node) -> void:
 		await create_timer(0.8).timeout
 		_expect(absf(hinge.rotation.y) > 1.0 if was_open else absf(hinge.rotation.y) < 0.01, "%s door returns" % door)
 	_expect(control_prompt(van, "RearDoorControl") == "Cerrar puertas traseras", "Door prompt reflects its state")
+
+
+## A door ignores a player who isn't looking at it, so it can't swallow the
+## E meant for a package or seat right next to it.
+func _test_door_needs_aim(van: VehicleBody3D) -> void:
+	var player := (load("res://scenes/gameplay/player/player.tscn") as PackedScene).instantiate() as CharacterBody3D
+	# Only its view matters here: no body to shove the truck around.
+	player.collision_layer = 0
+	player.collision_mask = 0
+	player.position = van.to_global(Vector3(0.3, 0.26, 3.4))
+	van.get_parent().add_child(player)
+	await process_frame
+	var control: Node3D = van.find_child("RearDoorControl", true, false)
+	var camera := player.get_node(^"Head/Camera3D") as Node3D
+	player.set_physics_process(false)
+	player.look_at(van.to_global(Vector3(-0.5, 0.26, 3.4)))  # Facing the rack.
+	await process_frame
+	_expect(not bool(control.call(&"can_interact", player)), "Facing the rack, the rear door doesn't answer E")
+	player.look_at(control.global_position * Vector3(1, 0, 1) + Vector3(0, player.global_position.y, 0))
+	camera.look_at(control.global_position)
+	await process_frame
+	_expect(bool(control.call(&"can_interact", player)), "Looking at the rear doors, they do")
+	player.free()
+
+
+func _test_boarding_swings_driver_door(van: VehicleBody3D, model: Node3D) -> void:
+	var hinge := model.find_child("CabDoor_Left_HINGE_Z", true, false) as Node3D
+	var seat: Node = van.get_node(^"CabinInterior/DriverEyePoint/InteractionArea")
+	van.set_door_open(&"cab_left", false)
+	await create_timer(0.8).timeout
+	_expect(not bool(seat.call(&"can_interact", Node.new())), "With the cab door shut the driver's seat is out of reach")
+	van.set_door_open(&"cab_left", true)
+	await create_timer(0.8).timeout
+	_expect(absf(hinge.rotation.y) > 0.9, "The driver's door swings open")
+	van.driver_peer_id = 1
+	await create_timer(0.8).timeout
+	_expect(not van.is_door_open(&"cab_left") and absf(hinge.rotation.y) < 0.01, "Taking the wheel shuts the door behind the driver")
+	van.driver_peer_id = 0
+	await create_timer(0.8).timeout
+	_expect(van.is_door_open(&"cab_left") and absf(hinge.rotation.y) > 0.9, "Getting out opens it again")
+	van.set_door_open(&"cab_left", false)
+	await create_timer(0.8).timeout
+
+
+## Getting up from any seat lands the player on a floor they can stand on,
+## never inside the truck's collision (that used to launch the truck).
+func _test_getting_up_lands_somewhere_clear() -> void:
+	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	root.add_child(level)
+	await process_frame
+	await physics_frame
+	var van: VehicleBody3D = level.vehicle
+	var player: CharacterBody3D = level.local_player
+	var space := van.get_world_3d().direct_space_state
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = 0.34
+	capsule.height = 1.65
+	for seat: Node in van.find_children("*EyePoint", "Marker3D", true, false):
+		var exit: Vector3 = player.call(&"_seat_exit_position", seat)
+		var query := PhysicsShapeQueryParameters3D.new()
+		query.shape = capsule
+		query.collision_mask = 1 | 2
+		query.transform = Transform3D(Basis.IDENTITY, exit + Vector3.UP * (0.85 + 0.03))
+		_expect(space.intersect_shape(query, 1).is_empty(), "Getting up from %s leaves the player standing clear" % seat.name)
+		var standing_inside: bool = absf(van.to_local(exit).x) < 1.0 and van.to_local(exit).z > -0.3
+		if seat.name == "DriverEyePoint":
+			_expect(van.to_local(exit).x < -1.1, "The driver climbs out beside the cab, not into it")
+		else:
+			_expect(standing_inside, "%s: getting up leaves the passenger in the cargo aisle" % seat.name)
+	level.free()
 
 
 func control_prompt(van: VehicleBody3D, control_name: String) -> String:
@@ -262,6 +358,65 @@ func _test_packages_rest_on_deck() -> void:
 		var bottom: float = (package as Node3D).global_position.y - half.y
 		_expect(absf(bottom - deck_top) < 0.01,
 			"%s (%s) rests on the %s deck (off by %.3f)" % [package.name, str(half * 2.0), mount_name, bottom - deck_top])
+	level.free()
+
+
+## The fold-down seats face the rack: sitting in one tends a box in its bay
+## column, and boarding with a box in hand shelves it there first.
+func _test_sit_with_the_cargo() -> void:
+	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	root.add_child(level)
+	await process_frame
+	await physics_frame
+	var player: Node = level.local_player
+	var van: VehicleBody3D = level.vehicle
+	var package: Node = root.get_tree().get_nodes_in_group(&"cargo")[0]
+	var seat: Node = van.get_node(^"CargoBay/RackSeat2EyePoint/InteractionArea")
+	var lower: Node = van.get_node(^"CargoBay/RightSeat1PackageMount/InteractionArea")
+	_expect(String(seat.call(&"get_prompt")) == "Sentarse junto a la carga", "Fold-down seat offers to sit with the cargo")
+	player.call(&"pick_up", package.get_path())
+	_expect(bool(seat.call(&"can_interact", player)), "Can board it holding a box")
+	seat.call(&"interact", player)
+	await process_frame
+	_expect(lower.get(&"occupied_by") == package, "Boarding shelves the box in the column's lower bay")
+	_expect(player.get(&"tended_package") == package, "...and the passenger now looks after it")
+	for tick in range(40):
+		await process_frame
+	var fold := van.get_node(^"BodyVisuals/CargoFittings/RackSeat2Fold") as Node3D
+	_expect(absf(fold.rotation.z) < 0.05, "The occupied fold-down seat is down")
+	var free_fold := van.get_node(^"BodyVisuals/CargoFittings/RackSeat1Fold") as Node3D
+	_expect(absf(free_fold.rotation.z) > 1.4, "Free fold-down seats stay folded against the wall")
+	level.free()
+
+
+## Interactions need a clear line from the eyes: nothing through the truck's
+## walls, the driver's seat only through its open door.
+func _test_only_what_is_in_reach() -> void:
+	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	root.add_child(level)
+	await process_frame
+	await physics_frame
+	var van: VehicleBody3D = level.vehicle
+	var player: CharacterBody3D = level.local_player
+	var package: Node = root.get_tree().get_nodes_in_group(&"cargo")[0]
+	player.call(&"pick_up", package.get_path())
+	var shelf: Node3D = van.get_node(^"CargoBay/LeftShelfPackageMount/InteractionArea")
+	var head := player.get_node(^"Head") as Node3D
+	var camera := head.get_node(^"Camera3D") as Node3D
+	# Outside, level with the shelf, facing the left wall right behind it.
+	player.global_position = van.to_global(Vector3(-1.55, -0.62, 3.9))
+	await physics_frame
+	camera.look_at(shelf.global_position)
+	_expect(not bool(player.call(&"_within_reach", shelf)), "A shelf can't be reached through the truck's wall")
+	player.global_position = van.to_global(Vector3(0.36, 0.26, 3.9))
+	await physics_frame
+	camera.look_at(shelf.global_position)
+	_expect(bool(player.call(&"_within_reach", shelf)), "From the aisle it can")
+	var seat: Node3D = van.get_node(^"CabinInterior/DriverEyePoint/InteractionArea")
+	player.global_position = van.to_global(Vector3(-1.7, -0.62, -1.0))
+	await physics_frame
+	camera.look_at(seat.global_position)
+	_expect(bool(player.call(&"_within_reach", seat)), "Through the open door the driver's seat is in reach")
 	level.free()
 
 

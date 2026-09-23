@@ -72,7 +72,7 @@ radius = 0.8
 radius = 0.5
 
 [sub_resource type="SphereShape3D" id="Shape_rear_door_interact"]
-radius = 0.9
+radius = 1.0
 
 [sub_resource type="SphereShape3D" id="Shape_cab_door_interact"]
 radius = 0.55
@@ -116,9 +116,13 @@ size = Vector3(0.82, 2.223, 0.03)
 [sub_resource type="BoxShape3D" id="Shape_ramp"]
 size = Vector3(1.1, 0.06, 1.814)
 
+; Mask: environment + packages. Not players (layer 4 = bit 8): a player
+; the truck is told to collide with can shove it, and a player placed even
+; slightly inside it (getting out of a seat) launched the whole truck. Players
+; still collide with the truck from their side (their mask includes it).
 [node name="DeliveryVan" type="VehicleBody3D" groups=["vehicle"]]
 collision_layer = 2
-collision_mask = 13
+collision_mask = 5
 mass = 950.0
 physics_material_override = SubResource("PhysicsMaterial_body")
 center_of_mass_mode = 1
@@ -232,18 +236,24 @@ position = Vector3(-0.5, 1.52, -1.2)
 [node name="FirstPersonCamera" parent="CabinInterior/DriverEyePoint" instance=ExtResource("3_fp_camera")]
 
 [node name="InteractionArea" type="Area3D" parent="CabinInterior/DriverEyePoint"]
+position = Vector3(-0.35, -0.25, 0.15)
 script = ExtResource("4_seat")
 role = &"driver"
 seat_camera_path = NodePath("../FirstPersonCamera")
 vehicle_path = NodePath("../../..")
 required_mount_path = NodePath("../../../CargoBay/LeftSeat1PackageMount/InteractionArea")
+required_door = &"cab_left"
 prompt = "Subirse a manejar"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CabinInterior/DriverEyePoint/InteractionArea"]
 shape = SubResource("Shape_seat_interact")
 
+; Where the driver stands after climbing out: beside the open door.
+[node name="ExitPoint" type="Marker3D" parent="CabinInterior/DriverEyePoint"]
+position = Vector3(-1.2, -1.0, 0.25)
+
 [node name="CabLeftDoorControl" type="Area3D" parent="CabinInterior"]
-position = Vector3(-1.25, 0.95, -0.9)
+position = Vector3(-1.1, 1.25, -1.85)
 script = ExtResource("7_door")
 door = &"cab_left"
 
@@ -251,7 +261,7 @@ door = &"cab_left"
 shape = SubResource("Shape_cab_door_interact")
 
 [node name="CabRightDoorControl" type="Area3D" parent="CabinInterior"]
-position = Vector3(1.25, 0.95, -0.9)
+position = Vector3(1.1, 1.25, -1.85)
 script = ExtResource("7_door")
 door = &"cab_right"
 
@@ -355,6 +365,10 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.68, 1.18, -0.012)
 
 [node name="FirstPersonCamera" parent="CargoBay/CenterSeatEyePoint" instance=ExtResource("3_fp_camera")]
 
+; Front seat: a straight step forward would put you against the bulkhead.
+[node name="ExitPoint" type="Marker3D" parent="CargoBay/CenterSeatEyePoint"]
+position = Vector3(0.35, 0, -0.55)
+
 [node name="InteractionArea" type="Area3D" parent="CargoBay/CenterSeatEyePoint"]
 script = ExtResource("4_seat")
 role = &"passenger"
@@ -379,6 +393,62 @@ prompt = "Sentarse"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat3EyePoint/InteractionArea"]
 shape = SubResource("Shape_seat_interact")
+
+; Fold-down seats on the right wall, facing the rack: sit with the boxes
+; and look after the column in front of you (lower bay first, then upper).
+[node name="RackSeat1EyePoint" type="Marker3D" parent="CargoBay"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.74, 1.24, 2.305)
+
+[node name="FirstPersonCamera" parent="CargoBay/RackSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+shake_position_scale = 0.0192
+shake_rotation_scale_deg = 2.56
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RackSeat1EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+tend_mount_paths = Array[NodePath]([NodePath("../../LeftSeat1PackageMount/InteractionArea"), NodePath("../../LeftSeat2PackageMount/InteractionArea")])
+prompt = "Sentarse junto a la carga"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RackSeat1EyePoint/InteractionArea"]
+shape = SubResource("Shape_mount_interact")
+
+[node name="RackSeat2EyePoint" type="Marker3D" parent="CargoBay"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.74, 1.24, 3.125)
+
+[node name="FirstPersonCamera" parent="CargoBay/RackSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+shake_position_scale = 0.0192
+shake_rotation_scale_deg = 2.56
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RackSeat2EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+tend_mount_paths = Array[NodePath]([NodePath("../../RightSeat1PackageMount/InteractionArea"), NodePath("../../RightSeat2PackageMount/InteractionArea")])
+prompt = "Sentarse junto a la carga"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RackSeat2EyePoint/InteractionArea"]
+shape = SubResource("Shape_mount_interact")
+
+[node name="RackSeat3EyePoint" type="Marker3D" parent="CargoBay"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.74, 1.24, 3.945)
+
+[node name="FirstPersonCamera" parent="CargoBay/RackSeat3EyePoint" instance=ExtResource("3_fp_camera")]
+shake_position_scale = 0.0192
+shake_rotation_scale_deg = 2.56
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RackSeat3EyePoint"]
+script = ExtResource("4_seat")
+role = &"passenger"
+seat_camera_path = NodePath("../FirstPersonCamera")
+vehicle_path = NodePath("../../..")
+tend_mount_paths = Array[NodePath]([NodePath("../../LeftShelfPackageMount/InteractionArea"), NodePath("../../RightShelfPackageMount/InteractionArea")])
+prompt = "Sentarse junto a la carga"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RackSeat3EyePoint/InteractionArea"]
+shape = SubResource("Shape_mount_interact")
 
 ; Six rack bays: three along the rack, lower and upper tier. Each marker is
 ; where a 0.65 m box's centre sits on its deck; vehicle.gd re-seats taller
@@ -444,7 +514,7 @@ prompt = "Guardar paquete en anaquel"
 shape = SubResource("Shape_mount_interact")
 
 [node name="RearDoorControl" type="Area3D" parent="CargoBay"]
-position = Vector3(0, 1.1, 4.75)
+position = Vector3(0, 1.35, 4.5)
 script = ExtResource("7_door")
 door = &"rear"
 
@@ -465,7 +535,7 @@ use_as_steering = true
 wheel_radius = 0.595
 wheel_rest_length = 0.29
 wheel_friction_slip = 3.5
-wheel_roll_influence = 0.12
+wheel_roll_influence = 0.3
 suspension_travel = 0.22
 suspension_stiffness = 42.0
 suspension_max_force = 8500.0
@@ -479,7 +549,7 @@ use_as_steering = true
 wheel_radius = 0.595
 wheel_rest_length = 0.29
 wheel_friction_slip = 3.5
-wheel_roll_influence = 0.12
+wheel_roll_influence = 0.3
 suspension_travel = 0.22
 suspension_stiffness = 42.0
 suspension_max_force = 8500.0
@@ -492,7 +562,7 @@ use_as_traction = true
 wheel_radius = 0.57
 wheel_rest_length = 0.29
 wheel_friction_slip = 3.5
-wheel_roll_influence = 0.12
+wheel_roll_influence = 0.3
 suspension_travel = 0.22
 suspension_stiffness = 42.0
 suspension_max_force = 8500.0
@@ -505,7 +575,7 @@ use_as_traction = true
 wheel_radius = 0.57
 wheel_rest_length = 0.29
 wheel_friction_slip = 3.5
-wheel_roll_influence = 0.12
+wheel_roll_influence = 0.3
 suspension_travel = 0.22
 suspension_stiffness = 42.0
 suspension_max_force = 8500.0

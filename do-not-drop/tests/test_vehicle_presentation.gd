@@ -21,7 +21,10 @@ func _run() -> void:
 	for tick in range(75):
 		await physics_frame
 	var settled_wheel: Transform3D = wheel.transform
-	_expect(absf(settled_wheel.origin.y - initial_wheel.origin.y) > 0.02, "Native wheel suspension visibly settles")
+	# While frozen for loading the wheels are already posed where the settled
+	# suspension holds them (vehicle.gd), so starting the delivery must not
+	# make them visibly drop or jump.
+	_expect(absf(settled_wheel.origin.y - initial_wheel.origin.y) < 0.03, "Wheels start where the suspension settles them: no drop when the run begins")
 	van.set_controls(0.8, 0.0, false)
 	for tick in range(100):
 		await physics_frame
