@@ -88,9 +88,34 @@ func _spawn_next() -> void:
 	segment.position = Vector3(0.0, 0.0, _next_z)
 	add_child(segment)
 	_active.append(segment)
+	_maybe_add_crossing(segment)
 	_next_z -= segment.length
 	_last_script = script
 	_hard_streak = _hard_streak + 1 if hard_segments.has(script) else 0
+
+
+## Endless mode's deer crossings: same odds for every peer (the streamer's
+## RNG is seeded from the session seed), never in the first stretch, and
+## spaced out so they stay a surprise.
+const CROSSING_CHANCE: float = 0.12
+const CROSSING_MIN_GAP: float = 300.0
+var _last_crossing_z: float = INF
+
+
+func _maybe_add_crossing(segment: RouteSegment) -> void:
+	var roll: float = _rng.randf()
+	var side: float = -1.0 if _rng.randf() < 0.5 else 1.0
+	if not segment is StraightSegment or segment.position.z > -120.0:
+		return
+	if _last_crossing_z - segment.position.z < CROSSING_MIN_GAP or roll > CROSSING_CHANCE:
+		return
+	var crossing := WildlifeCrossing.new()
+	crossing.name = "DeerCrossing"
+	crossing.side = side
+	crossing.with_sign = true
+	crossing.position = Vector3(0.0, 0.0, -segment.length * 0.5)
+	segment.add_child(crossing)
+	_last_crossing_z = segment.position.z
 
 
 func _pick_next_script() -> Script:

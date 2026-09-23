@@ -66,6 +66,19 @@ const SIGN_LATERAL: float = 7.8
 ## The warning stands this far before the hazard's first metre.
 const SIGN_LEAD: float = 6.0
 const GUARDRAIL: String = PROPS + "sm_env_prop_guardrail.glb"
+const WILDLIFE: String = "res://assets/models/environment/wildlife/"
+const ANIMAL_BEHAVIOUR: Script = preload("res://scripts/presentation/wildlife_animal.gd")
+const CROSSING_SIGN: String = SIGN_DIR + "sm_env_sign_animal_crossing.glb"
+## Deer crossings: on a straight, never in a village, never near the start,
+## and spaced out so one route has a couple at most -- a hazard you meet
+## every thirty seconds stops being a surprise.
+const CROSSING_CHANCE: float = 0.35
+const CROSSING_MIN_SEGMENT: int = 4
+const CROSSING_MIN_GAP: float = 260.0
+const CROSSING_MAX: int = 2
+## Before the deer (on the segment the truck is still on), like every
+## other warning, but far enough out to brake from full speed.
+const CROSSING_SIGN_LEAD: float = 30.0
 const GUARDRAIL_LATERAL: float = 7.4
 const WINDMILL_TURN_SECONDS: float = 14.0
 ## Ground contact (see _settle()). A model's "feet" are every vertex within
@@ -169,6 +182,28 @@ func _build_rules() -> Array[Dictionary]:
 			"density": {Zone.FOREST: 0.95, Zone.VILLAGE: 0.3, Zone.COUNTRYSIDE: 0.16}, "spacing": 5.5,
 			"attempts": 3, "lateral": Vector2(10.0, 30.0), "radius": 1.6, "clearance": 8.4,
 			"max_slope": 0.7, "scale": Vector2(0.82, 1.36)}),
+		# Wildlife: scenery that notices the truck (wildlife_animal.gd). Never
+		# solid -- it runs off -- and never close enough to wander onto the road.
+		_rule({"id": &"wildlife_deer", "group": "WildlifeDressing", "solid": false,
+			"paths": [WILDLIFE + "sm_env_animal_stag_rigged.glb"], "behaviour": ANIMAL_BEHAVIOUR,
+			"density": {Zone.FOREST: 0.07, Zone.COUNTRYSIDE: 0.12}, "spacing": 60.0,
+			"lateral": Vector2(15.0, 28.0), "radius": 0.9, "clearance": 12.0, "max_slope": 0.5,
+			"min_same": 70.0}),
+		_rule({"id": &"wildlife_rabbit", "group": "WildlifeDressing", "solid": false,
+			"paths": [WILDLIFE + "sm_env_animal_rabbit.glb"], "behaviour": ANIMAL_BEHAVIOUR,
+			"density": {Zone.COUNTRYSIDE: 0.28, Zone.FOREST: 0.12, Zone.VILLAGE: 0.06}, "spacing": 22.0,
+			"lateral": Vector2(8.5, 20.0), "radius": 0.2, "clearance": 7.8, "max_slope": 0.5,
+			"min_same": 10.0}),
+		_rule({"id": &"wildlife_frog", "group": "WildlifeDressing", "solid": false,
+			"paths": [WILDLIFE + "sm_env_animal_frog.glb"], "behaviour": ANIMAL_BEHAVIOUR,
+			"density": {Zone.FOREST: 0.14, Zone.COUNTRYSIDE: 0.08}, "spacing": 26.0,
+			"lateral": Vector2(7.2, 14.0), "radius": 0.15, "clearance": 7.0, "max_slope": 0.6,
+			"min_same": 10.0}),
+		_rule({"id": &"wildlife_bird", "group": "WildlifeDressing", "solid": false,
+			"paths": [WILDLIFE + "sm_env_animal_bird.glb"], "behaviour": ANIMAL_BEHAVIOUR,
+			"density": {Zone.COUNTRYSIDE: 0.24, Zone.VILLAGE: 0.22, Zone.FOREST: 0.09}, "spacing": 18.0,
+			"lateral": Vector2(7.5, 18.0), "radius": 0.15, "clearance": 7.2, "max_slope": 0.6,
+			"min_same": 7.0}),
 		_rule({"id": &"ground_plant", "group": "ForestDressing", "solid": false, "sides": [],
 			"paths": [FOREST + "sm_env_forest_bush_round.glb", FOREST + "sm_env_forest_fern.glb",
 				FOREST + "sm_env_forest_grass_clump.glb", FOREST + "sm_env_forest_wildflower.glb",
@@ -212,6 +247,7 @@ func dress(segments: Array, houses: Array, clear_zones: Array[Vector3]) -> void:
 		_dress_signs(segments[index])
 	for index: int in range(segments.size()):
 		_dress_barriers(segments[index])
+	_dress_crossings(segments)
 	for rule_index: int in range(_rules.size()):
 		for index: int in range(segments.size()):
 			_apply_rule(segments[index], index, rule_index)
@@ -242,6 +278,51 @@ func _dress_signs(segment: RouteSegment) -> void:
 		# Inside the segment rather than ahead of it, so it never shares a
 		# corner with a hazard sign.
 		_place_sign(segment, DELIVERY_SIGN, float(segment.get_meta(&"delivery_sign_side")), -minf(12.0, segment.length * 0.4), false, &"delivery_sign")
+
+
+## Deer crossings on some straights (see CROSSING_*).
+func _dress_crossings(segments: Array) -> void:
+	var placed: int = 0
+	var last_distance: float = -INF
+	var fallback: Array = []  # [segment, side] for every spot that qualified but lost the draw.
+	for index: int in range(CROSSING_MIN_SEGMENT, segments.size()):
+		var segment: RouteSegment = segments[index]
+		if not segment is StraightSegment or segment.has_meta(&"delivery_sign_side") or placed >= CROSSING_MAX:
+			continue
+		var distance: float = float(segment.get_meta(&"route_distance", 0.0))
+		if distance - last_distance < CROSSING_MIN_GAP:
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([_seed, index, &"deer_crossing"])
+		var roll: float = rng.randf()
+		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
+		if zone_at(segment.transform * Vector3(0.0, 0.0, -segment.length * 0.5), distance) == Zone.VILLAGE:
+			continue
+		if roll > CROSSING_CHANCE:
+			fallback.append([segment, side])
+			continue
+		_place_crossing(segment, side)
+		placed += 1
+		last_distance = distance
+	# Every route gets at least one: a mechanic you may never meet is one
+	# nobody learns. The middle candidate keeps it away from both ends.
+	if placed == 0 and not fallback.is_empty():
+		var pick: Array = fallback[fallback.size() / 2]
+		_place_crossing(pick[0], pick[1])
+
+
+## The warning sign goes up through the same gate as every other sign, then
+## the crossing itself, which keeps the deer's waiting spot clear of trees.
+func _place_crossing(segment: RouteSegment, side: float) -> void:
+	var middle := Vector3(0.0, 0.0, -segment.length * 0.5)
+	_place_sign(segment, CROSSING_SIGN, 1.0, CROSSING_SIGN_LEAD, false, &"crossing_sign")
+	var crossing := WildlifeCrossing.new()
+	crossing.name = "DeerCrossing"
+	crossing.side = side
+	crossing.position = middle
+	segment.add_child(crossing)
+	_occupy(segment.transform * Vector3(side * WildlifeCrossing.WAIT_LATERAL, 0.0, middle.z), 1.5)
+	_count(&"deer_crossing")
 
 
 func _dress_barriers(segment: RouteSegment) -> void:
@@ -391,6 +472,9 @@ func _try_place(segment: RouteSegment, group_name: String, path: String, xform: 
 	var node := _instantiate(path)
 	if node == null:
 		return null
+	if fields.has("behaviour"):
+		# Before entering the tree, so the behaviour's _ready() runs.
+		node.set_script(fields.behaviour)
 	node.transform = xform
 	_group(segment, group_name).add_child(node)
 	_settle(node, p, bool(fields.get("tilt", false)) or path.get_file() in LEAN_MODELS)

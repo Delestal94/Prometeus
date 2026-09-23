@@ -96,6 +96,16 @@ aplicados por `scripts/presentation/lowpoly_materials.gd` según el nombre del m
 Se regeneran con `art/tools/make_detail_textures.py`. Las de `textures/terrain/` quedaron
 en desuso.
 
+## Fauna (`models/environment/wildlife/`)
+
+- `sm_env_animal_stag_rigged.glb`: "Stag" del *Animated Animal Pack* de **Quaternius**,
+  licencia **CC0 1.0** (dominio público, uso comercial libre, sin atribución obligatoria;
+  la dejamos igual). Fuente: https://poly.pizza/m/tQdzbZ1Cmw. Trae esqueleto y animaciones
+  (`Gallop`, `Walk`, `Idle`, `Idle_2`, `Idle_Headlow`, `Eating`, `Idle_HitReact_*`...);
+  `scripts/presentation/wildlife_animal.gd` lo gira, lo escala a 0.4 y elige la animación.
+- Conejo, rana, pájaro y el cartel de cruce: propios, generados por
+  `tools/build_wildlife.py` (piezas con pivote en cada articulación, animadas por código).
+
 ## Tipografías (`fonts/`)
 
 Lilita One (títulos) y Nunito variable (texto), ambas de Google Fonts con licencia SIL Open
