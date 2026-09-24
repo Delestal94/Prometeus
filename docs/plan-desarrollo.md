@@ -279,6 +279,25 @@ cerrada la Fase 4.
 - Lanzar en Early Access con el contenido mínimo (1 vehículo, 1 set de tramos, 3-4
   trampas) e iterar con feedback real antes de sumar contenido extra.
 
+## Fuera del MVP (control de alcance)
+
+Lista cerrada de lo que **no** se hace antes de Early Access. Sumar una fila acá es
+decidir que algo no entra; una idea nueva va a "Después del lanzamiento", no a esta
+lista. (Slatex completa su parte en la S-702 de `docs/tareas-slatex.md`.)
+
+| Qué | Por qué no | De dónde viene |
+|---|---|---|
+| Tráfico en movimiento (autos con IA de waypoints) | IA, una capa de colisión dinámica y su propio playtesting de "tensión vs. molestia"; la ruta ya se siente habitada con autos estacionados, y la variedad sale de peligros puntuales (N-106). | Nacho #76, #77, #79 |
+| Puente de un carril con prioridad de paso | Sin tráfico no hay a quién cederle el paso. | Nacho #59 |
+| Curva peraltada | El asfalto sale del mismo campo de alturas del terreno; peraltarlo es rehacer el terreno de la ruta. | Nacho #65 |
+| Motion blur por velocidad | GL Compatibility no lo trae y un pase propio cuesta los 60 FPS. | Nacho #14 |
+| Rotonda | Sin tráfico no suma decisión al conductor; las curvas y cruces actuales ya cubren el manejo. | Nacho #60 |
+
+### Después del lanzamiento
+
+Ideas que aparezcan mientras tanto, sin compromiso: se anotan acá y se reconsideran con
+feedback real de Early Access.
+
 ---
 
 ## Por qué este orden (resumen de la lógica)
