@@ -182,9 +182,9 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_package_bounce_shake.gd
 <godot> --headless --path do-not-drop --script res://tests/test_body_lean_sink.gd
 <godot> --headless --path do-not-drop --script res://tests/test_dust_and_ambience.gd
+<godot> --headless --path do-not-drop --script res://tests/test_cargo_clutter.gd
 <godot> --headless --path do-not-drop --script res://tests/test_dev_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_bus_routing.gd
-<godot> --headless --path do-not-drop --script res://tests/test_cargo_clutter.gd
 <godot> --headless --path do-not-drop --script res://tests/test_level_endless.gd
 <godot> --headless --path do-not-drop --script res://tests/test_endless_multi_cargo.gd
 <godot> --headless --path do-not-drop --script res://tests/test_new_route_segments.gd
@@ -350,21 +350,21 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   real del vehículo.
 - `test_dust_and_ambience` — hay viento de ambiente siempre sonando, y las
   ruedas levantan polvo al andar y dejan de hacerlo al frenar del todo.
+- `test_cargo_clutter` — la caja de herramientas y el termo sueltos en la caja de carga
+  no pueden desincronizar el camión: no están en ninguna capa (no tocan paquetes ni
+  jugadores), en un cliente el camión está congelado y lo posiciona el host, y en el
+  host pesan menos del 1 % del camión.
 - `test_dev_camera` — la cámara de tercera persona de desarrollo (F9, solo
   en build de debug) prende, apaga y restaura la cámara anterior
   correctamente.
-- `test_audio_bus_routing` — el motor, el golpe de impacto y el chirrido de
-  neumáticos rutean al bus "Interior" o "Exterior" según si la cámara
+- `test_audio_bus_routing` — el motor, el golpe de impacto, el chirrido de
+  neumáticos y la bocina rutean al bus "Interior" o "Exterior" según si la cámara
   activa de ese cliente está adentro de la furgoneta o no.
 - `test_level_endless` — el modo endless (`level_endless.tscn`) arranca el
   streaming de tramos con el vehículo real, la distancia recorrida se
   trackea de verdad, y una sesión larga simulada no acumula segmentos ni
   nodos sin liberar.
 - `test_new_route_segments` — los tres tramos más nuevos: la curva en S
-- `test_cargo_clutter` — la caja de herramientas y el termo sueltos en la caja de carga
-  no pueden desincronizar el camión: no están en ninguna capa (no tocan paquetes ni
-  jugadores), en un cliente el camión está congelado y lo posiciona el host, y en el
-  host pesan menos del 1 % del camión.
   alterna 4 bloques (el doble que el chicane), la zona de obras angosta un
   solo lado en vez de alternar, y el ripio efectivamente baja
   `wheel_friction_slip` al entrar y lo restaura al salir (verificado con
@@ -386,7 +386,8 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   apoyados en la bandeja, el equipo aparece adentro y bajo techo, un pedido por casa en
   la pizarra, cada estación abre su pantalla solo antes de salir, los suministros se
   cobran una vez y el acolchado protege la carga, salir sin el pedido se avisa y el
-  portón se cierra recién cuando el camión salió y no queda nadie a pie.
+  portón se cierra recién cuando el camión salió y no queda nadie a pie. En Endless la
+  pizarra no queda vacía: dice "RUTA SIN FIN" con el récord de distancia, sin pedidos.
   Capturas del depósito (con ventana): `tests/render_depot.gd` → `user://depot_*.png`.
 - `test_locked_traps` — las trampas que el perfil todavía no desbloqueó (Líquido, Explosivo,
   Hostil) no aparecen en el depósito, desbloquearlas las pone en los estantes, y en línea

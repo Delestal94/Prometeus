@@ -248,6 +248,10 @@ los peers los calculan igual sin mensajes (la cantidad de casas también viene d
 estática se hornea en una malla por material (`DepotKit`); operarios y autoelevador son
 presentación local.
 
+En Endless el depósito es el mismo, pero sin casas no hay pedidos (`post_orders(0)`): la
+pizarra pasa a "RUTA SIN FIN" con el récord de distancia de `RunManager`, y el portón,
+que arranca abierto en los dos modos, no espera nada para dejar salir al camión.
+
 ## 6. Máquinas de estado
 
 ### Flujo general del juego (`GameManager`)

@@ -11,7 +11,9 @@ extends SceneTree
 ##     loaded box for the run that takes it;
 ##   - leaving without an ordered box is called out;
 ##   - the door stays open while anyone is inside on foot, and rolls down once
-##     the truck is out.
+##     the truck is out;
+##   - in Endless the board shows the goal and the distance record, not an
+##     empty order list.
 
 var _failures: int = 0
 var _opened: Array[StringName] = []
@@ -125,9 +127,44 @@ func _run() -> void:
 	root.get_node(^"/root/RunManager").call(&"reset_run")
 	crew.call(&"reset_campaign")
 	await create_timer(0.1).timeout
+	await _test_endless_board()
 	if _failures == 0:
 		print("PASS: depot stocks every box in its bin, posts the orders, sells supplies and closes behind the truck")
 	quit(_failures)
+
+
+## Endless (tareas de Nacho N-101): the same depot, no houses and so no
+## orders; the board sets the goal and shows the distance record instead of
+## an empty list, and the door is already open for the truck.
+func _test_endless_board() -> void:
+	var manager: Node = root.get_node(^"/root/RunManager")
+	var record := {"score": 1234, "date": "2026-09-24", "mode": manager.get(&"MODE_ENDLESS")}
+	# First in the list: best_score() takes the first entry of the mode.
+	(manager.get(&"leaderboard") as Array).insert(0, record)
+	var posted: Array = []
+	var on_posted := func(list: Array) -> void: posted.append(list)
+	root.get_node(^"/root/EventBus").connect(&"depot_orders_posted", on_posted)
+	var level: Node = load("res://scenes/gameplay/level_endless.tscn").instantiate()
+	root.add_child(level)
+	current_scene = level
+	await process_frame
+	await physics_frame
+	var depot: Node3D = level.get_node(^"World/Depot")
+	_expect((depot.get(&"orders") as Array).is_empty(), "Endless posts no orders")
+	_expect(posted.all(func(list: Array) -> bool: return list.is_empty()), "Nobody is told about orders in Endless (%s)" % str(posted))
+	var title: String = (depot.get_node(^"OrderBoard/Title") as Label3D).text
+	var rule: String = (depot.get_node(^"OrderBoard/Rule") as Label3D).text
+	var rows: String = (depot.get_node(^"OrderBoard/Row0") as Label3D).text + "
+" + (depot.get_node(^"OrderBoard/Row1") as Label3D).text
+	_expect(title == "RUTA SIN FIN", "The board is headed for Endless, not today's orders (%s)" % title)
+	_expect(rule.contains("lejos"), "The board says the goal: as far as possible (%s)" % rule)
+	_expect(rows.contains("1234 m"), "The board shows the distance record (%s)" % rows)
+	_expect(bool((depot.get(&"door") as Node).get(&"is_open")), "The door is open: nothing to wait for before driving out")
+	root.get_node(^"/root/EventBus").disconnect(&"depot_orders_posted", on_posted)
+	(manager.get(&"leaderboard") as Array).erase(record)
+	level.queue_free()
+	await process_frame
+	manager.call(&"reset_run")
 
 
 func _expect(condition: bool, description: String) -> void:

@@ -62,6 +62,7 @@ const YELLOW := Color("e7be51")
 const WARNING_TEXTURE: String = "res://assets/textures/environment/tx_env_warning_256.png"
 const DISPLAY_FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 const BODY_FONT: Font = preload("res://assets/fonts/Nunito-Variable.ttf")
+const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
 const CARGO_BOXES: Array[String] = [
 	"res://assets/models/cargo/sm_cargo_box_cube.glb",
 	"res://assets/models/cargo/sm_cargo_box_flat.glb",
@@ -92,6 +93,8 @@ var _watching_exit: bool = false
 var _insured: bool = false
 var _board_rows: Array[Label3D] = []
 var _board_marks: Array[Label3D] = []
+var _board_title: Label3D
+var _board_rule: Label3D
 var _stats_label: Label3D
 var _fans: Array[Node3D] = []
 var _clock_hour: Node3D
@@ -1053,6 +1056,10 @@ func _clock_hand(clock: Node3D, length: float, thickness: float) -> Node3D:
 	return pivot
 
 
+const BOARD_TITLE: String = "PEDIDOS DE HOY"
+const BOARD_RULE: String = "Una caja por casa  ·  cargá sólo lo que pide cada una"
+
+
 ## The order board: a whiteboard on a stand beside the truck, angled toward
 ## where the crew appears. Rows are filled in by post_orders().
 func _build_board() -> void:
@@ -1075,10 +1082,12 @@ func _build_board() -> void:
 		kit.box(Vector3(0.12, 0.02, 0.02), Vector3(-1.2 + index * 0.2, 0.88, 0.09), DepotKit.flat([Color("2a4d9b"), Color("c0392b"), Color("1f8a5b")][index], 0.5))
 	kit.collider(Vector3(3.5, 2.1, 0.2), Transform3D(Basis.IDENTITY, Vector3(0.0, 1.85, 0.0)))
 	kit.commit("Board")
-	_text("PEDIDOS DE HOY", Vector3(0.0, 2.6, 0.035), 0.0, 64, Color("2a4d9b"), DISPLAY_FONT, 0.0052, 0, board)
+	_board_title = _text(BOARD_TITLE, Vector3(0.0, 2.6, 0.035), 0.0, 64, Color("2a4d9b"), DISPLAY_FONT, 0.0052, 0, board)
+	_board_title.name = "Title"
 	var date: Dictionary = Time.get_date_dict_from_system()
 	_text("%02d/%02d" % [int(date.day), int(date.month)], Vector3(1.42, 2.72, 0.035), 0.0, 30, Color("c0392b"), DISPLAY_FONT, 0.0045, 0, board)
-	_text("Una caja por casa  ·  cargá sólo lo que pide cada una", Vector3(0.0, 2.4, 0.035), 0.0, 26, Color("c0392b"), BODY_FONT, 0.0045, 0, board).name = "Rule"
+	_board_rule = _text(BOARD_RULE, Vector3(0.0, 2.4, 0.035), 0.0, 26, Color("c0392b"), BODY_FONT, 0.0045, 0, board)
+	_board_rule.name = "Rule"
 	for row: int in range(4):
 		var y: float = 2.1 - row * 0.36
 		# Left-aligned from the board's left margin, whatever its length.
@@ -1103,9 +1112,18 @@ func _write_board() -> void:
 		else:
 			line.text = ""
 			mark.text = ""
+	_board_title.text = BOARD_TITLE
+	_board_rule.text = BOARD_RULE
 	if orders.is_empty():
-		_board_rows[0].text = "Ruta sin fin: cargá lo que quieras"
-		_board_rows[1].text = "y aguantá lo más lejos posible."
+		# Endless (tareas de Nacho N-101): no houses, so no orders. The depot
+		# stays the lobby it is, and the board sets the goal and the bar.
+		_board_title.text = "RUTA SIN FIN"
+		_board_rule.text = "Llevá todo lo que puedas lo más lejos posible"
+		_board_rows[0].text = "Cargá las cajas que quieras y salí:
+el portón está abierto."
+		var manager: Node = _autoload(&"RunManager")
+		var best: int = int(manager.call(&"best_score", RUN_MANAGER.MODE_ENDLESS)) if manager != null else 0
+		_board_rows[1].text = ("RÉCORD  ·  %d m" % best) if best > 0 else "RÉCORD  ·  todavía ninguno"
 
 
 ## The team's corkboard: deliveries, best score and the next unlock.

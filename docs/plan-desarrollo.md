@@ -190,6 +190,12 @@ pings) tienen cada una su propia línea y su propio reloj. Cubierto por
       run termina por dentro de `RunManager` (toda la carga arruinada). El leaderboard
       local guarda `mode` por entrada y cachea el top 10 de cada modo por separado, sin
       que uno desplace al otro.
+- [x] **El depósito en Endless** (2026-09-24, docs/tareas-nacho.md N-101): se queda
+      completo, como lobby (vestuario, taller, suministros). Como no hay casas no se
+      publican pedidos: la pizarra dice "RUTA SIN FIN — Llevá todo lo que puedas lo más
+      lejos posible" y muestra el récord de distancia (`RunManager.best_score(MODE_ENDLESS)`).
+      El portón ya está abierto: nada espera pedidos, el camión sale apenas arranca con
+      carga. Test: `test_depot`.
 - [ ] **Criterio subjetivo, sin resolver**: ningún test puede decir si la variedad
       procedural se siente bien, ni si el ritmo de dificultad es justo. Playtesting
       real pendiente (docs/tareas-nacho.md #55).
