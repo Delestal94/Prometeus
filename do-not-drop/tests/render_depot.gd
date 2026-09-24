@@ -9,6 +9,9 @@ extends SceneTree
 ## [name, camera position, look-at] in depot space.
 const SHOTS := [
 	["spawn_view", Vector3(0.0, 1.65, 17.4), Vector3(0.0, 1.5, 5.0)],
+	["spawn_floor_arrows", Vector3(0.6, 6.0, 22.5), Vector3(0.6, 0.0, 15.0)],
+	["spawn_turned_left", Vector3(0.0, 1.65, 17.4), Vector3(-8.0, 1.8, 18.5)],
+	["spawn_turned_right", Vector3(0.0, 1.65, 17.4), Vector3(8.0, 1.8, 18.5)],
 	["order_board", Vector3(-2.6, 1.7, 15.2), Vector3(-4.5, 1.8, 13.0)],
 	["dispatch_shelves", Vector3(-4.2, 1.8, 14.0), Vector3(-8.5, 1.0, 21.0)],
 	["aisle_between_shelves", Vector3(-8.5, 1.65, 13.2), Vector3(-8.5, 1.2, 24.0)],

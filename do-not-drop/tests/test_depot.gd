@@ -13,7 +13,18 @@ extends SceneTree
 ##   - the door stays open while anyone is inside on foot, and rolls down once
 ##     the truck is out;
 ##   - in Endless the board shows the goal and the distance record, not an
-##     empty order list.
+##     empty order list;
+##   - signage (N-503): every place has a hanging sign, arrows on the floor
+##     by the spawn point at each station and chevrons beside the truck at
+##     the door, and at least four signs read from where the crew appears.
+
+## Where the crew appears, looking at the truck: render_depot.gd's spawn_view
+## (72°), and each of the first four spawn points at the game's default 82°.
+const SPAWN_EYE := Vector3(0.0, 1.65, 17.4)
+const SPAWN_LOOK := Vector3(0.0, 1.5, 5.0)
+const SCREEN := Vector2(1920.0, 1080.0)
+## Smallest letter (the font's em, on a 1080p screen) that counts as readable.
+const READABLE_PX: float = 20.0
 
 var _failures: int = 0
 var _opened: Array[StringName] = []
@@ -64,6 +75,7 @@ func _run() -> void:
 	var player: Node3D = level.local_player
 	_expect(bool(depot.call(&"covers", player.global_position)), "The crew spawns inside the depot")
 	_expect(not bool(depot.call(&"covers", depot.to_global(Vector3(0.0, 1.0, -5.0)))), "The forecourt isn't under the roof")
+	_test_signage(depot)
 
 	# Orders: one per house, all different kinds, written on the board.
 	var orders: Array = depot.get(&"orders")
@@ -131,6 +143,111 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: depot stocks every box in its bin, posts the orders, sells supplies and closes behind the truck")
 	quit(_failures)
+
+
+## Signage (tareas de Nacho N-503), with the truck parked in its bay.
+func _test_signage(depot: Node3D) -> void:
+	var captions: Array = []
+	for label: Node in get_nodes_in_group(&"depot_sign"):
+		if not captions.has(String(label.get_meta(&"sign"))):
+			captions.append(String(label.get_meta(&"sign")))
+	for place: String in ["PIZARRA", "ESTANTE", "CAMIÓN", "PORTÓN", "TALLER", "VESTUARIO", "SUMINISTROS"]:
+		_expect(captions.any(func(caption: String) -> bool: return caption.contains(place)), "A hanging sign names %s (signs: %s)" % [place, captions])
+
+	# Floor arrows: from around the spawn to each station, and to the door.
+	# The depot's constants through its script: naming the class here would
+	# compile depot.gd before the autoloads exist (depot.gd _autoload()).
+	var layout: Dictionary = (depot.get_script() as Script).get_script_constant_map()
+	var spawn_centre := Vector3.ZERO
+	for point: Vector3 in layout.SPAWN_POINTS:
+		spawn_centre += Vector3(point.x, 0.0, point.z) / (layout.SPAWN_POINTS as Array).size()
+	var shelf_face_x: float = float(layout.SHELF_UNITS[0].x) + float(layout.SHELF_DEPTH) * 0.5
+	var shelf_end_z: float = float(layout.SHELF_START_Z) + float(layout.BAY_LENGTH) * int(layout.BAYS)
+	var targets := {
+		"PIZARRA": (depot.get_node(^"Station_orders") as Node3D).position,
+		"TALLER": (depot.get_node(^"Station_garage") as Node3D).position,
+		"VESTUARIO": (depot.get_node(^"Station_wardrobe") as Node3D).position,
+		"SUMINISTROS": (depot.get_node(^"Station_shop") as Node3D).position,
+	}
+	var guides: Array = depot.get(&"guides")
+	for caption: String in ["PIZARRA", "ESTANTES", "TALLER", "VESTUARIO", "SUMINISTROS", "PORTÓN"]:
+		var mine: Array = guides.filter(func(guide: Dictionary) -> bool: return guide.caption == caption)
+		_expect(not mine.is_empty(), "An arrow on the floor leads to %s" % caption)
+		for guide: Dictionary in mine:
+			var at: Vector3 = guide.at
+			var target: Vector3 = targets.get(caption, Vector3.ZERO)
+			if caption == "ESTANTES":
+				target = Vector3(shelf_face_x, 0.0, clampf(at.z, float(layout.SHELF_START_Z), shelf_end_z))
+			elif caption == "PORTÓN":
+				# Anywhere through the opening, half a metre clear of the jambs.
+				var half_door: float = float(layout.DOOR_WIDTH) * 0.5 - 0.5
+				target = Vector3(clampf(at.x, -half_door, half_door), 0.0, 0.0)
+			var off: float = rad_to_deg((Vector3(target.x, 0.0, target.z) - at).angle_to(guide.direction))
+			_expect(off < 25.0, "The %s arrow at %s points at it (%.0f° off)" % [caption, at, off])
+			if caption != "PORTÓN":
+				_expect(at.distance_to(spawn_centre) < 7.0, "The %s arrow starts by the spawn (%.1f m away)" % [caption, at.distance_to(spawn_centre)])
+
+	# Readable from where the crew appears.
+	var views: Array = [[Transform3D(Basis.IDENTITY, SPAWN_EYE).looking_at(SPAWN_LOOK), 72.0, "the spawn view"]]
+	for index: int in range(4):
+		var point: Vector3 = layout.SPAWN_POINTS[index]
+		views.append([Transform3D(Basis.IDENTITY, Vector3(point.x, SPAWN_EYE.y, point.z)), 82.0, "spawn point %d" % index])
+	for view: Array in views:
+		var readable: Array = _readable_signs(depot, depot.global_transform * (view[0] as Transform3D), float(view[1]))
+		_expect(readable.size() >= 4, "At least four signs read from %s (got %s)" % [view[2], readable])
+
+
+## Captions of the hanging signs readable from `eye`: every word on the front
+## face inside the picture, facing the camera, at least READABLE_PX tall,
+## with nothing solid in the way and not behind a nearer sign.
+func _readable_signs(depot: Node3D, eye: Transform3D, fov: float) -> Array:
+	var focal: float = SCREEN.y * 0.5 / tan(deg_to_rad(fov * 0.5))
+	var space := depot.get_world_3d().direct_space_state
+	var rects: Dictionary = {}  # caption -> Rect2 on screen
+	var depths: Dictionary = {}  # caption -> nearest depth
+	var failed: Dictionary = {}  # caption -> true
+	for node: Node in get_nodes_in_group(&"depot_sign"):
+		var label := node as Label3D
+		if not bool(label.get_meta(&"front")):
+			continue
+		var caption: String = label.get_meta(&"sign")
+		var centre: Vector3 = label.global_position
+		var em: float = label.font_size * label.pixel_size
+		var half_width: float = label.font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x * label.pixel_size * 0.5
+		var across: Vector3 = label.global_basis.x.normalized() * half_width
+		var up: Vector3 = label.global_basis.y.normalized() * em * 0.5
+		var depth: float = -(eye.affine_inverse() * centre).z
+		var ok: bool = depth > 0.3
+		ok = ok and label.global_basis.z.normalized().dot((eye.origin - centre).normalized()) > 0.35
+		ok = ok and focal * em / depth >= READABLE_PX
+		var pixels: Array[Vector2] = []
+		for corner: Vector3 in [centre - across - up, centre + across - up, centre - across + up, centre + across + up]:
+			var local: Vector3 = eye.affine_inverse() * corner
+			if local.z > -0.1:
+				ok = false
+				continue
+			pixels.append(Vector2(SCREEN.x * 0.5 + focal * local.x / -local.z, SCREEN.y * 0.5 - focal * local.y / -local.z))
+		var rect := Rect2(pixels[0], Vector2.ZERO) if not pixels.is_empty() else Rect2()
+		for pixel: Vector2 in pixels:
+			ok = ok and Rect2(Vector2.ZERO, SCREEN).has_point(pixel)
+			rect = rect.expand(pixel)
+		for probe: Vector3 in [centre, centre - across * 0.9, centre + across * 0.9]:
+			ok = ok and space.intersect_ray(PhysicsRayQueryParameters3D.create(eye.origin, probe, 3)).is_empty()
+		if not ok:
+			failed[caption] = true
+		rects[caption] = (rects[caption] as Rect2).merge(rect) if rects.has(caption) else rect
+		depths[caption] = minf(float(depths.get(caption, INF)), depth)
+	var readable: Array = []
+	for caption: String in rects:
+		if failed.has(caption):
+			continue
+		var covered: bool = false
+		for other: String in rects:
+			if other != caption and float(depths[other]) < float(depths[caption]) and (rects[other] as Rect2).intersects(rects[caption]):
+				covered = true
+		if not covered:
+			readable.append(caption)
+	return readable
 
 
 ## Endless (tareas de Nacho N-101): the same depot, no houses and so no

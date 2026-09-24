@@ -497,6 +497,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   cobran una vez y el acolchado protege la carga, salir sin el pedido se avisa y el
   portón se cierra recién cuando el camión salió y no queda nadie a pie. En Endless la
   pizarra no queda vacía: dice "RUTA SIN FIN" con el récord de distancia, sin pedidos.
+  Señalización: cada estación tiene su cartel colgante, las flechas del piso salen de
+  al lado del spawn y apuntan a cada una (y las del camión, al portón), y desde donde
+  aparece el equipo se leen al menos 4 carteles (dentro de la imagen, de frente, con
+  letra de 20 px o más a 1080p y sin nada que los tape).
   Capturas del depósito (con ventana): `tests/render_depot.gd` → `user://depot_*.png`.
 - `test_depot_mirror` — el espejo del vestuario refleja de verdad: cuelga en la pared de
   los lockers mirando al salón, la cámara reflejada queda detrás del vidrio con el plano

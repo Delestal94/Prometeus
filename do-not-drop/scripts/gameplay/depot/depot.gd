@@ -73,6 +73,29 @@ const CARGO_BOXES: Array[String] = [
 const PALLET: String = "res://assets/models/environment/props/sm_env_prop_pallet.glb"
 const CRATE: String = "res://assets/models/environment/props/sm_env_prop_wooden_crate.glb"
 
+## Hanging signs: caption size, and how long an arrow drawn on one is.
+const SIGN_FONT_SIZE: int = 64
+const SIGN_PIXEL: float = 0.0065
+const SIGN_ARROW: float = 0.5
+const SIGN_GAP: float = 0.18
+## Each place's colour, shared by its hanging sign and the arrow painted
+## toward it on the floor (tareas de Nacho N-503).
+const SHELVES_BLUE := Color("2f5d8a")
+const BOARD_GREEN := Color("2e9e56")
+const LOCKERS_TEAL := Color("3f7f8c")
+const SHOP_PURPLE := Color("7b52b9")
+const WORKSHOP_RED := Color("c0392b")
+## Wayfinding from where the crew appears: an arrow painted on the floor
+## toward each place, and its name beside it. The words read facing the
+## truck, the way everyone spawns; each arrow aims at `toward`.
+const FLOOR_GUIDES: Array[Dictionary] = [
+	{"caption": "PIZARRA", "word": Vector3(-2.0, 0.0, 16.0), "arrow": Vector3(-2.7, 0.0, 15.3), "toward": Vector3(-4.3, 0.0, 13.3), "colour": BOARD_GREEN},
+	{"caption": "ESTANTES", "word": Vector3(-3.0, 0.0, 17.4), "arrow": Vector3(-4.9, 0.0, 17.4), "toward": Vector3(-6.3, 0.0, 17.4), "colour": SHELVES_BLUE},
+	{"caption": "TALLER", "word": Vector3(3.0, 0.0, 15.5), "arrow": Vector3(4.4, 0.0, 15.2), "toward": Vector3(4.6, 0.0, 10.1), "colour": WORKSHOP_RED},
+	{"caption": "VESTUARIO", "word": Vector3(4.3, 0.0, 17.0), "arrow": Vector3(6.3, 0.0, 17.0), "toward": Vector3(14.0, 0.0, 15.5), "colour": LOCKERS_TEAL},
+	{"caption": "SUMINISTROS", "word": Vector3(4.6, 0.0, 18.6), "arrow": Vector3(6.9, 0.0, 19.0), "toward": Vector3(10.8, 0.0, 23.4), "colour": SHOP_PURPLE},
+]
+
 ## Builds the stock of extra packages; tests of other systems can turn it off.
 @export var stock_extra_packages: bool = true
 ## A plain ground apron around the building, for levels with no terrain of
@@ -105,6 +128,8 @@ var _belt_boxes: Array[Node3D] = []
 var _flicker_tube: MeshInstance3D
 var _flicker_time: float = 0.0
 var _supply_props: Dictionary = {}  # supply id -> Node3D shown on the truck
+## Arrows painted on the floor: {"caption", "at", "direction"} in depot space.
+var guides: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -526,6 +551,7 @@ func _build_structure() -> void:
 	kit.box(Vector3(0.06, 0.3, 0.06), Vector3(9.9, 1.1, -WALL - 0.1), DepotKit.flat(Color("c9ced0"), 0.3, 0.8))
 	kit.box(Vector3(1.1, 2.2, 0.06), Vector3(9.5, 1.1 + FLOOR_TOP, 0.03), DepotKit.flat(Color("2f7a64"), 0.6))
 	_build_floor_markings(kit)
+	_build_wayfinding(kit)
 	_build_wall_racking(kit)
 	_build_dispatch_shelves(kit)
 	_build_workshop(kit)
@@ -583,6 +609,51 @@ func _build_floor_markings(kit: DepotKit) -> void:
 	_floor_text("SALIDA", Vector3(0.0, 0.0, 2.6), 0.0, 90, Color(TEAL, 0.9))
 	_floor_text("ZONA DE CARGA", Vector3(0.0, 0.0, 14.1), 0.0, 40, Color(INK, 0.9))
 	_floor_text("TALLER", Vector3(10.8, 0.0, 6.5), -PI * 0.5, 80, Color("e8ebe4", 0.8))
+
+
+## How a new player finds each station without anyone telling them (tareas
+## de Nacho N-503): arrows on the floor around the spawn, chevrons beside the
+## truck toward the door, and hanging signs that read from where the crew
+## appears -- over the board (and on to the shelves), over the truck, and to
+## the right toward the lockers and the shop. Each place's own sign hangs
+## over it too (_build_workshop, _build_lockers...).
+func _build_wayfinding(kit: DepotKit) -> void:
+	for guide: Dictionary in FLOOR_GUIDES:
+		var at: Vector3 = guide.arrow
+		_paint_arrow(kit, guide.caption, at, ((guide.toward as Vector3) - at).normalized(), guide.colour)
+		_floor_text(guide.caption, guide.word, 0.0, 34, Color(guide.colour as Color, 0.95))
+	for x: float in [-2.6, 2.6]:
+		for z: float in [11.6, 7.6, 3.6]:
+			_paint_arrow(kit, "PORTÓN", Vector3(x, 0.0, z), Vector3.FORWARD, TEAL)
+	var board_yaw: float = deg_to_rad(38.0)
+	var over_board: Vector3 = Vector3(-4.5, 0.0, 13.0) + Basis(Vector3.UP, board_yaw) * Vector3(0.9, 0.0, 0.0)
+	_hanging_sign(kit, "← ESTANTES", over_board + Vector3(0.0, 4.3, 0.0), board_yaw, SHELVES_BLUE)
+	_hanging_sign(kit, "PIZARRA", over_board + Vector3(0.0, 3.5, 0.0), board_yaw, BOARD_GREEN, 4.0)
+	# High enough over the truck's roof to read above it from behind.
+	_hanging_sign(kit, "CAMIÓN → PORTÓN", Vector3(0.0, 4.4, 11.0), 0.0, INK, CEILING - 0.25, Color("ffc93c"))
+	var right := Vector3(4.6, 0.0, 11.0)
+	var right_yaw: float = deg_to_rad(-30.0)
+	_hanging_sign(kit, "VESTUARIO →", right + Vector3(0.0, 4.35, 0.0), right_yaw, LOCKERS_TEAL)
+	_hanging_sign(kit, "SUMINISTROS →", right + Vector3(0.0, 3.55, 0.0), right_yaw, SHOP_PURPLE, 4.05)
+
+
+## An arrow painted on the floor at `at`, pointing along `direction`.
+func _paint_arrow(kit: DepotKit, caption: String, at: Vector3, direction: Vector3, colour: Color) -> void:
+	var flat := Basis(direction, Vector3.UP.cross(direction), Vector3.UP)
+	_arrow_shape(kit, Transform3D(flat, Vector3(at.x, FLOOR_TOP + 0.004, at.z)), 1.1, 0.62, 0.006, DepotKit.flat(colour, 0.7))
+	guides.append({"caption": caption, "at": Vector3(at.x, 0.0, at.z), "direction": direction})
+
+
+## A flat arrow along `xform`'s +X: `length` long, `width` across the head,
+## `thickness` deep along its Z.
+func _arrow_shape(kit: DepotKit, xform: Transform3D, length: float, width: float, thickness: float, material: Material) -> void:
+	var head_length: float = length * 0.45
+	var shaft := BoxMesh.new()
+	shaft.size = Vector3(length - head_length + 0.02, width * 0.36, thickness)
+	kit.add_mesh(shaft, xform * Transform3D(Basis.IDENTITY, Vector3((0.02 - head_length) * 0.5, 0.0, 0.0)), material, false)
+	var head := PrismMesh.new()
+	head.size = Vector3(width, head_length, thickness)
+	kit.add_mesh(head, xform * Transform3D(Basis(Vector3.BACK, -PI * 0.5), Vector3((length - head_length) * 0.5, 0.0, 0.0)), material, false)
 
 
 func _build_wall_racking(kit: DepotKit) -> void:
@@ -686,7 +757,8 @@ func _build_dispatch_shelves(kit: DepotKit) -> void:
 					tag.name = "Tag%s_%d" % [code, 0 if side < 0 else 1]
 					kit.box(Vector3(0.012, 0.09, 0.36), Vector3(face - side * 0.005, LEVEL_TOPS[level] - 0.07, z), DepotKit.flat(PAPER, 0.8))
 		# Aisle sign hanging over the unit.
-		_hanging_sign(kit, "DESPACHO  %s" % unit.aisle, Vector3(x, 3.7, SHELF_START_Z + length * 0.5), PI * 0.5, Color("2f5d8a"))
+		# Named as the board reads ("ESTANTE A-3").
+		_hanging_sign(kit, "ESTANTE %s" % unit.aisle, Vector3(x, 3.7, SHELF_START_Z + length * 0.5), PI * 0.5, SHELVES_BLUE)
 
 
 func _build_workshop(kit: DepotKit) -> void:
@@ -729,7 +801,7 @@ func _build_workshop(kit: DepotKit) -> void:
 	kit.box(Vector3(0.56, 0.4, 0.02), Vector3(4.6, 1.45, 9.84), DepotKit.glow(Color("4cc9f0"), 1.1))
 	_text("TALLER", Vector3(4.6, 1.56, 9.86), 0.0, 40, PAPER, DISPLAY_FONT, 0.004, 4)
 	_text("pintura · camión", Vector3(4.6, 1.38, 9.86), 0.0, 26, INK, BODY_FONT, 0.004, 0)
-	_hanging_sign(kit, "TALLER", Vector3(11.5, 3.9, 6.0), 0.0, Color("c0392b"))
+	_hanging_sign(kit, "TALLER", Vector3(11.5, 3.9, 6.0), 0.0, WORKSHOP_RED)
 
 
 func _build_lockers(kit: DepotKit) -> void:
@@ -768,7 +840,7 @@ func _build_lockers(kit: DepotKit) -> void:
 	vanity.light_energy = 0.9
 	vanity.omni_range = 2.6
 	add_child(vanity)
-	_hanging_sign(kit, "VESTUARIO", Vector3(13.2, 3.4, 15.5), -PI * 0.5, Color("3f7f8c"))
+	_hanging_sign(kit, "VESTUARIO", Vector3(13.2, 3.4, 15.5), -PI * 0.5, LOCKERS_TEAL)
 
 
 func _build_break_area(kit: DepotKit) -> void:
@@ -828,7 +900,7 @@ func _build_shop(kit: DepotKit) -> void:
 		prop.visible = false
 		add_child(prop)
 		_supply_props[supply[0]] = prop
-	_hanging_sign(kit, "SUMINISTROS", Vector3(10.8, 3.4, 24.0), PI, Color("2f7a64"))
+	_hanging_sign(kit, "SUMINISTROS", Vector3(10.8, 3.4, 24.0), PI, SHOP_PURPLE)
 
 
 func _build_office(kit: DepotKit) -> void:
@@ -843,7 +915,7 @@ func _build_office(kit: DepotKit) -> void:
 	kit.box(Vector3(HALF_WIDTH - x0, 0.6, 0.12), Vector3((x0 + HALF_WIDTH) * 0.5, 2.7, z0), panel, true)
 	kit.box(Vector3(0.12, 1.0, DEPTH - z0 - 1.3), Vector3(x0, 0.5, z0 + (DEPTH - z0 - 1.3) * 0.5), panel, true)
 	kit.box(Vector3(0.04, 1.4, DEPTH - z0 - 1.3), Vector3(x0, 1.7, z0 + (DEPTH - z0 - 1.3) * 0.5), glass, true)
-	kit.box(Vector3(0.12, 0.6, DEPTH - x0), Vector3(x0, 2.7, (z0 + DEPTH) * 0.5), panel)
+	kit.box(Vector3(0.12, 0.6, DEPTH - z0), Vector3(x0, 2.7, (z0 + DEPTH) * 0.5), panel)
 	kit.box(Vector3(0.12, 2.4, 0.12), Vector3(x0, 1.2, DEPTH - 1.3), frame)
 	kit.box(Vector3(0.9, 2.1, 0.05), Vector3(x0 - 0.02, 1.05, DEPTH - 0.8), DepotKit.flat(Color("2f7a64"), 0.6), false, 0.0)
 	kit.box(Vector3(HALF_WIDTH - x0 + 0.1, 0.1, DEPTH - z0 + 0.1), Vector3((x0 + HALF_WIDTH) * 0.5, 3.05, (z0 + DEPTH) * 0.5), frame)
@@ -1202,19 +1274,67 @@ func _station(id: StringName, prompt_text: String, at: Vector3) -> void:
 	add_child(station)
 
 
-## Hanging zone sign: a board on two cables with its name on both faces.
-func _hanging_sign(kit: DepotKit, caption: String, at: Vector3, yaw: float, colour: Color) -> void:
+## Hanging sign: a board on two cables with its caption on both faces. An
+## arrow in the caption ("← ESTANTES", "CAMIÓN → PORTÓN") is drawn as a
+## shape, not a glyph, and only on the front face (the one `yaw` turns toward
+## +Z): read from behind it would point the wrong way, so the back just names
+## the place. A sign hung under another stops its cables at `cable_top`.
+## Every caption label is in the "depot_sign" group, tagged with the whole
+## caption and its face (test_depot_signage).
+func _hanging_sign(kit: DepotKit, caption: String, at: Vector3, yaw: float, colour: Color, cable_top: float = CEILING - 0.25, ink: Color = PAPER) -> void:
 	var basis := Basis(Vector3.UP, yaw)
-	var width: float = 0.5 + caption.length() * 0.26
+	var tokens: Array = _sign_tokens(caption)
+	var words: PackedStringArray = []
+	var widths: Array[float] = []
+	var content: float = SIGN_GAP * (tokens.size() - 1)
+	for token: Variant in tokens:
+		var token_width: float = SIGN_ARROW
+		if token is String:
+			words.append(token)
+			token_width = DISPLAY_FONT.get_string_size(token, HORIZONTAL_ALIGNMENT_LEFT, -1, SIGN_FONT_SIZE).x * SIGN_PIXEL
+		widths.append(token_width)
+		content += token_width
+	var width: float = content + 0.7
 	kit.box_xf(Vector3(width, 0.6, 0.06), Transform3D(basis, at), DepotKit.flat(colour, 0.7))
 	kit.box_xf(Vector3(width + 0.08, 0.06, 0.08), Transform3D(basis, at + Vector3(0.0, 0.33, 0.0)), DepotKit.flat(Color("e8ebe4"), 0.6))
 	for side: float in [-0.4, 0.4]:
 		var cable_at: Vector3 = at + basis * Vector3(side * width, 0.0, 0.0)
-		var top: float = CEILING - 0.25
-		kit.box_xf(Vector3(0.015, top - at.y - 0.3, 0.015), Transform3D(Basis.IDENTITY, Vector3(cable_at.x, (top + at.y + 0.3) * 0.5, cable_at.z)), DepotKit.flat(Color("263238"), 0.6))
-	for face: float in [1.0, -1.0]:
-		var offset: Vector3 = basis * Vector3(0.0, 0.0, face * 0.035)
-		_text(caption, at + offset, yaw + (0.0 if face > 0.0 else PI), 64, PAPER, DISPLAY_FONT, 0.0065, 10)
+		kit.box_xf(Vector3(0.015, cable_top - at.y - 0.3, 0.015), Transform3D(Basis.IDENTITY, Vector3(cable_at.x, (cable_top + at.y + 0.3) * 0.5, cable_at.z)), DepotKit.flat(Color("263238"), 0.6))
+	var cursor: float = -content * 0.5
+	for index: int in range(tokens.size()):
+		var centre: float = cursor + widths[index] * 0.5
+		if tokens[index] is String:
+			_sign_label(tokens[index], at + basis * Vector3(centre, 0.0, 0.035), yaw, ink, caption, true)
+		else:
+			var turn := Basis(Vector3.BACK, PI if int(tokens[index]) < 0 else 0.0)
+			_arrow_shape(kit, Transform3D(basis * turn, at + basis * Vector3(centre, 0.0, 0.036)), SIGN_ARROW, 0.34, 0.012, DepotKit.unlit(ink))
+		cursor += widths[index] + SIGN_GAP
+	_sign_label("  ·  ".join(words), at + basis * Vector3(0.0, 0.0, -0.035), yaw + PI, ink, caption, false)
+
+
+func _sign_label(value: String, at: Vector3, yaw: float, ink: Color, caption: String, front: bool) -> void:
+	var label := _text(value, at, yaw, SIGN_FONT_SIZE, ink, DISPLAY_FONT, SIGN_PIXEL, 10)
+	label.add_to_group(&"depot_sign")
+	label.set_meta(&"sign", caption)
+	label.set_meta(&"front", front)
+
+
+## "CAMIÓN → PORTÓN" -> ["CAMIÓN", 1, "PORTÓN"]: words, and -1 / 1 for
+## arrows pointing left / right.
+static func _sign_tokens(caption: String) -> Array:
+	var tokens: Array = []
+	var word: String = ""
+	for character: String in caption:
+		if character != "←" and character != "→":
+			word += character
+			continue
+		if not word.strip_edges().is_empty():
+			tokens.append(word.strip_edges())
+		tokens.append(-1 if character == "←" else 1)
+		word = ""
+	if not word.strip_edges().is_empty():
+		tokens.append(word.strip_edges())
+	return tokens
 
 
 func _build_lights() -> void:

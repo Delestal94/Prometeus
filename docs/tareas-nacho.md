@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 y M2 cerrados salvo N-503; M3 salvo
+> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 y M2 cerrados; M3 salvo
 > N-208 y N-209 (en espera); de M4, N-106, N-107 y N-405; además N-307, N-804, N-903, N-904.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
@@ -396,13 +396,20 @@ tocar el HUD.
 - [x] En Endless muestra la distancia recorrida y el récord.
 - Reemplaza a la radio en el centro del tablero, inclinado hacia el ojo del conductor; `check_driver_sightline` sigue pasando.
 
-### N-503 · Señalización del depósito — A · `Opus 5.5 · medium` · Aviso: no
+### N-503 · Señalización del depósito — A · `Opus 5.5 · medium` · Aviso: no · **[x]**
 
-- [ ] Flechas pintadas en el piso y carteles colgantes: "ESTANTES", "PIZARRA", "VESTUARIO", "TALLER",
+- [x] Flechas pintadas en el piso y carteles colgantes: "ESTANTES", "PIZARRA", "VESTUARIO", "TALLER",
   "SUMINISTROS", "CAMIÓN → PORTÓN". Un jugador nuevo encuentra cada estación sin que nadie le diga.
-- [ ] Captura desde el punto donde aparece el jugador: al menos 4 carteles legibles.
+- [x] Captura desde el punto donde aparece el jugador: al menos 4 carteles legibles.
 - [x] Espejo de cuerpo entero en el vestuario que refleja de verdad, para verse el uniforme
   (`depot/depot_mirror.gd`, test `test_depot_mirror`). Pedido del usuario, 2026-09-24.
+- Hecho en `depot.gd` `_build_wayfinding()`: desde el spawn se leen 6 carteles colgantes ("← ESTANTES" y
+  "PIZARRA" sobre la pizarra, "CAMIÓN → PORTÓN" sobre el camión, "VESTUARIO →" y "SUMINISTROS →" a la
+  derecha, y el "TALLER" que ya estaba). Las flechas de los carteles se dibujan como forma, solo en la cara de
+  adelante. En el piso, alrededor del spawn, hay una flecha con su palabra hacia cada estación, del color de
+  su cartel, y flechas a los costados del camión hacia el portón. Los estantes pasan a llamarse "ESTANTE A/B",
+  como en la pizarra. De paso se arregló un panel de la oficina que medía 23 m en vez de 4 y tapaba el cartel
+  de SUMINISTROS. `test_depot` cuenta los carteles legibles desde el spawn con proyección y rayos, sin render.
 
 ### N-504 · La cámara no atraviesa la cabina — B · `Opus 5.5 · xhigh` · Aviso: sí (`first_person_camera.gd`)
 

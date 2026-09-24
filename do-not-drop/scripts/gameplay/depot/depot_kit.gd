@@ -193,6 +193,18 @@ static func flat(color: Color, roughness: float = 0.85, metallic: float = 0.0) -
 	return _material_cache[key]
 
 
+## Unlit paint, drawn at exactly its colour: shapes that sit beside Label3D
+## text (unshaded too) and should read just as bright -- a sign's arrows.
+static func unlit(color: Color) -> StandardMaterial3D:
+	var key: String = "unlit:%s" % color.to_html()
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
 ## A palette colour with a greyscale detail map multiplied in, mapped in
 ## world space so a slab and a wall share one texel size (same look as
 ## LowpolyMaterials gives the imported props).
