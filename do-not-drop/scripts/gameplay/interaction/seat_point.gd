@@ -99,7 +99,7 @@ func get_prompt() -> String:
 
 
 func can_interact(player: Node) -> bool:
-	if _is_occupied():
+	if is_instance_valid(occupant) or _is_occupied():
 		return false
 	if required_door != &"":
 		var door_vehicle: Node = get_node_or_null(vehicle_path)
@@ -177,6 +177,8 @@ func interact(player: Node) -> void:
 			if full_mount != null:
 				package = full_mount.get(&"occupied_by")
 		if package != null and player.has_method(&"tend_package"):
+			if package.has_method(&"set_tender"):
+				package.call(&"set_tender", peer_id)
 			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 	elif role != &"driver" and not required_mount_path.is_empty():
 		# A passenger takes charge of the package at their own seat: from here
@@ -197,6 +199,8 @@ func interact(player: Node) -> void:
 				# as loaded cargo and the driver can actually start the run.
 				mount.emit_signal(&"interacted", player)
 		if package != null and player.has_method(&"tend_package"):
+			if package.has_method(&"set_tender"):
+				package.call(&"set_tender", peer_id)
 			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 	interacted.emit(player)
 
@@ -228,11 +232,17 @@ func _first_mount(occupied: bool) -> Node:
 ## read by both the on-foot controller and the van after the driver exits.
 @rpc("any_peer", "call_local", "reliable")
 func release_occupant(peer_id: int) -> void:
+	if not multiplayer.is_server():
+		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and sender_id != peer_id:
 		return
-	if occupant != null and int(occupant.get_multiplayer_authority()) == peer_id:
+	if is_instance_valid(occupant) and int(occupant.get_multiplayer_authority()) == peer_id:
 		occupant = null
+	# Whatever box they were looking after stops taking their input.
+	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
+		if int(package.get(&"tender_peer_id")) == peer_id and package.has_method(&"set_tender"):
+			package.call(&"set_tender", 0)
 	if role != &"driver":
 		return
 	var vehicle: Node = get_node_or_null(vehicle_path)

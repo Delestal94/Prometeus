@@ -103,16 +103,17 @@ func _check_session_house_count() -> void:
 	network.peer_ids = [1, 2, 3, 4] as Array[int]
 	_expect(await _built_house_count() == 3, "The host builds one house per passenger")
 	_expect(int(network.world_house_count) == 3, "The host records it as the session's house count (got %d)" % int(network.world_house_count))
-	# A fifth player joins and the host restarts: clients don't reload their
-	# world, so the host keeps the number it already handed out.
+	# A fifth player joins: a rebuilt route keeps the number already handed
+	# out, until the host restarts for everyone (NetworkManager.begin_restart()
+	# clears it, so the crew that's there now is counted afresh).
 	network.peer_ids = [1, 2, 3, 4, 5] as Array[int]
-	_expect(await _built_house_count() == 3, "A host restart keeps the session's house count")
-	# A joiner: its own roster says [host, itself] (one house), but it builds
-	# the number the handshake brought.
+	_expect(await _built_house_count() == 3, "A rebuilt route keeps the session's house count")
 	network.world_house_count = 0
+	_expect(await _built_house_count() == 4, "After a restart clears it, the grown crew gets more houses")
+	# A joiner: its own roster says [host, itself] (one house), but it builds
+	# the number the join handshake brought (_receive_auth stores it).
+	network.world_house_count = 3
 	network.peer_ids = [1, 7] as Array[int]
-	network.set(&"_awaiting_handshake", true)
-	network.call(&"_accept_joiner", 4242, 3, [])
 	_expect(await _built_house_count() == 3, "A joiner builds the host's house count, not its own roster's")
 	# Solo play never records one: every run counts the crew afresh.
 	network.world_seed = 0

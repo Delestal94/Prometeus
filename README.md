@@ -193,6 +193,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
+<godot> --headless --path do-not-drop --script res://tests/test_ride_sync.gd
+<godot> --headless --path do-not-drop --script res://tests/test_session_sync.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
@@ -254,7 +256,21 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una
   sola foto por entrega, y la foto es lo que hace caer el reclamo del
-  cliente al final (sin ella, el reclamo descuenta).
+  cliente al final (sin ella, el reclamo descuenta). También en un cliente,
+  donde la casa solo se entera de la entrega por el registro que manda el host.
+- `test_ride_sync` — en red, las cajas y los jugadores que van en la caja del
+  camión se mandan en coordenadas del camión y cada peer los pone sobre *su*
+  copia (antes rebotaban, atravesaban paredes y parecían caerse); el que va
+  parado atrás se mueve y gira con el camión; `controls_enabled` se replica
+  (un cliente no podía manejar); una caja ancha en el estante no se mete en
+  la pared.
+- `test_session_sync` — segunda tanda de multijugador: lo que se le manda al que
+  entra tarde (partida en curso, entregas, cajas ya entregadas, portón), la caja
+  entregada que desaparece en todos, cargar y soltar dentro del camión en marcha,
+  la entrada de "atender caja" solo del que está sentado ahí (y que vence), el
+  alcance de un pasajero medido desde su asiento, interacciones remotas solo al
+  alcance, sin bonus por fotos de casas salteadas, y una sesión que termina sin
+  dejar su mundo ni borrar a los jugadores.
 - `test_world_seed` — que todos los peers construyan el **mismo** mundo: misma
   semilla, misma ruta; semilla distinta, ruta distinta; y que jugar solo
   (semilla 0) siga variando entre partidas.

@@ -58,6 +58,11 @@ func _ready() -> void:
 	_build_ui()
 	NetworkManager.session_ready.connect(_on_session_ready)
 	NetworkManager.session_failed.connect(_on_session_failed)
+	# A session that ended while in a level (host gone, handshake refused):
+	# say why here, where the player lands.
+	var reason: String = NetworkManager.take_failure_message()
+	if not reason.is_empty():
+		_set_status(reason, RED)
 	_handle_cmdline_args()
 
 
@@ -65,6 +70,11 @@ func _handle_cmdline_args() -> void:
 	# Same shortcut level_base.gd already honours for smoke checks and quick
 	# iteration -- skips the menu the same way it skips on-foot loading.
 	var args: PackedStringArray = OS.get_cmdline_user_args()
+	# A Steam invite accepted before the menu existed (see NetworkManager).
+	var lobby: int = NetworkManager.take_pending_lobby()
+	if lobby != 0:
+		join_steam_lobby(lobby)
+		return
 	if "--autostart" in args:
 		_play_solo()
 		return
@@ -278,6 +288,20 @@ func _host_session(transport: int = NetworkManager.Transport.AUTO) -> void:
 		_set_status("No se pudo crear la sala (error %d)." % error, RED)
 
 
+## A friend's Steam room, from an accepted invite or "Unirse a la partida".
+func join_steam_lobby(lobby: int) -> void:
+	# Always taken, even mid-connection: NetworkManager already left whatever
+	# was in progress, and returning here left the menu stuck "Conectando…"
+	# with the invite thrown away.
+	_busy = true
+	_set_status("Entrando a la sala de tu amigo…", MUTED)
+	NetworkManager.transport = NetworkManager.Transport.STEAM
+	var error: Error = NetworkManager.join_session(str(lobby))
+	if error != OK:
+		_busy = false
+		_set_status("No se pudo entrar a la sala (error %d)." % error, RED)
+
+
 func _join_by_address() -> void:
 	if _busy:
 		return
@@ -304,7 +328,7 @@ func _on_session_ready(is_host: bool) -> void:
 	if not is_host:
 		GameSettings.last_join_address = _address_field.text
 	_set_status("Entrando…", MINT)
-	_go_to_level(LEVEL_SCENE)
+	_go_to_level(NetworkManager.session_scene if not NetworkManager.session_scene.is_empty() else LEVEL_SCENE)
 
 
 func _cancel_connection() -> void:
@@ -316,6 +340,7 @@ func _cancel_connection() -> void:
 
 
 func _on_session_failed(reason: String) -> void:
+	NetworkManager.take_failure_message()  # Shown right here; not again later.
 	_busy = false
 	_set_status(reason, RED)
 

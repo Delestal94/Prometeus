@@ -1,6 +1,6 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-23
+> Última actualización: 2026-09-24
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
@@ -37,6 +37,54 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/gameplay/interaction/`
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
+
+## Aviso activo: segunda tanda de multijugador (2026-09-24)
+
+Pedido del usuario: arreglar todo lo que encontró `cazador-bugs` (detalle en
+`docs/tareas-nacho.md` #151-166). Lo hizo Nacho. Zona compartida:
+- `core/network_manager.gd`: peers con el nivel cargado (`is_peer_ready`,
+  `peer_level_ready`), reinicio para todos (`begin_restart`, `_remote_restart`), fin de
+  sesión limpio (`_end_session`, `OfflineMultiplayerPeer`, `take_failure_message`),
+  timeout de 20 s; se borró `_accept_joiner`.
+- `core/run_manager.gd`: `send_session_state` / `_receive_session_state` (el que entra
+  tarde), `consumed_packages`, sin bonus por foto de casa salteada, foto validada.
+- `level_base.gd`/`level_endless.gd`: `_on_peer_level_ready`, spawn solo a peers listos,
+  el reinicio avisa a los clientes.
+
+Archivos de Slatex:
+- `player/player.gd`: `reach_origin()`, carga y soltada en coordenadas del camión,
+  `_ride_frame_by_frame`, filtro de visibilidad del sincronizador, golpe de caja solo del
+  host.
+- `player/player_ragdoll.gd`: hereda la velocidad del camión.
+- `package/package.gd`: carga relativa, `set_tender`/`tender_peer_id`,
+  `_remote_consume`, histéresis.
+- `interaction/interactable.gd`: alcance en `request_interact`.
+- `interaction/seat_point.gd`: asigna y libera quién atiende la caja.
+- `ui/main_menu.gd`: motivo de la desconexión.
+- Después de verificar con probes: `player.gd` y `package.gd` limitan su sincronizador a
+  peers listos en `_enter_tree`; `player.gd` no choca con las cajas mientras viaja en el
+  camión en marcha (`_on_foot_mask`); los niveles conservan la vista si se cae el host.
+- Tests: nuevo `test_session_sync`; `test_house_assignment` sin `_accept_joiner`.
+
+## Aviso activo: bugs de multijugador del playtest (2026-09-24)
+
+Pedido del usuario: siete bugs de una partida con amigos. Lo hizo Nacho (detalle en
+`docs/tareas-nacho.md` #143-149). Archivos de Slatex tocados:
+- `player/player.gd` y `player.tscn`: ya no se replica `position` sino `net_position` +
+  `net_in_vehicle` (dentro de la caja de carga, en coordenadas del camión). Las copias
+  remotas se ubican en `_process` y no se interpolan. El jugador local que va parado atrás
+  se mueve con el camión (`_ride_with_vehicle`), y el manejo de plataformas del
+  `CharacterBody3D` ignora la capa del camión.
+- `package/package.gd` y `package.tscn`: lo mismo con `net_transform` + `net_in_vehicle`
+  en lugar de `position`/`rotation`.
+- Zona compartida: `core/network_manager.gd` (`server_relay` en el cliente de Steam),
+  `core/run_manager.gd` (`submit_delivery_photo`, la foto de un cliente llega al host).
+- Del lado de Nacho: `vehicle.gd`/`.tscn` (`carries()`, `controls_enabled` replicado,
+  margen contra la pared en el estante), `cargo_clutter.gd`, `phone_camera.gd`.
+- `ui/main_menu.gd`: `join_steam_lobby()` (invitación de Steam aceptada); Steam se
+  inicializa al abrir el juego (`network_manager.gd` `_ready`). Test: `test_main_menu`.
+- Tests: nuevo `test_ride_sync`, ampliado `test_phone_camera`; `test_new_route_segments`
+  busca `ConstructionBarrierCollision` (el nodo cambió de nombre en 94af110).
 
 ## Aviso activo: partida retransmitida, trampas bloqueadas y tests en el push (2026-09-23)
 

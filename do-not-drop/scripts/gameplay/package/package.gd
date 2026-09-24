@@ -30,12 +30,26 @@ const PLAYER_HIT_MIN_SPEED: float = 4.0
 const PLAYER_HIT_PUSH_SCALE: float = 0.38
 
 var trap_behavior: Resource
-var is_held: bool = false
+var is_held: bool = false:
+	set(value):
+		is_held = value
+		collision_layer = 0 if value else 4
+		collision_mask = 0 if value else 7
 var is_loaded: bool = false
 ## Set by place_at(), cleared by release_mount(). Lets a pickup free its
 ## shelf slot with a direct reference instead of scanning every mount in
 ## the "package_mount" group to find whichever one claims this package.
 var current_mount: Node = null
+## Replicate shelf occupancy as well as the box transform: clients use it
+## to decide whether they may board, tend cargo or place another box.
+var current_mount_path: NodePath = NodePath():
+	set(value):
+		if is_instance_valid(current_mount) and &"occupied_by" in current_mount:
+			current_mount.set(&"occupied_by", null)
+		current_mount_path = value
+		current_mount = get_node_or_null(value) if not value.is_empty() and is_inside_tree() else null
+		if current_mount != null and &"occupied_by" in current_mount:
+			current_mount.set(&"occupied_by", self)
 ## Host-only: the player holding this box right now. Clients never set it.
 var carrier: Node = null
 ## Written each frame by whoever is tending this package. Plain data, so the
@@ -48,6 +62,37 @@ var is_open: bool = false
 ## Replicated too: once the contents are on the floor there's nothing left
 ## to close the box on.
 var contents_spilled: bool = false
+## Replicated in place of position/rotation (see package.tscn). Inside the
+## truck's cargo bay the box is sent in the truck's own space, and a client
+## puts it back on *its* copy of the truck. In world space the two arrived
+## from separate synchronizers, out of step: at speed the boxes trailed the
+## truck by a good part of a metre, so on clients they bounced about, went
+## through the walls and seemed to fall out.
+var net_transform: Transform3D = Transform3D.IDENTITY:
+	set(value):
+		net_transform = value
+		_has_net_state = true
+var net_in_vehicle: bool = false
+var _has_net_state: bool = false
+var _vehicle: Node3D = null
+## Host: the carrier's latest hold pose, in the truck's space when aboard.
+## Re-applied every tick against the host's own truck, so a box carried in
+## the moving bay rides with it between the carrier's updates.
+var _carry_pose: Transform3D = Transform3D.IDENTITY
+var _carry_in_vehicle: bool = false
+## Host: the peer whose seat looks after this box (seat_point.gd), the only
+## one whose trap input counts, and how long since their last sample.
+var tender_peer_id: int = 0
+var _tender_input_age: float = 0.0
+## Stale trap input is dropped after this long: a passenger who paused, or
+## tabbed out, holding "steady" would otherwise keep the trap calm forever.
+const TENDER_INPUT_TIMEOUT: float = 0.25
+## Handed over at a door: on a client the network stops placing it, the
+## hand-over plays out and it goes.
+var _consumed: bool = false
+## How far past the cargo bay's edge a box already aboard still counts as
+## aboard (see Vehicle.carries()).
+const RIDE_MARGIN: float = 0.4
 var integrity: float:
 	get:
 		return float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
@@ -72,11 +117,88 @@ var _hint_relay_time: float = 0.0
 var _package_hit_cooldowns: Dictionary = {}
 
 
+## Synced only to peers whose level is loaded (NetworkManager.is_peer_ready()),
+## same as the players. Installed before the synchronizer (a child) enters the
+## tree and registers: after a host restart the new level's boxes were synced
+## to clients still on the old level, where a box handed over last run was
+## gone; that client never resolved it and never saw that box move again.
+func _enter_tree() -> void:
+	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	if sync == null or network == null or not network.has_signal(&"peer_level_ready") \
+			or network.is_connected(&"peer_level_ready", _on_peer_level_ready):
+		return
+	sync.add_visibility_filter(func(peer_id: int) -> bool:
+		return not multiplayer.is_server() or bool(network.call(&"is_peer_ready", peer_id)))
+	network.connect(&"peer_level_ready", _on_peer_level_ready)
+
+
+func _on_peer_level_ready(peer_id: int) -> void:
+	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	if sync != null and multiplayer.is_server():
+		sync.update_visibility(peer_id)
+
+
 func _ready() -> void:
 	if not is_multiplayer_authority():
 		freeze = true
+		# Placed by the network every frame (_process), against the truck
+		# as it's drawn: interpolating between physics ticks on top of that
+		# only made it trail behind.
+		physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
 	initialize_trap()
 	body_entered.connect(_on_body_entered)
+	if is_multiplayer_authority():
+		_publish_net_state()
+
+
+## Host: what the synchronizer sends this tick. Read before the physics step,
+## so the box and the truck come from the same step.
+func _physics_process(delta: float) -> void:
+	if not is_multiplayer_authority():
+		return
+	if is_held and _carry_in_vehicle:
+		var vehicle: Node3D = _find_vehicle()
+		if vehicle != null:
+			global_transform = vehicle.global_transform * _carry_pose
+	if not player_input.is_empty():
+		_tender_input_age += delta
+		if _tender_input_age > TENDER_INPUT_TIMEOUT:
+			player_input = {}
+	_publish_net_state()
+
+
+## Client: put the box where the host says, on this peer's truck if it rides.
+func _process(_delta: float) -> void:
+	if is_multiplayer_authority() or not _has_net_state or _consumed:
+		return
+	var vehicle: Node3D = _find_vehicle()
+	if net_in_vehicle and vehicle != null:
+		# A client's truck is frozen, so not interpolated: its interpolated
+		# transform is then last frame's cached one, not where the network
+		# just put it, and the box would trail the truck by a frame.
+		var vehicle_pose: Transform3D = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
+		global_transform = vehicle_pose * net_transform
+	else:
+		global_transform = net_transform
+
+
+func _publish_net_state() -> void:
+	if not is_inside_tree():
+		return
+	var vehicle: Node3D = _find_vehicle()
+	# A little give once aboard: a box right at the rear doors mustn't flip
+	# between the truck's space and the world's every other frame.
+	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if net_in_vehicle else 0.0))
+	net_in_vehicle = riding
+	net_transform = vehicle.global_transform.affine_inverse() * global_transform if riding else global_transform
+
+
+func _find_vehicle() -> Node3D:
+	if not is_instance_valid(_vehicle) and is_inside_tree():
+		var found: Node = get_tree().get_first_node_in_group(&"vehicle")
+		_vehicle = found as Node3D if found != null and found.has_method(&"carries") else null
+	return _vehicle
 
 
 func initialize_trap() -> void:
@@ -250,8 +372,13 @@ func spill_contents(velocity: Vector3 = Vector3.ZERO) -> void:
 func _peer_within_reach(peer_id: int) -> bool:
 	for player: Node in get_tree().get_nodes_in_group(&"player"):
 		if player.get_multiplayer_authority() == peer_id:
-			return (player as Node3D).global_position.distance_to(global_position) <= OPEN_REACH
+			return _reach_origin(player).distance_to(global_position) <= OPEN_REACH
 	return false
+
+
+## A seated player's body stays where they sat down; their seat is where they are.
+static func _reach_origin(player: Node) -> Vector3:
+	return player.call(&"reach_origin") if player.has_method(&"reach_origin") else (player as Node3D).global_position
 
 
 func get_hint() -> String:
@@ -278,19 +405,45 @@ func _report_change(before_integrity: float, before_state: int, ruin_cause: Stri
 func submit_tender_input(input: Dictionary) -> void:
 	if not is_multiplayer_authority():
 		return
+	# Only whoever sits at this box's seat (0: a genuine local call).
+	var sender: int = multiplayer.get_remote_sender_id()
+	var from: int = sender if sender != 0 else multiplayer.get_unique_id()
+	if tender_peer_id == 0 or from != tender_peer_id:
+		return
 	player_input = input
+	_tender_input_age = 0.0
+
+
+## Host: the seat's occupant changed (seat_point.gd). Nobody tending means no
+## input at all -- not the last sample the previous passenger left behind.
+func set_tender(peer_id: int) -> void:
+	tender_peer_id = peer_id
+	player_input = {}
+	_tender_input_age = 0.0
 
 
 ## Whoever is carrying this package (on foot, not yet mounted) calls this
 ## every physics frame instead of setting global_transform directly -- the
 ## package is host-authoritative, so only the host's copy moving is real;
 ## everyone else, carrier included, sees it through the MultiplayerSynchronizer.
+##
+## `in_vehicle`: the pose is in the truck's space (the carrier is in the bay),
+## and goes on the host's own truck -- each peer's copy of the truck is a
+## little behind the host's, and a world pose put the box a metre behind the
+## hands at speed.
 @rpc("any_peer", "call_local", "unreliable_ordered")
-func submit_carry_transform(carry_transform: Transform3D) -> void:
+func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
 	if not is_multiplayer_authority():
 		return
-	if is_held:
-		global_transform = carry_transform
+	var sender: int = multiplayer.get_remote_sender_id()
+	if sender != 0 and (not is_instance_valid(carrier) or sender != carrier.get_multiplayer_authority()):
+		return
+	if not is_held:
+		return
+	var vehicle: Node3D = _find_vehicle()
+	_carry_in_vehicle = in_vehicle and vehicle != null
+	_carry_pose = carry_transform
+	global_transform = vehicle.global_transform * carry_transform if _carry_in_vehicle else carry_transform
 
 
 func set_held(held: bool) -> void:
@@ -330,24 +483,39 @@ func request_transfer(recipient_path: NodePath) -> void:
 	var recipient := get_node_or_null(recipient_path) as Player
 	if recipient == null or recipient == carrier or recipient.carried_package != null:
 		return
-	if (recipient as Node3D).global_position.distance_to((carrier as Node3D).global_position) > TRANSFER_REACH:
+	if _reach_origin(recipient).distance_to(_reach_origin(carrier)) > TRANSFER_REACH:
 		return
 	take_by(recipient)
 
 
 ## A carrier can always put a box back on the floor. Unlike a mount this
 ## keeps it loose and physical, so a mistaken pickup never traps the player.
+## `in_vehicle` as in submit_carry_transform(): set down in the truck, it's
+## placed on the host's truck and starts out moving with it.
 @rpc("any_peer", "call_local", "reliable")
-func request_drop(drop_transform: Transform3D) -> void:
+func request_drop(drop_transform: Transform3D, in_vehicle: bool = false) -> void:
 	if not is_multiplayer_authority() or not is_held:
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and carrier != null and int(carrier.get_multiplayer_authority()) != sender_id:
 		return
 	_release_carrier()
-	global_transform = drop_transform
+	var vehicle: Node3D = _find_vehicle()
+	global_transform = vehicle.global_transform * drop_transform if in_vehicle and vehicle != null else drop_transform
 	reset_physics_interpolation()
 	set_held(false)
+	_ride_along_if_aboard()
+
+
+## Let go of inside the moving truck (dropped, or put back on the rack
+## mid-run): start with the truck's own velocity, or the box behaves as if
+## dropped from a standstill and slams into the rear wall.
+func _ride_along_if_aboard() -> void:
+	if freeze:
+		return
+	var vehicle: Node3D = _find_vehicle()
+	if vehicle != null and bool(vehicle.call(&"carries", global_position)) and vehicle.has_method(&"point_velocity"):
+		linear_velocity = vehicle.call(&"point_velocity", global_position)
 
 
 ## For when the carrier goes away (disconnect) rather than letting go: the
@@ -372,10 +540,11 @@ func place_at(mount: Node3D, mount_point: Node = null) -> void:
 	reset_physics_interpolation()
 	set_held(false)
 	is_loaded = true
-	current_mount = mount_point if mount_point != null else mount
+	current_mount_path = (mount_point if mount_point != null else mount).get_path()
 	# Frozen while loading, until level_base.gd starts the run. A box put back
 	# mid-run has to ride physically like the rest, not stay glued to the shelf.
 	freeze = not _is_run_active()
+	_ride_along_if_aboard()
 	_emit_event(&"package_placed", [package_id])
 
 
@@ -393,7 +562,27 @@ const TAKE_IN_SECONDS: float = 0.3
 func consume(hand_over_at: Variant = null) -> void:
 	_release_carrier()
 	release_mount()
+	# It's a scene node, not a spawned one: freeing it here never reached the
+	# clients, where it stayed at the door, full size and still "cargo".
+	if is_inside_tree():
+		var run: Node = get_node_or_null(^"/root/RunManager")
+		if run != null:
+			(run.get(&"consumed_packages") as Array).append(String(get_path()))
+		var network: Node = get_node_or_null(^"/root/NetworkManager")
+		if network != null and bool(network.call(&"is_online")) and bool(network.call(&"is_host")):
+			_remote_consume.rpc(hand_over_at)
+	_play_consume(hand_over_at)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _remote_consume(hand_over_at: Variant) -> void:
+	_play_consume(hand_over_at)
+
+
+func _play_consume(hand_over_at: Variant) -> void:
+	_consumed = true
 	if hand_over_at == null or not is_inside_tree():
+		remove_from_group(&"cargo")
 		call_deferred(&"queue_free")
 		return
 	remove_from_group(&"cargo")
@@ -428,6 +617,7 @@ func release_mount() -> void:
 	if current_mount != null and is_instance_valid(current_mount):
 		current_mount.set(&"occupied_by", null)
 	current_mount = null
+	current_mount_path = NodePath()
 	is_loaded = false
 
 

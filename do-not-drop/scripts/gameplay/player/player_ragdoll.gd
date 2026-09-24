@@ -18,6 +18,13 @@ func fall(impulse: Vector3) -> void:
 		return
 	_active = true
 	_owner_player.visible = false
+	# Knocked over in the back of the moving truck, the pieces start out
+	# moving with it: from a standstill they were left on the road, or swept
+	# by the truck's walls.
+	var carried: Vector3 = Vector3.ZERO
+	var vehicle: Node = get_tree().get_first_node_in_group(&"vehicle")
+	if vehicle != null and vehicle.has_method(&"carries") and bool(vehicle.call(&"carries", _owner_player.global_position)):
+		carried = vehicle.call(&"point_velocity", _owner_player.global_position)
 	var root := get_tree().current_scene if get_tree().current_scene != null else get_tree().root
 	global_transform = Transform3D(Basis.IDENTITY, _owner_player.global_position + Vector3.UP * 0.9)
 	reparent(root)
@@ -28,7 +35,7 @@ func fall(impulse: Vector3) -> void:
 		{"name":"ArmR", "p":Vector3(0.32,0.55,0), "s":Vector3(0.11,0.42,0.11)},
 		{"name":"LegL", "p":Vector3(-0.15,-0.1,0), "s":Vector3(0.13,0.55,0.13)},
 		{"name":"LegR", "p":Vector3(0.15,-0.1,0), "s":Vector3(0.13,0.55,0.13)}]:
-		_make_part(part, impulse)
+		_make_part(part, impulse, carried)
 	await get_tree().create_timer(LIFETIME).timeout
 	if _owner_player != null and is_instance_valid(_owner_player):
 		_owner_player.visible = true
@@ -36,7 +43,7 @@ func fall(impulse: Vector3) -> void:
 	queue_free()
 
 
-func _make_part(data: Dictionary, impulse: Vector3) -> void:
+func _make_part(data: Dictionary, impulse: Vector3, carried: Vector3 = Vector3.ZERO) -> void:
 	var body := RigidBody3D.new()
 	body.name = String(data["name"])
 	body.position = data["p"]
@@ -61,5 +68,6 @@ func _make_part(data: Dictionary, impulse: Vector3) -> void:
 	shape.shape = collision
 	body.add_child(shape)
 	add_child(body)
+	body.linear_velocity = carried
 	body.apply_central_impulse(impulse * (0.7 + randf() * 0.4) + Vector3(randf_range(-1,1), randf(), randf_range(-1,1)))
 	body.apply_torque_impulse(Vector3(randf_range(-2,2), randf_range(-2,2), randf_range(-2,2)))

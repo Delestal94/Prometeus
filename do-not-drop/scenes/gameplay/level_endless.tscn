@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/level_endless.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_vehicle"]
@@ -13,6 +13,8 @@
 [ext_resource type="Resource" path="res://data/traps/explosive.tres" id="12_explosive"]
 [ext_resource type="Resource" path="res://data/traps/hostile.tres" id="13_hostile"]
 [ext_resource type="Script" path="res://scripts/gameplay/depot/depot.gd" id="14_depot"]
+
+[ext_resource type="Script" path="res://scripts/gameplay/player/player_spawner.gd" id="15_spawner"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.11, 0.2, 0.2, 1)
@@ -87,7 +89,7 @@ script = ExtResource("14_depot")
 ground_apron = true
 
 [node name="PlayerSpawner" type="MultiplayerSpawner" parent="World"]
-_spawnable_scenes = PackedStringArray("res://scenes/gameplay/player/player.tscn")
+script = ExtResource("15_spawner")
 spawn_path = NodePath("..")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
