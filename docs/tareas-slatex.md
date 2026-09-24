@@ -29,7 +29,7 @@
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 3 | Modelo humanoide para el jugador — hoy es una cápsula, sin cabeza, torso, brazos ni piernas. (#19) | B | ✅ Hecho (`d4a7885`, personaje rigged) |
-| 4 | Manos del viewmodel con dedos y guantes (dirección ya fijada en `docs/direccion-visual.md` §1). (#20) | B | 🟡 Parcial: asset de guantes (`c77194f`) |
+| 4 | Manos del viewmodel con dedos y guantes (dirección ya fijada en `docs/direccion-visual.md` §1). (#20) | B | ✅ Hecho (2026-09-23): mallas de guantes con dedos conectadas a ambas manos, verificadas en `test_player_colors` |
 
 ## Jugador — animación (5-16)
 
@@ -38,7 +38,7 @@
 | 5 | Ciclo de caminata a pie. (#29) | B | ✅ Hecho (`d4a7885`, anim Walk) |
 | 6 | Idle con respiración. (#30) | B | ✅ Hecho (`d4a7885`, anim Idle) |
 | 7 | Transición de sentarse: hoy abordar un asiento es un corte instantáneo de cámara (el fundido a negro ya tapa el corte de cámara — esto es la animación del cuerpo en sí, no la cámara). (#31) | B | ✅ Hecho (`da9d75d`, pose interpolada) |
-| 8 | Manos del conductor siguiendo el volante con IK. (#32) | B | 🟡 Manos procedurales visibles y siguiendo el volante (`e22452f`); falta IK del esqueleto |
+| 8 | Manos del conductor siguiendo el volante con IK. (#32) | B | ✅ Hecho (2026-09-23): dos `SkeletonIK3D` reales resuelven hombro→mano hacia objetivos del volante (`test_driver_ik`) |
 | 9 | Manos del pasajero agarrando físicamente su paquete mientras lo sostiene. (#33) | B | ✅ Hecho (`990987c`, agarre según ancho) |
 | 10 | Animación de la acción de trampa (mantener/calmar/corregir) — hoy el input no tiene contraparte visual en el personaje. (#34) | B | ✅ Hecho (2026-09-23): las manos del asiento presionan la caja al mantener y dan un toque por dirección (`player.gd` `_pose_tending_hands`); solo local |
 | 11 | Gesto de brazo al tocar bocina. (#35) | C | ✅ Hecho (2026-09-23): la mano derecha va al centro del volante mientras suena (`vehicle_presentation.gd`) |

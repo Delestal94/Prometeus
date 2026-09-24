@@ -38,6 +38,8 @@ func _initialize() -> void:
 	var right_hand: MeshInstance3D = first.get_node(^"Head/Camera3D/RightHand")
 	_expect(left_hand.material_override != null and right_hand.material_override != null,
 		"Both hands get their own colored material, not the shared default skin tone")
+	_expect(left_hand.get_node_or_null(^"Glove") != null and right_hand.get_node_or_null(^"Glove") != null,
+		"Both first-person anchors contain the authored glove meshes with fingers")
 
 	var second: Node = player_scene.instantiate()
 	second.set_multiplayer_authority(2)

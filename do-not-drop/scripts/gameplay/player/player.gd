@@ -69,6 +69,11 @@ const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 ## get ruined, not players), so it's just available on the AnimationPlayer
 ## for whenever that changes instead of invented on the spot.
 const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
+## The authored glove scenes replace the old capsule placeholders.  They are
+## parented to the same hand anchors so all existing package-grip posing keeps
+## working, while fingers and cuff remain visible in first person.
+const LEFT_GLOVE_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_viewmodel_glove_left.glb")
+const RIGHT_GLOVE_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_viewmodel_glove_right.glb")
 const ANIM_IDLE: StringName = &"Idle"
 const ANIM_WALK: StringName = &"Walk"
 const ANIM_JUMP: StringName = &"Jump"
@@ -98,6 +103,8 @@ var _seat_pose_blend: float = 0.0
 var _flinch_time: float = 0.0
 var _ragdolled: bool = false
 var _package_focus: CameraAttributesPractical
+var _driver_ik_ready: bool = false
+var _driver_ik_nodes: Array[SkeletonIK3D] = []
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -172,6 +179,8 @@ func _build_body() -> void:
 	visual.name = "BodyVisual"
 	add_child(visual)
 	_body_visual = visual
+	_build_viewmodel_gloves()
+	_enable_character_shadows(visual)
 
 	var mesh_instance: MeshInstance3D = _find_mesh_instance(visual)
 	if mesh_instance != null:
@@ -187,6 +196,30 @@ func _build_body() -> void:
 			if _anim_player.has_animation(loop_clip):
 				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 		_anim_player.play(ANIM_IDLE)
+
+
+func _build_viewmodel_gloves() -> void:
+	for spec: Dictionary in [
+		{"anchor": ^"LeftHand", "scene": LEFT_GLOVE_SCENE},
+		{"anchor": ^"RightHand", "scene": RIGHT_GLOVE_SCENE},
+	]:
+		var anchor := _camera.get_node(spec["anchor"]) as MeshInstance3D
+		if anchor == null or anchor.get_node_or_null(^"Glove") != null:
+			continue
+		# The anchor remains as the animation pivot, but its placeholder mesh
+		# is hidden once the authored glove (with fingers/cuff) is present.
+		anchor.visible = false
+		var glove := (spec["scene"] as PackedScene).instantiate() as Node3D
+		glove.name = "Glove"
+		glove.scale = Vector3.ONE * 0.72
+		anchor.add_child(glove)
+
+
+func _enable_character_shadows(node: Node) -> void:
+	if node is GeometryInstance3D:
+		(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	for child: Node in node.get_children():
+		_enable_character_shadows(child)
 
 
 
@@ -228,6 +261,16 @@ func _find_animation_player(node: Node) -> AnimationPlayer:
 		return node
 	for child: Node in node.get_children():
 		var found: AnimationPlayer = _find_animation_player(child)
+		if found != null:
+			return found
+	return null
+
+
+func _find_skeleton(node: Node) -> Skeleton3D:
+	if node is Skeleton3D:
+		return node
+	for child: Node in node.get_children():
+		var found: Skeleton3D = _find_skeleton(child)
 		if found != null:
 			return found
 	return null
@@ -292,6 +335,7 @@ func _process(delta: float) -> void:
 ## the ticks (from _physics_process) and interpolated right along with it.
 func _pose_seated_body(delta: float) -> void:
 	if seat_node_path.is_empty():
+		_stop_driver_ik()
 		if _body_visual != null:
 			_body_visual.position.y = sin(_bob_time * TAU) * 0.025 * _bob_amount
 			var flinch: float = sin(_flinch_time / 0.32 * PI) * 0.26
@@ -306,6 +350,50 @@ func _pose_seated_body(delta: float) -> void:
 	var target_pose := seat.global_transform.translated_local(Vector3(0.0, -0.55, 0.0))
 	_body_visual.global_transform = _body_visual.global_transform.interpolate_with(target_pose, _seat_pose_blend)
 	_body_visual.rotation.x = 0.18 + sin(Time.get_ticks_msec() * 0.008) * 0.025
+	_configure_driver_ik(seat)
+
+
+## Real skeletal IK for the driver: the two target nodes live on the wheel,
+## therefore they rotate with it and SkeletonIK3D solves Shoulder → Arm → Hand
+## every frame.  It only activates on the designated driver anchor; passengers
+## retain the authored seated pose.
+func _configure_driver_ik(seat: Node3D) -> void:
+	if _driver_ik_ready or seat.name != &"DriverEyePoint" or _body_visual == null:
+		return
+	var wheel: Node3D = seat.get_parent().get_parent().find_child("SteeringWheel", true, false) as Node3D
+	var skeleton := _find_skeleton(_body_visual)
+	if wheel == null or skeleton == null:
+		return
+	for spec: Dictionary in [
+		{"side": -1.0, "root": &"Shoulder_L", "tip": &"Hand_L", "name": "DriverHandTargetLeft"},
+		{"side": 1.0, "root": &"Shoulder_R", "tip": &"Hand_R", "name": "DriverHandTargetRight"},
+	]:
+		var target := Marker3D.new()
+		target.name = spec["name"]
+		target.position = Vector3(float(spec["side"]) * 0.19, 0.0, -0.03)
+		wheel.add_child(target)
+		var ik := SkeletonIK3D.new()
+		ik.name = "DriverIK" + str(spec["side"])
+		ik.root_bone = spec["root"]
+		ik.tip_bone = spec["tip"]
+		ik.override_tip_basis = false
+		skeleton.add_child(ik)
+		# get_path_to() only works after the solver itself belongs to the
+		# scene tree (the wheel is in the vehicle branch, not the player).
+		ik.target_node = ik.get_path_to(target)
+		ik.start(true)
+		_driver_ik_nodes.append(ik)
+	_driver_ik_ready = not _driver_ik_nodes.is_empty()
+
+
+func _stop_driver_ik() -> void:
+	if not _driver_ik_ready:
+		return
+	for ik: SkeletonIK3D in _driver_ik_nodes:
+		if is_instance_valid(ik):
+			ik.stop()
+	_driver_ik_nodes.clear()
+	_driver_ik_ready = false
 
 
 func _physics_process(delta: float) -> void:
