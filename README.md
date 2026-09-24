@@ -205,6 +205,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_render_batching.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_assignment.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_duration_budget.gd
+<godot> --headless --path do-not-drop --script res://tests/test_route_pacing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_handling.gd
 <godot> --headless --path do-not-drop --script res://tests/test_depot.gd
 <godot> --headless --path do-not-drop --script res://tests/test_locked_traps.gd
@@ -403,6 +404,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   corto con más casas) y la ruta que construye de verdad para varias semillas duran
   entre 2 y 5 minutos a la velocidad media que midió `bench_route_duration.gd`, contando
   cada parada.
+- `test_route_pacing` — el ritmo de la ruta en 200 semillas y 1-4 casas, sobre el plan de
+  `route.gd` (`plan_spine()`): algo pasa al menos cada 250 m (tramo difícil, curva cerrada o
+  casa), nunca dos tramos difíciles seguidos, los últimos 80 m antes de cada casa son recta o
+  curva suave, y los difíciles se vuelven más frecuentes hacia el final. Construye una ruta
+  para comprobar que el camino es el del plan.
 - `test_vehicle_handling` — el manejo en números, para la clásica y la ágil: 0 → 50 km/h,
   frenado desde 50, radio de giro a 20 km/h y que no vuelquen en la curva más cerrada a
   45 km/h. Falla si algo se mueve más de ±10 % de lo medido (`docs/parametros-diseno.md`,

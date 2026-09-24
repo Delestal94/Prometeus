@@ -41,10 +41,20 @@ func _init() -> void:
 	length = CHORD_LENGTH * 5.0
 
 
+## How long a bend of `turn` degrees is, before building it (route.gd plans
+## the whole road ahead of time).
+static func length_for_turn(turn: float) -> float:
+	return CHORD_LENGTH * float(_chord_count(turn))
+
+
+static func _chord_count(turn: float) -> int:
+	return maxi(MIN_CHORDS, roundi(absf(turn) / DEGREES_PER_CHORD))
+
+
 func _build() -> void:
-	var chord_count: int = maxi(MIN_CHORDS, roundi(absf(turn_deg) / DEGREES_PER_CHORD))
+	var chord_count: int = _chord_count(turn_deg)
 	var turn_per_chord: float = deg_to_rad(turn_deg) / float(chord_count)
-	length = CHORD_LENGTH * float(chord_count)
+	length = length_for_turn(turn_deg)
 
 	# Walk a local cursor through the chords, same Transform3D-composition
 	# pattern the outer chain uses on this segment as a whole -- a curve is

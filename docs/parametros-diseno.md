@@ -105,19 +105,36 @@ se reparte entre los tramos (casas + 1) a `ROUTE_CRUISE_SPEED` = 12,8 m/s, la ve
 midió el bench (46 km/h). Cada tramo varía ±10 % y queda entre 250 y 700 m. El techo pensado
 era 600 m, pero con 1 casa daba 1,9 min: con 700 m queda en ~2,3.
 
-**Después:**
+**Después** (con el ritmo de N-103 incluido, ver abajo):
 
 | Casas | Largo del tramo | Largo medio (m) | Minutos promedio | Máximo | Mínimo |
 |---|---|---|---|---|---|
-| 1 | 700 m | 1.404 | 2,36 | 2,69 | 2,14 |
-| 2 | 700 m | 2.102 | 3,79 | 4,30 | 3,42 |
-| 3 | 528 m | 2.218 | 4,40 | 4,74 | 4,00 |
-| 4 | 358 m | 1.902 | 4,38 | 4,92 | 4,04 |
+| 1 | 700 m | 1.402 | 2,37 | 2,77 | 2,16 |
+| 2 | 700 m | 2.082 | 3,68 | 3,90 | 3,51 |
+| 3 | 528 m | 2.154 | 4,25 | 4,43 | 4,01 |
+| 4 | 358 m | 1.864 | 4,24 | 4,63 | 4,00 |
 
 `test_route_duration_budget` lo vigila sin manejar: el largo planeado y el construido para
 varias semillas, con 1 a 4 casas, dan entre 2 y 5 minutos a esa velocidad media. Si cambia la
 velocidad del camión (ver "Manejo"), volver a correr el bench y actualizar
 `ROUTE_CRUISE_SPEED`.
+
+## Ritmo dentro de cada tramo (2026-09-24)
+
+`route.gd` planea toda la ruta antes de construirla (`plan_spine()`, tareas de Nacho N-103),
+con estas reglas, que `test_route_pacing` revisa en 200 semillas:
+
+| Regla | Valor |
+|---|---|
+| Siempre pasa algo: tramo difícil (chicana, puente angosto, curva en S, ripio, obras, cruce de tren), curva cerrada o parada en una casa | al menos cada `MOMENT_SPACING` = 250 m |
+| Curva cerrada | `SHARP_CURVE_DEG` = 45° o más |
+| Dos tramos difíciles seguidos | nunca |
+| Llegada tranquila a cada casa: solo recta o curva suave | últimos `QUIET_ZONE` = 80 m; curva suave hasta `GENTLE_CURVE_DEG` = 30° |
+| Arranque sin obstáculos ni curvas | primeros `SAFE_START_LENGTH` = 100 m (antes 150) |
+| Dificultad creciente | peso de los tramos difíciles de 0,25 a 2,5 a lo largo de la entrega, la misma curva que Endless |
+
+Resultado en 200 semillas: los tramos difíciles pasan de ser minoría en la primera mitad de la
+entrega a ser más frecuentes en la segunda (el test imprime los porcentajes).
 
 ## Manejo (medido, 2026-09-24)
 
