@@ -461,8 +461,9 @@ func _power_wires(tops: Array[Transform3D]) -> MeshInstance3D:
 func _dress_barriers(segment: RouteSegment) -> void:
 	if segment is CurveSegment:
 		_place_guardrails(segment)
-	if segment is ConstructionZoneSegment:
-		_place_roadworks(segment)
+	# ConstructionZoneSegment owns its lane closure, including its imported
+	# cones/barriers. Adding roadside dressing here created a second set on
+	# top of it and made the road unreadable.
 
 
 ## Signs are authored facing -Z; half a turn makes them face the driver

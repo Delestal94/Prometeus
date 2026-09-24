@@ -40,6 +40,8 @@ func _initialize() -> void:
 		"Both hands get their own colored material, not the shared default skin tone")
 	_expect(left_hand.get_node_or_null(^"Glove") != null and right_hand.get_node_or_null(^"Glove") != null,
 		"Both first-person anchors contain the authored glove meshes with fingers")
+	_expect(left_hand.get_node(^"Glove").is_visible_in_tree() and right_hand.get_node(^"Glove").is_visible_in_tree(),
+		"Gloves must remain visible through their parent hand anchors")
 
 	var second: Node = player_scene.instantiate()
 	second.set_multiplayer_authority(2)

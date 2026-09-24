@@ -208,7 +208,9 @@ func _build_viewmodel_gloves() -> void:
 			continue
 		# The anchor remains as the animation pivot, but its placeholder mesh
 		# is hidden once the authored glove (with fingers/cuff) is present.
-		anchor.visible = false
+		# Hiding the anchor also hides its glove children. Remove only the
+		# placeholder geometry and keep this animation pivot visible.
+		anchor.mesh = null
 		var glove := (spec["scene"] as PackedScene).instantiate() as Node3D
 		glove.name = "Glove"
 		glove.scale = Vector3.ONE * 0.72

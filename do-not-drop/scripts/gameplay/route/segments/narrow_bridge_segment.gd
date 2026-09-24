@@ -16,7 +16,9 @@ func _build() -> void:
 		# The authored railing repeats in short sections so it follows the
 		# narrow deck and is readable from both the cab and the road below.
 		for z: float in [-3.0, -9.0, -15.0, -21.0, -27.0, -33.0]:
-			_model("BridgeRailing", RAILING_MODEL, Vector3(side * 3.05, 0.0, z), 0.0 if side < 0.0 else PI)
+			# The source railing is authored across local X. A quarter turn lays
+			# it along the bridge instead of cutting through the driving lane.
+			_model("BridgeRailing", RAILING_MODEL, Vector3(side * 3.05, 0.0, z), PI * 0.5)
 		for z: int in range(-2, -int(length), -4):
 			_box("BridgePost", Vector3(0.3, 1.08, 0.3), Vector3(side * 3.05, 0.54, float(z)), Color("5d6b6c"), true)
 	_box("WaterPlaceholder", Vector3(30.0, 0.025, length), Vector3(0.0, -0.27, -length * 0.5), Color("4d7d80"))

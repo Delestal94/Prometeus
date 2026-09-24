@@ -37,8 +37,8 @@ func _build() -> void:
 	var cone_z: float = barrier_start_z - 1.5
 	var index: int = 0
 	while cone_z > barrier_end_z:
-		var cone_collision := _box("ConstructionConeCollision" + str(index), Vector3(0.42, 0.65, 0.42), Vector3(-0.4, 0.325, cone_z), CONE, true)
+		var cone_collision := _box("ConstructionConeCollision" + str(index), Vector3(0.42, 0.65, 0.42), Vector3(1.65, 0.325, cone_z), CONE, true)
 		_hide_box_visual(cone_collision)
-		_model("ConstructionCone" + str(index), CONE_MODEL, Vector3(-0.4, 0.0, cone_z), 0.0, 0.92)
+		_model("ConstructionCone" + str(index), CONE_MODEL, Vector3(1.65, 0.0, cone_z), 0.0, 0.92)
 		cone_z -= 3.0
 		index += 1

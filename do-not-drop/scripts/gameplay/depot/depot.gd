@@ -937,7 +937,7 @@ func _build_exterior(kit: DepotKit) -> void:
 		mesh.size = Vector3(0.1, 0.006, 4.6)
 		kit.add_mesh(mesh, Transform3D(Basis.IDENTITY, Vector3(x, bay_y, -5.2)), white, false)
 	kit.model_grounded("res://assets/models/vehicles/sm_vehicle_parked_sedan_refined.glb", Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-18.5, FLOOR_TOP, -5.2)))
-	kit.model_grounded("res://assets/models/vehicles/sm_vehicle_competitor_van.glb", Transform3D(Basis(Vector3.UP, PI * 0.5 + 0.04), Vector3(-15.9, FLOOR_TOP, -5.4)))
+	kit.model_grounded("res://assets/models/vehicles/sm_vehicle_competitor_van.glb", Transform3D(Basis(Vector3.UP, PI * 0.5 + 0.04), Vector3(-11.8, FLOOR_TOP, -5.4)))
 	kit.collider(Vector3(1.8, 1.5, 4.0), Transform3D(Basis.IDENTITY, Vector3(-18.5, 0.75, -5.2)))
 	kit.collider(Vector3(1.8, 1.5, 4.0), Transform3D(Basis.IDENTITY, Vector3(-15.9, 0.75, -5.4)))
 	# Dumpster and a stack of spare pallets on the right.

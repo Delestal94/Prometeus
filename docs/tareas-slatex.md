@@ -21,6 +21,12 @@
 
 ## Paquetes — modelado (1-2)
 
+### Correcciones de assets generados
+
+- [x] Corregir conversión Y/Z en los cinco GLB nuevos (sedán, van, tractor, farol y celular); ventanas exteriores y teléfono a escala de mano. Renders revisados y `test_refined_asset_axes` sin fallos.
+- [x] Corregir guantes invisibles: el pivote de la mano permanece visible y se retira únicamente su malla provisional.
+
+
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 1 | Identidad visual por trampa: Frágil con símbolos de copa rota, Ruidoso con agujeros de ventilación, Equilibrio alto y angosto, Peso Creciente bajo y macizo — hoy las 4 son la misma caja con distinto color y texto. Es la mecánica central: tiene que reconocerse de un vistazo. (#17) | B | ✅ Hecho (`af4856d`, cajas por trampa en `c77194f`) |

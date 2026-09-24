@@ -81,9 +81,11 @@ var fullscreen: bool = false:
 ## centred and already sized to fit, it's the corners that crowd a small
 ## screen or vanish on a TV across the room.
 const HUD_SCALE_MIN: float = 0.35
-const HUD_SCALE_MAX: float = 1.5
-const HUD_SCALE_DEFAULT: float = 0.6
-const HUD_DEFAULT_MARKER: String = "hud_scale_default_60"
+## A large HUD obscures the package, particularly at 1280×720. Keep the
+## readable range compact; the interface is already deliberately high contrast.
+const HUD_SCALE_MAX: float = 0.85
+const HUD_SCALE_DEFAULT: float = 0.48
+const HUD_DEFAULT_MARKER: String = "hud_scale_default_48"
 var hud_scale: float = HUD_SCALE_DEFAULT:
 	set(value):
 		hud_scale = clampf(value, HUD_SCALE_MIN, HUD_SCALE_MAX)
@@ -241,7 +243,7 @@ func _load() -> void:
 	look_sensitivity = float(config.get_value(SECTION, "look_sensitivity", 1.0))
 	invert_look_y = bool(config.get_value(SECTION, "invert_look_y", false))
 	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
-	hud_scale = float(config.get_value(SECTION, "hud_scale", HUD_SCALE_DEFAULT))
+	hud_scale = minf(float(config.get_value(SECTION, "hud_scale", HUD_SCALE_DEFAULT)), HUD_SCALE_MAX)
 	# Files saved before the HUD default dropped to 60 % hold the old 100 %
 	# default, not a choice anyone made: move them to the new one, once.
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
