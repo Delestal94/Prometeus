@@ -58,7 +58,7 @@ func _ready() -> void:
 	if _animator != null:
 		_setup_rigged()
 		return
-	for candidate: StringName in [&"Deer", &"Rabbit", &"Frog", &"Bird"]:
+	for candidate: StringName in [&"Deer", &"Rabbit", &"Frog", &"Bird", &"Sheep", &"Dog"]:
 		var found := find_child(String(candidate), true, false) as Node3D
 		if found != null:
 			species = StringName(String(candidate).to_lower())
@@ -164,6 +164,10 @@ func _process(delta: float) -> void:
 			_pose_hopper(delta, 0.12, 0.35)
 		&"bird":
 			_pose_bird()
+		&"sheep":
+			_pose_walker(1.6, 0.35)
+		&"dog":
+			_pose_walker(3.2, 0.55)
 
 
 ## Roadside behaviour: idle until the truck comes close, then flee away from
@@ -171,7 +175,7 @@ func _process(delta: float) -> void:
 func _update_roadside(delta: float) -> void:
 	if mode == Mode.FLEE:
 		_flee_time += delta
-		var speed: float = {&"deer": 8.0, &"rabbit": 5.0, &"frog": 1.6, &"bird": 5.5}.get(species, 4.0)
+		var speed: float = {&"deer": 8.0, &"rabbit": 5.0, &"frog": 1.6, &"bird": 5.5, &"sheep": 3.5, &"dog": 7.0}.get(species, 4.0)
 		global_position += _flee_direction * speed * delta
 		if species == &"bird":
 			global_position.y += 2.5 * delta
@@ -294,6 +298,26 @@ func _pose_hopper(delta: float, hop_height: float, hop_seconds: float) -> void:
 	if throat != null:
 		throat.transform = (_rest["Throat"] as Transform3D).scaled_local(Vector3.ONE * (1.0 + maxf(sin(t * 5.0), 0.0) * 0.6))
 	_turn("Tail", Vector3(0.0, sin(t * 9.0) * 0.3, 0.0))
+	_body.transform = body
+
+
+## Sheep and dog (roadside hazards, N-106): front and back legs swing out of
+## step, faster and wider at a run; the head nods with the stride, the tail
+## wags (the dog's ears flap). Standing, a slow graze or a sniff.
+func _pose_walker(run_steps: float, swing: float) -> void:
+	var t: float = _time + _phase
+	var moving: bool = mode == Mode.RUN or mode == Mode.FLEE
+	var stride: float = t * TAU * (run_steps if moving else 0.0)
+	var legs: float = sin(stride) * (swing if moving else 0.0)
+	_turn("Legs_Front", Vector3(legs, 0.0, 0.0))
+	_turn("Legs_Back", Vector3(-legs, 0.0, 0.0))
+	var head_dip: float = sin(stride * 2.0) * 0.08 if moving else (0.35 + sin(t * 0.7) * 0.15 if species == &"sheep" else sin(t * 1.3) * 0.1)
+	_turn("Head", Vector3(head_dip, 0.0, 0.0))
+	_turn("Tail", Vector3(0.0, sin(t * (14.0 if species == &"dog" else 3.0)) * (0.5 if species == &"dog" else 0.15), 0.0))
+	_turn("Ears", Vector3(sin(stride * 2.0) * 0.25 if moving else 0.0, 0.0, 0.0))
+	var body := _body_rest
+	if moving:
+		body.origin.y += absf(sin(stride)) * 0.04
 	_body.transform = body
 
 

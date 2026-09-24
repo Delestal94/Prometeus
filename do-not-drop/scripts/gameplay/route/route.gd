@@ -146,6 +146,10 @@ var _delivery_vehicles: Array[Node3D] = []
 var _rng := RandomNumberGenerator.new()
 ## What plan_spine() decided for this route: the segments to build, in order.
 var _plan: Dictionary = {}
+## This session's weather and time of day, picked once: the dressing (storm
+## debris in the rain) and the sky (RouteSky) both follow it. Picked twice,
+## solo play (seed 0) would roll two different ones.
+var mood: WorldMood
 ## [{"cumulative": float, "position": Vector3, "leg_index": int}, ...] one
 ## entry per segment boundary, in build order -- get_progress()/
 ## get_section_name() find the nearest one instead of trusting local Z,
@@ -381,6 +385,7 @@ func _ready() -> void:
 	if house_count <= 0:
 		house_count = _session_house_count()
 	_plan = plan_spine(session_seed if session_seed != 0 else _rng.randi(), house_count, start_yard.has_area())
+	mood = WorldMood.pick(session_seed)
 	_house_deck = _shuffled_house_variants()
 	terrain = Terrain.new()
 	terrain.name = "ContinuousTerrain"
@@ -808,6 +813,7 @@ func _finish_terrain() -> void:
 	# One draw from the session RNG after the whole road exists, so dressing
 	# can never change the road itself -- and every peer gets the same draw.
 	dresser = RouteDresser.new(self, terrain, _rng.randi())
+	dresser.raining = mood.is_raining()
 	dresser.dress(_segments, houses, _clear_zones, _sight_zones)
 	if batch_dressing:
 		var yards: Array = houses.map(func(house: DeliveryHouse) -> Node: return house.get_node_or_null(^"Yard"))

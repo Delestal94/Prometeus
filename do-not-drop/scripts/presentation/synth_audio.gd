@@ -735,3 +735,66 @@ static func _loop(data: PackedByteArray, rate: int, sample_count: int) -> AudioS
 	stream.loop_begin = 0
 	stream.loop_end = sample_count
 	return stream
+
+
+## A dog's bark (the chasing dog, tareas de Nacho N-106/N-405): a quick
+## pitch drop from ~620 to ~380 Hz through a rough, buzzy wave, a burst of
+## breath noise at the start, 0.22 s. One-shot; ChasingDog repeats it.
+static func dog_bark() -> AudioStreamWAV:
+	return _cached(&"dog_bark", _make_dog_bark)
+
+
+static func _make_dog_bark() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.22
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var phase: float = 0.0
+	var noise_state: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var k: float = t / DURATION
+		var freq: float = lerpf(620.0, 380.0, sqrt(k))
+		phase += TAU * freq / RATE
+		# Clipped sine plus its second harmonic: a bark, not a whistle.
+		var wave: float = clampf(sin(phase) * 1.8, -1.0, 1.0) * 0.6 + sin(phase * 2.0) * 0.25
+		noise_state = lerpf(noise_state, randf_range(-1.0, 1.0), 0.5)
+		var breath: float = noise_state * 0.5 * maxf(0.0, 1.0 - k * 4.0)
+		var envelope: float = minf(k * 25.0, 1.0) * pow(1.0 - k, 1.5)
+		data.encode_s16(i * 2, int(clampf((wave + breath) * envelope, -1.0, 1.0) * 32767.0 * 0.8))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream
+
+
+## A sheep's bleat (the flock, tareas de Nacho N-106/N-405): a nasal
+## "meeh" around 330 Hz with a fast vibrato that gives it the wobble,
+## 0.6 s. One-shot.
+static func sheep_bleat() -> AudioStreamWAV:
+	return _cached(&"sheep_bleat", _make_sheep_bleat)
+
+
+static func _make_sheep_bleat() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.6
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var phase: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var k: float = t / DURATION
+		var freq: float = 330.0 + sin(TAU * 17.0 * t) * 28.0 - k * 40.0
+		phase += TAU * freq / RATE
+		# Odd harmonics make it nasal.
+		var wave: float = sin(phase) * 0.55 + sin(phase * 3.0) * 0.25 + sin(phase * 5.0) * 0.12
+		var envelope: float = minf(k * 12.0, 1.0) * minf((1.0 - k) * 5.0, 1.0)
+		data.encode_s16(i * 2, int(clampf(wave * envelope, -1.0, 1.0) * 32767.0 * 0.7))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream

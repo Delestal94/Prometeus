@@ -51,7 +51,10 @@ const RAIN_HEIGHT: float = 9.0
 
 
 func _ready() -> void:
-	mood = WorldMood.pick(_session_seed())
+	# The route picks the session's mood once (its dressing depends on it);
+	# Endless's streamer has none, so the sky picks it there.
+	var picked: Variant = get_parent().get(&"mood") if get_parent() != null else null
+	mood = picked as WorldMood if picked is WorldMood else WorldMood.pick(_session_seed())
 	var world_environment: WorldEnvironment = _world_environment()
 	mood.apply(world_environment, _sun())
 	var environment: Environment = world_environment.environment if world_environment != null else null

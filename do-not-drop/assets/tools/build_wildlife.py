@@ -3,7 +3,7 @@
     "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background \
         --factory-startup --python do-not-drop/assets/tools/build_wildlife.py
 
-Animals: rabbit, frog and bird, plus the yellow "animal crossing" warning
+Animals: rabbit, frog, bird, sheep and dog, plus the yellow "animal crossing" warning
 sign that goes up before a deer crossing. (The deer itself is Quaternius'
 rigged "Stag", CC0 -- sm_env_animal_stag_rigged.glb; the deer() builder
 below is kept as reference but no longer exported.)
@@ -18,6 +18,14 @@ way the real joint would. Pivot names are the contract with that script:
   rabbit  Legs_Front Legs_Back  Ears  Tail
   frog    Legs_Front Legs_Back  Throat
   bird    Wing_L Wing_R  Head  Tail
+  sheep   Legs_Front Legs_Back  Head  Tail
+  dog     Legs_Front Legs_Back  Head > Ears  Tail
+
+The root empty is named after the species ("Rabbit", "Sheep", "Dog"...):
+that is how the script tells which animal it is holding.
+
+Pass names after "--" to rebuild only some of them:
+    blender --background --factory-startup --python build_wildlife.py -- sheep dog
 
 Conventions as the rest of the kit: metres, origin at the centre of the
 base (between the feet), front on Blender +Y (Godot -Z).
@@ -44,6 +52,9 @@ PALETTE.update({
     "frog_spot": (0.015, 0.06, 0.01, 1),
     "bird_back": (0.08, 0.045, 0.025, 1), "bird_breast": (0.78, 0.16, 0.03, 1),
     "beak": (0.85, 0.45, 0.03, 1), "eye_white": (0.9, 0.9, 0.85, 1),
+    "sheep_wool": (0.80, 0.74, 0.60, 1), "sheep_face": (0.035, 0.028, 0.024, 1),
+    "dog_fur": (0.22, 0.10, 0.035, 1), "dog_light": (0.66, 0.53, 0.36, 1),
+    "dog_ear": (0.09, 0.04, 0.016, 1),
 })
 
 M = os.path.join(ROOT, "models", "environment")
@@ -245,6 +256,94 @@ def bird():
 
 
 # =============================================================================
+# Sheep: 0.75 m at the withers. A lumpy cream fleece -- one big jittered
+# blob plus a puff over the shoulders and one over the rump, so the outline
+# reads as wool and not as an egg -- with the dark face and legs sticking out.
+# =============================================================================
+
+def sheep():
+    clear()
+    root = pivot("Sheep", (0, 0, 0))
+    attach(jitter(blob("Fleece", (0, -0.02, 0.53), (0.26, 0.42, 0.22), "sheep_wool", 2), 0.028, 21), root)
+    attach(jitter(blob("FleeceShoulder", (0, 0.2, 0.56), (0.22, 0.19, 0.19), "sheep_wool", 1), 0.024, 22), root)
+    attach(jitter(blob("FleeceRump", (0, -0.25, 0.56), (0.23, 0.2, 0.2), "sheep_wool", 1), 0.024, 23), root)
+    # Legs in pairs (Legs_Front / Legs_Back turn at the hip line), each with a
+    # woolly thigh riding along so the leg never pulls out of the fleece.
+    for pivot_name, y, foot_y, puff in (("Legs_Front", 0.25, 0.27, (0.06, 0.07, 0.08)),
+                                        ("Legs_Back", -0.27, -0.3, (0.07, 0.09, 0.1))):
+        legs = pivot(pivot_name, (0, y, 0.42), root)
+        for side in (-1, 1):
+            x = side * 0.11
+            attach(jitter(blob(pivot_name + "Wool", (x, y, 0.37), puff, "sheep_wool", 1), 0.012, 24 + side), legs)
+            attach(limb(pivot_name + "Leg", (x, y, 0.42), (x, foot_y, 0.04), 0.036, 0.028, "sheep_face", 6), legs)
+            attach(cube(pivot_name + "Hoof", (x, foot_y + 0.005, 0.02), (0.05, 0.06, 0.04), "deer_dark", 0.008), legs)
+    # Head held forward at about withers height, nose tipped down.
+    head = pivot("Head", (0, 0.36, 0.62), root)
+    attach(jitter(blob("Topknot", (0, 0.43, 0.72), (0.08, 0.08, 0.06), "sheep_wool", 1), 0.01, 26), head)
+    face = attach(blob("Face", (0, 0.5, 0.64), (0.075, 0.14, 0.085), "sheep_face", 1), head)
+    face.rotation_euler = (-0.5, 0, 0)
+    for side in (-1, 1):
+        eye("Eye", (side * 0.06, 0.5, 0.68), 0.017, head)
+        # Ears stick out sideways and droop a little, the sheep silhouette.
+        ear = attach(blob("Ear", (side * 0.1, 0.46, 0.68), (0.07, 0.022, 0.03), "sheep_face", 1), head)
+        ear.rotation_euler = (0, side * 0.35, 0)
+    tail = pivot("Tail", (0, -0.44, 0.62), root)
+    attach(jitter(blob("TailMesh", (0, -0.47, 0.54), (0.045, 0.04, 0.09), "sheep_wool", 1), 0.008, 27), tail)
+    done(os.path.join(WILDLIFE, "sm_env_animal_sheep.glb"))
+
+
+# =============================================================================
+# Dog: a medium farm dog, 0.55 m at the withers. Brown with pale patches
+# (chest, flanks, paws, muzzle, tail tip) and floppy ears: Ears hangs from
+# Head, so the ears follow the head when it turns.
+# =============================================================================
+
+def dog():
+    clear()
+    root = pivot("Dog", (0, 0, 0))
+    attach(jitter(blob("Barrel", (0, -0.03, 0.44), (0.11, 0.24, 0.1), "dog_fur", 2), 0.006, 31), root)
+    attach(jitter(blob("Chest", (0, 0.15, 0.42), (0.12, 0.14, 0.13), "dog_fur", 1), 0.006, 32), root)
+    attach(jitter(blob("Haunch", (0, -0.21, 0.45), (0.11, 0.12, 0.11), "dog_fur", 1), 0.006, 33), root)
+    attach(blob("ChestPatch", (0, 0.25, 0.4), (0.075, 0.05, 0.1), "dog_light", 1), root)
+    # Pale patches sitting on the coat, not symmetrical, so it reads as a
+    # mongrel and not as a pattern.
+    for name, loc, size in (("SpotFlankR", (0.1, -0.06, 0.46), (0.016, 0.09, 0.06)),
+                            ("SpotFlankL", (-0.1, -0.02, 0.44), (0.016, 0.07, 0.05)),
+                            ("SpotBack", (0.03, -0.15, 0.53), (0.06, 0.07, 0.016)),
+                            ("SpotHaunchL", (-0.1, -0.23, 0.48), (0.016, 0.06, 0.05))):
+        attach(blob(name, loc, size, "dog_light", 1), root)
+    front = pivot("Legs_Front", (0, 0.16, 0.38), root)
+    back = pivot("Legs_Back", (0, -0.22, 0.4), root)
+    for side in (-1, 1):
+        x = side * 0.065
+        attach(limb("FrontLeg", (x, 0.16, 0.42), (x, 0.18, 0.04), 0.032, 0.024, "dog_fur", 6), front)
+        attach(blob("FrontPaw", (x, 0.2, 0.022), (0.03, 0.045, 0.022), "dog_light", 1), front)
+        x = side * 0.07
+        attach(jitter(blob("BackThigh", (side * 0.075, -0.22, 0.38), (0.05, 0.09, 0.11), "dog_fur", 1), 0.005, 34 + side), back)
+        attach(limb("BackLegUpper", (x, -0.22, 0.4), (x, -0.3, 0.16), 0.04, 0.026, "dog_fur", 6), back)
+        attach(limb("BackLegLower", (x, -0.3, 0.16), (x, -0.27, 0.04), 0.025, 0.022, "dog_fur", 6), back)
+        attach(blob("BackPaw", (x, -0.25, 0.022), (0.03, 0.045, 0.022), "dog_light", 1), back)
+    head = pivot("Head", (0, 0.23, 0.5), root)
+    attach(limb("Neck", (0, 0.19, 0.45), (0, 0.32, 0.62), 0.062, 0.05, "dog_fur", 7), head)
+    attach(jitter(blob("Skull", (0, 0.35, 0.645), (0.075, 0.085, 0.07), "dog_fur", 1), 0.005, 36), head)
+    attach(limb("Snout", (0, 0.4, 0.63), (0, 0.505, 0.6), 0.044, 0.032, "dog_fur", 7), head)
+    attach(blob("Muzzle", (0, 0.475, 0.588), (0.038, 0.045, 0.028), "dog_light", 1), head)
+    attach(blob("Blaze", (0, 0.41, 0.69), (0.018, 0.06, 0.02), "dog_light", 1), head)
+    attach(blob("Nose", (0, 0.515, 0.61), (0.022, 0.018, 0.018), "deer_dark", 1), head)
+    for side in (-1, 1):
+        eye("Eye", (side * 0.047, 0.405, 0.665), 0.014, head)
+    ears = pivot("Ears", (0, 0.35, 0.705), head)
+    for side in (-1, 1):
+        # Hanging beside the skull, the bottom splayed out a little.
+        ear = attach(blob("Ear", (side * 0.074, 0.34, 0.64), (0.02, 0.045, 0.07), "dog_ear", 1), ears)
+        ear.rotation_euler = (0.15, -side * 0.25, 0)
+    tail = pivot("Tail", (0, -0.32, 0.52), root)
+    attach(limb("TailMesh", (0, -0.3, 0.52), (0, -0.45, 0.62), 0.03, 0.014, "dog_fur", 5), tail)
+    attach(blob("TailTip", (0, -0.455, 0.625), (0.018, 0.02, 0.02), "dog_light", 1), tail)
+    done(os.path.join(WILDLIFE, "sm_env_animal_dog.glb"))
+
+
+# =============================================================================
 # The warning sign: yellow diamond with a leaping deer, same build as the
 # other warning signs (build_lowpoly_refined.py: sign_post / diamond / symbol)
 # =============================================================================
@@ -278,10 +377,12 @@ def crossing_sign():
     done(os.path.join(SIGNS, "sm_env_sign_animal_crossing.glb"))
 
 
-rabbit()
-frog()
-bird()
-crossing_sign()
+BUILDERS = {"rabbit": rabbit, "frog": frog, "bird": bird, "sheep": sheep, "dog": dog,
+            "crossing_sign": crossing_sign}
+ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+for builder_name, builder in BUILDERS.items():
+    if not ONLY or builder_name in ONLY:
+        builder()
 
 print("WILDLIFE_REPORT")
 for path, tris in REPORT:
