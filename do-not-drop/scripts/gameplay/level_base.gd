@@ -184,10 +184,18 @@ func start_debug_delivery() -> void:
 ## RunManager relays the record to everyone from there.
 func _on_house_resolved(house_index: int, outcome: StringName, package_id: StringName) -> void:
 	RunManager.register_delivery(house_index, outcome, package_id)
-	# A stop is where the crew gets out, hands over one box and gets back in.
-	# It is not the end of the whole run unless every assigned house is done.
-	if NetworkManager.is_host() and RunManager.expected_houses > 0 and RunManager.deliveries.size() >= RunManager.expected_houses:
-		RunManager.finish_run(true)
+
+
+## A stop is where the crew gets out, hands over one box and gets back in.
+## The run ends once every house is done and the truck drives off from the
+## last one -- not the instant the last box is handed over, which left no
+## time for the delivery photo at that door.
+const DRIVE_OFF_KMH: float = 3.0
+
+
+func _all_houses_done_and_leaving() -> bool:
+	return (RunManager.expected_houses > 0 and RunManager.deliveries.size() >= RunManager.expected_houses
+		and int(vehicle.get(&"driver_peer_id")) != 0 and float(vehicle.get(&"speed_kmh")) > DRIVE_OFF_KMH)
 
 
 func _on_driver_seated(_player: Node) -> void:
@@ -275,6 +283,9 @@ func _physics_process(delta: float) -> void:
 	EventBus.delivery_status_changed.emit(route.is_vehicle_in_delivery, stopped_seconds)
 	# Clients follow the run for the HUD; how it ends is the host's call.
 	if not NetworkManager.is_host():
+		return
+	if _all_houses_done_and_leaving():
+		RunManager.finish_run(true)
 		return
 	_check_lost_cargo()
 	if vehicle.global_basis.y.dot(Vector3.UP) < 0.25:
