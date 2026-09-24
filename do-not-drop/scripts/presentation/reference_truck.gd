@@ -428,10 +428,6 @@ func _dress_cab() -> void:
 	var paper := _flat_material(Color("f2eee2"))
 	var cardboard := _flat_material(Color("b98a52"))
 	var green := _flat_material(Color("3fae5a"))
-	var screen := _flat_material(Color("1d6f78"))
-	screen.emission_enabled = true
-	screen.emission = Color("39c4c9")
-	screen.emission_energy_multiplier = 0.6
 	var dial := _flat_material(Color("f5f1e6"))
 	var needle := _flat_material(Color("e2402f"))
 	var cup := _flat_material(Color("f4f1ea"))
@@ -468,9 +464,14 @@ func _dress_cab() -> void:
 		var gauge_z: float = -0.64 + offset
 		_prop_cylinder(dressing, 0.055, 0.012, Vector3(3.235, 2.255, gauge_z), Vector3(0.0, 0.0, PI * 0.5), dial)
 		_prop_box(dressing, Vector3(0.006, 0.045, 0.008), Vector3(3.228, 2.27, gauge_z + 0.01), needle, Vector3(deg_to_rad(35.0), 0.0, 0.0))
-	# Radio with a lit screen, centre of the dash.
-	_prop_box(dressing, Vector3(0.05, 0.12, 0.3), Vector3(3.33, 2.13, 0.0), _dark)
-	_prop_box(dressing, Vector3(0.01, 0.06, 0.16), Vector3(3.303, 2.15, 0.0), screen)
+	# The GPS, centre of the dash where the radio was (dashboard_gps.gd):
+	# its screen faces the cab, model -X, turned a little toward the driver's
+	# eye and tilted up so it reads from the seat.
+	var gps := DashboardGps.new()
+	gps.name = "DashboardGps"
+	gps.position = Vector3(3.3, 2.16, 0.0)
+	gps.rotation = Vector3(deg_to_rad(12.0), PI * 0.5 - deg_to_rad(15.0), 0.0)
+	dressing.add_child(gps)
 	# Rear-view mirror and a pine-tree air freshener hanging from it.
 	_prop_box(dressing, Vector3(0.03, 0.12, 0.05), Vector3(3.22, 3.24, 0.0), _dark)
 	_prop_box(dressing, Vector3(0.05, 0.11, 0.34), Vector3(3.19, 3.13, 0.0), _dark)

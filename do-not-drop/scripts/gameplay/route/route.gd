@@ -160,6 +160,8 @@ var _progress_samples: Array[Dictionary] = []
 ## meters "off path" just from boundary sparsity, dangerously close to the
 ## safety net's own threshold.
 var _path_points: Array[Vector3] = []
+## Metres along the road to each of _path_points, worked out on first use.
+var _path_distances := PackedFloat32Array()
 var _house_deck: Array[int] = []
 ## Road cursor and side each house was dealt, for furnishing it once its
 ## final spot is known (see _keep_houses_off_road()).
@@ -690,6 +692,47 @@ func get_progress(world_position: Vector3) -> float:
 	if route_length <= 0.0:
 		return 0.0
 	return clampf(_nearest_sample(world_position).get("cumulative", 0.0) / route_length, 0.0, 1.0)
+
+
+## Metres along the road from the start to where `world_position` is (its
+## nearest point on the road), for the dashboard GPS (N-502). Resolution is
+## _path_points' ~10 m.
+func road_distance(world_position: Vector3) -> float:
+	var cumulative: PackedFloat32Array = _path_cumulative()
+	return cumulative[_nearest_path_index(to_local(world_position))] if not cumulative.is_empty() else 0.0
+
+
+## Metres along the road from the start to house `index`'s stop, or to the
+## goal for an index past the last house.
+func stop_road_distance(index: int) -> float:
+	var cumulative: PackedFloat32Array = _path_cumulative()
+	if cumulative.is_empty():
+		return 0.0
+	if index >= _house_anchors.size():
+		return cumulative[-1]
+	return cumulative[_nearest_path_index((_house_anchors[index].cursor as Transform3D).origin)]
+
+
+func _path_cumulative() -> PackedFloat32Array:
+	if _path_distances.size() != _path_points.size():
+		_path_distances.resize(_path_points.size())
+		var total: float = 0.0
+		for index: int in range(_path_points.size()):
+			if index > 0:
+				total += _path_points[index].distance_to(_path_points[index - 1])
+			_path_distances[index] = total
+	return _path_distances
+
+
+func _nearest_path_index(local_position: Vector3) -> int:
+	var nearest: int = 0
+	var best: float = INF
+	for index: int in range(_path_points.size()):
+		var gap: float = Vector2(_path_points[index].x - local_position.x, _path_points[index].z - local_position.z).length_squared()
+		if gap < best:
+			best = gap
+			nearest = index
+	return nearest
 
 
 func get_section_name(world_position: Vector3) -> String:
