@@ -35,6 +35,26 @@ de cada pasajero.
 - Ya tenemos precedente de éxito de un solo dev con Godot en la propia investigación:
   **Brotato** (10M+ copias) se hizo en Godot.
 
+### Renderer: **GL Compatibility** para el MVP (decidido 2026-09-24)
+
+`project.godot` usa `renderer/rendering_method = "gl_compatibility"` y se queda así hasta
+Early Access (docs/tareas-nacho.md N-308, antes #34).
+
+- **Por qué:** el público de un cooperativo de amigos a precio bajo tiene hardware
+  modesto (notebooks, gráficos integrados); Compatibility corre en OpenGL 3.3 / GLES3 y
+  la meta es 60 FPS estables. El estilo low-poly de colores planos no depende de los
+  efectos que se pierden.
+- **Qué se pierde:** SSAO, SSIL, SSR, SDFGI, niebla volumétrica y motion blur, que solo
+  existen en Forward+. Activarlos en Compatibility no da error: simplemente no hace nada.
+- **Cómo se compensa la oclusión ambiental:** oclusión horneada en los colores de vértice
+  de los modelos (script de Blender, al exportar) y sombras de contacto falsas (un decal
+  oscuro y difuso) bajo autos estacionados, casas y cajas apiladas. Las dos son baratas
+  en cualquier GPU.
+- **Cuándo revisarlo:** solo si, con el juego ya en Early Access, las mediciones de
+  N-204 muestran margen de sobra en el hardware objetivo y hay un efecto de Forward+ que
+  se note en capturas. Cambiar de renderer obliga a volver a revisar shaders
+  (`.gdshader`), iluminación y capturas.
+
 ### Networking
 - API de multiplayer de alto nivel de Godot (`MultiplayerAPI`, `ENetMultiplayerPeer`,
   nodos `MultiplayerSynchronizer`/`MultiplayerSpawner` en Godot 4), modelo
