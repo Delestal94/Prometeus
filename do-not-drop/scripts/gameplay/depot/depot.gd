@@ -936,8 +936,8 @@ func _build_exterior(kit: DepotKit) -> void:
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(0.1, 0.006, 4.6)
 		kit.add_mesh(mesh, Transform3D(Basis.IDENTITY, Vector3(x, bay_y, -5.2)), white, false)
-	kit.model_grounded("res://assets/models/vehicles/sm_vehicle_parked_hatchback.glb", Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-18.5, FLOOR_TOP, -5.2)))
-	kit.model_grounded("res://assets/models/vehicles/sm_vehicle_parked_pickup.glb", Transform3D(Basis(Vector3.UP, PI * 0.5 + 0.04), Vector3(-15.9, FLOOR_TOP, -5.4)))
+	kit.model_grounded("res://assets/models/vehicles/sm_vehicle_parked_sedan_refined.glb", Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-18.5, FLOOR_TOP, -5.2)))
+	kit.model_grounded("res://assets/models/vehicles/sm_vehicle_competitor_van.glb", Transform3D(Basis(Vector3.UP, PI * 0.5 + 0.04), Vector3(-15.9, FLOOR_TOP, -5.4)))
 	kit.collider(Vector3(1.8, 1.5, 4.0), Transform3D(Basis.IDENTITY, Vector3(-18.5, 0.75, -5.2)))
 	kit.collider(Vector3(1.8, 1.5, 4.0), Transform3D(Basis.IDENTITY, Vector3(-15.9, 0.75, -5.4)))
 	# Dumpster and a stack of spare pallets on the right.
@@ -948,7 +948,7 @@ func _build_exterior(kit: DepotKit) -> void:
 	kit.collider(Vector3(1.3, 0.8, 0.9), Transform3D(Basis.IDENTITY, Vector3(17.6, 0.4, -5.6)))
 	# Street lamps either side of the gate out, cones by the door.
 	for x: float in [-8.6, 8.6]:
-		kit.model_grounded("res://assets/models/environment/props/sm_env_prop_street_lamp.glb", Transform3D(Basis.IDENTITY, Vector3(x, FLOOR_TOP, -8.4)))
+		kit.model_grounded("res://assets/models/environment/props/sm_env_prop_street_lamp_refined.glb", Transform3D(Basis.IDENTITY, Vector3(x, FLOOR_TOP, -8.4)))
 		kit.collider(Vector3(0.3, 4.8, 0.3), Transform3D(Basis.IDENTITY, Vector3(x, 2.4, -8.4)))
 	for spot: Vector3 in [Vector3(-4.6, FLOOR_TOP, -2.2), Vector3(4.7, FLOOR_TOP, -2.6), Vector3(5.2, FLOOR_TOP, -3.3)]:
 		kit.model_grounded("res://assets/models/environment/props/sm_env_prop_traffic_cone.glb", Transform3D(Basis.IDENTITY, spot))
