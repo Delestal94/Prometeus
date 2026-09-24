@@ -50,9 +50,31 @@ func _run() -> void:
 	_expect(is_equal_approx(wet, 1.0), "Rain soaks the road (wetness %.2f)" % wet)
 	level.queue_free()
 	await process_frame
+	_check_outdoor_sounds()
 	if _failures == 0:
 		print("PASS: moods are shared by seed, varied across seeds, and never leak into the next load")
 	quit(_failures)
+
+
+## #20: birds by day and at dusk, crickets at night, nothing but rain when it
+## rains; the three loops are real audio and loop without a gap.
+func _check_outdoor_sounds() -> void:
+	var clear_day := WorldMood.new()
+	var clear_night := WorldMood.new()
+	clear_night.time_of_day = WorldMood.TimeOfDay.NIGHT
+	var rainy_dusk := WorldMood.new()
+	rainy_dusk.weather = WorldMood.Weather.RAIN
+	rainy_dusk.time_of_day = WorldMood.TimeOfDay.DUSK
+	_expect(clear_day.nature_bed() == &"birds", "Birds on a clear day")
+	_expect(clear_night.nature_bed() == &"crickets", "Crickets at night")
+	_expect(rainy_dusk.nature_bed().is_empty(), "No birds singing through the rain")
+	for stream: AudioStreamWAV in [SynthAudio.ambient_birds(), SynthAudio.night_crickets(), SynthAudio.distant_road()]:
+		var loud: int = 0
+		for index: int in range(0, stream.data.size() - 1, 2):
+			if absi(stream.data.decode_s16(index)) > 1500:
+				loud += 1
+		_expect(stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and stream.loop_end * 2 == stream.data.size(), "Each outdoor loop covers its whole buffer")
+		_expect(loud > 100, "Each outdoor loop actually makes sound (%d loud samples)" % loud)
 
 
 func _expect(condition: bool, description: String) -> void:

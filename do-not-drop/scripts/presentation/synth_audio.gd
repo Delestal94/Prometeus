@@ -621,6 +621,111 @@ static func _make_radio_tune() -> AudioStreamWAV:
 	return _loop(data, RATE, sample_count)
 
 
+## Birdsong for the outdoor bed (docs/tareas-nacho.md #20): a few short
+## phrases of quick whistled chirps -- each a sine sweeping down or up by a
+## few hundred hertz -- scattered over 9 s of silence, so the loop never
+## sounds like a pattern. Seeded: the same birds on every machine.
+static func ambient_birds() -> AudioStreamWAV:
+	return _cached(&"ambient_birds", _make_ambient_birds)
+
+
+static func _make_ambient_birds() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 9.0
+	var sample_count: int = int(RATE * DURATION)
+	var mix := PackedFloat32Array()
+	mix.resize(sample_count)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 41
+	for phrase: int in range(6):
+		var start: float = 0.4 + float(phrase) * 1.4 + rng.randf_range(0.0, 0.8)
+		var base: float = rng.randf_range(2600.0, 4200.0)
+		var chirps: int = rng.randi_range(2, 5)
+		var gap: float = rng.randf_range(0.09, 0.16)
+		var level: float = rng.randf_range(0.35, 0.8)
+		var sweep: float = rng.randf_range(-700.0, 500.0)
+		for chirp: int in range(chirps):
+			var begin: int = int((start + float(chirp) * gap) * RATE)
+			var length: int = int(rng.randf_range(0.04, 0.07) * RATE)
+			var phase: float = 0.0
+			for n: int in range(length):
+				var index: int = begin + n
+				if index >= sample_count:
+					break
+				var k: float = float(n) / float(length)
+				phase += TAU * (base + sweep * k) / RATE
+				# Quick attack, rounded tail.
+				var envelope: float = sin(PI * k) * (1.0 - 0.4 * k)
+				mix[index] += sin(phase) * envelope * level
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i: int in range(sample_count):
+		data.encode_s16(i * 2, roundi(clampf(mix[i], -1.0, 1.0) * 14000.0))
+	return _loop(data, RATE, sample_count)
+
+
+## Night instead of birds: crickets, bursts of three short 4.6 kHz pulses
+## about twice a second, with a little drift so it doesn't tick like a clock.
+static func night_crickets() -> AudioStreamWAV:
+	return _cached(&"night_crickets", _make_night_crickets)
+
+
+static func _make_night_crickets() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 6.0
+	const PITCH: float = 4600.0
+	const BURST: float = 0.075
+	const PULSE_PERIOD: float = 0.025
+	const PULSE_LENGTH: float = 0.018
+	var sample_count: int = int(RATE * DURATION)
+	var mix := PackedFloat32Array()
+	mix.resize(sample_count)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 23
+	var at: float = 0.1
+	while at < DURATION - 0.2:
+		var begin: int = int(at * RATE)
+		for n: int in range(int(BURST * RATE)):
+			var local: float = float(n) / RATE
+			var pulse: float = fmod(local, PULSE_PERIOD)
+			if pulse < PULSE_LENGTH:
+				mix[begin + n] += sin(TAU * PITCH * (at + local)) * sin(PI * pulse / PULSE_LENGTH)
+		at += rng.randf_range(0.42, 0.6)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i: int in range(sample_count):
+		data.encode_s16(i * 2, roundi(clampf(mix[i], -1.0, 1.0) * 9000.0))
+	return _loop(data, RATE, sample_count)
+
+
+## Far-off road: a low, dull rumble that swells twice a loop as if a car went
+## by somewhere out of sight. Heavily low-passed noise; the swell completes
+## whole periods and the ends fade, so the loop point is seamless.
+static func distant_road() -> AudioStreamWAV:
+	return _cached(&"distant_road", _make_distant_road)
+
+
+static func _make_distant_road() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 12.0
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var low: float = 0.0
+	var lower: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		low = lerpf(low, rng.randf_range(-1.0, 1.0), 0.02)
+		lower = lerpf(lower, low, 0.05)
+		var swell: float = pow(0.5 - 0.5 * cos(TAU * 2.0 * t / DURATION), 3.0)
+		var level: float = 0.35 + 0.65 * swell
+		var edge: float = minf(float(i), float(sample_count - i)) / (RATE * 0.05)
+		data.encode_s16(i * 2, roundi(clampf(lower * 9.0 * level * minf(edge, 1.0), -1.0, 1.0) * 20000.0))
+	return _loop(data, RATE, sample_count)
+
+
 static func _loop(data: PackedByteArray, rate: int, sample_count: int) -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS

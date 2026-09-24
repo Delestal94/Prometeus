@@ -47,7 +47,7 @@
 
 | # | Tarea | Prio |
 |---|---|---|
-| 20 | ~~Ambiente exterior.~~ **[x] Parcial** — viento en loop hecho, faltan pájaros y ruido lejano de ruta (queda como pendiente menor). (#45) | A |
+| 20 | ~~Ambiente exterior.~~ **[x] Hecho (2026-09-24)** — viento en loop, más pájaros de día y al atardecer, grillos de noche y nada con lluvia (`WorldMood.nature_bed()`), y el rumor de una ruta lejana con algún auto que pasa. Todo sintetizado (`SynthAudio.ambient_birds/night_crickets/distant_road`), en `route_sky.gd` (entrega y Endless) con el mismo ruteo Interior/Exterior que la lluvia y 9 dB más apagado dentro de la cabina o del depósito. `test_world_mood`. Falta escucharlo para ajustar volúmenes (ver #83). (#45) | A |
 | 21 | ~~Reverb distinta dentro de la furgoneta vs. afuera (buses de audio). (#46)~~ **[x] Hecho (2026-09-23)** — buses Interior/Exterior con reverb (`default_bus_layout.tres`), ruteo en `vehicle_presentation.gd`. | B |
 | 22 | ~~Música de tensión que suba con el riesgo acumulado de la carga.~~ **[x] Hecho** — `ingame_music.gd` adapta la capa de tensión al riesgo de la carga. (#47) | B |
 

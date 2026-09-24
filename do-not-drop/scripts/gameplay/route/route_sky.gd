@@ -36,6 +36,15 @@ var sky_material: ShaderMaterial
 var mood: WorldMood
 var _rain: GPUParticles3D
 var _rain_sound: AudioStreamPlayer
+## Outdoor sound bed (docs/tareas-nacho.md #20): birds or crickets per the
+## mood (nature_bed()), and a distant road. Same Interior/Exterior routing as
+## the rain, and duller inside the truck or under the depot roof.
+var nature_sound: AudioStreamPlayer
+var distant_road: AudioStreamPlayer
+const NATURE_DB: float = -24.0
+const DISTANT_ROAD_DB: float = -31.0
+## How much quieter the outdoors is from inside the cabin (or the depot).
+const INSIDE_MUFFLE_DB: float = 9.0
 const RAIN_INNER_RADIUS: float = 3.4
 const RAIN_OUTER_RADIUS: float = 24.0
 const RAIN_HEIGHT: float = 9.0
@@ -58,6 +67,7 @@ func _ready() -> void:
 	mood.apply_ground(get_parent())
 	if mood.is_raining():
 		_build_rain()
+	_build_outdoor_sounds()
 
 
 func _process(_delta: float) -> void:
@@ -65,18 +75,45 @@ func _process(_delta: float) -> void:
 	if camera != null:
 		var at: Vector3 = camera.global_position
 		global_position = Vector3(at.x, global_position.y, at.z)
+		var roofed: bool = _under_roof(at)
+		var inside: bool = roofed or _inside_vehicle(camera)
+		var bus: StringName = &"Interior" if inside else &"Exterior"
 		if _rain != null:
 			_rain.global_position = at + Vector3.UP * RAIN_HEIGHT
 			# Under a roof (the depot) no drop falls on you: you only hear it
 			# drumming overhead, like inside the truck.
-			var roofed: bool = _under_roof(at)
 			_rain.visible = not roofed
-			var inside: bool = roofed or _inside_vehicle(camera)
-			var bus: StringName = &"Interior" if inside else &"Exterior"
-			if AudioServer.get_bus_index(bus) >= 0 and _rain_sound.bus != bus:
-				_rain_sound.bus = bus
+			_route(_rain_sound, bus)
 			# Drumming on the roof is louder than rain on open ground.
 			_rain_sound.volume_db = -11.0 if inside else -17.0
+		var muffle: float = INSIDE_MUFFLE_DB if inside else 0.0
+		if nature_sound != null:
+			_route(nature_sound, bus)
+			nature_sound.volume_db = NATURE_DB - muffle
+		_route(distant_road, bus)
+		distant_road.volume_db = DISTANT_ROAD_DB - muffle
+
+
+func _route(player: AudioStreamPlayer, bus: StringName) -> void:
+	if player != null and AudioServer.get_bus_index(bus) >= 0 and player.bus != bus:
+		player.bus = bus
+
+
+func _build_outdoor_sounds() -> void:
+	var bed: StringName = mood.nature_bed()
+	if not bed.is_empty():
+		nature_sound = AudioStreamPlayer.new()
+		nature_sound.name = "NatureSound"
+		nature_sound.stream = SynthAudio.night_crickets() if bed == &"crickets" else SynthAudio.ambient_birds()
+		nature_sound.volume_db = NATURE_DB
+		nature_sound.autoplay = true
+		add_child(nature_sound)
+	distant_road = AudioStreamPlayer.new()
+	distant_road.name = "DistantRoad"
+	distant_road.stream = SynthAudio.distant_road()
+	distant_road.volume_db = DISTANT_ROAD_DB
+	distant_road.autoplay = true
+	add_child(distant_road)
 
 
 ## Drops fall in a ring around the camera that never reaches its middle, and

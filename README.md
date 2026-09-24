@@ -375,7 +375,8 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   cuenta la entrega; la plata del equipo no se paga dos veces.
 - `test_world_mood` — clima y hora del día: misma semilla, mismo clima para todos; semillas
   distintas cubren los 4 climas y las 3 horas; nunca se modifica el `Environment` compartido
-  de la escena; la lluvia moja el asfalto y la noche sube los faros. Para ver uno a mano:
+  de la escena; la lluvia moja el asfalto y la noche sube los faros; pájaros de día, grillos
+  de noche y ninguno con lluvia, y los loops de ambiente suenan y cubren todo su buffer. Para ver uno a mano:
   `-- --mood=lluvia_noche` (soleado/nublado/lluvia/niebla × dia/atardecer/noche).
 - `test_more_route_segments` — loma (el camino sube y vuelve a nivel), túnel sólido e
   iluminado, y el paso a nivel que baja barreras sólidas, deja pasar el tren y reabre;

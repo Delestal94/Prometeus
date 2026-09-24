@@ -80,6 +80,15 @@ func is_raining() -> bool:
 	return weather == Weather.RAIN
 
 
+## Which nature sound goes under the wind (route_sky.gd): birds by day and at
+## dusk, crickets at night, and nothing when it rains -- the rain covers it,
+## and birds singing through a downpour sounds wrong.
+func nature_bed() -> StringName:
+	if is_raining():
+		return &""
+	return &"crickets" if time_of_day == TimeOfDay.NIGHT else &"birds"
+
+
 ## The far mountains are unshaded, so their light level is set here.
 func horizon_light() -> float:
 	var light: float = 1.0
