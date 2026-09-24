@@ -47,4 +47,6 @@ jobs:
         env:
           GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
           JOBS: 2
+          # A hung test shows up in 2 minutes instead of 5.
+          TEST_TIMEOUT: 120
         run: bash tools/run-tests.sh -v

@@ -89,28 +89,38 @@ run_one() {
 	mkdir -p "$data"
 	local data_native="$data"
 	command -v cygpath >/dev/null 2>&1 && data_native="$(cygpath -w "$data")"
-	local attempt code
+	local attempt code began status
+	began=$(date +%s)
 	for attempt in 1 2; do
 		APPDATA="$data_native" XDG_DATA_HOME="$data" \
 			timeout "$TEST_TIMEOUT" "$GODOT_BIN" --headless --path "$PROJECT" --script "res://$rel" >"$log" 2>&1
 		code=$?
 		if [ $code -eq 0 ]; then
-			echo "PASS 0" >"$WORK/$name.result"; return
+			status=PASS; break
 		fi
 		if grep -q "needs a display\|needs a rendering display" "$log"; then
-			echo "SKIP $code" >"$WORK/$name.result"; return
+			status=SKIP; break
 		fi
 		# Crashed (signal) after printing PASS: retry once, then accept it.
 		if [ $code -ge 128 ] && [ $code -ne 124 ] && grep -q "^PASS" "$log"; then
-			[ $attempt -eq 2 ] && { echo "FLAKY $code" >"$WORK/$name.result"; return; }
+			status=FLAKY
+			[ $attempt -eq 2 ] && break
 			continue
 		fi
-		break
+		status=FAIL; break
 	done
-	echo "FAIL $code" >"$WORK/$name.result"
+	echo "$status $code" >"$WORK/$name.result"
+	# CI logs get a line per test as it finishes, so a hang shows which one.
+	if [ -n "${PROGRESS:-}" ]; then
+		echo "  $status $name ($(( $(date +%s) - began ))s)" >&3
+	fi
 }
 export -f run_one
 export WORK GODOT_BIN PROJECT TEST_TIMEOUT
+# Per-test progress lines: on in CI (GitHub sets CI=true), off locally.
+PROGRESS="${PROGRESS:-${CI:-}}"
+export PROGRESS
+exec 3>&1
 
 # stderr off: bash's own "Segmentation fault" notices for the known
 # shutdown crash; each test's output is already in its log.
