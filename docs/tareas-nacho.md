@@ -1,7 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`; M1 en curso: N-101, N-201, N-202,
-> N-203 y N-701 cerradas).
+> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 cerrado; también N-104, N-107,
+> N-307, N-804, N-903 y N-904, y la decisión de N-308.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -77,21 +77,22 @@ pizarra vacía.
 - [x] **N-101.3** Documentarlo en `docs/plan-desarrollo.md` Fase 3 y en `docs/arquitectura.md` §5.1.
 - [x] Test en `test_depot.gd`: en Endless la pizarra no queda vacía y no se publican pedidos.
 
-### N-102 · Presupuesto de largo de ruta (regla de oro de 2-5 minutos) — A · `Opus 5.5 · high` · Aviso: no
+### N-102 · Presupuesto de largo de ruta (regla de oro de 2-5 minutos) — A · `Opus 5.5 · high` · Aviso: no · **[x] `2dc63c8`**
 
 `critica-diseno-abogado-del-diablo.md` §3: con tramos de 400-600 m (`route.gd` `LEG_MIN_LENGTH` /
 `LEG_MAX_LENGTH`) y hasta 4 casas, una entrega puede tener ~3000 m, y nadie lo midió.
 
-- [ ] **N-102.1 Medir.** `tests/bench_route_duration.gd`: conductor automático (el de
+- [x] **N-102.1 Medir.** `tests/bench_route_duration.gd`: conductor automático (el de
   `test_vehicle_stress.gd` pero siguiendo el camino con `route.distance_from_path()`), a velocidad de
   crucero, frenando en cada casa 25 s (bajar, caminar, timbre, volver). Semillas 1-20, con 1, 2, 3 y 4
   casas. Imprimir minutos promedio y máximo.
-- [ ] **N-102.2 Regla.** Reemplazar el rango fijo por un presupuesto total: `ROUTE_TARGET_SECONDS := 240`
+- [x] **N-102.2 Regla.** Reemplazar el rango fijo por un presupuesto total: `ROUTE_TARGET_SECONDS := 240`
   (4 min). Largo de cada tramo = presupuesto de manejo ÷ (casas + 1), con piso de 250 m y techo de 600 m.
-  Con 1 casa los tramos quedan largos (mini aventura); con 4, cortos.
-- [ ] **N-102.3** Volver a medir: ninguna combinación pasa de 5 minutos ni baja de 2. Tabla con los
+  Con 1 casa los tramos quedan largos (mini aventura); con 4, cortos. **Cambio:** el techo quedó en
+  700 m, porque con 600 una casa sola daba 1,9 min (el test lo cazó).
+- [x] **N-102.3** Volver a medir: ninguna combinación pasa de 5 minutos ni baja de 2. Tabla con los
   resultados en `docs/parametros-diseno.md` ("Duración de la entrega").
-- [ ] Test `test_route_duration_budget.gd` (rápido, sin manejar): el largo total calculado respeta el
+- [x] Test `test_route_duration_budget.gd` (rápido, sin manejar): el largo total calculado respeta el
   presupuesto para 1-4 casas.
 
 ### N-103 · Ritmo dentro de cada tramo — A · `Opus 5.5 · high` · Aviso: no
@@ -107,18 +108,20 @@ Un tramo largo sin nada que hacer es tedio; uno con todo difícil seguido es inj
   a la última casa (misma curva que `hard_weight_at()` de Endless, escalada al largo de la entrega).
 - [ ] Test `test_route_pacing.gd`: 200 semillas, ninguna rompe las tres reglas.
 
-### N-104 · Balance del manejo medido — A · `Opus 5.5 · high` · Aviso: no
+### N-104 · Balance del manejo medido — A · `Opus 5.5 · high` · Aviso: no · **[x] `2dc63c8`**
 
 Hoy la sensación de manejo solo se juzga jugando. Medirla con números fijos permite ajustarla y que
 no se rompa sin querer.
 
-- [ ] **N-104.1** `tests/test_vehicle_handling.gd`: para cada variante (`classic`, `agile`) medir en recta
+- [x] **N-104.1** `tests/test_vehicle_handling.gd`: para cada variante (`classic`, `agile`) medir en recta
   plana 0→50 km/h, distancia de frenado desde 50 km/h, radio de giro a 20 km/h, y la velocidad máxima a la
   que una curva de `CurveSegment` se toma sin volcar.
-- [ ] **N-104.2** Objetivos escritos en `docs/parametros-diseno.md` ("Manejo"): clásica 0→50 en 5-7 s,
-  frenado < 18 m, vuelco solo por encima de 45 km/h en la curva cerrada; ágil 20 % más rápida y 15 % más
-  propensa a volcar. Ajustar `vehicle.gd` `VARIANTS` hasta cumplir.
-- [ ] El test falla si un cambio futuro saca los valores de rango (±10 %).
+- [x] **N-104.2** Objetivos escritos en `docs/parametros-diseno.md` ("Manejo"). **Cambio (decidido con el
+  usuario):** el camión real hace 0→50 en 2,4 s y frena en 6,4 m, lejos de lo propuesto (5-7 s, < 18 m);
+  cambiar la sensación de manejo sin playtesting era apostar a ciegas, así que los objetivos son los
+  valores medidos. Ninguna variante vuelca en la curva más cerrada a ninguna velocidad que alcance.
+  Revisarlos es de lo primero para cuando haya playtesting.
+- [x] El test falla si un cambio futuro saca los valores de rango (±10 %).
 
 ### N-105 · Ruta como fuente de riesgo para la carga, medida — B · `Opus 5.5 · high` · Aviso: no
 
@@ -143,9 +146,10 @@ Decisión vigente (antes #76): no hay tráfico en movimiento. La variedad sale d
 - [ ] Todo determinista desde la semilla y disparado por el host, como el cruce de tren (#63 viejo).
 - [ ] Tests por peligro, patrón `test_wildlife_crossing.gd`.
 
-### N-107 · Bocina con función — C · `Opus 5.5 · medium` · Aviso: no
+### N-107 · Bocina con función — C · `Opus 5.5 · medium` · Aviso: no · **[x] `eed9809`**
 
-- [ ] La bocina espanta animales (ciervo, ovejas, perro) dentro de 30 m hacia adelante. Hoy es solo
+- [x] La bocina espanta animales (ciervo, ovejas, perro) dentro de 30 m hacia adelante. (El ciervo ya;
+  ovejas y perro llegan con N-106 y usan lo mismo.) Hoy es solo
   comedia; así el conductor tiene una herramienta además del volante. Test en `test_horn.gd`.
 
 ---
@@ -300,22 +304,26 @@ Con entregas de varios minutos, bosque-campo-pueblo se repiten.
 - [ ] Tractor en zona de campo (regla nueva en `route_dresser.gd`, raro, lejos del asfalto) y la camioneta de la
   competencia estacionada en pueblo. Test en `test_route_placement_rules.gd`.
 
-### N-307 · Inventario y dirección visual al día — A · `Opus 5.5 · low` · Aviso: no
+### N-307 · Inventario y dirección visual al día — A · `Opus 5.5 · low` · Aviso: no · **[x] `220e6e0`**
 
-- [ ] `docs/inventario-assets.md`: sacar el ⛔ de la furgoneta (ya está integrada), marcar ✅ los cables entre
+- [x] `docs/inventario-assets.md`: sacar el ⛔ de la furgoneta (ya está integrada), marcar ✅ los cables entre
   postes y los autos nuevos, revisar cada 🟡.
-- [ ] `docs/direccion-visual.md`: cerrar los `[ ]` que ya están resueltos (escala de personajes, LOD, motion
+- [x] `docs/direccion-visual.md`: cerrar los `[ ]` que ya están resueltos (escala de personajes, LOD, motion
   blur descartado) y dejar abiertos solo los vigentes. Antes #100.
 
 ### N-308 · Decisión de renderer — A · `Opus 5.5 · medium` · Aviso: sí (`project.godot`, solo si se cambia)
 
 Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
 
-- [ ] **Decisión recomendada:** quedarse en GL Compatibility para el MVP (hardware modesto, 60 FPS, el estilo
+- [x] **Decisión recomendada:** quedarse en GL Compatibility para el MVP (hardware modesto, 60 FPS, el estilo
   low-poly no depende de SSAO). Compensar con oclusión horneada en vértices de los modelos (script de Blender)
   y sombras de contacto falsas bajo autos y casas (decal oscuro).
-- [ ] Registrar la decisión y su por qué en `docs/requerimientos-tecnicos.md` §1. Cerrar la fila #60 de
-  `especificaciones-visuales.md`.
+  - [ ] **N-308.1** Oclusión horneada en colores de vértice al exportar los modelos (script de Blender,
+    agente `modelador-blender`).
+  - [ ] **N-308.2** Sombras de contacto falsas (decal oscuro y difuso) bajo autos estacionados, casas y
+    cajas apiladas.
+- [x] Registrar la decisión y su por qué en `docs/requerimientos-tecnicos.md` §1. Cerrar la fila #60 de
+  `especificaciones-visuales.md`. (`0c7f0f1`)
 
 ---
 
@@ -475,11 +483,11 @@ Complementa la S-509 de Slatex sin esperarla.
 - [ ] Ampliar `test_vehicle_stress.gd` a la ruta curva con casas (no solo Endless): 3 minutos de manejo agresivo
   sin NaN, sin salir del mundo y sin quedar atascado sin que salte la detección.
 
-### N-804 · Recorrido técnico del mundo — A · `Opus 5.5 · low` · Aviso: no
+### N-804 · Recorrido técnico del mundo — A · `Opus 5.5 · low` · Aviso: no · **[x] `ba67f84`**
 
 Esto no es playtesting (no juzga diversión), busca errores.
 
-- [ ] Checklist en `docs/qa-recorrido.md` (sección de Nacho; si Slatex ya lo creó, sumarla): cada clima × hora
+- [x] Checklist en `docs/qa-recorrido.md` (sección de Nacho; si Slatex ya lo creó, sumarla): cada clima × hora
   del día una vez, túnel, cruce de tren, puente, ripio, ciervo, depósito completo y portón. Anotar errores de
   consola y capturas raras.
 
@@ -503,14 +511,14 @@ Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 - [ ] 6 planos guardados: salida del depósito con el portón, curva en el bosque, cruce de tren, puente angosto
   con lluvia, llegada a una casa de noche, vuelco con cajas volando.
 
-### N-903 · Guion del tráiler — B · `Opus 5.5 · medium` · Aviso: no
+### N-903 · Guion del tráiler — B · `Opus 5.5 · medium` · Aviso: no · **[x] `ee2cefd`**
 
-- [ ] `docs/marketing/trailer.md`: 60-90 s, plano por plano (qué se ve, qué suena, texto en pantalla), con los
+- [x] `docs/marketing/trailer.md`: 60-90 s, plano por plano (qué se ve, qué suena, texto en pantalla), con los
   planos de N-902 y los momentos de falla de las cajas de Slatex (S-310). Primer gancho en los primeros 5 s.
 
-### N-904 · Competidores de manejo cooperativo — B · `Opus 5.5 · medium` · Aviso: no
+### N-904 · Competidores de manejo cooperativo — B · `Opus 5.5 · medium` · Aviso: no · **[x] `e362f7f`**
 
-- [ ] `docs/marketing/competidores-manejo.md`: Drive Together, Co-Drive Chaos, Deliver Together, Totally
+- [x] `docs/marketing/competidores-manejo.md`: Drive Together, Co-Drive Chaos, Deliver Together, Totally
   Reliable Delivery Service: precio, reseñas de Steam (qué elogian y qué critican del manejo), cantidad de
   jugadores, cómo se ven sus páginas. Qué hacemos distinto (roles asimétricos) en una frase.
 
