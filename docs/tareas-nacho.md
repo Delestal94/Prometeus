@@ -1,7 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
 > Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 y M2 cerrados; M3 salvo
-> N-208 y N-209 (en espera); de M4, N-106, N-107 y N-405; además N-307, N-804, N-903, N-904.
+> N-208 y N-209 (en espera); de M4, N-106, N-107, N-302 y N-405; además N-307, N-804, N-903, N-904.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -280,12 +280,19 @@ Antes #4. Única pieza de modelado del camión que queda.
 - [ ] Hendiduras finas (bisel invertido o calcomanía oscura) en puertas de cabina, puertas traseras, capó y
   laterales del modelo de referencia, sin cambiar la colisión. Captura con `render_reference_truck.gd`.
 
-### N-302 · Timbre real en cada casa — A · `Opus 5.5 · high` · Aviso: no
+### N-302 · Timbre real en cada casa — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 `inventario-assets.md` §5: hoy `doorbell_point.gd` es una caja.
 
-- [ ] Panel de timbre low-poly (placa, botón, número de casa) con script de Blender, que se ilumina cuando
+- [x] Panel de timbre low-poly (placa, botón, número de casa) con script de Blender, que se ilumina cuando
   la casa espera un paquete y se apaga cuando se resolvió. Mismo punto de interacción.
+- `assets/tools/build_doorbell.py` → `sm_env_prop_doorbell_panel.glb` (12×26 cm: número, rejilla, botón con
+  aro, tarjeta, tornillos). `delivery_house.gd` lo cuelga en la pared de cada modelo (medida en los .glb),
+  del lado del picaporte entre el marco y el postigo, con el botón a 1,2 m del porche; número y botón se
+  encienden mientras la casa espera y se apagan con `house_delivery_recorded`, como la luz del porche. El
+  `DoorbellPoint` es el mismo y se mueve con el panel. De paso: el panel viejo flotaba 13-43 cm delante de
+  la pared, a la altura de la cadera. Test en `test_house_waiting_marker`; primeros planos en
+  `render_house_waiting.gd`.
 
 ### N-303 · Lluvia en el parabrisas y limpiaparabrisas — B · `Opus 5.5 · high` · Aviso: no
 

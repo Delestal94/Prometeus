@@ -110,6 +110,14 @@ en desuso.
   `... --python tools/build_wildlife.py -- sheep dog`). Raíz `Sheep` / `Dog`; pivotes
   `Legs_Front`, `Legs_Back`, `Head`, `Tail` y, en el perro, `Ears` colgando de `Head`.
 
+## Timbre (`models/environment/props/sm_env_prop_doorbell_panel.glb`)
+
+- Propio, `tools/build_doorbell.py` (tareas de Nacho N-302): placa de 12×26 cm con la
+  ventanita del número, rejilla de portero, botón con aro, tarjeta y tornillos. A diferencia
+  del resto, el origen es el centro del dorso de la placa (va colgado en una pared). Cada
+  pieza es un nodo: `delivery_house.gd` busca `Button` y `NumberPlate` para encenderlos y
+  escribe el número de la casa sobre `NumberPlate`.
+
 ## Tipografías (`fonts/`)
 
 Lilita One (títulos) y Nunito variable (texto), ambas de Google Fonts con licencia SIL Open

@@ -5,7 +5,9 @@ extends SceneTree
 ## number and a yard sign with the code of the box it ordered -- the same
 ## one the depot's board shows. When its delivery is recorded (relayed to
 ## every peer) the light goes out and the sign comes down; another house's
-## record doesn't touch it.
+## record doesn't touch it. The doorbell panel (N-302) hangs on each model's
+## wall beside the door with the house number, lit while the house waits and
+## dark once its delivery is recorded; ringing happens where it always did.
 
 var _failures: int = 0
 
@@ -65,9 +67,22 @@ func _run() -> void:
 			var ball_top: float = house.to_local(marker.balloon.get_child(1).global_position).y
 			_expect(ball_top > marker.house_bounds.end.y, "House %d: the balloon floats over the roof (%.1f m, roof %.1f m)" % [house.house_index, ball_top, marker.house_bounds.end.y])
 
+		# The doorbell panel, on every model.
+		for house: DeliveryHouse in houses:
+			_expect_doorbell(house)
+		for variant: int in range(DeliveryHouse.HOUSE_VISUALS.size()):
+			var bare := DeliveryHouse.new()
+			bare.visual_variant = variant
+			bare.house_index = 4
+			root.add_child(bare)
+			_expect_doorbell(bare)
+			bare.free()
+
 		root.get_node(^"/root/EventBus").emit_signal(&"house_delivery_recorded", 0, &"delivered_ok", &"fragile_a")
 		_expect(not first.porch_light.visible and not first.sign_board.visible and not first.balloon.visible, "Delivered: the light goes out and the sign and balloon come down")
 		_expect(second.porch_light.visible and second.sign_board.visible, "The other house is still waiting")
+		_expect(not (houses[0] as DeliveryHouse).doorbell_lit and not _doorbell_glows(houses[0]), "Delivered: the doorbell goes dark")
+		_expect((houses[1] as DeliveryHouse).doorbell_lit and _doorbell_glows(houses[1]), "The other house's doorbell stays lit")
 		root.get_node(^"/root/EventBus").emit_signal(&"house_delivery_recorded", 1, &"missed", &"")
 		_expect(not second.sign_board.visible, "Driven past counts too: nothing left to wait for")
 
@@ -78,6 +93,35 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: waiting houses show their light, number and ordered code, and stop once resolved")
 	quit(_failures)
+
+
+## A waiting house's doorbell: the model on its own wall (measured front of
+## each visual, build_doorbell.py's origin is the plate's back), on the
+## knob's side, clear of the door frame and the shutters, at doorbell height
+## over the porch floor (y 0.31); its window showing the house number, lit;
+## and the place you ring from right in front of it.
+func _expect_doorbell(house: DeliveryHouse) -> void:
+	var panel: Node3D = house.doorbell_panel
+	_expect(panel != null and panel.find_child("Button", true, false) != null and panel.find_child("NumberPlate", true, false) != null,
+		"House %d (model %d): a doorbell panel with its button and number window" % [house.house_index, house.visual_variant])
+	if panel == null:
+		return
+	var wall_z: float = DeliveryHouse.DOORBELL_WALL_Z[posmod(house.visual_variant, DeliveryHouse.HOUSE_VISUALS.size())]
+	var half_width: float = 0.06
+	_expect(is_equal_approx(panel.position.z, wall_z) and panel.position.x - half_width > 0.645 and panel.position.x + half_width < 0.785,
+		"House %d (model %d): the panel sits on the wall (z %.2f, wall %.2f) between the door frame and the shutter (x %.3f)" % [house.house_index, house.visual_variant, panel.position.z, wall_z, panel.position.x])
+	var button_height: float = (panel.find_child("Button", true, false) as Node3D).global_position.y - house.global_position.y - 0.31
+	_expect(button_height > 1.0 and button_height < 1.4, "House %d: the bell push is at doorbell height (%.2f m over the porch)" % [house.house_index, button_height])
+	_expect(house.doorbell.global_position.distance_to(panel.global_position) < 0.5, "House %d: you ring from right in front of the panel" % house.house_index)
+	_expect(house.doorbell_number.text == str(house.house_index + 1), "House %d: the doorbell shows its number (%s)" % [house.house_index, house.doorbell_number.text])
+	_expect(house.doorbell_number.global_basis.z.dot(-house.global_basis.z) > 0.99, "House %d: the number reads from the street side" % house.house_index)
+	_expect(house.doorbell_lit and _doorbell_glows(house), "House %d: a waiting house's doorbell is lit" % house.house_index)
+
+
+func _doorbell_glows(house: DeliveryHouse) -> bool:
+	var button := house.doorbell_panel.find_child("Button", true, false) as MeshInstance3D
+	var window := house.doorbell_panel.find_child("NumberPlate", true, false) as MeshInstance3D
+	return (button.material_override as StandardMaterial3D).emission_enabled and (window.material_override as StandardMaterial3D).emission_enabled
 
 
 func _expect(condition: bool, description: String) -> void:

@@ -26,6 +26,24 @@ const HOUSE_VISUALS: Array[String] = [
 	"res://assets/models/architecture/sm_arch_delivery_house_farmhouse.glb",
 ]
 const RESIDENT_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
+## The doorbell panel (N-302, assets/tools/build_doorbell.py): origin at the
+## back of the plate, front toward -Z.
+const DOORBELL_PANEL: String = "res://assets/models/environment/props/sm_env_prop_doorbell_panel.glb"
+## Where the panel hangs: on the knob's side of the door, in the strip of
+## plain wall between the frame (to x 0.64) and the nearest shutter (the
+## cottage's, from x 0.79), at doorbell height over the porch floor (y 0.31);
+## and each visual's front wall there, measured on the models (the cabin's
+## logs stand proud of the others' plaster).
+const DOORBELL_PANEL_X: float = 0.715
+const DOORBELL_HEIGHT: float = 1.55
+const DOORBELL_WALL_Z: Array[float] = [-2.25, -2.20, -2.40, -2.50, -2.30]
+## The point you ring from stands this far out from the wall, in front of it.
+const DOORBELL_REACH: float = 0.3
+## The number window and the bell push, lit from inside while the house waits.
+const DOORBELL_WINDOW := Color("fff1d6")
+const DOORBELL_BUTTON := Color("e7be51")
+const DOORBELL_INK := Color("1e2235")
+const DOORBELL_FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 ## Solid volumes per visual, [size, centre] pairs matching the walls only --
 ## never the porch, so the doorbell stays reachable. The first three share
 ## the original 6x5 box; the farmhouse is wider and has a wing out back
@@ -69,6 +87,11 @@ var doorbell: DoorbellPoint
 ## Porch light, mailbox and order sign: tells the crew from the road that this
 ## house is still waiting, and for which box (N-501).
 var waiting_marker: HouseWaitingMarker
+## The doorbell panel on the wall, and whether it's lit (the house waits).
+var doorbell_panel: Node3D
+var doorbell_number: Label3D
+var doorbell_lit: bool = true
+var _doorbell_materials: Array[StandardMaterial3D] = []
 var _resident: Node3D
 var _bell_player: AudioStreamPlayer3D
 var _reaction_player: AudioStreamPlayer3D
@@ -196,7 +219,7 @@ func _build_house() -> void:
 
 	doorbell = DoorbellPoint.new()
 	doorbell.name = "Doorbell"
-	doorbell.position = Vector3(-0.7, 1.1, -2.6)
+	doorbell.position = Vector3(DOORBELL_PANEL_X, DOORBELL_HEIGHT, DOORBELL_WALL_Z[variant] - DOORBELL_REACH)
 	var bell_shape := SphereShape3D.new()
 	bell_shape.radius = 1.6
 	var bell_collider := CollisionShape3D.new()
@@ -214,27 +237,54 @@ func _build_house() -> void:
 	waiting_marker.set_order(assigned_label)
 
 
+## The doorbell panel (tareas de Nacho N-302) on the wall beside the door, at
+## the doorbell's height: plate, house number, intercom grille and the bell
+## push. The number window and the push glow while the house waits for its
+## box and go dark once it's resolved -- the same moment the porch light goes
+## out, from the record the host relays to everyone (as HouseWaitingMarker).
+## Ringing still happens at `doorbell`, a reach in front of it.
 func _build_doorbell_visual() -> void:
-	var panel := MeshInstance3D.new()
-	panel.name = "DoorbellPanel"
-	var panel_mesh := BoxMesh.new()
-	panel_mesh.size = Vector3(0.22, 0.34, 0.055)
-	panel.mesh = panel_mesh
-	panel.material_override = _material(Color("35434a"))
-	panel.position = doorbell.position + Vector3(0.0, 0.0, -0.055)
-	add_child(panel)
-	var button := MeshInstance3D.new()
-	button.name = "DoorbellButton"
-	var button_mesh := CylinderMesh.new()
-	button_mesh.top_radius = 0.065
-	button_mesh.bottom_radius = 0.065
-	button_mesh.height = 0.045
-	button_mesh.radial_segments = 10
-	button.mesh = button_mesh
-	button.material_override = _material(Color("e7be51"))
-	button.position = doorbell.position + Vector3(0.0, 0.0, -0.095)
-	button.rotation.x = PI * 0.5
-	add_child(button)
+	var variant: int = posmod(visual_variant, HOUSE_VISUALS.size())
+	doorbell_panel = (load(DOORBELL_PANEL) as PackedScene).instantiate() as Node3D
+	doorbell_panel.name = "DoorbellPanel"
+	doorbell_panel.position = Vector3(DOORBELL_PANEL_X, DOORBELL_HEIGHT, DOORBELL_WALL_Z[variant])
+	add_child(doorbell_panel)
+	for part: Array in [["NumberPlate", DOORBELL_WINDOW], ["Button", DOORBELL_BUTTON]]:
+		var mesh := doorbell_panel.find_child(part[0], true, false) as MeshInstance3D
+		var material := _material(part[1])
+		material.emission = part[1]
+		material.emission_energy_multiplier = 1.3
+		_doorbell_materials.append(material)
+		if mesh != null:
+			mesh.material_override = material
+	# On the number window, whose face stands 3.6 cm off the wall.
+	doorbell_number = Label3D.new()
+	doorbell_number.name = "DoorbellNumber"
+	doorbell_number.text = str(house_index + 1)
+	doorbell_number.font = DOORBELL_FONT
+	doorbell_number.font_size = 64
+	doorbell_number.pixel_size = 0.0008
+	doorbell_number.modulate = DOORBELL_INK
+	doorbell_number.outline_size = 0
+	doorbell_number.double_sided = false
+	doorbell_number.position = Vector3(0.0, 0.08, -0.0375)
+	doorbell_number.rotation.y = PI
+	doorbell_panel.add_child(doorbell_number)
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null:
+		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
+	set_doorbell_lit(doorbell_lit)
+
+
+func _on_house_delivery_recorded(index: int, _outcome: StringName, _package_id: StringName) -> void:
+	if index == house_index:
+		set_doorbell_lit(false)
+
+
+func set_doorbell_lit(value: bool) -> void:
+	doorbell_lit = value
+	for material: StandardMaterial3D in _doorbell_materials:
+		material.emission_enabled = value
 
 
 func _tint_first_mesh(node: Node, color: Color) -> void:

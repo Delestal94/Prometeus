@@ -7,6 +7,9 @@ extends SceneTree
 ##   <godot> --path do-not-drop --script res://tests/render_house_waiting.gd -- --mood=soleado_noche
 ## Files are named after the mood: render_house_waiting_<mood>_{120m,40m,yard}.png
 ## -- --seed=N picks another road (default 4242, the same for every mood).
+## Then the doorbell panel (N-302) up close from the porch: lit while the
+## house waits (_doorbell), dark once delivered (_doorbell_done), and on
+## each house model (_doorbell_model<N>, hung up to one side of the road).
 
 const EYE_HEIGHT: float = 2.3
 
@@ -65,7 +68,25 @@ func _run() -> void:
 		await _shot(camera, route.to_global(at) + Vector3.UP * EYE_HEIGHT, house.global_position + Vector3.UP * 1.5, "render_house_waiting_%s_%dm.png" % [mood, int(distance)])
 	var front: Vector3 = -house.global_basis.z
 	await _shot(camera, house.global_position + front * 9.0 + Vector3.UP * 2.0, house.global_position + front * 3.0 + Vector3.UP * 1.3, "render_house_waiting_%s_yard.png" % mood)
+	await _doorbell_shot(camera, house, "render_house_waiting_%s_doorbell.png" % mood)
+	root.get_node(^"/root/EventBus").emit_signal(&"house_delivery_recorded", int(house.get(&"house_index")), &"delivered_ok", &"")
+	await _doorbell_shot(camera, house, "render_house_waiting_%s_doorbell_done.png" % mood)
+	for variant: int in range(DeliveryHouse.HOUSE_VISUALS.size()):
+		var model := DeliveryHouse.new()
+		model.visual_variant = variant
+		model.house_index = variant
+		level.add_child(model)
+		model.global_transform = Transform3D(house.global_basis, house.global_position + house.global_basis.x * (40.0 + 14.0 * variant) + Vector3.UP * 40.0)
+		await _doorbell_shot(camera, model, "render_house_waiting_%s_doorbell_model%d.png" % [mood, variant])
+		model.queue_free()
 	quit()
+
+
+## From the porch at eye height, a step off to the side of the door.
+func _doorbell_shot(camera: Camera3D, house: Node3D, file_name: String) -> void:
+	var panel: Node3D = house.get(&"doorbell_panel")
+	var front: Vector3 = -house.global_basis.z
+	await _shot(camera, panel.global_position + front * 1.3 - house.global_basis.x * 0.35 + Vector3.UP * 0.5, panel.global_position, file_name)
 
 
 ## The path point `distance` metres before `index`, along the road.

@@ -471,9 +471,12 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   de porche, globo amarillo sobre el techo, buzón con su número en los dos costados y un
   cartel en V (un tablero hacia cada sentido de la ruta) con el código de la caja que pidió,
   el mismo de la pizarra; todo delante del porche de cada modelo de casa. Cuando se registra
-  su entrega (o se pasa de largo) se apaga y se baja, y no toca a las demás casas.
-  Capturas a 120 m, 40 m y del jardín (con ventana): `tests/render_house_waiting.gd`
-  `-- --mood=soleado_dia` / `--mood=soleado_noche`.
+  su entrega (o se pasa de largo) se apaga y se baja, y no toca a las demás casas. El panel
+  del timbre (N-302) cuelga en la pared de cada modelo, del lado del picaporte, entre el marco
+  y el postigo, con el botón a ~1,2 m del porche y el número de la casa; está encendido
+  mientras la casa espera y se apaga con la entrega, y se toca justo delante de él.
+  Capturas a 120 m, 40 m, del jardín y del timbre de cerca en cada modelo (con ventana):
+  `tests/render_house_waiting.gd` `-- --mood=soleado_dia` / `--mood=soleado_noche`.
 - `test_run_ends_at_goal` — la entrega termina en la meta, no en la última casa: con todas
   las casas hechas la partida sigue, y termina (entregada) al detener el camión en la zona
   de la meta.
