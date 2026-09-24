@@ -136,6 +136,44 @@ con estas reglas, que `test_route_pacing` revisa en 200 semillas:
 Resultado en 200 semillas: los tramos difíciles pasan de ser minoría en la primera mitad de la
 entrega a ser más frecuentes en la segunda (el test imprime los porcentajes).
 
+## Golpes por tipo de tramo (medido, 2026-09-24)
+
+Qué siente una caja según el tramo, comparado con los umbrales de Frágil (3,0 m/s leve, 7,0 m/s
+pesado). Medido con `tests/bench_route_shocks.gd` (tareas de Nacho N-105): el piloto automático
+recorre rutas reales (semillas 1-10, 2 casas) y registra el golpe por tick en el primer anclaje de
+la caja de carga (cambio de velocidad en ese punto, sin la gravedad, que es lo mismo que mide
+`package.gd`) y cuánto se inclina el camión. "Golpe típico" es la mediana del peor golpe de cada
+pasada.
+
+| Tramo | Típico a 50 km/h | Máximo a 50 | Típico a 30 km/h | Máximo a 30 | Pasadas con golpe pesado (50 / 30) |
+|---|---|---|---|---|---|
+| Recta | 0,2 | 0,6 | 0,3 | 0,6 | 0 % / 0 % |
+| Badén | 0,2 | 0,6 | 0,3 | 0,6 | 0 % / 0 % |
+| Ripio | 0,2 | 0,3 | 0,3 | 0,3 | 0 % / 0 % |
+| Puente angosto | 0,2 | 0,4 | 0,3 | 0,4 | 0 % / 0 % |
+| Loma | 0,3 | 1,6 | 0,3 | 0,6 | 0 % / 0 % |
+| Túnel | 0,2 | 0,6 | 0,3 | 0,6 | 0 % / 0 % |
+| Curva | 0,2 | 6,8 | 0,3 | 0,6 | 0 % / 0 % |
+| Chicana | 0,2 | 0,5 | 0,3 | 9,6 | 0 % / 10 % |
+| Obras | 0,2 | 0,5 | 0,3 | 9,2 | 0 % / 25 % |
+| Curva en S | 0,2 | 0,4 | 0,3 | 9,5 | 0 % / 20 % |
+| Cruce de tren | 0,5 | 538 | 0,4 | 10,0 | 40 % / 40 % |
+
+Lo que dice:
+
+- **Ningún tramo golpea siempre por encima del umbral pesado**: todos se pasan sin daño manejando
+  con cuidado (el típico de cada uno queda en 0,2-0,5 m/s). No hizo falta bajarle la severidad a
+  ninguno.
+- **Los golpes pesados son choques, no el camino**: en chicana, obras y curva en S aparecen solo
+  cuando el piloto (que sigue el eje de la ruta y no esquiva) le pega a los bloques; en el cruce de
+  tren, cuando no frena ante la barrera y el tren se lo lleva puesto. La curva de 6,8 a 50 km/h
+  fue un vuelco del piloto.
+- **Hallazgo para diseño, no resuelto acá:** el badén, el ripio y la loma no amenazan a una caja
+  Frágil (a lo sumo 1,6 m/s, la mitad del umbral leve): la suspensión del camión se los come. Si
+  se quiere que el badén "cueste" pasarlo rápido, hay que hacerlo más alto o más seco, y conviene
+  medirlo junto con el simulador de balance de Slatex (S-108), porque este bench mide el anclaje
+  del camión y no la caja suelta rebotando sobre el piso.
+
 ## Manejo (medido, 2026-09-24)
 
 Medido con `tests/test_vehicle_handling.gd` (`-- --measure` imprime todo), en piso plano,
