@@ -72,7 +72,15 @@ func _initialize() -> void:
 	network.call(&"_on_join_requested", 90210, 0)
 	_expect(network.get(&"transport") == NetworkManager.Transport.STEAM,
 		"An accepted Steam invite joins over Steam")
-	_expect(bool(menu.get(&"_busy")), "The menu takes the invite over (shows it's joining)")
+	# Whether the join then stays in flight depends on Steam actually running:
+	# without it (CI, headless) _join_steam() fails synchronously and the menu
+	# must drop _busy and say so, not sit on "Entrando…" forever.
+	if bool(network.get(&"_steam_ready")):
+		_expect(bool(menu.get(&"_busy")), "The menu takes the invite over (shows it's joining)")
+	else:
+		_expect(not bool(menu.get(&"_busy"))
+				and (menu.get(&"_status_label") as Label).text.begins_with("No se pudo entrar"),
+			"Without Steam the menu takes the invite over and reports it couldn't join")
 	network.call(&"leave_session")
 	network.set(&"transport", NetworkManager.Transport.AUTO)
 	# An invite accepted before the menu existed waits for it, once.

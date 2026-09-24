@@ -49,6 +49,10 @@ Pedido del usuario: MCP, skills y hooks para el repo. Lo hizo Nacho (con Claude)
   confirmación al tocar el dominio del otro (`TMP_DUENO`) e instalación de Godot en la
   nube. Skills `cerrar-cambio` y `nuevo-test`. MCP de Godot en `.mcp.json`.
 - Los scripts de `.githooks/` y `tools/` se suben ya con permiso de ejecución.
+- Test de Slatex tocado: `test_main_menu` ya no exige `_busy` después de aceptar una
+  invitación cuando Steam no está corriendo (CI, headless): ahí `_join_steam()` falla en el
+  acto y el menú tiene que soltar `_busy` y decir "No se pudo entrar…". Con Steam abierto
+  sigue exigiendo `_busy`. `main_menu.gd` no cambió.
 
 ## Aviso activo: segunda tanda de multijugador (2026-09-24)
 
