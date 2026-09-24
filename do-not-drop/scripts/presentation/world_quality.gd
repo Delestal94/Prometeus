@@ -69,4 +69,4 @@ static func watch(tree: SceneTree) -> void:
 	tree.node_added.connect(func(node: Node) -> void:
 		if node is DirectionalLight3D or node is GPUParticles3D or node.has_meta(BASE_RANGE_META):
 			# Deferred: the node's owner sets its own values right after adding it.
-			WorldQuality.apply_to.call_deferred(node))
+			apply_to.call_deferred(node))
