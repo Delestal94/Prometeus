@@ -105,6 +105,9 @@ var _ragdolled: bool = false
 var _package_focus: CameraAttributesPractical
 var _driver_ik_ready: bool = false
 var _driver_ik_nodes: Array[SkeletonIK3D] = []
+var _driver_arm_visuals: Array[MeshInstance3D] = []
+var _driver_arm_targets: Array[Node3D] = []
+var _driver_arm_skeleton: Skeleton3D = null
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -360,13 +363,19 @@ func _pose_seated_body(delta: float) -> void:
 	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
 	if seat == null:
 		return
-	# Seat anchors are eye height (where the camera goes); a seated torso
-	# centers noticeably lower than that.
+	# Seat anchors are eye height (where the camera goes), while this character
+	# model is rooted at its feet. The old offset left the driver's head through
+	# the cab roof; keep the body seated below the eye marker instead.
 	_seat_pose_blend = minf(_seat_pose_blend + delta * 7.0, 1.0)
-	var target_pose := seat.global_transform.translated_local(Vector3(0.0, -0.55, 0.0))
+	# The driver's eye marker is behind the physical wheel. Move the seated
+	# character forward only in that seat so the shoulder chain can actually
+	# reach the wheel; passenger seat markers stay centered on their cushions.
+	var seat_offset := Vector3(0.0, -0.95, -0.62) if seat.name == &"DriverEyePoint" else Vector3(0.0, -0.95, 0.0)
+	var target_pose := seat.global_transform.translated_local(seat_offset)
 	_body_visual.global_transform = _body_visual.global_transform.interpolate_with(target_pose, _seat_pose_blend)
 	_body_visual.rotation.x = 0.18 + sin(Time.get_ticks_msec() * 0.008) * 0.025
 	_configure_driver_ik(seat)
+	_update_driver_arm_visuals()
 
 
 ## Real skeletal IK for the driver: the two target nodes live on the wheel,
@@ -396,10 +405,57 @@ func _configure_driver_ik(seat: Node3D) -> void:
 		skeleton.add_child(ik)
 		# get_path_to() only works after the solver itself belongs to the
 		# scene tree (the wheel is in the vehicle branch, not the player).
-		ik.target_node = ik.get_path_to(target)
+		# An absolute target path is required here: the wheel is in the vehicle
+		# branch, outside the player's Skeleton3D branch. The relative path was
+		# accepted by the property but never solved, leaving both arms at rest.
+		ik.target_node = target.get_path()
 		ik.start(true)
 		_driver_ik_nodes.append(ik)
+		_driver_arm_targets.append(target)
 	_driver_ik_ready = not _driver_ik_nodes.is_empty()
+	_build_driver_arm_visuals(skeleton, wheel.get_parent() as Node3D)
+
+
+func _build_driver_arm_visuals(skeleton: Skeleton3D, parent: Node3D) -> void:
+	if parent == null or not _driver_arm_visuals.is_empty():
+		return
+	_driver_arm_skeleton = skeleton
+	for side: float in [-1.0, 1.0]:
+		var arm := MeshInstance3D.new()
+		arm.name = "DriverArmVisualLeft" if side < 0.0 else "DriverArmVisualRight"
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.105
+		mesh.bottom_radius = 0.12
+		mesh.radial_segments = 8
+		mesh.height = 1.0
+		arm.mesh = mesh
+		var material := StandardMaterial3D.new()
+		material.albedo_color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()].darkened(0.28)
+		material.roughness = 0.8
+		arm.material_override = material
+		parent.add_child(arm)
+		_driver_arm_visuals.append(arm)
+
+
+func _update_driver_arm_visuals() -> void:
+	if _driver_arm_visuals.is_empty() or _driver_arm_skeleton == null:
+		return
+	for index: int in range(min(_driver_arm_visuals.size(), _driver_arm_targets.size())):
+		var shoulder_name: StringName = &"Shoulder_L" if index == 0 else &"Shoulder_R"
+		var shoulder_bone := _driver_arm_skeleton.find_bone(shoulder_name)
+		var target := _driver_arm_targets[index]
+		if shoulder_bone < 0 or not is_instance_valid(target):
+			continue
+		var start := _driver_arm_skeleton.to_global(_driver_arm_skeleton.get_bone_global_pose(shoulder_bone).origin)
+		var end := target.global_position
+		var direction := end - start
+		if direction.length_squared() < 0.001:
+			continue
+		var cylinder := _driver_arm_visuals[index].mesh as CylinderMesh
+		cylinder.height = direction.length()
+		var arm := _driver_arm_visuals[index]
+		arm.global_position = (start + end) * 0.5
+		arm.global_basis = Basis(Quaternion(Vector3.UP, direction.normalized()))
 
 
 func _stop_driver_ik() -> void:
@@ -409,6 +465,12 @@ func _stop_driver_ik() -> void:
 		if is_instance_valid(ik):
 			ik.stop()
 	_driver_ik_nodes.clear()
+	for arm: MeshInstance3D in _driver_arm_visuals:
+		if is_instance_valid(arm):
+			arm.queue_free()
+	_driver_arm_visuals.clear()
+	_driver_arm_targets.clear()
+	_driver_arm_skeleton = null
 	_driver_ik_ready = false
 
 
