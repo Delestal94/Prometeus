@@ -32,7 +32,8 @@ find_godot() {
 	for candidate in godot godot4 Godot_v4.7.2-stable_linux.x86_64; do
 		if command -v "$candidate" >/dev/null 2>&1; then command -v "$candidate"; return; fi
 	done
-	for candidate in /d/Descargas/Godot_v4.7.2-stable_win64_console.exe "D:/Descargas/Godot_v4.7.2-stable_win64_console.exe"; do
+	# ~/godot: where the Claude Code cloud session hook installs it.
+	for candidate in "$HOME/godot/Godot_v4.7.2-stable_linux.x86_64" /d/Descargas/Godot_v4.7.2-stable_win64_console.exe "D:/Descargas/Godot_v4.7.2-stable_win64_console.exe"; do
 		if [ -x "$candidate" ] || [ -f "$candidate" ]; then echo "$candidate"; return; fi
 	done
 }
