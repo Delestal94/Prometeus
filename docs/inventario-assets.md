@@ -1,6 +1,6 @@
 # Inventario de assets — Take My Package
 
-> Última actualización: 2026-09-23 (relevamiento de modelado pendiente, sección 10)
+> Última actualización: 2026-09-24 (N-307: baranda de puente, cables, autos, obras y guantes verificados contra el código)
 > Es **la lista** de assets del juego: qué existe, qué falta integrar y qué falta crear.
 > Cuando se crea o se integra algo, se actualiza acá. Complementa
 > `docs/especificaciones-visuales.md` (qué mejorar visualmente) y
@@ -75,10 +75,10 @@
 | Señal de obras | `…/sm_env_sign_roadworks.glb` | ✅ | Antes de `ConstructionZoneSegment`. |
 | Cartel "entrega adelante" | `…/sm_env_sign_delivery_ahead.glb` | ✅ | ~80 m antes de cada casa, del lado de la casa. |
 | Guardarraíl (4 m) | `models/environment/props/sm_env_prop_guardrail.glb` | ✅ | Del lado de afuera de cada `CurveSegment`, cada 4 m. |
-| Baranda de puente (6 m) | `…/sm_env_prop_bridge_railing.glb` | 🟡 | Opcional: el puente ya tiene barandas con colisión hechas en código. |
+| Baranda de puente (6 m) | `…/sm_env_prop_bridge_railing.glb` | ✅ | En `NarrowBridgeSegment` (`RAILING_MODEL`); la colisión sigue siendo la de código. |
 | Conos, barrera, farol, banco, buzón | `…/props/sm_env_prop_*.glb` | ✅ | Lote 1. |
 | Fardo, cajón de madera, pallet, hidrante, parada de colectivo, mojón | `…/props/sm_env_prop_{hay_bale,wooden_crate,pallet,fire_hydrant,bus_stop,milestone}.glb` | ✅ | En la rotación de mobiliario de banquina; pallet y cajón además detrás de la valla de obras. |
-| Cables entre postes | — | ⬜ | Espec. #53. Se genera en código (curva entre postes), no como GLB. |
+| Cables entre postes | `route_dresser.gd` (tendido eléctrico) | ✅ | Espec. #53. Generados en código: tres cables con comba entre postes cercanos, una sola malla. |
 | Poste eléctrico, cerca, tacho, señal genérica | `models/environment/sm_env_*.tscn` | ✅ | Lote 0 (escenas nativas). |
 
 ## 5. Casas de entrega y jardines (dominio Nacho)
@@ -110,7 +110,9 @@
 |---|---|---|---|
 | Furgoneta de reparto (exterior, interior, puertas, espejos, tablero, asientos) | `vehicle.tscn`, `truck_reference_lowpoly.glb` | ✅ | Modelo de Slatex, en uso vía `reference_truck.gd`. Espec. #5-#12, #14-#16 hechas salvo líneas de paneles (#8). No regenerarlo desde los scripts de lote. |
 | Autos estacionados: hatchback, pickup | `models/vehicles/sm_vehicle_parked_*.glb` | ✅ | |
-| Más autos estacionados (sedán, camioneta de reparto de la competencia), tractor | — | ⬜ | Espec. #55. |
+| Sedán estacionado | `models/vehicles/sm_vehicle_parked_sedan_refined.glb` | ✅ | En la ruta (`route_dresser.gd`) y frente al depósito. Espec. #55. |
+| Camioneta de la competencia | `models/vehicles/sm_vehicle_competitor_van.glb` | ✅ | Solo frente al depósito; en la ruta, con N-306. |
+| Tractor | `models/vehicles/sm_vehicle_tractor.glb` | 🟡 | Creado, sin usar todavía: va en zona de campo con N-306. |
 
 ## 8. Audio (hoy todo sintetizado en `synth_audio.gd`)
 
@@ -152,20 +154,17 @@ correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slate
 
 | Qué | Dónde se arma hoy | Dominio | Tarea |
 |---|---|---|---|
-| Barrera de hormigón y conos de la zona de obras | `construction_zone_segment.gd` (caja de 5 m y cubos de 0,5 m) | Nacho | N-128. **Solo código:** ya existen `sm_env_prop_road_barrier.glb` y `sm_env_prop_traffic_cone.glb`. |
 | Tren del paso a nivel (locomotora + vagones) | `rail_crossing_segment.gd` `_build_train()` (cajas de 7,5×3×2,6 m) | Nacho | N-129 |
 | Paso a nivel: poste, cruz de San Andrés, luces, barrera, vías y durmientes | `rail_crossing_segment.gd` | Nacho | N-130 |
 | Túnel: paredes, techo, portal, pilares, lámparas | `tunnel_segment.gd` | Nacho | N-131 |
-| Puente angosto: tablero, postes, agua | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya existe, sin integrar) |
+| Puente angosto: tablero, postes, agua | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya está integrada) |
 | Bloques de la chicana | `chicane_segment.gd` | Nacho | N-133 |
 | Poste eléctrico | `route_dresser.gd` (cilindro de 6 lados + caja) | Nacho | N-134 |
 | Depósito: autoelevador, cinta transportadora, portón enrollable, estanterías, lámparas, ventiladores, reloj, insumos | `depot*.gd` (~160 primitivas horneadas con `depot_kit.gd`) | Nacho | N-135 |
-| Autos estacionados nuevos: sedán, camioneta de la competencia, tractor | — | Nacho | N-136 (espec. #55) |
 | Residente que abre la puerta | `delivery_house.gd` (cápsula) | Nacho | N-137 (puede reusar el modelo del jugador) |
 | Timbre / panel de puerta | `doorbell_point.gd` | Nacho | N-137 |
 | Ragdoll del jugador | `player_ragdoll.gd` (cápsulas) | Slatex | S-101 |
 | Maniquí del panel de cosméticos | `cosmetics_panel.gd` (cápsula + esfera) | Slatex | S-102 |
-| Manos del conductor en el volante | `vehicle_presentation.gd` (cápsulas) | Nacho | N-138 (usar los guantes GLB) |
 | Objetos sueltos de la zona de carga (caja de herramientas, termo) | `cargo_clutter.gd` | Nacho | N-139 |
 | Accesorios cosméticos (gorras, chalecos) | — | Slatex | S-103 |
 

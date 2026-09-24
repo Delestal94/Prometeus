@@ -96,9 +96,11 @@ realidad primera persona, no tercera como parece a simple vista).
   1.68 m de alto interior, dejando 0.61 m de espacio para el conductor y 0.76 m
   para los pasajeros — verificado que sigue pasando `check_driver_sightline.gd` y
   el resto de la suite.
-- **[ ] Escala de personajes/props**: sin definir formalmente todavía (no hay
-  personaje con arte final). Referencia implícita por los `Marker3D` de asiento y
-  la altura de cámara: un adulto promedio, ~1.7-1.8 m de alto de ojos parado.
+- **[x] Escala de personajes/props** (cerrado 2026-09-24, N-307): 1 unidad = 1 m en
+  todo el proyecto (`assets/README.md`). El jugador es una cápsula de 1,7 m de alto y
+  0,35 m de radio (`player.tscn`) y el modelo del personaje se escala a esa altura;
+  los asientos (`Marker3D`) y la cámara de ojos salen de
+  ahí. Props y casas se modelan en metros reales con el origen en el centro de la base.
 
 ## 3. Paleta de colores
 
@@ -234,11 +236,11 @@ específico de "campo de visión, qué ve y qué no".
   esto juntos"), o el diseño del interior los separa visualmente (cada uno
   concentrado en lo suyo, menos distracción)? Depende del layout final de asientos,
   que hoy son placeholders (`Marker3D` sin geometría propia de asiento).
-- **[ ] LOD / culling de distancia**: no implementado — a la escala actual (una
-  ruta de 220 m con unas pocas docenas de objetos) no hace falta. Se vuelve
-  relevante recién si el modo endless genera muchos tramos activos a la vez
-  (`RouteStreamer.lookahead_distance` + `behind_keep_distance` ya limitan cuántos
-  hay vivos, pero cada uno todavía se dibuja entero mientras existe).
+- **[x] LOD / culling de distancia** (cerrado 2026-09-24, N-307): sin LOD de mallas
+  (el estilo low-poly no lo necesita), pero con recorte por distancia: el decorado
+  horneado en `dressing_batcher.gd` usa `visibility_range_end` según el tamaño de
+  cada pieza, los animales de banquina igual (`wildlife_animal.gd`), y en Endless
+  `RouteStreamer` limita cuántos tramos hay vivos.
 - **[x] Niebla/oclusión intencional del streaming**: Endless genera 180 m por delante
   y usa niebla de densidad 0.013; la geometría termina disuelta mucho antes del far
   clip de 600 m. El modo curado conserva 0.006.
@@ -266,8 +268,9 @@ específico de "campo de visión, qué ve y qué no".
   tensión sin depender de texto.
 - **[x] Aberración cromática de impacto**: `vehicle_effects.gd` la dispara sólo en
   golpes fuertes y la deja decaer rápido.
-- **[ ] Motion blur por velocidad**: pendiente; requiere validación visual y de
-  rendimiento antes de sumarlo al estilo.
+- **[x] Motion blur por velocidad: descartado** (2026-09-24, N-701): GL Compatibility
+  no lo trae y un pase propio cuesta los 60 FPS. Queda en "Fuera del MVP" de
+  `docs/plan-desarrollo.md`.
 
 ## 7. Vehículo — exterior e interior
 
@@ -317,9 +320,10 @@ específico de "campo de visión, qué ve y qué no".
   consistente con el low-poly estándar en tiempo real.
 - **Texturas**: colores planos/paleta simple, no fotorealista — coherente con no
   tener que producir/mantener un set de texturas complejo.
-- **[ ] Nombrado y organización de assets importados**: no definido todavía (no hay
-  ningún asset importado aún). Cuando empiece la Fase 6, conviene fijar esto acá
-  antes de importar el primer pack, para no reorganizar después.
+- **[x] Nombrado y organización de assets importados** (cerrado 2026-09-24, N-307):
+  `models/<familia>/sm_<familia>_<nombre>`, `textures/<familia>/tx_<familia>_<nombre>_<tamaño>`,
+  metros y origen en la base; la convención completa y el registro de origen de cada
+  asset están en `do-not-drop/assets/README.md`.
 
 ## Decisiones tomadas (2026-09-21)
 
