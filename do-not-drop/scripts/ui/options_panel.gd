@@ -20,6 +20,7 @@ var _shake_slider: HSlider
 var _hud_scale_slider: HSlider
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
+var _quality_slider: HSlider
 var _controls_label: Label
 var _binding_buttons: Dictionary = {}
 var _listening_action: StringName = &""
@@ -74,6 +75,16 @@ func _build() -> void:
 
 	_fullscreen_check = UiTheme.check_box(column, "Pantalla completa  (F11)", GameSettings.fullscreen)
 	_fullscreen_check.toggled.connect(func(pressed: bool) -> void: GameSettings.fullscreen = pressed)
+
+	# Graphics quality (world_quality.gd, tareas de Nacho N-205): the readout
+	# names the level instead of showing 0-2.
+	_quality_slider = UiTheme.slider_row(column, "Calidad gráfica", WorldQuality.Level.LOW, WorldQuality.Level.HIGH, 1.0, GameSettings.graphics_quality)
+	var quality_readout := (_quality_slider.get_parent().get_child(0) as HBoxContainer).get_child(1) as Label
+	var name_quality := func(value: float) -> void: quality_readout.text = WorldQuality.NAMES[int(value)]
+	name_quality.call(_quality_slider.value)
+	_quality_slider.value_changed.connect(func(value: float) -> void:
+		GameSettings.graphics_quality = int(value)
+		name_quality.call(value))
 
 	UiTheme.tag(column, "CONTROLES", UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
@@ -156,6 +167,8 @@ func _sync_from_settings() -> void:
 	_hud_scale_slider.value_changed.emit(GameSettings.hud_scale)
 	_invert_check.set_pressed_no_signal(GameSettings.invert_look_y)
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
+	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)
+	_quality_slider.value_changed.emit(GameSettings.graphics_quality)
 	for action: StringName in _binding_buttons:
 		(_binding_buttons[action] as Button).text = GameSettings.binding_label(action)
 

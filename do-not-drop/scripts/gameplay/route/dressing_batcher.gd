@@ -262,7 +262,10 @@ static func _multimesh_instance(batch: Dictionary) -> MultiMeshInstance3D:
 	instance.multimesh = multimesh
 	instance.cast_shadow = batch.shadow
 	var size: float = (batch.mesh as Mesh).get_aabb().get_longest_axis_size()
-	instance.visibility_range_end = SMALL_RANGE if size < SMALL_SIZE else (MEDIUM_RANGE if size < MEDIUM_SIZE else LARGE_RANGE)
+	var draw_range: float = SMALL_RANGE if size < SMALL_SIZE else (MEDIUM_RANGE if size < MEDIUM_SIZE else LARGE_RANGE)
+	# The graphics quality level scales it (world_quality.gd), from this.
+	instance.set_meta(WorldQuality.BASE_RANGE_META, draw_range)
+	instance.visibility_range_end = draw_range * WorldQuality.setting("range_scale")
 	instance.visibility_range_end_margin = 6.0
 	if record_instances:
 		instance.set_meta(&"instance_transforms", xforms.duplicate())

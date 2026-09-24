@@ -76,6 +76,15 @@ var fullscreen: bool = false:
 		_apply_fullscreen()
 		_save()
 
+## Graphics quality preset, WorldQuality.Level (tareas de Nacho N-205):
+## applies at once to whatever is on screen, and to what loads later.
+var graphics_quality: int = WorldQuality.Level.HIGH:
+	set(value):
+		graphics_quality = clampi(value, WorldQuality.Level.LOW, WorldQuality.Level.HIGH)
+		if is_inside_tree():
+			WorldQuality.apply(get_tree(), graphics_quality)
+		_save()
+
 ## Size of the in-game HUD (panels, banners, prompts) relative to how it
 ## was laid out. Menus and the pause/results card keep their size: they're
 ## centred and already sized to fit, it's the corners that crowd a small
@@ -119,6 +128,8 @@ func _ready() -> void:
 	if Engine.get_main_loop().get_script() != null:
 		save_path = "user://test_settings.cfg"
 	_load()
+	WorldQuality.watch(get_tree())
+	WorldQuality.apply(get_tree(), graphics_quality)
 
 
 func _input(event: InputEvent) -> void:
@@ -161,6 +172,7 @@ func reset_to_defaults() -> void:
 	look_sensitivity = 1.0
 	invert_look_y = false
 	fullscreen = false
+	graphics_quality = WorldQuality.Level.HIGH
 	hud_scale = HUD_SCALE_DEFAULT
 	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
 	_loading = false
@@ -243,6 +255,7 @@ func _load() -> void:
 	look_sensitivity = float(config.get_value(SECTION, "look_sensitivity", 1.0))
 	invert_look_y = bool(config.get_value(SECTION, "invert_look_y", false))
 	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
+	graphics_quality = int(config.get_value(SECTION, "graphics_quality", WorldQuality.Level.HIGH))
 	hud_scale = minf(float(config.get_value(SECTION, "hud_scale", HUD_SCALE_DEFAULT)), HUD_SCALE_MAX)
 	# Files saved before the HUD default dropped to 60 % hold the old 100 %
 	# default, not a choice anyone made: move them to the new one, once.
@@ -274,6 +287,7 @@ func _save() -> void:
 	config.set_value(SECTION, "look_sensitivity", look_sensitivity)
 	config.set_value(SECTION, "invert_look_y", invert_look_y)
 	config.set_value(SECTION, "fullscreen", fullscreen)
+	config.set_value(SECTION, "graphics_quality", graphics_quality)
 	config.set_value(SECTION, "hud_scale", hud_scale)
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
