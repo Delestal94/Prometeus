@@ -105,6 +105,10 @@ en desuso.
   `scripts/presentation/wildlife_animal.gd` lo gira, lo escala a 0.4 y elige la animación.
 - Conejo, rana, pájaro y el cartel de cruce: propios, generados por
   `tools/build_wildlife.py` (piezas con pivote en cada articulación, animadas por código).
+- `sm_env_animal_sheep.glb` (oveja, ~0,75 m a la cruz) y `sm_env_animal_dog.glb` (perro de
+  campo, ~0,55 m a la cruz): propios, mismo script (`sheep()`, `dog()`; se regeneran solos con
+  `... --python tools/build_wildlife.py -- sheep dog`). Raíz `Sheep` / `Dog`; pivotes
+  `Legs_Front`, `Legs_Back`, `Head`, `Tail` y, en el perro, `Ears` colgando de `Head`.
 
 ## Tipografías (`fonts/`)
 

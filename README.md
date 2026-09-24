@@ -206,6 +206,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_placement_rules.gd
 <godot> --headless --path do-not-drop --script res://tests/test_render_batching.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_assignment.gd
+<godot> --headless --path do-not-drop --script res://tests/test_house_waiting_marker.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_duration_budget.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_pacing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_handling.gd
@@ -222,6 +223,13 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_endless_difficulty.gd
 <godot> --headless --path do-not-drop --script res://tests/test_reference_truck.gd
 <godot> --headless --path do-not-drop --script res://tests/test_wildlife_crossing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_flock_crossing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_chasing_dog.gd
+<godot> --headless --path do-not-drop --script res://tests/test_road_hazards.gd
+<godot> --headless --path do-not-drop --script res://tests/test_dashboard_gps.gd
+<godot> --headless --path do-not-drop --script res://tests/test_route_fuzz.gd
+<godot> --headless --path do-not-drop --script res://tests/test_world_determinism.gd
+<godot> --headless --path do-not-drop --script res://tests/test_world_quality.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -250,6 +258,32 @@ cada frame; guarda capturas `check_interpolation_*.png` en `user://` para mirarl
 máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, p95 22 ms,
 ~6.200 draw calls y la cámara quieta en el 64% de los frames; después ~3,6–6 ms, p95
 ~6,5–8 ms, ~1.500 draw calls y ningún frame quieto.
+
+FPS reales con GPU (tareas de Nacho N-204), 2026-09-24, `bench_drive.gd` con ventana a
+1920×1080, 60 s por corrida, vsync apagado. PC de desarrollo: AMD Ryzen 5 7600X, NVIDIA
+RTX 4060 Ti (driver 596.36, GL Compatibility sobre OpenGL 3.3), 32 GB de RAM. `--endless`
+maneja Endless y `--mood=` fuerza clima y hora.
+
+| Modo | Clima / hora | FPS prom. | 1 % más bajo | p95 ms | Draw calls prom. |
+|---|---|---|---|---|---|
+| Reparto | día | 156 | 93 | 8,0 | 1.837 |
+| Reparto | atardecer | 139 | 85 | 9,9 | 2.748 |
+| Reparto | noche | 159 | 94 | 8,4 | 1.974 |
+| Reparto | lluvia (día) | 164 | 104 | 7,8 | 1.798 |
+| Endless | día | 380 | 219 | 3,6 | 530 |
+| Endless | atardecer | 312 | 188 | 4,2 | 1.465 |
+| Endless | noche | 375 | 244 | 3,5 | 625 |
+| Endless | lluvia (día) | 393 | 261 | 3,3 | 535 |
+
+La meta de 60 FPS estables a 1080p se cumple con margen (el 1 % más bajo nunca baja de 85).
+El atardecer es el caso más caro en los dos modos (más draw calls; lo más probable son las
+sombras largas del sol bajo, sin medir todavía). Una vez compilados los shaders no hay tirones; los que aparecen son de
+los primeros segundos o de cuando el piloto reubica el camión. La física promedia 0,55-0,75 ms
+por tick con picos de 12-19 ms. Falta medir el preset bajo en una PC modesta (N-205).
+
+`bench_route_shocks.gd` mide qué tan fuerte golpea cada tipo de tramo a la carga
+(headless, `--fixed-fps 60`, `-- --cruise=50` o `--cruise=30`); la tabla está en
+`docs/parametros-diseno.md` ("Golpes por tipo de tramo").
 
 `bench_route_duration.gd` mide cuánto dura una entrega manejándola: arma la ruta real para
 cada semilla y cantidad de casas, y un piloto automático la recorre a velocidad de crucero,
@@ -311,11 +345,31 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   terminar en el mismo transporte o nunca se van a encontrar).
 - `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
   prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
-- `test_route_streaming` — la pieza base de streaming de tramos (Fase 3): que
-  `RouteStreamer` genere tramos por delante de un objetivo, libere los que
-  quedaron muy atrás y nunca repita el mismo tipo dos veces seguidas. Es
-  aparte de la ruta curada a mano (`route.gd`), que sigue siendo la que se
-  juega hoy.
+- `test_route_streaming` — el streaming de tramos de Endless: `RouteStreamer` encadena
+  tramos con curvas (cursor `Transform3D`, como `route.gd`), genera por delante del
+  objetivo y libera lo que quedó atrás midiendo a lo largo del camino, nunca repite el
+  mismo tipo dos veces seguidas ni se aleja más de 80° de −Z, y 5 km recorridos nunca se
+  cruzan consigo mismos con los nodos vivos acotados.
+- `test_flock_crossing` — el rebaño de ovejas con el camión real: pasar de largo a toda
+  velocidad atropella una (multa, golpe y cartel en el HUD), esperar deja cruzar a todas y
+  la bocina las dispersa fuera del asfalto.
+- `test_chasing_dog` — el perro del pueblo corre al lado del camión ladrando sin tocarlo,
+  se rinde a los ~150 m y la bocina lo manda a casa.
+- `test_road_hazards` — en rutas reales: ramas y troncos solo con lluvia, sólidos y siempre
+  dejando un carril libre; el rebaño solo en zona de campo y el perro solo en pueblo.
+- `test_dashboard_gps` — el GPS del tablero muestra la distancia por la ruta a la próxima
+  casa que espera, su código y una flecha hacia ella; al terminar las casas apunta a la
+  llegada, y en Endless muestra la distancia y el récord.
+- `test_route_fuzz` — 500 semillas × 1-4 casas sobre el plan de la ruta (nunca se cruza
+  consigo misma) y 20 rutas construidas (casas y jardines fuera del asfalto, árboles
+  sólidos a más de 2 m del carril, sin escalones de más de 0,3 m bajo el camino y sin
+  cortes hasta la meta); cada falla nombra su semilla.
+- `test_world_determinism` — el nivel entero construido dos veces con la misma semilla da
+  las mismas posiciones de todo (ruta, decorado, jardines, depósito, cajas en los
+  estantes), los mismos pedidos, códigos de estante y clima.
+- `test_world_quality` — cada nivel de calidad gráfica (Baja / Media / Alta) fija sombras,
+  distancia de dibujado del decorado, partículas y escala 3D, se aplica en caliente y a lo
+  que carga después, y se guarda con las opciones.
 - `test_leaderboard` — el top de puntajes local de `RunManager`: ordena,
   recorta a 10 entradas, marca correctamente un nuevo récord y sobrevive a
   guardar/cargar de disco (usa un archivo de prueba aparte, no el guardado
@@ -412,6 +466,13 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   espera la caja que le asignó la pizarra del depósito desde que carga el nivel (se ve
   en su cartel, con el estante), y con la caja equivocada el vecino la devuelve sin
   gastar la entrega.
+- `test_house_waiting_marker` — cada casa que espera entrega se reconoce desde la ruta: luz
+  de porche, globo amarillo sobre el techo, buzón con su número en los dos costados y un
+  cartel en V (un tablero hacia cada sentido de la ruta) con el código de la caja que pidió,
+  el mismo de la pizarra; todo delante del porche de cada modelo de casa. Cuando se registra
+  su entrega (o se pasa de largo) se apaga y se baja, y no toca a las demás casas.
+  Capturas a 120 m, 40 m y del jardín (con ventana): `tests/render_house_waiting.gd`
+  `-- --mood=soleado_dia` / `--mood=soleado_noche`.
 - `test_route_duration_budget` — la regla de oro de 2-5 minutos por entrega, sin manejar:
   con 1 a 4 casas, el largo de tramo que planea `route.gd` (presupuesto de tiempo, más
   corto con más casas) y la ruta que construye de verdad para varias semillas duran
@@ -574,6 +635,11 @@ Corré el anfitrión en una terminal y el cliente en otra:
 ```
 
 Ambos imprimen `PASS` si se encuentran.
+
+Con tres jugadores (tareas de Nacho N-207), `tools/run-net-trio.sh` levanta un anfitrión y dos
+clientes ENet en localhost (el segundo entra 6 s tarde) y compara que los tres vean la misma
+semilla, las mismas casas, los mismos pedidos, la misma ruta y la misma fase del cruce de tren
+(`GODOT=<ejecutable sin _console> tools/run-net-trio.sh`).
 
 **Usá el ejecutable normal de Godot, no el que termina en `_console.exe`.**
 En Windows, las reglas del firewall quedan atadas a la ruta exacta del

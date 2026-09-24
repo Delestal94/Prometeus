@@ -1,7 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 cerrado; también N-104, N-107,
-> N-307, N-804, N-903 y N-904, y la decisión de N-308.
+> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 y M2 cerrados salvo N-503; M3 salvo
+> N-208 y N-209 (en espera); de M4, N-106, N-107 y N-405; además N-307, N-804, N-903, N-904.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -95,18 +95,19 @@ pizarra vacía.
 - [x] Test `test_route_duration_budget.gd` (rápido, sin manejar): el largo total calculado respeta el
   presupuesto para 1-4 casas.
 
-### N-103 · Ritmo dentro de cada tramo — A · `Opus 5.5 · high` · Aviso: no
+### N-103 · Ritmo dentro de cada tramo — A · `Opus 5.5 · high` · Aviso: no · **[x] `90c2e9d`**
 
 Un tramo largo sin nada que hacer es tedio; uno con todo difícil seguido es injusto.
 
-- [ ] **N-103.1** Regla de ritmo en `route.gd` al armar cada tramo: al menos un "momento" (tramo difícil,
+- [x] **N-103.1** Regla de ritmo en `route.gd` al armar cada tramo: al menos un "momento" (tramo difícil,
   cruce de tren, cruce de animales o curva cerrada) cada 250 m; nunca dos tramos difíciles seguidos
   (misma regla que `RouteStreamer.hard_segments`, reutilizarla).
-- [ ] **N-103.2** Zona tranquila obligatoria: los últimos 80 m antes de cada casa son recta o curva suave
+- [x] **N-103.2** Zona tranquila obligatoria: los últimos 80 m antes de cada casa son recta o curva suave
   (el conductor frena y los pasajeros bajan sin que un badén les tire la caja).
-- [ ] **N-103.3** Dificultad creciente dentro de la entrega: el peso de tramos difíciles sube de la primera
+- [x] **N-103.3** Dificultad creciente dentro de la entrega: el peso de tramos difíciles sube de la primera
   a la última casa (misma curva que `hard_weight_at()` de Endless, escalada al largo de la entrega).
-- [ ] Test `test_route_pacing.gd`: 200 semillas, ninguna rompe las tres reglas.
+- [x] Test `test_route_pacing.gd`: 200 semillas, ninguna rompe las tres reglas.
+- Hecho con `route.gd` `plan_spine()`: la ruta se planea entera antes de construirse; `test_route_pacing` revisa 200 semillas. El arranque seguro bajó de 150 a 100 m para que entre el primer "momento".
 
 ### N-104 · Balance del manejo medido — A · `Opus 5.5 · high` · Aviso: no · **[x] `2dc63c8`**
 
@@ -123,28 +124,30 @@ no se rompa sin querer.
   Revisarlos es de lo primero para cuando haya playtesting.
 - [x] El test falla si un cambio futuro saca los valores de rango (±10 %).
 
-### N-105 · Ruta como fuente de riesgo para la carga, medida — B · `Opus 5.5 · high` · Aviso: no
+### N-105 · Ruta como fuente de riesgo para la carga, medida — B · `Opus 5.5 · high` · Aviso: no · **[x] `661bc19`**
 
 Complementa el simulador de balance de Slatex (S-108) sin depender de él.
 
-- [ ] `tests/bench_route_shocks.gd`: grabar por tipo de tramo los impactos (delta de velocidad) y la
+- [x] `tests/bench_route_shocks.gd`: grabar por tipo de tramo los impactos (delta de velocidad) y la
   inclinación que sufre un paquete montado a velocidad de crucero. Tabla en `docs/parametros-diseno.md`:
   qué tramo produce qué nivel de golpe comparado con los umbrales de Frágil (3,0 y 7,0 m/s).
-- [ ] Si un tramo supera siempre el umbral pesado a velocidad normal (golpe inevitable), bajarle la
+- [x] Si un tramo supera siempre el umbral pesado a velocidad normal (golpe inevitable), bajarle la
   severidad: un obstáculo tiene que poder pasarse sin daño manejando con cuidado.
+- Resultado: ningún tramo golpea siempre por encima del umbral pesado; los golpes pesados son choques contra bloques o el tren. Hallazgo para diseño: badén, ripio y loma casi no golpean la carga (tabla en `docs/parametros-diseno.md`).
 
-### N-106 · Variedad de peligros sin tráfico — B · `Opus 5.5 · xhigh` · Aviso: no
+### N-106 · Variedad de peligros sin tráfico — B · `Opus 5.5 · xhigh` · Aviso: no · **[x] `467361a`**
 
 Decisión vigente (antes #76): no hay tráfico en movimiento. La variedad sale de peligros puntuales.
 
-- [ ] **N-106.1 Rebaño de ovejas** cruzando en zona de campo (reutilizar `wildlife_crossing.gd`: grupo de
+- [x] **N-106.1 Rebaño de ovejas** cruzando en zona de campo (reutilizar `wildlife_crossing.gd`: grupo de
   6-10 que se dispersa si el camión toca bocina; atropellar una multa como el ciervo).
-- [ ] **N-106.2 Perro que persigue al camión** en zona de pueblo durante 150 m, ladrando; no hace daño,
+- [x] **N-106.2 Perro que persigue al camión** en zona de pueblo durante 150 m, ladrando; no hace daño,
   distrae (y es un momento gracioso para clips).
-- [ ] **N-106.3 Piedras o ramas caídas** en el asfalto después de tormenta (solo con clima lluvia): obstáculo
+- [x] **N-106.3 Piedras o ramas caídas** en el asfalto después de tormenta (solo con clima lluvia): obstáculo
   estático que obliga a esquivar.
-- [ ] Todo determinista desde la semilla y disparado por el host, como el cruce de tren (#63 viejo).
-- [ ] Tests por peligro, patrón `test_wildlife_crossing.gd`.
+- [x] Todo determinista desde la semilla y disparado por el host, como el cruce de tren (#63 viejo).
+- [x] Tests por peligro, patrón `test_wildlife_crossing.gd`.
+- Rebaño (arranca a cruzar con el camión a 110 m, no a 45: si no, a velocidad normal pasaba antes de que llegaran al asfalto), perro de pueblo y ramas/troncos con lluvia. Modelos nuevos de oveja y perro (`build_wildlife.py`). Tests: `test_flock_crossing`, `test_chasing_dog`, `test_road_hazards`. Solo en la ruta de entrega; Endless todavía no los tiene.
 
 ### N-107 · Bocina con función — C · `Opus 5.5 · medium` · Aviso: no · **[x] `eed9809`**
 
@@ -181,7 +184,7 @@ un "evento" sin fin va a quedar colgado en su banner.
 - [x] Agregar `"incident": true` y `"duration": 0` al diccionario, y emitir `route_event_resolved(&"deer_hit",
   false, 0)` 4 s después. Así funciona con el HUD de hoy y con el de S-101 sin que ninguno de los dos
   tenga que esperar al otro.
-- [ ] Usar el mismo formato para los peligros nuevos de N-106: `WildlifeCrossing.report_incident()` ya
+- [x] Usar el mismo formato para los peligros nuevos de N-106: `WildlifeCrossing.report_incident()` ya
   lo arma (se cierra solo aunque el tramo se haya borrado). Se tilda con N-106.
 - [x] Test en `test_wildlife_crossing.gd`: tras el choque se emite el resuelto.
 
@@ -194,47 +197,51 @@ Pendiente del #81 viejo: motor, impacto y chirrido se rutean Interior/Exterior s
   igual que los demás. Test en `test_audio_bus_routing.gd`. (Se expuso: el nodo se llama `HornAudio` y
   la presentación lo rutea con los demás.)
 
-### N-204 · FPS reales con GPU — A · `Opus 5.5 · medium` · Aviso: no
+### N-204 · FPS reales con GPU — A · `Opus 5.5 · medium` · Aviso: no · **[x] `90ecef4`**
 
 El #93 viejo midió CPU/física en headless; el costo de dibujado nunca se midió.
 
-- [ ] Correr `tests/bench_drive.gd` **con ventana** (agente `revisor-visual`) en la PC de desarrollo, en las
+- [x] Correr `tests/bench_drive.gd` **con ventana** (agente `revisor-visual`) en la PC de desarrollo, en las
   tres horas del día y con lluvia, en entrega y Endless. Anotar FPS promedio, 1 % más bajo y draw calls
   (`Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`).
 - [ ] Meta: 60 FPS estables a 1080p en la PC de desarrollo y ≥ 45 FPS con el preset bajo (N-205).
-- [ ] Resultado en README → Rendimiento, con la PC usada.
+- [x] Resultado en README → Rendimiento, con la PC usada.
+- Medido el 2026-09-24 (tabla en README → Rendimiento): reparto 139-164 FPS, 1 % más bajo 85-104; Endless 312-393. Queda abierto medir el preset bajo en una PC modesta (no hay una a mano).
 
-### N-205 · Presets de calidad gráfica — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd` y `options_panel.gd` de Slatex, una fila)
+### N-205 · Presets de calidad gráfica — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd` y `options_panel.gd` de Slatex, una fila) · **[x] `7151f84`**
 
-- [ ] `scripts/presentation/world_quality.gd` (estático): tres niveles que ajustan distancia de sombras,
+- [x] `scripts/presentation/world_quality.gd` (estático): tres niveles que ajustan distancia de sombras,
   distancia de dibujado del decorado (`dressing_batcher.gd`), densidad de plantas, partículas de polvo y
   lluvia, y resolución de escala 3D.
-- [ ] Guardar la elección en `GameSettings` (clave nueva, sin cambiar las existentes) y una fila
+- [x] Guardar la elección en `GameSettings` (clave nueva, sin cambiar las existentes) y una fila
   "Calidad gráfica" en `options_panel.gd`. Son 10-15 líneas en archivos de Slatex: aviso.
-- [ ] Test: cada nivel aplica sus valores y se puede cambiar en caliente.
+- [x] Test: cada nivel aplica sus valores y se puede cambiar en caliente.
+- Sin densidad de plantas: el decorado sale del RNG compartido de la sesión y poner menos en una máquina movería el mundo de los demás. Aviso en `colaboracion-equipo.md`.
 
-### N-206 · Endless con curvas reales — B · `Opus 5.5 · xhigh` · Aviso: no
+### N-206 · Endless con curvas reales — B · `Opus 5.5 · xhigh` · Aviso: no · **[x] `90ecef4`**
 
 Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 
-- [ ] **N-206.1** Pasar el streamer a un cursor `Transform3D` como `route.gd` (#110 viejo): cada tramo nuevo
+- [x] **N-206.1** Pasar el streamer a un cursor `Transform3D` como `route.gd` (#110 viejo): cada tramo nuevo
   se arma en la pose de salida del anterior.
-- [ ] **N-206.2** Lookahead y borrado por distancia **a lo largo del camino** (acumulada), no por Z.
-- [ ] **N-206.3** Evitar que el camino se cruce consigo mismo: si el rumbo acumulado se aleja más de 120° del
+- [x] **N-206.2** Lookahead y borrado por distancia **a lo largo del camino** (acumulada), no por Z.
+- [x] **N-206.3** Evitar que el camino se cruce consigo mismo: si el rumbo acumulado se aleja más de 120° del
   inicial, el próximo `CurveSegment` dobla hacia el otro lado.
-- [ ] **N-206.4** La red de "fuera de la ruta" de `level_endless.gd` pasa a medir distancia al camino.
-- [ ] Tests `test_route_streaming.gd` y `test_level_endless.gd` ampliados: 5 km simulados sin cruces, nodos
+- [x] **N-206.4** La red de "fuera de la ruta" de `level_endless.gd` pasa a medir distancia al camino.
+- [x] Tests `test_route_streaming.gd` y `test_level_endless.gd` ampliados: 5 km simulados sin cruces, nodos
   acotados.
+- El rumbo se limita a 80° de −Z (como `route.gd`) en lugar de "doblar al otro lado pasados 120°": así el camino siempre avanza y nunca puede cruzarse.
 
-### N-207 · Prueba de red con 3 jugadores — A · `Opus 5.5 · xhigh` · Aviso: no
+### N-207 · Prueba de red con 3 jugadores — A · `Opus 5.5 · xhigh` · Aviso: no · **[x] `2f5096a`**
 
 `plan-desarrollo.md` Fase 4 lo marca como lo que falta para cerrarla.
 
-- [ ] `tests/net_trio.gd` sobre el patrón de `tests/net_smoke.gd`: un host y dos clientes ENet en localhost.
-- [ ] Chequear que los tres tienen el mismo `world_seed`, la misma cantidad de casas, la misma lista de
+- [x] `tests/net_trio.gd` sobre el patrón de `tests/net_smoke.gd`: un host y dos clientes ENet en localhost.
+- [x] Chequear que los tres tienen el mismo `world_seed`, la misma cantidad de casas, la misma lista de
   pedidos, un hash igual de la ruta generada (posición de cada tramo y casa), y la misma fase del cruce de
   tren cuando el host lo dispara. Un cliente que entra tarde recibe todo igual.
-- [ ] `tools/run-net-trio.sh` que lanza los tres y junta los códigos de salida.
+- [x] `tools/run-net-trio.sh` que lanza los tres y junta los códigos de salida.
+- Pasa con el segundo cliente entrando 6 s tarde; el host elige una semilla con cruce de tren. Un crash del motor al cerrar después de reportar cuenta como "cierre inestable", como en `run-tests.sh`.
 
 ### N-208 · Camión del host suave en los clientes — B · `Opus 5.5 · xhigh` · Aviso: no
 
@@ -243,6 +250,7 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 - [ ] Si hay saltos visibles (> 10 cm por frame a velocidad de crucero), sumar interpolación con un buffer de
   100 ms para la pose replicada en clientes. Nunca predicción de física en el cliente (el host manda).
 - [ ] Test con el retraso: la pose mostrada no salta más que el umbral.
+- **En espera (2026-09-24):** implica cambiar cómo se replica el camión y sobre qué viajan los pasajeros (`player.gd`), que estaba en obra en otra sesión. Retomar con ese archivo quieto.
 
 ### N-209 · Unificar lo común entre nivel de entrega y Endless — C · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`)
 
@@ -253,6 +261,7 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 - [ ] Hacerlo en un solo commit chico, avisado, con toda la batería verde. Si Slatex está tocando
   `level_base.gd` esa semana (su S-203 / S-209), coordinar el orden en el chat; no es bloqueante: el que
   llega segundo hace merge.
+- **En espera (2026-09-24):** refactor de `level_base.gd` (de Slatex), prioridad C; mejor en una semana sin cambios de Slatex en ese archivo.
 
 ### N-210 · Builds de exportación automáticas — B · `Opus 5.5 · high` · Aviso: no
 
@@ -361,28 +370,31 @@ Cierra el #83 viejo sin depender del oído.
   RMS, impactos −14 pico, ambiente −28 RMS, lluvia −24).
 - [ ] Tabla antes/después en `docs/direccion-visual.md` (audio) o `docs/audio.md` si Slatex ya lo creó.
 
-### N-405 · Sonidos de los peligros nuevos — C · `Opus 5.5 · medium` · Aviso: no
+### N-405 · Sonidos de los peligros nuevos — C · `Opus 5.5 · medium` · Aviso: no · **[x] `467361a`**
 
-- [ ] Balido de ovejas, ladrido, golpe de rama, sintetizados, para N-106.
+- [x] Balido de ovejas, ladrido, golpe de rama, sintetizados, para N-106.
 
 ---
+- Ladrido y balido sintetizados (`dog_bark()`, `sheep_bleat()`); el golpe de rama es el golpe normal del camión. Aviso por `synth_audio.gd`.
 
 ## 5. UI / UX (en el mundo)
 
 La UI de pantalla es de Slatex. Nacho se encarga de la guía **dentro del mundo**, que no necesita
 tocar el HUD.
 
-### N-501 · Saber de lejos qué casa espera entrega — A · `Opus 5.5 · high` · Aviso: no
+### N-501 · Saber de lejos qué casa espera entrega — A · `Opus 5.5 · high` · Aviso: no · **[x] `a4b6803`**
 
-- [ ] La casa que espera paquete tiene: porche encendido, buzón con su número grande, y un cartel en el jardín
+- [x] La casa que espera paquete tiene: porche encendido, buzón con su número grande, y un cartel en el jardín
   con el código de la caja que espera (el mismo de la pizarra del depósito, `A-3`). Al resolverse, se apaga.
-- [ ] Visible a 120 m de día y de noche. Captura con `revisor-visual`.
+- [x] Visible a 120 m de día y de noche. Captura con `revisor-visual`.
+- Ajustado en cuatro pasadas de revisión visual: globo naranja sobre el techo (de día, a 120 m), halo de la luz del porche (de noche), cartel en V a 40°, número del buzón en los costados, líneas de visión despejadas en los últimos 120 m, 3 m de jardín delante de cada casa y ningún túnel justo después de una casa.
 
-### N-502 · GPS en el tablero (UI diegética) — B · `Opus 5.5 · high` · Aviso: no
+### N-502 · GPS en el tablero (UI diegética) — B · `Opus 5.5 · high` · Aviso: no · **[x] `67e8abc`**
 
-- [ ] Pantallita en el tablero del camión (`SubViewport` o `Label3D`) con distancia a la próxima casa, flecha
+- [x] Pantallita en el tablero del camión (`SubViewport` o `Label3D`) con distancia a la próxima casa, flecha
   de dirección y el código de la caja que espera. Solo lee datos de `route.gd` y de la asignación de casas.
-- [ ] En Endless muestra la distancia recorrida y el récord.
+- [x] En Endless muestra la distancia recorrida y el récord.
+- Reemplaza a la radio en el centro del tablero, inclinado hacia el ojo del conductor; `check_driver_sightline` sigue pasando.
 
 ### N-503 · Señalización del depósito — A · `Opus 5.5 · medium` · Aviso: no
 
@@ -467,16 +479,17 @@ Complementa la S-509 de Slatex sin esperarla.
 
 ## 8. QA (sin playtesting)
 
-### N-801 · Fuzz de generación de ruta — A · `Opus 5.5 · high` · Aviso: no
+### N-801 · Fuzz de generación de ruta — A · `Opus 5.5 · high` · Aviso: no · **[x] `38ca576`**
 
-- [ ] `tests/test_route_fuzz.gd`: 500 semillas × 1-4 casas. Falla si: el camino se cruza consigo mismo,
+- [x] `tests/test_route_fuzz.gd`: 500 semillas × 1-4 casas. Falla si: el camino se cruza consigo mismo,
   una casa o su jardín queda sobre el asfalto, un árbol sólido queda a menos de 2 m del carril, dos tramos se
   superponen, el terreno bajo el asfalto tiene un escalón de más de 0,3 m, o la meta queda inalcanzable.
-- [ ] Guardar las semillas que fallaron en el mensaje, para reproducir.
+- [x] Guardar las semillas que fallaron en el mensaje, para reproducir.
+- Las 500 × 4 del cruce se revisan sobre el plan (rápido); las comprobaciones que necesitan geometría, sobre 20 rutas construidas.
 
-### N-802 · Determinismo entre jugadores — A · `Opus 5.5 · high` · Aviso: no
+### N-802 · Determinismo entre jugadores — A · `Opus 5.5 · high` · Aviso: no · **[x] `38ca576`**
 
-- [ ] Test de un solo proceso: armar la ruta, el decorado y el depósito dos veces con la misma semilla y
+- [x] Test de un solo proceso: armar la ruta, el decorado y el depósito dos veces con la misma semilla y
   comparar un hash de todas las posiciones. Cualquier `randf()` sin la semilla de sesión lo rompe (fue el bug
   del #122 viejo).
 

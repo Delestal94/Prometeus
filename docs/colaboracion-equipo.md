@@ -38,6 +38,25 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: presets de calidad gráfica (2026-09-24)
+
+Tareas de Nacho N-205. Archivos de Slatex tocados, solo agregando:
+- `core/game_settings.gd`: clave nueva `graphics_quality` (Baja / Media / Alta, por defecto
+  Alta), guardada con las demás y en `reset_to_defaults()`; al cambiar llama a
+  `WorldQuality.apply()`, y `_ready()` deja a `WorldQuality` mirando lo que se agrega al árbol.
+  Ninguna clave existente cambió.
+- `ui/options_panel.gd`: una fila "Calidad gráfica" (slider de 3 pasos que muestra el nombre del
+  nivel) debajo de "Pantalla completa", y su línea en `_sync_from_settings()`.
+- Lo nuevo es de Nacho: `presentation/world_quality.gd` (sombras, distancia de dibujado del
+  decorado, partículas y escala 3D; no la cantidad de plantas, que movería el mundo compartido).
+  Test: `test_world_quality`.
+
+## Aviso activo: sonidos nuevos en synth_audio.gd (2026-09-24)
+
+Tareas de Nacho N-106/N-405, zona compartida: `presentation/synth_audio.gd` gana
+`dog_bark()` y `sheep_bleat()` al final del archivo, con el mismo patrón `_cached()` que el
+resto. No se tocó ninguna función existente.
+
 ## Aviso activo: personaje redondeado de Astra como cuerpo del jugador (2026-09-24)
 
 Pedido del usuario: usar en el juego el personaje que hizo Astra
