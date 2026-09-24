@@ -13,9 +13,8 @@ extends Node3D
 ## needed to change; only the chaining and the dressing (forest/props, which
 ## used to assume "the road is the Z axis") needed to become curve-aware.
 ##
-## Deliberately NOT extended to modo endless (RouteStreamer) in this pass --
-## that's still a straight-line streaming/culling system, and making ITS
-## lookahead/cull math curve-aware is a separate, riskier follow-up.
+## Modo endless (RouteStreamer) chains its segments the same way since
+## N-206, streaming and culling along the road instead of along -Z.
 
 signal delivery_entered
 signal delivery_exited

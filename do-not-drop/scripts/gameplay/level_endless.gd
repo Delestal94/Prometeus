@@ -19,6 +19,9 @@ extends Node3D
 ## which fires from inside RunManager itself, not from this file.
 
 const LOST_CARGO_DISTANCE: float = 8.0
+## How far off the road's centre line counts as having left it. Measured
+## from the road itself (RouteStreamer.distance_from_path()), since Endless
+## bends now (N-206) -- it used to be |x|, when the road was the Z axis.
 const OUT_OF_BOUNDS_X: float = 42.0
 ## #97's automated bug bash found a real gap: driving unbraked into repeated
 ## SpeedBumpSegments at sustained top speed can launch the van hard enough
@@ -45,7 +48,8 @@ var packages: Array[DeliveryPackage] = []
 var tipped_seconds: float = 0.0
 var _driver_seated: bool = false
 var _streaming_started: bool = false
-var _last_vehicle_z: float = 0.0
+## Furthest along the road the truck has been (RouteStreamer.distance_along()).
+var _best_distance: float = 0.0
 ## Public, meters -- how far the van has actually driven this run. Reset in
 ## _ready(), only advances while RunManager.is_running.
 var distance_traveled: float = 0.0
@@ -215,7 +219,7 @@ func start_delivery() -> void:
 			loaded.append(package)
 	RunManager.start_run(RunManager.MODE_ENDLESS)
 	depot.begin_run(vehicle, loaded)
-	_last_vehicle_z = vehicle.global_position.z
+	_best_distance = 0.0
 	distance_traveled = 0.0
 	_stuck_seconds = 0.0
 	_streamer.start(vehicle)
@@ -245,11 +249,10 @@ func toggle_pause() -> void:
 func _physics_process(delta: float) -> void:
 	if not RunManager.is_running:
 		return
-	# Route moves toward -Z, same convention as route.gd's get_progress().
-	# Counted from the start line (z = 0): the way out of the depot is free.
-	var current_z: float = minf(vehicle.global_position.z, 0.0)
-	distance_traveled += maxf(minf(_last_vehicle_z, 0.0) - current_z, 0.0)
-	_last_vehicle_z = current_z
+	# Along the road, from the start line (the way out of the depot is free);
+	# only new ground counts, so reversing and coming back adds nothing.
+	_best_distance = maxf(_best_distance, _streamer.distance_along(vehicle.global_position))
+	distance_traveled = _best_distance
 	RunManager.current_distance = distance_traveled
 	# Clients follow the run for the HUD; how it ends is the host's call.
 	if not NetworkManager.is_host():
@@ -265,7 +268,7 @@ func _physics_process(delta: float) -> void:
 		_stuck_seconds = 0.0
 	if tipped_seconds > 4.0:
 		RunManager.finish_run(false, "La camioneta volcó. Tomá las curvas más despacio.")
-	elif vehicle.global_position.y < -8.0 or absf(vehicle.global_position.x) > OUT_OF_BOUNDS_X:
+	elif vehicle.global_position.y < -8.0 or _streamer.distance_from_path(vehicle.global_position) > OUT_OF_BOUNDS_X:
 		RunManager.finish_run(false, "Te saliste de la ruta. Reiniciá para intentarlo de nuevo.")
 	elif _stuck_seconds > STUCK_SECONDS:
 		RunManager.finish_run(false, "La camioneta quedó atascada contra la ruta. Reiniciá para intentarlo de nuevo.")

@@ -14,7 +14,7 @@ func _initialize() -> void:
 func _hard_share(streamer: Node, at_distance: float, picks: int) -> float:
 	var hard: int = 0
 	for _i: int in range(picks):
-		streamer.set(&"_next_z", -at_distance)
+		streamer.set(&"_next_distance", at_distance)
 		var script: Script = streamer.call(&"_pick_next_script")
 		streamer.set(&"_last_script", script)
 		streamer.set(&"_hard_streak", int(streamer.get(&"_hard_streak")) + 1 if (streamer.get(&"hard_segments") as Array).has(script) else 0)
@@ -35,7 +35,7 @@ func _run() -> void:
 	var worst: int = 0
 	streamer.set(&"_hard_streak", 0)
 	for _i: int in range(4000):
-		streamer.set(&"_next_z", -3000.0)
+		streamer.set(&"_next_distance", 3000.0)
 		var script: Script = streamer.call(&"_pick_next_script")
 		streamer.set(&"_last_script", script)
 		streak = streak + 1 if (streamer.get(&"hard_segments") as Array).has(script) else 0

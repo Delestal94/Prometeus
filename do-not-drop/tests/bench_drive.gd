@@ -7,11 +7,16 @@ extends SceneTree
 ## hitch (frame > HITCH_MS) with what was going on, so a stutter can be traced
 ## to rendering, physics or a script instead of guessed at.
 ## Optional user args: -- --seconds=60 --seed=1234 --hitch=33
+## --endless drives Endless instead (level_endless.tscn), following the
+## streamed road's own centre line (RouteStreamer.point_at()).
+## --mood=lluvia_noche (world_mood.gd) forces the weather and time of day.
 ## With --headless and -- --cpu-only it measures scripts + physics alone.
 ## --experiment=noshadow|shadow2|noplants|nodress switches one cost off to
 ## measure what it's worth.
 
 var HITCH_MS: float = 33.0
+var _endless: bool = false
+var _endless_best: float = -INF
 const LOOKAHEAD: float = 14.0
 
 var _level: Node3D
@@ -64,11 +69,13 @@ func _run() -> void:
 	if _arg("experiment", "").contains("fti"):
 		physics_interpolation = true
 	var build_start: int = Time.get_ticks_usec()
-	_level = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	_endless = "--endless" in OS.get_cmdline_user_args()
+	_level = load("res://scenes/gameplay/level_endless.tscn" if _endless else "res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(_level)
 	current_scene = _level
 	var build_ms: float = (Time.get_ticks_usec() - build_start) / 1000.0
-	_route = _level.get_node(^"World/Route")
+	# Endless has no Route: the experiments below that need one skip it.
+	_route = _level.get_node_or_null(^"World/Route")
 	_van = _level.vehicle
 	for _i: int in range(3):
 		await process_frame
@@ -79,14 +86,14 @@ func _run() -> void:
 	if experiment.contains("noshadow"):
 		for light: Node in _level.find_children("*", "DirectionalLight3D", true, false):
 			(light as DirectionalLight3D).shadow_enabled = false
-	if experiment.contains("noplants") or experiment.contains("nodress"):
+	if _route != null and (experiment.contains("noplants") or experiment.contains("nodress")):
 		for group: Node in _route.find_children("*Dressing", "Node3D", true, false):
 			if experiment.contains("nodress") or group.name == "ForestDressing":
 				group.queue_free()
-	if experiment.contains("nohouses"):
+	if _route != null and experiment.contains("nohouses"):
 		for house: Node in _route.get(&"houses"):
 			(house as Node3D).visible = false
-	if experiment.contains("nosegvis"):
+	if _route != null and experiment.contains("nosegvis"):
 		for segment: Node in _route.get(&"_segments"):
 			for mesh: Node in segment.find_children("*", "MeshInstance3D", true, false):
 				(mesh as Node3D).visible = false
@@ -103,8 +110,9 @@ func _run() -> void:
 	var bus: Node = root.get_node(^"/root/EventBus")
 	if bus.is_connected(&"package_ruined", ruined):
 		bus.disconnect(&"package_ruined", ruined)
-	_path.assign(_route.get(&"_path_points"))
-	print("BENCH build_ms=%.0f nodes=%d path_points=%d route_length=%.0f" % [build_ms, Performance.get_monitor(Performance.OBJECT_NODE_COUNT), _path.size(), float(_route.get(&"route_length"))])
+	if _route != null:
+		_path.assign(_route.get(&"_path_points"))
+	print("BENCH mode=%s mood=%s build_ms=%.0f nodes=%d path_points=%d route_length=%.0f" % ["endless" if _endless else "delivery", str(WorldMood.active.get("label", "")), build_ms, Performance.get_monitor(Performance.OBJECT_NODE_COUNT), _path.size(), float(_route.get(&"route_length")) if _route != null else 0.0])
 	physics_frame.connect(_drive)
 	var first_frame_start: int = Time.get_ticks_usec()
 	var first_ms: float = 0.0
@@ -154,6 +162,9 @@ func _run() -> void:
 func _drive() -> void:
 	if _physics_start_usec < 0:
 		_physics_start_usec = Time.get_ticks_usec()
+	if _endless:
+		_drive_endless()
+		return
 	if _path.is_empty():
 		return
 	var here: Vector3 = _route.to_local(_van.global_position)
@@ -181,6 +192,29 @@ func _drive() -> void:
 	var target: Vector3 = _route.to_global(_path[_path_index])
 	var local: Vector3 = _van.global_transform.affine_inverse() * target
 	# Front is -Z; positive steer input turns right (+X).
+	var steer: float = clampf(atan2(local.x, -local.z) * 2.2, -1.0, 1.0)
+	_van.call(&"set_controls", 1.0, steer, false)
+
+
+## Endless: follow the streamed road's centre line, and past a chicane it
+## can't weave, hop the truck 20 m on.
+func _drive_endless() -> void:
+	var streamer: RouteStreamer = _level.get_node(^"World/RouteStreamer")
+	var along: float = streamer.distance_along(_van.global_position)
+	_stuck_seconds += 1.0 / Engine.physics_ticks_per_second
+	if along > _endless_best + 1.0:
+		_endless_best = along
+		_stuck_seconds = 0.0
+	if _stuck_seconds > 2.0:
+		_stuck_seconds = 0.0
+		_rescues += 1
+		var at: Vector3 = streamer.point_at(along + 20.0)
+		var ahead: Vector3 = streamer.point_at(along + 25.0)
+		_van.global_transform = Transform3D(Basis.looking_at(ahead - at, Vector3.UP), at + Vector3.UP * 1.2)
+		_van.linear_velocity = (ahead - at).normalized() * 12.0
+		_van.angular_velocity = Vector3.ZERO
+		_van.reset_physics_interpolation()
+	var local: Vector3 = _van.global_transform.affine_inverse() * streamer.point_at(along + LOOKAHEAD)
 	var steer: float = clampf(atan2(local.x, -local.z) * 2.2, -1.0, 1.0)
 	_van.call(&"set_controls", 1.0, steer, false)
 
