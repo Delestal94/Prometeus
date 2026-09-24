@@ -28,8 +28,14 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code local settings (herramienta, no proyecto)
-.claude/
+# Claude Code: agentes, skills, hooks y settings.json son del proyecto y se
+# versionan; lo personal de cada uno (settings.local.json) y lo que genera la
+# herramienta en cada sesión, no.
+.claude/*
+!.claude/agents/
+!.claude/skills/
+!.claude/hooks/
+!.claude/settings.json
 .codex/
 
 # Godot's native-library hot-reload backup files

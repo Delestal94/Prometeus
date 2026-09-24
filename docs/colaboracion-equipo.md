@@ -1,6 +1,6 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-23
+> Última actualización: 2026-09-24
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
@@ -36,6 +36,26 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/gameplay/interaction/`
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
+
+## Aviso activo: configuración de Claude Code compartida e import arreglado (2026-09-24)
+
+Pedido del usuario: MCP, skills y hooks para el repo. Lo hizo Nacho (con Claude).
+- **`.claude/` ahora se versiona** (agentes, skills, hooks, `settings.json`). Si tenías
+  agentes propios en `.claude/agents/`, `git pull` va a quejarse de archivos sin
+  seguimiento: movelos a otro lado, pulleá y compará. Lo personal va en
+  `.claude/settings.local.json`.
+- Hooks: chequeo de GDScript al editar, bloqueo de `*.uid`/`*.import`/`.godot/`,
+  confirmación al tocar el dominio del otro (`TMP_DUENO`) e instalación de Godot en la
+  nube. Skills `cerrar-cambio` y `nuevo-test`. MCP de Godot en `.mcp.json`.
+- **Import headless arreglado**: `assets/tools/char_player_lowpoly_source.blend` hacía
+  abortar `godot --import` sin editor ("Blender path is invalid"), así que en un clon
+  nuevo (y en CI) no se importaba nada y la batería fallaba en cadena. Nuevo
+  `do-not-drop/assets/tools/.gdignore`: Godot ya no escanea esa carpeta (son scripts de
+  Blender y el `.blend` fuente, el juego no los carga).
+- Con eso quedan 3 fallas reales en `main`, sin tocar: `test_house_delivery_flow`
+  (puntos de puerta 150 vs 175 y la foto en resultados), `test_new_route_segments`
+  (`ConstructionBarrier`) y `test_seated_body` (altura de `BodyVisual` en el asiento).
+- Los scripts de `.githooks/` y `tools/` se suben ya con permiso de ejecución.
 
 ## Aviso activo: partida retransmitida, trampas bloqueadas y tests en el push (2026-09-23)
 
