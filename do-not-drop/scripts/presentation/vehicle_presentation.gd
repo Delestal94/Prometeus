@@ -89,6 +89,10 @@ var _horn_hand_rest: Vector3
 var _horn_press: float = 0.0
 const HORN_PRESS_SECONDS: float = 0.45
 const HORN_HAND_AT := Vector3(0.03, 0.05, -0.02)
+const DRIVER_GLOVES: Array[PackedScene] = [
+	preload("res://assets/models/characters/sm_char_viewmodel_glove_left.glb"),
+	preload("res://assets/models/characters/sm_char_viewmodel_glove_right.glb"),
+]
 
 
 func _ready() -> void:
@@ -228,18 +232,13 @@ func _build_driver_hands() -> void:
 	_driver_hands = Node3D.new()
 	_driver_hands.name = "DriverHands"
 	steering_wheel.add_child(_driver_hands)
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("83e2ba")
-	material.roughness = 0.82
-	for side: float in [-1.0, 1.0]:
-		var hand := MeshInstance3D.new()
-		var mesh := CapsuleMesh.new()
-		mesh.radius = 0.055
-		mesh.height = 0.24
-		hand.mesh = mesh
-		hand.material_override = material
+	for index: int in range(DRIVER_GLOVES.size()):
+		var side: float = -1.0 if index == 0 else 1.0
+		var hand := DRIVER_GLOVES[index].instantiate() as Node3D
+		hand.name = "DriverGloveLeft" if side < 0.0 else "DriverGloveRight"
 		hand.position = Vector3(side * 0.19, 0.0, -0.03)
 		hand.rotation_degrees = Vector3(78, 0, side * 38)
+		hand.scale = Vector3.ONE * 0.26
 		_driver_hands.add_child(hand)
 		if side > 0.0:
 			_horn_hand = hand
