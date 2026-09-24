@@ -151,6 +151,7 @@ func _apply_identity(package: Node) -> void:
 	# Box GLBs sit on their base; the package's origin is its centre.
 	model.position.y = -shape_size.y * 0.5
 	_box.add_child(model)
+	_add_cardboard_details(shape_size)
 	_build_shelf_straps(shape_size)
 	_adopt_box_material(model)
 	var collider: CollisionShape3D = package.get_node_or_null(^"CollisionShape3D") as CollisionShape3D
@@ -161,6 +162,20 @@ func _apply_identity(package: Node) -> void:
 	_add_shipping_label(package, shipping_data, shape_size)
 	_add_dent_pieces(shape_size * 0.5)
 	_build_outline(shape_size)
+
+
+func _add_cardboard_details(size: Vector3) -> void:
+	# Raised tape and four lid flaps break the perfectly smooth cube silhouette.
+	var tape := _box_piece(Vector3(size.x * 0.22, 0.012, size.z + 0.025), Color("c99a55"))
+	tape.name = "PackingTape"
+	tape.position.y = size.y * 0.5 + 0.007
+	_box.add_child(tape)
+	for side: float in [-1.0, 1.0]:
+		var flap := _box_piece(Vector3(size.x * 0.46, 0.014, size.z * 0.22), Color("ad7a42"))
+		flap.name = "CardboardFlap"
+		flap.position = Vector3(0.0, size.y * 0.5 + 0.011, side * size.z * 0.27)
+		flap.rotation.x = side * 0.12
+		_box.add_child(flap)
 
 
 ## An inverted hull: a plain box a hair larger than the box body, drawn

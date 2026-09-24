@@ -22,7 +22,7 @@
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 1 | Identidad visual por trampa: Frágil con símbolos de copa rota, Ruidoso con agujeros de ventilación, Equilibrio alto y angosto, Peso Creciente bajo y macizo — hoy las 4 son la misma caja con distinto color y texto. Es la mecánica central: tiene que reconocerse de un vistazo. (#17) | B | ✅ Hecho (`af4856d`, cajas por trampa en `c77194f`) |
-| 2 | Detalle de cartón en los paquetes: solapas, cinta, etiquetas, abolladuras. (#18) | B | ✅ Hecho: solapas, cinta, etiquetas y abolladuras (`test_package_identity`) |
+| 2 | Detalle de cartón en los paquetes: solapas, cinta, etiquetas, abolladuras. (#18) | B | ✅ Hecho (`package_feedback.gd`: solapas, cinta, etiqueta y abolladuras) |
 
 ## Jugador — modelado (3-4)
 
