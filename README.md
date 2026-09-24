@@ -207,6 +207,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_render_batching.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_assignment.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_waiting_marker.gd
+<godot> --headless --path do-not-drop --script res://tests/test_run_ends_at_goal.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_duration_budget.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_pacing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_handling.gd
@@ -473,6 +474,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   su entrega (o se pasa de largo) se apaga y se baja, y no toca a las demás casas.
   Capturas a 120 m, 40 m y del jardín (con ventana): `tests/render_house_waiting.gd`
   `-- --mood=soleado_dia` / `--mood=soleado_noche`.
+- `test_run_ends_at_goal` — la entrega termina en la meta, no en la última casa: con todas
+  las casas hechas la partida sigue, y termina (entregada) al detener el camión en la zona
+  de la meta.
 - `test_route_duration_budget` — la regla de oro de 2-5 minutos por entrega, sin manejar:
   con 1 a 4 casas, el largo de tramo que planea `route.gd` (presupuesto de tiempo, más
   corto con más casas) y la ruta que construye de verdad para varias semillas duran

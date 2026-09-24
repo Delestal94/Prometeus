@@ -38,6 +38,17 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: la entrega vuelve a terminar en la meta (2026-09-24)
+
+Decisión del usuario. `gameplay/level_base.gd` (de Slatex): la partida termina otra vez al
+detener el camión en la zona de la meta (`STOP_SECONDS`), como antes de `edbf90c`; entregar
+en todas las casas ya no la termina, ni tampoco alejarse de la última (`8945086`, se sacó
+`_all_houses_done_and_leaving()`). Por qué: el HUD seguía mostrando la distancia a la meta,
+y el presupuesto de 2-5 minutos de `route.gd` (N-102) cuenta el último tramo hasta la meta;
+sin él, una entrega de una casa duraba ~1,2 min. La foto de la última casa tiene todo el
+tramo final para sacarse. Llegar a la meta sigue dando por perdida la casa que nadie tocó.
+Test nuevo: `test_run_ends_at_goal`.
+
 ## Aviso activo: presets de calidad gráfica (2026-09-24)
 
 Tareas de Nacho N-205. Archivos de Slatex tocados, solo agregando:

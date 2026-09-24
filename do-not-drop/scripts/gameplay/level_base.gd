@@ -186,17 +186,6 @@ func _on_house_resolved(house_index: int, outcome: StringName, package_id: Strin
 	RunManager.register_delivery(house_index, outcome, package_id)
 
 
-## A stop is where the crew gets out, hands over one box and gets back in.
-## The run ends once every house is done and the truck drives off from the
-## last one -- not the instant the last box is handed over, which left no
-## time for the delivery photo at that door.
-const DRIVE_OFF_KMH: float = 3.0
-
-
-func _all_houses_done_and_leaving() -> bool:
-	return (RunManager.expected_houses > 0 and RunManager.deliveries.size() >= RunManager.expected_houses
-		and int(vehicle.get(&"driver_peer_id")) != 0 and float(vehicle.get(&"speed_kmh")) > DRIVE_OFF_KMH)
-
 
 func _on_driver_seated(_player: Node) -> void:
 	_driver_seated = true
@@ -284,7 +273,11 @@ func _physics_process(delta: float) -> void:
 	# Clients follow the run for the HUD; how it ends is the host's call.
 	if not NetworkManager.is_host():
 		return
-	if _all_houses_done_and_leaving():
+	# The run ends at the goal (stopped in its zone for STOP_SECONDS), not at
+	# the last house: every house is one stop on the way, and the last leg to
+	# the goal is part of the 2-5 minute delivery (route.gd's time budget).
+	# Reaching the goal also settles any house nobody rang (route.gd).
+	if stopped_seconds >= STOP_SECONDS:
 		RunManager.finish_run(true)
 		return
 	_check_lost_cargo()
