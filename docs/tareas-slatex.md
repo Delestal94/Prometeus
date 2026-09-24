@@ -836,3 +836,17 @@ S-805 y los objetivos de S-108.
   eventos de ruta sin resolución (S-101), mérito que nadie otorga (S-102), cartas sin uso (S-103),
   votación que nunca se abre (S-104), campaña que no se guarda (S-105), contenidos repetidos entre
   trampas (S-302), íconos faltantes para 3 trampas (S-301).
+
+## Modelado pendiente (101-106) — relevamiento 2026-09-23
+
+> Anotado por Nacho al relevar el modelado pendiente de todo el juego; detalle en
+> `docs/inventario-assets.md` §10. Son sugerencias para tu dominio: reordenalas o descartalas.
+
+| # | Tarea | Prio | Estado |
+|---|---|---|---|
+| 101 | Ragdoll con el modelo del jugador (huesos del rig) en vez de cápsulas sueltas (`player_ragdoll.gd`). | B | Pendiente |
+| 102 | Maniquí del panel de cosméticos con el modelo del jugador en vez de cápsula + esfera (`cosmetics_panel.gd`), para que la vista previa muestre lo que se va a ver en juego. | A | Pendiente |
+| 103 | Accesorios cosméticos con geometría (gorras, chalecos), cuando se retome la decisión del #76. | C | Pendiente |
+| 104 | Rehacer el celular (`sm_prop_phone.glb`, 92 triángulos) e integrarlo en `phone_camera.gd`, que hoy no carga ningún modelo. | B | Pendiente |
+| 105 | Borrar las cajas viejas `models/cargo/sm_cargo_package_*.glb`: sin uso desde las cajas por trampa. | A | Pendiente |
+| 106 | Revisar los ojos/tentáculos del paquete Hostil (esferas y barras en `package_feedback.gd`): ¿alcanzan como chiste o merecen un modelo? | C | Pendiente |

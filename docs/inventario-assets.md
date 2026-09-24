@@ -1,6 +1,6 @@
 # Inventario de assets — Take My Package
 
-> Última actualización: 2026-09-23 (reglas de generación, texturas, modelos refinados)
+> Última actualización: 2026-09-23 (relevamiento de modelado pendiente, sección 10)
 > Es **la lista** de assets del juego: qué existe, qué falta integrar y qué falta crear.
 > Cuando se crea o se integra algo, se actualiza acá. Complementa
 > `docs/especificaciones-visuales.md` (qué mejorar visualmente) y
@@ -51,8 +51,8 @@
 | Asset | Archivo | Estado | Notas |
 |---|---|---|---|
 | Jugador low-poly con 5 animaciones | `models/characters/sm_char_player_lowpoly.glb` | ✅ | |
-| Guantes del viewmodel (izq./der.) | `models/characters/sm_char_viewmodel_glove_{left,right}.glb` | 🟡 | Espec. #20. Origen en la muñeca, dedos a +Z. La manga usa el material `PlayerTint` para teñirla por jugador. Reemplazan las cápsulas de las manos. |
-| Celular en la mano | `models/props/handheld/sm_prop_phone.glb` | 🟡 | Pantalla hacia −Z en Godot, lente atrás. Para `phone_camera.gd`. |
+| Guantes del viewmodel (izq./der.) | `models/characters/sm_char_viewmodel_glove_{left,right}.glb` | ✅ | Espec. #20. Origen en la muñeca, dedos a +Z. La manga usa el material `PlayerTint` para teñirla por jugador. Los carga `player.gd` (`_build_viewmodel_gloves`). |
+| Celular en la mano | `models/props/handheld/sm_prop_phone.glb` | 🟡 | Pantalla hacia −Z en Godot, lente atrás. Para `phone_camera.gd`, que todavía no lo carga. Es de los más simples (92 triángulos) y se ve en primer plano: rehacerlo antes de integrarlo (sección 10). |
 | Accesorios/cosméticos (gorras, chalecos) | — | ⬜ | Fase 5 (progresión). |
 
 ## 3. Paquetes (dominio Slatex)
@@ -99,6 +99,8 @@
 | Nubes | `shaders/stylized_sky.gdshader` | ✅ | Espec. #58. Pintadas en el cielo: planas, dos tonos, se mueven despacio; `route_sky.gd` convierte el `ProceduralSkyMaterial` de cada nivel conservando sus colores. Las nubes 3D (`sm_env_sky_cloud_*`) se retiraron el 2026-09-23: con luz se veían como piedras flotando. |
 | Tanque de agua, molino | `models/environment/landmarks/sm_env_landmark_{water_tower,windmill}.glb` | ✅ | Regla `landmark`: sobre todo en zona de campo, a 42-56 m, nunca dos a menos de 170 m. El nodo `WindmillRotor` gira sobre su eje local **Z** en Godot. |
 | Bosque (6 árboles + 13 piezas de sotobosque) | `models/environment/forest/` | ✅ | |
+| Fauna: ciervo (con rig), conejo, rana, pájaro | `models/environment/wildlife/sm_env_animal_*.glb` | ✅ | Reglas de fauna en `route_dresser.gd`; el ciervo además cruza la ruta (`wildlife_crossing.gd`). |
+| Señal de cruce de animales | `models/environment/signs/sm_env_sign_animal_crossing.glb` | ✅ | Antes del cruce de fauna. |
 | Texturas de terreno | `textures/detail/tx_detail_{asphalt,earth,grass,gravel}_512.png` | ✅ | Reemplazan a `textures/terrain/*` (rayas procedurales con grilla visible, nunca se usaron). |
 | Texturas de modelos | `textures/detail/tx_detail_{wood_planks,roof_shingles,plaster,bark,foliage,stone}_512.png` | ✅ | Vía `LowpolyMaterials`; vidrios, pintura y señales quedan lisos a propósito. |
 
@@ -106,7 +108,7 @@
 
 | Asset | Archivo | Estado | Notas |
 |---|---|---|---|
-| Furgoneta de reparto (exterior, interior, puertas, espejos, tablero, asientos) | `vehicle.tscn`, `truck_reference_lowpoly.glb` | ⛔ | **Slatex la está reemplazando.** Espec. #5-#12, #14-#16: no generar hasta que termine. |
+| Furgoneta de reparto (exterior, interior, puertas, espejos, tablero, asientos) | `vehicle.tscn`, `truck_reference_lowpoly.glb` | ✅ | Modelo de Slatex, en uso vía `reference_truck.gd`. Espec. #5-#12, #14-#16 hechas salvo líneas de paneles (#8). No regenerarlo desde los scripts de lote. |
 | Autos estacionados: hatchback, pickup | `models/vehicles/sm_vehicle_parked_*.glb` | ✅ | |
 | Más autos estacionados (sedán, camioneta de reparto de la competencia), tractor | — | ⬜ | Espec. #55. |
 
@@ -140,6 +142,60 @@ orden (hitos, autos, mobiliario de pueblo, parada, mojones, cosas de campo, árb
 Determinista con la semilla de la sesión: todos los jugadores ven lo mismo. Test:
 `tests/test_route_placement_rules.gd`.
 
+## 10. Modelado pendiente y modelos a mejorar (relevamiento 2026-09-23)
+
+Salió de revisar qué geometría del juego se sigue armando en código con primitivas
+(`BoxMesh`, `CylinderMesh`, `CapsuleMesh`…) y de contar triángulos de cada GLB. Las tareas
+correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slatex.md` §101-106.
+
+### 10.1 Falta modelar (hoy son primitivas en código)
+
+| Qué | Dónde se arma hoy | Dominio | Tarea |
+|---|---|---|---|
+| Barrera de hormigón y conos de la zona de obras | `construction_zone_segment.gd` (caja de 5 m y cubos de 0,5 m) | Nacho | N-128. **Solo código:** ya existen `sm_env_prop_road_barrier.glb` y `sm_env_prop_traffic_cone.glb`. |
+| Tren del paso a nivel (locomotora + vagones) | `rail_crossing_segment.gd` `_build_train()` (cajas de 7,5×3×2,6 m) | Nacho | N-129 |
+| Paso a nivel: poste, cruz de San Andrés, luces, barrera, vías y durmientes | `rail_crossing_segment.gd` | Nacho | N-130 |
+| Túnel: paredes, techo, portal, pilares, lámparas | `tunnel_segment.gd` | Nacho | N-131 |
+| Puente angosto: tablero, postes, agua | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya existe, sin integrar) |
+| Bloques de la chicana | `chicane_segment.gd` | Nacho | N-133 |
+| Poste eléctrico | `route_dresser.gd` (cilindro de 6 lados + caja) | Nacho | N-134 |
+| Depósito: autoelevador, cinta transportadora, portón enrollable, estanterías, lámparas, ventiladores, reloj, insumos | `depot*.gd` (~160 primitivas horneadas con `depot_kit.gd`) | Nacho | N-135 |
+| Autos estacionados nuevos: sedán, camioneta de la competencia, tractor | — | Nacho | N-136 (espec. #55) |
+| Residente que abre la puerta | `delivery_house.gd` (cápsula) | Nacho | N-137 (puede reusar el modelo del jugador) |
+| Timbre / panel de puerta | `doorbell_point.gd` | Nacho | N-137 |
+| Ragdoll del jugador | `player_ragdoll.gd` (cápsulas) | Slatex | S-101 |
+| Maniquí del panel de cosméticos | `cosmetics_panel.gd` (cápsula + esfera) | Slatex | S-102 |
+| Manos del conductor en el volante | `vehicle_presentation.gd` (cápsulas) | Nacho | N-138 (usar los guantes GLB) |
+| Objetos sueltos de la zona de carga (caja de herramientas, termo) | `cargo_clutter.gd` | Nacho | N-139 |
+| Accesorios cosméticos (gorras, chalecos) | — | Slatex | S-103 |
+
+### 10.2 Modelos existentes demasiado simples
+
+Ordenados por cuánto se ven de cerca, no solo por triángulos. Low-poly es el estilo, así que
+pocos triángulos no es un defecto en sí: importa en lo que queda cerca de la cámara.
+
+| Prio | Modelo | Triángulos | Motivo | Tarea |
+|---|---|---|---|---|
+| Alta | Celular (`sm_prop_phone`) | 92 | Primer plano, en la mano | S-104 |
+| Alta | Autos estacionados hatchback / pickup | 320 / 364 | Lote viejo sin refinar; en ruta y depósito | N-136 |
+| Alta | Farol (`sm_env_prop_street_lamp`) | 132 | Muy repetido en pueblo y depósito | N-140 |
+| Media | Molino / tanque de agua | 192 / 204 | Lote viejo; hitos que se leen por silueta | N-140 |
+| Media | Buzón, mojón, cajón de madera, cono | 120–176 | Mobiliario que pasa cerca del camión | N-140 |
+| Media | Enano de jardín, felpudo | 164 / 68 | En el porche, donde se entrega | N-140 |
+| Baja | Roca, arbusto redondo, rama caída, tocón, mata de pasto | 80–192 | Variantes rinden más que detalle | N-141 |
+| Baja | Baranda de puente | 352 | Lote viejo, sin integrar | N-132 |
+
+Referencia: árboles 240–376, casas 2.300–3.400, contenidos de paquete 1.000–2.000 y el
+jugador 1.568 triángulos están bien para el estilo.
+
+### 10.3 Para limpiar
+
+- `models/cargo/sm_cargo_package_{balance,fragile,heavy,vented}.glb`: sin uso desde las cajas
+  por trampa (S-105).
+- Lote 0 en escenas nativas, sin referencias en código ni escenas:
+  `models/environment/sm_env_{fence_segment,trash_bin,tree_pine,utility_pole,warning_sign}.tscn`
+  y `models/architecture/sm_arch_delivery_house_small.tscn` (N-142).
+
 ## Próximo paso sugerido
 
 1. ~~Integrar lo 🟡 del dominio de Nacho~~ **Hecho (2026-09-23)**: tests en
@@ -150,3 +206,5 @@ Determinista con la semilla de la sesión: todos los jugadores ven lo mismo. Tes
    trampa): los assets ya están, solo falta enchufarlos.
 4. **Crear los ⬜ de mayor impacto:** el logo (lo necesitan menú, splash y Steam), los íconos
    de acción del HUD y el timbre.
+5. **Modelado (sección 10):** primero N-128 (conos y barrera de obras, solo código), después
+   el tren y el paso a nivel (N-129/N-130), el celular (S-104) y los autos (N-136).
