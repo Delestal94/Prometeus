@@ -1,6 +1,6 @@
 # Tareas de Slatex — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-23 (estado sincronizado con `6f4ec56`)
+> Última actualización: 2026-09-23 (estado sincronizado con `680001a`)
 > Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
 > compartida. Las tareas 1-32 vienen directo de `docs/especificaciones-visuales.md`
 > (número original entre paréntesis); 33-100 son backlog nuevo del proyecto,
@@ -12,10 +12,12 @@
 > Estado: ✅ hecho · 🟡 parcial · Pendiente. Entre paréntesis, el commit o
 > archivo donde quedó hecho.
 
-> Límite actual: `UnlockManager` registra Líquido, Explosivo y Hostil como
-> desbloqueos, pero los siete paquetes ya están instanciados en el nivel y
-> todavía no se filtran por perfil. El progreso local de clientes de red
-> tampoco es fiable hasta retransmitir inicio/fin de partida desde el host.
+> Resuelto 2026-09-23 (lo hizo Nacho, ver aviso en `colaboracion-equipo.md`):
+> Líquido, Explosivo y Hostil ya no aparecen en el depósito hasta desbloquearlas
+> (`UnlockManager.TRAP_UNLOCKS`/`locked_traps()`; en línea manda el perfil del
+> host), y el host retransmite inicio y fin de partida, así que un cliente ve los
+> resultados y suma progreso en su propio perfil (`test_locked_traps`,
+> `test_run_relay`).
 
 ## Paquetes — modelado (1-2)
 

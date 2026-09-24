@@ -4,6 +4,9 @@ extends SceneTree
 ## docs/tareas-nacho.md #104/#105/#107/#121: one house per passenger, and each
 ## house waits for one specific box.
 ##   - the house count follows the crew: players minus the driver, at least one;
+##   - online, the host decides that number once per session and every joiner
+##     builds the host's number, not one from its own roster (a client's roster
+##     starts as just [host, itself]);
 ##   - the depot's order board hands each house one specific box from the
 ##     start (depot.gd), and its sign says which box and which shelf;
 ##   - ringing with somebody else's box gets it handed back (the house stays
@@ -22,6 +25,7 @@ func _run() -> void:
 	_expect(route_script.crew_house_count(1) == 1, "Playing alone still gets one house")
 	_expect(route_script.crew_house_count(2) == 1, "Two players: the passenger's house")
 	_expect(route_script.crew_house_count(4) == 3, "Four players: three passengers, three houses")
+	await _check_session_house_count()
 
 	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(level)
@@ -86,6 +90,48 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: one house per passenger, each waiting for its own box, and a wrong box is handed back")
 	quit(_failures)
+
+
+func _check_session_house_count() -> void:
+	var network: Node = root.get_node(^"/root/NetworkManager")
+	var original_roster: Array[int] = network.peer_ids.duplicate()
+	var original_seed: int = int(network.world_seed)
+	# The host's route, with a crew of four in an online session: three
+	# houses, and that becomes the session's number.
+	network.world_seed = 4242
+	network.world_house_count = 0
+	network.peer_ids = [1, 2, 3, 4] as Array[int]
+	_expect(await _built_house_count() == 3, "The host builds one house per passenger")
+	_expect(int(network.world_house_count) == 3, "The host records it as the session's house count (got %d)" % int(network.world_house_count))
+	# A fifth player joins and the host restarts: clients don't reload their
+	# world, so the host keeps the number it already handed out.
+	network.peer_ids = [1, 2, 3, 4, 5] as Array[int]
+	_expect(await _built_house_count() == 3, "A host restart keeps the session's house count")
+	# A joiner: its own roster says [host, itself] (one house), but it builds
+	# the number the handshake brought.
+	network.world_house_count = 0
+	network.peer_ids = [1, 7] as Array[int]
+	network.set(&"_awaiting_handshake", true)
+	network.call(&"_accept_joiner", 4242, 3, [])
+	_expect(await _built_house_count() == 3, "A joiner builds the host's house count, not its own roster's")
+	# Solo play never records one: every run counts the crew afresh.
+	network.world_seed = 0
+	network.world_house_count = 0
+	network.peer_ids = [1] as Array[int]
+	_expect(await _built_house_count() == 1 and int(network.world_house_count) == 0, "Solo play counts the crew and records nothing")
+	network.world_seed = original_seed
+	network.world_house_count = 0
+	network.peer_ids = original_roster
+
+
+func _built_house_count() -> int:
+	var route: Node = load("res://scenes/gameplay/route/route.tscn").instantiate()
+	root.add_child(route)
+	await process_frame
+	var count: int = (route.get(&"houses") as Array).size()
+	route.free()
+	await process_frame
+	return count
 
 
 func _expect(condition: bool, description: String) -> void:

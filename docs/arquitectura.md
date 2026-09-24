@@ -242,7 +242,8 @@ camión en su bahía, los paquetes en las estanterías de despacho (cada uno con
 estante en la meta `dispatch_code`), la pizarra con un pedido por casa y las estaciones
 (`DepotStation`, un `Interactable` que abre la pantalla en el peer de quien la usó). Los
 pedidos y el orden de las estanterías salen de `NetworkManager.world_seed`, así que todos
-los peers los calculan igual sin mensajes; el host decide las compras
+los peers los calculan igual sin mensajes (la cantidad de casas también viene del host:
+`NetworkManager.world_house_count`, en el mismo handshake que la semilla); el host decide las compras
 (`CrewProgression.buy_supply`) y el cierre del portón, y los reparte por RPC. La geometría
 estática se hornea en una malla por material (`DepotKit`); operarios y autoelevador son
 presentación local.

@@ -5,9 +5,15 @@ class_name RailCrossingSegment
 ## short train goes by -- a forced stop in the middle of a delivery.
 ##
 ## Whether this crossing closes is drawn from the world seed and where the
-## segment sits, so every peer agrees; each peer runs the barrier and train
-## off the (replicated) truck's approach. Only the host's physics decides
-## anything, and there the barrier arms and train cars are solid.
+## segment sits, so every peer agrees. *When* it closes is the host's call:
+## each peer used to trigger it off its own copy of the truck, which on a
+## client arrives late through interpolation, and a client loading in mid-
+## crossing started from scratch -- so the barrier and train a client saw
+## weren't the ones the host's physics was running. Now the host starts the
+## cycle for everyone (_begin_cycle), a client that builds the segment asks
+## for the phase it's in (_request_state), and every peer runs the same
+## timers from there. Only the host's physics decides anything, and there the
+## barrier arms and train cars are solid.
 
 const APPROACH_TRIGGER: float = 55.0
 const CLOSE_CHANCE: float = 0.6
@@ -66,6 +72,9 @@ func _build() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([seed_value, roundi(global_position.x), roundi(global_position.z), &"rail"])
 	will_close = rng.randf() < CLOSE_CHANCE
+	if will_close and _is_online() and not _is_host():
+		# Joining mid-crossing: pick it up where the host's is.
+		_request_state.rpc_id(1)
 
 
 ## World-space points along the tracks where the ground should be level with
@@ -181,10 +190,11 @@ func _build_train() -> void:
 func _physics_process(delta: float) -> void:
 	match state:
 		State.WAITING:
-			if will_close and _truck_approaching():
-				state = State.WARNING
-				_timer = 0.0
-				_bell.play()
+			if will_close and _is_host() and _truck_approaching():
+				if _is_online():
+					_begin_cycle.rpc()
+				else:
+					_begin_cycle()
 		State.WARNING:
 			_timer += delta
 			if _timer >= WARNING_SECONDS:
@@ -222,6 +232,60 @@ func _physics_process(delta: float) -> void:
 	var phase: bool = fmod(Time.get_ticks_msec() / 450.0, 2.0) < 1.0
 	for index: int in range(_lamps.size()):
 		_lamps[index].emission_energy_multiplier = (2.2 if (index % 2 == 0) == phase else 0.0) if flashing else 0.0
+
+
+## The host saw the truck coming: the bell rings and the cycle starts, on
+## every peer at once.
+@rpc("authority", "call_local", "reliable")
+func _begin_cycle() -> void:
+	if state != State.WAITING:
+		return
+	state = State.WARNING
+	_timer = 0.0
+	_bell.play()
+
+
+## A client that just built this segment asks where the host's cycle is.
+@rpc("any_peer", "call_remote", "reliable")
+func _request_state() -> void:
+	if not _is_host() or state in [State.WAITING, State.DONE]:
+		return
+	_apply_state.rpc_id(multiplayer.get_remote_sender_id(), state, _timer, _train_x)
+
+
+## Jumps to the host's phase: arms where they'd be by now, train on the
+## tracks if it's passing, bell ringing.
+@rpc("authority", "call_remote", "reliable")
+func _apply_state(new_state: int, timer: float, train_x: float) -> void:
+	state = new_state
+	_timer = timer
+	_train_x = train_x
+	var train_on: bool = state == State.TRAIN
+	for car: AnimatableBody3D in _train:
+		car.visible = train_on
+		car.process_mode = Node.PROCESS_MODE_INHERIT if train_on else Node.PROCESS_MODE_DISABLED
+	var down: float = 0.0
+	match state:
+		State.CLOSING:
+			down = clampf(_timer / ARM_SECONDS, 0.0, 1.0)
+		State.TRAIN:
+			down = 1.0
+		State.OPENING:
+			down = 1.0 - clampf(_timer / ARM_SECONDS, 0.0, 1.0)
+	for arm: Node3D in _arms:
+		_set_arm(arm, down)
+	if state != State.DONE and not _bell.playing:
+		_bell.play()
+
+
+func _is_online() -> bool:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	return network != null and bool(network.call(&"is_online"))
+
+
+func _is_host() -> bool:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	return network == null or bool(network.call(&"is_host"))
 
 
 ## Height of the (levelled) ground under a point of the track, in local

@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta y Ambientación
 
-> Última actualización: 2026-09-23 (estado sincronizado con `6f4ec56`)
+> Última actualización: 2026-09-23 (estado sincronizado con `680001a`)
 > Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
 > compartida. Las tareas 1-40 vienen directo de `docs/especificaciones-visuales.md`
 > (número original entre paréntesis); 41-100 son backlog nuevo del proyecto,
@@ -115,7 +115,7 @@
 | 60 | Rotonda simple. | B |
 | 61 | ~~Tramo de ripio/tierra con fricción distinta a la ruta pavimentada.~~ **[x] Hecho** — `GravelSegment`. Verificado antes de implementar que `PhysicsMaterial.friction` del suelo **no** afecta `VehicleWheel3D.get_skidinfo()` en este motor; el único control real es `wheel_friction_slip` por rueda. El tramo usa un `Area3D` que lo reduce al entrar y lo restaura al salir (con red de seguridad en `_exit_tree()` por si el streamer libera el tramo con el vehículo todavía encima). | A |
 | 62 | ~~Tramo nocturno (probar junto con el ciclo día/noche).~~ **[x] Hecho (2026-09-23)** — la noche sale por sorteo como cualquier hora (`world_mood.gd`). | B |
-| 63 | ~~Cruce de vías de tren con barrera.~~ **[x] Hecho** — `RailCrossingSegment` avisa, baja una barrera sólida, deja pasar el tren y la reabre; puede no activarse según semilla. | B |
+| 63 | ~~Cruce de vías de tren con barrera.~~ **[x] Hecho** — `RailCrossingSegment` avisa, baja una barrera sólida, deja pasar el tren y la reabre; puede no activarse según semilla. **En red (2026-09-23):** lo dispara sólo el host (`_begin_cycle` por RPC a todos) y un cliente que arma el tramo a mitad del cruce le pide la fase al host (`_request_state` → `_apply_state`); antes cada peer lo disparaba con su copia interpolada del camión. Los tramos tienen nombre estable (`Segment%d`, en `route.gd` y `route_streamer.gd`) para que el RPC encuentre el nodo. | B |
 | 64 | ~~Zona de obras con conos y carril reducido.~~ **[x] Hecho** — `ConstructionZoneSegment`, barrera lateral sostenida (no alternada, a diferencia del chicane/curva en S) + fila de conos marcando el borde. | A |
 | 65 | Curva peraltada (banked turn) que favorece tomarla rápido. **no se hace por ahora: el asfalto es el mismo campo de alturas del terreno y no admite peralte sin rehacerlo.** | B |
 
@@ -200,10 +200,10 @@
 | 101 | ~~Casas separadas a lo largo de la ruta en vez de una única zona de entrega.~~ **[x] Hecho** — `route.gd` construye `house_count` `DeliveryHouse` alternando lados de la ruta, terminando en una meta (`GoalArea`) que reemplaza el viejo `DeliveryArea`/Warehouse, mismo contrato (`is_vehicle_in_delivery`) que ya usaba `level_base.gd`, sin tocar ese archivo. | A |
 | 102 | ~~Timbre que reacciona al estado del paquete entregado.~~ **[x] Hecho** — `DeliveryHouse` reacciona según integridad y contenido; `level_base.gd` conecta `route.house_resolved` con `RunManager.register_delivery()`, que aplica puntaje y penalidades por puerta. | A |
 | 103 | ~~"Si te olvidaste un paquete, tenés que bajarte a tocar el timbre igual y sufrir las consecuencias."~~ **[x] Hecho** — al llegar a la meta, cualquier casa que nadie tocó se resuelve automáticamente como `"missed"` (`force_resolve_if_missed()`), no queda colgada para siempre. | A |
-| 104 | ~~Cantidad de casas según jugadores. **Parcial** — `house_count=0` usa `max(jugadores - 1, 1)` al construir la ruta (una en solitario), pero el cálculo consulta el roster local de cada peer; con más de dos jugadores o joins tardíos puede producir distinta geometría en host y clientes. Falta que el host determine y replique la cantidad.~~ **[x] Hecho (2026-09-23)** — casas = jugadores − 1, mínimo 1 (`route.gd` `crew_house_count`). | B |
-| 105 | ~~Cantidad de paquetes por casa dinámica. **Parcial** — `level_base.tscn` instancia siete tipos de paquete y la partida sólo registra los cargados; la cantidad de cajas no se genera a partir de `house_count`. Las tres trampas nuevas aún no se filtran por desbloqueo.~~ **[x] Hecho (2026-09-23)** — cada casa recibe una de las cajas cargadas; las que sobran viajan como carga. | B |
+| 104 | ~~Cantidad de casas según jugadores.~~ **[x] Hecho (2026-09-23)** — `max(jugadores - 1, 1)` (`route.gd` `crew_house_count`), pero ahora la decide el host una vez por sesión (`NetworkManager.world_house_count`, se fija la primera vez que su ruta se arma) y viaja en el handshake junto con la semilla (`_accept_joiner`). Antes cada peer contaba su propio roster, y el de un cliente arranca como `[host, él]`: desde tres jugadores cada uno armaba otra cantidad. Límite asumido: como el host arma la ruta al crear la sala, quien se suma después no agrega casas hasta una partida nueva (y un reinicio del host la conserva, porque los clientes no recargan su mundo). `test_house_assignment`. | B |
+| 105 | ~~Cantidad de paquetes por casa dinámica.~~ **[x] Resuelto por el depósito (2026-09-23)** — el depósito tiene dos cajas de cada trampa (14) y la pizarra asigna una caja concreta a cada casa (`depot.gd` `post_orders`); las que no están en el pedido se pueden llevar igual como carga. Las trampas no desbloqueadas quedan fuera de los estantes (`withhold_locked`, `test_locked_traps`). | B |
 | 106 | ~~Volver a levantar un paquete ya montado para entregarlo.~~ **[x] Hecho** — `package_pickup_point.gd` permite bajarlo y libera el soporte; cubierto por `test_house_delivery_flow.gd`. | A |
-| 107 | ~~Asignar qué paquete corresponde a qué casa.~~ **[x] Hecho** — al iniciar la entrega, `level_base.gd` asigna cajas cargadas por orden de soporte y `DeliveryHouse` rechaza una caja equivocada. | B |
+| 107 | ~~Asignar qué paquete corresponde a qué casa.~~ **[x] Hecho** — desde 2026-09-23 la asigna la pizarra del depósito al cargar el nivel, desde `world_seed` (todos los peers calculan lo mismo) y se re-emite al arrancar (`houses_assigned`); antes era por orden de soporte. `DeliveryHouse` devuelve una caja equivocada sin gastar la entrega (`test_house_assignment`). | B |
 | 108 | ~~Sumar un hecho a `EventBus` para que el HUD reaccione a las entregas.~~ **[x] Hecho (2026-09-22)** — `house_delivery_recorded(house_index, outcome, package_id)` y `delivery_photo_taken(house_index, accepted)`, ambos relayed. `RunManager` los escucha además de registrarlos, para que cada peer puntué su propio run igual (los dos handlers son idempotentes, que es lo que hace seguro que el host reciba de vuelta el hecho que acaba de emitir). | A |
 
 ## Entrega real, celular y opciones (115-121) — pedido directo del usuario, 2026-09-22
@@ -221,7 +221,7 @@
 | 118 | ~~Quejas de clientes al final, y la foto como prueba.~~ **[x] Hecho** — un paquete entregado roto siempre genera reclamo, uno en riesgo a veces (`COMPLAINT_CHANCE_AT_RISK`). Con foto de esa puerta el reclamo se cae; sin foto descuenta. Es lo que le da sentido a parar a sacarla. | A |
 | 119 | ~~Pantalla de opciones, salir del juego y volver al menú.~~ **[x] Hecho** — `GameSettings` (autoload, `user://settings.cfg`) + `scripts/ui/options_panel.gd`, alcanzable desde el menú y desde la pausa. Volumen, sensibilidad de mirada, invertir Y, pantalla completa. Antes no había ninguna forma de salir salvo Alt+F4. | A |
 | 120 | ~~Paleta de UI duplicada entre menú y HUD.~~ **[x] Hecho** — `scripts/ui/ui_theme.gd` es la única fuente de colores y widgets; `main_menu.gd` y `prototype_hud.gd` construyen desde ahí (`docs/direccion-visual.md` sección 3 ya lo marcaba). | A |
-| 121 | ~~Cantidad de casas atada a la tripulación, con al menos una en solitario. **Parcial** — el cálculo local existe (#104), pero debe sincronizarse desde el host; hay siete paquetes definidos en la escena y sólo se asignan a casas los cargados por orden de soporte.~~ **[x] Hecho (2026-09-23)** — ver #104-#107. | B |
+| 121 | ~~Cantidad de casas atada a la tripulación, con al menos una en solitario.~~ **[x] Hecho (2026-09-23)** — ver #104 (cantidad sincronizada desde el host) y #105/#107 (asignación por la pizarra del depósito). | B |
 | 122 | ~~**Bug de multijugador encontrado revisando**: `route.gd` y `route_streamer.gd` hacían `_rng.randomize()` en cada peer, así que cada jugador construía un camino distinto y el cliente veía la furgoneta replicada del host atravesar casas inexistentes.~~ **[x] Resuelto (2026-09-22)** — `NetworkManager.world_seed`: el host la sortea al crear la sala y se la manda a cada joiner por RPC (`_accept_joiner`) **antes** de que el joiner emita `session_ready` y cargue el nivel, porque cargarlo antes era exactamente el problema. Timeout de 8s con mensaje claro si nunca llega. Semilla 0 = solo, sigue sorteando. Cubierto por `tests/test_world_seed.gd`. | A |
 
 
@@ -245,3 +245,19 @@
 | 112 | ~~Bosque/props siguiendo la curva en vez de flotar en línea recta.~~ **[x] Hecho** — `RouteSegment.get_dressing_slots()` (nuevo) da transforms locales a lo largo del camino real de cada segmento; `CurveSegment` lo sobreescribe caminando su propia cadena de cuerdas. | A |
 | 113 | ~~Red de seguridad "te saliste de la ruta" (`level_base.gd`) medía `abs(x mundial) > 42`, roto apenas el camino dobla.~~ **[x] Hecho** — `route.distance_from_path()` mide distancia real al camino generado (~10m de densidad), no a un eje fijo del mundo. Encontrado por regresión real en `test_vehicle_presentation.gd`/`test_dust_and_ambience.gd`, no hipotético. | A |
 | 114 | **Sin extender a Modo Endless todavía, a propósito** — `RouteStreamer` sigue siendo un camino recto que hace streaming/cull por -Z; darle curvas reales necesita que su lookahead/cull dejen de asumir un solo eje, un cambio más arriesgado que este (streaming infinito vs. construir todo una vez). Queda como follow-up separado, no mezclado con este pedido. | B |
+
+## Depósito de salida (123-127) — pedido directo del usuario, 2026-09-23
+
+> "La partida arranca en un depósito con el camión estacionado, paquetes de
+> todos los tipos, una pizarra de pedidos, estaciones para prepararse y un
+> portón que se cierra al salir; todo profesional." Hecho en `680001a`
+> (`scripts/gameplay/depot/`, detalle en `docs/arquitectura.md` §5.1 y el
+> aviso de `docs/colaboracion-equipo.md`).
+
+| # | Tarea | Prio |
+|---|---|---|
+| 123 | ~~Depósito como punto de partida de entrega y Endless.~~ **[x] Hecho** — camión en su bahía mirando al portón, suelo nivelado y sin árboles (`route.gd` `start_yard`), geometría horneada por material (`depot_kit.gd`), sin lluvia bajo techo (`roofed_area`). | A |
+| 124 | ~~Pizarra de pedidos y estanterías con código.~~ **[x] Hecho** — dos cajas por trampa con código `A-1`…`B-8`, un pedido por casa desde la semilla; el pedido se ve en el cartel de cada casa y en el objetivo del HUD (`test_depot`, `test_house_assignment`). | A |
+| 125 | ~~Estaciones: vestuario, taller, suministros y equipo del mes.~~ **[x] Hecho** — `depot_station.gd` + `ui/depot_panel.gd`; los suministros (acolchado, seguro) los decide el host con la plata del equipo (`CrewProgression.buy_supply`). | A |
+| 126 | ~~Portón que se cierra al salir y vida en el depósito.~~ **[x] Hecho** — `depot_roller_door.gd` (se cierra cuando el camión salió y no queda nadie a pie), operarios, autoelevador que frena ante jugadores, cinta, radio, reloj; sonidos en `SynthAudio`. | B |
+| 127 | Decidir el rol del depósito en Endless: ahí la pizarra no asigna pedidos (`post_orders(0)`), así que sólo sirve para estaciones y carga; ¿se mantiene completo o conviene uno reducido? (Validarlo jugando queda para el playtesting final.) | A |

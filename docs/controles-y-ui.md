@@ -68,7 +68,12 @@ Main Menu
 
 ### Lo que hay en cambio
 - Tres botones directos: **Jugar solo** (sin sesión), **Crear sala** (hostea y entra
-  directo a la furgoneta, sin esperar a nadie) y **Unirse por IP**.
+  directo al depósito, sin esperar a nadie) y **Unirse por IP**.
+- **El depósito hace de lobby jugable** (2026-09-23): toda partida arranca ahí y sus
+  estaciones abren `ui/depot_panel.gd` solo antes de salir: **pizarra de pedidos**,
+  **vestuario** (uniforme), **taller** (camión y pintura, los elige el anfitrión),
+  **suministros** (acolchado y seguro con la plata del equipo) y **equipo del mes**
+  (progreso). Cubre buena parte de lo que iba a hacer el lobby de abajo.
 - El host nunca espera en un lobby: `level_base.gd` ya spawnea jugadores dinámicamente
   a medida que se suman (`_sync_players`), así que entrar directo y dejar que los demás
   se sumen después ya funciona sin necesitar una pantalla de espera.
@@ -101,11 +106,11 @@ Main Menu
 - Al empezar la partida, un jugador es conductor (rotable entre partidas o elegido en
   el lobby, a definir con playtesting) y el resto recibe un paquete cada uno.
   **[x] Parcial**: cualquier jugador puede sentarse a conducir (primero en llegar, sin
-  rotación automática todavía) y tomar cualquier paquete disponible.
-- `UnlockManager` registra metas de progreso para Líquido, Explosivo y Hostil,
-  pero `level_base.tscn` ya instancia los siete paquetes y hoy no filtra esas
-  tres trampas por desbloqueo. La selección semi-aleatoria y sus reglas de
-  balance siguen pendientes.
+  rotación automática todavía) y tomar cualquier paquete disponible. Qué caja va a
+  qué casa lo dice la pizarra del depósito (dos cajas por trampa en las estanterías).
+- Líquido, Explosivo y Hostil aparecen en el depósito recién cuando están desbloqueadas
+  (`UnlockManager.TRAP_UNLOCKS`, `depot.gd` `withhold_locked`, 2026-09-23); en línea manda
+  el perfil del host. La selección semi-aleatoria y sus reglas de balance siguen pendientes.
 
 ### HUD durante la partida
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.

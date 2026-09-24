@@ -55,7 +55,7 @@ func _ready() -> void:
 	RunManager.reset_run()
 	add_child(preload("res://scripts/presentation/ingame_music.gd").new())
 	vehicle.freeze = true
-	packages.assign(get_tree().get_nodes_in_group(&"cargo"))
+	packages.assign(depot.withhold_locked(get_tree().get_nodes_in_group(&"cargo")))
 	for package: DeliveryPackage in packages:
 		package.freeze = true
 	depot.stock_shelves(packages)
@@ -209,6 +209,9 @@ func _physics_process(delta: float) -> void:
 	distance_traveled += maxf(minf(_last_vehicle_z, 0.0) - current_z, 0.0)
 	_last_vehicle_z = current_z
 	RunManager.current_distance = distance_traveled
+	# Clients follow the run for the HUD; how it ends is the host's call.
+	if not NetworkManager.is_host():
+		return
 	_check_lost_cargo()
 	if vehicle.global_basis.y.dot(Vector3.UP) < 0.25:
 		tipped_seconds += delta

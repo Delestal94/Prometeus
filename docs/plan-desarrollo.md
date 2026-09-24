@@ -5,8 +5,9 @@
 El MVP usa un **perfil local persistente**, no una cuenta. Entregas exitosas y
 puntaje acumulado marcan desbloqueos permanentes: Líquido (3 entregas,
 250 puntos), pintura violeta (5, 450), Explosivo (7, 750) y Hostil (12, 1500).
-Vehículos, pinturas y uniformes sí bloquean su selección; las tres trampas
-nuevas ya están instanciadas en el nivel y aún no se ocultan por progreso.
+Vehículos, pinturas y uniformes bloquean su selección, y desde 2026-09-23 las
+tres trampas nuevas no aparecen en el depósito hasta desbloquearlas (en línea,
+según el perfil del host).
 El dinero y las cartas permanecen en la campaña cooperativa, separados del
 progreso individual. El tutorial inicial es una pantalla estática del menú;
 un mini-nivel interactivo queda para una iteración posterior.
@@ -100,11 +101,11 @@ Lo que hay ahora:
       `tests/test_phone_camera.gd` (la foto y el reclamo).
 - [x] La meta al final de la ruta sigue cerrando el run. `Route` calcula
       `max(jugadores - 1, 1)` casas cuando `house_count=0` (una en solitario),
-      aunque falta sincronizar ese número desde el host para partidas con
-      más de dos jugadores o incorporaciones tardías;
-      la escena declara siete tipos de paquete y asigna a cada casa una caja
-      cargada por orden de soporte. Ajustar la cantidad de cajas instanciadas
-      al tamaño de la partida sigue pendiente (`docs/tareas-nacho.md` #105/#121).
+      y desde 2026-09-23 ese número lo fija el host una vez por sesión y lo
+      manda en el handshake con la semilla (`NetworkManager.world_house_count`);
+      desde 2026-09-23 toda partida arranca en el depósito, con dos cajas de
+      cada trampa en las estanterías y una pizarra que asigna una caja concreta
+      a cada casa desde la semilla (`docs/tareas-nacho.md` #105/#107, #123-#127).
 
 ### Lo que un jugador puede tocar (2026-09-22)
 
@@ -208,14 +209,15 @@ que separarlo. Esto **no** reemplaza el criterio subjetivo pendiente de las Fase
 seguir siendo divertido con varios jugadores reales es, si acaso, una pregunta más
 exigente que la versión solo.
 
-**Límites detectados en la auditoría del 2026-09-23:** con más de dos peers o
-un ingreso tardío, cada máquina puede construir distinta cantidad de casas a
-partir de su roster local. La asignación de cajas a casas se emite sólo al
-inicio y no llega como estado inicial al nuevo cliente. Inicio/fin de partida
-se emiten localmente en `RunManager`, por lo que un cliente puede no recibir
-resultados ni sumar progreso en su perfil. El cruce ferroviario tampoco replica
-su fase de barrera/tren. Estas rutas requieren una prueba multiproceso antes de
-considerar cerrada la Fase 4.
+**Límites detectados en la auditoría del 2026-09-23:** el reinicio del host no
+recarga el mundo de los clientes. Resueltos el mismo día: el host retransmite
+inicio y fin de partida (`RunManager`, `test_run_relay`), así que el cliente ve
+resultados y suma progreso en su perfil; la cantidad de casas la fija el
+host y viaja en el handshake (`docs/tareas-nacho.md` #104), la asignación de
+cajas la calcula cada peer desde la semilla en el depósito (#107), y el cruce
+ferroviario lo dispara sólo el host y un cliente que llega a mitad retoma su
+fase (#63). Falta una prueba multiproceso con 3+ jugadores antes de considerar
+cerrada la Fase 4.
 
 - Integrar la API de multiplayer de Godot (host-cliente), empezando con 2 jugadores
   (conductor + 1 pasajero) antes de escalar a 5.
@@ -246,7 +248,7 @@ considerar cerrada la Fase 4.
       Líquido (3/250), Furgoneta ágil (4/350), pintura violeta (5/450), Explosivo
       (7/750), uniforme cielo (9/1000) y Hostil (12/1500). Incluye migración del perfil
       v1 y tests de persistencia/elección. La selección de uniforme/vehículo/pintura
-      respeta bloqueos; la disponibilidad de trampas en el mundo aún no.
+      respeta bloqueos, y las trampas bloqueadas no salen al depósito (`test_locked_traps`).
 - [x] Pantallas de Progreso, Cómo jugar y Cosméticos — la última elige uniforme,
       vehículo y pintura; una opción bloqueada no puede seleccionarse.
 - [ ] Lobby multiplayer con pantalla de espera — no hace falta con el diseño actual

@@ -11,6 +11,11 @@ var _failures: int = 0
 
 func _initialize() -> void:
 	await process_frame
+	# Every trap unlocked: locked ones stay off the depot's shelves
+	# (depot.gd withhold_locked), and the test profile's unlocks depend on
+	# whichever tests ran before this one.
+	for unlock_id: StringName in (root.get_node(^"/root/UnlockManager").get(&"TRAP_UNLOCKS") as Dictionary).values():
+		root.get_node(^"/root/UnlockManager").unlocked[unlock_id] = true
 	var level: Node = load("res://scenes/gameplay/level_endless.tscn").instantiate()
 	root.add_child(level)
 	await process_frame

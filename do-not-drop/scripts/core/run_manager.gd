@@ -117,14 +117,35 @@ func reset_run() -> void:
 	current_distance = 0.0
 
 
+## Online, only the host gets here: interactions resolve on the host
+## (Interactable.interact() is host-only), so taking the wheel with cargo
+## aboard starts the run there. It used to stop there too -- a client never
+## heard run_started or run_ended, so it got no results screen and its own
+## profile never counted the delivery. The host now hands the start (and the
+## route event it drew, which is random) to every client.
 func start_run(mode: StringName = MODE_DELIVERY) -> void:
 	if is_running or not results.is_empty():
 		return
+	_begin_run(mode)
+	var event_id: StringName = RouteEventManager.begin_random()
+	if NetworkManager.is_online() and NetworkManager.is_host():
+		_remote_start_run.rpc(mode, event_id)
+
+
+func _begin_run(mode: StringName) -> void:
 	is_running = true
 	current_mode = mode
 	current_distance = 0.0
 	EventBus.run_started.emit(&"test_route", [1])
-	RouteEventManager.begin_random()
+
+
+@rpc("authority", "call_remote", "reliable")
+func _remote_start_run(mode: StringName, event_id: StringName) -> void:
+	if is_running or not results.is_empty():
+		return
+	_begin_run(mode)
+	if not event_id.is_empty():
+		RouteEventManager.begin_event(event_id)
 
 
 ## Called when a DeliveryHouse resolves (level_base.gd forwards route.gd's
@@ -260,6 +281,10 @@ func _complaint(entry: Dictionary, has_photo: bool) -> Dictionary:
 func finish_run(delivered: bool, reason: String = "") -> void:
 	if not is_running:
 		return
+	# The host decides how the run ended and scores it; a client's copy of
+	# the world only sees the replicated result of that (see _remote_finish_run).
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		return
 	is_running = false
 	if current_mode == MODE_ENDLESS:
 		_finish_endless_run(reason)
@@ -321,6 +346,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	}
 	print("[Run] ", results)
 	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
+	_share_results()
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 
@@ -353,6 +379,31 @@ func _finish_endless_run(reason: String) -> void:
 	}
 	print("[Run] ", results)
 	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
+	_share_results()
+	EventBus.run_ended.emit(score, results.duplicate(true))
+
+
+func _share_results() -> void:
+	if NetworkManager.is_online() and NetworkManager.is_host():
+		_remote_finish_run.rpc(current_mode, results)
+
+
+## The host's results, as they are: same score, same breakdown, for every
+## client. Only the leaderboard is each player's own (is_new_best/best_score
+## are recomputed against it), and the team's money stays with the host
+## (CrewProgression is host-authoritative), so it isn't awarded again here.
+## run_ended then does the rest locally, like on the host: results screen,
+## and UnlockManager counting the run in this player's profile.
+@rpc("authority", "call_remote", "reliable")
+func _remote_finish_run(mode: StringName, host_results: Dictionary) -> void:
+	if not results.is_empty():
+		return
+	is_running = false
+	current_mode = mode
+	results = host_results.duplicate(true)
+	var score: int = int(results.get("score", 0))
+	results["is_new_best"] = _record_score(score, mode)
+	results["best_score"] = best_score(mode)
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 

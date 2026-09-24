@@ -46,6 +46,9 @@ var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## _active shrinks as segments get culled behind, so it stops meaning
 ## "nothing has spawned yet" well before the run is actually over.
 var _spawned_any: bool = false
+## Names every segment the same on every peer (see route.gd): RPCs find a
+## RailCrossingSegment by its path.
+var _spawn_count: int = 0
 
 
 func _ready() -> void:
@@ -86,6 +89,8 @@ func _spawn_next() -> void:
 	_spawned_any = true
 	var segment: RouteSegment = script.new()
 	segment.position = Vector3(0.0, 0.0, _next_z)
+	segment.name = "Segment%d" % _spawn_count
+	_spawn_count += 1
 	add_child(segment)
 	_active.append(segment)
 	_maybe_add_crossing(segment)

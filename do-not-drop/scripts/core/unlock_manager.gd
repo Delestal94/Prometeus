@@ -23,6 +23,14 @@ const UNLOCKS := {
 	&"agile_van": {"title": "Furgoneta ágil", "deliveries": 4, "score": 350},
 }
 
+## Which trap each unlock above puts on the depot's shelves (by the trap's
+## id in data/traps/); traps not listed are there from the first run.
+const TRAP_UNLOCKS := {
+	&"liquid": &"liquid_trap",
+	&"explosive": &"explosive_trap",
+	&"hostile": &"hostile_trap",
+}
+
 ## The truck the host brings to the route (vehicle.gd VARIANTS) and its paint
 ## (vehicle.gd PAINTS). Same unlock rules as everything else here.
 const TRUCKS := {
@@ -77,6 +85,17 @@ func reset_profile() -> void:
 
 func is_unlocked(unlock_id: StringName) -> bool:
 	return bool(unlocked.get(unlock_id, false))
+
+
+## Trap ids this profile hasn't unlocked yet: the depot leaves them off its
+## shelves (depot.gd withhold_locked). Online it's the host's profile that
+## counts, handed to every joiner (NetworkManager.world_locked_traps).
+func locked_traps() -> Array[StringName]:
+	var locked: Array[StringName] = []
+	for trap_id: StringName in TRAP_UNLOCKS:
+		if not is_unlocked(StringName(TRAP_UNLOCKS[trap_id])):
+			locked.append(trap_id)
+	return locked
 
 
 func requirements(unlock_id: StringName) -> Dictionary:

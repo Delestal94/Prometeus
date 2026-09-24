@@ -148,6 +148,39 @@ func covers(world_point: Vector3) -> bool:
 # --- Stock and orders ------------------------------------------------------
 
 
+## Traps the session hasn't unlocked stay in the back: their boxes (the
+## level's and the depot's own second one) are taken out of the level before
+## anything is shelved, and the rest is returned. Every peer removes the same
+## ones -- online the list is the host's (NetworkManager.world_locked_traps),
+## solo it's this player's profile.
+func withhold_locked(packages: Array) -> Array:
+	var locked: Array = locked_traps()
+	var kept: Array = []
+	for package: Node in packages:
+		if not is_instance_valid(package):
+			continue
+		var definition: Resource = package.get(&"trap_definition")
+		if definition != null and locked.has(StringName(definition.get(&"id"))):
+			# Out of the group right away (the level reads it next), gone at the
+			# end of the frame; pulling it out of the tree here instead left
+			# its own deferred setup reading a transform it no longer had.
+			package.remove_from_group(&"cargo")
+			package.visible = false
+			package.process_mode = Node.PROCESS_MODE_DISABLED
+			package.queue_free()
+			continue
+		kept.append(package)
+	return kept
+
+
+func locked_traps() -> Array:
+	var network: Node = _autoload(&"NetworkManager")
+	if network != null and int(network.get(&"world_seed")) != 0:
+		return network.get(&"world_locked_traps")
+	var unlocks: Node = _autoload(&"UnlockManager")
+	return unlocks.call(&"locked_traps") if unlocks != null else []
+
+
 ## Puts every package the level has onto the dispatch shelves, one per slot,
 ## in an order drawn from the session seed (so every peer shelves the same box
 ## in the same bin). Each box keeps its bin code as meta "dispatch_code".

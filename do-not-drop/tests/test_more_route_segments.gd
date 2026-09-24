@@ -65,6 +65,22 @@ func _run() -> void:
 	_expect(absf(absf(arm.rotation.z) - PI * 0.5) < 0.05, "The arms are back up once it's gone")
 	crossing.free()
 
+	# A client loading in while the host's train is passing: it jumps
+	# straight to that phase (what the host answers _request_state with)
+	# instead of starting the cycle from scratch, and finishes it from there.
+	var joined: RailCrossingSegment = RailCrossingSegment.new()
+	root.add_child(joined)
+	await process_frame
+	joined.will_close = true
+	joined.call(&"_apply_state", RailCrossingSegment.State.TRAIN, 0.0, 0.0)
+	var joined_arm: Node3D = joined.get_node(^"BarrierArm")
+	var first_car: Node3D = joined.get_node(^"TrainCar0")
+	_expect(absf(joined_arm.rotation.z) < 0.05 and first_car.visible, "Joining mid-train: arms already down, train already on the tracks")
+	for _i: int in range(60 * 6):
+		await physics_frame
+	_expect(joined.state == RailCrossingSegment.State.DONE and absf(absf(joined_arm.rotation.z) - PI * 0.5) < 0.05, "...and it finishes the cycle from there (now %d)" % joined.state)
+	joined.free()
+
 	var quiet: RailCrossingSegment = RailCrossingSegment.new()
 	root.add_child(quiet)
 	await process_frame

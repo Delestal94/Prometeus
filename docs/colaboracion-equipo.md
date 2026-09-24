@@ -1,6 +1,6 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-21
+> Última actualización: 2026-09-23
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
@@ -36,6 +36,33 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/gameplay/interaction/`
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
+
+## Aviso activo: partida retransmitida, trampas bloqueadas y tests en el push (2026-09-23)
+
+Pedido del usuario: seguir con los pendientes de ambas listas y dejar el GitHub profesional,
+con los tests corriendo antes de cada push. Lo hizo Nacho.
+- Zona compartida: `core/run_manager.gd` — el host manda inicio (`_remote_start_run`, con el
+  evento de ruta que sorteó) y resultados (`_remote_finish_run`) a los clientes; `finish_run()`
+  en un cliente ya no hace nada. `level_base.gd`/`level_endless.gd`: en un cliente el
+  `_physics_process` solo informa progreso, el final lo decide el host.
+  `core/network_manager.gd`: `world_locked_traps` y el handshake pasa a 3 argumentos.
+- Archivos de Slatex: `core/unlock_manager.gd` suma `TRAP_UNLOCKS` y `locked_traps()`.
+  Tests de Slatex tocados: `test_multi_cargo` y `test_endless_multi_cargo` desbloquean las
+  trampas antes de armar el nivel (el perfil de test depende de qué corrió antes).
+- Nuevo: `depot.gd` `withhold_locked()`, tests `test_locked_traps` y `test_run_relay`.
+- **Tests antes del push:** después de clonar/pullear, correr una vez `tools/setup-hooks.sh`.
+  `tools/run-tests.sh` corre la batería en paralelo (~1 min) con un `user://` aislado por
+  test. CI en GitHub Actions (`.github/workflows/tests.yml`). Ver `CONTRIBUTING.md`.
+
+## Aviso activo: casas y paso a nivel sincronizados desde el host (2026-09-23)
+
+Pedido del usuario: seguir con tareas pendientes. Lo hizo Nacho. En la zona compartida:
+`core/network_manager.gd` suma `world_house_count` y el handshake `_accept_joiner` ahora
+lleva dos argumentos (semilla y cantidad de casas): **un cliente de una versión anterior
+no puede unirse** (se corta por timeout del handshake). Del lado de Nacho: `route.gd`
+(`_session_house_count()`, tramos con nombre estable `Segment%d`), `route_streamer.gd`
+(mismo nombre estable) y `segments/rail_crossing_segment.gd` (el host dispara el cruce por
+RPC). Tests: `test_house_assignment` y `test_more_route_segments` ampliados.
 
 ## Aviso activo: el depósito de salida (2026-09-23)
 
@@ -230,12 +257,9 @@ de entrega), `run_manager.gd` (registro y puntaje de entregas, quejas y
 fotos), `level_base.gd` (conecta las casas con el puntaje) y
 `scripts/presentation/first_person_camera.gd` (la misma sensibilidad).
 
-El número de casas se calcula al construir la ruta con
-`max(jugadores - 1, 1)`, pero todavía sale del roster local: host y clientes
-pueden generar cantidades distintas con más de dos jugadores o joins tardíos.
-El host debe fijar y comunicar ese valor. La escena declara siete paquetes;
-se asignan a puertas sólo las cajas cargadas, en orden de soporte. También
-queda decidir si conviene instanciar una cantidad de paquetes ajustada a cada partida.
+El número de casas es `max(jugadores - 1, 1)`; desde 2026-09-23 lo fija el host una
+vez por sesión y viaja en el handshake (`NetworkManager.world_house_count`), y la
+pizarra del depósito asigna una caja concreta a cada casa desde la semilla.
 
 ## Zona compartida — avisar antes de tocar
 

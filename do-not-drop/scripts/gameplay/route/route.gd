@@ -26,8 +26,9 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 @export var route_length: float = 0.0
 ## How many delivery houses this run has: one per passenger, i.e. players
 ## minus the driver, never fewer than one (docs/tareas-nacho.md #104). 0 means
-## "work it out from the crew" when the route builds -- every peer loads the
-## level with the same roster, so every peer builds the same number. Set it
+## "work it out" when the route builds: the session's number if the host
+## already decided one (NetworkManager.world_house_count), otherwise from the
+## crew -- and an online host records that as the session's number. Set it
 ## (or call configure_houses()) before this node enters the tree to force one.
 @export var house_count: int = 0
 ## Folds the static dressing into MultiMesh batches once it's placed, and
@@ -196,7 +197,7 @@ func _ready() -> void:
 	else:
 		_rng.randomize()
 	if house_count <= 0:
-		house_count = crew_house_count(_crew_size())
+		house_count = _session_house_count()
 	_spine_segment_scripts = [
 		StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
 		SCurveSegment, GravelSegment, ConstructionZoneSegment,
@@ -292,6 +293,9 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 		# Where along the road it starts: RouteDresser's zones (forest,
 		# countryside) are laid out over this distance.
 		segment.set_meta(&"route_distance", route_length)
+		# A stable name, the same on every peer: segments with state of their
+		# own (RailCrossingSegment) are reached by RPC through their path.
+		segment.name = "Segment%d" % _segments.size()
 		add_child(segment)
 		_segments.append(segment)
 		var road_slots: Array[Transform3D] = segment.get_dressing_slots(10.0)
@@ -809,6 +813,18 @@ func _session_seed() -> int:
 	return int(network.get(&"world_seed")) if network != null else 0
 
 
-func _crew_size() -> int:
+## Every peer has to build the same number of houses, and a client's own
+## roster can't tell it (see NetworkManager.world_house_count): the host
+## decides once per session, joiners use what it sent. Solo play (seed 0)
+## just counts the crew every time.
+func _session_house_count() -> int:
 	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return (network.get(&"peer_ids") as Array).size() if network != null else 1
+	if network == null:
+		return 1
+	var decided: int = int(network.get(&"world_house_count"))
+	if decided > 0:
+		return decided
+	var count: int = crew_house_count((network.get(&"peer_ids") as Array).size())
+	if int(network.get(&"world_seed")) != 0 and bool(network.call(&"is_host")):
+		network.set(&"world_house_count", count)
+	return count

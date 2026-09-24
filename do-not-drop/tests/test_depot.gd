@@ -25,6 +25,11 @@ func _initialize() -> void:
 func _run() -> void:
 	var crew: Node = root.get_node(^"/root/CrewProgression")
 	crew.call(&"reset_campaign")
+	# Every trap unlocked: locked ones stay off the depot's shelves
+	# (depot.gd withhold_locked), and the test profile's unlocks depend on
+	# whichever tests ran before this one.
+	for unlock_id: StringName in (root.get_node(^"/root/UnlockManager").get(&"TRAP_UNLOCKS") as Dictionary).values():
+		root.get_node(^"/root/UnlockManager").unlocked[unlock_id] = true
 	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(level)
 	current_scene = level

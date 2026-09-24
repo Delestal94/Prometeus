@@ -50,6 +50,21 @@ var peer_ids: Array[int] = [HOST_ID]
 ## level; 0 means "no session decided one", i.e. solo play, where randomize()
 ## is exactly right.
 var world_seed: int = 0
+## How many delivery houses this session's route has (docs/tareas-nacho.md
+## #104). The route used to work it out from each machine's own roster, but a
+## client's roster starts as just [host, itself], so from three players up
+## every peer built a different number of houses. The host's route decides it
+## once, the first time it builds, and each joiner gets it with the seed; a
+## host restart keeps it, since clients don't reload their world. 0 means
+## "not decided yet" (and always, playing solo).
+var world_house_count: int = 0
+## Traps this session's depot leaves off the shelves: the ones the *host's*
+## profile hasn't unlocked yet (UnlockManager.locked_traps()), fixed when the
+## room is created and handed to each joiner. Every peer has to shelve the
+## same boxes -- they're the same replicated nodes -- so a client's own
+## profile doesn't get a say. Only read while world_seed != 0; solo play asks
+## UnlockManager directly.
+var world_locked_traps: Array = []
 ## How long a joiner waits for the host to hand over that seed before giving
 ## up. Joining without it would build the wrong world, so this is a real
 ## failure to report, not something to paper over.
@@ -110,6 +125,9 @@ func host_session(port: int = DEFAULT_PORT) -> Error:
 	# Decided once, here, so every joiner gets the same one no matter which
 	# transport they arrive on. Never 0: that value means "solo".
 	world_seed = randi() | 1
+	world_house_count = 0
+	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
+	world_locked_traps = unlocks.call(&"locked_traps") if unlocks != null else []
 	if chosen_transport() == Transport.STEAM:
 		return _host_steam()
 	return _host_enet(port)
@@ -126,6 +144,8 @@ func join_session(target: String, port: int = DEFAULT_PORT) -> Error:
 
 func leave_session() -> void:
 	world_seed = 0
+	world_house_count = 0
+	world_locked_traps = []
 	_awaiting_handshake = false
 	if lobby_id != 0 and _steam != null:
 		_steam.call(&"leaveLobby", lobby_id)
@@ -275,17 +295,19 @@ func _on_peer_connected(id: int) -> void:
 		peer_ids.append(id)
 	roster_changed.emit(peer_ids.duplicate())
 	if multiplayer.is_server():
-		_accept_joiner.rpc_id(id, world_seed)
+		_accept_joiner.rpc_id(id, world_seed, world_house_count, world_locked_traps)
 
 
 ## The host's half of the join handshake. Until this lands the joiner has no
 ## idea which world to build, so it deliberately hasn't loaded the level yet.
 @rpc("authority", "call_remote", "reliable")
-func _accept_joiner(seed_value: int) -> void:
+func _accept_joiner(seed_value: int, house_count_value: int, locked_traps: Array) -> void:
 	if not _awaiting_handshake:
 		return
 	_awaiting_handshake = false
 	world_seed = seed_value
+	world_house_count = house_count_value
+	world_locked_traps = locked_traps.duplicate()
 	session_ready.emit(false)
 
 

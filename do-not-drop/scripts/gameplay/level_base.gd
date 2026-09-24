@@ -25,7 +25,7 @@ func _ready() -> void:
 	RunManager.reset_run()
 	add_child(preload("res://scripts/presentation/ingame_music.gd").new())
 	vehicle.freeze = true
-	packages.assign(get_tree().get_nodes_in_group(&"cargo"))
+	packages.assign(depot.withhold_locked(get_tree().get_nodes_in_group(&"cargo")))
 	for package: DeliveryPackage in packages:
 		package.freeze = true
 	depot.stock_shelves(packages)
@@ -222,6 +222,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		stopped_seconds = 0.0
 	EventBus.delivery_status_changed.emit(route.is_vehicle_in_delivery, stopped_seconds)
+	# Clients follow the run for the HUD; how it ends is the host's call.
+	if not NetworkManager.is_host():
+		return
 	if stopped_seconds >= STOP_SECONDS:
 		RunManager.finish_run(true)
 		return
