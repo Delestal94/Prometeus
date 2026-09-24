@@ -56,6 +56,9 @@ Pedido del usuario: MCP, skills y hooks para el repo. Lo hizo Nacho (con Claude)
   (puntos de puerta 150 vs 175 y la foto en resultados), `test_new_route_segments`
   (`ConstructionBarrier`) y `test_seated_body` (altura de `BodyVisual` en el asiento).
 - Los scripts de `.githooks/` y `tools/` se suben ya con permiso de ejecución.
+- Se suben los `.uid` que faltaban de 5 tests (`test_driver_ik`,
+  `test_driver_reboard_after_delivery`, `test_locked_traps`, `test_refined_asset_axes`,
+  `test_run_relay`). Si tenés otros sin subir en tu copia, borralos antes del `git pull`.
 
 ## Aviso activo: partida retransmitida, trampas bloqueadas y tests en el push (2026-09-23)
 
