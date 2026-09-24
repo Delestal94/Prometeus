@@ -38,6 +38,22 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: configuración de Claude Code compartida (2026-09-24)
+
+Pedido del usuario: MCP, skills y hooks para el repo. Lo hizo Nacho (con Claude).
+- **`.claude/` ahora se versiona** (agentes, skills, hooks, `settings.json`). Si tenías
+  agentes propios en `.claude/agents/`, `git pull` va a quejarse de archivos sin
+  seguimiento: movelos a otro lado, pulleá y compará. Lo personal va en
+  `.claude/settings.local.json`.
+- Hooks: chequeo de GDScript al editar, bloqueo de `*.uid`/`*.import`/`.godot/`,
+  confirmación al tocar el dominio del otro (`TMP_DUENO`) e instalación de Godot en la
+  nube. Skills `cerrar-cambio` y `nuevo-test`. MCP de Godot en `.mcp.json`.
+- Los scripts de `.githooks/` y `tools/` se suben ya con permiso de ejecución.
+- Test de Slatex tocado: `test_main_menu` ya no exige `_busy` después de aceptar una
+  invitación cuando Steam no está corriendo (CI, headless): ahí `_join_steam()` falla en el
+  acto y el menú tiene que soltar `_busy` y decir "No se pudo entrar…". Con Steam abierto
+  sigue exigiendo `_busy`. `main_menu.gd` no cambió.
+
 ## Aviso activo: segunda tanda de multijugador (2026-09-24)
 
 Pedido del usuario: arreglar todo lo que encontró `cazador-bugs` (detalle en

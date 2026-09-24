@@ -15,6 +15,21 @@ El hook y el script buscan Godot en `GODOT`, en el `PATH` o en
 `D:/Descargas/Godot_v4.7.2-stable_win64_console.exe`. Si lo tenés en otro lado:
 `export GODOT=/ruta/a/Godot_v4.7.2-stable_win64_console.exe`.
 
+## Claude Code
+
+La configuración compartida está en `.claude/` (agentes, skills, hooks, `settings.json`)
+y en `.mcp.json` (MCP de Blender y de Godot). Lo personal va en
+`.claude/settings.local.json`, que no se sube. Para que el hook de dominios sepa quién
+sos si tu mail de git no es el de siempre:
+
+```json
+{ "env": { "TMP_DUENO": "nacho" } }
+```
+
+El MCP de Godot (`@coding-solo/godot-mcp`) abre el editor, corre el juego y lee la salida
+de depuración. Usa `GODOT` para encontrar el ejecutable; si no está definida, lo busca
+solo.
+
 ## Tests
 
 ```bash
