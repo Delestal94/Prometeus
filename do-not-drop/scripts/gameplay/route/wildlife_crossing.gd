@@ -48,6 +48,11 @@ const IMPACT_SPEED_LOSS: float = 3.6
 const FINE: int = 30
 ## How long a hit's banner stays up before it's closed (report_incident()).
 const INCIDENT_SECONDS: float = 4.0
+## The horn scares the deer off when it's at most this far ahead of the
+## truck's nose (tareas de Nacho N-107): the driver's one tool besides the
+## wheel. Wider than the road on either side, not behind the truck.
+const HORN_SCARE_DISTANCE: float = 30.0
+const HORN_SCARE_LATERAL: float = 16.0
 const SIGN_LEAD: float = 45.0
 const SIGN_LATERAL: float = 7.8
 
@@ -80,6 +85,11 @@ func _ready() -> void:
 		warning.position = Vector3(SIGN_LATERAL, 0.0, SIGN_LEAD)
 		add_child(warning)
 		warning.position.y = _ground_height(warning.position)
+	# horn_honked is relayed to every peer, and each runs this same timeline
+	# off the same replicated truck: the scare plays out alike everywhere.
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null:
+		bus.connect(&"horn_honked", _on_horn_honked)
 
 
 func _physics_process(delta: float) -> void:
@@ -190,6 +200,29 @@ static func report_incident(tree: SceneTree, event_id: StringName, title: String
 	# stretch has streamed out of the world by then.
 	tree.create_timer(INCIDENT_SECONDS).timeout.connect(
 		Callable(bus, &"relay").bind(&"route_event_resolved", [event_id, false, 0]))
+
+
+## A honk close enough ahead scares the deer: still on its shoulder, it runs
+## off into the trees without ever crossing; already on the way or frozen in
+## the headlights, it bolts for the far side at once.
+func _on_horn_honked(_peer_id: int) -> void:
+	if state not in [State.WAITING, State.RUNNING_IN, State.FROZEN]:
+		return
+	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	if vehicle == null or not horn_reaches(vehicle):
+		return
+	if absf(_lateral) > ROAD_HALF_WIDTH:
+		_start_fleeing()
+	else:
+		state = State.BOLTING
+		deer.call(&"run")
+
+
+## Whether a honk from this truck reaches the deer: ahead of its nose, close.
+func horn_reaches(vehicle: Node3D) -> bool:
+	var in_truck: Vector3 = vehicle.to_local(deer.global_position)
+	var ahead: float = -in_truck.z + TRUCK_FRONT_Z
+	return ahead > -1.0 and ahead <= HORN_SCARE_DISTANCE and absf(in_truck.x) <= HORN_SCARE_LATERAL
 
 
 func _start_fleeing() -> void:
