@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`).
+> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`; M1 en curso: N-101, N-201, N-202,
+> N-203 y N-701 cerradas).
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -62,18 +63,19 @@ Dentro de un hito, el orden de la tabla es el recomendado.
 
 ## 1. Game Design
 
-### N-101 · Decidir el rol del depósito en Endless — A · `Opus 5.5 · medium` · Aviso: no
+### N-101 · Decidir el rol del depósito en Endless — A · `Opus 5.5 · medium` · Aviso: no · **[x] `30f94a3`**
 
 Antes #127. En Endless la pizarra no asigna pedidos (`post_orders(0)`), así que hoy muestra una
 pizarra vacía.
 
-- [ ] **N-101.1 Decisión (tomada acá para no depender de playtesting):** el depósito se mantiene
+- [x] **N-101.1 Decisión (tomada acá para no depender de playtesting):** el depósito se mantiene
   completo en Endless (ya está construido y sirve de lobby: vestuario, taller, suministros), pero la
   pizarra cambia su contenido a "ENDLESS — Llevá todo lo que puedas lo más lejos posible" y muestra el
   récord de distancia (`RunManager.best_score(MODE_ENDLESS)`).
-- [ ] **N-101.2** En Endless el portón se abre apenas el camión arranca con carga, sin esperar pedidos.
-- [ ] **N-101.3** Documentarlo en `docs/plan-desarrollo.md` Fase 3 y en `docs/arquitectura.md` §5.1.
-- [ ] Test en `test_depot.gd`: en Endless la pizarra no queda vacía y no se publican pedidos.
+- [x] **N-101.2** En Endless el portón se abre apenas el camión arranca con carga, sin esperar pedidos.
+  Ya pasaba: el portón arranca abierto en los dos modos y nada espera pedidos; el test lo fija.
+- [x] **N-101.3** Documentarlo en `docs/plan-desarrollo.md` Fase 3 y en `docs/arquitectura.md` §5.1.
+- [x] Test en `test_depot.gd`: en Endless la pizarra no queda vacía y no se publican pedidos.
 
 ### N-102 · Presupuesto de largo de ruta (regla de oro de 2-5 minutos) — A · `Opus 5.5 · high` · Aviso: no
 
@@ -150,37 +152,43 @@ Decisión vigente (antes #76): no hay tráfico en movimiento. La variedad sale d
 
 ## 2. Programación y arquitectura técnica
 
-### N-201 · Objetos sueltos del camión que no alteren la física en red — A · `Opus 5.5 · high` · Aviso: no
+### N-201 · Objetos sueltos del camión que no alteren la física en red — A · `Opus 5.5 · high` · Aviso: no · **[x] `3d76e90`**
 
 Pendiente desde el #18 viejo: `cargo_clutter.gd` crea la caja de herramientas y el termo como
 `RigidBody3D` en **cada** peer, y su contacto puede empujar la simulación del camión de forma
 distinta en cada máquina.
 
-- [ ] Opción recomendada: dejarlos como cuerpos rígidos pero en una capa de colisión que choca solo con el
-  piso y paredes de la zona de carga, **no** con el `VehicleBody3D` ni con paquetes; su masa ya no afecta
-  al camión. Documentar la capa en `docs/convenciones-godot.md` §2.
-- [ ] Test en `test_dust_and_ambience.gd` o nuevo: con y sin clutter, la trayectoria del camión en 10 s
-  de manejo es la misma (diferencia < 1 cm).
+- [x] **Resuelto por la arquitectura de red, sin tocar el clutter:** desde #145/#146 el camión de los
+  clientes está congelado y lo posiciona el host, así que el clutter de un cliente no puede empujarlo; el
+  único camión simulado es el del host, y ahí el clutter (4,3 kg contra 950 kg) es el mismo para todos
+  porque todos reciben esa pose. Ya estaban en capa 0 sin tocar paquetes ni jugadores. Separarlos de las
+  paredes del camión no era posible sin que lo atraviesen. Regla documentada en
+  `docs/convenciones-godot.md` §2.
+- [x] Test nuevo `test_cargo_clutter`: capa 0 y máscara sin paquetes ni jugadores, menos del 1 % de la
+  masa del camión, y camión congelado en la copia de un cliente (reemplaza la medición de trayectoria,
+  que ya no aplica).
 
-### N-202 · El ciervo no debería usar el canal de eventos de ruta — A · `Opus 5.5 · medium` · Aviso: no
+### N-202 · El ciervo no debería usar el canal de eventos de ruta — A · `Opus 5.5 · medium` · Aviso: no · **[x] `92db30b`**
 
 `wildlife_crossing.gd` avisa el choque con `route_event_started(&"deer_hit", …)` y nunca lo cierra.
 Slatex va a hacer que los eventos de ruta tengan cuenta regresiva y resolución (S-101 de su lista);
 un "evento" sin fin va a quedar colgado en su banner.
 
-- [ ] Agregar `"incident": true` y `"duration": 0` al diccionario, y emitir `route_event_resolved(&"deer_hit",
+- [x] Agregar `"incident": true` y `"duration": 0` al diccionario, y emitir `route_event_resolved(&"deer_hit",
   false, 0)` 4 s después. Así funciona con el HUD de hoy y con el de S-101 sin que ninguno de los dos
   tenga que esperar al otro.
-- [ ] Usar el mismo formato para los peligros nuevos de N-106.
-- [ ] Test en `test_wildlife_crossing.gd`: tras el choque se emite el resuelto.
+- [ ] Usar el mismo formato para los peligros nuevos de N-106: `WildlifeCrossing.report_incident()` ya
+  lo arma (se cierra solo aunque el tramo se haya borrado). Se tilda con N-106.
+- [x] Test en `test_wildlife_crossing.gd`: tras el choque se emite el resuelto.
 
-### N-203 · Bocina por el bus correcto — A · `Opus 5.5 · medium` · Aviso: no
+### N-203 · Bocina por el bus correcto — A · `Opus 5.5 · medium` · Aviso: no · **[x] `31222cc`**
 
 Pendiente del #81 viejo: motor, impacto y chirrido se rutean Interior/Exterior según la cámara
 (`vehicle_presentation.gd`), la bocina (`vehicle.gd` `_horn_player`) va fija por `SFX`.
 
-- [ ] Mover la creación del reproductor de bocina a `vehicle_presentation.gd` o exponerlo para que se rutee
-  igual que los demás. Test en `test_audio_bus_routing.gd`.
+- [x] Mover la creación del reproductor de bocina a `vehicle_presentation.gd` o exponerlo para que se rutee
+  igual que los demás. Test en `test_audio_bus_routing.gd`. (Se expuso: el nodo se llama `HornAudio` y
+  la presentación lo rutea con los demás.)
 
 ### N-204 · FPS reales con GPU — A · `Opus 5.5 · medium` · Aviso: no
 
@@ -427,9 +435,9 @@ Complementa la S-509 de Slatex sin esperarla.
 
 ## 7. Producción y gestión de proyecto
 
-### N-701 · Cerrar formalmente lo que no se hace en el MVP — A · `Opus 5.5 · low` · Aviso: no
+### N-701 · Cerrar formalmente lo que no se hace en el MVP — A · `Opus 5.5 · low` · Aviso: no · **[x] `b6d7439`**
 
-- [ ] Registrar como "fuera del MVP" en `docs/plan-desarrollo.md` (misma sección que la S-702 de Slatex; si ya
+- [x] Registrar como "fuera del MVP" en `docs/plan-desarrollo.md` (misma sección que la S-702 de Slatex; si ya
   existe, sumar filas): tráfico en movimiento (#76/#77/#79 viejos), puente con prioridad de paso (#59), curva
   peraltada (#65), motion blur (#14), rotonda (#60). Cualquier idea nueva va a "Después del lanzamiento".
 
