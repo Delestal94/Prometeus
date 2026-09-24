@@ -4,7 +4,8 @@
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
-> (100 cada una). Este doc es el manual de convivencia.
+> (la de Slatex se reescribió el 2026-09-24 por pilares, con IDs `S-xxx`). Este doc es el
+> manual de convivencia.
 
 ## El criterio: dividir por carpeta, no solo por tema
 
