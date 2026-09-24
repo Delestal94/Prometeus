@@ -505,7 +505,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_depot_mirror` — el espejo del vestuario refleja de verdad: cuelga en la pared de
   los lockers mirando al salón, la cámara reflejada queda detrás del vidrio con el plano
   cercano sobre él y su encuadre es justo el vidrio (espejado izquierda-derecha), muestra
-  tu propio cuerpo sin el vidrio, y solo renderiza si hay alguien cerca.
+  tu propio cuerpo sin el vidrio, y solo renderiza si hay alguien cerca; antes de eso
+  saca una foto del salón (medio segundo después de arrancar, con la cámara sin
+  interpolar), para que de lejos no se vea negro.
 - `test_locked_traps` — las trampas que el perfil todavía no desbloqueó (Líquido, Explosivo,
   Hostil) no aparecen en el depósito, desbloquearlas las pone en los estantes, y en línea
   manda la lista del host (viaja en el handshake con la semilla).

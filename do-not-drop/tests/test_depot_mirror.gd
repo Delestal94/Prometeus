@@ -7,7 +7,8 @@ extends SceneTree
 ##     looks back out, and its frustum is exactly the glass (the corners of
 ##     the glass land on the corners of the picture, flipped left-right);
 ##   - it sees your own body but not the glass;
-##   - it only renders while someone is close and in front of it.
+##   - it only renders while someone is close and in front of it, after one
+##     first picture of the room so it never shows black from afar.
 
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 
@@ -40,6 +41,16 @@ func _run() -> void:
 	mirror.rotation.y = 0.7
 	root.add_child(mirror)
 	await process_frame
+	_expect(mirror.reflection_camera.physics_interpolation_mode == Node.PHYSICS_INTERPOLATION_MODE_OFF, "The reflection camera is placed every frame, not interpolated between ticks")
+	# Before anyone comes near: one picture of the room, from in front of it.
+	var deadline: int = Time.get_ticks_msec() + int((DepotMirror.FIRST_PICTURE_DELAY + 1.0) * 1000.0)
+	var drew_once: bool = false
+	while not drew_once and Time.get_ticks_msec() < deadline:
+		await process_frame
+		drew_once = mirror.viewport.render_target_update_mode == SubViewport.UPDATE_ONCE
+	_expect(drew_once, "Before anyone comes near, the mirror draws the room once instead of showing black")
+	var first_eye: Vector3 = mirror.to_global(Vector3(DepotMirror.FIRST_EYE.x, DepotMirror.FIRST_EYE.y, -DepotMirror.FIRST_EYE.z))
+	_expect(mirror.reflection_camera.global_position.distance_to(first_eye) < 0.001, "That picture is the room seen from in front of the glass")
 	var eye_local := Vector3(0.3, 0.55, 2.0)
 	var eye: Vector3 = mirror.to_global(eye_local)
 	_expect(mirror.update_reflection(eye), "Renders for a viewer in front of the glass")

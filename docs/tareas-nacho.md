@@ -396,13 +396,15 @@ tocar el HUD.
 - [x] En Endless muestra la distancia recorrida y el récord.
 - Reemplaza a la radio en el centro del tablero, inclinado hacia el ojo del conductor; `check_driver_sightline` sigue pasando.
 
-### N-503 · Señalización del depósito — A · `Opus 5.5 · medium` · Aviso: no · **[x]**
+### N-503 · Señalización del depósito — A · `Opus 5.5 · medium` · Aviso: no · **[x] `29d9aca`**
 
 - [x] Flechas pintadas en el piso y carteles colgantes: "ESTANTES", "PIZARRA", "VESTUARIO", "TALLER",
   "SUMINISTROS", "CAMIÓN → PORTÓN". Un jugador nuevo encuentra cada estación sin que nadie le diga.
 - [x] Captura desde el punto donde aparece el jugador: al menos 4 carteles legibles.
 - [x] Espejo de cuerpo entero en el vestuario que refleja de verdad, para verse el uniforme
-  (`depot/depot_mirror.gd`, test `test_depot_mirror`). Pedido del usuario, 2026-09-24.
+  (`depot/depot_mirror.gd`, test `test_depot_mirror`). Pedido del usuario, 2026-09-24. Después: de lejos
+  (fuera de los 9 m en que se actualiza) se veía negro; ahora saca una foto del salón al arrancar, con la
+  cámara del reflejo sin interpolación física (si no, salía la ruta de afuera).
 - Hecho en `depot.gd` `_build_wayfinding()`: desde el spawn se leen 6 carteles colgantes ("← ESTANTES" y
   "PIZARRA" sobre la pizarra, "CAMIÓN → PORTÓN" sobre el camión, "VESTUARIO →" y "SUMINISTROS →" a la
   derecha, y el "TALLER" que ya estaba). Las flechas de los carteles se dibujan como forma, solo en la cara de

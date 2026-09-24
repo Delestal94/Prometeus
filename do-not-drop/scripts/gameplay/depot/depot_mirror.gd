@@ -12,19 +12,27 @@ extends Node3D
 ## SubViewport shown on the glass, flipped left-right.
 ##
 ## The glass faces local +Z; its centre is this node's origin. It only
-## renders while someone's camera is close and in front of it.
+## renders while someone's camera is close and in front of it, after one
+## first picture of the room (FIRST_EYE) so it never shows black from afar.
 
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 ## The glass itself stays out of its own reflection.
 const GLASS_LAYER: int = 1 << 19
 const RESOLUTION: int = 900
 const ACTIVE_DISTANCE: float = 9.0
+## The one picture taken before anyone comes near: seen from eye height a
+## couple of steps in front of the glass, once the level's light and
+## weather have settled.
+const FIRST_EYE := Vector3(0.0, 0.55, 2.0)
+const FIRST_PICTURE_DELAY: float = 0.5
 
 @export var glass_size := Vector2(0.9, 1.9)
 
 var viewport: SubViewport
 var reflection_camera: Camera3D
 var glass: MeshInstance3D
+var _drawn: bool = false
+var _first_picture_in: float = FIRST_PICTURE_DELAY
 
 
 func _ready() -> void:
@@ -41,6 +49,9 @@ func _ready() -> void:
 	reflection_camera.far = 40.0
 	# The world and your own body, which your own cameras leave out.
 	reflection_camera.cull_mask = RenderLayers.WORLD | RenderLayers.LOCAL_BODY
+	# Placed every frame in _process: interpolating it between physics ticks
+	# would draw it where it was a tick ago (at the world origin, at first).
+	reflection_camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	viewport.add_child(reflection_camera)
 
 	var quad := QuadMesh.new()
@@ -64,9 +75,20 @@ func _ready() -> void:
 	add_child(glass)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var viewer: Camera3D = get_viewport().get_camera_3d()
 	var active: bool = viewer != null and viewer != reflection_camera and update_reflection(viewer.global_position)
+	if not active and not _drawn:
+		# Nobody near yet: one picture of the room, so from across the depot
+		# the glass isn't a black hole in the wall.
+		_first_picture_in -= delta
+		if _first_picture_in > 0.0:
+			return
+		update_reflection(to_global(FIRST_EYE))
+		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		_drawn = true
+		return
+	_drawn = true
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if active else SubViewport.UPDATE_DISABLED
 
 
