@@ -48,7 +48,7 @@
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 17 | FOV configurable por el jugador — depende de la pantalla de opciones (ver sección propia más abajo). (#65) | B | ✅ Hecho (`GameSettings`, `options_panel.gd`) |
-| 18 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. (#70) | C | Pendiente |
+| 18 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. (#70) | C | ✅ Hecho (`player.gd`, fondo suavizado al llevar carga) |
 | 19 | Viñeta que se intensifica cuando la carga está en riesgo — comunica tensión sin texto. (#71) | B | ✅ Hecho (`674d8b1`) |
 | 20 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. (#74) | B | ✅ Hecho (`spectator_camera.gd`): Tab/Back alterna una cámara de persecución local cuando el pasajero está sentado, no conduce y su paquete está arruinado o ya no tiene uno. |
 | 21 | Modo foto. (#76) | C | ✅ Hecho (`phone_camera.gd`) |

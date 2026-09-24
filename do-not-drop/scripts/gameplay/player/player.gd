@@ -97,6 +97,7 @@ var _package_hit_cooldown: float = 0.0
 var _seat_pose_blend: float = 0.0
 var _flinch_time: float = 0.0
 var _ragdolled: bool = false
+var _package_focus: CameraAttributesPractical
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -139,6 +140,10 @@ func _ready() -> void:
 		if profile != null:
 			cosmetic_id = profile.get("selected_cosmetic")
 	_build_body()
+	_package_focus = CameraAttributesPractical.new()
+	_package_focus.dof_blur_far_enabled = false
+	_package_focus.dof_blur_near_enabled = false
+	_camera.attributes = _package_focus
 	RenderLayers.configure_first_person(_camera)
 	RenderLayers.show_viewmodel(_camera, is_local())
 	# Only the player this peer controls owns the view and reads input;
@@ -561,6 +566,10 @@ func _update_carried_package() -> void:
 	var carry_transform := Transform3D(global_basis, _carry_position())
 	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform)
 	_pose_viewmodel_hands(carried_package.get_half_extents())
+	_package_focus.dof_blur_far_enabled = true
+	_package_focus.dof_blur_far_distance = 1.45
+	_package_focus.dof_blur_far_transition = 1.0
+	_package_focus.dof_blur_amount = 0.18
 
 
 func _pose_viewmodel_hands(half_extents: Vector3) -> void:
@@ -612,6 +621,8 @@ func _pose_tending_hands(tending: Dictionary, delta: float) -> void:
 
 
 func _reset_viewmodel_hands() -> void:
+	if _package_focus != null:
+		_package_focus.dof_blur_far_enabled = false
 	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
 		var side: float = -1.0 if hand.name == &"LeftHand" else 1.0
 		hand.position = Vector3(side * 0.16, -0.2, -0.3)
