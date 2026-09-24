@@ -13,6 +13,8 @@
 - **ID**: `N-<pilar><número>` (N-101 es pilar 1, tarea 01). Subtareas `N-101.1`, `N-101.2`…
   con `[ ]` / `[x]`.
 - **Prio**: **A** hacer ya (cierra algo roto o a medias) · **B** suma valor claro · **C** pulido.
+- **Esfuerzo**: el modelo es siempre **Opus 5.5**; lo que cambia por tarea es el esfuerzo de
+  razonamiento (ver "Cómo trabajar una tarea").
 - **Aviso**: `sí` = toca la zona compartida o un archivo de Slatex. No hay que esperarlo: se deja
   el aviso en `docs/colaboracion-equipo.md` **en el mismo commit**, con un cambio chico y aislado
   (agregar antes que cambiar firmas).
@@ -21,9 +23,23 @@
   (bots, benchmarks, tests, capturas). Lo que necesita gente jugando está en "Para cuando haya
   playtesting" y **no se hace ahora**.
 
-### Cómo trabajar una tarea (Claude Code)
+### Cómo trabajar una tarea (Claude Code con Opus 5.5)
 
-Siguiendo `CLAUDE.md`: los tests se corren con el agente `ejecutor-tests` y un filtro
+Modelo fijo: **Opus 5.5**. Cada tarea trae anotado el esfuerzo recomendado (`/effort` en Claude
+Code antes de empezarla):
+
+| Esfuerzo | Cuándo | Ejemplos |
+|---|---|---|
+| **low** | Cambios mecánicos o de documentación sin decisiones. | N-307, N-701, N-804 |
+| **medium** | Decisiones ya tomadas en la tarea, textos, un archivo, assets con script conocido. | N-101, N-202, N-308, N-601 |
+| **high** (por defecto) | Una mecánica o sistema en 1-3 archivos con su test. | N-102, N-104, N-302, N-501 |
+| **xhigh** | Red (RPC, autoridad, varios procesos), refactors de archivos compartidos, cambios que tocan 4+ archivos. | N-206, N-207, N-208, N-209, N-504 |
+| **max** | Nunca de entrada: solo si xhigh no resolvió un bug después de pasarlo por `cazador-bugs`. | — |
+
+Subir un nivel si la tarea falla una vez con el esfuerzo anotado; bajar uno para las subtareas
+chicas de una tarea grande ya encaminada.
+
+Además, siguiendo `CLAUDE.md`: los tests se corren con el agente `ejecutor-tests` y un filtro
 (`tools/run-tests.sh route`), las capturas y todo lo que necesite pantalla con `revisor-visual`, y
 un test que falla sin causa clara con `cazador-bugs`. Al cerrar: `[x]` + hash del commit acá, test
 anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equipo.md`.
@@ -46,7 +62,7 @@ Dentro de un hito, el orden de la tabla es el recomendado.
 
 ## 1. Game Design
 
-### N-101 · Decidir el rol del depósito en Endless — A · Aviso: no
+### N-101 · Decidir el rol del depósito en Endless — A · `Opus 5.5 · medium` · Aviso: no
 
 Antes #127. En Endless la pizarra no asigna pedidos (`post_orders(0)`), así que hoy muestra una
 pizarra vacía.
@@ -59,7 +75,7 @@ pizarra vacía.
 - [ ] **N-101.3** Documentarlo en `docs/plan-desarrollo.md` Fase 3 y en `docs/arquitectura.md` §5.1.
 - [ ] Test en `test_depot.gd`: en Endless la pizarra no queda vacía y no se publican pedidos.
 
-### N-102 · Presupuesto de largo de ruta (regla de oro de 2-5 minutos) — A · Aviso: no
+### N-102 · Presupuesto de largo de ruta (regla de oro de 2-5 minutos) — A · `Opus 5.5 · high` · Aviso: no
 
 `critica-diseno-abogado-del-diablo.md` §3: con tramos de 400-600 m (`route.gd` `LEG_MIN_LENGTH` /
 `LEG_MAX_LENGTH`) y hasta 4 casas, una entrega puede tener ~3000 m, y nadie lo midió.
@@ -76,7 +92,7 @@ pizarra vacía.
 - [ ] Test `test_route_duration_budget.gd` (rápido, sin manejar): el largo total calculado respeta el
   presupuesto para 1-4 casas.
 
-### N-103 · Ritmo dentro de cada tramo — A · Aviso: no
+### N-103 · Ritmo dentro de cada tramo — A · `Opus 5.5 · high` · Aviso: no
 
 Un tramo largo sin nada que hacer es tedio; uno con todo difícil seguido es injusto.
 
@@ -89,7 +105,7 @@ Un tramo largo sin nada que hacer es tedio; uno con todo difícil seguido es inj
   a la última casa (misma curva que `hard_weight_at()` de Endless, escalada al largo de la entrega).
 - [ ] Test `test_route_pacing.gd`: 200 semillas, ninguna rompe las tres reglas.
 
-### N-104 · Balance del manejo medido — A · Aviso: no
+### N-104 · Balance del manejo medido — A · `Opus 5.5 · high` · Aviso: no
 
 Hoy la sensación de manejo solo se juzga jugando. Medirla con números fijos permite ajustarla y que
 no se rompa sin querer.
@@ -102,7 +118,7 @@ no se rompa sin querer.
   propensa a volcar. Ajustar `vehicle.gd` `VARIANTS` hasta cumplir.
 - [ ] El test falla si un cambio futuro saca los valores de rango (±10 %).
 
-### N-105 · Ruta como fuente de riesgo para la carga, medida — B · Aviso: no
+### N-105 · Ruta como fuente de riesgo para la carga, medida — B · `Opus 5.5 · high` · Aviso: no
 
 Complementa el simulador de balance de Slatex (S-108) sin depender de él.
 
@@ -112,7 +128,7 @@ Complementa el simulador de balance de Slatex (S-108) sin depender de él.
 - [ ] Si un tramo supera siempre el umbral pesado a velocidad normal (golpe inevitable), bajarle la
   severidad: un obstáculo tiene que poder pasarse sin daño manejando con cuidado.
 
-### N-106 · Variedad de peligros sin tráfico — B · Aviso: no
+### N-106 · Variedad de peligros sin tráfico — B · `Opus 5.5 · xhigh` · Aviso: no
 
 Decisión vigente (antes #76): no hay tráfico en movimiento. La variedad sale de peligros puntuales.
 
@@ -125,7 +141,7 @@ Decisión vigente (antes #76): no hay tráfico en movimiento. La variedad sale d
 - [ ] Todo determinista desde la semilla y disparado por el host, como el cruce de tren (#63 viejo).
 - [ ] Tests por peligro, patrón `test_wildlife_crossing.gd`.
 
-### N-107 · Bocina con función — C · Aviso: no
+### N-107 · Bocina con función — C · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] La bocina espanta animales (ciervo, ovejas, perro) dentro de 30 m hacia adelante. Hoy es solo
   comedia; así el conductor tiene una herramienta además del volante. Test en `test_horn.gd`.
@@ -134,7 +150,7 @@ Decisión vigente (antes #76): no hay tráfico en movimiento. La variedad sale d
 
 ## 2. Programación y arquitectura técnica
 
-### N-201 · Objetos sueltos del camión que no alteren la física en red — A · Aviso: no
+### N-201 · Objetos sueltos del camión que no alteren la física en red — A · `Opus 5.5 · high` · Aviso: no
 
 Pendiente desde el #18 viejo: `cargo_clutter.gd` crea la caja de herramientas y el termo como
 `RigidBody3D` en **cada** peer, y su contacto puede empujar la simulación del camión de forma
@@ -146,7 +162,7 @@ distinta en cada máquina.
 - [ ] Test en `test_dust_and_ambience.gd` o nuevo: con y sin clutter, la trayectoria del camión en 10 s
   de manejo es la misma (diferencia < 1 cm).
 
-### N-202 · El ciervo no debería usar el canal de eventos de ruta — A · Aviso: no
+### N-202 · El ciervo no debería usar el canal de eventos de ruta — A · `Opus 5.5 · medium` · Aviso: no
 
 `wildlife_crossing.gd` avisa el choque con `route_event_started(&"deer_hit", …)` y nunca lo cierra.
 Slatex va a hacer que los eventos de ruta tengan cuenta regresiva y resolución (S-101 de su lista);
@@ -158,7 +174,7 @@ un "evento" sin fin va a quedar colgado en su banner.
 - [ ] Usar el mismo formato para los peligros nuevos de N-106.
 - [ ] Test en `test_wildlife_crossing.gd`: tras el choque se emite el resuelto.
 
-### N-203 · Bocina por el bus correcto — A · Aviso: no
+### N-203 · Bocina por el bus correcto — A · `Opus 5.5 · medium` · Aviso: no
 
 Pendiente del #81 viejo: motor, impacto y chirrido se rutean Interior/Exterior según la cámara
 (`vehicle_presentation.gd`), la bocina (`vehicle.gd` `_horn_player`) va fija por `SFX`.
@@ -166,7 +182,7 @@ Pendiente del #81 viejo: motor, impacto y chirrido se rutean Interior/Exterior s
 - [ ] Mover la creación del reproductor de bocina a `vehicle_presentation.gd` o exponerlo para que se rutee
   igual que los demás. Test en `test_audio_bus_routing.gd`.
 
-### N-204 · FPS reales con GPU — A · Aviso: no
+### N-204 · FPS reales con GPU — A · `Opus 5.5 · medium` · Aviso: no
 
 El #93 viejo midió CPU/física en headless; el costo de dibujado nunca se midió.
 
@@ -176,7 +192,7 @@ El #93 viejo midió CPU/física en headless; el costo de dibujado nunca se midi�
 - [ ] Meta: 60 FPS estables a 1080p en la PC de desarrollo y ≥ 45 FPS con el preset bajo (N-205).
 - [ ] Resultado en README → Rendimiento, con la PC usada.
 
-### N-205 · Presets de calidad gráfica — B · Aviso: sí (`game_settings.gd` y `options_panel.gd` de Slatex, una fila)
+### N-205 · Presets de calidad gráfica — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd` y `options_panel.gd` de Slatex, una fila)
 
 - [ ] `scripts/presentation/world_quality.gd` (estático): tres niveles que ajustan distancia de sombras,
   distancia de dibujado del decorado (`dressing_batcher.gd`), densidad de plantas, partículas de polvo y
@@ -185,7 +201,7 @@ El #93 viejo midió CPU/física en headless; el costo de dibujado nunca se midi�
   "Calidad gráfica" en `options_panel.gd`. Son 10-15 líneas en archivos de Slatex: aviso.
 - [ ] Test: cada nivel aplica sus valores y se puede cambiar en caliente.
 
-### N-206 · Endless con curvas reales — B · Aviso: no
+### N-206 · Endless con curvas reales — B · `Opus 5.5 · xhigh` · Aviso: no
 
 Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 
@@ -198,7 +214,7 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 - [ ] Tests `test_route_streaming.gd` y `test_level_endless.gd` ampliados: 5 km simulados sin cruces, nodos
   acotados.
 
-### N-207 · Prueba de red con 3 jugadores — A · Aviso: no
+### N-207 · Prueba de red con 3 jugadores — A · `Opus 5.5 · xhigh` · Aviso: no
 
 `plan-desarrollo.md` Fase 4 lo marca como lo que falta para cerrarla.
 
@@ -208,7 +224,7 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
   tren cuando el host lo dispara. Un cliente que entra tarde recibe todo igual.
 - [ ] `tools/run-net-trio.sh` que lanza los tres y junta los códigos de salida.
 
-### N-208 · Camión del host suave en los clientes — B · Aviso: no
+### N-208 · Camión del host suave en los clientes — B · `Opus 5.5 · xhigh` · Aviso: no
 
 - [ ] Medir en un cliente el tirón de la posición replicada del camión con latencia artificial
   (opción de depuración `--fake-lag=150`): diferencia entre la pose mostrada y una interpolada ideal.
@@ -216,7 +232,7 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
   100 ms para la pose replicada en clientes. Nunca predicción de física en el cliente (el host manda).
 - [ ] Test con el retraso: la pose mostrada no salta más que el umbral.
 
-### N-209 · Unificar lo común entre nivel de entrega y Endless — C · Aviso: sí (`level_base.gd`)
+### N-209 · Unificar lo común entre nivel de entrega y Endless — C · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`)
 
 `level_endless.gd` duplica a propósito partes de `level_base.gd` (#42 viejo). Los dos modos ya están estables.
 
@@ -226,7 +242,7 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
   `level_base.gd` esa semana (su S-203 / S-209), coordinar el orden en el chat; no es bloqueante: el que
   llega segundo hace merge.
 
-### N-210 · Builds de exportación automáticas — B · Aviso: no
+### N-210 · Builds de exportación automáticas — B · `Opus 5.5 · high` · Aviso: no
 
 - [ ] Job de GitHub Actions que exporta Windows y Linux con `export_presets.cfg` en cada tag `v*` y adjunta
   los zip al release. Versión en `project.godot` (`config/version`) mostrada en el menú (texto chico, la
@@ -236,32 +252,32 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 
 ## 3. Arte y dirección visual
 
-### N-301 · Líneas de paneles y juntas de puertas — B · Aviso: no
+### N-301 · Líneas de paneles y juntas de puertas — B · `Opus 5.5 · high` · Aviso: no
 
 Antes #4. Única pieza de modelado del camión que queda.
 
 - [ ] Hendiduras finas (bisel invertido o calcomanía oscura) en puertas de cabina, puertas traseras, capó y
   laterales del modelo de referencia, sin cambiar la colisión. Captura con `render_reference_truck.gd`.
 
-### N-302 · Timbre real en cada casa — A · Aviso: no
+### N-302 · Timbre real en cada casa — A · `Opus 5.5 · high` · Aviso: no
 
 `inventario-assets.md` §5: hoy `doorbell_point.gd` es una caja.
 
 - [ ] Panel de timbre low-poly (placa, botón, número de casa) con script de Blender, que se ilumina cuando
   la casa espera un paquete y se apaga cuando se resolvió. Mismo punto de interacción.
 
-### N-303 · Lluvia en el parabrisas y limpiaparabrisas — B · Aviso: no
+### N-303 · Lluvia en el parabrisas y limpiaparabrisas — B · `Opus 5.5 · high` · Aviso: no
 
 - [ ] Shader de gotas deslizándose en el vidrio de la cabina, solo con clima lluvia y solo visto desde
   adentro.
 - [ ] Limpiaparabrisas animados que barren las gotas (el shader lee el ángulo del limpiador).
 
-### N-304 · Faros y noche con más carácter — C · Aviso: no
+### N-304 · Faros y noche con más carácter — C · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] Destello (flare) suave de faros de autos estacionados y faroles de pueblo de noche, ventanas de las casas
   iluminadas de noche, porche encendido en la casa que espera entrega (se combina con N-501).
 
-### N-305 · Identidad visual por zona — B · Aviso: no
+### N-305 · Identidad visual por zona — B · `Opus 5.5 · high` · Aviso: no
 
 Con entregas de varios minutos, bosque-campo-pueblo se repiten.
 
@@ -269,21 +285,21 @@ Con entregas de varios minutos, bosque-campo-pueblo se repiten.
   pasto en `lowpoly_materials.gd` y `route_terrain.gdshader`.
 - [ ] Cartel de nombre de pueblo al entrar a cada zona de pueblo (ver N-601).
 
-### N-306 · Vehículos del depósito también en la ruta — C · Aviso: no
+### N-306 · Vehículos del depósito también en la ruta — C · `Opus 5.5 · medium` · Aviso: no
 
 `sm_vehicle_tractor.glb` y `sm_vehicle_competitor_van.glb` solo se usan en el depósito.
 
 - [ ] Tractor en zona de campo (regla nueva en `route_dresser.gd`, raro, lejos del asfalto) y la camioneta de la
   competencia estacionada en pueblo. Test en `test_route_placement_rules.gd`.
 
-### N-307 · Inventario y dirección visual al día — A · Aviso: no
+### N-307 · Inventario y dirección visual al día — A · `Opus 5.5 · low` · Aviso: no
 
 - [ ] `docs/inventario-assets.md`: sacar el ⛔ de la furgoneta (ya está integrada), marcar ✅ los cables entre
   postes y los autos nuevos, revisar cada 🟡.
 - [ ] `docs/direccion-visual.md`: cerrar los `[ ]` que ya están resueltos (escala de personajes, LOD, motion
   blur descartado) y dejar abiertos solo los vigentes. Antes #100.
 
-### N-308 · Decisión de renderer — A · Aviso: sí (`project.godot`, solo si se cambia)
+### N-308 · Decisión de renderer — A · `Opus 5.5 · medium` · Aviso: sí (`project.godot`, solo si se cambia)
 
 Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
 
@@ -297,13 +313,13 @@ Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
 
 ## 4. Audio y diseño sonoro
 
-### N-401 · Motor con más vida — B · Aviso: sí (`synth_audio.gd`, solo funciones nuevas)
+### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas)
 
 - [ ] Capas por RPM (ralentí, medio, alto) mezcladas según velocidad y acelerador; cambio de marcha audible
   (bajón breve de RPM) en la clásica, más agudo y rápido en la ágil.
 - [ ] Test en `test_vehicle_audio.gd`: las capas cambian de volumen con la velocidad.
 
-### N-402 · Eco en el túnel y bajo techo — B · Aviso: no
+### N-402 · Eco en el túnel y bajo techo — B · `Opus 5.5 · high` · Aviso: no
 
 Pendiente del #58 viejo.
 
@@ -311,7 +327,7 @@ Pendiente del #58 viejo.
   larga, y al salir vuelve. Mismo mecanismo para el depósito (`roofed_area`).
 - [ ] Revisar la lluvia con cámaras exteriores ancladas al camión (pendiente del #68 viejo).
 
-### N-403 · Música del menú y del depósito — B · Aviso: sí (una línea en `main_menu.gd`)
+### N-403 · Música del menú y del depósito — B · `Opus 5.5 · medium` · Aviso: sí (una línea en `main_menu.gd`)
 
 Hoy hay una sola pista (`mus_ingame_loop.ogg`).
 
@@ -320,7 +336,7 @@ Hoy hay una sola pista (`mus_ingame_loop.ogg`).
   licencia al lado del archivo.
 - [ ] `scripts/presentation/menu_music.gd` autocontenido; `main_menu.gd` solo lo instancia (aviso).
 
-### N-404 · Mezcla medida del dominio — A · Aviso: no
+### N-404 · Mezcla medida del dominio — A · `Opus 5.5 · high` · Aviso: no
 
 Cierra el #83 viejo sin depender del oído.
 
@@ -329,7 +345,7 @@ Cierra el #83 viejo sin depender del oído.
   RMS, impactos −14 pico, ambiente −28 RMS, lluvia −24).
 - [ ] Tabla antes/después en `docs/direccion-visual.md` (audio) o `docs/audio.md` si Slatex ya lo creó.
 
-### N-405 · Sonidos de los peligros nuevos — C · Aviso: no
+### N-405 · Sonidos de los peligros nuevos — C · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] Balido de ovejas, ladrido, golpe de rama, sintetizados, para N-106.
 
@@ -340,25 +356,25 @@ Cierra el #83 viejo sin depender del oído.
 La UI de pantalla es de Slatex. Nacho se encarga de la guía **dentro del mundo**, que no necesita
 tocar el HUD.
 
-### N-501 · Saber de lejos qué casa espera entrega — A · Aviso: no
+### N-501 · Saber de lejos qué casa espera entrega — A · `Opus 5.5 · high` · Aviso: no
 
 - [ ] La casa que espera paquete tiene: porche encendido, buzón con su número grande, y un cartel en el jardín
   con el código de la caja que espera (el mismo de la pizarra del depósito, `A-3`). Al resolverse, se apaga.
 - [ ] Visible a 120 m de día y de noche. Captura con `revisor-visual`.
 
-### N-502 · GPS en el tablero (UI diegética) — B · Aviso: no
+### N-502 · GPS en el tablero (UI diegética) — B · `Opus 5.5 · high` · Aviso: no
 
 - [ ] Pantallita en el tablero del camión (`SubViewport` o `Label3D`) con distancia a la próxima casa, flecha
   de dirección y el código de la caja que espera. Solo lee datos de `route.gd` y de la asignación de casas.
 - [ ] En Endless muestra la distancia recorrida y el récord.
 
-### N-503 · Señalización del depósito — A · Aviso: no
+### N-503 · Señalización del depósito — A · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] Flechas pintadas en el piso y carteles colgantes: "ESTANTES", "PIZARRA", "VESTUARIO", "TALLER",
   "SUMINISTROS", "CAMIÓN → PORTÓN". Un jugador nuevo encuentra cada estación sin que nadie le diga.
 - [ ] Captura desde el punto donde aparece el jugador: al menos 4 carteles legibles.
 
-### N-504 · La cámara no atraviesa la cabina — B · Aviso: sí (`first_person_camera.gd`)
+### N-504 · La cámara no atraviesa la cabina — B · `Opus 5.5 · xhigh` · Aviso: sí (`first_person_camera.gd`)
 
 Antes #15 y #38.
 
@@ -375,30 +391,30 @@ Antes #15 y #38.
 La premisa, los clientes y los textos de las cajas son de Slatex (su S-601 a S-605). Nacho cuenta la
 historia **con el entorno**, sin esperar esos textos.
 
-### N-601 · Pueblos con nombre y carteles — B · Aviso: no
+### N-601 · Pueblos con nombre y carteles — B · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] Lista de 12 nombres de pueblo con tono de humor ("Villa Frágil", "Paso del Golpe", "Bajada Lenta")
   elegidos por semilla; cartel de entrada y salida de cada zona de pueblo.
 
-### N-602 · Historias en la banquina — C · Aviso: no
+### N-602 · Historias en la banquina — C · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] Escenas estáticas raras (1 cada ~800 m como máximo): la camioneta de la competencia con cajas
   desparramadas y la puerta abierta; una gallina suelta al lado de una caja rota; un cartel "Take My Package:
   entregamos (casi) todo" en una valla publicitaria.
 
-### N-603 · El depósito cuenta la campaña — C · Aviso: no
+### N-603 · El depósito cuenta la campaña — C · `Opus 5.5 · high` · Aviso: no
 
 - [ ] Cartel "Días sin accidentes: N" que vuelve a 0 cuando una partida termina con carga arruinada (lee el
   resultado de `run_ended`), y una pared de fotos con las fotos de entrega de la campaña (miniaturas que ya
   captura `phone_camera.gd`).
 
-### N-604 · Reacciones en la puerta — B · Aviso: no
+### N-604 · Reacciones en la puerta — B · `Opus 5.5 · high` · Aviso: no
 
 - [ ] En `delivery_house.gd`, animación y globo de texto del vecino según el resultado (contento, abre la caja
   y se agarra la cabeza, se lleva la caja equivocada de vuelta, no está y deja una nota). Pool de 5 frases por
   resultado en `delivery_house.gd`.
 
-### N-605 · Textos del mundo traducibles — B · Aviso: no
+### N-605 · Textos del mundo traducibles — B · `Opus 5.5 · high` · Aviso: no
 
 Complementa la S-509 de Slatex sin esperarla.
 
@@ -411,20 +427,20 @@ Complementa la S-509 de Slatex sin esperarla.
 
 ## 7. Producción y gestión de proyecto
 
-### N-701 · Cerrar formalmente lo que no se hace en el MVP — A · Aviso: no
+### N-701 · Cerrar formalmente lo que no se hace en el MVP — A · `Opus 5.5 · low` · Aviso: no
 
 - [ ] Registrar como "fuera del MVP" en `docs/plan-desarrollo.md` (misma sección que la S-702 de Slatex; si ya
   existe, sumar filas): tráfico en movimiento (#76/#77/#79 viejos), puente con prioridad de paso (#59), curva
   peraltada (#65), motion blur (#14), rotonda (#60). Cualquier idea nueva va a "Después del lanzamiento".
 
-### N-702 · Esta lista como tablero — A · Aviso: no
+### N-702 · Esta lista como tablero — A · `Opus 5.5 · low` · Aviso: no
 
 - [ ] `[x]` + hash al cerrar. Tarea que crece se parte acá antes de seguir. Revisión semanal de "Última
   actualización".
 - [ ] Verificar después de cada tarea grande `test_vehicle_presentation`, `test_vehicle_audio`,
   `test_route_streaming` y `check_driver_sightline` (antes #99).
 
-### N-703 · Hitos de lanzamiento con fecha — B · Aviso: no
+### N-703 · Hitos de lanzamiento con fecha — B · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] En `docs/plan-desarrollo.md` Fase 7: fechas objetivo para "contenido cerrado", "página de Steam
   publicada", "build de demo", "Early Access". Una por mes como máximo de distancia entre hitos.
@@ -433,25 +449,25 @@ Complementa la S-509 de Slatex sin esperarla.
 
 ## 8. QA (sin playtesting)
 
-### N-801 · Fuzz de generación de ruta — A · Aviso: no
+### N-801 · Fuzz de generación de ruta — A · `Opus 5.5 · high` · Aviso: no
 
 - [ ] `tests/test_route_fuzz.gd`: 500 semillas × 1-4 casas. Falla si: el camino se cruza consigo mismo,
   una casa o su jardín queda sobre el asfalto, un árbol sólido queda a menos de 2 m del carril, dos tramos se
   superponen, el terreno bajo el asfalto tiene un escalón de más de 0,3 m, o la meta queda inalcanzable.
 - [ ] Guardar las semillas que fallaron en el mensaje, para reproducir.
 
-### N-802 · Determinismo entre jugadores — A · Aviso: no
+### N-802 · Determinismo entre jugadores — A · `Opus 5.5 · high` · Aviso: no
 
 - [ ] Test de un solo proceso: armar la ruta, el decorado y el depósito dos veces con la misma semilla y
   comparar un hash de todas las posiciones. Cualquier `randf()` sin la semilla de sesión lo rompe (fue el bug
   del #122 viejo).
 
-### N-803 · Estrés del camión en las rutas nuevas — B · Aviso: no
+### N-803 · Estrés del camión en las rutas nuevas — B · `Opus 5.5 · high` · Aviso: no
 
 - [ ] Ampliar `test_vehicle_stress.gd` a la ruta curva con casas (no solo Endless): 3 minutos de manejo agresivo
   sin NaN, sin salir del mundo y sin quedar atascado sin que salte la detección.
 
-### N-804 · Recorrido técnico del mundo — A · Aviso: no
+### N-804 · Recorrido técnico del mundo — A · `Opus 5.5 · low` · Aviso: no
 
 Esto no es playtesting (no juzga diversión), busca errores.
 
@@ -463,7 +479,7 @@ Esto no es playtesting (no juzga diversión), busca errores.
 
 ## 9. Negocio, marketing y distribución
 
-### N-901 · Steamworks y AppID propio — A (decisión) · Aviso: no
+### N-901 · Steamworks y AppID propio — A (decisión) · `Opus 5.5 · medium` · Aviso: no
 
 Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 
@@ -472,29 +488,29 @@ Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 - [ ] Volver a verificar el flujo de invitación de amigos con el AppID real (la crítica §7 avisa que nunca se
   probó con el juego real).
 
-### N-902 · Herramienta de cámara para tráiler — B · Aviso: no
+### N-902 · Herramienta de cámara para tráiler — B · `Opus 5.5 · high` · Aviso: no
 
 - [ ] Cámara libre de depuración (solo build de debug) con rieles: grabar 3-4 puntos y que la cámara los
   recorra suave mientras el camión maneja solo. Reutilizar `results_orbit.gd` como base.
 - [ ] 6 planos guardados: salida del depósito con el portón, curva en el bosque, cruce de tren, puente angosto
   con lluvia, llegada a una casa de noche, vuelco con cajas volando.
 
-### N-903 · Guion del tráiler — B · Aviso: no
+### N-903 · Guion del tráiler — B · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] `docs/marketing/trailer.md`: 60-90 s, plano por plano (qué se ve, qué suena, texto en pantalla), con los
   planos de N-902 y los momentos de falla de las cajas de Slatex (S-310). Primer gancho en los primeros 5 s.
 
-### N-904 · Competidores de manejo cooperativo — B · Aviso: no
+### N-904 · Competidores de manejo cooperativo — B · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] `docs/marketing/competidores-manejo.md`: Drive Together, Co-Drive Chaos, Deliver Together, Totally
   Reliable Delivery Service: precio, reseñas de Steam (qué elogian y qué critican del manejo), cantidad de
   jugadores, cómo se ven sus páginas. Qué hacemos distinto (roles asimétricos) en una frase.
 
-### N-905 · Capturas del mundo para la tienda — C · Aviso: no
+### N-905 · Capturas del mundo para la tienda — C · `Opus 5.5 · medium` · Aviso: no
 
 - [ ] Con N-902: 5 capturas 1920×1080 sin HUD de paisaje, clima y camión. Se suman a las de Slatex (S-902).
 
-### N-906 · Devlog en GIF — C · Aviso: no
+### N-906 · Devlog en GIF — C · `Opus 5.5 · low` · Aviso: no
 
 - [ ] Un GIF corto por semana (ciervo, tren, vuelco, lluvia) desde la cámara de tráiler, para redes. Carpeta
   `art/devlog/` fuera de `do-not-drop/` para que no entre al build.
