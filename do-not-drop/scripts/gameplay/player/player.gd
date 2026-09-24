@@ -215,6 +215,20 @@ func _build_viewmodel_gloves() -> void:
 		glove.name = "Glove"
 		glove.scale = Vector3.ONE * 0.72
 		anchor.add_child(glove)
+		_style_viewmodel_glove(glove)
+
+
+func _style_viewmodel_glove(node: Node) -> void:
+	# The raw authored material is nearly the same grey as the forearm and
+	# disappeared against dim depots. A matte teal glove gives the viewmodel a
+	# readable silhouette without changing any shared glTF materials.
+	if node is MeshInstance3D:
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color("27cbb8")
+		material.roughness = 0.64
+		node.material_override = material
+	for child: Node in node.get_children():
+		_style_viewmodel_glove(child)
 
 
 func _enable_character_shadows(node: Node) -> void:

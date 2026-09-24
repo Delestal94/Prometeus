@@ -101,6 +101,11 @@ func can_interact(player: Node) -> bool:
 			return false
 	var carried: Node = player.get(&"carried_package")
 	if role == &"driver":
+		# At a delivery stop the handed-over package is gone from its mount.
+		# The active run must still let the driver return to the cab and take
+		# the crew on to the next house.
+		if RunManager.is_running:
+			return carried == null
 		# Any loaded passenger position makes the van ready. Requiring the
 		# first seat's mount made a valid package on the other three seats
 		# leave the driver prompt unavailable.

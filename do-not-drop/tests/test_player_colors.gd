@@ -42,6 +42,8 @@ func _initialize() -> void:
 		"Both first-person anchors contain the authored glove meshes with fingers")
 	_expect(left_hand.get_node(^"Glove").is_visible_in_tree() and right_hand.get_node(^"Glove").is_visible_in_tree(),
 		"Gloves must remain visible through their parent hand anchors")
+	_expect(_all_meshes_on_layer(left_hand.get_node(^"Glove"), 4) and _all_meshes_on_layer(right_hand.get_node(^"Glove"), 4),
+		"Every imported glove mesh renders on the first-person layer")
 
 	var second: Node = player_scene.instantiate()
 	second.set_multiplayer_authority(2)
@@ -115,6 +117,15 @@ func _find_skeleton(node: Node) -> Skeleton3D:
 		if found != null:
 			return found
 	return null
+
+
+func _all_meshes_on_layer(node: Node, layer: int) -> bool:
+	if node is MeshInstance3D and (node as MeshInstance3D).layers != layer:
+		return false
+	for child: Node in node.get_children():
+		if not _all_meshes_on_layer(child, layer):
+			return false
+	return true
 
 
 func _expect(condition: bool, description: String) -> void:
