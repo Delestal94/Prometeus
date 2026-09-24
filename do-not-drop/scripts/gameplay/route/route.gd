@@ -1,7 +1,8 @@
 extends Node3D
 ## Procedurally generated first delivery route (2026-09-22 rework): the road
 ## actually bends now, and each stretch between one house and the next is a
-## long mini-adventure (LEG_MIN_LENGTH-LEG_MAX_LENGTH m) built from the same
+## mini-adventure, as long as the route's time budget allows
+## (leg_target_length()), built from the same
 ## segment pool RouteStreamer uses for modo endless -- straight, speed bump,
 ## chicane, narrow bridge, S-curve, gravel, construction zone -- plus
 ## CurveSegment, which is the one segment type that actually changes the
@@ -43,12 +44,26 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 
-## Target length of each leg (start->house, house->house, house->goal),
-## randomized per leg within this range -- "mini aventura" territory, not a
-## quick hop. Actual length overshoots slightly since a leg only stops once
-## the segment that crosses the target finishes.
-const LEG_MIN_LENGTH: float = 400.0
-const LEG_MAX_LENGTH: float = 600.0
+## The golden rule: a delivery lasts 2-5 minutes whatever the house count
+## (tareas de Nacho N-102). The road is cut to a time budget instead of a
+## fixed length per leg, so one house gets long legs (a mini adventure) and
+## four get short ones. Measured with tests/bench_route_duration.gd; the
+## table is in docs/parametros-diseno.md ("Duración de la entrega").
+const ROUTE_TARGET_SECONDS: float = 240.0
+## Stopping at a house: get out, walk, ring, come back.
+const HOUSE_STOP_SECONDS: float = 25.0
+## Average driving speed over a whole route, m/s: the bench's autopilot
+## cruising at 50 km/h, easing off in bends and braking for every stop,
+## averaged 46 km/h on every house count.
+const ROUTE_CRUISE_SPEED: float = 12.8
+## Bounds on a leg (start->house, house->house, house->goal): under the
+## floor a leg is over before anything happens on it; over the cap one house
+## alone would be a long, empty drive. The cap was 600 m, but one house then
+## came to 1.9 minutes, under the 2-minute floor: 700 keeps it at ~2.2.
+const LEG_MIN_LENGTH: float = 250.0
+const LEG_MAX_LENGTH: float = 700.0
+## Each leg varies this much around its budget, so they don't all match.
+const LEG_LENGTH_JITTER: float = 0.1
 ## House/road proportions carried over unchanged from the old handcrafted
 ## route -- only WHERE the road goes changed, not how wide it or a house
 ## approach is.
@@ -168,6 +183,15 @@ func configure_houses(count: int) -> void:
 	house_count = maxi(count, 1)
 
 
+## How long each leg aims to be for this many houses: the driving time left
+## once every stop is paid for, shared out over the legs, in metres. Actual
+## legs vary LEG_LENGTH_JITTER around it, and overshoot a little since a leg
+## only ends once the segment that crosses its target finishes.
+static func leg_target_length(houses: int) -> float:
+	var driving_seconds: float = ROUTE_TARGET_SECONDS - houses * HOUSE_STOP_SECONDS
+	return clampf(driving_seconds * ROUTE_CRUISE_SPEED / float(houses + 1), LEG_MIN_LENGTH, LEG_MAX_LENGTH)
+
+
 ## Players minus the driver, at least one house even playing alone.
 static func crew_house_count(player_count: int) -> int:
 	return maxi(player_count - 1, 1)
@@ -272,11 +296,12 @@ func _reserve_start_yard() -> void:
 		x += step
 
 
-## Builds one leg's worth of road (LEG_MIN_LENGTH-LEG_MAX_LENGTH m of
-## chained segments) starting at `cursor`, and returns the cursor at the
-## far end so the caller can place a house or the goal there.
+## Builds one leg's worth of road (leg_target_length() m of chained
+## segments) starting at `cursor`, and returns the cursor at the far end so
+## the caller can place a house or the goal there.
 func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
-	var target_length: float = _rng.randf_range(LEG_MIN_LENGTH, LEG_MAX_LENGTH)
+	var jitter: float = _rng.randf_range(1.0 - LEG_LENGTH_JITTER, 1.0 + LEG_LENGTH_JITTER)
+	var target_length: float = clampf(leg_target_length(house_count) * jitter, LEG_MIN_LENGTH, LEG_MAX_LENGTH)
 	var leg_length: float = 0.0
 	# The last leg ends at the goal, not at a house, so it gets no warning.
 	var delivery_sign_placed: bool = leg_index >= house_count

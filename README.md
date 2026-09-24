@@ -204,6 +204,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_placement_rules.gd
 <godot> --headless --path do-not-drop --script res://tests/test_render_batching.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_assignment.gd
+<godot> --headless --path do-not-drop --script res://tests/test_route_duration_budget.gd
+<godot> --headless --path do-not-drop --script res://tests/test_vehicle_handling.gd
 <godot> --headless --path do-not-drop --script res://tests/test_depot.gd
 <godot> --headless --path do-not-drop --script res://tests/test_locked_traps.gd
 <godot> --headless --path do-not-drop --script res://tests/test_run_relay.gd
@@ -244,6 +246,18 @@ cada frame; guarda capturas `check_interpolation_*.png` en `user://` para mirarl
 máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, p95 22 ms,
 ~6.200 draw calls y la cámara quieta en el 64% de los frames; después ~3,6–6 ms, p95
 ~6,5–8 ms, ~1.500 draw calls y ningún frame quieto.
+
+`bench_route_duration.gd` mide cuánto dura una entrega manejándola: arma la ruta real para
+cada semilla y cantidad de casas, y un piloto automático la recorre a velocidad de crucero,
+frenando en cada casa (cada parada suma 25 s). Corre headless y más rápido que el tiempo
+real con `--fixed-fps 60`:
+
+```
+<godot> --headless --fixed-fps 60 --path do-not-drop --script res://tests/bench_route_duration.gd -- --seeds=1-20 --houses=1,2,3,4
+```
+
+Imprime una línea por corrida y una tabla por cantidad de casas (minutos promedio, máximo y
+mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración de la entrega").
 
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
@@ -309,7 +323,9 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   en su propia posición (no en el origen del mundo), y se limpia solo al
   terminar.
 - `test_horn` — la bocina atribuye correctamente a quien la toca (aunque no
-  sea el host) y el "honk" sintetizado en código es audio real, no silencio.
+  sea el host) y el "honk" sintetizado en código es audio real, no silencio. Con el
+  ciervo a menos de 30 m adelante, la bocina lo espanta: se va al monte sin cruzar, o
+  cruza de una si estaba congelado en el carril; de lejos no le hace nada.
 - `test_player_colors` — cada jugador tiene un cuerpo visible (antes no había
   ninguno) con un color distinto y determinístico por `peer_id`.
 - `test_impact_feedback` — el golpe de FOV al chocar: solo reacciona la cámara
@@ -382,6 +398,15 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   espera la caja que le asignó la pizarra del depósito desde que carga el nivel (se ve
   en su cartel, con el estante), y con la caja equivocada el vecino la devuelve sin
   gastar la entrega.
+- `test_route_duration_budget` — la regla de oro de 2-5 minutos por entrega, sin manejar:
+  con 1 a 4 casas, el largo de tramo que planea `route.gd` (presupuesto de tiempo, más
+  corto con más casas) y la ruta que construye de verdad para varias semillas duran
+  entre 2 y 5 minutos a la velocidad media que midió `bench_route_duration.gd`, contando
+  cada parada.
+- `test_vehicle_handling` — el manejo en números, para la clásica y la ágil: 0 → 50 km/h,
+  frenado desde 50, radio de giro a 20 km/h y que no vuelquen en la curva más cerrada a
+  45 km/h. Falla si algo se mueve más de ±10 % de lo medido (`docs/parametros-diseno.md`,
+  "Manejo"); `-- --measure` imprime los valores y barre la velocidad de vuelco.
 - `test_depot` — el depósito de salida: los 14 paquetes en su estante con código único y
   apoyados en la bandeja, el equipo aparece adentro y bajo techo, un pedido por casa en
   la pizarra, cada estación abre su pantalla solo antes de salir, los suministros se

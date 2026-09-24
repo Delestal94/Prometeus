@@ -89,6 +89,59 @@ no solo la entrega prolija.
   vez que llega al tope: si nadie la atiende, se escapa. Sin esto bajaba del máximo el
   mismo frame y era literalmente imposible de perder.
 
+## Duración de la entrega (medida, 2026-09-24)
+
+Regla de oro: una entrega dura **entre 2 y 5 minutos**, tenga las casas que tenga (tareas de
+Nacho N-102). Medido con `tests/bench_route_duration.gd`: un piloto automático maneja la ruta
+real a 50 km/h de crucero, afloja en las curvas, frena en cada casa y suma 25 s por parada;
+semillas 1-20.
+
+**Antes** (tramos de 400-600 m fijos, semillas 1-5): con 1 casa, 1,89 min promedio (menos de 2);
+con 4 casas, 5,40 min promedio y 5,52 de máximo (más de 5).
+
+**Regla nueva** (`route.gd`): el largo de cada tramo sale de un presupuesto de
+`ROUTE_TARGET_SECONDS` = 240 s. Se le resta `HOUSE_STOP_SECONDS` = 25 s por casa y lo que queda
+se reparte entre los tramos (casas + 1) a `ROUTE_CRUISE_SPEED` = 12,8 m/s, la velocidad media que
+midió el bench (46 km/h). Cada tramo varía ±10 % y queda entre 250 y 700 m. El techo pensado
+era 600 m, pero con 1 casa daba 1,9 min: con 700 m queda en ~2,3.
+
+**Después:**
+
+| Casas | Largo del tramo | Largo medio (m) | Minutos promedio | Máximo | Mínimo |
+|---|---|---|---|---|---|
+| 1 | 700 m | 1.404 | 2,36 | 2,69 | 2,14 |
+| 2 | 700 m | 2.102 | 3,79 | 4,30 | 3,42 |
+| 3 | 528 m | 2.218 | 4,40 | 4,74 | 4,00 |
+| 4 | 358 m | 1.902 | 4,38 | 4,92 | 4,04 |
+
+`test_route_duration_budget` lo vigila sin manejar: el largo planeado y el construido para
+varias semillas, con 1 a 4 casas, dan entre 2 y 5 minutos a esa velocidad media. Si cambia la
+velocidad del camión (ver "Manejo"), volver a correr el bench y actualizar
+`ROUTE_CRUISE_SPEED`.
+
+## Manejo (medido, 2026-09-24)
+
+Medido con `tests/test_vehicle_handling.gd` (`-- --measure` imprime todo), en piso plano,
+para cada variante de `vehicle.gd` `VARIANTS` (tareas de Nacho N-104).
+
+| Medida | Clásica | Ágil |
+|---|---|---|
+| 0 → 50 km/h | 2,42 s | 1,78 s (26 % más rápida) |
+| Frenado desde 50 km/h | 6,4 m | 5,6 m |
+| Radio de giro a 20 km/h, volante a fondo | 14,6 m | 12,0 m |
+| Vuelco en la curva más cerrada de la ruta (70°, radio ~49 m) | nunca, hasta su velocidad máxima | nunca, hasta su velocidad máxima |
+
+**Decisión:** estos valores **son** los objetivos. La tarea proponía un camión mucho más pesado
+(0 → 50 en 5-7 s, frenado de hasta 18 m), pero cambiar así la sensación de manejo sin
+playtesting es apostar a ciegas; el camión de hoy es el que se jugó en todas las pruebas. El
+test falla si un cambio mueve cualquiera de estos números más de ±10 %, así que la sensación
+no cambia por accidente. Revisarlos es de las primeras cosas para cuando haya playtesting.
+
+Lo que dicen los números: con esta aceleración y estos frenos, el riesgo para la carga no sale
+de no poder frenar a tiempo sino de los golpes (badenes, ripio, frenadas y volantazos). Ninguna
+curva de la ruta vuelca al camión por sí sola: un vuelco siempre viene de pegarle a un obstáculo
+o de salirse del camino.
+
 ## Próximo paso
 Estos valores van directo a los `TrapDefinition.tres` que se crean en la Fase 1-2 del
 plan de desarrollo. Cualquier ajuste posterior se hace editando esos Resources, sin
