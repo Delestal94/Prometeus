@@ -51,6 +51,11 @@ con los tests corriendo antes de cada push. Lo hizo Nacho.
   Tests de Slatex tocados: `test_multi_cargo` y `test_endless_multi_cargo` desbloquean las
   trampas antes de armar el nivel (el perfil de test depende de qué corrió antes).
 - Nuevo: `depot.gd` `withhold_locked()`, tests `test_locked_traps` y `test_run_relay`.
+- Bug reportado jugando (2026-09-24, "no me puedo subir"): `interaction/seat_point.gd` (de
+  Slatex). El asiento del conductor exigía una caja montada también con la partida ya
+  empezada, y con una caja en la mano desaparecía sin decir nada. Ahora la carga montada
+  solo se exige para arrancar, y con una caja en la mano el asiento avisa "Dejá el paquete
+  para manejar" (y no deja sentarse). Cubierto en `test_house_delivery_flow`.
 - **Tests antes del push:** después de clonar/pullear, correr una vez `tools/setup-hooks.sh`.
   `tools/run-tests.sh` corre la batería en paralelo (~1 min) con un `user://` aislado por
   test. CI en GitHub Actions (`.github/workflows/tests.yml`). Ver `CONTRIBUTING.md`.

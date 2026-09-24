@@ -45,6 +45,16 @@ func _run() -> void:
 	_expect(not bool(package.get(&"is_loaded")), "Taking it out stops it counting as loaded cargo")
 	_expect(mount.get(&"occupied_by") == null, "The shelf slot it came from is free again")
 
+	# Getting back behind the wheel mid-run (the "no me puedo subir" bug): the
+	# seat used to demand a loaded box even after the run had started, so
+	# with the only box in hand -- or after the last delivery -- the truck
+	# simply wouldn't take a driver, and it never said why.
+	player.call(&"leave_seat")
+	_expect(bool(seat.call(&"can_interact", player)), "The wheel still answers with the van's box in hand, mid-run")
+	_expect(String(seat.call(&"get_prompt")) == "Dejá el paquete para manejar", "...and says to put the box down (got '%s')" % seat.call(&"get_prompt"))
+	seat.interact(player)
+	_expect(NodePath(player.get(&"seat_node_path")).is_empty(), "Nobody drives with a box in hand")
+
 	# A box in someone's hands is not a box that fell off the van: the
 	# lost-cargo watchdog keys off the van's own distance, and walking 12 m
 	# to a front door would trip it instantly if it didn't skip held boxes.
@@ -67,6 +77,10 @@ func _run() -> void:
 	_expect(StringName(record["package_id"]) == package_id, "The record names the package that was handed over")
 	_expect(bool(manager.cargo[package_id].get("delivered", false)),
 		"A delivered box stops counting as cargo still aboard")
+	_expect(bool(seat.call(&"can_interact", player)) and String(seat.call(&"get_prompt")) == "Subirse a manejar",
+		"With nothing left aboard the driver can still get back in to drive on")
+	seat.interact(player)
+	_expect(not NodePath(player.get(&"seat_node_path")).is_empty(), "...and does")
 
 	# --- the photo is a bonus, and it only files against a real delivery ---
 	_expect(not bool(record["photo"]), "A delivery starts with no photo filed against it")
