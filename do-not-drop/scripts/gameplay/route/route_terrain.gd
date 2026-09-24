@@ -14,6 +14,12 @@ var paths: Array[Dictionary] = []
 ## neighbouring segments smoothly) and fades out sideways, so the ground
 ## beside the road climbs with it.
 var crests: Array[Dictionary] = []
+## Level rectangles (x/z) the ground is flattened to height 0 inside of, then
+## blends back out over FLAT_ZONE_BLEND -- the depot's footprint and yard
+## (route.gd start_yard), so no hill ever pushes through its floor or walls.
+var flat_zones: Array[Rect2] = []
+const FLAT_ZONE_BLEND: float = 10.0
+const FLAT_ZONE_HEIGHT: float = -0.02
 const HILL_FLANK: float = 55.0
 var _buckets: Dictionary = {}
 var _tiles: Dictionary = {}
@@ -88,6 +94,9 @@ func _sample(key: Vector2i) -> Vector3:
 	for pad: Vector3 in pads:
 		var weight: float = 1.0 - smoothstep(5.0, 11.0, p.distance_to(Vector2(pad.x, pad.z)))
 		height = lerpf(height, pad.y, weight)
+	for zone: Rect2 in flat_zones:
+		var outside := Vector2(maxf(maxf(zone.position.x - p.x, p.x - zone.end.x), 0.0), maxf(maxf(zone.position.y - p.y, p.y - zone.end.y), 0.0))
+		height = lerpf(height, FLAT_ZONE_HEIGHT, 1.0 - smoothstep(0.0, FLAT_ZONE_BLEND, outside.length()))
 	var result := Vector3(height, road.x - road.z + 6.0, road.y)
 	_samples[key] = result
 	return result

@@ -3,8 +3,10 @@
 ## Fase 5 — Progresión local del MVP
 
 El MVP usa un **perfil local persistente**, no una cuenta. Entregas exitosas y
-puntaje acumulado desbloquean contenido permanentemente: Líquido (3 entregas,
+puntaje acumulado marcan desbloqueos permanentes: Líquido (3 entregas,
 250 puntos), pintura violeta (5, 450), Explosivo (7, 750) y Hostil (12, 1500).
+Vehículos, pinturas y uniformes sí bloquean su selección; las tres trampas
+nuevas ya están instanciadas en el nivel y aún no se ocultan por progreso.
 El dinero y las cartas permanecen en la campaña cooperativa, separados del
 progreso individual. El tutorial inicial es una pantalla estática del menú;
 un mini-nivel interactivo queda para una iteración posterior.
@@ -96,9 +98,13 @@ Lo que hay ahora:
       de esa puerta el reclamo descuenta. Pedido directo del usuario.
 - [x] Cubierto por `tests/test_house_delivery_flow.gd` (el loop entero) y
       `tests/test_phone_camera.gd` (la foto y el reclamo).
-- [x] La meta al final de la ruta sigue cerrando el run, por decisión
-      explícita del usuario. Cuántas casas por partida (hoy 3 fijas contra 4
-      paquetes fijos) sigue abierto — `docs/tareas-nacho.md` #104/#105/#121.
+- [x] La meta al final de la ruta sigue cerrando el run. `Route` calcula
+      `max(jugadores - 1, 1)` casas cuando `house_count=0` (una en solitario),
+      aunque falta sincronizar ese número desde el host para partidas con
+      más de dos jugadores o incorporaciones tardías;
+      la escena declara siete tipos de paquete y asigna a cada casa una caja
+      cargada por orden de soporte. Ajustar la cantidad de cajas instanciadas
+      al tamaño de la partida sigue pendiente (`docs/tareas-nacho.md` #105/#121).
 
 ### Lo que un jugador puede tocar (2026-09-22)
 
@@ -127,7 +133,8 @@ pings) tienen cada una su propia línea y su propio reloj. Cubierto por
 - [x] Las tres trampas restantes, cada una como script + `.tres`, sin tocar el loop.
 - [x] Los cuatro asientos de pasajero son ocupables y cada uno queda a cargo del
       paquete de su soporte; el input del pasajero llega a su trampa.
-- [x] El nivel lleva los cuatro paquetes a la vez y el marcador puntúa por carga.
+- [x] El nivel instancia siete tipos de paquete; la partida puntúa la carga
+      que se monta y las entregas realizadas en las casas.
 - [x] `tests/test_traps.gd` y `tests/test_multi_cargo.gd` cubren la lógica headless.
 - [ ] **Criterio subjetivo, pendiente**: jugarlo y ver si el caos con 2-3 trampas
       simultáneas se siente divertido o solo abrumador. Ningún test puede responder
@@ -201,6 +208,15 @@ que separarlo. Esto **no** reemplaza el criterio subjetivo pendiente de las Fase
 seguir siendo divertido con varios jugadores reales es, si acaso, una pregunta más
 exigente que la versión solo.
 
+**Límites detectados en la auditoría del 2026-09-23:** con más de dos peers o
+un ingreso tardío, cada máquina puede construir distinta cantidad de casas a
+partir de su roster local. La asignación de cajas a casas se emite sólo al
+inicio y no llega como estado inicial al nuevo cliente. Inicio/fin de partida
+se emiten localmente en `RunManager`, por lo que un cliente puede no recibir
+resultados ni sumar progreso en su perfil. El cruce ferroviario tampoco replica
+su fase de barrera/tren. Estas rutas requieren una prueba multiproceso antes de
+considerar cerrada la Fase 4.
+
 - Integrar la API de multiplayer de Godot (host-cliente), empezando con 2 jugadores
   (conductor + 1 pasajero) antes de escalar a 5.
 - Sincronizar: transform del vehículo (autoridad del host), estado de cada paquete,
@@ -224,12 +240,13 @@ exigente que la versión solo.
       `user://leaderboard.json`, persiste entre sesiones, cubierto por
       `tests/test_leaderboard.gd`. Global queda fuera de alcance por ahora (no hay
       backend).
-- [x] Sistema de desbloqueos (`UnlockManager`) — perfil local JSON en
+- [x] Perfil y registro de desbloqueos (`UnlockManager`) — JSON local en
       `user://unlock_progress.json`, con entregas exitosas y puntaje acumulado. Parte
       del catálogo está disponible de inicio y se desbloquean: uniforme coral (2/150),
       Líquido (3/250), Furgoneta ágil (4/350), pintura violeta (5/450), Explosivo
       (7/750), uniforme cielo (9/1000) y Hostil (12/1500). Incluye migración del perfil
-      v1 y tests de persistencia/elección.
+      v1 y tests de persistencia/elección. La selección de uniforme/vehículo/pintura
+      respeta bloqueos; la disponibilidad de trampas en el mundo aún no.
 - [x] Pantallas de Progreso, Cómo jugar y Cosméticos — la última elige uniforme,
       vehículo y pintura; una opción bloqueada no puede seleccionarse.
 - [ ] Lobby multiplayer con pantalla de espera — no hace falta con el diseño actual

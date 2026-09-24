@@ -30,7 +30,10 @@ func _initialize() -> void:
 	# for that tick hasn't necessarily run before the signal fires) --
 	# whatever the exact ordering, only the second frame onward is reliably
 	# caught up, so that's what every other player's client would actually see.
-	await process_frame
+	# The body now eases into the seat over a few ticks (_seat_pose_blend), and
+	# with physics interpolation it's posed on physics ticks: wait for those.
+	for _i: int in range(30):
+		await physics_frame
 	await process_frame
 
 	_expect(bool(player.get(&"visible")), "Still visible after boarding -- no more disappearing")
@@ -47,7 +50,8 @@ func _initialize() -> void:
 	# being posed once and left behind.
 	var before: Vector3 = body.global_position
 	vehicle.global_position += Vector3(5.0, 0.0, 0.0)
-	await process_frame
+	for _i: int in range(3):
+		await physics_frame
 	await process_frame
 	_expect(body.global_position.distance_to(before) > 4.0,
 		"BodyVisual follows the seat every frame, not just once at boarding")

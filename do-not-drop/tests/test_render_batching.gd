@@ -42,7 +42,9 @@ func _run() -> void:
 	var remaining: Dictionary = _piece_transforms(batched)
 	var instances: int = 0
 	var unmatched: int = 0
-	for multimesh_instance: Node in batched.find_children("*", "MultiMeshInstance3D", true, false):
+	# Only the batcher's own batches: power lines are MultiMeshes too, built
+	# straight as geometry rather than from placed pieces.
+	for multimesh_instance: Node in holder.find_children("*", "MultiMeshInstance3D", true, false):
 		var multimesh: MultiMesh = (multimesh_instance as MultiMeshInstance3D).multimesh
 		# Headless, the dummy renderer can't give instance transforms back:
 		# read the copy the batcher kept for this (see record_instances).

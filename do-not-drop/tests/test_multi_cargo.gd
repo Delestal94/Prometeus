@@ -17,7 +17,9 @@ func _initialize() -> void:
 	packages.assign(root.get_tree().get_nodes_in_group(&"cargo"))
 	var mounts: Array[Node] = []
 	mounts.assign(root.get_tree().get_nodes_in_group(&"package_mount"))
-	_expect(packages.size() == 7, "The level ships seven packages, one per trap (got %d)" % packages.size())
+	# The level declares one box per trap; the depot (depot.gd) stocks a
+	# second of each on its shelves.
+	_expect(packages.size() == 14, "The depot holds two packages of every trap (got %d)" % packages.size())
 	_expect(mounts.size() == 6, "Four seat mounts plus two shelf mounts are available (got %d)" % mounts.size())
 	var seat_mounts: Array[Node] = []
 	for mount: Node in mounts:
@@ -28,8 +30,12 @@ func _initialize() -> void:
 	var trap_ids: Array = []
 	for package: Node in packages:
 		trap_ids.append(String(package.get(&"trap_definition").get(&"id")))
-	trap_ids.sort()
-	_expect(trap_ids == ["balance", "explosive", "fragile", "growing_weight", "hostile", "liquid", "noisy"],
+	var kinds: Array = []
+	for trap_id: String in trap_ids:
+		if not kinds.has(trap_id):
+			kinds.append(trap_id)
+	kinds.sort()
+	_expect(kinds == ["balance", "explosive", "fragile", "growing_weight", "hostile", "liquid", "noisy"] and trap_ids.size() == 14,
 		"All seven trap types are represented (got %s)" % str(trap_ids))
 
 	# Seven passenger places fit behind the driver; the four outer seats own

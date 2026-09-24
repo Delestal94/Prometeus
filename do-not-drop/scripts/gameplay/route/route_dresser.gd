@@ -443,7 +443,8 @@ func _power_wires(tops: Array[Transform3D]) -> MeshInstance3D:
 				var point: Vector3 = start.lerp(finish, t) + Vector3.DOWN * POWER_WIRE_SAG * 4.0 * t * (1.0 - t)
 				var span: Vector3 = point - previous
 				var basis := Basis.looking_at(span.normalized(), Vector3.UP) if absf(span.normalized().y) < 0.99 else Basis.IDENTITY
-				basis = basis.scaled(Vector3(1.0, 1.0, span.length()))
+				# Stretched along its own length (local Z), not the world's.
+				basis = basis * Basis.from_scale(Vector3(1.0, 1.0, span.length()))
 				surface.append_from(strand, 0, Transform3D(basis, (previous + point) * 0.5))
 				previous = point
 	var mesh := MeshInstance3D.new()

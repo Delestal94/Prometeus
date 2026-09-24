@@ -25,7 +25,8 @@ func _run() -> void:
 	var route: Node = level.get_node("World/Route")
 	var player: Node = level.local_player
 	var vehicle: Node = level.get_node("World/Vehicle")
-	var package: Node = level.get_node("World/Package")
+	# The box the first house ordered, as the board says.
+	var package: Node = _ordered_package(level)
 	var pickup: Node = package.get_node("InteractionArea")
 	var mount: Node = vehicle.get_node("CargoBay/LeftShelfPackageMount/InteractionArea")
 	var seat: Node = vehicle.get_node("CabinInterior/DriverEyePoint/InteractionArea")
@@ -98,3 +99,13 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		failures += 1
+
+
+## The box the depot's board says the first house ordered (depot.gd): the
+## one a crew would actually walk up to that door.
+func _ordered_package(level: Node) -> Node:
+	var wanted: StringName = StringName(level.get(&"depot").get(&"orders")[0]["package_id"])
+	for candidate: Node in level.get(&"packages"):
+		if StringName(candidate.get(&"package_id")) == wanted:
+			return candidate
+	return null

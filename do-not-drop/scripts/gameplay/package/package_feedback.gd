@@ -514,7 +514,10 @@ func _apply_explosive(delta: float) -> void:
 	var state: int = int(package.trap_behavior.call("get_state"))
 	_explosive_display.text = "DEFUSE\n%02d  %s" % [ceili(seconds), _explosive_arrow(direction)]
 	_explosive_display.modulate = UiTheme.RED if state == ITrapBehavior.TrapState.AT_RISK else UiTheme.YELLOW
-	if seconds <= 0.0 or direction == &"":
+	# The countdown only means something once the bomb is on the road: on
+	# the depot's shelf it would just be a floating, ticking sign (depot.gd).
+	_explosive_display.visible = bool(package.call(&"_is_run_active"))
+	if not _explosive_display.visible or seconds <= 0.0 or direction == &"":
 		return
 	_explosive_tick_timer -= delta
 	var interval: float = lerpf(0.16, 0.46, clampf(seconds / 14.0, 0.0, 1.0))

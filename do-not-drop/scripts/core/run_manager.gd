@@ -82,6 +82,11 @@ var leaderboard: Array = []
 
 
 func _ready() -> void:
+	# Under a test script (--script) the main loop has a script of its own:
+	# keep tests away from the player's real save, which they used to fill
+	# with dozens of scripted runs and unlocks.
+	if Engine.get_main_loop().get_script() != null:
+		save_path = "user://test_leaderboard.json"
 	EventBus.package_integrity_changed.connect(_on_integrity_changed)
 	EventBus.package_state_changed.connect(_on_state_changed)
 	EventBus.package_ruined.connect(_on_package_ruined)

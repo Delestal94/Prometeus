@@ -17,6 +17,9 @@ extends RigidBody3D
 @export_range(0.0, 1.0, 0.01) var spill_tilt_cos: float = 0.34
 ## ...or when a hit this hard (change in velocity, m/s) catches it open.
 @export_range(0.0, 30.0, 0.5) var spill_impact: float = 9.0
+## Scales every impact before the trap sees it: 1 is bare, lower absorbs
+## (the depot's padding supply sets it for the run -- see depot.gd).
+@export_range(0.0, 1.0, 0.05) var impact_absorption: float = 1.0
 ## How close a player has to be to open or close it.
 const OPEN_REACH: float = 3.0
 const TRANSFER_REACH: float = 2.4
@@ -142,7 +145,7 @@ func apply_impact(delta_velocity: float) -> void:
 		return
 	var before_integrity: float = integrity
 	var before_state: int = trap_state
-	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0))
+	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0) * impact_absorption)
 	_report_change(before_integrity, before_state, "El paquete sufrió demasiados golpes.")
 
 

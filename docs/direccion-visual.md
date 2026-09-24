@@ -171,9 +171,8 @@ misma paleta.
 - **[x] Ambient light** desde el cielo (`ambient_light_source = 3`, es decir, del
   `Sky`), energía moderada (0.65) — evita sombras completamente negras sin
   necesitar luces de relleno adicionales.
-- **[x] Cielo procedural** (`ProceduralSkyMaterial`), no un skybox de imagen —
-  gratis en rendimiento, sin asset que mantener, y combina bien con el estilo
-  low-poly de colores planos.
+- **[x] Cielo estilizado por shader** (`stylized_sky.gdshader`): gradiente,
+  nubes y colores parametrizados por el clima y la hora de la sesión.
 - **[x] Tonemap: Filmic** (`tonemap_mode = 2`, `level_base.tscn`). Decidido
   2026-09-21: Linear tiende a "quemar" los blancos en la transición interior
   oscuro de furgoneta / exterior soleado, y Filmic es la opción segura y estándar
@@ -186,6 +185,28 @@ misma paleta.
   y de paso deja el terreno preparado para disimular el streaming de tramos
   cuando el modo endless lo necesite) — activarla ahora cuesta lo mismo que
   activarla después, y ya suma en la ruta actual.
+
+`WorldMood` elige una combinación al construir la ruta, a partir de la semilla
+de sesión. No hay transición continua día/noche durante una partida. El valor
+`--mood=lluvia_noche` permite forzar una combinación para pruebas y capturas.
+
+| Clima | Probabilidad | Efecto principal |
+|---|---:|---|
+| Soleado | 45% | Luz y niebla base. |
+| Nublado | 25% | Más nubes, sol más tenue, niebla ×1,3. |
+| Lluvia | 18% | Gotas y sonido, terreno húmedo, niebla ×1,8, sol más tenue. |
+| Niebla | 12% | Niebla ×3,2 y horizonte más difuso. |
+
+| Hora | Probabilidad | Efecto principal |
+|---|---:|---|
+| Día | 60% | Iluminación base. |
+| Atardecer | 25% | Sol bajo y cálido; faros ×1,5. |
+| Noche | 15% | Luz fría tenue; faros ×4. |
+
+Las probabilidades provienen de `world_mood.gd`; lluvia y niebla elevan el
+refuerzo de faros al menos a ×1,6. La lluvia usa audio Interior/Exterior con
+volúmenes distintos. Sigue pendiente revisar la mezcla desde las cámaras
+exteriores de espectador y resultados, que hoy cuelgan del vehículo.
 
 ## 5. Qué ve el jugador y qué no (oclusión, interior/exterior)
 

@@ -37,6 +37,28 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: el depósito de salida (2026-09-23)
+
+Pedido del usuario: la partida arranca en un depósito con el camión estacionado, paquetes de
+todos los tipos, una pizarra de pedidos (cada casa espera un paquete concreto), estaciones
+para prepararse y un portón que se cierra al salir; "todo profesional". Lo hizo Nacho.
+Nuevo, del lado de Nacho: `scripts/gameplay/depot/` (`depot.gd` y sus piezas: `depot_kit.gd`,
+`depot_roller_door.gd`, `depot_station.gd`, `depot_worker.gd`, `depot_forklift.gd`),
+`route.gd` (`start_yard`: suelo nivelado y sin árboles bajo el depósito; el primer tramo no
+puede ser un túnel), `route_terrain.gd` (`flat_zones`), `route_sky.gd` (no llueve bajo techo:
+grupo `roofed_area`), `synth_audio.gd` (portón, zumbido, alarma de retroceso, radio).
+En la zona compartida: `level_base.gd`/`.tscn` y `level_endless.gd`/`.tscn` (nodo `Depot`,
+camión en su bahía, jugadores aparecen en el depósito, pedidos al cargar el nivel en vez de
+por orden del rack), `event_bus.gd` (`depot_orders_posted`, `depot_station_opened`,
+`depot_supplies_changed`, `depot_notice`). En archivos de Slatex, cambios chicos:
+- `core/crew_progression.gd`: `SUPPLIES`, `supplies`, `buy_supply()`, `take_supplies()`.
+- `package/package.gd`: `impact_absorption` (escala cada golpe; el acolchado la baja a 0.75).
+- `package/package_feedback.gd`: la cuenta regresiva del explosivo sólo se ve durante el run.
+- `interaction/package_pickup_point.gd`: el aviso dice el estante ("Agarrar paquete A-3 · Frágil").
+- `ui/prototype_hud.gd`: textos de inicio, objetivo con los pedidos, avisos del depósito,
+  abre `ui/depot_panel.gd` (nuevo: pizarra, vestuario, taller, suministros, progreso).
+- Tests: `test_house_assignment` actualizado; nuevo `test_depot`; capturas `render_depot.gd`.
+
 ## Aviso activo: paquetes que se abren (2026-09-23)
 
 Pedido del usuario: los paquetes tenían que abrirse y mostrar el contenido, a nivel
@@ -98,6 +120,22 @@ Nacho cambió el nombre oficial en la zona compartida y en dos archivos de Slate
   marca): el texto `"DO NOT DROP"` pasó a `"TAKE MY PACKAGE"`. Es un texto más
   largo en un panel de 240 px: si se corta, ajustarlo es de Slatex.
 - La carpeta `do-not-drop/` **no** se renombra.
+
+## Aviso activo: tanda de pendientes de ambas listas, con archivos de Slatex (2026-09-23)
+
+Pedido del usuario: implementar todo lo pendiente de las dos listas, sea de quien sea.
+Detalle por ítem en `tareas-nacho.md` y `tareas-slatex.md`. En archivos de Slatex:
+- `core/unlock_manager.gd`: uniforme por defecto "Color de equipo" (cada jugador su color;
+  antes todos salían menta), camiones y pinturas elegibles; perfil v2 migra el menta viejo.
+- `ui/cosmetics_panel.gd` (dos columnas: Uniforme / Camión y Pintura), `ui/main_menu.gd`
+  (botón "Apariencia"), `ui/prototype_hud.gd` (desglose de puntaje, caja rescatada, marcador
+  de ping, aviso de clima y de caja equivocada, atajo "mirar atrás").
+- `player/player.gd`: manos del asiento que responden a la trampa; `package/package.gd`:
+  `consume()` anima la entrega en la puerta.
+- `core/game_settings.gd` / `ui/options_panel.gd`: acción reasignable `look_back` (B).
+- Tests de Slatex actualizados a 7 trampas: `test_endless_multi_cargo`, `test_reference_truck`,
+  y `test_hint_relay` (teardown) — este último sigue crasheando a veces al cerrar el motor,
+  pasa siempre sus verificaciones; ya pasaba antes de estos cambios.
 
 ## Aviso activo: optimización de rendimiento, con archivos de Slatex (2026-09-23)
 
@@ -192,10 +230,12 @@ de entrega), `run_manager.gd` (registro y puntaje de entregas, quejas y
 fotos), `level_base.gd` (conecta las casas con el puntaje) y
 `scripts/presentation/first_person_camera.gd` (la misma sensibilidad).
 
-También quedan dos puntos de coordinación para cuando haya lugar:
-cantidad de casas dinámica según jugadores conectados (`route.configure_houses()`
-ya existe, falta llamarlo desde `level_base.gd`) y cantidad de paquetes por
-partida (hoy fija en 4 en la escena, sin relación con `house_count`).
+El número de casas se calcula al construir la ruta con
+`max(jugadores - 1, 1)`, pero todavía sale del roster local: host y clientes
+pueden generar cantidades distintas con más de dos jugadores o joins tardíos.
+El host debe fijar y comunicar ese valor. La escena declara siete paquetes;
+se asignan a puertas sólo las cajas cargadas, en orden de soporte. También
+queda decidir si conviene instanciar una cantidad de paquetes ajustada a cada partida.
 
 ## Zona compartida — avisar antes de tocar
 

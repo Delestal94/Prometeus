@@ -16,7 +16,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var settings: Node = root.get_node("GameSettings")
-	var original_path: String = settings.SAVE_PATH
+	var original_path: String = settings.save_path  # the test file under --script, never the real one
 
 	# --- volume reaches the bus, not just the variable ---
 	settings.master_volume = 0.5

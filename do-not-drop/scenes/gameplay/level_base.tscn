@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/level_base.gd" id="1_level"]
 [ext_resource type="PackedScene" path="res://scenes/gameplay/vehicle/vehicle.tscn" id="2_vehicle"]
@@ -13,6 +13,7 @@
 [ext_resource type="Resource" path="res://data/traps/liquid.tres" id="11_liquid"]
 [ext_resource type="Resource" path="res://data/traps/explosive.tres" id="12_explosive"]
 [ext_resource type="Resource" path="res://data/traps/hostile.tres" id="13_hostile"]
+[ext_resource type="Script" path="res://scripts/gameplay/depot/depot.gd" id="14_depot"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.23, 0.37, 0.47, 1)
@@ -42,9 +43,10 @@ script = ExtResource("1_level")
 [node name="World" type="Node3D" parent="."]
 
 [node name="Route" parent="World" instance=ExtResource("4_route")]
+start_yard = Rect2(-24, -2, 48, 50)
 
 [node name="Vehicle" parent="World" instance=ExtResource("2_vehicle")]
-position = Vector3(0, 0.9, 0)
+position = Vector3(0, 0.9, 15.5)
 
 [node name="Package" parent="World" instance=ExtResource("3_package")]
 position = Vector3(2.2, 0.75, 0.5)
@@ -78,6 +80,10 @@ trap_definition = ExtResource("12_explosive")
 position = Vector3(5.8, 0.75, 1.4)
 package_id = &"hostile_01"
 trap_definition = ExtResource("13_hostile")
+
+[node name="Depot" type="Node3D" parent="World"]
+position = Vector3(0, 0, 8)
+script = ExtResource("14_depot")
 
 [node name="PlayerSpawner" type="MultiplayerSpawner" parent="World"]
 _spawnable_scenes = PackedStringArray("res://scenes/gameplay/player/player.tscn")

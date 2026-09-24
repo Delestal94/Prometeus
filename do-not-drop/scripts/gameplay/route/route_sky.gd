@@ -67,7 +67,11 @@ func _process(_delta: float) -> void:
 		global_position = Vector3(at.x, global_position.y, at.z)
 		if _rain != null:
 			_rain.global_position = at + Vector3.UP * RAIN_HEIGHT
-			var inside: bool = _inside_vehicle(camera)
+			# Under a roof (the depot) no drop falls on you: you only hear it
+			# drumming overhead, like inside the truck.
+			var roofed: bool = _under_roof(at)
+			_rain.visible = not roofed
+			var inside: bool = roofed or _inside_vehicle(camera)
 			var bus: StringName = &"Interior" if inside else &"Exterior"
 			if AudioServer.get_bus_index(bus) >= 0 and _rain_sound.bus != bus:
 				_rain_sound.bus = bus
@@ -116,6 +120,14 @@ func _build_rain() -> void:
 	_rain_sound.volume_db = -17.0
 	_rain_sound.autoplay = true
 	add_child(_rain_sound)
+
+
+## Anything in the "roofed_area" group answers covers(point) -- the depot.
+func _under_roof(point: Vector3) -> bool:
+	for area: Node in get_tree().get_nodes_in_group(&"roofed_area"):
+		if bool(area.call(&"covers", point)):
+			return true
+	return false
 
 
 func _inside_vehicle(camera: Node) -> bool:

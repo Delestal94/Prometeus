@@ -84,7 +84,7 @@ func _remounting_mid_run_and_dropping() -> void:
 func _handing_over_at_the_door_empties_hands() -> void:
 	var level: Node = await _load_level()
 	var player: Node = level.local_player
-	var package: Node = level.get_node("World/Package")
+	var package: Node = _ordered_package(level)
 	package.get_node("InteractionArea").interact(player)
 	var houses: Array = level.get_node("World/Route").get(&"houses")
 	_expect(houses.size() > 0, "The route has a house to deliver to")
@@ -92,6 +92,10 @@ func _handing_over_at_the_door_empties_hands() -> void:
 		houses[0].get(&"doorbell").interact(player)
 		_expect(player.carried_package == null, "Handing a box to a resident empties the carrier's hands")
 		await process_frame
+		# Out of play at once (tareas de Slatex #15), gone once the hand-over
+		# animation has carried it to the door.
+		_expect(not is_instance_valid(package) or (not package.is_in_group(&"cargo") and package.collision_layer == 0), "The box leaves play the moment it's handed over")
+		await create_timer(1.1).timeout
 		_expect(not is_instance_valid(package), "The resident keeps the box")
 		_expect(package_pickup_ready(level, player), "With empty hands the player can pick up another box")
 	await _unload_level(level)
@@ -200,3 +204,13 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		failures += 1
 		push_error(description)
+
+
+## The box the depot's board says the first house ordered (depot.gd): the
+## one a crew would actually walk up to that door.
+func _ordered_package(level: Node) -> Node:
+	var wanted: StringName = StringName(level.get(&"depot").get(&"orders")[0]["package_id"])
+	for candidate: Node in level.get(&"packages"):
+		if StringName(candidate.get(&"package_id")) == wanted:
+			return candidate
+	return null

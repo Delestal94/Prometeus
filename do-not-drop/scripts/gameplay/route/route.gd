@@ -35,6 +35,10 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 ## the difference between ~16k draw calls a frame and a couple of thousand.
 ## Tests that inspect individual placed pieces turn it off.
 @export var batch_dressing: bool = true
+## Ground kept level and clear of trees and props behind the start line, in
+## route space (x/z): where the level puts its depot (depot.gd). Empty for no
+## yard at all.
+@export var start_yard: Rect2 = Rect2()
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 
@@ -204,6 +208,7 @@ func _ready() -> void:
 	terrain = Terrain.new()
 	terrain.name = "ContinuousTerrain"
 	add_child(terrain)
+	_reserve_start_yard()
 	var cursor: Transform3D = Transform3D.IDENTITY
 	_progress_samples.append({"cumulative": 0.0, "position": cursor.origin, "leg_index": 0})
 	_start_leg(cursor)
@@ -247,6 +252,23 @@ func _start_leg(cursor: Transform3D) -> void:
 	terrain.add_span(cursor.origin + Vector3(0.0, 0.0, 20.0), cursor.origin)
 	_sign("Salida", "SALIDA\nCuidá la carga -- el camino serpentea", cursor.origin + Vector3(-7.6, 0.0, -5.0), TEAL)
 	_box("StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.03, -4.0), TEAL)
+
+
+## The depot stands behind the start line: its footprint stays level and no
+## tree or roadside prop may grow into it. (Ground tiles already reach it:
+## the start apron's span makes them for 64 m around.)
+func _reserve_start_yard() -> void:
+	if not start_yard.has_area():
+		return
+	terrain.flat_zones.append(start_yard)
+	var step: float = 8.0
+	var x: float = start_yard.position.x + step * 0.5
+	while x < start_yard.end.x:
+		var z: float = start_yard.position.y + step * 0.5
+		while z < start_yard.end.y:
+			_clear_zones.append(Vector3(x, z, step * 0.75))
+			z += step
+		x += step
 
 
 ## Builds one leg's worth of road (LEG_MIN_LENGTH-LEG_MAX_LENGTH m of
@@ -315,6 +337,10 @@ func _pick_spine_script() -> Script:
 	var candidates: Array[Script] = _spine_segment_scripts.duplicate()
 	if route_length < SAFE_START_LENGTH:
 		candidates = candidates.filter(func(s: Script) -> bool: return not _spine_hard_segments.has(s) and s != CurveSegment)
+	# Nor a tunnel mouth right in front of the depot's door: its portal would
+	# stand against the forecourt and wall off the view of the building.
+	if route_length < 1.0 and start_yard.has_area():
+		candidates = candidates.filter(func(s: Script) -> bool: return s != TunnelSegment)
 	if _last_script != null:
 		candidates = candidates.filter(func(s: Script) -> bool: return s != _last_script)
 	if _hard_streak >= 2:

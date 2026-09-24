@@ -29,8 +29,13 @@ func _initialize() -> void:
 	var trap_ids: Array = []
 	for package: Node in packages:
 		trap_ids.append(String(package.get(&"trap_definition").get(&"id")))
-	trap_ids.sort()
-	_expect(trap_ids == expected_ids, "Every trap type is represented in the endless level (got %s, expected %s)" % [str(trap_ids), str(expected_ids)])
+	# The depot (depot.gd) stocks two of every kind: compare the kinds.
+	var kinds: Array = []
+	for trap_id: String in trap_ids:
+		if not kinds.has(trap_id):
+			kinds.append(trap_id)
+	kinds.sort()
+	_expect(kinds == expected_ids, "Every trap type is represented in the endless level (got %s, expected %s)" % [str(trap_ids), str(expected_ids)])
 
 	var mounts: Array[Node] = []
 	mounts.assign(root.get_tree().get_nodes_in_group(&"package_mount"))
@@ -41,7 +46,8 @@ func _initialize() -> void:
 	# (Explosive/hostile need a passenger's input to survive by design.)
 	var aboard: Array[Node] = []
 	for package: Node in packages:
-		if String(package.get(&"trap_definition").get(&"id")) in ["balance", "fragile", "growing_weight", "noisy"]:
+		var trap_id: String = String(package.get(&"trap_definition").get(&"id"))
+		if trap_id in ["balance", "fragile", "growing_weight", "noisy"] and not aboard.any(func(other: Node) -> bool: return String(other.get(&"trap_definition").get(&"id")) == trap_id):
 			aboard.append(package)
 	var player: Node = level.local_player
 	for index: int in range(aboard.size()):

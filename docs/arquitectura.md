@@ -83,9 +83,13 @@ antes que el pase de arte).
 | `EventBus` | Señales globales desacopladas (ver sección 5). Único punto de "broadcast" del juego. | Registrado |
 | `RunManager` | Estado de la partida en curso (ruta actual, paquetes activos, puntaje, tiempo — se resetea entre partidas) **y** el leaderboard local persistente (top 10, `user://leaderboard.json`, sobrevive entre partidas y reinicios de la app). | Registrado |
 | `NetworkManager` | Setup de host/cliente (Steam y ENet), conexión de jugadores, mapeo de autoridad. | Registrado |
+| `CrewProgression` | Economía y cartas del equipo durante la campaña. | Registrado |
+| `ShopVoteManager` | Votaciones cooperativas de tienda. | Registrado |
+| `RouteEventManager` | Eventos de ruta. | Registrado |
+| `GameSettings` | Preferencias locales persistentes de controles, audio y cámara. | Registrado |
 | `GameManager` | Estado de alto nivel del flujo del juego (menú → lobby → en partida → resultados). Máquina de estados. | **No existe aún** — el flujo de menú/nivel hoy lo maneja `main_menu.gd` + `get_tree().change_scene_to_file()`, sin autoload propio. |
 | `UnlockManager` | Progreso meta local, desbloqueos y elecciones de uniforme/vehículo/pintura; guarda JSON versionado en `user://unlock_progress.json`. | Registrado |
-| `AudioManager` | Reproducción de música/SFX desacoplada, escucha del `EventBus`. | **No existe aún** — no hay música/sfx dinámicos todavía. |
+| `AudioManager` | Reproducción centralizada de música/SFX. | **No existe aún** — la música y los efectos dinámicos actuales viven en scripts de presentación. |
 
 Ninguno de estos conoce los detalles internos de los otros — se comunican por señales
 o por métodos públicos mínimos y bien definidos.
@@ -202,6 +206,10 @@ Señales reales declaradas en `event_bus.gd` (18, actualizado 2026-09-21):
 - `interaction_prompt_changed(prompt)`
 - `ping_sent(peer_id, position, label)`
 - `horn_honked(peer_id)`
+- `depot_orders_posted(orders)` — la pizarra del depósito; cada peer la calcula igual desde la semilla.
+- `depot_station_opened(station)` — local: abrir la pantalla de una estación del depósito.
+- `depot_supplies_changed(supplies, team_money)` — el host decide la compra, `depot.gd` la reparte.
+- `depot_notice(text)` — aviso para todo el equipo (relayed): compra, pedido olvidado, portón.
 
 El HUD, `RunManager` y el `NetworkManager` escuchan estas señales cada uno por su
 cuenta. Ninguno le pide nada directamente a `Package` ni a `Vehicle` — esto es lo que
@@ -226,6 +234,18 @@ host decide que el hecho "pasó de verdad" y lo relayea a todos, incluido quien 
 mandó.
 
 ---
+
+## 5.1 El depósito de salida (`scripts/gameplay/depot/`)
+
+Toda partida empieza en `Depot` (nodo de `level_base.tscn` y `level_endless.tscn`): el
+camión en su bahía, los paquetes en las estanterías de despacho (cada uno con su código de
+estante en la meta `dispatch_code`), la pizarra con un pedido por casa y las estaciones
+(`DepotStation`, un `Interactable` que abre la pantalla en el peer de quien la usó). Los
+pedidos y el orden de las estanterías salen de `NetworkManager.world_seed`, así que todos
+los peers los calculan igual sin mensajes; el host decide las compras
+(`CrewProgression.buy_supply`) y el cierre del portón, y los reparte por RPC. La geometría
+estática se hornea en una malla por material (`DepotKit`); operarios y autoelevador son
+presentación local.
 
 ## 6. Máquinas de estado
 

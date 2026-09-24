@@ -500,3 +500,133 @@ static func _make_crossing_bell() -> AudioStreamWAV:
 	stream.loop_begin = 0
 	stream.loop_end = sample_count
 	return stream
+
+
+## Depot roller door (depot_roller_door.gd): a geared motor drone with the
+## slats rattling over it. Loops for as long as the door moves.
+static func roller_door() -> AudioStreamWAV:
+	return _cached(&"roller_door", _make_roller_door)
+
+
+static func _make_roller_door() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 1.0
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31
+	var rattle: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		# Whole cycles of 60/120/180 Hz in one second: the seam never clicks.
+		var drone: float = sin(TAU * 60.0 * t) * 0.35 + sin(TAU * 120.0 * t) * 0.22 + sin(TAU * 180.0 * t) * 0.08
+		# A slat clacks over the drum eight times a second.
+		if i % (RATE / 8) == 0:
+			rattle = 0.8
+		rattle *= 0.9985
+		var clack: float = rattle * rng.randf_range(-1.0, 1.0) * 0.4
+		data.encode_s16(i * 2, roundi(clampf(drone + clack, -1.0, 1.0) * 15000.0))
+	return _loop(data, RATE, sample_count)
+
+
+## The depot's room tone: ventilation and fluorescent tubes, a soft 100 Hz
+## hum under filtered air. Quiet on purpose -- it's what silence sounds like
+## in a warehouse.
+static func warehouse_hum() -> AudioStreamWAV:
+	return _cached(&"warehouse_hum", _make_warehouse_hum)
+
+
+static func _make_warehouse_hum() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 3.0
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 12
+	var air: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		air = air * 0.97 + rng.randf_range(-1.0, 1.0) * 0.03
+		var hum: float = sin(TAU * 100.0 * t) * 0.18 + sin(TAU * 200.0 * t) * 0.05
+		var edge: float = minf(float(i), float(sample_count - i)) / (RATE * 0.05)
+		data.encode_s16(i * 2, roundi(clampf((hum + air * 3.2) * minf(edge, 1.0), -1.0, 1.0) * 12000.0))
+	return _loop(data, RATE, sample_count)
+
+
+## Forklift reversing alarm: the classic beep, half a second on, half off.
+static func reverse_beep() -> AudioStreamWAV:
+	return _cached(&"reverse_beep", _make_reverse_beep)
+
+
+static func _make_reverse_beep() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 1.0
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var on: float = 1.0 if t < 0.45 else 0.0
+		var ramp: float = minf(minf(t, absf(0.45 - t)) / 0.01, 1.0) if t < 0.45 else 0.0
+		var tone: float = sin(TAU * 1100.0 * t) * 0.8 + sin(TAU * 2200.0 * t) * 0.1
+		data.encode_s16(i * 2, roundi(tone * on * ramp * 14000.0))
+	return _loop(data, RATE, sample_count)
+
+
+## A cheerful little tune from the depot's radio: a plucked melody over a
+## walking bass, band-limited and crackly like a small AM speaker. Eight bars
+## that loop, lo-fi rate on purpose (it's a radio, and it's cheaper to build).
+static func radio_tune() -> AudioStreamWAV:
+	return _cached(&"radio_tune", _make_radio_tune)
+
+
+static func _make_radio_tune() -> AudioStreamWAV:
+	const RATE: int = 11025
+	const BEAT: float = 0.3
+	# Semitones from A3; -99 is a rest. Two phrases of 16 eighth notes.
+	var melody: Array[int] = [7, 11, 14, 11, 12, 11, 7, -99, 9, 12, 16, 12, 14, 12, 9, -99,
+		7, 11, 14, 19, 17, 14, 12, 11, 9, 11, 12, 9, 7, -99, 7, -99]
+	var bass: Array[int] = [-12, -5, -10, -5, -8, -3, -10, -5]
+	var total_beats: int = melody.size()
+	var sample_count: int = int(RATE * BEAT * total_beats)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var low: float = 0.0
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var beat: int = int(t / BEAT)
+		var in_beat: float = t - beat * BEAT
+		var sample: float = 0.0
+		var note: int = melody[beat % total_beats]
+		if note != -99:
+			var freq: float = 220.0 * pow(2.0, note / 12.0)
+			var pluck: float = exp(-in_beat * 9.0)
+			sample += (sin(TAU * freq * t) * 0.6 + sin(TAU * freq * 2.0 * t) * 0.2) * pluck * 0.5
+		var bass_note: int = bass[(beat / 4) % bass.size()]
+		var bass_freq: float = 220.0 * pow(2.0, bass_note / 12.0)
+		var bass_in: float = t - (beat / 2) * BEAT * 2.0
+		sample += sin(TAU * bass_freq * t) * exp(-bass_in * 4.0) * 0.35
+		# Brushed hi-hat on the off-beats.
+		if beat % 2 == 1:
+			sample += rng.randf_range(-1.0, 1.0) * exp(-in_beat * 40.0) * 0.12
+		# Small-speaker colour: gentle low-pass plus a bed of crackle.
+		low = lerpf(low, sample, 0.55)
+		var crackle: float = rng.randf_range(-1.0, 1.0) * 0.015 + (0.25 if rng.randf() < 0.0004 else 0.0)
+		var edge: float = minf(float(i), float(sample_count - i)) / (RATE * 0.02)
+		data.encode_s16(i * 2, roundi(clampf((low + crackle) * minf(edge, 1.0), -1.0, 1.0) * 16000.0))
+	return _loop(data, RATE, sample_count)
+
+
+static func _loop(data: PackedByteArray, rate: int, sample_count: int) -> AudioStreamWAV:
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = rate
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = sample_count
+	return stream

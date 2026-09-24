@@ -12,12 +12,17 @@
 > Estado: ✅ hecho · 🟡 parcial · Pendiente. Entre paréntesis, el commit o
 > archivo donde quedó hecho.
 
+> Límite actual: `UnlockManager` registra Líquido, Explosivo y Hostil como
+> desbloqueos, pero los siete paquetes ya están instanciados en el nivel y
+> todavía no se filtran por perfil. El progreso local de clientes de red
+> tampoco es fiable hasta retransmitir inicio/fin de partida desde el host.
+
 ## Paquetes — modelado (1-2)
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 1 | Identidad visual por trampa: Frágil con símbolos de copa rota, Ruidoso con agujeros de ventilación, Equilibrio alto y angosto, Peso Creciente bajo y macizo — hoy las 4 son la misma caja con distinto color y texto. Es la mecánica central: tiene que reconocerse de un vistazo. (#17) | B | ✅ Hecho (`af4856d`, cajas por trampa en `c77194f`) |
-| 2 | Detalle de cartón en los paquetes: solapas, cinta, etiquetas, abolladuras. (#18) | B | Pendiente |
+| 2 | Detalle de cartón en los paquetes: solapas, cinta, etiquetas, abolladuras. (#18) | B | ✅ Hecho: solapas, cinta, etiquetas y abolladuras (`test_package_identity`) |
 
 ## Jugador — modelado (3-4)
 
@@ -35,12 +40,12 @@
 | 7 | Transición de sentarse: hoy abordar un asiento es un corte instantáneo de cámara (el fundido a negro ya tapa el corte de cámara — esto es la animación del cuerpo en sí, no la cámara). (#31) | B | ✅ Hecho (`da9d75d`, pose interpolada) |
 | 8 | Manos del conductor siguiendo el volante con IK. (#32) | B | 🟡 Manos procedurales visibles y siguiendo el volante (`e22452f`); falta IK del esqueleto |
 | 9 | Manos del pasajero agarrando físicamente su paquete mientras lo sostiene. (#33) | B | ✅ Hecho (`990987c`, agarre según ancho) |
-| 10 | Animación de la acción de trampa (mantener/calmar/corregir) — hoy el input no tiene contraparte visual en el personaje. (#34) | B | Pendiente |
-| 11 | Gesto de brazo al tocar bocina. (#35) | C | Pendiente |
+| 10 | Animación de la acción de trampa (mantener/calmar/corregir) — hoy el input no tiene contraparte visual en el personaje. (#34) | B | ✅ Hecho (2026-09-23): las manos del asiento presionan la caja al mantener y dan un toque por dirección (`player.gd` `_pose_tending_hands`); solo local |
+| 11 | Gesto de brazo al tocar bocina. (#35) | C | ✅ Hecho (2026-09-23): la mano derecha va al centro del volante mientras suena (`vehicle_presentation.gd`) |
 | 12 | Reacción de flinch/encogerse ante un golpe fuerte. (#36) | B | ✅ Hecho (`da9d75d`) |
 | 13 | Ragdoll físico al fallar (ya decidido en `docs/requerimientos-tecnicos.md` §2). (#37) | B | ✅ Hecho (`f86676d`, cuerpo físico temporal) |
 | 14 | Apertura y cierre de puertas al subir o bajar. (#38) | C | ✅ Hecho (`reference_truck.gd`) |
-| 15 | Animación de entrega exitosa: el paquete siendo depositado, no desapareciendo. (#39) | C | Pendiente |
+| 15 | Animación de entrega exitosa: el paquete siendo depositado, no desapareciendo. (#39) | C | ✅ Hecho (2026-09-23): la caja viaja a la puerta y el vecino la recibe (`package.gd` `consume(hand_over_at)`) |
 | 16 | Head bob de la malla del personaje (la cámara ya bobea — esto es sincronizar el cuerpo visible, para cuando exista #3). (#40) | B | ✅ Hecho (`da9d75d`) |
 
 ## Cámara y HUD — contexto jugador (17-22)
@@ -50,7 +55,7 @@
 | 17 | FOV configurable por el jugador — depende de la pantalla de opciones (ver sección propia más abajo). (#65) | B | ✅ Hecho (`GameSettings`, `options_panel.gd`) |
 | 18 | Profundidad de campo sutil sobre el paquete cuando lo estás atendiendo. (#70) | C | ✅ Hecho (`player.gd`, fondo suavizado al llevar carga) |
 | 19 | Viñeta que se intensifica cuando la carga está en riesgo — comunica tensión sin texto. (#71) | B | ✅ Hecho (`674d8b1`) |
-| 20 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. (#74) | B | ✅ Hecho (`spectator_camera.gd`): Tab/Back alterna una cámara de persecución local cuando el pasajero está sentado, no conduce y su paquete está arruinado o ya no tiene uno. |
+| 20 | Modo espectador para quien ya perdió su paquete, en vez de quedarse mirando una caja rota. (#74) | B | ✅ Hecho (2026-09-23): Tab/Back, cámara de persecución para quien ya no tiene caja que salvar (`spectator_camera.gd`, `test_spectator`) |
 | 21 | Modo foto. (#76) | C | ✅ Hecho (`phone_camera.gd`) |
 | 22 | Retroalimentación de cámara al pingear: destello o marca en el borde de pantalla apuntando hacia quién pingeó. (#79) | B | ✅ Hecho (`ee06b29`) |
 
@@ -71,14 +76,14 @@
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
-| 31 | Sombras de los personajes proyectadas dentro de la cabina, para que se sientan presentes en el espacio. (#97) | B | Pendiente |
-| 32 | Marcador sobre el compañero que pingeó, visible a través de la carrocería, para ubicarlo sin girar la cámara. (#100) | B | Pendiente |
+| 31 | Sombras de los personajes proyectadas dentro de la cabina, para que se sientan presentes en el espacio. (#97) | B | ✅ Verificado: los personajes proyectan sombra, también el propio cuerpo oculto a tu cámara |
+| 32 | Marcador sobre el compañero que pingeó, visible a través de la carrocería, para ubicarlo sin girar la cámara. (#100) | B | ✅ Hecho (2026-09-23): un "!" amarillo sobre quien pingeó, visible a través de la carrocería (`prototype_hud.gd` `_mark_pinger`) |
 
 ## Fase 5 — Progresión y desbloqueos (33-47)
 
-> Nota: `61c53d2` sumó `CrewProgression` (economía y cartas del equipo por
-> campaña), `ShopVoteManager` y eventos de ruta. No es todavía el sistema de
-> desbloqueos persistente de esta sección, así que 33-47 siguen pendientes.
+> `CrewProgression` administra economía y cartas de campaña; `UnlockManager`
+> administra el progreso local persistente. En esta sección quedan el balance
+> con playtesting (#41, parcial) y el test externo del tutorial (#47, pendiente).
 
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
@@ -177,7 +182,7 @@
 | # | Tarea | Prio | Estado |
 |---|---|---|---|
 | 88 | Pantalla de leaderboard dedicada (hoy el récord solo se ve en la pantalla de resultados de la propia partida). | B | ✅ Hecho (`leaderboard_panel.gd`) |
-| 89 | Desglose más claro del puntaje en resultados (ya existe la base, pulir legibilidad). | A | ✅ Hecho (`run_manager.gd`, `prototype_hud.gd`): líneas por entrega, puertas no atendidas y fotos, más multiplicador y total; `test_score_breakdown.gd` comprueba que suma exactamente el resultado. |
+| 89 | Desglose más claro del puntaje en resultados (ya existe la base, pulir legibilidad). | A | ✅ Hecho (2026-09-23): una línea por concepto que suma exacto al total (`RunManager` `breakdown`, `test_score_breakdown`) |
 | 90 | Indicador compartido más legible del estado de todos los paquetes (ya existe `cargo_rows_box`, evaluar si hace falta iconografía en vez de solo texto). | B | ✅ Hecho (íconos de trampa en el HUD, `c77194f`) |
 | 91 | Feedback visual cuando alguien más resuelve su trampa a tiempo (reforzar la cooperación, no solo el riesgo). | B | ✅ Hecho (`prototype_hud.gd`: toast, chime y destello de fila al volver de riesgo a seguro) |
 | 92 | Revisar la consistencia de la paleta de colores del HUD contra `docs/direccion-visual.md` §3 (hoy duplicada entre `main_menu.gd` y `prototype_hud.gd` — considerar unificar en un archivo de constantes compartido). | A | ✅ Hecho (`ui_theme.gd` compartido) |

@@ -102,10 +102,10 @@ Main Menu
   el lobby, a definir con playtesting) y el resto recibe un paquete cada uno.
   **[x] Parcial**: cualquier jugador puede sentarse a conducir (primero en llegar, sin
   rotación automática todavía) y tomar cualquier paquete disponible.
-- Las trampas disponibles respetan `UnlockManager`: Frágil, Peso creciente, Equilibrio
-  y Ruidoso están disponibles desde el inicio; Líquido, Explosivo y Hostil se habilitan
-  con el progreso local. La asignación todavía conserva paquetes fijos por nivel, por lo
-  que la selección semi-aleatoria y sus reglas de balance siguen pendientes.
+- `UnlockManager` registra metas de progreso para Líquido, Explosivo y Hostil,
+  pero `level_base.tscn` ya instancia los siete paquetes y hoy no filtra esas
+  tres trampas por desbloqueo. La selección semi-aleatoria y sus reglas de
+  balance siguen pendientes.
 
 ### HUD durante la partida
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.

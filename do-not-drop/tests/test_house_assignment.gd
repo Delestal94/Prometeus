@@ -4,8 +4,8 @@ extends SceneTree
 ## docs/tareas-nacho.md #104/#105/#107/#121: one house per passenger, and each
 ## house waits for one specific box.
 ##   - the house count follows the crew: players minus the driver, at least one;
-##   - starting the run hands each house one of the loaded boxes, in rack
-##     order, and its sign says which;
+##   - the depot's order board hands each house one specific box from the
+##     start (depot.gd), and its sign says which box and which shelf;
 ##   - ringing with somebody else's box gets it handed back (the house stays
 ##     open, and every HUD hears why), while the right box is delivered.
 
@@ -32,24 +32,38 @@ func _run() -> void:
 	var houses: Array = route.get(&"houses")
 	_expect(houses.size() == 1, "Solo (one peer), the route builds a single house (got %d)" % houses.size())
 
-	# Load two boxes, then take the wheel: the run starts and houses get assigned.
+	# The depot posts the orders the moment the level loads: the house waits
+	# for that specific box from the start, and its sign says which.
+	var depot: Node = level.get_node(^"World/Depot")
+	var orders: Array = depot.get(&"orders")
+	_expect(orders.size() == 1, "One order per house on the depot's board (got %d)" % orders.size())
+	var house: DeliveryHouse = houses[0]
+	var packages: Array = level.get(&"packages")
+	var first: Node = null
+	var second: Node = null
+	for package: Node in packages:
+		if package.get(&"package_id") == orders[0].package_id:
+			first = package
+		elif second == null:
+			second = package
+	_expect(first != null, "The ordered box is on the depot's shelves")
+	_expect(house.assigned_package_id == first.get(&"package_id"), "The house waits for the ordered box (got %s)" % house.assigned_package_id)
+	var sign_text: String = (route.get_node(^"HouseNumber0") as Label3D).text
+	_expect(sign_text.contains(String(first.trap_definition.get(&"display_name")).to_upper()) and sign_text.contains(String(orders[0].code)), "The house sign names the box and its shelf (%s)" % sign_text.replace("\n", " / "))
+
+	# Load it plus one more, then take the wheel: the run starts, and the
+	# orders are handed out again (relayed) without changing.
 	var player: Node = level.local_player
 	var van: Node = level.vehicle
-	var packages: Array = level.get(&"packages")
 	var bays: Array[String] = ["LeftSeat1PackageMount", "LeftSeat2PackageMount"]
 	for index: int in range(2):
-		player.call(&"pick_up", packages[index].get_path())
+		player.call(&"pick_up", [first, second][index].get_path())
 		van.get_node(NodePath("CargoBay/%s/InteractionArea" % bays[index])).call(&"interact", player)
 	van.call(&"set_door_open", &"cab_left", true)
 	van.get_node(^"CabinInterior/DriverEyePoint/InteractionArea").call(&"interact", player)
 	await process_frame
 	_expect(bool(root.get_node(^"/root/RunManager").get(&"is_running")), "The run started")
-	var house: DeliveryHouse = houses[0]
-	var first: Node = packages[0]
-	var second: Node = packages[1]
-	_expect(house.assigned_package_id == first.get(&"package_id"), "The first bay's box goes to the first house (got %s)" % house.assigned_package_id)
-	var sign_text: String = (route.get_node(^"HouseNumber0") as Label3D).text
-	_expect(sign_text.contains(String(first.trap_definition.get(&"display_name")).to_upper()), "The house sign says which box it's waiting for (%s)" % sign_text.replace("\n", " / "))
+	_expect(house.assigned_package_id == first.get(&"package_id"), "Starting the run keeps the posted order")
 
 	# Wrong box: handed back, house still open, everyone told.
 	root.get_node(^"/root/EventBus").connect(&"house_refused_package", func(index: int, expected: String) -> void: _refusals.append([index, expected]))

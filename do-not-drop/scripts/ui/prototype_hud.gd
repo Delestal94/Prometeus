@@ -59,6 +59,11 @@ var second_button: Button
 var options_button: Button
 var menu_button: Button
 var options_panel: OptionsPanel
+## The depot's station screens (lockers, workshop, supplies, board).
+var depot_panel: DepotPanel
+## Today's orders as the depot posted them (depot_orders_posted).
+var _orders: Array = []
+var _prep_refresh: float = 0.0
 ## "start", "preparation", "run", "pause", "results" or "disconnected".
 var overlay_mode: String = "start"
 var in_delivery: bool = false
@@ -137,6 +142,9 @@ func _ready() -> void:
 	EventBus.route_event_started.connect(_on_route_event_started)
 	EventBus.route_event_resolved.connect(_on_route_event_resolved)
 	EventBus.unlock_earned.connect(_on_unlock_earned)
+	EventBus.depot_orders_posted.connect(func(orders: Array) -> void: _orders = orders)
+	EventBus.depot_station_opened.connect(_on_depot_station_opened)
+	EventBus.depot_notice.connect(_toast)
 	var truck_view: Node = get_tree().get_first_node_in_group(&"vehicle")
 	if truck_view != null:
 		var spectator: Node = truck_view.find_child("SpectatorCamera", true, false)
@@ -333,6 +341,9 @@ func _build_ui() -> void:
 	options_panel = OptionsPanel.new()
 	options_panel.name = "OptionsPanel"
 	root.add_child(options_panel)
+	depot_panel = DepotPanel.new()
+	depot_panel.name = "DepotPanel"
+	root.add_child(depot_panel)
 	# Back to the button that opened it: otherwise a gamepad player comes
 	# back from the options with nothing focused and no way to move.
 	options_panel.closed.connect(func() -> void:
@@ -426,8 +437,8 @@ func _show_start() -> void:
 	overlay_kicker.text = "%s  ·  PROTOTIPO 0.1" % ("MODO ENDLESS" if _is_endless else "PRUEBA DE RUTA")
 	overlay_title.text = "¡A REPARTIR!"
 	_set_hero(false)
-	overlay_body.text = "Cargá el paquete y subite a manejar.\nLa entrega arranca sola apenas estés al volante con la carga a bordo."
-	overlay_stats.text = "1.  Caminá hasta un paquete y presioná %s para agarrarlo.\n2.  Llevalo a la furgoneta y presioná %s para dejarlo en su lugar.\n3.  Acercate al asiento del conductor y presioná %s para tomar el volante.\n\nCada objeto te muestra su indicación cuando te acercás." % [_key("E", "A"), _key("E", "A"), _key("E", "A")]
+	overlay_body.text = "Arrancás en el depósito, con el camión estacionado adentro.\nLa entrega sale apenas alguien toma el volante con carga a bordo; el portón se cierra detrás de ustedes."
+	overlay_stats.text = "1.  Leé la pizarra de pedidos: cada casa espera un paquete de un estante (A-1, B-6...).\n2.  Buscalo, presioná %s para agarrarlo y %s en el rack del camión para dejarlo.\n3.  Antes de salir: vestuario, taller y mostrador de suministros.\n4.  Subite al asiento del conductor (%s) y salí por el portón.\n\nCada cosa te muestra su indicación cuando te acercás." % [_key("E", "A"), _key("E", "A"), _key("E", "A")]
 	_set_buttons("Preparar entrega", false, true, true)
 
 
@@ -447,6 +458,11 @@ func _process(delta: float) -> void:
 	if overlay.visible and overlay_mode in ["start", "pause", "results", "disconnected"] 			and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_refresh_cargo_hint()
+	if overlay_mode == "preparation" and not RunManager.is_running:
+		_prep_refresh -= delta
+		if _prep_refresh <= 0.0:
+			_prep_refresh = 0.25
+			distance_label.text = _preparation_text()
 	if _is_endless and RunManager.is_running:
 		distance_label.text = "%d m recorridos" % roundi(float(get_parent().get(&"distance_traveled")))
 	if ping_seconds_left > 0.0:
@@ -617,6 +633,8 @@ func _session_color(color: Color) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if depot_panel != null and depot_panel.visible:
+		return
 	if event.is_action_pressed("ui_pause"):
 		match overlay_mode:
 			"pause":
@@ -691,10 +709,33 @@ func _primary_action() -> void:
 			action_button.release_focus()
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			section_label.text = "PREPARACIÓN"
-			distance_label.text = "Cargá el paquete y tomá el volante"
+			distance_label.text = _preparation_text()
 		"pause": _resume()
 		"results": _request_restart()
 		"disconnected": _leave_to_menu()
+
+
+## The objective while still in the depot: each house's order and whether
+## it's aboard yet, read off the boxes themselves.
+func _preparation_text() -> String:
+	if _orders.is_empty():
+		return "Cargá paquetes y tomá el volante"
+	var parts: PackedStringArray = []
+	for order: Dictionary in _orders:
+		var aboard: bool = false
+		for package: Node in get_tree().get_nodes_in_group(&"cargo"):
+			if StringName(package.get(&"package_id")) == StringName(order.package_id):
+				aboard = bool(package.get(&"is_loaded"))
+				break
+		parts.append("Casa %d: %s %s" % [int(order.house) + 1, order.code, "(a bordo)" if aboard else "(falta)"])
+	return "   ".join(parts)
+
+
+func _on_depot_station_opened(station: StringName) -> void:
+	if overlay_mode != "preparation" or RunManager.is_running:
+		return
+	var level: Node = get_parent()
+	depot_panel.open(station, level.get(&"depot") if level != null and &"depot" in level else null)
 
 
 func _on_interaction_prompt(prompt: String) -> void:

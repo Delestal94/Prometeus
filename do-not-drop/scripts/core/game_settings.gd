@@ -13,6 +13,7 @@ extends Node
 ## usually closes is a crash.
 
 const SAVE_PATH: String = "user://settings.cfg"
+var save_path: String = SAVE_PATH
 const SECTION: String = "player"
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
@@ -110,6 +111,11 @@ var _loading: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Under a test script (--script) the main loop has a script of its own:
+	# keep tests away from the player's real save, which they used to fill
+	# with dozens of scripted runs and unlocks.
+	if Engine.get_main_loop().get_script() != null:
+		save_path = "user://test_settings.cfg"
 	_load()
 
 
@@ -219,7 +225,7 @@ func _apply_fullscreen() -> void:
 func _load() -> void:
 	LegacyUserData.migrate()
 	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) != OK:
+	if config.load(save_path) != OK:
 		_apply_volume()
 		_apply_music_volume()
 		_apply_bus("SFX", effects_volume)
@@ -270,4 +276,4 @@ func _save() -> void:
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
 	config.set_value(SECTION, "key_bindings", key_bindings)
-	config.save(SAVE_PATH)
+	config.save(save_path)

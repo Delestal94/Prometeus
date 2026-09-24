@@ -10,17 +10,10 @@ const LOST_CARGO_DISTANCE: float = 8.0
 @onready var route: Node3D = $World/Route
 @onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
 @onready var _world: Node3D = $World
-## Spawn spots are handed out in order, so nobody lands inside anybody else.
-const SPAWN_POINTS: Array[Vector3] = [
-	Vector3(2.2, 1.0, 3.2),
-	Vector3(3.4, 1.0, 3.2),
-	Vector3(2.2, 1.0, 4.4),
-	Vector3(3.4, 1.0, 4.4),
-	Vector3(1.0, 1.0, 3.8),
-	Vector3(4.6, 1.0, 3.2),
-	Vector3(4.6, 1.0, 4.4),
-	Vector3(1.0, 1.0, 5.0),
-]
+## Where every delivery starts: the truck parked inside, the boxes on its
+## shelves, the order board (depot.gd). Players spawn here too, handed out
+## its spawn spots in order so nobody lands inside anybody else.
+@onready var depot: Depot = $World/Depot
 var local_player: Node = null
 var packages: Array[DeliveryPackage] = []
 var stopped_seconds: float = 0.0
@@ -35,6 +28,7 @@ func _ready() -> void:
 	packages.assign(get_tree().get_nodes_in_group(&"cargo"))
 	for package: DeliveryPackage in packages:
 		package.freeze = true
+	depot.stock_shelves(packages)
 	_driver_seat.interacted.connect(_on_driver_seated)
 	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
 		mount.connect(&"interacted", _on_package_loaded)
@@ -54,12 +48,19 @@ func _ready() -> void:
 			var index: int = int(house.get(&"house_index"))
 			house.connect(&"wrong_package_offered", func(expected: String) -> void:
 				EventBus.relay(&"house_refused_package", [index, expected]))
+		# Today's orders: one specific box per house, posted on the depot's
+		# board and on each house's sign from the start (every peer draws the
+		# same ones from the session seed).
+		depot.post_orders((route.get(&"houses") as Array).size())
+		route.call(&"assign_packages", depot.assignments())
 	# The host brings its own truck and paint; replication hands them to
 	# every client (vehicle.gd variant_id/paint_id).
 	if NetworkManager.is_host():
 		vehicle.variant_id = UnlockManager.selected_truck
 		vehicle.paint_id = UnlockManager.selected_paint
 	NetworkManager.roster_changed.connect(_on_roster_changed)
+	# Choices made in the depot (lockers, workshop) show at once.
+	UnlockManager.progress_changed.connect(_on_profile_changed)
 	# Offline is a session of one, so this same call covers both paths.
 	if NetworkManager.is_host():
 		_sync_players(NetworkManager.peer_ids)
@@ -83,13 +84,26 @@ func _sync_players(peer_ids: Array) -> void:
 			continue
 		var player: Node = load("res://scenes/gameplay/player/player.tscn").instantiate()
 		player.name = _player_name(id)
-		player.set(&"position", SPAWN_POINTS[index % SPAWN_POINTS.size()])
+		player.set(&"position", _world.to_local(depot.spawn_position(index)))
 		player.set_multiplayer_authority(id)
 		_world.add_child(player, true)
 	for child: Node in _world.get_children():
 		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
 			child.queue_free()
 	_refresh_local_player()
+
+
+## The workshop and the lockers write the profile; the truck is the host's
+## (replicated from vehicle.gd), the uniform is each player's own (replicated
+## from player.gd). Nothing changes once the truck has left.
+func _on_profile_changed() -> void:
+	if RunManager.is_running or not RunManager.results.is_empty():
+		return
+	if NetworkManager.is_host():
+		vehicle.variant_id = UnlockManager.selected_truck
+		vehicle.paint_id = UnlockManager.selected_paint
+	if is_instance_valid(local_player):
+		local_player.set(&"cosmetic_id", UnlockManager.selected_cosmetic)
 
 
 func _refresh_local_player() -> void:
@@ -160,26 +174,24 @@ func start_delivery() -> void:
 	if not _driver_seated or not _has_loaded_cargo():
 		return
 	vehicle.freeze = false
+	var loaded: Array[DeliveryPackage] = []
 	for package: DeliveryPackage in packages:
 		if is_instance_valid(package) and package.is_loaded:
 			package.freeze = false
 			# Only what's aboard counts: a box left on the rack was never
 			# part of this delivery, so it shouldn't drag the score down.
 			package.report_to_run()
+			loaded.append(package)
 	EventBus.relay(&"houses_assigned", [_house_assignments()])
 	RunManager.start_run()
+	depot.begin_run(vehicle, loaded)
 
 
-## One loaded box per house, in rack order: the first bay's box goes to the
-## first house, and so on. Boxes beyond the house count ride to the goal as
-## plain cargo; houses beyond the box count take whatever they're handed.
+## The depot's orders, relayed once more as the run starts so every client's
+## houses agree with the host's even if they joined late. A box that isn't
+## on the order rides to the goal as plain cargo.
 func _house_assignments() -> Array:
-	var assignments: Array = []
-	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
-		for package: DeliveryPackage in packages:
-			if is_instance_valid(package) and package.is_loaded and package.current_mount == mount:
-				assignments.append([package.package_id, String(package.trap_definition.get(&"display_name"))])
-	return assignments
+	return depot.assignments()
 
 
 func restart_delivery() -> void:

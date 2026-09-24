@@ -10,6 +10,14 @@ const PITY_DELIVERIES: int = 3
 
 enum Card { PRIORITY, REVOTE, DISCOUNT, RESCUE, INFORMATION }
 
+## What the depot's supplies counter sells (depot.gd): bought with team money
+## before a run and used up by the next delivery that leaves the depot.
+## "cost" in team money; the effect lives where it applies (see depot.gd).
+const SUPPLIES := {
+	&"padding": {"title": "Acolchado de estantes", "detail": "Espuma en el rack: la carga sufre un 25 % menos por golpes en el próximo reparto.", "cost": 40},
+	&"insurance": {"title": "Seguro de envío", "detail": "Cada paquete que se entregue roto en el próximo reparto le devuelve $30 al equipo.", "cost": 35},
+}
+
 var team_money: int = STARTING_MONEY
 var merit: Dictionary = {} # peer id -> points
 var cards: Dictionary = {} # peer id -> Card
@@ -17,6 +25,8 @@ var dry_deliveries: Dictionary = {}
 var _credited_actions: Dictionary = {}
 var event_bus: Node
 var priority_issued: bool = false
+## Supplies bought and waiting in the depot for the next run: id -> true.
+var supplies: Dictionary = {}
 
 
 func reset_campaign() -> void:
@@ -26,6 +36,7 @@ func reset_campaign() -> void:
 	dry_deliveries.clear()
 	_credited_actions.clear()
 	priority_issued = false
+	supplies.clear()
 	_emit_event(&"team_money_changed", [team_money])
 
 
@@ -53,6 +64,26 @@ func spend(cost: int) -> bool:
 	team_money -= cost
 	_emit_event(&"team_money_changed", [team_money])
 	return true
+
+
+## Host-only. One of each supply at a time: it's a kit for the next run,
+## not a stockpile.
+func buy_supply(supply_id: StringName) -> bool:
+	if not SUPPLIES.has(supply_id) or supplies.has(supply_id):
+		return false
+	if not spend(int(SUPPLIES[supply_id]["cost"])):
+		return false
+	supplies[supply_id] = true
+	return true
+
+
+## Hands the waiting supplies to the run that's leaving, and clears them.
+func take_supplies() -> Array[StringName]:
+	var taken: Array[StringName] = []
+	for supply_id: StringName in supplies:
+		taken.append(supply_id)
+	supplies.clear()
+	return taken
 
 
 func add_team_money(amount: int) -> void:

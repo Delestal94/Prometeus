@@ -80,6 +80,21 @@ signal unlock_earned(unlock_id: StringName, title: String)
 signal houses_assigned(assignments: Array)
 ## Somebody rang with a box the house didn't order; it was handed back.
 signal house_refused_package(house_index: int, expected_label: String)
+## The depot (depot.gd) posted today's orders on its board, one entry per
+## house in order: {"house", "package_id", "code", "trap", "content"}.
+## Every peer works the same list out from the session seed, so this is a
+## plain local emit, not a relay.
+signal depot_orders_posted(orders: Array)
+## Local-only, like interaction_prompt_changed: this player used a depot
+## station (lockers, workshop, supplies counter, board) and its screen should
+## open on this client. station is DepotStation.station_id.
+signal depot_station_opened(station: StringName)
+## The supplies waiting for the next run, and the team's money after the
+## purchase. The host decides; depot.gd hands it to every peer.
+signal depot_supplies_changed(supplies: Array, team_money: int)
+## Something the whole crew should read in the depot or from it (a purchase,
+## the door closing behind them, an order left on the shelf). Relayed.
+signal depot_notice(text: String)
 
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts

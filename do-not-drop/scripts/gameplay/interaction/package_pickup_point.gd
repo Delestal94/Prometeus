@@ -28,7 +28,13 @@ func highlight(enabled: bool) -> void:
 func get_prompt() -> String:
 	if bool(_package.get("is_held")):
 		return ""
-	return "Bajar paquete" if bool(_package.get("is_loaded")) else "Agarrar paquete"
+	var action: String = "Bajar paquete" if bool(_package.get("is_loaded")) else "Agarrar paquete"
+	# In the depot every box carries its bin code (depot.gd), which is what
+	# the order board asks for: say which one this is.
+	if _package.has_meta(&"dispatch_code"):
+		var trap: Resource = _package.get(&"trap_definition")
+		return "%s %s  ·  %s" % [action, String(_package.get_meta(&"dispatch_code")), String(trap.get(&"display_name")) if trap != null else ""]
+	return action
 
 
 func can_interact(player: Node) -> bool:

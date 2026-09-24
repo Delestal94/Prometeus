@@ -52,6 +52,11 @@ var selected_paint: StringName = &"white"
 
 
 func _ready() -> void:
+	# Under a test script (--script) the main loop has a script of its own:
+	# keep tests away from the player's real save, which they used to fill
+	# with dozens of scripted runs and unlocks.
+	if Engine.get_main_loop().get_script() != null:
+		storage_path = "user://test_unlock_progress.json"
 	load_profile()
 	var event_bus := get_node_or_null("/root/EventBus")
 	if event_bus != null:

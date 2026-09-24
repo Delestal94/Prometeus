@@ -219,8 +219,11 @@ Orden real en `project.godot` (importa por dependencias en `_ready()`):
 1. `EventBus`
 2. `NetworkManager`
 3. `RunManager`
-4. `GameSettings`
-5. `UnlockManager`
+4. `CrewProgression`
+5. `ShopVoteManager`
+6. `RouteEventManager`
+7. `GameSettings`
+8. `UnlockManager`
 
 `GameManager` y `AudioManager` siguen en el plan original pero no están registrados.
 `UnlockManager` y `GameSettings` sí lo están (ver nota de la sección 3).

@@ -55,14 +55,32 @@ queda en 0 y la ruta se sortea fresca cada vez, como antes. en vez de un
 trazado fijo, cada tramo entre una casa y la siguiente son 400-600m armados
 encadenando tipos de segmento (recta, badén, chicana, puente angosto, curva
 en S, ripio, zona de obras y curvas reales que doblan el rumbo del camino de
-verdad) -- con 3 casas de entrega por default, un recorrido completo ronda
-los 2000m. `CurveSegment` es el único tipo que cambia la dirección del
+verdad). Las casas se calculan al construir la ruta: una por pasajero, con
+mínimo de una si jugás solo; por eso la distancia total varía según la
+tripulación. En multijugador queda pendiente que el host comunique esa cantidad
+a todos los clientes, especialmente con más de dos jugadores o ingresos tardíos.
+`CurveSegment` es el único tipo que cambia la dirección del
 camino; los demás siguen siendo obstáculos dentro de un carril recto.
 
-Una vez en la furgoneta: elegí **Preparar entrega**, caminá con WASD y mirá
-con el mouse. Al acercarte a un
-objeto aparece la acción disponible: **E** agarra el paquete, lo deja en su
-lugar dentro de la furgoneta y permite tomar el volante una vez cargado.
+**El depósito** (2026-09-23): toda partida (entrega y Endless) arranca adentro del
+depósito central de la empresa, con el camión estacionado mirando al portón. Elegí
+**Preparar entrega**, caminá con WASD y mirá con el mouse; al acercarte a algo aparece la
+acción disponible.
+- **La pizarra de pedidos** (junto al camión) dice qué paquete espera cada casa y en qué
+  estante está (`A-1`…`B-8`). Hay dos paquetes de cada tipo en las estanterías de
+  despacho, así que hay que leerla: la casa devuelve cualquier otra caja. El mismo
+  pedido figura en el cartel de cada casa y en el objetivo del HUD ("Casa 1: A-6
+  (falta)"), y al agarrar una caja el aviso dice su estante.
+- **E** agarra el paquete y lo deja en el rack del camión; al sentarte al volante con
+  carga a bordo arranca la entrega. Si salen sin algún pedido, el juego lo avisa.
+- **Vestuario** (casilleros): uniforme. **Taller** (terminal al lado del camión): camión y
+  pintura, se ven al instante (los elige el anfitrión). **Suministros** (mostrador): con
+  la plata del equipo, *Acolchado de estantes* (la carga sufre 25 % menos por golpes) y
+  *Seguro de envío* ($30 por cada caja entregada rota), para el próximo reparto.
+  **Equipo del mes** (corcho): progreso y desbloqueos.
+- Cuando el camión salió y no queda nadie a pie adentro, **el portón se cierra** solo.
+- Adentro no llueve (se oye en el techo), hay operarios que saludan, un autoelevador
+  que frena si te le cruzás, cinta transportadora, radio, reloj con la hora real.
 
 La entrega empieza al sentarte con la carga a bordo. Usá W/S para acelerar,
 frenar y retroceder, A/D para girar y Espacio como freno de mano. **H** toca
@@ -75,7 +93,7 @@ contar como carga a bordo), llevalo hasta el porche y **E** en el timbre se
 lo da al vecino. El estado del paquete al momento de tocar decide la
 reacción, y pasar de largo una casa penaliza: el vecino se quedó esperando.
 Hasta esta versión esto era imposible — no se podía sacar un paquete ya
-cargado, así que las tres casas de la ruta eran decorado y todas terminaban
+cargado, así que las casas de la ruta eran decorado y todas terminaban
 como "no entregada" sin que nada lo puntuara.
 
 **Abrir los paquetes** (2026-09-23): **T** (D-pad abajo) abre o cierra la
@@ -170,6 +188,15 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_dressing_assets.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_placement_rules.gd
 <godot> --headless --path do-not-drop --script res://tests/test_render_batching.gd
+<godot> --headless --path do-not-drop --script res://tests/test_house_assignment.gd
+<godot> --headless --path do-not-drop --script res://tests/test_depot.gd
+<godot> --headless --path do-not-drop --script res://tests/test_world_mood.gd
+<godot> --headless --path do-not-drop --script res://tests/test_more_route_segments.gd
+<godot> --headless --path do-not-drop --script res://tests/test_truck_variant.gd
+<godot> --headless --path do-not-drop --script res://tests/test_spectator.gd
+<godot> --headless --path do-not-drop --script res://tests/test_tension_music.gd
+<godot> --headless --path do-not-drop --script res://tests/test_score_breakdown.gd
+<godot> --headless --path do-not-drop --script res://tests/test_endless_difficulty.gd
 <godot> --headless --path do-not-drop --script res://tests/test_reference_truck.gd
 <godot> --headless --path do-not-drop --script res://tests/test_wildlife_crossing.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
@@ -321,6 +348,31 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   solo en su zona (faroles y paradas en el pueblo, fardos
   en el campo), la ruta pasa por más de un tipo de lugar, y la misma semilla
   arma exactamente el mismo mundo en todos los jugadores.
+- `test_house_assignment` — una casa por pasajero (jugadores − 1, mínimo 1), cada casa
+  espera la caja que le asignó la pizarra del depósito desde que carga el nivel (se ve
+  en su cartel, con el estante), y con la caja equivocada el vecino la devuelve sin
+  gastar la entrega.
+- `test_depot` — el depósito de salida: los 14 paquetes en su estante con código único y
+  apoyados en la bandeja, el equipo aparece adentro y bajo techo, un pedido por casa en
+  la pizarra, cada estación abre su pantalla solo antes de salir, los suministros se
+  cobran una vez y el acolchado protege la carga, salir sin el pedido se avisa y el
+  portón se cierra recién cuando el camión salió y no queda nadie a pie.
+  Capturas del depósito (con ventana): `tests/render_depot.gd` → `user://depot_*.png`.
+- `test_world_mood` — clima y hora del día: misma semilla, mismo clima para todos; semillas
+  distintas cubren los 4 climas y las 3 horas; nunca se modifica el `Environment` compartido
+  de la escena; la lluvia moja el asfalto y la noche sube los faros. Para ver uno a mano:
+  `-- --mood=lluvia_noche` (soleado/nublado/lluvia/niebla × dia/atardecer/noche).
+- `test_more_route_segments` — loma (el camino sube y vuelve a nivel), túnel sólido e
+  iluminado, y el paso a nivel que baja barreras sólidas, deja pasar el tren y reabre.
+- `test_truck_variant` — la furgoneta ágil maneja distinto, la pintura cambia la carrocería
+  sin tocar el material importado, ambas se replican y respetan los desbloqueos.
+- `test_spectator` — solo un pasajero sin caja que salvar puede pasar a la cámara de
+  persecución (Tab), y la vista vuelve sola al bajarse.
+- `test_tension_music` — la capa de tensión sigue el riesgo de la carga y se calma con lo
+  que ya está perdido.
+- `test_score_breakdown` — el desglose de resultados siempre suma el puntaje mostrado.
+- `test_endless_difficulty` — el endless se endurece con la distancia sin encadenar tres
+  tramos difíciles.
 - `test_render_batching` — que el horneado del decorado para render
   (`dressing_batcher.gd`, 2026-09-23) sea solo eso: la misma semilla armada
   con piezas sueltas y horneada da exactamente las mismas piezas en las
