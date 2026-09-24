@@ -50,6 +50,9 @@ var headlights: Array[SpotLight3D] = []
 var engine_player: AudioStreamPlayer3D
 var impact_player: AudioStreamPlayer3D
 var screech_player: AudioStreamPlayer3D
+## The horn, created by vehicle.gd once the truck is ready (after this node's
+## own _ready), so it's picked up on the first routing pass that finds it.
+var horn_player: AudioStreamPlayer3D
 var _steering_rest: Basis
 var _front_materials: Array[StandardMaterial3D] = []
 var _rear_materials: Array[StandardMaterial3D] = []
@@ -386,11 +389,16 @@ func _apply_bus_routing() -> void:
 	var current_camera: Camera3D = get_viewport().get_camera_3d()
 	var inside: bool = current_camera != null and current_camera in _seat_cameras
 	var target_bus: StringName = &"Interior" if inside else &"Exterior"
+	if horn_player == null:
+		horn_player = vehicle.get_node_or_null(^"HornAudio") as AudioStreamPlayer3D
+		if horn_player != null:
+			_last_bus = &""
 	if target_bus == _last_bus:
 		return
 	_last_bus = target_bus
-	for player: AudioStreamPlayer3D in [engine_player, impact_player, screech_player]:
-		player.bus = target_bus
+	for player: AudioStreamPlayer3D in [engine_player, impact_player, screech_player, horn_player]:
+		if player != null:
+			player.bus = target_bus
 
 
 func _build_dev_camera() -> void:

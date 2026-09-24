@@ -140,6 +140,9 @@ func _ready() -> void:
 	# to everyone (see EventBus.request_horn()), so whoever's driving doesn't
 	# need to be this peer, or the host, for it to be heard here too.
 	_horn_player = AudioStreamPlayer3D.new()
+	# Named so vehicle_presentation.gd routes it Interior/Exterior with the
+	# engine and the rest of the truck's sounds; SFX only until it does.
+	_horn_player.name = "HornAudio"
 	_horn_player.bus = &"SFX"
 	_horn_player.stream = SynthAudio.honk_horn()
 	_horn_player.unit_size = 15.0
