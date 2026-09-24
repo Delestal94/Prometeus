@@ -25,6 +25,7 @@ const HOUSE_VISUALS: Array[String] = [
 	"res://assets/models/architecture/sm_arch_delivery_house_two_story.glb",
 	"res://assets/models/architecture/sm_arch_delivery_house_farmhouse.glb",
 ]
+const RESIDENT_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
 ## Solid volumes per visual, [size, centre] pairs matching the walls only --
 ## never the porch, so the doorbell stays reachable. The first three share
 ## the original 6x5 box; the farmhouse is wider and has a wing out back
@@ -65,7 +66,7 @@ var assigned_package_id: StringName = &""
 var assigned_label: String = ""
 signal wrong_package_offered(expected_label: String)
 var doorbell: DoorbellPoint
-var _resident: MeshInstance3D
+var _resident: Node3D
 var _bell_player: AudioStreamPlayer3D
 var _reaction_player: AudioStreamPlayer3D
 
@@ -175,19 +176,17 @@ func _build_house() -> void:
 		# call per material instead of one per part.
 		DressingBatcher.merge_into_one(visual_instance)
 
-	# The resident (placeholder, no art pipeline yet) stays hidden until
-	# someone actually rings -- popping out is the whole point of the joke.
-	_resident = MeshInstance3D.new()
+	# The resident shares the game's rigged low-poly character rather than a
+	# capsule. A warm unique uniform makes them read as a local, not player 2.
+	_resident = RESIDENT_SCENE.instantiate() as Node3D
 	_resident.name = "Resident"
-	var resident_mesh := CapsuleMesh.new()
-	resident_mesh.radius = 0.35
-	resident_mesh.height = 1.3
-	_resident.mesh = resident_mesh
 	# The imported house fronts face local -Z (the same direction set by
 	# Route._build_houses()), so keep the resident and interaction point on
 	# the actual porch instead of behind the building.
-	_resident.position = Vector3(0.0, 0.85, -2.7)
-	_resident.material_override = _material(Color("d9b48f"))
+	_resident.position = Vector3(0.0, 0.0, -2.7)
+	_resident.rotation.y = PI
+	_resident.scale = Vector3.ONE * 0.92
+	_tint_first_mesh(_resident, Color("b56f4d"))
 	_resident.visible = false
 	add_child(_resident)
 	resolved.connect(func(_outcome: StringName, _package_id: StringName) -> void: _resident.visible = true)
@@ -201,7 +200,40 @@ func _build_house() -> void:
 	bell_collider.shape = bell_shape
 	doorbell.add_child(bell_collider)
 	add_child(doorbell)
+	_build_doorbell_visual()
 	doorbell.rung.connect(_on_doorbell_rung)
+
+
+func _build_doorbell_visual() -> void:
+	var panel := MeshInstance3D.new()
+	panel.name = "DoorbellPanel"
+	var panel_mesh := BoxMesh.new()
+	panel_mesh.size = Vector3(0.22, 0.34, 0.055)
+	panel.mesh = panel_mesh
+	panel.material_override = _material(Color("35434a"))
+	panel.position = doorbell.position + Vector3(0.0, 0.0, -0.055)
+	add_child(panel)
+	var button := MeshInstance3D.new()
+	button.name = "DoorbellButton"
+	var button_mesh := CylinderMesh.new()
+	button_mesh.top_radius = 0.065
+	button_mesh.bottom_radius = 0.065
+	button_mesh.height = 0.045
+	button_mesh.radial_segments = 10
+	button.mesh = button_mesh
+	button.material_override = _material(Color("e7be51"))
+	button.position = doorbell.position + Vector3(0.0, 0.0, -0.095)
+	button.rotation.x = PI * 0.5
+	add_child(button)
+
+
+func _tint_first_mesh(node: Node, color: Color) -> void:
+	if node is MeshInstance3D:
+		var material := _material(color)
+		(node as MeshInstance3D).set_surface_override_material(0, material)
+		return
+	for child: Node in node.get_children():
+		_tint_first_mesh(child, color)
 
 
 ## Where a photo of this delivery should be aimed: the porch, where the

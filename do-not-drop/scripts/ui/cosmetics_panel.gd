@@ -1,6 +1,8 @@
 class_name CosmeticsPanel
 extends Control
 
+const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
+
 signal closed
 var _preview_root: Node3D
 
@@ -89,29 +91,30 @@ func _build_uniform_preview(parent: Node) -> void:
 	light.rotation_degrees = Vector3(-35, -20, 0)
 	world.add_child(light)
 	var color: Color = UnlockManager.cosmetic_color()
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.82
-	var torso := MeshInstance3D.new()
-	var torso_mesh := CapsuleMesh.new()
-	torso_mesh.radius = 0.38
-	torso_mesh.height = 1.25
-	torso.mesh = torso_mesh
-	torso.material_override = material
-	world.add_child(torso)
-	var head := MeshInstance3D.new()
-	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 0.28
-	head_mesh.height = 0.56
-	head.mesh = head_mesh
-	head.material_override = material
-	head.position.y = 0.82
-	world.add_child(head)
+	# Preview the exact rigged player used in-game, not the former capsule and
+	# sphere mannequin. This makes every uniform choice trustworthy.
+	var mannequin := PLAYER_SCENE.instantiate() as Node3D
+	mannequin.name = "UniformMannequin"
+	mannequin.position.y = -0.8
+	mannequin.rotation.y = PI
+	world.add_child(mannequin)
+	_tint_first_mesh(mannequin, color)
 
 
 func _process(delta: float) -> void:
 	if _preview_root != null:
 		_preview_root.rotation.y += delta * 0.65
+
+
+func _tint_first_mesh(node: Node, color: Color) -> void:
+	if node is MeshInstance3D:
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.roughness = 0.82
+		(node as MeshInstance3D).set_surface_override_material(0, material)
+		return
+	for child: Node in node.get_children():
+		_tint_first_mesh(child, color)
 
 
 func _refresh() -> void:

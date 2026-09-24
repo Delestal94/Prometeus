@@ -6,6 +6,8 @@ class_name ConstructionZoneSegment
 ## alternating dodge.
 
 const CONE := Color("d8752b")
+const CONE_MODEL := "res://assets/models/environment/props/sm_env_prop_traffic_cone.glb"
+const BARRIER_MODEL := "res://assets/models/environment/props/sm_env_prop_road_barrier.glb"
 
 var _barrier_length: float = 28.0
 
@@ -19,14 +21,24 @@ func _build() -> void:
 	_box("Road", Vector3(12.0, 0.4, length), Vector3(0.0, -0.2, -length * 0.5), ROAD, true)
 
 	var barrier_center_z: float = -length * 0.5
-	_box("ConstructionBarrier", Vector3(5.0, 0.9, _barrier_length), Vector3(2.5, 0.45, barrier_center_z), CONCRETE, true)
-	_box("ConstructionBarrierStripe", Vector3(5.04, 0.12, _barrier_length + 0.04), Vector3(2.5, 0.92, barrier_center_z), WARNING)
+	# Collision stays a simple continuous wall; the repeated imported barriers
+	# provide the readable feet, bevels and reflective faces.
+	var barrier_collision := _box("ConstructionBarrierCollision", Vector3(1.05, 0.9, _barrier_length), Vector3(2.5, 0.45, barrier_center_z), CONCRETE, true)
+	_hide_box_visual(barrier_collision)
+	var barrier_z: float = barrier_center_z + _barrier_length * 0.5 - 1.8
+	var barrier_index := 0
+	while barrier_z > barrier_center_z - _barrier_length * 0.5 + 1.0:
+		_model("ConstructionBarrier%d" % barrier_index, BARRIER_MODEL, Vector3(2.5, 0.0, barrier_z), PI * 0.5)
+		barrier_z -= 3.6
+		barrier_index += 1
 
 	var barrier_start_z: float = barrier_center_z + _barrier_length * 0.5
 	var barrier_end_z: float = barrier_center_z - _barrier_length * 0.5
 	var cone_z: float = barrier_start_z - 1.5
 	var index: int = 0
 	while cone_z > barrier_end_z:
-		_box("ConstructionCone" + str(index), Vector3(0.5, 0.7, 0.5), Vector3(-0.4, 0.35, cone_z), CONE, true)
+		var cone_collision := _box("ConstructionConeCollision" + str(index), Vector3(0.42, 0.65, 0.42), Vector3(-0.4, 0.325, cone_z), CONE, true)
+		_hide_box_visual(cone_collision)
+		_model("ConstructionCone" + str(index), CONE_MODEL, Vector3(-0.4, 0.0, cone_z), 0.0, 0.92)
 		cone_z -= 3.0
 		index += 1

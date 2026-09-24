@@ -167,6 +167,55 @@ func _build_train() -> void:
 		mesh.material_override = paint
 		mesh.position.y = size.y * 0.5 + 0.35
 		car.add_child(mesh)
+		# Windows, bogies and wheels turn the old moving box into a train
+		# silhouette even at road speed.  They are child meshes of the same
+		# physical car, so collision and host-authoritative movement are unchanged.
+		var window_color := Color("9ac1ca") if index == 0 else Color("d6e0d6")
+		for side: float in [-1.0, 1.0]:
+			for window_x: float in [-2.25, -1.1, 0.1, 1.3, 2.45]:
+				var window := MeshInstance3D.new()
+				var window_mesh := BoxMesh.new()
+				window_mesh.size = Vector3(0.76, 0.58, 0.045)
+				window.mesh = window_mesh
+				window.material_override = _material(window_color)
+				window.position = Vector3(window_x, 2.08, side * (size.z * 0.5 + 0.025))
+				car.add_child(window)
+		for bogie_x: float in [-2.35, 2.35]:
+			var bogie := MeshInstance3D.new()
+			var bogie_mesh := BoxMesh.new()
+			bogie_mesh.size = Vector3(1.45, 0.28, 2.05)
+			bogie.mesh = bogie_mesh
+			bogie.material_override = _material(Color("252a2d"))
+			bogie.position = Vector3(bogie_x, 0.38, 0.0)
+			car.add_child(bogie)
+			for side: float in [-1.0, 1.0]:
+				var wheel := MeshInstance3D.new()
+				var wheel_mesh := CylinderMesh.new()
+				wheel_mesh.top_radius = 0.38
+				wheel_mesh.bottom_radius = 0.38
+				wheel_mesh.height = 0.13
+				wheel_mesh.radial_segments = 10
+				wheel.mesh = wheel_mesh
+				wheel.material_override = _material(Color("171b1d"))
+				wheel.position = Vector3(bogie_x, 0.35, side * 1.05)
+				wheel.rotation.x = PI * 0.5
+				car.add_child(wheel)
+		if index == 0:
+			# The first car reads as a locomotive: a raised cab and a dark nose.
+			var cab := MeshInstance3D.new()
+			var cab_mesh := BoxMesh.new()
+			cab_mesh.size = Vector3(2.2, 0.85, 2.3)
+			cab.mesh = cab_mesh
+			cab.material_override = _material(colors[index].lightened(0.12))
+			cab.position = Vector3(1.9, 3.0, 0.0)
+			car.add_child(cab)
+			var nose := MeshInstance3D.new()
+			var nose_mesh := BoxMesh.new()
+			nose_mesh.size = Vector3(0.45, 1.0, 2.15)
+			nose.mesh = nose_mesh
+			nose.material_override = _material(Color("293238"))
+			nose.position = Vector3(-3.95, 1.15, 0.0)
+			car.add_child(nose)
 		var roof := MeshInstance3D.new()
 		var roof_box := BoxMesh.new()
 		roof_box.size = Vector3(size.x - 0.4, 0.2, size.z - 0.2)

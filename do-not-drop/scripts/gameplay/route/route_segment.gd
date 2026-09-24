@@ -80,6 +80,32 @@ func _box(node_name: String, size: Vector3, location: Vector3, color: Color, sol
 	return root
 
 
+## Runtime route pieces remain code-built, but no longer have to rebuild every
+## visible prop from cubes.  Keep collision primitives separate from imported
+## art: the former are deterministic and cheap, while the latter can evolve
+## without changing driving physics.
+func _model(node_name: String, path: String, location: Vector3, rotation_y: float = 0.0, scale_factor: float = 1.0) -> Node3D:
+	var scene := load(path) as PackedScene
+	if scene == null:
+		push_warning("Missing route model: " + path)
+		return null
+	var model := scene.instantiate() as Node3D
+	model.name = node_name
+	model.position = location
+	model.rotation.y = rotation_y
+	model.scale = Vector3.ONE * scale_factor
+	add_child(model)
+	return model
+
+
+func _hide_box_visual(body: Node3D) -> void:
+	if body == null:
+		return
+	for child: Node in body.get_children():
+		if child is MeshInstance3D:
+			(child as MeshInstance3D).visible = false
+
+
 func _material(color: Color) -> StandardMaterial3D:
 	if not _materials.has(color):
 		var material := StandardMaterial3D.new()
