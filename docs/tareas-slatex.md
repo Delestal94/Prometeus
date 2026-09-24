@@ -155,7 +155,7 @@
 | 74 | UI de selección de cosmético. | B | ✅ Hecho (`cosmetics_panel.gd`) |
 | 75 | Persistencia de la elección del jugador (mismo guardado JSON del progreso). | A | ✅ Hecho |
 | 76 | Decidir si los cosméticos son solo de color o incluyen geometría/accesorios (depende de cuándo llegue el modelo humanoide, #3). | A | ✅ Hecho: color de uniforme para MVP; accesorios requieren arte dedicado |
-| 77 | Vista previa del cosmético antes de confirmarlo (un espejo simple o un modelo girando). | C | 🟡 Los botones muestran el color; falta preview 3D dedicado |
+| 77 | Vista previa del cosmético antes de confirmarlo (un espejo simple o un modelo girando). | C | ✅ Hecho (`cosmetics_panel.gd`, maniquí 3D giratorio) |
 | 78 | Sincronizar la elección de cosmético en red, mismo patrón que el color por `peer_id` ya replicado. | B | ✅ Hecho (`cosmetic_id` replicado en Player) |
 | 79 | Test automatizado de que la elección persiste y se ve igual en todos los clientes. | A | 🟡 Persistencia cubierta; falta test de dos clientes reales |
 

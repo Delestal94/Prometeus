@@ -2,6 +2,7 @@ class_name CosmeticsPanel
 extends Control
 
 signal closed
+var _preview_root: Node3D
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -26,6 +27,7 @@ func _build() -> void:
 	outer.add_child(columns)
 	var people: VBoxContainer = UiTheme.panel(columns, Vector2(470, 0), 22)
 	people.add_theme_constant_override("separation", 12)
+	_build_uniform_preview(people)
 	_section(people, "Uniforme", "Tu color, igual para todos en la partida.",
 		UnlockManager.cosmetic_choices(), UnlockManager.selected_cosmetic, UnlockManager.select_cosmetic)
 	# The truck and its paint (docs/tareas-nacho.md #85-#89): the host's
@@ -65,6 +67,51 @@ func _section(column: VBoxContainer, title: String, subtitle: String, choices: A
 			if select.call(id):
 				_refresh()
 		)
+
+
+func _build_uniform_preview(parent: Node) -> void:
+	var frame := SubViewportContainer.new()
+	frame.custom_minimum_size = Vector2(0, 150)
+	frame.stretch = true
+	parent.add_child(frame)
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(420, 150)
+	viewport.transparent_bg = false
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	frame.add_child(viewport)
+	var world := Node3D.new()
+	viewport.add_child(world)
+	_preview_root = world
+	var camera := Camera3D.new()
+	camera.position = Vector3(0.0, 0.4, 3.0)
+	world.add_child(camera)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-35, -20, 0)
+	world.add_child(light)
+	var color: Color = UnlockManager.cosmetic_color()
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.82
+	var torso := MeshInstance3D.new()
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.38
+	torso_mesh.height = 1.25
+	torso.mesh = torso_mesh
+	torso.material_override = material
+	world.add_child(torso)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.28
+	head_mesh.height = 0.56
+	head.mesh = head_mesh
+	head.material_override = material
+	head.position.y = 0.82
+	world.add_child(head)
+
+
+func _process(delta: float) -> void:
+	if _preview_root != null:
+		_preview_root.rotation.y += delta * 0.65
 
 
 func _refresh() -> void:
