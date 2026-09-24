@@ -9,6 +9,7 @@ extends SceneTree
 var _failures: int = 0
 var _impacts: Array[float] = []
 var _banners: Array[Dictionary] = []
+var _resolved: Array = []
 
 
 func _initialize() -> void:
@@ -20,6 +21,7 @@ func _run() -> void:
 	var bus: Node = root.get_node(^"/root/EventBus")
 	bus.connect(&"vehicle_impact", func(strength: float, _at: Vector3) -> void: _impacts.append(strength))
 	bus.connect(&"route_event_started", func(_id: StringName, event: Dictionary) -> void: _banners.append(event))
+	bus.connect(&"route_event_resolved", func(id: StringName, success: bool, _peer: int) -> void: _resolved.append([id, success]))
 
 	var fast := await _drive_through(20.0)
 	_expect(fast.hit, "Full speed without braking: the truck hits the deer")
@@ -27,6 +29,15 @@ func _run() -> void:
 	_expect(fast.impacts > 0, "The hit reaches the cargo as a vehicle impact")
 	_expect(fast.banner.contains("ciervo"), "The HUD tells the crew what happened")
 	_expect(fast.deer_gone, "The deer gets up and runs off into the trees")
+	_expect(fast.incident, "The hit is flagged as an incident with no countdown (incident, duration 0)")
+	# An incident has nothing to respond to: it closes itself, even after the
+	# stretch it happened on is gone, so no banner hangs waiting for it.
+	var waited: float = 0.0
+	while _resolved.is_empty() and waited < WildlifeCrossing.INCIDENT_SECONDS + 2.0:
+		await create_timer(0.25).timeout
+		waited += 0.25
+	_expect(_resolved.size() == 1 and _resolved[0] == [&"deer_hit", false],
+		"The deer hit is resolved (as a failure) a few seconds later: %s" % [_resolved])
 
 	var careful := await _drive_through(11.0)
 	_expect(not careful.hit, "Slowed down after the warning: the deer is across before the truck arrives")
@@ -41,6 +52,7 @@ func _run() -> void:
 func _drive_through(speed: float) -> Dictionary:
 	_impacts.clear()
 	_banners.clear()
+	_resolved.clear()
 	var world := Node3D.new()
 	root.add_child(world)
 	var ground := StaticBody3D.new()
@@ -86,6 +98,7 @@ func _drive_through(speed: float) -> Dictionary:
 		"impacts": _impacts.size(),
 		"banner": String(_banners[-1].get("title", "")).to_lower() if not _banners.is_empty() else "",
 		"deer_gone": crossing.state == WildlifeCrossing.State.DONE and not crossing.deer.visible,
+		"incident": not _banners.is_empty() and bool(_banners[-1].get("incident", false)) and int(_banners[-1].get("duration", -1)) == 0,
 	}
 	run_manager.set(&"is_running", false)
 	world.free()

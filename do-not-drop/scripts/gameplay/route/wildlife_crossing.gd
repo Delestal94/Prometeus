@@ -46,6 +46,8 @@ const MIN_HIT_SPEED_KMH: float = 6.0
 ## threshold, so the hit reaches the cargo through vehicle_impact.
 const IMPACT_SPEED_LOSS: float = 3.6
 const FINE: int = 30
+## How long a hit's banner stays up before it's closed (report_incident()).
+const INCIDENT_SECONDS: float = 4.0
 const SIGN_LEAD: float = 45.0
 const SIGN_LATERAL: float = 7.8
 
@@ -165,12 +167,29 @@ func _apply_consequences(vehicle: VehicleBody3D) -> void:
 		fine = mini(FINE, int(crew.get(&"team_money")))
 		if fine > 0:
 			crew.call(&"spend", fine)
-	var bus: Node = get_node_or_null(^"/root/EventBus")
-	if bus != null:
-		bus.call(&"relay", &"route_event_started", [&"deer_hit", {
-			"title": "¡Chocaste un ciervo!",
-			"prompt": ("Salió corriendo, pero la multa por daños es de $%d." % fine) if fine > 0 else "Salió corriendo. Suerte que no había plata para la multa.",
-		}])
+	report_incident(get_tree(), &"deer_hit", "¡Chocaste un ciervo!",
+		("Salió corriendo, pero la multa por daños es de $%d." % fine) if fine > 0 else "Salió corriendo. Suerte que no había plata para la multa.")
+
+
+## Host only. Tells every HUD about something that already happened on the
+## road (a hit, a fine) through the route-event channel, and closes it again
+## after INCIDENT_SECONDS: an incident has nothing to respond to, so it must
+## not hang in a banner that waits for a resolution. `duration` 0 says there
+## is no countdown. The other roadside hazards use the same shape.
+static func report_incident(tree: SceneTree, event_id: StringName, title: String, prompt: String) -> void:
+	var bus: Node = tree.root.get_node_or_null(^"/root/EventBus")
+	if bus == null:
+		return
+	bus.call(&"relay", &"route_event_started", [event_id, {
+		"title": title,
+		"prompt": prompt,
+		"incident": true,
+		"duration": 0,
+	}])
+	# Bound to the bus, not to the crossing: it must close even if the
+	# stretch has streamed out of the world by then.
+	tree.create_timer(INCIDENT_SECONDS).timeout.connect(
+		Callable(bus, &"relay").bind(&"route_event_resolved", [event_id, false, 0]))
 
 
 func _start_fleeing() -> void:
