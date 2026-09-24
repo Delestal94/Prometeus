@@ -184,6 +184,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_dust_and_ambience.gd
 <godot> --headless --path do-not-drop --script res://tests/test_dev_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_bus_routing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_cargo_clutter.gd
 <godot> --headless --path do-not-drop --script res://tests/test_level_endless.gd
 <godot> --headless --path do-not-drop --script res://tests/test_endless_multi_cargo.gd
 <godot> --headless --path do-not-drop --script res://tests/test_new_route_segments.gd
@@ -360,6 +361,10 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   trackea de verdad, y una sesión larga simulada no acumula segmentos ni
   nodos sin liberar.
 - `test_new_route_segments` — los tres tramos más nuevos: la curva en S
+- `test_cargo_clutter` — la caja de herramientas y el termo sueltos en la caja de carga
+  no pueden desincronizar el camión: no están en ninguna capa (no tocan paquetes ni
+  jugadores), en un cliente el camión está congelado y lo posiciona el host, y en el
+  host pesan menos del 1 % del camión.
   alterna 4 bloques (el doble que el chicane), la zona de obras angosta un
   solo lado en vez de alternar, y el ripio efectivamente baja
   `wheel_friction_slip` al entrar y lo restaura al salir (verificado con

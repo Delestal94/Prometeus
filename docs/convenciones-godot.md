@@ -110,6 +110,12 @@ selección todavía. Ver `Player._send_ping()` en `player.gd`.
   caja de la camioneta (evita que "se caigan del mundo" por error de física).
 - `interaction_area` solo detecta `player`, no genera colisión física real (Area3D en
   modo monitor).
+- **Decorado físico local** (la caja de herramientas y el termo de `cargo_clutter.gd`):
+  capa `0` y máscara `environment | vehicle`. Nadie los busca, así que nunca tocan
+  paquetes ni jugadores, y como no se replican cada peer simula los suyos. No pueden
+  desincronizar el camión: en los clientes el camión está congelado y lo posiciona el
+  host, y en el host pesan menos del 1 % del camión (`test_cargo_clutter`). Cualquier
+  objeto suelto nuevo que sea solo decorado va igual.
 
 ## 3. Organización de escenas dentro de `do-not-drop/`
 
