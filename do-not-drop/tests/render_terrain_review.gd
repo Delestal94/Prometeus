@@ -15,7 +15,6 @@ func _run() -> void:
 	var camera := Camera3D.new()
 	level.add_child(camera)
 	camera.fov = 72.0
-	camera.cull_mask &= ~4
 	camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var route: Node3D = level.get_node("World/Route")

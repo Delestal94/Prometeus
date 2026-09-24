@@ -82,20 +82,17 @@ var _screech_mix: float = 0.0
 var _roll: float = 0.0
 var _pitch: float = 0.0
 var _sink: float = 0.0
-var _driver_hands: Node3D
 ## Chase view for a passenger with nothing left to save (spectator_camera.gd).
 var spectator_camera: Camera3D
-## The driver's right hand, and how much it's still pressing the horn (tareas
-## de Slatex #11): the hand leaves the rim for the hub while the horn sounds.
+## The seated driver's right-hand IK target (player.gd hangs it on the wheel)
+## and where it rests on the rim, and how much it's still pressing the horn
+## (tareas de Slatex #11): the character's own hand leaves the rim for the hub
+## while the horn sounds. No driver, no hand -- nothing stands in for one.
 var _horn_hand: Node3D
 var _horn_hand_rest: Vector3
 var _horn_press: float = 0.0
 const HORN_PRESS_SECONDS: float = 0.45
 const HORN_HAND_AT := Vector3(0.03, 0.05, -0.02)
-const DRIVER_GLOVES: Array[PackedScene] = [
-	preload("res://assets/models/characters/sm_char_viewmodel_glove_left.glb"),
-	preload("res://assets/models/characters/sm_char_viewmodel_glove_right.glb"),
-]
 
 
 func _ready() -> void:
@@ -167,7 +164,6 @@ func bind_model(wheel: Node3D, front_lenses: Array, rear_lenses: Array) -> void:
 	steering_wheel = wheel
 	if steering_wheel != null:
 		_steering_rest = steering_wheel.basis
-		_build_driver_hands()
 	for beam: SpotLight3D in headlights:
 		beam.queue_free()
 	headlights.clear()
@@ -202,12 +198,7 @@ func bind_model(wheel: Node3D, front_lenses: Array, rear_lenses: Array) -> void:
 func update_presentation(delta: float) -> void:
 	if steering_wheel != null:
 		steering_wheel.basis = _steering_rest * Basis(Vector3.UP, -vehicle.steering * steering_ratio)
-		if _driver_hands != null:
-			_driver_hands.rotation.z = sin(vehicle.steering * 2.0) * 0.12
-		if _horn_hand != null:
-			_horn_press = maxf(0.0, _horn_press - delta)
-			var reach: float = clampf(_horn_press / HORN_PRESS_SECONDS * 3.0, 0.0, 1.0)
-			_horn_hand.position = _horn_hand_rest.lerp(HORN_HAND_AT, reach)
+		_update_horn_hand(delta)
 	_flicker_remaining = maxf(0.0, _flicker_remaining - delta)
 	var running: bool = vehicle.presentation_engine_running
 	var flicker: float = 0.3 if _flicker_remaining > 0.0 else 1.0
@@ -229,24 +220,17 @@ func update_presentation(delta: float) -> void:
 	_apply_dust()
 
 
-func _build_driver_hands() -> void:
-	if _driver_hands != null:
-		_driver_hands.queue_free()
-	_driver_hands = Node3D.new()
-	_driver_hands.name = "DriverHands"
-	steering_wheel.add_child(_driver_hands)
-	for index: int in range(DRIVER_GLOVES.size()):
-		var side: float = -1.0 if index == 0 else 1.0
-		var hand := DRIVER_GLOVES[index].instantiate() as Node3D
-		hand.name = "DriverGloveLeft" if side < 0.0 else "DriverGloveRight"
-		hand.position = Vector3(side * 0.19, 0.0, -0.03)
-		hand.rotation_degrees = Vector3(78, 0, side * 38)
-		hand.scale = Vector3.ONE * 0.26
-		_driver_hands.add_child(hand)
-		if side > 0.0:
-			_horn_hand = hand
-			_horn_hand_rest = hand.position
-
+func _update_horn_hand(delta: float) -> void:
+	_horn_press = maxf(0.0, _horn_press - delta)
+	var target := steering_wheel.get_node_or_null(^"DriverHandTargetRight") as Node3D
+	if target == null:
+		return
+	# A new driver brings a new target; its rest is wherever it was placed.
+	if not is_instance_valid(_horn_hand) or target != _horn_hand:
+		_horn_hand = target
+		_horn_hand_rest = target.position
+	var reach: float = clampf(_horn_press / HORN_PRESS_SECONDS * 3.0, 0.0, 1.0)
+	target.position = _horn_hand_rest.lerp(HORN_HAND_AT, reach)
 
 
 func _apply_body_lean(delta: float) -> void:

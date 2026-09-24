@@ -29,7 +29,6 @@ func _run() -> void:
 	var camera := Camera3D.new()
 	level.add_child(camera)
 	camera.fov = 58.0
-	camera.cull_mask &= ~4  # External review excludes first-person hand meshes.
 	camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var views: Dictionary = {

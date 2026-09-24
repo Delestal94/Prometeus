@@ -1,0 +1,25 @@
+{
+  "mesh_objects": 16,
+  "vertices": 31897,
+  "triangles": 63738,
+  "deform_bones": 26,
+  "total_bones": 35,
+  "unweighted_vertices": 0,
+  "max_weight_sum_error": 4.470348358154297e-08,
+  "rest_joint_error": {
+    "forearm.L": 2.6749555872404934e-07,
+    "shin.L": 3.6400966514756343e-06,
+    "forearm.R": 2.6749555872404934e-07,
+    "shin.R": 3.6400966514756343e-06
+  },
+  "pose_test": {
+    "ik_endpoint_errors_m": {
+      "forearm.L": 5.931413904785135e-05,
+      "shin.L": 1.4115112651046644e-05,
+      "forearm.R": 5.996767147977738e-05,
+      "shin.R": 1.635075702971764e-06
+    },
+    "max_arm_vertex_motion_m": 0.6919730820953705,
+    "finite_deformation": true
+  }
+}

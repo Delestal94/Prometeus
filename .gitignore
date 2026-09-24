@@ -37,6 +37,8 @@ Thumbs.db
 !.claude/skills/
 !.claude/hooks/
 !.claude/settings.json
+do-not-drop/.claude/
+*.local.json
 .codex/
 
 # Godot's native-library hot-reload backup files

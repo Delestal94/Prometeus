@@ -1,0 +1,13 @@
+{
+  "animations": [
+    "Personaje redondeado | estudio"
+  ],
+  "bones": 26,
+  "breathing_at_0_73s": 0.744195997714996,
+  "godot": "4.7.2-stable (official)",
+  "morphs": [
+    "Respirar",
+    "Barriga_blanda"
+  ],
+  "skinned_meshes": 16
+}

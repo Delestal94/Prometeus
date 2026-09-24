@@ -1,0 +1,50 @@
+D:\Programas\Utilities\Proyectos\Prometeus\art\rounded_character\build_character.py:59: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+D:\Programas\Utilities\Proyectos\Prometeus\art\rounded_character\build_character.py:414: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('Estudio suave'); world.use_nodes=True
+INFO Draco is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_draco_bridge.dll
+INFO MeshOptimizer is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_meshopt_bridge.dll
+09:26:04 | INFO: Starting glTF 2.0 export
+09:26:04 | INFO: Extracting primitive: Brazo
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Brazo.001
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Sphere
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Camiseta
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Camiseta · dobladillo
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Sphere.001
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Cuello · costura
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Pierna.L
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Pierna.R
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Sphere.002
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Short · vuelta.L
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Short · vuelta.R
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Suela.L
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Suela.R
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Zapato.L
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Extracting primitive: Zapato.R
+09:26:05 | INFO: Primitives created: 1
+09:26:05 | INFO: Finished glTF 2.0 export in 0.37358593940734863 s
+00:03.375  reports          | WARNING Path 'C:\Program Files\Blender Foundation\Blender 5.2\5.2\datafiles\assets\brushes\essentials_brushes-gp_draw.blend' cannot be made relative for Material 'Dots Stroke'
+Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)
+00:03.375  reports          | WARNING Path 'C:\Program Files\Blender Foundation\Blender 5.2\5.2\datafiles\assets\brushes\essentials_brushes-gp_draw.blend' cannot be made relative for Material 'Material'
+00:24.094  render           | Saved: 'D:\Programas\Utilities\Proyectos\Prometeus\art\rounded_character\preview_tres_cuartos.png'
+00:54.766  render           | Saved: 'D:\Programas\Utilities\Proyectos\Prometeus\art\rounded_character\preview_frente.png'
+
+Info: Saved as "personaje_redondeado.blend"
+CHARACTER_BUILD_COMPLETE {"mesh_objects": 16, "vertices": 31897, "triangles": 63738, "deform_bones": 26, "total_bones": 35, "unweighted_vertices": 0, "max_weight_sum_error": 4.470348358154297e-08, "rest_joint_error": {"forearm.L": 2.6749555872404934e-07, "shin.L": 3.6400966514756343e-06, "forearm.R": 2.6749555872404934e-07, "shin.R": 3.6400966514756343e-06}}
+
+Blender quit

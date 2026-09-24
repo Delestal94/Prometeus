@@ -41,7 +41,6 @@ const LOOK_BACK_SPEED: float = 6.0
 
 func _ready() -> void:
 	RenderLayers.configure_first_person(self)
-	RenderLayers.show_viewmodel(self, current)
 	fov = GameSettings.preferred_fov
 	near = 0.03
 	# Explicit far plane instead of the engine default: the route is 220 m and
@@ -65,12 +64,10 @@ func _ready() -> void:
 func activate() -> void:
 	reset_look()
 	current = true
-	RenderLayers.show_viewmodel(self, true)
 
 
 func deactivate() -> void:
 	current = false
-	RenderLayers.show_viewmodel(self, false)
 	_shake_strength = 0.0
 	fov = GameSettings.preferred_fov
 	reset_look()
@@ -119,7 +116,6 @@ func _look_transform() -> Transform3D:
 
 
 func _process(delta: float) -> void:
-	RenderLayers.show_viewmodel(self, current)
 	if not current:
 		return
 	if get_tree().paused:

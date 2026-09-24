@@ -22,9 +22,55 @@ func _initialize() -> void:
 	_expect(vehicle.find_child("DriverHandTargetLeft", true, false) != null
 		and vehicle.find_child("DriverHandTargetRight", true, false) != null,
 		"Both hand targets are attached to the steering wheel")
-	_expect(vehicle.find_child("DriverArmVisualLeft", true, false) != null
-		and vehicle.find_child("DriverArmVisualRight", true, false) != null,
-		"Visible driver arms connect the shoulders to both steering-wheel targets")
+	# The character's own arms reach the wheel now (no stand-in cylinders):
+	# each solved wrist lands on its target.
+	_expect(vehicle.find_child("DriverArmVisualLeft", true, false) == null,
+		"No stand-in arm cylinders: the skinned arms do the reaching")
+	# SkeletonIK3D is a SkeletonModifier3D: its result only exists between the
+	# modifier pass and the skin update, so the wrists are read in there.
+	var wrists: Dictionary = {}
+	var shoulders: Dictionary = {}
+	var capture := func() -> void:
+		for bone_name: StringName in [&"hand.L", &"hand.R"]:
+			var bone: int = skeleton.find_bone(bone_name)
+			if bone >= 0:
+				wrists[bone_name] = skeleton.to_global(skeleton.get_bone_global_pose(bone).origin)
+				var shoulder: int = skeleton.get_bone_parent(skeleton.get_bone_parent(bone))
+				shoulders[bone_name] = skeleton.to_global(skeleton.get_bone_global_pose(shoulder).origin)
+	skeleton.skeleton_updated.connect(capture)
+	for _i: int in range(3):
+		await process_frame
+	skeleton.skeleton_updated.disconnect(capture)
+	for pair: Array in [[&"hand.L", "DriverHandTargetLeft"], [&"hand.R", "DriverHandTargetRight"]]:
+		var target := vehicle.find_child(pair[1], true, false) as Node3D
+		_expect(wrists.has(pair[0]), "Skeleton has bone %s" % pair[0])
+		if wrists.has(pair[0]) and target != null:
+			var gap: float = (wrists[pair[0]] as Vector3).distance_to(target.global_position)
+			print("driver %s wrist-to-wheel gap: %.3f m, shoulder-to-wheel %.3f m" % [pair[0], gap,
+				(shoulders[pair[0]] as Vector3).distance_to(target.global_position)])
+			_expect(gap < 0.08, "%s reaches its wheel target (gap %.3f m)" % [pair[0], gap])
+	# The horn takes the character's own right hand to the hub, and nothing
+	# else on the wheel is a hand.
+	_expect(vehicle.find_child("DriverHands", true, false) == null and vehicle.find_child("DriverGlove*", true, false) == null,
+		"No stand-in gloves hang on the steering wheel")
+	var right_target := vehicle.find_child("DriverHandTargetRight", true, false) as Node3D
+	var rim: Vector3 = right_target.position
+	vehicle.get_node(^"VehiclePresentation").set(&"_horn_press", 0.45)
+	for _i: int in range(2):
+		await process_frame
+	_expect(right_target.position.distance_to(rim) > 0.1, "Honking moves the driver's own right hand off the rim")
+	await create_timer(0.6).timeout  # past HORN_PRESS_SECONDS
+	await process_frame
+	_expect(right_target.position.distance_to(rim) < 0.01, "The hand goes back to the rim after honking")
+	# Standing up frees the solvers and the wheel targets, so boarding again
+	# doesn't stack a second pair.
+	player.call(&"leave_seat")
+	for _i: int in range(5):
+		await physics_frame
+	_expect(skeleton.get_children().filter(func(node: Node) -> bool: return node is SkeletonIK3D).is_empty(),
+		"Leaving the seat frees the driver IK solvers")
+	_expect(vehicle.find_child("DriverHandTargetLeft", true, false) == null,
+		"Leaving the seat frees the wheel targets")
 	player.free()
 	vehicle.free()
 	if _failures == 0:

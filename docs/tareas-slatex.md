@@ -468,7 +468,9 @@ Hoy Equilibrio, Líquido y Explosivo llevan la **misma** torta de bodas y Ruidos
 ### S-304 · Celular en la mano y marco de la cámara — B · `Sol · high` · Aviso: sí (`presentation/phone_camera.gd` no tiene dueño en el reparto)
 
 - [ ] Mostrar `models/props/handheld/sm_prop_phone.glb` en la mano derecha del viewmodel mientras la
-  cámara del celular está abierta (hoy el GLB está sin usar, `inventario-assets.md` §2).
+  cámara del celular está abierta (hoy el GLB está sin usar, `inventario-assets.md` §2). **Ojo
+  (2026-09-24):** ya no hay manos de primera persona (pedido del usuario: nada de manos que no sean
+  del personaje), así que el celular no puede colgar de una; ver aviso en `colaboracion-equipo.md`.
 - [ ] Marco de UI del celular (bordes redondeados, hora, batería, botón de obturador) como `Control`
   en `scripts/ui/phone_frame.gd`.
 
@@ -494,8 +496,9 @@ Hoy Equilibrio, Líquido y Explosivo llevan la **misma** torta de bodas y Ruidos
 ### S-308 · Animaciones de emote — C · `Sol · high` (Blender Python) · Aviso: no
 
 - [ ] Saludar, señalar, pulgar arriba, agarrarse la cabeza: 4 animaciones cortas agregadas al GLB del
-  jugador (fuente `personaje_lowpoly.blend`, script `create_character.py`). Las dispara la rueda de
-  pings (S-505).
+  jugador. Desde el 2026-09-24 el jugador es el personaje redondeado de Astra: se suman como
+  poses nuevas en `art/rounded_character/build_game_export.py` (ver `assets/README.md`,
+  "Personajes"). Las dispara la rueda de pings (S-505).
 
 ### S-309 · Mantener al día la dirección visual del dominio — A · `Luna · medium` · Aviso: sí (`especificaciones-visuales.md`, filas propias)
 
@@ -847,6 +850,8 @@ S-805 y los objetivos de S-108.
 | 101 | Ragdoll con el modelo del jugador (huesos del rig) en vez de cápsulas sueltas (`player_ragdoll.gd`). | B | Pendiente |
 | 102 | Maniquí del panel de cosméticos con el modelo del jugador en vez de cápsula + esfera (`cosmetics_panel.gd`), para que la vista previa muestre lo que se va a ver en juego. | A | Pendiente |
 | 103 | Accesorios cosméticos con geometría (gorras, chalecos), cuando se retome la decisión del #76. | C | Pendiente |
+| — | ~~Cuerpo del jugador con el personaje redondeado de Astra.~~ **[x] Hecho por Nacho (2026-09-24, pedido del usuario)** — `sm_char_player_rounded.glb` con clips Idle/Walk/Jump/PickUpPackage/Sit, camiseta con el color del equipo, IK de manejo continuo sin cilindros; aviso en `colaboracion-equipo.md`. Los NPC siguen con el modelo viejo. El #101 (ragdoll) ahora tendría que usar este rig. | A | Hecho |
+| — | ~~Manos flotantes en primera persona.~~ **[x] Hecho por Nacho (2026-09-24, pedido del usuario)** — sin guantes/cápsulas en las cámaras ni en el volante; las manos que atendían la trampa desde el asiento (#10) se fueron con ellos. Aviso en `colaboracion-equipo.md`. | A | Hecho |
 | 104 | Rehacer el celular (`sm_prop_phone.glb`, 92 triángulos) e integrarlo en `phone_camera.gd`, que hoy no carga ningún modelo. | B | Pendiente |
 | 105 | Borrar las cajas viejas `models/cargo/sm_cargo_package_*.glb`: sin uso desde las cajas por trampa. | A | Pendiente |
 | 106 | Revisar los ojos/tentáculos del paquete Hostil (esferas y barras en `package_feedback.gd`): ¿alcanzan como chiste o merecen un modelo? | C | Pendiente |

@@ -14,7 +14,8 @@ extends Node3D
 ## Split of responsibilities:
 ## - this script: layout, stock and orders, the door, supplies (gameplay);
 ## - DepotKit: batching static geometry; DepotRollerDoor: the door itself;
-## - DepotStation: the interactable stations; DepotWorker/DepotForklift: life.
+## - DepotStation: the interactable stations; DepotWorker/DepotForklift: life;
+##   DepotMirror: the lockers' working mirror.
 ## Orders are drawn from the session seed, so every peer posts the same board
 ## without a message; the door and purchases are decided by the host.
 
@@ -745,12 +746,28 @@ func _build_lockers(kit: DepotKit) -> void:
 		kit.box(Vector3(0.03, 0.14, 0.03), Vector3(14.39, 1.05, z + 0.18), handle)
 		kit.box(Vector3(0.01, 0.07, 0.2), Vector3(14.4, 1.45, z), DepotKit.flat(PAPER, 0.8))
 	kit.collider(Vector3(0.58, 2.0, 5.0), Transform3D(Basis.IDENTITY, Vector3(14.68, 1.0, 13.3 + 3.5 * 0.62)))
-	# Bench in front of them, and a mirror at the end of the row.
+	# Bench in front of them, and a full-length mirror (a real one: DepotMirror)
+	# at the end of the row, to check the uniform.
 	kit.box(Vector3(0.4, 0.06, 3.2), Vector3(13.4, 0.46, 15.5), DepotKit.detailed(Color("b08a5a"), "wood_planks", 1.0), true)
 	for z: float in [14.2, 16.8]:
 		kit.box(Vector3(0.3, 0.44, 0.06), Vector3(13.4, 0.22, z), dark)
-	kit.box(Vector3(0.03, 1.3, 0.62), Vector3(14.95, 1.3, 18.6), DepotKit.flat(Color("b9d7dd"), 0.05, 0.9))
-	kit.box(Vector3(0.05, 1.38, 0.7), Vector3(14.97, 1.3, 18.6), dark)
+	# Clear of the lining (to x 14.94) and of the column at z 19.05.
+	kit.box(Vector3(0.05, 2.0, 0.9), Vector3(14.91, 1.1, 18.5), dark)
+	var mirror := DepotMirror.new()
+	mirror.name = "Mirror"
+	mirror.glass_size = Vector2(0.8, 1.9)
+	mirror.position = Vector3(14.875, 1.1, 18.5)
+	mirror.rotation.y = -PI * 0.5
+	add_child(mirror)
+	# A vanity lamp over it, so the uniform reads even on a dark day.
+	kit.box(Vector3(0.12, 0.06, 0.7), Vector3(14.85, 2.14, 18.5), DepotKit.glow(Color("fff1d6"), 2.0), false)
+	var vanity := OmniLight3D.new()
+	vanity.name = "MirrorLamp"
+	vanity.position = Vector3(14.3, 2.1, 18.5)
+	vanity.light_color = Color("fff1d6")
+	vanity.light_energy = 0.9
+	vanity.omni_range = 2.6
+	add_child(vanity)
 	_hanging_sign(kit, "VESTUARIO", Vector3(13.2, 3.4, 15.5), -PI * 0.5, Color("3f7f8c"))
 
 

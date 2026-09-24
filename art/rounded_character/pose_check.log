@@ -1,0 +1,6 @@
+00:00.766  blend            | Read blend: "D:\Programas\Utilities\Proyectos\Prometeus\art\rounded_character\personaje_redondeado.blend"
+00:19.937  render           | Saved: 'D:\Programas\Utilities\Proyectos\Prometeus\art\rounded_character\preview_pose_rig.png'
+POSE_CHECK_PASS {"ik_endpoint_errors_m": {"forearm.L": 5.931413904785135e-05, "shin.L": 1.4115112651046644e-05, "forearm.R": 5.996767147977738e-05, "shin.R": 1.635075702971764e-06}, "max_arm_vertex_motion_m": 0.6919730820953705, "finite_deformation": true}
+Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)
+
+Blender quit

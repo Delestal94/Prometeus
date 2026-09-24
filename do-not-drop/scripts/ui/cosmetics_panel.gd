@@ -1,7 +1,7 @@
 class_name CosmeticsPanel
 extends Control
 
-const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
+const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
 
 signal closed
 var _preview_root: Node3D

@@ -120,6 +120,40 @@ e íconos de las cuatro trampas.
 
 ## Personajes
 
+`models/characters/sm_char_player_rounded.glb` (2026-09-24): **el cuerpo del
+jugador**. Es el personaje redondeado de Astra (cabeza lisa, camiseta, short,
+zapatos; fuente en `art/rounded_character/`), exportado para el juego por
+`art/rounded_character/build_game_export.py`, que parte del `.blend` de Astra sin
+modificarlo:
+
+- una sola malla con skin, diezmada a ~19k triángulos (el original tiene 64k),
+  sin morphs (la respiración va con huesos). Superficies por material con nombre
+  ASCII: `Shirt` es la 0 y `player.gd` le pone el color del equipo; `ShirtTrim`
+  toma el mismo color, un poco más oscuro. Además vienen `Skin`, `Shorts`,
+  `ShortsHem`, `Shoe` y `Sole`;
+- 26 huesos deformables en glTF (`pelvis/spine/chest/neck/head`, `belly`,
+  `clavicle/upper_arm/forearm/hand/thumb/grip` y `thigh/shin/foot/toe` por lado,
+  con sufijos `.L`/`.R` desde el punto de vista del personaje). `grip.L/R` sirven
+  de anclaje para agarrar cosas;
+- mira hacia −Z y mide ~1,74 m: la escala 0,5 y el giro de 180° están en el nodo
+  del esqueleto;
+- clips (30 fps, el IK de Blender horneado): `Idle` 2,5 s en loop con
+  respiración, `Walk` 0,67 s en loop, `Jump` 1,67 s, `PickUpPackage` 1,67 s (termina
+  sosteniendo la caja a la altura del pecho) y `Sit` 2 s en loop (pelvis 0,5 m más
+  abajo, manos sobre los muslos). `player.gd` ubica el cuerpo sobre cada asiento
+  con `_seat_body_offset()`, medido con `tests/render_player_character.gd`. Los
+  loops se marcan en `player.gd`. El export recorta la parte de la pierna que queda
+  dentro del short y la cintura del short bajo la camiseta, que al sentarse
+  atravesaban la ropa.
+
+Para cambiar poses o sumar clips, editá `build_game_export.py` y volvé a correrlo
+(el comando está en su encabezado; con `-- --preview` renderiza cada pose en
+`PREVIEW_DIR`).
+
+`models/characters/sm_char_player_lowpoly.glb` sigue en uso para los NPC
+(operarios del depósito y vecinos de las casas) y el ragdoll arma sus propias
+piezas.
+
 `models/characters/sm_char_player_lowpoly.glb` (2026-09-22): personaje
 low-poly estilo PEAK, cuerpo hecho con formas simples redondeadas (esferas +
 cilindros, shading suave, dos materiales planos: piel y traje). Trae un

@@ -1,15 +1,6 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
-
-[sub_resource type="StandardMaterial3D" id="Material_skin"]
-albedo_color = Color(0.87, 0.68, 0.53, 1)
-roughness = 0.85
-
-[sub_resource type="CapsuleMesh" id="Mesh_hand"]
-material = SubResource("Material_skin")
-radius = 0.045
-height = 0.24
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -62,16 +53,6 @@ position = Vector3(0, 1.6, 0)
 [node name="Camera3D" type="Camera3D" parent="Head"]
 fov = 78.0
 near = 0.03
-
-[node name="LeftHand" type="MeshInstance3D" parent="Head/Camera3D"]
-position = Vector3(-0.16, -0.2, -0.3)
-rotation_degrees = Vector3(75, 0, 12)
-mesh = SubResource("Mesh_hand")
-
-[node name="RightHand" type="MeshInstance3D" parent="Head/Camera3D"]
-position = Vector3(0.16, -0.2, -0.3)
-rotation_degrees = Vector3(75, 0, -12)
-mesh = SubResource("Mesh_hand")
 
 [node name="HoldPoint" type="Marker3D" parent="Head/Camera3D"]
 position = Vector3(0, -0.3, -0.95)

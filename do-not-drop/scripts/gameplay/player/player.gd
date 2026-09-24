@@ -62,22 +62,23 @@ var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
-## Rigged low-poly character (2026-09-22), replaces the old placeholder
-## capsule -- see assets/README.md "Personajes" for what the 5 baked clips
-## (Idle/Walk/Jump/PickUpPackage/Die) actually contain. Die isn't wired to
-## anything here: there's no player-death state in this game yet (packages
-## get ruined, not players), so it's just available on the AnimationPlayer
-## for whenever that changes instead of invented on the spot.
-const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
-## The authored glove scenes replace the old capsule placeholders.  They are
-## parented to the same hand anchors so all existing package-grip posing keeps
-## working, while fingers and cuff remain visible in first person.
-const LEFT_GLOVE_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_viewmodel_glove_left.glb")
-const RIGHT_GLOVE_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_viewmodel_glove_right.glb")
+## Astra's rounded character (2026-09-24), game export built by
+## art/rounded_character/build_game_export.py -- see assets/README.md
+## "Personajes" for its clips (Idle/Walk/Jump/PickUpPackage/Sit). One skinned
+## mesh; surface 0 is the T-shirt, which carries the crew colour.
+const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
 const ANIM_IDLE: StringName = &"Idle"
 const ANIM_WALK: StringName = &"Walk"
 const ANIM_JUMP: StringName = &"Jump"
 const ANIM_PICKUP: StringName = &"PickUpPackage"
+## Played by every peer while seat_node_path is set -- it's derived from that
+## replicated path, not from anim_state, so it needs no sync of its own.
+const ANIM_SIT: StringName = &"Sit"
+## Driver IK chain on the rounded character's skeleton (glTF bone names).
+const DRIVER_ARM_BONES: Dictionary = {
+	-1.0: [&"upper_arm.L", &"hand.L"],
+	1.0: [&"upper_arm.R", &"hand.R"],
+}
 ## Slightly under the clips' real length (1.67s each) so the lock releases
 ## right as the last frame settles, instead of holding an extra beat on the
 ## final pose before movement can take over again.
@@ -105,9 +106,7 @@ var _ragdolled: bool = false
 var _package_focus: CameraAttributesPractical
 var _driver_ik_ready: bool = false
 var _driver_ik_nodes: Array[SkeletonIK3D] = []
-var _driver_arm_visuals: Array[MeshInstance3D] = []
 var _driver_arm_targets: Array[Node3D] = []
-var _driver_arm_skeleton: Skeleton3D = null
 ## Replicated (see player.tscn): which seat anchor (e.g. DriverEyePoint) this
 ## player is sitting at, empty when on foot. board_seat() only ever runs on
 ## the boarding peer's own client (it's a targeted RPC, not a broadcast), so
@@ -183,7 +182,6 @@ func _ready() -> void:
 	_package_focus.dof_blur_near_enabled = false
 	_camera.attributes = _package_focus
 	RenderLayers.configure_first_person(_camera)
-	RenderLayers.show_viewmodel(_camera, is_local())
 	# The spawn state is the host's copy of these, sent before the owner's
 	# first update: start them at the spawn point, not at the world origin.
 	# (A late joiner already got the host's latest pair, applied before this.)
@@ -229,27 +227,22 @@ func _on_peer_level_ready(peer_id: int) -> void:
 		sync.update_visibility(peer_id)
 
 
-## The rigged low-poly character, so teammates actually have someone to see
-## at all -- until this, only the viewmodel hands existed, which are
-## attached to this player's own camera and so only ever visible to
-## themselves. Colored per peer_id (see PLAYER_COLORS) doubles as the
-## simplest possible "who is that" cue: the imported suit material gets
-## duplicated per instance (a surface override, not a mutation of the
-## shared glTF resource) before recoloring, so tinting one player's suit
-## never bleeds into every other instance of the same imported material.
-## Own camera can see its own body too (no per-camera render-layer split
-## yet) -- a minor rough edge, carried over unchanged from the placeholder.
+## The rigged character, so teammates have someone to see. Colored per
+## peer_id (see PLAYER_COLORS) doubles as the simplest possible "who is
+## that" cue: the imported suit material gets duplicated per instance (a
+## surface override, not a mutation of the shared glTF resource) before
+## recoloring, so tinting one player's suit never bleeds into every other
+## instance of the same imported material. This player's own cameras leave
+## it out (RenderLayers.LOCAL_BODY), and nothing stands in for it there: no
+## first-person hands float in front of the lens.
 func _build_body() -> void:
 	var visual: Node3D = CHARACTER_SCENE.instantiate()
 	visual.name = "BodyVisual"
 	add_child(visual)
 	_body_visual = visual
-	_build_viewmodel_gloves()
 	_enable_character_shadows(visual)
 
-	var mesh_instance: MeshInstance3D = _find_mesh_instance(visual)
-	if mesh_instance != null:
-		mesh_instance.layers = RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD
+	_set_body_layers(visual, RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 	_apply_cosmetic()
 
 	_anim_player = _find_animation_player(visual)
@@ -257,43 +250,17 @@ func _build_body() -> void:
 		# The glTF importer doesn't carry Blender's "this clip loops" flag,
 		# so it's set here once instead of needing a manual editor step
 		# every time the source .blend is re-exported.
-		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK]:
+		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK, ANIM_SIT]:
 			if _anim_player.has_animation(loop_clip):
 				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 		_anim_player.play(ANIM_IDLE)
 
 
-func _build_viewmodel_gloves() -> void:
-	for spec: Dictionary in [
-		{"anchor": ^"LeftHand", "scene": LEFT_GLOVE_SCENE},
-		{"anchor": ^"RightHand", "scene": RIGHT_GLOVE_SCENE},
-	]:
-		var anchor := _camera.get_node(spec["anchor"]) as MeshInstance3D
-		if anchor == null or anchor.get_node_or_null(^"Glove") != null:
-			continue
-		# The anchor remains as the animation pivot, but its placeholder mesh
-		# is hidden once the authored glove (with fingers/cuff) is present.
-		# Hiding the anchor also hides its glove children. Remove only the
-		# placeholder geometry and keep this animation pivot visible.
-		anchor.mesh = null
-		var glove := (spec["scene"] as PackedScene).instantiate() as Node3D
-		glove.name = "Glove"
-		glove.scale = Vector3.ONE * 0.72
-		anchor.add_child(glove)
-		_style_viewmodel_glove(glove)
-
-
-func _style_viewmodel_glove(node: Node) -> void:
-	# The raw authored material is nearly the same grey as the forearm and
-	# disappeared against dim depots. A matte teal glove gives the viewmodel a
-	# readable silhouette without changing any shared glTF materials.
-	if node is MeshInstance3D:
-		var material := StandardMaterial3D.new()
-		material.albedo_color = Color("27cbb8")
-		material.roughness = 0.64
-		node.material_override = material
+func _set_body_layers(node: Node, layers: int) -> void:
+	if node is VisualInstance3D:
+		(node as VisualInstance3D).layers = layers
 	for child: Node in node.get_children():
-		_style_viewmodel_glove(child)
+		_set_body_layers(child, layers)
 
 
 func _enable_character_shadows(node: Node) -> void:
@@ -315,16 +282,17 @@ func _apply_cosmetic() -> void:
 		color = profile.call(&"cosmetic_color", cosmetic_id)
 	var mesh_instance: MeshInstance3D = _find_mesh_instance(_body_visual)
 	if mesh_instance != null and mesh_instance.mesh != null:
-		var suit_material: Material = mesh_instance.mesh.surface_get_material(0)
-		if suit_material != null:
-			suit_material = suit_material.duplicate()
-			(suit_material as StandardMaterial3D).albedo_color = color
-			mesh_instance.set_surface_override_material(0, suit_material)
-	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
-		var hand_material := StandardMaterial3D.new()
-		hand_material.albedo_color = color.lightened(0.3)
-		hand_material.roughness = 0.85
-		hand.material_override = hand_material
+		# Surface 0 is the T-shirt; its collar/hem trim follows a shade darker.
+		for surface: int in mesh_instance.mesh.get_surface_count():
+			var source: Material = mesh_instance.mesh.surface_get_material(surface)
+			var tint: Color = color
+			if surface != 0:
+				if source == null or source.resource_name != "ShirtTrim":
+					continue
+				tint = color.darkened(0.18)
+			var suit_material := (source.duplicate() if source != null else StandardMaterial3D.new()) as StandardMaterial3D
+			suit_material.albedo_color = tint
+			mesh_instance.set_surface_override_material(surface, suit_material)
 
 
 func _find_mesh_instance(node: Node) -> MeshInstance3D:
@@ -404,8 +372,9 @@ func _process(delta: float) -> void:
 	# is only ever written by the owning peer (see _update_movement_anim()
 	# and pick_up() below) and reaches everyone else through the
 	# MultiplayerSynchronizer, same as seat_node_path.
-	if _anim_player != null and _anim_player.current_animation != String(anim_state):
-		_anim_player.play(String(anim_state))
+	var clip: StringName = anim_state if seat_node_path.is_empty() else ANIM_SIT
+	if _anim_player != null and _anim_player.current_animation != String(clip):
+		_anim_player.play(String(clip), 0.15)
 	if not is_local():
 		_apply_net_state()
 	elif not _seated:
@@ -550,25 +519,46 @@ func _pose_seated_body(delta: float) -> void:
 	if seat == null:
 		return
 	# Seat anchors are eye height (where the camera goes), while this character
-	# model is rooted at its feet. The old offset left the driver's head through
-	# the cab roof; keep the body seated below the eye marker instead.
+	# is rooted at its feet; the Sit clip drops its pelvis to about the root.
 	_seat_pose_blend = minf(_seat_pose_blend + delta * 7.0, 1.0)
-	# The driver's eye marker is behind the physical wheel. Move the seated
-	# character forward only in that seat so the shoulder chain can actually
-	# reach the wheel; passenger seat markers stay centered on their cushions.
-	var seat_offset := Vector3(0.0, -0.95, -0.62) if seat.name == &"DriverEyePoint" else Vector3(0.0, -0.95, 0.0)
+	var seat_offset: Vector3 = _seat_body_offset(seat.name)
 	var seat_pose: Transform3D = seat.global_transform if is_physics_interpolated_and_enabled() else _drawn_transform(seat)
 	var target_pose := seat_pose.translated_local(seat_offset)
 	_body_visual.global_transform = _body_visual.global_transform.interpolate_with(target_pose, _seat_pose_blend)
-	_body_visual.rotation.x = 0.18 + sin(Time.get_ticks_msec() * 0.008) * 0.025
+	# Leaning back suits the driver's reach; in the cargo bay a full lean put
+	# the head into the wall behind the seat.
+	# The rack jump seats are too shallow to lean at all without the head
+	# touching the wall.
+	var lean: float = 0.18 if seat.name == &"DriverEyePoint" else (0.0 if String(seat.name).begins_with("RackSeat") else 0.08)
+	_body_visual.rotation.x = lean + sin(Time.get_ticks_msec() * 0.008) * 0.025
 	_configure_driver_ik(seat)
-	_update_driver_arm_visuals()
+
+
+## Where the rounded character's root goes, in the seat marker's space, so
+## its Sit pose rests on that seat's cushion. Measured in the truck by
+## tests/render_player_character.gd (2026-09-24): the wall cushions are
+## ~0.58 m under their eye markers, the rack jump seats ~0.55 m and only
+## 0.36 m deep, and the driver's cushion sits behind the wheel -- 0.37 m
+## forward keeps both wrists on the rim at full reach. The cab is 6 cm too
+## low for this character fully on the cushion, so the driver sinks into it
+## a little rather than putting his head through the roof.
+func _seat_body_offset(seat_name: StringName) -> Vector3:
+	if seat_name == &"DriverEyePoint":
+		return Vector3(0.0, -0.73, -0.37)
+	if String(seat_name).begins_with("RackSeat"):
+		return Vector3(0.0, -0.35, -0.14)
+	if seat_name == &"CenterSeatEyePoint":
+		# Backs onto the cab bulkhead: slid 0.19 m away from it (seat-local +X
+		# is the van's +Z) or a foot and forearm poke into the cab.
+		return Vector3(0.19, -0.38, -0.16)
+	return Vector3(0.0, -0.38, -0.16)
 
 
 ## Real skeletal IK for the driver: the two target nodes live on the wheel,
-## therefore they rotate with it and SkeletonIK3D solves Shoulder → Arm → Hand
-## every frame.  It only activates on the designated driver anchor; passengers
-## retain the authored seated pose.
+## therefore they rotate with it and SkeletonIK3D solves upper arm → forearm
+## → hand every frame. It only activates on the designated driver anchor;
+## passengers keep the Sit clip's hands-on-lap pose. The rounded character's
+## own arms reach the wheel, so the old stand-in arm cylinders are gone.
 func _configure_driver_ik(seat: Node3D) -> void:
 	if _driver_ik_ready or seat.name != &"DriverEyePoint" or _body_visual == null:
 		return
@@ -576,88 +566,45 @@ func _configure_driver_ik(seat: Node3D) -> void:
 	var skeleton := _find_skeleton(_body_visual)
 	if wheel == null or skeleton == null:
 		return
-	for spec: Dictionary in [
-		{"side": -1.0, "root": &"Shoulder_L", "tip": &"Hand_L", "name": "DriverHandTargetLeft"},
-		{"side": 1.0, "root": &"Shoulder_R", "tip": &"Hand_R", "name": "DriverHandTargetRight"},
-	]:
+	for side: float in DRIVER_ARM_BONES:
+		var bones: Array = DRIVER_ARM_BONES[side]
 		var target := Marker3D.new()
-		target.name = spec["name"]
-		target.position = Vector3(float(spec["side"]) * 0.19, 0.0, -0.03)
+		target.name = "DriverHandTargetLeft" if side < 0.0 else "DriverHandTargetRight"
+		target.position = Vector3(side * 0.19, 0.0, -0.03)
 		wheel.add_child(target)
 		var ik := SkeletonIK3D.new()
-		ik.name = "DriverIK" + str(spec["side"])
-		ik.root_bone = spec["root"]
-		ik.tip_bone = spec["tip"]
+		ik.name = "DriverIK" + str(side)
+		ik.root_bone = bones[0]
+		ik.tip_bone = bones[1]
 		ik.override_tip_basis = false
 		skeleton.add_child(ik)
-		# get_path_to() only works after the solver itself belongs to the
-		# scene tree (the wheel is in the vehicle branch, not the player).
 		# An absolute target path is required here: the wheel is in the vehicle
 		# branch, outside the player's Skeleton3D branch. The relative path was
 		# accepted by the property but never solved, leaving both arms at rest.
 		ik.target_node = target.get_path()
-		ik.start(true)
+		# Continuous, not start(true): a one-time solve is overwritten by the
+		# Sit clip on the very next frame, which is why the arms never reached
+		# the wheel before and stand-in cylinders were drawn instead.
+		ik.start(false)
 		_driver_ik_nodes.append(ik)
 		_driver_arm_targets.append(target)
 	_driver_ik_ready = not _driver_ik_nodes.is_empty()
-	_build_driver_arm_visuals(skeleton, wheel.get_parent() as Node3D)
-
-
-func _build_driver_arm_visuals(skeleton: Skeleton3D, parent: Node3D) -> void:
-	if parent == null or not _driver_arm_visuals.is_empty():
-		return
-	_driver_arm_skeleton = skeleton
-	for side: float in [-1.0, 1.0]:
-		var arm := MeshInstance3D.new()
-		arm.name = "DriverArmVisualLeft" if side < 0.0 else "DriverArmVisualRight"
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = 0.105
-		mesh.bottom_radius = 0.12
-		mesh.radial_segments = 8
-		mesh.height = 1.0
-		arm.mesh = mesh
-		var material := StandardMaterial3D.new()
-		material.albedo_color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()].darkened(0.28)
-		material.roughness = 0.8
-		arm.material_override = material
-		parent.add_child(arm)
-		_driver_arm_visuals.append(arm)
-
-
-func _update_driver_arm_visuals() -> void:
-	if _driver_arm_visuals.is_empty() or _driver_arm_skeleton == null:
-		return
-	for index: int in range(min(_driver_arm_visuals.size(), _driver_arm_targets.size())):
-		var shoulder_name: StringName = &"Shoulder_L" if index == 0 else &"Shoulder_R"
-		var shoulder_bone := _driver_arm_skeleton.find_bone(shoulder_name)
-		var target := _driver_arm_targets[index]
-		if shoulder_bone < 0 or not is_instance_valid(target):
-			continue
-		var start := _driver_arm_skeleton.to_global(_driver_arm_skeleton.get_bone_global_pose(shoulder_bone).origin)
-		var end := target.global_position
-		var direction := end - start
-		if direction.length_squared() < 0.001:
-			continue
-		var cylinder := _driver_arm_visuals[index].mesh as CylinderMesh
-		cylinder.height = direction.length()
-		var arm := _driver_arm_visuals[index]
-		arm.global_position = (start + end) * 0.5
-		arm.global_basis = Basis(Quaternion(Vector3.UP, direction.normalized()))
 
 
 func _stop_driver_ik() -> void:
 	if not _driver_ik_ready:
 		return
+	# Freed, not just stopped: boarding again builds a fresh pair, and the old
+	# ones would otherwise pile up on the skeleton and the wheel.
 	for ik: SkeletonIK3D in _driver_ik_nodes:
 		if is_instance_valid(ik):
 			ik.stop()
+			ik.queue_free()
 	_driver_ik_nodes.clear()
-	for arm: MeshInstance3D in _driver_arm_visuals:
-		if is_instance_valid(arm):
-			arm.queue_free()
-	_driver_arm_visuals.clear()
+	for target: Node3D in _driver_arm_targets:
+		if is_instance_valid(target):
+			target.queue_free()
 	_driver_arm_targets.clear()
-	_driver_arm_skeleton = null
 	_driver_ik_ready = false
 
 
@@ -694,9 +641,7 @@ func _physics_process(delta: float) -> void:
 		if carried_package != null:
 			_update_carried_package()
 		if tended_package != null:
-			var tending: Dictionary = _gather_package_input()
-			tended_package.rpc_id(1, &"submit_tender_input", tending)
-			_pose_tending_hands(tending, delta)
+			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
 		return
 	_poll_interact()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
@@ -939,69 +884,15 @@ func _update_carried_package() -> void:
 	if aboard:
 		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
 	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard)
-	_pose_viewmodel_hands(carried_package.get_half_extents())
 	_package_focus.dof_blur_far_enabled = true
 	_package_focus.dof_blur_far_distance = 1.45
 	_package_focus.dof_blur_far_transition = 1.0
 	_package_focus.dof_blur_amount = 0.18
 
 
-func _pose_viewmodel_hands(half_extents: Vector3) -> void:
-	# The gloves now meet the sides of the actual box rather than floating
-	# near the camera. A wider package spreads the hands a little, which is
-	# enough visual grounding without inventing a second animation rig.
-	var spread: float = clampf(half_extents.x + 0.04, 0.22, 0.42)
-	var left: MeshInstance3D = _camera.get_node(^"LeftHand") as MeshInstance3D
-	var right: MeshInstance3D = _camera.get_node(^"RightHand") as MeshInstance3D
-	left.position = left.position.lerp(Vector3(-spread, -0.36, -0.76), 0.25)
-	right.position = right.position.lerp(Vector3(spread, -0.36, -0.76), 0.25)
-	left.rotation_degrees = left.rotation_degrees.lerp(Vector3(62, 0, 30), 0.25)
-	right.rotation_degrees = right.rotation_degrees.lerp(Vector3(62, 0, -30), 0.25)
-
-
-## The seat camera's hands answer the trap controls (tareas de Slatex #10):
-## holding the action leans both of them onto the box, pressing a direction
-## gives it a quick tap that way. Rest pose is whatever the seat authored.
-var _tending_rest: Dictionary = {}
-var _tending_tap: Vector3 = Vector3.ZERO
-const TENDING_PRESS := Vector3(0.0, -0.12, -0.2)
-const TENDING_TAP_DISTANCE: float = 0.09
-const TENDING_TAP_DIRECTIONS: Dictionary = {
-	&"up": Vector3(0.0, 0.0, -1.0), &"down": Vector3(0.0, 0.0, 1.0),
-	&"left": Vector3(-1.0, 0.0, 0.0), &"right": Vector3(1.0, 0.0, 0.0),
-}
-
-
-func _pose_tending_hands(tending: Dictionary, delta: float) -> void:
-	var seat_camera: Node = get_node_or_null(_seat_camera_path)
-	if seat_camera == null:
-		return
-	var direction: Variant = tending.get("direction_pressed")
-	if direction != null:
-		_tending_tap = TENDING_TAP_DIRECTIONS.get(direction, Vector3.ZERO) * TENDING_TAP_DISTANCE
-	_tending_tap = _tending_tap.move_toward(Vector3.ZERO, 0.6 * delta)
-	var pressing: bool = bool(tending.get("steady", false))
-	for hand_name: String in ["LeftHand", "RightHand"]:
-		var hand := seat_camera.get_node_or_null(NodePath(hand_name)) as Node3D
-		if hand == null:
-			continue
-		var key: String = "%s:%s" % [seat_camera.get_path(), hand_name]
-		if not _tending_rest.has(key):
-			_tending_rest[key] = hand.position
-		var rest: Vector3 = _tending_rest[key]
-		var tap: Vector3 = _tending_tap if (hand_name == "RightHand") == (_tending_tap.x >= 0.0) else Vector3.ZERO
-		var goal: Vector3 = rest + (TENDING_PRESS if pressing else Vector3.ZERO) + tap
-		hand.position = hand.position.lerp(goal, clampf(14.0 * delta, 0.0, 1.0))
-
-
-func _reset_viewmodel_hands() -> void:
+func _clear_carry_focus() -> void:
 	if _package_focus != null:
 		_package_focus.dof_blur_far_enabled = false
-	for hand: MeshInstance3D in [_camera.get_node(^"LeftHand"), _camera.get_node(^"RightHand")]:
-		var side: float = -1.0 if hand.name == &"LeftHand" else 1.0
-		hand.position = Vector3(side * 0.16, -0.2, -0.3)
-		hand.rotation_degrees = Vector3(75, 0, -side * 12)
-
 
 ## Collisions are off while carried, so without this the box pokes straight
 ## through the van's walls, doors and shelves whenever the player faces them.
@@ -1254,7 +1145,7 @@ func drop_carried() -> void:
 		return
 	carried_package = null
 	if is_local():
-		_reset_viewmodel_hands()
+		_clear_carry_focus()
 
 
 @rpc("any_peer", "call_local", "reliable")

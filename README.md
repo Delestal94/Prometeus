@@ -170,6 +170,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_horn.gd
 <godot> --headless --path do-not-drop --script res://tests/test_player_colors.gd
+<godot> --headless --path do-not-drop --script res://tests/test_player_character.gd
+<godot> --headless --path do-not-drop --script res://tests/test_driver_ik.gd
 <godot> --headless --path do-not-drop --script res://tests/test_impact_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_presentation.gd
 <godot> --headless --path do-not-drop --script res://tests/test_seated_body.gd
@@ -208,6 +210,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_pacing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_handling.gd
 <godot> --headless --path do-not-drop --script res://tests/test_depot.gd
+<godot> --headless --path do-not-drop --script res://tests/test_depot_mirror.gd
 <godot> --headless --path do-not-drop --script res://tests/test_locked_traps.gd
 <godot> --headless --path do-not-drop --script res://tests/test_run_relay.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_mood.gd
@@ -328,7 +331,17 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   ciervo a menos de 30 m adelante, la bocina lo espanta: se va al monte sin cruzar, o
   cruza de una si estaba congelado en el carril; de lejos no le hace nada.
 - `test_player_colors` — cada jugador tiene un cuerpo visible (antes no había
-  ninguno) con un color distinto y determinístico por `peer_id`.
+  ninguno) con un color distinto y determinístico por `peer_id`, y ni la cámara a pie ni
+  las de asiento cargan manos de relleno: las únicas manos en pantalla son de un personaje.
+- `test_player_character` — el cuerpo del jugador es el personaje redondeado de Astra
+  (`sm_char_player_rounded.glb`): trae los clips Idle/Walk/Jump/PickUpPackage/Sit, los
+  huesos del IK de manejo, mide lo que un jugador y mira a −Z, la camiseta es la
+  superficie 0 y lleva el color del equipo (el ribete, un tono más oscuro), todas sus
+  mallas van en la capa del cuerpo propio y sentado reproduce Sit.
+- `test_driver_ik` — sentado al volante, las muñecas del personaje llegan a los dos
+  puntos del volante con `SkeletonIK3D` (sin cilindros ni guantes sueltos en el volante),
+  la bocina lleva su propia mano derecha al centro y la devuelve al aro, y al levantarse se
+  liberan los solvers y los puntos.
 - `test_impact_feedback` — el golpe de FOV al chocar: solo reacciona la cámara
   del asiento que estás usando, vuelve sola a su valor base, y nunca toca
   `Engine.time_scale` (eso frenaría la física de todos, no solo tu vista).
@@ -420,6 +433,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   portón se cierra recién cuando el camión salió y no queda nadie a pie. En Endless la
   pizarra no queda vacía: dice "RUTA SIN FIN" con el récord de distancia, sin pedidos.
   Capturas del depósito (con ventana): `tests/render_depot.gd` → `user://depot_*.png`.
+- `test_depot_mirror` — el espejo del vestuario refleja de verdad: cuelga en la pared de
+  los lockers mirando al salón, la cámara reflejada queda detrás del vidrio con el plano
+  cercano sobre él y su encuadre es justo el vidrio (espejado izquierda-derecha), muestra
+  tu propio cuerpo sin el vidrio, y solo renderiza si hay alguien cerca.
 - `test_locked_traps` — las trampas que el perfil todavía no desbloqueó (Líquido, Explosivo,
   Hostil) no aparecen en el depósito, desbloquearlas las pone en los estantes, y en línea
   manda la lista del host (viaja en el handshake con la semilla).

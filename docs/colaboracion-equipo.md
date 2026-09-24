@@ -38,6 +38,42 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: personaje redondeado de Astra como cuerpo del jugador (2026-09-24)
+
+Pedido del usuario: usar en el juego el personaje que hizo Astra
+(`art/rounded_character/`). Lo hizo Nacho. Archivos de Slatex tocados:
+- `player/player.gd`: `CHARACTER_SCENE` apunta a `sm_char_player_rounded.glb`; clip `Sit`
+  mientras `seat_node_path` no está vacío (se deriva de esa propiedad replicada, sin sync
+  nueva); capas de render en todas las mallas del cuerpo; el color del equipo va a la
+  camiseta (superficie 0) y a su ribete; el IK de manejo usa `upper_arm.*`→`hand.*`, se
+  borraron los cilindros que hacían de brazos y al levantarse se liberan los solvers y
+  los puntos del volante. El IK ahora resuelve continuo (`start(false)`): con `start(true)`
+  el clip lo pisaba al frame siguiente y las manos nunca llegaban. El cuerpo sentado se
+  ubica por asiento (`_seat_body_offset()`, medido con `tests/render_player_character.gd`).
+- Pendiente de decidir (vehículo): sentado, el personaje ocupa ~0,88 m de ancho y los
+  asientos de la caja están a 0,48–0,52 m, así que dos vecinos se superponen.
+- `ui/cosmetics_panel.gd`: la vista previa del uniforme usa el modelo nuevo.
+- Tests: nuevo `test_player_character`; `test_driver_ik` mide que las muñecas lleguen al
+  volante.
+- Los NPC (depósito, vecinos) siguen con `sm_char_player_lowpoly.glb`.
+
+## Aviso activo: sin manos flotantes en primera persona (2026-09-24)
+
+Pedido del usuario: que en cámara no aparezcan manos que no sean del personaje. Lo hizo
+Nacho. Se borraron:
+- `player.tscn` y `presentation/first_person_camera.tscn`: los nodos `LeftHand`/`RightHand`
+  de las cámaras (guantes a pie, cápsulas en los asientos).
+- `player/player.gd`: `_build_viewmodel_gloves`, `_pose_viewmodel_hands`, las manos que
+  atendían la trampa desde el asiento (`_pose_tending_hands`, tareas de Slatex #10) y el
+  color de las manos en `_apply_cosmetic`; `_reset_viewmodel_hands` pasó a
+  `_clear_carry_focus` (solo apaga el desenfoque de la caja en mano).
+- Zona compartida: `render_layers.gd` ya no tiene `VIEWMODEL` ni `show_viewmodel`;
+  `first_person_camera.gd` dejó de llamarla.
+- `vehicle_presentation.gd`: sin guantes sobre el volante; la bocina (#11) mueve el punto
+  `DriverHandTargetRight` del IK, así que es la mano del personaje la que va al centro.
+- Pendiente para Slatex: el feedback de mantener/tocar la trampa desde el asiento quedó sin
+  manos (S-205), y S-304 (celular en la mano) ya no tiene un viewmodel donde colgarlo.
+
 ## Aviso activo: configuración de Claude Code compartida (2026-09-24)
 
 Pedido del usuario: MCP, skills y hooks para el repo. Lo hizo Nacho (con Claude).

@@ -1,6 +1,6 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_player_colors.gd
-## Covers the per-peer body/hand coloring added in docs/direccion-visual.md's
+## Covers the per-peer body coloring added in docs/direccion-visual.md's
 ## "identificación visual entre jugadores" decision: until this, there was no
 ## visible body mesh at all (only viewmodel hands attached to each player's
 ## own camera, so a teammate literally had nothing to look at) -- this checks
@@ -34,16 +34,15 @@ func _initialize() -> void:
 	_expect(mesh_instance != null, "The rigged character's mesh is present inside BodyVisual")
 	_expect(_find_skeleton(body) != null, "The rigged character's Skeleton3D is present inside BodyVisual")
 
-	var left_hand: MeshInstance3D = first.get_node(^"Head/Camera3D/LeftHand")
-	var right_hand: MeshInstance3D = first.get_node(^"Head/Camera3D/RightHand")
-	_expect(left_hand.material_override != null and right_hand.material_override != null,
-		"Both hands get their own colored material, not the shared default skin tone")
-	_expect(left_hand.get_node_or_null(^"Glove") != null and right_hand.get_node_or_null(^"Glove") != null,
-		"Both first-person anchors contain the authored glove meshes with fingers")
-	_expect(left_hand.get_node(^"Glove").is_visible_in_tree() and right_hand.get_node(^"Glove").is_visible_in_tree(),
-		"Gloves must remain visible through their parent hand anchors")
-	_expect(_all_meshes_on_layer(left_hand.get_node(^"Glove"), 4) and _all_meshes_on_layer(right_hand.get_node(^"Glove"), 4),
-		"Every imported glove mesh renders on the first-person layer")
+	# The only hands on screen are a character's: nothing hangs off the
+	# first-person camera, and the seat cameras carry none either.
+	var camera: Camera3D = first.get_node(^"Head/Camera3D")
+	_expect(camera.find_children("*", "VisualInstance3D", true, false).is_empty(),
+		"No stand-in hands (or any mesh) float in front of the first-person camera")
+	var seat_camera: Node = load("res://scenes/presentation/first_person_camera.tscn").instantiate()
+	_expect(seat_camera.find_children("*", "VisualInstance3D", true, false).is_empty(),
+		"No stand-in hands float in front of the seat cameras")
+	seat_camera.free()
 
 	var second: Node = player_scene.instantiate()
 	second.set_multiplayer_authority(2)
@@ -117,15 +116,6 @@ func _find_skeleton(node: Node) -> Skeleton3D:
 		if found != null:
 			return found
 	return null
-
-
-func _all_meshes_on_layer(node: Node, layer: int) -> bool:
-	if node is MeshInstance3D and (node as MeshInstance3D).layers != layer:
-		return false
-	for child: Node in node.get_children():
-		if not _all_meshes_on_layer(child, layer):
-			return false
-	return true
 
 
 func _expect(condition: bool, description: String) -> void:
