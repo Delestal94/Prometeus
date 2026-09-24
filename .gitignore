@@ -13,8 +13,9 @@ export_presets.cfg
 # Godot-generated translation files
 *.translation
 
-# Imported/compiled binaries
-*.import
+# *.import files ARE committed: they hold each asset's import settings, and
+# without them every clone (and CI) reimports with defaults. The imported
+# binaries themselves live in .godot/, ignored above.
 
 # Mono/C# specific
 .mono/

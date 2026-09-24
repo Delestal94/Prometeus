@@ -65,6 +65,21 @@ func _initialize() -> void:
 		"Joining by address forces ENet regardless of what AUTO would pick")
 	network.call(&"leave_session")
 
+	# Accepting a friend's Steam invite (or "Unirse a la partida") while in
+	# the menu joins that lobby over Steam, even right after a LAN attempt.
+	current_scene = menu
+	menu.set(&"_busy", false)
+	network.call(&"_on_join_requested", 90210, 0)
+	_expect(network.get(&"transport") == NetworkManager.Transport.STEAM,
+		"An accepted Steam invite joins over Steam")
+	_expect(bool(menu.get(&"_busy")), "The menu takes the invite over (shows it's joining)")
+	network.call(&"leave_session")
+	network.set(&"transport", NetworkManager.Transport.AUTO)
+	# An invite accepted before the menu existed waits for it, once.
+	network.set(&"_pending_lobby", 4242)
+	_expect(int(network.call(&"take_pending_lobby")) == 4242 and int(network.call(&"take_pending_lobby")) == 0,
+		"A pending invite is handed to the menu exactly once")
+
 	menu.free()
 	if _failures == 0:
 		print("PASS: the menu loads and every entry point resolves to the transport it promises")

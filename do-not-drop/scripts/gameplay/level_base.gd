@@ -58,7 +58,10 @@ func _ready() -> void:
 	if NetworkManager.is_host():
 		vehicle.variant_id = UnlockManager.selected_truck
 		vehicle.paint_id = UnlockManager.selected_paint
+	$World/PlayerSpawner.spawned.connect(func(_player: Node) -> void: _refresh_local_player())
 	NetworkManager.roster_changed.connect(_on_roster_changed)
+	NetworkManager.peer_level_ready.connect(_on_peer_level_ready)
+	NetworkManager.session_failed.connect(_keep_view)
 	# Choices made in the depot (lockers, workshop) show at once.
 	UnlockManager.progress_changed.connect(_on_profile_changed)
 	# Offline is a session of one, so this same call covers both paths.
@@ -66,6 +69,7 @@ func _ready() -> void:
 		_sync_players(NetworkManager.peer_ids)
 	# Command line shortcut for smoke checks and development: skips the
 	# on-foot loading entirely, same as the HUD's debug button.
+	NetworkManager.level_ready.call_deferred()
 	if "--autostart" in OS.get_cmdline_user_args():
 		start_debug_delivery.call_deferred()
 
@@ -75,6 +79,42 @@ func _on_roster_changed(peer_ids: Array) -> void:
 		_sync_players(peer_ids)
 
 
+## The host is gone. Godot frees everything the host's spawner made -- every
+## player, this one's own camera with them -- so the view jumped to some seat
+## camera behind the disconnect overlay. A still camera holds the last view.
+func _keep_view(_reason: String) -> void:
+	var eyes: Camera3D = get_viewport().get_camera_3d()
+	if eyes == null or eyes.owner == self:
+		return
+	var still := Camera3D.new()
+	still.name = "DisconnectedView"
+	still.fov = eyes.fov
+	still.near = eyes.near
+	still.far = eyes.far
+	still.cull_mask = eyes.cull_mask
+	still.environment = eyes.environment
+	still.attributes = eyes.attributes
+	add_child(still)
+	still.owner = self
+	still.global_transform = eyes.get_global_transform_interpolated()
+	still.current = true
+
+
+## Host: a peer's level is up (it just joined, or reloaded after a restart).
+## Its player can be spawned now, everyone's shown to it, and it's told how
+## the run stands -- it may have arrived in the middle of one.
+func _on_peer_level_ready(peer_id: int) -> void:
+	if not NetworkManager.is_host():
+		return
+	_sync_players(NetworkManager.peer_ids)
+	RunManager.send_session_state(peer_id)
+	# The houses were built with the level, for the crew there was then; a
+	# restart builds them for everyone here now (NetworkManager.begin_restart()).
+	var wanted: int = route.call(&"crew_house_count", NetworkManager.peer_ids.size())
+	if not RunManager.is_running and RunManager.results.is_empty() and wanted > (route.get(&"houses") as Array).size():
+		EventBus.depot_notice.emit("Llegó más gente: reiniciá (mantené R) para que la ruta tenga %d casas." % wanted)
+
+
 func _sync_players(peer_ids: Array) -> void:
 	# Only the host spawns: MultiplayerSpawner replicates the result to
 	# everyone, so clients never invent players of their own.
@@ -82,11 +122,12 @@ func _sync_players(peer_ids: Array) -> void:
 		var id: int = int(peer_ids[index])
 		if _world.has_node(NodePath(_player_name(id))):
 			continue
-		var player: Node = load("res://scenes/gameplay/player/player.tscn").instantiate()
-		player.name = _player_name(id)
-		player.set(&"position", _world.to_local(depot.spawn_position(index)))
-		player.set_multiplayer_authority(id)
-		_world.add_child(player, true)
+		# Only into a level that's there: after a host restart each client
+		# reloads at its own pace (NetworkManager.is_peer_ready()).
+		if not NetworkManager.is_peer_ready(id):
+			continue
+		$World/PlayerSpawner.spawn({"peer_id": id,
+			"position": _world.to_local(depot.spawn_position(index))})
 	for child: Node in _world.get_children():
 		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
 			child.queue_free()
@@ -143,10 +184,18 @@ func start_debug_delivery() -> void:
 ## RunManager relays the record to everyone from there.
 func _on_house_resolved(house_index: int, outcome: StringName, package_id: StringName) -> void:
 	RunManager.register_delivery(house_index, outcome, package_id)
-	# A stop is where the crew gets out, hands over one box and gets back in.
-	# It is not the end of the whole run unless every assigned house is done.
-	if NetworkManager.is_host() and RunManager.expected_houses > 0 and RunManager.deliveries.size() >= RunManager.expected_houses:
-		RunManager.finish_run(true)
+
+
+## A stop is where the crew gets out, hands over one box and gets back in.
+## The run ends once every house is done and the truck drives off from the
+## last one -- not the instant the last box is handed over, which left no
+## time for the delivery photo at that door.
+const DRIVE_OFF_KMH: float = 3.0
+
+
+func _all_houses_done_and_leaving() -> bool:
+	return (RunManager.expected_houses > 0 and RunManager.deliveries.size() >= RunManager.expected_houses
+		and int(vehicle.get(&"driver_peer_id")) != 0 and float(vehicle.get(&"speed_kmh")) > DRIVE_OFF_KMH)
 
 
 func _on_driver_seated(_player: Node) -> void:
@@ -199,6 +248,10 @@ func _house_assignments() -> Array:
 
 
 func restart_delivery() -> void:
+	# The host restarts for everyone (NetworkManager.begin_restart()); a
+	# client reloading on its own would leave the session's world behind.
+	if not NetworkManager.is_host():
+		return
 	get_tree().paused = false
 	# Fade out before reloading instead of the instant hard cut a bare
 	# reload_current_scene() would be -- only waits out the fade-to-black
@@ -207,6 +260,8 @@ func restart_delivery() -> void:
 	EventBus.emit_signal(&"quick_fade_requested", 0.3)
 	await get_tree().create_timer(0.15).timeout
 	RunManager.reset_run()
+	# Online, every client reloads too, once this level is back up.
+	NetworkManager.begin_restart()
 	get_tree().reload_current_scene()
 
 
@@ -228,6 +283,9 @@ func _physics_process(delta: float) -> void:
 	EventBus.delivery_status_changed.emit(route.is_vehicle_in_delivery, stopped_seconds)
 	# Clients follow the run for the HUD; how it ends is the host's call.
 	if not NetworkManager.is_host():
+		return
+	if _all_houses_done_and_leaving():
+		RunManager.finish_run(true)
 		return
 	_check_lost_cargo()
 	if vehicle.global_basis.y.dot(Vector3.UP) < 0.25:

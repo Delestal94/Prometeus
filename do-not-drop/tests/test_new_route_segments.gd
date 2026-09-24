@@ -41,8 +41,10 @@ func _check_s_curve() -> void:
 func _check_construction_zone() -> void:
 	var segment := ConstructionZoneSegment.new()
 	root.add_child(segment)
-	var barrier: Node = segment.get_node_or_null(^"ConstructionBarrier")
-	_expect(barrier != null, "ConstructionBarrier exists")
+	# The solid wall; the imported barrier models along it are ConstructionBarrier0..N.
+	var barrier: Node = segment.get_node_or_null(^"ConstructionBarrierCollision")
+	_expect(barrier != null, "ConstructionBarrierCollision exists")
+	_expect(segment.get_node_or_null(^"ConstructionBarrier0") != null, "Barrier models line the wall")
 	if barrier != null:
 		_expect((barrier as Node3D).position.x > 0.0,
 			"Barrier sits off-center, narrowing one side of the lane rather than blocking it entirely")

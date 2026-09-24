@@ -122,6 +122,28 @@ var cosmetic_id: StringName = &"team_color":
 	set(value):
 		cosmetic_id = value
 		_apply_cosmetic()
+## Replicated in place of position (see player.tscn), written by the owning
+## peer. Standing in the truck's cargo bay it's in the truck's own space, so
+## everyone else puts this player back inside *their* copy of the truck
+## instead of where a world position from a moment ago left them (a metre
+## behind at speed: through the rear doors, or out of the truck).
+var net_position: Vector3 = Vector3.ZERO:
+	set(value):
+		net_position = value
+		_has_net_state = true
+var net_in_vehicle: bool = false
+var _has_net_state: bool = false
+var _vehicle: Node3D = null
+## Owner only: the truck's pose last physics tick, while standing in its bay.
+var _riding: bool = false
+var _ride_last_transform: Transform3D = Transform3D.IDENTITY
+## Physics layer of the truck and its ramp. The truck carries its riders by
+## hand (_ride_with_vehicle), so the controller's own platform handling must
+## ignore it or they'd move twice.
+const VEHICLE_LAYER: int = 2
+## How far past the cargo bay's edge someone already aboard still counts as
+## aboard (see Vehicle.carries()).
+const RIDE_MARGIN: float = 0.4
 
 
 func _enter_tree() -> void:
@@ -130,12 +152,18 @@ func _enter_tree() -> void:
 		var peer: int = int(String(name).trim_prefix("Player_"))
 		if peer > 0:
 			set_multiplayer_authority(peer)
+	# Before the synchronizer (a child) enters the tree: it registers with the
+	# network right then, and without the filter it counted as public.
+	_limit_visibility_to_ready_peers()
 
 
 ## A player who disconnects mid-carry must not leave their box frozen in the
 ## air with collisions off. package.carrier is only ever set on the host, so
 ## this only acts there.
 func _exit_tree() -> void:
+	var network: Node = get_node_or_null("/root/NetworkManager")
+	if network != null and network.call(&"is_host"):
+		_release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
 	if not is_instance_valid(carried_package) or carried_package.carrier != self:
 		return
 	if not carried_package.is_inside_tree() or carried_package.is_queued_for_deletion():
@@ -156,15 +184,49 @@ func _ready() -> void:
 	_camera.attributes = _package_focus
 	RenderLayers.configure_first_person(_camera)
 	RenderLayers.show_viewmodel(_camera, is_local())
+	# The spawn state is the host's copy of these, sent before the owner's
+	# first update: start them at the spawn point, not at the world origin.
+	# (A late joiner already got the host's latest pair, applied before this.)
+	if not _has_net_state:
+		net_position = global_position
+	platform_floor_layers &= ~VEHICLE_LAYER
 	# Only the player this peer controls owns the view and reads input;
 	# everyone else's body is here to be seen, not driven.
 	if not is_local():
 		_camera.current = false
+		# Placed by the network every frame (_process), against the truck as
+		# it's drawn: interpolating between physics ticks on top of that
+		# only made riders trail behind it.
+		physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
 		return
 	_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_probe.area_entered.connect(_on_probe_entered)
 	_probe.area_exited.connect(_on_probe_exited)
+
+
+## Spawned into, and synced to, only the peers whose level is loaded (the
+## host's call -- NetworkManager.is_peer_ready()). After a host restart each
+## client reloads at its own pace; a spawn sent to one still on the old level
+## was lost, and that client never saw this player again. Installed from
+## _enter_tree(): set up in _ready, the synchronizer had already registered as
+## public, and the host's own player started syncing to clients mid-reload --
+## who couldn't resolve it and never saw the host move again.
+func _limit_visibility_to_ready_peers() -> void:
+	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	if sync == null or network == null or network.is_connected(&"peer_level_ready", _on_peer_level_ready):
+		return
+	sync.add_visibility_filter(func(peer_id: int) -> bool:
+		return not multiplayer.is_server() or bool(network.call(&"is_peer_ready", peer_id)))
+	if network.has_signal(&"peer_level_ready"):
+		network.connect(&"peer_level_ready", _on_peer_level_ready)
+
+
+func _on_peer_level_ready(peer_id: int) -> void:
+	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+	if sync != null and multiplayer.is_server():
+		sync.update_visibility(peer_id)
 
 
 ## The rigged low-poly character, so teammates actually have someone to see
@@ -344,18 +406,142 @@ func _process(delta: float) -> void:
 	# MultiplayerSynchronizer, same as seat_node_path.
 	if _anim_player != null and _anim_player.current_animation != String(anim_state):
 		_anim_player.play(String(anim_state))
-	if not get_tree().physics_interpolation:
+	if not is_local():
+		_apply_net_state()
+	elif not _seated:
+		_ride_frame_by_frame()
+	if not is_physics_interpolated_and_enabled():
 		_pose_seated_body(delta)
+
+
+## A client's truck is teleported by the network whenever an update lands,
+## not on physics ticks, and isn't interpolated. A rider moved with it only
+## on ticks, and drawn interpolated between them, was drawn up to a metre
+## behind it at speed: the view jumped against the truck's own walls. While
+## riding such a truck the owner follows it every frame, uninterpolated.
+func _ride_frame_by_frame() -> void:
+	var vehicle: Node3D = _find_vehicle()
+	var per_frame: bool = _riding and vehicle != null and not vehicle.is_physics_interpolated_and_enabled()
+	var wanted: Node.PhysicsInterpolationMode = PHYSICS_INTERPOLATION_MODE_OFF if per_frame else PHYSICS_INTERPOLATION_MODE_INHERIT
+	if physics_interpolation_mode != wanted:
+		physics_interpolation_mode = wanted
+		reset_physics_interpolation()
+	if per_frame:
+		_ride_with_vehicle()
+
+
+## Everyone else's copy of this player: where the owner says, inside this
+## peer's truck if they're riding in it. Each frame against the truck as
+## drawn -- except riding a simulated (interpolated) truck, the host's: there
+## this body is solid in the moving bay, and a frame's drawn pose is up to a
+## tick behind the simulated one. So there it follows the truck on the ticks
+## (`on_tick`, from _physics_process) and is drawn interpolated along with it;
+## placed per frame it rammed the loose boxes at every step.
+func _apply_net_state(on_tick: bool = false) -> void:
+	if not _has_net_state:
+		return
+	var vehicle: Node3D = _find_vehicle()
+	var riding: bool = net_in_vehicle and vehicle != null
+	var tick_placed: bool = riding and vehicle.is_physics_interpolated_and_enabled()
+	var wanted: Node.PhysicsInterpolationMode = PHYSICS_INTERPOLATION_MODE_INHERIT if tick_placed else PHYSICS_INTERPOLATION_MODE_OFF
+	if physics_interpolation_mode != wanted:
+		physics_interpolation_mode = wanted
+		reset_physics_interpolation()
+	if on_tick != tick_placed:
+		return
+	if riding:
+		global_position = (vehicle.global_transform if on_tick else _drawn_transform(vehicle)) * net_position
+	else:
+		global_position = net_position
+
+
+## Where a node is drawn this frame. A client's truck is frozen and not
+## interpolated, and then get_global_transform_interpolated() hands back last
+## frame's cached pose instead of where the network just put it.
+static func _drawn_transform(node: Node3D) -> Transform3D:
+	return node.get_global_transform_interpolated() if node.is_physics_interpolated_and_enabled() else node.global_transform
+
+
+func _publish_net_state() -> void:
+	var vehicle: Node3D = _find_vehicle()
+	# A little give once aboard, so standing right at the rear doors doesn't
+	# flip between the truck's space and the world's every other frame.
+	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if net_in_vehicle else 0.0))
+	net_in_vehicle = riding
+	net_position = vehicle.to_local(global_position) if riding else global_position
+
+
+## Standing (or jumping) in the cargo bay, the owner is moved along with the
+## truck by however much it moved since the last tick, turning with it. On a
+## client the truck is a copy the network teleports, which carries nobody by
+## itself: its walls just slid over the player (through the closed doors,
+## and out the back).
+func _ride_with_vehicle() -> void:
+	var vehicle: Node3D = _find_vehicle()
+	if vehicle == null:
+		_riding = false
+		return
+	var now: Transform3D = vehicle.global_transform
+	if _riding:
+		var motion: Transform3D = now * _ride_last_transform.affine_inverse()
+		global_position = motion * global_position
+		var heading: Vector3 = motion.basis * -global_basis.z
+		heading.y = 0.0
+		if heading.length_squared() > 0.0001:
+			rotate_y((-global_basis.z).signed_angle_to(heading.normalized(), Vector3.UP))
+	_riding = bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if _riding else 0.0))
+	_ride_last_transform = now
+
+
+## Where this player is for anything within reach -- opening a box, a
+## photo, a ping: at their seat while seated. The body itself stays where
+## they sat down (only its visual rides along), so the host measured a
+## passenger kilometres from the box on their lap.
+func reach_origin() -> Vector3:
+	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D if not seat_node_path.is_empty() else null
+	return seat.global_position if seat != null else global_position
+
+
+## What an on-foot player collides with. Riding in the bay of a truck that's
+## moving, not the loose boxes: a player is carried along by being moved
+## between physics steps, so during each step they stood still in the world
+## while the truck and its boxes moved on -- and every box they touched was
+## struck at the truck's speed, losing integrity or flying off the rack.
+## Parked (loading at the depot, a stop at a door) they collide as usual.
+const ON_FOOT_MASK: int = 1 | 2 | 4
+const RIDING_MASK: int = 1 | 2
+const RIDING_SPEED: float = 1.0
+
+
+func _on_foot_mask(riding: bool) -> int:
+	if not riding:
+		return ON_FOOT_MASK
+	var vehicle: Node3D = _find_vehicle()
+	var moving: bool = vehicle is RigidBody3D and (vehicle as RigidBody3D).linear_velocity.length() > RIDING_SPEED
+	return RIDING_MASK if moving else ON_FOOT_MASK
+
+
+func _find_vehicle() -> Node3D:
+	if not is_instance_valid(_vehicle) and is_inside_tree():
+		var found: Node = get_tree().get_first_node_in_group(&"vehicle")
+		_vehicle = found as Node3D if found != null and found.has_method(&"carries") else null
+	return _vehicle
 
 
 ## With physics interpolation on, the van is drawn between its physics ticks.
 ## A body snapped to the seat every rendered frame would sit at the raw tick
-## pose instead and shake against the smoothly drawn cab, so it's posed on
-## the ticks (from _physics_process) and interpolated right along with it.
+## pose instead and shake against the smoothly drawn cab, so the owner's own
+## body is posed on the ticks (from _physics_process) and interpolated right
+## along with it. Everyone else's copy isn't interpolated (it's placed by the
+## network each frame), so it's posed every frame against the seat as drawn.
 func _pose_seated_body(delta: float) -> void:
 	if seat_node_path.is_empty():
 		_stop_driver_ik()
 		if _body_visual != null:
+			# Clear the seat's world-space offset on every peer after standing.
+			_body_visual.position = Vector3.ZERO
+			_body_visual.rotation.y = 0.0
+			_body_visual.rotation.z = 0.0
 			_body_visual.position.y = sin(_bob_time * TAU) * 0.025 * _bob_amount
 			var flinch: float = sin(_flinch_time / 0.32 * PI) * 0.26
 			_body_visual.rotation.x = move_toward(_body_visual.rotation.x, flinch, delta * 12.0)
@@ -371,7 +557,8 @@ func _pose_seated_body(delta: float) -> void:
 	# character forward only in that seat so the shoulder chain can actually
 	# reach the wheel; passenger seat markers stay centered on their cushions.
 	var seat_offset := Vector3(0.0, -0.95, -0.62) if seat.name == &"DriverEyePoint" else Vector3(0.0, -0.95, 0.0)
-	var target_pose := seat.global_transform.translated_local(seat_offset)
+	var seat_pose: Transform3D = seat.global_transform if is_physics_interpolated_and_enabled() else _drawn_transform(seat)
+	var target_pose := seat_pose.translated_local(seat_offset)
 	_body_visual.global_transform = _body_visual.global_transform.interpolate_with(target_pose, _seat_pose_blend)
 	_body_visual.rotation.x = 0.18 + sin(Time.get_ticks_msec() * 0.008) * 0.025
 	_configure_driver_ik(seat)
@@ -476,10 +663,24 @@ func _stop_driver_ik() -> void:
 
 func _physics_process(delta: float) -> void:
 	_package_hit_cooldown = maxf(0.0, _package_hit_cooldown - delta)
-	if get_tree().physics_interpolation:
+	# Remote players must also stop colliding while seated. Their input RPC
+	# is targeted, but their seat path is replicated to everyone.
+	if not is_local():
+		collision_layer = 8 if seat_node_path.is_empty() else 0
+		collision_mask = _on_foot_mask(net_in_vehicle) if seat_node_path.is_empty() else 0
+		_apply_net_state(true)
+	if is_physics_interpolated_and_enabled():
 		_pose_seated_body(delta)
 	if not is_local():
 		return
+	# Before any early return: a menu open in the back of a moving truck
+	# must not leave the player behind.
+	if _seated:
+		_riding = false
+	else:
+		_ride_with_vehicle()
+		collision_mask = _on_foot_mask(_riding)
+	_publish_net_state()
 	if carried_package != null and not is_instance_valid(carried_package):
 		carried_package = null
 	_publish_carry(carried_package != null)
@@ -730,7 +931,14 @@ func _update_carried_package() -> void:
 	# a direct call when this peer already is the host), since the package is
 	# host-authoritative and only it should ever move the real one.
 	var carry_transform := Transform3D(global_basis, _carry_position())
-	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform)
+	# In the truck, in the truck's space: this client's copy of the truck
+	# trails the host's, and a world position placed against the host's put
+	# the box a metre behind the hands at speed.
+	var vehicle: Node3D = _find_vehicle()
+	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", carry_transform.origin, RIDE_MARGIN))
+	if aboard:
+		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
+	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard)
 	_pose_viewmodel_hands(carried_package.get_half_extents())
 	_package_focus.dof_blur_far_enabled = true
 	_package_focus.dof_blur_far_distance = 1.45
@@ -849,9 +1057,9 @@ func _send_ping() -> void:
 	if bus == null:
 		return
 	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
-		bus.rpc_id(1, &"request_ping", global_position, PING_LABEL)
+		bus.rpc_id(1, &"request_ping", reach_origin(), PING_LABEL)
 	else:
-		bus.call(&"request_ping", global_position, PING_LABEL)
+		bus.call(&"request_ping", reach_origin(), PING_LABEL)
 
 
 func _try_interact() -> void:
@@ -906,7 +1114,12 @@ func _drop_carried() -> void:
 	if carried_package == null:
 		return
 	var drop_transform := Transform3D(global_basis, _drop_position(carried_package.get_half_extents()))
-	carried_package.rpc_id(1, &"request_drop", drop_transform)
+	# Same as carrying: set down in the truck, it's placed on the host's truck.
+	var vehicle: Node3D = _find_vehicle()
+	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", drop_transform.origin, RIDE_MARGIN))
+	if aboard:
+		drop_transform = vehicle.global_transform.affine_inverse() * drop_transform
+	carried_package.rpc_id(1, &"request_drop", drop_transform, aboard)
 	# The host confirms by clearing this on every peer; clearing it here too
 	# just keeps the local hands responsive while that RPC is in flight.
 	carried_package = null
@@ -989,6 +1202,9 @@ func _on_probe_exited(area: Area3D) -> void:
 ## controller under a networked player.
 @rpc("any_peer", "call_local", "unreliable")
 func receive_package_hit(push: Vector3) -> void:
+	# Loose boxes are simulated on the host; nobody else gets to knock people over.
+	if not _from_host():
+		return
 	if _package_hit_cooldown > 0.0 or _seated:
 		return
 	_package_hit_cooldown = 0.45

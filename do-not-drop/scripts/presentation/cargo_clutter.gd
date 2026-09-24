@@ -14,6 +14,9 @@ const RATTLE_MIN_SPEED: float = 0.9
 
 var vehicle: VehicleBody3D
 var _items: Array[RigidBody3D] = []
+var _vehicle_last: Transform3D = Transform3D.IDENTITY
+var _tracking: bool = false
+const Vehicle = preload("res://scripts/gameplay/vehicle/vehicle.gd")
 
 
 func _ready() -> void:
@@ -29,6 +32,28 @@ func _spawn() -> void:
 	# Vehicle space: +X right, -Z toward the cab, cargo floor top at y 0.26.
 	_items.append(_make_item(world, "Toolbox", Vector3(0.36, 0.2, 0.2), Color("d2412f"), 3.5, Vector3(0.74, 0.37, 2.2)))
 	_items.append(_make_thermos(world, Vector3(0.82, 0.74, 1.05)))
+
+
+## On a client the truck is a frozen copy the network teleports every frame:
+## it drags nothing along, so its walls just swept through whatever sat in
+## the bay and the clutter bounced about and fell out. There, whatever's in
+## the bay is moved with the truck by hand and only jostles in its own space.
+## On the host the real, moving truck carries it physically. Every frame, not
+## every tick, and uninterpolated: the network moves the truck whenever an
+## update lands, and anything following it only on ticks trailed behind.
+func _process(_delta: float) -> void:
+	if vehicle == null or vehicle.is_multiplayer_authority():
+		return
+	var previous: Transform3D = _vehicle_last
+	_vehicle_last = vehicle.global_transform
+	if not _tracking:
+		_tracking = true
+		return
+	var motion: Transform3D = _vehicle_last * previous.affine_inverse()
+	for item: RigidBody3D in _items:
+		# Judged against where the truck was, which is where the item still is.
+		if is_instance_valid(item) and Vehicle.CARGO_BAY.has_point(previous.affine_inverse() * item.global_position):
+			item.global_transform = motion * item.global_transform
 
 
 func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mass_kg: float, at: Vector3) -> RigidBody3D:
@@ -70,6 +95,8 @@ func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mas
 	_add_rattle(body, 1.6 if item_name == "Toolbox" else 2.3)
 	world.add_child(body)
 	body.global_transform = vehicle.global_transform * Transform3D(Basis(Vector3.UP, randf_range(-0.3, 0.3)), at)
+	if not vehicle.is_multiplayer_authority():
+		body.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	body.reset_physics_interpolation()
 	return body
 

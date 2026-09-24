@@ -51,8 +51,13 @@ func _run() -> void:
 	# that test_house_delivery_flow.gd already drives end to end.
 	manager.start_run()
 	manager.expected_houses = houses.size()
-	houses[0].set(&"delivered", true)
+	# What a client sees: the doorbell is resolved on the host, so the
+	# house's own `delivered` never flips here -- only the relayed record
+	# arrives. That alone must make it a subject ("no delivery here" at every
+	# door was the multiplayer bug).
 	manager.register_delivery(0, &"delivered_ruined", &"box_a")
+	_expect(phone.subject_house() == 0, "A delivery known only from the relayed record is a subject (got %d)" % phone.subject_house())
+	houses[0].set(&"delivered", true)
 	_expect(phone.subject_house() == 0, "The nearest delivered door is the subject (got %d)" % phone.subject_house())
 
 	# Far enough away and it stops being the subject -- standing on the road

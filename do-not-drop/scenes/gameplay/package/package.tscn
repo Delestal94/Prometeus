@@ -17,10 +17,10 @@ size = Vector3(0.65, 0.65, 0.65)
 radius = 0.55
 
 [sub_resource type="SceneReplicationConfig" id="Repl_package"]
-properties/0/path = NodePath(".:position")
+properties/0/path = NodePath(".:net_transform")
 properties/0/spawn = true
 properties/0/replication_mode = 1
-properties/1/path = NodePath(".:rotation")
+properties/1/path = NodePath(".:net_in_vehicle")
 properties/1/spawn = true
 properties/1/replication_mode = 1
 properties/2/path = NodePath(".:linear_velocity")
@@ -41,6 +41,9 @@ properties/6/replication_mode = 2
 properties/7/path = NodePath(".:contents_spilled")
 properties/7/spawn = true
 properties/7/replication_mode = 2
+properties/8/path = NodePath(".:current_mount_path")
+properties/8/spawn = true
+properties/8/replication_mode = 2
 
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4

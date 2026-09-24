@@ -69,6 +69,13 @@ var expected_houses: int = 0
 ## that crosses the network, a texture never should.
 var delivery_photos: Dictionary = {}
 
+## The route event drawn for this run, so a late joiner gets it too.
+var _event_id: StringName = &""
+## Paths of the boxes handed over at a door this run. They're scene nodes, not
+## spawned ones, so a joiner's freshly loaded level still has them: the host
+## sends this list and the joiner frees them (send_session_state()).
+var consumed_packages: Array[String] = []
+
 ## True once two or more packages were in trouble at the same moment. The
 ## score rewards it: surviving a shared scare is the story people retell.
 var had_simultaneous_risk: bool = false
@@ -115,6 +122,8 @@ func reset_run() -> void:
 	delivery_photos = {}
 	current_mode = MODE_DELIVERY
 	current_distance = 0.0
+	_event_id = &""
+	consumed_packages = []
 
 
 ## Online, only the host gets here: interactions resolve on the host
@@ -128,6 +137,7 @@ func start_run(mode: StringName = MODE_DELIVERY) -> void:
 		return
 	_begin_run(mode)
 	var event_id: StringName = RouteEventManager.begin_random()
+	_event_id = event_id
 	if NetworkManager.is_online() and NetworkManager.is_host():
 		_remote_start_run.rpc(mode, event_id)
 
@@ -144,6 +154,7 @@ func _remote_start_run(mode: StringName, event_id: StringName) -> void:
 	if is_running or not results.is_empty():
 		return
 	_begin_run(mode)
+	_event_id = event_id
 	if not event_id.is_empty():
 		RouteEventManager.begin_event(event_id)
 
@@ -178,10 +189,57 @@ func attach_delivery_photo(house_index: int) -> bool:
 	return accepted
 
 
+## What the phone calls, from any peer. The host files it directly; a client
+## asks the host, which relays the result back. Answers right away (from this
+## peer's copy of the record, which the host keeps in step) so the phone can
+## say whether the shot counted without waiting on the round trip.
+func submit_delivery_photo(house_index: int) -> bool:
+	if not NetworkManager.is_online() or NetworkManager.is_host():
+		return attach_delivery_photo(house_index)
+	for entry: Dictionary in deliveries:
+		if int(entry["house"]) == house_index:
+			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
+				return false
+			entry["photo"] = true
+			_request_delivery_photo.rpc_id(NetworkManager.HOST_ID, house_index)
+			return true
+	return false
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_delivery_photo(house_index: int) -> void:
+	if not NetworkManager.is_host():
+		return
+	# The photo has to come from someone standing at that door, not from
+	# anywhere on the map.
+	if not _peer_near_house(multiplayer.get_remote_sender_id(), house_index):
+		return
+	attach_delivery_photo(house_index)
+
+
+## The phone's own range plus some slack for the time the request travelled.
+const PHOTO_REACH: float = 20.0
+
+
+func _peer_near_house(peer_id: int, house_index: int) -> bool:
+	var house_position: Variant = null
+	for house: Node in get_tree().get_nodes_in_group(&"delivery_house"):
+		if int(house.get(&"house_index")) == house_index:
+			house_position = house.call(&"porch_position")
+	if house_position == null:
+		return false
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		if player.get_multiplayer_authority() == peer_id:
+			return (player.call(&"reach_origin") as Vector3).distance_to(house_position) <= PHOTO_REACH
+	return false
+
+
 func _mark_photo(house_index: int) -> bool:
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
-			if bool(entry["photo"]):
+			# Nothing was delivered at a house the run drove past: there's
+			# nothing for a photo to prove, and it used to earn the bonus.
+			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
 				return false
 			entry["photo"] = true
 			return true
@@ -207,7 +265,7 @@ func _resolve_deliveries() -> Dictionary:
 	var complaints: Array[Dictionary] = []
 	for entry: Dictionary in deliveries:
 		var outcome: StringName = StringName(entry["outcome"])
-		var has_photo: bool = bool(entry["photo"])
+		var has_photo: bool = bool(entry["photo"]) and outcome != &"missed"
 		if has_photo:
 			photos += 1
 			points += POINTS_PHOTO_BONUS
@@ -381,6 +439,78 @@ func _finish_endless_run(reason: String) -> void:
 	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
 	_share_results()
 	EventBus.run_ended.emit(score, results.duplicate(true))
+
+
+## Host: how the session stands, for a peer whose level just came up (a late
+## joiner, or a client back from a restart). Everything else about a run
+## reaches clients as one-off events -- the start, each delivery, the door
+## closing, a box handed over -- so someone arriving after them saw a run
+## that hadn't started, boxes that were long gone and the depot door open.
+func send_session_state(peer_id: int) -> void:
+	if not NetworkManager.is_online() or not NetworkManager.is_host() or peer_id == NetworkManager.HOST_ID:
+		return
+	var names: Dictionary = {}
+	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
+		var id: StringName = package.get(&"package_id")
+		if cargo.has(id):
+			names[id] = String(package.get(&"trap_definition").get(&"display_name"))
+	var door_open: bool = true
+	var scene: Node = get_tree().current_scene
+	var depot: Node = scene.get(&"depot") as Node if scene != null else null
+	if depot != null and depot.get(&"door") != null:
+		door_open = bool(depot.get(&"door").get(&"is_open"))
+	_receive_session_state.rpc_id(peer_id, {
+		"running": is_running,
+		"mode": current_mode,
+		"event_id": _event_id,
+		"elapsed": elapsed_seconds,
+		"distance": current_distance,
+		"expected_houses": expected_houses,
+		"deliveries": deliveries.duplicate(true),
+		"cargo": cargo.duplicate(true),
+		"names": names,
+		"consumed": consumed_packages.duplicate(),
+		"door_open": door_open,
+		"results": results.duplicate(true),
+	})
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_session_state(state: Dictionary) -> void:
+	for path: String in state.get("consumed", []):
+		var package: Node = get_node_or_null(NodePath(path))
+		if package != null:
+			package.remove_from_group(&"cargo")
+			package.queue_free()
+	if not bool(state.get("door_open", true)):
+		var scene: Node = get_tree().current_scene
+		var depot: Node = scene.get(&"depot") as Node if scene != null else null
+		if depot != null and depot.get(&"door") != null:
+			depot.get(&"door").call(&"set_open", false, false)
+	expected_houses = int(state.get("expected_houses", expected_houses))
+	deliveries.assign(state.get("deliveries", []))
+	cargo = (state.get("cargo", {}) as Dictionary).duplicate(true)
+	var host_results: Dictionary = state.get("results", {})
+	if not host_results.is_empty():
+		# Arrived after the run ended: it isn't this player's run to score or
+		# count, so no results screen -- they wait for the host's restart,
+		# which reloads everyone. Keeping the results still blocks a new start.
+		is_running = false
+		current_mode = StringName(state.get("mode", MODE_DELIVERY))
+		results = host_results.duplicate(true)
+		return
+	if not bool(state.get("running", false)) or is_running:
+		return
+	_remote_start_run(StringName(state.get("mode", MODE_DELIVERY)), StringName(state.get("event_id", &"")))
+	elapsed_seconds = float(state.get("elapsed", 0.0))
+	current_distance = float(state.get("distance", 0.0))
+	# The HUD builds its cargo cards from these events as they happen.
+	var names: Dictionary = state.get("names", {})
+	for id: StringName in cargo:
+		var entry: Dictionary = cargo[id]
+		EventBus.cargo_registered.emit(id, String(names.get(id, id)))
+		EventBus.package_integrity_changed.emit(id, float(entry.get("integrity", 100.0)), float(entry.get("maximum", 100.0)))
+		EventBus.package_state_changed.emit(id, int(entry.get("state", 0)))
 
 
 func _share_results() -> void:

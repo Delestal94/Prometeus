@@ -43,8 +43,19 @@ func request_interact() -> void:
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var player: Node = _find_player(sender_id)
-	if player != null:
+	if player != null and _within_reach(player):
 		interact(player)
+
+
+## How far from a player's feet (or seat) something can be and still be
+## used: the reach of their interaction probe, plus room for the time the
+## request took to arrive. A client can't work a door across the map.
+const REMOTE_REACH: float = 4.5
+
+
+func _within_reach(player: Node) -> bool:
+	var origin: Vector3 = player.call(&"reach_origin") if player.has_method(&"reach_origin") else (player as Node3D).global_position
+	return origin.distance_to(global_position) <= REMOTE_REACH
 
 
 func _find_player(peer_id: int) -> Node:

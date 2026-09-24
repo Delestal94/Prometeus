@@ -20,6 +20,10 @@ extends VehicleBody3D
 		# door state replicates like any other door toggle.
 		if changed and is_node_ready() and is_multiplayer_authority():
 			set_door_open(&"cab_left", value == 0)
+## Replicated along with driver_peer_id (see vehicle.tscn): the driver's own
+## VehicleInputComponent reads it on their machine. It used to live only on
+## the host, so a client at the wheel kept the scene's `false` and never sent
+## a single throttle sample -- the truck just crept on its brakes.
 @export var controls_enabled: bool = true
 @export var maximum_engine_force: float = 1700.0
 @export var maximum_speed_kmh: float = 72.0
@@ -112,6 +116,15 @@ const RIDE_HEIGHT: float = 0.666
 const TIRE_RADIUS: float = 0.544
 ## A 0.65 m box's half height: rack markers sit that far above their deck.
 const MOUNT_REFERENCE_HALF_HEIGHT: float = 0.325
+## The cargo bay's inside in the truck's own space: side wall to side wall,
+## floor to roof, cab wall to rear doors (vehicle.tscn's collision shapes).
+## Whatever is in here rides with the truck -- see carries().
+const CARGO_BAY: AABB = AABB(Vector3(-1.05, 0.0, -0.35), Vector3(2.1, 2.6, 4.95))
+## Inner face of each side wall (WallCollision at x = ±1.05, 0.1 thick).
+const CARGO_WALL_INNER_X: float = 1.0
+## Room a shelved box keeps from the wall: its tape and straps stick out a
+## few centimetres past the collider (package_feedback.gd).
+const CARGO_WALL_CLEARANCE: float = 0.045
 
 @onready var _package_spawn: Marker3D = $CargoBay/LeftSeat1PackageMount
 var _horn_player: AudioStreamPlayer3D
@@ -151,6 +164,24 @@ func _ready() -> void:
 	rear_ramp_deployed = rear_ramp_deployed
 	if is_multiplayer_authority():
 		EventBus.package_placed.connect(_on_package_placed)
+
+
+## Whether a world point is inside the cargo bay, i.e. riding along: players
+## standing in the back, boxes, loose clutter. Uses this peer's copy of the
+## truck, so on a client it answers for the truck that client actually sees.
+##
+## `margin` grows the bay on every side: whoever's already aboard passes it,
+## so something right at the rear doors doesn't flicker in and out.
+func carries(world_point: Vector3, margin: float = 0.0) -> bool:
+	return CARGO_BAY.grow(margin).has_point(to_local(world_point))
+
+
+## How fast a point riding in the truck is moving in the world: what a box
+## let go of in the moving bay has to start with, or it slams into the rear
+## wall as if dropped from a standstill. linear_velocity is replicated, so
+## this holds on a client's copy too.
+func point_velocity(world_point: Vector3) -> Vector3:
+	return linear_velocity + angular_velocity.cross(world_point - global_transform * center_of_mass)
 
 
 func is_door_open(door: StringName) -> bool:
@@ -207,9 +238,18 @@ func _on_package_placed(package_id: StringName) -> void:
 			marker = mount_point.get_parent() as Node3D
 		if marker == null or not is_ancestor_of(marker):
 			continue
-		var half_height: float = (package.call(&"get_half_extents") as Vector3).y
-		var offset: float = half_height - MOUNT_REFERENCE_HALF_HEIGHT
-		(package as Node3D).global_position = marker.global_transform * Vector3(0.0, offset, 0.0)
+		var half: Vector3 = package.call(&"get_half_extents")
+		var offset: float = half.y - MOUNT_REFERENCE_HALF_HEIGHT
+		var local_center: Vector3 = to_local(marker.global_transform * Vector3(0.0, offset, 0.0))
+		# A wide box (the flat one is 0.95 m) centred on a marker laid out for
+		# the 0.65 m one reached into the side wall, and its tape and straps
+		# showed through on the outside: slide it in until it clears.
+		var box_basis: Basis = global_basis.inverse() * marker.global_basis
+		var reach_x: float = (absf(box_basis.x.x) * half.x + absf(box_basis.y.x) * half.y
+			+ absf(box_basis.z.x) * half.z + CARGO_WALL_CLEARANCE)
+		var limit_x: float = maxf(CARGO_WALL_INNER_X - reach_x, 0.0)
+		local_center.x = clampf(local_center.x, -limit_x, limit_x)
+		(package as Node3D).global_position = to_global(local_center)
 		(package as Node3D).reset_physics_interpolation()
 
 

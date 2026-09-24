@@ -1,263 +1,585 @@
-# Tareas de Nacho — Vehículo, Ruta y Ambientación
+# Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-23 (estado sincronizado con `680001a`)
-> Ver `docs/colaboracion-equipo.md` para la división de dominios y la zona
-> compartida. Las tareas 1-40 vienen directo de `docs/especificaciones-visuales.md`
-> (número original entre paréntesis); 41-100 son backlog nuevo del proyecto,
-> descompuesto en pasos concretos.
+> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`).
+> Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
+> versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
+> Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
+> sin esperar a Slatex y sin playtesting**.
 >
-> Prioridad: **A** accionable ya (sin pipeline de arte) · **B** necesita
-> arte/assets · **C** pulido para más adelante.
+> División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
 
-## Vehículo — modelado (1-11)
+## Cómo leer esta lista
+
+- **ID**: `N-<pilar><número>` (N-101 es pilar 1, tarea 01). Subtareas `N-101.1`, `N-101.2`…
+  con `[ ]` / `[x]`.
+- **Prio**: **A** hacer ya (cierra algo roto o a medias) · **B** suma valor claro · **C** pulido.
+- **Esfuerzo**: el modelo es siempre **Opus 5.5**; lo que cambia por tarea es el esfuerzo de
+  razonamiento (ver "Cómo trabajar una tarea").
+- **Aviso**: `sí` = toca la zona compartida o un archivo de Slatex. No hay que esperarlo: se deja
+  el aviso en `docs/colaboracion-equipo.md` **en el mismo commit**, con un cambio chico y aislado
+  (agregar antes que cambiar firmas).
+- **Hecho cuando**: el criterio verificable. Sin eso la tarea no se marca.
+- **Sin playtesting**: lo que antes era "falta playtesting" se reemplazó por mediciones con código
+  (bots, benchmarks, tests, capturas). Lo que necesita gente jugando está en "Para cuando haya
+  playtesting" y **no se hace ahora**.
+
+### Cómo trabajar una tarea (Claude Code con Opus 5.5)
+
+Modelo fijo: **Opus 5.5**. Cada tarea trae anotado el esfuerzo recomendado (`/effort` en Claude
+Code antes de empezarla):
+
+| Esfuerzo | Cuándo | Ejemplos |
+|---|---|---|
+| **low** | Cambios mecánicos o de documentación sin decisiones. | N-307, N-701, N-804 |
+| **medium** | Decisiones ya tomadas en la tarea, textos, un archivo, assets con script conocido. | N-101, N-202, N-308, N-601 |
+| **high** (por defecto) | Una mecánica o sistema en 1-3 archivos con su test. | N-102, N-104, N-302, N-501 |
+| **xhigh** | Red (RPC, autoridad, varios procesos), refactors de archivos compartidos, cambios que tocan 4+ archivos. | N-206, N-207, N-208, N-209, N-504 |
+| **max** | Nunca de entrada: solo si xhigh no resolvió un bug después de pasarlo por `cazador-bugs`. | — |
+
+Subir un nivel si la tarea falla una vez con el esfuerzo anotado; bajar uno para las subtareas
+chicas de una tarea grande ya encaminada.
+
+Además, siguiendo `CLAUDE.md`: los tests se corren con el agente `ejecutor-tests` y un filtro
+(`tools/run-tests.sh route`), las capturas y todo lo que necesite pantalla con `revisor-visual`, y
+un test que falla sin causa clara con `cazador-bugs`. Al cerrar: `[x]` + hash del commit acá, test
+anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equipo.md`.
+
+---
+
+## Orden de ataque (hitos)
+
+| Hito | Objetivo | Tareas |
+|---|---|---|
+| **M1 — Cerrar lo que está a medias** | Nada del mundo que se comporte distinto en cada jugador ni que quede sin usar. | N-201, N-202, N-203, N-101, N-102, N-701, N-702 |
+| **M2 — Ritmo y guía del jugador** | Una entrega de 2-5 minutos donde siempre se sabe adónde ir. | N-103, N-104, N-105, N-501, N-502, N-503 |
+| **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
+| **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
+| **M5 — Preparación de lanzamiento** | Builds, tienda, tráiler. | N-210, N-703, N-901 a N-906 |
+
+Dentro de un hito, el orden de la tabla es el recomendado.
+
+---
+
+## 1. Game Design
+
+### N-101 · Decidir el rol del depósito en Endless — A · `Opus 5.5 · medium` · Aviso: no
+
+Antes #127. En Endless la pizarra no asigna pedidos (`post_orders(0)`), así que hoy muestra una
+pizarra vacía.
+
+- [ ] **N-101.1 Decisión (tomada acá para no depender de playtesting):** el depósito se mantiene
+  completo en Endless (ya está construido y sirve de lobby: vestuario, taller, suministros), pero la
+  pizarra cambia su contenido a "ENDLESS — Llevá todo lo que puedas lo más lejos posible" y muestra el
+  récord de distancia (`RunManager.best_score(MODE_ENDLESS)`).
+- [ ] **N-101.2** En Endless el portón se abre apenas el camión arranca con carga, sin esperar pedidos.
+- [ ] **N-101.3** Documentarlo en `docs/plan-desarrollo.md` Fase 3 y en `docs/arquitectura.md` §5.1.
+- [ ] Test en `test_depot.gd`: en Endless la pizarra no queda vacía y no se publican pedidos.
+
+### N-102 · Presupuesto de largo de ruta (regla de oro de 2-5 minutos) — A · `Opus 5.5 · high` · Aviso: no
+
+`critica-diseno-abogado-del-diablo.md` §3: con tramos de 400-600 m (`route.gd` `LEG_MIN_LENGTH` /
+`LEG_MAX_LENGTH`) y hasta 4 casas, una entrega puede tener ~3000 m, y nadie lo midió.
+
+- [ ] **N-102.1 Medir.** `tests/bench_route_duration.gd`: conductor automático (el de
+  `test_vehicle_stress.gd` pero siguiendo el camino con `route.distance_from_path()`), a velocidad de
+  crucero, frenando en cada casa 25 s (bajar, caminar, timbre, volver). Semillas 1-20, con 1, 2, 3 y 4
+  casas. Imprimir minutos promedio y máximo.
+- [ ] **N-102.2 Regla.** Reemplazar el rango fijo por un presupuesto total: `ROUTE_TARGET_SECONDS := 240`
+  (4 min). Largo de cada tramo = presupuesto de manejo ÷ (casas + 1), con piso de 250 m y techo de 600 m.
+  Con 1 casa los tramos quedan largos (mini aventura); con 4, cortos.
+- [ ] **N-102.3** Volver a medir: ninguna combinación pasa de 5 minutos ni baja de 2. Tabla con los
+  resultados en `docs/parametros-diseno.md` ("Duración de la entrega").
+- [ ] Test `test_route_duration_budget.gd` (rápido, sin manejar): el largo total calculado respeta el
+  presupuesto para 1-4 casas.
+
+### N-103 · Ritmo dentro de cada tramo — A · `Opus 5.5 · high` · Aviso: no
+
+Un tramo largo sin nada que hacer es tedio; uno con todo difícil seguido es injusto.
+
+- [ ] **N-103.1** Regla de ritmo en `route.gd` al armar cada tramo: al menos un "momento" (tramo difícil,
+  cruce de tren, cruce de animales o curva cerrada) cada 250 m; nunca dos tramos difíciles seguidos
+  (misma regla que `RouteStreamer.hard_segments`, reutilizarla).
+- [ ] **N-103.2** Zona tranquila obligatoria: los últimos 80 m antes de cada casa son recta o curva suave
+  (el conductor frena y los pasajeros bajan sin que un badén les tire la caja).
+- [ ] **N-103.3** Dificultad creciente dentro de la entrega: el peso de tramos difíciles sube de la primera
+  a la última casa (misma curva que `hard_weight_at()` de Endless, escalada al largo de la entrega).
+- [ ] Test `test_route_pacing.gd`: 200 semillas, ninguna rompe las tres reglas.
+
+### N-104 · Balance del manejo medido — A · `Opus 5.5 · high` · Aviso: no
+
+Hoy la sensación de manejo solo se juzga jugando. Medirla con números fijos permite ajustarla y que
+no se rompa sin querer.
+
+- [ ] **N-104.1** `tests/test_vehicle_handling.gd`: para cada variante (`classic`, `agile`) medir en recta
+  plana 0→50 km/h, distancia de frenado desde 50 km/h, radio de giro a 20 km/h, y la velocidad máxima a la
+  que una curva de `CurveSegment` se toma sin volcar.
+- [ ] **N-104.2** Objetivos escritos en `docs/parametros-diseno.md` ("Manejo"): clásica 0→50 en 5-7 s,
+  frenado < 18 m, vuelco solo por encima de 45 km/h en la curva cerrada; ágil 20 % más rápida y 15 % más
+  propensa a volcar. Ajustar `vehicle.gd` `VARIANTS` hasta cumplir.
+- [ ] El test falla si un cambio futuro saca los valores de rango (±10 %).
+
+### N-105 · Ruta como fuente de riesgo para la carga, medida — B · `Opus 5.5 · high` · Aviso: no
+
+Complementa el simulador de balance de Slatex (S-108) sin depender de él.
+
+- [ ] `tests/bench_route_shocks.gd`: grabar por tipo de tramo los impactos (delta de velocidad) y la
+  inclinación que sufre un paquete montado a velocidad de crucero. Tabla en `docs/parametros-diseno.md`:
+  qué tramo produce qué nivel de golpe comparado con los umbrales de Frágil (3,0 y 7,0 m/s).
+- [ ] Si un tramo supera siempre el umbral pesado a velocidad normal (golpe inevitable), bajarle la
+  severidad: un obstáculo tiene que poder pasarse sin daño manejando con cuidado.
+
+### N-106 · Variedad de peligros sin tráfico — B · `Opus 5.5 · xhigh` · Aviso: no
+
+Decisión vigente (antes #76): no hay tráfico en movimiento. La variedad sale de peligros puntuales.
+
+- [ ] **N-106.1 Rebaño de ovejas** cruzando en zona de campo (reutilizar `wildlife_crossing.gd`: grupo de
+  6-10 que se dispersa si el camión toca bocina; atropellar una multa como el ciervo).
+- [ ] **N-106.2 Perro que persigue al camión** en zona de pueblo durante 150 m, ladrando; no hace daño,
+  distrae (y es un momento gracioso para clips).
+- [ ] **N-106.3 Piedras o ramas caídas** en el asfalto después de tormenta (solo con clima lluvia): obstáculo
+  estático que obliga a esquivar.
+- [ ] Todo determinista desde la semilla y disparado por el host, como el cruce de tren (#63 viejo).
+- [ ] Tests por peligro, patrón `test_wildlife_crossing.gd`.
+
+### N-107 · Bocina con función — C · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] La bocina espanta animales (ciervo, ovejas, perro) dentro de 30 m hacia adelante. Hoy es solo
+  comedia; así el conductor tiene una herramienta además del volante. Test en `test_horn.gd`.
+
+---
+
+## 2. Programación y arquitectura técnica
+
+### N-201 · Objetos sueltos del camión que no alteren la física en red — A · `Opus 5.5 · high` · Aviso: no
+
+Pendiente desde el #18 viejo: `cargo_clutter.gd` crea la caja de herramientas y el termo como
+`RigidBody3D` en **cada** peer, y su contacto puede empujar la simulación del camión de forma
+distinta en cada máquina.
+
+- [ ] Opción recomendada: dejarlos como cuerpos rígidos pero en una capa de colisión que choca solo con el
+  piso y paredes de la zona de carga, **no** con el `VehicleBody3D` ni con paquetes; su masa ya no afecta
+  al camión. Documentar la capa en `docs/convenciones-godot.md` §2.
+- [ ] Test en `test_dust_and_ambience.gd` o nuevo: con y sin clutter, la trayectoria del camión en 10 s
+  de manejo es la misma (diferencia < 1 cm).
+
+### N-202 · El ciervo no debería usar el canal de eventos de ruta — A · `Opus 5.5 · medium` · Aviso: no
+
+`wildlife_crossing.gd` avisa el choque con `route_event_started(&"deer_hit", …)` y nunca lo cierra.
+Slatex va a hacer que los eventos de ruta tengan cuenta regresiva y resolución (S-101 de su lista);
+un "evento" sin fin va a quedar colgado en su banner.
+
+- [ ] Agregar `"incident": true` y `"duration": 0` al diccionario, y emitir `route_event_resolved(&"deer_hit",
+  false, 0)` 4 s después. Así funciona con el HUD de hoy y con el de S-101 sin que ninguno de los dos
+  tenga que esperar al otro.
+- [ ] Usar el mismo formato para los peligros nuevos de N-106.
+- [ ] Test en `test_wildlife_crossing.gd`: tras el choque se emite el resuelto.
+
+### N-203 · Bocina por el bus correcto — A · `Opus 5.5 · medium` · Aviso: no
+
+Pendiente del #81 viejo: motor, impacto y chirrido se rutean Interior/Exterior según la cámara
+(`vehicle_presentation.gd`), la bocina (`vehicle.gd` `_horn_player`) va fija por `SFX`.
+
+- [ ] Mover la creación del reproductor de bocina a `vehicle_presentation.gd` o exponerlo para que se rutee
+  igual que los demás. Test en `test_audio_bus_routing.gd`.
+
+### N-204 · FPS reales con GPU — A · `Opus 5.5 · medium` · Aviso: no
+
+El #93 viejo midió CPU/física en headless; el costo de dibujado nunca se midió.
+
+- [ ] Correr `tests/bench_drive.gd` **con ventana** (agente `revisor-visual`) en la PC de desarrollo, en las
+  tres horas del día y con lluvia, en entrega y Endless. Anotar FPS promedio, 1 % más bajo y draw calls
+  (`Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`).
+- [ ] Meta: 60 FPS estables a 1080p en la PC de desarrollo y ≥ 45 FPS con el preset bajo (N-205).
+- [ ] Resultado en README → Rendimiento, con la PC usada.
+
+### N-205 · Presets de calidad gráfica — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd` y `options_panel.gd` de Slatex, una fila)
+
+- [ ] `scripts/presentation/world_quality.gd` (estático): tres niveles que ajustan distancia de sombras,
+  distancia de dibujado del decorado (`dressing_batcher.gd`), densidad de plantas, partículas de polvo y
+  lluvia, y resolución de escala 3D.
+- [ ] Guardar la elección en `GameSettings` (clave nueva, sin cambiar las existentes) y una fila
+  "Calidad gráfica" en `options_panel.gd`. Son 10-15 líneas en archivos de Slatex: aviso.
+- [ ] Test: cada nivel aplica sus valores y se puede cambiar en caliente.
+
+### N-206 · Endless con curvas reales — B · `Opus 5.5 · xhigh` · Aviso: no
+
+Antes #114: `RouteStreamer` sigue siendo recto en −Z.
+
+- [ ] **N-206.1** Pasar el streamer a un cursor `Transform3D` como `route.gd` (#110 viejo): cada tramo nuevo
+  se arma en la pose de salida del anterior.
+- [ ] **N-206.2** Lookahead y borrado por distancia **a lo largo del camino** (acumulada), no por Z.
+- [ ] **N-206.3** Evitar que el camino se cruce consigo mismo: si el rumbo acumulado se aleja más de 120° del
+  inicial, el próximo `CurveSegment` dobla hacia el otro lado.
+- [ ] **N-206.4** La red de "fuera de la ruta" de `level_endless.gd` pasa a medir distancia al camino.
+- [ ] Tests `test_route_streaming.gd` y `test_level_endless.gd` ampliados: 5 km simulados sin cruces, nodos
+  acotados.
+
+### N-207 · Prueba de red con 3 jugadores — A · `Opus 5.5 · xhigh` · Aviso: no
+
+`plan-desarrollo.md` Fase 4 lo marca como lo que falta para cerrarla.
+
+- [ ] `tests/net_trio.gd` sobre el patrón de `tests/net_smoke.gd`: un host y dos clientes ENet en localhost.
+- [ ] Chequear que los tres tienen el mismo `world_seed`, la misma cantidad de casas, la misma lista de
+  pedidos, un hash igual de la ruta generada (posición de cada tramo y casa), y la misma fase del cruce de
+  tren cuando el host lo dispara. Un cliente que entra tarde recibe todo igual.
+- [ ] `tools/run-net-trio.sh` que lanza los tres y junta los códigos de salida.
+
+### N-208 · Camión del host suave en los clientes — B · `Opus 5.5 · xhigh` · Aviso: no
+
+- [ ] Medir en un cliente el tirón de la posición replicada del camión con latencia artificial
+  (opción de depuración `--fake-lag=150`): diferencia entre la pose mostrada y una interpolada ideal.
+- [ ] Si hay saltos visibles (> 10 cm por frame a velocidad de crucero), sumar interpolación con un buffer de
+  100 ms para la pose replicada en clientes. Nunca predicción de física en el cliente (el host manda).
+- [ ] Test con el retraso: la pose mostrada no salta más que el umbral.
+
+### N-209 · Unificar lo común entre nivel de entrega y Endless — C · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`)
+
+`level_endless.gd` duplica a propósito partes de `level_base.gd` (#42 viejo). Los dos modos ya están estables.
+
+- [ ] Extraer a `scripts/gameplay/level_common.gd` (clase base) solo lo idéntico: spawn de jugadores
+  (`_sync_players`), pausa, reinicio, chequeo de carga perdida. Cada nivel hereda y conserva lo propio.
+- [ ] Hacerlo en un solo commit chico, avisado, con toda la batería verde. Si Slatex está tocando
+  `level_base.gd` esa semana (su S-203 / S-209), coordinar el orden en el chat; no es bloqueante: el que
+  llega segundo hace merge.
+
+### N-210 · Builds de exportación automáticas — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Job de GitHub Actions que exporta Windows y Linux con `export_presets.cfg` en cada tag `v*` y adjunta
+  los zip al release. Versión en `project.godot` (`config/version`) mostrada en el menú (texto chico, la
+  pone el job; aviso si se toca `main_menu.gd`).
+
+---
+
+## 3. Arte y dirección visual
+
+### N-301 · Líneas de paneles y juntas de puertas — B · `Opus 5.5 · high` · Aviso: no
+
+Antes #4. Única pieza de modelado del camión que queda.
+
+- [ ] Hendiduras finas (bisel invertido o calcomanía oscura) en puertas de cabina, puertas traseras, capó y
+  laterales del modelo de referencia, sin cambiar la colisión. Captura con `render_reference_truck.gd`.
+
+### N-302 · Timbre real en cada casa — A · `Opus 5.5 · high` · Aviso: no
+
+`inventario-assets.md` §5: hoy `doorbell_point.gd` es una caja.
+
+- [ ] Panel de timbre low-poly (placa, botón, número de casa) con script de Blender, que se ilumina cuando
+  la casa espera un paquete y se apaga cuando se resolvió. Mismo punto de interacción.
+
+### N-303 · Lluvia en el parabrisas y limpiaparabrisas — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Shader de gotas deslizándose en el vidrio de la cabina, solo con clima lluvia y solo visto desde
+  adentro.
+- [ ] Limpiaparabrisas animados que barren las gotas (el shader lee el ángulo del limpiador).
+
+### N-304 · Faros y noche con más carácter — C · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] Destello (flare) suave de faros de autos estacionados y faroles de pueblo de noche, ventanas de las casas
+  iluminadas de noche, porche encendido en la casa que espera entrega (se combina con N-501).
+
+### N-305 · Identidad visual por zona — B · `Opus 5.5 · high` · Aviso: no
+
+Con entregas de varios minutos, bosque-campo-pueblo se repiten.
+
+- [ ] Una paleta de follaje por sesión (verano / otoño) elegida por semilla, como el clima: tinte de hojas y
+  pasto en `lowpoly_materials.gd` y `route_terrain.gdshader`.
+- [ ] Cartel de nombre de pueblo al entrar a cada zona de pueblo (ver N-601).
+
+### N-306 · Vehículos del depósito también en la ruta — C · `Opus 5.5 · medium` · Aviso: no
+
+`sm_vehicle_tractor.glb` y `sm_vehicle_competitor_van.glb` solo se usan en el depósito.
+
+- [ ] Tractor en zona de campo (regla nueva en `route_dresser.gd`, raro, lejos del asfalto) y la camioneta de la
+  competencia estacionada en pueblo. Test en `test_route_placement_rules.gd`.
+
+### N-307 · Inventario y dirección visual al día — A · `Opus 5.5 · low` · Aviso: no
+
+- [ ] `docs/inventario-assets.md`: sacar el ⛔ de la furgoneta (ya está integrada), marcar ✅ los cables entre
+  postes y los autos nuevos, revisar cada 🟡.
+- [ ] `docs/direccion-visual.md`: cerrar los `[ ]` que ya están resueltos (escala de personajes, LOD, motion
+  blur descartado) y dejar abiertos solo los vigentes. Antes #100.
+
+### N-308 · Decisión de renderer — A · `Opus 5.5 · medium` · Aviso: sí (`project.godot`, solo si se cambia)
+
+Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
+
+- [ ] **Decisión recomendada:** quedarse en GL Compatibility para el MVP (hardware modesto, 60 FPS, el estilo
+  low-poly no depende de SSAO). Compensar con oclusión horneada en vértices de los modelos (script de Blender)
+  y sombras de contacto falsas bajo autos y casas (decal oscuro).
+- [ ] Registrar la decisión y su por qué en `docs/requerimientos-tecnicos.md` §1. Cerrar la fila #60 de
+  `especificaciones-visuales.md`.
+
+---
+
+## 4. Audio y diseño sonoro
+
+### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas)
+
+- [ ] Capas por RPM (ralentí, medio, alto) mezcladas según velocidad y acelerador; cambio de marcha audible
+  (bajón breve de RPM) en la clásica, más agudo y rápido en la ágil.
+- [ ] Test en `test_vehicle_audio.gd`: las capas cambian de volumen con la velocidad.
+
+### N-402 · Eco en el túnel y bajo techo — B · `Opus 5.5 · high` · Aviso: no
+
+Pendiente del #58 viejo.
+
+- [ ] `Area3D` en `TunnelSegment` que al entrar la cámara pasa el sonido del mundo a un bus `Tunnel` con reverb
+  larga, y al salir vuelve. Mismo mecanismo para el depósito (`roofed_area`).
+- [ ] Revisar la lluvia con cámaras exteriores ancladas al camión (pendiente del #68 viejo).
+
+### N-403 · Música del menú y del depósito — B · `Opus 5.5 · medium` · Aviso: sí (una línea en `main_menu.gd`)
+
+Hoy hay una sola pista (`mus_ingame_loop.ogg`).
+
+- [ ] Una pista de menú y una "radio del depósito" (la radio ya existe como objeto en `depot.gd`). Origen:
+  encargo, música libre con licencia compatible, o generada con registro en `art/ai-registro.md`. Anotar
+  licencia al lado del archivo.
+- [ ] `scripts/presentation/menu_music.gd` autocontenido; `main_menu.gd` solo lo instancia (aviso).
+
+### N-404 · Mezcla medida del dominio — A · `Opus 5.5 · high` · Aviso: no
+
+Cierra el #83 viejo sin depender del oído.
+
+- [ ] Mismo método que la S-404 de Slatex, sobre los sonidos de Nacho: script que genera cada sonido de
+  `synth_audio.gd` del mundo y del camión, calcula RMS y pico en dBFS, y los lleva a objetivos (motor −20 dBFS
+  RMS, impactos −14 pico, ambiente −28 RMS, lluvia −24).
+- [ ] Tabla antes/después en `docs/direccion-visual.md` (audio) o `docs/audio.md` si Slatex ya lo creó.
+
+### N-405 · Sonidos de los peligros nuevos — C · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] Balido de ovejas, ladrido, golpe de rama, sintetizados, para N-106.
+
+---
+
+## 5. UI / UX (en el mundo)
+
+La UI de pantalla es de Slatex. Nacho se encarga de la guía **dentro del mundo**, que no necesita
+tocar el HUD.
+
+### N-501 · Saber de lejos qué casa espera entrega — A · `Opus 5.5 · high` · Aviso: no
+
+- [ ] La casa que espera paquete tiene: porche encendido, buzón con su número grande, y un cartel en el jardín
+  con el código de la caja que espera (el mismo de la pizarra del depósito, `A-3`). Al resolverse, se apaga.
+- [ ] Visible a 120 m de día y de noche. Captura con `revisor-visual`.
+
+### N-502 · GPS en el tablero (UI diegética) — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Pantallita en el tablero del camión (`SubViewport` o `Label3D`) con distancia a la próxima casa, flecha
+  de dirección y el código de la caja que espera. Solo lee datos de `route.gd` y de la asignación de casas.
+- [ ] En Endless muestra la distancia recorrida y el récord.
+
+### N-503 · Señalización del depósito — A · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] Flechas pintadas en el piso y carteles colgantes: "ESTANTES", "PIZARRA", "VESTUARIO", "TALLER",
+  "SUMINISTROS", "CAMIÓN → PORTÓN". Un jugador nuevo encuentra cada estación sin que nadie le diga.
+- [ ] Captura desde el punto donde aparece el jugador: al menos 4 carteles legibles.
+
+### N-504 · La cámara no atraviesa la cabina — B · `Opus 5.5 · xhigh` · Aviso: sí (`first_person_camera.gd`)
+
+Antes #15 y #38.
+
+- [ ] Límite de pitch y giro por asiento (el conductor no puede mirar a través del techo ni de la
+  mampara). Para no tocar `seat_point.gd` (de Slatex), los límites viven en `vehicle.tscn`: un `Marker3D`
+  por asiento con metadatos `pitch_min`, `pitch_max`, `yaw_max`, y `first_person_camera.gd` los lee de la
+  cámara del asiento activo. Aviso por el archivo compartido.
+- [ ] Si la cámara igual queda a menos de 10 cm de una pared, retroceder a lo largo de la línea de mirada.
+
+---
+
+## 6. Narrativa y guion (narrativa ambiental del mundo)
+
+La premisa, los clientes y los textos de las cajas son de Slatex (su S-601 a S-605). Nacho cuenta la
+historia **con el entorno**, sin esperar esos textos.
+
+### N-601 · Pueblos con nombre y carteles — B · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] Lista de 12 nombres de pueblo con tono de humor ("Villa Frágil", "Paso del Golpe", "Bajada Lenta")
+  elegidos por semilla; cartel de entrada y salida de cada zona de pueblo.
+
+### N-602 · Historias en la banquina — C · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] Escenas estáticas raras (1 cada ~800 m como máximo): la camioneta de la competencia con cajas
+  desparramadas y la puerta abierta; una gallina suelta al lado de una caja rota; un cartel "Take My Package:
+  entregamos (casi) todo" en una valla publicitaria.
+
+### N-603 · El depósito cuenta la campaña — C · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Cartel "Días sin accidentes: N" que vuelve a 0 cuando una partida termina con carga arruinada (lee el
+  resultado de `run_ended`), y una pared de fotos con las fotos de entrega de la campaña (miniaturas que ya
+  captura `phone_camera.gd`).
+
+### N-604 · Reacciones en la puerta — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] En `delivery_house.gd`, animación y globo de texto del vecino según el resultado (contento, abre la caja
+  y se agarra la cabeza, se lleva la caja equivocada de vuelta, no está y deja una nota). Pool de 5 frases por
+  resultado en `delivery_house.gd`.
+
+### N-605 · Textos del mundo traducibles — B · `Opus 5.5 · high` · Aviso: no
+
+Complementa la S-509 de Slatex sin esperarla.
+
+- [ ] Pasar los textos de los archivos de Nacho (casas, depósito, ciervo, cruce, carteles de pueblo) a
+  `do-not-drop/translations/strings_world.csv` (columnas `es,en`, claves `WORLD_*`) y usar `tr()`. Godot admite
+  varios CSV, así que no choca con el de Slatex. Registrar el CSV en `project.godot` (aviso).
+- [ ] Traducción al inglés.
+
+---
+
+## 7. Producción y gestión de proyecto
+
+### N-701 · Cerrar formalmente lo que no se hace en el MVP — A · `Opus 5.5 · low` · Aviso: no
+
+- [ ] Registrar como "fuera del MVP" en `docs/plan-desarrollo.md` (misma sección que la S-702 de Slatex; si ya
+  existe, sumar filas): tráfico en movimiento (#76/#77/#79 viejos), puente con prioridad de paso (#59), curva
+  peraltada (#65), motion blur (#14), rotonda (#60). Cualquier idea nueva va a "Después del lanzamiento".
+
+### N-702 · Esta lista como tablero — A · `Opus 5.5 · low` · Aviso: no
+
+- [ ] `[x]` + hash al cerrar. Tarea que crece se parte acá antes de seguir. Revisión semanal de "Última
+  actualización".
+- [ ] Verificar después de cada tarea grande `test_vehicle_presentation`, `test_vehicle_audio`,
+  `test_route_streaming` y `check_driver_sightline` (antes #99).
+
+### N-703 · Hitos de lanzamiento con fecha — B · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] En `docs/plan-desarrollo.md` Fase 7: fechas objetivo para "contenido cerrado", "página de Steam
+  publicada", "build de demo", "Early Access". Una por mes como máximo de distancia entre hitos.
+
+---
+
+## 8. QA (sin playtesting)
+
+### N-801 · Fuzz de generación de ruta — A · `Opus 5.5 · high` · Aviso: no
+
+- [ ] `tests/test_route_fuzz.gd`: 500 semillas × 1-4 casas. Falla si: el camino se cruza consigo mismo,
+  una casa o su jardín queda sobre el asfalto, un árbol sólido queda a menos de 2 m del carril, dos tramos se
+  superponen, el terreno bajo el asfalto tiene un escalón de más de 0,3 m, o la meta queda inalcanzable.
+- [ ] Guardar las semillas que fallaron en el mensaje, para reproducir.
+
+### N-802 · Determinismo entre jugadores — A · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Test de un solo proceso: armar la ruta, el decorado y el depósito dos veces con la misma semilla y
+  comparar un hash de todas las posiciones. Cualquier `randf()` sin la semilla de sesión lo rompe (fue el bug
+  del #122 viejo).
+
+### N-803 · Estrés del camión en las rutas nuevas — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Ampliar `test_vehicle_stress.gd` a la ruta curva con casas (no solo Endless): 3 minutos de manejo agresivo
+  sin NaN, sin salir del mundo y sin quedar atascado sin que salte la detección.
+
+### N-804 · Recorrido técnico del mundo — A · `Opus 5.5 · low` · Aviso: no
+
+Esto no es playtesting (no juzga diversión), busca errores.
+
+- [ ] Checklist en `docs/qa-recorrido.md` (sección de Nacho; si Slatex ya lo creó, sumarla): cada clima × hora
+  del día una vez, túnel, cruce de tren, puente, ripio, ciervo, depósito completo y portón. Anotar errores de
+  consola y capturas raras.
+
+---
+
+## 9. Negocio, marketing y distribución
+
+### N-901 · Steamworks y AppID propio — A (decisión) · `Opus 5.5 · medium` · Aviso: no
+
+Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
+
+- [ ] Crear la cuenta de Steamworks y pagar el Steam Direct (USD 100 por juego). Anotar el AppID en
+  `steam_appid.txt` y en `network_manager.gd` (aviso).
+- [ ] Volver a verificar el flujo de invitación de amigos con el AppID real (la crítica §7 avisa que nunca se
+  probó con el juego real).
+
+### N-902 · Herramienta de cámara para tráiler — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Cámara libre de depuración (solo build de debug) con rieles: grabar 3-4 puntos y que la cámara los
+  recorra suave mientras el camión maneja solo. Reutilizar `results_orbit.gd` como base.
+- [ ] 6 planos guardados: salida del depósito con el portón, curva en el bosque, cruce de tren, puente angosto
+  con lluvia, llegada a una casa de noche, vuelco con cajas volando.
+
+### N-903 · Guion del tráiler — B · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] `docs/marketing/trailer.md`: 60-90 s, plano por plano (qué se ve, qué suena, texto en pantalla), con los
+  planos de N-902 y los momentos de falla de las cajas de Slatex (S-310). Primer gancho en los primeros 5 s.
+
+### N-904 · Competidores de manejo cooperativo — B · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] `docs/marketing/competidores-manejo.md`: Drive Together, Co-Drive Chaos, Deliver Together, Totally
+  Reliable Delivery Service: precio, reseñas de Steam (qué elogian y qué critican del manejo), cantidad de
+  jugadores, cómo se ven sus páginas. Qué hacemos distinto (roles asimétricos) en una frase.
+
+### N-905 · Capturas del mundo para la tienda — C · `Opus 5.5 · medium` · Aviso: no
+
+- [ ] Con N-902: 5 capturas 1920×1080 sin HUD de paisaje, clima y camión. Se suman a las de Slatex (S-902).
+
+### N-906 · Devlog en GIF — C · `Opus 5.5 · low` · Aviso: no
+
+- [ ] Un GIF corto por semana (ciervo, tren, vuelco, lluvia) desde la cámara de tráiler, para redes. Carpeta
+  `art/devlog/` fuera de `do-not-drop/` para que no entre al build.
+
+---
+
+## Para cuando haya playtesting (no se hace ahora)
+
+| Ítem viejo | Qué hay que observar |
+|---|---|
+| #55 | Si la variedad del Endless se siente bien o hace falta más curaduría. |
+| #98 | Si los tramos se sienten repetitivos después de varias partidas. |
+| #83 (parte) | Mezcla de audio con oído, después de la medida de N-404. |
+| — | Si el largo medido en N-102 se siente corto o largo jugando de verdad. |
+
+---
+
+## Qué pasó con la lista anterior (1-127)
+
+- **Cerradas**: modelado, comportamiento y sonido del camión; ruta procedural con curvas; 11 tipos de tramo;
+  clima y hora del día; casas de entrega con timbre y pizarra; depósito; Endless con dificultad creciente;
+  segundo vehículo y pinturas; optimización con decorado horneado; red con semilla y casas desde el host. El
+  detalle está en el historial de git (`git log -p docs/tareas-nacho.md`).
+- **Reubicadas en esta lista**: #4 → N-301 · #15 y #38 → N-504 · #18 (clutter en red) → N-201 · #34 (SSAO) →
+  N-308 · #58/#68 (eco del túnel, lluvia con cámara exterior) → N-402 · #81 (bocina) → N-203 · #83 (mezcla) →
+  N-404 · #93 (FPS con GPU) → N-204 · #99 → N-702 · #100 → N-307 · #114 (Endless curvo) → N-206 · #127
+  (depósito en Endless) → N-101.
+- **Cerradas como "fuera del MVP"** (N-701): #14, #59, #60, #65, #76, #77, #79.
+- **Movidas a "Para cuando haya playtesting"**: #55, #98.
+- **Encontradas en el relevamiento del 2026-09-24**: el ciervo abre un evento de ruta que nunca se cierra
+  (N-202), el largo de la entrega nunca se midió contra la regla de 2-5 minutos (N-102), el tractor y la
+  camioneta de la competencia solo aparecen en el depósito (N-306), el inventario de assets está
+  desactualizado (N-307).
+
+## Bugs de multijugador del playtest (143-149) — reporte directo del usuario, 2026-09-24
 
 | # | Tarea | Prio |
 |---|---|---|
-| 1 | ~~Silueta real de la furgoneta: biselar aristas, inclinar la trompa, proporciones de vehículo real, no dos cajas apiladas. (#5)~~ **[x] Hecho (2026-09-23)** — el camión de referencia (`reference_truck.gd`) ya tiene silueta real, trompa y proporciones. | B |
-| 2 | ~~Guardabarros / arcos de rueda que contengan las ruedas, hoy flotan junto a un panel plano. (#6)~~ **[x] Hecho (2026-09-23)** — `WheelArch_*` del modelo de referencia. | B |
-| 3 | ~~Neumático con dibujo y llanta diferenciada del caucho. (#7)~~ **[x] Hecho (2026-09-23)** — `Tire_*`/`WheelRim`/`RimBolt` del modelo de referencia. | B |
-| 4 | Líneas de paneles y juntas de puertas en la carrocería. (#8) | B |
-| 5 | ~~Espejos retrovisores laterales — correctos y que encuadren bien el plano en primera persona. (#9)~~ **[x] Hecho (2026-09-23)** — `MirrorHousing_*`/`MirrorSurface_*` del modelo de referencia. | B |
-| 6 | ~~Puertas traseras reales en la zona de carga, hoy `Tailgate` es una caja fija. (#10)~~ **[x] Hecho (2026-09-23)** — puertas traseras reales con bisagras y animación (`reference_truck.gd`). | B |
-| 7 | ~~Mampara entre cabina y zona de carga — hoy son dos volúmenes sin nada que los separe visualmente. (#11)~~ **[x] Hecho (2026-09-23)** — mampara `Bulkhead*`; ahora además es sólida (`_build_bulkhead_collision`). | B |
-| 8 | ~~Tablero completo: instrumentos, rejillas de ventilación, guantera, palanca de cambios. (#12)~~ **[x] Hecho (2026-09-23)** — `Dashboard`, `InstrumentCluster`, palanca y guantera en `_dress_cab()`. | B |
-| 9 | ~~Pedales, visibles al mirar hacia abajo desde el asiento del conductor. (#14)~~ **[x] Hecho (2026-09-23)** — tres pedales bajo el tablero; freno y acelerador se hunden con lo que hace el camión (`_build_pedals`). | C |
-| 10 | ~~Asientos con apoyacabezas y estructura real, hoy son dos cajas. (#15)~~ **[x] Hecho (2026-09-23)** — asientos con respaldo del modelo de referencia. | B |
-| 11 | ~~Cinturones de seguridad. (#16)~~ **[x] Hecho (2026-09-23)** — `Seatbelt` en el modelo de referencia. | C |
+| 143 | ~~Con 3+ jugadores los demás se ven flotando / al cargar una caja se ve la caja sola.~~ **[x] Hecho** — en Steam el cliente no tenía `server_relay`: lo que un cliente mandaba a otro (su posición) se perdía y lo veían quieto en su punto de aparición, a 1 m del piso (`network_manager.gd`). Falta confirmarlo jugando por Steam. | A |
+| 144 | ~~Un cliente no puede manejar (velocímetro 0-1-0-1).~~ **[x] Hecho** — `controls_enabled` arrancaba en `false` en `vehicle.tscn` y solo se prendía en el host; ahora se replica. | A |
+| 145 | ~~Las cajas rebotan atrás al avanzar (en clientes).~~ **[x] Hecho** — cajas y jugadores que van en la caja de carga se replican en coordenadas del camión (`net_transform` / `net_position` + `net_in_vehicle`, `vehicle.carries()`); cada peer los pone sobre su propia copia. Si en el host también rebotan, es otro problema: revisar jugando. | A |
+| 146 | ~~Cajas y personajes que se salen del camión / atraviesan las puertas cerradas.~~ **[x] Hecho** — lo de #145, más: el jugador parado atrás se mueve y gira con el camión a mano (`player.gd` `_ride_with_vehicle`; en el cliente el camión es una copia teletransportada que no arrastra nada), y los objetos sueltos del cliente también (`cargo_clutter.gd`). | A |
+| 147 | ~~Foto del celular en un cliente: "no hay ninguna entrega que probar".~~ **[x] Hecho** — el celular miraba `delivered` de la casa, que solo cambia en el host; ahora también el registro de `RunManager`, y la foto de un cliente se archiva en el host (`RunManager.submit_delivery_photo`). | A |
+| 148 | ~~Cajas pegadas a la pared la atraviesan.~~ **[x] Hecho** — en clientes era el mismo desfase de #145; además la caja plana (0,95 m) en el estante se metía en la pared lateral y ahora se corre hacia adentro (`vehicle.gd` `_on_package_placed`). | A |
+| 150 | ~~Los amigos tenían que tocar "Crear sala con amigos" para que Steam detectara el juego.~~ **[x] Hecho** — Steam se inicializaba recién al crear o unirse; ahora arranca con el juego (`NetworkManager._ready`, salvo headless). Aceptar una invitación o "Unirse a la partida" funciona desde el menú, jugando solo o con el juego cerrado (`+connect_lobby`); el menú entra con `join_steam_lobby()`. | A |
+| 149 | Probar con 3+ jugadores por Steam: jugadores quietos, carga, manejo de un cliente, caja de carga en movimiento y foto desde un cliente. | A |
 
-## Vehículo — comportamiento visual y físico (12-16)
+## Segunda tanda de multijugador (151-166) — cacería de `cazador-bugs`, 2026-09-24
 
 | # | Tarea | Prio |
 |---|---|---|
-| 12 | ~~Balanceo de carrocería exagerado en curvas y frenadas.~~ **[x] Hecho** (#21, ver detalle en `docs/especificaciones-visuales.md`). | A |
-| 13 | ~~Aberración cromática breve en impactos muy fuertes.~~ **[x] Hecho** — `vehicle_effects.gd` la activa sólo ante impactos fuertes. (#72) | C |
-| 14 | Motion blur por velocidad, sutil. (#73) **no se hace: GL Compatibility no tiene motion blur y un pase propio costaría rendimiento; descartado a favor de los 60+ FPS.** | C |
-| 15 | Evitar que la cámara atraviese geometría cercana al mirar en diagonal dentro de la cabina (fade o retroceso). (#80) | B |
-| 16 | ~~La furgoneta se hunde levemente según el peso total de la carga.~~ **[x] Hecho** — no hizo falta coordinar con Slatex, `mass` de `package.gd` ya era legible desde el grupo `cargo` sin tocar ese archivo. (#96) | A |
+| 151 | ~~Caja cargada o soltada dentro del camión en marcha, 1 m atrás o afuera.~~ **[x] Hecho** — la pose de carga y la de soltar viajan en coordenadas del camión (`submit_carry_transform`/`request_drop` con `in_vehicle`); el host la reaplica cada tick sobre su camión, y la caja soltada arranca con la velocidad del camión (`vehicle.point_velocity()`). | A |
+| 152 | ~~El host reinicia y los clientes quedan en resultados, encerrados, sin poder manejar.~~ **[x] Hecho** — `NetworkManager.begin_restart()`: el nivel nuevo del host manda `_remote_restart` y cada cliente recarga; los jugadores solo se crean para peers con el nivel cargado (`is_peer_ready`, filtro de visibilidad del sincronizador del jugador). | A |
+| 153 | ~~El que entra tarde no ve la partida, ve cajas entregadas y el portón al revés.~~ **[x] Hecho** — `RunManager.send_session_state()` al peer que tiene el nivel listo: partida, evento, reloj, entregas, carga (con tarjetas del HUD), cajas entregadas y portón. Si llega con la partida terminada, espera el reinicio. | A |
+| 154 | ~~La caja entregada queda congelada en la puerta en los clientes.~~ **[x] Hecho** — `consume()` se replica (`_remote_consume`) y queda anotada en `RunManager.consumed_packages`. | A |
+| 155 | ~~En un cliente, el que va parado atrás "rebota" contra el camión.~~ **[x] Hecho** — sigue al camión en cada frame y sin interpolación mientras el camión no se interpola (`_ride_frame_by_frame`); igual los objetos sueltos. El camión ahora se replica a ~60 Hz (antes 20). | A |
+| 156 | ~~Pasajero sentado (cliente) no puede abrir la caja.~~ **[x] Hecho** — el alcance se mide desde el asiento (`Player.reach_origin()`), también en pasar cajas, fotos y el ping. | A |
+| 157 | ~~Entrada de "atender caja" pegada.~~ **[x] Hecho** — solo la acepta del que está sentado ahí (`tender_peer_id`, `set_tender`), vence a los 0,25 s y se limpia al levantarse. | B |
+| 158 | ~~Si se cae el host, el cliente sigue con el mundo de la sala.~~ **[x] Hecho** — `_end_session()` limpia semilla, casas, trampas y lobby; el menú muestra el motivo. | B |
+| 159 | Casas según la cantidad de jugadores: se construyen con el nivel, así que el reinicio las recalcula y el depósito avisa al host si entró más gente antes de salir. Falta decidir si conviene reconstruir la ruta sola. | B |
+| 160 | ~~Handshake: timeout de 60 s, el que entra con el host entre escenas, código muerto.~~ **[x] Hecho** — timeout de 20 s, el cliente siempre espera a tener el nivel, el host recuerda su nivel (`session_scene`); se borró `_accept_joiner`. | B |
+| 161 | ~~Invitación aceptada mientras el menú conecta se pierde.~~ **[x] Hecho** | C |
+| 162 | ~~Al desconectarse desaparecen los jugadores y hay spam de errores.~~ **[x] Hecho** — `OfflineMultiplayerPeer` en vez de null y sin anunciar el roster vacío. | C |
+| 163 | ~~Salto al cruzar el borde de la caja de carga.~~ **[x] Hecho** — histéresis de 0,4 m (`carries(point, margin)`). | C |
+| 164 | ~~Ragdoll dentro del camión sale volando.~~ **[x] Hecho** — hereda la velocidad del camión. | C |
+| 165 | ~~RPCs sin validar.~~ **[x] Hecho** — golpe de caja solo del host, interacción remota con chequeo de alcance, foto solo cerca de la casa. | C |
+| 166 | ~~Bonus de foto en casas salteadas.~~ **[x] Hecho** | C |
+| 167 | ~~Verificación con probes (2 y 3 procesos): los sincronizadores del jugador y de las cajas se limitaban a peers listos recién en `_ready`, y tras un reinicio el host dejaba de verse moverse.~~ **[x] Hecho** — el filtro va en `_enter_tree` (jugador y caja); el jugador remoto sobre el camión del host se ubica en el tick de física. | A |
+| 168 | ~~En el host, el jugador que viaja atrás golpeaba las cajas sueltas en cada paso (se mueve entre pasos, no durante).~~ **[x] Hecho** — con el camión en marcha no choca con las cajas (`_on_foot_mask`); estacionado, sí. | A |
+| 169 | ~~Se cae el host: la cámara saltaba a un asiento.~~ **[x] Hecho** — Godot borra igual a los jugadores creados por el host; el nivel conserva la vista con una cámara quieta (`_keep_view`). | C |
+| 170 | El borde de la explanada del depósito hace cabecear el camión a ~15 m/s y tira la carga suelta (visto en los probes). Revisar la transición `start_yard` → ruta. | B |
 
-## Vehículo — detalle interior/exterior (17-19)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 17 | ~~Si la puerta trasera está abierta, la carga suelta puede salirse. (#87)~~ **[x] Hecho (2026-09-23)** — la carga suelta ya se sale físicamente con la puerta abierta; la mampara sólida evita que atraviese la cabina al frenar. | B |
-| 18 | ~~Objetos sueltos en la zona de carga que traqueteen con los golpes.~~ **[x] Hecho** — `cargo_clutter.gd` crea caja de herramientas y termo como cuerpos físicos; su contacto con el vehículo puede influir en la simulación y requiere corrección para que sean decorado local seguro en red. (#88) | B |
-| 19 | ~~Rayones y abolladuras acumuladas en la carrocería a lo largo de la entrega.~~ **[x] Hecho** — `vehicle_effects.gd` acumula marcas visuales a partir de impactos. (#91) | C |
-
-## Vehículo — sonido (20-22)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 20 | ~~Ambiente exterior.~~ **[x] Hecho (2026-09-24)** — viento en loop, más pájaros de día y al atardecer, grillos de noche y nada con lluvia (`WorldMood.nature_bed()`), y el rumor de una ruta lejana con algún auto que pasa. Todo sintetizado (`SynthAudio.ambient_birds/night_crickets/distant_road`), en `route_sky.gd` (entrega y Endless) con el mismo ruteo Interior/Exterior que la lluvia y 9 dB más apagado dentro de la cabina o del depósito. `test_world_mood`. Falta escucharlo para ajustar volúmenes (ver #83). (#45) | A |
-| 21 | ~~Reverb distinta dentro de la furgoneta vs. afuera (buses de audio). (#46)~~ **[x] Hecho (2026-09-23)** — buses Interior/Exterior con reverb (`default_bus_layout.tres`), ruteo en `vehicle_presentation.gd`. | B |
-| 22 | ~~Música de tensión que suba con el riesgo acumulado de la carga.~~ **[x] Hecho** — `ingame_music.gd` adapta la capa de tensión al riesgo de la carga. (#47) | B |
-
-## Ruta y ambientación (23-34)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 23 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho.** (#49) | A |
-| 24 | ~~Humo de escape en el caño trasero.~~ **[x] Hecho** — `vehicle_effects.gd` lo emite mientras el motor está activo. (#50) | C |
-| 25 | ~~Marcas de neumático en el asfalto al frenar. (#51)~~ **[x] Hecho (2026-09-23)** — marcas de neumático al derrapar, en un MultiMesh circular (`vehicle_effects.gd`). | C |
-| 26 | ~~Props de banquina: árboles, postes, carteles, cercas, tachos — hoy son 10 cajas grises.~~ **[x] Hecho** — bosque completo (`_build_forest`) + farolas/bancos/buzones/conos/barrera (`_build_landmarks`, ahora `RoadsideDressing`), reemplazando las 10 cajas grises. Sin colisión, mismo criterio que el bosque. (#52) | A |
-| 27 | ~~Cableado eléctrico entre postes. (#53)~~ **[x] Hecho (2026-09-23)** — postes cada ~36 m con tres cables con comba; 2 draw calls, postes sólidos (`route_dresser.gd` `_dress_power_lines`). | B |
-| 28 | ~~Edificios con ventanas, techos y puertas.~~ **[x] Hecho** — `DeliveryHouse` usa modelos GLB con techo a dos aguas, porche, puerta, ventanas y chimenea; la cantidad de casas depende de la tripulación. (#54) | A |
-| 29 | ~~Vehículos estacionados al costado de la ruta.~~ **[x] Hecho** — hatchback y pickup GLB, uno cada ~55m alternando lados (`_build_landmarks`). (#55) | A |
-| 30 | ~~Variación de hora del día.~~ **[x] Hecho** — `WorldMood` elige día/atardecer/noche por semilla de sesión y ajusta sol, ambiente, cielo y faros. (#56) | C |
-| 31 | ~~Clima: lluvia, asfalto mojado con reflejos.~~ **[x] Hecho** — presets soleado/nublado/lluvia/niebla; la lluvia humedece el material de terreno y sigue la cámara. (#57) | C |
-| 32 | ~~Nubes en el cielo procedural.~~ **[x] Hecho** — el shader de cielo recibe cobertura y color de nubes según `WorldMood`. (#58) | C |
-| 33 | ~~Silueta de horizonte / terreno lejano.~~ **[x] Hecho** — `route_dresser.gd` construye horizonte y lo integra con la niebla. (#59) | B |
-| 34 | SSAO: confirmado bloqueado por el renderer (`gl_compatibility`, ver fila #60 de `docs/especificaciones-visuales.md`) — no reabrir sin decidir primero migrar a Forward+. | B |
-
-## Cámara de manejo (35-38)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 35 | ~~Manera de mirar hacia atrás: espejos (#5 de esta lista) o una tecla dedicada. (#68)~~ **[x] Hecho (2026-09-23)** — B (o L3) mantiene la vista por encima del hombro (`first_person_camera.gd`, acción `look_back` reasignable). | B |
-| 36 | ~~Cámara de resultados: plano cinematográfico de la furgoneta al terminar.~~ **[x] Hecho** — órbita lenta local de `results_orbit.gd` alrededor del camión al finalizar. (#69) | C |
-| 37 | ~~Cámara en tercera persona alternable, solo para desarrollo.~~ **[x] Hecho** — F9, solo se construye en build de debug. (#75) | A |
-| 38 | Límite de pitch contextual dentro de la cabina (`first_person_camera.gd` es archivo compartido — avisar antes de tocarlo). (#78) | C |
-
-## Interacción vehículo-mundo (39-40)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 39 | ~~La furgoneta puede voltear props de banquina, no atravesarlos. (#89)~~ **[x] Hecho (2026-09-23)** — el decorado ahora es sólido (árboles, guardarraíles, autos, carteles) y los props chicos se vuelcan: cuerpos rígidos dormidos (`dressing_batcher.gd`). | B |
-| 40 | ~~Escombros y partículas al chocar contra algo sólido. (#90)~~ **[x] Hecho (2026-09-23)** — astillas y polvo al chocar, donde fue el golpe (`vehicle_effects.gd`). | B |
-
-## Modo Endless / streaming de tramos (41-55)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 41 | ~~Conectar `RouteStreamer.start()` al vehículo real.~~ **[x] Hecho.** | A |
-| 42 | ~~Crear `level_endless.tscn`/`level_endless.gd`.~~ **[x] Hecho** — duplica algo de `level_base.gd` a propósito en vez de refactorizar un archivo del que Slatex también depende. | A |
-| 43 | ~~Definir la condición de fin de partida para endless.~~ **[x] Decidido: se pierde (carga perdida, vuelco, salir de la ruta), nunca "se entrega".** El puntaje por distancia queda para el #52, ver detalle en `docs/plan-desarrollo.md` Fase 3. | A |
-| 44 | ~~Adaptar `RunManager` para puntaje por distancia en modo endless, sin romper el puntaje por entrega del modo normal.~~ **[x] Hecho** (2026-09-22) — `run_manager.gd` es de Slatex/zona compartida; decisión explícita de Nacho de avanzar igual. `current_mode`/`MODE_ENDLESS`, `_finish_endless_run()` separado de `finish_run()`, `DISTANCE_POINTS_PER_METER` (placeholder ajustable). Modo delivery sin cambios de comportamiento, tests existentes verifican esto. | A |
-| 45 | ~~Botón "Modo Endless" en el menú principal.~~ **[x] Hecho** (2026-09-22) — `main_menu.gd` es de Slatex; decisión explícita de Nacho de avanzar igual sin esperar coordinación previa. Botón "Modo Endless (solo)" + atajo `--autostart-endless`. | A |
-| 46 | ~~Ajustar `lookahead_distance` contra el far clip.~~ **[x] Hecho** — 180 m (era 60 m), niebla más densa en la escena endless (0.013 vs. 0.006) para que se disuelva antes de llegar al far clip. | A |
-| 47 | ~~Reglas de combinación más allá de "nunca repetir el mismo tipo": evitar 3 obstáculos difíciles seguidos.~~ **[x] Hecho** — `RouteStreamer.hard_segments` (chicane, puente angosto, curva en S, ripio, zona de obras) fuerza un respiro después de 2 difíciles seguidos. "Difícil" definido igual que ya lo trataban los propios tests (lo que un manejo sin dirección no puede sobrevivir), no un criterio nuevo aparte. Encontré y corregí un bug real al implementarlo: `const HARD_SEGMENTS` referenciando varios `class_name` globales en un array no compila en GDScript ("no es una expresión constante") — silenciosamente no falló en `--import` pero sí al usarse de verdad, colgando el proceso. Pasado a una `var` poblada en `_ready()`. | A |
-| 48 | ~~Integrar la niebla de distancia también en la escena endless.~~ **[x] Hecho de una vez con el #46.** | A |
-| 49 | ~~Balancear la dificultad progresiva del modo endless.~~ **[x] Hecho (2026-09-23)** — el peso de los tramos difíciles va de 0,25 a 2,5 en 2 km (`route_streamer.gd`, `test_endless_difficulty`). | B |
-| 50 | ~~Probar el modo endless con las 4 trampas activas simultáneamente a velocidad sostenida.~~ **[x] Automatizado** — `tests/test_endless_multi_cargo.gd`. Cobertura funcional (nada explota, las 4 trampas siguen activas durante 20s de manejo sostenido), no si la mezcla aleatoria "se siente bien" con las 4 activas (eso es el playtesting real del #55, deferido). Encontrar esto reveló un bug real, ver nota en #97. | A |
-| 51 | ~~Verificar que `RouteStreamer._cull_behind()` libere a tiempo.~~ **[x] Verificado** — sin fuga: conteo de segmentos activos y de hijos de `World` acotados tras una sesión larga simulada (`test_level_endless.gd`). | A |
-| 52 | ~~Sumar el modo endless al leaderboard local existente, como categoría separada del modo normal.~~ **[x] Hecho junto con el #44** — cada entrada del leaderboard guarda `mode`; `best_score(mode)` y el cap de `MAX_LEADERBOARD_ENTRIES` son por-modo (un modo no puede desplazar las entradas del otro del `.json` guardado). | A |
-| 53 | ~~Test automatizado de una sesión larga de endless simulada.~~ **[x] Hecho** — `tests/test_level_endless.gd`. | A |
-| 54 | ~~Documentar el modo endless en `docs/plan-desarrollo.md` Fase 3.~~ **[x] Hecho.** | A |
-| 55 | Playtesting real del modo endless: ¿se siente bien la variedad aleatoria o hace falta más curaduría? | A |
-
-## Contenido de ruta nuevo (56-65)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 56 | ~~Tramo de subida/bajada.~~ **[x] Hecho** — `HillSegment` registra una cresta de hasta 6 m en el terreno y vuelve a nivel en ambos extremos. | B |
-| 57 | ~~Tramo de curva en S (doble chicana en direcciones opuestas).~~ **[x] Hecho** — `SCurveSegment`, 4 bloques alternados en vez de los 2 del chicane. | A |
-| 58 | ~~Tramo de túnel corto.~~ **[x] Hecho** — `TunnelSegment` tiene paredes/techo sólidos e iluminación interior; el eco dedicado queda para una pasada de audio. | B |
-| 59 | Puente de un solo carril con prioridad de paso. **bloqueado: sin tráfico no hay con quién ceder el paso (#76/#77).** | B |
-| 60 | Rotonda simple. | B |
-| 61 | ~~Tramo de ripio/tierra con fricción distinta a la ruta pavimentada.~~ **[x] Hecho** — `GravelSegment`. Verificado antes de implementar que `PhysicsMaterial.friction` del suelo **no** afecta `VehicleWheel3D.get_skidinfo()` en este motor; el único control real es `wheel_friction_slip` por rueda. El tramo usa un `Area3D` que lo reduce al entrar y lo restaura al salir (con red de seguridad en `_exit_tree()` por si el streamer libera el tramo con el vehículo todavía encima). | A |
-| 62 | ~~Tramo nocturno (probar junto con el ciclo día/noche).~~ **[x] Hecho (2026-09-23)** — la noche sale por sorteo como cualquier hora (`world_mood.gd`). | B |
-| 63 | ~~Cruce de vías de tren con barrera.~~ **[x] Hecho** — `RailCrossingSegment` avisa, baja una barrera sólida, deja pasar el tren y la reabre; puede no activarse según semilla. **En red (2026-09-23):** lo dispara sólo el host (`_begin_cycle` por RPC a todos) y un cliente que arma el tramo a mitad del cruce le pide la fase al host (`_request_state` → `_apply_state`); antes cada peer lo disparaba con su copia interpolada del camión. Los tramos tienen nombre estable (`Segment%d`, en `route.gd` y `route_streamer.gd`) para que el RPC encuentre el nodo. | B |
-| 64 | ~~Zona de obras con conos y carril reducido.~~ **[x] Hecho** — `ConstructionZoneSegment`, barrera lateral sostenida (no alternada, a diferencia del chicane/curva en S) + fila de conos marcando el borde. | A |
-| 65 | Curva peraltada (banked turn) que favorece tomarla rápido. **no se hace por ahora: el asfalto es el mismo campo de alturas del terreno y no admite peralte sin rehacerlo.** | B |
-
-## Clima y ciclo día/noche (66-73)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 66 | ~~Diseñar presets de clima.~~ **[x] Hecho** — soleado 45%, nublado 25%, lluvia 18%, niebla 12%; se eligen determinísticamente con la semilla de sesión. | B |
-| 67 | ~~Implementar lluvia.~~ **[x] Hecho** — gotas que siguen cámara + parámetro `wetness` del shader de terreno. | B |
-| 68 | ~~Sonido de lluvia sobre el techo, distinto adentro que afuera.~~ **[x] Hecho** — `route_sky.gd` reproduce `SynthAudio.rain_loop()` y usa buses Interior/Exterior con -11/-17 dB según la cámara; queda revisar el caso de cámaras exteriores ancladas al vehículo. | B |
-| 69 | ~~Ciclo día/noche opcional.~~ **[x] Resuelto con una decisión más estable**: cada sesión fija día (60%), atardecer (25%) o noche (15%) por semilla, en vez de cambiar de luz durante la partida. | B |
-| 70 | ~~Ajustar faros para la noche.~~ **[x] Hecho** — `WorldMood.headlight_boost()` aumenta intensidad/alcance hasta 4× de noche. | A |
-| 71 | ~~Nubes procedurales en el cielo.~~ **[x] Hecho** — shader de cielo con cobertura dependiente del clima. | B |
-| 72 | ~~Probar la niebla de distancia con cada preset. **Parcial** — `test_world_mood.gd` comprueba lluvia+noche, densidad y aislamiento del `Environment`; falta cobertura de los otros presets y revisión visual.~~ **[x] Hecho (2026-09-23)** — la niebla se ajusta por preset (densidad y color); revisado en capturas. | A |
-| 73 | ~~Documentar presets de clima.~~ **[x] Hecho** — `docs/direccion-visual.md` §4. | A |
-
-## Tráfico y vehículos estacionados (74-79)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 74 | ~~Modelar/colocar 3-4 variantes de auto estacionado como props de banquina (placeholder hasta tener arte final).~~ **[x] Hecho (2026-09-23)** — regla `parked_vehicle` de `route_dresser.gd`. | B |
-| 75 | ~~Reglas de colocación: nunca bloquear el carril completo, variar el lado de la ruta.~~ **[x] Hecho (2026-09-23)** — la regla los deja a 12-14,5 m del centro, nunca sobre el carril. | A |
-| 76 | ~~Decidir si vale la pena tráfico en movimiento o si es demasiado para el alcance actual.~~ **[x] Decidido: no por ahora.** Tráfico en movimiento suma IA de waypoints, una capa de colisión dinámica nueva, y un playtesting propio de "tensión divertida vs. molesta" (#79) — alcance real para un prototipo solo con asistencia de IA que todavía no tiene ni autos estacionados construidos (#74, bloqueado por arte) ni un segundo vehículo (#85-91). Los vehículos estacionados como props de banquina estática (#74/#75/#78) ya cubren la sensación de "ruta habitada" sin ese costo. Revisar esta decisión recién si el modo endless necesita más variedad después de tener contenido curado real. | A |
-| 77 | Diseño mínimo de IA para tráfico en movimiento (waypoints simples, sin pathfinding complejo) — **no construir todavía**, ver #76. Dejar esta fila como semilla de diseño si la decisión cambia más adelante. | B |
-| 78 | ~~Capa de colisión para vehículos estacionados/tráfico, coherente con `docs/convenciones-godot.md`.~~ **[x] Ya resuelto, sin agregar nada nuevo**: los props estáticos de banquina son geometría estática igual que los bloques del chicane/curva en S/zona de obras, que ya usan la capa 1 (`environment`) vía `RouteSegment._box(..., solid=true)`. No hace falta una capa dedicada para tráfico en movimiento porque esa función quedó deferida (#76). Si esa decisión se revierte, ahí sí conviene una capa propia (para que el vehículo pueda reaccionar distinto a tráfico que a concreto fijo). | A |
-| 79 | Playtesting: ¿el tráfico agrega tensión divertida o es solo un obstáculo molesto? **No aplica hasta que #76 se reconsidere** — no hay tráfico en movimiento que probar. | A |
-
-## Audio: buses y mezcla (80-84)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 80 | ~~Crear buses de audio "Interior" y "Exterior".~~ **[x] Hecho** — `default_bus_layout.tres`, registrado en `project.godot`. | A |
-| 81 | ~~Rutear motor/neumáticos/impacto por el bus correcto según la cámara activa.~~ **[x] Hecho** para motor/impacto/chirrido (`VehiclePresentation`). La bocina (`vehicle.gd`) queda sin rutear — vive en otro archivo, follow-up chico. | A |
-| 82 | ~~Reverb distinta por bus.~~ **[x] Hecho de una vez con el #80**, no hizo falta separarlo — cada bus ya trae su propio `AudioEffectReverb` (interior más cerrado y húmedo, exterior más abierto y seco) en el mismo `.tres`. | B |
-| 83 | ~~Mezcla general de volúmenes relativos.~~ **[x] Parcial, honesto sobre el límite**: no puedo "escuchar" el juego para juzgar el balance de verdad — lo que hice fue revisar los valores en busca de inconsistencias objetivas. Encontré una real: la bocina (`vehicle.gd`) nunca tuvo `volume_db` seteado, quedaba en el default de 0dB, mucho más fuerte que todo lo demás sin que fuera intencional (nada en el código sugería que "la bocina debe ser así de fuerte"). La empardé con el pico del golpe de impacto (-6dB), el más fuerte del resto de la mezcla a propósito. Una pasada de balance real con oído sigue pendiente y necesita a alguien escuchando el juego, no edición de valores a ciegas. | A |
-| 84 | ~~Gancho de riesgo acumulado para la música de tensión.~~ **[x] Hecho** — `ingame_music.gd` calcula el riesgo desde `RunManager.cargo` y modula la capa de tensión; se instancia en entrega y Endless. | B |
-
-## Vehículos adicionales (85-92)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 85 | ~~Diseñar un segundo vehículo.~~ **[x] Hecho** — la Furgoneta ágil es más rápida, liviana y con más giro; se desbloquea con 4 entregas y 350 puntos. | B |
-| 86 | ~~Definir sus parámetros de física.~~ **[x] Hecho** — variantes declarativas en `vehicle.gd`; `test_truck_variant.gd` verifica que la ágil cambie velocidad, masa y giro frente a la clásica. | A |
-| 87 | ~~Adaptar `VehiclePresentation` para que sea reutilizable entre vehículos, no hardcodeada a los nombres de nodo del actual.~~ **[x] Hecho** — reemplazadas las rutas fijas (`"CabinInterior/SteeringWheel"`, `"BodyVisuals/" + side + "Headlight"`, `"CargoBay/" + side + "TailLight"`) por búsquedas por nombre/patrón (`find_child`/`find_children`) en cualquier parte del árbol. Convención documentada en `docs/agregar-vehiculo.md` (#92). | A |
-| 88 | ~~Selección de vehículo en el menú.~~ **[x] Hecho** — el panel de cosméticos permite elegir vehículo y pintura, respetando los desbloqueos. | B |
-| 89 | ~~Librea/calcomanía simple.~~ **[x] Hecho** — pintura blanca inicial y violeta desbloqueable (5 entregas, 450 puntos), aplicada por instancia sin modificar el material importado compartido. | B |
-| 90 | ~~Decidir si las libreas son cosméticos desbloqueables o variantes de color fijas.~~ **[x] Decidido e implementado**: blanco inicial y violeta desbloqueable mediante `UnlockManager`; la elección persiste en el perfil local. | A |
-| 91 | ~~Probar que el segundo vehículo respete lo ya construido. **Parcial** — `test_truck_variant.gd` verifica diferencias de física, pintura, bloqueo de elecciones y que `variant_id`/`paint_id` estén configurados para replicarse; falta una prueba con dos clientes del estado recibido y de las interacciones completas.~~ **[x] Hecho (2026-09-23)** — `test_truck_variant.gd`. | A |
-| 92 | ~~Documentar "cómo agregar un vehículo nuevo" para no redescubrirlo cada vez.~~ **[x] Hecho** — `docs/agregar-vehiculo.md`. | A |
-
-## Optimización / tooling de mundo (93-96)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 93 | ~~Medir el costo real de `RouteStreamer` en FPS con varios tramos activos a la vez.~~ **[x] Medido, con reserva honesta**: headless no renderiza nada, así que esto es costo de CPU/física real (`Performance.TIME_PHYSICS_PROCESS`), no FPS real con GPU — sigue faltando esa medición con ventana real. Manejando en `level_endless.tscn` con streaming activo (7 tramos activos en régimen estable): **0.56 ms promedio, 0.92 ms p95** de paso de física, contra un presupuesto de 16.67 ms a 60Hz. Margen amplio. | A |
-| 94 | ~~Evaluar si hace falta LOD para los props de banquina una vez que dejen de ser cajas grises.~~ **[x] Hecho (2026-09-23)** — resuelto con el horneado del decorado y distancias de dibujado (`dressing_batcher.gd`). | B |
-| 95 | ~~Revisar `far` clip (600 m) y `lookahead_distance`/`behind_keep_distance` juntos, para no generar ni de más ni de menos.~~ **[x] Revisado por cálculo**: con `fog_density = 0.013` (endless), la transmitancia (`exp(-density·distancia)`) cae a ~9.6% de claridad a los 180 m (el borde de `lookahead_distance`) y a ~5% a los 230 m — el borde del mundo generado ya queda bastante disuelto en niebla antes de acercarse al `far` de 600 m, sin superponerse de más con lo generado. `behind_keep_distance` (40 m, default) no tiene contraparte visual (no hay espejo retrovisor todavía, #35), así que no hay riesgo de pop-out visible por detrás. No hizo falta tocar ningún valor. | A |
-| 96 | ~~Perfilar el costo de las partículas de polvo bajo las 4 ruedas simultáneas.~~ **[x] Medido**: comparé el mismo régimen estable manejando (polvo activo, ~0.56 ms/0.92 ms p95) contra la furgoneta detenida (polvo apagado, ~0.70 ms/2.53 ms p95 — el p95 más alto detenido es ruido de muestra por contactos de reposo resolviéndose, no una señal real). El polvo no aparece como costo medible aparte del resto de la física del vehículo. | A |
-
-## QA y documentación de su dominio (97-100)
-
-| # | Tarea | Prio |
-|---|---|---|
-| 97 | ~~Bug bash de física del vehículo: saltos, vuelcos, quedarse atascado, comportamiento en los bordes de la ruta.~~ **[x] Hecho, automatizado en vez de manual una sola vez** — `tests/test_vehicle_stress.gd`: 60s de aceleración a fondo con dirección oscilante (no recta, para chocar contra el chicane/obras/puente de verdad) a través de los 7 tipos de tramo, revisando posición/velocidad finitas (sin NaN/Inf) cada frame y que la red de seguridad de "fuera de la ruta" (`level_endless.gd`, y<-8/\|x\|>42) atrape una caída antes de que se vuelva una caída real a través del mundo. Este bug bash encontró **un bug real en el juego, no solo en el test**: manejar sin frenar contra `SpeedBumpSegment` repetidos a velocidad máxima sostenida puede lanzar la furgoneta lo bastante fuerte como para aterrizar encajada contra la geometría de la ruta — nunca vuelca (no dispara el chequeo de vuelco) y nunca sale de los límites (no dispara ese chequeo tampoco), simplemente se queda parada para siempre con `RunManager.is_running` todavía en `true`, sin forma de recuperarse. Corregido sumando detección genérica de "atascado" en `level_endless.gd` (6s de velocidad casi nula termina la run como pérdida, `"La camioneta quedó atascada..."`) — no existía ningún mecanismo así antes, en ningún modo. Nota para `docs/tareas-slatex.md` o revisión futura: el mismo hueco conceptual podría existir en `level_base.gd`, no tocado acá por ser zona compartida. | A |
-| 98 | Playtesting de variedad de ruta: ¿los tramos curados se sienten repetitivos después de varias vueltas? | A |
-| 99 | Verificar que `test_vehicle_presentation`, `test_vehicle_audio`, `test_route_streaming` y `check_driver_sightline` sigan pasando después de cada tarea grande. | A |
-| 100 | Mantener actualizadas las filas de vehículo/ambientación en `docs/especificaciones-visuales.md` y `docs/direccion-visual.md` a medida que se completan tareas. | A |
-
-## Sistema de casas de entrega (101-108) — pedido directo del usuario, 2026-09-21
-
-> Reemplaza el único "Warehouse" al final de la ruta curada por `house_count`
-> casas separadas a lo largo del tramo final, cada una con timbre propio.
-> Al tocar el timbre, quien atiende reacciona según el estado del paquete
-> que se le entregó (o no se le entregó nada). Construido enteramente del
-> lado de Nacho (`route.gd`, `delivery_house.gd`, `doorbell_point.gd`) para
-> no interferir con lo que Slatex está tocando ahora mismo (expansión a 8
-> jugadores). `doorbell_point.gd` extiende `interactable.gd` (base de
-> Slatex) solo por lectura, mismo patrón que `package_mount_point.gd`.
-
-| # | Tarea | Prio |
-|---|---|---|
-| 101 | ~~Casas separadas a lo largo de la ruta en vez de una única zona de entrega.~~ **[x] Hecho** — `route.gd` construye `house_count` `DeliveryHouse` alternando lados de la ruta, terminando en una meta (`GoalArea`) que reemplaza el viejo `DeliveryArea`/Warehouse, mismo contrato (`is_vehicle_in_delivery`) que ya usaba `level_base.gd`, sin tocar ese archivo. | A |
-| 102 | ~~Timbre que reacciona al estado del paquete entregado.~~ **[x] Hecho** — `DeliveryHouse` reacciona según integridad y contenido; `level_base.gd` conecta `route.house_resolved` con `RunManager.register_delivery()`, que aplica puntaje y penalidades por puerta. | A |
-| 103 | ~~"Si te olvidaste un paquete, tenés que bajarte a tocar el timbre igual y sufrir las consecuencias."~~ **[x] Hecho** — al llegar a la meta, cualquier casa que nadie tocó se resuelve automáticamente como `"missed"` (`force_resolve_if_missed()`), no queda colgada para siempre. | A |
-| 104 | ~~Cantidad de casas según jugadores.~~ **[x] Hecho (2026-09-23)** — `max(jugadores - 1, 1)` (`route.gd` `crew_house_count`), pero ahora la decide el host una vez por sesión (`NetworkManager.world_house_count`, se fija la primera vez que su ruta se arma) y viaja en el handshake junto con la semilla (`_accept_joiner`). Antes cada peer contaba su propio roster, y el de un cliente arranca como `[host, él]`: desde tres jugadores cada uno armaba otra cantidad. Límite asumido: como el host arma la ruta al crear la sala, quien se suma después no agrega casas hasta una partida nueva (y un reinicio del host la conserva, porque los clientes no recargan su mundo). `test_house_assignment`. | B |
-| 105 | ~~Cantidad de paquetes por casa dinámica.~~ **[x] Resuelto por el depósito (2026-09-23)** — el depósito tiene dos cajas de cada trampa (14) y la pizarra asigna una caja concreta a cada casa (`depot.gd` `post_orders`); las que no están en el pedido se pueden llevar igual como carga. Las trampas no desbloqueadas quedan fuera de los estantes (`withhold_locked`, `test_locked_traps`). | B |
-| 106 | ~~Volver a levantar un paquete ya montado para entregarlo.~~ **[x] Hecho** — `package_pickup_point.gd` permite bajarlo y libera el soporte; cubierto por `test_house_delivery_flow.gd`. | A |
-| 107 | ~~Asignar qué paquete corresponde a qué casa.~~ **[x] Hecho** — desde 2026-09-23 la asigna la pizarra del depósito al cargar el nivel, desde `world_seed` (todos los peers calculan lo mismo) y se re-emite al arrancar (`houses_assigned`); antes era por orden de soporte. `DeliveryHouse` devuelve una caja equivocada sin gastar la entrega (`test_house_assignment`). | B |
-| 108 | ~~Sumar un hecho a `EventBus` para que el HUD reaccione a las entregas.~~ **[x] Hecho (2026-09-22)** — `house_delivery_recorded(house_index, outcome, package_id)` y `delivery_photo_taken(house_index, accepted)`, ambos relayed. `RunManager` los escucha además de registrarlos, para que cada peer puntué su propio run igual (los dos handlers son idempotentes, que es lo que hace seguro que el host reciba de vuelta el hecho que acaba de emitir). | A |
-
-## Entrega real, celular y opciones (115-121) — pedido directo del usuario, 2026-09-22
-
-> "Revisá todas las funcionalidades y vamos puliendo todo a nivel profesional."
-> El barrido encontró que el loop central estaba roto, no incompleto: las
-> casas existían pero eran inalcanzables y no puntuaban. Esta sección es lo
-> que se arregló y se agregó encima.
-
-| # | Tarea | Prio |
-|---|---|---|
-| 115 | ~~Conectar `route.house_resolved` con el puntaje.~~ **[x] Hecho** — nadie lo escuchaba salvo un test: entregar bien, entregar roto o pasar de largo daban el mismo puntaje. `level_base.gd` lo reenvía a `RunManager.register_delivery()`, que puntuá por puerta (150 intacto / 75 en riesgo / 20 roto / -60 por casa no atendida) aparte de la carga que vuelve en la furgoneta. | A |
-| 116 | ~~Que una casa nunca atendida penalice aunque el run no termine en la meta.~~ **[x] Hecho** — `force_resolve_if_missed()` solo corría al llegar a la meta, así que volcar 300m antes salía gratis. `RunManager.expected_houses` cuenta las puertas que el run debía alcanzar, independiente de cómo terminó. | A |
-| 117 | ~~Celular con modo cámara y foto de entrega.~~ **[x] Hecho** — `scripts/presentation/phone_camera.gd`, autocontenido: toma la pose de la cámara activa en una cámara propia en vez de tocar `player.gd`, y nunca escribe el FOV del jugador (que `_apply_context_fov()` interpola cada frame y pelearía con él). F abre, click dispara, captura real del viewport a miniatura. | A |
-| 118 | ~~Quejas de clientes al final, y la foto como prueba.~~ **[x] Hecho** — un paquete entregado roto siempre genera reclamo, uno en riesgo a veces (`COMPLAINT_CHANCE_AT_RISK`). Con foto de esa puerta el reclamo se cae; sin foto descuenta. Es lo que le da sentido a parar a sacarla. | A |
-| 119 | ~~Pantalla de opciones, salir del juego y volver al menú.~~ **[x] Hecho** — `GameSettings` (autoload, `user://settings.cfg`) + `scripts/ui/options_panel.gd`, alcanzable desde el menú y desde la pausa. Volumen, sensibilidad de mirada, invertir Y, pantalla completa. Antes no había ninguna forma de salir salvo Alt+F4. | A |
-| 120 | ~~Paleta de UI duplicada entre menú y HUD.~~ **[x] Hecho** — `scripts/ui/ui_theme.gd` es la única fuente de colores y widgets; `main_menu.gd` y `prototype_hud.gd` construyen desde ahí (`docs/direccion-visual.md` sección 3 ya lo marcaba). | A |
-| 121 | ~~Cantidad de casas atada a la tripulación, con al menos una en solitario.~~ **[x] Hecho (2026-09-23)** — ver #104 (cantidad sincronizada desde el host) y #105/#107 (asignación por la pizarra del depósito). | B |
-| 122 | ~~**Bug de multijugador encontrado revisando**: `route.gd` y `route_streamer.gd` hacían `_rng.randomize()` en cada peer, así que cada jugador construía un camino distinto y el cliente veía la furgoneta replicada del host atravesar casas inexistentes.~~ **[x] Resuelto (2026-09-22)** — `NetworkManager.world_seed`: el host la sortea al crear la sala y se la manda a cada joiner por RPC (`_accept_joiner`) **antes** de que el joiner emita `session_ready` y cargue el nivel, porque cargarlo antes era exactamente el problema. Timeout de 8s con mensaje claro si nunca llega. Semilla 0 = solo, sigue sorteando. Cubierto por `tests/test_world_seed.gd`. | A |
-
-
-## Ruta procedural con curvas reales (109-114) — pedido directo del usuario, 2026-09-22
-
-> "No quiero que sean tramos rectos, además me gustaría que sean tramos
-> mucho más largos entre casa, que sean mini aventuras." Reemplaza el
-> trazado recto hecho a mano (una sola caja de asfalto en línea) por un
-> generador procedural: cada tramo entre casas (y del arranque a la
-> primera, y de la última a la meta) es 400-600m armados encadenando
-> `RouteSegment`s reales, ahora incluyendo `CurveSegment` -- el único tipo
-> que cambia el rumbo del camino de verdad, no solo agrega obstáculos
-> dentro de un carril recto. Construido enteramente del lado de Nacho
-> (`route.gd`, `route_segment.gd`, `segments/curve_segment.gd`).
-
-| # | Tarea | Prio |
-|---|---|---|
-| 109 | ~~`CurveSegment`: un tramo que dobla el rumbo real del camino.~~ **[x] Hecho** — encadena cuerdas rectas cortas (~10m, una cada ~12°) rotando progresivamente; `exit_offset`/`exit_turn` (nuevos en `route_segment.gd`, default recto/0° para los otros 7 tipos, ninguno tocado) le dicen a quien encadena dónde y hacia dónde sigue el camino después. | A |
-| 110 | ~~Encadenar segmentos con posición + rumbo (Transform3D), no solo un offset en -Z.~~ **[x] Hecho** — `route.gd` camina un cursor `Transform3D`; cada segmento se sigue construyendo en su propio espacio local sin cambios (ni siquiera los 7 tipos viejos lo notaron). | A |
-| 111 | ~~Tramos mucho más largos entre casas (mini aventura).~~ **[x] Hecho** — cada tramo entre inicio, casas y meta apunta a 400-600 m; el total depende de cuántas casas construya la ruta (una en solitario). | A |
-| 112 | ~~Bosque/props siguiendo la curva en vez de flotar en línea recta.~~ **[x] Hecho** — `RouteSegment.get_dressing_slots()` (nuevo) da transforms locales a lo largo del camino real de cada segmento; `CurveSegment` lo sobreescribe caminando su propia cadena de cuerdas. | A |
-| 113 | ~~Red de seguridad "te saliste de la ruta" (`level_base.gd`) medía `abs(x mundial) > 42`, roto apenas el camino dobla.~~ **[x] Hecho** — `route.distance_from_path()` mide distancia real al camino generado (~10m de densidad), no a un eje fijo del mundo. Encontrado por regresión real en `test_vehicle_presentation.gd`/`test_dust_and_ambience.gd`, no hipotético. | A |
-| 114 | **Sin extender a Modo Endless todavía, a propósito** — `RouteStreamer` sigue siendo un camino recto que hace streaming/cull por -Z; darle curvas reales necesita que su lookahead/cull dejen de asumir un solo eje, un cambio más arriesgado que este (streaming infinito vs. construir todo una vez). Queda como follow-up separado, no mezclado con este pedido. | B |
-
-## Depósito de salida (123-127) — pedido directo del usuario, 2026-09-23
-
-> "La partida arranca en un depósito con el camión estacionado, paquetes de
-> todos los tipos, una pizarra de pedidos, estaciones para prepararse y un
-> portón que se cierra al salir; todo profesional." Hecho en `680001a`
-> (`scripts/gameplay/depot/`, detalle en `docs/arquitectura.md` §5.1 y el
-> aviso de `docs/colaboracion-equipo.md`).
-
-| # | Tarea | Prio |
-|---|---|---|
-| 123 | ~~Depósito como punto de partida de entrega y Endless.~~ **[x] Hecho** — camión en su bahía mirando al portón, suelo nivelado y sin árboles (`route.gd` `start_yard`), geometría horneada por material (`depot_kit.gd`), sin lluvia bajo techo (`roofed_area`). | A |
-| 124 | ~~Pizarra de pedidos y estanterías con código.~~ **[x] Hecho** — dos cajas por trampa con código `A-1`…`B-8`, un pedido por casa desde la semilla; el pedido se ve en el cartel de cada casa y en el objetivo del HUD (`test_depot`, `test_house_assignment`). | A |
-| 125 | ~~Estaciones: vestuario, taller, suministros y equipo del mes.~~ **[x] Hecho** — `depot_station.gd` + `ui/depot_panel.gd`; los suministros (acolchado, seguro) los decide el host con la plata del equipo (`CrewProgression.buy_supply`). | A |
-| 126 | ~~Portón que se cierra al salir y vida en el depósito.~~ **[x] Hecho** — `depot_roller_door.gd` (se cierra cuando el camión salió y no queda nadie a pie), operarios, autoelevador que frena ante jugadores, cinta, radio, reloj; sonidos en `SynthAudio`. | B |
-| 127 | Decidir el rol del depósito en Endless: ahí la pizarra no asigna pedidos (`post_orders(0)`), así que sólo sirve para estaciones y carga; ¿se mantiene completo o conviene uno reducido? (Validarlo jugando queda para el playtesting final.) | A |

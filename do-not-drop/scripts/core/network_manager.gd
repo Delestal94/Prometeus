@@ -65,14 +65,57 @@ var world_house_count: int = 0
 ## profile doesn't get a say. Only read while world_seed != 0; solo play asks
 ## UnlockManager directly.
 var world_locked_traps: Array = []
-## How long a joiner waits for the host to hand over that seed before giving
-## up. Joining without it would build the wrong world, so this is a real
-## failure to report, not something to paper over.
-const JOIN_HANDSHAKE_TIMEOUT: float = 8.0
+## How long a joiner may take to receive the host's world and load it before
+## the connection is dropped (Godot's auth timeout). Long enough for a slow
+## level load, short enough that a host on another version doesn't leave the
+## joiner staring at "Conectando…" for a minute.
+const JOIN_HANDSHAKE_TIMEOUT: float = 20.0
 var _awaiting_handshake: bool = false
+## The level the session plays in. The host records it whenever its own
+## level is up, so a joiner arriving mid-reload still gets the right one.
+var session_scene: String = ""
+const DEFAULT_LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
+const LEVEL_SCENES: Array[String] = ["res://scenes/gameplay/level_base.tscn", "res://scenes/gameplay/level_endless.tscn"]
+
+## Host only: peers whose copy of the current level is loaded. Players are
+## only spawned to (and their state only sent to) those, so a host restart
+## -- everyone reloads, each at their own pace -- never sends a spawn to a
+## level that isn't there yet. The host itself always counts.
+var _ready_peers: Array[int] = [HOST_ID]
+## A peer's level is up and can take spawns and the session's state (host).
+signal peer_level_ready(peer_id: int)
+## Why the last session ended, for the menu to show once it's back up (a
+## failure while in a level has only the level's overlay listening).
+var _failure_message: String = ""
 
 var _steam: Object = null
 var _steam_ready: bool = false
+const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
+## A Steam lobby to join as soon as the menu is up: an invite accepted from
+## outside the menu, or the game launched by one (+connect_lobby <id>).
+var _pending_lobby: int = 0
+
+
+## Steam starts with the game, not with the first "Crear sala": until it was
+## initialised Steam didn't know the game was open, so a friend showed as
+## not playing, couldn't be invited, and "Unirse a la partida" from the
+## friends list went nowhere -- they had to press "Crear sala" first just to
+## be found. Headless runs (tests, CI) leave the local Steam client alone.
+func _ready() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	steam_available()
+	var args: PackedStringArray = OS.get_cmdline_args()
+	var at: int = args.find("+connect_lobby")
+	if at >= 0 and at + 1 < args.size():
+		_pending_lobby = int(args[at + 1])
+
+
+## The main menu asks once it's ready; 0 means nothing to join.
+func take_pending_lobby() -> int:
+	var lobby: int = _pending_lobby
+	_pending_lobby = 0
+	return lobby
 
 
 func _process(_delta: float) -> void:
@@ -143,18 +186,37 @@ func join_session(target: String, port: int = DEFAULT_PORT) -> Error:
 
 
 func leave_session() -> void:
+	_end_session()
+	roster_changed.emit(peer_ids.duplicate())
+
+
+## Everything a session set up, undone: the next solo run must not keep
+## building the old room's world (its seed, house count, locked traps), and
+## Steam must not keep us in its lobby. The peer becomes an offline one, not
+## null: with none at all every authority check spammed "No multiplayer peer
+## is assigned" for as long as the level stayed up.
+func _end_session() -> void:
+	session_scene = ""
 	world_seed = 0
 	world_house_count = 0
 	world_locked_traps = []
 	_awaiting_handshake = false
+	_restart_pending = false
+	_ready_peers = [HOST_ID]
 	if lobby_id != 0 and _steam != null:
 		_steam.call(&"leaveLobby", lobby_id)
-		lobby_id = 0
-	if multiplayer.multiplayer_peer != null:
+	lobby_id = 0
+	if multiplayer.multiplayer_peer != null and multiplayer.multiplayer_peer is not OfflineMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
-	multiplayer.multiplayer_peer = null
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	peer_ids = [HOST_ID]
-	roster_changed.emit(peer_ids.duplicate())
+
+
+## The reason the last session ended, once (the menu shows it when it's back).
+func take_failure_message() -> String:
+	var message: String = _failure_message
+	_failure_message = ""
+	return message
 
 
 # --- ENet ------------------------------------------------------------------
@@ -268,11 +330,32 @@ func _on_lobby_joined(joined_lobby_id: int, _permissions: int, _locked: bool, re
 		return  # The host already made its peer in _on_lobby_created.
 	var peer: Object = ClassDB.instantiate(&"SteamMultiplayerPeer")
 	peer.call(&"create_client", owner_id, 0)
+	# A client only has a connection to the host, so everything it sends to
+	# another client (its own movement, above all) has to go through the host.
+	# With relay off on this side, Godot tried to send it straight to the
+	# other client, and those packets were dropped: from three players up,
+	# each client saw the others stuck where they spawned, a metre in the air,
+	# and the boxes they carried floating on their own.
+	peer.set(&"server_relay", true)
 	multiplayer.multiplayer_peer = peer as MultiplayerPeer
 
 
+## Accepting an invite (or "Unirse a la partida") works from anywhere: in the
+## menu it joins right away; playing solo or in another room, that's left
+## and the menu takes the join over, since it's what loads the host's level.
 func _on_join_requested(invited_lobby_id: int, _friend_id: int) -> void:
-	join_session(str(invited_lobby_id))
+	if invited_lobby_id == lobby_id and is_online():
+		return
+	if is_online():
+		leave_session()
+	transport = Transport.STEAM
+	var scene: Node = get_tree().current_scene
+	if scene != null and scene.scene_file_path == MAIN_MENU_SCENE:
+		scene.call(&"join_steam_lobby", invited_lobby_id)
+		return
+	_pending_lobby = invited_lobby_id
+	get_tree().paused = false
+	get_tree().change_scene_to_file.call_deferred(MAIN_MENU_SCENE)
 
 
 # --- Roster ----------------------------------------------------------------
@@ -281,6 +364,11 @@ func _on_join_requested(invited_lobby_id: int, _friend_id: int) -> void:
 ## before the tree is fully standing, and the MultiplayerAPI we'd reach that
 ## early isn't reliably the one in use later.
 func _ensure_signals() -> void:
+	multiplayer.auth_callback = _receive_auth
+	multiplayer.auth_timeout = JOIN_HANDSHAKE_TIMEOUT
+	if not multiplayer.peer_authenticating.is_connected(_peer_authenticating):
+		multiplayer.peer_authenticating.connect(_peer_authenticating)
+		multiplayer.peer_authentication_failed.connect(_auth_failed)
 	if multiplayer.peer_connected.is_connected(_on_peer_connected):
 		return
 	multiplayer.peer_connected.connect(_on_peer_connected)
@@ -290,65 +378,164 @@ func _ensure_signals() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 
+## On the host a peer only connects once its authentication completed, which
+## it does after loading the level (level_ready()): it can take spawns now.
 func _on_peer_connected(id: int) -> void:
 	if not peer_ids.has(id):
 		peer_ids.append(id)
+	if multiplayer.is_server() and not _ready_peers.has(id):
+		_ready_peers.append(id)
 	roster_changed.emit(peer_ids.duplicate())
 	if multiplayer.is_server():
-		_accept_joiner.rpc_id(id, world_seed, world_house_count, world_locked_traps)
-
-
-## The host's half of the join handshake. Until this lands the joiner has no
-## idea which world to build, so it deliberately hasn't loaded the level yet.
-@rpc("authority", "call_remote", "reliable")
-func _accept_joiner(seed_value: int, house_count_value: int, locked_traps: Array) -> void:
-	if not _awaiting_handshake:
-		return
-	_awaiting_handshake = false
-	world_seed = seed_value
-	world_house_count = house_count_value
-	world_locked_traps = locked_traps.duplicate()
-	session_ready.emit(false)
+		peer_level_ready.emit(id)
 
 
 func _on_peer_disconnected(id: int) -> void:
 	peer_ids.erase(id)
+	_ready_peers.erase(id)
 	roster_changed.emit(peer_ids.duplicate())
 
 
 func _on_connected_to_server() -> void:
-	# A client only knows its own id until the host tells it the rest; the
-	# level's spawner replicates the actual player nodes either way.
 	var id: int = multiplayer.get_unique_id()
-	peer_ids = [HOST_ID]
-	if id != HOST_ID:
+	if not peer_ids.has(HOST_ID):
+		peer_ids.append(HOST_ID)
+	if not peer_ids.has(id):
 		peer_ids.append(id)
 	roster_changed.emit(peer_ids.duplicate())
-	# session_ready waits for _accept_joiner(): loading the level before the
-	# host says which seed to use is what built a different world on every
-	# machine.
-	_awaiting_handshake = true
-	_fail_if_handshake_times_out()
 
 
-func _fail_if_handshake_times_out() -> void:
-	await get_tree().create_timer(JOIN_HANDSHAKE_TIMEOUT).timeout
-	if not _awaiting_handshake:
+func is_peer_ready(id: int) -> bool:
+	return not is_online() or id == HOST_ID or _ready_peers.has(id)
+
+
+# Hold scene replication until the joiner's level exists. Authentication
+# packets are the only traffic Godot permits before both sides complete_auth.
+func _peer_authenticating(id: int) -> void:
+	if multiplayer.is_server():
+		multiplayer.send_auth(id, var_to_bytes({"seed": world_seed,
+			"houses": world_house_count, "locked": world_locked_traps, "scene": _current_level_scene()}))
+	elif id != HOST_ID:
+		multiplayer.complete_auth(id)
+
+
+## The level to hand a joiner: the one up right now, else the last one this
+## host had up (it may be mid-reload), else the default.
+func _current_level_scene() -> String:
+	var scene: Node = get_tree().current_scene
+	var path: String = scene.scene_file_path if scene != null else ""
+	if path in LEVEL_SCENES:
+		return path
+	return session_scene if session_scene in LEVEL_SCENES else DEFAULT_LEVEL_SCENE
+
+
+func _receive_auth(id: int, data: PackedByteArray) -> void:
+	if multiplayer.is_server():
+		if data.get_string_from_utf8() == "ready":
+			multiplayer.complete_auth(id)
 		return
-	_awaiting_handshake = false
-	if multiplayer.multiplayer_peer != null:
-		multiplayer.multiplayer_peer.close()
-	multiplayer.multiplayer_peer = null
-	session_failed.emit("El anfitrión aceptó la conexión pero nunca mandó la partida. ¿Están en la misma versión del juego?")
+	if id != HOST_ID:
+		return
+	var state: Variant = bytes_to_var(data)
+	if not state is Dictionary or not state.has_all(["seed", "houses", "locked", "scene"]):
+		return
+	if String(state.scene) not in LEVEL_SCENES:
+		return
+	world_seed = int(state.seed)
+	world_house_count = int(state.houses)
+	world_locked_traps = state.locked
+	session_scene = String(state.scene)
+	# The joiner always loads the level first and only then says "ready"
+	# (level_ready(), from the level itself): completing before that let the
+	# host's spawns arrive at a menu and the joiner saw no players at all.
+	_awaiting_handshake = true
+	session_ready.emit(false)
+
+
+## Every level calls this once it's up (deferred from its _ready).
+func level_ready() -> void:
+	if not is_online():
+		return
+	if is_host():
+		var scene: Node = get_tree().current_scene
+		if scene != null and scene.scene_file_path in LEVEL_SCENES:
+			session_scene = scene.scene_file_path
+		if _restart_pending:
+			_restart_pending = false
+			_remote_restart.rpc(world_house_count)
+		return
+	if _awaiting_handshake:
+		_awaiting_handshake = false
+		multiplayer.send_auth(HOST_ID, "ready".to_utf8_buffer())
+		multiplayer.complete_auth(HOST_ID)
+		return
+	# Already in the session: back from a host restart.
+	_report_level_ready.rpc_id(HOST_ID)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _report_level_ready() -> void:
+	if not multiplayer.is_server():
+		return
+	var id: int = multiplayer.get_remote_sender_id()
+	if not peer_ids.has(id):
+		return
+	if not _ready_peers.has(id):
+		_ready_peers.append(id)
+	peer_level_ready.emit(id)
+
+
+# --- Restart -----------------------------------------------------------------
+
+## Set by begin_restart(), consumed by the host's reloaded level (level_ready).
+var _restart_pending: bool = false
+
+
+## Host only, right before reloading its level: every client reloads too,
+## once the host's new level is up (level_ready() sends it then, so nothing
+## is spawned into the old one). The crew may have grown since the level was
+## built, so the house count is decided afresh.
+func begin_restart() -> void:
+	if not is_online() or not is_host():
+		return
+	_restart_pending = true
+	_ready_peers = [HOST_ID]
+	world_house_count = 0
+
+
+## A client drops its run and reloads, then reports back (level_ready()).
+## Until now only the host reloaded: clients were left on the results screen,
+## behind a depot door only their copy had closed, unable to drive.
+@rpc("authority", "call_remote", "reliable")
+func _remote_restart(house_count_value: int) -> void:
+	world_house_count = house_count_value
+	var run: Node = get_node_or_null(^"/root/RunManager")
+	if run != null:
+		run.call(&"reset_run")
+	get_tree().paused = false
+	get_tree().reload_current_scene.call_deferred()
+
+
+func _auth_failed(_id: int) -> void:
+	if is_host():
+		return
+	_fail("No se pudo cargar la partida del anfitrión. Revisá que ambos tengan la misma versión.")
 
 
 func _on_connection_failed() -> void:
-	multiplayer.multiplayer_peer = null
-	session_failed.emit("La conexión falló.")
+	_fail("La conexión falló.")
 
 
+## The host is gone. The roster isn't announced as shrunk to "just us" any
+## more: that made the level think it was now the host and delete every
+## player, leaving a cameraless view behind the disconnect overlay.
 func _on_server_disconnected() -> void:
-	multiplayer.multiplayer_peer = null
-	peer_ids = [HOST_ID]
-	session_failed.emit("Se cortó la conexión con el anfitrión.")
-	roster_changed.emit(peer_ids.duplicate())
+	_fail("Se cortó la conexión con el anfitrión.")
+
+
+## Ends the session and says why, to whoever listens now (the menu, or the
+## level's overlay) and to the menu once it's back up, if it wasn't then.
+func _fail(reason: String) -> void:
+	_end_session()
+	_failure_message = reason
+	session_failed.emit(reason)

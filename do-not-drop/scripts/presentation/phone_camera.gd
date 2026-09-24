@@ -256,7 +256,10 @@ func subject_house() -> int:
 	var best_distance: float = PHOTO_RANGE
 	var origin: Vector3 = _camera.global_position
 	for house: Node in get_tree().get_nodes_in_group(&"delivery_house"):
-		if not bool(house.get(&"delivered")):
+		# A house's own `delivered` only flips on the host, where the doorbell
+		# is resolved; RunManager's record is relayed to every peer. Reading
+		# only the house told every client "no delivery here" at any door.
+		if not _was_delivered(house):
 			continue
 		var distance: float = origin.distance_to(house.call(&"porch_position"))
 		if distance < best_distance:
@@ -279,6 +282,16 @@ func _refresh_status() -> void:
 	_status_label.add_theme_color_override("font_color", MINT)
 
 
+## A box was actually handed over there -- a house the run drove past is
+## resolved as "missed", and there's nothing for a photo to prove.
+func _was_delivered(house: Node) -> bool:
+	var index: int = int(house.get(&"house_index"))
+	for entry: Dictionary in RunManager.deliveries:
+		if int(entry["house"]) == index:
+			return StringName(entry["outcome"]) != &"missed"
+	return bool(house.get(&"delivered")) and StringName(house.get(&"outcome")) != &"missed"
+
+
 func _already_photographed(house_index: int) -> bool:
 	for entry: Dictionary in RunManager.deliveries:
 		if int(entry["house"]) == house_index:
@@ -293,7 +306,9 @@ func shoot() -> void:
 	_busy = true
 	var index: int = subject_house()
 	var image: Texture2D = await _capture()
-	var accepted: bool = index >= 0 and RunManager.attach_delivery_photo(index)
+	# The host scores the run, so a client's photo has to be filed there;
+	# the host relays it back to everyone (this peer included).
+	var accepted: bool = index >= 0 and RunManager.submit_delivery_photo(index)
 	if accepted and image != null:
 		RunManager.delivery_photos[index] = image
 	_shutter.play()

@@ -42,7 +42,9 @@ func _initialize() -> void:
 	# not a bare mesh itself.
 	var body: Node3D = player.get_node(^"BodyVisual")
 	var offset: Vector3 = body.global_position - seat.global_position
-	_expect(offset.length() < 1.0 and offset.y < -0.2,
+	# The driver sits 0.62 m ahead of the eye marker so the arms reach the
+	# wheel (0febf9e): about 1.13 m from it in all.
+	_expect(offset.length() < 1.3 and offset.y < -0.2,
 		"BodyVisual sits at the seat, lower than the eye point (got offset %s)" % offset)
 
 	# Move the seat (as if the van itself drove off) and confirm the body

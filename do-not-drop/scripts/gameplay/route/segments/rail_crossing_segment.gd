@@ -74,7 +74,11 @@ func _build() -> void:
 	will_close = rng.randf() < CLOSE_CHANCE
 	if will_close and _is_online() and not _is_host():
 		# Joining mid-crossing: pick it up where the host's is.
-		_request_state.rpc_id(1)
+		if multiplayer.get_peers().has(1):
+			_request_state.rpc_id(1)
+		else:
+			multiplayer.connected_to_server.connect(
+				func() -> void: _request_state.rpc_id(1), CONNECT_ONE_SHOT)
 
 
 ## World-space points along the tracks where the ground should be level with

@@ -66,6 +66,9 @@ properties/17/replication_mode = 2
 properties/18/path = NodePath(".:paint_id")
 properties/18/spawn = true
 properties/18/replication_mode = 2
+properties/19/path = NodePath(".:controls_enabled")
+properties/19/spawn = true
+properties/19/replication_mode = 2
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_body"]
 friction = 0.7
@@ -147,7 +150,7 @@ script = ExtResource("2_input")
 script = ExtResource("6_presentation")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
-replication_interval = 0.05
+replication_interval = 0.0167
 replication_config = SubResource("Repl_vehicle")
 
 ; Collision follows the authored truck (assets/models/truck_reference_lowpoly.glb,
