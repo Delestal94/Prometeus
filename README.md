@@ -1,5 +1,7 @@
 # Prometeus
 
+[![Tests](https://github.com/Delestal94/Prometeus/actions/workflows/tests.yml/badge.svg)](https://github.com/Delestal94/Prometeus/actions/workflows/tests.yml)
+
 Proyecto de desarrollo de un videojuego indie (desarrollo en solitario, asistido por
 IA), con el objetivo de aplicar patrones de éxito observados en juegos de Steam hechos
 por 1-2 personas.
@@ -57,8 +59,10 @@ encadenando tipos de segmento (recta, badén, chicana, puente angosto, curva
 en S, ripio, zona de obras y curvas reales que doblan el rumbo del camino de
 verdad). Las casas se calculan al construir la ruta: una por pasajero, con
 mínimo de una si jugás solo; por eso la distancia total varía según la
-tripulación. En multijugador queda pendiente que el host comunique esa cantidad
-a todos los clientes, especialmente con más de dos jugadores o ingresos tardíos.
+tripulación. En multijugador la decide el host la primera vez que arma la ruta
+de la sesión y se la pasa a cada uno que se suma junto con la semilla, así que
+todos construyen las mismas casas (quien se suma después no agrega casas hasta
+una partida nueva).
 `CurveSegment` es el único tipo que cambia la dirección del
 camino; los demás siguen siendo obstáculos dentro de un carril recto.
 
@@ -137,7 +141,17 @@ del puntaje — entregas, vecinos sin atender, fotos y multiplicador — además
 
 ## Tests
 
-Las pruebas de lógica corren headless, sin abrir el editor. Reemplazá `<godot>` por la ruta a tu
+**La forma normal:** `tools/run-tests.sh` corre toda la batería headless en paralelo (~1 minuto)
+y muestra solo el resumen y las fallas; `tools/run-tests.sh depot traps` corre solo los tests
+cuyo nombre contiene esos textos. Después de clonar, `tools/setup-hooks.sh` activa el hook
+`pre-push`: cada `git push` con cambios de código corre la batería y no sube nada si falla.
+GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son
+parte de la batería (con Claude, los corre el agente `revisor-visual`).
+
+Para correr un test suelto a mano, sin abrir el editor, reemplazá `<godot>` por la ruta a tu
 ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 
 ```
@@ -181,8 +195,6 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
-<godot> --headless --path do-not-drop --script res://tests/test_settings.gd
-<godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
 <godot> --headless --path do-not-drop --script res://tests/test_legacy_user_data.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_dressing_assets.gd
@@ -190,6 +202,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_render_batching.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_assignment.gd
 <godot> --headless --path do-not-drop --script res://tests/test_depot.gd
+<godot> --headless --path do-not-drop --script res://tests/test_locked_traps.gd
+<godot> --headless --path do-not-drop --script res://tests/test_run_relay.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_mood.gd
 <godot> --headless --path do-not-drop --script res://tests/test_more_route_segments.gd
 <godot> --headless --path do-not-drop --script res://tests/test_truck_variant.gd
@@ -241,12 +255,6 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una
   sola foto por entrega, y la foto es lo que hace caer el reclamo del
   cliente al final (sin ella, el reclamo descuenta).
-- `test_world_seed` — que todos los peers construyan el **mismo** mundo: misma
-  semilla, misma ruta; semilla distinta, ruta distinta; y que jugar solo
-  (semilla 0) siga variando entre partidas.
-- `test_settings` — las opciones del jugador: que el volumen llegue al bus
-  de audio de verdad, que los valores se recorten en vez de dejar el juego
-  mudo o imposible de mirar, y que sobrevivan a cerrar el juego.
 - `test_world_seed` — que todos los peers construyan el **mismo** mundo: misma
   semilla, misma ruta; semilla distinta, ruta distinta; y que jugar solo
   (semilla 0) siga variando entre partidas.
@@ -348,7 +356,8 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   solo en su zona (faroles y paradas en el pueblo, fardos
   en el campo), la ruta pasa por más de un tipo de lugar, y la misma semilla
   arma exactamente el mismo mundo en todos los jugadores.
-- `test_house_assignment` — una casa por pasajero (jugadores − 1, mínimo 1), cada casa
+- `test_house_assignment` — una casa por pasajero (jugadores − 1, mínimo 1), en línea la
+  cantidad la fija el host una vez por sesión y el que se suma usa esa, cada casa
   espera la caja que le asignó la pizarra del depósito desde que carga el nivel (se ve
   en su cartel, con el estante), y con la caja equivocada el vecino la devuelve sin
   gastar la entrega.
@@ -358,12 +367,19 @@ máquina de desarrollo, semilla 4242: antes de optimizar 8,6 ms/frame promedio, 
   cobran una vez y el acolchado protege la carga, salir sin el pedido se avisa y el
   portón se cierra recién cuando el camión salió y no queda nadie a pie.
   Capturas del depósito (con ventana): `tests/render_depot.gd` → `user://depot_*.png`.
+- `test_locked_traps` — las trampas que el perfil todavía no desbloqueó (Líquido, Explosivo,
+  Hostil) no aparecen en el depósito, desbloquearlas las pone en los estantes, y en línea
+  manda la lista del host (viaja en el handshake con la semilla).
+- `test_run_relay` — en línea el cliente recibe del host el inicio de la partida (con el mismo
+  evento de ruta) y los resultados tal cual, los anota en su propio leaderboard y su perfil
+  cuenta la entrega; la plata del equipo no se paga dos veces.
 - `test_world_mood` — clima y hora del día: misma semilla, mismo clima para todos; semillas
   distintas cubren los 4 climas y las 3 horas; nunca se modifica el `Environment` compartido
   de la escena; la lluvia moja el asfalto y la noche sube los faros. Para ver uno a mano:
   `-- --mood=lluvia_noche` (soleado/nublado/lluvia/niebla × dia/atardecer/noche).
 - `test_more_route_segments` — loma (el camino sube y vuelve a nivel), túnel sólido e
-  iluminado, y el paso a nivel que baja barreras sólidas, deja pasar el tren y reabre.
+  iluminado, y el paso a nivel que baja barreras sólidas, deja pasar el tren y reabre;
+  quien se suma a mitad del cruce retoma la fase del host (barreras bajas, tren pasando).
 - `test_truck_variant` — la furgoneta ágil maneja distinto, la pintura cambia la carrocería
   sin tocar el material importado, ambas se replican y respetan los desbloqueos.
 - `test_spectator` — solo un pasajero sin caja que salvar puede pasar a la cámara de

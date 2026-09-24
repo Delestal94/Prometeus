@@ -1,0 +1,28 @@
+# Text is normalised to LF in the repo (it already is); each clone checks it
+# out with its own line endings.
+* text=auto
+
+# Shell scripts must stay LF even on Windows checkouts, or bash chokes on \r.
+*.sh text eol=lf
+.githooks/* text eol=lf
+
+# Binary assets: never diff or touch line endings.
+*.blend binary
+*.glb binary
+*.gltf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.wav binary
+*.ogg binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+*.so binary
+*.dll binary
+*.dylib binary
+*.zip binary
+*.exe binary
+*.res binary
+*.scn binary

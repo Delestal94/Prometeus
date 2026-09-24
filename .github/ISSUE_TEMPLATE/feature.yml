@@ -1,0 +1,21 @@
+name: Idea / tarea
+description: Una mecánica, contenido o mejora nueva
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Qué
+      description: Qué se quiere y qué problema del juego resuelve.
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Dominio
+      options: [Nacho (vehículo/ruta/ambientación), Slatex (jugador/paquetes/UI/progresión), Compartido]
+  - type: textarea
+    id: done
+    attributes:
+      label: Cuándo está terminada
+      description: Qué tiene que pasar (y qué test lo prueba) para darla por hecha.
