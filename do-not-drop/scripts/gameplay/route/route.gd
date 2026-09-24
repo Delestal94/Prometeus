@@ -77,11 +77,21 @@ const HOUSE_FRONT_CLEARANCE: float = 7.6
 ## Clear ground left between any part of a house and the asphalt's edge,
 ## checked against the WHOLE finished road: a bend right before or after a
 ## stop (or a later leg doubling back) can swing the road toward the house.
-const HOUSE_ROAD_MARGIN: float = 1.4
+## 3.0, was 1.4: the front yard needs room for the waiting house's sign and
+## mailbox (house_waiting_marker.gd) between the porch and the asphalt.
+const HOUSE_ROAD_MARGIN: float = 3.0
 const HOUSE_PUSH_STEP: float = 0.5
 const HOUSE_MAX_PUSH: float = 12.0
-## How far above the house's own roof its "CASA N" label floats.
-const HOUSE_LABEL_CLEARANCE: float = 1.0
+## How far above the house's own roof its "CASA N" label floats. 1.0 let the
+## roof's peak cut the second line (the ordered box) from the road.
+const HOUSE_LABEL_CLEARANCE: float = 1.8
+## Kept clear of trees and roadside props: the lines of sight from the road,
+## every SIGHT_LINE_STEP metres over the last SIGHT_LINE_LENGTH before a
+## house, to the house itself -- the truck must see it coming (N-501). They
+## follow the real road, so a bend just before the house is covered too.
+const SIGHT_LINE_LENGTH: float = 120.0
+const SIGHT_LINE_STEP: float = 30.0
+const SIGHT_LINE_RADIUS: float = 3.5
 
 ## How many segments in a row are allowed to leave the heading unchanged
 ## before a CurveSegment is forced -- this is the actual fix for "no quiero
@@ -160,6 +170,9 @@ var dresser: RouteDresser
 ## stand -- each house with its yard, plus the farmhouse's barn.
 ## RouteDresser reads these; see route_dresser.gd for the placement rules.
 var _clear_zones: Array[Vector3] = []
+## Lines of sight from the road to each house (see _clear_sight_lines()):
+## kept clear of trees and props, but not of road signs.
+var _sight_zones: Array[Vector3] = []
 const Terrain = preload("res://scripts/gameplay/route/route_terrain.gd")
 var terrain: Node3D
 var _segments: Array[RouteSegment] = []
@@ -222,7 +235,7 @@ static func plan_spine(session_seed: int, houses: int, avoid_tunnel_at_start: bo
 	var hard: Array[Script] = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment, RailCrossingSegment]
 	var leg_length_target: float = leg_target_length(houses)
 	var planned_total: float = leg_length_target * (houses + 1)
-	var state := {"distance": 0.0, "heading": 0.0, "last": null, "straight_streak": 0, "since_moment": 0.0}
+	var state := {"distance": 0.0, "heading": 0.0, "last": null, "straight_streak": 0, "since_moment": 0.0, "after_house": false}
 	var segments: Array[Dictionary] = []
 	var stops: Array[float] = []
 	for leg: int in range(houses + 1):
@@ -264,10 +277,12 @@ static func plan_spine(session_seed: int, houses: int, avoid_tunnel_at_start: bo
 			state.heading += turn
 			state.since_moment = 0.0 if entry.moment else float(state.since_moment) + length
 			state.last = script
+			state.after_house = false
 			state.straight_streak = 0 if script == CurveSegment else int(state.straight_streak) + 1
 		if to_house:
 			stops.append(state.distance)
 			state.since_moment = 0.0
+			state.after_house = true
 	return {"segments": segments, "house_distances": stops, "total": state.distance}
 
 
@@ -282,6 +297,9 @@ static func _plan_pick(rng: RandomNumberGenerator, pool: Array[Script], hard: Ar
 	# Nor a tunnel mouth right in front of the depot's door: its portal would
 	# stand against the forecourt and wall off the view of the building.
 	if avoid_tunnel_at_start and float(state.distance) < 1.0:
+		rules.append(func(s: Script) -> bool: return s != TunnelSegment)
+	# Nor right past a house: the portal stood against its yard and hid it.
+	if bool(state.after_house):
 		rules.append(func(s: Script) -> bool: return s != TunnelSegment)
 	var last: Script = state.last
 	if last != null:
@@ -343,6 +361,8 @@ func assign_packages(assignments: Array) -> void:
 		var entry: Array = assignments[index] if index < assignments.size() else []
 		house.assigned_package_id = StringName(entry[0]) if entry.size() > 0 else &""
 		house.assigned_label = String(entry[1]) if entry.size() > 1 else ""
+		if house.waiting_marker != null:
+			house.waiting_marker.set_order(house.assigned_label)
 		var label := get_node_or_null(NodePath("HouseNumber%d" % index)) as Label3D
 		if label != null:
 			label.text = "CASA %d" % (index + 1) if house.assigned_label.is_empty() else "CASA %d%s%s" % [index + 1, NEWLINE, house.assigned_label.to_upper()]
@@ -579,6 +599,7 @@ func _build_yard(house: DeliveryHouse, index: int) -> void:
 	if index % 2 == 1:
 		_yard_piece(yard, YARD_DOG_HOUSE, Vector3(-flip * (bounds.size.x * 0.5 + 0.8), 0.0, bounds.end.z - 0.4), PI, 0.7, false)
 	_clear_zones.append(Vector3(house.position.x, house.position.z, HOUSE_CLEAR_RADIUS))
+	_clear_sight_lines(house, (_house_anchors[index].cursor as Transform3D).origin)
 	# The farmhouse gets its barn beside it -- a farm, not a lone house.
 	if DeliveryHouse.HOUSE_VISUALS[posmod(house.visual_variant, DeliveryHouse.HOUSE_VISUALS.size())].ends_with("farmhouse.glb"):
 		# Turned a quarter, the barn's 12.7 m length runs sideways: 11 m out
@@ -587,6 +608,31 @@ func _build_yard(house: DeliveryHouse, index: int) -> void:
 		if barn != null:
 			var barn_at: Vector3 = to_local(barn.global_position)
 			_clear_zones.append(Vector3(barn_at.x, barn_at.z, 9.0))
+
+
+## Nothing between the arriving truck and the house: walks the road back
+## from the house's stop and clears a line from each sample to the house.
+func _clear_sight_lines(house: Node3D, stop: Vector3) -> void:
+	var nearest: int = 0
+	for index: int in range(_path_points.size()):
+		if _path_points[index].distance_squared_to(stop) < _path_points[nearest].distance_squared_to(stop):
+			nearest = index
+	var travelled: float = 0.0
+	var next_sample: float = SIGHT_LINE_STEP
+	var index: int = nearest
+	while index > 0 and travelled < SIGHT_LINE_LENGTH:
+		travelled += _path_points[index].distance_to(_path_points[index - 1])
+		index -= 1
+		if travelled < next_sample:
+			continue
+		next_sample += SIGHT_LINE_STEP
+		var from: Vector3 = _path_points[index]
+		var length: float = Vector2(house.position.x - from.x, house.position.z - from.z).length()
+		var along: float = 0.0
+		while along <= length:
+			var at: Vector3 = from.lerp(house.position, along / maxf(length, 0.01))
+			_sight_zones.append(Vector3(at.x, at.z, SIGHT_LINE_RADIUS))
+			along += SIGHT_LINE_RADIUS * 2.0
 
 
 func _yard_piece(yard: Node3D, path: String, local_position: Vector3, yaw: float, footprint: float, on_porch: bool) -> Node3D:
@@ -720,7 +766,7 @@ func _finish_terrain() -> void:
 	# One draw from the session RNG after the whole road exists, so dressing
 	# can never change the road itself -- and every peer gets the same draw.
 	dresser = RouteDresser.new(self, terrain, _rng.randi())
-	dresser.dress(_segments, houses, _clear_zones)
+	dresser.dress(_segments, houses, _clear_zones, _sight_zones)
 	if batch_dressing:
 		var yards: Array = houses.map(func(house: DeliveryHouse) -> Node: return house.get_node_or_null(^"Yard"))
 		DressingBatcher.bake(self, _segments, yards)

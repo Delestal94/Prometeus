@@ -66,6 +66,9 @@ var assigned_package_id: StringName = &""
 var assigned_label: String = ""
 signal wrong_package_offered(expected_label: String)
 var doorbell: DoorbellPoint
+## Porch light, mailbox and order sign: tells the crew from the road that this
+## house is still waiting, and for which box (N-501).
+var waiting_marker: HouseWaitingMarker
 var _resident: Node3D
 var _bell_player: AudioStreamPlayer3D
 var _reaction_player: AudioStreamPlayer3D
@@ -202,6 +205,13 @@ func _build_house() -> void:
 	add_child(doorbell)
 	_build_doorbell_visual()
 	doorbell.rung.connect(_on_doorbell_rung)
+	waiting_marker = HouseWaitingMarker.new()
+	waiting_marker.name = "WaitingMarker"
+	waiting_marker.house_index = house_index
+	waiting_marker.house_bounds = _visual_bounds()
+	add_child(waiting_marker)
+	waiting_marker.set_number(house_index + 1)
+	waiting_marker.set_order(assigned_label)
 
 
 func _build_doorbell_visual() -> void:
@@ -234,6 +244,20 @@ func _tint_first_mesh(node: Node, color: Color) -> void:
 		return
 	for child: Node in node.get_children():
 		_tint_first_mesh(child, color)
+
+
+## The house model's extent in this node's space, porch and eaves included.
+func _visual_bounds() -> AABB:
+	var visual := get_node_or_null(^"HouseVisual") as Node3D
+	if visual == null:
+		return HouseWaitingMarker.DEFAULT_BOUNDS
+	var result := AABB()
+	var first: bool = true
+	for child: Node in visual.find_children("*", "VisualInstance3D", true, false):
+		var box: AABB = (global_transform.affine_inverse() * (child as Node3D).global_transform) * (child as VisualInstance3D).get_aabb()
+		result = box if first else result.merge(box)
+		first = false
+	return HouseWaitingMarker.DEFAULT_BOUNDS if first else result
 
 
 ## Where a photo of this delivery should be aimed: the porch, where the

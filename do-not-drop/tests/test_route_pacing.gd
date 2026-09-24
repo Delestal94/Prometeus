@@ -7,7 +7,8 @@ extends SceneTree
 ##   - never two hard segments back to back;
 ##   - the last QUIET_ZONE metres before every house are straight or a gentle
 ##     bend, so nothing throws a box while the crew gets out;
-##   - hard segments get likelier from the first house to the last.
+##   - hard segments get likelier from the first house to the last;
+##   - no tunnel starts right past a house (its portal hid the yard).
 ## And one real build, to check the road it lays is that plan.
 
 const Route = preload("res://scripts/gameplay/route/route.gd")
@@ -38,6 +39,8 @@ func _run() -> void:
 		var previous_hard: bool = false
 		for index: int in range(segments.size()):
 			var segment: Dictionary = segments[index]
+			if segment.script == TunnelSegment and stops.has(segment.start):
+				_expect(false, "Seed %d: a tunnel mouth right past the house at %.0f m" % [seed_value, segment.start])
 			if segment.moment:
 				events.append([segment.start, segment.start + segment.length])
 			if segment.hard and previous_hard:

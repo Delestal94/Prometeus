@@ -110,6 +110,10 @@ var _seed: int
 var _noise := FastNoiseLite.new()
 var _houses: Array = []
 var _clear_zones: Array[Vector3] = []
+## Like _clear_zones, but only for what would hide a house from the road
+## (route.gd's sight lines, N-501): trees and props stay out, while a road
+## sign (thin, and there to be seen) may stand in one.
+var _sight_zones: Array[Vector3] = []
 var _grid: Dictionary = {}
 var _same_kind: Dictionary = {}
 var _rules: Array[Dictionary] = []
@@ -233,9 +237,10 @@ func _rule(fields: Dictionary) -> Dictionary:
 ## Runs everything, in priority order. `segments` must already sit on the
 ## finished terrain; `houses` are DeliveryHouse nodes whose yards were laid
 ## out by route.gd and get validated here.
-func dress(segments: Array, houses: Array, clear_zones: Array[Vector3]) -> void:
+func dress(segments: Array, houses: Array, clear_zones: Array[Vector3], sight_zones: Array[Vector3] = []) -> void:
 	_houses = houses
 	_clear_zones = clear_zones
+	_sight_zones = sight_zones
 	# Yards first: their pieces live inside their own house's cleared zone,
 	# so they skip that check -- then the house claims its footprint.
 	for house: Node3D in houses:
@@ -486,7 +491,7 @@ func _place_sign(segment: RouteSegment, path: String, side: float, distance: flo
 	for lateral: float in [SIGN_LATERAL, SIGN_LATERAL + 0.9, SIGN_LATERAL + 1.9]:
 		var xform: Transform3D = slot * Transform3D(basis, Vector3(side * lateral, 0.0, along))
 		if _try_place(segment, "RoadsideDressing", path, xform,
-				{"id": id, "radius": 0.5, "clearance": 6.8, "max_slope": 1.0, "solid": true, "tilt": true}) != null:
+				{"id": id, "radius": 0.5, "clearance": 6.8, "max_slope": 1.0, "solid": true, "tilt": true, "see_through": true}) != null:
 			return
 
 
@@ -603,6 +608,9 @@ func _try_place(segment: RouteSegment, group_name: String, path: String, xform: 
 	var footprint: float = float(fields.get("footprint", radius))
 	if _misfit(p, radius, float(fields.get("clearance", 7.0)), float(fields.get("max_slope", 0.35)), true, id, min_same, footprint) != &"":
 		return null
+	if not bool(fields.get("see_through", false)) and _in_zones(_sight_zones, p, footprint):
+		_reject(id, &"sight_line")
+		return null
 	var node := _instantiate(path)
 	if node == null:
 		return null
@@ -663,10 +671,20 @@ func _misfit(p: Vector3, radius: float, clearance: float, max_slope: float, in_w
 
 
 func _in_clear_zone(p: Vector3, radius: float) -> bool:
-	for zone: Vector3 in _clear_zones:
+	return _in_zones(_clear_zones, p, radius)
+
+
+func _in_zones(zones: Array[Vector3], p: Vector3, radius: float) -> bool:
+	for zone: Vector3 in zones:
 		if Vector2(p.x - zone.x, p.z - zone.y).length() < zone.z + radius:
 			return true
 	return false
+
+
+func _reject(id: StringName, reason: StringName) -> void:
+	if not rejected_counts.has(id):
+		rejected_counts[id] = {}
+	rejected_counts[id][reason] = int(rejected_counts[id].get(reason, 0)) + 1
 
 
 func _near_same(p: Vector3, id: StringName, distance: float) -> bool:
