@@ -747,7 +747,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ### S-804 · Nada anunciado queda colgado — A · `Sol · high` · Aviso: no
 
-- [ ] Test `tests/test_no_dangling_state.gd`: al terminar una partida, `RouteEventManager` no tiene evento
+- [x] (commit `4766801`) Test `tests/test_no_dangling_state.gd`: al terminar una partida, `RouteEventManager` no tiene evento
   activo, `ShopVoteManager.active` es falso fuera del depósito, ninguna caja queda con `occupied_by` de un
   jugador que ya no existe. Es el test que hubiera detectado S-101.
 
