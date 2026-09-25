@@ -12,9 +12,10 @@ const STOP_SECONDS: float = 1.0
 const DELIVERY_MAX_SPEED: float = 1.5
 ## Wedged: the pedal is down and the truck doesn't move (high-centred on an
 ## obstacle with its driven wheels hanging, N-803). Same rule as Endless;
-## stopping at a house never counts, since nobody is on the pedal there.
+## legitimate stops at the depot and houses never count.
 const STUCK_SPEED: float = 0.3
 const STUCK_SECONDS: float = 6.0
+const HOUSE_STOP_RADIUS: float = 18.0
 @onready var route: Node3D = $World/Route
 var stopped_seconds: float = 0.0
 var stuck_seconds: float = 0.0
@@ -99,14 +100,29 @@ func _physics_process(delta: float) -> void:
 		return
 	_check_lost_cargo()
 	_update_tipped(delta)
-	var speed: float = vehicle.linear_velocity.length()
-	if absf(vehicle.engine_force) > 0.0 and speed < STUCK_SPEED:
+	if _should_count_as_stuck():
 		stuck_seconds += delta
-	elif speed > 1.0:
+	else:
 		stuck_seconds = 0.0
 	if tipped_seconds > 4.0:
 		RunManager.finish_run(false, "La camioneta volcó. Tomá las curvas más despacio.")
 	elif vehicle.global_position.y < -8.0 or route.distance_from_path(vehicle.global_position) > 42.0:
 		RunManager.finish_run(false, "Te saliste de la ruta. Reiniciá para intentarlo de nuevo.")
-	elif stuck_seconds > STUCK_SECONDS:
+	elif stuck_seconds >= STUCK_SECONDS:
 		RunManager.finish_run(false, "La camioneta quedó atascada. Reiniciá para intentarlo de nuevo.")
+
+
+func _should_count_as_stuck() -> bool:
+	if vehicle.linear_velocity.length() >= STUCK_SPEED or absf(vehicle.engine_force) <= 0.0:
+		return false
+	if int(vehicle.get(&"driver_peer_id")) == 0:
+		return false
+	var depot_position: Vector3 = depot.to_local(vehicle.global_position)
+	if absf(depot_position.x) <= Depot.HALF_WIDTH + 2.0 \
+			and depot_position.z > Depot.TRUCK_CLEAR_Z \
+			and depot_position.z < Depot.DEPTH + 2.0:
+		return false
+	for house: Node in route.get(&"houses"):
+		if is_instance_valid(house) and vehicle.global_position.distance_to((house as Node3D).global_position) <= HOUSE_STOP_RADIUS:
+			return false
+	return true

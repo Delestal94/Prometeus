@@ -625,6 +625,14 @@ Slatex agregó `test_crew_campaign_save.gd` a la lista compartida de pruebas de
 `scripts/core/safe_json.gd`; no cambia firmas de la zona compartida. Hacer
 `git pull` tras el aviso de push antes de editar la misma sección del README.
 
+## Aviso S-203 · 2026-09-25
+
+Slatex amplió la detección de camioneta atascada de `level_base.gd`, sobre la base
+agregada por N-803. El contador ahora se reinicia en el depósito, junto a una casa y
+cuando no hay conductor, aunque todavía quede fuerza de motor del frame anterior.
+No cambia firmas compartidas. `test_stuck_detection.gd` cubre las tres exclusiones
+además del bloqueo real contra un obstáculo.
+
 ## Cómo se armaron las 200 tareas
 
 Las primeras ~70 de cada lista salen directo de los ítems pendientes de

@@ -28,6 +28,20 @@ func _run() -> void:
 		van.call(&"set_controls", 0.0, 0.0, true)
 		await physics_frame
 	_expect(bool(manager.get(&"is_running")), "Parked with nobody on the pedal, the run goes on (stuck %.1f s)" % float(level.get(&"stuck_seconds")))
+
+	# Even with drive force requested, the watchdog ignores the places where
+	# stopping is part of the delivery loop, plus a van with nobody driving.
+	van.set(&"controls_enabled", false)
+	van.set(&"engine_force", -100.0)
+	van.set(&"driver_peer_id", int(network.call(&"local_id")))
+	_expect(not bool(level.call(&"_should_count_as_stuck")), "Trying to leave the depot does not count as stuck")
+	var house := (level.get(&"route").get(&"houses") as Array)[0] as Node3D
+	van.global_position = house.global_position
+	_expect(not bool(level.call(&"_should_count_as_stuck")), "Stopping beside a delivery house does not count as stuck")
+	var depot := level.get(&"depot") as Node3D
+	van.global_position = depot.to_global(Vector3(0.0, Depot.TRUCK_BAY.y, Depot.TRUCK_CLEAR_Z - 15.0))
+	van.set(&"driver_peer_id", 0)
+	_expect(not bool(level.call(&"_should_count_as_stuck")), "A stopped van with no driver does not count as stuck")
 	await _free_level(level)
 
 	# Pedal down against a wall it can't move: ends as stuck.
