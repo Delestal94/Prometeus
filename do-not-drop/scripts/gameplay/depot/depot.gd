@@ -20,6 +20,7 @@ extends Node3D
 ## without a message; the door and purchases are decided by the host.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
 
 signal door_closed
 
@@ -565,6 +566,7 @@ func _build_structure() -> void:
 	_build_staging(kit)
 	_build_exterior(kit)
 	kit.commit("Depot")
+	_build_contact_shadows()
 
 
 func _build_floor_markings(kit: DepotKit) -> void:
@@ -1052,6 +1054,30 @@ func _build_exterior(kit: DepotKit) -> void:
 		mesh.size = Vector3(0.12, 0.006, 8.4)
 		kit.add_mesh(mesh, Transform3D(Basis.IDENTITY, Vector3(x, bay_y, -4.8)), yellow, false)
 	_floor_text("A LA RUTA", Vector3(0.0, 0.0, -6.2), 0.0, 90, Color(PAPER, 0.85))
+
+
+## Soft dark patches where heavy things meet the floor (tareas de Nacho
+## N-308.2; no SSAO on GL Compatibility): the cars outside, the dumpster,
+## the pallets waiting to be put away and the stacks of empty ones.
+## [centre, footprint (x by z), band half-width, opacity]
+const CONTACT_SHADOWS: Array = [
+	[Vector3(-18.5, 0.0, -5.2), Vector2(4.4, 1.8), 0.5, 0.55],
+	[Vector3(-11.8, 0.0, -5.4), Vector2(4.8, 2.0), 0.5, 0.55],
+	[Vector3(17.8, 0.0, -2.0), Vector2(2.0, 1.2), 0.4, 0.5],
+	[Vector3(17.6, 0.0, -5.6), Vector2(1.2, 1.0), 0.35, 0.45],
+	[Vector3(-5.2, 0.0, 27.6), Vector2(1.2, 1.0), 0.35, 0.45],
+	[Vector3(-3.4, 0.0, 27.6), Vector2(1.2, 1.0), 0.35, 0.45],
+	[Vector3(-5.2, 0.0, 29.3), Vector2(1.2, 1.0), 0.35, 0.45],
+	[Vector3(-1.4, 0.0, 31.3), Vector2(1.2, 1.0), 0.35, 0.45],
+]
+
+
+func _build_contact_shadows() -> void:
+	var holder := Node3D.new()
+	holder.name = "ContactShadows"
+	add_child(holder)
+	for patch: Array in CONTACT_SHADOWS:
+		ContactShadow.add(holder, (patch[0] as Vector3) + Vector3.UP * FLOOR_TOP, patch[1], patch[2], patch[3])
 
 
 func _build_door() -> void:

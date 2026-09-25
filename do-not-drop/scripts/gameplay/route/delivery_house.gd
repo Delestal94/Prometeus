@@ -15,6 +15,7 @@ class_name DeliveryHouse
 ## possible at all (currently isn't -- see the note in tareas-nacho.md).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
 const WALL := Color("9c8a6f")
 const ROOF := Color("6b4f3a")
 const DOOR := Color("46342a")
@@ -56,6 +57,11 @@ const HOUSE_COLLIDERS: Array = [
 	[[Vector3(6.0, 5.6, 5.0), Vector3(0.0, 2.8, 0.0)]],
 	[[Vector3(7.0, 3.2, 4.6), Vector3(0.0, 1.6, 0.0)], [Vector3(2.6, 2.8, 3.4), Vector3(2.24, 1.4, 3.22)]],
 ]
+
+## The contact shadow around each house's walls: a band this wide either
+## side of the wall line.
+const HOUSE_SHADOW_MARGIN: float = 0.9
+const HOUSE_SHADOW_OPACITY: float = 0.7
 
 signal resolved(outcome: StringName, package_id: StringName)  # see OUTCOMES below
 
@@ -189,6 +195,9 @@ func _build_house() -> void:
 	add_child(body)
 	var variant: int = posmod(visual_variant, HOUSE_VISUALS.size())
 	for volume: Array in HOUSE_COLLIDERS[variant]:
+		# Where the walls meet the ground, a soft dark band (N-308.2).
+		ContactShadow.add(self, Vector3((volume[1] as Vector3).x, 0.0, (volume[1] as Vector3).z),
+			Vector2((volume[0] as Vector3).x, (volume[0] as Vector3).z), HOUSE_SHADOW_MARGIN, HOUSE_SHADOW_OPACITY)
 		var collider := CollisionShape3D.new()
 		var box_shape := BoxShape3D.new()
 		box_shape.size = volume[0]

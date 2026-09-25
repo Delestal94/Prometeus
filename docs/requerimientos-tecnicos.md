@@ -47,9 +47,11 @@ Early Access (docs/tareas-nacho.md N-308, antes #34).
 - **Qué se pierde:** SSAO, SSIL, SSR, SDFGI, niebla volumétrica y motion blur, que solo
   existen en Forward+. Activarlos en Compatibility no da error: simplemente no hace nada.
 - **Cómo se compensa la oclusión ambiental:** oclusión horneada en los colores de vértice
-  de los modelos (script de Blender, al exportar) y sombras de contacto falsas (un decal
-  oscuro y difuso) bajo autos estacionados, casas y cajas apiladas. Las dos son baratas
-  en cualquier GPU.
+  de los modelos (script de Blender, al exportar) y sombras de contacto falsas bajo autos
+  estacionados, casas y cajas apiladas. Las dos son baratas en cualquier GPU. Las sombras
+  de contacto ya están (N-308.2, `scripts/presentation/contact_shadow.gd`): Compatibility
+  tampoco tiene nodos `Decal`, así que son una malla plana sin luz, con una franja que se
+  esfuma en metros alrededor de la base; en la ruta cada vértice se apoya en el terreno.
 - **Cuándo revisarlo:** solo si, con el juego ya en Early Access, las mediciones de
   N-204 muestran margen de sobra en el hardware objetivo y hay un efecto de Forward+ que
   se note en capturas. Cambiar de renderer obliga a volver a revisar shaders

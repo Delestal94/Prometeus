@@ -1,7 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
 > Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 y M2 cerrados; M3 salvo
-> N-208 y N-209 (en espera); de M4, N-106, N-107, N-302, N-404 y N-405; además N-307, N-804, N-903, N-904.
+> N-208 y N-209 (en espera); de M4, N-106, N-107, N-302, N-308.2, N-404 y N-405; además N-307, N-804, N-903, N-904.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -336,8 +336,12 @@ Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
   y sombras de contacto falsas bajo autos y casas (decal oscuro).
   - [ ] **N-308.1** Oclusión horneada en colores de vértice al exportar los modelos (script de Blender,
     agente `modelador-blender`).
-  - [ ] **N-308.2** Sombras de contacto falsas (decal oscuro y difuso) bajo autos estacionados, casas y
-    cajas apiladas.
+  - [x] **N-308.2** Sombras de contacto falsas (decal oscuro y difuso) bajo autos estacionados, casas y
+    cajas apiladas. `presentation/contact_shadow.gd`: sin `Decal` en Compatibility, es una malla 4×4 sin luz
+    con el desvanecido por vértice, en metros (sólida desde `margen` adentro de la huella, nada a `margen`
+    afuera). Autos estacionados de la ruta (cada vértice sobre el terreno: el auto se hunde al asentarse y
+    una mancha colgada de él quedaba enterrada), casas (una por bloque de paredes) y en el depósito autos,
+    contenedor y pallets. Los fardos/cajones de campo no: el camión los voltea. Test `test_contact_shadows`.
 - [x] Registrar la decisión y su por qué en `docs/requerimientos-tecnicos.md` §1. Cerrar la fila #60 de
   `especificaciones-visuales.md`. (`0c7f0f1`)
 
@@ -368,7 +372,7 @@ Hoy hay una sola pista (`mus_ingame_loop.ogg`).
   licencia al lado del archivo.
 - [ ] `scripts/presentation/menu_music.gd` autocontenido; `main_menu.gd` solo lo instancia (aviso).
 
-### N-404 · Mezcla medida del dominio — A · `Opus 5.5 · high` · Aviso: no · **[x]**
+### N-404 · Mezcla medida del dominio — A · `Opus 5.5 · high` · Aviso: no · **[x] `e9a89db`**
 
 Cierra el #83 viejo sin depender del oído.
 

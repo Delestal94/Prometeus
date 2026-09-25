@@ -178,6 +178,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_trap_visual_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_audio.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_audio_levels.gd
+<godot> --headless --path do-not-drop --script res://tests/test_contact_shadows.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
 <godot> --headless --path do-not-drop --script res://tests/test_screen_fade.gd
 <godot> --headless --path do-not-drop --script res://tests/test_camera_polish.gd
@@ -539,6 +540,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_score_breakdown` — el desglose de resultados siempre suma el puntaje mostrado.
 - `test_endless_difficulty` — el endless se endurece con la distancia sin encadenar tres
   tramos difíciles.
+- `test_contact_shadows` — las sombras de contacto falsas (no hay SSAO ni `Decal` en GL
+  Compatibility): una franja que se esfuma en metros alrededor de la huella; cada auto
+  estacionado de la ruta tiene la suya apoyada sobre el terreno vértice por vértice (nunca
+  enterrada), cada casa una por bloque de paredes, y el depósito bajo sus autos, el contenedor
+  y los pallets.
 - `test_render_batching` — que el horneado del decorado para render
   (`dressing_batcher.gd`, 2026-09-23) sea solo eso: la misma semilla armada
   con piezas sueltas y horneada da exactamente las mismas piezas en las

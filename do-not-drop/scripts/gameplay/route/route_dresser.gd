@@ -46,6 +46,10 @@ const MAX_FOOTPRINT: float = 8.0
 ## Terrain.nearest() returns 4x its HALO when a point has no road tile
 ## nearby at all -- i.e. there's no ground there to stand on.
 const NO_TERRAIN_DISTANCE: float = 250.0
+## Fake contact shadows (presentation/contact_shadow.gd): how far the soft
+## band reaches in and out of a parked car's footprint.
+const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
+const CONTACT_SHADOW_MARGIN: float = 0.6
 
 const PROPS: String = "res://assets/models/environment/props/"
 const FOREST: String = "res://assets/models/environment/forest/"
@@ -166,6 +170,7 @@ func _init(route: Node3D, terrain: Node, seed_value: int) -> void:
 ##   scale      (min, max) uniform scale     solid     others must keep out of its footprint
 ##   tilt       lean with the ground         min_same  keep this far from another of the same rule
 ##   group      node that holds it under the segment
+##   contact_shadow  opacity of a soft dark patch under it (N-308.2)
 func _build_rules() -> Array[Dictionary]:
 	return [
 		_rule({"id": &"landmark", "group": "LandmarkDressing",
@@ -180,7 +185,7 @@ func _build_rules() -> Array[Dictionary]:
 				"res://assets/models/vehicles/sm_vehicle_parked_sedan_refined.glb"],
 			"density": {Zone.VILLAGE: 0.55, Zone.COUNTRYSIDE: 0.2, Zone.FOREST: 0.06}, "spacing": 40.0,
 			"lateral": Vector2(12.0, 14.5), "radius": 2.4, "clearance": 9.5, "max_slope": 0.18,
-			"facing": Facing.ROAD, "tilt": true, "min_same": 22.0}),
+			"facing": Facing.ROAD, "tilt": true, "min_same": 22.0, "contact_shadow": 0.55}),
 		_rule({"id": &"village_furniture",
 			"paths": [PROPS + "sm_env_prop_street_lamp_refined.glb", PROPS + "sm_env_prop_bench.glb",
 				PROPS + "sm_env_prop_mailbox.glb", PROPS + "sm_env_prop_fire_hydrant.glb"],
@@ -781,6 +786,8 @@ func _try_place(segment: RouteSegment, group_name: String, path: String, xform: 
 	node.transform = xform
 	_group(segment, group_name).add_child(node)
 	_settle(node, p, bool(fields.get("tilt", false)) or path.get_file() in LEAN_MODELS)
+	if fields.has("contact_shadow"):
+		_lay_contact_shadow(segment, node, float(fields.contact_shadow))
 	node.set_meta(&"rule", id)
 	node.set_meta(&"reach", radius)
 	node.set_meta(&"footprint", footprint)
@@ -914,6 +921,28 @@ func _lean_with_ground(node: Node3D, p: Vector3, contacts: PackedVector3Array) -
 	var rise_z: float = _terrain.height_at(p + forward * reach.y) - _terrain.height_at(p - forward * reach.y)
 	node.rotate_object_local(Vector3.FORWARD, -atan(rise_x / (2.0 * reach.x)))
 	node.rotate_object_local(Vector3.RIGHT, -atan(rise_z / (2.0 * reach.y)))
+
+
+## A soft dark band where `node` meets the ground (N-308.2), draped over the
+## terrain vertex by vertex: the piece itself sinks a few cm into the ground
+## when settled (SINK_RANGE), so a patch hung from it would be buried. Laid
+## after settling (it isn't part of what stands on the ground) and in a group
+## of its own, not under the car: DressingBatcher.bake() shares one mesh per
+## model, and each car's ground is its own. (merge_segment_geometry() still
+## folds the bands into the segment's merged mesh, vertices where they were
+## laid; the meta then points at a freed node.) Knockable pieces get none --
+## the patch would fly off with them.
+func _lay_contact_shadow(segment: Node3D, node: Node3D, opacity: float) -> void:
+	var bounds: AABB = _mesh_bounds(node)
+	var in_route: Transform3D = _route.global_transform.affine_inverse() * node.global_transform
+	var scale: Vector3 = in_route.basis.get_scale()
+	var frame := Transform3D(in_route.basis.orthonormalized(), in_route * Vector3(bounds.get_center().x, 0.0, bounds.get_center().z))
+	var footprint := Vector2(bounds.size.x * scale.x, bounds.size.z * scale.z)
+	var band: ArrayMesh = ContactShadow.mesh(frame, footprint, CONTACT_SHADOW_MARGIN, func(point: Vector3) -> float: return _terrain.height_at(point))
+	var patch: MeshInstance3D = ContactShadow.instance(band, opacity)
+	_group(segment, "ContactShadows").add_child(patch, true)
+	patch.global_transform = _route.global_transform
+	node.set_meta(&"contact_shadow", patch)
 
 
 func _group(segment: Node3D, group_name: String) -> Node3D:
