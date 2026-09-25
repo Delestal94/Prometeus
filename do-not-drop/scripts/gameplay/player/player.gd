@@ -62,6 +62,7 @@ var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
 ## "Personajes" for its clips (Idle/Walk/Jump/PickUpPackage/Sit). One skinned
@@ -91,6 +92,17 @@ var _anim_player: AnimationPlayer = null
 ## ever computed on the owning peer (is_local()), same authority split as
 ## seat_node_path above.
 var anim_state: StringName = ANIM_IDLE
+## Presentation state authored by the owning peer, replicated with anim_state.
+## Walk was authored at 3.2 m/s; jump samples the real ascent/landing instead
+## of playing its crouch after the CharacterBody has already left the floor.
+var locomotion_speed: float = 0.0
+var jump_anim_time: float = 0.0
+var _jump_airborne: bool = false
+var _jump_landing_elapsed: float = -1.0
+var _carry_pose: Node3D
+var _pickup_elapsed: float = 2.0
+var _pickup_from: Transform3D = Transform3D.IDENTITY
+var _pickup_in_vehicle: bool = false
 ## While in the future (Time.get_ticks_msec()), a one-shot clip (Jump,
 ## PickUpPackage) is playing and the per-frame movement state (Idle/Walk)
 ## must not stomp over it.
@@ -254,6 +266,10 @@ func _build_body() -> void:
 			if _anim_player.has_animation(loop_clip):
 				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 		_anim_player.play(ANIM_IDLE)
+	_carry_pose = CarryPose.new()
+	_carry_pose.name = "CarryPose"
+	add_child(_carry_pose)
+	_carry_pose.setup(self, _find_skeleton(visual))
 
 
 func _set_body_layers(node: Node, layers: int) -> void:
@@ -375,12 +391,20 @@ func _process(delta: float) -> void:
 	var clip: StringName = anim_state if seat_node_path.is_empty() else ANIM_SIT
 	if _anim_player != null and _anim_player.current_animation != String(clip):
 		_anim_player.play(String(clip), 0.15)
+	if _anim_player != null:
+		if clip == ANIM_JUMP:
+			_anim_player.speed_scale = 0.0
+			_anim_player.seek(jump_anim_time, true)
+		else:
+			_anim_player.speed_scale = clampf(locomotion_speed / 3.2, 0.15, 1.5) if clip == ANIM_WALK else 1.0
 	if not is_local():
 		_apply_net_state()
 	elif not _seated:
 		_ride_frame_by_frame()
 	if not is_physics_interpolated_and_enabled():
 		_pose_seated_body(delta)
+	if _carry_pose != null:
+		_carry_pose.update_pose(carried_package, _pickup_elapsed, delta)
 
 
 ## A client's truck is teleported by the network whenever an update lands,
@@ -610,6 +634,7 @@ func _stop_driver_ik() -> void:
 
 func _physics_process(delta: float) -> void:
 	_package_hit_cooldown = maxf(0.0, _package_hit_cooldown - delta)
+	_pickup_elapsed += delta
 	# Remote players must also stop colliding while seated. Their input RPC
 	# is targeted, but their seat path is replicated to everyone.
 	if not is_local():
@@ -667,6 +692,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_update_ground_safety()
 	var ground_speed: float = Vector2(velocity.x, velocity.z).length()
+	locomotion_speed = ground_speed
+	_update_jump_animation(delta, ground_speed)
 	_apply_head_bob(delta, ground_speed)
 	_update_movement_anim(ground_speed)
 	_apply_context_fov(delta)
@@ -796,6 +823,12 @@ func _apply_head_bob(delta: float, ground_speed: float) -> void:
 ## anim_state a moment ago -- checked every physics frame but only actually
 ## writes (and re-replicates) anim_state when the target state changes.
 func _update_movement_anim(ground_speed: float) -> void:
+	# An interrupted pickup must not make a moving player slide on its
+	# planted crouch. The package lift and hand contact continue independently.
+	if anim_state == ANIM_PICKUP and ground_speed > 0.3 and _pickup_elapsed > 0.16:
+		_anim_lock_until_msec = 0
+	if anim_state == ANIM_JUMP and _jump_airborne:
+		return
 	if Time.get_ticks_msec() < _anim_lock_until_msec:
 		return
 	var next_state: StringName = ANIM_WALK if (ground_speed > 0.3 and is_on_floor()) else ANIM_IDLE
@@ -806,6 +839,32 @@ func _update_movement_anim(ground_speed: float) -> void:
 func _play_one_shot(clip: StringName, lock_ms: int) -> void:
 	anim_state = clip
 	_anim_lock_until_msec = Time.get_ticks_msec() + lock_ms
+	if clip == ANIM_JUMP:
+		_jump_airborne = true
+		_jump_landing_elapsed = -1.0
+		jump_anim_time = 0.0
+
+
+func _update_jump_animation(delta: float, ground_speed: float) -> void:
+	if anim_state != ANIM_JUMP:
+		# Also pose an unplanned fall from a ledge, without changing physics.
+		if not is_on_floor() and velocity.y < -1.0 and anim_state != ANIM_PICKUP:
+			_play_one_shot(ANIM_JUMP, JUMP_ANIM_LOCK_MS)
+		else:
+			return
+	if not is_on_floor():
+		_jump_airborne = true
+		_jump_landing_elapsed = -1.0
+		if velocity.y >= 0.0:
+			jump_anim_time = lerpf(0.0, 0.4, clampf(1.0 - velocity.y / JUMP_VELOCITY, 0.0, 1.0))
+		else:
+			jump_anim_time = lerpf(0.4, 0.84, clampf(-velocity.y / JUMP_VELOCITY, 0.0, 1.0))
+	else:
+		_jump_landing_elapsed = maxf(_jump_landing_elapsed, 0.0) + delta
+		jump_anim_time = minf(1.6, 0.9 + _jump_landing_elapsed)
+		if _jump_landing_elapsed >= (0.24 if ground_speed > 0.3 else 0.65):
+			_jump_airborne = false
+			_anim_lock_until_msec = 0
 
 
 func _apply_context_fov(delta: float) -> void:
@@ -876,6 +935,19 @@ func _update_carried_package() -> void:
 	# a direct call when this peer already is the host), since the package is
 	# host-authoritative and only it should ever move the real one.
 	var carry_transform := Transform3D(global_basis, _carry_position())
+	# The box waits for the reaching hands, then follows the lift instead of
+	# teleporting to chest height on the first pickup tick. Ownership/collisions
+	# remain host-authoritative throughout this presentation transition.
+	if _pickup_elapsed < 1.3:
+		var origin: Transform3D = _pickup_from
+		var pickup_vehicle: Node3D = _find_vehicle()
+		if _pickup_in_vehicle and pickup_vehicle != null:
+			origin = pickup_vehicle.global_transform * origin
+		var lift: float = smoothstep(0.42, 1.3, _pickup_elapsed)
+		# Moving away accelerates the lift so the arms are never left behind.
+		if locomotion_speed > 0.3:
+			lift = maxf(lift, smoothstep(0.16, 0.5, _pickup_elapsed))
+		carry_transform = origin.interpolate_with(carry_transform, lift)
 	# In the truck, in the truck's space: this client's copy of the truck
 	# trails the host's, and a world position placed against the host's put
 	# the box a metre behind the hands at speed.
@@ -909,6 +981,8 @@ const WORLD_BLOCKING_MASK: int = 1 | 2 | 4  # environment, vehicle, packages
 func _carry_position() -> Vector3:
 	var from: Vector3 = _camera.global_position
 	var target: Vector3 = _hold_point.global_position
+	# Looking up should not lift a box beyond this short character's arms.
+	target.y = clampf(target.y, global_position.y + 0.8, global_position.y + 1.3)
 	var offset: Vector3 = target - from
 	var reach: float = offset.length()
 	if reach < 0.001:
@@ -1132,6 +1206,13 @@ func pick_up(package_path: NodePath) -> void:
 		return
 	var was_empty: bool = carried_package == null
 	carried_package = get_node_or_null(package_path) as DeliveryPackage
+	if was_empty and carried_package != null:
+		_pickup_elapsed = 0.0
+		_pickup_from = carried_package.global_transform
+		var pickup_vehicle: Node3D = _find_vehicle()
+		_pickup_in_vehicle = pickup_vehicle != null and bool(pickup_vehicle.call(&"carries", _pickup_from.origin, RIDE_MARGIN))
+		if _pickup_in_vehicle:
+			_pickup_from = pickup_vehicle.global_transform.affine_inverse() * _pickup_from
 	# Only the owning peer drives anim_state (see _update_movement_anim) --
 	# this RPC reaches every peer that can see the pickup, but the write
 	# below only matters, and only actually replicates, from is_local()'s copy.

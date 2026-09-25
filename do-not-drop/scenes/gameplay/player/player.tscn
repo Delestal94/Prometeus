@@ -34,6 +34,12 @@ properties/6/replication_mode = 2
 properties/7/path = NodePath(".:net_in_vehicle")
 properties/7/spawn = true
 properties/7/replication_mode = 1
+properties/8/path = NodePath(".:locomotion_speed")
+properties/8/spawn = true
+properties/8/replication_mode = 1
+properties/9/path = NodePath(".:jump_anim_time")
+properties/9/spawn = true
+properties/9/replication_mode = 1
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 8
@@ -55,7 +61,7 @@ fov = 78.0
 near = 0.03
 
 [node name="HoldPoint" type="Marker3D" parent="Head/Camera3D"]
-position = Vector3(0, -0.3, -0.95)
+position = Vector3(0, -0.48, -0.64)
 
 [node name="InteractionProbe" type="Area3D" parent="Head"]
 position = Vector3(0, 0, -0.6)

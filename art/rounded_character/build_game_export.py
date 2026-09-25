@@ -27,6 +27,18 @@ scene.render.fps = FPS
 rig = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
 meshes = [o for o in bpy.data.objects if o.type == 'MESH' and o.parent == rig]
 
+# The calf's hidden rim must follow the short hem's thigh, not blend into
+# the shin: otherwise bent knees pull skin through the front of the shorts.
+for o in meshes:
+    if not o.name.startswith('Pierna.'):
+        continue
+    side = o.name.rsplit('.', 1)[-1]
+    for v in o.data.vertices:
+        t = max(0., min(1., (v.co.z - .43) / .14))
+        t = t*t*(3-2*t)
+        o.vertex_groups['thigh.'+side].add([v.index], t, 'REPLACE')
+        o.vertex_groups['shin.'+side].add([v.index], 1-t, 'REPLACE')
+
 # --- Materials: short ASCII names Godot code can look up -------------------
 MAT_NAMES = {'01': 'Skin', '02': 'Shirt', '03': 'ShirtTrim', '04': 'Shorts',
              '05': 'ShortsHem', '06': 'Shoe', '07': 'Sole'}
@@ -47,7 +59,7 @@ for o in meshes:
     doomed = [v for v in bm.verts if (o.matrix_world @ v.co).z > limit]
     bmesh.ops.delete(bm, geom=doomed, context='VERTS')
     bm.to_mesh(o.data); bm.free()
-RATIOS = {'Brazo': .25, 'Camiseta · cuerpo': .25, 'Short · pieza': .25, 'Cabeza': .6}
+RATIOS = {'Brazo': .25, 'Camiseta · cuerpo': .25, 'Short · pieza': .25, 'Cabeza': .8}
 bpy.ops.object.mode_set(mode='OBJECT') if bpy.context.object and bpy.context.object.mode != 'OBJECT' else None
 for o in meshes:
     bpy.ops.object.select_all(action='DESELECT')
@@ -74,149 +86,13 @@ while body.material_slots[0].material.name != 'Shirt':
     bpy.ops.object.material_slot_move(direction='UP')
 tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
 
-# --- Animation helpers -------------------------------------------------------
-for act in list(bpy.data.actions):
-    bpy.data.actions.remove(act)
+# --- Animation library: grounded contact paths and staged one-shots ----------
+sys.path.insert(0, str(HERE))
+from animation_library import build, FPS, DURATIONS
+scene.render.fps = FPS
 bpy.context.view_layer.objects.active = rig
-rig.animation_data_create()
-for k in list(rig.keys()):
-    if k.startswith('IK_'): rig[k] = 1.0
-REST = {pb.name: pb.bone.matrix_local.copy() for pb in rig.pose.bones}
-
-def reset():
-    for pb in rig.pose.bones:
-        pb.location = (0, 0, 0); pb.rotation_mode = 'XYZ'; pb.rotation_euler = (0, 0, 0); pb.scale = (1, 1, 1)
-
-def to_local(name, world_vec):
-    return REST[name].to_3x3().inverted() @ Vector(world_vec)
-
-def fk(name, rot=(0, 0, 0), loc=(0, 0, 0)):
-    """Rotation (degrees, armature axes) about the bone's own head, plus an armature-space offset."""
-    pb = rig.pose.bones[name]; r3 = REST[name].to_3x3()
-    world = Euler([math.radians(a) for a in rot]).to_matrix()
-    pb.rotation_euler = (r3.inverted() @ world @ r3).to_euler()
-    pb.location = to_local(name, loc)
-
-def ik(name, target, rot=(0, 0, 0)):
-    """IK controls hang off CTRL_root, so local = rest-relative armature space."""
-    fk(name, rot, Vector(target) - REST[name].translation)
-
-def side_sign(side): return 1.0 if side == 'L' else -1.0
-
-def hands(l, r, rot_l=None, rot_r=None):
-    # Hanging hands point down: rotate the rest (+-X pointing) hand about Y.
-    ik('CTRL_hand_IK.L', l, rot_l if rot_l is not None else (0, 80, 0))
-    ik('CTRL_hand_IK.R', r, rot_r if rot_r is not None else (0, -80, 0))
-
-def feet(l=(0, 0, 0), r=(0, 0, 0), rot_l=(0, 0, 0), rot_r=(0, 0, 0)):
-    ik('CTRL_foot_IK.L', REST['CTRL_foot_IK.L'].translation + Vector(l), rot_l)
-    ik('CTRL_foot_IK.R', REST['CTRL_foot_IK.R'].translation + Vector(r), rot_r)
-
-def elbows_back():
-    # Rest poles sit behind the elbows; pulled lower so the hanging arms bend slightly back.
-    for s in 'LR':
-        ik('CTRL_elbow.' + s, (side_sign(s) * 1.25, .9, 1.7))
-
-HANG_L, HANG_R = Vector((1.14, -.02, 1.46)), Vector((-1.14, -.02, 1.46))
-
-def stand(breath=0.0):
-    reset()
-    fk('pelvis', loc=(0, 0, -.06))
-    fk('chest', rot=(-2 * breath, 0, 0))
-    fk('belly', loc=(0, -.025 * breath, .01 * breath))
-    fk('head', rot=(1.5 * breath, 0, 0))
-    elbows_back()
-    hands(HANG_L + Vector((0, 0, .02 * breath)), HANG_R + Vector((0, 0, .02 * breath)))
-    feet()
-
-def key(frame):
-    for pb in rig.pose.bones:
-        pb.keyframe_insert('location', frame=frame)
-        pb.keyframe_insert('rotation_euler', frame=frame)
-        pb.keyframe_insert('scale', frame=frame)
-
-def make_action(name, frames, poses):
-    act = bpy.data.actions.new(name); act.use_fake_user = True
-    rig.animation_data.action = act
-    for f, pose in zip(frames, poses):
-        pose(); key(f)
-    act.frame_range = (frames[0], frames[-1])
-    try: act.use_frame_range = True
-    except AttributeError: pass
-    return act
-
-# Idle: 2.5 s breathing loop.
-make_action('Idle', [0, 38, 75], [lambda: stand(0), lambda: stand(1), lambda: stand(0)])
-
-# Walk: brisk 0.667 s waddle. Legs are short (0.85 u), so the pelvis drops at contact.
-STRIDE = .28
-def walk(phase):
-    reset()
-    c = math.cos(phase); s = math.sin(phase)       # c=1: left foot forward
-    lift_r = max(0.0, s) * .2; lift_l = max(0.0, -s) * .2
-    fk('pelvis', rot=(0, 0, 6 * c), loc=(.035 * s, 0, -.1 + .06 * abs(s)))
-    fk('spine', rot=(4, 0, 0)); fk('chest', rot=(0, 0, -8 * c))
-    fk('belly', loc=(0, 0, .015 * abs(s)))
-    elbows_back()
-    hands(HANG_L + Vector((0, .22 * c, .03 + .04 * max(0, c))), HANG_R + Vector((0, -.22 * c, .03 + .04 * max(0, -c))))
-    feet(l=(0, -STRIDE * c, lift_l), r=(0, STRIDE * c, lift_r),
-         rot_l=(-12 * c, 0, 0), rot_r=(12 * c, 0, 0))
-make_action('Walk', [0, 5, 10, 15, 20], [lambda p=p: walk(p * math.pi / 2) for p in range(5)])
-
-# Jump: anticipation, take-off, tuck, landing (50 frames = 1.67 s, one-shot).
-def crouch(depth, arm_z, arm_y, lean):
-    reset()
-    fk('pelvis', loc=(0, 0, -depth)); fk('spine', rot=(lean, 0, 0))
-    elbows_back()
-    hands(HANG_L + Vector((.05, arm_y, arm_z)), HANG_R + Vector((-.05, arm_y, arm_z)))
-    feet()
-def airborne():
-    reset()
-    fk('pelvis', loc=(0, 0, 0)); fk('spine', rot=(-4, 0, 0)); fk('head', rot=(-6, 0, 0))
-    hands((1.05, -.25, 2.85), (-1.05, -.25, 2.85), (0, -20, 0), (0, 20, 0))
-    feet(l=(0, -.12, .3), r=(0, .05, .22), rot_l=(20, 0, 0), rot_r=(-10, 0, 0))
-make_action('Jump', [0, 8, 14, 30, 38, 50], [
-    lambda: stand(0),
-    lambda: crouch(.2, -.1, .35, 14),
-    airborne, airborne,
-    lambda: crouch(.18, .25, -.15, 10),
-    lambda: stand(0)])
-
-# PickUpPackage: bend, reach, grip, stand holding the box at the chest (50 frames).
-def reach(depth, lean, hand_y, hand_z, width=.62):
-    reset()
-    fk('pelvis', loc=(0, .08 * depth / .25, -depth)); fk('spine', rot=(lean, 0, 0)); fk('chest', rot=(lean * .4, 0, 0))
-    fk('head', rot=(-lean * .3, 0, 0))
-    for s in 'LR':
-        ik('CTRL_elbow.' + s, (side_sign(s) * 1.4, .3, 1.8))
-    hands((width, hand_y, hand_z), (-width, hand_y, hand_z), (-70, 0, -90), (-70, 0, 90))
-    feet()
-make_action('PickUpPackage', [0, 14, 22, 28, 40, 50], [
-    lambda: stand(0),
-    lambda: reach(.25, 26, -.95, 1.15),
-    lambda: reach(.27, 28, -.9, 1.12, .55),
-    lambda: reach(.2, 18, -.82, 1.35, .55),
-    lambda: reach(.02, 0, -.78, 1.8, .55),
-    lambda: reach(0, 0, -.76, 1.82, .55)])
-
-# Sit: pelvis drops 1.0 u (0.5 m), to about the root. player.gd places the
-# root on each seat's cushion (Player._seat_body_offset).
-SIT_DROP = 1.0
-def sit(breath=0.0):
-    reset()
-    fk('pelvis', loc=(0, .05, -SIT_DROP)); fk('spine', rot=(-4, 0, 0)); fk('chest', rot=(-2 * breath, 0, 0))
-    fk('belly', loc=(0, -.02 * breath, 0))
-    hip = 1.09 - SIT_DROP
-    for s in 'LR':
-        ik('CTRL_knee.' + s, (side_sign(s) * .46, -1.4, hip + .2))
-        ik('CTRL_elbow.' + s, (side_sign(s) * 1.4, .6, 1.3))
-    feet(l=(.04, -.58, hip - .8 + .005 * breath), r=(-.04, -.58, hip - .8), rot_l=(0, 0, 0), rot_r=(0, 0, 0))
-    # Palms down on the outer thighs, fingers forward (the belly fills the lap).
-    hands((.62, -.22, hip + .12 + .015 * breath), (-.62, -.22, hip + .12 + .015 * breath), (0, 15, -80), (0, -15, 80))
-make_action('Sit', [0, 30, 60], [lambda: sit(0), lambda: sit(1), lambda: sit(0)])
-
-rig.animation_data.action = bpy.data.actions['Idle']
-stand(0)
+build(rig)
+scene.frame_set(0)
 
 # --- Orientation and scale for Godot ----------------------------------------
 # Blender front is -Y; +Y becomes glTF -Z, Godot's forward. 0.5 gives 1.74 m.
@@ -235,7 +111,7 @@ if PREVIEW:
         if o.type == 'MESH' and o != body: o.hide_render = True
     cam.location = (4.6, 3.4, 1.5); cam.data.ortho_scale = 2.6  # front 3/4 (rig already faces +Y)
     cam.rotation_euler = (Vector((0, 0, .85)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
-    for act_name, frames in [('Idle', [0]), ('Walk', [0, 5, 10]), ('Jump', [8, 20, 38]), ('PickUpPackage', [14, 22, 40]), ('Sit', [0])]:
+    for act_name, frames in [('Idle', [0]), ('Walk', [0, 8, 15, 23]), ('Jump', [6, 26, 56]), ('PickUpPackage', [20, 38, 75]), ('Sit', [0])]:
         rig.animation_data.action = bpy.data.actions[act_name]
         for f in frames:
             scene.frame_set(f)
@@ -264,6 +140,12 @@ for k, v in [('export_def_bones', True), ('export_animation_mode', 'ACTIONS'), (
     if k in props:
         if props[k].type == 'ENUM' and v not in {x.identifier for x in props[k].enum_items}: continue
         kwargs[k] = v
+# Editable animation master, separate from the original modeling/rest file.
+rig.animation_data.action = bpy.data.actions['Idle']
+scene.frame_start = 0
+scene.frame_end = round(DURATIONS['Idle'] * FPS)
+scene.frame_set(0)
+bpy.ops.wm.save_as_mainfile(filepath=str(HERE / 'personaje_animado.blend'))
 bpy.ops.export_scene.gltf(**kwargs)
 print('GAME_EXPORT', json.dumps({'file': str(OUT), 'triangles': tris,
       'materials': [s.material.name for s in body.material_slots],
