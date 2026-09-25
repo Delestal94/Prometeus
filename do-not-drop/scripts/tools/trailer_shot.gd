@@ -34,6 +34,9 @@ const LEVEL: String = "res://scenes/gameplay/level_base.tscn"
 const TrailerCameraScript = preload("res://scripts/tools/trailer_camera.gd")
 const RouteScript = preload("res://scripts/gameplay/route/route.gd")
 const LOOKAHEAD: float = 14.0
+## Saved frames and stills start this late: the first moments are the
+## scene settling (the rear doors swinging shut, the driver sitting down).
+const SETTLE_SECONDS: float = 0.8
 ## A shot's segment is at least its lead plus this far from the depot.
 const RUN_UP_MARGIN: float = 60.0
 ## How hard the autopilot can brake, to start slowing in time (m/s^2).
@@ -66,7 +69,7 @@ var _still_at: float = -1.0
 var _out_path: String = ""
 var _frames_dir: String = ""
 var _frame_step: float = 0.0
-var _next_frame: float = 0.0
+var _next_frame: float = SETTLE_SECONDS
 var _frame_count: int = 0
 
 
@@ -75,14 +78,25 @@ static func load_shots() -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 
-static func find_seed(kind: String, houses: int, first_seed: int = 1, min_start: float = 0.0) -> int:
-	# The first seed whose route has a `kind` segment at least `min_start`
-	# metres down the road (plan only, no build).
+static func find_seed(kind: String, houses: int, first_seed: int = 1, min_start: float = 0.0, run_up: float = 0.0) -> int:
+	# The first seed whose route's first `kind` segment at least `min_start`
+	# metres down the road has no tunnel in its last `run_up` metres before
+	# it (a chase camera beside the truck ended up inside the tunnel's wall).
+	# Plan only, no build; setup() picks that same segment (_first_segment).
 	for seed_value: int in range(first_seed, first_seed + 400):
 		var plan: Dictionary = RouteScript.plan_spine(seed_value, houses, true)
 		for entry: Dictionary in plan.segments:
-			if (entry.script as Script).get_global_name() == kind and float(entry.get("start", 0.0)) >= min_start:
+			if (entry.script as Script).get_global_name() != kind or float(entry.get("start", 0.0)) < min_start:
+				continue
+			var clear: bool = true
+			for other: Dictionary in plan.segments:
+				var other_start: float = float(other.get("start", 0.0))
+				var other_end: float = other_start + float(other.get("length", 0.0))
+				if (other.script as Script).get_global_name() == "TunnelSegment" and other_end > float(entry.start) - run_up and other_start < float(entry.start) + float(entry.get("length", 0.0)):
+					clear = false
+			if clear:
 				return seed_value
+			break
 	return first_seed
 
 
@@ -94,7 +108,7 @@ func _ready() -> void:
 		if arg.begins_with("--shot="):
 			name = arg.get_slice("=", 1)
 		elif arg.begins_with("--still="):
-			_still_at = float(arg.get_slice("=", 1))
+			_still_at = maxf(float(arg.get_slice("=", 1)), SETTLE_SECONDS)
 		elif arg.begins_with("--out="):
 			_out_path = arg.get_slice("=", 1)
 		elif arg.begins_with("--frames="):
@@ -123,13 +137,15 @@ func setup(definition: Dictionary) -> void:
 	var seed_value: int = int(shot.get("seed", 0))
 	var start: Dictionary = shot.get("start", {})
 	if seed_value == 0:
-		seed_value = find_seed(String(start.get("segment", "StraightSegment")), houses, 1, float(start.get("lead", 60.0)) + RUN_UP_MARGIN)
+		seed_value = find_seed(String(start.get("segment", "StraightSegment")), houses, 1, float(start.get("lead", 60.0)) + RUN_UP_MARGIN, float(start.get("lead", 60.0)) + 20.0)
 	var network: Node = get_node(^"/root/NetworkManager")
 	network.set(&"world_seed", seed_value)
 	network.set(&"world_house_count", houses)
 	WorldMood.forced_label = String(shot.get("mood", "soleado_dia"))
 	level = load(LEVEL).instantiate()
 	add_child(level)
+	# Before the first frame is drawn: the briefing card showed in frame 0.
+	_hide_overlays()
 	await get_tree().process_frame
 	await get_tree().physics_frame
 	_hide_overlays()
@@ -146,7 +162,7 @@ func setup(definition: Dictionary) -> void:
 	var anchor := Transform3D.IDENTITY
 	match String(start.get("at", "depot")):
 		"segment":
-			var segment: Node3D = _first_segment(String(start.segment), float(start.get("lead", 60.0)) + 20.0)
+			var segment: Node3D = _first_segment(String(start.segment), float(start.get("lead", 60.0)) + RUN_UP_MARGIN)
 			if segment != null:
 				focus = segment
 				anchor = segment.global_transform
@@ -280,6 +296,12 @@ func _place_before(distance: float) -> void:
 func _physics_process(_delta: float) -> void:
 	if van == null:
 		return
+	# The level must not call the run over mid-shot (tipped 4 s, stuck,
+	# off the road): its results camera cut into the roll.
+	level.set(&"tipped_seconds", 0.0)
+	level.set(&"stuck_seconds", 0.0)
+	if camera != null and not camera.current:
+		camera.make_current()
 	_drive()
 	if _rolled and not _landed and van.global_basis.y.dot(Vector3.UP) < 0.15:
 		# On its side: most of the spin goes, so it doesn't carry on over onto
@@ -299,12 +321,14 @@ func _physics_process(_delta: float) -> void:
 		van.center_of_mass = Vector3(0.0, 0.8, 0.1)
 		van.angular_velocity = van.global_basis.z * float(roll.get("strength", 5.0))
 		van.linear_velocity += Vector3.UP * 4.0 + van.global_basis.x * 3.0
-		# The boxes come loose and carry on with the truck's speed, tossed up
-		# and out the way it's going over.
+		# The back bursts open and the boxes come loose, thrown out of it (the
+		# cargo box is closed: released inside, they only rattled about).
+		van.call(&"set_door_open", &"rear", true)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 906
 		for package: RigidBody3D in level.call(&"_release_loaded_cargo"):
-			package.linear_velocity = van.linear_velocity * 0.8 + Vector3.UP * rng.randf_range(3.0, 6.0) + van.global_basis.x * rng.randf_range(2.0, 5.0)
+			package.call(&"release_mount")
+			package.linear_velocity = van.linear_velocity * 0.5 + van.global_basis.z * rng.randf_range(7.0, 10.0) + Vector3.UP * rng.randf_range(3.0, 5.0) + van.global_basis.x * rng.randf_range(-1.5, 1.5)
 			package.angular_velocity = Vector3(rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0))
 
 

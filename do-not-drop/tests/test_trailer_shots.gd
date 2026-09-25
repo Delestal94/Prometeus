@@ -104,12 +104,18 @@ func _run() -> void:
 		await physics_frame
 		lowest_up = minf(lowest_up, van.global_basis.y.dot(Vector3.UP))
 	_expect(lowest_up < 0.3, "The roll tips the truck over during the shot (lowest up·Y %.2f)" % lowest_up)
+	_expect(bool(root.get_node(^"/root/RunManager").get(&"is_running")), "The level doesn't call the run over mid-shot (its results camera cut into the roll)")
 	_expect(van.global_basis.y.dot(Vector3.UP) < 0.5, "...and it stays over, nobody drives it back upright (up·Y %.2f)" % van.global_basis.y.dot(Vector3.UP))
+	# Out of the truck, not just left behind where the truck slid away from
+	# them (the cargo box is closed: the roll opens its back).
 	var thrown: int = 0
 	for package: Node in packages:
-		if is_instance_valid(package) and (package as Node3D).global_position.distance_to(van.global_position) > 3.0:
+		if is_instance_valid(package) and not bool(van.call(&"carries", (package as Node3D).global_position)) \
+				and (package as Node3D).global_position.distance_to(van.global_position) > 3.0:
 			thrown += 1
-	_expect(thrown >= 3, "...and its boxes fly out (%d away from the truck)" % thrown)
+	_expect(thrown >= 3, "...and its boxes fly out of it (%d out of the truck)" % thrown)
+	_expect(van.call(&"is_door_open", &"rear"), "...through its back, burst open")
+	_expect(not bool((runner.get(&"level") as Node).get(&"packages")[0].get(&"is_loaded")), "The thrown boxes aren't still counted as loaded on a rack")
 	var recorded: Dictionary = (runner.get_node(^"TrailerCamera") as Node).call(&"record_point")
 	_expect(recorded.get("space", "") == "truck" and (recorded.at as Array).size() == 3, "Recording a point takes the view relative to the truck")
 	runner.queue_free()
