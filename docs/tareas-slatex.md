@@ -186,18 +186,18 @@ ninguna forma de usarlas. Prioridad e Información dependen de una tienda en rut
 **Descuento** y **Re-voto**. Prioridad e Información salen del reparto (sus valores del enum se
 conservan para no romper nada guardado).
 
-- [ ] **S-103.1** `CrewProgression.DRAWABLE_CARDS := [Card.RESCUE, Card.DISCOUNT, Card.REVOTE]`;
+- [x] **S-103.1** (commit `955e585`) `CrewProgression.DRAWABLE_CARDS := [Card.RESCUE, Card.DISCOUNT, Card.REVOTE]`;
   `_grant_card_chance` sortea solo de ahí. Borrar `priority_issued` si queda sin uso.
-- [ ] **S-103.2 Acción `use_card`** en `project.godot` (G / D-pad izquierda) y reasignable en
+- [x] **S-103.2 Acción `use_card`** (commit `955e585`) en `project.godot` (G / D-pad izquierda) y reasignable en
   `GameSettings` como las demás. Aviso por `project.godot`.
-- [ ] **S-103.3 Rescate en partida**: con un evento de ruta activo, `use_card` manda una RPC al host
+- [x] **S-103.3 Rescate en partida** (commit `955e585`): con un evento de ruta activo, `use_card` manda una RPC al host
   (`CrewProgression.request_use_card`, `@rpc("any_peer")`), que llama
   `RouteEventManager.use_rescue(peer)`. Sin evento activo, el HUD dice "No hay nada que rescatar".
-- [ ] **S-103.4 Descuento y Re-voto en el depósito**: botones en la sección de suministros de
+- [x] **S-103.4 Descuento y Re-voto en el depósito** (commit `955e585`): botones en la sección de suministros de
   `depot_panel.gd`, visibles solo si el jugador tiene esa carta (ver S-104).
-- [ ] **S-103.5 HUD**: ficha con el nombre de la carta en la esquina de dinero y la tecla para usarla
+- [x] **S-103.5 HUD** (commit `955e585`): ficha con el nombre de la carta en la esquina de dinero y la tecla para usarla
   (`UiTheme.keycaps`). El toast "Carta obtenida" pasa a decir cuál.
-- [ ] **S-103.6 Test** `tests/test_cards.gd`: nunca sale Prioridad ni Información; Rescate resuelve el
+- [x] **S-103.6 Test** (commit `955e585`) `tests/test_cards.gd`: nunca sale Prioridad ni Información; Rescate resuelve el
   evento activo y se consume; sin evento no se consume.
 
 ### S-104 · Votación de suministros en el depósito — A · `Sol · xhigh` · Aviso: no
