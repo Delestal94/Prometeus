@@ -110,6 +110,22 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_drop", package.get_path())
 	await _wait_for_report(&"drop")
 
+	# The disconnect cleanup is the last check because the client process
+	# intentionally leaves. Its carried box must become loose on the host.
+	package.call(&"take_by", client_player)
+	await _pump(0.8)
+	_expect(client_player.carried_package == package and package.carrier == client_player,
+		"client holds the package before disconnecting")
+	rpc_id(_client_peer_id, &"_client_disconnect_while_carrying", package.get_path())
+	var disconnected: bool = await _wait_until(func() -> bool:
+		return get_tree().root.multiplayer.get_peers().is_empty())
+	_expect(disconnected, "host observes the client disconnect")
+	await _pump(0.8)
+	_expect(is_instance_valid(package) and package.is_inside_tree(), "disconnected client's package remains in the world")
+	_expect(not package.is_held and package.carrier == null and package.collision_layer == 4,
+		"disconnected client's package is loose on the host")
+	_client_peer_id = 0  # It already printed its own result and left cleanly.
+
 	await _finish(not _failed, "all pair checks passed")
 
 
@@ -185,6 +201,18 @@ func _client_check_drop(package_path: NodePath) -> void:
 	var ok: bool = package != null and not package.is_held and _players_holding(package).is_empty() \
 		and package.collision_layer == 4
 	_report(&"drop", ok, "client sees the loose package on the floor")
+
+
+@rpc("authority", "call_remote", "reliable")
+func _client_disconnect_while_carrying(package_path: NodePath) -> void:
+	var package: DeliveryPackage = get_node_or_null(package_path) as DeliveryPackage
+	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
+	var ok: bool = package != null and player != null and player.carried_package == package
+	_finished = true
+	print("PAIR role=client %s: disconnect while carrying" % ("PASS" if ok else "FAIL"))
+	await _pump(0.2)
+	_network.call(&"leave_session")
+	get_tree().quit(0 if ok else 1)
 
 
 func _report(stage: StringName, ok: bool, detail: String) -> void:
