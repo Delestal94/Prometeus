@@ -372,13 +372,13 @@ Nacho encontró (su #97) que el camión puede quedar encajado sin volcar ni sali
 
 Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores con el mismo objeto).
 
-- [ ] **S-204.1** `tests/net_pair.gd`, sobre el patrón de `tests/net_smoke.gd` (ENet en localhost,
+- [x] (commit `200cb1b`) **S-204.1** `tests/net_pair.gd`, sobre el patrón de `tests/net_smoke.gd` (ENet en localhost,
   `--host` / `--client`): el host carga `level_base.tscn`; el cliente se une con un uniforme elegido.
-- [ ] **S-204.2** Chequeos: el host ve el `cosmetic_id` del cliente; los dos intentan agarrar la misma
+- [x] (commit `200cb1b`) **S-204.2** Chequeos: el host ve el `cosmetic_id` del cliente; los dos intentan agarrar la misma
   caja en el mismo frame y solo uno la tiene; el cliente se sienta en un asiento ocupado y es rechazado;
   el cliente suelta una caja a mitad de traspaso y queda en el piso en los dos procesos.
-- [ ] **S-204.3** `tools/run-net-pair.sh` que lanza los dos procesos y junta los códigos de salida.
-  Agregarlo a CI como job aparte si tarda < 60 s.
+- [x] (commit `200cb1b`) **S-204.3** `tools/run-net-pair.sh` que lanza los dos procesos y junta los códigos de salida.
+  Agregado a CI como job aparte: 15-16 s en dos ejecuciones locales.
 
 ### S-205 · Respuesta inmediata al mantener, aunque haya lag — B · `Astra · high` · Aviso: no
 
