@@ -49,6 +49,7 @@ const PLAYER_COLORS: Array[Color] = [
 @onready var _hold_point: Marker3D = $Head/Camera3D/HoldPoint
 @onready var _probe: Area3D = $Head/InteractionProbe
 @onready var _interaction_component: Node = $PlayerInteraction
+@onready var _carry_component: Node = $PlayerCarry
 
 var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
@@ -1089,43 +1090,11 @@ func _update_highlight(target: Node) -> void:
 
 
 func _update_carried_package() -> void:
-	# Position follows the hold point (in front of the camera, so it bobs
-	# naturally with head look), but rotation stays tied to the body's yaw
-	# only -- looking down doesn't swing the box's face into the lens. Goes
-	# through the host either way (rpc_id(1, ...) with call_local resolves to
-	# a direct call when this peer already is the host), since the package is
-	# host-authoritative and only it should ever move the real one.
-	var carry_transform := Transform3D(global_basis, _carry_position())
-	# The box waits for the reaching hands, then follows the lift instead of
-	# teleporting to chest height on the first pickup tick. Ownership/collisions
-	# remain host-authoritative throughout this presentation transition.
-	if _pickup_elapsed < 1.3:
-		var origin: Transform3D = _pickup_from
-		var pickup_vehicle: Node3D = _find_vehicle()
-		if _pickup_in_vehicle and pickup_vehicle != null:
-			origin = pickup_vehicle.global_transform * origin
-		var lift: float = smoothstep(0.42, 1.3, _pickup_elapsed)
-		# Moving away accelerates the lift so the arms are never left behind.
-		if locomotion_speed > 0.3:
-			lift = maxf(lift, smoothstep(0.16, 0.5, _pickup_elapsed))
-		carry_transform = origin.interpolate_with(carry_transform, lift)
-	# In the truck, in the truck's space: this client's copy of the truck
-	# trails the host's, and a world position placed against the host's put
-	# the box a metre behind the hands at speed.
-	var vehicle: Node3D = _find_vehicle()
-	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", carry_transform.origin, RIDE_MARGIN))
-	if aboard:
-		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
-	carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard)
-	_package_focus.dof_blur_far_enabled = true
-	_package_focus.dof_blur_far_distance = 1.45
-	_package_focus.dof_blur_far_transition = 1.0
-	_package_focus.dof_blur_amount = 0.18
+	_carry_component.update_carried_package()
 
 
 func _clear_carry_focus() -> void:
-	if _package_focus != null:
-		_package_focus.dof_blur_far_enabled = false
+	_carry_component.clear_carry_focus()
 
 ## Collisions are off while carried, so without this the box pokes straight
 ## through the van's walls, doors and shelves whenever the player faces them.
@@ -1140,34 +1109,11 @@ const WORLD_BLOCKING_MASK: int = 1 | 2 | 4  # environment, vehicle, packages
 
 
 func _carry_position() -> Vector3:
-	var from: Vector3 = _camera.global_position
-	var target: Vector3 = _hold_point.global_position
-	# Looking up should not lift a box beyond this short character's arms.
-	target.y = clampf(target.y, global_position.y + 0.8, global_position.y + 1.3)
-	var offset: Vector3 = target - from
-	var reach: float = offset.length()
-	if reach < 0.001:
-		return target
-	var direction: Vector3 = offset / reach
-	# How far the box reaches from its centre toward the camera along this
-	# ray: the box keeps the body's yaw, so project each half extent onto
-	# the ray. The camera must stay outside that, or you see from inside
-	# the box (looking up with it at head height, or up against a wall).
-	var half: Vector3 = carried_package.get_half_extents()
-	var support: float = (absf(direction.dot(global_basis.x)) * half.x
-		+ absf(direction.dot(global_basis.y)) * half.y
-		+ absf(direction.dot(global_basis.z)) * half.z)
-	var min_distance: float = maxf(CARRY_MIN_DISTANCE, support + CARRY_FACE_CLEARANCE)
-	var hit: Dictionary = _raycast(from, target + direction * support, WORLD_BLOCKING_MASK)
-	if hit.is_empty():
-		return from + direction * maxf(reach, min_distance)
-	var allowed: float = from.distance_to(hit["position"]) - support - 0.02
-	return from + direction * clampf(allowed, min_distance, maxf(reach, min_distance))
+	return _carry_component.carry_position()
 
 
 func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
-	var query := PhysicsRayQueryParameters3D.create(from, to, mask, [get_rid()])
-	return get_world_3d().direct_space_state.intersect_ray(query)
+	return _carry_component.raycast(from, to, mask)
 
 
 ## MVP has a single, always-available ping ("¡Cuidado!") instead of a wheel
@@ -1190,23 +1136,7 @@ func _try_interact() -> void:
 
 
 func _transfer_target() -> Player:
-	var eye: Vector3 = _camera.global_position
-	var forward: Vector3 = -_camera.global_basis.z
-	var best: Player = null
-	var best_score: float = 0.7
-	for node: Node in get_tree().get_nodes_in_group(&"player"):
-		var teammate := node as Player
-		if teammate == null or teammate == self or teammate.carried_package != null:
-			continue
-		var to_teammate: Vector3 = teammate.global_position - eye
-		var distance: float = to_teammate.length()
-		if distance > 2.4 or distance < 0.05:
-			continue
-		var score: float = forward.dot(to_teammate / distance)
-		if score > best_score:
-			best_score = score
-			best = teammate
-	return best
+	return _carry_component.transfer_target() as Player
 
 
 ## The box is set down just clear of the player's own capsule, then settled
@@ -1222,36 +1152,11 @@ const DROP_SETTLE_MARGIN: float = 0.02
 
 
 func _drop_carried() -> void:
-	if carried_package == null:
-		return
-	var drop_transform := Transform3D(global_basis, _drop_position(carried_package.get_half_extents()))
-	# Same as carrying: set down in the truck, it's placed on the host's truck.
-	var vehicle: Node3D = _find_vehicle()
-	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", drop_transform.origin, RIDE_MARGIN))
-	if aboard:
-		drop_transform = vehicle.global_transform.affine_inverse() * drop_transform
-	carried_package.rpc_id(1, &"request_drop", drop_transform, aboard)
-	# The host confirms by clearing this on every peer; clearing it here too
-	# just keeps the local hands responsive while that RPC is in flight.
-	carried_package = null
+	_carry_component.drop_carried()
 
 
 func _drop_position(half_extents: Vector3) -> Vector3:
-	var forward: Vector3 = -global_basis.z
-	forward.y = 0.0
-	forward = forward.normalized() if forward.length_squared() > 0.0001 else Vector3.FORWARD
-	var chest: Vector3 = global_position + Vector3.UP * DROP_CHEST_HEIGHT
-	var distance: float = BODY_RADIUS + DROP_GAP + half_extents.z
-	# A wall, the van's side or a door in front: set it down short of that
-	# instead of spawning the box half inside it.
-	var wall: Dictionary = _raycast(chest, chest + forward * (distance + half_extents.z), WORLD_BLOCKING_MASK)
-	if not wall.is_empty():
-		distance = maxf(chest.distance_to(wall["position"]) - half_extents.z - DROP_SETTLE_MARGIN, 0.0)
-	var spot: Vector3 = chest + forward * distance
-	var ground: Dictionary = _raycast(spot, spot - Vector3.UP * DROP_GROUND_PROBE, WORLD_BLOCKING_MASK)
-	if ground.is_empty():
-		return spot
-	return Vector3(spot.x, (ground["position"] as Vector3).y + half_extents.y + DROP_SETTLE_MARGIN, spot.z)
+	return _carry_component.drop_position(half_extents)
 
 
 ## What gets the interact prompt: whatever the player is looking at most
@@ -1327,30 +1232,14 @@ func _activate_ragdoll(push: Vector3) -> void:
 func pick_up(package_path: NodePath) -> void:
 	if not _from_host():
 		return
-	var was_empty: bool = carried_package == null
-	carried_package = get_node_or_null(package_path) as DeliveryPackage
-	if was_empty and carried_package != null:
-		_pickup_elapsed = 0.0
-		_pickup_from = carried_package.global_transform
-		pickup_high_weight = pickup_high_weight_for_package(carried_package)
-		var pickup_vehicle: Node3D = _find_vehicle()
-		_pickup_in_vehicle = pickup_vehicle != null and bool(pickup_vehicle.call(&"carries", _pickup_from.origin, RIDE_MARGIN))
-		if _pickup_in_vehicle:
-			_pickup_from = pickup_vehicle.global_transform.affine_inverse() * _pickup_from
-	# Only the owning peer drives anim_state (see _update_movement_anim) --
-	# this RPC reaches every peer that can see the pickup, but the write
-	# below only matters, and only actually replicates, from is_local()'s copy.
-	if is_local() and was_empty and carried_package != null:
-		_play_one_shot(ANIM_PICKUP, PICKUP_ANIM_LOCK_MS)
+	_carry_component.apply_pick_up(package_path)
 
 
 @rpc("any_peer", "call_local", "reliable")
 func drop_carried() -> void:
 	if not _from_host():
 		return
-	carried_package = null
-	if is_local():
-		_clear_carry_focus()
+	_carry_component.apply_drop_carried()
 
 
 @rpc("any_peer", "call_local", "reliable")
