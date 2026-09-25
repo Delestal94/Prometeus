@@ -12,6 +12,8 @@ extends SceneTree
 ## - while the list is open, the sounds play through the pause;
 ## - the options screen opens the list (ui/sound_check_panel.gd).
 
+## The depot's radio: a composed program since N-403, not a synthesized tune.
+const RADIO: AudioStream = preload("res://assets/audio/music/mus_depot_radio_loop.ogg")
 var _failures: int = 0
 
 
@@ -26,7 +28,7 @@ func _run() -> void:
 	root.add_child(world)
 	var forklift_engine: AudioStreamPlayer = _player(world, "Forklift", SynthAudio.engine_loop())
 	var truck_engine: AudioStreamPlayer = _player(world, "Truck", SynthAudio.engine_loop())
-	var radio: AudioStreamPlayer = _player(world, "Depot", SynthAudio.radio_tune())
+	var radio: AudioStreamPlayer = _player(world, "Depot", RADIO)
 	await process_frame
 
 	var labels: Array = audit.groups(self).map(func(group: Dictionary) -> String: return group.label)
@@ -50,12 +52,12 @@ func _run() -> void:
 	_expect(late.stream != SynthAudio.engine_loop(), "A player that appears later is muted too (a reloaded level)")
 
 	audit.solo(self, audit.key_of(radio))
-	_expect(radio.stream == SynthAudio.radio_tune() and truck_engine.stream != SynthAudio.engine_loop()
+	_expect(radio.stream == RADIO and truck_engine.stream != SynthAudio.engine_loop()
 		and forklift_engine.stream != SynthAudio.engine_loop(), "Solo: only the depot's radio is heard")
 
 	audit.unmute_all(self)
 	_expect(forklift_engine.stream == SynthAudio.engine_loop() and truck_engine.stream == SynthAudio.engine_loop()
-		and radio.stream == SynthAudio.radio_tune() and late.stream == SynthAudio.engine_loop(),
+		and radio.stream == RADIO and late.stream == SynthAudio.engine_loop(),
 		"Unmuting brings every real sound back")
 	_expect(forklift_engine.playing, "...still playing")
 

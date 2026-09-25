@@ -24,7 +24,7 @@ const SOUND_NAMES: Dictionary = {
 	&"honk_horn": "Bocina", &"ambient_wind": "Viento", &"camera_shutter": "Obturador",
 	&"tape_rip": "Cinta", &"cardboard_flap": "Solapa de cartón", &"tension_pulse": "Pulso de tensión",
 	&"rain_loop": "Lluvia", &"crossing_bell": "Campana", &"roller_door": "Motor del portón",
-	&"reverse_beep": "Beep de reversa", &"radio_tune": "Radio",
+	&"reverse_beep": "Beep de reversa", &"mus_depot_radio_loop": "Radio",
 	&"ambient_birds": "Pájaros", &"night_crickets": "Grillos", &"distant_road": "Ruta lejana",
 	&"dog_bark": "Ladrido", &"sheep_bleat": "Balido", &"scanner_beep": "Bip de los botones",
 }
