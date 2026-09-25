@@ -94,11 +94,20 @@ void fragment() {
 				float edge = smoothstep(1.0, 0.88, dist);
 				vec3 body = mix(vec3(0.78, 0.84, 0.9), vec3(0.42, 0.47, 0.52), rim);
 				float a = mix(0.16, 0.34, rim) * edge;
-				colour = mix(colour, mix(body, vec3(1.0), glint), max(a, glint));
-				alpha = max(alpha, max(a, glint * 0.75));
+				// The drop's own colour, and ALPHA says how much of it shows.
+				// (Mixing it into the starting black by that alpha first, then
+				// applying the alpha again, drew every drop at a fifth of its
+				// brightness: dark soot.)
+				float drop_alpha = max(a, glint * 0.75);
+				if (drop_alpha > alpha) {
+					colour = mix(body, vec3(1.0), glint);
+					alpha = drop_alpha;
+				}
 			}
 		}
 	}
+	// Nothing right at the glass's edges, where the frame's trim overlaps it.
+	float edge = min(min(p.x, 1.0 - p.x), min(p.y, 1.0 - p.y));
 	ALBEDO = colour;
-	ALPHA = alpha;
+	ALPHA = alpha * smoothstep(0.0, 0.035, edge);
 }

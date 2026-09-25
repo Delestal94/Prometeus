@@ -9,7 +9,8 @@ extends SceneTree
 ##   (the batcher's merged meshes are cached per darkness);
 ## - the house that waits for its box still has its porch light on;
 ## - the halos aren't culled as one route-long block (the first version's
-##   visibility range hid them all) and keep each lamp's size.
+##   visibility range hid them all) and keep each lamp's size; a car's two
+##   lamps in one mesh get one halo each, not one on the middle of the bumper.
 
 var _failures: int = 0
 
@@ -34,6 +35,25 @@ func _run() -> void:
 	var day: Dictionary = await _survey("soleado_dia")
 	_expect(day.halos == 0 and day.lamp_glow == 0 and day.window_glow == 0,
 		"By day nothing glows (halos %d, lamps %d, windows %d)" % [day.halos, day.lamp_glow, day.window_glow])
+
+	# A car's two lamps in one mesh get a halo each, not one on the bumper.
+	var pair := SurfaceTool.new()
+	pair.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for x: float in [-0.6, 0.6]:
+		var lamp := BoxMesh.new()
+		lamp.size = Vector3(0.2, 0.1, 0.05)
+		pair.append_from(lamp, 0, Transform3D(Basis.IDENTITY, Vector3(x, 0.7, -2.0)))
+	var lamps := MeshInstance3D.new()
+	lamps.mesh = pair.commit()
+	var centres: Array[Vector3] = NightFlares.lamp_centres(lamps)
+	_expect(centres.size() == 2 and centres.any(func(c: Vector3) -> bool: return c.distance_to(Vector3(-0.6, 0.7, -2.0)) < 0.01)
+		and centres.any(func(c: Vector3) -> bool: return c.distance_to(Vector3(0.6, 0.7, -2.0)) < 0.01),
+		"A mesh with both of a car's lamps gets a halo on each lamp (%s)" % [centres])
+	var single := MeshInstance3D.new()
+	single.mesh = BoxMesh.new()
+	_expect(NightFlares.lamp_centres(single).size() == 1, "...and a one-piece lamp gets one")
+	lamps.free()
+	single.free()
 
 	WorldMood.forced_label = ""
 	LowpolyMaterials.set_night_level(0.0)

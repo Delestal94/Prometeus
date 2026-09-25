@@ -38,13 +38,23 @@ const BRAND_TEAL := Color("1f8a86")
 const BRAND_CREAM := Color("f3ecd8")
 const BRAND_ORANGE := Color("e8862b")
 const HEN_PECK_SECONDS: float = 1.6
-## How far the spilled van's nose is tipped down into the ditch.
+## How far the spilled van's nose is tipped down into the ditch (before
+## fit_to_ground() knows the real ground).
 const VAN_NOSE_DOWN_DEG: float = 13.0
+## Once it does: the front bumper this far into the ground, the back wheels
+## this far off it -- nose-down on any slope, not just on the flat.
+const VAN_NOSE_BURIED: float = 0.45
+const VAN_TAIL_LIFT: float = 0.4
+## The van model's nose and tail along its length (its -Z is the nose).
+const VAN_NOSE_Z: float = -2.6
+const VAN_TAIL_Z: float = 2.3
 
 @export var kind: Kind = Kind.BILLBOARD
 @export var story_seed: int = 0
 
 var _hen: Node3D
+var _van: Node3D
+var _van_collision: Node3D
 var _time: float = 0.0
 
 
@@ -98,6 +108,8 @@ func _build_van_spill(rng: RandomNumberGenerator) -> void:
 	van.add_child(hinge)
 	var solid := _solid_box("VanCollision", Vector3(2.3, 2.4, 5.3), Vector3(0.0, 1.2, 0.0))
 	solid.transform = van.transform * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.2, 0.0))
+	_van = van
+	_van_collision = solid
 	# Parcels strewn out of the back and down the grass.
 	var behind: Vector3 = van.transform * Vector3(0.0, 0.0, 3.2)
 	for index: int in range(6):
@@ -175,6 +187,36 @@ static func fit_font_size(text: String, font_size: int, max_width: float) -> int
 	while size > 8 and FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * BILLBOARD_PIXEL_SIZE > max_width:
 		size -= 2
 	return size
+
+
+## Rests every loose piece on the ground under it: the story is placed as a
+## whole (RouteDresser._settle()), but beside a road the ground slopes, and
+## pieces at the story's own height floated over a dip or sank into a rise.
+## `height_at` takes a point in this node's space and returns the ground's
+## height there, in the same space. The van is pitched so its nose digs in
+## and its tail lifts whatever the slope does.
+func fit_to_ground(height_at: Callable) -> void:
+	for child: Node in get_children():
+		if not child is Node3D or child == _van or child == _van_collision or child is StaticBody3D:
+			continue
+		var piece := child as Node3D
+		if piece.name.begins_with("Spilled") or piece.name in ["BrokenBox", "Hen"]:
+			var base_offset: float = piece.position.y if piece.name == "BrokenBox" else 0.0
+			piece.position.y = float(height_at.call(piece.position)) + base_offset
+	if _van == null:
+		return
+	var yaw := Basis(Vector3.UP, _van.rotation.y)
+	var nose_at: Vector3 = _van.position + yaw * Vector3(0.0, 0.0, VAN_NOSE_Z)
+	var tail_at: Vector3 = _van.position + yaw * Vector3(0.0, 0.0, VAN_TAIL_Z)
+	var nose_y: float = float(height_at.call(nose_at)) - VAN_NOSE_BURIED
+	var tail_y: float = float(height_at.call(tail_at)) + VAN_TAIL_LIFT
+	# Rising toward the tail (+Z) is a negative pitch about X: nose down.
+	var pitch: float = -atan2(tail_y - nose_y, VAN_TAIL_Z - VAN_NOSE_Z)
+	_van.rotation.x = pitch
+	# The pivot sits between the two, where the line through them passes.
+	var along: float = -VAN_NOSE_Z / (VAN_TAIL_Z - VAN_NOSE_Z)
+	_van.position.y = lerpf(nose_y, tail_y, along)
+	_van_collision.transform = _van.transform * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.2, 0.0))
 
 
 func _model(path: String) -> Node3D:

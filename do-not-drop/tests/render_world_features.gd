@@ -64,8 +64,10 @@ func _part_stories() -> void:
 				continue
 			seen[kind] = true
 			await _from_road_before(route, story, 25.0, "stories_%s" % ["van_spill", "hen", "billboard"][kind])
-			var near: Vector3 = [Vector3(6.0, 3.0, 6.0), Vector3(2.2, 1.1, 2.2), Vector3(9.0, 3.5, 9.0)][kind]
-			await _shot(story.global_position + near, story.global_position + Vector3.UP * (0.3 if kind == 1 else 0.8), "stories_%s_close" % ["van_spill", "hen", "billboard"][kind])
+			# In the story's own space: its front (the billboard's lettering) faces +Z.
+			var near: Vector3 = [Vector3(6.0, 3.0, 6.0), Vector3(2.2, 1.1, 2.2), Vector3(2.5, 4.0, 13.0)][kind]
+			var aim: Vector3 = [Vector3(0.0, 0.8, 0.0), Vector3(0.0, 0.3, 0.0), Vector3(0.0, 4.3, 0.0)][kind]
+			await _shot(story.to_global(near), story.to_global(aim), "stories_%s_close" % ["van_spill", "hen", "billboard"][kind])
 		await _free(level)
 
 

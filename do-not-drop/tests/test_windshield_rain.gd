@@ -9,6 +9,8 @@ extends SceneTree
 ##   the same clock the shader clears the drops with, and at rest they lie
 ##   flat, side by side (never crossing) and within the glass.
 
+const SHADER: Shader = preload("res://shaders/windshield_rain.gdshader")
+
 var _failures: int = 0
 
 
@@ -73,6 +75,13 @@ func _run() -> void:
 		"The blades rest side by side, on the glass (tips at %.2f and %.2f; second pivot %.2f; edge %.2f)" % [first_tip, second_tip, second_pivot, rain.width * 0.5])
 	for arm: Node3D in rain.arms:
 		_expect((arm.get_child(0) as Node3D).position.x > 0.0, "%s rests lying toward +x" % arm.name)
+	# The model's own static blades are hidden: only the animated pair shows.
+	var model_blades: Array[Node] = van.find_children("Wiper*", "MeshInstance3D", true, false).filter(func(node: Node) -> bool: return ReferenceTruck.is_model_wiper(node.name))
+	_expect(not model_blades.is_empty() and model_blades.all(func(blade: Node) -> bool: return not (blade as MeshInstance3D).visible),
+		"The truck model's static wiper blades are hidden (%d)" % model_blades.size())
+	# Drops are drawn in their own pale colour, not darkened by their alpha
+	# twice (they read as soot).
+	_expect(not SHADER.code.contains("colour = mix(colour,"), "The drop shader doesn't blend drops into black before applying their alpha")
 
 	# Wipers: the engine on in the rain.
 	_expect(absf(rain.arms[0].rotation.z) < 0.01 and absf(rain.arms[1].rotation.z) < 0.01, "Parked, the blades rest flat")

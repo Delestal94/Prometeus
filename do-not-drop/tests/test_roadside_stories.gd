@@ -51,10 +51,15 @@ func _run() -> void:
 						"seed %d: the competition's van is there with its back door open" % seed_value)
 					_expect(story.find_children("SpilledBox*", "", true, false).size() >= 4, "seed %d: its parcels lie strewn about" % seed_value)
 					_expect(story.find_child("VanCollision", true, false) is StaticBody3D, "seed %d: the crashed van is solid" % seed_value)
+					# Against the real ground under each end, not the story's
+					# own level: beside the road it slopes.
 					var van := story.find_child("CompetitorVan", true, false) as Node3D
-					var nose: Vector3 = story.to_local(van.to_global(Vector3(0.0, 0.3, -2.6)))
-					var tail: Vector3 = story.to_local(van.to_global(Vector3(0.0, 0.3, 2.3)))
-					_expect(nose.y < tail.y - 0.8 and nose.y < 0.0, "seed %d: the van is nosed down into the ditch (nose %.2f m, tail %.2f m)" % [seed_value, nose.y, tail.y])
+					var nose: float = _above_ground(route, terrain, van.to_global(Vector3(0.0, 0.0, RoadsideStory.VAN_NOSE_Z)))
+					var tail: float = _above_ground(route, terrain, van.to_global(Vector3(0.0, 0.0, RoadsideStory.VAN_TAIL_Z)))
+					_expect(nose < -0.2 and tail > 0.2, "seed %d: the van's nose is dug into the ground and its tail lifted (nose %.2f m, tail %.2f m over the ground)" % [seed_value, nose, tail])
+					for box: Node in story.find_children("SpilledBox*", "", true, false):
+						var gap: float = _above_ground(route, terrain, (box as Node3D).global_position)
+						_expect(absf(gap) < 0.12, "seed %d: %s rests on the ground (%.2f m off it)" % [seed_value, box.name, gap])
 				RoadsideStory.Kind.HEN:
 					var hen := story.find_child("Hen", true, false) as Node3D
 					_expect(hen != null and story.find_child("BrokenBox", true, false) != null, "seed %d: a hen next to her broken box" % seed_value)
@@ -111,6 +116,12 @@ func _signature(route: Node3D, stories: Array[Node3D]) -> Array:
 	for story: Node3D in stories:
 		signature.append([int(story.get(&"kind")), route.to_local(story.global_position).snapped(Vector3.ONE * 0.01)])
 	return signature
+
+
+## How far `point` is above the terrain under it (negative: buried).
+func _above_ground(route: Node3D, terrain: Node, point: Vector3) -> float:
+	var local: Vector3 = route.to_local(point)
+	return local.y - float(terrain.call(&"height_at", local))
 
 
 func _expect(condition: bool, description: String) -> void:

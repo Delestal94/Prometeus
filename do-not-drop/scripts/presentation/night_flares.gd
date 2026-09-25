@@ -12,7 +12,7 @@ class_name NightFlares
 const STREET_LAMP: String = "res://assets/models/environment/props/sm_env_prop_street_lamp_refined.glb"
 const LAMP_HALO_SIZE: float = 1.5
 const CAR_HALO_SIZE: float = 0.55
-const HALO_COLOR := Color(1.0, 0.82, 0.55)
+const HALO_COLOR := Color(1.0, 0.72, 0.38)
 
 
 ## Where the halos go, in `route`'s space: [position, size] pairs.
@@ -29,10 +29,38 @@ static func halo_spots(route: Node3D) -> Array:
 					var box: AABB = (mesh as MeshInstance3D).get_aabb()
 					spots.append([to_route * ((mesh as MeshInstance3D).global_transform * box.get_center()), LAMP_HALO_SIZE])
 		elif piece.get_meta(&"rule") == &"parked_vehicle":
+			# The front lamps (palette "lamp"; the red "danger" tail lights stay
+			# off on a parked car). One mesh holds both lamps, so a halo at its
+			# centre sat in the middle of the bumper: one per lamp instead.
 			for mesh: Node in piece.find_children("Light*", "MeshInstance3D", true, false):
-				var box: AABB = (mesh as MeshInstance3D).get_aabb()
-				spots.append([to_route * ((mesh as MeshInstance3D).global_transform * box.get_center()), CAR_HALO_SIZE])
+				if not _has_material(mesh as MeshInstance3D, "lamp"):
+					continue
+				for centre: Vector3 in lamp_centres(mesh as MeshInstance3D):
+					spots.append([to_route * ((mesh as MeshInstance3D).global_transform * centre), CAR_HALO_SIZE])
 	return spots
+
+
+## The centre of each separate lamp in `mesh`, in its own space: its
+## triangles split across the mesh's widest axis (a car's left and right
+## lamp), or the whole mesh's centre when it's one piece.
+static func lamp_centres(mesh: MeshInstance3D) -> Array[Vector3]:
+	var box: AABB = mesh.get_aabb()
+	var axis: int = box.get_longest_axis_index()
+	var middle: float = box.get_center()[axis]
+	var sides: Array[AABB] = [AABB(), AABB()]
+	var found: Array[bool] = [false, false]
+	var faces: PackedVector3Array = mesh.mesh.get_faces()
+	for vertex: Vector3 in faces:
+		var side: int = 0 if vertex[axis] < middle else 1
+		if found[side]:
+			sides[side] = sides[side].expand(vertex)
+		else:
+			sides[side] = AABB(vertex, Vector3.ZERO)
+			found[side] = true
+	# One lamp spanning the middle (no gap between the halves) is one piece.
+	if not (found[0] and found[1]) or sides[0].end[axis] >= sides[1].position[axis] - 0.01:
+		return [box.get_center()] as Array[Vector3]
+	return [sides[0].get_center(), sides[1].get_center()] as Array[Vector3]
 
 
 ## The halos for the current LowpolyMaterials.night_level, or null by day or

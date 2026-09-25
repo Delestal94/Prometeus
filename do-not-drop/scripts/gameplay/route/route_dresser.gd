@@ -486,6 +486,10 @@ func _place_story(segment: RouteSegment, slot: Transform3D, kind: int, side: flo
 	_group(segment, "RoadsideDressing").add_child(story, true)
 	# Down onto the ground by every foot (the van's wheels, the strewn boxes).
 	_settle(story, p)
+	# Then each of its pieces on the ground under it (the slope beside a road).
+	story.fit_to_ground(func(local: Vector3) -> float:
+		var q: Vector3 = _route.to_local(story.to_global(local))
+		return story.to_local(_route.to_global(Vector3(q.x, _terrain.height_at(q), q.z))).y)
 	story.set_meta(&"rule", &"roadside_story")
 	story.set_meta(&"reach", reach)
 	story.set_meta(&"footprint", footprint)

@@ -904,6 +904,17 @@ func _build_windshield_rain() -> void:
 	rain.name = "WindshieldRain"
 	vehicle.get_node(^"BodyVisuals").add_child(rain)
 	rain.setup(vehicle, windshield)
+	# The model's own two blades are static and sat under the animated ones
+	# (two X's on the glass): the animated pair replaces them.
+	for blade: Node in model.find_children("Wiper*", "MeshInstance3D", true, false):
+		if ReferenceTruck.is_model_wiper(blade.name):
+			(blade as MeshInstance3D).visible = false
+
+
+## The model's own blades ("Wiper", "Wiper.001" / "Wiper_001"), not the
+## animated "WiperArm"s of WindshieldRain.
+static func is_model_wiper(node_name: String) -> bool:
+	return node_name == "Wiper" or node_name.begins_with("Wiper.") or node_name.begins_with("Wiper_")
 
 
 func _bind_presentation() -> void:

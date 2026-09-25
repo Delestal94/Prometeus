@@ -27,8 +27,10 @@ const NOTE_FONT: Font = preload("res://assets/fonts/Nunito-Variable.ttf")
 const INK := Color("1e2235")
 const PAPER := Color("fbf8ee")
 ## Where each hand grabs, from the head bone (x: to either side, z: forward),
-## in the resident's own space.
-const HEAD_GRAB := Vector3(0.13, 0.12, 0.06)
+## in the resident's own space. Out past the head's own 0.19 m half-width and
+## a little in front, so the hands read from the street, not hidden inside
+## or behind the head.
+const HEAD_GRAB := Vector3(0.22, 0.1, 0.06)
 
 var resident: Node3D
 var house_index: int = 0
@@ -142,7 +144,7 @@ func _grab_head() -> void:
 		var target := Marker3D.new()
 		target.name = "HeadGrab" + side
 		# The model faces -Z; its left arm (UpperArm_L / Hand_L) rests at -X.
-		var offset := Vector3(HEAD_GRAB.x * (-1.0 if side == "L" else 1.0), HEAD_GRAB.y, HEAD_GRAB.z)
+		var offset := Vector3(HEAD_GRAB.x * (-1.0 if side == "L" else 1.0), HEAD_GRAB.y, -HEAD_GRAB.z)
 		resident.add_child(target)
 		target.global_position = head + resident.global_basis.orthonormalized() * offset
 		_head_targets.append(target)
