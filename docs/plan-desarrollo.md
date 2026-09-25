@@ -3,11 +3,12 @@
 ## Fase 5 — Progresión local del MVP
 
 El MVP usa un **perfil local persistente**, no una cuenta. Entregas exitosas y
-puntaje acumulado marcan desbloqueos permanentes: Líquido (3 entregas,
-250 puntos), pintura violeta (5, 450), Explosivo (7, 750) y Hostil (12, 1500).
-Vehículos, pinturas y uniformes bloquean su selección, y desde 2026-09-23 las
-tres trampas nuevas no aparecen en el depósito hasta desbloquearlas (en línea,
-según el perfil del host).
+puntaje acumulado marcan desbloqueos permanentes. Las trampas siguen esta curva:
+Frágil + Equilibrio al inicio, Peso creciente (1 entrega), Ruidoso (2/100),
+Líquido (4/250), Explosivo (8/750) y Hostil (13/1500).
+Vehículos, pinturas y uniformes bloquean su selección, y las cinco trampas
+progresivas no aparecen en el depósito hasta desbloquearlas (en línea, según
+el perfil del host).
 El dinero y las cartas permanecen en la campaña cooperativa, separados del
 progreso individual. El tutorial inicial es una pantalla estática del menú;
 un mini-nivel interactivo queda para una iteración posterior.
@@ -250,11 +251,12 @@ cerrada la Fase 4.
       backend).
 - [x] Perfil y registro de desbloqueos (`UnlockManager`) — JSON local en
       `user://unlock_progress.json`, con entregas exitosas y puntaje acumulado. Parte
-      del catálogo está disponible de inicio y se desbloquean: uniforme coral (2/150),
-      Líquido (3/250), Furgoneta ágil (4/350), pintura violeta (5/450), Explosivo
-      (7/750), uniforme cielo (9/1000) y Hostil (12/1500). Incluye migración del perfil
-      v1 y tests de persistencia/elección. La selección de uniforme/vehículo/pintura
-      respeta bloqueos, y las trampas bloqueadas no salen al depósito (`test_locked_traps`).
+      del catálogo está disponible de inicio. La curva de trampas es Frágil + Equilibrio,
+      Peso creciente (1 entrega), Ruidoso (2/100), Líquido (4/250), Explosivo (8/750)
+      y Hostil (13/1500); los cosméticos y vehículos conservan sus propios umbrales.
+      Incluye migración del perfil v1-v3 y tests de persistencia/elección. La selección
+      de uniforme/vehículo/pintura respeta bloqueos, y las trampas bloqueadas no salen
+      al depósito (`test_locked_traps`).
 - [x] Pantallas de Progreso, Cómo jugar y Cosméticos — la última elige uniforme,
       vehículo y pintura; una opción bloqueada no puede seleccionarse.
 - [ ] Lobby multiplayer con pantalla de espera — no hace falta con el diseño actual

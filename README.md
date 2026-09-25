@@ -529,9 +529,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   tu propio cuerpo sin el vidrio, y solo renderiza si hay alguien cerca; antes de eso
   saca una foto del salón (medio segundo después de arrancar, con la cámara sin
   interpolar), para que de lejos no se vea negro.
-- `test_locked_traps` — las trampas que el perfil todavía no desbloqueó (Líquido, Explosivo,
-  Hostil) no aparecen en el depósito, desbloquearlas las pone en los estantes, y en línea
-  manda la lista del host (viaja en el handshake con la semilla).
+- `test_locked_traps` — el depósito empieza solo con Frágil y Equilibrio; las otras cinco
+  trampas aparecen según la curva del perfil, perfiles v2 migran sin perder desbloqueos,
+  siempre hay cajas suficientes para las casas y en línea manda la lista del host.
 - `test_run_relay` — en línea el cliente recibe del host el inicio de la partida (con el mismo
   evento de ruta) y los resultados tal cual, los anota en su propio leaderboard y su perfil
   cuenta la entrega; la plata del equipo no se paga dos veces.
