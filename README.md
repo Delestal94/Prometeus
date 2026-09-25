@@ -149,7 +149,7 @@ Uniforme y camión conservan sus propias pestañas y desbloqueos.
 
 `test_character_faces` cubre selecciones independientes, guardado/migración,
 preview, materiales por jugador, parpadeo y configuración de réplica.
-`test_character_motion` mide el cierre de los loops, que la bola del pie apoyado no
+`test_character_motion` mide el cierre de los loops (también `TurnInPlace`), que la bola del pie apoyado no
 patine en `Walk` (3,6 m/s) ni en `Stroll` (1,5 m/s), que los brazos se balanceen,
 que `Jump` termine en el primer cuadro de `Idle` y el alcance real de las muñecas a la caja. `render_character_faces.gd` genera capturas para revisión visual.
 
@@ -510,13 +510,18 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   ninguno) con un color distinto y determinístico por `peer_id`, y ni la cámara a pie ni
   las de asiento cargan manos de relleno: las únicas manos en pantalla son de un personaje.
 - `test_player_character` — el cuerpo del jugador es el personaje redondeado de Astra
-  (`sm_char_player_rounded.glb`): trae los clips Idle/Walk/Jump/PickUpPackage/PickUpHigh/Sit, los
+  (`sm_char_player_rounded.glb`): trae los clips Idle/Walk/Jump/PickUpPackage/PickUpHigh/Sit/TurnInPlace, los
   huesos del IK de manejo, mide lo que un jugador y mira a −Z, la camiseta es la
   superficie 0 y lleva el color del equipo (el ribete, un tono más oscuro), todas sus
   mallas van en la capa del cuerpo propio y sentado reproduce Sit. Agarrar según la altura:
   `PickUpHigh` dura lo mismo que `PickUpPackage`, no se agacha (el del piso sí) y agarra más
   alto; el peso sale de la altura del agarre (caja en el piso 0, a la cintura 1) y a media
-  altura se reproduce la mezcla horneada, que queda a mitad de camino.
+  altura se reproduce la mezcla horneada, que queda a mitad de camino. Pasos al girar:
+  `TurnInPlace` es más lento que `Walk`, levanta cada pie más de 4 cm y lo vuelve a apoyar
+  donde estaba (siempre queda uno en el piso); `movement_state()` lo elige parado y girando
+  rápido, no caminando, ni con un giro lento, ni en el aire (con histéresis), la velocidad
+  de giro sale del giro real del cuerpo, un giro no corta un pickup y `anim_state`
+  `TurnInPlace` reproduce el clip en loop.
 - `test_driver_ik` — sentado al volante, las muñecas del personaje llegan a los dos
   puntos del volante con `SkeletonIK3D` (sin cilindros ni guantes sueltos en el volante),
   la bocina lleva su propia mano derecha al centro y la devuelve al aro, y al levantarse se

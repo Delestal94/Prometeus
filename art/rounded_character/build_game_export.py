@@ -7,7 +7,8 @@ do-not-drop/assets/models/characters/sm_char_player_rounded.glb:
   (Shirt is surface 0, so the player's crew colour lands on the T-shirt);
 - rig rotated to face Godot's -Z and scaled 0.5 (about 1.74 m tall);
 - the clips player.gd plays: Idle, Walk, Stroll, Jump, PickUpPackage,
-  PickUpHigh (blended with PickUpPackage by box height), Sit
+  PickUpHigh (blended with PickUpPackage by box height), Sit, TurnInPlace
+  (steps while turning standing still)
   (animation_library.py). The IK controls are baked into the deform bones
   by the exporter's sampling; model_fixes.py corrects skin weights first.
 
@@ -92,7 +93,7 @@ if PREVIEW:
         if o.type == 'MESH' and o != body: o.hide_render = True
     cam.location = (4.6, 3.4, 1.5); cam.data.ortho_scale = 2.6  # front 3/4 (rig already faces +Y)
     cam.rotation_euler = (Vector((0, 0, .85)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
-    for act_name, frames in [('Idle', [0]), ('Walk', [0, 5, 10, 15]), ('Stroll', [0, 9, 18, 27]), ('Jump', [6, 24, 56, 64]), ('PickUpPackage', [20, 32, 60, 90]), ('PickUpHigh', [20, 32, 60, 90]), ('Sit', [0])]:
+    for act_name, frames in [('Idle', [0]), ('Walk', [0, 5, 10, 15]), ('Stroll', [0, 9, 18, 27]), ('Jump', [6, 24, 56, 64]), ('PickUpPackage', [20, 32, 60, 90]), ('PickUpHigh', [20, 32, 60, 90]), ('Sit', [0]), ('TurnInPlace', [0, 6, 10, 14, 24, 34, 38, 42])]:
         rig.animation_data.action = bpy.data.actions[act_name]
         for f in frames:
             scene.frame_set(f)

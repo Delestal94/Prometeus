@@ -102,6 +102,11 @@ cintura, sin sentadilla; mismos 1,6 s y tiempos que `PickUpPackage`). En `player
 devuelve uno de los dos clips o una mezcla horneada (`blend_clips()`, librería `pickup_blend`).
 `anim_state` sigue diciendo `PickUpPackage`; no cambian firmas, señales, locks ni propiedades
 replicadas. Test: `test_player_character` (ampliado). Reimportá el GLB después del `git pull`.
+Pasos al girar (mismo N-309): clip nuevo `TurnInPlace` y, en `player.gd`, `_apply_look()` suma el
+giro aplicado, `_update_movement_anim()` lo mide (`_measure_turn_rate()`, `turn_rate`) y elige
+estado con `movement_state()` (estático): parado y girando rápido da `TurnInPlace`. Es un valor
+más de `anim_state` (sin RPC ni propiedades replicadas nuevas); se agregó a los loops de
+`_build_body()` y, si el GLB no lo trae, `_process()` cae a `Idle`.
 
 ## Aviso activo: animaciones del personaje redondeado rehechas (2026-09-25)
 

@@ -67,7 +67,8 @@ const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
-## "Personajes" for its clips (Idle/Walk/Stroll/Jump/PickUpPackage/Sit). One skinned
+## "Personajes" for its clips (Idle/Walk/Stroll/TurnInPlace/Jump/PickUpPackage/
+## PickUpHigh/Sit). One skinned
 ## mesh; surface 0 is the T-shirt, which carries the crew colour.
 const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
 const ANIM_IDLE: StringName = &"Idle"
@@ -99,6 +100,18 @@ const STROLL_AUTHORED_SPEED: float = 1.5
 ## Hysteresis between the gaits, so a stick held near one speed doesn't flicker.
 const STROLL_BELOW: float = 2.2
 const WALK_ABOVE: float = 2.6
+## Small steps in place while the player turns standing still (the whole
+## body rotates with the look yaw; without this the feet swivelled on the
+## spot). The owner picks it in _update_movement_anim() from its own look
+## turn rate, so it reaches the other peers through anim_state. Rates in
+## rad/s, smoothed; hysteresis so a mouse flick doesn't flicker it. Turning
+## with the truck the player rides in doesn't count: the floor turns too.
+const ANIM_TURN: StringName = &"TurnInPlace"
+const TURN_STEP_ABOVE: float = 1.5
+const TURN_STEP_BELOW: float = 0.8
+const TURN_RATE_SMOOTHING: float = 10.0
+## Under this ground speed (m/s) the player stands (Idle), over it walks.
+const IDLE_BELOW_SPEED: float = 0.3
 ## Driver IK chain on the rounded character's skeleton (glTF bone names).
 const DRIVER_ARM_BONES: Dictionary = {
 	-1.0: [&"upper_arm.L", &"hand.L"],
@@ -121,6 +134,9 @@ var anim_state: StringName = ANIM_IDLE
 ## ascent/landing instead of playing a crouch after leaving the floor.
 var locomotion_speed: float = 0.0
 var _strolling: bool = false
+## Look yaw applied since the last physics tick, and its smoothed rate (rad/s).
+var _turn_yaw: float = 0.0
+var turn_rate: float = 0.0
 ## Last jump_anim_time seen here, to catch the touchdown (0.9) on every peer.
 var _seen_jump_time: float = 0.0
 var jump_anim_time: float = 0.0
@@ -309,7 +325,7 @@ func _build_body() -> void:
 		# The glTF importer doesn't carry Blender's "this clip loops" flag,
 		# so it's set here once instead of needing a manual editor step
 		# every time the source .blend is re-exported.
-		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK, ANIM_STROLL, ANIM_SIT]:
+		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK, ANIM_STROLL, ANIM_SIT, ANIM_TURN]:
 			if _anim_player.has_animation(loop_clip):
 				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 		_anim_player.play(ANIM_IDLE)
@@ -403,7 +419,9 @@ func _play_clip(clip: StringName) -> void:
 	var pickup_time: float = -1.0
 	if _is_pickup_clip(StringName(_anim_player.current_animation)) and _is_pickup_clip(clip):
 		pickup_time = _anim_player.current_animation_position
-	_anim_player.play(String(clip), 0.2 if phase >= 0.0 else 0.15)
+	# Idle <-> TurnInPlace blend a little longer: a step cut short settles.
+	var turn_blend: bool = clip == ANIM_TURN or _anim_player.current_animation == String(ANIM_TURN)
+	_anim_player.play(String(clip), 0.2 if phase >= 0.0 or turn_blend else 0.15)
 	if phase >= 0.0:
 		_anim_player.seek(phase * _anim_player.current_animation_length)
 	elif pickup_time >= 0.0:
@@ -549,6 +567,8 @@ func _process(delta: float) -> void:
 		clip = _gait_clip()
 	elif _anim_player != null and clip == ANIM_PICKUP:
 		clip = _pickup_clip()
+	elif _anim_player != null and clip == ANIM_TURN and not _anim_player.has_animation(ANIM_TURN):
+		clip = ANIM_IDLE
 	if _anim_player != null and _anim_player.current_animation != String(clip):
 		_play_clip(clip)
 	if _anim_player != null:
@@ -969,6 +989,7 @@ func _apply_look(motion: Vector2) -> void:
 	motion.x *= sensitivity
 	motion.y *= sensitivity * y_sign
 	rotate_y(-motion.x)
+	_turn_yaw += motion.x
 	_pitch = clampf(_pitch - motion.y, -PITCH_LIMIT, PITCH_LIMIT)
 	_head.rotation.x = _pitch
 
@@ -993,6 +1014,7 @@ func _apply_head_bob(delta: float, ground_speed: float) -> void:
 ## anim_state a moment ago -- checked every physics frame but only actually
 ## writes (and re-replicates) anim_state when the target state changes.
 func _update_movement_anim(ground_speed: float) -> void:
+	_measure_turn_rate(get_physics_process_delta_time())
 	# An interrupted pickup must not make a moving player slide on its
 	# planted crouch. The package lift and hand contact continue independently.
 	if anim_state == ANIM_PICKUP and ground_speed > 0.3 and _pickup_elapsed > 0.16:
@@ -1001,9 +1023,29 @@ func _update_movement_anim(ground_speed: float) -> void:
 		return
 	if Time.get_ticks_msec() < _anim_lock_until_msec:
 		return
-	var next_state: StringName = ANIM_WALK if (ground_speed > 0.3 and is_on_floor()) else ANIM_IDLE
+	var next_state: StringName = movement_state(ground_speed, is_on_floor(), turn_rate, anim_state == ANIM_TURN)
 	if anim_state != next_state:
 		anim_state = next_state
+
+
+## Walk when moving on the floor; standing, TurnInPlace while turning faster
+## than TURN_STEP_ABOVE (until it drops under TURN_STEP_BELOW), else Idle.
+static func movement_state(ground_speed: float, on_floor: bool, rate: float, turning: bool) -> StringName:
+	if ground_speed > IDLE_BELOW_SPEED and on_floor:
+		return ANIM_WALK
+	if on_floor and rate > (TURN_STEP_BELOW if turning else TURN_STEP_ABOVE):
+		return ANIM_TURN
+	return ANIM_IDLE
+
+
+## The yaw rate of this body (which carries BodyVisual) from the look input
+## since the last tick, smoothed: mouse motion lands in bursts between ticks.
+func _measure_turn_rate(delta: float) -> void:
+	if delta <= 0.0:
+		return
+	var rate: float = absf(_turn_yaw) / delta
+	_turn_yaw = 0.0
+	turn_rate = lerpf(turn_rate, rate, 1.0 - exp(-TURN_RATE_SMOOTHING * delta))
 
 
 func _play_one_shot(clip: StringName, lock_ms: int) -> void:

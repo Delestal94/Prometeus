@@ -172,8 +172,9 @@ modificarlo:
   primer cuadro de `Idle`), `PickUpPackage` 1,6 s (sincronizado con la caja:
   agarre a 0,42 s, sube hasta 1,3 s), `PickUpHigh` 1,6 s (la misma agarrada para una
   caja a la cintura, sin sentadilla, con los mismos tiempos: `player.gd` mezcla los dos
-  según la altura de la caja) y `Sit` 4 s en loop (pelvis 0,5 m más abajo,
-  manos sobre la panza, pies que se balancean). `player.gd` ubica el cuerpo sobre
+  según la altura de la caja), `Sit` 4 s en loop (pelvis 0,5 m más abajo,
+  manos sobre la panza, pies que se balancean) y `TurnInPlace` 0,8 s en loop (dos
+  pasitos que reacomodan los pies; `player.gd` lo usa al girar parado). `player.gd` ubica el cuerpo sobre
   cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
   Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
   pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)

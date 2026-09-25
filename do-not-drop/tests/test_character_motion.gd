@@ -11,7 +11,7 @@ func _run() -> void:
 	root.add_child(model)
 	var skeleton: Skeleton3D = _find(model, "Skeleton3D")
 	var animation: AnimationPlayer = _find(model, "AnimationPlayer")
-	for clip: String in ["Idle", "Walk", "Stroll", "Sit"]:
+	for clip: String in ["Idle", "Walk", "Stroll", "Sit", "TurnInPlace"]:
 		var duration: float = animation.get_animation(clip).length
 		var first: Array[Transform3D] = _pose(animation, skeleton, clip, 0.0)
 		var last: Array[Transform3D] = _pose(animation, skeleton, clip, duration)

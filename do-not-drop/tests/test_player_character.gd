@@ -8,6 +8,10 @@ extends SceneTree
 ## Also the height-weighted pickup (player.gd _pickup_clip()): PickUpHigh
 ## takes a waist-high box without squatting, lasts as long as PickUpPackage,
 ## and a pickup plays a blend of both by where the hands meet the box.
+## And steps while turning in place (player.gd movement_state()): the
+## TurnInPlace clip lifts and re-plants each foot, and only a player standing
+## on the floor and turning fast enough plays it -- not walking, not a slow
+## turn, not over a one-shot.
 
 const CHARACTER: String = "res://assets/models/characters/sm_char_player_rounded.glb"
 const PlayerScript: GDScript = preload("res://scripts/gameplay/player/player.gd")
@@ -24,7 +28,7 @@ func _initialize() -> void:
 	var anim: AnimationPlayer = _find(model, "AnimationPlayer") as AnimationPlayer
 	_expect(anim != null, "The GLB carries an AnimationPlayer")
 	if anim != null:
-		for clip: String in ["Idle", "Walk", "Jump", "PickUpPackage", "PickUpHigh", "Sit"]:
+		for clip: String in ["Idle", "Walk", "Jump", "PickUpPackage", "PickUpHigh", "Sit", "TurnInPlace"]:
 			_expect(anim.has_animation(clip), "Clip %s is exported" % clip)
 		if anim.has_animation("Jump") and anim.has_animation("PickUpPackage"):
 			# player.gd locks one-shots for 1.5 s / 1.55 s: the clips must outlast that.
@@ -47,6 +51,8 @@ func _initialize() -> void:
 		_expect(skeleton.find_bone("pelvis") >= 0, "Bone pelvis exists")
 		if anim != null and anim.has_animation("PickUpHigh") and skeleton.find_bone("pelvis") >= 0:
 			_check_pickup_heights(anim, skeleton)
+		if anim != null and anim.has_animation("TurnInPlace"):
+			_check_turn_steps(anim, skeleton)
 
 	var mesh: MeshInstance3D = _find(model, "MeshInstance3D") as MeshInstance3D
 	_expect(mesh != null and mesh.mesh != null, "One skinned mesh")
@@ -123,6 +129,46 @@ func _initialize() -> void:
 	_expect(player_anim.current_animation == "pickup_blend/4",
 		"A half-height pickup plays the blended clip (got %s)" % player_anim.current_animation)
 
+	# Turning in place: standing and turning fast steps, walking or a slow
+	# turn doesn't, and the hysteresis holds a turn that eases a little.
+	for sample: Array in [
+			[0.0, true, 3.0, false, "TurnInPlace", "standing, turning fast"],
+			[3.6, true, 3.0, false, "Walk", "walking while turning"],
+			[1.2, true, 3.0, false, "Walk", "strolling while turning"],
+			[0.0, true, 0.4, false, "Idle", "standing, turning slowly"],
+			[0.0, true, 0.0, false, "Idle", "standing still"],
+			[0.0, false, 3.0, false, "Idle", "airborne, turning fast"],
+			[0.0, true, 1.1, true, "TurnInPlace", "a turn easing off (hysteresis)"],
+			[0.0, true, 1.1, false, "Idle", "that rate from standing still"]]:
+		var state: String = String(PlayerScript.movement_state(sample[0], sample[1], sample[2], sample[3]))
+		_expect(state == sample[4], "%s plays %s (got %s)" % [sample[5], sample[4], state])
+	# The rate comes from the look yaw actually applied to the body.
+	var tick: float = 1.0 / 60.0
+	var start_yaw: float = player.rotation.y
+	for _i: int in range(30):
+		player.call(&"_apply_look", Vector2(0.05, 0.0))
+		player.call(&"_measure_turn_rate", tick)
+	var turned: float = absf(angle_difference(start_yaw, player.rotation.y)) / (30.0 * tick)
+	var fast_rate: float = player.get(&"turn_rate")
+	_expect(turned > PlayerScript.TURN_STEP_ABOVE and fast_rate > PlayerScript.TURN_STEP_ABOVE,
+		"Looking around fast measures the body's turn (%.2f rad/s, body %.2f rad/s)" % [fast_rate, turned])
+	for _i: int in range(60):
+		player.call(&"_apply_look", Vector2(0.005, 0.0))
+		player.call(&"_measure_turn_rate", tick)
+	var slow_rate: float = player.get(&"turn_rate")
+	_expect(slow_rate < PlayerScript.TURN_STEP_BELOW, "A slow look settles under the step rate (%.2f rad/s)" % slow_rate)
+	# One-shots keep their lock: turning during a pickup doesn't cut it.
+	player.call(&"_play_one_shot", &"PickUpPackage", 1550)
+	player.call(&"_apply_look", Vector2(0.2, 0.0))
+	player.call(&"_update_movement_anim", 0.0)
+	_expect(player.get(&"anim_state") == &"PickUpPackage", "Turning doesn't interrupt a pickup (got %s)" % player.get(&"anim_state"))
+	# anim_state carries it to every peer: TurnInPlace plays, seated still sits.
+	player.set(&"_anim_lock_until_msec", 0)
+	player.set(&"anim_state", &"TurnInPlace")
+	await process_frame
+	_expect(player_anim.current_animation == "TurnInPlace", "anim_state TurnInPlace plays the clip (got %s)" % player_anim.current_animation)
+	_expect(player_anim.get_animation("TurnInPlace").loop_mode == Animation.LOOP_LINEAR, "TurnInPlace loops")
+
 	player.free()
 	vehicle.free()
 	if _failures == 0:
@@ -147,6 +193,36 @@ func _check_pickup_heights(anim: AnimationPlayer, skeleton: Skeleton3D) -> void:
 	var hand_high: float = _bone_height(anim, skeleton, "PickUpHigh", 0.45, "hand.L")
 	_expect(hand_high - hand_low > 0.3, "PickUpHigh grabs higher, at the waist (hands %.2f vs %.2f m)" % [hand_high, hand_low])
 	anim.remove_animation_library(&"test")
+
+
+## TurnInPlace: slower than Walk, each foot lifts clearly and sets back down
+## where it stood, and one foot is always on the floor.
+func _check_turn_steps(anim: AnimationPlayer, skeleton: Skeleton3D) -> void:
+	var length: float = anim.get_animation("TurnInPlace").length
+	_expect(length > anim.get_animation("Walk").length * 2.0, "TurnInPlace steps slower than Walk (%.2f s loop)" % length)
+	var rest: Dictionary = {}
+	for side: String in ["L", "R"]:
+		rest[side] = _bone_height(anim, skeleton, "Idle", 0.0, "foot." + side)
+	var top: Dictionary = {"L": 0.0, "R": 0.0}
+	var planted: Dictionary = {"L": 0, "R": 0}
+	var airborne: int = 0
+	var samples: int = 48
+	for i: int in samples + 1:
+		var t: float = length * i / samples
+		var up: Dictionary = {}
+		for side: String in ["L", "R"]:
+			up[side] = _bone_height(anim, skeleton, "TurnInPlace", t, "foot." + side) - rest[side]
+			top[side] = maxf(top[side], up[side])
+			if absf(up[side]) < 0.01:
+				planted[side] += 1
+		if up["L"] > 0.01 and up["R"] > 0.01:
+			airborne += 1
+	for side: String in ["L", "R"]:
+		_expect(top[side] > 0.04, "TurnInPlace lifts foot.%s (%.3f m)" % [side, top[side]])
+		_expect(planted[side] > samples / 3, "TurnInPlace sets foot.%s back down (%d of %d samples)" % [side, planted[side], samples + 1])
+		var start: float = _bone_height(anim, skeleton, "TurnInPlace", 0.0, "foot." + side) - rest[side]
+		_expect(absf(start) < 0.005, "TurnInPlace starts with foot.%s where Idle has it (%.4f m)" % [side, start])
+	_expect(airborne == 0, "TurnInPlace always keeps a foot on the floor (%d samples with both up)" % airborne)
 
 
 func _bone_height(anim: AnimationPlayer, skeleton: Skeleton3D, clip: String, time: float, bone: String) -> float:

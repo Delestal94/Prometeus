@@ -7,7 +7,7 @@ Every clip is a function of time returning a pose: a flat dict of named
 parameters (see NEUTRAL). Poses are plain numbers, so clips can blend into
 each other exactly -- Jump and PickUpPackage settle into Idle's first frame,
 and PickUpHigh shares PickUpPackage's timing so the game blends them by the
-box's height.
+box's height. TurnInPlace starts and ends on Idle's first frame too.
 
 - Arms are FK (IK_brazo = 0) so they hang from the chest, follow the torso
   and swing on arcs with follow-through. The pickups switch them to IK
@@ -33,10 +33,13 @@ GAITS = {
     'Stroll': dict(speed=1.5*BU, period=.6, duty=.62, run=False),
 }
 IDLE_PERIOD = 6.0
+# Two small steps per loop (2.5 steps/s, Walk takes 6).
+TURN_PERIOD = .8
 DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Stroll': GAITS['Stroll']['period'], 'Jump': 1.6,
-             'PickUpPackage': 1.6, 'PickUpHigh': 1.6, 'Sit': 4.0}
-LOOPING = ('Idle', 'Walk', 'Stroll', 'Sit')
+             'PickUpPackage': 1.6, 'PickUpHigh': 1.6, 'Sit': 4.0,
+             'TurnInPlace': TURN_PERIOD}
+LOOPING = ('Idle', 'Walk', 'Stroll', 'Sit', 'TurnInPlace')
 
 # Foot geometry, relative to the ankle (IK target) at rest.
 BALL = Vector((0, -.245, -.227))   # ball of the foot on the ground
@@ -479,6 +482,57 @@ def pickup_high(t):
         P['arm'+side] = tuple(rest['arm'+side][:5]) + (3*hug,)
     return P
 
+# Each foot's step in TurnInPlace, as fractions of the loop: the weight goes
+# over the other foot first, then this one peels off, lifts and sets down.
+TURN_STEPS = {'L': (.08, .42), 'R': (.58, .92)}
+
+def turn_step(u, s):
+    """One small step in place, u 0..1 across the step window (planted
+    outside it): the heel peels up about the ball, the foot lifts a hand's
+    width, drifts a touch outward and sets back down
+    heel first under the hip, where it started. Returns foot, toe, lift."""
+    if u <= 0. or u >= 1.:
+        return (0., 0., 0., 0.), 0., 0.
+    lift = math.sin(math.pi*smooth(.12, .9, u))
+    roll = keys(u, [(0, 0.), (.22, 24.), (.5, 6.), (.82, -7.), (.94, -2.), (1., 0.)])
+    toe = max(0., roll)*(1-smooth(.18, .42, u))    # flat on the floor while the heel peels
+    return (s*.035*lift, -.02*lift, .15*lift, roll), toe, lift
+
+def turn_in_place(t):
+    """Feet catching up with a body that turns standing still: player.gd
+    plays it while the player looks around without walking. Two small steps
+    per loop, left then right, each with the weight shifted over the other
+    foot first. Starts and ends on IDLE0, so it blends in and out of Idle.
+    No yaw of its own: the body turns either way, the feet just re-plant."""
+    rest = IDLE0
+    p = (t/TURN_PERIOD) % 1.
+    # + weight over the left foot: onto the right before the left steps.
+    w = keys(p, [(0, 0.), (.08, -1.), (.40, -1.), (.58, 1.), (.90, 1.), (1., 0.)])
+    P = dict(rest)
+    lifts = {}
+    for side, s in (('L', 1), ('R', -1)):
+        a, b = TURN_STEPS[side]
+        foot, toe, lift = turn_step((p-a)/(b-a), s)
+        P['foot'+side], P['toe'+side], P['ground'+side] = foot, toe, 1.
+        lifts[side] = lift
+    step = lifts['L'] + lifts['R']
+    swap = lifts['L'] - lifts['R']          # + while the left foot is up
+    P.update(
+        # The loaded hip carries the weight and the knee under it softens.
+        px=rest['px']+.05*w, pz=rest['pz']-.03*step,
+        p_roll=rest['p_roll']-2.5*w, p_yaw=rest['p_yaw']+3.*swap,
+        s_pitch=rest['s_pitch']+1.5*step, s_roll=rest['s_roll']+1.6*w,
+        c_roll=rest['c_roll']+.8*w, c_yaw=rest['c_yaw']-2.*swap,
+        h_roll=rest['h_roll']-1.2*w, h_pitch=rest['h_pitch']-1.*step,
+        bz=rest['bz']-.012*step,
+    )
+    # Arms out a little for balance on each step, the one opposite the lifted
+    # foot swinging slightly forward, the other back.
+    for side, s in (('L', 1), ('R', -1)):
+        a = rest['arm'+side]
+        P['arm'+side] = (a[0]-4*step, a[1]-5*s*swap, a[2]+4*step, a[3], a[4], a[5])
+    return P
+
 HAND_ON_BELLY = (.70, -.42, .72)   # wrist, pelvis dropped 1.0 BU for the seat
 
 def belly_hand_rot(s):
@@ -532,7 +586,8 @@ def build(rig):
         rot = (m.to_3x3().normalized() @ poser.rest['hand.'+side].to_3x3().inverted()).to_euler('XYZ')
         HANDS0[side] = (tuple(m.translation), tuple(math.degrees(x) for x in rot))
     clips = {'Idle': idle, 'Walk': lambda t: gait('Walk', t), 'Stroll': lambda t: gait('Stroll', t),
-             'Jump': jump, 'PickUpPackage': pickup, 'PickUpHigh': pickup_high, 'Sit': sit}
+             'Jump': jump, 'PickUpPackage': pickup, 'PickUpHigh': pickup_high, 'Sit': sit,
+             'TurnInPlace': turn_in_place}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action

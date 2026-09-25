@@ -1,7 +1,7 @@
 # Personaje: animación y rostro
 
 El modelo de juego es `sm_char_player_rounded.glb` (~18.600 triángulos, camiseta
-teñible) con siete clips. `animation_library.py` los genera; `model_fixes.py`
+teñible) con ocho clips. `animation_library.py` los genera; `model_fixes.py`
 corrige pesos y geometría oculta antes de exportar; `build_game_export.py` arma el
 GLB. `personaje_animado.blend` guarda las acciones editables y
 `personaje_redondeado.blend` sigue siendo la referencia de modelado (no se guarda).
@@ -13,7 +13,8 @@ parámetros (inclinaciones de pelvis/columna/pecho/cabeza, barriga, brazos, pies
 Al ser números, las poses se mezclan exacto: `Jump` aterriza y termina en el
 primer cuadro de `Idle`, y `PickUpPackage` parte de donde cuelgan de verdad las
 manos en `Idle`. `PickUpPackage` y `PickUpHigh` comparten las curvas de tiempo
-(`pickup_timing()`), así el juego los mezcla cuadro a cuadro.
+(`pickup_timing()`), así el juego los mezcla cuadro a cuadro. `TurnInPlace` empieza
+y termina en el primer cuadro de `Idle`.
 
 - **Brazos en FK** (`IK_brazo = 0` por clip): cuelgan del pecho, siguen al torso y
   describen arcos con arrastre. Los dos pickups y `Sit` los pasan a IK, porque las
@@ -32,6 +33,7 @@ manos en `Idle`. `PickUpPackage` y `PickUpHigh` comparten las curvas de tiempo
 | `Jump` | 1,6 s | Brazos que vienen desde atrás y abajo (el impulso), "Y" de festejo arriba con piernas recogidas, aleteo cómico al caer, piernas que buscan el piso. Al tocar: aplastamiento que sigue la velocidad de caída, cabeza y barriga que siguen de largo, brazos que bajan tarde. Parpadeo de impacto. |
 | `PickUpPackage` | 1,6 s | Los ojos van primero, mini subida antes de bajar, sentadilla con cola atrás (no se dobla de cintura), abrazo a la caja, subida con las piernas y leve esfuerzo hacia atrás, asentamiento. Tiempos iguales a los de la caja en `player.gd`. |
 | `PickUpHigh` | 1,6 s | La misma agarrada con la caja a la cintura (estante, mesa): sin sentadilla, rodillas apenas flojas, inclinación leve hacia la caja, brazos al frente que la traen al pecho. Mismos tiempos que `PickUpPackage`. |
+| `TurnInPlace` | 0,8 s, loop | Pasos al girar parado: dos pasitos por ciclo (2,5 pasos/s; `Walk` da 6), izquierdo y después derecho. Antes de cada uno el peso pasa al otro pie (pelvis y cadera cargada, pecho y cabeza que compensan); el pie despega el talón sobre la bola, sube ~7 cm, se abre apenas y vuelve a apoyar de taco donde estaba. Brazos en FK que se abren un poco para equilibrar. Sin giro propio: sirve para los dos sentidos. |
 | `Sit` | 4 s, loop | Manos apoyadas sobre la panza (los codos salen para rodearla), respiración que las levanta, mirada, pies que se balancean por turnos. |
 
 ### Por qué `Walk` es un trote
@@ -52,6 +54,18 @@ en cada peer, así que no se replica nada. Sin `AnimationTree`: la mezcla se hor
 una vez por escalón de 1/8 como un clip más (`blend_clips()`, hueso por hueso a
 30 Hz) en la librería `pickup_blend` del `AnimationPlayer`. Una caja más alta que el
 pecho usa `PickUpHigh` entero y las manos llegan por IK.
+
+### Pasos al girar en el lugar
+
+El cuerpo entero gira con la mirada (`_apply_look()` rota el `CharacterBody3D`, que
+lleva `BodyVisual`). `player.gd` mide esa velocidad angular: suma el giro que aplica la
+mirada en cada tick y la suaviza (`turn_rate`, constante de 10/s, porque el mouse llega a
+ráfagas). Parado en el piso (menos de 0,3 m/s, el umbral de `Idle`/`Walk`) y girando a
+más de 1,5 rad/s pasa a `TurnInPlace`, y vuelve a `Idle` cuando baja de 0,8 rad/s
+(`movement_state()`). El giro del camión en el que se viaja no cuenta: el piso gira con
+los pies. Lo decide el dueño y viaja en `anim_state`, como `Walk`: no hay RPC ni
+propiedades replicadas nuevas. Los one-shots (`Jump`, pickups) siguen bloqueando y
+sentado manda `Sit`. Entre `Idle` y `TurnInPlace` el cruce dura 0,2 s.
 
 ## Correcciones del modelo (`model_fixes.py`)
 
@@ -92,7 +106,10 @@ con los mismos pesos y recortes que el export:
 
 - La caja viaja en línea recta de donde estaba hasta las manos (`player.gd`); si
   estaba lejos, se ve deslizarse.
-- Girar en el lugar no da pasos (el cuerpo rota entero). Sin IK de pies en pendientes.
+- Sin IK de pies en pendientes.
+- `TurnInPlace` no sabe hacia dónde gira: los pies se levantan y vuelven a apoyar en su
+  lugar relativo al cuerpo, así que mientras están en el piso giran con él. Con giros
+  rápidos se nota que pivotan; harían falta dos clips (izquierda/derecha) o IK de pies.
 - Con las piernas levantadas en `Sit`, el tiro del short forma un pliegue en punta
   entre las rodillas, visible de frente.
 - Las sombras de Workbench del banco de pruebas dibujan una línea falsa en algún
