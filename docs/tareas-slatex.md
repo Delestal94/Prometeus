@@ -259,16 +259,16 @@ Equilibrio. Hoy las 4 básicas salen desde la primera partida.
 Pendiente de `docs/controles-y-ui.md` ("la selección semi-aleatoria y sus reglas de balance
 siguen pendientes").
 
-- [ ] **S-107.1** Módulo puro `scripts/gameplay/traps/order_balancer.gd` (`class_name OrderBalancer`,
+- [x] **S-107.1** (commit `1fb41b9`) Módulo puro `scripts/gameplay/traps/order_balancer.gd` (`class_name OrderBalancer`,
   funciones `static`): recibe trampas disponibles (`TrapDefinition`), cantidad de casas, partidas
   completadas del perfil y un `RandomNumberGenerator` con la semilla de la sesión; devuelve la lista de
   ids de trampa por casa.
-- [ ] **S-107.2** Reglas: suma de `difficulty` del pedido ≤ `4 + casas + min(completed_runs, 6)`;
+- [x] **S-107.2** (commit `1fb41b9`) Reglas: suma de `difficulty` del pedido ≤ `4 + casas + min(completed_runs, 6)`;
   nunca dos de dificultad 4 juntas antes de 10 partidas; no repetir trampa mientras haya distintas
   disponibles; siempre al menos una de dificultad ≤ 2.
-- [ ] **S-107.3** Integración: `depot.gd` `post_orders()` usa el resultado para elegir la caja de cada
+- [x] **S-107.3** (commit `1fb41b9`) Integración: `depot.gd` `post_orders()` usa el resultado para elegir la caja de cada
   casa. Es un cambio de 3-5 líneas en un archivo de Nacho: aviso en `colaboracion-equipo.md`.
-- [ ] **S-107.4** Test `tests/test_order_balancer.gd`: 1000 semillas por cantidad de casas, ninguna
+- [x] **S-107.4** (commit `1fb41b9`) Test `tests/test_order_balancer.gd`: 1000 semillas por cantidad de casas, ninguna
   rompe las reglas; la misma semilla da el mismo pedido (todos los peers calculan igual).
 
 ### S-108 · Simulador de balance de trampas (reemplaza al playtesting de balance) — A · `Astra · xhigh` para diseñarlo, `Sol · high` para implementarlo · Aviso: no
