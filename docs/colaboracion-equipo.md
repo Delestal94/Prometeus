@@ -633,6 +633,14 @@ cuando no hay conductor, aunque todavía quede fuerza de motor del frame anterio
 No cambia firmas compartidas. `test_stuck_detection.gd` cubre las tres exclusiones
 además del bloqueo real contra un obstáculo.
 
+## Aviso S-210 · 2026-09-25
+
+Slatex pasó el guardado del leaderboard en `run_manager.gd` al helper común
+`safe_json.gd`; no cambió sus firmas ni su formato. También migró el perfil de
+`unlock_manager.gd` y mantuvo la campaña sobre el mismo helper. `README.md` suma
+`test_safe_json.gd`, que verifica la cuarentena `.bad` y los valores por defecto
+ante JSON truncado.
+
 ## Cómo se armaron las 200 tareas
 
 Las primeras ~70 de cada lista salen directo de los ítems pendientes de

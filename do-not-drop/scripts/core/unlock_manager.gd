@@ -13,6 +13,7 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## older profile grants every unlock its existing progress already earns.
 const PROFILE_VERSION := 3
 const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
+const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
@@ -250,11 +251,7 @@ func record_run(score: int, results: Dictionary) -> Array[StringName]:
 
 
 func save_profile() -> void:
-	var file := FileAccess.open(storage_path, FileAccess.WRITE)
-	if file == null:
-		push_warning("No se pudo guardar progreso: " + storage_path)
-		return
-	file.store_string(JSON.stringify({
+	var saved: bool = SAFE_JSON.write(storage_path, {
 		"version": PROFILE_VERSION,
 		"total_score": total_score,
 		"successful_deliveries": successful_deliveries,
@@ -265,17 +262,17 @@ func save_profile() -> void:
 		"selected_paint": selected_paint,
 		"selected_eyes": selected_eyes,
 		"selected_mouth": selected_mouth,
-	}))
+	})
+	if not saved:
+		push_warning("No se pudo guardar progreso: " + storage_path)
 
 
 func load_profile() -> void:
 	if not FileAccess.file_exists(storage_path):
 		return
-	var file := FileAccess.open(storage_path, FileAccess.READ)
-	if file == null:
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary:
+	var parsed: Dictionary = SAFE_JSON.read(storage_path, {})
+	if parsed.is_empty():
+		reset_profile()
 		return
 	var saved_version := int(parsed.get("version", 1))
 	total_score = maxi(int(parsed.get("total_score", 0)), 0)

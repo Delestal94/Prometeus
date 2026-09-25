@@ -222,6 +222,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_sound_check.gd
 <godot> --headless --path do-not-drop --script res://tests/test_session_sync.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
+<godot> --headless --path do-not-drop --script res://tests/test_safe_json.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
 <godot> --headless --path do-not-drop --script res://tests/test_legacy_user_data.gd

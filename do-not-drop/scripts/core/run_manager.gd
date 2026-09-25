@@ -11,6 +11,7 @@ const POINTS_INTACT: int = 100
 const POINTS_AT_RISK: int = 50
 const CHAOS_MULTIPLIER: float = 1.2
 const MAX_LEADERBOARD_ENTRIES: int = 10
+const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 
 ## docs/tareas-nacho.md #44/#52: endless never "delivers" (no zone to reach),
 ## so it can't use the cargo/time formula above -- distance is the only
@@ -616,22 +617,12 @@ func _trim_leaderboard() -> void:
 
 func _load_leaderboard() -> void:
 	LegacyUserData.migrate()
-	leaderboard = []
-	if not FileAccess.file_exists(save_path):
-		return
-	var file: FileAccess = FileAccess.open(save_path, FileAccess.READ)
-	if file == null:
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if parsed is Array:
-		leaderboard = parsed
+	leaderboard = SAFE_JSON.read(save_path, [])
 
 
 func _save_leaderboard() -> void:
-	var file: FileAccess = FileAccess.open(save_path, FileAccess.WRITE)
-	if file == null:
-		return
-	file.store_string(JSON.stringify(leaderboard))
+	if not SAFE_JSON.write(save_path, leaderboard):
+		push_warning("No se pudo guardar el leaderboard: " + save_path)
 
 
 ## Worst state across the cargo, for readouts that only have room for one.
