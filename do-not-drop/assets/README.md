@@ -164,18 +164,23 @@ modificarlo:
   de anclaje para agarrar cosas;
 - mira hacia −Z y mide ~1,74 m: la escala 0,5 y el giro de 180° están en el nodo
   del esqueleto;
-- clips (30 fps, el IK de Blender horneado): `Idle` 2,5 s en loop con
-  respiración, `Walk` 0,67 s en loop, `Jump` 1,67 s, `PickUpPackage` 1,67 s (termina
-  sosteniendo la caja a la altura del pecho) y `Sit` 2 s en loop (pelvis 0,5 m más
-  abajo, manos sobre los muslos). `player.gd` ubica el cuerpo sobre cada asiento
-  con `_seat_body_offset()`, medido con `tests/render_player_character.gd`. Los
-  loops se marcan en `player.gd`. El export recorta la parte de la pierna que queda
-  dentro del short y la cintura del short bajo la camiseta, que al sentarse
-  atravesaban la ropa.
+- clips (60 Hz, generados por `art/rounded_character/animation_library.py`; brazos en
+  FK, piernas con IK horneado): `Idle` 6 s en loop (respiración, cambio de peso,
+  mirada), `Walk` 0,33 s en loop (trote corto a 6 pasos/s, autorado a 3,6 m/s),
+  `Stroll` 0,6 s en loop (caminata real a 1,5 m/s, para el stick a medias),
+  `Jump` 1,6 s (`player.gd` lo recorre según la velocidad vertical; aterriza en el
+  primer cuadro de `Idle`), `PickUpPackage` 1,6 s (sincronizado con la caja:
+  agarre a 0,42 s, sube hasta 1,3 s) y `Sit` 4 s en loop (pelvis 0,5 m más abajo,
+  manos sobre la panza, pies que se balancean). `player.gd` ubica el cuerpo sobre
+  cada asiento con `_seat_body_offset()`, medido con `tests/render_player_character.gd`.
+  Los loops se marcan en `player.gd`. `art/rounded_character/model_fixes.py` corrige
+  pesos (rodilla, punta del zapato que se dobla en el metatarso, bajo de la camiseta)
+  y recorta la pierna dentro del short y la cintura del short bajo la camiseta.
 
-Para cambiar poses o sumar clips, editá `build_game_export.py` y volvé a correrlo
-(el comando está en su encabezado; con `-- --preview` renderiza cada pose en
-`PREVIEW_DIR`).
+Para cambiar poses o sumar clips, editá `animation_library.py` y volvé a correr
+`build_game_export.py` (el comando está en su encabezado; con `-- --preview`
+renderiza cada pose en `PREVIEW_DIR`). `art/rounded_character/REFINAMIENTO.md`
+explica los criterios y las mediciones.
 
 `models/characters/sm_char_player_lowpoly.glb` sigue en uso para los NPC
 (operarios del depósito y vecinos de las casas) y el ragdoll arma sus propias

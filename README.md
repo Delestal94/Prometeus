@@ -148,9 +148,10 @@ en el perfil, se aplica al jugador del depósito y se replica a los compañeros.
 Uniforme y camión conservan sus propias pestañas y desbloqueos.
 
 `test_character_faces` cubre selecciones independientes, guardado/migración,
-preview, materiales por jugador y configuración de réplica. `test_character_motion`
-mide el cierre de los loops, el deslizamiento del pie apoyado y el alcance real de
-las muñecas a la caja. `render_character_faces.gd` genera capturas para revisión visual.
+preview, materiales por jugador, parpadeo y configuración de réplica.
+`test_character_motion` mide el cierre de los loops, que la bola del pie apoyado no
+patine en `Walk` (3,6 m/s) ni en `Stroll` (1,5 m/s), que los brazos se balanceen,
+que `Jump` termine en el primer cuadro de `Idle` y el alcance real de las muñecas a la caja. `render_character_faces.gd` genera capturas para revisión visual.
 
 **La forma normal:** `tools/run-tests.sh` corre toda la batería headless en paralelo (~1 minuto)
 y muestra solo el resumen y las fallas; `tools/run-tests.sh depot traps` corre solo los tests
@@ -188,6 +189,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_player_colors.gd
 <godot> --headless --path do-not-drop --script res://tests/test_player_character.gd
 <godot> --headless --path do-not-drop --script res://tests/test_driver_ik.gd
+<godot> --headless --path do-not-drop --script res://tests/test_character_motion.gd
+<godot> --headless --path do-not-drop --script res://tests/test_character_faces.gd
 <godot> --headless --path do-not-drop --script res://tests/test_impact_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_presentation.gd
 <godot> --headless --path do-not-drop --script res://tests/test_seated_body.gd

@@ -370,6 +370,21 @@ Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
 
 ---
 
+
+### N-309 · Personaje redondeado: animaciones y rostro con vida — A · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd` de Slatex) · **[x] Hecho (2026-09-25)**
+
+Pedido del usuario: refinar el personaje y sus animaciones al máximo, sin perder lo tierno.
+
+- [x] ~~Rehacer los cinco clips~~ **[x] Hecho (2026-09-25)** — `art/rounded_character/animation_library.py`:
+  poses paramétricas, brazos en FK, pies que ruedan sobre bola/taco; `Walk` como trote corto a
+  3,6 m/s, `Stroll` nuevo, `Jump` con "Y" y aterrizaje con arrastre, `PickUpPackage` en
+  sentadilla sincronizada con la caja, `Sit` con manos en la panza. Detalle en `REFINAMIENTO.md`.
+- [x] ~~Arreglar deformaciones~~ **[x] Hecho (2026-09-25)** — `model_fixes.py`: zapato que se
+  dobla en el metatarso, rodilla, línea dentada del bajo de la camiseta, dobladillo y cuello.
+- [x] ~~Parpadeo~~ **[x] Hecho (2026-09-25)** — `character_face.gd` `blink()`, también al aterrizar.
+- [ ] Pendiente: sentadilla según la altura de la caja, pasos al girar en el lugar, pliegue del
+  short sentado (ver "Límites conocidos" en `REFINAMIENTO.md`).
+
 ## 4. Audio y diseño sonoro
 
 ### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas) · **[x] `8081c75`**

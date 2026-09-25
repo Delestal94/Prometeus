@@ -93,6 +93,25 @@ ampliados (lista del README). Hacé `git pull` antes de seguir con `level_base.g
   y en los clientes se dibuja suavizada 100 ms atrás (N-208, `vehicle/vehicle_net_smoother.gd`).
   `position`/`rotation` del camión en el cliente siguen siendo la verdad local para colisiones.
 
+## Aviso activo: animaciones del personaje redondeado rehechas (2026-09-25)
+
+Pedido del usuario: llevar el personaje y sus animaciones a la mejor calidad posible. Lo hizo
+Nacho (con Claude). Todo se regenera desde `art/rounded_character/` (`animation_library.py`,
+`model_fixes.py`, `build_game_export.py`); criterios y mediciones en `REFINAMIENTO.md`.
+Archivos de Slatex tocados:
+- `player/player.gd`: clip nuevo `Stroll` (caminata para el stick a medias). `anim_state` sigue
+  diciendo `Walk`; `_gait_clip()` elige `Walk`/`Stroll` por `locomotion_speed` (ya replicado) con
+  histéresis 2,2–2,6 m/s, y `_play_clip()` conserva la fase al cambiar. `speed_scale` usa
+  `WALK_AUTHORED_SPEED` (3,6, antes 3,2) y `STROLL_AUTHORED_SPEED` (1,5). Al aterrizar llama a
+  `_character_face.blink()`. No cambian firmas, señales ni propiedades replicadas.
+- Los clips cambiaron de largo: `Idle` 6 s, `Walk` 0,33 s, `Jump`/`PickUpPackage` 1,6 s, `Sit` 4 s.
+  Los tiempos de `Jump` (0–0,84 aire, 0,9 impacto) y de `PickUpPackage` (agarre 0,42 s, caja
+  arriba a 1,3 s) siguen los que ya usa `player.gd`: no hay que tocar los locks.
+- `Sit` ahora apoya las manos sobre la panza (antes se hundían en ella). El IK del volante del
+  conductor las sigue pisando igual.
+- Tests: `test_character_motion` (ampliado) y `test_character_faces` (parpadeo). Hacé `git pull`
+  y reimportá el GLB (abrir el editor alcanza) antes de tocar `player.gd`.
+
 ## Aviso activo: versión en el menú y builds de release (N-210, 2026-09-25)
 
 - `project.godot` (zona compartida): nueva clave `application/config/version="0.1.0"`. No cambia nada
