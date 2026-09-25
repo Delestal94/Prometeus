@@ -12,6 +12,8 @@ class_name NightFlares
 const STREET_LAMP: String = "res://assets/models/environment/props/sm_env_prop_street_lamp_refined.glb"
 const LAMP_HALO_SIZE: float = 1.5
 const CAR_HALO_SIZE: float = 0.55
+## How far out in front of a car's lamp its halo sits.
+const HALO_OUT: float = 0.18
 const HALO_COLOR := Color(1.0, 0.72, 0.38)
 
 
@@ -35,8 +37,19 @@ static func halo_spots(route: Node3D) -> Array:
 			for mesh: Node in piece.find_children("Light*", "MeshInstance3D", true, false):
 				if not _has_material(mesh as MeshInstance3D, "lamp"):
 					continue
-				for centre: Vector3 in lamp_centres(mesh as MeshInstance3D):
-					spots.append([to_route * ((mesh as MeshInstance3D).global_transform * centre), CAR_HALO_SIZE])
+				var lamp := mesh as MeshInstance3D
+				var centres: Array[Vector3] = lamp_centres(lamp)
+				# One piece may be a light bar across the whole front: a halo
+				# as wide as the bar, not a dot behind its middle. And a little
+				# out in front of the glass, or the bar itself hides it.
+				var size: float = CAR_HALO_SIZE
+				if centres.size() == 1:
+					size = maxf(CAR_HALO_SIZE, lamp.get_aabb().get_longest_axis_size() * lamp.global_basis.get_scale().x * 1.1)
+				for centre: Vector3 in centres:
+					var at: Vector3 = lamp.global_transform * centre
+					var out: Vector3 = at - piece.global_position
+					out.y = 0.0
+					spots.append([to_route * (at + out.normalized() * HALO_OUT), size])
 	return spots
 
 
