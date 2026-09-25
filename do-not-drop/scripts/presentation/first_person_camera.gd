@@ -20,6 +20,18 @@ extends Camera3D
 @export var stick_sensitivity: float = 2.4  ## Radians per second at full deflection.
 @export_range(0.0, 180.0) var yaw_limit_degrees: float = 160.0
 @export_range(0.0, 89.0) var pitch_limit_degrees: float = 80.0
+## How far down the head can tilt (negative); up is pitch_limit_degrees.
+@export_range(-89.0, 0.0) var pitch_down_limit_degrees: float = -80.0
+## Per-seat limits (tareas de Nacho N-504): a "LookLimits" Marker3D next to
+## this camera, under the seat's eye point in vehicle.tscn, with metadata
+## pitch_min / pitch_max / yaw_max in degrees -- the driver can't look up
+## through the cab roof or round through the bulkhead. Read on _ready().
+const LOOK_LIMITS_NODE: String = "LookLimits"
+## If the view still ends up nearer than this to something solid (a cargo
+## wall right behind a seat), the eye backs off along the line of sight.
+const WALL_CLEARANCE: float = 0.1
+## How far the eye may back off, at most.
+const MAX_PULLBACK: float = 0.25
 
 ## Wider than Player's own on-foot WALK_FOV (78°) -- item #64: driving
 ## shouldn't share the exact same frame as walking, and a touch more field
@@ -50,6 +62,7 @@ func _ready() -> void:
 	# that only shows up as a problem once the world stops being hand-placed.
 	far = 600.0
 	_base_transform = transform
+	_read_look_limits()
 	# Look and shake move this camera every rendered frame (_process), not on
 	# physics ticks. Off, it still rides the seat's interpolated pose -- the
 	# van stays smooth -- but its own turn applies the frame it happens.
@@ -101,7 +114,42 @@ func _apply_look(motion: Vector2) -> void:
 	motion.x *= GameSettings.look_sensitivity
 	motion.y *= GameSettings.look_sensitivity * GameSettings.look_y_sign()
 	_look_yaw = clampf(_look_yaw - motion.x, -deg_to_rad(yaw_limit_degrees), deg_to_rad(yaw_limit_degrees))
-	_look_pitch = clampf(_look_pitch - motion.y, -deg_to_rad(pitch_limit_degrees), deg_to_rad(pitch_limit_degrees))
+	_look_pitch = clampf(_look_pitch - motion.y, deg_to_rad(pitch_down_limit_degrees), deg_to_rad(pitch_limit_degrees))
+
+
+## The seat's own limits, if its eye point carries them (N-504).
+func _read_look_limits() -> void:
+	var limits: Node = get_parent().get_node_or_null(LOOK_LIMITS_NODE) if get_parent() != null else null
+	if limits == null:
+		return
+	pitch_down_limit_degrees = clampf(float(limits.get_meta(&"pitch_min", pitch_down_limit_degrees)), -89.0, 0.0)
+	pitch_limit_degrees = clampf(float(limits.get_meta(&"pitch_max", pitch_limit_degrees)), 0.0, 89.0)
+	yaw_limit_degrees = clampf(float(limits.get_meta(&"yaw_max", yaw_limit_degrees)), 0.0, 180.0)
+
+
+## Backs the eye off along its line of sight when something solid is closer
+## than WALL_CLEARANCE ahead of it (N-504). Rays that start inside a solid
+## (the cab is one solid volume) see nothing, so this only acts on walls the
+## eye is in front of, never on the truck's own shell around it.
+func _clear_of_walls(pose: Transform3D) -> Transform3D:
+	if not is_inside_tree() or get_world_3d() == null:
+		return pose
+	var parent_node := get_parent() as Node3D
+	if parent_node == null:
+		return pose
+	var eye: Vector3 = parent_node.global_transform * pose.origin
+	var forward: Vector3 = -(parent_node.global_basis * pose.basis).z.normalized()
+	var query := PhysicsRayQueryParameters3D.create(eye, eye + forward * (WALL_CLEARANCE + near))
+	query.hit_from_inside = false
+	query.collide_with_areas = false
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return pose
+	var gap: float = eye.distance_to(hit.position)
+	var back: float = minf(WALL_CLEARANCE + near - gap, MAX_PULLBACK)
+	var shifted := pose
+	shifted.origin -= (parent_node.global_basis.inverse() * forward) * back
+	return shifted
 
 
 func _look_transform() -> Transform3D:
@@ -125,7 +173,7 @@ func _process(delta: float) -> void:
 		_apply_look(stick * stick_sensitivity * delta)
 	var wants_back: bool = _can_look() and InputMap.has_action(&"look_back") and Input.is_action_pressed(&"look_back")
 	_look_back = move_toward(_look_back, 1.0 if wants_back else 0.0, LOOK_BACK_SPEED * delta)
-	var look_pose: Transform3D = _look_transform()
+	var look_pose: Transform3D = _clear_of_walls(_look_transform())
 	var preferred_fov: float = GameSettings.preferred_fov
 	if not is_equal_approx(fov, preferred_fov):
 		fov = move_toward(fov, preferred_fov, fov_recover_speed * absf(fov - preferred_fov) * delta + 0.01)

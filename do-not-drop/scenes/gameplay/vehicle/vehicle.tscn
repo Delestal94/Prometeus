@@ -9,10 +9,10 @@
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_door_interaction.gd" id="7_door"]
 
 [sub_resource type="SceneReplicationConfig" id="Repl_vehicle"]
-properties/0/path = NodePath(".:position")
+properties/0/path = NodePath(".:net_position")
 properties/0/spawn = true
 properties/0/replication_mode = 1
-properties/1/path = NodePath(".:rotation")
+properties/1/path = NodePath(".:net_rotation")
 properties/1/spawn = true
 properties/1/replication_mode = 1
 properties/2/path = NodePath(".:linear_velocity")
@@ -69,6 +69,9 @@ properties/18/replication_mode = 2
 properties/19/path = NodePath(".:controls_enabled")
 properties/19/spawn = true
 properties/19/replication_mode = 2
+properties/20/path = NodePath(".:net_time")
+properties/20/spawn = true
+properties/20/replication_mode = 1
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_body"]
 friction = 0.7
@@ -136,7 +139,6 @@ mass = 950.0
 physics_material_override = SubResource("PhysicsMaterial_body")
 center_of_mass_mode = 1
 center_of_mass = Vector3(0, -0.42, 0.1)
-continuous_cd = true
 linear_damp = 0.08
 angular_damp = 0.6
 can_sleep = false
@@ -244,6 +246,11 @@ position = Vector3(-0.5, 1.52, -1.2)
 
 [node name="FirstPersonCamera" parent="CabinInterior/DriverEyePoint" instance=ExtResource("3_fp_camera")]
 
+[node name="LookLimits" type="Marker3D" parent="CabinInterior/DriverEyePoint"]
+metadata/pitch_min = -55.0
+metadata/pitch_max = 32.0
+metadata/yaw_max = 110.0
+
 [node name="InteractionArea" type="Area3D" parent="CabinInterior/DriverEyePoint"]
 position = Vector3(-0.35, -0.25, 0.15)
 script = ExtResource("4_seat")
@@ -286,6 +293,11 @@ shape = SubResource("Shape_cab_door_interact")
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.68, 1.18, 1.428)
 
 [node name="FirstPersonCamera" parent="CargoBay/LeftSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/LeftSeat1EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 shake_position_scale = 0.0156
 shake_rotation_scale_deg = 2.08
 
@@ -304,6 +316,11 @@ shape = SubResource("Shape_seat_interact")
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.68, 1.18, 0.948)
 
 [node name="FirstPersonCamera" parent="CargoBay/LeftSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/LeftSeat2EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 shake_position_scale = 0.0192
 shake_rotation_scale_deg = 2.56
 
@@ -322,6 +339,11 @@ shape = SubResource("Shape_seat_interact")
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.68, 1.18, 1.108)
 
 [node name="FirstPersonCamera" parent="CargoBay/RightSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/RightSeat1EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 shake_position_scale = 0.0156
 shake_rotation_scale_deg = 2.08
 
@@ -340,6 +362,11 @@ shape = SubResource("Shape_seat_interact")
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.68, 1.18, 0.588)
 
 [node name="FirstPersonCamera" parent="CargoBay/RightSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/RightSeat2EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 shake_position_scale = 0.0192
 shake_rotation_scale_deg = 2.56
 
@@ -359,6 +386,11 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.68, 1.18, 0.468)
 
 [node name="FirstPersonCamera" parent="CargoBay/LeftSeat3EyePoint" instance=ExtResource("3_fp_camera")]
 
+[node name="LookLimits" type="Marker3D" parent="CargoBay/LeftSeat3EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
+
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat3EyePoint"]
 script = ExtResource("4_seat")
 role = &"passenger"
@@ -373,6 +405,11 @@ shape = SubResource("Shape_seat_interact")
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.68, 1.18, -0.012)
 
 [node name="FirstPersonCamera" parent="CargoBay/CenterSeatEyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/CenterSeatEyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 
 ; Front seat: a straight step forward would put you against the bulkhead.
 [node name="ExitPoint" type="Marker3D" parent="CargoBay/CenterSeatEyePoint"]
@@ -393,6 +430,11 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.68, 1.18, 0.068)
 
 [node name="FirstPersonCamera" parent="CargoBay/RightSeat3EyePoint" instance=ExtResource("3_fp_camera")]
 
+[node name="LookLimits" type="Marker3D" parent="CargoBay/RightSeat3EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
+
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat3EyePoint"]
 script = ExtResource("4_seat")
 role = &"passenger"
@@ -409,6 +451,11 @@ shape = SubResource("Shape_seat_interact")
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.74, 1.24, 2.305)
 
 [node name="FirstPersonCamera" parent="CargoBay/RackSeat1EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/RackSeat1EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 shake_position_scale = 0.0192
 shake_rotation_scale_deg = 2.56
 
@@ -427,6 +474,11 @@ shape = SubResource("Shape_mount_interact")
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.74, 1.24, 3.125)
 
 [node name="FirstPersonCamera" parent="CargoBay/RackSeat2EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/RackSeat2EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 shake_position_scale = 0.0192
 shake_rotation_scale_deg = 2.56
 
@@ -445,6 +497,11 @@ shape = SubResource("Shape_mount_interact")
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.74, 1.24, 3.945)
 
 [node name="FirstPersonCamera" parent="CargoBay/RackSeat3EyePoint" instance=ExtResource("3_fp_camera")]
+
+[node name="LookLimits" type="Marker3D" parent="CargoBay/RackSeat3EyePoint"]
+metadata/pitch_min = -60.0
+metadata/pitch_max = 55.0
+metadata/yaw_max = 120.0
 shake_position_scale = 0.0192
 shake_rotation_scale_deg = 2.56
 

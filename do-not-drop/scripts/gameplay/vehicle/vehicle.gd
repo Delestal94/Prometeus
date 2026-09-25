@@ -27,6 +27,38 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## the host, so a client at the wheel kept the scene's `false` and never sent
 ## a single throttle sample -- the truck just crept on its brakes.
 @export var controls_enabled: bool = true
+## The pose the host sends (tareas de Nacho N-208), replicated instead of
+## position/rotation (vehicle.tscn): on the host they read the truck itself,
+## plus its own clock; on a client each packet goes into VehicleNetSmoother,
+## which draws the truck a touch in the past, interpolated, instead of
+## jumping with every burst of packets.
+var net_time: float:
+	get:
+		return _host_clock
+	set(value):
+		_net_incoming_time = value
+		_net_received |= 1
+		_commit_net_pose()
+var net_position: Vector3:
+	get:
+		return position
+	set(value):
+		_net_incoming_position = value
+		_net_received |= 2
+		_commit_net_pose()
+var net_rotation: Vector3:
+	get:
+		return rotation
+	set(value):
+		_net_incoming_rotation = value
+		_net_received |= 4
+		_commit_net_pose()
+var _host_clock: float = 0.0
+var _net_smoother := VehicleNetSmoother.new()
+var _net_incoming_time: float = 0.0
+var _net_incoming_position: Vector3 = Vector3.ZERO
+var _net_incoming_rotation: Vector3 = Vector3.ZERO
+var _net_received: int = 0
 @export var maximum_engine_force: float = 1700.0
 @export var maximum_speed_kmh: float = 72.0
 @export var reverse_speed_kmh: float = 18.0
@@ -361,10 +393,36 @@ func get_cargo_spawn_transform() -> Transform3D:
 	return _package_spawn.global_transform
 
 
+## All three parts of a packet in (they travel together, in whatever order
+## they're applied): hand the pose to the smoother. The very first one also
+## puts the truck there at once, so a joining client doesn't see it slide in.
+func _commit_net_pose() -> void:
+	if _net_received != 7:
+		return
+	_net_received = 0
+	if is_inside_tree() and is_multiplayer_authority():
+		return
+	var pose := Transform3D(Basis.from_euler(_net_incoming_rotation), _net_incoming_position)
+	var first: bool = _net_smoother.is_empty()
+	_net_smoother.push(_net_incoming_time, pose, Time.get_ticks_usec() / 1000000.0)
+	if first:
+		transform = pose
+
+
+## A client draws the host's truck every frame from the smoother (N-208).
+func _process(_delta: float) -> void:
+	if is_multiplayer_authority() or _net_smoother.is_empty():
+		return
+	var pose: Transform3D = _net_smoother.sample(Time.get_ticks_usec() / 1000000.0)
+	if pose != Transform3D.IDENTITY:
+		transform = pose
+
+
 func _physics_process(delta: float) -> void:
 	_match_interpolation_to_freeze()
 	if not is_multiplayer_authority():
 		return
+	_host_clock += delta
 	if not _grounded_once:
 		_snap_to_ground()
 	_update_parking()

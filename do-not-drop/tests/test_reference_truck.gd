@@ -50,6 +50,7 @@ func _run() -> void:
 	_test_rack_fits_every_shape(van)
 	_test_aisle_is_walkable(van)
 	_test_seats_match_model(van, model)
+	await _test_panel_lines(van, model, adapter)
 	await _test_doors(van, adapter)
 	await _test_door_needs_aim(van)
 	await _test_boarding_swings_driver_door(van, model)
@@ -65,6 +66,56 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: truck art, glass, doors, ramp, wheels, steering, rack fit, aisle and seats all line up")
 	quit(_failures)
+
+
+## N-301: seams round the cab doors and rear door leaves, the hood's shut
+## line and the side sheets' joints -- thin, dark, on the outer face, hung on
+## the panel (so a door's seams swing with it), and no collision at all.
+func _test_panel_lines(van: VehicleBody3D, model: Node3D, adapter: Node) -> void:
+	var middle: Vector3 = van.to_global(Vector3(0.0, 1.0, 0.0))
+	for panel_name: String in ["CabDoorLower_Left", "CabDoorLower_Right", "RearDoor_Left", "RearDoor_Right", "FrontNose"]:
+		var panel := model.find_child(panel_name, true, false) as Node3D
+		var lines: Array = panel.find_children("PanelLine*", "MeshInstance3D", false, false) if panel != null else []
+		_expect(lines.size() >= 3, "%s has its seams (%d)" % [panel_name, lines.size()])
+		for line: Node in lines:
+			var strip := line as MeshInstance3D
+			var size: Vector3 = (strip.mesh as BoxMesh).size * strip.global_basis.get_scale()
+			_expect(minf(size.x, minf(size.y, size.z)) < 0.01 and size[size.min_axis_index()] < 0.01, "%s's seams are thin decals" % panel_name)
+			var material := (strip.mesh as BoxMesh).material as StandardMaterial3D
+			_expect(material != null and material.albedo_color.get_luminance() < 0.1, "%s's seams are dark" % panel_name)
+			break
+	var sides: int = 0
+	for panel: Node in model.find_children("CargoSide*", "MeshInstance3D", true, false):
+		sides += panel.find_children("PanelLine*", "MeshInstance3D", false, false).size()
+	_expect(sides >= 4, "The cargo box's sides show their sheet joints (%d)" % sides)
+	for line: MeshInstance3D in adapter.get(&"panel_lines"):
+		# On the outer face: its panel's own centre is closer to the middle.
+		var parent := line.get_parent() as MeshInstance3D
+		var panel_normal: Vector3 = line.global_position - parent.global_transform * parent.get_aabb().get_center()
+		var outward: Vector3 = parent.global_transform * parent.get_aabb().get_center() - middle
+		if parent.name != "FrontNose":
+			var thin: int = parent.get_aabb().size.min_axis_index()
+			var axis: Vector3 = (parent.global_basis * Vector3(float(thin == 0), float(thin == 1), float(thin == 2))).normalized()
+			_expect(signf(panel_normal.dot(axis)) == signf(outward.dot(axis)), "%s's seam sits on its outer face" % parent.name)
+		_expect(line.find_children("*", "CollisionObject3D", true, false).is_empty(), "Seams have no collision")
+	# A rear door's seams swing with it.
+	var leaf := model.find_child("RearDoor_Left", true, false) as Node3D
+	# The seam farthest from the hinge: the one along the hinge barely moves.
+	var seam: Node3D = null
+	if leaf != null:
+		var hinge := model.find_child("RearDoor_Left_HINGE_Z", true, false) as Node3D
+		for candidate: Node in leaf.find_children("PanelLine*", "MeshInstance3D", false, false):
+			if seam == null or (candidate as Node3D).global_position.distance_to(hinge.global_position) > seam.global_position.distance_to(hinge.global_position):
+				seam = candidate as Node3D
+	if seam != null:
+		var closed: Vector3 = seam.global_position
+		van.call(&"set_door_open", &"rear", not bool(van.call(&"is_door_open", &"rear")))
+		for frame: int in range(50):
+			await process_frame
+		_expect(seam.global_position.distance_to(closed) > 0.2, "A rear door's seams swing with the door (moved %.2f m)" % seam.global_position.distance_to(closed))
+		van.call(&"set_door_open", &"rear", not bool(van.call(&"is_door_open", &"rear")))
+		for frame: int in range(50):
+			await process_frame
 
 
 func _test_glass(model: Node3D) -> void:
