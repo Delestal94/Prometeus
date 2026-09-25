@@ -49,6 +49,24 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 @onready var body_visuals: Node3D = vehicle.find_child("BodyVisuals", true, false)
 var headlights: Array[SpotLight3D] = []
 var engine_player: AudioStreamPlayer3D
+## The engine in three layers (tareas de Nacho N-401): ticking over, the
+## mid-range loop above (engine_player), and revving hard -- crossfaded by a
+## simulated rev counter with a gearbox, so each gear change drops the revs
+## for a moment. The classic truck shifts slow and low; the agile one revs
+## higher and snaps through its gears.
+var engine_idle_player: AudioStreamPlayer3D
+var engine_high_player: AudioStreamPlayer3D
+## What the rev counter reads, and the gear it's in (0 = first).
+var engine_rpm: float = 0.0
+var engine_gear: int = 0
+## Seconds left of the current gear change (throttle lifted, revs falling).
+var shift_remaining: float = 0.0
+const ENGINE_PROFILES: Dictionary = {
+	&"classic": {"idle_rpm": 800.0, "redline_rpm": 4200.0, "shift_up_rpm": 3500.0, "shift_down_rpm": 1500.0,
+		"ratios": [3.4, 2.1, 1.45, 1.0], "shift_seconds": 0.38, "pitch": 1.0},
+	&"agile": {"idle_rpm": 950.0, "redline_rpm": 5800.0, "shift_up_rpm": 5000.0, "shift_down_rpm": 2100.0,
+		"ratios": [3.2, 2.25, 1.65, 1.25, 1.0], "shift_seconds": 0.16, "pitch": 1.14},
+}
 var impact_player: AudioStreamPlayer3D
 var screech_player: AudioStreamPlayer3D
 ## The horn, created by vehicle.gd once the truck is ready (after this node's
@@ -111,6 +129,8 @@ func _ready() -> void:
 	engine_player.max_distance = 45.0
 	engine_player.volume_db = -60.0
 	add_child(engine_player)
+	engine_idle_player = _engine_layer_player("EngineIdleAudio", preload("res://scripts/presentation/synth_audio.gd").engine_idle_loop())
+	engine_high_player = _engine_layer_player("EngineHighAudio", preload("res://scripts/presentation/synth_audio.gd").engine_high_loop())
 	impact_player = AudioStreamPlayer3D.new()
 	impact_player.bus = &"SFX"
 	impact_player.name = "ImpactAudio"
@@ -268,6 +288,10 @@ func _apply_cargo_sink(delta: float) -> void:
 
 ## Whether this client's own camera is in one of the vehicle's seats or
 ## standing inside its cab/cargo box. Purely local, like the audio bus pick.
+func viewer_inside() -> bool:
+	return _viewer_inside()
+
+
 func _viewer_inside() -> bool:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	if camera == null or camera == _dev_camera:
@@ -278,19 +302,96 @@ func _viewer_inside() -> bool:
 	return absf(local.x) < 1.15 and local.y > -0.3 and local.y < 2.7 and local.z > -2.9 and local.z < 4.6
 
 
+func _engine_layer_player(node_name: String, stream: AudioStream) -> AudioStreamPlayer3D:
+	var player := AudioStreamPlayer3D.new()
+	player.bus = &"SFX"
+	player.name = node_name
+	player.position = engine_player.position
+	player.stream = stream
+	player.unit_size = engine_player.unit_size
+	player.max_distance = engine_player.max_distance
+	player.volume_db = -60.0
+	add_child(player)
+	return player
+
+
+func _engine_profile() -> Dictionary:
+	return ENGINE_PROFILES.get(StringName(vehicle.get(&"variant_id")), ENGINE_PROFILES[&"classic"])
+
+
+## Revs from road speed through the current gear (top gear reaches just under
+## the shift point at top speed), a flare of revs off the line under load, and
+## the gearbox: over shift_up_rpm it changes up -- throttle lifted for
+## shift_seconds while the revs fall to the new gear's -- and under
+## shift_down_rpm it changes down.
+func update_rev_counter(delta: float, speed_kmh: float, load_amount: float) -> void:
+	var profile: Dictionary = _engine_profile()
+	var ratios: Array = profile.ratios
+	var idle: float = profile.idle_rpm
+	var redline: float = profile.redline_rpm
+	var top_speed: float = maxf(float(vehicle.get(&"maximum_speed_kmh")), 1.0)
+	var per_kmh: float = float(profile.shift_up_rpm) * 0.96 / (top_speed * float(ratios[-1]))
+	engine_gear = clampi(engine_gear, 0, ratios.size() - 1)
+	var from_road: float = absf(speed_kmh) * per_kmh * float(ratios[engine_gear])
+	if shift_remaining <= 0.0:
+		if from_road > float(profile.shift_up_rpm) and engine_gear < ratios.size() - 1:
+			engine_gear += 1
+			shift_remaining = float(profile.shift_seconds)
+		elif from_road < float(profile.shift_down_rpm) and engine_gear > 0 and speed_kmh > 1.0:
+			engine_gear -= 1
+			from_road = absf(speed_kmh) * per_kmh * float(ratios[engine_gear])
+	shift_remaining = maxf(shift_remaining - delta, 0.0)
+	var flare: float = idle + load_amount * (redline - idle) * 0.3
+	var target: float = clampf(maxf(from_road, flare), idle, redline)
+	if shift_remaining > 0.0:
+		# Clutch in: the revs drop to the new gear's quickly, no throttle.
+		target = clampf(absf(speed_kmh) * per_kmh * float(ratios[engine_gear]), idle, redline)
+		engine_rpm = move_toward(engine_rpm, target, (redline - idle) * delta / maxf(float(profile.shift_seconds), 0.05))
+	else:
+		engine_rpm = lerpf(engine_rpm if engine_rpm > 0.0 else idle, target, 1.0 - exp(-7.0 * delta))
+
+
+## 0 at idle, 1 at the redline.
+func rev_fraction() -> float:
+	var profile: Dictionary = _engine_profile()
+	return clampf((engine_rpm - float(profile.idle_rpm)) / (float(profile.redline_rpm) - float(profile.idle_rpm)), 0.0, 1.0)
+
+
+## Idle fades out as the revs rise, the high layer fades in near the top and
+## the mid loop fills between; the weights sum to 1 and each player gets the
+## square root of its weight (equal power), so the blend holds its loudness.
+func engine_layer_weights() -> Vector3:
+	var r: float = rev_fraction()
+	var idle: float = 1.0 - smoothstep(0.04, 0.38, r)
+	var high: float = smoothstep(0.5, 0.9, r)
+	return Vector3(idle, clampf(1.0 - idle - high, 0.0, 1.0), high)
+
+
 func _update_engine(delta: float, running: bool) -> void:
 	var target_mix: float = 1.0 if running and audio_enabled else 0.0
 	_motor_mix = move_toward(_motor_mix, target_mix, delta * 4.0)
+	var layers: Array[AudioStreamPlayer3D] = [engine_idle_player, engine_player, engine_high_player]
 	if target_mix > 0.0 and not engine_player.playing:
-		engine_player.play()
+		for player: AudioStreamPlayer3D in layers:
+			player.play()
 	if _motor_mix <= 0.0:
-		engine_player.stop()
+		for player: AudioStreamPlayer3D in layers:
+			player.stop()
+		engine_rpm = 0.0
+		engine_gear = 0
 		return
-	var speed: float = clampf(vehicle.linear_velocity.length() / 20.0, 0.0, 1.0)
+	var speed_kmh: float = vehicle.linear_velocity.length() * 3.6
 	var load_amount: float = clampf(absf(vehicle.engine_force) / maxf(vehicle.maximum_engine_force, 1.0), 0.0, 1.0)
-	var target_pitch: float = 0.85 + speed * 1.45 + load_amount * 0.25
-	engine_player.pitch_scale = lerpf(engine_player.pitch_scale, target_pitch, 1.0 - exp(-5.0 * delta))
-	engine_player.volume_db = engine_volume_db + linear_to_db(maxf(_motor_mix, 0.001)) + load_amount * 3.0
+	update_rev_counter(delta, speed_kmh, load_amount)
+	var profile: Dictionary = _engine_profile()
+	var weights: Vector3 = engine_layer_weights()
+	# Each layer's pitch follows the revs from its own reference point.
+	var references: Array[float] = [float(profile.idle_rpm), lerpf(profile.idle_rpm, profile.redline_rpm, 0.45), float(profile.redline_rpm) * 0.85]
+	var on_throttle: float = 0.0 if shift_remaining > 0.0 else load_amount
+	for index: int in range(layers.size()):
+		var player: AudioStreamPlayer3D = layers[index]
+		player.pitch_scale = clampf(engine_rpm / references[index] * float(profile.pitch), 0.5, 2.6)
+		player.volume_db = engine_volume_db + linear_to_db(maxf(_motor_mix * sqrt(weights[index]), 0.001)) + on_throttle * 3.0
 
 
 ## Average skid across every wheel touching the ground -- VehicleWheel3D's
@@ -381,7 +482,7 @@ func _apply_bus_routing() -> void:
 	if target_bus == _last_bus:
 		return
 	_last_bus = target_bus
-	for player: AudioStreamPlayer3D in [engine_player, impact_player, screech_player, horn_player]:
+	for player: AudioStreamPlayer3D in [engine_player, engine_idle_player, engine_high_player, impact_player, screech_player, horn_player]:
 		if player != null:
 			player.bus = target_bus
 

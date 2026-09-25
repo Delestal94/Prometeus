@@ -75,3 +75,31 @@ Qué cambia al jugar:
 - Los desvíos relativos que eran de diseño se conservan: el vecino se queja 6 dB más bajo por
   una caja golpeada y 10 dB más bajo por la caja equivocada; la lluvia suena 6 dB más fuerte
   bajo techo; afuera se oye 9 dB más apagado desde adentro (`route_sky.gd`).
+
+## Lo que se sumó el 2026-09-25
+
+- **Motor en capas (N-401).** Tres loops del mismo motor —en ralentí (`engine_idle_loop()`), el de
+  siempre (`engine_loop()`) y acelerado (`engine_high_loop()`)— sintetizados al mismo RMS, así que
+  el cruce no sube ni baja el volumen. `vehicle_presentation.gd` simula un cuentavueltas con caja:
+  las RPM salen de la velocidad por la marcha puesta, suben al acelerar parado, y al pasar el punto
+  de cambio se corta el acelerador `shift_seconds` y las vueltas caen a las de la marcha nueva (el
+  "bajón"). La clásica: 4 marchas, corte a 3500 rpm, 0,38 s por cambio; la ágil: 5 marchas, corte
+  a 5000, 0,16 s y todo un 14 % más agudo. Mezcla por potencia constante (raíz del peso de cada
+  capa). Las tres capas entran en `test_world_audio_levels` con el nivel del motor.
+- **Eco bajo techo (N-402).** `presentation/acoustic_space.gd` agrega, una vez y en tiempo de
+  ejecución, una reverb a los buses `SFX` y `Exterior`, y la prende según dónde esté la cámara de
+  cada cliente: en un túnel (`AcousticZone` a lo largo de cada `TunnelSegment`) sala 0,95, húmedo
+  0,42, predelay 70 ms; bajo el techo del depósito sala 0,8, húmedo 0,26, 40 ms; al aire libre,
+  apagada. `default_bus_layout.tres` no cambió. De paso, #68: una cámara anclada al camión desde
+  afuera (la de persecución) ya no cuenta como "adentro" para la lluvia y el ambiente.
+- **Música del menú y radio del depósito (N-403).** `mus_menu_loop.ogg` (112 BPM, do mayor, 34 s) y
+  `mus_depot_radio_loop.ogg` (88 BPM con swing, fa mayor, 44 s, por un parlante chico con
+  crujidos), compuestas por `tools/audio/compose_music.py` —síntesis propia, sin samples ni
+  terceros; licencia en `assets/audio/music/LICENCIA.md`—. Como Godot no le da a un test las
+  muestras de un `.ogg`, el compositor anota el RMS de cada archivo en
+  `assets/audio/music/loudness.json` y el test de niveles lo usa.
+
+| Sonido | Medido (dBFS) | Nivel (dB) | Resultado | Objetivo |
+|---|---|---|---|---|
+| Radio del depósito (música) | −19,4 RMS | −4,5 | −23,9 | −24 |
+| Tema del menú | −16,6 RMS | −13,2 | −29,8 | igual que la música del juego (−15,8 − 14 = −29,8) |

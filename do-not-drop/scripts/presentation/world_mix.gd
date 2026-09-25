@@ -55,7 +55,14 @@ const RESIDENT_WRONG_BOX_OFFSET_DB: float = -10.0
 
 # The depot (depot.gd, depot_forklift.gd, depot_roller_door.gd).
 const WAREHOUSE_HUM_DB: float = -21.5
-const DEPOT_RADIO_DB: float = -0.5
+## The radio plays mus_depot_radio_loop.ogg (N-403, tools/audio/compose_music.py),
+## measured in assets/audio/music/loudness.json: -19.4 dBFS RMS, -4.5 dB to -24.
+const DEPOT_RADIO_DB: float = -4.5
 const FORKLIFT_BEEP_DB: float = -17.5
 const FORKLIFT_ENGINE_DB: float = -27.0
 const ROLLER_DOOR_DB: float = -1.0
+
+# Menus (menu_music.gd, N-403): the menu theme sits exactly as loud as the
+# in-game track does under ingame_music.gd's -14 dB (loudness.json: in-game
+# -15.8, menu -16.6 dBFS RMS).
+const MENU_MUSIC_DB: float = -13.2

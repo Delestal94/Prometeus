@@ -30,6 +30,13 @@ func _build() -> void:
 		_box("TunnelPortal", Vector3(HALF_WIDTH * 2.0 + 3.0, 1.6, 0.8), Vector3(0.0, HEIGHT + 0.8, end_z), PORTAL, true)
 		for side: float in [-1.0, 1.0]:
 			_box("TunnelPortalPier", Vector3(1.2, HEIGHT, 0.8), Vector3(side * (HALF_WIDTH + 0.9), HEIGHT * 0.5, end_z), PORTAL, true)
+	# The echo inside (N-402): from portal to portal, floor to roof.
+	var zone := AcousticZone.new()
+	zone.name = "AcousticZone"
+	zone.size = Vector3(HALF_WIDTH * 2.0, HEIGHT, length)
+	zone.acoustic_space = &"tunnel"
+	zone.position = Vector3(0.0, HEIGHT * 0.5, middle)
+	add_child(zone)
 	# Warm lamps along the ceiling: an emissive strip each, a few real lights.
 	var lamp_material := _material(LAMP).duplicate() as StandardMaterial3D
 	lamp_material.emission_enabled = true

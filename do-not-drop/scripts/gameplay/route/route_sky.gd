@@ -82,6 +82,8 @@ func _process(_delta: float) -> void:
 		global_position = Vector3(at.x, global_position.y, at.z)
 		var roofed: bool = _under_roof(at)
 		var inside: bool = roofed or _inside_vehicle(camera)
+		# Echo in the tunnel and under the depot's roof (N-402).
+		AcousticSpace.apply(AcousticSpace.listening_space(get_tree(), at))
 		var bus: StringName = &"Interior" if inside else &"Exterior"
 		if _rain != null:
 			_rain.global_position = at + Vector3.UP * RAIN_HEIGHT
@@ -173,11 +175,17 @@ func _under_roof(point: Vector3) -> bool:
 	return false
 
 
+## Listening from inside the truck: a seat, or standing in its cab or cargo
+## box -- the truck's own presentation decides, the same way it picks its
+## Interior/Exterior bus. A camera merely anchored to the truck from outside
+## (the chase view, the development camera) is outdoors: it used to count as
+## inside, so the rain drummed as if on the roof (N-402, #68 viejo).
 func _inside_vehicle(camera: Node) -> bool:
 	var node: Node = camera.get_parent()
 	while node != null:
 		if node is VehicleBody3D:
-			return true
+			var presentation: Node = node.get_node_or_null(^"VehiclePresentation")
+			return presentation == null or bool(presentation.call(&"viewer_inside"))
 		node = node.get_parent()
 	return false
 

@@ -42,6 +42,63 @@ static func _make_engine_loop() -> AudioStreamWAV:
 	return stream
 
 
+## The engine's other two layers (tareas de Nacho N-401). VehiclePresentation
+## crossfades idle / engine_loop() / high by a simulated rev counter, so the
+## three are built to the same loudness (ENGINE_LAYER_RMS, engine_loop()'s own)
+## and a crossfade never swells or dips. Integer frequencies over a one-second
+## buffer: every partial ends where it started, so the loop has no seam.
+const ENGINE_LAYER_RMS: float = 0.2286
+
+
+## Ticking over: a low, lumpy rumble -- the firing rhythm (8 Hz) nods the
+## level of a 32 Hz base with a strong second harmonic.
+static func engine_idle_loop() -> AudioStreamWAV:
+	return _cached(&"engine_idle_loop", _make_engine_idle_loop)
+
+
+static func _make_engine_idle_loop() -> AudioStreamWAV:
+	return _engine_layer(func(t: float) -> float:
+		var phase: float = TAU * 32.0 * t
+		var lope: float = 0.72 + 0.28 * sin(TAU * 8.0 * t) * sin(TAU * 8.0 * t)
+		return (sin(phase) * 0.5 + sin(phase * 2.0) * 0.34 + sin(phase * 3.0) * 0.12 + sin(phase * 0.5) * 0.18) * lope)
+
+
+## Revving hard: the same engine higher up, its upper harmonics louder (the
+## strain you hear in the cab just before a gear change).
+static func engine_high_loop() -> AudioStreamWAV:
+	return _cached(&"engine_high_loop", _make_engine_high_loop)
+
+
+static func _make_engine_high_loop() -> AudioStreamWAV:
+	return _engine_layer(func(t: float) -> float:
+		var phase: float = TAU * 64.0 * t
+		return sin(phase) * 0.36 + sin(phase * 2.0) * 0.28 + sin(phase * 3.0) * 0.2 + sin(phase * 4.0) * 0.14 + sin(phase * 6.0) * 0.08)
+
+
+static func _engine_layer(wave: Callable) -> AudioStreamWAV:
+	const RATE: int = 22050
+	var samples := PackedFloat32Array()
+	samples.resize(RATE)
+	var power: float = 0.0
+	for index: int in range(RATE):
+		var value: float = float(wave.call(float(index) / float(RATE)))
+		samples[index] = value
+		power += value * value
+	var gain: float = ENGINE_LAYER_RMS / maxf(sqrt(power / float(RATE)), 0.0001)
+	var data := PackedByteArray()
+	data.resize(RATE * 2)
+	for index: int in range(RATE):
+		data.encode_s16(index * 2, roundi(clampf(samples[index] * gain, -1.0, 1.0) * 32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = RATE
+	return stream
+
+
 ## A short, low-frequency thump for vehicle_impact -- a sine "punch" under a
 ## burst of filtered noise, gone in a fifth of a second. Volume/whether it
 ## plays at all is VehiclePresentation's call (it already gates on strength);
@@ -572,52 +629,6 @@ static func _make_reverse_beep() -> AudioStreamWAV:
 		var ramp: float = minf(minf(t, absf(0.45 - t)) / 0.01, 1.0) if t < 0.45 else 0.0
 		var tone: float = sin(TAU * 1100.0 * t) * 0.8 + sin(TAU * 2200.0 * t) * 0.1
 		data.encode_s16(i * 2, roundi(tone * on * ramp * 14000.0))
-	return _loop(data, RATE, sample_count)
-
-
-## A cheerful little tune from the depot's radio: a plucked melody over a
-## walking bass, band-limited and crackly like a small AM speaker. Eight bars
-## that loop, lo-fi rate on purpose (it's a radio, and it's cheaper to build).
-static func radio_tune() -> AudioStreamWAV:
-	return _cached(&"radio_tune", _make_radio_tune)
-
-
-static func _make_radio_tune() -> AudioStreamWAV:
-	const RATE: int = 11025
-	const BEAT: float = 0.3
-	# Semitones from A3; -99 is a rest. Two phrases of 16 eighth notes.
-	var melody: Array[int] = [7, 11, 14, 11, 12, 11, 7, -99, 9, 12, 16, 12, 14, 12, 9, -99,
-		7, 11, 14, 19, 17, 14, 12, 11, 9, 11, 12, 9, 7, -99, 7, -99]
-	var bass: Array[int] = [-12, -5, -10, -5, -8, -3, -10, -5]
-	var total_beats: int = melody.size()
-	var sample_count: int = int(RATE * BEAT * total_beats)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 5
-	var low: float = 0.0
-	for i: int in range(sample_count):
-		var t: float = float(i) / RATE
-		var beat: int = int(t / BEAT)
-		var in_beat: float = t - beat * BEAT
-		var sample: float = 0.0
-		var note: int = melody[beat % total_beats]
-		if note != -99:
-			var freq: float = 220.0 * pow(2.0, note / 12.0)
-			var pluck: float = exp(-in_beat * 9.0)
-			sample += (sin(TAU * freq * t) * 0.6 + sin(TAU * freq * 2.0 * t) * 0.2) * pluck * 0.5
-		var bass_note: int = bass[(beat / 4) % bass.size()]
-		var bass_freq: float = 220.0 * pow(2.0, bass_note / 12.0)
-		var bass_in: float = t - (beat / 2) * BEAT * 2.0
-		sample += sin(TAU * bass_freq * t) * exp(-bass_in * 4.0) * 0.35
-		# Brushed hi-hat on the off-beats.
-		if beat % 2 == 1:
-			sample += rng.randf_range(-1.0, 1.0) * exp(-in_beat * 40.0) * 0.12
-		# Small-speaker colour: gentle low-pass plus a bed of crackle.
-		low = lerpf(low, sample, 0.55)
-		var crackle: float = rng.randf_range(-1.0, 1.0) * 0.015 + (0.25 if rng.randf() < 0.0004 else 0.0)
-		var edge: float = minf(float(i), float(sample_count - i)) / (RATE * 0.02)
-		data.encode_s16(i * 2, roundi(clampf((low + crackle) * minf(edge, 1.0), -1.0, 1.0) * 16000.0))
 	return _loop(data, RATE, sample_count)
 
 

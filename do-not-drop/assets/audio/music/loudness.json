@@ -1,0 +1,14 @@
+{
+  "mus_depot_radio_loop.ogg": {
+    "peak_dbfs": -2.28,
+    "rms_dbfs": -19.44
+  },
+  "mus_ingame_loop.ogg": {
+    "peak_dbfs": -2.19,
+    "rms_dbfs": -15.79
+  },
+  "mus_menu_loop.ogg": {
+    "peak_dbfs": -1.8,
+    "rms_dbfs": -16.64
+  }
+}

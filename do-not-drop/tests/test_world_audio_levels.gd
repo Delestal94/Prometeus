@@ -30,6 +30,8 @@ const CLASSES: Dictionary = {
 ## [what, SynthAudio function, its level in world_mix.gd, class]
 const SOUNDS: Array = [
 	["truck engine", &"engine_loop", &"ENGINE_DB", "engine"],
+	["truck engine idle", &"engine_idle_loop", &"ENGINE_DB", "engine"],
+	["truck engine revving", &"engine_high_loop", &"ENGINE_DB", "engine"],
 	["truck impact", &"impact_thud", &"IMPACT_DB", "impact"],
 	["tyre screech", &"tire_screech", &"SCREECH_DB", "signal"],
 	["horn", &"honk_horn", &"HORN_DB", "signal"],
@@ -46,11 +48,21 @@ const SOUNDS: Array = [
 	["resident cheer", &"honk_horn", &"RESIDENT_CHEER_DB", "signal"],
 	["resident groan", &"creature_groan", &"RESIDENT_GROAN_DB", "signal"],
 	["warehouse hum", &"warehouse_hum", &"WAREHOUSE_HUM_DB", "room"],
-	["depot radio", &"radio_tune", &"DEPOT_RADIO_DB", "music"],
 	["forklift beeper", &"reverse_beep", &"FORKLIFT_BEEP_DB", "repeat"],
 	["forklift engine", &"engine_loop", &"FORKLIFT_ENGINE_DB", "machine"],
 	["roller door", &"roller_door", &"ROLLER_DOOR_DB", "signal"],
 ]
+
+## Composed tracks (.ogg, tools/audio/compose_music.py): Godot can't hand a
+## test their samples, so their RMS is read from the measurements the composer
+## writes next to them (assets/audio/music/loudness.json).
+## [what, file, its level in world_mix.gd, class]
+const TRACKS: Array = [
+	["depot radio", "mus_depot_radio_loop.ogg", &"DEPOT_RADIO_DB", "music"],
+]
+const LOUDNESS_PATH: String = "res://assets/audio/music/loudness.json"
+## The menu theme sits as loud as the in-game track does (ingame_music.gd).
+const IngameMusic = preload("res://scripts/presentation/ingame_music.gd")
 
 var _failures: int = 0
 
@@ -70,6 +82,23 @@ func _initialize() -> void:
 		if report:
 			print("REPORT | %s | %s | %s | %.1f | %.1f | %.1f | %.1f | %+.1f" % [sound[0], sound[3], measure, measured, level, result, target, result - target])
 		_expect(absf(result - target) <= TOLERANCE_DB, "%s (%s) lands at %.1f dBFS %s, target %.1f +- %.0f (stream %.1f, level %s %.1f)" % [sound[0], sound[3], result, measure, target, TOLERANCE_DB, measured, sound[2], level])
+	var loudness: Variant = JSON.parse_string(FileAccess.get_file_as_string(LOUDNESS_PATH))
+	_expect(loudness is Dictionary, "The composed tracks' loudness is on file (%s)" % LOUDNESS_PATH)
+	if loudness is Dictionary:
+		for track: Array in TRACKS:
+			var entry: Dictionary = (loudness as Dictionary).get(track[1], {})
+			var measured: float = float(entry.get("rms_dbfs", 0.0))
+			var result: float = measured + float(levels[track[2]])
+			var target: float = CLASSES[track[3]][1]
+			if report:
+				print("REPORT | %s | %s | rms | %.1f | %.1f | %.1f | %.1f | %+.1f" % [track[0], track[3], measured, float(levels[track[2]]), result, target, result - target])
+			_expect(not entry.is_empty() and absf(result - target) <= TOLERANCE_DB,
+				"%s lands at %.1f dBFS rms, target %.1f +- %.0f" % [track[0], result, target, TOLERANCE_DB])
+		var menu: float = float(((loudness as Dictionary).get("mus_menu_loop.ogg", {}) as Dictionary).get("rms_dbfs", 0.0)) + float(levels[&"MENU_MUSIC_DB"])
+		var ingame: float = float(((loudness as Dictionary).get("mus_ingame_loop.ogg", {}) as Dictionary).get("rms_dbfs", 0.0)) + IngameMusic.VOLUME_DB
+		_expect(absf(menu - ingame) <= 1.0, "The menu theme plays as loud as the in-game track (%.1f vs %.1f dBFS)" % [menu, ingame])
+		for file_name: String in ["mus_menu_loop.ogg", "mus_depot_radio_loop.ogg"]:
+			_expect(ResourceLoader.exists("res://assets/audio/music/" + file_name), "%s is in the project" % file_name)
 	if _failures == 0:
 		print("PASS: every world and truck sound sits within %.0f dB of its class's target" % TOLERANCE_DB)
 	quit(_failures)

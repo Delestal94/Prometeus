@@ -55,6 +55,8 @@ var _busy: bool = false:
 
 
 func _ready() -> void:
+	# The menu's theme (tareas de Nacho N-403): self-contained, just added here.
+	add_child(preload("res://scripts/presentation/menu_music.gd").new())
 	_build_ui()
 	NetworkManager.session_ready.connect(_on_session_ready)
 	NetworkManager.session_failed.connect(_on_session_failed)
