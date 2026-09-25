@@ -120,7 +120,7 @@
       "at": "segment",
       "segment": "RailCrossingSegment",
       "lead": 45,
-      "stop": 9.5,
+      "stop": 11.0,
       "train": true
     },
     "rail": [

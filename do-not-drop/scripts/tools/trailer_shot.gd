@@ -37,7 +37,7 @@ const LOOKAHEAD: float = 14.0
 ## A shot's segment is at least its lead plus this far from the depot.
 const RUN_UP_MARGIN: float = 60.0
 ## How hard the autopilot can brake, to start slowing in time (m/s^2).
-const BRAKING: float = 4.0
+const BRAKING: float = 2.5
 const CARGO_MOUNTS: Array[String] = [
 	"CargoBay/LeftSeat1PackageMount", "CargoBay/RightSeat1PackageMount", "CargoBay/LeftSeat2PackageMount",
 	"CargoBay/RightSeat2PackageMount", "CargoBay/LeftShelfPackageMount", "CargoBay/RightShelfPackageMount",
@@ -57,6 +57,7 @@ var _path: Array[Vector3] = []
 var _path_index: int = 0
 var _stop_at: int = -1
 var _rolled: bool = false
+var _landed: bool = false
 var _still_at: float = -1.0
 var _out_path: String = ""
 var _frames_dir: String = ""
@@ -262,6 +263,11 @@ func _physics_process(_delta: float) -> void:
 	if van == null:
 		return
 	_drive()
+	if _rolled and not _landed and van.global_basis.y.dot(Vector3.UP) < 0.15:
+		# On its side: most of the spin goes, so it lands there rather than
+		# carrying on round onto its wheels (it did, at full strength).
+		_landed = true
+		van.angular_velocity *= 0.25
 	var roll: Dictionary = shot.get("roll", {})
 	if not roll.is_empty() and not _rolled and _time >= float(roll.get("t", 2.0)):
 		# Clip the kerb too fast: a spin about the roll axis and a hop, at
