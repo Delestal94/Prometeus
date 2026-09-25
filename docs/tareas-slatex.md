@@ -391,13 +391,13 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 ### S-206 · Errores de conexión que un jugador entienda — A · `Sol · high` · Aviso: sí (`network_manager.gd`)
 
-- [ ] **S-206.1** `NetworkManager.PROTOCOL_VERSION := 1` y enviarla en el handshake. Si no coincide, el
+- [x] (commit `03bd4e1`) **S-206.1** `NetworkManager.PROTOCOL_VERSION := 1` y enviarla en el handshake. Si no coincide, el
   host rechaza con motivo `version`. (El handshake ya cambió dos veces y hoy un cliente viejo solo ve un
   timeout.)
-- [ ] **S-206.2** En `main_menu.gd`, `_on_session_failed(reason)` traduce cada motivo a un texto con
+- [x] (commit `03bd4e1`) **S-206.2** En `main_menu.gd`, `_on_session_failed(reason)` traduce cada motivo a un texto con
   qué hacer: "El anfitrión tiene otra versión del juego: actualicen los dos", "No hubo respuesta en 8 s:
   revisá la IP y que el firewall de Windows permita Take My Package (ver README)", "La sala está llena".
-- [ ] **S-206.3** Test `tests/test_connection_errors.gd`: cada motivo muestra su texto.
+- [x] (commit `03bd4e1`) **S-206.3** Test `tests/test_connection_errors.gd`: cada motivo muestra su texto.
 
 ### S-207 · Unirse por código corto en LAN — C · `Sol · high` · Aviso: no
 
