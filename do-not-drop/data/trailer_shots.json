@@ -239,7 +239,7 @@
     ]
   },
   "vuelco": {
-    "about": "Vuelco con cajas volando: a toda velocidad en una recta, el camión se tumba y la carga sale disparada por atrás; cámara alta sobre la ruta, más adelante (las copas de los árboles de la banquina tapaban el plano de costado).",
+    "about": "Vuelco con cajas volando: a toda velocidad en una recta, el camión pasa junto a la cámara, se tumba más adelante y la carga sale disparada por atrás, hacia la cámara (vista desde la banquina, detrás).",
     "houses": 2,
     "mood": "soleado_dia_verano",
     "speed_kmh": 60,
@@ -258,14 +258,14 @@
       {
         "space": "anchor",
         "at": [
-          1.5,
-          7.5,
-          -36.0
+          3.2,
+          3.0,
+          26.0
         ],
         "look": [
           0.0,
-          1.0,
-          4.0
+          1.5,
+          10.0
         ],
         "t": 0.0
       },
@@ -273,13 +273,13 @@
         "space": "anchor",
         "at": [
           3.0,
-          8.0,
-          -32.0
+          3.4,
+          22.0
         ],
         "look": [
-          2.0,
-          0.6,
-          -6.0
+          0.0,
+          0.8,
+          -4.0
         ],
         "t": 7.0
       }

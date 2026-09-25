@@ -328,7 +328,7 @@ func _physics_process(_delta: float) -> void:
 		rng.seed = 906
 		for package: RigidBody3D in level.call(&"_release_loaded_cargo"):
 			package.call(&"release_mount")
-			package.linear_velocity = van.linear_velocity * 0.5 + van.global_basis.z * rng.randf_range(7.0, 10.0) + Vector3.UP * rng.randf_range(3.0, 5.0) + van.global_basis.x * rng.randf_range(-1.5, 1.5)
+			package.linear_velocity = van.linear_velocity * 0.4 + van.global_basis.z * rng.randf_range(8.0, 11.0) + Vector3.UP * rng.randf_range(6.0, 9.0) + van.global_basis.x * rng.randf_range(-2.0, 2.0)
 			package.angular_velocity = Vector3(rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0))
 
 
