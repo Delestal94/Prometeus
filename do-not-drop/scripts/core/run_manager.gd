@@ -71,6 +71,7 @@ var delivery_photos: Dictionary = {}
 
 ## The route event drawn for this run, so a late joiner gets it too.
 var _event_id: StringName = &""
+var lost_time_bonus: bool = false
 ## Paths of the boxes handed over at a door this run. They're scene nodes, not
 ## spawned ones, so a joiner's freshly loaded level still has them: the host
 ## sends this list and the joiner frees them (send_session_state()).
@@ -123,6 +124,8 @@ func reset_run() -> void:
 	current_mode = MODE_DELIVERY
 	current_distance = 0.0
 	_event_id = &""
+	lost_time_bonus = false
+	RouteEventManager.reset_route()
 	consumed_packages = []
 
 
@@ -135,6 +138,10 @@ func reset_run() -> void:
 func start_run(mode: StringName = MODE_DELIVERY) -> void:
 	if is_running or not results.is_empty():
 		return
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		return
+	RouteEventManager.reset_route()
+	lost_time_bonus = false
 	_begin_run(mode)
 	var event_id: StringName = RouteEventManager.begin_random()
 	_event_id = event_id
@@ -155,8 +162,7 @@ func _remote_start_run(mode: StringName, event_id: StringName) -> void:
 		return
 	_begin_run(mode)
 	_event_id = event_id
-	if not event_id.is_empty():
-		RouteEventManager.begin_event(event_id)
+	# The host's route_event_started relay carries the authoritative state.
 
 
 ## Called when a DeliveryHouse resolves (level_base.gd forwards route.gd's
@@ -344,6 +350,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	if NetworkManager.is_online() and not NetworkManager.is_host():
 		return
 	is_running = false
+	RouteEventManager.close_for_run_end()
 	if current_mode == MODE_ENDLESS:
 		_finish_endless_run(reason)
 		return
@@ -373,7 +380,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	var delivery_points: int = int(doors["delivery_points"])
 	var houses_delivered: int = int(doors["houses_delivered"])
 	var successful: bool = delivered and (cargo_points > 0 or houses_delivered > 0)
-	var time_bonus: int = roundi(50.0 * clampf(1.0 - elapsed_seconds / PAR_SECONDS, 0.0, 1.0)) if successful else 0
+	var time_bonus: int = roundi(50.0 * clampf(1.0 - elapsed_seconds / PAR_SECONDS, 0.0, 1.0)) if successful and not lost_time_bonus else 0
 	var multiplier: float = CHAOS_MULTIPLIER if (successful and had_simultaneous_risk) else 1.0
 	var score: int = maxi(roundi((cargo_points + time_bonus + delivery_points) * multiplier), 0)
 	var breakdown: Array = (doors["breakdown"] as Array).duplicate(true)
@@ -462,7 +469,8 @@ func send_session_state(peer_id: int) -> void:
 	_receive_session_state.rpc_id(peer_id, {
 		"running": is_running,
 		"mode": current_mode,
-		"event_id": _event_id,
+		"event_id": RouteEventManager.active_event_id,
+		"route_event": RouteEventManager.active_snapshot() if is_running else {},
 		"elapsed": elapsed_seconds,
 		"distance": current_distance,
 		"expected_houses": expected_houses,
@@ -498,10 +506,14 @@ func _receive_session_state(state: Dictionary) -> void:
 		is_running = false
 		current_mode = StringName(state.get("mode", MODE_DELIVERY))
 		results = host_results.duplicate(true)
+		RouteEventManager.load_snapshot({})
 		return
 	if not bool(state.get("running", false)) or is_running:
+		if is_running:
+			RouteEventManager.load_snapshot(state.get("route_event", {}))
 		return
 	_remote_start_run(StringName(state.get("mode", MODE_DELIVERY)), StringName(state.get("event_id", &"")))
+	RouteEventManager.load_snapshot(state.get("route_event", {}))
 	elapsed_seconds = float(state.get("elapsed", 0.0))
 	current_distance = float(state.get("distance", 0.0))
 	# The HUD builds its cargo cards from these events as they happen.

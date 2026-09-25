@@ -59,6 +59,18 @@ var player_input: Dictionary = {}
 ## lets the crew check what they're carrying; an open box can spill, and
 ## the resident notices one that shows up open.
 var is_open: bool = false
+## Host decides these event effects; MultiplayerSynchronizer copies them.
+var label_swapped_with: StringName = &""
+var disguise_trap_id: StringName = &""
+var disguise_revealed: bool = false
+var parasite_partner_id: StringName = &""
+## The opener is recorded before package_lid_changed is relayed.
+var last_opener_peer_id: int = 0
+var _sharing_parasite_damage: bool = false
+## Damage copied through a parasite link stays outside the trap behavior:
+## several traps derive their raw integrity from a timer/aggression every
+## frame, which would otherwise overwrite damage applied through damage().
+var _parasite_damage: float = 0.0
 ## Replicated too: once the contents are on the floor there's nothing left
 ## to close the box on.
 var contents_spilled: bool = false
@@ -95,13 +107,14 @@ var _consumed: bool = false
 const RIDE_MARGIN: float = 0.4
 var integrity: float:
 	get:
-		return float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
+		var raw: float = float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
+		return maxf(raw - _parasite_damage, 0.0)
 var integrity_max: float:
 	get:
 		return float(trap_behavior.get("integrity_max")) if trap_behavior != null else 100.0
 var trap_state: int:
 	get:
-		if _lost:
+		if _lost or integrity <= 0.0:
 			return ITrapBehavior.TrapState.RUINED
 		return int(trap_behavior.call("get_state")) if trap_behavior != null else 0
 ## A package can be written off for reasons no trap knows about -- falling out
@@ -212,6 +225,7 @@ func initialize_trap() -> void:
 	_impact_cooldown_remaining = 0.0
 	_has_previous_velocity = false
 	_lost = false
+	_parasite_damage = 0.0
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -265,6 +279,10 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 func apply_impact(delta_velocity: float) -> void:
 	if trap_behavior == null or not _is_run_active():
 		return
+	if is_inside_tree():
+		var routes: Node = get_node_or_null(^"/root/RouteEventManager")
+		if routes != null:
+			routes.call(&"on_package_impact", self, delta_velocity)
 	var before_integrity: float = integrity
 	var before_state: int = trap_state
 	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0) * impact_absorption)
@@ -347,13 +365,15 @@ func request_set_open(open: bool) -> void:
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and not _peer_within_reach(sender_id):
 		return
-	set_open(open)
+	set_open(open, sender_id if sender_id != 0 else multiplayer.get_unique_id())
 
 
 ## Host-only. A box whose contents already fell out stays open.
-func set_open(open: bool) -> void:
+func set_open(open: bool, opener_peer_id: int = 0) -> void:
 	if contents_spilled or open == is_open:
 		return
+	if open:
+		last_opener_peer_id = opener_peer_id
 	is_open = open
 	_emit_event(&"package_lid_changed", [package_id, open])
 
@@ -389,12 +409,29 @@ func _report_change(before_integrity: float, before_state: int, ruin_cause: Stri
 	var lost: float = before_integrity - integrity
 	if lost > 0.0:
 		_emit_event(&"package_damaged", [package_id, lost])
+		if not _sharing_parasite_damage and not parasite_partner_id.is_empty() and is_inside_tree():
+			for candidate: Node in get_tree().get_nodes_in_group(&"cargo"):
+				if candidate is DeliveryPackage and candidate.package_id == parasite_partner_id:
+					candidate.apply_parasite_damage(lost * 0.5)
+					break
 	if not is_equal_approx(before_integrity, integrity):
 		_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
 	if trap_state != before_state:
 		_emit_event(&"package_state_changed", [package_id, trap_state])
 		if trap_state == ITrapBehavior.TrapState.RUINED:
 			_emit_event(&"package_ruined", [package_id, ruin_cause])
+
+
+## Damage is applied to the real trap state, so it survives event cleanup.
+func apply_parasite_damage(amount: float) -> void:
+	if trap_behavior == null or amount <= 0.0:
+		return
+	var before_integrity: float = integrity
+	var before_state: int = trap_state
+	_sharing_parasite_damage = true
+	_parasite_damage = minf(_parasite_damage + amount, integrity_max)
+	_report_change(before_integrity, before_state, "La caja parásita dañó su pareja.")
+	_sharing_parasite_damage = false
 
 
 ## Whoever is tending this package calls this on their own client every

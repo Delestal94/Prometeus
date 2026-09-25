@@ -72,6 +72,11 @@ var _impact_shake_strength: float = 0.0
 var _growth_scale: float = 1.0
 var _bounce_time: float = -1.0  ## negative: no bounce in progress
 var _shipping_label: RigidBody3D
+var _shipping_text: Label3D
+var _shipping_data: String = ""
+var _disguise_text: Label3D
+var _disguise_icon: Sprite3D
+var _was_disguise_revealed: bool = false
 var _label_detached: bool = false
 var _dent_pieces: Array[MeshInstance3D] = []
 var _impact_damage_visual: float = 0.0
@@ -160,6 +165,18 @@ func _apply_identity(package: Node) -> void:
 		shape.size = shape_size
 		collider.shape = shape
 	_add_shipping_label(package, shipping_data, shape_size)
+	_disguise_text = Label3D.new()
+	_disguise_text.position = Vector3(0.0, shape_size.y * 0.22, -shape_size.z * 0.52)
+	_disguise_text.pixel_size = 0.0015
+	_disguise_text.font_size = 32
+	_disguise_text.modulate = INK
+	_disguise_text.visible = false
+	_box.add_child(_disguise_text)
+	_disguise_icon = Sprite3D.new()
+	_disguise_icon.position = Vector3(0.0, shape_size.y * 0.04, -shape_size.z * 0.53)
+	_disguise_icon.pixel_size = 0.001
+	_disguise_icon.visible = false
+	_box.add_child(_disguise_icon)
 	_add_dent_pieces(shape_size * 0.5)
 	_build_outline(shape_size)
 
@@ -276,6 +293,8 @@ func _add_shipping_label(package: Node, shipping_data: String, box_size: Vector3
 	_shipping_label.add_child(paper)
 	var text := Label3D.new()
 	text.text = shipping_data
+	_shipping_text = text
+	_shipping_data = shipping_data
 	text.font_size = 32
 	text.pixel_size = width / 512.0 * 0.62
 	text.outline_size = 0
@@ -419,6 +438,7 @@ func _on_package_placed(id: StringName) -> void:
 
 
 func _process(delta: float) -> void:
+	_refresh_event_disguise()
 	_apply_jitter(delta)
 	_apply_bounce(delta)
 	_apply_shelf_straps()
@@ -433,6 +453,36 @@ func _process(delta: float) -> void:
 			_apply_explosive(delta)
 		&"hostile":
 			_apply_hostile()
+
+
+func _refresh_event_disguise() -> void:
+	if _package == null or _shipping_text == null:
+		return
+	var shown: String = _shipping_data
+	if not _package.label_swapped_with.is_empty():
+		for other: Node in get_tree().get_nodes_in_group(&"cargo"):
+			if other is DeliveryPackage and other.package_id == _package.label_swapped_with:
+				var content: Resource = other.content_definition()
+				if content != null:
+					shown = "%s\n%s · %s" % [content.get("display_name"), content.get("declared_weight"), content.get("handling")]
+				break
+	_shipping_text.text = shown
+	var disguised: bool = not _package.disguise_trap_id.is_empty() and not _package.disguise_revealed
+	if _disguise_text != null:
+		_disguise_text.visible = disguised
+	if _disguise_icon != null:
+		_disguise_icon.visible = false
+	if disguised:
+		var definition: Resource = load("res://data/traps/%s.tres" % _package.disguise_trap_id)
+		if definition != null:
+			_disguise_text.text = String(definition.get("display_name"))
+			_disguise_icon.texture = UiTheme.trap_icon(String(definition.get("display_name")))
+			_disguise_icon.visible = _disguise_icon.texture != null
+	if _package.disguise_revealed and not _was_disguise_revealed:
+		_burst_confetti()
+		var reveal_sound: AudioStreamPlayer3D = _make_player(SynthAudio.glass_chime(), -8.0)
+		reveal_sound.play()
+	_was_disguise_revealed = _package.disguise_revealed
 
 
 func _build_shelf_straps(shape_size: Vector3) -> void:

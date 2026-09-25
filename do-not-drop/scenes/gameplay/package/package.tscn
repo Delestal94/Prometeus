@@ -44,6 +44,18 @@ properties/7/replication_mode = 2
 properties/8/path = NodePath(".:current_mount_path")
 properties/8/spawn = true
 properties/8/replication_mode = 2
+properties/9/path = NodePath(".:label_swapped_with")
+properties/9/spawn = true
+properties/9/replication_mode = 2
+properties/10/path = NodePath(".:disguise_trap_id")
+properties/10/spawn = true
+properties/10/replication_mode = 2
+properties/11/path = NodePath(".:disguise_revealed")
+properties/11/spawn = true
+properties/11/replication_mode = 2
+properties/12/path = NodePath(".:parasite_partner_id")
+properties/12/spawn = true
+properties/12/replication_mode = 2
 
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4

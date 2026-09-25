@@ -38,6 +38,21 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: eventos de ruta completos y sincronizados (S-101, 2026-09-24)
+
+Slatex amplió la zona compartida `scripts/core/run_manager.gd` sin cambiar firmas públicas:
+
+- cada inicio limpia el estado anterior de `RouteEventManager`; el host sortea una sola vez y
+  los clientes reciben el evento por `EventBus.relay`, sin volver a sortearlo ni emitirlo;
+- la instantánea para quien entra tarde lleva únicamente el evento que sigue activo, con su
+  tiempo y progreso, de modo que un evento ya resuelto no reaparece;
+- `lost_time_bonus` anula el bono antes de calcular el resultado cuando falla Cliente
+  impaciente, y el cierre de la partida cancela cualquier evento pendiente sin multa.
+
+Los paquetes suman cuatro propiedades replicadas para Etiquetas mezcladas, Mimético y Caja
+parásita. Las señales existentes conservan su firma. Pruebas focalizadas: `test_route_events`,
+`test_route_event_manager`, `test_run_relay`, `test_hud_flow` y `test_score_breakdown`.
+
 ## Aviso activo: la entrega vuelve a terminar en la meta (2026-09-24)
 
 Decisión del usuario. `gameplay/level_base.gd` (de Slatex): la partida termina otra vez al

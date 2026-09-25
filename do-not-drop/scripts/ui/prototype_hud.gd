@@ -83,6 +83,7 @@ var ping_seconds_left: float = 0.0
 ## Each kind of message gets its own line and its own clock now.
 var event_label: Label
 var event_seconds_left: float = 0.0
+var _route_event_active_id: StringName = &""
 var toast_label: Label
 var toast_seconds_left: float = 0.0
 var complaints_label: Label
@@ -140,6 +141,7 @@ func _ready() -> void:
 	EventBus.merit_changed.connect(_on_merit_changed)
 	EventBus.card_changed.connect(_on_card_changed)
 	EventBus.route_event_started.connect(_on_route_event_started)
+	EventBus.route_event_updated.connect(_on_route_event_updated)
 	EventBus.route_event_resolved.connect(_on_route_event_resolved)
 	EventBus.unlock_earned.connect(_on_unlock_earned)
 	EventBus.depot_orders_posted.connect(func(orders: Array) -> void: _orders = orders)
@@ -871,12 +873,37 @@ func _toast(text: String) -> void:
 
 
 func _on_route_event_started(_event_id: StringName, event: Dictionary) -> void:
-	event_label.text = "EVENTO  ·  %s — %s" % [event.get("title", "Evento"), event.get("prompt", "")]
+	if bool(event.get("incident", false)):
+		_toast("%s — %s" % [event.get("title", "Incidente"), event.get("prompt", "")])
+		return
+	_route_event_active_id = _event_id
+	_on_route_event_updated(_event_id, event)
 	event_label.add_theme_color_override("font_color", YELLOW)
-	event_seconds_left = EVENT_DISPLAY_SECONDS
+	event_seconds_left = 0.0
+
+
+func _on_route_event_updated(_event_id: StringName, event: Dictionary) -> void:
+	if bool(event.get("incident", false)):
+		return
+	var objective: String = String(event.get("prompt", ""))
+	if _event_id == &"inspection" and int(event.get("loose", 0)) > 0:
+		objective = "Faltan asegurar %d cajas" % int(event["loose"])
+	elif _event_id == &"mixed_labels" and event.get("phase") == &"swapped":
+		objective = "%s  ?" % objective
+	var seconds: int = ceili(float(event.get("remaining", 0.0)))
+	event_label.text = "%s\n%s\n%02d:%02d" % [event.get("title", "Evento"), objective, seconds / 60, seconds % 60]
+	if _event_id in [&"mixed_labels", &"mimetic_package"]:
+		for id: StringName in cargo_rows:
+			_refresh_row(id)
 
 
 func _on_route_event_resolved(_event_id: StringName, success: bool, _peer_id: int) -> void:
+	if _event_id not in RouteEventManager.EVENTS:
+		return
+	if _route_event_active_id == _event_id:
+		_route_event_active_id = &""
+	for id: StringName in cargo_rows:
+		_refresh_row(id)
 	event_label.text = "Evento resuelto" if success else "Evento fallido"
 	event_label.add_theme_color_override("font_color", MINT if success else RED)
 	event_seconds_left = PING_DISPLAY_SECONDS
@@ -976,7 +1003,19 @@ func _refresh_row(id: StringName) -> void:
 	var integrity: float = float(entry.get("integrity", 100.0))
 	var row: Dictionary = cargo_rows[id]
 	var label: Label = row["label"]
-	label.text = "%s  ·  %d%%  %s" % [row["name"], roundi(integrity), ["", "· ¡EN RIESGO!", "· PERDIDO"][state]]
+	var display_name: String = String(row["name"])
+	(row["icon"] as TextureRect).texture = UiTheme.trap_icon(display_name.capitalize())
+	for node: Node in get_tree().get_nodes_in_group(&"cargo"):
+		if node is DeliveryPackage and node.package_id == id:
+			if _route_event_active_id == &"mixed_labels" and not node.label_swapped_with.is_empty():
+				display_name += " ?"
+			if _route_event_active_id == &"mimetic_package" and not node.disguise_trap_id.is_empty() and not node.disguise_revealed:
+				var disguise: Resource = load("res://data/traps/%s.tres" % node.disguise_trap_id)
+				if disguise != null:
+					display_name = String(disguise.get("display_name")).to_upper()
+					(row["icon"] as TextureRect).texture = UiTheme.trap_icon(String(disguise.get("display_name")))
+			break
+	label.text = "%s  ·  %d%%  %s" % [display_name, roundi(integrity), ["", "· ¡EN RIESGO!", "· PERDIDO"][state]]
 	label.add_theme_color_override("font_color", STATE_TEXT[state])
 	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = STATE_FILL[state]
 	# A lost box's icon greys out, so the row reads "gone" before the words do.

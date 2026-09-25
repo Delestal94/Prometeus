@@ -165,6 +165,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_main_menu.gd
 <godot> --headless --path do-not-drop --script res://tests/test_hud_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/test_route_streaming.gd
+<godot> --headless --path do-not-drop --script res://tests/test_route_events.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd

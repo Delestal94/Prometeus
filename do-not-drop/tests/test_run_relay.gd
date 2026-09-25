@@ -38,7 +38,9 @@ func _run() -> void:
 	bus.connect(&"run_ended", func(score: int, results: Dictionary) -> void: _ended.append([score, results]))
 	bus.connect(&"route_event_started", func(event_id: StringName, _event: Dictionary) -> void: _events.append(event_id))
 
-	# The host's start, as a client receives it.
+	# The event state travels through EventBus independently from the run RPC.
+	# Receiving the run start afterwards must not emit or draw it a second time.
+	bus.route_event_started.emit(&"rear_door_jam", route_events.EVENTS[&"rear_door_jam"].duplicate(true))
 	manager.call(&"_remote_start_run", &"delivery", &"rear_door_jam")
 	_expect(bool(manager.get(&"is_running")) and _started == 1, "The host's start runs the client's run too")
 	_expect(_events == [&"rear_door_jam"] and route_events.get(&"active_event_id") == &"rear_door_jam",
