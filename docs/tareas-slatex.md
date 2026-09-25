@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-24 (estado relevado sobre `0febf9e`).
+> Última actualización: 2026-09-24 (estado relevado sobre `c4e2a60`).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -414,14 +414,14 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 ### S-209 · Jugador que se desconecta en medio de la partida — A · `Astra · high` · Aviso: sí (`level_base.gd`)
 
-- [ ] Cuando un peer se va: su caja en mano queda en el piso donde estaba; si estaba sentado, el
+- [x] (commits `c77194f`, `d20df06`) Cuando un peer se va: su caja en mano queda en el piso donde estaba; si estaba sentado, el
   asiento se libera; si conducía, el camión frena solo; su casa asignada sigue esperando.
 - [ ] Probarlo con `tests/net_pair.gd` (S-204): el cliente se cierra con caja en mano y el host sigue sin
   errores.
 
 ### S-210 · Guardados que no se corrompen — A · `Sol · high` · Aviso: sí (`run_manager.gd` para el leaderboard)
 
-- [ ] Función común `scripts/core/safe_json.gd`: escribe en `<archivo>.tmp` y renombra
+- [x] (commit `c694bdf`) Función común `scripts/core/safe_json.gd`: escribe en `<archivo>.tmp` y renombra
   (`DirAccess.rename`), así un corte de luz no deja el archivo a medias; al leer, si el JSON es
   inválido, lo renombra a `<archivo>.bad` y devuelve el valor por defecto.
 - [ ] Usarla en `unlock_manager.gd`, en la campaña (S-105) y en el leaderboard de `run_manager.gd`.
@@ -760,7 +760,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ### S-806 · Batería verde y rápida — A · — · Aviso: no
 
-- [ ] Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
+- [x] (commits `3c4ac88`, `37581a2`) Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
 - [ ] Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.
 
 ---
