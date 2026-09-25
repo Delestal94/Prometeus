@@ -95,50 +95,50 @@ local: si el host lo resolviera, los clientes no se enterarían.
 compartida), `scripts/gameplay/package/package.gd`, `scripts/gameplay/package/package_feedback.gd`,
 `scripts/ui/prototype_hud.gd`, `scripts/core/event_bus.gd` (solo si hace falta una señal nueva).
 
-- [ ] **S-101.1 Recortar el sorteo.** Constante `ROUTE_POOL: Array[StringName]` con
+- [x] **S-101.1 Recortar el sorteo.** (commit `2287979`) Constante `ROUTE_POOL: Array[StringName]` con
   `inspection`, `impatient_client`, `mixed_labels`, `mimetic_package`, `parasite_box`.
   `rear_door_jam` (necesita las puertas del camión, dominio de Nacho) y `confusing_shop`
   (necesita la tienda en ruta) quedan en `EVENTS` pero **fuera del sorteo**, con un
   comentario que explique por qué. `begin_random()` sortea solo del pool.
-- [ ] **S-101.2 Duración y vencimiento.** Cada evento suma `"duration"` (segundos, entre 45 y
+- [x] **S-101.2 Duración y vencimiento.** (commit `2287979`) Cada evento suma `"duration"` (segundos, entre 45 y
   90) y `"fine"` (multa en dinero del equipo, entre 15 y 30). En `_physics_process`, **solo en
   el host** y solo con `RunManager.is_running`, descontar el tiempo; al llegar a 0 resolver con
   `success = false` y cobrar la multa con `CrewProgression.spend(mini(fine, team_money))`
   (la plata nunca queda negativa). Al terminar la partida (`run_ended`) cualquier evento activo
   se cierra como fallido sin multa, y `reset_route()` corre en cada `start_run`.
-- [ ] **S-101.3 Resolver en red.** Reemplazar `_emit_event` por `EventBus.relay(...)` para
+- [x] **S-101.3 Resolver en red.** (commit `2287979`) Reemplazar `_emit_event` por `EventBus.relay(...)` para
   `route_event_started`, `route_event_updated` y `route_event_resolved`, así el host decide y
   todos lo ven. Revisar que `_remote_start_run` en `run_manager.gd` no dispare el evento dos
   veces en el cliente (hoy el cliente lo reinicia con `begin_event`; con relay alcanza con que
   el cliente copie el estado sin volver a emitirlo).
-- [ ] **S-101.4 Inspección sorpresa.** A los `duration - 15` s el host evalúa: toda caja del grupo
+- [x] **S-101.4 Inspección sorpresa.** (commit `2287979`) A los `duration - 15` s el host evalúa: toda caja del grupo
   `cargo` que siga en carga está `is_loaded` y no `is_open`. Si se cumple, éxito: dinero al
   equipo y mérito (`award_action`) para cada jugador sentado en un asiento de pasajero. Si no,
   multa. Mientras tanto, `route_event_updated` manda `{"loose": n}` para que el HUD muestre
   "Faltan asegurar 2 cajas".
-- [ ] **S-101.5 Cliente impaciente.** Al empezar, elegir una casa del pedido (escuchar
+- [x] **S-101.5 Cliente impaciente.** (commit `2287979`) Al empezar, elegir una casa del pedido (escuchar
   `houses_assigned`, que ya existe). Éxito si llega `house_delivery_recorded` para esa casa con
   resultado intacto antes del vencimiento. Si falla, además de la multa, poner
   `RunManager.results["time_bonus"] = 0` al cerrar (agregar una bandera `lost_time_bonus`
   en `RunManager`, no tocar la fórmula).
-- [ ] **S-101.6 Etiquetas mezcladas.** Se activa con el primer `vehicle_impact` fuerte después de
+- [x] **S-101.6 Etiquetas mezcladas.** (commit `2287979`) Se activa con el primer `vehicle_impact` fuerte después de
   sortear el evento. El host elige dos cajas en carga y **intercambia solo la etiqueta visible**
   (el `Label3D` del contenido declarado en `package_feedback.gd`, más una marca "?" en el HUD):
   la carga real y el pedido no cambian. Se resuelve cuando alguien abrió (T) **las dos** cajas
   (el contenido real se ve al abrir). Mérito para quien abrió la segunda. Propiedad nueva
   replicada en `package.gd`: `label_swapped_with: StringName`.
-- [ ] **S-101.7 Paquete mimético.** El host elige una caja en carga y le pone
+- [x] **S-101.7 Paquete mimético.** (commit `2287979`) El host elige una caja en carga y le pone
   `disguise_trap_id` (replicado): el HUD y la caja muestran el ícono y el nombre de otra trampa
   de igual o menor dificultad. El primer impacto por encima de `impact_threshold_light` la
   revela (partículas + sonido). Éxito si 20 s después de revelarse no está arruinada.
-- [ ] **S-101.8 Caja parásita.** El host enlaza dos cajas montadas: cada punto de daño que recibe
+- [x] **S-101.8 Caja parásita.** (commit `2287979`) El host enlaza dos cajas montadas: cada punto de daño que recibe
   una se le aplica al 50 % a la otra. Para separarlas, dos jugadores distintos tienen que mantener
   la acción primaria (`steady`) sobre una caja cada uno durante 2 s a la vez (usar lo que ya llega
   por `submit_tender_input`). Solo, en solitario, este evento no se sortea (`NetworkManager.peer_ids.size() < 2`).
-- [ ] **S-101.9 HUD.** El banner del evento (`event_label`) pasa a tener tres partes: título,
+- [x] **S-101.9 HUD.** (commit `2287979`) El banner del evento (`event_label`) pasa a tener tres partes: título,
   objetivo y cuenta regresiva, y se actualiza con `route_event_updated`. Tiene su propia zona
   (ver S-501): no comparte línea con el aviso de interacción.
-- [ ] **S-101.10 Tests.** `tests/test_route_events.gd`: cada uno de los 5 eventos del pool se
+- [x] **S-101.10 Tests.** (commit `2287979`) `tests/test_route_events.gd`: cada uno de los 5 eventos del pool se
   resuelve bien y vence mal; un evento no queda activo después de `run_ended`; la multa nunca deja
   la plata negativa; en solitario no sale `parasite_box`. Actualizar `test_route_event_manager.gd`.
 
