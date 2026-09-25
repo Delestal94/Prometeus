@@ -48,6 +48,7 @@ const PLAYER_COLORS: Array[Color] = [
 @onready var _camera: Camera3D = $Head/Camera3D
 @onready var _hold_point: Marker3D = $Head/Camera3D/HoldPoint
 @onready var _probe: Area3D = $Head/InteractionProbe
+@onready var _interaction_component: Node = $PlayerInteraction
 
 var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
@@ -906,76 +907,35 @@ func _update_ground_safety() -> void:
 
 
 func _is_interact_event(event: InputEvent) -> bool:
-	if event.is_action_pressed(&"interact"):
-		return true
-	if event is InputEventKey and event.pressed and not event.echo:
-		return event.keycode == KEY_E or event.physical_keycode == KEY_E
-	return false
+	return _interaction_component.is_interact_event(event)
 
 
 func _is_drop_event(event: InputEvent) -> bool:
-	if event.is_action_pressed(&"package_drop"):
-		return true
-	# Same logical-keycode fallback as _is_interact_event().
-	return event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_Q or event.physical_keycode == KEY_Q)
+	return _interaction_component.is_drop_event(event)
 
 
 func _is_open_event(event: InputEvent) -> bool:
-	if event.is_action_pressed(&"package_open"):
-		return true
-	# Same logical-keycode fallback as _is_interact_event().
-	return event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_T or event.physical_keycode == KEY_T)
+	return _interaction_component.is_open_event(event)
 
 
 ## The box a lid action applies to: the one in hand first, then the one at
 ## this player's seat, then whichever package they're looking at.
 func _lid_target(aimed: Node = null) -> DeliveryPackage:
-	if is_instance_valid(carried_package):
-		return carried_package
-	if _seated:
-		return tended_package if is_instance_valid(tended_package) else null
-	if aimed == null:
-		aimed = _closest_interactable()
-	if aimed != null and aimed.get_parent() is DeliveryPackage:
-		return aimed.get_parent() as DeliveryPackage
-	return null
+	return _interaction_component.lid_target(aimed)
 
 
 ## Opening goes through the host like everything else that changes a
 ## package (rpc_id(1, ...) resolves to a local call on the host itself).
 func _toggle_package_lid() -> void:
-	var package: DeliveryPackage = _lid_target()
-	if package == null or package.contents_spilled:
-		return
-	package.rpc_id(1, &"request_set_open", not package.is_open)
+	_interaction_component.toggle_package_lid()
 
 
 func _publish_lid_hint(package: DeliveryPackage) -> void:
-	var action: String = ""
-	var inside: String = ""
-	if package != null:
-		if not package.contents_spilled:
-			action = "Cerrar caja" if package.is_open else "Abrir caja"
-		var view: Node = package.get_node_or_null(^"PackageContentsView")
-		if view != null:
-			inside = str(view.call(&"describe"))
-	var key: String = action + "|" + inside
-	if key == _last_lid_hint:
-		return
-	_last_lid_hint = key
-	var bus: Node = get_node_or_null("/root/EventBus")
-	if bus != null:
-		bus.emit_signal(&"package_lid_hint_changed", action, inside)
+	_interaction_component.publish_lid_hint(package)
 
 
 func _poll_interact() -> void:
-	# Keeps interaction responsive even if another Control consumes the input
-	# event first. The explicit E fallback also supports keyboards that report
-	# a logical keycode instead of the physical layout saved in project.godot.
-	var is_down: bool = Input.is_action_pressed(&"interact") or Input.is_key_pressed(KEY_E)
-	if is_down and not _interact_was_down:
-		_try_interact()
-	_interact_was_down = is_down
+	_interaction_component.poll_interact()
 
 
 func _apply_look(motion: Vector2) -> void:
@@ -1117,12 +1077,7 @@ func _publish_carry(carrying: bool) -> void:
 
 
 func _publish_prompt(value: String) -> void:
-	if value == _last_prompt:
-		return
-	_last_prompt = value
-	var bus: Node = get_node_or_null("/root/EventBus")
-	if bus != null:
-		bus.emit_signal(&"interaction_prompt_changed", value)
+	_interaction_component.publish_prompt(value)
 
 
 ## A visible glow on whatever the player is currently looking at (item #98),
@@ -1130,13 +1085,7 @@ func _publish_prompt(value: String) -> void:
 ## every Interactable bothers implementing highlight() (a package mount is
 ## an empty slot, nothing to glow), so this is opt-in per type.
 func _update_highlight(target: Node) -> void:
-	if target == _highlighted:
-		return
-	if is_instance_valid(_highlighted) and _highlighted.has_method(&"highlight"):
-		_highlighted.call(&"highlight", false)
-	_highlighted = target
-	if is_instance_valid(_highlighted) and _highlighted.has_method(&"highlight"):
-		_highlighted.call(&"highlight", true)
+	_interaction_component.update_highlight(target)
 
 
 func _update_carried_package() -> void:
@@ -1229,41 +1178,15 @@ const PING_LABEL: String = "¡Cuidado!"
 
 
 func _send_ping() -> void:
-	var network: Node = get_node_or_null("/root/NetworkManager")
-	var bus: Node = get_node_or_null("/root/EventBus")
-	if bus == null:
-		return
-	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
-		bus.rpc_id(1, &"request_ping", reach_origin(), PING_LABEL)
-	else:
-		bus.call(&"request_ping", reach_origin(), PING_LABEL)
+	_interaction_component.send_ping()
 
 
 func _use_card() -> void:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	var crew: Node = get_node_or_null(^"/root/CrewProgression")
-	if crew == null:
-		return
-	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
-		crew.rpc_id(1, &"request_use_card")
-	else:
-		crew.call(&"request_use_card")
+	_interaction_component.use_card()
 
 
 func _try_interact() -> void:
-	if carried_package != null:
-		var teammate := _transfer_target()
-		if teammate != null:
-			carried_package.rpc_id(1, &"request_transfer", teammate.get_path())
-			return
-	var target: Node = _closest_interactable()
-	if target == null:
-		return
-	var network: Node = get_node_or_null("/root/NetworkManager")
-	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
-		target.rpc_id(1, &"request_interact")
-	else:
-		target.call(&"interact", self)
+	_interaction_component.try_interact()
 
 
 func _transfer_target() -> Player:
@@ -1346,42 +1269,19 @@ const REACH_SURFACE_TOLERANCE: float = 0.3
 
 
 func _closest_interactable() -> Node:
-	var best: Node = null
-	var best_score: float = -INF
-	var eye: Vector3 = _camera.global_position
-	var look: Vector3 = -_camera.global_basis.z
-	for area: Node in _nearby:
-		if not is_instance_valid(area):
-			continue
-		if not bool(area.call(&"can_interact", self)):
-			continue
-		if not _within_reach(area as Node3D):
-			continue
-		var to_target: Vector3 = (area as Node3D).global_position - eye
-		var distance: float = to_target.length()
-		var alignment: float = look.dot(to_target / distance) if distance > 0.001 else 1.0
-		var score: float = alignment - distance * AIM_DISTANCE_WEIGHT
-		if score > best_score:
-			best_score = score
-			best = area
-	return best
+	return _interaction_component.closest_interactable()
 
 
 func _within_reach(target: Node3D) -> bool:
-	var eye: Vector3 = _camera.global_position
-	var hit: Dictionary = _raycast(eye, target.global_position, 1 | 2)
-	if hit.is_empty():
-		return true
-	return (hit["position"] as Vector3).distance_to(target.global_position) <= REACH_SURFACE_TOLERANCE
+	return _interaction_component.within_reach(target)
 
 
 func _on_probe_entered(area: Area3D) -> void:
-	if area.has_method(&"interact"):
-		_nearby.append(area)
+	_interaction_component.on_probe_entered(area)
 
 
 func _on_probe_exited(area: Area3D) -> void:
-	_nearby.erase(area)
+	_interaction_component.on_probe_exited(area)
 
 
 ## A loose package can bowl somebody over. This intentionally stays a
