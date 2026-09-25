@@ -112,7 +112,20 @@ func _part_night() -> void:
 	route = level.get_node(^"World/Route")
 	for node: Node in route.find_children("*", "Node3D", true, false):
 		if node.get_meta(&"rule", &"") == &"parked_vehicle" and not (node as Node3D).scene_file_path.contains("sedan"):
-			await _shot((node as Node3D).global_position + (node as Node3D).global_basis.x * 7.0 + Vector3.UP * 2.0, (node as Node3D).global_position + Vector3.UP * 0.7, "night_parked_car")
+			# From in front of its lamps, a little to the side (the models run
+			# along x or z depending on the car: go by the lamp itself).
+			var car := node as Node3D
+			var lamp_mesh: MeshInstance3D = null
+			for light: Node in car.find_children("Light*", "MeshInstance3D", true, false):
+				if NightFlares._has_material(light as MeshInstance3D, "lamp"):
+					lamp_mesh = light as MeshInstance3D
+			if lamp_mesh == null:
+				continue
+			var lamp_at: Vector3 = lamp_mesh.global_transform * lamp_mesh.get_aabb().get_center()
+			var out: Vector3 = lamp_at - car.global_position
+			out.y = 0.0
+			out = out.normalized()
+			await _shot(lamp_at + out * 6.0 + out.cross(Vector3.UP) * 2.5 + Vector3.UP * 1.2, car.global_position + Vector3.UP * 0.7, "night_parked_car")
 			break
 	await _free(level)
 
