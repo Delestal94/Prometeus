@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-24 (estado relevado sobre `c4e2a60`).
+> Última actualización: 2026-09-25 (estado relevado sobre `026e8d3`).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -362,10 +362,11 @@ Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archiv
 Nacho encontró (su #97) que el camión puede quedar encajado sin volcar ni salir de la ruta;
 `level_endless.gd` ya lo detecta, `level_base.gd` no.
 
-- [ ] Copiar la misma regla (6 s casi quieto con el motor pedido → termina la partida con "La
+- [x] (commit `8ed7140`) Copiar la misma regla (6 s casi quieto con el motor pedido → termina la partida con "La
   camioneta quedó atascada"), **sin** contar el tiempo parado en el depósito, en una casa, o con el
   conductor fuera del asiento.
-- [ ] Test en `test_house_delivery_flow.gd` o uno nuevo: parado entregando no dispara; encajado sí.
+- [x] (commit `8ed7140`) Test en `test_stuck_detection.gd`: parado en depósito, casa o sin conductor no dispara;
+  encajado contra un obstáculo con el acelerador pedido sí.
 
 ### S-204 · Test automático de dos procesos (reemplaza "requiere playtest de red") — A · `Astra · xhigh` · Aviso: no
 
