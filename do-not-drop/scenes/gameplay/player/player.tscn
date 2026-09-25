@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_carry.gd" id="3_carry"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/player_seat_pose.gd" id="4_seat_pose"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -59,6 +60,9 @@ script = ExtResource("2_interaction")
 
 [node name="PlayerCarry" type="Node" parent="."]
 script = ExtResource("3_carry")
+
+[node name="PlayerSeatPose" type="Node" parent="."]
+script = ExtResource("4_seat_pose")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("Repl_player")

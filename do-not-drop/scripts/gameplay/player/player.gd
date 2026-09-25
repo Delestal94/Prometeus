@@ -50,6 +50,7 @@ const PLAYER_COLORS: Array[Color] = [
 @onready var _probe: Area3D = $Head/InteractionProbe
 @onready var _interaction_component: Node = $PlayerInteraction
 @onready var _carry_component: Node = $PlayerCarry
+@onready var _seat_pose_component: Node = $PlayerSeatPose
 
 var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
@@ -681,8 +682,7 @@ func _ride_with_vehicle() -> void:
 ## they sat down (only its visual rides along), so the host measured a
 ## passenger kilometres from the box on their lap.
 func reach_origin() -> Vector3:
-	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D if not seat_node_path.is_empty() else null
-	return seat.global_position if seat != null else global_position
+	return _seat_pose_component.reach_origin()
 
 
 ## What an on-foot player collides with. Riding in the bay of a truck that's
@@ -720,34 +720,7 @@ func _find_vehicle() -> Node3D:
 ## along with it. Everyone else's copy isn't interpolated (it's placed by the
 ## network each frame), so it's posed every frame against the seat as drawn.
 func _pose_seated_body(delta: float) -> void:
-	if seat_node_path.is_empty():
-		_stop_driver_ik()
-		if _body_visual != null:
-			# Clear the seat's world-space offset on every peer after standing.
-			_body_visual.position = Vector3.ZERO
-			_body_visual.rotation.y = 0.0
-			_body_visual.rotation.z = 0.0
-			_body_visual.position.y = sin(_bob_time * TAU) * 0.025 * _bob_amount
-			var flinch: float = sin(_flinch_time / 0.32 * PI) * 0.26
-			_body_visual.rotation.x = move_toward(_body_visual.rotation.x, flinch, delta * 12.0)
-		return
-	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
-	if seat == null:
-		return
-	# Seat anchors are eye height (where the camera goes), while this character
-	# is rooted at its feet; the Sit clip drops its pelvis to about the root.
-	_seat_pose_blend = minf(_seat_pose_blend + delta * 7.0, 1.0)
-	var seat_offset: Vector3 = _seat_body_offset(seat.name)
-	var seat_pose: Transform3D = seat.global_transform if is_physics_interpolated_and_enabled() else _drawn_transform(seat)
-	var target_pose := seat_pose.translated_local(seat_offset)
-	_body_visual.global_transform = _body_visual.global_transform.interpolate_with(target_pose, _seat_pose_blend)
-	# Leaning back suits the driver's reach; in the cargo bay a full lean put
-	# the head into the wall behind the seat.
-	# The rack jump seats are too shallow to lean at all without the head
-	# touching the wall.
-	var lean: float = 0.18 if seat.name == &"DriverEyePoint" else (0.0 if String(seat.name).begins_with("RackSeat") else 0.08)
-	_body_visual.rotation.x = lean + sin(Time.get_ticks_msec() * 0.008) * 0.025
-	_configure_driver_ik(seat)
+	_seat_pose_component.pose_seated_body(delta)
 
 
 ## Where the rounded character's root goes, in the seat marker's space, so
@@ -759,15 +732,7 @@ func _pose_seated_body(delta: float) -> void:
 ## low for this character fully on the cushion, so the driver sinks into it
 ## a little rather than putting his head through the roof.
 func _seat_body_offset(seat_name: StringName) -> Vector3:
-	if seat_name == &"DriverEyePoint":
-		return Vector3(0.0, -0.73, -0.37)
-	if String(seat_name).begins_with("RackSeat"):
-		return Vector3(0.0, -0.35, -0.14)
-	if seat_name == &"CenterSeatEyePoint":
-		# Backs onto the cab bulkhead: slid 0.19 m away from it (seat-local +X
-		# is the van's +Z) or a foot and forearm poke into the cab.
-		return Vector3(0.19, -0.38, -0.16)
-	return Vector3(0.0, -0.38, -0.16)
+	return _seat_pose_component.seat_body_offset(seat_name)
 
 
 ## Real skeletal IK for the driver: the two target nodes live on the wheel,
@@ -776,52 +741,11 @@ func _seat_body_offset(seat_name: StringName) -> Vector3:
 ## passengers keep the Sit clip's hands-on-lap pose. The rounded character's
 ## own arms reach the wheel, so the old stand-in arm cylinders are gone.
 func _configure_driver_ik(seat: Node3D) -> void:
-	if _driver_ik_ready or seat.name != &"DriverEyePoint" or _body_visual == null:
-		return
-	var wheel: Node3D = seat.get_parent().get_parent().find_child("SteeringWheel", true, false) as Node3D
-	var skeleton := _find_skeleton(_body_visual)
-	if wheel == null or skeleton == null:
-		return
-	for side: float in DRIVER_ARM_BONES:
-		var bones: Array = DRIVER_ARM_BONES[side]
-		var target := Marker3D.new()
-		target.name = "DriverHandTargetLeft" if side < 0.0 else "DriverHandTargetRight"
-		target.position = Vector3(side * 0.19, 0.0, -0.03)
-		wheel.add_child(target)
-		var ik := SkeletonIK3D.new()
-		ik.name = "DriverIK" + str(side)
-		ik.root_bone = bones[0]
-		ik.tip_bone = bones[1]
-		ik.override_tip_basis = false
-		skeleton.add_child(ik)
-		# An absolute target path is required here: the wheel is in the vehicle
-		# branch, outside the player's Skeleton3D branch. The relative path was
-		# accepted by the property but never solved, leaving both arms at rest.
-		ik.target_node = target.get_path()
-		# Continuous, not start(true): a one-time solve is overwritten by the
-		# Sit clip on the very next frame, which is why the arms never reached
-		# the wheel before and stand-in cylinders were drawn instead.
-		ik.start(false)
-		_driver_ik_nodes.append(ik)
-		_driver_arm_targets.append(target)
-	_driver_ik_ready = not _driver_ik_nodes.is_empty()
+	_seat_pose_component.configure_driver_ik(seat)
 
 
 func _stop_driver_ik() -> void:
-	if not _driver_ik_ready:
-		return
-	# Freed, not just stopped: boarding again builds a fresh pair, and the old
-	# ones would otherwise pile up on the skeleton and the wheel.
-	for ik: SkeletonIK3D in _driver_ik_nodes:
-		if is_instance_valid(ik):
-			ik.stop()
-			ik.queue_free()
-	_driver_ik_nodes.clear()
-	for target: Node3D in _driver_arm_targets:
-		if is_instance_valid(target):
-			target.queue_free()
-	_driver_arm_targets.clear()
-	_driver_ik_ready = false
+	_seat_pose_component.stop_driver_ik()
 
 
 func _physics_process(delta: float) -> void:
@@ -1052,20 +976,7 @@ func _apply_context_fov(delta: float) -> void:
 
 
 func _gather_package_input() -> Dictionary:
-	# One held action covers every "keep it under control" trap, and the walk
-	# keys double as the sequence input -- a seated passenger isn't using them
-	# to move.
-	var holding: bool = Input.is_action_pressed(&"package_action_primary")
-	var direction: Variant = null
-	if Input.is_action_just_pressed(&"walk_forward"):
-		direction = &"up"
-	elif Input.is_action_just_pressed(&"walk_backward"):
-		direction = &"down"
-	elif Input.is_action_just_pressed(&"drive_left"):
-		direction = &"left"
-	elif Input.is_action_just_pressed(&"drive_right"):
-		direction = &"right"
-	return {"steady": holding, "calm": holding, "direction_pressed": direction}
+	return _seat_pose_component.gather_package_input()
 
 
 func _publish_carry(carrying: bool) -> void:
@@ -1246,59 +1157,21 @@ func drop_carried() -> void:
 func tend_package(package_path: NodePath) -> void:
 	if not _from_host():
 		return
-	tended_package = get_node_or_null(package_path) as DeliveryPackage
+	_seat_pose_component.apply_tend_package(package_path)
 
 
 @rpc("any_peer", "call_local", "reliable")
 func board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	if not _from_host():
 		return
-	_seated = true
-	_seat_pose_blend = 0.0
-	collision_layer = 0
-	collision_mask = 0
-	velocity = Vector3.ZERO
-	# Visible stays true now -- BodyVisual tracks the seat (see _process())
-	# instead of disappearing, so teammates actually have someone to look at
-	# during the ride. Only this player's own camera stops rendering it
-	# (RenderLayers.LOCAL_BODY, set once in _build_body()).
-	_camera.current = false
-	seat_node_path = seat_path
-	_seat_camera_path = seat_camera_path
-	# board_seat() only ever runs on the boarding peer's own client (it's a
-	# targeted RPC, not a broadcast -- see seat_point.gd), so this is
-	# guaranteed to be the local player's own view swapping cameras. A quick
-	# fade softens what would otherwise be an instant teleport-cut from
-	# standing on foot to sitting in the seat.
-	var bus: Node = get_node_or_null("/root/EventBus")
-	if bus != null:
-		bus.emit_signal(&"quick_fade_requested", 0.2)
-	var seat_camera: Node = get_node_or_null(seat_camera_path)
-	if seat_camera != null and seat_camera.has_method(&"activate"):
-		seat_camera.call(&"activate")
+	_seat_pose_component.apply_board_seat(seat_camera_path, seat_path)
 
 
 ## Seats are a temporary safe spot, not a lock-in. Leaving restores the
 ## on-foot controller at the seat's location, so passengers can react to
 ## loose cargo while the van is moving.
 func leave_seat() -> void:
-	if not _seated:
-		return
-	var seat: Node3D = get_node_or_null(seat_node_path) as Node3D
-	_release_seat_occupant(seat)
-	if seat != null:
-		global_position = _seat_exit_position(seat)
-		reset_physics_interpolation()
-	var seat_camera: Node = get_node_or_null(_seat_camera_path)
-	if seat_camera != null and seat_camera.has_method(&"deactivate"):
-		seat_camera.call(&"deactivate")
-	_seated = false
-	tended_package = null
-	seat_node_path = NodePath()
-	_seat_camera_path = NodePath()
-	collision_layer = 8
-	collision_mask = ON_FOOT_MASK
-	_camera.current = true
+	_seat_pose_component.leave_seat()
 
 
 ## Where to stand when getting up: the seat's own "ExitPoint" if it has one
@@ -1306,25 +1179,11 @@ func leave_seat() -> void:
 ## from the seat, into the aisle it faces. Either way, dropped onto whatever
 ## floor is under that spot -- never left at eye height or inside a wall.
 func _seat_exit_position(seat: Node3D) -> Vector3:
-	var exit_point := seat.get_node_or_null(^"ExitPoint") as Node3D
-	var spot: Vector3 = exit_point.global_position if exit_point != null else seat.global_position - seat.global_basis.z * SEAT_EXIT_STEP
-	var query := PhysicsRayQueryParameters3D.create(spot + Vector3.UP * 0.2, spot + Vector3.DOWN * 3.0, 1 | 2, [get_rid()])
-	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
-	return (hit["position"] as Vector3) + Vector3.UP * 0.02 if not hit.is_empty() else spot
+	return _seat_pose_component.seat_exit_position(seat)
 
 
 func _release_seat_occupant(seat: Node3D) -> void:
-	if seat == null:
-		return
-	var interaction: Node = seat.get_node_or_null(^"InteractionArea")
-	if interaction == null or not interaction.has_method(&"release_occupant"):
-		return
-	var peer_id: int = get_multiplayer_authority()
-	var network: Node = get_node_or_null("/root/NetworkManager")
-	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
-		interaction.rpc_id(1, &"release_occupant", peer_id)
-	else:
-		interaction.call(&"release_occupant", peer_id)
+	_seat_pose_component.release_seat_occupant(seat)
 
 
 func _from_host() -> bool:
