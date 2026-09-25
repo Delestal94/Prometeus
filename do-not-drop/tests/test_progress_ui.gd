@@ -10,7 +10,21 @@ func _run() -> void:
 	assert(menu.get_node_or_null("ProgressPanel") != null, "El menú debe incluir Progreso")
 	assert(menu.get_node_or_null("TutorialPanel") != null, "El menú debe incluir Cómo jugar")
 	menu.call("_open_progress")
-	assert(menu.get_node("ProgressPanel").visible, "Progreso debe abrirse")
+	var progress: Control = menu.get_node("ProgressPanel")
+	assert(progress.visible, "Progreso debe abrirse")
+	var new_campaign: Button = null
+	for candidate: Node in progress.find_children("*", "Button", true, false):
+		if (candidate as Button).text == "Empezar campaña nueva":
+			new_campaign = candidate as Button
+			break
+	assert(new_campaign != null, "Progreso debe ofrecer empezar una campaña nueva")
+	var crew: Node = root.get_node(^"CrewProgression")
+	crew.team_money = 177
+	new_campaign.pressed.emit()
+	assert(crew.team_money == 177, "El primer click solo pide confirmación")
+	assert(new_campaign.text.begins_with("Confirmar"), "El botón debe mostrar la confirmación")
+	new_campaign.pressed.emit()
+	assert(crew.team_money == crew.STARTING_MONEY, "El segundo click reinicia la campaña")
 	menu.call("_open_tutorial")
 	assert(menu.get_node("TutorialPanel").visible, "Tutorial debe abrirse")
 	print("PASS: progress and tutorial panels are reachable from the main menu.")

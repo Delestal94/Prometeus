@@ -28,7 +28,8 @@ un requisito para empezar una partida.
 
 ## Desbloqueo gradual
 
-Las primeras entregas presentan Frágil y Equilibrio. Líquido introduce la
-necesidad de contención; Explosivo la presión de tiempo; y Apestoso/Hostil
-coordinar a varias personas. Cada riesgo llega junto a una mejora inicial que
-enseña su contramedida, sin convertir el juego en una rutina de farmeo.
+Las primeras entregas presentan Frágil y Equilibrio. Después llegan Peso
+creciente (1 entrega), Ruidoso (2 entregas y 100 puntos), Líquido (4/250),
+Explosivo (8/750) y Hostil (13/1500). Así cada riesgo nuevo agrega una sola
+idea a la vez: anticipación, control, contención, presión de tiempo y por último
+coordinación intensa, sin convertir el juego en una rutina de farmeo.

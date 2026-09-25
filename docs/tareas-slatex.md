@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-24 (estado relevado sobre `0febf9e`).
+> Última actualización: 2026-09-24 (estado relevado sobre `c4e2a60`).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -208,18 +208,18 @@ mostrador de suministros compra el que llega primero.
 **Archivos**: `scripts/core/shop_vote_manager.gd`, `scripts/ui/depot_panel.gd`. **No hace falta
 tocar `depot.gd`**: la compra final se sigue haciendo con `depot.buy_supply(id)` en el host.
 
-- [ ] **S-104.1** En `shop_vote_manager.gd`: `request_vote(offer_id)` con `@rpc("any_peer")` que en el
+- [x] **S-104.1** (commit `c05ed44`) En `shop_vote_manager.gd`: `request_vote(offer_id)` con `@rpc("any_peer")` que en el
   host valida y llama `vote(sender, offer_id)`; `resolve_winner(peers) -> StringName` que decide
   **sin gastar** (la plata la descuenta `depot.buy_supply`, para no cobrar dos veces). Empate: gana la
   oferta más barata. Nadie votó: no se compra nada.
-- [ ] **S-104.2** El host abre la votación (`open_shop(CrewProgression.SUPPLIES)`) la primera vez que
+- [x] **S-104.2** (commit `c05ed44`) El host abre la votación (`open_shop(CrewProgression.SUPPLIES)`) la primera vez que
   alguien abre el mostrador en el depósito, y la cierra cuando votaron todos los conectados o a los
   20 s del primer voto. Al cerrar: `depot.buy_supply(ganador)`.
-- [ ] **S-104.3** En solitario no hay votación: el botón compra directo como hoy.
-- [ ] **S-104.4** UI: cada oferta muestra quién la votó (círculos con el color de cada jugador) y la
+- [x] **S-104.3** (commit `c05ed44`) En solitario no hay votación: el botón compra directo como hoy.
+- [x] **S-104.4** (commit `c05ed44`) UI: cada oferta muestra quién la votó (círculos con el color de cada jugador) y la
   cuenta regresiva; Descuento (S-103) aparece como botón "Usar Descuento (−50 %)" sobre la oferta
   ganadora; Re-voto borra los votos.
-- [ ] **S-104.5 Test** `tests/test_supply_vote.gd` (con `ShopVoteManager` y `CrewProgression`
+- [x] **S-104.5 Test** (commit `c05ed44`) `tests/test_supply_vote.gd` (con `ShopVoteManager` y `CrewProgression`
   instanciados sin red, como `test_shop_vote_manager.gd`): gana la mayoría, empate a la más barata,
   el dinero se descuenta una sola vez.
 
@@ -228,14 +228,14 @@ tocar `depot.gd`**: la compra final se sigue haciendo con `depot.buy_supply(id)`
 **Problema real**: el dinero, las cartas y el mérito viven en memoria: al cerrar el juego se
 pierden y la economía no significa nada entre sesiones.
 
-- [ ] **S-105.1** `CrewProgression.save_campaign()` / `load_campaign()` en `user://crew_campaign.json`
+- [x] **S-105.1** (commit `c694bdf`) `CrewProgression.save_campaign()` / `load_campaign()` en `user://crew_campaign.json`
   (dinero, suministros pendientes, cartas y mérito **por color de jugador**, no por peer id, porque el
   id cambia en cada conexión). Mismo patrón que `unlock_manager.gd`, con `version: 1`.
-- [ ] **S-105.2** Guarda el host al terminar cada partida y al comprar. En línea manda la campaña del
+- [x] **S-105.2** (commit `c694bdf`) Guarda el host al terminar cada partida y al comprar. En línea manda la campaña del
   host; los clientes no escriben la suya.
-- [ ] **S-105.3** Botón "Empezar campaña nueva" en `progress_panel.gd`, con confirmación.
-- [ ] **S-105.4** Escritura segura (ver S-210).
-- [ ] **S-105.5 Test** `tests/test_crew_campaign_save.gd`: guarda, recarga, conserva; archivo corrupto
+- [x] **S-105.3** (commit `c694bdf`) Botón "Empezar campaña nueva" en `progress_panel.gd`, con confirmación.
+- [x] **S-105.4** (commit `c694bdf`) Escritura segura (ver S-210).
+- [x] **S-105.5 Test** (commit `c694bdf`) `tests/test_crew_campaign_save.gd`: guarda, recarga, conserva; archivo corrupto
   no rompe y arranca con $100.
 
 ### S-106 · Introducción gradual de trampas desde el perfil — A · `Sol · high` · Aviso: no
@@ -243,16 +243,16 @@ pierden y la economía no significa nada entre sesiones.
 `docs/economia-y-contramedidas.md` dice que las primeras entregas presentan solo Frágil y
 Equilibrio. Hoy las 4 básicas salen desde la primera partida.
 
-- [ ] **S-106.1** Sumar a `UnlockManager.UNLOCKS`: `growing_weight_trap` (1 entrega, 0 pts) y
+- [x] **S-106.1** (commit `2a2ad10`) Sumar a `UnlockManager.UNLOCKS`: `growing_weight_trap` (1 entrega, 0 pts) y
   `noisy_trap` (2 entregas, 100 pts); agregarlas a `TRAP_UNLOCKS`. Correr los umbrales siguientes para
   que la curva quede: Frágil+Equilibrio → Peso creciente (1) → Ruidoso (2) → Líquido (4) → Explosivo (8)
   → Hostil (13).
-- [ ] **S-106.2** `PROFILE_VERSION` 3: un perfil que ya supera los umbrales nuevos los recibe
+- [x] **S-106.2** (commit `2a2ad10`) `PROFILE_VERSION` 3: un perfil que ya supera los umbrales nuevos los recibe
   desbloqueados al cargar (no quitarle nada a nadie).
-- [ ] **S-106.3** Verificar que con solo 2 trampas (4 cajas) siempre alcanzan para las casas
+- [x] **S-106.3** (commit `2a2ad10`) Verificar que con solo 2 trampas (4 cajas) siempre alcanzan para las casas
   (`max(jugadores - 1, 1)`, máximo 4). Si no alcanza, `locked_traps()` libera la trampa de menor
   dificultad que falte. Test en `test_locked_traps.gd`.
-- [ ] **S-106.4** Actualizar `docs/plan-desarrollo.md` Fase 5 con la curva nueva.
+- [x] **S-106.4** (commit `2a2ad10`) Actualizar `docs/plan-desarrollo.md` Fase 5 con la curva nueva.
 
 ### S-107 · Reglas de dificultad para armar el pedido — B · `Sol · high` · Aviso: sí (una línea en `depot.gd`)
 
@@ -414,14 +414,14 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 ### S-209 · Jugador que se desconecta en medio de la partida — A · `Astra · high` · Aviso: sí (`level_base.gd`)
 
-- [ ] Cuando un peer se va: su caja en mano queda en el piso donde estaba; si estaba sentado, el
+- [x] (commits `c77194f`, `d20df06`) Cuando un peer se va: su caja en mano queda en el piso donde estaba; si estaba sentado, el
   asiento se libera; si conducía, el camión frena solo; su casa asignada sigue esperando.
 - [ ] Probarlo con `tests/net_pair.gd` (S-204): el cliente se cierra con caja en mano y el host sigue sin
   errores.
 
 ### S-210 · Guardados que no se corrompen — A · `Sol · high` · Aviso: sí (`run_manager.gd` para el leaderboard)
 
-- [ ] Función común `scripts/core/safe_json.gd`: escribe en `<archivo>.tmp` y renombra
+- [x] (commit `c694bdf`) Función común `scripts/core/safe_json.gd`: escribe en `<archivo>.tmp` y renombra
   (`DirAccess.rename`), así un corte de luz no deja el archivo a medias; al leer, si el JSON es
   inválido, lo renombra a `<archivo>.bad` y devuelve el valor por defecto.
 - [ ] Usarla en `unlock_manager.gd`, en la campaña (S-105) y en el leaderboard de `run_manager.gd`.
@@ -760,7 +760,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ### S-806 · Batería verde y rápida — A · — · Aviso: no
 
-- [ ] Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
+- [x] (commits `3c4ac88`, `37581a2`) Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
 - [ ] Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.
 
 ---
