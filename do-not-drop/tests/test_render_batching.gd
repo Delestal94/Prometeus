@@ -149,7 +149,15 @@ func _key(xform: Transform3D) -> String:
 func _shape_signature(route: Node3D) -> Array:
 	var signature: Array = []
 	for shape: Node in route.find_children("*", "CollisionShape3D", true, false):
-		signature.append("%s|%s" % [(shape as Node3D).global_position.snapped(Vector3.ONE * 0.01), (shape as CollisionShape3D).shape.get_class() if (shape as CollisionShape3D).shape != null else "none"])
+		var kind: String = (shape as CollisionShape3D).shape.get_class() if (shape as CollisionShape3D).shape != null else "none"
+		# A rigid body (a construction cone) settles under physics for its
+		# first few steps, and how many ran before this look depends on how
+		# long the build took -- CI once gave one build 5 and the other 6+,
+		# and a cone landed a centimetre off. Name it instead.
+		if shape.get_parent() is RigidBody3D:
+			signature.append("%s|%s" % [route.get_path_to(shape.get_parent()), kind])
+			continue
+		signature.append("%s|%s" % [(shape as Node3D).global_position.snapped(Vector3.ONE * 0.01), kind])
 	signature.sort()
 	return signature
 

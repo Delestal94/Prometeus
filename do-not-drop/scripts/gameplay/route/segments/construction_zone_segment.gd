@@ -92,7 +92,9 @@ func _cone(location: Vector3) -> void:
 	var model := (load(CONE_MODEL) as PackedScene).instantiate() as Node3D
 	model.scale = Vector3.ONE * CONE_SCALE
 	body.add_child(model)
-	body.tree_entered.connect(func() -> void: body.sleeping = true, CONNECT_ONE_SHOT)
+	# No "start asleep" here: the body is already in the tree by now (this
+	# runs from the segment's _ready), and Jolt settles it on the slope in
+	# ~5 physics steps either way. It drops the 1 cm gap and comes to rest.
 
 
 ## The barrier's amber lamp glows, so the closure reads at night too.
