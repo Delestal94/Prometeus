@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dy0376ucttwv3"
+
+[deps]
+
+files=["res://translations/strings_world.es.translation", "res://translations/strings_world.en.translation"]
+
+source_file="res://translations/strings_world.csv"
+dest_files=["res://translations/strings_world.es.translation", "res://translations/strings_world.en.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

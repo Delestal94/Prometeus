@@ -172,8 +172,8 @@ func _check_hit(vehicle: VehicleBody3D, index: int) -> void:
 			fine = mini(FINE, int(crew.get(&"team_money")))
 			if fine > 0:
 				crew.call(&"spend", fine)
-		WildlifeCrossing.report_incident(get_tree(), &"sheep_hit", "¡Atropellaste una oveja!",
-			("Se levantó ofendida. El dueño cobra $%d." % fine) if fine > 0 else "Se levantó ofendida. El dueño no te pudo cobrar nada.")
+		WildlifeCrossing.report_incident(get_tree(), &"sheep_hit", tr("WORLD_SHEEP_HIT_TITLE"),
+			(tr("WORLD_SHEEP_HIT_FINE") % fine) if fine > 0 else tr("WORLD_SHEEP_HIT_NO_FINE"))
 
 
 ## A honk close enough ahead scatters the flock off the road.

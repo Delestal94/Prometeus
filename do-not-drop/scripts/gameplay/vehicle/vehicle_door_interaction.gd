@@ -6,14 +6,14 @@ extends "res://scripts/gameplay/interaction/interactable.gd"
 @export var door: StringName = &"rear"
 
 const OPEN_PROMPTS := {
-	&"rear": "Cerrar puertas traseras",
-	&"cab_left": "Cerrar puerta del conductor",
-	&"cab_right": "Cerrar puerta del acompañante",
+	&"rear": "WORLD_TRUCK_REAR_CLOSE",
+	&"cab_left": "WORLD_TRUCK_DRIVER_CLOSE",
+	&"cab_right": "WORLD_TRUCK_PASSENGER_CLOSE",
 }
 const CLOSED_PROMPTS := {
-	&"rear": "Abrir puertas traseras",
-	&"cab_left": "Abrir puerta del conductor",
-	&"cab_right": "Abrir puerta del acompañante",
+	&"rear": "WORLD_TRUCK_REAR_OPEN",
+	&"cab_left": "WORLD_TRUCK_DRIVER_OPEN",
+	&"cab_right": "WORLD_TRUCK_PASSENGER_OPEN",
 }
 
 
@@ -41,7 +41,7 @@ func get_prompt() -> String:
 	if vehicle == null:
 		return ""
 	var open: bool = bool(vehicle.call(&"is_door_open", door))
-	return String((OPEN_PROMPTS if open else CLOSED_PROMPTS).get(door, prompt))
+	return tr(String((OPEN_PROMPTS if open else CLOSED_PROMPTS).get(door, prompt)))
 
 
 func interact(player: Node) -> void:

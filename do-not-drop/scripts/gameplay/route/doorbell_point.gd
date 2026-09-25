@@ -14,7 +14,7 @@ signal rung(carried_package: Node)
 
 
 func get_prompt() -> String:
-	return "Tocar timbre"
+	return tr("WORLD_DOORBELL_PROMPT")
 
 
 func can_interact(_player: Node) -> bool:

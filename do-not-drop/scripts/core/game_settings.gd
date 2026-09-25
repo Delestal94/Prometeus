@@ -132,6 +132,10 @@ func _ready() -> void:
 	if Engine.get_main_loop().get_script() != null:
 		save_path = "user://test_settings.cfg"
 	_load()
+	# The world's texts are translatable (translations/strings_world.csv, N-605)
+	# but the UI isn't yet: until the language option (S-509) lands, stay in
+	# Spanish even on an English system, so the two never mix on screen.
+	TranslationServer.set_locale("es")
 	WORLD_QUALITY.watch(get_tree())
 	WORLD_QUALITY.apply(get_tree(), graphics_quality)
 

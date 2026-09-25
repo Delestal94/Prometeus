@@ -65,6 +65,34 @@ const HOUSE_SHADOW_OPACITY: float = 0.7
 
 signal resolved(outcome: StringName, package_id: StringName)  # see OUTCOMES below
 
+## What the neighbour says at the door (N-604, DoorReaction): five lines per
+## outcome, one picked per house from the session seed so every peer reads
+## the same one. "wrong" is a box that isn't theirs (handed back, the house
+## keeps waiting); "missed" is the note left on the door when nobody rang.
+const REACTION_LINES: Dictionary = {
+	&"delivered_ok": [
+		"WORLD_REACTION_OK_1", "WORLD_REACTION_OK_2", "WORLD_REACTION_OK_3",
+		"WORLD_REACTION_OK_4", "WORLD_REACTION_OK_5",
+	],
+	&"delivered_at_risk": [
+		"WORLD_REACTION_AT_RISK_1", "WORLD_REACTION_AT_RISK_2", "WORLD_REACTION_AT_RISK_3",
+		"WORLD_REACTION_AT_RISK_4", "WORLD_REACTION_AT_RISK_5",
+	],
+	&"delivered_ruined": [
+		"WORLD_REACTION_RUINED_1", "WORLD_REACTION_RUINED_2", "WORLD_REACTION_RUINED_3",
+		"WORLD_REACTION_RUINED_4", "WORLD_REACTION_RUINED_5",
+	],
+	&"wrong": [
+		"WORLD_REACTION_WRONG_1", "WORLD_REACTION_WRONG_2",
+		"WORLD_REACTION_WRONG_3", "WORLD_REACTION_WRONG_4", "WORLD_REACTION_WRONG_5",
+	],
+	&"missed": [
+		"WORLD_REACTION_MISSED_1", "WORLD_REACTION_MISSED_2",
+		"WORLD_REACTION_MISSED_3", "WORLD_REACTION_MISSED_4",
+		"WORLD_REACTION_MISSED_5",
+	],
+}
+
 ## Every way a stop can end. A dented box is its own outcome rather than
 ## being rounded up to "fine": it's the case the delivery photo exists for
 ## (the resident may complain about it afterwards), so collapsing it into
@@ -100,6 +128,8 @@ var doorbell_number: Label3D
 var doorbell_lit: bool = true
 var _doorbell_materials: Array[StandardMaterial3D] = []
 var _resident: Node3D
+## The neighbour's scene at the door (N-604).
+var reaction: DoorReaction
 var _bell_player: AudioStreamPlayer3D
 var _reaction_player: AudioStreamPlayer3D
 
@@ -209,6 +239,8 @@ func _build_house() -> void:
 		var visual_instance := visual.instantiate()
 		visual_instance.name = "HouseVisual"
 		LowpolyMaterials.apply(visual_instance)
+		# Somebody's home: the windows glow after dark (N-304).
+		LowpolyMaterials.light_up(visual_instance, ["window"])
 		add_child(visual_instance)
 		# A few hundred authored parts, none of which ever move: one draw
 		# call per material instead of one per part.
@@ -227,7 +259,16 @@ func _build_house() -> void:
 	_tint_first_mesh(_resident, Color("b56f4d"))
 	_resident.visible = false
 	add_child(_resident)
-	resolved.connect(func(_outcome: StringName, _package_id: StringName) -> void: _resident.visible = true)
+	# The neighbour's reaction (N-604): from the record the host relays to
+	# everyone, so clients see it too -- `resolved` only fires on the host.
+	reaction = DoorReaction.new()
+	reaction.name = "DoorReaction"
+	add_child(reaction)
+	reaction.setup(_resident, house_index, Vector3(0.0, 1.25, DOORBELL_WALL_Z[variant] - 0.02))
+	var events: Node = get_node_or_null(^"/root/EventBus")
+	if events != null:
+		events.connect(&"house_delivery_recorded", _on_delivery_reaction)
+		events.connect(&"house_refused_package", _on_refused_reaction)
 
 	doorbell = DoorbellPoint.new()
 	doorbell.name = "Doorbell"
@@ -286,6 +327,23 @@ func _build_doorbell_visual() -> void:
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
 	set_doorbell_lit(doorbell_lit)
+
+
+func _on_delivery_reaction(index: int, result: StringName, _package_id: StringName) -> void:
+	if index == house_index and REACTION_LINES.has(result):
+		reaction.react(result, tr(DoorReaction.pick_line(REACTION_LINES[result], _session_seed(), house_index, result)))
+
+
+func _on_refused_reaction(index: int, expected_label: String) -> void:
+	if index != house_index:
+		return
+	var line: String = tr(DoorReaction.pick_line(REACTION_LINES[&"wrong"], _session_seed(), house_index, &"wrong"))
+	reaction.refuse(line % expected_label if line.contains("%s") else line)
+
+
+func _session_seed() -> int:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	return int(network.get(&"world_seed")) if network != null else 0
 
 
 func _on_house_delivery_recorded(index: int, _outcome: StringName, _package_id: StringName) -> void:

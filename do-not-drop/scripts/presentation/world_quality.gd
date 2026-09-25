@@ -69,4 +69,10 @@ static func watch(tree: SceneTree) -> void:
 	tree.node_added.connect(func(node: Node) -> void:
 		if node is DirectionalLight3D or node is GPUParticles3D or node.has_meta(BASE_RANGE_META):
 			# Deferred: the node's owner sets its own values right after adding it.
-			apply_to.call_deferred(node))
+			# Checked before the call: a node freed in the meantime (a route
+			# built and thrown away in the same frame) can't even be passed to
+			# apply_to()'s typed argument.
+			var later: Callable = func() -> void:
+				if is_instance_valid(node):
+					apply_to(node)
+			later.call_deferred())

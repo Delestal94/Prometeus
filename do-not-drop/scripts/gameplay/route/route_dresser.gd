@@ -17,9 +17,9 @@ class_name RouteDresser
 ## A spot that fails is simply skipped -- nothing gets nudged into a place
 ## it wasn't meant to be. Explicit features (warning signs, guardrails, the
 ## roadworks crew's stuff, house yards) go first and claim their space;
-## then the rules run in priority order: landmarks, parked cars, village
-## furniture, farm props, trees, and finally ground plants, which fill
-## whatever is left.
+## then the rules run in priority order: landmarks, parked cars (and the
+## competition's van), village furniture, farm props, the odd tractor, trees,
+## and finally ground plants, which fill whatever is left.
 ##
 ## Zones make the road read as a journey instead of one repeated strip:
 ##   VILLAGE     within VILLAGE_RADIUS of a delivery house: lamps, benches,
@@ -66,10 +66,27 @@ const HAZARD_SIGNS: Dictionary = {
 	"ConstructionZoneSegment": "sm_env_sign_roadworks.glb",
 }
 const DELIVERY_SIGN: String = SIGN_DIR + "sm_env_sign_delivery_ahead.glb"
+## Town-limit signs (TownSign, N-601): sampled every this many metres along
+## the road, standing this far right of the centreline.
+const TOWN_SIGN_STEP: float = 4.0
+const TOWN_SIGN_LATERAL: float = 9.4
+## Roadside stories (RoadsideStory, N-602): at most one per STORY_MIN_GAP
+## metres of road, none before STORY_START; STORY_LATERAL is how far the
+## scene's near edge stands from the centreline.
+const STORY_MIN_GAP: float = 800.0
+const STORY_START: float = 250.0
+const STORY_CHANCE: float = 0.5
+const STORY_LATERAL: Vector2 = Vector2(10.0, 14.0)
 const SIGN_LATERAL: float = 7.8
 ## The warning stands this far before the hazard's first metre.
 const SIGN_LEAD: float = 6.0
 const GUARDRAIL: String = PROPS + "sm_env_prop_guardrail.glb"
+## What lights up after dark (N-304, LowpolyMaterials.light_up()), by model.
+const NIGHT_LIGHTS: Dictionary = {
+	PROPS + "sm_env_prop_street_lamp_refined.glb": ["lamp_glass"],
+	"res://assets/models/vehicles/sm_vehicle_parked_hatchback.glb": ["lamp"],
+	"res://assets/models/vehicles/sm_vehicle_parked_pickup.glb": ["lamp"],
+}
 const WILDLIFE: String = "res://assets/models/environment/wildlife/"
 const ANIMAL_BEHAVIOUR: Script = preload("res://scripts/presentation/wildlife_animal.gd")
 const CROSSING_SIGN: String = SIGN_DIR + "sm_env_sign_animal_crossing.glb"
@@ -171,6 +188,8 @@ func _init(route: Node3D, terrain: Node, seed_value: int) -> void:
 ##   tilt       lean with the ground         min_same  keep this far from another of the same rule
 ##   group      node that holds it under the segment
 ##   contact_shadow  opacity of a soft dark patch under it (N-308.2)
+##   order      when it runs (default: its index; see _rule_order())
+##   yaw_offset extra turn (radians) for a model authored along another axis
 func _build_rules() -> Array[Dictionary]:
 	return [
 		_rule({"id": &"landmark", "group": "LandmarkDressing",
@@ -247,6 +266,22 @@ func _build_rules() -> Array[Dictionary]:
 			"density": {Zone.FOREST: 0.85, Zone.COUNTRYSIDE: 0.65, Zone.VILLAGE: 0.4}, "spacing": 0.9,
 			"lateral": Vector2(6.7, 31.0), "radius": 0.35, "clearance": 6.3, "max_slope": 1.0,
 			"scale": Vector2(0.65, 1.2)}),
+		# The depot's other vehicles out on the road (N-306). Appended, so no
+		# older rule's RNG stream moves; "order" slots them in before the trees.
+		# A tractor now and then out in the fields, well back from the asphalt.
+		_rule({"id": &"tractor", "order": 5.5,
+			"paths": ["res://assets/models/vehicles/sm_vehicle_tractor.glb"],
+			"density": {Zone.COUNTRYSIDE: 0.3}, "spacing": 70.0,
+			"lateral": Vector2(17.0, 28.0), "radius": 2.2, "clearance": 15.0, "max_slope": 0.15,
+			"tilt": true, "min_same": 320.0, "contact_shadow": 0.5}),
+		# The competition's van, parked in a village like the other cars.
+		_rule({"id": &"competitor_van", "order": 1.5,
+			"paths": ["res://assets/models/vehicles/sm_vehicle_competitor_van.glb"],
+			"density": {Zone.VILLAGE: 0.2}, "spacing": 60.0,
+			"lateral": Vector2(12.4, 14.5), "radius": 2.7, "clearance": 9.5, "max_slope": 0.15,
+			# Modelled lengthwise along Z, where the parked cars run along X.
+			"facing": Facing.ROAD, "yaw_offset": PI * 0.5, "tilt": true, "min_same": 400.0,
+			"contact_shadow": 0.55}),
 	]
 
 
@@ -278,6 +313,8 @@ func dress(segments: Array, houses: Array, clear_zones: Array[Vector3], sight_zo
 	# than one more metre of rail, and real rails have a gap at the post too.
 	for index: int in range(segments.size()):
 		_dress_signs(segments[index])
+	_dress_town_signs(segments)
+	_dress_roadside_stories(segments)
 	for index: int in range(segments.size()):
 		_dress_barriers(segments[index])
 	_dress_crossings(segments)
@@ -286,9 +323,25 @@ func dress(segments: Array, houses: Array, clear_zones: Array[Vector3], sight_zo
 	if raining:
 		_dress_storm_debris(segments)
 	_dress_power_lines(segments)
-	for rule_index: int in range(_rules.size()):
+	for rule_index: int in _rule_order():
 		for index: int in range(segments.size()):
 			_apply_rule(segments[index], index, rule_index)
+
+
+## Rules run by "order" (their index unless they say otherwise), so a rule
+## added at the end of the table can still claim its ground before the trees
+## while every older rule keeps its index -- and with it its RNG stream
+## (_apply_rule seeds by index): adding the tractor didn't move a single tree
+## that it doesn't stand on.
+func _rule_order() -> Array[int]:
+	var order: Array[int] = []
+	for rule_index: int in range(_rules.size()):
+		order.append(rule_index)
+	order.sort_custom(func(a: int, b: int) -> bool:
+		var oa: float = float(_rules[a].get("order", a))
+		var ob: float = float(_rules[b].get("order", b))
+		return oa < ob if oa != ob else a < b)
+	return order
 
 
 ## The zone at a point on the road, `distance` metres from the start.
@@ -316,6 +369,133 @@ func _dress_signs(segment: RouteSegment) -> void:
 		# Inside the segment rather than ahead of it, so it never shares a
 		# corner with a hazard sign.
 		_place_sign(segment, DELIVERY_SIGN, float(segment.get_meta(&"delivery_sign_side")), -minf(12.0, segment.length * 0.4), false, &"delivery_sign")
+
+
+## A named sign where the road enters each village and a crossed-out one
+## where it leaves (N-601): walks the road in TOWN_SIGN_STEP steps and puts
+## one up at every change into or out of the VILLAGE zone. A route that ends
+## inside a village (the goal next to the last house) gets no exit sign.
+func _dress_town_signs(segments: Array) -> void:
+	var names: Array[String] = TownSign.names_for_seed(_seed)
+	var town: int = -1
+	var inside: bool = false
+	var last_inside: Array = []
+	for segment: RouteSegment in segments:
+		var start_distance: float = float(segment.get_meta(&"route_distance", 0.0))
+		for slot: Transform3D in segment.get_dressing_slots(TOWN_SIGN_STEP):
+			var now_inside: bool = zone_at(segment.transform * slot.origin, start_distance - slot.origin.z) == Zone.VILLAGE
+			if now_inside and not inside:
+				town += 1
+				_place_town_sign(segment, slot, names[town % names.size()], false)
+			elif inside and not now_inside and not last_inside.is_empty():
+				_place_town_sign(last_inside[0], last_inside[1], names[town % names.size()], true)
+			inside = now_inside
+			if now_inside:
+				last_inside = [segment, slot]
+
+
+## On the driver's right, facing the traffic, through the same checks as any
+## sign; stepped further out if the first spot is taken. Kept as a node (it
+## builds its own board and text), so the batcher leaves it alone.
+func _place_town_sign(segment: RouteSegment, slot: Transform3D, town_name: String, is_exit: bool) -> void:
+	var reach: float = TownSign.POST_GAP * 0.5 + 0.1
+	for lateral: float in [TOWN_SIGN_LATERAL, TOWN_SIGN_LATERAL + 1.0, TOWN_SIGN_LATERAL + 2.0]:
+		var xform: Transform3D = slot * Transform3D(Basis.IDENTITY, Vector3(lateral, 0.0, 0.0))
+		var p: Vector3 = segment.transform * xform.origin
+		if _misfit(p, reach, 6.8, 1.0, true, &"town_sign", 0.0, TownSign.BOARD_SIZE.x * 0.5) != &"":
+			continue
+		var sign_node := TownSign.new()
+		sign_node.name = "TownExit" if is_exit else "TownEntry"
+		sign_node.town_name = town_name
+		sign_node.is_exit = is_exit
+		sign_node.transform = xform
+		_group(segment, "RoadsideDressing").add_child(sign_node, true)
+		_settle(sign_node, p)
+		sign_node.set_meta(&"rule", &"town_sign")
+		sign_node.set_meta(&"reach", reach)
+		sign_node.set_meta(&"footprint", TownSign.BOARD_SIZE.x * 0.5)
+		sign_node.set_meta(&"solid", true)
+		_occupy(p, TownSign.BOARD_SIZE.x * 0.5)
+		town_signs.append(sign_node)
+		_count(&"town_sign")
+		return
+
+
+## Little stories by the road (RoadsideStory, N-602): at most one every
+## STORY_MIN_GAP metres, none in the first STORY_START, each a 50/50 draw per
+## segment once the gap has passed, dealt from a seeded deck so a route shows
+## each kind before repeating one. The competition's crash stays out of the
+## villages; the billboard stays out of the forest (nobody rents one there).
+func _dress_roadside_stories(segments: Array) -> void:
+	var deck: Array[int] = [RoadsideStory.Kind.VAN_SPILL, RoadsideStory.Kind.HEN, RoadsideStory.Kind.BILLBOARD]
+	var shuffle := RandomNumberGenerator.new()
+	shuffle.seed = hash([_seed, &"story_deck"])
+	for i: int in range(deck.size() - 1, 0, -1):
+		var j: int = shuffle.randi_range(0, i)
+		var swap: int = deck[i]
+		deck[i] = deck[j]
+		deck[j] = swap
+	var next: int = 0
+	var last_distance: float = STORY_START - STORY_MIN_GAP
+	for index: int in range(segments.size()):
+		var segment: RouteSegment = segments[index]
+		if segment is TunnelSegment or segment is NarrowBridgeSegment or segment is RailCrossingSegment:
+			continue
+		var distance: float = float(segment.get_meta(&"route_distance", 0.0))
+		if distance - last_distance < STORY_MIN_GAP:
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([_seed, index, &"roadside_story"])
+		var roll: float = rng.randf()
+		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
+		var lateral: float = rng.randf_range(STORY_LATERAL.x, STORY_LATERAL.y)
+		var story_seed: int = rng.randi()
+		if roll > STORY_CHANCE:
+			continue
+		var kind: int = deck[next % deck.size()]
+		var middle := Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -segment.length * 0.5))
+		var zone: int = zone_at(segment.transform * middle.origin, distance + segment.length * 0.5)
+		if (kind == RoadsideStory.Kind.VAN_SPILL and zone == Zone.VILLAGE) or (kind == RoadsideStory.Kind.BILLBOARD and zone == Zone.FOREST):
+			continue
+		if _place_story(segment, middle, kind, side, lateral, story_seed, zone):
+			next += 1
+			last_distance = distance
+
+
+func _place_story(segment: RouteSegment, slot: Transform3D, kind: int, side: float, lateral: float, story_seed: int, zone: int) -> bool:
+	var reach: float = float(RoadsideStory.REACH[kind])
+	var footprint: float = float(RoadsideStory.FOOTPRINT[kind])
+	var distance_out: float = lateral + reach
+	# A billboard turns a little toward the traffic coming at it; the rest
+	# face wherever their scatter says (RoadsideStory builds them).
+	var basis := Basis.IDENTITY
+	if kind == RoadsideStory.Kind.BILLBOARD:
+		basis = Basis(Vector3.UP, -side * 0.35)
+	var xform: Transform3D = slot * Transform3D(basis, Vector3(side * distance_out, 0.0, 0.0))
+	var p: Vector3 = segment.transform * xform.origin
+	if _misfit(p, reach, 6.8, 0.3, true, &"roadside_story", 0.0, footprint) != &"":
+		return false
+	if _in_zones(_sight_zones, p, footprint):
+		_reject(&"roadside_story", &"sight_line")
+		return false
+	var story := RoadsideStory.new()
+	story.name = "RoadsideStory"
+	story.kind = kind
+	story.story_seed = story_seed
+	story.transform = xform
+	_group(segment, "RoadsideDressing").add_child(story, true)
+	# Down onto the ground by every foot (the van's wheels, the strewn boxes).
+	_settle(story, p)
+	story.set_meta(&"rule", &"roadside_story")
+	story.set_meta(&"reach", reach)
+	story.set_meta(&"footprint", footprint)
+	story.set_meta(&"solid", true)
+	story.set_meta(&"story_distance", float(segment.get_meta(&"route_distance", 0.0)))
+	story.set_meta(&"zone", ZONE_NAMES[zone])
+	_occupy(p, footprint)
+	roadside_stories.append(story)
+	_count(&"roadside_story")
+	return true
 
 
 ## Deer crossings on some straights (see CROSSING_*).
@@ -511,6 +691,10 @@ const POWER_MAX_SPAN: float = 58.0
 const POWER_WIRE_SAG: float = 0.9
 const POWER_WIRE_SEGMENTS: int = 10
 var power_poles: Array[Vector3] = []
+## Every town-limit sign put up, entries and exits, in road order (N-601).
+var town_signs: Array[Node3D] = []
+## Every roadside story put up (N-602), in road order.
+var roadside_stories: Array[Node3D] = []
 
 
 func _dress_power_lines(segments: Array) -> void:
@@ -754,6 +938,7 @@ func _apply_rule(segment: RouteSegment, segment_index: int, rule_index: int) -> 
 				if roll > density:
 					continue
 				var yaw: float = side * PI * 0.5 + yaw_jitter if rule.facing == Facing.ROAD else random_yaw
+				yaw += float(rule.get("yaw_offset", 0.0))
 				var xform := slot * Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale), Vector3(side * lateral, 0.0, along))
 				var fields: Dictionary = rule.duplicate()
 				fields["zone"] = zone
@@ -962,6 +1147,9 @@ func _instantiate(path: String) -> Node3D:
 		return null
 	var node := packed.instantiate() as Node3D
 	LowpolyMaterials.apply(node)
+	# After dark the street lamps and parked cars' lamps glow (N-304).
+	if NIGHT_LIGHTS.has(path):
+		LowpolyMaterials.light_up(node, NIGHT_LIGHTS[path])
 	return node
 
 

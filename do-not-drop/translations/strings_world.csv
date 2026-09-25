@@ -1,0 +1,153 @@
+keys,es,en
+WORLD_DEPOT_BOARD,PIZARRA,BOARD
+WORLD_DEPOT_SHELVES,ESTANTES,SHELVES
+WORLD_DEPOT_WORKSHOP,TALLER,WORKSHOP
+WORLD_DEPOT_LOCKERS,VESTUARIO,LOCKERS
+WORLD_DEPOT_SUPPLIES,SUMINISTROS,SUPPLIES
+WORLD_DEPOT_NOTICE_MISSING_ITEM,casa %d (%s),house %d (%s)
+WORLD_DEPOT_NOTICE_MISSING,Salieron sin el pedido de la %s,You left without the order for %s
+WORLD_DEPOT_NOTICE_DOOR,El depósito cierra el portón. ¡Buen viaje!,The depot shuts the gate. Have a good trip!
+WORLD_DEPOT_NOTICE_BOUGHT,Compraron %s (-$%d),Bought %s (-$%d)
+WORLD_DEPOT_NOTICE_DISCOUNT,Usaron Descuento en %s (-$%d),Used a Discount on %s (-$%d)
+WORLD_DEPOT_MARK_OK,OK,OK
+WORLD_DEPOT_MARK_RUINED,ROTO,BROKEN
+WORLD_DEPOT_MARK_MISSED,NO,NO
+WORLD_DEPOT_NOTICE_INSURANCE,El seguro cubrió la caja rota: +$%d,Insurance covered the broken box: +$%d
+WORLD_DEPOT_FLOOR_FORKLIFT,CARRIL AUTOELEVADOR,FORKLIFT LANE
+WORLD_DEPOT_FLOOR_EXIT,SALIDA,EXIT
+WORLD_DEPOT_FLOOR_LOADING,ZONA DE CARGA,LOADING ZONE
+WORLD_DEPOT_SIGN_SHELVES,← ESTANTES,← SHELVES
+WORLD_DEPOT_SIGN_TRUCK,CAMIÓN → PORTÓN,TRUCK → GATE
+WORLD_DEPOT_SIGN_LOCKERS,VESTUARIO →,LOCKERS →
+WORLD_DEPOT_SIGN_SUPPLIES,SUMINISTROS →,SUPPLIES →
+WORLD_DEPOT_SIGN_SHELF,ESTANTE %s,SHELF %s
+WORLD_DEPOT_WORKSHOP_SUB,pintura · camión,paint · truck
+WORLD_DEPOT_COFFEE,CAFÉ,COFFEE
+WORLD_DEPOT_OFFICE,OFICINA,OFFICE
+WORLD_DEPOT_FLOOR_TO_ROAD,A LA RUTA,TO THE ROAD
+WORLD_DEPOT_FACADE_SUB,DEPÓSITO CENTRAL  ·  ENTREGAS COOPERATIVAS,CENTRAL DEPOT  ·  CO-OP DELIVERIES
+WORLD_DEPOT_STAFF,PERSONAL,STAFF
+WORLD_DEPOT_DOOR_INSIDE,SALIDA  ·  CUIDÁ LA CARGA,EXIT  ·  MIND THE CARGO
+WORLD_DEPOT_POSTER_VEST_TITLE,USÁ EL CHALECO,WEAR THE VEST
+WORLD_DEPOT_POSTER_VEST_BODY,"Te tienen que ver
+los autoelevadores","The forklifts
+have to see you"
+WORLD_DEPOT_POSTER_LIFT_TITLE,LEVANTÁ CON LAS PIERNAS,LIFT WITH YOUR LEGS
+WORLD_DEPOT_POSTER_LIFT_BODY,"Las cajas pesadas
+se levantan entre dos","Heavy boxes
+take two people"
+WORLD_DEPOT_POSTER_FRAGILE_TITLE,FRÁGIL = DESPACIO,FRAGILE = SLOW
+WORLD_DEPOT_POSTER_FRAGILE_BODY,"Frená antes del badén,
+no encima","Brake before the bump,
+not on it"
+WORLD_DEPOT_POSTER_ONEBOX_TITLE,UNA CAJA POR CASA,ONE BOX PER HOUSE
+WORLD_DEPOT_POSTER_ONEBOX_BODY,"Leé la pizarra antes
+de cargar el camión","Read the board before
+loading the truck"
+WORLD_DEPOT_BOARD_TITLE,PEDIDOS DE HOY,TODAY'S ORDERS
+WORLD_DEPOT_BOARD_RULE,Una caja por casa  ·  cargá sólo lo que pide cada una,One box per house  ·  load only what each one ordered
+WORLD_DEPOT_BOARD_ORDER,"CASA %d  ·  ESTANTE %s
+%s · %s","HOUSE %d  ·  SHELF %s
+%s · %s"
+WORLD_DEPOT_ENDLESS_TITLE,RUTA SIN FIN,ENDLESS ROAD
+WORLD_DEPOT_ENDLESS_RULE,Llevá todo lo que puedas lo más lejos posible,Take all you can as far as you can
+WORLD_DEPOT_ENDLESS_ROW,"Cargá las cajas que quieras y salí:
+el portón está abierto.","Load whatever boxes you like and go:
+the gate is open."
+WORLD_DEPOT_ENDLESS_BEST,RÉCORD  ·  %d m,BEST  ·  %d m
+WORLD_DEPOT_ENDLESS_NO_BEST,RÉCORD  ·  todavía ninguno,BEST  ·  none yet
+WORLD_DEPOT_TEAM_TITLE,EQUIPO DEL MES,CREW OF THE MONTH
+WORLD_DEPOT_TEAM_ALL_UNLOCKED,¡todo desbloqueado!,everything unlocked!
+WORLD_DEPOT_TEAM_NEXT,%s (%d entregas),%s (%d deliveries)
+WORLD_DEPOT_TEAM_STATS,"Entregas exitosas: %d
+Puntos acumulados: %d
+Mejor reparto: %d pts
+Próximo: %s","Successful deliveries: %d
+Total points: %d
+Best run: %d pts
+Next: %s"
+WORLD_DEPOT_STATION_ORDERS,Leer pedidos,Read the orders
+WORLD_DEPOT_STATION_GARAGE,Personalizar el camión,Customise the truck
+WORLD_DEPOT_STATION_WARDROBE,Cambiarte el uniforme,Change your uniform
+WORLD_DEPOT_STATION_SHOP,Comprar suministros,Buy supplies
+WORLD_DEPOT_STATION_RECORDS,Ver el progreso del equipo,See the crew's progress
+WORLD_DEPOT_CLERK_1,¡Hola! ¿Qué llevás hoy?,Hi! What are you taking today?
+WORLD_DEPOT_CLERK_2,El acolchado salva jarrones.,Padding saves vases.
+WORLD_DEPOT_CLERK_3,"Con seguro, dormís tranquilo.","With insurance, you sleep easy."
+WORLD_DEPOT_DISPATCHER_1,Revisá la pizarra antes de salir.,Check the board before you leave.
+WORLD_DEPOT_DISPATCHER_2,"Casa por casa, sin mezclar.","House by house, no mix-ups."
+WORLD_DEPOT_PACKER_1,Esta cinta no pega nada...,This tape sticks to nothing...
+WORLD_DEPOT_PACKER_2,¡Cuidado con la gallina!,Watch out for the hen!
+WORLD_DEPOT_PACKER_3,"Etiqueta arriba, siempre.","Label side up, always."
+WORLD_DEPOT_MECHANIC_1,¿Le cambiamos la pintura?,Shall we change the paint?
+WORLD_DEPOT_MECHANIC_2,"Frenos revisados, ¡a la ruta!","Brakes checked, hit the road!"
+WORLD_DEPOT_WALKER_1,¡Permiso!,Coming through!
+WORLD_DEPOT_WALKER_2,"Inventario, inventario...","Inventory, inventory..."
+WORLD_DEPOT_WALKER_3,¿Viste mi lapicera?,Have you seen my pen?
+WORLD_DEPOT_BEST_STREAK,Récord: %d,Record: %d
+WORLD_DEPOT_DAYS_TITLE,DÍAS SIN ACCIDENTES,DAYS WITHOUT ACCIDENTS
+WORLD_DEPOT_PHOTOS_TITLE,NUESTRAS ENTREGAS,OUR DELIVERIES
+WORLD_DEPOT_PHOTOS_EMPTY,"Sacá una foto en la puerta
+y aparece acá","Take a photo at the door
+and it shows up here"
+WORLD_HOUSE_NUMBER,CASA %d,HOUSE %d
+WORLD_ROUTE_START_SIGN,"SALIDA
+Cuidá la carga -- el camino serpentea","START
+Mind the cargo -- the road winds"
+WORLD_ROUTE_GOAL,META,FINISH
+WORLD_ROUTE_SECTION_GOAL,Meta,Finish
+WORLD_ROUTE_SECTION_LEG,Camino a casa %d/%d,On the way to house %d/%d
+WORLD_DEER_HIT_TITLE,¡Chocaste un ciervo!,You hit a deer!
+WORLD_DEER_HIT_FINE,"Salió corriendo, pero la multa por daños es de $%d.","It ran off, but the damage fine is $%d."
+WORLD_DEER_HIT_NO_FINE,Salió corriendo. Suerte que no había plata para la multa.,It ran off. Lucky there was no money for the fine.
+WORLD_SHEEP_HIT_TITLE,¡Atropellaste una oveja!,You ran over a sheep!
+WORLD_SHEEP_HIT_FINE,Se levantó ofendida. El dueño cobra $%d.,She got up offended. The owner charges $%d.
+WORLD_SHEEP_HIT_NO_FINE,Se levantó ofendida. El dueño no te pudo cobrar nada.,She got up offended. The owner couldn't charge you a thing.
+WORLD_MOOD_TIME_DAY,Día,Day
+WORLD_MOOD_TIME_DUSK,Atardecer,Dusk
+WORLD_MOOD_TIME_NIGHT,Noche,Night
+WORLD_MOOD_SKY_CLEAR,despejado,clear
+WORLD_MOOD_SKY_CLOUDY,nublado,cloudy
+WORLD_MOOD_SKY_RAIN,con lluvia,with rain
+WORLD_MOOD_SKY_FOG,con niebla,with fog
+WORLD_MOOD_SKY_CLEAR_NIGHT,despejada,clear
+WORLD_HOUSE_DELIVERY,ENTREGA,DELIVERY
+WORLD_GPS_HOUSE_CODE,CASA %d · %s,HOUSE %d · %s
+WORLD_GPS_ARRIVAL,LLEGADA,ARRIVAL
+WORLD_GPS_BEST,RÉCORD %s,BEST %s
+WORLD_GPS_NO_BEST,SIN RÉCORD,NO RECORD
+WORLD_DOORBELL_PROMPT,Tocar timbre,Ring the bell
+WORLD_TRUCK_REAR_CLOSE,Cerrar puertas traseras,Close the back doors
+WORLD_TRUCK_DRIVER_CLOSE,Cerrar puerta del conductor,Close the driver's door
+WORLD_TRUCK_PASSENGER_CLOSE,Cerrar puerta del acompañante,Close the passenger door
+WORLD_TRUCK_REAR_OPEN,Abrir puertas traseras,Open the back doors
+WORLD_TRUCK_DRIVER_OPEN,Abrir puerta del conductor,Open the driver's door
+WORLD_TRUCK_PASSENGER_OPEN,Abrir puerta del acompañante,Open the passenger door
+WORLD_TOWN_WELCOME,Bienvenidos a,Welcome to
+WORLD_BILLBOARD_SLOGAN,entregamos (casi) todo,we deliver (almost) anything
+WORLD_REACTION_OK_1,¡Justo lo que esperaba!,Just what I was waiting for!
+WORLD_REACTION_OK_2,¡Impecable! Ni un rasguño.,Spotless! Not a scratch.
+WORLD_REACTION_OK_3,"¡Qué rápido! Pasen, tomen un mate.","That was quick! Come in, have a cuppa."
+WORLD_REACTION_OK_4,"Cinco estrellas, se las ganaron.","Five stars, you earned them."
+WORLD_REACTION_OK_5,¡Por fin algo que llega entero!,"Finally, something arrives in one piece!"
+WORLD_REACTION_AT_RISK_1,Mmm... ¿esta abolladura venía así?,Hmm... did this dent come like that?
+WORLD_REACTION_AT_RISK_2,"Lo reviso antes de firmar, ¿eh?","I'll check it before I sign, eh?"
+WORLD_REACTION_AT_RISK_3,"Está medio golpeada, pero bueno.","It's a bit battered, but fine."
+WORLD_REACTION_AT_RISK_4,¿La usaron de pelota en el camino?,Did you play football with it on the way?
+WORLD_REACTION_AT_RISK_5,"Firmo, pero con reservas.","I'll sign, with reservations."
+WORLD_REACTION_RUINED_1,¡¿Qué le hicieron a esto?!,What did you DO to this?!
+WORLD_REACTION_RUINED_2,Era un regalo... ERA.,It was a present... it WAS.
+WORLD_REACTION_RUINED_3,Esto no es lo que pedí. Esto es polvo.,This isn't what I ordered. This is dust.
+WORLD_REACTION_RUINED_4,Voy a llamar a la empresa.,I'm calling the company.
+WORLD_REACTION_RUINED_5,¿Sabés cuánto me costó? ¡¿SABÉS?!,Do you know what it cost me? DO YOU?!
+WORLD_REACTION_WRONG_1,Esta no es mía. La mía es la %s.,That's not mine. Mine is %s.
+WORLD_REACTION_WRONG_2,"Me equivoqué de vecino no, vos sí. Busco la %s.","I'm not the wrong neighbour, you are. I want %s."
+WORLD_REACTION_WRONG_3,¿%s decía la pizarra? Esta no es.,Did the board say %s? This isn't it.
+WORLD_REACTION_WRONG_4,"Nop. Espero la %s, gracias.","Nope. I'm waiting for %s, thanks."
+WORLD_REACTION_WRONG_5,"Linda caja, pero no es la %s.","Nice box, but it isn't %s."
+WORLD_REACTION_MISSED_1,Pasé por el depósito a buscarlo. —El vecino,I went to the depot to fetch it. —Your neighbour
+WORLD_REACTION_MISSED_2,No había nadie. Ni timbre tocaron.,Nobody came. Didn't even ring.
+WORLD_REACTION_MISSED_3,Estuve esperando toda la tarde...,I waited all afternoon...
+WORLD_REACTION_MISSED_4,"Si el paquete vuelve, llámenme. Gracias por nada.","If the parcel comes back, call me. Thanks for nothing."
+WORLD_REACTION_MISSED_5,Me fui a comprar. Déjenlo con la vecina (no).,Gone shopping. Leave it with the neighbour (don't).
+WORLD_DEPOT_GATE,PORTÓN,GATE

@@ -14,27 +14,38 @@ class_name WorldMood
 ##
 ## Force one for testing or screenshots with the user argument
 ## --mood=<weather>_<time>, e.g. --mood=lluvia_noche.
+##
+## The season (N-305) is drawn the same way, from its own stream so it never
+## moves the weather: summer greens or autumn ochres for every leaf, fern and
+## blade of grass of the session (LowpolyMaterials.set_season() and the
+## terrain's `autumn`). Force it by adding "otono" or "verano" to --mood.
 
 enum Weather { CLEAR, CLOUDY, RAIN, FOG }
 enum TimeOfDay { DAY, DUSK, NIGHT }
+enum Season { SUMMER, AUTUMN }
 
 const WEATHER_NAMES := {Weather.CLEAR: "soleado", Weather.CLOUDY: "nublado", Weather.RAIN: "lluvia", Weather.FOG: "niebla"}
 const TIME_NAMES := {TimeOfDay.DAY: "dia", TimeOfDay.DUSK: "atardecer", TimeOfDay.NIGHT: "noche"}
 ## Cumulative odds, out of 100.
 const WEATHER_ODDS := [[Weather.CLEAR, 45], [Weather.CLOUDY, 70], [Weather.RAIN, 88], [Weather.FOG, 100]]
 const TIME_ODDS := [[TimeOfDay.DAY, 60], [TimeOfDay.DUSK, 85], [TimeOfDay.NIGHT, 100]]
+const SEASON_NAMES := {Season.SUMMER: "verano", Season.AUTUMN: "otono"}
+const SEASON_ODDS := [[Season.SUMMER, 55], [Season.AUTUMN, 100]]
 
 ## What the rest of the game reads (headlights, rain, audio). Empty until a
 ## route has picked one.
 static var active: Dictionary = {}
+## Same as --mood=<...>, for tests and capture scripts; empty = from the seed.
+static var forced_label: String = ""
 
 var weather: int = Weather.CLEAR
 var time_of_day: int = TimeOfDay.DAY
+var season: int = Season.SUMMER
 
 
 static func pick(session_seed: int) -> WorldMood:
 	var mood := WorldMood.new()
-	var forced: String = ""
+	var forced: String = forced_label
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--mood="):
 			forced = arg.get_slice("=", 1)
@@ -45,14 +56,27 @@ static func pick(session_seed: int) -> WorldMood:
 		for key: int in TIME_NAMES:
 			if forced.contains(TIME_NAMES[key]):
 				mood.time_of_day = key
+		for key: int in SEASON_NAMES:
+			if forced.contains(SEASON_NAMES[key]):
+				mood.season = key
+		LowpolyMaterials.set_season(mood.season)
+		LowpolyMaterials.set_night_level(mood.darkness())
 		return mood
 	var rng := RandomNumberGenerator.new()
+	var season_rng := RandomNumberGenerator.new()
 	if session_seed != 0:
 		rng.seed = hash([session_seed, &"world_mood"])
+		season_rng.seed = hash([session_seed, &"season"])
 	else:
 		rng.randomize()
+		season_rng.randomize()
 	mood.weather = _from_odds(WEATHER_ODDS, rng.randi_range(0, 99))
 	mood.time_of_day = _from_odds(TIME_ODDS, rng.randi_range(0, 99))
+	mood.season = _from_odds(SEASON_ODDS, season_rng.randi_range(0, 99))
+	# Before anything is dressed: the route picks its mood first thing, and
+	# Endless's sky picks it before the streamer builds a single segment.
+	LowpolyMaterials.set_season(mood.season)
+	LowpolyMaterials.set_night_level(mood.darkness())
 	return mood
 
 
@@ -64,16 +88,22 @@ static func _from_odds(odds: Array, roll: int) -> int:
 
 
 func label() -> String:
-	return "%s_%s" % [WEATHER_NAMES[weather], TIME_NAMES[time_of_day]]
+	return "%s_%s_%s" % [WEATHER_NAMES[weather], TIME_NAMES[time_of_day], SEASON_NAMES[season]]
 
 
 ## For the HUD: "Noche con lluvia", "Atardecer despejado"...
 func describe() -> String:
-	var when: String = ["Día", "Atardecer", "Noche"][time_of_day]
-	var sky: String = ["despejado", "nublado", "con lluvia", "con niebla"][weather]
+	var when: String = TranslationServer.translate(["WORLD_MOOD_TIME_DAY", "WORLD_MOOD_TIME_DUSK", "WORLD_MOOD_TIME_NIGHT"][time_of_day])
+	var sky: String = TranslationServer.translate(["WORLD_MOOD_SKY_CLEAR", "WORLD_MOOD_SKY_CLOUDY", "WORLD_MOOD_SKY_RAIN", "WORLD_MOOD_SKY_FOG"][weather])
 	if time_of_day == TimeOfDay.NIGHT and weather == Weather.CLEAR:
-		sky = "despejada"
+		sky = TranslationServer.translate("WORLD_MOOD_SKY_CLEAR_NIGHT")
 	return "%s %s" % [when, sky]
+
+
+## How dark it is, for what lights up after dark (N-304): 0 by day, 0.5 at
+## dusk, 1 at night.
+func darkness() -> float:
+	return [0.0, 0.5, 1.0][time_of_day]
 
 
 func is_raining() -> bool:
@@ -122,7 +152,7 @@ func headlight_boost() -> float:
 ## Changes the level's light and sky. `world_environment` may be null (a route
 ## built alone in a test): then only `active` is set.
 func apply(world_environment: WorldEnvironment, sun: DirectionalLight3D) -> void:
-	active = {"weather": weather, "time": time_of_day, "label": label(), "description": describe(),
+	active = {"weather": weather, "time": time_of_day, "season": season, "label": label(), "description": describe(),
 		"headlight_boost": headlight_boost(), "rain": is_raining()}
 	if world_environment != null and world_environment.environment != null:
 		world_environment.environment = world_environment.environment.duplicate(true)
@@ -222,7 +252,8 @@ func apply_sky(sky: ShaderMaterial, fog: Color) -> void:
 	sky.set_shader_parameter(&"coverage", coverage)
 
 
-## Wet asphalt on the route's terrain (the one shared ShaderMaterial).
+## Wet asphalt and the season's grass on the route's terrain (the one shared
+## ShaderMaterial).
 func apply_ground(route_root: Node) -> void:
 	if route_root == null:
 		return
@@ -230,5 +261,7 @@ func apply_ground(route_root: Node) -> void:
 	for body: Node in route_root.find_children("Terrain_*", "StaticBody3D", true, false):
 		for mesh: Node in body.get_children():
 			if mesh is MeshInstance3D and (mesh as MeshInstance3D).material_override is ShaderMaterial:
-				((mesh as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter(&"wetness", wetness)
+				var terrain_material := (mesh as MeshInstance3D).material_override as ShaderMaterial
+				terrain_material.set_shader_parameter(&"wetness", wetness)
+				terrain_material.set_shader_parameter(&"autumn", 1.0 if season == Season.AUTUMN else 0.0)
 				return

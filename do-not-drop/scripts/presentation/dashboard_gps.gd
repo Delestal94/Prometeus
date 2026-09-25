@@ -69,10 +69,10 @@ func refresh() -> void:
 	if target_house >= 0:
 		var house: DeliveryHouse = houses[target_house]
 		var code: String = house.assigned_label.strip_edges().get_slice(" ", house.assigned_label.strip_edges().get_slice_count(" ") - 1) if not house.assigned_label.is_empty() else ""
-		detail_label.text = ("CASA %d · %s" % [target_house + 1, code.to_upper()]) if code != "" else "CASA %d" % (target_house + 1)
+		detail_label.text = (tr("WORLD_GPS_HOUSE_CODE") % [target_house + 1, code.to_upper()]) if code != "" else tr("WORLD_HOUSE_NUMBER") % (target_house + 1)
 		toward = house.global_position
 	else:
-		detail_label.text = "LLEGADA"
+		detail_label.text = tr("WORLD_GPS_ARRIVAL")
 		toward = route.to_global((route.get(&"goal_transform") as Transform3D).origin)
 	_point_arrow(truck, toward)
 
@@ -82,7 +82,7 @@ func _show_endless() -> void:
 	var driven: float = float(manager.get(&"current_distance")) if manager != null else 0.0
 	var best: int = int(manager.call(&"best_score", &"endless")) if manager != null else 0
 	distance_label.text = _metres(driven)
-	detail_label.text = "RÉCORD %s" % _metres(best) if best > 0 else "SIN RÉCORD"
+	detail_label.text = tr("WORLD_GPS_BEST") % _metres(best) if best > 0 else tr("WORLD_GPS_NO_BEST")
 	arrow.visible = false
 
 

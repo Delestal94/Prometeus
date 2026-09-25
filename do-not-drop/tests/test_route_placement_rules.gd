@@ -12,7 +12,10 @@ extends SceneTree
 ##   - the route passes through more than one kind of place;
 ##   - everything rests on the ground by all of its feet (root tips, both
 ##     ends of a log), not just its centre;
-##   - the same seed dresses the same world, down to every position.
+##   - the same seed dresses the same world, down to every position;
+##   - the depot's other vehicles turn up on the road (N-306): a tractor out in
+##     the countryside, well back from the asphalt, and the competition's van
+##     parked in a village, lined up with the road like the other parked cars.
 
 var _failures: int = 0
 
@@ -78,8 +81,10 @@ func _run() -> void:
 		match node.get_meta(&"rule", &""):
 			&"village_furniture", &"bus_stop":
 				_expect(zone == "village", "%s only in the village (found in %s)" % [node.scene_file_path.get_file(), zone])
-			&"farm_props":
+			&"farm_props", &"tractor":
 				_expect(zone == "countryside", "%s only in the countryside (found in %s)" % [node.scene_file_path.get_file(), zone])
+			&"competitor_van":
+				_expect(zone == "village", "%s only in the village (found in %s)" % [node.scene_file_path.get_file(), zone])
 	_expect(zones_seen.size() >= 2, "The road passes through more than one kind of place (%s)" % str(zones_seen.keys()))
 
 	# 4. On the ground, by every foot: no root tip or log end in the air, and
@@ -107,6 +112,32 @@ func _run() -> void:
 	_expect(first == _signature(again), "The same seed places every piece in the same spot")
 	again.free()
 
+	# 6. The tractor and the competition's van (N-306): rare, so look over a
+	# few seeds until both have shown up.
+	var seen: Dictionary = {&"tractor": 0, &"competitor_van": 0}
+	for seed_value: int in [777, 11, 4242, 90210, 31337, 2024, 5, 606]:
+		if seen[&"tractor"] > 0 and seen[&"competitor_van"] > 0:
+			break
+		network.world_seed = seed_value
+		var dressed: Node3D = await _build()
+		var dressed_terrain: Node = dressed.get(&"terrain")
+		for node: Node3D in _placed(dressed):
+			var rule: StringName = node.get_meta(&"rule", &"")
+			if not seen.has(rule):
+				continue
+			seen[rule] += 1
+			var p: Vector3 = dressed.to_local(node.global_position)
+			var edge: float = dressed_terrain.nearest(Vector2(p.x, p.z)).x - float(node.get_meta(&"reach", 0.0))
+			if rule == &"tractor":
+				_expect(edge >= 12.0, "seed %d: the tractor stays well back from the asphalt (edge %.1f m from the centreline)" % [seed_value, edge])
+			else:
+				var along_road: float = absf(_long_axis(node).dot(_road_direction(dressed, p)))
+				_expect(along_road > 0.9, "seed %d: the van is parked along the road like the other cars (|cos| %.2f)" % [seed_value, along_road])
+		dressed.free()
+		await process_frame
+	_expect(seen[&"tractor"] > 0, "A tractor shows up in the countryside on some route (%s)" % seen)
+	_expect(seen[&"competitor_van"] > 0, "The competition's van shows up parked in a village on some route (%s)" % seen)
+
 	network.world_seed = original_seed
 	await create_timer(0.1).timeout
 	if _failures == 0:
@@ -132,6 +163,34 @@ func _placed(route: Node) -> Array[Node3D]:
 		if node.has_meta(&"rule") and not node.get_meta(&"on_porch", false):
 			found.append(node as Node3D)
 	return found
+
+
+## The model's longest horizontal axis, in world space.
+func _long_axis(node: Node3D) -> Vector3:
+	var bounds := AABB()
+	var first: bool = true
+	for mesh: Node in node.find_children("*", "MeshInstance3D", true, false):
+		var local: AABB = (node.global_transform.affine_inverse() * (mesh as MeshInstance3D).global_transform) * (mesh as MeshInstance3D).get_aabb()
+		bounds = local if first else bounds.merge(local)
+		first = false
+	var axis: Vector3 = Vector3.RIGHT if bounds.size.x >= bounds.size.z else Vector3.BACK
+	var world: Vector3 = node.global_basis * axis
+	return Vector3(world.x, 0.0, world.z).normalized()
+
+
+## The road's heading next to a point (route-local), from the path points.
+func _road_direction(route: Node3D, local_point: Vector3) -> Vector3:
+	var path: Array[Vector3] = []
+	path.assign(route.get(&"_path_points"))
+	var nearest: int = 0
+	for index: int in range(path.size()):
+		if Vector2(path[index].x - local_point.x, path[index].z - local_point.z).length() < Vector2(path[nearest].x - local_point.x, path[nearest].z - local_point.z).length():
+			nearest = index
+	var a: Vector3 = path[maxi(nearest - 1, 0)]
+	var b: Vector3 = path[mini(nearest + 1, path.size() - 1)]
+	var local_dir := Vector3(b.x - a.x, 0.0, b.z - a.z).normalized()
+	var world: Vector3 = route.global_basis * local_dir
+	return Vector3(world.x, 0.0, world.z).normalized()
 
 
 func _signature(route: Node3D) -> Array:

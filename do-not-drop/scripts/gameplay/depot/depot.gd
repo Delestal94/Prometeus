@@ -66,6 +66,8 @@ const YELLOW := Color("e7be51")
 const WARNING_TEXTURE: String = "res://assets/textures/environment/tx_env_warning_256.png"
 const DISPLAY_FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 const BODY_FONT: Font = preload("res://assets/fonts/Nunito-Variable.ttf")
+const RADIO_PROGRAM: AudioStream = preload("res://assets/audio/music/mus_depot_radio_loop.ogg")
+const CAMPAIGN_BOARD: Script = preload("res://scripts/gameplay/depot/depot_campaign_board.gd")
 const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
 const CARGO_BOXES: Array[String] = [
 	"res://assets/models/cargo/sm_cargo_box_cube.glb",
@@ -92,11 +94,11 @@ const WORKSHOP_RED := Color("c0392b")
 ## toward each place, and its name beside it. The words read facing the
 ## truck, the way everyone spawns; each arrow aims at `toward`.
 const FLOOR_GUIDES: Array[Dictionary] = [
-	{"caption": "PIZARRA", "word": Vector3(-2.0, 0.0, 16.0), "arrow": Vector3(-2.7, 0.0, 15.3), "toward": Vector3(-4.3, 0.0, 13.3), "colour": BOARD_GREEN},
-	{"caption": "ESTANTES", "word": Vector3(-3.0, 0.0, 17.4), "arrow": Vector3(-4.9, 0.0, 17.4), "toward": Vector3(-6.3, 0.0, 17.4), "colour": SHELVES_BLUE},
-	{"caption": "TALLER", "word": Vector3(3.0, 0.0, 15.5), "arrow": Vector3(4.4, 0.0, 15.2), "toward": Vector3(4.6, 0.0, 10.1), "colour": WORKSHOP_RED},
-	{"caption": "VESTUARIO", "word": Vector3(4.3, 0.0, 17.0), "arrow": Vector3(6.3, 0.0, 17.0), "toward": Vector3(14.0, 0.0, 15.5), "colour": LOCKERS_TEAL},
-	{"caption": "SUMINISTROS", "word": Vector3(4.6, 0.0, 18.6), "arrow": Vector3(6.9, 0.0, 19.0), "toward": Vector3(10.8, 0.0, 23.4), "colour": SHOP_PURPLE},
+	{"caption": "WORLD_DEPOT_BOARD", "word": Vector3(-2.0, 0.0, 16.0), "arrow": Vector3(-2.7, 0.0, 15.3), "toward": Vector3(-4.3, 0.0, 13.3), "colour": BOARD_GREEN},
+	{"caption": "WORLD_DEPOT_SHELVES", "word": Vector3(-3.0, 0.0, 17.4), "arrow": Vector3(-4.9, 0.0, 17.4), "toward": Vector3(-6.3, 0.0, 17.4), "colour": SHELVES_BLUE},
+	{"caption": "WORLD_DEPOT_WORKSHOP", "word": Vector3(3.0, 0.0, 15.5), "arrow": Vector3(4.4, 0.0, 15.2), "toward": Vector3(4.6, 0.0, 10.1), "colour": WORKSHOP_RED},
+	{"caption": "WORLD_DEPOT_LOCKERS", "word": Vector3(4.3, 0.0, 17.0), "arrow": Vector3(6.3, 0.0, 17.0), "toward": Vector3(14.0, 0.0, 15.5), "colour": LOCKERS_TEAL},
+	{"caption": "WORLD_DEPOT_SUPPLIES", "word": Vector3(4.6, 0.0, 18.6), "arrow": Vector3(6.9, 0.0, 19.0), "toward": Vector3(10.8, 0.0, 23.4), "colour": SHOP_PURPLE},
 ]
 
 ## Builds the stock of extra packages; tests of other systems can turn it off.
@@ -142,11 +144,17 @@ func _ready() -> void:
 	else:
 		_rng.randomize()
 	add_to_group(&"roofed_area")
+	# The hall rings a little (N-402, AcousticSpace): covers() is the same test.
+	add_to_group(&"acoustic_space")
 	_build_structure()
 	_build_door()
 	_build_signs()
 	_build_board()
 	_build_team_board()
+	# "Días sin accidentes" and the wall of delivery photos (N-603).
+	var campaign: Node3D = CAMPAIGN_BOARD.new()
+	campaign.name = "CampaignBoard"
+	add_child(campaign)
 	_build_stations()
 	_build_lights()
 	_build_moving_parts()
@@ -170,8 +178,12 @@ func _ready() -> void:
 				_broadcast_supplies())
 
 
+## The depot's acoustics (N-402): a big roofed hall.
+var acoustic_space: StringName = &"roof"
+
+
 ## Whether a world point is under the depot's roof (route_sky.gd keeps the
-## rain off whoever is inside).
+## rain off whoever is inside; AcousticSpace gives it the hall's echo).
 func covers(world_point: Vector3) -> bool:
 	var local: Vector3 = to_local(world_point)
 	return absf(local.x) < HALF_WIDTH + WALL and local.z > -WALL and local.z < DEPTH + WALL and local.y < CEILING
@@ -309,9 +321,9 @@ func begin_run(vehicle: Node3D, loaded: Array) -> void:
 	for order: Dictionary in orders:
 		var package: Node = _stocked.get(order.package_id)
 		if package == null or not is_instance_valid(package) or not bool(package.get(&"is_loaded")):
-			missing.append("casa %d (%s)" % [int(order.house) + 1, order.code])
+			missing.append(tr("WORLD_DEPOT_NOTICE_MISSING_ITEM") % [int(order.house) + 1, order.code])
 	if not missing.is_empty():
-		_notice("Salieron sin el pedido de la %s" % ", ".join(missing))
+		_notice(tr("WORLD_DEPOT_NOTICE_MISSING") % ", ".join(missing))
 
 
 func _physics_process(_delta: float) -> void:
@@ -335,7 +347,7 @@ func _close_door() -> void:
 	door_closed.emit()
 	var network: Node = _autoload(&"NetworkManager")
 	if network == null or bool(network.call(&"is_host")):
-		_notice("El depósito cierra el portón. ¡Buen viaje!")
+		_notice(tr("WORLD_DEPOT_NOTICE_DOOR"))
 
 
 func _anyone_on_foot_inside() -> bool:
@@ -366,7 +378,7 @@ func request_supply(supply_id: StringName) -> void:
 		return
 	if bool(crew.call(&"buy_supply", supply_id)):
 		var item: Dictionary = crew.get(&"SUPPLIES")[supply_id]
-		_notice("Compraron %s (-$%d)" % [String(item.title).to_lower(), int(item.cost)])
+		_notice(tr("WORLD_DEPOT_NOTICE_BOUGHT") % [String(item.title).to_lower(), int(item.cost)])
 	_broadcast_supplies()
 
 
@@ -396,7 +408,7 @@ func request_discounted_supply(supply_id: StringName) -> void:
 	if bool(crew.call(&"buy_supply_discounted", peer_id, supply_id)):
 		var item: Dictionary = crew.get(&"SUPPLIES")[supply_id]
 		var discounted_cost: int = maxi(0, roundi(int(item.cost) * 0.5))
-		_notice("Usaron Descuento en %s (-$%d)" % [String(item.title).to_lower(), discounted_cost])
+		_notice(tr("WORLD_DEPOT_NOTICE_DISCOUNT") % [String(item.title).to_lower(), discounted_cost])
 	_broadcast_supplies()
 
 
@@ -439,16 +451,16 @@ func _on_house_delivery_recorded(house_index: int, outcome: StringName, _package
 		var mark: Label3D = _board_marks[house_index]
 		match outcome:
 			&"delivered_ok":
-				mark.text = "OK"
+				mark.text = tr("WORLD_DEPOT_MARK_OK")
 				mark.modulate = Color("1f8a5b")
 			&"delivered_at_risk":
-				mark.text = "OK"
+				mark.text = tr("WORLD_DEPOT_MARK_OK")
 				mark.modulate = Color("d9822b")
 			&"delivered_ruined":
-				mark.text = "ROTO"
+				mark.text = tr("WORLD_DEPOT_MARK_RUINED")
 				mark.modulate = Color("c0392b")
 			_:
-				mark.text = "NO"
+				mark.text = tr("WORLD_DEPOT_MARK_MISSED")
 				mark.modulate = Color("857a6e")
 	var network: Node = _autoload(&"NetworkManager")
 	var host: bool = network == null or bool(network.call(&"is_host"))
@@ -456,7 +468,7 @@ func _on_house_delivery_recorded(house_index: int, outcome: StringName, _package
 		var crew: Node = _autoload(&"CrewProgression")
 		if crew != null:
 			crew.call(&"add_team_money", INSURANCE_REFUND)
-			_notice("El seguro cubrió la caja rota: +$%d" % INSURANCE_REFUND)
+			_notice(tr("WORLD_DEPOT_NOTICE_INSURANCE") % INSURANCE_REFUND)
 			_broadcast_supplies()
 
 
@@ -638,10 +650,10 @@ func _build_floor_markings(kit: DepotKit) -> void:
 	paint.call(0.1, 30.0, Vector3(-13.1, 0.0, 16.0), yellow)
 	paint.call(0.1, 25.0, Vector3(-11.0, 0.0, 15.0), DepotKit.flat(TEAL, 0.7))
 	# Painted floor words, facing whoever walks toward them.
-	_floor_text("CARRIL AUTOELEVADOR", Vector3(-12.05, 0.0, 12.0), -PI * 0.5, 44, Color(YELLOW, 0.85))
-	_floor_text("SALIDA", Vector3(0.0, 0.0, 2.6), 0.0, 90, Color(TEAL, 0.9))
-	_floor_text("ZONA DE CARGA", Vector3(0.0, 0.0, 14.1), 0.0, 40, Color(INK, 0.9))
-	_floor_text("TALLER", Vector3(10.8, 0.0, 6.5), -PI * 0.5, 80, Color("e8ebe4", 0.8))
+	_floor_text(tr("WORLD_DEPOT_FLOOR_FORKLIFT"), Vector3(-12.05, 0.0, 12.0), -PI * 0.5, 44, Color(YELLOW, 0.85))
+	_floor_text(tr("WORLD_DEPOT_FLOOR_EXIT"), Vector3(0.0, 0.0, 2.6), 0.0, 90, Color(TEAL, 0.9))
+	_floor_text(tr("WORLD_DEPOT_FLOOR_LOADING"), Vector3(0.0, 0.0, 14.1), 0.0, 40, Color(INK, 0.9))
+	_floor_text(tr("WORLD_DEPOT_WORKSHOP"), Vector3(10.8, 0.0, 6.5), -PI * 0.5, 80, Color("e8ebe4", 0.8))
 
 
 ## How a new player finds each station without anyone telling them (tareas
@@ -653,21 +665,21 @@ func _build_floor_markings(kit: DepotKit) -> void:
 func _build_wayfinding(kit: DepotKit) -> void:
 	for guide: Dictionary in FLOOR_GUIDES:
 		var at: Vector3 = guide.arrow
-		_paint_arrow(kit, guide.caption, at, ((guide.toward as Vector3) - at).normalized(), guide.colour)
-		_floor_text(guide.caption, guide.word, 0.0, 34, Color(guide.colour as Color, 0.95))
+		_paint_arrow(kit, tr(guide.caption), at, ((guide.toward as Vector3) - at).normalized(), guide.colour)
+		_floor_text(tr(guide.caption), guide.word, 0.0, 34, Color(guide.colour as Color, 0.95))
 	for x: float in [-2.6, 2.6]:
 		for z: float in [11.6, 7.6, 3.6]:
-			_paint_arrow(kit, "PORTÓN", Vector3(x, 0.0, z), Vector3.FORWARD, TEAL)
+			_paint_arrow(kit, tr("WORLD_DEPOT_GATE"), Vector3(x, 0.0, z), Vector3.FORWARD, TEAL)
 	var board_yaw: float = deg_to_rad(38.0)
 	var over_board: Vector3 = Vector3(-4.5, 0.0, 13.0) + Basis(Vector3.UP, board_yaw) * Vector3(0.9, 0.0, 0.0)
-	_hanging_sign(kit, "← ESTANTES", over_board + Vector3(0.0, 4.3, 0.0), board_yaw, SHELVES_BLUE)
-	_hanging_sign(kit, "PIZARRA", over_board + Vector3(0.0, 3.5, 0.0), board_yaw, BOARD_GREEN, 4.0)
+	_hanging_sign(kit, tr("WORLD_DEPOT_SIGN_SHELVES"), over_board + Vector3(0.0, 4.3, 0.0), board_yaw, SHELVES_BLUE)
+	_hanging_sign(kit, tr("WORLD_DEPOT_BOARD"), over_board + Vector3(0.0, 3.5, 0.0), board_yaw, BOARD_GREEN, 4.0)
 	# High enough over the truck's roof to read above it from behind.
-	_hanging_sign(kit, "CAMIÓN → PORTÓN", Vector3(0.0, 4.4, 11.0), 0.0, INK, CEILING - 0.25, Color("ffc93c"))
+	_hanging_sign(kit, tr("WORLD_DEPOT_SIGN_TRUCK"), Vector3(0.0, 4.4, 11.0), 0.0, INK, CEILING - 0.25, Color("ffc93c"))
 	var right := Vector3(4.6, 0.0, 11.0)
 	var right_yaw: float = deg_to_rad(-30.0)
-	_hanging_sign(kit, "VESTUARIO →", right + Vector3(0.0, 4.35, 0.0), right_yaw, LOCKERS_TEAL)
-	_hanging_sign(kit, "SUMINISTROS →", right + Vector3(0.0, 3.55, 0.0), right_yaw, SHOP_PURPLE, 4.05)
+	_hanging_sign(kit, tr("WORLD_DEPOT_SIGN_LOCKERS"), right + Vector3(0.0, 4.35, 0.0), right_yaw, LOCKERS_TEAL)
+	_hanging_sign(kit, tr("WORLD_DEPOT_SIGN_SUPPLIES"), right + Vector3(0.0, 3.55, 0.0), right_yaw, SHOP_PURPLE, 4.05)
 
 
 ## An arrow painted on the floor at `at`, pointing along `direction`.
@@ -791,7 +803,7 @@ func _build_dispatch_shelves(kit: DepotKit) -> void:
 					kit.box(Vector3(0.012, 0.09, 0.36), Vector3(face - side * 0.005, LEVEL_TOPS[level] - 0.07, z), DepotKit.flat(PAPER, 0.8))
 		# Aisle sign hanging over the unit.
 		# Named as the board reads ("ESTANTE A-3").
-		_hanging_sign(kit, "ESTANTE %s" % unit.aisle, Vector3(x, 3.7, SHELF_START_Z + length * 0.5), PI * 0.5, SHELVES_BLUE)
+		_hanging_sign(kit, tr("WORLD_DEPOT_SIGN_SHELF") % unit.aisle, Vector3(x, 3.7, SHELF_START_Z + length * 0.5), PI * 0.5, SHELVES_BLUE)
 
 
 func _build_workshop(kit: DepotKit) -> void:
@@ -832,9 +844,9 @@ func _build_workshop(kit: DepotKit) -> void:
 	kit.box(Vector3(0.7, 1.2, 0.5), Vector3(4.6, 0.6, 9.6), dark, true)
 	kit.box(Vector3(0.66, 0.5, 0.06), Vector3(4.6, 1.45, 9.8), dark)
 	kit.box(Vector3(0.56, 0.4, 0.02), Vector3(4.6, 1.45, 9.84), DepotKit.glow(Color("4cc9f0"), 1.1))
-	_text("TALLER", Vector3(4.6, 1.56, 9.86), 0.0, 40, PAPER, DISPLAY_FONT, 0.004, 4)
-	_text("pintura · camión", Vector3(4.6, 1.38, 9.86), 0.0, 26, INK, BODY_FONT, 0.004, 0)
-	_hanging_sign(kit, "TALLER", Vector3(11.5, 3.9, 6.0), 0.0, WORKSHOP_RED)
+	_text(tr("WORLD_DEPOT_WORKSHOP"), Vector3(4.6, 1.56, 9.86), 0.0, 40, PAPER, DISPLAY_FONT, 0.004, 4)
+	_text(tr("WORLD_DEPOT_WORKSHOP_SUB"), Vector3(4.6, 1.38, 9.86), 0.0, 26, INK, BODY_FONT, 0.004, 0)
+	_hanging_sign(kit, tr("WORLD_DEPOT_WORKSHOP"), Vector3(11.5, 3.9, 6.0), 0.0, WORKSHOP_RED)
 
 
 func _build_lockers(kit: DepotKit) -> void:
@@ -873,7 +885,7 @@ func _build_lockers(kit: DepotKit) -> void:
 	vanity.light_energy = 0.9
 	vanity.omni_range = 2.6
 	add_child(vanity)
-	_hanging_sign(kit, "VESTUARIO", Vector3(13.2, 3.4, 15.5), -PI * 0.5, LOCKERS_TEAL)
+	_hanging_sign(kit, tr("WORLD_DEPOT_LOCKERS"), Vector3(13.2, 3.4, 15.5), -PI * 0.5, LOCKERS_TEAL)
 
 
 func _build_break_area(kit: DepotKit) -> void:
@@ -883,7 +895,7 @@ func _build_break_area(kit: DepotKit) -> void:
 	kit.box(Vector3(0.02, 0.5, 0.45), Vector3(14.29, 1.35, 20.2), DepotKit.glow(Color("ffd08a"), 0.9))
 	kit.box(Vector3(0.12, 0.03, 0.3), Vector3(14.26, 0.75, 20.2), dark)
 	kit.cylinder(0.04, 0.09, Transform3D(Basis.IDENTITY, Vector3(14.24, 0.81, 20.2)), DepotKit.flat(PAPER, 0.7), 10)
-	_text("CAFÉ", Vector3(14.28, 1.7, 20.2), -PI * 0.5, 40, PAPER, DISPLAY_FONT, 0.004, 4)
+	_text(tr("WORLD_DEPOT_COFFEE"), Vector3(14.28, 1.7, 20.2), -PI * 0.5, 40, PAPER, DISPLAY_FONT, 0.004, 4)
 	# Water cooler.
 	kit.box(Vector3(0.4, 1.0, 0.4), Vector3(14.6, 0.5, 21.2), DepotKit.flat(Color("e8ebe4"), 0.6), true)
 	kit.cylinder(0.17, 0.45, Transform3D(Basis.IDENTITY, Vector3(14.6, 1.25, 21.2)), DepotKit.glass(Color(0.55, 0.78, 0.95, 0.55)), 14)
@@ -933,7 +945,7 @@ func _build_shop(kit: DepotKit) -> void:
 		prop.visible = false
 		add_child(prop)
 		_supply_props[supply[0]] = prop
-	_hanging_sign(kit, "SUMINISTROS", Vector3(10.8, 3.4, 24.0), PI, SHOP_PURPLE)
+	_hanging_sign(kit, tr("WORLD_DEPOT_SUPPLIES"), Vector3(10.8, 3.4, 24.0), PI, SHOP_PURPLE)
 
 
 func _build_office(kit: DepotKit) -> void:
@@ -965,7 +977,7 @@ func _build_office(kit: DepotKit) -> void:
 	kit.box(Vector3(0.04, 0.9, 1.4), Vector3(14.95, 1.8, 30.6), DepotKit.flat(Color("c9a26b"), 0.9))  # corkboard
 	for index: int in range(5):
 		kit.box(Vector3(0.01, 0.22, 0.18), Vector3(14.92, 1.65 + (index % 2) * 0.35, 30.1 + index * 0.24), DepotKit.flat(PAPER, 0.9))
-	_hanging_sign(kit, "OFICINA", Vector3(11.8, 3.5, z0 - 0.1), PI, Color("263238"))
+	_hanging_sign(kit, tr("WORLD_DEPOT_OFFICE"), Vector3(11.8, 3.5, z0 - 0.1), PI, Color("263238"))
 
 
 func _build_conveyor(kit: DepotKit) -> void:
@@ -1082,7 +1094,7 @@ func _build_exterior(kit: DepotKit) -> void:
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(0.12, 0.006, 8.4)
 		kit.add_mesh(mesh, Transform3D(Basis.IDENTITY, Vector3(x, bay_y, -4.8)), yellow, false)
-	_floor_text("A LA RUTA", Vector3(0.0, 0.0, -6.2), 0.0, 90, Color(PAPER, 0.85))
+	_floor_text(tr("WORLD_DEPOT_FLOOR_TO_ROAD"), Vector3(0.0, 0.0, -6.2), 0.0, 90, Color(PAPER, 0.85))
 
 
 ## Soft dark patches where heavy things meet the floor (tareas de Nacho
@@ -1122,15 +1134,15 @@ func _build_signs() -> void:
 	# Facade: the company's name over the door, readable from the road.
 	var facade := _text("TAKE MY PACKAGE", Vector3(0.0, 6.6, -WALL - 0.05), PI, 110, Color("ffc93c"), DISPLAY_FONT, 0.009, 20)
 	facade.name = "FacadeTitle"
-	_text("DEPÓSITO CENTRAL  ·  ENTREGAS COOPERATIVAS", Vector3(0.0, 5.65, -WALL - 0.05), PI, 44, PAPER, DISPLAY_FONT, 0.008, 10)
-	_text("PERSONAL", Vector3(9.5, 2.35, -WALL - 0.09), PI, 36, PAPER, DISPLAY_FONT, 0.006, 6)
+	_text(tr("WORLD_DEPOT_FACADE_SUB"), Vector3(0.0, 5.65, -WALL - 0.05), PI, 44, PAPER, DISPLAY_FONT, 0.008, 10)
+	_text(tr("WORLD_DEPOT_STAFF"), Vector3(9.5, 2.35, -WALL - 0.09), PI, 36, PAPER, DISPLAY_FONT, 0.006, 6)
 	# Inside, over the door.
-	_text("SALIDA  ·  CUIDÁ LA CARGA", Vector3(0.0, DOOR_HEIGHT + 1.3, 0.12), 0.0, 64, Color("ffc93c"), DISPLAY_FONT, 0.008, 14)
+	_text(tr("WORLD_DEPOT_DOOR_INSIDE"), Vector3(0.0, DOOR_HEIGHT + 1.3, 0.12), 0.0, 64, Color("ffc93c"), DISPLAY_FONT, 0.008, 14)
 	# Safety posters on the walls.
-	_poster(Vector3(-HALF_WIDTH + 0.07, 2.2, 3.4), PI * 0.5, "USÁ EL CHALECO", "Te tienen que ver\nlos autoelevadores", Color("ff9f1c"))
-	_poster(Vector3(-HALF_WIDTH + 0.07, 2.2, 31.2), PI * 0.5, "LEVANTÁ CON LAS PIERNAS", "Las cajas pesadas\nse levantan entre dos", Color("4cc9f0"))
-	_poster(Vector3(HALF_WIDTH - 0.07, 2.2, 26.3), -PI * 0.5, "FRÁGIL = DESPACIO", "Frená antes del badén,\nno encima", Color("ff5e5b"))
-	_poster(Vector3(-8.0, 2.4, DEPTH - 0.07), PI, "UNA CAJA POR CASA", "Leé la pizarra antes\nde cargar el camión", Color("2dd4a3"))
+	_poster(Vector3(-HALF_WIDTH + 0.07, 2.2, 3.4), PI * 0.5, tr("WORLD_DEPOT_POSTER_VEST_TITLE"), tr("WORLD_DEPOT_POSTER_VEST_BODY"), Color("ff9f1c"))
+	_poster(Vector3(-HALF_WIDTH + 0.07, 2.2, 31.2), PI * 0.5, tr("WORLD_DEPOT_POSTER_LIFT_TITLE"), tr("WORLD_DEPOT_POSTER_LIFT_BODY"), Color("4cc9f0"))
+	_poster(Vector3(HALF_WIDTH - 0.07, 2.2, 26.3), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"), tr("WORLD_DEPOT_POSTER_FRAGILE_BODY"), Color("ff5e5b"))
+	_poster(Vector3(-8.0, 2.4, DEPTH - 0.07), PI, tr("WORLD_DEPOT_POSTER_ONEBOX_TITLE"), tr("WORLD_DEPOT_POSTER_ONEBOX_BODY"), Color("2dd4a3"))
 	_build_clock()
 
 
@@ -1202,8 +1214,8 @@ func _clock_hand(clock: Node3D, length: float, thickness: float) -> Node3D:
 	return pivot
 
 
-const BOARD_TITLE: String = "PEDIDOS DE HOY"
-const BOARD_RULE: String = "Una caja por casa  ·  cargá sólo lo que pide cada una"
+const BOARD_TITLE: String = "WORLD_DEPOT_BOARD_TITLE"
+const BOARD_RULE: String = "WORLD_DEPOT_BOARD_RULE"
 
 
 ## The order board: a whiteboard on a stand beside the truck, angled toward
@@ -1228,11 +1240,11 @@ func _build_board() -> void:
 		kit.box(Vector3(0.12, 0.02, 0.02), Vector3(-1.2 + index * 0.2, 0.88, 0.09), DepotKit.flat([Color("2a4d9b"), Color("c0392b"), Color("1f8a5b")][index], 0.5))
 	kit.collider(Vector3(3.5, 2.1, 0.2), Transform3D(Basis.IDENTITY, Vector3(0.0, 1.85, 0.0)))
 	kit.commit("Board")
-	_board_title = _text(BOARD_TITLE, Vector3(0.0, 2.6, 0.035), 0.0, 64, Color("2a4d9b"), DISPLAY_FONT, 0.0052, 0, board)
+	_board_title = _text(tr(BOARD_TITLE), Vector3(0.0, 2.6, 0.035), 0.0, 64, Color("2a4d9b"), DISPLAY_FONT, 0.0052, 0, board)
 	_board_title.name = "Title"
 	var date: Dictionary = Time.get_date_dict_from_system()
 	_text("%02d/%02d" % [int(date.day), int(date.month)], Vector3(1.42, 2.72, 0.035), 0.0, 30, Color("c0392b"), DISPLAY_FONT, 0.0045, 0, board)
-	_board_rule = _text(BOARD_RULE, Vector3(0.0, 2.4, 0.035), 0.0, 26, Color("c0392b"), BODY_FONT, 0.0045, 0, board)
+	_board_rule = _text(tr(BOARD_RULE), Vector3(0.0, 2.4, 0.035), 0.0, 26, Color("c0392b"), BODY_FONT, 0.0045, 0, board)
 	_board_rule.name = "Rule"
 	for row: int in range(4):
 		var y: float = 2.1 - row * 0.36
@@ -1252,24 +1264,22 @@ func _write_board() -> void:
 		var mark: Label3D = _board_marks[row]
 		if row < orders.size():
 			var order: Dictionary = orders[row]
-			line.text = "CASA %d  ·  ESTANTE %s
-%s · %s" % [int(order.house) + 1, order.code, order.trap, String(order.content).to_lower()]
+			line.text = tr("WORLD_DEPOT_BOARD_ORDER") % [int(order.house) + 1, order.code, order.trap, String(order.content).to_lower()]
 			mark.text = ""
 		else:
 			line.text = ""
 			mark.text = ""
-	_board_title.text = BOARD_TITLE
-	_board_rule.text = BOARD_RULE
+	_board_title.text = tr(BOARD_TITLE)
+	_board_rule.text = tr(BOARD_RULE)
 	if orders.is_empty():
 		# Endless (tareas de Nacho N-101): no houses, so no orders. The depot
 		# stays the lobby it is, and the board sets the goal and the bar.
-		_board_title.text = "RUTA SIN FIN"
-		_board_rule.text = "Llevá todo lo que puedas lo más lejos posible"
-		_board_rows[0].text = "Cargá las cajas que quieras y salí:
-el portón está abierto."
+		_board_title.text = tr("WORLD_DEPOT_ENDLESS_TITLE")
+		_board_rule.text = tr("WORLD_DEPOT_ENDLESS_RULE")
+		_board_rows[0].text = tr("WORLD_DEPOT_ENDLESS_ROW")
 		var manager: Node = _autoload(&"RunManager")
 		var best: int = int(manager.call(&"best_score", RUN_MANAGER.MODE_ENDLESS)) if manager != null else 0
-		_board_rows[1].text = ("RÉCORD  ·  %d m" % best) if best > 0 else "RÉCORD  ·  todavía ninguno"
+		_board_rows[1].text = (tr("WORLD_DEPOT_ENDLESS_BEST") % best) if best > 0 else tr("WORLD_DEPOT_ENDLESS_NO_BEST")
 
 
 ## The team's corkboard: deliveries, best score and the next unlock.
@@ -1280,7 +1290,7 @@ func _build_team_board() -> void:
 	kit.box(Vector3(0.05, 1.5, 2.1), at + Vector3(0.01, 0.0, 0.0), DepotKit.flat(Color("59656a"), 0.5, 0.4))
 	kit.box(Vector3(0.01, 0.3, 0.3), at + Vector3(-0.03, 0.4, 0.75), DepotKit.flat(Color("ffc93c"), 0.8), false, 0.1)
 	kit.commit("TeamBoard")
-	_text("EQUIPO DEL MES", at + Vector3(-0.04, 0.5, 0.0), -PI * 0.5, 36, INK, DISPLAY_FONT, 0.005, 0)
+	_text(tr("WORLD_DEPOT_TEAM_TITLE"), at + Vector3(-0.04, 0.5, 0.0), -PI * 0.5, 36, INK, DISPLAY_FONT, 0.005, 0)
 	_stats_label = _text("", at + Vector3(-0.04, -0.12, -0.05), -PI * 0.5, 28, INK, BODY_FONT, 0.0042, 0)
 	_stats_label.name = "TeamStats"
 	_stats_label.width = 420
@@ -1300,21 +1310,21 @@ func refresh_team_board() -> void:
 		return
 	var summary: Dictionary = unlocks.call(&"progress_summary")
 	var best: int = int(manager.call(&"best_score")) if manager != null else 0
-	var next: String = "¡todo desbloqueado!"
+	var next: String = tr("WORLD_DEPOT_TEAM_ALL_UNLOCKED")
 	for unlock_id: StringName in unlocks.get(&"UNLOCKS"):
 		if not bool(unlocks.call(&"is_unlocked", unlock_id)):
 			var rule: Dictionary = unlocks.get(&"UNLOCKS")[unlock_id]
-			next = "%s (%d entregas)" % [rule.title, int(rule.deliveries)]
+			next = tr("WORLD_DEPOT_TEAM_NEXT") % [rule.title, int(rule.deliveries)]
 			break
-	_stats_label.text = "Entregas exitosas: %d\nPuntos acumulados: %d\nMejor reparto: %d pts\nPróximo: %s" % [int(summary.deliveries), int(summary.score), best, next]
+	_stats_label.text = tr("WORLD_DEPOT_TEAM_STATS") % [int(summary.deliveries), int(summary.score), best, next]
 
 
 func _build_stations() -> void:
-	_station(&"orders", "Leer pedidos", Vector3(-4.5, 1.6, 13.0) + Basis(Vector3.UP, deg_to_rad(38.0)) * Vector3(0.0, 0.0, 0.35))
-	_station(&"garage", "Personalizar el camión", Vector3(4.6, 1.3, 10.1))
-	_station(&"wardrobe", "Cambiarte el uniforme", Vector3(14.0, 1.2, 15.5))
-	_station(&"shop", "Comprar suministros", Vector3(10.8, 1.25, 23.4))
-	_station(&"records", "Ver el progreso del equipo", Vector3(HALF_WIDTH - 0.5, 2.0, 22.5))
+	_station(&"orders", tr("WORLD_DEPOT_STATION_ORDERS"), Vector3(-4.5, 1.6, 13.0) + Basis(Vector3.UP, deg_to_rad(38.0)) * Vector3(0.0, 0.0, 0.35))
+	_station(&"garage", tr("WORLD_DEPOT_STATION_GARAGE"), Vector3(4.6, 1.3, 10.1))
+	_station(&"wardrobe", tr("WORLD_DEPOT_STATION_WARDROBE"), Vector3(14.0, 1.2, 15.5))
+	_station(&"shop", tr("WORLD_DEPOT_STATION_SHOP"), Vector3(10.8, 1.25, 23.4))
+	_station(&"records", tr("WORLD_DEPOT_STATION_RECORDS"), Vector3(HALF_WIDTH - 0.5, 2.0, 22.5))
 
 
 func _station(id: StringName, prompt_text: String, at: Vector3) -> void:
@@ -1504,19 +1514,19 @@ func _build_moving_parts() -> void:
 
 func _build_life() -> void:
 	var clerk := _worker(Vector3(10.4, FLOOR_TOP, 24.9), 0.0, Color("2dd4a3"), [
-		"¡Hola! ¿Qué llevás hoy?", "El acolchado salva jarrones.", "Con seguro, dormís tranquilo."])
+		tr("WORLD_DEPOT_CLERK_1"), tr("WORLD_DEPOT_CLERK_2"), tr("WORLD_DEPOT_CLERK_3")])
 	clerk.name = "Clerk"
 	var dispatcher := _worker(Vector3(11.4, FLOOR_TOP, 29.95), PI, Color("4cc9f0"), [
-		"Revisá la pizarra antes de salir.", "Casa por casa, sin mezclar."])
+		tr("WORLD_DEPOT_DISPATCHER_1"), tr("WORLD_DEPOT_DISPATCHER_2")])
 	dispatcher.name = "Dispatcher"
 	var packer := _worker(Vector3(2.2, FLOOR_TOP, 28.2), 0.0, Color("ff9f1c"), [
-		"Esta cinta no pega nada...", "¡Cuidado con la gallina!", "Etiqueta arriba, siempre."])
+		tr("WORLD_DEPOT_PACKER_1"), tr("WORLD_DEPOT_PACKER_2"), tr("WORLD_DEPOT_PACKER_3")])
 	packer.name = "Packer"
 	var mechanic := _worker(Vector3(13.5, FLOOR_TOP, 5.2), -PI * 0.5, Color("c0392b"), [
-		"¿Le cambiamos la pintura?", "Frenos revisados, ¡a la ruta!"])
+		tr("WORLD_DEPOT_MECHANIC_1"), tr("WORLD_DEPOT_MECHANIC_2")])
 	mechanic.name = "Mechanic"
 	var walker := _worker(Vector3(-8.5, FLOOR_TOP, 25.2), 0.0, Color("ffc93c"), [
-		"¡Permiso!", "Inventario, inventario...", "¿Viste mi lapicera?"])
+		tr("WORLD_DEPOT_WALKER_1"), tr("WORLD_DEPOT_WALKER_2"), tr("WORLD_DEPOT_WALKER_3")])
 	walker.name = "StockWalker"
 	walker.waypoints = [Vector3(-8.5, FLOOR_TOP, 14.4), Vector3(-8.5, FLOOR_TOP, 25.2), Vector3(-2.6, FLOOR_TOP, 25.0),
 		Vector3(0.6, FLOOR_TOP, 29.0), Vector3(-2.6, FLOOR_TOP, 25.0), Vector3(-8.5, FLOOR_TOP, 25.2)]
@@ -1549,7 +1559,10 @@ func _build_audio() -> void:
 	add_child(hum)
 	var radio := AudioStreamPlayer3D.new()
 	radio.name = "Radio"
-	radio.stream = SynthAudio.radio_tune()
+	# The break area's radio (N-403): a lo-fi program composed for it.
+	var program := RADIO_PROGRAM.duplicate() as AudioStreamOggVorbis
+	program.loop = true
+	radio.stream = program
 	radio.bus = &"Music"
 	radio.volume_db = WorldMix.DEPOT_RADIO_DB
 	radio.unit_size = 3.0

@@ -39,7 +39,7 @@ static var record_instances: bool = false
 ## patch (cheap: static, never moving); a tree is a trunk cylinder, the rest
 ## the box of their model. Small loose things become sleeping rigid bodies
 ## instead, so the truck knocks them flying rather than stopping dead.
-const SOLID_RULES: Array[StringName] = [&"tree", &"landmark", &"parked_vehicle", &"guardrail", &"bus_stop", &"hazard_sign", &"delivery_sign", &"crossing_sign"]
+const SOLID_RULES: Array[StringName] = [&"tree", &"landmark", &"parked_vehicle", &"tractor", &"competitor_van", &"guardrail", &"bus_stop", &"hazard_sign", &"delivery_sign", &"crossing_sign"]
 const KNOCKABLE_RULES: Array[StringName] = [&"roadworks", &"village_furniture", &"farm_props", &"milestone", &"yard"]
 ## Bigger than this and it isn't something a truck bats aside (a barn).
 const KNOCKABLE_MAX_SIZE: float = 2.5
@@ -204,7 +204,10 @@ static func _static_parts(piece: Node) -> Array[MeshInstance3D]:
 ## into one surface per material, so a batch costs a draw call per material
 ## instead of one per part. Built once per model file and shared.
 static func _model_mesh(piece: Node3D, parts: Array[MeshInstance3D]) -> Mesh:
-	var path: String = piece.scene_file_path
+	# Per season and darkness too: the merged mesh keeps the materials it was
+	# built with -- autumn's leaves aren't summer's (N-305), and a lamp lit at
+	# night isn't the daytime one (N-304).
+	var path: String = "%s|%d|%.2f" % [piece.scene_file_path, LowpolyMaterials.season, LowpolyMaterials.night_level] if piece.scene_file_path != "" else ""
 	if path != "" and _model_cache.has(path):
 		return _model_cache[path]
 	var inverse: Transform3D = piece.global_transform.affine_inverse()

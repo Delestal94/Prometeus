@@ -203,6 +203,10 @@ package_drop={
 ]
 }
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://translations/strings_world.es.translation", "res://translations/strings_world.en.translation")
+
 [layer_names]
 
 3d_physics/layer_1="environment"

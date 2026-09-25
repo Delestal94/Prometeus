@@ -90,7 +90,7 @@ func _ready() -> void:
 func set_order(label: String) -> void:
 	var words: PackedStringArray = label.strip_edges().split(" ", false)
 	# No order yet (or any box will do): the sign still says a delivery is due.
-	var code: String = words[-1].to_upper() if not words.is_empty() else "ENTREGA"
+	var code: String = words[-1].to_upper() if not words.is_empty() else tr("WORLD_HOUSE_DELIVERY")
 	var trap: String = " ".join(words.slice(0, words.size() - 1)).to_upper() if words.size() > 1 else ""
 	for label_node: Label3D in code_labels:
 		label_node.text = code
@@ -217,7 +217,7 @@ func _build_sign() -> void:
 		var board := _box(face, Vector3(BOARD_SIZE.x, BOARD_SIZE.y, 0.05), Vector3(0.0, BOARD_HEIGHT, 0.0), SIGN_COLOR)
 		# Unshaded: it has to read at noon as much as at night.
 		(board.material_override as StandardMaterial3D).shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		var code := _label(face, "ENTREGA", Vector3(0.0, BOARD_HEIGHT + 0.15, -0.035), 0.0, 150, INK, 0.007)
+		var code := _label(face, tr("WORLD_HOUSE_DELIVERY"), Vector3(0.0, BOARD_HEIGHT + 0.15, -0.035), 0.0, 150, INK, 0.007)
 		code.name = "Code"
 		code_labels.append(code)
 		var trap := _label(face, "", Vector3(0.0, BOARD_HEIGHT - 0.42, -0.035), 0.0, 64, INK, 0.007)

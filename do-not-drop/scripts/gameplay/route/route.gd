@@ -302,9 +302,12 @@ static func _plan_pick(rng: RandomNumberGenerator, pool: Array[Script], hard: Ar
 	if float(state.distance) < SAFE_START_LENGTH:
 		rules.append(func(s: Script) -> bool: return not hard.has(s) and s != CurveSegment)
 	# Nor a tunnel mouth right in front of the depot's door: its portal would
-	# stand against the forecourt and wall off the view of the building.
+	# stand against the forecourt and wall off the view of the building. Nor a
+	# hill: the yard's flat zone (route_terrain.gd) squeezed its first 12 m
+	# into a 0 -> 27 % ramp right where the truck reaches ~15 m/s out of the
+	# depot, and it pitched hard enough to throw loose cargo (#170).
 	if avoid_tunnel_at_start and float(state.distance) < 1.0:
-		rules.append(func(s: Script) -> bool: return s != TunnelSegment)
+		rules.append(func(s: Script) -> bool: return s != TunnelSegment and s != HillSegment)
 	# Nor right past a house: the portal stood against its yard and hid it.
 	if bool(state.after_house):
 		rules.append(func(s: Script) -> bool: return s != TunnelSegment)
@@ -372,7 +375,7 @@ func assign_packages(assignments: Array) -> void:
 			house.waiting_marker.set_order(house.assigned_label)
 		var label := get_node_or_null(NodePath("HouseNumber%d" % index)) as Label3D
 		if label != null:
-			label.text = "CASA %d" % (index + 1) if house.assigned_label.is_empty() else "CASA %d%s%s" % [index + 1, NEWLINE, house.assigned_label.to_upper()]
+			label.text = tr("WORLD_HOUSE_NUMBER") % (index + 1) if house.assigned_label.is_empty() else "%s%s%s" % [tr("WORLD_HOUSE_NUMBER") % (index + 1), NEWLINE, house.assigned_label.to_upper()]
 
 
 func _ready() -> void:
@@ -434,7 +437,7 @@ func _shuffled_house_variants() -> Array[int]:
 ## fell out from under them before their checks ever ran).
 func _start_leg(cursor: Transform3D) -> void:
 	terrain.add_span(cursor.origin + Vector3(0.0, 0.0, 20.0), cursor.origin)
-	_sign("Salida", "SALIDA\nCuidá la carga -- el camino serpentea", cursor.origin + Vector3(-7.6, 0.0, -5.0), TEAL)
+	_sign("Salida", tr("WORLD_ROUTE_START_SIGN"), cursor.origin + Vector3(-7.6, 0.0, -5.0), TEAL)
 	_box("StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.03, -4.0), TEAL)
 
 
@@ -544,7 +547,7 @@ func _keep_houses_off_road() -> void:
 		_build_house_path(anchor.cursor, anchor.side, house)
 		var top: float = _local_bounds(house, visual).end.y if visual != null else 4.0
 		var label_at: Vector3 = house.position + Vector3.UP * (top + HOUSE_LABEL_CLEARANCE)
-		_label("HouseNumber%d" % index, "CASA %d" % (index + 1), label_at, 0.01, TEAL, true)
+		_label("HouseNumber%d" % index, tr("WORLD_HOUSE_NUMBER") % (index + 1), label_at, 0.01, TEAL, true)
 		get_node(NodePath("HouseNumber%d" % index)).set_meta(&"height_above_house", top + HOUSE_LABEL_CLEARANCE)
 
 
@@ -675,7 +678,7 @@ func _build_goal(cursor: Transform3D) -> void:
 	_box_at("GoalArchLeft", Vector3(0.5, 4.0, 0.5), arch_left, CONCRETE, true)
 	_box_at("GoalArchRight", Vector3(0.5, 4.0, 0.5), arch_right, CONCRETE, true)
 	_box_at("GoalArchTop", Vector3(9.6, 0.5, 0.5), arch_top, TEAL, true)
-	_label("GoalTitle", "META", arch_top.origin + Vector3(0.0, 0.9, 0.0), 0.014, TEAL)
+	_label("GoalTitle", tr("WORLD_ROUTE_GOAL"), arch_top.origin + Vector3(0.0, 0.9, 0.0), 0.014, TEAL)
 	var end_barrier: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.5, -10.0))
 	_box_at("EndBarrier", Vector3(15.0, 1.0, 0.6), end_barrier, CONCRETE, true)
 	var area := Area3D.new()
@@ -744,10 +747,10 @@ func _nearest_path_index(local_position: Vector3) -> int:
 func get_section_name(world_position: Vector3) -> String:
 	var leg_index: int = int(_nearest_sample(world_position).get("leg_index", 0))
 	if leg_index >= house_count:
-		return "Meta"
+		return tr("WORLD_ROUTE_SECTION_GOAL")
 	if leg_index == 0:
-		return "Camino a casa 1/%d" % house_count
-	return "Camino a casa %d/%d" % [leg_index + 1, house_count]
+		return tr("WORLD_ROUTE_SECTION_LEG") % [1, house_count]
+	return tr("WORLD_ROUTE_SECTION_LEG") % [leg_index + 1, house_count]
 
 
 ## Nearest-boundary lookup rather than exact arc-length math: with segment
@@ -817,6 +820,10 @@ func _finish_terrain() -> void:
 	dresser = RouteDresser.new(self, terrain, _rng.randi())
 	dresser.raining = mood.is_raining()
 	dresser.dress(_segments, houses, _clear_zones, _sight_zones)
+	# Halos round the lamps after dark (N-304), found while they're still nodes.
+	var flares: MultiMeshInstance3D = NightFlares.build(self)
+	if flares != null:
+		add_child(flares)
 	if batch_dressing:
 		var yards: Array = houses.map(func(house: DeliveryHouse) -> Node: return house.get_node_or_null(^"Yard"))
 		DressingBatcher.bake(self, _segments, yards)

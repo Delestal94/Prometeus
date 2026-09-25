@@ -177,8 +177,8 @@ func _apply_consequences(vehicle: VehicleBody3D) -> void:
 		fine = mini(FINE, int(crew.get(&"team_money")))
 		if fine > 0:
 			crew.call(&"spend", fine)
-	report_incident(get_tree(), &"deer_hit", "¡Chocaste un ciervo!",
-		("Salió corriendo, pero la multa por daños es de $%d." % fine) if fine > 0 else "Salió corriendo. Suerte que no había plata para la multa.")
+	report_incident(get_tree(), &"deer_hit", tr("WORLD_DEER_HIT_TITLE"),
+		(tr("WORLD_DEER_HIT_FINE") % fine) if fine > 0 else tr("WORLD_DEER_HIT_NO_FINE"))
 
 
 ## Host only. Tells every HUD about something that already happened on the

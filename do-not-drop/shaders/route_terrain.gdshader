@@ -20,6 +20,9 @@ uniform float detail_gain = 1.16;
 // Rain (world_mood.gd): 0 dry, 1 soaked. Darkens and polishes the road so
 // it catches the sky and the headlights, with puddle-ish patches.
 uniform float wetness : hint_range(0.0, 1.0) = 0.0;
+// Season (world_mood.gd, N-305): 0 summer, 1 autumn. Dries the grass toward
+// straw, patchily, like LowpolyMaterials does for the grass models on it.
+uniform float autumn : hint_range(0.0, 1.0) = 0.0;
 
 float noise2(vec2 p) {
 	return sin(p.x * 1.17 + sin(p.y * 0.83)) * 0.5 + sin(p.y * 1.61 - p.x * 0.71) * 0.25;
@@ -48,6 +51,8 @@ void fragment() {
 	float lawn_grain = texture(grass_detail, p / grass_tile).r * texture(grass_detail, p / (grass_tile * 3.7) + 0.31).r;
 	lawn *= lawn_grain * detail_gain * detail_gain;
 	lawn += grain * 0.006;
+	vec3 straw = mix(vec3(0.5, 0.45, 0.22), vec3(0.62, 0.5, 0.26), broad * 0.5 + 0.5) * lawn_grain * detail_gain * detail_gain;
+	lawn = mix(lawn, straw, autumn * (0.45 + 0.25 * smoothstep(-0.3, 0.5, broad)));
 	vec3 ground = mix(mix(asphalt, earth, shoulder), lawn, grass);
 	ground = mix(ground, earth, COLOR.r * smoothstep(5.7, 7.2, edge));
 	float road = (1.0 - shoulder) * (1.0 - grass);
