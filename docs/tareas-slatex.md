@@ -228,14 +228,14 @@ tocar `depot.gd`**: la compra final se sigue haciendo con `depot.buy_supply(id)`
 **Problema real**: el dinero, las cartas y el mérito viven en memoria: al cerrar el juego se
 pierden y la economía no significa nada entre sesiones.
 
-- [ ] **S-105.1** `CrewProgression.save_campaign()` / `load_campaign()` en `user://crew_campaign.json`
+- [x] **S-105.1** (commit `c694bdf`) `CrewProgression.save_campaign()` / `load_campaign()` en `user://crew_campaign.json`
   (dinero, suministros pendientes, cartas y mérito **por color de jugador**, no por peer id, porque el
   id cambia en cada conexión). Mismo patrón que `unlock_manager.gd`, con `version: 1`.
-- [ ] **S-105.2** Guarda el host al terminar cada partida y al comprar. En línea manda la campaña del
+- [x] **S-105.2** (commit `c694bdf`) Guarda el host al terminar cada partida y al comprar. En línea manda la campaña del
   host; los clientes no escriben la suya.
-- [ ] **S-105.3** Botón "Empezar campaña nueva" en `progress_panel.gd`, con confirmación.
-- [ ] **S-105.4** Escritura segura (ver S-210).
-- [ ] **S-105.5 Test** `tests/test_crew_campaign_save.gd`: guarda, recarga, conserva; archivo corrupto
+- [x] **S-105.3** (commit `c694bdf`) Botón "Empezar campaña nueva" en `progress_panel.gd`, con confirmación.
+- [x] **S-105.4** (commit `c694bdf`) Escritura segura (ver S-210).
+- [x] **S-105.5 Test** (commit `c694bdf`) `tests/test_crew_campaign_save.gd`: guarda, recarga, conserva; archivo corrupto
   no rompe y arranca con $100.
 
 ### S-106 · Introducción gradual de trampas desde el perfil — A · `Sol · high` · Aviso: no
