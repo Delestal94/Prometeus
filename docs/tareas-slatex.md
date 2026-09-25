@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-25 (estado relevado sobre `026e8d3`).
+> Última actualización: 2026-09-25 (estado relevado sobre `d15ad02`).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -339,15 +339,15 @@ del host. Hacerlo **solo visual y local**:
 
 Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archivo.
 
-- [x] (commits `62a30ac`, `6a9de47`, `003d24f`, `202d9bf`, `a07c5d1`) **S-201.1** Listar qué usan los tests del HUD (`grep -n "hud\." tests/test_hud_flow.gd` y los
+- [x] (commits `d324ecd`, `780a489`, `15ede48`, `44ff262`, `f70b064`) **S-201.1** Listar qué usan los tests del HUD (`grep -n "hud\." tests/test_hud_flow.gd` y los
   demás) para no romper esos nombres.
-- [x] (commits `62a30ac`, `6a9de47`, `003d24f`, `202d9bf`, `a07c5d1`) **S-201.2** Crear `scripts/ui/hud/`: `hud_cargo_panel.gd` (filas de carga e íconos),
+- [x] (commits `d324ecd`, `780a489`, `15ede48`, `44ff262`, `f70b064`) **S-201.2** Crear `scripts/ui/hud/`: `hud_cargo_panel.gd` (filas de carga e íconos),
   `hud_prompts.gd` (interacción, tapa de caja, atajos), `hud_notices.gd` (toasts, eventos, pings,
   avisos del depósito), `hud_results.gd` (pantalla de resultados), `hud_pause.gd` (pausa).
   `prototype_hud.gd` queda como el que los arma y conecta señales (objetivo: < 350 líneas).
-- [x] (commits `62a30ac`, `6a9de47`, `003d24f`, `202d9bf`, `a07c5d1`) **S-201.3** Mover **sin cambiar comportamiento**. Un commit por componente, tests del HUD verdes
+- [x] (commits `d324ecd`, `780a489`, `15ede48`, `44ff262`, `f70b064`) **S-201.3** Mover **sin cambiar comportamiento**. Un commit por componente, tests del HUD verdes
   en cada uno (`tools/run-tests.sh hud score spectator ping`).
-- [x] (commit `a07c5d1`) **S-201.4** Captura con `tests/render_hud.gd` antes y después: tienen que verse iguales.
+- [x] (commit `f70b064`) **S-201.4** Captura con `tests/render_hud.gd` antes y después: tienen que verse iguales.
 
 ### S-202 · Partir `player.gd` (1131 líneas) — B · `Astra · high` · Aviso: no
 
@@ -362,10 +362,10 @@ Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archiv
 Nacho encontró (su #97) que el camión puede quedar encajado sin volcar ni salir de la ruta;
 `level_endless.gd` ya lo detecta, `level_base.gd` no.
 
-- [x] (commit `8ed7140`) Copiar la misma regla (6 s casi quieto con el motor pedido → termina la partida con "La
+- [x] (commit `204cfdc`) Copiar la misma regla (6 s casi quieto con el motor pedido → termina la partida con "La
   camioneta quedó atascada"), **sin** contar el tiempo parado en el depósito, en una casa, o con el
   conductor fuera del asiento.
-- [x] (commit `8ed7140`) Test en `test_stuck_detection.gd`: parado en depósito, casa o sin conductor no dispara;
+- [x] (commit `204cfdc`) Test en `test_stuck_detection.gd`: parado en depósito, casa o sin conductor no dispara;
   encajado contra un obstáculo con el acelerador pedido sí.
 
 ### S-204 · Test automático de dos procesos (reemplaza "requiere playtest de red") — A · `Astra · xhigh` · Aviso: no
@@ -425,8 +425,8 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 - [x] (commit `c694bdf`) Función común `scripts/core/safe_json.gd`: escribe en `<archivo>.tmp` y renombra
   (`DirAccess.rename`), así un corte de luz no deja el archivo a medias; al leer, si el JSON es
   inválido, lo renombra a `<archivo>.bad` y devuelve el valor por defecto.
-- [x] (commit `f00821d`) Usarla en `unlock_manager.gd`, en la campaña (S-105) y en el leaderboard de `run_manager.gd`.
-- [x] (commit `f00821d`) Test `tests/test_safe_json.gd`: archivo truncado → no crashea, crea `.bad`, perfil por defecto.
+- [x] (commit `11328c1`) Usarla en `unlock_manager.gd`, en la campaña (S-105) y en el leaderboard de `run_manager.gd`.
+- [x] (commit `11328c1`) Test `tests/test_safe_json.gd`: archivo truncado → no crashea, crea `.bad`, perfil por defecto.
 
 ---
 
@@ -747,7 +747,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ### S-804 · Nada anunciado queda colgado — A · `Sol · high` · Aviso: no
 
-- [x] (commit `4766801`) Test `tests/test_no_dangling_state.gd`: al terminar una partida, `RouteEventManager` no tiene evento
+- [x] (commit `6175d6e`) Test `tests/test_no_dangling_state.gd`: al terminar una partida, `RouteEventManager` no tiene evento
   activo, `ShopVoteManager.active` es falso fuera del depósito, ninguna caja queda con `occupied_by` de un
   jugador que ya no existe. Es el test que hubiera detectado S-101.
 
