@@ -3,6 +3,8 @@
 .import/
 export.cfg
 export_presets.cfg
+# ...except the release job's presets (N-210), which CI copies in.
+!/tools/export/export_presets.cfg
 
 # Exported game builds (binaries, not source -- regenerate via export_presets.cfg)
 /builds/
