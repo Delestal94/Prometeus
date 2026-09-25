@@ -50,6 +50,13 @@ def apply(rig):
     reweight(rig)
     trim_hidden(rig)
 
+# Shorts crotch: thigh share (L+R) on the midline at the crotch bottom, and
+# the heights where it fades in (rest z; the hips are at 1.09, the crotch
+# bottom at ~0.62).
+CROTCH_SHARE = .85
+CROTCH_TOP, CROTCH_BOTTOM = 1.0, .75
+CROTCH_SMOOTHING = 20
+
 def reweight(rig):
     meshes = [o for o in bpy.data.objects if o.type == 'MESH' and o.parent == rig]
     for o in meshes:
@@ -79,6 +86,39 @@ def reweight(rig):
     shirt = next((o for o in meshes if o.name.startswith('Camiseta · cuerpo')), None)
     if shirt is not None:
         smooth_weights(shirt, lambda p: p.z < 1.7 and abs(p.x) < 1.0, 12)
+    # Shorts crotch: the thigh weight was a ramp in x alone (0 on the
+    # midline, 1 at |x| ~0.26), so the whole crotch stayed on the pelvis. The
+    # inseam is short (the cuffs reach x 0.04): when both thighs swing up
+    # (Sit, tucked Jump, squats) the leg openings rose with them while the
+    # crotch hung where it was, a pointed fold between the knees.
+    # Split each vertex's thigh weight into a shared part (L+R) and a
+    # difference (L-R). Only the shared part grows toward the crotch bottom,
+    # so the crotch rides with the thighs when they move together; the
+    # difference, which is what matters when they swing apart (Walk), keeps
+    # its old gentle ramp. (Pinning the rim along the cuffs to its thigh
+    # made that difference jump from -1 to 1 across ~0.1 m and flipped
+    # faces at the front of the crotch in Walk.) A short Laplacian pass then
+    # evens out the seam where the new share meets the old ramp.
+    # Measured by check_deformation.py (crotch_check).
+    shorts = next((o for o in meshes if o.name.startswith('Short · pieza')), None)
+    if shorts is not None:
+        groups = shorts.vertex_groups
+        L, R, P = groups['thigh.L'], groups['thigh.R'], groups['pelvis']
+        for v in shorts.data.vertices:
+            p = shorts.matrix_world @ v.co
+            if abs(p.x) >= .3:
+                continue
+            w = {groups[g.group].name: g.weight for g in v.groups}
+            wl, wr = w.get('thigh.L', 0.), w.get('thigh.R', 0.)
+            shared = max(wl + wr, CROTCH_SHARE*smoothstep(CROTCH_TOP, CROTCH_BOTTOM, p.z))
+            if shared <= wl + wr + 1e-4:
+                continue
+            others = sum(x for k, x in w.items() if k not in ('thigh.L', 'thigh.R', 'pelvis'))
+            shared = min(shared, 1. - others)
+            L.add([v.index], (shared + wl - wr)/2, 'REPLACE')
+            R.add([v.index], (shared - wl + wr)/2, 'REPLACE')
+            P.add([v.index], max(0., 1. - others - shared), 'REPLACE')
+        smooth_weights(shorts, lambda p: abs(p.x) < .3 and p.z < CROTCH_TOP, CROTCH_SMOOTHING)
     # Trim pieces (hems, seams) were skinned on their own and drift from the
     # garment under them when the torso bends: a jagged line shows through.
     # Each vertex takes the weights of the nearest garment vertex.

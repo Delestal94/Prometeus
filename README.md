@@ -521,7 +521,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   donde estaba (siempre queda uno en el piso); `movement_state()` lo elige parado y girando
   rápido, no caminando, ni con un giro lento, ni en el aire (con histéresis), la velocidad
   de giro sale del giro real del cuerpo, un giro no corta un pickup y `anim_state`
-  `TurnInPlace` reproduce el clip en loop.
+  `TurnInPlace` reproduce el clip en loop. El fondo del tiro del short tiene peso de los
+  muslos (más de 0,5; antes 0), así sentado no cuelga en punta entre las rodillas.
 - `test_driver_ik` — sentado al volante, las muñecas del personaje llegan a los dos
   puntos del volante con `SkeletonIK3D` (sin cilindros ni guantes sueltos en el volante),
   la bocina lleva su propia mano derecha al centro y la devuelve al aro, y al levantarse se

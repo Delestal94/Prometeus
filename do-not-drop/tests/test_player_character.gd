@@ -12,6 +12,9 @@ extends SceneTree
 ## TurnInPlace clip lifts and re-plants each foot, and only a player standing
 ## on the floor and turning fast enough plays it -- not walking, not a slow
 ## turn, not over a one-shot.
+## And the shorts' crotch rides with the thighs (model_fixes.py): its bottom
+## carries thigh weight, or it hangs as a pointed fold between the knees in
+## Sit. The deformation itself is measured by check_deformation.py.
 
 const CHARACTER: String = "res://assets/models/characters/sm_char_player_rounded.glb"
 const PlayerScript: GDScript = preload("res://scripts/gameplay/player/player.gd")
@@ -67,6 +70,8 @@ func _initialize() -> void:
 		_expect(names[0] == "Shirt", "Surface 0 is the T-shirt (got %s)" % names[0])
 		_expect(names.has("ShirtTrim"), "The T-shirt trim is its own surface")
 		_expect(triangles < 25000, "Game export stays decimated (%d triangles)" % triangles)
+		if skeleton != null:
+			_check_crotch_weights(mesh, skeleton)
 	model.free()
 
 	# In the player: crew colour on shirt and trim, every body mesh on the
@@ -223,6 +228,52 @@ func _check_turn_steps(anim: AnimationPlayer, skeleton: Skeleton3D) -> void:
 		var start: float = _bone_height(anim, skeleton, "TurnInPlace", 0.0, "foot." + side) - rest[side]
 		_expect(absf(start) < 0.005, "TurnInPlace starts with foot.%s where Idle has it (%.4f m)" % [side, start])
 	_expect(airborne == 0, "TurnInPlace always keeps a foot on the floor (%d samples with both up)" % airborne)
+
+
+## Midline vertices at the bottom of the shorts' crotch: before model_fixes.py
+## split them between both thighs they were all pelvis (thigh share ~0).
+func _check_crotch_weights(mesh: MeshInstance3D, skeleton: Skeleton3D) -> void:
+	var surface: int = -1
+	for i: int in mesh.mesh.get_surface_count():
+		var material: Material = mesh.mesh.surface_get_material(i)
+		if material != null and material.resource_name == "Shorts":
+			surface = i
+	_expect(surface >= 0, "The shorts are their own surface")
+	if surface < 0 or mesh.skin == null:
+		return
+	var thighs: Array[int] = []
+	for bind: int in mesh.skin.get_bind_count():
+		var bone_name: String = String(mesh.skin.get_bind_name(bind))
+		if bone_name.is_empty():
+			bone_name = skeleton.get_bone_name(mesh.skin.get_bind_bone(bind))
+		if bone_name in ["thigh.L", "thigh.R"]:
+			thighs.append(bind)
+	var arrays: Array = mesh.mesh.surface_get_arrays(surface)
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var stride: int = bones.size() / points.size()
+	var min_x: float = INF
+	var max_x: float = -INF
+	for point: Vector3 in points:
+		min_x = minf(min_x, point.x)
+		max_x = maxf(max_x, point.x)
+	var mid_x: float = (min_x + max_x) / 2.0
+	var bottom: float = INF
+	for point: Vector3 in points:
+		if absf(point.x - mid_x) < 0.015:
+			bottom = minf(bottom, point.y)
+	var share: float = 0.0
+	var count: int = 0
+	for i: int in points.size():
+		if absf(points[i].x - mid_x) < 0.015 and points[i].y < bottom + 0.03:
+			for k: int in stride:
+				if bones[i * stride + k] in thighs:
+					share += weights[i * stride + k]
+			count += 1
+	share /= maxf(count, 1)
+	_expect(count > 0 and share > 0.5,
+		"The shorts' crotch bottom rides with the thighs (thigh weight %.2f over %d vertices)" % [share, count])
 
 
 func _bone_height(anim: AnimationPlayer, skeleton: Skeleton3D, clip: String, time: float, bone: String) -> float:

@@ -21,5 +21,18 @@
     },
     "max_arm_vertex_motion_m": 0.6919730820953705,
     "finite_deformation": true
+  },
+  "crotch_test": {
+    "crotch_fold_deg": {
+      "Idle": 26.4,
+      "Walk": 48.3,
+      "Stroll": 53.2,
+      "Jump": 26.3,
+      "PickUpPackage": 26.3,
+      "PickUpHigh": 26.3,
+      "Sit": 23.1,
+      "TurnInPlace": 26.4
+    },
+    "sit_crotch_sag_m": -0.07
   }
 }

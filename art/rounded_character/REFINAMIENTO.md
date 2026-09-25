@@ -77,6 +77,18 @@ sentado manda `Sit`. Entre `Idle` y `TurnInPlace` el cruce dura 0,2 s.
 - **Panza:** el peso de pelvis caía de 0,17 a 0 en un solo anillo (z 1,40) y hacía
   una línea dentada al doblar la columna. Suavizado laplaciano del bajo de la camiseta.
 - **Dobladillo y costura del cuello:** copian los pesos de la prenda que tienen debajo.
+- **Tiro del short:** el peso de los muslos era una rampa solo en x (0 en el centro,
+  1 a |x| 0,26), así que todo el tiro iba con la pelvis. La entrepierna es corta (los
+  bordes de las perneras llegan a x 0,04): en `Sit` las perneras subían con los muslos y
+  el tiro quedaba colgando, un pliegue en punta entre las rodillas. Era un problema de
+  pesos, no de topología ni de huesos. Ahora el peso de los muslos de cada vértice se
+  separa en una parte compartida (L+R) y una diferencia (L−R). Solo la compartida crece
+  hacia el fondo del tiro (0,85 en el centro, desde z 1,0 hasta 0,75 en reposo), así el
+  tiro sigue a los muslos cuando se mueven juntos (`Sit`, sentadilla, `Jump` recogido).
+  La diferencia, que es lo que cuenta cuando se abren (`Walk`), conserva su rampa suave.
+  Después, 20 pasadas de suavizado. Fijar el borde de la pernera al 100% de su muslo
+  (lo primero que se probó) hacía saltar esa diferencia de −1 a 1 en ~0,1 m y daba
+  vuelta caras en `Walk`. Sin triángulos nuevos: siguen siendo 18.591.
 - Se sigue recortando la pierna dentro del short y la cintura del short bajo la camiseta.
 
 ## Rostro
@@ -99,6 +111,13 @@ con los mismos pesos y recortes que el export:
   `Jump` la punta baja del cero en la vista estática, pero el cuerpo ya subió.
 - **Continuidad:** relación jerk máx/mediana ≤ 2 en `Walk`/`Stroll`/`Idle`; el pico
   que queda en `Jump` es el impacto (el cuerpo se detiene a 6,7 m/s) y es intencional.
+- **Tiro del short** (`check_deformation.py`, `crotch_test` en `validation.json`): el
+  ángulo máximo entre normales vecinas al fondo del tiro, cada 6 cuadros de cada clip,
+  baja en `Sit` de 77° a 23° (`Walk` de 62° a 48°, `PickUpPackage` de 60° a 26°). `Stroll`
+  sube de 40° a 53°, pero es un pliegue entre las piernas que no se ve. El tiro ya no
+  cuelga por debajo de los muslos sentado: antes pasaba 0,014 (unidades del modelo; en el
+  juego, la mitad) la parte de abajo de las perneras, ahora queda 0,07 por encima. `test_player_character` comprueba que el fondo del
+  tiro tenga peso de los muslos en el GLB.
 - **Godot** (`test_character_motion`): bola del pie apoyado, deriva 8,7 mm en `Walk`
   y 0,8 mm en `Stroll`; balanceo de mano 0,44 m; `Jump` termina en `Idle`.
 
@@ -110,7 +129,5 @@ con los mismos pesos y recortes que el export:
 - `TurnInPlace` no sabe hacia dónde gira: los pies se levantan y vuelven a apoyar en su
   lugar relativo al cuerpo, así que mientras están en el piso giran con él. Con giros
   rápidos se nota que pivotan; harían falta dos clips (izquierda/derecha) o IK de pies.
-- Con las piernas levantadas en `Sit`, el tiro del short forma un pliegue en punta
-  entre las rodillas, visible de frente.
 - Las sombras de Workbench del banco de pruebas dibujan una línea falsa en algún
   cuadro del aterrizaje; sin sombras no aparece (no es geometría).

@@ -391,7 +391,10 @@ Pedido del usuario: refinar el personaje y sus animaciones al máximo, sin perde
     (dos pasitos en loop, 0,8 s) y `player.gd` lo elige parado y girando a más de 1,5 rad/s
     (`movement_state()`, histéresis hasta 0,8 rad/s); viaja en `anim_state`. Tests:
     `test_player_character`, `test_character_motion`.
-  - [ ] Pliegue del short sentado.
+  - [x] ~~Pliegue del short sentado~~ **[x] Hecho (2026-09-25)**. En `model_fixes.py`, el
+    tiro del short reparte su peso entre los dos muslos (la parte compartida L+R crece hacia
+    el fondo y la diferencia L−R se mantiene), así ya no cuelga en punta entre las rodillas
+    en `Sit`. Métrica en `check_deformation.py` (`--crotch-only`); test: `test_player_character`.
 
 ## 4. Audio y diseño sonoro
 

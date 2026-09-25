@@ -68,6 +68,8 @@ alineación en reposo y seguimiento de controles en una pose flexionada.
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --python art/rounded_character/build_character.py
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --python art/rounded_character/check_deformation.py
+# Solo el tiro del short en los clips (sin el render de Cycles):
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --python art/rounded_character/check_deformation.py -- --crotch-only
 ```
 
 La reconstrucción vuelve a generar los archivos de este directorio.
