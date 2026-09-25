@@ -16,11 +16,13 @@ enum TrapState { OK, AT_RISK, RUINED }
 
 var integrity: float = 100.0
 var integrity_max: float = 100.0
+var _milestones: Array[StringName] = []
 
 
 func on_setup(_package: Node, config: Dictionary) -> void:
 	integrity_max = maxf(float(config.get("integrity_max", 100.0)), 1.0)
 	integrity = integrity_max
+	_milestones.clear()
 
 
 func on_physics_process(_package: Node, _delta: float, _context: Dictionary) -> void:
@@ -39,6 +41,22 @@ func get_state() -> int:
 ## the player what it currently wants from them.
 func get_hint() -> String:
 	return ""
+
+
+## Milestones are consumed by DeliveryPackage on the host. Keeping them in
+## the behavior lets each trap define what "good play" means without making
+## the package inspect trap-specific state.
+func take_milestones() -> Array[StringName]:
+	var taken: Array[StringName] = _milestones.duplicate()
+	_milestones.clear()
+	return taken
+
+
+## A state can update more than once in one physics frame. One occurrence is
+## still one action, so duplicate milestone ids wait only once in the queue.
+func _add_milestone(milestone: StringName) -> void:
+	if not _milestones.has(milestone):
+		_milestones.append(milestone)
 
 
 ## Applies damage and returns how much was actually lost, so callers can

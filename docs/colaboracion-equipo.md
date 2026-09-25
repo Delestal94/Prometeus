@@ -53,6 +53,18 @@ Los paquetes suman cuatro propiedades replicadas para Etiquetas mezcladas, Mimé
 parásita. Las señales existentes conservan su firma. Pruebas focalizadas: `test_route_events`,
 `test_route_event_manager`, `test_run_relay`, `test_hud_flow` y `test_score_breakdown`.
 
+## Aviso activo: mérito individual por acciones reales (S-102, 2026-09-24)
+
+Slatex amplió `scripts/core/run_manager.gd` sin cambiar ninguna firma pública:
+cuando una foto aceptada puede desestimar el reclamo de una entrega dañada, conserva
+el peer y el paquete responsables mientras emite la señal existente
+`delivery_photo_taken`. `CrewProgression` usa esos datos para otorgar `photo_saved`;
+las fotos de entregas intactas conservan su bono normal, pero no dan ese mérito.
+
+También se agregó `test_merit.gd` a la lista compartida de tests del `README.md`.
+Pruebas focalizadas: `test_merit`, `test_crew_progression`, trampas, manejo de paquetes
+y cámara del celular.
+
 ## Aviso activo: la entrega vuelve a terminar en la meta (2026-09-24)
 
 Decisión del usuario. `gameplay/level_base.gd` (de Slatex): la partida termina otra vez al

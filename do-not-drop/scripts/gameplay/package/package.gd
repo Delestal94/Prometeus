@@ -96,6 +96,13 @@ var _carry_in_vehicle: bool = false
 ## one whose trap input counts, and how long since their last sample.
 var tender_peer_id: int = 0
 var _tender_input_age: float = 0.0
+## Host-only merit attribution. Trap milestones belong to the last passenger
+## who sent an input that could actually affect the box; carry milestones
+## belong to the last player who held it.
+var _last_tender_peer: int = 0
+var _last_holder_peer: int = 0
+var _rescue_pending: bool = false
+var _milestone_counts: Dictionary = {}
 ## Stale trap input is dropped after this long: a passenger who paused, or
 ## tabbed out, holding "steady" would otherwise keep the trap calm forever.
 const TENDER_INPUT_TIMEOUT: float = 0.25
@@ -226,6 +233,10 @@ func initialize_trap() -> void:
 	_has_previous_velocity = false
 	_lost = false
 	_parasite_damage = 0.0
+	_last_tender_peer = 0
+	_last_holder_peer = 0
+	_rescue_pending = false
+	_milestone_counts.clear()
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -263,6 +274,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 			"angular_velocity": state.angular_velocity,
 			"input": player_input,
 		})
+		_award_pending_trap_milestones()
 		# Traps that bleed over time (tilt, weight, agitation) change integrity
 		# here rather than on impact, so the same events still have to fire.
 		_report_change(before_integrity, before_state, "El paquete no aguantó el viaje.")
@@ -448,6 +460,8 @@ func submit_tender_input(input: Dictionary) -> void:
 	if tender_peer_id == 0 or from != tender_peer_id:
 		return
 	player_input = input
+	if _has_useful_input(input):
+		_last_tender_peer = from
 	_tender_input_age = 0.0
 
 
@@ -501,10 +515,16 @@ func set_held(held: bool) -> void:
 ## the package knows who has it -- needed to validate drop requests and to
 ## clear that player's hands on every peer when the box leaves them.
 func take_by(player: Node) -> void:
+	var peer_id: int = int(player.get_multiplayer_authority())
+	var vehicle: Node3D = _find_vehicle()
+	if _is_run_active() and not is_held and not is_loaded \
+			and (vehicle == null or not bool(vehicle.call(&"carries", global_position))):
+		_rescue_pending = true
 	if is_loaded:
 		release_mount()
 	set_held(true)
 	carrier = player
+	_last_holder_peer = peer_id
 	player.rpc(&"pick_up", get_path())
 
 
@@ -522,7 +542,10 @@ func request_transfer(recipient_path: NodePath) -> void:
 		return
 	if _reach_origin(recipient).distance_to(_reach_origin(carrier)) > TRANSFER_REACH:
 		return
+	var giver_peer_id: int = _last_holder_peer
 	take_by(recipient)
+	if _is_run_active():
+		_award_milestone(giver_peer_id, &"handover")
 
 
 ## A carrier can always put a box back on the floor. Unlike a mount this
@@ -583,6 +606,9 @@ func place_at(mount: Node3D, mount_point: Node = null) -> void:
 	freeze = not _is_run_active()
 	_ride_along_if_aboard()
 	_emit_event(&"package_placed", [package_id])
+	if _rescue_pending:
+		_rescue_pending = false
+		_award_milestone(_last_holder_peer, &"rescued")
 
 
 ## A resident took the box at the door. Its carrier's hands have to empty on
@@ -663,6 +689,35 @@ func _is_run_active() -> bool:
 		return true
 	var run_manager: Node = get_node_or_null("/root/RunManager")
 	return run_manager == null or bool(run_manager.get("is_running"))
+
+
+func _award_pending_trap_milestones() -> void:
+	if trap_behavior == null or not trap_behavior.has_method(&"take_milestones"):
+		return
+	for milestone: StringName in trap_behavior.call(&"take_milestones"):
+		_award_milestone(_last_tender_peer, milestone)
+
+
+func _award_milestone(peer_id: int, milestone: StringName) -> bool:
+	if peer_id <= 0 or milestone.is_empty() or not is_inside_tree():
+		return false
+	var progression: Node = get_node_or_null(^"/root/CrewProgression")
+	if progression == null or not progression.has_method(&"award_milestone"):
+		return false
+	var occurrence: int = int(_milestone_counts.get(milestone, 0)) + 1
+	if not bool(progression.call(&"award_milestone", peer_id, package_id, milestone, occurrence)):
+		return false
+	_milestone_counts[milestone] = occurrence
+	return true
+
+
+static func _has_useful_input(input: Dictionary) -> bool:
+	for value: Variant in input.values():
+		if value is bool and bool(value):
+			return true
+		if (value is StringName or value is String) and not String(value).is_empty():
+			return true
+	return false
 
 
 func _emit_event(event_name: StringName, arguments: Array) -> void:

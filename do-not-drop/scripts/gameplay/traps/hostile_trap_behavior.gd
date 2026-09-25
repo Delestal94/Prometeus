@@ -28,6 +28,7 @@ func on_setup(_package: Node, config: Dictionary) -> void:
 func on_physics_process(_package: Node, delta: float, context: Dictionary) -> void:
 	if get_state() == TrapState.RUINED:
 		return
+	var before_state: int = get_state()
 	_command_timer -= delta
 	_attack_cooldown = maxf(0.0, _attack_cooldown - delta)
 	if _command_timer <= 0.0:
@@ -44,6 +45,8 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 			attack_count += 1
 			_attack_cooldown = 0.8
 	_sync_integrity()
+	if before_state == TrapState.AT_RISK and get_state() == TrapState.OK:
+		_add_milestone(&"calmed")
 
 func on_impact(delta_velocity: float) -> float:
 	if delta_velocity >= 5.0:

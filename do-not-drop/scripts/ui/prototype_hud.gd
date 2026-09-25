@@ -116,11 +116,13 @@ var _soft_pause: bool = false
 const RESTART_HOLD_SECONDS: float = 0.9
 var _restart_hold: float = 0.0
 var _is_endless: bool = false
+var _local_merit_total: int = 0
 
 
 func _ready() -> void:
 	var level: Node = get_parent()
 	_is_endless = level != null and &"distance_traveled" in level
+	_local_merit_total = int(CrewProgression.merit.get(NetworkManager.local_id(), 0))
 	_build_ui()
 	EventBus.vehicle_telemetry.connect(_on_speed)
 	EventBus.package_integrity_changed.connect(_on_integrity)
@@ -855,7 +857,9 @@ func _on_team_money_changed(amount: int) -> void:
 
 func _on_merit_changed(peer_id: int, total: int) -> void:
 	if peer_id == NetworkManager.local_id():
-		_toast("Mérito sumado  ·  total %d" % total)
+		var gained: int = maxi(total - _local_merit_total, 0)
+		_local_merit_total = total
+		_toast("Mérito +%d  ·  total %d" % [gained, total])
 
 
 func _on_card_changed(peer_id: int, card_id: int) -> void:

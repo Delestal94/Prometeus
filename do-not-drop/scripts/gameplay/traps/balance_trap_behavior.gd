@@ -30,6 +30,7 @@ func on_setup(package: Node, config: Dictionary) -> void:
 func on_physics_process(package: Node, delta: float, context: Dictionary) -> void:
 	if get_state() == TrapState.RUINED:
 		return
+	var before_state: int = get_state()
 	var input: Dictionary = context.get("input", {}) as Dictionary
 	_is_steadying = bool(input.get("steady", false))
 	tilt_degrees = _measure_tilt(package)
@@ -44,6 +45,8 @@ func on_physics_process(package: Node, delta: float, context: Dictionary) -> voi
 		return
 	if tilt_degrees > _angle_ok_max:
 		damage(_damage_per_second * delta)
+	if before_state == TrapState.AT_RISK and get_state() == TrapState.OK:
+		_add_milestone(&"leveled")
 
 
 func get_state() -> int:

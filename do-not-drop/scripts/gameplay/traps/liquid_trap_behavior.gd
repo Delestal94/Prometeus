@@ -15,6 +15,7 @@ var _impact_threshold: float = 4.0
 var _impact_spill: float = 18.0
 var _mop_rate: float = 22.0
 var _integrity_loss_per_spill: float = 0.23
+var _had_large_spill: bool = false
 
 
 func on_setup(_package: Node, config: Dictionary) -> void:
@@ -28,11 +29,14 @@ func on_setup(_package: Node, config: Dictionary) -> void:
 	_mop_rate = float(config.get("mop_rate", 22.0))
 	_integrity_loss_per_spill = float(config.get("integrity_loss_per_spill", 0.23))
 	spill_amount = 0.0
+	_had_large_spill = false
 
 
 func on_physics_process(package: Node, delta: float, context: Dictionary) -> void:
 	if get_state() == TrapState.RUINED:
 		return
+	if spill_amount > 30.0:
+		_had_large_spill = true
 	tilt_degrees = _measure_tilt(package)
 	var tilt_ratio: float = clampf((tilt_degrees - _safe_angle) / maxf(_danger_angle - _safe_angle, 0.01), 0.0, 1.0)
 	if tilt_ratio > 0.0:
@@ -41,6 +45,11 @@ func on_physics_process(package: Node, delta: float, context: Dictionary) -> voi
 	var input: Dictionary = context.get("input", {}) as Dictionary
 	if bool(input.get("calm", false)):
 		spill_amount = maxf(0.0, spill_amount - _mop_rate * delta)
+	if spill_amount > 30.0:
+		_had_large_spill = true
+	elif _had_large_spill and is_zero_approx(spill_amount):
+		_had_large_spill = false
+		_add_milestone(&"dried")
 	# The wetness is the danger buffer.  Once it gets serious, it converts
 	# into permanent package damage at a pace a teammate can still fight.
 	if spill_amount > integrity_max * 0.14:
@@ -50,6 +59,8 @@ func on_physics_process(package: Node, delta: float, context: Dictionary) -> voi
 func on_impact(delta_velocity: float) -> float:
 	if delta_velocity >= _impact_threshold:
 		spill_amount = minf(integrity_max, spill_amount + _impact_spill * (delta_velocity / _impact_threshold))
+		if spill_amount > 30.0:
+			_had_large_spill = true
 	return 0.0
 
 

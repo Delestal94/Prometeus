@@ -7,6 +7,16 @@ const MAX_CARD_PER_PLAYER: int = 1
 const BASE_CARD_CHANCE: float = 0.20
 const MERIT_CARD_BONUS: float = 0.01
 const PITY_DELIVERIES: int = 3
+const MERIT_POINTS := {
+	&"defused": 25,
+	&"rescued": 20,
+	&"calmed": 10,
+	&"dried": 10,
+	&"leveled": 8,
+	&"sequence": 8,
+	&"handover": 5,
+	&"photo_saved": 15,
+}
 
 enum Card { PRIORITY, REVOTE, DISCOUNT, RESCUE, INFORMATION }
 
@@ -29,6 +39,13 @@ var priority_issued: bool = false
 var supplies: Dictionary = {}
 
 
+func _ready() -> void:
+	var bus: Node = event_bus if event_bus != null else get_node_or_null(^"/root/EventBus")
+	if bus != null and bus.has_signal(&"delivery_photo_taken") \
+			and not bus.is_connected(&"delivery_photo_taken", _on_delivery_photo_taken):
+		bus.connect(&"delivery_photo_taken", _on_delivery_photo_taken)
+
+
 func reset_campaign() -> void:
 	team_money = STARTING_MONEY
 	merit.clear()
@@ -47,6 +64,16 @@ func award_action(peer_id: int, action_id: StringName, points: int) -> bool:
 	merit[peer_id] = int(merit.get(peer_id, 0)) + points
 	_emit_event(&"merit_changed", [peer_id, int(merit[peer_id])])
 	return true
+
+
+## Turns a package fact into the stable action id used for deduplication.
+## occurrence belongs to that package and milestone, so separate real saves
+## can score while a repeated report of the same one cannot.
+func award_milestone(peer_id: int, package_id: StringName, milestone: StringName, occurrence: int) -> bool:
+	if package_id.is_empty() or not MERIT_POINTS.has(milestone) or occurrence <= 0:
+		return false
+	var action_id := StringName("%s:%s:%d" % [package_id, milestone, occurrence])
+	return award_action(peer_id, action_id, int(MERIT_POINTS[milestone]))
 
 
 func award_delivery(results: Dictionary, peers: Array) -> void:
@@ -127,6 +154,23 @@ func _emit_event(signal_name: StringName, arguments: Array) -> void:
 	if bus == null and is_inside_tree():
 		bus = get_node_or_null("/root/EventBus")
 	if bus != null and bus.has_signal(signal_name):
-		var payload: Array = [signal_name]
-		payload.append_array(arguments)
-		bus.callv(&"emit_signal", payload)
+		if signal_name in [&"merit_changed", &"card_changed"] and bus.has_method(&"relay"):
+			bus.call(&"relay", signal_name, arguments)
+		else:
+			var payload: Array = [signal_name]
+			payload.append_array(arguments)
+			bus.callv(&"emit_signal", payload)
+
+
+func _on_delivery_photo_taken(_house_index: int, accepted: bool) -> void:
+	if not accepted:
+		return
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	if network != null and not bool(network.call(&"is_host")):
+		return
+	var run: Node = get_node_or_null(^"/root/RunManager")
+	if run == null:
+		return
+	var peer_id: int = int(run.get(&"last_photo_peer_id"))
+	var package_id := StringName(run.get(&"last_photo_package_id"))
+	award_milestone(peer_id, package_id, &"photo_saved", 1)

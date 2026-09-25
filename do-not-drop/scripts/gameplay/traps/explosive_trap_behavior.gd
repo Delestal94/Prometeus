@@ -68,6 +68,7 @@ func _consume_direction(direction: StringName) -> void:
 		if sequence_index >= sequence.size():
 			_defused = true
 			integrity = integrity_max
+			_add_milestone(&"defused")
 	else:
 		seconds_left = maxf(0.0, seconds_left - _mistake_penalty)
 		sequence_index = 0

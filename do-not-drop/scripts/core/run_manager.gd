@@ -68,6 +68,11 @@ var expected_houses: int = 0
 ## the delivery records rather than inside them: the records are plain data
 ## that crosses the network, a texture never should.
 var delivery_photos: Dictionary = {}
+## Host-side attribution for CrewProgression's delivery_photo_taken listener.
+## The signal keeps its existing compact signature; these fields describe
+## the accepted shot while relay() emits it synchronously on the host.
+var last_photo_peer_id: int = 0
+var last_photo_package_id: StringName = &""
 
 ## The route event drawn for this run, so a late joiner gets it too.
 var _event_id: StringName = &""
@@ -121,6 +126,8 @@ func reset_run() -> void:
 	deliveries = []
 	expected_houses = 0
 	delivery_photos = {}
+	last_photo_peer_id = 0
+	last_photo_package_id = &""
 	current_mode = MODE_DELIVERY
 	current_distance = 0.0
 	_event_id = &""
@@ -189,8 +196,14 @@ func register_delivery(house_index: int, outcome: StringName, package_id: String
 ## nobody delivered to), so the caller can say so instead of silently
 ## pretending it counted.
 func attach_delivery_photo(house_index: int) -> bool:
+	return _attach_delivery_photo(house_index, NetworkManager.local_id())
+
+
+func _attach_delivery_photo(house_index: int, peer_id: int) -> bool:
 	var accepted: bool = _mark_photo(house_index)
 	if accepted:
+		last_photo_peer_id = peer_id
+		last_photo_package_id = _claim_package_at(house_index)
 		EventBus.relay(&"delivery_photo_taken", [house_index, true])
 	return accepted
 
@@ -218,9 +231,10 @@ func _request_delivery_photo(house_index: int) -> void:
 		return
 	# The photo has to come from someone standing at that door, not from
 	# anywhere on the map.
-	if not _peer_near_house(multiplayer.get_remote_sender_id(), house_index):
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if not _peer_near_house(sender_id, house_index):
 		return
-	attach_delivery_photo(house_index)
+	_attach_delivery_photo(house_index, sender_id)
 
 
 ## The phone's own range plus some slack for the time the request travelled.
@@ -250,6 +264,18 @@ func _mark_photo(house_index: int) -> bool:
 			entry["photo"] = true
 			return true
 	return false
+
+
+## Only a damaged delivery can have a complaint dismissed. Intact-delivery
+## photos still earn their normal run bonus, but not the photo_saved merit.
+func _claim_package_at(house_index: int) -> StringName:
+	for entry: Dictionary in deliveries:
+		if int(entry["house"]) != house_index:
+			continue
+		var outcome := StringName(entry["outcome"])
+		if outcome in [&"delivered_at_risk", &"delivered_ruined"]:
+			return StringName(entry["package_id"])
+	return &""
 
 
 func _on_house_delivery_recorded(house_index: int, outcome: StringName, package_id: StringName) -> void:

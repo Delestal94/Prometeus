@@ -94,6 +94,7 @@ func _solve() -> void:
 	_time_since_growth = 0.0
 	_roll_sequence()
 	_sync_integrity()
+	_add_milestone(&"sequence")
 
 
 func _roll_sequence() -> void:

@@ -34,6 +34,7 @@ func on_setup(package: Node, config: Dictionary) -> void:
 func on_physics_process(_package: Node, delta: float, context: Dictionary) -> void:
 	if _escaped:
 		return
+	var before_state: int = get_state()
 	var input: Dictionary = context.get("input", {}) as Dictionary
 	var calming: bool = bool(input.get("calm", false))
 	if agitation >= _agitation_max and not calming:
@@ -51,6 +52,8 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 	if agitation < _agitation_max:
 		_seconds_at_max = 0.0
 	_sync_integrity()
+	if before_state == TrapState.AT_RISK and get_state() == TrapState.OK:
+		_add_milestone(&"calmed")
 
 
 func on_impact(delta_velocity: float) -> float:
