@@ -479,6 +479,13 @@ La implementación queda aislada en `shop_vote_manager.gd` y `depot_panel.gd`; n
 cambia firmas compartidas ni vuelve a modificar `depot.gd`. Hacer `git pull` tras
 el aviso de push antes de editar la misma sección de tests del README.
 
+## Aviso S-105 · 2026-09-24
+
+Slatex agregó `test_crew_campaign_save.gd` a la lista compartida de pruebas de
+`README.md`. La implementación está aislada en progresión/UI y suma
+`scripts/core/safe_json.gd`; no cambia firmas de la zona compartida. Hacer
+`git pull` tras el aviso de push antes de editar la misma sección del README.
+
 ## Cómo se armaron las 200 tareas
 
 Las primeras ~70 de cada lista salen directo de los ítems pendientes de

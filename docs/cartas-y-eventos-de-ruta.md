@@ -8,6 +8,11 @@ El mérito es individual y se obtiene solo por acciones útiles, como recuperar
 una caja caída, desactivar una bomba, contener un derrame o asistir a otro
 jugador. Desbloquea cosméticos, nunca ventajas de juego.
 
+La campaña cooperativa del anfitrión conserva dinero, suministros pendientes,
+mérito y cartas entre sesiones. Mérito y cartas se identifican por el color
+estable del jugador, no por el id temporal de red; los clientes reciben esa
+campaña durante la sesión, pero no sobrescriben su archivo local.
+
 ## Cartas
 
 Al completar una entrega, cada jugador puede recibir una carta. La probabilidad
