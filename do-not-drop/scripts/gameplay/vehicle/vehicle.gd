@@ -159,6 +159,16 @@ const CARGO_WALL_INNER_X: float = 1.0
 ## Room a shelved box keeps from the wall: its tape and straps stick out a
 ## few centimetres past the collider (package_feedback.gd).
 const CARGO_WALL_CLEARANCE: float = 0.045
+## The cargo shell's physics layer (7, "vehicle_shell"). What rides in the
+## truck or bumps into it -- boxes, players, loose clutter, a ragdoll -- collides
+## with the shell, never with the truck's own body, whose mask is the
+## environment alone. The shell is kinematic: it carries and stops a box like
+## a wall of infinite mass, and nothing that hits it pushes back on the
+## truck. Before it, an 8-20 kg box sliding about the bay (or a player, who
+## the solver treats as immovable) shoved a 950 kg truck around: it drove in
+## jerks (playtest 2026-09-25).
+const SHELL_LAYER: int = 64
+var _shell: StaticBody3D
 
 @onready var _package_spawn: Marker3D = $CargoBay/LeftSeat1PackageMount
 var _horn_player: AudioStreamPlayer3D
@@ -190,6 +200,8 @@ func _ready() -> void:
 	var reference_truck := preload("res://scripts/presentation/reference_truck.gd").new()
 	reference_truck.name = "ReferenceTruck"
 	add_child(reference_truck)
+	# After the reference truck: it adds the bulkhead's collision.
+	_build_cargo_shell()
 	# Setters ran before the scene was ready (defaults, spawn sync); apply the
 	# current state to collision and art once everything exists.
 	for door: StringName in [&"rear", &"cab_left", &"cab_right"]:
@@ -248,12 +260,90 @@ func set_rear_cargo_open(open: bool) -> void:
 
 func _apply_door(door: StringName, open: bool) -> void:
 	if door == &"rear":
-		var blocker := get_node_or_null(^"RearDoorCollision") as CollisionShape3D
-		if blocker != null:
-			blocker.set_deferred(&"disabled", open)
+		for owner_body: Node in [self, _shell]:
+			var blocker := owner_body.get_node_or_null(^"RearDoorCollision") as CollisionShape3D if owner_body != null else null
+			if blocker != null:
+				blocker.set_deferred(&"disabled", open)
 	var reference_truck := get_node_or_null(^"ReferenceTruck")
 	if reference_truck != null:
 		reference_truck.call(&"set_door_open", door, open)
+
+
+## The shell: a copy of every collision shape of the truck's body (sharing
+## the Shape resources), in the same place, on SHELL_LAYER. On the host it's
+## a kinematic body moved each tick to where the truck will be at the end of
+## the step (_follow_with_shell), so it carries its riders at the truck's own
+## speed. On a client the truck is a frozen copy the network teleports; there
+## the shell is a plain static child that jumps along with it, the way the
+## truck's own shapes used to.
+func _build_cargo_shell() -> void:
+	var simulated: bool = is_multiplayer_authority()
+	_shell = AnimatableBody3D.new() if simulated else StaticBody3D.new()
+	_shell.name = "CargoShell"
+	_shell.collision_layer = SHELL_LAYER
+	_shell.collision_mask = 0
+	_shell.physics_material_override = physics_material_override
+	if simulated:
+		(_shell as AnimatableBody3D).sync_to_physics = false
+		_shell.top_level = true
+		_shell.physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
+		# Top level: this is its world pose, from the moment it exists.
+		_shell.transform = global_transform
+	for child: Node in get_children():
+		var source := child as CollisionShape3D
+		if source == null:
+			continue
+		var copy := CollisionShape3D.new()
+		copy.name = source.name
+		copy.shape = source.shape
+		copy.transform = source.transform
+		copy.disabled = source.disabled
+		_shell.add_child(copy)
+	add_child(_shell)
+	if simulated:
+		set_notify_transform(true)
+
+
+## Farther than the truck can travel in a tick: moved by hand (a test, a
+## reset), not driven. The shell jumps there with it before the next step
+## (transform notifications are flushed once a frame) instead of
+## sweeping the whole way in it, which would fling whatever it carries at
+## hundreds of metres a second.
+const SHELL_TELEPORT_DISTANCE: float = 2.0
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSFORM_CHANGED and _shell != null and _shell.top_level:
+		if _shell.global_position.distance_to(global_position) > SHELL_TELEPORT_DISTANCE:
+			_teleport_shell(global_transform)
+
+
+func _teleport_shell(to: Transform3D) -> void:
+	var shell_rid: RID = _shell.get_rid()
+	PhysicsServer3D.body_set_mode(shell_rid, PhysicsServer3D.BODY_MODE_STATIC)
+	_shell.global_transform = to
+	PhysicsServer3D.body_set_mode(shell_rid, PhysicsServer3D.BODY_MODE_KINEMATIC)
+	PhysicsServer3D.body_set_state(shell_rid, PhysicsServer3D.BODY_STATE_TRANSFORM, to)
+
+
+## Host, each tick before the step: where the truck will be once the step
+## is done -- its pose now, carried on by its velocity and spin -- so the
+## step moves the shell along with the truck at the truck's own speed.
+## Following the truck's pose as of now instead, it would trail a tick
+## behind (a third of a metre at 72 km/h), and the boxes with it.
+func _follow_with_shell(delta: float) -> void:
+	var ahead: Transform3D = global_transform
+	if not freeze:
+		var centre: Vector3 = global_transform * center_of_mass
+		var turned: Basis = global_basis
+		if angular_velocity.length_squared() > 0.000001:
+			turned = Basis(angular_velocity.normalized(), angular_velocity.length() * delta) * global_basis
+		ahead = Transform3D(turned, centre + linear_velocity * delta - turned * center_of_mass)
+	if _shell.global_position.distance_to(ahead.origin) > SHELL_TELEPORT_DISTANCE:
+		_teleport_shell(ahead)
+		return
+	# Kinematic: this is only the target the step moves it to.
+	_shell.global_transform = ahead
 
 
 ## A box set on the rack rests on its deck whatever its shape: the markers
@@ -428,6 +518,7 @@ func _physics_process(delta: float) -> void:
 	_update_parking()
 	if freeze and not _parked:
 		_pose_frozen_wheels()
+	_follow_with_shell(delta)
 	if rear_ramp_deployed and (not rear_cargo_open or speed_kmh > RAMP_STOW_SPEED):
 		rear_ramp_deployed = false
 	elif not rear_ramp_deployed and rear_cargo_open and speed_kmh < RAMP_DEPLOY_SPEED:

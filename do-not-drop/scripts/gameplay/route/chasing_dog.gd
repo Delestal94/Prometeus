@@ -13,7 +13,8 @@ class_name ChasingDog
 ## the road running along Z; the dog itself runs in world space.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
-const DOG_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_dog.glb"
+## Quaternius' rigged Shiba Inu (CC0, assets/README.md), animated by wildlife_animal.gd.
+const DOG_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_dog_rigged.glb"
 const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
 
 enum State { WAITING, CHASING, GIVING_UP, DONE }
@@ -25,11 +26,24 @@ const NOTICE_DISTANCE: float = 22.0
 const CHASE_LATERAL: float = 5.5
 const CHASE_LENGTH: float = 150.0
 const RUN_SPEED: float = 11.0
-const TROT_SPEED: float = 3.0
+## Home again at a walk: the rigged dog's walk cycle keeps pace up to ~2.5 m/s.
+const TROT_SPEED: float = 2.0
 ## Left this far behind, it gives up.
 const LEFT_BEHIND: float = 30.0
-const GIVE_UP_SECONDS: float = 3.0
-const BARK_SECONDS: float = 0.7
+## Going home takes as long as it takes, up to this; it used to stop after
+## 3 s, wherever it was -- on the shoulder, a hundred metres from home.
+const GIVE_UP_SECONDS: float = 60.0
+## Farther from home than this it lopes back; closer, it walks.
+const LOPE_HOME_BEYOND: float = 15.0
+const LOPE_SPEED: float = 5.0
+## Between barks, picked afresh each time: a steady beat read as a machine.
+const BARK_GAP_MIN: float = 0.45
+const BARK_GAP_MAX: float = 1.1
+## Now and then a quick second "guau" right after the first.
+const DOUBLE_BARK_CHANCE: float = 0.35
+const DOUBLE_BARK_GAP: float = 0.24
+## How fast it turns to face where it runs, rad/s.
+const TURN_RATE: float = 9.0
 
 @export var side: float = 1.0
 
@@ -40,6 +54,8 @@ var barks: int = 0
 var _home: Vector3
 var _bark_timer: float = 0.0
 var _give_up_timer: float = 0.0
+var _double_bark_pending: bool = false
+var _rng := RandomNumberGenerator.new()
 var _bark: AudioStreamPlayer3D
 
 
@@ -78,6 +94,8 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if state == State.DONE:
+		# Home: turned back to face the road, as it waited.
+		dog.rotation.y = rotate_toward(dog.rotation.y, side * PI * 0.5, TURN_RATE * 0.3 * delta)
 		return
 	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as Node3D
 	match state:
@@ -98,19 +116,18 @@ func _physics_process(delta: float) -> void:
 			run_distance += move.length()
 			_bark_timer -= delta
 			if _bark_timer <= 0.0:
-				_bark_timer = BARK_SECONDS
-				barks += 1
-				_bark.pitch_scale = 0.95 + 0.1 * float(barks % 3)
-				_bark.play()
+				_bark_once()
 			if run_distance >= CHASE_LENGTH or step.length() > LEFT_BEHIND:
 				_give_up()
 		State.GIVING_UP:
 			_give_up_timer -= delta
 			var home: Vector3 = _flat(_home - dog.global_position)
-			_move(home.limit_length(TROT_SPEED * delta))
-			if _give_up_timer <= 0.0:
+			var pace: float = LOPE_SPEED if home.length() > LOPE_HOME_BEYOND else TROT_SPEED
+			_move(home.limit_length(pace * delta))
+			if home.length() < 0.3 or _give_up_timer <= 0.0:
 				state = State.DONE
 				dog.call(&"idle")
+				dog.set(&"ground_speed", 0.0)
 
 
 func _on_horn_honked(_peer_id: int) -> void:
@@ -125,13 +142,34 @@ func _give_up() -> void:
 	dog.call(&"run")
 
 
-## Moves the dog across the ground, facing where it goes.
+## One bark, sometimes followed straight away by a second, higher one.
+func _bark_once() -> void:
+	barks += 1
+	_bark.pitch_scale = _rng.randf_range(0.92, 1.08) * (1.06 if _double_bark_pending else 1.0)
+	_bark.play()
+	if _double_bark_pending:
+		_double_bark_pending = false
+		_bark_timer = _rng.randf_range(BARK_GAP_MIN, BARK_GAP_MAX)
+	elif _rng.randf() < DOUBLE_BARK_CHANCE:
+		_double_bark_pending = true
+		_bark_timer = DOUBLE_BARK_GAP
+	else:
+		_bark_timer = _rng.randf_range(BARK_GAP_MIN, BARK_GAP_MAX)
+
+
+## Moves the dog across the ground, turning toward where it goes, and tells
+## its animation how fast that is -- standing still it stands, it doesn't
+## gallop on the spot.
 func _move(offset: Vector3) -> void:
+	var delta: float = get_physics_process_delta_time()
+	var speed: float = offset.length() / maxf(delta, 0.0001)
+	dog.set(&"ground_speed", lerpf(float(dog.get(&"ground_speed")), speed, 0.25))
 	if offset.length() < 0.001:
 		return
 	var to: Vector3 = dog.global_position + offset
 	to.y = _ground_height(to)
-	dog.look_at(Vector3(to.x, dog.global_position.y, to.z), Vector3.UP)
+	var facing: float = atan2(-offset.x, -offset.z)
+	dog.rotation.y = rotate_toward(dog.rotation.y, facing, TURN_RATE * delta)
 	dog.global_position = to
 
 

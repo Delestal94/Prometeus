@@ -425,7 +425,7 @@ func _detach_shipping_label() -> void:
 	_shipping_label.reset_physics_interpolation()
 	_shipping_label.freeze = false
 	_shipping_label.collision_layer = 4
-	_shipping_label.collision_mask = 7
+	_shipping_label.collision_mask = DeliveryPackage.LOOSE_MASK
 	_shipping_label.linear_velocity = (package as RigidBody3D).linear_velocity + Vector3(0.0, 1.2, 0.4)
 	_label_detached = true
 

@@ -7,8 +7,9 @@ class_name RouteSky
 ##
 ## The mountains sit well inside the camera's 600 m far plane but past most
 ## of the level's exponential fog -- at 0.008 density a 280 m silhouette would
-## come out ~90% fog colour. So their materials skip fog and get the aerial
-## tint baked in instead, from whatever fog colour the level uses.
+## come out ~90% fog colour. So their material (shaders/horizon_mountains)
+## skips fog and gets the aerial tint baked in instead, from whatever fog
+## colour the level uses, with the foot fading into the sky's horizon.
 ##
 ## Clouds used to be 3D meshes; lit by the sun they got dark bellies and read
 ## as floating rocks. Now the level's ProceduralSkyMaterial is swapped for
@@ -21,6 +22,9 @@ class_name RouteSky
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const HORIZON: PackedScene = preload("res://assets/models/environment/sky/sm_env_horizon_mountains.glb")
 const SKY_SHADER: Shader = preload("res://shaders/stylized_sky.gdshader")
+const HORIZON_SHADER: Shader = preload("res://shaders/horizon_mountains.gdshader")
+## The GLB's tallest peaks reach ~130 m above its base, before scaling.
+const HORIZON_MODEL_HEIGHT: float = 130.0
 ## The GLB ring is 450 m across the middle; 0.62 brings it to ~280 m.
 const HORIZON_SCALE: float = 0.62
 const HORIZON_DEPTH: float = -6.0  # sinks the bases behind the forest ridge
@@ -42,6 +46,10 @@ var _rain_sound: AudioStreamPlayer
 ## the rain, and duller inside the truck or under the depot roof.
 var nature_sound: AudioStreamPlayer
 var distant_road: AudioStreamPlayer
+## The route's wind bed (route.gd builds it; Endless has none): dulled
+## inside like the rest -- at full level under the depot roof it read as
+## rain on the tin.
+var wind: AudioStreamPlayer
 ## The bed's own level (world_mix.gd): birds and crickets are measured apart.
 var nature_db: float = WorldMix.BIRDS_DB
 const DISTANT_ROAD_DB: float = WorldMix.DISTANT_ROAD_DB
@@ -50,6 +58,9 @@ const INSIDE_MUFFLE_DB: float = 9.0
 const RAIN_INNER_RADIUS: float = 3.4
 const RAIN_OUTER_RADIUS: float = 24.0
 const RAIN_HEIGHT: float = 9.0
+const SILENT_DB: float = -80.0
+## Linear gain per second: the rain fades in or out over about half a second.
+const RAIN_FADE_PER_SECOND: float = 4.0
 
 
 func _ready() -> void:
@@ -66,16 +77,19 @@ func _ready() -> void:
 	horizon.scale = Vector3.ONE * HORIZON_SCALE
 	horizon.position.y = HORIZON_DEPTH
 	add_child(horizon)
-	_tint(horizon, fog, mood.horizon_haze(HORIZON_HAZE), mood.horizon_light())
 	_install_sky(environment, fog)
 	mood.apply_sky(sky_material, fog)
+	# After the sky, whose horizon the mountains' foot fades into.
+	var sky_haze: Color = sky_material.get_shader_parameter(&"sky_horizon_color") if sky_material != null else fog
+	_tint(horizon, fog, mood.horizon_haze(HORIZON_HAZE), mood.horizon_light(), sky_haze)
 	mood.apply_ground(get_parent())
 	if mood.is_raining():
 		_build_rain()
 	_build_outdoor_sounds()
+	wind = get_parent().get_node_or_null(^"AmbientWind") as AudioStreamPlayer
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	if camera != null:
 		var at: Vector3 = camera.global_position
@@ -87,18 +101,31 @@ func _process(_delta: float) -> void:
 		var bus: StringName = &"Interior" if inside else &"Exterior"
 		if _rain != null:
 			_rain.global_position = at + Vector3.UP * RAIN_HEIGHT
-			# Under a roof (the depot) no drop falls on you: you only hear it
-			# drumming overhead, like inside the truck.
+			# Under a roof (the depot) no drop falls on you, nor is it heard.
 			_rain.visible = not roofed
 			_route(_rain_sound, bus)
-			# Drumming on the roof is louder than rain on open ground.
-			_rain_sound.volume_db = WorldMix.RAIN_DB + (WorldMix.RAIN_UNDER_ROOF_BOOST_DB if inside else 0.0)
+			# Fades rather than cuts when walking through the depot's door.
+			var target: float = db_to_linear(rain_db(roofed, inside))
+			var level: float = move_toward(db_to_linear(_rain_sound.volume_db), target, RAIN_FADE_PER_SECOND * delta)
+			_rain_sound.volume_db = linear_to_db(maxf(level, 0.0001))
 		var muffle: float = INSIDE_MUFFLE_DB if inside else 0.0
 		if nature_sound != null:
 			_route(nature_sound, bus)
 			nature_sound.volume_db = nature_db - muffle
 		_route(distant_road, bus)
 		distant_road.volume_db = DISTANT_ROAD_DB - muffle
+		if wind != null:
+			_route(wind, bus)
+			wind.volume_db = WorldMix.WIND_DB - muffle
+
+
+## The rain's level where the camera is: drumming louder on the truck's roof
+## than on open ground, and not at all inside the depot -- under its big tin
+## roof it was deafening (playtest 2026-09-25).
+static func rain_db(roofed: bool, inside: bool) -> float:
+	if roofed:
+		return SILENT_DB
+	return WorldMix.RAIN_DB + (WorldMix.RAIN_UNDER_ROOF_BOOST_DB if inside else 0.0)
 
 
 func _route(player: AudioStreamPlayer, bus: StringName) -> void:
@@ -240,24 +267,33 @@ func _environment() -> Environment:
 	return (found[0] as WorldEnvironment).environment if not found.is_empty() else null
 
 
-## Replaces each imported material with a fog-free, unshaded copy pre-blended
-## toward the fog colour: at this distance the sun's shading only adds noise
-## to what should read as one flat silhouette.
-func _tint(root: Node, fog: Color, haze: float, light: float = 1.0) -> void:
+## Replaces each imported material with a fog-free, unshaded one
+## (shaders/horizon_mountains) whose colour is pre-blended toward the fog:
+## at this distance the sun's shading only adds noise to what should read as
+## far-off mountains. The shader gives the facets a soft fixed light and
+## fades the foot into `sky_haze`, so they keep some depth -- flat, a night
+## ridge was a near-black cut-out (playtest 2026-09-25).
+func _tint(root: Node, fog: Color, haze: float, light: float = 1.0, sky_haze: Color = fog) -> void:
+	var foot: float = (root as Node3D).global_position.y if root is Node3D and root.is_inside_tree() else HORIZON_DEPTH
+	var top: float = foot + HORIZON_MODEL_HEIGHT * HORIZON_SCALE
+	var materials: Dictionary = {}
 	for mesh_instance: Node in root.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (mesh_instance as MeshInstance3D).mesh
 		if mesh == null:
 			continue
 		for surface: int in range(mesh.get_surface_count()):
 			var source := mesh.surface_get_material(surface) as BaseMaterial3D
-			var material := StandardMaterial3D.new()
 			var base: Color = source.albedo_color if source != null else Color.WHITE
-			# Unshaded, so the mood's light level is baked in: a night ridge is a
-			# dark silhouette, not a sunlit one.
-			var tinted: Color = base.lerp(fog, haze)
-			material.albedo_color = Color(tinted.r * light, tinted.g * light, tinted.b * light, tinted.a)
-			material.disable_fog = true
-			material.roughness = 1.0
-			material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			(mesh_instance as MeshInstance3D).set_surface_override_material(surface, material)
+			# One material per source colour: the rock and the snow.
+			if not materials.has(base):
+				var material := ShaderMaterial.new()
+				material.shader = HORIZON_SHADER
+				# The mood's light level is baked in: a night ridge is dark, not sunlit.
+				var tinted: Color = base.lerp(fog, haze)
+				material.set_shader_parameter(&"body_color", Color(tinted.r * light, tinted.g * light, tinted.b * light))
+				material.set_shader_parameter(&"haze_color", sky_haze)
+				material.set_shader_parameter(&"foot_y", foot)
+				material.set_shader_parameter(&"top_y", top)
+				materials[base] = material
+			(mesh_instance as MeshInstance3D).set_surface_override_material(surface, materials[base])
 		(mesh_instance as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

@@ -83,6 +83,24 @@ func _run() -> void:
 	expect(travelled > 75.0, "Van traverses the hill without getting stuck")
 	root.get_node("RunManager").is_running = false
 	van.free()
+	# An imported model laid on the terrain keeps every surface and its
+	# material: the road barrier used to come out in the default grey, with
+	# no stripes and no orange legs (playtest 2026-09-25).
+	var barrier: Node3D = (load("res://assets/models/environment/props/sm_env_prop_road_barrier.glb") as PackedScene).instantiate()
+	terrain.add_child(barrier)
+	barrier.position = Vector3(3.0, 0.0, -160.0)
+	var before_surfaces: Dictionary = {}
+	for part: MeshInstance3D in barrier.find_children("*", "MeshInstance3D", true, false):
+		before_surfaces[part.name] = part.mesh.get_surface_count()
+	terrain.conform_geometry(barrier)
+	var bare: Array[String] = []
+	for part: MeshInstance3D in barrier.find_children("*", "MeshInstance3D", true, false):
+		if part.mesh.get_surface_count() != int(before_surfaces[part.name]):
+			bare.append("%s lost surfaces" % part.name)
+		for surface: int in range(part.mesh.get_surface_count()):
+			if part.mesh.surface_get_material(surface) == null:
+				bare.append("%s surface %d" % [part.name, surface])
+	expect(bare.is_empty(), "Laid on the terrain, the road barrier keeps its materials (bare: %s)" % str(bare))
 	terrain.free()
 	await process_frame
 	if failures == 0:

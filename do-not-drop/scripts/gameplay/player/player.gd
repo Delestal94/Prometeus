@@ -63,9 +63,11 @@ var _last_lid_hint: String = ""
 var _highlighted: Node = null
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
+const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
+const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
-## "Personajes" for its clips (Idle/Walk/Jump/PickUpPackage/Sit). One skinned
+## "Personajes" for its clips (Idle/Walk/Stroll/Jump/PickUpPackage/Sit). One skinned
 ## mesh; surface 0 is the T-shirt, which carries the crew colour.
 const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
 const ANIM_IDLE: StringName = &"Idle"
@@ -75,12 +77,23 @@ const ANIM_PICKUP: StringName = &"PickUpPackage"
 ## Played by every peer while seat_node_path is set -- it's derived from that
 ## replicated path, not from anim_state, so it needs no sync of its own.
 const ANIM_SIT: StringName = &"Sit"
+## Presentation-only gait under Walk: a real walk for partial stick input.
+## anim_state still says Walk; each peer picks the gait from the replicated
+## locomotion_speed (_gait_clip()), so it needs no sync of its own.
+const ANIM_STROLL: StringName = &"Stroll"
+## Speeds (m/s) the gait clips were authored at: played at speed / this, the
+## planted feet keep pace with the ground.
+const WALK_AUTHORED_SPEED: float = 3.6
+const STROLL_AUTHORED_SPEED: float = 1.5
+## Hysteresis between the gaits, so a stick held near one speed doesn't flicker.
+const STROLL_BELOW: float = 2.2
+const WALK_ABOVE: float = 2.6
 ## Driver IK chain on the rounded character's skeleton (glTF bone names).
 const DRIVER_ARM_BONES: Dictionary = {
 	-1.0: [&"upper_arm.L", &"hand.L"],
 	1.0: [&"upper_arm.R", &"hand.R"],
 }
-## Slightly under the clips' real length (1.67s each) so the lock releases
+## Slightly under the clips' real length (1.6 s each) so the lock releases
 ## right as the last frame settles, instead of holding an extra beat on the
 ## final pose before movement can take over again.
 const JUMP_ANIM_LOCK_MS: int = 1500
@@ -93,9 +106,12 @@ var _anim_player: AnimationPlayer = null
 ## seat_node_path above.
 var anim_state: StringName = ANIM_IDLE
 ## Presentation state authored by the owning peer, replicated with anim_state.
-## Walk was authored at 3.2 m/s; jump samples the real ascent/landing instead
-## of playing its crouch after the CharacterBody has already left the floor.
+## Scales the gait clips (see WALK_AUTHORED_SPEED); jump samples the real
+## ascent/landing instead of playing a crouch after leaving the floor.
 var locomotion_speed: float = 0.0
+var _strolling: bool = false
+## Last jump_anim_time seen here, to catch the touchdown (0.9) on every peer.
+var _seen_jump_time: float = 0.0
 var jump_anim_time: float = 0.0
 var _jump_airborne: bool = false
 var _jump_landing_elapsed: float = -1.0
@@ -103,6 +119,15 @@ var _carry_pose: Node3D
 var _pickup_elapsed: float = 2.0
 var _pickup_from: Transform3D = Transform3D.IDENTITY
 var _pickup_in_vehicle: bool = false
+var _character_face: BoneAttachment3D
+var face_eyes: StringName = FaceCatalog.DEFAULT_EYES:
+	set(value):
+		face_eyes = FaceCatalog.valid_eyes(value)
+		_apply_face()
+var face_mouth: StringName = FaceCatalog.DEFAULT_MOUTH:
+	set(value):
+		face_mouth = FaceCatalog.valid_mouth(value)
+		_apply_face()
 ## While in the future (Time.get_ticks_msec()), a one-shot clip (Jump,
 ## PickUpPackage) is playing and the per-frame movement state (Idle/Walk)
 ## must not stomp over it.
@@ -148,10 +173,12 @@ var _vehicle: Node3D = null
 ## Owner only: the truck's pose last physics tick, while standing in its bay.
 var _riding: bool = false
 var _ride_last_transform: Transform3D = Transform3D.IDENTITY
-## Physics layer of the truck and its ramp. The truck carries its riders by
-## hand (_ride_with_vehicle), so the controller's own platform handling must
-## ignore it or they'd move twice.
+## Physics layers of the truck and of its cargo shell (vehicle.gd SHELL_LAYER),
+## the kinematic copy of it that players actually collide with. The truck
+## carries its riders by hand (_ride_with_vehicle), so the controller's own
+## platform handling must ignore both or they'd move twice.
 const VEHICLE_LAYER: int = 2
+const SHELL_LAYER: int = 64
 ## How far past the cargo bay's edge someone already aboard still counts as
 ## aboard (see Vehicle.carries()).
 const RIDE_MARGIN: float = 0.4
@@ -188,6 +215,9 @@ func _ready() -> void:
 		var profile: Node = get_node_or_null("/root/UnlockManager")
 		if profile != null:
 			cosmetic_id = profile.get("selected_cosmetic")
+			face_eyes = profile.get("selected_eyes")
+			face_mouth = profile.get("selected_mouth")
+			profile.progress_changed.connect(_sync_profile_appearance)
 	_build_body()
 	_package_focus = CameraAttributesPractical.new()
 	_package_focus.dof_blur_far_enabled = false
@@ -199,7 +229,7 @@ func _ready() -> void:
 	# (A late joiner already got the host's latest pair, applied before this.)
 	if not _has_net_state:
 		net_position = global_position
-	platform_floor_layers &= ~VEHICLE_LAYER
+	platform_floor_layers &= ~(VEHICLE_LAYER | SHELL_LAYER)
 	# Only the player this peer controls owns the view and reads input;
 	# everyone else's body is here to be seen, not driven.
 	if not is_local():
@@ -256,13 +286,16 @@ func _build_body() -> void:
 
 	_set_body_layers(visual, RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 	_apply_cosmetic()
+	_character_face = CharacterFace.new()
+	_character_face.setup(visual, _find_skeleton(visual), RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
+	_apply_face()
 
 	_anim_player = _find_animation_player(visual)
 	if _anim_player != null:
 		# The glTF importer doesn't carry Blender's "this clip loops" flag,
 		# so it's set here once instead of needing a manual editor step
 		# every time the source .blend is re-exported.
-		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK, ANIM_SIT]:
+		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK, ANIM_STROLL, ANIM_SIT]:
 			if _anim_player.has_animation(loop_clip):
 				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
 		_anim_player.play(ANIM_IDLE)
@@ -277,6 +310,19 @@ func _set_body_layers(node: Node, layers: int) -> void:
 		(node as VisualInstance3D).layers = layers
 	for child: Node in node.get_children():
 		_set_body_layers(child, layers)
+
+
+func _apply_face() -> void:
+	if _character_face != null:
+		_character_face.set_expression(face_eyes, face_mouth)
+
+
+func _sync_profile_appearance() -> void:
+	var profile: Node = get_node_or_null("/root/UnlockManager")
+	if profile != null and is_local():
+		cosmetic_id = profile.selected_cosmetic
+		face_eyes = profile.selected_eyes
+		face_mouth = profile.selected_mouth
 
 
 func _enable_character_shadows(node: Node) -> void:
@@ -319,6 +365,28 @@ func _find_mesh_instance(node: Node) -> MeshInstance3D:
 		if found != null:
 			return found
 	return null
+
+
+## Walk (a quick short-legged run) at full speed, Stroll for partial stick
+## input: the run played slowly reads as slow motion, not as walking.
+func _gait_clip() -> StringName:
+	if _strolling and locomotion_speed > WALK_ABOVE:
+		_strolling = false
+	elif not _strolling and locomotion_speed < STROLL_BELOW:
+		_strolling = true
+	return ANIM_STROLL if _strolling and _anim_player.has_animation(ANIM_STROLL) else ANIM_WALK
+
+
+## Both gaits start on the left foot's touchdown, so switching between them
+## keeps the cycle phase: the feet carry on instead of skating to a new step.
+func _play_clip(clip: StringName) -> void:
+	var gaits: Array[String] = [String(ANIM_WALK), String(ANIM_STROLL)]
+	var phase: float = -1.0
+	if _anim_player.current_animation in gaits and String(clip) in gaits:
+		phase = _anim_player.current_animation_position / maxf(_anim_player.current_animation_length, 0.001)
+	_anim_player.play(String(clip), 0.2 if phase >= 0.0 else 0.15)
+	if phase >= 0.0:
+		_anim_player.seek(phase * _anim_player.current_animation_length)
 
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
@@ -392,14 +460,24 @@ func _process(delta: float) -> void:
 	# and pick_up() below) and reaches everyone else through the
 	# MultiplayerSynchronizer, same as seat_node_path.
 	var clip: StringName = anim_state if seat_node_path.is_empty() else ANIM_SIT
+	if _anim_player != null and clip == ANIM_WALK:
+		clip = _gait_clip()
 	if _anim_player != null and _anim_player.current_animation != String(clip):
-		_anim_player.play(String(clip), 0.15)
+		_play_clip(clip)
 	if _anim_player != null:
 		if clip == ANIM_JUMP:
 			_anim_player.speed_scale = 0.0
 			_anim_player.seek(jump_anim_time, true)
+			# The eyes squeeze shut as the landing's squash hits.
+			if jump_anim_time >= 0.9 and _seen_jump_time < 0.9 and _character_face != null:
+				_character_face.blink()
+			_seen_jump_time = jump_anim_time
+		elif clip == ANIM_WALK:
+			_anim_player.speed_scale = clampf(locomotion_speed / WALK_AUTHORED_SPEED, 0.5, 1.5)
+		elif clip == ANIM_STROLL:
+			_anim_player.speed_scale = clampf(locomotion_speed / STROLL_AUTHORED_SPEED, 0.2, 1.6)
 		else:
-			_anim_player.speed_scale = clampf(locomotion_speed / 3.2, 0.15, 1.5) if clip == ANIM_WALK else 1.0
+			_anim_player.speed_scale = 1.0
 	if not is_local():
 		_apply_net_state()
 	elif not _seated:
@@ -504,8 +582,10 @@ func reach_origin() -> Vector3:
 ## while the truck and its boxes moved on -- and every box they touched was
 ## struck at the truck's speed, losing integrity or flying off the rack.
 ## Parked (loading at the depot, a stop at a door) they collide as usual.
-const ON_FOOT_MASK: int = 1 | 2 | 4
-const RIDING_MASK: int = 1 | 2
+## The truck itself is never in these: a player is solid against its shell,
+## so they can't shove it (vehicle.gd SHELL_LAYER).
+const ON_FOOT_MASK: int = 1 | SHELL_LAYER | 4
+const RIDING_MASK: int = 1 | SHELL_LAYER
 const RIDING_SPEED: float = 1.0
 
 
@@ -1298,7 +1378,7 @@ func leave_seat() -> void:
 	seat_node_path = NodePath()
 	_seat_camera_path = NodePath()
 	collision_layer = 8
-	collision_mask = 7
+	collision_mask = ON_FOOT_MASK
 	_camera.current = true
 
 

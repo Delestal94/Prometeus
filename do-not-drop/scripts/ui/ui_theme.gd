@@ -39,6 +39,11 @@ const BACKDROP: Color = Color("16324f")
 const CORNER_RADIUS: int = 16
 const OUTLINE: int = 3
 const SHADOW: int = 6
+## Hover lifts a button off its shadow by this much: the press sinks it,
+## so the hover should do the opposite for the button to feel physical.
+const HOVER_LIFT: int = 2
+## The scanner beep every button plays when pressed (SynthAudio).
+const CLICK_DB: float = -14.0
 const BUTTON_HEIGHT: int = 50
 
 const DISPLAY_FONT_PATH: String = "res://assets/fonts/LilitaOne-Regular.ttf"
@@ -256,8 +261,9 @@ static func _add_tilted(parent: Node, child: Control, degrees: float) -> void:
 
 # --- Buttons & inputs -------------------------------------------------------
 
-## Chunky sticker buttons. `primary` is mint; the rest are white. Pressing
-## sinks the button onto its own shadow; focus (gamepad) gets a sky ring.
+## Chunky sticker buttons. `primary` is mint; the rest are white. Hover
+## lifts the button off its shadow, pressing sinks it onto it (with a
+## scanner beep); focus (gamepad) gets a sky ring.
 static func button(parent: Node, text: String, primary: bool = false, minimum_size: Vector2 = Vector2(0, BUTTON_HEIGHT), color: Color = Color.TRANSPARENT) -> Button:
 	var node := Button.new()
 	node.text = text
@@ -267,7 +273,13 @@ static func button(parent: Node, text: String, primary: bool = false, minimum_si
 	var fill: Color = color if color.a > 0.0 else (MINT if primary else WHITE)
 	var normal: StyleBoxFlat = _button_style(fill, SHADOW)
 	node.add_theme_stylebox_override("normal", normal)
-	var hover: StyleBoxFlat = _button_style(fill.lightened(0.14), SHADOW)
+	# The box rises HOVER_LIFT px while its shadow's bottom edge stays put,
+	# and the text rises with it; the button's own size never changes.
+	var hover: StyleBoxFlat = _button_style(fill.lightened(0.14), SHADOW + HOVER_LIFT)
+	hover.expand_margin_top = HOVER_LIFT
+	hover.expand_margin_bottom = -HOVER_LIFT
+	hover.content_margin_top -= HOVER_LIFT
+	hover.content_margin_bottom += HOVER_LIFT
 	node.add_theme_stylebox_override("hover", hover)
 	var pressed: StyleBoxFlat = _button_style(fill.darkened(0.06), 1)
 	pressed.content_margin_top += SHADOW - 1
@@ -289,8 +301,26 @@ static func button(parent: Node, text: String, primary: bool = false, minimum_si
 	for state: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		node.add_theme_color_override(state, INK)
 	node.add_theme_color_override("font_disabled_color", Color(INK, 0.4))
+	node.pressed.connect(_play_click.bind(node))
 	parent.add_child(node)
 	return node
+
+
+## One shared player on the root rather than one per button, so the beep
+## also outlives a press that changes the scene (Jugar, Salir al menú).
+static func _play_click(from: Node) -> void:
+	if not from.is_inside_tree():
+		return
+	var root: Window = from.get_tree().root
+	var player := root.get_node_or_null(^"UiClick") as AudioStreamPlayer
+	if player == null:
+		player = AudioStreamPlayer.new()
+		player.name = "UiClick"
+		player.stream = SynthAudio.scanner_beep()
+		player.bus = &"SFX"
+		player.volume_db = CLICK_DB
+		root.add_child(player)
+	player.play()
 
 
 static func _button_style(fill: Color, shadow: int) -> StyleBoxFlat:

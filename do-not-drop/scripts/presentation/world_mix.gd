@@ -8,18 +8,19 @@ extends RefCounted
 ##
 ##   engine   loop RMS       -20 dBFS   the truck's engine at full throttle
 ##   impact   peak           -14 dBFS   the hardest hit
-##   ambient  loop RMS       -28 dBFS   wind, distant road, depot hum, forklift engine
+##   noise    loop RMS       -35 dBFS   wind and the distant road: band noise, which
+##                                      at -28 read as rain on the depot's roof
 ##   nature   loudest 100 ms -24 dBFS   birds or crickets: chirps with silence between,
 ##                                      whose RMS would say nothing about how loud they are
-##   rain     loop RMS       -24 dBFS   outdoors; louder drumming under a roof
+##   rain     loop RMS       -32 dBFS   outdoors; louder in the cabin, silent in the depot
+##                                      (-24 at first: it drowned everything, playtest 2026-09-25)
 ##   signal   loudest 100 ms -18 dBFS   one-shots that call for attention: horn,
 ##                                      crossing bell, doorbell, animals, door motor
 ##   detail   peak           -26 dBFS   small things: loose clutter in the cargo box
 ##   music    loop RMS       -24 dBFS   the depot's radio (Music bus)
-##   room     loop RMS       -42 dBFS   the depot's hum: always on, felt more than heard
 ##   machine  loop RMS       -40 dBFS   the forklift's engine going back and forth
 ##   repeat   loudest 100 ms -30 dBFS   the forklift's reverse beep, over and over
-## (The last three were "ambient" and "signal" at first, and the depot got
+## (The last two were "ambient" and "signal" at first, and the depot got
 ## grating: a sound that never stops sits well under one that calls once.)
 ##
 ## The table and the before/after values are in docs/audio-mundo.md.
@@ -32,18 +33,24 @@ const HORN_DB: float = -10.5
 const CLUTTER_DB: float = -26.0
 
 # Outdoors (route.gd, route_sky.gd).
-const WIND_DB: float = -14.5
+## The wind, the distant road, the crickets and the dog's bark are
+## normalised by SynthAudio itself (its *_STREAM_*_DB constants), so these
+## four are just the class target minus that.
+const WIND_DB: float = -15.0
 const BIRDS_DB: float = -4.5
-const CRICKETS_DB: float = -4.0
-const DISTANT_ROAD_DB: float = -12.0
-const RAIN_DB: float = 0.0
-## Rain drums louder on a roof overhead (the cabin, the depot).
-const RAIN_UNDER_ROOF_BOOST_DB: float = 6.0
+## 1.5 dB under the nature target on purpose: crickets are the one bed
+## that plays all night (playtest 2026-09-25).
+const CRICKETS_DB: float = -5.5
+const DISTANT_ROAD_DB: float = -15.0
+const RAIN_DB: float = -8.0
+## Rain drums louder on the cabin's roof. Inside the depot it isn't heard at
+## all (RouteSky.rain_db): under the big tin roof it was deafening.
+const RAIN_UNDER_ROOF_BOOST_DB: float = 3.0
 
 # Along the route (rail_crossing_segment.gd, chasing_dog.gd,
 # flock_crossing.gd, delivery_house.gd).
 const CROSSING_BELL_DB: float = 0.0
-const DOG_BARK_DB: float = -7.5
+const DOG_BARK_DB: float = -6.0
 const SHEEP_BLEAT_DB: float = -7.5
 const DOORBELL_DB: float = -7.0
 ## The resident at the door: a cheer for a good box, a groan for a wreck, a
@@ -54,7 +61,6 @@ const RESIDENT_AT_RISK_OFFSET_DB: float = -6.0
 const RESIDENT_WRONG_BOX_OFFSET_DB: float = -10.0
 
 # The depot (depot.gd, depot_forklift.gd, depot_roller_door.gd).
-const WAREHOUSE_HUM_DB: float = -21.5
 ## The radio plays mus_depot_radio_loop.ogg (N-403, tools/audio/compose_music.py),
 ## measured in assets/audio/music/loudness.json: -19.4 dBFS RMS, -4.5 dB to -24.
 const DEPOT_RADIO_DB: float = -4.5

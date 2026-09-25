@@ -6,8 +6,9 @@ do-not-drop/assets/models/characters/sm_char_player_rounded.glb:
 - one joined, decimated mesh (~20k tris instead of 64k), ASCII material names
   (Shirt is surface 0, so the player's crew colour lands on the T-shirt);
 - rig rotated to face Godot's -Z and scaled 0.5 (about 1.74 m tall);
-- the clips player.gd plays: Idle, Walk, Jump, PickUpPackage, Sit. The IK
-  controls are baked into the deform bones by the exporter's sampling.
+- the clips player.gd plays: Idle, Walk, Stroll, Jump, PickUpPackage, Sit
+  (animation_library.py). The IK controls are baked into the deform bones
+  by the exporter's sampling; model_fixes.py corrects skin weights first.
 
 Run:
   blender --background --factory-startup -noaudio art/rounded_character/personaje_redondeado.blend \
@@ -27,17 +28,9 @@ scene.render.fps = FPS
 rig = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
 meshes = [o for o in bpy.data.objects if o.type == 'MESH' and o.parent == rig]
 
-# The calf's hidden rim must follow the short hem's thigh, not blend into
-# the shin: otherwise bent knees pull skin through the front of the shorts.
-for o in meshes:
-    if not o.name.startswith('Pierna.'):
-        continue
-    side = o.name.rsplit('.', 1)[-1]
-    for v in o.data.vertices:
-        t = max(0., min(1., (v.co.z - .43) / .14))
-        t = t*t*(3-2*t)
-        o.vertex_groups['thigh.'+side].add([v.index], t, 'REPLACE')
-        o.vertex_groups['shin.'+side].add([v.index], 1-t, 'REPLACE')
+sys.path.insert(0, str(HERE))
+import model_fixes
+model_fixes.apply(rig)
 
 # --- Materials: short ASCII names Godot code can look up -------------------
 MAT_NAMES = {'01': 'Skin', '02': 'Shirt', '03': 'ShirtTrim', '04': 'Shorts',
@@ -46,19 +39,7 @@ for mat in bpy.data.materials:
     if mat.name[:2] in MAT_NAMES:
         mat.name = MAT_NAMES[mat.name[:2]]
 
-# --- Mesh: trim hidden overlaps, drop morphs, decimate, join ----------------
-# Hidden in the rest pose, but once the thighs swing forward (Sit, Jump) the
-# leg tops poke out of the shorts and the shorts' waist out of the shirt:
-# each is weighted differently from the garment over it. Cut them where the
-# garment still covers the cut (shorts hem 0.577-0.673, shirt hem ~1.11).
-TRIM_ABOVE = {'Pierna': .64, 'Short · pieza': 1.3}
-for o in meshes:
-    limit = next((z for k, z in TRIM_ABOVE.items() if o.name.startswith(k)), None)
-    if limit is None: continue
-    bm = bmesh.new(); bm.from_mesh(o.data)
-    doomed = [v for v in bm.verts if (o.matrix_world @ v.co).z > limit]
-    bmesh.ops.delete(bm, geom=doomed, context='VERTS')
-    bm.to_mesh(o.data); bm.free()
+# --- Mesh: drop morphs, decimate, join (hidden overlaps: model_fixes) ---------
 RATIOS = {'Brazo': .25, 'Camiseta · cuerpo': .25, 'Short · pieza': .25, 'Cabeza': .8}
 bpy.ops.object.mode_set(mode='OBJECT') if bpy.context.object and bpy.context.object.mode != 'OBJECT' else None
 for o in meshes:
@@ -87,7 +68,6 @@ while body.material_slots[0].material.name != 'Shirt':
 tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
 
 # --- Animation library: grounded contact paths and staged one-shots ----------
-sys.path.insert(0, str(HERE))
 from animation_library import build, FPS, DURATIONS
 scene.render.fps = FPS
 bpy.context.view_layer.objects.active = rig
@@ -111,7 +91,7 @@ if PREVIEW:
         if o.type == 'MESH' and o != body: o.hide_render = True
     cam.location = (4.6, 3.4, 1.5); cam.data.ortho_scale = 2.6  # front 3/4 (rig already faces +Y)
     cam.rotation_euler = (Vector((0, 0, .85)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
-    for act_name, frames in [('Idle', [0]), ('Walk', [0, 8, 15, 23]), ('Jump', [6, 26, 56]), ('PickUpPackage', [20, 38, 75]), ('Sit', [0])]:
+    for act_name, frames in [('Idle', [0]), ('Walk', [0, 5, 10, 15]), ('Stroll', [0, 9, 18, 27]), ('Jump', [6, 24, 56, 64]), ('PickUpPackage', [20, 32, 60, 90]), ('Sit', [0])]:
         rig.animation_data.action = bpy.data.actions[act_name]
         for f in frames:
             scene.frame_set(f)

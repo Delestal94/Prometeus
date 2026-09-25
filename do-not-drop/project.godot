@@ -215,6 +215,7 @@ locale/translations=PackedStringArray("res://translations/strings_world.es.trans
 3d_physics/layer_4="player"
 3d_physics/layer_5="interaction_area"
 3d_physics/layer_6="route_trigger"
+3d_physics/layer_7="vehicle_shell"
 
 [physics]
 

@@ -13,6 +13,7 @@ extends SceneTree
 const PACKAGE_LAYER: int = 4
 const PLAYER_LAYER: int = 8
 const VEHICLE_LAYER: int = 2
+const SHELL_LAYER: int = 64
 
 var _failures: int = 0
 
@@ -39,7 +40,8 @@ func _initialize() -> void:
 		_expect(item.collision_layer == 0, "%s sits on no layer: nothing looks for it" % item.name)
 		_expect(item.collision_mask & (PACKAGE_LAYER | PLAYER_LAYER) == 0,
 			"%s never touches packages or players" % item.name)
-		_expect(item.collision_mask & VEHICLE_LAYER != 0, "%s still rattles against the truck's walls" % item.name)
+		_expect(item.collision_mask & SHELL_LAYER != 0, "%s still rattles against the truck's walls (its cargo shell)" % item.name)
+		_expect(item.collision_mask & VEHICLE_LAYER == 0, "%s never pushes the truck's own body" % item.name)
 		_expect(host_truck.to_local(item.global_position).length() < 3.0, "%s starts inside the truck" % item.name)
 	_expect(not host_truck.freeze, "The host's truck is the one really simulated")
 	_expect(clutter_mass < host_truck.mass * 0.01,

@@ -23,6 +23,8 @@ var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
 var _controls_label: Label
 var _binding_buttons: Dictionary = {}
+## Every sound in the game, to mute one by one (sound_check_panel.gd).
+var _sound_check: Control
 var _listening_action: StringName = &""
 
 
@@ -57,6 +59,8 @@ func _build() -> void:
 	_effects_slider.value_changed.connect(func(value: float) -> void: GameSettings.effects_volume = value)
 	_voice_slider = UiTheme.slider_row(column, "Volumen de voces/pings", 0.0, 1.0, 0.05, GameSettings.voice_volume)
 	_voice_slider.value_changed.connect(func(value: float) -> void: GameSettings.voice_volume = value)
+	var sounds: Button = UiTheme.button(column, "Sonidos del juego (uno por uno)…", false, Vector2(0, 40))
+	sounds.pressed.connect(_open_sound_check)
 	_fov_slider = UiTheme.slider_row(column, "Campo de visión", 65.0, 100.0, 1.0, GameSettings.preferred_fov)
 	_fov_slider.value_changed.connect(func(value: float) -> void: GameSettings.preferred_fov = value)
 	_shake_slider = UiTheme.slider_row(column, "Sacudida de cámara", 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
@@ -104,6 +108,15 @@ func _build() -> void:
 	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back.pressed.connect(close)
 	UiTheme.button(actions, "Restablecer", false).pressed.connect(_reset)
+
+
+func _open_sound_check() -> void:
+	if _sound_check == null:
+		_sound_check = preload("res://scripts/ui/sound_check_panel.gd").new()
+		_sound_check.name = "SoundCheck"
+		add_child(_sound_check)
+		_sound_check.connect(&"closed", func() -> void: _volume_slider.grab_focus())
+	_sound_check.call(&"open")
 
 
 ## Mirrors the actual input map (project.godot), per device, so the list
@@ -186,5 +199,7 @@ func open() -> void:
 
 
 func close() -> void:
+	if _sound_check != null and _sound_check.visible:
+		_sound_check.call(&"close")
 	hide()
 	closed.emit()

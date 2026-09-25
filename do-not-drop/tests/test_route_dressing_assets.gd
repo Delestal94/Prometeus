@@ -124,8 +124,11 @@ func _run() -> void:
 		_expect(converted != null and converted.get_shader_parameter(&"sky_top_color") == Color(0.2, 0.3, 0.4), "The converted sky keeps the level's own colours")
 		_expect(sky.find_children("*", "MeshInstance3D", true, false).size() == sky.horizon.find_children("*", "MeshInstance3D", true, false).size(), "No 3D cloud meshes anymore, only the horizon")
 		var horizon_mesh: MeshInstance3D = sky.horizon.find_children("*", "MeshInstance3D", true, false)[0]
-		var material := horizon_mesh.get_surface_override_material(0) as BaseMaterial3D
-		_expect(material != null and material.disable_fog, "The horizon skips fog so it doesn't vanish into it")
+		var material := horizon_mesh.get_surface_override_material(0) as ShaderMaterial
+		_expect(material != null and material.shader == RouteSky.HORIZON_SHADER and material.shader.code.contains("fog_disabled"),
+			"The horizon skips fog so it doesn't vanish into it (shaders/horizon_mountains)")
+		_expect(material != null and (material.get_shader_parameter(&"top_y") as float) > (material.get_shader_parameter(&"foot_y") as float) + 40.0,
+			"The horizon shader knows how high the ring reaches, to light the ridges and haze the foot")
 	route.free()
 
 	# ...and in endless mode, which never builds route.gd at all.

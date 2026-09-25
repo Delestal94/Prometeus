@@ -141,6 +141,17 @@ del puntaje — entregas, vecinos sin atender, fotos y multiplicador — además
 
 ## Tests
 
+**Rostros del personaje (2026-09-24):** en Personalización, la pestaña **Rostro**
+permite combinar seis estilos de ojos y seis de boca, o dejar cada parte vacía.
+La vista 2D y el personaje 3D muestran la misma combinación al instante. Se guarda
+en el perfil, se aplica al jugador del depósito y se replica a los compañeros.
+Uniforme y camión conservan sus propias pestañas y desbloqueos.
+
+`test_character_faces` cubre selecciones independientes, guardado/migración,
+preview, materiales por jugador y configuración de réplica. `test_character_motion`
+mide el cierre de los loops, el deslizamiento del pie apoyado y el alcance real de
+las muñecas a la caja. `render_character_faces.gd` genera capturas para revisión visual.
+
 **La forma normal:** `tools/run-tests.sh` corre toda la batería headless en paralelo (~1 minuto)
 y muestra solo el resumen y las fallas; `tools/run-tests.sh depot traps` corre solo los tests
 cuyo nombre contiene esos textos. Después de clonar, `tools/setup-hooks.sh` activa el hook
@@ -204,6 +215,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ride_sync.gd
+<godot> --headless --path do-not-drop --script res://tests/test_cargo_shell.gd
+<godot> --headless --path do-not-drop --script res://tests/test_sound_check.gd
 <godot> --headless --path do-not-drop --script res://tests/test_session_sync.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
@@ -342,6 +355,20 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   parado atrás se mueve y gira con el camión; `controls_enabled` se replica
   (un cliente no podía manejar); una caja ancha en el estante no se mete en
   la pared.
+- `test_route_terrain` — el terreno: colisión igual a lo que se ve, sin escalones en las
+  uniones, relieve real, borde que no deja caer al vacío, el camión sube la loma, y un
+  modelo importado apoyado sobre el terreno conserva todos sus materiales (la valla salía
+  gris).
+- `test_sound_check` — "Sonidos del juego" (Opciones): cada sonido aparece por quién lo
+  toca y qué es (el motor del autoelevador y el del camión por separado), se silencia con
+  una copia muda que sigue sonando, "Solo" deja uno, se desmutea, el silencio alcanza a los
+  que aparecen después y, con la lista abierta, todo suena aunque el juego esté en pausa.
+- `test_cargo_shell` — las cajas, los jugadores y lo suelto chocan con la cáscara
+  cinemática del camión, no con el camión: dos camiones iguales, uno con 80 kg de
+  cajas sueltas atrás, aceleran, se golpean y frenan exactamente igual; la cáscara
+  sigue al camión a toda velocidad (las cajas siguen adentro después del golpe) y
+  salta con él si se lo mueve a mano (playtest 2026-09-25: andaba a tirones y una
+  caja salió por adelante).
 - `test_session_sync` — segunda tanda de multijugador: lo que se le manda al que
   entra tarde (partida en curso, entregas, cajas ya entregadas, portón), la caja
   entregada que desaparece en todos, cargar y soltar dentro del camión en marcha,
@@ -375,7 +402,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   del anfitrión.
 - `test_main_menu` — que el menú cargue y que cada botón/atajo elija el
   transporte que promete (crítico: "Crear sala" y "Unirse por IP" tienen que
-  terminar en el mismo transporte o nunca se van a encontrar).
+  terminar en el mismo transporte o nunca se van a encontrar); que el inicio
+  muestre un solo "¡JUGAR!" y pocos botones (el campo de IP vive en "Unirse a
+  una sala") y que Esc vuelva un nivel.
 - `test_stuck_detection` — N-803: un camión trabado con el acelerador apretado (chasis
   apoyado en un obstáculo, ruedas en el aire) termina la entrega a los 6 s
   (`level_base.gd` `STUCK_SECONDS`); estacionado sin pisar el acelerador, no.
@@ -443,7 +472,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   velocidad atropella una (multa, golpe y cartel en el HUD), esperar deja cruzar a todas y
   la bocina las dispersa fuera del asfalto.
 - `test_chasing_dog` — el perro del pueblo corre al lado del camión ladrando sin tocarlo,
-  se rinde a los ~150 m y la bocina lo manda a casa.
+  se rinde a los ~150 m y la bocina lo manda a casa. Es el Shiba Inu con esqueleto: nunca
+  galopa quieto, galopa a la par del camión y sus ladridos no van a ritmo fijo.
 - `test_road_hazards` — en rutas reales: ramas y troncos solo con lluvia, sólidos y siempre
   dejando un carril libre; el rebaño solo en zona de campo y el perro solo en pueblo.
 - `test_dashboard_gps` — el GPS del tablero muestra la distancia por la ruta a la próxima
@@ -622,8 +652,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   sin tocar el material importado, ambas se replican y respetan los desbloqueos.
 - `test_spectator` — solo un pasajero sin caja que salvar puede pasar a la cámara de
   persecución (Tab), y la vista vuelve sola al bajarse.
-- `test_tension_music` — la capa de tensión sigue el riesgo de la carga y se calma con lo
-  que ya está perdido.
+- `test_tension_music` — música con pausas y fundidos suaves, afinación estable y una capa
+  discreta de tensión solo ante carga en riesgo; vuelve a la calma al resolverse.
 - `test_score_breakdown` — el desglose de resultados siempre suma el puntaje mostrado.
 - `test_endless_difficulty` — el endless se endurece con la distancia sin encadenar tres
   tramos difíciles.

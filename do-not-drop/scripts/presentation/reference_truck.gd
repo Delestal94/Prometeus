@@ -305,7 +305,7 @@ func _collect_doors() -> void:
 ## A solid slab the size of the door leaf, hanging from its hinge so it
 ## swings with the animation: an open door stops players and the box in
 ## their hands instead of being walked (or carried) straight through. On
-## the vehicle layer with no mask of its own, like the ramp: it never
+## the cargo shell's layer with no mask of its own, like the ramp: it never
 ## touches the road or pushes the truck.
 func _add_leaf_collision(hinge: Node3D) -> void:
 	var bounds := AABB()
@@ -320,7 +320,7 @@ func _add_leaf_collision(hinge: Node3D) -> void:
 		return
 	var body := StaticBody3D.new()
 	body.name = "LeafCollision"
-	body.collision_layer = 2
+	body.collision_layer = 64  # vehicle.gd SHELL_LAYER
 	body.collision_mask = 0
 	var shape := CollisionShape3D.new()
 	var slab := BoxShape3D.new()
@@ -652,6 +652,8 @@ func _process(delta: float) -> void:
 ## Rack decks, end frames and wheel-well humps are drawn from the collision
 ## shapes themselves, so the boxes can never look like they float above or
 ## sink into a shelf.
+## Between the rack's two end frames, in vehicle space (RackLowerDeckCollision).
+const RACK_CENTRE_Z: float = 3.11
 func _build_cargo_fittings() -> void:
 	var fittings := Node3D.new()
 	fittings.name = "CargoFittings"
@@ -677,9 +679,13 @@ func _build_cargo_fittings() -> void:
 			continue
 		var size: Vector3 = frame.size
 		var at: Vector3 = frame.position
-		_add_box(fittings, Vector3(size.x, size.y, 0.02), at, _steel)
+		# The collider runs well past the steel, away from the rack (see
+		# vehicle.tscn): the frame is drawn on its face towards the shelves.
+		var inward: float = signf(RACK_CENTRE_Z - at.z)
+		var face: Vector3 = Vector3(at.x, at.y, at.z + inward * (size.z * 0.5 - 0.01))
+		_add_box(fittings, Vector3(size.x, size.y, 0.02), face, _steel)
 		# Upright on the aisle corner.
-		_add_box(fittings, Vector3(0.05, size.y, 0.05), Vector3(at.x + size.x * 0.5 - 0.025, at.y, at.z), _accent)
+		_add_box(fittings, Vector3(0.05, size.y, 0.05), Vector3(at.x + size.x * 0.5 - 0.025, at.y, face.z - inward * 0.015), _accent)
 	for shape_name: String in ["LeftWheelWellCollision", "RightWheelWellCollision"]:
 		var well := _box_shape(shape_name)
 		if not well.is_empty():

@@ -126,7 +126,9 @@ func horizon_light() -> float:
 		TimeOfDay.DUSK:
 			light = 0.72
 		TimeOfDay.NIGHT:
-			light = 0.16
+			# Moonlit, a shade under the night sky's horizon: at 0.16 the ring
+			# was a black cut-out (playtest 2026-09-25).
+			light = 0.32
 	if weather == Weather.RAIN:
 		light *= 0.75
 	return light

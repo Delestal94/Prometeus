@@ -5,6 +5,8 @@ extends Node3D
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 @export var steering_ratio: float = 7.0
 @export var headlight_energy: float = 1.6
+## However far the mood boosts the beams (world_mood.gd), their energy stops here.
+const HEADLIGHT_ENERGY_BOOST_CAP: float = 1.6
 @export var impact_flicker_seconds: float = 0.16
 @export var engine_volume_db: float = WorldMix.ENGINE_DB
 @export var impact_thud_volume_db: float = WorldMix.IMPACT_DB
@@ -225,11 +227,17 @@ func update_presentation(delta: float) -> void:
 	var flicker: float = 0.3 if _flicker_remaining > 0.0 else 1.0
 	# At night, in rain or fog the beams reach further and burn brighter
 	# (world_mood.gd, tareas de Nacho #70): there they're how you see the road.
+	# The reach comes from a flatter falloff, not from raw energy: at 4x the
+	# first few metres burned out (a cone or a barrier by the road came out
+	# a washed-out beige, playtest 2026-09-25), while the far road now gets
+	# about as much light as before.
 	var boost: float = float(WorldMood.active.get("headlight_boost", 1.0))
+	var night: float = clampf((boost - 1.0) / 3.0, 0.0, 1.0)
 	for index: int in range(headlights.size()):
-		headlights[index].light_energy = headlight_energy * boost * flicker if running else 0.0
+		headlights[index].light_energy = headlight_energy * minf(boost, HEADLIGHT_ENERGY_BOOST_CAP) * flicker if running else 0.0
 		headlights[index].spot_range = 24.0 * minf(boost, 2.2)
 		headlights[index].spot_angle = 32.0 + minf(boost - 1.0, 1.5) * 6.0
+		headlights[index].spot_attenuation = lerpf(1.2, 0.8, night)
 		_front_materials[index].emission_energy_multiplier = 0.8 * flicker if running else 0.0
 	for material: StandardMaterial3D in _rear_materials:
 		material.emission_energy_multiplier = 2.4 if vehicle.presentation_braking else (0.18 if running else 0.0)

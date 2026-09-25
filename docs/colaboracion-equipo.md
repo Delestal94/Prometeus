@@ -9,6 +9,18 @@
 
 ## El criterio: dividir por carpeta, no solo por tema
 
+Aviso 2026-09-25: dirección sonora tranquila solicitada por el usuario, tomando
+como referencia la sensación de calma de Minecraft. Se ajustan
+`presentation/ingame_music.gd` (pausas, fundidos y tensión sin desafinar) y la zona
+compartida `presentation/synth_audio.gd` (pájaros espaciados), con
+sus pruebas de audio y criterios en `docs/audio-mundo.md`.
+
+Aviso 2026-09-24: personalización de rostro solicitada por el usuario. Se trabaja
+en `ui/cosmetics_panel.gd`, `player/player.gd`, `player.tscn` y en el perfil compartido
+`core/unlock_manager.gd` para guardar ojos y boca independientes. Los nuevos assets
+y helpers viven en `assets/textures/characters/faces/` y `scripts/presentation/`.
+Continúa la comprobación de la biblioteca de animaciones del personaje redondeado.
+
 Dos personas editando el mismo archivo al mismo tiempo generan conflictos de merge
 sin importar qué tan bien organizadas estén las tareas. Por eso la división real acá
 es por **dominio de archivos**, y las tareas de cada lista caen naturalmente adentro
@@ -117,6 +129,46 @@ las fotos de entregas intactas conservan su bono normal, pero no dan ese mérito
 También se agregó `test_merit.gd` a la lista compartida de tests del `README.md`.
 Pruebas focalizadas: `test_merit`, `test_crew_progression`, trampas, manejo de paquetes
 y cámara del celular.
+## Aviso activo: menú principal por páginas (2026-09-25)
+
+Pedido del usuario (tareas de Nacho #179): el menú mostraba diez botones con el mismo peso. Lo
+hizo Nacho, en archivos de Slatex:
+- `scripts/ui/main_menu.gd`: páginas dentro de la misma tarjeta (`enum Page`, `_show_page()`,
+  `PAGE_PARENT`). Inicio: "¡JUGAR!", "Garaje" y Opciones / Cómo jugar / Salir. Jugar: solo,
+  Endless, Crear sala, Unirse a una sala. Unirse: el campo de IP (`_address_field`, mismo nombre).
+  Garaje: Apariencia, Progreso, Récords. `_host_session()`, `_join_by_address()` y
+  `join_steam_lobby()` no cambiaron de firma; ahora muestran su página para que el estado se
+  lea donde corresponde. La tarjeta es translúcida sobre una copia desenfocada del arte
+  (`_build_frost()`, shader inline); en headless queda opaca.
+- `scripts/ui/ui_theme.gd` `button()`: hover levanta el botón 2 px (`HOVER_LIFT`) y cada
+  presión suena `SynthAudio.scanner_beep()` en el bus SFX, con un único `UiClick` en la raíz.
+  Afecta a todos los botones del juego (pausa, resultados, opciones).
+- `tests/test_main_menu.gd`: chequea la jerarquía y la navegación con Esc.
+- Zona compartida: `presentation/synth_audio.gd` suma `scanner_beep()`;
+  `presentation/sound_audit.gd` lo nombra en "Sonidos del juego".
+
+## Aviso activo: la carga ya no empuja al camión (2026-09-25)
+
+Playtest del usuario (tareas de Nacho #172-177): el camión andaba a tirones y una caja lo
+atravesó. Lo hizo Nacho. **Capa física nueva: 7, `vehicle_shell`** (`project.godot`). El
+camión (`vehicle.gd`) arma una cáscara cinemática con copias de todas sus formas; lo que va
+atrás choca con la cáscara, y el camión en sí solo con el entorno (máscara 1). Regla para lo
+nuevo: **nada que no sea el mundo lleva la capa 2 en su máscara**; va la 64 (capa 7). Los rayos
+y consultas contra el camión (capa 2) siguen igual. Archivos de Slatex tocados, solo máscaras:
+- `player/player.gd`: `ON_FOOT_MASK`/`RIDING_MASK` usan `SHELL_LAYER` en vez de la capa 2;
+  `platform_floor_layers` excluye las dos; `leave_seat()` vuelve a `ON_FOOT_MASK`.
+  `player.tscn`: máscara 69. `player/player_ragdoll.gd`: máscara `1 | 64`.
+- `package/package.gd`: `LOOSE_MASK` (1 | 4 | 64) en lugar del 7; `package.tscn`: máscara 69;
+  `package_feedback.gd` (la etiqueta suelta) y `package_contents_view.gd` (`DEBRIS_MASK`), igual.
+- Zona compartida: `presentation/synth_audio.gd` rehace `ambient_wind`, `distant_road`,
+  `night_crickets`, `dog_bark` y **`wood_creak`** (el crujido de Peso creciente: era el
+  "ruido de interferencia"; mismo nivel que antes) y suma `_normalized()`, `_seamless_loop()` y
+  `_Resonator`. Ninguna firma cambió. `vehicle_presentation.gd`: los faros de noche con tope
+  de energía. `liquid_slosh`, `explosive_tick` y `hostile_hiss` pasan por la caché como el resto.
+- Pedido del usuario después: "Sonidos del juego" en Opciones para encontrar el ruido. En `ui/`
+  (de Slatex): `options_panel.gd` suma un botón bajo los volúmenes y `_open_sound_check()`
+  (cerrar Opciones cierra también la lista); nuevo `ui/sound_check_panel.gd`. La lógica es de
+  Nacho: `presentation/sound_audit.gd`. Test: `test_sound_check`.
 
 ## Aviso activo: la entrega vuelve a terminar en la meta (2026-09-24)
 

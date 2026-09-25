@@ -195,21 +195,27 @@ func conform_geometry(node: Node) -> void:
 			source = source.duplicate()
 			source.subdivide_width = maxi(0, ceili(source.size.x / STEP) - 1)
 			source.subdivide_depth = maxi(0, ceili(source.size.z / STEP) - 1)
-		var surface := SurfaceTool.new()
-		surface.create_from(source, 0)
-		var arrays: Array = surface.commit_to_arrays()
-		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		for i: int in range(vertices.size()):
-			var p: Vector3 = to_local(node.to_global(vertices[i]))
-			p.y += height_at(p)
-			vertices[i] = node.to_local(to_global(p))
-		arrays[Mesh.ARRAY_VERTEX] = vertices
-		# Keep the source's own normals. Regenerating them here merged every
-		# vertex that shares a position, so a box's corners got averaged and
-		# barriers, cones and rails shaded like soft pillows. The ground under
-		# them is gentle enough that unwarped normals light them correctly.
+		# Every surface, each with its own material: rebuilt from the first
+		# surface alone and without materials, an imported model (the road
+		# barrier: white board, red stripes, orange legs) came out in the
+		# default grey -- "no textures" (playtest 2026-09-25).
 		var mesh := ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		for index: int in range(source.get_surface_count()):
+			var surface := SurfaceTool.new()
+			surface.create_from(source, index)
+			var arrays: Array = surface.commit_to_arrays()
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			for i: int in range(vertices.size()):
+				var p: Vector3 = to_local(node.to_global(vertices[i]))
+				p.y += height_at(p)
+				vertices[i] = node.to_local(to_global(p))
+			arrays[Mesh.ARRAY_VERTEX] = vertices
+			# Keep the source's own normals. Regenerating them here merged every
+			# vertex that shares a position, so a box's corners got averaged and
+			# barriers, cones and rails shaded like soft pillows. The ground under
+			# them is gentle enough that unwarped normals light them correctly.
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			mesh.surface_set_material(index, source.surface_get_material(index))
 		node.mesh = mesh
 		var parent: Node = node.get_parent()
 		if parent is StaticBody3D:

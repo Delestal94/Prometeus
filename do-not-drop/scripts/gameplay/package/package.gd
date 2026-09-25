@@ -27,6 +27,10 @@ const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
 const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
 const PACKAGE_COLLISION_COOLDOWN: float = 0.16
 const PLAYER_HIT_MIN_SPEED: float = 4.0
+## What a loose box collides with: the environment, other boxes and the
+## truck's cargo shell (vehicle.gd SHELL_LAYER) -- never the truck's own body,
+## which a box sliding about the bay used to shove (it drove in jerks).
+const LOOSE_MASK: int = 1 | 4 | 64
 const PLAYER_HIT_PUSH_SCALE: float = 0.38
 
 var trap_behavior: Resource
@@ -34,7 +38,7 @@ var is_held: bool = false:
 	set(value):
 		is_held = value
 		collision_layer = 0 if value else 4
-		collision_mask = 0 if value else 7
+		collision_mask = 0 if value else LOOSE_MASK
 var is_loaded: bool = false
 ## Set by place_at(), cleared by release_mount(). Lets a pickup free its
 ## shelf slot with a direct reference instead of scanning every mount in
@@ -503,7 +507,7 @@ func set_held(held: bool) -> void:
 	# Disabled while carried: a held package following the hold point every
 	# frame shouldn't shove the player or clip weirdly through the world.
 	collision_layer = 0 if held else 4
-	collision_mask = 0 if held else 7
+	collision_mask = 0 if held else LOOSE_MASK
 	# The velocity sampled before a pickup has nothing to do with the first
 	# physics step after a drop; comparing the two read as a hard impact.
 	_has_previous_velocity = false

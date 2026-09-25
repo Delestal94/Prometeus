@@ -25,10 +25,11 @@ const BOARD: float = 0.012
 ## lot of boxes, and nothing reads them back.
 const DEBRIS_LIFETIME: float = 25.0
 const FILLER_BITS: int = 10
-## environment | vehicle | packages: pieces land on the road, the cargo floor
-## or other boxes, but sit on no layer of their own, so they never block a
-## player or trip a trap's impact check.
-const DEBRIS_MASK: int = 1 | 2 | 4
+## environment | the truck's cargo shell (vehicle.gd SHELL_LAYER) | packages:
+## pieces land on the road, the cargo floor or other boxes, but sit on no
+## layer of their own, so they never block a player or trip a trap's impact
+## check.
+const DEBRIS_MASK: int = 1 | 64 | 4
 
 var _package: RigidBody3D
 var _package_id: StringName

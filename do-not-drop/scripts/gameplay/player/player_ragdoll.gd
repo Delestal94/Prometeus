@@ -49,7 +49,9 @@ func _make_part(data: Dictionary, impulse: Vector3, carried: Vector3 = Vector3.Z
 	body.position = data["p"]
 	body.mass = 1.0
 	body.collision_layer = 0
-	body.collision_mask = 3
+	# The ground and the truck's cargo shell (vehicle.gd SHELL_LAYER), never
+	# the truck itself: a ragdoll flopping in the bay mustn't shove it.
+	body.collision_mask = 1 | 64
 	var mesh := MeshInstance3D.new()
 	var capsule := CapsuleMesh.new()
 	var size: Vector3 = data["s"]

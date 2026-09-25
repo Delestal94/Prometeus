@@ -3,9 +3,13 @@ extends Node3D
 ## assets/tools/build_wildlife.py for the pivot names): no armature, no
 ## AnimationPlayer, just a handful of rotations driven by time.
 ##
-## The deer is the exception: it's a rigged, skinned model with keyframed
-## animations (Quaternius' "Stag", CC0 -- see assets/README.md), so it plays
-## those instead, cross-fading between them by mode.
+## The deer and the chasing dog are the exception: rigged, skinned models
+## with keyframed animations (Quaternius' "Stag" and "Shiba Inu", CC0 -- see
+## assets/README.md), so they play those instead, cross-fading between them.
+## The dog picks its gait from how fast it really covers ground
+## (`ground_speed`) and paces the clip to it: the old jointed dog swung both
+## front legs together at one rate whatever its speed, and alongside a slow
+## truck it galloped on the spot (playtest 2026-09-25).
 ##
 ## Roadside animals are pure scenery and run all of this locally on each
 ## client -- a rabbit hopping off a few frames earlier on one screen than on
@@ -25,6 +29,9 @@ var species: StringName = &""
 var mode: Mode = Mode.IDLE
 ## Set by WildlifeCrossing: it moves this animal, so no self-fleeing.
 var steered: bool = false
+## Set each frame by whoever moves a steered animal (ChasingDog): how fast
+## it's covering ground, m/s.
+var ground_speed: float = 0.0
 
 var _time: float = 0.0
 var _phase: float = 0.0
@@ -50,6 +57,19 @@ const RIGGED_LOOPS: Array[StringName] = [&"Gallop", &"Walk", &"Idle", &"Idle_2",
 ## Grazing routine: mostly eating, sometimes head-up looking around.
 const RIGGED_IDLES: Array[StringName] = [&"Eating", &"Eating", &"Idle", &"Idle_Headlow", &"Idle_2"]
 const RIGGED_BLEND: float = 0.25
+## The Shiba Inu is authored ~3 m tall; the village dog stands ~0.55 m at
+## the shoulder, like the old one.
+const DOG_RIGGED_SCALE: float = 0.26
+const DOG_LOOPS: Array[StringName] = [&"Gallop", &"Walk", &"Idle", &"Idle_2", &"Idle_2_HeadLow", &"Eating"]
+const DOG_IDLES: Array[StringName] = [&"Idle", &"Idle_2", &"Idle_2_HeadLow", &"Idle", &"Eating"]
+## Ground one cycle of each clip covers at that scale: the clip plays at the
+## speed over this, so the paws keep pace with the ground.
+const DOG_STRIDE := {&"Walk": 0.6, &"Gallop": 2.2}
+## Gait changes, with some overlap so it doesn't flicker between the two.
+const DOG_GALLOP_ABOVE: float = 3.6
+const DOG_WALK_BELOW: float = 2.6
+const DOG_STILL_BELOW: float = 0.2
+var _dog_gait: StringName = &"Idle"
 
 
 func _ready() -> void:
@@ -92,17 +112,20 @@ func _limit_draw_distance(distance: float) -> void:
 
 
 func _setup_rigged() -> void:
-	species = &"deer"
-	var fix := Transform3D(Basis(Vector3.UP, PI).scaled(Vector3.ONE * RIGGED_SCALE), Vector3.ZERO)
+	var is_dog: bool = find_child("ShibaInu", true, false) != null
+	species = &"dog" if is_dog else &"deer"
+	# Both are authored facing +Z.
+	var fix := Transform3D(Basis(Vector3.UP, PI).scaled(Vector3.ONE * (DOG_RIGGED_SCALE if is_dog else RIGGED_SCALE)), Vector3.ZERO)
 	for child: Node in get_children():
 		if child is Node3D:
 			(child as Node3D).transform = fix * (child as Node3D).transform
-	for animation_name: StringName in RIGGED_LOOPS:
+	for animation_name: StringName in (DOG_LOOPS if is_dog else RIGGED_LOOPS):
 		if _animator.has_animation(animation_name):
 			_animator.get_animation(animation_name).loop_mode = Animation.LOOP_LINEAR
 	var seed_value: int = hash(Vector3i(global_position.round()))
 	_phase = float(absi(seed_value) % 1000) / 1000.0
-	_play(RIGGED_IDLES[absi(seed_value) % RIGGED_IDLES.size()])
+	var idles: Array[StringName] = DOG_IDLES if is_dog else RIGGED_IDLES
+	_play(idles[absi(seed_value) % idles.size()])
 	# Start each deer somewhere in its loop, so a herd isn't in lockstep.
 	_animator.seek(_phase * _animator.current_animation_length, true)
 	_idle_timer = 4.0 + _phase * 6.0
@@ -205,6 +228,9 @@ func _turn(joint_name: String, euler: Vector3) -> void:
 
 
 func _animate_rigged(delta: float) -> void:
+	if species == &"dog":
+		_animate_rigged_dog(delta)
+		return
 	match mode:
 		Mode.RUN, Mode.FLEE:
 			_play(&"Gallop", 1.25)
@@ -218,6 +244,24 @@ func _animate_rigged(delta: float) -> void:
 			if _idle_timer <= 0.0 or not _current_animation in RIGGED_IDLES:
 				_idle_timer = 5.0 + fmod(_time * 1.7, 6.0)
 				_play(RIGGED_IDLES[int(_time * 3.0) % RIGGED_IDLES.size()])
+
+
+## Still, walking or at a gallop by the speed it really moves at, the clip
+## paced to it. Standing, it looks about, sniffs the ground, sits back.
+func _animate_rigged_dog(delta: float) -> void:
+	var gait: StringName = &"Idle"
+	if ground_speed >= DOG_STILL_BELOW:
+		var galloping: bool = _dog_gait == &"Gallop"
+		gait = &"Gallop" if ground_speed > (DOG_WALK_BELOW if galloping else DOG_GALLOP_ABOVE) else &"Walk"
+	_dog_gait = gait
+	if gait == &"Idle":
+		_idle_timer -= delta
+		if _idle_timer <= 0.0 or not _current_animation in DOG_IDLES:
+			_idle_timer = 3.0 + fmod(_time * 1.7, 4.0)
+			_play(DOG_IDLES[int(_time * 3.0) % DOG_IDLES.size()])
+		return
+	var cycle: float = _animator.get_animation(gait).length if _animator.has_animation(gait) else 1.0
+	_play(gait, clampf(ground_speed * cycle / float(DOG_STRIDE[gait]), 0.45, 2.4))
 
 
 ## Legs in trot order: diagonal pairs move together (front-left with

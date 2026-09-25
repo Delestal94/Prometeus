@@ -40,10 +40,16 @@ properties/8/replication_mode = 1
 properties/9/path = NodePath(".:jump_anim_time")
 properties/9/spawn = true
 properties/9/replication_mode = 1
+properties/10/path = NodePath(".:face_eyes")
+properties/10/spawn = true
+properties/10/replication_mode = 2
+properties/11/path = NodePath(".:face_mouth")
+properties/11/spawn = true
+properties/11/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 8
-collision_mask = 7
+collision_mask = 69
 script = ExtResource("1_player")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]

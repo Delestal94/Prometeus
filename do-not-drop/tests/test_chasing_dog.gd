@@ -3,6 +3,9 @@ extends SceneTree
 ## The village dog (tareas de Nacho N-106): when the truck drives past it
 ## runs alongside, barking, never touching it, for up to CHASE_LENGTH metres
 ## and then goes home; a honk sends it home at once.
+## Playtest 2026-09-25: it's the rigged Shiba Inu now, whose gait follows how
+## fast it really moves (no galloping on the spot), and its barks don't come
+## on a fixed beat.
 
 var _failures: int = 0
 
@@ -15,6 +18,12 @@ func _run() -> void:
 	root.get_node(^"/root/RunManager").set(&"is_running", true)
 
 	var chase := await _setup()
+	var animal: Node3D = chase.dog.dog
+	var animator := animal.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	_expect(animator != null and animal.get(&"species") == &"dog", "The chasing dog is the rigged, animated model")
+	var galloped_still: int = 0
+	var galloped_running: bool = false
+	var bark_ticks: Array[int] = []
 	var closest: float = INF
 	var farthest_while_chasing: float = 0.0
 	var started: bool = false
@@ -23,6 +32,15 @@ func _run() -> void:
 		_drive(chase.van, 8.0)
 		await physics_frame
 		var gap: float = ChasingDog._flat(chase.van.global_position - chase.dog.dog.global_position).length()
+		if animator != null and animator.is_playing():
+			var clip: StringName = animator.current_animation
+			var speed: float = float(animal.get(&"ground_speed"))
+			if clip == &"Gallop" and speed < 0.2:
+				galloped_still += 1
+			if clip == &"Gallop" and speed > 5.0:
+				galloped_running = true
+		if bark_ticks.size() < chase.dog.barks:
+			bark_ticks.append(tick)
 		if chase.dog.state == ChasingDog.State.CHASING:
 			started = true
 			closest = minf(closest, gap)
@@ -34,6 +52,12 @@ func _run() -> void:
 			break
 	_expect(started, "The dog notices the truck going past and gives chase")
 	_expect(chase.dog.barks >= 3, "It barks while it runs (%d barks)" % chase.dog.barks)
+	_expect(galloped_still == 0, "It never gallops standing still (%d ticks)" % galloped_still)
+	_expect(galloped_running, "Running flat out beside the truck, it gallops")
+	var gaps: Dictionary = {}
+	for i: int in range(1, bark_ticks.size()):
+		gaps[bark_ticks[i] - bark_ticks[i - 1]] = true
+	_expect(gaps.size() >= 2, "Its barks don't come on a fixed beat (%d different gaps)" % gaps.size())
 	_expect(closest > 2.5, "It never touches the truck (closest %.1f m)" % closest)
 	_expect(caught_up and farthest_while_chasing < 16.0, "Once alongside, it keeps up beside the truck (at most %.1f m off)" % farthest_while_chasing)
 	_expect(chase.dog.run_distance <= ChasingDog.CHASE_LENGTH + 5.0 and chase.dog.state != ChasingDog.State.CHASING,

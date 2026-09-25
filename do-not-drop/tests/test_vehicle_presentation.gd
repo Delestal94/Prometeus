@@ -51,10 +51,22 @@ func _run() -> void:
 	visual._on_impact(10.0, van.global_position)
 	visual.update_presentation(0.01)
 	# The route's weather/time of day scales the beams (world_mood.gd).
-	var full_beam: float = visual.headlight_energy * float(WorldMood.active.get("headlight_boost", 1.0))
+	var full_beam: float = visual.headlight_energy * minf(float(WorldMood.active.get("headlight_boost", 1.0)), visual.HEADLIGHT_ENERGY_BOOST_CAP)
 	_expect(visual.headlights[0].light_energy < full_beam, "Strong impact briefly dims headlights")
 	visual.update_presentation(0.3)
 	_expect(is_equal_approx(visual.headlights[0].light_energy, full_beam), "Headlights recover without persistent flashing")
+	# At night the beams reach further by falling off slower, not by burning
+	# brighter: 4x energy washed out everything near the truck.
+	var mood_before: Dictionary = WorldMood.active
+	WorldMood.active = mood_before.duplicate()
+	WorldMood.active["headlight_boost"] = 4.0
+	visual.update_presentation(0.3)
+	_expect(visual.headlights[0].light_energy <= visual.headlight_energy * visual.HEADLIGHT_ENERGY_BOOST_CAP + 0.001,
+		"Night beams stay under the energy cap (%.2f)" % visual.headlights[0].light_energy)
+	_expect(visual.headlights[0].spot_range > 50.0 and visual.headlights[0].spot_attenuation < 1.0,
+		"...and reach far with a flatter falloff (range %.0f, attenuation %.2f)" % [visual.headlights[0].spot_range, visual.headlights[0].spot_attenuation])
+	WorldMood.active = mood_before
+	visual.update_presentation(0.3)
 	var original_velocity: Vector3 = van.linear_velocity
 	van.linear_velocity = Vector3.ZERO
 	van.engine_force = 0.0

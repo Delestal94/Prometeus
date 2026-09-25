@@ -17,13 +17,12 @@ const TOLERANCE_DB: float = 2.0
 const CLASSES: Dictionary = {
 	"engine": ["rms", -20.0],
 	"impact": ["peak", -14.0],
-	"ambient": ["rms", -28.0],
+	"noise": ["rms", -35.0],
 	"nature": ["loudest", -24.0],
-	"rain": ["rms", -24.0],
+	"rain": ["rms", -32.0],
 	"signal": ["loudest", -18.0],
 	"detail": ["peak", -26.0],
 	"music": ["rms", -24.0],
-	"room": ["rms", -42.0],
 	"machine": ["rms", -40.0],
 	"repeat": ["loudest", -30.0],
 }
@@ -36,10 +35,10 @@ const SOUNDS: Array = [
 	["tyre screech", &"tire_screech", &"SCREECH_DB", "signal"],
 	["horn", &"honk_horn", &"HORN_DB", "signal"],
 	["cargo clutter", &"impact_thud", &"CLUTTER_DB", "detail"],
-	["wind", &"ambient_wind", &"WIND_DB", "ambient"],
+	["wind", &"ambient_wind", &"WIND_DB", "noise"],
 	["birds", &"ambient_birds", &"BIRDS_DB", "nature"],
 	["crickets", &"night_crickets", &"CRICKETS_DB", "nature"],
-	["distant road", &"distant_road", &"DISTANT_ROAD_DB", "ambient"],
+	["distant road", &"distant_road", &"DISTANT_ROAD_DB", "noise"],
 	["rain", &"rain_loop", &"RAIN_DB", "rain"],
 	["crossing bell", &"crossing_bell", &"CROSSING_BELL_DB", "signal"],
 	["dog bark", &"dog_bark", &"DOG_BARK_DB", "signal"],
@@ -47,7 +46,6 @@ const SOUNDS: Array = [
 	["doorbell", &"glass_chime", &"DOORBELL_DB", "signal"],
 	["resident cheer", &"honk_horn", &"RESIDENT_CHEER_DB", "signal"],
 	["resident groan", &"creature_groan", &"RESIDENT_GROAN_DB", "signal"],
-	["warehouse hum", &"warehouse_hum", &"WAREHOUSE_HUM_DB", "room"],
 	["forklift beeper", &"reverse_beep", &"FORKLIFT_BEEP_DB", "repeat"],
 	["forklift engine", &"engine_loop", &"FORKLIFT_ENGINE_DB", "machine"],
 	["roller door", &"roller_door", &"ROLLER_DOOR_DB", "signal"],
@@ -99,9 +97,30 @@ func _initialize() -> void:
 		_expect(absf(menu - ingame) <= 1.0, "The menu theme plays as loud as the in-game track (%.1f vs %.1f dBFS)" % [menu, ingame])
 		for file_name: String in ["mus_menu_loop.ogg", "mus_depot_radio_loop.ogg"]:
 			_expect(ResourceLoader.exists("res://assets/audio/music/" + file_name), "%s is in the project" % file_name)
+	_check_quiet_spaces()
 	if _failures == 0:
 		print("PASS: every world and truck sound sits within %.0f dB of its class's target" % TOLERANCE_DB)
 	quit(_failures)
+
+
+## Sparse birds must leave actual quiet, not simply quieter constant chirps.
+func _check_quiet_spaces() -> void:
+	var birds: AudioStreamWAV = SynthAudio.ambient_birds()
+	var data: PackedByteArray = birds.data
+	var quiet_samples: int = 0
+	var quiet_run: int = 0
+	var longest_quiet: int = 0
+	for index: int in range(data.size() / 2):
+		if absi(data.decode_s16(index * 2)) < 32:
+			quiet_samples += 1
+			quiet_run += 1
+			longest_quiet = maxi(longest_quiet, quiet_run)
+		else:
+			quiet_run = 0
+	_expect(float(quiet_samples) / (data.size() / 2) > 0.85, "Birdsong leaves most of the day bed quiet")
+	_expect(float(longest_quiet) / birds.mix_rate > 3.0, "Bird phrases leave several seconds to hear the rest of the world")
+	_expect(absi(data.decode_s16(0)) < 32 and absi(data.decode_s16(data.size() - 2)) < 32,
+		"Birdsong begins and ends near silence so its seam doesn't click")
 
 
 ## "rms" over the whole clip (loops), "loudest" 100 ms window's RMS

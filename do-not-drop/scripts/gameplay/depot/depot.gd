@@ -1547,16 +1547,8 @@ func _worker(at: Vector3, yaw: float, uniform: Color, lines: Array) -> DepotWork
 
 
 func _build_audio() -> void:
-	var hum := AudioStreamPlayer3D.new()
-	hum.name = "RoomTone"
-	hum.stream = SynthAudio.warehouse_hum()
-	hum.bus = &"SFX"
-	hum.volume_db = WorldMix.WAREHOUSE_HUM_DB
-	hum.unit_size = 30.0
-	hum.max_distance = 60.0
-	hum.position = Vector3(0.0, 4.0, 16.0)
-	hum.autoplay = true
-	add_child(hum)
+	# No room tone: the hum over the loading zone grated, even brought down to
+	# its measured level (playtest 2026-09-25) -- the user asked for it gone.
 	var radio := AudioStreamPlayer3D.new()
 	radio.name = "Radio"
 	# The break area's radio (N-403): a lo-fi program composed for it.

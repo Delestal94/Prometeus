@@ -1,4 +1,4 @@
-[gd_scene load_steps=26 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle.gd" id="1_vehicle"]
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_input_component.gd" id="2_input"]
@@ -122,19 +122,23 @@ size = Vector3(0.82, 0.1, 2.62)
 [sub_resource type="BoxShape3D" id="Shape_rack_upper_deck"]
 size = Vector3(0.82, 0.03, 2.62)
 
-[sub_resource type="BoxShape3D" id="Shape_rack_end"]
+[sub_resource type="BoxShape3D" id="Shape_rack_front_end"]
 size = Vector3(0.82, 2.223, 0.03)
+
+[sub_resource type="BoxShape3D" id="Shape_rack_rear_end"]
+size = Vector3(0.82, 2.223, 0.1)
 
 [sub_resource type="BoxShape3D" id="Shape_ramp"]
 size = Vector3(1.1, 0.06, 1.814)
 
-; Mask: environment + packages. Not players (layer 4 = bit 8): a player
-; the truck is told to collide with can shove it, and a player placed even
-; slightly inside it (getting out of a seat) launched the whole truck. Players
-; still collide with the truck from their side (their mask includes it).
+; Mask: the environment alone. Boxes, players, clutter and ragdolls collide
+; with the cargo shell (vehicle.gd _build_cargo_shell, layer 7), a kinematic
+; copy of these shapes: they're carried and stopped by it but never push the
+; truck. A player placed even slightly inside the truck used to launch it,
+; and loose boxes made it drive in jerks.
 [node name="DeliveryVan" type="VehicleBody3D" groups=["vehicle"]]
 collision_layer = 2
-collision_mask = 5
+collision_mask = 1
 mass = 950.0
 physics_material_override = SubResource("PhysicsMaterial_body")
 center_of_mass_mode = 1
@@ -218,19 +222,23 @@ shape = SubResource("Shape_rack_lower_deck")
 position = Vector3(-0.59, 1.475, 3.11)
 shape = SubResource("Shape_rack_upper_deck")
 
+; The end frames are 3 cm of steel (reference_truck.gd draws them on the
+; rack side of these). The rear one is solid 10 cm deep, outward, over the
+; gap to the rear doors. The front one can't be: a passenger getting up from
+; the first left seat stands a couple of millimetres short of it.
 [node name="RackFrontEndCollision" type="CollisionShape3D" parent="."]
 position = Vector3(-0.59, 1.3665, 1.785)
-shape = SubResource("Shape_rack_end")
+shape = SubResource("Shape_rack_front_end")
 
 [node name="RackRearEndCollision" type="CollisionShape3D" parent="."]
-position = Vector3(-0.59, 1.3665, 4.435)
-shape = SubResource("Shape_rack_end")
+position = Vector3(-0.59, 1.3665, 4.47)
+shape = SubResource("Shape_rack_rear_end")
 
 ; Loading ramp, out while the rear doors are open and the truck is parked.
-; A separate body on the vehicle layer with no mask: players and packages
-; use it, but it never touches the road and never pushes the truck itself.
+; A separate body on the cargo shell's layer with no mask: players and
+; packages use it, but it never touches the road and never pushes the truck.
 [node name="RearRamp" type="StaticBody3D" parent="."]
-collision_layer = 2
+collision_layer = 64
 collision_mask = 0
 
 [node name="Shape" type="CollisionShape3D" parent="RearRamp"]

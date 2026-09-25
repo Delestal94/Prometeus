@@ -287,11 +287,13 @@ func _test_doors(van: VehicleBody3D, adapter: Node) -> void:
 	var space := van.get_world_3d().direct_space_state
 	var right_leaf := model.find_child("RearDoor_Right", true, false) as MeshInstance3D
 	var leaf_center: Vector3 = (right_leaf.global_transform * right_leaf.get_aabb()).get_center()
-	var probe := PhysicsRayQueryParameters3D.create(leaf_center + Vector3(0.0, 0.0, 3.0), leaf_center - Vector3(0.0, 0.0, 3.0), 2)
+	# On the cargo shell's layer, where players and boxes look (vehicle.gd SHELL_LAYER).
+	var leaf_layer: int = van.get_script().get_script_constant_map()["SHELL_LAYER"]
+	var probe := PhysicsRayQueryParameters3D.create(leaf_center + Vector3(0.0, 0.0, 3.0), leaf_center - Vector3(0.0, 0.0, 3.0), leaf_layer)
 	var through := space.intersect_ray(probe)
-	var probe_x := PhysicsRayQueryParameters3D.create(leaf_center + van.global_basis.x * 3.0, leaf_center - van.global_basis.x * 3.0, 2)
+	var probe_x := PhysicsRayQueryParameters3D.create(leaf_center + van.global_basis.x * 3.0, leaf_center - van.global_basis.x * 3.0, leaf_layer)
 	var across := space.intersect_ray(probe_x)
-	_expect((not through.is_empty() and through.collider != van) or (not across.is_empty() and across.collider != van),
+	_expect((not through.is_empty() and through.collider.name == &"LeafCollision") or (not across.is_empty() and across.collider.name == &"LeafCollision"),
 		"An open rear door leaf has collision where it is drawn")
 
 

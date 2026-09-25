@@ -1,0 +1,19 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 3.3.0 NVIDIA 596.36 - Compatibility - Using Device: NVIDIA - NVIDIA GeForce RTX 4060 Ti
+
+ERROR: Failed to read the root certificate store.
+   at: get_system_ca_certificates (platform/windows/os_windows.cpp:2582)
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/customization_classic.png
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/customization_wink.png
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/face_ingame_closeup.png
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/face_on_animated_head.png
+WARNING: Depth of field blur is only available when using the Forward+ or Mobile renderer.
+   at: camera_attributes_set_dof_blur (servers/rendering/storage/camera_attributes_storage.cpp:74)
+   GDScript backtrace (most recent call first):
+       [0] _update_carried_package (res://scripts/gameplay/player/player.gd:989)
+       [1] _run (res://tests/render_character_faces.gd:65)
+       [2] _save (res://tests/render_character_faces.gd:77)
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/pickup_025.png
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/pickup_055.png
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/pickup_100.png
+RENDER: D:/Programas/Utilities/Proyectos/Prometeus/do-not-drop/../art/rounded_character/review/pickup_155.png

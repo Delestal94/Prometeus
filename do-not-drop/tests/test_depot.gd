@@ -76,6 +76,9 @@ func _run() -> void:
 	_expect(bool(depot.call(&"covers", player.global_position)), "The crew spawns inside the depot")
 	_expect(not bool(depot.call(&"covers", depot.to_global(Vector3(0.0, 1.0, -5.0)))), "The forecourt isn't under the roof")
 	_test_signage(depot)
+	# No room tone: the hum over the loading zone was the noise that grated
+	# (playtest 2026-09-25), and the user asked for it gone.
+	_expect(depot.get_node_or_null(^"RoomTone") == null, "The depot has no humming room tone")
 
 	# Orders: one per house, all different kinds, written on the board.
 	var orders: Array = depot.get(&"orders")

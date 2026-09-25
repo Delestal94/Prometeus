@@ -59,7 +59,7 @@ properties/12/replication_mode = 2
 
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4
-collision_mask = 7
+collision_mask = 69
 mass = 8.0
 physics_material_override = SubResource("PhysicsMaterial_crate")
 linear_damp = 0.12

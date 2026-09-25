@@ -5,11 +5,11 @@ extends Node
 ## back if someone drives off with the doors open (#17).
 ##
 ## Pure scenery, simulated separately on every client and never replicated:
-## they only collide with the truck and the ground, never with packages
-## (a thermos must not be what ruins a Fragile box) or players.
+## they only collide with the truck's cargo shell and the ground, never with
+## packages (a thermos must not be what ruins a Fragile box) or players.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
-const ENVIRONMENT_AND_VEHICLE: int = 1 | 2
+const ENVIRONMENT_AND_SHELL: int = 1 | Vehicle.SHELL_LAYER
 ## Relative speed (m/s) for a knock to be heard.
 const RATTLE_MIN_SPEED: float = 0.9
 
@@ -62,7 +62,7 @@ func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mas
 	body.name = "CargoClutter" + item_name
 	body.mass = mass_kg
 	body.collision_layer = 0
-	body.collision_mask = ENVIRONMENT_AND_VEHICLE
+	body.collision_mask = ENVIRONMENT_AND_SHELL
 	# Light and quick next to the walls they rattle against: without
 	# continuous collision a hard stop could tunnel them straight through.
 	body.continuous_cd = true

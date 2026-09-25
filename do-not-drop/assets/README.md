@@ -103,6 +103,12 @@ en desuso.
   la dejamos igual). Fuente: https://poly.pizza/m/tQdzbZ1Cmw. Trae esqueleto y animaciones
   (`Gallop`, `Walk`, `Idle`, `Idle_2`, `Idle_Headlow`, `Eating`, `Idle_HitReact_*`...);
   `scripts/presentation/wildlife_animal.gd` lo gira, lo escala a 0.4 y elige la animación.
+- `sm_env_animal_dog_rigged.glb` (2026-09-25): "Shiba Inu" del mismo *Animated Animal Pack*
+  de **Quaternius**, **CC0 1.0**. Fuente: https://poly.pizza/m/y4wdQpg767. Es el perro que
+  persigue al camión (`chasing_dog.gd`); `wildlife_animal.gd` lo gira, lo escala a 0.26
+  (~0,55 m a la cruz) y elige `Idle`/`Walk`/`Gallop` según la velocidad a la que se mueve de
+  verdad, con el clip acompasado a esa velocidad. Reemplaza al perro articulado propio, que
+  quedó sin usar (`sm_env_animal_dog.glb`).
 - Conejo, rana, pájaro y el cartel de cruce: propios, generados por
   `tools/build_wildlife.py` (piezas con pivote en cada articulación, animadas por código).
 - `sm_env_animal_sheep.glb` (oveja, ~0,75 m a la cruz) y `sm_env_animal_dog.glb` (perro de
@@ -131,6 +137,15 @@ Imágenes generadas con ComfyUI + Z-Image Turbo (Apache 2.0), registradas en
 e íconos de las cuatro trampas.
 
 ## Personajes
+
+**Rostro personalizable (2026-09-24):** `textures/characters/faces/` contiene
+dibujos vectoriales propios de ojos y bocas. `art/rounded_character/build_faces.py`
+los reproduce. `face_catalog.gd` define IDs estables; `character_face.gd` coloca dos
+mallas curvas con transparencia sobre el hueso `head` del personaje redondeado.
+Las mismas texturas se componen en `face_preview.gd` para la vista 2D del vestuario.
+No requiere Decal ni SubViewport por jugador; funciona en GL Compatibility.
+El perfil guarda `selected_eyes`/`selected_mouth`; cada jugador replica
+`face_eyes`/`face_mouth`, incluidos los valores de entrada tardía.
 
 `models/characters/sm_char_player_rounded.glb` (2026-09-24): **el cuerpo del
 jugador**. Es el personaje redondeado de Astra (cabeza lisa, camiseta, short,

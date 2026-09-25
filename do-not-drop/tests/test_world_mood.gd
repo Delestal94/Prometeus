@@ -10,6 +10,7 @@ extends SceneTree
 ##     autumn really recolours leaves and grass -- the models' materials
 ##     (LowpolyMaterials), the batched dressing, and the terrain's `autumn` --
 ##     while summer leaves the palette alone.
+##   - rain is heard louder in the cabin and not at all inside the depot.
 
 var _failures: int = 0
 
@@ -174,11 +175,16 @@ func _check_outdoor_sounds() -> void:
 	_expect(rainy_dusk.nature_bed().is_empty(), "No birds singing through the rain")
 	for stream: AudioStreamWAV in [SynthAudio.ambient_birds(), SynthAudio.night_crickets(), SynthAudio.distant_road()]:
 		var loud: int = 0
-		for index: int in range(0, stream.data.size() - 1, 2):
-			if absi(stream.data.decode_s16(index)) > 1500:
+		var data: PackedByteArray = stream.data
+		for index: int in range(0, data.size() - 1, 2):
+			if absi(data.decode_s16(index)) > 1500:
 				loud += 1
-		_expect(stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and stream.loop_end * 2 == stream.data.size(), "Each outdoor loop covers its whole buffer")
+		_expect(stream.loop_mode == AudioStreamWAV.LOOP_FORWARD and stream.loop_end * 2 == data.size(), "Each outdoor loop covers its whole buffer")
 		_expect(loud > 100, "Each outdoor loop actually makes sound (%d loud samples)" % loud)
+	# Rain drums on the cabin roof but isn't heard inside the depot at all.
+	var open_ground: float = RouteSky.rain_db(false, false)
+	_expect(RouteSky.rain_db(false, true) > open_ground, "Rain is louder inside the cabin than on open ground")
+	_expect(RouteSky.rain_db(true, true) <= -60.0, "Rain is silent inside the depot (%.1f dB)" % RouteSky.rain_db(true, true))
 
 
 func _expect(condition: bool, description: String) -> void:

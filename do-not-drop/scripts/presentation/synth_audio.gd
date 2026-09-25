@@ -4,8 +4,8 @@ extends RefCounted
 ## assets -- same "no art yet, code is the source of truth" convention as
 ## route.gd's boxes and package_feedback.gd's confetti cubes.
 
-## Every sound is synthesized sample by sample in GDScript -- up to ~12 ms
-## for the wind bed -- so each one is built once and shared: a stream is
+## Every sound is synthesized sample by sample in GDScript -- ~50 ms for
+## the wind bed -- so each one is built once and shared: a stream is
 ## read-only data, and every AudioStreamPlayer keeps its own playback of it.
 ## Without this, opening a box or ringing a door re-synthesized its sound on
 ## the very frame it had to play.
@@ -228,32 +228,53 @@ static func wood_creak() -> AudioStreamWAV:
 	return _cached(&"wood_creak", _make_wood_creak)
 
 
+## Stick-slip, the way wood actually creaks: the surfaces catch and let go
+## in a run of tiny ticks, whose rate wanders slowly (here ~45-140 a
+## second), and each tick rings the box's wooden body (three resonances).
+## It used to be a raw sawtooth whose pitch was re-rolled every sample: a
+## buzzing static that, repeating under load, sounded like interference
+## (playtest 2026-09-25). Its loudest 100 ms land where the old one's did.
+const WOOD_CREAK_STREAM_LOUDEST_DB: float = -12.0
+
+
 static func _make_wood_creak() -> AudioStreamWAV:
 	const RATE: int = 22050
-	const DURATION: float = 0.35
+	const DURATION: float = 0.4
 	var sample_count: int = int(RATE * DURATION)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	var phase: float = 0.0
+	var mix := PackedFloat32Array()
+	mix.resize(sample_count)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 17
+	var body := [_Resonator.new(), _Resonator.new(), _Resonator.new()]
+	var drift: float = 0.0
+	var until_slip: float = 0.0
 	for i: int in range(sample_count):
-		var t: float = float(i) / RATE
-		var progress: float = t / DURATION
-		var freq: float = lerpf(260.0, 90.0, progress) + randf_range(-12.0, 12.0)
-		phase += freq / RATE
-		var envelope: float = (1.0 - progress) * (0.6 + 0.4 * sin(progress * PI))
-		var wave: float = (fmod(phase, 1.0) * 2.0 - 1.0) * 0.6  # cheap sawtooth
-		var sample: float = clampf(wave * envelope, -1.0, 1.0)
-		data.encode_s16(i * 2, int(sample * 32767.0))
+		var k: float = float(i) / float(sample_count)
+		drift = lerpf(drift, rng.randf_range(-1.0, 1.0), 0.002)
+		var excitation: float = 0.0
+		until_slip -= 1.0
+		if until_slip <= 0.0:
+			var rate: float = lerpf(140.0, 45.0, k) * (1.0 + 0.35 * drift)
+			until_slip = RATE / rate * rng.randf_range(0.85, 1.15)
+			excitation = rng.randf_range(0.6, 1.0)
+		var sound: float = (body[0].filter(excitation, 430.0, 9.0, RATE)
+			+ body[1].filter(excitation, 1150.0, 11.0, RATE) * 0.7
+			+ body[2].filter(excitation, 2350.0, 14.0, RATE) * 0.35)
+		mix[i] = sound * sin(PI * pow(k, 0.7))
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = data
+	stream.data = _normalized(mix, RATE, WOOD_CREAK_STREAM_LOUDEST_DB, true)
 	return stream
 
 
 ## Liquid's wet slosh: a short low filtered-noise wobble, used only when
 ## the puddle grows so it signals trouble without becoming a constant loop.
 static func liquid_slosh() -> AudioStreamWAV:
+	return _cached(&"liquid_slosh", _make_liquid_slosh)
+
+
+static func _make_liquid_slosh() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.28
 	var data := PackedByteArray()
@@ -274,6 +295,10 @@ static func liquid_slosh() -> AudioStreamWAV:
 
 
 static func explosive_tick() -> AudioStreamWAV:
+	return _cached(&"explosive_tick", _make_explosive_tick)
+
+
+static func _make_explosive_tick() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.07
 	var data := PackedByteArray()
@@ -292,6 +317,10 @@ static func explosive_tick() -> AudioStreamWAV:
 
 
 static func hostile_hiss() -> AudioStreamWAV:
+	return _cached(&"hostile_hiss", _make_hostile_hiss)
+
+
+static func _make_hostile_hiss() -> AudioStreamWAV:
 	const RATE: int = 22050
 	const DURATION: float = 0.32
 	var data := PackedByteArray()
@@ -347,36 +376,46 @@ static func _make_honk_horn() -> AudioStreamWAV:
 	return stream
 
 
-## World ambience (item #45): soft looping wind, low-passed white noise
-## instead of raw hiss -- a one-pole filter (y[n] = y[n-1]*a + x[n]*(1-a))
-## smooths it into something that reads as air movement, not static. A
-## slow amplitude drift on top keeps it from feeling like a dead-flat loop.
+## World ambience (item #45): a soft looping wind, noise kept to a band
+## between ~160 and ~800 Hz -- air moving, a "whoosh". It used to be white
+## noise through one low-pass at ~50 Hz: all the energy in a sub-bass
+## rumble that came and went, which on headphones read as wind buffeting a
+## microphone, like interference (playtest 2026-09-25). Gusts brighten the
+## band as they swell. Every gust completes whole cycles over the loop and
+## the seam is cross-faded (_seamless_loop), so nothing jumps each lap:
+## the old drift ended half a cycle off, a bump every four seconds.
 static func ambient_wind() -> AudioStreamWAV:
 	return _cached(&"ambient_wind", _make_ambient_wind)
 
 
+const WIND_STREAM_RMS_DB: float = -20.0
+
+
 static func _make_ambient_wind() -> AudioStreamWAV:
-	const RATE: int = 22050
-	const DURATION: float = 4.0
-	const FILTER_A: float = 0.985
-	var sample_count: int = int(RATE * DURATION)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	var filtered: float = 0.0
-	for i: int in range(sample_count):
+	# Nothing in it above ~1 kHz: half the usual rate, half the work.
+	const RATE: int = 11025
+	const DURATION: float = 10.0
+	const FADE: float = 1.5
+	var loop_count: int = int(RATE * DURATION)
+	var raw := PackedFloat32Array()
+	raw.resize(loop_count + int(RATE * FADE))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var band: float = 0.0
+	var band_2: float = 0.0
+	var rumble: float = 0.0
+	for i: int in range(raw.size()):
 		var t: float = float(i) / RATE
-		filtered = filtered * FILTER_A + randf_range(-1.0, 1.0) * (1.0 - FILTER_A)
-		var drift: float = 0.7 + 0.3 * sin(TAU * 0.13 * t)
-		var sample: float = clampf(filtered * 5.0 * drift, -1.0, 1.0)
-		data.encode_s16(i * 2, int(sample * 32767.0))
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = RATE
-	stream.data = data
-	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	stream.loop_begin = 0
-	stream.loop_end = sample_count
-	return stream
+		var gust: float = (0.55 + 0.25 * sin(TAU * t / DURATION)
+			+ 0.14 * sin(TAU * 3.0 * t / DURATION + 1.3) + 0.06 * sin(TAU * 7.0 * t / DURATION + 0.4))
+		# Two one-pole low-passes, their corner riding the gust (~370-870 Hz)...
+		var opening: float = lerpf(0.19, 0.39, gust)
+		band = lerpf(band, rng.randf_range(-1.0, 1.0), opening)
+		band_2 = lerpf(band_2, band, opening)
+		# ...minus everything under ~160 Hz: no rumble.
+		rumble = lerpf(rumble, band_2, 0.088)
+		raw[i] = (band_2 - rumble) * gust
+	return _loop(_normalized(_seamless_loop(raw, loop_count), RATE, WIND_STREAM_RMS_DB), RATE, loop_count)
 
 ## Two hard clicks a few milliseconds apart -- a shutter opening and closing.
 ## Short and dry on purpose: it has to read as a phone taking a picture over
@@ -587,31 +626,6 @@ static func _make_roller_door() -> AudioStreamWAV:
 	return _loop(data, RATE, sample_count)
 
 
-## The depot's room tone: ventilation and fluorescent tubes, a soft 100 Hz
-## hum under filtered air. Quiet on purpose -- it's what silence sounds like
-## in a warehouse.
-static func warehouse_hum() -> AudioStreamWAV:
-	return _cached(&"warehouse_hum", _make_warehouse_hum)
-
-
-static func _make_warehouse_hum() -> AudioStreamWAV:
-	const RATE: int = 22050
-	const DURATION: float = 3.0
-	var sample_count: int = int(RATE * DURATION)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 12
-	var air: float = 0.0
-	for i: int in range(sample_count):
-		var t: float = float(i) / RATE
-		air = air * 0.97 + rng.randf_range(-1.0, 1.0) * 0.03
-		var hum: float = sin(TAU * 100.0 * t) * 0.18 + sin(TAU * 200.0 * t) * 0.05
-		var edge: float = minf(float(i), float(sample_count - i)) / (RATE * 0.05)
-		data.encode_s16(i * 2, roundi(clampf((hum + air * 3.2) * minf(edge, 1.0), -1.0, 1.0) * 12000.0))
-	return _loop(data, RATE, sample_count)
-
-
 ## Forklift reversing alarm: the classic beep, half a second on, half off.
 static func reverse_beep() -> AudioStreamWAV:
 	return _cached(&"reverse_beep", _make_reverse_beep)
@@ -634,30 +648,30 @@ static func _make_reverse_beep() -> AudioStreamWAV:
 
 ## Birdsong for the outdoor bed (docs/tareas-nacho.md #20): a few short
 ## phrases of quick whistled chirps -- each a sine sweeping down or up by a
-## few hundred hertz -- scattered over 9 s of silence, so the loop never
-## sounds like a pattern. Seeded: the same birds on every machine.
+## few hundred hertz -- scattered over 28 s with several seconds of quiet
+## between phrases. Seeded: the same birds on every machine.
 static func ambient_birds() -> AudioStreamWAV:
 	return _cached(&"ambient_birds", _make_ambient_birds)
 
 
 static func _make_ambient_birds() -> AudioStreamWAV:
 	const RATE: int = 22050
-	const DURATION: float = 9.0
+	const DURATION: float = 28.0
 	var sample_count: int = int(RATE * DURATION)
 	var mix := PackedFloat32Array()
 	mix.resize(sample_count)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 41
-	for phrase: int in range(6):
-		var start: float = 0.4 + float(phrase) * 1.4 + rng.randf_range(0.0, 0.8)
-		var base: float = rng.randf_range(2600.0, 4200.0)
-		var chirps: int = rng.randi_range(2, 5)
-		var gap: float = rng.randf_range(0.09, 0.16)
+	for phrase: int in range(5):
+		var start: float = 1.2 + float(phrase) * 5.2 + rng.randf_range(0.0, 1.6)
+		var base: float = rng.randf_range(2000.0, 3300.0)
+		var chirps: int = rng.randi_range(2, 4)
+		var gap: float = rng.randf_range(0.16, 0.24)
 		var level: float = rng.randf_range(0.35, 0.8)
-		var sweep: float = rng.randf_range(-700.0, 500.0)
+		var sweep: float = rng.randf_range(-400.0, 300.0)
 		for chirp: int in range(chirps):
 			var begin: int = int((start + float(chirp) * gap) * RATE)
-			var length: int = int(rng.randf_range(0.04, 0.07) * RATE)
+			var length: int = int(rng.randf_range(0.06, 0.11) * RATE)
 			var phase: float = 0.0
 			for n: int in range(length):
 				var index: int = begin + n
@@ -665,76 +679,134 @@ static func _make_ambient_birds() -> AudioStreamWAV:
 					break
 				var k: float = float(n) / float(length)
 				phase += TAU * (base + sweep * k) / RATE
-				# Quick attack, rounded tail.
-				var envelope: float = sin(PI * k) * (1.0 - 0.4 * k)
+				# Rounded attack and tail, with no abrupt whistle onset.
+				var envelope: float = pow(sin(PI * k), 2.0) * (1.0 - 0.4 * k)
 				mix[index] += sin(phase) * envelope * level
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	for i: int in range(sample_count):
-		data.encode_s16(i * 2, roundi(clampf(mix[i], -1.0, 1.0) * 14000.0))
-	return _loop(data, RATE, sample_count)
+	return _loop(_normalized(mix, RATE, -20.0, true), RATE, sample_count)
 
 
-## Night instead of birds: crickets, bursts of three short 4.6 kHz pulses
-## about twice a second, with a little drift so it doesn't tick like a clock.
+## Night instead of birds: a few crickets in the grass, at different
+## distances and pitches, each singing a short phrase of chirps and then
+## keeping quiet for a few seconds -- most of the loop is silence. It was
+## one cricket chirping twice a second without a break, the whole night,
+## which grated (playtest 2026-09-25). Each pulse is a rounded tone with a
+## slight downward slide, softer than the old hard-edged beeps.
 static func night_crickets() -> AudioStreamWAV:
 	return _cached(&"night_crickets", _make_night_crickets)
 
 
+const CRICKETS_STREAM_LOUDEST_DB: float = -20.0
+
+
 static func _make_night_crickets() -> AudioStreamWAV:
 	const RATE: int = 22050
-	const DURATION: float = 6.0
-	const PITCH: float = 4600.0
-	const BURST: float = 0.075
-	const PULSE_PERIOD: float = 0.025
-	const PULSE_LENGTH: float = 0.018
+	const DURATION: float = 20.0
+	const PULSES: int = 3
+	const PULSE_PERIOD: float = 0.03
+	const PULSE_LENGTH: float = 0.02
 	var sample_count: int = int(RATE * DURATION)
 	var mix := PackedFloat32Array()
 	mix.resize(sample_count)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 23
-	var at: float = 0.1
-	while at < DURATION - 0.2:
-		var begin: int = int(at * RATE)
-		for n: int in range(int(BURST * RATE)):
-			var local: float = float(n) / RATE
-			var pulse: float = fmod(local, PULSE_PERIOD)
-			if pulse < PULSE_LENGTH:
-				mix[begin + n] += sin(TAU * PITCH * (at + local)) * sin(PI * pulse / PULSE_LENGTH)
-		at += rng.randf_range(0.42, 0.6)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	for i: int in range(sample_count):
-		data.encode_s16(i * 2, roundi(clampf(mix[i], -1.0, 1.0) * 9000.0))
-	return _loop(data, RATE, sample_count)
+	# [pitch Hz, level, first phrase at s]: the near one, and two farther off.
+	for cricket: Array in [[4300.0, 1.0, 0.6], [4750.0, 0.5, 5.2], [3950.0, 0.32, 11.5]]:
+		var at: float = cricket[2]
+		while at < DURATION - 1.2:
+			var chirps: int = rng.randi_range(3, 7)
+			for chirp: int in range(chirps):
+				var chirp_at: float = at + float(chirp) * rng.randf_range(0.5, 0.62)
+				var level: float = float(cricket[1]) * rng.randf_range(0.75, 1.0)
+				for pulse: int in range(PULSES):
+					var begin: int = int((chirp_at + float(pulse) * PULSE_PERIOD) * RATE)
+					var length: int = int(PULSE_LENGTH * RATE)
+					for n: int in range(length):
+						if begin + n >= sample_count:
+							break
+						var k: float = float(n) / float(length)
+						var pitch: float = float(cricket[0]) * (1.0 - 0.02 * k)
+						mix[begin + n] += sin(TAU * pitch * float(n) / RATE) * pow(sin(PI * k), 2.0) * level
+			# Then quiet: the next phrase a few seconds later.
+			at += float(chirps) * 0.56 + rng.randf_range(3.0, 7.0)
+	return _loop(_normalized(mix, RATE, CRICKETS_STREAM_LOUDEST_DB, true), RATE, sample_count)
 
 
-## Far-off road: a low, dull rumble that swells twice a loop as if a car went
-## by somewhere out of sight. Heavily low-passed noise; the swell completes
-## whole periods and the ends fade, so the loop point is seamless.
+## Far-off road: tyres on asphalt somewhere out of sight, swelling twice a
+## loop as a car goes by and brightening as it nears. A band of noise from
+## ~130 to ~500 Hz: it used to be noise under ~70 Hz, a sub-bass rumble
+## that only read as interference, and it faded to silence at the seam.
+## The swell completes whole periods and the seam is cross-faded.
 static func distant_road() -> AudioStreamWAV:
 	return _cached(&"distant_road", _make_distant_road)
 
 
+const DISTANT_ROAD_STREAM_RMS_DB: float = -20.0
+
+
 static func _make_distant_road() -> AudioStreamWAV:
-	const RATE: int = 22050
+	const RATE: int = 11025
 	const DURATION: float = 12.0
-	var sample_count: int = int(RATE * DURATION)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
+	const FADE: float = 1.0
+	var loop_count: int = int(RATE * DURATION)
+	var raw := PackedFloat32Array()
+	raw.resize(loop_count + int(RATE * FADE))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
-	var low: float = 0.0
-	var lower: float = 0.0
-	for i: int in range(sample_count):
+	var band: float = 0.0
+	var band_2: float = 0.0
+	var rumble: float = 0.0
+	for i: int in range(raw.size()):
 		var t: float = float(i) / RATE
-		low = lerpf(low, rng.randf_range(-1.0, 1.0), 0.02)
-		lower = lerpf(lower, low, 0.05)
 		var swell: float = pow(0.5 - 0.5 * cos(TAU * 2.0 * t / DURATION), 3.0)
-		var level: float = 0.35 + 0.65 * swell
-		var edge: float = minf(float(i), float(sample_count - i)) / (RATE * 0.05)
-		data.encode_s16(i * 2, roundi(clampf(lower * 9.0 * level * minf(edge, 1.0), -1.0, 1.0) * 20000.0))
-	return _loop(data, RATE, sample_count)
+		var opening: float = lerpf(0.116, 0.243, swell)
+		band = lerpf(band, rng.randf_range(-1.0, 1.0), opening)
+		band_2 = lerpf(band_2, band, opening)
+		rumble = lerpf(rumble, band_2, 0.073)
+		raw[i] = (band_2 - rumble) * (0.3 + 0.7 * swell)
+	return _loop(_normalized(_seamless_loop(raw, loop_count), RATE, DISTANT_ROAD_STREAM_RMS_DB), RATE, loop_count)
+
+
+## `raw` holds a loop plus some run-on past its end: the first samples are
+## cross-faded (equal power, for noise) from that run-on, the loop's own
+## continuation, into the fresh start, so the last sample leads straight
+## into the first. Returns just the loop.
+static func _seamless_loop(raw: PackedFloat32Array, loop_count: int) -> PackedFloat32Array:
+	var fade_count: int = raw.size() - loop_count
+	var looped: PackedFloat32Array = raw.slice(0, loop_count)
+	for i: int in range(fade_count):
+		var k: float = float(i) / float(fade_count) * PI * 0.5
+		looped[i] = raw[i] * sin(k) + raw[loop_count + i] * cos(k)
+	return looped
+
+
+## 16-bit samples scaled so the whole clip's RMS -- or with `loudest`, its
+## loudest 100 ms (tests/test_world_audio_levels.gd measures the same way) --
+## lands on `target_db`. The level in world_mix.gd then no longer depends on
+## what the synthesis happened to come out at.
+static func _normalized(mix: PackedFloat32Array, rate: int, target_db: float, loudest: bool = false) -> PackedByteArray:
+	var squares := PackedFloat32Array()
+	squares.resize(mix.size())
+	var total: float = 0.0
+	for i: int in range(mix.size()):
+		squares[i] = mix[i] * mix[i]
+		total += squares[i]
+	var power: float = total / maxf(mix.size(), 1)
+	if loudest:
+		var window: int = mini(int(rate * 0.1), mix.size())
+		var running: float = 0.0
+		for i: int in range(window):
+			running += squares[i]
+		var peak_window: float = running
+		for i: int in range(window, mix.size()):
+			running += squares[i] - squares[i - window]
+			peak_window = maxf(peak_window, running)
+		power = peak_window / maxf(window, 1)
+	var gain: float = db_to_linear(target_db) / maxf(sqrt(power), 0.000001)
+	var data := PackedByteArray()
+	data.resize(mix.size() * 2)
+	for i: int in range(mix.size()):
+		data.encode_s16(i * 2, roundi(clampf(mix[i] * gain, -1.0, 1.0) * 32767.0))
+	return data
 
 
 static func _loop(data: PackedByteArray, rate: int, sample_count: int) -> AudioStreamWAV:
@@ -748,37 +820,78 @@ static func _loop(data: PackedByteArray, rate: int, sample_count: int) -> AudioS
 	return stream
 
 
-## A dog's bark (the chasing dog, tareas de Nacho N-106/N-405): a quick
-## pitch drop from ~620 to ~380 Hz through a rough, buzzy wave, a burst of
-## breath noise at the start, 0.22 s. One-shot; ChasingDog repeats it.
+## A dog's bark (the chasing dog, tareas de Nacho N-106/N-405): "guau", a
+## voice through a mouth. The voice is a buzz of harmonics whose pitch
+## jumps up as the bark opens and falls away, with a little breath on it;
+## the mouth is two resonances (formants) that open from "u" to "a" and
+## close again. The first version was a clipped sine sliding down, with
+## no mouth at all -- it read as a synth, not a dog (playtest 2026-09-25).
+## 0.24 s. One-shot; ChasingDog repeats it, doubled up now and then.
 static func dog_bark() -> AudioStreamWAV:
 	return _cached(&"dog_bark", _make_dog_bark)
 
 
+const DOG_BARK_STREAM_LOUDEST_DB: float = -12.0
+
+
 static func _make_dog_bark() -> AudioStreamWAV:
 	const RATE: int = 22050
-	const DURATION: float = 0.22
+	const DURATION: float = 0.24
 	var sample_count: int = int(RATE * DURATION)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
+	var mix := PackedFloat32Array()
+	mix.resize(sample_count)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
 	var phase: float = 0.0
-	var noise_state: float = 0.0
+	var breath: float = 0.0
+	var wobble: float = 0.0
+	var mouth_low := _Resonator.new()
+	var mouth_high := _Resonator.new()
 	for i: int in range(sample_count):
 		var t: float = float(i) / RATE
 		var k: float = t / DURATION
-		var freq: float = lerpf(620.0, 380.0, sqrt(k))
-		phase += TAU * freq / RATE
-		# Clipped sine plus its second harmonic: a bark, not a whistle.
-		var wave: float = clampf(sin(phase) * 1.8, -1.0, 1.0) * 0.6 + sin(phase * 2.0) * 0.25
-		noise_state = lerpf(noise_state, randf_range(-1.0, 1.0), 0.5)
-		var breath: float = noise_state * 0.5 * maxf(0.0, 1.0 - k * 4.0)
-		var envelope: float = minf(k * 25.0, 1.0) * pow(1.0 - k, 1.5)
-		data.encode_s16(i * 2, int(clampf((wave + breath) * envelope, -1.0, 1.0) * 32767.0 * 0.8))
+		# Pitch: up fast as it opens (~0.03 s), then down; a slight roughness.
+		wobble = lerpf(wobble, rng.randf_range(-1.0, 1.0), 0.02)
+		var pitch: float = (lerpf(360.0, 560.0, minf(t / 0.03, 1.0)) - 240.0 * maxf(k - 0.12, 0.0)) * (1.0 + 0.03 * wobble)
+		phase = fmod(phase + pitch / RATE, 1.0)
+		# Band-limited buzz: harmonics falling off as 1/n, up to ~5 kHz.
+		var voice: float = 0.0
+		var harmonics: int = mini(int(5000.0 / pitch), 14)
+		for n: int in range(1, harmonics + 1):
+			voice += sin(TAU * phase * n) / float(n)
+		breath = lerpf(breath, rng.randf_range(-1.0, 1.0), 0.7)
+		var source: float = voice * 0.5 + breath * lerpf(0.9, 0.25, minf(k * 3.0, 1.0))
+		# The mouth: "u" (closed) to "a" and back as the bark ends.
+		var open: float = sin(PI * pow(k, 0.6))
+		var sound: float = (mouth_low.filter(source, lerpf(380.0, 820.0, open), 3.5, RATE)
+			+ mouth_high.filter(source, lerpf(1000.0, 1700.0, open), 5.0, RATE) * 0.6)
+		var envelope: float = minf(t / 0.008, 1.0) * pow(1.0 - k, 1.8)
+		mix[i] = sound * envelope
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = data
+	stream.data = _normalized(mix, RATE, DOG_BARK_STREAM_LOUDEST_DB, true)
 	return stream
+
+
+## A two-pole band-pass (RBJ, 0 dB at the peak) whose centre can move every
+## sample: a formant for the bark, a wooden body for the creak.
+class _Resonator:
+	var _x1: float = 0.0
+	var _x2: float = 0.0
+	var _y1: float = 0.0
+	var _y2: float = 0.0
+
+	func filter(x: float, centre: float, q: float, rate: int) -> float:
+		var w0: float = TAU * centre / float(rate)
+		var alpha: float = sin(w0) / (2.0 * q)
+		var a0: float = 1.0 + alpha
+		var y: float = (alpha * x - alpha * _x2 + 2.0 * cos(w0) * _y1 - (1.0 - alpha) * _y2) / a0
+		_x2 = _x1
+		_x1 = x
+		_y2 = _y1
+		_y1 = y
+		return y
 
 
 ## A sheep's bleat (the flock, tareas de Nacho N-106/N-405): a nasal
@@ -804,6 +917,33 @@ static func _make_sheep_bleat() -> AudioStreamWAV:
 		var wave: float = sin(phase) * 0.55 + sin(phase * 3.0) * 0.25 + sin(phase * 5.0) * 0.12
 		var envelope: float = minf(k * 12.0, 1.0) * minf((1.0 - k) * 5.0, 1.0)
 		data.encode_s16(i * 2, int(clampf(wave * envelope, -1.0, 1.0) * 32767.0 * 0.7))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = data
+	return stream
+
+
+## A parcel scanner's "bip" for menu buttons (main menu redesign,
+## 2026-09-25): one short square-ish beep at 2.4 kHz, 70 ms, soft edges so
+## it never clicks. Short on purpose -- it plays on every press.
+static func scanner_beep() -> AudioStreamWAV:
+	return _cached(&"scanner_beep", _make_scanner_beep)
+
+
+static func _make_scanner_beep() -> AudioStreamWAV:
+	const RATE: int = 22050
+	const DURATION: float = 0.07
+	var sample_count: int = int(RATE * DURATION)
+	var data := PackedByteArray()
+	data.resize(sample_count * 2)
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		# Fundamental plus a little third harmonic: a scanner's buzzy edge
+		# without a raw square wave's harshness.
+		var wave: float = sin(TAU * 2400.0 * t) * 0.8 + sin(TAU * 7200.0 * t) * 0.15
+		var envelope: float = minf(t / 0.004, 1.0) * minf((DURATION - t) / 0.012, 1.0)
+		data.encode_s16(i * 2, roundi(clampf(wave * envelope, -1.0, 1.0) * 12000.0))
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE

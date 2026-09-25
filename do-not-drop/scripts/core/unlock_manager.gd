@@ -12,6 +12,7 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 3: Peso creciente and Ruidoso joined the gradual trap curve. Loading an
 ## older profile grants every unlock its existing progress already earns.
 const PROFILE_VERSION := 3
+const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
@@ -68,6 +69,8 @@ var unlocked: Dictionary = {&"starter_kit": true}
 var selected_cosmetic: StringName = TEAM_COLOR
 var selected_truck: StringName = &"classic"
 var selected_paint: StringName = &"white"
+var selected_eyes: StringName = FaceCatalog.DEFAULT_EYES
+var selected_mouth: StringName = FaceCatalog.DEFAULT_MOUTH
 
 
 func _ready() -> void:
@@ -90,6 +93,8 @@ func reset_profile() -> void:
 	selected_cosmetic = TEAM_COLOR
 	selected_truck = &"classic"
 	selected_paint = &"white"
+	selected_eyes = FaceCatalog.DEFAULT_EYES
+	selected_mouth = FaceCatalog.DEFAULT_MOUTH
 	save_profile()
 	progress_changed.emit()
 
@@ -200,6 +205,24 @@ func select_paint(paint_id: StringName) -> bool:
 	return true
 
 
+func select_eyes(eyes_id: StringName) -> bool:
+	if not FaceCatalog.EYES.has(eyes_id):
+		return false
+	selected_eyes = eyes_id
+	save_profile()
+	progress_changed.emit()
+	return true
+
+
+func select_mouth(mouth_id: StringName) -> bool:
+	if not FaceCatalog.MOUTHS.has(mouth_id):
+		return false
+	selected_mouth = mouth_id
+	save_profile()
+	progress_changed.emit()
+	return true
+
+
 func progress_summary() -> Dictionary:
 	return {
 		"score": total_score,
@@ -240,6 +263,8 @@ func save_profile() -> void:
 		"selected_cosmetic": selected_cosmetic,
 		"selected_truck": selected_truck,
 		"selected_paint": selected_paint,
+		"selected_eyes": selected_eyes,
+		"selected_mouth": selected_mouth,
 	}))
 
 
@@ -272,6 +297,8 @@ func load_profile() -> void:
 	selected_truck = saved_truck if TRUCKS.has(saved_truck) and is_unlocked(StringName(TRUCKS[saved_truck]["unlock"])) else &"classic"
 	var saved_paint := StringName(parsed.get("selected_paint", &"white"))
 	selected_paint = saved_paint if PAINTS.has(saved_paint) and is_unlocked(StringName(PAINTS[saved_paint]["unlock"])) else &"white"
+	selected_eyes = FaceCatalog.valid_eyes(StringName(parsed.get("selected_eyes", FaceCatalog.DEFAULT_EYES)))
+	selected_mouth = FaceCatalog.valid_mouth(StringName(parsed.get("selected_mouth", FaceCatalog.DEFAULT_MOUTH)))
 	if saved_version < PROFILE_VERSION or not retroactive_unlocks.is_empty():
 		save_profile()
 
