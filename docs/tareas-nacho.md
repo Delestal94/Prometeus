@@ -336,6 +336,17 @@ Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
   y sombras de contacto falsas bajo autos y casas (decal oscuro).
   - [ ] **N-308.1** Oclusión horneada en colores de vértice al exportar los modelos (script de Blender,
     agente `modelador-blender`).
+    - **Piloto (2026-09-24), no aplicado:** `assets/tools/bake_vertex_ao.py` hornea sobre `.glb` ya exportados
+      (rayos propios con BVH: los de Cycles contaban las esquinas enterradas entre cajas y agrisaban caras
+      enteras; subdivide aristas de más de 0,6 m; promedia esquinas que comparten vértice y normal). Probado
+      en la casita y el hatchback con `--out` fuera del repo. Bajo el alero, el porche y el auto suma volumen,
+      pero **no está listo**: manchas como hollín alrededor de las ventanas, el vidrio (46 vértices) con una X
+      oscura, la casa 7-12 % más oscura de día y el frente en sombra casi negro de noche; la casa pasa de ~7k a
+      ~41k esquinas. Además el importador de glTF de Godot **no** activa `vertex_color_use_as_albedo`:
+      `LowpolyMaterials.apply()` tendría que activarlo cuando la malla trae color (también en los materiales
+      fuera de `DETAIL`) y separar esos materiales en su caché, para que el batcher no mezcle superficies.
+    - Para retomarlo: excluir vidrios y marcos (o subdividirlos más), bajar `STRENGTH`/subir `FLOOR`, limitarlo
+      a casas, vehículos y props grandes (nunca vegetación: se instancia de a miles) y revisar de noche.
   - [x] **N-308.2** Sombras de contacto falsas (decal oscuro y difuso) bajo autos estacionados, casas y
     cajas apiladas. `presentation/contact_shadow.gd`: sin `Decal` en Compatibility, es una malla 4×4 sin luz
     con el desvanecido por vértice, en metros (sólida desde `margen` adentro de la huella, nada a `margen`
