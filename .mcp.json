@@ -18,6 +18,16 @@
       "env": {
         "GODOT_PATH": "${GODOT:-}"
       }
+    },
+    "elevenlabs": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "elevenlabs-mcp"
+      ],
+      "env": {
+        "ELEVENLABS_API_KEY": "${ELEVENLABS_API_KEY:-}"
+      }
     }
   }
 }
