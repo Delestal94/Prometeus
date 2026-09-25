@@ -26,6 +26,9 @@ enum Transport { AUTO, STEAM, ENET }
 const DEFAULT_PORT: int = 7777
 const MAX_PLAYERS: int = 8
 const HOST_ID: int = 1
+## Increment whenever peers can no longer share the same replicated scene or
+## handshake. Both sides exchange it before either starts scene replication.
+const PROTOCOL_VERSION: int = 1
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -69,7 +72,7 @@ var world_locked_traps: Array = []
 ## the connection is dropped (Godot's auth timeout). Long enough for a slow
 ## level load, short enough that a host on another version doesn't leave the
 ## joiner staring at "Conectando…" for a minute.
-const JOIN_HANDSHAKE_TIMEOUT: float = 20.0
+const JOIN_HANDSHAKE_TIMEOUT: float = 8.0
 var _awaiting_handshake: bool = false
 ## The level the session plays in. The host records it whenever its own
 ## level is up, so a joiner arriving mid-reload still gets the right one.
@@ -322,7 +325,7 @@ func _on_lobby_created(status: int, created_lobby_id: int) -> void:
 
 func _on_lobby_joined(joined_lobby_id: int, _permissions: int, _locked: bool, response: int) -> void:
 	if response != 1:
-		session_failed.emit("No se pudo entrar a la sala.")
+		_fail("full" if response == 4 else "No se pudo entrar a la sala.")
 		return
 	lobby_id = joined_lobby_id
 	var owner_id: int = int(_steam.call(&"getLobbyOwner", joined_lobby_id))
@@ -413,7 +416,7 @@ func is_peer_ready(id: int) -> bool:
 # packets are the only traffic Godot permits before both sides complete_auth.
 func _peer_authenticating(id: int) -> void:
 	if multiplayer.is_server():
-		multiplayer.send_auth(id, var_to_bytes({"seed": world_seed,
+		multiplayer.send_auth(id, var_to_bytes({"version": PROTOCOL_VERSION, "seed": world_seed,
 			"houses": world_house_count, "locked": world_locked_traps, "scene": _current_level_scene()}))
 	elif id != HOST_ID:
 		multiplayer.complete_auth(id)
@@ -429,17 +432,46 @@ func _current_level_scene() -> String:
 	return session_scene if session_scene in LEVEL_SCENES else DEFAULT_LEVEL_SCENE
 
 
+func _handshake_error(state: Variant) -> String:
+	if not state is Dictionary:
+		return "version"
+	if int(state.get("version", -1)) != PROTOCOL_VERSION:
+		return "version"
+	if not state.has_all(["seed", "houses", "locked", "scene"]):
+		return "connection"
+	if String(state.scene) not in LEVEL_SCENES:
+		return "connection"
+	return ""
+
+
+func _ready_reply_error(reply: Variant) -> String:
+	if not reply is Dictionary or not bool(reply.get("ready", false)):
+		return "version"
+	return "" if int(reply.get("version", -1)) == PROTOCOL_VERSION else "version"
+
+
 func _receive_auth(id: int, data: PackedByteArray) -> void:
 	if multiplayer.is_server():
+		# Protocol 0 sent the raw word "ready". Recognize it without asking
+		# bytes_to_var() to parse arbitrary UTF-8, then reject it explicitly.
 		if data.get_string_from_utf8() == "ready":
+			multiplayer.send_auth(id, var_to_bytes({"failure": "version"}))
+			return
+		var reply: Variant = bytes_to_var(data)
+		if _ready_reply_error(reply).is_empty():
 			multiplayer.complete_auth(id)
+		else:
+			multiplayer.send_auth(id, var_to_bytes({"failure": "version"}))
 		return
 	if id != HOST_ID:
 		return
 	var state: Variant = bytes_to_var(data)
-	if not state is Dictionary or not state.has_all(["seed", "houses", "locked", "scene"]):
+	if state is Dictionary and state.has("failure"):
+		_fail(String(state.failure))
 		return
-	if String(state.scene) not in LEVEL_SCENES:
+	var handshake_error: String = _handshake_error(state)
+	if not handshake_error.is_empty():
+		_fail(handshake_error)
 		return
 	world_seed = int(state.seed)
 	world_house_count = int(state.houses)
@@ -466,7 +498,7 @@ func level_ready() -> void:
 		return
 	if _awaiting_handshake:
 		_awaiting_handshake = false
-		multiplayer.send_auth(HOST_ID, "ready".to_utf8_buffer())
+		multiplayer.send_auth(HOST_ID, var_to_bytes({"ready": true, "version": PROTOCOL_VERSION}))
 		multiplayer.complete_auth(HOST_ID)
 		return
 	# Already in the session: back from a host restart.
@@ -519,11 +551,11 @@ func _remote_restart(house_count_value: int) -> void:
 func _auth_failed(_id: int) -> void:
 	if is_host():
 		return
-	_fail("No se pudo cargar la partida del anfitrión. Revisá que ambos tengan la misma versión.")
+	_fail("timeout")
 
 
 func _on_connection_failed() -> void:
-	_fail("La conexión falló.")
+	_fail("timeout")
 
 
 ## The host is gone. The roster isn't announced as shrunk to "just us" any

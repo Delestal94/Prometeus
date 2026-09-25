@@ -78,6 +78,12 @@ void fragment() {
 """
 
 enum Page { HOME, PLAY, JOIN, GARAGE }
+const CONNECTION_ERROR_TEXT: Dictionary = {
+	"version": "El anfitrión tiene otra versión del juego: actualicen los dos.",
+	"timeout": "No hubo respuesta en 8 s. Revisá la IP y que el firewall de Windows permita Take My Package.",
+	"full": "La sala está llena.",
+	"connection": "No se pudo completar la conexión. Revisá la dirección e intentá de nuevo.",
+}
 const PAGE_TITLES: Dictionary = {
 	Page.HOME: "¿LISTOS PARA REPARTIR?",
 	Page.PLAY: "¿CÓMO SALIMOS HOY?",
@@ -549,7 +555,11 @@ func _cancel_connection() -> void:
 func _on_session_failed(reason: String) -> void:
 	NetworkManager.take_failure_message()  # Shown right here; not again later.
 	_busy = false
-	_set_status(reason, RED)
+	_set_status(connection_error_text(reason), RED)
+
+
+static func connection_error_text(reason: String) -> String:
+	return String(CONNECTION_ERROR_TEXT.get(reason, reason))
 
 
 func _go_to_level(scene_path: String) -> void:
