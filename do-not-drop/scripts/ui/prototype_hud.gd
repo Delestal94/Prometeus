@@ -1,4 +1,4 @@
-extends "res://scripts/ui/hud/hud_cargo_panel.gd"
+extends "res://scripts/ui/hud/hud_prompts.gd"
 ## Lightweight prototype UI: no gameplay decisions or direct physics references.
 
 
@@ -324,96 +324,6 @@ func _process(delta: float) -> void:
 			event_label.text = ""
 
 
-## Full strength while paused or before the run starts, faded to a hint
-## once the run is under way. Never hidden outright: a player who forgets
-## which key honks shouldn't have to pause to find out.
-func _refresh_shortcuts() -> void:
-	if shortcut_label == null:
-		return
-	var learning: bool = get_tree().paused or not RunManager.is_running or RunManager.elapsed_seconds < SHORTCUT_VISIBLE_SECONDS
-	var target: float = 1.0 if learning else 0.25
-	var pill: Control = shortcut_label.get_parent() as Control
-	pill.modulate.a = move_toward(pill.modulate.a, target, 0.02)
-
-
-## The things you can do from anywhere. What depends on where you are (the
-## pedals, the package, the seat) lives in the hint line above instead.
-func _refresh_shortcut_text() -> void:
-	var items: PackedStringArray = [
-		_key("F  celular", "LB  celular"),
-		_key("Click rueda  ping", "D-pad arriba  ping"),
-		_key("C  centrar vista", "Clic stick der.  centrar vista"),
-		_key("%s  mirar atrás" % GameSettings.binding_label(&"look_back"), "Clic stick izq.  mirar atrás"),
-		_key("Esc  pausa", "Start  pausa"),
-	]
-	if _can_restart():
-		items.append(_key("Mantener R  reiniciar", "Mantener Y  reiniciar"))
-	shortcut_label.text = UiTheme.keycaps("   ·   ".join(items), true)
-
-
-func _refresh_role() -> void:
-	_role = _local_role()
-
-
-func _local_role() -> int:
-	var level: Node = get_parent()
-	if level == null:
-		return Role.ON_FOOT
-	var player: Variant = level.get(&"local_player")
-	if not is_instance_valid(player):
-		return Role.ON_FOOT
-	var seat: String = String((player as Node).get(&"seat_node_path"))
-	if seat.is_empty():
-		return Role.ON_FOOT
-	return Role.DRIVER if seat.contains("DriverEyePoint") else Role.PASSENGER
-
-
-func _flash_hint(text: String, seconds: float) -> void:
-	_hint_override = text
-	_hint_override_seconds = seconds
-
-
-func _refresh_hint(delta: float) -> void:
-	if _hint_override_seconds > 0.0:
-		_hint_override_seconds -= delta
-		hint_label.text = "[b]%s[/b]" % _hint_override
-		hint_label.add_theme_color_override("default_color", STATE_TEXT[1])
-		return
-	hint_label.text = UiTheme.keycaps(_base_hint())
-	hint_label.add_theme_color_override("default_color", MUTED)
-
-
-func _base_hint() -> String:
-	var waiting: bool = not RunManager.is_running and RunManager.results.is_empty()
-	match _role:
-		Role.DRIVER:
-			if waiting:
-				# Seated with nothing aboard is the one way the run silently
-				# never starts -- say so instead of teaching the pedals.
-				return "Todavía no hay carga a bordo  ·  %s bajarte a buscar un paquete" % _key("E", "A")
-			return _key(
-				"W/S  acelerar y frenar   ·   A/D  girar   ·   Espacio  freno de mano   ·   H  bocina   ·   E  bajarte",
-				"RT  acelerar   ·   LT  frenar   ·   Stick izq.  girar   ·   X  freno de mano   ·   B  bocina   ·   A  bajarte")
-		Role.PASSENGER:
-			return _key(
-				"Click izq. (mantener)  cuidar tu paquete   ·   WASD  secuencias   ·   E  bajarte",
-				"RT (mantener)  cuidar tu paquete   ·   Stick izq.  secuencias   ·   A  bajarte")
-	if waiting:
-		return _key(
-			"WASD  caminar   ·   Espacio  saltar   ·   E  agarrar / dejar   ·   Q  soltar paquete",
-			"Stick izq.  caminar   ·   X  saltar   ·   A  agarrar / dejar")
-	return _key(
-		"WASD  caminar   ·   E  interactuar   ·   F  sacar una foto de la entrega",
-		"Stick izq.  caminar   ·   A  interactuar   ·   LB  sacar una foto de la entrega")
-
-
-## Online, only the host may restart: a client reloading its own copy of
-## the level tears down the spawner the host replicates players into, and
-## comes back to an empty world.
-func _can_restart() -> bool:
-	return not NetworkManager.is_online() or NetworkManager.is_host()
-
-
 func _request_restart() -> void:
 	if _can_restart():
 		EventBus.restart_requested.emit()
@@ -583,35 +493,6 @@ func _on_depot_station_opened(station: StringName) -> void:
 	depot_panel.open(station, level.get(&"depot") if level != null and &"depot" in level else null)
 
 
-func _on_interaction_prompt(prompt: String) -> void:
-	_interaction_prompt = prompt
-	_render_interaction_prompt()
-
-
-func _on_carry_changed(carrying: bool) -> void:
-	_carrying = carrying
-	_render_interaction_prompt()
-
-
-func _render_interaction_prompt() -> void:
-	var lines: PackedStringArray = []
-	if not _interaction_prompt.is_empty():
-		lines.append("[ %s ]  %s" % [_key("E", "A"), _interaction_prompt])
-	if _carrying:
-		lines.append("[ %s ]  Soltar paquete" % _key("Q", "B"))
-	if not _lid_action.is_empty():
-		lines.append("[ %s ]  %s" % [_key("T", "D-pad abajo"), _lid_action])
-	if not _lid_inside.is_empty():
-		lines.append("Adentro:  %s" % _lid_inside)
-	interaction_label.text = "\n".join(lines)
-
-
-func _on_lid_hint_changed(action: String, inside: String) -> void:
-	_lid_action = action
-	_lid_inside = inside
-	_render_interaction_prompt()
-
-
 const PING_DISPLAY_SECONDS: float = 2.5
 ## Long enough to read a two-clause event line without it becoming furniture.
 const EVENT_DISPLAY_SECONDS: float = 6.0
@@ -767,20 +648,6 @@ func _on_route_event_resolved(_event_id: StringName, success: bool, _peer_id: in
 	event_label.text = "Evento resuelto" if success else "Evento fallido"
 	event_label.add_theme_color_override("font_color", MINT if success else RED)
 	event_seconds_left = PING_DISPLAY_SECONDS
-
-
-func _on_damage(_id: StringName, damage: float) -> void:
-	_flash_hint("¡Golpe!  −%d de integridad. Bajá la velocidad antes del próximo obstáculo." % roundi(damage), 2.5)
-
-
-func _on_delivery(in_zone: bool, stopped: float) -> void:
-	if in_zone:
-		# Re-sent every physics frame while inside, so a short clock is
-		# enough to keep it up and lets it lapse the moment the van leaves.
-		_flash_hint("Mantené la camioneta detenida…" if stopped > 0.0 else "¡Llegaste! Frená dentro de la zona marcada para entregar.", 0.25)
-	elif in_delivery:
-		_flash_hint("Volvé a la zona de entrega y detené la camioneta.", 3.0)
-	in_delivery = in_zone
 
 
 ## A client whose host vanished used to be left driving a frozen puppet van
