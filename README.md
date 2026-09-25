@@ -357,7 +357,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   una se consuma al funcionar y que Rescate no se pierda si no hay evento.
 - `test_fragile` — umbrales de daño, estados e independencia entre paquetes.
 - `test_traps` — las otras tres trampas: peso creciente, equilibrio y ruidoso.
-- `test_interaction` — agarrar, dejar en el asiento y subirse a manejar.
+- `test_interaction` — agarrar, dejar en el asiento y subirse a manejar; el que está
+  sentado no ve el indicador de su propio asiento.
 - `test_multi_cargo` — varias trampas a la vez, y que perder una no termine
   la entrega de todos.
 - `test_network_roster` — quién está en la sesión, quién es anfitrión, y que
@@ -378,12 +379,15 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   tachado, a la derecha y mirando al camión, nombres sin repetir y los mismos por semilla.
 - `test_roadside_stories` — N-602: historias de banquina (camioneta de la competencia
   volcada, gallina con la caja rota, cartel "entregamos (casi) todo") como mucho una cada
-  800 m, fuera del asfalto, sólidas donde se chocan e iguales para todos.
+  800 m, fuera del asfalto, sólidas donde se chocan e iguales para todos; la camioneta con
+  la trompa en la cuneta y el texto del cartel dentro del panel (también traducido).
 - `test_depot_campaign_board` — N-603: "Días sin accidentes" suma por partida sin cajas
-  rotas y vuelve a 0 con una rota; la pared de fotos guarda las últimas 8 y borra las viejas.
+  rotas y vuelve a 0 con una rota; la pared de fotos guarda las últimas 8 y borra las viejas,
+  cada foto con su chinche y la pared sin pisar el pizarrón del equipo.
 - `test_door_reactions` — N-604: el vecino reacciona a cada resultado (salta, revisa la
   caja, se agarra la cabeza, devuelve la caja equivocada, deja una nota) con una de 5
-  frases elegida por semilla, en todos los clientes.
+  frases elegida por semilla, en todos los clientes; mirando a la calle, con el globo
+  delante de la lamparita del porche y la nota sobre la cara de la puerta en los 5 modelos.
 - `test_world_translations` — N-605: todos los textos del mundo están en
   `translations/strings_world.csv` en español e inglés con los mismos marcadores, no hay
   claves de más ni de menos, el juego arranca en español y cambiar el idioma cambia el mundo.
@@ -393,9 +397,14 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_music_tracks` — N-403: el menú tiene su tema y la radio del depósito su programa,
   los dos en loop por el bus Music, con origen y licencia anotados.
 - `test_night_lights` — N-304: de noche faroles y faros de autos estacionados brillan con
-  destello y las ventanas se encienden; al atardecer más tenue, de día nada.
+  destello y las ventanas se encienden; al atardecer más tenue, de día nada; los halos no
+  se ocultan como un bloque del largo de la ruta y cada uno conserva su tamaño.
 - `test_windshield_rain` — N-303: gotas en el parabrisas solo con lluvia y solo desde
-  adentro; los limpiaparabrisas barren con el mismo reloj que limpia el shader.
+  adentro; los limpiaparabrisas (en tándem, paralelos, sin cruzarse ni salirse del vidrio)
+  barren con el mismo reloj que limpia el shader.
+- `test_reference_truck` — el camión de referencia: puertas que abren y se apuntan, el
+  conductor sube por su puerta, ruedas sobre el piso y (N-301) juntas de paneles oscuras de
+  20 mm en la cara exterior de cada panel, sin colisión, que se mueven con su puerta.
 - `test_seat_look_limits` — N-504: cada asiento tiene sus límites de mirada (el conductor
   no mira a través del techo ni de la mampara) y la vista retrocede si queda pegada a una pared.
 - `test_vehicle_net_smoothing` — N-208: con 150 ms de lag y 50 de jitter el camión del host
@@ -403,8 +412,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   teletransporte salta en vez de deslizarse.
 - `test_level_common` — N-209: entrega y Endless heredan lo común de `level_common.gd` sin
   redefinirlo, y los dos arrancan su partida.
-- `test_trailer_shots` — N-902: los 6 planos del tráiler están guardados, cada uno encuentra
-  su mundo, los rieles son suaves y un plano (el vuelco) se reproduce de verdad.
+- `test_trailer_shots` — N-902/N-905/N-906: los planos del tráiler y del devlog están
+  guardados, cada uno encuentra un mundo con su tramo lejos del depósito, los rieles son
+  suaves; el vuelco tumba el camión, queda tumbado y tira las cajas, sin HUD ni carteles
+  flotantes y con las puertas cerradas; la casa de noche, el tren y el ciervo se reproducen
+  y quedan en cuadro (el camión frena en la casa y en la barrera, no atropella al ciervo).
 - `test_release_build` — builds de release (N-210): `project.godot` tiene
   `config/version` y el menú la muestra; los presets de CI
   (`tools/export/export_presets.cfg`) exportan Windows y Linux sin `tests/` ni `.blend`, y
@@ -589,7 +601,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_world_mood` — clima y hora del día: misma semilla, mismo clima para todos; semillas
   distintas cubren los 4 climas y las 3 horas; nunca se modifica el `Environment` compartido
   de la escena; la lluvia moja el asfalto y la noche sube los faros; pájaros de día, grillos
-  de noche y ninguno con lluvia, y los loops de ambiente suenan y cubren todo su buffer. Para ver uno a mano:
+  de noche y ninguno con lluvia, y los loops de ambiente suenan y cubren todo su buffer; en
+  otoño las hojas se ponen ocres y los pinos siguen verdes. Para ver uno a mano:
   `-- --mood=lluvia_noche` (soleado/nublado/lluvia/niebla × dia/atardecer/noche).
 - `test_more_route_segments` — loma (el camino sube y vuelve a nivel), túnel sólido e
   iluminado, y el paso a nivel que baja barreras sólidas, deja pasar el tren y reabre;

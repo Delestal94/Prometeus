@@ -10,15 +10,38 @@ extends Node
 ##
 ## The shots are in data/trailer_shots.json: which world (seed, weather),
 ## where the truck starts (the depot, or some metres before the first segment
-## of a kind, or before a house), how fast the autopilot drives it, what
-## happens (a roll), and the camera's rail (TrailerCamera). The HUD is hidden:
-## these are for the store page and the trailer.
+## of a kind, a deer crossing or a house), how fast the autopilot drives it,
+## where it stops, what happens (a train, a roll), how many boxes ride along,
+## and the camera's rail (TrailerCamera). The HUD and the floating in-world
+## labels are hidden, and the truck's doors shut: these are for the store
+## page and the trailer.
+##
+## Start options ("start"):
+##   at        depot | segment | crossing | house
+##   segment   the segment kind (at: segment); the seed, unless the shot fixes
+##             one, is the first whose route has that kind at least lead +
+##             RUN_UP_MARGIN metres out -- not the depot's own doorstep
+##   lead      metres of run-up before the segment / crossing / house stop
+##   stop      (segment) stop this many metres before the segment's middle
+##   train     (segment, RailCrossingSegment) the barriers do come down
+##
+## The anchor space of the rail: the segment (at: segment), the crossing
+## turned so the deer waits at +x (crossing), or the truck's stop on the road
+## facing along it with the house at +x (house).
 
 const SHOTS_PATH: String = "res://data/trailer_shots.json"
 const LEVEL: String = "res://scenes/gameplay/level_base.tscn"
 const TrailerCameraScript = preload("res://scripts/tools/trailer_camera.gd")
 const RouteScript = preload("res://scripts/gameplay/route/route.gd")
 const LOOKAHEAD: float = 14.0
+## A shot's segment is at least its lead plus this far from the depot.
+const RUN_UP_MARGIN: float = 60.0
+## How hard the autopilot can brake, to start slowing in time (m/s^2).
+const BRAKING: float = 4.0
+const CARGO_MOUNTS: Array[String] = [
+	"CargoBay/LeftSeat1PackageMount", "CargoBay/RightSeat1PackageMount", "CargoBay/LeftSeat2PackageMount",
+	"CargoBay/RightSeat2PackageMount", "CargoBay/LeftShelfPackageMount", "CargoBay/RightShelfPackageMount",
+]
 
 var shot: Dictionary = {}
 ## Off in tests: they call setup() themselves.
@@ -27,6 +50,8 @@ var level: Node
 var route: Node3D
 var van: VehicleBody3D
 var camera: Camera3D
+## What the shot is about: its segment, deer crossing or house (null at the depot).
+var focus: Node3D
 var _time: float = 0.0
 var _path: Array[Vector3] = []
 var _path_index: int = 0
@@ -45,12 +70,13 @@ static func load_shots() -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 
-static func find_seed(kind: String, houses: int, first_seed: int = 1) -> int:
-	# The first seed whose route has a `kind` segment (plan only, no build).
+static func find_seed(kind: String, houses: int, first_seed: int = 1, min_start: float = 0.0) -> int:
+	# The first seed whose route has a `kind` segment at least `min_start`
+	# metres down the road (plan only, no build).
 	for seed_value: int in range(first_seed, first_seed + 400):
 		var plan: Dictionary = RouteScript.plan_spine(seed_value, houses, true)
 		for entry: Dictionary in plan.segments:
-			if (entry.script as Script).get_global_name() == kind:
+			if (entry.script as Script).get_global_name() == kind and float(entry.get("start", 0.0)) >= min_start:
 				return seed_value
 	return first_seed
 
@@ -92,7 +118,7 @@ func setup(definition: Dictionary) -> void:
 	var seed_value: int = int(shot.get("seed", 0))
 	var start: Dictionary = shot.get("start", {})
 	if seed_value == 0:
-		seed_value = find_seed(String(start.get("segment", "StraightSegment")), houses)
+		seed_value = find_seed(String(start.get("segment", "StraightSegment")), houses, 1, float(start.get("lead", 60.0)) + RUN_UP_MARGIN)
 	var network: Node = get_node(^"/root/NetworkManager")
 	network.set(&"world_seed", seed_value)
 	network.set(&"world_house_count", houses)
@@ -101,33 +127,49 @@ func setup(definition: Dictionary) -> void:
 	add_child(level)
 	await get_tree().process_frame
 	await get_tree().physics_frame
-	for layer: Node in level.find_children("*", "CanvasLayer", false, false):
-		(layer as CanvasLayer).visible = false
+	_hide_overlays()
 	van = level.get(&"vehicle")
 	route = level.get_node(^"World/Route")
 	_path.assign(route.get(&"_path_points"))
+	_load_cargo(int(shot.get("cargo", 1)))
 	level.call(&"start_debug_delivery")
 	await get_tree().physics_frame
+	# Boarding opened the cab door and the load left the back open (ramp
+	# down): shut for a driving shot.
+	for door: StringName in [&"rear", &"cab_left", &"cab_right"]:
+		van.call(&"set_door_open", door, false)
 	var anchor := Transform3D.IDENTITY
 	match String(start.get("at", "depot")):
 		"segment":
 			var segment: Node3D = _first_segment(String(start.segment), float(start.get("lead", 60.0)) + 20.0)
 			if segment != null:
+				focus = segment
 				anchor = segment.global_transform
-				_place_before(float(segment.get_meta(&"route_distance", 0.0)) - float(start.get("lead", 60.0)))
+				var segment_start: float = float(segment.get_meta(&"route_distance", 0.0))
+				_place_before(segment_start - float(start.get("lead", 60.0)))
+				if start.has("stop"):
+					_stop_at = _index_at(segment_start + float(segment.get(&"length")) * 0.5 - float(start.stop))
+				if bool(start.get("train", false)) and &"will_close" in segment:
+					segment.set(&"will_close", true)
 		"crossing":
-			# A deer crossing (RouteDresser._dress_crossings): its straight.
-			var crossing: Node3D = route.find_child("DeerCrossing", true, false) as Node3D
+			# A deer crossing (RouteDresser._dress_crossings), mid-straight:
+			# the run-up is measured to the crossing itself, so nothing else
+			# (a level crossing's barrier) comes between.
+			var crossing := route.find_child("DeerCrossing", true, false) as Node3D
 			if crossing != null:
-				var segment: Node3D = crossing.get_parent() as Node3D
-				anchor = segment.global_transform
-				_place_before(float(segment.get_meta(&"route_distance", 0.0)) - float(start.get("lead", 60.0)))
+				focus = crossing
+				anchor = _mirrored_toward(crossing.global_transform, crossing.global_transform * Vector3(float(crossing.get(&"side")), 0.0, 0.0))
+				_place_before(float(route.call(&"road_distance", crossing.global_position)) - float(start.get("lead", 60.0)))
 		"house":
 			var house: Node3D = (route.get(&"houses") as Array)[int(start.get("index", 0))]
-			anchor = house.global_transform
+			focus = house
 			var stop: float = float(route.call(&"stop_road_distance", int(start.get("index", 0))))
 			_place_before(stop - float(start.get("lead", 90.0)))
 			_stop_at = _index_at(stop)
+			var at: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2)])
+			var along: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2) + 1]) - at
+			along.y = 0.0
+			anchor = _mirrored_toward(Transform3D(Basis.looking_at(along.normalized(), Vector3.UP), at), house.global_position)
 		_:
 			anchor = level.get(&"depot").global_transform
 	camera = TrailerCameraScript.new()
@@ -135,6 +177,44 @@ func setup(definition: Dictionary) -> void:
 	camera.set(&"target", van)
 	add_child(camera)
 	camera.call(&"play", shot.get("rail", []), anchor)
+
+
+## `frame`, with its x axis flipped if need be so `point` lies on its +x side:
+## a rail written for "the house on the right" works on either side.
+func _mirrored_toward(frame: Transform3D, point: Vector3) -> Transform3D:
+	if (frame.affine_inverse() * point).x < 0.0:
+		frame.basis.x = -frame.basis.x
+	return frame
+
+
+## `count` boxes aboard (the debug start loads one): more to fly in a roll.
+func _load_cargo(count: int) -> void:
+	var player: Node = level.get(&"local_player")
+	var packages: Array = level.get(&"packages")
+	if player == null:
+		return
+	var loaded: int = 0
+	for package: RigidBody3D in packages:
+		if loaded >= count or loaded >= CARGO_MOUNTS.size():
+			break
+		var mount: Node = van.get_node_or_null(NodePath(CARGO_MOUNTS[loaded] + "/InteractionArea"))
+		if mount == null or not is_instance_valid(package):
+			continue
+		player.call(&"pick_up", package.get_path())
+		mount.call(&"interact", player)
+		loaded += 1
+
+
+## HUD, menus and the floating in-world labels (a house's "CASA 1" tag):
+## game UI, not scenery. Run every frame -- the run's banners come later.
+func _hide_overlays() -> void:
+	for layer: Node in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(layer as CanvasLayer).visible = false
+	if level == null:
+		return
+	for label: Node in level.find_children("*", "Label3D", true, false):
+		if (label as Label3D).billboard != BaseMaterial3D.BILLBOARD_DISABLED:
+			(label as Label3D).visible = false
 
 
 ## The first `kind` segment at least `from` metres down the road (room for
@@ -191,11 +271,23 @@ func _physics_process(_delta: float) -> void:
 		van.freeze = false
 		van.angular_velocity = van.global_basis.z * float(roll.get("strength", 5.0))
 		van.linear_velocity += Vector3.UP * 4.0 + van.global_basis.x * 3.0
+		# The boxes come loose and carry on with the truck's speed, tossed up
+		# and out the way it's going over.
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 906
+		for package: RigidBody3D in level.call(&"_release_loaded_cargo"):
+			package.linear_velocity = van.linear_velocity * 0.8 + Vector3.UP * rng.randf_range(3.0, 6.0) + van.global_basis.x * rng.randf_range(2.0, 5.0)
+			package.angular_velocity = Vector3(rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0))
 
 
 ## Pure pursuit along the road at the shot's speed, braking to a stop at the
 ## house for an arrival shot. The truck drives itself; nobody's at the wheel.
 func _drive() -> void:
+	if _rolled:
+		# Nobody drives a truck that's going over: it doesn't get righted and
+		# driven off.
+		van.set_controls(0.0, 0.0, false)
+		return
 	if _path_index >= _path.size() - 1:
 		van.set_controls(0.0, 0.0, true)
 		return
@@ -205,9 +297,13 @@ func _drive() -> void:
 	var local: Vector3 = van.global_transform.affine_inverse() * route.to_global(_path[_path_index])
 	var steer: float = clampf(atan2(local.x, -local.z) * 2.2, -1.0, 1.0)
 	var target_kmh: float = float(shot.get("speed_kmh", 40.0))
-	if _stop_at >= 0 and _path_index >= _stop_at - 2:
-		target_kmh = 0.0
 	var speed: float = float(van.get(&"speed_kmh"))
+	if _stop_at >= 0:
+		# Brake in time to stand still at the stop, not a lookahead past it.
+		var to_stop: float = van.global_position.distance_to(route.to_global(_path[mini(_stop_at, _path.size() - 1)]))
+		var metres_per_second: float = speed / 3.6
+		if to_stop < metres_per_second * metres_per_second / (2.0 * BRAKING) + 1.5 or _passed_stop():
+			target_kmh = 0.0
 	var throttle: float = 0.35
 	if target_kmh <= 0.0:
 		throttle = -1.0 if speed > 1.0 else 0.0
@@ -218,9 +314,17 @@ func _drive() -> void:
 	van.set_controls(throttle, steer, target_kmh <= 0.0 and speed < 1.0)
 
 
+## Whether the truck is already beyond the stop along the road.
+func _passed_stop() -> bool:
+	var at: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2)])
+	var along: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2) + 1]) - at
+	return (van.global_position - at).dot(along) > 0.0
+
+
 func _process(delta: float) -> void:
 	if van == null:
 		return
+	_hide_overlays()
 	_time += delta
 	if _frame_step > 0.0 and _time >= _next_frame:
 		_next_frame += _frame_step
@@ -232,7 +336,8 @@ func _process(delta: float) -> void:
 		_save_frame(_out_path if not _out_path.is_empty() else "user://trailer_still.png")
 		get_tree().quit()
 		return
-	if _time > float(shot.get("duration", 8.0)) and _still_at < 0.0:
+	# Only when running on its own: a test drives the shot and quits itself.
+	if autoplay and _time > float(shot.get("duration", 8.0)) and _still_at < 0.0:
 		get_tree().quit()
 
 
