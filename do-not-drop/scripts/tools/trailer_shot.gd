@@ -115,6 +115,13 @@ func setup(definition: Dictionary) -> void:
 			if segment != null:
 				anchor = segment.global_transform
 				_place_before(float(segment.get_meta(&"route_distance", 0.0)) - float(start.get("lead", 60.0)))
+		"crossing":
+			# A deer crossing (RouteDresser._dress_crossings): its straight.
+			var crossing: Node3D = route.find_child("DeerCrossing", true, false) as Node3D
+			if crossing != null:
+				var segment: Node3D = crossing.get_parent() as Node3D
+				anchor = segment.global_transform
+				_place_before(float(segment.get_meta(&"route_distance", 0.0)) - float(start.get("lead", 60.0)))
 		"house":
 			var house: Node3D = (route.get(&"houses") as Array)[int(start.get("index", 0))]
 			anchor = house.global_transform

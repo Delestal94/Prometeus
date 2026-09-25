@@ -281,5 +281,46 @@
         "t": 7.0
       }
     ]
+  },
+  "ciervo": {
+    "about": "Ciervo: el ciervo cruza delante del camión en una recta del bosque (devlog N-906).",
+    "houses": 2,
+    "mood": "soleado_atardecer_otono",
+    "speed_kmh": 38,
+    "duration": 8.0,
+    "start": {
+      "at": "crossing",
+      "lead": 55
+    },
+    "rail": [
+      {
+        "space": "truck",
+        "at": [
+          1.2,
+          2.3,
+          -1.0
+        ],
+        "look": [
+          0.0,
+          1.5,
+          -20.0
+        ],
+        "t": 0.0
+      },
+      {
+        "space": "truck",
+        "at": [
+          3.0,
+          2.6,
+          -6.0
+        ],
+        "look": [
+          0.0,
+          1.2,
+          -24.0
+        ],
+        "t": 8.0
+      }
+    ]
   }
 }
