@@ -26,6 +26,11 @@ Cada jugador conserva como máximo una carta. Rescate no se consume si no hay
 un evento activo; Descuento y Re-voto solo aparecen como acciones en el mostrador
 de suministros cuando el jugador tiene la carta correspondiente.
 
+En una sesión online, abrir Suministros inicia una votación: cada oferta muestra
+los colores de quienes la eligieron y el reloj de 20 segundos empieza con el
+primer voto. La votación termina antes si ya votaron todos; gana la mayoría y,
+si empatan, la opción más barata. En solitario la compra sigue siendo directa.
+
 ## Eventos de ruta
 
 | Orden | Evento | Efecto |

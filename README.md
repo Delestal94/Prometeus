@@ -168,6 +168,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_events.gd
 <godot> --headless --path do-not-drop --script res://tests/test_merit.gd
 <godot> --headless --path do-not-drop --script res://tests/test_cards.gd
+<godot> --headless --path do-not-drop --script res://tests/test_supply_vote.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
@@ -339,6 +340,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   a cerrar el juego.
 - `test_cards` — que solo se repartan Rescate, Descuento y Re-voto; que cada
   una se consuma al funcionar y que Rescate no se pierda si no hay evento.
+- `test_supply_vote` — mayoría, desempate por la oferta más barata y compra
+  final en el depósito sin descontar dos veces la plata del equipo.
 - `test_fragile` — umbrales de daño, estados e independencia entre paquetes.
 - `test_traps` — las otras tres trampas: peso creciente, equilibrio y ruidoso.
 - `test_interaction` — agarrar, dejar en el asiento y subirse a manejar.
