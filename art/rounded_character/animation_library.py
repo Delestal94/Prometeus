@@ -5,10 +5,12 @@ the character's left is +X. 1 Blender unit (BU) = 0.5 m in game.
 
 Every clip is a function of time returning a pose: a flat dict of named
 parameters (see NEUTRAL). Poses are plain numbers, so clips can blend into
-each other exactly -- Jump and PickUpPackage settle into Idle's first frame.
+each other exactly -- Jump and PickUpPackage settle into Idle's first frame,
+and PickUpHigh shares PickUpPackage's timing so the game blends them by the
+box's height.
 
 - Arms are FK (IK_brazo = 0) so they hang from the chest, follow the torso
-  and swing on arcs with follow-through. PickUpPackage switches them to IK
+  and swing on arcs with follow-through. The pickups switch them to IK
   while the hands must meet a box.
 - Legs stay IK. Feet roll about the ball (heel up) or the heel (toe up), so
   the point touching the ground does not slide while the foot pitches.
@@ -33,7 +35,7 @@ GAITS = {
 IDLE_PERIOD = 6.0
 DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
              'Stroll': GAITS['Stroll']['period'], 'Jump': 1.6,
-             'PickUpPackage': 1.6, 'Sit': 4.0}
+             'PickUpPackage': 1.6, 'PickUpHigh': 1.6, 'Sit': 4.0}
 LOOPING = ('Idle', 'Walk', 'Stroll', 'Sit')
 
 # Foot geometry, relative to the ankle (IK target) at rest.
@@ -381,19 +383,30 @@ def jump(t):
         P['arm'+side] = (a[0]-12*squash, a[1]+14*squash-8*arm_swing, a[2]+18*squash, a[3], a[4], a[5])
     return blend(P, rest, smooth(1.4, 1.6, t))
 
+def pickup_timing(t):
+    """The curves both pickups share, so PickUpPackage and PickUpHigh stay in
+    step and player.gd can blend them by the box's height: the grab at
+    0.42 s, the lift until 1.3 s, the settle."""
+    return dict(
+        look=keys(t, [(0, 0.), (.1, 1.)]),                       # the eyes lead
+        rise=keys(t, [(0, 0.), (.07, 1.), (.13, 0.)]),           # a tiny lift before going down
+        down=keys(t, [(0, 0.), (.08, 0.), (.42, 1.), (.50, 1.05), (.58, 1.), (1.3, 0.)]),
+        lift=smooth(.52, 1.3, t),
+        effort=keys(t, [(.5, 0.), (.75, 1.), (1.15, 1.), (1.45, 0.)]),
+        settle=ramped(t, 1.28, 1., 2.2, 6.),
+        hug=keys(t, [(.34, 0.), (.48, 1.)]),
+        reach=keys(t, [(0, 0.), (.42, 1.)]),
+    )
+
 def pickup(t):
     """Timed to player.gd: hands take the box at 0.42 s, it rises until 1.3 s.
     In the game the hands then follow the real box by IK; these arcs matter
     while that IK blends in, and in any preview."""
     rest = IDLE0
-    look = keys(t, [(0, 0.), (.1, 1.)])                      # the eyes lead
-    rise = keys(t, [(0, 0.), (.07, 1.), (.13, 0.)])          # a tiny lift before going down
-    down = keys(t, [(0, 0.), (.08, 0.), (.42, 1.), (.50, 1.05), (.58, 1.), (1.3, 0.)])
-    lift = smooth(.52, 1.3, t)
-    effort = keys(t, [(.5, 0.), (.75, 1.), (1.15, 1.), (1.45, 0.)])
+    c = pickup_timing(t)
+    look, rise, down, lift = c['look'], c['rise'], c['down'], c['lift']
+    effort, settle, hug = c['effort'], c['settle'], c['hug']
     wobble = effort*math.sin(TAU*3.2*(t-.5))
-    settle = ramped(t, 1.28, 1., 2.2, 6.)
-    hug = keys(t, [(.34, 0.), (.48, 1.)])
     P = dict(rest)
     P.update(
         pz=rest['pz']+.025*rise-.43*down-.03*settle,
@@ -407,7 +420,7 @@ def pickup(t):
     )
     # Hands on arcs: out and down around the tummy to the box's sides, a
     # squeeze, then the box comes in toward the chest before going up.
-    reach = keys(t, [(0, 0.), (.42, 1.)])
+    reach = c['reach']
     for side, s in (('L', 1), ('R', -1)):
         start, rot0 = HANDS0[side]
         width = s*(.60-.04*hug)
@@ -415,6 +428,51 @@ def pickup(t):
             pos = bezier(start, (s*1.2, -.55, 1.25), (width, -.78, 1.02), reach)
         else:
             pos = bezier((width, -.78, 1.02), (width, -.66, 1.45), (width, -.62, 1.97), lift)
+        P['hand'+side] = pos
+        P['hrot'+side] = lerp(rot0, (-55., 0., -s*75.), reach)
+        P['ik'+side] = 1.
+        P['arm'+side] = tuple(rest['arm'+side][:5]) + (3*hug,)
+    return P
+
+# Where the hands meet the box in each pickup (wrist height, BU). player.gd
+# blends the two clips by the box's grip height between these (x 0.5 m/BU).
+PICKUP_GRAB_Z = {'PickUpPackage': 1.02, 'PickUpHigh': 1.85}
+
+def pickup_high(t):
+    """PickUpPackage for a box at the waist (a shelf, a table): same duration
+    and the same grab/lift/settle times, so the two blend frame by frame.
+    No squat: the knees only soften, the torso leans a little toward the
+    box, the arms reach straight out in front and pull it in to the chest."""
+    rest = IDLE0
+    c = pickup_timing(t)
+    look, rise, down, lift = c['look'], c['rise'], c['down'], c['lift']
+    effort, settle, hug = c['effort'], c['settle'], c['hug']
+    wobble = effort*math.sin(TAU*3.2*(t-.5))
+    P = dict(rest)
+    P.update(
+        # A small dip, weight a little back as the arms reach forward.
+        pz=rest['pz']+.02*rise-.06*down-.02*settle,
+        py=.04*down,
+        # Leans from the waist toward the box, then back a touch under the
+        # weight as it comes in to the chest.
+        s_pitch=rest['s_pitch']+9*down-5*effort*lift, c_pitch=rest['c_pitch']+4*down-2*effort,
+        s_roll=rest['s_roll']+1.*wobble, c_roll=rest['c_roll']-.7*wobble,
+        h_pitch=rest['h_pitch']+9*look*(1-lift)-3*down*(1-lift)-2*effort+2*settle,
+        h_roll=rest['h_roll']+keys(t, [(0, 0.), (.3, -3.), (.9, 2.), (1.6, 0.)]),
+        h_yaw=rest['h_yaw']*(1-look),
+        by=rest['by']-.01*down, bz=rest['bz']-.01*down-.015*settle,
+    )
+    reach = c['reach']
+    for side, s in (('L', 1), ('R', -1)):
+        start, rot0 = HANDS0[side]
+        width = s*(.60-.04*hug)
+        grab = (width, -.92, PICKUP_GRAB_Z['PickUpHigh'])
+        if t < .42:
+            # Out around the tummy and forward, rising to the box's sides.
+            pos = bezier(start, (s*1.1, -.75, 1.45), grab, reach)
+        else:
+            # Pulled in toward the chest: the carry pose PickUpPackage ends in.
+            pos = bezier(grab, (width, -.78, 2.02), (width, -.62, 1.97), lift)
         P['hand'+side] = pos
         P['hrot'+side] = lerp(rot0, (-55., 0., -s*75.), reach)
         P['ik'+side] = 1.
@@ -474,7 +532,7 @@ def build(rig):
         rot = (m.to_3x3().normalized() @ poser.rest['hand.'+side].to_3x3().inverted()).to_euler('XYZ')
         HANDS0[side] = (tuple(m.translation), tuple(math.degrees(x) for x in rot))
     clips = {'Idle': idle, 'Walk': lambda t: gait('Walk', t), 'Stroll': lambda t: gait('Stroll', t),
-             'Jump': jump, 'PickUpPackage': pickup, 'Sit': sit}
+             'Jump': jump, 'PickUpPackage': pickup, 'PickUpHigh': pickup_high, 'Sit': sit}
     for name, duration in DURATIONS.items():
         action = bpy.data.actions.new(name); action.use_fake_user = True
         rig.animation_data.action = action

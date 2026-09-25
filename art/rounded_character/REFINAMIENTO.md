@@ -1,7 +1,7 @@
 # Personaje: animación y rostro
 
 El modelo de juego es `sm_char_player_rounded.glb` (~18.600 triángulos, camiseta
-teñible) con seis clips. `animation_library.py` los genera; `model_fixes.py`
+teñible) con siete clips. `animation_library.py` los genera; `model_fixes.py`
 corrige pesos y geometría oculta antes de exportar; `build_game_export.py` arma el
 GLB. `personaje_animado.blend` guarda las acciones editables y
 `personaje_redondeado.blend` sigue siendo la referencia de modelado (no se guarda).
@@ -12,10 +12,11 @@ Cada clip es una función del tiempo que devuelve una pose: un diccionario de
 parámetros (inclinaciones de pelvis/columna/pecho/cabeza, barriga, brazos, pies).
 Al ser números, las poses se mezclan exacto: `Jump` aterriza y termina en el
 primer cuadro de `Idle`, y `PickUpPackage` parte de donde cuelgan de verdad las
-manos en `Idle`.
+manos en `Idle`. `PickUpPackage` y `PickUpHigh` comparten las curvas de tiempo
+(`pickup_timing()`), así el juego los mezcla cuadro a cuadro.
 
 - **Brazos en FK** (`IK_brazo = 0` por clip): cuelgan del pecho, siguen al torso y
-  describen arcos con arrastre. `PickUpPackage` y `Sit` los pasan a IK, porque las
+  describen arcos con arrastre. Los dos pickups y `Sit` los pasan a IK, porque las
   manos tienen que tocar algo.
 - **Piernas con IK.** El pie rota sobre la bola (talón arriba) o sobre el borde
   del taco (punta arriba), así el punto que toca el suelo no patina.
@@ -30,6 +31,7 @@ manos en `Idle`.
 | `Stroll` | 0,6 s, loop | Caminata real a 1,5 m/s: doble apoyo, taco primero, cadera en péndulo invertido. Para el stick a medias. |
 | `Jump` | 1,6 s | Brazos que vienen desde atrás y abajo (el impulso), "Y" de festejo arriba con piernas recogidas, aleteo cómico al caer, piernas que buscan el piso. Al tocar: aplastamiento que sigue la velocidad de caída, cabeza y barriga que siguen de largo, brazos que bajan tarde. Parpadeo de impacto. |
 | `PickUpPackage` | 1,6 s | Los ojos van primero, mini subida antes de bajar, sentadilla con cola atrás (no se dobla de cintura), abrazo a la caja, subida con las piernas y leve esfuerzo hacia atrás, asentamiento. Tiempos iguales a los de la caja en `player.gd`. |
+| `PickUpHigh` | 1,6 s | La misma agarrada con la caja a la cintura (estante, mesa): sin sentadilla, rodillas apenas flojas, inclinación leve hacia la caja, brazos al frente que la traen al pecho. Mismos tiempos que `PickUpPackage`. |
 | `Sit` | 4 s, loop | Manos apoyadas sobre la panza (los codos salen para rodearla), respiración que las levanta, mirada, pies que se balancean por turnos. |
 
 ### Por qué `Walk` es un trote
@@ -39,6 +41,17 @@ llega hasta ~0,5). A esa velocidad un personaje así corre. La versión anterior
 pasos de 0,8 m (1,9 veces la pierna, casi un espagat). Ahora son 6 pasos/s de 0,6 m.
 Con el stick a medias, `player.gd` usa `Stroll` (histéresis 2,2–2,6 m/s) y
 conserva la fase al cambiar: los dos ciclos empiezan con el pie izquierdo apoyando.
+
+### Agarrar según la altura de la caja
+
+`player.gd` mezcla `PickUpPackage` (caja en el piso) y `PickUpHigh` (caja a la
+cintura) por la altura, sobre los pies, del punto donde las manos tocan la caja (el
+mismo de `carry_pose.gd`): peso 0 con el agarre a 0,51 m (el del clip del piso), 1 a
+0,925 m (el del clip alto; `PICKUP_GRAB_Z` × 0,5). El peso se calcula en `pick_up()`
+en cada peer, así que no se replica nada. Sin `AnimationTree`: la mezcla se hornea
+una vez por escalón de 1/8 como un clip más (`blend_clips()`, hueso por hueso a
+30 Hz) en la librería `pickup_blend` del `AnimationPlayer`. Una caja más alta que el
+pecho usa `PickUpHigh` entero y las manos llegan por IK.
 
 ## Correcciones del modelo (`model_fixes.py`)
 
@@ -77,9 +90,6 @@ con los mismos pesos y recortes que el export:
 
 ## Límites conocidos
 
-- La sentadilla de `PickUpPackage` es siempre hasta el piso: una caja en un estante
-  alto la agarran las manos (IK) pero el cuerpo igual se agacha. Faltaría una
-  variante alta mezclada por altura.
 - La caja viaja en línea recta de donde estaba hasta las manos (`player.gd`); si
   estaba lejos, se ve deslizarse.
 - Girar en el lugar no da pasos (el cuerpo rota entero). Sin IK de pies en pendientes.

@@ -510,10 +510,13 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   ninguno) con un color distinto y determinístico por `peer_id`, y ni la cámara a pie ni
   las de asiento cargan manos de relleno: las únicas manos en pantalla son de un personaje.
 - `test_player_character` — el cuerpo del jugador es el personaje redondeado de Astra
-  (`sm_char_player_rounded.glb`): trae los clips Idle/Walk/Jump/PickUpPackage/Sit, los
+  (`sm_char_player_rounded.glb`): trae los clips Idle/Walk/Jump/PickUpPackage/PickUpHigh/Sit, los
   huesos del IK de manejo, mide lo que un jugador y mira a −Z, la camiseta es la
   superficie 0 y lleva el color del equipo (el ribete, un tono más oscuro), todas sus
-  mallas van en la capa del cuerpo propio y sentado reproduce Sit.
+  mallas van en la capa del cuerpo propio y sentado reproduce Sit. Agarrar según la altura:
+  `PickUpHigh` dura lo mismo que `PickUpPackage`, no se agacha (el del piso sí) y agarra más
+  alto; el peso sale de la altura del agarre (caja en el piso 0, a la cintura 1) y a media
+  altura se reproduce la mezcla horneada, que queda a mitad de camino.
 - `test_driver_ik` — sentado al volante, las muñecas del personaje llegan a los dos
   puntos del volante con `SkeletonIK3D` (sin cilindros ni guantes sueltos en el volante),
   la bocina lleva su propia mano derecha al centro y la devuelve al aro, y al levantarse se

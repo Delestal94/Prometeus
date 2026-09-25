@@ -74,6 +74,17 @@ const ANIM_IDLE: StringName = &"Idle"
 const ANIM_WALK: StringName = &"Walk"
 const ANIM_JUMP: StringName = &"Jump"
 const ANIM_PICKUP: StringName = &"PickUpPackage"
+## PickUpPackage squats to the floor; PickUpHigh takes a box at the waist
+## without squatting. Same length and grab/lift times, so a pickup plays a
+## blend of both weighted by where the hands meet the box (pickup_high_weight)
+## -- built once per weight step into PICKUP_BLEND_LIBRARY. Heights are the
+## wrists at the grab in each clip, above the feet (animation_library.py
+## PICKUP_GRAB_Z x 0.5 m/BU).
+const ANIM_PICKUP_HIGH: StringName = &"PickUpHigh"
+const PICKUP_LOW_GRIP: float = 0.51
+const PICKUP_HIGH_GRIP: float = 0.925
+const PICKUP_BLEND_STEPS: int = 8
+const PICKUP_BLEND_LIBRARY: StringName = &"pickup_blend"
 ## Played by every peer while seat_node_path is set -- it's derived from that
 ## replicated path, not from anim_state, so it needs no sync of its own.
 const ANIM_SIT: StringName = &"Sit"
@@ -119,6 +130,9 @@ var _carry_pose: Node3D
 var _pickup_elapsed: float = 2.0
 var _pickup_from: Transform3D = Transform3D.IDENTITY
 var _pickup_in_vehicle: bool = false
+## 0 = box on the floor (full squat) .. 1 = box at the waist. Set by pick_up()
+## on every peer from the same package position, so it needs no sync.
+var pickup_high_weight: float = 0.0
 var _character_face: BoneAttachment3D
 var face_eyes: StringName = FaceCatalog.DEFAULT_EYES:
 	set(value):
@@ -384,9 +398,80 @@ func _play_clip(clip: StringName) -> void:
 	var phase: float = -1.0
 	if _anim_player.current_animation in gaits and String(clip) in gaits:
 		phase = _anim_player.current_animation_position / maxf(_anim_player.current_animation_length, 0.001)
+	# A pickup whose height arrives late (anim_state replicated before the
+	# pick_up RPC) swaps blends in place instead of restarting the squat.
+	var pickup_time: float = -1.0
+	if _is_pickup_clip(StringName(_anim_player.current_animation)) and _is_pickup_clip(clip):
+		pickup_time = _anim_player.current_animation_position
 	_anim_player.play(String(clip), 0.2 if phase >= 0.0 else 0.15)
 	if phase >= 0.0:
 		_anim_player.seek(phase * _anim_player.current_animation_length)
+	elif pickup_time >= 0.0:
+		_anim_player.seek(pickup_time)
+
+
+func _is_pickup_clip(clip: StringName) -> bool:
+	return clip == ANIM_PICKUP or clip == ANIM_PICKUP_HIGH or String(clip).begins_with(String(PICKUP_BLEND_LIBRARY) + "/")
+
+
+## How much of PickUpHigh a pickup plays, from the height above the feet at
+## which the hands meet the box (0 at the floor clip's grip, 1 at the high one's).
+static func pickup_high_weight_for(grip_height: float) -> float:
+	return clampf((grip_height - PICKUP_LOW_GRIP) / (PICKUP_HIGH_GRIP - PICKUP_LOW_GRIP), 0.0, 1.0)
+
+
+## Same contact point carry_pose.gd puts the hands on: the box's upper sides.
+func pickup_high_weight_for_package(package: Node3D) -> float:
+	var half: Vector3 = package.call(&"get_half_extents") if package.has_method(&"get_half_extents") else Vector3.ONE * 0.325
+	var grip: float = package.global_position.y + minf(half.y * 0.65, 0.16)
+	return pickup_high_weight_for(grip - global_position.y)
+
+
+## The pickup clip for pickup_high_weight: either authored clip at the ends,
+## a baked blend of both in between (quantised, so at most a handful exist).
+func _pickup_clip() -> StringName:
+	var step: int = roundi(pickup_high_weight * PICKUP_BLEND_STEPS)
+	if step <= 0 or not _anim_player.has_animation(ANIM_PICKUP_HIGH):
+		return ANIM_PICKUP
+	if step >= PICKUP_BLEND_STEPS:
+		return ANIM_PICKUP_HIGH
+	var blend_name := StringName("%s/%d" % [PICKUP_BLEND_LIBRARY, step])
+	if not _anim_player.has_animation(blend_name):
+		if not _anim_player.has_animation_library(PICKUP_BLEND_LIBRARY):
+			_anim_player.add_animation_library(PICKUP_BLEND_LIBRARY, AnimationLibrary.new())
+		var blended: Animation = blend_clips(_anim_player.get_animation(ANIM_PICKUP),
+			_anim_player.get_animation(ANIM_PICKUP_HIGH), float(step) / PICKUP_BLEND_STEPS)
+		_anim_player.get_animation_library(PICKUP_BLEND_LIBRARY).add_animation(StringName(str(step)), blended)
+	return blend_name
+
+
+## low blended toward high by weight, bone by bone, sampled at 30 Hz (the
+## export's rate). Tracks high lacks, and non-transform tracks, come from low.
+static func blend_clips(low: Animation, high: Animation, weight: float) -> Animation:
+	var out := Animation.new()
+	out.length = low.length
+	var frames: int = ceili(low.length * 30.0)
+	for track: int in low.get_track_count():
+		var type: Animation.TrackType = low.track_get_type(track)
+		var other: int = high.find_track(low.track_get_path(track), type)
+		var index: int = out.add_track(type)
+		out.track_set_path(index, low.track_get_path(track))
+		out.track_set_interpolation_type(index, low.track_get_interpolation_type(track))
+		var transform_track: bool = type in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D, Animation.TYPE_SCALE_3D]
+		if other < 0 or not transform_track:
+			for key: int in low.track_get_key_count(track):
+				out.track_insert_key(index, low.track_get_key_time(track, key), low.track_get_key_value(track, key))
+			continue
+		for frame: int in frames + 1:
+			var t: float = minf(frame / 30.0, low.length)
+			match type:
+				Animation.TYPE_POSITION_3D:
+					out.position_track_insert_key(index, t, low.position_track_interpolate(track, t).lerp(high.position_track_interpolate(other, t), weight))
+				Animation.TYPE_ROTATION_3D:
+					out.rotation_track_insert_key(index, t, low.rotation_track_interpolate(track, t).slerp(high.rotation_track_interpolate(other, t), weight))
+				Animation.TYPE_SCALE_3D:
+					out.scale_track_insert_key(index, t, low.scale_track_interpolate(track, t).lerp(high.scale_track_interpolate(other, t), weight))
+	return out
 
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
@@ -462,6 +547,8 @@ func _process(delta: float) -> void:
 	var clip: StringName = anim_state if seat_node_path.is_empty() else ANIM_SIT
 	if _anim_player != null and clip == ANIM_WALK:
 		clip = _gait_clip()
+	elif _anim_player != null and clip == ANIM_PICKUP:
+		clip = _pickup_clip()
 	if _anim_player != null and _anim_player.current_animation != String(clip):
 		_play_clip(clip)
 	if _anim_player != null:
@@ -1303,6 +1390,7 @@ func pick_up(package_path: NodePath) -> void:
 	if was_empty and carried_package != null:
 		_pickup_elapsed = 0.0
 		_pickup_from = carried_package.global_transform
+		pickup_high_weight = pickup_high_weight_for_package(carried_package)
 		var pickup_vehicle: Node3D = _find_vehicle()
 		_pickup_in_vehicle = pickup_vehicle != null and bool(pickup_vehicle.call(&"carries", _pickup_from.origin, RIDE_MARGIN))
 		if _pickup_in_vehicle:

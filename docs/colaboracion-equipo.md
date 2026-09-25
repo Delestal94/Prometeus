@@ -93,6 +93,16 @@ ampliados (lista del README). Hacé `git pull` antes de seguir con `level_base.g
   y en los clientes se dibuja suavizada 100 ms atrás (N-208, `vehicle/vehicle_net_smoother.gd`).
   `position`/`rotation` del camión en el cliente siguen siendo la verdad local para colisiones.
 
+## Aviso activo: agarrar la caja según su altura (N-309, 2026-09-25)
+
+Lo hizo Nacho (con Claude). Clip nuevo `PickUpHigh` en `sm_char_player_rounded.glb` (caja a la
+cintura, sin sentadilla; mismos 1,6 s y tiempos que `PickUpPackage`). En `player/player.gd`
+(de Slatex), cambio aislado: `pick_up()` calcula `pickup_high_weight` (0 = caja en el piso,
+1 = a la cintura) en cada peer; `_process()` traduce `ANIM_PICKUP` a `_pickup_clip()`, que
+devuelve uno de los dos clips o una mezcla horneada (`blend_clips()`, librería `pickup_blend`).
+`anim_state` sigue diciendo `PickUpPackage`; no cambian firmas, señales, locks ni propiedades
+replicadas. Test: `test_player_character` (ampliado). Reimportá el GLB después del `git pull`.
+
 ## Aviso activo: animaciones del personaje redondeado rehechas (2026-09-25)
 
 Pedido del usuario: llevar el personaje y sus animaciones a la mejor calidad posible. Lo hizo

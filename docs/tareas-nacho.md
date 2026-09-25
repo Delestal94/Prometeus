@@ -382,8 +382,13 @@ Pedido del usuario: refinar el personaje y sus animaciones al máximo, sin perde
 - [x] ~~Arreglar deformaciones~~ **[x] Hecho (2026-09-25)** — `model_fixes.py`: zapato que se
   dobla en el metatarso, rodilla, línea dentada del bajo de la camiseta, dobladillo y cuello.
 - [x] ~~Parpadeo~~ **[x] Hecho (2026-09-25)** — `character_face.gd` `blink()`, también al aterrizar.
-- [ ] Pendiente: sentadilla según la altura de la caja, pasos al girar en el lugar, pliegue del
-  short sentado (ver "Límites conocidos" en `REFINAMIENTO.md`).
+- Pendiente (ver "Límites conocidos" en `REFINAMIENTO.md`):
+  - [x] ~~Sentadilla según la altura de la caja~~ **[x] Hecho (2026-09-25)** — clip nuevo
+    `PickUpHigh` (caja a la cintura, sin sentadilla, mismos tiempos) y `player.gd` mezcla los
+    dos por la altura del agarre (`pickup_high_weight`, blend horneado en 1/8). Test:
+    `test_player_character`.
+  - [ ] Pasos al girar en el lugar.
+  - [ ] Pliegue del short sentado.
 
 ## 4. Audio y diseño sonoro
 

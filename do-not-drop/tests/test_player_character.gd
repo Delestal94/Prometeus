@@ -5,8 +5,12 @@ extends SceneTree
 ## player.gd relies on from that GLB: the clips it plays, the bones the
 ## driver IK solves, the T-shirt as surface 0 (crew colour) plus its trim,
 ## a real player's height and facing, and the Sit clip while seated.
+## Also the height-weighted pickup (player.gd _pickup_clip()): PickUpHigh
+## takes a waist-high box without squatting, lasts as long as PickUpPackage,
+## and a pickup plays a blend of both by where the hands meet the box.
 
 const CHARACTER: String = "res://assets/models/characters/sm_char_player_rounded.glb"
+const PlayerScript: GDScript = preload("res://scripts/gameplay/player/player.gd")
 
 var _failures: int = 0
 
@@ -20,12 +24,15 @@ func _initialize() -> void:
 	var anim: AnimationPlayer = _find(model, "AnimationPlayer") as AnimationPlayer
 	_expect(anim != null, "The GLB carries an AnimationPlayer")
 	if anim != null:
-		for clip: String in ["Idle", "Walk", "Jump", "PickUpPackage", "Sit"]:
+		for clip: String in ["Idle", "Walk", "Jump", "PickUpPackage", "PickUpHigh", "Sit"]:
 			_expect(anim.has_animation(clip), "Clip %s is exported" % clip)
 		if anim.has_animation("Jump") and anim.has_animation("PickUpPackage"):
 			# player.gd locks one-shots for 1.5 s / 1.55 s: the clips must outlast that.
 			_expect(anim.get_animation("Jump").length >= 1.5, "Jump outlasts JUMP_ANIM_LOCK_MS")
 			_expect(anim.get_animation("PickUpPackage").length >= 1.55, "PickUpPackage outlasts PICKUP_ANIM_LOCK_MS")
+		if anim.has_animation("PickUpHigh") and anim.has_animation("PickUpPackage"):
+			var lengths: Vector2 = Vector2(anim.get_animation("PickUpPackage").length, anim.get_animation("PickUpHigh").length)
+			_expect(is_equal_approx(lengths.x, lengths.y), "PickUpHigh lasts as long as PickUpPackage, so they blend (got %s)" % lengths)
 
 	var skeleton: Skeleton3D = _find(model, "Skeleton3D") as Skeleton3D
 	_expect(skeleton != null, "The GLB carries a Skeleton3D")
@@ -37,6 +44,9 @@ func _initialize() -> void:
 		# The character's left hand is on its -X side when it faces Godot's -Z.
 		var left: Vector3 = skeleton.to_global(skeleton.get_bone_global_rest(skeleton.find_bone("hand.L")).origin)
 		_expect(left.x < -0.3, "Faces -Z like the rest of the game (left hand at x %.2f)" % left.x)
+		_expect(skeleton.find_bone("pelvis") >= 0, "Bone pelvis exists")
+		if anim != null and anim.has_animation("PickUpHigh") and skeleton.find_bone("pelvis") >= 0:
+			_check_pickup_heights(anim, skeleton)
 
 	var mesh: MeshInstance3D = _find(model, "MeshInstance3D") as MeshInstance3D
 	_expect(mesh != null and mesh.mesh != null, "One skinned mesh")
@@ -86,11 +96,63 @@ func _initialize() -> void:
 	await process_frame
 	_expect(player_anim.current_animation != "Sit", "Standing up leaves the Sit clip")
 
+	# Height-weighted pickup: grip height above the feet -> PickUpHigh weight.
+	for sample: Vector2 in [Vector2(0.2, 0.0), Vector2(PlayerScript.PICKUP_LOW_GRIP, 0.0),
+			Vector2((PlayerScript.PICKUP_LOW_GRIP + PlayerScript.PICKUP_HIGH_GRIP) / 2.0, 0.5),
+			Vector2(PlayerScript.PICKUP_HIGH_GRIP, 1.0), Vector2(1.5, 1.0)]:
+		var weight: float = PlayerScript.pickup_high_weight_for(sample.x)
+		_expect(is_equal_approx(weight, sample.y), "Grip at %.2f m weighs PickUpHigh %.2f (got %.2f)" % [sample.x, sample.y, weight])
+	var package: Node3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
+	root.add_child(package)
+	package.set(&"freeze", true)
+	var feet: Vector3 = player.global_position
+	package.global_position = feet + Vector3(0.0, package.call(&"get_half_extents").y, -0.6)
+	var on_floor: float = player.call(&"pickup_high_weight_for_package", package)
+	package.global_position = feet + Vector3(0.0, 0.8, -0.6)
+	var on_shelf: float = player.call(&"pickup_high_weight_for_package", package)
+	_expect(on_floor < 0.05, "A box on the floor squats all the way (PickUpHigh weight %.2f)" % on_floor)
+	_expect(on_shelf > 0.95, "A box at the waist doesn't squat (PickUpHigh weight %.2f)" % on_shelf)
+	package.free()
+	# Weight -> clip: the authored clips at the ends, a baked blend between.
+	for sample: Array in [[0.0, "PickUpPackage"], [1.0, "PickUpHigh"], [0.5, "pickup_blend/4"]]:
+		player.set(&"pickup_high_weight", sample[0])
+		var picked: String = String(player.call(&"_pickup_clip"))
+		_expect(picked == sample[1], "Weight %.1f plays %s (got %s)" % [sample[0], sample[1], picked])
+	player.call(&"_play_one_shot", &"PickUpPackage", 1550)
+	await process_frame
+	_expect(player_anim.current_animation == "pickup_blend/4",
+		"A half-height pickup plays the blended clip (got %s)" % player_anim.current_animation)
+
 	player.free()
 	vehicle.free()
 	if _failures == 0:
 		print("PASS: the rounded character carries its clips, bones, shirt colour and seated pose")
 	quit(_failures)
+
+
+## Pelvis and hands at the grab (0.45 s): the floor clip squats, the high
+## one doesn't and reaches higher; a 50% blend lands halfway.
+func _check_pickup_heights(anim: AnimationPlayer, skeleton: Skeleton3D) -> void:
+	var library := AnimationLibrary.new()
+	library.add_animation(&"half", PlayerScript.blend_clips(anim.get_animation("PickUpPackage"), anim.get_animation("PickUpHigh"), 0.5))
+	anim.add_animation_library(&"test", library)
+	var rest: float = _bone_height(anim, skeleton, "PickUpPackage", 0.0, "pelvis")
+	var low: float = _bone_height(anim, skeleton, "PickUpPackage", 0.45, "pelvis")
+	var high: float = _bone_height(anim, skeleton, "PickUpHigh", 0.45, "pelvis")
+	var half: float = _bone_height(anim, skeleton, "test/half", 0.45, "pelvis")
+	_expect(rest - low > 0.15, "PickUpPackage squats to the floor (pelvis drops %.2f m)" % (rest - low))
+	_expect(rest - high < 0.06, "PickUpHigh doesn't squat (pelvis drops %.2f m)" % (rest - high))
+	_expect(absf(half - (low + high) / 2.0) < 0.02, "A 50%% blend squats halfway (pelvis %.3f, ends %.3f / %.3f)" % [half, low, high])
+	var hand_low: float = _bone_height(anim, skeleton, "PickUpPackage", 0.45, "hand.L")
+	var hand_high: float = _bone_height(anim, skeleton, "PickUpHigh", 0.45, "hand.L")
+	_expect(hand_high - hand_low > 0.3, "PickUpHigh grabs higher, at the waist (hands %.2f vs %.2f m)" % [hand_high, hand_low])
+	anim.remove_animation_library(&"test")
+
+
+func _bone_height(anim: AnimationPlayer, skeleton: Skeleton3D, clip: String, time: float, bone: String) -> float:
+	anim.play(clip)
+	anim.seek(time, true)
+	return skeleton.to_global(skeleton.get_bone_global_pose(skeleton.find_bone(bone)).origin).y
 
 
 func _find(node: Node, type_name: String) -> Node:
