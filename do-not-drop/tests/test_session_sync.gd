@@ -133,8 +133,12 @@ func _initialize() -> void:
 	# --- a session that ends leaves nothing behind ---
 	network.set(&"world_seed", 777)
 	network.set(&"world_house_count", 3)
+	network.set(&"world_locked_traps", [&"hostile"])
+	network.set(&"world_completed_runs", 6)
 	network.call(&"_fail", "Se cortó la conexión con el anfitrión.")
-	_expect(int(network.get(&"world_seed")) == 0 and int(network.get(&"world_house_count")) == 0,
+	_expect(int(network.get(&"world_seed")) == 0 and int(network.get(&"world_house_count")) == 0
+		and (network.get(&"world_locked_traps") as Array).is_empty()
+		and int(network.get(&"world_completed_runs")) == 0,
 		"The next solo run doesn't keep building the old room's world")
 	_expect(root.multiplayer.multiplayer_peer is OfflineMultiplayerPeer, "An offline peer, not none (no error spam)")
 	_expect(String(network.call(&"take_failure_message")) == "Se cortó la conexión con el anfitrión."

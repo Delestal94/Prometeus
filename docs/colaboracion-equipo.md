@@ -641,6 +641,15 @@ Slatex pasó el guardado del leaderboard en `run_manager.gd` al helper común
 `test_safe_json.gd`, que verifica la cuarentena `.bad` y los valores por defecto
 ante JSON truncado.
 
+## Aviso S-107 · 2026-09-25
+
+Slatex cambió la selección interna de `post_orders()` en `depot.gd`: ahora delega
+el orden de trampas al módulo puro `order_balancer.gd` y después toma la caja
+correspondiente de los mismos estantes. No cambió ninguna firma pública. El
+handshake de `network_manager.gd` también comparte las partidas completadas del
+anfitrión para que todos calculen exactamente el mismo pedido. Hacer `git pull`
+antes de editar esos sectores compartidos.
+
 ## Cómo se armaron las 200 tareas
 
 Las primeras ~70 de cada lista salen directo de los ítems pendientes de

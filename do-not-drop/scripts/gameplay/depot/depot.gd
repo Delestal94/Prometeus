@@ -21,6 +21,7 @@ extends Node3D
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
+const ORDER_BALANCER = preload("res://scripts/gameplay/traps/order_balancer.gd")
 
 signal door_closed
 
@@ -259,32 +260,31 @@ func post_orders(house_count: int) -> Array[Dictionary]:
 	orders.clear()
 	var candidates: Array = _stocked.values()
 	candidates.sort_custom(func(a: Node, b: Node) -> bool: return String(a.get(&"package_id")) < String(b.get(&"package_id")))
-	_shuffle(candidates)
-	var used_traps: Array[String] = []
-	for pass_index: int in range(2):
-		for package: Node in candidates:
-			if orders.size() >= house_count:
-				break
-			var trap: String = String(package.get(&"trap_definition").get(&"display_name"))
-			var package_id := StringName(package.get(&"package_id"))
-			if orders.any(func(o: Dictionary) -> bool: return o.package_id == package_id):
-				continue
-			if pass_index == 0 and trap in used_traps:
-				continue
-			used_traps.append(trap)
-			var content: Resource = package.call(&"content_definition")
-			orders.append({
-				"house": orders.size(),
-				"package_id": package_id,
-				"code": String(package.get_meta(&"dispatch_code", "?")),
-				"trap": trap,
-				"content": String(content.get(&"display_name")) if content != null else "",
-			})
+	var definitions: Array = candidates.map(func(package: Node) -> Resource: return package.get(&"trap_definition"))
+	var trap_ids: Array[StringName] = ORDER_BALANCER.build_order(definitions, house_count, _completed_runs(), _rng)
+	for package: Node in ORDER_BALANCER.packages_for_order(candidates, trap_ids):
+		var definition: Resource = package.get(&"trap_definition")
+		var content: Resource = package.call(&"content_definition")
+		orders.append({
+			"house": orders.size(),
+			"package_id": StringName(package.get(&"package_id")),
+			"code": String(package.get_meta(&"dispatch_code", "?")),
+			"trap": String(definition.get(&"display_name")),
+			"content": String(content.get(&"display_name")) if content != null else "",
+		})
 	_write_board()
 	var bus: Node = _autoload(&"EventBus")
 	if bus != null:
 		bus.emit_signal(&"depot_orders_posted", orders.duplicate(true))
 	return orders
+
+
+func _completed_runs() -> int:
+	var network: Node = _autoload(&"NetworkManager")
+	if network != null and int(network.get(&"world_seed")) != 0:
+		return int(network.get(&"world_completed_runs"))
+	var unlocks: Node = _autoload(&"UnlockManager")
+	return int(unlocks.get(&"completed_runs")) if unlocks != null else 0
 
 
 ## [[package_id, label], ...] in house order, the shape route.assign_packages()

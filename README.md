@@ -239,6 +239,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_depot.gd
 <godot> --headless --path do-not-drop --script res://tests/test_depot_mirror.gd
 <godot> --headless --path do-not-drop --script res://tests/test_locked_traps.gd
+<godot> --headless --path do-not-drop --script res://tests/test_order_balancer.gd
 <godot> --headless --path do-not-drop --script res://tests/test_run_relay.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_mood.gd
 <godot> --headless --path do-not-drop --script res://tests/test_more_route_segments.gd
@@ -650,6 +651,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_locked_traps` — el depósito empieza solo con Frágil y Equilibrio; las otras cinco
   trampas aparecen según la curva del perfil, perfiles v2 migran sin perder desbloqueos,
   siempre hay cajas suficientes para las casas y en línea manda la lista del host.
+- `test_order_balancer` — 1000 semillas por cada cantidad de casas verifican el presupuesto
+  de dificultad, la separación de trampas difíciles al principio, que no haya repeticiones
+  prematuras y que siempre entre una trampa accesible; la misma semilla repite el pedido.
 - `test_run_relay` — en línea el cliente recibe del host el inicio de la partida (con el mismo
   evento de ruta) y los resultados tal cual, los anota en su propio leaderboard y su perfil
   cuenta la entrega; la plata del equipo no se paga dos veces.

@@ -10,23 +10,25 @@ func _initialize() -> void:
 	var network: Node = root.get_node(^"/root/NetworkManager")
 	var menu_script: Script = load("res://scripts/ui/main_menu.gd")
 
-	_expect(int(network.get(&"PROTOCOL_VERSION")) == 1, "The network protocol starts at version 1")
+	var protocol_version := int(network.get(&"PROTOCOL_VERSION"))
+	_expect(protocol_version >= 1, "The network protocol is versioned")
 	var valid_state: Dictionary = {
-		"version": 1,
+		"version": protocol_version,
 		"seed": 42,
 		"houses": 2,
 		"locked": [],
+		"runs": 3,
 		"scene": "res://scenes/gameplay/level_base.tscn",
 	}
 	_expect(String(network.call(&"_handshake_error", valid_state)).is_empty(), "Matching handshake is accepted")
 	var old_state: Dictionary = valid_state.duplicate(true)
-	old_state.version = 0
+	old_state.version = protocol_version - 1
 	_expect(String(network.call(&"_handshake_error", old_state)) == "version", "Old protocol is rejected as version")
 	old_state.erase("version")
 	_expect(String(network.call(&"_handshake_error", old_state)) == "version", "Missing protocol is rejected as version")
-	_expect(String(network.call(&"_ready_reply_error", {"ready": true, "version": 1})).is_empty(),
+	_expect(String(network.call(&"_ready_reply_error", {"ready": true, "version": protocol_version})).is_empty(),
 		"Host accepts a ready reply from its protocol")
-	_expect(String(network.call(&"_ready_reply_error", {"ready": true, "version": 0})) == "version",
+	_expect(String(network.call(&"_ready_reply_error", {"ready": true, "version": protocol_version - 1})) == "version",
 		"Host rejects a ready reply from an old client")
 
 	var expected: Dictionary = {

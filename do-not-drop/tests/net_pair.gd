@@ -20,6 +20,9 @@ func _ready() -> void:
 	_network = get_node(^"/root/NetworkManager")
 	_network.set(&"transport", 2)  # NetworkManager.Transport.ENET
 	_host = "--host" in OS.get_cmdline_user_args()
+	# Deliberately different local profiles: order difficulty must come from
+	# the host through the handshake, never from the joiner's save.
+	get_node(^"/root/UnlockManager").set(&"completed_runs", 6 if _host else 0)
 	if not _host:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		get_node(^"/root/UnlockManager").set(&"selected_cosmetic", CLIENT_COSMETIC)
@@ -53,6 +56,8 @@ func _run_host() -> void:
 	if host_player == null or client_player == null:
 		await _finish(false, "spawned player paths are missing")
 		return
+	rpc_id(_client_peer_id, &"_client_check_order", _order_ids(), int(_network.get(&"world_completed_runs")))
+	await _wait_for_report(&"order")
 
 	# The client owns this property. The host must see the selected uniform.
 	var cosmetic_arrived: bool = await _wait_until(func() -> bool:
@@ -204,6 +209,15 @@ func _client_check_drop(package_path: NodePath) -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
+func _client_check_order(host_order: Array, host_completed_runs: int) -> void:
+	await _pump(0.4)
+	var ok: bool = host_completed_runs == 6 \
+		and int(_network.get(&"world_completed_runs")) == host_completed_runs \
+		and _order_ids() == host_order
+	_report(&"order", ok, "client uses the host's progression and posts the same order")
+
+
+@rpc("authority", "call_remote", "reliable")
 func _client_disconnect_while_carrying(package_path: NodePath) -> void:
 	var package: DeliveryPackage = get_node_or_null(package_path) as DeliveryPackage
 	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
@@ -253,6 +267,16 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		_failed = true
 		push_error(description)
+
+
+func _order_ids() -> Array:
+	var result: Array = []
+	if _level == null:
+		return result
+	var depot: Node = _level.get_node(^"World/Depot")
+	for order: Dictionary in depot.get(&"orders"):
+		result.append(StringName(order.package_id))
+	return result
 
 
 func _wait_for_report(stage: StringName) -> bool:

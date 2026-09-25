@@ -28,7 +28,7 @@ const MAX_PLAYERS: int = 8
 const HOST_ID: int = 1
 ## Increment whenever peers can no longer share the same replicated scene or
 ## handshake. Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 1
+const PROTOCOL_VERSION: int = 2
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -68,6 +68,9 @@ var world_house_count: int = 0
 ## profile doesn't get a say. Only read while world_seed != 0; solo play asks
 ## UnlockManager directly.
 var world_locked_traps: Array = []
+## The host profile's completed-run count drives order difficulty. Like the
+## locked list, it must be shared: a joiner's local profile may be different.
+var world_completed_runs: int = 0
 ## How long a joiner may take to receive the host's world and load it before
 ## the connection is dropped (Godot's auth timeout). Long enough for a slow
 ## level load, short enough that a host on another version doesn't leave the
@@ -174,6 +177,7 @@ func host_session(port: int = DEFAULT_PORT) -> Error:
 	world_house_count = 0
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
 	world_locked_traps = unlocks.call(&"locked_traps") if unlocks != null else []
+	world_completed_runs = int(unlocks.get(&"completed_runs")) if unlocks != null else 0
 	if chosen_transport() == Transport.STEAM:
 		return _host_steam()
 	return _host_enet(port)
@@ -203,6 +207,7 @@ func _end_session() -> void:
 	world_seed = 0
 	world_house_count = 0
 	world_locked_traps = []
+	world_completed_runs = 0
 	_awaiting_handshake = false
 	_restart_pending = false
 	_ready_peers = [HOST_ID]
@@ -417,7 +422,8 @@ func is_peer_ready(id: int) -> bool:
 func _peer_authenticating(id: int) -> void:
 	if multiplayer.is_server():
 		multiplayer.send_auth(id, var_to_bytes({"version": PROTOCOL_VERSION, "seed": world_seed,
-			"houses": world_house_count, "locked": world_locked_traps, "scene": _current_level_scene()}))
+			"houses": world_house_count, "locked": world_locked_traps, "runs": world_completed_runs,
+			"scene": _current_level_scene()}))
 	elif id != HOST_ID:
 		multiplayer.complete_auth(id)
 
@@ -437,7 +443,7 @@ func _handshake_error(state: Variant) -> String:
 		return "version"
 	if int(state.get("version", -1)) != PROTOCOL_VERSION:
 		return "version"
-	if not state.has_all(["seed", "houses", "locked", "scene"]):
+	if not state.has_all(["seed", "houses", "locked", "runs", "scene"]):
 		return "connection"
 	if String(state.scene) not in LEVEL_SCENES:
 		return "connection"
@@ -476,6 +482,7 @@ func _receive_auth(id: int, data: PackedByteArray) -> void:
 	world_seed = int(state.seed)
 	world_house_count = int(state.houses)
 	world_locked_traps = state.locked
+	world_completed_runs = int(state.runs)
 	session_scene = String(state.scene)
 	# The joiner always loads the level first and only then says "ready"
 	# (level_ready(), from the level itself): completing before that let the
@@ -494,7 +501,7 @@ func level_ready() -> void:
 			session_scene = scene.scene_file_path
 		if _restart_pending:
 			_restart_pending = false
-			_remote_restart.rpc(world_house_count)
+			_remote_restart.rpc(world_house_count, world_completed_runs)
 		return
 	if _awaiting_handshake:
 		_awaiting_handshake = false
@@ -533,14 +540,17 @@ func begin_restart() -> void:
 	_restart_pending = true
 	_ready_peers = [HOST_ID]
 	world_house_count = 0
+	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
+	world_completed_runs = int(unlocks.get(&"completed_runs")) if unlocks != null else world_completed_runs
 
 
 ## A client drops its run and reloads, then reports back (level_ready()).
 ## Until now only the host reloaded: clients were left on the results screen,
 ## behind a depot door only their copy had closed, unable to drive.
 @rpc("authority", "call_remote", "reliable")
-func _remote_restart(house_count_value: int) -> void:
+func _remote_restart(house_count_value: int, completed_runs_value: int) -> void:
 	world_house_count = house_count_value
+	world_completed_runs = completed_runs_value
 	var run: Node = get_node_or_null(^"/root/RunManager")
 	if run != null:
 		run.call(&"reset_run")
