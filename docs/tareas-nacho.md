@@ -387,7 +387,7 @@ Pedido del usuario: refinar el personaje y sus animaciones al máximo, sin perde
     `PickUpHigh` (caja a la cintura, sin sentadilla, mismos tiempos) y `player.gd` mezcla los
     dos por la altura del agarre (`pickup_high_weight`, blend horneado en 1/8). Test:
     `test_player_character`.
-  - [x] ~~Pasos al girar en el lugar~~ **[x] Hecho (2026-09-25)** — clip nuevo `TurnInPlace`
+  - [x] ~~Pasos al girar en el lugar~~ **[x] `75fdae5`** — clip nuevo `TurnInPlace`
     (dos pasitos en loop, 0,8 s) y `player.gd` lo elige parado y girando a más de 1,5 rad/s
     (`movement_state()`, histéresis hasta 0,8 rad/s); viaja en `anim_state`. Tests:
     `test_player_character`, `test_character_motion`.
