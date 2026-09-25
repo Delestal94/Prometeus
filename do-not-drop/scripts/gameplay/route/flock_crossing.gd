@@ -15,6 +15,7 @@ class_name FlockCrossing
 ## Space: this node sits on the road's centre line, the road running along
 ## Z (the truck comes from +Z), lateral offsets on X.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const SHEEP_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_sheep.glb"
 const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
 const SIGN_MODEL: PackedScene = preload("res://assets/models/environment/signs/sm_env_sign_animal_crossing.glb")
@@ -91,6 +92,7 @@ func _ready() -> void:
 	_bleat.bus = &"SFX"
 	_bleat.stream = SynthAudio.sheep_bleat()
 	_bleat.unit_size = 7.0
+	_bleat.volume_db = WorldMix.SHEEP_BLEAT_DB
 	_bleat.max_distance = 60.0
 	add_child(_bleat)
 	var bus: Node = get_node_or_null(^"/root/EventBus")

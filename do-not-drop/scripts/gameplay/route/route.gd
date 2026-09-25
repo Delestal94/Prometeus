@@ -16,6 +16,8 @@ extends Node3D
 ## Modo endless (RouteStreamer) chains its segments the same way since
 ## N-206, streaming and culling along the road instead of along -Z.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+
 signal delivery_entered
 signal delivery_exited
 ## Fires whenever any house resolves (delivered ok/ruined/missed) -- forwards
@@ -877,7 +879,7 @@ func _build_ambience() -> void:
 	var player := AudioStreamPlayer.new()
 	player.name = "AmbientWind"
 	player.stream = SynthAudio.ambient_wind()
-	player.volume_db = -26.0
+	player.volume_db = WorldMix.WIND_DB
 	player.autoplay = true
 	add_child(player)
 

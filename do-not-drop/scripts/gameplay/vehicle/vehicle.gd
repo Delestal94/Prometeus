@@ -8,6 +8,8 @@ extends VehicleBody3D
 ## fight the transform MultiplayerSynchronizer is about to hand it, driven
 ## only by whatever the host broadcasts.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+
 ## Which peer currently holds the wheel, synced to everyone so each client's
 ## VehicleInputComponent knows whether it's the one that should be reading
 ## input at all. 0 means nobody's driving.
@@ -146,12 +148,8 @@ func _ready() -> void:
 	_horn_player.bus = &"SFX"
 	_horn_player.stream = SynthAudio.honk_horn()
 	_horn_player.unit_size = 15.0
-	# No volume_db was ever set here -- defaulted to 0 dB, dramatically
-	# louder than every other sound in the mix (engine peaks around -21 dB;
-	# the impact thud, the loudest deliberate peak elsewhere, around -6 dB).
-	# Matched to the impact thud's peak: loud and attention-grabbing on
-	# purpose, not an accident of an unset property.
-	_horn_player.volume_db = -6.0
+	# Measured, like the rest of the world's sounds (world_mix.gd).
+	_horn_player.volume_db = WorldMix.HORN_DB
 	add_child(_horn_player)
 	EventBus.horn_honked.connect(_on_horn_honked)
 	for wheel: Node in get_children():

@@ -18,6 +18,7 @@ class_name RouteSky
 ## Pure presentation. Nothing here collides or depends on the world seed, so
 ## every client can build its own and follow its own camera.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const HORIZON: PackedScene = preload("res://assets/models/environment/sky/sm_env_horizon_mountains.glb")
 const SKY_SHADER: Shader = preload("res://shaders/stylized_sky.gdshader")
 ## The GLB ring is 450 m across the middle; 0.62 brings it to ~280 m.
@@ -41,8 +42,9 @@ var _rain_sound: AudioStreamPlayer
 ## the rain, and duller inside the truck or under the depot roof.
 var nature_sound: AudioStreamPlayer
 var distant_road: AudioStreamPlayer
-const NATURE_DB: float = -24.0
-const DISTANT_ROAD_DB: float = -31.0
+## The bed's own level (world_mix.gd): birds and crickets are measured apart.
+var nature_db: float = WorldMix.BIRDS_DB
+const DISTANT_ROAD_DB: float = WorldMix.DISTANT_ROAD_DB
 ## How much quieter the outdoors is from inside the cabin (or the depot).
 const INSIDE_MUFFLE_DB: float = 9.0
 const RAIN_INNER_RADIUS: float = 3.4
@@ -88,11 +90,11 @@ func _process(_delta: float) -> void:
 			_rain.visible = not roofed
 			_route(_rain_sound, bus)
 			# Drumming on the roof is louder than rain on open ground.
-			_rain_sound.volume_db = -11.0 if inside else -17.0
+			_rain_sound.volume_db = WorldMix.RAIN_DB + (WorldMix.RAIN_UNDER_ROOF_BOOST_DB if inside else 0.0)
 		var muffle: float = INSIDE_MUFFLE_DB if inside else 0.0
 		if nature_sound != null:
 			_route(nature_sound, bus)
-			nature_sound.volume_db = NATURE_DB - muffle
+			nature_sound.volume_db = nature_db - muffle
 		_route(distant_road, bus)
 		distant_road.volume_db = DISTANT_ROAD_DB - muffle
 
@@ -108,7 +110,8 @@ func _build_outdoor_sounds() -> void:
 		nature_sound = AudioStreamPlayer.new()
 		nature_sound.name = "NatureSound"
 		nature_sound.stream = SynthAudio.night_crickets() if bed == &"crickets" else SynthAudio.ambient_birds()
-		nature_sound.volume_db = NATURE_DB
+		nature_db = WorldMix.CRICKETS_DB if bed == &"crickets" else WorldMix.BIRDS_DB
+		nature_sound.volume_db = nature_db
 		nature_sound.autoplay = true
 		add_child(nature_sound)
 	distant_road = AudioStreamPlayer.new()
@@ -157,7 +160,7 @@ func _build_rain() -> void:
 	_rain_sound = AudioStreamPlayer.new()
 	_rain_sound.name = "RainSound"
 	_rain_sound.stream = SynthAudio.rain_loop()
-	_rain_sound.volume_db = -17.0
+	_rain_sound.volume_db = WorldMix.RAIN_DB
 	_rain_sound.autoplay = true
 	add_child(_rain_sound)
 

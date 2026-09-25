@@ -12,6 +12,7 @@ class_name ChasingDog
 ## Space: this node sits on the road's centre line where the dog lives,
 ## the road running along Z; the dog itself runs in world space.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const DOG_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_dog.glb"
 const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
 
@@ -67,6 +68,7 @@ func _ready() -> void:
 	_bark.bus = &"SFX"
 	_bark.stream = SynthAudio.dog_bark()
 	_bark.unit_size = 6.0
+	_bark.volume_db = WorldMix.DOG_BARK_DB
 	_bark.max_distance = 45.0
 	dog.add_child(_bark)
 	var bus: Node = get_node_or_null(^"/root/EventBus")

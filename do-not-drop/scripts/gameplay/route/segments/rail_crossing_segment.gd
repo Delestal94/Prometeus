@@ -15,6 +15,7 @@ class_name RailCrossingSegment
 ## timers from there. Only the host's physics decides anything, and there the
 ## barrier arms and train cars are solid.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const APPROACH_TRIGGER: float = 55.0
 const CLOSE_CHANCE: float = 0.6
 const ARM_SECONDS: float = 1.3
@@ -61,6 +62,7 @@ func _build() -> void:
 	_bell.name = "CrossingBell"
 	_bell.stream = SynthAudio.crossing_bell()
 	_bell.unit_size = 10.0
+	_bell.volume_db = WorldMix.CROSSING_BELL_DB
 	_bell.max_distance = 70.0
 	_bell.bus = &"SFX"
 	_bell.position = Vector3(0.0, 2.5, track_z)

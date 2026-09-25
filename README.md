@@ -177,6 +177,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_seated_body.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_visual_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_audio.gd
+<godot> --headless --path do-not-drop --script res://tests/test_world_audio_levels.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
 <godot> --headless --path do-not-drop --script res://tests/test_screen_fade.gd
 <godot> --headless --path do-not-drop --script res://tests/test_camera_polish.gd
@@ -412,6 +413,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_trap_visual_feedback` — Peso Creciente se ve crecer y hundirse, y
   Ruidoso se ve temblar (con fase propia por paquete); ninguno toca el
   `RigidBody3D` real.
+- `test_world_audio_levels` — la mezcla del mundo y del camión, medida: genera cada sonido
+  (motor, golpes, bocina, viento, pájaros, lluvia, cruce, perro, timbre, depósito...), lo mide en
+  dBFS, le suma su nivel de `world_mix.gd` y exige quedar a ±2 dB del objetivo de su clase
+  (`docs/audio-mundo.md`). `-- --report` imprime la tabla completa.
 - `test_vehicle_audio` — el golpe suena más fuerte cuanto más fuerte es el
   impacto (y no suena si es lejano), y el chirrido de neumáticos sigue el
   patinaje real de las ruedas.

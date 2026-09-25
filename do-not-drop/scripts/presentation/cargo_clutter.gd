@@ -8,6 +8,7 @@ extends Node
 ## they only collide with the truck and the ground, never with packages
 ## (a thermos must not be what ruins a Fragile box) or players.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const ENVIRONMENT_AND_VEHICLE: int = 1 | 2
 ## Relative speed (m/s) for a knock to be heard.
 const RATTLE_MIN_SPEED: float = 0.9
@@ -144,7 +145,7 @@ func _add_rattle(body: RigidBody3D, pitch: float) -> void:
 	var sound := AudioStreamPlayer3D.new()
 	sound.stream = SynthAudio.impact_thud()
 	sound.bus = &"SFX"
-	sound.volume_db = -20.0
+	sound.volume_db = WorldMix.CLUTTER_DB
 	sound.unit_size = 3.0
 	sound.max_distance = 18.0
 	sound.pitch_scale = pitch

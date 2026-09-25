@@ -2,12 +2,13 @@ extends Node3D
 ## Presentation only. Native VehicleWheel3D poses come from physics on the host
 ## and replication on clients; never rotate the wheels a second time here.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 @export var steering_ratio: float = 7.0
 @export var headlight_energy: float = 1.6
 @export var impact_flicker_seconds: float = 0.16
-@export var engine_volume_db: float = -21.0
-@export var impact_thud_volume_db: float = -6.0
-@export var screech_volume_db: float = -14.0
+@export var engine_volume_db: float = WorldMix.ENGINE_DB
+@export var impact_thud_volume_db: float = WorldMix.IMPACT_DB
+@export var screech_volume_db: float = WorldMix.SCREECH_DB
 @export var audio_enabled: bool = true
 
 ## Exaggerated exterior lean beyond what the real suspension already does

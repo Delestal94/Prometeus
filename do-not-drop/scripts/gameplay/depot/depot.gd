@@ -19,6 +19,8 @@ extends Node3D
 ## Orders are drawn from the session seed, so every peer posts the same board
 ## without a message; the door and purchases are decided by the host.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+
 signal door_closed
 
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
@@ -1484,7 +1486,7 @@ func _build_audio() -> void:
 	hum.name = "RoomTone"
 	hum.stream = SynthAudio.warehouse_hum()
 	hum.bus = &"SFX"
-	hum.volume_db = -20.0
+	hum.volume_db = WorldMix.WAREHOUSE_HUM_DB
 	hum.unit_size = 30.0
 	hum.max_distance = 60.0
 	hum.position = Vector3(0.0, 4.0, 16.0)
@@ -1494,7 +1496,7 @@ func _build_audio() -> void:
 	radio.name = "Radio"
 	radio.stream = SynthAudio.radio_tune()
 	radio.bus = &"Music"
-	radio.volume_db = -9.0
+	radio.volume_db = WorldMix.DEPOT_RADIO_DB
 	radio.unit_size = 3.0
 	radio.max_distance = 22.0
 	radio.position = Vector3(12.8, 1.1, 21.0)

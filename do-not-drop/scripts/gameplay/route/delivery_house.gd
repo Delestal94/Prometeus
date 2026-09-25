@@ -14,6 +14,7 @@ class_name DeliveryHouse
 ## matters once picking a package back out of the van to walk it here is
 ## possible at all (currently isn't -- see the note in tareas-nacho.md).
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const WALL := Color("9c8a6f")
 const ROOF := Color("6b4f3a")
 const DOOR := Color("46342a")
@@ -107,6 +108,7 @@ func _ready() -> void:
 	_bell_player.bus = &"SFX"
 	_bell_player.stream = SynthAudio.glass_chime()
 	_bell_player.unit_size = 8.0
+	_bell_player.volume_db = WorldMix.DOORBELL_DB
 	_bell_player.max_distance = 25.0
 	add_child(_bell_player)
 	_reaction_player = AudioStreamPlayer3D.new()
@@ -135,7 +137,7 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 		# Not theirs: the resident shakes their head and the box stays with
 		# whoever brought it -- the delivery isn't spent on a mix-up.
 		_reaction_player.stream = SynthAudio.creature_groan()
-		_reaction_player.volume_db = -10.0
+		_reaction_player.volume_db = WorldMix.RESIDENT_GROAN_DB + WorldMix.RESIDENT_WRONG_BOX_OFFSET_DB
 		_reaction_player.play()
 		wrong_package_offered.emit(assigned_label)
 		return
@@ -173,7 +175,8 @@ func _resolve(result: StringName, package: Node) -> void:
 	# for a wreck, the same groan quieter for something dented, a cheer for
 	# a box that made it.
 	_reaction_player.stream = SynthAudio.creature_groan() if result in [OUTCOME_RUINED, OUTCOME_AT_RISK] else SynthAudio.honk_horn()
-	_reaction_player.volume_db = -6.0 if result == OUTCOME_AT_RISK else 0.0
+	var groan: bool = result in [OUTCOME_RUINED, OUTCOME_AT_RISK]
+	_reaction_player.volume_db = (WorldMix.RESIDENT_GROAN_DB if groan else WorldMix.RESIDENT_CHEER_DB) + (WorldMix.RESIDENT_AT_RISK_OFFSET_DB if result == OUTCOME_AT_RISK else 0.0)
 	_reaction_player.play()
 	resolved.emit(result, delivered_package_id)
 

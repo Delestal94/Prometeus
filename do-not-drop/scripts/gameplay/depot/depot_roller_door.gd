@@ -9,6 +9,8 @@ extends Node3D
 ## call (depot.gd decides on the host and tells every peer), so this never
 ## runs on its own.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+
 signal finished_moving(open: bool)
 
 @export var width: float = 6.6
@@ -171,6 +173,6 @@ func _build() -> void:
 	_motor.bus = &"SFX"
 	_motor.unit_size = 10.0
 	_motor.max_distance = 45.0
-	_motor.volume_db = -4.0
+	_motor.volume_db = WorldMix.ROLLER_DOOR_DB
 	_motor.position = Vector3(0.0, height + 0.4, 0.0)
 	add_child(_motor)

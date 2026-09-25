@@ -1,7 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
 > Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 y M2 cerrados; M3 salvo
-> N-208 y N-209 (en espera); de M4, N-106, N-107, N-302 y N-405; además N-307, N-804, N-903, N-904.
+> N-208 y N-209 (en espera); de M4, N-106, N-107, N-302, N-404 y N-405; además N-307, N-804, N-903, N-904.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -280,7 +280,7 @@ Antes #4. Única pieza de modelado del camión que queda.
 - [ ] Hendiduras finas (bisel invertido o calcomanía oscura) en puertas de cabina, puertas traseras, capó y
   laterales del modelo de referencia, sin cambiar la colisión. Captura con `render_reference_truck.gd`.
 
-### N-302 · Timbre real en cada casa — A · `Opus 5.5 · high` · Aviso: no · **[x]**
+### N-302 · Timbre real en cada casa — A · `Opus 5.5 · high` · Aviso: no · **[x] `ad4c281`**
 
 `inventario-assets.md` §5: hoy `doorbell_point.gd` es una caja.
 
@@ -368,14 +368,19 @@ Hoy hay una sola pista (`mus_ingame_loop.ogg`).
   licencia al lado del archivo.
 - [ ] `scripts/presentation/menu_music.gd` autocontenido; `main_menu.gd` solo lo instancia (aviso).
 
-### N-404 · Mezcla medida del dominio — A · `Opus 5.5 · high` · Aviso: no
+### N-404 · Mezcla medida del dominio — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 Cierra el #83 viejo sin depender del oído.
 
-- [ ] Mismo método que la S-404 de Slatex, sobre los sonidos de Nacho: script que genera cada sonido de
+- [x] Mismo método que la S-404 de Slatex, sobre los sonidos de Nacho: script que genera cada sonido de
   `synth_audio.gd` del mundo y del camión, calcula RMS y pico en dBFS, y los lleva a objetivos (motor −20 dBFS
   RMS, impactos −14 pico, ambiente −28 RMS, lluvia −24).
-- [ ] Tabla antes/después en `docs/direccion-visual.md` (audio) o `docs/audio.md` si Slatex ya lo creó.
+- [x] Tabla antes/después en `docs/direccion-visual.md` (audio) o `docs/audio.md` si Slatex ya lo creó.
+- Tabla en `docs/audio-mundo.md` (no existía ninguno de los dos). Todos los niveles pasan a
+  `presentation/world_mix.gd`; `test_world_audio_levels` los mide (21 sonidos, 8 clases) y exige ±2 dB. Se
+  sumaron tres clases: "señal" −18 (la misma escala que la S-404 de Slatex), "naturaleza" (pájaros y grillos,
+  por sus 100 ms más fuertes: su RMS engaña) y "detalle" / "música". Cambio grande: motor +14 dB, lluvia +17,
+  pájaros +19; golpes −8, vecino −11/−13. `synth_audio.gd` no se tocó.
 
 ### N-405 · Sonidos de los peligros nuevos — C · `Opus 5.5 · medium` · Aviso: no · **[x] `467361a`**
 

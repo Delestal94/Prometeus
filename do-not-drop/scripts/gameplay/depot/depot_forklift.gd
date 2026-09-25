@@ -7,6 +7,7 @@ extends AnimatableBody3D
 ##
 ## Local presentation, same as the depot's staff: every peer runs its own.
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const BODY := Color("e8772e")
 const DARK := Color("263238")
 const STEEL := Color("59656a")
@@ -202,7 +203,7 @@ func _build() -> void:
 	_beeper.name = "ReverseBeeper"
 	_beeper.stream = SynthAudio.reverse_beep()
 	_beeper.bus = &"SFX"
-	_beeper.volume_db = -14.0
+	_beeper.volume_db = WorldMix.FORKLIFT_BEEP_DB
 	_beeper.unit_size = 4.0
 	_beeper.max_distance = 30.0
 	add_child(_beeper)
@@ -210,7 +211,7 @@ func _build() -> void:
 	_engine.name = "Motor"
 	_engine.stream = SynthAudio.engine_loop()
 	_engine.bus = &"SFX"
-	_engine.volume_db = -30.0
+	_engine.volume_db = WorldMix.FORKLIFT_ENGINE_DB
 	_engine.unit_size = 3.0
 	_engine.max_distance = 25.0
 	_engine.autoplay = true
