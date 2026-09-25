@@ -145,7 +145,7 @@ compartida), `scripts/gameplay/package/package.gd`, `scripts/gameplay/package/pa
 **Hecho cuando**: una partida con el nivel de entrega sortea un evento, lo muestra con cuenta
 regresiva, y termina resuelto o vencido en todos los casos; tests verdes.
 
-### S-102 · Mérito individual por acciones reales — A · `Sol · xhigh` · Aviso: no
+### S-102 · Mérito individual por acciones reales — A · `Sol · xhigh` · Aviso: sí (`run_manager.gd`)
 
 **Problema real**: `CrewProgression.award_action()` solo lo llama el evento de ruta (que nunca se
 resuelve, S-101). Hoy nadie gana mérito nunca, y `merit_changed` se emite en local, así que un
@@ -154,24 +154,24 @@ cliente tampoco vería el suyo.
 **Archivos**: `scripts/core/crew_progression.gd`, `scripts/gameplay/package/package.gd`, las
 trampas en `scripts/gameplay/traps/`, `scripts/ui/prototype_hud.gd`.
 
-- [ ] **S-102.1 Saber quién hizo qué.** En `package.gd`, guardar en el host el último peer que
+- [x] **S-102.1 Saber quién hizo qué.** (commit `e3928bb`) En `package.gd`, guardar en el host el último peer que
   mandó input útil (`_last_tender_peer`, con `multiplayer.get_remote_sender_id()` o el id local si
   es 0) y el último que la tuvo en la mano.
-- [ ] **S-102.2 Hitos desde las trampas.** Agregar a `i_trap_behavior.gd` una función
+- [x] **S-102.2 Hitos desde las trampas.** (commit `e3928bb`) Agregar a `i_trap_behavior.gd` una función
   `take_milestones() -> Array[StringName]` (por defecto vacía) que cada trampa llena cuando pasa
   algo meritorio, y el paquete la consume cada frame en el host. Hitos: `defused` (Explosivo
   desactivado), `calmed` (Hostil o Ruidoso vuelve de riesgo a OK), `dried` (Líquido: charco en 0
   después de haber pasado 30), `leveled` (Equilibrio vuelve a OK desde riesgo),
   `sequence` (Peso creciente resuelto).
-- [ ] **S-102.3 Hitos desde el paquete.** `rescued`: alguien levanta una caja que estaba en el piso
+- [x] **S-102.3 Hitos desde el paquete.** (commit `e3928bb`) `rescued`: alguien levanta una caja que estaba en el piso
   fuera del camión durante la partida y la vuelve a montar. `handover`: traspaso mano a mano.
   `photo_saved`: la foto de entrega anuló un reclamo (escuchar `delivery_photo_taken`).
-- [ ] **S-102.4 Tabla de puntos** en `crew_progression.gd`: `MERIT_POINTS := {&"defused": 25,
+- [x] **S-102.4 Tabla de puntos** (commit `e3928bb`) en `crew_progression.gd`: `MERIT_POINTS := {&"defused": 25,
   &"rescued": 20, &"calmed": 10, &"dried": 10, &"leveled": 8, &"sequence": 8, &"handover": 5,
   &"photo_saved": 15}`. El `action_id` tiene que ser único por hecho:
   `"%s:%s:%d" % [package_id, milestone, contador]`, así un mismo hito no se cobra dos veces.
-- [ ] **S-102.5 Red.** `merit_changed` y `card_changed` pasan por `EventBus.relay`.
-- [ ] **S-102.6 Test** `tests/test_merit.gd`: cada hito suma lo de la tabla una sola vez; el mérito
+- [x] **S-102.5 Red.** (commit `e3928bb`) `merit_changed` y `card_changed` pasan por `EventBus.relay`.
+- [x] **S-102.6 Test** (commit `e3928bb`) `tests/test_merit.gd`: cada hito suma lo de la tabla una sola vez; el mérito
   va al peer correcto; un hito repetido en el mismo frame no duplica.
 
 **Hecho cuando**: jugando solo, desactivar un explosivo muestra "Mérito +25" y el total aparece en
