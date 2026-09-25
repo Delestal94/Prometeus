@@ -236,6 +236,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_fuzz.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_determinism.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_quality.gd
+<godot> --headless --path do-not-drop --script res://tests/test_release_build.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -352,6 +353,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_main_menu` — que el menú cargue y que cada botón/atajo elija el
   transporte que promete (crítico: "Crear sala" y "Unirse por IP" tienen que
   terminar en el mismo transporte o nunca se van a encontrar).
+- `test_release_build` — builds de release (N-210): `project.godot` tiene
+  `config/version` y el menú la muestra; los presets de CI
+  (`tools/export/export_presets.cfg`) exportan Windows y Linux sin `tests/` ni `.blend`, y
+  `.github/workflows/release.yml` los usa en cada tag `v*` y sube los zip al release.
 - `test_loading_flow` — flujo integrado de preparación, bloqueo de abordaje
   prematuro, carga, inicio, pausa, resultados, reinicio y atajo de desarrollo.
 - `test_route_streaming` — el streaming de tramos de Endless: `RouteStreamer` encadena

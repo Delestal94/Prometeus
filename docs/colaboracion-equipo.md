@@ -1,6 +1,6 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-24
+> Última actualización: 2026-09-25
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
@@ -37,6 +37,16 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/gameplay/interaction/`
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
+
+## Aviso activo: versión en el menú y builds de release (N-210, 2026-09-25)
+
+- `project.godot` (zona compartida): nueva clave `application/config/version="0.1.0"`. No cambia nada
+  más; el job de release la reescribe con el tag antes de exportar.
+- `scripts/ui/main_menu.gd` (de Slatex): el pie decía "Prototipo 0.1" fijo; ahora dice
+  "Versión <config/version>". Es la única línea tocada. `test_release_build` verifica que el menú la
+  muestre.
+- Nuevos, fuera de `do-not-drop/`: `.github/workflows/release.yml`, `tools/export/` (presets de CI y
+  `stamp_version.py`). Cómo sacar una build: `CONTRIBUTING.md` → "Builds de release".
 
 ## Aviso activo: eventos de ruta completos y sincronizados (S-101, 2026-09-24)
 

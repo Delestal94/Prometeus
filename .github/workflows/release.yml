@@ -1,0 +1,119 @@
+name: Release builds
+
+# N-210: every v* tag exports Windows and Linux with tools/export/export_presets.cfg
+# and attaches both zips to the GitHub release of that tag. The tag (without the
+# "v") becomes application/config/version, which the main menu shows.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to stamp (no release is published for manual runs)'
+        required: false
+        default: '0.0.0-dev'
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  export:
+    name: Export Windows + Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version from tag
+        id: version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Godot and export templates
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-export-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot and export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$dest"
+          # Only the two release templates we export with: the full .tpz is ~1 GB.
+          unzip -q -j /tmp/templates.tpz \
+            'templates/windows_release_x86_64.exe' \
+            'templates/linux_release.x86_64' \
+            'templates/version.txt' -d "$dest"
+          rm /tmp/templates.tpz
+
+      - name: Stamp version and presets
+        run: |
+          python3 tools/export/stamp_version.py do-not-drop/project.godot "${{ steps.version.outputs.version }}"
+          cp tools/export/export_presets.cfg do-not-drop/export_presets.cfg
+
+      - name: Import project
+        run: |
+          timeout 600 ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path do-not-drop --import || true
+
+      - name: Export
+        run: |
+          godot=~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          mkdir -p builds/windows builds/linux
+          $godot --headless --path do-not-drop --export-release "Windows Desktop" ../builds/windows/TakeMyPackage.exe
+          $godot --headless --path do-not-drop --export-release "Linux" ../builds/linux/TakeMyPackage.x86_64
+          # Godot can print an error and still exit 0: check the files are really there.
+          for f in builds/windows/TakeMyPackage.exe builds/windows/TakeMyPackage.pck \
+                   builds/windows/steam_api64.dll \
+                   builds/linux/TakeMyPackage.x86_64 builds/linux/TakeMyPackage.pck \
+                   builds/linux/libsteam_api.so; do
+            test -s "$f" || { echo "::error::missing export output $f"; ls -la builds/*; exit 1; }
+          done
+
+      - name: Smoke test (Linux build loads)
+        run: |
+          # The exported build must boot to the menu without missing resources or scripts.
+          timeout 60 builds/linux/TakeMyPackage.x86_64 --headless --quit-after 120 2>&1 | tee /tmp/smoke.log || true
+          if grep -E "Failed to load|Cannot open|Parse Error|SCRIPT ERROR" /tmp/smoke.log; then
+            echo "::error::exported build logged load errors"; exit 1
+          fi
+
+      - name: Zip builds
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          (cd builds/windows && zip -qr "../../TakeMyPackage-${version}-windows.zip" .)
+          (cd builds/linux && zip -qr "../../TakeMyPackage-${version}-linux.zip" .)
+          ls -la *.zip
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: builds-${{ steps.version.outputs.version }}
+          path: '*.zip'
+
+      - name: Attach to release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes
+          gh release upload "$tag" *.zip --clobber

@@ -205,7 +205,9 @@ func _build_ui() -> void:
 	_cancel_button.pressed.connect(_cancel_connection)
 	_cancel_button.visible = false
 
-	var footer: Label = UiTheme.chip(self, "Prototipo 0.1   ·   F11 pantalla completa", UiTheme.WHITE, 14)
+	# The release job (N-210) stamps the tag into config/version before exporting.
+	var version: String = str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
+	var footer: Label = UiTheme.chip(self, "Versión %s   ·   F11 pantalla completa" % version, UiTheme.WHITE, 14)
 	var footer_holder: Control = footer.get_parent()
 	footer_holder.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	footer_holder.offset_left = 24

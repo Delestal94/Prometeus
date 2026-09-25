@@ -47,6 +47,18 @@ tools/run-tests.sh -v traps     # con el log de cada falla
 - Cada mecánica nueva o bug arreglado lleva su test (`tests/test_<tema>.gd`, patrón
   `extends SceneTree` + `_expect` + `quit(_failures)`), anotado en la lista del README.
 
+## Builds de release
+
+Un tag `v*` en `main` (`git tag v0.2.0 && git push origin v0.2.0`) dispara
+`.github/workflows/release.yml`: pone la versión del tag en `config/version` de
+`project.godot` (el menú la muestra abajo a la izquierda), exporta Windows y Linux con
+`tools/export/export_presets.cfg`, prueba que la build de Linux arranque sin errores de
+carga y sube `TakeMyPackage-<versión>-windows.zip` y `-linux.zip` al release del tag.
+El `export_presets.cfg` de `do-not-drop/` sigue siendo local de cada uno (está en
+`.gitignore`); si cambiás filtros o rutas en el tuyo, copiá el cambio al de `tools/export/`.
+También se puede correr a mano desde Actions ("Run workflow"): deja los zip como artefacto
+sin publicar un release.
+
 ## Commits
 
 Mensajes en inglés, con prefijo: `feat:`, `fix:`, `perf:`, `docs:`, `test:`, `chore:`.
