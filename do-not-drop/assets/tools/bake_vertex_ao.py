@@ -5,6 +5,10 @@
         --factory-startup --python do-not-drop/assets/tools/bake_vertex_ao.py -- \
         [--out DIR] model.glb [model.glb ...]
 
+or, without Blender installed (pip install bpy -- Blender as a Python module):
+
+    python3 do-not-drop/assets/tools/bake_vertex_ao.py -- [--out DIR] model.glb ...
+
 GL Compatibility has no SSAO, so the darkening where surfaces meet (a wall
 into the ground, an eave over a wall, a wheel arch) is baked instead: each
 GLB is imported, every face corner casts RAYS rays over its hemisphere
@@ -28,20 +32,35 @@ import math
 import os
 import sys
 
+import bpy  # first: as a Python module (pip install bpy) it's what makes bmesh importable
 import bmesh
-import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 
 DISTANCE = 1.2      # metres an occluder counts from
 RAYS = 96
-STRENGTH = 0.75     # 1 = the raw occlusion, 0 = no AO at all
-FLOOR = 0.45        # darkest a corner may get
+## Tuned after the pilot (2026-09-25, N-308.1): at 0.75 / 0.45 a house came
+## out 7-12 % darker by day and its shaded front near black at night.
+STRENGTH = 0.5      # 1 = the raw occlusion, 0 = no AO at all
+FLOOR = 0.62        # darkest a corner may get
 NUDGE = 0.01        # off the face, and toward its middle, before casting
 ## Faces are cut until no edge is longer than this (world metres), so the
 ## darkening hugs the ground or the eave instead of greying a whole wall --
-## a wall has only four corners to carry it otherwise.
-SUBDIVIDE = 0.6
+## a wall has only four corners to carry it otherwise. 1.0, not the pilot's
+## 0.6: a house went from ~7k to ~41k corners at 0.6.
+SUBDIVIDE = 1.0
+## Palette entries that get no AO and aren't cut up: glass (a 46-corner pane
+## grew a dark X), window frames and bars (soot rings round every window),
+## lamps (they glow at night, N-304) and tyres (black already).
+SKIP_MATERIALS = ("window", "glass", "lamp", "lamp_glass", "trim", "tire", "tyre", "rubber")
+
+
+def skipped(obj, polygon):
+    slot = polygon.material_index
+    if slot >= len(obj.material_slots) or obj.material_slots[slot].material is None:
+        return False
+    name = obj.material_slots[slot].material.name.split(".")[0].lower()
+    return name in SKIP_MATERIALS
 
 
 def args():
@@ -97,8 +116,13 @@ def subdivide(obj):
     scale = max(obj.matrix_world.to_scale())
     part = bmesh.new()
     part.from_mesh(obj.data)
+    skip = set()
+    for polygon in obj.data.polygons:
+        if skipped(obj, polygon):
+            skip.update(polygon.vertices)
     for _round in range(6):
-        long_edges = [e for e in part.edges if e.calc_length() * scale > SUBDIVIDE]
+        long_edges = [e for e in part.edges if e.calc_length() * scale > SUBDIVIDE
+                      and not (e.verts[0].index in skip and e.verts[1].index in skip)]
         if not long_edges:
             break
         bmesh.ops.subdivide_edges(part, edges=long_edges, cuts=1, use_grid_fill=True)
@@ -144,6 +168,10 @@ def bake(path, out_dir):
         shared = {}
         raws = {}
         for polygon in mesh.polygons:
+            if skipped(obj, polygon):
+                for loop_index in polygon.loop_indices:
+                    colours.data[loop_index].color = (1.0, 1.0, 1.0, 1.0)
+                continue
             normal = (rotate @ polygon.normal).normalized()
             middle = world @ polygon.center
             for loop_index in polygon.loop_indices:
