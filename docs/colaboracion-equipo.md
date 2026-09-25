@@ -463,6 +463,15 @@ actualice su copia.
    indicador de asiento del ítem #94, que depende de una propiedad replicada del
    jugador, no del vehículo).
 
+## Aviso S-103 · 2026-09-24
+
+Slatex agregó la acción compartida `use_card` a `project.godot` (G / D-pad izquierda),
+sin cambiar ninguna acción existente. En `depot.gd` se agregaron únicamente
+`request_discounted_supply()` y `buy_supply_discounted()` para que Descuento siga el
+mismo camino autoritativo y sincronizado de las compras normales; no se modificaron
+firmas existentes. `README.md` suma `test_cards.gd` a la batería. Antes de continuar
+trabajo en esos archivos compartidos, hacer `git pull` después del aviso de push.
+
 ## Cómo se armaron las 200 tareas
 
 Las primeras ~70 de cada lista salen directo de los ítems pendientes de

@@ -353,6 +353,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_ping"):
 		_send_ping()
 		return
+	if event.is_action_pressed(&"use_card"):
+		_use_card()
+		return
 	if _is_drop_event(event):
 		_drop_carried()
 		return
@@ -1025,6 +1028,17 @@ func _send_ping() -> void:
 		bus.rpc_id(1, &"request_ping", reach_origin(), PING_LABEL)
 	else:
 		bus.call(&"request_ping", reach_origin(), PING_LABEL)
+
+
+func _use_card() -> void:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	var crew: Node = get_node_or_null(^"/root/CrewProgression")
+	if crew == null:
+		return
+	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+		crew.rpc_id(1, &"request_use_card")
+	else:
+		crew.call(&"request_use_card")
 
 
 func _try_interact() -> void:

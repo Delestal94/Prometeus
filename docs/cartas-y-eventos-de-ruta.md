@@ -14,17 +14,17 @@ Al completar una entrega, cada jugador puede recibir una carta. La probabilidad
 parte de una base, aumenta por mérito y se garantiza tras varias entregas sin
 recibir ninguna. Máximo una carta activa por persona.
 
-| Carta | Efecto |
-| --- | --- |
-| Prioridad | Reemplaza el resultado de una votación. Una vez por campaña. |
-| Re-voto | Repite una votación. |
-| Descuento | Reduce el costo de una compra cooperativa. |
-| Rescate | Resuelve una emergencia activa una vez. |
-| Información | Revela las ofertas de una tienda confusa. |
+| Carta | Efecto | Estado MVP |
+| --- | --- | --- |
+| Re-voto | Repite una votación. | Se reparte y se usa en Suministros. |
+| Descuento | Reduce 50 % el costo de una compra cooperativa. | Se reparte y se usa en Suministros. |
+| Rescate | Resuelve una emergencia activa una vez. | Se reparte y se usa con G / D-pad izquierda. |
+| Prioridad | Reemplaza el resultado de una votación. | Reservada: conserva su id, pero no se reparte. |
+| Información | Revela las ofertas de una tienda confusa. | Reservada: conserva su id, pero no se reparte. |
 
-La carta Prioridad no puede gastar dinero inexistente ni elegir una compra
-bloqueada. Si dos personas la juegan a la vez, ambas se anulan y se repite la
-votación.
+Cada jugador conserva como máximo una carta. Rescate no se consume si no hay
+un evento activo; Descuento y Re-voto solo aparecen como acciones en el mostrador
+de suministros cuando el jugador tiene la carta correspondiente.
 
 ## Eventos de ruta
 
@@ -42,6 +42,6 @@ votación.
 
 1. Mérito individual y dinero cooperativo.
 2. Votación de compras.
-3. Cartas Descuento, Información y Prioridad.
+3. Cartas Rescate, Descuento y Re-voto; Prioridad e Información quedan fuera del MVP.
 4. Inspección sorpresa y Cliente impaciente.
 5. Puerta trabada, Etiquetas mezcladas, Paquete mimético, Caja parásita y Tienda confusa.

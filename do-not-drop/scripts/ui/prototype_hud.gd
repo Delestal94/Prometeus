@@ -32,6 +32,7 @@ var speed_label: Label
 var speed_unit_label: Label
 var time_label: Label
 var economy_label: Label
+var card_label: RichTextLabel
 var distance_label: Label
 var section_label: Label
 var cargo_rows_box: VBoxContainer
@@ -166,6 +167,7 @@ func _ready() -> void:
 	_apply_hud_scale()
 	_refresh_session()
 	_refresh_shortcut_text()
+	_refresh_card()
 	_show_start()
 
 
@@ -226,6 +228,9 @@ func _build_ui() -> void:
 	metrics.add_child(chips)
 	time_label = UiTheme.chip(chips, "00:00", UiTheme.SKY, 17)
 	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, 17)
+	card_label = _rich(metrics, 14)
+	card_label.custom_minimum_size.x = 190
+	card_label.add_theme_color_override("default_color", INK)
 
 	var space := Control.new()
 	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -351,6 +356,7 @@ func _build_ui() -> void:
 	# Back to the button that opened it: otherwise a gamepad player comes
 	# back from the options with nothing focused and no way to move.
 	options_panel.closed.connect(func() -> void:
+		_refresh_card()
 		if overlay.visible:
 			options_button.grab_focus())
 
@@ -594,6 +600,7 @@ func _refresh_restart_hold(delta: float) -> void:
 
 func _on_input_device_changed(_gamepad: bool) -> void:
 	_refresh_shortcut_text()
+	_refresh_card()
 	_render_interaction_prompt()
 	if overlay_mode == "start":
 		_show_start()
@@ -863,8 +870,23 @@ func _on_merit_changed(peer_id: int, total: int) -> void:
 
 
 func _on_card_changed(peer_id: int, card_id: int) -> void:
-	if peer_id == NetworkManager.local_id() and card_id >= 0:
-		_toast("Carta obtenida")
+	if peer_id != NetworkManager.local_id():
+		return
+	_refresh_card()
+	if card_id >= 0:
+		_toast("Carta obtenida: %s" % CrewProgression.card_name(card_id))
+
+
+func _refresh_card() -> void:
+	if card_label == null:
+		return
+	var card_id: int = int(CrewProgression.cards.get(NetworkManager.local_id(), -1))
+	card_label.visible = card_id >= 0
+	if card_id < 0:
+		card_label.text = ""
+		return
+	var action: String = GameSettings.prompt("%s  usar" % GameSettings.binding_label(&"use_card"), "D-pad izquierda  usar")
+	card_label.text = UiTheme.keycaps("CARTA: %s   ·   %s" % [CrewProgression.card_name(card_id), action])
 
 
 func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:

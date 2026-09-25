@@ -1,6 +1,6 @@
 # Controles y flujo de UI/lobby — Take My Package
 
-> Última actualización: 2026-09-23
+> Última actualización: 2026-09-24
 > Cada jugador juega desde su propio dispositivo/cliente (no split-screen local) —
 > esto simplifica el esquema de controles: cada uno usa su teclado+mouse o gamepad
 > completo, no hay que repartir un solo teclado entre varios jugadores.
@@ -33,6 +33,7 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 | Acción | Input |
 |---|---|
 | Ping/emote rápido | Rueda del mouse click / D-pad | Sistema de comunicación no verbal para MVP (ver nota abajo) |
+| Usar carta | G (reasignable) / D-pad izquierda | Rescate en ruta; Descuento y Re-voto desde Suministros |
 | Pausa/menú | Esc / Start | — |
 | Reiniciar | **Mantener** R / Y (en pausa o resultados, instantáneo) | Solo solo o anfitrión |
 | Pantalla completa | F11 | — |

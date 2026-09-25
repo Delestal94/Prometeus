@@ -89,7 +89,7 @@ func _build() -> void:
 	UiTheme.tag(column, "CONTROLES", UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
-	for pair: Array in [[&"interact", "Interactuar"], [&"ui_ping", "Ping"], [&"drive_horn", "Bocina"], [&"look_back", "Mirar atrás"]]:
+	for pair: Array in [[&"interact", "Interactuar"], [&"ui_ping", "Ping"], [&"drive_horn", "Bocina"], [&"look_back", "Mirar atrás"], [&"use_card", "Usar carta"]]:
 		var row := HBoxContainer.new()
 		column.add_child(row)
 		UiTheme.label(row, String(pair[1]), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -112,9 +112,9 @@ func _refresh_controls() -> void:
 	if _controls_label == null:
 		return
 	if GameSettings.using_gamepad:
-		_controls_label.text = "A pie: stick izq. caminar  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  Clic stick der. centrar vista\nStart pausa  ·  mantener Y reiniciar"
+		_controls_label.text = "A pie: stick izq. caminar  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar"
 	else:
-		_controls_label.text = "A pie: WASD caminar  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa"
+		_controls_label.text = "A pie: WASD caminar  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa"
 
 
 func _on_input_device_changed(_gamepad: bool) -> void:
@@ -188,4 +188,3 @@ func open() -> void:
 func close() -> void:
 	hide()
 	closed.emit()
-

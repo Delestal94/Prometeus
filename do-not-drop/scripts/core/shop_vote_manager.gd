@@ -55,6 +55,16 @@ func use_revote(peer_id: int) -> bool:
 	return true
 
 
+@rpc("any_peer", "call_local", "reliable")
+func request_revote() -> bool:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+		return false
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender_id if sender_id != 0 else int(network.call(&"local_id")) if network != null else 1
+	return use_revote(peer_id)
+
+
 func use_discount(peer_id: int, offer_id: StringName) -> StringName:
 	var crew: Node = _crew()
 	if not active or not offers.has(offer_id) or crew == null:
