@@ -120,15 +120,19 @@ func _carry_and_drop_respect_walls_and_floor() -> void:
 	var package: Node = level.get_node("World/Package")
 	var origin := Vector3(400.0, 50.0, 0.0)
 	var floor_body: StaticBody3D = _static_box(Vector3(20.0, 1.0, 20.0), origin + Vector3(0.0, -0.5, 0.0))
-	var wall: StaticBody3D = _static_box(Vector3(4.0, 3.0, 0.2), origin + Vector3(0.0, 1.5, -1.1))
 	level.add_child(floor_body)
-	level.add_child(wall)
 	player.global_position = origin
 	player.rotation = Vector3.ZERO
+	# The wall 12 cm short of where the held box's front would be, wherever
+	# the carry pose puts the hold point: close enough that the box must be
+	# pulled in, not so close that it can't be (it never comes nearer the
+	# eye than CARRY_MIN_DISTANCE; flush against a wall it still can't fit).
+	var wall_face_z: float = player._hold_point.global_position.z - package.get_half_extents().z + 0.12
+	var wall: StaticBody3D = _static_box(Vector3(4.0, 3.0, 0.2), Vector3(origin.x, origin.y + 1.5, wall_face_z - 0.1))
+	level.add_child(wall)
 	package.get_node("InteractionArea").interact(player)
 	await physics_frame
 	await physics_frame
-	var wall_face_z: float = origin.z - 1.0
 	var half: Vector3 = package.get_half_extents()
 
 	var carry: Vector3 = player._carry_position()
