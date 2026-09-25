@@ -208,18 +208,18 @@ mostrador de suministros compra el que llega primero.
 **Archivos**: `scripts/core/shop_vote_manager.gd`, `scripts/ui/depot_panel.gd`. **No hace falta
 tocar `depot.gd`**: la compra final se sigue haciendo con `depot.buy_supply(id)` en el host.
 
-- [ ] **S-104.1** En `shop_vote_manager.gd`: `request_vote(offer_id)` con `@rpc("any_peer")` que en el
+- [x] **S-104.1** (commit `c05ed44`) En `shop_vote_manager.gd`: `request_vote(offer_id)` con `@rpc("any_peer")` que en el
   host valida y llama `vote(sender, offer_id)`; `resolve_winner(peers) -> StringName` que decide
   **sin gastar** (la plata la descuenta `depot.buy_supply`, para no cobrar dos veces). Empate: gana la
   oferta más barata. Nadie votó: no se compra nada.
-- [ ] **S-104.2** El host abre la votación (`open_shop(CrewProgression.SUPPLIES)`) la primera vez que
+- [x] **S-104.2** (commit `c05ed44`) El host abre la votación (`open_shop(CrewProgression.SUPPLIES)`) la primera vez que
   alguien abre el mostrador en el depósito, y la cierra cuando votaron todos los conectados o a los
   20 s del primer voto. Al cerrar: `depot.buy_supply(ganador)`.
-- [ ] **S-104.3** En solitario no hay votación: el botón compra directo como hoy.
-- [ ] **S-104.4** UI: cada oferta muestra quién la votó (círculos con el color de cada jugador) y la
+- [x] **S-104.3** (commit `c05ed44`) En solitario no hay votación: el botón compra directo como hoy.
+- [x] **S-104.4** (commit `c05ed44`) UI: cada oferta muestra quién la votó (círculos con el color de cada jugador) y la
   cuenta regresiva; Descuento (S-103) aparece como botón "Usar Descuento (−50 %)" sobre la oferta
   ganadora; Re-voto borra los votos.
-- [ ] **S-104.5 Test** `tests/test_supply_vote.gd` (con `ShopVoteManager` y `CrewProgression`
+- [x] **S-104.5 Test** (commit `c05ed44`) `tests/test_supply_vote.gd` (con `ShopVoteManager` y `CrewProgression`
   instanciados sin red, como `test_shop_vote_manager.gd`): gana la mayoría, empate a la más barata,
   el dinero se descuenta una sola vez.
 
