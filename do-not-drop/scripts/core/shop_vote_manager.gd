@@ -17,6 +17,8 @@ func _ready() -> void:
 	var bus: Node = event_bus if event_bus != null else get_node_or_null(^"/root/EventBus")
 	if bus != null and bus.has_signal(&"run_started") and not bus.is_connected(&"run_started", _on_run_started):
 		bus.connect(&"run_started", _on_run_started)
+	if bus != null and bus.has_signal(&"run_ended") and not bus.is_connected(&"run_ended", _on_run_ended):
+		bus.connect(&"run_ended", _on_run_ended)
 
 
 func _process(delta: float) -> void:
@@ -269,10 +271,19 @@ func _sync_resolution(offer_id: StringName, offer: Dictionary) -> void:
 
 
 func _on_run_started(_route_id: StringName, _players: Array) -> void:
+	_reset_vote()
+
+
+func _on_run_ended(_score: int, _results: Dictionary) -> void:
+	_reset_vote()
+
+
+func _reset_vote() -> void:
 	active = false
 	timer_started = false
 	seconds_left = VOTE_DURATION
 	votes.clear()
+	offers.clear()
 
 
 func _crew() -> Node:
