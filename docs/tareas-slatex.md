@@ -243,16 +243,16 @@ pierden y la economía no significa nada entre sesiones.
 `docs/economia-y-contramedidas.md` dice que las primeras entregas presentan solo Frágil y
 Equilibrio. Hoy las 4 básicas salen desde la primera partida.
 
-- [ ] **S-106.1** Sumar a `UnlockManager.UNLOCKS`: `growing_weight_trap` (1 entrega, 0 pts) y
+- [x] **S-106.1** (commit `2a2ad10`) Sumar a `UnlockManager.UNLOCKS`: `growing_weight_trap` (1 entrega, 0 pts) y
   `noisy_trap` (2 entregas, 100 pts); agregarlas a `TRAP_UNLOCKS`. Correr los umbrales siguientes para
   que la curva quede: Frágil+Equilibrio → Peso creciente (1) → Ruidoso (2) → Líquido (4) → Explosivo (8)
   → Hostil (13).
-- [ ] **S-106.2** `PROFILE_VERSION` 3: un perfil que ya supera los umbrales nuevos los recibe
+- [x] **S-106.2** (commit `2a2ad10`) `PROFILE_VERSION` 3: un perfil que ya supera los umbrales nuevos los recibe
   desbloqueados al cargar (no quitarle nada a nadie).
-- [ ] **S-106.3** Verificar que con solo 2 trampas (4 cajas) siempre alcanzan para las casas
+- [x] **S-106.3** (commit `2a2ad10`) Verificar que con solo 2 trampas (4 cajas) siempre alcanzan para las casas
   (`max(jugadores - 1, 1)`, máximo 4). Si no alcanza, `locked_traps()` libera la trampa de menor
   dificultad que falte. Test en `test_locked_traps.gd`.
-- [ ] **S-106.4** Actualizar `docs/plan-desarrollo.md` Fase 5 con la curva nueva.
+- [x] **S-106.4** (commit `2a2ad10`) Actualizar `docs/plan-desarrollo.md` Fase 5 con la curva nueva.
 
 ### S-107 · Reglas de dificultad para armar el pedido — B · `Sol · high` · Aviso: sí (una línea en `depot.gd`)
 
