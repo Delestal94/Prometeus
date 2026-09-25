@@ -351,11 +351,11 @@ Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archiv
 
 ### S-202 · Partir `player.gd` (1131 líneas) — B · `Astra · high` · Aviso: no
 
-- [ ] Separar en nodos hijos con script propio: `player_interaction.gd` (alcance, avisos, E),
+- [x] (commits `bb4a862`, `f168819`, `42d5aa2`) Separar en nodos hijos con script propio: `player_interaction.gd` (alcance, avisos, E),
   `player_carry.gd` (caja en mano), `player_seat_pose.gd` (pose sentado, manos que atienden).
-- [ ] **Las funciones `@rpc` se quedan en `player.gd`** (Godot resuelve la RPC por la ruta del nodo; si
+- [x] (commits `f168819`, `42d5aa2`) **Las funciones `@rpc` se quedan en `player.gd`** (Godot resuelve la RPC por la ruta del nodo; si
   se mueven, se rompe la red). Esas funciones solo delegan.
-- [ ] Tests verdes: `tools/run-tests.sh interaction seat carry player driver look`.
+- [x] (commits `bb4a862`, `f168819`, `42d5aa2`) Tests verdes: `interaction`, `seat`, `carry`, `player`, `driver` y `look`.
 
 ### S-203 · Detectar camión atascado también en el modo entrega — A · `Sol · high` · Aviso: sí (`level_base.gd`)
 
