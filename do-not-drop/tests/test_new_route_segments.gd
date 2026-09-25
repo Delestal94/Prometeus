@@ -35,6 +35,14 @@ func _check_s_curve() -> void:
 			sides.append(signf((block as Node3D).position.x))
 		_expect(sides == [-1.0, 1.0, -1.0, 1.0],
 			"Blocks alternate sides in order, doubling the single chicane's one weave into two (got %s)" % [sides])
+		# N-803: solid well above what's drawn, so a truck can't end up on top.
+		for block: Node in blocks:
+			var height: float = 0.0
+			for shape: Node in block.get_children():
+				if shape is CollisionShape3D and (shape as CollisionShape3D).shape is BoxShape3D:
+					height = ((shape as CollisionShape3D).shape as BoxShape3D).size.y
+			_expect(height >= 1.5, "%s is too tall to end up sitting on (%.2f m)" % [block.name, height])
+		_expect(segment.get_node_or_null(^"SCurveBlock0Visual") != null, "Each block is still drawn at its own size")
 	segment.free()
 
 
@@ -50,6 +58,17 @@ func _check_construction_zone() -> void:
 			"Barrier sits off-center, narrowing one side of the lane rather than blocking it entirely")
 	var first_cone: Node = segment.get_node_or_null(^"ConstructionCone0")
 	_expect(first_cone != null, "Cones mark the narrowed edge for visibility")
+	# N-803: a truck that clipped a static 0.65 m cone could land on it, or
+	# on the 0.9 m wall, with its wheels in the air and no way off. Cones are
+	# light bodies it bats aside, and the wall is too tall to be climbed.
+	_expect(first_cone is RigidBody3D and (first_cone as RigidBody3D).mass <= 10.0,
+		"Cones are light bodies the truck knocks over, not posts (got %s)" % [first_cone])
+	if barrier != null:
+		var wall_height: float = 0.0
+		for shape: Node in barrier.get_children():
+			if shape is CollisionShape3D and (shape as CollisionShape3D).shape is BoxShape3D:
+				wall_height = ((shape as CollisionShape3D).shape as BoxShape3D).size.y
+		_expect(wall_height >= 1.5, "The barrier's wall is too tall for the truck to end up sitting on (%.2f m)" % wall_height)
 	segment.free()
 
 

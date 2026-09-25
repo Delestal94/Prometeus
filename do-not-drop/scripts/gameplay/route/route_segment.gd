@@ -22,6 +22,8 @@ var exit_offset: Vector3
 var exit_turn: float = 0.0
 var continuous_terrain: bool = false
 
+## How tall the obstacles' collision is (see _block()).
+const BLOCK_COLLISION_HEIGHT: float = 1.6
 const ROAD := Color("394a50")
 const SHOULDER := Color("63736f")
 const MARKING := Color("d4d9c2")
@@ -96,6 +98,19 @@ func _model(node_name: String, path: String, location: Vector3, rotation_y: floa
 	model.scale = Vector3.ONE * scale_factor
 	add_child(model)
 	return model
+
+
+## A concrete block the truck must steer round (chicane, S-curve): drawn at
+## its real size, but solid up to BLOCK_COLLISION_HEIGHT. At the drawn 0.8 m it
+## was taller than the truck's ground clearance and lower than what its wheels
+## reach, so a truck that clipped one at an angle could end up sitting on top
+## with its front wheels in the air (N-803). The solid node keeps `node_name`.
+func _block(node_name: String, size: Vector3, location: Vector3, color: Color) -> Node3D:
+	_box(node_name + "Visual", size, location, color)
+	var solid_size := Vector3(size.x, BLOCK_COLLISION_HEIGHT, size.z)
+	var solid: Node3D = _box(node_name, solid_size, Vector3(location.x, location.y - size.y * 0.5 + BLOCK_COLLISION_HEIGHT * 0.5, location.z), color, true)
+	_hide_box_visual(solid)
+	return solid
 
 
 func _hide_box_visual(body: Node3D) -> void:
