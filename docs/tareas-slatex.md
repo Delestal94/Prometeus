@@ -339,15 +339,15 @@ del host. Hacerlo **solo visual y local**:
 
 Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archivo.
 
-- [ ] **S-201.1** Listar qué usan los tests del HUD (`grep -n "hud\." tests/test_hud_flow.gd` y los
+- [x] (commits `62a30ac`, `6a9de47`, `003d24f`, `202d9bf`, `a07c5d1`) **S-201.1** Listar qué usan los tests del HUD (`grep -n "hud\." tests/test_hud_flow.gd` y los
   demás) para no romper esos nombres.
-- [ ] **S-201.2** Crear `scripts/ui/hud/`: `hud_cargo_panel.gd` (filas de carga e íconos),
+- [x] (commits `62a30ac`, `6a9de47`, `003d24f`, `202d9bf`, `a07c5d1`) **S-201.2** Crear `scripts/ui/hud/`: `hud_cargo_panel.gd` (filas de carga e íconos),
   `hud_prompts.gd` (interacción, tapa de caja, atajos), `hud_notices.gd` (toasts, eventos, pings,
   avisos del depósito), `hud_results.gd` (pantalla de resultados), `hud_pause.gd` (pausa).
   `prototype_hud.gd` queda como el que los arma y conecta señales (objetivo: < 350 líneas).
-- [ ] **S-201.3** Mover **sin cambiar comportamiento**. Un commit por componente, tests del HUD verdes
+- [x] (commits `62a30ac`, `6a9de47`, `003d24f`, `202d9bf`, `a07c5d1`) **S-201.3** Mover **sin cambiar comportamiento**. Un commit por componente, tests del HUD verdes
   en cada uno (`tools/run-tests.sh hud score spectator ping`).
-- [ ] **S-201.4** Captura con `tests/render_hud.gd` antes y después: tienen que verse iguales.
+- [x] (commit `a07c5d1`) **S-201.4** Captura con `tests/render_hud.gd` antes y después: tienen que verse iguales.
 
 ### S-202 · Partir `player.gd` (1131 líneas) — B · `Astra · high` · Aviso: no
 
