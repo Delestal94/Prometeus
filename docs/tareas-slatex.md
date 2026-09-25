@@ -417,7 +417,7 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 - [x] (commits `c77194f`, `d20df06`) Cuando un peer se va: su caja en mano queda en el piso donde estaba; si estaba sentado, el
   asiento se libera; si conducía, el camión frena solo; su casa asignada sigue esperando.
-- [ ] Probarlo con `tests/net_pair.gd` (S-204): el cliente se cierra con caja en mano y el host sigue sin
+- [x] (commit `5dd2771`) Probarlo con `tests/net_pair.gd` (S-204): el cliente se cierra con caja en mano y el host sigue sin
   errores.
 
 ### S-210 · Guardados que no se corrompen — A · `Sol · high` · Aviso: sí (`run_manager.gd` para el leaderboard)
