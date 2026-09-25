@@ -425,8 +425,8 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 - [x] (commit `c694bdf`) Función común `scripts/core/safe_json.gd`: escribe en `<archivo>.tmp` y renombra
   (`DirAccess.rename`), así un corte de luz no deja el archivo a medias; al leer, si el JSON es
   inválido, lo renombra a `<archivo>.bad` y devuelve el valor por defecto.
-- [ ] Usarla en `unlock_manager.gd`, en la campaña (S-105) y en el leaderboard de `run_manager.gd`.
-- [ ] Test `tests/test_safe_json.gd`: archivo truncado → no crashea, crea `.bad`, perfil por defecto.
+- [x] (commit `f00821d`) Usarla en `unlock_manager.gd`, en la campaña (S-105) y en el leaderboard de `run_manager.gd`.
+- [x] (commit `f00821d`) Test `tests/test_safe_json.gd`: archivo truncado → no crashea, crea `.bad`, perfil por defecto.
 
 ---
 
