@@ -604,14 +604,27 @@ Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
   Reliable Delivery Service: precio, reseñas de Steam (qué elogian y qué critican del manejo), cantidad de
   jugadores, cómo se ven sus páginas. Qué hacemos distinto (roles asimétricos) en una frase.
 
-### N-905 · Capturas del mundo para la tienda — C · `Opus 5.5 · medium` · Aviso: no
+### N-905 · Capturas del mundo para la tienda — C · `Opus 5.5 · medium` · Aviso: no · **[x] `f74b26e`**
 
-- [ ] Con N-902: 5 capturas 1920×1080 sin HUD de paisaje, clima y camión. Se suman a las de Slatex (S-902).
+- [x] Con N-902: 5 capturas 1920×1080 sin HUD de paisaje, clima y camión. Se suman a las de Slatex (S-902).
+- `art/marketing/capturas/2026-09-25_*.png` (`f74b26e`, `b28efa1`): salida del depósito por el portón,
+  curva del bosque en otoño, cruce de tren con la barrera baja y la locomotora entrando, puente con lluvia y
+  llegada a la casa de noche. Sacadas con `trailer_shot.tscn` (`--fixed-fps 10 --frames`, el mejor cuadro de
+  cada plano). Las primeras tandas se descartaron: el camión fuera de cuadro, la cámara dentro de una pared
+  y el cartel de "¡A REPARTIR!" en el primer cuadro; esos arreglos están en N-902.
+- A mejorar en una próxima tanda: de noche el camión queda casi negro (solo se leen los faros) y el "puente"
+  no tiene agua ni desnivel debajo, así que se lee como una ruta con barandas.
 
-### N-906 · Devlog en GIF — C · `Opus 5.5 · low` · Aviso: no
+### N-906 · Devlog en GIF — C · `Opus 5.5 · low` · Aviso: no · **[x] `4363a0a`**
 
-- [ ] Un GIF corto por semana (ciervo, tren, vuelco, lluvia) desde la cámara de tráiler, para redes. Carpeta
+Tarea semanal: estos son los cuatro primeros; la costumbre sigue.
+
+- [x] Un GIF corto por semana (ciervo, tren, vuelco, lluvia) desde la cámara de tráiler, para redes. Carpeta
   `art/devlog/` fuera de `do-not-drop/` para que no entre al build.
+- `art/devlog/2026-09-25_{ciervo,tren,vuelco,lluvia}.gif` (`b28efa1`, `4363a0a`), 480 px de ancho y
+  menos de 8 MiB cada uno: el ciervo cruza delante del camión, el tren pasa entre la cámara y el camión
+  frenado en la barrera, el camión vuelca, se queda tumbado y las cajas salen volando por atrás, y la
+  persecución bajo la lluvia. `tools/devlog/make_gif.py` arma una paleta con cuadros de todo el clip.
 
 ---
 
