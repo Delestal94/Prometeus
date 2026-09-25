@@ -337,7 +337,7 @@ func _physics_process(_delta: float) -> void:
 			# them), and a trailer shot doesn't need the physics of the exit.
 			package.global_position = van.to_global(Vector3(rng.randf_range(-0.6, 0.6), 1.3 + 0.35 * float(index % 3), REAR_OUTSIDE_Z + 0.4 * float(index)))
 			index += 1
-			package.linear_velocity = van.linear_velocity * 0.4 + van.global_basis.z * rng.randf_range(8.0, 11.0) + Vector3.UP * rng.randf_range(6.0, 9.0) + van.global_basis.x * rng.randf_range(-2.0, 2.0)
+			package.linear_velocity = van.linear_velocity * 0.4 + van.global_basis.z * rng.randf_range(3.5, 5.5) + Vector3.UP * rng.randf_range(4.5, 6.5) + van.global_basis.x * rng.randf_range(-2.0, 2.0)
 			package.angular_velocity = Vector3(rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0))
 
 
