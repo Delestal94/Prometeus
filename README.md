@@ -237,6 +237,21 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_world_determinism.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_quality.gd
 <godot> --headless --path do-not-drop --script res://tests/test_release_build.gd
+<godot> --headless --path do-not-drop --script res://tests/test_stuck_detection.gd
+<godot> --headless --path do-not-drop --script res://tests/test_town_signs.gd
+<godot> --headless --path do-not-drop --script res://tests/test_roadside_stories.gd
+<godot> --headless --path do-not-drop --script res://tests/test_depot_campaign_board.gd
+<godot> --headless --path do-not-drop --script res://tests/test_door_reactions.gd
+<godot> --headless --path do-not-drop --script res://tests/test_world_translations.gd
+<godot> --headless --path do-not-drop --script res://tests/test_acoustic_space.gd
+<godot> --headless --path do-not-drop --script res://tests/test_music_tracks.gd
+<godot> --headless --path do-not-drop --script res://tests/test_night_lights.gd
+<godot> --headless --path do-not-drop --script res://tests/test_windshield_rain.gd
+<godot> --headless --path do-not-drop --script res://tests/test_seat_look_limits.gd
+<godot> --headless --path do-not-drop --script res://tests/test_vehicle_net_smoothing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_level_common.gd
+<godot> --headless --path do-not-drop --script res://tests/test_trailer_shots.gd
+<godot> --headless --path do-not-drop --script res://tests/test_start_yard.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
 <godot> --headless --path do-not-drop --script res://scripts/gameplay/route/route_smoke_check.gd
@@ -353,6 +368,43 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_main_menu` — que el menú cargue y que cada botón/atajo elija el
   transporte que promete (crítico: "Crear sala" y "Unirse por IP" tienen que
   terminar en el mismo transporte o nunca se van a encontrar).
+- `test_stuck_detection` — N-803: un camión trabado con el acelerador apretado (chasis
+  apoyado en un obstáculo, ruedas en el aire) termina la entrega a los 6 s
+  (`level_base.gd` `STUCK_SECONDS`); estacionado sin pisar el acelerador, no.
+- `test_start_yard` — #170: ninguna ruta arranca con una loma ni un túnel en el portón, el
+  camión no usa CCD (frenaba su posición y la carga lo atravesaba) y saliendo a fondo no
+  cabecea más de 20 °/s y una caja suelta sigue atrás.
+- `test_town_signs` — N-601: cada pueblo tiene cartel de entrada con nombre y de salida
+  tachado, a la derecha y mirando al camión, nombres sin repetir y los mismos por semilla.
+- `test_roadside_stories` — N-602: historias de banquina (camioneta de la competencia
+  volcada, gallina con la caja rota, cartel "entregamos (casi) todo") como mucho una cada
+  800 m, fuera del asfalto, sólidas donde se chocan e iguales para todos.
+- `test_depot_campaign_board` — N-603: "Días sin accidentes" suma por partida sin cajas
+  rotas y vuelve a 0 con una rota; la pared de fotos guarda las últimas 8 y borra las viejas.
+- `test_door_reactions` — N-604: el vecino reacciona a cada resultado (salta, revisa la
+  caja, se agarra la cabeza, devuelve la caja equivocada, deja una nota) con una de 5
+  frases elegida por semilla, en todos los clientes.
+- `test_world_translations` — N-605: todos los textos del mundo están en
+  `translations/strings_world.csv` en español e inglés con los mismos marcadores, no hay
+  claves de más ni de menos, el juego arranca en español y cambiar el idioma cambia el mundo.
+- `test_acoustic_space` — N-402: eco largo dentro de los túneles y más corto bajo el techo
+  del depósito, apagado al aire libre; una cámara pegada al camión desde afuera no cuenta
+  como adentro (lluvia, #68).
+- `test_music_tracks` — N-403: el menú tiene su tema y la radio del depósito su programa,
+  los dos en loop por el bus Music, con origen y licencia anotados.
+- `test_night_lights` — N-304: de noche faroles y faros de autos estacionados brillan con
+  destello y las ventanas se encienden; al atardecer más tenue, de día nada.
+- `test_windshield_rain` — N-303: gotas en el parabrisas solo con lluvia y solo desde
+  adentro; los limpiaparabrisas barren con el mismo reloj que limpia el shader.
+- `test_seat_look_limits` — N-504: cada asiento tiene sus límites de mirada (el conductor
+  no mira a través del techo ni de la mampara) y la vista retrocede si queda pegada a una pared.
+- `test_vehicle_net_smoothing` — N-208: con 150 ms de lag y 50 de jitter el camión del host
+  se dibuja en el cliente sin saltos de más de 10 cm por cuadro (antes, varios), y un
+  teletransporte salta en vez de deslizarse.
+- `test_level_common` — N-209: entrega y Endless heredan lo común de `level_common.gd` sin
+  redefinirlo, y los dos arrancan su partida.
+- `test_trailer_shots` — N-902: los 6 planos del tráiler están guardados, cada uno encuentra
+  su mundo, los rieles son suaves y un plano (el vuelco) se reproduce de verdad.
 - `test_release_build` — builds de release (N-210): `project.godot` tiene
   `config/version` y el menú la muestra; los presets de CI
   (`tools/export/export_presets.cfg`) exportan Windows y Linux sin `tests/` ni `.blend`, y

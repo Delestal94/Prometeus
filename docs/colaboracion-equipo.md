@@ -38,6 +38,45 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: tanda de tareas de Nacho del 2026-09-25 (zona compartida y archivos de Slatex)
+
+Resumen de lo que toca archivos que no son solo de Nacho. Todo está cubierto por tests nuevos o
+ampliados (lista del README). Hacé `git pull` antes de seguir con `level_base.gd`.
+
+- **`gameplay/level_base.gd` / `level_endless.gd` (N-209, N-803):** lo idéntico entre los dos
+  niveles pasó a `gameplay/level_common.gd` (clase base: carga en el depósito, spawn de jugadores,
+  pausa, reinicio, carga perdida, vista al caerse el host). Cada nivel conserva lo suyo:
+  `_prepare_mode()`, `start_delivery()`, `_physics_process()` y, en entrega, el aviso de "llegó más
+  gente" en `_on_peer_level_ready()`. **Ninguna firma pública cambió** (`start_debug_delivery`,
+  `start_delivery`, `restart_delivery`, `toggle_pause`, `vehicle`, `depot`, `packages`,
+  `local_player`, `tipped_seconds`). Nuevo en la entrega: `stuck_seconds` y la regla de atascado
+  (acelerador apretado y camión quieto 6 s termina la partida con "La camioneta quedó atascada"),
+  la misma idea que Endless ya tenía. En builds de debug los niveles suman una `TrailerCamera`
+  (F7 cámara libre; F5/F6/F8 rieles del tráiler, N-902).
+- **`core/game_settings.gd` (N-605):** una línea en `_ready()`: `TranslationServer.set_locale("es")`.
+  Los textos del mundo ya son traducibles (`translations/strings_world.csv`, claves `WORLD_*`); hasta
+  que la S-509 agregue la opción de idioma, el juego queda en español aunque el sistema esté en
+  inglés, para que UI y mundo no se mezclen. Cuando hagas la S-509, reemplazá esa línea por tu
+  opción y sumá tu CSV a `internationalization/locale/translations` al lado del mío.
+- **`project.godot`:** sección `[internationalization]` con los dos `.translation` de
+  `strings_world.csv` (se generan al importar; `*.translation` está en `.gitignore`).
+- **`ui/main_menu.gd` (N-403):** una línea en `_ready()` que agrega `presentation/menu_music.gd`
+  (tema del menú, autocontenido, bus Music). Nada más en ese archivo.
+- **`presentation/synth_audio.gd`:** funciones nuevas `engine_idle_loop()` y `engine_high_loop()`
+  (capas del motor, N-401). Se sacó `radio_tune()`: la radio del depósito ahora pasa
+  `assets/audio/music/mus_depot_radio_loop.ogg` (compuesta por `tools/audio/compose_music.py`) y
+  nadie más la usaba.
+- **`presentation/first_person_camera.gd` (N-504):** límites de mirada por asiento, leídos de un
+  `Marker3D` "LookLimits" en cada punto de ojos de `vehicle.tscn` (metadatos `pitch_min`,
+  `pitch_max`, `yaw_max`); nueva variable `pitch_down_limit_degrees`; si la vista queda a menos de
+  10 cm de una pared, retrocede por la línea de mirada. `seat_point.gd` no se tocó.
+- **`README.md`:** tests nuevos anotados en las dos listas.
+- **`vehicle.tscn` / `vehicle.gd` (de Nacho, aviso por si los usás):** el camión ya no tiene
+  `continuous_cd` (#170: frenaba su posición y la carga lo atravesaba; los paquetes y el clutter
+  conservan el suyo), la pose del camión se replica por `net_position`/`net_rotation`/`net_time`
+  y en los clientes se dibuja suavizada 100 ms atrás (N-208, `vehicle/vehicle_net_smoother.gd`).
+  `position`/`rotation` del camión en el cliente siguen siendo la verdad local para colisiones.
+
 ## Aviso activo: versión en el menú y builds de release (N-210, 2026-09-25)
 
 - `project.godot` (zona compartida): nueva clave `application/config/version="0.1.0"`. No cambia nada
