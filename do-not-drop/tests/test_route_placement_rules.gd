@@ -92,6 +92,11 @@ func _run() -> void:
 	var floating: int = 0
 	var buried: int = 0
 	for node: Node3D in placed:
+		# A roadside story is several pieces, each put on the ground under it
+		# (RoadsideStory.fit_to_ground(), its van's nose dug in on purpose):
+		# test_roadside_stories checks them one by one.
+		if node.get_meta(&"rule", &"") == &"roadside_story":
+			continue
 		var gap: float = RouteDresser.ground_gap(node, route, terrain)
 		if gap > 0.005:
 			floating += 1

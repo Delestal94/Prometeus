@@ -64,6 +64,8 @@ func _run() -> void:
 					var hen := story.find_child("Hen", true, false) as Node3D
 					_expect(hen != null and story.find_child("BrokenBox", true, false) != null, "seed %d: a hen next to her broken box" % seed_value)
 					if hen != null:
+						var hen_gap: float = _above_ground(route, terrain, hen.global_position)
+						_expect(absf(hen_gap) < 0.12, "seed %d: the hen stands on the ground (%.2f m off it)" % [seed_value, hen_gap])
 						var intact := hen.find_child("Intact", true, false) as Node3D
 						_expect(intact != null and intact.visible, "seed %d: the hen shows the live bird" % seed_value)
 				RoadsideStory.Kind.BILLBOARD:

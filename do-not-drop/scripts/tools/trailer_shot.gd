@@ -55,7 +55,11 @@ var focus: Node3D
 var _time: float = 0.0
 var _path: Array[Vector3] = []
 var _path_index: int = 0
-var _stop_at: int = -1
+## Where the autopilot stops (world space) and the road's heading there;
+## `_stopping` false when the shot doesn't stop.
+var _stopping: bool = false
+var stop_point: Vector3 = Vector3.ZERO
+var _stop_heading: Vector3 = Vector3.FORWARD
 var _rolled: bool = false
 var _landed: bool = false
 var _still_at: float = -1.0
@@ -149,7 +153,7 @@ func setup(definition: Dictionary) -> void:
 				var segment_start: float = float(segment.get_meta(&"route_distance", 0.0))
 				_place_before(segment_start - float(start.get("lead", 60.0)))
 				if start.has("stop"):
-					_stop_at = _index_at(segment_start + float(segment.get(&"length")) * 0.5 - float(start.stop))
+					_set_stop(segment_start + float(segment.get(&"length")) * 0.5 - float(start.stop))
 				if bool(start.get("train", false)) and &"will_close" in segment:
 					segment.set(&"will_close", true)
 		"crossing":
@@ -166,11 +170,8 @@ func setup(definition: Dictionary) -> void:
 			focus = house
 			var stop: float = float(route.call(&"stop_road_distance", int(start.get("index", 0))))
 			_place_before(stop - float(start.get("lead", 90.0)))
-			_stop_at = _index_at(stop)
-			var at: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2)])
-			var along: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2) + 1]) - at
-			along.y = 0.0
-			anchor = _mirrored_toward(Transform3D(Basis.looking_at(along.normalized(), Vector3.UP), at), house.global_position)
+			_set_stop(stop)
+			anchor = _mirrored_toward(Transform3D(Basis.looking_at(_stop_heading, Vector3.UP), stop_point), house.global_position)
 		_:
 			anchor = level.get(&"depot").global_transform
 	camera = TrailerCameraScript.new()
@@ -231,6 +232,23 @@ func _first_segment(kind: String, from: float = 0.0) -> Node3D:
 	return fallback
 
 
+## The stop at exactly `distance` metres along the road: interpolated between
+## path points, which are 10 m apart -- rounding to the next one stopped the
+## truck up to 10 m late, on the level crossing's tracks.
+func _set_stop(distance: float) -> void:
+	var cumulative: PackedFloat32Array = route.call(&"_path_cumulative")
+	var index: int = clampi(_index_at(distance), 1, _path.size() - 1)
+	var span: float = maxf(cumulative[index] - cumulative[index - 1], 0.001)
+	var weight: float = clampf((distance - cumulative[index - 1]) / span, 0.0, 1.0)
+	var from: Vector3 = route.to_global(_path[index - 1])
+	var to: Vector3 = route.to_global(_path[index])
+	stop_point = from.lerp(to, weight)
+	var heading: Vector3 = to - from
+	heading.y = 0.0
+	_stop_heading = heading.normalized() if heading.length() > 0.001 else Vector3.FORWARD
+	_stopping = true
+
+
 func _index_at(distance: float) -> int:
 	var cumulative: PackedFloat32Array = route.call(&"_path_cumulative")
 	for index: int in range(cumulative.size()):
@@ -264,8 +282,8 @@ func _physics_process(_delta: float) -> void:
 		return
 	_drive()
 	if _rolled and not _landed and van.global_basis.y.dot(Vector3.UP) < 0.15:
-		# On its side: most of the spin goes, so it lands there rather than
-		# carrying on round onto its wheels (it did, at full strength).
+		# On its side: most of the spin goes, so it doesn't carry on over onto
+		# its roof.
 		_landed = true
 		van.angular_velocity *= 0.25
 	var roll: Dictionary = shot.get("roll", {})
@@ -275,6 +293,10 @@ func _physics_process(_delta: float) -> void:
 		# low centre of mass shrugged off an impulse.
 		_rolled = true
 		van.freeze = false
+		# The truck's centre of mass sits under its floor (vehicle.tscn), so
+		# on its side gravity rolled it straight back onto its wheels: for
+		# the shot, lift it to mid-body so the truck comes to rest lying there.
+		van.center_of_mass = Vector3(0.0, 0.8, 0.1)
 		van.angular_velocity = van.global_basis.z * float(roll.get("strength", 5.0))
 		van.linear_velocity += Vector3.UP * 4.0 + van.global_basis.x * 3.0
 		# The boxes come loose and carry on with the truck's speed, tossed up
@@ -304,9 +326,9 @@ func _drive() -> void:
 	var steer: float = clampf(atan2(local.x, -local.z) * 2.2, -1.0, 1.0)
 	var target_kmh: float = float(shot.get("speed_kmh", 40.0))
 	var speed: float = float(van.get(&"speed_kmh"))
-	if _stop_at >= 0:
+	if _stopping:
 		# Brake in time to stand still at the stop, not a lookahead past it.
-		var to_stop: float = van.global_position.distance_to(route.to_global(_path[mini(_stop_at, _path.size() - 1)]))
+		var to_stop: float = van.global_position.distance_to(stop_point)
 		var metres_per_second: float = speed / 3.6
 		if to_stop < metres_per_second * metres_per_second / (2.0 * BRAKING) + 1.5 or _passed_stop():
 			target_kmh = 0.0
@@ -322,9 +344,7 @@ func _drive() -> void:
 
 ## Whether the truck is already beyond the stop along the road.
 func _passed_stop() -> bool:
-	var at: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2)])
-	var along: Vector3 = route.to_global(_path[mini(_stop_at, _path.size() - 2) + 1]) - at
-	return (van.global_position - at).dot(along) > 0.0
+	return (van.global_position - stop_point).dot(_stop_heading) > 0.0
 
 
 func _process(delta: float) -> void:

@@ -41,8 +41,9 @@ static func halo_spots(route: Node3D) -> Array:
 
 
 ## The centre of each separate lamp in `mesh`, in its own space: its
-## triangles split across the mesh's widest axis (a car's left and right
-## lamp), or the whole mesh's centre when it's one piece.
+## triangles split across the middle of the mesh's widest axis (a car's left
+## and right lamp), or the whole mesh's centre when some triangle spans that
+## middle -- then it's one piece.
 static func lamp_centres(mesh: MeshInstance3D) -> Array[Vector3]:
 	var box: AABB = mesh.get_aabb()
 	var axis: int = box.get_longest_axis_index()
@@ -50,15 +51,22 @@ static func lamp_centres(mesh: MeshInstance3D) -> Array[Vector3]:
 	var sides: Array[AABB] = [AABB(), AABB()]
 	var found: Array[bool] = [false, false]
 	var faces: PackedVector3Array = mesh.mesh.get_faces()
-	for vertex: Vector3 in faces:
-		var side: int = 0 if vertex[axis] < middle else 1
-		if found[side]:
-			sides[side] = sides[side].expand(vertex)
-		else:
-			sides[side] = AABB(vertex, Vector3.ZERO)
-			found[side] = true
-	# One lamp spanning the middle (no gap between the halves) is one piece.
-	if not (found[0] and found[1]) or sides[0].end[axis] >= sides[1].position[axis] - 0.01:
+	for corner: int in range(0, faces.size() - 2, 3):
+		var low: bool = true
+		var high: bool = true
+		for k: int in range(3):
+			low = low and faces[corner + k][axis] < middle
+			high = high and faces[corner + k][axis] > middle
+		if not low and not high:
+			return [box.get_center()] as Array[Vector3]
+		var side: int = 0 if low else 1
+		for k: int in range(3):
+			if found[side]:
+				sides[side] = sides[side].expand(faces[corner + k])
+			else:
+				sides[side] = AABB(faces[corner + k], Vector3.ZERO)
+				found[side] = true
+	if not (found[0] and found[1]):
 		return [box.get_center()] as Array[Vector3]
 	return [sides[0].get_center(), sides[1].get_center()] as Array[Vector3]
 

@@ -183,10 +183,8 @@ func _play(definition: Dictionary) -> Dictionary:
 			break
 	result.in_view_at_end = camera.is_position_in_frustum(van.global_position + Vector3.UP)
 	result.end_speed_kmh = float(van.get(&"speed_kmh"))
-	var stop_index: int = int(runner.get(&"_stop_at"))
-	if stop_index >= 0:
-		var path: Array = runner.get(&"_path")
-		result.to_stop = van.global_position.distance_to(route.to_global(path[stop_index]))
+	if bool(runner.get(&"_stopping")):
+		result.to_stop = van.global_position.distance_to(runner.get(&"stop_point"))
 	runner.queue_free()
 	await process_frame
 	root.get_node(^"/root/RunManager").call(&"reset_run")
