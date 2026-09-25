@@ -378,6 +378,35 @@ func buy_supply(supply_id: StringName) -> void:
 		request_supply(supply_id)
 
 
+## Same authoritative purchase path as request_supply(), with the requesting
+## peer attached so only that player's Discount card can pay half price.
+@rpc("any_peer", "call_local", "reliable")
+func request_discounted_supply(supply_id: StringName) -> void:
+	var network: Node = _autoload(&"NetworkManager")
+	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+		return
+	var manager: Node = _autoload(&"RunManager")
+	if manager != null and (bool(manager.get(&"is_running")) or not (manager.get(&"results") as Dictionary).is_empty()):
+		return
+	var crew: Node = _autoload(&"CrewProgression")
+	if crew == null:
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender_id if sender_id != 0 else int(network.call(&"local_id")) if network != null else 1
+	if bool(crew.call(&"buy_supply_discounted", peer_id, supply_id)):
+		var item: Dictionary = crew.get(&"SUPPLIES")[supply_id]
+		var discounted_cost: int = maxi(0, roundi(int(item.cost) * 0.5))
+		_notice("Usaron Descuento en %s (-$%d)" % [String(item.title).to_lower(), discounted_cost])
+	_broadcast_supplies()
+
+
+func buy_supply_discounted(supply_id: StringName) -> void:
+	if _is_online() and not bool(_autoload(&"NetworkManager").call(&"is_host")):
+		request_discounted_supply.rpc_id(1, supply_id)
+	else:
+		request_discounted_supply(supply_id)
+
+
 func _broadcast_supplies() -> void:
 	var crew: Node = _autoload(&"CrewProgression")
 	if crew == null:

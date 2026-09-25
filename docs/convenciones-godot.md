@@ -72,6 +72,7 @@
 | `look_center` | C | Clic del stick derecho |
 | `package_action_primary` | Clic izquierdo | Gatillo derecho (a pie, con paquete en mano) |
 | `ui_ping` | Clic de la rueda del mouse | Botón D-pad arriba |
+| `use_card` | G (reasignable) | Botón D-pad izquierda |
 | `drive_horn` | H | Botón Este (B/Círculo) |
 | `ui_pause` | Esc | Start |
 | `run_restart` | R | Botón Oeste (X/Cuadrado) |

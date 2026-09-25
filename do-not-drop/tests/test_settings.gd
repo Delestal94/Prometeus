@@ -52,6 +52,14 @@ func _run() -> void:
 			has_rebound_key = true
 	_expect(has_rebound_key, "The rebound key is applied to InputMap immediately")
 	settings.bind_key(&"interact", KEY_E)
+	settings.bind_key(&"use_card", KEY_X)
+	_expect(settings.binding_label(&"use_card") == "X", "Use card can be rebound to a keyboard key")
+	var has_card_key: bool = false
+	for event: InputEvent in InputMap.action_get_events(&"use_card"):
+		if event is InputEventKey and (event as InputEventKey).physical_keycode == KEY_X:
+			has_card_key = true
+	_expect(has_card_key, "The use-card binding is applied to InputMap immediately")
+	settings.bind_key(&"use_card", KEY_G)
 
 	# --- inversion is expressed as a multiplier both look paths can use ---
 	settings.invert_look_y = false

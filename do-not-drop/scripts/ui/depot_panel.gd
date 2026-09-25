@@ -44,6 +44,9 @@ func _ready() -> void:
 		bus.connect(&"depot_supplies_changed", func(_list: Array, _money: int) -> void:
 			if visible and station == &"shop":
 				_rebuild())
+		bus.connect(&"card_changed", func(peer_id: int, _card_id: int) -> void:
+			if visible and station == &"shop" and peer_id == NetworkManager.local_id():
+				_rebuild())
 		# Somebody else took the wheel: the depot is behind us now.
 		bus.connect(&"run_started", func(_route: StringName, _players: Array) -> void: close())
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
@@ -140,7 +143,17 @@ func _build_garage() -> void:
 func _build_shop() -> void:
 	var money: int = int(depot.get(&"team_money")) if depot != null else CrewProgression.team_money
 	var owned: Array = depot.get(&"supplies") if depot != null else []
+	var peer_id: int = NetworkManager.local_id()
+	var has_discount: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.DISCOUNT)
+	var has_revote: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.REVOTE)
 	_header("Suministros", "CAJA DEL EQUIPO  ·  $%d" % money, UiTheme.YELLOW, "Se pagan con la plata del equipo y se usan en el próximo reparto que salga del depósito.")
+	if has_revote:
+		var revote: Button = UiTheme.button(_body, "Usar Re-voto", false, Vector2(0, 42))
+		revote.disabled = not ShopVoteManager.active
+		revote.tooltip_text = "Disponible cuando haya una votación de compra activa."
+		revote.pressed.connect(_use_revote)
+		if _first_focus == null and not revote.disabled:
+			_first_focus = revote
 	for supply_id: StringName in CrewProgression.SUPPLIES:
 		var item: Dictionary = CrewProgression.SUPPLIES[supply_id]
 		var row := VBoxContainer.new()
@@ -161,6 +174,22 @@ func _build_shop() -> void:
 		var detail: Label = UiTheme.label(row, String(item.detail), 15, UiTheme.MUTED)
 		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		detail.custom_minimum_size.x = 560
+		if has_discount and not have:
+			var discounted_cost: int = maxi(0, roundi(cost * 0.5))
+			var discount: Button = UiTheme.button(row, "Usar Descuento (−50 %%)  ·  $%d" % discounted_cost, true, Vector2(0, 40))
+			discount.disabled = money < discounted_cost
+			discount.pressed.connect(func() -> void:
+				if depot != null:
+					depot.call(&"buy_supply_discounted", supply_id))
+			if _first_focus == null and not discount.disabled:
+				_first_focus = discount
+
+
+func _use_revote() -> void:
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		ShopVoteManager.rpc_id(1, &"request_revote")
+	else:
+		ShopVoteManager.request_revote()
 
 
 func _build_records() -> void:

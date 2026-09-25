@@ -20,6 +20,18 @@ const MERIT_POINTS := {
 
 enum Card { PRIORITY, REVOTE, DISCOUNT, RESCUE, INFORMATION }
 
+## Only these cards belong to the current playable loop. The other enum
+## values stay reserved so old saves and the documented design keep stable
+## ids, but a delivery can never draw them.
+const DRAWABLE_CARDS := [Card.RESCUE, Card.DISCOUNT, Card.REVOTE]
+const CARD_NAMES := {
+	Card.RESCUE: "Rescate",
+	Card.DISCOUNT: "Descuento",
+	Card.REVOTE: "Re-voto",
+	Card.PRIORITY: "Prioridad",
+	Card.INFORMATION: "Información",
+}
+
 ## What the depot's supplies counter sells (depot.gd): bought with team money
 ## before a run and used up by the next delivery that leaves the depot.
 ## "cost" in team money; the effect lives where it applies (see depot.gd).
@@ -34,7 +46,6 @@ var cards: Dictionary = {} # peer id -> Card
 var dry_deliveries: Dictionary = {}
 var _credited_actions: Dictionary = {}
 var event_bus: Node
-var priority_issued: bool = false
 ## Supplies bought and waiting in the depot for the next run: id -> true.
 var supplies: Dictionary = {}
 
@@ -44,6 +55,9 @@ func _ready() -> void:
 	if bus != null and bus.has_signal(&"delivery_photo_taken") \
 			and not bus.is_connected(&"delivery_photo_taken", _on_delivery_photo_taken):
 		bus.connect(&"delivery_photo_taken", _on_delivery_photo_taken)
+	if bus != null and bus.has_signal(&"card_changed") \
+			and not bus.is_connected(&"card_changed", _on_card_changed):
+		bus.connect(&"card_changed", _on_card_changed)
 
 
 func reset_campaign() -> void:
@@ -52,7 +66,6 @@ func reset_campaign() -> void:
 	cards.clear()
 	dry_deliveries.clear()
 	_credited_actions.clear()
-	priority_issued = false
 	supplies.clear()
 	_emit_event(&"team_money_changed", [team_money])
 
@@ -104,6 +117,19 @@ func buy_supply(supply_id: StringName) -> bool:
 	return true
 
 
+## Host-only discounted purchase. Validation happens before the card is
+## consumed, so a sold-out or unaffordable item never wastes it.
+func buy_supply_discounted(peer_id: int, supply_id: StringName) -> bool:
+	if not SUPPLIES.has(supply_id) or supplies.has(supply_id) or not has_card(peer_id, Card.DISCOUNT):
+		return false
+	var cost: int = maxi(0, roundi(int(SUPPLIES[supply_id]["cost"]) * 0.5))
+	if not spend(cost):
+		return false
+	supplies[supply_id] = true
+	consume_card(peer_id, Card.DISCOUNT)
+	return true
+
+
 ## Hands the waiting supplies to the run that's leaving, and clears them.
 func take_supplies() -> Array[StringName]:
 	var taken: Array[StringName] = []
@@ -132,17 +158,51 @@ func consume_card(peer_id: int, card: Card) -> bool:
 	return true
 
 
+func card_name(card_id: int) -> String:
+	return String(CARD_NAMES.get(card_id, "Carta"))
+
+
+## Usable from anywhere during a run. Clients ask the host, which derives
+## the peer from the RPC sender and lets RouteEventManager resolve the event.
+@rpc("any_peer", "call_local", "reliable")
+func request_use_card() -> bool:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+		return false
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender_id if sender_id != 0 else int(network.call(&"local_id")) if network != null else 1
+	var held_card: int = int(cards.get(peer_id, -1))
+	if held_card != Card.RESCUE:
+		_send_card_notice(peer_id, "Esta carta se usa en el depósito" if held_card in [Card.DISCOUNT, Card.REVOTE] else "No tenés ninguna carta")
+		return false
+	var route_events: Node = get_node_or_null(^"/root/RouteEventManager")
+	if route_events == null or StringName(route_events.get(&"active_event_id")).is_empty():
+		_send_card_notice(peer_id, "No hay nada que rescatar")
+		return false
+	return bool(route_events.call(&"use_rescue", peer_id))
+
+
+func _send_card_notice(peer_id: int, text: String) -> void:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	if network != null and bool(network.call(&"is_online")) and peer_id != int(network.call(&"local_id")):
+		_receive_card_notice.rpc_id(peer_id, text)
+	else:
+		_receive_card_notice(text)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_card_notice(text: String) -> void:
+	var bus: Node = event_bus if event_bus != null else get_node_or_null(^"/root/EventBus")
+	if bus != null:
+		bus.emit_signal(&"depot_notice", text)
+
+
 func _grant_card_chance(peer_id: int) -> void:
 	if peer_id <= 0 or cards.has(peer_id):
 		return
 	var chance: float = BASE_CARD_CHANCE + float(merit.get(peer_id, 0)) * MERIT_CARD_BONUS + float(dry_deliveries.get(peer_id, 0)) * 0.20
 	if int(dry_deliveries.get(peer_id, 0)) >= PITY_DELIVERIES or randf() < minf(chance, 1.0):
-		var possible_cards: Array = Card.values()
-		if priority_issued:
-			possible_cards.erase(Card.PRIORITY)
-		cards[peer_id] = possible_cards.pick_random()
-		if int(cards[peer_id]) == Card.PRIORITY:
-			priority_issued = true
+		cards[peer_id] = DRAWABLE_CARDS.pick_random()
 		dry_deliveries[peer_id] = 0
 		_emit_event(&"card_changed", [peer_id, int(cards[peer_id])])
 	else:
@@ -174,3 +234,10 @@ func _on_delivery_photo_taken(_house_index: int, accepted: bool) -> void:
 	var peer_id: int = int(run.get(&"last_photo_peer_id"))
 	var package_id := StringName(run.get(&"last_photo_package_id"))
 	award_milestone(peer_id, package_id, &"photo_saved", 1)
+
+
+func _on_card_changed(peer_id: int, card_id: int) -> void:
+	if card_id < 0:
+		cards.erase(peer_id)
+	else:
+		cards[peer_id] = card_id
