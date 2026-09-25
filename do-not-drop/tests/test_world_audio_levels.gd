@@ -23,6 +23,9 @@ const CLASSES: Dictionary = {
 	"signal": ["loudest", -18.0],
 	"detail": ["peak", -26.0],
 	"music": ["rms", -24.0],
+	"room": ["rms", -42.0],
+	"machine": ["rms", -40.0],
+	"repeat": ["loudest", -30.0],
 }
 ## [what, SynthAudio function, its level in world_mix.gd, class]
 const SOUNDS: Array = [
@@ -42,10 +45,10 @@ const SOUNDS: Array = [
 	["doorbell", &"glass_chime", &"DOORBELL_DB", "signal"],
 	["resident cheer", &"honk_horn", &"RESIDENT_CHEER_DB", "signal"],
 	["resident groan", &"creature_groan", &"RESIDENT_GROAN_DB", "signal"],
-	["warehouse hum", &"warehouse_hum", &"WAREHOUSE_HUM_DB", "ambient"],
+	["warehouse hum", &"warehouse_hum", &"WAREHOUSE_HUM_DB", "room"],
 	["depot radio", &"radio_tune", &"DEPOT_RADIO_DB", "music"],
-	["forklift beeper", &"reverse_beep", &"FORKLIFT_BEEP_DB", "signal"],
-	["forklift engine", &"engine_loop", &"FORKLIFT_ENGINE_DB", "ambient"],
+	["forklift beeper", &"reverse_beep", &"FORKLIFT_BEEP_DB", "repeat"],
+	["forklift engine", &"engine_loop", &"FORKLIFT_ENGINE_DB", "machine"],
 	["roller door", &"roller_door", &"ROLLER_DOOR_DB", "signal"],
 ]
 

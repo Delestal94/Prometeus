@@ -16,6 +16,11 @@ extends RefCounted
 ##                                      crossing bell, doorbell, animals, door motor
 ##   detail   peak           -26 dBFS   small things: loose clutter in the cargo box
 ##   music    loop RMS       -24 dBFS   the depot's radio (Music bus)
+##   room     loop RMS       -42 dBFS   the depot's hum: always on, felt more than heard
+##   machine  loop RMS       -40 dBFS   the forklift's engine going back and forth
+##   repeat   loudest 100 ms -30 dBFS   the forklift's reverse beep, over and over
+## (The last three were "ambient" and "signal" at first, and the depot got
+## grating: a sound that never stops sits well under one that calls once.)
 ##
 ## The table and the before/after values are in docs/audio-mundo.md.
 
@@ -49,8 +54,8 @@ const RESIDENT_AT_RISK_OFFSET_DB: float = -6.0
 const RESIDENT_WRONG_BOX_OFFSET_DB: float = -10.0
 
 # The depot (depot.gd, depot_forklift.gd, depot_roller_door.gd).
-const WAREHOUSE_HUM_DB: float = -7.5
+const WAREHOUSE_HUM_DB: float = -21.5
 const DEPOT_RADIO_DB: float = -0.5
-const FORKLIFT_BEEP_DB: float = -5.5
-const FORKLIFT_ENGINE_DB: float = -15.0
+const FORKLIFT_BEEP_DB: float = -17.5
+const FORKLIFT_ENGINE_DB: float = -27.0
 const ROLLER_DOOR_DB: float = -1.0

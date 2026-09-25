@@ -22,12 +22,18 @@ playtesting" en `docs/tareas-nacho.md`).
 |---|---|---|---|
 | motor | RMS del loop | −20 dBFS | motor del camión a fondo |
 | golpe | pico | −14 dBFS | el golpe más fuerte del camión |
-| fondo | RMS del loop | −28 dBFS | viento, ruta lejana, zumbido del depósito, motor del autoelevador |
+| fondo | RMS del loop | −28 dBFS | viento, ruta lejana |
 | naturaleza | 100 ms más fuertes | −24 dBFS | pájaros o grillos (chirridos con silencio en el medio: su RMS no dice cuán fuerte suenan) |
 | lluvia | RMS del loop | −24 dBFS | afuera; bajo techo (cabina, depósito) +6 dB |
-| señal | 100 ms más fuertes | −18 dBFS | bocina, derrape, campana del cruce, timbre, perro, ovejas, vecino, beep y portón del depósito |
+| señal | 100 ms más fuertes | −18 dBFS | bocina, derrape, campana del cruce, timbre, perro, ovejas, vecino, portón del depósito |
 | detalle | pico | −26 dBFS | objetos sueltos en la caja de carga |
 | música | RMS del loop | −24 dBFS | la radio del depósito (bus Music) |
+| sala | RMS del loop | −42 dBFS | el zumbido del depósito: siempre prendido, se siente más de lo que se oye |
+| máquina | RMS del loop | −40 dBFS | el motor del autoelevador que va y viene |
+| repetido | 100 ms más fuertes | −30 dBFS | el beep de marcha atrás del autoelevador, una y otra vez |
+
+Las tres últimas empezaron en "fondo" y "señal", y el depósito quedó molesto (reporte del usuario,
+2026-09-24): un sonido que no para tiene que quedar bien por debajo de uno que llama una vez.
 
 Los de "señal" usan el mismo objetivo que la S-404 de Slatex para los efectos de trampa
 (−18 dBFS RMS), así los dos dominios quedan en la misma escala.
@@ -54,10 +60,10 @@ Resultado = sonido medido + nivel del reproductor, en dBFS con la medida de su c
 | Timbre de la casa | señal | 0 | −11,1 | −7 | −18,1 |
 | Vecino contento | señal | 0 | −7,3 | −10,5 | −17,8 |
 | Vecino que se queja | señal | 0 | −4,8 | −13 | −17,9 |
-| Zumbido del depósito | fondo | −20 | −40,5 | −7,5 | −28,0 |
+| Zumbido del depósito | sala | −20 | −40,5 | −21,5 | −42,0 |
 | Radio del depósito | música | −9 | −32,3 | −0,5 | −23,8 |
-| Beep del autoelevador | señal | −14 | −26,3 | −5,5 | −17,8 |
-| Motor del autoelevador | fondo | −30 | −42,8 | −15 | −27,8 |
+| Beep del autoelevador | repetido | −14 | −26,3 | −17,5 | −29,8 |
+| Motor del autoelevador | máquina | −30 | −42,8 | −27 | −39,8 |
 | Portón | señal | −4 | −21,0 | −1 | −18,0 |
 
 Qué cambia al jugar:
