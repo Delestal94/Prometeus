@@ -1,7 +1,9 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-24 (estado relevado sobre `61c7dc3`). M1 y M2 cerrados; M3 salvo
-> N-208 y N-209 (en espera); de M4, N-106, N-107, N-302, N-308.2, N-404 y N-405; además N-307, N-804, N-903, N-904.
+> Última actualización: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
+> M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
+> N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
+> una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -243,42 +245,46 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 - [x] `tools/run-net-trio.sh` que lanza los tres y junta los códigos de salida.
 - Pasa con el segundo cliente entrando 6 s tarde; el host elige una semilla con cruce de tren. Un crash del motor al cerrar después de reportar cuenta como "cierre inestable", como en `run-tests.sh`.
 
-### N-208 · Camión del host suave en los clientes — B · `Opus 5.5 · xhigh` · Aviso: no
+### N-208 · Camión del host suave en los clientes — B · `Opus 5.5 · xhigh` · Aviso: no · **[x] `8c8aff2`**
 
-- [ ] Medir en un cliente el tirón de la posición replicada del camión con latencia artificial
+- [x] Medir en un cliente el tirón de la posición replicada del camión con latencia artificial
   (opción de depuración `--fake-lag=150`): diferencia entre la pose mostrada y una interpolada ideal.
-- [ ] Si hay saltos visibles (> 10 cm por frame a velocidad de crucero), sumar interpolación con un buffer de
+- [x] Si hay saltos visibles (> 10 cm por frame a velocidad de crucero), sumar interpolación con un buffer de
   100 ms para la pose replicada en clientes. Nunca predicción de física en el cliente (el host manda).
-- [ ] Test con el retraso: la pose mostrada no salta más que el umbral.
+- [x] Test con el retraso: la pose mostrada no salta más que el umbral.
 - **En espera (2026-09-24):** implica cambiar cómo se replica el camión y sobre qué viajan los pasajeros (`player.gd`), que estaba en obra en otra sesión. Retomar con ese archivo quieto.
+- Medido (`test_vehicle_net_smoothing`, 150 ms de lag + hasta 50 ms de jitter, 60 km/h en curva, 144 fps): poniendo cada pose al llegar, el camión se apartaba hasta ~1 m por cuadro del movimiento parejo; con el buffer, menos de 10 cm. `vehicle_net_smoother.gd`: la pose viaja con el reloj del host (`net_time`, `net_position`, `net_rotation` en la replicación) y el cliente la dibuja 100 ms atrás, interpolada; nunca predice física. Un teletransporte (respawn) salta. `--fake-lag=<ms>` en un cliente retiene las poses para probarlo en red real.
 
-### N-209 · Unificar lo común entre nivel de entrega y Endless — C · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`)
+### N-209 · Unificar lo común entre nivel de entrega y Endless — C · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`) · **[x] `abf72b8`**
 
 `level_endless.gd` duplica a propósito partes de `level_base.gd` (#42 viejo). Los dos modos ya están estables.
 
-- [ ] Extraer a `scripts/gameplay/level_common.gd` (clase base) solo lo idéntico: spawn de jugadores
+- [x] Extraer a `scripts/gameplay/level_common.gd` (clase base) solo lo idéntico: spawn de jugadores
   (`_sync_players`), pausa, reinicio, chequeo de carga perdida. Cada nivel hereda y conserva lo propio.
-- [ ] Hacerlo en un solo commit chico, avisado, con toda la batería verde. Si Slatex está tocando
+- [x] Hacerlo en un solo commit chico, avisado, con toda la batería verde. Si Slatex está tocando
   `level_base.gd` esa semana (su S-203 / S-209), coordinar el orden en el chat; no es bloqueante: el que
   llega segundo hace merge.
 - **En espera (2026-09-24):** refactor de `level_base.gd` (de Slatex), prioridad C; mejor en una semana sin cambios de Slatex en ese archivo.
+- `level_common.gd` (clase `LevelCommon`) tiene lo idéntico: carga en el depósito, spawn de jugadores, pausa, reinicio, carga perdida, vista al caerse el host, arranque con conductor y carga. Cada nivel conserva `_prepare_mode()`, `start_delivery()`, `_physics_process()`. Sin cambios de firma; aviso en `colaboracion-equipo.md`. Test `test_level_common` (ninguno redefine lo compartido y los dos arrancan).
 
-### N-210 · Builds de exportación automáticas — B · `Opus 5.5 · high` · Aviso: no
+### N-210 · Builds de exportación automáticas — B · `Opus 5.5 · high` · Aviso: no · **[x] `8d71e30`**
 
-- [ ] Job de GitHub Actions que exporta Windows y Linux con `export_presets.cfg` en cada tag `v*` y adjunta
+- [x] Job de GitHub Actions que exporta Windows y Linux con `export_presets.cfg` en cada tag `v*` y adjunta
   los zip al release. Versión en `project.godot` (`config/version`) mostrada en el menú (texto chico, la
   pone el job; aviso si se toca `main_menu.gd`).
+- `.github/workflows/release.yml`: en cada tag `v*` escribe la versión del tag en `config/version` (`tools/export/stamp_version.py`), exporta con `tools/export/export_presets.cfg` (el `export_presets.cfg` de `do-not-drop/` sigue siendo local), prueba que la build de Linux arranque sin errores de carga y sube `TakeMyPackage-<versión>-windows.zip` / `-linux.zip` al release. Probado localmente con las plantillas 4.7.2: las dos builds salen con las DLL de Steam. El menú muestra "Versión <config/version>" (una línea en `main_menu.gd`, aviso). Test `test_release_build`. Cómo usarlo: `CONTRIBUTING.md` → Builds de release.
 
 ---
 
 ## 3. Arte y dirección visual
 
-### N-301 · Líneas de paneles y juntas de puertas — B · `Opus 5.5 · high` · Aviso: no
+### N-301 · Líneas de paneles y juntas de puertas — B · `Opus 5.5 · high` · Aviso: no · **[x] `8c8aff2`**
 
 Antes #4. Única pieza de modelado del camión que queda.
 
-- [ ] Hendiduras finas (bisel invertido o calcomanía oscura) en puertas de cabina, puertas traseras, capó y
+- [x] Hendiduras finas (bisel invertido o calcomanía oscura) en puertas de cabina, puertas traseras, capó y
   laterales del modelo de referencia, sin cambiar la colisión. Captura con `render_reference_truck.gd`.
+- `reference_truck.gd` `_build_panel_lines()`: franjas oscuras de 20 mm (a 12 mm casi no se leían en la captura) apenas salidas de la cara exterior de cada panel, colgadas del panel (se mueven con la puerta): contorno de las puertas de cabina y de las traseras, línea del capó y juntas de chapa de los laterales de la caja. Sin colisión. Test en `test_reference_truck`; captura en `render_world_features.gd --part=truck`.
 
 ### N-302 · Timbre real en cada casa — A · `Opus 5.5 · high` · Aviso: no · **[x] `ad4c281`**
 
@@ -294,31 +300,38 @@ Antes #4. Única pieza de modelado del camión que queda.
   la pared, a la altura de la cadera. Test en `test_house_waiting_marker`; primeros planos en
   `render_house_waiting.gd`.
 
-### N-303 · Lluvia en el parabrisas y limpiaparabrisas — B · `Opus 5.5 · high` · Aviso: no
+### N-303 · Lluvia en el parabrisas y limpiaparabrisas — B · `Opus 5.5 · high` · Aviso: no · **[x] `8c8aff2`**
 
-- [ ] Shader de gotas deslizándose en el vidrio de la cabina, solo con clima lluvia y solo visto desde
+- [x] Shader de gotas deslizándose en el vidrio de la cabina, solo con clima lluvia y solo visto desde
   adentro.
-- [ ] Limpiaparabrisas animados que barren las gotas (el shader lee el ángulo del limpiador).
+- [x] Limpiaparabrisas animados que barren las gotas (el shader lee el ángulo del limpiador).
+- `presentation/windshield_rain.gd` + `shaders/windshield_rain.gdshader`: una copia de la malla del parabrisas apenas adentro de la cabina, con sus caras hacia adentro (desde afuera se descarta). Gotas en celdas con reloj propio que bajan despacio; se muestran solo con lluvia y con la cámara adentro del camión. Dos brazos en tándem que descansan paralelos y barren a la par sin cruzarse (la primera versión se cruzaba en X), y el shader borra exactamente donde pasa cada escobilla (misma fórmula y mismo reloj, `sweep_angle()`). Test `test_windshield_rain`.
+- Revisión visual (2026-09-25, `render_world_features.gd`; `655c6f2`, `5cc1497`): las gotas eran oscuras como hollín: el shader mezclaba el color de cada gota con negro según su alfa y después volvía a aplicar el alfa (quedaba a un quinto del brillo). Ahora son agua pálida con borde fino y brillo, y se desvanecen en los bordes del vidrio. El modelo del camión traía dos escobillas fijas que quedaban debajo de las animadas (dos X): se ocultan.
 
-### N-304 · Faros y noche con más carácter — C · `Opus 5.5 · medium` · Aviso: no
+### N-304 · Faros y noche con más carácter — C · `Opus 5.5 · medium` · Aviso: no · **[x] `94bed31`**
 
-- [ ] Destello (flare) suave de faros de autos estacionados y faroles de pueblo de noche, ventanas de las casas
+- [x] Destello (flare) suave de faros de autos estacionados y faroles de pueblo de noche, ventanas de las casas
   iluminadas de noche, porche encendido en la casa que espera entrega (se combina con N-501).
+- De noche (y al 50 % al atardecer) brillan el vidrio de los faroles del pueblo, las luces de los autos estacionados y las ventanas de las casas (`LowpolyMaterials.light_up()`, `night_level` que fija `WorldMood.pick()`), con un halo aditivo en cada farol y faro (`presentation/night_flares.gd`, un MultiMesh por ruta). El porche de la casa que espera ya estaba (N-501). Test `test_night_lights`.
+- Revisión visual (2026-09-25, `render_world_features.gd`; `655c6f2`, `5cc1497`): no se veía ningún halo. El rango de visibilidad del MultiMesh se medía desde el centro de toda la ruta (a kilómetros) y lo ocultaba entero: sacado, y cada halo conserva su tamaño al girar hacia la cámara. El test lo cubre. Los faros de un auto estacionado son una sola malla: el halo iba al medio del paragolpes; ahora uno por faro (`NightFlares.lamp_centres()`), solo los delanteros, en un tono más cálido.
 
-### N-305 · Identidad visual por zona — B · `Opus 5.5 · high` · Aviso: no
+### N-305 · Identidad visual por zona — B · `Opus 5.5 · high` · Aviso: no · **[x] `94bed31`**
 
 Con entregas de varios minutos, bosque-campo-pueblo se repiten.
 
-- [ ] Una paleta de follaje por sesión (verano / otoño) elegida por semilla, como el clima: tinte de hojas y
+- [x] Una paleta de follaje por sesión (verano / otoño) elegida por semilla, como el clima: tinte de hojas y
   pasto en `lowpoly_materials.gd` y `route_terrain.gdshader`.
-- [ ] Cartel de nombre de pueblo al entrar a cada zona de pueblo (ver N-601).
+- [x] Cartel de nombre de pueblo al entrar a cada zona de pueblo (ver N-601).
+- `WorldMood` sortea también la estación (verano 55 % / otoño 45 %) con su propio flujo de la semilla: `LowpolyMaterials` lleva hojas, helechos y pasto a ocres (`AUTUMN`), el batcher cachea por estación y el terreno seca el pasto (`route_terrain.gdshader` `autumn`). Forzable con `--mood=...otono`. Carteles de pueblo: ver N-601. Test en `test_world_mood`.
+- Revisión visual (2026-09-25, `render_world_features.gd`; `655c6f2`, `5cc1497`): los pinos se ponían ocres; ahora quedan verdes (`LowpolyMaterials.EVERGREEN`, por nombre de modelo, porque comparten la paleta de hojas).
 
-### N-306 · Vehículos del depósito también en la ruta — C · `Opus 5.5 · medium` · Aviso: no
+### N-306 · Vehículos del depósito también en la ruta — C · `Opus 5.5 · medium` · Aviso: no · **[x] `94bed31`**
 
 `sm_vehicle_tractor.glb` y `sm_vehicle_competitor_van.glb` solo se usan en el depósito.
 
-- [ ] Tractor en zona de campo (regla nueva en `route_dresser.gd`, raro, lejos del asfalto) y la camioneta de la
+- [x] Tractor en zona de campo (regla nueva en `route_dresser.gd`, raro, lejos del asfalto) y la camioneta de la
   competencia estacionada en pueblo. Test en `test_route_placement_rules.gd`.
+- Reglas `tractor` (campo, 17-28 m del eje, a 320 m de otro) y `competitor_van` (pueblo, estacionada a lo largo como los autos) en `route_dresser.gd`, agregadas al final de la tabla para no mover el RNG de las demás y ordenadas antes de los árboles con el campo `order`. Sólidos (`dressing_batcher.gd`). Test en `test_route_placement_rules`.
 
 ### N-307 · Inventario y dirección visual al día — A · `Opus 5.5 · low` · Aviso: no · **[x] `220e6e0`**
 
@@ -327,26 +340,25 @@ Con entregas de varios minutos, bosque-campo-pueblo se repiten.
 - [x] `docs/direccion-visual.md`: cerrar los `[ ]` que ya están resueltos (escala de personajes, LOD, motion
   blur descartado) y dejar abiertos solo los vigentes. Antes #100.
 
-### N-308 · Decisión de renderer — A · `Opus 5.5 · medium` · Aviso: sí (`project.godot`, solo si se cambia)
+### N-308 · Decisión de renderer — A · `Opus 5.5 · medium` · Aviso: sí (`project.godot`, solo si se cambia) · **[x] `ae775d7`**
 
 Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
 
 - [x] **Decisión recomendada:** quedarse en GL Compatibility para el MVP (hardware modesto, 60 FPS, el estilo
   low-poly no depende de SSAO). Compensar con oclusión horneada en vértices de los modelos (script de Blender)
   y sombras de contacto falsas bajo autos y casas (decal oscuro).
-  - [ ] **N-308.1** Oclusión horneada en colores de vértice al exportar los modelos (script de Blender,
-    agente `modelador-blender`).
-    - **Piloto (2026-09-24), no aplicado:** `assets/tools/bake_vertex_ao.py` hornea sobre `.glb` ya exportados
-      (rayos propios con BVH: los de Cycles contaban las esquinas enterradas entre cajas y agrisaban caras
-      enteras; subdivide aristas de más de 0,6 m; promedia esquinas que comparten vértice y normal). Probado
-      en la casita y el hatchback con `--out` fuera del repo. Bajo el alero, el porche y el auto suma volumen,
-      pero **no está listo**: manchas como hollín alrededor de las ventanas, el vidrio (46 vértices) con una X
-      oscura, la casa 7-12 % más oscura de día y el frente en sombra casi negro de noche; la casa pasa de ~7k a
-      ~41k esquinas. Además el importador de glTF de Godot **no** activa `vertex_color_use_as_albedo`:
-      `LowpolyMaterials.apply()` tendría que activarlo cuando la malla trae color (también en los materiales
-      fuera de `DETAIL`) y separar esos materiales en su caché, para que el batcher no mezcle superficies.
-    - Para retomarlo: excluir vidrios y marcos (o subdividirlos más), bajar `STRENGTH`/subir `FLOOR`, limitarlo
-      a casas, vehículos y props grandes (nunca vegetación: se instancia de a miles) y revisar de noche.
+  - [x] **N-308.1** Oclusión horneada en colores de vértice al exportar los modelos (script de Blender,
+    agente `modelador-blender`). **Hecho** `8238840` (ajuste) + `ae775d7` (aplicado).
+    - `assets/tools/bake_vertex_ao.py` corre con el módulo de Python de Blender (`pip install bpy`, sin
+      abrir Blender): rayos propios con BVH, `STRENGTH` 0,5, `FLOOR` 0,62 (ninguna esquina más oscura),
+      subdivide aristas de más de 1 m y deja sin tocar vidrios, marcos, faroles y gomas (se acabaron la X
+      oscura en el vidrio y el hollín en las ventanas).
+    - Aplicado a 14 modelos: las 5 casas y el granero, los 5 vehículos (estacionados y del depósito), la
+      parada de colectivo, el molino y el tanque de agua. Nunca vegetación (se instancia de a miles).
+    - `LowpolyMaterials.apply()` activa `vertex_color_use_as_albedo` cuando la malla trae color (también
+      fuera de `DETAIL`) y separa esos materiales en su caché, así el batcher no mezcla superficies.
+    - Revisado de día y de noche en captura (`revisor-visual`): suma volumen bajo aleros, porches y
+      autos sin oscurecer las fachadas. Test `test_baked_ao`.
   - [x] **N-308.2** Sombras de contacto falsas (decal oscuro y difuso) bajo autos estacionados, casas y
     cajas apiladas. `presentation/contact_shadow.gd`: sin `Decal` en Compatibility, es una malla 4×4 sin luz
     con el desvanecido por vértice, en metros (sólida desde `margen` adentro de la huella, nada a `margen`
@@ -360,28 +372,31 @@ Antes #34: SSAO bloqueado por GL Compatibility, decisión nunca tomada.
 
 ## 4. Audio y diseño sonoro
 
-### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas)
+### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas) · **[x] `8081c75`**
 
-- [ ] Capas por RPM (ralentí, medio, alto) mezcladas según velocidad y acelerador; cambio de marcha audible
+- [x] Capas por RPM (ralentí, medio, alto) mezcladas según velocidad y acelerador; cambio de marcha audible
   (bajón breve de RPM) en la clásica, más agudo y rápido en la ágil.
-- [ ] Test en `test_vehicle_audio.gd`: las capas cambian de volumen con la velocidad.
+- [x] Test en `test_vehicle_audio.gd`: las capas cambian de volumen con la velocidad.
+- Tres capas (ralentí, medio, acelerado) al mismo RMS, cruzadas por un cuentavueltas con caja en `vehicle_presentation.gd`; cada cambio corta el acelerador y baja las vueltas. Clásica: 4 marchas, corta a 3500 rpm, 0,38 s; ágil: 5 marchas, 5000 rpm, 0,16 s y 14 % más aguda. Detalle en `docs/audio-mundo.md`.
 
-### N-402 · Eco en el túnel y bajo techo — B · `Opus 5.5 · high` · Aviso: no
+### N-402 · Eco en el túnel y bajo techo — B · `Opus 5.5 · high` · Aviso: no · **[x] `8081c75`**
 
 Pendiente del #58 viejo.
 
-- [ ] `Area3D` en `TunnelSegment` que al entrar la cámara pasa el sonido del mundo a un bus `Tunnel` con reverb
+- [x] `Area3D` en `TunnelSegment` que al entrar la cámara pasa el sonido del mundo a un bus `Tunnel` con reverb
   larga, y al salir vuelve. Mismo mecanismo para el depósito (`roofed_area`).
-- [ ] Revisar la lluvia con cámaras exteriores ancladas al camión (pendiente del #68 viejo).
+- [x] Revisar la lluvia con cámaras exteriores ancladas al camión (pendiente del #68 viejo).
+- `AcousticZone` (Area3D) a lo largo de cada túnel y el depósito en el grupo `acoustic_space`; `AcousticSpace` prende una reverb (agregada en ejecución a SFX y Exterior) según dónde esté la cámara: túnel larga, depósito media, afuera nada. #68: una cámara anclada al camión desde afuera ya no cuenta como adentro para lluvia y ambiente (`VehiclePresentation.viewer_inside()`). Test `test_acoustic_space`.
 
-### N-403 · Música del menú y del depósito — B · `Opus 5.5 · medium` · Aviso: sí (una línea en `main_menu.gd`)
+### N-403 · Música del menú y del depósito — B · `Opus 5.5 · medium` · Aviso: sí (una línea en `main_menu.gd`) · **[x] `8081c75`**
 
 Hoy hay una sola pista (`mus_ingame_loop.ogg`).
 
-- [ ] Una pista de menú y una "radio del depósito" (la radio ya existe como objeto en `depot.gd`). Origen:
+- [x] Una pista de menú y una "radio del depósito" (la radio ya existe como objeto en `depot.gd`). Origen:
   encargo, música libre con licencia compatible, o generada con registro en `art/ai-registro.md`. Anotar
   licencia al lado del archivo.
-- [ ] `scripts/presentation/menu_music.gd` autocontenido; `main_menu.gd` solo lo instancia (aviso).
+- [x] `scripts/presentation/menu_music.gd` autocontenido; `main_menu.gd` solo lo instancia (aviso).
+- Compuestas por código (`tools/audio/compose_music.py`, sin samples ni terceros; licencia en `assets/audio/music/LICENCIA.md`): `mus_menu_loop.ogg` y `mus_depot_radio_loop.ogg`. `menu_music.gd` la agrega `main_menu.gd` (aviso); la radio del depósito pasa el programa. Niveles medidos (`loudness.json`). Test `test_music_tracks`.
 
 ### N-404 · Mezcla medida del dominio — A · `Opus 5.5 · high` · Aviso: no · **[x] `e9a89db`**
 
@@ -440,15 +455,16 @@ tocar el HUD.
   como en la pizarra. De paso se arregló un panel de la oficina que medía 23 m en vez de 4 y tapaba el cartel
   de SUMINISTROS. `test_depot` cuenta los carteles legibles desde el spawn con proyección y rayos, sin render.
 
-### N-504 · La cámara no atraviesa la cabina — B · `Opus 5.5 · xhigh` · Aviso: sí (`first_person_camera.gd`)
+### N-504 · La cámara no atraviesa la cabina — B · `Opus 5.5 · xhigh` · Aviso: sí (`first_person_camera.gd`) · **[x] `8c8aff2`**
 
 Antes #15 y #38.
 
-- [ ] Límite de pitch y giro por asiento (el conductor no puede mirar a través del techo ni de la
+- [x] Límite de pitch y giro por asiento (el conductor no puede mirar a través del techo ni de la
   mampara). Para no tocar `seat_point.gd` (de Slatex), los límites viven en `vehicle.tscn`: un `Marker3D`
   por asiento con metadatos `pitch_min`, `pitch_max`, `yaw_max`, y `first_person_camera.gd` los lee de la
   cámara del asiento activo. Aviso por el archivo compartido.
-- [ ] Si la cámara igual queda a menos de 10 cm de una pared, retroceder a lo largo de la línea de mirada.
+- [x] Si la cámara igual queda a menos de 10 cm de una pared, retroceder a lo largo de la línea de mirada.
+- `LookLimits` (Marker3D con `pitch_min`/`pitch_max`/`yaw_max`) en los 11 puntos de ojos de `vehicle.tscn`; conductor −55°/+32°/110°, carga −60°/+55°/120°. `first_person_camera.gd` los lee y, con algo sólido a menos de 10 cm adelante, retrocede la vista por la línea de mirada. Test `test_seat_look_limits`.
 
 ---
 
@@ -457,37 +473,44 @@ Antes #15 y #38.
 La premisa, los clientes y los textos de las cajas son de Slatex (su S-601 a S-605). Nacho cuenta la
 historia **con el entorno**, sin esperar esos textos.
 
-### N-601 · Pueblos con nombre y carteles — B · `Opus 5.5 · medium` · Aviso: no
+### N-601 · Pueblos con nombre y carteles — B · `Opus 5.5 · medium` · Aviso: no · **[x] `94bed31`**
 
-- [ ] Lista de 12 nombres de pueblo con tono de humor ("Villa Frágil", "Paso del Golpe", "Bajada Lenta")
+- [x] Lista de 12 nombres de pueblo con tono de humor ("Villa Frágil", "Paso del Golpe", "Bajada Lenta")
   elegidos por semilla; cartel de entrada y salida de cada zona de pueblo.
+- `route/town_sign.gd`: 12 nombres repartidos por semilla sin repetir, cartel verde "Bienvenidos a …" al entrar a cada zona de pueblo y el nombre tachado al salir, a la derecha y mirando al camión (`RouteDresser._dress_town_signs()`). Test `test_town_signs`.
 
-### N-602 · Historias en la banquina — C · `Opus 5.5 · medium` · Aviso: no
+### N-602 · Historias en la banquina — C · `Opus 5.5 · medium` · Aviso: no · **[x] `94bed31`**
 
-- [ ] Escenas estáticas raras (1 cada ~800 m como máximo): la camioneta de la competencia con cajas
+- [x] Escenas estáticas raras (1 cada ~800 m como máximo): la camioneta de la competencia con cajas
   desparramadas y la puerta abierta; una gallina suelta al lado de una caja rota; un cartel "Take My Package:
   entregamos (casi) todo" en una valla publicitaria.
+- `route/roadside_story.gd`: la camioneta de la competencia en la cuneta con la puerta trasera abierta y las cajas desparramadas, una gallina picoteando al lado de su caja rota, y el cartel "TAKE MY PACKAGE — entregamos (casi) todo". Como mucho una cada 800 m, desde los 250 m, sin repetir tipo hasta usar los tres. Test `test_roadside_stories`.
+- Revisión visual (2026-09-25, `render_world_features.gd`; `655c6f2`, `5cc1497`): el texto del cartel se salía del panel (ahora se achica hasta entrar, también traducido) y la caja tapaba una letra (ahora está sobre el borde de arriba); la camioneta tenía la trompa para arriba y todo quedaba a la altura del origen de la escena, flotando o enterrado en la pendiente de la banquina. `RoadsideStory.fit_to_ground()` apoya cada pieza en el terreno y clava la trompa 45 cm con la cola 40 cm en el aire, sea cual sea la pendiente.
 
-### N-603 · El depósito cuenta la campaña — C · `Opus 5.5 · high` · Aviso: no
+### N-603 · El depósito cuenta la campaña — C · `Opus 5.5 · high` · Aviso: no · **[x] `94bed31`**
 
-- [ ] Cartel "Días sin accidentes: N" que vuelve a 0 cuando una partida termina con carga arruinada (lee el
+- [x] Cartel "Días sin accidentes: N" que vuelve a 0 cuando una partida termina con carga arruinada (lee el
   resultado de `run_ended`), y una pared de fotos con las fotos de entrega de la campaña (miniaturas que ya
   captura `phone_camera.gd`).
+- `depot/depot_campaign_board.gd`: el cartel junto al portón cuenta partidas sin cajas rotas (vuelve a 0 con una, guarda el récord) y la pared de fotos arriba del café muestra las últimas 8 fotos de entrega del celular, guardadas en `user://` al terminar cada partida. Test `test_depot_campaign_board`. Chinches de colores en cada foto; la pared se corrió para no pisar el pizarrón del equipo.
 
-### N-604 · Reacciones en la puerta — B · `Opus 5.5 · high` · Aviso: no
+### N-604 · Reacciones en la puerta — B · `Opus 5.5 · high` · Aviso: no · **[x] `94bed31`**
 
-- [ ] En `delivery_house.gd`, animación y globo de texto del vecino según el resultado (contento, abre la caja
+- [x] En `delivery_house.gd`, animación y globo de texto del vecino según el resultado (contento, abre la caja
   y se agarra la cabeza, se lleva la caja equivocada de vuelta, no está y deja una nota). Pool de 5 frases por
   resultado en `delivery_house.gd`.
+- `presentation/door_reaction.gd` + `DeliveryHouse.REACTION_LINES`: salta contento, revisa la caja, se agarra la cabeza con las dos manos (IK), devuelve la caja equivocada negando con la cabeza, o deja una nota en la puerta. Reacciona al registro que el host manda a todos (ahora los clientes también ven al vecino); 5 frases por resultado elegidas por semilla. Test `test_door_reactions`.
+- Revisión visual (2026-09-25, `render_world_features.gd`; `655c6f2`, `5cc1497`): el vecino le daba la espalda a la calle (el modelo mira a −Z), el globo quedaba tapado por la lamparita del porche y la nota quedaba enterrada dentro de la puerta. Arreglados los tres, con test. Las manos que se agarran la cabeza quedaban adentro y detrás de ella (13 cm al costado, cabeza de 19 cm de radio): ahora van por fuera y adelante.
 
-### N-605 · Textos del mundo traducibles — B · `Opus 5.5 · high` · Aviso: no
+### N-605 · Textos del mundo traducibles — B · `Opus 5.5 · high` · Aviso: no · **[x] `94bed31`**
 
 Complementa la S-509 de Slatex sin esperarla.
 
-- [ ] Pasar los textos de los archivos de Nacho (casas, depósito, ciervo, cruce, carteles de pueblo) a
+- [x] Pasar los textos de los archivos de Nacho (casas, depósito, ciervo, cruce, carteles de pueblo) a
   `do-not-drop/translations/strings_world.csv` (columnas `es,en`, claves `WORLD_*`) y usar `tr()`. Godot admite
   varios CSV, así que no choca con el de Slatex. Registrar el CSV en `project.godot` (aviso).
-- [ ] Traducción al inglés.
+- [x] Traducción al inglés.
+- 130 textos del mundo en `translations/strings_world.csv` (claves `WORLD_*`, columnas `es,en`) con `tr()`: depósito, casas y vecino, GPS, ciervo y ovejas, puertas del camión, carteles de pueblo, historias. Registrado en `project.godot`; hasta la S-509 el juego fuerza español (`game_settings.gd`, aviso). Los prompts de asiento de `vehicle.tscn` quedan para la S-509. Test `test_world_translations`.
 
 ---
 
@@ -501,15 +524,21 @@ Complementa la S-509 de Slatex sin esperarla.
 
 ### N-702 · Esta lista como tablero — A · `Opus 5.5 · low` · Aviso: no
 
-- [ ] `[x]` + hash al cerrar. Tarea que crece se parte acá antes de seguir. Revisión semanal de "Última
-  actualización".
-- [ ] Verificar después de cada tarea grande `test_vehicle_presentation`, `test_vehicle_audio`,
-  `test_route_streaming` y `check_driver_sightline` (antes #99).
+Tarea permanente: no se cierra, se cumple en cada tanda.
 
-### N-703 · Hitos de lanzamiento con fecha — B · `Opus 5.5 · medium` · Aviso: no
+- [x] `[x]` + hash al cerrar. Tarea que crece se parte acá antes de seguir. Revisión semanal de "Última
+  actualización". (Tanda del 2026-09-25: cada tarea cerrada con su hash; la revisión visual y las
+  capturas quedaron anotadas en su tarea.)
+- [x] Verificar después de cada tarea grande `test_vehicle_presentation`, `test_vehicle_audio`,
+  `test_route_streaming` y `check_driver_sightline` (antes #99). (2026-09-25: los tres primeros en la
+  batería completa del `pre-push`, 115/116 con `test_look_controls` pasado aparte con pantalla;
+  `check_driver_sightline` PASS, ahora ignora mallas ocultas y overlays con `ALPHA`.)
 
-- [ ] En `docs/plan-desarrollo.md` Fase 7: fechas objetivo para "contenido cerrado", "página de Steam
+### N-703 · Hitos de lanzamiento con fecha — B · `Opus 5.5 · medium` · Aviso: no · **[x] `3e23947`**
+
+- [x] En `docs/plan-desarrollo.md` Fase 7: fechas objetivo para "contenido cerrado", "página de Steam
   publicada", "build de demo", "Early Access". Una por mes como máximo de distancia entre hitos.
+- Contenido cerrado 2026-10-30, página de Steam 2026-11-27, demo 2026-12-18, Early Access 2027-01-22, con qué significa "listo" y de qué depende cada uno (`plan-desarrollo.md` Fase 7).
 
 ---
 
@@ -529,10 +558,11 @@ Complementa la S-509 de Slatex sin esperarla.
   comparar un hash de todas las posiciones. Cualquier `randf()` sin la semilla de sesión lo rompe (fue el bug
   del #122 viejo).
 
-### N-803 · Estrés del camión en las rutas nuevas — B · `Opus 5.5 · high` · Aviso: no
+### N-803 · Estrés del camión en las rutas nuevas — B · `Opus 5.5 · high` · Aviso: no · **[x] `abf72b8`**
 
-- [ ] Ampliar `test_vehicle_stress.gd` a la ruta curva con casas (no solo Endless): 3 minutos de manejo agresivo
+- [x] Ampliar `test_vehicle_stress.gd` a la ruta curva con casas (no solo Endless): 3 minutos de manejo agresivo
   sin NaN, sin salir del mundo y sin quedar atascado sin que salte la detección.
+- `test_vehicle_stress.gd` maneja 3 minutos agresivos (a fondo, frenadas con freno de mano, zigzag) por la ruta curva con 4 casas en 4 semillas. Encontró un bloqueo real: el camión que rozaba el primer cono de una obra caía con el chasis sobre la valla o un cono (0,9/0,65 m, más que su despeje) y ninguna red de seguridad terminaba la partida. Arreglos: los conos de obra son cuerpos livianos que el camión voltea, la colisión de la valla y de los bloques de chicana y curva en S mide 1,6 m (se dibujan igual), y `level_base.gd` suma la regla de atascado (acelerador apretado y camión quieto 6 s, como Endless; test `test_stuck_detection`). El bot mira adelante y esquiva; "atascado" en el test es inmovilizado (menos de 3 m en 12 s), no dar vueltas.
 
 ### N-804 · Recorrido técnico del mundo — A · `Opus 5.5 · low` · Aviso: no · **[x] `ba67f84`**
 
@@ -555,12 +585,13 @@ Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 - [ ] Volver a verificar el flujo de invitación de amigos con el AppID real (la crítica §7 avisa que nunca se
   probó con el juego real).
 
-### N-902 · Herramienta de cámara para tráiler — B · `Opus 5.5 · high` · Aviso: no
+### N-902 · Herramienta de cámara para tráiler — B · `Opus 5.5 · high` · Aviso: no · **[x] `8ffbb2f`**
 
-- [ ] Cámara libre de depuración (solo build de debug) con rieles: grabar 3-4 puntos y que la cámara los
+- [x] Cámara libre de depuración (solo build de debug) con rieles: grabar 3-4 puntos y que la cámara los
   recorra suave mientras el camión maneja solo. Reutilizar `results_orbit.gd` como base.
-- [ ] 6 planos guardados: salida del depósito con el portón, curva en el bosque, cruce de tren, puente angosto
+- [x] 6 planos guardados: salida del depósito con el portón, curva en el bosque, cruce de tren, puente angosto
   con lluvia, llegada a una casa de noche, vuelco con cajas volando.
+- `scripts/tools/trailer_camera.gd` (sobre `results_orbit.gd`): en builds de debug F7 cámara libre, F5 graba un punto de riel relativo al camión, F6 lo reproduce, F8 lo imprime. `scenes/tools/trailer_shot.tscn` reproduce un plano de `data/trailer_shots.json` con el camión manejado por piloto automático: salida del depósito, curva en el bosque (otoño), cruce de tren, puente angosto con lluvia, llegada a una casa de noche vuelco (con 4 cajas que salen volando y el camión que queda tumbado) y el ciervo del devlog. `--still`/`--frames` sacan capturas; `--write-movie` graba. Nada de eso se exporta. Test `test_trailer_shots`. Cada plano arranca con el camión lejos del depósito (semilla con el tramo a más de `lead + 60 m`), puertas cerradas y sin HUD ni carteles flotantes; el test reproduce la casa de noche, el tren y el ciervo y verifica que el camión, el tren y el ciervo queden en cuadro. Arreglos tras revisar las capturas: `61d2b5f`, `e0fb236`, `08f62b0`, `77da5a8`.
 
 ### N-903 · Guion del tráiler — B · `Opus 5.5 · medium` · Aviso: no · **[x] `ee2cefd`**
 
@@ -648,6 +679,6 @@ Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 | 167 | ~~Verificación con probes (2 y 3 procesos): los sincronizadores del jugador y de las cajas se limitaban a peers listos recién en `_ready`, y tras un reinicio el host dejaba de verse moverse.~~ **[x] Hecho** — el filtro va en `_enter_tree` (jugador y caja); el jugador remoto sobre el camión del host se ubica en el tick de física. | A |
 | 168 | ~~En el host, el jugador que viaja atrás golpeaba las cajas sueltas en cada paso (se mueve entre pasos, no durante).~~ **[x] Hecho** — con el camión en marcha no choca con las cajas (`_on_foot_mask`); estacionado, sí. | A |
 | 169 | ~~Se cae el host: la cámara saltaba a un asiento.~~ **[x] Hecho** — Godot borra igual a los jugadores creados por el host; el nivel conserva la vista con una cámara quieta (`_keep_view`). | C |
-| 170 | El borde de la explanada del depósito hace cabecear el camión a ~15 m/s y tira la carga suelta (visto en los probes). Revisar la transición `start_yard` → ruta. | B |
+| 170 | ~~El borde de la explanada del depósito hace cabecear el camión a ~15 m/s y tira la carga suelta (visto en los probes).~~ **[x] Hecho** `abf72b8` — medido con `cazador-bugs`: no era el borde de la explanada sino una loma (`HillSegment`) o un túnel como primer tramo, apretados en la salida del depósito (rampa de ~27 %), más el CCD del camión, que frenaba su posición y dejaba que la carga lo atravesara. `route.gd` `_plan_pick` ya no pone loma ni túnel primero, y el camión no usa `continuous_cd` (los paquetes sí). Test `test_start_yard`: saliendo a fondo no cabecea más de 20 °/s y una caja suelta sigue atrás. | B |
 | 171 | ~~Guantes sueltos sobre el volante aunque no maneje nadie, y manos flotantes en las cámaras.~~ **[x] Hecho** (pedido del usuario, 2026-09-24) — fuera los guantes de `vehicle_presentation.gd`; la bocina mueve el punto de IK de la mano derecha del conductor (`test_driver_ik`). | A |
 

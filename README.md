@@ -251,6 +251,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_net_smoothing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_level_common.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trailer_shots.gd
+<godot> --headless --path do-not-drop --script res://tests/test_baked_ao.gd
 <godot> --headless --path do-not-drop --script res://tests/test_start_yard.gd
 <godot> --headless --path do-not-drop --script res://tests/check_driver_sightline.gd
 <godot> --headless --path do-not-drop --script res://tests/check_steam_extension.gd
@@ -417,6 +418,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   suaves; el vuelco tumba el camión, queda tumbado y tira las cajas, sin HUD ni carteles
   flotantes y con las puertas cerradas; la casa de noche, el tren y el ciervo se reproducen
   y quedan en cuadro (el camión frena en la casa y en la barrera, no atropella al ciervo).
+- `test_baked_ao` — N-308.1: casas, vehículos estacionados y del depósito y props grandes
+  traen oclusión horneada en colores de vértice y `LowpolyMaterials` la multiplica en el
+  albedo; la vegetación no; vidrios, marcos y faroles quedan blancos, ninguna esquina más
+  oscura que el `FLOOR` del horneado y cada modelo por debajo de 2× sus vértices.
 - `test_release_build` — builds de release (N-210): `project.godot` tiene
   `config/version` y el menú la muestra; los presets de CI
   (`tools/export/export_presets.cfg`) exportan Windows y Linux sin `tests/` ni `.blend`, y
