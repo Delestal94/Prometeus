@@ -76,10 +76,12 @@ func _run() -> void:
 	for layer: Node in (runner.get(&"level") as Node).find_children("*", "CanvasLayer", false, false):
 		hud_hidden = hud_hidden and not (layer as CanvasLayer).visible
 	_expect(hud_hidden, "No HUD in the shot")
+	var lowest_up: float = 1.0
 	for tick: int in range(60 * 5):
 		runner.set(&"_time", float(tick) / 60.0)
 		await physics_frame
-	_expect(van.global_basis.y.dot(Vector3.UP) < 0.6, "The roll rolls the truck (up·Y %.2f)" % van.global_basis.y.dot(Vector3.UP))
+		lowest_up = minf(lowest_up, van.global_basis.y.dot(Vector3.UP))
+	_expect(lowest_up < 0.3, "The roll tips the truck over during the shot (lowest up·Y %.2f)" % lowest_up)
 	var recorded: Dictionary = (runner.get_node(^"TrailerCamera") as Node).call(&"record_point")
 	_expect(recorded.get("space", "") == "truck" and (recorded.at as Array).size() == 3, "Recording a point takes the view relative to the truck")
 	runner.queue_free()

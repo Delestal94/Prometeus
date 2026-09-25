@@ -177,10 +177,13 @@ func _physics_process(_delta: float) -> void:
 	_drive()
 	var roll: Dictionary = shot.get("roll", {})
 	if not roll.is_empty() and not _rolled and _time >= float(roll.get("t", 2.0)):
-		# Clip the kerb too fast: a hard shove on the roll axis, at speed.
+		# Clip the kerb too fast: a spin about the roll axis and a hop, at
+		# speed (`strength` in radians a second). Set, not pushed: the truck's
+		# low centre of mass shrugged off an impulse.
 		_rolled = true
-		van.apply_torque_impulse(van.global_basis.z * van.mass * float(roll.get("strength", 5.0)))
-		van.apply_central_impulse((Vector3.UP * 3.0 + van.global_basis.x * 2.5) * van.mass)
+		van.freeze = false
+		van.angular_velocity = van.global_basis.z * float(roll.get("strength", 5.0))
+		van.linear_velocity += Vector3.UP * 4.0 + van.global_basis.x * 3.0
 
 
 ## Pure pursuit along the road at the shot's speed, braking to a stop at the
