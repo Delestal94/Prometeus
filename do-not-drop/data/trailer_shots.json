@@ -1,0 +1,59 @@
+{
+  "salida_deposito": {
+    "about": "Salida del depósito con el portón: el camión sale del galpón y la cámara, afuera, lo ve cruzar el portón.",
+    "seed": 4242, "houses": 1, "mood": "soleado_dia_verano", "speed_kmh": 20, "duration": 9.0,
+    "start": {"at": "depot"},
+    "rail": [
+      {"space": "anchor", "at": [7.5, 2.2, -14.0], "look": [0.0, 1.6, 2.0], "t": 0.0},
+      {"space": "anchor", "at": [4.0, 1.8, -11.0], "look": [0.0, 1.4, -2.0], "t": 5.0},
+      {"space": "anchor", "at": [-3.0, 3.0, -16.0], "look": [0.0, 1.2, -12.0], "t": 9.0}
+    ]
+  },
+  "curva_bosque": {
+    "about": "Curva en el bosque: la cámara adelante a la izquierda, el camión entra en la curva y la toma.",
+    "houses": 2, "mood": "soleado_dia_otono", "speed_kmh": 42, "duration": 8.0,
+    "start": {"at": "segment", "segment": "CurveSegment", "lead": 45},
+    "rail": [
+      {"space": "truck", "at": [-4.5, 2.2, -12.0], "look": [0.0, 1.3, 0.0], "t": 0.0},
+      {"space": "truck", "at": [-6.0, 1.6, -3.0], "look": [0.0, 1.2, 0.0], "t": 4.0},
+      {"space": "truck", "at": [-3.0, 3.5, 7.0], "look": [0.0, 1.0, -6.0], "t": 8.0}
+    ]
+  },
+  "cruce_tren": {
+    "about": "Cruce de tren: plano fijo junto a las vías, el camión llega a la barrera.",
+    "houses": 2, "mood": "nublado_atardecer", "speed_kmh": 35, "duration": 9.0,
+    "start": {"at": "segment", "segment": "RailCrossingSegment", "lead": 55},
+    "rail": [
+      {"space": "anchor", "at": [9.0, 2.0, -4.0], "look": [0.0, 1.2, 12.0], "t": 0.0},
+      {"space": "anchor", "at": [8.0, 2.4, -10.0], "look": [0.0, 1.0, -6.0], "t": 9.0}
+    ]
+  },
+  "puente_lluvia": {
+    "about": "Puente angosto con lluvia: persecución baja, el camión cruza el puente entre las barandas.",
+    "houses": 2, "mood": "lluvia_dia", "speed_kmh": 30, "duration": 8.0,
+    "start": {"at": "segment", "segment": "NarrowBridgeSegment", "lead": 30},
+    "rail": [
+      {"space": "truck", "at": [2.5, 1.4, 9.0], "look": [0.0, 1.4, -8.0], "t": 0.0},
+      {"space": "truck", "at": [4.5, 2.0, 2.0], "look": [0.0, 1.2, -6.0], "t": 8.0}
+    ]
+  },
+  "casa_noche": {
+    "about": "Llegada a una casa de noche: el camión frena frente a la casa que espera, con el porche encendido.",
+    "houses": 2, "mood": "soleado_noche", "speed_kmh": 32, "duration": 11.0,
+    "start": {"at": "house", "index": 0, "lead": 70},
+    "rail": [
+      {"space": "anchor", "at": [0.0, 3.5, -18.0], "look": [0.0, 1.5, 0.0], "t": 0.0},
+      {"space": "anchor", "at": [-6.0, 2.2, -12.0], "look": [0.0, 1.8, -2.0], "t": 11.0}
+    ]
+  },
+  "vuelco": {
+    "about": "Vuelco con cajas volando: a toda velocidad en una recta, el camión se tumba y la carga sale disparada.",
+    "houses": 2, "mood": "soleado_dia_verano", "speed_kmh": 60, "duration": 7.0,
+    "start": {"at": "segment", "segment": "StraightSegment", "lead": 40},
+    "roll": {"t": 2.2, "strength": 7.0},
+    "rail": [
+      {"space": "truck", "at": [6.0, 2.0, -14.0], "look": [0.0, 1.0, 0.0], "t": 0.0},
+      {"space": "truck", "at": [8.0, 3.0, -6.0], "look": [0.0, 0.8, 0.0], "t": 7.0}
+    ]
+  }
+}

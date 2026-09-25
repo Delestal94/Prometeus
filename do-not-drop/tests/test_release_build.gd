@@ -51,8 +51,8 @@ func _run() -> void:
 		var name: String = str(presets.get_value(section, "name", ""))
 		found[name] = true
 		var filter: String = str(presets.get_value(section, "exclude_filter", ""))
-		_expect(filter.contains("tests/*") and filter.contains("*.blend"),
-			"Preset '%s' keeps tests/ and .blend files out of the build (got '%s')" % [name, filter])
+		_expect(filter.contains("tests/*") and filter.contains("*.blend") and filter.contains("scripts/tools/*") and filter.contains("scenes/tools/*"),
+			"Preset '%s' keeps tests/, the debug tools and .blend files out of the build (got '%s')" % [name, filter])
 		if EXPECTED_PRESETS.has(name):
 			_expect(str(presets.get_value(section, "export_path", "")) == EXPECTED_PRESETS[name],
 				"Preset '%s' exports to %s" % [name, EXPECTED_PRESETS[name]])
