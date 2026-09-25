@@ -279,6 +279,18 @@ cerrada la Fase 4.
 - Lanzar en Early Access con el contenido mínimo (1 vehículo, 1 set de tramos, 3-4
   trampas) e iterar con feedback real antes de sumar contenido extra.
 
+### Hitos de lanzamiento con fecha (N-703, 2026-09-25)
+
+Fechas objetivo, con un mes como máximo entre un hito y el siguiente. Si un hito se corre,
+se corren los que siguen, sin comprimirlos: los plazos de Steam no se acortan.
+
+| Hito | Fecha objetivo | Qué significa "listo" | Depende de |
+|---|---|---|---|
+| Contenido cerrado | 2026-10-30 (vie) | No entra ningún tramo, trampa, peligro ni pantalla nueva; de acá en adelante solo arreglos, balance y pulido. Las listas de Nacho y Slatex sin tareas A abiertas. | Tareas A de `tareas-nacho.md` y `tareas-slatex.md` |
+| Página de Steam publicada | 2026-11-27 (vie) | Página "Próximamente" pública con cápsulas, 5+ capturas y tráiler, para juntar wishlists. Steam pide la página visible al menos 2 semanas antes del lanzamiento y la revisión tarda unos días hábiles: se envía a revisión una semana antes. | AppID propio (N-901), capturas (N-905, S-902), tráiler (N-903/N-902) |
+| Build de demo | 2026-12-18 (vie) | Una entrega completa y el depósito, exportada con `tools`/CI (N-210), en una rama de Steam propia de la demo. Sirve para Steam Next Fest si la fecha del festival cae antes del Early Access. | Export automático (N-210), página publicada |
+| Early Access | 2027-01-22 (vie) | Lanzamiento con el contenido mínimo (1 vehículo, 1 set de tramos, 3-4 trampas), precio definido y build revisada por Steam (revisión de build: pedirla 2 semanas antes). | Demo publicada, playtesting de amigos |
+
 ## Fuera del MVP (control de alcance)
 
 Lista cerrada de lo que **no** se hace antes de Early Access. Sumar una fila acá es
