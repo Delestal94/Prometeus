@@ -37,6 +37,9 @@ const LOOKAHEAD: float = 14.0
 ## Saved frames and stills start this late: the first moments are the
 ## scene settling (the rear doors swinging shut, the driver sitting down).
 const SETTLE_SECONDS: float = 0.8
+## Just behind the truck's open back, in its own space (the cargo box ends at
+## about +4.9 m).
+const REAR_OUTSIDE_Z: float = 5.4
 ## A shot's segment is at least its lead plus this far from the depot.
 const RUN_UP_MARGIN: float = 60.0
 ## How hard the autopilot can brake, to start slowing in time (m/s^2).
@@ -326,8 +329,14 @@ func _physics_process(_delta: float) -> void:
 		van.call(&"set_door_open", &"rear", true)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 906
+		var index: int = 0
 		for package: RigidBody3D in level.call(&"_release_loaded_cargo"):
 			package.call(&"release_mount")
+			# Set just outside the opened back before the throw: released in
+			# the cargo bay they stayed there (the bay's walls and racks hold
+			# them), and a trailer shot doesn't need the physics of the exit.
+			package.global_position = van.to_global(Vector3(rng.randf_range(-0.6, 0.6), 1.3 + 0.35 * float(index % 3), REAR_OUTSIDE_Z + 0.4 * float(index)))
+			index += 1
 			package.linear_velocity = van.linear_velocity * 0.4 + van.global_basis.z * rng.randf_range(8.0, 11.0) + Vector3.UP * rng.randf_range(6.0, 9.0) + van.global_basis.x * rng.randf_range(-2.0, 2.0)
 			package.angular_velocity = Vector3(rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0), rng.randf_range(-6.0, 6.0))
 

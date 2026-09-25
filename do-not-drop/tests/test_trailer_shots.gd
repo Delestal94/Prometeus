@@ -98,7 +98,13 @@ func _run() -> void:
 			aboard += 1
 	_expect(aboard >= int(shots["vuelco"].get("cargo", 1)), "The roll carries its %d boxes (%d aboard)" % [int(shots["vuelco"].get("cargo", 1)), aboard])
 	var lowest_up: float = 1.0
-	var packages: Array = (runner.get(&"level") as Node).get(&"packages")
+	# Only the boxes that ride along: the depot's shelves hold more, which
+	# are "out of the truck" too (the first version of this check counted
+	# them and passed while no box ever left the truck).
+	var packages: Array = []
+	for package: Node in (runner.get(&"level") as Node).get(&"packages"):
+		if is_instance_valid(package) and bool(package.get(&"is_loaded")):
+			packages.append(package)
 	for tick: int in range(60 * 5):
 		runner.set(&"_time", float(tick) / 60.0)
 		await physics_frame
@@ -115,7 +121,7 @@ func _run() -> void:
 			thrown += 1
 	_expect(thrown >= 3, "...and its boxes fly out of it (%d out of the truck)" % thrown)
 	_expect(van.call(&"is_door_open", &"rear"), "...through its back, burst open")
-	_expect(not bool((runner.get(&"level") as Node).get(&"packages")[0].get(&"is_loaded")), "The thrown boxes aren't still counted as loaded on a rack")
+	_expect(packages.all(func(package: Node) -> bool: return not is_instance_valid(package) or not bool(package.get(&"is_loaded"))), "The thrown boxes aren't still counted as loaded on a rack")
 	var recorded: Dictionary = (runner.get_node(^"TrailerCamera") as Node).call(&"record_point")
 	_expect(recorded.get("space", "") == "truck" and (recorded.at as Array).size() == 3, "Recording a point takes the view relative to the truck")
 	runner.queue_free()
