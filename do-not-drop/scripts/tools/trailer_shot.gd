@@ -111,7 +111,7 @@ func setup(definition: Dictionary) -> void:
 	var anchor := Transform3D.IDENTITY
 	match String(start.get("at", "depot")):
 		"segment":
-			var segment: Node3D = _first_segment(String(start.segment))
+			var segment: Node3D = _first_segment(String(start.segment), float(start.get("lead", 60.0)) + 20.0)
 			if segment != null:
 				anchor = segment.global_transform
 				_place_before(float(segment.get_meta(&"route_distance", 0.0)) - float(start.get("lead", 60.0)))
@@ -130,11 +130,17 @@ func setup(definition: Dictionary) -> void:
 	camera.call(&"play", shot.get("rail", []), anchor)
 
 
-func _first_segment(kind: String) -> Node3D:
+## The first `kind` segment at least `from` metres down the road (room for
+## the run-up), or the first of that kind at all.
+func _first_segment(kind: String, from: float = 0.0) -> Node3D:
+	var fallback: Node3D = null
 	for child: Node in route.get_children():
 		if child is RouteSegment and (child.get_script() as Script).get_global_name() == kind:
-			return child
-	return null
+			if float(child.get_meta(&"route_distance", 0.0)) >= from:
+				return child
+			if fallback == null:
+				fallback = child
+	return fallback
 
 
 func _index_at(distance: float) -> int:
@@ -174,7 +180,7 @@ func _physics_process(_delta: float) -> void:
 		# Clip the kerb too fast: a hard shove on the roll axis, at speed.
 		_rolled = true
 		van.apply_torque_impulse(van.global_basis.z * van.mass * float(roll.get("strength", 5.0)))
-		van.apply_central_impulse(Vector3.UP * van.mass * 2.0)
+		van.apply_central_impulse((Vector3.UP * 3.0 + van.global_basis.x * 2.5) * van.mass)
 
 
 ## Pure pursuit along the road at the shot's speed, braking to a stop at the

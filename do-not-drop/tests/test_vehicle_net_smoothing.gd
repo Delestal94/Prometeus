@@ -102,6 +102,8 @@ func _run() -> void:
 	var van := (load("res://scenes/gameplay/vehicle/vehicle.tscn") as PackedScene).instantiate() as VehicleBody3D
 	root.add_child(van)
 	await process_frame
+	# A remote copy is frozen: the network places it, not its own physics.
+	van.freeze = true
 	van.set_multiplayer_authority(2)
 	var target := Vector3(3.0, 1.0, -7.0)
 	van.set(&"net_time", 10.0)

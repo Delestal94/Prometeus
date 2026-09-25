@@ -14,8 +14,9 @@ extends SceneTree
 ## swerving, only looking ahead enough to steer round a block in its lane --
 ## over several seeds with 4 houses. Besides NaN and falling out of
 ## the world it checks that the truck never ends up stuck with no safety net
-## firing: every time it stops making progress for STUCK_SECONDS while the
-## driver is still trying (forward and in reverse), level_base.gd must already
+## firing: every time it stops making progress for STUCK_SECONDS -- pinned,
+## not moving 3 m, while the driver is still trying (forward and in reverse; a
+## truck circling in place could still be steered out) -- level_base.gd must already
 ## have ended the run (tipped, off the route, stuck with the pedal down); a
 ## truck wedged upright where nothing ends the run is a soft lock the players
 ## can't get out of. (It found one: high-centred on the roadworks' cones and
@@ -136,6 +137,8 @@ func _stress_delivery_route() -> void:
 		var recoveries: int = 0
 		var best_progress: float = -INF
 		var since_progress: float = 0.0
+		var window_start: Vector3 = van.global_position
+		var pinned: float = 0.0
 		# Up to a minute per seed, so every seed gets driven.
 		while ticks < 60 * 60 and driven < DELIVERY_SECONDS:
 			if not bool(manager.get(&"is_running")):
@@ -211,7 +214,14 @@ func _stress_delivery_route() -> void:
 				recoveries = 0
 			else:
 				since_progress += step
-			if since_progress > STUCK_SECONDS:
+			# Stuck means pinned: a truck still driving round in circles can be
+			# steered out by a person; one that hasn't moved 3 m can't.
+			if since_progress == 0.0 or position.distance_to(window_start) > 3.0:
+				window_start = position
+				pinned = 0.0
+			else:
+				pinned += step
+			if since_progress > STUCK_SECONDS and pinned > STUCK_SECONDS:
 				_expect(false, "seed %d: stuck %.0f s with no progress and the run still going -- nothing caught it (at %s, %.0f m along, %.1f s)" % [
 					seed_value, STUCK_SECONDS, position, progress, t])
 				break

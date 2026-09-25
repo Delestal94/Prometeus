@@ -25,6 +25,8 @@ const MAX_SNAPSHOTS: int = 40
 ## Past the newest pose, keep going on its velocity at most this long, then hold.
 const MAX_EXTRAPOLATION: float = 0.1
 const TELEPORT_DISTANCE: float = 6.0
+## How much the clock offset may move per packet toward a lower estimate.
+const OFFSET_EASE: float = 0.0005
 
 ## [host_time, Transform3D], oldest first.
 var _snapshots: Array = []
@@ -59,13 +61,24 @@ func push(host_time: float, pose: Transform3D, now: float) -> void:
 func _accept(host_time: float, pose: Transform3D, now: float) -> void:
 	if not _snapshots.is_empty():
 		var last: Array = _snapshots[-1]
-		if host_time <= float(last[0]):
-			return  # Late and out of order: we're past it already.
-		if (last[1] as Transform3D).origin.distance_to(pose.origin) > TELEPORT_DISTANCE:
+		if host_time > float(last[0]) and (last[1] as Transform3D).origin.distance_to(pose.origin) > TELEPORT_DISTANCE:
 			_snapshots.clear()
 			_clock_offset = INF
-	_clock_offset = minf(_clock_offset, host_time - now)
-	_snapshots.append([host_time, pose])
+	# The clock offset follows the least-delayed arrival, but eases toward a
+	# better one instead of jumping: every jump in it is a jump in where the
+	# truck is drawn.
+	var offset: float = host_time - now
+	if _clock_offset == INF:
+		_clock_offset = offset
+	elif offset < _clock_offset:
+		_clock_offset = maxf(offset, _clock_offset - OFFSET_EASE)
+	# In order, even when the network swapped two packets.
+	var at: int = _snapshots.size()
+	while at > 0 and float(_snapshots[at - 1][0]) > host_time:
+		at -= 1
+	if at > 0 and is_equal_approx(float(_snapshots[at - 1][0]), host_time):
+		return
+	_snapshots.insert(at, [host_time, pose])
 	while _snapshots.size() > MAX_SNAPSHOTS:
 		_snapshots.pop_front()
 
