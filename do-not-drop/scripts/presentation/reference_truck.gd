@@ -785,7 +785,7 @@ const PANEL_LINES: Dictionary = {
 	"RearDoor_Left": &"outline", "RearDoor_Right": &"outline",
 	"FrontNose": &"hood", "CargoSide": &"joints", "CargoSide.001": &"joints", "CargoSide_001": &"joints",
 }
-const SEAM_WIDTH: float = 0.012
+const SEAM_WIDTH: float = 0.02
 const SEAM_INSET: float = 0.02
 const SEAM_PROUD: float = 0.002
 const SIDE_JOINT_SPACING: float = 1.05

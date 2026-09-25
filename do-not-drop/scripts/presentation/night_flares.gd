@@ -13,7 +13,6 @@ const STREET_LAMP: String = "res://assets/models/environment/props/sm_env_prop_s
 const LAMP_HALO_SIZE: float = 1.5
 const CAR_HALO_SIZE: float = 0.55
 const HALO_COLOR := Color(1.0, 0.82, 0.55)
-const DRAW_DISTANCE: float = 260.0
 
 
 ## Where the halos go, in `route`'s space: [position, size] pairs.
@@ -57,7 +56,9 @@ static func build(route: Node3D) -> MultiMeshInstance3D:
 	node.name = "NightFlares"
 	node.multimesh = multimesh
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	node.visibility_range_end = DRAW_DISTANCE
+	# No visibility range: it's measured from the centre of the whole
+	# MultiMesh -- the middle of a route kilometres long -- so it hid every
+	# halo. The fog fades far ones, and they're a handful of quads.
 	return node
 
 
@@ -80,6 +81,9 @@ static func _material(level: float) -> StandardMaterial3D:
 	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	# Each halo keeps its instance's size (a street lamp's is bigger than a
+	# car's); plain billboarding would draw them all 1 m across.
+	material.billboard_keep_scale = true
 	material.no_depth_test = false
 	material.disable_fog = false
 	return material

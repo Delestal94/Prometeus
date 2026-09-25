@@ -39,6 +39,11 @@ const DOORBELL_PANEL: String = "res://assets/models/environment/props/sm_env_pro
 const DOORBELL_PANEL_X: float = 0.715
 const DOORBELL_HEIGHT: float = 1.55
 const DOORBELL_WALL_Z: Array[float] = [-2.25, -2.20, -2.40, -2.50, -2.30]
+## The door's raised panels stand this far out from the wall line above
+## (measured on the models: the upper panel's face), and the "nobody home"
+## note (N-604) goes on the upper one, at this height over the ground.
+const DOOR_PANEL_PROUD: float = 0.125
+const NOTE_HEIGHT: float = 1.82
 ## The point you ring from stands this far out from the wall, in front of it.
 const DOORBELL_REACH: float = 0.3
 ## The number window and the bell push, lit from inside while the house waits.
@@ -254,7 +259,9 @@ func _build_house() -> void:
 	# Route._build_houses()), so keep the resident and interaction point on
 	# the actual porch instead of behind the building.
 	_resident.position = Vector3(0.0, 0.0, -2.7)
-	_resident.rotation.y = PI
+	# The character model faces -Z (as the depot staff do), out of the door
+	# toward the road; no turn needed.
+	_resident.rotation.y = 0.0
 	_resident.scale = Vector3.ONE * 0.92
 	_tint_first_mesh(_resident, Color("b56f4d"))
 	_resident.visible = false
@@ -264,7 +271,7 @@ func _build_house() -> void:
 	reaction = DoorReaction.new()
 	reaction.name = "DoorReaction"
 	add_child(reaction)
-	reaction.setup(_resident, house_index, Vector3(0.0, 1.25, DOORBELL_WALL_Z[variant] - 0.02))
+	reaction.setup(_resident, house_index, Vector3(0.0, NOTE_HEIGHT, DOORBELL_WALL_Z[variant] - DOOR_PANEL_PROUD))
 	var events: Node = get_node_or_null(^"/root/EventBus")
 	if events != null:
 		events.connect(&"house_delivery_recorded", _on_delivery_reaction)

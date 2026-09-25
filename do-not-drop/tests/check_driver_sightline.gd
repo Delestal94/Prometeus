@@ -8,7 +8,9 @@ extends SceneTree
 ## Two hits are legitimate and are not failures:
 ##   - a mesh the eye sits inside of, as long as it culls back faces
 ##     (the cabin shell is invisible from within);
-##   - a mesh whose material is transparent (the windshield is glass).
+##   - a mesh whose material is transparent (the windshield is glass), or a
+##     shader overlay that writes ALPHA (the rain on the glass, N-303);
+##   - a mesh that isn't drawn (hidden, e.g. that rain overlay in dry weather).
 
 const RAY_LENGTH: float = 4.0
 var _blockers: Array[String] = []
@@ -28,6 +30,12 @@ func _initialize() -> void:
 		var aabb: AABB = mesh.global_transform * mesh.get_aabb()
 		var inside: bool = aabb.has_point(origin)
 		if not inside and aabb.intersects_ray(origin, forward * RAY_LENGTH) == null:
+			continue
+		if not mesh.is_visible_in_tree():
+			_allowed.append("%s (hidden)" % mesh.name)
+			continue
+		if _is_alpha_shader(mesh):
+			_allowed.append("%s (transparent shader overlay)" % mesh.name)
 			continue
 		var material: BaseMaterial3D = _material_of(mesh)
 		if material != null and material.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
@@ -56,6 +64,14 @@ func _material_of(mesh: MeshInstance3D) -> BaseMaterial3D:
 	if mesh.mesh != null and mesh.mesh.surface_get_material(0) is BaseMaterial3D:
 		return mesh.mesh.surface_get_material(0) as BaseMaterial3D
 	return null
+
+
+## A ShaderMaterial whose shader writes ALPHA is drawn see-through.
+func _is_alpha_shader(mesh: MeshInstance3D) -> bool:
+	var material := mesh.material_override as ShaderMaterial
+	if material == null and mesh.mesh != null and mesh.mesh.get_surface_count() > 0:
+		material = mesh.mesh.surface_get_material(0) as ShaderMaterial
+	return material != null and material.shader != null and material.shader.code.contains("ALPHA")
 
 
 func _all_meshes(node: Node) -> Array[MeshInstance3D]:

@@ -67,6 +67,10 @@ func _process(_delta: float) -> void:
 
 func _update_indicator() -> void:
 	var occupied: bool = _is_occupied()
+	# The marker is for everyone else: whoever sits here would see it glowing
+	# at their shoulder whenever they turn their head (it showed up as a
+	# salmon disc hanging in the side window).
+	_indicator.visible = not _local_player_seated_here()
 	# Rewriting the material every frame re-uploaded it for nothing; the
 	# colour only changes when someone sits down or gets up.
 	if occupied == _indicator_occupied:
@@ -75,6 +79,11 @@ func _update_indicator() -> void:
 	var color: Color = Color("f47e6d") if occupied else Color("83e2ba")
 	_indicator_material.albedo_color = color
 	_indicator_material.emission = color
+
+
+func _local_player_seated_here() -> bool:
+	var local: Node = _local_player()
+	return local != null and NodePath(local.get(&"seat_node_path")) == _own_seat_path
 
 
 func _is_occupied() -> bool:

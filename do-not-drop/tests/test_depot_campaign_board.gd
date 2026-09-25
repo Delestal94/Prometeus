@@ -4,8 +4,9 @@ extends SceneTree
 ## The depot tells the campaign (N-603, depot_campaign_board.gd):
 ## - "DÍAS SIN ACCIDENTES" counts runs that end with no ruined box, drops to
 ##   0 when one comes back broken, and remembers the best streak;
-## - the run's delivery photos are saved and pinned up, newest first, never
-##   more than MAX_PHOTOS (the oldest files are deleted, not just hidden);
+## - the run's delivery photos are saved and pinned up (a pushpin each),
+##   newest first, never more than MAX_PHOTOS (the oldest files are deleted,
+##   not just hidden), on a wall clear of the team's corkboard;
 ## - the depot builds both boards, they read what's saved, and they update
 ##   the moment a run ends (EventBus.run_ended).
 
@@ -52,10 +53,23 @@ func _run() -> void:
 		var days: Label3D = board.get(&"days_label")
 		_expect(days.text == str(int(log.days)), "The sign shows the saved count (%s, saved %d)" % [days.text, int(log.days)])
 		var shown: int = 0
+		var pinned: int = 0
 		for frame: Sprite3D in board.get(&"photo_frames"):
 			if frame.visible and frame.texture != null:
 				shown += 1
+				var pin := frame.get_node_or_null(^"Pin") as MeshInstance3D
+				if pin != null and pin.is_visible_in_tree():
+					pinned += 1
 		_expect(shown == Board.MAX_PHOTOS, "The wall pins up every saved photo (%d)" % shown)
+		_expect(pinned == shown, "...each with a pushpin (%d of %d)" % [pinned, shown])
+		# Clear of the team's corkboard on the same wall (they overlapped).
+		var wall := board.get_node(^"PhotoWall") as Node3D
+		var team_parts: Array[Node] = level.find_children("TeamBoard*", "MeshInstance3D", true, false)
+		_expect(not team_parts.is_empty(), "The depot has its team corkboard to check against")
+		var wall_box: AABB = _world_box(wall)
+		for part: Node in team_parts:
+			var team_box: AABB = _world_box(part)
+			_expect(not wall_box.grow(-0.01).intersects(team_box), "The photo wall doesn't overlap the team's board (%s / %s)" % [wall_box, team_box])
 		var sign_node := board.get_node(^"AccidentSign") as Node3D
 		_expect((sign_node.global_basis * Vector3.BACK).z > 0.9, "The sign faces into the depot")
 		root.get_node(^"/root/EventBus").emit_signal(&"run_ended", 10, {"cargo_ruined": 2})
@@ -67,6 +81,23 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: the depot counts days without accidents and pins up the latest delivery photos")
 	quit(_failures)
+
+
+## Every visible mesh under `node`, as one world-space box.
+func _world_box(node: Node) -> AABB:
+	var box := AABB()
+	var first: bool = true
+	var meshes: Array[Node] = node.find_children("*", "VisualInstance3D", true, false)
+	if node is VisualInstance3D:
+		meshes.append(node)
+	for item: Node in meshes:
+		var visual := item as VisualInstance3D
+		if not visual.is_visible_in_tree() or item is Label3D:
+			continue
+		var world: AABB = visual.global_transform * visual.get_aabb()
+		box = world if first else box.merge(world)
+		first = false
+	return box
 
 
 func _clear() -> void:

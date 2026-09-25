@@ -81,6 +81,10 @@ func _test_panel_lines(van: VehicleBody3D, model: Node3D, adapter: Node) -> void
 			var strip := line as MeshInstance3D
 			var size: Vector3 = (strip.mesh as BoxMesh).size * strip.global_basis.get_scale()
 			_expect(minf(size.x, minf(size.y, size.z)) < 0.01 and size[size.min_axis_index()] < 0.01, "%s's seams are thin decals" % panel_name)
+			# ...but wide enough to read from a few metres (12 mm didn't).
+			var dims: Array[float] = [size.x, size.y, size.z]
+			dims.sort()
+			_expect(dims[1] >= 0.018, "%s's seams are wide enough to see (%.0f mm)" % [panel_name, dims[1] * 1000.0])
 			var material := (strip.mesh as BoxMesh).material as StandardMaterial3D
 			_expect(material != null and material.albedo_color.get_luminance() < 0.1, "%s's seams are dark" % panel_name)
 			break

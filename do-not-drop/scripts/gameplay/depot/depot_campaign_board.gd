@@ -26,10 +26,14 @@ const SAFETY_GREEN := Color("1f8a5b")
 const CORK := Color("c9a26b")
 ## Sign: on the front wall's inner face, right of the door, facing inward.
 const SIGN_AT := Vector3(6.6, 3.1, 0.17)
-## Photo wall: on the right wall above the break area, facing -X.
-const WALL_AT := Vector3(14.92, 2.95, 20.4)
+## Photo wall: on the right wall above the break area, facing -X, clear of
+## the team's corkboard (depot.gd _build_team_board(), from z 21.4).
+const WALL_AT := Vector3(14.92, 2.95, 19.9)
 const WALL_SIZE := Vector2(2.3, 1.05)
 const PHOTO_SIZE := Vector2(0.44, 0.3)
+## A pushpin at each photo's top edge, in a few colours.
+const PIN_COLORS: Array[Color] = [Color("d64541"), Color("2f7fc1"), Color("f2b632"), Color("3a9b5c")]
+const PIN_RADIUS: float = 0.018
 
 var days_label: Label3D
 var best_label: Label3D
@@ -167,6 +171,22 @@ func _build_photo_wall() -> void:
 		frame.visible = false
 		wall.add_child(frame)
 		photo_frames.append(frame)
+		# Pinned at the top: a child of the photo, so it shows and hides with it.
+		var pin := MeshInstance3D.new()
+		pin.name = "Pin"
+		var head := SphereMesh.new()
+		head.radius = PIN_RADIUS
+		head.height = PIN_RADIUS * 2.0
+		head.radial_segments = 8
+		head.rings = 4
+		var pin_material := StandardMaterial3D.new()
+		pin_material.albedo_color = PIN_COLORS[index % PIN_COLORS.size()]
+		pin_material.roughness = 0.35
+		head.material = pin_material
+		pin.mesh = head
+		pin.position = Vector3(0.0, PHOTO_SIZE.y * 0.5 - 0.035, 0.012)
+		pin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		frame.add_child(pin)
 
 
 func _box(parent: Node3D, node_name: String, size: Vector3, at: Vector3, color: Color) -> void:

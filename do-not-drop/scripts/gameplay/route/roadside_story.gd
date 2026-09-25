@@ -30,10 +30,16 @@ const HEN_MODEL: String = "res://assets/models/cargo/contents/sm_cargo_content_h
 const FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 const BILLBOARD_SIZE := Vector2(8.4, 3.4)
 const BILLBOARD_HEIGHT: float = 2.6
+## Text keeps this far in from the panel's edges; a line that wouldn't fit
+## (a longer translation of the slogan too) is set smaller until it does.
+const BILLBOARD_TEXT_MARGIN: float = 0.45
+const BILLBOARD_PIXEL_SIZE: float = 0.01
 const BRAND_TEAL := Color("1f8a86")
 const BRAND_CREAM := Color("f3ecd8")
 const BRAND_ORANGE := Color("e8862b")
 const HEN_PECK_SECONDS: float = 1.6
+## How far the spilled van's nose is tipped down into the ditch.
+const VAN_NOSE_DOWN_DEG: float = 13.0
 
 @export var kind: Kind = Kind.BILLBOARD
 @export var story_seed: int = 0
@@ -66,10 +72,13 @@ func _process(delta: float) -> void:
 
 func _build_van_spill(rng: RandomNumberGenerator) -> void:
 	# Nose down into the ditch, turned away from the road, one side sagging.
+	# The model's nose is its -Z, so a negative pitch tips it down: the
+	# front bumper digs in about half a metre, the back wheels come off the
+	# grass.
 	var van := _model(VAN)
 	van.name = "CompetitorVan"
-	van.rotation = Vector3(deg_to_rad(6.0), deg_to_rad(28.0 + rng.randf_range(-8.0, 8.0)), deg_to_rad(-4.0))
-	van.position = Vector3(0.0, -0.12, 0.0)
+	van.rotation = Vector3(deg_to_rad(-VAN_NOSE_DOWN_DEG), deg_to_rad(28.0 + rng.randf_range(-8.0, 8.0)), deg_to_rad(-7.0))
+	van.position = Vector3(0.0, -0.08, 0.0)
 	add_child(van)
 	# The back door, swung wide open on its hinge (the model's door is part
 	# of the body): a slab in the body's own colour.
@@ -145,15 +154,27 @@ func _build_billboard() -> void:
 	_box("Board", Vector3(BILLBOARD_SIZE.x, BILLBOARD_SIZE.y, 0.12), Vector3(0.0, center_y, 0.0), BRAND_TEAL)
 	_box("Panel", Vector3(BILLBOARD_SIZE.x - 0.3, BILLBOARD_SIZE.y - 0.3, 0.13), Vector3(0.0, center_y, 0.0), BRAND_CREAM)
 	_box("Stripe", Vector3(BILLBOARD_SIZE.x - 0.3, 0.42, 0.14), Vector3(0.0, BILLBOARD_HEIGHT + 0.36, 0.0), BRAND_ORANGE)
-	_text("Brand", "TAKE MY PACKAGE", Vector3(-0.7, center_y + 0.55, 0.08), 150, BRAND_TEAL)
-	_text("Slogan", tr("WORLD_BILLBOARD_SLOGAN"), Vector3(-0.7, center_y - 0.45, 0.08), 90, Color("3a2f25"))
-	# A parcel sitting on the top edge, one corner hanging over.
+	var text_width: float = BILLBOARD_SIZE.x - 0.3 - BILLBOARD_TEXT_MARGIN * 2.0
+	_text("Brand", "TAKE MY PACKAGE", Vector3(0.0, center_y + 0.55, 0.08), fit_font_size("TAKE MY PACKAGE", 130, text_width), BRAND_TEAL)
+	var slogan: String = tr("WORLD_BILLBOARD_SLOGAN")
+	_text("Slogan", slogan, Vector3(0.0, center_y - 0.45, 0.08), fit_font_size(slogan, 80, text_width), Color("3a2f25"))
+	# A parcel sitting on the top edge (the box's origin is its base), off
+	# the lettering, one corner hanging out over the front.
 	var parcel := _model(BOXES[0])
 	parcel.name = "BillboardParcel"
 	parcel.scale = Vector3.ONE * 1.6
-	parcel.position = Vector3(BILLBOARD_SIZE.x * 0.5 - 1.3, center_y - 0.2, 0.35)
-	parcel.rotation = Vector3(0.0, deg_to_rad(-18.0), deg_to_rad(-8.0))
+	parcel.position = Vector3(BILLBOARD_SIZE.x * 0.5 - 0.8, top, 0.2)
+	parcel.rotation = Vector3(0.0, deg_to_rad(-18.0), 0.0)
 	add_child(parcel)
+
+
+## The largest size up to `font_size` at which `text` spans no more than
+## `max_width` metres on the billboard.
+static func fit_font_size(text: String, font_size: int, max_width: float) -> int:
+	var size: int = font_size
+	while size > 8 and FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * BILLBOARD_PIXEL_SIZE > max_width:
+		size -= 2
+	return size
 
 
 func _model(path: String) -> Node3D:
@@ -207,7 +228,7 @@ func _text(node_name: String, text: String, at: Vector3, font_size: int, color: 
 	label.text = text
 	label.font = FONT
 	label.font_size = font_size
-	label.pixel_size = 0.01
+	label.pixel_size = BILLBOARD_PIXEL_SIZE
 	label.modulate = color
 	label.outline_size = 0
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

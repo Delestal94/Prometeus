@@ -18,9 +18,10 @@ uniform float wiper_period = 1.6;
 uniform float wiper_sweep = 1.7;
 // Blade pivots (UV) and the blade's reach, in glass heights; aspect is the
 // glass's width over its height, to measure angles on the real glass.
-uniform vec2 pivot_a = vec2(0.28, 0.02);
-uniform vec2 pivot_b = vec2(0.72, 0.02);
-uniform float blade_reach = 0.9;
+// Both blades rest lying toward +x and sweep up together (a tandem pair).
+uniform vec2 pivot_a = vec2(0.18, 0.02);
+uniform vec2 pivot_b = vec2(0.58, 0.02);
+uniform float blade_reach = 0.75;
 uniform float aspect = 3.0;
 uniform float wipers_on = 1.0;
 uniform vec2 cells = vec2(26.0, 9.0);
@@ -37,9 +38,8 @@ float last_sweep(vec2 p, vec2 pivot, float now) {
 	if (reach > blade_reach || wipers_on < 0.5) {
 		return -1e6;
 	}
-	// Angle from the bottom edge, pointing toward the glass's middle.
-	float side = pivot.x < 0.5 ? 1.0 : -1.0;
-	float angle = atan(v.y, v.x * side);
+	// Angle up from the bottom edge, measured from +x (where the blade rests).
+	float angle = atan(v.y, v.x);
 	if (angle < 0.0 || angle > wiper_sweep) {
 		return -1e6;
 	}
@@ -85,12 +85,17 @@ void fragment() {
 			vec2 d = vec2((p.x - centre.x) * aspect, p.y - centre.y);
 			float dist = length(d) / size;
 			if (dist < 1.0) {
-				// A dark rim and a bright glint: how a drop reads against the road.
-				float rim = smoothstep(0.55, 1.0, dist);
-				float glint = 1.0 - smoothstep(0.0, 0.35, length(d / size - vec2(-0.3, 0.35)));
-				float a = mix(0.18, 0.55, rim) * smoothstep(1.0, 0.85, dist);
-				colour = mix(colour, mix(vec3(0.12, 0.15, 0.18), vec3(0.95, 0.98, 1.0), glint), a);
-				alpha = max(alpha, max(a, glint * 0.6));
+				// Water, not soot: a pale, mostly clear body that catches the
+				// sky, a thin slightly darker rim where the drop bends the
+				// light, and a bright glint. Light over dark road, and only a
+				// faint film over bright sky.
+				float rim = smoothstep(0.7, 1.0, dist);
+				float glint = 1.0 - smoothstep(0.0, 0.3, length(d / size - vec2(-0.3, 0.35)));
+				float edge = smoothstep(1.0, 0.88, dist);
+				vec3 body = mix(vec3(0.78, 0.84, 0.9), vec3(0.42, 0.47, 0.52), rim);
+				float a = mix(0.16, 0.34, rim) * edge;
+				colour = mix(colour, mix(body, vec3(1.0), glint), max(a, glint));
+				alpha = max(alpha, max(a, glint * 0.75));
 			}
 		}
 	}

@@ -9,7 +9,15 @@ extends SceneTree
 ## - happy hop for a good box, a look-over for a dented one, both hands to
 ##   the head for a ruined one -- with the line in a speech bubble;
 ## - a box that isn't theirs: out, head shake, "la mía es la A-2", back in;
-## - nobody rang: a note on the door, and no neighbour.
+## - nobody rang: a note on the door, and no neighbour;
+## - the neighbour faces out of the door, the bubble hangs clear of the porch
+##   bulb, and the note sits on the door's face on every house model (not
+##   inside the door, where the first version put it).
+
+## The face of each model's upper door panel, house-local z (measured on the
+## GLBs in Blender, glTF -Y as Godot +Z): cottage, cabin, bungalow, two-storey,
+## farmhouse -- the order of DeliveryHouse.HOUSE_VISUALS.
+const DOOR_FACE_Z: Array[float] = [-2.36, -2.30, -2.51, -2.61, -2.41]
 
 var _failures: int = 0
 
@@ -36,6 +44,7 @@ func _run() -> void:
 	for index: int in range(5):
 		var house := DeliveryHouse.new()
 		house.house_index = index
+		house.visual_variant = index
 		house.position = Vector3(index * 20.0, 0.0, 0.0)
 		root.add_child(house)
 		houses.append(house)
@@ -96,6 +105,21 @@ func _run() -> void:
 	var missed: DoorReaction = houses[4].reaction
 	_expect(missed.note != null and missed.note.text in _said(&"missed"), "Missed: a note on the door")
 	_expect(not missed.resident.visible, "...and nobody comes out")
+
+	# Where things stand: the neighbour faces the road (the house's front is
+	# its -Z, and so is the character model's), the bubble is out in front of
+	# the porch bulb, and each house's note is on the door, not in it.
+	_expect(ok_reaction.resident.global_basis.z.normalized().dot(houses[0].global_basis.z) > 0.95,
+		"The neighbour faces out of the door, toward the road")
+	var bulb_at: Vector3 = houses[0].to_global(HouseWaitingMarker.PORCH_LIGHT_AT)
+	_expect(ok_reaction.bubble.global_position.distance_to(bulb_at) > 0.45 and ok_reaction.bubble.global_position.z < bulb_at.z,
+		"The speech bubble hangs in front of the porch bulb, not on it (%.2f m)" % ok_reaction.bubble.global_position.distance_to(bulb_at))
+	for house: DeliveryHouse in houses:
+		house.reaction.react(&"missed", tr(DeliveryHouse.REACTION_LINES[&"missed"][0]))
+		var paper := house.find_child("NotePaper", true, false) as Node3D
+		var proud: float = DOOR_FACE_Z[house.visual_variant] - house.to_local(paper.global_position).z
+		_expect(proud > 0.0 and proud < 0.03, "House model %d: the note is on the door's face (%.3f m out)" % [house.visual_variant, proud])
+		_expect(house.to_local(house.reaction.note.global_position).z < house.to_local(paper.global_position).z, "...with its writing on the paper's outer side")
 
 	for house: DeliveryHouse in houses:
 		house.queue_free()

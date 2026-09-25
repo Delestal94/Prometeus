@@ -18,6 +18,10 @@ class_name DoorReaction
 const BUBBLE_SECONDS: float = 6.0
 const WRONG_SECONDS: float = 4.0
 const BUBBLE_HEIGHT: float = 2.35
+## ...and this far out in front of the neighbour, toward whoever is at the
+## door: clear of the porch bulb (HouseWaitingMarker.PORCH_LIGHT_AT), which
+## hangs right over the doorstep at that height.
+const BUBBLE_FORWARD: float = 0.55
 const BUBBLE_FONT: Font = preload("res://assets/fonts/Nunito-Variable.ttf")
 const NOTE_FONT: Font = preload("res://assets/fonts/Nunito-Variable.ttf")
 const INK := Color("1e2235")
@@ -28,7 +32,8 @@ const HEAD_GRAB := Vector3(0.13, 0.12, 0.06)
 
 var resident: Node3D
 var house_index: int = 0
-## Where the "nobody home" note goes: on the door, in this node's parent space.
+## Where the "nobody home" note goes: on the door's face, in this node's
+## parent space.
 var door_point: Vector3 = Vector3(0.0, 1.3, -2.3)
 var bubble: Label3D
 var note: Label3D
@@ -136,7 +141,7 @@ func _grab_head() -> void:
 			continue
 		var target := Marker3D.new()
 		target.name = "HeadGrab" + side
-		# The model faces +Z; its left arm (UpperArm_L / Hand_L) rests at -X.
+		# The model faces -Z; its left arm (UpperArm_L / Hand_L) rests at -X.
 		var offset := Vector3(HEAD_GRAB.x * (-1.0 if side == "L" else 1.0), HEAD_GRAB.y, HEAD_GRAB.z)
 		resident.add_child(target)
 		target.global_position = head + resident.global_basis.orthonormalized() * offset
@@ -223,7 +228,8 @@ func _build_bubble() -> void:
 	bubble.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	bubble.visible = false
 	add_child(bubble)
-	var at: Vector3 = resident.position + Vector3(0.0, BUBBLE_HEIGHT, 0.0)
+	# The model faces -Z, so "in front" is its own -Z.
+	var at: Vector3 = resident.position + Vector3(0.0, BUBBLE_HEIGHT, 0.0) + resident.basis.orthonormalized() * Vector3(0.0, 0.0, -BUBBLE_FORWARD)
 	bubble.position = at
 	_bubble_back.position = at
 

@@ -15,9 +15,12 @@ const SHADER: Shader = preload("res://shaders/windshield_rain.gdshader")
 const PERIOD: float = 1.6
 const SWEEP: float = 1.7
 ## Pivots along the bottom edge (fractions of the width) and the blade's
-## reach (fractions of the height).
-const PIVOTS: Array[float] = [0.28, 0.72]
-const BLADE_REACH: float = 0.9
+## reach (fractions of the height). A tandem pair, as on a real truck: both
+## blades rest lying the same way (toward +x, the passenger side) and sweep up
+## in step, parallel -- never crossing. The first blade parks just short of
+## the second's pivot, and the second just short of the glass's edge.
+const PIVOTS: Array[float] = [0.18, 0.58]
+const BLADE_REACH: float = 0.75
 ## How far inside the glass the drops sit, toward the cab.
 const INSET: float = 0.012
 const ARM_COLOR := Color("1d2226")
@@ -86,9 +89,8 @@ func _refresh(delta: float) -> void:
 	material.set_shader_parameter(&"wiper_time", wiper_time)
 	material.set_shader_parameter(&"rain_amount", 0.85 if raining else 0.0)
 	var angle: float = sweep_angle(wiper_time)
-	for index: int in range(arms.size()):
-		var side: float = 1.0 if PIVOTS[index] < 0.5 else -1.0
-		arms[index].rotation.z = angle * side
+	for arm: Node3D in arms:
+		arm.rotation.z = angle
 
 
 func _build_arm(index: int) -> Node3D:
@@ -96,7 +98,6 @@ func _build_arm(index: int) -> Node3D:
 	pivot.name = "WiperPivot%d" % index
 	pivot.position = Vector3((PIVOTS[index] - 0.5) * width, -height * 0.5 + 0.02 * height, -0.02)
 	add_child(pivot)
-	var side: float = 1.0 if PIVOTS[index] < 0.5 else -1.0
 	var length: float = BLADE_REACH * height
 	var arm := MeshInstance3D.new()
 	arm.name = "WiperArm"
@@ -107,8 +108,8 @@ func _build_arm(index: int) -> Node3D:
 	arm_material.roughness = 0.5
 	box.material = arm_material
 	arm.mesh = box
-	# Lying along the bottom edge toward the middle of the glass at rest.
-	arm.position = Vector3(side * length * 0.5, 0.0, 0.0)
+	# Lying along the bottom edge toward +x at rest.
+	arm.position = Vector3(length * 0.5, 0.0, 0.0)
 	pivot.add_child(arm)
 	return pivot
 

@@ -86,6 +86,13 @@ func _check_seasons() -> void:
 	_expect(is_equal_approx(summer.g, 0.55 * LowpolyMaterials.DETAIL_GAIN), "Summer leaves keep the palette's green (got %s)" % summer)
 	_expect(autumn.r > autumn.g and autumn.r > summer.r + 0.2, "Autumn leaves turn warm, red over green (got %s)" % autumn)
 	_expect(LowpolyMaterials.seasonal_color("glass", glass.albedo_color) == glass.albedo_color, "Autumn leaves glass, paint and the rest alone")
+	# Pines share the broadleaf trees' leaf palette, but keep their needles.
+	var pine: Color = LowpolyMaterials.textured_for(leaf, false, true).albedo_color
+	_expect(pine.is_equal_approx(summer), "A pine stays green in autumn (got %s)" % pine)
+	_expect(LowpolyMaterials.is_evergreen("res://assets/models/environment/forest/sm_env_forest_pine_tall.glb")
+		and LowpolyMaterials.is_evergreen("res://assets/models/environment/forest/sm_env_forest_pine_sapling.glb")
+		and not LowpolyMaterials.is_evergreen("res://assets/models/environment/forest/sm_env_forest_oak.glb"),
+		"Pines are evergreen, oaks aren't")
 
 	# Whole route, forced to autumn: the trees that end up drawn (batched or
 	# not) wear autumn leaves, and the terrain dries out.
@@ -102,6 +109,13 @@ func _check_seasons() -> void:
 	await process_frame
 	var warm_leaves: int = 0
 	var green_leaves: int = 0
+	var green_pines: int = 0
+	# The batcher's merged pine meshes, to tell a pine's green from a
+	# broadleaf tree that failed to turn.
+	var pine_meshes: Array = []
+	for key: String in DressingBatcher._model_cache:
+		if LowpolyMaterials.is_evergreen(key.get_slice("|", 0)):
+			pine_meshes.append(DressingBatcher._model_cache[key])
 	for instance: Node in route.find_children("*", "GeometryInstance3D", true, false):
 		var meshes: Array[Mesh] = []
 		if instance is MeshInstance3D and (instance as MeshInstance3D).mesh != null:
@@ -117,9 +131,12 @@ func _check_seasons() -> void:
 					continue
 				if material.albedo_color.r > material.albedo_color.g:
 					warm_leaves += 1
+				elif mesh in pine_meshes or _in_pine(instance):
+					green_pines += 1
 				else:
 					green_leaves += 1
-	_expect(warm_leaves > 0 and green_leaves == 0, "An autumn route's leaves are all warm (%d warm, %d still green)" % [warm_leaves, green_leaves])
+	_expect(warm_leaves > 0 and green_leaves == 0, "An autumn route's broadleaf trees are all warm (%d warm, %d still green)" % [warm_leaves, green_leaves])
+	_expect(green_pines > 0, "...and its pines stay green (%d)" % green_pines)
 	var dry: float = -1.0
 	for body: Node in route.find_children("Terrain_*", "StaticBody3D", true, false):
 		for mesh: Node in body.get_children():
@@ -133,6 +150,14 @@ func _check_seasons() -> void:
 	network.set(&"world_seed", 0)
 	network.set(&"world_house_count", 0)
 	LowpolyMaterials.set_season(WorldMood.Season.SUMMER)
+
+
+func _in_pine(node: Node) -> bool:
+	while node != null:
+		if LowpolyMaterials.is_evergreen(node.scene_file_path):
+			return true
+		node = node.get_parent()
+	return false
 
 
 ## #20: birds by day and at dusk, crickets at night, nothing but rain when it

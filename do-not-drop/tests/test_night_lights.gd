@@ -7,7 +7,9 @@ extends SceneTree
 ## - by day nothing glows and there are no halos;
 ## - a night route never leaves its glow behind for the next, daytime one
 ##   (the batcher's merged meshes are cached per darkness);
-## - the house that waits for its box still has its porch light on.
+## - the house that waits for its box still has its porch light on;
+## - the halos aren't culled as one route-long block (the first version's
+##   visibility range hid them all) and keep each lamp's size.
 
 var _failures: int = 0
 
@@ -53,6 +55,12 @@ func _survey(label: String) -> Dictionary:
 	var flares := route.get_node_or_null(^"NightFlares") as MultiMeshInstance3D
 	if flares != null:
 		result.halos = flares.multimesh.instance_count
+		# The first version hid them all: a visibility range is measured from
+		# the centre of the whole route's MultiMesh, kilometres off.
+		_expect(flares.visibility_range_end == 0.0 or flares.visibility_range_end > flares.get_aabb().size.length(),
+			"The halos aren't culled as one route-long block (range %.0f m)" % flares.visibility_range_end)
+		_expect((flares.multimesh.mesh.surface_get_material(0) as BaseMaterial3D).billboard_keep_scale,
+			"...and each keeps its own size when turned to the camera")
 	for node: Node in route.find_children("*", "GeometryInstance3D", true, false):
 		for material: Material in _materials(node):
 			var base := material as BaseMaterial3D

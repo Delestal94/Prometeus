@@ -62,7 +62,23 @@ func _initialize() -> void:
 	_expect(bool(vehicle.get(&"controls_enabled")), "Boarding as driver enables the vehicle's controls")
 	_expect(bool(player.get(&"visible")), "Seated player stays visible -- teammates should see them, not just an empty seat")
 	_expect(NodePath(player.get(&"seat_node_path")) == seat.get_path(), "Player remembers which seat it's tracking")
-	player.call(&"leave_seat")
+	# The seat's "taken" marker is for everyone else: the one sitting there
+	# doesn't see it glowing at their shoulder when they turn their head.
+	var seat_point: Node = null
+	for child: Node in seat.get_parent().find_children("*", "Area3D", true, false):
+		if child.get(&"_indicator") != null and child.get_parent() == seat:
+			seat_point = child
+	_expect(seat_point != null, "The driver's seat has its marker")
+	if seat_point != null:
+		_expect(bool(player.call(&"is_local")), "(the test's player is this machine's own)")
+		await process_frame
+		var marker := seat_point.get(&"_indicator") as MeshInstance3D
+		_expect(not marker.visible, "Seated, you don't see your own seat's marker")
+		player.call(&"leave_seat")
+		await process_frame
+		_expect(marker.visible, "...and it's back once you get up")
+	else:
+		player.call(&"leave_seat")
 	_expect(NodePath(player.get(&"seat_node_path")).is_empty(), "Leaving clears the occupied seat")
 	_expect(int(player.get(&"collision_layer")) == 8, "Leaving restores the player's physical collider")
 	_expect(bool(camera.get(&"current")) == false, "Leaving deactivates the seat camera")

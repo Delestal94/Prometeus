@@ -5,8 +5,9 @@ extends SceneTree
 ## - the truck carries a copy of its windshield, with UVs across and up the
 ##   glass, facing into the cab (so from outside it's culled);
 ## - it's shown only while it rains and the camera is inside the truck;
-## - with the engine running in the rain the two wipers sweep, from the same
-##   clock the shader clears the drops with, and at rest they lie flat.
+## - with the engine running in the rain the two wipers sweep, in step, from
+##   the same clock the shader clears the drops with, and at rest they lie
+##   flat, side by side (never crossing) and within the glass.
 
 var _failures: int = 0
 
@@ -61,6 +62,18 @@ func _run() -> void:
 	await process_frame
 	_expect(not rain.overlay.visible, "Rain, from outside the truck: nothing drawn")
 
+	# A tandem pair: at rest both lie the same way, the first parked short
+	# of the second's pivot and the second short of the glass's edge -- they
+	# never cross (the first version's pair met in an X in the middle).
+	var reach: float = WindshieldRain.BLADE_REACH * rain.height
+	var first_tip: float = (WindshieldRain.PIVOTS[0] - 0.5) * rain.width + reach
+	var second_pivot: float = (WindshieldRain.PIVOTS[1] - 0.5) * rain.width
+	var second_tip: float = second_pivot + reach
+	_expect(first_tip < second_pivot and second_tip < rain.width * 0.5,
+		"The blades rest side by side, on the glass (tips at %.2f and %.2f; second pivot %.2f; edge %.2f)" % [first_tip, second_tip, second_pivot, rain.width * 0.5])
+	for arm: Node3D in rain.arms:
+		_expect((arm.get_child(0) as Node3D).position.x > 0.0, "%s rests lying toward +x" % arm.name)
+
 	# Wipers: the engine on in the rain.
 	_expect(absf(rain.arms[0].rotation.z) < 0.01 and absf(rain.arms[1].rotation.z) < 0.01, "Parked, the blades rest flat")
 	level.call(&"start_debug_delivery")
@@ -70,8 +83,8 @@ func _run() -> void:
 	var t: float = rain.wiper_time
 	_expect(t > 0.5, "With the engine on in the rain, the wipers run (%.2f s)" % t)
 	var angle: float = WindshieldRain.sweep_angle(t)
-	_expect(is_equal_approx(rain.arms[0].rotation.z, angle) and is_equal_approx(rain.arms[1].rotation.z, -angle),
-		"Both blades follow the shared clock, mirrored (%.2f / %.2f, expected ±%.2f)" % [rain.arms[0].rotation.z, rain.arms[1].rotation.z, angle])
+	_expect(is_equal_approx(rain.arms[0].rotation.z, angle) and is_equal_approx(rain.arms[1].rotation.z, angle),
+		"Both blades follow the shared clock, in step (%.2f / %.2f, expected %.2f)" % [rain.arms[0].rotation.z, rain.arms[1].rotation.z, angle])
 	_expect(is_equal_approx(float(rain.material.get_shader_parameter(&"wiper_time")), t), "The shader clears the glass on the same clock")
 	var peak: float = 0.0
 	for step: int in range(40):

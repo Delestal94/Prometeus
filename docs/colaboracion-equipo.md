@@ -69,7 +69,11 @@ ampliados (lista del README). Hacé `git pull` antes de seguir con `level_base.g
 - **`presentation/first_person_camera.gd` (N-504):** límites de mirada por asiento, leídos de un
   `Marker3D` "LookLimits" en cada punto de ojos de `vehicle.tscn` (metadatos `pitch_min`,
   `pitch_max`, `yaw_max`); nueva variable `pitch_down_limit_degrees`; si la vista queda a menos de
-  10 cm de una pared, retrocede por la línea de mirada. `seat_point.gd` no se tocó.
+  10 cm de una pared, retrocede por la línea de mirada.
+- **`interaction/seat_point.gd` (revisión visual de N-504):** el indicador de asiento ocupado
+  (la bolita verde/salmón, #94) se oculta **solo para quien está sentado en ese asiento**: al girar
+  la cabeza desde el volante se veía como un disco salmón flotando en la ventanilla. Los demás lo
+  siguen viendo igual. Función nueva `_local_player_seated_here()`; `test_interaction` lo cubre.
 - **`README.md`:** tests nuevos anotados en las dos listas.
 - **`vehicle.tscn` / `vehicle.gd` (de Nacho, aviso por si los usás):** el camión ya no tiene
   `continuous_cd` (#170: frenaba su posición y la carga lo atravesaba; los paquetes y el clutter

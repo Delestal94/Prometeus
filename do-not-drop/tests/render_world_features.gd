@@ -64,7 +64,8 @@ func _part_stories() -> void:
 				continue
 			seen[kind] = true
 			await _from_road_before(route, story, 25.0, "stories_%s" % ["van_spill", "hen", "billboard"][kind])
-			await _shot(story.global_position + Vector3(6.0, 3.0, 6.0), story.global_position + Vector3.UP * 0.8, "stories_%s_close" % ["van_spill", "hen", "billboard"][kind])
+			var near: Vector3 = [Vector3(6.0, 3.0, 6.0), Vector3(2.2, 1.1, 2.2), Vector3(9.0, 3.5, 9.0)][kind]
+			await _shot(story.global_position + near, story.global_position + Vector3.UP * (0.3 if kind == 1 else 0.8), "stories_%s_close" % ["van_spill", "hen", "billboard"][kind])
 		await _free(level)
 
 
@@ -73,7 +74,7 @@ func _part_vehicles() -> void:
 	for seed_value: int in [777, 11, 4242, 90210, 31337, 2024, 5, 606]:
 		if found.size() == 2:
 			break
-		var level: Node3D = await _level(seed_value, 5, "soleado_dia_verano")
+		var level: Node3D = await _level(seed_value, 5, "soleado_dia_verano", false)
 		var route: Node3D = level.get_node(^"World/Route")
 		for node: Node in route.find_children("*", "Node3D", true, false):
 			var rule: StringName = node.get_meta(&"rule", &"")
@@ -102,8 +103,13 @@ func _part_night() -> void:
 	var house: Node3D = (route.get(&"houses") as Array)[0]
 	await _from_road_before(route, house, 60.0, "night_village_60m")
 	await _from_road_before(route, house, 25.0, "night_village_25m")
+	await _free(level)
+	# The same village unbatched, to find a parked car with lamps (the
+	# hatchback and the pickup have them; the sedan has none).
+	level = await _level(4242, 3, "soleado_noche", false)
+	route = level.get_node(^"World/Route")
 	for node: Node in route.find_children("*", "Node3D", true, false):
-		if node.get_meta(&"rule", &"") == &"parked_vehicle":
+		if node.get_meta(&"rule", &"") == &"parked_vehicle" and not (node as Node3D).scene_file_path.contains("sedan"):
 			await _shot((node as Node3D).global_position + (node as Node3D).global_basis.x * 7.0 + Vector3.UP * 2.0, (node as Node3D).global_position + Vector3.UP * 0.7, "night_parked_car")
 			break
 	await _free(level)
@@ -149,7 +155,7 @@ func _part_door() -> void:
 	bus.emit_signal(&"house_delivery_recorded", 1, &"missed", &"")
 	var other: Node3D = houses[1]
 	var other_front: Vector3 = -other.global_basis.z
-	await _shot(other.global_position + other_front * 4.0 + Vector3.UP * 1.6, other.global_position + other_front * 2.2 + Vector3.UP * 1.25, "door_note")
+	await _shot(other.global_position + other_front * 3.6 + Vector3.UP * 1.8, other.global_position + other_front * 2.3 + Vector3.UP * 1.8, "door_note")
 	await _free(level)
 
 
@@ -166,7 +172,7 @@ func _part_depot() -> void:
 	await _shot(sign_node.global_position + Vector3(0.0, 0.0, 5.0), sign_node.global_position, "depot_days_sign")
 	await _shot(depot.to_global(Vector3(0.0, 1.7, 14.0)), sign_node.global_position, "depot_days_sign_from_floor")
 	var wall: Node3D = board.get_node(^"PhotoWall")
-	await _shot(wall.global_position + Vector3(-3.0, -0.4, 0.0), wall.global_position, "depot_photo_wall")
+	await _shot(wall.global_position + Vector3(-1.9, -0.35, -0.3), wall.global_position, "depot_photo_wall")
 	await _free(level)
 
 
@@ -192,11 +198,15 @@ func _part_look() -> void:
 
 # --- Helpers ------------------------------------------------------------------
 
-func _level(seed_value: int, houses: int, mood: String) -> Node3D:
+## `batched` false leaves the dressing as nodes (the batcher folds pieces into
+## MultiMeshes and their `rule` meta goes with them), for shots that have to
+## find one placed piece.
+func _level(seed_value: int, houses: int, mood: String, batched: bool = true) -> Node3D:
 	root.get_node(^"/root/NetworkManager").set(&"world_seed", seed_value)
 	root.get_node(^"/root/NetworkManager").set(&"world_house_count", houses)
 	WorldMood.forced_label = mood
 	var level: Node3D = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	level.get_node(^"World/Route").set(&"batch_dressing", batched)
 	root.add_child(level)
 	current_scene = level
 	for layer: Node in level.find_children("*", "CanvasLayer", false, false):

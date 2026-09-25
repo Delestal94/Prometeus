@@ -51,6 +51,10 @@ func _run() -> void:
 						"seed %d: the competition's van is there with its back door open" % seed_value)
 					_expect(story.find_children("SpilledBox*", "", true, false).size() >= 4, "seed %d: its parcels lie strewn about" % seed_value)
 					_expect(story.find_child("VanCollision", true, false) is StaticBody3D, "seed %d: the crashed van is solid" % seed_value)
+					var van := story.find_child("CompetitorVan", true, false) as Node3D
+					var nose: Vector3 = story.to_local(van.to_global(Vector3(0.0, 0.3, -2.6)))
+					var tail: Vector3 = story.to_local(van.to_global(Vector3(0.0, 0.3, 2.3)))
+					_expect(nose.y < tail.y - 0.8 and nose.y < 0.0, "seed %d: the van is nosed down into the ditch (nose %.2f m, tail %.2f m)" % [seed_value, nose.y, tail.y])
 				RoadsideStory.Kind.HEN:
 					var hen := story.find_child("Hen", true, false) as Node3D
 					_expect(hen != null and story.find_child("BrokenBox", true, false) != null, "seed %d: a hen next to her broken box" % seed_value)
@@ -62,6 +66,14 @@ func _run() -> void:
 					var slogan := story.find_child("Slogan", true, false) as Label3D
 					_expect(slogan != null and slogan.text.contains("casi"), "seed %d: the billboard carries the slogan" % seed_value)
 					_expect(story.find_child("BillboardCollision", true, false) is StaticBody3D, "seed %d: the billboard's legs are solid" % seed_value)
+					var panel_width: float = RoadsideStory.BILLBOARD_SIZE.x - 0.3
+					for label_name: String in ["Brand", "Slogan"]:
+						var label := story.find_child(label_name, true, false) as Label3D
+						var width: float = label.font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x * label.pixel_size
+						_expect(absf(label.position.x) + width * 0.5 < panel_width * 0.5, "seed %d: the %s fits on the panel (%.1f m of %.1f)" % [seed_value, label_name, width, panel_width])
+					var parcel := story.find_child("BillboardParcel", true, false) as Node3D
+					_expect(parcel.position.y >= RoadsideStory.BILLBOARD_HEIGHT + RoadsideStory.BILLBOARD_SIZE.y - 0.01,
+						"seed %d: the parcel sits on the top edge, not over the lettering" % seed_value)
 		var signature: Array = _signature(route, stories)
 		route.free()
 		await process_frame
@@ -71,6 +83,11 @@ func _run() -> void:
 		_expect(signature == _signature(again, again_stories), "seed %d: the same seed tells the same stories in the same spots" % seed_value)
 		again.free()
 		await process_frame
+	# A longer translation of the slogan is set smaller, not left to overflow.
+	var long_line: String = "entregamos casi todo, casi siempre, casi enteros"
+	var fitted: int = RoadsideStory.fit_font_size(long_line, 80, 7.2)
+	_expect(fitted < 80 and RoadsideStory.FONT.get_string_size(long_line, HORIZONTAL_ALIGNMENT_LEFT, -1, fitted).x * RoadsideStory.BILLBOARD_PIXEL_SIZE <= 7.2,
+		"A slogan too long for the billboard is set smaller until it fits (%d px)" % fitted)
 	_expect(kinds_seen.size() == 3, "Every kind of story turns up across seeds (%s)" % kinds_seen)
 	_expect(total >= 6, "Stories do turn up (%d over 8 routes)" % total)
 

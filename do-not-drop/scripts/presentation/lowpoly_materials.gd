@@ -53,6 +53,11 @@ const AUTUMN: Dictionary = {
 	"grass": [Color(0.62, 0.55, 0.28), 0.45],
 }
 
+## Models that keep their green all year: a conifer's needles don't turn
+## (matched against the model's file name; they share the broadleaf trees'
+## leaf palette, so it can't go by material).
+const EVERGREEN: Array[String] = ["pine"]
+
 ## The session's season (WorldMood.Season: 0 summer, 1 autumn). Set by
 ## WorldMood.pick() before anything is dressed; part of every cache key, so a
 ## restart into the other season never reuses the last one's leaves.
@@ -117,8 +122,8 @@ static func light_up(root: Node, keys: Array) -> int:
 
 
 ## The palette colour this season: summer as authored, autumn per AUTUMN.
-static func seasonal_color(key: String, color: Color) -> Color:
-	if season != 1 or not AUTUMN.has(key):
+static func seasonal_color(key: String, color: Color, evergreen: bool = false) -> Color:
+	if season != 1 or evergreen or not AUTUMN.has(key):
 		return color
 	var target: Color = AUTUMN[key][0]
 	var shifted: Color = color.lerp(target, float(AUTUMN[key][1]))
@@ -134,6 +139,7 @@ static func seasonal_color(key: String, color: Color) -> Color:
 ## doesn't switch that on by itself. Those materials are cached apart, so a
 ## model without the bake never shares a material with one that has it.
 static func apply(root: Node) -> void:
+	var evergreen: bool = is_evergreen(root.scene_file_path)
 	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
 		var instance := node as MeshInstance3D
 		if instance.mesh == null:
@@ -145,7 +151,7 @@ static func apply(root: Node) -> void:
 			if source == null:
 				continue
 			var baked: bool = (instance.mesh.surface_get_format(surface) & Mesh.ARRAY_FORMAT_COLOR) != 0
-			var textured: BaseMaterial3D = textured_for(source, baked)
+			var textured: BaseMaterial3D = textured_for(source, baked, evergreen)
 			if textured != null:
 				instance.set_surface_override_material(surface, textured)
 			elif baked and not source.vertex_color_use_as_albedo:
@@ -156,6 +162,15 @@ static var _vertex_coloured: Dictionary = {}
 
 
 ## The same material with the vertex colour multiplied in, shared per source.
+## Whether the model at `path` keeps its green in autumn (EVERGREEN).
+static func is_evergreen(path: String) -> bool:
+	var file: String = path.get_file()
+	for word: String in EVERGREEN:
+		if file.contains(word):
+			return true
+	return false
+
+
 static func _with_vertex_colour(source: BaseMaterial3D) -> BaseMaterial3D:
 	var key: int = source.get_instance_id()
 	if not _vertex_coloured.has(key):
@@ -167,13 +182,13 @@ static func _with_vertex_colour(source: BaseMaterial3D) -> BaseMaterial3D:
 
 ## The detailed twin of a palette material, or null when it has no detail
 ## entry (glass, paint, signs -- those stay flat on purpose).
-static func textured_for(source: BaseMaterial3D, vertex_colour: bool = false) -> BaseMaterial3D:
+static func textured_for(source: BaseMaterial3D, vertex_colour: bool = false, evergreen: bool = false) -> BaseMaterial3D:
 	if source.albedo_texture != null and source.uv1_world_triplanar:
 		return null  # already one of ours
 	var key: String = source.resource_name.get_slice(".", 0)
 	if not DETAIL.has(key):
 		return null
-	var cache_key: String = "%s|%s|%d|%d" % [key, source.albedo_color.to_html(), season if AUTUMN.has(key) else 0, int(vertex_colour)]
+	var cache_key: String = "%s|%s|%d|%d" % [key, source.albedo_color.to_html(), season if AUTUMN.has(key) and not evergreen else 0, int(vertex_colour)]
 	if _materials.has(cache_key):
 		return _materials[cache_key]
 	var map: String = DETAIL[key][0]
@@ -182,7 +197,7 @@ static func textured_for(source: BaseMaterial3D, vertex_colour: bool = false) ->
 		_textures[map] = load(DETAIL_DIR % map)
 	var material := StandardMaterial3D.new()
 	material.resource_name = key
-	var base: Color = seasonal_color(key, source.albedo_color)
+	var base: Color = seasonal_color(key, source.albedo_color, evergreen)
 	material.albedo_color = Color(base.r * DETAIL_GAIN, base.g * DETAIL_GAIN, base.b * DETAIL_GAIN, base.a)
 	material.albedo_texture = _textures[map]
 	material.uv1_triplanar = true
