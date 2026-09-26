@@ -271,30 +271,31 @@ siguen pendientes").
 - [x] **S-107.4** (commit `1fb41b9`) Test `tests/test_order_balancer.gd`: 1000 semillas por cantidad de casas, ninguna
   rompe las reglas; la misma semilla da el mismo pedido (todos los peers calculan igual).
 
-### S-108 · Simulador de balance de trampas (reemplaza al playtesting de balance) — A · `Astra · xhigh` para diseñarlo, `Sol · high` para implementarlo · Aviso: no
+### S-108 · Simulador de balance de trampas (reemplaza al playtesting de balance) — A · `Astra · xhigh` para diseñarlo, `Sol · high` para implementarlo · Aviso: no · **[x] `8d04262`**
 
 Cierra lo que antes era "#41/#51/#59/#67: falta playtesting". No mide diversión: mide si cada
 trampa es **perdible, ganable y con momentos de casi-perder**, que es lo que `parametros-diseno.md`
 pide de los números.
 
-- [ ] **S-108.1 Grabar manejo real.** `tests/sim_record_drive.gd`: maneja el camión de verdad por una
+- [x] **S-108.1 Grabar manejo real.** (commit `8d04262`) `tests/sim_record_drive.gd`: maneja el camión de verdad por una
   ruta (mismo conductor automático que `test_vehicle_stress.gd`, pero respetando curvas) y guarda por
   frame de física lo que las trampas reciben: aceleración, inclinación de la caja, impactos (delta de
   velocidad). Salida: `tests/sim_data/drive_<semilla>.json`. 5 semillas.
-- [ ] **S-108.2 Pasajeros bot.** Tres perfiles: *ausente* (no toca nada), *torpe* (reacciona con
+- [x] **S-108.2 Pasajeros bot.** (commit `8d04262`) Tres perfiles: *ausente* (no toca nada), *torpe* (reacciona con
   0,8 s de retraso, acierta 60 % de las secuencias, suelta el botón 20 % del tiempo) y *experto*
   (0,25 s, 95 %). Cada perfil también con +150 ms de latencia de red simulada.
-- [ ] **S-108.3 Simulador.** `tests/sim_trap_balance.gd` (no va en la batería, como `bench_drive.gd`):
+- [x] **S-108.3 Simulador.** (commit `8d04262`) `tests/sim_trap_balance.gd` (no va en la batería, como `bench_drive.gd`):
   para cada `data/traps/*.tres` × perfil × manejo grabado, corre el `ITrapBehavior` real 50 veces y
   anota % arruinadas, segundos en riesgo, y *casi-pérdidas* (integridad mínima entre 5 y 25 sin llegar a
   0). Imprime una tabla y la guarda en `tests/sim_data/balance_report.md`.
-- [ ] **S-108.4 Objetivos** (escribirlos en `docs/parametros-diseno.md` antes de ajustar):
+- [x] **S-108.4 Objetivos** (commit `8d04262`; escritos antes del ajuste) en `docs/parametros-diseno.md`:
   ausente arruina 80-100 %; torpe 30-55 % con al menos 1 casi-pérdida por viaje; experto < 12 %.
   La latencia de 150 ms no puede subir el % del experto más de 8 puntos.
-- [ ] **S-108.5 Ajustar** los `params` de los `.tres` hasta cumplir los objetivos (sin tocar scripts de
+- [x] **S-108.5 Ajustar** (commit `8d04262`) los `params` de los `.tres` hasta cumplir los objetivos (sin tocar scripts de
   trampa) y documentar valor viejo → nuevo y por qué en `parametros-diseno.md`.
 
-**Hecho cuando**: el reporte muestra las 7 trampas dentro de los objetivos y el doc lo explica.
+**Hecho**: el reporte muestra las 6 trampas interactivas dentro de los objetivos y documenta
+`Frágil` como excepción dependiente del conductor (sus perfiles son idénticos porque no consume input).
 
 ### S-109 · Algo que hacer cuando tu paquete ya se arruinó — A · `Sol · xhigh` · Aviso: no
 
