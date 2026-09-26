@@ -50,7 +50,96 @@ jobs:
           JOBS: 2
           # A hung test shows up in 2 minutes instead of 5.
           TEST_TIMEOUT: 120
+          REPORT_FILE: ${{ runner.temp }}/godot-headless-report.csv
         run: bash tools/run-tests.sh -v
+
+      - name: Upload per-test audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-headless-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/godot-headless-report.csv
+          if-no-files-found: warn
+          retention-days: 90
+
+  runtime-audit:
+    name: Runtime performance and visual captures (Godot 4.7.2)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+
+      - name: Import project
+        run: timeout 600 ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path do-not-drop --import
+
+      - name: Record runner metadata
+        run: |
+          mkdir -p "$RUNNER_TEMP/runtime-audit/captures" "$RUNNER_TEMP/godot-userdata"
+          {
+            echo "commit=$GITHUB_SHA"
+            echo "ref=$GITHUB_REF"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "runner_os=$RUNNER_OS"
+            echo "image_os=$ImageOS"
+            echo "image_version=$ImageVersion"
+            echo "godot_version=$(~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --version)"
+            echo "benchmark_mode=delivery"
+            echo "benchmark_seed=4242"
+            echo "benchmark_duration_seconds=30"
+            echo "benchmark_hitch_threshold_ms=33"
+            echo "render_resolution=1280x720"
+            echo "render_driver=software (LIBGL_ALWAYS_SOFTWARE=1)"
+            uname -a
+            lscpu
+            free -h
+          } > "$RUNNER_TEMP/runtime-audit/runner-metadata.txt"
+
+      - name: Capture HUD states for visual review
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          XDG_DATA_HOME: ${{ runner.temp }}/godot-userdata
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          xvfb-run -a "$GODOT" --path do-not-drop --script res://tests/render_hud.gd 2>&1 | tee "$RUNNER_TEMP/runtime-audit/render-hud.log"
+          find "$XDG_DATA_HOME" -type f -name 'render_hud_*.png' -exec cp {} "$RUNNER_TEMP/runtime-audit/captures/" \;
+          capture_count=$(find "$RUNNER_TEMP/runtime-audit/captures" -type f -name '*.png' | wc -l)
+          test "$capture_count" -ge 5
+
+      - name: Measure rendered performance
+        if: always()
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          timeout 120 xvfb-run -a "$GODOT" --path do-not-drop --script res://tests/bench_drive.gd -- --seconds=30 --seed=4242 --hitch=33 2>&1 | tee "$RUNNER_TEMP/runtime-audit/bench-drive.log"
+
+      - name: Upload runtime audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/runtime-audit/
+          if-no-files-found: warn
+          retention-days: 90
 
   network-pair:
     name: Network pair (Godot 4.7.2)
@@ -82,4 +171,46 @@ jobs:
       - name: Run two-process gameplay checks
         env:
           GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
-        run: bash tools/run-net-pair.sh
+        run: |
+          set -o pipefail
+          bash tools/run-net-pair.sh | tee "$RUNNER_TEMP/network-pair-audit.log"
+
+      - name: Upload network latency audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-pair-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/network-pair-audit.log
+          if-no-files-found: warn
+          retention-days: 90
+
+  network-trio:
+    name: Network trio with late join (Godot 4.7.2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+
+      - name: Import project
+        run: timeout 600 ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path do-not-drop --import
+
+      - name: Run three-peer late-join gameplay check
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+        run: bash tools/run-net-trio.sh
