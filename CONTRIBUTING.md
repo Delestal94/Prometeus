@@ -55,6 +55,7 @@ Un tag `v*` en `main` (`git tag v0.2.0 && git push origin v0.2.0`) dispara
 `project.godot` (el menú la muestra abajo a la izquierda), exporta Windows y Linux con
 `tools/export/export_presets.cfg`, prueba que la build de Linux arranque sin errores de
 carga y sube `TakeMyPackage-<versión>-windows.zip` y `-linux.zip` al release del tag.
+También adjunta `SHA256SUMS.txt` para verificar la integridad de los ZIP descargados.
 El `export_presets.cfg` de `do-not-drop/` sigue siendo local de cada uno (está en
 `.gitignore`); si cambiás filtros o rutas en el tuyo, copiá el cambio al de `tools/export/`.
 También se puede correr a mano desde Actions ("Run workflow"): deja los zip como artefacto

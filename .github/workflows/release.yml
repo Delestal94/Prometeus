@@ -119,13 +119,17 @@ jobs:
         run: |
           (cd builds/windows && zip -qr "../../TakeMyPackage-${VERSION}-windows.zip" .)
           (cd builds/linux && zip -qr "../../TakeMyPackage-${VERSION}-linux.zip" .)
+          sha256sum *.zip > SHA256SUMS.txt
           ls -la *.zip
+          cat SHA256SUMS.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: builds-${{ steps.version.outputs.version }}
-          path: '*.zip'
+          path: |
+            *.zip
+            SHA256SUMS.txt
 
   publish:
     name: Publish GitHub release
@@ -146,4 +150,4 @@ jobs:
         run: |
           tag="$GITHUB_REF_NAME"
           gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes
-          gh release upload "$tag" *.zip --clobber
+          gh release upload "$tag" *.zip SHA256SUMS.txt --clobber
