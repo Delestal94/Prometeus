@@ -64,10 +64,15 @@ var _last_prompt: String = ""
 var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
+var _ping_wheel: PingWheel
+var _ping_held: bool = false
+var _ping_hold_seconds: float = 0.0
+var _ping_wheel_open: bool = false
 const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const PingWheelScene = preload("res://scripts/ui/ping_wheel.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
 ## "Personajes" for its clips (Idle/Walk/Stroll/TurnInPlace/Jump/PickUpPackage/
@@ -232,6 +237,7 @@ func _enter_tree() -> void:
 ## air with collisions off. package.carrier is only ever set on the host, so
 ## this only acts there.
 func _exit_tree() -> void:
+	_close_ping_wheel()
 	var network: Node = get_node_or_null("/root/NetworkManager")
 	if network != null and network.call(&"is_host"):
 		_release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
@@ -274,6 +280,8 @@ func _ready() -> void:
 		return
 	_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_ping_wheel = PingWheelScene.new()
+	add_child(_ping_wheel)
 	_probe.area_entered.connect(_on_probe_entered)
 	_probe.area_exited.connect(_on_probe_exited)
 
@@ -520,12 +528,23 @@ func is_local() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_local() or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if not is_local():
 		return
-	# Ping works seated or not -- it's communication, not a physical action,
-	# so it's checked before the _seated gate below applies to the rest.
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not _ping_wheel_open:
+		return
 	if event.is_action_pressed(&"ui_ping"):
-		_send_ping()
+		_begin_ping_input()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_released(&"ui_ping"):
+		_finish_ping_input()
+		get_viewport().set_input_as_handled()
+		return
+	if _ping_wheel_open and event is InputEventMouseMotion:
+		_ping_wheel.select_from_pointer(event.position)
+		get_viewport().set_input_as_handled()
+		return
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
 	if event.is_action_pressed(&"use_card"):
 		_use_card()
@@ -561,6 +580,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## need authority the way movement/input do.
 func _process(delta: float) -> void:
 	_flinch_time = maxf(_flinch_time - delta, 0.0)
+	_update_ping_input(delta)
 	# Runs for every peer's copy of this player, local or not -- anim_state
 	# is only ever written by the owning peer (see _update_movement_anim()
 	# and pick_up() below) and reaches everyone else through the
@@ -1027,15 +1047,52 @@ func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
 	return _carry_component.raycast(from, to, mask)
 
 
-## MVP has a single, always-available ping ("¡Cuidado!") instead of a wheel
-## of options -- docs/controles-y-ui.md sketches "¡ayuda!"/"¡cuidado!" as
-## examples, not a mandate, and one message covers the actual need (warn
-## teammates) without a second input to design around it.
 const PING_LABEL: String = "¡Cuidado!"
+const PING_WHEEL_HOLD_SECONDS: float = 0.28
 
 
-func _send_ping() -> void:
-	_interaction_component.send_ping()
+func _send_ping(label: String = PING_LABEL) -> void:
+	_interaction_component.send_ping(label)
+
+
+func _begin_ping_input() -> void:
+	if _ping_held:
+		return
+	_ping_held = true
+	_ping_hold_seconds = 0.0
+
+
+func _update_ping_input(delta: float) -> void:
+	if not is_local() or not _ping_held:
+		return
+	_ping_hold_seconds += delta
+	if not _ping_wheel_open and _ping_hold_seconds >= PING_WHEEL_HOLD_SECONDS:
+		_ping_wheel_open = true
+		_ping_wheel.show_wheel()
+	if _ping_wheel_open:
+		var stick := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
+		if stick.length() >= 0.35:
+			_ping_wheel.select_from_vector(stick * PingWheel.DEAD_ZONE * 2.0)
+
+
+func _finish_ping_input() -> void:
+	if not _ping_held:
+		return
+	var label: String = _ping_wheel.selected_label() if _ping_wheel_open else PING_LABEL
+	_ping_held = false
+	_ping_hold_seconds = 0.0
+	_close_ping_wheel()
+	_send_ping(label)
+
+
+func _close_ping_wheel() -> void:
+	if not _ping_wheel_open:
+		return
+	_ping_wheel_open = false
+	if is_instance_valid(_ping_wheel):
+		_ping_wheel.hide_wheel()
+	if is_local() and not get_tree().paused:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _use_card() -> void:

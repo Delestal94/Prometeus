@@ -4,6 +4,7 @@ extends "res://scripts/ui/hud/hud_prompts.gd"
 
 const PING_DISPLAY_SECONDS: float = 2.5
 const EVENT_DISPLAY_SECONDS: float = 6.0
+const PingCatalogData = preload("res://scripts/ui/ping_catalog.gd")
 
 
 func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
@@ -13,10 +14,11 @@ func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
 	ping_indicator.text = ""
 	ping_seconds_left = PING_DISPLAY_SECONDS
 	if peer_id != NetworkManager.local_id():
-		_mark_pinger(peer_id)
+		_mark_pinger(peer_id, label)
 
 
-func _mark_pinger(peer_id: int) -> void:
+func _mark_pinger(peer_id: int, label: String) -> void:
+	var option: Dictionary = PingCatalogData.option(label)
 	for player: Node in get_tree().get_nodes_in_group(&"player"):
 		if player.get_multiplayer_authority() != peer_id or not player is Node3D:
 			continue
@@ -25,11 +27,11 @@ func _mark_pinger(peer_id: int) -> void:
 			old.free()
 		var marker := Label3D.new()
 		marker.name = "PingMarker"
-		marker.text = "!"
+		marker.text = String(option["icon"])
 		marker.font = load(UiTheme.DISPLAY_FONT_PATH)
 		marker.font_size = 110
 		marker.outline_size = 18
-		marker.modulate = UiTheme.YELLOW
+		marker.modulate = option["color"]
 		marker.outline_modulate = UiTheme.INK
 		marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		marker.no_depth_test = true

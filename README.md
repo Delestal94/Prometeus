@@ -127,9 +127,9 @@ sensibilidad de la mirada, invertir eje Y, pantalla completa — se guardan en
 `user://settings.cfg`) y **Salir**. Desde la pausa se llega a las mismas
 opciones y a **Menú**, que deja la sesión limpia antes de volver.
 
-Cualquier jugador puede pingear "¡Cuidado!" con el clic de la rueda del mouse (o
-D-pad arriba en gamepad) para avisar a los demás sin depender de voice chat externo —
-aparece arriba de la pantalla de todos por unos segundos, con quién lo mandó.
+Cualquier jugador puede pingear "¡Cuidado!" con un toque del clic de la rueda del mouse
+(o D-pad arriba en gamepad); al mantenerlo aparece una rueda de seis mensajes elegibles
+con mouse o stick derecho. El aviso muestra quién lo mandó sin depender de voice chat.
 
 **Progreso, variantes y espectador** (2026-09-23): las entregas exitosas y el puntaje
 acumulado se guardan en `user://unlock_progress.json`. Desde **Progreso** y
@@ -509,9 +509,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   recorta a 10 entradas, marca correctamente un nuevo récord y sobrevive a
   guardar/cargar de disco (usa un archivo de prueba aparte, no el guardado
   real).
-- `test_ping` — el sistema de pings: `EventBus.request_ping()` atribuye
-  correctamente al emisor, y `Player._send_ping()` llega hasta ahí con la
-  posición y el mensaje reales.
+- `test_ping` — la rueda de pings: las seis etiquetas llegan por
+  `EventBus.request_ping()`, se atribuyen al emisor y `Player._send_ping()` conserva
+  la posición y el mensaje reales.
 - `test_ruin_feedback` — el paquete arruinado explota en confeti una sola vez,
   en su propia posición (no en el origen del mundo), y se limpia solo al
   terminar.

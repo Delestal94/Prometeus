@@ -92,15 +92,15 @@ func update_highlight(target: Node) -> void:
 		player._highlighted.call(&"highlight", true)
 
 
-func send_ping() -> void:
+func send_ping(label: String) -> void:
 	var network: Node = player.get_node_or_null("/root/NetworkManager")
 	var bus: Node = player.get_node_or_null("/root/EventBus")
 	if bus == null:
 		return
 	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
-		bus.rpc_id(1, &"request_ping", player.reach_origin(), player.PING_LABEL)
+		bus.rpc_id(1, &"request_ping", player.reach_origin(), label)
 	else:
-		bus.call(&"request_ping", player.reach_origin(), player.PING_LABEL)
+		bus.call(&"request_ping", player.reach_origin(), label)
 
 
 func use_card() -> void:
