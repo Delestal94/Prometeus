@@ -9,7 +9,8 @@
 #   tools/run-tests.sh -v ...          # also print the log of every failure
 #
 # Env: GODOT (path to the Godot 4 console binary), JOBS (parallel processes,
-# default: half the cores, at most 6), TEST_TIMEOUT (seconds per test, 300).
+# default: half the cores, at most 6), TEST_TIMEOUT (seconds per test, 300),
+# REPORT_FILE (optional CSV path for per-test status and duration).
 #
 # Not run here, on purpose: render_*.gd and check_*.gd need a real display and
 # someone looking at the images -- that's the revisor-visual agent's job.
@@ -69,6 +70,47 @@ if [ ${#TESTS[@]} -eq 0 ]; then
 	exit 2
 fi
 
+# Keep historically slow tests at the front of xargs' work queue. With a small
+# worker pool, longest-first scheduling reduces the tail without changing test
+# isolation, coverage or parallelism. Refresh this list from the per-test
+# durations printed in CI; names not listed retain their normal discovery order.
+SLOW_TESTS=(
+	test_route_fuzz
+	test_vehicle_stress
+	test_roadside_stories
+	test_vehicle_handling
+	test_route_duration_budget
+	test_reference_truck
+	test_road_hazards
+	test_trailer_shots
+	test_world_seed
+	test_more_route_segments
+	test_town_signs
+	test_level_endless
+	test_start_yard
+	test_package_handling
+)
+ORDERED_TESTS=()
+for slow_name in "${SLOW_TESTS[@]}"; do
+	for rel in "${TESTS[@]}"; do
+		if [ "${rel##*/}" = "$slow_name.gd" ]; then
+			ORDERED_TESTS+=("$rel")
+			break
+		fi
+	done
+done
+for rel in "${TESTS[@]}"; do
+	is_slow=0
+	for slow_name in "${SLOW_TESTS[@]}"; do
+		if [ "${rel##*/}" = "$slow_name.gd" ]; then
+			is_slow=1
+			break
+		fi
+	done
+	[ "$is_slow" -eq 1 ] || ORDERED_TESTS+=("$rel")
+done
+TESTS=("${ORDERED_TESTS[@]}")
+
 # A fresh clone has no .godot/ import cache: build it once, before the
 # parallel runs, so they don't all race to write it.
 if [ ! -d "$PROJECT/.godot/imported" ]; then
@@ -90,7 +132,7 @@ run_one() {
 	mkdir -p "$data"
 	local data_native="$data"
 	command -v cygpath >/dev/null 2>&1 && data_native="$(cygpath -w "$data")"
-	local attempt code began status
+	local attempt code began status duration
 	began=$(date +%s)
 	for attempt in 1 2; do
 		APPDATA="$data_native" XDG_DATA_HOME="$data" \
@@ -110,10 +152,11 @@ run_one() {
 		fi
 		status=FAIL; break
 	done
-	echo "$status $code" >"$WORK/$name.result"
+	duration=$(( $(date +%s) - began ))
+	echo "$status $code $duration" >"$WORK/$name.result"
 	# CI logs get a line per test as it finishes, so a hang shows which one.
 	if [ -n "${PROGRESS:-}" ]; then
-		echo "  $status $name ($(( $(date +%s) - began ))s)" >&3
+		echo "  $status $name (${duration}s)" >&3
 	fi
 }
 export -f run_one
@@ -131,7 +174,7 @@ pass=0; fail=0; skip=0; flaky=0
 failed=(); skipped=(); flakies=()
 for rel in "${TESTS[@]}"; do
 	name="$(basename "$rel" .gd)"
-	read -r status code <"$WORK/$name.result" 2>/dev/null || { status=FAIL; code="?"; }
+	read -r status code duration <"$WORK/$name.result" 2>/dev/null || { status=FAIL; code="?"; duration=0; }
 	case "$status" in
 		PASS) pass=$((pass + 1)) ;;
 		FLAKY) pass=$((pass + 1)); flaky=$((flaky + 1)); flakies+=("$name") ;;
@@ -140,6 +183,18 @@ for rel in "${TESTS[@]}"; do
 	esac
 done
 elapsed=$(( $(date +%s) - start ))
+
+if [ -n "${REPORT_FILE:-}" ]; then
+	mkdir -p "$(dirname "$REPORT_FILE")"
+	{
+		echo 'test,status,exit_code,duration_seconds'
+		for rel in "${TESTS[@]}"; do
+			name="$(basename "$rel" .gd)"
+			read -r status code duration <"$WORK/$name.result" 2>/dev/null || { status=FAIL; code="?"; duration=0; }
+			printf '%s,%s,%s,%s\n' "$name" "$status" "$code" "$duration"
+		done
+	} >"$REPORT_FILE"
+fi
 
 echo "Tests: $pass/${#TESTS[@]} PASS, $fail FAIL, $skip SKIP  (${elapsed}s, $JOBS en paralelo)"
 [ $flaky -gt 0 ] && echo "  cierre inestable (pasaron, el motor crasheó al salir): ${flakies[*]}"
