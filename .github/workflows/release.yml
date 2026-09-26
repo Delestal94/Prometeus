@@ -15,7 +15,7 @@ on:
         default: '0.0.0-dev'
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   GODOT_VERSION: 4.7.2
@@ -25,16 +25,24 @@ jobs:
     name: Export Windows + Linux
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Version from tag
         id: version
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
         run: |
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             version="${GITHUB_REF_NAME#v}"
           else
-            version="${{ github.event.inputs.version }}"
+            version="${MANUAL_VERSION:-0.0.0-dev}"
+          fi
+          if [[ ! "$version" =~ ^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$ ]]; then
+            echo "::error::invalid version: use up to 64 letters, digits, dots, pluses, or hyphens"
+            exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -66,13 +74,15 @@ jobs:
           rm /tmp/templates.tpz
 
       - name: Stamp version and presets
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          python3 tools/export/stamp_version.py do-not-drop/project.godot "${{ steps.version.outputs.version }}"
+          python3 tools/export/stamp_version.py do-not-drop/project.godot "$VERSION"
           cp tools/export/export_presets.cfg do-not-drop/export_presets.cfg
 
       - name: Import project
         run: |
-          timeout 600 ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path do-not-drop --import || true
+          timeout 600 ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path do-not-drop --import
 
       - name: Export
         run: |
@@ -91,16 +101,24 @@ jobs:
       - name: Smoke test (Linux build loads)
         run: |
           # The exported build must boot to the menu without missing resources or scripts.
-          timeout 60 builds/linux/TakeMyPackage.x86_64 --headless --quit-after 120 2>&1 | tee /tmp/smoke.log || true
+          set +e
+          timeout 60 builds/linux/TakeMyPackage.x86_64 --headless --quit-after 120 2>&1 | tee /tmp/smoke.log
+          smoke_status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$smoke_status" -ne 0 ]]; then
+            echo "::error::exported build exited with status $smoke_status"
+            exit "$smoke_status"
+          fi
           if grep -E "Failed to load|Cannot open|Parse Error|SCRIPT ERROR" /tmp/smoke.log; then
             echo "::error::exported build logged load errors"; exit 1
           fi
 
       - name: Zip builds
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          version="${{ steps.version.outputs.version }}"
-          (cd builds/windows && zip -qr "../../TakeMyPackage-${version}-windows.zip" .)
-          (cd builds/linux && zip -qr "../../TakeMyPackage-${version}-linux.zip" .)
+          (cd builds/windows && zip -qr "../../TakeMyPackage-${VERSION}-windows.zip" .)
+          (cd builds/linux && zip -qr "../../TakeMyPackage-${VERSION}-linux.zip" .)
           ls -la *.zip
 
       - name: Upload artifacts
@@ -109,8 +127,20 @@ jobs:
           name: builds-${{ steps.version.outputs.version }}
           path: '*.zip'
 
-      - name: Attach to release
-        if: github.ref_type == 'tag'
+  publish:
+    name: Publish GitHub release
+    if: github.ref_type == 'tag'
+    needs: export
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: builds-${{ needs.export.outputs.version }}
+
+      - name: Attach builds to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
