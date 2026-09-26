@@ -19,6 +19,9 @@ var _fov_slider: HSlider
 var _shake_slider: HSlider
 var _hud_scale_slider: HSlider
 var _control_help_option: OptionButton
+var _colorblind_check: CheckBox
+var _menu_text_option: OptionButton
+var _sound_subtitles_check: CheckBox
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
@@ -85,8 +88,30 @@ func _build() -> void:
 	_control_help_option.select(GameSettings.control_help_mode)
 	_control_help_option.custom_minimum_size = Vector2(170, 40)
 	help_row.add_child(_control_help_option)
+	UiTheme.register_font_size(_control_help_option, 16)
 	_control_help_option.item_selected.connect(func(index: int) -> void:
 		GameSettings.control_help_mode = _control_help_option.get_item_id(index))
+
+	_colorblind_check = UiTheme.check_box(column, "Paleta para daltonismo", GameSettings.colorblind_palette)
+	_colorblind_check.toggled.connect(func(pressed: bool) -> void: GameSettings.colorblind_palette = pressed)
+
+	var text_row := HBoxContainer.new()
+	text_row.add_theme_constant_override("separation", 12)
+	column.add_child(text_row)
+	UiTheme.label(text_row, "Tamaño de texto de menús", 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_menu_text_option = OptionButton.new()
+	_menu_text_option.add_item("100 %", 100)
+	_menu_text_option.add_item("125 %", 125)
+	_menu_text_option.add_item("150 %", 150)
+	_menu_text_option.select(_menu_text_scale_index())
+	_menu_text_option.custom_minimum_size = Vector2(130, 40)
+	text_row.add_child(_menu_text_option)
+	UiTheme.register_font_size(_menu_text_option, 16)
+	_menu_text_option.item_selected.connect(func(index: int) -> void:
+		GameSettings.menu_text_scale = float(_menu_text_option.get_item_id(index)) / 100.0)
+
+	_sound_subtitles_check = UiTheme.check_box(column, "Subtítulos de sonidos", GameSettings.sound_subtitles)
+	_sound_subtitles_check.toggled.connect(func(pressed: bool) -> void: GameSettings.sound_subtitles = pressed)
 
 	_invert_check = UiTheme.check_box(column, "Invertir eje Y", GameSettings.invert_look_y)
 	_invert_check.toggled.connect(func(pressed: bool) -> void: GameSettings.invert_look_y = pressed)
@@ -193,12 +218,19 @@ func _sync_from_settings() -> void:
 	_hud_scale_slider.set_value_no_signal(GameSettings.hud_scale)
 	_hud_scale_slider.value_changed.emit(GameSettings.hud_scale)
 	_control_help_option.select(GameSettings.control_help_mode)
+	_colorblind_check.set_pressed_no_signal(GameSettings.colorblind_palette)
+	_menu_text_option.select(_menu_text_scale_index())
+	_sound_subtitles_check.set_pressed_no_signal(GameSettings.sound_subtitles)
 	_invert_check.set_pressed_no_signal(GameSettings.invert_look_y)
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
 	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)
 	_quality_slider.value_changed.emit(GameSettings.graphics_quality)
 	for action: StringName in _binding_buttons:
 		(_binding_buttons[action] as Button).text = GameSettings.binding_label(action)
+
+
+func _menu_text_scale_index() -> int:
+	return GameSettings.MENU_TEXT_SCALES.find(GameSettings.menu_text_scale)
 
 
 ## Shown over a paused game as often as over the menu, so it has to keep

@@ -117,6 +117,34 @@ var control_help_mode: int = ControlHelp.BEGINNING:
 		_save()
 signal control_help_mode_changed(mode: int)
 
+## Accessibility choices are independent: someone may need the colour-safe
+## palette without larger menu text, or captions without either visual aid.
+var colorblind_palette: bool = false:
+	set(value):
+		colorblind_palette = value
+		colorblind_palette_changed.emit(colorblind_palette)
+		_save()
+signal colorblind_palette_changed(enabled: bool)
+
+const MENU_TEXT_SCALES: Array[float] = [1.0, 1.25, 1.5]
+var menu_text_scale: float = 1.0:
+	set(value):
+		var closest: float = MENU_TEXT_SCALES[0]
+		for candidate: float in MENU_TEXT_SCALES:
+			if absf(candidate - value) < absf(closest - value):
+				closest = candidate
+		menu_text_scale = closest
+		menu_text_scale_changed.emit(menu_text_scale)
+		_save()
+signal menu_text_scale_changed(scale: float)
+
+var sound_subtitles: bool = false:
+	set(value):
+		sound_subtitles = value
+		sound_subtitles_changed.emit(sound_subtitles)
+		_save()
+signal sound_subtitles_changed(enabled: bool)
+
 ## The last address typed into "Unirse", so rejoining the same friend's LAN
 ## game doesn't mean typing their IP again every session.
 var last_join_address: String = "":
@@ -194,6 +222,9 @@ func reset_to_defaults() -> void:
 	graphics_quality = WORLD_QUALITY.Level.HIGH
 	hud_scale = HUD_SCALE_DEFAULT
 	control_help_mode = ControlHelp.BEGINNING
+	colorblind_palette = false
+	menu_text_scale = 1.0
+	sound_subtitles = false
 	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
 	_loading = false
 	_save()
@@ -278,6 +309,9 @@ func _load() -> void:
 	graphics_quality = int(config.get_value(SECTION, "graphics_quality", WORLD_QUALITY.Level.HIGH))
 	hud_scale = minf(float(config.get_value(SECTION, "hud_scale", HUD_SCALE_DEFAULT)), HUD_SCALE_MAX)
 	control_help_mode = int(config.get_value(SECTION, "control_help_mode", ControlHelp.BEGINNING))
+	colorblind_palette = bool(config.get_value(SECTION, "colorblind_palette", false))
+	menu_text_scale = float(config.get_value(SECTION, "menu_text_scale", 1.0))
+	sound_subtitles = bool(config.get_value(SECTION, "sound_subtitles", false))
 	# Files saved before the HUD default dropped to 60 % hold the old 100 %
 	# default, not a choice anyone made: move them to the new one, once.
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
@@ -311,6 +345,9 @@ func _save() -> void:
 	config.set_value(SECTION, "graphics_quality", graphics_quality)
 	config.set_value(SECTION, "hud_scale", hud_scale)
 	config.set_value(SECTION, "control_help_mode", control_help_mode)
+	config.set_value(SECTION, "colorblind_palette", colorblind_palette)
+	config.set_value(SECTION, "menu_text_scale", menu_text_scale)
+	config.set_value(SECTION, "sound_subtitles", sound_subtitles)
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
 	config.set_value(SECTION, "key_bindings", key_bindings)

@@ -30,6 +30,13 @@ const ORANGE: Color = Color("ff9f1c")     # at risk
 const GRAPE: Color = Color("9b5de5")      # special: Steam, records, events
 const CARDBOARD: Color = Color("e0a867")  # the brand's box colour
 const WHITE: Color = Color("fffdf8")
+## Okabe-Ito subset used for the three cargo states. These hues remain
+## distinguishable for the most common red/green colour-vision deficiencies.
+const OKABE_BLUE: Color = Color("0072b2")
+const OKABE_ORANGE: Color = Color("e69f00")
+const OKABE_VERMILLION: Color = Color("d55e00")
+const STATE_COLORS: Array[Color] = [MINT, ORANGE, RED]
+const OKABE_STATE_COLORS: Array[Color] = [OKABE_BLUE, OKABE_ORANGE, OKABE_VERMILLION]
 ## Text on cards, and the old names still used by a few callers.
 const TEXT: Color = INK
 const BORDER: Color = INK
@@ -88,8 +95,57 @@ static func theme() -> Theme:
 	return _theme
 
 
-static func apply(control: Control) -> void:
+static func apply(control: Control, scale_menu_text: bool = true) -> void:
 	control.theme = theme()
+	control.set_meta(&"ui_menu_text_scale", _settings_text_scale(control) if scale_menu_text else 1.0)
+	if scale_menu_text:
+		var settings: Node = control.get_node_or_null(^"/root/GameSettings")
+		if settings != null:
+			var refresh: Callable = _refresh_text_scale.bind(control)
+			if not settings.is_connected(&"menu_text_scale_changed", refresh):
+				settings.connect(&"menu_text_scale_changed", refresh)
+
+
+static func state_color(state: int, colorblind: bool = false) -> Color:
+	return (OKABE_STATE_COLORS if colorblind else STATE_COLORS)[clampi(state, 0, 2)]
+
+
+## Registers an explicit font size so it can follow the menu-only scale live.
+## HUD roots opt out in apply(); nested menu panels opt back in on themselves.
+static func register_font_size(control: Control, base_size: int, property: StringName = &"font_size", context: Node = null) -> void:
+	var sizes: Dictionary = control.get_meta(&"ui_base_font_sizes", {})
+	sizes[property] = base_size
+	control.set_meta(&"ui_base_font_sizes", sizes)
+	control.add_theme_font_size_override(property, roundi(float(base_size) * _text_scale_for(context if context != null else control)))
+
+
+static func _settings_text_scale(control: Control) -> float:
+	var settings: Node = control.get_node_or_null(^"/root/GameSettings")
+	return float(settings.get(&"menu_text_scale")) if settings != null else 1.0
+
+
+static func _text_scale_for(node: Node) -> float:
+	var current: Node = node
+	while current != null:
+		if current.has_meta(&"ui_menu_text_scale"):
+			return float(current.get_meta(&"ui_menu_text_scale"))
+		current = current.get_parent()
+	return 1.0
+
+
+static func _refresh_text_scale(scale: float, root: Control) -> void:
+	if not is_instance_valid(root):
+		return
+	root.set_meta(&"ui_menu_text_scale", scale)
+	var controls: Array[Node] = [root]
+	controls.append_array(root.find_children("*", "Control", true, false))
+	for item: Node in controls:
+		var control := item as Control
+		if control == null or not control.has_meta(&"ui_base_font_sizes"):
+			continue
+		var sizes: Dictionary = control.get_meta(&"ui_base_font_sizes")
+		for property: StringName in sizes:
+			control.add_theme_font_size_override(property, roundi(float(sizes[property]) * scale))
 
 
 # --- Cards ------------------------------------------------------------------
@@ -128,7 +184,7 @@ static func surface_style(padding: int = 22, fill: Color = PAPER) -> StyleBoxFla
 static func label(parent: Node, text: String, font_size: int, color: Color = INK, display: bool = false) -> Label:
 	var node := Label.new()
 	node.text = text
-	node.add_theme_font_size_override("font_size", font_size)
+	register_font_size(node, font_size, &"font_size", parent)
 	node.add_theme_color_override("font_color", color)
 	if display:
 		node.add_theme_font_override("font", display_font())
@@ -160,7 +216,7 @@ static func tag(parent: Node, text: String, color: Color = YELLOW, tilt: float =
 	var node := Label.new()
 	node.text = text
 	node.add_theme_font_override("font", display_font())
-	node.add_theme_font_size_override("font_size", font_size)
+	register_font_size(node, font_size, &"font_size", holder)
 	node.add_theme_color_override("font_color", INK)
 	holder.add_child(node)
 	return node
@@ -184,7 +240,7 @@ static func chip(parent: Node, text: String, color: Color = WHITE, font_size: in
 	var node := Label.new()
 	node.text = text
 	node.add_theme_font_override("font", display_font())
-	node.add_theme_font_size_override("font_size", font_size)
+	register_font_size(node, font_size, &"font_size", holder)
 	node.add_theme_color_override("font_color", INK)
 	holder.add_child(node)
 	return node
@@ -223,7 +279,7 @@ static func _logo_line(parent: Node, text: String, size: int, color: Color, outl
 	var node := Label.new()
 	node.text = text
 	node.add_theme_font_override("font", display_font())
-	node.add_theme_font_size_override("font_size", size)
+	register_font_size(node, size, &"font_size", parent)
 	node.add_theme_color_override("font_color", color)
 	if outlined:
 		node.add_theme_color_override("font_outline_color", INK)
@@ -269,7 +325,7 @@ static func button(parent: Node, text: String, primary: bool = false, minimum_si
 	node.text = text
 	node.custom_minimum_size = minimum_size
 	node.add_theme_font_override("font", display_font())
-	node.add_theme_font_size_override("font_size", 21)
+	register_font_size(node, 21, &"font_size", parent)
 	var fill: Color = color if color.a > 0.0 else (MINT if primary else WHITE)
 	var normal: StyleBoxFlat = _button_style(fill, SHADOW)
 	node.add_theme_stylebox_override("normal", normal)
@@ -364,7 +420,7 @@ static func line_edit(parent: Node, placeholder: String) -> LineEdit:
 	var node := LineEdit.new()
 	node.placeholder_text = placeholder
 	node.custom_minimum_size.y = BUTTON_HEIGHT
-	node.add_theme_font_size_override("font_size", 17)
+	register_font_size(node, 17, &"font_size", parent)
 	node.add_theme_color_override("font_color", INK)
 	node.add_theme_color_override("font_placeholder_color", Color(MUTED, 0.8))
 	node.add_theme_color_override("caret_color", INK)
@@ -388,7 +444,7 @@ static func check_box(parent: Node, text: String, pressed: bool) -> CheckBox:
 	var node := CheckBox.new()
 	node.text = text
 	node.button_pressed = pressed
-	node.add_theme_font_size_override("font_size", 16)
+	register_font_size(node, 16, &"font_size", parent)
 	for state: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		node.add_theme_color_override(state, INK)
 	node.add_theme_stylebox_override("focus", _focus_ring())

@@ -12,6 +12,7 @@ const RED: Color = UiTheme.RED
 const ORANGE: Color = UiTheme.ORANGE
 const STATE_FILL: Array[Color] = [UiTheme.MINT, UiTheme.ORANGE, UiTheme.RED]
 const STATE_TEXT: Array[Color] = [UiTheme.INK, Color("c26a00"), Color("c73431")]
+const STATE_STATUS: Array[String] = ["OK ✓", "EN RIESGO !", "ARRUINADA ✕"]
 
 enum Role { ON_FOOT, DRIVER, PASSENGER }
 
@@ -76,6 +77,7 @@ var _notice_sources: Dictionary = {&"critical": {}, &"information": {}}
 var _notice_serial: int = 0
 var _hint_override: String = ""
 var _hint_override_seconds: float = 0.0
+var _sound_subtitle: String = ""
 var _role: int = Role.ON_FOOT
 var _soft_pause: bool = false
 const RESTART_HOLD_SECONDS: float = 0.9
@@ -227,10 +229,31 @@ func _refresh_row(id: StringName) -> void:
 					display_name = String(disguise.get("display_name")).to_upper()
 					(row["icon"] as TextureRect).texture = UiTheme.trap_icon(String(disguise.get("display_name")))
 			break
-	label.text = "%s  ·  %d%%  %s" % [display_name, roundi(integrity), ["", "· ¡EN RIESGO!", "· PERDIDO"][state]]
-	label.add_theme_color_override("font_color", STATE_TEXT[state])
-	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = STATE_FILL[state]
+	label.text = "%s  ·  %d%%  ·  %s" % [display_name, roundi(integrity), STATE_STATUS[state]]
+	label.add_theme_color_override("font_color", _state_text_color(state))
+	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = UiTheme.state_color(state, GameSettings.colorblind_palette)
 	(row["icon"] as TextureRect).modulate = Color(1, 1, 1, 0.35) if state == 2 else Color.WHITE
+
+
+func _state_text_color(state: int) -> Color:
+	if state == ITrapBehavior.TrapState.OK:
+		return INK
+	return UiTheme.state_color(state, GameSettings.colorblind_palette).darkened(0.18)
+
+
+func _refresh_accessibility_colors(_enabled: bool = GameSettings.colorblind_palette) -> void:
+	for id: StringName in cargo_rows:
+		_refresh_row(id)
+	if risk_vignette != null:
+		var alpha: float = risk_vignette.color.a
+		risk_vignette.color = Color(UiTheme.state_color(ITrapBehavior.TrapState.AT_RISK, GameSettings.colorblind_palette), alpha)
+
+
+func _refresh_state_pulses() -> void:
+	var pulse: float = 0.72 + sin(Time.get_ticks_msec() * 0.009) * 0.28
+	for id: StringName in cargo_rows:
+		var state: int = int(RunManager.cargo.get(id, {}).get("state", 0))
+		(cargo_rows[id]["label"] as Label).modulate.a = pulse if state == ITrapBehavior.TrapState.AT_RISK else 1.0
 
 
 func _on_progress(progress: float, meters: float, section: String) -> void:

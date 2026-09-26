@@ -53,6 +53,16 @@ func _run() -> void:
 	_expect(hud.overlay.get_parent() == hud.root and is_equal_approx(hud.overlay.get_global_transform().get_scale().x, 1.0),
 		"The pause/results card keeps its own size")
 	settings.hud_scale = player_hud_scale
+	var player_menu_scale: float = settings.menu_text_scale
+	var volume_slider: HSlider = hud.options_panel.get("_volume_slider") as HSlider
+	var menu_caption := (volume_slider.get_parent().get_child(0) as HBoxContainer).get_child(0) as Label
+	var hud_font_size: int = hud.speed_label.get_theme_font_size("font_size")
+	settings.menu_text_scale = 1.5
+	_expect(menu_caption.get_theme_font_size("font_size") == 24,
+		"The 150% menu setting enlarges menu text live")
+	_expect(hud.speed_label.get_theme_font_size("font_size") == hud_font_size,
+		"Menu text scale stays independent from HUD scale")
+	settings.menu_text_scale = player_menu_scale
 
 	# --- restart has to be held during play ---
 	hud._primary_action()
@@ -81,6 +91,32 @@ func _run() -> void:
 	hud._set_notice(&"information", &"brief", "Aviso breve", 95, Color.WHITE, 0.01)
 	hud._process_notices(0.02)
 	_expect(hud.toast_label.text == "Carta obtenida", "An expired priority notice resumes the queue (got '%s')" % hud.toast_label.text)
+
+	# --- cargo state never relies on red/green alone ---
+	var run_manager: Node = root.get_node("RunManager")
+	run_manager.cargo[&"accessible_box"] = {"integrity": 35.0, "maximum": 100.0, "state": 1}
+	bus.cargo_registered.emit(&"accessible_box", "Frágil")
+	bus.package_state_changed.emit(&"accessible_box", 1)
+	var accessible_row: Dictionary = hud.cargo_rows[&"accessible_box"]
+	_expect(String((accessible_row["label"] as Label).text).contains("EN RIESGO !"),
+		"At-risk cargo has a shape marker as well as a colour")
+	var original_palette: bool = settings.colorblind_palette
+	settings.colorblind_palette = true
+	var fill := (accessible_row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat
+	_expect(fill.bg_color.is_equal_approx(UiTheme.OKABE_ORANGE),
+		"The colour-blind option switches cargo state colours to Okabe-Ito")
+	var original_subtitles: bool = settings.sound_subtitles
+	settings.sound_subtitles = true
+	bus.interaction_prompt_changed.emit("")
+	hud._refresh_sound_subtitle()
+	_expect(String(hud.interaction_label.text).contains("[vidrio que cruje]"),
+		"An at-risk fragile trap captions its sound in the context zone")
+	run_manager.cargo[&"accessible_box"]["state"] = 2
+	bus.package_state_changed.emit(&"accessible_box", 2)
+	_expect(String((accessible_row["label"] as Label).text).contains("ARRUINADA ✕"),
+		"Ruined cargo has an X marker")
+	settings.colorblind_palette = original_palette
+	settings.sound_subtitles = original_subtitles
 
 	# --- shortcut teaching can be automatic or explicitly overridden ---
 	var unlocks: Node = root.get_node("UnlockManager")

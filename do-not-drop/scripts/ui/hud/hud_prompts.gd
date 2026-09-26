@@ -113,7 +113,35 @@ func _render_interaction_prompt() -> void:
 		lines.append("[ %s ]  %s" % [_key("T", "D-pad abajo"), _lid_action])
 	if not _lid_inside.is_empty():
 		lines.append("Adentro:  %s" % _lid_inside)
+	if not _sound_subtitle.is_empty():
+		lines.append(_sound_subtitle)
 	interaction_label.text = "\n".join(lines)
+
+
+func _refresh_sound_subtitle() -> void:
+	var subtitle: String = ""
+	if GameSettings.sound_subtitles:
+		var package_id: StringName = _local_package_id()
+		if int(RunManager.cargo.get(package_id, {}).get("state", 0)) != ITrapBehavior.TrapState.AT_RISK:
+			package_id = &""
+			for candidate: StringName in cargo_rows:
+				if int(RunManager.cargo.get(candidate, {}).get("state", 0)) == ITrapBehavior.TrapState.AT_RISK:
+					package_id = candidate
+					break
+		if not package_id.is_empty() and cargo_rows.has(package_id):
+			var trap_name: String = String(cargo_rows[package_id]["name"]).to_upper()
+			subtitle = {
+				"EXPLOSIVO": "[tictac acelerando]",
+				"RUIDOSO": "[gruñido]",
+				"FRÁGIL": "[vidrio que cruje]",
+				"PESO CRECIENTE": "[madera que cruje]",
+				"LÍQUIDO": "[líquido agitándose]",
+				"HOSTIL": "[siseo amenazante]",
+				"EQUILIBRIO": "[carga crujiendo]",
+			}.get(trap_name, "[la carga cruje]")
+	if subtitle != _sound_subtitle:
+		_sound_subtitle = subtitle
+		_render_interaction_prompt()
 
 
 func _on_lid_hint_changed(action: String, inside: String) -> void:

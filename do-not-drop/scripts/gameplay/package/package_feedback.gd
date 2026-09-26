@@ -74,6 +74,7 @@ var _bounce_time: float = -1.0  ## negative: no bounce in progress
 var _shipping_label: RigidBody3D
 var _shipping_text: Label3D
 var _shipping_data: String = ""
+var _state_badge: Label3D
 var _disguise_text: Label3D
 var _disguise_icon: Sprite3D
 var _was_disguise_revealed: bool = false
@@ -138,6 +139,7 @@ func _ready() -> void:
 		bus.connect("package_damaged", _on_package_damaged)
 		bus.connect("package_collision", _on_package_collision)
 		bus.connect("package_placed", _on_package_placed)
+	GameSettings.colorblind_palette_changed.connect(_refresh_accessibility_palette)
 
 
 func _apply_identity(package: Node) -> void:
@@ -165,6 +167,7 @@ func _apply_identity(package: Node) -> void:
 		shape.size = shape_size
 		collider.shape = shape
 	_add_shipping_label(package, shipping_data, shape_size)
+	_build_state_badge(shape_size)
 	_disguise_text = Label3D.new()
 	_disguise_text.position = Vector3(0.0, shape_size.y * 0.22, -shape_size.z * 0.52)
 	_disguise_text.pixel_size = 0.0015
@@ -179,6 +182,18 @@ func _apply_identity(package: Node) -> void:
 	_box.add_child(_disguise_icon)
 	_add_dent_pieces(shape_size * 0.5)
 	_build_outline(shape_size)
+
+
+func _build_state_badge(box_size: Vector3) -> void:
+	_state_badge = Label3D.new()
+	_state_badge.name = "AccessibleState"
+	_state_badge.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_state_badge.font_size = 46
+	_state_badge.pixel_size = 0.0022
+	_state_badge.outline_size = 10
+	_state_badge.position = Vector3(0.0, box_size.y * 0.62 + 0.10, 0.0)
+	_box.add_child(_state_badge)
+	_refresh_state_badge()
 
 
 func _add_cardboard_details(size: Vector3) -> void:
@@ -442,6 +457,9 @@ func _process(delta: float) -> void:
 	_apply_jitter(delta)
 	_apply_bounce(delta)
 	_apply_shelf_straps()
+	if _state_badge != null:
+		var pulse: float = 1.0 + sin(Time.get_ticks_msec() * 0.009) * 0.08
+		_state_badge.scale = Vector3.ONE * (pulse if _state == ITrapBehavior.TrapState.AT_RISK else 1.0)
 	match _trap_id:
 		&"noisy":
 			_apply_groan()
@@ -578,7 +596,7 @@ func _apply_explosive(delta: float) -> void:
 	var direction: StringName = StringName(package.trap_behavior.call("next_direction"))
 	var state: int = int(package.trap_behavior.call("get_state"))
 	_explosive_display.text = "DEFUSE\n%02d  %s" % [ceili(seconds), _explosive_arrow(direction)]
-	_explosive_display.modulate = UiTheme.RED if state == ITrapBehavior.TrapState.AT_RISK else UiTheme.YELLOW
+	_explosive_display.modulate = UiTheme.state_color(state, GameSettings.colorblind_palette)
 	# The countdown only means something once the bomb is on the road: on
 	# the depot's shelf it would just be a floating, ticking sign (depot.gd).
 	_explosive_display.visible = bool(package.call(&"_is_run_active"))
@@ -774,3 +792,15 @@ func highlight(enabled: bool) -> void:
 func _set_state(new_state: int) -> void:
 	_state = new_state
 	_material.albedo_color = STATE_TINT[clampi(new_state, 0, STATE_TINT.size() - 1)]
+	_refresh_state_badge()
+
+
+func _refresh_state_badge() -> void:
+	if _state_badge == null:
+		return
+	_state_badge.text = ["OK ✓", "EN RIESGO !", "ARRUINADA ✕"][clampi(_state, 0, 2)]
+	_state_badge.modulate = UiTheme.state_color(_state, GameSettings.colorblind_palette)
+
+
+func _refresh_accessibility_palette(_enabled: bool) -> void:
+	_refresh_state_badge()

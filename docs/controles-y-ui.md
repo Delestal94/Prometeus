@@ -79,7 +79,9 @@ Main Menu
   a medida que se suman (`_sync_players`), así que entrar directo y dejar que los demás
   se sumen después ya funciona sin necesitar una pantalla de espera.
 - **Opciones** (menú y pausa): volumen, sensibilidad, invertir Y, pantalla completa,
-  restablecer, y la lista de controles del dispositivo en uso. **Salir** cierra el juego.
+  escala del HUD, tamaño de texto de menús (100/125/150 %), paleta para daltonismo,
+  subtítulos de sonidos, ayudas de controles, restablecer y la lista de controles del
+  dispositivo en uso. **Salir** cierra el juego.
 - Hay pantallas de **Cómo jugar** (tutorial estático) y **Progreso**, accesibles desde
   el menú principal. El perfil local muestra entregas, puntaje, desbloqueos y elecciones.
 - Las ayudas en pantalla muestran solo la tecla del dispositivo que se tocó último
@@ -122,7 +124,7 @@ si llegan varios, `hud_notices.gd` conserva la cola y enseña primero el de mayo
 | Capa | Zona | Contenido | Movimiento |
 |---|---|---|---|
 | **Crítico** | Arriba, centro | Tu caja en riesgo (incluida la cuenta del explosivo) o el evento de ruta con su cuenta regresiva | Grande, con pulso suave |
-| **Contexto** | Abajo, centro | Acción del objeto que mirás, soltar paquete y abrir/cerrar/ver la tapa | Un solo bloque estable |
+| **Contexto** | Abajo, centro | Acción del objeto que mirás, soltar paquete, abrir/cerrar/ver la tapa y subtítulos opcionales de sonidos de trampas | Un solo bloque estable |
 | **Información** | Esquinas | Velocidad, tiempo, distancia, estado de la carga, sesión, dinero cuando corresponde y avisos breves | Chico y quieto |
 
 La barra de atajos respeta **Ayudas de controles: siempre / al principio / nunca**. En
@@ -133,7 +135,7 @@ ruta mientras se maneja.
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.
   **[x] Implementado** (`prototype_hud.gd`: `speed_label`, `distance_label`).
 - **Pasajero**: su propio paquete en pantalla con el medidor de integridad/agitación
-  visible (barra de color: verde=OK, amarillo=EnRiesgo, rojo=Arruinado), y el prompt de
+  visible (OK ✓, En riesgo ! con pulso, Arruinada ✕; paleta normal u Okabe-Ito), y el prompt de
   la acción correspondiente a su trampa. **[x] Implementado** (`cargo_hint_label`,
   `interaction_label`).
 - **Compartido**: mini resumen del estado de todos los paquetes (iconos chicos) para

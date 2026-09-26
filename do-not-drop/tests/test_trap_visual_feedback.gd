@@ -21,7 +21,7 @@ func _initialize() -> void:
 	_test_growing_weight_visuals()
 	_test_noisy_wobble()
 	if _failures == 0:
-		print("PASS: Peso Creciente visibly swells and sinks, Ruidoso visibly shudders")
+		print("PASS: cargo state markers, Peso Creciente visuals, and Ruidoso wobble")
 	quit(_failures)
 
 
@@ -33,9 +33,15 @@ func _test_growing_weight_visuals() -> void:
 
 	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
 	var box: Node3D = package.get_node(^"Box")
+	var state_badge: Label3D = box.get_node(^"AccessibleState") as Label3D
 	_expect(box.scale.is_equal_approx(Vector3.ONE), "Starts at normal size")
+	_expect(state_badge.text == "OK ✓", "The box itself starts with an OK shape marker")
 
 	var package_id: StringName = package.get(&"package_id")
+	feedback.call(&"_on_package_state_changed", package_id, ITrapBehavior.TrapState.AT_RISK)
+	_expect(state_badge.text == "EN RIESGO !", "The box itself shows the at-risk shape marker")
+	feedback.call(&"_on_package_state_changed", package_id, ITrapBehavior.TrapState.RUINED)
+	_expect(state_badge.text == "ARRUINADA ✕", "The box itself shows the ruined shape marker")
 	feedback.call(&"_on_integrity_changed", package_id, 100.0, 100.0)
 	_expect(box.scale.is_equal_approx(Vector3.ONE) and is_equal_approx(box.position.y, 0.0),
 		"No distress, no swelling")

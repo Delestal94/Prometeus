@@ -46,6 +46,8 @@ func _ready() -> void:
 	GameSettings.input_device_changed.connect(_on_input_device_changed)
 	GameSettings.hud_scale_changed.connect(func(_scale: float) -> void: _apply_hud_scale())
 	GameSettings.control_help_mode_changed.connect(func(_mode: int) -> void: _refresh_shortcuts())
+	GameSettings.colorblind_palette_changed.connect(_refresh_accessibility_colors)
+	GameSettings.sound_subtitles_changed.connect(func(_enabled: bool) -> void: _refresh_sound_subtitle())
 	root.resized.connect(_apply_hud_scale)
 	_apply_hud_scale()
 	_refresh_session()
@@ -58,10 +60,12 @@ func _build_ui() -> void:
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	UiTheme.apply(root)
+	# Menu text has its own accessibility scale; the HUD remains governed by
+	# the separate HUD-scale setting.
+	UiTheme.apply(root, false)
 	add_child(root)
 	risk_vignette = ColorRect.new()
-	risk_vignette.color = Color(0.62, 0.05, 0.04, 0.0)
+	risk_vignette.color = Color(UiTheme.state_color(ITrapBehavior.TrapState.AT_RISK, GameSettings.colorblind_palette), 0.0)
 	risk_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	risk_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	risk_vignette.material = _vignette_material()
@@ -267,6 +271,8 @@ func _process(delta: float) -> void:
 	_refresh_shortcuts(delta)
 	_refresh_restart_hold(delta)
 	_refresh_risk_vignette(delta)
+	_refresh_state_pulses()
+	_refresh_sound_subtitle()
 	_process_notices(delta)
 	event_label.modulate.a = 0.84 + sin(Time.get_ticks_msec() * 0.008) * 0.16 if not event_label.text.is_empty() else 1.0
 	if overlay_mode == "pause" and not _soft_pause and not get_tree().paused:

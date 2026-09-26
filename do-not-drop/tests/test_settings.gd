@@ -83,6 +83,20 @@ func _run() -> void:
 	_expect(int(help_config.get_value("player", "control_help_mode", -1)) == settings.ControlHelp.NEVER,
 		"The control-help preference is saved")
 	settings.control_help_mode = settings.ControlHelp.BEGINNING
+	settings.colorblind_palette = true
+	settings.menu_text_scale = 1.5
+	settings.sound_subtitles = true
+	var accessibility_config := ConfigFile.new()
+	accessibility_config.load(original_path)
+	_expect(bool(accessibility_config.get_value("player", "colorblind_palette", false)),
+		"The colour-blind palette preference is saved")
+	_expect(is_equal_approx(float(accessibility_config.get_value("player", "menu_text_scale", 0.0)), 1.5),
+		"The menu text scale is saved independently from the HUD scale")
+	_expect(bool(accessibility_config.get_value("player", "sound_subtitles", false)),
+		"The sound-subtitle preference is saved")
+	settings.menu_text_scale = 1.4
+	_expect(is_equal_approx(settings.menu_text_scale, 1.5),
+		"Menu text scale snaps to one of the three supported sizes")
 
 	# --- they survive a restart ---
 	settings.master_volume = 0.35
@@ -97,6 +111,9 @@ func _run() -> void:
 	settings.look_sensitivity = 1.0
 	settings.invert_look_y = false
 	settings.control_help_mode = settings.ControlHelp.BEGINNING
+	settings.colorblind_palette = false
+	settings.menu_text_scale = 1.0
+	settings.sound_subtitles = false
 	settings.master_volume = 0.35
 	settings.look_sensitivity = 1.75
 	settings.invert_look_y = true
@@ -112,6 +129,9 @@ func _run() -> void:
 	settings.master_volume = 1.0
 	settings.look_sensitivity = 1.0
 	settings.invert_look_y = false
+	settings.colorblind_palette = false
+	settings.menu_text_scale = 1.0
+	settings.sound_subtitles = false
 
 	await create_timer(0.1).timeout
 	if failures == 0:
