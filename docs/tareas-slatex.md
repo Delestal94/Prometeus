@@ -562,15 +562,15 @@ no sirve).
 
 Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 
-- [ ] **S-501.1** Definir en `docs/controles-y-ui.md` tres capas con zona fija de pantalla:
+- [x] **S-501.1** Definir en `docs/controles-y-ui.md` tres capas con zona fija de pantalla:
   **crítico** (tu caja en riesgo, evento con cuenta regresiva, cuenta del explosivo) arriba al centro,
   grande, con pulso; **contexto** (aviso de interacción, tapa de la caja) abajo al centro; **información**
   (velocidad, dinero, distancia, carga de los demás) en las esquinas, chico y quieto.
-- [ ] **S-501.2** Nunca dos textos en la misma zona: cola con prioridad en `hud_notices.gd`.
-- [ ] **S-501.3** Barra de atajos: se oculta sola después de 3 partidas completadas o 60 s sin usar
+- [x] **S-501.2** Nunca dos textos en la misma zona: cola con prioridad en `hud_notices.gd`.
+- [x] **S-501.3** Barra de atajos: se oculta sola después de 3 partidas completadas o 60 s sin usar
   ayuda; opción "Ayudas de controles: siempre / al principio / nunca".
-- [ ] **S-501.4** El dinero del equipo solo se ve en el depósito, en la pausa y en resultados.
-- [ ] **S-501.5** Test en `test_hud_flow.gd`: con evento + aviso + toast a la vez, cada uno en su zona y
+- [x] **S-501.4** El dinero del equipo solo se ve en el depósito, en la pausa y en resultados.
+- [x] **S-501.5** Test en `test_hud_flow.gd`: con evento + aviso + toast a la vez, cada uno en su zona y
   ninguno tapado. Captura antes/después con `render_hud.gd`.
 
 ### S-502 · Accesibilidad: daltonismo, texto y efectos — A · `Sol · high` · Aviso: no
