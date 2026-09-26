@@ -586,7 +586,7 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 
 ### S-503 · Tipografía legible a distancia de sillón — C · `Luna · medium` · Aviso: no
 
-- [ ] Revisar que ningún texto del HUD al 60 % de escala quede por debajo de 14 px efectivos a 1080p;
+- [x] (commit `10218d0`) Revisar que ningún texto del HUD al 60 % de escala quede por debajo de 14 px efectivos a 1080p;
   subir los que no cumplan. Tabla de tamaños en `docs/direccion-visual.md` §3.
 
 ### S-504 · Todo el menú con gamepad — A · `Sol · high` · Aviso: no
