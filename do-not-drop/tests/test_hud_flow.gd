@@ -8,6 +8,9 @@ extends SceneTree
 
 var failures: int = 0
 var _restarts: int = 0
+const COUCH_HUD_SCALE: float = 0.6
+const SCALE_720_TO_1080: float = 1080.0 / 720.0
+const MIN_EFFECTIVE_FONT_SIZE: float = 14.0
 
 
 func _initialize() -> void:
@@ -100,6 +103,7 @@ func _run() -> void:
 	var accessible_row: Dictionary = hud.cargo_rows[&"accessible_box"]
 	_expect(String((accessible_row["label"] as Label).text).contains("EN RIESGO !"),
 		"At-risk cargo has a shape marker as well as a colour")
+	_expect_hud_text_readable(hud)
 	var original_palette: bool = settings.colorblind_palette
 	settings.colorblind_palette = true
 	var fill := (accessible_row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat
@@ -181,6 +185,23 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		failures += 1
+
+
+func _expect_hud_text_readable(hud: CanvasLayer) -> void:
+	var too_small: PackedStringArray = []
+	for node: Node in hud.hud_layer.find_children("*", "Control", true, false):
+		var base_size: int = 0
+		if node is RichTextLabel:
+			base_size = (node as RichTextLabel).get_theme_font_size(&"normal_font_size")
+		elif node is Label:
+			base_size = (node as Label).get_theme_font_size(&"font_size")
+		else:
+			continue
+		var effective_size: float = float(base_size) * COUCH_HUD_SCALE * SCALE_720_TO_1080
+		if effective_size < MIN_EFFECTIVE_FONT_SIZE:
+			too_small.append("%s: %.1f px" % [str(hud.hud_layer.get_path_to(node)), effective_size])
+	_expect(too_small.is_empty(),
+		"Every HUD label stays at least 14 px at 60%% scale and 1080p (%s)" % ", ".join(too_small))
 
 
 func _overlap(a: Control, b: Control) -> bool:

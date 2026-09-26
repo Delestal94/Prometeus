@@ -153,6 +153,19 @@ Tipografías (OFL, uso comercial libre, en `assets/fonts/`): **Lilita One** para
 botones y cintas; **Nunito** (variable, peso 700 por defecto) para el texto. El logo se arma con
 tipografía (`UiTheme.logo()`): "TAKE MY" sobre "PACKAGE" en cinta amarilla, todo algo torcido.
 
+### Escala tipográfica del HUD
+
+El HUD se diseña sobre un lienzo de 1280×720. A 1920×1080, su escala de accesibilidad al 60 %
+multiplica los tamaños base por `1,5 × 0,6 = 0,9`; por eso ningún texto del HUD usa menos de
+16 px de base, que conserva 14,4 px efectivos a distancia de sillón.
+
+| Uso | Tamaño base a 720p | Efectivo al 60 % en 1080p |
+|---|---:|---:|
+| Etiquetas compactas, carta y atajos | 16 px | 14,4 px |
+| Estado de carga e información breve | 18–22 px | 16,2–19,8 px |
+| Interacción y avisos | 25–34 px | 22,5–30,6 px |
+| Velocidad y títulos principales | 50 px o más | 45 px o más |
+
 ### Estado de los paquetes (`package_feedback.gd`)
 | Estado | Color | Hex |
 |---|---|---|

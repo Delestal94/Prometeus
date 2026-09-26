@@ -96,7 +96,7 @@ func _build_ui() -> void:
 	brand.get_parent().size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	brand.add_theme_constant_override("separation", 6)
 	UiTheme.title(brand, "TAKE MY PACKAGE", 22)
-	session_label = UiTheme.tag(brand, "", MINT, -1.5, 14)
+	session_label = UiTheme.tag(brand, "", MINT, -1.5, 16)
 	var stretch := Control.new()
 	stretch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stretch.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -116,7 +116,7 @@ func _build_ui() -> void:
 	time_label = UiTheme.chip(chips, "00:00", UiTheme.SKY, 17)
 	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, 17)
 	economy_label.visible = false
-	card_label = _rich(metrics, 14)
+	card_label = _rich(metrics, 16)
 	card_label.custom_minimum_size.x = 190
 	card_label.add_theme_color_override("default_color", INK)
 
@@ -131,7 +131,7 @@ func _build_ui() -> void:
 	bottom.add_theme_constant_override("separation", 16)
 	var cargo := _panel(bottom, Vector2(330, 0))
 	cargo.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
-	UiTheme.tag(cargo, "CARGA", UiTheme.CARDBOARD, -2.0, 15)
+	UiTheme.tag(cargo, "CARGA", UiTheme.CARDBOARD, -2.0, 16)
 	cargo_rows_box = VBoxContainer.new()
 	cargo_rows_box.add_theme_constant_override("separation", 10)
 	cargo.add_child(cargo_rows_box)
@@ -139,7 +139,7 @@ func _build_ui() -> void:
 	delivery.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	delivery.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
 	delivery.add_theme_constant_override("separation", 8)
-	section_label = UiTheme.tag(delivery, "PREPARACIÓN", MINT, -1.5, 15)
+	section_label = UiTheme.tag(delivery, "PREPARACIÓN", MINT, -1.5, 16)
 	# Used to open on "220 m hasta la entrega", a leftover from the fixed
 	# route: the real one is random and runs closer to 2000 m.
 	distance_label = UiTheme.title(delivery, "", 30)
@@ -159,7 +159,7 @@ func _build_ui() -> void:
 	shortcut_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	shortcut_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(shortcut_pill)
-	shortcut_label = _rich(shortcut_pill, 15)
+	shortcut_label = _rich(shortcut_pill, 16)
 	shortcut_label.add_theme_color_override("default_color", PAPER)
 	shortcut_label.fit_content = true
 	shortcut_label.autowrap_mode = TextServer.AUTOWRAP_OFF
