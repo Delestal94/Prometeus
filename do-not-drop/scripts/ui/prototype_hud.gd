@@ -45,6 +45,7 @@ func _ready() -> void:
 	NetworkManager.session_failed.connect(_on_connection_lost)
 	GameSettings.input_device_changed.connect(_on_input_device_changed)
 	GameSettings.hud_scale_changed.connect(func(_scale: float) -> void: _apply_hud_scale())
+	GameSettings.control_help_mode_changed.connect(func(_mode: int) -> void: _refresh_shortcuts())
 	root.resized.connect(_apply_hud_scale)
 	_apply_hud_scale()
 	_refresh_session()
@@ -110,6 +111,7 @@ func _build_ui() -> void:
 	metrics.add_child(chips)
 	time_label = UiTheme.chip(chips, "00:00", UiTheme.SKY, 17)
 	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, 17)
+	economy_label.visible = false
 	card_label = _rich(metrics, 14)
 	card_label.custom_minimum_size.x = 190
 	card_label.add_theme_color_override("default_color", INK)
@@ -129,9 +131,6 @@ func _build_ui() -> void:
 	cargo_rows_box = VBoxContainer.new()
 	cargo_rows_box.add_theme_constant_override("separation", 10)
 	cargo.add_child(cargo_rows_box)
-	cargo_hint_label = _label(cargo, "", 15, MUTED)
-	cargo_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	cargo_hint_label.custom_minimum_size.x = 285
 	var delivery := _panel(bottom, Vector2.ZERO)
 	delivery.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	delivery.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
@@ -168,16 +167,25 @@ func _build_ui() -> void:
 	ping_indicator.offset_right = 130
 	ping_indicator.offset_top = -190
 	ping_indicator.offset_bottom = -145
-	toast_label = UiTheme.floating_label(hud_layer, "", 21, MINT, 560, 64)
-	event_label = UiTheme.floating_label(hud_layer, "", 23, YELLOW, 760, 104)
+	toast_label = UiTheme.floating_label(hud_layer, "", 18, MINT, 400, 150)
+	toast_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	toast_label.offset_left = -440
+	toast_label.offset_right = -24
+	toast_label.offset_top = 150
+	toast_label.offset_bottom = 240
+	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	event_label = UiTheme.floating_label(hud_layer, "", 29, YELLOW, 760, 28)
+	event_label.custom_minimum_size.y = 118
+	# The package-at-risk hint and the route event share the critical queue,
+	# never the screen. Kept as an alias for the existing cargo HUD seam.
+	cargo_hint_label = event_label
 	interaction_label = UiTheme.floating_label(hud_layer, "", 25, PAPER, 560, 0)
-	# Just under the crosshair, where the eye already is when reaching for
-	# something -- not with the banners along the top.
-	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	# Context owns the bottom centre; it never competes with critical alerts.
+	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	interaction_label.offset_left = -280
 	interaction_label.offset_right = 280
-	interaction_label.offset_top = 45
-	interaction_label.offset_bottom = 95
+	interaction_label.offset_top = -150
+	interaction_label.offset_bottom = -55
 
 	overlay = ColorRect.new()
 	root.add_child(overlay)
@@ -256,9 +264,11 @@ func _process(delta: float) -> void:
 	time_label.text = "%02d:%02d" % [int(RunManager.elapsed_seconds) / 60, int(RunManager.elapsed_seconds) % 60]
 	_refresh_role()
 	_refresh_hint(delta)
-	_refresh_shortcuts()
+	_refresh_shortcuts(delta)
 	_refresh_restart_hold(delta)
 	_refresh_risk_vignette(delta)
+	_process_notices(delta)
+	event_label.modulate.a = 0.84 + sin(Time.get_ticks_msec() * 0.008) * 0.16 if not event_label.text.is_empty() else 1.0
 	if overlay_mode == "pause" and not _soft_pause and not get_tree().paused:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
@@ -280,14 +290,8 @@ func _process(delta: float) -> void:
 		if ping_seconds_left <= 0.0:
 			ping_label.text = ""
 			ping_indicator.text = ""
-	if toast_seconds_left > 0.0:
-		toast_seconds_left -= delta
-		if toast_seconds_left <= 0.0:
-			toast_label.text = ""
-	if event_seconds_left > 0.0:
-		event_seconds_left -= delta
-		if event_seconds_left <= 0.0:
-			event_label.text = ""
+	toast_seconds_left = maxf(toast_seconds_left - delta, 0.0)
+	event_seconds_left = maxf(event_seconds_left - delta, 0.0)
 
 
 func _on_roster_changed(_peer_ids: Array) -> void:
@@ -331,6 +335,7 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	overlay.hide()
 	overlay_mode = "run"
 	dashboard.show()
+	economy_label.hide()
 	action_button.release_focus()
 	_interaction_prompt = ""
 	interaction_label.text = ""

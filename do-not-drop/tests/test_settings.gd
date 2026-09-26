@@ -77,6 +77,12 @@ func _run() -> void:
 	saved.load(original_path)
 	_expect(is_equal_approx(float(saved.get_value("player", "hud_scale", -1.0)), 0.8), "The saved file holds the HUD scale that was set")
 	settings.hud_scale = 1.0
+	settings.control_help_mode = settings.ControlHelp.NEVER
+	var help_config := ConfigFile.new()
+	help_config.load(original_path)
+	_expect(int(help_config.get_value("player", "control_help_mode", -1)) == settings.ControlHelp.NEVER,
+		"The control-help preference is saved")
+	settings.control_help_mode = settings.ControlHelp.BEGINNING
 
 	# --- they survive a restart ---
 	settings.master_volume = 0.35
@@ -90,6 +96,7 @@ func _run() -> void:
 	settings.voice_volume = 1.0
 	settings.look_sensitivity = 1.0
 	settings.invert_look_y = false
+	settings.control_help_mode = settings.ControlHelp.BEGINNING
 	settings.master_volume = 0.35
 	settings.look_sensitivity = 1.75
 	settings.invert_look_y = true

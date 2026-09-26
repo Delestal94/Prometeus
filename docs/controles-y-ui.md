@@ -1,6 +1,6 @@
 # Controles y flujo de UI/lobby — Take My Package
 
-> Última actualización: 2026-09-24
+> Última actualización: 2026-09-25
 > Cada jugador juega desde su propio dispositivo/cliente (no split-screen local) —
 > esto simplifica el esquema de controles: cada uno usa su teclado+mouse o gamepad
 > completo, no hay que repartir un solo teclado entre varios jugadores.
@@ -111,9 +111,25 @@ Main Menu
   qué casa lo dice la pizarra del depósito (dos cajas por trampa en las estanterías).
 - Líquido, Explosivo y Hostil aparecen en el depósito recién cuando están desbloqueadas
   (`UnlockManager.TRAP_UNLOCKS`, `depot.gd` `withhold_locked`, 2026-09-23); en línea manda
-  el perfil del host. La selección semi-aleatoria y sus reglas de balance siguen pendientes.
+  el perfil del host. `OrderBalancer` arma el pedido con presupuesto de dificultad, sin
+  repeticiones prematuras y con al menos una trampa accesible.
 
 ### HUD durante la partida
+
+La interfaz tiene tres capas con zonas fijas. Una zona muestra **un solo texto** a la vez;
+si llegan varios, `hud_notices.gd` conserva la cola y enseña primero el de mayor prioridad:
+
+| Capa | Zona | Contenido | Movimiento |
+|---|---|---|---|
+| **Crítico** | Arriba, centro | Tu caja en riesgo (incluida la cuenta del explosivo) o el evento de ruta con su cuenta regresiva | Grande, con pulso suave |
+| **Contexto** | Abajo, centro | Acción del objeto que mirás, soltar paquete y abrir/cerrar/ver la tapa | Un solo bloque estable |
+| **Información** | Esquinas | Velocidad, tiempo, distancia, estado de la carga, sesión, dinero cuando corresponde y avisos breves | Chico y quieto |
+
+La barra de atajos respeta **Ayudas de controles: siempre / al principio / nunca**. En
+“al principio” desaparece al completar 3 partidas o tras 60 segundos de uso del HUD. El
+dinero del equipo se reserva para decisiones: depósito, pausa y resultados; no ocupa la
+ruta mientras se maneja.
+
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.
   **[x] Implementado** (`prototype_hud.gd`: `speed_label`, `distance_label`).
 - **Pasajero**: su propio paquete en pantalla con el medidor de integridad/agitación

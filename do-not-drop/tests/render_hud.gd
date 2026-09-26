@@ -33,10 +33,17 @@ func _run() -> void:
 	event_bus.package_integrity_changed.emit(&"d", 0.0, 100.0)
 	event_bus.vehicle_telemetry.emit(47.0)
 	event_bus.route_progress_changed.emit(0.42, 1180.0, "Camino a casa 2/3")
+	for _i in range(3):
+		await process_frame
+	await _shot("render_hud_hierarchy_before.png")
+	event_bus.route_event_started.emit(&"inspection", {
+		"title": "INSPECCIÓN SORPRESA", "prompt": "Asegurá toda la carga", "remaining": 45.0,
+	})
 	event_bus.interaction_prompt_changed.emit("Agarrar paquete")
-	event_bus.ping_sent.emit(1, Vector3.ZERO, "¡Cuidado!")
+	event_bus.depot_notice.emit("Carta obtenida: Rescate")
 	for _i in range(6):
 		await process_frame
+	await _shot("render_hud_hierarchy_after.png")
 	await _shot("render_hud_run.png")
 
 	event_bus.interaction_prompt_changed.emit("")

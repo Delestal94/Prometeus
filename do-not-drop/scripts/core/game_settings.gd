@@ -106,6 +106,17 @@ var hud_scale: float = HUD_SCALE_DEFAULT:
 		_save()
 signal hud_scale_changed(scale: float)
 
+## How long the compact shortcut strip stays on screen. BEGINNING teaches
+## new players, then gets out of the way; the other two modes are explicit
+## accessibility preferences.
+enum ControlHelp { ALWAYS, BEGINNING, NEVER }
+var control_help_mode: int = ControlHelp.BEGINNING:
+	set(value):
+		control_help_mode = clampi(value, ControlHelp.ALWAYS, ControlHelp.NEVER)
+		control_help_mode_changed.emit(control_help_mode)
+		_save()
+signal control_help_mode_changed(mode: int)
+
 ## The last address typed into "Unirse", so rejoining the same friend's LAN
 ## game doesn't mean typing their IP again every session.
 var last_join_address: String = "":
@@ -182,6 +193,7 @@ func reset_to_defaults() -> void:
 	fullscreen = false
 	graphics_quality = WORLD_QUALITY.Level.HIGH
 	hud_scale = HUD_SCALE_DEFAULT
+	control_help_mode = ControlHelp.BEGINNING
 	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
 	_loading = false
 	_save()
@@ -265,6 +277,7 @@ func _load() -> void:
 	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
 	graphics_quality = int(config.get_value(SECTION, "graphics_quality", WORLD_QUALITY.Level.HIGH))
 	hud_scale = minf(float(config.get_value(SECTION, "hud_scale", HUD_SCALE_DEFAULT)), HUD_SCALE_MAX)
+	control_help_mode = int(config.get_value(SECTION, "control_help_mode", ControlHelp.BEGINNING))
 	# Files saved before the HUD default dropped to 60 % hold the old 100 %
 	# default, not a choice anyone made: move them to the new one, once.
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
@@ -297,6 +310,7 @@ func _save() -> void:
 	config.set_value(SECTION, "fullscreen", fullscreen)
 	config.set_value(SECTION, "graphics_quality", graphics_quality)
 	config.set_value(SECTION, "hud_scale", hud_scale)
+	config.set_value(SECTION, "control_help_mode", control_help_mode)
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
 	config.set_value(SECTION, "key_bindings", key_bindings)

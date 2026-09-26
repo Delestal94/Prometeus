@@ -3,13 +3,23 @@ extends "res://scripts/ui/hud/hud_cargo_panel.gd"
 ## short keyboard/gamepad cheat sheet.
 
 
-func _refresh_shortcuts() -> void:
+func _refresh_shortcuts(delta: float = 0.0) -> void:
 	if shortcut_label == null:
 		return
-	var learning: bool = get_tree().paused or not RunManager.is_running or RunManager.elapsed_seconds < SHORTCUT_VISIBLE_SECONDS
-	var target: float = 1.0 if learning else 0.25
 	var pill: Control = shortcut_label.get_parent() as Control
-	pill.modulate.a = move_toward(pill.modulate.a, target, 0.02)
+	if overlay_mode in ["preparation", "run"] and not get_tree().paused:
+		_shortcut_learning_seconds += delta
+	var visible_now: bool = false
+	match GameSettings.control_help_mode:
+		GameSettings.ControlHelp.ALWAYS:
+			visible_now = true
+		GameSettings.ControlHelp.BEGINNING:
+			visible_now = int(UnlockManager.completed_runs) < 3 \
+				and _shortcut_learning_seconds < SHORTCUT_VISIBLE_SECONDS
+		GameSettings.ControlHelp.NEVER:
+			visible_now = false
+	pill.visible = visible_now
+	pill.modulate.a = 1.0
 
 
 func _refresh_shortcut_text() -> void:

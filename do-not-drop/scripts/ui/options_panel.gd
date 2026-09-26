@@ -18,6 +18,7 @@ var _voice_slider: HSlider
 var _fov_slider: HSlider
 var _shake_slider: HSlider
 var _hud_scale_slider: HSlider
+var _control_help_option: OptionButton
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
@@ -73,6 +74,19 @@ func _build() -> void:
 	# slider moves, so there's no guessing what 80% looks like.
 	_hud_scale_slider = UiTheme.slider_row(column, "Tamaño del HUD", GameSettings.HUD_SCALE_MIN, GameSettings.HUD_SCALE_MAX, 0.05, GameSettings.hud_scale, true)
 	_hud_scale_slider.value_changed.connect(func(value: float) -> void: GameSettings.hud_scale = value)
+	var help_row := HBoxContainer.new()
+	help_row.add_theme_constant_override("separation", 12)
+	column.add_child(help_row)
+	UiTheme.label(help_row, "Ayudas de controles", 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_control_help_option = OptionButton.new()
+	_control_help_option.add_item("Siempre", GameSettings.ControlHelp.ALWAYS)
+	_control_help_option.add_item("Al principio", GameSettings.ControlHelp.BEGINNING)
+	_control_help_option.add_item("Nunca", GameSettings.ControlHelp.NEVER)
+	_control_help_option.select(GameSettings.control_help_mode)
+	_control_help_option.custom_minimum_size = Vector2(170, 40)
+	help_row.add_child(_control_help_option)
+	_control_help_option.item_selected.connect(func(index: int) -> void:
+		GameSettings.control_help_mode = _control_help_option.get_item_id(index))
 
 	_invert_check = UiTheme.check_box(column, "Invertir eje Y", GameSettings.invert_look_y)
 	_invert_check.toggled.connect(func(pressed: bool) -> void: GameSettings.invert_look_y = pressed)
@@ -178,6 +192,7 @@ func _sync_from_settings() -> void:
 	_sensitivity_slider.value_changed.emit(GameSettings.look_sensitivity)
 	_hud_scale_slider.set_value_no_signal(GameSettings.hud_scale)
 	_hud_scale_slider.value_changed.emit(GameSettings.hud_scale)
+	_control_help_option.select(GameSettings.control_help_mode)
 	_invert_check.set_pressed_no_signal(GameSettings.invert_look_y)
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
 	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)

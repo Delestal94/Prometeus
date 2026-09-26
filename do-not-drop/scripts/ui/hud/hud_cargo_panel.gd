@@ -68,7 +68,12 @@ var photo_strip: HBoxContainer
 var fade_rect: ColorRect
 var risk_vignette: ColorRect
 var shortcut_label: RichTextLabel
-const SHORTCUT_VISIBLE_SECONDS: float = 25.0
+const SHORTCUT_VISIBLE_SECONDS: float = 60.0
+var _shortcut_learning_seconds: float = 0.0
+## One label per fixed HUD zone. Each source keeps its queued entry here;
+## hud_notices.gd renders only the highest-priority one in that zone.
+var _notice_sources: Dictionary = {&"critical": {}, &"information": {}}
+var _notice_serial: int = 0
 var _hint_override: String = ""
 var _hint_override_seconds: float = 0.0
 var _role: int = Role.ON_FOOT
@@ -239,16 +244,25 @@ func _on_package_hint(package_id: StringName, hint: String) -> void:
 
 
 func _refresh_cargo_hint() -> void:
-	if cargo_hint_label == null or not RunManager.is_running:
+	if cargo_hint_label == null:
 		return
-	var worst_id: StringName = &""
-	var worst_integrity: float = INF
-	for id: StringName in RunManager.cargo:
-		var entry: Dictionary = RunManager.cargo[id]
-		if int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED:
-			continue
-		var value: float = float(entry.get("integrity", 100.0))
-		if value < worst_integrity:
-			worst_integrity = value
-			worst_id = id
-	cargo_hint_label.text = String(cargo_hints.get(worst_id, ""))
+	if not RunManager.is_running:
+		call(&"_clear_notice", &"critical", &"cargo")
+		return
+	var package_id := _local_package_id()
+	var entry: Dictionary = RunManager.cargo.get(package_id, {})
+	var at_risk: bool = int(entry.get("state", 0)) == ITrapBehavior.TrapState.AT_RISK
+	var text: String = String(cargo_hints.get(package_id, "")) if at_risk else ""
+	call(&"_set_notice", &"critical", &"cargo", text, 100, RED)
+
+
+func _local_package_id() -> StringName:
+	var level: Node = get_parent()
+	var player: Variant = level.get(&"local_player") if level != null and &"local_player" in level else null
+	if not is_instance_valid(player):
+		return &""
+	for property: StringName in [&"tended_package", &"carried_package"]:
+		var package: Variant = (player as Node).get(property)
+		if is_instance_valid(package):
+			return StringName((package as Node).get(&"package_id"))
+	return &""

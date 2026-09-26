@@ -22,8 +22,10 @@ func _set_buttons(primary: String, restart: bool, options: bool, menu: bool) -> 
 
 func _on_ended(score: int, results: Dictionary) -> void:
 	_soft_pause = false
+	_clear_all_notices()
 	overlay_mode = "results"
 	overlay.show()
+	economy_label.hide()
 	overlay_kicker.text = "RESULTADO"
 	var new_best: bool = bool(results.get("is_new_best", false))
 	_set_hero(true, score, new_best)
@@ -33,7 +35,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	if results.has("distance_traveled"):
 		overlay_title.text = "FIN DEL RECORRIDO"
 		overlay_body.text = String(results["reason"])
-		overlay_stats.text = "%.0f m recorridos   ·   %.1f s%s%s" % [float(results["distance_traveled"]), results["elapsed_seconds"], best_line, client_line]
+		overlay_stats.text = "%.0f m recorridos   ·   %.1f s\nEquipo: $%d%s%s" % [float(results["distance_traveled"]), results["elapsed_seconds"], CrewProgression.team_money, best_line, client_line]
 		complaints_label.visible = false
 		photo_strip.visible = false
 		_set_buttons(retry, false, false, true)
@@ -55,9 +57,9 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
 	var door_line: String = "\nPuertas: %d pts" % int(results.get("delivery_points", 0)) if results.has("delivery_points") else ""
 	if results.has("breakdown"):
-		overlay_stats.text = format_score_breakdown(results, score) + best_line + client_line
+		overlay_stats.text = format_score_breakdown(results, score) + "\nEquipo: $%d" % CrewProgression.team_money + best_line + client_line
 	else:
-		overlay_stats.text = "En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s%s%s" % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, best_line, client_line]
+		overlay_stats.text = "En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s\nEquipo: $%d%s%s" % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
 	_show_complaints(results.get("complaints", []))
 	_show_photos()
 	_set_buttons(retry, false, false, true)

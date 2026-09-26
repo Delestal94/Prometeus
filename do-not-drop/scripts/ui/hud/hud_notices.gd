@@ -8,8 +8,9 @@ const EVENT_DISPLAY_SECONDS: float = 6.0
 
 func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
 	var who: String = "Vos" if peer_id == NetworkManager.local_id() else "Jugador %d" % peer_id
-	ping_label.text = "%s:  %s" % [who, label]
-	ping_indicator.text = _ping_arrow(world_position) + "  PING"
+	_toast("%s  %s:  %s" % [_ping_arrow(world_position), who, label], 40)
+	ping_label.text = ""
+	ping_indicator.text = ""
 	ping_seconds_left = PING_DISPLAY_SECONDS
 	if peer_id != NetworkManager.local_id():
 		_mark_pinger(peer_id)
@@ -94,8 +95,9 @@ func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
 	_toast("¡Desbloqueaste %s!" % title)
 
 
-func _toast(text: String) -> void:
-	toast_label.text = text
+func _toast(text: String, priority: int = 20) -> void:
+	_notice_serial += 1
+	_set_notice(&"information", StringName("toast_%d" % _notice_serial), text, priority, MINT, PING_DISPLAY_SECONDS)
 	toast_seconds_left = PING_DISPLAY_SECONDS
 
 
@@ -105,7 +107,6 @@ func _on_route_event_started(event_id: StringName, event: Dictionary) -> void:
 		return
 	_route_event_active_id = event_id
 	_on_route_event_updated(event_id, event)
-	event_label.add_theme_color_override("font_color", YELLOW)
 	event_seconds_left = 0.0
 
 
@@ -118,7 +119,7 @@ func _on_route_event_updated(event_id: StringName, event: Dictionary) -> void:
 	elif event_id == &"mixed_labels" and event.get("phase") == &"swapped":
 		objective = "%s  ?" % objective
 	var seconds: int = ceili(float(event.get("remaining", 0.0)))
-	event_label.text = "%s\n%s\n%02d:%02d" % [event.get("title", "Evento"), objective, seconds / 60, seconds % 60]
+	_set_notice(&"critical", &"route_event", "%s\n%s\n%02d:%02d" % [event.get("title", "Evento"), objective, seconds / 60, seconds % 60], 80, YELLOW)
 	if event_id in [&"mixed_labels", &"mimetic_package"]:
 		for id: StringName in cargo_rows:
 			_refresh_row(id)
@@ -129,8 +130,89 @@ func _on_route_event_resolved(event_id: StringName, success: bool, _peer_id: int
 		return
 	if _route_event_active_id == event_id:
 		_route_event_active_id = &""
+	_clear_notice(&"critical", &"route_event")
 	for id: StringName in cargo_rows:
 		_refresh_row(id)
-	event_label.text = "Evento resuelto" if success else "Evento fallido"
-	event_label.add_theme_color_override("font_color", MINT if success else RED)
+	_set_notice(&"critical", &"route_result", "Evento resuelto" if success else "Evento fallido", 70, MINT if success else RED, PING_DISPLAY_SECONDS)
 	event_seconds_left = PING_DISPLAY_SECONDS
+
+
+func _set_notice(zone: StringName, key: StringName, text: String, priority: int,
+		color: Color, duration: float = -1.0) -> void:
+	if not _notice_sources.has(zone):
+		return
+	if text.is_empty():
+		_clear_notice(zone, key)
+		return
+	var sources: Dictionary = _notice_sources[zone]
+	var previous: Dictionary = sources.get(key, {})
+	_notice_serial += 1 if previous.is_empty() else 0
+	sources[key] = {
+		"text": text,
+		"priority": priority,
+		"color": color,
+		"duration": duration,
+		"remaining": duration,
+		"serial": int(previous.get("serial", _notice_serial)),
+	}
+	_notice_sources[zone] = sources
+	_render_notice_zone(zone)
+
+
+func _clear_notice(zone: StringName, key: StringName) -> void:
+	if not _notice_sources.has(zone):
+		return
+	var sources: Dictionary = _notice_sources[zone]
+	sources.erase(key)
+	_notice_sources[zone] = sources
+	_render_notice_zone(zone)
+
+
+func _clear_all_notices() -> void:
+	_notice_sources = {&"critical": {}, &"information": {}}
+	_render_notice_zone(&"critical")
+	_render_notice_zone(&"information")
+
+
+func _process_notices(delta: float) -> void:
+	for zone: StringName in _notice_sources:
+		var sources: Dictionary = _notice_sources[zone]
+		var active_key := _top_notice_key(sources)
+		if active_key != &"":
+			var active: Dictionary = sources[active_key]
+			if float(active.get("remaining", -1.0)) >= 0.0:
+				active.remaining = float(active.remaining) - delta
+				if float(active.remaining) <= 0.0:
+					sources.erase(active_key)
+				else:
+					sources[active_key] = active
+		_notice_sources[zone] = sources
+		_render_notice_zone(zone)
+
+
+func _render_notice_zone(zone: StringName) -> void:
+	var label: Label = event_label if zone == &"critical" else toast_label
+	if label == null:
+		return
+	var sources: Dictionary = _notice_sources[zone]
+	var best_key := _top_notice_key(sources)
+	if best_key == &"":
+		label.text = ""
+		return
+	var best: Dictionary = sources[best_key]
+	label.text = String(best.text)
+	label.add_theme_color_override("font_color", best.color)
+
+
+func _top_notice_key(sources: Dictionary) -> StringName:
+	var best_key: StringName = &""
+	for key: StringName in sources:
+		var entry: Dictionary = sources[key]
+		if best_key == &"":
+			best_key = key
+			continue
+		var best: Dictionary = sources[best_key]
+		if int(entry.priority) > int(best.priority) \
+				or (int(entry.priority) == int(best.priority) and int(entry.serial) < int(best.serial)):
+			best_key = key
+	return best_key

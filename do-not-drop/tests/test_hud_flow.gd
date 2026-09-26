@@ -57,6 +57,60 @@ func _run() -> void:
 	# --- restart has to be held during play ---
 	hud._primary_action()
 	_expect(hud.overlay_mode == "preparation" and not hud.overlay.visible, "Begin reveals the level")
+	_expect(hud.economy_label.visible, "Team money is visible while making depot decisions")
+
+	# --- fixed hierarchy: one message in each zone, never on top of another ---
+	bus.route_event_started.emit(&"inspection", {
+		"title": "INSPECCIÓN", "prompt": "Asegurá la carga", "remaining": 45.0,
+	})
+	bus.interaction_prompt_changed.emit("Agarrar paquete")
+	bus.depot_notice.emit("Carta obtenida")
+	await process_frame
+	_expect(String(hud.event_label.text).contains("INSPECCIÓN"), "Critical event owns the top-centre zone")
+	_expect(String(hud.interaction_label.text).contains("Agarrar paquete"), "Interaction owns the bottom-centre zone")
+	_expect(String(hud.toast_label.text).contains("Carta obtenida"), "Toast owns the information zone")
+	_expect(not _overlap(hud.event_label, hud.interaction_label)
+		and not _overlap(hud.event_label, hud.toast_label)
+		and not _overlap(hud.interaction_label, hud.toast_label),
+		"Critical, context and information zones do not overlap")
+	hud._set_notice(&"information", &"low", "Aviso normal", 1, Color.WHITE)
+	hud._set_notice(&"information", &"high", "Aviso prioritario", 90, Color.WHITE)
+	_expect(hud.toast_label.text == "Aviso prioritario", "The notice queue shows its highest priority")
+	hud._clear_notice(&"information", &"high")
+	_expect(hud.toast_label.text == "Carta obtenida", "Clearing a priority notice resumes the queued toast")
+	hud._set_notice(&"information", &"brief", "Aviso breve", 95, Color.WHITE, 0.01)
+	hud._process_notices(0.02)
+	_expect(hud.toast_label.text == "Carta obtenida", "An expired priority notice resumes the queue (got '%s')" % hud.toast_label.text)
+
+	# --- shortcut teaching can be automatic or explicitly overridden ---
+	var unlocks: Node = root.get_node("UnlockManager")
+	var original_runs: int = int(unlocks.completed_runs)
+	var original_help: int = int(settings.control_help_mode)
+	unlocks.completed_runs = 0
+	settings.control_help_mode = settings.ControlHelp.BEGINNING
+	hud._shortcut_learning_seconds = 0.0
+	hud._refresh_shortcuts()
+	_expect(hud.shortcut_label.get_parent().visible, "Beginning mode teaches a new player")
+	hud._shortcut_learning_seconds = 60.0
+	hud._refresh_shortcuts()
+	_expect(not hud.shortcut_label.get_parent().visible, "Beginning mode hides after 60 seconds")
+	hud._shortcut_learning_seconds = 0.0
+	unlocks.completed_runs = 3
+	hud._refresh_shortcuts()
+	_expect(not hud.shortcut_label.get_parent().visible, "Beginning mode hides after three completed runs")
+	settings.control_help_mode = settings.ControlHelp.ALWAYS
+	hud._refresh_shortcuts()
+	_expect(hud.shortcut_label.get_parent().visible, "Always mode keeps shortcuts visible")
+	settings.control_help_mode = settings.ControlHelp.NEVER
+	hud._refresh_shortcuts()
+	_expect(not hud.shortcut_label.get_parent().visible, "Never mode hides shortcuts")
+	settings.control_help_mode = original_help
+	unlocks.completed_runs = original_runs
+
+	hud._on_started(&"delivery", [])
+	_expect(not hud.economy_label.visible, "Team money is hidden while driving")
+	_expect(String(hud._pause_stats()).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
+		"Pause shows team money")
 	Input.action_press(&"run_restart")
 	await create_timer(0.3).timeout
 	_expect(_restarts == 0, "A tap of R mid-play doesn't throw the run away")
@@ -71,6 +125,8 @@ func _run() -> void:
 	_expect(hud.overlay_mode == "results", "Results open")
 	_expect(hud.action_button.visible and hud.menu_button.visible, "Results offer retry and menu")
 	_expect(not hud.options_button.visible and not hud.second_button.visible, "Results don't carry stale buttons")
+	_expect(String(hud.overlay_stats.text).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
+		"Results show team money")
 
 	# --- losing the host ---
 	network.session_failed.emit("Se cortó la conexión con el anfitrión.")
@@ -89,3 +145,7 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		failures += 1
+
+
+func _overlap(a: Control, b: Control) -> bool:
+	return not a.text.is_empty() and not b.text.is_empty() and a.get_global_rect().intersects(b.get_global_rect())

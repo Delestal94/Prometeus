@@ -25,13 +25,13 @@ func _refresh_restart_hold(delta: float) -> void:
 	var playing: bool = overlay_mode == "run" or overlay_mode == "preparation"
 	if playing and _can_restart() and Input.is_action_pressed(&"run_restart"):
 		_restart_hold += delta
-		toast_label.text = "Reiniciando…  soltá para cancelar"
-		toast_seconds_left = 0.2
+		_set_notice(&"information", &"restart", "Reiniciando…  soltá para cancelar", 100, YELLOW, 0.25)
 		if _restart_hold >= RESTART_HOLD_SECONDS:
 			_restart_hold = 0.0
 			_request_restart()
 	else:
 		_restart_hold = 0.0
+		_clear_notice(&"information", &"restart")
 
 
 func _on_input_device_changed(_gamepad: bool) -> void:
@@ -81,7 +81,7 @@ func _pause() -> void:
 
 
 func _pause_stats() -> String:
-	return "%s para volver a la ruta." % _key("Esc", "Start")
+	return "Equipo: $%d\n%s para volver a la ruta." % [CrewProgression.team_money, _key("Esc", "Start")]
 
 
 func _resume() -> void:
@@ -113,6 +113,7 @@ func _primary_action() -> void:
 			overlay.hide()
 			overlay_mode = "preparation"
 			dashboard.show()
+			economy_label.show()
 			action_button.release_focus()
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			section_label.text = "PREPARACIÓN"
@@ -146,6 +147,7 @@ func _on_depot_station_opened(station: StringName) -> void:
 func _on_connection_lost(reason: String) -> void:
 	get_tree().paused = false
 	_soft_pause = false
+	_clear_all_notices()
 	overlay_mode = "disconnected"
 	overlay.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
