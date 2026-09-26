@@ -41,6 +41,7 @@ status=0
 for role in host client; do
 	line="$(grep -m1 "^PAIR role=$role " "$WORK/$role.log" || true)"
 	echo "${line:-PAIR role=$role (no result)}"
+	grep -m1 "^NETMETRIC " "$WORK/$role.log" || true
 	case "$line" in
 		*PASS*) ;;
 		*) status=1 ;;

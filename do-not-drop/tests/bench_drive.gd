@@ -149,8 +149,10 @@ func _run() -> void:
 			"physics": physics_wall,
 			"draws": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			"objects": Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
-			"prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
-			"kmh": _van.linear_velocity.length() * 3.6,
+		"prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+		"memory_static": Performance.get_monitor(Performance.MEMORY_STATIC),
+		"memory_video": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED),
+		"kmh": _van.linear_velocity.length() * 3.6,
 			"progress": float(_path_index) / maxf(1.0, float(_path.size())),
 			"rescues": _rescues,
 		})
@@ -231,6 +233,8 @@ func _report(first_ms: float) -> void:
 	var process_ms: float = 0.0
 	var physics_ms: float = 0.0
 	var physics_peak: float = 0.0
+	var memory_static_peak: float = 0.0
+	var memory_video_peak: float = 0.0
 	var physics_ticks: int = 0
 	for f: Dictionary in _frames:
 		times.append(f.ms)
@@ -238,6 +242,8 @@ func _report(first_ms: float) -> void:
 		draws += f.draws
 		objects += f.objects
 		prims += f.prims
+		memory_static_peak = maxf(memory_static_peak, f.memory_static)
+		memory_video_peak = maxf(memory_video_peak, f.memory_video)
 		process_ms += f.process
 		if f.physics > 0.0:
 			physics_ms += f.physics
@@ -249,6 +255,10 @@ func _report(first_ms: float) -> void:
 	print("BENCH first_frame_ms=%.0f frames=%d avg_ms=%.2f fps=%.0f p50=%.2f p95=%.2f p99=%.2f max=%.1f" % [first_ms, _frames.size(), total / n, 1000.0 * n / total, p.call(0.5), p.call(0.95), p.call(0.99), times[-1]])
 	print("BENCH avg draws=%.0f objects=%.0f prims=%.0f progress=%.2f" % [draws / n, objects / n, prims / n, _frames[-1].progress])
 	print("BENCH physics per tick: avg=%.2fms peak=%.2fms (%d ticks)" % [physics_ms / maxf(1.0, physics_ticks), physics_peak, physics_ticks])
+	print("BENCH memory_static_peak_mib=%.1f memory_video_peak_mib=%.1f" % [
+		memory_static_peak / 1048576.0,
+		memory_video_peak / 1048576.0,
+	])
 	if _smooth_samples.size() > 10:
 		var mean: float = 0.0
 		for v: float in _smooth_samples:

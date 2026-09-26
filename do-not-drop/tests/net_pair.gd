@@ -121,6 +121,7 @@ func _run_host() -> void:
 	await _pump(0.8)
 	_expect(client_player.carried_package == package and package.carrier == client_player,
 		"client holds the package before disconnecting")
+	_print_network_metrics("host")
 	rpc_id(_client_peer_id, &"_client_disconnect_while_carrying", package.get_path())
 	var disconnected: bool = await _wait_until(func() -> bool:
 		return get_tree().root.multiplayer.get_peers().is_empty())
@@ -223,6 +224,7 @@ func _client_disconnect_while_carrying(package_path: NodePath) -> void:
 	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
 	var ok: bool = package != null and player != null and player.carried_package == package
 	_finished = true
+	_print_network_metrics("client")
 	print("PAIR role=client %s: disconnect while carrying" % ("PASS" if ok else "FAIL"))
 	await _pump(0.2)
 	_network.call(&"leave_session")
@@ -261,6 +263,27 @@ func _finish(ok: bool, detail: String) -> void:
 	await _pump(0.8)
 	_network.call(&"leave_session")
 	get_tree().quit(0 if passed else 1)
+
+
+func _print_network_metrics(role: String) -> void:
+	var multiplayer_peer: MultiplayerPeer = get_tree().root.multiplayer.multiplayer_peer
+	if not multiplayer_peer is ENetMultiplayerPeer:
+		return
+	var remote_id: int = 1 if role == "client" else _client_peer_id
+	var packet_peer: ENetPacketPeer = (multiplayer_peer as ENetMultiplayerPeer).get_peer(remote_id)
+	if packet_peer == null:
+		return
+	var loss_epoch_ms: int = int(packet_peer.get_statistic(ENetPacketPeer.PEER_PACKET_LOSS_EPOCH))
+	var loss_percent: String = "NA"
+	if loss_epoch_ms >= 10000:
+		loss_percent = "%.3f" % (packet_peer.get_statistic(ENetPacketPeer.PEER_PACKET_LOSS) * 100.0 / ENetPacketPeer.PACKET_LOSS_SCALE)
+	print("NETMETRIC transport=enet topology=localhost role=%s rtt_ms=%.1f rtt_variance_ms=%.1f packet_loss_pct=%s packet_loss_epoch_ms=%d" % [
+		role,
+		packet_peer.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME),
+		packet_peer.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME_VARIANCE),
+		loss_percent,
+		loss_epoch_ms,
+	])
 
 
 func _expect(condition: bool, description: String) -> void:
