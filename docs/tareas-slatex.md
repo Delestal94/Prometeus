@@ -575,14 +575,14 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 
 ### S-502 · Accesibilidad: daltonismo, texto y efectos — A · `Sol · high` · Aviso: no
 
-- [ ] Estados de caja con forma además de color: OK ✓, En riesgo ! (con pulso), Arruinada ✕, en las filas
+- [x] Estados de caja con forma además de color: OK ✓, En riesgo ! (con pulso), Arruinada ✕, en las filas
   de carga y sobre la caja.
-- [ ] Opción "Paleta para daltonismo" que cambia verde/amarillo/rojo por la paleta Okabe-Ito
+- [x] Opción "Paleta para daltonismo" que cambia verde/amarillo/rojo por la paleta Okabe-Ito
   (azul/naranja/bermellón) en `UiTheme`.
-- [ ] Opción "Tamaño de texto de menús" (100 / 125 / 150 %), aparte de la escala del HUD que ya existe.
-- [ ] Opción "Subtítulos de sonidos": "[tictac acelerando]", "[gruñido]", "[vidrio que cruje]" en la
+- [x] Opción "Tamaño de texto de menús" (100 / 125 / 150 %), aparte de la escala del HUD que ya existe.
+- [x] Opción "Subtítulos de sonidos": "[tictac acelerando]", "[gruñido]", "[vidrio que cruje]" en la
   zona de contexto, para los sonidos de trampa en riesgo.
-- [ ] Todas persistidas en `GameSettings`; `test_settings.gd` ampliado.
+- [x] Todas persistidas en `GameSettings`; `test_settings.gd` ampliado.
 
 ### S-503 · Tipografía legible a distancia de sillón — C · `Luna · medium` · Aviso: no
 
