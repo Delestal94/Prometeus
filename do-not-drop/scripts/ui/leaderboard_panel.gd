@@ -2,6 +2,7 @@ class_name LeaderboardPanel
 extends Control
 
 signal closed
+var _close_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -12,6 +13,17 @@ func _ready() -> void:
 func open() -> void:
 	_refresh()
 	show()
+
+
+func close() -> void:
+	hide()
+	closed.emit()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if visible and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
+		close()
+		get_viewport().set_input_as_handled()
 
 
 func _build() -> void:
@@ -32,8 +44,10 @@ func _build() -> void:
 		rank += 1
 	if rank == 1:
 		UiTheme.label(column, "Todavía no hay entregas registradas.", 18, UiTheme.MUTED)
-	var close_button: Button = UiTheme.button(column, "Volver", false, Vector2(0, 48))
-	close_button.pressed.connect(func() -> void: hide(); closed.emit())
+	_close_button = UiTheme.button(column, "Volver", false, Vector2(0, 48))
+	_close_button.pressed.connect(close)
+	if visible:
+		_close_button.grab_focus.call_deferred()
 
 
 func _refresh() -> void:

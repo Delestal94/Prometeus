@@ -84,8 +84,21 @@ func _build(active_tab: int = 0) -> void:
 	UiTheme.label(footer, "Tus cambios se guardan automáticamente", 15, UiTheme.PAPER).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var done: Button = UiTheme.button(footer, "Listo", true, Vector2(180, 48))
 	done.name = "Done"
-	done.pressed.connect(func() -> void: hide(); closed.emit())
+	done.pressed.connect(close)
 	_refresh_face()
+
+func open() -> void:
+	show()
+	_grab_first_button.call_deferred()
+
+func close() -> void:
+	hide()
+	closed.emit()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if visible and (event.is_action_pressed(&"ui_pause") or event.is_action_pressed(&"ui_cancel")):
+		close()
+		get_viewport().set_input_as_handled()
 
 func _tab(label: String) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
@@ -106,6 +119,7 @@ func _face_choices(parent: VBoxContainer, title: String, kind: String, options: 
 	grid.add_theme_constant_override("v_separation", 10)
 	parent.add_child(grid)
 	var group := ButtonGroup.new()
+	var buttons: Array[Button] = []
 	for id: StringName in options:
 		var button: Button = UiTheme.button(grid, "", false, Vector2(108, 78))
 		button.name = kind.capitalize() + "_" + String(id)
@@ -137,6 +151,28 @@ func _face_choices(parent: VBoxContainer, title: String, kind: String, options: 
 			_refresh_face()
 		)
 		_face_buttons.append(button)
+		buttons.append(button)
+	_wire_grid_focus(buttons, grid.columns)
+
+func _wire_grid_focus(buttons: Array[Button], columns: int) -> void:
+	for index: int in buttons.size():
+		var button: Button = buttons[index]
+		var column: int = index % columns
+		var neighbors: Dictionary = {
+			&"focus_neighbor_left": buttons[index - 1] if column > 0 else button,
+			&"focus_neighbor_right": buttons[index + 1] if column < columns - 1 and index + 1 < buttons.size() else button,
+			&"focus_neighbor_top": buttons[index - columns] if index >= columns else button,
+			&"focus_neighbor_bottom": buttons[index + columns] if index + columns < buttons.size() else button,
+		}
+		for property: StringName in neighbors:
+			button.set(property, button.get_path_to(neighbors[property]))
+
+func _grab_first_button() -> void:
+	for node: Node in find_children("*", "Button", true, false):
+		var button := node as Button
+		if button.is_visible_in_tree() and not button.disabled:
+			button.grab_focus()
+			return
 
 func _refresh_face() -> void:
 	_face_preview.shirt_color = UnlockManager.cosmetic_color()
@@ -236,3 +272,5 @@ func _refresh() -> void:
 		remove_child(child)
 		child.queue_free()
 	_build(tab)
+	if visible:
+		_grab_first_button.call_deferred()

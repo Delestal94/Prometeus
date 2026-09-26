@@ -47,6 +47,14 @@ func _on_input_device_changed(_gamepad: bool) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if depot_panel != null and depot_panel.visible:
 		return
+	if options_panel != null and options_panel.visible:
+		return
+	if event.is_action_pressed("ui_cancel") and overlay_mode in ["pause", "results", "disconnected"]:
+		match overlay_mode:
+			"pause": _resume()
+			"results", "disconnected": _leave_to_menu()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("ui_pause"):
 		match overlay_mode:
 			"pause":
@@ -88,6 +96,7 @@ func _resume() -> void:
 	if _soft_pause:
 		_soft_pause = false
 		overlay.hide()
+		action_button.release_focus()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	else:

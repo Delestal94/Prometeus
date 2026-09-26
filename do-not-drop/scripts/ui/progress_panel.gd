@@ -39,6 +39,7 @@ func open() -> void:
 	_reset_campaign_confirmation()
 	_refresh()
 	show()
+	_new_campaign_button.grab_focus.call_deferred()
 
 func close() -> void:
 	_reset_campaign_confirmation()

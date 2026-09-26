@@ -463,7 +463,7 @@ func _open_tutorial() -> void:
 
 
 func _open_cosmetics() -> void:
-	_cosmetics.show()
+	_cosmetics.call(&"open")
 
 
 func _open_leaderboard() -> void:
