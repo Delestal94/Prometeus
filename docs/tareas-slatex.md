@@ -591,11 +591,11 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 
 ### S-504 · Todo el menú con gamepad — A · `Sol · high` · Aviso: no
 
-- [ ] Cada panel (`options`, `progress`, `tutorial`, `cosmetics`, `leaderboard`, `depot_panel`, pausa y
+- [x] (commit `67cf588`) Cada panel (`options`, `progress`, `tutorial`, `cosmetics`, `leaderboard`, `depot_panel`, pausa y
   resultados) da foco a su primer botón al abrir y devuelve el foco al botón que lo abrió al cerrar.
-- [ ] Vecinos de foco en grillas (cosméticos) para que el stick no salte de columna.
-- [ ] B / Círculo cierra cualquier panel (hoy lo hacen algunos).
-- [ ] Test `tests/test_gamepad_focus.gd`: al abrir cada panel hay un `Control` con foco.
+- [x] (commit `67cf588`) Vecinos de foco en grillas (cosméticos) para que el stick no salte de columna.
+- [x] (commit `67cf588`) B / Círculo cierra cualquier panel (hoy lo hacen algunos).
+- [x] (commit `67cf588`) Test `tests/test_gamepad_focus.gd`: al abrir cada panel hay un `Control` con foco.
 
 ### S-505 · Rueda de pings — B · `Sol · xhigh` · Aviso: no
 
