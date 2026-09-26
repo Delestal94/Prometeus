@@ -139,7 +139,9 @@ func _ready() -> void:
 		bus.connect("package_damaged", _on_package_damaged)
 		bus.connect("package_collision", _on_package_collision)
 		bus.connect("package_placed", _on_package_placed)
-	GameSettings.colorblind_palette_changed.connect(_refresh_accessibility_palette)
+	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	if settings != null:
+		settings.connect(&"colorblind_palette_changed", _refresh_accessibility_palette)
 
 
 func _apply_identity(package: Node) -> void:
@@ -596,7 +598,7 @@ func _apply_explosive(delta: float) -> void:
 	var direction: StringName = StringName(package.trap_behavior.call("next_direction"))
 	var state: int = int(package.trap_behavior.call("get_state"))
 	_explosive_display.text = "DEFUSE\n%02d  %s" % [ceili(seconds), _explosive_arrow(direction)]
-	_explosive_display.modulate = UiTheme.state_color(state, GameSettings.colorblind_palette)
+	_explosive_display.modulate = UiTheme.state_color(state, _colorblind_palette_enabled())
 	# The countdown only means something once the bomb is on the road: on
 	# the depot's shelf it would just be a floating, ticking sign (depot.gd).
 	_explosive_display.visible = bool(package.call(&"_is_run_active"))
@@ -799,8 +801,13 @@ func _refresh_state_badge() -> void:
 	if _state_badge == null:
 		return
 	_state_badge.text = ["OK ✓", "EN RIESGO !", "ARRUINADA ✕"][clampi(_state, 0, 2)]
-	_state_badge.modulate = UiTheme.state_color(_state, GameSettings.colorblind_palette)
+	_state_badge.modulate = UiTheme.state_color(_state, _colorblind_palette_enabled())
 
 
 func _refresh_accessibility_palette(_enabled: bool) -> void:
 	_refresh_state_badge()
+
+
+func _colorblind_palette_enabled() -> bool:
+	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	return bool(settings.get(&"colorblind_palette")) if settings != null else false

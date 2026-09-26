@@ -39,13 +39,16 @@ func _run() -> void:
 	van.global_position = house.global_position
 	_expect(not bool(level.call(&"_should_count_as_stuck")), "Stopping beside a delivery house does not count as stuck")
 	var depot := level.get(&"depot") as Node3D
-	van.global_position = depot.to_global(Vector3(0.0, Depot.TRUCK_BAY.y, Depot.TRUCK_CLEAR_Z - 15.0))
+	var depot_constants: Dictionary = (depot.get_script() as Script).get_script_constant_map()
+	var truck_bay: Vector3 = depot_constants["TRUCK_BAY"] as Vector3
+	var truck_clear_z: float = float(depot_constants["TRUCK_CLEAR_Z"])
+	van.global_position = depot.to_global(Vector3(0.0, truck_bay.y, truck_clear_z - 15.0))
 	van.set(&"driver_peer_id", 0)
 	_expect(not bool(level.call(&"_should_count_as_stuck")), "A stopped van with no driver does not count as stuck")
 	await _free_level(level)
 
 	# Pedal down against a wall it can't move: ends as stuck.
-	level = await _start_level()
+	level = await _start_level(true)
 	van = level.get(&"vehicle")
 	var wall := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
@@ -76,12 +79,20 @@ func _run() -> void:
 	quit(_failures)
 
 
-func _start_level() -> Node:
+func _start_level(start_outside_depot: bool = false) -> Node:
 	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(level)
 	current_scene = level
 	await process_frame
 	await physics_frame
+	if start_outside_depot:
+		var depot := level.get(&"depot") as Node3D
+		var depot_constants: Dictionary = (depot.get_script() as Script).get_script_constant_map()
+		var truck_bay: Vector3 = depot_constants["TRUCK_BAY"] as Vector3
+		var truck_clear_z: float = float(depot_constants["TRUCK_CLEAR_Z"])
+		var van := level.get(&"vehicle") as VehicleBody3D
+		van.global_position = depot.to_global(Vector3(0.0, truck_bay.y, truck_clear_z - 15.0))
+		van.reset_physics_interpolation()
 	level.call(&"start_debug_delivery")
 	await physics_frame
 	_expect(bool(root.get_node(^"/root/RunManager").get(&"is_running")), "The run starts")
