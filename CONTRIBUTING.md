@@ -8,8 +8,9 @@ tools/setup-hooks.sh
 
 Activa el hook `pre-push`: antes de cada `git push` se corre la batería de tests headless
 (`tools/run-tests.sh`) y, si algo falla, no se sube nada. Si el push solo trae cambios de
-documentación, el hook no corre los tests. En una emergencia: `SKIP_TESTS=1 git push`
-(GitHub Actions los corre igual en cada push a `main` y en cada PR).
+documentación, el hook no corre los tests. GitHub Actions corre los tests headless y los
+checks de red en cada push a `main` y en cada PR, incluidos los cambios que solo tocan
+documentación. En una emergencia: `SKIP_TESTS=1 git push`.
 
 El hook y el script buscan Godot en `GODOT`, en el `PATH` o en
 `D:/Descargas/Godot_v4.7.2-stable_win64_console.exe`. Si lo tenés en otro lado:
