@@ -602,12 +602,12 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 
 Hoy hay un único ping "¡Cuidado!" (`player.gd` `_send_ping`).
 
-- [ ] Tocar ping = ping rápido como hoy. Mantener = rueda de 6: ¡Cuidado!, ¡Ayuda!, ¡Frená!, Acá, Gracias,
+- [x] (commit `638b9a4`) Tocar ping = ping rápido como hoy. Mantener = rueda de 6: ¡Cuidado!, ¡Ayuda!, ¡Frená!, Acá, Gracias,
   Sí/No. Selección con el mouse o el stick derecho.
-- [ ] Sin cambios de red: `EventBus.request_ping(position, label)` ya lleva el texto.
-- [ ] Color e ícono por tipo en el marcador (`_mark_pinger`); "¡Ayuda!" dispara el emote (S-308) y la
+- [x] (commit `638b9a4`) Sin cambios de red: `EventBus.request_ping(position, label)` ya lleva el texto.
+- [x] (commit `638b9a4`) Color e ícono por tipo en el marcador (`_mark_pinger`); "¡Ayuda!" dispara el emote (S-308) y la
   voz (S-402) si existen.
-- [ ] Test en `test_ping.gd`: cada opción llega con su etiqueta.
+- [x] (commit `638b9a4`) Test en `test_ping.gd`: cada opción llega con su etiqueta.
 
 ### S-506 · Onboarding: tutorial en fichas y consejos de primera vez — A · `Sol · high`, textos con `Luna · medium` · Aviso: no
 
