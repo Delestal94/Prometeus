@@ -1,4 +1,4 @@
-name: Dependabot auto-merge
+name: Auto-merge pull requests
 
 on:
   pull_request_target:
@@ -12,8 +12,7 @@ jobs:
   enable-auto-merge:
     if: >-
       ${{ !github.event.pull_request.draft &&
-      github.repository == 'Delestal94/Prometeus' &&
-      github.event.pull_request.user.login == 'dependabot[bot]' }}
+      github.event.pull_request.base.ref == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Queue auto-merge after required checks
