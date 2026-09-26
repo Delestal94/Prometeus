@@ -13,11 +13,11 @@ difficulty = 3
 params = {
 "integrity_max": 100.0,
 "agitation_max": 100.0,
-"agitation_gain_per_shake": 25.0,
-"shake_threshold": 7.0,
-"agitation_decay_rate": 30.0,
+"agitation_gain_per_shake": 16.0,
+"shake_threshold": 0.30,
+"agitation_decay_rate": 16.0,
 "agitation_passive_decay": 5.0,
 "at_risk_at": 60.0,
-"fail_seconds_at_max": 2.0
+"fail_seconds_at_max": 0.8
 }
 contents = Array[Resource]([ExtResource("3_content")])

@@ -17,8 +17,8 @@ params = {
 "leak_per_second": 7.0,
 "surge_per_second": 24.0,
 "impact_threshold": 4.0,
-"impact_spill": 18.0,
-"mop_rate": 22.0,
-"integrity_loss_per_spill": 0.23
+"impact_spill": 0.05,
+"mop_rate": 9.0,
+"integrity_loss_per_spill": 0.55
 }
 contents = Array[Resource]([ExtResource("3_content")])

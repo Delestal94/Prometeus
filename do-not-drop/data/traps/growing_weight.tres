@@ -16,7 +16,7 @@ params = {
 "sequence_length": 4,
 "weight_growth_rate": 0.15,
 "weight_growth_interval": 2.0,
-"weight_fail_threshold": 2.5,
-"weight_at_risk_threshold": 1.5
+"weight_fail_threshold": 2.9,
+"weight_at_risk_threshold": 1.45
 }
 contents = Array[Resource]([ExtResource("3_content")])

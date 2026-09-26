@@ -12,9 +12,9 @@ behavior_script = ExtResource("2_behavior")
 difficulty = 4
 params = {
 "integrity_max": 100.0,
-"command_seconds": 2.8,
-"correct_decay": 13.0,
-"wrong_gain": 22.0,
-"passive_gain": 3.5
+"command_seconds": 11.0,
+"correct_decay": 14.0,
+"wrong_gain": 7.0,
+"passive_gain": 2.5
 }
 contents = Array[Resource]([ExtResource("3_content")])

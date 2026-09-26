@@ -659,3 +659,10 @@ desarrollo, contenido nuevo, streaming de tramos/modo endless, pulido, documenta
 descompuestas en pasos concretos — no relleno. Cada lista tiene prioridad **A/B/C**
 igual que `especificaciones-visuales.md`: A es accionable ya, B necesita arte/pipeline,
 C es pulido para más adelante.
+
+# Aviso S-108 · 2026-09-26
+
+El simulador reproducible de balance de trampas agrega dos herramientas aisladas en `tests/`,
+documenta objetivos y resultados en `docs/parametros-diseno.md` y añade sus comandos al
+`README.md` compartido. El ajuste queda limitado a parámetros de `data/traps/*.tres`; no cambia
+comportamientos ni archivos del dominio de Nacho.

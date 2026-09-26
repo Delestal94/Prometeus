@@ -163,6 +163,16 @@ GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
 Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son
 parte de la batería (con Claude, los corre el agente `revisor-visual`).
 
+El balance reproducible de trampas tampoco forma parte de la batería rápida. Primero
+`sim_record_drive.gd` maneja cinco rutas reales y guarda la aceleración, inclinación e impactos
+de cada cuadro; después `sim_trap_balance.gd` repite esos recorridos con los siete
+comportamientos y los perfiles ausente, torpe y experto, con y sin 150 ms de latencia:
+
+```
+<godot> --headless --fixed-fps 60 --path do-not-drop --script res://tests/sim_record_drive.gd
+<godot> --headless --path do-not-drop --script res://tests/sim_trap_balance.gd
+```
+
 Para correr un test suelto a mano, sin abrir el editor, reemplazá `<godot>` por la ruta a tu
 ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 

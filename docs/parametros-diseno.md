@@ -1,12 +1,79 @@
 # Parámetros de diseño — valores iniciales
 
 > Basado en: `docs/requerimientos-tecnicos.md` (sección 4, catálogo de trampas).
-> Última actualización: 2026-09-20
+> Última actualización: 2026-09-26
 > **Importante**: todos los números de este documento son puntos de partida
 > razonables para poder empezar a programar, no valores finales. Se ajustan con
 > playtesting real (Fase 7 del plan de desarrollo). Cada valor está pensado para vivir
 > en el `params: Dictionary` del `TrapDefinition` correspondiente (ver
 > `docs/arquitectura.md` sección 4), es decir, **ajustable sin tocar código**.
+
+## Objetivos cuantitativos de balance (S-108, definidos antes del ajuste)
+
+Los perfiles se prueban sobre cinco recorridos físicos grabados y 50 repeticiones por
+combinación. Un pasajero ausente debe perder entre 80 % y 100 % de los paquetes; uno torpe
+(0,8 s de reacción, 60 % de acierto y 20 % de abandono de una acción sostenida), entre 30 % y
+55 %, dejando en promedio al menos una casi pérdida por viaje; uno experto (0,25 s y 95 %),
+menos de 12 %. Agregar 150 ms de latencia no debe aumentar la pérdida experta más de 8 puntos
+porcentuales.
+
+Estos objetivos se aplican a las seis trampas con una acción de pasajero. `Frágil` es la
+excepción explícita: su comportamiento no consume input y el propio diseño establece que la
+única defensa es conducir despacio. El simulador igualmente la mide en todos los perfiles para
+detectar cualquier divergencia accidental, pero su objetivo depende del conductor y sus seis
+filas deben ser idénticas.
+
+### Ajuste medido de S-108 (2026-09-26)
+
+El banco definitivo usa las semillas 1081, 1082, 1084, 1085 y 1087: cinco rutas reales de una
+casa, a 50 km/h y 60 cuadros de física por segundo. Se descartaron dos candidatos en los que el
+piloto automático volcó o fue teletransportado por un rescate (picos irreales de 589-596 m/s y
+hasta 171°). El objetivo es aislar la atención del pasajero; una colisión que destruye cualquier
+carga imponía por sí sola 20 % de pérdidas al experto y hacía matemáticamente imposible el límite
+de 12 %. Esos accidentes siguen cubiertos por los bancos de ruta y golpes.
+
+Solo se modificaron recursos `.tres`; los siete scripts de comportamiento quedaron intactos:
+
+| Trampa | Parámetro | Antes → después | Motivo |
+|---|---|---:|---|
+| Equilibrio | `angle_ok_max` | 15 → 8° | La inclinación normal nunca agotaba una caja abandonada. |
+| Equilibrio | `damage_per_second_at_risk` | 20 → 28 | Convierte el abandono prolongado en una pérdida. |
+| Equilibrio | `correction_strength` | 20 → 9,8°/s | Conserva diferencia medible entre reacción torpe y experta. |
+| Explosivo | `countdown_seconds` | 14 → 12 s | Lleva al perfil torpe al rango objetivo sin afectar al experto. |
+| Explosivo | `mistake_penalty` | 1,5 → 2 s | Hace significativa una secuencia incorrecta. |
+| Peso creciente | `weight_fail_threshold` | 2,5 → 2,9× | Da una ventana de rescate adicional al perfil torpe. |
+| Peso creciente | `weight_at_risk_threshold` | 1,5 → 1,45× | Expone antes el aviso y produce casi-pérdidas recuperables. |
+| Hostil | `command_seconds` | 2,8 → 11 s | El ausente permanece suficiente tiempo bajo una orden para perder. |
+| Hostil | `correct_decay` | 13 → 14/s | La respuesta correcta compensa los errores aislados. |
+| Hostil | `wrong_gain` | 22 → 7 | Evita que un único fallo condene al experto. |
+| Hostil | `passive_gain` | 3,5 → 2,5/s | Mantiene tensión sin daño inevitable durante la latencia. |
+| Líquido | `impact_spill` | 18 → 0,05 | Un pico físico no llena instantáneamente el medidor. |
+| Líquido | `mop_rate` | 22 → 9/s | La limpieza torpe ya no borra el riesgo demasiado rápido. |
+| Líquido | `integrity_loss_per_spill` | 0,23 → 0,55 | Un charco desatendido deja daño permanente y casi-pérdidas. |
+| Ruidoso | `agitation_gain_per_shake` | 25 → 16 | Acumula tensión en varios golpes, no en uno solo. |
+| Ruidoso | `shake_threshold` | 7 → 0,30 m/s | Las sacudidas reales de la caja sí entran al comportamiento. |
+| Ruidoso | `agitation_decay_rate` | 30 → 16/s | El perfil torpe no neutraliza cada sacudida de inmediato. |
+| Ruidoso | `fail_seconds_at_max` | 2 → 0,8 s | Abandonar el botón en el máximo tiene una consecuencia visible. |
+
+`Frágil` no necesitó ajustes: las rutas cuidadas producen daño y casi-pérdidas, pero no una
+pérdida automática; su dificultad la decide el conductor, como establece el comportamiento.
+
+La corrida definitiva (`tests/sim_data/balance_report.md`, 5 recorridos × 50 repeticiones) dio:
+
+| Trampa | Ausente perdido | Torpe perdido | Experto perdido | Experto +150 ms | Casi pérdida torpe |
+|---|---:|---:|---:|---:|---:|
+| Equilibrio | 100 % | 45,2 % | 0 % | 0 % | 13,2 % |
+| Explosivo | 100 % | 38,8 % | 1,2 % | 0,8 % | 9,2 % |
+| Peso creciente | 100 % | 50,0 % | 0 % | 0 % | 18,0 % |
+| Hostil | 100 % | 36,8 % | 0 % | 0 % | 27,2 % |
+| Líquido | 100 % | 33,6 % | 0 % | 0 % | 12,8 % |
+| Ruidoso | 100 % | 44,8 % | 0,8 % | 1,6 % | 0 % |
+| Frágil (solo conductor) | 0 % | 0 % | 0 % | 0 % | 20,0 % |
+
+Las seis trampas interactivas cumplen 80–100 % / 30–55 % / <12 %; el aumento experto con
+150 ms queda muy por debajo de 8 puntos. Sumando los siete paquetes, el perfil torpe produce
+**1,00 casi-pérdidas esperadas por viaje**. Las filas idénticas de Frágil confirman que el perfil
+del pasajero no altera una trampa que no consume input.
 
 ## Principio de diseño para los números
 En vez de fallas binarias e instantáneas (que se sienten injustas en un juego de

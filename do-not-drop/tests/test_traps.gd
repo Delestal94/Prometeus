@@ -84,24 +84,24 @@ func _test_noisy() -> void:
 	var package: RigidBody3D = _make_package("res://data/traps/noisy.tres")
 	var trap: Resource = package.get(&"trap_behavior")
 
-	package.call(&"apply_impact", 3.0)
+	package.call(&"apply_impact", 0.29)
 	_expect(is_equal_approx(float(trap.get(&"agitation")), 0.0), "A gentle bump doesn't stir it")
 
-	package.call(&"apply_impact", 8.0)
-	_expect(is_equal_approx(float(trap.get(&"agitation")), 25.0), "A hard bump adds agitation")
-	_expect(is_equal_approx(float(package.get(&"integrity")), 75.0), "Agitation reads on the shared integrity scale")
+	package.call(&"apply_impact", 0.30)
+	_expect(is_equal_approx(float(trap.get(&"agitation")), 16.0), "A recorded shake adds tuned agitation")
+	_expect(is_equal_approx(float(package.get(&"integrity")), 84.0), "Agitation reads on the shared integrity scale")
 
 	# Unattended it settles slowly; calming is much faster.
 	_step(package, 1.0)
-	_expect(is_equal_approx(float(trap.get(&"agitation")), 20.0), "It settles 5/s on its own")
+	_expect(is_equal_approx(float(trap.get(&"agitation")), 11.0), "It settles 5/s on its own")
 	_step(package, 1.0, {"calm": true})
-	_expect(_about(float(trap.get(&"agitation")), 0.0), "Calming drains it at 30/s")
+	_expect(_about(float(trap.get(&"agitation")), 0.0), "Calming drains it at 16/s")
 
-	for _index: int in range(4):
-		package.call(&"apply_impact", 8.0)
+	for _index: int in range(7):
+		package.call(&"apply_impact", 0.30)
 	_expect(is_equal_approx(float(trap.get(&"agitation")), 100.0), "Agitation tops out at its maximum")
 	_expect(int(trap.call(&"get_state")) == 1, "At max but not yet loose, it's AT_RISK")
-	_step(package, 2.5)
+	_step(package, 0.9)
 	_expect(int(trap.call(&"get_state")) == 2, "Pinned at max long enough, it escapes")
 	package.free()
 
