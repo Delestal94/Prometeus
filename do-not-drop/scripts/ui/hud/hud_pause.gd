@@ -123,7 +123,7 @@ func primary_action() -> void:
 			hud.overlay.hide()
 			hud.overlay_mode = "preparation"
 			hud.dashboard.show()
-			hud.economy_label.show()
+			hud.set_economy_visible(true)
 			hud.action_button.release_focus()
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			hud.section_label.text = "PREPARACIÓN"

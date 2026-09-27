@@ -51,11 +51,28 @@ func _run() -> void:
 	var player_hud_scale: float = settings.hud_scale
 	settings.hud_scale = 0.75
 	var layer: Control = hud.hud_layer
-	_expect(is_equal_approx(layer.scale.x, 0.75), "HUD scale setting resizes the HUD layer live")
-	_expect(layer.size.is_equal_approx(hud.root.size / 0.75), "A scaled HUD still spans the whole screen")
+	# 0.75 on top of the window-shape correction (layout_scale()).
+	var expected_scale: float = hud.call(&"layout_scale", 0.75, hud.root.size)
+	_expect(is_equal_approx(layer.scale.x, expected_scale), "HUD scale setting resizes the HUD layer live")
+	_expect(layer.size.is_equal_approx(hud.root.size / expected_scale), "A scaled HUD still spans the whole screen")
 	_expect(hud.overlay.get_parent() == hud.root and is_equal_approx(hud.overlay.get_global_transform().get_scale().x, 1.0),
 		"The pause/results card keeps its own size")
+	_expect(is_equal_approx(hud.overlay_center.scale.x, hud.call(&"layout_scale", 1.0, hud.root.size)),
+		"The card takes only the window-shape correction, not the player's HUD scale")
 	settings.hud_scale = player_hud_scale
+	# Window shapes: the HUD keeps its 16:9 text size in taller windows and
+	# only gains room in wider ones.
+	_expect(is_equal_approx(hud.call(&"layout_scale", 1.0, Vector2(1280, 960)), 960.0 / 720.0),
+		"At 4:3 the HUD scales back up to its 16:9 size instead of shrinking to 75%")
+	_expect(is_equal_approx(hud.call(&"layout_scale", 1.0, Vector2(1720, 720)), 1.0),
+		"At 21:9 the HUD keeps its size and just gets more room")
+	_expect(is_equal_approx(hud.call(&"layout_scale", 0.75, Vector2(1280, 800)), 0.75 * 800.0 / 720.0),
+		"The player's HUD scale still applies on top of the window shape")
+	# The prompt sits in the dashboard's flow right above the bottom bar, never on it.
+	var prompt_index: int = hud.interaction_label.get_index()
+	_expect(hud.interaction_label.get_parent() == hud.dashboard
+			and hud.dashboard.get_child(prompt_index + 1).is_ancestor_of(hud.cargo_rows_box),
+		"The interaction prompt stands right above the bottom bar")
 	var player_menu_scale: float = settings.menu_text_scale
 	var volume_slider: HSlider = hud.options_panel.get("_volume_slider") as HSlider
 	var menu_caption := (volume_slider.get_parent().get_child(0) as HBoxContainer).get_child(0) as Label
@@ -152,7 +169,8 @@ func _run() -> void:
 	_expect(hud.orders == posted, "The HUD keeps the depot's posted orders for the orders station")
 
 	hud._on_started(&"delivery", [])
-	_expect(not hud.economy_label.visible, "Team money is hidden while driving")
+	_expect(not hud.economy_label.visible and not hud.economy_label.get_parent().visible,
+		"Team money is hidden while driving, chip and all (no empty yellow pill)")
 	_expect(String(hud.pause._pause_stats()).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
 		"Pause shows team money")
 	Input.action_press(&"run_restart")

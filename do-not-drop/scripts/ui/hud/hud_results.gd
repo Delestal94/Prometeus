@@ -32,7 +32,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	hud.notices.clear_all_notices()
 	hud.overlay_mode = "results"
 	hud.overlay.show()
-	hud.economy_label.hide()
+	hud.set_economy_visible(false)
 	hud.overlay_kicker.text = "RESULTADO"
 	var new_best: bool = bool(results.get("is_new_best", false))
 	set_hero(true, score, new_best)
@@ -96,9 +96,9 @@ func _delivery_summary(delivered_doors: int, missed_doors: int, aboard: int, rui
 	if aboard > 0:
 		var back: int = aboard - ruined
 		if back == 1:
-			lines.append("Volvió 1 paquete en la furgoneta%s." % (", intacto" if intact >= 1 else ""))
+			lines.append("Volvió 1 paquete en el camión%s." % (", intacto" if intact >= 1 else ""))
 		elif back > 1:
-			lines.append("Volvieron %d paquetes en la furgoneta, %d intactos." % [back, intact])
+			lines.append("Volvieron %d paquetes en el camión, %d intactos." % [back, intact])
 	return "\n".join(lines) if not lines.is_empty() else "Llegaste, y eso ya es algo."
 
 

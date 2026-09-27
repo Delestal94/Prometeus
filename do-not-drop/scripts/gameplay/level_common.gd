@@ -263,7 +263,7 @@ func _check_lost_cargo() -> void:
 			continue
 		var distance: float = package.global_position.distance_to(vehicle.global_position)
 		if distance > LOST_CARGO_DISTANCE:
-			package.mark_lost("Se cayó de la furgoneta.")
+			package.mark_lost("Se cayó del camión.")
 
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:

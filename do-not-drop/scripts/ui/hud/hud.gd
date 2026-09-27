@@ -19,6 +19,8 @@ const STATE_STATUS: Array[String] = ["OK ✓", "EN RIESGO !", "ARRUINADA ✕"]
 enum Role { ON_FOOT, DRIVER, PASSENGER }
 const SHORTCUT_VISIBLE_SECONDS: float = 60.0
 const RESTART_HOLD_SECONDS: float = 0.9
+## The logical height the HUD is laid out for (project.godot's viewport).
+const BASE_HEIGHT: float = 720.0
 
 var root: Control
 var hud_layer: Control
@@ -68,6 +70,9 @@ var photo_strip: HBoxContainer
 var fade_rect: ColorRect
 var risk_vignette: ColorRect
 var shortcut_label: RichTextLabel
+## Centres the start/pause/results card over the dimmed backdrop; scaled for
+## the window's shape only (not the player's HUD scale), see apply_hud_scale().
+var overlay_center: CenterContainer
 var soft_pause: bool = false
 var is_endless: bool = false
 var local_merit_total: int = 0
@@ -127,13 +132,36 @@ func _ready() -> void:
 	pause.show_start()
 
 
+## The HUD lays out in a logical space BASE_HEIGHT tall, whatever the
+## window's shape. Under the project's "expand" stretch a window taller than
+## 16:9 (4:3, 16:10) grows the logical canvas instead, which drew every
+## label smaller -- 6-7 px at 4:3. Scaling back by that extra height keeps
+## text the size it has at 16:9; a wider window (21:9) just gets more room.
+static func layout_scale(user_scale: float, logical_size: Vector2) -> float:
+	return user_scale * maxf(1.0, logical_size.y / BASE_HEIGHT)
+
+
+## Team money is a chip (UiTheme.chip): the pill around the label must go too,
+## or it stays behind as an empty yellow oval.
+func set_economy_visible(shown: bool) -> void:
+	economy_label.visible = shown
+	economy_label.get_parent().visible = shown
+
+
 func apply_hud_scale() -> void:
 	if hud_layer == null:
 		return
-	var hud_scale: float = GameSettings.hud_scale
+	var hud_scale: float = layout_scale(GameSettings.hud_scale, root.size)
 	hud_layer.position = Vector2.ZERO
 	hud_layer.scale = Vector2(hud_scale, hud_scale)
 	hud_layer.size = root.size / hud_scale
+	# The card keeps its own size -- only the window-shape correction, so a 4:3
+	# screen doesn't draw it at 75% either. The dimmed backdrop stays full screen.
+	if overlay_center != null:
+		var shape_scale: float = layout_scale(1.0, root.size)
+		overlay_center.position = Vector2.ZERO
+		overlay_center.scale = Vector2(shape_scale, shape_scale)
+		overlay_center.size = root.size / shape_scale
 
 
 func make_rich(parent: Node, font_size: int) -> RichTextLabel:
@@ -243,7 +271,7 @@ func _build_top_bar() -> void:
 	metrics.add_child(chips)
 	time_label = UiTheme.chip(chips, "00:00", UiTheme.SKY, 17)
 	economy_label = UiTheme.chip(chips, "$%d" % CrewProgression.team_money, YELLOW, 17)
-	economy_label.visible = false
+	set_economy_visible(false)
 	card_label = make_rich(metrics, 16)
 	card_label.custom_minimum_size.x = 190
 	card_label.add_theme_color_override("default_color", INK)
@@ -255,6 +283,12 @@ func _build_bottom_bar() -> void:
 	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(space)
+	# Context owns the bottom centre, right above the bottom bar in the
+	# dashboard's own flow: pinned at a fixed offset it sat on the route bar,
+	# and it never competes with the critical alerts up top.
+	interaction_label = UiTheme.floating_label(dashboard, "", 25, PAPER, 560, 0)
+	interaction_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	interaction_label.custom_minimum_size.x = 560
 
 	# --- Bottom: the cargo (left), the objective (right) ---
 	var bottom := HBoxContainer.new()
@@ -317,13 +351,6 @@ func _build_floating_labels() -> void:
 	# The package-at-risk hint and the route event share the critical queue,
 	# never the screen. Kept as an alias for the existing cargo HUD seam.
 	cargo_hint_label = event_label
-	interaction_label = UiTheme.floating_label(hud_layer, "", 25, PAPER, 560, 0)
-	# Context owns the bottom centre; it never competes with critical alerts.
-	interaction_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	interaction_label.offset_left = -280
-	interaction_label.offset_right = 280
-	interaction_label.offset_top = -150
-	interaction_label.offset_bottom = -55
 
 
 ## The start / pause / results card and its buttons.
@@ -332,10 +359,9 @@ func _build_overlay_card() -> void:
 	root.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.color = Color(UiTheme.BACKDROP, 0.72)
-	var center := CenterContainer.new()
-	overlay.add_child(center)
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	card = make_panel(center, Vector2(640, 0))
+	overlay_center = CenterContainer.new()
+	overlay.add_child(overlay_center)
+	card = make_panel(overlay_center, Vector2(640, 0))
 	card.add_theme_constant_override("separation", 14)
 	overlay_kicker = UiTheme.tag(card, "", YELLOW, -2.0, 16)
 	overlay_title = UiTheme.title(card, "¡A REPARTIR!", 62)
@@ -485,7 +511,7 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	overlay.hide()
 	overlay_mode = "run"
 	dashboard.show()
-	economy_label.hide()
+	set_economy_visible(false)
 	action_button.release_focus()
 	interaction_prompt = ""
 	interaction_label.text = ""

@@ -300,8 +300,13 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
   ciervo) ahora cachean el camión en `_vehicle()`. La de `reference_truck` recorre los jugadores (≤5) y queda.
 - [ ] **Fase 7 · i18n:** ~234 textos de UI en español escritos en el código (fuera de `tr()`), a un CSV
   de traducción (se cruza con la S-509 de Slatex: opción de idioma).
-- [ ] **Fase 8 · Responsividad:** capturas del HUD/menús en 16:9, 16:10 (Steam Deck), 21:9 y 4:3 con
-  `revisor-visual`.
+- [x] **Fase 8 · Responsividad:** capturas del HUD y el menú en 16:9, 16:10 (Steam Deck), 21:9 y 4:3.
+  16:9/16:10/21:9 bien. Arreglado: en 4:3 todo el HUD se dibujaba al 75% (letra de 6-7 px) — ahora
+  `Hud.layout_scale()` maqueta siempre en 720 de alto lógico (HUD y tarjeta); el aviso de interacción
+  pisaba la barra de ruta (ahora va en el flujo del dashboard); el chip de plata dejaba un óvalo vacío
+  (`Hud.set_economy_visible()`); "furgoneta" → "camión". Todo con aserciones en `test_hud_flow`.
+  - [ ] A confirmar: en las capturas la escena 3D del depósito salió más fría en una tanda que en otra;
+    probablemente el clima/`WorldMood` al azar de cada corrida (nada de iluminación cambió en esta rama).
 - [ ] **Aparte:** faltan 14 `.uid` en `main` (Godot los genera en cada clon con valores distintos);
   commitearlos en un PR chico cuando nadie tenga copias sin trackear.
 - [ ] Bajar la línea base del lint (quedan ~990 líneas de más de 120 columnas, casi todas en tests).

@@ -72,6 +72,10 @@ antes de seguir con cualquier archivo listado acá.
   constructor por sección (`_build_backdrop()`, `_build_brand()`, `_build_card()`, una función por
   página, `_build_connection_status()`, `_build_footer()`, `_build_overlays()`), con el código movido
   sin cambios.
+- **HUD, responsividad (fase 8, dominio Slatex):** `Hud.layout_scale()` compensa ventanas más altas
+  que 16:9 (en 4:3 todo se veía al 75%); `interaction_label` pasó al flujo del dashboard (pisaba la barra
+  de ruta); mostrar/ocultar la plata es `hud.set_economy_visible()` (ocultar solo el `Label` dejaba la
+  pastilla vacía); `hud.overlay_center` es el contenedor de la tarjeta. Textos: "furgoneta" → "camión".
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 
