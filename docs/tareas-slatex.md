@@ -613,16 +613,16 @@ Hoy hay un único ping "¡Cuidado!" (`player.gd` `_send_ping`).
 
 La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo párrafo largo.
 
-- [ ] **S-506.1** `tutorial_panel.gd` en páginas: 1) el objetivo (entregar a cada casa la caja de la
+- [x] **S-506.1** (commit `cffdbfc`) `tutorial_panel.gd` en páginas: 1) el objetivo (entregar a cada casa la caja de la
   pizarra), 2) conductor, 3) pasajero, 4) una ficha por trampa **desbloqueada** (ícono, qué la rompe, qué
   hacer, tecla del dispositivo en uso con `UiTheme.keycaps`), 5) dinero, mérito y cartas en dos líneas.
   Navegable con gamepad.
-- [ ] **S-506.2** Consejos de primera vez en partida: la primera vez que un perfil tiene una trampa en la
+- [x] **S-506.2** (commit `cffdbfc`) Consejos de primera vez en partida: la primera vez que un perfil tiene una trampa en la
   mano o en su asiento, aparece su ficha resumida 6 s en la zona de contexto. Se guarda `seen_tips` en el
   perfil de `UnlockManager`.
-- [ ] **S-506.3** Al abrir el juego por primera vez (perfil sin partidas), el menú ofrece "Cómo jugar"
+- [x] **S-506.3** (commit `cffdbfc`) Al abrir el juego por primera vez (perfil sin partidas), el menú ofrece "Cómo jugar"
   resaltado.
-- [ ] **S-506.4** Test: cada trampa tiene su ficha; un consejo visto no vuelve a salir.
+- [x] **S-506.4** (commit `cffdbfc`) Test: cada trampa tiene su ficha; un consejo visto no vuelve a salir.
 
 ### S-507 · Panel de tripulación en el depósito — B · `Sol · high` · Aviso: no
 
