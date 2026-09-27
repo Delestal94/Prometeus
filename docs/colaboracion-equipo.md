@@ -22,6 +22,12 @@ antes de seguir con cualquier archivo listado acá.
   `core/` dependiera de `presentation/` era una inversión de capas). Los `preload` de
   `player.gd`, `cosmetics_panel.gd`, `face_preview.gd`, `character_face.gd`,
   `first_person_camera.gd`, `depot_mirror.gd` y `unlock_manager.gd` ya apuntan a la ruta nueva.
+- **Depósito (fase 2, dominio Nacho):** `depot.gd` (1629 → ~550 líneas) queda con la lógica
+  (stock, órdenes, portón, suministros, pizarrón del equipo). La construcción pasó a
+  `depot_hall.gd`, `depot_furnishing.gd`, `depot_dressing.gd`; lo que se anima por frame a
+  `depot_ambience.gd`; el pizarrón a `depot_order_board.gd`; las medidas y la paleta a
+  `depot_layout.gd`; texto y carteles a `depot_labels.gd`. API pública y nombres de nodos sin
+  cambios. `test_depot`/`test_contact_shadows` leen las constantes de `depot_layout.gd`.
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 

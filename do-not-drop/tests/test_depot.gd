@@ -160,7 +160,7 @@ func _test_signage(depot: Node3D) -> void:
 	# Floor arrows: from around the spawn to each station, and to the door.
 	# The depot's constants through its script: naming the class here would
 	# compile depot.gd before the autoloads exist (depot.gd _autoload()).
-	var layout: Dictionary = (depot.get_script() as Script).get_script_constant_map()
+	var layout: Dictionary = (load("res://scripts/gameplay/depot/depot_layout.gd") as Script).get_script_constant_map()
 	var spawn_centre := Vector3.ZERO
 	for point: Vector3 in layout.SPAWN_POINTS:
 		spawn_centre += Vector3(point.x, 0.0, point.z) / (layout.SPAWN_POINTS as Array).size()

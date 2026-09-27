@@ -73,7 +73,7 @@ func _run() -> void:
 	root.add_child(depot)
 	await process_frame
 	var holder: Node = depot.get_node_or_null(^"ContactShadows")
-	_expect(holder != null and holder.get_child_count() == (depot.get_script() as Script).get_script_constant_map().CONTACT_SHADOWS.size(),
+	_expect(holder != null and holder.get_child_count() == DepotLayout.CONTACT_SHADOWS.size(),
 		"The depot lays a patch under each car outside, the dumpster and the pallets")
 	depot.free()
 	await process_frame
