@@ -138,6 +138,40 @@ armaba `rail_crossing_segment.gd`. El script conserva su colisión (poste, brazo
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_rail_crossing.py [-- track signal arm loco boxcar tanker]
 ```
 
+## Túnel, puente, chicana y tendido eléctrico (`models/environment/route/`, 2026-09-27)
+
+Propios, generados por `tools/build_route_pieces.py` (N-131 a N-134), en la línea cartoon del tren
+y de la calle. Reemplazan las cajas que armaban `tunnel_segment.gd`, `narrow_bridge_segment.gd`,
+`chicane_segment.gd` y el poste de `route_dresser.gd`. Los scripts conservan cada caja de colisión
+(oculta), la `AcousticZone` y las luces del túnel: los modelos son solo lo que se ve. Materiales
+con nombre de la paleta; los que empiezan con `stone.`, `concrete.` o `grass` toman el grano de
+`LowpolyMaterials` (`RouteSegment._art()`).
+
+- `sm_env_route_tunnel_module.glb` (454 tris): 4 m de bóveda (y −2..2 en Blender): zócalo oscuro,
+  franja teal, azulejo crema, bóveda elíptica (arranca a 2,6 m, clave a 4,8 m = techo de la
+  colisión), nervio, cordón amarillo/negro, bandeja de cables, piedra afuera y lomo de pasto. El
+  segmento pone 11 seguidos: piezas cortas para que `conform_geometry()` las doble sobre el terreno.
+- `sm_env_route_tunnel_portal.glb` (1.752): muro de piedra arenisca con dovelas, clave, esquinas,
+  contrafuertes, cornisa, señal de gálibo, pasto, arbustos y hiedra. Mira a +Z (Godot); la boca de
+  salida va girada media vuelta.
+- `sm_env_route_tunnel_lamp.glb` (80): origen arriba (el anclaje); la lente es el nodo `Lens`, al
+  que el script le pone el material emisivo.
+- `sm_env_route_bridge_deck.glb` (212): 4 m de tablero (asfalto de 6 m, líneas de borde, losa y
+  vigas de acero teal). `sm_env_route_bridge_post.glb` (92): el poste cada 4 m.
+  `sm_env_route_bridge_water.glb` (696): 36 m de río bajo el tablero (agua a −1,6 m, márgenes,
+  estribos, dos pilas, ondas y espuma), origen en el medio del tramo; se estira con el largo. Con
+  terreno continuo (ruta principal) tablero y río no se ponen, igual que antes las cajas.
+- `sm_env_route_chicane_barrier.glb` (460): 4,4×1,0×0,8 m, dos New Jersey con franjas inclinadas
+  hacia +X y un bolardo con luz ámbar en ese extremo, el del hueco; el bloque derecho va girado.
+- `sm_env_route_power_pole.glb` (362 en total): malla `PowerPole` (poste con 0,3 m enterrado,
+  travesaño a lo largo de X con riostras, aisladores en x ±0,75 y en la punta, chapa de
+  advertencia; 258) y malla `Transformer` (104). `route_dresser.gd` las usa en dos MultiMesh, con
+  transformador cada 4 postes; los cables salen de las puntas de los aisladores.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_route_pieces.py [-- tunnel bridge chicane pole]
+```
+
 ## Depósito (`models/environment/depot/`, 2026-09-27)
 
 Propios, generados por `tools/build_depot_props.py` (N-135), misma línea cartoon que el tren:

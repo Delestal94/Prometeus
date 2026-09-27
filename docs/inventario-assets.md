@@ -156,10 +156,10 @@ correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slate
 |---|---|---|---|
 | ~~Tren del paso a nivel (locomotora + vagones)~~ **[x] Hecho (2026-09-27)**: locomotora a vapor, vagón cerrado y vagón tanque en `models/environment/rail/`; la colisión sigue siendo la caja de 7,5×3×2,6 m | `rail_crossing_segment.gd` `_build_train()` | Nacho | N-129 |
 | ~~Paso a nivel: poste, cruz de San Andrés, luces, barrera, vías y durmientes~~ **[x] Hecho (2026-09-27)**: vía, señal (lentes `LampLeft`/`LampRight`) y barrera con origen en la bisagra | `rail_crossing_segment.gd` | Nacho | N-130 |
-| Túnel: paredes, techo, portal, pilares, lámparas | `tunnel_segment.gd` | Nacho | N-131 |
-| Puente angosto: tablero, postes, agua | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya está integrada) |
-| Bloques de la chicana | `chicane_segment.gd` | Nacho | N-133 |
-| Poste eléctrico | `route_dresser.gd` (cilindro de 6 lados + caja) | Nacho | N-134 |
+| ~~Túnel: paredes, techo, portal, pilares, lámparas~~ **[x] Hecho (2026-09-27)**: módulo de bóveda de 4 m (454 tris, ×11), boca de piedra con dovelas y clave (1.752) y lámpara con lente `Lens` (80) en `models/environment/route/`; colisiones, `AcousticZone` y luces sin cambios | `tunnel_segment.gd` | Nacho | N-131 |
+| ~~Puente angosto: tablero, postes, agua~~ **[x] Hecho (2026-09-27)**: módulo de tablero de 4 m (212 tris, ×9), poste (92) y río con márgenes, estribos y pilas (696); tablero y río siguen omitiéndose con terreno continuo, como las cajas | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya está integrada) |
+| ~~Bloques de la chicana~~ **[x] Hecho (2026-09-27)**: barrera New Jersey doble con franjas y bolardo hacia el hueco (460 tris); la caja sólida de 1,6 m sigue igual | `chicane_segment.gd` | Nacho | N-133 |
+| ~~Poste eléctrico~~ **[x] Hecho (2026-09-27)**: poste de madera con travesaño y riostras, tres aisladores y chapa (258 tris) + transformador aparte cada 4 postes (104), sigue siendo un MultiMesh | `route_dresser.gd` | Nacho | N-134 |
 | ~~Depósito: autoelevador, cinta transportadora, portón enrollable, estanterías, lámparas, ventiladores, reloj, insumos~~ **[x] Hecho (2026-09-27)**: 19 GLB en `models/environment/depot/` (`tools/build_depot_props.py`); colisiones, animaciones y horneado siguen en los scripts. Quedan en código a propósito lo que brilla o se anima con material (cinta, cortinas de tiras, lentes de balizas, discos y tubos de luz, varilla del ventilador). Falta: la mercadería de los estantes de la tienda (rollos de film, cinta, espuma), mesa de embalaje y zorra | `depot*.gd` (~160 primitivas horneadas con `depot_kit.gd`) | Nacho | N-135 |
 | Residente que abre la puerta | `delivery_house.gd` (cápsula) | Nacho | N-137 (puede reusar el modelo del jugador) |
 | Ragdoll del jugador | `player_ragdoll.gd` (cápsulas) | Slatex | S-101 |
@@ -181,7 +181,7 @@ pocos triángulos no es un defecto en sí: importa en lo que queda cerca de la c
 | ~~Media~~ | ~~Buzón, mojón, cajón de madera, cono~~ **[x] Hecho (2026-09-27)**: 508 / 534 / 528 / 390 tris | ~~120–176~~ | Mobiliario que pasa cerca del camión | N-140 |
 | ~~Media~~ | ~~Enano de jardín, felpudo~~ **[x] Hecho (2026-09-27)**: 604 / 228 tris | ~~164 / 68~~ | En el porche, donde se entrega | N-140 |
 | Baja | Roca, arbusto redondo, rama caída, tocón, mata de pasto | 80–192 | Variantes rinden más que detalle | N-141 |
-| Baja | Baranda de puente | 352 | Lote viejo, sin integrar | N-132 |
+| Baja | Baranda de puente | 352 | Lote viejo; integrada en el puente angosto | N-132 |
 
 Referencia: árboles 240–376, casas 2.300–3.400, contenidos de paquete 1.000–2.000 y el
 jugador 1.568 triángulos están bien para el estilo.

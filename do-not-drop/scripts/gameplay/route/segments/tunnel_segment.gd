@@ -1,14 +1,20 @@
 extends RouteSegment
 class_name TunnelSegment
 ## A short tunnel (docs/tareas-nacho.md #58): walls, a roof under a grassy
-## cover and concrete portals, dim inside (the roof shades it from the sun)
-## with a few warm lights along the ceiling. Solid walls, so a sloppy line
-## scrapes the truck along them.
+## cover and stone portals (imported art since N-131, build_route_pieces.py),
+## dim inside (the roof shades it from the sun) with a few warm lights along
+## the ceiling. Solid walls, so a sloppy line scrapes the truck along them.
 
 const HALF_WIDTH: float = 4.7
 const HEIGHT: float = 4.8
 const PORTAL := Color("7d8784")
 const LAMP := Color("ffd89a")
+const MODELS: String = "res://assets/models/environment/route/"
+const BORE_MODEL: String = MODELS + "sm_env_route_tunnel_module.glb"
+const PORTAL_MODEL: String = MODELS + "sm_env_route_tunnel_portal.glb"
+const LAMP_MODEL: String = MODELS + "sm_env_route_tunnel_lamp.glb"
+## How long one bore module is authored (assets/tools/build_route_pieces.py).
+const MODULE_LENGTH: float = 4.0
 
 
 func _init() -> void:
@@ -19,17 +25,26 @@ func _build() -> void:
 	_box("Ground", Vector3(24.0, 1.0, length), Vector3(0.0, -0.8, -length * 0.5), SHOULDER, true)
 	_box("Road", Vector3(12.0, 0.4, length), Vector3(0.0, -0.2, -length * 0.5), ROAD, true)
 	var middle: float = -length * 0.5
+	# What you hit is the boxes this script always built (hidden); what you
+	# see is the imported bore, portals and lamps (N-131).
 	for side: float in [-1.0, 1.0]:
-		_box("TunnelWall", Vector3(0.6, HEIGHT, length), Vector3(side * (HALF_WIDTH + 0.3), HEIGHT * 0.5, middle), CONCRETE, true)
-		# A kerb strip so the foot of the wall reads at speed.
-		_box("TunnelKerb", Vector3(0.35, 0.18, length), Vector3(side * (HALF_WIDTH - 0.17), 0.09, middle), WARNING)
-	_box("TunnelRoof", Vector3(HALF_WIDTH * 2.0 + 1.2, 0.5, length), Vector3(0.0, HEIGHT + 0.25, middle), CONCRETE, true)
-	# Earth heaped over the roof: from outside it reads as a hill with a hole.
-	_box("TunnelCover", Vector3(HALF_WIDTH * 2.0 + 1.6, 1.4, length - 1.0), Vector3(0.0, HEIGHT + 1.2, middle), Color("4f7a3b"))
+		_hide_box_visual(_box("TunnelWall", Vector3(0.6, HEIGHT, length), Vector3(side * (HALF_WIDTH + 0.3), HEIGHT * 0.5, middle), CONCRETE, true))
+	_hide_box_visual(_box("TunnelRoof", Vector3(HALF_WIDTH * 2.0 + 1.2, 0.5, length), Vector3(0.0, HEIGHT + 0.25, middle), CONCRETE, true))
 	for end_z: float in [0.0, -length]:
-		_box("TunnelPortal", Vector3(HALF_WIDTH * 2.0 + 3.0, 1.6, 0.8), Vector3(0.0, HEIGHT + 0.8, end_z), PORTAL, true)
+		_hide_box_visual(_box("TunnelPortal", Vector3(HALF_WIDTH * 2.0 + 3.0, 1.6, 0.8), Vector3(0.0, HEIGHT + 0.8, end_z), PORTAL, true))
 		for side: float in [-1.0, 1.0]:
-			_box("TunnelPortalPier", Vector3(1.2, HEIGHT, 0.8), Vector3(side * (HALF_WIDTH + 0.9), HEIGHT * 0.5, end_z), PORTAL, true)
+			_hide_box_visual(_box("TunnelPortalPier", Vector3(1.2, HEIGHT, 0.8), Vector3(side * (HALF_WIDTH + 0.9), HEIGHT * 0.5, end_z), PORTAL, true))
+	# The bore in short modules (walls, vault, kerb, grass hump on top):
+	# conform_geometry() bends each onto the terrain like the boxes it replaced.
+	var modules: int = maxi(1, roundi(length / MODULE_LENGTH))
+	var module_length: float = length / float(modules)
+	for index: int in range(modules):
+		var module: Node3D = _art("TunnelBore", BORE_MODEL, Vector3(0.0, 0.0, -module_length * (float(index) + 0.5)))
+		if module != null:
+			module.scale.z = module_length / MODULE_LENGTH
+	# Stone headwalls, facing out of each end.
+	_art("TunnelMouthEntry", PORTAL_MODEL, Vector3.ZERO)
+	_art("TunnelMouthExit", PORTAL_MODEL, Vector3(0.0, 0.0, -length), PI)
 	# The echo inside (N-402): from portal to portal, floor to roof.
 	var zone := AcousticZone.new()
 	zone.name = "AcousticZone"
@@ -44,10 +59,11 @@ func _build() -> void:
 	lamp_material.emission_energy_multiplier = 1.6
 	for index: int in range(4):
 		var z: float = -6.0 - float(index) * ((length - 12.0) / 3.0)
-		var lamp: Node3D = _box("TunnelLamp", Vector3(0.9, 0.08, 0.3), Vector3(0.0, HEIGHT - 0.05, z), LAMP)
-		for child: Node in lamp.get_children():
-			if child is MeshInstance3D:
-				(child as MeshInstance3D).material_override = lamp_material
+		# The fitting hangs from the vault's crown; its lens is the glowing strip.
+		var lamp: Node3D = _model("TunnelLamp", LAMP_MODEL, Vector3(0.0, HEIGHT - 0.02, z))
+		var lens := lamp.find_child("Lens", true, false) as MeshInstance3D if lamp != null else null
+		if lens != null:
+			lens.material_override = lamp_material
 		if index != 1:
 			# Spot lights, not omni: the truck's headlights are spots, so their
 			# shader variants are compiled from the first frame. The first omni

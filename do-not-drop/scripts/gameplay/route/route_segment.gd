@@ -100,6 +100,16 @@ func _model(node_name: String, path: String, location: Vector3, rotation_y: floa
 	return model
 
 
+## _model() dressed in the kit's detail materials (LowpolyMaterials: the
+## stone, concrete and grass grain). For the imported route pieces that
+## replaced code-built boxes (tunnel, bridge, chicane).
+func _art(node_name: String, path: String, location: Vector3, rotation_y: float = 0.0) -> Node3D:
+	var model: Node3D = _model(node_name, path, location, rotation_y)
+	if model != null:
+		LowpolyMaterials.apply(model)
+	return model
+
+
 ## A concrete block the truck must steer round (chicane, S-curve): drawn at
 ## its real size, but solid up to BLOCK_COLLISION_HEIGHT. At the drawn 0.8 m it
 ## was taller than the truck's ground clearance and lower than what its wheels
