@@ -315,10 +315,10 @@ hacer nada. El modo espectador ayuda a mirar, no a jugar.
 
 ### S-110 · Medir cuánto dura una entrega (regla de oro de 2-5 min) — B · `Sol · high` · Aviso: no (solo informa a Nacho)
 
-- [ ] **S-110.1** `tests/bench_delivery_time.gd`: con el conductor automático de S-108.1 y un bot que
+- [x] (commit `35787d6`) **S-110.1** `tests/bench_delivery_time.gd`: con el conductor automático de S-108.1 y un bot que
   baja, camina y toca el timbre, medir el tiempo total de una entrega con 1, 2, 3 y 4 casas, a
   velocidad de crucero.
-- [ ] **S-110.2** Escribir el resultado en `docs/parametros-diseno.md` ("Duración medida") y dejar aviso
+- [x] (commit `35787d6`) **S-110.2** Escribir el resultado en `docs/parametros-diseno.md` ("Duración medida") y dejar aviso
   a Nacho en `colaboracion-equipo.md` con los números. Ajustar el largo de la ruta es de Nacho: esta
   tarea termina al entregar la medición, no espera su respuesta.
 
