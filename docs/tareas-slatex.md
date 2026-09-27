@@ -302,15 +302,15 @@ pide de los números.
 `docs/critica-diseno-abogado-del-diablo.md` §6: quien pierde su caja pasa el resto del viaje sin
 hacer nada. El modo espectador ayuda a mirar, no a jugar.
 
-- [ ] **S-109.1 Ayudante.** Un paquete acepta input de hasta **dos** peers: el que lo atiende y un
+- [x] (commit `251b082`) **S-109.1 Ayudante.** Un paquete acepta input de hasta **dos** peers: el que lo atiende y un
   ayudante (otro jugador sentado en un asiento contiguo o a pie a menos de 1,5 m). En `package.gd`,
   `submit_tender_input` guarda el input por peer y combina: `steady`/`calm` del ayudante suman 50 % de
   la fuerza; las secuencias (Explosivo, Peso creciente) las puede completar cualquiera de los dos.
-- [ ] **S-109.2** El aviso de interacción muestra "Ayudar con la caja de <color>" y el ayudante gana el
+- [x] (commit `251b082`) **S-109.2** El aviso de interacción muestra "Ayudar con la caja de <color>" y el ayudante gana el
   hito `assist` (5 de mérito cada 10 s ayudando con la caja en riesgo).
-- [ ] **S-109.3** Hostil pasa a pedir dos personas en su fase difícil: CALMÁ necesita la suma de dos
+- [x] (commit `251b082`) **S-109.3** Hostil pasa a pedir dos personas en su fase difícil: CALMÁ necesita la suma de dos
   inputs para bajar rápido (dato en `hostile.tres`, no código especial).
-- [ ] **S-109.4** Test `tests/test_assist.gd`: dos peers simulados atienden la misma caja; la corrección
+- [x] (commit `251b082`) **S-109.4** Test `tests/test_assist.gd`: dos peers simulados atienden la misma caja; la corrección
   combinada es la esperada; un tercer peer es ignorado.
 
 ### S-110 · Medir cuánto dura una entrega (regla de oro de 2-5 min) — B · `Sol · high` · Aviso: no (solo informa a Nacho)
