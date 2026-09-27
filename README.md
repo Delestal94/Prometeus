@@ -374,7 +374,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   cajas sueltas atrás, aceleran, se golpean y frenan exactamente igual; la cáscara
   sigue al camión a toda velocidad (las cajas siguen adentro después del golpe) y
   salta con él si se lo mueve a mano (playtest 2026-09-25: andaba a tirones y una
-  caja salió por adelante).
+  caja salió por adelante); con las puertas cerradas, cajas altas apoyadas contra el
+  tope trasero del estante y contra las puertas no los atraviesan a toda velocidad
+  (playtest 2026-09-27: el CCD de Jolt las barría hacia afuera).
 - `test_session_sync` — segunda tanda de multijugador: lo que se le manda al que
   entra tarde (partida en curso, entregas, cajas ya entregadas, portón), la caja
   entregada que desaparece en todos, cargar y soltar dentro del camión en marcha,

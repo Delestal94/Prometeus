@@ -6,11 +6,16 @@ extends SceneTree
 ## - the truck's own body only collides with the environment; boxes, players,
 ##   clutter and ragdolls collide with its kinematic cargo shell instead
 ##   (vehicle.gd _build_cargo_shell), a copy of every one of its shapes;
-## - two identical trucks, one of them carrying four of the heaviest boxes
+## - two identical trucks, one of them carrying seven of the heaviest boxes
 ##   there are (a Peso creciente at its limit), drive, brake and take a hard
 ##   knock exactly alike;
 ## - the shell keeps up with the truck at speed, so the boxes ride inside it
 ##   and are still in the bay after the knock;
+## - with the rear doors shut, boxes pressed against the rack's rear stop and
+##   the doors at top speed never get past them (playtest 2026-09-27: Jolt's
+##   continuous collision swept each box from last tick's spot against the
+##   moving shell and put it behind the stop; package.gd only sweeps loose
+##   boxes now);
 ## - moved by hand (a test, a reset), the shell jumps along before the next
 ##   step instead of sweeping the way.
 
@@ -20,6 +25,12 @@ const VEHICLE_LAYER: int = 2
 const RIDE_HEIGHT: float = 0.666
 ## A Peso creciente box at its failure threshold: 8 kg x 2.5.
 const HEAVIEST_BOX_KG: float = 20.0
+## Inner faces of the rack's rear stop and of the shut rear doors, in the
+## truck's space (vehicle.tscn RackRearEndCollision, RearDoorCollision).
+const RACK_REAR_STOP_Z: float = 4.42
+const REAR_DOORS_Z: float = 4.46
+## What a box may sink into them: contact slop, not a way through.
+const REAR_TOLERANCE: float = 0.03
 
 var _failures: int = 0
 
@@ -54,6 +65,9 @@ func _run() -> void:
 	world.add_child(ground)
 	var empty: VehicleBody3D = _truck(world, Vector3(-30.0, 0.0, 0.0))
 	var loaded: VehicleBody3D = _truck(world, Vector3(30.0, 0.0, 0.0))
+	# A box rides the first truck in the "vehicle" group (package.gd
+	# _find_vehicle()); in the game there's only one. Here it's the loaded one.
+	empty.remove_from_group(&"vehicle")
 	for i: int in range(40):
 		await physics_frame
 
@@ -71,19 +85,29 @@ func _run() -> void:
 		"The shell is on its own layer and copies all %d of the truck's shapes (layer %d, %d shapes)" % [truck_shapes, shell_body.collision_layer, shell_body.get_child_count()])
 	_expect(shell_body.global_position.distance_to(loaded.global_position) < 0.02, "At rest the shell sits on the truck")
 
-	# --- four of the heaviest boxes in the bay: on both rack decks and loose in the aisle ---
+	# --- seven of the heaviest boxes in the bay: on both rack decks and loose
+	# in the aisle, three of them tall and narrow (an Explosivo) set right
+	# up against the rack's rear stop and the rear doors, the way the ride
+	# settles them: the ones that got through ---
 	var boxes: Array[RigidBody3D] = []
-	var spots: Array[Vector3] = [
-		loaded.get_node(^"CargoBay/LeftSeat1PackageMount").position,
-		loaded.get_node(^"CargoBay/LeftSeat2PackageMount").position,
-		Vector3(0.45, 0.6, 1.2),
-		Vector3(0.45, 0.6, 3.6),
+	var tall: Resource = load("res://data/traps/explosive.tres")
+	var spots: Array[Array] = [
+		[loaded.get_node(^"CargoBay/LeftSeat1PackageMount").position, null],
+		[loaded.get_node(^"CargoBay/LeftSeat2PackageMount").position, null],
+		[Vector3(0.45, 0.6, 1.2), null],
+		[Vector3(0.45, 0.6, 3.6), null],
+		# 0.42 x 0.98 x 0.42: centre half its depth (and a hair) short of the face.
+		[Vector3(-0.52, 0.97, RACK_REAR_STOP_Z - 0.215), tall],
+		[Vector3(-0.52, 1.99, RACK_REAR_STOP_Z - 0.215), tall],
+		[Vector3(0.45, 0.755, REAR_DOORS_Z - 0.215), tall],
 	]
-	for spot: Vector3 in spots:
+	for spot: Array in spots:
 		var box: RigidBody3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
 		box.set(&"package_id", StringName("shell_box_%d" % boxes.size()))
+		if spot[1] != null:
+			box.set(&"trap_definition", spot[1])
 		world.add_child(box)
-		box.global_transform = Transform3D(loaded.global_basis, loaded.to_global(spot + Vector3.UP * 0.02))
+		box.global_transform = Transform3D(loaded.global_basis, loaded.to_global(spot[0] + Vector3.UP * 0.02))
 		box.mass = HEAVIEST_BOX_KG
 		boxes.append(box)
 	# Doors shut: with them open a box is meant to slide out the back.
@@ -99,25 +123,43 @@ func _run() -> void:
 		truck.set(&"driver_peer_id", 1)
 		truck.call(&"set_controls", 1.0, 0.0, false)
 	var worst_drift: float = 0.0
+	# How far past the rear stop (boxes on the rack) or the rear doors (in
+	# the aisle) each box's back face ever got.
+	var worst_rear: Dictionary = {}
+	var peak_kmh: float = 0.0
 	var worst_lag: float = 0.0
 	var empty_start: Transform3D = empty.global_transform
 	var loaded_start: Transform3D = loaded.global_transform
-	for tick: int in range(260):
-		if tick == 150:
+	# Long enough flat out to reach top speed with the boxes pushed back
+	# against the rear stop and the doors, where they used to get through.
+	for tick: int in range(620):
+		if tick == 510:
 			# Hit something: half the speed gone in one tick. Everything loose
 			# in the back keeps going.
 			for truck: VehicleBody3D in [empty, loaded]:
 				truck.linear_velocity *= 0.5
-		if tick == 160:
+		if tick == 520:
 			for truck: VehicleBody3D in [empty, loaded]:
 				truck.call(&"set_controls", -1.0, 0.0, false)
 		await physics_frame
 		var empty_moved: Transform3D = empty_start.affine_inverse() * empty.global_transform
 		var loaded_moved: Transform3D = loaded_start.affine_inverse() * loaded.global_transform
+		peak_kmh = maxf(peak_kmh, float(loaded.get(&"speed_kmh")))
 		worst_drift = maxf(worst_drift, empty_moved.origin.distance_to(loaded_moved.origin))
 		worst_lag = maxf(worst_lag, shell_body.global_position.distance_to(loaded.global_position))
+		for box: RigidBody3D in boxes:
+			var back: Vector3 = loaded.to_local(box.global_position)
+			var half: Vector3 = box.call(&"get_half_extents")
+			var stop_z: float = RACK_REAR_STOP_Z if back.x < -0.18 else REAR_DOORS_Z
+			worst_rear[box] = maxf(float(worst_rear.get(box, -INF)), back.z + half.z - stop_z)
 	var top_speed: float = loaded.linear_velocity.length()
-	_expect(worst_drift < 0.01,
+	_expect(peak_kmh > 60.0, "The drive reached top speed (%.0f km/h)" % peak_kmh)
+	for box: RigidBody3D in boxes:
+		_expect(float(worst_rear.get(box, INF)) <= REAR_TOLERANCE,
+			"%s never gets past the rear stop or the shut rear doors (%.3f m past at worst)" % [box.name, float(worst_rear.get(box, INF))])
+	# A couple of centimetres over some 150 m is float noise between two
+	# trucks 60 m apart; a box shoving the truck moved it by far more.
+	_expect(worst_drift < 0.02,
 		"Carrying %.0f kg of loose boxes, the truck drives exactly like an empty one (off by up to %.4f m)" % [HEAVIEST_BOX_KG * boxes.size(), worst_drift])
 	_expect(worst_lag < 0.05, "The shell keeps up with the truck at speed (off by up to %.3f m)" % worst_lag)
 	for box: RigidBody3D in boxes:

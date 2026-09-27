@@ -50,6 +50,23 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: cajas que se salían del camión con las puertas cerradas (#180, 2026-09-27)
+
+Toca `gameplay/package/package.gd` (Slatex). **Ninguna firma cambió**; hacé `git pull` antes de
+seguir con `package.gd`.
+
+- **`package.gd` `_physics_process()`** (solo en el host): cada tick prende o apaga
+  `continuous_cd` según `Vehicle.needs_sweep()` (nuevo, en `vehicle.gd`). La caja barre solo
+  cuando está suelta en el mundo o cuando se mueve adentro de la caja de carga más rápido de lo que
+  el camión la lleva (un choque que la tira contra el tabique). `package.tscn` sigue con
+  `continuous_cd = true` de base.
+- Por qué: viajando en el camión, a 72 km/h una caja avanza 30 cm por tick, y Jolt la barría
+  desde el lugar del tick anterior contra la cáscara ya movida, o sea desde detrás del tope trasero del
+  estante y de las puertas. Una caja apoyada ahí quedaba del lado de afuera y se caía a la ruta.
+  Con una sonda por la ruta real hubo 23 escapes en 6 rutas antes y 0 después.
+- Lo mismo para los objetos sueltos de la caja (`cargo_clutter.gd`, de Nacho).
+- Test: `test_cargo_shell` (cajas altas apoyadas contra el tope y las puertas, a toda velocidad).
+
 ## Aviso activo: tanda de tareas de Nacho del 2026-09-25 (zona compartida y archivos de Slatex)
 
 Resumen de lo que toca archivos que no son solo de Nacho. Todo está cubierto por tests nuevos o
