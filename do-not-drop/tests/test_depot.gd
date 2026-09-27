@@ -25,7 +25,8 @@ const DEPOT_MODELS: Array[String] = [
 	"door_slat", "door_slat_window", "door_bottom_bar", "door_frame", "rack_frame", "rack_beam_level",
 	"shelf_frame", "shelf_deck", "forklift_body", "forklift_carriage", "conveyor", "high_bay_lamp",
 	"tube_fixture", "ceiling_fan", "wall_clock", "clock_hand_hour", "clock_hand_minute",
-	"supply_padding", "supply_insurance",
+	"supply_padding", "supply_insurance", "shop_tape_roll", "shop_foam_blue", "shop_foam_orange",
+	"packing_table", "pallet_jack",
 ]
 
 ## Where the crew appears, looking at the truck: render_depot.gd's spawn_view
@@ -327,3 +328,7 @@ func _test_models(depot: Node3D) -> void:
 		var from: Vector3 = depot.to_global(probe[0])
 		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * float(probe[1]), 1))
 		_expect(not hit.is_empty(), "Something solid under %s" % str(probe[0]))
+	# The exit sign hangs in front of the door's drum (front at z ~0.83), not
+	# behind it where the drum hid it from anyone close to the door.
+	var exit_sign := depot.get_node(^"ExitSign") as Label3D
+	_expect(exit_sign.position.z > 0.9, "The exit sign is in front of the door's drum (z %.2f)" % exit_sign.position.z)

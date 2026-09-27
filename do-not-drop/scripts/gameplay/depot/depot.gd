@@ -920,15 +920,18 @@ func _build_shop(kit: DepotKit) -> void:
 	kit.box(Vector3(4.6, 2.2, 0.5), Vector3(10.8, 1.1, 26.9), shelf, true)
 	for level: int in range(3):
 		kit.box(Vector3(4.6, 0.04, 0.55), Vector3(10.8, 0.45 + level * 0.7, 26.8), top)
+		# Models stand on the shelf board (top at 0.47 + 0.7 per level).
+		var base_y: float = 0.47 + level * 0.7
 		for index: int in range(7):
 			var x: float = 8.9 + index * 0.62
 			match (index + level) % 3:
 				0:
-					kit.cylinder(0.2, 0.5, Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(x, 0.67 + level * 0.7, 26.75)), DepotKit.glass(Color(0.85, 0.92, 0.98, 0.6)), 12)
+					kit.model(DepotKit.depot_model("sm_env_depot_supply_padding"), Transform3D(Basis.IDENTITY, Vector3(x, base_y, 26.75)))
 				1:
-					kit.cylinder(0.11, 0.08, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(x, 0.58 + level * 0.7, 26.7)), DepotKit.flat(Color("e0a867"), 0.5), 12)
+					kit.model(DepotKit.depot_model("sm_env_depot_shop_tape_roll"), Transform3D(Basis(Vector3.UP, (index - 3) * 0.08), Vector3(x, base_y, 26.57)))
 				_:
-					kit.box(Vector3(0.45, 0.3, 0.4), Vector3(x, 0.62 + level * 0.7, 26.75), DepotKit.flat(Color("7fa7b5") if level == 1 else Color("e8772e"), 0.9))
+					var foam: String = "sm_env_depot_shop_foam_blue" if level == 1 else "sm_env_depot_shop_foam_orange"
+					kit.model(DepotKit.depot_model(foam), Transform3D(Basis.IDENTITY, Vector3(x, base_y, 26.75)))
 	# The supplies that are bought wait on the counter, ready to go.
 	for supply: Array in [[&"padding", Vector3(11.6, 1.06, 23.9), "sm_env_depot_supply_padding"], [&"insurance", Vector3(12.4, 1.06, 23.95), "sm_env_depot_supply_insurance"]]:
 		var prop := MeshInstance3D.new()
@@ -1027,22 +1030,13 @@ func _build_staging(kit: DepotKit) -> void:
 	for layer: int in range(6):
 		kit.model_grounded(PALLET, Transform3D(Basis(Vector3.UP, rng.randf_range(-0.06, 0.06)), Vector3(-1.4, FLOOR_TOP + layer * 0.1, 31.3)))
 	kit.collider(Vector3(1.3, 0.62, 0.9), Transform3D(Basis.IDENTITY, Vector3(-1.4, 0.31, 31.3)))
-	# Packing table: cardboard, a tape gun and a roll of labels.
-	var wood := DepotKit.detailed(Color("b08a5a"), "wood_planks", 1.2)
-	kit.box(Vector3(2.4, 0.06, 1.0), Vector3(2.2, 0.9, 27.4), wood, true)
-	for x: float in [1.1, 3.3]:
-		for z: float in [27.0, 27.8]:
-			kit.box(Vector3(0.06, 0.88, 0.06), Vector3(x, 0.44, z), DepotKit.flat(Color("59656a"), 0.5, 0.4))
+	# Packing table (model: cardboard, tape gun, label roll, flat-packs
+	# below), its top solid as before, and a box being packed.
+	kit.model(DepotKit.depot_model("sm_env_depot_packing_table"), Transform3D(Basis.IDENTITY, Vector3(2.2, 0.0, 27.4)))
+	kit.collider(Vector3(2.4, 0.06, 1.0), Transform3D(Basis.IDENTITY, Vector3(2.2, 0.9, 27.4)))
 	kit.model(CARGO_BOXES[0], Transform3D(Basis(Vector3.UP, 0.2).scaled(Vector3.ONE * 0.7), Vector3(1.6, 0.93, 27.4)))
-	kit.box(Vector3(0.7, 0.01, 0.5), Vector3(2.5, 0.935, 27.3), DepotKit.flat(Color("e0a867"), 0.9), false, -0.15)
-	kit.box(Vector3(0.12, 0.16, 0.2), Vector3(2.95, 1.0, 27.5), DepotKit.flat(Color("c0392b"), 0.5))
-	kit.cylinder(0.08, 0.07, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(3.2, 0.98, 27.1)), DepotKit.flat(PAPER, 0.7), 12)
-	# Pallet jack parked beside it.
-	var dark := DepotKit.flat(Color("263238"), 0.6)
-	for x: float in [4.3, 4.75]:
-		kit.box(Vector3(0.16, 0.08, 1.15), Vector3(x, 0.08, 26.4), DepotKit.flat(Color("e8772e"), 0.5))
-	kit.box(Vector3(0.6, 0.3, 0.25), Vector3(4.52, 0.2, 27.1), DepotKit.flat(Color("e8772e"), 0.5))
-	kit.box(Vector3(0.05, 1.0, 0.05), Vector3(4.52, 0.75, 27.35), dark, false, 0.0)
+	# Pallet jack parked beside it, forks toward the door.
+	kit.model(DepotKit.depot_model("sm_env_depot_pallet_jack"), Transform3D(Basis.IDENTITY, Vector3(4.52, FLOOR_TOP, 27.1)))
 
 
 func _build_exterior(kit: DepotKit) -> void:
@@ -1124,8 +1118,12 @@ func _build_signs() -> void:
 	facade.name = "FacadeTitle"
 	_text(tr("WORLD_DEPOT_FACADE_SUB"), Vector3(0.0, 5.65, -WALL - 0.05), PI, 44, PAPER, DISPLAY_FONT, 0.008, 10)
 	_text(tr("WORLD_DEPOT_STAFF"), Vector3(9.5, 2.35, -WALL - 0.09), PI, 36, PAPER, DISPLAY_FONT, 0.006, 6)
-	# Inside, over the door.
-	_text(tr("WORLD_DEPOT_DOOR_INSIDE"), Vector3(0.0, DOOR_HEIGHT + 1.3, 0.12), 0.0, 64, Color("ffc93c"), DISPLAY_FONT, 0.008, 14)
+	# Inside, on the board across the roller door's drum (sm_env_depot_door_frame):
+	# in front of the drum, so it reads from right under the door too.
+	# The board leans 0.3 rad toward the room; the text sits 4 cm off its face.
+	var exit_sign := _text(tr("WORLD_DEPOT_DOOR_INSIDE"), Vector3(0.0, FLOOR_TOP + DOOR_HEIGHT + 0.45 - 0.04 * sin(0.3), 0.02 + 0.855 + 0.04 * cos(0.3)), 0.0, 64, Color("ffc93c"), DISPLAY_FONT, 0.008, 14)
+	exit_sign.rotation.x = 0.3
+	exit_sign.name = "ExitSign"
 	# Safety posters on the walls.
 	_poster(Vector3(-HALF_WIDTH + 0.07, 2.2, 3.4), PI * 0.5, tr("WORLD_DEPOT_POSTER_VEST_TITLE"), tr("WORLD_DEPOT_POSTER_VEST_BODY"), Color("ff9f1c"))
 	_poster(Vector3(-HALF_WIDTH + 0.07, 2.2, 31.2), PI * 0.5, tr("WORLD_DEPOT_POSTER_LIFT_TITLE"), tr("WORLD_DEPOT_POSTER_LIFT_BODY"), Color("4cc9f0"))

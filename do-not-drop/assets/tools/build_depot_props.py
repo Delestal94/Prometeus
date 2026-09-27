@@ -94,6 +94,11 @@ PALETTE.update({
     "fan_blade": srgb("c9ced0"), "door_glass": srgb("2a4550"),
     "bubble": srgb("a6d8ea"), "logo_cardboard": srgb("e0a867"),
     "go_green": srgb("3fbf6a"),
+    # ~15 % lighter than housing / steel: the drum and the forklift mast
+    # read almost black against the racking otherwise.
+    "drum": srgb("50666f"), "mast_steel": srgb("6d7b81"),
+    "wood": srgb("b08a5a"), "tape_brown": srgb("c98a45"),
+    "foam_blue": srgb("7fa7b5"), "foam_orange": srgb("e8772e"),
 })
 
 OUT = os.path.join(ROOT, "models", "environment", "depot")
@@ -343,13 +348,21 @@ def door_frame():
             cyl("BollardBand", (bx, y, bz), 0.146, 0.09, "sign_ink", 14)
     # Drum housing: a fat rounded barrel with yellow end caps and wall brackets.
     hy, hz = top + 0.45, 0.35
-    cyl("DrumHousing", (0, hy, hz), 0.46, DOOR_W + 0.5, "housing", 16, ALONG_X)
-    box("DrumSkirt", (0, top + 0.12, hz - 0.05), (DOOR_W + 0.5, 0.24, 0.62), "housing", 0.04)
+    cyl("DrumHousing", (0, hy, hz), 0.46, DOOR_W + 0.5, "drum", 16, ALONG_X)
+    box("DrumSkirt", (0, top + 0.12, hz - 0.05), (DOOR_W + 0.5, 0.24, 0.62), "drum", 0.04)
+    # Sign board on the drum's face: depot.gd writes the exit sign on it, in
+    # front of the drum, so it reads from right under the door too.
+    # Tilted 0.3 rad (top toward the room) so it faces whoever stands under it.
+    tilt = 0.3
+    box("SignBoardRim", (0, hy, 0.855), (DOOR_W + 0.1, 0.72, 0.04), "ui_yellow", 0.03, 2, pitch=tilt)
+    box("SignBoard", (0, hy - 0.02 * math.sin(tilt), 0.855 + 0.02 * math.cos(tilt)), (DOOR_W - 0.06, 0.58, 0.02), "sign_ink", 0.01, pitch=tilt)
+    for x in (-2.4, 2.4):
+        box("SignBracket", (x, hy, 0.78), (0.1, 0.3, 0.12), "sign_ink")
     for side in (-1.0, 1.0):
         x = side * (DOOR_W / 2 + 0.3)
         cyl("DrumCap", (x, hy, hz), 0.5, 0.12, "ui_yellow", 16, ALONG_X)
         cyl("DrumCapBolt", (x + side * 0.07, hy, hz), 0.14, 0.05, "sign_ink", 10, ALONG_X)
-    for x in (-2.2, 0.0, 2.2):
+    for x in (-3.0, 3.0):
         box("DrumBand", (x, hy, hz), (0.08, 0.95, 0.95), "sign_ink", 0.03)
     # Motor on the right end: chunky box, cooling fins, a warning label.
     mx = DOOR_W / 2 + 0.2
@@ -487,11 +500,11 @@ def forklift_body():
     ball("JoystickKnob", (0.34, 1.7, 0.51), (0.055, 0.055, 0.055), "danger_red")
     # Mast: outer rails, an inner stage, the lift ram and its chains.
     for x in (-0.42, 0.42):
-        box("MastRail", (x, 1.55, -0.38), (0.11, 2.9, 0.13), "steel", 0.02)
+        box("MastRail", (x, 1.55, -0.38), (0.11, 2.9, 0.13), "mast_steel", 0.02)
         box("MastInner", (x * 0.82, 1.6, -0.36), (0.06, 2.7, 0.09), "steel_light", 0.01)
         box("Chain", (x * 0.55, 1.6, -0.4), (0.03, 2.5, 0.03), "sign_ink")
-    box("MastHead", (0, 3.02, -0.38), (0.98, 0.12, 0.14), "steel", 0.03)
-    box("MastFoot", (0, 0.2, -0.38), (0.98, 0.14, 0.16), "steel", 0.03)
+    box("MastHead", (0, 3.02, -0.38), (0.98, 0.12, 0.14), "mast_steel", 0.03)
+    box("MastFoot", (0, 0.2, -0.38), (0.98, 0.14, 0.16), "mast_steel", 0.03)
     cyl("LiftRam", (0, 1.4, -0.3), 0.055, 2.3, "steel_light", 10)
     cyl("LiftRamCap", (0, 2.58, -0.3), 0.07, 0.06, "ui_yellow", 10)
     # Wheels: fat tyres, yellow hubs.
@@ -698,6 +711,86 @@ def supply_insurance():
     done("sm_env_depot_supply_insurance.glb")
 
 
+# =============================================================================
+# Shop goods, packing table, pallet jack (depot.gd _build_shop / _build_staging).
+# =============================================================================
+
+def shop_tape_roll():
+    """Packing tape standing on its edge, facing +Z. Base centre."""
+    clear()
+    r = 0.11
+    cyl("Tape", (0, r, 0), r, 0.08, "tape_brown", 14, ALONG_Z)
+    for z in (-0.041, 0.041):
+        cyl("Core", (0, r, z), 0.06, 0.004, "logo_cardboard", 10, ALONG_Z)
+        cyl("Hole", (0, r, z * 1.05), 0.045, 0.004, "sign_ink", 8, ALONG_Z)
+    box("TapeTail", (0, 0.055, 0.0), (0.07, 0.06, 0.078), "tape_brown", 0.01, pitch=0.5)
+    done("sm_env_depot_shop_tape_roll.glb")
+
+
+def _foam_pack(colour, filename):
+    """A shrink-wrapped stack of foam sheets, 0.45 x 0.3 x 0.4. Base centre."""
+    clear()
+    for i in range(3):
+        box("FoamSheet", (0, 0.05 + i * 0.1, 0), (0.45 - (i % 2) * 0.02, 0.095, 0.4), colour, 0.03, 2)
+    box("Band", (0, 0.15, 0), (0.1, 0.305, 0.405), "paper", 0.01)
+    box("Label", (0, 0.2, 0.203), (0.08, 0.06, 0.004), "sign_ink")
+    done(filename)
+
+
+def shop_foam_blue():
+    _foam_pack("foam_blue", "sm_env_depot_shop_foam_blue.glb")
+
+
+def shop_foam_orange():
+    _foam_pack("foam_orange", "sm_env_depot_shop_foam_orange.glb")
+
+
+def packing_table():
+    """2.4 x 1.0 m bench, top at 0.93, with a cardboard sheet, a tape gun and a
+    label roll on it and flat-packed boxes on the shelf below. Base centre."""
+    clear()
+    box("Top", (0, 0.9, 0), (2.4, 0.06, 1.0), "wood", 0.02, 2)
+    box("TopEdge", (0, 0.855, -0.49), (2.36, 0.05, 0.03), "depot_orange")
+    for x in (-1.1, 1.1):
+        for z in (-0.4, 0.4):
+            box("Leg", (x, 0.44, z), (0.07, 0.86, 0.07), "steel", 0.015)
+            cyl("Foot", (x, 0.015, z), 0.05, 0.03, "sign_ink", 8)
+        bar("LegTie", (x, 0.2, -0.4), (x, 0.2, 0.4), 0.05, "steel")
+    box("LowerShelf", (0, 0.22, 0), (2.2, 0.03, 0.8), "deck_grey", 0.01)
+    for i in range(4):
+        box("FlatBox", (-0.5 + i * 0.03, 0.255 + i * 0.022, 0.02 * i), (0.9, 0.02, 0.6), "logo_cardboard", yaw=0.04 * i)
+    # On top: a sheet of cardboard, the tape gun, a roll of labels.
+    box("CardboardSheet", (0.3, 0.935, -0.1), (0.7, 0.01, 0.5), "logo_cardboard", yaw=-0.15)
+    box("TapeGunBody", (0.75, 0.99, 0.1), (0.1, 0.1, 0.2), "danger_red", 0.02)
+    rod("TapeGunGrip", (0.75, 0.97, 0.18), (0.75, 1.1, 0.24), 0.025, "sign_ink", 6)
+    cyl("TapeGunRoll", (0.75, 1.04, 0.05), 0.07, 0.06, "tape_brown", 10, ALONG_X)
+    cyl("LabelRoll", (1.0, 1.01, -0.3), 0.08, 0.07, "paper", 12, ALONG_Z)
+    cyl("LabelCore", (1.0, 1.01, -0.3), 0.03, 0.075, "ui_mint", 8, ALONG_Z)
+    done("sm_env_depot_packing_table.glb")
+
+
+def pallet_jack():
+    """Hand pallet truck: forks toward -Z, handle up at +Z, origin at the
+    base of the pump (the forks run to z = -1.25)."""
+    clear()
+    for x in (-0.225, 0.225):
+        box("Fork", (x, 0.08, -0.7), (0.16, 0.08, 1.15), "depot_orange", 0.02)
+        box("ForkTip", (x, 0.06, -1.3), (0.14, 0.05, 0.08), "depot_orange", 0.02)
+        cyl("LoadRoller", (x, 0.04, -1.18), 0.035, 0.1, "sign_ink", 8, ALONG_X)
+    box("Chassis", (0, 0.16, 0), (0.6, 0.2, 0.25), "depot_orange", 0.05, 2)
+    cyl("PumpBody", (0, 0.36, 0.05), 0.09, 0.3, "sign_ink", 10)
+    cyl("PumpCap", (0, 0.52, 0.05), 0.1, 0.04, "ui_yellow", 10)
+    for x in (-0.12, 0.12):
+        cyl("SteerWheel", (x, 0.09, 0.1), 0.09, 0.07, "rubber", 12, ALONG_X)
+        cyl("SteerHub", (x, 0.09, 0.1), 0.04, 0.075, "ui_yellow", 8, ALONG_X)
+    rod("Handle", (0, 0.5, 0.08), (0, 1.25, 0.3), 0.025, "sign_ink", 8)
+    rod("HandleBar", (-0.17, 1.28, 0.31), (0.17, 1.28, 0.31), 0.03, "sign_ink", 8)
+    for x in (-0.17, 0.17):
+        rod("HandleSide", (x, 1.28, 0.31), (0, 1.13, 0.26), 0.02, "sign_ink", 6)
+    ball("Lever", (0.06, 1.24, 0.33), (0.035, 0.035, 0.035), "danger_red")
+    done("sm_env_depot_pallet_jack.glb")
+
+
 BUILDERS = {
     "door": [door_slat, door_slat_window, door_bottom_bar, door_frame],
     "rack": [rack_frame, rack_beam_level, shelf_frame, shelf_deck],
@@ -707,6 +800,8 @@ BUILDERS = {
     "fan": [ceiling_fan],
     "clock": [wall_clock, clock_hand_hour, clock_hand_minute],
     "supplies": [supply_padding, supply_insurance],
+    "shop": [shop_tape_roll, shop_foam_blue, shop_foam_orange],
+    "staging": [packing_table, pallet_jack],
 }
 ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 for group, builders in BUILDERS.items():

@@ -188,7 +188,8 @@ usan `DepotKit.merged_mesh()`, una malla con una superficie por material.
 
 - Portón: `sm_env_depot_door_slat.glb` (168 tris) y `..._slat_window.glb` (928, la tablilla 5,
   con mirillas), `..._door_bottom_bar.glb` (680), `..._door_frame.glb` (2.268: guías, tambor,
-  motor, jambas rayadas, bolardos, umbral, botonera y soporte de la baliza). Espacio local del
+  motor, jambas rayadas, bolardos, umbral, botonera, soporte de la baliza y el tablero inclinado
+  sobre el que `depot.gd` escribe "SALIDA · CUIDÁ LA CARGA", delante del tambor). Espacio local del
   portón: origen en el centro de la base, afuera hacia −Z; las tablillas centradas.
 - Estanterías: `sm_env_depot_rack_frame.glb` (644, bastidor de 6,3 m, 1,3 de fondo en X, la
   protección de poste en +X = pasillo) y `..._rack_beam_level.glb` (404, un nivel de 5,6 m;
@@ -204,9 +205,14 @@ usan `DepotKit.merged_mesh()`, una malla con una superficie por material.
   motor, gira en Y), `..._wall_clock.glb` (892, esfera hacia +Z), `..._clock_hand_hour.glb` (24)
   y `..._clock_hand_minute.glb` (72) apuntando a +Y desde el eje (giran en Z),
   `..._supply_padding.glb` (384) y `..._supply_insurance.glb` (212), base centrada.
+- Tienda y embalaje: `..._shop_tape_roll.glb` (224, de canto mirando a +Z),
+  `..._shop_foam_blue.glb` / `..._shop_foam_orange.glb` (380), los rollos de film reusan
+  `supply_padding`; `..._packing_table.glb` (708, mesa de 2,4×1 m con cartón, pistola de cinta,
+  rollo de etiquetas y cajas planas abajo; la tapa sigue sólida en código) y `..._pallet_jack.glb`
+  (672, zorra: origen en la base de la bomba, horquillas hacia −Z). Base centrada.
 
 ```
-"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_depot_props.py [-- door rack forklift conveyor lamps fan clock supplies]
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_depot_props.py [-- door rack forklift conveyor lamps fan clock supplies shop staging]
 ```
 
 ## Calle y ruta: autos, farol, hitos y mobiliario (2026-09-27)
