@@ -61,6 +61,10 @@ func _flash_hint(text: String, seconds: float) -> void:
 	_hint_override_seconds = seconds
 
 
+func _on_tutorial_tip_requested(text: String) -> void:
+	_flash_hint(text, 6.0)
+
+
 func _refresh_hint(delta: float) -> void:
 	if _hint_override_seconds > 0.0:
 		_hint_override_seconds -= delta

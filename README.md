@@ -195,6 +195,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_crew_campaign_save.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
+<godot> --headless --path do-not-drop --script res://tests/test_tutorial.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_horn.gd
 <godot> --headless --path do-not-drop --script res://tests/test_player_colors.gd
@@ -512,6 +513,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_ping` — la rueda de pings: las seis etiquetas llegan por
   `EventBus.request_ping()`, se atribuyen al emisor y `Player._send_ping()` conserva
   la posición y el mensaje reales.
+- `test_tutorial` — cada trampa tiene una ficha completa, el tutorial muestra solo
+  las desbloqueadas, el primer perfil resalta “Cómo jugar” y cada consejo en partida
+  aparece una sola vez antes de quedar guardado en el perfil.
 - `test_ruin_feedback` — el paquete arruinado explota en confeti una sola vez,
   en su propia posición (no en el origen del mundo), y se limpia solo al
   terminar.

@@ -18,6 +18,7 @@ func _ready() -> void:
 	EventBus.interaction_prompt_changed.connect(_on_interaction_prompt)
 	EventBus.carry_changed.connect(_on_carry_changed)
 	EventBus.package_lid_hint_changed.connect(_on_lid_hint_changed)
+	EventBus.tutorial_tip_requested.connect(_on_tutorial_tip_requested)
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.package_hint_changed.connect(_on_package_hint)
 	EventBus.ping_sent.connect(_on_ping)

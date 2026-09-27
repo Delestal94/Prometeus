@@ -11,7 +11,8 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## mint (never actually chosen) is moved to team_color when loaded.
 ## 3: Peso creciente and Ruidoso joined the gradual trap curve. Loading an
 ## older profile grants every unlock its existing progress already earns.
-const PROFILE_VERSION := 3
+## 4: first-time trap tutorial cards persist in seen_tips.
+const PROFILE_VERSION := 4
 const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
 const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
@@ -72,6 +73,7 @@ var selected_truck: StringName = &"classic"
 var selected_paint: StringName = &"white"
 var selected_eyes: StringName = FaceCatalog.DEFAULT_EYES
 var selected_mouth: StringName = FaceCatalog.DEFAULT_MOUTH
+var seen_tips: Dictionary = {}
 
 
 func _ready() -> void:
@@ -96,12 +98,23 @@ func reset_profile() -> void:
 	selected_paint = &"white"
 	selected_eyes = FaceCatalog.DEFAULT_EYES
 	selected_mouth = FaceCatalog.DEFAULT_MOUTH
+	seen_tips.clear()
 	save_profile()
 	progress_changed.emit()
 
 
 func is_unlocked(unlock_id: StringName) -> bool:
 	return bool(unlocked.get(unlock_id, false))
+
+
+## Returns true exactly once per trap and persists immediately, so changing
+## levels or closing the game cannot replay an already-read first-time card.
+func mark_tip_seen(trap_id: StringName) -> bool:
+	if trap_id.is_empty() or bool(seen_tips.get(trap_id, false)):
+		return false
+	seen_tips[trap_id] = true
+	save_profile()
+	return true
 
 
 ## Trap ids this profile hasn't unlocked yet: the depot leaves them off its
@@ -262,6 +275,7 @@ func save_profile() -> void:
 		"selected_paint": selected_paint,
 		"selected_eyes": selected_eyes,
 		"selected_mouth": selected_mouth,
+		"seen_tips": seen_tips,
 	})
 	if not saved:
 		push_warning("No se pudo guardar progreso: " + storage_path)
@@ -296,6 +310,10 @@ func load_profile() -> void:
 	selected_paint = saved_paint if PAINTS.has(saved_paint) and is_unlocked(StringName(PAINTS[saved_paint]["unlock"])) else &"white"
 	selected_eyes = FaceCatalog.valid_eyes(StringName(parsed.get("selected_eyes", FaceCatalog.DEFAULT_EYES)))
 	selected_mouth = FaceCatalog.valid_mouth(StringName(parsed.get("selected_mouth", FaceCatalog.DEFAULT_MOUTH)))
+	seen_tips.clear()
+	for trap_id: Variant in Dictionary(parsed.get("seen_tips", {})):
+		if bool(parsed["seen_tips"].get(trap_id, false)):
+			seen_tips[StringName(trap_id)] = true
 	if saved_version < PROFILE_VERSION or not retroactive_unlocks.is_empty():
 		save_profile()
 

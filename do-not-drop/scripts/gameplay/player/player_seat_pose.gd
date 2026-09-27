@@ -124,6 +124,8 @@ func apply_board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 
 func apply_tend_package(package_path: NodePath) -> void:
 	player.tended_package = player.get_node_or_null(package_path) as DeliveryPackage
+	if player.is_local() and player.tended_package != null:
+		player._show_first_trap_tip(player.tended_package)
 
 
 func leave_seat() -> void:

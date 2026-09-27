@@ -73,6 +73,7 @@ const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 const PingWheelScene = preload("res://scripts/ui/ping_wheel.gd")
+const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
 ## "Personajes" for its clips (Idle/Walk/Stroll/TurnInPlace/Jump/PickUpPackage/
@@ -1097,6 +1098,19 @@ func _close_ping_wheel() -> void:
 
 func _use_card() -> void:
 	_interaction_component.use_card()
+
+
+func _show_first_trap_tip(package: DeliveryPackage) -> void:
+	if package == null or package.trap_definition == null:
+		return
+	var trap_id: StringName = StringName(package.trap_definition.get(&"id"))
+	var profile: Node = get_node_or_null(^"/root/UnlockManager")
+	if profile == null or not bool(profile.call(&"mark_tip_seen", trap_id)):
+		return
+	var text: String = TutorialData.tip_text(trap_id)
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null and not text.is_empty():
+		bus.emit_signal(&"tutorial_tip_requested", text)
 
 
 func _try_interact() -> void:

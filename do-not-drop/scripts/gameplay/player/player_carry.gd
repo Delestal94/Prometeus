@@ -128,6 +128,7 @@ func apply_pick_up(package_path: NodePath) -> void:
 			player._pickup_from = pickup_vehicle.global_transform.affine_inverse() * player._pickup_from
 	if player.is_local() and was_empty and player.carried_package != null:
 		player._play_one_shot(player.ANIM_PICKUP, player.PICKUP_ANIM_LOCK_MS)
+		player._show_first_trap_tip(player.carried_package)
 
 
 func apply_drop_carried() -> void:
