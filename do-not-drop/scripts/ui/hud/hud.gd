@@ -171,6 +171,17 @@ func key_hint(keyboard: String, gamepad: String) -> String:
 
 
 func _build_ui() -> void:
+	_build_frame()
+	_build_top_bar()
+	_build_bottom_bar()
+	_build_floating_labels()
+	_build_overlay_card()
+	_build_panels()
+	_build_fade()
+
+
+## The full-screen root, the risk vignette, and the scaled layer the dashboard lives in.
+func _build_frame() -> void:
 	root = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -191,7 +202,7 @@ func _build_ui() -> void:
 	var margin := MarginContainer.new()
 	hud_layer.add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
+	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 24)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard = VBoxContainer.new()
@@ -199,7 +210,9 @@ func _build_ui() -> void:
 	dashboard.add_theme_constant_override("separation", 12)
 	dashboard.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	# --- Top: who's playing (left), the van's numbers (right) ---
+
+## Top: who's playing (left), the van's numbers (right).
+func _build_top_bar() -> void:
 	var top := HBoxContainer.new()
 	dashboard.add_child(top)
 	top.add_theme_constant_override("separation", 16)
@@ -235,6 +248,9 @@ func _build_ui() -> void:
 	card_label.custom_minimum_size.x = 190
 	card_label.add_theme_color_override("default_color", INK)
 
+
+## Bottom: the cargo (left), the objective (right), and the shortcut pill under them.
+func _build_bottom_bar() -> void:
 	var space := Control.new()
 	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -244,12 +260,12 @@ func _build_ui() -> void:
 	var bottom := HBoxContainer.new()
 	dashboard.add_child(bottom)
 	bottom.add_theme_constant_override("separation", 16)
-	var cargo := make_panel(bottom, Vector2(330, 0))
-	cargo.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
-	UiTheme.tag(cargo, "CARGA", UiTheme.CARDBOARD, -2.0, 16)
+	var cargo_panel := make_panel(bottom, Vector2(330, 0))
+	cargo_panel.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
+	UiTheme.tag(cargo_panel, "CARGA", UiTheme.CARDBOARD, -2.0, 16)
 	cargo_rows_box = VBoxContainer.new()
 	cargo_rows_box.add_theme_constant_override("separation", 10)
-	cargo.add_child(cargo_rows_box)
+	cargo_panel.add_child(cargo_rows_box)
 	var delivery := make_panel(bottom, Vector2.ZERO)
 	delivery.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	delivery.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
@@ -279,6 +295,9 @@ func _build_ui() -> void:
 	shortcut_label.fit_content = true
 	shortcut_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 
+
+## Messages that float over the view: pings, toasts, route events, interaction prompts.
+func _build_floating_labels() -> void:
 	ping_label = UiTheme.floating_label(hud_layer, "", 26, YELLOW, 560, 20)
 	ping_indicator = UiTheme.floating_label(hud_layer, "", 34, YELLOW, 260, 0)
 	ping_indicator.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -306,6 +325,9 @@ func _build_ui() -> void:
 	interaction_label.offset_top = -150
 	interaction_label.offset_bottom = -55
 
+
+## The start / pause / results card and its buttons.
+func _build_overlay_card() -> void:
 	overlay = ColorRect.new()
 	root.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -356,6 +378,8 @@ func _build_ui() -> void:
 	menu_button = make_button(actions, "Menú", false)
 	menu_button.pressed.connect(pause.leave_to_menu)
 
+
+func _build_panels() -> void:
 	options_panel = OptionsPanel.new()
 	options_panel.name = "OptionsPanel"
 	root.add_child(options_panel)
@@ -369,6 +393,8 @@ func _build_ui() -> void:
 		if overlay.visible:
 			options_button.grab_focus())
 
+
+func _build_fade() -> void:
 	# Added last so it paints over everything else, including the pause/
 	# results overlay above -- a quick black flash to soften a hard camera
 	# cut (boarding a seat) or a scene reload (restarting), not a UI panel.
