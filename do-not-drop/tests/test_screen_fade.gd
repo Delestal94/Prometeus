@@ -3,7 +3,7 @@ extends SceneTree
 ## Covers items #62 (seat transition) and #77 (restart) of
 ## docs/especificaciones-visuales.md: both used to be a hard, instant cut.
 ## Both now route through the same EventBus.quick_fade_requested ->
-## prototype_hud.gd mechanism, covered here directly rather than through
+## HUD (hud/hud.gd) mechanism, covered here directly rather than through
 ## the full board_seat()/restart_delivery() call chains (already exercised
 ## by test_interaction.gd and test_loading_flow.gd).
 
@@ -13,7 +13,7 @@ var _failures: int = 0
 func _initialize() -> void:
 	await process_frame
 	var bus: Node = root.get_node(^"/root/EventBus")
-	var hud: CanvasLayer = load("res://scripts/ui/prototype_hud.gd").new()
+	var hud: CanvasLayer = load("res://scripts/ui/hud/hud.gd").new()
 	root.add_child(hud)
 	await process_frame
 

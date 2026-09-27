@@ -12,7 +12,7 @@ es un wrapper mínimo y la interfaz se construye en código.
 
 - `scripts/ui/main_menu.gd` — menú principal (Jugar solo, Crear sala, Unirse por IP, Modo Endless, Opciones, Salir).
 - `scripts/ui/options_panel.gd` — volumen, sensibilidad, invertir Y, pantalla completa; persiste vía autoload `GameSettings` en `user://settings.cfg`.
-- `scripts/ui/prototype_hud.gd` — HUD en partida, pausa, resultados (reclamos de clientes, fotos), pings.
+- `scripts/ui/hud/hud.gd` — HUD en partida, pausa, resultados (reclamos de clientes, fotos), pings.
 - `scripts/ui/ui_theme.gd` — estilos compartidos. Usalo siempre en vez de colores/fuentes sueltos.
 - Controles y diseño de UI: `docs/controles-y-ui.md`; Input Map real: `docs/convenciones-godot.md` §1.
 

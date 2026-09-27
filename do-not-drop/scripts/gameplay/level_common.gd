@@ -225,7 +225,7 @@ func restart_delivery() -> void:
 	get_tree().paused = false
 	# Fade out before reloading instead of the instant hard cut a bare
 	# reload_current_scene() would be -- only waits out the fade-to-black
-	# half (see prototype_hud.gd's _on_quick_fade_requested), since the
+	# half (see HudNotices._on_quick_fade_requested), since the
 	# fade-back-in half is moot once the whole tree gets torn down anyway.
 	EventBus.emit_signal(&"quick_fade_requested", 0.3)
 	await get_tree().create_timer(0.15).timeout
@@ -263,7 +263,7 @@ func _check_lost_cargo() -> void:
 			continue
 		var distance: float = package.global_position.distance_to(vehicle.global_position)
 		if distance > LOST_CARGO_DISTANCE:
-			package.mark_lost("Se cayó de la furgoneta.")
+			package.mark_lost("Se cayó del camión.")
 
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:

@@ -2,11 +2,11 @@ extends Node
 ## Local interaction targeting and prompts. The Player keeps its established
 ## method surface (and every RPC); those small wrappers delegate here.
 
-var player
+var player: Player
 
 
 func _ready() -> void:
-	player = get_parent()
+	player = get_parent() as Player
 
 
 func is_interact_event(event: InputEvent) -> bool:

@@ -41,108 +41,12 @@ const VILLAGE_RADIUS: float = 110.0
 ## the threshold the forest opens up into countryside.
 const COUNTRYSIDE_NOISE_FREQUENCY: float = 0.004
 const COUNTRYSIDE_THRESHOLD: float = 0.12
-const GRID_CELL: float = 8.0
-const MAX_FOOTPRINT: float = 8.0
-## Terrain.nearest() returns 4x its HALO when a point has no road tile
-## nearby at all -- i.e. there's no ground there to stand on.
-const NO_TERRAIN_DISTANCE: float = 250.0
-## Fake contact shadows (presentation/contact_shadow.gd): how far the soft
-## band reaches in and out of a parked car's footprint.
-const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
-const CONTACT_SHADOW_MARGIN: float = 0.6
 
 const PROPS: String = "res://assets/models/environment/props/"
 const FOREST: String = "res://assets/models/environment/forest/"
-const SIGN_DIR: String = "res://assets/models/environment/signs/"
-## Which warning goes up in front of which hazard. Straight roads get none:
-## a sign that means "nothing ahead" teaches players to ignore signs.
-const HAZARD_SIGNS: Dictionary = {
-	"CurveSegment": "sm_env_sign_curve.glb",
-	"SCurveSegment": "sm_env_sign_curve.glb",
-	"SpeedBumpSegment": "sm_env_sign_speed_bump.glb",
-	"NarrowBridgeSegment": "sm_env_sign_narrow_bridge.glb",
-	"ChicaneSegment": "sm_env_sign_narrow_bridge.glb",
-	"GravelSegment": "sm_env_sign_gravel.glb",
-	"ConstructionZoneSegment": "sm_env_sign_roadworks.glb",
-}
-const DELIVERY_SIGN: String = SIGN_DIR + "sm_env_sign_delivery_ahead.glb"
-## Town-limit signs (TownSign, N-601): sampled every this many metres along
-## the road, standing this far right of the centreline.
-const TOWN_SIGN_STEP: float = 4.0
-const TOWN_SIGN_LATERAL: float = 9.4
-## Roadside stories (RoadsideStory, N-602): at most one per STORY_MIN_GAP
-## metres of road, none before STORY_START; STORY_LATERAL is how far the
-## scene's near edge stands from the centreline.
-const STORY_MIN_GAP: float = 800.0
-const STORY_START: float = 250.0
-const STORY_CHANCE: float = 0.5
-const STORY_LATERAL: Vector2 = Vector2(10.0, 14.0)
-const SIGN_LATERAL: float = 7.8
-## The warning stands this far before the hazard's first metre.
-const SIGN_LEAD: float = 6.0
-const GUARDRAIL: String = PROPS + "sm_env_prop_guardrail.glb"
-## What lights up after dark (N-304, LowpolyMaterials.light_up()), by model.
-const NIGHT_LIGHTS: Dictionary = {
-	PROPS + "sm_env_prop_street_lamp_refined.glb": ["lamp_glass"],
-	"res://assets/models/vehicles/sm_vehicle_parked_hatchback.glb": ["lamp"],
-	"res://assets/models/vehicles/sm_vehicle_parked_pickup.glb": ["lamp"],
-}
 const WILDLIFE: String = "res://assets/models/environment/wildlife/"
 const ANIMAL_BEHAVIOUR: Script = preload("res://scripts/presentation/wildlife_animal.gd")
-const CROSSING_SIGN: String = SIGN_DIR + "sm_env_sign_animal_crossing.glb"
-## Deer crossings: on a straight, never in a village, never near the start,
-## and spaced out so one route has a couple at most -- a hazard you meet
-## every thirty seconds stops being a surprise.
-const CROSSING_CHANCE: float = 0.35
-const CROSSING_MIN_SEGMENT: int = 4
-const CROSSING_MIN_GAP: float = 260.0
-const CROSSING_MAX: int = 2
-## Before the deer (on the segment the truck is still on), like every
-## other warning, but far enough out to brake from full speed.
-const CROSSING_SIGN_LEAD: float = 30.0
 
-## Roadside hazards besides the deer (tareas de Nacho N-106), each drawn from
-## its own seeded stream, so adding one never moves anything else:
-## a flock of sheep in open country, a dog that chases the truck through a
-## village, and -- only when it's raining -- branches and logs fallen onto
-## one lane after the storm.
-const FLOCK_CHANCE: float = 0.5
-const FLOCK_MIN_DISTANCE: float = 200.0
-const DOG_CHANCE: float = 0.7
-const DEBRIS_MAX: int = 3
-const DEBRIS_CHANCE: float = 0.45
-const DEBRIS_MIN_DISTANCE: float = 150.0
-const DEBRIS_MIN_GAP: float = 150.0
-const DEBRIS_MODELS: Array[String] = [FOREST + "sm_env_forest_fallen_log.glb", FOREST + "sm_env_forest_deadfall_branch.glb"]
-## Fallen across this much of the road from its own edge at most: the other
-## lane always stays clear to drive round it.
-const DEBRIS_REACH: float = 5.0
-## The asphalt's half width (12 m road).
-const ROAD_HALF_WIDTH_FOR_DEBRIS: float = 6.0
-const GUARDRAIL_LATERAL: float = 7.4
-const WINDMILL_TURN_SECONDS: float = 14.0
-## Ground contact (see _settle()). A model's "feet" are every vertex within
-## CONTACT_BAND of its lowest point; of those, the outermost one per angular
-## sector around the origin (plus the very lowest) is kept, so a tree's root
-## tips, a log's two ends and a bench's four legs are all checked against the
-## terrain right under them instead of under the object's centre. Kept thin:
-## a parked car's sills sit ~0.3 m above its tyres, and counting them as feet
-## sank the wheels into the ground.
-const CONTACT_BAND: float = 0.08
-const CONTACT_SECTORS: int = 8
-## Once nothing floats, everything sinks a touch more so no hairline of sky
-## shows under a foot where the terrain bends between samples: proportional
-## to how far the feet spread, within these bounds (metres).
-const SINK_RATIO: float = 0.05
-const SINK_RANGE: Vector2 = Vector2(0.02, 0.1)
-## Ground plants that lie on the ground rather than grow out of it, and so
-## lean with the slope (a stump or a fern stays upright like a tree).
-const LEAN_MODELS: Array[String] = [
-	"sm_env_forest_fallen_log.glb", "sm_env_forest_deadfall_branch.glb",
-	"sm_env_forest_rock.glb", "sm_env_forest_mossy_rock_cluster.glb",
-]
-
-static var _contact_cache: Dictionary = {}
 
 var _route: Node3D
 var _terrain: Node
@@ -152,19 +56,32 @@ var _seed: int
 var raining: bool = false
 var _noise := FastNoiseLite.new()
 var _houses: Array = []
-var _clear_zones: Array[Vector3] = []
-## Like _clear_zones, but only for what would hide a house from the road
-## (route.gd's sight lines, N-501): trees and props stay out, while a road
-## sign (thin, and there to be seen) may stand in one.
-var _sight_zones: Array[Vector3] = []
-var _grid: Dictionary = {}
-var _same_kind: Dictionary = {}
 var _rules: Array[Dictionary] = []
-var _packed: Dictionary = {}
+## The placement gate, shared by the rules and every feature builder.
+var _placement: RoutePlacement
+var _signage: RouteSignage
+var _wildlife: RouteWildlife
+var _power_lines: RoutePowerLines
+
+## Every town-limit sign put up, entries and exits, in road order (N-601).
+var town_signs: Array[Node3D]:
+	get:
+		return _signage.town_signs
+## Every roadside story put up (N-602), in road order.
+var roadside_stories: Array[Node3D]:
+	get:
+		return _signage.roadside_stories
+var power_poles: Array[Vector3]:
+	get:
+		return _power_lines.power_poles
 ## How many things each rule/feature actually placed, and why the rest were
 ## turned down ({id: {reason: count}}), for tests and tuning.
-var placed_counts: Dictionary = {}
-var rejected_counts: Dictionary = {}
+var placed_counts: Dictionary:
+	get:
+		return _placement.placed_counts
+var rejected_counts: Dictionary:
+	get:
+		return _placement.rejected_counts
 
 
 func _init(route: Node3D, terrain: Node, seed_value: int) -> void:
@@ -175,6 +92,10 @@ func _init(route: Node3D, terrain: Node, seed_value: int) -> void:
 	_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	_noise.frequency = COUNTRYSIDE_NOISE_FREQUENCY
 	_rules = _build_rules()
+	_placement = RoutePlacement.new(route, terrain)
+	_signage = RouteSignage.new(self, _placement, route, terrain, seed_value)
+	_wildlife = RouteWildlife.new(self, _placement, _signage, route, terrain, seed_value)
+	_power_lines = RoutePowerLines.new(self, _placement, route, terrain, seed_value)
 
 
 ## The rule table, highest priority first. Fields (any missing one takes the
@@ -301,28 +222,28 @@ func _rule(fields: Dictionary) -> Dictionary:
 ## out by route.gd and get validated here.
 func dress(segments: Array, houses: Array, clear_zones: Array[Vector3], sight_zones: Array[Vector3] = []) -> void:
 	_houses = houses
-	_clear_zones = clear_zones
-	_sight_zones = sight_zones
+	_placement.clear_zones = clear_zones
+	_placement.sight_zones = sight_zones
 	# Yards first: their pieces live inside their own house's cleared zone,
 	# so they skip that check -- then the house claims its footprint.
 	for house: Node3D in houses:
-		_settle_yard(house)
+		_signage.settle_yard(house)
 	for house: Node3D in houses:
-		_occupy(_route.to_local(house.global_position), 5.0)
+		_placement.occupy(_route.to_local(house.global_position), 5.0)
 	# Signs claim their corner before any guardrail: a warning matters more
 	# than one more metre of rail, and real rails have a gap at the post too.
 	for index: int in range(segments.size()):
-		_dress_signs(segments[index])
-	_dress_town_signs(segments)
-	_dress_roadside_stories(segments)
+		_signage.dress_signs(segments[index])
+	_signage.dress_town_signs(segments)
+	_signage.dress_roadside_stories(segments)
 	for index: int in range(segments.size()):
-		_dress_barriers(segments[index])
-	_dress_crossings(segments)
-	_dress_flock(segments)
-	_dress_dog(segments)
+		_signage.dress_barriers(segments[index])
+	_wildlife.dress_crossings(segments)
+	_wildlife.dress_flock(segments)
+	_wildlife.dress_dog(segments)
 	if raining:
-		_dress_storm_debris(segments)
-	_dress_power_lines(segments)
+		_wildlife.dress_storm_debris(segments)
+	_power_lines.dress(segments)
 	for rule_index: int in _rule_order():
 		for index: int in range(segments.size()):
 			_apply_rule(segments[index], index, rule_index)
@@ -355,560 +276,9 @@ func zone_at(route_point: Vector3, distance: float) -> int:
 	return Zone.FOREST
 
 
-# --- Explicit features ------------------------------------------------------
-
-func _dress_signs(segment: RouteSegment) -> void:
-	var sign_file: String = HAZARD_SIGNS.get(segment.get_script().get_global_name(), "")
-	if sign_file != "":
-		# The curve arrow is modelled bending to the driver's right; mirror it
-		# for a left-hander, reading the bend off where the segment actually
-		# ends rather than trusting the sign convention of turn_deg.
-		var mirror: bool = segment is CurveSegment and segment.exit_offset.x < 0.0
-		_place_sign(segment, SIGN_DIR + sign_file, 1.0, SIGN_LEAD, mirror, &"hazard_sign")
-	if segment.has_meta(&"delivery_sign_side"):
-		# Inside the segment rather than ahead of it, so it never shares a
-		# corner with a hazard sign.
-		_place_sign(segment, DELIVERY_SIGN, float(segment.get_meta(&"delivery_sign_side")), -minf(12.0, segment.length * 0.4), false, &"delivery_sign")
-
-
-## A named sign where the road enters each village and a crossed-out one
-## where it leaves (N-601): walks the road in TOWN_SIGN_STEP steps and puts
-## one up at every change into or out of the VILLAGE zone. A route that ends
-## inside a village (the goal next to the last house) gets no exit sign.
-func _dress_town_signs(segments: Array) -> void:
-	var names: Array[String] = TownSign.names_for_seed(_seed)
-	var town: int = -1
-	var inside: bool = false
-	var last_inside: Array = []
-	for segment: RouteSegment in segments:
-		var start_distance: float = float(segment.get_meta(&"route_distance", 0.0))
-		for slot: Transform3D in segment.get_dressing_slots(TOWN_SIGN_STEP):
-			var now_inside: bool = zone_at(segment.transform * slot.origin, start_distance - slot.origin.z) == Zone.VILLAGE
-			if now_inside and not inside:
-				town += 1
-				_place_town_sign(segment, slot, names[town % names.size()], false)
-			elif inside and not now_inside and not last_inside.is_empty():
-				_place_town_sign(last_inside[0], last_inside[1], names[town % names.size()], true)
-			inside = now_inside
-			if now_inside:
-				last_inside = [segment, slot]
-
-
-## On the driver's right, facing the traffic, through the same checks as any
-## sign; stepped further out if the first spot is taken. Kept as a node (it
-## builds its own board and text), so the batcher leaves it alone.
-func _place_town_sign(segment: RouteSegment, slot: Transform3D, town_name: String, is_exit: bool) -> void:
-	var reach: float = TownSign.POST_GAP * 0.5 + 0.1
-	for lateral: float in [TOWN_SIGN_LATERAL, TOWN_SIGN_LATERAL + 1.0, TOWN_SIGN_LATERAL + 2.0]:
-		var xform: Transform3D = slot * Transform3D(Basis.IDENTITY, Vector3(lateral, 0.0, 0.0))
-		var p: Vector3 = segment.transform * xform.origin
-		if _misfit(p, reach, 6.8, 1.0, true, &"town_sign", 0.0, TownSign.BOARD_SIZE.x * 0.5) != &"":
-			continue
-		var sign_node := TownSign.new()
-		sign_node.name = "TownExit" if is_exit else "TownEntry"
-		sign_node.town_name = town_name
-		sign_node.is_exit = is_exit
-		sign_node.transform = xform
-		_group(segment, "RoadsideDressing").add_child(sign_node, true)
-		_settle(sign_node, p)
-		sign_node.set_meta(&"rule", &"town_sign")
-		sign_node.set_meta(&"reach", reach)
-		sign_node.set_meta(&"footprint", TownSign.BOARD_SIZE.x * 0.5)
-		sign_node.set_meta(&"solid", true)
-		_occupy(p, TownSign.BOARD_SIZE.x * 0.5)
-		town_signs.append(sign_node)
-		_count(&"town_sign")
-		return
-
-
-## Little stories by the road (RoadsideStory, N-602): at most one every
-## STORY_MIN_GAP metres, none in the first STORY_START, each a 50/50 draw per
-## segment once the gap has passed, dealt from a seeded deck so a route shows
-## each kind before repeating one. The competition's crash stays out of the
-## villages; the billboard stays out of the forest (nobody rents one there).
-func _dress_roadside_stories(segments: Array) -> void:
-	var deck: Array[int] = [RoadsideStory.Kind.VAN_SPILL, RoadsideStory.Kind.HEN, RoadsideStory.Kind.BILLBOARD]
-	var shuffle := RandomNumberGenerator.new()
-	shuffle.seed = hash([_seed, &"story_deck"])
-	for i: int in range(deck.size() - 1, 0, -1):
-		var j: int = shuffle.randi_range(0, i)
-		var swap: int = deck[i]
-		deck[i] = deck[j]
-		deck[j] = swap
-	var next: int = 0
-	var last_distance: float = STORY_START - STORY_MIN_GAP
-	for index: int in range(segments.size()):
-		var segment: RouteSegment = segments[index]
-		if segment is TunnelSegment or segment is NarrowBridgeSegment or segment is RailCrossingSegment:
-			continue
-		var distance: float = float(segment.get_meta(&"route_distance", 0.0))
-		if distance - last_distance < STORY_MIN_GAP:
-			continue
-		var rng := RandomNumberGenerator.new()
-		rng.seed = hash([_seed, index, &"roadside_story"])
-		var roll: float = rng.randf()
-		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
-		var lateral: float = rng.randf_range(STORY_LATERAL.x, STORY_LATERAL.y)
-		var story_seed: int = rng.randi()
-		if roll > STORY_CHANCE:
-			continue
-		var kind: int = deck[next % deck.size()]
-		var middle := Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -segment.length * 0.5))
-		var zone: int = zone_at(segment.transform * middle.origin, distance + segment.length * 0.5)
-		if (kind == RoadsideStory.Kind.VAN_SPILL and zone == Zone.VILLAGE) or (kind == RoadsideStory.Kind.BILLBOARD and zone == Zone.FOREST):
-			continue
-		if _place_story(segment, middle, kind, side, lateral, story_seed, zone):
-			next += 1
-			last_distance = distance
-
-
-func _place_story(segment: RouteSegment, slot: Transform3D, kind: int, side: float, lateral: float, story_seed: int, zone: int) -> bool:
-	var reach: float = float(RoadsideStory.REACH[kind])
-	var footprint: float = float(RoadsideStory.FOOTPRINT[kind])
-	var distance_out: float = lateral + reach
-	# A billboard turns a little toward the traffic coming at it; the rest
-	# face wherever their scatter says (RoadsideStory builds them).
-	var basis := Basis.IDENTITY
-	if kind == RoadsideStory.Kind.BILLBOARD:
-		basis = Basis(Vector3.UP, -side * 0.35)
-	var xform: Transform3D = slot * Transform3D(basis, Vector3(side * distance_out, 0.0, 0.0))
-	var p: Vector3 = segment.transform * xform.origin
-	if _misfit(p, reach, 6.8, 0.3, true, &"roadside_story", 0.0, footprint) != &"":
-		return false
-	if _in_zones(_sight_zones, p, footprint):
-		_reject(&"roadside_story", &"sight_line")
-		return false
-	var story := RoadsideStory.new()
-	story.name = "RoadsideStory"
-	story.kind = kind
-	story.story_seed = story_seed
-	story.transform = xform
-	_group(segment, "RoadsideDressing").add_child(story, true)
-	# Down onto the ground by every foot (the van's wheels, the strewn boxes).
-	_settle(story, p)
-	# Then each of its pieces on the ground under it (the slope beside a road).
-	story.fit_to_ground(func(local: Vector3) -> float:
-		var q: Vector3 = _route.to_local(story.to_global(local))
-		return story.to_local(_route.to_global(Vector3(q.x, _terrain.height_at(q), q.z))).y)
-	story.set_meta(&"rule", &"roadside_story")
-	story.set_meta(&"reach", reach)
-	story.set_meta(&"footprint", footprint)
-	story.set_meta(&"solid", true)
-	story.set_meta(&"story_distance", float(segment.get_meta(&"route_distance", 0.0)))
-	story.set_meta(&"zone", ZONE_NAMES[zone])
-	_occupy(p, footprint)
-	roadside_stories.append(story)
-	_count(&"roadside_story")
-	return true
-
-
-## Deer crossings on some straights (see CROSSING_*).
-func _dress_crossings(segments: Array) -> void:
-	var placed: int = 0
-	var last_distance: float = -INF
-	var fallback: Array = []  # [segment, side] for every spot that qualified but lost the draw.
-	for index: int in range(CROSSING_MIN_SEGMENT, segments.size()):
-		var segment: RouteSegment = segments[index]
-		if not segment is StraightSegment or segment.has_meta(&"delivery_sign_side") or placed >= CROSSING_MAX:
-			continue
-		var distance: float = float(segment.get_meta(&"route_distance", 0.0))
-		if distance - last_distance < CROSSING_MIN_GAP:
-			continue
-		var rng := RandomNumberGenerator.new()
-		rng.seed = hash([_seed, index, &"deer_crossing"])
-		var roll: float = rng.randf()
-		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
-		if zone_at(segment.transform * Vector3(0.0, 0.0, -segment.length * 0.5), distance) == Zone.VILLAGE:
-			continue
-		if roll > CROSSING_CHANCE:
-			fallback.append([segment, side])
-			continue
-		_place_crossing(segment, side)
-		placed += 1
-		last_distance = distance
-	# Every route gets at least one: a mechanic you may never meet is one
-	# nobody learns. The middle candidate keeps it away from both ends.
-	if placed == 0 and not fallback.is_empty():
-		var pick: Array = fallback[fallback.size() / 2]
-		_place_crossing(pick[0], pick[1])
-
-
-## The warning sign goes up through the same gate as every other sign, then
-## the crossing itself, which keeps the deer's waiting spot clear of trees.
-func _place_crossing(segment: RouteSegment, side: float) -> void:
-	var middle := Vector3(0.0, 0.0, -segment.length * 0.5)
-	_place_sign(segment, CROSSING_SIGN, 1.0, CROSSING_SIGN_LEAD, false, &"crossing_sign")
-	var crossing := WildlifeCrossing.new()
-	crossing.name = "DeerCrossing"
-	crossing.side = side
-	crossing.position = middle
-	segment.add_child(crossing)
-	_occupy(segment.transform * Vector3(side * WildlifeCrossing.WAIT_LATERAL, 0.0, middle.z), 1.5)
-	_count(&"deer_crossing")
-
-
-## One flock of sheep, maybe, on a straight in open country: never on a
-## segment that already has a deer crossing or a delivery warning.
-func _dress_flock(segments: Array) -> void:
-	for index: int in range(CROSSING_MIN_SEGMENT, segments.size()):
-		var segment: RouteSegment = segments[index]
-		if not segment is StraightSegment or segment.has_meta(&"delivery_sign_side") or segment.has_node(^"DeerCrossing"):
-			continue
-		var distance: float = float(segment.get_meta(&"route_distance", 0.0))
-		var middle := Vector3(0.0, 0.0, -segment.length * 0.5)
-		if distance < FLOCK_MIN_DISTANCE or zone_at(segment.transform * middle, distance) != Zone.COUNTRYSIDE:
-			continue
-		var rng := RandomNumberGenerator.new()
-		rng.seed = hash([_seed, index, &"flock"])
-		var roll: float = rng.randf()
-		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
-		if roll > FLOCK_CHANCE:
-			continue
-		_place_sign(segment, CROSSING_SIGN, 1.0, CROSSING_SIGN_LEAD, false, &"crossing_sign")
-		var flock := FlockCrossing.new()
-		flock.name = "FlockCrossing"
-		flock.side = side
-		flock.flock_seed = hash([_seed, index, &"flock_members"])
-		flock.position = middle
-		segment.add_child(flock)
-		_occupy(segment.transform * Vector3(side * 11.0, 0.0, middle.z), 7.0)
-		_count(&"flock_crossing")
-		return
-
-
-## One dog, maybe, by the road in a village.
-func _dress_dog(segments: Array) -> void:
-	for index: int in range(CROSSING_MIN_SEGMENT, segments.size()):
-		var segment: RouteSegment = segments[index]
-		if not (segment is StraightSegment or segment is CurveSegment):
-			continue
-		var distance: float = float(segment.get_meta(&"route_distance", 0.0))
-		if zone_at(segment.transform * Vector3.ZERO, distance) != Zone.VILLAGE:
-			continue
-		var rng := RandomNumberGenerator.new()
-		rng.seed = hash([_seed, index, &"dog"])
-		var roll: float = rng.randf()
-		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
-		var home: Vector3 = segment.transform * Vector3(side * ChasingDog.HOME_LATERAL, 0.0, 0.0)
-		if roll > DOG_CHANCE or _overlaps(home, 1.0) or _in_clear_zone(home, 1.0):
-			continue
-		var dog := ChasingDog.new()
-		dog.name = "ChasingDog"
-		dog.side = side
-		segment.add_child(dog)
-		_occupy(home, 1.0)
-		_count(&"chasing_dog")
-		return
-
-
-## After the storm: a fallen log or branch lying across one lane of a few
-## forest straights, solid, so the driver has to steer round it. It reaches
-## in from its own road edge DEBRIS_REACH metres at most, leaving the other
-## lane clear.
-func _dress_storm_debris(segments: Array) -> void:
-	var placed: int = 0
-	var last_distance: float = -INF
-	for index: int in range(segments.size()):
-		var segment: RouteSegment = segments[index]
-		if placed >= DEBRIS_MAX:
-			return
-		if not segment is StraightSegment or segment.has_meta(&"delivery_sign_side"):
-			continue
-		var distance: float = float(segment.get_meta(&"route_distance", 0.0))
-		var middle := Vector3(0.0, 0.0, -segment.length * 0.5)
-		if distance < DEBRIS_MIN_DISTANCE or distance - last_distance < DEBRIS_MIN_GAP or zone_at(segment.transform * middle, distance) != Zone.FOREST:
-			continue
-		if segment.has_node(^"DeerCrossing") or segment.has_node(^"FlockCrossing"):
-			continue
-		var rng := RandomNumberGenerator.new()
-		rng.seed = hash([_seed, index, &"storm_debris"])
-		var roll: float = rng.randf()
-		var side: float = -1.0 if rng.randf() < 0.5 else 1.0
-		var model: String = DEBRIS_MODELS[rng.randi() % DEBRIS_MODELS.size()]
-		var angle: float = rng.randf_range(-0.35, 0.35)
-		var along: float = rng.randf_range(-0.3, 0.3) * segment.length
-		if roll > DEBRIS_CHANCE:
-			continue
-		if _place_debris(segment, model, side, middle + Vector3(0.0, 0.0, along), angle):
-			placed += 1
-			last_distance = distance
-
-
-func _place_debris(segment: RouteSegment, path: String, side: float, at: Vector3, angle: float) -> bool:
-	var piece: Node3D = _instantiate(path)
-	if piece == null:
-		return false
-	# Lying across the road (its long axis along X), turned a little.
-	var bounds: AABB = _mesh_bounds(piece)
-	var length: float = bounds.size.x if bounds.size.x >= bounds.size.z else bounds.size.z
-	var yaw: float = angle if bounds.size.x >= bounds.size.z else angle + PI * 0.5
-	var reach: float = minf(length, DEBRIS_REACH)
-	var lateral: float = side * (ROAD_HALF_WIDTH_FOR_DEBRIS - reach * 0.5)
-	var holder := StaticBody3D.new()
-	holder.name = "StormDebris"
-	holder.collision_layer = 1
-	holder.collision_mask = 0
-	# Kept out of the geometry merge: it has a collider to go with it.
-	holder.set_meta(&"animated", true)
-	holder.set_meta(&"debris", true)
-	holder.position = at + Vector3(lateral, 0.0, 0.0)
-	holder.rotation.y = yaw
-	segment.add_child(holder)
-	holder.add_child(piece)
-	holder.position.y = _terrain.height_at(segment.transform * holder.position) - segment.transform.origin.y - base_offset(piece)
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(maxf(bounds.size.x, 0.2), maxf(bounds.size.y, 0.3), maxf(bounds.size.z, 0.2))
-	shape.shape = box
-	shape.position = bounds.get_center()
-	holder.add_child(shape)
-	_count(&"storm_debris")
-	return true
-
-
-static func _mesh_bounds(root: Node3D) -> AABB:
-	var result := AABB()
-	var first: bool = true
-	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		var xform: Transform3D = Transform3D.IDENTITY
-		var walker: Node = mesh
-		while walker != root and walker != null:
-			xform = (walker as Node3D).transform * xform
-			walker = walker.get_parent()
-		var box: AABB = xform * mesh.get_aabb()
-		result = box if first else result.merge(box)
-		first = false
-	return result
-
-
-## Power lines (docs/tareas-nacho.md #27): wooden poles every
-## POWER_POLE_SPACING metres down one side of the road, strung together with
-## three sagging wires. Poles go through the same checks as any prop (and
-## claim their ground first, so no tree grows through one); a pole that
-## can't stand leaves a gap, and the wires only span poles close enough.
-## All the poles are one MultiMesh and all the wire one mesh: two draw calls.
-const POWER_POLE_SPACING: float = 36.0
-const POWER_POLE_LATERAL: float = 9.6
-const POWER_POLE_HEIGHT: float = 7.4
-const POWER_MAX_SPAN: float = 58.0
-const POWER_WIRE_SAG: float = 0.9
-const POWER_WIRE_SEGMENTS: int = 10
-var power_poles: Array[Vector3] = []
-## Every town-limit sign put up, entries and exits, in road order (N-601).
-var town_signs: Array[Node3D] = []
-## Every roadside story put up (N-602), in road order.
-var roadside_stories: Array[Node3D] = []
-
-
-func _dress_power_lines(segments: Array) -> void:
-	var carried: float = 0.0
-	for segment: RouteSegment in segments:
-		if segment is TunnelSegment:
-			carried = 0.0
-			continue
-		for slot: Transform3D in segment.get_dressing_slots(4.0):
-			carried += 4.0
-			if carried < POWER_POLE_SPACING:
-				continue
-			var p: Vector3 = segment.transform * (slot * Vector3(POWER_POLE_LATERAL, 0.0, 0.0))
-			if _misfit(p, 0.35, 8.6, 1.0, true, &"power_pole", 20.0) != &"":
-				continue
-			carried = 0.0
-			_occupy(p, 0.6)
-			if not _same_kind.has(&"power_pole"):
-				_same_kind[&"power_pole"] = []
-			_same_kind[&"power_pole"].append(Vector2(p.x, p.z))
-			power_poles.append(Vector3(p.x, _terrain.height_at(p), p.z))
-			_count(&"power_pole")
-	if power_poles.size() >= 2:
-		_build_power_lines()
-
-
-func _build_power_lines() -> void:
-	var holder := Node3D.new()
-	holder.name = "PowerLines"
-	_route.add_child(holder)
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color("6b5238")
-	wood.roughness = 0.95
-	var pole := CylinderMesh.new()
-	pole.top_radius = 0.11
-	pole.bottom_radius = 0.15
-	pole.height = POWER_POLE_HEIGHT
-	pole.radial_segments = 6
-	pole.material = wood
-	var arm := BoxMesh.new()
-	arm.size = Vector3(1.8, 0.12, 0.12)
-	arm.material = wood
-	var poles := MultiMesh.new()
-	poles.transform_format = MultiMesh.TRANSFORM_3D
-	poles.mesh = pole
-	poles.instance_count = power_poles.size()
-	var arms := MultiMesh.new()
-	arms.transform_format = MultiMesh.TRANSFORM_3D
-	arms.mesh = arm
-	arms.instance_count = power_poles.size()
-	var colliders := StaticBody3D.new()
-	colliders.name = "PowerPoleColliders"
-	colliders.collision_layer = 1
-	var tops: Array[Transform3D] = []
-	for index: int in range(power_poles.size()):
-		var base: Vector3 = power_poles[index]
-		# The cross-arm faces along the line, toward the neighbouring pole.
-		var along: Vector3 = (power_poles[mini(index + 1, power_poles.size() - 1)] - power_poles[maxi(index - 1, 0)])
-		along.y = 0.0
-		var yaw: float = atan2(along.x, along.z) if along.length() > 0.1 else 0.0
-		var basis := Basis(Vector3.UP, yaw + PI * 0.5)
-		poles.set_instance_transform(index, Transform3D(Basis.IDENTITY, base + Vector3.UP * (POWER_POLE_HEIGHT * 0.5 - 0.3)))
-		var top := Transform3D(basis, base + Vector3.UP * (POWER_POLE_HEIGHT - 0.6))
-		arms.set_instance_transform(index, top)
-		tops.append(top)
-		var shape := CollisionShape3D.new()
-		var cylinder := CylinderShape3D.new()
-		cylinder.radius = 0.15
-		cylinder.height = POWER_POLE_HEIGHT
-		shape.shape = cylinder
-		shape.position = base + Vector3.UP * (POWER_POLE_HEIGHT * 0.5 - 0.3)
-		colliders.add_child(shape)
-	for pair: Array in [[poles, "PowerPoles"], [arms, "PowerPoleArms"]]:
-		var instance := MultiMeshInstance3D.new()
-		instance.name = pair[1]
-		instance.multimesh = pair[0]
-		# No draw distance: it's measured from the middle of the whole line's
-		# bounds, hundreds of metres away, and hid poles right beside you.
-		holder.add_child(instance)
-	holder.add_child(colliders)
-	holder.add_child(_power_wires(tops))
-
-
-## Three wires from arm to arm, each a chain of thin boxes hanging in a
-## parabola, all in one surface.
-func _power_wires(tops: Array[Transform3D]) -> MeshInstance3D:
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var strand := BoxMesh.new()
-	strand.size = Vector3(0.05, 0.05, 1.0)
-	for index: int in range(tops.size() - 1):
-		var a: Transform3D = tops[index]
-		var b: Transform3D = tops[index + 1]
-		if a.origin.distance_to(b.origin) > POWER_MAX_SPAN:
-			continue
-		for offset: float in [-0.75, 0.0, 0.75]:
-			var start: Vector3 = a * Vector3(offset, 0.08, 0.0)
-			var finish: Vector3 = b * Vector3(offset, 0.08, 0.0)
-			var previous: Vector3 = start
-			for step: int in range(1, POWER_WIRE_SEGMENTS + 1):
-				var t: float = float(step) / POWER_WIRE_SEGMENTS
-				var point: Vector3 = start.lerp(finish, t) + Vector3.DOWN * POWER_WIRE_SAG * 4.0 * t * (1.0 - t)
-				var span: Vector3 = point - previous
-				var basis := Basis.looking_at(span.normalized(), Vector3.UP) if absf(span.normalized().y) < 0.99 else Basis.IDENTITY
-				# Stretched along its own length (local Z), not the world's.
-				basis = basis * Basis.from_scale(Vector3(1.0, 1.0, span.length()))
-				surface.append_from(strand, 0, Transform3D(basis, (previous + point) * 0.5))
-				previous = point
-	var mesh := MeshInstance3D.new()
-	mesh.name = "PowerWires"
-	mesh.mesh = surface.commit()
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color("2b2f33")
-	mesh.material_override = metal
-	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	return mesh
-
-
-func _dress_barriers(segment: RouteSegment) -> void:
-	if segment is CurveSegment:
-		_place_guardrails(segment)
-	# ConstructionZoneSegment owns its lane closure, including its imported
-	# cones/barriers. Adding roadside dressing here created a second set on
-	# top of it and made the road unreadable.
-
-
-## Signs are authored facing -Z; half a turn makes them face the driver
-## coming up the road (who travels toward -Z). `distance` is along the
-## segment's real path (negative = into it, positive = before it), read off
-## its dressing slots so a sign inside a curve follows the bend instead of
-## standing where a straight road would have been. If the ideal spot is
-## taken or too tight, it steps further out before giving up.
-func _place_sign(segment: RouteSegment, path: String, side: float, distance: float, mirror: bool, id: StringName) -> void:
-	var slot: Transform3D = Transform3D.IDENTITY
-	var along: float = distance
-	if distance < 0.0:
-		var slots: Array[Transform3D] = segment.get_dressing_slots(2.0)
-		var index: int = clampi(roundi(-distance / 2.0), 0, slots.size() - 1)
-		slot = slots[index]
-		along = 0.0
-	var basis := Basis(Vector3.UP, PI)
-	if mirror:
-		basis = basis * Basis.from_scale(Vector3(-1.0, 1.0, 1.0))
-	for lateral: float in [SIGN_LATERAL, SIGN_LATERAL + 0.9, SIGN_LATERAL + 1.9]:
-		var xform: Transform3D = slot * Transform3D(basis, Vector3(side * lateral, 0.0, along))
-		if _try_place(segment, "RoadsideDressing", path, xform,
-				{"id": id, "radius": 0.5, "clearance": 6.8, "max_slope": 1.0, "solid": true, "tilt": true, "see_through": true}) != null:
-			return
-
-
-## Along the outside of every real bend -- the side a van that takes it too
-## fast leaves the road on. Authored along X with the reflector on -Z; a
-## quarter turn lays it along the road, reflector toward the asphalt.
-func _place_guardrails(segment: RouteSegment) -> void:
-	var outer: float = -signf(segment.exit_offset.x)
-	if outer == 0.0:
-		return
-	for slot: Transform3D in segment.get_dressing_slots(4.0):
-		var xform: Transform3D = slot * Transform3D(Basis(Vector3.UP, outer * PI * 0.5), Vector3(outer * GUARDRAIL_LATERAL, 0.0, -2.0))
-		_try_place(segment, "RoadsideDressing", GUARDRAIL, xform,
-			{"id": &"guardrail", "radius": 0.3, "footprint": 1.8, "clearance": 6.6, "max_slope": 1.0, "solid": true, "tilt": true})
-
-
-## Cones and the barrier stand right at the edge of the closed lane (that's
-## the point of them); the crew's pallet and crate wait behind it.
-func _place_roadworks(segment: RouteSegment) -> void:
-	var slots: Array[Transform3D] = segment.get_dressing_slots(2.2)
-	var edge: Dictionary = {"id": &"roadworks", "radius": 0.3, "clearance": 5.8, "max_slope": 1.0, "solid": true}
-	# The barrier goes first and claims its whole 2.2 m board (feet at
-	# +-0.85), so the cones -- which used to share its spot -- line up behind
-	# it instead of standing inside its legs.
-	if not slots.is_empty():
-		var barrier: Dictionary = edge.duplicate()
-		barrier["footprint"] = 1.2
-		_try_place(segment, "RoadsideDressing", PROPS + "sm_env_prop_road_barrier.glb", slots[0] * Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(6.4, 0.0, -1.2)), barrier)
-	for index: int in range(mini(4, slots.size() - 2)):
-		_try_place(segment, "RoadsideDressing", PROPS + "sm_env_prop_traffic_cone.glb", slots[index + 2] * Transform3D(Basis.IDENTITY, Vector3(6.4, 0.0, 0.0)), edge)
-	var mid: float = -segment.length * 0.5
-	var crew: Dictionary = {"id": &"roadworks", "radius": 0.8, "clearance": 7.0, "max_slope": 0.4, "solid": true, "tilt": true}
-	_try_place(segment, "RoadsideDressing", PROPS + "sm_env_prop_pallet.glb", Transform3D(Basis(Vector3.UP, 0.2), Vector3(8.4, 0.0, mid + 1.6)), crew)
-	_try_place(segment, "RoadsideDressing", PROPS + "sm_env_prop_wooden_crate.glb", Transform3D(Basis(Vector3.UP, -0.15), Vector3(8.2, 0.0, mid - 0.8)), crew)
-
-
-## Yard pieces were laid out by route.gd from the house's own bounds. The
-## porch ones (meta on_porch) belong to the house and ride on its porch
-## deck; everything else in the lot has to pass the same checks as any
-## roadside prop, or it's dropped -- which is what kept a fence off the
-## asphalt when a house was dealt a tight spot.
-func _settle_yard(house: Node3D) -> void:
-	var yard: Node = house.get_node_or_null(^"Yard")
-	if yard == null:
-		return
-	var pieces: Array = yard.get_children()
-	# Biggest first, so a barn keeps its spot and a fence panel gives way.
-	pieces.sort_custom(func(a: Node, b: Node) -> bool: return float(a.get_meta(&"footprint", 0.0)) > float(b.get_meta(&"footprint", 0.0)))
-	for piece: Node3D in pieces:
-		if piece.get_meta(&"on_porch", false):
-			_count(&"yard")
-			continue
-		var p: Vector3 = _route.to_local(piece.global_position)
-		var radius: float = float(piece.get_meta(&"footprint", 0.8))
-		if _misfit(p, radius, 7.2, 0.45, false, &"yard", 0.0) != &"":
-			piece.free()
-			continue
-		_settle(piece, p)
-		piece.set_meta(&"rule", &"yard")
-		piece.set_meta(&"reach", radius)
-		piece.set_meta(&"solid", true)
-		_occupy(p, radius)
-		_count(&"yard")
+## Storm debris on its own (tests): dress() lays it only when it's raining.
+func dress_storm_debris(segments: Array) -> void:
+	_wildlife.dress_storm_debris(segments)
 
 
 # --- Rules ------------------------------------------------------------------
@@ -927,7 +297,8 @@ func _apply_rule(segment: RouteSegment, segment_index: int, rule_index: int) -> 
 		var density: float = float(rule.density.get(zone, 0.0))
 		if density <= 0.0:
 			continue
-		var slot_sides: Array = sides if not sides.is_empty() else [-1.0 if (segment_index + slot_index) % 2 == 0 else 1.0]
+		var alternate: float = -1.0 if (segment_index + slot_index) % 2 == 0 else 1.0
+		var slot_sides: Array = sides if not sides.is_empty() else [alternate]
 		for side: float in slot_sides:
 			for _attempt: int in range(rule.attempts):
 				# Draw everything up front so a rejected spot never shifts the
@@ -943,299 +314,9 @@ func _apply_rule(segment: RouteSegment, segment_index: int, rule_index: int) -> 
 					continue
 				var yaw: float = side * PI * 0.5 + yaw_jitter if rule.facing == Facing.ROAD else random_yaw
 				yaw += float(rule.get("yaw_offset", 0.0))
-				var xform := slot * Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale), Vector3(side * lateral, 0.0, along))
+				var turn := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale)
+				var xform := slot * Transform3D(turn, Vector3(side * lateral, 0.0, along))
 				var fields: Dictionary = rule.duplicate()
 				fields["zone"] = zone
 				fields["radius"] = rule.radius * scale
-				_try_place(segment, rule.group, rule.paths[pick], xform, fields)
-
-
-# --- Placement --------------------------------------------------------------
-
-## The single gate every object goes through. `xform` is in the segment's
-## space. Returns the spawned node, or null when the spot fails a check.
-func _try_place(segment: RouteSegment, group_name: String, path: String, xform: Transform3D, fields: Dictionary) -> Node3D:
-	var p: Vector3 = segment.transform * xform.origin
-	var radius: float = float(fields.get("radius", 0.5))
-	var solid: bool = bool(fields.get("solid", true))
-	var id: StringName = StringName(fields.get("id", &""))
-	var min_same: float = float(fields.get("min_same", 0.0))
-	var footprint: float = float(fields.get("footprint", radius))
-	if _misfit(p, radius, float(fields.get("clearance", 7.0)), float(fields.get("max_slope", 0.35)), true, id, min_same, footprint) != &"":
-		return null
-	if not bool(fields.get("see_through", false)) and _in_zones(_sight_zones, p, footprint):
-		_reject(id, &"sight_line")
-		return null
-	var node := _instantiate(path)
-	if node == null:
-		return null
-	if fields.has("behaviour"):
-		# Before entering the tree, so the behaviour's _ready() runs.
-		node.set_script(fields.behaviour)
-	node.transform = xform
-	_group(segment, group_name).add_child(node)
-	_settle(node, p, bool(fields.get("tilt", false)) or path.get_file() in LEAN_MODELS)
-	if fields.has("contact_shadow"):
-		_lay_contact_shadow(segment, node, float(fields.contact_shadow))
-	node.set_meta(&"rule", id)
-	node.set_meta(&"reach", radius)
-	node.set_meta(&"footprint", footprint)
-	node.set_meta(&"solid", solid)
-	if fields.has("zone"):
-		node.set_meta(&"zone", ZONE_NAMES[fields.zone])
-	if solid:
-		_occupy(p, footprint)
-	if min_same > 0.0:
-		if not _same_kind.has(id):
-			_same_kind[id] = []
-		_same_kind[id].append(Vector2(p.x, p.z))
-	var rotor: Node3D = node.find_child("WindmillRotor", true, false) as Node3D
-	if rotor != null:
-		# Blender's rotor axis (+Y) arrives as Godot's local Z.
-		rotor.create_tween().set_loops().tween_property(rotor, "rotation:z", TAU, WINDMILL_TURN_SECONDS).from(0.0)
-	_count(id)
-	return node
-
-
-## The five checks from the class comment, in cheapest-first order. Returns
-## why a spot was turned down, or &"" when it fits (and records the reason).
-## `in_world` = false is for a house's own yard, which sits inside that
-## house's cleared zone by definition (it still can't overlap itself).
-func _misfit(p: Vector3, radius: float, clearance: float, max_slope: float, in_world: bool, id: StringName, min_same: float, footprint: float = -1.0) -> StringName:
-	# `radius` is how close the object itself comes to the road; `footprint`
-	# is the ground it claims from others (a guardrail is thin across the
-	# road but 4 m along it).
-	var claim: float = footprint if footprint >= 0.0 else radius
-	var reason: StringName = &""
-	var road: float = _terrain.nearest(Vector2(p.x, p.z)).x
-	if road >= NO_TERRAIN_DISTANCE:
-		reason = &"no_terrain"
-	elif road - radius < clearance:
-		reason = &"road"
-	elif in_world and _in_clear_zone(p, claim):
-		reason = &"clear_zone"
-	elif _overlaps(p, claim):
-		reason = &"occupied"
-	elif min_same > 0.0 and _near_same(p, id, min_same):
-		reason = &"same_kind"
-	elif _slope(p, maxf(radius, 0.5)) > max_slope:
-		reason = &"slope"
-	if reason != &"":
-		if not rejected_counts.has(id):
-			rejected_counts[id] = {}
-		rejected_counts[id][reason] = int(rejected_counts[id].get(reason, 0)) + 1
-	return reason
-
-
-func _in_clear_zone(p: Vector3, radius: float) -> bool:
-	return _in_zones(_clear_zones, p, radius)
-
-
-func _in_zones(zones: Array[Vector3], p: Vector3, radius: float) -> bool:
-	for zone: Vector3 in zones:
-		if Vector2(p.x - zone.x, p.z - zone.y).length() < zone.z + radius:
-			return true
-	return false
-
-
-func _reject(id: StringName, reason: StringName) -> void:
-	if not rejected_counts.has(id):
-		rejected_counts[id] = {}
-	rejected_counts[id][reason] = int(rejected_counts[id].get(reason, 0)) + 1
-
-
-func _near_same(p: Vector3, id: StringName, distance: float) -> bool:
-	for other: Vector2 in _same_kind.get(id, []):
-		if other.distance_to(Vector2(p.x, p.z)) < distance:
-			return true
-	return false
-
-
-func _slope(p: Vector3, reach: float) -> float:
-	var dx: float = absf(_terrain.height_at(p + Vector3(reach, 0.0, 0.0)) - _terrain.height_at(p - Vector3(reach, 0.0, 0.0)))
-	var dz: float = absf(_terrain.height_at(p + Vector3(0.0, 0.0, reach)) - _terrain.height_at(p - Vector3(0.0, 0.0, reach)))
-	return maxf(dx, dz) / (2.0 * reach)
-
-
-func _occupy(p: Vector3, radius: float) -> void:
-	var key := Vector2i(floori(p.x / GRID_CELL), floori(p.z / GRID_CELL))
-	if not _grid.has(key):
-		_grid[key] = []
-	_grid[key].append(Vector3(p.x, p.z, radius))
-
-
-func _overlaps(p: Vector3, radius: float) -> bool:
-	var reach: int = ceili((radius + MAX_FOOTPRINT) / GRID_CELL)
-	var center := Vector2i(floori(p.x / GRID_CELL), floori(p.z / GRID_CELL))
-	for dx: int in range(-reach, reach + 1):
-		for dz: int in range(-reach, reach + 1):
-			for other: Vector3 in _grid.get(center + Vector2i(dx, dz), []):
-				if Vector2(other.x - p.x, other.y - p.z).length() < other.z + radius:
-					return true
-	return false
-
-
-## Puts `node` (already posed and parented) down at route-space `p`: leans it
-## with the slope if asked, then lowers it until every contact point is at or
-## under the terrain right below it, plus a small sink. Placing by the centre
-## alone is what left a tree's downhill roots or a log's far end in the air.
-func _settle(node: Node3D, p: Vector3, lean: bool = false) -> void:
-	node.global_position = _route.to_global(p)
-	var contacts: PackedVector3Array = contact_points(node)
-	if lean:
-		_lean_with_ground(node, p, contacts)
-	var basis: Basis = _route.global_basis.inverse() * node.global_basis
-	var y: float = INF
-	var spread: float = 0.0
-	for contact: Vector3 in contacts:
-		var offset: Vector3 = basis * contact
-		y = minf(y, _terrain.height_at(p + Vector3(offset.x, 0.0, offset.z)) - offset.y)
-		spread = maxf(spread, Vector2(offset.x, offset.z).length())
-	if y == INF:
-		y = _terrain.height_at(p)
-	p.y = y - clampf(spread * SINK_RATIO, SINK_RANGE.x, SINK_RANGE.y)
-	node.global_position = _route.to_global(p)
-
-
-## Tilts `node` to the ground plane across its own length and width: a 4 m
-## log reads the slope between its two ends, not over the metre at its middle.
-func _lean_with_ground(node: Node3D, p: Vector3, contacts: PackedVector3Array) -> void:
-	var scale: Vector3 = node.basis.get_scale()
-	var reach := Vector2(0.5, 0.5)
-	for contact: Vector3 in contacts:
-		reach = reach.max(Vector2(absf(contact.x) * scale.x, absf(contact.z) * scale.z))
-	var right: Vector3 = node.global_basis.x.normalized()
-	var forward: Vector3 = node.global_basis.z.normalized()
-	var rise_x: float = _terrain.height_at(p + right * reach.x) - _terrain.height_at(p - right * reach.x)
-	var rise_z: float = _terrain.height_at(p + forward * reach.y) - _terrain.height_at(p - forward * reach.y)
-	node.rotate_object_local(Vector3.FORWARD, -atan(rise_x / (2.0 * reach.x)))
-	node.rotate_object_local(Vector3.RIGHT, -atan(rise_z / (2.0 * reach.y)))
-
-
-## A soft dark band where `node` meets the ground (N-308.2), draped over the
-## terrain vertex by vertex: the piece itself sinks a few cm into the ground
-## when settled (SINK_RANGE), so a patch hung from it would be buried. Laid
-## after settling (it isn't part of what stands on the ground) and in a group
-## of its own, not under the car: DressingBatcher.bake() shares one mesh per
-## model, and each car's ground is its own. (merge_segment_geometry() still
-## folds the bands into the segment's merged mesh, vertices where they were
-## laid; the meta then points at a freed node.) Knockable pieces get none --
-## the patch would fly off with them.
-func _lay_contact_shadow(segment: Node3D, node: Node3D, opacity: float) -> void:
-	var bounds: AABB = _mesh_bounds(node)
-	var in_route: Transform3D = _route.global_transform.affine_inverse() * node.global_transform
-	var scale: Vector3 = in_route.basis.get_scale()
-	var frame := Transform3D(in_route.basis.orthonormalized(), in_route * Vector3(bounds.get_center().x, 0.0, bounds.get_center().z))
-	var footprint := Vector2(bounds.size.x * scale.x, bounds.size.z * scale.z)
-	var band: ArrayMesh = ContactShadow.mesh(frame, footprint, CONTACT_SHADOW_MARGIN, func(point: Vector3) -> float: return _terrain.height_at(point))
-	var patch: MeshInstance3D = ContactShadow.instance(band, opacity)
-	_group(segment, "ContactShadows").add_child(patch, true)
-	patch.global_transform = _route.global_transform
-	node.set_meta(&"contact_shadow", patch)
-
-
-func _group(segment: Node3D, group_name: String) -> Node3D:
-	var group: Node3D = segment.get_node_or_null(NodePath(group_name)) as Node3D
-	if group == null:
-		group = Node3D.new()
-		group.name = group_name
-		segment.add_child(group)
-	return group
-
-
-func _instantiate(path: String) -> Node3D:
-	if not _packed.has(path):
-		_packed[path] = load(path) as PackedScene
-	var packed: PackedScene = _packed[path]
-	if packed == null:
-		return null
-	var node := packed.instantiate() as Node3D
-	LowpolyMaterials.apply(node)
-	# After dark the street lamps and parked cars' lamps glow (N-304).
-	if NIGHT_LIGHTS.has(path):
-		LowpolyMaterials.light_up(node, NIGHT_LIGHTS[path])
-	return node
-
-
-func _count(id: StringName) -> void:
-	placed_counts[id] = int(placed_counts.get(id, 0)) + 1
-
-
-## How far a model's visible base sits above (or below) its own origin, in
-## the node's unscaled local space. Most props are exported with the base at
-## y=0, but some (ferns, fallen logs, round bushes) are not, and would float
-## or sink if placed by their origin.
-static func base_offset(node: Node3D) -> float:
-	var lowest: float = _lowest_mesh_y(node, node)
-	return lowest if lowest != INF else 0.0
-
-
-## How far the highest of `node`'s feet sits above the terrain right under it
-## (negative = every foot is in the ground). For tests: after _settle() this
-## is -sink, never above zero.
-static func ground_gap(node: Node3D, route: Node3D, terrain: Node) -> float:
-	var basis: Basis = route.global_basis.inverse() * node.global_basis
-	var origin: Vector3 = route.to_local(node.global_position)
-	var gap: float = -INF
-	for contact: Vector3 in contact_points(node):
-		var foot: Vector3 = origin + basis * contact
-		gap = maxf(gap, foot.y - float(terrain.call(&"height_at", foot)))
-	return gap
-
-
-## The model's feet in its own (unscaled) space: see CONTACT_BAND. Cached per
-## scene file, since every oak has the same roots.
-static func contact_points(node: Node3D) -> PackedVector3Array:
-	var key: String = node.scene_file_path
-	if key != "" and _contact_cache.has(key):
-		return _contact_cache[key]
-	var vertices := PackedVector3Array()
-	_collect_vertices(node, node, vertices)
-	var contacts := PackedVector3Array()
-	if vertices.is_empty():
-		contacts.append(Vector3.ZERO)
-	else:
-		var lowest: Vector3 = vertices[0]
-		for v: Vector3 in vertices:
-			if v.y < lowest.y:
-				lowest = v
-		contacts.append(lowest)
-		var outermost: Array = []
-		outermost.resize(CONTACT_SECTORS)
-		for v: Vector3 in vertices:
-			if v.y > lowest.y + CONTACT_BAND:
-				continue
-			var sector: int = posmod(floori(atan2(v.z, v.x) / TAU * CONTACT_SECTORS), CONTACT_SECTORS)
-			var best: Variant = outermost[sector]
-			if best == null or Vector2(v.x, v.z).length_squared() > Vector2(best.x, best.z).length_squared():
-				outermost[sector] = v
-		for v: Variant in outermost:
-			if v != null:
-				contacts.append(v)
-	if key != "":
-		_contact_cache[key] = contacts
-	return contacts
-
-
-static func _collect_vertices(root_node: Node3D, node: Node, into: PackedVector3Array) -> void:
-	for child: Node in node.get_children():
-		if child is MeshInstance3D and (child as MeshInstance3D).mesh != null:
-			var mesh: Mesh = (child as MeshInstance3D).mesh
-			var xform: Transform3D = root_node.global_transform.affine_inverse() * (child as Node3D).global_transform
-			for surface: int in range(mesh.get_surface_count()):
-				var arrays: Array = mesh.surface_get_arrays(surface)
-				for v: Vector3 in arrays[Mesh.ARRAY_VERTEX]:
-					into.append(xform * v)
-		if child is Node3D:
-			_collect_vertices(root_node, child, into)
-
-
-static func _lowest_mesh_y(root_node: Node3D, node: Node) -> float:
-	var lowest: float = INF
-	for child: Node in node.get_children():
-		if child is VisualInstance3D:
-			var xform: Transform3D = root_node.global_transform.affine_inverse() * (child as Node3D).global_transform
-			lowest = minf(lowest, (xform * (child as VisualInstance3D).get_aabb()).position.y)
-		if child is Node3D:
-			lowest = minf(lowest, _lowest_mesh_y(root_node, child))
-	return lowest
+				_placement.try_place(segment, rule.group, rule.paths[pick], xform, fields)

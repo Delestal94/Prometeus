@@ -1,7 +1,7 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_town_signs.gd
 ##
-## Villages with names (N-601, town_sign.gd, RouteDresser._dress_town_signs):
+## Villages with names (N-601, town_sign.gd, RouteSignage.dress_town_signs):
 ## - every village the road passes through gets a named sign where the road
 ##   enters it and a crossed-out one where it leaves (unless the goal is
 ##   inside it), in that order along the road;

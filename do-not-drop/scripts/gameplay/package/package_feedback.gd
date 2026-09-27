@@ -168,7 +168,7 @@ func _apply_identity(package: Node) -> void:
 		var shape := BoxShape3D.new()
 		shape.size = shape_size
 		collider.shape = shape
-	_add_shipping_label(package, shipping_data, shape_size)
+	_add_shipping_label(shipping_data, shape_size)
 	_build_state_badge(shape_size)
 	_disguise_text = Label3D.new()
 	_disguise_text.position = Vector3(0.0, shape_size.y * 0.22, -shape_size.z * 0.52)
@@ -282,7 +282,7 @@ func _add_dent_pieces(half: Vector3) -> void:
 ## The courier's label, stuck on the back of the box: printed paper plus the
 ## declared contents written on it. Same detachable rigid body as before --
 ## a hard enough hit tears it off.
-func _add_shipping_label(package: Node, shipping_data: String, box_size: Vector3) -> void:
+func _add_shipping_label(shipping_data: String, box_size: Vector3) -> void:
 	var width: float = minf(0.4, box_size.x * 0.78)
 	var height: float = width * LABEL_ASPECT
 	_shipping_label = RigidBody3D.new()

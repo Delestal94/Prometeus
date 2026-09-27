@@ -264,6 +264,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_depot_campaign_board.gd
 <godot> --headless --path do-not-drop --script res://tests/test_door_reactions.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_translations.gd
+<godot> --headless --path do-not-drop --script res://tests/test_ui_translations.gd
 <godot> --headless --path do-not-drop --script res://tests/test_acoustic_space.gd
 <godot> --headless --path do-not-drop --script res://tests/test_music_tracks.gd
 <godot> --headless --path do-not-drop --script res://tests/test_night_lights.gd
@@ -433,6 +434,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_world_translations` — N-605: todos los textos del mundo están en
   `translations/strings_world.csv` en español e inglés con los mismos marcadores, no hay
   claves de más ni de menos, el juego arranca en español y cambiar el idioma cambia el mundo.
+- `test_ui_translations` — N-211: los textos de menús y HUD están en `translations/strings_ui.csv`
+  en español (el texto de siempre) e inglés con los mismos marcadores, no hay claves de más ni de
+  menos, y con el idioma en inglés el panel de opciones se arma en inglés.
 - `test_acoustic_space` — N-402: eco largo dentro de los túneles y más corto bajo el techo
   del depósito, apagado al aire libre; una cámara pegada al camión desde afuera no cuenta
   como adentro (lluvia, #68).

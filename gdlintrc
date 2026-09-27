@@ -1,0 +1,25 @@
+# gdlint (gdtoolkit 4) config for Take My Package. Run through tools/lint.sh,
+# which compares against tools/lint-baseline.txt so only *new* problems fail CI.
+#
+# Deviations from the gdtoolkit defaults, and why:
+# - class-definitions-order is off: the project orders consts next to the
+#   exports they tune (docs/convenciones-godot.md), not gdtoolkit's fixed order.
+# - Names may end in "_" (visible_, transform_, sign_, name_): the Godot idiom
+#   for not shadowing a built-in property or function.
+# - max-line-length 120: tabs count as 4, the width of a split editor pane.
+# - max-returns 8: guard-clause style (seat_point.can_interact) reads better
+#   than nesting.
+disable:
+- class-definitions-order
+excluded_directories: !!set
+  .git: null
+  .godot: null
+  addons: null
+function-argument-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*_?
+function-variable-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*_?'
+loop-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*_?
+max-file-lines: 1000
+max-line-length: 120
+max-public-methods: 20
+max-returns: 8
+tab-characters: 4

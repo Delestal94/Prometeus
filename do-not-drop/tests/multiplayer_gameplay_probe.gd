@@ -56,7 +56,7 @@ func _check_client() -> void:
 		"Client spawns at the depot, not at the origin: %s" % player.global_position)
 	_expect(player.get_node("Head/Camera3D").current, "Client camera is active")
 	var start: Vector3 = player.position
-	level.get_node("HUD")._primary_action()
+	level.get_node("HUD").pause.primary_action()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	Input.action_press("walk_backward")
 	for i in range(60):

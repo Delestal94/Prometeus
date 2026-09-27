@@ -50,8 +50,8 @@ func _run() -> void:
 		for piece: Node3D in yard.get_children():
 			if piece.get_meta(&"on_porch", false):
 				continue  # rides on the porch deck, not the ground
-			var gap: float = RouteDresser.ground_gap(piece, route, terrain)
-			_expect(gap <= 0.005 and gap >= -RouteDresser.SINK_RANGE.y - 0.005,"Yard piece %s sits on the ground (gap %.3f)" % [piece.scene_file_path.get_file(), gap])
+			var gap: float = RoutePlacement.ground_gap(piece, route, terrain)
+			_expect(gap <= 0.005 and gap >= -RoutePlacement.SINK_RANGE.y - 0.005,"Yard piece %s sits on the ground (gap %.3f)" % [piece.scene_file_path.get_file(), gap])
 		if String(DeliveryHouse.HOUSE_VISUALS[int(house.get(&"visual_variant"))]).ends_with("farmhouse.glb"):
 			farm_has_barn = _count(yard, "sm_arch_barn") == 1
 	variants.sort()
@@ -67,7 +67,7 @@ func _run() -> void:
 		if not segment is RouteSegment:
 			continue
 		var dressing: Node = segment.get_node_or_null(^"RoadsideDressing")
-		var expected: String = RouteDresser.HAZARD_SIGNS.get(segment.get_script().get_global_name(), "")
+		var expected: String = RouteSignage.HAZARD_SIGNS.get(segment.get_script().get_global_name(), "")
 		if expected != "":
 			hazards += 1
 			for sign_node: Node3D in _find(dressing, "/signs/" + expected.get_basename()):
