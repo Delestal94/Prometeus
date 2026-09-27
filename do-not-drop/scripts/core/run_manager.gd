@@ -650,9 +650,15 @@ func best_score(mode: StringName = MODE_DELIVERY) -> int:
 	return 0
 
 
-func _record_score(score: int, mode: StringName = MODE_DELIVERY) -> bool:
+func _record_score(score: int, mode: StringName = MODE_DELIVERY, crew_size: int = -1) -> bool:
 	var is_new_best: bool = score > best_score(mode)
-	leaderboard.append({"score": score, "date": Time.get_date_string_from_system(), "mode": mode})
+	var players: int = maxi(crew_size if crew_size > 0 else NetworkManager.peer_ids.size(), 1)
+	leaderboard.append({
+		"score": score,
+		"date": Time.get_date_string_from_system(),
+		"mode": mode,
+		"crew_size": players,
+	})
 	leaderboard.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["score"]) > int(b["score"]))
 	_trim_leaderboard()
 	_save_leaderboard()

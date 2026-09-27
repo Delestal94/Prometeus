@@ -134,7 +134,9 @@ con mouse o stick derecho. El aviso muestra quién lo mandó sin depender de voi
 **Progreso, variantes y espectador** (2026-09-23): las entregas exitosas y el puntaje
 acumulado se guardan en `user://unlock_progress.json`. Desde **Progreso** y
 **Cosméticos** del menú se consultan los desbloqueos y se eligen uniforme, pintura y
-vehículo; la Furgoneta ágil se desbloquea con 4 entregas y 350 puntos. Si sos pasajero,
+vehículo; cada premio muestra por separado el avance de entregas y puntos. **Récords**
+separa Entrega de Endless y conserva fecha y tamaño de la tripulación. La Furgoneta ágil
+se desbloquea con 4 entregas y 350 puntos. Si sos pasajero,
 tu paquete se arruinó y seguís sentado, **Tab** (Back en gamepad) alterna una cámara
 espectadora detrás de la furgoneta. La pantalla de resultados ahora desglosa cada fuente
 del puntaje — entregas, vecinos sin atender, fotos y multiplicador — además del total.
@@ -196,6 +198,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_supply_vote.gd
 <godot> --headless --path do-not-drop --script res://tests/test_crew_campaign_save.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
+<godot> --headless --path do-not-drop --script res://tests/test_progress_ui.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
 <godot> --headless --path do-not-drop --script res://tests/test_tutorial.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
@@ -509,9 +512,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   distancia de dibujado del decorado, partículas y escala 3D, se aplica en caliente y a lo
   que carga después, y se guarda con las opciones.
 - `test_leaderboard` — el top de puntajes local de `RunManager`: ordena,
-  recorta a 10 entradas, marca correctamente un nuevo récord y sobrevive a
+  recorta a 10 entradas por modo, conserva tamaño de tripulación, marca correctamente un nuevo récord y sobrevive a
   guardar/cargar de disco (usa un archivo de prueba aparte, no el guardado
   real).
+- `test_progress_ui` — cada desbloqueo explica su premio y separa el avance de entregas
+  y puntos; los récords alternan entre Entrega y Endless con fecha y tripulación legibles.
 - `test_ping` — la rueda de pings: las seis etiquetas llegan por
   `EventBus.request_ping()`, se atribuyen al emisor y `Player._send_ping()` conserva
   la posición y el mensaje reales.
