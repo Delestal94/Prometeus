@@ -8,7 +8,7 @@ func _run() -> void:
 	var level: Node3D = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(level)
 	current_scene = level
-	level.get_node("HUD")._primary_action()
+	level.get_node("HUD").pause.primary_action()
 	for i: int in range(60):
 		await physics_frame
 	level.get_node("HUD").hide()

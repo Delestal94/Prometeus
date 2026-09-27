@@ -55,6 +55,19 @@ antes de seguir con cualquier archivo listado acá.
     algo que no existe ahora es error de compilación, no de ejecución.
   - Tests actualizados: `test_player_character`, `test_character_motion`, `render_player_character`,
     `render_character_faces`.
+- **HUD (fase 5, dominio Slatex, autorizado por el usuario):** la cadena de herencia de 6 niveles
+  (`prototype_hud` → `hud_pause` → `hud_results` → `hud_notices` → `hud_prompts` → `hud_cargo_panel`)
+  pasó a composición. **`scripts/ui/prototype_hud.gd` ahora es `scripts/ui/hud/hud.gd`** (`class_name Hud`,
+  mismo `.uid`; las escenas ya apuntan ahí). `Hud` es dueño de los widgets y del estado compartido y tiene
+  cinco componentes `Node` hijos: `hud.cargo` (`HudCargoPanel`), `hud.prompts`, `hud.notices`,
+  `hud.results`, `hud.pause`. Cada uno conecta sus propias señales en su `_ready()`.
+  - Renombres: helpers `_label/_panel/_button/_bar/_rich/_key/_apply_hud_scale` → `make_label()`,
+    `make_panel()`, `make_button()`, `make_bar()`, `make_rich()`, `key_hint()`, `apply_hud_scale()`.
+    Estado compartido sin guion bajo: `orders`, `soft_pause`, `is_endless`, `interaction_prompt`,
+    `route_event_active_id`, `local_merit_total`. Lo que un componente llama de otro pasó a público
+    (`hud.notices.toast()`, `set_notice()`, `hud.pause.primary_action()`, `hud.prompts.refresh_shortcuts()`…).
+  - Bug que apareció en el camino (ya cubierto en `test_hud_flow`): con `orders` público, la lambda
+    `func(orders): orders = orders` se habría pisado a sí misma; ahora es `func(posted): orders = posted`.
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 

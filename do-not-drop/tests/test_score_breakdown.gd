@@ -37,7 +37,7 @@ func _run() -> void:
 	_expect(expected == int(results["score"]), "The lines add up to the score (%d x %.1f vs %d)" % [sum, float(results["chaos_multiplier"]), int(results["score"])])
 	_expect("Vecinos sin su paquete (2)" in labels, "Both the skipped door and the one never reached cost points (%s)" % ", ".join(labels))
 	_expect("Fotos de entrega (1)" in labels, "The photo shows as its own line")
-	var text: String = load("res://scripts/ui/prototype_hud.gd").score_breakdown_text(results, int(results["score"]))
+	var text: String = load("res://scripts/ui/hud/hud.gd").score_breakdown_text(results, int(results["score"]))
 	_expect(text.contains("Total") and text.contains(str(int(results["score"]))), "The results text ends on the total")
 	manager.call(&"reset_run")
 	if _failures == 0:
