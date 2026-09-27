@@ -53,6 +53,19 @@ func _run() -> void:
 	truck.global_position = crossing.global_transform * Vector3(0.0, 0.0, crossing.track_z + 30.0)
 	var seen: Dictionary = {}
 	var arm: Node3D = crossing.get_node(^"BarrierArm")
+	# N-129 / N-130: the crossing and the train are the imported models, the
+	# lamps are the signal's named lenses, and the collision is still the boxes.
+	_expect(crossing.get_node_or_null(^"RailTrack") != null, "The track is the imported model")
+	_expect(crossing.find_children("CrossingSignal*", "", false, false).size() == 2, "Two imported crossing signals")
+	var lamps: Array = crossing.get("_lamps")
+	_expect(lamps.size() == 4, "Four flashing lenses found in the signal models (%d)" % lamps.size())
+	_expect(arm.get_node_or_null(^"ArmModel") != null, "The barrier arm hangs its model from the hinge")
+	for index: int in range(4):
+		var car: Node3D = crossing.get_node(NodePath("TrainCar%d" % index))
+		var car_shape := car.find_children("*", "CollisionShape3D", false, false)
+		var car_box: BoxShape3D = (car_shape[0] as CollisionShape3D).shape as BoxShape3D if not car_shape.is_empty() else null
+		_expect(car.get_node_or_null(^"CarModel") != null and car_box != null and car_box.size.is_equal_approx(Vector3(7.5, 3.0, 2.6)),
+			"Train car %d: imported model, same 7.5 x 3 x 2.6 m collision box" % index)
 	var arm_down_seen: bool = false
 	for _i: int in range(60 * 14):
 		await physics_frame

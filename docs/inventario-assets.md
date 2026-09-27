@@ -154,8 +154,8 @@ correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slate
 
 | Qué | Dónde se arma hoy | Dominio | Tarea |
 |---|---|---|---|
-| Tren del paso a nivel (locomotora + vagones) | `rail_crossing_segment.gd` `_build_train()` (cajas de 7,5×3×2,6 m) | Nacho | N-129 |
-| Paso a nivel: poste, cruz de San Andrés, luces, barrera, vías y durmientes | `rail_crossing_segment.gd` | Nacho | N-130 |
+| ~~Tren del paso a nivel (locomotora + vagones)~~ **[x] Hecho (2026-09-27)**: locomotora a vapor, vagón cerrado y vagón tanque en `models/environment/rail/`; la colisión sigue siendo la caja de 7,5×3×2,6 m | `rail_crossing_segment.gd` `_build_train()` | Nacho | N-129 |
+| ~~Paso a nivel: poste, cruz de San Andrés, luces, barrera, vías y durmientes~~ **[x] Hecho (2026-09-27)**: vía, señal (lentes `LampLeft`/`LampRight`) y barrera con origen en la bisagra | `rail_crossing_segment.gd` | Nacho | N-130 |
 | Túnel: paredes, techo, portal, pilares, lámparas | `tunnel_segment.gd` | Nacho | N-131 |
 | Puente angosto: tablero, postes, agua | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya está integrada) |
 | Bloques de la chicana | `chicane_segment.gd` | Nacho | N-133 |

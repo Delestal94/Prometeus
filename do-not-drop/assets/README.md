@@ -116,6 +116,28 @@ en desuso.
   `... --python tools/build_wildlife.py -- sheep dog`). Raíz `Sheep` / `Dog`; pivotes
   `Legs_Front`, `Legs_Back`, `Head`, `Tail` y, en el perro, `Ears` colgando de `Head`.
 
+## Paso a nivel y tren (`models/environment/rail/`, 2026-09-27)
+
+Propios, generados por `tools/build_rail_crossing.py` (N-129 / N-130); reemplazan las cajas que
+armaba `rail_crossing_segment.gd`. El script conserva su colisión (poste, brazo, una caja de
+7,5×3×2,6 m por vagón): los modelos son solo lo que se ve.
+
+- `sm_env_rail_track.glb` (1.304 tris): 84 m de vía (x −42..42), terraplén de balasto y
+  durmientes fuera de la calzada, tablones sobre ella. Origen en el eje de la vía.
+- `sm_env_rail_crossing_signal.glb` (764): poste, cruz de San Andrés, campana, tablero con dos
+  luces mirando a +Z y el gabinete de la barrera detrás. Las lentes son los nodos `LampLeft` y
+  `LampRight`: el script les pone un material emisivo propio para hacerlas titilar.
+- `sm_env_rail_barrier_arm.glb` (320): el brazo a lo largo de +X desde la bisagra en el origen
+  (10,6 m), contrapeso en −X; el script lo gira media vuelta según el lado.
+- `sm_env_rail_locomotive.glb` (2.332), `sm_env_rail_wagon_boxcar.glb` (1.352),
+  `sm_env_rail_wagon_tanker.glb` (1.980): origen en el centro de la base, sobre los rieles
+  (tope a 0,12 m); la locomotora mira a +X, hacia donde corre el tren. La lente del faro usa el
+  material `lamp` y se enciende de noche.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_rail_crossing.py [-- track signal arm loco boxcar tanker]
+```
+
 ## Timbre (`models/environment/props/sm_env_prop_doorbell_panel.glb`)
 
 - Propio, `tools/build_doorbell.py` (tareas de Nacho N-302): placa de 12×26 cm con la
