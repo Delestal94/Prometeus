@@ -666,3 +666,13 @@ El simulador reproducible de balance de trampas agrega dos herramientas aisladas
 documenta objetivos y resultados en `docs/parametros-diseno.md` y añade sus comandos al
 `README.md` compartido. El ajuste queda limitado a parámetros de `data/traps/*.tres`; no cambia
 comportamientos ni archivos del dominio de Nacho.
+
+## Aviso S-110 · 2026-09-27
+
+Slatex midió 20 entregas completas con `tests/bench_delivery_time.gd`: el piloto físico de S-108
+conduce a 50 km/h y, en cada casa, un jugador bot baja, recoge la caja asignada, camina al timbre,
+entrega y vuelve a la furgoneta. Resultados promedio/máximo/mínimo: **1 casa 2,15/2,20/2,08 min;
+2 casas 3,42/3,49/3,30; 3 casas 3,80/3,89/3,70; 4 casas 3,84/3,91/3,76**. Las paradas reales
+midieron 20,0-20,9 s por casa frente a los 25 s presupuestados. Las 20 corridas terminaron con
+todas sus casas entregadas y todas quedaron dentro de la regla de 2-5 min. No se cambió
+`route.gd`: cualquier ajuste posterior del largo sigue siendo decisión de Nacho.

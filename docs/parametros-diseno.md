@@ -1,7 +1,7 @@
 # Parámetros de diseño — valores iniciales
 
 > Basado en: `docs/requerimientos-tecnicos.md` (sección 4, catálogo de trampas).
-> Última actualización: 2026-09-26
+> Última actualización: 2026-09-27
 > **Importante**: todos los números de este documento son puntos de partida
 > razonables para poder empezar a programar, no valores finales. Se ajustan con
 > playtesting real (Fase 7 del plan de desarrollo). Cada valor está pensado para vivir
@@ -156,7 +156,7 @@ no solo la entrega prolija.
   vez que llega al tope: si nadie la atiende, se escapa. Sin esto bajaba del máximo el
   mismo frame y era literalmente imposible de perder.
 
-## Duración de la entrega (medida, 2026-09-24)
+## Duración medida de la entrega (N-102: 2026-09-24; S-110: 2026-09-27)
 
 Regla de oro: una entrega dura **entre 2 y 5 minutos**, tenga las casas que tenga (tareas de
 Nacho N-102). Medido con `tests/bench_route_duration.gd`: un piloto automático maneja la ruta
@@ -180,6 +180,29 @@ era 600 m, pero con 1 casa daba 1,9 min: con 700 m queda en ~2,3.
 | 2 | 700 m | 2.082 | 3,68 | 3,90 | 3,51 |
 | 3 | 528 m | 2.154 | 4,25 | 4,43 | 4,01 |
 | 4 | 358 m | 1.864 | 4,24 | 4,63 | 4,00 |
+
+### Medición completa con bot de entrega (S-110)
+
+`tests/bench_delivery_time.gd` reemplaza la parada supuesta de 25 s por el flujo físico. Usa el
+mismo conductor automático de S-108 a 50 km/h; al estacionar en el punto de parada de la ruta,
+un `Player` baja, recoge el `DeliveryPackage` asignado, camina a 3,6 m/s hasta el `DoorbellPoint`,
+entrega y vuelve a subir. La puerta solo cuenta si el sistema real de la casa la resuelve.
+
+Matriz definitiva: semillas 1081, 1082, 1084, 1085 y 1087, con 1 a 4 casas (20 entregas,
+60 cuadros de física por segundo). Todas terminaron, se entregaron las cajas asignadas y no hubo
+corridas incompletas:
+
+| Casas | Largo medio (m) | Manejo medio (s) | Paradas totales (s) | Minutos promedio | Máximo | Mínimo |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 1.413 | 108,2 | 20,9 | 2,15 | 2,20 | 2,08 |
+| 2 | 2.105 | 163,6 | 41,4 | 3,42 | 3,49 | 3,30 |
+| 3 | 2.152 | 168,1 | 59,9 | 3,80 | 3,89 | 3,70 |
+| 4 | 1.888 | 149,2 | 81,2 | 3,84 | 3,91 | 3,76 |
+
+La parada física tarda **20,0-20,9 s por casa**, algo menos que los 25 s presupuestados por N-102.
+Incluso con esa diferencia, promedio, mínimo y máximo quedan dentro de la regla de 2-5 minutos.
+S-110 no cambia el largo de la ruta: estos números se entregan a Nacho para decidir cualquier
+ajuste posterior.
 
 `test_route_duration_budget` lo vigila sin manejar: el largo planeado y el construido para
 varias semillas, con 1 a 4 casas, dan entre 2 y 5 minutos a esa velocidad media. Si cambia la

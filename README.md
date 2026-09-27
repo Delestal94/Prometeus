@@ -182,6 +182,14 @@ comportamientos y los perfiles ausente, torpe y experto, con y sin 150 ms de lat
 <godot> --headless --path do-not-drop --script res://tests/sim_trap_balance.gd
 ```
 
+La duración completa se mide aparte con el mismo piloto automático: en cada parada un bot real
+baja de la furgoneta, recoge la caja asignada, camina al timbre, la entrega y vuelve. La matriz
+recorre cinco rutas con 1, 2, 3 y 4 casas a 50 km/h:
+
+```
+<godot> --headless --fixed-fps 60 --path do-not-drop --script res://tests/bench_delivery_time.gd
+```
+
 Para correr un test suelto a mano, sin abrir el editor, reemplazá `<godot>` por la ruta a tu
 ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 
