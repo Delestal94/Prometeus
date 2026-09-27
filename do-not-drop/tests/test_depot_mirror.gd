@@ -92,7 +92,7 @@ func _run() -> void:
 	_expect(mirror.viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "The reflection renders when someone stands in front")
 
 	if _failures == 0:
-		print("test_depot_mirror: PASS")
+		print("PASS: the lockers mirror reflects the player in real time")
 	quit(_failures)
 
 
