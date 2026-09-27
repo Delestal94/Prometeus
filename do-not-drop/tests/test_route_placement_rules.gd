@@ -97,12 +97,12 @@ func _run() -> void:
 		# test_roadside_stories checks them one by one.
 		if node.get_meta(&"rule", &"") == &"roadside_story":
 			continue
-		var gap: float = RouteDresser.ground_gap(node, route, terrain)
+		var gap: float = RoutePlacement.ground_gap(node, route, terrain)
 		if gap > 0.005:
 			floating += 1
 			if floating <= 5:
 				print("floating: %s %.3f m" % [node.scene_file_path.get_file(), gap])
-		elif gap < -RouteDresser.SINK_RANGE.y - 0.005:
+		elif gap < -RoutePlacement.SINK_RANGE.y - 0.005:
 			buried += 1
 			if buried <= 5:
 				print("buried: %s %.3f m" % [node.scene_file_path.get_file(), gap])

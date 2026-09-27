@@ -28,6 +28,13 @@ antes de seguir con cualquier archivo listado acá.
   `depot_ambience.gd`; el pizarrón a `depot_order_board.gd`; las medidas y la paleta a
   `depot_layout.gd`; texto y carteles a `depot_labels.gd`. API pública y nombres de nodos sin
   cambios. `test_depot`/`test_contact_shadows` leen las constantes de `depot_layout.gd`.
+- **Ruta, decorado (fase 3, dominio Nacho):** `route_dresser.gd` (1241 → ~330 líneas) queda con
+  las zonas, la tabla de reglas y el orden de todo. El motor de colocación (grilla, chequeos,
+  asentar en el suelo, sombras de contacto) pasó a `route_placement.gd`; carteles, guardarraíles,
+  pueblos e historias a `route_signage.gd`; cruces de animales, perro y ramas a
+  `route_wildlife.gd`; tendido eléctrico a `route_power_lines.gd`. `RouteDresser.base_offset()`,
+  `ground_gap()` y `SINK_RANGE` ahora son de `RoutePlacement`; `STORY_*` y `HAZARD_SIGNS` de
+  `RouteSignage`.
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 

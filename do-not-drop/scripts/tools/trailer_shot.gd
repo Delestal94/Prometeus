@@ -176,7 +176,7 @@ func setup(definition: Dictionary) -> void:
 				if bool(start.get("train", false)) and &"will_close" in segment:
 					segment.set(&"will_close", true)
 		"crossing":
-			# A deer crossing (RouteDresser._dress_crossings), mid-straight:
+			# A deer crossing (RouteWildlife.dress_crossings), mid-straight:
 			# the run-up is measured to the crossing itself, so nothing else
 			# (a level crossing's barrier) comes between.
 			var crossing := route.find_child("DeerCrossing", true, false) as Node3D

@@ -3,7 +3,7 @@ class_name RoadsideStory
 ## Little stories by the road (tareas de Nacho N-602): rare, static scenes a
 ## driver catches out of the corner of an eye, telling the game's premise
 ## without a word of tutorial. RouteDresser puts up at most one every
-## MIN_GAP metres (_dress_roadside_stories()); `kind` picks which:
+## MIN_GAP metres (RouteSignage.dress_roadside_stories()); `kind` picks which:
 ##
 ##   VAN_SPILL  the competition's van nosed into the ditch, back door hanging
 ##              open, its parcels strewn across the grass;
@@ -190,7 +190,7 @@ static func fit_font_size(text: String, font_size: int, max_width: float) -> int
 
 
 ## Rests every loose piece on the ground under it: the story is placed as a
-## whole (RouteDresser._settle()), but beside a road the ground slopes, and
+## whole (RoutePlacement.settle()), but beside a road the ground slopes, and
 ## pieces at the story's own height floated over a dip or sank into a rise.
 ## `height_at` takes a point in this node's space and returns the ground's
 ## height there, in the same space. The van is pitched so its nose digs in

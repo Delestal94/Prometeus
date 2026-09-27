@@ -34,7 +34,7 @@ func _run() -> void:
 		if not raining:
 			# Rain it on this route to see where the debris would go.
 			dresser.raining = true
-			dresser.call(&"_dress_storm_debris", route.get(&"_segments"))
+			dresser.call(&"dress_storm_debris", route.get(&"_segments"))
 			debris = _find(route, "StormDebris")
 		debris_seen += debris.size()
 		for piece: StaticBody3D in debris:

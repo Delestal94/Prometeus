@@ -1,7 +1,7 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_roadside_stories.gd
 ##
-## Stories by the road (N-602, roadside_story.gd, RouteDresser._dress_roadside_stories):
+## Stories by the road (N-602, roadside_story.gd, RouteSignage.dress_roadside_stories):
 ## - rare: never two within STORY_MIN_GAP (800 m) of road, none in the first
 ##   STORY_START metres;
 ## - all three kinds turn up across seeds: the competition's van in the
@@ -32,8 +32,8 @@ func _run() -> void:
 		var last: float = -INF
 		for story: Node3D in stories:
 			var distance: float = float(story.get_meta(&"story_distance"))
-			_expect(distance >= RouteDresser.STORY_START, "seed %d: no story in the first %.0f m (one at %.0f m)" % [seed_value, RouteDresser.STORY_START, distance])
-			_expect(distance - last >= RouteDresser.STORY_MIN_GAP, "seed %d: stories at least %.0f m apart (%.0f after %.0f)" % [seed_value, RouteDresser.STORY_MIN_GAP, distance, last])
+			_expect(distance >= RouteSignage.STORY_START, "seed %d: no story in the first %.0f m (one at %.0f m)" % [seed_value, RouteSignage.STORY_START, distance])
+			_expect(distance - last >= RouteSignage.STORY_MIN_GAP, "seed %d: stories at least %.0f m apart (%.0f after %.0f)" % [seed_value, RouteSignage.STORY_MIN_GAP, distance, last])
 			last = distance
 			var kind: int = int(story.get(&"kind"))
 			kinds_seen[kind] = int(kinds_seen.get(kind, 0)) + 1

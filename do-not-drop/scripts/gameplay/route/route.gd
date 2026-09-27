@@ -856,9 +856,9 @@ func _instantiate_dressing(path: String) -> Node3D:
 
 
 ## Kept for tests and older callers: how far a model's visible base sits
-## from its origin (see RouteDresser.base_offset).
+## from its origin (see RoutePlacement.base_offset).
 func _mesh_base_offset(node: Node3D) -> float:
-	return RouteDresser.base_offset(node)
+	return RoutePlacement.base_offset(node)
 
 
 ## The road, shoulder and terrain sit at three distinct elevations. Imported

@@ -32,8 +32,6 @@ do-not-drop/scripts/gameplay/route/flock_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/roadside_story.gd|max-line-length 8
 do-not-drop/scripts/gameplay/route/route.gd|max-file-lines 1
 do-not-drop/scripts/gameplay/route/route.gd|max-line-length 22
-do-not-drop/scripts/gameplay/route/route_dresser.gd|max-file-lines 1
-do-not-drop/scripts/gameplay/route/route_dresser.gd|max-line-length 29
 do-not-drop/scripts/gameplay/route/route_segment.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/route_sky.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/route_smoke_check.gd|max-line-length 2
