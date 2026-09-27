@@ -657,10 +657,10 @@ Hoy todos los textos están escritos en español dentro del código.
 
 ### S-510 · Progreso y récords que se entiendan — B · `Sol · high` · Aviso: no
 
-- [ ] `progress_panel.gd`: barra por desbloqueo (entregas y puntos por separado), ícono del contenido y
+- [x] (commit `c2dad6d`) `progress_panel.gd`: barra por desbloqueo (entregas y puntos por separado), ícono del contenido y
   qué da ("Nueva trampa: Explosivo").
-- [ ] `leaderboard_panel.gd`: pestañas Entrega / Endless, tamaño de tripulación y fecha legible.
-- [ ] Test `test_progress_ui.gd` ampliado.
+- [x] (commit `c2dad6d`) `leaderboard_panel.gd`: pestañas Entrega / Endless, tamaño de tripulación y fecha legible.
+- [x] (commit `c2dad6d`) Test `test_progress_ui.gd` ampliado.
 
 ---
 
