@@ -594,6 +594,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   Frágil (más grave si se arruina), gemido para Ruidoso que sube con la
   agitación, crujido para Peso Creciente que se reinicia al resolver el
   puzzle.
+- `test_trap_icons` — las siete definiciones de trampa resuelven a un ícono
+  HUD propio, sin faltantes ni reutilización de un genérico.
 - `test_screen_fade` — el fundido a negro (al sentarse, al reiniciar) se
   oscurece y vuelve solo a transparente.
 - `test_camera_polish` — head bob al caminar, FOV distinto al cargar un

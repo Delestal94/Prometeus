@@ -37,7 +37,7 @@
 | Splash de arranque | `ui/backgrounds/tx_ui_boot_splash_1920.png` | ✅ | `project.godot` → `boot_splash/*`, modo Cover. Reemplaza el logo de Godot. |
 | Ícono de la app | `icon.png`, `ui/icons/tx_ui_app_icon_1024.png` | ✅ | `config/icon`. |
 | Ícono del .exe | `ui/icons/app_icon.ico` | ✅ | `export_presets.cfg` → `application/icon`. |
-| Íconos de trampa (×4) | `ui/icons/tx_ui_trap_{fragile,balance,growing_weight,noisy}_256.png` | ✅ | En el HUD, al lado de cada paquete de la carga (se apagan si el paquete se pierde). |
+| Íconos de trampa (×7) | `ui/icons/tx_ui_trap_{fragile,balance,growing_weight,noisy,liquid,explosive,hostile}_256.png` | ✅ | Un ícono low-poly transparente por trampa; en el HUD, al lado de cada paquete de la carga (se apagan si el paquete se pierde). |
 | Logo del juego (wordmark) | `UiTheme.logo()` | 🟡 | Armado con tipografía (Lilita One + cinta amarilla) en menú. Falta pasarlo a imagen para el splash, el ícono y Steam. |
 | Fondo de pantalla de resultados | — | ⬜ | Ilustración: la tripulación frente a la furgoneta al terminar la ruta. |
 | Cápsulas de Steam (460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240) | — | ⬜ | Necesitan el logo. Fase de lanzamiento. |
