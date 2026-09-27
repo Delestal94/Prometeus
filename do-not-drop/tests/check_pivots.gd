@@ -68,7 +68,10 @@ func _gather2(root_node: Node, node: Node) -> AABB:
 	for child in node.get_children():
 		if child is VisualInstance3D:
 			var local_aabb: AABB = child.get_aabb()
-			var xform: Transform3D = root_node.global_transform.affine_inverse() * child.global_transform
+			# Chained local transforms: global_transform can still be stale
+			# right after add_child() here, which reported every rotated part
+			# centred on the model's origin (a boiler "2 m under the rails").
+			var xform: Transform3D = _relative(root_node as Node3D, child as Node3D)
 			var world_aabb: AABB = xform * local_aabb
 			if not has_any:
 				result = world_aabb
@@ -83,3 +86,12 @@ func _gather2(root_node: Node, node: Node) -> AABB:
 			else:
 				result = result.merge(child_aabb)
 	return result
+
+
+func _relative(root_node: Node3D, node: Node3D) -> Transform3D:
+	var xform := Transform3D.IDENTITY
+	var current: Node3D = node
+	while current != null and current != root_node:
+		xform = current.transform * xform
+		current = current.get_parent() as Node3D
+	return xform

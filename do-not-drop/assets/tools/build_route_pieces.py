@@ -13,14 +13,18 @@ are only what you see. Pieces, in `models/environment/route/`:
                                    dark dado, cream tiles and a teal band, an
                                    elliptic vault (springs at 2.6 m, crown at
                                    4.8 m = the collision roof), a rib, a
-                                   yellow/black kerb, cable tray, reflectors,
-                                   stone outside and a grass hump on top. The
+                                   yellow/black kerb, cable tray, reflectors
+                                   and the grass hill over the tube (x +-9.6).
+                                   Modules overlap 6 cm at each end. The
                                    segment lays 11 of them: short pieces, so
                                    conform_geometry() can bend them onto the
                                    terrain like the boxes it replaced.
-  sm_env_route_tunnel_portal.glb   stone headwall with voussoirs, keystone,
-                                   quoins, buttresses, coping, a height-limit
-                                   roundel, grass and bushes on top. Front face
+  sm_env_route_tunnel_hill_props.glb rocks, bushes and flowers on the hill
+                                   for 44 m (centred; the segment stretches it).
+  sm_env_route_tunnel_portal.glb   stone headwall whose wing walls follow the
+                                   hill down to the ground, voussoirs, keystone,
+                                   quoins, pilasters, coping, a height-limit
+                                   roundel, grass easing into the hill. Front face
                                    toward Godot +Z (the way into the tunnel);
                                    the exit portal is turned half round.
   sm_env_route_tunnel_lamp.glb     ceiling lamp, origin at its top (the mount);
@@ -59,7 +63,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from lowpoly_kit import (MATS, PALETTE, ROOT, blob, clear, cone, cube,  # noqa: E402
-                         cylinder, export, flat_poly, jitter, triangle_count)
+                         cylinder, export, flat_poly, jitter, slab, triangle_count)
 
 
 def srgb(hex_code):
@@ -193,36 +197,108 @@ def bore_outline(inset=0.0, floor=0.0):
     return [(HALF - inset, floor)] + bore_arch(10, inset) + [(-(HALF - inset), floor)]
 
 
+# The hill the bore runs through, right half (x, z) from the ground up,
+# mirrored: 9.6 m out, over the tube (its outer faces at x 5.3, roof at 5.3).
+HILL = [(9.6, -0.4), (8.9, 0.9), (8.0, 2.4), (7.0, 3.8), (5.9, 5.0), (4.4, 6.0), (2.4, 6.7), (0.0, 6.95)]
+# The portal's wing walls: the hill grown a little, so they cover its section.
+WING = [(10.1, -0.4), (9.3, 0.95), (8.4, 2.5), (7.35, 3.95), (6.2, 5.2), (4.6, 6.25), (2.5, 6.98), (0.0, 7.25)]
+# Modules overlap their neighbours by this much at each end: bent onto the
+# terrain one by one, butt joints opened hairline gaps the sun leaked through.
+OVERLAP = 0.06
+
+
+def mirrored(half):
+    """A right-half profile (bottom to top) made into the full arch, right to left."""
+    return half + [(-x, z) for x, z in reversed(half[:-1])]
+
+
+def hill_outline(profile):
+    """The hill's section as a U: outside along `profile`, inside round the tube."""
+    return mirrored(profile) + [(-5.3, -0.4), (-5.3, 5.25), (5.3, 5.25), (5.3, -0.4)]
+
+
+def profile_height(profile, x):
+    """Height of a right-half profile at |x|."""
+    x = abs(x)
+    for (x0, z0), (x1, z1) in zip(profile, profile[1:]):
+        if x1 <= x <= x0:
+            return z0 + (z1 - z0) * (x0 - x) / (x0 - x1)
+    return profile[-1][1] if x < profile[-1][0] else profile[0][1]
+
+
+def loft_y(name, front, back, y0, y1, material):
+    """Two outlines with the same number of points, joined from y0 to y1."""
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+    a = [bm.verts.new((x, y0, z)) for x, z in front]
+    b = [bm.verts.new((x, y1, z)) for x, z in back]
+    n = len(front)
+    for j in range(n):
+        k = (j + 1) % n
+        bm.faces.new([a[j], a[k], b[k], b[j]])
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.data.materials.append(mat(material))
+    return obj
+
+
 def tunnel_module():
     clear()
     y0, y1 = -MODULE / 2, MODULE / 2
+    o0, o1 = y0 - OVERLAP, y1 + OVERLAP
+    run = MODULE + 2 * OVERLAP
     # The shell: inverted U round the bore, flat roof on top.
     shell = bore_outline(0.0, -0.35) + [(-5.3, -0.35), (-5.3, 5.3), (5.3, 5.3), (5.3, -0.35)]
-    prism_y("TunnelShell", shell, y0, y1, "concrete.light")
+    prism_y("TunnelShell", shell, o0, o1, "concrete.light")
     for side in (-1.0, 1.0):
         # Inside, from the floor up: dark dado, teal band, cream tiles.
-        cube("Dado", (side * (HALF - 0.03), 0, 0.6), (0.06, MODULE, 1.2), "tunnel_dado")
-        cube("Band", (side * (HALF - 0.05), 0, 1.3), (0.1, MODULE, 0.2), "teal")
-        cube("Tiles", (side * (HALF - 0.025), 0, 1.98), (0.05, MODULE, 1.16), "tunnel_tile")
-        cube("CableTray", (side * (HALF - 0.1), 0, 2.4), (0.12, MODULE, 0.09), "charcoal")
+        cube("Dado", (side * (HALF - 0.03), 0, 0.6), (0.06, run, 1.2), "tunnel_dado")
+        cube("Band", (side * (HALF - 0.05), 0, 1.3), (0.1, run, 0.2), "teal")
+        cube("Tiles", (side * (HALF - 0.025), 0, 1.98), (0.05, run, 1.16), "tunnel_tile")
+        cube("CableTray", (side * (HALF - 0.1), 0, 2.4), (0.12, run, 0.09), "charcoal")
         # Kerb in yellow and black metres: reads speed in the half-dark.
         for i in range(4):
             cube("Kerb", (side * (HALF - 0.17), y0 + 0.5 + i, 0.09), (0.35, 1.0, 0.18),
                  "warning" if i % 2 == 0 else "charcoal")
         cube("Reflector", (side * (HALF - 0.07), 0.9, 0.85), (0.04, 0.22, 0.12), "reflector")
-        # Outside: stone cladding.
-        cube("OuterStone", (side * 5.33, 0, 2.47), (0.06, MODULE, 5.64), "stone")
     # A rib round the bore every module.
     outer = bore_outline(0.0, 0.18)
     inner = bore_outline(0.12, 0.18)
     rib = outer + list(reversed(inner))
-    # Off-centre so it never meets the ceiling lamps (tunnel_segment.gd).
-    prism_y("Rib", rib, 0.32, 0.68, "concrete.light")
-    # Earth hump over the roof, grass on top.
-    hump = [(5.36, 5.2), (6.0, 5.05), (4.6, 6.1), (2.4, 6.75), (0.0, 6.95),
-            (-2.4, 6.75), (-4.6, 6.1), (-6.0, 5.05), (-5.36, 5.2)]
-    prism_y("Hump", hump, y0, y1, "grass", rings=2)
+    # Off-centre so it never meets the ceiling lamps (tunnel_segment.gd), and
+    # darker than the vault: seen edge-on, a light rib read as a crack of sky.
+    prism_y("Rib", rib, 0.32, 0.68, "concrete")
+    # The hill over it, grass all over.
+    prism_y("Hill", hill_outline(HILL), o0, o1, "grass")
     done("sm_env_route_tunnel_module.glb")
+
+
+def tunnel_hill_props():
+    """Rocks, bushes and flowers for the whole 44 m hill, centred (y -22..22)."""
+    clear()
+    rng = random.Random(1311)
+    for i in range(22):
+        side = -1.0 if i % 2 else 1.0
+        y = -20.5 + i * 1.95 + rng.uniform(-0.6, 0.6)
+        x = side * rng.uniform(2.0, 8.8)
+        z = profile_height(HILL, x)
+        kind = rng.random()
+        if kind < 0.45:
+            s = rng.uniform(0.7, 1.3)
+            jitter(blob("Bush", (x, y, z + s * 0.35), (s, s * 0.9, s * 0.7), rng.choice(("leaf", "leaf_light", "leaf_dark")), 1),
+                   0.08, 100 + i)
+        elif kind < 0.8:
+            s = rng.uniform(0.45, 0.9)
+            jitter(blob("Rock", (x, y, z + s * 0.15), (s, s * 0.8, s * 0.55), rng.choice(("stone", "stone.light")), 1),
+                   0.07, 200 + i)
+        else:
+            cone("Flowers", (x, y, z + 0.12), 0.35, 0.1, 0.25, rng.choice(("flower", "mushroom", "sign_white")), 6)
+    done("sm_env_route_tunnel_hill_props.glb")
 
 
 def tunnel_lamp():
@@ -250,15 +326,15 @@ def tunnel_portal():
     clear()
     rng = random.Random(131)
     front, back = -0.4, 0.4
-    top = 7.0
-    # Headwall: a U round the opening.
-    wall = bore_outline(0.0, -0.4) + [(-6.6, -0.4), (-6.6, top), (6.6, top), (6.6, -0.4)]
+    # Headwall and wing walls in one: a U round the opening, its top
+    # following the hill down to the ground on both sides.
+    wall = bore_outline(0.0, -0.4) + list(reversed(mirrored(WING)))
     prism_y("Headwall", wall, front, back, "stone.sand")
     # A few proud blocks so the sandstone reads as coursed stone.
-    for i in range(16):
-        x = rng.choice((-1, 1)) * rng.uniform(5.2, 6.2) if i < 8 else rng.uniform(-3.6, 3.6)
-        z = rng.uniform(0.5, 4.6) if i < 8 else rng.uniform(5.6, 6.6)
-        if abs(x) < 3.2 and z < 6.0:
+    for i in range(24):
+        x = rng.choice((-1, 1)) * rng.uniform(5.4, 8.8)
+        z = rng.uniform(0.3, 4.4)
+        if z + 0.45 > profile_height(WING, abs(x) + 0.6):
             continue
         cube("Block", (x, front - 0.04, z), (rng.choice((0.7, 0.9, 1.1)), 0.1, 0.42), rng.choice(("stone.sand", "stone.light")), 0.03)
     # Voussoirs round the vault, keystone at the crown.
@@ -270,35 +346,39 @@ def tunnel_portal():
         voussoir("Keystone" if key else "Voussoir", t0 - (0.03 if key else 0), t1 + (0.03 if key else 0),
                  1.05 if key else 0.75, front - (0.26 if key else 0.16), back - 0.2,
                  "stone.key" if key else ("stone.light" if i % 2 else "stone.dark"))
-    # Quoins down the jambs, long and short in turn.
     for side in (-1.0, 1.0):
+        # Quoins down the jambs, long and short in turn.
         for i in range(4):
             w = 0.95 if i % 2 == 0 else 0.6
             cube("Quoin", (side * (HALF + w / 2), front - 0.08, 0.33 + i * 0.64), (w, 0.2, 0.58),
                  "stone.light" if i % 2 == 0 else "stone.dark", 0.03)
-        # Buttresses at the ends, stepped back at the top.
-        cube("Buttress", (side * 6.35, front - 0.22, 2.8), (0.8, 0.5, 6.4), "stone.dark", 0.04)
-        flat_poly("ButtressCap", [(front - 0.47, 6.0), (front + 0.03, 6.0), (front + 0.03, 6.5)],
-                  side * 6.35 - 0.4, 0.8, "stone.dark", plane="yz")
-        # Rocks at the foot, grass and bushes on top, ivy spilling over.
-        jitter(blob("Rock", (side * 7.1, front - 0.2, 0.0), (0.7, 0.55, 0.5), "stone", 1), 0.08, 7 + int(side))
-        jitter(blob("Rock", (side * 7.3, front + 0.8, 0.0), (0.5, 0.45, 0.35), "stone.dark", 1), 0.06, 9 + int(side))
-        jitter(blob("Bush", (side * 5.2, back + 0.6, 7.55), (1.1, 0.9, 0.75), "leaf", 1), 0.1, 11 + int(side))
-        jitter(blob("Bush", (side * 3.6, back + 1.2, 7.35), (0.8, 0.7, 0.55), "leaf_light", 1), 0.08, 13 + int(side))
-        for k, (dx, dz, s) in enumerate(((0.0, 6.35, 0.55), (0.45, 5.75, 0.4), (-0.1, 5.25, 0.3))):
-            jitter(blob("Ivy", (side * (5.6 + dx), front - 0.12, dz), (s, 0.14, s * 1.3), "leaf_dark", 1), 0.04, 20 + k + int(side) * 5)
-    cube("Coping", (0, (front + back) / 2 - 0.05, top + 0.15), (13.8, 1.1, 0.3), "stone.dark", 0.05)
-    # Grass cushion over the coping, running back into the tunnel's hump.
-    hump = [(6.0, 7.2), (4.6, 7.55), (2.4, 7.75), (0.0, 7.8), (-2.4, 7.75), (-4.6, 7.55), (-6.0, 7.2),
-            (-6.0, 5.05), (6.0, 5.05)]
-    prism_y("Grass", hump, front + 0.1, back + 2.4, "grass")
+        # Pilasters beside the arch.
+        cube("Pilaster", (side * 6.0, front - 0.15, 2.1), (0.6, 0.3, 5.0), "stone.dark", 0.04)
+        cube("PilasterCap", (side * 6.0, front - 0.18, 4.66), (0.76, 0.4, 0.16), "stone.dark", 0.03)
+        # Coping along the top of the wall, all the way down to the ground.
+        for (xa, za), (xb, zb) in zip(WING, WING[1:]):
+            p0, p1 = (side * xa, za), (side * xb, zb)
+            if side > 0:
+                p0, p1 = p1, p0
+            slab("Coping", p0, p1, 1.0, 0.26, "stone.dark", y=(front + back) / 2 - 0.05, outward=1.0)
+        # Rocks at the foot, bushes up on the hill, ivy spilling over.
+        jitter(blob("Rock", (side * 10.4, front - 0.3, 0.0), (0.8, 0.6, 0.55), "stone", 1), 0.08, 7 + int(side))
+        jitter(blob("Rock", (side * 9.3, front - 0.8, -0.1), (0.5, 0.45, 0.35), "stone.dark", 1), 0.06, 9 + int(side))
+        jitter(blob("Bush", (side * 5.6, back + 1.3, profile_height(HILL, 5.6) + 0.45), (1.1, 0.9, 0.75), "leaf", 1), 0.1, 11 + int(side))
+        jitter(blob("Bush", (side * 8.2, back + 0.9, profile_height(HILL, 8.2) + 0.3), (0.8, 0.7, 0.55), "leaf_light", 1), 0.08, 13 + int(side))
+        for k, (dx, dz, s) in enumerate(((0.0, 5.3, 0.5), (0.55, 4.75, 0.38), (-0.3, 4.2, 0.3))):
+            jitter(blob("Ivy", (side * (5.1 + dx), front - 0.12, dz), (s, 0.14, s * 1.3), "leaf_dark", 1), 0.04, 20 + k + int(side) * 5)
+    # Grass behind the coping, easing down onto the hill's own profile so the
+    # portal and the first bore module meet without a step.
+    lifted = [(x, z + 0.1) for x, z in WING]
+    loft_y("Grass", hill_outline(lifted), hill_outline(HILL), 0.0, back + 1.8, "grass")
     # Height-limit roundel over the keystone: red ring, white face, arrows.
-    cylinder("SignRing", (0, front - 0.22, 6.2), 0.52, 0.06, "danger_red", 16, rot=ALONG_Y)
-    cylinder("SignFace", (0, front - 0.26, 6.2), 0.4, 0.04, "sign_white", 16, rot=ALONG_Y)
+    cylinder("SignRing", (0, front - 0.22, 6.15), 0.5, 0.06, "danger_red", 16, rot=ALONG_Y)
+    cylinder("SignFace", (0, front - 0.26, 6.15), 0.38, 0.04, "sign_white", 16, rot=ALONG_Y)
     for dz, flip in ((0.18, -1), (-0.18, 1)):
-        flat_poly("SignArrow", [(-0.13, 6.2 + dz), (0.13, 6.2 + dz), (0.0, 6.2 + dz + flip * 0.14)],
+        flat_poly("SignArrow", [(-0.13, 6.15 + dz), (0.13, 6.15 + dz), (0.0, 6.15 + dz + flip * 0.14)],
                   front - 0.3, 0.02, "ink", plane="xz")
-    cube("SignBar", (0, front - 0.29, 6.2), (0.5, 0.02, 0.035), "ink")
+    cube("SignBar", (0, front - 0.29, 6.15), (0.5, 0.02, 0.035), "ink")
     done("sm_env_route_tunnel_portal.glb")
 
 
@@ -466,7 +546,7 @@ def power_pole():
 
 
 BUILDERS = {
-    "tunnel": (tunnel_module, tunnel_portal, tunnel_lamp),
+    "tunnel": (tunnel_module, tunnel_hill_props, tunnel_portal, tunnel_lamp),
     "bridge": (bridge_deck, bridge_post, bridge_water),
     "chicane": (chicane_barrier,),
     "pole": (power_pole,),

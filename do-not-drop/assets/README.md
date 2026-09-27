@@ -147,13 +147,17 @@ y de la calle. Reemplazan las cajas que armaban `tunnel_segment.gd`, `narrow_bri
 con nombre de la paleta; los que empiezan con `stone.`, `concrete.` o `grass` toman el grano de
 `LowpolyMaterials` (`RouteSegment._art()`).
 
-- `sm_env_route_tunnel_module.glb` (454 tris): 4 m de bóveda (y −2..2 en Blender): zócalo oscuro,
-  franja teal, azulejo crema, bóveda elíptica (arranca a 2,6 m, clave a 4,8 m = techo de la
-  colisión), nervio, cordón amarillo/negro, bandeja de cables, piedra afuera y lomo de pasto. El
-  segmento pone 11 seguidos: piezas cortas para que `conform_geometry()` las doble sobre el terreno.
-- `sm_env_route_tunnel_portal.glb` (1.752): muro de piedra arenisca con dovelas, clave, esquinas,
-  contrafuertes, cornisa, señal de gálibo, pasto, arbustos y hiedra. Mira a +Z (Godot); la boca de
-  salida va girada media vuelta.
+- `sm_env_route_tunnel_module.glb` (452 tris): 4 m de bóveda (y −2..2 en Blender, más 6 cm de
+  solape por punta para que no se abran juntas al doblarlos): zócalo oscuro, franja teal, azulejo
+  crema, bóveda elíptica (arranca a 2,6 m, clave a 4,8 m = techo de la colisión), nervio oscuro,
+  cordón amarillo/negro, bandeja de cables y la loma de pasto que cubre el tubo (sale hasta
+  x ±9,6). El segmento pone 11 seguidos para que `conform_geometry()` los doble sobre el terreno.
+- `sm_env_route_tunnel_hill_props.glb` (440): rocas, arbustos y flores sobre la loma, para 44 m
+  (centrado); el script lo estira al largo del túnel.
+- `sm_env_route_tunnel_portal.glb` (2.524): muro de arenisca con aleros que bajan siguiendo la loma
+  hasta el suelo (x ±10,1), dovelas, clave, esquinas, pilastras, cornisa, señal de gálibo, pasto que
+  empalma con la loma sin escalón, arbustos y hiedra. Mira a +Z (Godot); la boca de salida va girada
+  media vuelta. Los aleros tienen colisión propia (`TunnelWingWall`).
 - `sm_env_route_tunnel_lamp.glb` (80): origen arriba (el anclaje); la lente es el nodo `Lens`, al
   que el script le pone el material emisivo.
 - `sm_env_route_bridge_deck.glb` (212): 4 m de tablero (asfalto de 6 m, líneas de borde, losa y
