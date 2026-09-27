@@ -16,7 +16,17 @@ extends SceneTree
 ##     empty order list;
 ##   - signage (N-503): every place has a hanging sign, arrows on the floor
 ##     by the spawn point at each station and chevrons beside the truck at
-##     the door, and at least four signs read from where the crew appears.
+##     the door, and at least four signs read from where the crew appears;
+##   - the props are the modelled ones (N-135, models/environment/depot/):
+##     door slats, clock hands and the supplies use those meshes, and the
+##     shelves and belt keep their colliders.
+
+const DEPOT_MODELS: Array[String] = [
+	"door_slat", "door_slat_window", "door_bottom_bar", "door_frame", "rack_frame", "rack_beam_level",
+	"shelf_frame", "shelf_deck", "forklift_body", "forklift_carriage", "conveyor", "high_bay_lamp",
+	"tube_fixture", "ceiling_fan", "wall_clock", "clock_hand_hour", "clock_hand_minute",
+	"supply_padding", "supply_insurance",
+]
 
 ## Where the crew appears, looking at the truck: render_depot.gd's spawn_view
 ## (72°), and each of the first four spawn points at the game's default 82°.
@@ -79,6 +89,7 @@ func _run() -> void:
 	# No room tone: the hum over the loading zone was the noise that grated
 	# (playtest 2026-09-25), and the user asked for it gone.
 	_expect(depot.get_node_or_null(^"RoomTone") == null, "The depot has no humming room tone")
+	_test_models(depot)
 
 	# Orders: one per house, all different kinds, written on the board.
 	var orders: Array = depot.get(&"orders")
@@ -291,3 +302,28 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
+
+## N-135: the depot's props come from its GLBs, not from primitives.
+func _test_models(depot: Node3D) -> void:
+	for model_name: String in DEPOT_MODELS:
+		var path: String = "res://assets/models/environment/depot/sm_env_depot_%s.glb" % model_name
+		_expect(ResourceLoader.exists(path), "The depot model %s is imported" % model_name)
+	var slat := depot.get_node(^"RollerDoor/Slat0") as MeshInstance3D
+	_expect(slat != null and slat.mesh is ArrayMesh and slat.mesh.get_surface_count() >= 2, "The door slats use the slat model")
+	var window := depot.get_node(^"RollerDoor/Slat5") as MeshInstance3D
+	_expect(window != null and window.mesh != slat.mesh, "One slat has the vision panes")
+	var padding := depot.get_node(^"Supply_padding") as MeshInstance3D
+	_expect(padding.mesh is ArrayMesh and padding.mesh.get_surface_count() >= 3, "The padding on the counter is the bubble-wrap model")
+	var hands: Array = [depot.get(&"_clock_hour"), depot.get(&"_clock_minute")]
+	for hand: Node3D in hands:
+		var mesh_instance := hand.get_child(0) as MeshInstance3D
+		_expect(mesh_instance.position.is_zero_approx() and mesh_instance.mesh is ArrayMesh, "Each clock hand is its model, pivoting on the spindle")
+	# Shelves and belt keep their colliders: a short ray down onto the top
+	# dispatch deck (2.6 m) and onto the belt bed (0.77-0.91 m) hits something
+	# solid well before it could reach the floor.
+	var space: PhysicsDirectSpaceState3D = depot.get_world_3d().direct_space_state
+	for probe: Array in [[Vector3(-6.8, 3.2, 16.5), 1.0], [Vector3(0.0, 1.6, 30.6), 1.0]]:
+		var from: Vector3 = depot.to_global(probe[0])
+		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * float(probe[1]), 1))
+		_expect(not hit.is_empty(), "Something solid under %s" % str(probe[0]))

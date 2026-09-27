@@ -702,9 +702,8 @@ func _arrow_shape(kit: DepotKit, xform: Transform3D, length: float, width: float
 
 
 func _build_wall_racking(kit: DepotKit) -> void:
-	var blue := DepotKit.flat(Color("2f5d8a"), 0.5, 0.3)
-	var orange := DepotKit.flat(Color("e8772e"), 0.5, 0.2)
-	var deck := DepotKit.ribbed(Color("9ea6a9"), 0.15, 0.5, 0.4)
+	var rack_frame: String = DepotKit.depot_model("sm_env_depot_rack_frame")
+	var rack_level: String = DepotKit.depot_model("sm_env_depot_rack_beam_level")
 	var film := DepotKit.glass(Color(0.85, 0.9, 0.95, 0.35))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4471
@@ -714,20 +713,17 @@ func _build_wall_racking(kit: DepotKit) -> void:
 	var depth: float = x_front - x_back
 	var frames: Array[float] = [1.4, 7.0, 12.6, 18.2, 23.8, 29.4]
 	var beams: Array[float] = [1.9, 3.8, 5.7]
+	# Upright frames (their post guard on the aisle side, +X) and, per bay
+	# and level, a pair of beams with the deck the pallets sit on (+0.085).
 	for z: float in frames:
-		for x: float in [x_back, x_front]:
-			kit.box(Vector3(0.1, 6.3, 0.1), Vector3(x, 3.15, z), blue)
-		for level: int in range(6):
-			kit.box(Vector3(depth, 0.05, 0.05), Vector3(centre_x, 0.5 + level * 1.05, z), blue)
+		kit.model(rack_frame, Transform3D(Basis.IDENTITY, Vector3(centre_x, 0.0, z)))
 	for bay: int in range(frames.size() - 1):
 		var z0: float = frames[bay]
 		var z1: float = frames[bay + 1]
 		var length: float = z1 - z0
 		kit.collider(Vector3(depth + 0.1, 6.3, length), Transform3D(Basis.IDENTITY, Vector3(centre_x, 3.15, (z0 + z1) * 0.5)))
 		for beam_y: float in beams:
-			for x: float in [x_back, x_front]:
-				kit.box(Vector3(0.06, 0.12, length), Vector3(x, beam_y, (z0 + z1) * 0.5), orange)
-			kit.box(Vector3(depth, 0.03, length - 0.1), Vector3(centre_x, beam_y + 0.07, (z0 + z1) * 0.5), deck)
+			kit.model(rack_level, Transform3D(Basis.IDENTITY, Vector3(centre_x, beam_y, (z0 + z1) * 0.5)))
 		for level: int in range(4):
 			var base_y: float = FLOOR_TOP if level == 0 else beams[level - 1] + 0.085
 			for spot: int in range(2):
@@ -765,22 +761,22 @@ func _stock_pallet(kit: DepotKit, base: Vector3, rng: RandomNumberGenerator, top
 
 
 func _build_dispatch_shelves(kit: DepotKit) -> void:
-	var blue := DepotKit.flat(Color("2f5d8a"), 0.5, 0.3)
-	var orange := DepotKit.flat(Color("e8772e"), 0.5, 0.2)
-	var deck := DepotKit.ribbed(Color("a9b0b3"), 0.12, 0.5, 0.4)
+	var shelf_frame: String = DepotKit.depot_model("sm_env_depot_shelf_frame")
+	var shelf_deck: String = DepotKit.depot_model("sm_env_depot_shelf_deck")
 	var length: float = BAY_LENGTH * BAYS
 	for unit: Dictionary in SHELF_UNITS:
 		var x: float = float(unit.x)
 		for frame: int in range(BAYS + 1):
 			var z: float = SHELF_START_Z + frame * BAY_LENGTH
+			kit.model(shelf_frame, Transform3D(Basis.IDENTITY, Vector3(x, 0.0, z)))
 			for side: float in [-1.0, 1.0]:
-				kit.box(Vector3(0.08, 2.7, 0.08), Vector3(x + side * SHELF_DEPTH * 0.5, 1.35, z), blue, true)
-			kit.box(Vector3(SHELF_DEPTH, 0.04, 0.04), Vector3(x, 0.9, z), blue)
-			kit.box(Vector3(SHELF_DEPTH, 0.04, 0.04), Vector3(x, 2.1, z), blue)
+				kit.collider(Vector3(0.08, 2.7, 0.08), Transform3D(Basis.IDENTITY, Vector3(x + side * SHELF_DEPTH * 0.5, 1.35, z)))
+		# One deck model per bay (origin at the top, where the packages sit);
+		# one collider per level, as before.
 		for deck_top: float in LEVEL_TOPS + [2.6]:
-			for side: float in [-1.0, 1.0]:
-				kit.box(Vector3(0.05, 0.1, length), Vector3(x + side * (SHELF_DEPTH * 0.5 - 0.02), deck_top - 0.07, SHELF_START_Z + length * 0.5), orange)
-			kit.box(Vector3(SHELF_DEPTH - 0.04, 0.04, length), Vector3(x, deck_top - 0.02, SHELF_START_Z + length * 0.5), deck, true)
+			for bay: int in range(BAYS):
+				kit.model(shelf_deck, Transform3D(Basis.IDENTITY, Vector3(x, deck_top, SHELF_START_Z + (bay + 0.5) * BAY_LENGTH)))
+			kit.collider(Vector3(SHELF_DEPTH - 0.04, 0.04, length), Transform3D(Basis.IDENTITY, Vector3(x, deck_top - 0.02, SHELF_START_Z + length * 0.5)))
 		# Loose small stock on the top deck, out of reach and just for show.
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 90 + int(x)
@@ -934,13 +930,10 @@ func _build_shop(kit: DepotKit) -> void:
 				_:
 					kit.box(Vector3(0.45, 0.3, 0.4), Vector3(x, 0.62 + level * 0.7, 26.75), DepotKit.flat(Color("7fa7b5") if level == 1 else Color("e8772e"), 0.9))
 	# The supplies that are bought wait on the counter, ready to go.
-	for supply: Array in [[&"padding", Vector3(11.6, 1.25, 23.9), Color("7fa7b5")], [&"insurance", Vector3(12.4, 1.1, 23.95), PAPER]]:
+	for supply: Array in [[&"padding", Vector3(11.6, 1.06, 23.9), "sm_env_depot_supply_padding"], [&"insurance", Vector3(12.4, 1.06, 23.95), "sm_env_depot_supply_insurance"]]:
 		var prop := MeshInstance3D.new()
 		prop.name = "Supply_%s" % supply[0]
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.5, 0.4, 0.4) if supply[0] == &"padding" else Vector3(0.3, 0.02, 0.22)
-		prop.mesh = mesh
-		prop.material_override = DepotKit.flat(supply[2], 0.8)
+		prop.mesh = DepotKit.merged_mesh(DepotKit.depot_model(supply[2]))
 		prop.position = supply[1]
 		prop.visible = false
 		add_child(prop)
@@ -981,21 +974,16 @@ func _build_office(kit: DepotKit) -> void:
 
 
 func _build_conveyor(kit: DepotKit) -> void:
-	var frame := DepotKit.flat(Color("59656a"), 0.45, 0.5)
-	var guard := DepotKit.flat(Color("e7be51"), 0.6)
 	var length: float = CONVEYOR_END_X - CONVEYOR_START_X
 	var centre: float = (CONVEYOR_START_X + CONVEYOR_END_X) * 0.5
-	kit.box(Vector3(length, 0.14, 0.9), Vector3(centre, 0.84, CONVEYOR_Z), frame, true)
-	for x: float in range(int(CONVEYOR_START_X) + 1, int(CONVEYOR_END_X), 2):
-		for z: float in [CONVEYOR_Z - 0.4, CONVEYOR_Z + 0.4]:
-			kit.box(Vector3(0.08, 0.8, 0.08), Vector3(x, 0.4, z), frame)
-	for z: float in [CONVEYOR_Z - 0.47, CONVEYOR_Z + 0.47]:
-		kit.box(Vector3(length, 0.12, 0.05), Vector3(centre, 1.0, z), guard)
+	# Bed, legs, guard rails and both end portals: one model (17 m, origin
+	# under the middle of the belt). Colliders as before.
+	kit.model(DepotKit.depot_model("sm_env_depot_conveyor"), Transform3D(Basis.IDENTITY, Vector3(centre, 0.0, CONVEYOR_Z)))
+	kit.collider(Vector3(length, 0.14, 0.9), Transform3D(Basis.IDENTITY, Vector3(centre, 0.84, CONVEYOR_Z)))
 	# Portals at each end with PVC strip curtains: stock appears from one and
 	# disappears into the other.
 	for x: float in [CONVEYOR_START_X, CONVEYOR_END_X]:
-		kit.box(Vector3(1.2, 1.3, 1.3), Vector3(x, 1.55, CONVEYOR_Z), DepotKit.ribbed(Color("3b4c53"), 0.4), true)
-		kit.box(Vector3(1.2, 0.9, 1.3), Vector3(x, 0.45, CONVEYOR_Z), frame)
+		kit.collider(Vector3(1.2, 1.3, 1.3), Transform3D(Basis.IDENTITY, Vector3(x, 1.55, CONVEYOR_Z)))
 		var face: float = x + (0.61 if x < 0.0 else -0.61)
 		for strip: int in range(6):
 			kit.box(Vector3(0.01, 0.6, 0.14), Vector3(face, 1.2, CONVEYOR_Z - 0.4 + strip * 0.16), DepotKit.glass(Color(0.75, 0.85, 0.8, 0.5)))
@@ -1165,51 +1153,23 @@ func _build_clock() -> void:
 	clock.position = Vector3(3.0, 4.8, DEPTH - 0.08)
 	clock.rotation.y = PI
 	add_child(clock)
-	var face := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = 0.55
-	disc.bottom_radius = 0.55
-	disc.height = 0.06
-	disc.radial_segments = 32
-	face.mesh = disc
-	face.rotation.x = PI * 0.5
-	face.material_override = DepotKit.flat(PAPER, 0.6)
-	clock.add_child(face)
-	var rim := MeshInstance3D.new()
-	var rim_mesh := CylinderMesh.new()
-	rim_mesh.top_radius = 0.6
-	rim_mesh.bottom_radius = 0.6
-	rim_mesh.height = 0.04
-	rim_mesh.radial_segments = 32
-	rim.mesh = rim_mesh
-	rim.rotation.x = PI * 0.5
-	rim.position.z = -0.02
-	rim.material_override = DepotKit.flat(INK, 0.5)
-	clock.add_child(rim)
-	for hour: int in range(12):
-		var tick := MeshInstance3D.new()
-		var tick_mesh := BoxMesh.new()
-		tick_mesh.size = Vector3(0.03, 0.1 if hour % 3 == 0 else 0.06, 0.01)
-		tick.mesh = tick_mesh
-		tick.material_override = DepotKit.flat(INK, 0.6)
-		var angle: float = TAU * hour / 12.0
-		tick.position = Vector3(sin(angle) * 0.46, cos(angle) * 0.46, 0.04)
-		tick.rotation.z = -angle
-		clock.add_child(tick)
-	_clock_hour = _clock_hand(clock, 0.28, 0.05)
-	_clock_minute = _clock_hand(clock, 0.42, 0.03)
+	# Body, face and ticks: one model, face toward the clock's +Z.
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	body.mesh = DepotKit.merged_mesh(DepotKit.depot_model("sm_env_depot_wall_clock"))
+	clock.add_child(body)
+	_clock_hour = _clock_hand(clock, "sm_env_depot_clock_hand_hour")
+	_clock_minute = _clock_hand(clock, "sm_env_depot_clock_hand_minute")
 
 
-func _clock_hand(clock: Node3D, length: float, thickness: float) -> Node3D:
+## A hand on its spindle: the model points +Y from its origin, the pivot
+## turns about Z (see _process).
+func _clock_hand(clock: Node3D, model_name: String) -> Node3D:
 	var pivot := Node3D.new()
 	pivot.position.z = 0.05
 	clock.add_child(pivot)
 	var hand := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(thickness, length, 0.01)
-	hand.mesh = mesh
-	hand.position.y = length * 0.4
-	hand.material_override = DepotKit.flat(INK, 0.5)
+	hand.mesh = DepotKit.merged_mesh(DepotKit.depot_model(model_name))
 	pivot.add_child(hand)
 	return pivot
 
@@ -1406,20 +1366,16 @@ static func _sign_tokens(caption: String) -> Array:
 
 func _build_lights() -> void:
 	var kit := DepotKit.new(self, "LightColliders")
-	var housing := DepotKit.flat(Color("3b4c53"), 0.5, 0.4)
 	var lamp := DepotKit.glow(Color("fff1d6"), 2.2)
 	var fixtures: Array[Vector3] = []
 	for x: float in [-9.0, -3.0, 3.0, 9.0]:
 		for z: float in [5.2, 13.0, 20.8, 28.0]:
 			fixtures.append(Vector3(x, 5.9, z))
+	var high_bay: String = DepotKit.depot_model("sm_env_depot_high_bay_lamp")
+	var tube_fixture: String = DepotKit.depot_model("sm_env_depot_tube_fixture")
 	for at: Vector3 in fixtures:
-		kit.box(Vector3(0.015, 0.65, 0.015), at + Vector3(0.0, 0.33, 0.0), housing)
-		var shade := CylinderMesh.new()
-		shade.top_radius = 0.12
-		shade.bottom_radius = 0.42
-		shade.height = 0.32
-		shade.radial_segments = 14
-		kit.add_mesh(shade, Transform3D(Basis.IDENTITY, at), housing)
+		# Shade model hangs from its hook, 0.65 m above the shade's centre.
+		kit.model(high_bay, Transform3D(Basis.IDENTITY, at + Vector3(0.0, 0.65, 0.0)))
 		var bulb := CylinderMesh.new()
 		bulb.top_radius = 0.36
 		bulb.bottom_radius = 0.36
@@ -1430,7 +1386,7 @@ func _build_lights() -> void:
 	for unit: Dictionary in SHELF_UNITS:
 		for index: int in range(2):
 			var z: float = SHELF_START_Z + 2.0 + index * 4.0
-			kit.box(Vector3(0.2, 0.06, 1.3), Vector3(float(unit.x), 4.3, z), housing)
+			kit.model(tube_fixture, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 4.3, z)))
 			if unit.aisle == "B" and index == 1:
 				_flicker_tube = MeshInstance3D.new()
 				_flicker_tube.name = "FlickeringTube"
@@ -1445,8 +1401,6 @@ func _build_lights() -> void:
 				var tube_mesh := BoxMesh.new()
 				tube_mesh.size = Vector3(0.1, 0.04, 1.2)
 				kit.add_mesh(tube_mesh, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 4.26, z)), DepotKit.glow(Color("eaf6ff"), 2.0), false)
-			for cable: float in [-0.5, 0.5]:
-				kit.box(Vector3(0.01, 2.2, 0.01), Vector3(float(unit.x), 5.4, z + cable), housing)
 	kit.commit("Lamps")
 	# Few real lights (the GL Compatibility renderer caps lights per mesh):
 	# four warm high-bay pools; the fixtures above do the rest of the look.
@@ -1494,11 +1448,7 @@ func _build_moving_parts() -> void:
 		fan.position = at
 		add_child(fan)
 		var kit := DepotKit.new(fan, "FanColliders")
-		var dark := DepotKit.flat(Color("263238"), 0.5, 0.4)
-		kit.cylinder(0.2, 0.3, Transform3D.IDENTITY, dark, 12)
-		for blade: int in range(5):
-			var basis := Basis(Vector3.UP, TAU * blade / 5.0)
-			kit.box_xf(Vector3(0.28, 0.03, 2.2), Transform3D(basis * Basis(Vector3.BACK, 0.12), basis * Vector3(0.0, -0.1, 1.2)), DepotKit.flat(Color("c9ced0"), 0.4, 0.5))
+		kit.model(DepotKit.depot_model("sm_env_depot_ceiling_fan"), Transform3D.IDENTITY)
 		kit.commit("Fan")
 		var rod := MeshInstance3D.new()
 		var rod_mesh := CylinderMesh.new()

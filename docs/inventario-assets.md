@@ -160,7 +160,7 @@ correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slate
 | Puente angosto: tablero, postes, agua | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya está integrada) |
 | Bloques de la chicana | `chicane_segment.gd` | Nacho | N-133 |
 | Poste eléctrico | `route_dresser.gd` (cilindro de 6 lados + caja) | Nacho | N-134 |
-| Depósito: autoelevador, cinta transportadora, portón enrollable, estanterías, lámparas, ventiladores, reloj, insumos | `depot*.gd` (~160 primitivas horneadas con `depot_kit.gd`) | Nacho | N-135 |
+| ~~Depósito: autoelevador, cinta transportadora, portón enrollable, estanterías, lámparas, ventiladores, reloj, insumos~~ **[x] Hecho (2026-09-27)**: 19 GLB en `models/environment/depot/` (`tools/build_depot_props.py`); colisiones, animaciones y horneado siguen en los scripts. Quedan en código a propósito lo que brilla o se anima con material (cinta, cortinas de tiras, lentes de balizas, discos y tubos de luz, varilla del ventilador). Falta: la mercadería de los estantes de la tienda (rollos de film, cinta, espuma), mesa de embalaje y zorra | `depot*.gd` (~160 primitivas horneadas con `depot_kit.gd`) | Nacho | N-135 |
 | Residente que abre la puerta | `delivery_house.gd` (cápsula) | Nacho | N-137 (puede reusar el modelo del jugador) |
 | Ragdoll del jugador | `player_ragdoll.gd` (cápsulas) | Slatex | S-101 |
 | Maniquí del panel de cosméticos | `cosmetics_panel.gd` (cápsula + esfera) | Slatex | S-102 |

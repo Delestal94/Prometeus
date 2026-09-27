@@ -138,6 +138,39 @@ armaba `rail_crossing_segment.gd`. El script conserva su colisión (poste, brazo
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_rail_crossing.py [-- track signal arm loco boxcar tanker]
 ```
 
+## Depósito (`models/environment/depot/`, 2026-09-27)
+
+Propios, generados por `tools/build_depot_props.py` (N-135), misma línea cartoon que el tren:
+formas gruesas y redondeadas, paleta del depósito (azul `2f5d8a`, naranja `e8772e`, tinta,
+amarillo de advertencia) y acentos de la UI. Reemplazan las cajas que armaban `depot.gd`,
+`depot_forklift.gd` y `depot_roller_door.gd`; los scripts conservan colisiones, áreas, nodos con
+nombre y animaciones. Los fijos entran al horneado de `DepotKit` con `model()` (que ahora comparte
+los materiales planos por nombre y color entre GLB, así no suman draw calls); los que se mueven
+usan `DepotKit.merged_mesh()`, una malla con una superficie por material.
+
+- Portón: `sm_env_depot_door_slat.glb` (168 tris) y `..._slat_window.glb` (928, la tablilla 5,
+  con mirillas), `..._door_bottom_bar.glb` (680), `..._door_frame.glb` (2.268: guías, tambor,
+  motor, jambas rayadas, bolardos, umbral, botonera y soporte de la baliza). Espacio local del
+  portón: origen en el centro de la base, afuera hacia −Z; las tablillas centradas.
+- Estanterías: `sm_env_depot_rack_frame.glb` (644, bastidor de 6,3 m, 1,3 de fondo en X, la
+  protección de poste en +X = pasillo) y `..._rack_beam_level.glb` (404, un nivel de 5,6 m;
+  origen en el centro de las vigas, apoyo de pallets a +0,085). Estantes de despacho:
+  `..._shelf_frame.glb` (512, 2,7 m) y `..._shelf_deck.glb` (132, 2 m; origen en la cara de
+  arriba, donde se apoyan los paquetes: coincide con `LEVEL_TOPS`).
+- Autoelevador: `sm_env_depot_forklift_body.glb` (2.264, horquillas hacia −Z, origen en el piso
+  bajo el chasis) y `..._forklift_carriage.glb` (436, origen = nodo `Carriage`, sube en +Y).
+- Cinta: `sm_env_depot_conveyor.glb` (4.068, 17 m, origen en el piso bajo el centro de la cinta;
+  cinta a 0,93 m). La banda que se desplaza y las cortinas de tiras siguen en código.
+- `sm_env_depot_high_bay_lamp.glb` (264, origen en el gancho, 0,65 m sobre la pantalla),
+  `..._tube_fixture.glb` (180, centro del artefacto), `..._ceiling_fan.glb` (504, centro del
+  motor, gira en Y), `..._wall_clock.glb` (892, esfera hacia +Z), `..._clock_hand_hour.glb` (24)
+  y `..._clock_hand_minute.glb` (72) apuntando a +Y desde el eje (giran en Z),
+  `..._supply_padding.glb` (384) y `..._supply_insurance.glb` (212), base centrada.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_depot_props.py [-- door rack forklift conveyor lamps fan clock supplies]
+```
+
 ## Timbre (`models/environment/props/sm_env_prop_doorbell_panel.glb`)
 
 - Propio, `tools/build_doorbell.py` (tareas de Nacho N-302): placa de 12×26 cm con la

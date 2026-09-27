@@ -12,6 +12,8 @@ extends RefCounted
 
 const DETAIL_DIR: String = "res://assets/textures/detail/tx_detail_%s_512.png"
 const DETAIL_GAIN: float = 1.16
+## The depot's own low-poly pieces (assets/tools/build_depot_props.py).
+const DEPOT_MODELS: String = "res://assets/models/environment/depot/%s.glb"
 
 var owner: Node3D
 ## Where solid pieces put their shapes: a StaticBody3D made here, or the
@@ -20,9 +22,19 @@ var body: CollisionObject3D
 var _tools: Dictionary = {}  # material instance id -> SurfaceTool
 var _materials: Dictionary = {}  # material instance id -> Material
 var _shadowless: Dictionary = {}  # material instance id -> true
-var _model_cache: Dictionary = {}
 
 static var _material_cache: Dictionary = {}
+## Model parts per path, loaded and detailed once per session.
+static var _model_cache: Dictionary = {}
+## Flat GLB materials shared by palette name and colour, across files: every
+## depot model's "depot_blue" lands in the same batch.
+static var _shared_materials: Dictionary = {}
+static var _merged_cache: Dictionary = {}
+
+
+## Path of one of the depot's own models, by file name without extension.
+static func depot_model(model_name: String) -> String:
+	return DEPOT_MODELS % model_name
 
 
 func _init(owner_node: Node3D, collider_name: String = "Colliders", host: CollisionObject3D = null) -> void:
@@ -150,9 +162,36 @@ func commit(prefix: String = "Batch") -> Array[MeshInstance3D]:
 	return made
 
 
+## A model folded into one mesh, one surface per material: for pieces that
+## move on their own node (door slats, clock hands, the supplies on the
+## counter). Shared per path.
+static func merged_mesh(path: String) -> ArrayMesh:
+	if _merged_cache.has(path):
+		return _merged_cache[path]
+	var tools: Dictionary = {}
+	var materials: Dictionary = {}
+	for part: Array in _model_parts(path):
+		var mesh: Mesh = part[0]
+		for surface: int in range(mesh.get_surface_count()):
+			var material: Material = part[2][surface]
+			if material == null:
+				material = flat(Color("9a8f80"))
+			var id: int = material.get_instance_id()
+			if not tools.has(id):
+				tools[id] = SurfaceTool.new()
+				materials[id] = material
+			(tools[id] as SurfaceTool).append_from(mesh, surface, part[1])
+	var merged := ArrayMesh.new()
+	for id: int in tools:
+		(tools[id] as SurfaceTool).commit(merged)
+		merged.surface_set_material(merged.get_surface_count() - 1, materials[id])
+	_merged_cache[path] = merged
+	return merged
+
+
 ## [mesh, transform relative to the model root, [material per surface]] for
 ## every mesh in a model file, loaded and detailed once per path.
-func _model_parts(path: String) -> Array:
+static func _model_parts(path: String) -> Array:
 	if _model_cache.has(path):
 		return _model_cache[path]
 	var parts: Array = []
@@ -174,11 +213,24 @@ func _model_parts(path: String) -> Array:
 				var material: Material = part.get_surface_override_material(surface)
 				if material == null:
 					material = part.mesh.surface_get_material(surface)
-				materials.append(material)
+				materials.append(_shared(material))
 			parts.append([part.mesh, local, materials])
 		instance.free()
 	_model_cache[path] = parts
 	return parts
+
+
+## One material per (palette name, colour, finish) for plain flat GLB
+## materials, so pieces from different files batch together. Textured,
+## see-through or glowing ones are left alone.
+static func _shared(material: Material) -> Material:
+	var base := material as StandardMaterial3D
+	if base == null or base.albedo_texture != null or base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or base.emission_enabled:
+		return material
+	var key: String = "%s|%s|%.2f|%.2f|%d" % [base.resource_name.get_slice(".", 0), base.albedo_color.to_html(), base.roughness, base.metallic, int(base.vertex_color_use_as_albedo)]
+	if not _shared_materials.has(key):
+		_shared_materials[key] = base
+	return _shared_materials[key]
 
 
 ## A flat palette colour -- glass, paint, plastic. Shared per colour.

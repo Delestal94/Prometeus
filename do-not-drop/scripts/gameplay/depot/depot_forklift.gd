@@ -8,11 +8,6 @@ extends AnimatableBody3D
 ## Local presentation, same as the depot's staff: every peer runs its own.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
-const BODY := Color("e8772e")
-const DARK := Color("263238")
-const STEEL := Color("59656a")
-const TYRE := Color("1b1f22")
-const FORK := Color("3b4247")
 const BEACON := Color("ffb02e")
 const SPEED: float = 1.6
 const LIFT_SPEED: float = 0.55
@@ -119,43 +114,18 @@ func _someone_ahead() -> bool:
 
 func _build() -> void:
 	# Built facing -Z: forks out front (-Z), operator platform at the back.
+	# The look is one model (assets/tools/build_depot_props.py); the chassis
+	# keeps its box on the body so it still shoves whoever it runs into.
 	var kit := DepotKit.new(self, "Frame", self)
-	var body := DepotKit.flat(BODY, 0.55, 0.1)
-	var dark := DepotKit.flat(DARK, 0.7)
-	var steel := DepotKit.flat(STEEL, 0.45, 0.5)
-	var tyre := DepotKit.flat(TYRE, 0.95)
-	kit.box(Vector3(1.15, 0.55, 1.5), Vector3(0.0, 0.45, 0.45), body, true)
-	kit.box(Vector3(1.18, 0.12, 1.54), Vector3(0.0, 0.76, 0.45), dark)
-	kit.box(Vector3(1.0, 0.95, 0.32), Vector3(0.0, 1.2, 1.0), body)  # counterweight hood
-	kit.box(Vector3(0.9, 0.08, 0.5), Vector3(0.0, 0.3, 1.45), DepotKit.flat(Color("7a8387"), 0.8, 0.3))  # step plate
-	# Overhead guard: four posts and a slatted roof.
-	for x: float in [-0.52, 0.52]:
-		for z: float in [0.0, 1.15]:
-			kit.box(Vector3(0.06, 1.45, 0.06), Vector3(x, 1.5, z), dark)
-	for index: int in range(5):
-		kit.box(Vector3(1.1, 0.04, 0.08), Vector3(0.0, 2.22, 0.05 + index * 0.27), dark)
-	kit.box(Vector3(0.3, 0.3, 0.18), Vector3(0.28, 1.35, 0.6), dark)  # control console
-	kit.cylinder(0.035, 0.28, Transform3D(Basis(Vector3.RIGHT, 0.3), Vector3(0.28, 1.6, 0.55)), DepotKit.flat(Color("c0392b"), 0.5), 8)
-	# Mast rails.
-	for x: float in [-0.42, 0.42]:
-		kit.box(Vector3(0.1, 2.9, 0.12), Vector3(x, 1.55, -0.38), steel)
-	kit.box(Vector3(0.94, 0.1, 0.12), Vector3(0.0, 3.0, -0.38), steel)
-	# Wheels.
-	for x: float in [-0.5, 0.5]:
-		for z: float in [-0.1, 1.0]:
-			kit.cylinder(0.2, 0.18, Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(x, 0.2, z)), tyre, 12)
-	# Warning stripes on the counterweight.
-	kit.box(Vector3(1.02, 0.18, 0.02), Vector3(0.0, 0.95, 1.17), DepotKit.detailed(Color.WHITE, "res://assets/textures/environment/tx_env_warning_256.png", 0.5, 0.7))
+	kit.model(DepotKit.depot_model("sm_env_depot_forklift_body"), Transform3D.IDENTITY)
+	kit.collider(Vector3(1.15, 0.55, 1.5), Transform3D(Basis.IDENTITY, Vector3(0.0, 0.45, 0.45)))
 	kit.commit("ForkliftBody")
 	# The carriage rides the mast: backrest, forks, and a pallet of stock.
 	_carriage = Node3D.new()
 	_carriage.name = "Carriage"
 	add_child(_carriage)
 	var lift_kit := DepotKit.new(_carriage, "CarriageColliders")
-	var fork := DepotKit.flat(FORK, 0.5, 0.5)
-	lift_kit.box(Vector3(1.0, 0.7, 0.06), Vector3(0.0, 0.55, -0.48), steel)
-	for x: float in [-0.25, 0.25]:
-		lift_kit.box(Vector3(0.1, 0.05, 1.1), Vector3(x, 0.14, -1.05), fork)
+	lift_kit.model(DepotKit.depot_model("sm_env_depot_forklift_carriage"), Transform3D.IDENTITY)
 	lift_kit.model("res://assets/models/environment/props/sm_env_prop_pallet.glb", Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * 0.85), Vector3(0.0, 0.17, -1.05)))
 	var box_paths: Array[String] = [
 		"res://assets/models/cargo/sm_cargo_box_cube.glb",
