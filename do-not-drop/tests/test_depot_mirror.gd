@@ -10,7 +10,7 @@ extends SceneTree
 ##   - it only renders while someone is close and in front of it, after one
 ##     first picture of the room so it never shows black from afar.
 
-const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
 
 var _failures: int = 0
 

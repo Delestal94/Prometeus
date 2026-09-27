@@ -64,9 +64,9 @@ var _last_prompt: String = ""
 var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
-const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
-const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
+const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md

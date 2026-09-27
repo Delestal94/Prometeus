@@ -1,7 +1,7 @@
 extends SceneTree
 ## Independent selections, persistent profile migration, live preview, per-peer
 ## face materials, and facial attachments that follow the animated head.
-const Catalog = preload("res://scripts/presentation/face_catalog.gd")
+const Catalog = preload("res://scripts/core/face_catalog.gd")
 const Profile = preload("res://scripts/core/unlock_manager.gd")
 var _failures: int = 0
 

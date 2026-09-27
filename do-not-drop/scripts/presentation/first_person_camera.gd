@@ -37,7 +37,7 @@ const MAX_PULLBACK: float = 0.25
 ## shouldn't share the exact same frame as walking, and a touch more field
 ## of view suits the extra spatial awareness manoeuvring the van needs.
 const BASE_FOV: float = 82.0
-const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
 
 var _shake_strength: float = 0.0
 var _rng := RandomNumberGenerator.new()

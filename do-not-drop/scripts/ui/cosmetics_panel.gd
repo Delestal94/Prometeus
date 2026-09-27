@@ -2,7 +2,7 @@ class_name CosmeticsPanel
 extends Control
 
 const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
-const Catalog = preload("res://scripts/presentation/face_catalog.gd")
+const Catalog = preload("res://scripts/core/face_catalog.gd")
 const FacePreview = preload("res://scripts/ui/face_preview.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 signal closed

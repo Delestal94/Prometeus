@@ -7,6 +7,24 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: pasada de calidad de código (2026-09-27, rama `refactor/quality-pass`)
+
+Pedido del usuario: llevar arquitectura, modularidad y variables a nivel profesional en todo el
+repo, **incluidos archivos de Slatex** (autorizado explícitamente). Se hace por fases, un commit
+por fase, sin cambiar firmas públicas ni nombres de nodos que usan los tests. Hacé `git pull`
+antes de seguir con cualquier archivo listado acá.
+
+- **Lint (fase 1):** `gdlintrc` en la raíz + `tools/lint.sh`, con una línea base
+  (`tools/lint-baseline.txt`) que solo puede bajar: CI y el `pre-push` fallan ante problemas
+  *nuevos*, los viejos se toleran hasta que se arreglan. Instalar: `pip install "gdtoolkit==4.5.0"`.
+  Después de arreglar algo, `tools/lint.sh --update-baseline` y commitear la baseline.
+- **Movidos a `scripts/core/` (fase 1):** `face_catalog.gd` y `render_layers.gd` (datos puros; que
+  `core/` dependiera de `presentation/` era una inversión de capas). Los `preload` de
+  `player.gd`, `cosmetics_panel.gd`, `face_preview.gd`, `character_face.gd`,
+  `first_person_camera.gd`, `depot_mirror.gd` y `unlock_manager.gd` ya apuntan a la ruta nueva.
+- **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
+  `package` que no usaba (privada, un solo llamador).
+
 ## El criterio: dividir por carpeta, no solo por tema
 
 Aviso 2026-09-25: dirección sonora tranquila solicitada por el usuario, tomando
@@ -571,7 +589,7 @@ cambiar**, hace el cambio en un commit chico y aislado, y avisa cuando ya está 
 para que el otro haga `git pull` antes de seguir.
 
 - `do-not-drop/scripts/core/event_bus.gd`, `network_manager.gd`, `run_manager.gd`
-- `do-not-drop/scripts/presentation/first_person_camera.gd`, `render_layers.gd`,
+- `do-not-drop/scripts/presentation/first_person_camera.gd`, `core/render_layers.gd`,
   `synth_audio.gd` (lo usan tanto el vehículo como el jugador)
 - `do-not-drop/scripts/gameplay/level_base.gd` y
   `do-not-drop/scenes/gameplay/level_base.tscn` (componen ambos dominios)

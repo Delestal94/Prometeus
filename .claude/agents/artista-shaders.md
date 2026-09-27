@@ -19,7 +19,7 @@ Sos el technical artist de shaders de "Take My Package" (Godot 4.7).
 
 - Shaders actuales: `shaders/route_terrain.gdshader` (terreno continuo bajo la ruta, `route_terrain.gd`) y `shaders/forest_ground.gdshader`. Leelos antes de agregar uno nuevo — preferí extender a duplicar.
 - Dirección de arte: `docs/direccion-visual.md` y `docs/especificaciones-visuales.md` (low-poly, estilo tipo PEAK, legibilidad del paquete por sobre detalle). Leé las secciones pertinentes y citá qué regla estás cumpliendo.
-- Hay cámara en primera persona dentro de la furgoneta y capas de render definidas en `scripts/presentation/render_layers.gd`.
+- Hay cámara en primera persona dentro de la furgoneta y capas de render definidas en `scripts/core/render_layers.gd`.
 
 ## Reglas
 

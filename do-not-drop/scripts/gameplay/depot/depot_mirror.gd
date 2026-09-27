@@ -15,7 +15,7 @@ extends Node3D
 ## renders while someone's camera is close and in front of it, after one
 ## first picture of the room (FIRST_EYE) so it never shows black from afar.
 
-const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
 ## The glass itself stays out of its own reflection.
 const GLASS_LAYER: int = 1 << 19
 const RESOLUTION: int = 900

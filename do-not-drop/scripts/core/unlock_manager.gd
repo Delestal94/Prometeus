@@ -12,7 +12,7 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 3: Peso creciente and Ruidoso joined the gradual trap curve. Loading an
 ## older profile grants every unlock its existing progress already earns.
 const PROFILE_VERSION := 3
-const FaceCatalog = preload("res://scripts/presentation/face_catalog.gd")
+const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.

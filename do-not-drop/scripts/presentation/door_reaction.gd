@@ -23,7 +23,7 @@ const BUBBLE_HEIGHT: float = 2.35
 ## hangs right over the doorstep at that height.
 const BUBBLE_FORWARD: float = 0.55
 const BUBBLE_FONT: Font = preload("res://assets/fonts/Nunito-Variable.ttf")
-const NOTE_FONT: Font = preload("res://assets/fonts/Nunito-Variable.ttf")
+const NOTE_FONT: Font = BUBBLE_FONT
 const INK := Color("1e2235")
 const PAPER := Color("fbf8ee")
 ## Where each hand grabs, from the head bone (x: to either side, z: forward),
