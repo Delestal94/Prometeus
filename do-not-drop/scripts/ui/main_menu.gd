@@ -185,6 +185,24 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _build_ui() -> void:
+	_build_backdrop()
+	_build_brand()
+	var column: VBoxContainer = _build_card()
+	var focus_return: Dictionary = _build_home_page(column)
+	_build_play_page(column)
+	_build_join_page(column)
+	focus_return.merge(_build_garage_page(column))
+	_build_connection_status(column)
+	_build_footer()
+	_build_overlays(focus_return)
+	_show_page(Page.HOME, false)
+	# A gamepad player has no cursor: without a focused button, the menu
+	# ignored every press until someone reached for the mouse.
+	_play_button.grab_focus.call_deferred()
+
+
+## Backdrop, key art and the frosted copy of it behind the card.
+func _build_backdrop() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	UiTheme.apply(self)
 	var bg := ColorRect.new()
@@ -203,6 +221,8 @@ func _build_ui() -> void:
 	add_child(art)
 	_frost = _build_frost()
 
+
+func _build_brand() -> void:
 	# Logo over the open sky, top left; the menu card on the right, so the
 	# van spilling boxes (the whole joke) stays in view.
 	var brand := VBoxContainer.new()
@@ -218,6 +238,9 @@ func _build_ui() -> void:
 	var stamp: Label = UiTheme.tag(brand, "¡NO LO DEJES CAER!", RED, -5.0, 18)
 	stamp.get_parent().size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
+
+## The menu card on the right; returns the column the pages go in.
+func _build_card() -> VBoxContainer:
 	var side := MarginContainer.new()
 	side.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
 	side.offset_left = -500
@@ -241,7 +264,11 @@ func _build_ui() -> void:
 		_card.item_rect_changed.connect(_fit_frost)
 	_page_title = UiTheme.tag(column, PAGE_TITLES[Page.HOME], UiTheme.YELLOW, -1.5, 17)
 	_spacer(column, 2)
+	return column
 
+
+## Returns the buttons the overlays opened from here give focus back to.
+func _build_home_page(column: VBoxContainer) -> Dictionary:
 	var home: VBoxContainer = _add_page(column, Page.HOME)
 	_play_button = UiTheme.button(home, "¡JUGAR!", true, Vector2(0, 78))
 	_play_button.add_theme_font_size_override("font_size", 34)
@@ -268,7 +295,10 @@ func _build_ui() -> void:
 	# section 4).
 	var quit_button: Button = _small_button(bottom_row, "Salir")
 	quit_button.pressed.connect(_quit_game)
+	return {"options": options_button, "tutorial": tutorial_button}
 
+
+func _build_play_page(column: VBoxContainer) -> void:
 	var play: VBoxContainer = _add_page(column, Page.PLAY)
 	var solo_button: Button = UiTheme.button(play, "Jugar solo", true, Vector2(0, 62))
 	solo_button.add_theme_font_size_override("font_size", 26)
@@ -285,6 +315,8 @@ func _build_ui() -> void:
 	_entry_buttons[-1].pressed.connect(_show_page.bind(Page.JOIN))
 	_back_button(play)
 
+
+func _build_join_page(column: VBoxContainer) -> void:
 	var join: VBoxContainer = _add_page(column, Page.JOIN)
 	# INK, not MUTED: these are the page's instructions, and MUTED over the
 	# frosted art dropped to ~2.6:1 contrast.
@@ -305,6 +337,9 @@ func _build_ui() -> void:
 	_entry_buttons[-1].pressed.connect(_join_by_address)
 	_back_button(join)
 
+
+## Returns the buttons the overlays opened from here give focus back to.
+func _build_garage_page(column: VBoxContainer) -> Dictionary:
 	var garage: VBoxContainer = _add_page(column, Page.GARAGE)
 	var cosmetics_button: Button = _button(garage, "Apariencia", false)
 	cosmetics_button.pressed.connect(_open_cosmetics)
@@ -317,7 +352,10 @@ func _build_ui() -> void:
 	leaderboard_button.pressed.connect(_open_leaderboard)
 	_entry_buttons.append(leaderboard_button)
 	_back_button(garage)
+	return {"cosmetics": cosmetics_button, "progress": progress_button, "leaderboard": leaderboard_button}
 
+
+func _build_connection_status(column: VBoxContainer) -> void:
 	_status_label = _label(column, "", 15, MUTED)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.visible = false
@@ -327,6 +365,8 @@ func _build_ui() -> void:
 	_cancel_button.pressed.connect(_cancel_connection)
 	_cancel_button.visible = false
 
+
+func _build_footer() -> void:
 	# The release job (N-210) stamps the tag into config/version before exporting.
 	var version: String = str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
 	var footer: Label = UiTheme.chip(self, "Versión %s   ·   F11 pantalla completa" % version, UiTheme.WHITE, 14)
@@ -337,32 +377,32 @@ func _build_ui() -> void:
 	footer_holder.offset_bottom = -20
 	footer_holder.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
+
+## Options, progress, tutorial, appearance and records open over the menu;
+## closing one gives focus back to the button that opened it.
+func _build_overlays(focus_return: Dictionary) -> void:
 	_options = OptionsPanel.new()
 	_options.name = "OptionsPanel"
 	add_child(_options)
-	_options.closed.connect(options_button.grab_focus)
+	_options.closed.connect((focus_return["options"] as Button).grab_focus)
 	_progress = PROGRESS_PANEL_SCRIPT.new()
 	_progress.name = "ProgressPanel"
 	add_child(_progress)
-	_progress.connect(&"closed", progress_button.grab_focus)
+	_progress.connect(&"closed", (focus_return["progress"] as Button).grab_focus)
 	_tutorial = TUTORIAL_PANEL_SCRIPT.new()
 	_tutorial.name = "TutorialPanel"
 	add_child(_tutorial)
-	_tutorial.connect(&"closed", tutorial_button.grab_focus)
+	_tutorial.connect(&"closed", (focus_return["tutorial"] as Button).grab_focus)
 	_cosmetics = COSMETICS_PANEL_SCRIPT.new()
 	_cosmetics.name = "CosmeticsPanel"
 	add_child(_cosmetics)
 	_cosmetics.hide()
-	_cosmetics.connect(&"closed", cosmetics_button.grab_focus)
+	_cosmetics.connect(&"closed", (focus_return["cosmetics"] as Button).grab_focus)
 	_leaderboard = LEADERBOARD_PANEL_SCRIPT.new()
 	_leaderboard.name = "LeaderboardPanel"
 	add_child(_leaderboard)
 	_leaderboard.hide()
-	_leaderboard.connect(&"closed", leaderboard_button.grab_focus)
-	_show_page(Page.HOME, false)
-	# A gamepad player has no cursor: without a focused button, the menu
-	# ignored every press until someone reached for the mouse.
-	_play_button.grab_focus.call_deferred()
+	_leaderboard.connect(&"closed", (focus_return["leaderboard"] as Button).grab_focus)
 
 
 ## A blurred copy of the key art, masked to the card's rounded rectangle, so

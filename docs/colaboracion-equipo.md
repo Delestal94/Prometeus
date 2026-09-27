@@ -68,6 +68,10 @@ antes de seguir con cualquier archivo listado acá.
     (`hud.notices.toast()`, `set_notice()`, `hud.pause.primary_action()`, `hud.prompts.refresh_shortcuts()`…).
   - Bug que apareció en el camino (ya cubierto en `test_hud_flow`): con `orders` público, la lambda
     `func(orders): orders = orders` se habría pisado a sí misma; ahora es `func(posted): orders = posted`.
+- **Menú principal (fase 5, dominio Slatex):** `main_menu._build_ui()` (184 líneas) se partió en un
+  constructor por sección (`_build_backdrop()`, `_build_brand()`, `_build_card()`, una función por
+  página, `_build_connection_status()`, `_build_footer()`, `_build_overlays()`), con el código movido
+  sin cambios.
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 

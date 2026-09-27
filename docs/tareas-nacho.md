@@ -290,8 +290,10 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
   `1a86faa` `603fefd`
 - [x] **Fase 4 · Jugador:** `player.gd` 1191 → 925 (`PlayerAnimator`, `PlayerAppearance`); componentes
   tipados `var player: Player`. `b1026bf`
-- [ ] **Fase 5 · UI armada por código:** partir `prototype_hud._build_ui()` (207 líneas) y
-  `main_menu._build_ui()` (184) en constructores por sección; renombrar `prototype_hud` (ya no es prototipo).
+- [x] **Fase 5 · UI:** el HUD dejó de ser una cadena de herencia de 6 niveles; ahora es `Hud`
+  (`scripts/ui/hud/hud.gd`, antes `prototype_hud.gd`) con 5 componentes. `main_menu._build_ui()`
+  se partió por sección. `696e147` + el commit del menú.
+  - [ ] Pendiente: partir `Hud._build_ui()` (~200 líneas) igual que el menú.
 - [ ] **Fase 6 · Búsquedas frágiles:** 113 `find_child`/búsquedas por grupo (18 en `reference_truck.gd`)
   → referencias cacheadas o `@export`.
 - [ ] **Fase 7 · i18n:** ~234 textos de UI en español escritos en el código (fuera de `tr()`), a un CSV
