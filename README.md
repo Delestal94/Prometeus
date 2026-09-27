@@ -123,7 +123,7 @@ el freno de mano al conducir. Mirar desde el asiento no cambia la dirección
 del vehículo. La mirada se conserva después de las sacudidas de los impactos.
 
 **Opciones y salir**: el menú principal tiene **Opciones** (volumen,
-sensibilidad de la mirada, invertir eje Y, pantalla completa — se guardan en
+sensibilidad de la mirada, efectos de impacto, invertir eje Y, pantalla completa — se guardan en
 `user://settings.cfg`) y **Salir**. Desde la pausa se llega a las mismas
 opciones y a **Menú**, que deja la sesión limpia antes de volver.
 
@@ -540,8 +540,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_assist` — un segundo jugador ayuda a una caja en riesgo con media fuerza,
   puede completar secuencias y gana mérito; un tercer jugador no desplaza al ayudante.
 - `test_ruin_feedback` — el paquete arruinado explota en confeti una sola vez,
-  en su propia posición (no en el origen del mundo), y se limpia solo al
-  terminar.
+  en su propia posición (no en el origen del mundo); las partículas quedan a
+  15 % durante 0,35 s, vuelven a velocidad normal y se limpian solas, sin tocar
+  jamás `Engine.time_scale`.
 - `test_horn` — la bocina atribuye correctamente a quien la toca (aunque no
   sea el host) y el "honk" sintetizado en código es audio real, no silencio. Con el
   ciervo a menos de 30 m adelante, la bocina lo espanta: se va al monte sin cruzar, o

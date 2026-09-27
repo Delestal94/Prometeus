@@ -268,15 +268,14 @@ específico de "campo de visión, qué ve y qué no".
   3.4) en vez de solo cambiar un color.
 - **[x] Color + texto del paquete según estado** (sección 3, tabla de estados) —
   feedback legible a distancia, no depende de leer una barra de progreso.
-- **[x] Golpe de FOV en impactos, en lugar del slow-mo** (2026-09-21,
-  `first_person_camera.gd`): el FOV salta hacia afuera en proporción a la fuerza
-  del golpe y vuelve solo. Decidido así porque el slow-mo literal del plan
-  original (3.4) exige `Engine.time_scale`, que frenaría también la física
-  host-autoritativa — es decir, la partida entera de todos, no un efecto visual.
-  El golpe de FOV se lee como el mismo tipo de puñetazo, es puramente local (cada
-  cliente el suyo) y no toca la simulación. Cubierto por
-  `tests/test_impact_feedback.gd`, que verifica explícitamente que
-  `Engine.time_scale` nunca se modifica.
+- **[x] Golpes locales sin slow-mo global** (2026-09-21; S-111, 2026-09-27):
+  `first_person_camera.gd` da un golpe de FOV en impactos físicos. Al arruinarse
+  una caja, su confeti corre al 15 % durante 0,35 s, la viñeta da un destello
+  blanco suave y suena un golpe grave; después las partículas vuelven a velocidad
+  normal. Todo es presentación local: `Engine.time_scale` permanece en 1,0 para
+  no frenar la física autoritativa de toda la partida. “Efectos de impacto” en
+  Opciones apaga este segundo efecto. `test_impact_feedback.gd` y
+  `test_ruin_feedback.gd` fijan ambos contratos.
 - **[x] Viñeta de riesgo**: el HUD la intensifica con el riesgo de la carga para dar
   tensión sin depender de texto.
 - **[x] Aberración cromática de impacto**: `vehicle_effects.gd` la dispara sólo en

@@ -75,6 +75,7 @@ var complaints_label: Label
 var photo_strip: HBoxContainer
 var fade_rect: ColorRect
 var risk_vignette: ColorRect
+var ruin_vignette: ColorRect
 var shortcut_label: RichTextLabel
 const SHORTCUT_VISIBLE_SECONDS: float = 60.0
 var _shortcut_learning_seconds: float = 0.0
@@ -93,6 +94,9 @@ var _is_endless: bool = false
 var _local_merit_total: int = 0
 var _last_states: Dictionary = {}
 var _rescue_player: AudioStreamPlayer
+const RUIN_FLASH_SECONDS: float = 0.35
+const RUIN_FLASH_ALPHA: float = 0.24
+var _ruin_flash_left: float = 0.0
 
 
 func _apply_hud_scale() -> void:
@@ -180,6 +184,23 @@ func _refresh_risk_vignette(delta: float) -> void:
 		risk = maxf(risk, clampf((0.6 - ratio) / 0.6, 0.0, 1.0))
 	var target_alpha: float = risk * 0.38
 	risk_vignette.color.a = move_toward(risk_vignette.color.a, target_alpha, delta * 1.8)
+
+
+func _on_ruin_impact(_id: StringName, _cause: String) -> void:
+	if not GameSettings.impact_effects:
+		return
+	_ruin_flash_left = RUIN_FLASH_SECONDS
+	ruin_vignette.color = Color(1.0, 1.0, 1.0, RUIN_FLASH_ALPHA)
+
+
+func _refresh_ruin_impact(delta: float) -> void:
+	if not GameSettings.impact_effects:
+		_ruin_flash_left = 0.0
+		ruin_vignette.color.a = 0.0
+		return
+	_ruin_flash_left = maxf(0.0, _ruin_flash_left - delta)
+	var amount: float = _ruin_flash_left / RUIN_FLASH_SECONDS
+	ruin_vignette.color.a = RUIN_FLASH_ALPHA * smoothstep(0.0, 1.0, amount)
 
 
 func _vignette_material() -> ShaderMaterial:

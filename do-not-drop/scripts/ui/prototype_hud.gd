@@ -10,6 +10,7 @@ func _ready() -> void:
 	EventBus.vehicle_telemetry.connect(_on_speed)
 	EventBus.package_integrity_changed.connect(_on_integrity)
 	EventBus.package_state_changed.connect(_on_package_state)
+	EventBus.package_ruined.connect(_on_ruin_impact)
 	EventBus.package_damaged.connect(_on_damage)
 	EventBus.route_progress_changed.connect(_on_progress)
 	EventBus.delivery_status_changed.connect(_on_delivery)
@@ -71,6 +72,12 @@ func _build_ui() -> void:
 	risk_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	risk_vignette.material = _vignette_material()
 	root.add_child(risk_vignette)
+	ruin_vignette = ColorRect.new()
+	ruin_vignette.color = Color(1.0, 1.0, 1.0, 0.0)
+	ruin_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ruin_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ruin_vignette.material = _vignette_material()
+	root.add_child(ruin_vignette)
 	hud_layer = Control.new()
 	hud_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(hud_layer)
@@ -296,6 +303,7 @@ func _process(delta: float) -> void:
 	_refresh_shortcuts(delta)
 	_refresh_restart_hold(delta)
 	_refresh_risk_vignette(delta)
+	_refresh_ruin_impact(delta)
 	_refresh_state_pulses()
 	_refresh_sound_subtitle()
 	_process_notices(delta)

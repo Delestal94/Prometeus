@@ -58,6 +58,9 @@ func _run() -> void:
 	settings.hud_scale = player_hud_scale
 	var player_menu_scale: float = settings.menu_text_scale
 	var volume_slider: HSlider = hud.options_panel.get("_volume_slider") as HSlider
+	var impact_effects_check := hud.options_panel.get("_impact_effects_check") as CheckBox
+	_expect(impact_effects_check != null and impact_effects_check.text == "Efectos de impacto",
+		"Options exposes the impact-effects accessibility switch")
 	var menu_caption := (volume_slider.get_parent().get_child(0) as HBoxContainer).get_child(0) as Label
 	var hud_font_size: int = hud.speed_label.get_theme_font_size("font_size")
 	settings.menu_text_scale = 1.5
@@ -121,6 +124,22 @@ func _run() -> void:
 		"Ruined cargo has an X marker")
 	settings.colorblind_palette = original_palette
 	settings.sound_subtitles = original_subtitles
+
+	# --- ruined cargo gets a local-only soft flash, never global slow motion ---
+	var original_impact_effects: bool = settings.impact_effects
+	settings.impact_effects = true
+	var time_scale_before: float = Engine.time_scale
+	hud._on_ruin_impact(&"accessible_box", "test")
+	_expect(hud.ruin_vignette.color.r > 0.99 and hud.ruin_vignette.color.a > 0.0,
+		"A ruined package flashes a soft white edge vignette")
+	_expect(is_equal_approx(Engine.time_scale, time_scale_before),
+		"The HUD ruin flash never changes global time scale")
+	hud._refresh_ruin_impact(0.4)
+	_expect(is_zero_approx(hud.ruin_vignette.color.a), "The ruin flash clears after 0.35 seconds")
+	settings.impact_effects = false
+	hud._on_ruin_impact(&"accessible_box", "disabled")
+	_expect(is_zero_approx(hud.ruin_vignette.color.a), "Impact effects can be disabled for accessibility")
+	settings.impact_effects = original_impact_effects
 
 	# --- shortcut teaching can be automatic or explicitly overridden ---
 	var unlocks: Node = root.get_node("UnlockManager")
