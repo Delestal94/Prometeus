@@ -66,12 +66,12 @@ func _run() -> void:
 				_expect(is_equal_approx(second_before - second.integrity, first_loss * 0.5), "Parasite copies exactly half the real damage")
 				first.set_tender(1)
 				second.set_tender(1)
-				first.player_input = {"steady": true}
-				second.player_input = {"steady": true}
+				first._accept_tender_input(1, {"steady": true})
+				second._accept_tender_input(1, {"steady": true})
 				routes._physics_process(2.1)
 				_expect(routes.active_event_id == &"parasite_box", "One player cannot separate both parasite boxes")
 				second.set_tender(2)
-				second.player_input = {"steady": true}
+				second._accept_tender_input(2, {"steady": true})
 				routes._physics_process(2.0)
 				_expect(int(crew.merit.get(1, 0)) == 25 and int(crew.merit.get(2, 0)) == 25, "Both parasite helpers earn merit once (got %s)" % crew.merit)
 		_expect(routes.active_event_id.is_empty(), "%s resolves successfully (got %s)" % [event_id, routes.active_event_id])

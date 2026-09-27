@@ -331,7 +331,7 @@ func _parasite_peers() -> Array[int]:
 	var second: DeliveryPackage = _package_by_id(StringName(ids[1]))
 	if first == null or second == null or first.tender_peer_id <= 0 or second.tender_peer_id <= 0 or first.tender_peer_id == second.tender_peer_id:
 		return []
-	if first._tender_input_age > first.TENDER_INPUT_TIMEOUT or second._tender_input_age > second.TENDER_INPUT_TIMEOUT:
+	if not first._has_fresh_input(first.tender_peer_id) or not second._has_fresh_input(second.tender_peer_id):
 		return []
 	if not bool(first.player_input.get("steady", false)) or not bool(second.player_input.get("steady", false)):
 		return []
