@@ -632,12 +632,12 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
 
 ### S-508 · Pantalla de resultados completa — A · `Sol · high` · Aviso: no
 
-- [ ] Una fila por casa con ícono de la trampa, resultado y si tuvo foto.
-- [ ] Premios de la entrega a partir del mérito (S-102): "MVP" (más mérito), "Rescatista", "Desactivador",
+- [x] (commit `909a662`) Una fila por casa con ícono de la trampa, resultado y si tuvo foto.
+- [x] (commit `909a662`) Premios de la entrega a partir del mérito (S-102): "MVP" (más mérito), "Rescatista", "Desactivador",
   "Mano firme". Con el color de cada jugador.
-- [ ] Barra de progreso hacia el próximo desbloqueo: "Te faltan 2 entregas y 120 pts para Explosivo".
-- [ ] Evento de ruta de la partida y cómo terminó.
-- [ ] Test en `test_score_breakdown.gd` / `test_hud_flow.gd`.
+- [x] (commit `909a662`) Barra de progreso hacia el próximo desbloqueo: "Te faltan 2 entregas y 120 pts para Explosivo".
+- [x] (commit `909a662`) Evento de ruta de la partida y cómo terminó.
+- [x] (commit `909a662`) Test en `test_score_breakdown.gd` / `test_hud_flow.gd`.
 
 ### S-509 · Idioma inglés — A (para lanzar) · `Sol · high` para extraer, `Luna · medium` para traducir · Aviso: sí (`project.godot`)
 
