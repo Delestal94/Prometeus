@@ -97,7 +97,7 @@ func _run() -> void:
 	_aim(Vector3(-6.2, 1.4, -0.6), Vector3(-2.1, 0.9, -0.9))
 	await _save("jump_pickup_midclip")
 	for player: Node3D in _players:
-		var anim: AnimationPlayer = player.get(&"_anim_player")
+		var anim: AnimationPlayer = player.get(&"animator").anim_player
 		anim.speed_scale = 1.0
 		player.set(&"anim_state", &"Idle")
 
@@ -214,7 +214,7 @@ func _ground(point: Vector3) -> Vector3:
 
 
 func _freeze_clip(player: Node3D, at_seconds: float) -> void:
-	var anim: AnimationPlayer = player.get(&"_anim_player")
+	var anim: AnimationPlayer = player.get(&"animator").anim_player
 	anim.seek(at_seconds, true)
 	anim.speed_scale = 0.0
 

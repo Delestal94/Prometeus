@@ -39,6 +39,22 @@ antes de seguir con cualquier archivo listado acá.
   planificador estático a `route_planner.gd` (`RoutePlanner.plan_spine()` y sus constantes
   `LEG_*`, `QUIET_ZONE`, `MOMENT_SPACING`…) y las primitivas de construcción a `route_props.gd`.
   `Route.plan_spine()`, `leg_target_length()` y `crew_house_count()` siguen existiendo (delegan).
+- **Jugador (fase 4, dominio Slatex, autorizado por el usuario):** `player.gd` (1191 → 925 líneas).
+  **Si tenés cambios sin subir en `player.gd`, hacé `git pull --rebase` antes de seguir.**
+  - La animación pasó a `player_animator.gd` (`PlayerAnimator`, en `player.animator`): la máquina
+    de estados del dueño (`update_movement()`, `update_jump()`, `play_one_shot()`,
+    `measure_turn_rate()`, `movement_state()`) y la reproducción en cada peer (`animate()`,
+    `pickup_clip()`, `blend_clips()`). `anim_state`, `jump_anim_time` y `locomotion_speed` siguen en
+    el jugador (los replica el `MultiplayerSynchronizer`). Las constantes de marcha/giro/pickup
+    (`WALK_AUTHORED_SPEED`, `TURN_STEP_*`, `PICKUP_BLEND_*`, `IDLE_BELOW_SPEED`) son de `PlayerAnimator`;
+    los nombres de clip `ANIM_*` y los `*_LOCK_MS` siguen en `Player`.
+  - Buscar esqueleto/AnimationPlayer/mesh, capas, sombras y teñido de la remera pasaron a
+    `player_appearance.gd` (`PlayerAppearance`, estático). `_apply_cosmetic()` decide el color y
+    llama a `PlayerAppearance.tint_shirt()`.
+  - `PlayerCarry`, `PlayerInteraction` y `PlayerSeatPose` tipan `var player: Player`: un acceso a
+    algo que no existe ahora es error de compilación, no de ejecución.
+  - Tests actualizados: `test_player_character`, `test_character_motion`, `render_player_character`,
+    `render_character_faces`.
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 

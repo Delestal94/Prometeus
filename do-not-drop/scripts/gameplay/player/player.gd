@@ -81,40 +81,26 @@ const ANIM_PICKUP: StringName = &"PickUpPackage"
 ## PickUpPackage squats to the floor; PickUpHigh takes a box at the waist
 ## without squatting. Same length and grab/lift times, so a pickup plays a
 ## blend of both weighted by where the hands meet the box (pickup_high_weight)
-## -- built once per weight step into PICKUP_BLEND_LIBRARY. Heights are the
+## -- built once per weight step into PlayerAnimator.PICKUP_BLEND_LIBRARY. Heights are the
 ## wrists at the grab in each clip, above the feet (animation_library.py
 ## PICKUP_GRAB_Z x 0.5 m/BU).
 const ANIM_PICKUP_HIGH: StringName = &"PickUpHigh"
 const PICKUP_LOW_GRIP: float = 0.51
 const PICKUP_HIGH_GRIP: float = 0.925
-const PICKUP_BLEND_STEPS: int = 8
-const PICKUP_BLEND_LIBRARY: StringName = &"pickup_blend"
 ## Played by every peer while seat_node_path is set -- it's derived from that
 ## replicated path, not from anim_state, so it needs no sync of its own.
 const ANIM_SIT: StringName = &"Sit"
 ## Presentation-only gait under Walk: a real walk for partial stick input.
 ## anim_state still says Walk; each peer picks the gait from the replicated
-## locomotion_speed (_gait_clip()), so it needs no sync of its own.
+## locomotion_speed (PlayerAnimator), so it needs no sync of its own.
 const ANIM_STROLL: StringName = &"Stroll"
-## Speeds (m/s) the gait clips were authored at: played at speed / this, the
-## planted feet keep pace with the ground.
-const WALK_AUTHORED_SPEED: float = 3.6
-const STROLL_AUTHORED_SPEED: float = 1.5
-## Hysteresis between the gaits, so a stick held near one speed doesn't flicker.
-const STROLL_BELOW: float = 2.2
-const WALK_ABOVE: float = 2.6
 ## Small steps in place while the player turns standing still (the whole
 ## body rotates with the look yaw; without this the feet swivelled on the
-## spot). The owner picks it in _update_movement_anim() from its own look
+## spot). The owner picks it (PlayerAnimator.update_movement()) from its own look
 ## turn rate, so it reaches the other peers through anim_state. Rates in
 ## rad/s, smoothed; hysteresis so a mouse flick doesn't flicker it. Turning
 ## with the truck the player rides in doesn't count: the floor turns too.
 const ANIM_TURN: StringName = &"TurnInPlace"
-const TURN_STEP_ABOVE: float = 1.5
-const TURN_STEP_BELOW: float = 0.8
-const TURN_RATE_SMOOTHING: float = 10.0
-## Under this ground speed (m/s) the player stands (Idle), over it walks.
-const IDLE_BELOW_SPEED: float = 0.3
 ## Driver IK chain on the rounded character's skeleton (glTF bone names).
 const DRIVER_ARM_BONES: Dictionary = {
 	-1.0: [&"upper_arm.L", &"hand.L"],
@@ -126,25 +112,19 @@ const DRIVER_ARM_BONES: Dictionary = {
 const JUMP_ANIM_LOCK_MS: int = 1500
 const PICKUP_ANIM_LOCK_MS: int = 1550
 var _body_visual: Node3D = null
-var _anim_player: AnimationPlayer = null
 ## Replicated (see player.tscn) so every peer's own copy of this player's
 ## AnimationPlayer plays the same clip -- movement/jump/pickup state is only
 ## ever computed on the owning peer (is_local()), same authority split as
 ## seat_node_path above.
 var anim_state: StringName = ANIM_IDLE
+## Picks anim_state (owner) and plays it (every peer); see PlayerAnimator.
+var animator: PlayerAnimator
 ## Presentation state authored by the owning peer, replicated with anim_state.
-## Scales the gait clips (see WALK_AUTHORED_SPEED); jump samples the real
+## Scales the gait clips (see PlayerAnimator.WALK_AUTHORED_SPEED); jump samples the real
 ## ascent/landing instead of playing a crouch after leaving the floor.
 var locomotion_speed: float = 0.0
-var _strolling: bool = false
-## Look yaw applied since the last physics tick, and its smoothed rate (rad/s).
-var _turn_yaw: float = 0.0
 var turn_rate: float = 0.0
-## Last jump_anim_time seen here, to catch the touchdown (0.9) on every peer.
-var _seen_jump_time: float = 0.0
 var jump_anim_time: float = 0.0
-var _jump_airborne: bool = false
-var _jump_landing_elapsed: float = -1.0
 var _carry_pose: Node3D
 var _pickup_elapsed: float = 2.0
 var _pickup_from: Transform3D = Transform3D.IDENTITY
@@ -161,10 +141,6 @@ var face_mouth: StringName = FaceCatalog.DEFAULT_MOUTH:
 	set(value):
 		face_mouth = FaceCatalog.valid_mouth(value)
 		_apply_face()
-## While in the future (Time.get_ticks_msec()), a one-shot clip (Jump,
-## PickUpPackage) is playing and the per-frame movement state (Idle/Walk)
-## must not stomp over it.
-var _anim_lock_until_msec: int = 0
 var _bob_time: float = 0.0
 var _bob_amount: float = 0.0
 var _interact_was_down: bool = false
@@ -315,34 +291,19 @@ func _build_body() -> void:
 	visual.name = "BodyVisual"
 	add_child(visual)
 	_body_visual = visual
-	_enable_character_shadows(visual)
+	PlayerAppearance.enable_shadows(visual)
 
-	_set_body_layers(visual, RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
+	PlayerAppearance.set_layers(visual, RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 	_apply_cosmetic()
 	_character_face = CharacterFace.new()
-	_character_face.setup(visual, _find_skeleton(visual), RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
+	_character_face.setup(visual, PlayerAppearance.find_skeleton(visual), RenderLayers.LOCAL_BODY if is_local() else RenderLayers.WORLD)
 	_apply_face()
 
-	_anim_player = _find_animation_player(visual)
-	if _anim_player != null:
-		# The glTF importer doesn't carry Blender's "this clip loops" flag,
-		# so it's set here once instead of needing a manual editor step
-		# every time the source .blend is re-exported.
-		for loop_clip: StringName in [ANIM_IDLE, ANIM_WALK, ANIM_STROLL, ANIM_SIT, ANIM_TURN]:
-			if _anim_player.has_animation(loop_clip):
-				_anim_player.get_animation(loop_clip).loop_mode = Animation.LOOP_LINEAR
-		_anim_player.play(ANIM_IDLE)
+	animator = PlayerAnimator.new(self, PlayerAppearance.find_animation_player(visual), _character_face)
 	_carry_pose = CarryPose.new()
 	_carry_pose.name = "CarryPose"
 	add_child(_carry_pose)
-	_carry_pose.setup(self, _find_skeleton(visual))
-
-
-func _set_body_layers(node: Node, layers: int) -> void:
-	if node is VisualInstance3D:
-		(node as VisualInstance3D).layers = layers
-	for child: Node in node.get_children():
-		_set_body_layers(child, layers)
+	_carry_pose.setup(self, PlayerAppearance.find_skeleton(visual))
 
 
 func _apply_face() -> void:
@@ -358,14 +319,6 @@ func _sync_profile_appearance() -> void:
 		face_mouth = profile.selected_mouth
 
 
-func _enable_character_shadows(node: Node) -> void:
-	if node is GeometryInstance3D:
-		(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	for child: Node in node.get_children():
-		_enable_character_shadows(child)
-
-
-
 func _apply_cosmetic() -> void:
 	if _body_visual == null:
 		return
@@ -375,64 +328,7 @@ func _apply_cosmetic() -> void:
 	var color: Color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
 	if profile != null and not bool(profile.call(&"cosmetic_is_auto", cosmetic_id)):
 		color = profile.call(&"cosmetic_color", cosmetic_id)
-	var mesh_instance: MeshInstance3D = _find_mesh_instance(_body_visual)
-	if mesh_instance != null and mesh_instance.mesh != null:
-		# Surface 0 is the T-shirt; its collar/hem trim follows a shade darker.
-		for surface: int in mesh_instance.mesh.get_surface_count():
-			var source: Material = mesh_instance.mesh.surface_get_material(surface)
-			var tint: Color = color
-			if surface != 0:
-				if source == null or source.resource_name != "ShirtTrim":
-					continue
-				tint = color.darkened(0.18)
-			var suit_material := (source.duplicate() if source != null else StandardMaterial3D.new()) as StandardMaterial3D
-			suit_material.albedo_color = tint
-			mesh_instance.set_surface_override_material(surface, suit_material)
-
-
-func _find_mesh_instance(node: Node) -> MeshInstance3D:
-	if node is MeshInstance3D:
-		return node
-	for child: Node in node.get_children():
-		var found: MeshInstance3D = _find_mesh_instance(child)
-		if found != null:
-			return found
-	return null
-
-
-## Walk (a quick short-legged run) at full speed, Stroll for partial stick
-## input: the run played slowly reads as slow motion, not as walking.
-func _gait_clip() -> StringName:
-	if _strolling and locomotion_speed > WALK_ABOVE:
-		_strolling = false
-	elif not _strolling and locomotion_speed < STROLL_BELOW:
-		_strolling = true
-	return ANIM_STROLL if _strolling and _anim_player.has_animation(ANIM_STROLL) else ANIM_WALK
-
-
-## Both gaits start on the left foot's touchdown, so switching between them
-## keeps the cycle phase: the feet carry on instead of skating to a new step.
-func _play_clip(clip: StringName) -> void:
-	var gaits: Array[String] = [String(ANIM_WALK), String(ANIM_STROLL)]
-	var phase: float = -1.0
-	if _anim_player.current_animation in gaits and String(clip) in gaits:
-		phase = _anim_player.current_animation_position / maxf(_anim_player.current_animation_length, 0.001)
-	# A pickup whose height arrives late (anim_state replicated before the
-	# pick_up RPC) swaps blends in place instead of restarting the squat.
-	var pickup_time: float = -1.0
-	if _is_pickup_clip(StringName(_anim_player.current_animation)) and _is_pickup_clip(clip):
-		pickup_time = _anim_player.current_animation_position
-	# Idle <-> TurnInPlace blend a little longer: a step cut short settles.
-	var turn_blend: bool = clip == ANIM_TURN or _anim_player.current_animation == String(ANIM_TURN)
-	_anim_player.play(String(clip), 0.2 if phase >= 0.0 or turn_blend else 0.15)
-	if phase >= 0.0:
-		_anim_player.seek(phase * _anim_player.current_animation_length)
-	elif pickup_time >= 0.0:
-		_anim_player.seek(pickup_time)
-
-
-func _is_pickup_clip(clip: StringName) -> bool:
-	return clip == ANIM_PICKUP or clip == ANIM_PICKUP_HIGH or String(clip).begins_with(String(PICKUP_BLEND_LIBRARY) + "/")
+	PlayerAppearance.tint_shirt(_body_visual, color)
 
 
 ## How much of PickUpHigh a pickup plays, from the height above the feet at
@@ -446,73 +342,6 @@ func pickup_high_weight_for_package(package: Node3D) -> float:
 	var half: Vector3 = package.call(&"get_half_extents") if package.has_method(&"get_half_extents") else Vector3.ONE * 0.325
 	var grip: float = package.global_position.y + minf(half.y * 0.65, 0.16)
 	return pickup_high_weight_for(grip - global_position.y)
-
-
-## The pickup clip for pickup_high_weight: either authored clip at the ends,
-## a baked blend of both in between (quantised, so at most a handful exist).
-func _pickup_clip() -> StringName:
-	var step: int = roundi(pickup_high_weight * PICKUP_BLEND_STEPS)
-	if step <= 0 or not _anim_player.has_animation(ANIM_PICKUP_HIGH):
-		return ANIM_PICKUP
-	if step >= PICKUP_BLEND_STEPS:
-		return ANIM_PICKUP_HIGH
-	var blend_name := StringName("%s/%d" % [PICKUP_BLEND_LIBRARY, step])
-	if not _anim_player.has_animation(blend_name):
-		if not _anim_player.has_animation_library(PICKUP_BLEND_LIBRARY):
-			_anim_player.add_animation_library(PICKUP_BLEND_LIBRARY, AnimationLibrary.new())
-		var blended: Animation = blend_clips(_anim_player.get_animation(ANIM_PICKUP),
-			_anim_player.get_animation(ANIM_PICKUP_HIGH), float(step) / PICKUP_BLEND_STEPS)
-		_anim_player.get_animation_library(PICKUP_BLEND_LIBRARY).add_animation(StringName(str(step)), blended)
-	return blend_name
-
-
-## low blended toward high by weight, bone by bone, sampled at 30 Hz (the
-## export's rate). Tracks high lacks, and non-transform tracks, come from low.
-static func blend_clips(low: Animation, high: Animation, weight: float) -> Animation:
-	var out := Animation.new()
-	out.length = low.length
-	var frames: int = ceili(low.length * 30.0)
-	for track: int in low.get_track_count():
-		var type: Animation.TrackType = low.track_get_type(track)
-		var other: int = high.find_track(low.track_get_path(track), type)
-		var index: int = out.add_track(type)
-		out.track_set_path(index, low.track_get_path(track))
-		out.track_set_interpolation_type(index, low.track_get_interpolation_type(track))
-		var transform_track: bool = type in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D, Animation.TYPE_SCALE_3D]
-		if other < 0 or not transform_track:
-			for key: int in low.track_get_key_count(track):
-				out.track_insert_key(index, low.track_get_key_time(track, key), low.track_get_key_value(track, key))
-			continue
-		for frame: int in frames + 1:
-			var t: float = minf(frame / 30.0, low.length)
-			match type:
-				Animation.TYPE_POSITION_3D:
-					out.position_track_insert_key(index, t, low.position_track_interpolate(track, t).lerp(high.position_track_interpolate(other, t), weight))
-				Animation.TYPE_ROTATION_3D:
-					out.rotation_track_insert_key(index, t, low.rotation_track_interpolate(track, t).slerp(high.rotation_track_interpolate(other, t), weight))
-				Animation.TYPE_SCALE_3D:
-					out.scale_track_insert_key(index, t, low.scale_track_interpolate(track, t).lerp(high.scale_track_interpolate(other, t), weight))
-	return out
-
-
-func _find_animation_player(node: Node) -> AnimationPlayer:
-	if node is AnimationPlayer:
-		return node
-	for child: Node in node.get_children():
-		var found: AnimationPlayer = _find_animation_player(child)
-		if found != null:
-			return found
-	return null
-
-
-func _find_skeleton(node: Node) -> Skeleton3D:
-	if node is Skeleton3D:
-		return node
-	for child: Node in node.get_children():
-		var found: Skeleton3D = _find_skeleton(child)
-		if found != null:
-			return found
-	return null
 
 
 func is_local() -> bool:
@@ -561,33 +390,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## need authority the way movement/input do.
 func _process(delta: float) -> void:
 	_flinch_time = maxf(_flinch_time - delta, 0.0)
-	# Runs for every peer's copy of this player, local or not -- anim_state
-	# is only ever written by the owning peer (see _update_movement_anim()
-	# and pick_up() below) and reaches everyone else through the
-	# MultiplayerSynchronizer, same as seat_node_path.
-	var clip: StringName = anim_state if seat_node_path.is_empty() else ANIM_SIT
-	if _anim_player != null and clip == ANIM_WALK:
-		clip = _gait_clip()
-	elif _anim_player != null and clip == ANIM_PICKUP:
-		clip = _pickup_clip()
-	elif _anim_player != null and clip == ANIM_TURN and not _anim_player.has_animation(ANIM_TURN):
-		clip = ANIM_IDLE
-	if _anim_player != null and _anim_player.current_animation != String(clip):
-		_play_clip(clip)
-	if _anim_player != null:
-		if clip == ANIM_JUMP:
-			_anim_player.speed_scale = 0.0
-			_anim_player.seek(jump_anim_time, true)
-			# The eyes squeeze shut as the landing's squash hits.
-			if jump_anim_time >= 0.9 and _seen_jump_time < 0.9 and _character_face != null:
-				_character_face.blink()
-			_seen_jump_time = jump_anim_time
-		elif clip == ANIM_WALK:
-			_anim_player.speed_scale = clampf(locomotion_speed / WALK_AUTHORED_SPEED, 0.5, 1.5)
-		elif clip == ANIM_STROLL:
-			_anim_player.speed_scale = clampf(locomotion_speed / STROLL_AUTHORED_SPEED, 0.2, 1.6)
-		else:
-			_anim_player.speed_scale = 1.0
+	animator.animate()
 	if not is_local():
 		_apply_net_state()
 	elif not _seated:
@@ -800,7 +603,7 @@ func _physics_process(delta: float) -> void:
 		# requested jump impulse instead of immediately overwriting it.
 		if Input.is_action_just_pressed(&"jump"):
 			velocity.y = JUMP_VELOCITY
-			_play_one_shot(ANIM_JUMP, JUMP_ANIM_LOCK_MS)
+			animator.play_one_shot(ANIM_JUMP, JUMP_ANIM_LOCK_MS)
 		else:
 			velocity.y = -0.2
 	else:
@@ -809,9 +612,9 @@ func _physics_process(delta: float) -> void:
 	_update_ground_safety()
 	var ground_speed: float = Vector2(velocity.x, velocity.z).length()
 	locomotion_speed = ground_speed
-	_update_jump_animation(delta, ground_speed)
+	animator.update_jump(delta, ground_speed)
 	_apply_head_bob(delta, ground_speed)
-	_update_movement_anim(ground_speed)
+	animator.update_movement(ground_speed, _pickup_elapsed)
 	_apply_context_fov(delta)
 	if carried_package != null:
 		_update_carried_package()
@@ -874,7 +677,7 @@ func _apply_look(motion: Vector2) -> void:
 	motion.x *= sensitivity
 	motion.y *= sensitivity * y_sign
 	rotate_y(-motion.x)
-	_turn_yaw += motion.x
+	animator.add_look_yaw(motion.x)
 	_pitch = clampf(_pitch - motion.y, -PITCH_LIMIT, PITCH_LIMIT)
 	_head.rotation.x = _pitch
 
@@ -893,75 +696,6 @@ func _apply_head_bob(delta: float, ground_speed: float) -> void:
 	# Always write the offset so it eases back to eye height after stopping or
 	# jumping; previously it could freeze at the final high/low bob position.
 	_camera.position.y = sin(_bob_time * TAU) * BOB_AMPLITUDE * _bob_amount
-
-
-## Idle/Walk while on foot, unless a one-shot (Jump, PickUpPackage) locked
-## anim_state a moment ago -- checked every physics frame but only actually
-## writes (and re-replicates) anim_state when the target state changes.
-func _update_movement_anim(ground_speed: float) -> void:
-	_measure_turn_rate(get_physics_process_delta_time())
-	# An interrupted pickup must not make a moving player slide on its
-	# planted crouch. The package lift and hand contact continue independently.
-	if anim_state == ANIM_PICKUP and ground_speed > 0.3 and _pickup_elapsed > 0.16:
-		_anim_lock_until_msec = 0
-	if anim_state == ANIM_JUMP and _jump_airborne:
-		return
-	if Time.get_ticks_msec() < _anim_lock_until_msec:
-		return
-	var next_state: StringName = movement_state(ground_speed, is_on_floor(), turn_rate, anim_state == ANIM_TURN)
-	if anim_state != next_state:
-		anim_state = next_state
-
-
-## Walk when moving on the floor; standing, TurnInPlace while turning faster
-## than TURN_STEP_ABOVE (until it drops under TURN_STEP_BELOW), else Idle.
-static func movement_state(ground_speed: float, on_floor: bool, rate: float, turning: bool) -> StringName:
-	if ground_speed > IDLE_BELOW_SPEED and on_floor:
-		return ANIM_WALK
-	if on_floor and rate > (TURN_STEP_BELOW if turning else TURN_STEP_ABOVE):
-		return ANIM_TURN
-	return ANIM_IDLE
-
-
-## The yaw rate of this body (which carries BodyVisual) from the look input
-## since the last tick, smoothed: mouse motion lands in bursts between ticks.
-func _measure_turn_rate(delta: float) -> void:
-	if delta <= 0.0:
-		return
-	var rate: float = absf(_turn_yaw) / delta
-	_turn_yaw = 0.0
-	turn_rate = lerpf(turn_rate, rate, 1.0 - exp(-TURN_RATE_SMOOTHING * delta))
-
-
-func _play_one_shot(clip: StringName, lock_ms: int) -> void:
-	anim_state = clip
-	_anim_lock_until_msec = Time.get_ticks_msec() + lock_ms
-	if clip == ANIM_JUMP:
-		_jump_airborne = true
-		_jump_landing_elapsed = -1.0
-		jump_anim_time = 0.0
-
-
-func _update_jump_animation(delta: float, ground_speed: float) -> void:
-	if anim_state != ANIM_JUMP:
-		# Also pose an unplanned fall from a ledge, without changing physics.
-		if not is_on_floor() and velocity.y < -1.0 and anim_state != ANIM_PICKUP:
-			_play_one_shot(ANIM_JUMP, JUMP_ANIM_LOCK_MS)
-		else:
-			return
-	if not is_on_floor():
-		_jump_airborne = true
-		_jump_landing_elapsed = -1.0
-		if velocity.y >= 0.0:
-			jump_anim_time = lerpf(0.0, 0.4, clampf(1.0 - velocity.y / JUMP_VELOCITY, 0.0, 1.0))
-		else:
-			jump_anim_time = lerpf(0.4, 0.84, clampf(-velocity.y / JUMP_VELOCITY, 0.0, 1.0))
-	else:
-		_jump_landing_elapsed = maxf(_jump_landing_elapsed, 0.0) + delta
-		jump_anim_time = minf(1.6, 0.9 + _jump_landing_elapsed)
-		if _jump_landing_elapsed >= (0.24 if ground_speed > 0.3 else 0.65):
-			_jump_airborne = false
-			_anim_lock_until_msec = 0
 
 
 func _apply_context_fov(delta: float) -> void:
@@ -1115,7 +849,7 @@ func receive_package_hit(push: Vector3) -> void:
 	_flinch_time = 0.32
 	velocity += push + Vector3.UP * 1.4
 	if is_local():
-		_play_one_shot(ANIM_JUMP, 420)
+		animator.play_one_shot(ANIM_JUMP, 420)
 	if push.length() >= 2.2:
 		_activate_ragdoll(push)
 
