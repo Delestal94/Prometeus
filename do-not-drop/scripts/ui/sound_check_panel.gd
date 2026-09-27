@@ -37,8 +37,8 @@ func _build() -> void:
 	add_child(center)
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(720, 0), 26)
 	column.add_theme_constant_override("separation", 12)
-	UiTheme.title(column, "Sonidos del juego", 32)
-	var help: Label = UiTheme.label(column, "Silenciá uno por uno hasta que deje de sonar lo que molesta. Mientras esta pantalla está abierta el juego sigue sonando aunque esté en pausa. Lo que silencies queda así hasta cerrar el juego.", 15, UiTheme.MUTED)
+	UiTheme.title(column, tr("UI_SOUND_TITLE"), 32)
+	var help: Label = UiTheme.label(column, tr("UI_SOUND_HELP"), 15, UiTheme.MUTED)
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help.custom_minimum_size.x = 660
 
@@ -50,19 +50,19 @@ func _build() -> void:
 	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_theme_constant_override("separation", 6)
 	scroll.add_child(_list)
-	_empty_note = UiTheme.label(_list, "No hay sonidos cargados. Abrí esta pantalla desde la pausa, jugando, parado donde se escucha el ruido.", 15, UiTheme.MUTED)
+	_empty_note = UiTheme.label(_list, tr("UI_SOUND_EMPTY"), 15, UiTheme.MUTED)
 	_empty_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
 	column.add_child(actions)
-	var back: Button = UiTheme.button(actions, "Volver", true)
+	var back: Button = UiTheme.button(actions, tr("UI_BACK"), true)
 	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back.pressed.connect(close)
-	UiTheme.button(actions, "Silenciar todos", false).pressed.connect(func() -> void:
+	UiTheme.button(actions, tr("UI_SOUND_MUTE_ALL"), false).pressed.connect(func() -> void:
 		Audit.mute_all(get_tree())
 		_refresh())
-	UiTheme.button(actions, "Activar todos", false).pressed.connect(func() -> void:
+	UiTheme.button(actions, tr("UI_SOUND_UNMUTE_ALL"), false).pressed.connect(func() -> void:
 		Audit.unmute_all(get_tree())
 		_refresh())
 
@@ -115,10 +115,10 @@ func _refresh() -> void:
 			state.text = "silenciado"
 			state.add_theme_color_override("font_color", UiTheme.MUTED)
 		elif int(group.playing) > 0:
-			state.text = "SONANDO" if int(group.playing) == 1 else "SONANDO ×%d" % int(group.playing)
+			state.text = tr("UI_SOUND_PLAYING") if int(group.playing) == 1 else tr("UI_SOUND_PLAYING_MANY") % int(group.playing)
 			state.add_theme_color_override("font_color", UiTheme.RED)
 		else:
-			state.text = "en espera"
+			state.text = tr("UI_SOUND_IDLE")
 			state.add_theme_color_override("font_color", UiTheme.MUTED)
 		(row.mute as CheckBox).set_pressed_no_signal(muted)
 
@@ -135,13 +135,13 @@ func _rebuild(groups: Array[Dictionary]) -> void:
 		state.custom_minimum_size.x = 110
 		var name_label: Label = UiTheme.label(line, String(group.label), 16, UiTheme.INK)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_label.tooltip_text = "Bus: %s" % group.bus
+		name_label.tooltip_text = tr("UI_SOUND_BUS") % group.bus
 		UiTheme.label(line, String(group.bus), 12, UiTheme.MUTED).custom_minimum_size.x = 70
-		var mute: CheckBox = UiTheme.check_box(line, "Silenciar", false)
+		var mute: CheckBox = UiTheme.check_box(line, tr("UI_SOUND_MUTE"), false)
 		mute.toggled.connect(func(pressed: bool, key: String = group.key) -> void:
 			Audit.set_muted(get_tree(), key, pressed)
 			_refresh())
-		var solo: Button = UiTheme.button(line, "Solo", false, Vector2(80, 36))
+		var solo: Button = UiTheme.button(line, tr("UI_SOUND_SOLO"), false, Vector2(80, 36))
 		solo.pressed.connect(func(key: String = group.key) -> void:
 			Audit.solo(get_tree(), key)
 			_refresh())

@@ -79,15 +79,15 @@ void fragment() {
 
 enum Page { HOME, PLAY, JOIN, GARAGE }
 const CONNECTION_ERROR_TEXT: Dictionary = {
-	"version": "El anfitrión tiene otra versión del juego: actualicen los dos.",
-	"timeout": "No hubo respuesta en 8 s. Revisá la IP y que el firewall de Windows permita Take My Package.",
-	"full": "La sala está llena.",
-	"connection": "No se pudo completar la conexión. Revisá la dirección e intentá de nuevo.",
+	"version": "UI_MENU_ERROR_VERSION",
+	"timeout": "UI_MENU_ERROR_TIMEOUT",
+	"full": "UI_MENU_ERROR_FULL",
+	"connection": "UI_MENU_ERROR_CONNECTION",
 }
 const PAGE_TITLES: Dictionary = {
-	Page.HOME: "¿LISTOS PARA REPARTIR?",
-	Page.PLAY: "¿CÓMO SALIMOS HOY?",
-	Page.JOIN: "UNIRSE A UNA SALA",
+	Page.HOME: "UI_MENU_PAGE_HOME",
+	Page.PLAY: "UI_MENU_PAGE_PLAY",
+	Page.JOIN: "UI_MENU_PAGE_JOIN",
 	Page.GARAGE: "GARAJE",
 }
 ## Where "Volver" (and Esc / B) lead from each sub-page.
@@ -233,9 +233,9 @@ func _build_brand() -> void:
 	var chips := HBoxContainer.new()
 	chips.add_theme_constant_override("separation", 10)
 	brand.add_child(chips)
-	UiTheme.tag(chips, "DELIVERY COOPERATIVO", MINT, -2.0, 16)
-	UiTheme.tag(chips, "1 A 5 JUGADORES", UiTheme.SKY, 1.5, 16)
-	var stamp: Label = UiTheme.tag(brand, "¡NO LO DEJES CAER!", RED, -5.0, 18)
+	UiTheme.tag(chips, tr("UI_MENU_TAG_COOP"), MINT, -2.0, 16)
+	UiTheme.tag(chips, tr("UI_MENU_TAG_PLAYERS"), UiTheme.SKY, 1.5, 16)
+	var stamp: Label = UiTheme.tag(brand, tr("UI_MENU_TAG_DONT_DROP"), RED, -5.0, 18)
 	stamp.get_parent().size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
 
@@ -262,7 +262,7 @@ func _build_card() -> VBoxContainer:
 		style.shadow_size = 0
 		_card.add_theme_stylebox_override("panel", style)
 		_card.item_rect_changed.connect(_fit_frost)
-	_page_title = UiTheme.tag(column, PAGE_TITLES[Page.HOME], UiTheme.YELLOW, -1.5, 17)
+	_page_title = UiTheme.tag(column, tr(PAGE_TITLES[Page.HOME]), UiTheme.YELLOW, -1.5, 17)
 	_spacer(column, 2)
 	return column
 
@@ -270,48 +270,48 @@ func _build_card() -> VBoxContainer:
 ## Returns the buttons the overlays opened from here give focus back to.
 func _build_home_page(column: VBoxContainer) -> Dictionary:
 	var home: VBoxContainer = _add_page(column, Page.HOME)
-	_play_button = UiTheme.button(home, "¡JUGAR!", true, Vector2(0, 78))
+	_play_button = UiTheme.button(home, tr("UI_MENU_PLAY"), true, Vector2(0, 78))
 	_play_button.add_theme_font_size_override("font_size", 34)
 	_play_button.pressed.connect(_show_page.bind(Page.PLAY))
 	_entry_buttons.append(_play_button)
 	_page_focus[Page.HOME] = _play_button
-	var garage_button: Button = _button(home, "Garaje", false)
+	var garage_button: Button = _button(home, tr("UI_MENU_GARAGE"), false)
 	garage_button.pressed.connect(_show_page.bind(Page.GARAGE))
 	_entry_buttons.append(garage_button)
-	_label(home, "Apariencia, progreso y récords", 14, MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label(home, tr("UI_MENU_GARAGE_HINT"), 14, MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_spacer(home, 8)
 	# The quiet row: smaller, so nothing here competes with ¡JUGAR!.
 	var bottom_row := HBoxContainer.new()
 	bottom_row.add_theme_constant_override("separation", 10)
 	home.add_child(bottom_row)
-	var options_button: Button = _small_button(bottom_row, "Opciones")
+	var options_button: Button = _small_button(bottom_row, tr("UI_OPTIONS"))
 	options_button.pressed.connect(_open_options)
 	_entry_buttons.append(options_button)
-	var tutorial_button: Button = _small_button(bottom_row, "Cómo jugar")
+	var tutorial_button: Button = _small_button(bottom_row, tr("UI_HOW_TO_PLAY"))
 	tutorial_button.pressed.connect(_open_tutorial)
 	_entry_buttons.append(tutorial_button)
 	# A game you can only leave with Alt+F4 reads as unfinished before a
 	# player has pressed anything (docs/critica-diseno-abogado-del-diablo.md
 	# section 4).
-	var quit_button: Button = _small_button(bottom_row, "Salir")
+	var quit_button: Button = _small_button(bottom_row, tr("UI_MENU_QUIT"))
 	quit_button.pressed.connect(_quit_game)
 	return {"options": options_button, "tutorial": tutorial_button}
 
 
 func _build_play_page(column: VBoxContainer) -> void:
 	var play: VBoxContainer = _add_page(column, Page.PLAY)
-	var solo_button: Button = UiTheme.button(play, "Jugar solo", true, Vector2(0, 62))
+	var solo_button: Button = UiTheme.button(play, tr("UI_MENU_SOLO"), true, Vector2(0, 62))
 	solo_button.add_theme_font_size_override("font_size", 26)
 	solo_button.pressed.connect(_play_solo)
 	_entry_buttons.append(solo_button)
 	_page_focus[Page.PLAY] = solo_button
-	_entry_buttons.append(_button(play, "Modo Endless", false))
+	_entry_buttons.append(_button(play, tr("UI_MENU_ENDLESS"), false))
 	_entry_buttons[-1].pressed.connect(_play_endless)
 	_spacer(play, 4)
-	_label(play, "Con amigos", 15, MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_entry_buttons.append(_button(play, "Crear sala", false))
+	_label(play, tr("UI_MENU_WITH_FRIENDS"), 15, MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_entry_buttons.append(_button(play, tr("UI_MENU_HOST"), false))
 	_entry_buttons[-1].pressed.connect(_host_session)
-	_entry_buttons.append(_button(play, "Unirse a una sala", false))
+	_entry_buttons.append(_button(play, tr("UI_MENU_JOIN"), false))
 	_entry_buttons[-1].pressed.connect(_show_page.bind(Page.JOIN))
 	_back_button(play)
 
@@ -320,20 +320,20 @@ func _build_join_page(column: VBoxContainer) -> void:
 	var join: VBoxContainer = _add_page(column, Page.JOIN)
 	# INK, not MUTED: these are the page's instructions, and MUTED over the
 	# frosted art dropped to ~2.6:1 contrast.
-	for hint: String in ["Por Steam: aceptá la invitación de tu amigo desde la lista de amigos.",
-			"Por red local: la IP del anfitrión aparece en su pantalla."]:
+	for hint: String in [tr("UI_MENU_JOIN_STEAM_HINT"),
+			tr("UI_MENU_JOIN_LAN_HINT")]:
 		_label(join, hint, 15, UiTheme.INK).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var join_row := HBoxContainer.new()
 	join_row.add_theme_constant_override("separation", 10)
 	join.add_child(join_row)
-	_address_field = UiTheme.line_edit(join_row, "IP del anfitrión")
+	_address_field = UiTheme.line_edit(join_row, tr("UI_MENU_HOST_IP"))
 	_address_field.text = GameSettings.last_join_address
 	_address_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Enter in the field is the obvious way to confirm an address; it used
 	# to do nothing and leave the player hunting for the button.
 	_address_field.text_submitted.connect(func(_text: String) -> void: _join_by_address())
 	_page_focus[Page.JOIN] = _address_field
-	_entry_buttons.append(_button(join_row, "Unirse", true))
+	_entry_buttons.append(_button(join_row, tr("UI_MENU_JOIN_BUTTON"), true))
 	_entry_buttons[-1].pressed.connect(_join_by_address)
 	_back_button(join)
 
@@ -341,14 +341,14 @@ func _build_join_page(column: VBoxContainer) -> void:
 ## Returns the buttons the overlays opened from here give focus back to.
 func _build_garage_page(column: VBoxContainer) -> Dictionary:
 	var garage: VBoxContainer = _add_page(column, Page.GARAGE)
-	var cosmetics_button: Button = _button(garage, "Apariencia", false)
+	var cosmetics_button: Button = _button(garage, tr("UI_APPEARANCE"), false)
 	cosmetics_button.pressed.connect(_open_cosmetics)
 	_entry_buttons.append(cosmetics_button)
 	_page_focus[Page.GARAGE] = cosmetics_button
-	var progress_button: Button = _button(garage, "Progreso", false)
+	var progress_button: Button = _button(garage, tr("UI_PROGRESS"), false)
 	progress_button.pressed.connect(_open_progress)
 	_entry_buttons.append(progress_button)
-	var leaderboard_button: Button = _button(garage, "Récords", false)
+	var leaderboard_button: Button = _button(garage, tr("UI_RECORDS"), false)
 	leaderboard_button.pressed.connect(_open_leaderboard)
 	_entry_buttons.append(leaderboard_button)
 	_back_button(garage)
@@ -361,7 +361,7 @@ func _build_connection_status(column: VBoxContainer) -> void:
 	_status_label.visible = false
 	# Only while a connection is in flight: a join to a wrong IP used to
 	# leave every button dead until the timeout, with no way back out.
-	_cancel_button = _button(column, "Cancelar", false)
+	_cancel_button = _button(column, tr("UI_CANCEL"), false)
 	_cancel_button.pressed.connect(_cancel_connection)
 	_cancel_button.visible = false
 
@@ -369,7 +369,7 @@ func _build_connection_status(column: VBoxContainer) -> void:
 func _build_footer() -> void:
 	# The release job (N-210) stamps the tag into config/version before exporting.
 	var version: String = str(ProjectSettings.get_setting("application/config/version", "0.1.0"))
-	var footer: Label = UiTheme.chip(self, "Versión %s   ·   F11 pantalla completa" % version, UiTheme.WHITE, 14)
+	var footer: Label = UiTheme.chip(self, tr("UI_MENU_FOOTER") % version, UiTheme.WHITE, 14)
 	var footer_holder: Control = footer.get_parent()
 	footer_holder.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	footer_holder.offset_left = 24
@@ -463,7 +463,7 @@ func _add_page(column: VBoxContainer, page: Page) -> VBoxContainer:
 
 func _back_button(page: VBoxContainer) -> void:
 	_spacer(page, 4)
-	var back: Button = _small_button(page, "Volver")
+	var back: Button = _small_button(page, tr("UI_BACK"))
 	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	back.custom_minimum_size.x = 140
 	back.pressed.connect(func() -> void: _show_page(PAGE_PARENT[_page]))
@@ -474,7 +474,7 @@ func _show_page(page: Page, focus: bool = true) -> void:
 	_page = page
 	for key: Page in _pages:
 		(_pages[key] as Control).visible = key == page
-	_page_title.text = PAGE_TITLES[page]
+	_page_title.text = tr(PAGE_TITLES[page])
 	# A status from another page ("Conexión cancelada.") would read as being
 	# about this one; a failure the player hasn't seen yet stays.
 	if not _busy and _status_label.visible and _status_label.get_theme_color(&"font_color") != RED:
@@ -531,12 +531,12 @@ func _host_session(transport: int = NetworkManager.Transport.AUTO) -> void:
 		return
 	_show_page(Page.PLAY, false)
 	_busy = true
-	_set_status("Creando sala…", MUTED)
+	_set_status(tr("UI_MENU_STATUS_HOSTING"), MUTED)
 	NetworkManager.transport = transport
 	var error: Error = NetworkManager.host_session()
 	if error != OK:
 		_busy = false
-		_set_status("No se pudo crear la sala (error %d)." % error, RED)
+		_set_status(tr("UI_MENU_STATUS_HOST_FAILED") % error, RED)
 
 
 ## A friend's Steam room, from an accepted invite or "Unirse a la partida".
@@ -546,12 +546,12 @@ func join_steam_lobby(lobby: int) -> void:
 	# with the invite thrown away.
 	_show_page(Page.JOIN, false)
 	_busy = true
-	_set_status("Entrando a la sala de tu amigo…", MUTED)
+	_set_status(tr("UI_MENU_STATUS_JOINING_FRIEND"), MUTED)
 	NetworkManager.transport = NetworkManager.Transport.STEAM
 	var error: Error = NetworkManager.join_session(str(lobby))
 	if error != OK:
 		_busy = false
-		_set_status("No se pudo entrar a la sala (error %d)." % error, RED)
+		_set_status(tr("UI_MENU_STATUS_JOIN_FAILED") % error, RED)
 
 
 func _join_by_address() -> void:
@@ -560,10 +560,10 @@ func _join_by_address() -> void:
 	_show_page(Page.JOIN, false)
 	var address: String = _address_field.text.strip_edges()
 	if address.is_empty():
-		_set_status("Escribí la IP del anfitrión primero.", RED)
+		_set_status(tr("UI_MENU_STATUS_NEED_IP"), RED)
 		return
 	_busy = true
-	_set_status("Conectando a %s…" % address, MUTED)
+	_set_status(tr("UI_MENU_STATUS_CONNECTING") % address, MUTED)
 	# Typing an address only makes sense for ENet -- a Steam lobby is joined
 	# by id, not by IP, so AUTO would be the wrong choice here even if Steam
 	# happens to be running.
@@ -571,7 +571,7 @@ func _join_by_address() -> void:
 	var error: Error = NetworkManager.join_session(address)
 	if error != OK:
 		_busy = false
-		_set_status("No se pudo conectar (error %d)." % error, RED)
+		_set_status(tr("UI_MENU_STATUS_CONNECT_FAILED") % error, RED)
 
 
 ## The LAN address to share used to be printed here, one frame before the
@@ -580,7 +580,7 @@ func _join_by_address() -> void:
 func _on_session_ready(is_host: bool) -> void:
 	if not is_host:
 		GameSettings.last_join_address = _address_field.text
-	_set_status("Entrando…", MINT)
+	_set_status(tr("UI_MENU_STATUS_ENTERING"), MINT)
 	_go_to_level(NetworkManager.session_scene if not NetworkManager.session_scene.is_empty() else LEVEL_SCENE)
 
 
@@ -588,7 +588,7 @@ func _cancel_connection() -> void:
 	NetworkManager.leave_session()
 	NetworkManager.transport = NetworkManager.Transport.AUTO
 	_busy = false
-	_set_status("Conexión cancelada.", MUTED)
+	_set_status(tr("UI_MENU_STATUS_CANCELLED"), MUTED)
 	(_page_focus[_page] as Control).grab_focus()
 
 
@@ -599,7 +599,7 @@ func _on_session_failed(reason: String) -> void:
 
 
 static func connection_error_text(reason: String) -> String:
-	return String(CONNECTION_ERROR_TEXT.get(reason, reason))
+	return TranslationServer.translate(String(CONNECTION_ERROR_TEXT.get(reason, reason)))
 
 
 func _go_to_level(scene_path: String) -> void:

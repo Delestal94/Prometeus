@@ -205,7 +205,7 @@ package_drop={
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://translations/strings_world.es.translation", "res://translations/strings_world.en.translation")
+locale/translations=PackedStringArray("res://translations/strings_world.es.translation", "res://translations/strings_world.en.translation", "res://translations/strings_ui.es.translation", "res://translations/strings_ui.en.translation")
 
 [layer_names]
 

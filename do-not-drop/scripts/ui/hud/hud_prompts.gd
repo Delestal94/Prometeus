@@ -45,14 +45,14 @@ func refresh_shortcuts(delta: float = 0.0) -> void:
 
 func refresh_shortcut_text() -> void:
 	var items: PackedStringArray = [
-		hud.key_hint("F  celular", "LB  celular"),
-		hud.key_hint("Click rueda  ping", "D-pad arriba  ping"),
-		hud.key_hint("C  centrar vista", "Clic stick der.  centrar vista"),
-		hud.key_hint("%s  mirar atrás" % GameSettings.binding_label(&"look_back"), "Clic stick izq.  mirar atrás"),
-		hud.key_hint("Esc  pausa", "Start  pausa"),
+		hud.key_hint(tr("HUD_KEY_PHONE"), tr("HUD_PAD_PHONE")),
+		hud.key_hint(tr("HUD_KEY_PING"), tr("HUD_PAD_PING")),
+		hud.key_hint(tr("HUD_KEY_CENTER_VIEW"), tr("HUD_PAD_CENTER_VIEW")),
+		hud.key_hint(tr("HUD_KEY_LOOK_BACK") % GameSettings.binding_label(&"look_back"), tr("HUD_PAD_LOOK_BACK")),
+		hud.key_hint(tr("HUD_KEY_PAUSE"), tr("HUD_PAD_PAUSE")),
 	]
 	if can_restart():
-		items.append(hud.key_hint("Mantener R  reiniciar", "Mantener Y  reiniciar"))
+		items.append(hud.key_hint(tr("HUD_KEY_RESTART"), tr("HUD_PAD_RESTART")))
 	hud.shortcut_label.text = UiTheme.keycaps("   ·   ".join(items), true)
 
 
@@ -97,21 +97,21 @@ func _base_hint() -> String:
 	match _role:
 		Hud.Role.DRIVER:
 			if waiting:
-				return "Todavía no hay carga a bordo  ·  %s bajarte a buscar un paquete" % hud.key_hint("E", "A")
+				return tr("HUD_NO_CARGO_YET") % hud.key_hint("E", "A")
 			return hud.key_hint(
-				"W/S  acelerar y frenar   ·   A/D  girar   ·   Espacio  freno de mano   ·   H  bocina   ·   E  bajarte",
-				"RT  acelerar   ·   LT  frenar   ·   Stick izq.  girar   ·   X  freno de mano   ·   B  bocina   ·   A  bajarte")
+				tr("HUD_KEYS_DRIVER"),
+				tr("HUD_PAD_DRIVER"))
 		Hud.Role.PASSENGER:
 			return hud.key_hint(
-				"Click izq. (mantener)  cuidar tu paquete   ·   WASD  secuencias   ·   E  bajarte",
-				"RT (mantener)  cuidar tu paquete   ·   Stick izq.  secuencias   ·   A  bajarte")
+				tr("HUD_KEYS_PASSENGER"),
+				tr("HUD_PAD_PASSENGER"))
 	if waiting:
 		return hud.key_hint(
-			"WASD  caminar   ·   Espacio  saltar   ·   E  agarrar / dejar   ·   Q  soltar paquete",
-			"Stick izq.  caminar   ·   X  saltar   ·   A  agarrar / dejar")
+			tr("HUD_KEYS_ON_FOOT"),
+			tr("HUD_PAD_ON_FOOT"))
 	return hud.key_hint(
-		"WASD  caminar   ·   E  interactuar   ·   F  sacar una foto de la entrega",
-		"Stick izq.  caminar   ·   A  interactuar   ·   LB  sacar una foto de la entrega")
+		tr("HUD_KEYS_AT_HOUSE"),
+		tr("HUD_PAD_AT_HOUSE"))
 
 
 func _on_interaction_prompt(prompt: String) -> void:
@@ -129,11 +129,11 @@ func render_interaction_prompt() -> void:
 	if not hud.interaction_prompt.is_empty():
 		lines.append("[ %s ]  %s" % [hud.key_hint("E", "A"), hud.interaction_prompt])
 	if _carrying:
-		lines.append("[ %s ]  Soltar paquete" % hud.key_hint("Q", "B"))
+		lines.append(tr("HUD_PROMPT_DROP") % hud.key_hint("Q", "B"))
 	if not _lid_action.is_empty():
-		lines.append("[ %s ]  %s" % [hud.key_hint("T", "D-pad abajo"), _lid_action])
+		lines.append("[ %s ]  %s" % [hud.key_hint("T", tr("HUD_PAD_DOWN")), _lid_action])
 	if not _lid_inside.is_empty():
-		lines.append("Adentro:  %s" % _lid_inside)
+		lines.append(tr("HUD_PROMPT_INSIDE") % _lid_inside)
 	if not _sound_subtitle.is_empty():
 		lines.append(_sound_subtitle)
 	hud.interaction_label.text = "\n".join(lines)
@@ -152,14 +152,14 @@ func refresh_sound_subtitle() -> void:
 		if not package_id.is_empty() and hud.cargo_rows.has(package_id):
 			var trap_name: String = String(hud.cargo_rows[package_id]["name"]).to_upper()
 			subtitle = {
-				"EXPLOSIVO": "[tictac acelerando]",
-				"RUIDOSO": "[gruñido]",
-				"FRÁGIL": "[vidrio que cruje]",
-				"PESO CRECIENTE": "[madera que cruje]",
-				"LÍQUIDO": "[líquido agitándose]",
-				"HOSTIL": "[siseo amenazante]",
-				"EQUILIBRIO": "[carga crujiendo]",
-			}.get(trap_name, "[la carga cruje]")
+				"EXPLOSIVO": tr("HUD_SUB_EXPLOSIVE"),
+				"RUIDOSO": tr("HUD_SUB_NOISY"),
+				"FRÁGIL": tr("HUD_SUB_FRAGILE"),
+				"PESO CRECIENTE": tr("HUD_SUB_GROWING_WEIGHT"),
+				"LÍQUIDO": tr("HUD_SUB_LIQUID"),
+				"HOSTIL": tr("HUD_SUB_HOSTILE"),
+				"EQUILIBRIO": tr("HUD_SUB_BALANCE"),
+			}.get(trap_name, tr("HUD_SUB_DEFAULT"))
 	if subtitle != _sound_subtitle:
 		_sound_subtitle = subtitle
 		render_interaction_prompt()
@@ -172,12 +172,12 @@ func _on_lid_hint_changed(action: String, inside: String) -> void:
 
 
 func _on_damage(_id: StringName, damage: float) -> void:
-	_flash_hint("¡Golpe!  −%d de integridad. Bajá la velocidad antes del próximo obstáculo." % roundi(damage), 2.5)
+	_flash_hint(tr("HUD_HIT") % roundi(damage), 2.5)
 
 
 func _on_delivery(in_zone: bool, stopped: float) -> void:
 	if in_zone:
-		_flash_hint("Mantené la camioneta detenida…" if stopped > 0.0 else "¡Llegaste! Frená dentro de la zona marcada para entregar.", 0.25)
+		_flash_hint(tr("HUD_HOLD_STILL") if stopped > 0.0 else tr("HUD_ARRIVED"), 0.25)
 	elif in_delivery:
-		_flash_hint("Volvé a la zona de entrega y detené la camioneta.", 3.0)
+		_flash_hint(tr("HUD_BACK_TO_ZONE"), 3.0)
 	in_delivery = in_zone

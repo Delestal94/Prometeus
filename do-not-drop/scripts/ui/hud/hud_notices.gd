@@ -27,7 +27,7 @@ func _ready() -> void:
 
 
 func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
-	var who: String = "Vos" if peer_id == NetworkManager.local_id() else "Jugador %d" % peer_id
+	var who: String = tr("HUD_YOU") if peer_id == NetworkManager.local_id() else tr("UI_PLAYER_N") % peer_id
 	toast("%s  %s:  %s" % [_ping_arrow(world_position), who, label], 40)
 	hud.ping_label.text = ""
 	hud.ping_indicator.text = ""
@@ -88,7 +88,7 @@ func _on_merit_changed(peer_id: int, total: int) -> void:
 	if peer_id == NetworkManager.local_id():
 		var gained: int = maxi(total - hud.local_merit_total, 0)
 		hud.local_merit_total = total
-		toast("Mérito +%d  ·  total %d" % [gained, total])
+		toast(tr("HUD_MERIT") % [gained, total])
 
 
 func _on_card_changed(peer_id: int, card_id: int) -> void:
@@ -96,7 +96,7 @@ func _on_card_changed(peer_id: int, card_id: int) -> void:
 		return
 	refresh_card()
 	if card_id >= 0:
-		toast("Carta obtenida: %s" % CrewProgression.card_name(card_id))
+		toast(tr("HUD_CARD_EARNED") % CrewProgression.card_name(card_id))
 
 
 func refresh_card() -> void:
@@ -107,13 +107,13 @@ func refresh_card() -> void:
 	if card_id < 0:
 		hud.card_label.text = ""
 		return
-	var action: String = GameSettings.prompt("%s  usar" % GameSettings.binding_label(&"use_card"),
-			"D-pad izquierda  usar")
-	hud.card_label.text = UiTheme.keycaps("CARTA: %s   ·   %s" % [CrewProgression.card_name(card_id), action])
+	var action: String = GameSettings.prompt(tr("HUD_CARD_USE_KEY") % GameSettings.binding_label(&"use_card"),
+			tr("HUD_CARD_USE_PAD"))
+	hud.card_label.text = UiTheme.keycaps(tr("HUD_CARD") % [CrewProgression.card_name(card_id), action])
 
 
 func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
-	toast("¡Desbloqueaste %s!" % title)
+	toast(tr("HUD_UNLOCKED") % title)
 
 
 func toast(text: String, priority: int = 20) -> void:
@@ -124,7 +124,7 @@ func toast(text: String, priority: int = 20) -> void:
 
 func _on_route_event_started(event_id: StringName, event: Dictionary) -> void:
 	if bool(event.get("incident", false)):
-		toast("%s — %s" % [event.get("title", "Incidente"), event.get("prompt", "")])
+		toast("%s — %s" % [event.get("title", tr("HUD_INCIDENT")), event.get("prompt", "")])
 		return
 	hud.route_event_active_id = event_id
 	_on_route_event_updated(event_id, event)
@@ -136,12 +136,13 @@ func _on_route_event_updated(event_id: StringName, event: Dictionary) -> void:
 		return
 	var objective: String = String(event.get("prompt", ""))
 	if event_id == &"inspection" and int(event.get("loose", 0)) > 0:
-		objective = "Faltan asegurar %d cajas" % int(event["loose"])
+		objective = tr("HUD_BOXES_TO_SECURE") % int(event["loose"])
 	elif event_id == &"mixed_labels" and event.get("phase") == &"swapped":
 		objective = "%s  ?" % objective
 	var seconds: int = ceili(float(event.get("remaining", 0.0)))
+	var title: String = event.get("title", tr("HUD_EVENT"))
 	set_notice(&"critical", &"route_event",
-			"%s\n%s\n%02d:%02d" % [event.get("title", "Evento"), objective, seconds / 60, seconds % 60], 80, Hud.YELLOW)
+			"%s\n%s\n%02d:%02d" % [title, objective, seconds / 60, seconds % 60], 80, Hud.YELLOW)
 	if event_id in [&"mixed_labels", &"mimetic_package"]:
 		for id: StringName in hud.cargo_rows:
 			hud.cargo.refresh_row(id)
@@ -155,7 +156,7 @@ func _on_route_event_resolved(event_id: StringName, success: bool, _peer_id: int
 	clear_notice(&"critical", &"route_event")
 	for id: StringName in hud.cargo_rows:
 		hud.cargo.refresh_row(id)
-	set_notice(&"critical", &"route_result", "Evento resuelto" if success else "Evento fallido", 70,
+	set_notice(&"critical", &"route_result", tr("HUD_EVENT_RESOLVED") if success else tr("HUD_EVENT_FAILED"), 70,
 			Hud.MINT if success else Hud.RED, PING_DISPLAY_SECONDS)
 	hud.event_seconds_left = PING_DISPLAY_SECONDS
 

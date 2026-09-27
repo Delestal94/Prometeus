@@ -52,39 +52,39 @@ func _build() -> void:
 
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(480, 0), 30)
 	column.add_theme_constant_override("separation", 16)
-	UiTheme.title(column, "Opciones", 36)
+	UiTheme.title(column, tr("UI_OPTIONS"), 36)
 
-	_volume_slider = UiTheme.slider_row(column, "Volumen general", 0.0, 1.0, 0.05, GameSettings.master_volume)
+	_volume_slider = UiTheme.slider_row(column, tr("UI_OPT_MASTER_VOLUME"), 0.0, 1.0, 0.05, GameSettings.master_volume)
 	_volume_slider.value_changed.connect(func(value: float) -> void: GameSettings.master_volume = value)
 
-	_music_slider = UiTheme.slider_row(column, "Volumen de la música", 0.0, 1.0, 0.05, GameSettings.music_volume)
+	_music_slider = UiTheme.slider_row(column, tr("UI_OPT_MUSIC_VOLUME"), 0.0, 1.0, 0.05, GameSettings.music_volume)
 	_music_slider.value_changed.connect(func(value: float) -> void: GameSettings.music_volume = value)
-	_effects_slider = UiTheme.slider_row(column, "Volumen de efectos", 0.0, 1.0, 0.05, GameSettings.effects_volume)
+	_effects_slider = UiTheme.slider_row(column, tr("UI_OPT_EFFECTS_VOLUME"), 0.0, 1.0, 0.05, GameSettings.effects_volume)
 	_effects_slider.value_changed.connect(func(value: float) -> void: GameSettings.effects_volume = value)
-	_voice_slider = UiTheme.slider_row(column, "Volumen de voces/pings", 0.0, 1.0, 0.05, GameSettings.voice_volume)
+	_voice_slider = UiTheme.slider_row(column, tr("UI_OPT_VOICE_VOLUME"), 0.0, 1.0, 0.05, GameSettings.voice_volume)
 	_voice_slider.value_changed.connect(func(value: float) -> void: GameSettings.voice_volume = value)
-	var sounds: Button = UiTheme.button(column, "Sonidos del juego (uno por uno)…", false, Vector2(0, 40))
+	var sounds: Button = UiTheme.button(column, tr("UI_OPT_SOUND_CHECK"), false, Vector2(0, 40))
 	sounds.pressed.connect(_open_sound_check)
-	_fov_slider = UiTheme.slider_row(column, "Campo de visión", 65.0, 100.0, 1.0, GameSettings.preferred_fov)
+	_fov_slider = UiTheme.slider_row(column, tr("UI_OPT_FOV"), 65.0, 100.0, 1.0, GameSettings.preferred_fov)
 	_fov_slider.value_changed.connect(func(value: float) -> void: GameSettings.preferred_fov = value)
-	_shake_slider = UiTheme.slider_row(column, "Sacudida de cámara", 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
+	_shake_slider = UiTheme.slider_row(column, tr("UI_OPT_SHAKE"), 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
 	_shake_slider.value_changed.connect(func(value: float) -> void: GameSettings.camera_shake_scale = value)
 
-	_sensitivity_slider = UiTheme.slider_row(column, "Sensibilidad de la mirada", 0.2, 3.0, 0.05, GameSettings.look_sensitivity)
+	_sensitivity_slider = UiTheme.slider_row(column, tr("UI_OPT_SENSITIVITY"), 0.2, 3.0, 0.05, GameSettings.look_sensitivity)
 	_sensitivity_slider.value_changed.connect(func(value: float) -> void: GameSettings.look_sensitivity = value)
 
 	# Live: opened from the pause menu, the HUD behind the dim resizes as the
 	# slider moves, so there's no guessing what 80% looks like.
-	_hud_scale_slider = UiTheme.slider_row(column, "Tamaño del HUD", GameSettings.HUD_SCALE_MIN, GameSettings.HUD_SCALE_MAX, 0.05, GameSettings.hud_scale, true)
+	_hud_scale_slider = UiTheme.slider_row(column, tr("UI_OPT_HUD_SIZE"), GameSettings.HUD_SCALE_MIN, GameSettings.HUD_SCALE_MAX, 0.05, GameSettings.hud_scale, true)
 	_hud_scale_slider.value_changed.connect(func(value: float) -> void: GameSettings.hud_scale = value)
 	var help_row := HBoxContainer.new()
 	help_row.add_theme_constant_override("separation", 12)
 	column.add_child(help_row)
-	UiTheme.label(help_row, "Ayudas de controles", 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiTheme.label(help_row, tr("UI_OPT_CONTROL_HELP"), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_control_help_option = OptionButton.new()
-	_control_help_option.add_item("Siempre", GameSettings.ControlHelp.ALWAYS)
-	_control_help_option.add_item("Al principio", GameSettings.ControlHelp.BEGINNING)
-	_control_help_option.add_item("Nunca", GameSettings.ControlHelp.NEVER)
+	_control_help_option.add_item(tr("UI_OPT_HELP_ALWAYS"), GameSettings.ControlHelp.ALWAYS)
+	_control_help_option.add_item(tr("UI_OPT_HELP_BEGINNING"), GameSettings.ControlHelp.BEGINNING)
+	_control_help_option.add_item(tr("UI_OPT_HELP_NEVER"), GameSettings.ControlHelp.NEVER)
 	_control_help_option.select(GameSettings.control_help_mode)
 	_control_help_option.custom_minimum_size = Vector2(170, 40)
 	help_row.add_child(_control_help_option)
@@ -92,13 +92,13 @@ func _build() -> void:
 	_control_help_option.item_selected.connect(func(index: int) -> void:
 		GameSettings.control_help_mode = _control_help_option.get_item_id(index))
 
-	_colorblind_check = UiTheme.check_box(column, "Paleta para daltonismo", GameSettings.colorblind_palette)
+	_colorblind_check = UiTheme.check_box(column, tr("UI_OPT_COLORBLIND"), GameSettings.colorblind_palette)
 	_colorblind_check.toggled.connect(func(pressed: bool) -> void: GameSettings.colorblind_palette = pressed)
 
 	var text_row := HBoxContainer.new()
 	text_row.add_theme_constant_override("separation", 12)
 	column.add_child(text_row)
-	UiTheme.label(text_row, "Tamaño de texto de menús", 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiTheme.label(text_row, tr("UI_OPT_MENU_TEXT_SIZE"), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_menu_text_option = OptionButton.new()
 	_menu_text_option.add_item("100 %", 100)
 	_menu_text_option.add_item("125 %", 125)
@@ -110,18 +110,18 @@ func _build() -> void:
 	_menu_text_option.item_selected.connect(func(index: int) -> void:
 		GameSettings.menu_text_scale = float(_menu_text_option.get_item_id(index)) / 100.0)
 
-	_sound_subtitles_check = UiTheme.check_box(column, "Subtítulos de sonidos", GameSettings.sound_subtitles)
+	_sound_subtitles_check = UiTheme.check_box(column, tr("UI_OPT_SOUND_SUBTITLES"), GameSettings.sound_subtitles)
 	_sound_subtitles_check.toggled.connect(func(pressed: bool) -> void: GameSettings.sound_subtitles = pressed)
 
-	_invert_check = UiTheme.check_box(column, "Invertir eje Y", GameSettings.invert_look_y)
+	_invert_check = UiTheme.check_box(column, tr("UI_OPT_INVERT_Y"), GameSettings.invert_look_y)
 	_invert_check.toggled.connect(func(pressed: bool) -> void: GameSettings.invert_look_y = pressed)
 
-	_fullscreen_check = UiTheme.check_box(column, "Pantalla completa  (F11)", GameSettings.fullscreen)
+	_fullscreen_check = UiTheme.check_box(column, tr("UI_OPT_FULLSCREEN"), GameSettings.fullscreen)
 	_fullscreen_check.toggled.connect(func(pressed: bool) -> void: GameSettings.fullscreen = pressed)
 
 	# Graphics quality (world_quality.gd, tareas de Nacho N-205): the readout
 	# names the level instead of showing 0-2.
-	_quality_slider = UiTheme.slider_row(column, "Calidad gráfica", WorldQuality.Level.LOW, WorldQuality.Level.HIGH, 1.0, GameSettings.graphics_quality)
+	_quality_slider = UiTheme.slider_row(column, tr("UI_OPT_QUALITY"), WorldQuality.Level.LOW, WorldQuality.Level.HIGH, 1.0, GameSettings.graphics_quality)
 	var quality_readout := (_quality_slider.get_parent().get_child(0) as HBoxContainer).get_child(1) as Label
 	var name_quality := func(value: float) -> void: quality_readout.text = WorldQuality.NAMES[int(value)]
 	name_quality.call(_quality_slider.value)
@@ -132,7 +132,7 @@ func _build() -> void:
 	UiTheme.tag(column, "CONTROLES", UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
-	for pair: Array in [[&"interact", "Interactuar"], [&"ui_ping", "Ping"], [&"drive_horn", "Bocina"], [&"look_back", "Mirar atrás"], [&"use_card", "Usar carta"]]:
+	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")]]:
 		var row := HBoxContainer.new()
 		column.add_child(row)
 		UiTheme.label(row, String(pair[1]), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -143,10 +143,10 @@ func _build() -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
 	column.add_child(actions)
-	var back: Button = UiTheme.button(actions, "Volver", true)
+	var back: Button = UiTheme.button(actions, tr("UI_BACK"), true)
 	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back.pressed.connect(close)
-	UiTheme.button(actions, "Restablecer", false).pressed.connect(_reset)
+	UiTheme.button(actions, tr("UI_OPT_RESET"), false).pressed.connect(_reset)
 
 
 func _open_sound_check() -> void:
@@ -164,9 +164,9 @@ func _refresh_controls() -> void:
 	if _controls_label == null:
 		return
 	if GameSettings.using_gamepad:
-		_controls_label.text = "A pie: stick izq. caminar  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar"
+		_controls_label.text = tr("UI_OPT_CONTROLS_PAD")
 	else:
-		_controls_label.text = "A pie: WASD caminar  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa"
+		_controls_label.text = tr("UI_OPT_CONTROLS_KEYS")
 
 
 func _on_input_device_changed(_gamepad: bool) -> void:
@@ -175,7 +175,7 @@ func _on_input_device_changed(_gamepad: bool) -> void:
 
 func _listen_for_key(action: StringName) -> void:
 	_listening_action = action
-	(_binding_buttons[action] as Button).text = "Presioná una tecla…"
+	(_binding_buttons[action] as Button).text = tr("UI_OPT_PRESS_KEY")
 
 
 func _unhandled_input(event: InputEvent) -> void:

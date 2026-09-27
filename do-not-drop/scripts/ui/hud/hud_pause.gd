@@ -18,12 +18,12 @@ func show_start() -> void:
 	hud.overlay_mode = "start"
 	hud.overlay.visible = true
 	hud.dashboard.visible = false
-	hud.overlay_kicker.text = "%s  ·  PROTOTIPO 0.1" % ("MODO ENDLESS" if hud.is_endless else "PRUEBA DE RUTA")
-	hud.overlay_title.text = "¡A REPARTIR!"
+	hud.overlay_kicker.text = tr("HUD_START_KICKER") % (tr("HUD_MODE_ENDLESS") if hud.is_endless else tr("HUD_MODE_ROUTE"))
+	hud.overlay_title.text = tr("HUD_START_TITLE")
 	hud.results.set_hero(false)
-	hud.overlay_body.text = "Arrancás en el depósito, con el camión estacionado adentro.\nLa entrega sale apenas alguien toma el volante con carga a bordo; el portón se cierra detrás de ustedes."
-	hud.overlay_stats.text = "1.  Leé la pizarra de pedidos: cada casa espera un paquete de un estante (A-1, B-6...).\n2.  Buscalo, presioná %s para agarrarlo y %s en el rack del camión para dejarlo.\n3.  Antes de salir: vestuario, taller y mostrador de suministros.\n4.  Subite al asiento del conductor (%s) y salí por el portón.\n\nCada cosa te muestra su indicación cuando te acercás." % [hud.key_hint("E", "A"), hud.key_hint("E", "A"), hud.key_hint("E", "A")]
-	hud.results.set_buttons("Preparar entrega", false, true, true)
+	hud.overlay_body.text = tr("HUD_START_BODY")
+	hud.overlay_stats.text = tr("HUD_START_STEPS") % [hud.key_hint("E", "A"), hud.key_hint("E", "A"), hud.key_hint("E", "A")]
+	hud.results.set_buttons(tr("HUD_PREPARE_DELIVERY"), false, true, true)
 
 
 func request_restart() -> void:
@@ -35,7 +35,7 @@ func refresh_restart_hold(delta: float) -> void:
 	var playing: bool = hud.overlay_mode == "run" or hud.overlay_mode == "preparation"
 	if playing and hud.prompts.can_restart() and Input.is_action_pressed(&"run_restart"):
 		_restart_hold += delta
-		hud.notices.set_notice(&"information", &"restart", "Reiniciando…  soltá para cancelar", 100, Hud.YELLOW, 0.25)
+		hud.notices.set_notice(&"information", &"restart", tr("HUD_RESTARTING"), 100, Hud.YELLOW, 0.25)
 		if _restart_hold >= Hud.RESTART_HOLD_SECONDS:
 			_restart_hold = 0.0
 			request_restart()
@@ -81,17 +81,17 @@ func _pause() -> void:
 	hud.overlay_mode = "pause"
 	hud.overlay.show()
 	hud.overlay_kicker.text = "PAUSA"
-	hud.overlay_title.text = "EN PAUSA" if not hud.soft_pause else "MENÚ"
-	hud.overlay_body.text = "Tu entrega puede esperar." if not hud.soft_pause else "La partida sigue corriendo para el resto del equipo."
+	hud.overlay_title.text = tr("HUD_PAUSED") if not hud.soft_pause else tr("HUD_MENU_TITLE")
+	hud.overlay_body.text = tr("HUD_PAUSE_BODY") if not hud.soft_pause else tr("HUD_SOFT_PAUSE_BODY")
 	hud.overlay_stats.text = _pause_stats()
 	hud.complaints_label.visible = false
 	hud.photo_strip.visible = false
 	hud.results.set_hero(false)
-	hud.results.set_buttons("Continuar", true, true, true)
+	hud.results.set_buttons(tr("HUD_CONTINUE"), true, true, true)
 
 
 func _pause_stats() -> String:
-	return "Equipo: $%d\n%s para volver a la ruta." % [CrewProgression.team_money, hud.key_hint("Esc", "Start")]
+	return tr("HUD_PAUSE_STATS") % [CrewProgression.team_money, hud.key_hint("Esc", "Start")]
 
 
 func _resume() -> void:
@@ -126,7 +126,7 @@ func primary_action() -> void:
 			hud.set_economy_visible(true)
 			hud.action_button.release_focus()
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-			hud.section_label.text = "PREPARACIÓN"
+			hud.section_label.text = tr("HUD_PREPARATION")
 			hud.distance_label.text = preparation_text()
 		"pause": _resume()
 		"results": request_restart()
@@ -135,7 +135,7 @@ func primary_action() -> void:
 
 func preparation_text() -> String:
 	if hud.orders.is_empty():
-		return "Cargá paquetes y tomá el volante"
+		return tr("HUD_PREP_LOAD_AND_DRIVE")
 	var parts: PackedStringArray = []
 	for order: Dictionary in hud.orders:
 		var aboard: bool = false
@@ -143,7 +143,7 @@ func preparation_text() -> String:
 			if StringName(package.get(&"package_id")) == StringName(order.package_id):
 				aboard = bool(package.get(&"is_loaded"))
 				break
-		parts.append("Casa %d: %s %s" % [int(order.house) + 1, order.code, "(a bordo)" if aboard else "(falta)"])
+		parts.append(tr("HUD_PREP_ORDER") % [int(order.house) + 1, order.code, tr("HUD_PREP_ABOARD") if aboard else tr("HUD_PREP_MISSING")])
 	return "   ".join(parts)
 
 
@@ -162,10 +162,10 @@ func _on_connection_lost(reason: String) -> void:
 	hud.overlay.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	hud.overlay_kicker.text = "MULTIJUGADOR"
-	hud.overlay_title.text = "SIN CONEXIÓN"
+	hud.overlay_title.text = tr("HUD_DISCONNECTED")
 	hud.overlay_body.text = reason
-	hud.overlay_stats.text = "La partida del anfitrión ya no está disponible."
+	hud.overlay_stats.text = tr("HUD_HOST_GONE")
 	hud.results.set_hero(false)
 	hud.complaints_label.visible = false
 	hud.photo_strip.visible = false
-	hud.results.set_buttons("Volver al menú", false, false, false)
+	hud.results.set_buttons(tr("HUD_BACK_TO_MENU"), false, false, false)

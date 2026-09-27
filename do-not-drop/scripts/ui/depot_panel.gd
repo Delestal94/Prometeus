@@ -103,7 +103,7 @@ func _rebuild() -> void:
 			_build_records()
 		_:
 			_build_orders()
-	var back: Button = UiTheme.button(_body, "Volver al depósito", false, Vector2(0, 46))
+	var back: Button = UiTheme.button(_body, tr("UI_DEPOT_BACK"), false, Vector2(0, 46))
 	back.pressed.connect(close)
 	if _first_focus == null:
 		_first_focus = back
@@ -120,10 +120,10 @@ func _header(title: String, tag: String, tag_color: Color, subtitle: String) -> 
 
 
 func _build_orders() -> void:
-	_header("Pedidos de hoy", "PIZARRA", UiTheme.SKY, "Cada casa espera un paquete en particular. Buscalo por su estante, cargalo en el camión y entregalo en esa puerta.")
+	_header(tr("UI_DEPOT_ORDERS"), tr("UI_DEPOT_ORDERS_TAG"), UiTheme.SKY, tr("UI_DEPOT_ORDERS_HINT"))
 	var orders: Array = depot.get(&"orders") if depot != null else []
 	if orders.is_empty():
-		UiTheme.label(_body, "Ruta sin fin: no hay casas. Cargá lo que quieras y aguantá lo más lejos posible.", 18)
+		UiTheme.label(_body, tr("UI_DEPOT_ENDLESS_HINT"), 18)
 		return
 	for order: Dictionary in orders:
 		var row := HBoxContainer.new()
@@ -137,23 +137,23 @@ func _build_orders() -> void:
 		row.add_child(icon)
 		var text := VBoxContainer.new()
 		row.add_child(text)
-		UiTheme.label(text, "Casa %d  ·  estante %s" % [int(order.house) + 1, order.code], 22, UiTheme.INK, true)
-		var state: String = "a bordo" if _is_loaded(order.package_id) else "en el estante"
-		UiTheme.label(text, "%s · %s  —  %s" % [order.trap, String(order.content).to_lower(), state], 16, UiTheme.MINT if state == "a bordo" else UiTheme.MUTED)
+		UiTheme.label(text, tr("UI_DEPOT_ORDER_ROW") % [int(order.house) + 1, order.code], 22, UiTheme.INK, true)
+		var state: String = tr("UI_DEPOT_ON_BOARD") if _is_loaded(order.package_id) else tr("UI_DEPOT_ON_SHELF")
+		UiTheme.label(text, "%s · %s  —  %s" % [order.trap, String(order.content).to_lower(), state], 16, UiTheme.MINT if state == tr("UI_DEPOT_ON_BOARD") else UiTheme.MUTED)
 
 
 func _build_wardrobe() -> void:
-	_header("Vestuario", "UNIFORME", UiTheme.MINT, "Tu color para esta partida. Lo ve todo el equipo.")
+	_header(tr("UI_DEPOT_LOCKERS"), tr("UI_DEPOT_UNIFORM_TAG"), UiTheme.MINT, tr("UI_DEPOT_UNIFORM_HINT"))
 	_choices(UnlockManager.cosmetic_choices(), UnlockManager.selected_cosmetic, UnlockManager.select_cosmetic, true)
 
 
 func _build_garage() -> void:
 	var host: bool = NetworkManager.is_host()
-	_header("Taller", "CAMIÓN Y PINTURA", UiTheme.RED,
-		"Los cambios se ven al instante en el camión." if host else "El camión lo elige quien hostea la partida. Podés mirar lo que hay.")
-	UiTheme.label(_body, "Camión", 20, UiTheme.INK, true)
+	_header(tr("UI_DEPOT_WORKSHOP"), tr("UI_DEPOT_WORKSHOP_TAG"), UiTheme.RED,
+		tr("UI_DEPOT_WORKSHOP_HOST_HINT") if host else tr("UI_DEPOT_WORKSHOP_GUEST_HINT"))
+	UiTheme.label(_body, tr("UI_TRUCK"), 20, UiTheme.INK, true)
 	_choices(UnlockManager.truck_choices(), UnlockManager.selected_truck, UnlockManager.select_truck, host)
-	UiTheme.label(_body, "Pintura", 20, UiTheme.INK, true)
+	UiTheme.label(_body, tr("UI_PAINT"), 20, UiTheme.INK, true)
 	_choices(UnlockManager.paint_choices(), UnlockManager.selected_paint, UnlockManager.select_paint, host)
 
 
@@ -165,13 +165,13 @@ func _build_shop() -> void:
 	var has_discount: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.DISCOUNT)
 	var has_revote: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.REVOTE)
 	var current_winner: StringName = ShopVoteManager.resolve_winner(NetworkManager.peer_ids) if voting else &""
-	_header("Suministros", "CAJA DEL EQUIPO  ·  $%d" % money, UiTheme.YELLOW, "Se pagan con la plata del equipo y se usan en el próximo reparto que salga del depósito.")
+	_header(tr("UI_DEPOT_SUPPLIES"), tr("UI_DEPOT_TEAM_CASH") % money, UiTheme.YELLOW, tr("UI_DEPOT_SUPPLIES_HINT"))
 	if voting:
 		_vote_timer_label = UiTheme.label(_body, _vote_status_text(), 17, UiTheme.GRAPE, true)
 	if has_revote and voting:
-		var revote: Button = UiTheme.button(_body, "Usar Re-voto", false, Vector2(0, 42))
+		var revote: Button = UiTheme.button(_body, tr("UI_DEPOT_USE_REVOTE"), false, Vector2(0, 42))
 		revote.disabled = not ShopVoteManager.active
-		revote.tooltip_text = "Disponible cuando haya una votación de compra activa."
+		revote.tooltip_text = tr("UI_DEPOT_REVOTE_TOOLTIP")
 		revote.pressed.connect(_use_revote)
 		if _first_focus == null and not revote.disabled:
 			_first_focus = revote
@@ -182,9 +182,9 @@ func _build_shop() -> void:
 		_body.add_child(row)
 		var have: bool = owned.has(supply_id)
 		var cost: int = int(item.cost)
-		var label: String = "%s%s  ·  $%d" % ["Votar: " if voting else "", item.title, cost]
+		var label: String = "%s%s  ·  $%d" % [tr("UI_DEPOT_VOTE_PREFIX") if voting else "", item.title, cost]
 		if have:
-			label = "%s  ·  listo para salir" % item.title
+			label = tr("UI_DEPOT_SUPPLY_READY") % item.title
 		var enabled: bool = not have and money >= cost and (not voting or ShopVoteManager.active)
 		var button: Button = UiTheme.button(row, label, enabled, Vector2(0, 46))
 		button.disabled = not enabled
@@ -204,7 +204,7 @@ func _build_shop() -> void:
 			_add_voters(row, supply_id)
 		if has_discount and not have and (not voting or supply_id == current_winner):
 			var discounted_cost: int = maxi(0, roundi(cost * 0.5))
-			var discount: Button = UiTheme.button(row, "Usar Descuento (−50 %%)  ·  $%d" % discounted_cost, true, Vector2(0, 40))
+			var discount: Button = UiTheme.button(row, tr("UI_DEPOT_USE_DISCOUNT") % discounted_cost, true, Vector2(0, 40))
 			discount.disabled = money < discounted_cost or (voting and not ShopVoteManager.active)
 			discount.pressed.connect(func() -> void:
 				if voting:
@@ -247,17 +247,17 @@ func _request_discount(supply_id: StringName) -> void:
 
 func _vote_status_text() -> String:
 	if not ShopVoteManager.active:
-		return "Votación cerrada · volvé a abrir el mostrador para iniciar otra"
+		return tr("UI_DEPOT_VOTE_CLOSED")
 	if not ShopVoteManager.timer_started:
-		return "Votación abierta · el reloj empieza con el primer voto"
-	return "Votación abierta · %d s" % ceili(ShopVoteManager.seconds_left)
+		return tr("UI_DEPOT_VOTE_OPEN")
+	return tr("UI_DEPOT_VOTE_OPEN_TIMER") % ceili(ShopVoteManager.seconds_left)
 
 
 func _add_voters(parent: Node, supply_id: StringName) -> void:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 7)
 	parent.add_child(line)
-	UiTheme.label(line, "Votos:", 14, UiTheme.MUTED)
+	UiTheme.label(line, tr("UI_DEPOT_VOTES"), 14, UiTheme.MUTED)
 	var count: int = 0
 	for voter: Variant in NetworkManager.peer_ids:
 		var peer_id: int = int(voter)
@@ -265,7 +265,7 @@ func _add_voters(parent: Node, supply_id: StringName) -> void:
 			continue
 		var dot := PanelContainer.new()
 		dot.custom_minimum_size = Vector2(20, 20)
-		dot.tooltip_text = "Jugador %d" % peer_id
+		dot.tooltip_text = tr("UI_PLAYER_N") % peer_id
 		var style := StyleBoxFlat.new()
 		style.bg_color = Player.PLAYER_COLORS[peer_id % Player.PLAYER_COLORS.size()]
 		style.border_color = UiTheme.INK
@@ -300,14 +300,14 @@ func _depot_node() -> Node:
 
 
 func _build_records() -> void:
-	_header("Equipo del mes", "PROGRESO", UiTheme.GRAPE, "")
+	_header(tr("UI_DEPOT_RECORDS"), tr("UI_DEPOT_PROGRESS_TAG"), UiTheme.GRAPE, "")
 	var summary: Dictionary = UnlockManager.progress_summary()
-	UiTheme.label(_body, "%d entregas exitosas  ·  %d puntos  ·  %d partidas  ·  mejor reparto %d pts" % [
+	UiTheme.label(_body, tr("UI_DEPOT_RECORDS_SUMMARY") % [
 		int(summary.deliveries), int(summary.score), int(summary.runs), RunManager.best_score()], 16, UiTheme.MUTED)
 	for unlock_id: StringName in UnlockManager.UNLOCKS:
 		var rule: Dictionary = UnlockManager.requirements(unlock_id)
 		var got: bool = UnlockManager.is_unlocked(unlock_id)
-		UiTheme.label(_body, "%s  %s  —  %d entregas + %d pts" % ["Listo:" if got else "Falta:", rule.title, int(rule.deliveries), int(rule.score)], 17, UiTheme.MINT if got else UiTheme.MUTED)
+		UiTheme.label(_body, tr("UI_DEPOT_UNLOCK_LINE") % [tr("UI_DEPOT_UNLOCK_DONE") if got else tr("UI_DEPOT_UNLOCK_TODO"), rule.title, int(rule.deliveries), int(rule.score)], 17, UiTheme.MINT if got else UiTheme.MUTED)
 
 
 func _choices(choices: Array[Dictionary], selected: StringName, select: Callable, enabled: bool) -> void:
@@ -319,7 +319,7 @@ func _choices(choices: Array[Dictionary], selected: StringName, select: Callable
 			text += "  ·  " + String(choice["detail"])
 		if not available:
 			var rule: Dictionary = UnlockManager.requirements(StringName(choice["unlock"]))
-			text += "  — bloqueado (%d entregas, %d pts)" % [int(rule.get("deliveries", 0)), int(rule.get("score", 0))]
+			text += tr("UI_DEPOT_LOCKED_SUFFIX") % [int(rule.get("deliveries", 0)), int(rule.get("score", 0))]
 		var button: Button = UiTheme.button(_body, text, id == selected, Vector2(0, 44))
 		button.disabled = not available or not enabled
 		button.clip_text = true

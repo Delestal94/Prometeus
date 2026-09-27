@@ -81,8 +81,8 @@ func _on_package_state(id: StringName, state: int) -> void:
 
 
 func _celebrate_rescue(id: StringName) -> void:
-	var name_text: String = String(hud.cargo_rows[id]["name"]) if hud.cargo_rows.has(id) else "LA CARGA"
-	hud.notices.toast("¡%s a salvo!" % name_text.capitalize())
+	var name_text: String = String(hud.cargo_rows[id]["name"]) if hud.cargo_rows.has(id) else tr("HUD_THE_CARGO")
+	hud.notices.toast(tr("HUD_RESCUED") % name_text.capitalize())
 	if _rescue_player == null:
 		_rescue_player = AudioStreamPlayer.new()
 		_rescue_player.stream = SynthAudio.glass_chime()
@@ -118,7 +118,7 @@ func refresh_row(id: StringName) -> void:
 					display_name = String(disguise.get("display_name")).to_upper()
 					(row["icon"] as TextureRect).texture = UiTheme.trap_icon(String(disguise.get("display_name")))
 			break
-	label.text = "%s  ·  %d%%  ·  %s" % [display_name, roundi(integrity), Hud.STATE_STATUS[state]]
+	label.text = "%s  ·  %d%%  ·  %s" % [display_name, roundi(integrity), tr(Hud.STATE_STATUS[state])]
 	label.add_theme_color_override("font_color", _state_text_color(state))
 	((row["bar"] as ProgressBar).get_theme_stylebox("fill") as StyleBoxFlat).bg_color = UiTheme.state_color(state,
 			GameSettings.colorblind_palette)
@@ -149,7 +149,7 @@ func refresh_state_pulses() -> void:
 
 func _on_progress(progress: float, meters: float, section: String) -> void:
 	hud.route_bar.value = progress * 100.0
-	hud.distance_label.text = "%d m hasta la entrega" % ceili(meters)
+	hud.distance_label.text = tr("HUD_METERS_TO_DELIVERY") % ceili(meters)
 	hud.section_label.text = section.to_upper()
 
 

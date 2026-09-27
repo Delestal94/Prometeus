@@ -15,7 +15,7 @@ const RED: Color = UiTheme.RED
 const ORANGE: Color = UiTheme.ORANGE
 const STATE_FILL: Array[Color] = [UiTheme.MINT, UiTheme.ORANGE, UiTheme.RED]
 const STATE_TEXT: Array[Color] = [UiTheme.INK, Color("c26a00"), Color("c73431")]
-const STATE_STATUS: Array[String] = ["OK ✓", "EN RIESGO !", "ARRUINADA ✕"]
+const STATE_STATUS: Array[String] = ["HUD_STATE_OK", "HUD_STATE_AT_RISK", "HUD_STATE_RUINED"]
 enum Role { ON_FOOT, DRIVER, PASSENGER }
 const SHORTCUT_VISIBLE_SECONDS: float = 60.0
 const RESTART_HOLD_SECONDS: float = 0.9
@@ -117,9 +117,9 @@ func _ready() -> void:
 		if spectator != null:
 			spectator.connect(&"availability_changed", func(available: bool) -> void:
 				if available:
-					notices.toast("Tu caja ya no tiene arreglo  ·  %s: ver desde afuera" % key_hint("Tab", "Back")))
+					notices.toast(tr("HUD_SPECTATE_AVAILABLE") % key_hint("Tab", "Back")))
 	EventBus.house_refused_package.connect(func(house_index: int, expected: String) -> void:
-		notices.toast("Casa %d: \"Ese no es mío, pedí %s\"" % [house_index + 1, expected.to_lower()]))
+		notices.toast(tr("HUD_HOUSE_REFUSED") % [house_index + 1, expected.to_lower()]))
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	GameSettings.hud_scale_changed.connect(func(_scale: float) -> void: apply_hud_scale())
 	GameSettings.control_help_mode_changed.connect(func(_mode: int) -> void: prompts.refresh_shortcuts())
@@ -304,7 +304,7 @@ func _build_bottom_bar() -> void:
 	delivery.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	delivery.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
 	delivery.add_theme_constant_override("separation", 8)
-	section_label = UiTheme.tag(delivery, "PREPARACIÓN", MINT, -1.5, 16)
+	section_label = UiTheme.tag(delivery, tr("HUD_PREPARATION"), MINT, -1.5, 16)
 	# Used to open on "220 m hasta la entrega", a leftover from the fixed
 	# route: the real one is random and runs closer to 2000 m.
 	distance_label = UiTheme.title(delivery, "", 30)
@@ -364,12 +364,12 @@ func _build_overlay_card() -> void:
 	card = make_panel(overlay_center, Vector2(640, 0))
 	card.add_theme_constant_override("separation", 14)
 	overlay_kicker = UiTheme.tag(card, "", YELLOW, -2.0, 16)
-	overlay_title = UiTheme.title(card, "¡A REPARTIR!", 62)
+	overlay_title = UiTheme.title(card, tr("HUD_START_TITLE"), 62)
 	var hero := HBoxContainer.new()
 	hero.add_theme_constant_override("separation", 14)
 	card.add_child(hero)
 	score_label = UiTheme.chip(hero, "", YELLOW, 40)
-	record_label = UiTheme.tag(hero, "¡NUEVO RÉCORD!", UiTheme.GRAPE, 4.0, 20)
+	record_label = UiTheme.tag(hero, tr("HUD_NEW_RECORD"), UiTheme.GRAPE, 4.0, 20)
 	record_label.add_theme_color_override("font_color", UiTheme.WHITE)
 	record_label.get_parent().size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	results.set_hero(false)
@@ -392,16 +392,16 @@ func _build_overlay_card() -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
 	card.add_child(actions)
-	action_button = make_button(actions, "Empezar entrega", true)
+	action_button = make_button(actions, tr("HUD_START_DELIVERY"), true)
 	action_button.pressed.connect(pause.primary_action)
-	second_button = make_button(actions, "Reiniciar", false)
+	second_button = make_button(actions, tr("HUD_RESTART"), false)
 	second_button.pressed.connect(pause.request_restart)
 	# Pausing was a dead end: continue or restart, with no way to reach the
 	# options or leave the level at all
 	# (docs/critica-diseno-abogado-del-diablo.md section 4).
-	options_button = make_button(actions, "Opciones", false)
+	options_button = make_button(actions, tr("UI_OPTIONS"), false)
 	options_button.pressed.connect(pause.open_options)
-	menu_button = make_button(actions, "Menú", false)
+	menu_button = make_button(actions, tr("HUD_MENU"), false)
 	menu_button.pressed.connect(pause.leave_to_menu)
 
 
@@ -459,7 +459,7 @@ func _process(delta: float) -> void:
 			_prep_refresh = 0.25
 			distance_label.text = pause.preparation_text()
 	if is_endless and RunManager.is_running:
-		distance_label.text = "%d m recorridos" % roundi(float(get_parent().get(&"distance_traveled")))
+		distance_label.text = tr("HUD_METERS_TRAVELLED") % roundi(float(get_parent().get(&"distance_traveled")))
 	if ping_seconds_left > 0.0:
 		ping_seconds_left -= delta
 		if ping_seconds_left <= 0.0:
@@ -478,21 +478,21 @@ func _refresh_session() -> void:
 		return
 	var mode: String = "ENDLESS" if is_endless else "ENTREGA"
 	if not NetworkManager.is_online():
-		session_label.text = "%s  ·  SOLO" % mode
+		session_label.text = tr("HUD_SESSION_SOLO") % mode
 		_session_color(MINT)
 		return
 	var count: int = NetworkManager.peer_ids.size()
-	var players: String = "%d jugador%s" % [count, "" if count == 1 else "es"]
+	var players: String = (tr("HUD_PLAYERS_ONE") if count == 1 else tr("HUD_PLAYERS_MANY")) % count
 	if not NetworkManager.is_host():
-		session_label.text = "EN SALA  ·  %s" % players
+		session_label.text = tr("HUD_SESSION_GUEST") % players
 		_session_color(UiTheme.SKY)
 	elif NetworkManager.active_transport == NetworkManager.Transport.ENET:
 		var address: String = NetworkManager.lan_address()
-		session_label.text = "SALA LAN  ·  %s\nIP  %s" % [players,
-				address if not address.is_empty() else "sin red local"]
+		session_label.text = tr("HUD_SESSION_LAN") % [players,
+				address if not address.is_empty() else tr("HUD_SESSION_NO_LAN")]
 		_session_color(UiTheme.SKY)
 	else:
-		session_label.text = "SALA STEAM  ·  %s\nInvitá desde la lista de amigos" % players
+		session_label.text = tr("HUD_SESSION_STEAM") % players
 		_session_color(UiTheme.GRAPE)
 
 
@@ -507,7 +507,7 @@ func _session_color(color: Color) -> void:
 
 func _on_started(_route: StringName, _players: Array) -> void:
 	if WorldMood.active.has("description"):
-		notices.toast("Ruta de hoy: %s" % String(WorldMood.active["description"]).to_lower())
+		notices.toast(tr("HUD_TODAYS_ROUTE") % String(WorldMood.active["description"]).to_lower())
 	overlay.hide()
 	overlay_mode = "run"
 	dashboard.show()
@@ -517,7 +517,7 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	interaction_label.text = ""
 	if is_endless:
 		section_label.text = "ENDLESS"
-		distance_label.text = "0 m recorridos"
+		distance_label.text = tr("HUD_ZERO_METERS")
 
 
 ## The score as a sum you can check (tareas de Slatex #89): one line per

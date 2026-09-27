@@ -13,7 +13,7 @@ func _ready() -> void:
 func set_hero(visible_: bool, score: int = 0, new_best: bool = false) -> void:
 	var hero: Control = hud.score_label.get_parent().get_parent() as Control
 	hero.visible = visible_
-	hud.score_label.text = "%d PTS" % score
+	hud.score_label.text = tr("HUD_POINTS") % score
 	hud.record_label.get_parent().get_parent().visible = new_best
 
 
@@ -36,13 +36,13 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	hud.overlay_kicker.text = "RESULTADO"
 	var new_best: bool = bool(results.get("is_new_best", false))
 	set_hero(true, score, new_best)
-	var best_line: String = "" if new_best else "\nRécord: %d pts" % int(results.get("best_score", 0))
-	var retry: String = "Volver a intentar" if hud.prompts.can_restart() else ""
-	var client_line: String = "" if hud.prompts.can_restart() else "\n\nSolo el anfitrión puede reiniciar. Para otra vuelta, volvé al menú y unite de nuevo a la sala."
+	var best_line: String = "" if new_best else tr("HUD_RESULT_RECORD") % int(results.get("best_score", 0))
+	var retry: String = tr("HUD_RETRY") if hud.prompts.can_restart() else ""
+	var client_line: String = "" if hud.prompts.can_restart() else tr("HUD_RESULT_GUEST_NOTE")
 	if results.has("distance_traveled"):
-		hud.overlay_title.text = "FIN DEL RECORRIDO"
+		hud.overlay_title.text = tr("HUD_RESULT_ENDLESS_TITLE")
 		hud.overlay_body.text = String(results["reason"])
-		hud.overlay_stats.text = "%.0f m recorridos   ·   %.1f s\nEquipo: $%d%s%s" % [float(results["distance_traveled"]), results["elapsed_seconds"], CrewProgression.team_money, best_line, client_line]
+		hud.overlay_stats.text = tr("HUD_RESULT_ENDLESS_STATS") % [float(results["distance_traveled"]), results["elapsed_seconds"], CrewProgression.team_money, best_line, client_line]
 		hud.complaints_label.visible = false
 		hud.photo_strip.visible = false
 		set_buttons(retry, false, false, true)
@@ -54,52 +54,52 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var delivered_doors: int = int(results.get("houses_delivered", 0))
 	var missed_doors: int = int(results.get("houses_missed", 0))
 	if not success:
-		hud.overlay_title.text = "OTRA VUELTA"
+		hud.overlay_title.text = tr("HUD_RESULT_FAILED_TITLE")
 	elif delivered_doors == 0 and missed_doors > 0:
-		hud.overlay_title.text = "RUTA TERMINADA"
+		hud.overlay_title.text = tr("HUD_RESULT_FINISHED_TITLE")
 	else:
-		hud.overlay_title.text = "¡ENTREGADO!"
+		hud.overlay_title.text = tr("HUD_RESULT_DELIVERED_TITLE")
 	hud.overlay_body.text = _delivery_summary(delivered_doors, missed_doors, total, ruined,
 			intact) if success else String(results["reason"])
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
-	var chaos_line: String = "\nBonus por caos compartido: x%.1f" % chaos if chaos > 1.0 else ""
-	var door_line: String = "\nPuertas: %d pts" % int(results.get("delivery_points",
+	var chaos_line: String = tr("HUD_RESULT_CHAOS_BONUS") % chaos if chaos > 1.0 else ""
+	var door_line: String = tr("HUD_RESULT_DOORS") % int(results.get("delivery_points",
 			0)) if results.has("delivery_points") else ""
 	if results.has("breakdown"):
 		hud.overlay_stats.text = format_score_breakdown(results,
-				score) + "\nEquipo: $%d" % CrewProgression.team_money + best_line + client_line
+				score) + tr("HUD_RESULT_TEAM") % CrewProgression.team_money + best_line + client_line
 	else:
-		hud.overlay_stats.text = "En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s\nEquipo: $%d%s%s" % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
+		hud.overlay_stats.text = tr("HUD_RESULT_STATS") % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
 	_show_complaints(results.get("complaints", []))
 	_show_photos()
 	set_buttons(retry, false, false, true)
 
 
 static func format_score_breakdown(results: Dictionary, score: int) -> String:
-	var lines: PackedStringArray = ["En ruta: %.1f s" % float(results.get("elapsed_seconds", 0.0))]
+	var lines: PackedStringArray = [TranslationServer.translate("HUD_RESULT_ON_ROAD") % float(results.get("elapsed_seconds", 0.0))]
 	for line: Dictionary in results.get("breakdown", []):
 		var points: int = int(line["points"])
 		lines.append("%s   %s%d" % [String(line["label"]), "+" if points >= 0 else "−", absi(points)])
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	if chaos > 1.0:
-		lines.append("Caos compartido   ×%.1f" % chaos)
-	lines.append("Total   %d pts" % score)
+		lines.append(TranslationServer.translate("HUD_RESULT_CHAOS_LINE") % chaos)
+	lines.append(TranslationServer.translate("HUD_RESULT_TOTAL") % score)
 	return "\n".join(lines)
 
 
 func _delivery_summary(delivered_doors: int, missed_doors: int, aboard: int, ruined: int, intact: int) -> String:
 	var lines: PackedStringArray = []
 	if delivered_doors > 0:
-		lines.append("Entregaste en %d puerta%s." % [delivered_doors, "" if delivered_doors == 1 else "s"])
+		lines.append((tr("HUD_RESULT_DOORS_ONE") if delivered_doors == 1 else tr("HUD_RESULT_DOORS_MANY")) % delivered_doors)
 	if missed_doors > 0:
-		lines.append("1 vecino se quedó esperando." if missed_doors == 1 else "%d vecinos se quedaron esperando." % missed_doors)
+		lines.append(tr("HUD_RESULT_MISSED_ONE") if missed_doors == 1 else tr("HUD_RESULT_MISSED_MANY") % missed_doors)
 	if aboard > 0:
 		var back: int = aboard - ruined
 		if back == 1:
-			lines.append("Volvió 1 paquete en el camión%s." % (", intacto" if intact >= 1 else ""))
+			lines.append(tr("HUD_RESULT_BACK_ONE") % (tr("HUD_RESULT_INTACT_SUFFIX") if intact >= 1 else ""))
 		elif back > 1:
-			lines.append("Volvieron %d paquetes en el camión, %d intactos." % [back, intact])
-	return "\n".join(lines) if not lines.is_empty() else "Llegaste, y eso ya es algo."
+			lines.append(tr("HUD_RESULT_BACK_MANY") % [back, intact])
+	return "\n".join(lines) if not lines.is_empty() else tr("HUD_RESULT_ARRIVED")
 
 
 func _show_complaints(complaints: Array) -> void:
@@ -110,9 +110,9 @@ func _show_complaints(complaints: Array) -> void:
 	for complaint: Dictionary in complaints:
 		var house: int = int(complaint["house"]) + 1
 		if bool(complaint["dismissed"]):
-			lines.append("Casa %d reclamó que llegó roto — les mostraste la foto. Caso cerrado." % house)
+			lines.append(tr("HUD_COMPLAINT_SETTLED") % house)
 		else:
-			lines.append("Casa %d reclamó que llegó roto y no tenías foto. Te lo descuentan." % house)
+			lines.append(tr("HUD_COMPLAINT_PAID") % house)
 	hud.complaints_label.text = "\n".join(lines)
 	hud.complaints_label.visible = true
 

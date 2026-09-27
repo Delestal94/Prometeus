@@ -76,6 +76,15 @@ antes de seguir con cualquier archivo listado acá.
   que 16:9 (en 4:3 todo se veía al 75%); `interaction_label` pasó al flujo del dashboard (pisaba la barra
   de ruta); mostrar/ocultar la plata es `hud.set_economy_visible()` (ocultar solo el `Label` dejaba la
   pastilla vacía); `hud.overlay_center` es el contenedor de la tarjeta. Textos: "furgoneta" → "camión".
+- **Textos de menús y HUD traducibles (fase 7, dominio Slatex; base para la S-509):** los ~260 textos de
+  `scripts/ui/**` pasaron a claves `UI_*` / `HUD_*` en `translations/strings_ui.csv` (registrado en
+  `project.godot`, zona compartida). La columna `es` es exactamente el texto de antes, así que en español
+  nada cambia; `en` es una primera traducción para revisar. Plurales armados a mano ("jugador" + "es",
+  "puerta" + "s") ahora son dos claves (`*_ONE` / `*_MANY`). Las tablas `const` (títulos de página del menú,
+  errores de conexión, estados de caja) guardan la clave y se traducen donde se muestran.
+  `test_ui_translations` exige ambos idiomas, los mismos marcadores (`%d`, `%s`) y ninguna clave muerta.
+  **Para la S-509:** los textos se traducen al armar cada pantalla; al cambiar de idioma hay que volver a
+  armarla (recargar la escena del menú alcanza). Un texto nuevo: agregalo al CSV y usá `tr("UI_...")`.
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 
