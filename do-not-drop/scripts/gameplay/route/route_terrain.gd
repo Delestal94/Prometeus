@@ -14,6 +14,36 @@ var paths: Array[Dictionary] = []
 ## neighbouring segments smoothly) and fades out sideways, so the ground
 ## beside the road climbs with it.
 var crests: Array[Dictionary] = []
+## Riverbeds a NarrowBridgeSegment crosses: {"a", "b": Vector2 ends of that
+## stretch (its own centreline, straight -- the segment never turns),
+## "depth": metres the ground drops away by, "full_width": half-width of the
+## flat riverbed floor, "bank_width": how far out it's still fading back to
+## the ambient ground}. Unlike a crest this never touches the segment's own
+## furniture (deck, rails, posts, the authored water/bank model) --
+## conform_geometry() skips it for anything under a node flagged
+## &"ignore_river" (see NarrowBridgeSegment._build()), so the bridge floats
+## over the drop instead of sinking into it with the rest of the ground.
+## Fades to nothing at both ends of the span (RIVER_TAPER) so it never leaves
+## a seam against neighbouring, river-free terrain, and route.gd shrinks
+## `bank_width` on its own to keep a long river from cutting into another
+## stretch of road, a house or the depot yard (_clamp_river_reach()).
+## Meanders a little (a smooth, position-seeded wobble, not the session's
+## RNG) so it doesn't read as a perfectly straight ditch, and its edges
+## wobble too so the shoreline is organic rather than a rectangle.
+var rivers: Array[Dictionary] = []
+## How far in from each end of a river's span the drop is still fading in --
+## matches the authored bank model's own taper (build_route_pieces.py
+## bridge_water(): half_len=18, banks slope over the last 3.2 m).
+const RIVER_TAPER: float = 3.2
+## Defaults for a river entry that doesn't specify its own (only the tests'
+## fixtures don't -- route.gd always sets both, see NarrowBridgeSegment's
+## river_width/river_reach). Full depth out to RIVER_FULL_WIDTH from the
+## (meandered) centreline, fading back up to the ambient ground by
+## RIVER_BANK_WIDTH -- far enough to be lost in the landscape rather than
+## read as a rectangular pool, but still short of the forest ridge that
+## starts at 61 m (see _sample()).
+const RIVER_FULL_WIDTH: float = 18.0
+const RIVER_BANK_WIDTH: float = 60.0
 ## Level rectangles (x/z) the ground is flattened to height 0 inside of, then
 ## blends back out over FLAT_ZONE_BLEND -- the depot's footprint and yard
 ## (route.gd start_yard), so no hill ever pushes through its floor or walls.
@@ -81,10 +111,12 @@ func _hill_height(p: Vector2) -> float:
 	return total
 
 
-func _sample(key: Vector2i) -> Vector3:
-	if _samples.has(key):
-		return _samples[key]
-	var p := Vector2(key) * STEP
+## The ground's height before any river carves into it -- shared by
+## _sample() (the actual rendered/collidable terrain) and
+## height_without_rivers() (what a bridge's own furniture and authored water
+## model measure themselves against, so they float over the drop instead of
+## sinking into it).
+func _natural_height(p: Vector2) -> float:
 	var road: Vector3 = nearest(p)
 	var offroad: float = smoothstep(12.0, 29.0, road.x)
 	var hills: float = 1.7 + 1.4 * sin(p.x * 0.087 + p.y * 0.039) + 0.8 * cos(p.y * 0.11 - p.x * 0.043)
@@ -97,6 +129,80 @@ func _sample(key: Vector2i) -> Vector3:
 	for zone: Rect2 in flat_zones:
 		var outside := Vector2(maxf(maxf(zone.position.x - p.x, p.x - zone.end.x), 0.0), maxf(maxf(zone.position.y - p.y, p.y - zone.end.y), 0.0))
 		height = lerpf(height, FLAT_ZONE_HEIGHT, 1.0 - smoothstep(0.0, FLAT_ZONE_BLEND, outside.length()))
+	return height
+
+
+## A deterministic wobble for `river`, purely a function of its own fixed
+## endpoints -- no RNG, so every peer (and a rebuilt terrain) agrees, and two
+## different bridges don't all meander in lockstep.
+func _river_phase(river: Dictionary) -> float:
+	var a: Vector2 = river.a
+	return fmod(a.x * 0.037 + a.y * 0.029, TAU)
+
+
+## 0..1: how much `river` affects `p`, combining the fade at both ends of its
+## span (RIVER_TAPER) with the sideways fade from its (meandered) centreline
+## out past its bank. Shared by _river_drop() (the actual carved ground) and
+## the water mesh (_build_river_water()) so the visible water can never float
+## above dry, uncarved ground or cut off in a straight line the terrain
+## doesn't follow -- both read the exact same shape.
+## Meander/wobble amplitudes (see _river_factor()) and their combined worst
+## case -- how far a "wet" point can ever sit past a river's nominal
+## `bank_width` in either direction. route.gd's _clamp_river_reach() has to
+## clear a hazard by at least this much (its own margin on top for comfort),
+## or the meander could still swing the actual carved/visible river into
+## whatever it was supposed to stop short of.
+const RIVER_MEANDER_MAX: float = 7.0
+const RIVER_WOBBLE_MAX: float = 2.1
+const RIVER_MAX_DRIFT: float = RIVER_MEANDER_MAX + RIVER_WOBBLE_MAX
+
+
+func _river_factor(river: Dictionary, p: Vector2) -> float:
+	var a: Vector2 = river.a
+	var edge: Vector2 = river.b - a
+	var length: float = maxf(edge.length(), 0.001)
+	var dir: Vector2 = edge / length
+	var perp: Vector2 = Vector2(-dir.y, dir.x)
+	var s: float = clampf((p - a).dot(dir), 0.0, length)
+	var phase: float = _river_phase(river)
+	# A gentle meander (the centreline itself drifts sideways along the
+	# span) plus a smaller wobble on where the bank actually sits, so the
+	# river reads as a real, organic crossing instead of a straight ditch
+	# with a ruler-straight rectangle of water in it.
+	var meander: float = sin(s * 0.05 + phase) * 5.0 + sin(s * 0.13 + phase * 1.7) * 2.0
+	var side: float = absf((p - a).dot(perp) - meander)
+	var wobble: float = sin(s * 0.21 + phase * 2.3) * 1.5 + sin(side * 0.4 + phase) * 0.6
+	var full_width: float = maxf(float(river.get("full_width", RIVER_FULL_WIDTH)) + wobble, 1.0)
+	var bank_width: float = maxf(float(river.get("bank_width", RIVER_BANK_WIDTH)) + wobble, full_width + 1.0)
+	var along: float = smoothstep(0.0, RIVER_TAPER, s) * smoothstep(0.0, RIVER_TAPER, length - s)
+	var lateral: float = 1.0 - smoothstep(full_width, bank_width, side)
+	return along * lateral
+
+
+## How far the ground drops for a river at `p`, 0 outside every registered
+## span. Smooth on every axis (see _river_factor()): never a hole, never a
+## seam against untouched ground.
+func _river_drop(p: Vector2) -> float:
+	var total: float = 0.0
+	for river: Dictionary in rivers:
+		total += float(river.depth) * _river_factor(river, p)
+	return total
+
+
+## Public alias of _river_drop() for anything outside this script that needs
+## to know "is this spot in a riverbed" without caring about the carved
+## height itself -- RouteDresser's placement rules (no tree, pole, car or
+## roadside prop belongs in the water or the bare bed beside it).
+func river_depth_at(p: Vector2) -> float:
+	return _river_drop(p)
+
+
+func _sample(key: Vector2i) -> Vector3:
+	if _samples.has(key):
+		return _samples[key]
+	var p := Vector2(key) * STEP
+	var road: Vector3 = nearest(p)
+	var height: float = _natural_height(p) - _river_drop(p)
 	var result := Vector3(height, road.x - road.z + 6.0, road.y)
 	_samples[key] = result
 	return result
@@ -116,6 +222,24 @@ func height_at(p: Vector3) -> float:
 	return d + (c - d) * (1.0 - f.x) + (b - d) * (1.0 - f.y)
 
 
+## Same interpolation as height_at(), but ignoring every river: what a
+## bridge's own deck, rails and authored water model are measured against
+## (see conform_geometry()'s &"ignore_river" flag) so they read as a real
+## span over the drop instead of sinking into it. Not cached -- only called
+## while placing a bridge's own handful of nodes, never per frame.
+func height_without_rivers(p: Vector3) -> float:
+	var grid := Vector2(p.x, p.z) / STEP
+	var k := Vector2i(floori(grid.x), floori(grid.y))
+	var f := grid - Vector2(k)
+	var a: float = _natural_height(Vector2(k) * STEP)
+	var b: float = _natural_height(Vector2(k + Vector2i(1, 0)) * STEP)
+	var c: float = _natural_height(Vector2(k + Vector2i(0, 1)) * STEP)
+	var d: float = _natural_height(Vector2(k + Vector2i(1, 1)) * STEP)
+	if f.x + f.y <= 1.0:
+		return a + (b - a) * f.x + (c - a) * f.y
+	return d + (c - d) * (1.0 - f.x) + (b - d) * (1.0 - f.y)
+
+
 func build() -> void:
 	_material = ShaderMaterial.new()
 	_material.shader = preload("res://shaders/route_terrain.gdshader")
@@ -123,6 +247,87 @@ func build() -> void:
 		_material.set_shader_parameter(surface + "_detail", load("res://assets/textures/detail/tx_detail_%s_512.png" % surface))
 	for key: Vector2i in _tiles:
 		_build_tile(key)
+	for river: Dictionary in rivers:
+		_build_river_water(river)
+
+
+## The wide, organic water surface over a carved riverbed -- one flat-ish
+## mesh per river, built once here (never per frame). Every vertex sits
+## exactly on the already-carved ground (height_at(), which already includes
+## this same river's drop) plus a hair of clearance, so it can never float
+## over dry land or leave a gap against the bank; a quad is only emitted when
+## all four of its corners are "wet" per the same _river_factor() the carving
+## itself uses, so the shoreline follows the actual meander and bank wobble
+## instead of the grid's straight rows -- no rectangle, no seam.
+const RIVER_WATER_STEP: float = 3.0
+const RIVER_WATER_THRESHOLD: float = 0.08
+const RIVER_WATER_CLEARANCE: float = 0.03
+const RIVER_WATER_COLOR := Color(0.29, 0.58, 0.74, 0.72)
+
+
+func _build_river_water(river: Dictionary) -> void:
+	var a: Vector2 = river.a
+	var edge: Vector2 = river.b - a
+	var length: float = maxf(edge.length(), 0.001)
+	var dir: Vector2 = edge / length
+	var perp: Vector2 = Vector2(-dir.y, dir.x)
+	var reach: float = float(river.get("bank_width", RIVER_BANK_WIDTH)) + 6.0
+	var along_steps: int = maxi(1, ceili(length / RIVER_WATER_STEP))
+	var side_steps: int = maxi(1, ceili((reach * 2.0) / RIVER_WATER_STEP))
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	var wet: Dictionary = {}
+	var index_of: Dictionary = {}
+	for i: int in range(along_steps + 1):
+		var s: float = clampf(float(i) * RIVER_WATER_STEP, 0.0, length)
+		for j: int in range(side_steps + 1):
+			var lateral: float = -reach + float(j) * RIVER_WATER_STEP
+			var p: Vector2 = a + dir * s + perp * lateral
+			var factor: float = _river_factor(river, p)
+			var key := Vector2i(i, j)
+			var is_wet: bool = factor > RIVER_WATER_THRESHOLD
+			wet[key] = is_wet
+			if is_wet:
+				var h: float = height_at(Vector3(p.x, 0.0, p.y)) + RIVER_WATER_CLEARANCE
+				index_of[key] = vertices.size()
+				vertices.append(Vector3(p.x, h, p.y))
+				normals.append(Vector3.UP)
+				# Alpha eases in from the threshold: the coastline blends
+				# into the bank instead of cutting off hard.
+				colors.append(Color(1.0, 1.0, 1.0, clampf((factor - RIVER_WATER_THRESHOLD) * 4.0, 0.0, 1.0)))
+	for i: int in range(along_steps):
+		for j: int in range(side_steps):
+			var k00 := Vector2i(i, j)
+			var k10 := Vector2i(i + 1, j)
+			var k01 := Vector2i(i, j + 1)
+			var k11 := Vector2i(i + 1, j + 1)
+			if wet.get(k00, false) and wet.get(k10, false) and wet.get(k01, false) and wet.get(k11, false):
+				indices.append_array(PackedInt32Array([index_of[k00], index_of[k10], index_of[k01], index_of[k10], index_of[k11], index_of[k01]]))
+	if indices.is_empty():
+		return
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = RIVER_WATER_COLOR
+	material.vertex_color_use_as_albedo = true
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.roughness = 0.05
+	material.metallic = 0.1
+	# Back faces culled, same reasoning as _material(): a double-sided plane
+	# right above a slope this shallow shadowed its own underside.
+	mesh.surface_set_material(0, material)
+	var visual := MeshInstance3D.new()
+	visual.name = "RiverWater"
+	visual.mesh = mesh
+	add_child(visual)
 
 
 func _build_tile(key: Vector2i) -> void:
@@ -188,7 +393,13 @@ func _build_tile(key: Vector2i) -> void:
 
 ## Warp authored road furniture (including its collision) onto the height field.
 ## Imported props/houses instead move as rigid objects in route.gd.
-func conform_geometry(node: Node) -> void:
+## `ignore_rivers` sticks once set (a node flagged &"ignore_river", or any
+## ancestor already carrying the flag down the recursion) so a whole bridge
+## -- deck, rails, posts and its authored water/bank model alike -- measures
+## itself against the ground as if no river had carved under it, and floats
+## over the drop instead of sinking into it with everything else.
+func conform_geometry(node: Node, ignore_rivers: bool = false) -> void:
+	ignore_rivers = ignore_rivers or (node is Node3D and (node as Node3D).has_meta(&"ignore_river"))
 	if node is MeshInstance3D and node.mesh != null:
 		var source: Mesh = node.mesh
 		if source is BoxMesh:
@@ -207,7 +418,7 @@ func conform_geometry(node: Node) -> void:
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			for i: int in range(vertices.size()):
 				var p: Vector3 = to_local(node.to_global(vertices[i]))
-				p.y += height_at(p)
+				p.y += height_without_rivers(p) if ignore_rivers else height_at(p)
 				vertices[i] = node.to_local(to_global(p))
 			arrays[Mesh.ARRAY_VERTEX] = vertices
 			# Keep the source's own normals. Regenerating them here merged every
@@ -228,7 +439,7 @@ func conform_geometry(node: Node) -> void:
 	# rigid pieces: warping their vertices would bend them out of shape.
 	if node is Area3D or node is Label3D or (node is Node3D and node.has_meta(&"animated")):
 		var p: Vector3 = to_local(node.global_position)
-		node.global_position.y += height_at(p)
+		node.global_position.y += height_without_rivers(p) if ignore_rivers else height_at(p)
 		return
 	for child: Node in node.get_children():
-		conform_geometry(child)
+		conform_geometry(child, ignore_rivers)

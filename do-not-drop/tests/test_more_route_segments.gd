@@ -3,6 +3,12 @@ extends SceneTree
 ## The newer route segments (docs/tareas-nacho.md #56/#58/#63):
 ##   - a HillSegment really lifts the road (terrain crest), smoothly back to
 ##     level at both ends;
+##   - a NarrowBridgeSegment on the main route (continuous terrain) carves a
+##     real riverbed under itself -- deck and water both actually build, the
+##     ground drops away well past just under the deck, fades back to level
+##     exactly at both of the segment's own edges (no seam with the straight
+##     road on either side), and the deck floats over the drop instead of
+##     sinking into it;
 ##   - a TunnelSegment has solid walls and roof, and light inside;
 ##   - a RailCrossingSegment that's due to close runs the whole cycle when the
 ##     truck comes up to it -- warning, arms down (and solid), train across,
@@ -27,6 +33,48 @@ func _run() -> void:
 	_expect(absf(end - start) < 0.3, "It comes back down to level at the far end")
 	_expect(absf(beside - start) < 0.3, "Far off to the side the ground isn't lifted")
 	terrain.free()
+
+	# Narrow bridge on the main route: the ground itself is carved into a
+	# riverbed under it (route.gd registers the span with route_terrain.gd's
+	# `rivers`, same as it does for a hill's crest above).
+	var river_terrain: Node3D = load("res://scripts/gameplay/route/route_terrain.gd").new()
+	root.add_child(river_terrain)
+	river_terrain.add_span(Vector3(0.0, 0.0, 20.0), Vector3(0.0, 0.0, -400.0), false, 3.0)
+	var bridge := NarrowBridgeSegment.new()
+	bridge.continuous_terrain = true
+	bridge.position = Vector3(0.0, 0.0, -180.0)
+	root.add_child(bridge)
+	await process_frame
+	var bridge_exit: Vector3 = bridge.position + Vector3(0.0, 0.0, -bridge.length)
+	river_terrain.rivers.append({"a": Vector2(bridge.position.x, bridge.position.z), "b": Vector2(bridge_exit.x, bridge_exit.z), "depth": bridge.river_depth})
+	river_terrain.build()
+	_expect(bridge.get_node_or_null(^"BridgeDeckModule") != null, "The deck GLB builds on the main route too, not just standalone")
+	_expect(bridge.get_node_or_null(^"BridgeWater") != null, "The river GLB builds on the main route too")
+	_expect(bridge.get_node_or_null(^"BridgeGuardRailCollision") != null, "Guard rail collision is still there with the river carved in")
+	_expect(bridge.has_meta(&"ignore_river"), "The whole segment is flagged so its own furniture floats over the drop")
+	var mid_z: float = bridge.position.z - bridge.length * 0.5
+	var river_under_deck: float = river_terrain.height_at(Vector3(0.0, 0.0, mid_z))
+	var river_beside: float = river_terrain.height_at(Vector3(10.0, 0.0, mid_z))
+	var river_natural: float = river_terrain.height_without_rivers(Vector3(0.0, 0.0, mid_z))
+	_expect(not is_nan(river_under_deck) and not is_nan(river_beside) and not is_nan(river_natural), "No NaN in the carved riverbed")
+	_expect(river_natural - river_under_deck > 1.0, "The ground actually drops away under the middle of the bridge (%.2f m)" % (river_natural - river_under_deck))
+	_expect(absf(river_under_deck - river_beside) < 0.6, "It's a real valley crossing under the bridge, not a hole only right under the deck (%.2f vs %.2f)" % [river_under_deck, river_beside])
+	var entry_gap: float = absf(river_terrain.height_at(bridge.position) - river_terrain.height_without_rivers(bridge.position))
+	var exit_gap: float = absf(river_terrain.height_at(bridge_exit) - river_terrain.height_without_rivers(bridge_exit))
+	_expect(entry_gap < 0.01 and exit_gap < 0.01, "The riverbed fades out exactly at the segment's own edges -- no seam with the straight road (%.3f / %.3f)" % [entry_gap, exit_gap])
+	river_terrain.conform_geometry(bridge)
+	await physics_frame
+	await physics_frame
+	var river_space := root.world_3d.direct_space_state
+	var deck_ray := PhysicsRayQueryParameters3D.create(Vector3(0.0, river_natural + 6.0, mid_z), Vector3(0.0, river_under_deck - 3.0, mid_z))
+	var deck_hit: Dictionary = river_space.intersect_ray(deck_ray)
+	_expect(not deck_hit.is_empty() and deck_hit.position.y - river_under_deck > 1.0,
+		"A raycast down the middle of the span lands on the deck, well above the carved riverbed, not in the gap")
+	var gorge_ray := PhysicsRayQueryParameters3D.create(Vector3(10.0, river_natural + 6.0, mid_z), Vector3(10.0, river_beside - 3.0, mid_z))
+	var gorge_hit: Dictionary = river_space.intersect_ray(gorge_ray)
+	_expect(not gorge_hit.is_empty() and absf(gorge_hit.position.y - river_beside) < 0.05, "Beside the deck a raycast finds the real dropped ground, not empty air or a hole")
+	bridge.free()
+	river_terrain.free()
 
 	# Tunnel.
 	var tunnel: RouteSegment = TunnelSegment.new()
@@ -105,7 +153,7 @@ func _run() -> void:
 	truck.free()
 	await process_frame
 	if _failures == 0:
-		print("PASS: crests lift the road, tunnels are solid and lit, crossings close for a passing train and reopen")
+		print("PASS: crests lift the road, a narrow bridge carves a real riverbed under itself, tunnels are solid and lit, crossings close for a passing train and reopen")
 	quit(_failures)
 
 

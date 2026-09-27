@@ -485,15 +485,95 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 		road_slots.append(Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset))
 		for i: int in range(road_slots.size() - 1):
 			terrain.add_span((cursor * road_slots[i]).origin, (cursor * road_slots[i + 1]).origin, segment is GravelSegment, 3.0 if segment is NarrowBridgeSegment else 6.0)
+		# Where this segment's own stretch of _path_points starts and ends --
+		# _clamp_river_reach() needs it to tell "another part of the road" a
+		# river might run into from the river's own straight stretch under it.
+		var path_start_index: int = _path_points.size()
 		for slot: Transform3D in segment.get_dressing_slots(10.0):
 			_path_points.append((cursor * slot).origin)
 		if segment is HillSegment:
 			var exit: Vector3 = (cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)).origin
 			terrain.crests.append({"a": Vector2(cursor.origin.x, cursor.origin.z), "b": Vector2(exit.x, exit.z), "height": (segment as HillSegment).crest_height})
+		# The riverbed under a narrow bridge (N-132 follow-up): carves the
+		# ground itself so it reads as a real crossing instead of guard
+		# rails standing over flat grass. The span exactly matches this
+		# straight segment (it never turns), so the deck/rails/water --
+		# all flagged &"ignore_river" -- float over the drop. `bank_width`
+		# starts at the segment's own preference and _clamp_river_reach()
+		# (called once the whole route exists) shrinks it if it would
+		# otherwise run into another stretch of road, a house or the yard.
+		if segment is NarrowBridgeSegment:
+			var bridge: NarrowBridgeSegment = segment as NarrowBridgeSegment
+			var river_end: Vector3 = (cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)).origin
+			terrain.rivers.append({
+				"a": Vector2(cursor.origin.x, cursor.origin.z), "b": Vector2(river_end.x, river_end.z),
+				"depth": bridge.river_depth, "full_width": bridge.river_width, "bank_width": bridge.river_reach,
+				"path_start": path_start_index, "path_end": _path_points.size(), "route_start": route_length,
+			})
 		route_length += segment.length
 		cursor = cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)
 		_progress_samples.append({"cumulative": route_length, "position": cursor.origin, "leg_index": leg_index})
 	return cursor
+
+
+## A river reaches for its own preferred `bank_width` (NarrowBridgeSegment's
+## river_reach, up to 60 m out) so it fades into the landscape instead of
+## reading as a rectangular pool -- but a winding route can bring another
+## stretch of road, a house or the depot yard back within that reach. Run
+## once the whole route (every leg, every house) exists, so unlike the
+## registration in _build_leg() this sees what comes both before AND after
+## the bridge. Shrinks `bank_width` to stop RIVER_HAZARD_MARGIN short of
+## whatever's closest, never below its own `full_width` + a visible margin,
+## so the crossing itself is never swallowed. The margin has to clear
+## route_terrain.gd's RIVER_MAX_DRIFT (how far the meander can ever swing the
+## actual wet edge past the plain `bank_width` this measures against) plus
+## some slack, or the meander could still carry the real river into what
+## this thought it had already cleared.
+const RIVER_HAZARD_MARGIN: float = 4.0 + Terrain.RIVER_MAX_DRIFT
+## The road immediately before and after the bridge is the SAME straight
+## lane the river runs under -- at zero sideways distance from its own
+## centreline, so without this it would always read as the nearest "hazard"
+## and clamp every river down to the floor. Matches test_route_fuzz.gd's
+## NEIGHBOUR_ALONG for the same idea: anything within this far along the
+## route of the bridge's own span is its approach/exit, not another part of
+## the road that happens to have come back close by.
+const RIVER_SELF_BUFFER: float = 60.0
+
+
+func _clamp_river_reach() -> void:
+	var cumulative: PackedFloat32Array = _path_cumulative()
+	for river: Dictionary in terrain.rivers:
+		var a: Vector2 = river.a
+		var edge: Vector2 = (river.b as Vector2) - a
+		var length: float = maxf(edge.length(), 0.001)
+		var dir: Vector2 = edge / length
+		var perp: Vector2 = Vector2(-dir.y, dir.x)
+		var route_start: float = float(river.get("route_start", 0.0))
+		var route_end: float = route_start + length
+		var hazard: float = INF
+		for index: int in range(_path_points.size()):
+			var travelled: float = cumulative[index] if index < cumulative.size() else 0.0
+			if travelled > route_start - RIVER_SELF_BUFFER and travelled < route_end + RIVER_SELF_BUFFER:
+				continue  # this bridge's own approach/exit, not a hazard
+			var q := Vector2(_path_points[index].x, _path_points[index].z)
+			var s: float = (q - a).dot(dir)
+			if s < -RIVER_HAZARD_MARGIN or s > length + RIVER_HAZARD_MARGIN:
+				continue
+			hazard = minf(hazard, absf((q - a).dot(perp)))
+		for house: DeliveryHouse in houses:
+			var q := Vector2(house.position.x, house.position.z)
+			var s: float = (q - a).dot(dir)
+			if s < -RIVER_HAZARD_MARGIN or s > length + RIVER_HAZARD_MARGIN:
+				continue
+			hazard = minf(hazard, absf((q - a).dot(perp)) - HOUSE_CLEAR_RADIUS)
+		if start_yard.has_area():
+			var center: Vector2 = start_yard.position + start_yard.size * 0.5
+			var s: float = (center - a).dot(dir)
+			if s >= -RIVER_HAZARD_MARGIN and s <= length + RIVER_HAZARD_MARGIN:
+				hazard = minf(hazard, absf((center - a).dot(perp)) - maxf(start_yard.size.x, start_yard.size.y) * 0.5)
+		var full_width: float = float(river.full_width)
+		var desired: float = float(river.bank_width)
+		river.bank_width = clampf(hazard - RIVER_HAZARD_MARGIN, full_width + 6.0, desired) if hazard < INF else desired
 
 
 ## One house per package (docs/tareas-nacho.md house delivery system), one
@@ -788,6 +868,7 @@ func distance_from_path(world_position: Vector3) -> float:
 
 func _finish_terrain() -> void:
 	_keep_houses_off_road()
+	_clamp_river_reach()
 	# Level building pads blend back into the landscape, so the doorstep and
 	# access path remain walkable even on a hillside.
 	for house: Node3D in houses:

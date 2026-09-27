@@ -8,10 +8,14 @@ class_name RouteDresser
 ##
 ##   1. far enough from the asphalt (terrain.nearest() to the road centreline
 ##      minus the object's own footprint radius),
-##   2. not inside a cleared zone (a house and its yard, the farm's barn),
-##   3. not overlapping anything solid already placed (occupancy grid),
-##   4. not on a slope steeper than the object tolerates,
-##   5. not too close to another of its own kind, when that matters
+##   2. not in a narrow bridge's riverbed (terrain.river_depth_at() --
+##      RIVER_MISFIT_DEPTH still lets a power pole plant itself on the
+##      shallow outer bank, so its line can cross the river; nothing stands
+##      in the water or the bare bed beside it),
+##   3. not inside a cleared zone (a house and its yard, the farm's barn),
+##   4. not overlapping anything solid already placed (occupancy grid),
+##   5. not on a slope steeper than the object tolerates,
+##   6. not too close to another of its own kind, when that matters
 ##      (two windmills side by side, three bus stops in a row).
 ##
 ## A spot that fails is simply skipped -- nothing gets nudged into a place
@@ -46,6 +50,12 @@ const MAX_FOOTPRINT: float = 8.0
 ## Terrain.nearest() returns 4x its HALO when a point has no road tile
 ## nearby at all -- i.e. there's no ground there to stand on.
 const NO_TERRAIN_DISTANCE: float = 250.0
+## Above this much carved-away depth (route_terrain.gd river_depth_at()) a
+## spot counts as "in the riverbed" and nothing gets planted there -- low
+## enough that a power pole still fits on a bridge's shallow outer bank
+## (its own line is allowed to cross the river), but high enough to keep
+## everything out of the actual water and the bare bed beside it.
+const RIVER_MISFIT_DEPTH: float = 0.5
 ## Fake contact shadows (presentation/contact_shadow.gd): how far the soft
 ## band reaches in and out of a parked car's footprint.
 const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
@@ -1046,7 +1056,7 @@ func _try_place(segment: RouteSegment, group_name: String, path: String, xform: 
 	return node
 
 
-## The five checks from the class comment, in cheapest-first order. Returns
+## The six checks from the class comment, in cheapest-first order. Returns
 ## why a spot was turned down, or &"" when it fits (and records the reason).
 ## `in_world` = false is for a house's own yard, which sits inside that
 ## house's cleared zone by definition (it still can't overlap itself).
@@ -1061,6 +1071,8 @@ func _misfit(p: Vector3, radius: float, clearance: float, max_slope: float, in_w
 		reason = &"no_terrain"
 	elif road - radius < clearance:
 		reason = &"road"
+	elif _terrain.river_depth_at(Vector2(p.x, p.z)) > RIVER_MISFIT_DEPTH:
+		reason = &"river"
 	elif in_world and _in_clear_zone(p, claim):
 		reason = &"clear_zone"
 	elif _overlaps(p, claim):
