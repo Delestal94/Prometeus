@@ -61,6 +61,8 @@ var sheep: Array[Node3D] = []
 var _flock: Array[Dictionary] = []
 var _clock: float = 0.0
 var _bleat: AudioStreamPlayer3D
+## The truck, found once and kept while it lives (a restart frees it).
+var _vehicle_cache: Node3D
 
 
 func _ready() -> void:
@@ -103,7 +105,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if state == State.DONE:
 		return
-	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as VehicleBody3D
+	var vehicle := _vehicle() as VehicleBody3D
 	if state == State.WAITING:
 		if vehicle != null and _approaching(vehicle):
 			state = State.CROSSING
@@ -180,7 +182,7 @@ func _check_hit(vehicle: VehicleBody3D, index: int) -> void:
 func _on_horn_honked(_peer_id: int) -> void:
 	if state not in [State.WAITING, State.CROSSING]:
 		return
-	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	var vehicle := _vehicle() as Node3D
 	if vehicle == null or not horn_reaches(vehicle):
 		return
 	state = State.SCATTERED
@@ -245,3 +247,9 @@ func _ground_height(local_point: Vector3) -> float:
 	if hit_info.is_empty():
 		return local_point.y
 	return to_local(hit_info["position"] as Vector3).y
+
+
+func _vehicle() -> Node3D:
+	if not is_instance_valid(_vehicle_cache):
+		_vehicle_cache = get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	return _vehicle_cache

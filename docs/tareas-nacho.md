@@ -294,8 +294,10 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
   (`scripts/ui/hud/hud.gd`, antes `prototype_hud.gd`) con 5 componentes. `main_menu._build_ui()`
   se partió por sección. `696e147` + el commit del menú.
   - [x] `Hud._build_ui()` (~200 líneas) partido en siete constructores por zona de pantalla.
-- [ ] **Fase 6 · Búsquedas frágiles:** 113 `find_child`/búsquedas por grupo (18 en `reference_truck.gd`)
-  → referencias cacheadas o `@export`.
+- [x] **Fase 6 · Búsquedas de nodos:** auditadas las 103. Casi todas son legítimas: partes de GLB importados
+  buscadas por su nombre de Blender (contrato con el pipeline de arte, cubierto por `test_reference_truck`
+  y afines) o consultas globales por grupo. Solo 4 corrían en cada frame; las 3 de fauna (perro, ovejas,
+  ciervo) ahora cachean el camión en `_vehicle()`. La de `reference_truck` recorre los jugadores (≤5) y queda.
 - [ ] **Fase 7 · i18n:** ~234 textos de UI en español escritos en el código (fuera de `tr()`), a un CSV
   de traducción (se cruza con la S-509 de Slatex: opción de idioma).
 - [ ] **Fase 8 · Responsividad:** capturas del HUD/menús en 16:9, 16:10 (Steam Deck), 21:9 y 4:3 con

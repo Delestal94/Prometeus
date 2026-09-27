@@ -68,6 +68,8 @@ var _lateral: float = 0.0
 var _timer: float = 0.0
 var _tumble_velocity: Vector3 = Vector3.ZERO
 var _tumble_offset: Vector3 = Vector3.ZERO
+## The truck, found once and kept while it lives (a restart frees it).
+var _vehicle_cache: Node3D
 
 
 func _ready() -> void:
@@ -95,7 +97,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if state == State.DONE:
 		return
-	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as VehicleBody3D
+	var vehicle := _vehicle() as VehicleBody3D
 	match state:
 		State.WAITING:
 			if vehicle != null and _approaching(vehicle):
@@ -208,7 +210,7 @@ static func report_incident(tree: SceneTree, event_id: StringName, title: String
 func _on_horn_honked(_peer_id: int) -> void:
 	if state not in [State.WAITING, State.RUNNING_IN, State.FROZEN]:
 		return
-	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	var vehicle := _vehicle() as Node3D
 	if vehicle == null or not horn_reaches(vehicle):
 		return
 	if absf(_lateral) > ROAD_HALF_WIDTH:
@@ -248,3 +250,9 @@ func _ground_height(local_point: Vector3) -> float:
 	if hit_info.is_empty():
 		return local_point.y
 	return to_local(hit_info["position"] as Vector3).y
+
+
+func _vehicle() -> Node3D:
+	if not is_instance_valid(_vehicle_cache):
+		_vehicle_cache = get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	return _vehicle_cache
