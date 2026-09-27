@@ -435,16 +435,17 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 ### S-301 · Íconos de Líquido, Explosivo y Hostil — A · `Luna · medium` para el prompt, generación de imagen aparte · Aviso: no
 
-Hoy el HUD tiene ícono para 4 de las 7 trampas (`assets/ui/icons/tx_ui_trap_*_256.png`).
+El HUD ya tiene un ícono transparente propio para cada una de las 7 trampas
+(`assets/ui/icons/tx_ui_trap_*_256.png`).
 
-- [ ] Generarlos con el mismo estilo que los 4 existentes: `art/tools/comfy_generate.py` con
+- [x] (commit `81ee0e3`) Generarlos con el mismo estilo que los 4 existentes: `art/tools/comfy_generate.py` con
   `art/prompts/estilo-base.md` (o la generación de imágenes de ChatGPT, pasándole los 4 íconos de
   referencia). 256×256, fondo transparente, silueta legible a 42 px.
-- [ ] Nombres: `tx_ui_trap_liquid_256.png`, `tx_ui_trap_explosive_256.png`, `tx_ui_trap_hostile_256.png`.
+- [x] (commit `81ee0e3`) Nombres: `tx_ui_trap_liquid_256.png`, `tx_ui_trap_explosive_256.png`, `tx_ui_trap_hostile_256.png`.
   Mapearlos en `UiTheme.trap_icon()`.
-- [ ] Registrar cada imagen en `art/ai-registro.md` (declaración de IA de Steam) y en
+- [x] (commit `81ee0e3`) Registrar cada imagen en `art/ai-registro.md` (declaración de IA de Steam) y en
   `docs/inventario-assets.md` §1.
-- [ ] Test `tests/test_trap_icons.gd`: cada `data/traps/*.tres` tiene ícono propio (ninguno cae en el
+- [x] (commit `81ee0e3`) Test `tests/test_trap_icons.gd`: cada `data/traps/*.tres` tiene ícono propio (ninguno cae en el
   genérico).
 
 ### S-302 · Contenidos propios para cada trampa — B · `Sol · high` (Blender Python) · Aviso: no
