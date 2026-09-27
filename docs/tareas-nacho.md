@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
+> Última actualización: 2026-09-27 (N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
 > M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
 > N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
 > una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
@@ -395,6 +395,25 @@ Pedido del usuario: refinar el personaje y sus animaciones al máximo, sin perde
     tiro del short reparte su peso entre los dos muslos (la parte compartida L+R crece hacia
     el fondo y la diferencia L−R se mantiene), así ya no cuelga en punta entre las rodillas
     en `Sit`. Métrica en `check_deformation.py` (`--crotch-only`); test: `test_player_character`.
+
+### N-310 · Personaje cartoon gordito — A · `Opus 5.5 · xhigh` · Aviso: sí (`character_face.gd`, GLB) · **[x] Hecho (2026-09-27)**
+
+Pedido del usuario: modelo cartoon cómico y tierno, más gordito, "nivel Pixar".
+
+- [x] Modelo (`art/rounded_character/build_character.py`, `head_shape.py`): cabeza esculpida por
+  fórmula (elipsoide con papada y cachetes), nariz de botón, orejas, pelo corto con flequillo en
+  mechones y rulo (material nuevo `Hair`), panza más grande y adelantada, brazos, piernas y
+  zapatos más regordetes. Mismos huesos y articulaciones: el juego no cambia.
+- [x] Oclusión suave y rubor horneados en color de vértice (`vertex_shading.py`); ~23.500 triángulos.
+- [x] Animación (`animation_library.py`): brazos que cuelgan separados de la panza (`HANG`,
+  `GAIT_ARMS`), caminos de las manos al agarrar por delante de la panza (`PICKUP_*`,
+  `CARRY_HANDS`), manos sentado sobre la panza nueva, panza y cabeza con más rebote al
+  trotar y al aterrizar, bamboleo más marcado. Medido con `check_clearance.py`.
+- [x] Ojos ovalados con brillos redondos (`build_faces.py`); `character_face.gd` apoya la cara
+  sobre la cabeza nueva. Test: `test_player_character` (cara sobre la piel, color de vértice).
+- [x] Asientos remedidos para el cuerpo nuevo (`player_seat_pose.gd`, rulo más bajo para el conductor).
+- Pendiente: la nuca del conductor roza el techo inclinado de la cabina y los pasajeros vecinos
+  se superponen (asientos a 0,48 m); ver "Límites conocidos" en `REFINAMIENTO.md`.
 
 ## 4. Audio y diseño sonoro
 

@@ -36,13 +36,16 @@ model_fixes.apply(rig)
 
 # --- Materials: short ASCII names Godot code can look up -------------------
 MAT_NAMES = {'01': 'Skin', '02': 'Shirt', '03': 'ShirtTrim', '04': 'Shorts',
-             '05': 'ShortsHem', '06': 'Shoe', '07': 'Sole'}
+             '05': 'ShortsHem', '06': 'Shoe', '07': 'Sole', '08': 'Hair'}
 for mat in bpy.data.materials:
     if mat.name[:2] in MAT_NAMES:
         mat.name = MAT_NAMES[mat.name[:2]]
 
 # --- Mesh: drop morphs, decimate, join (hidden overlaps: model_fixes) ---------
-RATIOS = {'Brazo': .25, 'Camiseta · cuerpo': .25, 'Short · pieza': .25, 'Cabeza': .8}
+# The chubby calves bend a lot sitting: at .35 their slivers creased there.
+RATIOS = {'Brazo': .19, 'Camiseta · cuerpo': .23, 'Short · pieza': .22, 'Cabeza': .42, 'Pierna': .6,
+          'Pelo': .1, 'Rulo': .3, 'Mechón': .3, 'Oreja': .3, 'Nariz': .3,
+          'Cuello · costura': .35, 'Cuello': .2}
 bpy.ops.object.mode_set(mode='OBJECT') if bpy.context.object and bpy.context.object.mode != 'OBJECT' else None
 for o in meshes:
     bpy.ops.object.select_all(action='DESELECT')
@@ -68,6 +71,10 @@ while body.material_slots[0].material.name != 'Shirt':
     body.active_material_index = next(i for i, s in enumerate(body.material_slots) if s.material.name == 'Shirt')
     bpy.ops.object.material_slot_move(direction='UP')
 tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
+
+# Baked soft occlusion and the blush on cheeks, nose and ears (rest pose).
+import vertex_shading
+vertex_shading.apply(body)
 
 # --- Animation library: grounded contact paths and staged one-shots ----------
 from animation_library import build, FPS, DURATIONS
@@ -118,7 +125,7 @@ kwargs = dict(filepath=str(OUT), export_format='GLB', use_selection=True,
               export_animations=True, export_skins=True, export_morph=False)
 for k, v in [('export_def_bones', True), ('export_animation_mode', 'ACTIONS'), ('export_force_sampling', True),
              ('export_frame_range', False), ('export_anim_single_armature', True), ('export_reset_pose_bones', True),
-             ('export_extras', False), ('export_apply', False)]:
+             ('export_extras', False), ('export_apply', False), ('export_vertex_color', 'ACTIVE')]:
     if k in props:
         if props[k].type == 'ENUM' and v not in {x.identifier for x in props[k].enum_items}: continue
         kwargs[k] = v

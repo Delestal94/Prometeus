@@ -99,14 +99,24 @@ func _layer(label: String, mesh: ArrayMesh, layers: int) -> MeshInstance3D:
 	add_child(part)
 	return part
 
+## The exported head (art/rounded_character/head_shape.py, in metres): an
+## ellipsoid whose lower half widens into jowls. Cheeks and nose are pushed
+## out of it where nothing is drawn, so the face ignores them.
+const HEAD_CENTRE_Y: float = 1.445
+const HEAD_RADII: Vector3 = Vector3(0.30, 0.285, 0.275)  # side, up, depth
+const HEAD_JOWL: float = 0.07
+## Clears the decimated skin without a floating sticker.
+const FACE_OFFSET: float = 0.003
+
 ## Model-space point of the face patch for a texture coordinate.
 static func _patch_point(uv: Vector2) -> Vector3:
 	var longitude: float = (uv.x - 0.5) * 1.9
 	var latitude: float = (0.5 - uv.y) * 1.5
-	# Exported head: centre 1.445 m, ellipsoid radii .2875/.29/.2625.
-	# A 3 mm offset clears the decimated skin without a floating sticker.
-	return Vector3(0.2905 * sin(longitude) * cos(latitude),
-		1.445 + 0.293 * sin(latitude), -0.2655 * cos(longitude) * cos(latitude))
+	var up: float = sin(latitude)
+	var jowl: float = 1.0 + HEAD_JOWL * (1.0 - smoothstep(-0.8, 0.2, up))
+	var point := Vector3(HEAD_RADII.x * sin(longitude) * cos(latitude) * jowl,
+		HEAD_RADII.y * up, -HEAD_RADII.z * cos(longitude) * cos(latitude) * jowl)
+	return Vector3(0.0, HEAD_CENTRE_Y, 0.0) + point * (1.0 + FACE_OFFSET / point.length())
 
 static func _curved_patch(to_bone: Transform3D) -> ArrayMesh:
 	var surface := SurfaceTool.new()

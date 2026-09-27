@@ -11,8 +11,13 @@ def write(name,body):
     svg=f'<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><g fill="{INK}" stroke="{INK}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">{body}</g></svg>'
     (OUT/(name+'.svg')).write_text(svg,encoding='utf-8')
 
-def oval_eye(x,cy=213,rx=30,ry=55):
-    return f'<ellipse cx="{x}" cy="{cy}" rx="{rx}" ry="{ry}" stroke="none"/><path d="M {x-4},{cy-ry+9} L {x+20},{cy-19} L {x-4},{cy-12} Z" fill="#fffaf0" stroke="none"/>'
+def oval_eye(x,cy=213,rx=33,ry=57):
+    # Glossy: a big round catch-light up and to the right and a small one low
+    # on the left, the same on both eyes (one light).
+    k=rx/33
+    return (f'<ellipse cx="{x}" cy="{cy}" rx="{rx}" ry="{ry}" stroke="none"/>'
+            f'<circle cx="{x+round(10*k)}" cy="{cy-round(ry*.42)}" r="{round(12*k)}" fill="#fffaf0" stroke="none"/>'
+            f'<circle cx="{x-round(12*k)}" cy="{cy+round(ry*.38)}" r="{round(5*k)}" fill="#fffaf0" stroke="none"/>')
 
 def brows(left,right):
     return f'<path d="{left} M {right}" fill="none"/>'
@@ -20,9 +25,9 @@ def brows(left,right):
 write('eyes_classic',oval_eye(185)+oval_eye(327))
 write('eyes_joyful','<path d="M 150 234 Q 185 169 221 234 M 292 234 Q 327 169 363 234" fill="none" stroke-width="12"/><path d="M 146 185 Q 185 154 222 181 M 291 181 Q 328 154 364 185" fill="none" stroke-width="5"/>')
 write('eyes_sleepy','<path d="M 153 205 Q 185 283 216 205 Z M 296 205 Q 328 283 360 205 Z"/><path d="M 145 198 L 221 205 M 291 205 L 365 197" fill="none" stroke-width="10"/><path d="M 153 171 Q 185 159 215 176 M 298 176 Q 329 159 359 171" fill="none" stroke-width="5"/><path d="M 185 212 L 201 216 L 189 228 Z M 328 212 L 344 216 L 332 228 Z" stroke="none" fill="#fffaf0"/>')
-write('eyes_worried',oval_eye(185,219,24,43)+oval_eye(327,219,24,43)+'<path d="M 147 170 Q 180 171 209 141 M 303 141 Q 332 171 365 170" fill="none"/>')
+write('eyes_worried',oval_eye(185,219,26,45)+oval_eye(327,219,26,45)+'<path d="M 147 170 Q 180 171 209 141 M 303 141 Q 332 171 365 170" fill="none"/>')
 write('eyes_wink',oval_eye(185)+'<path d="M 294 220 Q 326 203 358 222 M 351 211 L 369 201" fill="none" stroke-width="11"/><path d="M 294 168 Q 326 150 357 174" fill="none" stroke-width="5"/>')
-write('eyes_lashes',oval_eye(185,216,29,53)+oval_eye(327,216,29,53)+'<path d="M 164 169 L 154 148 M 184 161 L 183 138 M 204 169 L 215 150 M 306 169 L 296 148 M 326 161 L 327 138 M 346 169 L 358 151" fill="none" stroke-width="6"/>')
+write('eyes_lashes',oval_eye(185,216,32,55)+oval_eye(327,216,32,55)+'<path d="M 164 169 L 154 148 M 184 161 L 183 138 M 204 169 L 215 150 M 306 169 L 296 148 M 326 161 L 327 138 M 346 169 L 358 151" fill="none" stroke-width="6"/>')
 write('mouth_smile','<path d="M 181 321 Q 256 386 331 321" fill="none" stroke-width="9"/><path d="M 174 329 Q 174 314 190 312 M 322 312 Q 338 314 338 329" fill="none" stroke-width="5"/>')
 write('mouth_grin','<path d="M 174 313 Q 256 348 338 313 Q 335 381 256 381 Q 178 381 174 313 Z" fill="#fffaf0"/><path d="M 181 344 Q 256 366 331 344 M 211 327 L 210 368 M 241 333 L 241 378 M 272 334 L 272 377 M 301 328 L 302 369" fill="none" stroke-width="4"/>')
 write('mouth_surprised','<ellipse cx="256" cy="344" rx="27" ry="34"/><ellipse cx="255" cy="365" rx="15" ry="7" fill="#fffaf0" stroke="none"/>')

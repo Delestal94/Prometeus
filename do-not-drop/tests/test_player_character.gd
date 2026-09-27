@@ -15,9 +15,14 @@ extends SceneTree
 ## And the shorts' crotch rides with the thighs (model_fixes.py): its bottom
 ## carries thigh weight, or it hangs as a pointed fold between the knees in
 ## Sit. The deformation itself is measured by check_deformation.py.
+## And the chubby head (head_shape.py, 2026-09-27): character_face.gd lays
+## the eyes and mouth just over its skin, neither buried nor floating, and
+## the export bakes soft occlusion and a cheek blush into vertex colour,
+## which the imported materials multiply in.
 
 const CHARACTER: String = "res://assets/models/characters/sm_char_player_rounded.glb"
 const PlayerScript: GDScript = preload("res://scripts/gameplay/player/player.gd")
+const CharacterFace: GDScript = preload("res://scripts/presentation/character_face.gd")
 
 var _failures: int = 0
 
@@ -72,6 +77,8 @@ func _initialize() -> void:
 		_expect(triangles < 25000, "Game export stays decimated (%d triangles)" % triangles)
 		if skeleton != null:
 			_check_crotch_weights(mesh, skeleton)
+			_check_face_fit(model, mesh, skeleton)
+		_check_vertex_shading(mesh)
 	model.free()
 
 	# In the player: crew colour on shirt and trim, every body mesh on the
@@ -85,6 +92,7 @@ func _initialize() -> void:
 	var body_mesh: MeshInstance3D = _find(player.get_node(^"BodyVisual"), "MeshInstance3D") as MeshInstance3D
 	var shirt := body_mesh.get_surface_override_material(0) as StandardMaterial3D
 	_expect(shirt != null and shirt.albedo_color == Color("f4c562"), "Peer 1's shirt wears its crew colour")
+	_expect(shirt != null and shirt.vertex_color_use_as_albedo, "The crew-coloured shirt keeps the baked occlusion")
 	var trim_tinted: bool = false
 	for surface: int in body_mesh.mesh.get_surface_count():
 		var source: Material = body_mesh.mesh.surface_get_material(surface)
@@ -274,6 +282,70 @@ func _check_crotch_weights(mesh: MeshInstance3D, skeleton: Skeleton3D) -> void:
 	share /= maxf(count, 1)
 	_expect(count > 0 and share > 0.5,
 		"The shorts' crotch bottom rides with the thighs (thigh weight %.2f over %d vertices)" % [share, count])
+
+
+## Where the face texture's eyes and mouth are drawn (texture px / 512) must
+## sit 0-12 mm over the head's rest skin: the patch follows the same
+## ellipsoid and jowls as the sculpted head.
+func _check_face_fit(model: Node3D, mesh: MeshInstance3D, skeleton: Skeleton3D) -> void:
+	var head_bone: int = skeleton.find_bone("head")
+	var bind: int = -1
+	for i: int in mesh.skin.get_bind_count():
+		var bone_name: String = String(mesh.skin.get_bind_name(i))
+		if (bone_name == "head") or (bone_name.is_empty() and mesh.skin.get_bind_bone(i) == head_bone):
+			bind = i
+	_expect(bind >= 0, "The skin binds the head bone")
+	if bind < 0:
+		return
+	var to_model: Transform3D = model.global_transform.affine_inverse() * skeleton.global_transform 		* skeleton.get_bone_global_rest(head_bone) * mesh.skin.get_bind_pose(bind)
+	var skin: PackedVector3Array = PackedVector3Array()
+	for surface: int in mesh.mesh.get_surface_count():
+		var material: Material = mesh.mesh.surface_get_material(surface)
+		if material == null or material.resource_name != "Skin":
+			continue
+		var arrays: Array = mesh.mesh.surface_get_arrays(surface)
+		var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		var stride: int = bones.size() / points.size()
+		for i: int in points.size():
+			for k: int in stride:
+				if bones[i * stride + k] == bind and weights[i * stride + k] > 0.99:
+					skin.append(to_model * points[i])
+	var centre := Vector3(0.0, CharacterFace.HEAD_CENTRE_Y, 0.0)
+	# Eye centres, mouth middle and its corners on the default face.
+	for px: Vector2 in [Vector2(185, 213), Vector2(327, 213), Vector2(256, 350), Vector2(181, 321), Vector2(331, 321)]:
+		var point: Vector3 = CharacterFace._patch_point(px / 512.0)
+		var direction: Vector3 = (point - centre).normalized()
+		var radius: float = -1.0
+		for vertex: Vector3 in skin:
+			if (vertex - centre).normalized().dot(direction) > 0.997:
+				radius = maxf(radius, (vertex - centre).length())
+		var gap: float = (point - centre).length() - radius
+		_expect(radius > 0.0 and gap > 0.0 and gap < 0.012,
+			"The face at texture px %s sits just over the skin (gap %.4f m)" % [px, gap])
+
+
+## Baked vertex colour: somewhere darker (occlusion) and a pink cheek blush on
+## the skin, and the imported materials use it.
+func _check_vertex_shading(mesh: MeshInstance3D) -> void:
+	var darkest: float = 1.0
+	var blush: float = 0.0
+	for surface: int in mesh.mesh.get_surface_count():
+		var material := mesh.mesh.surface_get_material(surface) as BaseMaterial3D
+		var arrays: Array = mesh.mesh.surface_get_arrays(surface)
+		var colours: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+		_expect(not colours.is_empty(), "Surface %d carries baked vertex colour" % surface)
+		# Except the shirt: the importer leaves the flag off on the first
+		# surface, and player.gd sets it on the crew-coloured copy (below).
+		_expect(surface == 0 or (material != null and material.vertex_color_use_as_albedo),
+			"Surface %d's material multiplies the vertex colour in" % surface)
+		for colour: Color in colours:
+			darkest = minf(darkest, colour.g)
+			if material != null and material.resource_name == "Skin":
+				blush = maxf(blush, colour.r - colour.g)
+	_expect(darkest < 0.9, "Occlusion darkens the tucked-in places (darkest %.2f)" % darkest)
+	_expect(blush > 0.15, "The skin has a cheek blush (red over green %.2f)" % blush)
 
 
 func _bone_height(anim: AnimationPlayer, skeleton: Skeleton3D, clip: String, time: float, bone: String) -> float:

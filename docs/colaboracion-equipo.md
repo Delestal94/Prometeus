@@ -93,6 +93,26 @@ ampliados (lista del README). Hacé `git pull` antes de seguir con `level_base.g
   y en los clientes se dibuja suavizada 100 ms atrás (N-208, `vehicle/vehicle_net_smoother.gd`).
   `position`/`rotation` del camión en el cliente siguen siendo la verdad local para colisiones.
 
+## Aviso activo: personaje cartoon gordito (N-310, 2026-09-27)
+
+Pedido del usuario: modelo cartoon tierno y más gordito. Lo hizo Nacho (con Claude), todo desde
+`art/rounded_character/` (detalle en `LEEME.md` y `REFINAMIENTO.md`). Mismos huesos, nombres y
+clips: nada del juego tiene que cambiar para usarlo. Reimportá el GLB después del `git pull`.
+- `sm_char_player_rounded.glb`: cabeza con cachetes, nariz, orejas y pelo (superficie nueva
+  `Hair`), panza más grande, oclusión y rubor en color de vértice. La camiseta sigue siendo la
+  superficie 0.
+- `presentation/character_face.gd` (zona de Nacho): la cara se apoya sobre la cabeza nueva
+  (`HEAD_*`). Los ojos ovalados de `faces/` tienen brillos redondos.
+- `player/player.gd` (de Slatex): una línea en `_apply_cosmetic()`, la copia teñida de la
+  camiseta activa `vertex_color_use_as_albedo` (el importador lo deja apagado en la primera
+  superficie) y se actualizó el comentario de `_seat_body_offset()`.
+- `player/player_seat_pose.gd` (de Slatex): `seat_body_offset()` remedido con
+  `render_player_character.gd` para el cuerpo nuevo: conductor 2 cm más hundido (el pelo tocaba
+  el techo; el rulo quedó bajo), pasajeros 7 cm más abajo y 10 cm más adelante, rack 7 y 4 cm.
+- Test: `test_player_character` (ampliado: cara sobre la piel, color de vértice).
+- Pendiente conocido: el cuerpo sentado es más ancho que la separación de los asientos de la
+  caja (0,48 m); los vecinos se superponen, como ya pasaba en menor medida.
+
 ## Aviso activo: agarrar la caja según su altura (N-309, 2026-09-25)
 
 Lo hizo Nacho (con Claude). Clip nuevo `PickUpHigh` en `sm_char_player_rounded.glb` (caja a la

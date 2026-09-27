@@ -33,6 +33,10 @@ GAITS = {
     'Stroll': dict(speed=1.5*BU, period=.6, duty=.62, run=False),
 }
 IDLE_PERIOD = 6.0
+# Gait arms, (lower, ext, extra ext swinging forward): out from the sides and
+# turned out on the forward swing, so the fists pass the tummy. Tuned with
+# check_clearance.py: turning the bent running arm out drove the fist in.
+GAIT_ARMS = {'run': (52., -15., 40.), 'walk': (50., 0., 40.)}
 # Two small steps per loop (2.5 steps/s, Walk takes 6).
 TURN_PERIOD = .8
 DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
@@ -98,7 +102,9 @@ def blend(p, q, f):
 # Foot tuple: (x, y, z, roll) offsets from the rest ankle, roll + is heel up
 # about the ball, - is toe up about the heel. 'ground' pivots at the contact
 # point when true; a raised foot (ground 0) pitches about the ankle.
-HANG = (64., 4., 16., 0., 0., 0.)
+# The tummy keeps the arms off the sides: they hang out a little, elbows
+# soft, the upper arm turned out so the forearms clear it.
+HANG = (52., 8., 18., 0., 15., 0.)
 NEUTRAL = dict(
     px=0., py=0., pz=0., p_pitch=0., p_roll=0., p_yaw=0.,
     s_pitch=0., s_roll=0., s_yaw=0.,
@@ -207,8 +213,8 @@ def idle(t):
         h_pitch=.9*breath-1.5+1.2*math.sin(2*w+.6)*.5, h_roll=2.2*math.sin(w-1.1),
         h_yaw=4.5*look,
         by=-.02*breath, bz=.006*breath, bs=.02*breath,
-        armL=(64-1.5*breath+arm_sway, 4+.8*math.sin(w-.9), 16+2*breath, 0, 0, 1.2*breath),
-        armR=(64-1.5*breath-arm_sway, 4-.8*math.sin(w-.9), 16+2*breath, 0, 0, 1.2*breath),
+        armL=(HANG[0]-1.5*breath+arm_sway, HANG[1]+.8*math.sin(w-.9), HANG[2]+2*breath, HANG[3], HANG[4], 1.2*breath),
+        armR=(HANG[0]-1.5*breath-arm_sway, HANG[1]-.8*math.sin(w-.9), HANG[2]+2*breath, HANG[3], HANG[4], 1.2*breath),
         footL=(0, 0, 0, 0), footR=(0, 0, 0, 0),
     )
 
@@ -285,12 +291,13 @@ def gait(name, t):
         # the fist passes beside the tummy, not through it. Swinging back
         # the elbow opens.
         f = (forward+1)/2
-        return (60. if run else 66., swing, bend+bend_amp*(2*f-1), twist, (40. if run else 12.)*f, 0.)
+        lower, ext, ext_fwd = GAIT_ARMS['run' if run else 'walk']
+        return (lower, swing, bend+bend_amp*(2*f-1), twist, ext+ext_fwd*f, 0.)
     lean = 7.5 if run else 2.5
     bounce_lag = math.cos(phase2-1.1)       # head and belly trail the bounce
     return dict(
         px=(.035 if run else .03)*load, py=0., pz=pz,
-        p_pitch=2. if run else 0., p_roll=(-4.5 if run else -2.5)*load,
+        p_pitch=2. if run else 0., p_roll=(-6. if run else -3.5)*load,
         p_yaw=(-7. if run else -5.)*reach,
         s_pitch=lean, s_roll=(2.5 if run else 1.4)*math.cos(TAU*(p-mid)-.5),
         s_yaw=(4. if run else 3.)*reach,
@@ -298,11 +305,14 @@ def gait(name, t):
         c_yaw=(8. if run else 5.)*math.cos(a-TAU*lag*.5),
         # The head keeps the gaze steady: it cancels most of the lean and
         # twist, and nods a beat after each bounce.
-        h_pitch=-lean*.8 + (2.4 if run else 1.)*bounce_lag,
+        h_pitch=-lean*.8 + (3.4 if run else 1.4)*bounce_lag,
         h_roll=(2. if run else 1.)*math.cos(TAU*(p-mid)-1.4),
         h_yaw=-(5. if run else 4.)*math.cos(a-TAU*lag*1.5),
-        by=(.012 if run else .006)*math.sin(phase2-1.3),
-        bz=(-.03 if run else -.012)*bounce_lag,
+        # The tummy is heavy: it lags the bounce, swells as it lands and
+        # sways a little toward the loaded side.
+        by=(.022 if run else .01)*math.sin(phase2-1.3),
+        bz=(-.055 if run else -.022)*bounce_lag,
+        bs=(.035 if run else .015)*max(0., bounce_lag),
         armL=arm(swing_l, math.cos(a-TAU*lag+math.pi)),
         armR=arm(2*bias-swing_l, math.cos(a-TAU*lag)),
         footL=fl, footR=fr, groundL=gl, groundR=gr, toeL=tl, toeR=tr,
@@ -374,8 +384,8 @@ def jump(t):
         py=base['py']+.06*squash,
         s_pitch=base['s_pitch']+15*squash, c_pitch=base['c_pitch']+6*squash,
         h_pitch=base['h_pitch']-4*squash+9*head_nod,
-        bz=base['bz']-.035*belly_jig, by=base['by']-.01*belly_jig,
-        bs=base['bs']+.03*squash,
+        bz=base['bz']-.065*belly_jig, by=base['by']-.02*belly_jig,
+        bs=base['bs']+.06*squash+.02*belly_jig,
         footL=lerp(base['footL'], (.03, 0., 0., 0.), squash),
         footR=lerp(base['footR'], (-.03, 0., 0., 0.), squash),
         groundL=1., groundR=1., toeL=0., toeR=0.,
@@ -426,11 +436,11 @@ def pickup(t):
     reach = c['reach']
     for side, s in (('L', 1), ('R', -1)):
         start, rot0 = HANDS0[side]
-        width = s*(.60-.04*hug)
+        width = s*(PICKUP_WIDTH-.04*hug)
         if t < .42:
-            pos = bezier(start, (s*1.2, -.55, 1.25), (width, -.78, 1.02), reach)
+            pos = bezier(start, (s*PICKUP_ARC, -.72, 1.25), (width, -.94, 1.02), reach)
         else:
-            pos = bezier((width, -.78, 1.02), (width, -.66, 1.45), (width, -.62, 1.97), lift)
+            pos = bezier((width, -.94, 1.02), (width, -.92, 1.45), CARRY_HANDS(s), lift)
         P['hand'+side] = pos
         P['hrot'+side] = lerp(rot0, (-55., 0., -s*75.), reach)
         P['ik'+side] = 1.
@@ -440,6 +450,13 @@ def pickup(t):
 # Where the hands meet the box in each pickup (wrist height, BU). player.gd
 # blends the two clips by the box's grip height between these (x 0.5 m/BU).
 PICKUP_GRAB_Z = {'PickUpPackage': 1.02, 'PickUpHigh': 1.85}
+# Half the box's width at the grab, and where the hands hold it after the
+# lift: in front of the chest, the tummy under it (the game's IK then takes
+# the hands to the real box).
+PICKUP_WIDTH = .72
+CARRY_HANDS = lambda s: (s*PICKUP_WIDTH, -.95, 1.97)
+# The hands leave the sides on an arc this far out, around the tummy.
+PICKUP_ARC = 1.45
 
 def pickup_high(t):
     """PickUpPackage for a box at the waist (a shelf, a table): same duration
@@ -468,14 +485,14 @@ def pickup_high(t):
     reach = c['reach']
     for side, s in (('L', 1), ('R', -1)):
         start, rot0 = HANDS0[side]
-        width = s*(.60-.04*hug)
-        grab = (width, -.92, PICKUP_GRAB_Z['PickUpHigh'])
+        width = s*(PICKUP_WIDTH-.04*hug)
+        grab = (width, -1.04, PICKUP_GRAB_Z['PickUpHigh'])
         if t < .42:
             # Out around the tummy and forward, rising to the box's sides.
-            pos = bezier(start, (s*1.1, -.75, 1.45), grab, reach)
+            pos = bezier(start, (s*(PICKUP_ARC-.1), -.92, 1.45), grab, reach)
         else:
             # Pulled in toward the chest: the carry pose PickUpPackage ends in.
-            pos = bezier(grab, (width, -.78, 2.02), (width, -.62, 1.97), lift)
+            pos = bezier(grab, (width, -.92, 2.02), CARRY_HANDS(s), lift)
         P['hand'+side] = pos
         P['hrot'+side] = lerp(rot0, (-55., 0., -s*75.), reach)
         P['ik'+side] = 1.
@@ -533,7 +550,7 @@ def turn_in_place(t):
         P['arm'+side] = (a[0]-4*step, a[1]-5*s*swap, a[2]+4*step, a[3], a[4], a[5])
     return P
 
-HAND_ON_BELLY = (.70, -.42, .72)   # wrist, pelvis dropped 1.0 BU for the seat
+HAND_ON_BELLY = (.78, -.58, .72)   # wrist, pelvis dropped 1.0 BU for the seat
 
 def belly_hand_rot(s):
     """Fingers inward (Rz 180), palm turned onto the tummy and thumb up (Rx 90),
