@@ -8,6 +8,7 @@ const CAMPAIGN_VERSION: int = 1
 const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 ## Player.PLAYER_COLORS uses peer_id modulo five in this same order.
 const PLAYER_COLOR_KEYS: Array[String] = ["mint", "yellow", "coral", "sky", "violet"]
+const PLAYER_COLOR_NAMES: Array[String] = ["menta", "amarillo", "coral", "cielo", "violeta"]
 const MAX_CARD_PER_PLAYER: int = 1
 const BASE_CARD_CHANCE: float = 0.20
 const MERIT_CARD_BONUS: float = 0.01
@@ -21,6 +22,7 @@ const MERIT_POINTS := {
 	&"sequence": 8,
 	&"handover": 5,
 	&"photo_saved": 15,
+	&"assist": 5,
 }
 
 enum Card { PRIORITY, REVOTE, DISCOUNT, RESCUE, INFORMATION }
@@ -119,6 +121,10 @@ func load_campaign() -> void:
 
 func player_color_key(peer_id: int) -> String:
 	return PLAYER_COLOR_KEYS[posmod(peer_id, PLAYER_COLOR_KEYS.size())]
+
+
+func player_color_name(peer_id: int) -> String:
+	return PLAYER_COLOR_NAMES[posmod(peer_id, PLAYER_COLOR_NAMES.size())]
 
 
 func award_action(peer_id: int, action_id: StringName, points: int) -> bool:

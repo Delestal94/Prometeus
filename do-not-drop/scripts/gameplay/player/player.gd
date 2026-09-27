@@ -56,6 +56,9 @@ var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
 ## Their input reaches its trap through here.
 var tended_package: DeliveryPackage = null
+## A second box this player is helping after their own is lost. Unlike
+## tended_package, this can belong to an adjacent seat or be helped on foot.
+var assisted_package: DeliveryPackage = null
 var _seated: bool = false
 var _seat_camera_path: NodePath = NodePath()
 var _pitch: float = 0.0
@@ -798,14 +801,21 @@ func _physics_process(delta: float) -> void:
 		_publish_lid_hint(null)
 		return
 	if _seated:
-		_publish_prompt("")
+		var candidate: DeliveryPackage = _assist_candidate() if tended_package != null and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null
+		_publish_prompt(candidate.assist_prompt() if candidate != null and assisted_package == null else "")
 		_publish_lid_hint(_lid_target())
 		if carried_package != null:
 			_update_carried_package()
-		if tended_package != null:
+		if tended_package != null and tended_package.run_state() != ITrapBehavior.TrapState.RUINED:
 			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
+		if assisted_package != null:
+			_update_assisting()
+		elif candidate != null and Input.is_action_just_pressed(&"interact"):
+			candidate.rpc_id(1, &"request_assist")
 		return
 	_poll_interact()
+	if assisted_package != null:
+		_update_assisting()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	_apply_look(stick * stick_sensitivity * delta)
 	# get_vector's y is -1 for forward and +1 for back;
@@ -998,6 +1008,31 @@ func _apply_context_fov(delta: float) -> void:
 
 func _gather_package_input() -> Dictionary:
 	return _seat_pose_component.gather_package_input()
+
+
+func _assist_candidate() -> DeliveryPackage:
+	var best: DeliveryPackage = null
+	var best_distance: float = DeliveryPackage.ASSIST_REACH
+	for node: Node in get_tree().get_nodes_in_group(&"cargo"):
+		var package := node as DeliveryPackage
+		if package == null or package == tended_package or not package.can_assist(get_multiplayer_authority()):
+			continue
+		var distance: float = reach_origin().distance_to(package.global_position)
+		if distance <= best_distance:
+			best = package
+			best_distance = distance
+	return best
+
+
+func _update_assisting() -> void:
+	if not is_instance_valid(assisted_package):
+		assisted_package = null
+		return
+	if reach_origin().distance_to(assisted_package.global_position) > DeliveryPackage.ASSIST_REACH:
+		assisted_package.rpc_id(1, &"request_stop_assist")
+		assisted_package = null
+		return
+	assisted_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
 
 
 func _publish_carry(carrying: bool) -> void:
@@ -1229,6 +1264,21 @@ func tend_package(package_path: NodePath) -> void:
 	if not _from_host():
 		return
 	_seat_pose_component.apply_tend_package(package_path)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func assist_package(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	assisted_package = get_node_or_null(package_path) as DeliveryPackage
+
+
+@rpc("any_peer", "call_local", "reliable")
+func stop_assisting(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	if assisted_package != null and assisted_package.get_path() == package_path:
+		assisted_package = null
 
 
 @rpc("any_peer", "call_local", "reliable")

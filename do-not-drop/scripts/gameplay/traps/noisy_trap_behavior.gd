@@ -36,7 +36,8 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 		return
 	var before_state: int = get_state()
 	var input: Dictionary = context.get("input", {}) as Dictionary
-	var calming: bool = bool(input.get("calm", false))
+	var calm_strength: float = float(input.get("calm_strength", 1.0 if bool(input.get("calm", false)) else 0.0))
+	var calming: bool = calm_strength > 0.0
 	if agitation >= _agitation_max and not calming:
 		# Once it's fully worked up it does not settle on its own: only a
 		# passenger actively calming it can pull it back before it gets loose.
@@ -47,7 +48,7 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 			_escaped = true
 		_sync_integrity()
 		return
-	var decay: float = _calm_rate if calming else _passive_decay
+	var decay: float = lerpf(_passive_decay, _calm_rate, clampf(calm_strength, 0.0, 1.0))
 	agitation = clampf(agitation - decay * delta, 0.0, _agitation_max)
 	if agitation < _agitation_max:
 		_seconds_at_max = 0.0

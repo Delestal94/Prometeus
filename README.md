@@ -131,6 +131,11 @@ Cualquier jugador puede pingear "¡Cuidado!" con un toque del clic de la rueda d
 (o D-pad arriba en gamepad); al mantenerlo aparece una rueda de seis mensajes elegibles
 con mouse o stick derecho. El aviso muestra quién lo mandó sin depender de voice chat.
 
+Si tu caja ya se arruinó, todavía podés ayudar con una caja en riesgo de un asiento
+contiguo o a pie junto a ella. El segundo jugador aporta media fuerza al estabilizar o
+calmar, puede completar secuencias y gana mérito por sostener la ayuda; una caja admite
+como máximo al responsable y a un ayudante.
+
 **Progreso, variantes y espectador** (2026-09-23): las entregas exitosas y el puntaje
 acumulado se guardan en `user://unlock_progress.json`. Desde **Progreso** y
 **Cosméticos** del menú se consultan los desbloqueos y se eligen uniforme, pintura y
@@ -194,6 +199,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_events.gd
 <godot> --headless --path do-not-drop --script res://tests/test_no_dangling_state.gd
 <godot> --headless --path do-not-drop --script res://tests/test_merit.gd
+<godot> --headless --path do-not-drop --script res://tests/test_assist.gd
 <godot> --headless --path do-not-drop --script res://tests/test_cards.gd
 <godot> --headless --path do-not-drop --script res://tests/test_supply_vote.gd
 <godot> --headless --path do-not-drop --script res://tests/test_crew_campaign_save.gd
@@ -523,6 +529,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_tutorial` — cada trampa tiene una ficha completa, el tutorial muestra solo
   las desbloqueadas, el primer perfil resalta “Cómo jugar” y cada consejo en partida
   aparece una sola vez antes de quedar guardado en el perfil.
+- `test_assist` — un segundo jugador ayuda a una caja en riesgo con media fuerza,
+  puede completar secuencias y gana mérito; un tercer jugador no desplaza al ayudante.
 - `test_ruin_feedback` — el paquete arruinado explota en confeti una sola vez,
   en su propia posición (no en el origen del mundo), y se limpia solo al
   terminar.

@@ -13,6 +13,7 @@ difficulty = 4
 params = {
 "integrity_max": 100.0,
 "command_seconds": 11.0,
+"calm_strength_required": 1.5,
 "correct_decay": 14.0,
 "wrong_gain": 7.0,
 "passive_gain": 2.5

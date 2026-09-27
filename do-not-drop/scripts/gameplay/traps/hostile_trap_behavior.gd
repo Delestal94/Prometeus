@@ -12,6 +12,7 @@ var _attack_cooldown: float = 0.0
 var _correct_decay: float = 13.0
 var _wrong_gain: float = 22.0
 var _passive_gain: float = 3.5
+var _calm_strength_required: float = 1.0
 
 func on_setup(_package: Node, config: Dictionary) -> void:
 	super.on_setup(_package, config)
@@ -19,6 +20,7 @@ func on_setup(_package: Node, config: Dictionary) -> void:
 	_correct_decay = float(config.get("correct_decay", 13.0))
 	_wrong_gain = float(config.get("wrong_gain", 22.0))
 	_passive_gain = float(config.get("passive_gain", 3.5))
+	_calm_strength_required = maxf(float(config.get("calm_strength_required", 1.0)), 0.1)
 	aggression = 0.0
 	command_calm = true
 	_command_timer = command_seconds
@@ -35,9 +37,11 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 		command_calm = not command_calm
 		_command_timer += command_seconds
 	var input: Dictionary = context.get("input", {}) as Dictionary
-	var holding: bool = bool(input.get("calm", false))
+	var calm_strength: float = float(input.get("calm_strength", 1.0 if bool(input.get("calm", false)) else 0.0))
+	var holding: bool = calm_strength > 0.0
 	if holding == command_calm:
-		aggression = maxf(0.0, aggression - _correct_decay * delta)
+		var effectiveness: float = clampf(calm_strength / _calm_strength_required, 0.0, 1.0) if command_calm else 1.0
+		aggression = maxf(0.0, aggression - _correct_decay * effectiveness * delta)
 	else:
 		aggression = minf(integrity_max, aggression + _passive_gain * delta)
 		if _attack_cooldown <= 0.0:

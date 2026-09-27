@@ -28,6 +28,8 @@ func highlight(enabled: bool) -> void:
 func get_prompt() -> String:
 	if bool(_package.get("is_held")):
 		return ""
+	if _package.has_method(&"assist_available") and bool(_package.call(&"assist_available")):
+		return String(_package.call(&"assist_prompt"))
 	var action: String = "Bajar paquete" if bool(_package.get("is_loaded")) else "Agarrar paquete"
 	# In the depot every box carries its bin code (depot.gd), which is what
 	# the order board asks for: say which one this is.
@@ -38,11 +40,22 @@ func get_prompt() -> String:
 
 
 func can_interact(player: Node) -> bool:
+	var peer_id: int = player.get_multiplayer_authority()
+	if _package.has_method(&"can_assist") and bool(_package.call(&"can_assist", peer_id)):
+		var origin: Vector3 = player.call(&"reach_origin") if player.has_method(&"reach_origin") else (player as Node3D).global_position
+		return player.get(&"carried_package") == null \
+				and origin.distance_to((_package as Node3D).global_position) <= DeliveryPackage.ASSIST_REACH
 	return not get_prompt().is_empty() and player.get(&"carried_package") == null
 
 
 func interact(player: Node) -> void:
 	if not can_interact(player):
+		return
+	var peer_id: int = player.get_multiplayer_authority()
+	if _package.has_method(&"can_assist") and bool(_package.call(&"can_assist", peer_id)):
+		if bool(_package.call(&"set_assistant", peer_id)) and player.has_method(&"assist_package"):
+			player.rpc_id(peer_id, &"assist_package", _package.get_path())
+		interacted.emit(player)
 		return
 	_package.call(&"take_by", player)
 	interacted.emit(player)

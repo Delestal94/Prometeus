@@ -39,7 +39,7 @@ func _run() -> void:
 	event_bus.route_event_started.emit(&"inspection", {
 		"title": "INSPECCIÓN SORPRESA", "prompt": "Asegurá toda la carga", "remaining": 45.0,
 	})
-	event_bus.interaction_prompt_changed.emit("Agarrar paquete")
+	event_bus.interaction_prompt_changed.emit("Ayudar con la caja de amarillo")
 	event_bus.depot_notice.emit("Carta obtenida: Rescate")
 	for _i in range(6):
 		await process_frame

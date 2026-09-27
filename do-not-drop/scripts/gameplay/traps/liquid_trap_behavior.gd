@@ -43,8 +43,9 @@ func on_physics_process(package: Node, delta: float, context: Dictionary) -> voi
 		var rate: float = lerpf(_leak_per_second, _surge_per_second, tilt_ratio)
 		spill_amount = minf(integrity_max, spill_amount + rate * delta)
 	var input: Dictionary = context.get("input", {}) as Dictionary
-	if bool(input.get("calm", false)):
-		spill_amount = maxf(0.0, spill_amount - _mop_rate * delta)
+	var calm_strength: float = float(input.get("calm_strength", 1.0 if bool(input.get("calm", false)) else 0.0))
+	if calm_strength > 0.0:
+		spill_amount = maxf(0.0, spill_amount - _mop_rate * calm_strength * delta)
 	if spill_amount > 30.0:
 		_had_large_spill = true
 	elif _had_large_spill and is_zero_approx(spill_amount):
