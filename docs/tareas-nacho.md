@@ -401,7 +401,7 @@ Pedido del usuario: refinar el personaje y sus animaciones al máximo, sin perde
 Pedido del usuario: modelo cartoon cómico y tierno, más gordito, "nivel Pixar".
 
 - [x] Modelo (`art/rounded_character/build_character.py`, `head_shape.py`): cabeza esculpida por
-  fórmula (elipsoide con papada y cachetes), nariz de botón, orejas, pelo corto con flequillo en
+  fórmula (elipsoide con papada; los cachetes salientes se sacaron a pedido), nariz de botón, orejas, pelo corto con flequillo en
   mechones y rulo (material nuevo `Hair`), panza más grande y adelantada, brazos, piernas y
   zapatos más regordetes. Mismos huesos y articulaciones: el juego no cambia.
 - [x] Oclusión suave y rubor horneados en color de vértice (`vertex_shading.py`); ~23.500 triángulos.
@@ -412,6 +412,9 @@ Pedido del usuario: modelo cartoon cómico y tierno, más gordito, "nivel Pixar"
 - [x] Ojos ovalados con brillos redondos (`build_faces.py`); `character_face.gd` apoya la cara
   sobre la cabeza nueva. Test: `test_player_character` (cara sobre la piel, color de vértice).
 - [x] Asientos remedidos para el cuerpo nuevo (`player_seat_pose.gd`, rulo más bajo para el conductor).
+- [x] Ajustes tras verlo en el juego: sin cachetes salientes (el usuario no los quería), piernas sin
+  decimar y oclusión horneada con rayos fijos y suavizado (el ruido se veía como rayas en las
+  pantorrillas y ondas bajo el flequillo), rubor subido a los pómulos.
 - Pendiente: la nuca del conductor roza el techo inclinado de la cabina y los pasajeros vecinos
   se superponen (asientos a 0,48 m); ver "Límites conocidos" en `REFINAMIENTO.md`.
 

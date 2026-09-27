@@ -1,12 +1,12 @@
 # Personaje redondeado
 
 Personaje cartoon gordito (rehecho el 2026-09-27 a partir de la referencia original de
-cabeza lisa): cabeza grande con papada y cachetes, nariz de botón, orejitas, pelo corto con
+cabeza lisa): cabeza grande y lisa con papada suave, nariz de botón, orejitas, pelo corto con
 flequillo en mechones y un rulo, panza redonda que empuja la camiseta por delante del
 short, brazos y piernas regordetes, manos tipo manopla con pulgar y zapatos grandes y
 blandos. Creado en Blender 5.2.1.
 
-La forma de la cabeza vive en `head_shape.py` (elipsoide, papada, cachetes y línea del
+La forma de la cabeza vive en `head_shape.py` (elipsoide, papada y línea del
 pelo): la usan `build_character.py` para esculpirla y `render_review.py` para apoyar la
 cara, y `character_face.gd` en el juego repite el elipsoide y la papada (`HEAD_*`). Si se
 cambia uno, hay que cambiar los tres; `test_player_character` avisa si la cara queda
@@ -24,7 +24,7 @@ enterrada o flotando.
   los SVG de la cara con PyMuPDF del Python del sistema (`python -m pip install pymupdf`).
 - `check_clearance.py`: cuenta cuántos vértices de antebrazo y mano quedan dentro de la
   camiseta en cada clip (la panza es grande); guarda `clearance_check` en `validation.json`.
-- `vertex_shading.py`: oclusión suave y rubor (cachetes, nariz, orejas) horneados en color
+- `vertex_shading.py`: oclusión suave y rubor (pómulos, nariz, orejas) horneados en color
   de vértice al exportar; Godot los multiplica en el material.
 
 ## Posar en Blender

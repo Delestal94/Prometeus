@@ -98,8 +98,7 @@ def sphere(name, loc, scale, mat, segments=48, rings=32, rot=(0, 0, 0)):
     o.rotation_euler = rot
     return finish(o, name, mat)
 
-# Head: an ellipsoid whose lower half widens into soft jowls, with cheeks
-# pushed out of the surface (head_shape.py, shared with render_review.py;
+# Head: an ellipsoid whose lower half widens into soft jowls (head_shape.py, shared with render_review.py;
 # character_face.gd lays the face on the same ellipsoid and jowls).
 import sys
 sys.path.insert(0, str(OUT))
@@ -258,10 +257,10 @@ def ringband(name, centre, radii, thickness, mat, axis='Z'):
     o=bpy.data.objects.new(name,me); geo.objects.link(o)
     return finish(o,name,mat)
 
-# Silhouette: a big round head sunk into the shoulders (cheeks, button nose,
+# Silhouette: a big round head sunk into the shoulders (soft jowls, button nose,
 # little ears and a cowlick), a round tummy pushing the T-shirt forward past
 # the shorts, chubby short limbs, mitten hands and big soft shoes.
-head=sculpted_head('Cabeza · cachetes y nariz',skin)
+head=sculpted_head('Cabeza · papada',skin)
 ears=[sphere('Oreja.'+side,(s*.60,.05,2.83),(.085,.12,.15),skin,32,20,(0,0,s*-.35))
       for s,side in [(1,'L'),(-1,'R')]]
 # Button nose between the eyes and the mouth, clear of both.
@@ -311,7 +310,7 @@ for s,side in [(1,'L'),(-1,'R')]:
         (.35,s*.42,-.025,.245,.25),(.46,s*.42,-.045,.275,.272),
         (.56,s*.42,-.055,.293,.286),(.67,s*.42,-.04,.31,.305),
         (.79,s*.42,-.025,.335,.33),(.93,s*.42,0,.34,.345)
-    ],skin)
+    ],skin,n=32)
     # Big soft shoes: a rounder, taller toe box and a thicker sole.
     shoes[side]=tube('Zapato.'+side,[
         (.045,s*.42,-.12,.268,.395),(.065,s*.42,-.12,.283,.408),

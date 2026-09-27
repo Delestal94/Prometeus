@@ -98,7 +98,7 @@ ampliados (lista del README). Hacé `git pull` antes de seguir con `level_base.g
 Pedido del usuario: modelo cartoon tierno y más gordito. Lo hizo Nacho (con Claude), todo desde
 `art/rounded_character/` (detalle en `LEEME.md` y `REFINAMIENTO.md`). Mismos huesos, nombres y
 clips: nada del juego tiene que cambiar para usarlo. Reimportá el GLB después del `git pull`.
-- `sm_char_player_rounded.glb`: cabeza con cachetes, nariz, orejas y pelo (superficie nueva
+- `sm_char_player_rounded.glb`: cabeza lisa con papada, nariz, orejas y pelo (superficie nueva
   `Hair`), panza más grande, oclusión y rubor en color de vértice. La camiseta sigue siendo la
   superficie 0.
 - `presentation/character_face.gd` (zona de Nacho): la cara se apoya sobre la cabeza nueva

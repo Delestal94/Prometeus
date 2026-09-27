@@ -42,8 +42,9 @@ for mat in bpy.data.materials:
         mat.name = MAT_NAMES[mat.name[:2]]
 
 # --- Mesh: drop morphs, decimate, join (hidden overlaps: model_fixes) ---------
-# The chubby calves bend a lot sitting: at .35 their slivers creased there.
-RATIOS = {'Brazo': .19, 'Camiseta · cuerpo': .23, 'Short · pieza': .22, 'Cabeza': .42, 'Pierna': .6,
+# The legs are built light (32 sides) and kept whole: decimating the tube
+# left long slivers that showed as vertical stripes down the calves.
+RATIOS = {'Brazo': .19, 'Camiseta · cuerpo': .23, 'Short · pieza': .22, 'Cabeza': .42, 'Pierna': 1.,
           'Pelo': .1, 'Rulo': .3, 'Mechón': .3, 'Oreja': .3, 'Nariz': .3,
           'Cuello · costura': .35, 'Cuello': .2}
 bpy.ops.object.mode_set(mode='OBJECT') if bpy.context.object and bpy.context.object.mode != 'OBJECT' else None

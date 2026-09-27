@@ -25,12 +25,10 @@ def jowl(dz):
     """Soft jowls: the lower half of the head widens (x and depth)."""
     return 1+HEAD_JOWL*smoothstep(.2, -.8, dz)
 
-# (direction, height, width): cheeks below and outside the eyes, clear of the
-# widest mouths' corners. Pushed out along the surface; the face ignores them.
-BUMPS = [
-    (direction(.74, -.26), .07, .13),
-    (direction(-.74, -.26), .07, .13),
-]
+# (direction, height, width) bumps pushed out along the surface; the face
+# ignores them. The cheeks that were here (2026-09-27) stuck out of the head
+# and were taken off; the blush in vertex_shading.py stays.
+BUMPS = []
 
 def point(d, bumps=True):
     """Surface point of the head for the unit direction d."""
