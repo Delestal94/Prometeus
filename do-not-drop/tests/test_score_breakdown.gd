@@ -14,17 +14,38 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var manager: Node = root.get_node(^"/root/RunManager")
+	var crew: Node = root.get_node(^"/root/CrewProgression")
+	var unlocks: Node = root.get_node(^"/root/UnlockManager")
+	crew.call(&"reset_campaign")
+	unlocks.call(&"reset_profile")
 	manager.call(&"reset_run")
 	manager.set(&"expected_houses", 4)
 	manager.call(&"start_run")
+	root.get_node(^"/root/EventBus").emit_signal(&"houses_assigned", [
+		[&"a", "FRÁGIL · A1"],
+		[&"b", "EQUILIBRIO · B2"],
+		[&"c", "RUIDOSO · C3"],
+		[&"d", "PESO CRECIENTE · D4"],
+	])
+	root.get_node(^"/root/EventBus").emit_signal(&"cargo_registered", &"a", "FRÁGIL")
+	root.get_node(^"/root/EventBus").emit_signal(&"cargo_registered", &"b", "EQUILIBRIO")
 	manager.set(&"cargo", {
 		&"a": {"integrity": 100.0, "maximum": 100.0, "state": 0},
 		&"b": {"integrity": 60.0, "maximum": 100.0, "state": 1},
 	})
-	manager.call(&"register_delivery", 0, &"delivered_ok", &"")
+	manager.call(&"register_delivery", 0, &"delivered_ok", &"a")
 	manager.call(&"attach_delivery_photo", 0)
-	manager.call(&"register_delivery", 1, &"delivered_ruined", &"")
-	manager.call(&"register_delivery", 2, &"missed", &"")
+	manager.call(&"register_delivery", 1, &"delivered_ruined", &"b")
+	manager.call(&"register_delivery", 2, &"missed", &"c")
+	crew.call(&"award_milestone", 1, &"a", &"rescued", 1)
+	crew.call(&"award_milestone", 1, &"a", &"leveled", 1)
+	crew.call(&"award_milestone", 2, &"b", &"defused", 1)
+	crew.call(&"award_milestone", 2, &"c", &"defused", 1)
+	manager.set(&"_event_id", &"inspection")
+	var route_events: Node = root.get_node(^"/root/RouteEventManager")
+	route_events.set(&"active_event_id", &"")
+	var resolved_events: Dictionary = route_events.get(&"resolved_events")
+	resolved_events[&"inspection"] = true
 	manager.call(&"finish_run", true)
 	var results: Dictionary = manager.get(&"results")
 	var lines: Array = results.get("breakdown", [])
@@ -37,6 +58,18 @@ func _run() -> void:
 	_expect(expected == int(results["score"]), "The lines add up to the score (%d x %.1f vs %d)" % [sum, float(results["chaos_multiplier"]), int(results["score"])])
 	_expect("Vecinos sin su paquete (2)" in labels, "Both the skipped door and the one never reached cost points (%s)" % ", ".join(labels))
 	_expect("Fotos de entrega (1)" in labels, "The photo shows as its own line")
+	var deliveries: Array = results.get("deliveries", [])
+	_expect(deliveries.size() == 4, "There is one result row per promised house")
+	_expect(String(deliveries[0].get("trap", "")) == "FRÁGIL" and bool(deliveries[0].get("photo", false)), "A row identifies its trap and delivery photo")
+	_expect(StringName(deliveries[3].get("outcome", &"")) == &"missed", "An unreached house is represented as a missed delivery")
+	var route_event: Dictionary = results.get("route_event", {})
+	_expect(StringName(route_event.get("id", &"")) == &"inspection" and bool(route_event.get("success", false)), "The result records how the route event ended")
+	var award_titles: PackedStringArray = []
+	for award: Dictionary in results.get("awards", []):
+		award_titles.append(String(award.get("title", "")))
+	_expect("MVP" in award_titles and "Rescatista" in award_titles and "Desactivador" in award_titles and "Mano firme" in award_titles, "Merit produces all four result awards")
+	var next_unlock: Dictionary = unlocks.call(&"next_unlock_progress")
+	_expect(not next_unlock.is_empty() and float(next_unlock.get("progress", -1.0)) >= 0.0, "The results can show progress toward the next unlock")
 	var text: String = load("res://scripts/ui/prototype_hud.gd").score_breakdown_text(results, int(results["score"]))
 	_expect(text.contains("Total") and text.contains(str(int(results["score"]))), "The results text ends on the total")
 	manager.call(&"reset_run")

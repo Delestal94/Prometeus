@@ -53,6 +53,17 @@ func _run() -> void:
 		"houses_delivered": 2, "houses_missed": 1, "cargo_total": 1, "cargo_intact": 1,
 		"cargo_ruined": 0, "is_new_best": true, "best_score": 1840,
 		"complaints": [{"house": 1, "dismissed": true}],
+		"deliveries": [
+			{"house": 0, "trap": "FRÁGIL", "outcome": &"delivered_ok", "photo": true},
+			{"house": 1, "trap": "EQUILIBRIO", "outcome": &"delivered_at_risk", "photo": true},
+			{"house": 2, "trap": "RUIDOSO", "outcome": &"missed", "photo": false},
+		],
+		"awards": [
+			{"title": "MVP", "peer": 1},
+			{"title": "Rescatista", "peer": 2},
+			{"title": "Mano firme", "peer": 1},
+		],
+		"route_event": {"title": "Inspección sorpresa", "success": true},
 	})
 	for _i in range(6):
 		await process_frame

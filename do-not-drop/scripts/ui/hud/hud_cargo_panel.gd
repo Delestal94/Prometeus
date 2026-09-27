@@ -39,6 +39,13 @@ var overlay_kicker: Label
 var overlay_title: Label
 var overlay_body: Label
 var overlay_stats: Label
+var result_details: HBoxContainer
+var result_rows_box: VBoxContainer
+var result_meta_box: VBoxContainer
+var result_awards_label: RichTextLabel
+var result_event_label: Label
+var result_progress_label: Label
+var result_progress_bar: ProgressBar
 var score_label: Label
 var record_label: Label
 var action_button: Button

@@ -152,6 +152,37 @@ func requirements(unlock_id: StringName) -> Dictionary:
 	return Dictionary(UNLOCKS.get(unlock_id, {})).duplicate(true)
 
 
+## The closest locked reward, with one conservative percentage: both score
+## and deliveries are required, so the slower condition owns the bar.
+func next_unlock_progress() -> Dictionary:
+	var next_id: StringName = &""
+	var next_rule: Dictionary = {}
+	for unlock_id: StringName in UNLOCKS:
+		if is_unlocked(unlock_id):
+			continue
+		var rule: Dictionary = UNLOCKS[unlock_id]
+		if next_rule.is_empty() \
+				or int(rule["deliveries"]) < int(next_rule["deliveries"]) \
+				or (int(rule["deliveries"]) == int(next_rule["deliveries"]) and int(rule["score"]) < int(next_rule["score"])):
+			next_id = unlock_id
+			next_rule = rule
+	if next_rule.is_empty():
+		return {}
+	var target_deliveries: int = int(next_rule["deliveries"])
+	var target_score: int = int(next_rule["score"])
+	var delivery_ratio: float = 1.0 if target_deliveries <= 0 else minf(float(successful_deliveries) / target_deliveries, 1.0)
+	var score_ratio: float = 1.0 if target_score <= 0 else minf(float(total_score) / target_score, 1.0)
+	return {
+		"id": next_id,
+		"title": String(next_rule["title"]),
+		"current_deliveries": successful_deliveries,
+		"target_deliveries": target_deliveries,
+		"current_score": total_score,
+		"target_score": target_score,
+		"progress": minf(delivery_ratio, score_ratio),
+	}
+
+
 func cosmetic_choices() -> Array[Dictionary]:
 	var choices: Array[Dictionary] = []
 	for cosmetic_id: StringName in COSMETICS:

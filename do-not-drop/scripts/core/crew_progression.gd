@@ -50,6 +50,10 @@ var merit: Dictionary = {} # peer id -> points
 var cards: Dictionary = {} # peer id -> Card
 var dry_deliveries: Dictionary = {}
 var _credited_actions: Dictionary = {}
+## Current-run merit is separate from the campaign total: it drives the
+## results awards without changing how persistent merit or cards work.
+var _run_merit: Dictionary = {}
+var _run_milestones: Dictionary = {}
 var event_bus: Node
 ## Supplies bought and waiting in the depot for the next run: id -> true.
 var supplies: Dictionary = {}
@@ -70,6 +74,9 @@ func _ready() -> void:
 	if bus != null and bus.has_signal(&"card_changed") \
 			and not bus.is_connected(&"card_changed", _on_card_changed):
 		bus.connect(&"card_changed", _on_card_changed)
+	if bus != null and bus.has_signal(&"run_started") \
+			and not bus.is_connected(&"run_started", _on_run_started):
+		bus.connect(&"run_started", _on_run_started)
 	var network: Node = get_node_or_null(^"/root/NetworkManager")
 	if network != null and network.has_signal(&"roster_changed") \
 			and not network.is_connected(&"roster_changed", _on_roster_changed):
@@ -82,6 +89,8 @@ func reset_campaign(persist: bool = false) -> bool:
 	cards.clear()
 	dry_deliveries.clear()
 	_credited_actions.clear()
+	_run_merit.clear()
+	_run_milestones.clear()
 	supplies.clear()
 	_saved_players_by_color.clear()
 	_known_peers.assign(_current_peers())
@@ -117,6 +126,7 @@ func award_action(peer_id: int, action_id: StringName, points: int) -> bool:
 		return false
 	_credited_actions[action_id] = peer_id
 	merit[peer_id] = int(merit.get(peer_id, 0)) + points
+	_run_merit[peer_id] = int(_run_merit.get(peer_id, 0)) + points
 	_emit_event(&"merit_changed", [peer_id, int(merit[peer_id])])
 	return true
 
@@ -128,10 +138,17 @@ func award_milestone(peer_id: int, package_id: StringName, milestone: StringName
 	if package_id.is_empty() or not MERIT_POINTS.has(milestone) or occurrence <= 0:
 		return false
 	var action_id := StringName("%s:%s:%d" % [package_id, milestone, occurrence])
-	return award_action(peer_id, action_id, int(MERIT_POINTS[milestone]))
+	if not award_action(peer_id, action_id, int(MERIT_POINTS[milestone])):
+		return false
+	var peer_milestones: Dictionary = _run_milestones.get(peer_id, {})
+	peer_milestones[milestone] = int(peer_milestones.get(milestone, 0)) + 1
+	_run_milestones[peer_id] = peer_milestones
+	return true
 
 
 func award_delivery(results: Dictionary, peers: Array) -> void:
+	results["merit_by_peer"] = _run_merit.duplicate(true)
+	results["awards"] = _delivery_awards()
 	var payout: int = int(results.get("cargo_points", 0)) + int(results.get("time_bonus", 0))
 	team_money += maxi(payout, 0)
 	_credited_actions.clear()
@@ -139,6 +156,50 @@ func award_delivery(results: Dictionary, peers: Array) -> void:
 	for peer: Variant in peers:
 		_grant_card_chance(int(peer))
 	save_campaign()
+	_reset_run_merit()
+
+
+func _on_run_started(_route_id: StringName, _peers: Array) -> void:
+	_reset_run_merit()
+
+
+func _reset_run_merit() -> void:
+	_run_merit.clear()
+	_run_milestones.clear()
+
+
+func _delivery_awards() -> Array[Dictionary]:
+	var awards: Array[Dictionary] = []
+	var mvp: int = _best_peer(_run_merit)
+	if mvp > 0:
+		awards.append({"title": "MVP", "peer": mvp})
+	_append_milestone_award(awards, "Rescatista", [&"rescued"])
+	_append_milestone_award(awards, "Desactivador", [&"defused"])
+	_append_milestone_award(awards, "Mano firme", [&"leveled", &"calmed", &"dried", &"sequence"])
+	return awards
+
+
+func _append_milestone_award(awards: Array[Dictionary], title: String, milestones: Array[StringName]) -> void:
+	var scores: Dictionary = {}
+	for peer: Variant in _run_milestones:
+		var counts: Dictionary = _run_milestones[peer]
+		for milestone: StringName in milestones:
+			scores[int(peer)] = int(scores.get(int(peer), 0)) + int(counts.get(milestone, 0))
+	var winner: int = _best_peer(scores)
+	if winner > 0:
+		awards.append({"title": title, "peer": winner})
+
+
+func _best_peer(scores: Dictionary) -> int:
+	var winner: int = 0
+	var best: int = 0
+	for raw_peer: Variant in scores:
+		var peer: int = int(raw_peer)
+		var score: int = int(scores[raw_peer])
+		if score > best or (score == best and score > 0 and (winner == 0 or peer < winner)):
+			winner = peer
+			best = score
+	return winner
 
 
 func spend(cost: int) -> bool:

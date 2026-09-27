@@ -138,6 +138,8 @@ vehículo; la Furgoneta ágil se desbloquea con 4 entregas y 350 puntos. Si sos 
 tu paquete se arruinó y seguís sentado, **Tab** (Back en gamepad) alterna una cámara
 espectadora detrás de la furgoneta. La pantalla de resultados ahora desglosa cada fuente
 del puntaje — entregas, vecinos sin atender, fotos y multiplicador — además del total.
+También resume cada casa con su trampa, estado y foto; entrega premios de mérito por jugador,
+cuenta cómo terminó el evento de ruta y muestra cuánto falta para el próximo desbloqueo.
 
 ## Tests
 
@@ -686,7 +688,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   persecución (Tab), y la vista vuelve sola al bajarse.
 - `test_tension_music` — música con pausas y fundidos suaves, afinación estable y una capa
   discreta de tensión solo ante carga en riesgo; vuelve a la calma al resolverse.
-- `test_score_breakdown` — el desglose de resultados siempre suma el puntaje mostrado.
+- `test_score_breakdown` — el desglose siempre suma el puntaje mostrado y conserva una fila
+  por casa, premios de mérito, desenlace del evento y progreso de desbloqueo.
 - `test_endless_difficulty` — el endless se endurece con la distancia sin encadenar tres
   tramos difíciles.
 - `test_contact_shadows` — las sombras de contacto falsas (no hay SSAO ni `Decal` en GL

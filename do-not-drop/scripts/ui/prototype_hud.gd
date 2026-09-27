@@ -199,7 +199,7 @@ func _build_ui() -> void:
 	var center := CenterContainer.new()
 	overlay.add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	card = _panel(center, Vector2(640, 0))
+	card = _panel(center, Vector2(900, 0))
 	card.add_theme_constant_override("separation", 14)
 	overlay_kicker = UiTheme.tag(card, "", YELLOW, -2.0, 16)
 	overlay_title = UiTheme.title(card, "¡A REPARTIR!", 62)
@@ -213,15 +213,39 @@ func _build_ui() -> void:
 	_set_hero(false)
 	overlay_body = _label(card, "", 21, INK)
 	overlay_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	overlay_body.custom_minimum_size.x = 575
+	overlay_body.custom_minimum_size.x = 835
+	result_details = HBoxContainer.new()
+	result_details.add_theme_constant_override("separation", 24)
+	result_details.visible = false
+	card.add_child(result_details)
+	result_rows_box = VBoxContainer.new()
+	result_rows_box.add_theme_constant_override("separation", 3)
+	result_rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	result_details.add_child(result_rows_box)
+	result_meta_box = VBoxContainer.new()
+	result_meta_box.custom_minimum_size.x = 320
+	result_meta_box.add_theme_constant_override("separation", 6)
+	result_details.add_child(result_meta_box)
+	result_awards_label = RichTextLabel.new()
+	result_awards_label.bbcode_enabled = true
+	result_awards_label.fit_content = true
+	result_awards_label.scroll_active = false
+	result_awards_label.custom_minimum_size.x = 320
+	result_awards_label.add_theme_font_size_override("normal_font_size", 16)
+	result_meta_box.add_child(result_awards_label)
+	result_event_label = _label(result_meta_box, "", 16, MUTED)
+	result_event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	result_progress_label = _label(result_meta_box, "", 15, MUTED)
+	result_progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	result_progress_bar = UiTheme.bar(result_meta_box, MINT, 12)
 	overlay_stats = _label(card, "", 17, MUTED)
 	overlay_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	overlay_stats.custom_minimum_size.x = 575
+	overlay_stats.custom_minimum_size.x = 835
 	# What the residents had to say, and the photos that answer them. Both
 	# stay hidden unless the run actually produced any.
 	complaints_label = _label(card, "", 17, STATE_TEXT[1])
 	complaints_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	complaints_label.custom_minimum_size.x = 575
+	complaints_label.custom_minimum_size.x = 835
 	complaints_label.visible = false
 	photo_strip = HBoxContainer.new()
 	photo_strip.add_theme_constant_override("separation", 14)

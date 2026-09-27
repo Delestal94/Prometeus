@@ -168,6 +168,44 @@ func _run() -> void:
 	_expect(String(hud.overlay_stats.text).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
 		"Results show team money")
 
+	# --- delivery results explain each stop and what comes next ---
+	var original_score: int = int(unlocks.total_score)
+	var original_deliveries: int = int(unlocks.successful_deliveries)
+	var original_unlocked: Dictionary = unlocks.unlocked.duplicate(true)
+	unlocks.total_score = 0
+	unlocks.successful_deliveries = 0
+	unlocks.unlocked = {&"starter_kit": true}
+	hud._on_ended(175, {
+		"delivered": true,
+		"reason": "",
+		"elapsed_seconds": 40.0,
+		"cargo_total": 0,
+		"cargo_intact": 0,
+		"cargo_ruined": 0,
+		"cargo_points": 0,
+		"time_bonus": 0,
+		"houses_delivered": 1,
+		"houses_missed": 1,
+		"breakdown": [{"label": "Entregas perfectas (1)", "points": 150}],
+		"best_score": 175,
+		"complaints": [],
+		"deliveries": [
+			{"house": 0, "trap": "FRÁGIL", "outcome": &"delivered_ok", "photo": true},
+			{"house": 1, "trap": "RUIDOSO", "outcome": &"missed", "photo": false},
+		],
+		"awards": [{"title": "MVP", "peer": network.local_id()}],
+		"route_event": {"title": "Inspección sorpresa", "success": true},
+	})
+	await process_frame
+	_expect(hud.result_rows_box.get_child_count() == 2, "Delivery results show one row per house")
+	_expect(String(hud.result_awards_label.text).contains("MVP"), "Delivery results show merit awards")
+	_expect(String(hud.result_event_label.text).contains("RESUELTO"), "Delivery results show how the route event ended")
+	_expect(hud.result_progress_bar.visible and String(hud.result_progress_label.text).contains("Te faltan"),
+		"Delivery results show progress toward the next unlock")
+	unlocks.total_score = original_score
+	unlocks.successful_deliveries = original_deliveries
+	unlocks.unlocked = original_unlocked
+
 	# --- losing the host ---
 	network.session_failed.emit("Se cortó la conexión con el anfitrión.")
 	await process_frame
