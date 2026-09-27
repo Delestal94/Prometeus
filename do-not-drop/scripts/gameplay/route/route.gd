@@ -45,26 +45,6 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 
-## The golden rule: a delivery lasts 2-5 minutes whatever the house count
-## (tareas de Nacho N-102). The road is cut to a time budget instead of a
-## fixed length per leg, so one house gets long legs (a mini adventure) and
-## four get short ones. Measured with tests/bench_route_duration.gd; the
-## table is in docs/parametros-diseno.md ("Duración de la entrega").
-const ROUTE_TARGET_SECONDS: float = 240.0
-## Stopping at a house: get out, walk, ring, come back.
-const HOUSE_STOP_SECONDS: float = 25.0
-## Average driving speed over a whole route, m/s: the bench's autopilot
-## cruising at 50 km/h, easing off in bends and braking for every stop,
-## averaged 46 km/h on every house count.
-const ROUTE_CRUISE_SPEED: float = 12.8
-## Bounds on a leg (start->house, house->house, house->goal): under the
-## floor a leg is over before anything happens on it; over the cap one house
-## alone would be a long, empty drive. The cap was 600 m, but one house then
-## came to 1.9 minutes, under the 2-minute floor: 700 keeps it at ~2.2.
-const LEG_MIN_LENGTH: float = 250.0
-const LEG_MAX_LENGTH: float = 700.0
-## Each leg varies this much around its budget, so they don't all match.
-const LEG_LENGTH_JITTER: float = 0.1
 ## House/road proportions carried over unchanged from the old handcrafted
 ## route -- only WHERE the road goes changed, not how wide it or a house
 ## approach is.
@@ -94,35 +74,7 @@ const SIGHT_LINE_LENGTH: float = 120.0
 const SIGHT_LINE_STEP: float = 30.0
 const SIGHT_LINE_RADIUS: float = 3.5
 
-## How many segments in a row are allowed to leave the heading unchanged
-## before a CurveSegment is forced -- this is the actual fix for "no quiero
-## tramos rectos": without it, the "never repeat the same type twice" rule
-## alone still allows Straight, Bump, Straight, Gravel, Straight... for as
-## long as the RNG allows, all dead straight in world space.
-const MAX_STRAIGHT_STREAK: int = 2
-## Pacing inside each leg (tareas de Nacho N-103), see plan_spine(): something
-## happens at least every MOMENT_SPACING metres -- a hard segment, a bend of
-## SHARP_CURVE_DEG or more, or a house stop -- and the last QUIET_ZONE metres
-## before a house are straight or bend at most GENTLE_CURVE_DEG, so the crew
-## gets out without a bump throwing a box.
-const MOMENT_SPACING: float = 250.0
-const QUIET_ZONE: float = 80.0
-const SHARP_CURVE_DEG: float = 45.0
-const GENTLE_CURVE_DEG: float = 30.0
-## The longest spine segment (HillSegment): how far one pick can run before
-## the next rule gets a say.
-const MAX_SEGMENT_LENGTH: float = 70.0
-const CURVE_TURN_MIN_DEG: float = 25.0
-const CURVE_TURN_MAX_DEG: float = 70.0
-## How far the road may ever head away from the start's -Z. Past 90 degrees
-## a run of same-way curves brought it back around onto road already built:
-## two stretches overlapping, lines crossing the asphalt and roadworks
-## standing on the other lane. Kept under 90, every stretch still advances
-## along -Z, so the road can never cross itself.
-const MAX_HEADING_DEG: float = 80.0
 
-## How far before a house its "entrega adelante" sign goes up.
-const DELIVERY_SIGN_LEAD: float = 80.0
 ## Trees keep this far from a house centre: enough room for the yard (fence
 ## line sits ~7-8 m out) without the forest growing through the porch.
 const HOUSE_CLEAR_RADIUS: float = 9.0
@@ -142,7 +94,6 @@ const WARNING := Color("e7be51")
 const TEAL := Color("65b5a1")
 const CONCRETE := Color("8c9791")
 
-var _materials: Dictionary = {}
 var _delivery_vehicles: Array[Node3D] = []
 
 var _rng := RandomNumberGenerator.new()
@@ -183,18 +134,6 @@ var _sight_zones: Array[Vector3] = []
 const Terrain = preload("res://scripts/gameplay/route/route_terrain.gd")
 var terrain: Node3D
 var _segments: Array[RouteSegment] = []
-## Distance from the very start that only gets Straight/SpeedBump/Hill/
-## Tunnel -- segments that don't need steering input to survive. Below this
-## length the plan never picks a hard segment or a CurveSegment. It was
-## 150 m; 100 still covers the runway below, and leaves room for the first
-## leg's "something happens" before the approach to the first house (N-103). Same problem RouteStreamer's
-## first_segment_script already solved for its own pool (a driver needs a
-## second to get their bearings) -- this route needed a longer buffer, not
-## just one segment, because test_vehicle_presentation.gd and
-## test_dust_and_ambience.gd drive 90-100 physics ticks at full throttle
-## with zero steering input to check headlights/dust, and caught it when a
-## single straight segment wasn't enough runway.
-const SAFE_START_LENGTH: float = 100.0
 
 
 ## Overrides house_count before the node builds itself. Call before
@@ -204,162 +143,17 @@ func configure_houses(count: int) -> void:
 	house_count = maxi(count, 1)
 
 
-## How long each leg aims to be for this many houses: the driving time left
-## once every stop is paid for, shared out over the legs, in metres. Actual
-## legs vary LEG_LENGTH_JITTER around it, and overshoot a little since a leg
-## only ends once the segment that crosses its target finishes.
-static func leg_target_length(houses: int) -> float:
-	var driving_seconds: float = ROUTE_TARGET_SECONDS - houses * HOUSE_STOP_SECONDS
-	return clampf(driving_seconds * ROUTE_CRUISE_SPEED / float(houses + 1), LEG_MIN_LENGTH, LEG_MAX_LENGTH)
-
-
-## The whole spine, decided before anything is built, from its own stream
-## off the session seed so every peer plans the same road (and a test can
-## check hundreds of seeds without building one). Returns
-## {"segments": [{"script", "turn_deg", "length", "leg", "start", "hard",
-## "moment", "delivery_sign"}, ...], "house_distances": [...], "total"}.
-##
-## Rules: no repeat of the previous type; the first SAFE_START_LENGTH metres
-## easy and straight; never two hard segments in a row; at most
-## MAX_STRAIGHT_STREAK segments without a bend; something happening at least
-## every MOMENT_SPACING metres (a house stop counts); a calm last QUIET_ZONE
-## metres before every house; and hard segments getting likelier from the
-## first house to the last, on the same curve as Endless
-## (RouteStreamer.hard_weight_at()) stretched over this delivery's length.
+## The road this route builds, planned by RoutePlanner (see there).
 static func plan_spine(session_seed: int, houses: int, avoid_tunnel_at_start: bool = false) -> Dictionary:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([session_seed, &"route_spine"])
-	# Not a const: GDScript can't fold an array of global class_names.
-	var pool: Array[Script] = [
-		StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
-		SCurveSegment, GravelSegment, ConstructionZoneSegment,
-		CurveSegment, CurveSegment,  # weighted up: this is the one that turns
-		HillSegment, TunnelSegment, RailCrossingSegment,
-	]
-	# Same "needs real steering/braking" set RouteStreamer uses, plus the
-	# rail crossing. CurveSegment isn't on it: turning is what driving here
-	# is; only a sharp bend counts as a moment.
-	var hard: Array[Script] = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment, RailCrossingSegment]
-	var leg_length_target: float = leg_target_length(houses)
-	var planned_total: float = leg_length_target * (houses + 1)
-	var state := {"distance": 0.0, "heading": 0.0, "last": null, "straight_streak": 0, "since_moment": 0.0, "after_house": false}
-	var segments: Array[Dictionary] = []
-	var stops: Array[float] = []
-	for leg: int in range(houses + 1):
-		var jitter: float = rng.randf_range(1.0 - LEG_LENGTH_JITTER, 1.0 + LEG_LENGTH_JITTER)
-		var target: float = clampf(leg_length_target * jitter, LEG_MIN_LENGTH, LEG_MAX_LENGTH)
-		var to_house: bool = leg < houses
-		# The last leg ends at the goal, not at a house: no warning, no calm.
-		var sign_placed: bool = not to_house
-		var leg_length: float = 0.0
-		while leg_length < target:
-			var remaining: float = target - leg_length
-			# Whatever comes now could reach into the last QUIET_ZONE metres
-			# (a leg ends once the segment crossing its target finishes).
-			var quiet: bool = to_house and remaining <= QUIET_ZONE + MAX_SEGMENT_LENGTH
-			# Something has to happen now if one more uneventful segment could
-			# leave MOMENT_SPACING without anything, or if what's left before
-			# the house (the calm approach included) would.
-			var since: float = state.since_moment
-			var must_move: bool = not quiet and (since + MAX_SEGMENT_LENGTH > MOMENT_SPACING
-				or (to_house and remaining <= QUIET_ZONE + 2.0 * MAX_SEGMENT_LENGTH and since + remaining + MAX_SEGMENT_LENGTH > MOMENT_SPACING))
-			var progress: float = clampf(float(state.distance) / planned_total, 0.0, 1.0)
-			var hard_weight: float = lerpf(RouteStreamer.HARD_WEIGHT_START, RouteStreamer.HARD_WEIGHT_END, progress)
-			var script: Script = _plan_pick(rng, pool, hard, state, quiet, must_move, hard_weight, avoid_tunnel_at_start)
-			var turn: float = _plan_turn(rng, state.heading, quiet, must_move) if script == CurveSegment else 0.0
-			var length: float = CurveSegment.length_for_turn(turn) if script == CurveSegment else _segment_length(script)
-			var is_hard: bool = hard.has(script)
-			var entry := {
-				"script": script, "turn_deg": turn, "length": length, "leg": leg,
-				"start": state.distance, "hard": is_hard,
-				"moment": is_hard or (script == CurveSegment and absf(turn) >= SHARP_CURVE_DEG),
-				# "Entrega adelante" lands on whichever segment covers the last
-				# DELIVERY_SIGN_LEAD metres before the house.
-				"delivery_sign": not sign_placed and leg_length + length >= target - DELIVERY_SIGN_LEAD,
-			}
-			sign_placed = sign_placed or entry.delivery_sign
-			segments.append(entry)
-			leg_length += length
-			state.distance += length
-			state.heading += turn
-			state.since_moment = 0.0 if entry.moment else float(state.since_moment) + length
-			state.last = script
-			state.after_house = false
-			state.straight_streak = 0 if script == CurveSegment else int(state.straight_streak) + 1
-		if to_house:
-			stops.append(state.distance)
-			state.since_moment = 0.0
-			state.after_house = true
-	return {"segments": segments, "house_distances": stops, "total": state.distance}
+	return RoutePlanner.plan_spine(session_seed, houses, avoid_tunnel_at_start)
 
 
-static func _plan_pick(rng: RandomNumberGenerator, pool: Array[Script], hard: Array[Script], state: Dictionary,
-		quiet: bool, must_move: bool, hard_weight: float, avoid_tunnel_at_start: bool) -> Script:
-	var candidates: Array[Script] = pool.duplicate()
-	var rules: Array[Callable] = []
-	if quiet:
-		rules.append(func(s: Script) -> bool: return s == StraightSegment or s == CurveSegment)
-	if float(state.distance) < SAFE_START_LENGTH:
-		rules.append(func(s: Script) -> bool: return not hard.has(s) and s != CurveSegment)
-	# Nor a tunnel mouth right in front of the depot's door: its portal would
-	# stand against the forecourt and wall off the view of the building. Nor a
-	# hill: the yard's flat zone (route_terrain.gd) squeezed its first 12 m
-	# into a 0 -> 27 % ramp right where the truck reaches ~15 m/s out of the
-	# depot, and it pitched hard enough to throw loose cargo (#170).
-	if avoid_tunnel_at_start and float(state.distance) < 1.0:
-		rules.append(func(s: Script) -> bool: return s != TunnelSegment and s != HillSegment)
-	# Nor right past a house: the portal stood against its yard and hid it.
-	if bool(state.after_house):
-		rules.append(func(s: Script) -> bool: return s != TunnelSegment)
-	var last: Script = state.last
-	if last != null:
-		rules.append(func(s: Script) -> bool: return s != last)
-		if hard.has(last):
-			rules.append(func(s: Script) -> bool: return not hard.has(s))
-	if must_move:
-		rules.append(func(s: Script) -> bool: return hard.has(s) or s == CurveSegment)
-	elif int(state.straight_streak) >= MAX_STRAIGHT_STREAK:
-		rules.append(func(s: Script) -> bool: return s == CurveSegment)
-	# In order of importance: a rule that would leave nothing is skipped.
-	for rule: Callable in rules:
-		var kept: Array[Script] = candidates.filter(rule)
-		if not kept.is_empty():
-			candidates = kept
-	var total: float = 0.0
-	for script: Script in candidates:
-		total += hard_weight if hard.has(script) else 1.0
-	var roll: float = rng.randf() * total
-	for script: Script in candidates:
-		roll -= hard_weight if hard.has(script) else 1.0
-		if roll <= 0.0:
-			return script
-	return candidates[-1]
+static func leg_target_length(houses: int) -> float:
+	return RoutePlanner.leg_target_length(houses)
 
 
-## A bend's angle in degrees: gentle on a house's approach, sharp when it's
-## the moment the pacing asked for. It turns back the other way rather than
-## head more than MAX_HEADING_DEG off the start's -Z, so the road can never
-## come round and cross itself.
-static func _plan_turn(rng: RandomNumberGenerator, heading: float, gentle: bool, sharp: bool) -> float:
-	var sign_: float = -1.0 if rng.randf() < 0.5 else 1.0
-	var smallest: float = SHARP_CURVE_DEG if sharp else CURVE_TURN_MIN_DEG
-	var largest: float = GENTLE_CURVE_DEG if gentle else CURVE_TURN_MAX_DEG
-	var turn: float = sign_ * rng.randf_range(smallest, largest)
-	if absf(heading + turn) > MAX_HEADING_DEG:
-		turn = -turn
-	return clampf(turn, -MAX_HEADING_DEG - heading, MAX_HEADING_DEG - heading)
-
-
-static func _segment_length(script: Script) -> float:
-	var probe := script.new() as RouteSegment
-	var length: float = probe.length
-	probe.free()
-	return length
-
-
-## Players minus the driver, at least one house even playing alone.
 static func crew_house_count(player_count: int) -> int:
-	return maxi(player_count - 1, 1)
+	return RoutePlanner.crew_house_count(player_count)
 
 
 ## Which box each house is waiting for, decided once the run starts (see
@@ -389,7 +183,7 @@ func _ready() -> void:
 		_rng.randomize()
 	if house_count <= 0:
 		house_count = _session_house_count()
-	_plan = plan_spine(session_seed if session_seed != 0 else _rng.randi(), house_count, start_yard.has_area())
+	_plan = RoutePlanner.plan_spine(session_seed if session_seed != 0 else _rng.randi(), house_count, start_yard.has_area())
 	mood = WorldMood.pick(session_seed)
 	_house_deck = _shuffled_house_variants()
 	terrain = Terrain.new()
@@ -437,8 +231,9 @@ func _shuffled_house_variants() -> Array[int]:
 ## fell out from under them before their checks ever ran).
 func _start_leg(cursor: Transform3D) -> void:
 	terrain.add_span(cursor.origin + Vector3(0.0, 0.0, 20.0), cursor.origin)
-	_sign("Salida", tr("WORLD_ROUTE_START_SIGN"), cursor.origin + Vector3(-7.6, 0.0, -5.0), TEAL)
-	_box("StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.03, -4.0), TEAL)
+	var sign_at: Vector3 = cursor.origin + Vector3(-7.6, 0.0, -5.0)
+	RouteProps.sign(self, "Salida", tr("WORLD_ROUTE_START_SIGN"), sign_at, _ground_height_at(sign_at.x), TEAL)
+	RouteProps.box(self, "StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.03, -4.0), TEAL)
 
 
 ## The depot stands behind the start line: its footprint stays level and no
@@ -547,7 +342,7 @@ func _keep_houses_off_road() -> void:
 		_build_house_path(anchor.cursor, anchor.side, house)
 		var top: float = _local_bounds(house, visual).end.y if visual != null else 4.0
 		var label_at: Vector3 = house.position + Vector3.UP * (top + HOUSE_LABEL_CLEARANCE)
-		_label("HouseNumber%d" % index, tr("WORLD_HOUSE_NUMBER") % (index + 1), label_at, 0.01, TEAL, true)
+		RouteProps.label(self, "HouseNumber%d" % index, tr("WORLD_HOUSE_NUMBER") % (index + 1), label_at, 0.01, TEAL, true)
 		get_node(NodePath("HouseNumber%d" % index)).set_meta(&"height_above_house", top + HOUSE_LABEL_CLEARANCE)
 
 
@@ -675,12 +470,12 @@ func _build_goal(cursor: Transform3D) -> void:
 	var arch_left: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(-4.5, 2.0, 0.0))
 	var arch_right: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(4.5, 2.0, 0.0))
 	var arch_top: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 4.0, 0.0))
-	_box_at("GoalArchLeft", Vector3(0.5, 4.0, 0.5), arch_left, CONCRETE, true)
-	_box_at("GoalArchRight", Vector3(0.5, 4.0, 0.5), arch_right, CONCRETE, true)
-	_box_at("GoalArchTop", Vector3(9.6, 0.5, 0.5), arch_top, TEAL, true)
-	_label("GoalTitle", tr("WORLD_ROUTE_GOAL"), arch_top.origin + Vector3(0.0, 0.9, 0.0), 0.014, TEAL)
+	RouteProps.box_at(self, "GoalArchLeft", Vector3(0.5, 4.0, 0.5), arch_left, CONCRETE, true)
+	RouteProps.box_at(self, "GoalArchRight", Vector3(0.5, 4.0, 0.5), arch_right, CONCRETE, true)
+	RouteProps.box_at(self, "GoalArchTop", Vector3(9.6, 0.5, 0.5), arch_top, TEAL, true)
+	RouteProps.label(self, "GoalTitle", tr("WORLD_ROUTE_GOAL"), arch_top.origin + Vector3(0.0, 0.9, 0.0), 0.014, TEAL)
 	var end_barrier: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.5, -10.0))
-	_box_at("EndBarrier", Vector3(15.0, 1.0, 0.6), end_barrier, CONCRETE, true)
+	RouteProps.box_at(self, "EndBarrier", Vector3(15.0, 1.0, 0.6), end_barrier, CONCRETE, true)
 	var area := Area3D.new()
 	area.name = "GoalArea"
 	area.transform = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 2.0, 3.0))
@@ -911,108 +706,7 @@ func _on_delivery_body_exited(body: Node3D) -> void:
 		delivery_exited.emit()
 
 
-func _box(node_name: String, size: Vector3, location: Vector3, color: Color, solid: bool = false) -> Node3D:
-	return _box_at(node_name, size, Transform3D(Basis.IDENTITY, location), color, solid)
-
-
-func _box_at(node_name: String, size: Vector3, transform_: Transform3D, color: Color, solid: bool = false) -> Node3D:
-	var root: Node3D = StaticBody3D.new() if solid else Node3D.new()
-	root.name = node_name
-	root.transform = transform_
-	add_child(root)
-	var mesh := MeshInstance3D.new()
-	var box_mesh := BoxMesh.new()
-	box_mesh.size = size
-	mesh.mesh = box_mesh
-	mesh.material_override = _material(color)
-	root.add_child(mesh)
-	if solid:
-		var body := root as StaticBody3D
-		body.collision_layer = 1
-		body.collision_mask = 6
-		var collider := CollisionShape3D.new()
-		var box_shape := BoxShape3D.new()
-		box_shape.size = size
-		collider.shape = box_shape
-		body.add_child(collider)
-	return root
-
-
-const SIGN_FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
-const SIGN_BOARD_SIZE := Vector2(4.6, 1.4)
 const NEWLINE: String = "\n"
-
-
-## A route board: the first caption line is the big title, the rest a
-## smaller message wrapped to the board's width, both in the game's cartoon
-## display font. The post stands behind the board (text faces +Z), so it
-## never shows through the face.
-func _sign(node_name: String, caption: String, location: Vector3, accent: Color) -> void:
-	var ground_y: float = _ground_height_at(location.x)
-	var board_center_y: float = ground_y + 2.65
-	var board_top: float = board_center_y + SIGN_BOARD_SIZE.y * 0.5
-	_box(node_name + "Post", Vector3(0.16, board_top - 0.1 - ground_y, 0.16), location + Vector3(0.0, ground_y + (board_top - 0.1 - ground_y) * 0.5, -0.15), CONCRETE, true)
-	_box(node_name + "Board", Vector3(SIGN_BOARD_SIZE.x, SIGN_BOARD_SIZE.y, 0.12), location + Vector3(0.0, board_center_y, 0.0), Color("263b3e"))
-	_box(node_name + "Stripe", Vector3(SIGN_BOARD_SIZE.x, 0.10, 0.13), location + Vector3(0.0, board_top - 0.05, 0.0), accent)
-	var lines: PackedStringArray = caption.split(NEWLINE, false, 1)
-	var title: String = lines[0]
-	var message: String = lines[1].replace(" -- ", " · ") if lines.size() > 1 else ""
-	var face_z: float = 0.075
-	if message.is_empty():
-		_sign_text(node_name + "Title", title, location + Vector3(0.0, board_center_y - 0.03, face_z), 84, MARKING)
-	else:
-		_sign_text(node_name + "Title", title, location + Vector3(0.0, board_center_y + 0.26, face_z), 76, MARKING)
-		_sign_text(node_name + "Text", message, location + Vector3(0.0, board_center_y - 0.26, face_z), 44, accent.lerp(MARKING, 0.35))
-
-
-func _sign_text(node_name: String, text: String, location: Vector3, font_size: int, color: Color) -> void:
-	var label := Label3D.new()
-	label.name = node_name
-	label.text = text
-	label.font = SIGN_FONT
-	label.font_size = font_size
-	label.pixel_size = 0.0055
-	label.modulate = color
-	label.outline_size = 10
-	label.outline_modulate = Color("16252a")
-	# Wraps inside the board with a margin instead of running off its edges.
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.width = (SIGN_BOARD_SIZE.x - 0.4) / label.pixel_size
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.position = location
-	add_child(label)
-
-
-func _label(node_name: String, caption: String, location: Vector3, pixel_size: float, color: Color, face_camera: bool = false) -> void:
-	var label := Label3D.new()
-	label.name = node_name
-	label.text = caption
-	label.position = location
-	label.font_size = 48
-	label.pixel_size = pixel_size
-	label.modulate = color
-	label.outline_size = 4
-	label.outline_modulate = Color("1e3035")
-	# Free-floating labels (house numbers) turn to the camera around Y: the
-	# road bends, so a fixed facing read backwards ("1 ASAC") from half the
-	# approaches. Text printed on a board must not -- it would swing out in
-	# front of its own board and get cut by it ("SAL...erpentea").
-	if face_camera:
-		label.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-	add_child(label)
-
-
-func _material(color: Color) -> StandardMaterial3D:
-	if not _materials.has(color):
-		var material := StandardMaterial3D.new()
-		material.albedo_color = color
-		material.roughness = 0.95
-		# Back faces culled: double-sided, the underside of every flat marking
-		# z-fought the terrain a few millimetres below it (flicker) and box
-		# sides shadowed themselves in fine stripes.
-		_materials[color] = material
-	return _materials[color] as StandardMaterial3D
 
 
 ## Looked up by node path rather than by the NetworkManager identifier on
@@ -1036,7 +730,7 @@ func _session_house_count() -> int:
 	var decided: int = int(network.get(&"world_house_count"))
 	if decided > 0:
 		return decided
-	var count: int = crew_house_count((network.get(&"peer_ids") as Array).size())
+	var count: int = RoutePlanner.crew_house_count((network.get(&"peer_ids") as Array).size())
 	if int(network.get(&"world_seed")) != 0 and bool(network.call(&"is_host")):
 		network.set(&"world_house_count", count)
 	return count

@@ -30,8 +30,7 @@ do-not-drop/scripts/gameplay/route/delivery_house.gd|max-line-length 3
 do-not-drop/scripts/gameplay/route/dressing_batcher.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/flock_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/roadside_story.gd|max-line-length 8
-do-not-drop/scripts/gameplay/route/route.gd|max-file-lines 1
-do-not-drop/scripts/gameplay/route/route.gd|max-line-length 22
+do-not-drop/scripts/gameplay/route/route.gd|max-line-length 14
 do-not-drop/scripts/gameplay/route/route_segment.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/route_sky.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/route_smoke_check.gd|max-line-length 2
@@ -162,7 +161,7 @@ do-not-drop/tests/test_road_hazards.gd|max-line-length 4
 do-not-drop/tests/test_roadside_stories.gd|max-line-length 20
 do-not-drop/tests/test_route_difficulty.gd|max-line-length 3
 do-not-drop/tests/test_route_dressing_assets.gd|max-line-length 12
-do-not-drop/tests/test_route_duration_budget.gd|max-line-length 2
+do-not-drop/tests/test_route_duration_budget.gd|max-line-length 1
 do-not-drop/tests/test_route_event_manager.gd|max-line-length 7
 do-not-drop/tests/test_route_events.gd|duplicated-load 1
 do-not-drop/tests/test_route_events.gd|max-line-length 8

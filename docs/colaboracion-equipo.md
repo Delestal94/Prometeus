@@ -35,6 +35,10 @@ antes de seguir con cualquier archivo listado acá.
   `route_wildlife.gd`; tendido eléctrico a `route_power_lines.gd`. `RouteDresser.base_offset()`,
   `ground_gap()` y `SINK_RANGE` ahora son de `RoutePlacement`; `STORY_*` y `HAZARD_SIGNS` de
   `RouteSignage`.
+- **Ruta, plan y primitivas (fase 3, dominio Nacho):** de `route.gd` (1042 → ~740 líneas) salieron el
+  planificador estático a `route_planner.gd` (`RoutePlanner.plan_spine()` y sus constantes
+  `LEG_*`, `QUIET_ZONE`, `MOMENT_SPACING`…) y las primitivas de construcción a `route_props.gd`.
+  `Route.plan_spine()`, `leg_target_length()` y `crew_house_count()` siguen existiendo (delegan).
 - **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
   `package` que no usaba (privada, un solo llamador).
 
