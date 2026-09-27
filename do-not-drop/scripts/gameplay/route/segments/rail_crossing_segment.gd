@@ -56,6 +56,12 @@ var _lamps: Array[StandardMaterial3D] = []
 var _train: Array[AnimatableBody3D] = []
 var _train_x: float = 0.0
 var _bell: AudioStreamPlayer3D
+## The cartoon steam train's own voice (playtest polish 2026-09-27): a
+## "toot, tooooot" as it starts across, and a chugging loop for as long as
+## it's actually on the tracks. Both hang on the locomotive (_train[0]) so
+## they move with it for free.
+var _train_horn: AudioStreamPlayer3D
+var _train_chug: AudioStreamPlayer3D
 
 
 func _init() -> void:
@@ -192,6 +198,26 @@ func _build_train() -> void:
 		car.process_mode = Node.PROCESS_MODE_DISABLED
 		add_child(car)
 		_train.append(car)
+	# Children of the segment itself, not of a car -- a car's process_mode
+	# toggles off between crossings, which would also stop these tracking
+	# their position. _physics_process moves them by hand instead, the same
+	# way it moves the cars' own visuals.
+	_train_horn = AudioStreamPlayer3D.new()
+	_train_horn.name = "TrainHorn"
+	_train_horn.stream = SynthAudio.train_horn()
+	_train_horn.bus = &"SFX"
+	_train_horn.volume_db = WorldMix.TRAIN_HORN_DB
+	_train_horn.unit_size = 12.0
+	_train_horn.max_distance = 80.0
+	add_child(_train_horn)
+	_train_chug = AudioStreamPlayer3D.new()
+	_train_chug.name = "TrainChug"
+	_train_chug.stream = SynthAudio.train_chug_loop()
+	_train_chug.bus = &"SFX"
+	_train_chug.volume_db = WorldMix.TRAIN_CHUG_DB
+	_train_chug.unit_size = 10.0
+	_train_chug.max_distance = 70.0
+	add_child(_train_chug)
 
 
 ## An imported model, not yet in the tree (null, with a warning, if missing).
@@ -233,15 +259,20 @@ func _physics_process(delta: float) -> void:
 				for car: AnimatableBody3D in _train:
 					car.visible = true
 					car.process_mode = Node.PROCESS_MODE_INHERIT
+				_train_horn.play()
+				_train_chug.play()
 		State.TRAIN:
 			_train_x += TRAIN_SPEED * delta
 			for index: int in range(_train.size()):
 				var at: Vector3 = Vector3(_train_x - float(index) * 8.0, 0.0, track_z)
 				_train[index].position = Vector3(at.x, _ground_offset(at), at.z)
+			_train_horn.position = _train[0].position
+			_train_chug.position = _train[0].position
 			if _train_x - float(_train.size()) * 8.0 > TRAIN_SPAN:
 				for car: AnimatableBody3D in _train:
 					car.visible = false
 					car.process_mode = Node.PROCESS_MODE_DISABLED
+				_train_chug.stop()
 				state = State.OPENING
 				_timer = 0.0
 		State.OPENING:
@@ -299,6 +330,14 @@ func _apply_state(new_state: int, timer: float, train_x: float) -> void:
 		_set_arm(arm, down)
 	if state != State.DONE and not _bell.playing:
 		_bell.play()
+	# A client joining mid-crossing picks up the chugging already in
+	# progress (the horn is a one-off "here it comes", not worth replaying
+	# for someone arriving late); _physics_process's own TRAIN branch keeps
+	# it positioned and stops it once the cars clear, same as the host.
+	if train_on and not _train_chug.playing:
+		_train_chug.play()
+	elif not train_on and _train_chug.playing:
+		_train_chug.stop()
 
 
 func _is_online() -> bool:

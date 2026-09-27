@@ -179,7 +179,7 @@ func _build() -> void:
 	add_child(_beeper)
 	_engine = AudioStreamPlayer3D.new()
 	_engine.name = "Motor"
-	_engine.stream = SynthAudio.engine_loop()
+	_engine.stream = SynthAudio.forklift_motor_loop()
 	_engine.bus = &"SFX"
 	_engine.volume_db = WorldMix.FORKLIFT_ENGINE_DB
 	_engine.unit_size = 3.0

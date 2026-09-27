@@ -50,6 +50,26 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: pasada de pulido de audio "cartoon cómico" (2026-09-27)
+
+Pedido del usuario: repasar todo lo sintetizado en código y mejorar lo que sonaba a
+medias o sin tono cómico. Lo hizo Nacho. Zona compartida `presentation/synth_audio.gd`:
+solo funciones nuevas, ninguna firma existente cambió — `doorbell_ding_dong()`,
+`neighbor_cheer()`, `comic_ruin_stinger()`, `comic_boom()`, `forklift_motor_loop()`,
+`river_flow_loop()`, `train_horn()` y `train_chug_loop()`. `presentation/sound_audit.gd`
+y `presentation/world_mix.gd` (ambos de Nacho) las suman a "Sonidos del juego" y a la
+tabla de niveles medidos; detalle completo en `docs/audio-mundo.md`.
+
+Un archivo de Slatex, cambio chico y aislado: **`package/package_feedback.gd`** suma
+`_ruin_player` (elegido una vez en `_ready()` según la trampa) y lo hace sonar en
+`_on_package_ruined()`, junto al confeti que ya estaba. Ninguna firma ni propiedad
+replicada cambió; `test_trap_audio` sigue pasando tal cual. El resto de lo tocado es
+propio de Nacho: `route/delivery_house.gd` (timbre y alegría del vecino ya no
+reusan la campanita de Frágil ni la bocina del camión), `depot/depot_forklift.gd`
+(motor eléctrico propio en vez del motor del camión pitcheado), y dos segmentos
+nuevos con sonido: `route/segments/narrow_bridge_segment.gd` (el río, bus Exterior)
+y `route/segments/rail_crossing_segment.gd` (silbato y traqueteo del tren).
+
 ## Aviso activo: cajas que se salían del camión con las puertas cerradas (#180, 2026-09-27)
 
 Toca `gameplay/package/package.gd` (Slatex). **Ninguna firma cambió**; hacé `git pull` antes de

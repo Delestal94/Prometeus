@@ -19,6 +19,7 @@ class_name NarrowBridgeSegment
 ## river weren't there, same as it would be with no river at all.
 
 
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const RAILING_MODEL := "res://assets/models/environment/props/sm_env_prop_bridge_railing.glb"
 const MODELS: String = "res://assets/models/environment/route/"
 const DECK_MODEL: String = MODELS + "sm_env_route_bridge_deck.glb"
@@ -87,3 +88,27 @@ func _build() -> void:
 			var flat_water: Node = water.find_child("Water", true, false)
 			if flat_water is VisualInstance3D:
 				(flat_water as VisualInstance3D).visible = false
+	_build_river_sound()
+
+
+## Water running under the span (playtest polish 2026-09-27, docs/tareas-nacho.md
+## #178 warns against repeating the depot's old zumbido): a normal positioned
+## 3D loop at the water, not a wall-to-wall drone -- loud right over it,
+## faded out well before the next segment (unit_size 6, well under the
+## typical distance to it, so it never gets the depot's old near-field
+## over-boost). Always on the Exterior bus: the river doesn't care whether
+## the truck's own cabin is open or closed, it's outside either way.
+func _build_river_sound() -> void:
+	var river := AudioStreamPlayer3D.new()
+	river.name = "RiverFlow"
+	river.stream = SynthAudio.river_flow_loop()
+	river.bus = &"Exterior"
+	river.volume_db = WorldMix.RIVER_DB
+	river.unit_size = 6.0
+	river.max_distance = 45.0
+	river.autoplay = true
+	# Roughly at the water's surface: below the deck on a carved riverbed,
+	# level with it on the flat test water model otherwise.
+	var water_y: float = -river_depth * 0.5 if continuous_terrain else -0.3
+	river.position = Vector3(0.0, water_y, -length * 0.5)
+	add_child(river)

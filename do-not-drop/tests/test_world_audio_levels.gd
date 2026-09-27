@@ -43,12 +43,15 @@ const SOUNDS: Array = [
 	["crossing bell", &"crossing_bell", &"CROSSING_BELL_DB", "signal"],
 	["dog bark", &"dog_bark", &"DOG_BARK_DB", "signal"],
 	["sheep bleat", &"sheep_bleat", &"SHEEP_BLEAT_DB", "signal"],
-	["doorbell", &"glass_chime", &"DOORBELL_DB", "signal"],
-	["resident cheer", &"honk_horn", &"RESIDENT_CHEER_DB", "signal"],
+	["doorbell", &"doorbell_ding_dong", &"DOORBELL_DB", "signal"],
+	["resident cheer", &"neighbor_cheer", &"RESIDENT_CHEER_DB", "signal"],
 	["resident groan", &"creature_groan", &"RESIDENT_GROAN_DB", "signal"],
 	["forklift beeper", &"reverse_beep", &"FORKLIFT_BEEP_DB", "repeat"],
-	["forklift engine", &"engine_loop", &"FORKLIFT_ENGINE_DB", "machine"],
+	["forklift engine", &"forklift_motor_loop", &"FORKLIFT_ENGINE_DB", "machine"],
 	["roller door", &"roller_door", &"ROLLER_DOOR_DB", "signal"],
+	["river", &"river_flow_loop", &"RIVER_DB", "noise"],
+	["train horn", &"train_horn", &"TRAIN_HORN_DB", "signal"],
+	["train chugging", &"train_chug_loop", &"TRAIN_CHUG_DB", "engine"],
 ]
 
 ## Composed tracks (.ogg, tools/audio/compose_music.py): Godot can't hand a

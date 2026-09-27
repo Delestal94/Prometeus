@@ -200,6 +200,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_world_audio_levels.gd
 <godot> --headless --path do-not-drop --script res://tests/test_contact_shadows.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
+<godot> --headless --path do-not-drop --script res://tests/test_audio_polish.gd
 <godot> --headless --path do-not-drop --script res://tests/test_screen_fade.gd
 <godot> --headless --path do-not-drop --script res://tests/test_camera_polish.gd
 <godot> --headless --path do-not-drop --script res://tests/test_interaction_highlight.gd
@@ -561,6 +562,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   Frágil (más grave si se arruina), gemido para Ruidoso que sube con la
   agitación, crujido para Peso Creciente que se reinicia al resolver el
   puzzle.
+- `test_audio_polish` — pasada de pulido "cartoon cómico" (2026-09-27): el timbre ya
+  no reusa la campanita de Frágil, el vecino contento ya no reusa la bocina del
+  camión, el autoelevador eléctrico ya no comparte el motor del camión, y cualquier
+  trampa que se arruina suena su propio golpe cómico (Explosivo con un "BOOM"
+  aparte) en vez de solo el confeti.
 - `test_screen_fade` — el fundido a negro (al sentarse, al reiniciar) se
   oscurece y vuelve solo a transparente.
 - `test_camera_polish` — head bob al caminar, FOV distinto al cargar un
@@ -668,9 +674,12 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   de noche y ninguno con lluvia, y los loops de ambiente suenan y cubren todo su buffer; en
   otoño las hojas se ponen ocres y los pinos siguen verdes. Para ver uno a mano:
   `-- --mood=lluvia_noche` (soleado/nublado/lluvia/niebla × dia/atardecer/noche).
-- `test_more_route_segments` — loma (el camino sube y vuelve a nivel), túnel sólido e
-  iluminado, y el paso a nivel que baja barreras sólidas, deja pasar el tren y reabre;
-  quien se suma a mitad del cruce retoma la fase del host (barreras bajas, tren pasando).
+- `test_more_route_segments` — loma (el camino sube y vuelve a nivel), el puente
+  angosto talla un río de verdad y suena (agua corriendo, en el bus Exterior, con
+  caída por distancia), túnel sólido e iluminado, y el paso a nivel que baja
+  barreras sólidas, deja pasar el tren (con su propio silbato y traqueteo) y reabre;
+  quien se suma a mitad del cruce retoma la fase del host (barreras bajas, tren
+  pasando, traqueteo ya sonando) y termina el ciclo con el traqueteo apagado.
 - `test_truck_variant` — la furgoneta ágil maneja distinto, la pintura cambia la carrocería
   sin tocar el material importado, ambas se replican y respetan los desbloqueos.
 - `test_spectator` — solo un pasajero sin caja que salvar puede pasar a la cámara de

@@ -8,11 +8,13 @@ extends SceneTree
 ##     ground drops away well past just under the deck, fades back to level
 ##     exactly at both of the segment's own edges (no seam with the straight
 ##     road on either side), and the deck floats over the drop instead of
-##     sinking into it;
+##     sinking into it; it also has its own flowing-water loop (positioned,
+##     Exterior bus, playtest polish 2026-09-27);
 ##   - a TunnelSegment has solid walls and roof, and light inside;
 ##   - a RailCrossingSegment that's due to close runs the whole cycle when the
-##     truck comes up to it -- warning, arms down (and solid), train across,
-##     arms up -- and one that isn't due never moves.
+##     truck comes up to it -- warning, arms down (and solid), train across
+##     (with its own horn and chugging, playtest polish 2026-09-27), arms up --
+##     and one that isn't due never moves.
 
 var _failures: int = 0
 
@@ -52,6 +54,16 @@ func _run() -> void:
 	_expect(bridge.get_node_or_null(^"BridgeWater") != null, "The river GLB builds on the main route too")
 	_expect(bridge.get_node_or_null(^"BridgeGuardRailCollision") != null, "Guard rail collision is still there with the river carved in")
 	_expect(bridge.has_meta(&"ignore_river"), "The whole segment is flagged so its own furniture floats over the drop")
+	# The river's own sound (playtest polish 2026-09-27, docs/tareas-nacho.md #178
+	# warns against the depot's old zumbido: a flat drone the whole floor got at
+	# the same volume): positioned, on Exterior, and a modest unit_size so it
+	# doesn't get that same near-field over-boost right on the deck.
+	var river_sound: AudioStreamPlayer3D = bridge.get_node_or_null(^"RiverFlow")
+	_expect(river_sound != null and river_sound.stream == SynthAudio.river_flow_loop(),
+		"The river has its own flowing-water loop")
+	_expect(river_sound != null and river_sound.bus == &"Exterior", "...on the Exterior bus")
+	_expect(river_sound != null and river_sound.unit_size <= 10.0 and river_sound.max_distance > river_sound.unit_size,
+		"...a modest reference distance with real fall-off past it, not a wall-to-wall wash")
 	var mid_z: float = bridge.position.z - bridge.length * 0.5
 	var river_under_deck: float = river_terrain.height_at(Vector3(0.0, 0.0, mid_z))
 	var river_beside: float = river_terrain.height_at(Vector3(10.0, 0.0, mid_z))
@@ -114,16 +126,29 @@ func _run() -> void:
 		var car_box: BoxShape3D = (car_shape[0] as CollisionShape3D).shape as BoxShape3D if not car_shape.is_empty() else null
 		_expect(car.get_node_or_null(^"CarModel") != null and car_box != null and car_box.size.is_equal_approx(Vector3(7.5, 3.0, 2.6)),
 			"Train car %d: imported model, same 7.5 x 3 x 2.6 m collision box" % index)
+	# The train's own voice (playtest polish 2026-09-27): a "toot" as it starts
+	# across, and chugging for as long as it's actually on the tracks.
+	var train_horn: AudioStreamPlayer3D = crossing.get(&"_train_horn")
+	var train_chug: AudioStreamPlayer3D = crossing.get(&"_train_chug")
+	_expect(train_horn.stream == SynthAudio.train_horn() and train_chug.stream == SynthAudio.train_chug_loop(),
+		"The train has its own horn and chugging loop, not silence while it crosses")
 	var arm_down_seen: bool = false
+	var chug_seen_playing: bool = false
+	var chug_seen_stopped_after: bool = false
 	for _i: int in range(60 * 14):
 		await physics_frame
 		seen[crossing.state] = true
 		if crossing.state == RailCrossingSegment.State.TRAIN:
 			arm_down_seen = arm_down_seen or absf(arm.rotation.z) < 0.05
+			chug_seen_playing = chug_seen_playing or train_chug.playing
+		elif chug_seen_playing:
+			chug_seen_stopped_after = chug_seen_stopped_after or not train_chug.playing
 	_expect(seen.has(RailCrossingSegment.State.WARNING) and seen.has(RailCrossingSegment.State.TRAIN) and crossing.state == RailCrossingSegment.State.DONE,
 		"Warning, train, done (states seen: %s, now %d)" % [str(seen.keys()), crossing.state])
 	_expect(arm_down_seen and arm is StaticBody3D, "The arms are down across the road while the train passes, and solid")
 	_expect(absf(absf(arm.rotation.z) - PI * 0.5) < 0.05, "The arms are back up once it's gone")
+	_expect(chug_seen_playing, "The chugging loop actually plays while the train is on the tracks")
+	_expect(chug_seen_stopped_after and not train_chug.playing, "...and stops once the cars have cleared, not left running forever")
 	crossing.free()
 
 	# A client loading in while the host's train is passing: it jumps
@@ -137,9 +162,11 @@ func _run() -> void:
 	var joined_arm: Node3D = joined.get_node(^"BarrierArm")
 	var first_car: Node3D = joined.get_node(^"TrainCar0")
 	_expect(absf(joined_arm.rotation.z) < 0.05 and first_car.visible, "Joining mid-train: arms already down, train already on the tracks")
+	_expect((joined.get(&"_train_chug") as AudioStreamPlayer3D).playing, "...and the chugging already going, not silence until the next state change")
 	for _i: int in range(60 * 6):
 		await physics_frame
 	_expect(joined.state == RailCrossingSegment.State.DONE and absf(absf(joined_arm.rotation.z) - PI * 0.5) < 0.05, "...and it finishes the cycle from there (now %d)" % joined.state)
+	_expect(not (joined.get(&"_train_chug") as AudioStreamPlayer3D).playing, "...and the chugging stops once it's done too")
 	joined.free()
 
 	var quiet: RailCrossingSegment = RailCrossingSegment.new()
@@ -153,7 +180,7 @@ func _run() -> void:
 	truck.free()
 	await process_frame
 	if _failures == 0:
-		print("PASS: crests lift the road, a narrow bridge carves a real riverbed under itself, tunnels are solid and lit, crossings close for a passing train and reopen")
+		print("PASS: crests lift the road, a narrow bridge carves a real riverbed under itself and it flows, tunnels are solid and lit, crossings close for a passing train (its own horn and chugging) and reopen")
 	quit(_failures)
 
 
