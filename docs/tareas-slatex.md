@@ -327,10 +327,10 @@ hacer nada. El modo espectador ayuda a mirar, no a jugar.
 `requerimientos-tecnicos.md` §3.4 lo deja pendiente porque `Engine.time_scale` rompe la física
 del host. Hacerlo **solo visual y local**:
 
-- [ ] 0,35 s en los que las partículas de ruina (`package_feedback.gd`) corren a `speed_scale = 0.15`,
+- [x] (commit `5fa9277`) 0,35 s en los que las partículas de ruina (`package_feedback.gd`) corren a `speed_scale = 0.15`,
   un destello blanco suave en la viñeta del HUD y un golpe de sonido grave. La física no cambia.
-- [ ] Opción "Efectos de impacto" en opciones para apagarlo (accesibilidad, ver S-502).
-- [ ] Test: tras `package_ruined` el `Engine.time_scale` sigue en 1.0 y las partículas vuelven a 1.0.
+- [x] (commit `5fa9277`) Opción "Efectos de impacto" en opciones para apagarlo (accesibilidad, ver S-502).
+- [x] (commit `5fa9277`) Test: tras `package_ruined` el `Engine.time_scale` sigue en 1.0 y las partículas vuelven a 1.0.
 
 ---
 
