@@ -276,6 +276,32 @@ Antes #114: `RouteStreamer` sigue siendo recto en −Z.
 
 ---
 
+### N-211 · Pasada de calidad de código "nivel AAA" — A · `Opus 5.5 · xhigh` · Aviso: sí · rama `refactor/quality-pass`
+
+Pedido del usuario (2026-09-27): arquitectura, modularidad, responsividad y variables a nivel
+profesional en todo el repo, incluidos archivos de Slatex. Un commit por fase, batería completa verde
+en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `docs/colaboracion-equipo.md`.
+
+- [x] **Fase 1 · Lint:** `gdlintrc` + `tools/lint.sh` con línea base que solo baja (CI + `pre-push`);
+  `face_catalog.gd`/`render_layers.gd` a `core/`. `62ed50b`
+- [x] **Fase 2 · Depósito:** `depot.gd` 1629 → ~550 en 7 componentes. `c9986c9`
+- [x] **Fase 3 · Ruta:** `route_dresser.gd` 1241 → ~330 (`RoutePlacement`, `RouteSignage`,
+  `RouteWildlife`, `RoutePowerLines`); `route.gd` 1042 → 736 (`RoutePlanner`, `RouteProps`).
+  `1a86faa` `603fefd`
+- [x] **Fase 4 · Jugador:** `player.gd` 1191 → 925 (`PlayerAnimator`, `PlayerAppearance`); componentes
+  tipados `var player: Player`. `b1026bf`
+- [ ] **Fase 5 · UI armada por código:** partir `prototype_hud._build_ui()` (207 líneas) y
+  `main_menu._build_ui()` (184) en constructores por sección; renombrar `prototype_hud` (ya no es prototipo).
+- [ ] **Fase 6 · Búsquedas frágiles:** 113 `find_child`/búsquedas por grupo (18 en `reference_truck.gd`)
+  → referencias cacheadas o `@export`.
+- [ ] **Fase 7 · i18n:** ~234 textos de UI en español escritos en el código (fuera de `tr()`), a un CSV
+  de traducción (se cruza con la S-509 de Slatex: opción de idioma).
+- [ ] **Fase 8 · Responsividad:** capturas del HUD/menús en 16:9, 16:10 (Steam Deck), 21:9 y 4:3 con
+  `revisor-visual`.
+- [ ] **Aparte:** faltan 14 `.uid` en `main` (Godot los genera en cada clon con valores distintos);
+  commitearlos en un PR chico cuando nadie tenga copias sin trackear.
+- [ ] Bajar la línea base del lint (quedan ~990 líneas de más de 120 columnas, casi todas en tests).
+
 ## 3. Arte y dirección visual
 
 ### N-301 · Líneas de paneles y juntas de puertas — B · `Opus 5.5 · high` · Aviso: no · **[x] `8c8aff2`**
