@@ -175,11 +175,11 @@ pocos triángulos no es un defecto en sí: importa en lo que queda cerca de la c
 | Prio | Modelo | Triángulos | Motivo | Tarea |
 |---|---|---|---|---|
 | Alta | Celular (`sm_prop_phone`) | 92 | Primer plano, en la mano | S-104 |
-| Alta | Autos estacionados hatchback / pickup | 320 / 364 | Lote viejo sin refinar; en ruta y depósito | N-136 |
-| Alta | Farol (`sm_env_prop_street_lamp`) | 132 | Muy repetido en pueblo y depósito | N-140 |
-| Media | Molino / tanque de agua | 192 / 204 | Lote viejo; hitos que se leen por silueta | N-140 |
-| Media | Buzón, mojón, cajón de madera, cono | 120–176 | Mobiliario que pasa cerca del camión | N-140 |
-| Media | Enano de jardín, felpudo | 164 / 68 | En el porche, donde se entrega | N-140 |
+| ~~Alta~~ | ~~Autos estacionados hatchback / pickup~~ **[x] Hecho (2026-09-27)**: 1.636 / 1.700 tris (antes 320 / 364), `build_street_props.py` | ~~320 / 364~~ | Lote viejo sin refinar; en ruta y depósito | N-136 |
+| ~~Alta~~ | ~~Farol (`sm_env_prop_street_lamp_refined`, y el viejo `sm_env_prop_street_lamp`)~~ **[x] Hecho (2026-09-27)**: 496 tris (antes 104 / 132) | ~~132~~ | Muy repetido en pueblo y depósito | N-140 |
+| ~~Media~~ | ~~Molino / tanque de agua~~ **[x] Hecho (2026-09-27)**: 1.016 / 954 tris antes del AO (antes 192 / 204) | ~~192 / 204~~ | Lote viejo; hitos que se leen por silueta | N-140 |
+| ~~Media~~ | ~~Buzón, mojón, cajón de madera, cono~~ **[x] Hecho (2026-09-27)**: 508 / 534 / 528 / 390 tris | ~~120–176~~ | Mobiliario que pasa cerca del camión | N-140 |
+| ~~Media~~ | ~~Enano de jardín, felpudo~~ **[x] Hecho (2026-09-27)**: 604 / 228 tris | ~~164 / 68~~ | En el porche, donde se entrega | N-140 |
 | Baja | Roca, arbusto redondo, rama caída, tocón, mata de pasto | 80–192 | Variantes rinden más que detalle | N-141 |
 | Baja | Baranda de puente | 352 | Lote viejo, sin integrar | N-132 |
 

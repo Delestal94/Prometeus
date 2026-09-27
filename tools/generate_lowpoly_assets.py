@@ -134,7 +134,7 @@ def lamp():
     export("environment/props/sm_env_prop_street_lamp_refined.glb")
 
 
-phone(); lamp()
+phone()  # lamp(): build_street_props.py (N-140) owns the street lamp now
 vehicle("sm_vehicle_parked_sedan_refined", "sedan", (.24,.38,.62))
 vehicle("sm_vehicle_competitor_van", "van", (.83,.38,.12))
 vehicle("sm_vehicle_tractor", "tractor", (.32,.55,.19))

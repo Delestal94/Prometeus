@@ -345,8 +345,7 @@ def glove(side):
 # to build_lowpoly_refined.py (2026-09-23). The 3D clouds were retired: the
 # sky shader paints them now (shaders/stylized_sky.gdshader).
 bridge_railing()
-water_tower()
-windmill()
+# water_tower() / windmill(): rebuilt by build_street_props.py (N-140, 2026-09-27).
 horizon()
 phone()
 for side in ("left", "right"):

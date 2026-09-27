@@ -171,6 +171,42 @@ usan `DepotKit.merged_mesh()`, una malla con una superficie por material.
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_depot_props.py [-- door rack forklift conveyor lamps fan clock supplies]
 ```
 
+## Calle y ruta: autos, farol, hitos y mobiliario (2026-09-27)
+
+Propios, generados por `tools/build_street_props.py` (N-136 / N-140), misma línea cartoon que el
+tren y el depósito. Reemplazan los del lote viejo con el mismo nombre, escala, pivote (centro de
+la base) y orientación (Blender +Y = Godot −Z, el lado que `Facing.ROAD` gira hacia la ruta), así
+que no cambió ninguna escena ni script. Triángulos antes del AO:
+
+- `vehicles/sm_vehicle_parked_hatchback.glb` (1.636: cabina redondeada con portón inclinado,
+  techo blanco con barras, faros redondos y parrilla sonriente) y `..._pickup.glb` (1.700: caja
+  con un paquete y rueda de auxilio, barra de balizas ámbar, parrilla cromada). Largo en X, trompa
+  hacia −X, ruedas en y = 0. Los faros son **un** mesh `Light` con material `lamp`
+  (`LowpolyMaterials.light_up()` y `NightFlares` lo buscan así y separan los dos faros); las luces
+  traseras son `TailLights` (`danger`, no se encienden). Ningún otro nodo empieza con `Light`.
+- `environment/props/sm_env_prop_street_lamp_refined.glb` (496; el viejo `..._street_lamp.glb`
+  recibe el mismo modelo): 4,56 m, cuello de cisne hacia +X, farol hexagonal. Materiales
+  `lamp_metal` y `lamp_glass` (un solo mesh `LampGlass`: brilla de noche y lleva un halo).
+- `environment/landmarks/sm_env_landmark_windmill.glb` (1.016): aspas en X colgadas del empty
+  `WindmillRotor` (gira sobre su Z local de Godot), mirando a la ruta. `..._water_tower.glb`
+  (954): patas abiertas con cruces, pasarela con baranda, escalera y el logo de la caja en la
+  cara que mira a la ruta.
+- `environment/props/sm_env_prop_mailbox.glb` (508, puerta abierta con un paquete y bandera
+  levantada), `..._milestone.glb` (534, capuchón rojo y "12" legible desde la ruta),
+  `..._wooden_crate.glb` (528), `..._traffic_cone.glb` (390).
+- `environment/yard/sm_env_yard_garden_gnome.glb` (604, abraza un paquete) y
+  `..._doormat.glb` (228, carita sonriente derecha para quien llega a la puerta).
+
+Autos, molino y tanque llevan AO horneado: después de regenerarlos hay que volver a correr
+`bake_vertex_ao.py` (el horneado subdivide, así que en el juego quedan en ~2.260 / 2.290 /
+3.570 / 6.320 triángulos). Los generadores viejos (`build_lowpoly_glb_assets*.py`,
+`build_lowpoly_refined.py`, `tools/generate_lowpoly_assets.py`) ya no escriben estos archivos.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_street_props.py [-- cars lamp landmarks roadside yard]
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/bake_vertex_ao.py -- do-not-drop/assets/models/vehicles/sm_vehicle_parked_hatchback.glb do-not-drop/assets/models/vehicles/sm_vehicle_parked_pickup.glb do-not-drop/assets/models/environment/landmarks/sm_env_landmark_windmill.glb do-not-drop/assets/models/environment/landmarks/sm_env_landmark_water_tower.glb
+```
+
 ## Timbre (`models/environment/props/sm_env_prop_doorbell_panel.glb`)
 
 - Propio, `tools/build_doorbell.py` (tareas de Nacho N-302): placa de 12×26 cm con la
