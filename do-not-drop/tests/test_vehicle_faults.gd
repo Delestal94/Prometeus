@@ -69,7 +69,8 @@ func _run() -> void:
 	faults.set(&"max_faults_per_run", 1)
 	var first: Array = _hits_with_seed(faults, network, 4242)
 	var second: Array = _hits_with_seed(faults, network, 4242)
-	_expect(first == second and not first.is_empty(), "Same seed and hits break the same thing on the same hit (%s vs %s)" % [first, second])
+	_expect(first == second and not first.is_empty(),
+			"Same seed and hits break the same thing on the same hit (%s vs %s)" % [first, second])
 	var seen_any: bool = false
 	for world_seed: int in [1, 2, 3, 4, 5, 6, 7, 8]:
 		seen_any = seen_any or not _hits_with_seed(faults, network, world_seed).is_empty()
