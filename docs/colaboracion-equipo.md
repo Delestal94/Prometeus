@@ -19,6 +19,19 @@ Slatex, revisá esos PRs antes de que entren si tocan tus archivos. `vehicle.tsc
 siguen congelados: N-214 (averías) va como componente aparte, y N-114 (caja manual) queda
 descartada si no hay acuerdo.
 
+## Aviso activo: N-505 indicaciones rápidas en la rueda de pings (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-505-quick-callouts`. Toca archivos de Slatex y la zona
+compartida; **ninguna firma cambia**:
+- `ui/ping_catalog.gd` (Slatex): ocho frases ("¡Cuidado!", "¡Frená!", "¡Bache!", "¡Ayuda acá!",
+  "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!"), cada una con clave `CALLOUT_*` en
+  `strings_ui.csv` y `display_text()` para mostrarla traducida. Salen "Acá", "Gracias" y "Sí/No";
+  la rueda (`ui/ping_wheel.gd`) solo cambia el texto que muestra.
+- `ui/hud/hud_notices.gd` (Slatex): el toast muestra la frase traducida y, si el jugador local
+  maneja, la frase de otro tripulante va grande en `ping_indicator` (`local_is_driving()`).
+- `core/event_bus.gd` (zona compartida): `request_ping()` descarta la segunda frase del mismo
+  jugador dentro de `ping_cooldown_seconds` (1,5 s). `reset_ping_cooldowns()` para tests.
+
 ## Aviso activo: CI en verde otra vez (PR #15, 2026-09-28)
 
 Los PRs fallaban por tres cosas, ninguna del contenido de los PRs de docs:

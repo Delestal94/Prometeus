@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-28 (N-704 cerrada: diferencial corregido en los docs y veredictos de
+> Última actualización: 2026-09-28 (N-505 parcial: rueda de ocho frases, enfriamiento de 1,5 s en el
+> host y la frase en el HUD del conductor; falta la voz sintetizada). Antes, el mismo día: (N-704 cerrada: diferencial corregido en los docs y veredictos de
 > `critico-diseno` en N-212, N-214 y N-112 — esta última en contra). Antes, el mismo día: (hito M6: 15 tareas tomadas de `analisis-competencia-backseat-rv.md`,
 > asignadas a Nacho aunque varias tocan el dominio de Slatex; N-907 nace pospuesta ⏸). Antes, el mismo día:
 > N-901 y todo lo de publicar/promocionar pospuesto a la iteración de lanzamiento. Antes: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
@@ -783,14 +784,22 @@ congelados: nada de esta sección los edita; lo que necesita el camión se cuelg
 
 Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
 
-- [ ] **N-505.1** Rueda radial (D-pad / rueda del mouse + tecla) con 6-8 frases: "¡Frená!", "¡Bache!",
-  "¡Ayuda acá!", "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!".
+- [x] **N-505.1** Rueda radial (D-pad / rueda del mouse + tecla) con 6-8 frases: "¡Frená!", "¡Bache!",
+  "¡Ayuda acá!", "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!". `ad3e2d9` — se reusó la rueda de
+  pings que ya existía (mantener la tecla de ping, apuntar con mouse o stick derecho): `PingCatalog` pasa
+  de seis a ocho frases ("¡Cuidado!" sigue siendo el toque corto) con clave `CALLOUT_*` en
+  `strings_ui.csv`; lo que viaja por la red sigue siendo la frase en castellano. Salen "Acá", "Gracias"
+  y "Sí/No".
 - [ ] **N-505.2** Cada frase: ícono sobre la cabeza del jugador, entrada en el HUD mínimo del conductor
   ("pedidos de freno" de `jugabilidad-paquetes-rescate.md`) y voz sintetizada en `SynthAudio` con tono
-  por color de jugador.
-- [ ] **N-505.3** RPC confiable al host y reenvío a todos; enfriamiento de 1,5 s por jugador.
-- [ ] Test `test_quick_callouts.gd`: la frase llega a todos, el enfriamiento corta el spam y el conductor
-  la ve en su HUD. Textos en el CSV de traducciones.
+  por color de jugador. **Hecho (`ad3e2d9`):** el ícono ya lo ponía `HudNotices._mark_pinger()`; el conductor
+  ve la frase de otro tripulante grande en el centro (`ping_indicator`, color de la frase).
+  **Falta:** la voz sintetizada con tono por color de jugador (función nueva en `SynthAudio`).
+- [x] **N-505.3** RPC confiable al host y reenvío a todos; enfriamiento de 1,5 s por jugador. `ad3e2d9` — el
+  RPC y el reenvío ya eran `EventBus.request_ping()`; el host ahora descarta la segunda frase del mismo
+  jugador dentro de `ping_cooldown_seconds` (1,5 s).
+- [x] Test `test_quick_callouts.gd`: la frase llega a todos, el enfriamiento corta el spam y el conductor
+  la ve en su HUD. Textos en el CSV de traducciones. `ad3e2d9` (`test_ping` ajustado a las ocho frases).
 
 ### N-213 · Carga que sale del camión y rescate afuera — A · `Opus 5.5 · xhigh` · Aviso: sí (`DeliveryPackage`, `RunManager`)
 
