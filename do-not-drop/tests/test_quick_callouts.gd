@@ -29,7 +29,7 @@ func _initialize() -> void:
 	for option: Dictionary in options:
 		var key: String = String(option["key"])
 		_expect(TranslationServer.translate(key) != key, "%s has a text in strings_ui.csv" % key)
-	_expect(PingCatalogData.option("¡Frená!")["key"] == "CALLOUT_BRAKE", "Labels map back to their phrase")
+	_expect(PingCatalogData.option("¡Frená!")["key"] == "HUD_CALLOUT_BRAKE", "Labels map back to their phrase")
 
 	# Cooldown: the second callout within 1.5 s is dropped, a later one passes.
 	bus.call(&"reset_ping_cooldowns")

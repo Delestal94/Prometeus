@@ -787,7 +787,7 @@ Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
 - [x] **N-505.1** Rueda radial (D-pad / rueda del mouse + tecla) con 6-8 frases: "¡Frená!", "¡Bache!",
   "¡Ayuda acá!", "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!". `ad3e2d9` — se reusó la rueda de
   pings que ya existía (mantener la tecla de ping, apuntar con mouse o stick derecho): `PingCatalog` pasa
-  de seis a ocho frases ("¡Cuidado!" sigue siendo el toque corto) con clave `CALLOUT_*` en
+  de seis a ocho frases ("¡Cuidado!" sigue siendo el toque corto) con clave `HUD_CALLOUT_*` en
   `strings_ui.csv`; lo que viaja por la red sigue siendo la frase en castellano. Salen "Acá", "Gracias"
   y "Sí/No".
 - [ ] **N-505.2** Cada frase: ícono sobre la cabeza del jugador, entrada en el HUD mínimo del conductor

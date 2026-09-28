@@ -1,16 +1,16 @@
 keys,es,en
-CALLOUT_BRAKE,¡Frená!,Brake!
-CALLOUT_BUMP,¡Bache!,Bump!
-CALLOUT_CAREFUL,¡Cuidado!,Careful!
-CALLOUT_FALLING,¡Se cae!,It's falling!
-CALLOUT_GO,"¡Dale, dale!","Go, go!"
-CALLOUT_HELP,¡Ayuda acá!,Help here!
-CALLOUT_TAPE,Tengo la cinta,I've got the tape
-CALLOUT_WAIT,Esperá,Wait
 HUD_ARRIVED,¡Llegaste! Frená dentro de la zona marcada para entregar.,You made it! Stop inside the marked zone to deliver.
 HUD_BACK_TO_MENU,Volver al menú,Back to menu
 HUD_BACK_TO_ZONE,Volvé a la zona de entrega y detené la camioneta.,Go back to the delivery zone and stop the truck.
 HUD_BOXES_TO_SECURE,Faltan asegurar %d cajas,%d boxes left to secure
+HUD_CALLOUT_BRAKE,¡Frená!,Brake!
+HUD_CALLOUT_BUMP,¡Bache!,Bump!
+HUD_CALLOUT_CAREFUL,¡Cuidado!,Careful!
+HUD_CALLOUT_FALLING,¡Se cae!,It's falling!
+HUD_CALLOUT_GO,"¡Dale, dale!","Go, go!"
+HUD_CALLOUT_HELP,¡Ayuda acá!,Help here!
+HUD_CALLOUT_TAPE,Tengo la cinta,I've got the tape
+HUD_CALLOUT_WAIT,Esperá,Wait
 HUD_CARD,CARTA: %s   ·   %s,CARD: %s   ·   %s
 HUD_CARD_EARNED,Carta obtenida: %s,Card earned: %s
 HUD_CARD_USE_KEY,%s  usar,%s  use

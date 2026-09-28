@@ -24,7 +24,7 @@ descartada si no hay acuerdo.
 Lo hizo Nacho (con Claude), PR `nacho/N-505-quick-callouts`. Toca archivos de Slatex y la zona
 compartida; **ninguna firma cambia**:
 - `ui/ping_catalog.gd` (Slatex): ocho frases ("¡Cuidado!", "¡Frená!", "¡Bache!", "¡Ayuda acá!",
-  "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!"), cada una con clave `CALLOUT_*` en
+  "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!"), cada una con clave `HUD_CALLOUT_*` en
   `strings_ui.csv` y `display_text()` para mostrarla traducida. Salen "Acá", "Gracias" y "Sí/No";
   la rueda (`ui/ping_wheel.gd`) solo cambia el texto que muestra.
 - `ui/hud/hud_notices.gd` (Slatex): el toast muestra la frase traducida y, si el jugador local
