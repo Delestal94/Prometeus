@@ -10,6 +10,7 @@
 #
 # Env: GODOT (path to the Godot 4 console binary), JOBS (parallel processes,
 # default: half the cores, at most 6), TEST_TIMEOUT (seconds per test, 300),
+# SLOW_TEST_TIMEOUT (seconds for the SLOW_TESTS below, twice TEST_TIMEOUT),
 # REPORT_FILE (optional CSV path for per-test status and duration).
 #
 # Not run here, on purpose: render_*.gd and check_*.gd need a real display and
@@ -47,6 +48,7 @@ fi
 cores="$(nproc 2>/dev/null || echo 4)"
 JOBS="${JOBS:-$(( cores / 2 > 6 ? 6 : (cores / 2 < 1 ? 1 : cores / 2) ))}"
 TEST_TIMEOUT="${TEST_TIMEOUT:-300}"
+SLOW_TEST_TIMEOUT="${SLOW_TEST_TIMEOUT:-$(( TEST_TIMEOUT * 2 ))}"
 WORK="$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/tmp-tests-$$")"
 mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
@@ -74,6 +76,8 @@ fi
 # worker pool, longest-first scheduling reduces the tail without changing test
 # isolation, coverage or parallelism. Refresh this list from the per-test
 # durations printed in CI; names not listed retain their normal discovery order.
+# These also get SLOW_TEST_TIMEOUT: test_route_fuzz takes 80-115 s on a normal
+# CI runner and went past the 120 s limit whenever the runner was slower.
 SLOW_TESTS=(
 	test_route_fuzz
 	test_vehicle_stress
@@ -110,6 +114,8 @@ for rel in "${TESTS[@]}"; do
 	[ "$is_slow" -eq 1 ] || ORDERED_TESTS+=("$rel")
 done
 TESTS=("${ORDERED_TESTS[@]}")
+# Space-padded so run_one can match whole names (arrays don't cross export).
+SLOW_NAMES=" ${SLOW_TESTS[*]} "
 
 # A fresh clone has no .godot/ import cache: build it once, before the
 # parallel runs, so they don't all race to write it.
@@ -132,11 +138,12 @@ run_one() {
 	mkdir -p "$data"
 	local data_native="$data"
 	command -v cygpath >/dev/null 2>&1 && data_native="$(cygpath -w "$data")"
-	local attempt code began status duration
+	local attempt code began status duration limit="$TEST_TIMEOUT"
+	case "$SLOW_NAMES" in *" $name "*) limit="$SLOW_TEST_TIMEOUT" ;; esac
 	began=$(date +%s)
 	for attempt in 1 2; do
 		APPDATA="$data_native" XDG_DATA_HOME="$data" \
-			timeout "$TEST_TIMEOUT" "$GODOT_BIN" --headless --path "$PROJECT" --script "res://$rel" >"$log" 2>&1
+			timeout "$limit" "$GODOT_BIN" --headless --path "$PROJECT" --script "res://$rel" >"$log" 2>&1
 		code=$?
 		if [ $code -eq 0 ]; then
 			status=PASS; break
@@ -160,7 +167,7 @@ run_one() {
 	fi
 }
 export -f run_one
-export WORK GODOT_BIN PROJECT TEST_TIMEOUT
+export WORK GODOT_BIN PROJECT TEST_TIMEOUT SLOW_TEST_TIMEOUT SLOW_NAMES
 # Per-test progress lines: on in CI (GitHub sets CI=true), off locally.
 PROGRESS="${PROGRESS:-${CI:-}}"
 export PROGRESS
@@ -201,7 +208,9 @@ echo "Tests: $pass/${#TESTS[@]} PASS, $fail FAIL, $skip SKIP  (${elapsed}s, $JOB
 [ $skip -gt 0 ] && echo "  necesitan pantalla (revisor-visual): ${skipped[*]}"
 for entry in "${failed[@]+"${failed[@]}"}"; do
 	name="${entry%%:*}"; code="${entry#*:}"
-	[ "$code" = "124" ] && reason="timeout ${TEST_TIMEOUT}s" || reason="exit $code"
+	limit="$TEST_TIMEOUT"
+	case "$SLOW_NAMES" in *" $name "*) limit="$SLOW_TEST_TIMEOUT" ;; esac
+	[ "$code" = "124" ] && reason="timeout ${limit}s" || reason="exit $code"
 	echo "FAIL $name ($reason)"
 	# Only the test's own failures, not engine noise from the dummy renderer.
 	grep -E "^(ERROR|SCRIPT ERROR|Parse Error)" "$WORK/$name.log" \
