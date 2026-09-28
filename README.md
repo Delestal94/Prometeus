@@ -247,6 +247,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_difficulty.gd
 <godot> --headless --path do-not-drop --script res://tests/test_delivery_houses.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
+<godot> --headless --path do-not-drop --script res://tests/test_cargo_overboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_rescue.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
@@ -375,6 +376,9 @@ real con `--fixed-fps 60`:
 Imprime una línea por corrida y una tabla por cantidad de casas (minutos promedio, máximo y
 mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración de la entrega").
 
+- `test_cargo_overboard` — N-213: una caja que sale del camión no se pierde al instante:
+  abre una ventana de rescate (más larga que la de adentro) con un cartel "¡RESCATAR!" encima,
+  levantarla la cierra como rescatada y vuelve al estante, y si nadie la busca se pierde al vencer.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
