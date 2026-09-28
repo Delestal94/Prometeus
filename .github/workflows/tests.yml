@@ -65,7 +65,8 @@ jobs:
         env:
           GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
           JOBS: 2
-          # A hung test shows up in 2 minutes instead of 5.
+          # A hung test shows up in 2 minutes instead of 5. The known slow
+          # ones (SLOW_TESTS in run-tests.sh) get twice that.
           TEST_TIMEOUT: 120
           REPORT_FILE: ${{ runner.temp }}/godot-headless-report.csv
         run: bash tools/run-tests.sh -v

@@ -72,10 +72,11 @@ var world_locked_traps: Array = []
 ## locked list, it must be shared: a joiner's local profile may be different.
 var world_completed_runs: int = 0
 ## How long a joiner may take to receive the host's world and load it before
-## the connection is dropped (Godot's auth timeout). Long enough for a slow
-## level load, short enough that a host on another version doesn't leave the
-## joiner staring at "Conectando…" for a minute.
-const JOIN_HANDSHAKE_TIMEOUT: float = 8.0
+## the connection is dropped (Godot's auth timeout). A host on another version
+## answers with a failure right away, so this only has to cover a slow level
+## load: 8 s dropped joiners on 2-core CI runners (three Godots loading at
+## once) with the level up and no players, and a slow PC is no faster.
+const JOIN_HANDSHAKE_TIMEOUT: float = 20.0
 var _awaiting_handshake: bool = false
 ## The level the session plays in. The host records it whenever its own
 ## level is up, so a joiner arriving mid-reload still gets the right one.

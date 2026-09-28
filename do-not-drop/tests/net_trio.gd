@@ -38,6 +38,9 @@ func _initialize() -> void:
 		if arg.begins_with("--name="):
 			_name = arg.get_slice("=", 1)
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
+	# NETLOG, not TRIO: run-net-trio.sh takes the first TRIO line as the result.
+	_network.connect(&"session_failed", func(reason: String) -> void:
+		print("NETLOG role=%s session failed at %.1f s: %s" % [_name, Time.get_ticks_msec() / 1000.0, reason]))
 	var error: Error = _network.call(&"host_session", PORT) if _host else _network.call(&"join_session", "127.0.0.1", PORT)
 	if error != OK:
 		print("TRIO role=%s FAIL could not %s (error %d)" % [_name, "host" if _host else "join", error])
@@ -60,9 +63,12 @@ func _initialize() -> void:
 
 
 func _load_level() -> void:
+	var began: int = Time.get_ticks_msec()
 	_level = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(_level)
 	current_scene = _level
+	var now: int = Time.get_ticks_msec()
+	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_name, now / 1000.0, (now - began) / 1000.0])
 
 
 func _report() -> void:
