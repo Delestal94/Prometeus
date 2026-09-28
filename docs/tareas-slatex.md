@@ -465,9 +465,9 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
 ### S-303 · Íconos de acción del HUD — B · generación de imagen + `Sol · high` para integrar · Aviso: no
 
-- [ ] Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja, usar carta. 128×128, mismo
+- [x] (commit `d14cc56`) Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja, usar carta. 128×128, mismo
   estilo que los de trampa. `assets/ui/icons/tx_ui_action_<acción>_128.png`.
-- [ ] `UiTheme.action_icon(id)`; los avisos de interacción muestran ícono + tecla + texto corto.
+- [x] (commit `d14cc56`) `UiTheme.action_icon(id)`; los avisos de interacción muestran ícono + tecla + texto corto.
 
 ### S-304 · Celular en la mano y marco de la cámara — B · `Sol · high` · Aviso: sí (`presentation/phone_camera.gd` no tiene dueño en el reparto)
 
