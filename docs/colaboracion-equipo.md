@@ -7,6 +7,20 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: límite de juego, minijuego que termina y toasts sin pisarse (2026-09-28)
+
+Lo hizo Nacho (con Claude) tras una prueba propia:
+
+- `gameplay/play_area.gd` (nuevo, lo agrega `level_common.gd`): el jugador local no sale del
+  depósito + 10 m de patio antes de la salida, ni a más de 30 m del camión en ruta; avisa por
+  `depot_notice`. Un test que necesite al jugador lejos puede apagar el nodo `PlayArea`.
+- `traps/growing_weight_trap_behavior.gd` (Slatex): tras resolver, la carga queda asegurada y la
+  próxima secuencia recién se pide `ARM_WINDOW` segundos antes de crecer (`armed()`; entrada
+  ignorada mientras tanto). `sequence_state()` suma `pending`.
+- `ui/hud/care_guide.gd`: "sostenela" solo si la caja lo necesita (`need_hands`, calculado en
+  `player_cargo_care.gd`); si no, "TODO EN ORDEN". `hud.gd`: el toast va debajo del velocímetro
+  en la misma columna.
+
 ## Aviso activo: rediseño del layout del HUD en ruta (2026-09-28)
 
 Lo hizo Nacho (con Claude), a pedido suyo ("que se vea profesional"). Toca `ui/hud/` (Slatex); los

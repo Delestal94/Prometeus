@@ -29,6 +29,10 @@ var _driver_seated: bool = false
 func _ready() -> void:
 	RunManager.reset_run()
 	add_child(preload("res://scripts/presentation/ingame_music.gd").new())
+	var play_area: Node = preload("res://scripts/gameplay/play_area.gd").new()
+	play_area.name = "PlayArea"
+	play_area.set(&"level", self)
+	add_child(play_area)
 	vehicle.freeze = true
 	packages.assign(depot.withhold_locked(get_tree().get_nodes_in_group(&"cargo")))
 	for package: DeliveryPackage in packages:

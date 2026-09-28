@@ -143,6 +143,9 @@ func _carry_and_drop_respect_walls_and_floor() -> void:
 	var player: Node = level.local_player
 	var package: Node = level.get_node("World/Package")
 	var origin := Vector3(400.0, 50.0, 0.0)
+	# This test floor is far outside the depot on purpose: the play area
+	# (play_area.gd) would walk the player back in.
+	level.get_node("PlayArea").set_physics_process(false)
 	var floor_body: StaticBody3D = _static_box(Vector3(20.0, 1.0, 20.0), origin + Vector3(0.0, -0.5, 0.0))
 	level.add_child(floor_body)
 	player.global_position = origin

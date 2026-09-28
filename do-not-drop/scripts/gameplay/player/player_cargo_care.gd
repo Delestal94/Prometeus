@@ -113,7 +113,9 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 		handling: bool) -> void:
 	var gamepad: bool = _using_gamepad()
 	var keys: Dictionary = control_names(gamepad, _interact_label(gamepad))
-	var state: Dictionary = target.get(&"care_state") if target.get(&"care_state") is Dictionary else {}
+	var state: Dictionary = (target.get(&"care_state") if target.get(&"care_state") is Dictionary else {}).duplicate()
+	var entry_state: int = int(((run.get(&"cargo") as Dictionary).get(target.get(&"package_id"), {}) as Dictionary).get("state", 0))
+	state["need_hands"] = needs_hands(care, entry_state)
 	var tool_name: String = care.tool_name(tool, kind) if tool != &"" else ""
 	var step: Dictionary = CareGuide.next_step(state, kind, tool, tool_name, keys) if handling \
 		else reach_step(keys, bool(player.get(&"_seated")))
@@ -141,6 +143,12 @@ func _update_practice(delta: float, run: Node) -> void:
 	if not practice.advance(delta, player, control_names(gamepad, _interact_label(gamepad)), gamepad):
 		practice.queue_free()
 		practice = null
+
+
+## Whether the box needs hands on it right now: at risk, straining, or the
+## truck throwing it about. Otherwise the card says it's fine to let go.
+static func needs_hands(care, trap_state: int) -> bool:
+	return trap_state >= 1 or care.strain > 0.2 or care.balance_target.length() > 0.35
 
 
 ## The card for a box within reach but not in your hands: how to take charge.

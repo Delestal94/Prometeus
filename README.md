@@ -250,6 +250,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_rescue.gd
 <godot> --headless --path do-not-drop --script res://tests/test_care_prompt_view.gd
+<godot> --headless --path do-not-drop --script res://tests/test_play_area.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ride_sync.gd
@@ -393,6 +394,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   los controles simples (mantener para cuidar, mantener para la herramienta
   sugerida) y la guía "qué hacer ahora", que lee acción, pista y secuencia de
   la trampa replicadas con el estado de cuidado.
+- `test_play_area` — el jugador no sale de donde hay mundo: el depósito y su
+  patio antes de salir, 30 m alrededor del camión en ruta, con aviso.
 - `test_care_prompt_view` — la tarjeta de cuidado y su tira animada: cada
   paso (sostener, soltar, herramienta, secuencia, juntar piezas) suena al
   cambiar (cinco sonidos sintetizados, cortos y sin saturar), nada suena solo

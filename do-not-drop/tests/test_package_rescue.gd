@@ -227,6 +227,14 @@ func _check_guide() -> void:
 	_expect(CareGuide.next_step(calm, &"noisy", &"", "", keys)["title"] == "CALMALA", "A hen is calmed by holding")
 	_expect(String(CareGuide.next_step(calm, &"fragile", &"", "", keys)["detail"]).contains("Clic izq."),
 		"...and the card names the button")
+	calm["need_hands"] = false
+	_expect(CareGuide.next_step(calm, &"noisy", &"", "", keys)["step"] == &"idle",
+		"A box that needs nothing says so: the player can let go")
+	var secured: Dictionary = {"phase": &"intact", "action": &"hold", "need_hands": false,
+		"sequence": {"steps": [&"up", &"left"], "index": 0, "solved": 1, "pending": false}}
+	_expect(CareGuide.next_step(secured, &"growing_weight", &"", "", keys)["step"] == &"idle",
+		"A load just secured doesn't ask for the next sequence yet")
+	calm["need_hands"] = true
 	calm["action"] = &"release"
 	_expect(CareGuide.next_step(calm, &"hostile", &"", "", keys)["step"] == &"release", "The creature's NO TOCAR says hands off")
 	var crisis: Dictionary = {"phase": &"crisis", "missing": 2, "restore": true}

@@ -188,8 +188,10 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var center := Vector2(size.x * 0.5, size.y * 0.5) + Vector2(sin(_time * 55.0) * 6.0 * _shake, 0.0)
 	match step:
-		&"hold", &"idle":
+		&"hold":
 			_draw_hold(center)
+		&"idle":
+			_draw_idle(center)
 		&"release":
 			_draw_release(center)
 		&"tool":
@@ -229,6 +231,17 @@ func _draw_hold(center: Vector2) -> void:
 
 ## The mirror of hold: the button struck out and the box on its own. Hands
 ## still on it show up red and crossed out.
+## All good: the box sitting still with a tick, and the button quiet.
+func _draw_idle(center: Vector2) -> void:
+	if gamepad:
+		_draw_trigger(center + Vector2(-78, 0), "RT", holding_primary, false)
+	else:
+		_draw_mouse(center + Vector2(-78, 0), true, holding_primary, false)
+	var box_center: Vector2 = center + Vector2(62, 4)
+	_draw_cardboard(box_center, clampf(sway.x, -1.0, 1.0) * 0.1)
+	_draw_check(box_center + Vector2(36, -30))
+
+
 func _draw_release(center: Vector2) -> void:
 	_draw_primary_button(center + Vector2(-78, 0), holding_primary, true)
 	var box_center: Vector2 = center + Vector2(62, 4)

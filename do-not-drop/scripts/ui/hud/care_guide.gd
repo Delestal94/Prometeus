@@ -8,7 +8,9 @@ extends RefCounted
 ##   sequence -- a tap sequence pending (the bomb, Peso creciente)
 ##   tool     -- a rescue that needs the kit, or a job already under way
 ##   release  -- the creature says hands off
-##   hold     -- keep the primary action held: steady, calm, mop
+##   hold     -- keep the primary action held: steady, calm, mop (only
+##               while `need_hands` says the box needs it)
+##   idle     -- nothing to do right now: you can let go
 ##   lost     -- nothing left to save
 ## Pure data in, pure data out: CareCard draws it.
 
@@ -33,7 +35,7 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 		return _step(&"collect", "JUNTÁ LAS PIEZAS",
 			"Quedan %d en el piso: acercate a cada una y apretá %s." % [missing, keys.get("interact", "E")])
 	var steps: Array = sequence.get("steps", [])
-	if int(sequence.get("index", 0)) < steps.size():
+	if int(sequence.get("index", 0)) < steps.size() and bool(sequence.get("pending", true)):
 		return _step(&"sequence", "TOCÁ EN ORDEN",
 			"%s: una tecla por vez, sin clic. Si le errás, vuelve a empezar." % String(sequence.get("verb", "Resolver")))
 	var urgent: bool = phase in [&"crisis", &"lost"] or bool(state.get("restore", false))
@@ -44,10 +46,14 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 		return _step(&"lost", "CONTENIDO PERDIDO", hint if not hint.is_empty() else "Ya no se puede recuperar.")
 	if action == &"release":
 		return _step(&"release", "¡SOLTALA!", "No toques la caja hasta que vuelva a pedir calma.")
-	if action == &"hold":
+	# Hands are asked for when the box needs them -- at risk, strained or
+	# being thrown about -- not all the time: a card that always says "hold"
+	# never lets the player know they're done (playtest 2026-09-28).
+	if action == &"hold" and bool(state.get("need_hands", true)):
 		return _step(&"hold", String(HOLD_TITLES.get(kind, "SOSTENELA")),
 			"Mantené %s: la protege de golpes y curvas." % keys.get("primary", "Clic izq."))
-	return _step(&"idle", "TODO EN ORDEN", hint)
+	return _step(&"idle", "TODO EN ORDEN", hint if not hint.is_empty()
+		else "Podés soltar. Mantené %s si se sacude o se pone en riesgo." % keys.get("primary", "Clic izq."))
 
 
 static func _step(step: StringName, title: String, detail: String) -> Dictionary:

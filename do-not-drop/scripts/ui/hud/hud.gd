@@ -39,6 +39,8 @@ var section_label: Label
 var cargo_rows_box: VBoxContainer
 ## The bottom-left cargo card itself, hidden while it has no rows.
 var cargo_card: PanelContainer
+## Top-right: the metrics card with the toasts under it.
+var _right_column: VBoxContainer
 var cargo_hint_label: Label
 var cargo_rows: Dictionary = {}
 var route_bar: ProgressBar
@@ -287,8 +289,16 @@ func _build_top_bar() -> void:
 	stretch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stretch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(stretch)
-	var metrics := make_panel(top, Vector2(210, 0))
-	metrics.get_parent().size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	# The right column: the van's numbers, and the toasts stacked right under
+	# them in the same flow -- anchored at a fixed height, a toast sat on the
+	# card whenever the card grew a line (playtest 2026-09-28).
+	_right_column = VBoxContainer.new()
+	_right_column.add_theme_constant_override("separation", 12)
+	_right_column.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_right_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_child(_right_column)
+	var metrics := make_panel(_right_column, Vector2(210, 0))
+	metrics.get_parent().size_flags_horizontal = Control.SIZE_SHRINK_END
 	metrics.add_theme_constant_override("separation", 6)
 	var speed_row := HBoxContainer.new()
 	speed_row.add_theme_constant_override("separation", 6)
@@ -412,14 +422,10 @@ func _build_floating_labels() -> void:
 	ping_indicator.offset_right = 130
 	ping_indicator.offset_top = -190
 	ping_indicator.offset_bottom = -145
-	# Under the van's numbers, sized to its text and growing leftwards.
-	toast_label = UiTheme.floating_label(hud_layer, "", 18, MINT, 400, 190)
-	toast_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	toast_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	# Under the van's numbers, in the same column, sized to its text.
+	toast_label = UiTheme.floating_label(_right_column, "", 18, MINT, 400, 0)
+	toast_label.size_flags_horizontal = Control.SIZE_SHRINK_END
 	toast_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	toast_label.offset_left = -EDGE_MARGIN
-	toast_label.offset_right = -EDGE_MARGIN
-	toast_label.offset_top = 196
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_plate(toast_label, Color(INK, 0.88), INK)
 	# Top centre, sized to its text: a card, not three loose lines.
