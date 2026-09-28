@@ -36,8 +36,8 @@ func _build() -> void:
 	add_child(center)
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(760, 620), 24)
 	column.add_theme_constant_override("separation", 10)
-	UiTheme.title(column, "Progreso", 38)
-	UiTheme.tag(column, "PERFIL LOCAL", UiTheme.SKY, 1.0, 14)
+	UiTheme.title(column, tr("UI_PROGRESS"), 38)
+	UiTheme.tag(column, tr("UI_PROG_LOCAL_PROFILE"), UiTheme.SKY, 1.0, 14)
 	_summary = UiTheme.label(column, "", 17, UiTheme.MUTED)
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(700, 430)
@@ -51,10 +51,10 @@ func _build() -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
 	column.add_child(actions)
-	_new_campaign_button = UiTheme.button(actions, "Empezar campaña nueva", false)
+	_new_campaign_button = UiTheme.button(actions, tr("UI_PROG_NEW_CAMPAIGN"), false)
 	_new_campaign_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_new_campaign_button.pressed.connect(_request_new_campaign)
-	var back := UiTheme.button(actions, "Volver", true)
+	var back := UiTheme.button(actions, tr("UI_BACK"), true)
 	back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back.pressed.connect(close)
 
@@ -74,7 +74,7 @@ func _refresh() -> void:
 	if _summary == null:
 		return
 	var summary := UnlockManager.progress_summary()
-	_summary.text = "%d entregas exitosas  ·  %d puntos acumulados  ·  %d partidas" % [summary["deliveries"], summary["score"], summary["runs"]]
+	_summary.text = tr("UI_PROG_SUMMARY") % [summary["deliveries"], summary["score"], summary["runs"]]
 	for child: Node in _list.get_children():
 		_list.remove_child(child)
 		child.queue_free()
@@ -87,6 +87,7 @@ func _refresh() -> void:
 func _add_unlock_row(unlock_id: StringName, rule: Dictionary, got: bool, summary: Dictionary) -> void:
 	var panel := PanelContainer.new()
 	panel.name = "Unlock_%s" % unlock_id
+	panel.tooltip_text = tr("UI_PROG_UNLOCK_LINE") % ["✓" if got else "○", rule["title"], rule["deliveries"], rule["score"]]
 	panel.add_theme_stylebox_override("panel", UiTheme.surface_style(10, UiTheme.WHITE))
 	_list.add_child(panel)
 	var row := HBoxContainer.new()
@@ -134,22 +135,22 @@ func _add_requirement_bar(parent: VBoxContainer, label_text: String, current: in
 func _request_new_campaign() -> void:
 	if not _confirming_campaign_reset:
 		_confirming_campaign_reset = true
-		_new_campaign_button.text = "Confirmar: borrar campaña"
+		_new_campaign_button.text = tr("UI_PROG_CONFIRM_RESET")
 		_new_campaign_button.grab_focus()
 		return
 	_confirming_campaign_reset = false
 	if CrewProgression.reset_campaign(true):
-		_new_campaign_button.text = "Campaña nueva iniciada"
+		_new_campaign_button.text = tr("UI_PROG_RESET_DONE")
 		_new_campaign_button.disabled = true
 	else:
-		_new_campaign_button.text = "No se pudo guardar · intentar otra vez"
+		_new_campaign_button.text = tr("UI_PROG_RESET_FAILED")
 	_refresh()
 
 
 func _reset_campaign_confirmation() -> void:
 	_confirming_campaign_reset = false
 	if _new_campaign_button != null:
-		_new_campaign_button.text = "Empezar campaña nueva"
+		_new_campaign_button.text = tr("UI_PROG_NEW_CAMPAIGN")
 		_new_campaign_button.disabled = false
 
 func _unhandled_input(event: InputEvent) -> void:

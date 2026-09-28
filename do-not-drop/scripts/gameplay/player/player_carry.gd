@@ -2,11 +2,11 @@ extends Node
 ## Package carry/drop behavior. Player owns the replicated state and RPC
 ## entry points; this child owns how a box is positioned and handed off.
 
-var player
+var player: Player
 
 
 func _ready() -> void:
-	player = get_parent()
+	player = get_parent() as Player
 
 
 func update_carried_package() -> void:
@@ -127,7 +127,7 @@ func apply_pick_up(package_path: NodePath) -> void:
 		if player._pickup_in_vehicle:
 			player._pickup_from = pickup_vehicle.global_transform.affine_inverse() * player._pickup_from
 	if player.is_local() and was_empty and player.carried_package != null:
-		player._play_one_shot(player.ANIM_PICKUP, player.PICKUP_ANIM_LOCK_MS)
+		player.animator.play_one_shot(player.ANIM_PICKUP, player.PICKUP_ANIM_LOCK_MS)
 		player._show_first_trap_tip(player.carried_package)
 
 

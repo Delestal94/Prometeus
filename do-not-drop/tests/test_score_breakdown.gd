@@ -70,7 +70,7 @@ func _run() -> void:
 	_expect("MVP" in award_titles and "Rescatista" in award_titles and "Desactivador" in award_titles and "Mano firme" in award_titles, "Merit produces all four result awards")
 	var next_unlock: Dictionary = unlocks.call(&"next_unlock_progress")
 	_expect(not next_unlock.is_empty() and float(next_unlock.get("progress", -1.0)) >= 0.0, "The results can show progress toward the next unlock")
-	var text: String = load("res://scripts/ui/prototype_hud.gd").score_breakdown_text(results, int(results["score"]))
+	var text: String = load("res://scripts/ui/hud/hud.gd").score_breakdown_text(results, int(results["score"]))
 	_expect(text.contains("Total") and text.contains(str(int(results["score"]))), "The results text ends on the total")
 	manager.call(&"reset_run")
 	if _failures == 0:

@@ -26,7 +26,7 @@ func _run() -> void:
 	var hud: Node = level.get_node("HUD")
 	_expect(not manager.is_running, "No run behind the introduction")
 	_expect(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Intro allows clicking its button")
-	hud._primary_action()
+	hud.pause.primary_action()
 	_expect(not hud.overlay.visible and hud.dashboard.visible, "Preparation reveals the world and objective")
 	level.toggle_pause()
 	_expect(paused, "Preparation can pause")

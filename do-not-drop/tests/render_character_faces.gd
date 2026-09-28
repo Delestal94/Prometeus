@@ -54,7 +54,7 @@ func _run() -> void:
 	root.add_child(package)
 	package.position = Vector3(0, 0.325, -0.56)
 	package.take_by(player)
-	var animation: AnimationPlayer = player.get("_anim_player")
+	var animation: AnimationPlayer = player.get(&"animator").anim_player
 	animation.play("PickUpPackage")
 	animation.speed_scale = 0.0
 	camera.position = Vector3(2.4, 1.6, -3.1)

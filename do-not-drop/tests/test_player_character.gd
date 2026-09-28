@@ -5,10 +5,10 @@ extends SceneTree
 ## player.gd relies on from that GLB: the clips it plays, the bones the
 ## driver IK solves, the T-shirt as surface 0 (crew colour) plus its trim,
 ## a real player's height and facing, and the Sit clip while seated.
-## Also the height-weighted pickup (player.gd _pickup_clip()): PickUpHigh
+## Also the height-weighted pickup (PlayerAnimator.pickup_clip()): PickUpHigh
 ## takes a waist-high box without squatting, lasts as long as PickUpPackage,
 ## and a pickup plays a blend of both by where the hands meet the box.
-## And steps while turning in place (player.gd movement_state()): the
+## And steps while turning in place (PlayerAnimator.movement_state()): the
 ## TurnInPlace clip lifts and re-plants each foot, and only a player standing
 ## on the floor and turning fast enough plays it -- not walking, not a slow
 ## turn, not over a one-shot.
@@ -127,9 +127,9 @@ func _initialize() -> void:
 	# Weight -> clip: the authored clips at the ends, a baked blend between.
 	for sample: Array in [[0.0, "PickUpPackage"], [1.0, "PickUpHigh"], [0.5, "pickup_blend/4"]]:
 		player.set(&"pickup_high_weight", sample[0])
-		var picked: String = String(player.call(&"_pickup_clip"))
+		var picked: String = String(player.get(&"animator").pickup_clip())
 		_expect(picked == sample[1], "Weight %.1f plays %s (got %s)" % [sample[0], sample[1], picked])
-	player.call(&"_play_one_shot", &"PickUpPackage", 1550)
+	player.get(&"animator").play_one_shot(&"PickUpPackage", 1550)
 	await process_frame
 	_expect(player_anim.current_animation == "pickup_blend/4",
 		"A half-height pickup plays the blended clip (got %s)" % player_anim.current_animation)
@@ -145,30 +145,30 @@ func _initialize() -> void:
 			[0.0, false, 3.0, false, "Idle", "airborne, turning fast"],
 			[0.0, true, 1.1, true, "TurnInPlace", "a turn easing off (hysteresis)"],
 			[0.0, true, 1.1, false, "Idle", "that rate from standing still"]]:
-		var state: String = String(PlayerScript.movement_state(sample[0], sample[1], sample[2], sample[3]))
+		var state: String = String(PlayerAnimator.movement_state(sample[0], sample[1], sample[2], sample[3]))
 		_expect(state == sample[4], "%s plays %s (got %s)" % [sample[5], sample[4], state])
 	# The rate comes from the look yaw actually applied to the body.
 	var tick: float = 1.0 / 60.0
 	var start_yaw: float = player.rotation.y
 	for _i: int in range(30):
 		player.call(&"_apply_look", Vector2(0.05, 0.0))
-		player.call(&"_measure_turn_rate", tick)
+		player.get(&"animator").measure_turn_rate(tick)
 	var turned: float = absf(angle_difference(start_yaw, player.rotation.y)) / (30.0 * tick)
 	var fast_rate: float = player.get(&"turn_rate")
-	_expect(turned > PlayerScript.TURN_STEP_ABOVE and fast_rate > PlayerScript.TURN_STEP_ABOVE,
+	_expect(turned > PlayerAnimator.TURN_STEP_ABOVE and fast_rate > PlayerAnimator.TURN_STEP_ABOVE,
 		"Looking around fast measures the body's turn (%.2f rad/s, body %.2f rad/s)" % [fast_rate, turned])
 	for _i: int in range(60):
 		player.call(&"_apply_look", Vector2(0.005, 0.0))
-		player.call(&"_measure_turn_rate", tick)
+		player.get(&"animator").measure_turn_rate(tick)
 	var slow_rate: float = player.get(&"turn_rate")
-	_expect(slow_rate < PlayerScript.TURN_STEP_BELOW, "A slow look settles under the step rate (%.2f rad/s)" % slow_rate)
+	_expect(slow_rate < PlayerAnimator.TURN_STEP_BELOW, "A slow look settles under the step rate (%.2f rad/s)" % slow_rate)
 	# One-shots keep their lock: turning during a pickup doesn't cut it.
-	player.call(&"_play_one_shot", &"PickUpPackage", 1550)
+	player.get(&"animator").play_one_shot(&"PickUpPackage", 1550)
 	player.call(&"_apply_look", Vector2(0.2, 0.0))
-	player.call(&"_update_movement_anim", 0.0)
+	player.get(&"animator").update_movement(0.0, 2.0)
 	_expect(player.get(&"anim_state") == &"PickUpPackage", "Turning doesn't interrupt a pickup (got %s)" % player.get(&"anim_state"))
 	# anim_state carries it to every peer: TurnInPlace plays, seated still sits.
-	player.set(&"_anim_lock_until_msec", 0)
+	player.get(&"animator").release_lock()
 	player.set(&"anim_state", &"TurnInPlace")
 	await process_frame
 	_expect(player_anim.current_animation == "TurnInPlace", "anim_state TurnInPlace plays the clip (got %s)" % player_anim.current_animation)
@@ -185,7 +185,7 @@ func _initialize() -> void:
 ## one doesn't and reaches higher; a 50% blend lands halfway.
 func _check_pickup_heights(anim: AnimationPlayer, skeleton: Skeleton3D) -> void:
 	var library := AnimationLibrary.new()
-	library.add_animation(&"half", PlayerScript.blend_clips(anim.get_animation("PickUpPackage"), anim.get_animation("PickUpHigh"), 0.5))
+	library.add_animation(&"half", PlayerAnimator.blend_clips(anim.get_animation("PickUpPackage"), anim.get_animation("PickUpHigh"), 0.5))
 	anim.add_animation_library(&"test", library)
 	var rest: float = _bone_height(anim, skeleton, "PickUpPackage", 0.0, "pelvis")
 	var low: float = _bone_height(anim, skeleton, "PickUpPackage", 0.45, "pelvis")

@@ -62,7 +62,7 @@ file_domain() {
 		do-not-drop/scripts/core/event_bus.gd|do-not-drop/scripts/core/network_manager.gd|\
 		do-not-drop/scripts/core/run_manager.gd|\
 		do-not-drop/scripts/presentation/first_person_camera.gd|\
-		do-not-drop/scripts/presentation/render_layers.gd|\
+		do-not-drop/scripts/core/render_layers.gd|\
 		do-not-drop/scripts/presentation/synth_audio.gd|\
 		do-not-drop/scripts/gameplay/level_base.gd|do-not-drop/scenes/gameplay/level_base.tscn|\
 		do-not-drop/project.godot)

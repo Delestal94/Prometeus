@@ -7,6 +7,87 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: pasada de calidad de código (2026-09-27, rama `refactor/quality-pass`)
+
+Pedido del usuario: llevar arquitectura, modularidad y variables a nivel profesional en todo el
+repo, **incluidos archivos de Slatex** (autorizado explícitamente). Se hace por fases, un commit
+por fase, sin cambiar firmas públicas ni nombres de nodos que usan los tests. Hacé `git pull`
+antes de seguir con cualquier archivo listado acá.
+
+- **Lint (fase 1):** `gdlintrc` en la raíz + `tools/lint.sh`, con una línea base
+  (`tools/lint-baseline.txt`) que solo puede bajar: CI y el `pre-push` fallan ante problemas
+  *nuevos*, los viejos se toleran hasta que se arreglan. Instalar: `pip install "gdtoolkit==4.5.0"`.
+  Después de arreglar algo, `tools/lint.sh --update-baseline` y commitear la baseline.
+- **Movidos a `scripts/core/` (fase 1):** `face_catalog.gd` y `render_layers.gd` (datos puros; que
+  `core/` dependiera de `presentation/` era una inversión de capas). Los `preload` de
+  `player.gd`, `cosmetics_panel.gd`, `face_preview.gd`, `character_face.gd`,
+  `first_person_camera.gd`, `depot_mirror.gd` y `unlock_manager.gd` ya apuntan a la ruta nueva.
+- **Depósito (fase 2, dominio Nacho):** `depot.gd` (1629 → ~550 líneas) queda con la lógica
+  (stock, órdenes, portón, suministros, pizarrón del equipo). La construcción pasó a
+  `depot_hall.gd`, `depot_furnishing.gd`, `depot_dressing.gd`; lo que se anima por frame a
+  `depot_ambience.gd`; el pizarrón a `depot_order_board.gd`; las medidas y la paleta a
+  `depot_layout.gd`; texto y carteles a `depot_labels.gd`. API pública y nombres de nodos sin
+  cambios. `test_depot`/`test_contact_shadows` leen las constantes de `depot_layout.gd`.
+- **Ruta, decorado (fase 3, dominio Nacho):** `route_dresser.gd` (1241 → ~330 líneas) queda con
+  las zonas, la tabla de reglas y el orden de todo. El motor de colocación (grilla, chequeos,
+  asentar en el suelo, sombras de contacto) pasó a `route_placement.gd`; carteles, guardarraíles,
+  pueblos e historias a `route_signage.gd`; cruces de animales, perro y ramas a
+  `route_wildlife.gd`; tendido eléctrico a `route_power_lines.gd`. `RouteDresser.base_offset()`,
+  `ground_gap()` y `SINK_RANGE` ahora son de `RoutePlacement`; `STORY_*` y `HAZARD_SIGNS` de
+  `RouteSignage`.
+- **Ruta, plan y primitivas (fase 3, dominio Nacho):** de `route.gd` (1042 → ~740 líneas) salieron el
+  planificador estático a `route_planner.gd` (`RoutePlanner.plan_spine()` y sus constantes
+  `LEG_*`, `QUIET_ZONE`, `MOMENT_SPACING`…) y las primitivas de construcción a `route_props.gd`.
+  `Route.plan_spine()`, `leg_target_length()` y `crew_house_count()` siguen existiendo (delegan).
+- **Jugador (fase 4, dominio Slatex, autorizado por el usuario):** `player.gd` (1191 → 925 líneas).
+  **Si tenés cambios sin subir en `player.gd`, hacé `git pull --rebase` antes de seguir.**
+  - La animación pasó a `player_animator.gd` (`PlayerAnimator`, en `player.animator`): la máquina
+    de estados del dueño (`update_movement()`, `update_jump()`, `play_one_shot()`,
+    `measure_turn_rate()`, `movement_state()`) y la reproducción en cada peer (`animate()`,
+    `pickup_clip()`, `blend_clips()`). `anim_state`, `jump_anim_time` y `locomotion_speed` siguen en
+    el jugador (los replica el `MultiplayerSynchronizer`). Las constantes de marcha/giro/pickup
+    (`WALK_AUTHORED_SPEED`, `TURN_STEP_*`, `PICKUP_BLEND_*`, `IDLE_BELOW_SPEED`) son de `PlayerAnimator`;
+    los nombres de clip `ANIM_*` y los `*_LOCK_MS` siguen en `Player`.
+  - Buscar esqueleto/AnimationPlayer/mesh, capas, sombras y teñido de la remera pasaron a
+    `player_appearance.gd` (`PlayerAppearance`, estático). `_apply_cosmetic()` decide el color y
+    llama a `PlayerAppearance.tint_shirt()`.
+  - `PlayerCarry`, `PlayerInteraction` y `PlayerSeatPose` tipan `var player: Player`: un acceso a
+    algo que no existe ahora es error de compilación, no de ejecución.
+  - Tests actualizados: `test_player_character`, `test_character_motion`, `render_player_character`,
+    `render_character_faces`.
+- **HUD (fase 5, dominio Slatex, autorizado por el usuario):** la cadena de herencia de 6 niveles
+  (`prototype_hud` → `hud_pause` → `hud_results` → `hud_notices` → `hud_prompts` → `hud_cargo_panel`)
+  pasó a composición. **`scripts/ui/prototype_hud.gd` ahora es `scripts/ui/hud/hud.gd`** (`class_name Hud`,
+  mismo `.uid`; las escenas ya apuntan ahí). `Hud` es dueño de los widgets y del estado compartido y tiene
+  cinco componentes `Node` hijos: `hud.cargo` (`HudCargoPanel`), `hud.prompts`, `hud.notices`,
+  `hud.results`, `hud.pause`. Cada uno conecta sus propias señales en su `_ready()`.
+  - Renombres: helpers `_label/_panel/_button/_bar/_rich/_key/_apply_hud_scale` → `make_label()`,
+    `make_panel()`, `make_button()`, `make_bar()`, `make_rich()`, `key_hint()`, `apply_hud_scale()`.
+    Estado compartido sin guion bajo: `orders`, `soft_pause`, `is_endless`, `interaction_prompt`,
+    `route_event_active_id`, `local_merit_total`. Lo que un componente llama de otro pasó a público
+    (`hud.notices.toast()`, `set_notice()`, `hud.pause.primary_action()`, `hud.prompts.refresh_shortcuts()`…).
+  - Bug que apareció en el camino (ya cubierto en `test_hud_flow`): con `orders` público, la lambda
+    `func(orders): orders = orders` se habría pisado a sí misma; ahora es `func(posted): orders = posted`.
+- **Menú principal (fase 5, dominio Slatex):** `main_menu._build_ui()` (184 líneas) se partió en un
+  constructor por sección (`_build_backdrop()`, `_build_brand()`, `_build_card()`, una función por
+  página, `_build_connection_status()`, `_build_footer()`, `_build_overlays()`), con el código movido
+  sin cambios.
+- **HUD, responsividad (fase 8, dominio Slatex):** `Hud.layout_scale()` compensa ventanas más altas
+  que 16:9 (en 4:3 todo se veía al 75%); `interaction_label` pasó al flujo del dashboard (pisaba la barra
+  de ruta); mostrar/ocultar la plata es `hud.set_economy_visible()` (ocultar solo el `Label` dejaba la
+  pastilla vacía); `hud.overlay_center` es el contenedor de la tarjeta. Textos: "furgoneta" → "camión".
+- **Textos de menús y HUD traducibles (fase 7, dominio Slatex; base para la S-509):** los ~260 textos de
+  `scripts/ui/**` pasaron a claves `UI_*` / `HUD_*` en `translations/strings_ui.csv` (registrado en
+  `project.godot`, zona compartida). La columna `es` es exactamente el texto de antes, así que en español
+  nada cambia; `en` es una primera traducción para revisar. Plurales armados a mano ("jugador" + "es",
+  "puerta" + "s") ahora son dos claves (`*_ONE` / `*_MANY`). Las tablas `const` (títulos de página del menú,
+  errores de conexión, estados de caja) guardan la clave y se traducen donde se muestran.
+  `test_ui_translations` exige ambos idiomas, los mismos marcadores (`%d`, `%s`) y ninguna clave muerta.
+  **Para la S-509:** los textos se traducen al armar cada pantalla; al cambiar de idioma hay que volver a
+  armarla (recargar la escena del menú alcanza). Un texto nuevo: agregalo al CSV y usá `tr("UI_...")`.
+- **`package/package_feedback.gd` (fase 1):** `_add_shipping_label()` perdió el parámetro
+  `package` que no usaba (privada, un solo llamador).
+
 ## El criterio: dividir por carpeta, no solo por tema
 
 Aviso 2026-09-25: dirección sonora tranquila solicitada por el usuario, tomando
@@ -571,7 +652,7 @@ cambiar**, hace el cambio en un commit chico y aislado, y avisa cuando ya está 
 para que el otro haga `git pull` antes de seguir.
 
 - `do-not-drop/scripts/core/event_bus.gd`, `network_manager.gd`, `run_manager.gd`
-- `do-not-drop/scripts/presentation/first_person_camera.gd`, `render_layers.gd`,
+- `do-not-drop/scripts/presentation/first_person_camera.gd`, `core/render_layers.gd`,
   `synth_audio.gd` (lo usan tanto el vehículo como el jugador)
 - `do-not-drop/scripts/gameplay/level_base.gd` y
   `do-not-drop/scenes/gameplay/level_base.tscn` (componen ambos dominios)

@@ -62,7 +62,7 @@ func _run() -> void:
 	package.take_by(player)
 	player._pickup_elapsed = 2.0
 	player._update_carried_package()
-	skeleton = player._find_skeleton(player.get_node("BodyVisual"))
+	skeleton = PlayerAppearance.find_skeleton(player.get_node("BodyVisual"))
 	var wrists: Dictionary = {}
 	var capture: Callable = func() -> void:
 		for side: String in ["L", "R"]:

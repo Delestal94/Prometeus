@@ -30,10 +30,11 @@ func _build() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(760, 540), 28)
-	UiTheme.title(column, "Cómo jugar", 38)
-	UiTheme.tag(column, "COOPEREN O SE CAE TODO", UiTheme.YELLOW, -1.0, 14)
+	UiTheme.title(column, tr("UI_HOW_TO_PLAY"), 38)
+	UiTheme.tag(column, tr("UI_TUT_TAG"), UiTheme.YELLOW, -1.0, 14)
 	var content := HBoxContainer.new()
 	content.custom_minimum_size = Vector2(0, 330)
+	content.tooltip_text = tr("UI_TUT_BODY")
 	content.add_theme_constant_override(&"separation", 24)
 	column.add_child(content)
 	var icon_holder := CenterContainer.new()
@@ -79,7 +80,7 @@ func _build() -> void:
 	_next_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_next_button.add_theme_color_override(&"font_disabled_color", UiTheme.MUTED)
 	_next_button.pressed.connect(_change_page.bind(1))
-	_back_button = UiTheme.button(navigation, "Cerrar")
+	_back_button = UiTheme.button(navigation, tr("UI_TUT_GOT_IT"))
 	_back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_back_button.pressed.connect(close)
 	GameSettings.input_device_changed.connect(func(_gamepad: bool) -> void: _rebuild_pages())

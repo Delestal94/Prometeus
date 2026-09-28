@@ -57,6 +57,8 @@ var _give_up_timer: float = 0.0
 var _double_bark_pending: bool = false
 var _rng := RandomNumberGenerator.new()
 var _bark: AudioStreamPlayer3D
+## The truck, found once and kept while it lives (a restart frees it).
+var _vehicle_cache: Node3D
 
 
 func _ready() -> void:
@@ -97,7 +99,7 @@ func _physics_process(delta: float) -> void:
 		# Home: turned back to face the road, as it waited.
 		dog.rotation.y = rotate_toward(dog.rotation.y, side * PI * 0.5, TURN_RATE * 0.3 * delta)
 		return
-	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	var vehicle := _vehicle() as Node3D
 	match state:
 		State.WAITING:
 			if vehicle != null and _flat(vehicle.global_position - dog.global_position).length() < NOTICE_DISTANCE:
@@ -131,7 +133,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_horn_honked(_peer_id: int) -> void:
-	var vehicle := get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	var vehicle := _vehicle() as Node3D
 	if state == State.CHASING and vehicle != null and _flat(vehicle.global_position - dog.global_position).length() < WildlifeCrossing.HORN_SCARE_DISTANCE:
 		_give_up()
 
@@ -181,3 +183,9 @@ func _ground_height(world_point: Vector3) -> float:
 	var query := PhysicsRayQueryParameters3D.create(world_point + Vector3.UP * 6.0, world_point + Vector3.DOWN * 12.0, 1)
 	var hit_info: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
 	return (hit_info["position"] as Vector3).y if not hit_info.is_empty() else world_point.y
+
+
+func _vehicle() -> Node3D:
+	if not is_instance_valid(_vehicle_cache):
+		_vehicle_cache = get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	return _vehicle_cache

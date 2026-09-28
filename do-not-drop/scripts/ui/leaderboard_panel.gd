@@ -42,7 +42,7 @@ func _build() -> void:
 	add_child(center)
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(680, 520), 26)
 	column.add_theme_constant_override("separation", 10)
-	UiTheme.title(column, "Récords locales", 36)
+	UiTheme.title(column, tr("UI_LEAD_TITLE"), 36)
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 8)
 	column.add_child(tabs)
@@ -54,7 +54,7 @@ func _build() -> void:
 	_entries.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_entries.add_theme_constant_override("separation", 8)
 	column.add_child(_entries)
-	_close_button = UiTheme.button(column, "Volver", false, Vector2(0, 48))
+	_close_button = UiTheme.button(column, tr("UI_BACK"), false, Vector2(0, 48))
 	_close_button.pressed.connect(close)
 	_refresh_entries()
 
@@ -86,6 +86,7 @@ func _refresh_entries() -> void:
 		var crew_text: String = "1 jugador" if crew == 1 else "%d jugadores" % crew
 		var line := HBoxContainer.new()
 		line.name = "Rank%d" % rank
+		line.tooltip_text = tr("UI_LEAD_ROW") % [rank, int(entry.get("score", 0)), String(entry.get("mode", "delivery")), String(entry.get("date", ""))]
 		line.add_theme_constant_override("separation", 12)
 		_entries.add_child(line)
 		var rank_label: Label = UiTheme.chip(line, "%d" % rank, UiTheme.YELLOW, 18)
@@ -99,8 +100,8 @@ func _refresh_entries() -> void:
 		date.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		rank += 1
 	if rank == 1:
-		var mode_name: String = "entregas" if _mode == &"delivery" else "partidas Endless"
-		UiTheme.label(_entries, "Todavía no hay %s registradas." % mode_name, 18, UiTheme.MUTED)
+		var empty_text: String = tr("UI_LEAD_EMPTY") if _mode == &"delivery" else "Todavía no hay partidas Endless registradas."
+		UiTheme.label(_entries, empty_text, 18, UiTheme.MUTED)
 
 
 static func format_date(iso_date: String) -> String:

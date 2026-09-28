@@ -22,6 +22,8 @@ func _initialize() -> void:
 			failures += 1
 		model.free()
 	print("Asset orientation/scale failures: ", failures)
+	if failures == 0:
+		print("PASS: refined assets keep their axes, pivots and scale")
 	quit(failures)
 
 func _bounds(node: Node3D, parent_transform: Transform3D) -> AABB:

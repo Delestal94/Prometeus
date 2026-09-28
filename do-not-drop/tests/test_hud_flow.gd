@@ -21,7 +21,7 @@ func _run() -> void:
 	var settings: Node = root.get_node("GameSettings")
 	var bus: Node = root.get_node("EventBus")
 	var network: Node = root.get_node("NetworkManager")
-	var hud: CanvasLayer = load("res://scripts/ui/prototype_hud.gd").new()
+	var hud: CanvasLayer = load("res://scripts/ui/hud/hud.gd").new()
 	root.add_child(hud)
 	await process_frame
 	bus.restart_requested.connect(func() -> void: _restarts += 1)
@@ -58,11 +58,28 @@ func _run() -> void:
 	var player_hud_scale: float = settings.hud_scale
 	settings.hud_scale = 0.75
 	var layer: Control = hud.hud_layer
-	_expect(is_equal_approx(layer.scale.x, 0.75), "HUD scale setting resizes the HUD layer live")
-	_expect(layer.size.is_equal_approx(hud.root.size / 0.75), "A scaled HUD still spans the whole screen")
+	# 0.75 on top of the window-shape correction (layout_scale()).
+	var expected_scale: float = hud.call(&"layout_scale", 0.75, hud.root.size)
+	_expect(is_equal_approx(layer.scale.x, expected_scale), "HUD scale setting resizes the HUD layer live")
+	_expect(layer.size.is_equal_approx(hud.root.size / expected_scale), "A scaled HUD still spans the whole screen")
 	_expect(hud.overlay.get_parent() == hud.root and is_equal_approx(hud.overlay.get_global_transform().get_scale().x, 1.0),
 		"The pause/results card keeps its own size")
+	_expect(is_equal_approx(hud.overlay_center.scale.x, hud.call(&"layout_scale", 1.0, hud.root.size)),
+		"The card takes only the window-shape correction, not the player's HUD scale")
 	settings.hud_scale = player_hud_scale
+	# Window shapes: the HUD keeps its 16:9 text size in taller windows and
+	# only gains room in wider ones.
+	_expect(is_equal_approx(hud.call(&"layout_scale", 1.0, Vector2(1280, 960)), 960.0 / 720.0),
+		"At 4:3 the HUD scales back up to its 16:9 size instead of shrinking to 75%")
+	_expect(is_equal_approx(hud.call(&"layout_scale", 1.0, Vector2(1720, 720)), 1.0),
+		"At 21:9 the HUD keeps its size and just gets more room")
+	_expect(is_equal_approx(hud.call(&"layout_scale", 0.75, Vector2(1280, 800)), 0.75 * 800.0 / 720.0),
+		"The player's HUD scale still applies on top of the window shape")
+	# The prompt sits in the dashboard's flow right above the bottom bar, never on it.
+	var prompt_index: int = hud.interaction_label.get_index()
+	_expect(hud.interaction_label.get_parent() == hud.dashboard
+			and hud.dashboard.get_child(prompt_index + 1).is_ancestor_of(hud.cargo_rows_box),
+		"The interaction prompt stands right above the bottom bar")
 	var player_menu_scale: float = settings.menu_text_scale
 	var volume_slider: HSlider = hud.options_panel.get("_volume_slider") as HSlider
 	var impact_effects_check := hud.options_panel.get("_impact_effects_check") as CheckBox
@@ -78,7 +95,7 @@ func _run() -> void:
 	settings.menu_text_scale = player_menu_scale
 
 	# --- restart has to be held during play ---
-	hud._primary_action()
+	hud.pause.primary_action()
 	_expect(hud.overlay_mode == "preparation" and not hud.overlay.visible, "Begin reveals the level")
 	_expect(hud.economy_label.visible, "Team money is visible while making depot decisions")
 
@@ -96,13 +113,13 @@ func _run() -> void:
 		and not _overlap(hud.event_label, hud.toast_label)
 		and not _overlap(hud.interaction_label, hud.toast_label),
 		"Critical, context and information zones do not overlap")
-	hud._set_notice(&"information", &"low", "Aviso normal", 1, Color.WHITE)
-	hud._set_notice(&"information", &"high", "Aviso prioritario", 90, Color.WHITE)
+	hud.notices.set_notice(&"information", &"low", "Aviso normal", 1, Color.WHITE)
+	hud.notices.set_notice(&"information", &"high", "Aviso prioritario", 90, Color.WHITE)
 	_expect(hud.toast_label.text == "Aviso prioritario", "The notice queue shows its highest priority")
-	hud._clear_notice(&"information", &"high")
+	hud.notices.clear_notice(&"information", &"high")
 	_expect(hud.toast_label.text == "Carta obtenida", "Clearing a priority notice resumes the queued toast")
-	hud._set_notice(&"information", &"brief", "Aviso breve", 95, Color.WHITE, 0.01)
-	hud._process_notices(0.02)
+	hud.notices.set_notice(&"information", &"brief", "Aviso breve", 95, Color.WHITE, 0.01)
+	hud.notices.process_notices(0.02)
 	_expect(hud.toast_label.text == "Carta obtenida", "An expired priority notice resumes the queue (got '%s')" % hud.toast_label.text)
 
 	# --- cargo state never relies on red/green alone ---
@@ -122,7 +139,7 @@ func _run() -> void:
 	var original_subtitles: bool = settings.sound_subtitles
 	settings.sound_subtitles = true
 	bus.interaction_prompt_changed.emit("")
-	hud._refresh_sound_subtitle()
+	hud.prompts.refresh_sound_subtitle()
 	_expect(String(hud.interaction_label.text).contains("[vidrio que cruje]"),
 		"An at-risk fragile trap captions its sound in the context zone")
 	run_manager.cargo[&"accessible_box"]["state"] = 2
@@ -136,15 +153,15 @@ func _run() -> void:
 	var original_impact_effects: bool = settings.impact_effects
 	settings.impact_effects = true
 	var time_scale_before: float = Engine.time_scale
-	hud._on_ruin_impact(&"accessible_box", "test")
+	hud.cargo._on_ruin_impact(&"accessible_box", "test")
 	_expect(hud.ruin_vignette.color.r > 0.99 and hud.ruin_vignette.color.a > 0.0,
 		"A ruined package flashes a soft white edge vignette")
 	_expect(is_equal_approx(Engine.time_scale, time_scale_before),
 		"The HUD ruin flash never changes global time scale")
-	hud._refresh_ruin_impact(0.4)
+	hud.cargo.refresh_ruin_impact(0.4)
 	_expect(is_zero_approx(hud.ruin_vignette.color.a), "The ruin flash clears after 0.35 seconds")
 	settings.impact_effects = false
-	hud._on_ruin_impact(&"accessible_box", "disabled")
+	hud.cargo._on_ruin_impact(&"accessible_box", "disabled")
 	_expect(is_zero_approx(hud.ruin_vignette.color.a), "Impact effects can be disabled for accessibility")
 	settings.impact_effects = original_impact_effects
 
@@ -154,28 +171,33 @@ func _run() -> void:
 	var original_help: int = int(settings.control_help_mode)
 	unlocks.completed_runs = 0
 	settings.control_help_mode = settings.ControlHelp.BEGINNING
-	hud._shortcut_learning_seconds = 0.0
-	hud._refresh_shortcuts()
+	hud.prompts._shortcut_learning_seconds = 0.0
+	hud.prompts.refresh_shortcuts()
 	_expect(hud.shortcut_label.get_parent().visible, "Beginning mode teaches a new player")
-	hud._shortcut_learning_seconds = 60.0
-	hud._refresh_shortcuts()
+	hud.prompts._shortcut_learning_seconds = 60.0
+	hud.prompts.refresh_shortcuts()
 	_expect(not hud.shortcut_label.get_parent().visible, "Beginning mode hides after 60 seconds")
-	hud._shortcut_learning_seconds = 0.0
+	hud.prompts._shortcut_learning_seconds = 0.0
 	unlocks.completed_runs = 3
-	hud._refresh_shortcuts()
+	hud.prompts.refresh_shortcuts()
 	_expect(not hud.shortcut_label.get_parent().visible, "Beginning mode hides after three completed runs")
 	settings.control_help_mode = settings.ControlHelp.ALWAYS
-	hud._refresh_shortcuts()
+	hud.prompts.refresh_shortcuts()
 	_expect(hud.shortcut_label.get_parent().visible, "Always mode keeps shortcuts visible")
 	settings.control_help_mode = settings.ControlHelp.NEVER
-	hud._refresh_shortcuts()
+	hud.prompts.refresh_shortcuts()
 	_expect(not hud.shortcut_label.get_parent().visible, "Never mode hides shortcuts")
 	settings.control_help_mode = original_help
 	unlocks.completed_runs = original_runs
 
+	var posted: Array = [{"house": 0, "code": "A-1", "trap": "Frágil", "content": "Vajilla"}]
+	bus.emit_signal(&"depot_orders_posted", posted)
+	_expect(hud.orders == posted, "The HUD keeps the depot's posted orders for the orders station")
+
 	hud._on_started(&"delivery", [])
-	_expect(not hud.economy_label.visible, "Team money is hidden while driving")
-	_expect(String(hud._pause_stats()).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
+	_expect(not hud.economy_label.visible and not hud.economy_label.get_parent().visible,
+		"Team money is hidden while driving, chip and all (no empty yellow pill)")
+	_expect(String(hud.pause._pause_stats()).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
 		"Pause shows team money")
 	Input.action_press(&"run_restart")
 	await create_timer(0.3).timeout
@@ -201,7 +223,7 @@ func _run() -> void:
 	unlocks.total_score = 0
 	unlocks.successful_deliveries = 0
 	unlocks.unlocked = {&"starter_kit": true}
-	hud._on_ended(175, {
+	hud.results._on_ended(175, {
 		"delivered": true,
 		"reason": "",
 		"elapsed_seconds": 40.0,

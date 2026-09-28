@@ -10,7 +10,7 @@ extends SceneTree
 ##   - it only renders while someone is close and in front of it, after one
 ##     first picture of the room so it never shows black from afar.
 
-const RenderLayers = preload("res://scripts/presentation/render_layers.gd")
+const RenderLayers = preload("res://scripts/core/render_layers.gd")
 
 var _failures: int = 0
 
@@ -92,7 +92,7 @@ func _run() -> void:
 	_expect(mirror.viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "The reflection renders when someone stands in front")
 
 	if _failures == 0:
-		print("test_depot_mirror: PASS")
+		print("PASS: the lockers mirror reflects the player in real time")
 	quit(_failures)
 
 

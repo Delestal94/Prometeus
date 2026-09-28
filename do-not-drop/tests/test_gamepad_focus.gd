@@ -42,17 +42,17 @@ func _run() -> void:
 	depot_panel.queue_free()
 	await process_frame
 
-	var hud: CanvasLayer = load("res://scripts/ui/prototype_hud.gd").new()
+	var hud: CanvasLayer = load("res://scripts/ui/hud/hud.gd").new()
 	root.add_child(hud)
 	await process_frame
 	_expect(_focus_is_inside(hud.overlay), "The start/results overlay focuses its first action")
-	hud.call(&"_primary_action")
-	hud.set(&"_soft_pause", true)
+	hud.pause.primary_action()
+	hud.soft_pause = true
 	hud.set(&"overlay_mode", "pause")
 	hud.overlay.show()
-	hud.call(&"_set_buttons", "Continuar", true, true, true)
+	hud.results.set_buttons("Continuar", true, true, true)
 	_expect(_focus_is_inside(hud.overlay), "Pause focuses Continue")
-	_send_cancel(hud)
+	_send_cancel(hud.pause)
 	await process_frame
 	_expect(not hud.overlay.visible, "B closes pause and returns to play")
 	hud.free()

@@ -21,7 +21,7 @@ func _run() -> void:
 		await process_frame
 	await _shot("render_hud_start.png")
 
-	hud.call(&"_primary_action")
+	hud.get(&"pause").primary_action()
 	var event_bus: Node = root.get_node("EventBus")
 	var boxes: Array = [[&"a", "Frágil"], [&"b", "Equilibrio"], [&"c", "Peso creciente"], [&"d", "Ruidoso"]]
 	for box: Array in boxes:
