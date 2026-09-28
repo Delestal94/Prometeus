@@ -147,7 +147,7 @@ func _ready() -> void:
 	_build_house()
 	_bell_player = AudioStreamPlayer3D.new()
 	_bell_player.bus = &"SFX"
-	_bell_player.stream = SynthAudio.glass_chime()
+	_bell_player.stream = SynthAudio.doorbell_ding_dong()
 	_bell_player.unit_size = 8.0
 	_bell_player.volume_db = WorldMix.DOORBELL_DB
 	_bell_player.max_distance = 25.0
@@ -215,7 +215,7 @@ func _resolve(result: StringName, package: Node) -> void:
 	# The resident's reaction follows what they were actually handed: a groan
 	# for a wreck, the same groan quieter for something dented, a cheer for
 	# a box that made it.
-	_reaction_player.stream = SynthAudio.creature_groan() if result in [OUTCOME_RUINED, OUTCOME_AT_RISK] else SynthAudio.honk_horn()
+	_reaction_player.stream = SynthAudio.creature_groan() if result in [OUTCOME_RUINED, OUTCOME_AT_RISK] else SynthAudio.neighbor_cheer()
 	var groan: bool = result in [OUTCOME_RUINED, OUTCOME_AT_RISK]
 	_reaction_player.volume_db = (WorldMix.RESIDENT_GROAN_DB if groan else WorldMix.RESIDENT_CHEER_DB) + (WorldMix.RESIDENT_AT_RISK_OFFSET_DB if result == OUTCOME_AT_RISK else 0.0)
 	_reaction_player.play()

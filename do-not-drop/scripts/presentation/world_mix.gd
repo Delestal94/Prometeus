@@ -52,21 +52,38 @@ const RAIN_UNDER_ROOF_BOOST_DB: float = 3.0
 const CROSSING_BELL_DB: float = 0.0
 const DOG_BARK_DB: float = -6.0
 const SHEEP_BLEAT_DB: float = -7.5
-const DOORBELL_DB: float = -7.0
+## doorbell_ding_dong() and neighbor_cheer() self-normalise to their own
+## *_STREAM_LOUDEST_DB (SynthAudio), so these two are just the "signal"
+## target (-18) minus that -- same reasoning as DOG_BARK_DB.
+const DOORBELL_DB: float = -6.0
 ## The resident at the door: a cheer for a good box, a groan for a wreck, a
 ## quieter groan for a dented one, and a quieter still for the wrong box.
-const RESIDENT_CHEER_DB: float = -10.5
+const RESIDENT_CHEER_DB: float = -6.0
 const RESIDENT_GROAN_DB: float = -13.0
 const RESIDENT_AT_RISK_OFFSET_DB: float = -6.0
 const RESIDENT_WRONG_BOX_OFFSET_DB: float = -10.0
+## The cartoon steam train at the crossing (rail_crossing_segment.gd): the
+## whistle self-normalises like the doorbell above; the chugging loop to
+## -20 (the "engine" target) minus its own -14 RMS -- as loud passing by as
+## the truck's own engine at full throttle, which is the point.
+const TRAIN_HORN_DB: float = -6.0
+const TRAIN_CHUG_DB: float = -6.0
 
 # The depot (depot.gd, depot_forklift.gd, depot_roller_door.gd).
 ## The radio plays mus_depot_radio_loop.ogg (N-403, tools/audio/compose_music.py),
 ## measured in assets/audio/music/loudness.json: -19.4 dBFS RMS, -4.5 dB to -24.
 const DEPOT_RADIO_DB: float = -4.5
 const FORKLIFT_BEEP_DB: float = -17.5
-const FORKLIFT_ENGINE_DB: float = -27.0
+## forklift_motor_loop() self-normalises to -16 RMS; the "machine" target is
+## -40, same reasoning as the truck's own ENGINE_DB is engine_loop()'s raw level.
+const FORKLIFT_ENGINE_DB: float = -24.0
 const ROLLER_DOOR_DB: float = -1.0
+
+# The river under the narrow bridge (narrow_bridge_segment.gd). Positioned
+# 3D, so this is its level at the player's unit_size, same as the crossing
+# bell above. river_flow_loop() self-normalises to -20 RMS; the "noise"
+# target is -35, same reasoning as WIND_DB.
+const RIVER_DB: float = -15.0
 
 # Menus (menu_music.gd, N-403): the menu theme sits exactly as loud as the
 # in-game track does under ingame_music.gd's -14 dB (loudness.json: in-game

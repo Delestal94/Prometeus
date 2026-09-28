@@ -69,7 +69,6 @@ var _wobble_seed: float = 0.0
 var _chime_player: AudioStreamPlayer3D
 var _groan_player: AudioStreamPlayer3D
 var _creak_player: AudioStreamPlayer3D
-var _ruin_thud_player: AudioStreamPlayer3D
 var _creak_countdown: float = 0.0
 var _impact_shake_strength: float = 0.0
 var _growth_scale: float = 1.0
@@ -95,6 +94,10 @@ var _hostile_hiss_player: AudioStreamPlayer3D
 var _hostile_last_attack_count: int = 0
 var _shelf_straps: Array[MeshInstance3D] = []
 var _package: DeliveryPackage
+## Every trap's own "it broke" stinger (item #23-adjacent, playtest polish
+## 2026-09-27): comic_ruin_stinger() for most traps, comic_boom() for
+## Explosivo -- picked once in _ready(), see there.
+var _ruin_player: AudioStreamPlayer3D
 
 
 func _ready() -> void:
@@ -133,6 +136,15 @@ func _ready() -> void:
 		&"hostile":
 			_build_hostile_eyes()
 			_hostile_hiss_player = _make_player(SynthAudio.hostile_hiss(), -13.0)
+	# Every trap gets a stinger for the moment it actually fails, on top of
+	# the confetti burst and whatever cue it already has of its own (Frágil's
+	# chime pitches down for this same moment) -- picked once, since which
+	# trap this package has never changes after _ready(). Explosivo gets its
+	# own "BOOM." (explosive_trap_behavior.gd's get_hint() literally says
+	# that once seconds_left hits 0) instead of the generic cartoon fail.
+	var explosive: bool = _trap_id == &"explosive"
+	_ruin_player = _make_player(SynthAudio.comic_boom() if explosive else SynthAudio.comic_ruin_stinger(),
+		-6.0 if explosive else -9.0)
 	_set_state(0)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
@@ -393,13 +405,11 @@ func _on_package_state_changed(id: StringName, new_state: int) -> void:
 
 func _on_package_ruined(id: StringName, _cause: String) -> void:
 	if id == _package_id:
-		var impact_enabled: bool = _impact_effects_enabled()
-		_burst_confetti(impact_enabled)
-		if impact_enabled:
-			if _ruin_thud_player == null:
-				_ruin_thud_player = _make_player(SynthAudio.impact_thud(), -14.0)
-				_ruin_thud_player.pitch_scale = 0.72
-			_ruin_thud_player.play()
+		# The comic stinger is the ruin cue itself (it replaced the old impact
+		# thud), so it plays even with impact effects turned off.
+		_burst_confetti(_impact_effects_enabled())
+		if _ruin_player != null:
+			_ruin_player.play()
 
 
 func _on_integrity_changed(id: StringName, integrity: float, maximum: float) -> void:

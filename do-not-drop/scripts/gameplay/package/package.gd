@@ -200,6 +200,14 @@ func _physics_process(delta: float) -> void:
 			_assist_seconds -= ASSIST_MERIT_SECONDS
 			_award_milestone(assistant_peer_id, &"assist")
 	_publish_net_state()
+	# Continuous collision only while loose, or thrown about the bay: riding
+	# along with it on, a box was swept out through the shut rear doors
+	# (playtest 2026-09-27, see Vehicle.needs_sweep()).
+	var vehicle: Node3D = _find_vehicle()
+	var sweep: bool = vehicle == null or bool(vehicle.call(&"needs_sweep", self,
+			RIDE_MARGIN if net_in_vehicle else 0.0))
+	if continuous_cd != sweep:
+		continuous_cd = sweep
 
 
 ## Client: put the box where the host says, on this peer's truck if it rides.

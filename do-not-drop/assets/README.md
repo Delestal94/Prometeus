@@ -116,6 +116,141 @@ en desuso.
   `... --python tools/build_wildlife.py -- sheep dog`). Raíz `Sheep` / `Dog`; pivotes
   `Legs_Front`, `Legs_Back`, `Head`, `Tail` y, en el perro, `Ears` colgando de `Head`.
 
+## Paso a nivel y tren (`models/environment/rail/`, 2026-09-27)
+
+Propios, generados por `tools/build_rail_crossing.py` (N-129 / N-130); reemplazan las cajas que
+armaba `rail_crossing_segment.gd`. El script conserva su colisión (poste, brazo, una caja de
+7,5×3×2,6 m por vagón): los modelos son solo lo que se ve.
+
+- `sm_env_rail_track.glb` (1.304 tris): 84 m de vía (x −42..42), terraplén de balasto y
+  durmientes fuera de la calzada, tablones sobre ella. Origen en el eje de la vía.
+- `sm_env_rail_crossing_signal.glb` (764): poste, cruz de San Andrés, campana, tablero con dos
+  luces mirando a +Z y el gabinete de la barrera detrás. Las lentes son los nodos `LampLeft` y
+  `LampRight`: el script les pone un material emisivo propio para hacerlas titilar.
+- `sm_env_rail_barrier_arm.glb` (320): el brazo a lo largo de +X desde la bisagra en el origen
+  (10,6 m), contrapeso en −X; el script lo gira media vuelta según el lado.
+- `sm_env_rail_locomotive.glb` (2.332), `sm_env_rail_wagon_boxcar.glb` (1.352),
+  `sm_env_rail_wagon_tanker.glb` (1.980): origen en el centro de la base, sobre los rieles
+  (tope a 0,12 m); la locomotora mira a +X, hacia donde corre el tren. La lente del faro usa el
+  material `lamp` y se enciende de noche.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_rail_crossing.py [-- track signal arm loco boxcar tanker]
+```
+
+## Túnel, puente, chicana y tendido eléctrico (`models/environment/route/`, 2026-09-27)
+
+Propios, generados por `tools/build_route_pieces.py` (N-131 a N-134), en la línea cartoon del tren
+y de la calle. Reemplazan las cajas que armaban `tunnel_segment.gd`, `narrow_bridge_segment.gd`,
+`chicane_segment.gd` y el poste de `route_dresser.gd`. Los scripts conservan cada caja de colisión
+(oculta), la `AcousticZone` y las luces del túnel: los modelos son solo lo que se ve. Materiales
+con nombre de la paleta; los que empiezan con `stone.`, `concrete.` o `grass` toman el grano de
+`LowpolyMaterials` (`RouteSegment._art()`).
+
+- `sm_env_route_tunnel_module.glb` (452 tris): 4 m de bóveda (y −2..2 en Blender, más 6 cm de
+  solape por punta para que no se abran juntas al doblarlos): zócalo oscuro, franja teal, azulejo
+  crema, bóveda elíptica (arranca a 2,6 m, clave a 4,8 m = techo de la colisión), nervio oscuro,
+  cordón amarillo/negro, bandeja de cables y la loma de pasto que cubre el tubo (sale hasta
+  x ±9,6). El segmento pone 11 seguidos para que `conform_geometry()` los doble sobre el terreno.
+- `sm_env_route_tunnel_hill_props.glb` (440): rocas, arbustos y flores sobre la loma, para 44 m
+  (centrado); el script lo estira al largo del túnel.
+- `sm_env_route_tunnel_portal.glb` (2.524): muro de arenisca con aleros que bajan siguiendo la loma
+  hasta el suelo (x ±10,1), dovelas, clave, esquinas, pilastras, cornisa, señal de gálibo, pasto que
+  empalma con la loma sin escalón, arbustos y hiedra. Mira a +Z (Godot); la boca de salida va girada
+  media vuelta. Los aleros tienen colisión propia (`TunnelWingWall`).
+- `sm_env_route_tunnel_lamp.glb` (80): origen arriba (el anclaje); la lente es el nodo `Lens`, al
+  que el script le pone el material emisivo.
+- `sm_env_route_bridge_deck.glb` (212): 4 m de tablero (asfalto de 6 m, líneas de borde, losa y
+  vigas de acero teal). `sm_env_route_bridge_post.glb` (92): el poste cada 4 m.
+  `sm_env_route_bridge_water.glb` (696): 36 m de río bajo el tablero (agua a −1,6 m, márgenes,
+  estribos, dos pilas, ondas y espuma), origen en el medio del tramo; se estira con el largo. Con
+  terreno continuo (ruta principal) tablero y río no se ponen, igual que antes las cajas.
+- `sm_env_route_chicane_barrier.glb` (460): 4,4×1,0×0,8 m, dos New Jersey con franjas inclinadas
+  hacia +X y un bolardo con luz ámbar en ese extremo, el del hueco; el bloque derecho va girado.
+- `sm_env_route_power_pole.glb` (362 en total): malla `PowerPole` (poste con 0,3 m enterrado,
+  travesaño a lo largo de X con riostras, aisladores en x ±0,75 y en la punta, chapa de
+  advertencia; 258) y malla `Transformer` (104). `route_dresser.gd` las usa en dos MultiMesh, con
+  transformador cada 4 postes; los cables salen de las puntas de los aisladores.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_route_pieces.py [-- tunnel bridge chicane pole]
+```
+
+## Depósito (`models/environment/depot/`, 2026-09-27)
+
+Propios, generados por `tools/build_depot_props.py` (N-135), misma línea cartoon que el tren:
+formas gruesas y redondeadas, paleta del depósito (azul `2f5d8a`, naranja `e8772e`, tinta,
+amarillo de advertencia) y acentos de la UI. Reemplazan las cajas que armaban `depot.gd`,
+`depot_forklift.gd` y `depot_roller_door.gd`; los scripts conservan colisiones, áreas, nodos con
+nombre y animaciones. Los fijos entran al horneado de `DepotKit` con `model()` (que ahora comparte
+los materiales planos por nombre y color entre GLB, así no suman draw calls); los que se mueven
+usan `DepotKit.merged_mesh()`, una malla con una superficie por material.
+
+- Portón: `sm_env_depot_door_slat.glb` (168 tris) y `..._slat_window.glb` (928, la tablilla 5,
+  con mirillas), `..._door_bottom_bar.glb` (680), `..._door_frame.glb` (2.268: guías, tambor,
+  motor, jambas rayadas, bolardos, umbral, botonera, soporte de la baliza y el tablero inclinado
+  sobre el que `depot.gd` escribe "SALIDA · CUIDÁ LA CARGA", delante del tambor). Espacio local del
+  portón: origen en el centro de la base, afuera hacia −Z; las tablillas centradas.
+- Estanterías: `sm_env_depot_rack_frame.glb` (644, bastidor de 6,3 m, 1,3 de fondo en X, la
+  protección de poste en +X = pasillo) y `..._rack_beam_level.glb` (404, un nivel de 5,6 m;
+  origen en el centro de las vigas, apoyo de pallets a +0,085). Estantes de despacho:
+  `..._shelf_frame.glb` (512, 2,7 m) y `..._shelf_deck.glb` (132, 2 m; origen en la cara de
+  arriba, donde se apoyan los paquetes: coincide con `LEVEL_TOPS`).
+- Autoelevador: `sm_env_depot_forklift_body.glb` (2.264, horquillas hacia −Z, origen en el piso
+  bajo el chasis) y `..._forklift_carriage.glb` (436, origen = nodo `Carriage`, sube en +Y).
+- Cinta: `sm_env_depot_conveyor.glb` (4.068, 17 m, origen en el piso bajo el centro de la cinta;
+  cinta a 0,93 m). La banda que se desplaza y las cortinas de tiras siguen en código.
+- `sm_env_depot_high_bay_lamp.glb` (264, origen en el gancho, 0,65 m sobre la pantalla),
+  `..._tube_fixture.glb` (180, centro del artefacto), `..._ceiling_fan.glb` (504, centro del
+  motor, gira en Y), `..._wall_clock.glb` (892, esfera hacia +Z), `..._clock_hand_hour.glb` (24)
+  y `..._clock_hand_minute.glb` (72) apuntando a +Y desde el eje (giran en Z),
+  `..._supply_padding.glb` (384) y `..._supply_insurance.glb` (212), base centrada.
+- Tienda y embalaje: `..._shop_tape_roll.glb` (224, de canto mirando a +Z),
+  `..._shop_foam_blue.glb` / `..._shop_foam_orange.glb` (380), los rollos de film reusan
+  `supply_padding`; `..._packing_table.glb` (708, mesa de 2,4×1 m con cartón, pistola de cinta,
+  rollo de etiquetas y cajas planas abajo; la tapa sigue sólida en código) y `..._pallet_jack.glb`
+  (672, zorra: origen en la base de la bomba, horquillas hacia −Z). Base centrada.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_depot_props.py [-- door rack forklift conveyor lamps fan clock supplies shop staging]
+```
+
+## Calle y ruta: autos, farol, hitos y mobiliario (2026-09-27)
+
+Propios, generados por `tools/build_street_props.py` (N-136 / N-140), misma línea cartoon que el
+tren y el depósito. Reemplazan los del lote viejo con el mismo nombre, escala, pivote (centro de
+la base) y orientación (Blender +Y = Godot −Z, el lado que `Facing.ROAD` gira hacia la ruta), así
+que no cambió ninguna escena ni script. Triángulos antes del AO:
+
+- `vehicles/sm_vehicle_parked_hatchback.glb` (1.636: cabina redondeada con portón inclinado,
+  techo blanco con barras, faros redondos y parrilla sonriente) y `..._pickup.glb` (1.700: caja
+  con un paquete y rueda de auxilio, barra de balizas ámbar, parrilla cromada). Largo en X, trompa
+  hacia −X, ruedas en y = 0. Los faros son **un** mesh `Light` con material `lamp`
+  (`LowpolyMaterials.light_up()` y `NightFlares` lo buscan así y separan los dos faros); las luces
+  traseras son `TailLights` (`danger`, no se encienden). Ningún otro nodo empieza con `Light`.
+- `environment/props/sm_env_prop_street_lamp_refined.glb` (496; el viejo `..._street_lamp.glb`
+  recibe el mismo modelo): 4,56 m, cuello de cisne hacia +X, farol hexagonal. Materiales
+  `lamp_metal` y `lamp_glass` (un solo mesh `LampGlass`: brilla de noche y lleva un halo).
+- `environment/landmarks/sm_env_landmark_windmill.glb` (1.016): aspas en X colgadas del empty
+  `WindmillRotor` (gira sobre su Z local de Godot), mirando a la ruta. `..._water_tower.glb`
+  (954): patas abiertas con cruces, pasarela con baranda, escalera y el logo de la caja en la
+  cara que mira a la ruta.
+- `environment/props/sm_env_prop_mailbox.glb` (508, puerta abierta con un paquete y bandera
+  levantada), `..._milestone.glb` (534, capuchón rojo y "12" legible desde la ruta),
+  `..._wooden_crate.glb` (528), `..._traffic_cone.glb` (390).
+- `environment/yard/sm_env_yard_garden_gnome.glb` (604, abraza un paquete) y
+  `..._doormat.glb` (228, carita sonriente derecha para quien llega a la puerta).
+
+Autos, molino y tanque llevan AO horneado: después de regenerarlos hay que volver a correr
+`bake_vertex_ao.py` (el horneado subdivide, así que en el juego quedan en ~2.260 / 2.290 /
+3.570 / 6.320 triángulos). Los generadores viejos (`build_lowpoly_glb_assets*.py`,
+`build_lowpoly_refined.py`, `tools/generate_lowpoly_assets.py`) ya no escriben estos archivos.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_street_props.py [-- cars lamp landmarks roadside yard]
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/bake_vertex_ao.py -- do-not-drop/assets/models/vehicles/sm_vehicle_parked_hatchback.glb do-not-drop/assets/models/vehicles/sm_vehicle_parked_pickup.glb do-not-drop/assets/models/environment/landmarks/sm_env_landmark_windmill.glb do-not-drop/assets/models/environment/landmarks/sm_env_landmark_water_tower.glb
+```
+
 ## Timbre (`models/environment/props/sm_env_prop_doorbell_panel.glb`)
 
 - Propio, `tools/build_doorbell.py` (tareas de Nacho N-302): placa de 12×26 cm con la

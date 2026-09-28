@@ -154,13 +154,13 @@ correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slate
 
 | Qué | Dónde se arma hoy | Dominio | Tarea |
 |---|---|---|---|
-| Tren del paso a nivel (locomotora + vagones) | `rail_crossing_segment.gd` `_build_train()` (cajas de 7,5×3×2,6 m) | Nacho | N-129 |
-| Paso a nivel: poste, cruz de San Andrés, luces, barrera, vías y durmientes | `rail_crossing_segment.gd` | Nacho | N-130 |
-| Túnel: paredes, techo, portal, pilares, lámparas | `tunnel_segment.gd` | Nacho | N-131 |
-| Puente angosto: tablero, postes, agua | `narrow_bridge_segment.gd` | Nacho | N-132 (la baranda GLB ya está integrada) |
-| Bloques de la chicana | `chicane_segment.gd` | Nacho | N-133 |
-| Poste eléctrico | `route_dresser.gd` (cilindro de 6 lados + caja) | Nacho | N-134 |
-| Depósito: autoelevador, cinta transportadora, portón enrollable, estanterías, lámparas, ventiladores, reloj, insumos | `depot*.gd` (~160 primitivas horneadas con `depot_kit.gd`) | Nacho | N-135 |
+| ~~Tren del paso a nivel (locomotora + vagones)~~ **[x] Hecho (2026-09-27)**: locomotora a vapor, vagón cerrado y vagón tanque en `models/environment/rail/`; la colisión sigue siendo la caja de 7,5×3×2,6 m | `rail_crossing_segment.gd` `_build_train()` | Nacho | N-129 |
+| ~~Paso a nivel: poste, cruz de San Andrés, luces, barrera, vías y durmientes~~ **[x] Hecho (2026-09-27)**: vía, señal (lentes `LampLeft`/`LampRight`) y barrera con origen en la bisagra | `rail_crossing_segment.gd` | Nacho | N-130 |
+| ~~Túnel: paredes, techo, portal, pilares, lámparas~~ **[x] Hecho (2026-09-27)**: módulo de bóveda con loma de pasto de 4 m (452 tris, ×11), rocas/arbustos de la loma (440), boca de piedra con aleros, dovelas y clave (2.524) y lámpara con lente ámbar `Lens` (80) en `models/environment/route/`; colisiones, `AcousticZone` y luces sin cambios | `tunnel_segment.gd` | Nacho | N-131 |
+| ~~Puente angosto: tablero, postes, agua~~ **[x] Hecho (2026-09-27)**: módulo de tablero de 4 m (212 tris, ×9), poste (92) y río con márgenes, estribos y pilas (696). **Actualizado (2026-09-27)**: en la ruta real (terreno continuo) el tablero y el río ya se construyen -- el terreno mismo talla un cauce bajo el tramo (`route_terrain.gd` `rivers`/`height_without_rivers`, registrado por `route.gd`) en vez de quedar asfalto con barandas sobre pasto; el tablero, las barandas, los postes y el agua quedan marcados `&"ignore_river"` para flotar sobre el pozo en lugar de hundirse con el resto del terreno. **Revisado (2026-09-27, segunda vuelta)**: el cauce ya no se leía como pileta rectangular -- ahora el terreno y una malla de agua generada por código (`route_terrain.gd` `_build_river_water()`, sin colisión, solo visual) se extienden hasta ~60 m por lado con un meandro y un borde de banco determinísticos por posición (sin RNG), y `route.gd` (`_clamp_river_reach()`) acorta ese alcance cuando otro tramo de camino, una casa o el depósito quedan cerca; `route_dresser.gd` ya no planta árboles, postes ni autos dentro del cauce (`river_depth_at`, `RIVER_MISFIT_DEPTH`) | `narrow_bridge_segment.gd`, `route_terrain.gd`, `route.gd`, `route_dresser.gd` | Nacho | N-132 (la baranda GLB ya está integrada) |
+| ~~Bloques de la chicana~~ **[x] Hecho (2026-09-27)**: barrera New Jersey doble con franjas y bolardo hacia el hueco (460 tris); la caja sólida de 1,6 m sigue igual | `chicane_segment.gd` | Nacho | N-133 |
+| ~~Poste eléctrico~~ **[x] Hecho (2026-09-27)**: poste de madera con travesaño y riostras, tres aisladores y chapa (258 tris) + transformador aparte cada 4 postes (104), sigue siendo un MultiMesh | `route_dresser.gd` | Nacho | N-134 |
+| ~~Depósito: autoelevador, cinta transportadora, portón enrollable, estanterías, lámparas, ventiladores, reloj, insumos~~ **[x] Hecho (2026-09-27)**: 24 GLB en `models/environment/depot/` (`tools/build_depot_props.py`); colisiones, animaciones y horneado siguen en los scripts. Quedan en código a propósito lo que brilla o se anima con material (cinta, cortinas de tiras, lentes de balizas, discos y tubos de luz, varilla del ventilador). Después de la revisión en Godot: cartel de salida sobre un tablero delante del tambor, tambor y mástil aclarados, y modeladas la mercadería de la tienda, la mesa de embalaje y la zorra | `depot*.gd` (~160 primitivas horneadas con `depot_kit.gd`) | Nacho | N-135 |
 | Residente que abre la puerta | `delivery_house.gd` (cápsula) | Nacho | N-137 (puede reusar el modelo del jugador) |
 | Ragdoll del jugador | `player_ragdoll.gd` (cápsulas) | Slatex | S-101 |
 | Maniquí del panel de cosméticos | `cosmetics_panel.gd` (cápsula + esfera) | Slatex | S-102 |
@@ -175,13 +175,13 @@ pocos triángulos no es un defecto en sí: importa en lo que queda cerca de la c
 | Prio | Modelo | Triángulos | Motivo | Tarea |
 |---|---|---|---|---|
 | Alta | Celular (`sm_prop_phone`) | 92 | Primer plano, en la mano | S-104 |
-| Alta | Autos estacionados hatchback / pickup | 320 / 364 | Lote viejo sin refinar; en ruta y depósito | N-136 |
-| Alta | Farol (`sm_env_prop_street_lamp`) | 132 | Muy repetido en pueblo y depósito | N-140 |
-| Media | Molino / tanque de agua | 192 / 204 | Lote viejo; hitos que se leen por silueta | N-140 |
-| Media | Buzón, mojón, cajón de madera, cono | 120–176 | Mobiliario que pasa cerca del camión | N-140 |
-| Media | Enano de jardín, felpudo | 164 / 68 | En el porche, donde se entrega | N-140 |
+| ~~Alta~~ | ~~Autos estacionados hatchback / pickup~~ **[x] Hecho (2026-09-27)**: 1.636 / 1.700 tris (antes 320 / 364), `build_street_props.py` | ~~320 / 364~~ | Lote viejo sin refinar; en ruta y depósito | N-136 |
+| ~~Alta~~ | ~~Farol (`sm_env_prop_street_lamp_refined`, y el viejo `sm_env_prop_street_lamp`)~~ **[x] Hecho (2026-09-27)**: 496 tris (antes 104 / 132) | ~~132~~ | Muy repetido en pueblo y depósito | N-140 |
+| ~~Media~~ | ~~Molino / tanque de agua~~ **[x] Hecho (2026-09-27)**: 1.016 / 954 tris antes del AO (antes 192 / 204) | ~~192 / 204~~ | Lote viejo; hitos que se leen por silueta | N-140 |
+| ~~Media~~ | ~~Buzón, mojón, cajón de madera, cono~~ **[x] Hecho (2026-09-27)**: 508 / 534 / 528 / 390 tris | ~~120–176~~ | Mobiliario que pasa cerca del camión | N-140 |
+| ~~Media~~ | ~~Enano de jardín, felpudo~~ **[x] Hecho (2026-09-27)**: 604 / 228 tris | ~~164 / 68~~ | En el porche, donde se entrega | N-140 |
 | Baja | Roca, arbusto redondo, rama caída, tocón, mata de pasto | 80–192 | Variantes rinden más que detalle | N-141 |
-| Baja | Baranda de puente | 352 | Lote viejo, sin integrar | N-132 |
+| Baja | Baranda de puente | 352 | Lote viejo; integrada en el puente angosto | N-132 |
 
 Referencia: árboles 240–376, casas 2.300–3.400, contenidos de paquete 1.000–2.000 y el
 jugador 1.568 triángulos están bien para el estilo.

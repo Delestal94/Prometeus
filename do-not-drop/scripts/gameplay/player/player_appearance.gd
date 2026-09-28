@@ -38,6 +38,9 @@ static func tint_shirt(body: Node, color: Color) -> void:
 			tint = color.darkened(0.18)
 		var shirt := (source.duplicate() if source != null else StandardMaterial3D.new()) as StandardMaterial3D
 		shirt.albedo_color = tint
+		# The GLB bakes occlusion into vertex colour, but Godot's importer
+		# leaves this flag off on the first surface (the shirt) only.
+		shirt.vertex_color_use_as_albedo = true
 		mesh_instance.set_surface_override_material(surface, shirt)
 
 

@@ -107,6 +107,7 @@ func _check_built(seed_value: int, houses: int) -> void:
 	route.set(&"batch_dressing", false)
 	root.add_child(route)
 	var terrain: Node = route.get(&"terrain")
+	var path: Array = route.get(&"_path_points")
 	var road_distance := func(world_point: Vector3) -> float:
 		var local: Vector3 = route.to_local(world_point)
 		return float((terrain.call(&"nearest", Vector2(local.x, local.z)) as Vector3).x)
@@ -125,16 +126,51 @@ func _check_built(seed_value: int, houses: int) -> void:
 					break
 
 	var tree_failed: bool = false
+	var river_tree_failed: bool = false
 	for group: Node in route.find_children("ForestDressing", "Node3D", true, false):
 		for tree: Node in group.get_children():
-			if tree_failed or not tree is Node3D or not tree.scene_file_path.get_file() in TREE_MODELS:
+			if not tree is Node3D or not tree.scene_file_path.get_file() in TREE_MODELS:
 				continue
-			var gap: float = road_distance.call((tree as Node3D).global_position)
-			if gap < ROAD_HALF_WIDTH + TREE_GAP:
-				_fail(seed_value, houses, "a tree (%s) stands %.1f m from the road's centre" % [tree.scene_file_path.get_file(), gap])
-				tree_failed = true
+			if not tree_failed:
+				var gap: float = road_distance.call((tree as Node3D).global_position)
+				if gap < ROAD_HALF_WIDTH + TREE_GAP:
+					_fail(seed_value, houses,
+							"a tree (%s) stands %.1f m from the road's centre" % [tree.scene_file_path.get_file(), gap])
+					tree_failed = true
+			if not river_tree_failed:
+				var local_pos: Vector3 = route.to_local((tree as Node3D).global_position)
+				if float(terrain.call(&"river_depth_at", Vector2(local_pos.x,
+						local_pos.z))) > RoutePlacement.RIVER_MISFIT_DEPTH:
+					_fail(seed_value, houses,
+							"a tree (%s) stands in a narrow bridge's riverbed" % tree.scene_file_path.get_file())
+					river_tree_failed = true
 
-	var path: Array = route.get(&"_path_points")
+	# A river never reaches far enough to touch another stretch of the same
+	# road or a house -- route.gd's _clamp_river_reach() is supposed to
+	# shrink it before that happens (N-132 follow-up, "no corte otros
+	# tramos"). Every river remembers which stretch of `path` is its own.
+	# Checked against THIS river's own contribution (_river_factor), not the
+	# combined river_depth_at() -- two different bridges' riverbeds can
+	# legitimately sit near each other on the same route without either one
+	# having "reached" the other's stretch of road.
+	for river: Dictionary in terrain.get(&"rivers"):
+		var self_start: int = int(river.get("path_start", -1))
+		var self_end: int = int(river.get("path_end", -1))
+		var river_failed: bool = false
+		for index: int in range(path.size()):
+			if river_failed or (index >= self_start and index < self_end):
+				continue
+			var factor: float = float(terrain.call(&"_river_factor", river, Vector2(path[index].x, path[index].z)))
+			if factor * float(river.depth) > RoutePlacement.RIVER_MISFIT_DEPTH:
+				_fail(seed_value, houses, "a river reaches another stretch of road at point %d" % index)
+				river_failed = true
+		for house: DeliveryHouse in route.get(&"houses"):
+			var factor: float = float(terrain.call(&"_river_factor", river, Vector2(house.position.x,
+					house.position.z)))
+			if not river_failed and factor * float(river.depth) > RoutePlacement.RIVER_MISFIT_DEPTH:
+				_fail(seed_value, houses, "house %d stands in a narrow bridge's riverbed" % (house.house_index + 1))
+				river_failed = true
+
 	for index: int in range(1, path.size()):
 		var a: Vector3 = path[index - 1]
 		var b: Vector3 = path[index]

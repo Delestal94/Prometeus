@@ -190,3 +190,96 @@ Qué cambia al jugar:
 |---|---|---|---|---|
 | Radio del depósito (música) | −19,4 RMS | −4,5 | −23,9 | −24 |
 | Tema del menú | −16,6 RMS | −13,2 | −29,8 | igual que la música del juego (−15,8 − 14 = −29,8) |
+
+## Pasada de pulido "cartoon cómico" (2026-09-27)
+
+Pedido del usuario: repasar todo lo sintetizado en código con la vara de "calidad cartoon
+cómica profesional" y mejorar lo que estaba a medias, era demasiado sintético/seco, se
+repetía sin variación o le faltaba tono cómico donde correspondía. Relevamiento contra
+`synth_audio.gd`, `sound_audit.gd` y esta misma tabla:
+
+- **El timbre de entrega reusaba la campanita de Frágil** (`glass_chime()`): tocar un
+  timbre sonaba igual que una caja frágil rompiéndose. `docs/inventario-assets.md` ya
+  tenía el panel del timbre como modelo terminado (N-302) pero sin un sonido propio.
+  Nuevo `doorbell_ding_dong()`: dos notas ("ding" en A5, "dong" en E5), más grave y
+  redonda que la campanita brillante de Frágil, para que se distingan de oído.
+- **El vecino contento reusaba la bocina del camión** (`honk_horn()`): una entrega
+  bien hecha sonaba a alguien tocando bocina en la puerta. Nuevo `neighbor_cheer()`:
+  un "ta-da" de tres notas ascendentes (arpegio de acorde mayor) con un vibrato
+  suave en la última, tono de festejo en vez de tránsito.
+- **El autoelevador eléctrico del depósito compartía el motor a explosión del
+  camión** (`engine_loop()`, solo repitcheado): sonaba a una segunda furgoneta
+  diésel. Nuevo `forklift_motor_loop()`: zumbido eléctrico agudo y metálico
+  (110/220/330 Hz) sin nada de grave, más un silbido fino de hidráulica encima.
+- **Ninguna trampa salvo Frágil tenía un sonido propio para el momento en que se
+  arruina** -- solo el tinte y el confeti. Nuevo `comic_ruin_stinger()` (un "uh-oh"
+  tipo trombón, tres notas cayendo con un crujido de ruido al principio) para las
+  demás, y `comic_boom()` para Explosivo (su propio `get_hint()` ya dice "BOOM."
+  cuando se acaba el tiempo, pero no sonaba nada). `package_feedback.gd` elige el
+  sonido una vez en `_ready()` según la trampa y lo toca en `_on_package_ruined()`,
+  junto al confeti.
+- **El río bajo el puente angosto no tenía sonido** (`narrow_bridge_segment.gd`):
+  agua corriendo se ve pero no se oye. Nuevo `river_flow_loop()` (banda de ruido
+  180-650 Hz con hinchazones cada pocos segundos y goteo esporádico), 3D posicionado
+  en el agua, bus **Exterior**, `unit_size` 6 (bien por debajo de la distancia real
+  al cruzar el puente) para no repetir el zumbido del depósito (ítem #178 de
+  `docs/tareas-nacho.md`: ahí el problema fue un `unit_size` de 30 con la cámara a
+  4 m, +17 dB de más; acá el `unit_size` queda chico a propósito).
+- **El paso a nivel no tenía tren, solo campana**: el tren cartoon pasaba en
+  silencio salvo la campana del cruce. Nuevos `train_horn()` (silbato de vapor de
+  dos tonos, "tut, tuuut", al arrancar el cruce) y `train_chug_loop()`
+  (resoplidos de vapor con un clac de vía, mientras los vagones están en pantalla).
+  Ambos siguen a la locomotora a mano en `_physics_process` (no cuelgan de un nodo
+  cuyo `process_mode` se apaga entre cruces); quien se suma a mitad del cruce
+  retoma el traqueteo ya sonando.
+
+Los seis sonidos nuevos se autonormalizan igual que los del playtest anterior
+(`_normalized()`, su propia constante `*_STREAM_*_DB`); el nivel en `world_mix.gd`
+es el objetivo de su clase menos esa constante. El timbre y el vecino contento entran
+en la tabla de mezcla sin cambiar de objetivo (siguen siendo clase "señal"):
+
+| Sonido | Clase | Nivel antes | Resultado antes | Nivel ahora | Resultado ahora |
+|---|---|---|---|---|---|
+| Timbre de la casa | señal | −7 (`glass_chime`) | −18,1 | −6 (`doorbell_ding_dong`) | −18,0 |
+| Vecino contento | señal | −10,5 (`honk_horn`) | −17,8 | −6 (`neighbor_cheer`) | −18,0 |
+| Motor del autoelevador | máquina | −27 (`engine_loop`) | −39,8 | −24 (`forklift_motor_loop`) | −40,0 |
+
+Y tres entradas nuevas en la tabla de clases (mismo objetivo que su clase, ver
+`world_mix.gd` para el detalle de cómo se llega a cada nivel; medidos con
+`-- --report`):
+
+| Sonido | Clase | Nivel | Resultado | Objetivo |
+|---|---|---|---|---|
+| Río (bajo el puente) | ruido | −15 | −35,0 | −35 |
+| Silbato del tren | señal | −6 | −18,0 | −18 |
+| Traqueteo del tren | motor | −6 | −20,5 | −20 |
+
+`comic_ruin_stinger()` y `comic_boom()` son sonidos de trampa (como el crujido de
+Peso Creciente o el gemido de Ruidoso): su volumen se ajusta a mano en
+`package_feedback.gd`, no entran en esta tabla ni en `world_mix.gd` -- igual que
+`wood_creak`, `hostile_hiss`, etc.
+
+Cómo debería sonar cada uno, para validar jugando (headless no reproduce audio):
+
+- **Timbre**: un "ding-dong" cálido y corto, como una campanilla de puerta de
+  verdad, no un tintineo de cristal.
+- **Vecino contento**: un "ta-da" breve y alegre, tres notas subiendo rápido, sin
+  nada de bocina ni de tránsito.
+- **Autoelevador**: un zumbido eléctrico fino y constante, sin la vibración grave
+  de un motor a explosión -- se lo debería poder distinguir del camión con los
+  ojos cerrados.
+- **Trampa arruinada**: un "uh-oh" cómico y corto, como un trombón cayendo de
+  tono tres veces, con un crujido al principio -- no un tono largo ni molesto.
+- **Explosivo arruinado**: un "boom" de caricatura, grave y corto, con un poco de
+  estática y un brillo agudo al final (el humo disipándose), no una explosión
+  realista ni un ruido blanco plano.
+- **Río**: un murmullo de agua corriendo, suave y continuo, más fuerte cruzando
+  el puente y que se pierde bien antes del siguiente tramo -- nunca un tono
+  parejo que se escuche igual de fuerte en cualquier punto del puente.
+- **Tren**: un silbato de vapor de caricatura ("tut, tuuut") al arrancar el
+  cruce, y mientras pasa un resoplido rítmico de vapor con un clac de vía metido
+  en el medio -- se corta apenas se van los vagones, no se queda sonando de más.
+
+Pruebas: `tests/test_more_route_segments.gd` (río y tren), `tests/test_audio_polish.gd`
+(timbre, vecino, autoelevador, arruinado/boom) y `tools/run-tests.sh sound audio synth`
+para la batería completa de audio.

@@ -5,6 +5,7 @@ Front = -Y, Z up; dimensions in metres. No external assets or add-ons required.
 import bpy
 import math
 import json
+import bmesh
 from pathlib import Path
 from mathutils import Vector, Quaternion
 
@@ -17,6 +18,9 @@ def enum(obj, prop, value):
     if value not in valid:
         raise RuntimeError(f'{prop}: {value} not in {valid}')
     setattr(obj, prop, value)
+
+def smoothstep(a,b,x):
+    t=max(0,min(1,(x-a)/(b-a))); return t*t*(3-2*t)
 
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
@@ -72,6 +76,7 @@ brown = material('04 | Short · caramelo', (.255,.118,.060))
 cuffmat = material('05 | Dobladillo short', (.30,.148,.080))
 leather = material('06 | Zapato · cacao', (.135,.062,.033), .76)
 solemat = material('07 | Suela', (.085,.041,.025), .82)
+hairmat = material('08 | Pelo · castaño', (.075,.036,.018), .6)
 groundmat = material('Estudio | marfil', (.86,.845,.81), .85)
 meshes = []
 
@@ -86,11 +91,102 @@ def finish(o, name, mat):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     return o
 
-def sphere(name, loc, scale, mat, segments=48, rings=32):
+def sphere(name, loc, scale, mat, segments=48, rings=32, rot=(0, 0, 0)):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=segments, ring_count=rings, location=loc)
     o = bpy.context.object
     o.scale = scale
+    o.rotation_euler = rot
     return finish(o, name, mat)
+
+# Head: an ellipsoid whose lower half widens into soft jowls (head_shape.py, shared with render_review.py;
+# character_face.gd lays the face on the same ellipsoid and jowls).
+import sys
+sys.path.insert(0, str(OUT))
+import head_shape
+from head_shape import HEAD_CENTRE, hairline
+head_point = head_shape.point
+
+def sculpted_head(name, mat):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=72, ring_count=48, radius=1)
+    o = bpy.context.object
+    for v in o.data.vertices:
+        v.co = head_point(v.co.normalized())
+    return finish(o, name, mat)
+
+# Bangs: the hairline dips into a few chunky locks across the forehead
+# (azimuth from the front, radians; uneven on purpose).
+FRINGE_LOCKS = [(-.55, .11), (-.22, .15), (.12, .13), (.45, .10)]
+
+def hair_cap(name, mat, columns=96, rows=28):
+    """Short hair: a shell over the head on a grid that starts exactly on the
+    hairline (so its edge is a clean curve, not the zigzag of a cut sphere),
+    tucked under the skin there and thickest on the crown."""
+    verts, faces = [], []
+    for i in range(columns):
+        th = 2*PI*i/columns
+        az = math.atan2(math.sin(th), math.cos(th))
+        dip = sum(depth*math.exp(-((az-at)/.085)**2) for at, depth in FRINGE_LOCKS)*max(0., math.cos(th))**2
+        def dirz(z):
+            r = math.sqrt(max(0., 1-z*z))
+            return Vector((math.sin(th)*r, -math.cos(th)*r, z))
+        z0 = .3
+        for _ in range(12):
+            z0 = hairline(dirz(z0))-dip
+        for j in range(rows):
+            f = j/(rows-1)
+            z = z0+(.985-z0)*(1-(1-f)**1.6)
+            d = dirz(z).normalized()
+            surface = head_point(d, False)
+            lift = -.012+.05*smoothstep(0., .07, z-z0)+.008*f
+            verts.append(tuple(surface+(surface-HEAD_CENTRE).normalized()*lift))
+    top = len(verts)
+    verts.append(tuple(head_point(Vector((0, 0, 1)), False)+Vector((0, 0, .046))))
+    for i in range(columns):
+        n = (i+1) % columns
+        for j in range(rows-1):
+            faces.append((i*rows+j, n*rows+j, n*rows+j+1, i*rows+j+1))
+        faces.append((i*rows+rows-1, n*rows+rows-1, top))
+    me = bpy.data.meshes.new(name); me.from_pydata(verts, [], faces); me.update()
+    o = bpy.data.objects.new(name, me); geo.objects.link(o)
+    finish(o, name, mat)
+    activate(o)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    sub = o.modifiers.new('Superficie redondeada', 'SUBSURF'); sub.levels = 1
+    apply(o, sub)
+    return o
+
+def sweep(name, points, radii, mat, n=16):
+    """Round tube along a polyline, closed at both ends (hair strands)."""
+    pts = [Vector(p) for p in points]
+    verts, faces = [], []
+    for i, p in enumerate(pts):
+        tangent = (pts[min(i+1, len(pts)-1)]-pts[max(i-1, 0)]).normalized()
+        side = tangent.cross(Vector((1, 0, 0)))
+        if side.length < 1e-3: side = tangent.cross(Vector((0, 1, 0)))
+        side.normalize(); up = tangent.cross(side)
+        for j in range(n):
+            a = 2*PI*j/n
+            verts.append(tuple(p+radii[i]*(math.cos(a)*side+math.sin(a)*up)))
+    for i in range(len(pts)-1):
+        for j in range(n):
+            a = i*n+j; b = i*n+(j+1) % n
+            faces.append((a, b, b+n, a+n))
+    faces.append(tuple(reversed(range(n))))
+    faces.append(tuple((len(pts)-1)*n+j for j in range(n)))
+    me = bpy.data.meshes.new(name); me.from_pydata(verts, [], faces); me.update()
+    o = bpy.data.objects.new(name, me); geo.objects.link(o)
+    finish(o, name, mat)
+    activate(o)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    sub = o.modifiers.new('Superficie redondeada', 'SUBSURF'); sub.levels = 1
+    apply(o, sub)
+    return o
 
 def tube(name, rings, mat, axis='Z', n=48):
     # Every ring is (axis coordinate, centre 1, centre 2, radius 1, radius 2).
@@ -161,67 +257,83 @@ def ringband(name, centre, radii, thickness, mat, axis='Z'):
     o=bpy.data.objects.new(name,me); geo.objects.link(o)
     return finish(o,name,mat)
 
-# Silhouette: large blank head, soft pear-shaped shirt, short legs and mitten hands.
-head=sphere('Cabeza · lisa como referencia',(0,0,2.89),(.575,.525,.58),skin)
-neck=sphere('Cuello',(0,0,2.34),(.23,.225,.21),skin,32,20)
+# Silhouette: a big round head sunk into the shoulders (soft jowls, button nose,
+# little ears and a cowlick), a round tummy pushing the T-shirt forward past
+# the shorts, chubby short limbs, mitten hands and big soft shoes.
+head=sculpted_head('Cabeza · papada',skin)
+ears=[sphere('Oreja.'+side,(s*.60,.05,2.83),(.085,.12,.15),skin,32,20,(0,0,s*-.35))
+      for s,side in [(1,'L'),(-1,'R')]]
+# Button nose between the eyes and the mouth, clear of both.
+ears.append(sphere('Nariz',(0,-.525,2.84),(.085,.075,.075),skin,32,20))
+# Short hair, and a cowlick of three strands from the crown curling forward.
+hair=[hair_cap('Pelo',hairmat)]
+# A curl on the crown swooping forward and back on itself, and a small lock beside it.
+# Kept low (top ~3.62): the driver's head is right under the cab roof.
+hair.append(sweep('Rulo',[(0,.08,3.45),(0,0,3.535),(0,-.12,3.56),(0,-.21,3.53),(0,-.225,3.49),(0,-.165,3.47)],
+                  [.08,.075,.06,.044,.028,.01],hairmat))
+hair.append(sweep('Mechón',[(.06,.15,3.42),(.1,.12,3.53),(.155,.05,3.56)],[.05,.038,.012],hairmat))
+neck=sphere('Cuello',(0,0,2.34),(.25,.24,.21),skin,32,20)
 shirt=tube('Camiseta',[
-    (1.11,0,-.005,.76,.42),(1.125,0,-.005,.83,.465),
-    (1.18,0,-.015,.865,.49),(1.30,0,-.025,.89,.505),
-    (1.49,0,-.03,.88,.51),(1.72,0,-.015,.82,.475),
-    (1.93,0,0,.76,.41),(2.16,0,0,.725,.355),
-    (2.30,0,0,.86,.325),(2.40,0,0,.83,.30),
-    (2.46,0,0,.66,.275),(2.47,0,0,.30,.23),(2.48,0,0,.275,.22)
+    (1.10,0,-.035,.80,.50),(1.115,0,-.04,.875,.565),
+    (1.17,0,-.06,.935,.62),(1.29,0,-.085,.985,.665),
+    (1.47,0,-.085,.985,.675),(1.68,0,-.06,.925,.615),
+    (1.90,0,-.03,.835,.51),(2.12,0,-.01,.765,.415),
+    (2.29,0,0,.86,.36),(2.40,0,0,.83,.325),
+    (2.46,0,0,.67,.295),(2.475,0,0,.31,.25),(2.485,0,0,.285,.24)
 ],blue)
 shirtparts=[shirt]
 for s,side in [(1,'L'),(-1,'R')]:
     sleeve=tube('Manga',[(s*x,0,z,ry,rz) for x,z,ry,rz in [
-        (.59,2.23,.305,.235),(.70,2.25,.30,.242),(.84,2.25,.29,.244),
-        (.98,2.25,.274,.24),(1.015,2.25,.268,.235)]],blue,'X')
+        (.59,2.23,.33,.265),(.70,2.25,.33,.275),(.84,2.25,.32,.28),
+        (.98,2.25,.305,.275),(1.015,2.25,.298,.268)]],blue,'X')
     shirtparts.append(sleeve)
 shirt=union(shirtparts,'Camiseta · cuerpo y mangas',blue,.027)
-collar=ringband('Cuello · costura',(0,0,2.455),(.268,.217),.018,edgeblue)
-hem=ringband('Camiseta · dobladillo',(0,-.005,1.155),(.818,.465),.016,edgeblue)
+collar=ringband('Cuello · costura',(0,0,2.46),(.29,.25),.018,edgeblue)
+hem=ringband('Camiseta · dobladillo',(0,-.045,1.145),(.895,.585),.017,edgeblue)
 
-shortparts=[sphere('Cadera short',(0,.015,1.065),(.835,.425,.38),brown)]
+shortparts=[sphere('Cadera short',(0,.01,1.065),(.88,.47,.38),brown)]
 limbs={}; hems={}; shoes={}; soles={}; arms={}; thumbs={}
 for s,side in [(1,'L'),(-1,'R')]:
     shortparts.append(tube('Pernera short',[
-        (.58,s*.414,0,.348,.335),(.61,s*.414,0,.37,.35),
-        (.75,s*.422,.01,.385,.365),(.94,s*.417,.015,.395,.382),
-        (1.12,s*.40,.015,.397,.386),(1.25,s*.37,.015,.39,.38)
+        (.58,s*.42,0,.375,.36),(.61,s*.42,0,.397,.377),
+        (.75,s*.428,.01,.412,.392),(.94,s*.425,.015,.42,.405),
+        (1.12,s*.41,.015,.42,.41),(1.25,s*.38,.015,.41,.40)
     ],brown))
     hems[side]=tube('Short · vuelta.'+side,[
-        (.577,s*.414,0,.348,.335),(.586,s*.414,0,.365,.351),
-        (.614,s*.414,0,.373,.359),(.659,s*.414,0,.373,.359),
-        (.673,s*.414,0,.364,.35)
+        (.577,s*.42,0,.375,.36),(.586,s*.42,0,.392,.376),
+        (.614,s*.42,0,.40,.384),(.659,s*.42,0,.40,.384),
+        (.673,s*.42,0,.391,.375)
     ],cuffmat)
+    # Chubby calves: widest just under the shorts, a soft ankle into the shoe.
     limbs[side]=tube('Pierna.'+side,[
-        (.18,s*.42,0,.183,.195),(.25,s*.42,-.005,.203,.21),
-        (.35,s*.42,-.025,.221,.227),(.46,s*.42,-.048,.246,.245),
-        (.56,s*.42,-.06,.263,.256),(.67,s*.42,-.043,.284,.282),
-        (.79,s*.42,-.025,.31,.307),(.93,s*.42,0,.316,.32)
-    ],skin)
+        (.18,s*.42,0,.20,.212),(.25,s*.42,-.005,.222,.23),
+        (.35,s*.42,-.025,.245,.25),(.46,s*.42,-.045,.275,.272),
+        (.56,s*.42,-.055,.293,.286),(.67,s*.42,-.04,.31,.305),
+        (.79,s*.42,-.025,.335,.33),(.93,s*.42,0,.34,.345)
+    ],skin,n=32)
+    # Big soft shoes: a rounder, taller toe box and a thicker sole.
     shoes[side]=tube('Zapato.'+side,[
-        (.04,s*.42,-.105,.248,.365),(.06,s*.42,-.105,.261,.376),
-        (.11,s*.42,-.105,.265,.38),(.18,s*.42,-.104,.25,.35),
-        (.23,s*.42,-.07,.225,.28),(.26,s*.42,-.025,.207,.22),
-        (.275,s*.42,-.008,.184,.192)
+        (.045,s*.42,-.12,.268,.395),(.065,s*.42,-.12,.283,.408),
+        (.12,s*.42,-.12,.288,.412),(.19,s*.42,-.115,.27,.38),
+        (.24,s*.42,-.075,.24,.30),(.27,s*.42,-.025,.218,.235),
+        (.285,s*.42,-.008,.195,.205)
     ],leather)
     soles[side]=tube('Suela.'+side,[
-        (.018,s*.42,-.103,.248,.361),(.032,s*.42,-.103,.260,.374),
-        (.055,s*.42,-.103,.267,.38),(.077,s*.42,-.103,.26,.374)
+        (.018,s*.42,-.118,.268,.39),(.034,s*.42,-.118,.281,.404),
+        (.06,s*.42,-.118,.288,.41),(.085,s*.42,-.118,.28,.402)
     ],solemat)
-    # Slight elbow bend toward +Y; wrist remains precisely at the hand root.
+    # Chubby arm: a round upper arm, a soft forearm and a little wrist crease
+    # before the mitten. Slight elbow bend toward +Y.
     arm=tube('Brazo',[(s*x,y,z,ry,rz) for x,y,z,ry,rz in [
-        (.85,0,2.25,.224,.214),(.99,.012,2.25,.223,.211),
-        (1.12,.03,2.25,.216,.197),(1.25,.05,2.25,.20,.18),
-        (1.34,.047,2.25,.185,.166),(1.46,.033,2.25,.16,.145),
-        (1.60,.016,2.25,.128,.12),(1.72,0,2.25,.098,.094),
-        (1.79,-.005,2.25,.10,.095)
+        (.85,0,2.25,.262,.25),(.99,.012,2.25,.265,.25),
+        (1.12,.03,2.25,.255,.237),(1.25,.05,2.25,.238,.22),
+        (1.34,.047,2.25,.222,.205),(1.46,.033,2.25,.198,.184),
+        (1.58,.016,2.25,.168,.158),(1.68,0,2.25,.14,.134),
+        (1.725,0,2.25,.126,.121),(1.79,-.005,2.25,.13,.124)
     ]],skin,'X',32)
-    palm=sphere('Manopla',(s*1.83,-.005,2.25),(.19,.115,.096),skin,32,20)
-    tip=sphere('Dedos juntos',(s*1.971,-.005,2.263),(.105,.088,.054),skin,24,16)
-    thumb=sphere('Pulgar',(s*1.80,-.078,2.169),(.105,.074,.106),skin,24,16)
+    palm=sphere('Manopla',(s*1.845,-.005,2.25),(.205,.128,.108),skin,32,20)
+    tip=sphere('Dedos juntos',(s*1.99,-.005,2.262),(.115,.098,.062),skin,24,16)
+    thumb=sphere('Pulgar',(s*1.80,-.088,2.162),(.115,.082,.115),skin,24,16)
     arms[side]=union([arm,palm,tip,thumb],'Brazo y mano.'+side,skin,.014)
 
 shorts=union(shortparts,'Short · pieza continua',brown,.027)
@@ -232,11 +344,11 @@ breath=shirt.shape_key_add(name='Respirar')
 squash=shirt.shape_key_add(name='Barriga_blanda')
 for v in shirt.data.vertices:
     x,y,z=v.co
-    mask=math.exp(-((x/.62)**4)-(((z-1.52)/.42)**4))*max(0,min(1,(-y-.05)/.35))
-    breath.data[v.index].co.y-=.072*mask
+    mask=math.exp(-((x/.70)**4)-(((z-1.46)/.46)**4))*max(0,min(1,(-y-.05)/.45))
+    breath.data[v.index].co.y-=.08*mask
     breath.data[v.index].co.x+=x*.045*mask
-    squash.data[v.index].co.y-=.10*mask
-    squash.data[v.index].co.z-=.065*mask
+    squash.data[v.index].co.y-=.12*mask
+    squash.data[v.index].co.z-=.07*mask
 
 # Skeleton: actual deform hierarchy, FK limbs, IK targets/poles and secondary belly.
 armdata=bpy.data.armatures.new('Esqueleto humanoide')
@@ -258,7 +370,7 @@ bone('spine',(0,0,1.34),(0,0,1.83),'pelvis',connected=True)
 bone('chest',(0,0,1.83),(0,0,2.29),'spine',connected=True)
 bone('neck',(0,0,2.29),(0,0,2.40),'chest',connected=True)
 bone('head',(0,0,2.40),(0,0,3.26),'neck',connected=True)
-bone('belly',(0,-.12,1.53),(0,-.43,1.53),'spine')
+bone('belly',(0,-.14,1.46),(0,-.55,1.46),'spine')
 for s,side in [(1,'L'),(-1,'R')]:
     bone('clavicle.'+side,(s*.12,0,2.27),(s*.72,0,2.25),'chest')
     bone('upper_arm.'+side,(s*.72,0,2.25),(s*1.29,.05,2.25),'clavicle.'+side,connected=True)
@@ -342,9 +454,6 @@ for side in ['L','R']:
         d=rotation.driver_add('influence').driver; d.expression='ik'
         v=d.variables.new(); v.name='ik'; v.targets[0].id=rig; v.targets[0].data_path='["'+prop+'"]'
 
-def smoothstep(a,b,x):
-    t=max(0,min(1,(x-a)/(b-a))); return t*t*(3-2*t)
-
 def blend(a,b,t):
     return {a:1-t,b:t}
 
@@ -354,7 +463,7 @@ def torso_weights(v):
     else: w=blend('spine','chest',smoothstep(1.56,2.14,z))
     sleeve=smoothstep(.60,1.02,abs(x))*smoothstep(1.85,2.18,z)
     w={k:a*(1-sleeve) for k,a in w.items()}; w['upper_arm.'+side]=sleeve
-    belly=.60*math.exp(-((x/.62)**4)-(((z-1.53)/.38)**4))*smoothstep(.05,.4,-y)
+    belly=.66*math.exp(-((x/.70)**4)-(((z-1.46)/.42)**4))*smoothstep(.05,.5,-y)
     w={k:a*(1-belly) for k,a in w.items()}; w['belly']=belly
     return w
 
@@ -384,7 +493,9 @@ def bind(obj, weights):
     mod=obj.modifiers.new('Deformacion · esqueleto','ARMATURE'); mod.object=rig
     mod.use_deform_preserve_volume=False # Match glTF / Godot linear skinning.
 
-bind(head,'head'); bind(neck,'neck'); bind(shirt,torso_weights)
+bind(head,'head'); bind(neck,'neck')
+for o in ears+hair: bind(o,'head')
+bind(shirt,torso_weights)
 bind(collar,'chest'); bind(hem,torso_weights); bind(shorts,short_weights)
 for side in ['L','R']:
     bind(arms[side],lambda v,s=side:arm_weights(v,s))
@@ -419,7 +530,7 @@ camdata=bpy.data.cameras.new('Camara'); cam=bpy.data.objects.new('Camara',camdat
 cam.location=(4.4,-10,4.1); track(cam,(0,0,1.70)); camdata.type='ORTHO'; camdata.ortho_scale=4.95; scene.camera=cam
 try: scene.render.engine='CYCLES'
 except TypeError: pass
-scene.cycles.samples=40
+scene.cycles.samples=int(__import__('os').environ.get('SAMPLES','40'))
 scene.cycles.use_denoising=True
 scene.render.resolution_x=1400; scene.render.resolution_y=1400; scene.render.resolution_percentage=100
 enum(scene.render.image_settings,'file_format','PNG')
@@ -489,7 +600,7 @@ for screen in bpy.data.screens:
             sp.overlay.show_axis_x=False; sp.overlay.show_axis_y=False
             sp.overlay.show_ortho_grid=False; sp.overlay.show_extras=False
             sp.overlay.show_relationship_lines=False
-            sp.region_3d.update()
+            if not bpy.app.background: sp.region_3d.update()
 bpy.ops.object.mode_set(mode='POSE')
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'personaje_redondeado.blend'))
 scene.render.filepath=str(OUT/'preview_tres_cuartos.png')
