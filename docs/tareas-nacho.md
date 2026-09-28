@@ -781,7 +781,7 @@ congelados: nada de esta sección los edita; lo que necesita el camión se cuelg
   diferencial (asimetría entre pasajeros + la carga protagonista, revisada en la puerta) y suman RV There Yet?
   y Backseat Drivers. `critico-diseno`: N-212 y N-214 a favor con cambios, N-112 en contra (veredictos abajo).
 
-### N-505 · Indicaciones rápidas con voz de personaje — A · `Opus 5.5 · high` · Aviso: sí (UI y jugador de Slatex, `synth_audio.gd` solo funciones nuevas) · **[x] `HASH`**
+### N-505 · Indicaciones rápidas con voz de personaje — A · `Opus 5.5 · high` · Aviso: sí (UI y jugador de Slatex, `synth_audio.gd` solo funciones nuevas) · **[x] `c488838`**
 
 Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
 
@@ -795,7 +795,7 @@ Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
   ("pedidos de freno" de `jugabilidad-paquetes-rescate.md`) y voz sintetizada en `SynthAudio` con tono
   por color de jugador. **Hecho (`ad3e2d9`):** el ícono ya lo ponía `HudNotices._mark_pinger()`; el conductor
   ve la frase de otro tripulante grande en el centro (`ping_indicator`, color de la frase).
-  **Voz (`HASH`):** `SynthAudio.callout_voice(color, sílabas)` balbucea una sílaba por grupo de vocales
+  **Voz (`c488838`):** `SynthAudio.callout_voice(color, sílabas)` balbucea una sílaba por grupo de vocales
   de la frase (`PingCatalog.syllables()`), con tono base según el color del jugador (peer id módulo
   cinco, 150-310 Hz) y la boca que salta entre vocales como el ladrido del perro. `HudNotices._speak()`
   la hace sonar desde la cabeza del que avisa (la propia, plana); nivel `CALLOUT_VOICE_DB` medido
