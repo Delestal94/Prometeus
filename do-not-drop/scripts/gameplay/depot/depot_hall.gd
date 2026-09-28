@@ -299,20 +299,16 @@ func build_contact_shadows() -> void:
 
 func build_lights() -> void:
 	var kit := DepotKit.new(_root, "LightColliders")
-	var housing := DepotKit.flat(Color("3b4c53"), 0.5, 0.4)
 	var lamp := DepotKit.glow(Color("fff1d6"), 2.2)
 	var fixtures: Array[Vector3] = []
 	for x: float in [-9.0, -3.0, 3.0, 9.0]:
 		for z: float in [5.2, 13.0, 20.8, 28.0]:
 			fixtures.append(Vector3(x, 5.9, z))
+	var high_bay: String = DepotKit.depot_model("sm_env_depot_high_bay_lamp")
+	var tube_fixture: String = DepotKit.depot_model("sm_env_depot_tube_fixture")
 	for at: Vector3 in fixtures:
-		kit.box(Vector3(0.015, 0.65, 0.015), at + Vector3(0.0, 0.33, 0.0), housing)
-		var shade := CylinderMesh.new()
-		shade.top_radius = 0.12
-		shade.bottom_radius = 0.42
-		shade.height = 0.32
-		shade.radial_segments = 14
-		kit.add_mesh(shade, Transform3D(Basis.IDENTITY, at), housing)
+		# Shade model hangs from its hook, 0.65 m above the shade's centre.
+		kit.model(high_bay, Transform3D(Basis.IDENTITY, at + Vector3(0.0, 0.65, 0.0)))
 		var bulb := CylinderMesh.new()
 		bulb.top_radius = 0.36
 		bulb.bottom_radius = 0.36
@@ -323,7 +319,7 @@ func build_lights() -> void:
 	for unit: Dictionary in Layout.SHELF_UNITS:
 		for index: int in range(2):
 			var z: float = Layout.SHELF_START_Z + 2.0 + index * 4.0
-			kit.box(Vector3(0.2, 0.06, 1.3), Vector3(float(unit.x), 4.3, z), housing)
+			kit.model(tube_fixture, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 4.3, z)))
 			if unit.aisle == "B" and index == 1:
 				flicker_tube = MeshInstance3D.new()
 				flicker_tube.name = "FlickeringTube"
@@ -339,8 +335,6 @@ func build_lights() -> void:
 				tube_mesh.size = Vector3(0.1, 0.04, 1.2)
 				kit.add_mesh(tube_mesh, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 4.26, z)),
 						DepotKit.glow(Color("eaf6ff"), 2.0), false)
-			for cable: float in [-0.5, 0.5]:
-				kit.box(Vector3(0.01, 2.2, 0.01), Vector3(float(unit.x), 5.4, z + cable), housing)
 	kit.commit("Lamps")
 	# Few real lights (the GL Compatibility renderer caps lights per mesh):
 	# four warm high-bay pools; the fixtures above do the rest of the look.

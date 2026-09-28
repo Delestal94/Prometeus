@@ -15,6 +15,13 @@ const POWER_POLE_HEIGHT: float = 7.4
 const POWER_MAX_SPAN: float = 58.0
 const POWER_WIRE_SAG: float = 0.9
 const POWER_WIRE_SEGMENTS: int = 10
+const POWER_POLE_MODEL: String = "res://assets/models/environment/route/sm_env_route_power_pole.glb"
+## Where the wires leave each pole, from the cross-arm's centre: the tips of
+## the model's three insulators (two on the arm, one on top of the pole).
+const POWER_WIRE_ANCHORS: Array[Vector3] = [Vector3(-0.75, 0.21, 0.0), Vector3(0.0, 0.45, 0.0), Vector3(0.75, 0.21,
+		0.0)]
+## One pole in this many carries a transformer.
+const POWER_TRANSFORMER_EVERY: int = 4
 
 
 var _dresser: RouteDresser
@@ -59,41 +66,35 @@ func _build() -> void:
 	var holder := Node3D.new()
 	holder.name = "PowerLines"
 	_route.add_child(holder)
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color("6b5238")
-	wood.roughness = 0.95
-	var pole := CylinderMesh.new()
-	pole.top_radius = 0.11
-	pole.bottom_radius = 0.15
-	pole.height = POWER_POLE_HEIGHT
-	pole.radial_segments = 6
-	pole.material = wood
-	var arm := BoxMesh.new()
-	arm.size = Vector3(1.8, 0.12, 0.12)
-	arm.material = wood
+	# The pole is imported art (N-134, build_route_pieces.py): wood, braced
+	# cross-arm, insulators; a transformer on every few. Still one MultiMesh
+	# (a draw per material), and the same cylinder to hit.
+	var meshes: Dictionary = _pole_meshes()
 	var poles := MultiMesh.new()
 	poles.transform_format = MultiMesh.TRANSFORM_3D
-	poles.mesh = pole
+	poles.mesh = meshes.get("PowerPole")
 	poles.instance_count = power_poles.size()
-	var arms := MultiMesh.new()
-	arms.transform_format = MultiMesh.TRANSFORM_3D
-	arms.mesh = arm
-	arms.instance_count = power_poles.size()
+	var transformers := MultiMesh.new()
+	transformers.transform_format = MultiMesh.TRANSFORM_3D
+	transformers.mesh = meshes.get("Transformer")
+	transformers.instance_count = ceili(float(power_poles.size()) / POWER_TRANSFORMER_EVERY)
 	var colliders := StaticBody3D.new()
 	colliders.name = "PowerPoleColliders"
 	colliders.collision_layer = 1
 	var tops: Array[Transform3D] = []
 	for index: int in range(power_poles.size()):
 		var base: Vector3 = power_poles[index]
-		# The cross-arm faces along the line, toward the neighbouring pole.
+		# The cross-arm (the model's X) lies across the line, square to the
+		# neighbouring poles, with the wires running off it toward them.
 		var along: Vector3 = (power_poles[mini(index + 1, power_poles.size() - 1)] - power_poles[maxi(index - 1, 0)])
 		along.y = 0.0
 		var yaw: float = atan2(along.x, along.z) if along.length() > 0.1 else 0.0
-		var basis := Basis(Vector3.UP, yaw + PI * 0.5)
-		poles.set_instance_transform(index,
-				Transform3D(Basis.IDENTITY, base + Vector3.UP * (POWER_POLE_HEIGHT * 0.5 - 0.3)))
+		var basis := Basis(Vector3.UP, yaw)
+		poles.set_instance_transform(index, Transform3D(basis, base))
+		if index % POWER_TRANSFORMER_EVERY == 0:
+			transformers.set_instance_transform(floori(float(index) / float(POWER_TRANSFORMER_EVERY)),
+					Transform3D(basis, base))
 		var top := Transform3D(basis, base + Vector3.UP * (POWER_POLE_HEIGHT - 0.6))
-		arms.set_instance_transform(index, top)
 		tops.append(top)
 		var shape := CollisionShape3D.new()
 		var cylinder := CylinderShape3D.new()
@@ -102,7 +103,9 @@ func _build() -> void:
 		shape.shape = cylinder
 		shape.position = base + Vector3.UP * (POWER_POLE_HEIGHT * 0.5 - 0.3)
 		colliders.add_child(shape)
-	for pair: Array in [[poles, "PowerPoles"], [arms, "PowerPoleArms"]]:
+	for pair: Array in [[poles, "PowerPoles"], [transformers, "PowerPoleTransformers"]]:
+		if (pair[0] as MultiMesh).mesh == null:
+			continue
 		var instance := MultiMeshInstance3D.new()
 		instance.name = pair[1]
 		instance.multimesh = pair[0]
@@ -111,6 +114,54 @@ func _build() -> void:
 		holder.add_child(instance)
 	holder.add_child(colliders)
 	holder.add_child(_wires(tops))
+
+
+## The pole model's meshes by node name ("PowerPole", "Transformer"), each
+## flattened into one mesh with the kit's materials, ready for a MultiMesh.
+## Falls back to the old bare cylinder if the model is missing.
+func _pole_meshes() -> Dictionary:
+	var meshes: Dictionary = {}
+	var scene := load(POWER_POLE_MODEL) as PackedScene
+	if scene == null:
+		push_warning("Missing power pole model: " + POWER_POLE_MODEL)
+		var wood := StandardMaterial3D.new()
+		wood.albedo_color = Color("6b5238")
+		var pole := CylinderMesh.new()
+		pole.top_radius = 0.11
+		pole.bottom_radius = 0.15
+		pole.height = POWER_POLE_HEIGHT
+		pole.radial_segments = 6
+		pole.material = wood
+		var shifted := SurfaceTool.new()
+		shifted.append_from(pole, 0, Transform3D(Basis.IDENTITY, Vector3.UP * (POWER_POLE_HEIGHT * 0.5 - 0.3)))
+		meshes["PowerPole"] = shifted.commit()
+		return meshes
+	var model := scene.instantiate() as Node3D
+	LowpolyMaterials.apply(model)
+	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var part := node as MeshInstance3D
+		var local: Transform3D = _relative_transform(model, part)
+		var mesh := ArrayMesh.new()
+		for surface: int in range(part.mesh.get_surface_count()):
+			var tool := SurfaceTool.new()
+			tool.append_from(part.mesh, surface, local)
+			tool.commit(mesh)
+			var material: Material = part.get_surface_override_material(surface)
+			mesh.surface_set_material(surface,
+					material if material != null else part.mesh.surface_get_material(surface))
+		meshes[String(part.name)] = mesh
+	model.free()
+	return meshes
+
+
+## `node`'s transform in `root`'s space, for a tree that isn't in the scene.
+static func _relative_transform(root: Node3D, node: Node3D) -> Transform3D:
+	var result := Transform3D.IDENTITY
+	var current: Node3D = node
+	while current != null and current != root:
+		result = current.transform * result
+		current = current.get_parent() as Node3D
+	return result
 
 
 ## Three wires from arm to arm, each a chain of thin boxes hanging in a
@@ -125,9 +176,9 @@ func _wires(tops: Array[Transform3D]) -> MeshInstance3D:
 		var b: Transform3D = tops[index + 1]
 		if a.origin.distance_to(b.origin) > POWER_MAX_SPAN:
 			continue
-		for offset: float in [-0.75, 0.0, 0.75]:
-			var start: Vector3 = a * Vector3(offset, 0.08, 0.0)
-			var finish: Vector3 = b * Vector3(offset, 0.08, 0.0)
+		for anchor: Vector3 in POWER_WIRE_ANCHORS:
+			var start: Vector3 = a * anchor
+			var finish: Vector3 = b * anchor
 			var previous: Vector3 = start
 			for step: int in range(1, POWER_WIRE_SEGMENTS + 1):
 				var t: float = float(step) / POWER_WIRE_SEGMENTS

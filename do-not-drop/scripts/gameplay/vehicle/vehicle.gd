@@ -229,6 +229,22 @@ func point_velocity(world_point: Vector3) -> Vector3:
 	return linear_velocity + angular_velocity.cross(world_point - global_transform * center_of_mass)
 
 
+## Whether a rigid body in or around the truck (a box, loose clutter) should
+## use continuous collision this tick. Jolt sweeps it from last tick's spot
+## to this one against the cargo shell where the shell ends up, so riding
+## along -- a third of a metre a tick at 72 km/h -- the sweep started from
+## behind the rack's rear stop and the shut rear doors, and a box resting
+## against them was stopped on the far side and fell out (playtest
+## 2026-09-27, tests/test_cargo_shell.gd). So: sweep while loose in the
+## world, or while it moves inside the bay faster than the truck carries it
+## (a crash throwing it at the bulkhead); not while it just rides along.
+func needs_sweep(body: RigidBody3D, margin: float = 0.0) -> bool:
+	if not carries(body.global_position, margin):
+		return true
+	var carried: Vector3 = point_velocity(body.global_position)
+	return (body.linear_velocity - carried).length_squared() > carried.length_squared()
+
+
 func is_door_open(door: StringName) -> bool:
 	match door:
 		&"rear":

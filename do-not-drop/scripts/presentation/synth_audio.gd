@@ -924,28 +924,39 @@ static func _make_sheep_bleat() -> AudioStreamWAV:
 	return stream
 
 
-## A parcel scanner's "bip" for menu buttons (main menu redesign,
-## 2026-09-25): one short square-ish beep at 2.4 kHz, 70 ms, soft edges so
-## it never clicks. Short on purpose -- it plays on every press.
+## Scene sounds: built by SynthAudioScenes (see there for what each is),
+## cached here like every other stream.
+static func doorbell_ding_dong() -> AudioStreamWAV:
+	return _cached(&"doorbell_ding_dong", SynthAudioScenes.make_doorbell_ding_dong)
+
+
+static func neighbor_cheer() -> AudioStreamWAV:
+	return _cached(&"neighbor_cheer", SynthAudioScenes.make_neighbor_cheer)
+
+
+static func comic_ruin_stinger() -> AudioStreamWAV:
+	return _cached(&"comic_ruin_stinger", SynthAudioScenes.make_comic_ruin_stinger)
+
+
+static func comic_boom() -> AudioStreamWAV:
+	return _cached(&"comic_boom", SynthAudioScenes.make_comic_boom)
+
+
+static func forklift_motor_loop() -> AudioStreamWAV:
+	return _cached(&"forklift_motor_loop", SynthAudioScenes.make_forklift_motor_loop)
+
+
+static func river_flow_loop() -> AudioStreamWAV:
+	return _cached(&"river_flow_loop", SynthAudioScenes.make_river_flow_loop)
+
+
+static func train_horn() -> AudioStreamWAV:
+	return _cached(&"train_horn", SynthAudioScenes.make_train_horn)
+
+
+static func train_chug_loop() -> AudioStreamWAV:
+	return _cached(&"train_chug_loop", SynthAudioScenes.make_train_chug_loop)
+
+
 static func scanner_beep() -> AudioStreamWAV:
-	return _cached(&"scanner_beep", _make_scanner_beep)
-
-
-static func _make_scanner_beep() -> AudioStreamWAV:
-	const RATE: int = 22050
-	const DURATION: float = 0.07
-	var sample_count: int = int(RATE * DURATION)
-	var data := PackedByteArray()
-	data.resize(sample_count * 2)
-	for i: int in range(sample_count):
-		var t: float = float(i) / RATE
-		# Fundamental plus a little third harmonic: a scanner's buzzy edge
-		# without a raw square wave's harshness.
-		var wave: float = sin(TAU * 2400.0 * t) * 0.8 + sin(TAU * 7200.0 * t) * 0.15
-		var envelope: float = minf(t / 0.004, 1.0) * minf((DURATION - t) / 0.012, 1.0)
-		data.encode_s16(i * 2, roundi(clampf(wave * envelope, -1.0, 1.0) * 12000.0))
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = RATE
-	stream.data = data
-	return stream
+	return _cached(&"scanner_beep", SynthAudioScenes.make_scanner_beep)

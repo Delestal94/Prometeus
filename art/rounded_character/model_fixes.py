@@ -77,7 +77,7 @@ def reweight(rig):
             foot = o.vertex_groups['foot.'+side]
             for v in o.data.vertices:
                 y = (o.matrix_world @ v.co).y
-                t = smoothstep(-.19, -.31, y) if y < -.19 else 0.
+                t = smoothstep(-.20, -.33, y) if y < -.20 else 0.
                 toe.add([v.index], t, 'REPLACE')
                 foot.add([v.index], 1-t, 'REPLACE')
     # The shirt's pelvis weight fell from 0.17 to 0 in one ring (z ~1.40),

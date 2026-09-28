@@ -56,12 +56,12 @@ func pose_seated_body(delta: float) -> void:
 
 func seat_body_offset(seat_name: StringName) -> Vector3:
 	if seat_name == &"DriverEyePoint":
-		return Vector3(0.0, -0.73, -0.37)
+		return Vector3(0.0, -0.75, -0.37)
 	if String(seat_name).begins_with("RackSeat"):
-		return Vector3(0.0, -0.35, -0.14)
+		return Vector3(0.0, -0.42, -0.18)
 	if seat_name == &"CenterSeatEyePoint":
-		return Vector3(0.19, -0.38, -0.16)
-	return Vector3(0.0, -0.38, -0.16)
+		return Vector3(0.19, -0.45, -0.26)
+	return Vector3(0.0, -0.45, -0.26)
 
 
 func configure_driver_ik(seat: Node3D) -> void:

@@ -160,6 +160,43 @@ dominio, es señal de avisar antes de tocarlo (ver "Zona compartida" más abajo)
 - `do-not-drop/scripts/ui/`
 - `docs/plan-desarrollo.md` Fase 5 (progresión/desbloqueos), `docs/controles-y-ui.md`.
 
+## Aviso activo: pasada de pulido de audio "cartoon cómico" (2026-09-27)
+
+Pedido del usuario: repasar todo lo sintetizado en código y mejorar lo que sonaba a
+medias o sin tono cómico. Lo hizo Nacho. Zona compartida `presentation/synth_audio.gd`:
+solo funciones nuevas, ninguna firma existente cambió — `doorbell_ding_dong()`,
+`neighbor_cheer()`, `comic_ruin_stinger()`, `comic_boom()`, `forklift_motor_loop()`,
+`river_flow_loop()`, `train_horn()` y `train_chug_loop()`. `presentation/sound_audit.gd`
+y `presentation/world_mix.gd` (ambos de Nacho) las suman a "Sonidos del juego" y a la
+tabla de niveles medidos; detalle completo en `docs/audio-mundo.md`.
+
+Un archivo de Slatex, cambio chico y aislado: **`package/package_feedback.gd`** suma
+`_ruin_player` (elegido una vez en `_ready()` según la trampa) y lo hace sonar en
+`_on_package_ruined()`, junto al confeti que ya estaba. Ninguna firma ni propiedad
+replicada cambió; `test_trap_audio` sigue pasando tal cual. El resto de lo tocado es
+propio de Nacho: `route/delivery_house.gd` (timbre y alegría del vecino ya no
+reusan la campanita de Frágil ni la bocina del camión), `depot/depot_forklift.gd`
+(motor eléctrico propio en vez del motor del camión pitcheado), y dos segmentos
+nuevos con sonido: `route/segments/narrow_bridge_segment.gd` (el río, bus Exterior)
+y `route/segments/rail_crossing_segment.gd` (silbato y traqueteo del tren).
+
+## Aviso activo: cajas que se salían del camión con las puertas cerradas (#180, 2026-09-27)
+
+Toca `gameplay/package/package.gd` (Slatex). **Ninguna firma cambió**; hacé `git pull` antes de
+seguir con `package.gd`.
+
+- **`package.gd` `_physics_process()`** (solo en el host): cada tick prende o apaga
+  `continuous_cd` según `Vehicle.needs_sweep()` (nuevo, en `vehicle.gd`). La caja barre solo
+  cuando está suelta en el mundo o cuando se mueve adentro de la caja de carga más rápido de lo que
+  el camión la lleva (un choque que la tira contra el tabique). `package.tscn` sigue con
+  `continuous_cd = true` de base.
+- Por qué: viajando en el camión, a 72 km/h una caja avanza 30 cm por tick, y Jolt la barría
+  desde el lugar del tick anterior contra la cáscara ya movida, o sea desde detrás del tope trasero del
+  estante y de las puertas. Una caja apoyada ahí quedaba del lado de afuera y se caía a la ruta.
+  Con una sonda por la ruta real hubo 23 escapes en 6 rutas antes y 0 después.
+- Lo mismo para los objetos sueltos de la caja (`cargo_clutter.gd`, de Nacho).
+- Test: `test_cargo_shell` (cajas altas apoyadas contra el tope y las puertas, a toda velocidad).
+
 ## Aviso activo: tanda de tareas de Nacho del 2026-09-25 (zona compartida y archivos de Slatex)
 
 Resumen de lo que toca archivos que no son solo de Nacho. Todo está cubierto por tests nuevos o
@@ -202,6 +239,26 @@ ampliados (lista del README). Hacé `git pull` antes de seguir con `level_base.g
   conservan el suyo), la pose del camión se replica por `net_position`/`net_rotation`/`net_time`
   y en los clientes se dibuja suavizada 100 ms atrás (N-208, `vehicle/vehicle_net_smoother.gd`).
   `position`/`rotation` del camión en el cliente siguen siendo la verdad local para colisiones.
+
+## Aviso activo: personaje cartoon gordito (N-310, 2026-09-27)
+
+Pedido del usuario: modelo cartoon tierno y más gordito. Lo hizo Nacho (con Claude), todo desde
+`art/rounded_character/` (detalle en `LEEME.md` y `REFINAMIENTO.md`). Mismos huesos, nombres y
+clips: nada del juego tiene que cambiar para usarlo. Reimportá el GLB después del `git pull`.
+- `sm_char_player_rounded.glb`: cabeza lisa con papada, nariz, orejas y pelo (superficie nueva
+  `Hair`), panza más grande, oclusión y rubor en color de vértice. La camiseta sigue siendo la
+  superficie 0.
+- `presentation/character_face.gd` (zona de Nacho): la cara se apoya sobre la cabeza nueva
+  (`HEAD_*`). Los ojos ovalados de `faces/` tienen brillos redondos.
+- `player/player.gd` (de Slatex): una línea en `_apply_cosmetic()`, la copia teñida de la
+  camiseta activa `vertex_color_use_as_albedo` (el importador lo deja apagado en la primera
+  superficie) y se actualizó el comentario de `_seat_body_offset()`.
+- `player/player_seat_pose.gd` (de Slatex): `seat_body_offset()` remedido con
+  `render_player_character.gd` para el cuerpo nuevo: conductor 2 cm más hundido (el pelo tocaba
+  el techo; el rulo quedó bajo), pasajeros 7 cm más abajo y 10 cm más adelante, rack 7 y 4 cm.
+- Test: `test_player_character` (ampliado: cara sobre la piel, color de vértice).
+- Pendiente conocido: el cuerpo sentado es más ancho que la separación de los asientos de la
+  caja (0,48 m); los vecinos se superponen, como ya pasaba en menor medida.
 
 ## Aviso activo: agarrar la caja según su altura (N-309, 2026-09-25)
 

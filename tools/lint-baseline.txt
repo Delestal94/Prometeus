@@ -6,10 +6,10 @@ do-not-drop/scripts/core/run_manager.gd|max-line-length 2
 do-not-drop/scripts/core/shop_vote_manager.gd|max-line-length 1
 do-not-drop/scripts/core/unlock_manager.gd|max-line-length 3
 do-not-drop/scripts/gameplay/depot/depot_campaign_board.gd|max-line-length 4
-do-not-drop/scripts/gameplay/depot/depot_forklift.gd|max-line-length 6
+do-not-drop/scripts/gameplay/depot/depot_forklift.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_kit.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_mirror.gd|max-line-length 1
-do-not-drop/scripts/gameplay/depot/depot_roller_door.gd|max-line-length 4
+do-not-drop/scripts/gameplay/depot/depot_roller_door.gd|max-line-length 2
 do-not-drop/scripts/gameplay/interaction/interactable.gd|max-line-length 1
 do-not-drop/scripts/gameplay/interaction/package_pickup_point.gd|max-line-length 1
 do-not-drop/scripts/gameplay/interaction/seat_point.gd|max-line-length 1
@@ -40,7 +40,6 @@ do-not-drop/scripts/gameplay/route/segments/curve_segment.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/segments/narrow_bridge_segment.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/segments/rail_crossing_segment.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/segments/speed_bump_segment.gd|max-line-length 2
-do-not-drop/scripts/gameplay/route/segments/tunnel_segment.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/wildlife_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/world_mood.gd|max-line-length 3
 do-not-drop/scripts/gameplay/vehicle/vehicle.gd|max-line-length 5
@@ -160,7 +159,7 @@ do-not-drop/tests/test_route_duration_budget.gd|max-line-length 1
 do-not-drop/tests/test_route_event_manager.gd|max-line-length 7
 do-not-drop/tests/test_route_events.gd|duplicated-load 1
 do-not-drop/tests/test_route_events.gd|max-line-length 8
-do-not-drop/tests/test_route_fuzz.gd|max-line-length 8
+do-not-drop/tests/test_route_fuzz.gd|max-line-length 7
 do-not-drop/tests/test_route_pacing.gd|max-line-length 6
 do-not-drop/tests/test_route_placement_rules.gd|max-line-length 7
 do-not-drop/tests/test_route_streaming.gd|max-line-length 5

@@ -1,7 +1,16 @@
 # Personaje redondeado
 
-Modelo basado en la referencia: cabeza lisa sin rostro, camiseta azul, short marrón,
-manos tipo manopla con pulgar y zapatos redondeados. Creado en Blender 5.2.1.
+Personaje cartoon gordito (rehecho el 2026-09-27 a partir de la referencia original de
+cabeza lisa): cabeza grande y lisa con papada suave, nariz de botón, orejitas, pelo corto con
+flequillo en mechones y un rulo, panza redonda que empuja la camiseta por delante del
+short, brazos y piernas regordetes, manos tipo manopla con pulgar y zapatos grandes y
+blandos. Creado en Blender 5.2.1.
+
+La forma de la cabeza vive en `head_shape.py` (elipsoide, papada y línea del
+pelo): la usan `build_character.py` para esculpirla y `render_review.py` para apoyar la
+cara, y `character_face.gd` en el juego repite el elipsoide y la papada (`HEAD_*`). Si se
+cambia uno, hay que cambiar los tres; `test_player_character` avisa si la cara queda
+enterrada o flotando.
 
 ## Archivos
 
@@ -10,6 +19,13 @@ manos tipo manopla con pulgar y zapatos redondeados. Creado en Blender 5.2.1.
 - `preview_frente.png` y `preview_tres_cuartos.png`: renders de la pose neutra.
 - `preview_pose_rig.png`: prueba de brazos flexionados y pie levantado con IK.
 - `respaldo_sesion_anterior.blend`: copia de la escena que estaba abierta antes de cargar este personaje.
+- `render_review.py`: renders de revisión en Cycles con la cara puesta (frente, ¾ y primer
+  plano en `review/`), opcionalmente en un cuadro de un clip (`--pose Walk:10`). Rasteriza
+  los SVG de la cara con PyMuPDF del Python del sistema (`python -m pip install pymupdf`).
+- `check_clearance.py`: cuenta cuántos vértices de antebrazo y mano quedan dentro de la
+  camiseta en cada clip (la panza es grande); guarda `clearance_check` en `validation.json`.
+- `vertex_shading.py`: oclusión suave y rubor (pómulos, nariz, orejas) horneados en color
+  de vértice al exportar; Godot los multiplica en el material.
 
 ## Posar en Blender
 
@@ -49,8 +65,9 @@ incluyendo los controles que no se exportan. La animación de exportación
 combina el movimiento de barriga y el morph en un único clip.
 
 Frente en Blender: **−Y**; en el GLB importado: **+Z**. Altura aproximada:
-**3,47 unidades**; una escala uniforme de 0,5 da aproximadamente 1,74 m.
-La malla tiene **31.897 vértices / 63.738 triángulos**, con hasta cuatro
+**3,46 unidades** hasta la coronilla (3,68 con el rulo); una escala uniforme de 0,5 da
+aproximadamente 1,73 m (1,84 m con el rulo).
+La malla tiene **50.946 vértices / 101.622 triángulos** (el GLB del juego, ~23.500), con hasta cuatro
 influencias por vértice. No incluye UVs pintados: usa materiales de color sólido.
 
 Los controles IK de Blender no se convierten en controles IK de Godot.
@@ -70,7 +87,15 @@ alineación en reposo y seguimiento de controles en una pose flexionada.
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --python art/rounded_character/check_deformation.py
 # Solo el tiro del short en los clips (sin el render de Cycles):
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --python art/rounded_character/check_deformation.py -- --crotch-only
+# Brazos contra la panza en cada clip:
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --python art/rounded_character/check_clearance.py
+# Renders de revisión con cara (SAMPLES y RES por variable de entorno):
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background --factory-startup --python art/rounded_character/render_review.py -- classic smile --pose Walk:10
 ```
+
+`build_character.py` acepta `SAMPLES` (muestras de Cycles de los previews, 40 por
+defecto) y en modo `--background` no toca la vista del editor (Blender 5.2.1 se cuelga
+al actualizarla sin interfaz).
 
 La reconstrucción vuelve a generar los archivos de este directorio.
 `verify_godot.gd` se ejecuta en un proyecto temporal vacío, pasando la ruta

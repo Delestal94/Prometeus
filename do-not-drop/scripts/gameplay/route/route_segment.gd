@@ -58,7 +58,13 @@ func _build() -> void:
 
 
 func _box(node_name: String, size: Vector3, location: Vector3, color: Color, solid: bool = false) -> Node3D:
-	if continuous_terrain and node_name in ["Ground", "Road", "BridgeDeck", "WaterPlaceholder"]:
+	# "Ground"/"Road": the continuous terrain already provides that surface
+	# and its collision -- building another copy would just z-fight it.
+	# NarrowBridgeSegment's "BridgeDeck" is the one exception: on the main
+	# route the ground under it is carved into a riverbed (route_terrain.gd
+	# rivers, route.gd's leg builder), so unlike every other segment there's
+	# real empty space under the bridge and it needs its own deck.
+	if continuous_terrain and node_name in ["Ground", "Road"]:
 		return null
 	var root: Node3D = StaticBody3D.new() if solid else Node3D.new()
 	root.name = node_name
@@ -97,6 +103,16 @@ func _model(node_name: String, path: String, location: Vector3, rotation_y: floa
 	model.rotation.y = rotation_y
 	model.scale = Vector3.ONE * scale_factor
 	add_child(model)
+	return model
+
+
+## _model() dressed in the kit's detail materials (LowpolyMaterials: the
+## stone, concrete and grass grain). For the imported route pieces that
+## replaced code-built boxes (tunnel, bridge, chicane).
+func _art(node_name: String, path: String, location: Vector3, rotation_y: float = 0.0) -> Node3D:
+	var model: Node3D = _model(node_name, path, location, rotation_y)
+	if model != null:
+		LowpolyMaterials.apply(model)
 	return model
 
 

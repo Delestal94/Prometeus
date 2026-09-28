@@ -539,9 +539,11 @@ func _pose_seated_body(delta: float) -> void:
 ## tests/render_player_character.gd (2026-09-24): the wall cushions are
 ## ~0.58 m under their eye markers, the rack jump seats ~0.55 m and only
 ## 0.36 m deep, and the driver's cushion sits behind the wheel -- 0.37 m
-## forward keeps both wrists on the rim at full reach. The cab is 6 cm too
-## low for this character fully on the cushion, so the driver sinks into it
-## a little rather than putting his head through the roof.
+## forward keeps both wrists on the rim at full reach. The cab is too low for
+## this character fully on the cushion, so the driver sinks into it rather
+## than putting his head through the roof. Re-measured for the chubbier body
+## with hair (2026-09-27): the driver sinks 2 cm more (the cowlick is kept
+## low for him), the passengers sit 7 cm lower and 10 cm further forward.
 func _seat_body_offset(seat_name: StringName) -> Vector3:
 	return _seat_pose_component.seat_body_offset(seat_name)
 

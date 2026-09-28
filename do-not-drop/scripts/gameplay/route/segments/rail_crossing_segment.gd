@@ -14,6 +14,11 @@ class_name RailCrossingSegment
 ## for the phase it's in (_request_state), and every peer runs the same
 ## timers from there. Only the host's physics decides anything, and there the
 ## barrier arms and train cars are solid.
+##
+## What you see is imported art (assets/tools/build_rail_crossing.py, N-129 /
+## N-130): track, signal, barrier arm and a cartoon steam train. What you hit
+## is still the boxes this script always used -- post, arm, one per car -- so
+## the models can change without touching the driving or the network sync.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const APPROACH_TRIGGER: float = 55.0
@@ -23,8 +28,22 @@ const WARNING_SECONDS: float = 1.2
 const TRAIN_SPEED: float = 17.0
 const TRAIN_SPAN: float = 42.0
 const GAUGE: float = 1.435
-const RAIL_STEEL := Color("5b5f62")
-const SLEEPER := Color("5a4636")
+const LAMP_OFF := Color("5a1210")
+const LAMP_ON := Color("ff2a1f")
+const MODELS: String = "res://assets/models/environment/rail/"
+const TRACK_MODEL: String = MODELS + "sm_env_rail_track.glb"
+const SIGNAL_MODEL: String = MODELS + "sm_env_rail_crossing_signal.glb"
+const ARM_MODEL: String = MODELS + "sm_env_rail_barrier_arm.glb"
+## Front to back: the locomotive leads (+X, the way the train runs).
+const TRAIN_MODELS: Array[String] = [
+	MODELS + "sm_env_rail_locomotive.glb",
+	MODELS + "sm_env_rail_wagon_boxcar.glb",
+	MODELS + "sm_env_rail_wagon_tanker.glb",
+	MODELS + "sm_env_rail_wagon_boxcar.glb",
+]
+## The lenses the signal model names; each gets its own glow material.
+const LAMP_NODES: Array[StringName] = [&"LampLeft", &"LampRight"]
+const CAR_SIZE := Vector3(7.5, 3.0, 2.6)
 
 enum State { WAITING, WARNING, CLOSING, TRAIN, OPENING, DONE }
 
@@ -37,6 +56,12 @@ var _lamps: Array[StandardMaterial3D] = []
 var _train: Array[AnimatableBody3D] = []
 var _train_x: float = 0.0
 var _bell: AudioStreamPlayer3D
+## The cartoon steam train's own voice (playtest polish 2026-09-27): a
+## "toot, tooooot" as it starts across, and a chugging loop for as long as
+## it's actually on the tracks. Both hang on the locomotive (_train[0]) so
+## they move with it for free.
+var _train_horn: AudioStreamPlayer3D
+var _train_chug: AudioStreamPlayer3D
 
 
 func _init() -> void:
@@ -47,12 +72,9 @@ func _build() -> void:
 	track_z = -length * 0.5
 	_box("Ground", Vector3(24.0, 1.0, length), Vector3(0.0, -0.8, -length * 0.5), SHOULDER, true)
 	_box("Road", Vector3(12.0, 0.4, length), Vector3(0.0, -0.2, -length * 0.5), ROAD, true)
-	# Tracks: two rails on sleepers, running across the road and well beyond.
-	for side: float in [-0.5, 0.5]:
-		_box("Rail", Vector3(TRAIN_SPAN * 2.0, 0.12, 0.08), Vector3(0.0, 0.06, track_z + side * GAUGE), RAIL_STEEL)
-	for index: int in range(28):
-		var x: float = -TRAIN_SPAN + 1.5 + float(index) * (TRAIN_SPAN * 2.0 - 3.0) / 27.0
-		_box("Sleeper", Vector3(0.28, 0.06, GAUGE + 0.9), Vector3(x, 0.02, track_z), SLEEPER)
+	# Tracks: rails, sleepers and ballast across the road and well beyond
+	# (TRAIN_SPAN each way), a plank deck where they cross it. No collision.
+	_dress(_model("RailTrack", TRACK_MODEL, Vector3(0.0, 0.0, track_z)))
 	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(1.5, 0.03, track_z + 5.5), MARKING)
 	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(-1.5, 0.03, track_z - 5.5), MARKING)
 	for side: float in [-1.0, 1.0]:
@@ -97,21 +119,24 @@ func track_pads() -> Array[Vector3]:
 ## A post with the crossbuck, twin red lamps and a barrier arm that swings
 ## down across the whole road on this side of the tracks.
 func _build_signal(at: Vector3, side: float) -> void:
-	_box("CrossingPost", Vector3(0.18, 3.4, 0.18), at + Vector3(0.0, 1.7, 0.0), CONCRETE, true)
-	for tilt: float in [0.6, -0.6]:
-		var board: Node3D = _box("Crossbuck", Vector3(1.5, 0.22, 0.05), at + Vector3(0.0, 3.05, 0.0), MARKING)
-		board.rotation.z = tilt
-	for offset: float in [-0.28, 0.28]:
-		var lamp: Node3D = _box("CrossingLamp", Vector3(0.22, 0.22, 0.12), at + Vector3(offset, 2.45, side * 0.12), Color("5a1210"))
-		for child: Node in lamp.get_children():
-			if child is MeshInstance3D:
-				var glow := StandardMaterial3D.new()
-				glow.albedo_color = Color("5a1210")
-				glow.emission_enabled = true
-				glow.emission = Color("ff2a1f")
-				glow.emission_energy_multiplier = 0.0
-				(child as MeshInstance3D).material_override = glow
-				_lamps.append(glow)
+	# The post's collision stays the box it always was; the model draws it.
+	_hide_box_visual(_box("CrossingPost", Vector3(0.18, 3.4, 0.18), at + Vector3(0.0, 1.7, 0.0), CONCRETE, true))
+	# The model faces +Z: the side = -1 signal (past the tracks, for the
+	# traffic coming the other way) turns round.
+	var signal_name: String = "CrossingSignalNear" if side > 0.0 else "CrossingSignalFar"
+	var signal_model: Node3D = _dress(_model(signal_name, SIGNAL_MODEL, at, 0.0 if side > 0.0 else PI))
+	for lamp_name: StringName in LAMP_NODES:
+		var lens := signal_model.find_child(String(lamp_name), true, false) as MeshInstance3D if signal_model != null else null
+		if lens == null:
+			push_warning("Crossing signal model without %s" % lamp_name)
+			continue
+		var glow := StandardMaterial3D.new()
+		glow.albedo_color = LAMP_OFF
+		glow.emission_enabled = true
+		glow.emission = LAMP_ON
+		glow.emission_energy_multiplier = 0.0
+		lens.material_override = glow
+		_lamps.append(glow)
 	# The arm pivots on the post; up is vertical, down spans the road.
 	var pivot := StaticBody3D.new()
 	pivot.name = "BarrierArm"
@@ -120,26 +145,18 @@ func _build_signal(at: Vector3, side: float) -> void:
 	pivot.position = at + Vector3(0.0, 1.05, 0.0)
 	add_child(pivot)
 	var arm_length: float = 10.6
-	var mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(arm_length, 0.14, 0.12)
-	mesh.mesh = box
-	mesh.material_override = _material(Color("e8e3d6"))
-	mesh.position = Vector3(-side * arm_length * 0.5, 0.0, 0.0)
-	pivot.add_child(mesh)
-	for stripe: int in range(5):
-		var band := MeshInstance3D.new()
-		var band_box := BoxMesh.new()
-		band_box.size = Vector3(0.9, 0.15, 0.13)
-		band.mesh = band_box
-		band.material_override = _material(Color("c8302b"))
-		band.position = Vector3(-side * (1.2 + float(stripe) * 2.0), 0.0, 0.0)
-		pivot.add_child(band)
+	# The model is authored along +X from its hinge (and a hand's breadth
+	# behind the post); a half turn points it across the road for side = +1.
+	var arm_model: Node3D = _instance(ARM_MODEL)
+	if arm_model != null:
+		arm_model.name = "ArmModel"
+		arm_model.rotation.y = PI if side > 0.0 else 0.0
+		pivot.add_child(arm_model)
 	var shape := CollisionShape3D.new()
 	var box_shape := BoxShape3D.new()
 	box_shape.size = Vector3(arm_length, 0.3, 0.3)
 	shape.shape = box_shape
-	shape.position = mesh.position
+	shape.position = Vector3(-side * arm_length * 0.5, 0.0, 0.0)
 	pivot.add_child(shape)
 	pivot.set_meta(&"side", side)
 	# A script-driven part: keeps it out of the static geometry merge.
@@ -155,91 +172,68 @@ func _set_arm(arm: Node3D, down: float) -> void:
 
 
 func _build_train() -> void:
-	var colors: Array[Color] = [Color("2d5d7b"), Color("8c3b2e"), Color("8c3b2e"), Color("6b7a3a")]
-	for index: int in range(colors.size()):
+	for index: int in range(TRAIN_MODELS.size()):
 		var car := AnimatableBody3D.new()
 		car.name = "TrainCar%d" % index
 		car.collision_layer = 1
 		car.collision_mask = 0
 		car.sync_to_physics = false
-		var size := Vector3(7.5, 3.0, 2.6)
-		var mesh := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = size
-		mesh.mesh = box
-		var paint := StandardMaterial3D.new()
-		paint.albedo_color = colors[index]
-		paint.roughness = 0.7
-		mesh.material_override = paint
-		mesh.position.y = size.y * 0.5 + 0.35
-		car.add_child(mesh)
-		# Windows, bogies and wheels turn the old moving box into a train
-		# silhouette even at road speed.  They are child meshes of the same
-		# physical car, so collision and host-authoritative movement are unchanged.
-		var window_color := Color("9ac1ca") if index == 0 else Color("d6e0d6")
-		for side: float in [-1.0, 1.0]:
-			for window_x: float in [-2.25, -1.1, 0.1, 1.3, 2.45]:
-				var window := MeshInstance3D.new()
-				var window_mesh := BoxMesh.new()
-				window_mesh.size = Vector3(0.76, 0.58, 0.045)
-				window.mesh = window_mesh
-				window.material_override = _material(window_color)
-				window.position = Vector3(window_x, 2.08, side * (size.z * 0.5 + 0.025))
-				car.add_child(window)
-		for bogie_x: float in [-2.35, 2.35]:
-			var bogie := MeshInstance3D.new()
-			var bogie_mesh := BoxMesh.new()
-			bogie_mesh.size = Vector3(1.45, 0.28, 2.05)
-			bogie.mesh = bogie_mesh
-			bogie.material_override = _material(Color("252a2d"))
-			bogie.position = Vector3(bogie_x, 0.38, 0.0)
-			car.add_child(bogie)
-			for side: float in [-1.0, 1.0]:
-				var wheel := MeshInstance3D.new()
-				var wheel_mesh := CylinderMesh.new()
-				wheel_mesh.top_radius = 0.38
-				wheel_mesh.bottom_radius = 0.38
-				wheel_mesh.height = 0.13
-				wheel_mesh.radial_segments = 10
-				wheel.mesh = wheel_mesh
-				wheel.material_override = _material(Color("171b1d"))
-				wheel.position = Vector3(bogie_x, 0.35, side * 1.05)
-				wheel.rotation.x = PI * 0.5
-				car.add_child(wheel)
-		if index == 0:
-			# The first car reads as a locomotive: a raised cab and a dark nose.
-			var cab := MeshInstance3D.new()
-			var cab_mesh := BoxMesh.new()
-			cab_mesh.size = Vector3(2.2, 0.85, 2.3)
-			cab.mesh = cab_mesh
-			cab.material_override = _material(colors[index].lightened(0.12))
-			cab.position = Vector3(1.9, 3.0, 0.0)
-			car.add_child(cab)
-			var nose := MeshInstance3D.new()
-			var nose_mesh := BoxMesh.new()
-			nose_mesh.size = Vector3(0.45, 1.0, 2.15)
-			nose.mesh = nose_mesh
-			nose.material_override = _material(Color("293238"))
-			nose.position = Vector3(-3.95, 1.15, 0.0)
-			car.add_child(nose)
-		var roof := MeshInstance3D.new()
-		var roof_box := BoxMesh.new()
-		roof_box.size = Vector3(size.x - 0.4, 0.2, size.z - 0.2)
-		roof.mesh = roof_box
-		roof.material_override = _material(Color("3b3f42"))
-		roof.position.y = size.y + 0.45
-		car.add_child(roof)
+		# The model sits on the car's origin (the rails); the collision is the
+		# same 7.5 x 3 x 2.6 m box the cubes had, its bottom 0.35 m up.
+		var model: Node3D = _instance(TRAIN_MODELS[index])
+		if model != null:
+			model.name = "CarModel"
+			car.add_child(model)
+			LowpolyMaterials.apply(model)
+			# The loco's headlight lens is "lamp": lit after dark.
+			LowpolyMaterials.light_up(model, ["lamp"])
 		var shape := CollisionShape3D.new()
 		var box_shape := BoxShape3D.new()
-		box_shape.size = size
+		box_shape.size = CAR_SIZE
 		shape.shape = box_shape
-		shape.position = mesh.position
+		shape.position.y = CAR_SIZE.y * 0.5 + 0.35
 		car.add_child(shape)
 		car.set_meta(&"animated", true)
 		car.visible = false
 		car.process_mode = Node.PROCESS_MODE_DISABLED
 		add_child(car)
 		_train.append(car)
+	# Children of the segment itself, not of a car -- a car's process_mode
+	# toggles off between crossings, which would also stop these tracking
+	# their position. _physics_process moves them by hand instead, the same
+	# way it moves the cars' own visuals.
+	_train_horn = AudioStreamPlayer3D.new()
+	_train_horn.name = "TrainHorn"
+	_train_horn.stream = SynthAudio.train_horn()
+	_train_horn.bus = &"SFX"
+	_train_horn.volume_db = WorldMix.TRAIN_HORN_DB
+	_train_horn.unit_size = 12.0
+	_train_horn.max_distance = 80.0
+	add_child(_train_horn)
+	_train_chug = AudioStreamPlayer3D.new()
+	_train_chug.name = "TrainChug"
+	_train_chug.stream = SynthAudio.train_chug_loop()
+	_train_chug.bus = &"SFX"
+	_train_chug.volume_db = WorldMix.TRAIN_CHUG_DB
+	_train_chug.unit_size = 10.0
+	_train_chug.max_distance = 70.0
+	add_child(_train_chug)
+
+
+## An imported model, not yet in the tree (null, with a warning, if missing).
+func _instance(path: String) -> Node3D:
+	var scene := load(path) as PackedScene
+	if scene == null:
+		push_warning("Missing rail model: " + path)
+		return null
+	return scene.instantiate() as Node3D
+
+
+## The kit's detail textures (planks on the sleepers and the deck).
+func _dress(model: Node3D) -> Node3D:
+	if model != null:
+		LowpolyMaterials.apply(model)
+	return model
 
 
 func _physics_process(delta: float) -> void:
@@ -265,15 +259,20 @@ func _physics_process(delta: float) -> void:
 				for car: AnimatableBody3D in _train:
 					car.visible = true
 					car.process_mode = Node.PROCESS_MODE_INHERIT
+				_train_horn.play()
+				_train_chug.play()
 		State.TRAIN:
 			_train_x += TRAIN_SPEED * delta
 			for index: int in range(_train.size()):
 				var at: Vector3 = Vector3(_train_x - float(index) * 8.0, 0.0, track_z)
 				_train[index].position = Vector3(at.x, _ground_offset(at), at.z)
+			_train_horn.position = _train[0].position
+			_train_chug.position = _train[0].position
 			if _train_x - float(_train.size()) * 8.0 > TRAIN_SPAN:
 				for car: AnimatableBody3D in _train:
 					car.visible = false
 					car.process_mode = Node.PROCESS_MODE_DISABLED
+				_train_chug.stop()
 				state = State.OPENING
 				_timer = 0.0
 		State.OPENING:
@@ -331,6 +330,14 @@ func _apply_state(new_state: int, timer: float, train_x: float) -> void:
 		_set_arm(arm, down)
 	if state != State.DONE and not _bell.playing:
 		_bell.play()
+	# A client joining mid-crossing picks up the chugging already in
+	# progress (the horn is a one-off "here it comes", not worth replaying
+	# for someone arriving late); _physics_process's own TRAIN branch keeps
+	# it positioned and stops it once the cars clear, same as the host.
+	if train_on and not _train_chug.playing:
+		_train_chug.play()
+	elif not train_on and _train_chug.playing:
+		_train_chug.stop()
 
 
 func _is_online() -> bool:
