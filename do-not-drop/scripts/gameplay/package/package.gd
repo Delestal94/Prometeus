@@ -812,165 +812,34 @@ func _trap_kind() -> StringName:
 
 
 func _simulate_cargo(delta: float) -> void:
-	if trap_behavior == null:
-		return
-	var before_integrity: float = integrity
-	var before_state: int = trap_state
-	var vehicle: Node3D = _find_vehicle()
-	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, 1.0))
-	var speed: float = 0.0
-	if riding:
-		var velocity_now: Vector3 = vehicle.call(&"point_velocity", global_position)
-		speed = velocity_now.length()
-		if _motion_initialized:
-			var acceleration: Vector3 = (velocity_now - _motion_velocity) / maxf(delta, 0.001)
-			var local_acceleration: Vector3 = vehicle.global_basis.inverse() * acceleration
-			_motion_acceleration = _motion_acceleration.lerp(local_acceleration, minf(1.0, delta * 8.0))
-		_motion_velocity = velocity_now
-		_motion_initialized = true
-	else:
-		_motion_initialized = false
-		_motion_acceleration = Vector3.ZERO
-	care.in_lap = is_held and is_instance_valid(carrier) and not String(carrier.get(&"seat_node_path")).is_empty()
-	var input: Dictionary = player_input.duplicate()
-	# Solo crews get a modest rack assistant; they still stop to repair.
-	var solo_assist: bool = get_tree().get_nodes_in_group(&"player").size() == 1 and not is_held and tender_peer_id == 0
-	if solo_assist:
-		input["steady"] = true
-		input["calm"] = true
-		input["balance"] = care.balance_target
-	var strained: bool = care.advance(delta, _motion_acceleration, input, _assist_age < 0.3)
-	if strained and riding:
-		apply_impact(4.5)
-	# Held bodies are frozen; the trap still advances here exactly once per tick.
-	# In a solo run complex traps pause while safely parked for repairs.
-	if not care.needs_restore and care.phase != &"lost" and not care.substituted:
-		if not solo_assist or speed > 1.0:
-			trap_behavior.call("on_physics_process", self, delta, {
-				"linear_velocity": linear_velocity, "angular_velocity": angular_velocity, "input": input})
-		_award_pending_trap_milestones()
-	_check_recovery()
-	var tool := StringName(input.get("tool", "tape"))
-	var run: Node = get_node_or_null(^"/root/RunManager")
-	var available: bool = run != null and int(run.call(&"care_supply_count", tool)) > 0
-	if care.advance_work(delta, tool, input, _trap_kind(), speed, available, _assist_age < 0.3):
-		if bool(run.call(&"consume_care_supply", tool)):
-			_complete_care_tool(tool)
-		else:
-			care.message = "Otro compañero usó el último suministro."
-	_report_change(before_integrity, before_state, "El contenido se perdió durante el rescate.")
-	_care_publish_time += delta
-	if _care_publish_time >= 0.1:
-		_care_publish_time = 0.0
-		_publish_care()
-		_emit_event(&"package_hint_changed", [package_id, get_hint()])
+	PackageRescue.simulate_cargo(self, delta)
 
 
 func _check_recovery() -> void:
-	if _lost or trap_behavior == null:
-		return
-	var failed: bool = int(trap_behavior.call(&"get_state")) == ITrapBehavior.TrapState.RUINED or integrity <= 0.0
-	if care.observe(integrity, failed, _trap_kind()):
-		_spawn_salvage()
-		_publish_care()
+	PackageRescue.check_recovery(self)
 
 
 func _complete_care_tool(tool: StringName) -> void:
-	care.complete_tool(tool, _trap_kind())
-	if tool in [&"repair", &"substitute", &"rag"]:
-		_lost = false
-		_parasite_damage = 0.0
-		contents_spilled = false
-		salvage_state = {}
-		var config: Dictionary = trap_definition.get(&"params")
-		trap_behavior.call(&"on_setup", self, config.duplicate(true))
-		# A neutralized explosive is inert, not a new bomb with a fresh timer.
-		if _trap_kind() == &"explosive":
-			trap_behavior.set(&"_defused", true)
-		care.recent_hit = 1.25
-		_emit_event(&"package_contents_recovered", [package_id])
-		_award_milestone(_care_worker, &"rescued")
-	if tool == &"tape":
-		# Tape seals the box even if its contents are still on the floor.
-		is_open = false
-		_emit_event(&"package_lid_changed", [package_id, false])
-	_publish_care()
+	PackageRescue.complete_care_tool(self, tool)
 
 
 func _publish_care() -> void:
-	care_state = care.snapshot()
-	var run: Node = get_node_or_null(^"/root/RunManager")
-	if run != null and (run.get(&"cargo") as Dictionary).has(package_id):
-		run.call(&"record_care", package_id, delivery_assessment())
+	PackageRescue.publish_care(self)
 
 
 func _spawn_salvage() -> void:
-	if care.missing_parts <= 0 or not salvage_state.is_empty():
-		return
-	var vehicle: Node3D = _find_vehicle()
-	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, 1.0))
-	var origin: Vector3 = vehicle.to_local(global_position) if aboard else global_position
-	var parts: Array = []
-	for index: int in care.missing_parts:
-		parts.append(origin + Vector3((index - 1) * 0.32, -0.2, 0.45))
-	salvage_state = {"aboard": aboard, "parts": parts, "collected": [], "kind": _trap_kind()}
-	contents_spilled = true
-	_emit_event(&"package_contents_spilled", [package_id, Vector3.ZERO, trap_state])
+	PackageRescue.spawn_salvage(self)
 
 
 func collect_salvage(index: int, player: Node, point: Vector3) -> void:
-	if not is_multiplayer_authority() or _consumed or care.phase == &"lost":
-		return
-	if _reach_origin(player).distance_to(point) > 3.0:
-		return
-	var collected: Array = salvage_state.get("collected", [])
-	var parts: Array = salvage_state.get("parts", [])
-	if index < 0 or index >= parts.size() or collected.has(index):
-		return
-	if care.collect_part():
-		collected.append(index)
-		salvage_state = salvage_state.duplicate(true)
-		salvage_state["collected"] = collected
-		_publish_care()
+	PackageRescue.collect_salvage(self, index, player, point)
 
 
 ## Client sends intent only. Ownership/reach, action duration, direction, speed,
 ## inventory and the final result are all checked by the host.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_care_input(input: Dictionary) -> void:
-	if not is_multiplayer_authority() or _consumed or not _is_run_active():
-		return
-	var sender: int = multiplayer.get_remote_sender_id()
-	var peer: int = sender if sender != 0 else multiplayer.get_unique_id()
-	var operator: Node = null
-	for candidate: Node in get_tree().get_nodes_in_group(&"player"):
-		if candidate.get_multiplayer_authority() == peer:
-			operator = candidate
-			break
-	if operator == null or _reach_origin(operator).distance_to(global_position) > 3.5:
-		return
-	var owns: bool = carrier == operator or tender_peer_id == peer
-	var someone_else_holds: bool = is_instance_valid(carrier) and carrier != operator
-	var someone_else_works: bool = _care_worker != 0 and _care_worker != peer and _tender_input_age < 0.3
-	if not owns and (someone_else_holds or someone_else_works):
-		if bool(input.get("steady", false)):
-			_assist_age = 0.0
-		return
-	var balance: Variant = input.get("balance", Vector2.ZERO)
-	if not balance is Vector2 or not (balance as Vector2).is_finite():
-		return
-	var pressed: Variant = input.get("direction_pressed")
-	var direction: StringName = StringName(pressed) if pressed != null else &""
-	player_input = {"steady": bool(input.get("steady", false)), "calm": bool(input.get("calm", false)),
-		"balance": (balance as Vector2).limit_length(1.0), "work": bool(input.get("work", false)),
-		"tool": StringName(input.get("tool", "tape")),
-		"direction_pressed": direction if direction in [&"up", &"down", &"left", &"right"] else null}
-	if bool(player_input["work"]):
-		player_input["steady"] = false
-		player_input["calm"] = false
-	_care_worker = peer
-	_last_tender_peer = peer
-	_tender_input_age = 0.0
+	PackageRescue.submit_care_input(self, input)
 
 
 func delivery_assessment() -> Dictionary:
