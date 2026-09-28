@@ -17,6 +17,7 @@ var _effects_slider: HSlider
 var _voice_slider: HSlider
 var _fov_slider: HSlider
 var _shake_slider: HSlider
+var _impact_effects_check: CheckBox
 var _hud_scale_slider: HSlider
 var _control_help_option: OptionButton
 var _colorblind_check: CheckBox
@@ -46,9 +47,24 @@ func _build() -> void:
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 
+	# Options now exceed 720p once accessibility controls are included. Keep
+	# every row and the action buttons reachable instead of clipping the lower
+	# half of the panel on the minimum supported window size.
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	add_child(scroll)
+	var padding := MarginContainer.new()
+	padding.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	padding.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for side: String in ["left", "right", "top", "bottom"]:
+		padding.add_theme_constant_override("margin_" + side, 18)
+	scroll.add_child(padding)
 	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	padding.add_child(center)
 
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(480, 0), 30)
 	column.add_theme_constant_override("separation", 16)
@@ -69,6 +85,8 @@ func _build() -> void:
 	_fov_slider.value_changed.connect(func(value: float) -> void: GameSettings.preferred_fov = value)
 	_shake_slider = UiTheme.slider_row(column, tr("UI_OPT_SHAKE"), 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
 	_shake_slider.value_changed.connect(func(value: float) -> void: GameSettings.camera_shake_scale = value)
+	_impact_effects_check = UiTheme.check_box(column, "Efectos de impacto", GameSettings.impact_effects)
+	_impact_effects_check.toggled.connect(func(pressed: bool) -> void: GameSettings.impact_effects = pressed)
 
 	_sensitivity_slider = UiTheme.slider_row(column, tr("UI_OPT_SENSITIVITY"), 0.2, 3.0, 0.05, GameSettings.look_sensitivity)
 	_sensitivity_slider.value_changed.connect(func(value: float) -> void: GameSettings.look_sensitivity = value)
@@ -135,7 +153,7 @@ func _build() -> void:
 	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")]]:
 		var row := HBoxContainer.new()
 		column.add_child(row)
-		UiTheme.label(row, String(pair[1]), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiTheme.label(row, String(pair[1]), 16, UiTheme.INK).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var bind: Button = UiTheme.button(row, GameSettings.binding_label(pair[0]), false, Vector2(150, 38))
 		bind.pressed.connect(func(action: StringName = pair[0]) -> void: _listen_for_key(action))
 		_binding_buttons[pair[0]] = bind
@@ -213,6 +231,7 @@ func _sync_from_settings() -> void:
 	_fov_slider.value_changed.emit(GameSettings.preferred_fov)
 	_shake_slider.set_value_no_signal(GameSettings.camera_shake_scale)
 	_shake_slider.value_changed.emit(GameSettings.camera_shake_scale)
+	_impact_effects_check.set_pressed_no_signal(GameSettings.impact_effects)
 	_sensitivity_slider.set_value_no_signal(GameSettings.look_sensitivity)
 	_sensitivity_slider.value_changed.emit(GameSettings.look_sensitivity)
 	_hud_scale_slider.set_value_no_signal(GameSettings.hud_scale)

@@ -40,6 +40,11 @@ func _run() -> void:
 	_expect(is_equal_approx(settings.preferred_fov, 65.0), "FOV clamps to a comfortable minimum")
 	settings.camera_shake_scale = -1.0
 	_expect(is_zero_approx(settings.camera_shake_scale), "Camera shake can be disabled for accessibility")
+	settings.impact_effects = false
+	var impact_config := ConfigFile.new()
+	impact_config.load(original_path)
+	_expect(not bool(impact_config.get_value("player", "impact_effects", true)),
+		"The local impact-effects accessibility preference is saved")
 	settings.effects_volume = 0.4
 	settings.voice_volume = 0.6
 	_expect(is_equal_approx(settings.effects_volume, 0.4), "Effects volume is stored independently")
@@ -106,6 +111,7 @@ func _run() -> void:
 	settings.master_volume = 1.0
 	settings.preferred_fov = 82.0
 	settings.camera_shake_scale = 1.0
+	settings.impact_effects = true
 	settings.effects_volume = 1.0
 	settings.voice_volume = 1.0
 	settings.look_sensitivity = 1.0
@@ -114,6 +120,7 @@ func _run() -> void:
 	settings.colorblind_palette = false
 	settings.menu_text_scale = 1.0
 	settings.sound_subtitles = false
+	settings.impact_effects = true
 	settings.master_volume = 0.35
 	settings.look_sensitivity = 1.75
 	settings.invert_look_y = true

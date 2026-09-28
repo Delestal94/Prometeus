@@ -15,6 +15,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_test_content_model_contract()
+	_test_trap_content_catalog()
 	await _test_open_and_close()
 	await _test_contents_follow_state()
 	await _test_spill_on_tip()
@@ -24,9 +26,49 @@ func _run() -> void:
 	quit(failures)
 
 
+func _test_content_model_contract() -> void:
+	var files: PackedStringArray = DirAccess.get_files_at("res://data/contents")
+	files.sort()
+	for file: String in files:
+		if not file.ends_with(".tres"):
+			continue
+		var content: Resource = load("res://data/contents/%s" % file)
+		var content_id: String = String(content.get(&"id"))
+		var model: PackedScene = content.get(&"model") as PackedScene
+		_expect(model != null, "%s has a content model" % content_id)
+		if model == null:
+			continue
+		var instance: Node = model.instantiate()
+		for node_name: String in ["Filler", "Intact", "Damage", "Ruined"]:
+			_expect(instance.get_node_or_null(NodePath(node_name)) != null,
+				"%s model has %s" % [content_id, node_name])
+		instance.free()
+
+
+func _test_trap_content_catalog() -> void:
+	var expected := {
+		"balance": ["glass_tower", "wedding_cake"],
+		"explosive": ["fireworks_crate"],
+		"fragile": ["porcelain_vase", "antique_lamp"],
+		"growing_weight": ["sourdough"],
+		"hostile": ["raccoon_cage"],
+		"liquid": ["milk_canister"],
+		"noisy": ["hen", "puppy"],
+	}
+	for trap_id: String in expected:
+		var definition: Resource = load("res://data/traps/%s.tres" % trap_id)
+		var actual: Array[String] = []
+		for content: Resource in definition.get(&"contents"):
+			actual.append(String(content.get(&"id")))
+		_expect(actual == expected[trap_id], "%s has its intended contents (got %s)" % [trap_id, str(actual)])
+
+
 func _make_package(trap: String, id: StringName) -> RigidBody3D:
 	var package: RigidBody3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
 	package.set(&"trap_definition", load("res://data/traps/%s.tres" % trap))
+	var fixtures := {"fragile": "porcelain_vase", "noisy": "hen"}
+	if fixtures.has(trap):
+		package.set(&"content", load("res://data/contents/%s.tres" % fixtures[trap]))
 	package.set(&"package_id", id)
 	root.add_child(package)
 	return package

@@ -56,6 +56,9 @@ var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
 ## Their input reaches its trap through here.
 var tended_package: DeliveryPackage = null
+## A second box this player is helping after their own is lost. Unlike
+## tended_package, this can belong to an adjacent seat or be helped on foot.
+var assisted_package: DeliveryPackage = null
 var _seated: bool = false
 var _seat_camera_path: NodePath = NodePath()
 var _pitch: float = 0.0
@@ -64,10 +67,14 @@ var _last_prompt: String = ""
 var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
+var _ping_input := PlayerPingInput.new(self)
+## Rescue panel and assisting another box (player_cargo_care.gd).
+var _cargo_care: Node
 const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
 ## "Personajes" for its clips (Idle/Walk/Stroll/TurnInPlace/Jump/PickUpPackage/
@@ -208,6 +215,7 @@ func _enter_tree() -> void:
 ## air with collisions off. package.carrier is only ever set on the host, so
 ## this only acts there.
 func _exit_tree() -> void:
+	_ping_input.close_wheel()
 	var network: Node = get_node_or_null("/root/NetworkManager")
 	if network != null and network.call(&"is_host"):
 		_release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
@@ -219,9 +227,9 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	var cargo_care := preload("res://scripts/gameplay/player/player_cargo_care.gd").new()
-	cargo_care.name = "CargoCare"
-	add_child(cargo_care)
+	_cargo_care = preload("res://scripts/gameplay/player/player_cargo_care.gd").new()
+	_cargo_care.name = "CargoCare"
+	add_child(_cargo_care)
 	_last_safe_ground = global_position
 	if is_local():
 		var profile: Node = get_node_or_null("/root/UnlockManager")
@@ -253,6 +261,7 @@ func _ready() -> void:
 		return
 	_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_ping_input.build_wheel()
 	_probe.area_entered.connect(_on_probe_entered)
 	_probe.area_exited.connect(_on_probe_exited)
 
@@ -352,26 +361,13 @@ func is_local() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_local() or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if not is_local():
 		return
-	# Ping works seated or not -- it's communication, not a physical action,
-	# so it's checked before the _seated gate below applies to the rest.
-	if event.is_action_pressed(&"ui_ping"):
-		_send_ping()
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not _ping_input.wheel_open:
 		return
-	if event.is_action_pressed(&"use_card"):
-		_use_card()
+	if _ping_input.handle_event(event) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
-	if _is_drop_event(event):
-		# Seated, "drop" moves the box you tend between your lap and its rack
-		# (docs/jugabilidad-paquetes-rescate.md): never onto the floor.
-		if _seated and is_instance_valid(tended_package):
-			tended_package.rpc_id(1, &"request_lap_toggle")
-			return
-		_drop_carried()
-		return
-	if _is_open_event(event):
-		_toggle_package_lid()
+	if _handle_package_input(event):
 		return
 	if _seated:
 		if _is_interact_event(event):
@@ -398,6 +394,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## need authority the way movement/input do.
 func _process(delta: float) -> void:
 	_flinch_time = maxf(_flinch_time - delta, 0.0)
+	_ping_input.update(delta)
 	animator.animate()
 	if not is_local():
 		_apply_net_state()
@@ -590,18 +587,26 @@ func _physics_process(delta: float) -> void:
 		_publish_lid_hint(null)
 		return
 	if _seated:
-		_publish_prompt("")
+		var candidate: DeliveryPackage = (_cargo_care.assist_candidate() if tended_package != null
+				and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null)
+		_publish_prompt(candidate.assist_prompt() if candidate != null and assisted_package == null else "")
 		_publish_lid_hint(_lid_target())
 		if carried_package != null:
 			_update_carried_package()
+		if assisted_package != null:
+			_cargo_care.update_assisting()
+		elif candidate != null and Input.is_action_just_pressed(&"interact"):
+			candidate.rpc_id(1, &"request_assist")
 		return
 	_poll_interact()
+	if assisted_package != null:
+		_cargo_care.update_assisting()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	_apply_look(stick * stick_sensitivity * delta)
 	# get_vector's y is -1 for forward and +1 for back;
 	# local forward is -Z, so the two negatives cancel out to a plain +basis.z.
 	var input_vector: Vector2 = Input.get_vector(&"drive_left", &"drive_right", &"walk_forward", &"walk_backward")
-	if Input.is_action_pressed(&"care_work") and get_node("CargoCare").target != null:
+	if Input.is_action_pressed(&"care_work") and _cargo_care.target != null:
 		input_vector = Vector2.ZERO
 	var move_direction: Vector3 = (global_basis.x * input_vector.x) + (global_basis.z * input_vector.y)
 	if move_direction.length() > 1.0:
@@ -771,19 +776,46 @@ func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
 	return _carry_component.raycast(from, to, mask)
 
 
-## MVP has a single, always-available ping ("¡Cuidado!") instead of a wheel
-## of options -- docs/controles-y-ui.md sketches "¡ayuda!"/"¡cuidado!" as
-## examples, not a mandate, and one message covers the actual need (warn
-## teammates) without a second input to design around it.
 const PING_LABEL: String = "¡Cuidado!"
 
 
-func _send_ping() -> void:
-	_interaction_component.send_ping()
+func _send_ping(label: String = PING_LABEL) -> void:
+	_interaction_component.send_ping(label)
+
+
+## Card, drop and lid keys; true when the event was one of them.
+func _handle_package_input(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"use_card"):
+		_use_card()
+	elif _is_drop_event(event):
+		# Seated, "drop" moves the box you tend between your lap and its rack
+		# (docs/jugabilidad-paquetes-rescate.md): never onto the floor.
+		if _seated and is_instance_valid(tended_package):
+			tended_package.rpc_id(1, &"request_lap_toggle")
+		else:
+			_drop_carried()
+	elif _is_open_event(event):
+		_toggle_package_lid()
+	else:
+		return false
+	return true
 
 
 func _use_card() -> void:
 	_interaction_component.use_card()
+
+
+func _show_first_trap_tip(package: DeliveryPackage) -> void:
+	if package == null or package.trap_definition == null:
+		return
+	var trap_id: StringName = StringName(package.trap_definition.get(&"id"))
+	var profile: Node = get_node_or_null(^"/root/UnlockManager")
+	if profile == null or not bool(profile.call(&"mark_tip_seen", trap_id)):
+		return
+	var text: String = TutorialData.tip_text(trap_id)
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null and not text.is_empty():
+		bus.emit_signal(&"tutorial_tip_requested", text)
 
 
 func _try_interact() -> void:
@@ -902,6 +934,21 @@ func tend_package(package_path: NodePath) -> void:
 	if not _from_host():
 		return
 	_seat_pose_component.apply_tend_package(package_path)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func assist_package(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	assisted_package = get_node_or_null(package_path) as DeliveryPackage
+
+
+@rpc("any_peer", "call_local", "reliable")
+func stop_assisting(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	if assisted_package != null and assisted_package.get_path() == package_path:
+		assisted_package = null
 
 
 @rpc("any_peer", "call_local", "reliable")

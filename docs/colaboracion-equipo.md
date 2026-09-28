@@ -7,6 +7,22 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: PR #10 al día con main y con el lint (2026-09-28)
+
+Nacho integró main (con #8, el pulido cartoon) en `codex/s504-gamepad-navigation`
+y lo dejó pasando el lint con baseline. Archivos de Slatex tocados:
+
+- `package_feedback.gd`: al arruinarse suena el stinger cómico de #8
+  (`_ruin_player`), que reemplaza al golpe sordo `_ruin_thud_player`. El
+  confeti sigue respetando "Efectos de impacto". `test_ruin_feedback` controla
+  el stinger.
+- `player.gd` pasaba las 1000 líneas: el ping con rueda es ahora
+  `player_ping_input.gd` (`PlayerPingInput`, `RefCounted` creado por código), y
+  carta/soltar/abrir quedaron en `_handle_package_input()`.
+- `hud_prompts.gd`: `_action_id_for_prompt()` usa la tabla `PROMPT_ACTIONS`.
+- Líneas de más de 120 columnas cortadas en UI, tutorial y tests. Mismo
+  comportamiento.
+
 ## Aviso activo: pasada de calidad de código (2026-09-27, rama `refactor/quality-pass`)
 
 Pedido del usuario: llevar arquitectura, modularidad y variables a nivel profesional en todo el
@@ -826,3 +842,20 @@ desarrollo, contenido nuevo, streaming de tramos/modo endless, pulido, documenta
 descompuestas en pasos concretos — no relleno. Cada lista tiene prioridad **A/B/C**
 igual que `especificaciones-visuales.md`: A es accionable ya, B necesita arte/pipeline,
 C es pulido para más adelante.
+
+# Aviso S-108 · 2026-09-26
+
+El simulador reproducible de balance de trampas agrega dos herramientas aisladas en `tests/`,
+documenta objetivos y resultados en `docs/parametros-diseno.md` y añade sus comandos al
+`README.md` compartido. El ajuste queda limitado a parámetros de `data/traps/*.tres`; no cambia
+comportamientos ni archivos del dominio de Nacho.
+
+## Aviso S-110 · 2026-09-27
+
+Slatex midió 20 entregas completas con `tests/bench_delivery_time.gd`: el piloto físico de S-108
+conduce a 50 km/h y, en cada casa, un jugador bot baja, recoge la caja asignada, camina al timbre,
+entrega y vuelve a la furgoneta. Resultados promedio/máximo/mínimo: **1 casa 2,15/2,20/2,08 min;
+2 casas 3,42/3,49/3,30; 3 casas 3,80/3,89/3,70; 4 casas 3,84/3,91/3,76**. Las paradas reales
+midieron 20,0-20,9 s por casa frente a los 25 s presupuestados. Las 20 corridas terminaron con
+todas sus casas entregadas y todas quedaron dentro de la regla de 2-5 min. No se cambió
+`route.gd`: cualquier ajuste posterior del largo sigue siendo decisión de Nacho.

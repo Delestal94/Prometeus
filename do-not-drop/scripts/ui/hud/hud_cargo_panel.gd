@@ -8,12 +8,16 @@ var hud: Hud
 var cargo_hints: Dictionary = {}
 var _last_states: Dictionary = {}
 var _rescue_player: AudioStreamPlayer
+const RUIN_FLASH_SECONDS: float = 0.35
+const RUIN_FLASH_ALPHA: float = 0.24
+var _ruin_flash_left: float = 0.0
 
 
 func _ready() -> void:
 	EventBus.vehicle_telemetry.connect(_on_speed)
 	EventBus.package_integrity_changed.connect(_on_integrity)
 	EventBus.package_state_changed.connect(_on_package_state)
+	EventBus.package_ruined.connect(_on_ruin_impact)
 	EventBus.route_progress_changed.connect(_on_progress)
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.package_hint_changed.connect(_on_package_hint)
@@ -62,6 +66,23 @@ func refresh_risk_vignette(delta: float) -> void:
 		risk = maxf(risk, clampf((0.6 - ratio) / 0.6, 0.0, 1.0))
 	var target_alpha: float = risk * 0.38
 	hud.risk_vignette.color.a = move_toward(hud.risk_vignette.color.a, target_alpha, delta * 1.8)
+
+
+func _on_ruin_impact(_id: StringName, _cause: String) -> void:
+	if not GameSettings.impact_effects:
+		return
+	_ruin_flash_left = RUIN_FLASH_SECONDS
+	hud.ruin_vignette.color = Color(1.0, 1.0, 1.0, RUIN_FLASH_ALPHA)
+
+
+func refresh_ruin_impact(delta: float) -> void:
+	if not GameSettings.impact_effects:
+		_ruin_flash_left = 0.0
+		hud.ruin_vignette.color.a = 0.0
+		return
+	_ruin_flash_left = maxf(0.0, _ruin_flash_left - delta)
+	var amount: float = _ruin_flash_left / RUIN_FLASH_SECONDS
+	hud.ruin_vignette.color.a = RUIN_FLASH_ALPHA * smoothstep(0.0, 1.0, amount)
 
 
 func vignette_material() -> ShaderMaterial:

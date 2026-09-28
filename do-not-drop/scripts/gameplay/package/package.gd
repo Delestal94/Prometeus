@@ -23,6 +23,8 @@ extends RigidBody3D
 ## How close a player has to be to open or close it.
 const OPEN_REACH: float = 3.0
 const TRANSFER_REACH: float = 2.4
+const ASSIST_REACH: float = 1.5
+const ASSIST_MERIT_SECONDS: float = 10.0
 const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
 const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
 const PACKAGE_COLLISION_COOLDOWN: float = 0.16
@@ -118,7 +120,11 @@ var _carry_in_vehicle: bool = false
 ## Host: the peer whose seat looks after this box (seat_point.gd), the only
 ## one whose trap input counts, and how long since their last sample.
 var tender_peer_id: int = 0
-var _tender_input_age: float = 0.0
+var assistant_peer_id: int = 0
+## peer id -> {"input": Dictionary, "age": float}. The host combines the
+## primary sample at full strength and one assistant at half strength.
+var _tender_inputs: Dictionary = {}
+var _assist_seconds: float = 0.0
 ## Host-only merit attribution. Trap milestones belong to the last passenger
 ## who sent an input that could actually affect the box; carry milestones
 ## belong to the last player who held it.
@@ -212,11 +218,17 @@ func _physics_process(delta: float) -> void:
 		var vehicle: Node3D = _find_vehicle()
 		if vehicle != null:
 			global_transform = vehicle.global_transform * _carry_pose
-	if not player_input.is_empty():
-		_tender_input_age += delta
-		if _tender_input_age > TENDER_INPUT_TIMEOUT:
-			player_input = {}
-			_care_worker = 0
+	_age_tender_inputs(delta)
+	if assistant_peer_id > 0 and trap_state != ITrapBehavior.TrapState.AT_RISK:
+		set_assistant(0)
+	elif assistant_peer_id > 0 and _has_fresh_input(assistant_peer_id):
+		_assist_seconds += delta
+		if _assist_seconds >= ASSIST_MERIT_SECONDS:
+			_assist_seconds -= ASSIST_MERIT_SECONDS
+			_award_milestone(assistant_peer_id, &"assist")
+	# A care worker whose input stopped arriving is no longer working the box.
+	if _care_worker != 0 and not _has_fresh_input(_care_worker):
+		_care_worker = 0
 	_assist_age += delta
 	# Worn off here, not in the care model, so a box outside the run's
 	# cargo (or not simulated this tick) can't stay shielded forever.
@@ -287,6 +299,9 @@ func initialize_trap() -> void:
 	care_state = care.snapshot()
 	salvage_state = {}
 	_motion_initialized = false
+	_tender_inputs.clear()
+	assistant_peer_id = 0
+	_assist_seconds = 0.0
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -496,10 +511,10 @@ func apply_parasite_damage(amount: float) -> void:
 	_sharing_parasite_damage = false
 
 
-## Whoever is tending this package calls this on their own client every
-## physics frame; only takes effect on the host, which is the only place
-## trap_behavior should actually read it. Same unreliable-ordered reasoning
-## as the van's driver input -- a dropped sample is superseded a frame later.
+## The primary tender and, when present, one helper call this every physics
+## frame. Only the host combines their samples and advances trap behavior.
+## Same unreliable-ordered reasoning as the van's driver input -- a dropped
+## sample is superseded a frame later.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_tender_input(input: Dictionary) -> void:
 	if not is_multiplayer_authority():
@@ -507,20 +522,148 @@ func submit_tender_input(input: Dictionary) -> void:
 	# Only whoever sits at this box's seat (0: a genuine local call).
 	var sender: int = multiplayer.get_remote_sender_id()
 	var from: int = sender if sender != 0 else multiplayer.get_unique_id()
-	if tender_peer_id == 0 or from != tender_peer_id:
-		return
-	player_input = input
+	_accept_tender_input(from, input)
+
+
+func _accept_tender_input(peer_id: int, input: Dictionary) -> bool:
+	if peer_id <= 0 or (peer_id != tender_peer_id and peer_id != assistant_peer_id):
+		return false
+	_tender_inputs[peer_id] = {"input": input.duplicate(true), "age": 0.0}
 	if _has_useful_input(input):
-		_last_tender_peer = from
-	_tender_input_age = 0.0
+		_last_tender_peer = peer_id
+	_refresh_combined_input()
+	return true
 
 
 ## Host: the seat's occupant changed (seat_point.gd). Nobody tending means no
 ## input at all -- not the last sample the previous passenger left behind.
 func set_tender(peer_id: int) -> void:
 	tender_peer_id = peer_id
+	_tender_inputs.clear()
 	player_input = {}
-	_tender_input_age = 0.0
+	if peer_id == 0 or assistant_peer_id == peer_id:
+		set_assistant(0)
+	_assist_seconds = 0.0
+
+
+func set_assistant(peer_id: int) -> bool:
+	if peer_id > 0 and (tender_peer_id <= 0 or peer_id == tender_peer_id or (assistant_peer_id > 0
+			and assistant_peer_id != peer_id)):
+		return false
+	var previous: int = assistant_peer_id
+	if previous > 0:
+		_tender_inputs.erase(previous)
+	assistant_peer_id = peer_id
+	_assist_seconds = 0.0
+	_refresh_combined_input()
+	if previous > 0 and previous != peer_id and is_inside_tree():
+		var previous_player: Node = _player_for_peer(previous)
+		if previous_player != null and previous_player.has_method(&"stop_assisting"):
+			previous_player.rpc_id(previous, &"stop_assisting", get_path())
+	return true
+
+
+func can_assist(peer_id: int) -> bool:
+	return peer_id > 0 and peer_id != tender_peer_id and tender_peer_id > 0 \
+			and (assistant_peer_id == 0 or assistant_peer_id == peer_id) \
+			and assist_available()
+
+
+func assist_available() -> bool:
+	return tender_peer_id > 0 and run_state() == ITrapBehavior.TrapState.AT_RISK
+
+
+func run_state() -> int:
+	if is_inside_tree():
+		var run: Node = get_node_or_null(^"/root/RunManager")
+		if run != null:
+			var run_cargo: Dictionary = run.get(&"cargo")
+			if run_cargo.has(package_id):
+				return int((run_cargo[package_id] as Dictionary).get("state", trap_state))
+	return trap_state
+
+
+func assist_prompt() -> String:
+	var crew: Node = get_node_or_null(^"/root/CrewProgression") if is_inside_tree() else null
+	var color: String = String(crew.call(&"player_color_name", tender_peer_id)) if crew != null else "tu compañero"
+	return "Ayudar con la caja de %s" % color
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_assist() -> void:
+	if not is_multiplayer_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
+	if not can_assist(peer_id) or not _peer_within_assist_reach(peer_id):
+		return
+	if not set_assistant(peer_id):
+		return
+	var player: Node = _player_for_peer(peer_id)
+	if player != null and player.has_method(&"assist_package"):
+		player.rpc_id(peer_id, &"assist_package", get_path())
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_stop_assist() -> void:
+	if not is_multiplayer_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
+	if peer_id == assistant_peer_id:
+		set_assistant(0)
+
+
+func _age_tender_inputs(delta: float) -> void:
+	for raw_peer: Variant in _tender_inputs.keys():
+		var sample: Dictionary = _tender_inputs[raw_peer]
+		sample["age"] = float(sample.get("age", 0.0)) + delta
+		if float(sample["age"]) > TENDER_INPUT_TIMEOUT:
+			_tender_inputs.erase(raw_peer)
+		else:
+			_tender_inputs[raw_peer] = sample
+	_refresh_combined_input()
+
+
+func _refresh_combined_input() -> void:
+	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0,
+			"direction_pressed": null}
+	# The care worker (carrying it, PackageRescue) counts in full, like the tender.
+	var worker: int = _care_worker if _care_worker not in [tender_peer_id, assistant_peer_id] else 0
+	for peer_id: int in [tender_peer_id, assistant_peer_id, worker]:
+		if peer_id <= 0 or not _has_fresh_input(peer_id):
+			continue
+		var sample: Dictionary = _tender_inputs[peer_id]["input"]
+		var weight: float = 0.5 if peer_id == assistant_peer_id else 1.0
+		if bool(sample.get("steady", false)):
+			combined["steady_strength"] = float(combined["steady_strength"]) + weight
+		if bool(sample.get("calm", false)):
+			combined["calm_strength"] = float(combined["calm_strength"]) + weight
+		if combined["direction_pressed"] == null and sample.get("direction_pressed") != null:
+			combined["direction_pressed"] = sample["direction_pressed"]
+	combined["steady"] = float(combined["steady_strength"]) > 0.0
+	combined["calm"] = float(combined["calm_strength"]) > 0.0
+	player_input = combined if float(combined["steady_strength"]) > 0.0 \
+			or float(combined["calm_strength"]) > 0.0 \
+			or combined["direction_pressed"] != null else {}
+	PackageRescue.add_care_fields(self)
+
+
+func _has_fresh_input(peer_id: int) -> bool:
+	return _tender_inputs.has(peer_id) and float((_tender_inputs[peer_id] as Dictionary).get("age",
+			INF)) <= TENDER_INPUT_TIMEOUT
+
+
+func _peer_within_assist_reach(peer_id: int) -> bool:
+	var player: Node = _player_for_peer(peer_id)
+	return player != null and _reach_origin(player).distance_to(global_position) <= ASSIST_REACH
+
+
+func _player_for_peer(peer_id: int) -> Node:
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		if player.get_multiplayer_authority() == peer_id:
+			return player
+	return null
 
 
 ## Whoever is carrying this package (on foot, not yet mounted) calls this
@@ -633,40 +776,14 @@ func _ride_along_if_aboard() -> void:
 ## the rack frees them for tools but needs a strap (package_care.gd).
 @rpc("any_peer", "call_local", "reliable")
 func request_lap_toggle() -> void:
-	if not is_multiplayer_authority() or _consumed:
-		return
-	var sender: int = multiplayer.get_remote_sender_id()
-	var peer: int = sender if sender != 0 else multiplayer.get_unique_id()
-	if peer != tender_peer_id:
-		return
-	var operator: Node = null
-	for candidate: Node in get_tree().get_nodes_in_group(&"player"):
-		if candidate.get_multiplayer_authority() == peer:
-			operator = candidate
-	if operator == null or String(operator.get(&"seat_node_path")).is_empty():
-		return
-	if is_held and carrier == operator:
-		if is_instance_valid(_lap_mount) and _lap_mount.get(&"occupied_by") == null:
-			_lap_mount.call(&"store", self)
-	elif is_loaded and not is_held and current_mount != null:
-		_lap_mount = current_mount
-		take_by(operator)
-	care.in_lap = is_held and carrier == operator
-	_publish_care()
+	PackageRescue.request_lap_toggle(self)
 
 
 ## Host: someone dropped out. If they were looking after this box, its
 ## rescue window is held so the crew can reach it -- leaving never loses a
 ## box on the spot (docs/jugabilidad-paquetes-rescate.md, "Caída de un jugador").
 func peer_left(peer_id: int) -> void:
-	var carried_by_them: bool = is_instance_valid(carrier) and carrier.get_multiplayer_authority() == peer_id
-	if peer_id in [tender_peer_id, _care_worker] or carried_by_them:
-		care.hold_crisis(CareModel.CRISIS_SECONDS)
-		if tender_peer_id == peer_id:
-			tender_peer_id = 0
-		_care_worker = 0
-		player_input = {}
-		_publish_care()
+	PackageRescue.peer_left(self, peer_id)
 
 
 ## For when the carrier goes away (disconnect) rather than letting go: the
@@ -843,17 +960,7 @@ func submit_care_input(input: Dictionary) -> void:
 
 
 func delivery_assessment() -> Dictionary:
-	var category: StringName = &"intact"
-	if care.substituted:
-		category = &"substituted"
-	elif _lost or care.phase == &"lost" or care.needs_restore or contents_spilled:
-		category = &"unconvincing"
-	elif care.repairs > 0:
-		category = &"repaired" if not is_open and integrity >= 60.0 else &"unconvincing"
-	elif is_open or integrity < 85.0 or trap_state != 0:
-		category = &"damaged"
-	return {"category": category, "kind": _trap_kind(), "quality": integrity,
-		"repairs": care.repairs, "worst": care.worst_quality, "substituted": care.substituted}
+	return PackageRescue.delivery_assessment(self)
 
 
 static func _has_useful_input(input: Dictionary) -> bool:

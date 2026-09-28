@@ -90,7 +90,9 @@ func _test_v2_profile_migration() -> void:
 	_expect(not migrated.is_unlocked(&"hostile_trap"), "Migration does not grant thresholds the profile has not reached")
 	_expect(migrated.is_unlocked(&"sky_uniform"), "Migration never removes an existing unlock")
 	var saved: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	_expect(saved is Dictionary and int(saved.get("version", 0)) == 3, "The migrated profile is persisted as version 3")
+	var current_version: int = int((migrated.get_script() as Script).get_script_constant_map()[&"PROFILE_VERSION"])
+	_expect(saved is Dictionary and int(saved.get("version", 0)) == current_version,
+		"The migrated profile is persisted as the current version (%d)" % current_version)
 	migrated.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 

@@ -11,7 +11,8 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## mint (never actually chosen) is moved to team_color when loaded.
 ## 3: Peso creciente and Ruidoso joined the gradual trap curve. Loading an
 ## older profile grants every unlock its existing progress already earns.
-const PROFILE_VERSION := 3
+## 4: first-time trap tutorial cards persist in seen_tips.
+const PROFILE_VERSION := 4
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
@@ -72,6 +73,7 @@ var selected_truck: StringName = &"classic"
 var selected_paint: StringName = &"white"
 var selected_eyes: StringName = FaceCatalog.DEFAULT_EYES
 var selected_mouth: StringName = FaceCatalog.DEFAULT_MOUTH
+var seen_tips: Dictionary = {}
 
 
 func _ready() -> void:
@@ -96,12 +98,23 @@ func reset_profile() -> void:
 	selected_paint = &"white"
 	selected_eyes = FaceCatalog.DEFAULT_EYES
 	selected_mouth = FaceCatalog.DEFAULT_MOUTH
+	seen_tips.clear()
 	save_profile()
 	progress_changed.emit()
 
 
 func is_unlocked(unlock_id: StringName) -> bool:
 	return bool(unlocked.get(unlock_id, false))
+
+
+## Returns true exactly once per trap and persists immediately, so changing
+## levels or closing the game cannot replay an already-read first-time card.
+func mark_tip_seen(trap_id: StringName) -> bool:
+	if trap_id.is_empty() or bool(seen_tips.get(trap_id, false)):
+		return false
+	seen_tips[trap_id] = true
+	save_profile()
+	return true
 
 
 ## Trap ids this profile hasn't unlocked yet: the depot leaves them off its
@@ -137,6 +150,39 @@ func _ensure_trap_capacity(locked: Array[StringName], required_boxes: int) -> Ar
 
 func requirements(unlock_id: StringName) -> Dictionary:
 	return Dictionary(UNLOCKS.get(unlock_id, {})).duplicate(true)
+
+
+## The closest locked reward, with one conservative percentage: both score
+## and deliveries are required, so the slower condition owns the bar.
+func next_unlock_progress() -> Dictionary:
+	var next_id: StringName = &""
+	var next_rule: Dictionary = {}
+	for unlock_id: StringName in UNLOCKS:
+		if is_unlocked(unlock_id):
+			continue
+		var rule: Dictionary = UNLOCKS[unlock_id]
+		if next_rule.is_empty() \
+				or int(rule["deliveries"]) < int(next_rule["deliveries"]) \
+				or (int(rule["deliveries"]) == int(next_rule["deliveries"])
+						and int(rule["score"]) < int(next_rule["score"])):
+			next_id = unlock_id
+			next_rule = rule
+	if next_rule.is_empty():
+		return {}
+	var target_deliveries: int = int(next_rule["deliveries"])
+	var target_score: int = int(next_rule["score"])
+	var delivery_ratio: float = (1.0 if target_deliveries <= 0
+			else minf(float(successful_deliveries) / target_deliveries, 1.0))
+	var score_ratio: float = 1.0 if target_score <= 0 else minf(float(total_score) / target_score, 1.0)
+	return {
+		"id": next_id,
+		"title": String(next_rule["title"]),
+		"current_deliveries": successful_deliveries,
+		"target_deliveries": target_deliveries,
+		"current_score": total_score,
+		"target_score": target_score,
+		"progress": minf(delivery_ratio, score_ratio),
+	}
 
 
 func cosmetic_choices() -> Array[Dictionary]:
@@ -262,6 +308,7 @@ func save_profile() -> void:
 		"selected_paint": selected_paint,
 		"selected_eyes": selected_eyes,
 		"selected_mouth": selected_mouth,
+		"seen_tips": seen_tips,
 	})
 	if not saved:
 		push_warning("No se pudo guardar progreso: " + storage_path)
@@ -296,6 +343,10 @@ func load_profile() -> void:
 	selected_paint = saved_paint if PAINTS.has(saved_paint) and is_unlocked(StringName(PAINTS[saved_paint]["unlock"])) else &"white"
 	selected_eyes = FaceCatalog.valid_eyes(StringName(parsed.get("selected_eyes", FaceCatalog.DEFAULT_EYES)))
 	selected_mouth = FaceCatalog.valid_mouth(StringName(parsed.get("selected_mouth", FaceCatalog.DEFAULT_MOUTH)))
+	seen_tips.clear()
+	for trap_id: Variant in Dictionary(parsed.get("seen_tips", {})):
+		if bool(parsed["seen_tips"].get(trap_id, false)):
+			seen_tips[StringName(trap_id)] = true
 	if saved_version < PROFILE_VERSION or not retroactive_unlocks.is_empty():
 		save_profile()
 

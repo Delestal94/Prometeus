@@ -147,7 +147,7 @@ static func submit_care_input(p: DeliveryPackage, input: Dictionary) -> void:
 		return
 	var owns: bool = p.carrier == operator or p.tender_peer_id == peer
 	var someone_else_holds: bool = is_instance_valid(p.carrier) and p.carrier != operator
-	var someone_else_works: bool = p._care_worker != 0 and p._care_worker != peer and p._tender_input_age < 0.3
+	var someone_else_works: bool = p._care_worker != 0 and p._care_worker != peer and p._has_fresh_input(p._care_worker)
 	if not owns and (someone_else_holds or someone_else_works):
 		if bool(input.get("steady", false)):
 			p._assist_age = 0.0
@@ -157,13 +157,90 @@ static func submit_care_input(p: DeliveryPackage, input: Dictionary) -> void:
 		return
 	var pressed: Variant = input.get("direction_pressed")
 	var direction: StringName = StringName(pressed) if pressed != null else &""
-	p.player_input = {"steady": bool(input.get("steady", false)), "calm": bool(input.get("calm", false)),
+	var sample: Dictionary = {"steady": bool(input.get("steady", false)), "calm": bool(input.get("calm", false)),
 		"balance": (balance as Vector2).limit_length(1.0), "work": bool(input.get("work", false)),
 		"tool": StringName(input.get("tool", "tape")),
 		"direction_pressed": direction if direction in [&"up", &"down", &"left", &"right"] else null}
-	if bool(p.player_input["work"]):
-		p.player_input["steady"] = false
-		p.player_input["calm"] = false
+	if bool(sample["work"]):
+		sample["steady"] = false
+		sample["calm"] = false
+	# Same per-peer samples as submit_tender_input(), so the two never fight
+	# over player_input; add_care_fields() adds the tool work on top.
+	p._tender_inputs[peer] = {"input": sample, "age": 0.0}
 	p._care_worker = peer
 	p._last_tender_peer = peer
-	p._tender_input_age = 0.0
+	p._refresh_combined_input()
+
+
+## After the steady/calm mix: the balance, tool and work of whoever is working
+## the box (the care worker, else the seat's tender). Working takes both hands,
+## so it cancels steadying and calming.
+static func add_care_fields(p: DeliveryPackage) -> void:
+	var worker: int = p._care_worker if p._has_fresh_input(p._care_worker) else p.tender_peer_id
+	if worker <= 0 or not p._has_fresh_input(worker):
+		return
+	var own: Dictionary = p._tender_inputs[worker]["input"]
+	if not own.has("tool"):
+		return
+	var combined: Dictionary = p.player_input.duplicate() if not p.player_input.is_empty() else {
+			"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0, "direction_pressed": null}
+	for key: String in ["balance", "work", "tool"]:
+		combined[key] = own[key]
+	if bool(combined["work"]):
+		combined["steady"] = false
+		combined["calm"] = false
+	p.player_input = combined
+
+
+## Host: the seated passenger tending this box moves it between their lap
+## and the rack it came from. The lap cushions hits but ties up the hands;
+## the rack frees them for tools but needs a strap (package_care.gd).
+static func request_lap_toggle(p: DeliveryPackage) -> void:
+	if not p.is_multiplayer_authority() or p._consumed:
+		return
+	var sender: int = p.multiplayer.get_remote_sender_id()
+	var peer: int = sender if sender != 0 else p.multiplayer.get_unique_id()
+	if peer != p.tender_peer_id:
+		return
+	var operator: Node = null
+	for candidate: Node in p.get_tree().get_nodes_in_group(&"player"):
+		if candidate.get_multiplayer_authority() == peer:
+			operator = candidate
+	if operator == null or String(operator.get(&"seat_node_path")).is_empty():
+		return
+	if p.is_held and p.carrier == operator:
+		if is_instance_valid(p._lap_mount) and p._lap_mount.get(&"occupied_by") == null:
+			p._lap_mount.call(&"store", p)
+	elif p.is_loaded and not p.is_held and p.current_mount != null:
+		p._lap_mount = p.current_mount
+		p.take_by(operator)
+	p.care.in_lap = p.is_held and p.carrier == operator
+	p._publish_care()
+
+
+## Host: someone dropped out. If they were looking after this box, its
+## rescue window is held so the crew can reach it -- leaving never loses a
+## box on the spot (docs/jugabilidad-paquetes-rescate.md, "Caída de un jugador").
+static func peer_left(p: DeliveryPackage, peer_id: int) -> void:
+	var carried_by_them: bool = is_instance_valid(p.carrier) and p.carrier.get_multiplayer_authority() == peer_id
+	if peer_id in [p.tender_peer_id, p._care_worker] or carried_by_them:
+		p.care.hold_crisis(DeliveryPackage.CareModel.CRISIS_SECONDS)
+		if p.tender_peer_id == peer_id:
+			p.tender_peer_id = 0
+		p._care_worker = 0
+		p.player_input = {}
+		p._publish_care()
+
+
+static func delivery_assessment(p: DeliveryPackage) -> Dictionary:
+	var category: StringName = &"intact"
+	if p.care.substituted:
+		category = &"substituted"
+	elif p._lost or p.care.phase == &"lost" or p.care.needs_restore or p.contents_spilled:
+		category = &"unconvincing"
+	elif p.care.repairs > 0:
+		category = &"repaired" if not p.is_open and p.integrity >= 60.0 else &"unconvincing"
+	elif p.is_open or p.integrity < 85.0 or p.trap_state != 0:
+		category = &"damaged"
+	return {"category": category, "kind": p._trap_kind(), "quality": p.integrity,
+		"repairs": p.care.repairs, "worst": p.care.worst_quality, "substituted": p.care.substituted}

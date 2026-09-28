@@ -123,3 +123,30 @@ func _physics_process(_delta: float) -> void:
 func _using_gamepad() -> bool:
 	var settings: Node = get_node_or_null(^"/root/GameSettings")
 	return settings != null and bool(settings.get(&"using_gamepad"))
+
+
+## The nearest box someone else tends that this player could steady.
+func assist_candidate() -> DeliveryPackage:
+	var best: DeliveryPackage = null
+	var best_distance: float = DeliveryPackage.ASSIST_REACH
+	for node: Node in player.get_tree().get_nodes_in_group(&"cargo"):
+		var package := node as DeliveryPackage
+		if (package == null or package == player.tended_package
+				or not package.can_assist(player.get_multiplayer_authority())):
+			continue
+		var distance: float = player.reach_origin().distance_to(package.global_position)
+		if distance <= best_distance:
+			best = package
+			best_distance = distance
+	return best
+
+
+func update_assisting() -> void:
+	if not is_instance_valid(player.assisted_package):
+		player.assisted_package = null
+		return
+	if player.reach_origin().distance_to(player.assisted_package.global_position) > DeliveryPackage.ASSIST_REACH:
+		player.assisted_package.rpc_id(1, &"request_stop_assist")
+		player.assisted_package = null
+		return
+	player.assisted_package.rpc_id(1, &"submit_tender_input", player._gather_package_input())

@@ -22,6 +22,7 @@ const EXPECTED_POINTS := {
 	&"sequence": 8,
 	&"handover": 5,
 	&"photo_saved": 15,
+	&"assist": 5,
 }
 
 var _failures: int = 0

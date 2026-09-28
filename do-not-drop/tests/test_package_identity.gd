@@ -5,14 +5,25 @@ extends SceneTree
 var failures := 0
 
 func _initialize() -> void:
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
-	root.add_child(level)
+	var fixtures: Array[Dictionary] = [
+		{"trap": "fragile", "content": "porcelain_vase", "size": Vector3(0.65, 0.65, 0.65)},
+		{"trap": "noisy", "content": "hen", "size": Vector3(0.65, 0.65, 0.65)},
+		{"trap": "balance", "content": "wedding_cake", "size": Vector3(0.42, 0.98, 0.42)},
+		{"trap": "growing_weight", "content": "sourdough", "size": Vector3(0.95, 0.42, 0.95)},
+	]
+	var packages: Array[Node] = []
+	for fixture: Dictionary in fixtures:
+		var package: Node = load("res://scenes/gameplay/package/package.tscn").instantiate()
+		package.name = "Package%s" % String(fixture["trap"]).to_pascal_case()
+		package.set(&"package_id", StringName("identity_%s" % fixture["trap"]))
+		package.set(&"trap_definition", load("res://data/traps/%s.tres" % fixture["trap"]))
+		package.set(&"content", load("res://data/contents/%s.tres" % fixture["content"]))
+		root.add_child(package)
+		packages.append(package)
 	await process_frame
 	await process_frame
-	_expect_identity(level.get_node("World/Package"), Vector3(0.65, 0.65, 0.65), &"porcelain_vase")
-	_expect_identity(level.get_node("World/PackageNoisy"), Vector3(0.65, 0.65, 0.65), &"hen")
-	_expect_identity(level.get_node("World/PackageBalance"), Vector3(0.42, 0.98, 0.42), &"wedding_cake")
-	_expect_identity(level.get_node("World/PackageGrowingWeight"), Vector3(0.95, 0.42, 0.95), &"sourdough")
+	for i: int in fixtures.size():
+		_expect_identity(packages[i], fixtures[i]["size"], StringName(fixtures[i]["content"]))
 	if failures == 0:
 		print("PASS: every trap has its own box, contents, label and damage marks")
 	quit(failures)

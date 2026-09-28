@@ -44,6 +44,13 @@ var overlay_kicker: Label
 var overlay_title: Label
 var overlay_body: Label
 var overlay_stats: Label
+var result_details: HBoxContainer
+var result_rows_box: VBoxContainer
+var result_meta_box: VBoxContainer
+var result_awards_label: RichTextLabel
+var result_event_label: Label
+var result_progress_label: Label
+var result_progress_bar: ProgressBar
 var score_label: Label
 var record_label: Label
 var action_button: Button
@@ -56,6 +63,7 @@ var orders: Array = []
 var _prep_refresh: float = 0.0
 var overlay_mode: String = "start"
 var interaction_label: Label
+var interaction_icon: TextureRect
 var interaction_prompt: String = ""
 var ping_label: Label
 var ping_indicator: Label
@@ -69,6 +77,7 @@ var complaints_label: Label
 var photo_strip: HBoxContainer
 var fade_rect: ColorRect
 var risk_vignette: ColorRect
+var ruin_vignette: ColorRect
 var shortcut_label: RichTextLabel
 ## Centres the start/pause/results card over the dimmed backdrop; scaled for
 ## the window's shape only (not the player's HUD scale), see apply_hud_scale().
@@ -224,6 +233,12 @@ func _build_frame() -> void:
 	risk_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	risk_vignette.material = cargo.vignette_material()
 	root.add_child(risk_vignette)
+	ruin_vignette = ColorRect.new()
+	ruin_vignette.color = Color(1.0, 1.0, 1.0, 0.0)
+	ruin_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ruin_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ruin_vignette.material = cargo.vignette_material()
+	root.add_child(ruin_vignette)
 	hud_layer = Control.new()
 	hud_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(hud_layer)
@@ -289,6 +304,17 @@ func _build_bottom_bar() -> void:
 	interaction_label = UiTheme.floating_label(dashboard, "", 25, PAPER, 560, 0)
 	interaction_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	interaction_label.custom_minimum_size.x = 560
+	interaction_icon = TextureRect.new()
+	interaction_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	interaction_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	interaction_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interaction_icon.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
+	interaction_icon.offset_left = -70
+	interaction_icon.offset_right = -10
+	interaction_icon.offset_top = -30
+	interaction_icon.offset_bottom = 30
+	interaction_icon.hide()
+	interaction_label.add_child(interaction_icon)
 
 	# --- Bottom: the cargo (left), the objective (right) ---
 	var bottom := HBoxContainer.new()
@@ -351,8 +377,6 @@ func _build_floating_labels() -> void:
 	# The package-at-risk hint and the route event share the critical queue,
 	# never the screen. Kept as an alias for the existing cargo HUD seam.
 	cargo_hint_label = event_label
-
-
 ## The start / pause / results card and its buttons.
 func _build_overlay_card() -> void:
 	overlay = ColorRect.new()
@@ -361,7 +385,7 @@ func _build_overlay_card() -> void:
 	overlay.color = Color(UiTheme.BACKDROP, 0.72)
 	overlay_center = CenterContainer.new()
 	overlay.add_child(overlay_center)
-	card = make_panel(overlay_center, Vector2(640, 0))
+	card = make_panel(overlay_center, Vector2(900, 0))
 	card.add_theme_constant_override("separation", 14)
 	overlay_kicker = UiTheme.tag(card, "", YELLOW, -2.0, 16)
 	overlay_title = UiTheme.title(card, tr("HUD_START_TITLE"), 62)
@@ -375,15 +399,39 @@ func _build_overlay_card() -> void:
 	results.set_hero(false)
 	overlay_body = make_label(card, "", 21, INK)
 	overlay_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	overlay_body.custom_minimum_size.x = 575
+	overlay_body.custom_minimum_size.x = 835
+	result_details = HBoxContainer.new()
+	result_details.add_theme_constant_override("separation", 24)
+	result_details.visible = false
+	card.add_child(result_details)
+	result_rows_box = VBoxContainer.new()
+	result_rows_box.add_theme_constant_override("separation", 3)
+	result_rows_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	result_details.add_child(result_rows_box)
+	result_meta_box = VBoxContainer.new()
+	result_meta_box.custom_minimum_size.x = 320
+	result_meta_box.add_theme_constant_override("separation", 6)
+	result_details.add_child(result_meta_box)
+	result_awards_label = RichTextLabel.new()
+	result_awards_label.bbcode_enabled = true
+	result_awards_label.fit_content = true
+	result_awards_label.scroll_active = false
+	result_awards_label.custom_minimum_size.x = 320
+	result_awards_label.add_theme_font_size_override("normal_font_size", 16)
+	result_meta_box.add_child(result_awards_label)
+	result_event_label = make_label(result_meta_box, "", 16, MUTED)
+	result_event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	result_progress_label = make_label(result_meta_box, "", 15, MUTED)
+	result_progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	result_progress_bar = UiTheme.bar(result_meta_box, MINT, 12)
 	overlay_stats = make_label(card, "", 17, MUTED)
 	overlay_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	overlay_stats.custom_minimum_size.x = 575
+	overlay_stats.custom_minimum_size.x = 835
 	# What the residents had to say, and the photos that answer them. Both
 	# stay hidden unless the run actually produced any.
 	complaints_label = make_label(card, "", 17, STATE_TEXT[1])
 	complaints_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	complaints_label.custom_minimum_size.x = 575
+	complaints_label.custom_minimum_size.x = 835
 	complaints_label.visible = false
 	photo_strip = HBoxContainer.new()
 	photo_strip.add_theme_constant_override("separation", 14)
@@ -438,6 +486,7 @@ func _process(delta: float) -> void:
 	prompts.refresh_shortcuts(delta)
 	pause.refresh_restart_hold(delta)
 	cargo.refresh_risk_vignette(delta)
+	cargo.refresh_ruin_impact(delta)
 	cargo.refresh_state_pulses()
 	prompts.refresh_sound_subtitle()
 	notices.refresh_deadline()

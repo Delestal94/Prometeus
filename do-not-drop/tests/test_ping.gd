@@ -8,6 +8,7 @@ extends SceneTree
 
 var _failures: int = 0
 var _received: Array = []
+const PingWheelScript = preload("res://scripts/ui/ping_wheel.gd")
 
 
 func _initialize() -> void:
@@ -34,15 +35,22 @@ func _initialize() -> void:
 	root.add_child(player)
 	await process_frame
 	player.global_position = Vector3(1.0, 0.0, -2.0)
-	player.call(&"_send_ping")
-	_expect(_received.size() == 1, "Player._send_ping() reaches EventBus offline, the same as a real key press would")
+	for option: Dictionary in PingCatalog.OPTIONS:
+		player.call(&"_send_ping", String(option["label"]))
+	_expect(_received.size() == PingCatalog.OPTIONS.size(), "Every wheel option reaches EventBus")
+	for index: int in mini(_received.size(), PingCatalog.OPTIONS.size()):
+		_expect(String(_received[index][2]) == String(PingCatalog.OPTIONS[index]["label"]),
+			"Wheel option %d keeps its label" % index)
 	if not _received.is_empty():
 		_expect((_received[0][1] as Vector3).is_equal_approx(Vector3(1.0, 0.0, -2.0)),
-			"Ping carries the sending player's own position")
+			"Pings carry the sending player's own position")
+	_expect(PingWheelScript.index_for_vector(Vector2.UP * 100.0) == 0, "Mouse/stick up selects Cuidado")
+	_expect(PingWheelScript.index_for_vector(Vector2.RIGHT * 100.0) == 1, "Mouse/stick right selects Ayuda")
+	_expect(PingWheelScript.index_for_vector(Vector2.DOWN * 100.0) == 3, "Mouse/stick down selects Acá")
 	player.free()
 
 	if _failures == 0:
-		print("PASS: pings reach EventBus with the right sender, position and label")
+		print("PASS: all wheel pings reach EventBus and radial selection is stable")
 	quit(_failures)
 
 

@@ -579,8 +579,24 @@ static func keycaps(line: String, on_dark: bool = false) -> String:
 
 ## Trap display name (as the HUD receives it) -> its icon, if there is one.
 static func trap_icon(display_name: String) -> Texture2D:
-	var ids: Dictionary = {"FRÁGIL": "fragile", "EQUILIBRIO": "balance", "PESO CRECIENTE": "growing_weight", "RUIDOSO": "noisy"}
+	var ids: Dictionary = {
+		"FRÁGIL": "fragile",
+		"EQUILIBRIO": "balance",
+		"PESO CRECIENTE": "growing_weight",
+		"RUIDOSO": "noisy",
+		"LÍQUIDO": "liquid",
+		"EXPLOSIVO": "explosive",
+		"HOSTIL": "hostile",
+	}
 	var id: String = ids.get(display_name.to_upper(), "")
 	if id.is_empty():
 		return null
 	return load("res://assets/ui/icons/tx_ui_trap_%s_256.png" % id)
+
+
+## Stable action id -> its transparent HUD icon. Unknown actions deliberately
+## return null so generic interactions can keep their text-only fallback.
+static func action_icon(id: StringName) -> Texture2D:
+	if id not in [&"grab", &"drop", &"sit", &"bell", &"photo", &"horn", &"ping", &"open_box", &"use_card"]:
+		return null
+	return load("res://assets/ui/icons/tx_ui_action_%s_128.png" % id)
