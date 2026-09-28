@@ -7,6 +7,21 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: ríos rehechos, límite por la ruta y secuencias a pie (2026-09-28)
+
+Lo hizo Nacho (con Claude) tras otra prueba propia:
+
+- `route/route_terrain.gd` (Nacho): el río de un puente angosto es un cauce más angosto que el
+  tablero (arranca `RIVER_INSET` adentro, baja en `RIVER_TAPER` = 6 m), serpentea y se afina
+  hacia su final; el agua es una superficie propia a `RIVER_FILL` de la profundidad (sin la loma),
+  sobre la grilla del terreno, y el lecho no se pinta como asfalto. `_natural_height()` suma el
+  parámetro `with_ridge`. `RIVER_MEANDER_MAX`/`RIVER_WOBBLE_MAX` cambiaron (los usa
+  `_clamp_river_reach()`).
+- `gameplay/play_area.gd`: ya no hay correa al camión; el límite es 45 m de la ruta más el
+  depósito y su patio.
+- `player/player_seat_pose.gd`, `player.gd`, `player_cargo_care.gd` (Slatex): a pie, los toques
+  de una secuencia solo cuentan con la acción primaria mantenida, que además frena la caminata.
+
 ## Aviso activo: límite de juego, minijuego que termina y toasts sin pisarse (2026-09-28)
 
 Lo hizo Nacho (con Claude) tras una prueba propia:

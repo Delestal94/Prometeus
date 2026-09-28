@@ -18,6 +18,7 @@ var _failures: int = 0
 ## Stand-ins for the local player and a box already on the rack.
 class FakePlayer extends Node:
 	var carried_package: Node = null
+	var seat_node_path: NodePath = NodePath()
 
 
 class FakeAboardBox extends Node:

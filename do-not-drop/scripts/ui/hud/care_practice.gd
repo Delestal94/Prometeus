@@ -17,7 +17,7 @@ const PRACTICE_SEQUENCE: Array[StringName] = [&"up", &"left", &"down"]
 ## Shown after the last tick, then the card goes away for good.
 const FAREWELL_SECONDS: float = 2.5
 const STEP_TEXTS: Array[String] = ["Agarrá una caja", "Mantené %s: la cuidás", "Mantené %s: usás una herramienta",
-	"Tocá W, A, S en orden (como la bomba)", "Subila al estante o sentate con ella"]
+	"Con %s mantenido, tocá W, A, S (como la bomba)", "Subila al estante o sentate con ella"]
 const STEP_VIEWS: Array[StringName] = [&"grab", &"hold", &"tool", &"sequence", &"load"]
 
 var step: int = 0
@@ -112,7 +112,9 @@ func advance(delta: float, player: Node, keys: Dictionary, gamepad: bool) -> boo
 			if _tool_time >= HOLD_SECONDS:
 				_next()
 		3:
-			_read_taps()
+			# Same rule as on the road: on foot, taps count with the box held.
+			if primary or not String(player.get(&"seat_node_path")).is_empty():
+				_read_taps()
 			if _sequence_index >= PRACTICE_SEQUENCE.size():
 				_next()
 		4:
@@ -157,7 +159,7 @@ func _next() -> void:
 func _refresh(keys: Dictionary) -> void:
 	for i: int in _rows.size():
 		var text: String = STEP_TEXTS[i]
-		if i == 1:
+		if i == 1 or i == 3:
 			text = text % keys.get("primary", "Clic izq.")
 		elif i == 2:
 			text = text % keys.get("tool", "Clic der.")

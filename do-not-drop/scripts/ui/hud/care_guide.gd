@@ -36,8 +36,10 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 			"Quedan %d en el piso: acercate a cada una y apretá %s." % [missing, keys.get("interact", "E")])
 	var steps: Array = sequence.get("steps", [])
 	if int(sequence.get("index", 0)) < steps.size() and bool(sequence.get("pending", true)):
+		var how: String = "mantené %s y tocá una tecla por vez" % keys.get("primary", "Clic izq.") \
+			if bool(state.get("on_foot", false)) else "una tecla por vez, sin clic"
 		return _step(&"sequence", "TOCÁ EN ORDEN",
-			"%s: una tecla por vez, sin clic. Si le errás, vuelve a empezar." % String(sequence.get("verb", "Resolver")))
+			"%s: %s. Si le errás, vuelve a empezar." % [String(sequence.get("verb", "Resolver")), how])
 	var urgent: bool = phase in [&"crisis", &"lost"] or bool(state.get("restore", false))
 	if tool != &"" and (urgent or working):
 		return _step(&"tool", "USÁ: %s" % tool_name.to_upper(),

@@ -23,6 +23,9 @@ var target: Node
 ## A tool picked by hand with care_tool_next; cleared when the box's needs
 ## change, so the card goes back to suggesting.
 var manual_tool: StringName = &""
+## On foot with a box that asks for a tap sequence and the primary action
+## held: WASD taps the sequence instead of walking (player.gd reads this).
+var tapping: bool = false
 var _suggested: StringName = &""
 var _card_target: Node
 var _layer: CanvasLayer
@@ -66,6 +69,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_fit_to_screen()
 	var run: Node = get_node_or_null(^"/root/RunManager")
+	tapping = false
 	_update_practice(delta, run)
 	target = null
 	if not bool(run.get(&"is_running")) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED \
@@ -116,6 +120,12 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 	var state: Dictionary = (target.get(&"care_state") if target.get(&"care_state") is Dictionary else {}).duplicate()
 	var entry_state: int = int(((run.get(&"cargo") as Dictionary).get(target.get(&"package_id"), {}) as Dictionary).get("state", 0))
 	state["need_hands"] = needs_hands(care, entry_state)
+	var seated: bool = not String(player.get(&"seat_node_path")).is_empty()
+	state["on_foot"] = not seated
+	var sequence: Dictionary = state.get("sequence", {})
+	tapping = handling and not seated and bool(input.get("steady", false)) \
+		and int(sequence.get("index", 0)) < (sequence.get("steps", []) as Array).size() \
+		and bool(sequence.get("pending", true))
 	var tool_name: String = care.tool_name(tool, kind) if tool != &"" else ""
 	var step: Dictionary = CareGuide.next_step(state, kind, tool, tool_name, keys) if handling \
 		else reach_step(keys, bool(player.get(&"_seated")))
@@ -140,7 +150,10 @@ func _update_practice(delta: float, run: Node) -> void:
 	if not practice.visible:
 		return
 	var gamepad: bool = _using_gamepad()
-	if not practice.advance(delta, player, control_names(gamepad, _interact_label(gamepad)), gamepad):
+	var advancing: bool = practice.advance(delta, player, control_names(gamepad, _interact_label(gamepad)), gamepad)
+	tapping = advancing and practice.step == 3 and Input.is_action_pressed(&"package_action_primary") \
+		and is_instance_valid(player.get(&"carried_package"))
+	if not advancing:
 		practice.queue_free()
 		practice = null
 
