@@ -269,6 +269,31 @@ static func ribbed(color: Color, rib_metres: float = 0.9, roughness: float = 0.5
 	return _material_cache[key]
 
 
+## Hazard paint: diagonal bands of two colours, `period` metres apart,
+## world-mapped. Built here rather than read from a file so it tiles without
+## a seam -- the warning texture's bands broke at every tile edge.
+static func stripes(a: Color, b: Color, period: float = 0.5, roughness: float = 0.7) -> StandardMaterial3D:
+	var key: String = "stripes:%s:%s:%.2f" % [a.to_html(), b.to_html(), period]
+	if not _material_cache.has(key):
+		var size: int = 64
+		var image := Image.create(size, size, false, Image.FORMAT_RGB8)
+		for y: int in range(size):
+			for x: int in range(size):
+				# Two bands per tile along x + y: one full period wraps exactly.
+				var phase: float = fposmod(float(x + y) / float(size) * 2.0, 1.0)
+				image.set_pixel(x, y, a if phase < 0.5 else b)
+		image.generate_mipmaps()
+		var material := StandardMaterial3D.new()
+		material.albedo_texture = ImageTexture.create_from_image(image)
+		material.uv1_triplanar = true
+		material.uv1_world_triplanar = true
+		material.uv1_scale = Vector3.ONE / (period * 2.0)
+		material.roughness = roughness
+		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
 static func _rib_texture() -> ImageTexture:
 	if _material_cache.has("rib_texture"):
 		return _material_cache["rib_texture"]

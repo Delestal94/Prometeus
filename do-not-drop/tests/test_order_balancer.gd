@@ -47,8 +47,10 @@ func _initialize() -> void:
 		for seed_value: int in range(200):
 			for pool: Array in [traps, starter]:
 				var big := _build(pool, houses, 0, seed_value)
-				_expect(big.size() == houses, "A crew with %d houses gets %d orders, got %s (seed %d)" % [houses, houses, big, seed_value])
-				_expect(big == _build(pool, houses, 0, seed_value), "A big crew's order is deterministic (seed %d)" % seed_value)
+				_expect(big.size() == houses,
+						"A crew with %d houses gets %d orders, got %s (seed %d)" % [houses, houses, big, seed_value])
+				_expect(big == _build(pool, houses, 0, seed_value),
+						"A big crew's order is deterministic (seed %d)" % seed_value)
 
 	if _failures == 0:
 		print("PASS: 1000 deterministic orders per house count obey every balance rule")

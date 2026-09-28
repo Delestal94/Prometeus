@@ -670,9 +670,9 @@ func _build_cargo_fittings() -> void:
 		# Dark deck plate: a light one showed as a bright strip under every box,
 		# which read as the box hovering above the shelf.
 		_add_box(fittings, Vector3(size.x, 0.03, size.z), Vector3(at.x, top - 0.015, at.z), _dark)
-		# Orange load beam along the aisle edge, its top flush with the deck
-		# and a centimetre proud of it, so the box visibly sits on the beam line.
-		_add_box(fittings, Vector3(0.05, 0.07, size.z), Vector3(aisle_edge - 0.015, top - 0.035, at.z), _accent)
+		# Orange load beam along the aisle edge, a centimetre proud of the
+		# deck: flush, the two tops shared one plane and z-fought into stripes.
+		_add_box(fittings, Vector3(0.05, 0.07, size.z), Vector3(aisle_edge - 0.015, top - 0.025, at.z), _accent)
 	for shape_name: String in ["RackFrontEndCollision", "RackRearEndCollision"]:
 		var frame := _box_shape(shape_name)
 		if frame.is_empty():

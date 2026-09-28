@@ -70,6 +70,17 @@ func _run() -> void:
 		for part: Node in team_parts:
 			var team_box: AABB = _world_box(part)
 			_expect(not wall_box.grow(-0.01).intersects(team_box), "The photo wall doesn't overlap the team's board (%s / %s)" % [wall_box, team_box])
+		# Not behind a column of the hall (it was, at z 19.2).
+		var depot_node := level.find_child("Depot", true, false) as Node3D
+		if depot_node != null:
+			var centre_z: float = depot_node.to_local(wall.global_position).z
+			var half: float = Board.WALL_SIZE.x * 0.5 + 0.04
+			for column_z: float in DepotLayout.PORTAL_FRAMES:
+				_expect(absf(column_z - centre_z) > half + 0.18,
+					"The photo wall hangs between columns, not behind the one at z %.1f (centre %.2f)"
+							% [column_z, centre_z])
+		else:
+			_expect(false, "The level has its depot to check the photo wall against")
 		var sign_node := board.get_node(^"AccidentSign") as Node3D
 		_expect((sign_node.global_basis * Vector3.BACK).z > 0.9, "The sign faces into the depot")
 		root.get_node(^"/root/EventBus").emit_signal(&"run_ended", 10, {"cargo_ruined": 2})
