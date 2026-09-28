@@ -450,17 +450,18 @@ El HUD ya tiene un ícono transparente propio para cada una de las 7 trampas
 
 ### S-302 · Contenidos propios para cada trampa — B · `Sol · high` (Blender Python) · Aviso: no
 
-Hoy Equilibrio, Líquido y Explosivo llevan la **misma** torta de bodas y Ruidoso y Hostil la
-**misma** gallina (`data/traps/*.tres` → `contents`).
+Las siete trampas ya tienen contenidos propios: diez modelos en total, con una segunda opción para
+Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
-- [ ] Modelos nuevos con `assets/tools/build_cargo_packages.py` (mismo esquema de nodos `Filler`,
+- [x] (commit `bc24f07`) Modelos nuevos con `assets/tools/build_cargo_packages.py` (mismo esquema de nodos `Filler`,
   `Intact`, `Damage`, `Ruined`): **Líquido** → bidón de leche de vidrio; **Explosivo** → caja de fuegos
   artificiales; **Hostil** → mapache en una jaula de mimbre; **Equilibrio** → torre de copas (la torta
   queda como segunda opción).
-- [ ] Un `.tres` en `data/contents/` por modelo y agregarlo al `contents` de su trampa. Segundo
+- [x] (commit `bc24f07`) Un `.tres` en `data/contents/` por modelo y agregarlo al `contents` de su trampa. Segundo
   contenido para Frágil (lámpara antigua) y Ruidoso (cachorro) para que no se repitan siempre.
-- [ ] Capturas con `tests/render_packages.gd` (necesita ventana: las corrés vos).
-- [ ] `test_package_unboxing.gd` ampliado: cada contenido tiene los 4 nodos.
+- [x] (commit `bc24f07`) Capturas con `tests/render_packages.gd` (revisadas en ventana: los diez
+  contenidos quedan dentro de sus cajas).
+- [x] (commit `bc24f07`) `test_package_unboxing.gd` ampliado: cada contenido tiene los 4 nodos.
 
 ### S-303 · Íconos de acción del HUD — B · generación de imagen + `Sol · high` para integrar · Aviso: no
 
