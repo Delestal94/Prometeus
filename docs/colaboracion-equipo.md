@@ -7,6 +7,20 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: CI en verde otra vez (PR #15, 2026-09-28)
+
+Los PRs fallaban por tres cosas, ninguna del contenido de los PRs de docs:
+- **`package.tscn` con índices de replicación repetidos** (quedó así del merge del #12): pisaba
+  `tender_peer_id`/`assistant_peer_id` y rompía el spawn en red. Arreglado, con chequeo en
+  `test_ride_sync`.
+- **`test_route_fuzz` por timeout:** tarda 80-115 s y el límite de CI era 120 s. Los tests de
+  `SLOW_TESTS` en `tools/run-tests.sh` ahora tienen el doble (`SLOW_TEST_TIMEOUT`).
+- **Zona compartida, `core/network_manager.gd`:** `JOIN_HANDSHAKE_TIMEOUT` pasa de 8 s a 20 s.
+  El que se une carga el nivel antes de completar la autenticación; en CI (tres Godot en 2
+  núcleos) eso pasaba de 8 s y el host lo echaba: nivel cargado y cero jugadores. Una PC lenta
+  tiene el mismo problema. `net_pair`/`net_trio` ahora imprimen líneas `NETLOG` con el tiempo de
+  carga y el motivo si la sesión se cae.
+
 ## Aviso activo: Steam y marketing pospuestos (2026-09-28)
 
 Estamos en desarrollo y refinamiento: todo lo de publicar en Steam o promocionar el juego queda para

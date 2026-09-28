@@ -40,6 +40,15 @@ func _initialize() -> void:
 	var package_config: SceneReplicationConfig = (packages[0].get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_config
 	_expect(package_config.has_property(NodePath(".:net_transform")) and package_config.has_property(NodePath(".:net_in_vehicle"))
 		and not package_config.has_property(NodePath(".:position")), "Boxes replicate a truck-relative transform, not a raw one")
+	# A merge once reused indices 13/14 for care_state/salvage_state, which
+	# dropped the tender/assistant peers and broke spawning in net_pair.
+	for path: String in [".:tender_peer_id", ".:assistant_peer_id", ".:care_state", ".:salvage_state"]:
+		_expect(package_config.has_property(NodePath(path)), "Boxes replicate %s" % path)
+	var package_paths: Array[NodePath] = package_config.get_properties()
+	var unique_paths: Dictionary = {}
+	for path: NodePath in package_paths:
+		unique_paths[path] = true
+	_expect(unique_paths.size() == package_paths.size(), "Every replicated box property is listed once")
 
 	# --- the cargo bay ---
 	_expect(van.carries(van.to_global(Vector3(0.0, 1.0, 2.0))), "A point in the middle of the bay rides with the truck")
