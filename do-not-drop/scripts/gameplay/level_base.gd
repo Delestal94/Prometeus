@@ -47,9 +47,35 @@ func _on_peer_level_ready(peer_id: int) -> void:
 		return
 	# The houses were built with the level, for the crew there was then; a
 	# restart builds them for everyone here now (NetworkManager.begin_restart()).
-	var wanted: int = route.call(&"crew_house_count", NetworkManager.peer_ids.size())
-	if not RunManager.is_running and RunManager.results.is_empty() and wanted > (route.get(&"houses") as Array).size():
-		EventBus.depot_notice.emit("Llegó más gente: reiniciá (mantené R) para que la ruta tenga %d casas." % wanted)
+	# The host usually builds the level alone, the moment it opens the room:
+	# one house, one order on the board. Asking the crew to restart by hand
+	# left most sessions delivering a single box, so while nobody has set off
+	# the depot rebuilds itself for the crew that's actually here -- after a
+	# short wait, so friends joining together cost one reload, not several.
+	if _crew_outgrew_route():
+		EventBus.depot_notice.emit("Se sumó gente: preparando la ruta para %d casas..." % _wanted_houses())
+		if not _crew_restart_pending:
+			_crew_restart_pending = true
+			await get_tree().create_timer(CREW_RESTART_DELAY).timeout
+			_crew_restart_pending = false
+			if is_inside_tree() and _crew_outgrew_route():
+				restart_delivery()
+
+
+## Seconds the host waits after someone joins before rebuilding the route.
+const CREW_RESTART_DELAY: float = 3.0
+var _crew_restart_pending: bool = false
+
+
+func _wanted_houses() -> int:
+	return int(route.call(&"crew_house_count", NetworkManager.peer_ids.size()))
+
+
+## More passengers than houses, and the run not started yet.
+func _crew_outgrew_route() -> bool:
+	if not NetworkManager.is_host() or RunManager.is_running or not RunManager.results.is_empty():
+		return false
+	return _wanted_houses() > (route.get(&"houses") as Array).size()
 
 
 ## Only the host resolves doors (Interactable.interact() is host-only), and
