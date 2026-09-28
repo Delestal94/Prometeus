@@ -87,7 +87,10 @@ func _test_spill_on_tip() -> void:
 	for i: int in 4:
 		await physics_frame
 	_expect(bool(package.get(&"contents_spilled")), "An open box on its side spills")
-	_expect(int(package.get(&"trap_state")) == ITrapBehavior.TrapState.RUINED, "Spilling the contents loses the package")
+	# Spilling opens a rescue (docs/jugabilidad-paquetes-rescate.md), not an
+	# instant loss: the box is at risk until it's recovered or the window ends.
+	_expect(int(package.get(&"trap_state")) == ITrapBehavior.TrapState.AT_RISK and package.get(&"care").phase == &"crisis",
+		"Spilling the contents starts a rescue instead of losing the package")
 	var spilled: int = 0
 	for node: Node in root.get_children():
 		if node is RigidBody3D and String(node.name).begins_with("SpilledContent"):

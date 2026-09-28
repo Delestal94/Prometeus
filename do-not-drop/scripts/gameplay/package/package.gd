@@ -27,6 +27,25 @@ const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
 const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
 const PACKAGE_COLLISION_COOLDOWN: float = 0.16
 const PLAYER_HIT_MIN_SPEED: float = 4.0
+## An impact at least this hard (m/s) briefly interrupts tool work.
+const HARD_HIT_SPEED: float = 6.0
+const CareModel = preload("res://scripts/gameplay/package/package_care.gd")
+var care = CareModel.new()
+var care_state: Dictionary = {}:
+	set(value):
+		care_state = value
+		if is_inside_tree() and not is_multiplayer_authority():
+			care.apply_snapshot(value)
+var salvage_state: Dictionary = {}
+var _care_publish_time: float = 0.0
+var _care_worker: int = 0
+var _assist_age: float = 99.0
+var _motion_velocity := Vector3.ZERO
+var _motion_initialized: bool = false
+var _motion_acceleration := Vector3.ZERO
+var _salvage_view: Node
+## The rack a box left for its tender's lap, to go back to.
+var _lap_mount: Node
 ## What a loose box collides with: the environment, other boxes and the
 ## truck's cargo shell (vehicle.gd SHELL_LAYER) -- never the truck's own body,
 ## which a box sliding about the bay used to shove (it drove in jerks).
@@ -119,14 +138,18 @@ const RIDE_MARGIN: float = 0.4
 var integrity: float:
 	get:
 		var raw: float = float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
-		return maxf(raw - _parasite_damage, 0.0)
+		return minf(care.quality_cap, maxf(raw - _parasite_damage, 0.0))
 var integrity_max: float:
 	get:
 		return float(trap_behavior.get("integrity_max")) if trap_behavior != null else 100.0
 var trap_state: int:
 	get:
-		if _lost or integrity <= 0.0:
+		if _lost or care.phase == &"lost":
 			return ITrapBehavior.TrapState.RUINED
+		if care.needs_restore:
+			return ITrapBehavior.TrapState.AT_RISK
+		if integrity <= 0.0:
+			return ITrapBehavior.TrapState.AT_RISK
 		return int(trap_behavior.call("get_state")) if trap_behavior != null else 0
 ## A package can be written off for reasons no trap knows about -- falling out
 ## of the van, say -- without every trap needing its own concept of that.
@@ -171,8 +194,12 @@ func _ready() -> void:
 		# only made it trail behind.
 		physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
 	initialize_trap()
+	_salvage_view = preload("res://scripts/gameplay/package/package_salvage.gd").new()
+	_salvage_view.name = "PackageSalvage"
+	add_child(_salvage_view)
 	body_entered.connect(_on_body_entered)
 	if is_multiplayer_authority():
+		multiplayer.peer_disconnected.connect(peer_left)
 		_publish_net_state()
 
 
@@ -189,6 +216,13 @@ func _physics_process(delta: float) -> void:
 		_tender_input_age += delta
 		if _tender_input_age > TENDER_INPUT_TIMEOUT:
 			player_input = {}
+			_care_worker = 0
+	_assist_age += delta
+	# Worn off here, not in the care model, so a box outside the run's
+	# cargo (or not simulated this tick) can't stay shielded forever.
+	care.recent_hit = maxf(0.0, care.recent_hit - delta)
+	if _is_run_active() and not _consumed and _registered_for_run():
+		_simulate_cargo(delta)
 	_publish_net_state()
 
 
@@ -241,6 +275,10 @@ func initialize_trap() -> void:
 	_last_holder_peer = 0
 	_rescue_pending = false
 	_milestone_counts.clear()
+	care = CareModel.new()
+	care_state = care.snapshot()
+	salvage_state = {}
+	_motion_initialized = false
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -270,30 +308,14 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 			spill_contents(current_velocity)
 	_previous_velocity = current_velocity
 	_has_previous_velocity = true
-	if trap_behavior != null and _is_run_active():
-		var before_integrity: float = integrity
-		var before_state: int = trap_state
-		trap_behavior.call("on_physics_process", self, state.step, {
-			"linear_velocity": current_velocity,
-			"angular_velocity": state.angular_velocity,
-			"input": player_input,
-		})
-		_award_pending_trap_milestones()
-		# Traps that bleed over time (tilt, weight, agitation) change integrity
-		# here rather than on impact, so the same events still have to fire.
-		_report_change(before_integrity, before_state, "El paquete no aguantó el viaje.")
-		_hint_relay_time += state.step
-		if _hint_relay_time >= HINT_RELAY_INTERVAL:
-			_hint_relay_time = 0.0
-			# get_hint() reads trap_behavior directly, which only ever advances
-			# here, on the host -- a client's own local copy is frozen and never
-			# runs this, so its hint text would otherwise sit stale forever
-			# (a countdown that never counts down, for instance).
-			_emit_event(&"package_hint_changed", [package_id, get_hint()])
 
 
 func apply_impact(delta_velocity: float) -> void:
 	if trap_behavior == null or not _is_run_active():
+		return
+	# Mid-rescue the contents are already out: nothing left for a hit to break.
+	# Echoes of one collision are already folded by PACKAGE_COLLISION_COOLDOWN.
+	if care.needs_restore or care.phase == &"lost":
 		return
 	if is_inside_tree():
 		var routes: Node = get_node_or_null(^"/root/RouteEventManager")
@@ -301,7 +323,13 @@ func apply_impact(delta_velocity: float) -> void:
 			routes.call(&"on_package_impact", self, delta_velocity)
 	var before_integrity: float = integrity
 	var before_state: int = trap_state
-	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0) * impact_absorption)
+	var strength: float = clampf(delta_velocity, 0.0, 9.0) * impact_absorption * care.impact_scale()
+	trap_behavior.call("on_impact", strength)
+	if delta_velocity >= HARD_HIT_SPEED:
+		# Shaken hard: tool work pauses a moment (package_care.gd advance_work).
+		care.recent_hit = 0.65
+	care.on_hard_hit(delta_velocity)
+	_check_recovery()
 	_report_change(before_integrity, before_state, "El paquete sufrió demasiados golpes.")
 
 
@@ -363,6 +391,9 @@ func mark_lost(cause: String) -> void:
 	var before_integrity: float = integrity
 	var before_state: int = trap_state
 	_lost = true
+	care.phase = &"lost"
+	care.message = cause
+	_publish_care()
 	_report_change(before_integrity, before_state, cause)
 
 
@@ -402,7 +433,10 @@ func spill_contents(velocity: Vector3 = Vector3.ZERO) -> void:
 		return
 	contents_spilled = true
 	_emit_event(&"package_contents_spilled", [package_id, velocity, trap_state])
-	mark_lost("Se le cayó el contenido.")
+	care.begin_crisis(_trap_kind(), true)
+	_spawn_salvage()
+	_publish_care()
+	_emit_event(&"package_state_changed", [package_id, trap_state])
 
 
 func _peer_within_reach(peer_id: int) -> bool:
@@ -418,6 +452,10 @@ static func _reach_origin(player: Node) -> Vector3:
 
 
 func get_hint() -> String:
+	if care.phase == &"crisis":
+		return "¡%ds para rescatar! Encintá y recuperá %d pieza(s)." % [ceili(care.crisis_left), care.missing_parts]
+	if care.needs_restore or care.phase == &"lost" or care.substituted:
+		return care.message
 	return String(trap_behavior.call("get_hint")) if trap_behavior != null else ""
 
 
@@ -582,6 +620,47 @@ func _ride_along_if_aboard() -> void:
 		linear_velocity = vehicle.call(&"point_velocity", global_position)
 
 
+## Host: the seated passenger tending this box moves it between their lap
+## and the rack it came from. The lap cushions hits but ties up the hands;
+## the rack frees them for tools but needs a strap (package_care.gd).
+@rpc("any_peer", "call_local", "reliable")
+func request_lap_toggle() -> void:
+	if not is_multiplayer_authority() or _consumed:
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	var peer: int = sender if sender != 0 else multiplayer.get_unique_id()
+	if peer != tender_peer_id:
+		return
+	var operator: Node = null
+	for candidate: Node in get_tree().get_nodes_in_group(&"player"):
+		if candidate.get_multiplayer_authority() == peer:
+			operator = candidate
+	if operator == null or String(operator.get(&"seat_node_path")).is_empty():
+		return
+	if is_held and carrier == operator:
+		if is_instance_valid(_lap_mount) and _lap_mount.get(&"occupied_by") == null:
+			_lap_mount.call(&"store", self)
+	elif is_loaded and not is_held and current_mount != null:
+		_lap_mount = current_mount
+		take_by(operator)
+	care.in_lap = is_held and carrier == operator
+	_publish_care()
+
+
+## Host: someone dropped out. If they were looking after this box, its
+## rescue window is held so the crew can reach it -- leaving never loses a
+## box on the spot (docs/jugabilidad-paquetes-rescate.md, "Caída de un jugador").
+func peer_left(peer_id: int) -> void:
+	var carried_by_them: bool = is_instance_valid(carrier) and carrier.get_multiplayer_authority() == peer_id
+	if peer_id in [tender_peer_id, _care_worker] or carried_by_them:
+		care.hold_crisis(CareModel.CRISIS_SECONDS)
+		if tender_peer_id == peer_id:
+			tender_peer_id = 0
+		_care_worker = 0
+		player_input = {}
+		_publish_care()
+
+
 ## For when the carrier goes away (disconnect) rather than letting go: the
 ## box must not stay frozen mid-air with collisions off forever.
 func drop_loose(drop_transform: Transform3D) -> void:
@@ -713,6 +792,186 @@ func _award_milestone(peer_id: int, milestone: StringName) -> bool:
 		return false
 	_milestone_counts[milestone] = occurrence
 	return true
+
+
+func _registered_for_run() -> bool:
+	var run: Node = get_node_or_null(^"/root/RunManager")
+	return run != null and (run.get(&"cargo") as Dictionary).has(package_id)
+
+
+func _trap_kind() -> StringName:
+	return StringName(trap_definition.get(&"id")) if trap_definition != null else &"fragile"
+
+
+func _simulate_cargo(delta: float) -> void:
+	if trap_behavior == null:
+		return
+	var before_integrity: float = integrity
+	var before_state: int = trap_state
+	var vehicle: Node3D = _find_vehicle()
+	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, 1.0))
+	var speed: float = 0.0
+	if riding:
+		var velocity_now: Vector3 = vehicle.call(&"point_velocity", global_position)
+		speed = velocity_now.length()
+		if _motion_initialized:
+			var acceleration: Vector3 = (velocity_now - _motion_velocity) / maxf(delta, 0.001)
+			_motion_acceleration = _motion_acceleration.lerp(vehicle.global_basis.inverse() * acceleration, minf(1.0, delta * 8.0))
+		_motion_velocity = velocity_now
+		_motion_initialized = true
+	else:
+		_motion_initialized = false
+		_motion_acceleration = Vector3.ZERO
+	care.in_lap = is_held and is_instance_valid(carrier) and not String(carrier.get(&"seat_node_path")).is_empty()
+	var input: Dictionary = player_input.duplicate()
+	# Solo crews get a modest rack assistant; they still stop to repair.
+	var solo_assist: bool = get_tree().get_nodes_in_group(&"player").size() == 1 and not is_held and tender_peer_id == 0
+	if solo_assist:
+		input["steady"] = true
+		input["calm"] = true
+		input["balance"] = care.balance_target
+	var strained: bool = care.advance(delta, _motion_acceleration, input, _assist_age < 0.3)
+	if strained and riding:
+		apply_impact(4.5)
+	# Held bodies are frozen; the trap still advances here exactly once per tick.
+	# In a solo run complex traps pause while safely parked for repairs.
+	if not care.needs_restore and care.phase != &"lost" and not care.substituted:
+		if not solo_assist or speed > 1.0:
+			trap_behavior.call("on_physics_process", self, delta, {
+				"linear_velocity": linear_velocity, "angular_velocity": angular_velocity, "input": input})
+		_award_pending_trap_milestones()
+	_check_recovery()
+	var tool := StringName(input.get("tool", "tape"))
+	var run: Node = get_node_or_null(^"/root/RunManager")
+	var available: bool = run != null and int(run.call(&"care_supply_count", tool)) > 0
+	if care.advance_work(delta, tool, input, _trap_kind(), speed, available, _assist_age < 0.3):
+		if bool(run.call(&"consume_care_supply", tool)):
+			_complete_care_tool(tool)
+		else:
+			care.message = "Otro compañero usó el último suministro."
+	_report_change(before_integrity, before_state, "El contenido se perdió durante el rescate.")
+	_care_publish_time += delta
+	if _care_publish_time >= 0.1:
+		_care_publish_time = 0.0
+		_publish_care()
+		_emit_event(&"package_hint_changed", [package_id, get_hint()])
+
+
+func _check_recovery() -> void:
+	if _lost or trap_behavior == null:
+		return
+	var failed: bool = int(trap_behavior.call(&"get_state")) == ITrapBehavior.TrapState.RUINED or integrity <= 0.0
+	if care.observe(integrity, failed, _trap_kind()):
+		_spawn_salvage()
+		_publish_care()
+
+
+func _complete_care_tool(tool: StringName) -> void:
+	care.complete_tool(tool, _trap_kind())
+	if tool in [&"repair", &"substitute", &"rag"]:
+		_lost = false
+		_parasite_damage = 0.0
+		contents_spilled = false
+		salvage_state = {}
+		var config: Dictionary = trap_definition.get(&"params")
+		trap_behavior.call(&"on_setup", self, config.duplicate(true))
+		# A neutralized explosive is inert, not a new bomb with a fresh timer.
+		if _trap_kind() == &"explosive":
+			trap_behavior.set(&"_defused", true)
+		care.recent_hit = 1.25
+		_emit_event(&"package_contents_recovered", [package_id])
+		_award_milestone(_care_worker, &"rescued")
+	if tool == &"tape":
+		# Tape seals the box even if its contents are still on the floor.
+		is_open = false
+		_emit_event(&"package_lid_changed", [package_id, false])
+	_publish_care()
+
+
+func _publish_care() -> void:
+	care_state = care.snapshot()
+	var run: Node = get_node_or_null(^"/root/RunManager")
+	if run != null and (run.get(&"cargo") as Dictionary).has(package_id):
+		run.call(&"record_care", package_id, delivery_assessment())
+
+
+func _spawn_salvage() -> void:
+	if care.missing_parts <= 0 or not salvage_state.is_empty():
+		return
+	var vehicle: Node3D = _find_vehicle()
+	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, 1.0))
+	var origin: Vector3 = vehicle.to_local(global_position) if aboard else global_position
+	var parts: Array = []
+	for index: int in care.missing_parts:
+		parts.append(origin + Vector3((index - 1) * 0.32, -0.2, 0.45))
+	salvage_state = {"aboard": aboard, "parts": parts, "collected": [], "kind": _trap_kind()}
+	contents_spilled = true
+	_emit_event(&"package_contents_spilled", [package_id, Vector3.ZERO, trap_state])
+
+
+func collect_salvage(index: int, player: Node, point: Vector3) -> void:
+	if not is_multiplayer_authority() or _consumed or care.phase == &"lost":
+		return
+	if _reach_origin(player).distance_to(point) > 3.0:
+		return
+	var collected: Array = salvage_state.get("collected", [])
+	var parts: Array = salvage_state.get("parts", [])
+	if index < 0 or index >= parts.size() or collected.has(index):
+		return
+	if care.collect_part():
+		collected.append(index)
+		salvage_state = salvage_state.duplicate(true)
+		salvage_state["collected"] = collected
+		_publish_care()
+
+
+## Client sends intent only. Ownership/reach, action duration, direction, speed,
+## inventory and the final result are all checked by the host.
+@rpc("any_peer", "call_local", "unreliable_ordered")
+func submit_care_input(input: Dictionary) -> void:
+	if not is_multiplayer_authority() or _consumed or not _is_run_active():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	var peer: int = sender if sender != 0 else multiplayer.get_unique_id()
+	var operator: Node = null
+	for candidate: Node in get_tree().get_nodes_in_group(&"player"):
+		if candidate.get_multiplayer_authority() == peer:
+			operator = candidate
+			break
+	if operator == null or _reach_origin(operator).distance_to(global_position) > 3.5:
+		return
+	var owns: bool = carrier == operator or tender_peer_id == peer
+	if not owns and ((is_instance_valid(carrier) and carrier != operator) or (_care_worker != 0 and _care_worker != peer and _tender_input_age < 0.3)):
+		if bool(input.get("steady", false)):
+			_assist_age = 0.0
+		return
+	var balance: Variant = input.get("balance", Vector2.ZERO)
+	if not balance is Vector2 or not (balance as Vector2).is_finite():
+		return
+	var direction: StringName = StringName(input.get("direction_pressed", "")) if input.get("direction_pressed") != null else &""
+	player_input = {"steady": bool(input.get("steady", false)), "calm": bool(input.get("calm", false)),
+		"balance": (balance as Vector2).limit_length(1.0), "work": bool(input.get("work", false)),
+		"tool": StringName(input.get("tool", "tape")), "direction_pressed": direction if direction in [&"up", &"down", &"left", &"right"] else null}
+	if bool(player_input["work"]):
+		player_input["steady"] = false
+		player_input["calm"] = false
+	_care_worker = peer
+	_last_tender_peer = peer
+	_tender_input_age = 0.0
+
+
+func delivery_assessment() -> Dictionary:
+	var category: StringName = &"intact"
+	if care.substituted:
+		category = &"substituted"
+	elif _lost or care.phase == &"lost" or care.needs_restore or contents_spilled:
+		category = &"unconvincing"
+	elif care.repairs > 0:
+		category = &"repaired" if not is_open and integrity >= 60.0 else &"unconvincing"
+	elif is_open or integrity < 85.0 or trap_state != 0:
+		category = &"damaged"
+	return {"category": category, "kind": _trap_kind(), "quality": integrity,
+		"repairs": care.repairs, "worst": care.worst_quality, "substituted": care.substituted}
 
 
 static func _has_useful_input(input: Dictionary) -> bool:

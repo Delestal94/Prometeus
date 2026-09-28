@@ -161,6 +161,18 @@ func _on_route_event_resolved(event_id: StringName, success: bool, _peer_id: int
 	hud.event_seconds_left = PING_DISPLAY_SECONDS
 
 
+## The closest open delivery deadline, counting down; yellow in its last
+## 20 seconds so the driver knows it's time to push (or to let it go).
+func refresh_deadline() -> void:
+	var deadline: Dictionary = RunManager.next_deadline() if RunManager.is_running else {}
+	if deadline.is_empty():
+		clear_notice(&"information", &"deadline")
+		return
+	var left: int = maxi(0, ceili(float(deadline["seconds"]) - RunManager.elapsed_seconds))
+	set_notice(&"information", &"deadline", "Casa %d: %s en %02d:%02d" % [int(deadline["house"]) + 1, deadline["reason"], left / 60, left % 60],
+		40 if left > 20 else 75, Hud.MINT if left > 20 else Hud.YELLOW)
+
+
 func set_notice(zone: StringName, key: StringName, text: String, priority: int,
 		color: Color, duration: float = -1.0) -> void:
 	if not _notice_sources.has(zone):

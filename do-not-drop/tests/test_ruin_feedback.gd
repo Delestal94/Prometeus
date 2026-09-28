@@ -43,6 +43,8 @@ func _initialize() -> void:
 	# test_fragile.gd for the exact curve); a few big hits is enough here.
 	for _i in range(5):
 		package.call(&"apply_impact", 7.0)
+	# Broken opens a rescue; the burst is for a box actually lost.
+	package.call(&"mark_lost", "Se perdió en el rescate.")
 	_expect(int(package.get(&"trap_state")) == 2, "Package actually reached RUINED")
 
 	var bursts: Array[GPUParticles3D] = _find_particles()

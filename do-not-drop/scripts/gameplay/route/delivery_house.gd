@@ -98,6 +98,15 @@ const REACTION_LINES: Dictionary = {
 	],
 }
 
+## What the neighbour says about a box the crew rescued on the way, keyed by
+## DeliveryPackage.delivery_assessment()'s category (the rescue design): the
+## same inspection always ends the same way, and the line names the clue.
+const CARE_LINES: Dictionary = {
+	&"repaired": ["WORLD_REACTION_CARE_REPAIRED_1", "WORLD_REACTION_CARE_REPAIRED_2", "WORLD_REACTION_CARE_REPAIRED_3"],
+	&"unconvincing": ["WORLD_REACTION_CARE_UNCONVINCING_1", "WORLD_REACTION_CARE_UNCONVINCING_2", "WORLD_REACTION_CARE_UNCONVINCING_3"],
+	&"substituted": ["WORLD_REACTION_CARE_SUBSTITUTED_1", "WORLD_REACTION_CARE_SUBSTITUTED_2", "WORLD_REACTION_CARE_SUBSTITUTED_3"],
+}
+
 ## Every way a stop can end. A dented box is its own outcome rather than
 ## being rounded up to "fine": it's the case the delivery photo exists for
 ## (the resident may complain about it afterwards), so collapsing it into
@@ -133,6 +142,8 @@ var doorbell_number: Label3D
 var doorbell_lit: bool = true
 var _doorbell_materials: Array[StandardMaterial3D] = []
 var _resident: Node3D
+## Set by delivery_care_noted just before this door's delivery is recorded.
+var care_category: StringName = &""
 ## The neighbour's scene at the door (N-604).
 var reaction: DoorReaction
 var _bell_player: AudioStreamPlayer3D
@@ -182,6 +193,9 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 		_reaction_player.play()
 		wrong_package_offered.emit(assigned_label)
 		return
+	# The box's latest rescue record, so what the door inspects is current.
+	if carried_package.has_method(&"_publish_care") and carried_package.is_multiplayer_authority():
+		carried_package.call(&"_publish_care")
 	var state: int = int(carried_package.get(&"trap_state"))
 	match state:
 		ITrapBehavior.TrapState.RUINED:
@@ -276,6 +290,7 @@ func _build_house() -> void:
 	if events != null:
 		events.connect(&"house_delivery_recorded", _on_delivery_reaction)
 		events.connect(&"house_refused_package", _on_refused_reaction)
+		events.connect(&"delivery_care_noted", _on_care_noted)
 
 	doorbell = DoorbellPoint.new()
 	doorbell.name = "Doorbell"
@@ -336,7 +351,18 @@ func _build_doorbell_visual() -> void:
 	set_doorbell_lit(doorbell_lit)
 
 
+func _on_care_noted(index: int, category: StringName) -> void:
+	if index == house_index:
+		care_category = category
+
+
 func _on_delivery_reaction(index: int, result: StringName, _package_id: StringName) -> void:
+	if index == house_index and result != OUTCOME_MISSED and CARE_LINES.has(care_category):
+		# A convincing repair is looked over and accepted; anything worse
+		# gets the head-in-hands scene.
+		var scene: StringName = OUTCOME_AT_RISK if care_category == &"repaired" else OUTCOME_RUINED
+		reaction.react(scene, tr(DoorReaction.pick_line(CARE_LINES[care_category], _session_seed(), house_index, care_category)))
+		return
 	if index == house_index and REACTION_LINES.has(result):
 		reaction.react(result, tr(DoorReaction.pick_line(REACTION_LINES[result], _session_seed(), house_index, result)))
 

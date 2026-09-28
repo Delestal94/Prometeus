@@ -333,6 +333,31 @@ del host. Hacerlo **solo visual y local**:
 
 ---
 
+### S-112 · Rescate de carga (`docs/jugabilidad-paquetes-rescate.md`) — A · Aviso: sí (`run_manager.gd`, `event_bus.gd`)
+
+**Hecho por Nacho (2026-09-27, pedido del usuario), corte vertical 1:**
+- [x] Estado de cuidado en el host (`package_care.gd`) separado de la barra de la trampa: rescate de
+  15 s, piezas para juntar (`package_salvage.gd`), cinta / recomponer / gallina de juguete con el
+  minijuego de flechas, equilibrio con stick (`player_cargo_care.gd`) y tope de calidad.
+- [x] Kit compartido en `RunManager` (3 cintas, 2 reparaciones, 1 juguete), sincronizado a clientes.
+- [x] La puerta lee la categoría (reparado / poco convincente / sustituto) y reacciona con su línea; el
+  pago no depende del azar; los resultados cuentan los rescates.
+- [x] Derramar ya no pierde la caja: abre un rescate. Una gallina perdida no corta la partida mientras
+  quede un juguete. Test: `tests/test_package_rescue.gd`.
+
+**Hecho después (2026-09-28), resto del diseño:**
+- [x] Plazos de entrega calculados sobre la distancia real de cada casa (`RunManager.plan_deadlines`,
+  hasta 3), cuenta regresiva en el HUD, +40 por plazo cumplido y −15 por vencido.
+- [x] Relleno, trapo y cincha; "recomponer" cambia según el contenido (pegar, rearmar, desactivar,
+  reparar jaula, reubicar entre dos); el líquido solo se rescata con trapo y llega parcial.
+- [x] Regazo o soporte: sentado, Q mueve la caja entre las dos. El regazo amortigua pero ocupa las
+  manos; el soporte libera las manos y pide cincha. La herramienta cambia con X (antes V, que era el ping).
+- [x] Líneas de la puerta en `strings_world.csv`.
+- [x] Si se desconecta quien atendía una caja en rescate, su ventana se mantiene (`peer_left`).
+
+**Pendiente:** prueba real en red con dos o tres PCs (desconexión en medio de un rescate) y ajustar
+cifras de plazos con `bench_route_duration` cuando se juegue.
+
 ## 2. Programación y arquitectura técnica
 
 ### S-201 · Partir `prototype_hud.gd` (1176 líneas) en componentes — A · `Astra · high` · Aviso: no

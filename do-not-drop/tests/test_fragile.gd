@@ -25,7 +25,8 @@ func _initialize() -> void:
 	_expect(float(second.get("integrity")) == 100.0, "Shared definition never shares mutable state")
 	first.call("apply_impact", 7.0)
 	_expect(float(first.get("integrity")) == 0.0, "Integrity clamps at zero")
-	_expect(int(first.get("trap_state")) == 2, "Zero integrity is RUINED")
+	# Broken isn't lost yet: it opens a rescue (docs/jugabilidad-paquetes-rescate.md).
+	_expect(int(first.get("trap_state")) == 1 and first.get("care").phase == &"crisis", "Zero integrity opens a rescue")
 	first.call("apply_impact", 20.0)
 	_expect(float(first.get("integrity")) == 0.0, "Ruined package cannot lose further integrity")
 	first.call("initialize_trap")

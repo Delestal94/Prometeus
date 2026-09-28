@@ -219,6 +219,9 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
+	var cargo_care := preload("res://scripts/gameplay/player/player_cargo_care.gd").new()
+	cargo_care.name = "CargoCare"
+	add_child(cargo_care)
 	_last_safe_ground = global_position
 	if is_local():
 		var profile: Node = get_node_or_null("/root/UnlockManager")
@@ -360,6 +363,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_use_card()
 		return
 	if _is_drop_event(event):
+		# Seated, "drop" moves the box you tend between your lap and its rack
+		# (docs/jugabilidad-paquetes-rescate.md): never onto the floor.
+		if _seated and is_instance_valid(tended_package):
+			tended_package.rpc_id(1, &"request_lap_toggle")
+			return
 		_drop_carried()
 		return
 	if _is_open_event(event):
@@ -584,8 +592,6 @@ func _physics_process(delta: float) -> void:
 		_publish_lid_hint(_lid_target())
 		if carried_package != null:
 			_update_carried_package()
-		if tended_package != null:
-			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
 		return
 	_poll_interact()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
@@ -593,6 +599,8 @@ func _physics_process(delta: float) -> void:
 	# get_vector's y is -1 for forward and +1 for back;
 	# local forward is -Z, so the two negatives cancel out to a plain +basis.z.
 	var input_vector: Vector2 = Input.get_vector(&"drive_left", &"drive_right", &"walk_forward", &"walk_backward")
+	if Input.is_action_pressed(&"care_work") and get_node("CargoCare").target != null:
+		input_vector = Vector2.ZERO
 	var move_direction: Vector3 = (global_basis.x * input_vector.x) + (global_basis.z * input_vector.y)
 	if move_direction.length() > 1.0:
 		move_direction = move_direction.normalized()

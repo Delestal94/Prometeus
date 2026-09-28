@@ -107,6 +107,18 @@ Nacho, pedido del usuario. Toca tres archivos de Slatex y la zona compartida; ni
 
 Hacer `git pull` antes de tocar esos archivos.
 
+## Aviso activo: rescate de carga y entregas urgentes (2026-09-27)
+
+Implementación solicitada por el usuario de `jugabilidad-paquetes-rescate.md`
+(corte vertical 1, detalle en `tareas-slatex.md` S-112). Se amplían paquetes,
+HUD del pasajero, resultados y reacciones de las casas; `RunManager` suma el kit de
+reparación, `record_care()` y el pago de entregas rescatadas; `EventBus` suma
+`delivery_care_noted`. Derramar abre un rescate en vez de perder la caja. 2026-09-28: plazos de
+entrega (`level_base.gd` los fija al arrancar, señal `delivery_deadlines_set`),
+regazo/soporte con Q sentado, y la acción `care_tool_next` pasa a X en `project.godot`. Se conserva el contrato de tres estados
+de las trampas y se agrega estado de cuidado replicado para el rescate. Hacer
+`git pull` antes de continuar en esas áreas. No cambia el manejo del vehículo.
+
 Aviso 2026-09-25: dirección sonora tranquila solicitada por el usuario, tomando
 como referencia la sensación de calma de Minecraft. Se ajustan
 `presentation/ingame_music.gd` (pausas, fundidos y tensión sin desafinar) y la zona

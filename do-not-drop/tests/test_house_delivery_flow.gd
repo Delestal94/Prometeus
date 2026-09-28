@@ -97,9 +97,13 @@ func _run() -> void:
 	_expect(int(results["houses_delivered"]) == 1, "Results report one door delivered (got %d)" % int(results["houses_delivered"]))
 	_expect(int(results["houses_missed"]) == unrung, "Every house nobody rang is reported as missed (got %d, expected %d)" % [int(results["houses_missed"]), unrung])
 	_expect(int(results["photos"]) == 1, "Results report the photo taken")
-	var expected: int = manager.POINTS_DELIVERED_INTACT + manager.POINTS_PHOTO_BONUS - unrung * manager.PENALTY_MISSED_HOUSE
+	# Delivery deadlines (docs/jugabilidad-paquetes-rescate.md) pay on top:
+	# met ones add, missed ones (the houses nobody rang) take a little off.
+	var tally: Dictionary = manager.deadline_tally()
+	_expect(int(tally["met"]) == 1, "The door rung right away made its deadline")
+	var expected: int = manager.POINTS_DELIVERED_INTACT + manager.POINTS_PHOTO_BONUS - unrung * manager.PENALTY_MISSED_HOUSE 		+ int(tally["met"]) * manager.POINTS_DEADLINE_MET - int(tally["missed"]) * manager.PENALTY_DEADLINE_MISSED
 	_expect(int(results["delivery_points"]) == expected,
-		"Door points = intact delivery + photo - missed houses (got %d, expected %d)" % [int(results["delivery_points"]), expected])
+		"Door points = intact delivery + photo - missed houses + deadlines (got %d, expected %d)" % [int(results["delivery_points"]), expected])
 	_expect(int(results["score"]) > 0, "A delivered run scores above zero")
 
 	level.free()

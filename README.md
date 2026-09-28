@@ -216,6 +216,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_delivery_houses.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_package_rescue.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ride_sync.gd
@@ -350,6 +351,12 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   que el contenido siga el estado del paquete, que una caja abierta volcada
   derrame el contenido como cuerpos físicos (y una cerrada no), y que el
   vecino note una caja entregada abierta.
+- `test_package_rescue` — rescate de carga: una caja rota abre una ventana
+  de rescate con piezas para juntar, cinta/recomponer/juguete siguiendo las
+  flechas, un tope de calidad que ningún arreglo levanta, el kit compartido
+  que no se gasta dos veces, cómo pagan y se cuentan las entregas rescatadas,
+  los rescates propios de cada contenido (trapo, reubicar entre dos...), regazo
+  y cincha, la ventana que se sostiene si alguien se desconecta, y los plazos.
 - `test_package_identity` — cada trampa viaja en su propia caja impresa, con
   su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una
