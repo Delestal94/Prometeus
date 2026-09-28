@@ -9,6 +9,10 @@ extends SceneTree
 ## - picking it up closes the window as rescued, and it goes back on a shelf;
 ## - left there past the window, it's lost ("Se cayó del camión.") and the
 ##   flag goes away.
+## N-213.4: abandoning it closes that house's order empty (outcome &"lost",
+## "PERDIDO" in the results) without ending the run, even with nothing else
+## aboard; the house can't be rung for it afterwards and it pays like a missed
+## door, with its own line.
 
 var _failures: int = 0
 var _started: Array = []
@@ -74,6 +78,9 @@ func _run() -> void:
 	_expect(_started.size() == 1, "Back aboard, no new window opens (got %d)" % _started.size())
 
 	# --- it falls out again and nobody comes: lost ---
+	# Pinned so the test doesn't depend on which door the depot picked.
+	var house: Node = (level.get_node(^"World/Route").get(&"houses") as Array)[0]
+	house.set(&"assigned_package_id", package_id)
 	level.set(&"overboard_rescue_seconds", 0.05)
 	package.global_position = far
 	for i: int in 10:
@@ -83,6 +90,28 @@ func _run() -> void:
 		"The window closes as not rescued (got %s)" % [_ended])
 	await process_frame
 	_expect(not bool(marker.call(&"has_marker", package_id)), "The flag goes away once it's lost")
+
+	# --- N-213.4: abandoning it closes its order empty, the run goes on ---
+	_expect(bool(manager.get(&"is_running")), "Losing the only box on the road doesn't end the run")
+	_expect(bool(house.get(&"delivered")) and StringName(house.get(&"outcome")) == &"lost",
+		"Its house's order closes as lost (got %s)" % house.get(&"outcome"))
+	var records: Array = (manager.get(&"deliveries") as Array).filter(func(entry: Dictionary) -> bool:
+		return StringName(entry["package_id"]) == package_id)
+	_expect(records.size() == 1 and StringName(records[0]["outcome"]) == &"lost",
+		"RunManager records the order as lost (got %s)" % [records])
+	_expect(not bool(manager.call(&"_mark_photo", int(house.get(&"house_index")))),
+		"There's nothing to photograph at a door whose box was lost")
+	var doors: Dictionary = manager.call(&"_resolve_deliveries")
+	_expect(int(doors.get("houses_lost", 0)) == 1 and int(doors.get("houses_missed", 0)) == 0,
+		"The lost order is counted apart from missed doors (got %s)" % [doors])
+	var lines: Array = (doors["breakdown"] as Array).filter(func(line: Dictionary) -> bool:
+		return String(line["label"]).begins_with("Paquetes perdidos"))
+	_expect(lines.size() == 1 and int(lines[0]["points"]) < 0, "The results list the lost box as a penalty")
+	manager.call(&"finish_run", true)
+	_expect(int((manager.get(&"results") as Dictionary).get("houses_lost", 0)) == 1,
+		"The results carry the lost order for the HUD and the depot's streak board")
+	_expect(not bool(level.get_node(^"World/Route").call(&"close_lost_order", package_id)),
+		"An order closes only once")
 
 	level.queue_free()
 	manager.call(&"reset_run")

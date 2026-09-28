@@ -27,6 +27,9 @@ func _run() -> void:
 	_expect(int(log.days) == 2 and int(log.best) == 2, "Another clean run makes two (got %s)" % log)
 	log = Board.record_run({"cargo_ruined": 1}, {})
 	_expect(int(log.days) == 0 and int(log.best) == 2, "A ruined box resets the count, the record stays (got %s)" % log)
+	log = Board.record_run({"cargo_ruined": 0}, {})
+	log = Board.record_run({"cargo_ruined": 0, "houses_lost": 1}, {})
+	_expect(int(log.days) == 0, "A box left on the road (N-213.4) resets the count too (got %s)" % log)
 
 	var photo := Image.create(64, 40, false, Image.FORMAT_RGB8)
 	log = Board.record_run({"cargo_ruined": 0}, {0: photo, 2: photo, 3: null})

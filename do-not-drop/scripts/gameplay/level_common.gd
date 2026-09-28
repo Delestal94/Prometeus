@@ -297,6 +297,11 @@ func _check_lost_cargo() -> void:
 		_overboard_seconds[id] = float(_overboard_seconds[id]) + get_physics_process_delta_time()
 		if float(_overboard_seconds[id]) >= overboard_rescue_seconds:
 			_overboard_seconds.erase(id)
+			# The order closes empty first (N-213.4), so RunManager no longer
+			# counts the box as cargo and writing it off can't end the run.
+			var route_node: Node = get_node_or_null(^"World/Route")
+			if route_node != null and route_node.has_method(&"close_lost_order"):
+				route_node.call(&"close_lost_order", id)
 			package.mark_lost("Se cayó del camión.")
 			EventBus.relay(&"cargo_overboard_ended", [id, false])
 

@@ -288,8 +288,8 @@ func _was_delivered(house: Node) -> bool:
 	var index: int = int(house.get(&"house_index"))
 	for entry: Dictionary in RunManager.deliveries:
 		if int(entry["house"]) == index:
-			return StringName(entry["outcome"]) != &"missed"
-	return bool(house.get(&"delivered")) and StringName(house.get(&"outcome")) != &"missed"
+			return RunManager.handed_over(StringName(entry["outcome"]))
+	return bool(house.get(&"delivered")) and RunManager.handed_over(StringName(house.get(&"outcome")))
 
 
 func _already_photographed(house_index: int) -> bool:

@@ -123,6 +123,8 @@ const OUTCOME_OK: StringName = &"delivered_ok"
 const OUTCOME_AT_RISK: StringName = &"delivered_at_risk"
 const OUTCOME_RUINED: StringName = &"delivered_ruined"
 const OUTCOME_MISSED: StringName = &"missed"
+## Its box was left on the road past the rescue window (N-213.4).
+const OUTCOME_LOST: StringName = &"lost"
 
 var delivered: bool = false
 ## Which stop this is along the route (route.gd sets it). The phone camera
@@ -184,6 +186,18 @@ func _ready() -> void:
 func force_resolve_if_missed() -> void:
 	if not delivered:
 		_resolve(OUTCOME_MISSED, null)
+
+
+## Host: the box for this door was left on the road (N-213.4). The order
+## closes empty, with no one at the door -- the truck is far away by then --
+## and the run goes on to the other houses.
+func close_lost() -> void:
+	if delivered:
+		return
+	delivered = true
+	outcome = OUTCOME_LOST
+	delivered_package_id = assigned_package_id
+	resolved.emit(OUTCOME_LOST, assigned_package_id)
 
 
 func _on_doorbell_rung(carried_package: Node) -> void:
