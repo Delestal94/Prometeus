@@ -297,7 +297,8 @@ func _check_face_fit(model: Node3D, mesh: MeshInstance3D, skeleton: Skeleton3D) 
 	_expect(bind >= 0, "The skin binds the head bone")
 	if bind < 0:
 		return
-	var to_model: Transform3D = model.global_transform.affine_inverse() * skeleton.global_transform 		* skeleton.get_bone_global_rest(head_bone) * mesh.skin.get_bind_pose(bind)
+	var to_model: Transform3D = (model.global_transform.affine_inverse() * skeleton.global_transform
+			* skeleton.get_bone_global_rest(head_bone) * mesh.skin.get_bind_pose(bind))
 	var skin: PackedVector3Array = PackedVector3Array()
 	for surface: int in mesh.mesh.get_surface_count():
 		var material: Material = mesh.mesh.surface_get_material(surface)
@@ -334,7 +335,9 @@ func _check_vertex_shading(mesh: MeshInstance3D) -> void:
 	for surface: int in mesh.mesh.get_surface_count():
 		var material := mesh.mesh.surface_get_material(surface) as BaseMaterial3D
 		var arrays: Array = mesh.mesh.surface_get_arrays(surface)
-		var colours: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+		var colours := PackedColorArray()
+		if arrays[Mesh.ARRAY_COLOR] != null:
+			colours = arrays[Mesh.ARRAY_COLOR]
 		_expect(not colours.is_empty(), "Surface %d carries baked vertex colour" % surface)
 		# Except the shirt: the importer leaves the flag off on the first
 		# surface, and player.gd sets it on the crew-coloured copy (below).

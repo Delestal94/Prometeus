@@ -140,8 +140,9 @@ func _ready() -> void:
 	# trap this package has never changes after _ready(). Explosivo gets its
 	# own "BOOM." (explosive_trap_behavior.gd's get_hint() literally says
 	# that once seconds_left hits 0) instead of the generic cartoon fail.
-	_ruin_player = _make_player(SynthAudio.comic_boom() if _trap_id == &"explosive" else SynthAudio.comic_ruin_stinger(),
-		-6.0 if _trap_id == &"explosive" else -9.0)
+	var explosive: bool = _trap_id == &"explosive"
+	_ruin_player = _make_player(SynthAudio.comic_boom() if explosive else SynthAudio.comic_ruin_stinger(),
+		-6.0 if explosive else -9.0)
 	_set_state(0)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:

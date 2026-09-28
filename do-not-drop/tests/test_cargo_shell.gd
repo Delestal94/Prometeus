@@ -156,7 +156,8 @@ func _run() -> void:
 	_expect(peak_kmh > 60.0, "The drive reached top speed (%.0f km/h)" % peak_kmh)
 	for box: RigidBody3D in boxes:
 		_expect(float(worst_rear.get(box, INF)) <= REAR_TOLERANCE,
-			"%s never gets past the rear stop or the shut rear doors (%.3f m past at worst)" % [box.name, float(worst_rear.get(box, INF))])
+			"%s never gets past the rear stop or the shut rear doors (%.3f m past at worst)" % [box.name,
+					float(worst_rear.get(box, INF))])
 	# A couple of centimetres over some 150 m is float noise between two
 	# trucks 60 m apart; a box shoving the truck moved it by far more.
 	_expect(worst_drift < 0.02,

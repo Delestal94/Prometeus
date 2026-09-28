@@ -18,7 +18,8 @@ const POWER_WIRE_SEGMENTS: int = 10
 const POWER_POLE_MODEL: String = "res://assets/models/environment/route/sm_env_route_power_pole.glb"
 ## Where the wires leave each pole, from the cross-arm's centre: the tips of
 ## the model's three insulators (two on the arm, one on top of the pole).
-const POWER_WIRE_ANCHORS: Array[Vector3] = [Vector3(-0.75, 0.21, 0.0), Vector3(0.0, 0.45, 0.0), Vector3(0.75, 0.21, 0.0)]
+const POWER_WIRE_ANCHORS: Array[Vector3] = [Vector3(-0.75, 0.21, 0.0), Vector3(0.0, 0.45, 0.0), Vector3(0.75, 0.21,
+		0.0)]
 ## One pole in this many carries a transformer.
 const POWER_TRANSFORMER_EVERY: int = 4
 
@@ -146,7 +147,8 @@ func _pole_meshes() -> Dictionary:
 			tool.append_from(part.mesh, surface, local)
 			tool.commit(mesh)
 			var material: Material = part.get_surface_override_material(surface)
-			mesh.surface_set_material(surface, material if material != null else part.mesh.surface_get_material(surface))
+			mesh.surface_set_material(surface,
+					material if material != null else part.mesh.surface_get_material(surface))
 		meshes[String(part.name)] = mesh
 	model.free()
 	return meshes

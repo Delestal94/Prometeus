@@ -33,7 +33,8 @@ func build_signs() -> void:
 	# in front of the drum, so it reads from right under the door too.
 	# The board leans 0.3 rad toward the room; the text sits 4 cm off its face.
 	var exit_sign := DepotLabels.text(_root, tr("WORLD_DEPOT_DOOR_INSIDE"),
-			Vector3(0.0, Layout.FLOOR_TOP + Layout.DOOR_HEIGHT + 0.45 - 0.04 * sin(0.3), 0.02 + 0.855 + 0.04 * cos(0.3)),
+			Vector3(0.0, Layout.FLOOR_TOP + Layout.DOOR_HEIGHT + 0.45 - 0.04 * sin(0.3),
+					0.02 + 0.855 + 0.04 * cos(0.3)),
 			0.0, 64, Color("ffc93c"), Layout.DISPLAY_FONT, 0.008, 14)
 	exit_sign.rotation.x = 0.3
 	exit_sign.name = "ExitSign"

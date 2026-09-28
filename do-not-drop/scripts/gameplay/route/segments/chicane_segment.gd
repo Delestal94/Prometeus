@@ -24,6 +24,7 @@ func _build() -> void:
 
 
 func _barrier(node_name: String, base: Vector3, rotation_y: float) -> void:
-	var solid: Node3D = _box(node_name, Vector3(BLOCK_SIZE.x, BLOCK_COLLISION_HEIGHT, BLOCK_SIZE.z), base + Vector3.UP * BLOCK_COLLISION_HEIGHT * 0.5, CONCRETE, true)
+	var solid: Node3D = _box(node_name, Vector3(BLOCK_SIZE.x, BLOCK_COLLISION_HEIGHT, BLOCK_SIZE.z),
+			base + Vector3.UP * BLOCK_COLLISION_HEIGHT * 0.5, CONCRETE, true)
 	_hide_box_visual(solid)
 	_art(node_name + "Visual", BARRIER_MODEL, base, rotation_y)

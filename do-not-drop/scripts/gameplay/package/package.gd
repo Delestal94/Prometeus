@@ -194,7 +194,8 @@ func _physics_process(delta: float) -> void:
 	# along with it on, a box was swept out through the shut rear doors
 	# (playtest 2026-09-27, see Vehicle.needs_sweep()).
 	var vehicle: Node3D = _find_vehicle()
-	var sweep: bool = vehicle == null or bool(vehicle.call(&"needs_sweep", self, RIDE_MARGIN if net_in_vehicle else 0.0))
+	var sweep: bool = vehicle == null or bool(vehicle.call(&"needs_sweep", self,
+			RIDE_MARGIN if net_in_vehicle else 0.0))
 	if continuous_cd != sweep:
 		continuous_cd = sweep
 

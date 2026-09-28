@@ -225,9 +225,11 @@ static func _model_parts(path: String) -> Array:
 ## see-through or glowing ones are left alone.
 static func _shared(material: Material) -> Material:
 	var base := material as StandardMaterial3D
-	if base == null or base.albedo_texture != null or base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or base.emission_enabled:
+	if (base == null or base.albedo_texture != null or base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
+			or base.emission_enabled):
 		return material
-	var key: String = "%s|%s|%.2f|%.2f|%d" % [base.resource_name.get_slice(".", 0), base.albedo_color.to_html(), base.roughness, base.metallic, int(base.vertex_color_use_as_albedo)]
+	var key: String = "%s|%s|%.2f|%.2f|%d" % [base.resource_name.get_slice(".", 0), base.albedo_color.to_html(),
+			base.roughness, base.metallic, int(base.vertex_color_use_as_albedo)]
 	if not _shared_materials.has(key):
 		_shared_materials[key] = base
 	return _shared_materials[key]

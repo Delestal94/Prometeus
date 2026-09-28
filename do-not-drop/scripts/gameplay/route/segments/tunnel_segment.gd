@@ -33,12 +33,16 @@ func _build() -> void:
 	# What you hit is the boxes this script always built (hidden); what you
 	# see is the imported bore, portals and lamps (N-131).
 	for side: float in [-1.0, 1.0]:
-		_hide_box_visual(_box("TunnelWall", Vector3(0.6, HEIGHT, length), Vector3(side * (HALF_WIDTH + 0.3), HEIGHT * 0.5, middle), CONCRETE, true))
-	_hide_box_visual(_box("TunnelRoof", Vector3(HALF_WIDTH * 2.0 + 1.2, 0.5, length), Vector3(0.0, HEIGHT + 0.25, middle), CONCRETE, true))
+		_hide_box_visual(_box("TunnelWall", Vector3(0.6, HEIGHT, length), Vector3(side * (HALF_WIDTH + 0.3),
+				HEIGHT * 0.5, middle), CONCRETE, true))
+	_hide_box_visual(_box("TunnelRoof", Vector3(HALF_WIDTH * 2.0 + 1.2, 0.5, length), Vector3(0.0, HEIGHT + 0.25,
+			middle), CONCRETE, true))
 	for end_z: float in [0.0, -length]:
-		_hide_box_visual(_box("TunnelPortal", Vector3(HALF_WIDTH * 2.0 + 3.0, 1.6, 0.8), Vector3(0.0, HEIGHT + 0.8, end_z), PORTAL, true))
+		_hide_box_visual(_box("TunnelPortal", Vector3(HALF_WIDTH * 2.0 + 3.0, 1.6, 0.8), Vector3(0.0, HEIGHT + 0.8,
+				end_z), PORTAL, true))
 		for side: float in [-1.0, 1.0]:
-			_hide_box_visual(_box("TunnelPortalPier", Vector3(1.2, HEIGHT, 0.8), Vector3(side * (HALF_WIDTH + 0.9), HEIGHT * 0.5, end_z), PORTAL, true))
+			_hide_box_visual(_box("TunnelPortalPier", Vector3(1.2, HEIGHT, 0.8), Vector3(side * (HALF_WIDTH + 0.9),
+					HEIGHT * 0.5, end_z), PORTAL, true))
 	# The bore in short modules (walls, vault, kerb, grass hump on top):
 	# conform_geometry() bends each onto the terrain like the boxes it replaced.
 	var modules: int = maxi(1, roundi(length / MODULE_LENGTH))
@@ -56,8 +60,10 @@ func _build() -> void:
 	_art("TunnelMouthExit", PORTAL_MODEL, Vector3(0.0, 0.0, -length), PI)
 	for end_z: float in [0.0, -length]:
 		for side: float in [-1.0, 1.0]:
-			_hide_box_visual(_box("TunnelWingWall", Vector3(2.2, 2.6, 0.8), Vector3(side * 7.3, 1.3, end_z), PORTAL, true))
-			_hide_box_visual(_box("TunnelWingWall", Vector3(1.2, 1.0, 0.8), Vector3(side * 9.0, 0.5, end_z), PORTAL, true))
+			_hide_box_visual(_box("TunnelWingWall", Vector3(2.2, 2.6, 0.8), Vector3(side * 7.3, 1.3, end_z), PORTAL,
+					true))
+			_hide_box_visual(_box("TunnelWingWall", Vector3(1.2, 1.0, 0.8), Vector3(side * 9.0, 0.5, end_z), PORTAL,
+					true))
 	# The echo inside (N-402): from portal to portal, floor to roof.
 	var zone := AcousticZone.new()
 	zone.name = "AcousticZone"

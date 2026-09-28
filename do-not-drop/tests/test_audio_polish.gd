@@ -15,6 +15,7 @@ extends SceneTree
 ## and are genuinely their own clip, not the old stand-in still playing.
 
 const SynthAudio = preload("res://scripts/presentation/synth_audio.gd")
+const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 
 var _failures: int = 0
 
@@ -28,7 +29,8 @@ func _run() -> void:
 	_test_forklift_motor()
 	await _test_ruin_stinger()
 	if _failures == 0:
-		print("PASS: doorbell, resident cheer, forklift motor and every trap's ruin stinger are their own sounds, not reused stand-ins")
+		print("PASS: doorbell, resident cheer, forklift motor and every trap's ruin stinger are their own sounds,"
+				+ " not reused stand-ins")
 	quit(_failures)
 
 
@@ -63,7 +65,7 @@ func _test_forklift_motor() -> void:
 
 func _test_ruin_stinger() -> void:
 	# A plain box (no declared trap) still gets the generic cartoon fail cue.
-	var plain: RigidBody3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
+	var plain: RigidBody3D = PACKAGE_SCENE.instantiate()
 	root.add_child(plain)
 	await process_frame
 	var plain_feedback: Node = plain.get_node(^"PackageFeedbackComponent")
@@ -77,13 +79,14 @@ func _test_ruin_stinger() -> void:
 
 	# Explosivo gets its own "BOOM." instead (explosive_trap_behavior.gd's
 	# get_hint() literally says that once the timer runs out).
-	var bomb: RigidBody3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
+	var bomb: RigidBody3D = PACKAGE_SCENE.instantiate()
 	bomb.set(&"trap_definition", load("res://data/traps/explosive.tres"))
 	root.add_child(bomb)
 	await process_frame
 	var bomb_feedback: Node = bomb.get_node(^"PackageFeedbackComponent")
 	var bomb_ruin: AudioStreamPlayer3D = bomb_feedback.get(&"_ruin_player")
-	_expect(bomb_ruin != null and bomb_ruin.stream == SynthAudio.comic_boom() and bomb_ruin.stream != SynthAudio.comic_ruin_stinger(),
+	_expect(bomb_ruin != null and bomb_ruin.stream == SynthAudio.comic_boom()
+			and bomb_ruin.stream != SynthAudio.comic_ruin_stinger(),
 		"Explosivo booms instead of the generic stinger when it runs out")
 	bomb_feedback.call(&"_on_package_ruined", bomb.get(&"package_id"), "test")
 	_expect(bomb_ruin.playing, "...and it plays too")

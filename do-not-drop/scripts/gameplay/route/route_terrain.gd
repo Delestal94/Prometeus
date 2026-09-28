@@ -304,7 +304,8 @@ func _build_river_water(river: Dictionary) -> void:
 			var k01 := Vector2i(i, j + 1)
 			var k11 := Vector2i(i + 1, j + 1)
 			if wet.get(k00, false) and wet.get(k10, false) and wet.get(k01, false) and wet.get(k11, false):
-				indices.append_array(PackedInt32Array([index_of[k00], index_of[k10], index_of[k01], index_of[k10], index_of[k11], index_of[k01]]))
+				indices.append_array(PackedInt32Array([index_of[k00], index_of[k10], index_of[k01], index_of[k10],
+						index_of[k11], index_of[k01]]))
 	if indices.is_empty():
 		return
 	var arrays: Array = []

@@ -299,7 +299,8 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 		# otherwise run into another stretch of road, a house or the yard.
 		if segment is NarrowBridgeSegment:
 			var bridge: NarrowBridgeSegment = segment as NarrowBridgeSegment
-			var river_end: Vector3 = (cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)).origin
+			var river_end: Vector3 = (cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn),
+					segment.exit_offset)).origin
 			terrain.rivers.append({
 				"a": Vector2(cursor.origin.x, cursor.origin.z), "b": Vector2(river_end.x, river_end.z),
 				"depth": bridge.river_depth, "full_width": bridge.river_width, "bank_width": bridge.river_reach,

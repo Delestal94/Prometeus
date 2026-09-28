@@ -57,7 +57,8 @@ func _build() -> void:
 	var modules: int = maxi(1, roundi(length / MODULE_LENGTH))
 	var module_length: float = length / float(modules)
 	for index: int in range(modules):
-		var deck: Node3D = _art("BridgeDeckModule", DECK_MODEL, Vector3(0.0, 0.0, -module_length * (float(index) + 0.5)))
+		var deck: Node3D = _art("BridgeDeckModule", DECK_MODEL, Vector3(0.0, 0.0,
+				-module_length * (float(index) + 0.5)))
 		if deck != null:
 			deck.scale.z = module_length / MODULE_LENGTH
 	for side: float in [-1.0, 1.0]:
@@ -70,7 +71,8 @@ func _build() -> void:
 			# it along the bridge instead of cutting through the driving lane.
 			_model("BridgeRailing", RAILING_MODEL, Vector3(side * 3.05, 0.0, z), PI * 0.5)
 		for z: int in range(-2, -int(length), -4):
-			_hide_box_visual(_box("BridgePost", Vector3(0.3, 1.08, 0.3), Vector3(side * 3.05, 0.54, float(z)), Color("5d6b6c"), true))
+			_hide_box_visual(_box("BridgePost", Vector3(0.3, 1.08, 0.3), Vector3(side * 3.05, 0.54, float(z)),
+					Color("5d6b6c"), true))
 			_art("BridgePostModel", POST_MODEL, Vector3(side * 3.05, 0.0, float(z)))
 	# The river: water, banks, abutments and piers, stretched to the span.
 	# Off the main route (endless, tests) this model's own flat "Water" plane

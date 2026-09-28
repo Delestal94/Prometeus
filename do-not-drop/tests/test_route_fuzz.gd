@@ -134,12 +134,15 @@ func _check_built(seed_value: int, houses: int) -> void:
 			if not tree_failed:
 				var gap: float = road_distance.call((tree as Node3D).global_position)
 				if gap < ROAD_HALF_WIDTH + TREE_GAP:
-					_fail(seed_value, houses, "a tree (%s) stands %.1f m from the road's centre" % [tree.scene_file_path.get_file(), gap])
+					_fail(seed_value, houses,
+							"a tree (%s) stands %.1f m from the road's centre" % [tree.scene_file_path.get_file(), gap])
 					tree_failed = true
 			if not river_tree_failed:
 				var local_pos: Vector3 = route.to_local((tree as Node3D).global_position)
-				if float(terrain.call(&"river_depth_at", Vector2(local_pos.x, local_pos.z))) > RoutePlacement.RIVER_MISFIT_DEPTH:
-					_fail(seed_value, houses, "a tree (%s) stands in a narrow bridge's riverbed" % tree.scene_file_path.get_file())
+				if float(terrain.call(&"river_depth_at", Vector2(local_pos.x,
+						local_pos.z))) > RoutePlacement.RIVER_MISFIT_DEPTH:
+					_fail(seed_value, houses,
+							"a tree (%s) stands in a narrow bridge's riverbed" % tree.scene_file_path.get_file())
 					river_tree_failed = true
 
 	# A river never reaches far enough to touch another stretch of the same
@@ -162,7 +165,8 @@ func _check_built(seed_value: int, houses: int) -> void:
 				_fail(seed_value, houses, "a river reaches another stretch of road at point %d" % index)
 				river_failed = true
 		for house: DeliveryHouse in route.get(&"houses"):
-			var factor: float = float(terrain.call(&"_river_factor", river, Vector2(house.position.x, house.position.z)))
+			var factor: float = float(terrain.call(&"_river_factor", river, Vector2(house.position.x,
+					house.position.z)))
 			if not river_failed and factor * float(river.depth) > RoutePlacement.RIVER_MISFIT_DEPTH:
 				_fail(seed_value, houses, "house %d stands in a narrow bridge's riverbed" % (house.house_index + 1))
 				river_failed = true
