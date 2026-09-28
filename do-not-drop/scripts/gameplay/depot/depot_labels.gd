@@ -32,12 +32,26 @@ static func text(parent: Node, value: String, at: Vector3, yaw: float, font_size
 
 ## Paint on the floor, lying flat. yaw 0 reads for someone walking toward -Z
 ## (toward the door); -PI/2 for someone walking toward +X.
-static func floor_text(parent: Node, value: String, at: Vector3, yaw: float, font_size: int, colour: Color) -> void:
-	var label := text(parent, value, Vector3(at.x, Layout.FLOOR_TOP + 0.008, at.z), 0.0, font_size, colour,
+static func floor_text(parent: Node, value: String, at: Vector3, yaw: float, font_size: int, colour: Color) -> Label3D:
+	# Clear of the painted lines (top at FLOOR_TOP + 0.006) and the workshop's
+	# floor (+0.01): closer, the words flickered in and out of them.
+	var label := text(parent, value, Vector3(at.x, Layout.FLOOR_TOP + 0.014, at.z), 0.0, font_size, colour,
 		Layout.DISPLAY_FONT, 0.012, 0)
 	label.basis = Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, -PI * 0.5)
 	label.no_depth_test = false
 	label.shaded = true
+	return label
+
+
+## Shrinks a label's font until its widest line fits `max_width` metres:
+## captions come from the translation table, and a longer word in one
+## language ran off the sign, poster or screen it was written on.
+static func fit_label(label: Label3D, max_width: float) -> void:
+	var font: Font = label.font if label.font != null else Layout.BODY_FONT
+	var measured: float = font.get_multiline_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			label.font_size).x * label.pixel_size
+	if measured > max_width and measured > 0.0:
+		label.font_size = maxi(int(floor(label.font_size * max_width / measured)), 8)
 
 
 ## A flat arrow along `xform`'s +X: `length` long, `width` across the head,

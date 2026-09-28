@@ -457,12 +457,17 @@ func _build_door() -> void:
 func _build_team_board() -> void:
 	var at := Vector3(HALF_WIDTH - 0.06, 2.55, 22.5)
 	var kit := DepotKit.new(self, "TeamBoardColliders")
-	kit.box(Vector3(0.04, 1.4, 2.0), at, DepotKit.flat(Color("c9a26b"), 0.9))
-	kit.box(Vector3(0.05, 1.5, 2.1), at + Vector3(0.01, 0.0, 0.0), DepotKit.flat(Color("59656a"), 0.5, 0.4))
-	kit.box(Vector3(0.01, 0.3, 0.3), at + Vector3(-0.03, 0.4, 0.75), DepotKit.flat(Color("ffc93c"), 0.8), false, 0.1)
+	# Frame behind, cork 1 cm in front of it, the note 1 cm in front of that:
+	# 5 mm apart they flickered. The note sits in the bottom corner, clear of
+	# the title it used to cover.
+	kit.box(Vector3(0.03, 1.5, 2.1), at + Vector3(0.02, 0.0, 0.0), DepotKit.flat(Color("59656a"), 0.5, 0.4))
+	kit.box(Vector3(0.03, 1.4, 2.0), at, DepotKit.flat(Color("c9a26b"), 0.9))
+	kit.box(Vector3(0.01, 0.22, 0.22), at + Vector3(-0.025, -0.52, 0.82), DepotKit.flat(Color("ffc93c"), 0.8),
+			false, 0.1)
 	kit.commit("TeamBoard")
-	DepotLabels.text(self, tr("WORLD_DEPOT_TEAM_TITLE"), at + Vector3(-0.04, 0.5, 0.0), -PI * 0.5, 36, Layout.INK,
-			Layout.DISPLAY_FONT, 0.005, 0)
+	var title := DepotLabels.text(self, tr("WORLD_DEPOT_TEAM_TITLE"), at + Vector3(-0.04, 0.5, 0.0), -PI * 0.5, 36,
+			Layout.INK, Layout.DISPLAY_FONT, 0.005, 0)
+	DepotLabels.fit_label(title, 1.8)
 	_stats_label = DepotLabels.text(self, "", at + Vector3(-0.04, -0.12, -0.05), -PI * 0.5, 28, Layout.INK,
 			Layout.BODY_FONT, 0.0042, 0)
 	_stats_label.name = "TeamStats"
@@ -495,7 +500,7 @@ func refresh_team_board() -> void:
 func _build_stations() -> void:
 	var at_board: Vector3 = Layout.BOARD_AT + Vector3(0.0, 1.6, 0.0) + Layout.board_basis() * Vector3(0.0, 0.0, 0.35)
 	_station(&"orders", tr("WORLD_DEPOT_STATION_ORDERS"), at_board)
-	_station(&"garage", tr("WORLD_DEPOT_STATION_GARAGE"), Vector3(4.6, 1.3, 10.1))
+	_station(&"garage", tr("WORLD_DEPOT_STATION_GARAGE"), Layout.KIOSK_AT + Vector3(-0.45, 1.3, 0.0))
 	_station(&"wardrobe", tr("WORLD_DEPOT_STATION_WARDROBE"), Vector3(14.0, 1.2, 15.5))
 	_station(&"shop", tr("WORLD_DEPOT_STATION_SHOP"), Vector3(10.8, 1.25, 23.4))
 	_station(&"records", tr("WORLD_DEPOT_STATION_RECORDS"), Vector3(HALF_WIDTH - 0.5, 2.0, 22.5))

@@ -65,18 +65,20 @@ func build_shell(kit: DepotKit) -> void:
 	for side: float in [-1.0, 1.0]:
 		var x: float = side * (Layout.HALF_WIDTH - 0.03)
 		kit.box(Vector3(0.06, 2.4, Layout.DEPTH), Vector3(x, 1.2 + Layout.FLOOR_TOP, Layout.DEPTH * 0.5), liner_low)
-		kit.box(Vector3(0.06, Layout.CEILING - 2.4, Layout.DEPTH),
-				Vector3(x, 2.4 + (Layout.CEILING - 2.4) * 0.5, Layout.DEPTH * 0.5), liner_high)
+		kit.box(Vector3(0.06, Layout.CEILING - Layout.LINER_SPLIT, Layout.DEPTH),
+				Vector3(x, Layout.LINER_SPLIT + (Layout.CEILING - Layout.LINER_SPLIT) * 0.5, Layout.DEPTH * 0.5),
+				liner_high)
 	kit.box(Vector3(Layout.HALF_WIDTH * 2.0, 2.4, 0.06), Vector3(0.0, 1.2 + Layout.FLOOR_TOP, Layout.DEPTH - 0.03),
 			liner_low)
-	kit.box(Vector3(Layout.HALF_WIDTH * 2.0, Layout.CEILING - 2.4, 0.06),
-			Vector3(0.0, 2.4 + (Layout.CEILING - 2.4) * 0.5, Layout.DEPTH - 0.03), liner_high)
+	kit.box(Vector3(Layout.HALF_WIDTH * 2.0, Layout.CEILING - Layout.LINER_SPLIT, 0.06),
+			Vector3(0.0, Layout.LINER_SPLIT + (Layout.CEILING - Layout.LINER_SPLIT) * 0.5, Layout.DEPTH - 0.03),
+			liner_high)
 	for side: float in [-1.0, 1.0]:
 		var inner: float = Layout.HALF_WIDTH - jamb
 		var centre: float = side * (jamb + inner * 0.5)
 		kit.box(Vector3(inner, 2.4, 0.06), Vector3(centre, 1.2 + Layout.FLOOR_TOP, 0.01), liner_low)
-		kit.box(Vector3(inner, Layout.CEILING - 2.4, 0.06), Vector3(centre, 2.4 + (Layout.CEILING - 2.4) * 0.5, 0.01),
-				liner_high)
+		kit.box(Vector3(inner, Layout.CEILING - Layout.LINER_SPLIT, 0.06),
+				Vector3(centre, Layout.LINER_SPLIT + (Layout.CEILING - Layout.LINER_SPLIT) * 0.5, 0.01), liner_high)
 	kit.box(Vector3(jamb * 2.0, Layout.CEILING - Layout.DOOR_HEIGHT - 0.9, 0.06),
 			Vector3(0.0, Layout.DOOR_HEIGHT + 0.9 + (Layout.CEILING - Layout.DOOR_HEIGHT - 0.9) * 0.5, 0.01),
 			liner_high)
@@ -88,7 +90,7 @@ func build_shell(kit: DepotKit) -> void:
 		for z: float in [5.0, 16.0, 27.0]:
 			kit.box(Vector3(1.6, 0.04, 7.0), Vector3(x, Layout.CEILING - 0.01, z), DepotKit.glow(Color("e4f1ef"), 0.9))
 	# Portal frames: columns along the walls, trusses across.
-	for z: float in [2.4, 8.0, 13.6, 19.2, 24.8, 30.4]:
+	for z: float in Layout.PORTAL_FRAMES:
 		for side: float in [-1.0, 1.0]:
 			kit.box(Vector3(0.36, Layout.CEILING, 0.3),
 					Vector3(side * (Layout.HALF_WIDTH - 0.24), Layout.CEILING * 0.5, z), steel)
@@ -134,7 +136,7 @@ func build_shell(kit: DepotKit) -> void:
 func build_floor_markings(kit: DepotKit) -> void:
 	var yellow := DepotKit.flat(Layout.YELLOW, 0.7)
 	var white := DepotKit.flat(Color("e8ebe4"), 0.7)
-	var hazard := DepotKit.detailed(Color.WHITE, Layout.WARNING_TEXTURE, 0.9, 0.7)
+	var hazard := DepotKit.stripes(Layout.YELLOW, Color("2b3136"), 0.25)
 	var y: float = Layout.FLOOR_TOP + 0.003
 	var paint := func(size_x: float, size_z: float, centre: Vector3, material: Material) -> void:
 		var mesh := BoxMesh.new()
@@ -157,9 +159,9 @@ func build_floor_markings(kit: DepotKit) -> void:
 	paint.call(0.12, 11.2, Vector3(-1.9, 0.0, 7.8), white)
 	paint.call(0.12, 11.2, Vector3(1.9, 0.0, 7.8), white)
 	paint.call(3.92, 0.12, Vector3(0.0, 0.0, 13.4), white)
-	# Hazard band inside the door, and the loading zone behind the truck.
+	# Hazard band inside the door.
 	paint.call(Layout.DOOR_WIDTH, 1.2, Vector3(0.0, 0.0, 0.9), hazard)
-	paint.call(3.6, 0.8, Vector3(0.0, 0.0, 14.1), hazard)
+	_build_loading_zone(kit, hazard)
 	# Yellow walkway edges and the zones' outlines.
 	for x: float in [-3.3, 3.3]:
 		paint.call(0.1, 13.0, Vector3(x, 0.0, 8.0), yellow)
@@ -179,10 +181,29 @@ func build_floor_markings(kit: DepotKit) -> void:
 			Color(Layout.YELLOW, 0.85))
 	DepotLabels.floor_text(_root, tr("WORLD_DEPOT_FLOOR_EXIT"), Vector3(0.0, 0.0, 2.6), 0.0, 90,
 			Color(Layout.TEAL, 0.9))
-	DepotLabels.floor_text(_root, tr("WORLD_DEPOT_FLOOR_LOADING"), Vector3(0.0, 0.0, 14.1), 0.0, 40,
-			Color(Layout.INK, 0.9))
 	DepotLabels.floor_text(_root, tr("WORLD_DEPOT_WORKSHOP"), Vector3(10.8, 0.0, 6.5), -PI * 0.5, 80,
 			Color("e8ebe4", 0.8))
+
+
+## The loading zone behind the truck's ramp: a hazard-striped frame around a
+## dark plate, and the words painted in yellow on the plate -- written over
+## the stripes they were unreadable. Each layer sits FLOOR_PAINT_STEP over the
+## one under it, so none of them z-fight.
+func _build_loading_zone(kit: DepotKit, hazard: Material) -> void:
+	var zone: Rect2 = Layout.LOADING_ZONE
+	var centre := Vector3(zone.get_center().x, 0.0, zone.get_center().y)
+	var frame := BoxMesh.new()
+	frame.size = Vector3(zone.size.x, 0.006, zone.size.y)
+	kit.add_mesh(frame, Transform3D(Basis.IDENTITY, Vector3(centre.x, Layout.FLOOR_TOP + 0.003, centre.z)), hazard,
+			false)
+	var plate := BoxMesh.new()
+	plate.size = Vector3(zone.size.x - 0.36, 0.006, zone.size.y - 0.36)
+	var plate_y: float = Layout.FLOOR_TOP + 0.003 + Layout.FLOOR_PAINT_STEP
+	kit.add_mesh(plate, Transform3D(Basis.IDENTITY, Vector3(centre.x, plate_y, centre.z)),
+			DepotKit.flat(Color("2b3136"), 0.75), false)
+	var words := DepotLabels.floor_text(_root, tr("WORLD_DEPOT_FLOOR_LOADING"), centre, 0.0, 56, Layout.YELLOW)
+	words.position.y = Layout.FLOOR_TOP + 0.006 + Layout.FLOOR_PAINT_STEP * 2.0
+	DepotLabels.fit_label(words, zone.size.x - 0.7)
 
 
 ## How a new player finds each station without anyone telling them (tareas

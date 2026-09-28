@@ -33,11 +33,15 @@ func build_signs() -> void:
 	DepotLabels.text(_root, tr("WORLD_DEPOT_DOOR_INSIDE"), Vector3(0.0, Layout.DOOR_HEIGHT + 1.3, 0.12), 0.0, 64,
 			Color("ffc93c"), Layout.DISPLAY_FONT, 0.008, 14)
 	# Safety posters on the walls.
-	_poster(Vector3(-Layout.HALF_WIDTH + 0.07, 2.2, 3.4), PI * 0.5, tr("WORLD_DEPOT_POSTER_VEST_TITLE"),
+	# On the front wall, left of the door: on the left wall it hung behind
+	# the stock racking, where nobody could read it.
+	_poster(Vector3(-7.5, 2.2, 0.06), 0.0, tr("WORLD_DEPOT_POSTER_VEST_TITLE"),
 			tr("WORLD_DEPOT_POSTER_VEST_BODY"), Color("ff9f1c"))
 	_poster(Vector3(-Layout.HALF_WIDTH + 0.07, 2.2, 31.2), PI * 0.5, tr("WORLD_DEPOT_POSTER_LIFT_TITLE"),
 			tr("WORLD_DEPOT_POSTER_LIFT_BODY"), Color("4cc9f0"))
-	_poster(Vector3(Layout.HALF_WIDTH - 0.07, 2.2, 26.3), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"),
+	# Between the column at z 24.8 and the supplies shelf (from z 26.65),
+	# which used to hide half of it.
+	_poster(Vector3(Layout.HALF_WIDTH - 0.07, 2.2, 25.6), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"),
 			tr("WORLD_DEPOT_POSTER_FRAGILE_BODY"), Color("ff5e5b"))
 	_poster(Vector3(-8.0, 2.4, Layout.DEPTH - 0.07), PI, tr("WORLD_DEPOT_POSTER_ONEBOX_TITLE"),
 			tr("WORLD_DEPOT_POSTER_ONEBOX_BODY"), Color("2dd4a3"))
@@ -48,15 +52,19 @@ func _poster(at: Vector3, yaw: float, title: String, body: String, accent: Color
 	var kit := DepotKit.new(_root, "PosterColliders")
 	var basis := Basis(Vector3.UP, yaw)
 	kit.box_xf(Vector3(1.1, 1.5, 0.02), Transform3D(basis, at), DepotKit.flat(Layout.PAPER, 0.9))
-	kit.box_xf(Vector3(1.1, 0.34, 0.025), Transform3D(basis, at + Vector3(0.0, 0.58, 0.0)), DepotKit.flat(accent, 0.8))
+	# The header band stands 1 cm proud of the paper (it was 2.5 mm, and the
+	# two faces shimmered into each other from across the hall).
+	var band_at: Vector3 = at + basis * Vector3(0.0, 0.0, 0.01) + Vector3(0.0, 0.58, 0.0)
+	kit.box_xf(Vector3(1.1, 0.34, 0.02), Transform3D(basis, band_at), DepotKit.flat(accent, 0.8))
 	kit.commit("Poster")
 	var face: Vector3 = basis * Vector3(0.0, 0.0, 0.03)
-	DepotLabels.text(_root, title, at + face + Vector3(0.0, 0.58, 0.0), yaw, 34, Layout.PAPER, Layout.DISPLAY_FONT,
-			0.0045, 6).width = 230
+	var heading := DepotLabels.text(_root, title, at + face + Vector3(0.0, 0.58, 0.0), yaw, 34, Layout.PAPER,
+			Layout.DISPLAY_FONT, 0.0045, 6)
+	DepotLabels.fit_label(heading, 0.98)
 	var text := DepotLabels.text(_root, body, at + face + Vector3(0.0, -0.05, 0.0), yaw, 30, Layout.INK,
 			Layout.BODY_FONT, 0.004, 0)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.width = 250
+	text.width = 240
 
 
 func _build_clock() -> void:
