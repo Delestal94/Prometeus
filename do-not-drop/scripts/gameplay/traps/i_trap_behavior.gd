@@ -43,6 +43,16 @@ func get_hint() -> String:
 	return ""
 
 
+## A trap solved by tapping directions one at a time says where that stands,
+## so the care panel can show and sound it on every peer (the behavior only
+## runs on the host; PackageRescue.publish_care() replicates this):
+## {steps: Array[StringName], index: next step, mistakes: wrong taps so far,
+##  solved: times completed, seconds: time left (or -1), verb: what solving
+##  does}. Empty for every other trap.
+func sequence_state() -> Dictionary:
+	return {}
+
+
 ## Milestones are consumed by DeliveryPackage on the host. Keeping them in
 ## the behavior lets each trap define what "good play" means without making
 ## the package inspect trap-specific state.

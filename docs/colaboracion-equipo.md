@@ -7,6 +7,31 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: tarjeta animada con sonido en el panel de cuidado (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo: que los minijuegos se entiendan con animaciones que
+muestren qué usar, y con sonido. Toca la zona compartida y archivos de Slatex; **solo agrega**,
+ninguna firma existente cambia salvo `sequence_prompt()` (ver abajo):
+
+- `presentation/synth_audio.gd` (zona compartida): cinco funciones nuevas, `care_step()`,
+  `care_error()`, `care_success()`, `care_whoosh()` y `care_tick()`, cacheadas como las demás.
+  Los generadores están en el archivo nuevo `presentation/synth_audio_care.gd`.
+  `presentation/sound_audit.gd` las nombra en "Sonidos del juego".
+- `ui/hud/care_prompt_view.gd` (nuevo, Slatex): la tarjeta que dibuja qué apretar. En modo
+  trabajo muestra mouse o LT, tecla o stick, flechas que se deslizan y un anillo de progreso. En
+  modo secuencia muestra una fila de teclas: la que toca rebota y las hechas llevan tilde; si
+  errás aparece "¡TECLA EQUIVOCADA!". Todo suena en el bus SFX.
+- `player/player_cargo_care.gd` (Slatex): la tarjeta reemplaza a la barra de progreso.
+  `sequence_prompt()` ahora recibe el diccionario de la secuencia en vez del paquete.
+- `traps/i_trap_behavior.gd` (Slatex): nuevo `sequence_state()`, vacío por defecto. Lo
+  implementan `explosive_trap_behavior.gd` y `growing_weight_trap_behavior.gd`, que ahora
+  cuentan errores y resoluciones.
+- `package/package_rescue.gd` (Slatex): `publish_care()` suma `"sequence"` al `care_state`
+  replicado. Antes los clientes nunca veían el avance real de la bomba; el cartel 3D de
+  `package_feedback.gd` también lo lee ahora.
+- Tests: `test_care_prompt_view` (nuevo) y `test_package_rescue`. Captura con ventana:
+  `tests/render_care_prompt.gd`. Slatex: `git pull` antes de tocar esos archivos.
+
 ## Aviso activo: regazo al sentarse, arranque sin carga y minijuegos más claros (2026-09-28)
 
 Lo hizo Nacho (con Claude) a partir de una prueba propia. Toca archivos de Slatex y la zona

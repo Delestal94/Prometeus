@@ -623,6 +623,14 @@ func _apply_explosive(delta: float) -> void:
 		return
 	var seconds: float = float(package.trap_behavior.get("seconds_left"))
 	var direction: StringName = StringName(package.trap_behavior.call("next_direction"))
+	# The bomb only ticks on the host: every other peer reads the sequence
+	# the host publishes with the care state (PackageRescue.publish_care()).
+	var sequence: Dictionary = package.care_state.get("sequence", {})
+	if not sequence.is_empty():
+		var steps: Array = sequence.get("steps", [])
+		var index: int = int(sequence.get("index", 0))
+		seconds = float(sequence.get("seconds", seconds))
+		direction = StringName(steps[index]) if index < steps.size() else &""
 	var state: int = int(package.trap_behavior.call("get_state"))
 	_explosive_display.text = "DESACTIVAR\n%02d s  %s" % [ceili(seconds), _explosive_arrow(direction)]
 	_explosive_display.modulate = UiTheme.state_color(state, _colorblind_palette_enabled())

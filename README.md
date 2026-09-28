@@ -249,6 +249,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_rescue.gd
+<godot> --headless --path do-not-drop --script res://tests/test_care_prompt_view.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ride_sync.gd
@@ -388,7 +389,14 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   flechas, un tope de calidad que ningún arreglo levanta, el kit compartido
   que no se gasta dos veces, cómo pagan y se cuentan las entregas rescatadas,
   los rescates propios de cada contenido (trapo, reubicar entre dos...), regazo
-  y cincha, la ventana que se sostiene si alguien se desconecta, y los plazos.
+  y cincha, la ventana que se sostiene si alguien se desconecta, y los plazos;
+  el panel nombra botón y tecla, y la secuencia de la bomba viaja con el estado
+  de cuidado para que todos los clientes la vean.
+- `test_care_prompt_view` — la tarjeta animada del panel de cuidado: cada
+  toque correcto, tecla equivocada, giro de flecha, avance de la herramienta y
+  trabajo terminado suena (cinco sonidos sintetizados, cortos y sin saturar), y
+  nada suena solo por empezar a mirar una caja. Capturas con ventana:
+  `tests/render_care_prompt.gd` → `user://render_care_prompt_*.png`.
 - `test_package_identity` — cada trampa viaja en su propia caja impresa, con
   su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una

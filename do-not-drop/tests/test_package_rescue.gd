@@ -190,10 +190,17 @@ func _check_panel_prompts() -> void:
 	await process_frame
 	var expected: String = CargoCare.direction_key(
 		CargoCare.SEQUENCE_VECTORS[StringName(bomb.trap_behavior.call(&"next_direction"))])
-	var prompt: String = CargoCare.sequence_prompt(bomb, false)
+	# What clients get: the host publishes the sequence with the care state.
+	PackageRescue.publish_care(bomb)
+	var sequence: Dictionary = bomb.care_state.get("sequence", {})
+	_expect(not sequence.is_empty(), "The bomb's sequence rides along with the replicated care state")
+	var prompt: String = CargoCare.sequence_prompt(sequence, false)
 	_expect(prompt.begins_with("Desactivar: tocá %s" % expected), "The bomb's next tap is spelled out (got '%s')" % prompt)
+	bomb.trap_behavior.call(&"_consume_direction", &"nowhere")
+	_expect(int(bomb.trap_behavior.call(&"sequence_state")["mistakes"]) == 1, "A wrong tap is counted, so every peer can buzz")
 	bomb.trap_behavior.set(&"_defused", true)
-	_expect(CargoCare.sequence_prompt(bomb, false).is_empty(), "Nothing to tap once it's defused")
+	_expect(CargoCare.sequence_prompt(bomb.trap_behavior.call(&"sequence_state"), false).is_empty(),
+		"Nothing to tap once it's defused")
 	bomb.free()
 
 

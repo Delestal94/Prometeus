@@ -95,7 +95,14 @@ static func complete_care_tool(p: DeliveryPackage, tool: StringName) -> void:
 
 
 static func publish_care(p: DeliveryPackage) -> void:
-	p.care_state = p.care.snapshot()
+	var state: Dictionary = p.care.snapshot()
+	# Tap sequences live in the host-only trap behavior: ride along so every
+	# peer's care panel and bomb sign show the real next key.
+	if p.trap_behavior != null and p.trap_behavior.has_method(&"sequence_state"):
+		var sequence: Dictionary = p.trap_behavior.call(&"sequence_state")
+		if not sequence.is_empty():
+			state["sequence"] = sequence
+	p.care_state = state
 	var run: Node = p.get_node_or_null(^"/root/RunManager")
 	if run != null and (run.get(&"cargo") as Dictionary).has(p.package_id):
 		run.call(&"record_care", p.package_id, p.delivery_assessment())

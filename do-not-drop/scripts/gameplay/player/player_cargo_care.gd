@@ -1,6 +1,7 @@
 extends Node
 ## Local input and a compact workbench HUD. All actual work happens on the host.
 const Care = preload("res://scripts/gameplay/package/package_care.gd")
+const CarePromptView = preload("res://scripts/ui/hud/care_prompt_view.gd")
 const PHASE_NAMES: Dictionary = {&"intact": "INTACTO", &"damaged": "DAÑADO", &"crisis": "¡RESCATE!",
 	&"rescued": "RESCATADO", &"lost": "PERDIDO"}
 const HELP_GAMEPAD: String = "RT + stick: equilibrar\n" \
@@ -17,9 +18,10 @@ var panel: PanelContainer
 var title: Label
 var details: Label
 var instructions: Label
-var progress: ProgressBar
+var prompt_view: CarePromptView
 var balance_view: Control
 var target: Node
+var _prompt_target: Node
 var _layer: CanvasLayer
 
 class BalanceView extends Control:
@@ -50,21 +52,21 @@ func _ready() -> void:
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
 	panel.offset_left = -370
 	panel.offset_right = -20
-	panel.offset_top = -140
-	panel.offset_bottom = 140
+	panel.offset_top = -250
+	panel.offset_bottom = 250
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	panel.add_child(column)
 	title = _label(column, 20)
+	# First thing under the name: what to press, animated and with sound.
+	prompt_view = CarePromptView.new()
+	column.add_child(prompt_view)
 	var view := BalanceView.new()
 	view.custom_minimum_size = Vector2(190, 100)
 	column.add_child(view)
 	balance_view = view
-	progress = ProgressBar.new()
-	progress.show_percentage = true
-	column.add_child(progress)
 	details = _label(column, 16)
 	instructions = _label(column, 15)
 	panel.visible = false
@@ -98,10 +100,14 @@ func _physics_process(_delta: float) -> void:
 	if target == null:
 		target = player.call(&"_lid_target")
 	panel.visible = target != null
+	if target != _prompt_target:
+		_prompt_target = target
+		prompt_view.reset()
 	if target == null:
 		return
 	if Input.is_action_just_pressed(&"care_tool_next"):
 		tool_index = (tool_index + 1) % Care.TOOLS.size()
+		prompt_view.play_cue(&"whoosh")
 	var input: Dictionary = player.call(&"_gather_package_input")
 	input["balance"] = Input.get_vector(&"drive_left", &"drive_right", &"walk_forward", &"walk_backward")
 	input["work"] = Input.is_action_pressed(&"care_work")
@@ -111,19 +117,39 @@ func _physics_process(_delta: float) -> void:
 	title.text = "%s · %s" % [String(target.trap_definition.display_name), PHASE_NAMES.get(care.phase, "")]
 	balance_view.care = care
 	balance_view.queue_redraw()
-	progress.value = care.work * 100.0
 	var gamepad: bool = _using_gamepad()
-	var stock: int = int(run.call(&"care_supply_count", Care.TOOLS[tool_index]))
-	var tool_label: String = care.tool_name(Care.TOOLS[tool_index], target._trap_kind())
+	var tool: StringName = Care.TOOLS[tool_index]
+	var stock: int = int(run.call(&"care_supply_count", tool))
+	var tool_label: String = care.tool_name(tool, target._trap_kind())
 	var status: String = target.get_hint() if care.message.is_empty() else care.message
-	# A bare arrow read as decoration: spell out the button and the key.
-	details.text = "%s (%d): %s\n%s" % [tool_label, stock, work_prompt(care.work_direction(), gamepad), status]
-	var sequence: String = sequence_prompt(target, gamepad)
-	if not sequence.is_empty():
-		details.text += "\n" + sequence
+	_update_prompt(care, input, tool, tool_label, stock, gamepad)
+	details.text = "%s (%d) · %s" % [tool_label, stock, status]
 	if care.phase == &"crisis":
 		details.text += "\nRescate: %ds · quedan %d piezas" % [ceili(care.crisis_left), care.missing_parts]
 	instructions.text = HELP_GAMEPAD if gamepad else HELP_KEYBOARD
+
+
+## The animated card: a pending tap sequence (the bomb) comes first, the
+## selected tool's hold-to-work otherwise. Speed and a helper aren't known
+## here, so "usable" is the host's rule minus those two.
+func _update_prompt(care, input: Dictionary, tool: StringName, tool_label: String, stock: int,
+		gamepad: bool) -> void:
+	var state: Dictionary = target.get(&"care_state") if target.get(&"care_state") is Dictionary else {}
+	var sequence: Dictionary = state.get("sequence", {})
+	if not sequence.is_empty() and prompt_view.show_sequence(sequence, gamepad, sequence_prompt(sequence, gamepad)):
+		return
+	var direction: Vector2 = care.work_direction()
+	var balance: Vector2 = input.get("balance", Vector2.ZERO)
+	var usable: bool = stock > 0 and care.tool_blocker(tool, target._trap_kind(), 0.0, true).is_empty()
+	var work: float = care.work if care.work_tool in [tool, &""] else 0.0
+	prompt_view.show_work(direction, work, bool(input["work"]), balance.dot(direction) >= 0.65, fix_count(care),
+		usable, gamepad, "%s: %s" % [tool_label, work_prompt(direction, gamepad)])
+
+
+## Grows each time a tool job completes (tape can also tear off on a hit,
+## which only makes it smaller): the card celebrates when it goes up.
+static func fix_count(care) -> int:
+	return int(care.tape) + int(care.repairs) + int(care.padded) + int(care.strapped) + int(care.substituted)
 
 
 ## "Hold right click + A (←)": the tool only works while both are held.
@@ -133,19 +159,18 @@ static func work_prompt(direction: Vector2, gamepad: bool) -> String:
 	return "mantené clic der. + %s (%s)" % [direction_key(direction), direction_arrow(direction)]
 
 
-## A trap solved by tapping directions one at a time (the bomb's module):
-## the next one to tap, spelled out, or "" when none is pending.
-static func sequence_prompt(package: Node, gamepad: bool) -> String:
-	var behavior: Object = package.get(&"trap_behavior") as Object
-	if behavior == null or not behavior.has_method(&"next_direction"):
+## A trap solved by tapping directions one at a time (the bomb's module,
+## from its replicated sequence_state()): the next one to tap, spelled out,
+## or "" when none is pending.
+static func sequence_prompt(sequence: Dictionary, gamepad: bool) -> String:
+	var steps: Array = sequence.get("steps", [])
+	var index: int = int(sequence.get("index", 0))
+	if index >= steps.size() or not SEQUENCE_VECTORS.has(StringName(steps[index])):
 		return ""
-	var next: StringName = StringName(behavior.call(&"next_direction"))
-	if not SEQUENCE_VECTORS.has(next):
-		return ""
-	var direction: Vector2 = SEQUENCE_VECTORS[next]
+	var direction: Vector2 = SEQUENCE_VECTORS[StringName(steps[index])]
 	var key: String = "stick %s" % direction_arrow(direction) if gamepad \
 		else "%s (%s)" % [direction_key(direction), direction_arrow(direction)]
-	return "Desactivar: tocá %s (un toque, sin clic)" % key
+	return "%s: tocá %s, sin clic" % [String(sequence.get("verb", "Resolver")), key]
 
 
 static func direction_arrow(direction: Vector2) -> String:

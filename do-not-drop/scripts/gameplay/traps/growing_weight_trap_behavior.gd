@@ -21,6 +21,8 @@ var _base_mass: float = 8.0
 var _time_since_solved: float = 0.0
 var _time_since_growth: float = 0.0
 var _rng := RandomNumberGenerator.new()
+var _mistakes: int = 0
+var _solved: int = 0
 
 
 func on_setup(package: Node, config: Dictionary) -> void:
@@ -60,6 +62,7 @@ func press_direction(direction: StringName) -> bool:
 		return false
 	if direction != sequence[sequence_index]:
 		sequence_index = 0
+		_mistakes += 1
 		return false
 	sequence_index += 1
 	if sequence_index < sequence.size():
@@ -88,7 +91,15 @@ func get_hint() -> String:
 	return "¡Se está poniendo pesado! %s" % pending
 
 
+func sequence_state() -> Dictionary:
+	if get_state() == TrapState.RUINED or sequence.is_empty():
+		return {}
+	return {"steps": sequence.duplicate(), "index": sequence_index, "mistakes": _mistakes, "solved": _solved,
+		"seconds": maxf(_puzzle_time_limit - _time_since_solved, 0.0), "verb": "Asegurar"}
+
+
 func _solve() -> void:
+	_solved += 1
 	mass_multiplier = 1.0
 	_time_since_solved = 0.0
 	_time_since_growth = 0.0
