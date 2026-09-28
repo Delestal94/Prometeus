@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
+> Última actualización: 2026-09-28 (N-901 y todo lo de publicar/promocionar pospuesto a la iteración de lanzamiento). Antes: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
 > M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
 > N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
 > una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
@@ -72,7 +72,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M2 — Ritmo y guía del jugador** | Una entrega de 2-5 minutos donde siempre se sabe adónde ir. | N-103, N-104, N-105, N-501, N-502, N-503 |
 | **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
-| **M5 — Preparación de lanzamiento** | Builds, tienda, tráiler. | N-210, N-703, N-901 a N-906 |
+| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
@@ -678,7 +678,11 @@ Esto no es playtesting (no juzga diversión), busca errores.
 
 ## 9. Negocio, marketing y distribución
 
-### N-901 · Steamworks y AppID propio — A (decisión) · `Opus 5.5 · medium` · Aviso: no
+> **⏸ Pospuesto (2026-09-28):** estamos en desarrollo y refinamiento, así que lo de publicar en Steam
+> y promocionar el juego queda para una iteración de lanzamiento. Las tareas marcadas ⏸ no se trabajan
+> ni cuentan como pendientes hasta que se reabra esta sección.
+
+### N-901 · Steamworks y AppID propio — A (decisión) · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 

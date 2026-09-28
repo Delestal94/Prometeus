@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-25 (estado relevado sobre `d15ad02`).
+> Última actualización: 2026-09-28 (S-901 a S-904, S-906 y S-907 pospuestas a la iteración de lanzamiento). Antes: 2026-09-25 (estado relevado sobre `d15ad02`).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -75,7 +75,7 @@ ChatGPT no ve el repo ni corre Godot solo (salvo que uses Codex conectado al rep
 | **M2 — Base técnica para lo que sigue** | Partir los archivos gigantes antes de sumarles UI; red robusta. | S-201, S-202, S-204, S-206, S-209 |
 | **M3 — Onboarding y UX** | Que alguien que nunca jugó entienda qué hacer sin que se lo expliquen. | S-106, S-107, S-501, S-502, S-504, S-505, S-506, S-508, S-510 |
 | **M4 — Balance medido y juice** | Números justificados por simulación; fallas que den ganas de clipear. | S-108, S-109, S-110, S-111, S-301, S-302, S-310, S-401 a S-404, S-601 a S-604 |
-| **M5 — Preparación de lanzamiento** | Inglés, tienda, capturas, logros. | S-509, S-306, S-901 a S-907, S-805 |
+| **M5 — Preparación de lanzamiento** | Inglés, logo, telemetría. Tienda, capturas, press kit, monetización y logros (S-901 a S-904, S-906, S-907) ⏸ pospuestos a la iteración de lanzamiento. | S-509, S-306, S-905, S-805 |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
@@ -796,25 +796,30 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ## 9. Negocio, marketing y distribución
 
-### S-901 · Texto de la página de Steam — B · `Luna · medium` (redactar), `Sol · medium` (revisar) · Aviso: no
+> **⏸ Pospuesto (2026-09-28):** estamos en desarrollo y refinamiento, así que lo de publicar en Steam
+> y promocionar el juego queda para una iteración de lanzamiento. Las tareas marcadas ⏸ no se trabajan
+> ni cuentan como pendientes hasta que se reabra esta sección.
+> S-905 sigue activa: es investigación de onboarding que alimenta a S-506.
+
+### S-901 · Texto de la página de Steam — B · `Luna · medium` (redactar), `Sol · medium` (revisar) · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] `docs/marketing/steam-page.md` en español e inglés: descripción corta (≤ 300 caracteres), descripción
   larga con 5 viñetas de características, requisitos mínimos (GL Compatibility → hardware modesto),
   etiquetas (Co-op, Online Co-Op, Physics, Driving, Funny, Party Game).
 - [ ] Una frase de gancho que diga los roles asimétricos: "Uno maneja. Los demás intentan que nada explote."
 
-### S-902 · Modo captura para imágenes y tráiler — B · `Sol · high` · Aviso: no
+### S-902 · Modo captura para imágenes y tráiler — B · `Sol · high` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] Tecla de depuración (F10, solo build de debug) que oculta todo el HUD y el viewmodel.
 - [ ] `tests/render_store_shots.gd`: 5 escenas fijas (depósito cargando, manejo con cajas en riesgo, entrega
   en una casa, caja explotando, resultados) a 1920×1080. Necesita ventana: la corrés vos.
 
-### S-903 · Cápsulas de Steam — C · generación de imagen · Aviso: no
+### S-903 · Cápsulas de Steam — C · generación de imagen · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] Con el logo (S-306): 460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240. `assets/store/`.
   Registrar en `art/ai-registro.md`.
 
-### S-904 · Press kit — C · `Luna · medium` · Aviso: no
+### S-904 · Press kit — C · `Luna · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] `docs/marketing/presskit.md`: ficha (nombre, equipo, plataforma, precio objetivo $8-15, fecha
   tentativa de Early Access), descripción, características, logo, capturas (S-902), contacto.
@@ -825,12 +830,12 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   Totally Reliable Delivery Service enseñan sus controles y sus reglas en los primeros 5 minutos, y qué
   tomar para S-506. Con fuentes.
 
-### S-906 · Registro de decisión de monetización — A · `Luna · medium` · Aviso: no
+### S-906 · Registro de decisión de monetización — A · `Luna · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] En `docs/plan-desarrollo.md`: precio único $8-15, sin microtransacciones, cosméticos solo se
   ganan jugando, actualizaciones gratis. Verificar que ningún cosmético del código tenga precio en dinero real.
 
-### S-907 · Logros — B · `Sol · high` · Aviso: no
+### S-907 · Logros — B · `Sol · high` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] Diseñar 15 logros atados a hitos que ya existen o que suma esta lista (primera entrega, primer
   explosivo desactivado, entrega perfecta con 4 casas, 10 rescates, sacar foto a una caja arruinada…).

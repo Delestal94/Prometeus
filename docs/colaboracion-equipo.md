@@ -7,6 +7,14 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: Steam y marketing pospuestos (2026-09-28)
+
+Estamos en desarrollo y refinamiento: todo lo de publicar en Steam o promocionar el juego queda para
+una iteración de lanzamiento. Marcadas ⏸ en las listas: **N-901** (Steamworks y AppID) y **S-901 a
+S-904, S-906, S-907** (página de Steam, modo captura, cápsulas, press kit, monetización, logros).
+Siguen activas S-905 (alimenta el onboarding S-506), S-306 (logo del menú), S-509 (inglés) y S-805.
+Slatex: si querés reabrir alguna de las tuyas antes, sacale la marca ⏸.
+
 ## Aviso activo: PR #10 al día con main y con el lint (2026-09-28)
 
 Nacho integró main (con #8, el pulido cartoon) en `codex/s504-gamepad-navigation`
