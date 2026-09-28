@@ -8,7 +8,7 @@ extends PanelContainer
 
 const CarePromptView = preload("res://scripts/ui/hud/care_prompt_view.gd")
 const UiThemeScript = preload("res://scripts/ui/ui_theme.gd")
-const WIDTH: float = 340.0
+const WIDTH: float = 360.0
 ## The profile flag, alongside the per-trap first tips.
 const SEEN_ID: StringName = &"care_practice"
 ## Seconds of holding that count as having done it.
@@ -61,7 +61,7 @@ func _init() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	add_child(column)
-	UiThemeScript.tag(column, "PRÁCTICA", UiThemeScript.SKY, -2.0, 14)
+	UiThemeScript.tag(column, "PRÁCTICA", UiThemeScript.SKY, -2.0, 16)
 	_title = UiThemeScript.title(column, "CÓMO CUIDAR LA CARGA", 24)
 	prompt_view = CarePromptView.new()
 	prompt_view.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -74,8 +74,11 @@ func _init() -> void:
 		mark.custom_minimum_size = Vector2(22, 22)
 		row.add_child(mark)
 		_marks.append(mark)
-		_rows.append(UiThemeScript.label(row, "", 15))
-	var note: Label = UiThemeScript.label(column, "Cuando quieras, subite a manejar para salir.", 13, UiThemeScript.MUTED)
+		var text: Label = UiThemeScript.label(row, "", 16)
+		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.custom_minimum_size.x = WIDTH - 32 - 30
+		_rows.append(text)
+	var note: Label = UiThemeScript.label(column, "Cuando quieras, subite a manejar para salir.", 16, UiThemeScript.MUTED)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size.x = WIDTH - 32
 

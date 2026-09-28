@@ -44,8 +44,9 @@ func _ready() -> void:
 	card.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 	card.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	card.grow_vertical = Control.GROW_DIRECTION_BOTH
-	card.offset_right = -24
-	card.offset_left = -24 - CareCard.WIDTH
+	# The HUD's own margin (Hud.EDGE_MARGIN), so the right column lines up.
+	card.offset_right = -Hud.EDGE_MARGIN
+	card.offset_left = -Hud.EDGE_MARGIN - CareCard.WIDTH
 	_root.add_child(card)
 	card.visible = false
 	if CarePractice.pending(get_node_or_null(^"/root/UnlockManager")):
@@ -54,8 +55,8 @@ func _ready() -> void:
 		practice.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 		practice.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		practice.grow_vertical = Control.GROW_DIRECTION_BOTH
-		practice.offset_right = -24
-		practice.offset_left = -24 - CarePractice.WIDTH
+		practice.offset_right = -Hud.EDGE_MARGIN
+		practice.offset_left = -Hud.EDGE_MARGIN - CarePractice.WIDTH
 		_root.add_child(practice)
 		practice.visible = false
 

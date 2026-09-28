@@ -11,7 +11,7 @@ const UiThemeScript = preload("res://scripts/ui/ui_theme.gd")
 const WIDTH: float = 340.0
 ## Every step keeps the same height, footer or not: the card is centred on
 ## the screen's edge and would otherwise jump as the steps change.
-const MIN_HEIGHT: float = 318.0
+const MIN_HEIGHT: float = 330.0
 ## Warm for "something to do now", readable on cream (UiTheme.ORANGE isn't).
 const URGENT_ORANGE: Color = Color("c26a00")
 const STATE_TEXTS: Array[String] = ["OK", "EN RIESGO", "ARRUINADA"]
@@ -54,7 +54,7 @@ func _init() -> void:
 	header.add_child(names)
 	name_label = UiThemeScript.title(names, "", 20)
 	integrity_bar = UiThemeScript.bar(names, UiThemeScript.MINT, 10)
-	state_chip = UiThemeScript.chip(header, "OK", UiThemeScript.MINT, 14)
+	state_chip = UiThemeScript.chip(header, "OK", UiThemeScript.MINT, 16)
 	# As wide as its longest word, so the integrity bar never changes length.
 	state_chip.get_parent().size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	(state_chip.get_parent() as Control).custom_minimum_size.x = 84
@@ -70,7 +70,7 @@ func _init() -> void:
 	prompt_view = CarePromptView.new()
 	prompt_view.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(prompt_view)
-	step_detail = UiThemeScript.label(column, "", 15, UiThemeScript.MUTED)
+	step_detail = UiThemeScript.label(column, "", 16, UiThemeScript.MUTED)
 	step_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	step_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	step_detail.custom_minimum_size.x = WIDTH - 32
@@ -141,9 +141,9 @@ func _build_footer(items: PackedStringArray) -> void:
 		style.shadow_size = 1
 		cap.add_theme_stylebox_override("panel", style)
 		pair.add_child(cap)
-		UiThemeScript.title(cap, parts[0], 14, UiThemeScript.PAPER)
+		UiThemeScript.title(cap, parts[0], 16, UiThemeScript.PAPER)
 		if parts.size() > 1:
-			UiThemeScript.label(pair, parts[1], 14, UiThemeScript.INK)
+			UiThemeScript.label(pair, parts[1], 16, UiThemeScript.INK)
 
 
 func _colorblind() -> bool:

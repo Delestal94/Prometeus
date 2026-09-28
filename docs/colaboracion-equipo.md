@@ -7,6 +7,22 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: rediseño del layout del HUD en ruta (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo ("que se vea profesional"). Toca `ui/hud/` (Slatex); los
+nombres de los widgets no cambian, solo dónde y cómo se ven:
+
+- `hud.gd`: arriba a la izquierda, una tarjeta de objetivo (sección, sesión, destino, barra de ruta)
+  reemplaza al logo "TAKE MY PACKAGE"; la cinta de sesión se oculta al arrancar. Se fue la barra
+  ancha de abajo: la carga pasó a la esquina inferior izquierda (fuera del `dashboard`, oculta si
+  está vacía) y abajo al centro quedan el aviso de interacción y dos pastillas oscuras (controles y
+  atajos). Evento, toast e interacción tienen placa oscura (`_plate()`); el evento, borde rojo.
+  Margen de bordes `EDGE_MARGIN` = 40 unidades.
+- `hud_prompts.gd`: la línea de controles se dibuja para fondo oscuro. `hud_results.gd`: los
+  resultados ocultan el HUD de juego; "Te falta 1 entrega" en singular.
+- No se tocó `GameSettings.HUD_SCALE_DEFAULT` (0.48): el HUD sigue diseñado a ~2x y achicado.
+- Test ajustado: `test_hud_flow` (orden del prompt y la pastilla de controles, "Te falta").
+
 ## Aviso activo: minijuegos simplificados, guía "qué hacer ahora" y práctica (2026-09-28)
 
 Lo hizo Nacho (con Claude), a pedido suyo: que se entienda si hay que alzar la caja o qué hacer.

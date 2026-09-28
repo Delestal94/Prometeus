@@ -21,6 +21,9 @@ const SHORTCUT_VISIBLE_SECONDS: float = 60.0
 const RESTART_HOLD_SECONDS: float = 0.9
 ## The logical height the HUD is laid out for (project.godot's viewport).
 const BASE_HEIGHT: float = 720.0
+## Safe margin from every screen edge, in HUD units (redesign 2026-09-28:
+## 24 put the cards against the bezel on a TV).
+const EDGE_MARGIN: int = 40
 
 var root: Control
 var hud_layer: Control
@@ -34,6 +37,8 @@ var card_label: RichTextLabel
 var distance_label: Label
 var section_label: Label
 var cargo_rows_box: VBoxContainer
+## The bottom-left cargo card itself, hidden while it has no rows.
+var cargo_card: PanelContainer
 var cargo_hint_label: Label
 var cargo_rows: Dictionary = {}
 var route_bar: ProgressBar
@@ -246,7 +251,7 @@ func _build_frame() -> void:
 	hud_layer.add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side: String in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
+		margin.add_theme_constant_override("margin_" + side, EDGE_MARGIN)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard = VBoxContainer.new()
 	margin.add_child(dashboard)
@@ -254,20 +259,30 @@ func _build_frame() -> void:
 	dashboard.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## Top: who's playing (left), the van's numbers (right).
+## Top: where you're going (left), the van's numbers (right).
 func _build_top_bar() -> void:
 	var top := HBoxContainer.new()
 	dashboard.add_child(top)
 	top.add_theme_constant_override("separation", 16)
-	# This corner used to be a permanent "DO NOT DROP / PRUEBA DE RUTA / 01"
-	# logo. It says who's in the session now -- and, hosting over LAN, the
-	# IP friends need, which the menu only ever showed for the single frame
-	# before loading the level.
-	var brand := make_panel(top, Vector2.ZERO)
-	brand.get_parent().size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	brand.add_theme_constant_override("separation", 6)
-	UiTheme.title(brand, "TAKE MY PACKAGE", 22)
-	session_label = UiTheme.tag(brand, "", MINT, -1.5, 16)
+	# The objective owns the corner the eye checks first. It replaced a
+	# permanent "TAKE MY PACKAGE" logo card (HUD redesign 2026-09-28): the
+	# brand belongs to the menus; the session tape (who's playing, the LAN
+	# address friends need) rides along on the same card.
+	var objective := make_panel(top, Vector2(620, 0))
+	objective.get_parent().size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	objective.add_theme_constant_override("separation", 8)
+	var tags := HBoxContainer.new()
+	tags.add_theme_constant_override("separation", 10)
+	objective.add_child(tags)
+	section_label = UiTheme.tag(tags, tr("HUD_PREPARATION"), MINT, -1.5, 16)
+	session_label = UiTheme.tag(tags, "", MINT, 1.5, 16)
+	# Used to open on "220 m hasta la entrega", a leftover from the fixed
+	# route: the real one is random and runs closer to 2000 m.
+	distance_label = UiTheme.title(objective, "", 30)
+	distance_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	distance_label.custom_minimum_size.x = 576
+	route_bar = UiTheme.bar(objective, MINT, 16)
+	route_bar.visible = not is_endless
 	var stretch := Control.new()
 	stretch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stretch.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -292,18 +307,22 @@ func _build_top_bar() -> void:
 	card_label.add_theme_color_override("default_color", INK)
 
 
-## Bottom: the cargo (left), the objective (right), and the shortcut pill under them.
+## Bottom: the cargo card (bottom-left corner), and in the centre what you
+## can do right now -- the interaction pill, the controls for your role and
+## the shortcut pill. The wide objective bar that used to sit here covered
+## the road ahead of the truck; its contents moved to the top-left card.
 func _build_bottom_bar() -> void:
 	var space := Control.new()
 	space.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(space)
-	# Context owns the bottom centre, right above the bottom bar in the
+	# Context owns the bottom centre, right above the controls in the
 	# dashboard's own flow: pinned at a fixed offset it sat on the route bar,
 	# and it never competes with the critical alerts up top.
 	interaction_label = UiTheme.floating_label(dashboard, "", 25, PAPER, 560, 0)
 	interaction_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	interaction_label.custom_minimum_size.x = 560
+	interaction_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_plate(interaction_label, Color(INK, 0.88), INK)
 	interaction_icon = TextureRect.new()
 	interaction_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	interaction_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -316,37 +335,32 @@ func _build_bottom_bar() -> void:
 	interaction_icon.hide()
 	interaction_label.add_child(interaction_icon)
 
-	# --- Bottom: the cargo (left), the objective (right) ---
-	var bottom := HBoxContainer.new()
-	dashboard.add_child(bottom)
-	bottom.add_theme_constant_override("separation", 16)
-	var cargo_panel := make_panel(bottom, Vector2(330, 0))
-	cargo_panel.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
+	# The controls for what you're doing: a dark pill, the same language as
+	# the shortcut pill under it (keycaps drawn for a dark background).
+	var hint_pill := PanelContainer.new()
+	hint_pill.add_theme_stylebox_override("panel", _pill_style())
+	hint_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	hint_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dashboard.add_child(hint_pill)
+	hint_label = make_rich(hint_pill, 16)
+	hint_label.fit_content = true
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+
+	# --- Bottom-left corner: the cargo, out of the centre's flow ---
+	var cargo_panel := make_panel(hud_layer, Vector2(330, 0))
+	cargo_card = cargo_panel.get_parent() as PanelContainer
+	cargo_card.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	cargo_card.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	cargo_card.offset_left = EDGE_MARGIN
+	cargo_card.offset_bottom = -EDGE_MARGIN
+	cargo_card.offset_top = -EDGE_MARGIN
 	UiTheme.tag(cargo_panel, "CARGA", UiTheme.CARDBOARD, -2.0, 16)
 	cargo_rows_box = VBoxContainer.new()
 	cargo_rows_box.add_theme_constant_override("separation", 10)
 	cargo_panel.add_child(cargo_rows_box)
-	var delivery := make_panel(bottom, Vector2.ZERO)
-	delivery.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	delivery.get_parent().size_flags_vertical = Control.SIZE_SHRINK_END
-	delivery.add_theme_constant_override("separation", 8)
-	section_label = UiTheme.tag(delivery, tr("HUD_PREPARATION"), MINT, -1.5, 16)
-	# Used to open on "220 m hasta la entrega", a leftover from the fixed
-	# route: the real one is random and runs closer to 2000 m.
-	distance_label = UiTheme.title(delivery, "", 30)
-	route_bar = UiTheme.bar(delivery, MINT, 16)
-	route_bar.visible = not is_endless
-	hint_label = make_rich(delivery, 16)
 
 	var shortcut_pill := PanelContainer.new()
-	var pill_style := StyleBoxFlat.new()
-	pill_style.bg_color = Color(INK, 0.82)
-	pill_style.set_corner_radius_all(99)
-	pill_style.content_margin_left = 18
-	pill_style.content_margin_right = 18
-	pill_style.content_margin_top = 5
-	pill_style.content_margin_bottom = 6
-	shortcut_pill.add_theme_stylebox_override("panel", pill_style)
+	shortcut_pill.add_theme_stylebox_override("panel", _pill_style())
 	shortcut_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	shortcut_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dashboard.add_child(shortcut_pill)
@@ -354,6 +368,39 @@ func _build_bottom_bar() -> void:
 	shortcut_label.add_theme_color_override("default_color", PAPER)
 	shortcut_label.fit_content = true
 	shortcut_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+
+
+func _pill_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(INK, 0.82)
+	style.set_corner_radius_all(99)
+	style.content_margin_left = 18
+	style.content_margin_right = 18
+	style.content_margin_top = 5
+	style.content_margin_bottom = 6
+	return style
+
+
+## A dark rounded plate behind a floating message, so it reads as HUD and
+## not as a sign in the world (the depot's signs are yellow on grey too).
+## Label draws its "normal" stylebox; _process() hides it while empty.
+func _plate(label: Label, fill: Color, border: Color) -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(16)
+	style.content_margin_left = 22
+	style.content_margin_right = 22
+	style.content_margin_top = 8
+	style.content_margin_bottom = 10
+	style.shadow_color = Color(INK, 0.5)
+	style.shadow_offset = Vector2(0, 5)
+	style.shadow_size = 1
+	label.add_theme_stylebox_override("normal", style)
+	label.add_theme_constant_override("outline_size", 4)
+	label.add_theme_constant_override("shadow_outline_size", 0)
+	label.add_theme_constant_override("shadow_offset_y", 0)
 
 
 ## Messages that float over the view: pings, toasts, route events, interaction prompts.
@@ -365,15 +412,24 @@ func _build_floating_labels() -> void:
 	ping_indicator.offset_right = 130
 	ping_indicator.offset_top = -190
 	ping_indicator.offset_bottom = -145
-	toast_label = UiTheme.floating_label(hud_layer, "", 18, MINT, 400, 150)
-	toast_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	toast_label.offset_left = -440
-	toast_label.offset_right = -24
-	toast_label.offset_top = 150
-	toast_label.offset_bottom = 240
+	# Under the van's numbers, sized to its text and growing leftwards.
+	toast_label = UiTheme.floating_label(hud_layer, "", 18, MINT, 400, 190)
+	toast_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	toast_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	toast_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	toast_label.offset_left = -EDGE_MARGIN
+	toast_label.offset_right = -EDGE_MARGIN
+	toast_label.offset_top = 196
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	event_label = UiTheme.floating_label(hud_layer, "", 29, YELLOW, 760, 28)
-	event_label.custom_minimum_size.y = 118
+	_plate(toast_label, Color(INK, 0.88), INK)
+	# Top centre, sized to its text: a card, not three loose lines.
+	event_label = UiTheme.floating_label(hud_layer, "", 29, YELLOW, 760, EDGE_MARGIN)
+	event_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	event_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	event_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	event_label.offset_left = 0
+	event_label.offset_right = 0
+	_plate(event_label, Color(INK, 0.9), RED)
 	# The package-at-risk hint and the route event share the critical queue,
 	# never the screen. Kept as an alias for the existing cargo HUD seam.
 	cargo_hint_label = event_label
@@ -493,6 +549,10 @@ func _process(delta: float) -> void:
 	notices.process_notices(delta)
 	var event_pulse: float = 0.84 + sin(Time.get_ticks_msec() * 0.008) * 0.16
 	event_label.modulate.a = event_pulse if not event_label.text.is_empty() else 1.0
+	# The plated messages (_plate()) would show an empty plate otherwise.
+	for plated: Label in [event_label, toast_label, interaction_label]:
+		plated.visible = not plated.text.is_empty()
+	cargo_card.visible = cargo_rows_box.get_child_count() > 0
 	if overlay_mode == "pause" and not soft_pause and not get_tree().paused:
 		overlay.hide()
 		overlay_mode = "run" if RunManager.is_running else "preparation"
@@ -561,6 +621,8 @@ func _on_started(_route: StringName, _players: Array) -> void:
 	overlay.hide()
 	overlay_mode = "run"
 	dashboard.show()
+	# Who's playing matters while gathering in the depot, not on the road.
+	session_label.get_parent().get_parent().hide()
 	set_economy_visible(false)
 	action_button.release_focus()
 	interaction_prompt = ""

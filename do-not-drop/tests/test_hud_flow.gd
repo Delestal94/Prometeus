@@ -76,11 +76,14 @@ func _run() -> void:
 		"At 21:9 the HUD keeps its size and just gets more room")
 	_expect(is_equal_approx(hud.call(&"layout_scale", 0.75, Vector2(1280, 800)), 0.75 * 800.0 / 720.0),
 		"The player's HUD scale still applies on top of the window shape")
-	# The prompt sits in the dashboard's flow right above the bottom bar, never on it.
+	# The prompt sits in the dashboard's flow right above the controls pill,
+	# never on it; the cargo card keeps to its corner, out of that flow.
 	var prompt_index: int = hud.interaction_label.get_index()
 	_expect(hud.interaction_label.get_parent() == hud.dashboard
-			and hud.dashboard.get_child(prompt_index + 1).is_ancestor_of(hud.cargo_rows_box),
-		"The interaction prompt stands right above the bottom bar")
+			and hud.dashboard.get_child(prompt_index + 1).is_ancestor_of(hud.hint_label),
+		"The interaction prompt stands right above the controls")
+	_expect(not hud.dashboard.is_ancestor_of(hud.cargo_rows_box) and hud.hud_layer.is_ancestor_of(hud.cargo_rows_box),
+		"The cargo card sits in its own corner, not in the centre column")
 	var player_menu_scale: float = settings.menu_text_scale
 	var volume_slider: HSlider = hud.options_panel.get("_volume_slider") as HSlider
 	var impact_effects_check := hud.options_panel.get("_impact_effects_check") as CheckBox
@@ -249,7 +252,7 @@ func _run() -> void:
 	_expect(hud.result_rows_box.get_child_count() == 2, "Delivery results show one row per house")
 	_expect(String(hud.result_awards_label.text).contains("MVP"), "Delivery results show merit awards")
 	_expect(String(hud.result_event_label.text).contains("RESUELTO"), "Delivery results show how the route event ended")
-	_expect(hud.result_progress_bar.visible and String(hud.result_progress_label.text).contains("Te faltan"),
+	_expect(hud.result_progress_bar.visible and String(hud.result_progress_label.text).contains("Te falta"),
 		"Delivery results show progress toward the next unlock")
 	unlocks.total_score = original_score
 	unlocks.successful_deliveries = original_deliveries
