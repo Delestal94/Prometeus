@@ -9,7 +9,9 @@ extends SceneTree
 ## - at most max_faults_per_run per delivery, and run_started resets it;
 ## - repair() relays vehicle_fault_repaired and every peer's list clears it.
 
-const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
+## Loaded at run time: the script uses the EventBus autoload, which a
+## SceneTree test can't resolve while it compiles.
+const VEHICLE_FAULTS_PATH: String = "res://scripts/gameplay/vehicle/vehicle_faults.gd"
 
 var _failures: int = 0
 var _started: Array = []
@@ -25,7 +27,8 @@ func _run() -> void:
 	var network: Node = root.get_node(^"/root/NetworkManager")
 	bus.connect(&"vehicle_fault_started", func(id: StringName, _at: Vector3) -> void: _started.append(id))
 	bus.connect(&"vehicle_fault_repaired", func(id: StringName, how: StringName) -> void: _repaired.append([id, how]))
-	var faults: Node = VEHICLE_FAULTS.new()
+	var faults_script: Script = load(VEHICLE_FAULTS_PATH)
+	var faults: Node = faults_script.new()
 	root.add_child(faults)
 	await process_frame
 
@@ -41,7 +44,7 @@ func _run() -> void:
 	bus.relay(&"vehicle_impact", [12.0, Vector3.ZERO])
 	_expect(_started.size() == 1, "At most one fault per delivery (got %d)" % _started.size())
 	var broken: StringName = _started[0] if not _started.is_empty() else &""
-	_expect(broken in VEHICLE_FAULTS.FAULTS, "The fault is one of this version's two")
+	_expect(broken in [&"rear_door", &"mirror"], "The fault is one of this version's two")
 	_expect(bool(faults.call(&"is_broken", broken)), "Every peer's list has the fault")
 
 	# Repair, relayed; a second repair does nothing.
