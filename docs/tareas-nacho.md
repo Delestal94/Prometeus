@@ -825,7 +825,7 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
 - [ ] **N-213.3** Caña o gancho de rescate (mejora de tienda, rama Supervivencia): desde la puerta trasera,
   un pasajero engancha una caja cercana sin frenar. El cliente solo manda la intención; el host resuelve.
 - [x] **N-213.4** Abandonarlo cierra el pedido vacío (resultado "Perdido"), sin terminar la partida.
-  `COMMIT` — al vencer la ventana, `LevelCommon._check_lost_cargo()` llama a `Route.close_lost_order()`
+  `33f7702` — al vencer la ventana, `LevelCommon._check_lost_cargo()` llama a `Route.close_lost_order()`
   antes de `mark_lost`: la casa queda resuelta con el resultado nuevo `&"lost"` (`DeliveryHouse.close_lost()`,
   sin vecino en la puerta) y `RunManager` la saca de la carga, así que perder la última caja ya no corta la
   partida. `RunManager.handed_over()` reemplaza los `!= &"missed"` (foto, plazos, pago de rescate); en
@@ -833,7 +833,7 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
   la pizarra del depósito marca "PERDIDO". "Abandonar" es dejar vencer la ventana: no hay botón aparte.
 - [ ] Tests `test_cargo_overboard.gd` (ventana, recogida, abandono) y ampliar el de red con dos clientes
   que intentan agarrar la misma caja. **Parcial (`d8a014b`):** `test_cargo_overboard.gd` cubre ventana,
-  cartel, recogida y pérdida al vencer; faltan el abandono (N-213.4) y el caso de red. `COMMIT`: suma el
+  cartel, recogida y pérdida al vencer; faltan el abandono (N-213.4) y el caso de red. `33f7702`: suma el
   abandono (pedido "Perdido", la partida sigue, sin foto, línea propia en resultados); falta el caso de red.
 
 ### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
