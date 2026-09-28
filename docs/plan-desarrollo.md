@@ -15,7 +15,7 @@ un mini-nivel interactivo queda para una iteración posterior.
 
 > Basado en: `docs/requerimientos-tecnicos.md` (Godot 4.x, física real de vehículo +
 > streaming de tramos, confirmado 2026-09-20).
-> Última actualización: 2026-09-23
+> Última actualización: 2026-09-28
 > Principio guía: validar el loop central (conducir + manejar paquetes) lo antes
 > posible, **antes** de invertir en multiplayer, arte final o contenido extra. El
 > multiplayer y el arte son las partes más caras de rehacer si el loop no es divertido.
@@ -306,6 +306,14 @@ lista. (Slatex completa su parte en la S-702 de `docs/tareas-slatex.md`.)
 | Curva peraltada | El asfalto sale del mismo campo de alturas del terreno; peraltarlo es rehacer el terreno de la ruta. | Nacho #65 |
 | Motion blur por velocidad | GL Compatibility no lo trae y un pase propio cuesta los 60 FPS. | Nacho #14 |
 | Rotonda | Sin tráfico no suma decisión al conductor; las curvas y cruces actuales ya cubren el manejo. | Nacho #60 |
+| Chat de voz propio | Steam, Discord y las plataformas ya cubren la conversación; capturar, comprimir, transmitir y moderar voz no mejora el loop de entrega. | Slatex S-702 |
+| Matchmaking público | Requiere backend, moderación y manejo de abandono. Early Access se limita a invitaciones de Steam y conexión LAN/IP. | Slatex S-702 |
+| Cartas Prioridad e Información | Dependían de sistemas fuera del MVP. El mazo queda cerrado en Rescate, Descuento y Re-voto. | Slatex S-103 / S-702 |
+| Tienda durante la ruta | Duplica el flujo de suministros del depósito y corta el ritmo de conducción. Las compras se resuelven antes de salir. | Slatex S-702 |
+| Tutorial jugable | Exige mantener un nivel especial junto con cada cambio de controles. El MVP usa fichas y consejos contextuales. | Slatex S-506 / S-702 |
+| Más de siete trampas | Las siete actuales ya cubren el alcance de contenido y necesitan balance conjunto antes de ampliar el catálogo. | Slatex S-702 |
+| Servidores dedicados | La simulación actual es host-autoritativa y orientada a partidas entre amigos; operar servidores agrega costo e infraestructura sin validar. | Slatex S-702 |
+| Microtransacciones | El precio es único y los cosméticos se obtienen jugando; no se diseña tienda de dinero real para Early Access. | Slatex S-702 / S-906 |
 
 ### Después del lanzamiento
 
