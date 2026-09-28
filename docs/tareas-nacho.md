@@ -1,6 +1,8 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-28 (N-901 y todo lo de publicar/promocionar pospuesto a la iteración de lanzamiento). Antes: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
+> Última actualización: 2026-09-28 (hito M6: 15 tareas tomadas de `analisis-competencia-backseat-rv.md`,
+> asignadas a Nacho aunque varias tocan el dominio de Slatex; N-907 nace pospuesta ⏸). Antes, el mismo día:
+> N-901 y todo lo de publicar/promocionar pospuesto a la iteración de lanzamiento. Antes: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
 > M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
 > N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
 > una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
@@ -73,6 +75,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
+| **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
@@ -731,6 +734,171 @@ Tarea semanal: estos son los cuatro primeros; la costumbre sigue.
   menos de 8 MiB cada uno: el ciervo cruza delante del camión, el tren pasa entre la cámara y el camión
   frenado en la barrera, el camión vuelca, se queda tumbado y las cajas salen volando por atrás, y la
   persecución bajo la lluvia. `tools/devlog/make_gif.py` arma una paleta con cuadros de todo el clip.
+
+---
+
+## Mecánicas tomadas de la competencia (2026-09-28)
+
+Salen de `docs/analisis-competencia-backseat-rv.md` (Backseat Drivers y RV There Yet?); la columna
+**M-xx** es el id de ese documento, donde está el razonamiento completo. Los IDs siguen el pilar al que
+pertenece cada tarea. A diferencia del resto de la lista, varias tocan el dominio de Slatex (paquetes,
+jugador, UI): se asignaron a Nacho a pedido del usuario, así que llevan **Aviso: sí** y, antes de
+empezarlas, conviene pasar el plan por `guardian-dominios`. `vehicle.tscn` / `vehicle.gd` siguen
+congelados: nada de esta sección los edita; lo que necesita el camión se cuelga desde afuera.
+
+| ID | M-xx | Tarea | Prio |
+|---|---|---|---|
+| N-704 | — | Corregir el diferencial y pasar las ideas grandes por crítica | A |
+| N-505 | M-02 | Indicaciones rápidas con voz de personaje | A |
+| N-213 | M-04 | Carga que sale del camión y rescate afuera | A |
+| N-214 | M-03 | Averías del camión reparables con el kit | A |
+| N-212 | M-01 | Voz por proximidad | A |
+| N-109 | M-06 | Animales que se meten con la carga | B |
+| N-406 | M-09 | Radio del camión con función | B |
+| N-108 | M-05 | Tramo de barro/pendiente con salida cooperativa | B |
+| N-110 | M-07 | Paradas de servicio en la ruta | B |
+| N-311 | M-08 | Cosméticos para encontrar en el mundo | B |
+| N-113 | M-11 | Evento de visibilidad limitada para el conductor | C |
+| N-111 | M-14 | Modo "Mudanza" (viaje largo) | C |
+| N-112 | M-10 | Modo party "Clientes a bordo" | C |
+| N-114 | M-12 | Caja de cambios manual como variante | C |
+| N-907 | M-13 | Friend Pass y demo separada (⏸ pospuesta) | C |
+
+### N-704 · Corregir el diferencial y criticar las ideas grandes — A · `Opus 5.5 · low` · Aviso: no
+
+- [ ] **N-704.1** `docs/definicion-proyecto.md`: quitar "no encontramos roles asimétricos replicados"
+  (Backseat Drivers los tiene desde oct-2025). Diferencial nuevo: asimetría **entre pasajeros** (cada uno
+  con su trampa) + la carga como protagonista, con revisión del cliente en la puerta.
+- [ ] **N-704.2** `docs/investigacion-mercado.md` y `docs/marketing/competidores-manejo.md` (N-904): sumar
+  RV There Yet? (4,5 M copias, ~8 USD, game jam) y Backseat Drivers (Friend Pass, ≈78 % positivas).
+- [ ] **N-704.3** Pasar N-212, N-214 y N-112 por `critico-diseno` antes de empezarlas; anotar el
+  veredicto en cada tarea.
+- Hecho cuando: los tres docs dicen lo mismo sobre el diferencial y las tres tareas tienen veredicto.
+
+### N-505 · Indicaciones rápidas con voz de personaje — A · `Opus 5.5 · high` · Aviso: sí (UI y jugador de Slatex, `synth_audio.gd` solo funciones nuevas)
+
+Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
+
+- [ ] **N-505.1** Rueda radial (D-pad / rueda del mouse + tecla) con 6-8 frases: "¡Frená!", "¡Bache!",
+  "¡Ayuda acá!", "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!".
+- [ ] **N-505.2** Cada frase: ícono sobre la cabeza del jugador, entrada en el HUD mínimo del conductor
+  ("pedidos de freno" de `jugabilidad-paquetes-rescate.md`) y voz sintetizada en `SynthAudio` con tono
+  por color de jugador.
+- [ ] **N-505.3** RPC confiable al host y reenvío a todos; enfriamiento de 1,5 s por jugador.
+- [ ] Test `test_quick_callouts.gd`: la frase llega a todos, el enfriamiento corta el spam y el conductor
+  la ve en su HUD. Textos en el CSV de traducciones.
+
+### N-213 · Carga que sale del camión y rescate afuera — A · `Opus 5.5 · xhigh` · Aviso: sí (`DeliveryPackage`, `RunManager`)
+
+Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
+
+- [ ] **N-213.1** Un paquete fuera del camión deja de ir directo a `RUINED`: queda en el suelo con marcador
+  y una ventana de rescate (más larga que los 8-15 s de adentro; medirla con el bot).
+- [ ] **N-213.2** Bajar a buscarlo: levantarlo y volver a subirlo al estante o al regazo.
+- [ ] **N-213.3** Caña o gancho de rescate (mejora de tienda, rama Supervivencia): desde la puerta trasera,
+  un pasajero engancha una caja cercana sin frenar. El cliente solo manda la intención; el host resuelve.
+- [ ] **N-213.4** Abandonarlo cierra el pedido vacío (resultado "Perdido"), sin terminar la partida.
+- [ ] Tests `test_cargo_overboard.gd` (ventana, recogida, abandono) y ampliar el de red con dos clientes
+  que intentan agarrar la misma caja.
+
+### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
+
+- [ ] **N-214.1** Componente `VehicleFaults` fuera de `vehicle.gd`: escucha los impactos y decide averías en
+  el host (una por golpe fuerte como máximo, con tope por entrega).
+- [ ] **N-214.2** Averías: puerta trasera que se abre sola, espejo caído, limpiaparabrisas roto (solo con
+  lluvia), faro roto (solo de noche), asiento flojo. Cada una con efecto visible y leve.
+- [ ] **N-214.3** Arreglo oficial (repuesto de tienda) e improvisado con el kit existente (cinta, cincha,
+  trapo; el espejo lo reemplaza un pasajero con `phone_camera.gd`). Sin herramientas nuevas.
+- [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
+- [ ] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado.
+
+### N-212 · Voz por proximidad — A · `Opus 5.5 · xhigh` · Aviso: sí (jugador y red)
+
+Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con Steam.
+
+- [ ] **N-212.1** Steam: captura y envío con la voz de GodotSteam (`startVoiceRecording` / `getVoice` /
+  `decompressVoice`) por un canal no confiable, fuera de la simulación autoritativa.
+- [ ] **N-212.2** Reproducción en `AudioStreamPlayer3D` en la cabeza del jugador; dentro de la cabina se
+  oyen todos, afuera se atenúa y pasa por el bus Exterior con filtro (se oye "a través de la chapa").
+- [ ] **N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
+  jugador, y un interruptor general en Opciones.
+- [ ] **N-212.4** LAN/ENet: `AudioEffectCapture` o dejarlo fuera del MVP (decidir y anotar).
+- [ ] Medir con `auditor-red` el ancho de banda con 5 jugadores. Test de que el apagado general no
+  captura el micrófono.
+
+### N-109 · Animales que se meten con la carga — B · `Opus 5.5 · xhigh` · Aviso: sí (estados del paquete)
+
+Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
+
+- [ ] **N-109.1** Gaviota o carancho que baja a la caja del estante y trata de llevársela; se espanta con la
+  bocina o sujetando la caja.
+- [ ] **N-109.2** Perro que se sube a una caja abierta en una parada; se lo distrae tirándole algo.
+- [ ] **N-109.3** Abejas atraídas por la torta (Equilibrio) en zona de campo.
+- [ ] Cada uno anunciado con sonido o ícono antes de actuar (la queja principal de RV There Yet? es la
+  fauna sin aviso). Determinista por semilla, disparado por el host. Tests con el patrón de
+  `test_wildlife_crossing.gd`.
+
+### N-406 · Radio del camión con función — B · `Opus 5.5 · high` · Aviso: sí (trampa Ruidoso)
+
+- [ ] **N-406.1** Perilla en el tablero que cualquiera puede girar: tranquila / fuerte / noticiero /
+  apagada. Estado en el host.
+- [ ] **N-406.2** Música tranquila calma la trampa Ruidoso; la fuerte la altera.
+- [ ] **N-406.3** El noticiero anuncia el próximo evento de ruta ("inspección más adelante").
+- [ ] Test `test_truck_radio.gd`: el estado se sincroniza y modifica la agitación de Ruidoso.
+
+### N-108 · Tramo de barro/pendiente con salida cooperativa — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Tramo nuevo, raro y anunciado con carteles, donde el camión se puede atascar. Salidas: pasajeros que
+  bajan a empujar (mantener un botón en la zona correcta; el host aplica la fuerza) o eslinga de tienda.
+- [ ] El dilema tiene que existir: mientras empujan, sus cajas quedan sin atender.
+- [ ] Nunca bloquea para siempre: pasado un tiempo aparece una grúa cómica que lo saca, con multa.
+- [ ] Con `constructor-tramos`; tests de pacing y fuzz (N-103, N-801) siguen pasando.
+
+### N-110 · Paradas de servicio en la ruta — B · `Opus 5.5 · xhigh` · Aviso: sí (compra de suministros)
+
+- [ ] En rutas largas y en Endless, una estación de servicio opcional: reponer consumibles del kit con
+  dinero cooperativo, arreglar averías (N-214) y un cosmético escondido (N-311).
+- [ ] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
+- [ ] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
+
+### N-311 · Cosméticos para encontrar en el mundo — B · `Opus 5.5 · medium` · Aviso: sí (cosméticos del jugador)
+
+- [ ] Además de los que se desbloquean con mérito, algunos gorros aparecen en el depósito, en las paradas
+  (N-110) o en el jardín de un cliente. Recogerlos exige bajarse o desviarse unos metros.
+- [ ] Se guardan en la campaña por color de jugador, como el mérito. Test de guardado y carga.
+
+### N-113 · Evento de visibilidad limitada para el conductor — C · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Evento de ruta de 10-20 s: niebla densa, parabrisas embarrado o una caja que tapa la vista. Un
+  pasajero en la ventana guía (con N-505 o N-212). Solo como evento corto: la premisa completa es la de
+  Backseat Drivers.
+- [ ] Shader con `artista-shaders`; test de que dura lo previsto y no se repite seguido.
+
+### N-111 · Modo "Mudanza" (viaje largo) — C · `Opus 5.5 · xhigh` · Aviso: sí (modo nuevo, zona compartida)
+
+- [ ] 20-40 min con una carga grande y paradas de servicio (N-110), sobre el streamer de Endless.
+- [ ] Guardado a mitad de camino en cada parada. Test de la duración con el bot de N-102.
+
+### N-112 · Modo party "Clientes a bordo" — C · `Opus 5.5 · xhigh` · Aviso: sí (modo nuevo, zona compartida)
+
+- [ ] Solo si N-704.3 le da luz verde. Uno o dos jugadores son pasajeros caóticos (cliente apurado,
+  chico) que ganan puntos propios molestando dentro de límites: bocina, radio, abrir una caja ajena.
+- [ ] Límites duros para que el sabotaje no arruine la partida (enfriamientos, lo que no pueden tocar).
+
+### N-114 · Caja de cambios manual como variante — C · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado)
+
+- [ ] Variante "clásico viejo" a elegir en el depósito, con marchas manuales opcionales y más paga o
+  mérito como compensación. Requiere acuerdo previo para tocar el manejo; si no, queda descartada.
+- [ ] Los tests de manejo (N-104) de las variantes existentes no cambian.
+
+### N-907 · Friend Pass y demo separada — C · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
+
+Es de publicación en Steam: queda pospuesta como el resto del pilar 9 (ver la nota de esa sección).
+
+- [ ] Averiguar en Steamworks cómo funciona el Friend Pass (Backseat Drivers lo usa) y si se puede
+  combinar con nuestro lobby de Steam. Decisión anotada en `docs/plan-desarrollo.md` Fase 7.
+- [ ] Evaluar publicar la demo (hito del 2026-12-18) como app aparte para acumular deseados.
+- Depende de N-901 (AppID propio).
 
 ---
 

@@ -7,6 +7,18 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: hito M6 de Nacho toca dominio de Slatex (2026-09-28)
+
+`docs/analisis-competencia-backseat-rv.md` (Backseat Drivers y RV There Yet?) generó 15 tareas que
+quedaron en `tareas-nacho.md` como hito **M6**, todas asignadas a Nacho a pedido suyo. Varias tocan
+el dominio de Slatex y llevan `Aviso: sí`: N-505 (indicaciones rápidas: UI y jugador), N-213 (caja
+que sale del camión: `DeliveryPackage`, `RunManager`), N-212 (voz por proximidad), N-109 (animales
+que atacan la carga), N-406 (radio que calma a Ruidoso) y N-311 (cosméticos encontrables). Una
+rutina en la nube las va trabajando de a una, **con un PR por tarea** (ramas `nacho/N-xxx-…`):
+Slatex, revisá esos PRs antes de que entren si tocan tus archivos. `vehicle.tscn`/`vehicle.gd`
+siguen congelados: N-214 (averías) va como componente aparte, y N-114 (caja manual) queda
+descartada si no hay acuerdo.
+
 ## Aviso activo: Steam y marketing pospuestos (2026-09-28)
 
 Estamos en desarrollo y refinamiento: todo lo de publicar en Steam o promocionar el juego queda para
