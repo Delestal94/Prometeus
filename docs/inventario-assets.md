@@ -62,7 +62,7 @@
 | Cajas abribles por trampa: cubo (frágil), ventilada (ruidoso), alta (equilibrio), plana (peso creciente) | `models/cargo/sm_cargo_box_{cube,vented,tall,flat}.glb` | ✅ | Espec. #17 (2026-09-23). Cuerpo + 4 solapas con pivote en la bisagra, cinta de marca cortada en la unión. Las usa `package_feedback.gd` vía `data/contents/*.tres`. Las viejas `sm_cargo_package_*.glb` quedan sin uso. |
 | Impresión del cartón (logo, "este lado arriba", copa, paraguas, código de barras, sello del fondo, cinta) | `art/cargo/tx_cargo_box_*_2048.png` (embebidas en los GLB) | ✅ | Espec. #18. Dibujadas con PIL por `art/tools/make_cargo_textures.py`. |
 | Etiqueta de envío | `textures/cargo/tx_cargo_shipping_label_512.png` | ✅ | En el dorso de la caja; el contenido declarado va encima como `Label3D`. |
-| Contenidos: jarrón de porcelana, gallina, torta de bodas, masa madre | `models/cargo/contents/sm_cargo_content_*.glb` | ✅ | Cada uno con `Filler`, `Intact`, `Damage` (en riesgo) y `Ruined` (piezas sueltas que salen como cuerpos rígidos si se derrama). `assets/tools/build_cargo_packages.py`. |
+| Contenidos (×10): jarrón, lámpara antigua, gallina, cachorro, torre de copas, torta, masa madre, bidón de leche, fuegos artificiales y mapache en jaula | `models/cargo/contents/sm_cargo_content_*.glb` | ✅ | Cada uno con `Filler`, `Intact`, `Damage` (en riesgo) y `Ruined` (piezas sueltas que salen como cuerpos rígidos si se derrama). `assets/tools/build_cargo_packages.py`. |
 
 ## 4. Ruta: señales y mobiliario (dominio Nacho)
 

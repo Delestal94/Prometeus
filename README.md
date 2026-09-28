@@ -375,10 +375,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
   estaba roto o sin puntuar antes de existir este test.
-- `test_package_unboxing` — abrir y cerrar una caja (solapas y contenido),
-  que el contenido siga el estado del paquete, que una caja abierta volcada
-  derrame el contenido como cuerpos físicos (y una cerrada no), y que el
-  vecino note una caja entregada abierta.
+- `test_package_unboxing` — los diez contenidos tienen `Filler`, `Intact`,
+  `Damage` y `Ruined`; además cubre abrir/cerrar, seguir el estado del paquete,
+  derramar piezas físicas al volcar una caja abierta (y retenerlas cerrada),
+  y que el vecino note una caja entregada abierta.
 - `test_package_identity` — cada trampa viaja en su propia caja impresa, con
   su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una

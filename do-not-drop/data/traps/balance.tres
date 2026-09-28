@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="TrapDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="TrapDefinition" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/traps/trap_definition.gd" id="1_definition"]
 [ext_resource type="Script" path="res://scripts/gameplay/traps/balance_trap_behavior.gd" id="2_behavior"]
-[ext_resource type="Resource" path="res://data/contents/wedding_cake.tres" id="3_content"]
+[ext_resource type="Resource" path="res://data/contents/glass_tower.tres" id="3_content"]
+[ext_resource type="Resource" path="res://data/contents/wedding_cake.tres" id="4_content"]
 
 [resource]
 script = ExtResource("1_definition")
@@ -18,4 +19,4 @@ params = {
 "damage_per_second_at_risk": 28.0,
 "correction_strength": 9.8
 }
-contents = Array[Resource]([ExtResource("3_content")])
+contents = Array[Resource]([ExtResource("3_content"), ExtResource("4_content")])
