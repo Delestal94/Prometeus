@@ -37,11 +37,11 @@
 | Splash de arranque | `ui/backgrounds/tx_ui_boot_splash_1920.png` | ✅ | `project.godot` → `boot_splash/*`, modo Cover. Reemplaza el logo de Godot. |
 | Ícono de la app | `icon.png`, `ui/icons/tx_ui_app_icon_1024.png` | ✅ | `config/icon`. |
 | Ícono del .exe | `ui/icons/app_icon.ico` | ✅ | `export_presets.cfg` → `application/icon`. |
-| Íconos de trampa (×4) | `ui/icons/tx_ui_trap_{fragile,balance,growing_weight,noisy}_256.png` | ✅ | En el HUD, al lado de cada paquete de la carga (se apagan si el paquete se pierde). |
+| Íconos de trampa (×7) | `ui/icons/tx_ui_trap_{fragile,balance,growing_weight,noisy,liquid,explosive,hostile}_256.png` | ✅ | Un ícono low-poly transparente por trampa; en el HUD, al lado de cada paquete de la carga (se apagan si el paquete se pierde). |
 | Logo del juego (wordmark) | `UiTheme.logo()` | 🟡 | Armado con tipografía (Lilita One + cinta amarilla) en menú. Falta pasarlo a imagen para el splash, el ícono y Steam. |
 | Fondo de pantalla de resultados | — | ⬜ | Ilustración: la tripulación frente a la furgoneta al terminar la ruta. |
 | Cápsulas de Steam (460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240) | — | ⬜ | Necesitan el logo. Fase de lanzamiento. |
-| Íconos de acción del HUD (agarrar, sentarse, timbre, foto, bocina, ping) | — | ⬜ | Hoy los prompts son solo texto. |
+| Íconos de acción del HUD (×9) | `ui/icons/tx_ui_action_*_128.png` | ✅ | Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja y usar carta; `UiTheme.action_icon()` los muestra junto a los avisos de interacción. |
 | Marco del celular / UI de cámara | — | ⬜ | Para `phone_camera.gd`. |
 
 | Tipografías | `assets/fonts/LilitaOne-Regular.ttf`, `Nunito-Variable.ttf` | ✅ | OFL (licencias al lado). Sistema de UI en `docs/direccion-visual.md` §3. |
@@ -62,7 +62,7 @@
 | Cajas abribles por trampa: cubo (frágil), ventilada (ruidoso), alta (equilibrio), plana (peso creciente) | `models/cargo/sm_cargo_box_{cube,vented,tall,flat}.glb` | ✅ | Espec. #17 (2026-09-23). Cuerpo + 4 solapas con pivote en la bisagra, cinta de marca cortada en la unión. Las usa `package_feedback.gd` vía `data/contents/*.tres`. Las viejas `sm_cargo_package_*.glb` quedan sin uso. |
 | Impresión del cartón (logo, "este lado arriba", copa, paraguas, código de barras, sello del fondo, cinta) | `art/cargo/tx_cargo_box_*_2048.png` (embebidas en los GLB) | ✅ | Espec. #18. Dibujadas con PIL por `art/tools/make_cargo_textures.py`. |
 | Etiqueta de envío | `textures/cargo/tx_cargo_shipping_label_512.png` | ✅ | En el dorso de la caja; el contenido declarado va encima como `Label3D`. |
-| Contenidos: jarrón de porcelana, gallina, torta de bodas, masa madre | `models/cargo/contents/sm_cargo_content_*.glb` | ✅ | Cada uno con `Filler`, `Intact`, `Damage` (en riesgo) y `Ruined` (piezas sueltas que salen como cuerpos rígidos si se derrama). `assets/tools/build_cargo_packages.py`. |
+| Contenidos (×10): jarrón, lámpara antigua, gallina, cachorro, torre de copas, torta, masa madre, bidón de leche, fuegos artificiales y mapache en jaula | `models/cargo/contents/sm_cargo_content_*.glb` | ✅ | Cada uno con `Filler`, `Intact`, `Damage` (en riesgo) y `Ruined` (piezas sueltas que salen como cuerpos rígidos si se derrama). `assets/tools/build_cargo_packages.py`. |
 
 ## 4. Ruta: señales y mobiliario (dominio Nacho)
 

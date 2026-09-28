@@ -56,6 +56,9 @@ var carried_package: DeliveryPackage = null
 ## The package at this player's seat, once they sit down as a passenger.
 ## Their input reaches its trap through here.
 var tended_package: DeliveryPackage = null
+## A second box this player is helping after their own is lost. Unlike
+## tended_package, this can belong to an adjacent seat or be helped on foot.
+var assisted_package: DeliveryPackage = null
 var _seated: bool = false
 var _seat_camera_path: NodePath = NodePath()
 var _pitch: float = 0.0
@@ -64,10 +67,12 @@ var _last_prompt: String = ""
 var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
+var _ping_input := PlayerPingInput.new(self)
 const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
 ## "Personajes" for its clips (Idle/Walk/Stroll/TurnInPlace/Jump/PickUpPackage/
@@ -208,6 +213,7 @@ func _enter_tree() -> void:
 ## air with collisions off. package.carrier is only ever set on the host, so
 ## this only acts there.
 func _exit_tree() -> void:
+	_ping_input.close_wheel()
 	var network: Node = get_node_or_null("/root/NetworkManager")
 	if network != null and network.call(&"is_host"):
 		_release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
@@ -250,6 +256,7 @@ func _ready() -> void:
 		return
 	_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_ping_input.build_wheel()
 	_probe.area_entered.connect(_on_probe_entered)
 	_probe.area_exited.connect(_on_probe_exited)
 
@@ -349,21 +356,13 @@ func is_local() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_local() or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if not is_local():
 		return
-	# Ping works seated or not -- it's communication, not a physical action,
-	# so it's checked before the _seated gate below applies to the rest.
-	if event.is_action_pressed(&"ui_ping"):
-		_send_ping()
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not _ping_input.wheel_open:
 		return
-	if event.is_action_pressed(&"use_card"):
-		_use_card()
+	if _ping_input.handle_event(event) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
-	if _is_drop_event(event):
-		_drop_carried()
-		return
-	if _is_open_event(event):
-		_toggle_package_lid()
+	if _handle_package_input(event):
 		return
 	if _seated:
 		if _is_interact_event(event):
@@ -390,6 +389,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## need authority the way movement/input do.
 func _process(delta: float) -> void:
 	_flinch_time = maxf(_flinch_time - delta, 0.0)
+	_ping_input.update(delta)
 	animator.animate()
 	if not is_local():
 		_apply_net_state()
@@ -582,14 +582,22 @@ func _physics_process(delta: float) -> void:
 		_publish_lid_hint(null)
 		return
 	if _seated:
-		_publish_prompt("")
+		var candidate: DeliveryPackage = (_assist_candidate() if tended_package != null
+				and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null)
+		_publish_prompt(candidate.assist_prompt() if candidate != null and assisted_package == null else "")
 		_publish_lid_hint(_lid_target())
 		if carried_package != null:
 			_update_carried_package()
-		if tended_package != null:
+		if tended_package != null and tended_package.run_state() != ITrapBehavior.TrapState.RUINED:
 			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
+		if assisted_package != null:
+			_update_assisting()
+		elif candidate != null and Input.is_action_just_pressed(&"interact"):
+			candidate.rpc_id(1, &"request_assist")
 		return
 	_poll_interact()
+	if assisted_package != null:
+		_update_assisting()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	_apply_look(stick * stick_sensitivity * delta)
 	# get_vector's y is -1 for forward and +1 for back;
@@ -715,6 +723,31 @@ func _gather_package_input() -> Dictionary:
 	return _seat_pose_component.gather_package_input()
 
 
+func _assist_candidate() -> DeliveryPackage:
+	var best: DeliveryPackage = null
+	var best_distance: float = DeliveryPackage.ASSIST_REACH
+	for node: Node in get_tree().get_nodes_in_group(&"cargo"):
+		var package := node as DeliveryPackage
+		if package == null or package == tended_package or not package.can_assist(get_multiplayer_authority()):
+			continue
+		var distance: float = reach_origin().distance_to(package.global_position)
+		if distance <= best_distance:
+			best = package
+			best_distance = distance
+	return best
+
+
+func _update_assisting() -> void:
+	if not is_instance_valid(assisted_package):
+		assisted_package = null
+		return
+	if reach_origin().distance_to(assisted_package.global_position) > DeliveryPackage.ASSIST_REACH:
+		assisted_package.rpc_id(1, &"request_stop_assist")
+		assisted_package = null
+		return
+	assisted_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
+
+
 func _publish_carry(carrying: bool) -> void:
 	if carrying == _last_carrying:
 		return
@@ -763,19 +796,41 @@ func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
 	return _carry_component.raycast(from, to, mask)
 
 
-## MVP has a single, always-available ping ("¡Cuidado!") instead of a wheel
-## of options -- docs/controles-y-ui.md sketches "¡ayuda!"/"¡cuidado!" as
-## examples, not a mandate, and one message covers the actual need (warn
-## teammates) without a second input to design around it.
 const PING_LABEL: String = "¡Cuidado!"
 
 
-func _send_ping() -> void:
-	_interaction_component.send_ping()
+func _send_ping(label: String = PING_LABEL) -> void:
+	_interaction_component.send_ping(label)
+
+
+## Card, drop and lid keys; true when the event was one of them.
+func _handle_package_input(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"use_card"):
+		_use_card()
+	elif _is_drop_event(event):
+		_drop_carried()
+	elif _is_open_event(event):
+		_toggle_package_lid()
+	else:
+		return false
+	return true
 
 
 func _use_card() -> void:
 	_interaction_component.use_card()
+
+
+func _show_first_trap_tip(package: DeliveryPackage) -> void:
+	if package == null or package.trap_definition == null:
+		return
+	var trap_id: StringName = StringName(package.trap_definition.get(&"id"))
+	var profile: Node = get_node_or_null(^"/root/UnlockManager")
+	if profile == null or not bool(profile.call(&"mark_tip_seen", trap_id)):
+		return
+	var text: String = TutorialData.tip_text(trap_id)
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null and not text.is_empty():
+		bus.emit_signal(&"tutorial_tip_requested", text)
 
 
 func _try_interact() -> void:
@@ -894,6 +949,21 @@ func tend_package(package_path: NodePath) -> void:
 	if not _from_host():
 		return
 	_seat_pose_component.apply_tend_package(package_path)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func assist_package(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	assisted_package = get_node_or_null(package_path) as DeliveryPackage
+
+
+@rpc("any_peer", "call_local", "reliable")
+func stop_assisting(package_path: NodePath) -> void:
+	if not _from_host():
+		return
+	if assisted_package != null and assisted_package.get_path() == package_path:
+		assisted_package = null
 
 
 @rpc("any_peer", "call_local", "reliable")

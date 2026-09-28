@@ -32,7 +32,7 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 ### General (todos los jugadores)
 | Acción | Input |
 |---|---|
-| Ping/emote rápido | Rueda del mouse click / D-pad | Sistema de comunicación no verbal para MVP (ver nota abajo) |
+| Ping/emote rápido | Rueda del mouse click / D-pad arriba | Tocar: “¡Cuidado!”. Mantener: rueda de seis mensajes; elegir con mouse o stick derecho. |
 | Usar carta | G (reasignable) / D-pad izquierda | Rescate en ruta; Descuento y Re-voto desde Suministros |
 | Pausa/menú | Esc / Start | — |
 | Reiniciar | **Mantener** R / Y (en pausa o resultados, instantáneo) | Solo solo o anfitrión |

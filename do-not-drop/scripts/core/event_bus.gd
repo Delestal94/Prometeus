@@ -45,6 +45,8 @@ signal carry_changed(carrying: bool)
 ## hand, at their seat, or looked at). action is "Abrir caja"/"Cerrar caja"
 ## or empty; inside is what they can see in it while it's open.
 signal package_lid_hint_changed(action: String, inside: String)
+## Local-only onboarding card shown once per trap for this profile.
+signal tutorial_tip_requested(text: String)
 ## Non-verbal communication (docs/controles-y-ui.md): any player can ping,
 ## not just the host, so this needs its own client->host->everyone hop
 ## instead of relay() (which only ever originates from host-run simulation).

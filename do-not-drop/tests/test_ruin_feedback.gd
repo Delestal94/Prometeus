@@ -16,6 +16,10 @@ var _failures: int = 0
 
 func _initialize() -> void:
 	await process_frame
+	var settings: Node = root.get_node(^"/root/GameSettings")
+	var original_impact_effects: bool = bool(settings.get(&"impact_effects"))
+	settings.set(&"impact_effects", true)
+	var time_scale_before: float = Engine.time_scale
 	# apply_impact() only does anything to a package that's actually inside
 	# the tree once RunManager says a run is in progress -- see
 	# Package._is_run_active(). test_fragile.gd sidesteps this by never
@@ -47,12 +51,24 @@ func _initialize() -> void:
 
 	var bursts: Array[GPUParticles3D] = _find_particles()
 	_expect(bursts.size() == 1, "Exactly one confetti burst spawned (got %d)" % bursts.size())
+	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
+	# The comic ruin stinger (test_audio_polish) replaced the old low thud.
+	var ruin_sound := feedback.get(&"_ruin_player") as AudioStreamPlayer3D
+	_expect(ruin_sound != null and ruin_sound.playing, "Ruin plays its comic stinger with the visual hold")
 	if not bursts.is_empty():
 		var burst: GPUParticles3D = bursts[0]
 		_expect(burst.global_position.is_equal_approx(Vector3(3.0, 0.0, -8.0)),
 			"Burst spawns at the package's actual position, not the world origin")
 		_expect(burst.one_shot, "Never loops -- it's a one-time punctuation, not ambient VFX")
 		_expect(burst.emitting, "Starts emitting immediately, no delay")
+		_expect(is_equal_approx(burst.speed_scale, 0.15),
+			"Ruin confetti starts at 15% speed for the local freeze-frame")
+		_expect(is_equal_approx(Engine.time_scale, time_scale_before),
+			"The ruin effect never changes Engine.time_scale")
+		for _i in range(30):
+			await physics_frame
+		_expect(is_equal_approx(burst.speed_scale, 1.0),
+			"Confetti returns to full speed after the 0.35 s hold")
 
 	package.free()
 	await process_frame
@@ -65,6 +81,7 @@ func _initialize() -> void:
 		if _count_particles() == 0:
 			break
 	_expect(_count_particles() == 0, "The burst frees itself once it finishes, it isn't left behind")
+	settings.set(&"impact_effects", original_impact_effects)
 
 	if _failures == 0:
 		print("PASS: a ruined package bursts into confetti at its own position, once, and cleans up after itself")

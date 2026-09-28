@@ -287,7 +287,9 @@ func _build_home_page(column: VBoxContainer) -> Dictionary:
 	var options_button: Button = _small_button(bottom_row, tr("UI_OPTIONS"))
 	options_button.pressed.connect(_open_options)
 	_entry_buttons.append(options_button)
-	var tutorial_button: Button = _small_button(bottom_row, tr("UI_HOW_TO_PLAY"))
+	var tutorial_button: Button = _small_button(bottom_row, tr("UI_HOW_TO_PLAY"),
+			int(UnlockManager.completed_runs) == 0)
+	tutorial_button.set_meta(&"first_run_highlighted", int(UnlockManager.completed_runs) == 0)
 	tutorial_button.pressed.connect(_open_tutorial)
 	_entry_buttons.append(tutorial_button)
 	# A game you can only leave with Alt+F4 reads as unfinished before a
@@ -503,7 +505,7 @@ func _open_tutorial() -> void:
 
 
 func _open_cosmetics() -> void:
-	_cosmetics.show()
+	_cosmetics.call(&"open")
 
 
 func _open_leaderboard() -> void:
@@ -625,8 +627,8 @@ func _button(parent: Node, text: String, primary: bool) -> Button:
 
 
 ## Secondary actions: shorter and smaller type than the page's real choices.
-func _small_button(parent: Node, text: String) -> Button:
-	var button: Button = UiTheme.button(parent, text, false, Vector2(0, 42))
+func _small_button(parent: Node, text: String, highlighted: bool = false) -> Button:
+	var button: Button = UiTheme.button(parent, text, highlighted, Vector2(0, 42))
 	button.add_theme_font_size_override("font_size", 17)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return button

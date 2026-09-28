@@ -58,6 +58,10 @@ var cargo: Dictionary = {}
 ##  "photo": bool}. Photos are attached later by the phone camera, so this
 ## stays the single record of what happened at each door.
 var deliveries: Array[Dictionary] = []
+## Presentation data kept alongside the run so the results screen can name
+## every order, including a house the crew never reached.
+var cargo_names: Dictionary = {}
+var house_assignments: Array = []
 ## How many doors this run was supposed to reach, set by the level once the
 ## route has built itself. Counting missed houses off this instead of off
 ## the houses that force-resolved themselves keeps the penalty honest no
@@ -110,6 +114,8 @@ func _ready() -> void:
 	# makes it safe for the host to receive back the fact it just relayed.
 	EventBus.house_delivery_recorded.connect(_on_house_delivery_recorded)
 	EventBus.delivery_photo_taken.connect(_on_delivery_photo_taken)
+	EventBus.cargo_registered.connect(_on_cargo_registered)
+	EventBus.houses_assigned.connect(_on_houses_assigned)
 	_load_leaderboard()
 
 
@@ -125,6 +131,8 @@ func reset_run() -> void:
 	cargo = {}
 	had_simultaneous_risk = false
 	deliveries = []
+	cargo_names = {}
+	house_assignments = []
 	expected_houses = 0
 	delivery_photos = {}
 	last_photo_peer_id = 0
@@ -288,6 +296,14 @@ func _on_delivery_photo_taken(house_index: int, accepted: bool) -> void:
 		_mark_photo(house_index)
 
 
+func _on_cargo_registered(package_id: StringName, display_name: String) -> void:
+	cargo_names[package_id] = display_name
+
+
+func _on_houses_assigned(assignments: Array) -> void:
+	house_assignments = assignments.duplicate(true)
+
+
 ## Points and complaints from the doors, kept apart from the van tally in
 ## finish_run() so each side stays readable on its own.
 func _resolve_deliveries() -> Dictionary:
@@ -432,6 +448,8 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"houses_missed": int(doors["houses_missed"]),
 		"photos": int(doors["photos"]),
 		"complaints": doors["complaints"],
+		"deliveries": _result_delivery_rows(),
+		"route_event": _result_route_event(),
 		"score": score,
 		"is_new_best": is_new_best,
 		"best_score": best_score(MODE_DELIVERY),
@@ -440,6 +458,50 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
 	_share_results()
 	EventBus.run_ended.emit(score, results.duplicate(true))
+
+
+## One stable row per promised stop. A missing record is still useful result
+## data: it means that house never received its order.
+func _result_delivery_rows() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for house: int in range(expected_houses):
+		var package_id: StringName = &""
+		var trap_name: String = "PAQUETE"
+		if house < house_assignments.size():
+			var assignment: Array = house_assignments[house]
+			if not assignment.is_empty():
+				package_id = StringName(assignment[0])
+			if assignment.size() > 1:
+				trap_name = String(assignment[1]).split(" · ", false, 1)[0]
+		trap_name = String(cargo_names.get(package_id, trap_name))
+		var outcome: StringName = &"missed"
+		var has_photo: bool = false
+		for delivery: Dictionary in deliveries:
+			if int(delivery["house"]) == house:
+				outcome = StringName(delivery["outcome"])
+				has_photo = bool(delivery["photo"])
+				if package_id.is_empty():
+					package_id = StringName(delivery["package_id"])
+				break
+		rows.append({
+			"house": house,
+			"package_id": package_id,
+			"trap": trap_name,
+			"outcome": outcome,
+			"photo": has_photo,
+		})
+	return rows
+
+
+func _result_route_event() -> Dictionary:
+	if _event_id.is_empty():
+		return {}
+	var definition: Dictionary = RouteEventManager.EVENTS.get(_event_id, {})
+	return {
+		"id": _event_id,
+		"title": String(definition.get("title", String(_event_id))),
+		"success": bool(RouteEventManager.resolved_events.get(_event_id, false)),
+	}
 
 
 ## Endless (docs/tareas-nacho.md #44/#52): no delivery zone, so distance
@@ -588,9 +650,15 @@ func best_score(mode: StringName = MODE_DELIVERY) -> int:
 	return 0
 
 
-func _record_score(score: int, mode: StringName = MODE_DELIVERY) -> bool:
+func _record_score(score: int, mode: StringName = MODE_DELIVERY, crew_size: int = -1) -> bool:
 	var is_new_best: bool = score > best_score(mode)
-	leaderboard.append({"score": score, "date": Time.get_date_string_from_system(), "mode": mode})
+	var players: int = maxi(crew_size if crew_size > 0 else NetworkManager.peer_ids.size(), 1)
+	leaderboard.append({
+		"score": score,
+		"date": Time.get_date_string_from_system(),
+		"mode": mode,
+		"crew_size": players,
+	})
 	leaderboard.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["score"]) > int(b["score"]))
 	_trim_leaderboard()
 	_save_leaderboard()

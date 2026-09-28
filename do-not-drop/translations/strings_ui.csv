@@ -168,7 +168,7 @@ UI_DEPOT_VOTES,Votos:,Votes:
 UI_DEPOT_VOTE_CLOSED,Votación cerrada · volvé a abrir el mostrador para iniciar otra,Vote closed · reopen the counter to start another
 UI_DEPOT_VOTE_OPEN,Votación abierta · el reloj empieza con el primer voto,Vote open · the clock starts with the first vote
 UI_DEPOT_VOTE_OPEN_TIMER,Votación abierta · %d s,Vote open · %d s
-UI_DEPOT_VOTE_PREFIX,Votar: ,Vote: 
+UI_DEPOT_VOTE_PREFIX,"Votar: ","Vote: "
 UI_DEPOT_WORKSHOP,Taller,Workshop
 UI_DEPOT_WORKSHOP_GUEST_HINT,El camión lo elige quien hostea la partida. Podés mirar lo que hay.,The host picks the truck. You can look at what there is.
 UI_DEPOT_WORKSHOP_HOST_HINT,Los cambios se ven al instante en el camión.,Changes show on the truck right away.

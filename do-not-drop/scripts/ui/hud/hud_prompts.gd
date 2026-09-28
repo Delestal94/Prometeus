@@ -22,6 +22,7 @@ func _ready() -> void:
 	EventBus.interaction_prompt_changed.connect(_on_interaction_prompt)
 	EventBus.carry_changed.connect(_on_carry_changed)
 	EventBus.package_lid_hint_changed.connect(_on_lid_hint_changed)
+	EventBus.tutorial_tip_requested.connect(_on_tutorial_tip_requested)
 
 
 func refresh_shortcuts(delta: float = 0.0) -> void:
@@ -82,6 +83,10 @@ func _flash_hint(text: String, seconds: float) -> void:
 	_hint_override_seconds = seconds
 
 
+func _on_tutorial_tip_requested(text: String) -> void:
+	_flash_hint(text, 6.0)
+
+
 func refresh_hint(delta: float) -> void:
 	if _hint_override_seconds > 0.0:
 		_hint_override_seconds -= delta
@@ -126,17 +131,49 @@ func _on_carry_changed(carrying: bool) -> void:
 
 func render_interaction_prompt() -> void:
 	var lines: PackedStringArray = []
+	var action_id: StringName = _action_id_for_prompt(hud.interaction_prompt)
 	if not hud.interaction_prompt.is_empty():
 		lines.append("[ %s ]  %s" % [hud.key_hint("E", "A"), hud.interaction_prompt])
 	if _carrying:
 		lines.append(tr("HUD_PROMPT_DROP") % hud.key_hint("Q", "B"))
+		if action_id == &"":
+			action_id = &"drop"
 	if not _lid_action.is_empty():
 		lines.append("[ %s ]  %s" % [hud.key_hint("T", tr("HUD_PAD_DOWN")), _lid_action])
+		if action_id == &"":
+			action_id = &"open_box"
 	if not _lid_inside.is_empty():
 		lines.append(tr("HUD_PROMPT_INSIDE") % _lid_inside)
 	if not _sound_subtitle.is_empty():
 		lines.append(_sound_subtitle)
 	hud.interaction_label.text = "\n".join(lines)
+	hud.interaction_icon.texture = UiTheme.action_icon(action_id)
+	hud.interaction_icon.visible = hud.interaction_icon.texture != null
+
+
+## Prompt words to the action they ask for, checked in this order.
+const PROMPT_ACTIONS: Array = [
+	[&"grab", ["agarrar", "bajar paquete"]],
+	[&"drop", ["soltar", "dejá el paquete", "dejar paquete"]],
+	[&"sit", ["sentar", "subirse"]],
+	[&"bell", ["timbre"]],
+	[&"photo", ["foto"]],
+	[&"horn", ["bocina"]],
+	[&"ping", ["ping"]],
+]
+
+
+func _action_id_for_prompt(prompt: String) -> StringName:
+	var normalized: String = prompt.to_lower()
+	for entry: Array in PROMPT_ACTIONS:
+		for word: String in entry[1]:
+			if word in normalized:
+				return entry[0]
+	if "caja" in normalized and ("abrir" in normalized or "cerrar" in normalized):
+		return &"open_box"
+	if "carta" in normalized:
+		return &"use_card"
+	return &""
 
 
 func refresh_sound_subtitle() -> void:

@@ -33,10 +33,17 @@ func _run() -> void:
 	_expect(not hud.second_button.visible, "Nothing to restart before anything started")
 	_expect(hud.route_bar.visible, "Outside endless the route bar is shown")
 	_expect(String(hud.session_label.text).contains("SOLO"), "Offline, the session corner says so")
+	for action_id: StringName in [&"grab", &"drop", &"sit", &"bell", &"photo", &"horn", &"ping", &"open_box",
+			&"use_card"]:
+		_expect(UiTheme.action_icon(action_id) != null, "%s has an action icon" % action_id)
+	_expect(UiTheme.action_icon(&"unknown") == null, "Unknown actions keep the text-only fallback")
 
 	# --- prompts follow the device ---
 	bus.interaction_prompt_changed.emit("Agarrar paquete")
 	_expect(hud.interaction_label.text == "[ E ]  Agarrar paquete", "Keyboard prompt shows only the key")
+	_expect(hud.interaction_icon.visible
+		and hud.interaction_icon.texture == UiTheme.action_icon(&"grab"),
+		"Interaction prompt shows the matching action icon")
 	settings.using_gamepad = true
 	settings.input_device_changed.emit(true)
 	_expect(hud.interaction_label.text == "[ A ]  Agarrar paquete", "Switching to a gamepad re-renders the prompt")
@@ -45,6 +52,7 @@ func _run() -> void:
 	settings.input_device_changed.emit(false)
 	bus.interaction_prompt_changed.emit("")
 	_expect(hud.interaction_label.text == "", "An empty prompt clears the line")
+	_expect(not hud.interaction_icon.visible, "An empty prompt clears its action icon")
 
 	# --- the in-game HUD scales as one layer, still covering the screen ---
 	# Put back whatever the player had: this writes their real settings file.
@@ -75,6 +83,9 @@ func _run() -> void:
 		"The interaction prompt stands right above the bottom bar")
 	var player_menu_scale: float = settings.menu_text_scale
 	var volume_slider: HSlider = hud.options_panel.get("_volume_slider") as HSlider
+	var impact_effects_check := hud.options_panel.get("_impact_effects_check") as CheckBox
+	_expect(impact_effects_check != null and impact_effects_check.text == "Efectos de impacto",
+		"Options exposes the impact-effects accessibility switch")
 	var menu_caption := (volume_slider.get_parent().get_child(0) as HBoxContainer).get_child(0) as Label
 	var hud_font_size: int = hud.speed_label.get_theme_font_size("font_size")
 	settings.menu_text_scale = 1.5
@@ -139,6 +150,22 @@ func _run() -> void:
 	settings.colorblind_palette = original_palette
 	settings.sound_subtitles = original_subtitles
 
+	# --- ruined cargo gets a local-only soft flash, never global slow motion ---
+	var original_impact_effects: bool = settings.impact_effects
+	settings.impact_effects = true
+	var time_scale_before: float = Engine.time_scale
+	hud.cargo._on_ruin_impact(&"accessible_box", "test")
+	_expect(hud.ruin_vignette.color.r > 0.99 and hud.ruin_vignette.color.a > 0.0,
+		"A ruined package flashes a soft white edge vignette")
+	_expect(is_equal_approx(Engine.time_scale, time_scale_before),
+		"The HUD ruin flash never changes global time scale")
+	hud.cargo.refresh_ruin_impact(0.4)
+	_expect(is_zero_approx(hud.ruin_vignette.color.a), "The ruin flash clears after 0.35 seconds")
+	settings.impact_effects = false
+	hud.cargo._on_ruin_impact(&"accessible_box", "disabled")
+	_expect(is_zero_approx(hud.ruin_vignette.color.a), "Impact effects can be disabled for accessibility")
+	settings.impact_effects = original_impact_effects
+
 	# --- shortcut teaching can be automatic or explicitly overridden ---
 	var unlocks: Node = root.get_node("UnlockManager")
 	var original_runs: int = int(unlocks.completed_runs)
@@ -189,6 +216,44 @@ func _run() -> void:
 	_expect(not hud.options_button.visible and not hud.second_button.visible, "Results don't carry stale buttons")
 	_expect(String(hud.overlay_stats.text).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
 		"Results show team money")
+
+	# --- delivery results explain each stop and what comes next ---
+	var original_score: int = int(unlocks.total_score)
+	var original_deliveries: int = int(unlocks.successful_deliveries)
+	var original_unlocked: Dictionary = unlocks.unlocked.duplicate(true)
+	unlocks.total_score = 0
+	unlocks.successful_deliveries = 0
+	unlocks.unlocked = {&"starter_kit": true}
+	hud.results._on_ended(175, {
+		"delivered": true,
+		"reason": "",
+		"elapsed_seconds": 40.0,
+		"cargo_total": 0,
+		"cargo_intact": 0,
+		"cargo_ruined": 0,
+		"cargo_points": 0,
+		"time_bonus": 0,
+		"houses_delivered": 1,
+		"houses_missed": 1,
+		"breakdown": [{"label": "Entregas perfectas (1)", "points": 150}],
+		"best_score": 175,
+		"complaints": [],
+		"deliveries": [
+			{"house": 0, "trap": "FRÁGIL", "outcome": &"delivered_ok", "photo": true},
+			{"house": 1, "trap": "RUIDOSO", "outcome": &"missed", "photo": false},
+		],
+		"awards": [{"title": "MVP", "peer": network.local_id()}],
+		"route_event": {"title": "Inspección sorpresa", "success": true},
+	})
+	await process_frame
+	_expect(hud.result_rows_box.get_child_count() == 2, "Delivery results show one row per house")
+	_expect(String(hud.result_awards_label.text).contains("MVP"), "Delivery results show merit awards")
+	_expect(String(hud.result_event_label.text).contains("RESUELTO"), "Delivery results show how the route event ended")
+	_expect(hud.result_progress_bar.visible and String(hud.result_progress_label.text).contains("Te faltan"),
+		"Delivery results show progress toward the next unlock")
+	unlocks.total_score = original_score
+	unlocks.successful_deliveries = original_deliveries
+	unlocks.unlocked = original_unlocked
 
 	# --- losing the host ---
 	network.session_failed.emit("Se cortó la conexión con el anfitrión.")

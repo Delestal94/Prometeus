@@ -23,6 +23,8 @@ extends RigidBody3D
 ## How close a player has to be to open or close it.
 const OPEN_REACH: float = 3.0
 const TRANSFER_REACH: float = 2.4
+const ASSIST_REACH: float = 1.5
+const ASSIST_MERIT_SECONDS: float = 10.0
 const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
 const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
 const PACKAGE_COLLISION_COOLDOWN: float = 0.16
@@ -99,7 +101,11 @@ var _carry_in_vehicle: bool = false
 ## Host: the peer whose seat looks after this box (seat_point.gd), the only
 ## one whose trap input counts, and how long since their last sample.
 var tender_peer_id: int = 0
-var _tender_input_age: float = 0.0
+var assistant_peer_id: int = 0
+## peer id -> {"input": Dictionary, "age": float}. The host combines the
+## primary sample at full strength and one assistant at half strength.
+var _tender_inputs: Dictionary = {}
+var _assist_seconds: float = 0.0
 ## Host-only merit attribution. Trap milestones belong to the last passenger
 ## who sent an input that could actually affect the box; carry milestones
 ## belong to the last player who held it.
@@ -185,10 +191,14 @@ func _physics_process(delta: float) -> void:
 		var vehicle: Node3D = _find_vehicle()
 		if vehicle != null:
 			global_transform = vehicle.global_transform * _carry_pose
-	if not player_input.is_empty():
-		_tender_input_age += delta
-		if _tender_input_age > TENDER_INPUT_TIMEOUT:
-			player_input = {}
+	_age_tender_inputs(delta)
+	if assistant_peer_id > 0 and trap_state != ITrapBehavior.TrapState.AT_RISK:
+		set_assistant(0)
+	elif assistant_peer_id > 0 and _has_fresh_input(assistant_peer_id):
+		_assist_seconds += delta
+		if _assist_seconds >= ASSIST_MERIT_SECONDS:
+			_assist_seconds -= ASSIST_MERIT_SECONDS
+			_award_milestone(assistant_peer_id, &"assist")
 	_publish_net_state()
 	# Continuous collision only while loose, or thrown about the bay: riding
 	# along with it on, a box was swept out through the shut rear doors
@@ -249,6 +259,9 @@ func initialize_trap() -> void:
 	_last_holder_peer = 0
 	_rescue_pending = false
 	_milestone_counts.clear()
+	_tender_inputs.clear()
+	assistant_peer_id = 0
+	_assist_seconds = 0.0
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -458,10 +471,10 @@ func apply_parasite_damage(amount: float) -> void:
 	_sharing_parasite_damage = false
 
 
-## Whoever is tending this package calls this on their own client every
-## physics frame; only takes effect on the host, which is the only place
-## trap_behavior should actually read it. Same unreliable-ordered reasoning
-## as the van's driver input -- a dropped sample is superseded a frame later.
+## The primary tender and, when present, one helper call this every physics
+## frame. Only the host combines their samples and advances trap behavior.
+## Same unreliable-ordered reasoning as the van's driver input -- a dropped
+## sample is superseded a frame later.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_tender_input(input: Dictionary) -> void:
 	if not is_multiplayer_authority():
@@ -469,20 +482,145 @@ func submit_tender_input(input: Dictionary) -> void:
 	# Only whoever sits at this box's seat (0: a genuine local call).
 	var sender: int = multiplayer.get_remote_sender_id()
 	var from: int = sender if sender != 0 else multiplayer.get_unique_id()
-	if tender_peer_id == 0 or from != tender_peer_id:
-		return
-	player_input = input
+	_accept_tender_input(from, input)
+
+
+func _accept_tender_input(peer_id: int, input: Dictionary) -> bool:
+	if peer_id <= 0 or (peer_id != tender_peer_id and peer_id != assistant_peer_id):
+		return false
+	_tender_inputs[peer_id] = {"input": input.duplicate(true), "age": 0.0}
 	if _has_useful_input(input):
-		_last_tender_peer = from
-	_tender_input_age = 0.0
+		_last_tender_peer = peer_id
+	_refresh_combined_input()
+	return true
 
 
 ## Host: the seat's occupant changed (seat_point.gd). Nobody tending means no
 ## input at all -- not the last sample the previous passenger left behind.
 func set_tender(peer_id: int) -> void:
 	tender_peer_id = peer_id
+	_tender_inputs.clear()
 	player_input = {}
-	_tender_input_age = 0.0
+	if peer_id == 0 or assistant_peer_id == peer_id:
+		set_assistant(0)
+	_assist_seconds = 0.0
+
+
+func set_assistant(peer_id: int) -> bool:
+	if peer_id > 0 and (tender_peer_id <= 0 or peer_id == tender_peer_id or (assistant_peer_id > 0
+			and assistant_peer_id != peer_id)):
+		return false
+	var previous: int = assistant_peer_id
+	if previous > 0:
+		_tender_inputs.erase(previous)
+	assistant_peer_id = peer_id
+	_assist_seconds = 0.0
+	_refresh_combined_input()
+	if previous > 0 and previous != peer_id and is_inside_tree():
+		var previous_player: Node = _player_for_peer(previous)
+		if previous_player != null and previous_player.has_method(&"stop_assisting"):
+			previous_player.rpc_id(previous, &"stop_assisting", get_path())
+	return true
+
+
+func can_assist(peer_id: int) -> bool:
+	return peer_id > 0 and peer_id != tender_peer_id and tender_peer_id > 0 \
+			and (assistant_peer_id == 0 or assistant_peer_id == peer_id) \
+			and assist_available()
+
+
+func assist_available() -> bool:
+	return tender_peer_id > 0 and run_state() == ITrapBehavior.TrapState.AT_RISK
+
+
+func run_state() -> int:
+	if is_inside_tree():
+		var run: Node = get_node_or_null(^"/root/RunManager")
+		if run != null:
+			var run_cargo: Dictionary = run.get(&"cargo")
+			if run_cargo.has(package_id):
+				return int((run_cargo[package_id] as Dictionary).get("state", trap_state))
+	return trap_state
+
+
+func assist_prompt() -> String:
+	var crew: Node = get_node_or_null(^"/root/CrewProgression") if is_inside_tree() else null
+	var color: String = String(crew.call(&"player_color_name", tender_peer_id)) if crew != null else "tu compañero"
+	return "Ayudar con la caja de %s" % color
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_assist() -> void:
+	if not is_multiplayer_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
+	if not can_assist(peer_id) or not _peer_within_assist_reach(peer_id):
+		return
+	if not set_assistant(peer_id):
+		return
+	var player: Node = _player_for_peer(peer_id)
+	if player != null and player.has_method(&"assist_package"):
+		player.rpc_id(peer_id, &"assist_package", get_path())
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_stop_assist() -> void:
+	if not is_multiplayer_authority():
+		return
+	var sender: int = multiplayer.get_remote_sender_id()
+	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
+	if peer_id == assistant_peer_id:
+		set_assistant(0)
+
+
+func _age_tender_inputs(delta: float) -> void:
+	for raw_peer: Variant in _tender_inputs.keys():
+		var sample: Dictionary = _tender_inputs[raw_peer]
+		sample["age"] = float(sample.get("age", 0.0)) + delta
+		if float(sample["age"]) > TENDER_INPUT_TIMEOUT:
+			_tender_inputs.erase(raw_peer)
+		else:
+			_tender_inputs[raw_peer] = sample
+	_refresh_combined_input()
+
+
+func _refresh_combined_input() -> void:
+	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0,
+			"direction_pressed": null}
+	for peer_id: int in [tender_peer_id, assistant_peer_id]:
+		if peer_id <= 0 or not _has_fresh_input(peer_id):
+			continue
+		var sample: Dictionary = _tender_inputs[peer_id]["input"]
+		var weight: float = 1.0 if peer_id == tender_peer_id else 0.5
+		if bool(sample.get("steady", false)):
+			combined["steady_strength"] = float(combined["steady_strength"]) + weight
+		if bool(sample.get("calm", false)):
+			combined["calm_strength"] = float(combined["calm_strength"]) + weight
+		if combined["direction_pressed"] == null and sample.get("direction_pressed") != null:
+			combined["direction_pressed"] = sample["direction_pressed"]
+	combined["steady"] = float(combined["steady_strength"]) > 0.0
+	combined["calm"] = float(combined["calm_strength"]) > 0.0
+	player_input = combined if float(combined["steady_strength"]) > 0.0 \
+			or float(combined["calm_strength"]) > 0.0 \
+			or combined["direction_pressed"] != null else {}
+
+
+func _has_fresh_input(peer_id: int) -> bool:
+	return _tender_inputs.has(peer_id) and float((_tender_inputs[peer_id] as Dictionary).get("age",
+			INF)) <= TENDER_INPUT_TIMEOUT
+
+
+func _peer_within_assist_reach(peer_id: int) -> bool:
+	var player: Node = _player_for_peer(peer_id)
+	return player != null and _reach_origin(player).distance_to(global_position) <= ASSIST_REACH
+
+
+func _player_for_peer(peer_id: int) -> Node:
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		if player.get_multiplayer_authority() == peer_id:
+			return player
+	return null
 
 
 ## Whoever is carrying this package (on foot, not yet mounted) calls this

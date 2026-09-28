@@ -20,9 +20,11 @@ func _initialize() -> void:
 		"Starts empty when there's no save file yet")
 	_expect(int(manager.call(&"best_score")) == 0, "best_score() is 0 with an empty board")
 
-	var first_best: bool = bool(manager.call(&"_record_score", 100))
+	var first_best: bool = bool(manager.call(&"_record_score", 100, &"delivery", 3))
 	_expect(first_best, "The very first score recorded is trivially a new best")
 	_expect(int(manager.call(&"best_score")) == 100, "Board tracks the score just recorded")
+	_expect(int((manager.get(&"leaderboard") as Array)[0].get("crew_size", 0)) == 3,
+		"A record remembers how many players shared the run")
 
 	var second_best: bool = bool(manager.call(&"_record_score", 60))
 	_expect(not second_best, "A lower score than the current best isn't a new best")

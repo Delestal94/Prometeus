@@ -1,7 +1,7 @@
 """Openable delivery boxes and what's inside them (Blender 5.2, background).
 
     "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup \
-        --python do-not-drop/assets/tools/build_cargo_packages.py [-- boxes contents]
+        --python do-not-drop/assets/tools/build_cargo_packages.py [-- boxes contents|<content_id>...]
 
 Run art/tools/make_cargo_textures.py first: it paints the printed cardboard
 atlases and writes cargo_layout.json (box sizes + the UV rect of every
@@ -64,6 +64,14 @@ PALETTE.update({
     "dough": (0.80, 0.58, 0.30, 1), "bowl": (0.12, 0.40, 0.42, 1),
     "bowl_inner": (0.80, 0.78, 0.70, 1), "towel": (0.72, 0.10, 0.08, 1),
     "towel_light": (0.90, 0.88, 0.82, 1), "card": (0.95, 0.92, 0.84, 1),
+    "glass": (0.50, 0.72, 0.75, 1), "milk": (0.92, 0.94, 0.88, 1),
+    "cap": (0.10, 0.38, 0.48, 1), "rocket_red": (0.78, 0.10, 0.06, 1),
+    "rocket_blue": (0.06, 0.35, 0.48, 1), "rocket_cream": (0.92, 0.78, 0.48, 1),
+    "wicker": (0.48, 0.25, 0.08, 1), "raccoon": (0.34, 0.35, 0.38, 1),
+    "raccoon_dark": (0.08, 0.08, 0.10, 1), "raccoon_light": (0.58, 0.57, 0.53, 1),
+    "brass": (0.58, 0.34, 0.07, 1), "lamp_shade": (0.86, 0.62, 0.28, 1),
+    "puppy": (0.46, 0.25, 0.10, 1), "puppy_light": (0.76, 0.52, 0.27, 1),
+    "collar": (0.10, 0.42, 0.48, 1), "blanket": (0.15, 0.42, 0.43, 1),
 })
 
 
@@ -479,6 +487,9 @@ def wedding_cake():
     clear()
     board_r = 0.19
     tiers = [(0.17, 0.2), (0.13, 0.16), (0.09, 0.14)]
+    pads = [cube("foam_pad", (x, y, 0.018), (0.055, 0.055, 0.036), "shreds", bevel=0.008)
+            for x, y in ((-0.15, -0.15), (0.15, -0.15), (-0.15, 0.15), (0.15, 0.15))]
+    join("Filler", pads)
 
     def build_tiers(prefix, lean=0.0, slump=1.0, offsets=None):
         objs = []
@@ -577,16 +588,193 @@ def sourdough():
     finish("sourdough")
 
 
+def milk_canister():
+    """Líquido: a glass milk canister; damage and ruin show the leak."""
+    clear()
+    hx, hy, _ = inner_half("cube")
+    join("Filler", scatter_strips("paper", 24, hx * 0.9, hy * 0.9, 0.02, 0.07,
+                                  ["shreds", "shreds_light"], 101))
+    bottle = [
+        cylinder("milk", (0, 0, 0.22), 0.13, 0.31, "milk", 12),
+        cylinder("glass_body", (0, 0, 0.22), 0.145, 0.32, "glass", 12),
+        cone("shoulder", (0, 0, 0.405), 0.145, 0.075, 0.09, "glass", 12),
+        cylinder("neck", (0, 0, 0.47), 0.075, 0.06, "glass", 12),
+        cylinder("cap", (0, 0, 0.51), 0.082, 0.025, "cap", 12),
+        cube("handle_top", (0.15, 0, 0.39), (0.10, 0.035, 0.03), "glass", bevel=0.008),
+        cube("handle_side", (0.195, 0, 0.33), (0.03, 0.035, 0.14), "glass", bevel=0.008),
+    ]
+    join("Intact", bottle)
+    join("Damage", [blob("leak", (0.16, -0.04, 0.045), (0.09, 0.06, 0.012), "milk", 1),
+                    cube("crack", (0.12, -0.125, 0.22), (0.006, 0.008, 0.13), "crack", rot=(0.25, 0, -0.35))])
+    fallen = join("fallen_canister", [cylinder("r_milk", (0, 0, 0), 0.11, 0.28, "milk", 10),
+                                      cylinder("r_glass", (0, 0, 0), 0.125, 0.29, "glass", 10)])
+    place(fallen, (-0.05, 0.02, 0.13), (0, math.pi / 2, 0.35))
+    spill = blob("spill", (0.08, -0.08, 0.02), (0.23, 0.16, 0.018), "milk", 2)
+    cap = cylinder("loose_cap", (0.20, 0.13, 0.025), 0.07, 0.025, "cap", 10, rot=(math.pi / 2, 0, 0))
+    group("Ruined", [fallen, spill, cap])
+    finish("milk_canister")
+
+
+def fireworks_crate():
+    """Explosivo: a small crate of colourful fireworks."""
+    clear()
+    hx, hy, _ = inner_half("cube")
+    join("Filler", scatter_strips("shred", 20, hx * 0.9, hy * 0.9, 0.02, 0.06,
+                                  ["shreds", "shreds_light"], 111))
+    parts = [cube("crate", (0, 0, 0.10), (0.42, 0.34, 0.18), "cardboard", bevel=0.015)]
+    colours = ["rocket_red", "rocket_blue", "rocket_red"]
+    for i, x in enumerate((-0.12, 0.0, 0.12)):
+        y = -0.015 if i == 1 else 0.025
+        h = 0.31 + 0.04 * i
+        parts += [cylinder("rocket_body", (x, y, 0.17 + h / 2), 0.045, h, colours[i], 8),
+                  cone("rocket_tip", (x, y, 0.17 + h + 0.05), 0.06, 0.0, 0.10, colours[i], 8),
+                  cube("rocket_band", (x, y - 0.044, 0.33), (0.07, 0.008, 0.045), "rocket_cream")]
+    join("Intact", parts)
+    join("Damage", [cube("fuse", (0.18, -0.12, 0.28), (0.012, 0.18, 0.012), "crack", rot=(0.25, 0.3, 0.4)),
+                    blob("spark", (0.20, -0.18, 0.37), (0.025, 0.025, 0.025), "warning", 1)])
+    ruined = [cube("broken_crate", (0, 0.04, 0.06), (0.38, 0.30, 0.10), "cardboard")]
+    for i, x in enumerate((-0.14, 0.02, 0.15)):
+        tube = cylinder("spent", (0, 0, 0), 0.035, 0.25, colours[i], 8)
+        place(tube, (x, -0.04 + i * 0.05, 0.09), (0.7 + i * 0.25, 0.3, -0.4 + i * 0.35))
+        ruined.append(tube)
+    group("Ruined", ruined)
+    finish("fireworks_crate")
+
+
+def _wicker_cage(prefix, broken=False):
+    pieces = [cylinder(prefix + "_base", (0, 0, 0.045), 0.23, 0.07, "wicker", 12),
+              cylinder(prefix + "_rim", (0, 0, 0.43), 0.22, 0.035, "wicker", 12)]
+    for i in range(10):
+        a = i * math.tau / 10
+        if broken and i in (1, 2, 3):
+            continue
+        pieces.append(cylinder(prefix + "_bar", (math.cos(a) * 0.205, math.sin(a) * 0.205, 0.24),
+                               0.012, 0.37, "wicker", 6))
+    return pieces
+
+
+def raccoon_cage():
+    """Hostil: a grumpy raccoon held in a wicker cage."""
+    clear()
+    join("Filler", scatter_strips("straw", 26, 0.24, 0.24, 0.02, 0.07, ["hay", "straw"], 121,
+                                  size=(0.08, 0.006, 0.006)))
+    animal = [blob("body", (0, 0.03, 0.20), (0.14, 0.13, 0.16), "raccoon", 2),
+              blob("head", (0, -0.06, 0.34), (0.13, 0.11, 0.10), "raccoon", 2),
+              cone("ear_l", (-0.08, -0.05, 0.43), 0.045, 0.0, 0.09, "raccoon_dark", 6),
+              cone("ear_r", (0.08, -0.05, 0.43), 0.045, 0.0, 0.09, "raccoon_dark", 6),
+              cube("mask", (0, -0.155, 0.35), (0.19, 0.018, 0.045), "raccoon_dark", bevel=0.018),
+              blob("eye_l", (-0.052, -0.169, 0.36), (0.015, 0.009, 0.015), "warning", 1),
+              blob("eye_r", (0.052, -0.169, 0.36), (0.015, 0.009, 0.015), "warning", 1),
+              blob("muzzle", (0, -0.165, 0.31), (0.05, 0.025, 0.035), "raccoon_light", 1),
+              blob("nose", (0, -0.19, 0.325), (0.018, 0.012, 0.012), "raccoon_dark", 1)]
+    join("Intact", _wicker_cage("cage") + animal)
+    join("Damage", [cube("scratch_a", (-0.08, -0.222, 0.23), (0.012, 0.01, 0.11), "crack", rot=(0.0, 0.0, -0.28)),
+                    cube("scratch_b", (0.02, -0.222, 0.23), (0.012, 0.01, 0.11), "crack", rot=(0.0, 0.0, 0.22))])
+    broken = _wicker_cage("broken", True)
+    paw = blob("raccoon_paw", (0.17, -0.12, 0.07), (0.07, 0.05, 0.035), "raccoon_dark", 1)
+    broken.append(paw)
+    group("Ruined", broken)
+    finish("raccoon_cage")
+
+
+def _goblet(prefix, x, y, z, scale=1.0):
+    cup = lathe(prefix + "_cup", [(0.0, 0.0), (0.055 * scale, 0.0), (0.07 * scale, 0.09 * scale),
+                                  (0.075 * scale, 0.13 * scale), (0.065 * scale, 0.135 * scale)], "glass", 10,
+                location=(x, y, z + 0.055 * scale))
+    stem = cylinder(prefix + "_stem", (x, y, z + 0.025 * scale), 0.012 * scale, 0.06 * scale, "glass", 8)
+    base = cylinder(prefix + "_base", (x, y, z), 0.055 * scale, 0.012 * scale, "glass", 10)
+    return [cup, stem, base]
+
+
+def glass_tower():
+    """Equilibrio: a narrow tower of stacked glasses."""
+    clear()
+    join("Filler", [cube("foam", (0, 0, 0.025), (0.34, 0.34, 0.05), "shreds", bevel=0.015)])
+    glasses = []
+    levels = [(0, 0, 0.06), (-0.07, 0, 0.25), (0.07, 0, 0.25), (0, 0, 0.44), (0, 0, 0.63)]
+    for i, (x, y, z) in enumerate(levels):
+        glasses += _goblet("glass%d" % i, x, y, z, 0.9 if i > 2 else 1.0)
+    join("Intact", glasses)
+    join("Damage", [cube("hairline", (0.0, -0.066, 0.73), (0.006, 0.008, 0.10), "crack", rot=(0.15, 0, 0.3))])
+    shards = []
+    rng = random.Random(131)
+    for i in range(9):
+        shard = cone("shard", (0, 0, 0), 0.035, 0.0, 0.10, "glass", 3)
+        place(shard, (rng.uniform(-0.14, 0.14), rng.uniform(-0.14, 0.14), rng.uniform(0.02, 0.09)),
+              (rng.uniform(0.5, 1.4), rng.uniform(-0.8, 0.8), rng.uniform(0, math.tau)))
+        shards.append(shard)
+    group("Ruined", shards)
+    finish("glass_tower")
+
+
+def antique_lamp():
+    """Frágil: a small brass table lamp with a faceted shade."""
+    clear()
+    hx, hy, _ = inner_half("cube")
+    join("Filler", scatter_strips("paper", 28, hx * 0.9, hy * 0.9, 0.02, 0.07,
+                                  ["shreds", "shreds_light"], 141))
+    intact = [cylinder("base", (0, 0, 0.07), 0.16, 0.07, "brass", 12),
+              cylinder("stem", (0, 0, 0.24), 0.035, 0.30, "brass", 8),
+              blob("bulb", (0, 0, 0.39), (0.06, 0.06, 0.08), "lamp", 2),
+              cone("shade", (0, 0, 0.43), 0.20, 0.10, 0.24, "lamp_shade", 12),
+              cylinder("shade_rim", (0, 0, 0.31), 0.205, 0.018, "brass", 12)]
+    join("Intact", intact)
+    join("Damage", [cube("shade_crack_a", (0.11, -0.15, 0.43), (0.008, 0.01, 0.13), "crack", rot=(0, 0, 0.35)),
+                    cube("shade_crack_b", (0.07, -0.16, 0.39), (0.008, 0.01, 0.09), "crack", rot=(0, 0, -0.45))])
+    shade = cone("fallen_shade", (0, 0, 0), 0.20, 0.10, 0.22, "lamp_shade", 10)
+    place(shade, (0.10, 0.02, 0.12), (0.4, 1.15, 0.2))
+    stem = cylinder("bent_stem", (-0.12, 0.02, 0.10), 0.03, 0.30, "brass", 8, rot=(0.0, 0.9, 0.0))
+    bulb = blob("broken_bulb", (0.16, -0.12, 0.04), (0.05, 0.04, 0.035), "lamp", 1)
+    group("Ruined", [shade, stem, bulb])
+    finish("antique_lamp")
+
+
+def puppy():
+    """Ruidoso: a puppy on a blanket; ruin means it chewed its way out."""
+    clear()
+    hx, hy, _ = inner_half("vented")
+    blanket = mound("blanket", hx * 0.92, hy * 0.92, 0.045, "blanket", 151, sub=5)
+    join("Filler", [blanket])
+    parts = [blob("body", (0, 0.04, 0.18), (0.15, 0.18, 0.13), "puppy", 2),
+             blob("head", (0, -0.11, 0.31), (0.13, 0.11, 0.11), "puppy_light", 2),
+             cone("ear_l", (-0.09, -0.08, 0.31), 0.055, 0.015, 0.14, "puppy", 6, rot=(0.35, 0.5, -0.3)),
+             cone("ear_r", (0.09, -0.08, 0.31), 0.055, 0.015, 0.14, "puppy", 6, rot=(0.35, -0.5, 0.3)),
+             blob("muzzle", (0, -0.205, 0.28), (0.065, 0.035, 0.045), "puppy_light", 1),
+             blob("nose", (0, -0.237, 0.30), (0.022, 0.015, 0.017), "eye", 1),
+             blob("eye_l", (-0.05, -0.195, 0.34), (0.014, 0.010, 0.014), "eye", 1),
+             blob("eye_r", (0.05, -0.195, 0.34), (0.014, 0.010, 0.014), "eye", 1),
+             cylinder("collar", (0, -0.04, 0.24), 0.105, 0.035, "collar", 10),
+             cone("tail", (0, 0.22, 0.24), 0.035, 0.012, 0.17, "puppy", 7, rot=(-0.65, 0, 0))]
+    join("Intact", parts)
+    join("Damage", [cube("chew", (-0.13, -0.24, 0.08), (0.12, 0.025, 0.035), "cardboard", rot=(0, 0.2, -0.4)),
+                    blob("tuft", (0.17, 0.03, 0.10), (0.03, 0.06, 0.012), "puppy", 1)])
+    ruined = [cube("chewed_toy", (0.05, 0.04, 0.045), (0.18, 0.07, 0.07), "rocket_red", bevel=0.025)]
+    for i, (x, y) in enumerate(((-0.14, -0.10), (0.10, 0.02), (-0.02, 0.14))):
+        ruined.append(blob("paw_print%d" % i, (x, y, 0.012), (0.045, 0.035, 0.008), "puppy", 1))
+    group("Ruined", ruined)
+    finish("puppy")
+
+
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["boxes", "contents"]
     if "boxes" in argv:
         for variant in LAYOUT:
             build_box(variant)
-    if "contents" in argv:
-        porcelain_vase()
-        hen()
-        wedding_cake()
-        sourdough()
+    builders = {
+        "porcelain_vase": porcelain_vase,
+        "hen": hen,
+        "wedding_cake": wedding_cake,
+        "sourdough": sourdough,
+        "milk_canister": milk_canister,
+        "fireworks_crate": fireworks_crate,
+        "raccoon_cage": raccoon_cage,
+        "glass_tower": glass_tower,
+        "antique_lamp": antique_lamp,
+        "puppy": puppy,
+    }
+    requested = list(builders) if "contents" in argv else [name for name in argv if name in builders]
+    for name in requested:
+        builders[name]()
 
 
 main()

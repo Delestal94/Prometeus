@@ -53,6 +53,13 @@ var camera_shake_scale: float = 1.0:
 		camera_shake_scale = clampf(value, 0.0, 1.0)
 		_save()
 
+## Local-only ruin punctuation (brief slowed confetti, white vignette and low thud).
+## Accessibility switch: it never changes simulation or Engine.time_scale.
+var impact_effects: bool = true:
+	set(value):
+		impact_effects = value
+		_save()
+
 const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card"]
 const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G}
 var key_bindings: Dictionary = DEFAULT_KEY_BINDINGS.duplicate():
@@ -216,6 +223,7 @@ func reset_to_defaults() -> void:
 	voice_volume = 1.0
 	preferred_fov = 82.0
 	camera_shake_scale = 1.0
+	impact_effects = true
 	look_sensitivity = 1.0
 	invert_look_y = false
 	fullscreen = false
@@ -303,6 +311,7 @@ func _load() -> void:
 	voice_volume = float(config.get_value(SECTION, "voice_volume", 1.0))
 	preferred_fov = float(config.get_value(SECTION, "preferred_fov", 82.0))
 	camera_shake_scale = float(config.get_value(SECTION, "camera_shake_scale", 1.0))
+	impact_effects = bool(config.get_value(SECTION, "impact_effects", true))
 	look_sensitivity = float(config.get_value(SECTION, "look_sensitivity", 1.0))
 	invert_look_y = bool(config.get_value(SECTION, "invert_look_y", false))
 	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
@@ -339,6 +348,7 @@ func _save() -> void:
 	config.set_value(SECTION, "voice_volume", voice_volume)
 	config.set_value(SECTION, "preferred_fov", preferred_fov)
 	config.set_value(SECTION, "camera_shake_scale", camera_shake_scale)
+	config.set_value(SECTION, "impact_effects", impact_effects)
 	config.set_value(SECTION, "look_sensitivity", look_sensitivity)
 	config.set_value(SECTION, "invert_look_y", invert_look_y)
 	config.set_value(SECTION, "fullscreen", fullscreen)

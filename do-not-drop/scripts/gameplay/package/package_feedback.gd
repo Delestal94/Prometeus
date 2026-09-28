@@ -9,6 +9,8 @@ extends Node
 const CONFETTI_COLORS: Array[Color] = [Color("f47e6d"), Color("f4c562"), Color("83e2ba"), Color("6db3d6")]
 const CONFETTI_COUNT: int = 28
 const CONFETTI_LIFETIME: float = 1.1
+const RUIN_HOLD_SECONDS: float = 0.35
+const RUIN_PARTICLE_SPEED: float = 0.15
 
 ## Nodes wobbled for the Ruidoso trap and on impacts: Box holds the whole
 ## cardboard model and what's inside it, so everything shudders together.
@@ -403,7 +405,9 @@ func _on_package_state_changed(id: StringName, new_state: int) -> void:
 
 func _on_package_ruined(id: StringName, _cause: String) -> void:
 	if id == _package_id:
-		_burst_confetti()
+		# The comic stinger is the ruin cue itself (it replaced the old impact
+		# thud), so it plays even with impact effects turned off.
+		_burst_confetti(_impact_effects_enabled())
 		if _ruin_player != null:
 			_ruin_player.play()
 
@@ -765,9 +769,10 @@ func _apply_creak(delta: float) -> void:
 ## A handful of tiny colored cubes flung outward and pulled down by gravity --
 ## no particle texture/material asset needed, matches the placeholder-box style
 ## everything else in the prototype already uses.
-func _burst_confetti() -> void:
+func _burst_confetti(slow_ruin: bool = false) -> GPUParticles3D:
 	var origin: Vector3 = (get_parent() as Node3D).global_position
 	var particles := GPUParticles3D.new()
+	particles.name = "RuinConfetti" if slow_ruin else "ConfettiBurst"
 	particles.top_level = true
 	particles.emitting = false
 	particles.one_shot = true
@@ -785,6 +790,7 @@ func _burst_confetti() -> void:
 	process_material.gravity = Vector3(0.0, -9.0, 0.0)
 	process_material.color = CONFETTI_COLORS[randi() % CONFETTI_COLORS.size()]
 	particles.process_material = process_material
+	particles.speed_scale = RUIN_PARTICLE_SPEED if slow_ruin else 1.0
 
 	# current_scene is null in headless test trees that never loaded a scene --
 	# falls back to the tree root so this still works there, not just in-game.
@@ -793,7 +799,17 @@ func _burst_confetti() -> void:
 	particles.global_position = origin
 	particles.reset_physics_interpolation()
 	particles.emitting = true
+	if slow_ruin:
+		get_tree().create_timer(RUIN_HOLD_SECONDS).timeout.connect(func() -> void:
+			if is_instance_valid(particles):
+				particles.speed_scale = 1.0)
 	particles.finished.connect(particles.queue_free)
+	return particles
+
+
+func _impact_effects_enabled() -> bool:
+	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	return bool(settings.get(&"impact_effects")) if settings != null else true
 
 
 ## Called by package_pickup_point.gd while this package is (or stops being)

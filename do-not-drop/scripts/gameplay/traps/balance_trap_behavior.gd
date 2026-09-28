@@ -14,6 +14,7 @@ var _damage_per_second: float = 20.0
 var _correction_degrees_per_second: float = 20.0
 var _seconds_past_danger: float = 0.0
 var _is_steadying: bool = false
+var _steady_strength: float = 0.0
 
 
 func on_setup(package: Node, config: Dictionary) -> void:
@@ -32,10 +33,11 @@ func on_physics_process(package: Node, delta: float, context: Dictionary) -> voi
 		return
 	var before_state: int = get_state()
 	var input: Dictionary = context.get("input", {}) as Dictionary
-	_is_steadying = bool(input.get("steady", false))
+	_steady_strength = float(input.get("steady_strength", 1.0 if bool(input.get("steady", false)) else 0.0))
+	_is_steadying = _steady_strength > 0.0
 	tilt_degrees = _measure_tilt(package)
 	if _is_steadying:
-		_apply_correction(package, delta)
+		_apply_correction(package, delta, _steady_strength)
 	if tilt_degrees > _angle_at_risk_max:
 		_seconds_past_danger += delta
 	else:
@@ -74,7 +76,7 @@ func _measure_tilt(package: Node) -> float:
 	return rad_to_deg(up.angle_to(Vector3.UP))
 
 
-func _apply_correction(package: Node, delta: float) -> void:
+func _apply_correction(package: Node, delta: float, strength: float = 1.0) -> void:
 	if package == null or tilt_degrees <= 0.01:
 		return
 	var basis: Basis = package.get(&"global_basis") as Basis
@@ -83,7 +85,7 @@ func _apply_correction(package: Node, delta: float) -> void:
 		return
 	# Rotate the box back toward upright, capped so it can fight a corner
 	# but never instantly undo a real slam.
-	var step: float = minf(deg_to_rad(_correction_degrees_per_second * delta), deg_to_rad(tilt_degrees))
+	var step: float = minf(deg_to_rad(_correction_degrees_per_second * strength * delta), deg_to_rad(tilt_degrees))
 	var corrected: Basis = Basis(axis.normalized(), step) * basis
 	var transform: Transform3D = package.get(&"global_transform") as Transform3D
 	package.set(&"global_transform", Transform3D(corrected.orthonormalized(), transform.origin))

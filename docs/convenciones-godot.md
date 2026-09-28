@@ -87,9 +87,9 @@ persona con mouse no pasa por el Input Map para el delta continuo (se lee direct
 Pendiente de implementar (documentado en `docs/controles-y-ui.md` como diseño, todavía
 no en `project.godot`): un control de trampa secundario por tipo.
 
-`ui_ping` es deliberadamente un solo mensaje fijo ("¡Cuidado!"), no una rueda de
-opciones — cubre la necesidad real (avisar a los compañeros) sin sumar UI de
-selección todavía. Ver `Player._send_ping()` en `player.gd`.
+`ui_ping` conserva “¡Cuidado!” con un toque corto. Al mantenerlo abre una rueda de
+seis mensajes, seleccionable con mouse o stick derecho. Ver el catálogo compartido
+en `scripts/ui/ping_catalog.gd` y el envío en `Player._send_ping()`.
 
 ## 2. Capas de física (Project Settings → Layer Names → 3D Physics)
 

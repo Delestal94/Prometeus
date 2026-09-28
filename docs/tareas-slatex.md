@@ -271,53 +271,54 @@ siguen pendientes").
 - [x] **S-107.4** (commit `1fb41b9`) Test `tests/test_order_balancer.gd`: 1000 semillas por cantidad de casas, ninguna
   rompe las reglas; la misma semilla da el mismo pedido (todos los peers calculan igual).
 
-### S-108 · Simulador de balance de trampas (reemplaza al playtesting de balance) — A · `Astra · xhigh` para diseñarlo, `Sol · high` para implementarlo · Aviso: no
+### S-108 · Simulador de balance de trampas (reemplaza al playtesting de balance) — A · `Astra · xhigh` para diseñarlo, `Sol · high` para implementarlo · Aviso: no · **[x] `8d04262`**
 
 Cierra lo que antes era "#41/#51/#59/#67: falta playtesting". No mide diversión: mide si cada
 trampa es **perdible, ganable y con momentos de casi-perder**, que es lo que `parametros-diseno.md`
 pide de los números.
 
-- [ ] **S-108.1 Grabar manejo real.** `tests/sim_record_drive.gd`: maneja el camión de verdad por una
+- [x] **S-108.1 Grabar manejo real.** (commit `8d04262`) `tests/sim_record_drive.gd`: maneja el camión de verdad por una
   ruta (mismo conductor automático que `test_vehicle_stress.gd`, pero respetando curvas) y guarda por
   frame de física lo que las trampas reciben: aceleración, inclinación de la caja, impactos (delta de
   velocidad). Salida: `tests/sim_data/drive_<semilla>.json`. 5 semillas.
-- [ ] **S-108.2 Pasajeros bot.** Tres perfiles: *ausente* (no toca nada), *torpe* (reacciona con
+- [x] **S-108.2 Pasajeros bot.** (commit `8d04262`) Tres perfiles: *ausente* (no toca nada), *torpe* (reacciona con
   0,8 s de retraso, acierta 60 % de las secuencias, suelta el botón 20 % del tiempo) y *experto*
   (0,25 s, 95 %). Cada perfil también con +150 ms de latencia de red simulada.
-- [ ] **S-108.3 Simulador.** `tests/sim_trap_balance.gd` (no va en la batería, como `bench_drive.gd`):
+- [x] **S-108.3 Simulador.** (commit `8d04262`) `tests/sim_trap_balance.gd` (no va en la batería, como `bench_drive.gd`):
   para cada `data/traps/*.tres` × perfil × manejo grabado, corre el `ITrapBehavior` real 50 veces y
   anota % arruinadas, segundos en riesgo, y *casi-pérdidas* (integridad mínima entre 5 y 25 sin llegar a
   0). Imprime una tabla y la guarda en `tests/sim_data/balance_report.md`.
-- [ ] **S-108.4 Objetivos** (escribirlos en `docs/parametros-diseno.md` antes de ajustar):
+- [x] **S-108.4 Objetivos** (commit `8d04262`; escritos antes del ajuste) en `docs/parametros-diseno.md`:
   ausente arruina 80-100 %; torpe 30-55 % con al menos 1 casi-pérdida por viaje; experto < 12 %.
   La latencia de 150 ms no puede subir el % del experto más de 8 puntos.
-- [ ] **S-108.5 Ajustar** los `params` de los `.tres` hasta cumplir los objetivos (sin tocar scripts de
+- [x] **S-108.5 Ajustar** (commit `8d04262`) los `params` de los `.tres` hasta cumplir los objetivos (sin tocar scripts de
   trampa) y documentar valor viejo → nuevo y por qué en `parametros-diseno.md`.
 
-**Hecho cuando**: el reporte muestra las 7 trampas dentro de los objetivos y el doc lo explica.
+**Hecho**: el reporte muestra las 6 trampas interactivas dentro de los objetivos y documenta
+`Frágil` como excepción dependiente del conductor (sus perfiles son idénticos porque no consume input).
 
 ### S-109 · Algo que hacer cuando tu paquete ya se arruinó — A · `Sol · xhigh` · Aviso: no
 
 `docs/critica-diseno-abogado-del-diablo.md` §6: quien pierde su caja pasa el resto del viaje sin
 hacer nada. El modo espectador ayuda a mirar, no a jugar.
 
-- [ ] **S-109.1 Ayudante.** Un paquete acepta input de hasta **dos** peers: el que lo atiende y un
+- [x] (commit `251b082`) **S-109.1 Ayudante.** Un paquete acepta input de hasta **dos** peers: el que lo atiende y un
   ayudante (otro jugador sentado en un asiento contiguo o a pie a menos de 1,5 m). En `package.gd`,
   `submit_tender_input` guarda el input por peer y combina: `steady`/`calm` del ayudante suman 50 % de
   la fuerza; las secuencias (Explosivo, Peso creciente) las puede completar cualquiera de los dos.
-- [ ] **S-109.2** El aviso de interacción muestra "Ayudar con la caja de <color>" y el ayudante gana el
+- [x] (commit `251b082`) **S-109.2** El aviso de interacción muestra "Ayudar con la caja de <color>" y el ayudante gana el
   hito `assist` (5 de mérito cada 10 s ayudando con la caja en riesgo).
-- [ ] **S-109.3** Hostil pasa a pedir dos personas en su fase difícil: CALMÁ necesita la suma de dos
+- [x] (commit `251b082`) **S-109.3** Hostil pasa a pedir dos personas en su fase difícil: CALMÁ necesita la suma de dos
   inputs para bajar rápido (dato en `hostile.tres`, no código especial).
-- [ ] **S-109.4** Test `tests/test_assist.gd`: dos peers simulados atienden la misma caja; la corrección
+- [x] (commit `251b082`) **S-109.4** Test `tests/test_assist.gd`: dos peers simulados atienden la misma caja; la corrección
   combinada es la esperada; un tercer peer es ignorado.
 
 ### S-110 · Medir cuánto dura una entrega (regla de oro de 2-5 min) — B · `Sol · high` · Aviso: no (solo informa a Nacho)
 
-- [ ] **S-110.1** `tests/bench_delivery_time.gd`: con el conductor automático de S-108.1 y un bot que
+- [x] (commit `35787d6`) **S-110.1** `tests/bench_delivery_time.gd`: con el conductor automático de S-108.1 y un bot que
   baja, camina y toca el timbre, medir el tiempo total de una entrega con 1, 2, 3 y 4 casas, a
   velocidad de crucero.
-- [ ] **S-110.2** Escribir el resultado en `docs/parametros-diseno.md` ("Duración medida") y dejar aviso
+- [x] (commit `35787d6`) **S-110.2** Escribir el resultado en `docs/parametros-diseno.md` ("Duración medida") y dejar aviso
   a Nacho en `colaboracion-equipo.md` con los números. Ajustar el largo de la ruta es de Nacho: esta
   tarea termina al entregar la medición, no espera su respuesta.
 
@@ -326,10 +327,10 @@ hacer nada. El modo espectador ayuda a mirar, no a jugar.
 `requerimientos-tecnicos.md` §3.4 lo deja pendiente porque `Engine.time_scale` rompe la física
 del host. Hacerlo **solo visual y local**:
 
-- [ ] 0,35 s en los que las partículas de ruina (`package_feedback.gd`) corren a `speed_scale = 0.15`,
+- [x] (commit `5fa9277`) 0,35 s en los que las partículas de ruina (`package_feedback.gd`) corren a `speed_scale = 0.15`,
   un destello blanco suave en la viñeta del HUD y un golpe de sonido grave. La física no cambia.
-- [ ] Opción "Efectos de impacto" en opciones para apagarlo (accesibilidad, ver S-502).
-- [ ] Test: tras `package_ruined` el `Engine.time_scale` sigue en 1.0 y las partículas vuelven a 1.0.
+- [x] (commit `5fa9277`) Opción "Efectos de impacto" en opciones para apagarlo (accesibilidad, ver S-502).
+- [x] (commit `5fa9277`) Test: tras `package_ruined` el `Engine.time_scale` sigue en 1.0 y las partículas vuelven a 1.0.
 
 ---
 
@@ -434,37 +435,39 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 ### S-301 · Íconos de Líquido, Explosivo y Hostil — A · `Luna · medium` para el prompt, generación de imagen aparte · Aviso: no
 
-Hoy el HUD tiene ícono para 4 de las 7 trampas (`assets/ui/icons/tx_ui_trap_*_256.png`).
+El HUD ya tiene un ícono transparente propio para cada una de las 7 trampas
+(`assets/ui/icons/tx_ui_trap_*_256.png`).
 
-- [ ] Generarlos con el mismo estilo que los 4 existentes: `art/tools/comfy_generate.py` con
+- [x] (commit `81ee0e3`) Generarlos con el mismo estilo que los 4 existentes: `art/tools/comfy_generate.py` con
   `art/prompts/estilo-base.md` (o la generación de imágenes de ChatGPT, pasándole los 4 íconos de
   referencia). 256×256, fondo transparente, silueta legible a 42 px.
-- [ ] Nombres: `tx_ui_trap_liquid_256.png`, `tx_ui_trap_explosive_256.png`, `tx_ui_trap_hostile_256.png`.
+- [x] (commit `81ee0e3`) Nombres: `tx_ui_trap_liquid_256.png`, `tx_ui_trap_explosive_256.png`, `tx_ui_trap_hostile_256.png`.
   Mapearlos en `UiTheme.trap_icon()`.
-- [ ] Registrar cada imagen en `art/ai-registro.md` (declaración de IA de Steam) y en
+- [x] (commit `81ee0e3`) Registrar cada imagen en `art/ai-registro.md` (declaración de IA de Steam) y en
   `docs/inventario-assets.md` §1.
-- [ ] Test `tests/test_trap_icons.gd`: cada `data/traps/*.tres` tiene ícono propio (ninguno cae en el
+- [x] (commit `81ee0e3`) Test `tests/test_trap_icons.gd`: cada `data/traps/*.tres` tiene ícono propio (ninguno cae en el
   genérico).
 
 ### S-302 · Contenidos propios para cada trampa — B · `Sol · high` (Blender Python) · Aviso: no
 
-Hoy Equilibrio, Líquido y Explosivo llevan la **misma** torta de bodas y Ruidoso y Hostil la
-**misma** gallina (`data/traps/*.tres` → `contents`).
+Las siete trampas ya tienen contenidos propios: diez modelos en total, con una segunda opción para
+Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
-- [ ] Modelos nuevos con `assets/tools/build_cargo_packages.py` (mismo esquema de nodos `Filler`,
+- [x] (commit `bc24f07`) Modelos nuevos con `assets/tools/build_cargo_packages.py` (mismo esquema de nodos `Filler`,
   `Intact`, `Damage`, `Ruined`): **Líquido** → bidón de leche de vidrio; **Explosivo** → caja de fuegos
   artificiales; **Hostil** → mapache en una jaula de mimbre; **Equilibrio** → torre de copas (la torta
   queda como segunda opción).
-- [ ] Un `.tres` en `data/contents/` por modelo y agregarlo al `contents` de su trampa. Segundo
+- [x] (commit `bc24f07`) Un `.tres` en `data/contents/` por modelo y agregarlo al `contents` de su trampa. Segundo
   contenido para Frágil (lámpara antigua) y Ruidoso (cachorro) para que no se repitan siempre.
-- [ ] Capturas con `tests/render_packages.gd` (necesita ventana: las corrés vos).
-- [ ] `test_package_unboxing.gd` ampliado: cada contenido tiene los 4 nodos.
+- [x] (commit `bc24f07`) Capturas con `tests/render_packages.gd` (revisadas en ventana: los diez
+  contenidos quedan dentro de sus cajas).
+- [x] (commit `bc24f07`) `test_package_unboxing.gd` ampliado: cada contenido tiene los 4 nodos.
 
 ### S-303 · Íconos de acción del HUD — B · generación de imagen + `Sol · high` para integrar · Aviso: no
 
-- [ ] Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja, usar carta. 128×128, mismo
+- [x] (commit `d14cc56`) Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja, usar carta. 128×128, mismo
   estilo que los de trampa. `assets/ui/icons/tx_ui_action_<acción>_128.png`.
-- [ ] `UiTheme.action_icon(id)`; los avisos de interacción muestran ícono + tecla + texto corto.
+- [x] (commit `d14cc56`) `UiTheme.action_icon(id)`; los avisos de interacción muestran ícono + tecla + texto corto.
 
 ### S-304 · Celular en la mano y marco de la cámara — B · `Sol · high` · Aviso: sí (`presentation/phone_camera.gd` no tiene dueño en el reparto)
 
@@ -591,37 +594,37 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 
 ### S-504 · Todo el menú con gamepad — A · `Sol · high` · Aviso: no
 
-- [ ] Cada panel (`options`, `progress`, `tutorial`, `cosmetics`, `leaderboard`, `depot_panel`, pausa y
+- [x] (commit `67cf588`) Cada panel (`options`, `progress`, `tutorial`, `cosmetics`, `leaderboard`, `depot_panel`, pausa y
   resultados) da foco a su primer botón al abrir y devuelve el foco al botón que lo abrió al cerrar.
-- [ ] Vecinos de foco en grillas (cosméticos) para que el stick no salte de columna.
-- [ ] B / Círculo cierra cualquier panel (hoy lo hacen algunos).
-- [ ] Test `tests/test_gamepad_focus.gd`: al abrir cada panel hay un `Control` con foco.
+- [x] (commit `67cf588`) Vecinos de foco en grillas (cosméticos) para que el stick no salte de columna.
+- [x] (commit `67cf588`) B / Círculo cierra cualquier panel (hoy lo hacen algunos).
+- [x] (commit `67cf588`) Test `tests/test_gamepad_focus.gd`: al abrir cada panel hay un `Control` con foco.
 
 ### S-505 · Rueda de pings — B · `Sol · xhigh` · Aviso: no
 
 Hoy hay un único ping "¡Cuidado!" (`player.gd` `_send_ping`).
 
-- [ ] Tocar ping = ping rápido como hoy. Mantener = rueda de 6: ¡Cuidado!, ¡Ayuda!, ¡Frená!, Acá, Gracias,
+- [x] (commit `638b9a4`) Tocar ping = ping rápido como hoy. Mantener = rueda de 6: ¡Cuidado!, ¡Ayuda!, ¡Frená!, Acá, Gracias,
   Sí/No. Selección con el mouse o el stick derecho.
-- [ ] Sin cambios de red: `EventBus.request_ping(position, label)` ya lleva el texto.
-- [ ] Color e ícono por tipo en el marcador (`_mark_pinger`); "¡Ayuda!" dispara el emote (S-308) y la
+- [x] (commit `638b9a4`) Sin cambios de red: `EventBus.request_ping(position, label)` ya lleva el texto.
+- [x] (commit `638b9a4`) Color e ícono por tipo en el marcador (`_mark_pinger`); "¡Ayuda!" dispara el emote (S-308) y la
   voz (S-402) si existen.
-- [ ] Test en `test_ping.gd`: cada opción llega con su etiqueta.
+- [x] (commit `638b9a4`) Test en `test_ping.gd`: cada opción llega con su etiqueta.
 
 ### S-506 · Onboarding: tutorial en fichas y consejos de primera vez — A · `Sol · high`, textos con `Luna · medium` · Aviso: no
 
 La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo párrafo largo.
 
-- [ ] **S-506.1** `tutorial_panel.gd` en páginas: 1) el objetivo (entregar a cada casa la caja de la
+- [x] **S-506.1** (commit `cffdbfc`) `tutorial_panel.gd` en páginas: 1) el objetivo (entregar a cada casa la caja de la
   pizarra), 2) conductor, 3) pasajero, 4) una ficha por trampa **desbloqueada** (ícono, qué la rompe, qué
   hacer, tecla del dispositivo en uso con `UiTheme.keycaps`), 5) dinero, mérito y cartas en dos líneas.
   Navegable con gamepad.
-- [ ] **S-506.2** Consejos de primera vez en partida: la primera vez que un perfil tiene una trampa en la
+- [x] **S-506.2** (commit `cffdbfc`) Consejos de primera vez en partida: la primera vez que un perfil tiene una trampa en la
   mano o en su asiento, aparece su ficha resumida 6 s en la zona de contexto. Se guarda `seen_tips` en el
   perfil de `UnlockManager`.
-- [ ] **S-506.3** Al abrir el juego por primera vez (perfil sin partidas), el menú ofrece "Cómo jugar"
+- [x] **S-506.3** (commit `cffdbfc`) Al abrir el juego por primera vez (perfil sin partidas), el menú ofrece "Cómo jugar"
   resaltado.
-- [ ] **S-506.4** Test: cada trampa tiene su ficha; un consejo visto no vuelve a salir.
+- [x] **S-506.4** (commit `cffdbfc`) Test: cada trampa tiene su ficha; un consejo visto no vuelve a salir.
 
 ### S-507 · Panel de tripulación en el depósito — B · `Sol · high` · Aviso: no
 
@@ -631,12 +634,12 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
 
 ### S-508 · Pantalla de resultados completa — A · `Sol · high` · Aviso: no
 
-- [ ] Una fila por casa con ícono de la trampa, resultado y si tuvo foto.
-- [ ] Premios de la entrega a partir del mérito (S-102): "MVP" (más mérito), "Rescatista", "Desactivador",
+- [x] (commit `909a662`) Una fila por casa con ícono de la trampa, resultado y si tuvo foto.
+- [x] (commit `909a662`) Premios de la entrega a partir del mérito (S-102): "MVP" (más mérito), "Rescatista", "Desactivador",
   "Mano firme". Con el color de cada jugador.
-- [ ] Barra de progreso hacia el próximo desbloqueo: "Te faltan 2 entregas y 120 pts para Explosivo".
-- [ ] Evento de ruta de la partida y cómo terminó.
-- [ ] Test en `test_score_breakdown.gd` / `test_hud_flow.gd`.
+- [x] (commit `909a662`) Barra de progreso hacia el próximo desbloqueo: "Te faltan 2 entregas y 120 pts para Explosivo".
+- [x] (commit `909a662`) Evento de ruta de la partida y cómo terminó.
+- [x] (commit `909a662`) Test en `test_score_breakdown.gd` / `test_hud_flow.gd`.
 
 ### S-509 · Idioma inglés — A (para lanzar) · `Sol · high` para extraer, `Luna · medium` para traducir · Aviso: sí (`project.godot`)
 
@@ -656,10 +659,10 @@ Hoy todos los textos están escritos en español dentro del código.
 
 ### S-510 · Progreso y récords que se entiendan — B · `Sol · high` · Aviso: no
 
-- [ ] `progress_panel.gd`: barra por desbloqueo (entregas y puntos por separado), ícono del contenido y
+- [x] (commit `c2dad6d`) `progress_panel.gd`: barra por desbloqueo (entregas y puntos por separado), ícono del contenido y
   qué da ("Nueva trampa: Explosivo").
-- [ ] `leaderboard_panel.gd`: pestañas Entrega / Endless, tamaño de tripulación y fecha legible.
-- [ ] Test `test_progress_ui.gd` ampliado.
+- [x] (commit `c2dad6d`) `leaderboard_panel.gd`: pestañas Entrega / Endless, tamaño de tripulación y fecha legible.
+- [x] (commit `c2dad6d`) Test `test_progress_ui.gd` ampliado.
 
 ---
 

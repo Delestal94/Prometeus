@@ -123,21 +123,30 @@ el freno de mano al conducir. Mirar desde el asiento no cambia la dirección
 del vehículo. La mirada se conserva después de las sacudidas de los impactos.
 
 **Opciones y salir**: el menú principal tiene **Opciones** (volumen,
-sensibilidad de la mirada, invertir eje Y, pantalla completa — se guardan en
+sensibilidad de la mirada, efectos de impacto, invertir eje Y, pantalla completa — se guardan en
 `user://settings.cfg`) y **Salir**. Desde la pausa se llega a las mismas
 opciones y a **Menú**, que deja la sesión limpia antes de volver.
 
-Cualquier jugador puede pingear "¡Cuidado!" con el clic de la rueda del mouse (o
-D-pad arriba en gamepad) para avisar a los demás sin depender de voice chat externo —
-aparece arriba de la pantalla de todos por unos segundos, con quién lo mandó.
+Cualquier jugador puede pingear "¡Cuidado!" con un toque del clic de la rueda del mouse
+(o D-pad arriba en gamepad); al mantenerlo aparece una rueda de seis mensajes elegibles
+con mouse o stick derecho. El aviso muestra quién lo mandó sin depender de voice chat.
+
+Si tu caja ya se arruinó, todavía podés ayudar con una caja en riesgo de un asiento
+contiguo o a pie junto a ella. El segundo jugador aporta media fuerza al estabilizar o
+calmar, puede completar secuencias y gana mérito por sostener la ayuda; una caja admite
+como máximo al responsable y a un ayudante.
 
 **Progreso, variantes y espectador** (2026-09-23): las entregas exitosas y el puntaje
 acumulado se guardan en `user://unlock_progress.json`. Desde **Progreso** y
 **Cosméticos** del menú se consultan los desbloqueos y se eligen uniforme, pintura y
-vehículo; la Furgoneta ágil se desbloquea con 4 entregas y 350 puntos. Si sos pasajero,
+vehículo; cada premio muestra por separado el avance de entregas y puntos. **Récords**
+separa Entrega de Endless y conserva fecha y tamaño de la tripulación. La Furgoneta ágil
+se desbloquea con 4 entregas y 350 puntos. Si sos pasajero,
 tu paquete se arruinó y seguís sentado, **Tab** (Back en gamepad) alterna una cámara
 espectadora detrás de la furgoneta. La pantalla de resultados ahora desglosa cada fuente
 del puntaje — entregas, vecinos sin atender, fotos y multiplicador — además del total.
+También resume cada casa con su trampa, estado y foto; entrega premios de mérito por jugador,
+cuenta cómo terminó el evento de ruta y muestra cuánto falta para el próximo desbloqueo.
 
 ## Tests
 
@@ -163,6 +172,24 @@ GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
 Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son
 parte de la batería (con Claude, los corre el agente `revisor-visual`).
 
+El balance reproducible de trampas tampoco forma parte de la batería rápida. Primero
+`sim_record_drive.gd` maneja cinco rutas reales y guarda la aceleración, inclinación e impactos
+de cada cuadro; después `sim_trap_balance.gd` repite esos recorridos con los siete
+comportamientos y los perfiles ausente, torpe y experto, con y sin 150 ms de latencia:
+
+```
+<godot> --headless --fixed-fps 60 --path do-not-drop --script res://tests/sim_record_drive.gd
+<godot> --headless --path do-not-drop --script res://tests/sim_trap_balance.gd
+```
+
+La duración completa se mide aparte con el mismo piloto automático: en cada parada un bot real
+baja de la furgoneta, recoge la caja asignada, camina al timbre, la entrega y vuelve. La matriz
+recorre cinco rutas con 1, 2, 3 y 4 casas a 50 km/h:
+
+```
+<godot> --headless --fixed-fps 60 --path do-not-drop --script res://tests/bench_delivery_time.gd
+```
+
 Para correr un test suelto a mano, sin abrir el editor, reemplazá `<godot>` por la ruta a tu
 ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 
@@ -180,11 +207,14 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_events.gd
 <godot> --headless --path do-not-drop --script res://tests/test_no_dangling_state.gd
 <godot> --headless --path do-not-drop --script res://tests/test_merit.gd
+<godot> --headless --path do-not-drop --script res://tests/test_assist.gd
 <godot> --headless --path do-not-drop --script res://tests/test_cards.gd
 <godot> --headless --path do-not-drop --script res://tests/test_supply_vote.gd
 <godot> --headless --path do-not-drop --script res://tests/test_crew_campaign_save.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
+<godot> --headless --path do-not-drop --script res://tests/test_progress_ui.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
+<godot> --headless --path do-not-drop --script res://tests/test_tutorial.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_horn.gd
 <godot> --headless --path do-not-drop --script res://tests/test_player_colors.gd
@@ -347,10 +377,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
   estaba roto o sin puntuar antes de existir este test.
-- `test_package_unboxing` — abrir y cerrar una caja (solapas y contenido),
-  que el contenido siga el estado del paquete, que una caja abierta volcada
-  derrame el contenido como cuerpos físicos (y una cerrada no), y que el
-  vecino note una caja entregada abierta.
+- `test_package_unboxing` — los diez contenidos tienen `Filler`, `Intact`,
+  `Damage` y `Ruined`; además cubre abrir/cerrar, seguir el estado del paquete,
+  derramar piezas físicas al volcar una caja abierta (y retenerlas cerrada),
+  y que el vecino note una caja entregada abierta.
 - `test_package_identity` — cada trampa viaja en su propia caja impresa, con
   su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una
@@ -503,15 +533,23 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   distancia de dibujado del decorado, partículas y escala 3D, se aplica en caliente y a lo
   que carga después, y se guarda con las opciones.
 - `test_leaderboard` — el top de puntajes local de `RunManager`: ordena,
-  recorta a 10 entradas, marca correctamente un nuevo récord y sobrevive a
+  recorta a 10 entradas por modo, conserva tamaño de tripulación, marca correctamente un nuevo récord y sobrevive a
   guardar/cargar de disco (usa un archivo de prueba aparte, no el guardado
   real).
-- `test_ping` — el sistema de pings: `EventBus.request_ping()` atribuye
-  correctamente al emisor, y `Player._send_ping()` llega hasta ahí con la
-  posición y el mensaje reales.
+- `test_progress_ui` — cada desbloqueo explica su premio y separa el avance de entregas
+  y puntos; los récords alternan entre Entrega y Endless con fecha y tripulación legibles.
+- `test_ping` — la rueda de pings: las seis etiquetas llegan por
+  `EventBus.request_ping()`, se atribuyen al emisor y `Player._send_ping()` conserva
+  la posición y el mensaje reales.
+- `test_tutorial` — cada trampa tiene una ficha completa, el tutorial muestra solo
+  las desbloqueadas, el primer perfil resalta “Cómo jugar” y cada consejo en partida
+  aparece una sola vez antes de quedar guardado en el perfil.
+- `test_assist` — un segundo jugador ayuda a una caja en riesgo con media fuerza,
+  puede completar secuencias y gana mérito; un tercer jugador no desplaza al ayudante.
 - `test_ruin_feedback` — el paquete arruinado explota en confeti una sola vez,
-  en su propia posición (no en el origen del mundo), y se limpia solo al
-  terminar.
+  en su propia posición (no en el origen del mundo); las partículas quedan a
+  15 % durante 0,35 s, vuelven a velocidad normal y se limpian solas, sin tocar
+  jamás `Engine.time_scale`.
 - `test_horn` — la bocina atribuye correctamente a quien la toca (aunque no
   sea el host) y el "honk" sintetizado en código es audio real, no silencio. Con el
   ciervo a menos de 30 m adelante, la bocina lo espanta: se va al monte sin cruzar, o
@@ -566,6 +604,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   Frágil (más grave si se arruina), gemido para Ruidoso que sube con la
   agitación, crujido para Peso Creciente que se reinicia al resolver el
   puzzle.
+- `test_trap_icons` — las siete definiciones de trampa resuelven a un ícono
+  HUD propio, sin faltantes ni reutilización de un genérico.
 - `test_audio_polish` — pasada de pulido "cartoon cómico" (2026-09-27): el timbre ya
   no reusa la campanita de Frágil, el vecino contento ya no reusa la bocina del
   camión, el autoelevador eléctrico ya no comparte el motor del camión, y cualquier
@@ -690,7 +730,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   persecución (Tab), y la vista vuelve sola al bajarse.
 - `test_tension_music` — música con pausas y fundidos suaves, afinación estable y una capa
   discreta de tensión solo ante carga en riesgo; vuelve a la calma al resolverse.
-- `test_score_breakdown` — el desglose de resultados siempre suma el puntaje mostrado.
+- `test_score_breakdown` — el desglose siempre suma el puntaje mostrado y conserva una fila
+  por casa, premios de mérito, desenlace del evento y progreso de desbloqueo.
 - `test_endless_difficulty` — el endless se endurece con la distancia sin encadenar tres
   tramos difíciles.
 - `test_contact_shadows` — las sombras de contacto falsas (no hay SSAO ni `Decal` en GL
