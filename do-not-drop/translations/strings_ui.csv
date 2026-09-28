@@ -1,0 +1,280 @@
+keys,es,en
+HUD_ARRIVED,¡Llegaste! Frená dentro de la zona marcada para entregar.,You made it! Stop inside the marked zone to deliver.
+HUD_BACK_TO_MENU,Volver al menú,Back to menu
+HUD_BACK_TO_ZONE,Volvé a la zona de entrega y detené la camioneta.,Go back to the delivery zone and stop the truck.
+HUD_BOXES_TO_SECURE,Faltan asegurar %d cajas,%d boxes left to secure
+HUD_CARD,CARTA: %s   ·   %s,CARD: %s   ·   %s
+HUD_CARD_EARNED,Carta obtenida: %s,Card earned: %s
+HUD_CARD_USE_KEY,%s  usar,%s  use
+HUD_CARD_USE_PAD,D-pad izquierda  usar,D-pad left  use
+HUD_COMPLAINT_PAID,Casa %d reclamó que llegó roto y no tenías foto. Te lo descuentan.,House %d complained it arrived broken and you had no photo. It comes out of your pay.
+HUD_COMPLAINT_SETTLED,Casa %d reclamó que llegó roto — les mostraste la foto. Caso cerrado.,House %d complained it arrived broken — you showed them the photo. Case closed.
+HUD_CONTINUE,Continuar,Continue
+HUD_DISCONNECTED,SIN CONEXIÓN,DISCONNECTED
+HUD_EVENT,Evento,Event
+HUD_EVENT_FAILED,Evento fallido,Event failed
+HUD_EVENT_RESOLVED,Evento resuelto,Event resolved
+HUD_HIT,¡Golpe!  −%d de integridad. Bajá la velocidad antes del próximo obstáculo.,Hit!  −%d integrity. Slow down before the next obstacle.
+HUD_HOLD_STILL,Mantené la camioneta detenida…,Keep the truck stopped…
+HUD_HOST_GONE,La partida del anfitrión ya no está disponible.,The host's game is no longer available.
+HUD_HOUSE_REFUSED,"Casa %d: ""Ese no es mío, pedí %s""","House %d: \""That's not mine, I ordered %s\"""
+HUD_INCIDENT,Incidente,Incident
+HUD_KEYS_AT_HOUSE,WASD  caminar   ·   E  interactuar   ·   F  sacar una foto de la entrega,WASD  walk   ·   E  interact   ·   F  take a delivery photo
+HUD_KEYS_DRIVER,W/S  acelerar y frenar   ·   A/D  girar   ·   Espacio  freno de mano   ·   H  bocina   ·   E  bajarte,W/S  accelerate and brake   ·   A/D  steer   ·   Space  handbrake   ·   H  horn   ·   E  get out
+HUD_KEYS_ON_FOOT,WASD  caminar   ·   Espacio  saltar   ·   E  agarrar / dejar   ·   Q  soltar paquete,WASD  walk   ·   Space  jump   ·   E  grab / place   ·   Q  drop package
+HUD_KEYS_PASSENGER,Click izq. (mantener)  cuidar tu paquete   ·   WASD  secuencias   ·   E  bajarte,Left click (hold)  tend your package   ·   WASD  sequences   ·   E  get out
+HUD_KEY_CENTER_VIEW,C  centrar vista,C  centre view
+HUD_KEY_LOOK_BACK,%s  mirar atrás,%s  look back
+HUD_KEY_PAUSE,Esc  pausa,Esc  pause
+HUD_KEY_PHONE,F  celular,F  phone
+HUD_KEY_PING,Click rueda  ping,Wheel click  ping
+HUD_KEY_RESTART,Mantener R  reiniciar,Hold R  restart
+HUD_MENU,Menú,Menu
+HUD_MENU_TITLE,MENÚ,MENU
+HUD_MERIT,Mérito +%d  ·  total %d,Merit +%d  ·  total %d
+HUD_METERS_TO_DELIVERY,%d m hasta la entrega,%d m to the delivery
+HUD_METERS_TRAVELLED,%d m recorridos,%d m travelled
+HUD_MODE_ENDLESS,MODO ENDLESS,ENDLESS MODE
+HUD_MODE_ROUTE,PRUEBA DE RUTA,ROUTE TEST
+HUD_NEW_RECORD,¡NUEVO RÉCORD!,NEW RECORD!
+HUD_NO_CARGO_YET,Todavía no hay carga a bordo  ·  %s bajarte a buscar un paquete,No cargo on board yet  ·  %s get out and fetch a package
+HUD_PAD_AT_HOUSE,Stick izq.  caminar   ·   A  interactuar   ·   LB  sacar una foto de la entrega,L-stick  walk   ·   A  interact   ·   LB  take a delivery photo
+HUD_PAD_CENTER_VIEW,Clic stick der.  centrar vista,R-stick click  centre view
+HUD_PAD_DOWN,D-pad abajo,D-pad down
+HUD_PAD_DRIVER,RT  acelerar   ·   LT  frenar   ·   Stick izq.  girar   ·   X  freno de mano   ·   B  bocina   ·   A  bajarte,RT  accelerate   ·   LT  brake   ·   L-stick  steer   ·   X  handbrake   ·   B  horn   ·   A  get out
+HUD_PAD_LOOK_BACK,Clic stick izq.  mirar atrás,L-stick click  look back
+HUD_PAD_ON_FOOT,Stick izq.  caminar   ·   X  saltar   ·   A  agarrar / dejar,L-stick  walk   ·   X  jump   ·   A  grab / place
+HUD_PAD_PASSENGER,RT (mantener)  cuidar tu paquete   ·   Stick izq.  secuencias   ·   A  bajarte,RT (hold)  tend your package   ·   L-stick  sequences   ·   A  get out
+HUD_PAD_PAUSE,Start  pausa,Start  pause
+HUD_PAD_PHONE,LB  celular,LB  phone
+HUD_PAD_PING,D-pad arriba  ping,D-pad up  ping
+HUD_PAD_RESTART,Mantener Y  reiniciar,Hold Y  restart
+HUD_PAUSED,EN PAUSA,PAUSED
+HUD_PAUSE_BODY,Tu entrega puede esperar.,Your delivery can wait.
+HUD_PAUSE_STATS,Equipo: $%d\n%s para volver a la ruta.,Team: $%d\n%s to get back on the road.
+HUD_PLAYERS_MANY,%d jugadores,%d players
+HUD_PLAYERS_ONE,%d jugador,%d player
+HUD_POINTS,%d PTS,%d PTS
+HUD_PREPARATION,PREPARACIÓN,PREPARATION
+HUD_PREPARE_DELIVERY,Preparar entrega,Prepare delivery
+HUD_PREP_ABOARD,(a bordo),(on board)
+HUD_PREP_LOAD_AND_DRIVE,Cargá paquetes y tomá el volante,Load packages and take the wheel
+HUD_PREP_MISSING,(falta),(missing)
+HUD_PREP_ORDER,Casa %d: %s %s,House %d: %s %s
+HUD_PROMPT_DROP,[ %s ]  Soltar paquete,[ %s ]  Drop package
+HUD_PROMPT_INSIDE,Adentro:  %s,Inside:  %s
+HUD_RESCUED,¡%s a salvo!,%s is safe!
+HUD_RESTART,Reiniciar,Restart
+HUD_RESTARTING,Reiniciando…  soltá para cancelar,Restarting…  let go to cancel
+HUD_RESULT_ARRIVED,"Llegaste, y eso ya es algo.","You made it, and that's something."
+HUD_RESULT_BACK_MANY,"Volvieron %d paquetes en el camión, %d intactos.","%d packages came back in the truck, %d intact."
+HUD_RESULT_BACK_ONE,Volvió 1 paquete en el camión%s.,1 package came back in the truck%s.
+HUD_RESULT_CHAOS_BONUS,\nBonus por caos compartido: x%.1f,\nShared-chaos bonus: x%.1f
+HUD_RESULT_CHAOS_LINE,Caos compartido   ×%.1f,Shared chaos   ×%.1f
+HUD_RESULT_DELIVERED_TITLE,¡ENTREGADO!,DELIVERED!
+HUD_RESULT_DOORS,\nPuertas: %d pts,\nDoors: %d pts
+HUD_RESULT_DOORS_MANY,Entregaste en %d puertas.,You delivered to %d doors.
+HUD_RESULT_DOORS_ONE,Entregaste en %d puerta.,You delivered to %d door.
+HUD_RESULT_ENDLESS_STATS,%.0f m recorridos   ·   %.1f s\nEquipo: $%d%s%s,%.0f m travelled   ·   %.1f s\nTeam: $%d%s%s
+HUD_RESULT_ENDLESS_TITLE,FIN DEL RECORRIDO,END OF THE ROAD
+HUD_RESULT_FAILED_TITLE,OTRA VUELTA,ONE MORE GO
+HUD_RESULT_FINISHED_TITLE,RUTA TERMINADA,ROUTE FINISHED
+HUD_RESULT_GUEST_NOTE,"\n\nSolo el anfitrión puede reiniciar. Para otra vuelta, volvé al menú y unite de nuevo a la sala.","\n\nOnly the host can restart. For another go, head back to the menu and rejoin the room."
+HUD_RESULT_INTACT_SUFFIX,", intacto",", intact"
+HUD_RESULT_MISSED_MANY,%d vecinos se quedaron esperando.,%d neighbours were left waiting.
+HUD_RESULT_MISSED_ONE,1 vecino se quedó esperando.,1 neighbour was left waiting.
+HUD_RESULT_ON_ROAD,En ruta: %.1f s,On the road: %.1f s
+HUD_RESULT_RECORD,\nRécord: %d pts,\nRecord: %d pts
+HUD_RESULT_STATS,En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s\nEquipo: $%d%s%s,On the road: %.1f s\nCargo: %d pts   +   Speed: %d pts%s%s\nTeam: $%d%s%s
+HUD_RESULT_TEAM,\nEquipo: $%d,\nTeam: $%d
+HUD_RESULT_TOTAL,Total   %d pts,Total   %d pts
+HUD_RETRY,Volver a intentar,Try again
+HUD_SESSION_GUEST,EN SALA  ·  %s,IN ROOM  ·  %s
+HUD_SESSION_LAN,SALA LAN  ·  %s\nIP  %s,LAN ROOM  ·  %s\nIP  %s
+HUD_SESSION_NO_LAN,sin red local,no local network
+HUD_SESSION_SOLO,%s  ·  SOLO,%s  ·  SOLO
+HUD_SESSION_STEAM,SALA STEAM  ·  %s\nInvitá desde la lista de amigos,STEAM ROOM  ·  %s\nInvite from your friends list
+HUD_SOFT_PAUSE_BODY,La partida sigue corriendo para el resto del equipo.,The run keeps going for the rest of the team.
+HUD_SPECTATE_AVAILABLE,Tu caja ya no tiene arreglo  ·  %s: ver desde afuera,Your box is beyond saving  ·  %s: watch from outside
+HUD_START_BODY,"Arrancás en el depósito, con el camión estacionado adentro.\nLa entrega sale apenas alguien toma el volante con carga a bordo; el portón se cierra detrás de ustedes.","You start in the depot, with the truck parked inside.
+The delivery leaves as soon as someone takes the wheel with cargo on board; the roller door closes behind you."
+HUD_START_DELIVERY,Empezar entrega,Start delivery
+HUD_START_KICKER,%s  ·  PROTOTIPO 0.1,%s  ·  PROTOTYPE 0.1
+HUD_START_STEPS,"1.  Leé la pizarra de pedidos: cada casa espera un paquete de un estante (A-1, B-6...).\n2.  Buscalo, presioná %s para agarrarlo y %s en el rack del camión para dejarlo.\n3.  Antes de salir: vestuario, taller y mostrador de suministros.\n4.  Subite al asiento del conductor (%s) y salí por el portón.\n\nCada cosa te muestra su indicación cuando te acercás.","1.  Read the order board: each house is waiting for a package from one shelf (A-1, B-6...).
+2.  Find it, press %s to grab it and %s on the truck's rack to place it.
+3.  Before leaving: locker room, workshop and supplies counter.
+4.  Get in the driver's seat (%s) and drive out through the door.
+
+Everything shows its hint when you get close."
+HUD_START_TITLE,¡A REPARTIR!,LET'S DELIVER!
+HUD_STATE_AT_RISK,EN RIESGO !,AT RISK !
+HUD_STATE_OK,OK ✓,OK ✓
+HUD_STATE_RUINED,ARRUINADA ✕,RUINED ✕
+HUD_SUB_BALANCE,[carga crujiendo],[cargo creaking]
+HUD_SUB_DEFAULT,[la carga cruje],[the cargo creaks]
+HUD_SUB_EXPLOSIVE,[tictac acelerando],"[ticking, faster]"
+HUD_SUB_FRAGILE,[vidrio que cruje],[glass creaking]
+HUD_SUB_GROWING_WEIGHT,[madera que cruje],[wood creaking]
+HUD_SUB_HOSTILE,[siseo amenazante],[menacing hiss]
+HUD_SUB_LIQUID,[líquido agitándose],[liquid sloshing]
+HUD_SUB_NOISY,[gruñido],[growling]
+HUD_THE_CARGO,LA CARGA,THE CARGO
+HUD_TODAYS_ROUTE,Ruta de hoy: %s,Today's route: %s
+HUD_UNLOCKED,¡Desbloqueaste %s!,You unlocked %s!
+HUD_YOU,Vos,You
+HUD_ZERO_METERS,0 m recorridos,0 m travelled
+UI_APPEARANCE,Apariencia,Appearance
+UI_BACK,Volver,Back
+UI_CANCEL,Cancelar,Cancel
+UI_COSM_AUTOSAVE,Tus cambios se guardan automáticamente,Your changes are saved automatically
+UI_COSM_EYES,Ojos,Eyes
+UI_COSM_FACE,Rostro,Face
+UI_COSM_FACE_HINT,Combiná los ojos y la boca como quieras.,Mix and match eyes and mouth.
+UI_COSM_LOCKED_SUFFIX, — %d entregas / %d puntos, — %d deliveries / %d points
+UI_COSM_MOUTH,Boca,Mouth
+UI_COSM_PREVIEW_HINT,Tu personaje dentro del juego,Your character in game
+UI_COSM_PREVIEW_TAG,ASÍ QUEDA,HOW IT LOOKS
+UI_COSM_TITLE,Hacé tu personaje,Make your character
+UI_COSM_TRUCK_HINT,"Si sos el anfitrión, lo usa toda la tripulación.","If you're the host, the whole crew uses it."
+UI_COSM_UNIFORM,Uniforme,Uniform
+UI_COSM_UNIFORM_HINT,Se ve igual para toda la tripulación.,The whole crew sees it the same.
+UI_COSM_YOUR_UNIFORM,Tu uniforme,Your uniform
+UI_DEPOT_BACK,Volver al depósito,Back to the depot
+UI_DEPOT_ENDLESS_HINT,Ruta sin fin: no hay casas. Cargá lo que quieras y aguantá lo más lejos posible.,Endless route: no houses. Load whatever you like and hold out as far as you can.
+UI_DEPOT_LOCKED_SUFFIX,"  — bloqueado (%d entregas, %d pts)","  — locked (%d deliveries, %d pts)"
+UI_DEPOT_LOCKERS,Vestuario,Locker room
+UI_DEPOT_ON_BOARD,a bordo,on board
+UI_DEPOT_ON_SHELF,en el estante,on the shelf
+UI_DEPOT_ORDERS,Pedidos de hoy,Today's orders
+UI_DEPOT_ORDERS_HINT,"Cada casa espera un paquete en particular. Buscalo por su estante, cargalo en el camión y entregalo en esa puerta.","Each house is waiting for one particular package. Find it by its shelf, load it on the truck and deliver it to that door."
+UI_DEPOT_ORDERS_TAG,PIZARRA,BOARD
+UI_DEPOT_ORDER_ROW,Casa %d  ·  estante %s,House %d  ·  shelf %s
+UI_DEPOT_PROGRESS_TAG,PROGRESO,PROGRESS
+UI_DEPOT_RECORDS,Equipo del mes,Team of the month
+UI_DEPOT_RECORDS_SUMMARY,%d entregas exitosas  ·  %d puntos  ·  %d partidas  ·  mejor reparto %d pts,%d successful deliveries  ·  %d points  ·  %d runs  ·  best run %d pts
+UI_DEPOT_REVOTE_TOOLTIP,Disponible cuando haya una votación de compra activa.,Available while a purchase vote is open.
+UI_DEPOT_SUPPLIES,Suministros,Supplies
+UI_DEPOT_SUPPLIES_HINT,Se pagan con la plata del equipo y se usan en el próximo reparto que salga del depósito.,Paid with the team's money and used on the next run that leaves the depot.
+UI_DEPOT_SUPPLY_READY,%s  ·  listo para salir,%s  ·  ready to go
+UI_DEPOT_TEAM_CASH,CAJA DEL EQUIPO  ·  $%d,TEAM CASH  ·  $%d
+UI_DEPOT_UNIFORM_HINT,Tu color para esta partida. Lo ve todo el equipo.,Your colour for this run. The whole team sees it.
+UI_DEPOT_UNIFORM_TAG,UNIFORME,UNIFORM
+UI_DEPOT_UNLOCK_DONE,Listo:,Done:
+UI_DEPOT_UNLOCK_LINE,%s  %s  —  %d entregas + %d pts,%s  %s  —  %d deliveries + %d pts
+UI_DEPOT_UNLOCK_TODO,Falta:,To go:
+UI_DEPOT_USE_DISCOUNT,Usar Descuento (−50 %%)  ·  $%d,Use Discount (−50 %%)  ·  $%d
+UI_DEPOT_USE_REVOTE,Usar Re-voto,Use Re-vote
+UI_DEPOT_VOTES,Votos:,Votes:
+UI_DEPOT_VOTE_CLOSED,Votación cerrada · volvé a abrir el mostrador para iniciar otra,Vote closed · reopen the counter to start another
+UI_DEPOT_VOTE_OPEN,Votación abierta · el reloj empieza con el primer voto,Vote open · the clock starts with the first vote
+UI_DEPOT_VOTE_OPEN_TIMER,Votación abierta · %d s,Vote open · %d s
+UI_DEPOT_VOTE_PREFIX,Votar: ,Vote: 
+UI_DEPOT_WORKSHOP,Taller,Workshop
+UI_DEPOT_WORKSHOP_GUEST_HINT,El camión lo elige quien hostea la partida. Podés mirar lo que hay.,The host picks the truck. You can look at what there is.
+UI_DEPOT_WORKSHOP_HOST_HINT,Los cambios se ven al instante en el camión.,Changes show on the truck right away.
+UI_DEPOT_WORKSHOP_TAG,CAMIÓN Y PINTURA,TRUCK AND PAINT
+UI_DONE,Listo,Done
+UI_HOW_TO_PLAY,Cómo jugar,How to play
+UI_LEAD_EMPTY,Todavía no hay entregas registradas.,No deliveries recorded yet.
+UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
+UI_LEAD_TITLE,Récords locales,Local records
+UI_MENU_ENDLESS,Modo Endless,Endless mode
+UI_MENU_ERROR_CONNECTION,No se pudo completar la conexión. Revisá la dirección e intentá de nuevo.,Couldn't complete the connection. Check the address and try again.
+UI_MENU_ERROR_FULL,La sala está llena.,The room is full.
+UI_MENU_ERROR_TIMEOUT,No hubo respuesta en 8 s. Revisá la IP y que el firewall de Windows permita Take My Package.,No answer in 8 s. Check the IP and that Windows Firewall allows Take My Package.
+UI_MENU_ERROR_VERSION,El anfitrión tiene otra versión del juego: actualicen los dos.,The host has a different version of the game: both of you need to update.
+UI_MENU_FOOTER,Versión %s   ·   F11 pantalla completa,Version %s   ·   F11 full screen
+UI_MENU_GARAGE,Garaje,Garage
+UI_MENU_GARAGE_HINT,"Apariencia, progreso y récords","Appearance, progress and records"
+UI_MENU_HOST,Crear sala,Host a room
+UI_MENU_HOST_IP,IP del anfitrión,Host's IP
+UI_MENU_JOIN,Unirse a una sala,Join a room
+UI_MENU_JOIN_BUTTON,Unirse,Join
+UI_MENU_JOIN_LAN_HINT,Por red local: la IP del anfitrión aparece en su pantalla.,On a local network: the host's IP is shown on their screen.
+UI_MENU_JOIN_STEAM_HINT,Por Steam: aceptá la invitación de tu amigo desde la lista de amigos.,On Steam: accept your friend's invite from your friends list.
+UI_MENU_PAGE_HOME,¿LISTOS PARA REPARTIR?,READY TO DELIVER?
+UI_MENU_PAGE_JOIN,UNIRSE A UNA SALA,JOIN A ROOM
+UI_MENU_PAGE_PLAY,¿CÓMO SALIMOS HOY?,HOW ARE WE HEADING OUT?
+UI_MENU_PLAY,¡JUGAR!,PLAY!
+UI_MENU_QUIT,Salir,Quit
+UI_MENU_SOLO,Jugar solo,Play solo
+UI_MENU_STATUS_CANCELLED,Conexión cancelada.,Connection cancelled.
+UI_MENU_STATUS_CONNECTING,Conectando a %s…,Connecting to %s…
+UI_MENU_STATUS_CONNECT_FAILED,No se pudo conectar (error %d).,Couldn't connect (error %d).
+UI_MENU_STATUS_ENTERING,Entrando…,Joining…
+UI_MENU_STATUS_HOSTING,Creando sala…,Creating room…
+UI_MENU_STATUS_HOST_FAILED,No se pudo crear la sala (error %d).,Couldn't create the room (error %d).
+UI_MENU_STATUS_JOINING_FRIEND,Entrando a la sala de tu amigo…,Joining your friend's room…
+UI_MENU_STATUS_JOIN_FAILED,No se pudo entrar a la sala (error %d).,Couldn't join the room (error %d).
+UI_MENU_STATUS_NEED_IP,Escribí la IP del anfitrión primero.,Type the host's IP first.
+UI_MENU_TAG_COOP,DELIVERY COOPERATIVO,CO-OP DELIVERY
+UI_MENU_TAG_DONT_DROP,¡NO LO DEJES CAER!,DON'T DROP IT!
+UI_MENU_TAG_PLAYERS,1 A 5 JUGADORES,1 TO 5 PLAYERS
+UI_MENU_WITH_FRIENDS,Con amigos,With friends
+UI_OPTIONS,Opciones,Options
+UI_OPT_BIND_HORN,Bocina,Horn
+UI_OPT_BIND_INTERACT,Interactuar,Interact
+UI_OPT_BIND_LOOK_BACK,Mirar atrás,Look back
+UI_OPT_BIND_PING,Ping,Ping
+UI_OPT_BIND_USE_CARD,Usar carta,Use card
+UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
+UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa,"On foot: WASD walk  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
+Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out
+Passenger: Left click (hold) tend the package  ·  WASD sequences
+F phone  ·  Click take photo  ·  Wheel click ping  ·  G use card  ·  C centre view
+Esc pause  ·  hold R restart  ·  F11 full screen"
+UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar,"On foot: L-stick walk  ·  R-stick look  ·  A interact  ·  X jump
+Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out
+Passenger: RT (hold) tend the package  ·  L-stick sequences
+LB phone  ·  RB take photo  ·  D-pad up ping  ·  D-pad left use card
+R-stick click centre view  ·  Start pause  ·  hold Y restart"
+UI_OPT_CONTROL_HELP,Ayudas de controles,Control hints
+UI_OPT_EFFECTS_VOLUME,Volumen de efectos,Effects volume
+UI_OPT_FOV,Campo de visión,Field of view
+UI_OPT_FULLSCREEN,Pantalla completa  (F11),Full screen  (F11)
+UI_OPT_HELP_ALWAYS,Siempre,Always
+UI_OPT_HELP_BEGINNING,Al principio,At first
+UI_OPT_HELP_NEVER,Nunca,Never
+UI_OPT_HUD_SIZE,Tamaño del HUD,HUD size
+UI_OPT_INVERT_Y,Invertir eje Y,Invert Y axis
+UI_OPT_MASTER_VOLUME,Volumen general,Master volume
+UI_OPT_MENU_TEXT_SIZE,Tamaño de texto de menús,Menu text size
+UI_OPT_MUSIC_VOLUME,Volumen de la música,Music volume
+UI_OPT_PRESS_KEY,Presioná una tecla…,Press a key…
+UI_OPT_QUALITY,Calidad gráfica,Graphics quality
+UI_OPT_RESET,Restablecer,Reset
+UI_OPT_SENSITIVITY,Sensibilidad de la mirada,Look sensitivity
+UI_OPT_SHAKE,Sacudida de cámara,Camera shake
+UI_OPT_SOUND_CHECK,Sonidos del juego (uno por uno)…,Game sounds (one by one)…
+UI_OPT_SOUND_SUBTITLES,Subtítulos de sonidos,Sound subtitles
+UI_OPT_VOICE_VOLUME,Volumen de voces/pings,Voices/pings volume
+UI_PAINT,Pintura,Paint
+UI_PLAYER_N,Jugador %d,Player %d
+UI_PROGRESS,Progreso,Progress
+UI_PROG_CONFIRM_RESET,Confirmar: borrar campaña,Confirm: erase campaign
+UI_PROG_LOCAL_PROFILE,PERFIL LOCAL,LOCAL PROFILE
+UI_PROG_NEW_CAMPAIGN,Empezar campaña nueva,Start a new campaign
+UI_PROG_RESET_DONE,Campaña nueva iniciada,New campaign started
+UI_PROG_RESET_FAILED,No se pudo guardar · intentar otra vez,Couldn't save · try again
+UI_PROG_SUMMARY,%d entregas exitosas  ·  %d puntos acumulados  ·  %d partidas,%d successful deliveries  ·  %d points earned  ·  %d runs
+UI_PROG_UNLOCK_LINE,%s  %s\n%d entregas + %d pts,%s  %s\n%d deliveries + %d pts
+UI_RECORDS,Récords,Records
+UI_SOUND_BUS,Bus: %s,Bus: %s
+UI_SOUND_EMPTY,"No hay sonidos cargados. Abrí esta pantalla desde la pausa, jugando, parado donde se escucha el ruido.","No sounds loaded. Open this screen from the pause menu, while playing, standing where you hear the noise."
+UI_SOUND_HELP,Silenciá uno por uno hasta que deje de sonar lo que molesta. Mientras esta pantalla está abierta el juego sigue sonando aunque esté en pausa. Lo que silencies queda así hasta cerrar el juego.,Mute them one by one until the annoying sound stops. While this screen is open the game keeps making sound even when paused. Whatever you mute stays muted until you close the game.
+UI_SOUND_IDLE,en espera,idle
+UI_SOUND_MUTE,Silenciar,Mute
+UI_SOUND_MUTE_ALL,Silenciar todos,Mute all
+UI_SOUND_PLAYING,SONANDO,PLAYING
+UI_SOUND_PLAYING_MANY,SONANDO ×%d,PLAYING ×%d
+UI_SOUND_SOLO,Solo,Solo
+UI_SOUND_TITLE,Sonidos del juego,Game sounds
+UI_SOUND_UNMUTE_ALL,Activar todos,Unmute all
+UI_TRUCK,Camión,Truck
+UI_TUT_BODY,1. Carguen paquetes en los anaqueles o llévenlos en mano.\n2. Un jugador conduce; los demás vigilan la carga incluso durante la marcha.\n3. Frágil: evitá golpes. Ruidoso: calmalo. Equilibrio: mantenelo derecho. Peso creciente: movelo pronto. Líquido: no lo inclines y secá el charco. Explosivo: seguí la secuencia antes de que llegue a cero. Hostil: obedecé CALMÁ o NO TOCAR.\n4. Las buenas acciones dan mérito individual; las entregas dan dinero al equipo.\n5. Entre entregas voten mejoras. Una carta de prioridad puede cambiar el resultado.,"1. Load packages onto the racks or carry them by hand.
+2. One player drives; the rest watch the cargo, even on the move.
+3. Fragile: avoid bumps. Noisy: calm it down. Balance: keep it upright. Growing weight: move it early. Liquid: don't tip it and mop the puddle. Explosive: follow the sequence before it hits zero. Hostile: obey CALM or DON'T TOUCH.
+4. Good deeds earn individual merit; deliveries earn the team money.
+5. Between deliveries, vote on upgrades. A priority card can swing the result."
+UI_TUT_GOT_IT,Entendido,Got it
+UI_TUT_TAG,COOPEREN O SE CAE TODO,WORK TOGETHER OR IT ALL FALLS

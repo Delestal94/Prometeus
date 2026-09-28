@@ -43,6 +43,16 @@ if [ $needs_tests -eq 0 ]; then
 	exit 0
 fi
 
+# The lint takes a second; without gdtoolkit installed, CI still runs it.
+if command -v gdlint >/dev/null 2>&1; then
+	if ! bash "$ROOT/tools/lint.sh"; then
+		echo "pre-push: el lint encontró problemas nuevos, no se sube nada."
+		exit 1
+	fi
+else
+	echo "pre-push: sin gdlint (pip install \"gdtoolkit==4.5.0\"), el lint queda para CI."
+fi
+
 echo "pre-push: corriendo los tests antes de subir..."
 if ! bash "$ROOT/tools/run-tests.sh"; then
 	echo ""

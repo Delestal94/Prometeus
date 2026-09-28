@@ -47,9 +47,11 @@ func _run() -> void:
 				_expect(false, "Seed %d: two hard segments in a row at %.0f m" % [seed_value, segment.start])
 			previous_hard = segment.hard
 			for stop: float in stops:
-				var overlaps: bool = segment.start < stop and segment.start + segment.length > stop - Route.QUIET_ZONE
+				var overlaps: bool = segment.start < stop and segment.start + segment.length > stop - RoutePlanner.QUIET_ZONE
 				if overlaps and not _calm(segment):
-					_expect(false, "Seed %d: %s in the last %.0f m before the house at %.0f m" % [seed_value, segment.script.get_global_name(), Route.QUIET_ZONE, stop])
+					_expect(false,
+							"Seed %d: %s in the last %.0f m before the house at %.0f m" % [seed_value,
+							segment.script.get_global_name(), RoutePlanner.QUIET_ZONE, stop])
 			if segment.start < plan.total * 0.5:
 				early_total += 1
 				early_hard += int(segment.hard)
@@ -60,7 +62,7 @@ func _run() -> void:
 		events.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
 		var reached: float = 0.0
 		for event: Array in events:
-			if event[0] - reached > Route.MOMENT_SPACING + 0.01:
+			if event[0] - reached > RoutePlanner.MOMENT_SPACING + 0.01:
 				_expect(false, "Seed %d, %d houses: %.0f m with nothing happening (from %.0f m)" % [seed_value, houses, event[0] - reached, reached])
 			reached = maxf(reached, event[1])
 
@@ -71,14 +73,14 @@ func _run() -> void:
 
 	await _test_build_follows_plan()
 	if _failures == 0:
-		print("PASS: over %d seeds every leg has something every %.0f m, no two hard in a row, a calm approach to every house and a rising difficulty" % [SEEDS, Route.MOMENT_SPACING])
+		print("PASS: over %d seeds every leg has something every %.0f m, no two hard in a row, a calm approach to every house and a rising difficulty" % [SEEDS, RoutePlanner.MOMENT_SPACING])
 	quit(_failures)
 
 
 func _calm(segment: Dictionary) -> bool:
 	if segment.script == StraightSegment:
 		return true
-	return segment.script == CurveSegment and absf(segment.turn_deg) <= Route.GENTLE_CURVE_DEG
+	return segment.script == CurveSegment and absf(segment.turn_deg) <= RoutePlanner.GENTLE_CURVE_DEG
 
 
 func _test_build_follows_plan() -> void:

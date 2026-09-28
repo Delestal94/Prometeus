@@ -138,7 +138,7 @@ func _check_built(seed_value: int, houses: int) -> void:
 					tree_failed = true
 			if not river_tree_failed:
 				var local_pos: Vector3 = route.to_local((tree as Node3D).global_position)
-				if float(terrain.call(&"river_depth_at", Vector2(local_pos.x, local_pos.z))) > RouteDresser.RIVER_MISFIT_DEPTH:
+				if float(terrain.call(&"river_depth_at", Vector2(local_pos.x, local_pos.z))) > RoutePlacement.RIVER_MISFIT_DEPTH:
 					_fail(seed_value, houses, "a tree (%s) stands in a narrow bridge's riverbed" % tree.scene_file_path.get_file())
 					river_tree_failed = true
 
@@ -158,12 +158,12 @@ func _check_built(seed_value: int, houses: int) -> void:
 			if river_failed or (index >= self_start and index < self_end):
 				continue
 			var factor: float = float(terrain.call(&"_river_factor", river, Vector2(path[index].x, path[index].z)))
-			if factor * float(river.depth) > RouteDresser.RIVER_MISFIT_DEPTH:
+			if factor * float(river.depth) > RoutePlacement.RIVER_MISFIT_DEPTH:
 				_fail(seed_value, houses, "a river reaches another stretch of road at point %d" % index)
 				river_failed = true
 		for house: DeliveryHouse in route.get(&"houses"):
 			var factor: float = float(terrain.call(&"_river_factor", river, Vector2(house.position.x, house.position.z)))
-			if not river_failed and factor * float(river.depth) > RouteDresser.RIVER_MISFIT_DEPTH:
+			if not river_failed and factor * float(river.depth) > RoutePlacement.RIVER_MISFIT_DEPTH:
 				_fail(seed_value, houses, "house %d stands in a narrow bridge's riverbed" % (house.house_index + 1))
 				river_failed = true
 

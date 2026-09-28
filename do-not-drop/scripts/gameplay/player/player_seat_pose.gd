@@ -2,11 +2,11 @@ extends Node
 ## Seated body placement, driver hand IK, and entering/leaving seats. Player
 ## retains the replicated properties and RPC entry point used by the network.
 
-var player
+var player: Player
 
 
 func _ready() -> void:
-	player = get_parent()
+	player = get_parent() as Player
 
 
 func reach_origin() -> Vector3:
@@ -68,7 +68,7 @@ func configure_driver_ik(seat: Node3D) -> void:
 	if player._driver_ik_ready or seat.name != &"DriverEyePoint" or player._body_visual == null:
 		return
 	var wheel: Node3D = seat.get_parent().get_parent().find_child("SteeringWheel", true, false) as Node3D
-	var skeleton: Skeleton3D = player._find_skeleton(player._body_visual)
+	var skeleton: Skeleton3D = PlayerAppearance.find_skeleton(player._body_visual)
 	if wheel == null or skeleton == null:
 		return
 	for side: float in player.DRIVER_ARM_BONES:

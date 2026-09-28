@@ -3,6 +3,7 @@ extends Node3D
 ## and replication on clients; never rotate the wheels a second time here.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const SpectatorCameraScript = preload("res://scripts/presentation/spectator_camera.gd")
 @export var steering_ratio: float = 7.0
 @export var headlight_energy: float = 1.6
 ## However far the mood boosts the beams (world_mood.gd), their energy stops here.
@@ -126,17 +127,17 @@ func _ready() -> void:
 	engine_player.bus = &"SFX"
 	engine_player.name = "EngineAudio"
 	engine_player.position = Vector3(0.0, 0.0, -1.4)
-	engine_player.stream = preload("res://scripts/presentation/synth_audio.gd").engine_loop()
+	engine_player.stream = SynthAudio.engine_loop()
 	engine_player.unit_size = 7.0
 	engine_player.max_distance = 45.0
 	engine_player.volume_db = -60.0
 	add_child(engine_player)
-	engine_idle_player = _engine_layer_player("EngineIdleAudio", preload("res://scripts/presentation/synth_audio.gd").engine_idle_loop())
-	engine_high_player = _engine_layer_player("EngineHighAudio", preload("res://scripts/presentation/synth_audio.gd").engine_high_loop())
+	engine_idle_player = _engine_layer_player("EngineIdleAudio", SynthAudio.engine_idle_loop())
+	engine_high_player = _engine_layer_player("EngineHighAudio", SynthAudio.engine_high_loop())
 	impact_player = AudioStreamPlayer3D.new()
 	impact_player.bus = &"SFX"
 	impact_player.name = "ImpactAudio"
-	impact_player.stream = preload("res://scripts/presentation/synth_audio.gd").impact_thud()
+	impact_player.stream = SynthAudio.impact_thud()
 	impact_player.unit_size = 10.0
 	impact_player.max_distance = 60.0
 	add_child(impact_player)
@@ -144,7 +145,7 @@ func _ready() -> void:
 	screech_player.bus = &"SFX"
 	screech_player.name = "ScreechAudio"
 	screech_player.position = Vector3(0.0, -0.3, 1.2)
-	screech_player.stream = preload("res://scripts/presentation/synth_audio.gd").tire_screech()
+	screech_player.stream = SynthAudio.tire_screech()
 	screech_player.unit_size = 8.0
 	screech_player.max_distance = 35.0
 	screech_player.volume_db = -60.0
@@ -160,7 +161,7 @@ func _ready() -> void:
 	var clutter: Node = preload("res://scripts/presentation/cargo_clutter.gd").new()
 	clutter.name = "CargoClutter"
 	add_child(clutter)
-	spectator_camera = preload("res://scripts/presentation/spectator_camera.gd").new()
+	spectator_camera = SpectatorCameraScript.new()
 	spectator_camera.vehicle = vehicle
 	add_child(spectator_camera)
 	if OS.is_debug_build():
@@ -172,7 +173,7 @@ func _ready() -> void:
 		bus.run_ended.connect(func(_score: int, _results: Dictionary) -> void:
 			if spectator_camera != null and spectator_camera.current:
 				spectator_camera.call(&"stop")
-			preload("res://scripts/presentation/spectator_camera.gd").orbit_results(vehicle))
+			SpectatorCameraScript.orbit_results(vehicle))
 	update_presentation(0.0)
 
 

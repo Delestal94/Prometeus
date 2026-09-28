@@ -1,7 +1,7 @@
 extends BoneAttachment3D
 ## Two curved alpha-cutout layers on the head. Works with GL Compatibility;
 ## no decals, per-player viewport, extra skeleton, or texture baking at runtime.
-const Catalog = preload("res://scripts/presentation/face_catalog.gd")
+const Catalog = preload("res://scripts/core/face_catalog.gd")
 var _eyes: MeshInstance3D
 var _mouth: MeshInstance3D
 var eyes_id: StringName = Catalog.DEFAULT_EYES

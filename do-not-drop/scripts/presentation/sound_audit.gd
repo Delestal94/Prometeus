@@ -38,7 +38,7 @@ const SOURCE_NAMES: Dictionary = {
 	"cargo_clutter": "Objetos sueltos del camión", "depot": "Depósito", "depot_forklift": "Autoelevador",
 	"depot_roller_door": "Portón del depósito", "route": "Ruta", "route_sky": "Ambiente",
 	"ingame_music": "Música", "package_feedback": "Caja (trampa)", "package_contents_view": "Caja (contenido)",
-	"phone_camera": "Celular", "prototype_hud": "Pantalla", "delivery_house": "Casa",
+	"phone_camera": "Celular", "hud": "Pantalla", "hud_cargo_panel": "Pantalla", "delivery_house": "Casa",
 	"chasing_dog": "Perro", "flock_crossing": "Ovejas", "rail_crossing_segment": "Paso a nivel",
 	"narrow_bridge_segment": "Puente",
 }

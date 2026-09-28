@@ -1,17 +1,37 @@
-extends "res://scripts/ui/hud/hud_prompts.gd"
-## Short-lived HUD notices: pings, toasts, route events, cards/merit and
-## the cosmetic fade used around abrupt camera changes.
+class_name HudNotices
+extends Node
+## Everything that pops up during a run: pings, route events, toasts, money,
+## merit and cards -- queued by zone so only the most important shows.
 
+## Set by Hud before this is added as its child.
+var hud: Hud
 const PING_DISPLAY_SECONDS: float = 2.5
 const EVENT_DISPLAY_SECONDS: float = 6.0
+## One label per fixed HUD zone. Each source keeps its queued entry here;
+## hud_notices.gd renders only the highest-priority one in that zone.
+var _notice_sources: Dictionary = {&"critical": {}, &"information": {}}
+var _notice_serial: int = 0
+
+
+func _ready() -> void:
+	EventBus.ping_sent.connect(_on_ping)
+	EventBus.quick_fade_requested.connect(_on_quick_fade_requested)
+	EventBus.team_money_changed.connect(_on_team_money_changed)
+	EventBus.merit_changed.connect(_on_merit_changed)
+	EventBus.card_changed.connect(_on_card_changed)
+	EventBus.route_event_started.connect(_on_route_event_started)
+	EventBus.route_event_updated.connect(_on_route_event_updated)
+	EventBus.route_event_resolved.connect(_on_route_event_resolved)
+	EventBus.unlock_earned.connect(_on_unlock_earned)
+	EventBus.depot_notice.connect(toast)
 
 
 func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
-	var who: String = "Vos" if peer_id == NetworkManager.local_id() else "Jugador %d" % peer_id
-	_toast("%s  %s:  %s" % [_ping_arrow(world_position), who, label], 40)
-	ping_label.text = ""
-	ping_indicator.text = ""
-	ping_seconds_left = PING_DISPLAY_SECONDS
+	var who: String = tr("HUD_YOU") if peer_id == NetworkManager.local_id() else tr("UI_PLAYER_N") % peer_id
+	toast("%s  %s:  %s" % [_ping_arrow(world_position), who, label], 40)
+	hud.ping_label.text = ""
+	hud.ping_indicator.text = ""
+	hud.ping_seconds_left = PING_DISPLAY_SECONDS
 	if peer_id != NetworkManager.local_id():
 		_mark_pinger(peer_id)
 
@@ -56,58 +76,59 @@ func _ping_arrow(world_position: Vector3) -> String:
 func _on_quick_fade_requested(seconds: float) -> void:
 	var half: float = maxf(seconds * 0.5, 0.01)
 	var tween: Tween = create_tween()
-	tween.tween_property(fade_rect, ^"color:a", 1.0, half)
-	tween.tween_property(fade_rect, ^"color:a", 0.0, half)
+	tween.tween_property(hud.fade_rect, ^"color:a", 1.0, half)
+	tween.tween_property(hud.fade_rect, ^"color:a", 0.0, half)
 
 
 func _on_team_money_changed(amount: int) -> void:
-	economy_label.text = "$%d" % amount
+	hud.economy_label.text = "$%d" % amount
 
 
 func _on_merit_changed(peer_id: int, total: int) -> void:
 	if peer_id == NetworkManager.local_id():
-		var gained: int = maxi(total - _local_merit_total, 0)
-		_local_merit_total = total
-		_toast("Mérito +%d  ·  total %d" % [gained, total])
+		var gained: int = maxi(total - hud.local_merit_total, 0)
+		hud.local_merit_total = total
+		toast(tr("HUD_MERIT") % [gained, total])
 
 
 func _on_card_changed(peer_id: int, card_id: int) -> void:
 	if peer_id != NetworkManager.local_id():
 		return
-	_refresh_card()
+	refresh_card()
 	if card_id >= 0:
-		_toast("Carta obtenida: %s" % CrewProgression.card_name(card_id))
+		toast(tr("HUD_CARD_EARNED") % CrewProgression.card_name(card_id))
 
 
-func _refresh_card() -> void:
-	if card_label == null:
+func refresh_card() -> void:
+	if hud.card_label == null:
 		return
 	var card_id: int = int(CrewProgression.cards.get(NetworkManager.local_id(), -1))
-	card_label.visible = card_id >= 0
+	hud.card_label.visible = card_id >= 0
 	if card_id < 0:
-		card_label.text = ""
+		hud.card_label.text = ""
 		return
-	var action: String = GameSettings.prompt("%s  usar" % GameSettings.binding_label(&"use_card"), "D-pad izquierda  usar")
-	card_label.text = UiTheme.keycaps("CARTA: %s   ·   %s" % [CrewProgression.card_name(card_id), action])
+	var action: String = GameSettings.prompt(tr("HUD_CARD_USE_KEY") % GameSettings.binding_label(&"use_card"),
+			tr("HUD_CARD_USE_PAD"))
+	hud.card_label.text = UiTheme.keycaps(tr("HUD_CARD") % [CrewProgression.card_name(card_id), action])
 
 
 func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
-	_toast("¡Desbloqueaste %s!" % title)
+	toast(tr("HUD_UNLOCKED") % title)
 
 
-func _toast(text: String, priority: int = 20) -> void:
+func toast(text: String, priority: int = 20) -> void:
 	_notice_serial += 1
-	_set_notice(&"information", StringName("toast_%d" % _notice_serial), text, priority, MINT, PING_DISPLAY_SECONDS)
-	toast_seconds_left = PING_DISPLAY_SECONDS
+	set_notice(&"information", StringName("toast_%d" % _notice_serial), text, priority, Hud.MINT, PING_DISPLAY_SECONDS)
+	hud.toast_seconds_left = PING_DISPLAY_SECONDS
 
 
 func _on_route_event_started(event_id: StringName, event: Dictionary) -> void:
 	if bool(event.get("incident", false)):
-		_toast("%s — %s" % [event.get("title", "Incidente"), event.get("prompt", "")])
+		toast("%s — %s" % [event.get("title", tr("HUD_INCIDENT")), event.get("prompt", "")])
 		return
-	_route_event_active_id = event_id
+	hud.route_event_active_id = event_id
 	_on_route_event_updated(event_id, event)
-	event_seconds_left = 0.0
+	hud.event_seconds_left = 0.0
 
 
 func _on_route_event_updated(event_id: StringName, event: Dictionary) -> void:
@@ -115,34 +136,37 @@ func _on_route_event_updated(event_id: StringName, event: Dictionary) -> void:
 		return
 	var objective: String = String(event.get("prompt", ""))
 	if event_id == &"inspection" and int(event.get("loose", 0)) > 0:
-		objective = "Faltan asegurar %d cajas" % int(event["loose"])
+		objective = tr("HUD_BOXES_TO_SECURE") % int(event["loose"])
 	elif event_id == &"mixed_labels" and event.get("phase") == &"swapped":
 		objective = "%s  ?" % objective
 	var seconds: int = ceili(float(event.get("remaining", 0.0)))
-	_set_notice(&"critical", &"route_event", "%s\n%s\n%02d:%02d" % [event.get("title", "Evento"), objective, seconds / 60, seconds % 60], 80, YELLOW)
+	var title: String = event.get("title", tr("HUD_EVENT"))
+	set_notice(&"critical", &"route_event",
+			"%s\n%s\n%02d:%02d" % [title, objective, seconds / 60, seconds % 60], 80, Hud.YELLOW)
 	if event_id in [&"mixed_labels", &"mimetic_package"]:
-		for id: StringName in cargo_rows:
-			_refresh_row(id)
+		for id: StringName in hud.cargo_rows:
+			hud.cargo.refresh_row(id)
 
 
 func _on_route_event_resolved(event_id: StringName, success: bool, _peer_id: int) -> void:
 	if event_id not in RouteEventManager.EVENTS:
 		return
-	if _route_event_active_id == event_id:
-		_route_event_active_id = &""
-	_clear_notice(&"critical", &"route_event")
-	for id: StringName in cargo_rows:
-		_refresh_row(id)
-	_set_notice(&"critical", &"route_result", "Evento resuelto" if success else "Evento fallido", 70, MINT if success else RED, PING_DISPLAY_SECONDS)
-	event_seconds_left = PING_DISPLAY_SECONDS
+	if hud.route_event_active_id == event_id:
+		hud.route_event_active_id = &""
+	clear_notice(&"critical", &"route_event")
+	for id: StringName in hud.cargo_rows:
+		hud.cargo.refresh_row(id)
+	set_notice(&"critical", &"route_result", tr("HUD_EVENT_RESOLVED") if success else tr("HUD_EVENT_FAILED"), 70,
+			Hud.MINT if success else Hud.RED, PING_DISPLAY_SECONDS)
+	hud.event_seconds_left = PING_DISPLAY_SECONDS
 
 
-func _set_notice(zone: StringName, key: StringName, text: String, priority: int,
+func set_notice(zone: StringName, key: StringName, text: String, priority: int,
 		color: Color, duration: float = -1.0) -> void:
 	if not _notice_sources.has(zone):
 		return
 	if text.is_empty():
-		_clear_notice(zone, key)
+		clear_notice(zone, key)
 		return
 	var sources: Dictionary = _notice_sources[zone]
 	var previous: Dictionary = sources.get(key, {})
@@ -159,7 +183,7 @@ func _set_notice(zone: StringName, key: StringName, text: String, priority: int,
 	_render_notice_zone(zone)
 
 
-func _clear_notice(zone: StringName, key: StringName) -> void:
+func clear_notice(zone: StringName, key: StringName) -> void:
 	if not _notice_sources.has(zone):
 		return
 	var sources: Dictionary = _notice_sources[zone]
@@ -168,13 +192,13 @@ func _clear_notice(zone: StringName, key: StringName) -> void:
 	_render_notice_zone(zone)
 
 
-func _clear_all_notices() -> void:
+func clear_all_notices() -> void:
 	_notice_sources = {&"critical": {}, &"information": {}}
 	_render_notice_zone(&"critical")
 	_render_notice_zone(&"information")
 
 
-func _process_notices(delta: float) -> void:
+func process_notices(delta: float) -> void:
 	for zone: StringName in _notice_sources:
 		var sources: Dictionary = _notice_sources[zone]
 		var active_key := _top_notice_key(sources)
@@ -191,7 +215,7 @@ func _process_notices(delta: float) -> void:
 
 
 func _render_notice_zone(zone: StringName) -> void:
-	var label: Label = event_label if zone == &"critical" else toast_label
+	var label: Label = hud.event_label if zone == &"critical" else hud.toast_label
 	if label == null:
 		return
 	var sources: Dictionary = _notice_sources[zone]

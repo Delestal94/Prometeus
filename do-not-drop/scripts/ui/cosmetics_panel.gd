@@ -2,7 +2,7 @@ class_name CosmeticsPanel
 extends Control
 
 const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
-const Catalog = preload("res://scripts/presentation/face_catalog.gd")
+const Catalog = preload("res://scripts/core/face_catalog.gd")
 const FacePreview = preload("res://scripts/ui/face_preview.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 signal closed
@@ -33,13 +33,13 @@ func _build(active_tab: int = 0) -> void:
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 14)
 	margin.add_child(outer)
-	UiTheme.title(outer, "Hacé tu personaje", 32, UiTheme.PAPER)
+	UiTheme.title(outer, tr("UI_COSM_TITLE"), 32, UiTheme.PAPER)
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 20)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outer.add_child(columns)
 	var preview: VBoxContainer = UiTheme.panel(columns, Vector2(310, 0), 16)
-	UiTheme.tag(preview, "ASÍ QUEDA", UiTheme.YELLOW, 0)
+	UiTheme.tag(preview, tr("UI_COSM_PREVIEW_TAG"), UiTheme.YELLOW, 0)
 	_face_preview = FacePreview.new()
 	_face_preview.name = "FacePreview"
 	_face_preview.custom_minimum_size = Vector2(270, 218)
@@ -47,7 +47,7 @@ func _build(active_tab: int = 0) -> void:
 	_face_caption = UiTheme.label(preview, "", 15)
 	_face_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_build_uniform_preview(preview)
-	UiTheme.label(preview, "Tu personaje dentro del juego", 13, UiTheme.MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UiTheme.label(preview, tr("UI_COSM_PREVIEW_HINT"), 13, UiTheme.MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var settings: VBoxContainer = UiTheme.panel(columns, Vector2(550, 0), 16)
 	settings.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_tabs = TabContainer.new()
@@ -65,24 +65,24 @@ func _build(active_tab: int = 0) -> void:
 	_tabs.add_theme_font_override("font", UiTheme.display_font())
 	_tabs.add_theme_font_size_override("font_size", 21)
 	settings.add_child(_tabs)
-	var face: VBoxContainer = _tab("Rostro")
-	UiTheme.label(face, "Combiná los ojos y la boca como quieras.", 16, UiTheme.MUTED)
-	_face_choices(face, "Ojos", "eyes", Catalog.EYES)
-	_face_choices(face, "Boca", "mouth", Catalog.MOUTHS)
-	var uniform: VBoxContainer = _tab("Uniforme")
-	_section(uniform, "Tu uniforme", "Se ve igual para toda la tripulación.",
+	var face: VBoxContainer = _tab(tr("UI_COSM_FACE"))
+	UiTheme.label(face, tr("UI_COSM_FACE_HINT"), 16, UiTheme.MUTED)
+	_face_choices(face, tr("UI_COSM_EYES"), "eyes", Catalog.EYES)
+	_face_choices(face, tr("UI_COSM_MOUTH"), "mouth", Catalog.MOUTHS)
+	var uniform: VBoxContainer = _tab(tr("UI_COSM_UNIFORM"))
+	_section(uniform, tr("UI_COSM_YOUR_UNIFORM"), tr("UI_COSM_UNIFORM_HINT"),
 		UnlockManager.cosmetic_choices(), UnlockManager.selected_cosmetic, UnlockManager.select_cosmetic)
-	var truck: VBoxContainer = _tab("Camión")
-	_section(truck, "Camión", "Si sos el anfitrión, lo usa toda la tripulación.",
+	var truck: VBoxContainer = _tab(tr("UI_TRUCK"))
+	_section(truck, tr("UI_TRUCK"), tr("UI_COSM_TRUCK_HINT"),
 		UnlockManager.truck_choices(), UnlockManager.selected_truck, UnlockManager.select_truck)
-	_section(truck, "Pintura", "", UnlockManager.paint_choices(), UnlockManager.selected_paint, UnlockManager.select_paint)
+	_section(truck, tr("UI_PAINT"), "", UnlockManager.paint_choices(), UnlockManager.selected_paint, UnlockManager.select_paint)
 	_tabs.current_tab = active_tab
 	var footer := HBoxContainer.new()
 	footer.alignment = BoxContainer.ALIGNMENT_END
 	footer.add_theme_constant_override("separation", 18)
 	outer.add_child(footer)
-	UiTheme.label(footer, "Tus cambios se guardan automáticamente", 15, UiTheme.PAPER).size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var done: Button = UiTheme.button(footer, "Listo", true, Vector2(180, 48))
+	UiTheme.label(footer, tr("UI_COSM_AUTOSAVE"), 15, UiTheme.PAPER).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var done: Button = UiTheme.button(footer, tr("UI_DONE"), true, Vector2(180, 48))
 	done.name = "Done"
 	done.pressed.connect(func() -> void: hide(); closed.emit())
 	_refresh_face()
@@ -163,7 +163,7 @@ func _section(column: VBoxContainer, title: String, subtitle: String, choices: A
 		if choice.has("detail"): label += " · " + String(choice["detail"])
 		if not available:
 			var rule: Dictionary = UnlockManager.requirements(StringName(choice["unlock"]))
-			label += " — %d entregas / %d puntos" % [int(rule.get("deliveries", 0)), int(rule.get("score", 0))]
+			label += tr("UI_COSM_LOCKED_SUFFIX") % [int(rule.get("deliveries", 0)), int(rule.get("score", 0))]
 		var button: Button = UiTheme.button(column, label, id == selected, Vector2(0, 44))
 		button.disabled = not available; button.clip_text = true
 		button.pressed.connect(func() -> void:

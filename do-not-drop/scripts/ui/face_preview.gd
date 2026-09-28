@@ -1,6 +1,6 @@
 extends Control
 ## Same feature textures as CharacterFace, composed on a front-facing 2D head.
-const Catalog = preload("res://scripts/presentation/face_catalog.gd")
+const Catalog = preload("res://scripts/core/face_catalog.gd")
 var eyes_id: StringName = Catalog.DEFAULT_EYES
 var mouth_id: StringName = Catalog.DEFAULT_MOUTH
 var shirt_color: Color = Color("f4c562")

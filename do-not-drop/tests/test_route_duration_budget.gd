@@ -24,8 +24,9 @@ func _run() -> void:
 	var previous_leg: float = INF
 	for houses: int in range(1, 5):
 		var leg: float = Route.leg_target_length(houses)
-		_expect(leg >= Route.LEG_MIN_LENGTH and leg <= Route.LEG_MAX_LENGTH,
-			"%d houses: legs of %.0f m, within %.0f-%.0f" % [houses, leg, Route.LEG_MIN_LENGTH, Route.LEG_MAX_LENGTH])
+		_expect(leg >= RoutePlanner.LEG_MIN_LENGTH and leg <= RoutePlanner.LEG_MAX_LENGTH,
+			"%d houses: legs of %.0f m, within %.0f-%.0f" % [houses, leg, RoutePlanner.LEG_MIN_LENGTH,
+					RoutePlanner.LEG_MAX_LENGTH])
 		_expect(leg <= previous_leg, "More houses never means longer legs (%d houses: %.0f m)" % [houses, leg])
 		previous_leg = leg
 		var planned: float = _seconds(leg * (houses + 1), houses)
@@ -42,8 +43,10 @@ func _run() -> void:
 			root.add_child(route)
 			var length: float = float(route.get(&"route_length"))
 			var leg: float = Route.leg_target_length(houses)
-			var shortest: float = (houses + 1) * maxf(leg * (1.0 - Route.LEG_LENGTH_JITTER), Route.LEG_MIN_LENGTH)
-			var longest: float = (houses + 1) * (minf(leg * (1.0 + Route.LEG_LENGTH_JITTER), Route.LEG_MAX_LENGTH) + MAX_OVERSHOOT)
+			var shortest: float = (houses + 1) * maxf(leg * (1.0 - RoutePlanner.LEG_LENGTH_JITTER),
+					RoutePlanner.LEG_MIN_LENGTH)
+			var longest: float = (houses + 1) * (minf(leg * (1.0 + RoutePlanner.LEG_LENGTH_JITTER),
+					RoutePlanner.LEG_MAX_LENGTH) + MAX_OVERSHOOT)
 			_expect(length >= shortest and length <= longest,
 				"Seed %d, %d houses: %.0f m of road, within %.0f-%.0f" % [seed_value, houses, length, shortest, longest])
 			var built: float = _seconds(length, houses)
@@ -60,7 +63,7 @@ func _run() -> void:
 
 
 func _seconds(length: float, houses: int) -> float:
-	return length / Route.ROUTE_CRUISE_SPEED + houses * Route.HOUSE_STOP_SECONDS
+	return length / RoutePlanner.ROUTE_CRUISE_SPEED + houses * RoutePlanner.HOUSE_STOP_SECONDS
 
 
 func _expect(condition: bool, description: String) -> void:
