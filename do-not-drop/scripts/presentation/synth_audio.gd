@@ -960,3 +960,27 @@ static func train_chug_loop() -> AudioStreamWAV:
 
 static func scanner_beep() -> AudioStreamWAV:
 	return _cached(&"scanner_beep", SynthAudioScenes.make_scanner_beep)
+
+
+## Care panel cues (ui/hud/care_prompt_view.gd), built by synth_audio_care.gd.
+const SynthAudioCare = preload("res://scripts/presentation/synth_audio_care.gd")
+
+
+static func care_step() -> AudioStreamWAV:
+	return _cached(&"care_step", SynthAudioCare.make_care_step)
+
+
+static func care_error() -> AudioStreamWAV:
+	return _cached(&"care_error", SynthAudioCare.make_care_error)
+
+
+static func care_success() -> AudioStreamWAV:
+	return _cached(&"care_success", SynthAudioCare.make_care_success)
+
+
+static func care_whoosh() -> AudioStreamWAV:
+	return _cached(&"care_whoosh", SynthAudioCare.make_care_whoosh)
+
+
+static func care_tick() -> AudioStreamWAV:
+	return _cached(&"care_tick", SynthAudioCare.make_care_tick)
