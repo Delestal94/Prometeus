@@ -247,6 +247,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_difficulty.gd
 <godot> --headless --path do-not-drop --script res://tests/test_delivery_houses.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
+<godot> --headless --path do-not-drop --script res://tests/test_cargo_overboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_rescue.gd
 <godot> --headless --path do-not-drop --script res://tests/test_care_prompt_view.gd
@@ -378,6 +379,9 @@ real con `--fixed-fps 60`:
 Imprime una línea por corrida y una tabla por cantidad de casas (minutos promedio, máximo y
 mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración de la entrega").
 
+- `test_cargo_overboard` — N-213: una caja que sale del camión no se pierde al instante:
+  abre una ventana de rescate (más larga que la de adentro) con un cartel "¡RESCATAR!" encima,
+  levantarla la cierra como rescatada y vuelve al estante, y si nadie la busca se pierde al vencer.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
@@ -569,7 +573,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   la posición y el mensaje reales.
 - `test_quick_callouts` — indicaciones rápidas (N-505): la rueda ofrece las frases pedidas
   con texto en `strings_ui.csv`, el host corta el spam con 1,5 s por jugador y el
-  conductor ve en el centro de su HUD la frase de otro tripulante (no la propia).
+  conductor ve en el centro de su HUD la frase de otro tripulante (no la propia); cada
+  frase suena con un balbuceo sintetizado cuyo tono sale del color del jugador, desde
+  su cabeza.
 - `test_tutorial` — cada trampa tiene una ficha completa, el tutorial muestra solo
   las desbloqueadas, el primer perfil resalta “Cómo jugar” y cada consejo en partida
   aparece una sola vez antes de quedar guardado en el perfil.

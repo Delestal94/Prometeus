@@ -128,6 +128,27 @@ Slatex, revisá esos PRs antes de que entren si tocan tus archivos. `vehicle.tsc
 siguen congelados: N-214 (averías) va como componente aparte, y N-114 (caja manual) queda
 descartada si no hay acuerdo.
 
+## Aviso activo: N-213 ventana de rescate para la caja que sale del camión (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-213-cargo-overboard-window`. Solo zona compartida y un archivo
+nuevo; **ninguna firma cambia** y no se tocan archivos de Slatex:
+- `gameplay/level_common.gd` (zona compartida): `_check_lost_cargo()` ya no llama `mark_lost` apenas la
+  caja cargada se aleja 8 m; abre una ventana de `overboard_rescue_seconds` (30 s) y la pierde al vencer.
+  Levantarla (deja de estar `is_loaded`) la cuenta como rescatada.
+- `core/event_bus.gd` (zona compartida): señales nuevas `cargo_overboard(package_id, position, seconds)` y
+  `cargo_overboard_ended(package_id, rescued)`, relayadas por el host. Slatex: si querés mostrarlo en el
+  HUD, escuchalas ahí.
+- `presentation/overboard_marker.gd` (nuevo): cartel "¡RESCATAR! N s" sobre la caja en cada par.
+
+## Aviso activo: N-505 voz de las indicaciones rápidas (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-505-callout-voice`. Suma funciones, **ninguna firma cambia**:
+- `ui/ping_catalog.gd` (Slatex): `syllables(label)` cuenta los grupos de vocales de la frase (1-5).
+- `ui/hud/hud_notices.gd` (Slatex): `_speak()` hace sonar cada frase con la voz del que la manda,
+  desde su cabeza (`AudioStreamPlayer3D` "CalloutVoice", bus SFX) o plana si es la propia.
+- `presentation/synth_audio.gd` y `world_mix.gd` (Nacho): `callout_voice(color, sílabas)` y
+  `CALLOUT_VOICE_DB`, medida en `test_world_audio_levels`.
+
 ## Aviso activo: N-505 indicaciones rápidas en la rueda de pings (2026-09-28)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-505-quick-callouts`. Toca archivos de Slatex y la zona

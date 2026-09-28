@@ -962,6 +962,14 @@ static func scanner_beep() -> AudioStreamWAV:
 	return _cached(&"scanner_beep", SynthAudioScenes.make_scanner_beep)
 
 
+## A crewmate's quick callout (N-505): babble pitched by their colour slot.
+static func callout_voice(color_slot: int = 0, syllables: int = 3) -> AudioStreamWAV:
+	var slot: int = posmod(color_slot, SynthAudioScenes.CALLOUT_VOICE_PITCHES.size())
+	var count: int = clampi(syllables, 1, SynthAudioScenes.CALLOUT_MAX_SYLLABLES)
+	var key := StringName("callout_voice_%d_%d" % [slot, count])
+	return _cached(key, SynthAudioScenes.make_callout_voice.bind(slot, count))
+
+
 ## Care panel cues (ui/hud/care_prompt_view.gd), built by synth_audio_care.gd.
 const SynthAudioCare = preload("res://scripts/presentation/synth_audio_care.gd")
 

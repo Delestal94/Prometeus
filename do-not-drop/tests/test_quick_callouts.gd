@@ -3,8 +3,8 @@ extends SceneTree
 ## Covers N-505 (quick callouts, docs/tareas-nacho.md): the ping wheel's eight
 ## phrases, the host's 1.5 s per-player anti-spam cooldown in
 ## EventBus.request_ping(), the driver's HUD entry and the phrase texts in
-## strings_ui.csv. The call reaching every peer is the same relay() hop as
-## test_ping.gd; the real cross-peer delivery is net_trio's job.
+## strings_ui.csv, and the babbled voice pitched by player colour. The call
+## reaching every peer is the same relay() hop as test_ping.gd; the real cross-peer delivery is net_trio's job.
 
 var _failures: int = 0
 var _received: Array = []
@@ -66,11 +66,36 @@ func _initialize() -> void:
 	bus.emit_signal(&"ping_sent", int(network.call(&"local_id")), Vector3.ZERO, "¡Frená!")
 	_expect(hud.ping_indicator.text == "", "The driver's own callout doesn't echo back at them")
 
+	# The voice (N-505.2): babble pitched by the caller's colour slot.
+	_expect(PingCatalogData.syllables("¡Dale, dale!") == 4 and PingCatalogData.syllables("Esperá") == 3,
+		"The babble has one syllable per vowel group of the phrase")
+	var low: AudioStreamWAV = SynthAudio.callout_voice(0, 3)
+	var high: AudioStreamWAV = SynthAudio.callout_voice(1, 3)
+	_expect(low != null and high != null and low.data != high.data, "Each player colour has its own voice")
+	_expect(SynthAudio.callout_voice(5, 3) == low,
+		"The voice is cached and picked by colour slot (peer id modulo five)")
+	_expect(SynthAudio.callout_voice(0, 4).get_length() > low.get_length(), "A longer phrase babbles longer")
+	var crewmate := Node3D.new()
+	crewmate.name = "Crewmate"
+	crewmate.set_multiplayer_authority(7)
+	crewmate.add_to_group(&"player")
+	root.add_child(crewmate)
+	bus.emit_signal(&"ping_sent", 7, Vector3.ZERO, "Esperá")
+	var from_head: Node = crewmate.get_node_or_null(^"CalloutVoice")
+	_expect(from_head is AudioStreamPlayer3D, "A crewmate's callout is voiced from their head")
+	if from_head is AudioStreamPlayer3D:
+		_expect((from_head as AudioStreamPlayer3D).stream == SynthAudio.callout_voice(7 % 5, 3),
+			"The crewmate's voice uses their colour slot and the phrase's syllables")
+	bus.emit_signal(&"ping_sent", int(network.call(&"local_id")), Vector3.ZERO, "¡Frená!")
+	_expect(not hud.find_children("CalloutVoice", "AudioStreamPlayer", true, false).is_empty(),
+		"Your own callout is voiced flat, without a body to hang it from")
+
+	crewmate.free()
 	vehicle.free()
 	hud.free()
 	bus.call(&"reset_ping_cooldowns")
 	if _failures == 0:
-		print("PASS: quick callouts rate-limit per player and reach the driver's HUD")
+		print("PASS: quick callouts rate-limit per player, reach the driver's HUD and speak in the caller's voice")
 	quit(_failures)
 
 
