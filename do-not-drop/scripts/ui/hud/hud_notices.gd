@@ -8,6 +8,7 @@ var hud: Hud
 const PING_DISPLAY_SECONDS: float = 2.5
 const EVENT_DISPLAY_SECONDS: float = 6.0
 const PingCatalogData = preload("res://scripts/ui/ping_catalog.gd")
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## One label per fixed HUD zone. Each source keeps its queued entry here;
 ## hud_notices.gd renders only the highest-priority one in that zone.
 var _notice_sources: Dictionary = {&"critical": {}, &"information": {}}
@@ -43,6 +44,7 @@ func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
 	hud.ping_seconds_left = PING_DISPLAY_SECONDS
 	if peer_id != NetworkManager.local_id():
 		_mark_pinger(peer_id, label)
+	_speak(peer_id, label)
 
 
 ## Whether this client's player is the one at the wheel right now.
@@ -80,6 +82,43 @@ func _mark_pinger(peer_id: int, label: String) -> void:
 		tween.tween_interval(PING_DISPLAY_SECONDS - 0.6)
 		tween.tween_property(marker, ^"modulate:a", 0.0, 0.6)
 		tween.tween_callback(marker.queue_free)
+
+
+## The callout's voice (N-505.2): babble pitched by the caller's colour slot,
+## from their head when their player is in the scene, flat otherwise (your own
+## call, or a lobby without bodies).
+func _speak(peer_id: int, label: String) -> void:
+	var slot: int = posmod(peer_id, Player.PLAYER_COLORS.size())
+	var stream: AudioStreamWAV = SynthAudio.callout_voice(slot, PingCatalogData.syllables(label))
+	var parent: Node = self
+	if peer_id != NetworkManager.local_id():
+		for player: Node in get_tree().get_nodes_in_group(&"player"):
+			if player is Node3D and player.get_multiplayer_authority() == peer_id:
+				parent = player
+	var old: Node = parent.get_node_or_null(^"CalloutVoice")
+	if old != null:
+		old.free()
+	var voice: Node
+	if parent is Node3D:
+		var voice_3d := AudioStreamPlayer3D.new()
+		voice_3d.unit_size = 6.0
+		voice_3d.max_distance = 40.0
+		voice_3d.position = Vector3(0.0, 1.7, 0.0)
+		voice_3d.volume_db = WorldMix.CALLOUT_VOICE_DB
+		voice_3d.stream = stream
+		voice_3d.bus = &"SFX" if AudioServer.get_bus_index(&"SFX") >= 0 else &"Master"
+		voice_3d.finished.connect(voice_3d.queue_free)
+		voice = voice_3d
+	else:
+		var voice_flat := AudioStreamPlayer.new()
+		voice_flat.volume_db = WorldMix.CALLOUT_VOICE_DB
+		voice_flat.stream = stream
+		voice_flat.bus = &"SFX" if AudioServer.get_bus_index(&"SFX") >= 0 else &"Master"
+		voice_flat.finished.connect(voice_flat.queue_free)
+		voice = voice_flat
+	voice.name = "CalloutVoice"
+	parent.add_child(voice)
+	voice.call(&"play")
 
 
 func _ping_arrow(world_position: Vector3) -> String:

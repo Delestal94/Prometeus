@@ -23,6 +23,21 @@ static func option(label: String) -> Dictionary:
 	return OPTIONS[0]
 
 
+## How many syllables the callout's babble has (SynthAudio.callout_voice()):
+## one per vowel group of the network label, so "¡Dale, dale!" chatters
+## four times and "Esperá" three. Counted on the label, never the translated
+## text, so every client hears the same call.
+static func syllables(label: String) -> int:
+	var count: int = 0
+	var in_vowel: bool = false
+	for character: String in label.to_lower():
+		var vowel: bool = "aeiouáéíóú".contains(character)
+		if vowel and not in_vowel:
+			count += 1
+		in_vowel = vowel
+	return clampi(count, 1, 5)
+
+
 ## The phrase as this client's language shows it.
 static func display_text(label: String) -> String:
 	return TranslationServer.translate(String(option(label)["key"]))
