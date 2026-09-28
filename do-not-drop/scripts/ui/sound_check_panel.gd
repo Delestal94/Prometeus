@@ -71,6 +71,7 @@ func open() -> void:
 	Audit.play_through_pause(get_tree(), true)
 	_refresh()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	var first: Control = _first_focusable()
 	if first != null:
 		first.grab_focus()
@@ -78,6 +79,7 @@ func open() -> void:
 
 func close() -> void:
 	Audit.play_through_pause(get_tree(), false)
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 

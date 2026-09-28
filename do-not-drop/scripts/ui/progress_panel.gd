@@ -63,10 +63,12 @@ func open() -> void:
 	_reset_campaign_confirmation()
 	_refresh()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_new_campaign_button.grab_focus.call_deferred()
 
 func close() -> void:
 	_reset_campaign_confirmation()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 

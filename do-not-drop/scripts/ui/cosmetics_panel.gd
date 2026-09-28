@@ -89,9 +89,11 @@ func _build(active_tab: int = 0) -> void:
 
 func open() -> void:
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_grab_first_button.call_deferred()
 
 func close() -> void:
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 

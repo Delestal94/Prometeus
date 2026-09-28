@@ -259,6 +259,7 @@ func open() -> void:
 	_sync_from_settings()
 	_refresh_controls()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	# The first control, not the first Button: CheckBox counts as a Button,
 	# so that used to land a gamepad player below both sliders.
 	_volume_slider.grab_focus()
@@ -267,5 +268,6 @@ func open() -> void:
 func close() -> void:
 	if _sound_check != null and _sound_check.visible:
 		_sound_check.call(&"close")
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()

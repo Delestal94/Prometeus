@@ -115,13 +115,14 @@ func refresh_card() -> void:
 
 
 func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
-	toast(tr("HUD_UNLOCKED") % title)
+	toast(tr("HUD_UNLOCKED") % title, 20, UiTheme.UI_SOUNDS.UNLOCK)
 
 
-func toast(text: String, priority: int = 20) -> void:
+func toast(text: String, priority: int = 20, cue: StringName = UiTheme.UI_SOUNDS.TOAST) -> void:
 	_notice_serial += 1
 	set_notice(&"information", StringName("toast_%d" % _notice_serial), text, priority, Hud.MINT, PING_DISPLAY_SECONDS)
 	hud.toast_seconds_left = PING_DISPLAY_SECONDS
+	UiTheme.UI_SOUNDS.play(self, cue)
 
 
 func _on_route_event_started(event_id: StringName, event: Dictionary) -> void:

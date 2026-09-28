@@ -28,11 +28,13 @@ func open(station_id: StringName, depot_node: Node) -> void:
 		_request_open_vote()
 	_rebuild()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 
 
 func close() -> void:
 	if not visible:
 		return
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	closed.emit()
@@ -55,6 +57,7 @@ func _ready() -> void:
 				_rebuild())
 		bus.connect(&"shop_vote_changed", func(_peer_id: int, _offer_id: StringName) -> void:
 			if visible and station == &"shop":
+				UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.VOTE)
 				_rebuild())
 		bus.connect(&"shop_resolved", _on_shop_resolved)
 		# Somebody else took the wheel: the depot is behind us now.

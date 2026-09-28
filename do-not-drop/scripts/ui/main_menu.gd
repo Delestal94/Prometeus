@@ -616,6 +616,8 @@ func _set_status(text: String, color: Color) -> void:
 	_status_label.text = text
 	_status_label.visible = not text.is_empty()
 	_status_label.add_theme_color_override("font_color", color)
+	if not text.is_empty() and color == RED:
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.ERROR)
 
 
 func _label(parent: Node, text: String, font_size: int, color: Color) -> Label:

@@ -17,10 +17,12 @@ func _ready() -> void:
 func open() -> void:
 	_refresh()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_delivery_button.grab_focus.call_deferred()
 
 
 func close() -> void:
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 

@@ -91,9 +91,11 @@ func open() -> void:
 	_page_index = 0
 	_refresh_page()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_next_button.grab_focus.call_deferred()
 
 func close() -> void:
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 
