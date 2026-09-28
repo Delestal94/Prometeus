@@ -12,6 +12,14 @@ class_name LevelCommon
 ## $World/PlayerSpawner), which is what makes this possible.
 
 const LOST_CARGO_DISTANCE: float = 8.0
+## A box that leaves the van isn't written off on the spot (N-213.1): it lies
+## on the road with a marker for this long, so someone can go fetch it and put
+## it back on a shelf. Longer than the 8-15 s rescue inside the van, since it
+## takes stopping, getting out and walking back. A var so tests can shorten it.
+var overboard_rescue_seconds: float = 30.0
+## Host-only: package_id -> seconds it has been out of the van so far.
+var _overboard_seconds: Dictionary = {}
+const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_marker.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
 @onready var vehicle: VehicleBody3D = $World/Vehicle
 @onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
@@ -59,6 +67,10 @@ func _ready() -> void:
 	# Command line shortcut for smoke checks and development: skips the
 	# on-foot loading entirely, same as the HUD's debug button.
 	NetworkManager.level_ready.call_deferred()
+	# Every peer draws the flag over a box on the road; the host decides (N-213.1).
+	var overboard_marker: Node3D = OVERBOARD_MARKER.new()
+	overboard_marker.name = "OverboardMarker"
+	add_child(overboard_marker)
 	if "--autostart" in OS.get_cmdline_user_args():
 		start_debug_delivery.call_deferred()
 	# The trailer's camera (N-902): F7 free camera, F5/F6/F8 rails. Debug
@@ -251,19 +263,33 @@ func _update_tipped(delta: float) -> void:
 
 
 func _check_lost_cargo() -> void:
-	# A box that falls out is written off on its own. Only losing every last
-	# one ends the run, and RunManager decides that.
+	# A box that falls out gets a rescue window (N-213.1) and is written off
+	# on its own once it runs out. Only losing every last one ends the run,
+	# and RunManager decides that.
 	for package: DeliveryPackage in packages:
 		# A box handed over at a door is freed on the spot -- this list
 		# outlives it, so skip what's already gone instead of reading a
 		# freed node's properties.
 		if not is_instance_valid(package):
 			continue
-		if not package.is_loaded:
+		var id: StringName = package.package_id
+		# Picked up (or never aboard) is no longer a box lying on the road:
+		# carrying it back is the rescue itself.
+		var out: bool = (package.is_loaded and package.trap_state != ITrapBehavior.TrapState.RUINED
+				and package.global_position.distance_to(vehicle.global_position) > LOST_CARGO_DISTANCE)
+		if not out:
+			if _overboard_seconds.has(id):
+				_overboard_seconds.erase(id)
+				EventBus.relay(&"cargo_overboard_ended", [id, package.trap_state != ITrapBehavior.TrapState.RUINED])
 			continue
-		var distance: float = package.global_position.distance_to(vehicle.global_position)
-		if distance > LOST_CARGO_DISTANCE:
+		if not _overboard_seconds.has(id):
+			_overboard_seconds[id] = 0.0
+			EventBus.relay(&"cargo_overboard", [id, package.global_position, overboard_rescue_seconds])
+		_overboard_seconds[id] = float(_overboard_seconds[id]) + get_physics_process_delta_time()
+		if float(_overboard_seconds[id]) >= overboard_rescue_seconds:
+			_overboard_seconds.erase(id)
 			package.mark_lost("Se cayó del camión.")
+			EventBus.relay(&"cargo_overboard_ended", [id, false])
 
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:

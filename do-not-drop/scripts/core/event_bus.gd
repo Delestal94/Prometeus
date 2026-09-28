@@ -103,6 +103,11 @@ signal depot_supplies_changed(supplies: Array, team_money: int)
 ## Something the whole crew should read in the depot or from it (a purchase,
 ## the door closing behind them, an order left on the shelf). Relayed.
 signal depot_notice(text: String)
+## A box left the van and lies on the road (N-213.1): the crew has
+## `seconds` to pick it up and put it back before it's written off. Relayed.
+signal cargo_overboard(package_id: StringName, position: Vector3, seconds: float)
+## That box's rescue window closed: back aboard (`rescued`) or lost. Relayed.
+signal cargo_overboard_ended(package_id: StringName, rescued: bool)
 
 
 ## Minimum seconds between two callouts from the same player (N-505.3).
