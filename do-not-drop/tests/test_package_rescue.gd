@@ -7,6 +7,7 @@ extends SceneTree
 ## a rescued box is paid and told at the end of the run.
 
 const Care = preload("res://scripts/gameplay/package/package_care.gd")
+const CargoCare = preload("res://scripts/gameplay/player/player_cargo_care.gd")
 
 var _failures: int = 0
 
@@ -21,6 +22,7 @@ func _initialize() -> void:
 	_check_lap_strap_and_filler()
 	_check_disconnect_hold()
 	_check_deadlines()
+	await _check_panel_prompts()
 	quit(_failures)
 
 
@@ -173,6 +175,26 @@ func _check_supplies_and_scoring() -> void:
 	_expect(stories.contains("Jarrón") and stories.contains("juguete"), "The results tell the rescues")
 	run.reset_run()
 	_expect(run.care_supply_count(&"tape") == 3 and run.deliveries.is_empty(), "A new run gets a fresh kit")
+
+
+## The workbench says which button and which key, not just an arrow: a bare
+## "←" next to the tool read as decoration in playtests.
+func _check_panel_prompts() -> void:
+	var care = Care.new()
+	_expect(CargoCare.work_prompt(care.work_direction(), false) == "mantené clic der. + A (←)",
+		"Tool work names the mouse button and the key for the arrow")
+	_expect(CargoCare.work_prompt(Vector2.UP, true) == "mantené LT + stick ↑", "...and the trigger and stick on a gamepad")
+	var bomb := (load("res://scenes/gameplay/package/package.tscn") as PackedScene).instantiate() as DeliveryPackage
+	bomb.trap_definition = load("res://data/traps/explosive.tres")
+	root.add_child(bomb)
+	await process_frame
+	var expected: String = CargoCare.direction_key(
+		CargoCare.SEQUENCE_VECTORS[StringName(bomb.trap_behavior.call(&"next_direction"))])
+	var prompt: String = CargoCare.sequence_prompt(bomb, false)
+	_expect(prompt.begins_with("Desactivar: tocá %s" % expected), "The bomb's next tap is spelled out (got '%s')" % prompt)
+	bomb.trap_behavior.set(&"_defused", true)
+	_expect(CargoCare.sequence_prompt(bomb, false).is_empty(), "Nothing to tap once it's defused")
+	bomb.free()
 
 
 func _expect(condition: bool, message: String) -> void:

@@ -4,9 +4,13 @@ const Care = preload("res://scripts/gameplay/package/package_care.gd")
 const PHASE_NAMES: Dictionary = {&"intact": "INTACTO", &"damaged": "DAÑADO", &"crisis": "¡RESCATE!",
 	&"rescued": "RESCATADO", &"lost": "PERDIDO"}
 const HELP_GAMEPAD: String = "RT + stick: equilibrar\n" \
-	+ "LT + flecha: trabajar · D-pad der.: herramienta · soltar: regazo/soporte"
+	+ "LT + stick hacia la flecha: trabajar · D-pad der.: herramienta · soltar: regazo/soporte"
 const HELP_KEYBOARD: String = "Clic izq. + WASD: equilibrar\n" \
-	+ "Clic der. + flecha: trabajar · X: herramienta · Q: regazo/soporte"
+	+ "Clic der. + tecla de la flecha: trabajar · X: herramienta · Q: regazo/soporte"
+const DIRECTION_ARROWS: Dictionary = {Vector2.LEFT: "←", Vector2.UP: "↑", Vector2.RIGHT: "→", Vector2.DOWN: "↓"}
+const DIRECTION_KEYS: Dictionary = {Vector2.LEFT: "A", Vector2.UP: "W", Vector2.RIGHT: "D", Vector2.DOWN: "S"}
+const SEQUENCE_VECTORS: Dictionary = {&"left": Vector2.LEFT, &"up": Vector2.UP, &"right": Vector2.RIGHT,
+	&"down": Vector2.DOWN}
 var player: Node
 var tool_index: int = 0
 var panel: PanelContainer
@@ -108,14 +112,49 @@ func _physics_process(_delta: float) -> void:
 	balance_view.care = care
 	balance_view.queue_redraw()
 	progress.value = care.work * 100.0
-	var arrows: Array[String] = ["←", "↑", "→", "↓"]
+	var gamepad: bool = _using_gamepad()
 	var stock: int = int(run.call(&"care_supply_count", Care.TOOLS[tool_index]))
 	var tool_label: String = care.tool_name(Care.TOOLS[tool_index], target._trap_kind())
 	var status: String = target.get_hint() if care.message.is_empty() else care.message
-	details.text = "%s (%d) · %s\n%s" % [tool_label, stock, arrows[care.work_step % 4], status]
+	# A bare arrow read as decoration: spell out the button and the key.
+	details.text = "%s (%d): %s\n%s" % [tool_label, stock, work_prompt(care.work_direction(), gamepad), status]
+	var sequence: String = sequence_prompt(target, gamepad)
+	if not sequence.is_empty():
+		details.text += "\n" + sequence
 	if care.phase == &"crisis":
 		details.text += "\nRescate: %ds · quedan %d piezas" % [ceili(care.crisis_left), care.missing_parts]
-	instructions.text = HELP_GAMEPAD if _using_gamepad() else HELP_KEYBOARD
+	instructions.text = HELP_GAMEPAD if gamepad else HELP_KEYBOARD
+
+
+## "Hold right click + A (←)": the tool only works while both are held.
+static func work_prompt(direction: Vector2, gamepad: bool) -> String:
+	if gamepad:
+		return "mantené LT + stick %s" % direction_arrow(direction)
+	return "mantené clic der. + %s (%s)" % [direction_key(direction), direction_arrow(direction)]
+
+
+## A trap solved by tapping directions one at a time (the bomb's module):
+## the next one to tap, spelled out, or "" when none is pending.
+static func sequence_prompt(package: Node, gamepad: bool) -> String:
+	var behavior: Object = package.get(&"trap_behavior") as Object
+	if behavior == null or not behavior.has_method(&"next_direction"):
+		return ""
+	var next: StringName = StringName(behavior.call(&"next_direction"))
+	if not SEQUENCE_VECTORS.has(next):
+		return ""
+	var direction: Vector2 = SEQUENCE_VECTORS[next]
+	var key: String = "stick %s" % direction_arrow(direction) if gamepad \
+		else "%s (%s)" % [direction_key(direction), direction_arrow(direction)]
+	return "Desactivar: tocá %s (un toque, sin clic)" % key
+
+
+static func direction_arrow(direction: Vector2) -> String:
+	return String(DIRECTION_ARROWS.get(direction, "?"))
+
+
+## Movement keys aren't rebindable (game_settings.gd): WASD is what they are.
+static func direction_key(direction: Vector2) -> String:
+	return String(DIRECTION_KEYS.get(direction, "?"))
 
 
 ## Looked up by path: tests run with --script, where autoload names don't

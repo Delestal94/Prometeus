@@ -342,5 +342,5 @@ func _choices(choices: Array[Dictionary], selected: StringName, select: Callable
 func _is_loaded(package_id: StringName) -> bool:
 	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
 		if StringName(package.get(&"package_id")) == package_id:
-			return bool(package.get(&"is_loaded"))
+			return bool(package.call(&"is_aboard"))
 	return false

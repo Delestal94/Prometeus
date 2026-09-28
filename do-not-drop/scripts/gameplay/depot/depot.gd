@@ -248,7 +248,7 @@ func begin_run(vehicle: Node3D, loaded: Array) -> void:
 	var missing: PackedStringArray = []
 	for order: Dictionary in orders:
 		var package: Node = _stocked.get(order.package_id)
-		if package == null or not is_instance_valid(package) or not bool(package.get(&"is_loaded")):
+		if package == null or not is_instance_valid(package) or not bool(package.call(&"is_aboard")):
 			missing.append(tr("WORLD_DEPOT_NOTICE_MISSING_ITEM") % [int(order.house) + 1, order.code])
 	if not missing.is_empty():
 		_notice(tr("WORLD_DEPOT_NOTICE_MISSING") % ", ".join(missing))

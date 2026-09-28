@@ -1,11 +1,33 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-25
+> Última actualización: 2026-09-28
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
+
+## Aviso activo: regazo al sentarse, arranque sin carga y minijuegos más claros (2026-09-28)
+
+Lo hizo Nacho (con Claude) a partir de una prueba propia. Toca archivos de Slatex y la zona
+compartida; ninguna firma existente cambia:
+
+- `interaction/seat_point.gd` (Slatex): sentarse con una caja en la mano ya **no** la deja en el
+  estante; queda en el regazo (`tend_package` + `_lap_mount` apuntando a la bahía libre) y Q la
+  estantea con el `request_lap_toggle` que ya existía. El asiento del conductor ya no pide carga
+  cargada (se borró `_run_under_way()`).
+- `package/package.gd` (Slatex): nuevo `DeliveryPackage.is_aboard()` = en un estante o en el regazo
+  de quien la cuida sentado. Lo usan `level_common.gd`, `depot.gd`, `ui/hud/hud_pause.gd` y
+  `ui/depot_panel.gd` en lugar de `is_loaded` para decir "a bordo".
+- `level_base.gd` (zona compartida), `level_common.gd`, `level_endless.gd`: el recorrido arranca
+  cuando alguien se sienta a manejar, **con o sin cajas** (decisión de diseño: olvidarse la carga
+  es problema de la partida). Las cajas del regazo cuentan como carga del recorrido y siguen en mano.
+- `package/package_feedback.gd` (Slatex): el cartel del Explosivo dice "DESACTIVAR", flota sobre la
+  caja y se dibuja sin prueba de profundidad (antes quedaba hundido en una cara y enorme en mano).
+- `player/player_cargo_care.gd` (Slatex): el panel dice la tecla (`mantené clic der. + A (←)`) y,
+  para el Explosivo, cuál tocar a continuación (`sequence_prompt()`).
+- Tests ajustados: `test_package_handling`, `test_loading_flow`, `test_reference_truck`,
+  `test_package_rescue`, `test_explosive_visual`. Slatex: `git pull` antes de tocar esos archivos.
 
 ## Aviso activo: hito M6 de Nacho toca dominio de Slatex (2026-09-28)
 

@@ -12,7 +12,9 @@ func _run() -> void:
 	var feedback := package.get_node("PackageFeedbackComponent")
 	var display := feedback.get_node_or_null("../Box/ExplosiveCountdown") as Label3D
 	assert(display != null, "Explosivo debe mostrar su contador en la caja")
-	assert("DEFUSE" in display.text, "El contador debe indicar la acción de desactivar")
+	assert("DESACTIVAR" in display.text, "El contador debe indicar la acción de desactivar")
+	assert(display.no_depth_test, "El contador se dibuja encima de la caja, no adentro")
+	assert(display.position.y > 0.3, "El contador flota sobre la tapa, no en una cara de la caja")
 	assert(feedback.get("_explosive_tick_player") != null, "Explosivo debe tener sonido de tictac")
 	package.free()
 	print("PASS: explosive package has countdown display and ticking audio presentation.")

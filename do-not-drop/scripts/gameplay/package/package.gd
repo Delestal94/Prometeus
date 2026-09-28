@@ -721,6 +721,17 @@ func take_by(player: Node) -> void:
 	player.rpc(&"pick_up", get_path())
 
 
+## Riding with the crew: on a rack, or on the lap of whoever sits tending it
+## (seat_point.gd). Built from replicated state so every peer agrees; the
+## carrier check only narrows it on the host, where it is known.
+func is_aboard() -> bool:
+	if is_loaded:
+		return true
+	if not is_held or tender_peer_id <= 0:
+		return false
+	return carrier == null or int(carrier.get_multiplayer_authority()) == tender_peer_id
+
+
 ## Hand-to-hand transfer. The host checks both the caller's ownership and
 ## physical distance, so a client cannot pass cargo across the map.
 @rpc("any_peer", "call_local", "reliable")
