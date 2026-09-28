@@ -551,7 +551,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   la posición y el mensaje reales.
 - `test_quick_callouts` — indicaciones rápidas (N-505): la rueda ofrece las frases pedidas
   con texto en `strings_ui.csv`, el host corta el spam con 1,5 s por jugador y el
-  conductor ve en el centro de su HUD la frase de otro tripulante (no la propia).
+  conductor ve en el centro de su HUD la frase de otro tripulante (no la propia); cada
+  frase suena con un balbuceo sintetizado cuyo tono sale del color del jugador, desde
+  su cabeza.
 - `test_tutorial` — cada trampa tiene una ficha completa, el tutorial muestra solo
   las desbloqueadas, el primer perfil resalta “Cómo jugar” y cada consejo en partida
   aparece una sola vez antes de quedar guardado en el perfil.

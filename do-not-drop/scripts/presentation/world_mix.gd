@@ -68,6 +68,9 @@ const RESIDENT_WRONG_BOX_OFFSET_DB: float = -10.0
 ## the truck's own engine at full throttle, which is the point.
 const TRAIN_HORN_DB: float = -6.0
 const TRAIN_CHUG_DB: float = -6.0
+## A crewmate's quick callout (N-505, hud_notices.gd): callout_voice()
+## self-normalises like the doorbell, so this is the "signal" target minus that.
+const CALLOUT_VOICE_DB: float = -6.0
 
 # The depot (depot.gd, depot_forklift.gd, depot_roller_door.gd).
 ## The radio plays mus_depot_radio_loop.ogg (N-403, tools/audio/compose_music.py),

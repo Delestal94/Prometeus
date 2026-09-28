@@ -19,6 +19,15 @@ Slatex, revisá esos PRs antes de que entren si tocan tus archivos. `vehicle.tsc
 siguen congelados: N-214 (averías) va como componente aparte, y N-114 (caja manual) queda
 descartada si no hay acuerdo.
 
+## Aviso activo: N-505 voz de las indicaciones rápidas (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-505-callout-voice`. Suma funciones, **ninguna firma cambia**:
+- `ui/ping_catalog.gd` (Slatex): `syllables(label)` cuenta los grupos de vocales de la frase (1-5).
+- `ui/hud/hud_notices.gd` (Slatex): `_speak()` hace sonar cada frase con la voz del que la manda,
+  desde su cabeza (`AudioStreamPlayer3D` "CalloutVoice", bus SFX) o plana si es la propia.
+- `presentation/synth_audio.gd` y `world_mix.gd` (Nacho): `callout_voice(color, sílabas)` y
+  `CALLOUT_VOICE_DB`, medida en `test_world_audio_levels`.
+
 ## Aviso activo: N-505 indicaciones rápidas en la rueda de pings (2026-09-28)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-505-quick-callouts`. Toca archivos de Slatex y la zona
