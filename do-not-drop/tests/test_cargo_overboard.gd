@@ -26,8 +26,8 @@ func _run() -> void:
 	await process_frame
 	var bus: Node = root.get_node(^"/root/EventBus")
 	var manager: Node = root.get_node(^"/root/RunManager")
-	bus.connect(&"cargo_overboard", func(id: StringName, _at: Vector3, seconds: float) -> void: _started.append([id, seconds]))
-	bus.connect(&"cargo_overboard_ended", func(id: StringName, rescued: bool) -> void: _ended.append([id, rescued]))
+	bus.connect(&"cargo_overboard", _on_overboard)
+	bus.connect(&"cargo_overboard_ended", _on_overboard_ended)
 	var player: Node = level.local_player
 	var vehicle: Node3D = level.get_node(^"World/Vehicle")
 	var marker: Node = level.get_node(^"OverboardMarker")
@@ -48,7 +48,8 @@ func _run() -> void:
 	var far: Vector3 = vehicle.global_position + Vector3(0.0, 0.0, 20.0)
 	package.global_position = far
 	level._check_lost_cargo()
-	_expect(_started.size() == 1 and _started[0][0] == package_id, "Falling out opens a rescue window (got %s)" % [_started])
+	_expect(_started.size() == 1 and _started[0][0] == package_id,
+		"Falling out opens a rescue window (got %s)" % [_started])
 	_expect(_started.size() == 1 and float(_started[0][1]) > 15.0,
 		"The window outlasts the 8-15 s rescue inside the van (got %s)" % [_started])
 	_expect(int(package.get(&"trap_state")) != ITrapBehavior.TrapState.RUINED, "A box on the road isn't ruined yet")
@@ -62,7 +63,8 @@ func _run() -> void:
 	pickup.interact(player)
 	_expect(player.get(&"carried_package") == package, "The box on the road can be picked up")
 	level._check_lost_cargo()
-	_expect(_ended.size() == 1 and _ended[0] == [package_id, true], "Picking it up closes the window as rescued (got %s)" % [_ended])
+	_expect(_ended.size() == 1 and _ended[0] == [package_id, true],
+		"Picking it up closes the window as rescued (got %s)" % [_ended])
 	await process_frame
 	_expect(not bool(marker.call(&"has_marker", package_id)), "The flag goes away once it's rescued")
 	player.set(&"global_position", vehicle.global_position)
@@ -77,7 +79,8 @@ func _run() -> void:
 	for i: int in 10:
 		level._check_lost_cargo()
 	_expect(int(package.get(&"trap_state")) == ITrapBehavior.TrapState.RUINED, "Past the window, the box is lost")
-	_expect(_ended.size() == 2 and _ended[1] == [package_id, false], "The window closes as not rescued (got %s)" % [_ended])
+	_expect(_ended.size() == 2 and _ended[1] == [package_id, false],
+		"The window closes as not rescued (got %s)" % [_ended])
 	await process_frame
 	_expect(not bool(marker.call(&"has_marker", package_id)), "The flag goes away once it's lost")
 
@@ -87,6 +90,14 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: a box off the van gets a rescue window, a flag, and is lost only when it runs out")
 	quit(_failures)
+
+
+func _on_overboard(id: StringName, _at: Vector3, seconds: float) -> void:
+	_started.append([id, seconds])
+
+
+func _on_overboard_ended(id: StringName, rescued: bool) -> void:
+	_ended.append([id, rescued])
 
 
 func _expect(condition: bool, description: String) -> void:
