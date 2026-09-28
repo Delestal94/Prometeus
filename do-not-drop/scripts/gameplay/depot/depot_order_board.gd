@@ -4,13 +4,22 @@ extends Node3D
 ## where the crew appears. Depot writes today's orders on it (write()) and
 ## ticks each house off as the run reports it (mark()).
 ##
-## Children keep fixed names -- Title, Rule, Row0..3, Mark0..3 -- that tests
+## Children keep fixed names -- Title, Rule, Row0..6, Mark0..6 -- that tests
 ## and the HUD's depot panel look up.
 
 const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const TITLE: String = "WORLD_DEPOT_BOARD_TITLE"
 const RULE: String = "WORLD_DEPOT_BOARD_RULE"
-const ROWS: int = 4
+## One row per house for the biggest crew (NetworkManager.MAX_PLAYERS - 1).
+const ROWS: int = 7
+## The writing area under the rule, down to the marker tray, and its width.
+const ROWS_TOP: float = 2.25
+const ROWS_BOTTOM: float = 0.95
+const TEXT_WIDTH: float = 2.84
+const ROW_FONT: int = 32
+## Up to this many orders each takes two lines (house and shelf, then the
+## box); more go one line each, smaller, so all of them fit.
+const TWO_LINE_ROWS: int = 4
 const BLUE_INK := Color("2a4d9b")
 const RED_INK := Color("c0392b")
 ## What each delivery outcome writes beside its row, and in which colour.
@@ -38,13 +47,25 @@ func _ready() -> void:
 ## orders (endless, tareas de Nacho N-101: no houses) the depot stays the lobby
 ## it is, and the board sets the goal and the bar instead: `endless_best`.
 func write(orders: Array[Dictionary], endless_best: int) -> void:
+	var count: int = mini(orders.size(), _rows.size())
+	var two_lines: bool = count <= TWO_LINE_ROWS
+	var pitch: float = (ROWS_TOP - ROWS_BOTTOM) / float(maxi(count, TWO_LINE_ROWS if two_lines else 1))
 	for row: int in range(_rows.size()):
+		var line: Label3D = _rows[row]
+		line.position.y = ROWS_TOP - row * pitch
+		_marks[row].position.y = line.position.y
+		line.font_size = ROW_FONT
 		_marks[row].text = ""
-		_rows[row].text = ""
-		if row < orders.size():
+		line.text = ""
+		if row < count:
 			var order: Dictionary = orders[row]
-			_rows[row].text = tr("WORLD_DEPOT_BOARD_ORDER") % [
-				int(order.house) + 1, order.code, order.trap, String(order.content).to_lower()]
+			var key: String = "WORLD_DEPOT_BOARD_ORDER" if two_lines else "WORLD_DEPOT_BOARD_ORDER_SHORT"
+			line.text = tr(key) % [int(order.house) + 1, order.code, order.trap, String(order.content).to_lower()]
+			# Never taller than its share of the board, never wider than it.
+			var tall: float = Layout.BODY_FONT.get_height(ROW_FONT) * (2 if two_lines else 1) * line.pixel_size
+			if tall > pitch * 0.92:
+				line.font_size = maxi(int(ROW_FONT * pitch * 0.92 / tall), 10)
+			DepotLabels.fit_label(line, TEXT_WIDTH - 0.25)
 	_title.text = tr(TITLE)
 	_rule.text = tr(RULE)
 	if orders.is_empty():
@@ -53,6 +74,10 @@ func write(orders: Array[Dictionary], endless_best: int) -> void:
 		_rows[0].text = tr("WORLD_DEPOT_ENDLESS_ROW")
 		_rows[1].text = (tr("WORLD_DEPOT_ENDLESS_BEST") % endless_best) if endless_best > 0 \
 				else tr("WORLD_DEPOT_ENDLESS_NO_BEST")
+		DepotLabels.fit_label(_rows[0], TEXT_WIDTH - 0.25)
+		DepotLabels.fit_label(_rows[1], TEXT_WIDTH - 0.25)
+	DepotLabels.fit_label(_title, TEXT_WIDTH - 0.5)
+	DepotLabels.fit_label(_rule, TEXT_WIDTH)
 
 
 ## Ticks a house's row with how its delivery went.
@@ -91,14 +116,17 @@ func _build_labels() -> void:
 			RED_INK, Layout.DISPLAY_FONT, 0.0045, 0)
 	_rule = DepotLabels.text(self, tr(RULE), Vector3(0.0, 2.4, 0.035), 0.0, 26, RED_INK, Layout.BODY_FONT, 0.0045, 0)
 	_rule.name = "Rule"
+	# write() spaces the rows to fit however many orders there are.
 	for row: int in range(ROWS):
-		var y: float = 2.1 - row * 0.36
 		# Left-aligned from the board's left margin, whatever its length.
-		var line := DepotLabels.text(self, "", Vector3(-1.42, y, 0.035), 0.0, 32, BLUE_INK, Layout.BODY_FONT, 0.0045, 0)
+		var line := DepotLabels.text(self, "", Vector3(-1.42, ROWS_TOP, 0.035), 0.0, ROW_FONT, BLUE_INK,
+				Layout.BODY_FONT, 0.0045, 0)
 		line.name = "Row%d" % row
 		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		line.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		_rows.append(line)
-		var mark_label := DepotLabels.text(self, "", Vector3(1.38, y, 0.035), 0.0, 40, MARK_MISSED[1],
+		var mark_label := DepotLabels.text(self, "", Vector3(1.38, ROWS_TOP, 0.035), 0.0, 40, MARK_MISSED[1],
 				Layout.DISPLAY_FONT, 0.005, 0)
 		mark_label.name = "Mark%d" % row
+		mark_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		_marks.append(mark_label)

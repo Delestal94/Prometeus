@@ -90,6 +90,23 @@ antes de seguir con cualquier archivo listado acá.
 
 ## El criterio: dividir por carpeta, no solo por tema
 
+## Aviso activo: repaso del depósito tras playtest (2026-09-27)
+
+Nacho, pedido del usuario. Toca tres archivos de Slatex y la zona compartida; ninguna firma cambia:
+
+- `presentation/reference_truck.gd` (`_build_cargo_fittings`): la viga naranja del estante
+  queda 1 cm sobre la placa del piso. Antes compartían plano y parpadeaba (z-fighting).
+- `package/package_feedback.gd` (`_refresh_state_badge`): el cartel "OK ✓" sobre cada caja
+  sana se oculta. "EN RIESGO" y "ARRUINADA" se siguen viendo (`test_trap_visual_feedback`).
+- `traps/order_balancer.gd` (`build_order`): si la curva no da un pedido para 5-7 casas,
+  se sortea de nuevo sin presupuesto ni tope de trampas difíciles. Antes una tripulación de 8
+  se quedaba con la pizarra vacía. Lo que la curva ya resolvía no cambia (`test_order_balancer`).
+- `level_base.gd` (zona compartida, `_on_peer_level_ready`): si entra gente antes de salir y
+  la ruta tiene menos casas que pasajeros, el host reinicia solo a los 3 s. Reemplaza el aviso de
+  "reiniciá con R".
+
+Hacer `git pull` antes de tocar esos archivos.
+
 Aviso 2026-09-25: dirección sonora tranquila solicitada por el usuario, tomando
 como referencia la sensación de calma de Minecraft. Se ajustan
 `presentation/ingame_music.gd` (pausas, fundidos y tensión sin desafinar) y la zona

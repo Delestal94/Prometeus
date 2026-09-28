@@ -4,6 +4,11 @@ extends RefCounted
 ## session seed and inputs produce the same house order on every peer.
 
 
+## The fallback's rules: runs past the hard-pair limit and no budget at all.
+const RELAXED_RUNS: int = 10
+const RELAXED_BUDGET: int = 1 << 30
+
+
 static func build_order(available_traps: Array, house_count: int, completed_runs: int,
 		rng: RandomNumberGenerator) -> Array[StringName]:
 	var traps := _unique_traps(available_traps)
@@ -15,6 +20,13 @@ static func build_order(available_traps: Array, house_count: int, completed_runs
 	var budget := 4 + target + mini(maxi(completed_runs, 0), 6)
 	var result: Array[StringName] = []
 	if _fill_order(traps, target, maxi(completed_runs, 0), budget, rng, result, 0, 0):
+		return result
+	# A big crew (5-7 houses) can't fit the curve: the budget is spent and the
+	# cycle rule forces both hard traps in. An order for every house matters
+	# more than the curve, so it's drawn again with only the cycle rule and
+	# the easy box kept. Every order the curve can fit is left as it was.
+	result.clear()
+	if _fill_order(traps, target, RELAXED_RUNS, RELAXED_BUDGET, rng, result, 0, 0):
 		return result
 	return []
 

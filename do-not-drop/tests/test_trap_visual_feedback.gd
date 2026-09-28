@@ -36,10 +36,12 @@ func _test_growing_weight_visuals() -> void:
 	var state_badge: Label3D = box.get_node(^"AccessibleState") as Label3D
 	_expect(box.scale.is_equal_approx(Vector3.ONE), "Starts at normal size")
 	_expect(state_badge.text == "OK ✓", "The box itself starts with an OK shape marker")
+	_expect(not state_badge.visible, "A healthy box shows no floating marker")
 
 	var package_id: StringName = package.get(&"package_id")
 	feedback.call(&"_on_package_state_changed", package_id, ITrapBehavior.TrapState.AT_RISK)
 	_expect(state_badge.text == "EN RIESGO !", "The box itself shows the at-risk shape marker")
+	_expect(state_badge.visible, "An at-risk box shows its marker")
 	feedback.call(&"_on_package_state_changed", package_id, ITrapBehavior.TrapState.RUINED)
 	_expect(state_badge.text == "ARRUINADA ✕", "The box itself shows the ruined shape marker")
 	feedback.call(&"_on_integrity_changed", package_id, 100.0, 100.0)

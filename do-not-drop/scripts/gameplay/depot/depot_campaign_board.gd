@@ -26,9 +26,10 @@ const SAFETY_GREEN := Color("1f8a5b")
 const CORK := Color("c9a26b")
 ## Sign: on the front wall's inner face, right of the door, facing inward.
 const SIGN_AT := Vector3(6.6, 3.1, 0.17)
-## Photo wall: on the right wall above the break area, facing -X, clear of
-## the team's corkboard (depot.gd _build_team_board(), from z 21.4).
-const WALL_AT := Vector3(14.92, 2.95, 19.9)
+## Photo wall: on the right wall above the lockers, facing -X, between two
+## of the hall's columns (DepotLayout.PORTAL_FRAMES, z 13.6 and 19.2). Above
+## the break area a column stood in front of it and hid half the photos.
+const WALL_AT := Vector3(14.92, 2.95, 16.4)
 const WALL_SIZE := Vector2(2.3, 1.05)
 const PHOTO_SIZE := Vector2(0.44, 0.3)
 ## A pushpin at each photo's top edge, in a few colours.
