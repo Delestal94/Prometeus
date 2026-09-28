@@ -67,7 +67,10 @@ var _last_prompt: String = ""
 var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
-var _ping_input := PlayerPingInput.new(self)
+## Loaded by path because isolated `--script` tests run before Godot refreshes
+## the editor-managed global class cache after this helper was split out.
+const PING_INPUT_PATH: String = "res://scripts/gameplay/player/player_ping_input.gd"
+var _ping_input: Variant = (load(PING_INPUT_PATH) as Script).new(self)
 const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")

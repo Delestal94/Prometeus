@@ -1,11 +1,25 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-25
+> Última actualización: 2026-09-28
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
+
+## Aviso activo: cargas headless de helpers separados (2026-09-28)
+
+Slatex corrigió dos dependencias que fallaban únicamente al ejecutar pruebas
+aisladas con `--script`, antes de que Godot reconstruyera la caché global de clases:
+
+- **Zona compartida `presentation/synth_audio.gd`:** los generadores de
+  `synth_audio_scenes.gd` se cargan por ruta y de forma diferida. No cambia ninguna
+  función pública ni el audio generado; evita depender del nombre global nuevo
+  `SynthAudioScenes` durante el parseo inicial.
+- **Dominio de Slatex `player/player.gd`:** `player_ping_input.gd` también se carga
+  por ruta al crear el jugador, sin cambiar la API ni el comportamiento de pings.
+
+Verificado con `tutorial`, `audio_polish`, `world_audio_levels` y `ping`: 4/4 verdes.
 
 ## Aviso activo: PR #10 al día con main y con el lint (2026-09-28)
 

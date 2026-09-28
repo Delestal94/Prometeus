@@ -10,12 +10,24 @@ extends RefCounted
 ## Without this, opening a box or ringing a door re-synthesized its sound on
 ## the very frame it had to play.
 static var _cache: Dictionary = {}
+const SCENE_SOUNDS_PATH: String = "res://scripts/presentation/synth_audio_scenes.gd"
+static var _scene_sounds_script: Script
 
 
 static func _cached(key: StringName, build: Callable) -> AudioStreamWAV:
 	if not _cache.has(key):
 		_cache[key] = build.call()
 	return _cache[key]
+
+
+## `--script` tests start before Godot rebuilds the editor-managed global
+## class cache. Load the recently split scene generators by path at runtime,
+## after this SynthAudio class has compiled, instead of relying on the
+## `SynthAudioScenes` global name during parsing.
+static func _scene_builder(method: StringName) -> Callable:
+	if _scene_sounds_script == null:
+		_scene_sounds_script = load(SCENE_SOUNDS_PATH) as Script
+	return Callable(_scene_sounds_script, method)
 
 
 ## Quiet harmonic exhaust loop. Integer periods keep the seam continuous;
@@ -927,36 +939,36 @@ static func _make_sheep_bleat() -> AudioStreamWAV:
 ## Scene sounds: built by SynthAudioScenes (see there for what each is),
 ## cached here like every other stream.
 static func doorbell_ding_dong() -> AudioStreamWAV:
-	return _cached(&"doorbell_ding_dong", SynthAudioScenes.make_doorbell_ding_dong)
+	return _cached(&"doorbell_ding_dong", _scene_builder(&"make_doorbell_ding_dong"))
 
 
 static func neighbor_cheer() -> AudioStreamWAV:
-	return _cached(&"neighbor_cheer", SynthAudioScenes.make_neighbor_cheer)
+	return _cached(&"neighbor_cheer", _scene_builder(&"make_neighbor_cheer"))
 
 
 static func comic_ruin_stinger() -> AudioStreamWAV:
-	return _cached(&"comic_ruin_stinger", SynthAudioScenes.make_comic_ruin_stinger)
+	return _cached(&"comic_ruin_stinger", _scene_builder(&"make_comic_ruin_stinger"))
 
 
 static func comic_boom() -> AudioStreamWAV:
-	return _cached(&"comic_boom", SynthAudioScenes.make_comic_boom)
+	return _cached(&"comic_boom", _scene_builder(&"make_comic_boom"))
 
 
 static func forklift_motor_loop() -> AudioStreamWAV:
-	return _cached(&"forklift_motor_loop", SynthAudioScenes.make_forklift_motor_loop)
+	return _cached(&"forklift_motor_loop", _scene_builder(&"make_forklift_motor_loop"))
 
 
 static func river_flow_loop() -> AudioStreamWAV:
-	return _cached(&"river_flow_loop", SynthAudioScenes.make_river_flow_loop)
+	return _cached(&"river_flow_loop", _scene_builder(&"make_river_flow_loop"))
 
 
 static func train_horn() -> AudioStreamWAV:
-	return _cached(&"train_horn", SynthAudioScenes.make_train_horn)
+	return _cached(&"train_horn", _scene_builder(&"make_train_horn"))
 
 
 static func train_chug_loop() -> AudioStreamWAV:
-	return _cached(&"train_chug_loop", SynthAudioScenes.make_train_chug_loop)
+	return _cached(&"train_chug_loop", _scene_builder(&"make_train_chug_loop"))
 
 
 static func scanner_beep() -> AudioStreamWAV:
-	return _cached(&"scanner_beep", SynthAudioScenes.make_scanner_beep)
+	return _cached(&"scanner_beep", _scene_builder(&"make_scanner_beep"))
