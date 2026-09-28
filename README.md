@@ -248,6 +248,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_delivery_houses.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
 <godot> --headless --path do-not-drop --script res://tests/test_cargo_overboard.gd
+<godot> --headless --path do-not-drop --script res://tests/test_vehicle_faults.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_rescue.gd
 <godot> --headless --path do-not-drop --script res://tests/test_care_prompt_view.gd
@@ -384,6 +385,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   levantarla la cierra como rescatada y vuelve al estante, y si nadie la busca se pierde al vencer.
   N-213.4: abandonarla cierra el pedido de su casa como "PERDIDO" sin terminar la partida (aunque
   no quede otra caja), no admite foto y en los resultados se cobra como una casa sin entregar.
+- `test_vehicle_faults` — N-214.1: las averías del camión las decide el host con un golpe fuerte
+  (un bache no rompe nada), como mucho una por entrega (se reinicia con cada recorrido), se repiten
+  igual con la misma semilla y los mismos golpes, y `repair()` las saca de la lista de cada par.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos

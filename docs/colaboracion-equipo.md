@@ -7,6 +7,19 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: N-214.1 averías del camión, componente `VehicleFaults` (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-vehicle-faults`. Solo agrega; **ninguna firma cambia**,
+no se tocan archivos de Slatex y `vehicle.gd` sigue congelado:
+- `core/event_bus.gd` (zona compartida): señales nuevas `vehicle_fault_started(fault_id, impact_position)`
+  y `vehicle_fault_repaired(fault_id, method)`, relayadas por el host. Por ahora `fault_id` es
+  `&"rear_door"` o `&"mirror"` (veredicto de `critico-diseno`). Slatex: si querés avisarlas en el HUD
+  o contarlas en resultados (N-214.4), escuchalas ahí.
+- `gameplay/level_common.gd` (zona compartida): agrega el nodo `VehicleFaults` en cada par.
+- `gameplay/vehicle/vehicle_faults.gd` (nuevo): escucha `vehicle_impact`; con un golpe de fuerza ≥ 9
+  el host tira por semilla y rompe como mucho una cosa por entrega. Todavía no hay efecto visible ni
+  arreglo (N-214.2 y N-214.3), así que en el juego no cambia nada.
+
 ## Aviso activo: N-213.4 pedido "Perdido" para la caja abandonada en la ruta (2026-09-28)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-213-lost-order`. Suma funciones y un resultado nuevo,
