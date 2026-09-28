@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-28 (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
+> Última actualización: 2026-09-28 (N-213.4: abandonar la caja caída cierra su pedido como
+> "Perdido" sin terminar la partida; falta el gancho). Antes, el mismo día: (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
 > con cartel encima y se puede volver a subir; faltan el gancho y el pedido "Perdido"). Antes, el mismo día: (N-505 cerrada: la voz sintetizada de cada frase, con tono por
 > color de jugador). Antes, el mismo día: (N-505 parcial: rueda de ocho frases, enfriamiento de 1,5 s en el
 > host y la frase en el HUD del conductor; falta la voz sintetizada). Antes, el mismo día: (N-704 cerrada: diferencial corregido en los docs y veredictos de
@@ -823,10 +824,17 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
   premia `rescued` como antes).
 - [ ] **N-213.3** Caña o gancho de rescate (mejora de tienda, rama Supervivencia): desde la puerta trasera,
   un pasajero engancha una caja cercana sin frenar. El cliente solo manda la intención; el host resuelve.
-- [ ] **N-213.4** Abandonarlo cierra el pedido vacío (resultado "Perdido"), sin terminar la partida.
+- [x] **N-213.4** Abandonarlo cierra el pedido vacío (resultado "Perdido"), sin terminar la partida.
+  `COMMIT` — al vencer la ventana, `LevelCommon._check_lost_cargo()` llama a `Route.close_lost_order()`
+  antes de `mark_lost`: la casa queda resuelta con el resultado nuevo `&"lost"` (`DeliveryHouse.close_lost()`,
+  sin vecino en la puerta) y `RunManager` la saca de la carga, así que perder la última caja ya no corta la
+  partida. `RunManager.handed_over()` reemplaza los `!= &"missed"` (foto, plazos, pago de rescate); en
+  resultados, "PERDIDO ✕" y la línea "Paquetes perdidos en la ruta" con la multa de una casa sin entregar;
+  la pizarra del depósito marca "PERDIDO". "Abandonar" es dejar vencer la ventana: no hay botón aparte.
 - [ ] Tests `test_cargo_overboard.gd` (ventana, recogida, abandono) y ampliar el de red con dos clientes
   que intentan agarrar la misma caja. **Parcial (`d8a014b`):** `test_cargo_overboard.gd` cubre ventana,
-  cartel, recogida y pérdida al vencer; faltan el abandono (N-213.4) y el caso de red.
+  cartel, recogida y pérdida al vencer; faltan el abandono (N-213.4) y el caso de red. `COMMIT`: suma el
+  abandono (pedido "Perdido", la partida sigue, sin foto, línea propia en resultados); falta el caso de red.
 
 ### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
 

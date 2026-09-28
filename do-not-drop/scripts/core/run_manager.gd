@@ -220,8 +220,15 @@ func next_deadline() -> Dictionary:
 func _delivered_at(house_index: int) -> bool:
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
-			return StringName(entry["outcome"]) != &"missed"
+			return handed_over(StringName(entry["outcome"]))
 	return false
+
+
+## Whether the resident actually got a box: not a house the run drove past
+## (&"missed") nor an order closed empty because its box was left on the road
+## (&"lost", N-213.4). Only those can earn a photo, a met deadline or care pay.
+static func handed_over(outcome: StringName) -> bool:
+	return outcome != &"missed" and outcome != &"lost"
 
 
 ## Met / missed counts over this run's deadlines, from the delivery record.
@@ -231,7 +238,7 @@ func deadline_tally() -> Dictionary:
 	for deadline: Dictionary in deadlines:
 		var on_time: bool = false
 		for entry: Dictionary in deliveries:
-			if int(entry["house"]) == int(deadline["house"]) and StringName(entry["outcome"]) != &"missed":
+			if int(entry["house"]) == int(deadline["house"]) and handed_over(StringName(entry["outcome"])):
 				on_time = float(entry.get("at", INF)) <= float(deadline["seconds"])
 		if on_time:
 			met += 1
@@ -318,7 +325,7 @@ func register_delivery(house_index: int, outcome: StringName, package_id: String
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
 			return
-	var care: StringName = care_category(package_id) if outcome != &"missed" else &""
+	var care: StringName = care_category(package_id) if handed_over(outcome) else &""
 	if care.is_empty():
 		care = StringName(_pending_care.get(house_index, &""))
 	deliveries.append({
@@ -364,7 +371,7 @@ func submit_delivery_photo(house_index: int) -> bool:
 		return attach_delivery_photo(house_index)
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
-			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
+			if bool(entry["photo"]) or not handed_over(StringName(entry["outcome"])):
 				return false
 			entry["photo"] = true
 			_request_delivery_photo.rpc_id(NetworkManager.HOST_ID, house_index)
@@ -406,7 +413,7 @@ func _mark_photo(house_index: int) -> bool:
 		if int(entry["house"]) == house_index:
 			# Nothing was delivered at a house the run drove past: there's
 			# nothing for a photo to prove, and it used to earn the bonus.
-			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
+			if bool(entry["photo"]) or not handed_over(StringName(entry["outcome"])):
 				return false
 			entry["photo"] = true
 			return true
@@ -457,17 +464,18 @@ func _resolve_deliveries() -> Dictionary:
 	var points: int = 0
 	var delivered_count: int = 0
 	var missed: int = 0
+	var lost: int = 0
 	var photos: int = 0
 	var complaints: Array[Dictionary] = []
 	var rescued: Dictionary = {}
 	for entry: Dictionary in deliveries:
 		var outcome: StringName = StringName(entry["outcome"])
-		var has_photo: bool = bool(entry["photo"]) and outcome != &"missed"
+		var has_photo: bool = bool(entry["photo"]) and handed_over(outcome)
 		if has_photo:
 			photos += 1
 			points += POINTS_PHOTO_BONUS
 		var care: StringName = StringName(entry.get("care", ""))
-		if outcome != &"missed" and CARE_POINTS.has(care):
+		if handed_over(outcome) and CARE_POINTS.has(care):
 			# The resident inspected a rescued box: what they saw decides
 			# the pay, not the trap's bar or a roll for a complaint.
 			points += int(CARE_POINTS[care])
@@ -484,6 +492,11 @@ func _resolve_deliveries() -> Dictionary:
 				complaints.append(_complaint(entry, has_photo))
 			&"missed":
 				missed += 1
+				points -= PENALTY_MISSED_HOUSE
+			&"lost":
+				# Its box was left on the road (N-213.4): the resident waited
+				# for nothing, same as a door the run drove past.
+				lost += 1
 				points -= PENALTY_MISSED_HOUSE
 			&"delivered_at_risk":
 				# Handed over dented. Worth less than intact, and the
@@ -511,7 +524,7 @@ func _resolve_deliveries() -> Dictionary:
 	# sums as `points`, so the lines always add up to the score shown.
 	var counts: Dictionary = {}
 	for entry: Dictionary in deliveries:
-		if StringName(entry["outcome"]) != &"missed" and CARE_POINTS.has(StringName(entry.get("care", ""))):
+		if handed_over(StringName(entry["outcome"])) and CARE_POINTS.has(StringName(entry.get("care", ""))):
 			continue
 		counts[StringName(entry["outcome"])] = int(counts.get(StringName(entry["outcome"]), 0)) + 1
 	var breakdown: Array = []
@@ -526,12 +539,14 @@ func _resolve_deliveries() -> Dictionary:
 	_add_line(breakdown, "Plazos vencidos", int(tally["missed"]), -PENALTY_DEADLINE_MISSED)
 	_add_line(breakdown, "Fotos de entrega", photos, POINTS_PHOTO_BONUS)
 	_add_line(breakdown, "Vecinos sin su paquete", missed, -PENALTY_MISSED_HOUSE)
+	_add_line(breakdown, "Paquetes perdidos en la ruta", lost, -PENALTY_MISSED_HOUSE)
 	_add_line(breakdown, "Reclamos sin foto", unanswered, -COMPLAINT_PENALTY)
 	return {
 		"breakdown": breakdown,
 		"delivery_points": points,
 		"houses_delivered": delivered_count,
 		"houses_missed": missed,
+		"houses_lost": lost,
 		"photos": photos,
 		"complaints": complaints,
 	}

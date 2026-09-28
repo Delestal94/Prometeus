@@ -27,6 +27,7 @@ const MARKS: Dictionary = {
 	&"delivered_ok": ["WORLD_DEPOT_MARK_OK", Color("1f8a5b")],
 	&"delivered_at_risk": ["WORLD_DEPOT_MARK_OK", Color("d9822b")],
 	&"delivered_ruined": ["WORLD_DEPOT_MARK_RUINED", Color("c0392b")],
+	&"lost": ["WORLD_DEPOT_MARK_LOST", Color("c0392b")],
 }
 const MARK_MISSED: Array = ["WORLD_DEPOT_MARK_MISSED", Color("857a6e")]
 

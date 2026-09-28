@@ -139,6 +139,16 @@ var _segments: Array[RouteSegment] = []
 ## Overrides house_count before the node builds itself. Call before
 ## add_child()-ing this into the tree -- _ready() already builds geometry
 ## from house_count, same convention as any other @export here.
+## Host: closes the order whose box was left on the road (N-213.4). False
+## when no door is waiting for that box (Endless, or already resolved).
+func close_lost_order(package_id: StringName) -> bool:
+	for house: DeliveryHouse in houses:
+		if is_instance_valid(house) and not house.delivered and house.assigned_package_id == package_id:
+			house.close_lost()
+			return true
+	return false
+
+
 func configure_houses(count: int) -> void:
 	house_count = maxi(count, 1)
 
