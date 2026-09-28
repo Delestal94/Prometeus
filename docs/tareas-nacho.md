@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-28 (hito M6: 15 tareas tomadas de `analisis-competencia-backseat-rv.md`,
+> Última actualización: 2026-09-28 (N-704 cerrada: diferencial corregido en los docs y veredictos de
+> `critico-diseno` en N-212, N-214 y N-112 — esta última en contra). Antes, el mismo día: (hito M6: 15 tareas tomadas de `analisis-competencia-backseat-rv.md`,
 > asignadas a Nacho aunque varias tocan el dominio de Slatex; N-907 nace pospuesta ⏸). Antes, el mismo día:
 > N-901 y todo lo de publicar/promocionar pospuesto a la iteración de lanzamiento. Antes: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
 > M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
@@ -764,16 +765,19 @@ congelados: nada de esta sección los edita; lo que necesita el camión se cuelg
 | N-114 | M-12 | Caja de cambios manual como variante | C |
 | N-907 | M-13 | Friend Pass y demo separada (⏸ pospuesta) | C |
 
-### N-704 · Corregir el diferencial y criticar las ideas grandes — A · `Opus 5.5 · low` · Aviso: no
+### N-704 · Corregir el diferencial y criticar las ideas grandes — A · `Opus 5.5 · low` · Aviso: no · **[x] `c0bfeb5`**
 
-- [ ] **N-704.1** `docs/definicion-proyecto.md`: quitar "no encontramos roles asimétricos replicados"
+- [x] **N-704.1** `docs/definicion-proyecto.md`: quitar "no encontramos roles asimétricos replicados"
   (Backseat Drivers los tiene desde oct-2025). Diferencial nuevo: asimetría **entre pasajeros** (cada uno
   con su trampa) + la carga como protagonista, con revisión del cliente en la puerta.
-- [ ] **N-704.2** `docs/investigacion-mercado.md` y `docs/marketing/competidores-manejo.md` (N-904): sumar
+- [x] **N-704.2** `docs/investigacion-mercado.md` y `docs/marketing/competidores-manejo.md` (N-904): sumar
   RV There Yet? (4,5 M copias, ~8 USD, game jam) y Backseat Drivers (Friend Pass, ≈78 % positivas).
-- [ ] **N-704.3** Pasar N-212, N-214 y N-112 por `critico-diseno` antes de empezarlas; anotar el
+- [x] **N-704.3** Pasar N-212, N-214 y N-112 por `critico-diseno` antes de empezarlas; anotar el
   veredicto en cada tarea.
 - Hecho cuando: los tres docs dicen lo mismo sobre el diferencial y las tres tareas tienen veredicto.
+- Hecho: `definicion-proyecto.md`, `investigacion-mercado.md` y `competidores-manejo.md` dicen el mismo
+  diferencial (asimetría entre pasajeros + la carga protagonista, revisada en la puerta) y suman RV There Yet?
+  y Backseat Drivers. `critico-diseno`: N-212 y N-214 a favor con cambios, N-112 en contra (veredictos abajo).
 
 ### N-505 · Indicaciones rápidas con voz de personaje — A · `Opus 5.5 · high` · Aviso: sí (UI y jugador de Slatex, `synth_audio.gd` solo funciones nuevas)
 
@@ -803,6 +807,14 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
 
 ### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
 
+> **Veredicto `critico-diseno` (N-704.3, 2026-09-28): a favor con cambios.** Reutiliza el kit y da
+> historias para resultados, pero 2 de las 5 averías dependen de lluvia o noche, el asiento flojo no se ve y
+> sumar avería a un choque agranda el error. Condiciones: primera versión con **2 averías** (puerta trasera
+> que se abre sola, enganchada con N-213, y espejo reemplazado por el celular); cada avería se avisa con
+> sonido y algo visible en el golpe; **como mucho 1 por entrega**, ninguna saca al conductor ni va directo a
+> RUINED; el repuesto cuesta menos que lo que se pierde sin arreglarlo pero más que la cinta.
+> Limpiaparabrisas, faro y asiento esperan a que haya lluvia y noche en las rutas.
+
 - [ ] **N-214.1** Componente `VehicleFaults` fuera de `vehicle.gd`: escucha los impactos y decide averías en
   el host (una por golpe fuerte como máximo, con tope por entrega).
 - [ ] **N-214.2** Averías: puerta trasera que se abre sola, espejo caído, limpiaparabrisas roto (solo con
@@ -815,6 +827,13 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
 ### N-212 · Voz por proximidad — A · `Opus 5.5 · xhigh` · Aviso: sí (jugador y red)
 
 Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con Steam.
+
+> **Veredicto `critico-diseno` (N-704.3, 2026-09-28): a favor con cambios.** La voz posicional da los clips
+> (el "¡FRENÁ!" que el conductor no oye), pero cuesta L, toca red y jugador, y los bugs de voz fueron la
+> queja número uno en los dos juegos. Condiciones: empezarla **después de N-505**; solo Steam (N-212.4 se
+> resuelve "LAN sin voz"); tope de 5 días y, si no anda estable con 5 jugadores, se congela; interruptor
+> general, pulsar para hablar por defecto y silenciar por jugador; el filtro "a través de la chapa" es
+> extra (alcanza con atenuación 3D). Sugiere bajarla a prioridad B (no es condición para la demo).
 
 - [ ] **N-212.1** Steam: captura y envío con la voz de GodotSteam (`startVoiceRecording` / `getVoice` /
   `decompressVoice`) por un canal no confiable, fuera de la simulación autoritativa.
@@ -880,6 +899,13 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 - [ ] Guardado a mitad de camino en cada parada. Test de la duración con el bot de N-102.
 
 ### N-112 · Modo party "Clientes a bordo" — C · `Opus 5.5 · xhigh` · Aviso: sí (modo nuevo, zona compartida)
+
+> **Veredicto `critico-diseno` (N-704.3, 2026-09-28): en contra; postergar a después del lanzamiento.**
+> Mete un rol con objetivo opuesto al grupo en un juego cuyo pilar es cooperar; con 5 jugadores como máximo,
+> cada saboteador es un cargador menos; el "pasajero caótico" ya son las trampas; el griefing sigue sin
+> resolver y un modo nuevo en la zona compartida cuesta M-L. Alternativa barata si se retoma: carta/evento de
+> ruta "Cliente a bordo" con un NPC que molesta 30-60 s, manejado por el host y reutilizando bocina y radio
+> (N-406). Revisarla como contenido de actualización cuando haya datos de jugadores reales.
 
 - [ ] Solo si N-704.3 le da luz verde. Uno o dos jugadores son pasajeros caóticos (cliente apurado,
   chico) que ganan puntos propios molestando dentro de límites: bocina, radio, abrir una caja ajena.
