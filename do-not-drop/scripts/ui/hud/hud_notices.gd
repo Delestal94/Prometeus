@@ -29,12 +29,29 @@ func _ready() -> void:
 
 func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
 	var who: String = tr("HUD_YOU") if peer_id == NetworkManager.local_id() else tr("UI_PLAYER_N") % peer_id
-	toast("%s  %s:  %s" % [_ping_arrow(world_position), who, label], 40)
+	var text: String = PingCatalogData.display_text(label)
+	toast("%s  %s:  %s" % [_ping_arrow(world_position), who, text], 40)
 	hud.ping_label.text = ""
 	hud.ping_indicator.text = ""
+	# The driver's minimal HUD (jugabilidad-paquetes-rescate.md, "pedidos de
+	# freno"): their eyes are on the road, so a crewmate's callout also goes
+	# big in the middle of the screen, in the phrase's colour.
+	if peer_id != NetworkManager.local_id() and local_is_driving():
+		var option: Dictionary = PingCatalogData.option(label)
+		hud.ping_indicator.text = "%s %s" % [option["icon"], text]
+		hud.ping_indicator.add_theme_color_override(&"font_color", option["color"])
 	hud.ping_seconds_left = PING_DISPLAY_SECONDS
 	if peer_id != NetworkManager.local_id():
 		_mark_pinger(peer_id, label)
+
+
+## Whether this client's player is the one at the wheel right now.
+func local_is_driving() -> bool:
+	for vehicle: Node in get_tree().get_nodes_in_group(&"vehicle"):
+		var driver: Variant = vehicle.get(&"driver_peer_id")
+		if driver is int and driver == NetworkManager.local_id():
+			return true
+	return false
 
 
 func _mark_pinger(peer_id: int, label: String) -> void:

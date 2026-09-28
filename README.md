@@ -214,6 +214,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_progress_ui.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
+<godot> --headless --path do-not-drop --script res://tests/test_quick_callouts.gd
 <godot> --headless --path do-not-drop --script res://tests/test_tutorial.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_horn.gd
@@ -545,9 +546,12 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   real).
 - `test_progress_ui` — cada desbloqueo explica su premio y separa el avance de entregas
   y puntos; los récords alternan entre Entrega y Endless con fecha y tripulación legibles.
-- `test_ping` — la rueda de pings: las seis etiquetas llegan por
+- `test_ping` — la rueda de pings: las ocho frases llegan por
   `EventBus.request_ping()`, se atribuyen al emisor y `Player._send_ping()` conserva
   la posición y el mensaje reales.
+- `test_quick_callouts` — indicaciones rápidas (N-505): la rueda ofrece las frases pedidas
+  con texto en `strings_ui.csv`, el host corta el spam con 1,5 s por jugador y el
+  conductor ve en el centro de su HUD la frase de otro tripulante (no la propia).
 - `test_tutorial` — cada trampa tiene una ficha completa, el tutorial muestra solo
   las desbloqueadas, el primer perfil resalta “Cómo jugar” y cada consejo en partida
   aparece una sola vez antes de quedar guardado en el perfil.
