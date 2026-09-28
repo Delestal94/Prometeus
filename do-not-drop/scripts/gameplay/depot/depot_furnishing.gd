@@ -143,8 +143,10 @@ func _build_dispatch_shelves(kit: DepotKit) -> void:
 					var tag := DepotLabels.text(_root, code, Vector3(face, Layout.LEVEL_TOPS[level] - 0.07, z),
 							side * PI * 0.5, 30, Layout.INK, Layout.DISPLAY_FONT, 0.004, 0)
 					tag.name = "Tag%s_%d" % [code, 0 if side < 0 else 1]
+					# The card's face 6 mm behind the words: it used to stand 1 mm
+					# in front of them, and they flickered through it.
 					kit.box(Vector3(0.012, 0.09, 0.36),
-							Vector3(face - side * 0.005, Layout.LEVEL_TOPS[level] - 0.07, z),
+							Vector3(face - side * 0.012, Layout.LEVEL_TOPS[level] - 0.07, z),
 							DepotKit.flat(Layout.PAPER, 0.8))
 		# Aisle sign hanging over the unit.
 		# Named as the board reads ("ESTANTE A-3").
@@ -192,15 +194,95 @@ func _build_workshop(kit: DepotKit) -> void:
 	kit.box(Vector3(0.4, 0.3, 0.3), Vector3(13.1, 0.85, 2.2), dark)
 	kit.cylinder(0.22, 0.1, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(14.9, 1.6, 1.5)),
 			DepotKit.flat(Color("ffc93c"), 0.6), 14)
-	# Customisation kiosk facing the crew as they come round the truck.
-	kit.box(Vector3(0.7, 1.2, 0.5), Vector3(4.6, 0.6, 9.6), dark, true)
-	kit.box(Vector3(0.66, 0.5, 0.06), Vector3(4.6, 1.45, 9.8), dark)
-	kit.box(Vector3(0.56, 0.4, 0.02), Vector3(4.6, 1.45, 9.84), DepotKit.glow(Color("4cc9f0"), 1.1))
-	DepotLabels.text(_root, tr("WORLD_DEPOT_WORKSHOP"), Vector3(4.6, 1.56, 9.86), 0.0, 40, Layout.PAPER,
-			Layout.DISPLAY_FONT, 0.004, 4)
-	DepotLabels.text(_root, tr("WORLD_DEPOT_WORKSHOP_SUB"), Vector3(4.6, 1.38, 9.86), 0.0, 26, Layout.INK,
-			Layout.BODY_FONT, 0.004, 0)
+	_build_workshop_floor(kit)
+	_build_workshop_kiosk()
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_WORKSHOP"), Vector3(11.5, 3.9, 6.0), 0.0, Layout.WORKSHOP_RED)
+
+
+## The workshop's own floor (sealed dark concrete with a red border, so the
+## area reads as a place and not as more hall), a red band on the wall behind
+## it, a work lamp over the bench, an oil drum and a stack of spare tyres.
+func _build_workshop_floor(kit: DepotKit) -> void:
+	var area: Rect2 = Layout.WORKSHOP_FLOOR
+	var centre: Vector2 = area.get_center()
+	var epoxy := BoxMesh.new()
+	epoxy.size = Vector3(area.size.x, 0.008, area.size.y)
+	kit.add_mesh(epoxy, Transform3D(Basis.IDENTITY, Vector3(centre.x, Layout.FLOOR_TOP + 0.004, centre.y)),
+			DepotKit.detailed(Color("59636a"), "plaster", 2.0, 0.45), false)
+	var border := DepotKit.flat(Layout.WORKSHOP_RED, 0.6)
+	for edge: Array in [[Vector3(area.size.x, 0.004, 0.1), Vector3(centre.x, 0.0, area.position.y + 0.05)],
+			[Vector3(area.size.x, 0.004, 0.1), Vector3(centre.x, 0.0, area.end.y - 0.05)],
+			[Vector3(0.1, 0.004, area.size.y), Vector3(area.position.x + 0.05, 0.0, centre.y)]]:
+		var line := BoxMesh.new()
+		line.size = edge[0]
+		var line_at: Vector3 = (edge[1] as Vector3) + Vector3(0.0, Layout.FLOOR_TOP + 0.01, 0.0)
+		kit.add_mesh(line, Transform3D(Basis.IDENTITY, line_at), border, false)
+	kit.box(Vector3(0.02, 0.16, area.size.y), Vector3(Layout.HALF_WIDTH - 0.07, Layout.LINER_SPLIT - 0.12, centre.y),
+			border)
+	kit.box(Vector3(0.3, 0.06, 1.6), Vector3(14.3, 2.9, 5.5), DepotKit.flat(Color("263238"), 0.5, 0.4))
+	kit.box(Vector3(0.24, 0.02, 1.5), Vector3(14.3, 2.865, 5.5), DepotKit.glow(Color("fff1d6"), 2.0))
+	var bench_lamp := OmniLight3D.new()
+	bench_lamp.name = "WorkshopLamp"
+	bench_lamp.position = Vector3(14.0, 2.6, 5.5)
+	bench_lamp.light_color = Color("fff1d6")
+	bench_lamp.light_energy = 0.8
+	bench_lamp.omni_range = 3.5
+	_root.add_child(bench_lamp)
+	var floor_y: float = Layout.FLOOR_TOP
+	kit.cylinder(0.29, 0.88, Transform3D(Basis.IDENTITY, Vector3(14.45, 0.44 + floor_y, 0.55)),
+			DepotKit.flat(Color("2f5d8a"), 0.5, 0.3), 16, true)
+	kit.cylinder(0.3, 0.03, Transform3D(Basis.IDENTITY, Vector3(14.45, 0.895 + floor_y, 0.55)),
+			DepotKit.flat(Color("c9ced0"), 0.4, 0.6), 16)
+	for index: int in range(3):
+		var tyre_at := Vector3(11.4, 0.1 + index * 0.21 + floor_y, 0.75)
+		kit.cylinder(0.34, 0.2, Transform3D(Basis.IDENTITY, tyre_at), DepotKit.flat(Color("1b1f22"), 0.9), 16,
+				index == 0)
+		kit.cylinder(0.18, 0.205, Transform3D(Basis.IDENTITY, tyre_at), DepotKit.flat(Color("8a9499"), 0.4, 0.6), 12)
+
+
+## A proper terminal instead of a box with a screen: plinth, slim column, a
+## tilted screen in a bezel with a red header. Every word on it is fitted to
+## the glass (DepotLabels.fit_label), so no language runs off the edge.
+func _build_workshop_kiosk() -> void:
+	var kiosk := Node3D.new()
+	kiosk.name = "WorkshopKiosk"
+	kiosk.position = Layout.KIOSK_AT + Vector3(0.0, Layout.FLOOR_TOP, 0.0)
+	# Its front (local +Z) toward the hall, -X.
+	kiosk.rotation.y = -PI * 0.5
+	_root.add_child(kiosk)
+	var kit := DepotKit.new(kiosk, "KioskColliders")
+	var body := DepotKit.flat(Color("2b3338"), 0.45, 0.35)
+	kit.box(Vector3(0.8, 0.06, 0.6), Vector3(0.0, 0.03, 0.0), body)
+	kit.box(Vector3(0.36, 1.0, 0.26), Vector3(0.0, 0.56, -0.04), body, true)
+	kit.box(Vector3(0.37, 0.05, 0.27), Vector3(0.0, 0.3, -0.04), DepotKit.flat(Layout.WORKSHOP_RED, 0.45, 0.2))
+	var head := Node3D.new()
+	head.name = "Head"
+	head.position = Vector3(0.0, 1.38, 0.0)
+	head.rotation.x = deg_to_rad(-18.0)
+	kiosk.add_child(head)
+	var head_kit := DepotKit.new(head, "KioskHeadColliders")
+	var screen := Vector2(0.78, 0.54)
+	head_kit.box(Vector3(screen.x + 0.08, screen.y + 0.08, 0.07), Vector3.ZERO, body)
+	head_kit.box(Vector3(screen.x, screen.y, 0.01), Vector3(0.0, 0.0, 0.04), DepotKit.glow(Color("1d2b33"), 1.0))
+	head_kit.box(Vector3(screen.x, 0.14, 0.012), Vector3(0.0, screen.y * 0.5 - 0.07, 0.042),
+			DepotKit.glow(Layout.WORKSHOP_RED, 1.0))
+	# Paint swatches along the bottom of the screen: what the truck can wear.
+	var swatches: Array[Color] = [Color("dde2e8"), Color("7b52b9"), Color("2dd4a3"), Color("ff5e5b"), Color("ffc93c"),
+			Color("4cc9f0")]
+	for index: int in range(swatches.size()):
+		var x: float = (index - (swatches.size() - 1) * 0.5) * 0.11
+		head_kit.box(Vector3(0.08, 0.06, 0.012), Vector3(x, -screen.y * 0.5 + 0.08, 0.042),
+				DepotKit.glow(swatches[index], 1.0))
+	head_kit.commit("KioskHead")
+	kit.commit("Kiosk")
+	var title := DepotLabels.text(head, tr("WORLD_DEPOT_WORKSHOP"), Vector3(0.0, screen.y * 0.5 - 0.07, 0.05), 0.0, 40,
+			Layout.PAPER, Layout.DISPLAY_FONT, 0.004, 0)
+	title.name = "KioskTitle"
+	DepotLabels.fit_label(title, screen.x - 0.1)
+	var sub := DepotLabels.text(head, tr("WORLD_DEPOT_WORKSHOP_SUB"), Vector3(0.0, 0.02, 0.05), 0.0, 26,
+			Color("cfe8f2"), Layout.BODY_FONT, 0.004, 0)
+	sub.name = "KioskSubtitle"
+	DepotLabels.fit_label(sub, screen.x - 0.12)
 
 
 func _build_lockers(kit: DepotKit) -> void:
@@ -240,7 +322,32 @@ func _build_lockers(kit: DepotKit) -> void:
 	vanity.light_energy = 0.9
 	vanity.omni_range = 2.6
 	_root.add_child(vanity)
-	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_LOCKERS"), Vector3(13.2, 3.4, 15.5), -PI * 0.5,
+	# Rubber mat under the bench, the row's own floor.
+	var mat := BoxMesh.new()
+	mat.size = Vector3(2.3, 0.008, 5.6)
+	kit.add_mesh(mat, Transform3D(Basis.IDENTITY, Vector3(13.55, Layout.FLOOR_TOP + 0.004, 15.6)),
+			DepotKit.detailed(Color("35494f"), "plaster", 0.8, 0.95), false)
+	# On top of the lockers: hard hats and folded hi-vis vests, turn about.
+	var helmet := SphereMesh.new()
+	helmet.radius = 0.14
+	helmet.height = 0.14
+	helmet.is_hemisphere = true
+	helmet.radial_segments = 12
+	helmet.rings = 4
+	for index: int in range(8):
+		var z: float = 13.3 + index * 0.62
+		if index % 2 == 0:
+			kit.add_mesh(helmet, Transform3D(Basis.IDENTITY, Vector3(14.62, 1.975, z)),
+					DepotKit.flat(Color("ffc93c") if index % 4 == 0 else Layout.PAPER, 0.4))
+		else:
+			kit.box(Vector3(0.34, 0.08, 0.3), Vector3(14.62, 2.015, z), DepotKit.flat(Color("ff9f1c"), 0.8))
+			kit.box(Vector3(0.345, 0.02, 0.05), Vector3(14.62, 2.03, z), DepotKit.flat(Color("e8ebe4"), 0.4))
+	# Laundry hamper at the start of the row.
+	kit.cylinder(0.24, 0.62, Transform3D(Basis.IDENTITY, Vector3(13.8, 0.31 + Layout.FLOOR_TOP, 12.75)),
+			DepotKit.flat(Color("3f7f8c"), 0.8), 14, true)
+	kit.box(Vector3(0.3, 0.12, 0.26), Vector3(13.8, 0.66, 12.75), DepotKit.flat(Color("ff9f1c"), 0.9), false, 0.3)
+	# High enough to hang clear over the photo wall behind it.
+	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_LOCKERS"), Vector3(13.2, 4.25, 15.5), -PI * 0.5,
 			Layout.LOCKERS_TEAL)
 
 
@@ -330,8 +437,23 @@ func _build_office(kit: DepotKit) -> void:
 			true)
 	kit.box(Vector3(0.12, 0.6, Layout.DEPTH - z0), Vector3(x0, 2.7, (z0 + Layout.DEPTH) * 0.5), panel)
 	kit.box(Vector3(0.12, 2.4, 0.12), Vector3(x0, 1.2, Layout.DEPTH - 1.3), frame)
-	kit.box(Vector3(0.9, 2.1, 0.05), Vector3(x0 - 0.02, 1.05, Layout.DEPTH - 0.8), DepotKit.flat(Color("2f7a64"), 0.6),
-			false, 0.0)
+	var door_z: float = Layout.DEPTH - 0.8
+	kit.box(Vector3(0.05, 2.1, 0.9), Vector3(x0 - 0.02, 1.05 + Layout.FLOOR_TOP, door_z),
+			DepotKit.flat(Color("2f7a64"), 0.6))
+	# The door's frame, a handle and a mat, so the way in reads from the hall.
+	for z: float in [Layout.DEPTH - 1.29, Layout.DEPTH - 0.31]:
+		kit.box(Vector3(0.14, 2.2, 0.08), Vector3(x0 - 0.02, 1.1 + Layout.FLOOR_TOP, z), frame)
+	kit.box(Vector3(0.14, 0.1, 1.06), Vector3(x0 - 0.02, 2.2 + Layout.FLOOR_TOP, door_z), frame)
+	kit.box(Vector3(0.05, 0.04, 0.16), Vector3(x0 - 0.07, 1.05, Layout.DEPTH - 1.1),
+			DepotKit.flat(Color("c9ced0"), 0.3, 0.8))
+	var mat := BoxMesh.new()
+	mat.size = Vector3(0.9, 0.008, 1.0)
+	kit.add_mesh(mat, Transform3D(Basis.IDENTITY, Vector3(x0 - 0.6, Layout.FLOOR_TOP + 0.004, door_z)),
+			DepotKit.flat(Color("2b3136"), 0.95), false)
+	var plate := DepotLabels.text(_root, tr("WORLD_DEPOT_OFFICE"), Vector3(x0 - 0.08, 2.55, door_z), -PI * 0.5, 36,
+			Layout.PAPER, Layout.DISPLAY_FONT, 0.005, 8)
+	plate.name = "OfficeDoorSign"
+	DepotLabels.fit_label(plate, 1.0)
 	kit.box(Vector3(Layout.HALF_WIDTH - x0 + 0.1, 0.1, Layout.DEPTH - z0 + 0.1),
 			Vector3((x0 + Layout.HALF_WIDTH) * 0.5, 3.05, (z0 + Layout.DEPTH) * 0.5), frame)
 	for x: float in [x0, 11.0, 13.2]:

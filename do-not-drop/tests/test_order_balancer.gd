@@ -40,6 +40,18 @@ func _initialize() -> void:
 				saw_two_hard_after_ten = true
 	_expect(saw_two_hard_after_ten, "Difficulty-4 pairs become eligible after 10 completed runs")
 
+	# A full crew (8 players, 7 houses) still gets a box for every house, with
+	# every trap available or only the starters (they had none: the curve
+	# can't fit 7 houses, and the board came up empty).
+	for houses: int in range(5, 8):
+		for seed_value: int in range(200):
+			for pool: Array in [traps, starter]:
+				var big := _build(pool, houses, 0, seed_value)
+				_expect(big.size() == houses,
+						"A crew with %d houses gets %d orders, got %s (seed %d)" % [houses, houses, big, seed_value])
+				_expect(big == _build(pool, houses, 0, seed_value),
+						"A big crew's order is deterministic (seed %d)" % seed_value)
+
 	if _failures == 0:
 		print("PASS: 1000 deterministic orders per house count obey every balance rule")
 	quit(_failures)

@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-27 (#180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
+> Última actualización: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
 > M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
 > N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
 > una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
@@ -10,6 +10,21 @@
 > sin esperar a Slatex y sin playtesting**.
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
+
+## Hecho fuera de lista: repaso del depósito tras playtest (2026-09-27)
+
+~~Parpadeos, taller, vestuario, oficina, pizarras y zona de carga~~ **[x] Hecho (2026-09-27)** —
+Depósito (repartido en `depot_hall/furnishing/dressing/order_board.gd` tras N-211): se sacó el solape del revestimiento (`DepotLayout.LINER_SPLIT`), las etiquetas de los estantes
+y los textos del piso dejaron de parpadear y la zona de carga se rehízo (`_build_loading_zone`,
+franjas `DepotKit.stripes` sin cortes). El taller tiene piso propio, lámpara, tambor, cubiertas
+y una terminal nueva (`_build_workshop_kiosk`) dentro del área. El vestuario suma alfombra,
+cascos, chalecos y cesto. La cinta termina en x 5 para no tapar la puerta de la oficina, que
+ahora tiene marco y cartel. La pizarra de pedidos tiene hasta 7 renglones que se ajustan al
+tamaño, y los carteles achican el título si no entra (`DepotLabels.fit_label`). Se movieron el póster del
+chaleco, el póster de frágil y la pared de fotos, que quedaban escondidos. La viga del estante
+del camión, el "OK" sobre las cajas, los pedidos de tripulaciones grandes y el reinicio al sumarse
+gente están en el aviso de `colaboracion-equipo.md`. Tests: `test_depot` (`_test_layout`),
+`test_depot_campaign_board`, `test_order_balancer`, `test_trap_visual_feedback`.
 
 ## Cómo leer esta lista
 

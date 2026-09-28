@@ -148,6 +148,7 @@ func _run() -> void:
 		await physics_frame
 	_expect(not bool(door.get(&"is_open")), "The door closes behind the truck")
 	_expect(_notices.any(func(text: String) -> bool: return text.contains("portón")), "The crew is told the door closed")
+	_test_layout(depot)
 
 	level.queue_free()
 	await process_frame
@@ -210,6 +211,37 @@ func _test_signage(depot: Node3D) -> void:
 	for view: Array in views:
 		var readable: Array = _readable_signs(depot, depot.global_transform * (view[0] as Transform3D), float(view[1]))
 		_expect(readable.size() >= 4, "At least four signs read from %s (got %s)" % [view[2], readable])
+
+
+## Where things stand and whether their words fit (playtest 2026-09-27):
+## the truck terminal inside the workshop with its words on its screen, the
+## office door clear of the conveyor, the order board holding a full crew's
+## orders without running off, and nothing floating over the shelved boxes.
+func _test_layout(depot: Node3D) -> void:
+	var layout: Dictionary = (load("res://scripts/gameplay/depot/depot_layout.gd") as Script).get_script_constant_map()
+	var board_rules: Dictionary = (load("res://scripts/gameplay/depot/depot_order_board.gd") as Script).get_script_constant_map()
+	var workshop: Rect2 = layout.WORKSHOP_FLOOR
+	var garage: Vector3 = (depot.get_node(^"Station_garage") as Node3D).position
+	_expect(workshop.grow(0.8).has_point(Vector2(garage.x, garage.z)), "The truck terminal stands in the workshop (%s)" % garage)
+	for label_name: String in ["KioskTitle", "KioskSubtitle"]:
+		var label := depot.get_node(NodePath("WorkshopKiosk/Head/" + label_name)) as Label3D
+		var width: float = label.font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x * label.pixel_size
+		_expect(width <= 0.7, "The terminal's %s fits its screen (%.2f m)" % [label_name, width])
+	# The conveyor's end portal (1.2 m wide) ends well before the office wall.
+	_expect(float(layout.CONVEYOR_END_X) + 0.6 < 8.6 - 2.0, "The conveyor leaves the office door clear (ends at %.1f)" % float(layout.CONVEYOR_END_X))
+
+	# A full crew: 8 players, 7 houses, 7 rows that fit the board.
+	var orders: Array = depot.call(&"post_orders", int(board_rules.ROWS))
+	_expect(orders.size() == int(board_rules.ROWS), "A full crew gets an order per house (%d)" % orders.size())
+	var previous_bottom: float = INF
+	for row: int in range(orders.size()):
+		var line := depot.get_node(NodePath("OrderBoard/Row%d" % row)) as Label3D
+		_expect(not line.text.is_empty(), "Row %d of %d is written" % [row + 1, orders.size()])
+		var size: Vector2 = line.font.get_multiline_string_size(line.text, HORIZONTAL_ALIGNMENT_LEFT, -1, line.font_size) * line.pixel_size
+		_expect(size.x <= float(board_rules.TEXT_WIDTH), "Row %d fits across the board (%.2f m)" % [row + 1, size.x])
+		_expect(line.position.y <= previous_bottom + 0.001, "Row %d doesn't overlap the one above" % [row + 1])
+		_expect(line.position.y - size.y >= float(board_rules.ROWS_BOTTOM) - 0.02, "Row %d stays above the marker tray" % [row + 1])
+		previous_bottom = line.position.y - size.y
 
 
 ## Captions of the hanging signs readable from `eye`: every word on the front

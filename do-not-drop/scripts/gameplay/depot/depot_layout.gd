@@ -43,8 +43,24 @@ const BOARD_AT := Vector3(-4.5, 0.0, 13.0)
 const BOARD_YAW_DEGREES: float = 38.0
 ## The conveyor along the back wall; its boxes loop from start to end.
 const CONVEYOR_START_X: float = -9.8
-const CONVEYOR_END_X: float = 7.2
+## Ends well short of the office (x 8.6): at 7.2 its end portal stood right
+## in front of the office door.
+const CONVEYOR_END_X: float = 5.0
 const CONVEYOR_Z: float = 30.6
+## Where the portal frames stand along the hall: a column on each wall.
+const PORTAL_FRAMES: Array[float] = [2.4, 8.0, 13.6, 19.2, 24.8, 30.4]
+## Where the wall lining's block dado meets the sheet above: exactly the
+## dado's top. The sheet used to start 3 cm lower, and the overlap z-fought
+## in a flickering line all the way round the hall.
+const LINER_SPLIT: float = 2.4 + FLOOR_TOP
+## The loading zone behind the truck's ramp (x/z), and how far each layer of
+## floor paint sits over the one under it so none of them z-fight.
+const LOADING_ZONE := Rect2(-1.9, 13.55, 3.8, 1.3)
+const FLOOR_PAINT_STEP: float = 0.004
+## The workshop's floor (x/z), from the front wall to the lockers.
+const WORKSHOP_FLOOR := Rect2(9.4, 0.3, HALF_WIDTH - 9.4 - 0.06, 12.2)
+## The truck and paint terminal: inside the workshop, facing the hall.
+const KIOSK_AT := Vector3(10.6, 0.0, 9.0)
 
 # --- Palette and type ------------------------------------------------------------
 
@@ -64,7 +80,6 @@ const WORKSHOP_RED := Color("c0392b")
 
 # --- Assets ----------------------------------------------------------------------
 
-const WARNING_TEXTURE: String = "res://assets/textures/environment/tx_env_warning_256.png"
 const CARGO_BOXES: Array[String] = [
 	"res://assets/models/cargo/sm_cargo_box_cube.glb",
 	"res://assets/models/cargo/sm_cargo_box_flat.glb",
@@ -85,7 +100,7 @@ const FLOOR_GUIDES: Array[Dictionary] = [
 	{"caption": "WORLD_DEPOT_SHELVES", "word": Vector3(-3.0, 0.0, 17.4),
 		"arrow": Vector3(-4.9, 0.0, 17.4), "toward": Vector3(-6.3, 0.0, 17.4), "colour": SHELVES_BLUE},
 	{"caption": "WORLD_DEPOT_WORKSHOP", "word": Vector3(3.0, 0.0, 15.5),
-		"arrow": Vector3(4.4, 0.0, 15.2), "toward": Vector3(4.6, 0.0, 10.1), "colour": WORKSHOP_RED},
+		"arrow": Vector3(4.4, 0.0, 15.2), "toward": Vector3(10.15, 0.0, 9.0), "colour": WORKSHOP_RED},
 	{"caption": "WORLD_DEPOT_LOCKERS", "word": Vector3(4.3, 0.0, 17.0),
 		"arrow": Vector3(6.3, 0.0, 17.0), "toward": Vector3(14.0, 0.0, 15.5), "colour": LOCKERS_TEAL},
 	{"caption": "WORLD_DEPOT_SUPPLIES", "word": Vector3(4.6, 0.0, 18.6),

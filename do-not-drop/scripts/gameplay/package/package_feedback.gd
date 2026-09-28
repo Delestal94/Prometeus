@@ -817,6 +817,9 @@ func _refresh_state_badge() -> void:
 		return
 	_state_badge.text = ["OK ✓", "EN RIESGO !", "ARRUINADA ✕"][clampi(_state, 0, 2)]
 	_state_badge.modulate = UiTheme.state_color(_state, _colorblind_palette_enabled())
+	# Only trouble earns a marker: an "OK" floating over every healthy box
+	# on the shelves read as noise, not information.
+	_state_badge.visible = _state != ITrapBehavior.TrapState.OK
 
 
 func _refresh_accessibility_palette(_enabled: bool) -> void:
