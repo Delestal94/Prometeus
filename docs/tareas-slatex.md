@@ -730,7 +730,7 @@ Hoy todos los textos están escritos en español dentro del código.
 
 Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
-- [ ] Checklist en `docs/qa-recorrido.md`: abrir el juego, cambiar opciones, jugar solo una entrega
+- [x] (commit `ce7370b`) Checklist en `docs/qa-recorrido.md`: abrir el juego, cambiar opciones, jugar solo una entrega
   completa (agarrar, montar, manejar, bajar, timbre, foto), pausa, volver al menú, Endless 2 minutos,
   cerrar. Anotar cualquier error de la consola de Godot.
 
