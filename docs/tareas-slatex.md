@@ -552,9 +552,9 @@ lugar, balbuceo sintetizado estilo Animal Crossing, con tono propio por color de
 Balance de volumen sin depender del oído (Nacho dejó registrado en su #83 que editar valores a ciegas
 no sirve).
 
-- [ ] `tests/audio_loudness_report.gd`: genera cada sonido de trampa y de UI, calcula RMS y pico
+- [x] (commit `2dc4769`) `tests/audio_loudness_report.gd`: genera cada sonido de trampa y de UI, calcula RMS y pico
   en dBFS, y lista la diferencia contra un objetivo (−18 dBFS RMS para efectos de trampa, −24 para UI).
-- [ ] Ajustar el `volume_db` de cada reproductor del dominio de Slatex para quedar a ±2 dB del objetivo.
+- [x] (commit `2dc4769`) Ajustar el `volume_db` de cada reproductor del dominio de Slatex para quedar a ±2 dB del objetivo.
   Tabla antes/después en `docs/direccion-visual.md` (sección de audio) o un `docs/audio.md` nuevo.
 
 ---
