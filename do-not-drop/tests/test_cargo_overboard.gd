@@ -125,7 +125,7 @@ func _run() -> void:
 	manager.call(&"reset_run")
 	await process_frame
 	if _failures == 0:
-		print("PASS: a box off the van gets a rescue window, a flag, and is lost only when it runs out; its order closes as lost")
+		print("PASS: a box off the van gets a rescue window and a flag; abandoned, its order closes as lost")
 	quit(_failures)
 
 
