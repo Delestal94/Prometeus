@@ -140,7 +140,8 @@ func _check_card() -> void:
 	card.update("Frágil", 1, 42.0, {"step": &"hold", "title": "SOSTENELA", "detail": "Mantené clic izq."},
 		{"primary": false}, PackedStringArray(["Q  soltar"]))
 	await process_frame
-	_expect(card.step_title.text == "SOSTENELA" and card.name_label.text == "FRÁGIL", "The card names the box and the step")
+	_expect(card.step_title.text == "SOSTENELA" and card.name_label.text == "FRÁGIL",
+		"The card names the box and the step")
 	_expect(card.state_chip.text == "EN RIESGO" and is_equal_approx(card.integrity_bar.value, 42.0),
 		"...its state and integrity")
 	_expect(card.footer.get_child_count() == 1 and card.footer.get_child(0).get_child_count() == 2,

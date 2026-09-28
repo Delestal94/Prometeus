@@ -118,7 +118,8 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 	var gamepad: bool = _using_gamepad()
 	var keys: Dictionary = control_names(gamepad, _interact_label(gamepad))
 	var state: Dictionary = (target.get(&"care_state") if target.get(&"care_state") is Dictionary else {}).duplicate()
-	var entry_state: int = int(((run.get(&"cargo") as Dictionary).get(target.get(&"package_id"), {}) as Dictionary).get("state", 0))
+	var cargo_entry: Dictionary = (run.get(&"cargo") as Dictionary).get(target.get(&"package_id"), {})
+	var entry_state: int = int(cargo_entry.get("state", 0))
 	state["need_hands"] = needs_hands(care, entry_state)
 	var seated: bool = not String(player.get(&"seat_node_path")).is_empty()
 	state["on_foot"] = not seated

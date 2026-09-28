@@ -199,7 +199,8 @@ func _check_simple_controls() -> void:
 	for _i: int in 3:
 		fresh.collect_part()
 	_expect(fresh.suggested_tool(&"fragile") == &"repair", "Pieces back: repair is offered")
-	_expect(fresh.suggested_tool(&"fragile", {&"repair": 0, &"tape": 2}) == &"tape", "...or the next tool the kit still has")
+	_expect(fresh.suggested_tool(&"fragile", {&"repair": 0, &"tape": 2}) == &"tape",
+		"...or the next tool the kit still has")
 	var leak = Care.new()
 	leak.begin_crisis(&"liquid")
 	_expect(leak.suggested_tool(&"liquid") == &"rag", "A leak is offered the rag")
@@ -215,13 +216,17 @@ func _check_guide() -> void:
 	await process_frame
 	PackageRescue.publish_care(bomb)
 	var state: Dictionary = bomb.care_state
-	_expect(not (state.get("sequence", {}) as Dictionary).is_empty(), "The bomb's sequence rides along with the care state")
-	_expect(state.get("action") == &"hold" and not String(state.get("hint", "")).is_empty(), "...and so do its action and hint")
+	_expect(not (state.get("sequence", {}) as Dictionary).is_empty(),
+		"The bomb's sequence rides along with the care state")
+	_expect(state.get("action") == &"hold" and not String(state.get("hint", "")).is_empty(),
+		"...and so do its action and hint")
 	var keys: Dictionary = CargoCare.control_names(false, "E")
 	var step: Dictionary = CareGuide.next_step(state, &"explosive", &"", "", keys)
-	_expect(step["step"] == &"sequence" and String(step["detail"]).begins_with("Desactivar"), "A pending sequence comes first")
+	_expect(step["step"] == &"sequence" and String(step["detail"]).begins_with("Desactivar"),
+		"A pending sequence comes first")
 	bomb.trap_behavior.call(&"_consume_direction", &"nowhere")
-	_expect(int(bomb.trap_behavior.call(&"sequence_state")["mistakes"]) == 1, "A wrong tap is counted, so every peer can buzz")
+	_expect(int(bomb.trap_behavior.call(&"sequence_state")["mistakes"]) == 1,
+		"A wrong tap is counted, so every peer can buzz")
 	bomb.free()
 	var calm: Dictionary = {"phase": &"intact", "action": &"hold"}
 	_expect(CareGuide.next_step(calm, &"noisy", &"", "", keys)["title"] == "CALMALA", "A hen is calmed by holding")
@@ -236,14 +241,16 @@ func _check_guide() -> void:
 		"A load just secured doesn't ask for the next sequence yet")
 	calm["need_hands"] = true
 	calm["action"] = &"release"
-	_expect(CareGuide.next_step(calm, &"hostile", &"", "", keys)["step"] == &"release", "The creature's NO TOCAR says hands off")
+	_expect(CareGuide.next_step(calm, &"hostile", &"", "", keys)["step"] == &"release",
+		"The creature's NO TOCAR says hands off")
 	var crisis: Dictionary = {"phase": &"crisis", "missing": 2, "restore": true}
 	_expect(CareGuide.next_step(crisis, &"fragile", &"tape", "Encintar", keys)["step"] == &"collect",
 		"Pieces on the floor are picked up first")
 	crisis["missing"] = 0
 	var repair: Dictionary = CareGuide.next_step(crisis, &"fragile", &"repair", "Pegar piezas", keys)
 	_expect(repair["step"] == &"tool" and String(repair["title"]).contains("PEGAR PIEZAS"), "...then the rescue tool")
-	_expect(CargoCare.reach_step(keys, false)["title"] == "AGARRALA", "A box within reach but not in hand says: pick it up")
+	_expect(CargoCare.reach_step(keys, false)["title"] == "AGARRALA",
+		"A box within reach but not in hand says: pick it up")
 
 
 func _expect(condition: bool, message: String) -> void:

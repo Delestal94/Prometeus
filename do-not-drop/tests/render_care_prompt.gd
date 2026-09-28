@@ -8,18 +8,23 @@ extends SceneTree
 const CareCard = preload("res://scripts/ui/hud/care_card.gd")
 
 const CARDS: Array = [
-	["Frágil", 0, 96.0, {"step": &"hold", "title": "SOSTENELA", "detail": "Mantené Clic izq.: la protege de golpes y curvas."},
+	["Frágil", 0, 96.0, {"step": &"hold", "title": "SOSTENELA",
+		"detail": "Mantené Clic izq.: la protege de golpes y curvas."},
 		{"primary": true, "sway": Vector2(0.6, 0)}, ["Q  soltar"]],
-	["Hostil", 1, 51.0, {"step": &"release", "title": "¡SOLTALA!", "detail": "No toques la caja hasta que vuelva a pedir calma."},
+	["Hostil", 1, 51.0, {"step": &"release", "title": "¡SOLTALA!",
+		"detail": "No toques la caja hasta que vuelva a pedir calma."},
 		{"primary": true}, ["Q  al regazo"]],
-	["Frágil", 1, 40.0, {"step": &"tool", "title": "USÁ: PEGAR PIEZAS", "detail": "Mantené Clic der. hasta llenar el círculo."},
-		{"tool_held": true, "work": 0.62}, ["Clic der.  Pegar piezas · quedan 2", "X  otra herramienta", "Q  al estante"]],
+	["Frágil", 1, 40.0, {"step": &"tool", "title": "USÁ: PEGAR PIEZAS",
+		"detail": "Mantené Clic der. hasta llenar el círculo."},
+		{"tool_held": true, "work": 0.62},
+		["Clic der.  Pegar piezas · quedan 2", "X  otra herramienta", "Q  al estante"]],
 	["Explosivo", 1, 38.0, {"step": &"sequence", "title": "TOCÁ EN ORDEN",
 		"detail": "Desactivar: una tecla por vez, sin clic. Si le errás, vuelve a empezar."},
 		{"sequence": {"steps": [&"up", &"left", &"down"], "index": 1}}, ["Q  soltar"]],
 	["Ruidoso", 2, 0.0, {"step": &"collect", "title": "JUNTÁ LAS PIEZAS",
 		"detail": "Quedan 2 en el piso: acercate a cada una y apretá E."}, {"missing": 2}, []],
-	["Equilibrio", 0, 100.0, {"step": &"hold", "title": "ENDEREZALA", "detail": "Mantené RT: la protege de golpes y curvas."},
+	["Equilibrio", 0, 100.0, {"step": &"hold", "title": "ENDEREZALA",
+		"detail": "Mantené RT: la protege de golpes y curvas."},
 		{"pad": true, "primary": false, "sway": Vector2(-0.8, 0)}, ["LT  otra herramienta", "B  soltar"]],
 ]
 

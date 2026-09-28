@@ -46,7 +46,9 @@ class StepMark extends Control:
 			2:
 				draw_circle(center, 9.0, UiTheme.MINT)
 				draw_arc(center, 9.0, 0.0, TAU, 24, UiTheme.INK, 2.0, true)
-				draw_polyline(PackedVector2Array([center + Vector2(-4, 0), center + Vector2(-1, 3), center + Vector2(5, -4)]),
+				var tick := PackedVector2Array([center + Vector2(-4, 0), center + Vector2(-1, 3),
+					center + Vector2(5, -4)])
+				draw_polyline(tick,
 					UiTheme.INK, 2.5, true)
 			1:
 				draw_arc(center, 8.0, 0.0, TAU, 24, UiTheme.ORANGE, 3.0, true)
@@ -78,7 +80,8 @@ func _init() -> void:
 		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text.custom_minimum_size.x = WIDTH - 32 - 30
 		_rows.append(text)
-	var note: Label = UiThemeScript.label(column, "Cuando quieras, subite a manejar para salir.", 16, UiThemeScript.MUTED)
+	var note: Label = UiThemeScript.label(column, "Cuando quieras, subite a manejar para salir.", 16,
+		UiThemeScript.MUTED)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size.x = WIDTH - 32
 

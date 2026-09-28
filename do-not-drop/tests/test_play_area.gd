@@ -36,8 +36,10 @@ func _run() -> void:
 	_expect(area.keep_inside(walkable).is_equal_approx(walkable), "Anywhere near the road is walkable, truck or not")
 	var beyond: Vector3 = near_road + side * 200.0
 	var kept: Vector3 = area.keep_inside(beyond)
-	var reach: float = Vector2(kept.x - area.nearest_road_point(kept).x, kept.z - area.nearest_road_point(kept).z).length()
-	_expect(reach <= PlayArea.ROAD_REACH + 0.5, "Walking off towards the map's edge stops at the reach (%.1f m)" % reach)
+	var kept_road: Vector3 = area.nearest_road_point(kept)
+	var reach: float = Vector2(kept.x - kept_road.x, kept.z - kept_road.z).length()
+	_expect(reach <= PlayArea.ROAD_REACH + 0.5,
+		"Walking off towards the map's edge stops at the reach (%.1f m)" % reach)
 	var player: CharacterBody3D = level.local_player
 	player.global_position = beyond
 	for _i: int in 3:

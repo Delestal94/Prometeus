@@ -206,7 +206,8 @@ func _draw() -> void:
 			_draw_load(center)
 	for spark: Dictionary in _sparks:
 		var alpha: float = clampf(float(spark["life"]) / 0.4, 0.0, 1.0)
-		draw_rect(Rect2((spark["pos"] as Vector2) - Vector2(3, 3), Vector2(6, 6)), Color(spark["color"] as Color, alpha))
+		var at: Vector2 = (spark["pos"] as Vector2) - Vector2(3, 3)
+		draw_rect(Rect2(at, Vector2(6, 6)), Color(spark["color"] as Color, alpha))
 
 
 # --- Steps ------------------------------------------------------------------
@@ -254,7 +255,8 @@ func _draw_release(center: Vector2) -> void:
 		for side: float in [-1.0, 1.0]:
 			var hand := Rect2(box_center + shake + Vector2(side * 30 - 9, -6), Vector2(18, 26))
 			_box(hand, UiThemeScript.RED, UiThemeScript.INK, 9, 3)
-			draw_line(hand.position + Vector2(-6, -6), hand.end + Vector2(6, 6), UiThemeScript.RED.darkened(0.35), 6.0, true)
+			draw_line(hand.position + Vector2(-6, -6), hand.end + Vector2(6, 6), UiThemeScript.RED.darkened(0.35),
+				6.0, true)
 	else:
 		_draw_check(box_center + Vector2(36, -30))
 
