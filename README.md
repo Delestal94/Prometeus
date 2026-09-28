@@ -228,6 +228,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_trap_visual_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_audio.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_audio_levels.gd
+<godot> --headless --path do-not-drop --script res://tests/audio_loudness_report.gd
 <godot> --headless --path do-not-drop --script res://tests/test_contact_shadows.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_polish.gd
@@ -597,6 +598,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   (motor, golpes, bocina, viento, pájaros, lluvia, cruce, perro, timbre, depósito...), lo mide en
   dBFS, le suma su nivel de `world_mix.gd` y exige quedar a ±2 dB del objetivo de su clase
   (`docs/audio-mundo.md`). `-- --report` imprime la tabla completa.
+- `audio_loudness_report` — genera los ocho sonidos de trampa y los ocho de interfaz, informa
+  RMS y pico en dBFS y verifica que su RMS final quede a ±2 dB de −18 y −24 respectivamente
+  (`docs/audio.md`).
 - `test_vehicle_audio` — el golpe suena más fuerte cuanto más fuerte es el
   impacto (y no suena si es lejano), y el chirrido de neumáticos sigue el
   patinaje real de las ruedas.

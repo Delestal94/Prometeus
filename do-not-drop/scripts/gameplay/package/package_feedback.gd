@@ -11,6 +11,18 @@ const CONFETTI_COUNT: int = 28
 const CONFETTI_LIFETIME: float = 1.1
 const RUIN_HOLD_SECONDS: float = 0.35
 const RUIN_PARTICLE_SPEED: float = 0.15
+## Reference-distance levels for every trap cue owned by this component.
+## `tests/audio_loudness_report.gd` keeps their resulting RMS near -18 dBFS.
+const TRAP_SOUND_LEVELS_DB: Dictionary = {
+	&"glass_chime": -0.7,
+	&"creature_groan": -12.7,
+	&"wood_creak": -3.2,
+	&"liquid_slosh": 4.6,
+	&"explosive_tick": -2.7,
+	&"hostile_hiss": 2.5,
+	&"comic_ruin_stinger": -5.3,
+	&"comic_boom": 0.0,
+}
 
 ## Nodes wobbled for the Ruidoso trap and on impacts: Box holds the whole
 ## cardboard model and what's inside it, so everything shudders together.
@@ -123,19 +135,19 @@ func _ready() -> void:
 		&"noisy":
 			_groan_player = _make_player(SynthAudio.creature_groan(), -60.0)
 		&"fragile":
-			_chime_player = _make_player(SynthAudio.glass_chime(), -8.0)
+			_chime_player = _make_player(SynthAudio.glass_chime(), TRAP_SOUND_LEVELS_DB[&"glass_chime"])
 		&"growing_weight":
-			_creak_player = _make_player(SynthAudio.wood_creak(), -10.0)
+			_creak_player = _make_player(SynthAudio.wood_creak(), TRAP_SOUND_LEVELS_DB[&"wood_creak"])
 			_creak_countdown = CREAK_INTERVAL_MAX
 		&"liquid":
 			_build_liquid_puddle(parent as DeliveryPackage)
-			_liquid_slosh_player = _make_player(SynthAudio.liquid_slosh(), -16.0)
+			_liquid_slosh_player = _make_player(SynthAudio.liquid_slosh(), TRAP_SOUND_LEVELS_DB[&"liquid_slosh"])
 		&"explosive":
 			_build_explosive_display()
-			_explosive_tick_player = _make_player(SynthAudio.explosive_tick(), -14.0)
+			_explosive_tick_player = _make_player(SynthAudio.explosive_tick(), TRAP_SOUND_LEVELS_DB[&"explosive_tick"])
 		&"hostile":
 			_build_hostile_eyes()
-			_hostile_hiss_player = _make_player(SynthAudio.hostile_hiss(), -13.0)
+			_hostile_hiss_player = _make_player(SynthAudio.hostile_hiss(), TRAP_SOUND_LEVELS_DB[&"hostile_hiss"])
 	# Every trap gets a stinger for the moment it actually fails, on top of
 	# the confetti burst and whatever cue it already has of its own (Frágil's
 	# chime pitches down for this same moment) -- picked once, since which
@@ -144,7 +156,7 @@ func _ready() -> void:
 	# that once seconds_left hits 0) instead of the generic cartoon fail.
 	var explosive: bool = _trap_id == &"explosive"
 	_ruin_player = _make_player(SynthAudio.comic_boom() if explosive else SynthAudio.comic_ruin_stinger(),
-		-6.0 if explosive else -9.0)
+		TRAP_SOUND_LEVELS_DB[&"comic_boom"] if explosive else TRAP_SOUND_LEVELS_DB[&"comic_ruin_stinger"])
 	_set_state(0)
 	var bus: Node = get_node_or_null("/root/EventBus")
 	if bus != null:
@@ -519,7 +531,8 @@ func _refresh_event_disguise() -> void:
 			_disguise_icon.visible = _disguise_icon.texture != null
 	if _package.disguise_revealed and not _was_disguise_revealed:
 		_burst_confetti()
-		var reveal_sound: AudioStreamPlayer3D = _make_player(SynthAudio.glass_chime(), -8.0)
+		var reveal_sound: AudioStreamPlayer3D = _make_player(
+			SynthAudio.glass_chime(), TRAP_SOUND_LEVELS_DB[&"glass_chime"])
 		reveal_sound.play()
 	_was_disguise_revealed = _package.disguise_revealed
 
@@ -748,7 +761,7 @@ func _apply_groan() -> void:
 		return
 	if not _groan_player.playing:
 		_groan_player.play()
-	_groan_player.volume_db = lerpf(-40.0, -6.0, _distress)
+	_groan_player.volume_db = lerpf(-40.0, TRAP_SOUND_LEVELS_DB[&"creature_groan"], _distress)
 	_groan_player.pitch_scale = lerpf(0.85, 1.3, _distress)
 
 

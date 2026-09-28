@@ -24,14 +24,14 @@ const CUES: Array[StringName] = [
 ]
 
 const _SPECS: Dictionary = {
-	HOVER: {"start": 880.0, "end": 1040.0, "duration": 0.045, "gain": 0.20},
-	CLICK: {"start": 520.0, "end": 360.0, "duration": 0.085, "gain": 0.32},
-	PANEL_OPEN: {"start": 330.0, "end": 660.0, "duration": 0.14, "gain": 0.28},
-	PANEL_CLOSE: {"start": 660.0, "end": 300.0, "duration": 0.12, "gain": 0.25},
-	TOAST: {"start": 720.0, "end": 920.0, "duration": 0.16, "gain": 0.24},
-	UNLOCK: {"start": 620.0, "end": 1320.0, "duration": 0.30, "gain": 0.30},
-	VOTE: {"start": 440.0, "end": 700.0, "duration": 0.11, "gain": 0.27},
-	ERROR: {"start": 190.0, "end": 120.0, "duration": 0.22, "gain": 0.35},
+	HOVER: {"start": 880.0, "end": 1040.0, "duration": 0.045, "gain": 0.20, "volume_db": 2.7},
+	CLICK: {"start": 520.0, "end": 360.0, "duration": 0.085, "gain": 0.32, "volume_db": -1.4},
+	PANEL_OPEN: {"start": 330.0, "end": 660.0, "duration": 0.14, "gain": 0.28, "volume_db": -0.2},
+	PANEL_CLOSE: {"start": 660.0, "end": 300.0, "duration": 0.12, "gain": 0.25, "volume_db": 0.7},
+	TOAST: {"start": 720.0, "end": 920.0, "duration": 0.16, "gain": 0.24, "volume_db": 1.1},
+	UNLOCK: {"start": 620.0, "end": 1320.0, "duration": 0.30, "gain": 0.30, "volume_db": -0.8},
+	VOTE: {"start": 440.0, "end": 700.0, "duration": 0.11, "gain": 0.27, "volume_db": 0.1},
+	ERROR: {"start": 190.0, "end": 120.0, "duration": 0.22, "gain": 0.35, "volume_db": -2.2},
 }
 
 static var _cache: Dictionary = {}
@@ -62,6 +62,7 @@ static func play(from: Node, cue: StringName) -> void:
 		player.bus = &"SFX"
 		root.add_child(player)
 	player.stream = stream_for(cue)
+	player.volume_db = volume_db_for(cue)
 	player.play()
 
 
@@ -71,6 +72,10 @@ static func stream_for(cue: StringName) -> AudioStreamWAV:
 	if not _cache.has(cue):
 		_cache[cue] = _build_stream(_SPECS[cue])
 	return _cache[cue] as AudioStreamWAV
+
+
+static func volume_db_for(cue: StringName) -> float:
+	return float((_SPECS.get(cue, {}) as Dictionary).get("volume_db", 0.0))
 
 
 static func _build_stream(spec: Dictionary) -> AudioStreamWAV:
