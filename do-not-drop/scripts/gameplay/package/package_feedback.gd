@@ -134,7 +134,7 @@ func _ready() -> void:
 	match _trap_id:
 		&"noisy":
 			_groan_player = _make_player(SynthAudio.creature_groan(), -60.0)
-		&"fragile":
+		&"fragile", &"balance":
 			_chime_player = _make_player(SynthAudio.glass_chime(), TRAP_SOUND_LEVELS_DB[&"glass_chime"])
 		&"growing_weight":
 			_creak_player = _make_player(SynthAudio.wood_creak(), TRAP_SOUND_LEVELS_DB[&"wood_creak"])
@@ -407,10 +407,9 @@ func _on_package_state_changed(id: StringName, new_state: int) -> void:
 	if id != _package_id:
 		return
 	_set_state(new_state)
-	# Frágil's audible cue (docs/especificaciones-visuales.md #43): a bright
-	# chime on the way into AT_RISK, the same clip pitched down a fourth for
-	# RUINED so the two severities are easy to tell apart by ear alone.
-	if _trap_id == &"fragile" and new_state != 0:
+	# Frágil and Equilibrio use a bright warning chime on the way into
+	# AT_RISK, pitched down a fourth for RUINED so severity reads by ear.
+	if _trap_id in [&"fragile", &"balance"] and new_state != 0:
 		_chime_player.pitch_scale = 1.0 if new_state == 1 else 0.75
 		_chime_player.play()
 

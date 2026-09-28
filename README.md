@@ -231,6 +231,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/audio_loudness_report.gd
 <godot> --headless --path do-not-drop --script res://tests/test_contact_shadows.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
+<godot> --headless --path do-not-drop --script res://tests/test_trap_contract.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_polish.gd
 <godot> --headless --path do-not-drop --script res://tests/test_screen_fade.gd
 <godot> --headless --path do-not-drop --script res://tests/test_camera_polish.gd
@@ -608,6 +609,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   Frágil (más grave si se arruina), gemido para Ruidoso que sube con la
   agitación, crujido para Peso Creciente que se reinicia al resolver el
   puzzle.
+- `test_trap_contract` — recorre todos los datos de trampas y contenidos: comportamiento e
+  integridad acotada durante 30 s simulados, aviso, ícono, contenido exclusivo, sonido de riesgo,
+  progresión y los cuatro estados visuales de cada modelo.
 - `test_trap_icons` — las siete definiciones de trampa resuelven a un ícono
   HUD propio, sin faltantes ni reutilización de un genérico.
 - `test_audio_polish` — pasada de pulido "cartoon cómico" (2026-09-27): el timbre ya
