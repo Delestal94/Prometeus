@@ -489,6 +489,7 @@ func _process(delta: float) -> void:
 	cargo.refresh_ruin_impact(delta)
 	cargo.refresh_state_pulses()
 	prompts.refresh_sound_subtitle()
+	notices.refresh_deadline()
 	notices.process_notices(delta)
 	var event_pulse: float = 0.84 + sin(Time.get_ticks_msec() * 0.008) * 0.16
 	event_label.modulate.a = event_pulse if not event_label.text.is_empty() else 1.0

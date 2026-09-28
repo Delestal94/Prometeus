@@ -94,7 +94,16 @@ func start_delivery() -> void:
 	var loaded: Array[DeliveryPackage] = _release_loaded_cargo()
 	EventBus.relay(&"houses_assigned", [_house_assignments()])
 	RunManager.start_run()
+	RunManager.set_deadlines(RunManager.plan_deadlines(_house_distances()))
 	depot.begin_run(vehicle, loaded)
+
+
+## How far along the road each house sits, in metres, in house order.
+func _house_distances() -> Array:
+	var distances: Array = []
+	for house: Node3D in route.get(&"houses"):
+		distances.append(float(route.call(&"get_progress", house.global_position)) * float(route.get(&"route_length")))
+	return distances
 
 
 ## The depot's orders, relayed once more as the run starts so every client's

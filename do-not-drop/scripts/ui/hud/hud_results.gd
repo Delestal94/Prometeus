@@ -68,6 +68,10 @@ func _on_ended(score: int, results: Dictionary) -> void:
 		hud.overlay_title.text = tr("HUD_RESULT_DELIVERED_TITLE")
 	hud.overlay_body.text = _delivery_summary(delivered_doors, missed_doors, total, ruined,
 			intact) if success else String(results.get("reason", ""))
+	# The rescues are the run's story: "Jarrón: 1 arreglo(s) en el camino".
+	var stories: Array = results.get("stories", [])
+	if not stories.is_empty():
+		hud.overlay_body.text += "\n" + "\n".join(PackedStringArray(stories))
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = tr("HUD_RESULT_CHAOS_BONUS") % chaos if chaos > 1.0 else ""
 	var door_line: String = tr("HUD_RESULT_DOORS") % int(results.get("delivery_points",

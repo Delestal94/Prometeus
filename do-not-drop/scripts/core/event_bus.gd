@@ -28,6 +28,7 @@ signal package_lid_changed(package_id: StringName, open: bool)
 ## state is the trap state right before, so the pieces thrown out match
 ## what was in there (a whole vase, or its shards).
 signal package_contents_spilled(package_id: StringName, velocity: Vector3, state: int)
+signal package_contents_recovered(package_id: StringName)
 signal vehicle_telemetry(speed_kmh: float)
 signal vehicle_impact(strength: float, impact_position: Vector3)
 signal run_started(route_id: StringName, players: Array)
@@ -70,6 +71,11 @@ signal shop_resolved(offer_id: StringName, offer: Dictionary)
 ## at. photo_available says whether there's still something worth
 ## photographing there -- the phone camera uses it to offer the shot.
 signal house_delivery_recorded(house_index: int, outcome: StringName, package_id: StringName)
+## What the door saw of a rescued box (repaired / unconvincing / substituted),
+## relayed right before its house_delivery_recorded. Relayed.
+signal delivery_care_noted(house_index: int, category: StringName)
+## This run's delivery deadlines, [{house, seconds, reason}], as it starts. Relayed.
+signal delivery_deadlines_set(deadlines: Array)
 ## The delivery photo was filed against a door (or wasn't -- accepted says
 ## which), so the HUD can confirm the shot landed.
 signal delivery_photo_taken(house_index: int, accepted: bool)
