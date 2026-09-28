@@ -54,7 +54,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 		hud.result_details.visible = false
 		set_buttons(retry, false, false, true)
 		return
-	var success: bool = results["delivered"]
+	var success: bool = bool(results.get("delivered", false))
 	var total: int = int(results.get("cargo_total", 0))
 	var intact: int = int(results.get("cargo_intact", 0))
 	var ruined: int = int(results.get("cargo_ruined", 0))
@@ -67,7 +67,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	else:
 		hud.overlay_title.text = tr("HUD_RESULT_DELIVERED_TITLE")
 	hud.overlay_body.text = _delivery_summary(delivered_doors, missed_doors, total, ruined,
-			intact) if success else String(results["reason"])
+			intact) if success else String(results.get("reason", ""))
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = tr("HUD_RESULT_CHAOS_BONUS") % chaos if chaos > 1.0 else ""
 	var door_line: String = tr("HUD_RESULT_DOORS") % int(results.get("delivery_points",
@@ -76,7 +76,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 		hud.overlay_stats.text = format_score_breakdown(results,
 				score) + tr("HUD_RESULT_TEAM") % CrewProgression.team_money + best_line + client_line
 	else:
-		hud.overlay_stats.text = tr("HUD_RESULT_STATS") % [results["elapsed_seconds"], results["cargo_points"], results["time_bonus"], door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
+		hud.overlay_stats.text = tr("HUD_RESULT_STATS") % [float(results.get("elapsed_seconds", 0.0)), int(results.get("cargo_points", 0)), int(results.get("time_bonus", 0)), door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
 	_show_complaints(results.get("complaints", []))
 	_show_photos()
 	_show_result_details(results)
