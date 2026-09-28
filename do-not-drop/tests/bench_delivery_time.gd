@@ -52,7 +52,8 @@ func _run() -> void:
 		for seed_value: int in seeds:
 			var result: Dictionary = await _deliver(seed_value, houses, cruise_kmh)
 			summary[houses].append(result)
-			print("RUN seed=%d houses=%d length=%.0fm drive=%.1fs stops=%.1fs total=%.2fmin delivered=%d rescues=%d%s" % [
+			print("RUN seed=%d houses=%d length=%.0fm drive=%.1fs stops=%.1fs total=%.2fmin delivered=%d rescues=%d%s"
+					% [
 				seed_value, houses, result.length, result.drive, result.stops, result.total / 60.0,
 				result.delivered, result.rescues, "" if result.finished else " UNFINISHED"])
 	print("")
@@ -77,7 +78,8 @@ func _run() -> void:
 		print("| %d | %.0f | %.1f | %.1f | %.2f | %.2f | %.2f |" % [
 			houses, length_sum / count, drive_sum / count, stop_sum / count,
 			total_sum / count / 60.0, worst / 60.0, best / 60.0])
-	print("%s bench_delivery_time: %d physical deliveries" % ["PASS" if _failures == 0 else "FAIL", house_counts.size() * seeds.size()])
+	print("%s bench_delivery_time: %d physical deliveries" % ["PASS" if _failures == 0 else "FAIL",
+			house_counts.size() * seeds.size()])
 	quit(_failures)
 
 
@@ -128,7 +130,8 @@ func _deliver(seed_value: int, houses: int, cruise_kmh: float) -> Dictionary:
 	var last_index: int = -1
 	while path_index < path.size() - 1 and drive_ticks * step + stop_seconds < MAX_DELIVERY_SECONDS:
 		var here: Vector3 = route.to_local(van.global_position)
-		while path_index < path.size() - 1 and Vector2(path[path_index].x - here.x, path[path_index].z - here.z).length() < LOOKAHEAD:
+		while path_index < path.size() - 1 and Vector2(path[path_index].x - here.x,
+				path[path_index].z - here.z).length() < LOOKAHEAD:
 			path_index += 1
 		stuck = 0.0 if path_index != last_index else stuck + step
 		last_index = path_index
@@ -141,18 +144,21 @@ func _deliver(seed_value: int, houses: int, cruise_kmh: float) -> Dictionary:
 			path_index += 2
 			var rescue_at: Vector3 = route.to_global(path[path_index])
 			var rescue_ahead: Vector3 = route.to_global(path[path_index + 1])
-			van.global_transform = Transform3D(Basis.looking_at(rescue_ahead - rescue_at, Vector3.UP), rescue_at + Vector3.UP * 1.2)
+			van.global_transform = Transform3D(Basis.looking_at(rescue_ahead - rescue_at, Vector3.UP),
+					rescue_at + Vector3.UP * 1.2)
 			van.linear_velocity = (rescue_ahead - rescue_at).normalized() * cruise_kmh / 3.6 * 0.5
 			van.angular_velocity = Vector3.ZERO
 		var target_kmh: float = cruise_kmh * _bend_factor(path, path_index)
-		var braking: bool = next_stop < stops.size() and _distance_along(path, path_index, stops[next_stop]) < BRAKE_DISTANCE
+		var braking: bool = next_stop < stops.size() and _distance_along(path, path_index,
+				stops[next_stop]) < BRAKE_DISTANCE
 		if braking:
 			target_kmh = 0.0
 			if van.get(&"speed_kmh") < 1.5:
 				van.call(&"set_controls", 0.0, 0.0, true)
 				van.linear_velocity = Vector3.ZERO
 				van.angular_velocity = Vector3.ZERO
-				stop_seconds += await _serve_house(world, bot, van, route.get(&"houses")[next_stop], assignments[next_stop][0])
+				stop_seconds += await _serve_house(world, bot, van, route.get(&"houses")[next_stop],
+						assignments[next_stop][0])
 				next_stop += 1
 		var local: Vector3 = van.global_transform.affine_inverse() * route.to_global(path[path_index])
 		var steer: float = clampf(atan2(local.x, -local.z) * 2.2, -1.0, 1.0)
@@ -182,7 +188,8 @@ func _deliver(seed_value: int, houses: int, cruise_kmh: float) -> Dictionary:
 	var finished: bool = path_index >= path.size() - 1 and delivered == houses
 	if not finished:
 		_failures += 1
-		push_error("seed %d houses %d: finished=%s delivered=%d/%d" % [seed_value, houses, path_index >= path.size() - 1, delivered, houses])
+		push_error("seed %d houses %d: finished=%s delivered=%d/%d" % [seed_value, houses,
+				path_index >= path.size() - 1, delivered, houses])
 	var drive_seconds: float = drive_ticks * step
 	var result := {
 		"length": float(route.get(&"route_length")),
@@ -201,7 +208,8 @@ func _deliver(seed_value: int, houses: int, cruise_kmh: float) -> Dictionary:
 	return result
 
 
-func _serve_house(world: Node3D, bot: CharacterBody3D, van: VehicleBody3D, house: Node, package_id: StringName) -> float:
+func _serve_house(world: Node3D, bot: CharacterBody3D, van: VehicleBody3D, house: Node,
+		package_id: StringName) -> float:
 	var elapsed: float = 0.0
 	var exit_position: Vector3 = van.global_position + van.global_basis.x * 1.4
 	bot.global_position = exit_position

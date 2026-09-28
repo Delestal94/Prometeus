@@ -163,14 +163,16 @@ func next_unlock_progress() -> Dictionary:
 		var rule: Dictionary = UNLOCKS[unlock_id]
 		if next_rule.is_empty() \
 				or int(rule["deliveries"]) < int(next_rule["deliveries"]) \
-				or (int(rule["deliveries"]) == int(next_rule["deliveries"]) and int(rule["score"]) < int(next_rule["score"])):
+				or (int(rule["deliveries"]) == int(next_rule["deliveries"])
+						and int(rule["score"]) < int(next_rule["score"])):
 			next_id = unlock_id
 			next_rule = rule
 	if next_rule.is_empty():
 		return {}
 	var target_deliveries: int = int(next_rule["deliveries"])
 	var target_score: int = int(next_rule["score"])
-	var delivery_ratio: float = 1.0 if target_deliveries <= 0 else minf(float(successful_deliveries) / target_deliveries, 1.0)
+	var delivery_ratio: float = (1.0 if target_deliveries <= 0
+			else minf(float(successful_deliveries) / target_deliveries, 1.0))
 	var score_ratio: float = 1.0 if target_score <= 0 else minf(float(total_score) / target_score, 1.0)
 	return {
 		"id": next_id,

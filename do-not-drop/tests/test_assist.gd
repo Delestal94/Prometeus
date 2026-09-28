@@ -32,9 +32,11 @@ func _run() -> void:
 	_expect(is_equal_approx(float(package.player_input.get("steady_strength", 0.0)), 1.5),
 		"Primary and helper correction combine to 150 percent")
 	var before: Dictionary = package.player_input.duplicate(true)
-	_expect(not package._accept_tender_input(3, {"steady": true, "direction_pressed": &"up"}) and package.player_input == before,
+	_expect(not package._accept_tender_input(3, {"steady": true, "direction_pressed": &"up"})
+			and package.player_input == before,
 		"Input from a third peer cannot affect the package")
-	_expect(package.assist_prompt().contains("amarillo"), "The interaction prompt identifies the primary tender by colour")
+	_expect(package.assist_prompt().contains("amarillo"),
+			"The interaction prompt identifies the primary tender by colour")
 
 	var tilted := Node3D.new()
 	root.add_child(tilted)

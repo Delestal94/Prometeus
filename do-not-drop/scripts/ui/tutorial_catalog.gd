@@ -8,31 +8,38 @@ const TRAP_ORDER: Array[StringName] = [
 const TRAPS: Dictionary = {
 	&"fragile": {
 		"title": "Frágil", "glyph": "!", "breaks": "Los golpes fuertes le quitan integridad.",
-		"action": "Manejá suave y asegurala antes de salir.", "keyboard": "W/S", "gamepad": "RT/LT", "control_label": "conducir suave",
+		"action": "Manejá suave y asegurala antes de salir.", "keyboard": "W/S", "gamepad": "RT/LT",
+		"control_label": "conducir suave",
 	},
 	&"balance": {
 		"title": "Equilibrio", "glyph": "↔", "breaks": "Quedar inclinada demasiado tiempo.",
-		"action": "Mantené la acción para enderezarla.", "keyboard": "Click izq.", "gamepad": "RT", "control_label": "enderezar",
+		"action": "Mantené la acción para enderezarla.", "keyboard": "Click izq.", "gamepad": "RT",
+		"control_label": "enderezar",
 	},
 	&"growing_weight": {
 		"title": "Peso creciente", "glyph": "↓", "breaks": "No completar la secuencia antes de que pese demasiado.",
-		"action": "Seguí las flechas sin soltar la caja.", "keyboard": "WASD", "gamepad": "Stick izq.", "control_label": "secuencia",
+		"action": "Seguí las flechas sin soltar la caja.", "keyboard": "WASD", "gamepad": "Stick izq.",
+		"control_label": "secuencia",
 	},
 	&"liquid": {
 		"title": "Líquido", "glyph": "≈", "breaks": "Inclinarla y dejar crecer el charco.",
-		"action": "Mantené la acción para secar el derrame.", "keyboard": "Click izq.", "gamepad": "RT", "control_label": "secar",
+		"action": "Mantené la acción para secar el derrame.", "keyboard": "Click izq.", "gamepad": "RT",
+		"control_label": "secar",
 	},
 	&"noisy": {
 		"title": "Ruidoso", "glyph": "♪", "breaks": "Los golpes lo alteran hasta que escapa.",
-		"action": "Mantené la acción para calmarlo.", "keyboard": "Click izq.", "gamepad": "RT", "control_label": "calmar",
+		"action": "Mantené la acción para calmarlo.", "keyboard": "Click izq.", "gamepad": "RT",
+		"control_label": "calmar",
 	},
 	&"explosive": {
 		"title": "Explosivo", "glyph": "✹", "breaks": "Dejar que la cuenta regresiva llegue a cero.",
-		"action": "Repetí la secuencia de flechas a tiempo.", "keyboard": "WASD", "gamepad": "Stick izq.", "control_label": "secuencia",
+		"action": "Repetí la secuencia de flechas a tiempo.", "keyboard": "WASD", "gamepad": "Stick izq.",
+		"control_label": "secuencia",
 	},
 	&"hostile": {
 		"title": "Hostil", "glyph": "◆", "breaks": "Tocar cuando ordena NO TOCAR o ignorar CALMÁ.",
-		"action": "Mantené o soltá según la orden de la caja.", "keyboard": "Click izq.", "gamepad": "RT", "control_label": "obedecer",
+		"action": "Mantené o soltá según la orden de la caja.", "keyboard": "Click izq.", "gamepad": "RT",
+		"control_label": "obedecer",
 	},
 }
 

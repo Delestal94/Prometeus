@@ -7,6 +7,22 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: PR #10 al día con main y con el lint (2026-09-28)
+
+Nacho integró main (con #8, el pulido cartoon) en `codex/s504-gamepad-navigation`
+y lo dejó pasando el lint con baseline. Archivos de Slatex tocados:
+
+- `package_feedback.gd`: al arruinarse suena el stinger cómico de #8
+  (`_ruin_player`), que reemplaza al golpe sordo `_ruin_thud_player`. El
+  confeti sigue respetando "Efectos de impacto". `test_ruin_feedback` controla
+  el stinger.
+- `player.gd` pasaba las 1000 líneas: el ping con rueda es ahora
+  `player_ping_input.gd` (`PlayerPingInput`, `RefCounted` creado por código), y
+  carta/soltar/abrir quedaron en `_handle_package_input()`.
+- `hud_prompts.gd`: `_action_id_for_prompt()` usa la tabla `PROMPT_ACTIONS`.
+- Líneas de más de 120 columnas cortadas en UI, tutorial y tests. Mismo
+  comportamiento.
+
 ## Aviso activo: pasada de calidad de código (2026-09-27, rama `refactor/quality-pass`)
 
 Pedido del usuario: llevar arquitectura, modularidad y variables a nivel profesional en todo el

@@ -60,16 +60,21 @@ func _run() -> void:
 	_expect("Fotos de entrega (1)" in labels, "The photo shows as its own line")
 	var deliveries: Array = results.get("deliveries", [])
 	_expect(deliveries.size() == 4, "There is one result row per promised house")
-	_expect(String(deliveries[0].get("trap", "")) == "FRÁGIL" and bool(deliveries[0].get("photo", false)), "A row identifies its trap and delivery photo")
-	_expect(StringName(deliveries[3].get("outcome", &"")) == &"missed", "An unreached house is represented as a missed delivery")
+	_expect(String(deliveries[0].get("trap", "")) == "FRÁGIL" and bool(deliveries[0].get("photo", false)),
+			"A row identifies its trap and delivery photo")
+	_expect(StringName(deliveries[3].get("outcome", &"")) == &"missed",
+			"An unreached house is represented as a missed delivery")
 	var route_event: Dictionary = results.get("route_event", {})
-	_expect(StringName(route_event.get("id", &"")) == &"inspection" and bool(route_event.get("success", false)), "The result records how the route event ended")
+	_expect(StringName(route_event.get("id", &"")) == &"inspection" and bool(route_event.get("success", false)),
+			"The result records how the route event ended")
 	var award_titles: PackedStringArray = []
 	for award: Dictionary in results.get("awards", []):
 		award_titles.append(String(award.get("title", "")))
-	_expect("MVP" in award_titles and "Rescatista" in award_titles and "Desactivador" in award_titles and "Mano firme" in award_titles, "Merit produces all four result awards")
+	_expect("MVP" in award_titles and "Rescatista" in award_titles and "Desactivador" in award_titles
+			and "Mano firme" in award_titles, "Merit produces all four result awards")
 	var next_unlock: Dictionary = unlocks.call(&"next_unlock_progress")
-	_expect(not next_unlock.is_empty() and float(next_unlock.get("progress", -1.0)) >= 0.0, "The results can show progress toward the next unlock")
+	_expect(not next_unlock.is_empty() and float(next_unlock.get("progress", -1.0)) >= 0.0,
+			"The results can show progress toward the next unlock")
 	var text: String = load("res://scripts/ui/hud/hud.gd").score_breakdown_text(results, int(results["score"]))
 	_expect(text.contains("Total") and text.contains(str(int(results["score"]))), "The results text ends on the total")
 	manager.call(&"reset_run")

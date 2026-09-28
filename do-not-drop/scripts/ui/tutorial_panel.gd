@@ -118,19 +118,29 @@ func page_titles() -> PackedStringArray:
 
 func _rebuild_pages() -> void:
 	_pages = [
-		_page("El objetivo", "Leé la pizarra, cargá la caja correcta y entregala en la casa indicada. La caja puede ir asegurada o en tus manos.", "⌂"),
-		_page("Conductor", "%s\n\nManejá suave, frená dentro de la zona de entrega y dejá que el equipo atienda la carga." % UiTheme.keycaps("%s  acelerar y frenar" % GameSettings.prompt("W/S", "RT/LT")), "▰"),
-		_page("Pasajero", "%s\n\nSentate junto a una caja y reaccioná a su aviso. También podés abrirla para comprobar qué lleva." % UiTheme.keycaps("%s  cuidar   ·   %s  abrir" % [GameSettings.prompt("Click izq.", "RT"), GameSettings.prompt("T", "D-pad abajo")]), "☺"),
+		_page("El objetivo",
+				"Leé la pizarra, cargá la caja correcta y entregala en la casa indicada. La caja puede ir asegurada o"
+				+ " en tus manos.", "⌂"),
+		_page("Conductor",
+				"%s\n\nManejá suave, frená dentro de la zona de entrega y dejá que el equipo atienda la carga."
+				% UiTheme.keycaps("%s  acelerar y frenar" % GameSettings.prompt("W/S", "RT/LT")), "▰"),
+		_page("Pasajero",
+				"%s\n\nSentate junto a una caja y reaccioná a su aviso. También podés abrirla para comprobar qué lleva."
+				% UiTheme.keycaps("%s  cuidar   ·   %s  abrir" % [GameSettings.prompt("Click izq.", "RT"),
+				GameSettings.prompt("T", "D-pad abajo")]), "☺"),
 	]
 	for trap_id: StringName in TutorialData.available_traps(UnlockManager):
 		var data: Dictionary = TutorialData.card(trap_id)
 		_pages.append({
 			"title": String(data["title"]),
-			"body": "[b]Qué la rompe[/b]\n%s\n\n[b]Qué hacer[/b]\n%s\n\n%s" % [data["breaks"], data["action"], UiTheme.keycaps("%s  %s" % [TutorialData.control(data), data["control_label"]])],
+			"body": "[b]Qué la rompe[/b]\n%s\n\n[b]Qué hacer[/b]\n%s\n\n%s" % [data["breaks"], data["action"],
+					UiTheme.keycaps("%s  %s" % [TutorialData.control(data), data["control_label"]])],
 			"glyph": String(data["glyph"]),
 			"texture": UiTheme.trap_icon(String(data["title"])),
 		})
-	_pages.append(_page("Dinero, mérito y cartas", "Las entregas pagan dinero al equipo para comprar suministros. Las buenas acciones dan mérito personal y pueden otorgarte una carta.", "$"))
+	_pages.append(_page("Dinero, mérito y cartas",
+			"Las entregas pagan dinero al equipo para comprar suministros. Las buenas acciones dan mérito personal y"
+			+ " pueden otorgarte una carta.", "$"))
 	_page_index = clampi(_page_index, 0, maxi(_pages.size() - 1, 0))
 	if visible:
 		_refresh_page()

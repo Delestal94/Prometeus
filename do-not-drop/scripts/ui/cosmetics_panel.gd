@@ -160,7 +160,8 @@ func _wire_grid_focus(buttons: Array[Button], columns: int) -> void:
 		var column: int = index % columns
 		var neighbors: Dictionary = {
 			&"focus_neighbor_left": buttons[index - 1] if column > 0 else button,
-			&"focus_neighbor_right": buttons[index + 1] if column < columns - 1 and index + 1 < buttons.size() else button,
+			&"focus_neighbor_right": buttons[index + 1] if column < columns - 1 and index + 1 < buttons.size()
+			else button,
 			&"focus_neighbor_top": buttons[index - columns] if index >= columns else button,
 			&"focus_neighbor_bottom": buttons[index + columns] if index + columns < buttons.size() else button,
 		}

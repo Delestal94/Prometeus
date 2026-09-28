@@ -85,10 +85,12 @@ func _check_menu_panel(menu: Control, button_text: String, panel: Control) -> vo
 func _check_cosmetic_neighbors(panel: Control) -> void:
 	var buttons: Array = panel.get(&"_face_buttons")
 	for button: Button in buttons:
-		for property: StringName in [&"focus_neighbor_left", &"focus_neighbor_right", &"focus_neighbor_top", &"focus_neighbor_bottom"]:
+		for property: StringName in [&"focus_neighbor_left", &"focus_neighbor_right", &"focus_neighbor_top",
+				&"focus_neighbor_bottom"]:
 			var neighbor := button.get_node_or_null(button.get(property)) as Button
 			_expect(neighbor != null and neighbor.get_meta(&"kind") == button.get_meta(&"kind"),
-				"Cosmetic grid keeps %s navigation inside the %s choices" % [String(property).trim_prefix("focus_neighbor_"), button.get_meta(&"kind")])
+				"Cosmetic grid keeps %s navigation inside the %s choices"
+				% [String(property).trim_prefix("focus_neighbor_"), button.get_meta(&"kind")])
 
 
 func _button_named(parent: Node, text: String) -> Button:

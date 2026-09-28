@@ -151,22 +151,24 @@ func render_interaction_prompt() -> void:
 	hud.interaction_icon.visible = hud.interaction_icon.texture != null
 
 
+## Prompt words to the action they ask for, checked in this order.
+const PROMPT_ACTIONS: Array = [
+	[&"grab", ["agarrar", "bajar paquete"]],
+	[&"drop", ["soltar", "dejá el paquete", "dejar paquete"]],
+	[&"sit", ["sentar", "subirse"]],
+	[&"bell", ["timbre"]],
+	[&"photo", ["foto"]],
+	[&"horn", ["bocina"]],
+	[&"ping", ["ping"]],
+]
+
+
 func _action_id_for_prompt(prompt: String) -> StringName:
 	var normalized: String = prompt.to_lower()
-	if "agarrar" in normalized or "bajar paquete" in normalized:
-		return &"grab"
-	if "soltar" in normalized or "dejá el paquete" in normalized or "dejar paquete" in normalized:
-		return &"drop"
-	if "sentar" in normalized or "subirse" in normalized:
-		return &"sit"
-	if "timbre" in normalized:
-		return &"bell"
-	if "foto" in normalized:
-		return &"photo"
-	if "bocina" in normalized:
-		return &"horn"
-	if "ping" in normalized:
-		return &"ping"
+	for entry: Array in PROMPT_ACTIONS:
+		for word: String in entry[1]:
+			if word in normalized:
+				return entry[0]
 	if "caja" in normalized and ("abrir" in normalized or "cerrar" in normalized):
 		return &"open_box"
 	if "carta" in normalized:

@@ -42,7 +42,8 @@ func get_prompt() -> String:
 func can_interact(player: Node) -> bool:
 	var peer_id: int = player.get_multiplayer_authority()
 	if _package.has_method(&"can_assist") and bool(_package.call(&"can_assist", peer_id)):
-		var origin: Vector3 = player.call(&"reach_origin") if player.has_method(&"reach_origin") else (player as Node3D).global_position
+		var origin: Vector3 = (player.call(&"reach_origin") if player.has_method(&"reach_origin")
+				else (player as Node3D).global_position)
 		return player.get(&"carried_package") == null \
 				and origin.distance_to((_package as Node3D).global_position) <= DeliveryPackage.ASSIST_REACH
 	return not get_prompt().is_empty() and player.get(&"carried_package") == null

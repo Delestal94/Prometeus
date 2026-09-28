@@ -86,7 +86,8 @@ func _refresh_entries() -> void:
 		var crew_text: String = "1 jugador" if crew == 1 else "%d jugadores" % crew
 		var line := HBoxContainer.new()
 		line.name = "Rank%d" % rank
-		line.tooltip_text = tr("UI_LEAD_ROW") % [rank, int(entry.get("score", 0)), String(entry.get("mode", "delivery")), String(entry.get("date", ""))]
+		line.tooltip_text = tr("UI_LEAD_ROW") % [rank, int(entry.get("score", 0)), String(entry.get("mode",
+				"delivery")), String(entry.get("date", ""))]
 		line.add_theme_constant_override("separation", 12)
 		_entries.add_child(line)
 		var rank_label: Label = UiTheme.chip(line, "%d" % rank, UiTheme.YELLOW, 18)

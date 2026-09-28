@@ -507,7 +507,8 @@ func set_tender(peer_id: int) -> void:
 
 
 func set_assistant(peer_id: int) -> bool:
-	if peer_id > 0 and (tender_peer_id <= 0 or peer_id == tender_peer_id or (assistant_peer_id > 0 and assistant_peer_id != peer_id)):
+	if peer_id > 0 and (tender_peer_id <= 0 or peer_id == tender_peer_id or (assistant_peer_id > 0
+			and assistant_peer_id != peer_id)):
 		return false
 	var previous: int = assistant_peer_id
 	if previous > 0:
@@ -585,7 +586,8 @@ func _age_tender_inputs(delta: float) -> void:
 
 
 func _refresh_combined_input() -> void:
-	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0, "direction_pressed": null}
+	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0,
+			"direction_pressed": null}
 	for peer_id: int in [tender_peer_id, assistant_peer_id]:
 		if peer_id <= 0 or not _has_fresh_input(peer_id):
 			continue
@@ -605,7 +607,8 @@ func _refresh_combined_input() -> void:
 
 
 func _has_fresh_input(peer_id: int) -> bool:
-	return _tender_inputs.has(peer_id) and float((_tender_inputs[peer_id] as Dictionary).get("age", INF)) <= TENDER_INPUT_TIMEOUT
+	return _tender_inputs.has(peer_id) and float((_tender_inputs[peer_id] as Dictionary).get("age",
+			INF)) <= TENDER_INPUT_TIMEOUT
 
 
 func _peer_within_assist_reach(peer_id: int) -> bool:

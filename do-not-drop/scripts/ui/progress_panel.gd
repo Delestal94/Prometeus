@@ -87,7 +87,8 @@ func _refresh() -> void:
 func _add_unlock_row(unlock_id: StringName, rule: Dictionary, got: bool, summary: Dictionary) -> void:
 	var panel := PanelContainer.new()
 	panel.name = "Unlock_%s" % unlock_id
-	panel.tooltip_text = tr("UI_PROG_UNLOCK_LINE") % ["✓" if got else "○", rule["title"], rule["deliveries"], rule["score"]]
+	panel.tooltip_text = tr("UI_PROG_UNLOCK_LINE") % ["✓" if got else "○", rule["title"], rule["deliveries"],
+			rule["score"]]
 	panel.add_theme_stylebox_override("panel", UiTheme.surface_style(10, UiTheme.WHITE))
 	_list.add_child(panel)
 	var row := HBoxContainer.new()
@@ -113,7 +114,8 @@ func _add_unlock_row(unlock_id: StringName, rule: Dictionary, got: bool, summary
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 3)
 	row.add_child(content)
-	var title: Label = UiTheme.label(content, "%s  %s" % ["✓" if got else "○", String(rule["title"])], 18, UiTheme.MINT if got else UiTheme.INK, true)
+	var title: Label = UiTheme.label(content, "%s  %s" % ["✓" if got else "○", String(rule["title"])], 18,
+			UiTheme.MINT if got else UiTheme.INK, true)
 	title.name = "Title"
 	var reward_label: Label = UiTheme.label(content, String(reward["text"]), 15, UiTheme.MUTED)
 	reward_label.name = "Reward"

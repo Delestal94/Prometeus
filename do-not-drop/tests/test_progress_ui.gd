@@ -21,7 +21,8 @@ func _run() -> void:
 	await process_frame
 	var noisy_row: Node = progress.find_child("Unlock_noisy_trap", true, false)
 	assert(noisy_row != null, "Cada desbloqueo debe tener su propia tarjeta")
-	assert(noisy_row.find_child("Reward", true, false).text.contains("Nueva trampa"), "La tarjeta debe explicar qué contenido entrega")
+	assert(noisy_row.find_child("Reward", true, false).text.contains("Nueva trampa"),
+			"La tarjeta debe explicar qué contenido entrega")
 	var delivery_bar: ProgressBar = noisy_row.find_child("EntregasProgress", true, false)
 	var score_bar: ProgressBar = noisy_row.find_child("PuntosProgress", true, false)
 	assert(delivery_bar != null and score_bar != null and delivery_bar.value != score_bar.value,

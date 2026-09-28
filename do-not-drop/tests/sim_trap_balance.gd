@@ -45,8 +45,10 @@ func _run() -> void:
 				var aggregate := {"runs": 0, "ruined": 0, "risk_seconds": 0.0, "near_misses": 0}
 				for drive_index: int in range(drives.size()):
 					for trial: int in range(_trials_per_drive):
-						var seed_value: int = hash("%s:%s:%.2f:%d:%d" % [definition.id, profile_name, latency, drive_index, trial])
-						var result: Dictionary = _simulate(definition, drives[drive_index], profile_name, latency, seed_value)
+						var seed_value: int = hash("%s:%s:%.2f:%d:%d" % [definition.id, profile_name, latency,
+								drive_index, trial])
+						var result: Dictionary = _simulate(definition, drives[drive_index], profile_name, latency,
+								seed_value)
 						aggregate.runs += 1
 						aggregate.ruined += int(result.ruined)
 						aggregate.risk_seconds += result.risk_seconds
@@ -64,7 +66,8 @@ func _run() -> void:
 				print("ROW %s %s +%dms ruined=%.1f%% risk=%.1fs near=%.1f%%" % [
 					row.trap, row.profile, row.latency_ms, row.ruined_pct, row.risk_seconds, row.near_miss_pct])
 	if not only_trap.is_empty():
-		print("PASS sim_trap_balance calibration: %s × 3 profiles × 2 latencies × 5 drives × %d trials" % [only_trap, _trials_per_drive])
+		print("PASS sim_trap_balance calibration: %s × 3 profiles × 2 latencies × 5 drives × %d trials" % [only_trap,
+				_trials_per_drive])
 		quit(0)
 		return
 	var report: String = _make_report(rows, drives)
@@ -73,7 +76,8 @@ func _run() -> void:
 	file.store_string(report)
 	file.close()
 	print(report)
-	print("PASS sim_trap_balance: %d traps × 3 profiles × 2 latencies × 5 drives × %d trials" % [traps.size(), _trials_per_drive])
+	print("PASS sim_trap_balance: %d traps × 3 profiles × 2 latencies × 5 drives × %d trials" % [traps.size(),
+			_trials_per_drive])
 	quit(0)
 
 
@@ -108,7 +112,8 @@ func _load_traps() -> Array[TrapDefinition]:
 	return traps
 
 
-func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: String, latency: float, seed_value: int) -> Dictionary:
+func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: String, latency: float,
+		seed_value: int) -> Dictionary:
 	var package := RigidBody3D.new()
 	package.mass = 8.0
 	root.add_child(package)
@@ -150,7 +155,8 @@ func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: Stri
 					if rng.randf() >= float(profile.dropout):
 						var wanted: StringName = _wanted_direction(behavior, definition.id)
 						if not wanted.is_empty():
-							input.direction_pressed = wanted if rng.randf() <= float(profile.accuracy) else _wrong_direction(wanted, rng)
+							input.direction_pressed = (wanted if rng.randf() <= float(profile.accuracy)
+									else _wrong_direction(wanted, rng))
 			else:
 				var desired: bool = _wanted_hold(behavior, definition.id, tilt)
 				desired_history.append({"time": time, "value": desired})
@@ -220,8 +226,10 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 	var lines: Array[String] = [
 		"# S-108 · Balance de trampas",
 		"",
-		"Generado por `tests/sim_trap_balance.gd` con los comportamientos reales: 5 recorridos × %d repeticiones por combinación." % _trials_per_drive,
-		"Perfiles: ausente; torpe (0,8 s, 60 % de acierto, 20 % de abandono); experto (0,25 s, 95 %). Cada uno se mide con 0 y 150 ms adicionales.",
+		("Generado por `tests/sim_trap_balance.gd` con los comportamientos reales: 5 recorridos × %d repeticiones"
+		+ " por combinación.") % _trials_per_drive,
+		"Perfiles: ausente; torpe (0,8 s, 60 % de acierto, 20 % de abandono); experto (0,25 s, 95 %). Cada uno se mide"
+		+ " con 0 y 150 ms adicionales.",
 		"",
 		"| Trampa | Perfil | Latencia | Perdidos | Segundos en riesgo | Casi pérdida |",
 		"|---|---|---:|---:|---:|---:|",
@@ -252,7 +260,8 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 	lines.append("- Resultado interactivo: **%s**." % ("CUMPLE" if all_targets else "REQUIERE AJUSTE"))
 	lines.append_array([
 		"",
-		"`fragile` se informa aparte: no tiene acción de pasajero por diseño; sus seis filas deben coincidir y miden solamente el manejo del conductor.",
+		"`fragile` se informa aparte: no tiene acción de pasajero por diseño; sus seis filas deben coincidir y miden"
+		+ " solamente el manejo del conductor.",
 		"",
 		"Recorridos: %s." % _drive_summary(drives),
 		"",

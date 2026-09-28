@@ -76,7 +76,9 @@ func _on_ended(score: int, results: Dictionary) -> void:
 		hud.overlay_stats.text = format_score_breakdown(results,
 				score) + tr("HUD_RESULT_TEAM") % CrewProgression.team_money + best_line + client_line
 	else:
-		hud.overlay_stats.text = tr("HUD_RESULT_STATS") % [float(results.get("elapsed_seconds", 0.0)), int(results.get("cargo_points", 0)), int(results.get("time_bonus", 0)), door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
+		hud.overlay_stats.text = tr("HUD_RESULT_STATS") % [float(results.get("elapsed_seconds", 0.0)),
+				int(results.get("cargo_points", 0)), int(results.get("time_bonus",
+				0)), door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
 	_show_complaints(results.get("complaints", []))
 	_show_photos()
 	_show_result_details(results)
@@ -120,7 +122,8 @@ func _add_delivery_row(entry: Dictionary) -> void:
 		&"delivered_ruined": "ARRUINADO ✕",
 		&"missed": "SIN ENTREGA",
 	}.get(outcome, "SIN ENTREGA")
-	var label: Label = UiTheme.label(row, "Casa %d  ·  %s  ·  %s" % [int(entry.get("house", 0)) + 1, trap_name, result_text], 15, Hud.INK)
+	var label: Label = UiTheme.label(row, "Casa %d  ·  %s  ·  %s" % [int(entry.get("house", 0)) + 1, trap_name,
+			result_text], 15, Hud.INK)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if bool(entry.get("photo", false)):
 		UiTheme.tag(row, "FOTO ✓", UiTheme.SKY, -1.0, 13)
@@ -132,7 +135,8 @@ func _show_awards(awards: Array) -> void:
 		var peer: int = int(award.get("peer", 0))
 		var color: Color = RESULT_PLAYER_COLORS[posmod(peer, RESULT_PLAYER_COLORS.size())]
 		var player_name: String = "Vos" if peer == NetworkManager.local_id() else "Jugador %d" % peer
-		lines.append("[color=#%s]●[/color] [b]%s[/b]  %s" % [color.to_html(false), String(award.get("title", "Premio")), player_name])
+		lines.append("[color=#%s]●[/color] [b]%s[/b]  %s" % [color.to_html(false), String(award.get("title", "Premio")),
+				player_name])
 	hud.result_awards_label.text = "\n".join(lines)
 	hud.result_awards_label.visible = not lines.is_empty()
 

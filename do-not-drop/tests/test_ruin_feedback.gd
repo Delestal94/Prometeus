@@ -52,9 +52,9 @@ func _initialize() -> void:
 	var bursts: Array[GPUParticles3D] = _find_particles()
 	_expect(bursts.size() == 1, "Exactly one confetti burst spawned (got %d)" % bursts.size())
 	var feedback: Node = package.get_node(^"PackageFeedbackComponent")
-	var ruin_thud := feedback.get(&"_ruin_thud_player") as AudioStreamPlayer3D
-	_expect(ruin_thud != null and ruin_thud.playing and ruin_thud.pitch_scale < 1.0,
-		"Ruin plays one low local thud with the visual hold")
+	# The comic ruin stinger (test_audio_polish) replaced the old low thud.
+	var ruin_sound := feedback.get(&"_ruin_player") as AudioStreamPlayer3D
+	_expect(ruin_sound != null and ruin_sound.playing, "Ruin plays its comic stinger with the visual hold")
 	if not bursts.is_empty():
 		var burst: GPUParticles3D = bursts[0]
 		_expect(burst.global_position.is_equal_approx(Vector3(3.0, 0.0, -8.0)),

@@ -33,7 +33,8 @@ func _run() -> void:
 	_expect(not hud.second_button.visible, "Nothing to restart before anything started")
 	_expect(hud.route_bar.visible, "Outside endless the route bar is shown")
 	_expect(String(hud.session_label.text).contains("SOLO"), "Offline, the session corner says so")
-	for action_id: StringName in [&"grab", &"drop", &"sit", &"bell", &"photo", &"horn", &"ping", &"open_box", &"use_card"]:
+	for action_id: StringName in [&"grab", &"drop", &"sit", &"bell", &"photo", &"horn", &"ping", &"open_box",
+			&"use_card"]:
 		_expect(UiTheme.action_icon(action_id) != null, "%s has an action icon" % action_id)
 	_expect(UiTheme.action_icon(&"unknown") == null, "Unknown actions keep the text-only fallback")
 

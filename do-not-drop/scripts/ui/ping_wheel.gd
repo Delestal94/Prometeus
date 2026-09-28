@@ -53,7 +53,8 @@ static func index_for_vector(direction: Vector2) -> int:
 	var best_index: int = 0
 	var best_dot: float = -INF
 	for index: int in PingCatalog.OPTIONS.size():
-		var option_direction := Vector2.RIGHT.rotated(-PI * 0.5 + TAU * float(index) / float(PingCatalog.OPTIONS.size()))
+		var option_direction := Vector2.RIGHT.rotated(-PI * 0.5 + TAU
+				* float(index) / float(PingCatalog.OPTIONS.size()))
 		var score: float = normalized.dot(option_direction)
 		if score > best_dot:
 			best_dot = score

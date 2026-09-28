@@ -67,15 +67,11 @@ var _last_prompt: String = ""
 var _last_carrying: bool = false
 var _last_lid_hint: String = ""
 var _highlighted: Node = null
-var _ping_wheel: PingWheel
-var _ping_held: bool = false
-var _ping_hold_seconds: float = 0.0
-var _ping_wheel_open: bool = false
+var _ping_input := PlayerPingInput.new(self)
 const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
-const PingWheelScene = preload("res://scripts/ui/ping_wheel.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
@@ -217,7 +213,7 @@ func _enter_tree() -> void:
 ## air with collisions off. package.carrier is only ever set on the host, so
 ## this only acts there.
 func _exit_tree() -> void:
-	_close_ping_wheel()
+	_ping_input.close_wheel()
 	var network: Node = get_node_or_null("/root/NetworkManager")
 	if network != null and network.call(&"is_host"):
 		_release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
@@ -260,8 +256,7 @@ func _ready() -> void:
 		return
 	_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	_ping_wheel = PingWheelScene.new()
-	add_child(_ping_wheel)
+	_ping_input.build_wheel()
 	_probe.area_entered.connect(_on_probe_entered)
 	_probe.area_exited.connect(_on_probe_exited)
 
@@ -363,30 +358,11 @@ func is_local() -> bool:
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_local():
 		return
-	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not _ping_wheel_open:
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not _ping_input.wheel_open:
 		return
-	if event.is_action_pressed(&"ui_ping"):
-		_begin_ping_input()
-		get_viewport().set_input_as_handled()
+	if _ping_input.handle_event(event) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
-	if event.is_action_released(&"ui_ping"):
-		_finish_ping_input()
-		get_viewport().set_input_as_handled()
-		return
-	if _ping_wheel_open and event is InputEventMouseMotion:
-		_ping_wheel.select_from_pointer(event.position)
-		get_viewport().set_input_as_handled()
-		return
-	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		return
-	if event.is_action_pressed(&"use_card"):
-		_use_card()
-		return
-	if _is_drop_event(event):
-		_drop_carried()
-		return
-	if _is_open_event(event):
-		_toggle_package_lid()
+	if _handle_package_input(event):
 		return
 	if _seated:
 		if _is_interact_event(event):
@@ -413,7 +389,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## need authority the way movement/input do.
 func _process(delta: float) -> void:
 	_flinch_time = maxf(_flinch_time - delta, 0.0)
-	_update_ping_input(delta)
+	_ping_input.update(delta)
 	animator.animate()
 	if not is_local():
 		_apply_net_state()
@@ -606,7 +582,8 @@ func _physics_process(delta: float) -> void:
 		_publish_lid_hint(null)
 		return
 	if _seated:
-		var candidate: DeliveryPackage = _assist_candidate() if tended_package != null and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null
+		var candidate: DeliveryPackage = (_assist_candidate() if tended_package != null
+				and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null)
 		_publish_prompt(candidate.assist_prompt() if candidate != null and assisted_package == null else "")
 		_publish_lid_hint(_lid_target())
 		if carried_package != null:
@@ -820,51 +797,23 @@ func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
 
 
 const PING_LABEL: String = "¡Cuidado!"
-const PING_WHEEL_HOLD_SECONDS: float = 0.28
 
 
 func _send_ping(label: String = PING_LABEL) -> void:
 	_interaction_component.send_ping(label)
 
 
-func _begin_ping_input() -> void:
-	if _ping_held:
-		return
-	_ping_held = true
-	_ping_hold_seconds = 0.0
-
-
-func _update_ping_input(delta: float) -> void:
-	if not is_local() or not _ping_held:
-		return
-	_ping_hold_seconds += delta
-	if not _ping_wheel_open and _ping_hold_seconds >= PING_WHEEL_HOLD_SECONDS:
-		_ping_wheel_open = true
-		_ping_wheel.show_wheel()
-	if _ping_wheel_open:
-		var stick := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
-		if stick.length() >= 0.35:
-			_ping_wheel.select_from_vector(stick * PingWheel.DEAD_ZONE * 2.0)
-
-
-func _finish_ping_input() -> void:
-	if not _ping_held:
-		return
-	var label: String = _ping_wheel.selected_label() if _ping_wheel_open else PING_LABEL
-	_ping_held = false
-	_ping_hold_seconds = 0.0
-	_close_ping_wheel()
-	_send_ping(label)
-
-
-func _close_ping_wheel() -> void:
-	if not _ping_wheel_open:
-		return
-	_ping_wheel_open = false
-	if is_instance_valid(_ping_wheel):
-		_ping_wheel.hide_wheel()
-	if is_local() and not get_tree().paused:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+## Card, drop and lid keys; true when the event was one of them.
+func _handle_package_input(event: InputEvent) -> bool:
+	if event.is_action_pressed(&"use_card"):
+		_use_card()
+	elif _is_drop_event(event):
+		_drop_carried()
+	elif _is_open_event(event):
+		_toggle_package_lid()
+	else:
+		return false
+	return true
 
 
 func _use_card() -> void:

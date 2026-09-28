@@ -77,7 +77,8 @@ func _drive(seed_value: int, houses: int, cruise_kmh: float) -> Dictionary:
 	var last_index: int = -1
 	while path_index < path.size() - 1 and ticks * step < MAX_DRIVE_SECONDS:
 		var here: Vector3 = route.to_local(van.global_position)
-		while path_index < path.size() - 1 and Vector2(path[path_index].x - here.x, path[path_index].z - here.z).length() < LOOKAHEAD:
+		while path_index < path.size() - 1 and Vector2(path[path_index].x - here.x,
+				path[path_index].z - here.z).length() < LOOKAHEAD:
 			path_index += 1
 		stuck = 0.0 if path_index != last_index else stuck + step
 		last_index = path_index
@@ -99,7 +100,8 @@ func _drive(seed_value: int, houses: int, cruise_kmh: float) -> Dictionary:
 		var target_kmh: float = cruise_kmh * _bend_factor(path, path_index)
 		var local: Vector3 = van.global_transform.affine_inverse() * route.to_global(path[path_index])
 		var steer: float = clampf(atan2(local.x, -local.z) * 2.2, -1.0, 1.0)
-		var throttle: float = 1.0 if van.speed_kmh < target_kmh - 2.0 else (-0.7 if van.speed_kmh > target_kmh + 3.0 else 0.35)
+		var throttle: float = 1.0 if van.speed_kmh < target_kmh - 2.0 else (-0.7 if van.speed_kmh > target_kmh + 3.0
+				else 0.35)
 		van.call(&"set_controls", throttle, steer, false)
 		await physics_frame
 		ticks += 1

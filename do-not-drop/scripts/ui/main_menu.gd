@@ -287,7 +287,8 @@ func _build_home_page(column: VBoxContainer) -> Dictionary:
 	var options_button: Button = _small_button(bottom_row, tr("UI_OPTIONS"))
 	options_button.pressed.connect(_open_options)
 	_entry_buttons.append(options_button)
-	var tutorial_button: Button = _small_button(bottom_row, tr("UI_HOW_TO_PLAY"), int(UnlockManager.completed_runs) == 0)
+	var tutorial_button: Button = _small_button(bottom_row, tr("UI_HOW_TO_PLAY"),
+			int(UnlockManager.completed_runs) == 0)
 	tutorial_button.set_meta(&"first_run_highlighted", int(UnlockManager.completed_runs) == 0)
 	tutorial_button.pressed.connect(_open_tutorial)
 	_entry_buttons.append(tutorial_button)
