@@ -105,6 +105,11 @@ signal depot_supplies_changed(supplies: Array, team_money: int)
 signal depot_notice(text: String)
 
 
+## Minimum seconds between two callouts from the same player (N-505.3).
+var ping_cooldown_seconds: float = 1.5
+## Host-side: peer_id -> Time.get_ticks_msec() of their last accepted callout.
+var _last_ping_ms: Dictionary = {}
+
 ## Emits locally and, if this is the host of an online session, rebroadcasts
 ## to every client so their own EventBus fires the same signal. Call this
 ## instead of emit_signal() for anything that originates from host-run
@@ -125,13 +130,24 @@ func _relay(event_name: StringName, args: Array) -> void:
 ## decide a ping actually happened, same authority rule as every other
 ## player-initiated action in this project, then relay()s it as a fact so
 ## everyone's HUD (including the sender's) reacts identically.
+## The host also rate-limits each player to one callout per
+## ping_cooldown_seconds (N-505.3), so a held-down wheel can't spam the crew.
 @rpc("any_peer", "call_remote", "reliable")
 func request_ping(position: Vector3, label: String) -> void:
 	if NetworkManager.is_online() and not NetworkManager.is_host():
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else NetworkManager.local_id()
+	var now_ms: int = Time.get_ticks_msec()
+	if _last_ping_ms.has(peer_id) and now_ms - int(_last_ping_ms[peer_id]) < roundi(ping_cooldown_seconds * 1000.0):
+		return
+	_last_ping_ms[peer_id] = now_ms
 	relay(&"ping_sent", [peer_id, position, label])
+
+
+## Forgets every player's last callout, so the next one goes through.
+func reset_ping_cooldowns() -> void:
+	_last_ping_ms.clear()
 
 
 ## Same client->host->everyone shape as request_ping(), for the driver's horn.
