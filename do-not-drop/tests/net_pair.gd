@@ -27,6 +27,12 @@ func _ready() -> void:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		get_node(^"/root/UnlockManager").set(&"selected_cosmetic", CLIENT_COSMETIC)
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
+	# Without this a dropped join only showed up as a bare timeout 40 s later.
+	# NETLOG, not PAIR: run-net-pair.sh takes the first PAIR line as the result.
+	_network.connect(&"session_failed", func(reason: String) -> void:
+		print("NETLOG role=%s session failed at %.1f s: %s" % [_role(), _seconds(), reason]))
+	_network.connect(&"session_ready", func(_is_host: bool) -> void:
+		print("NETLOG role=%s session ready at %.1f s" % [_role(), _seconds()]))
 	var error: Error = _network.call(&"host_session", PORT) if _host else _network.call(&"join_session", "127.0.0.1", PORT)
 	if error != OK:
 		print("PAIR role=%s FAIL could not %s (error %d)" % [_role(), "host" if _host else "join", error])
@@ -41,8 +47,10 @@ func _ready() -> void:
 func _load_level() -> void:
 	if _level != null:
 		return
+	var began: float = _seconds()
 	_level = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	get_tree().root.add_child(_level)
+	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_role(), _seconds(), _seconds() - began])
 
 
 func _run_host() -> void:
@@ -315,6 +323,10 @@ func _wait_until(predicate: Callable) -> bool:
 			return true
 		await get_tree().process_frame
 	return false
+
+
+func _seconds() -> float:
+	return Time.get_ticks_msec() / 1000.0
 
 
 func _pump(seconds: float) -> void:
