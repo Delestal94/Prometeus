@@ -156,6 +156,7 @@ func _ready() -> void:
 	EventBus.delivery_deadlines_set.connect(func(list: Array) -> void: deadlines = list.duplicate(true))
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.houses_assigned.connect(_on_houses_assigned)
+	EventBus.cargo_overboard_ended.connect(_on_cargo_overboard_ended)
 	_load_leaderboard()
 
 
@@ -220,7 +221,7 @@ func next_deadline() -> Dictionary:
 func _delivered_at(house_index: int) -> bool:
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
-			return StringName(entry["outcome"]) != &"missed"
+			return not is_empty_order(StringName(entry["outcome"]))
 	return false
 
 
@@ -231,7 +232,7 @@ func deadline_tally() -> Dictionary:
 	for deadline: Dictionary in deadlines:
 		var on_time: bool = false
 		for entry: Dictionary in deliveries:
-			if int(entry["house"]) == int(deadline["house"]) and StringName(entry["outcome"]) != &"missed":
+			if int(entry["house"]) == int(deadline["house"]) and not is_empty_order(StringName(entry["outcome"])):
 				on_time = float(entry.get("at", INF)) <= float(deadline["seconds"])
 		if on_time:
 			met += 1
@@ -318,7 +319,7 @@ func register_delivery(house_index: int, outcome: StringName, package_id: String
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
 			return
-	var care: StringName = care_category(package_id) if outcome != &"missed" else &""
+	var care: StringName = care_category(package_id) if not is_empty_order(outcome) else &""
 	if care.is_empty():
 		care = StringName(_pending_care.get(house_index, &""))
 	deliveries.append({
@@ -364,7 +365,7 @@ func submit_delivery_photo(house_index: int) -> bool:
 		return attach_delivery_photo(house_index)
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
-			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
+			if bool(entry["photo"]) or is_empty_order(StringName(entry["outcome"])):
 				return false
 			entry["photo"] = true
 			_request_delivery_photo.rpc_id(NetworkManager.HOST_ID, house_index)
@@ -406,7 +407,7 @@ func _mark_photo(house_index: int) -> bool:
 		if int(entry["house"]) == house_index:
 			# Nothing was delivered at a house the run drove past: there's
 			# nothing for a photo to prove, and it used to earn the bonus.
-			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
+			if bool(entry["photo"]) or is_empty_order(StringName(entry["outcome"])):
 				return false
 			entry["photo"] = true
 			return true
@@ -451,23 +452,45 @@ func _on_houses_assigned(assignments: Array) -> void:
 	house_assignments = assignments.duplicate(true)
 
 
+## An order that closed with nothing handed over: a door nobody rang
+## ("missed") or a box left on the road past its rescue window ("lost").
+func is_empty_order(outcome: StringName) -> bool:
+	return outcome == &"missed" or outcome == &"lost"
+
+
+## N-213.4: a box nobody came back for closes its own order as "lost"
+## ("Perdido" on the results screen) instead of ending the run. The window's
+## end is relayed, so every peer closes the same order; it goes in before the
+## box is marked lost (level_common.gd), so a lost box no longer counts as
+## cargo aboard and can't read as "all the cargo is ruined".
+func _on_cargo_overboard_ended(package_id: StringName, rescued: bool) -> void:
+	if rescued:
+		return
+	for house: int in house_assignments.size():
+		var assignment: Array = house_assignments[house]
+		if not assignment.is_empty() and StringName(assignment[0]) == package_id:
+			register_delivery(house, &"lost", package_id)
+			return
+
+
 ## Points and complaints from the doors, kept apart from the van tally in
 ## finish_run() so each side stays readable on its own.
 func _resolve_deliveries() -> Dictionary:
 	var points: int = 0
 	var delivered_count: int = 0
 	var missed: int = 0
+	var lost: int = 0
 	var photos: int = 0
 	var complaints: Array[Dictionary] = []
 	var rescued: Dictionary = {}
 	for entry: Dictionary in deliveries:
 		var outcome: StringName = StringName(entry["outcome"])
-		var has_photo: bool = bool(entry["photo"]) and outcome != &"missed"
+		var has_photo: bool = bool(entry["photo"]) and not is_empty_order(outcome)
 		if has_photo:
 			photos += 1
 			points += POINTS_PHOTO_BONUS
 		var care: StringName = StringName(entry.get("care", ""))
-		if outcome != &"missed" and CARE_POINTS.has(care):
+		if not is_empty_order(outcome) and CARE_POINTS.has(care):
 			# The resident inspected a rescued box: what they saw decides
 			# the pay, not the trap's bar or a roll for a complaint.
 			points += int(CARE_POINTS[care])
@@ -484,6 +507,11 @@ func _resolve_deliveries() -> Dictionary:
 				complaints.append(_complaint(entry, has_photo))
 			&"missed":
 				missed += 1
+				points -= PENALTY_MISSED_HOUSE
+			&"lost":
+				# Left on the road past its rescue window (N-213.4): the
+				# order closed empty, same cost as a door nobody rang.
+				lost += 1
 				points -= PENALTY_MISSED_HOUSE
 			&"delivered_at_risk":
 				# Handed over dented. Worth less than intact, and the
@@ -511,7 +539,7 @@ func _resolve_deliveries() -> Dictionary:
 	# sums as `points`, so the lines always add up to the score shown.
 	var counts: Dictionary = {}
 	for entry: Dictionary in deliveries:
-		if StringName(entry["outcome"]) != &"missed" and CARE_POINTS.has(StringName(entry.get("care", ""))):
+		if not is_empty_order(StringName(entry["outcome"])) and CARE_POINTS.has(StringName(entry.get("care", ""))):
 			continue
 		counts[StringName(entry["outcome"])] = int(counts.get(StringName(entry["outcome"]), 0)) + 1
 	var breakdown: Array = []
@@ -526,12 +554,13 @@ func _resolve_deliveries() -> Dictionary:
 	_add_line(breakdown, "Plazos vencidos", int(tally["missed"]), -PENALTY_DEADLINE_MISSED)
 	_add_line(breakdown, "Fotos de entrega", photos, POINTS_PHOTO_BONUS)
 	_add_line(breakdown, "Vecinos sin su paquete", missed, -PENALTY_MISSED_HOUSE)
+	_add_line(breakdown, "Pedidos perdidos en la ruta", lost, -PENALTY_MISSED_HOUSE)
 	_add_line(breakdown, "Reclamos sin foto", unanswered, -COMPLAINT_PENALTY)
 	return {
 		"breakdown": breakdown,
 		"delivery_points": points,
 		"houses_delivered": delivered_count,
-		"houses_missed": missed,
+		"houses_missed": missed + lost,
 		"photos": photos,
 		"complaints": complaints,
 	}

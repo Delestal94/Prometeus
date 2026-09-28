@@ -273,8 +273,8 @@ func _update_tipped(delta: float) -> void:
 
 func _check_lost_cargo() -> void:
 	# A box that falls out gets a rescue window (N-213.1) and is written off
-	# on its own once it runs out. Only losing every last one ends the run,
-	# and RunManager decides that.
+	# on its own once it runs out, closing its order as "lost" (N-213.4)
+	# without ending the run.
 	for package: DeliveryPackage in packages:
 		# A box handed over at a door is freed on the spot -- this list
 		# outlives it, so skip what's already gone instead of reading a
@@ -297,8 +297,11 @@ func _check_lost_cargo() -> void:
 		_overboard_seconds[id] = float(_overboard_seconds[id]) + get_physics_process_delta_time()
 		if float(_overboard_seconds[id]) >= overboard_rescue_seconds:
 			_overboard_seconds.erase(id)
-			package.mark_lost("Se cayó del camión.")
+			# Abandoned: the window's end closes its order as "lost" first
+			# (RunManager, N-213.4), so writing the box off below doesn't
+			# count it as cargo still aboard and end the run.
 			EventBus.relay(&"cargo_overboard_ended", [id, false])
+			package.mark_lost("Se cayó del camión.")
 
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:

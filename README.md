@@ -382,6 +382,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_cargo_overboard` — N-213: una caja que sale del camión no se pierde al instante:
   abre una ventana de rescate (más larga que la de adentro) con un cartel "¡RESCATAR!" encima,
   levantarla la cierra como rescatada y vuelve al estante, y si nadie la busca se pierde al vencer.
+  Abandonarla (N-213.4) cierra el pedido de su casa como "lost" ("PERDIDO" en resultados), sin
+  terminar la partida aunque sea la única caja, y llegar a la meta no lo vuelve "missed".
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos

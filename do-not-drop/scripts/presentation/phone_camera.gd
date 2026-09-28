@@ -283,13 +283,14 @@ func _refresh_status() -> void:
 
 
 ## A box was actually handed over there -- a house the run drove past is
-## resolved as "missed", and there's nothing for a photo to prove.
+## resolved as "missed" (or "lost", its box left on the road), and there's
+## nothing for a photo to prove.
 func _was_delivered(house: Node) -> bool:
 	var index: int = int(house.get(&"house_index"))
 	for entry: Dictionary in RunManager.deliveries:
 		if int(entry["house"]) == index:
-			return StringName(entry["outcome"]) != &"missed"
-	return bool(house.get(&"delivered")) and StringName(house.get(&"outcome")) != &"missed"
+			return not RunManager.is_empty_order(StringName(entry["outcome"]))
+	return bool(house.get(&"delivered")) and not RunManager.is_empty_order(StringName(house.get(&"outcome")))
 
 
 func _already_photographed(house_index: int) -> bool:

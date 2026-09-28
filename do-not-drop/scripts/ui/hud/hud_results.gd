@@ -128,6 +128,7 @@ func _add_delivery_row(entry: Dictionary) -> void:
 		&"delivered_at_risk": "CON REPAROS !",
 		&"delivered_ruined": "ARRUINADO ✕",
 		&"missed": "SIN ENTREGA",
+		&"lost": "PERDIDO ✕",
 	}.get(outcome, "SIN ENTREGA")
 	var label: Label = UiTheme.label(row, "Casa %d  ·  %s  ·  %s" % [int(entry.get("house", 0)) + 1, trap_name,
 			result_text], 15, Hud.INK)

@@ -123,6 +123,9 @@ const OUTCOME_OK: StringName = &"delivered_ok"
 const OUTCOME_AT_RISK: StringName = &"delivered_at_risk"
 const OUTCOME_RUINED: StringName = &"delivered_ruined"
 const OUTCOME_MISSED: StringName = &"missed"
+## The order closed without a door: its box was left on the road past the
+## rescue window (N-213.4, RunManager._on_cargo_overboard_ended).
+const OUTCOME_LOST: StringName = &"lost"
 
 var delivered: bool = false
 ## Which stop this is along the route (route.gd sets it). The phone camera
@@ -389,9 +392,15 @@ func _session_seed() -> int:
 	return int(network.get(&"world_seed")) if network != null else 0
 
 
-func _on_house_delivery_recorded(index: int, _outcome: StringName, _package_id: StringName) -> void:
-	if index == house_index:
-		set_doorbell_lit(false)
+func _on_house_delivery_recorded(index: int, result: StringName, _package_id: StringName) -> void:
+	if index != house_index:
+		return
+	set_doorbell_lit(false)
+	# Nothing left to hand over here: ringing later or reaching the goal
+	# mustn't resolve it again as "missed".
+	if result == OUTCOME_LOST and not delivered:
+		delivered = true
+		outcome = OUTCOME_LOST
 
 
 func set_doorbell_lit(value: bool) -> void:

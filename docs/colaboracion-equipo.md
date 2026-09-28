@@ -7,6 +7,25 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: pedido "Perdido" para la caja abandonada en la ruta (2026-09-28)
+
+Lo hizo Nacho (con Claude), N-213.4:
+
+- `core/run_manager.gd` (zona compartida): nuevo resultado de entrega `&"lost"`. Al vencer la
+  ventana de rescate (`EventBus.cargo_overboard_ended(id, false)`, relayado) cada par cierra el
+  pedido de la casa asignada a esa caja con `register_delivery(casa, &"lost", id)`: cuesta lo
+  mismo que una casa sin entregar (`PENALTY_MISSED_HOUSE`), sale en su propia línea "Pedidos
+  perdidos en la ruta" y suma a `houses_missed`. La partida ya no termina por perder esa caja
+  (deja de contar como carga a bordo). Nuevo `is_empty_order(outcome)` (true para `missed` y
+  `lost`): reemplaza las comparaciones `!= &"missed"` internas. Si en código de Slatex se compara
+  con `&"missed"` para saber si hubo entrega, conviene usarlo; `presentation/phone_camera.gd`
+  `_was_delivered()` ya lo usa (el teléfono no ofrece documentar una casa "Perdido").
+- `ui/hud/hud_results.gd` (Slatex): una línea, `&"lost": "PERDIDO ✕"` en la fila de cada casa.
+- `gameplay/level_common.gd`: al vencer, el relay de `cargo_overboard_ended` va antes de
+  `mark_lost()` (el orden importa para no leerlo como "se arruinó toda la carga").
+- `route/delivery_house.gd`: la casa que recibe `lost` queda resuelta (`OUTCOME_LOST`), así que
+  la meta no la vuelve "missed" ni toca la nota en la puerta.
+
 ## Aviso activo: ríos rehechos, límite por la ruta y secuencias a pie (2026-09-28)
 
 Lo hizo Nacho (con Claude) tras otra prueba propia:

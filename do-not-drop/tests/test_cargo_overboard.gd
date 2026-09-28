@@ -8,7 +8,9 @@ extends SceneTree
 ##   (presentation/overboard_marker.gd);
 ## - picking it up closes the window as rescued, and it goes back on a shelf;
 ## - left there past the window, it's lost ("Se cayó del camión.") and the
-##   flag goes away.
+##   flag goes away;
+## - N-213.4: abandoning it closes its house's order as "lost" ("Perdido")
+##   without ending the run, and the goal doesn't re-resolve it as missed.
 
 var _failures: int = 0
 var _started: Array = []
@@ -74,6 +76,13 @@ func _run() -> void:
 	_expect(_started.size() == 1, "Back aboard, no new window opens (got %d)" % _started.size())
 
 	# --- it falls out again and nobody comes: lost ---
+	# Which box house 0 waits for depends on the session seed; point its
+	# order at this one so abandoning it has an order to close (N-213.4).
+	var order: Array = (manager.get(&"house_assignments") as Array).duplicate(true)
+	if order.is_empty():
+		order.append([])
+	order[0] = [package_id, "Test"]
+	manager.set(&"house_assignments", order)
 	level.set(&"overboard_rescue_seconds", 0.05)
 	package.global_position = far
 	for i: int in 10:
@@ -84,11 +93,39 @@ func _run() -> void:
 	await process_frame
 	_expect(not bool(marker.call(&"has_marker", package_id)), "The flag goes away once it's lost")
 
+	# --- abandoned: its order closes as "lost", the run goes on (N-213.4) ---
+	var house: int = -1
+	var assignments: Array = manager.get(&"house_assignments")
+	for index: int in assignments.size():
+		if not (assignments[index] as Array).is_empty() and StringName(assignments[index][0]) == package_id:
+			house = index
+	_expect(house >= 0, "The box has a house assigned (got %s)" % [assignments])
+	var record: Dictionary = {}
+	for entry: Dictionary in manager.get(&"deliveries"):
+		if int(entry["house"]) == house:
+			record = entry
+	_expect(StringName(record.get("outcome", &"")) == &"lost",
+		"Abandoning the box closes its order as lost (got %s)" % [record])
+	_expect(bool(manager.get(&"is_running")), "Losing the only box doesn't end the run")
+	_expect(bool(manager.call(&"is_empty_order", &"lost")), "A lost order counts as nothing handed over")
+	var door: Node = null
+	for node: Node in level.find_children("*", "", true, false):
+		if node.get(&"house_index") == house and node.has_method(&"force_resolve_if_missed"):
+			door = node
+	if door != null:
+		door.call(&"force_resolve_if_missed")
+		_expect(StringName(door.get(&"outcome")) == &"lost", "Reaching the goal doesn't turn it into missed")
+	var doors: Dictionary = manager.call(&"_resolve_deliveries")
+	var lines: Array = []
+	for line: Dictionary in doors["breakdown"]:
+		lines.append(String(line["label"]))
+	_expect(lines.has("Pedidos perdidos en la ruta (1)"), "The results break down the lost order (got %s)" % [lines])
+
 	level.queue_free()
 	manager.call(&"reset_run")
 	await process_frame
 	if _failures == 0:
-		print("PASS: a box off the van gets a rescue window, a flag, and is lost only when it runs out")
+		print("PASS: a box off the van gets a rescue window, a flag, and is lost only when it runs out; its order closes as lost")
 	quit(_failures)
 
 
