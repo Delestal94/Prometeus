@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-25 (estado relevado sobre `d15ad02`).
+> Última actualización: 2026-09-28 (estado relevado sobre `60c4dc4`).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -525,11 +525,11 @@ Hoy toda caja arruinada tira el mismo confeti de cubitos.
 
 ### S-401 · Sonidos de interfaz — A · `Sol · high` · Aviso: no
 
-- [ ] `scripts/ui/ui_sounds.gd` (autocontenido, **sin tocar `synth_audio.gd`**, que es zona
+- [x] (commit `60c4dc4`) `scripts/ui/ui_sounds.gd` (autocontenido, **sin tocar `synth_audio.gd`**, que es zona
   compartida): pasar el mouse, clic, abrir y cerrar panel, toast, desbloqueo, voto, error. Sintetizados
   igual que `SynthAudio` (generar `AudioStreamWAV` en código), por el bus `SFX`.
-- [ ] `UiTheme.button()` conecta hover/press automáticamente, así todos los botones suenan.
-- [ ] Test: cada botón de `main_menu.gd` tiene el sonido conectado; el volumen de efectos lo afecta.
+- [x] (commit `60c4dc4`) `UiTheme.button()` conecta hover/press automáticamente, así todos los botones suenan.
+- [x] (commit `60c4dc4`) Test: cada botón de `main_menu.gd` tiene el sonido conectado; el volumen de efectos lo afecta.
 
 ### S-402 · Voces sin palabras ("gibberish") — B · `Sol · xhigh` · Aviso: no
 
