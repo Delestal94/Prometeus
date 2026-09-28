@@ -1,6 +1,6 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-27 (repaso del depósito tras playtest; antes, tanda del 2026-09-25 sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
+> Última actualización: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
 > M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
 > N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
 > una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
@@ -450,6 +450,28 @@ Pedido del usuario: refinar el personaje y sus animaciones al máximo, sin perde
     el fondo y la diferencia L−R se mantiene), así ya no cuelga en punta entre las rodillas
     en `Sit`. Métrica en `check_deformation.py` (`--crotch-only`); test: `test_player_character`.
 
+### N-310 · Personaje cartoon gordito — A · `Opus 5.5 · xhigh` · Aviso: sí (`character_face.gd`, GLB) · **[x] Hecho (2026-09-27)**
+
+Pedido del usuario: modelo cartoon cómico y tierno, más gordito, "nivel Pixar".
+
+- [x] Modelo (`art/rounded_character/build_character.py`, `head_shape.py`): cabeza esculpida por
+  fórmula (elipsoide con papada; los cachetes salientes se sacaron a pedido), nariz de botón, orejas, pelo corto con flequillo en
+  mechones y rulo (material nuevo `Hair`), panza más grande y adelantada, brazos, piernas y
+  zapatos más regordetes. Mismos huesos y articulaciones: el juego no cambia.
+- [x] Oclusión suave y rubor horneados en color de vértice (`vertex_shading.py`); ~23.500 triángulos.
+- [x] Animación (`animation_library.py`): brazos que cuelgan separados de la panza (`HANG`,
+  `GAIT_ARMS`), caminos de las manos al agarrar por delante de la panza (`PICKUP_*`,
+  `CARRY_HANDS`), manos sentado sobre la panza nueva, panza y cabeza con más rebote al
+  trotar y al aterrizar, bamboleo más marcado. Medido con `check_clearance.py`.
+- [x] Ojos ovalados con brillos redondos (`build_faces.py`); `character_face.gd` apoya la cara
+  sobre la cabeza nueva. Test: `test_player_character` (cara sobre la piel, color de vértice).
+- [x] Asientos remedidos para el cuerpo nuevo (`player_seat_pose.gd`, rulo más bajo para el conductor).
+- [x] Ajustes tras verlo en el juego: sin cachetes salientes (el usuario no los quería), piernas sin
+  decimar y oclusión horneada con rayos fijos y suavizado (el ruido se veía como rayas en las
+  pantorrillas y ondas bajo el flequillo), rubor subido a los pómulos.
+- Pendiente: la nuca del conductor roza el techo inclinado de la cabina y los pasajeros vecinos
+  se superponen (asientos a 0,48 m); ver "Límites conocidos" en `REFINAMIENTO.md`.
+
 ## 4. Audio y diseño sonoro
 
 ### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas) · **[x] `8081c75`**
@@ -788,3 +810,4 @@ Tarea semanal: estos son los cuatro primeros; la costumbre sigue.
 | 177 | ~~El perro feo, con un ladrido raro y corriendo en el lugar.~~ **[x] Hecho** — Shiba Inu con esqueleto de Quaternius (CC0); marcha (quieto / paso / galope) y ritmo del clip según la velocidad real; ladrido "guau" con formantes, a intervalos al azar y a veces doble. Al rendirse vuelve hasta su casa (antes se quedaba en la banquina). | B |
 | 178 | ~~El ruido sigue, más fuerte en la zona de carga del depósito: poner todos los sonidos en Opciones para encontrarlo.~~ **[x] Hecho** — "Sonidos del juego" en Opciones: cada sonido por quién lo toca, si suena, silenciar / solo, sonando con el juego en pausa (`sound_audit.gd`, `sound_check_panel.gd`, `test_sound_check`). Con eso el usuario lo encontró: **Depósito · Zumbido**. Era un sonido 3D con `unit_size` 30 colgado a 4 m sobre la zona de carga: debajo sonaba ~7 veces (+17 dB) más fuerte que el nivel medido, y el loop tenía un hueco cada 3 s. Ahora es un tono de sala parejo en todo el depósito (sin caída por distancia, `depot.gd`), rehecho sin hueco (`warehouse_hum`), a −42 dBFS. Igual molestaba: por pedido del usuario **se sacó** (`depot.gd` ya no tiene tono de sala; `test_depot` lo cuida). | A |
 | 179 | ~~Menú principal saturado: diez botones iguales y el campo de IP a la vista.~~ **[x] Hecho** (pedido del usuario, 2026-09-25) — `main_menu.gd` en páginas dentro de la tarjeta: inicio con "¡JUGAR!", "Garaje" (Apariencia, Progreso, Récords) y una fila chica Opciones / Cómo jugar / Salir; "¡JUGAR!" lleva a Jugar solo, Endless, Crear sala y Unirse a una sala (la IP, con la ayuda de Steam). "Volver" y Esc suben un nivel. Tarjeta esmerilada: el arte desenfocado una vez al abrir (sin blur por cuadro) y recortado a la tarjeta por shader. `ui_theme.gd`: los botones se levantan 2 px al pasar el mouse y hacen el bip de escáner (`SynthAudio.scanner_beep`) al presionarlos. Descartado de la propuesta: fondo 3D animado, cambiar tipografías (Lilita One/Nunito ya son las redondeadas que pedía) y avatares de sala en el menú. `test_main_menu`. | B |
+| 180 | ~~Los paquetes se salen del camión aunque las puertas traseras estén cerradas (playtest 2026-09-27, jugando solo: la caja quedó en la ruta y se arruinó toda la carga).~~ **[x] Hecho (2026-09-27)** — era el CCD de Jolt: viajando a bordo, la caja se barría desde el lugar del tick anterior contra la cáscara ya movida, o sea desde detrás del tope trasero del estante y de las puertas, y quedaba afuera (sonda por la ruta real: 23 escapes en 6 rutas antes, 0 después). Ahora `package.gd` y `cargo_clutter.gd` prenden `continuous_cd` solo cuando la caja está suelta o la tira un choque (`vehicle.gd` `needs_sweep()`). Las puertas abiertas siguen siendo la mecánica de olvidarse de cerrarlas. `test_cargo_shell`. Queda: el termo (8 cm) todavía puede atravesar una pared lateral en un choque violento con el camión girando. | A |

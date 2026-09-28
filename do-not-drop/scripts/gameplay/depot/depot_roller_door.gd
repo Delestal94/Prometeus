@@ -19,13 +19,13 @@ signal finished_moving(open: bool)
 @export var travel_seconds: float = 4.2
 
 const SLAT_HEIGHT: float = 0.3
-const SLAT_DEPTH: float = 0.07
-const CURTAIN := Color("d9dcd6")
-const RIB := Color("b9beb8")
-const HOUSING := Color("3b4c53")
-const RAIL := Color("59656a")
-const RUBBER := Color("1e2528")
 const BEACON := Color("ff9f1c")
+## The models (assets/tools/build_depot_props.py) are authored for this
+## opening width; another width stretches them along X.
+const MODEL_WIDTH: float = 6.6
+## The slat with the row of vision panes, counted from the bottom (~1.6 m up
+## when the door is down: eye height from the cab).
+const WINDOW_SLAT: int = 5
 
 ## 0 closed, 1 fully open. Presentation reads it every frame.
 var openness: float = 1.0
@@ -98,49 +98,28 @@ func _apply_openness() -> void:
 
 
 func _build() -> void:
-	var slat_mesh := BoxMesh.new()
-	slat_mesh.size = Vector3(width, SLAT_HEIGHT - 0.02, SLAT_DEPTH)
-	var rib_mesh := BoxMesh.new()
-	rib_mesh.size = Vector3(width, 0.035, SLAT_DEPTH + 0.03)
-	var slat_material := DepotKit.flat(CURTAIN, 0.5, 0.25)
-	var rib_material := DepotKit.flat(RIB, 0.5, 0.3)
+	var stretch := Vector3(width / MODEL_WIDTH, 1.0, 1.0)
+	var slat_mesh: Mesh = DepotKit.merged_mesh(DepotKit.depot_model("sm_env_depot_door_slat"))
+	var window_mesh: Mesh = DepotKit.merged_mesh(DepotKit.depot_model("sm_env_depot_door_slat_window"))
 	var count: int = ceili(height / SLAT_HEIGHT)
 	for index: int in range(count):
 		var slat := MeshInstance3D.new()
 		slat.name = "Slat%d" % index
-		slat.mesh = slat_mesh
-		slat.material_override = slat_material
-		var rib := MeshInstance3D.new()
-		rib.mesh = rib_mesh
-		rib.material_override = rib_material
-		rib.position = Vector3(0.0, SLAT_HEIGHT * 0.5 - 0.01, 0.0)
-		slat.add_child(rib)
+		slat.mesh = window_mesh if index == WINDOW_SLAT else slat_mesh
+		slat.scale = stretch
 		add_child(slat)
 		_slats.append(slat)
 	_bottom_bar = MeshInstance3D.new()
 	_bottom_bar.name = "BottomBar"
-	var bar_mesh := BoxMesh.new()
-	bar_mesh.size = Vector3(width, 0.08, 0.12)
-	_bottom_bar.mesh = bar_mesh
-	_bottom_bar.material_override = DepotKit.flat(RUBBER, 0.9)
+	_bottom_bar.mesh = DepotKit.merged_mesh(DepotKit.depot_model("sm_env_depot_door_bottom_bar"))
+	_bottom_bar.scale = stretch
 	add_child(_bottom_bar)
-	# Fixed frame: guide rails, drum housing, hazard-striped jambs.
+	# Fixed frame: guide rails, drum housing, striped jambs, bollards, the
+	# threshold -- one model folded into the batch. The bollards stay solid.
 	var kit := DepotKit.new(self, "FrameColliders")
-	var rail := DepotKit.flat(RAIL, 0.5, 0.4)
-	var stripes := DepotKit.detailed(Color.WHITE, "res://assets/textures/environment/tx_env_warning_256.png", 0.9, 0.7)
+	kit.model(DepotKit.depot_model("sm_env_depot_door_frame"), Transform3D(Basis.from_scale(stretch), Vector3.ZERO))
 	for side: float in [-1.0, 1.0]:
-		var x: float = side * (width * 0.5 + 0.06)
-		kit.box(Vector3(0.12, height + 0.3, 0.2), Vector3(x, (height + 0.3) * 0.5, 0.0), rail)
-		kit.box(Vector3(0.36, height, 0.08), Vector3(side * (width * 0.5 + 0.3), height * 0.5, -0.4), stripes)
-		# Bollards protect the jambs from the truck's mirrors.
-		kit.cylinder(0.14, 1.1, Transform3D(Basis.IDENTITY, Vector3(side * (width * 0.5 + 0.35), 0.55, -0.7)), DepotKit.flat(Color("e7be51"), 0.6), 14, true)
-		kit.cylinder(0.145, 0.12, Transform3D(Basis.IDENTITY, Vector3(side * (width * 0.5 + 0.35), 0.78, -0.7)), DepotKit.flat(Color("1e2528")), 14)
-	kit.box(Vector3(width + 0.8, 0.9, 0.9), Vector3(0.0, height + 0.45, 0.35), DepotKit.ribbed(HOUSING, 0.6))
-	kit.box(Vector3(0.5, 0.36, 0.3), Vector3(width * 0.5 + 0.2, height + 0.2, 0.95), DepotKit.flat(Color("2a3439"), 0.6, 0.4))
-	# Threshold: a steel plate with a hazard band either side.
-	kit.box(Vector3(width, 0.03, 0.5), Vector3(0.0, 0.015, 0.0), DepotKit.flat(Color("6c767a"), 0.4, 0.6))
-	kit.box(Vector3(width, 0.02, 0.35), Vector3(0.0, 0.012, -0.45), stripes)
-	kit.box(Vector3(width, 0.02, 0.35), Vector3(0.0, 0.012, 0.45), stripes)
+		kit.collider(Vector3(0.28, 1.1, 0.28), Transform3D(Basis.IDENTITY, Vector3(side * (width * 0.5 + 0.35), 0.55, -0.7)))
 	kit.commit("DoorFrame")
 	_beacon_lens = MeshInstance3D.new()
 	_beacon_lens.name = "BeaconLens"

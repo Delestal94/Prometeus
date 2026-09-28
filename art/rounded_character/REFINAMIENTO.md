@@ -94,11 +94,35 @@ sentado manda `Sit`. Entre `Idle` y `TurnInPlace` el cruce dura 0,2 s.
 ## Rostro
 
 Seis ojos y seis bocas combinables (`Personalización → Rostro`); **Sin ojos + Sin
-boca** recupera la cabeza lisa. Los ojos **parpadean** cada 2,2–5,5 s (uno de cada
+boca** deja la cabeza sin rasgos dibujados (con nariz, orejas y pelo desde el
+2026-09-27). Los ojos ovalados llevan un brillo redondo grande arriba a la derecha y
+uno chico abajo a la izquierda, iguales en los dos ojos (una sola luz). Los ojos **parpadean** cada 2,2–5,5 s (uno de cada
 cinco, doble) y al aterrizar: `character_face.gd` comprime la textura en UV sobre la
 línea de los ojos, así el párpado cierra sobre la superficie curva de la cabeza.
 Los ojos `joyful` (ya cerrados, ^^) no parpadean. Cada par parpadea con su reloj;
 no se replica nada.
+
+## Versión gordita (2026-09-27)
+
+El cuerpo creció (panza más ancha y 0,2 BU más adelante, brazos, piernas y zapatos
+más gruesos) con los mismos huesos y articulaciones, así que los clips se reajustaron
+midiendo con `check_clearance.py` (vértices de antebrazo y mano dentro de la camiseta,
+cada 4 cuadros; suma por clip, antes → después):
+
+| Clip | Antes | Después | Qué se cambió |
+| --- | --- | --- | --- |
+| `Idle` | 21.043 | 643 | `HANG`: los brazos caen a 52° (antes 64°), el brazo girado 15° hacia afuera. |
+| `Walk` | 1.220 | 58 | `GAIT_ARMS`: 52°; girar el brazo doblado hacia afuera metía el puño en la panza, así que va −15°. |
+| `Stroll` | 2.684 | 5 | 50° y giro hacia afuera solo al ir adelante. |
+| Agarradas | 7.233 / 4.947 | 114 / 63 | Caminos de las manos 0,14–0,17 BU más adelante, más anchos (`PICKUP_WIDTH` 0,72, `PICKUP_ARC`); la caja termina en `CARRY_HANDS`. |
+| `Sit` | 38.244 | 0 | `HAND_ON_BELLY` (0,78; −0,58; 0,72): apoyadas sobre la panza nueva. |
+
+Lo que queda es la parte alta del brazo contra el costado justo bajo la manga, que no
+se ve. Las alturas de agarre (`PICKUP_GRAB_Z`) no cambiaron: `player.gd` sigue igual.
+
+Más peso en el movimiento: al trotar la panza rebota con retraso y se hincha al
+apoyar (`by`, `bz`, `bs` casi al doble), la cabeza cabecea más y la cadera se
+bambolea más (`p_roll` −6°); al aterrizar la panza sigue de largo el doble.
 
 ## Cómo se verificó
 
@@ -123,6 +147,11 @@ con los mismos pesos y recortes que el export:
 
 ## Límites conocidos
 
+- El conductor: con el pelo, la nuca queda ~5 cm dentro del tramo inclinado del techo de la
+  cabina (`render_player_character.gd`); no se ve desde afuera. Bajarlo no lo arregla y
+  adelantarlo mete la panza en el volante: haría falta más altura en la cabina.
+- Sentados, los cuerpos son más anchos que la separación de los asientos de la caja
+  (0,48 m) y los vecinos se superponen. Detrás de la rodilla doblada asoma un pico del short.
 - La caja viaja en línea recta de donde estaba hasta las manos (`player.gd`); si
   estaba lejos, se ve deslizarse.
 - Sin IK de pies en pendientes.

@@ -29,9 +29,15 @@ func build_signs() -> void:
 			Layout.DISPLAY_FONT, 0.008, 10)
 	DepotLabels.text(_root, tr("WORLD_DEPOT_STAFF"), Vector3(9.5, 2.35, -Layout.WALL - 0.09), PI, 36, Layout.PAPER,
 			Layout.DISPLAY_FONT, 0.006, 6)
-	# Inside, over the door.
-	DepotLabels.text(_root, tr("WORLD_DEPOT_DOOR_INSIDE"), Vector3(0.0, Layout.DOOR_HEIGHT + 1.3, 0.12), 0.0, 64,
-			Color("ffc93c"), Layout.DISPLAY_FONT, 0.008, 14)
+	# Inside, on the board across the roller door's drum (sm_env_depot_door_frame):
+	# in front of the drum, so it reads from right under the door too.
+	# The board leans 0.3 rad toward the room; the text sits 4 cm off its face.
+	var exit_sign := DepotLabels.text(_root, tr("WORLD_DEPOT_DOOR_INSIDE"),
+			Vector3(0.0, Layout.FLOOR_TOP + Layout.DOOR_HEIGHT + 0.45 - 0.04 * sin(0.3),
+					0.02 + 0.855 + 0.04 * cos(0.3)),
+			0.0, 64, Color("ffc93c"), Layout.DISPLAY_FONT, 0.008, 14)
+	exit_sign.rotation.x = 0.3
+	exit_sign.name = "ExitSign"
 	# Safety posters on the walls.
 	# On the front wall, left of the door: on the left wall it hung behind
 	# the stock racking, where nobody could read it.
@@ -73,51 +79,23 @@ func _build_clock() -> void:
 	clock.position = Vector3(3.0, 4.8, Layout.DEPTH - 0.08)
 	clock.rotation.y = PI
 	_root.add_child(clock)
-	var face := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = 0.55
-	disc.bottom_radius = 0.55
-	disc.height = 0.06
-	disc.radial_segments = 32
-	face.mesh = disc
-	face.rotation.x = PI * 0.5
-	face.material_override = DepotKit.flat(Layout.PAPER, 0.6)
-	clock.add_child(face)
-	var rim := MeshInstance3D.new()
-	var rim_mesh := CylinderMesh.new()
-	rim_mesh.top_radius = 0.6
-	rim_mesh.bottom_radius = 0.6
-	rim_mesh.height = 0.04
-	rim_mesh.radial_segments = 32
-	rim.mesh = rim_mesh
-	rim.rotation.x = PI * 0.5
-	rim.position.z = -0.02
-	rim.material_override = DepotKit.flat(Layout.INK, 0.5)
-	clock.add_child(rim)
-	for hour: int in range(12):
-		var tick := MeshInstance3D.new()
-		var tick_mesh := BoxMesh.new()
-		tick_mesh.size = Vector3(0.03, 0.1 if hour % 3 == 0 else 0.06, 0.01)
-		tick.mesh = tick_mesh
-		tick.material_override = DepotKit.flat(Layout.INK, 0.6)
-		var angle: float = TAU * hour / 12.0
-		tick.position = Vector3(sin(angle) * 0.46, cos(angle) * 0.46, 0.04)
-		tick.rotation.z = -angle
-		clock.add_child(tick)
-	clock_hour = _clock_hand(clock, 0.28, 0.05)
-	clock_minute = _clock_hand(clock, 0.42, 0.03)
+	# Body, face and ticks: one model, face toward the clock's +Z.
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	body.mesh = DepotKit.merged_mesh(DepotKit.depot_model("sm_env_depot_wall_clock"))
+	clock.add_child(body)
+	clock_hour = _clock_hand(clock, "sm_env_depot_clock_hand_hour")
+	clock_minute = _clock_hand(clock, "sm_env_depot_clock_hand_minute")
 
 
-func _clock_hand(clock: Node3D, length: float, thickness: float) -> Node3D:
+## A hand on its spindle: the model points +Y from its origin, the pivot
+## turns about Z (see DepotAmbience).
+func _clock_hand(clock: Node3D, model_name: String) -> Node3D:
 	var pivot := Node3D.new()
 	pivot.position.z = 0.05
 	clock.add_child(pivot)
 	var hand := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(thickness, length, 0.01)
-	hand.mesh = mesh
-	hand.position.y = length * 0.4
-	hand.material_override = DepotKit.flat(Layout.INK, 0.5)
+	hand.mesh = DepotKit.merged_mesh(DepotKit.depot_model(model_name))
 	pivot.add_child(hand)
 	return pivot
 
@@ -130,13 +108,7 @@ func build_fans() -> void:
 		fan.position = at
 		_root.add_child(fan)
 		var kit := DepotKit.new(fan, "FanColliders")
-		var dark := DepotKit.flat(Color("263238"), 0.5, 0.4)
-		kit.cylinder(0.2, 0.3, Transform3D.IDENTITY, dark, 12)
-		for blade: int in range(5):
-			var basis := Basis(Vector3.UP, TAU * blade / 5.0)
-			kit.box_xf(Vector3(0.28, 0.03, 2.2),
-					Transform3D(basis * Basis(Vector3.BACK, 0.12), basis * Vector3(0.0, -0.1, 1.2)),
-					DepotKit.flat(Color("c9ced0"), 0.4, 0.5))
+		kit.model(DepotKit.depot_model("sm_env_depot_ceiling_fan"), Transform3D.IDENTITY)
 		kit.commit("Fan")
 		var rod := MeshInstance3D.new()
 		var rod_mesh := CylinderMesh.new()

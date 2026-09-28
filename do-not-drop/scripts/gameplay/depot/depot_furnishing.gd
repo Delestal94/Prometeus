@@ -37,9 +37,8 @@ func build(kit: DepotKit) -> void:
 
 
 func _build_wall_racking(kit: DepotKit) -> void:
-	var blue := DepotKit.flat(Color("2f5d8a"), 0.5, 0.3)
-	var orange := DepotKit.flat(Color("e8772e"), 0.5, 0.2)
-	var deck := DepotKit.ribbed(Color("9ea6a9"), 0.15, 0.5, 0.4)
+	var rack_frame: String = DepotKit.depot_model("sm_env_depot_rack_frame")
+	var rack_level: String = DepotKit.depot_model("sm_env_depot_rack_beam_level")
 	var film := DepotKit.glass(Color(0.85, 0.9, 0.95, 0.35))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4471
@@ -49,11 +48,10 @@ func _build_wall_racking(kit: DepotKit) -> void:
 	var depth: float = x_front - x_back
 	var frames: Array[float] = [1.4, 7.0, 12.6, 18.2, 23.8, 29.4]
 	var beams: Array[float] = [1.9, 3.8, 5.7]
+	# Upright frames (their post guard on the aisle side, +X) and, per bay
+	# and level, a pair of beams with the deck the pallets sit on (+0.085).
 	for z: float in frames:
-		for x: float in [x_back, x_front]:
-			kit.box(Vector3(0.1, 6.3, 0.1), Vector3(x, 3.15, z), blue)
-		for level: int in range(6):
-			kit.box(Vector3(depth, 0.05, 0.05), Vector3(centre_x, 0.5 + level * 1.05, z), blue)
+		kit.model(rack_frame, Transform3D(Basis.IDENTITY, Vector3(centre_x, 0.0, z)))
 	for bay: int in range(frames.size() - 1):
 		var z0: float = frames[bay]
 		var z1: float = frames[bay + 1]
@@ -61,9 +59,7 @@ func _build_wall_racking(kit: DepotKit) -> void:
 		kit.collider(Vector3(depth + 0.1, 6.3, length),
 				Transform3D(Basis.IDENTITY, Vector3(centre_x, 3.15, (z0 + z1) * 0.5)))
 		for beam_y: float in beams:
-			for x: float in [x_back, x_front]:
-				kit.box(Vector3(0.06, 0.12, length), Vector3(x, beam_y, (z0 + z1) * 0.5), orange)
-			kit.box(Vector3(depth, 0.03, length - 0.1), Vector3(centre_x, beam_y + 0.07, (z0 + z1) * 0.5), deck)
+			kit.model(rack_level, Transform3D(Basis.IDENTITY, Vector3(centre_x, beam_y, (z0 + z1) * 0.5)))
 		for level: int in range(4):
 			var base_y: float = Layout.FLOOR_TOP if level == 0 else beams[level - 1] + 0.085
 			for spot: int in range(2):
@@ -105,25 +101,25 @@ func _stock_pallet(kit: DepotKit, base: Vector3, rng: RandomNumberGenerator, top
 
 
 func _build_dispatch_shelves(kit: DepotKit) -> void:
-	var blue := DepotKit.flat(Color("2f5d8a"), 0.5, 0.3)
-	var orange := DepotKit.flat(Color("e8772e"), 0.5, 0.2)
-	var deck := DepotKit.ribbed(Color("a9b0b3"), 0.12, 0.5, 0.4)
+	var shelf_frame: String = DepotKit.depot_model("sm_env_depot_shelf_frame")
+	var shelf_deck: String = DepotKit.depot_model("sm_env_depot_shelf_deck")
 	var length: float = Layout.BAY_LENGTH * Layout.BAYS
 	for unit: Dictionary in Layout.SHELF_UNITS:
 		var x: float = float(unit.x)
 		for frame: int in range(Layout.BAYS + 1):
 			var z: float = Layout.SHELF_START_Z + frame * Layout.BAY_LENGTH
+			kit.model(shelf_frame, Transform3D(Basis.IDENTITY, Vector3(x, 0.0, z)))
 			for side: float in [-1.0, 1.0]:
-				kit.box(Vector3(0.08, 2.7, 0.08), Vector3(x + side * Layout.SHELF_DEPTH * 0.5, 1.35, z), blue, true)
-			kit.box(Vector3(Layout.SHELF_DEPTH, 0.04, 0.04), Vector3(x, 0.9, z), blue)
-			kit.box(Vector3(Layout.SHELF_DEPTH, 0.04, 0.04), Vector3(x, 2.1, z), blue)
+				kit.collider(Vector3(0.08, 2.7, 0.08),
+						Transform3D(Basis.IDENTITY, Vector3(x + side * Layout.SHELF_DEPTH * 0.5, 1.35, z)))
+		# One deck model per bay (origin at the top, where the packages sit);
+		# one collider per level, as before.
 		for deck_top: float in Layout.LEVEL_TOPS + [2.6]:
-			for side: float in [-1.0, 1.0]:
-				kit.box(Vector3(0.05, 0.1, length),
-						Vector3(x + side * (Layout.SHELF_DEPTH * 0.5 - 0.02), deck_top - 0.07,
-						Layout.SHELF_START_Z + length * 0.5), orange)
-			kit.box(Vector3(Layout.SHELF_DEPTH - 0.04, 0.04, length),
-					Vector3(x, deck_top - 0.02, Layout.SHELF_START_Z + length * 0.5), deck, true)
+			for bay: int in range(Layout.BAYS):
+				kit.model(shelf_deck, Transform3D(Basis.IDENTITY,
+						Vector3(x, deck_top, Layout.SHELF_START_Z + (bay + 0.5) * Layout.BAY_LENGTH)))
+			kit.collider(Vector3(Layout.SHELF_DEPTH - 0.04, 0.04, length),
+					Transform3D(Basis.IDENTITY, Vector3(x, deck_top - 0.02, Layout.SHELF_START_Z + length * 0.5)))
 		# Loose small stock on the top deck, out of reach and just for show.
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 90 + int(x)
@@ -398,29 +394,26 @@ func _build_shop(kit: DepotKit) -> void:
 	kit.box(Vector3(4.6, 2.2, 0.5), Vector3(10.8, 1.1, 26.9), shelf, true)
 	for level: int in range(3):
 		kit.box(Vector3(4.6, 0.04, 0.55), Vector3(10.8, 0.45 + level * 0.7, 26.8), top)
+		# Models stand on the shelf board (top at 0.47 + 0.7 per level).
+		var base_y: float = 0.47 + level * 0.7
 		for index: int in range(7):
 			var x: float = 8.9 + index * 0.62
 			match (index + level) % 3:
 				0:
-					kit.cylinder(0.2, 0.5,
-							Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(x, 0.67 + level * 0.7, 26.75)),
-							DepotKit.glass(Color(0.85, 0.92, 0.98, 0.6)), 12)
+					kit.model(DepotKit.depot_model("sm_env_depot_supply_padding"),
+							Transform3D(Basis.IDENTITY, Vector3(x, base_y, 26.75)))
 				1:
-					kit.cylinder(0.11, 0.08,
-							Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(x, 0.58 + level * 0.7, 26.7)),
-							DepotKit.flat(Color("e0a867"), 0.5), 12)
+					kit.model(DepotKit.depot_model("sm_env_depot_shop_tape_roll"),
+							Transform3D(Basis(Vector3.UP, (index - 3) * 0.08), Vector3(x, base_y, 26.57)))
 				_:
-					kit.box(Vector3(0.45, 0.3, 0.4), Vector3(x, 0.62 + level * 0.7, 26.75),
-							DepotKit.flat(Color("7fa7b5") if level == 1 else Color("e8772e"), 0.9))
+					var foam: String = "sm_env_depot_shop_foam_blue" if level == 1 else "sm_env_depot_shop_foam_orange"
+					kit.model(DepotKit.depot_model(foam), Transform3D(Basis.IDENTITY, Vector3(x, base_y, 26.75)))
 	# The supplies that are bought wait on the counter, ready to go.
-	for supply: Array in [[&"padding", Vector3(11.6, 1.25, 23.9), Color("7fa7b5")],
-			[&"insurance", Vector3(12.4, 1.1, 23.95), Layout.PAPER]]:
+	for supply: Array in [[&"padding", Vector3(11.6, 1.06, 23.9), "sm_env_depot_supply_padding"],
+			[&"insurance", Vector3(12.4, 1.06, 23.95), "sm_env_depot_supply_insurance"]]:
 		var prop := MeshInstance3D.new()
 		prop.name = "Supply_%s" % supply[0]
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.5, 0.4, 0.4) if supply[0] == &"padding" else Vector3(0.3, 0.02, 0.22)
-		prop.mesh = mesh
-		prop.material_override = DepotKit.flat(supply[2], 0.8)
+		prop.mesh = DepotKit.merged_mesh(DepotKit.depot_model(supply[2]))
 		prop.position = supply[1]
 		prop.visible = false
 		_root.add_child(prop)
@@ -482,22 +475,17 @@ func _build_office(kit: DepotKit) -> void:
 
 
 func _build_conveyor(kit: DepotKit) -> void:
-	var frame := DepotKit.flat(Color("59656a"), 0.45, 0.5)
-	var guard := DepotKit.flat(Color("e7be51"), 0.6)
 	var length: float = Layout.CONVEYOR_END_X - Layout.CONVEYOR_START_X
 	var centre: float = (Layout.CONVEYOR_START_X + Layout.CONVEYOR_END_X) * 0.5
-	kit.box(Vector3(length, 0.14, 0.9), Vector3(centre, 0.84, Layout.CONVEYOR_Z), frame, true)
-	for x: float in range(int(Layout.CONVEYOR_START_X) + 1, int(Layout.CONVEYOR_END_X), 2):
-		for z: float in [Layout.CONVEYOR_Z - 0.4, Layout.CONVEYOR_Z + 0.4]:
-			kit.box(Vector3(0.08, 0.8, 0.08), Vector3(x, 0.4, z), frame)
-	for z: float in [Layout.CONVEYOR_Z - 0.47, Layout.CONVEYOR_Z + 0.47]:
-		kit.box(Vector3(length, 0.12, 0.05), Vector3(centre, 1.0, z), guard)
+	# Bed, legs, guard rails and both end portals: one model (17 m, origin
+	# under the middle of the belt). Colliders as before.
+	kit.model(DepotKit.depot_model("sm_env_depot_conveyor"),
+			Transform3D(Basis.IDENTITY, Vector3(centre, 0.0, Layout.CONVEYOR_Z)))
+	kit.collider(Vector3(length, 0.14, 0.9), Transform3D(Basis.IDENTITY, Vector3(centre, 0.84, Layout.CONVEYOR_Z)))
 	# Portals at each end with PVC strip curtains: stock appears from one and
 	# disappears into the other.
 	for x: float in [Layout.CONVEYOR_START_X, Layout.CONVEYOR_END_X]:
-		kit.box(Vector3(1.2, 1.3, 1.3), Vector3(x, 1.55, Layout.CONVEYOR_Z), DepotKit.ribbed(Color("3b4c53"), 0.4),
-				true)
-		kit.box(Vector3(1.2, 0.9, 1.3), Vector3(x, 0.45, Layout.CONVEYOR_Z), frame)
+		kit.collider(Vector3(1.2, 1.3, 1.3), Transform3D(Basis.IDENTITY, Vector3(x, 1.55, Layout.CONVEYOR_Z)))
 		var face: float = x + (0.61 if x < 0.0 else -0.61)
 		for strip: int in range(6):
 			kit.box(Vector3(0.01, 0.6, 0.14), Vector3(face, 1.2, Layout.CONVEYOR_Z - 0.4 + strip * 0.16),
@@ -546,21 +534,12 @@ func _build_staging(kit: DepotKit) -> void:
 				Transform3D(Basis(Vector3.UP, rng.randf_range(-0.06, 0.06)),
 				Vector3(-1.4, Layout.FLOOR_TOP + layer * 0.1, 31.3)))
 	kit.collider(Vector3(1.3, 0.62, 0.9), Transform3D(Basis.IDENTITY, Vector3(-1.4, 0.31, 31.3)))
-	# Packing table: cardboard, a tape gun and a roll of labels.
-	var wood := DepotKit.detailed(Color("b08a5a"), "wood_planks", 1.2)
-	kit.box(Vector3(2.4, 0.06, 1.0), Vector3(2.2, 0.9, 27.4), wood, true)
-	for x: float in [1.1, 3.3]:
-		for z: float in [27.0, 27.8]:
-			kit.box(Vector3(0.06, 0.88, 0.06), Vector3(x, 0.44, z), DepotKit.flat(Color("59656a"), 0.5, 0.4))
+	# Packing table (model: cardboard, tape gun, label roll, flat-packs
+	# below), its top solid as before, and a box being packed.
+	kit.model(DepotKit.depot_model("sm_env_depot_packing_table"), Transform3D(Basis.IDENTITY, Vector3(2.2, 0.0, 27.4)))
+	kit.collider(Vector3(2.4, 0.06, 1.0), Transform3D(Basis.IDENTITY, Vector3(2.2, 0.9, 27.4)))
 	kit.model(Layout.CARGO_BOXES[0],
 			Transform3D(Basis(Vector3.UP, 0.2).scaled(Vector3.ONE * 0.7), Vector3(1.6, 0.93, 27.4)))
-	kit.box(Vector3(0.7, 0.01, 0.5), Vector3(2.5, 0.935, 27.3), DepotKit.flat(Color("e0a867"), 0.9), false, -0.15)
-	kit.box(Vector3(0.12, 0.16, 0.2), Vector3(2.95, 1.0, 27.5), DepotKit.flat(Color("c0392b"), 0.5))
-	kit.cylinder(0.08, 0.07, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(3.2, 0.98, 27.1)),
-			DepotKit.flat(Layout.PAPER, 0.7), 12)
-	# Pallet jack parked beside it.
-	var dark := DepotKit.flat(Color("263238"), 0.6)
-	for x: float in [4.3, 4.75]:
-		kit.box(Vector3(0.16, 0.08, 1.15), Vector3(x, 0.08, 26.4), DepotKit.flat(Color("e8772e"), 0.5))
-	kit.box(Vector3(0.6, 0.3, 0.25), Vector3(4.52, 0.2, 27.1), DepotKit.flat(Color("e8772e"), 0.5))
-	kit.box(Vector3(0.05, 1.0, 0.05), Vector3(4.52, 0.75, 27.35), dark, false, 0.0)
+	# Pallet jack parked beside it, forks toward the door.
+	kit.model(DepotKit.depot_model("sm_env_depot_pallet_jack"),
+			Transform3D(Basis.IDENTITY, Vector3(4.52, Layout.FLOOR_TOP, 27.1)))

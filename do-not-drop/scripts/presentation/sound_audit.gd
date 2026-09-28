@@ -27,6 +27,10 @@ const SOUND_NAMES: Dictionary = {
 	&"reverse_beep": "Beep de reversa", &"mus_depot_radio_loop": "Radio",
 	&"ambient_birds": "Pájaros", &"night_crickets": "Grillos", &"distant_road": "Ruta lejana",
 	&"dog_bark": "Ladrido", &"sheep_bleat": "Balido", &"scanner_beep": "Bip de los botones",
+	&"doorbell_ding_dong": "Timbre", &"neighbor_cheer": "Alegría del vecino",
+	&"comic_ruin_stinger": "Caja arruinada", &"comic_boom": "Explosión",
+	&"forklift_motor_loop": "Motor eléctrico", &"river_flow_loop": "Río",
+	&"train_horn": "Silbato del tren", &"train_chug_loop": "Traqueteo del tren",
 }
 ## Whoever plays it: the nearest ancestor's script, by file name.
 const SOURCE_NAMES: Dictionary = {
@@ -36,6 +40,7 @@ const SOURCE_NAMES: Dictionary = {
 	"ingame_music": "Música", "package_feedback": "Caja (trampa)", "package_contents_view": "Caja (contenido)",
 	"phone_camera": "Celular", "hud": "Pantalla", "hud_cargo_panel": "Pantalla", "delivery_house": "Casa",
 	"chasing_dog": "Perro", "flock_crossing": "Ovejas", "rail_crossing_segment": "Paso a nivel",
+	"narrow_bridge_segment": "Puente",
 }
 
 ## Keys muted this session.

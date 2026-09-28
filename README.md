@@ -200,6 +200,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_world_audio_levels.gd
 <godot> --headless --path do-not-drop --script res://tests/test_contact_shadows.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
+<godot> --headless --path do-not-drop --script res://tests/test_audio_polish.gd
 <godot> --headless --path do-not-drop --script res://tests/test_screen_fade.gd
 <godot> --headless --path do-not-drop --script res://tests/test_camera_polish.gd
 <godot> --headless --path do-not-drop --script res://tests/test_interaction_highlight.gd
@@ -375,7 +376,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   cajas sueltas atrás, aceleran, se golpean y frenan exactamente igual; la cáscara
   sigue al camión a toda velocidad (las cajas siguen adentro después del golpe) y
   salta con él si se lo mueve a mano (playtest 2026-09-25: andaba a tirones y una
-  caja salió por adelante).
+  caja salió por adelante); con las puertas cerradas, cajas altas apoyadas contra el
+  tope trasero del estante y contra las puertas no los atraviesan a toda velocidad
+  (playtest 2026-09-27: el CCD de Jolt las barría hacia afuera).
 - `test_session_sync` — segunda tanda de multijugador: lo que se le manda al que
   entra tarde (partida en curso, entregas, cajas ya entregadas, portón), la caja
   entregada que desaparece en todos, cargar y soltar dentro del camión en marcha,
@@ -530,6 +533,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   de giro sale del giro real del cuerpo, un giro no corta un pickup y `anim_state`
   `TurnInPlace` reproduce el clip en loop. El fondo del tiro del short tiene peso de los
   muslos (más de 0,5; antes 0), así sentado no cuelga en punta entre las rodillas.
+  La cara (`character_face.gd`) queda entre 0 y 12 mm sobre la piel de la cabeza nueva
+  (elipsoide con papada de `head_shape.py`) en los ojos y la boca, y el GLB trae la
+  oclusión y el rubor horneados en color de vértice, que los materiales multiplican.
 - `test_driver_ik` — sentado al volante, las muñecas del personaje llegan a los dos
   puntos del volante con `SkeletonIK3D` (sin cilindros ni guantes sueltos en el volante),
   la bocina lleva su propia mano derecha al centro y la devuelve al aro, y al levantarse se
@@ -560,6 +566,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   Frágil (más grave si se arruina), gemido para Ruidoso que sube con la
   agitación, crujido para Peso Creciente que se reinicia al resolver el
   puzzle.
+- `test_audio_polish` — pasada de pulido "cartoon cómico" (2026-09-27): el timbre ya
+  no reusa la campanita de Frágil, el vecino contento ya no reusa la bocina del
+  camión, el autoelevador eléctrico ya no comparte el motor del camión, y cualquier
+  trampa que se arruina suena su propio golpe cómico (Explosivo con un "BOOM"
+  aparte) en vez de solo el confeti.
 - `test_screen_fade` — el fundido a negro (al sentarse, al reiniciar) se
   oscurece y vuelve solo a transparente.
 - `test_camera_polish` — head bob al caminar, FOV distinto al cargar un
@@ -667,9 +678,12 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   de noche y ninguno con lluvia, y los loops de ambiente suenan y cubren todo su buffer; en
   otoño las hojas se ponen ocres y los pinos siguen verdes. Para ver uno a mano:
   `-- --mood=lluvia_noche` (soleado/nublado/lluvia/niebla × dia/atardecer/noche).
-- `test_more_route_segments` — loma (el camino sube y vuelve a nivel), túnel sólido e
-  iluminado, y el paso a nivel que baja barreras sólidas, deja pasar el tren y reabre;
-  quien se suma a mitad del cruce retoma la fase del host (barreras bajas, tren pasando).
+- `test_more_route_segments` — loma (el camino sube y vuelve a nivel), el puente
+  angosto talla un río de verdad y suena (agua corriendo, en el bus Exterior, con
+  caída por distancia), túnel sólido e iluminado, y el paso a nivel que baja
+  barreras sólidas, deja pasar el tren (con su propio silbato y traqueteo) y reabre;
+  quien se suma a mitad del cruce retoma la fase del host (barreras bajas, tren
+  pasando, traqueteo ya sonando) y termina el ciclo con el traqueteo apagado.
 - `test_truck_variant` — la furgoneta ágil maneja distinto, la pintura cambia la carrocería
   sin tocar el material importado, ambas se replican y respetan los desbloqueos.
 - `test_spectator` — solo un pasajero sin caja que salvar puede pasar a la cámara de

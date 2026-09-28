@@ -1,7 +1,7 @@
 class_name RoutePlacement
 extends RefCounted
 ## The single gate every roadside object goes through (see route_dresser.gd
-## for the five checks): the occupancy grid, clear and sight zones, slope and
+## for the six checks): the occupancy grid, clear and sight zones, slope and
 ## same-kind spacing, then settling the model on the ground -- sunk a little,
 ## leaned with the slope, with a soft contact shadow under it. RouteDresser
 ## and its feature builders (RouteSignage, RouteWildlife, RoutePowerLines)
@@ -12,6 +12,12 @@ const MAX_FOOTPRINT: float = 8.0
 ## Terrain.nearest() returns 4x its HALO when a point has no road tile
 ## nearby at all -- i.e. there's no ground there to stand on.
 const NO_TERRAIN_DISTANCE: float = 250.0
+## Above this much carved-away depth (route_terrain.gd river_depth_at()) a
+## spot counts as "in the riverbed" and nothing gets planted there -- low
+## enough that a power pole still fits on a bridge's shallow outer bank
+## (its own line is allowed to cross the river), but high enough to keep
+## everything out of the actual water and the bare bed beside it.
+const RIVER_MISFIT_DEPTH: float = 0.5
 ## Fake contact shadows (presentation/contact_shadow.gd): how far the soft
 ## band reaches in and out of a parked car's footprint.
 const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
@@ -113,7 +119,7 @@ func try_place(segment: RouteSegment, group_name: String, path: String, xform: T
 	return node
 
 
-## The five checks from the class comment, in cheapest-first order. Returns
+## The six checks from the class comment, in cheapest-first order. Returns
 ## why a spot was turned down, or &"" when it fits (and records the reason).
 ## `in_world` = false is for a house's own yard, which sits inside that
 ## house's cleared zone by definition (it still can't overlap itself).
@@ -129,6 +135,8 @@ func misfit(p: Vector3, radius: float, clearance: float, max_slope: float, in_wo
 		reason = &"no_terrain"
 	elif road - radius < clearance:
 		reason = &"road"
+	elif _terrain.river_depth_at(Vector2(p.x, p.z)) > RIVER_MISFIT_DEPTH:
+		reason = &"river"
 	elif in_world and in_clear_zone(p, claim):
 		reason = &"clear_zone"
 	elif overlaps(p, claim):

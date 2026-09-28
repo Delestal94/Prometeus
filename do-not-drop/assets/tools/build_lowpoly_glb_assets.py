@@ -205,4 +205,4 @@ def roadside_prop(kind):
 # more detailed versions. This batch still owns the cargo boxes and the parked
 # cars; the old functions above stay only as reference.
 for name in ("fragile", "vented", "balance", "heavy"): cargo_box(name)
-for name in ("hatchback", "pickup"): parked_car(name)
+# The parked cars moved to build_street_props.py (N-136, 2026-09-27).

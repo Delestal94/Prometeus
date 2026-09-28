@@ -847,9 +847,11 @@ GROUPS = {
     "trees": lambda: [fn() or export_forest(name) for name, fn in TREES.items()],
     "plants": lambda: [fn() or export_forest(name) for name, fn in PLANTS.items()],
     "signs": lambda: [sign(k) for k in ("curve", "speed_bump", "narrow_bridge", "gravel", "roadworks", "delivery_ahead")],
-    "props": lambda: (guardrail(), [roadside(k) for k in ("hay_bale", "wooden_crate", "pallet", "fire_hydrant", "bus_stop", "milestone",
-                                                        "traffic_cone", "road_barrier", "mailbox", "street_lamp", "bench")]),
-    "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "garden_gnome", "dog_house", "doormat")],
+    # Crate, milestone, cone, mailbox, street lamp, gnome and doormat moved to
+    # build_street_props.py (N-140, 2026-09-27); their functions here stay as reference.
+    "props": lambda: (guardrail(), [roadside(k) for k in ("hay_bale", "pallet", "fire_hydrant", "bus_stop",
+                                                        "road_barrier", "bench")]),
+    "yard": lambda: [yard(k) for k in ("picket_fence", "flower_pot", "dog_house")],
 }
 TREES = {"oak": tree_oak, "birch": tree_birch, "pine_tall": tree_pine, "maple": tree_maple, "dead": tree_dead, "pine_sapling": tree_sapling}
 PLANTS = {"bush_round": bush, "fern": fern, "grass_clump": grass, "wildflower": flowers, "mushroom": mushroom, "fallen_log": log,

@@ -8,10 +8,14 @@ class_name RouteDresser
 ##
 ##   1. far enough from the asphalt (terrain.nearest() to the road centreline
 ##      minus the object's own footprint radius),
-##   2. not inside a cleared zone (a house and its yard, the farm's barn),
-##   3. not overlapping anything solid already placed (occupancy grid),
-##   4. not on a slope steeper than the object tolerates,
-##   5. not too close to another of its own kind, when that matters
+##   2. not in a narrow bridge's riverbed (terrain.river_depth_at() --
+##      RIVER_MISFIT_DEPTH still lets a power pole plant itself on the
+##      shallow outer bank, so its line can cross the river; nothing stands
+##      in the water or the bare bed beside it),
+##   3. not inside a cleared zone (a house and its yard, the farm's barn),
+##   4. not overlapping anything solid already placed (occupancy grid),
+##   5. not on a slope steeper than the object tolerates,
+##   6. not too close to another of its own kind, when that matters
 ##      (two windmills side by side, three bus stops in a row).
 ##
 ## A spot that fails is simply skipped -- nothing gets nudged into a place

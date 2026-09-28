@@ -57,6 +57,17 @@ func _process(_delta: float) -> void:
 			item.global_transform = motion * item.global_transform
 
 
+## Continuous collision only while loose or thrown about the bay: riding
+## along with it on, they were swept out through the shut rear doors, like
+## the boxes (Vehicle.needs_sweep()).
+func _physics_process(_delta: float) -> void:
+	if vehicle == null:
+		return
+	for item: RigidBody3D in _items:
+		if is_instance_valid(item):
+			item.continuous_cd = bool(vehicle.call(&"needs_sweep", item, 0.4))
+
+
 func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mass_kg: float, at: Vector3) -> RigidBody3D:
 	var body := RigidBody3D.new()
 	body.name = "CargoClutter" + item_name
@@ -64,7 +75,8 @@ func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mas
 	body.collision_layer = 0
 	body.collision_mask = ENVIRONMENT_AND_SHELL
 	# Light and quick next to the walls they rattle against: without
-	# continuous collision a hard stop could tunnel them straight through.
+	# continuous collision a hard stop could tunnel them straight through
+	# (switched per tick, see _physics_process).
 	body.continuous_cd = true
 	body.contact_monitor = true
 	body.max_contacts_reported = 2
