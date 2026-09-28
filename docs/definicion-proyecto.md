@@ -21,11 +21,16 @@ el dev hace el juego que él mismo quiere jugar (ver `docs/checklist-exito.md`).
 - Cruza dos referencias con demanda actual probada: el "caos físico cooperativo" tipo
   **PEAK** (5M copias en menos de un mes, 2025) y el género de delivery físico
   cooperativo tipo **Totally Reliable Delivery Service** (14M descargas).
-- Diferenciación real frente a la ola de "chaos co-op" reciente (Drive Together,
+- Diferenciación frente a la ola de "chaos co-op" reciente (Drive Together,
   Co-Drive Chaos, Deliver Together): esos juegos son de **control compartido
-  simétrico** de un mismo vehículo; Take My Package propone **roles asimétricos** (un
-  conductor normal + pasajeros con mini-puzzles individuales), que no encontramos
-  replicado en ningún juego existente al momento de la investigación.
+  simétrico** de un mismo vehículo. Los roles asimétricos solos ya no alcanzan:
+  **Backseat Drivers** (oct-2025) separa conductor que no ve y pasajero que ve pero
+  no maneja, y **RV There Yet?** (4,5 M copias) hace que el conductor dependa de los
+  demás (ver `docs/analisis-competencia-backseat-rv.md`). Nuestro diferencial es:
+  - **Asimetría entre pasajeros:** cada pasajero tiene su propio problema en las
+    manos (su paquete con su trampa), no solo conductor contra pasajero.
+  - **La carga es la protagonista:** la entrega se revisa en la puerta del cliente;
+    el viaje importa por lo que le hace a los paquetes.
 - Rating de evaluación: 8/10 (ver el análisis completo en el historial de la
   conversación de diseño — no está en un documento de "ideas candidatas" porque nació
   fuera de ese proceso).

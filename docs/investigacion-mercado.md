@@ -51,6 +51,19 @@ de referencia al definir el próximo proyecto.
 ### Casos límite a tener en cuenta (útiles igual, con matices)
 - **Celeste**, **Hollow Knight**, **Dwarf Fortress**: el *diseño y la programación* fueron obra de 1-2 personas, pero **tercerizaron arte y/o música** a colaboradores puntuales. Este es probablemente el patrón más realista para vos: un dev + IA puede cubrir diseño/código/arte base, pero música y algo de arte pulido suelen seguir viniendo de afuera incluso en los "solo devs" más exitosos.
 
+### Referencias directas del género (fuera del criterio de 1-2 personas)
+No entran en la lista porque son estudios, pero son los competidores más cercanos a Take My
+Package (detalle en `docs/analisis-competencia-backseat-rv.md` y
+`docs/marketing/competidores-manejo.md`):
+- **RV There Yet?** (Nuggets Entertainment, 2025): nació de una game jam, cuesta ~8 USD y
+  superó los **4,5 M de copias** (1,29 M en 5 días). Coop de 1-4 con voz por proximidad.
+  Prueba que un juego de manejo cooperativo barato y legible en un GIF vende muchísimo.
+- **Backseat Drivers** (GhostJam Games + Deadcat Studios, oct-2025): **roles asimétricos** dentro
+  del auto (el conductor no ve, el pasajero no maneja), ≈78 % positivas sobre ~700 reseñas.
+  Vende con **Friend Pass** (una copia alcanza para dos) y demo gratis aparte. Por este juego,
+  nuestro diferencial ya no es "roles asimétricos" a secas, sino la asimetría **entre pasajeros**
+  y la carga como protagonista (ver `docs/definicion-proyecto.md`).
+
 ### Aún pendiente si querés profundizar más
 - Cifra de copias vendidas específica de Cave Story en Steam.
 - Precio de lanzamiento exacto de cada título (dato menor, se puede sacar de SteamDB en cualquier momento).

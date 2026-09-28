@@ -2,7 +2,8 @@
 
 > Relevado el 2026-09-24 desde las páginas de Steam y sus reseñas (tareas de Nacho N-904).
 > Los precios y las reseñas cambian: volver a mirar antes de fijar el precio o armar la página.
-> Complementa `docs/investigacion-mercado.md`.
+> Complementa `docs/investigacion-mercado.md`. RV There Yet? y Backseat Drivers se sumaron el
+> 2026-09-28 (N-704) desde `docs/analisis-competencia-backseat-rv.md`, donde está el detalle.
 
 ## Resumen
 
@@ -12,6 +13,8 @@
 | [Drive Together](https://store.steampowered.com/app/4117320/Drive_Together/) | 3,49 | Variadas (55 % de 43) | 1-4 (parkour), hasta 8 (carrera) | "Un auto, varios conductores": cada jugador controla una parte del mismo auto (volante, acelerador, freno). |
 | [Co-Drive Chaos](https://store.steampowered.com/app/4265920/CoDrive_Chaos/) | 2,69 | Sin puntaje todavía (9 reseñas) | 2-4 online | Uno solo puede girar a la derecha y otro solo a la izquierda; rutas de terror. |
 | [Deliver Together](https://store.steampowered.com/app/3419270/Deliver_Together/) | Sin precio (sin lanzar, 2026) | — | Hasta 8 | Dos camiones atados a un mismo acoplado; hay que coordinar para no arrastrar al otro. |
+| RV There Yet? | ~8 | Muy positivas; más de 4,5 M de copias | 1-4 online | Casa rodante destartalada por un valle sin caminos; cabrestante y voz por proximidad: el conductor depende de los demás. |
+| Backseat Drivers | Friend Pass (una copia para dos) y demo gratis aparte | ≈78 % positivas de ~700 | 2 (Historia), 4 (Carpool) | Roles asimétricos: el conductor no ve y el pasajero ve pero no maneja; el auto se desarma. |
 
 ## Qué elogian y qué critican del manejo
 
@@ -30,6 +33,15 @@
 **Co-Drive Chaos** y **Deliver Together**: todavía sin reseñas que sirvan. Confirman que el
 subgénero "un vehículo, control repartido" está de moda en 2026 y lleno de juegos baratos.
 
+**RV There Yet?** y **Backseat Drivers** (los dos de octubre de 2025, análisis completo en
+`docs/analisis-competencia-backseat-rv.md`):
+- RV There Yet? es el éxito del género: barato, nacido de una game jam, con la voz por proximidad
+  como motor de las risas. Muestra que el precio bajo y una idea legible en un GIF pesan más que
+  el contenido.
+- Backseat Drivers ya hizo **roles asimétricos** conductor/pasajero: no los podemos vender como
+  novedad. Critican bugs de conexión; elogian las indicaciones rápidas con voz de personaje y los
+  arreglos improvisados del auto.
+
 ## Cómo se ven sus páginas
 
 - Todos abren con tráiler de caos físico (vuelcos, choques, gente gritando) y capturas del
@@ -40,9 +52,11 @@ subgénero "un vehículo, control repartido" está de moda en 2026 y lleno de ju
 
 ## Qué hacemos distinto
 
-**Una frase:** en Take My Package no se reparten los controles de un mismo auto: cada uno tiene
-un rol distinto (uno maneja y los demás cuidan paquetes con trampas propias atrás), así que el
-caos sale de que el conductor no ve lo que su manejo le hace a la carga.
+**Una frase:** en Take My Package no se reparten los controles de un mismo auto ni alcanza con
+separar conductor y pasajero (eso ya lo hace Backseat Drivers): **cada pasajero tiene su propio
+problema en las manos** (su paquete con su trampa) y **la carga es la protagonista**, porque la
+entrega se revisa en la puerta del cliente. El caos sale de que el conductor no ve lo que su
+manejo le hace a la carga.
 
 Lecciones para nosotros:
 - **La red es lo que más castiga a TRDS**: desync y retraso son su crítica número uno. Justifica
