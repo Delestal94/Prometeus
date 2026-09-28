@@ -67,7 +67,8 @@ func _load_level() -> void:
 	_level = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(_level)
 	current_scene = _level
-	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_name, Time.get_ticks_msec() / 1000.0, (Time.get_ticks_msec() - began) / 1000.0])
+	var now: int = Time.get_ticks_msec()
+	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_name, now / 1000.0, (now - began) / 1000.0])
 
 
 func _report() -> void:
