@@ -77,6 +77,14 @@ var world_completed_runs: int = 0
 ## load: 8 s dropped joiners on 2-core CI runners (three Godots loading at
 ## once) with the level up and no players, and a slow PC is no faster.
 const JOIN_HANDSHAKE_TIMEOUT: float = 20.0
+## ENet drops a peer it hasn't heard from in about 5 s, and loading a level
+## blocks the main thread -- and with it ENet's polling -- for longer than that
+## on a slow machine (9.6 s on a CI runner): the joiner was cut off right after
+## loading, and a host restart could drop everyone. A peer that really vanished
+## is still noticed, just later; a clean leave is noticed at once.
+const ENET_PEER_TIMEOUT_LIMIT: int = 32
+const ENET_PEER_TIMEOUT_MIN_MSEC: int = 15000
+const ENET_PEER_TIMEOUT_MAX_MSEC: int = 30000
 var _awaiting_handshake: bool = false
 ## The level the session plays in. The host records it whenever its own
 ## level is up, so a joiner arriving mid-reload still gets the right one.
@@ -421,12 +429,25 @@ func is_peer_ready(id: int) -> bool:
 # Hold scene replication until the joiner's level exists. Authentication
 # packets are the only traffic Godot permits before both sides complete_auth.
 func _peer_authenticating(id: int) -> void:
+	_tolerate_level_loads(id)
 	if multiplayer.is_server():
 		multiplayer.send_auth(id, var_to_bytes({"version": PROTOCOL_VERSION, "seed": world_seed,
 			"houses": world_house_count, "locked": world_locked_traps, "runs": world_completed_runs,
 			"scene": _current_level_scene()}))
 	elif id != HOST_ID:
 		multiplayer.complete_auth(id)
+
+
+## Both ends of a new ENet link (the host for the joiner, the joiner for the
+## host) wait out a level load instead of dropping the other side. Steam
+## peers keep their own timeouts.
+func _tolerate_level_loads(id: int) -> void:
+	var enet: ENetMultiplayerPeer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
+	if enet == null:
+		return
+	var packet_peer: ENetPacketPeer = enet.get_peer(id)
+	if packet_peer != null:
+		packet_peer.set_timeout(ENET_PEER_TIMEOUT_LIMIT, ENET_PEER_TIMEOUT_MIN_MSEC, ENET_PEER_TIMEOUT_MAX_MSEC)
 
 
 ## The level to hand a joiner: the one up right now, else the last one this

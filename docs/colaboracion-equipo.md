@@ -32,6 +32,11 @@ Los PRs fallaban por tres cosas, ninguna del contenido de los PRs de docs:
   núcleos) eso pasaba de 8 s y el host lo echaba: nivel cargado y cero jugadores. Una PC lenta
   tiene el mismo problema. `net_pair`/`net_trio` ahora imprimen líneas `NETLOG` con el tiempo de
   carga y el motivo si la sesión se cae.
+- **Segunda parte (rama `fix/enet-load-timeout`), también en `core/network_manager.gd`:** los `NETLOG` del #16 mostraron
+  que el corte real era de ENet: mientras un proceso carga el nivel no atiende la red, y ENet da
+  por caído al otro lado a los ~5 s (la carga llegó a 9,6 s en CI). `_tolerate_level_loads()` sube
+  ese margen a 15 s en las dos puntas de cada conexión ENet (no toca Steam). Cubre también el
+  reinicio del host con clientes conectados. Un par que se va limpio se sigue viendo al instante.
 
 ## Aviso activo: Steam y marketing pospuestos (2026-09-28)
 
