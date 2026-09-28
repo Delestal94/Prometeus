@@ -198,6 +198,17 @@ func _build_ui() -> void:
 	interaction_label.offset_right = 280
 	interaction_label.offset_top = -150
 	interaction_label.offset_bottom = -55
+	interaction_icon = TextureRect.new()
+	interaction_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	interaction_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	interaction_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	interaction_icon.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	interaction_icon.offset_left = -330
+	interaction_icon.offset_right = -270
+	interaction_icon.offset_top = -140
+	interaction_icon.offset_bottom = -80
+	interaction_icon.hide()
+	hud_layer.add_child(interaction_icon)
 
 	overlay = ColorRect.new()
 	root.add_child(overlay)

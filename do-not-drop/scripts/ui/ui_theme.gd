@@ -592,3 +592,11 @@ static func trap_icon(display_name: String) -> Texture2D:
 	if id.is_empty():
 		return null
 	return load("res://assets/ui/icons/tx_ui_trap_%s_256.png" % id)
+
+
+## Stable action id -> its transparent HUD icon. Unknown actions deliberately
+## return null so generic interactions can keep their text-only fallback.
+static func action_icon(id: StringName) -> Texture2D:
+	if id not in [&"grab", &"drop", &"sit", &"bell", &"photo", &"horn", &"ping", &"open_box", &"use_card"]:
+		return null
+	return load("res://assets/ui/icons/tx_ui_action_%s_128.png" % id)

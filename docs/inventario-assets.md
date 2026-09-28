@@ -41,7 +41,7 @@
 | Logo del juego (wordmark) | `UiTheme.logo()` | 🟡 | Armado con tipografía (Lilita One + cinta amarilla) en menú. Falta pasarlo a imagen para el splash, el ícono y Steam. |
 | Fondo de pantalla de resultados | — | ⬜ | Ilustración: la tripulación frente a la furgoneta al terminar la ruta. |
 | Cápsulas de Steam (460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240) | — | ⬜ | Necesitan el logo. Fase de lanzamiento. |
-| Íconos de acción del HUD (agarrar, sentarse, timbre, foto, bocina, ping) | — | ⬜ | Hoy los prompts son solo texto. |
+| Íconos de acción del HUD (×9) | `ui/icons/tx_ui_action_*_128.png` | ✅ | Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja y usar carta; `UiTheme.action_icon()` los muestra junto a los avisos de interacción. |
 | Marco del celular / UI de cámara | — | ⬜ | Para `phone_camera.gd`. |
 
 | Tipografías | `assets/fonts/LilitaOne-Regular.ttf`, `Nunito-Variable.ttf` | ✅ | OFL (licencias al lado). Sistema de UI en `docs/direccion-visual.md` §3. |

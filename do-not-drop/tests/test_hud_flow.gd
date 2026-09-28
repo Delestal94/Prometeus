@@ -33,10 +33,16 @@ func _run() -> void:
 	_expect(not hud.second_button.visible, "Nothing to restart before anything started")
 	_expect(hud.route_bar.visible, "Outside endless the route bar is shown")
 	_expect(String(hud.session_label.text).contains("SOLO"), "Offline, the session corner says so")
+	for action_id: StringName in [&"grab", &"drop", &"sit", &"bell", &"photo", &"horn", &"ping", &"open_box", &"use_card"]:
+		_expect(UiTheme.action_icon(action_id) != null, "%s has an action icon" % action_id)
+	_expect(UiTheme.action_icon(&"unknown") == null, "Unknown actions keep the text-only fallback")
 
 	# --- prompts follow the device ---
 	bus.interaction_prompt_changed.emit("Agarrar paquete")
 	_expect(hud.interaction_label.text == "[ E ]  Agarrar paquete", "Keyboard prompt shows only the key")
+	_expect(hud.interaction_icon.visible
+		and hud.interaction_icon.texture == UiTheme.action_icon(&"grab"),
+		"Interaction prompt shows the matching action icon")
 	settings.using_gamepad = true
 	settings.input_device_changed.emit(true)
 	_expect(hud.interaction_label.text == "[ A ]  Agarrar paquete", "Switching to a gamepad re-renders the prompt")
@@ -45,6 +51,7 @@ func _run() -> void:
 	settings.input_device_changed.emit(false)
 	bus.interaction_prompt_changed.emit("")
 	_expect(hud.interaction_label.text == "", "An empty prompt clears the line")
+	_expect(not hud.interaction_icon.visible, "An empty prompt clears its action icon")
 
 	# --- the in-game HUD scales as one layer, still covering the screen ---
 	# Put back whatever the player had: this writes their real settings file.

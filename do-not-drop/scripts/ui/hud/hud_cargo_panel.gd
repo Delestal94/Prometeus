@@ -59,6 +59,7 @@ var _prep_refresh: float = 0.0
 var overlay_mode: String = "start"
 var in_delivery: bool = false
 var interaction_label: Label
+var interaction_icon: TextureRect
 var _interaction_prompt: String = ""
 var _lid_action: String = ""
 var _lid_inside: String = ""

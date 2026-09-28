@@ -109,17 +109,47 @@ func _on_carry_changed(carrying: bool) -> void:
 
 func _render_interaction_prompt() -> void:
 	var lines: PackedStringArray = []
+	var action_id: StringName = _action_id_for_prompt(_interaction_prompt)
 	if not _interaction_prompt.is_empty():
 		lines.append("[ %s ]  %s" % [_key("E", "A"), _interaction_prompt])
 	if _carrying:
 		lines.append("[ %s ]  Soltar paquete" % _key("Q", "B"))
+		if action_id == &"":
+			action_id = &"drop"
 	if not _lid_action.is_empty():
 		lines.append("[ %s ]  %s" % [_key("T", "D-pad abajo"), _lid_action])
+		if action_id == &"":
+			action_id = &"open_box"
 	if not _lid_inside.is_empty():
 		lines.append("Adentro:  %s" % _lid_inside)
 	if not _sound_subtitle.is_empty():
 		lines.append(_sound_subtitle)
 	interaction_label.text = "\n".join(lines)
+	interaction_icon.texture = UiTheme.action_icon(action_id)
+	interaction_icon.visible = interaction_icon.texture != null
+
+
+func _action_id_for_prompt(prompt: String) -> StringName:
+	var normalized: String = prompt.to_lower()
+	if "agarrar" in normalized or "bajar paquete" in normalized:
+		return &"grab"
+	if "soltar" in normalized or "dejá el paquete" in normalized or "dejar paquete" in normalized:
+		return &"drop"
+	if "sentar" in normalized or "subirse" in normalized:
+		return &"sit"
+	if "timbre" in normalized:
+		return &"bell"
+	if "foto" in normalized:
+		return &"photo"
+	if "bocina" in normalized:
+		return &"horn"
+	if "ping" in normalized:
+		return &"ping"
+	if "caja" in normalized and ("abrir" in normalized or "cerrar" in normalized):
+		return &"open_box"
+	if "carta" in normalized:
+		return &"use_card"
+	return &""
 
 
 func _refresh_sound_subtitle() -> void:
