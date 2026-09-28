@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-28 (estado relevado sobre `60c4dc4`).
+> Última actualización: 2026-09-28 (estado relevado sobre `dbe3e48`).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -712,7 +712,7 @@ Hoy todos los textos están escritos en español dentro del código.
 
 ### S-702 · Qué queda fuera del MVP (control de alcance) — A · `Luna · medium` · Aviso: no
 
-- [ ] Sección nueva en `docs/plan-desarrollo.md` con la lista cerrada de lo que **no** se hace antes de
+- [x] (commit `dbe3e48`) Sección nueva en `docs/plan-desarrollo.md` con la lista cerrada de lo que **no** se hace antes de
   Early Access: chat de voz propio, matchmaking público, cartas Prioridad e Información, tienda en ruta,
   tutorial jugable, más de 7 trampas, servidores dedicados, microtransacciones. Cualquier idea nueva se
   anota en una sección "Después del lanzamiento", no en esta lista.
