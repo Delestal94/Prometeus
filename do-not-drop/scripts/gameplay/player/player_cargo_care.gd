@@ -1,39 +1,32 @@
 extends Node
-## Local input and a compact workbench HUD. All actual work happens on the host.
+## Local input and the care card for the box in your hands or at your seat.
+## All actual work happens on the host.
+##
+## Controls, kept to one each (playtest 2026-09-28):
+##   primary (left click / RT), held  -- look after the box: steady, calm, mop
+##   tool (right click / LT), held    -- use the tool the card offers, until
+##                                        its ring fills
+##   taps (WASD / stick)              -- only when a box asks for a sequence
+##   care_tool_next (X / D-pad right) -- pick another tool by hand
+##   drop (Q / B), seated             -- lap <-> rack
 const Care = preload("res://scripts/gameplay/package/package_care.gd")
-const CarePromptView = preload("res://scripts/ui/hud/care_prompt_view.gd")
-const PHASE_NAMES: Dictionary = {&"intact": "INTACTO", &"damaged": "DAÑADO", &"crisis": "¡RESCATE!",
-	&"rescued": "RESCATADO", &"lost": "PERDIDO"}
-const HELP_GAMEPAD: String = "RT + stick: equilibrar\n" \
-	+ "LT + stick hacia la flecha: trabajar · D-pad der.: herramienta · soltar: regazo/soporte"
-const HELP_KEYBOARD: String = "Clic izq. + WASD: equilibrar\n" \
-	+ "Clic der. + tecla de la flecha: trabajar · X: herramienta · Q: regazo/soporte"
-const DIRECTION_ARROWS: Dictionary = {Vector2.LEFT: "←", Vector2.UP: "↑", Vector2.RIGHT: "→", Vector2.DOWN: "↓"}
-const DIRECTION_KEYS: Dictionary = {Vector2.LEFT: "A", Vector2.UP: "W", Vector2.RIGHT: "D", Vector2.DOWN: "S"}
-const SEQUENCE_VECTORS: Dictionary = {&"left": Vector2.LEFT, &"up": Vector2.UP, &"right": Vector2.RIGHT,
-	&"down": Vector2.DOWN}
+const CareCard = preload("res://scripts/ui/hud/care_card.gd")
+const CareGuide = preload("res://scripts/ui/hud/care_guide.gd")
+const CarePractice = preload("res://scripts/ui/hud/care_practice.gd")
+## The logical height the card lays out for, like Hud.BASE_HEIGHT.
+const BASE_HEIGHT: float = 720.0
 var player: Node
-var tool_index: int = 0
-var panel: PanelContainer
-var title: Label
-var details: Label
-var instructions: Label
-var prompt_view: CarePromptView
-var balance_view: Control
+var card: CareCard
+## The depot's practice card (CarePractice), until this profile has done it.
+var practice: CarePractice
 var target: Node
-var _prompt_target: Node
+## A tool picked by hand with care_tool_next; cleared when the box's needs
+## change, so the card goes back to suggesting.
+var manual_tool: StringName = &""
+var _suggested: StringName = &""
+var _card_target: Node
 var _layer: CanvasLayer
-
-class BalanceView extends Control:
-	var care
-	func _draw() -> void:
-		var center := Vector2(95, 50)
-		draw_circle(center, 43, Color("34465b"))
-		draw_line(center - Vector2(43, 0), center + Vector2(43, 0), Color("7a8999"))
-		draw_line(center - Vector2(0, 43), center + Vector2(0, 43), Color("7a8999"))
-		if care != null:
-			draw_circle(center + care.balance_target * 32.0, 13, Color("83e2ba"))
-			draw_circle(center + care.balance_cursor * 32.0, 5, Color.WHITE)
+var _root: Control
 
 
 func _ready() -> void:
@@ -44,106 +37,148 @@ func _ready() -> void:
 	_layer = CanvasLayer.new()
 	_layer.layer = 7
 	add_child(_layer)
-	var root := Control.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_layer.add_child(root)
-	panel = PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
-	panel.offset_left = -370
-	panel.offset_right = -20
-	panel.offset_top = -250
-	panel.offset_bottom = 250
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(panel)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 8)
-	panel.add_child(column)
-	title = _label(column, 20)
-	# First thing under the name: what to press, animated and with sound.
-	prompt_view = CarePromptView.new()
-	column.add_child(prompt_view)
-	var view := BalanceView.new()
-	view.custom_minimum_size = Vector2(190, 100)
-	column.add_child(view)
-	balance_view = view
-	details = _label(column, 16)
-	instructions = _label(column, 15)
-	panel.visible = false
+	_root = Control.new()
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_layer.add_child(_root)
+	card = CareCard.new()
+	card.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	card.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	card.grow_vertical = Control.GROW_DIRECTION_BOTH
+	card.offset_right = -24
+	card.offset_left = -24 - CareCard.WIDTH
+	_root.add_child(card)
+	card.visible = false
+	if CarePractice.pending(get_node_or_null(^"/root/UnlockManager")):
+		practice = CarePractice.new()
+		practice.profile = get_node_or_null(^"/root/UnlockManager")
+		practice.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+		practice.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		practice.grow_vertical = Control.GROW_DIRECTION_BOTH
+		practice.offset_right = -24
+		practice.offset_left = -24 - CarePractice.WIDTH
+		_root.add_child(practice)
+		practice.visible = false
 
 
-func _label(parent: Node, size: int) -> Label:
-	var label := Label.new()
-	label.add_theme_font_size_override("font_size", size)
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size.x = 330
-	parent.add_child(label)
-	return label
-
-
-func _physics_process(_delta: float) -> void:
-	if panel == null:
+func _physics_process(delta: float) -> void:
+	if card == null:
 		return
+	_fit_to_screen()
 	var run: Node = get_node_or_null(^"/root/RunManager")
+	_update_practice(delta, run)
 	target = null
-	if not bool(run.get(&"is_running")) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		panel.visible = false
+	if not bool(run.get(&"is_running")) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED \
+			or String(player.get(&"seat_node_path")).contains("DriverEyePoint"):
+		card.visible = false
 		return
-	if String(player.get(&"seat_node_path")).contains("DriverEyePoint"):
-		panel.visible = false
-		return
+	var handling: bool = false
 	for key: StringName in [&"carried_package", &"tended_package"]:
 		var candidate: Variant = player.get(key)
 		if is_instance_valid(candidate):
 			target = candidate
+			handling = true
 			break
 	if target == null:
 		target = player.call(&"_lid_target")
-	panel.visible = target != null
-	if target != _prompt_target:
-		_prompt_target = target
-		prompt_view.reset()
+	card.visible = target != null
+	if target != _card_target:
+		_card_target = target
+		card.reset()
+		manual_tool = &""
 	if target == null:
 		return
-	if Input.is_action_just_pressed(&"care_tool_next"):
-		tool_index = (tool_index + 1) % Care.TOOLS.size()
-		prompt_view.play_cue(&"whoosh")
-	var input: Dictionary = player.call(&"_gather_package_input")
-	input["balance"] = Input.get_vector(&"drive_left", &"drive_right", &"walk_forward", &"walk_backward")
-	input["work"] = Input.is_action_pressed(&"care_work")
-	input["tool"] = Care.TOOLS[tool_index]
-	target.rpc_id(1, &"submit_care_input", input)
 	var care = target.care
-	title.text = "%s · %s" % [String(target.trap_definition.display_name), PHASE_NAMES.get(care.phase, "")]
-	balance_view.care = care
-	balance_view.queue_redraw()
+	var kind: StringName = target._trap_kind()
+	var supplies: Dictionary = {}
+	for tool_id: StringName in Care.TOOLS:
+		supplies[tool_id] = int(run.call(&"care_supply_count", tool_id))
+	var suggested: StringName = care.suggested_tool(kind, supplies)
+	if suggested != _suggested:
+		_suggested = suggested
+		manual_tool = &""
+	if handling and Input.is_action_just_pressed(&"care_tool_next"):
+		manual_tool = next_tool(manual_tool if manual_tool != &"" else suggested)
+		card.prompt_view.play_cue(&"whoosh")
+	var tool: StringName = manual_tool if manual_tool != &"" else suggested
+	var input: Dictionary = player.call(&"_gather_package_input")
+	input["work"] = handling and tool != &"" and Input.is_action_pressed(&"care_work")
+	input["tool"] = tool if tool != &"" else &"tape"
+	if handling:
+		target.rpc_id(1, &"submit_care_input", input)
+	_refresh_card(run, care, kind, tool, int(supplies.get(tool, 0)), input, handling)
+
+
+func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: int, input: Dictionary,
+		handling: bool) -> void:
 	var gamepad: bool = _using_gamepad()
-	var tool: StringName = Care.TOOLS[tool_index]
-	var stock: int = int(run.call(&"care_supply_count", tool))
-	var tool_label: String = care.tool_name(tool, target._trap_kind())
-	var status: String = target.get_hint() if care.message.is_empty() else care.message
-	_update_prompt(care, input, tool, tool_label, stock, gamepad)
-	details.text = "%s (%d) · %s" % [tool_label, stock, status]
-	if care.phase == &"crisis":
-		details.text += "\nRescate: %ds · quedan %d piezas" % [ceili(care.crisis_left), care.missing_parts]
-	instructions.text = HELP_GAMEPAD if gamepad else HELP_KEYBOARD
-
-
-## The animated card: a pending tap sequence (the bomb) comes first, the
-## selected tool's hold-to-work otherwise. Speed and a helper aren't known
-## here, so "usable" is the host's rule minus those two.
-func _update_prompt(care, input: Dictionary, tool: StringName, tool_label: String, stock: int,
-		gamepad: bool) -> void:
+	var keys: Dictionary = control_names(gamepad, _interact_label(gamepad))
 	var state: Dictionary = target.get(&"care_state") if target.get(&"care_state") is Dictionary else {}
-	var sequence: Dictionary = state.get("sequence", {})
-	if not sequence.is_empty() and prompt_view.show_sequence(sequence, gamepad, sequence_prompt(sequence, gamepad)):
+	var tool_name: String = care.tool_name(tool, kind) if tool != &"" else ""
+	var step: Dictionary = CareGuide.next_step(state, kind, tool, tool_name, keys) if handling \
+		else reach_step(keys, bool(player.get(&"_seated")))
+	var entry: Dictionary = (run.get(&"cargo") as Dictionary).get(target.get(&"package_id"), {})
+	var integrity: float = float(entry.get("integrity", 100.0)) / maxf(float(entry.get("maximum", 100.0)), 0.01) * 100.0
+	var view_data: Dictionary = {"pad": gamepad, "primary": bool(input.get("steady", false)),
+		"tool_held": Input.is_action_pressed(&"care_work"), "work": care.work if care.work_tool == tool else 0.0,
+		"fixes": fix_count(care), "sequence": state.get("sequence", {}), "missing": care.missing_parts,
+		"sway": care.balance_target, "interact": keys["interact"]}
+	card.update(String(target.trap_definition.display_name), int(entry.get("state", 0)), integrity, step,
+		view_data, footer_items(keys, tool_name, stock, handling, bool(player.get(&"_seated")), care.in_lap))
+
+
+## Before the first run: the practice card, while the crew is loading up in
+## the depot and nothing covers the screen.
+func _update_practice(delta: float, run: Node) -> void:
+	if practice == null:
 		return
-	var direction: Vector2 = care.work_direction()
-	var balance: Vector2 = input.get("balance", Vector2.ZERO)
-	var usable: bool = stock > 0 and care.tool_blocker(tool, target._trap_kind(), 0.0, true).is_empty()
-	var work: float = care.work if care.work_tool in [tool, &""] else 0.0
-	prompt_view.show_work(direction, work, bool(input["work"]), balance.dot(direction) >= 0.65, fix_count(care),
-		usable, gamepad, "%s: %s" % [tool_label, work_prompt(direction, gamepad)])
+	var preparing: bool = not bool(run.get(&"is_running")) and (run.get(&"results") as Dictionary).is_empty()
+	practice.visible = preparing and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED \
+		and not String(player.get(&"seat_node_path")).contains("DriverEyePoint")
+	if not practice.visible:
+		return
+	var gamepad: bool = _using_gamepad()
+	if not practice.advance(delta, player, control_names(gamepad, _interact_label(gamepad)), gamepad):
+		practice.queue_free()
+		practice = null
+
+
+## The card for a box within reach but not in your hands: how to take charge.
+static func reach_step(keys: Dictionary, seated: bool) -> Dictionary:
+	if seated:
+		return {"step": &"collect", "title": "ESTA CAJA NO ES TUYA",
+			"detail": "Cuidás la de tu asiento. Para esta, levantate y agarrala."}
+	return {"step": &"collect", "title": "AGARRALA",
+		"detail": "Apretá %s para alzarla, o sentate junto a ella en el camión para cuidarla sin moverla." \
+			% keys["interact"]}
+
+
+## The secondary keys under the card, as UiTheme.keycaps() items.
+static func footer_items(keys: Dictionary, tool_name: String, stock: int, handling: bool, seated: bool,
+		in_lap: bool) -> PackedStringArray:
+	var items: PackedStringArray = []
+	if not handling:
+		return items
+	if not tool_name.is_empty():
+		items.append("%s  %s · quedan %d" % [keys["tool"], tool_name, stock])
+	items.append("%s  otra herramienta" % keys["tool_next"])
+	if seated:
+		items.append("%s  %s" % [keys["drop"], "al estante" if in_lap else "al regazo"])
+	else:
+		items.append("%s  soltar" % keys["drop"])
+	return items
+
+
+## What each control is called on the device in use.
+static func control_names(gamepad: bool, interact: String) -> Dictionary:
+	if gamepad:
+		return {"primary": "RT", "tool": "LT", "interact": interact, "tool_next": "D-pad →", "drop": "B"}
+	return {"primary": "Clic izq.", "tool": "Clic der.", "interact": interact, "tool_next": "X", "drop": "Q"}
+
+
+## The tool after `current` in the kit's order, wrapping around.
+static func next_tool(current: StringName) -> StringName:
+	var index: int = Care.TOOLS.find(current)
+	return Care.TOOLS[(index + 1) % Care.TOOLS.size()]
 
 
 ## Grows each time a tool job completes (tape can also tear off on a hit,
@@ -152,34 +187,22 @@ static func fix_count(care) -> int:
 	return int(care.tape) + int(care.repairs) + int(care.padded) + int(care.strapped) + int(care.substituted)
 
 
-## "Hold right click + A (←)": the tool only works while both are held.
-static func work_prompt(direction: Vector2, gamepad: bool) -> String:
+## Same scaling as the HUD (Hud.layout_scale()): the card follows the HUD
+## size setting and keeps its size on screens taller than 16:9.
+func _fit_to_screen() -> void:
+	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	var user_scale: float = float(settings.get(&"hud_scale")) if settings != null else 1.0
+	var screen: Vector2 = _layer.get_viewport().get_visible_rect().size
+	var fit: float = user_scale * maxf(1.0, screen.y / BASE_HEIGHT)
+	_root.scale = Vector2(fit, fit)
+	_root.size = screen / fit
+
+
+func _interact_label(gamepad: bool) -> String:
 	if gamepad:
-		return "mantené LT + stick %s" % direction_arrow(direction)
-	return "mantené clic der. + %s (%s)" % [direction_key(direction), direction_arrow(direction)]
-
-
-## A trap solved by tapping directions one at a time (the bomb's module,
-## from its replicated sequence_state()): the next one to tap, spelled out,
-## or "" when none is pending.
-static func sequence_prompt(sequence: Dictionary, gamepad: bool) -> String:
-	var steps: Array = sequence.get("steps", [])
-	var index: int = int(sequence.get("index", 0))
-	if index >= steps.size() or not SEQUENCE_VECTORS.has(StringName(steps[index])):
-		return ""
-	var direction: Vector2 = SEQUENCE_VECTORS[StringName(steps[index])]
-	var key: String = "stick %s" % direction_arrow(direction) if gamepad \
-		else "%s (%s)" % [direction_key(direction), direction_arrow(direction)]
-	return "%s: tocá %s, sin clic" % [String(sequence.get("verb", "Resolver")), key]
-
-
-static func direction_arrow(direction: Vector2) -> String:
-	return String(DIRECTION_ARROWS.get(direction, "?"))
-
-
-## Movement keys aren't rebindable (game_settings.gd): WASD is what they are.
-static func direction_key(direction: Vector2) -> String:
-	return String(DIRECTION_KEYS.get(direction, "?"))
+		return "A"
+	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	return String(settings.call(&"binding_label", &"interact")) if settings != null else "E"
 
 
 ## Looked up by path: tests run with --script, where autoload names don't

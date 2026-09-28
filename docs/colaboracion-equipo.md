@@ -7,6 +7,23 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: minijuegos simplificados, guía "qué hacer ahora" y práctica (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo: que se entienda si hay que alzar la caja o qué hacer.
+Cambia **cómo se juega el cuidado** (dominio de Slatex) — Slatex, mirá esto antes de tocar cargas:
+
+- `package/package_care.gd`: mantener la acción primaria protege la caja (`HOLD_PROTECTION`), sin
+  el cursor de equilibrio con WASD; las herramientas solo piden mantener su botón (sin seguir
+  flechas). Nuevo `suggested_tool(kind, supplies)`: la herramienta que sirve ahora.
+- `traps/i_trap_behavior.gd`: nuevo `care_action()` (`&"hold"`/`&"release"`/`&""`); `hostile`
+  lo sobreescribe. `package_rescue.publish_care()` replica `action` y `hint` con el `care_state`.
+- `ui/hud/care_guide.gd` (nuevo): el paso más urgente (juntar piezas, secuencia, herramienta,
+  soltar, sostener). `ui/hud/care_card.gd` (nuevo) reemplaza el panel gris de
+  `player/player_cargo_care.gd` con una tarjeta crema; la herramienta se elige sola (X cambia).
+- `ui/hud/care_practice.gd` (nuevo): práctica de cinco pasos en el depósito antes de la primera
+  salida, una vez por perfil (`UnlockManager.seen_tips["care_practice"]`).
+- Tests: `test_package_rescue`, `test_care_prompt_view`.
+
 ## Aviso activo: tarjeta animada con sonido en el panel de cuidado (2026-09-28)
 
 Lo hizo Nacho (con Claude), a pedido suyo: que los minijuegos se entiendan con animaciones que

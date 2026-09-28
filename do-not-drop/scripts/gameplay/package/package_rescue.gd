@@ -96,9 +96,12 @@ static func complete_care_tool(p: DeliveryPackage, tool: StringName) -> void:
 
 static func publish_care(p: DeliveryPackage) -> void:
 	var state: Dictionary = p.care.snapshot()
-	# Tap sequences live in the host-only trap behavior: ride along so every
-	# peer's care panel and bomb sign show the real next key.
-	if p.trap_behavior != null and p.trap_behavior.has_method(&"sequence_state"):
+	# Trap state lives in the host-only behavior: what it asks of the hands,
+	# its hint and any tap sequence ride along, so every peer's care panel
+	# (and the bomb's sign) shows the real thing.
+	if p.trap_behavior != null:
+		state["action"] = p.trap_behavior.call(&"care_action")
+		state["hint"] = String(p.trap_behavior.call(&"get_hint"))
 		var sequence: Dictionary = p.trap_behavior.call(&"sequence_state")
 		if not sequence.is_empty():
 			state["sequence"] = sequence

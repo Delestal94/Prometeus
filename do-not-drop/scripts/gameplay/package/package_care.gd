@@ -22,7 +22,8 @@ const REPAIR_NAMES: Dictionary = {&"fragile": "Pegar piezas", &"balance": "Rearm
 ## intact, a mopped-up liquid is only partial, a late-neutralized bomb is scrap.
 const RESCUE_CAPS: Dictionary = {&"fragile": 85.0, &"balance": 80.0, &"noisy": 75.0,
 	&"hostile": 75.0, &"growing_weight": 80.0, &"liquid": 60.0, &"explosive": 35.0}
-## Seconds of work each tool takes; repair is the long one.
+## Seconds of work each tool takes, holding the tool button; repair is the
+## long one.
 const TOOL_SECONDS: Dictionary = {&"tape": 3.0, &"repair": 5.0, &"filler": 3.0, &"rag": 4.0,
 	&"strap": 2.5, &"substitute": 5.0}
 const DIRECTIONS: Array[Vector2] = [Vector2.LEFT, Vector2.UP, Vector2.RIGHT, Vector2.DOWN]
@@ -30,6 +31,11 @@ const DIRECTIONS: Array[Vector2] = [Vector2.LEFT, Vector2.UP, Vector2.RIGHT, Vec
 const CRISIS_SECONDS: float = 15.0
 ## An impact at least this hard (m/s) can loosen the strap and tear tape.
 const LOOSENING_HIT: float = 7.0
+## Hands on the box (the primary action held): how much of each hit they
+## soak up. One hold, no aiming (playtest 2026-09-28: the old "WASD onto the
+## green dot" balance on top of every trap's own action was one control too
+## many to learn on the road).
+const HOLD_PROTECTION: float = 0.9
 var phase: StringName = &"intact"
 var quality_cap: float = 100.0
 var worst_quality: float = 100.0
@@ -109,14 +115,13 @@ func hold_crisis(seconds: float) -> void:
 func advance(delta: float, acceleration: Vector3, input: Dictionary, assisted: bool = false) -> bool:
 	elapsed += delta
 	var force := Vector2(-acceleration.x, -acceleration.z) / 8.0
+	# The sway the truck puts on the box: still drawn (the carried box leans
+	# with it), no longer something to aim at.
 	balance_target = balance_target.lerp(force.limit_length(1.0), minf(1.0, delta * 7.0))
-	var correction: Vector2 = input.get("balance", Vector2.ZERO)
-	if not correction.is_finite():
-		correction = Vector2.ZERO
-	balance_cursor = balance_cursor.move_toward(correction.limit_length(1.0), delta * 3.0)
-	balance_error = balance_cursor.distance_to(balance_target)
 	var holding: bool = bool(input.get("steady", false)) and not bool(input.get("work", false))
-	protection = clampf(1.0 - balance_error, 0.0, 1.0) if holding else 0.0
+	balance_cursor = balance_target if holding else balance_cursor.move_toward(Vector2.ZERO, delta * 3.0)
+	balance_error = 0.0 if holding else balance_cursor.distance_to(balance_target)
+	protection = HOLD_PROTECTION if holding else 0.0
 	if assisted:
 		protection = maxf(protection, 0.65)
 	if in_lap:
@@ -227,7 +232,33 @@ func work_direction() -> Vector2:
 	return DIRECTIONS[work_step % DIRECTIONS.size()]
 
 
-## Progress is earned by matching the visible direction, with partial progress
+## The tool that helps this box right now, or &"" when none does: what the
+## care panel picks for the player instead of making them cycle through six.
+## `supplies` maps tool -> units left in the crew's kit.
+func suggested_tool(kind: StringName, supplies: Dictionary = {}) -> StringName:
+	var order: Array[StringName] = []
+	match phase:
+		&"crisis":
+			if kind == &"liquid":
+				order = [&"rag"]
+			elif missing_parts > 0:
+				order = [&"tape"]
+			else:
+				order = [&"repair", &"tape"]
+		&"lost":
+			order = [&"substitute"]
+		&"intact":
+			# A sound box needs hands, not the crew's kit.
+			order = []
+		_:
+			order = [&"repair", &"tape", &"filler", &"strap"]
+	for tool: StringName in order:
+		if int(supplies.get(tool, 1)) > 0 and tool_blocker(tool, kind, 0.0, true).is_empty():
+			return tool
+	return &""
+
+
+## Progress is earned by holding the tool button, with partial progress
 ## retained on release. Supplies are spent atomically by the package on completion.
 func advance_work(delta: float, tool: StringName, input: Dictionary, kind: StringName, speed: float,
 		available: bool, helped: bool = false) -> bool:
@@ -243,10 +274,6 @@ func advance_work(delta: float, tool: StringName, input: Dictionary, kind: Strin
 		work_tool = tool
 		work = 0.0
 		work_step = 0
-	var correction: Vector2 = input.get("balance", Vector2.ZERO)
-	if correction.dot(work_direction()) < 0.65:
-		message = "Mantené la herramienta y seguí la flecha."
-		return false
 	if recent_hit > 0.3:
 		message = "¡Se mueve! Sujetá la caja antes de seguir."
 		return false

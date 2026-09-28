@@ -43,6 +43,14 @@ func get_hint() -> String:
 	return ""
 
 
+## What the hands on this box should be doing right now: &"hold" (the
+## primary action: steady, calm, mop), &"release" (hands off), or &"" when
+## it asks nothing. The care panel turns it into one instruction; a tap
+## sequence (sequence_state()) is shown on top of it.
+func care_action() -> StringName:
+	return &"hold"
+
+
 ## A trap solved by tapping directions one at a time says where that stands,
 ## so the care panel can show and sound it on every peer (the behavior only
 ## runs on the host; PackageRescue.publish_care() replicates this):

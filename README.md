@@ -390,13 +390,15 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   que no se gasta dos veces, cómo pagan y se cuentan las entregas rescatadas,
   los rescates propios de cada contenido (trapo, reubicar entre dos...), regazo
   y cincha, la ventana que se sostiene si alguien se desconecta, y los plazos;
-  el panel nombra botón y tecla, y la secuencia de la bomba viaja con el estado
-  de cuidado para que todos los clientes la vean.
-- `test_care_prompt_view` — la tarjeta animada del panel de cuidado: cada
-  toque correcto, tecla equivocada, giro de flecha, avance de la herramienta y
-  trabajo terminado suena (cinco sonidos sintetizados, cortos y sin saturar), y
-  nada suena solo por empezar a mirar una caja. Capturas con ventana:
-  `tests/render_care_prompt.gd` → `user://render_care_prompt_*.png`.
+  los controles simples (mantener para cuidar, mantener para la herramienta
+  sugerida) y la guía "qué hacer ahora", que lee acción, pista y secuencia de
+  la trampa replicadas con el estado de cuidado.
+- `test_care_prompt_view` — la tarjeta de cuidado y su tira animada: cada
+  paso (sostener, soltar, herramienta, secuencia, juntar piezas) suena al
+  cambiar (cinco sonidos sintetizados, cortos y sin saturar), nada suena solo
+  por empezar a mirar una caja, y la práctica del depósito tilda cada paso
+  solo cuando el jugador lo hace. Capturas con ventana:
+  `tests/render_care_prompt.gd` → `user://render_care_card_*.png`.
 - `test_package_identity` — cada trampa viaja en su propia caja impresa, con
   su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una
