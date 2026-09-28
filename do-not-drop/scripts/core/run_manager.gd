@@ -627,6 +627,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"breakdown": breakdown,
 		"houses_delivered": houses_delivered,
 		"houses_missed": int(doors["houses_missed"]),
+		"houses_lost": int(doors["houses_lost"]),
 		"photos": int(doors["photos"]),
 		"complaints": doors["complaints"],
 		"stories": rescue_stories(),

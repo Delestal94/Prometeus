@@ -136,9 +136,6 @@ var terrain: Node3D
 var _segments: Array[RouteSegment] = []
 
 
-## Overrides house_count before the node builds itself. Call before
-## add_child()-ing this into the tree -- _ready() already builds geometry
-## from house_count, same convention as any other @export here.
 ## Host: closes the order whose box was left on the road (N-213.4). False
 ## when no door is waiting for that box (Endless, or already resolved).
 func close_lost_order(package_id: StringName) -> bool:
@@ -149,6 +146,9 @@ func close_lost_order(package_id: StringName) -> bool:
 	return false
 
 
+## Overrides house_count before the node builds itself. Call before
+## add_child()-ing this into the tree -- _ready() already builds geometry
+## from house_count, same convention as any other @export here.
 func configure_houses(count: int) -> void:
 	house_count = maxi(count, 1)
 

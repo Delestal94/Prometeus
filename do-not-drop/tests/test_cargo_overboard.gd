@@ -107,6 +107,9 @@ func _run() -> void:
 	var lines: Array = (doors["breakdown"] as Array).filter(func(line: Dictionary) -> bool:
 		return String(line["label"]).begins_with("Paquetes perdidos"))
 	_expect(lines.size() == 1 and int(lines[0]["points"]) < 0, "The results list the lost box as a penalty")
+	manager.call(&"finish_run", true)
+	_expect(int((manager.get(&"results") as Dictionary).get("houses_lost", 0)) == 1,
+		"The results carry the lost order for the HUD and the depot's streak board")
 	_expect(not bool(level.get_node(^"World/Route").call(&"close_lost_order", package_id)),
 		"An order closes only once")
 

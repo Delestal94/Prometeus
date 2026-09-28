@@ -15,10 +15,15 @@ Lo hizo Nacho (con Claude), PR `nacho/N-213-lost-order`. Suma funciones y un res
   `missed`, línea "Paquetes perdidos en la ruta", clave `houses_lost` en `_resolve_deliveries()`) y
   `static func handed_over(outcome)`, que reemplaza los `!= &"missed"` de foto, plazos y pago de rescate.
   Si agregás otro chequeo de "¿se entregó algo?", usá `handed_over()`.
-- `ui/hud/hud_results.gd` (Slatex): la fila de un pedido perdido dice "PERDIDO ✕".
+- `ui/hud/hud_results.gd` (Slatex): la fila de un pedido perdido dice "PERDIDO ✕", y el título y el
+  resumen suman `results["houses_lost"]` a las casas sin entregar.
 - `presentation/phone_camera.gd`: `_was_delivered()` usa `handed_over()` (no se fotografía un pedido perdido).
 - Nacho: `DeliveryHouse.close_lost()`, `Route.close_lost_order()`, `LevelCommon._check_lost_cargo()` la
-  cierra antes de `mark_lost`, y la pizarra del depósito marca "PERDIDO" (`WORLD_DEPOT_MARK_LOST`).
+  cierra antes de `mark_lost`, la pizarra del depósito marca "PERDIDO" (`WORLD_DEPOT_MARK_LOST`) y el
+  cartel "días sin accidentes" también vuelve a 0 con una caja perdida en la ruta.
+- Duda abierta: una gallina (Ruidoso) abandonada en la ruta ya no puede salvarse con el sustituto de
+  juguete, porque su pedido se cierra al vencer la ventana. Si Slatex quiere conservar esa salida, basta con
+  no cerrar el pedido en `_check_lost_cargo()` mientras quede un sustituto en el kit.
 
 ## Aviso activo: ríos rehechos, límite por la ruta y secuencias a pie (2026-09-28)
 

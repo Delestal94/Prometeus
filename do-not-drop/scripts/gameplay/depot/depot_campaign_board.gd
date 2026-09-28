@@ -77,7 +77,9 @@ static func save_log(log: Dictionary) -> void:
 ## test can feed it results without a depot.
 static func record_run(results: Dictionary, photos: Dictionary) -> Dictionary:
 	var log: Dictionary = load_log()
-	if int(results.get("cargo_ruined", 0)) > 0:
+	# A box abandoned on the road (N-213.4) is closed as a delivery, not
+	# counted as ruined cargo, but it's still an accident.
+	if int(results.get("cargo_ruined", 0)) > 0 or int(results.get("houses_lost", 0)) > 0:
 		log["days"] = 0
 	else:
 		log["days"] = int(log["days"]) + 1

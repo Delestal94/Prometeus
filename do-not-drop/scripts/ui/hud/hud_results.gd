@@ -62,7 +62,8 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var intact: int = int(results.get("cargo_intact", 0))
 	var ruined: int = int(results.get("cargo_ruined", 0))
 	var delivered_doors: int = int(results.get("houses_delivered", 0))
-	var missed_doors: int = int(results.get("houses_missed", 0))
+	# A door whose box was left on the road (N-213.4) waited for nothing too.
+	var missed_doors: int = int(results.get("houses_missed", 0)) + int(results.get("houses_lost", 0))
 	if not success:
 		hud.overlay_title.text = tr("HUD_RESULT_FAILED_TITLE")
 	elif delivered_doors == 0 and missed_doors > 0:
