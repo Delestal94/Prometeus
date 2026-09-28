@@ -65,6 +65,11 @@ func get_state() -> int:
 		return TrapState.AT_RISK
 	return TrapState.OK
 
+func care_action() -> StringName:
+	if get_state() == TrapState.RUINED:
+		return &""
+	return &"hold" if command_calm else &"release"
+
 func get_hint() -> String:
 	if get_state() == TrapState.RUINED:
 		return "La criatura escapó."

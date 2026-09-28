@@ -7,6 +7,8 @@ extends SceneTree
 ## a rescued box is paid and told at the end of the run.
 
 const Care = preload("res://scripts/gameplay/package/package_care.gd")
+const CargoCare = preload("res://scripts/gameplay/player/player_cargo_care.gd")
+const CareGuide = preload("res://scripts/ui/hud/care_guide.gd")
 
 var _failures: int = 0
 
@@ -21,6 +23,8 @@ func _initialize() -> void:
 	_check_lap_strap_and_filler()
 	_check_disconnect_hold()
 	_check_deadlines()
+	_check_simple_controls()
+	await _check_guide()
 	quit(_failures)
 
 
@@ -28,7 +32,7 @@ func _work(care, tool: StringName, kind: StringName, seconds: float) -> bool:
 	var done: bool = false
 	var step: float = 1.0 / 60.0
 	for _i: int in roundi(seconds / step):
-		var input: Dictionary = {"work": true, "balance": care.work_direction()}
+		var input: Dictionary = {"work": true}
 		if care.advance_work(step, tool, input, kind, 0.0, true):
 			care.complete_tool(tool)
 			done = true
@@ -45,10 +49,7 @@ func _check_crisis_and_repair() -> void:
 		care.collect_part()
 	_expect(care.missing_parts == 0, "All pieces collected")
 	_expect(not care.tool_blocker(&"repair", &"fragile", 20.0).is_empty(), "No repairing at full speed")
-	var idle: Dictionary = {"work": true, "balance": -care.work_direction()}
-	_expect(not care.advance_work(0.5, &"repair", idle, &"fragile", 0.0, true) and is_zero_approx(care.work),
-		"Working against the arrow makes no progress")
-	_expect(_work(care, &"repair", &"fragile", 6.0), "Following the arrows completes the repair")
+	_expect(_work(care, &"repair", &"fragile", 6.0), "Holding the tool completes the repair")
 	_expect(care.phase == &"rescued" and not care.needs_restore, "The vase is rescued")
 	_expect(care.quality_cap <= 85.0 and care.worst_quality <= 20.0,
 		"...but its history stays: capped quality, worst kept")
@@ -173,6 +174,83 @@ func _check_supplies_and_scoring() -> void:
 	_expect(stories.contains("Jarrón") and stories.contains("juguete"), "The results tell the rescues")
 	run.reset_run()
 	_expect(run.care_supply_count(&"tape") == 3 and run.deliveries.is_empty(), "A new run gets a fresh kit")
+
+
+## One control each (playtest 2026-09-28): holding the primary action is
+## what protects a box -- no aiming a cursor -- and a tool only needs its
+## button held; the card offers the tool that helps.
+func _check_simple_controls() -> void:
+	var care = Care.new()
+	care.advance(1.0 / 60.0, Vector3(6.0, 0.0, 0.0), {"steady": true})
+	_expect(care.protection >= Care.HOLD_PROTECTION - 0.01, "Holding protects the box, whatever the sway")
+	care.advance(1.0 / 60.0, Vector3(6.0, 0.0, 0.0), {})
+	_expect(is_zero_approx(care.protection), "Hands off, no protection")
+	care.begin_crisis(&"fragile")
+	var no_button: Dictionary = {"work": false}
+	_expect(not care.advance_work(0.5, &"tape", no_button, &"fragile", 0.0, true) and is_zero_approx(care.work),
+		"Without the tool button held, no progress")
+	var held: Dictionary = {"work": true}
+	care.advance_work(0.5, &"tape", held, &"fragile", 0.0, true)
+	_expect(care.work > 0.1, "Holding the tool button is all the work needs")
+	var fresh = Care.new()
+	_expect(fresh.suggested_tool(&"fragile") == &"", "A sound box isn't offered the crew's kit")
+	fresh.begin_crisis(&"fragile")
+	_expect(fresh.suggested_tool(&"fragile") == &"tape", "With pieces on the floor, tape holds it together")
+	for _i: int in 3:
+		fresh.collect_part()
+	_expect(fresh.suggested_tool(&"fragile") == &"repair", "Pieces back: repair is offered")
+	_expect(fresh.suggested_tool(&"fragile", {&"repair": 0, &"tape": 2}) == &"tape",
+		"...or the next tool the kit still has")
+	var leak = Care.new()
+	leak.begin_crisis(&"liquid")
+	_expect(leak.suggested_tool(&"liquid") == &"rag", "A leak is offered the rag")
+
+
+## What every peer's care card reads: the host publishes the trap's action,
+## hint and tap sequence with the care state, and CareGuide turns it into
+## one step, the most urgent first.
+func _check_guide() -> void:
+	var bomb := (load("res://scenes/gameplay/package/package.tscn") as PackedScene).instantiate() as DeliveryPackage
+	bomb.trap_definition = load("res://data/traps/explosive.tres")
+	root.add_child(bomb)
+	await process_frame
+	PackageRescue.publish_care(bomb)
+	var state: Dictionary = bomb.care_state
+	_expect(not (state.get("sequence", {}) as Dictionary).is_empty(),
+		"The bomb's sequence rides along with the care state")
+	_expect(state.get("action") == &"hold" and not String(state.get("hint", "")).is_empty(),
+		"...and so do its action and hint")
+	var keys: Dictionary = CargoCare.control_names(false, "E")
+	var step: Dictionary = CareGuide.next_step(state, &"explosive", &"", "", keys)
+	_expect(step["step"] == &"sequence" and String(step["detail"]).begins_with("Desactivar"),
+		"A pending sequence comes first")
+	bomb.trap_behavior.call(&"_consume_direction", &"nowhere")
+	_expect(int(bomb.trap_behavior.call(&"sequence_state")["mistakes"]) == 1,
+		"A wrong tap is counted, so every peer can buzz")
+	bomb.free()
+	var calm: Dictionary = {"phase": &"intact", "action": &"hold"}
+	_expect(CareGuide.next_step(calm, &"noisy", &"", "", keys)["title"] == "CALMALA", "A hen is calmed by holding")
+	_expect(String(CareGuide.next_step(calm, &"fragile", &"", "", keys)["detail"]).contains("Clic izq."),
+		"...and the card names the button")
+	calm["need_hands"] = false
+	_expect(CareGuide.next_step(calm, &"noisy", &"", "", keys)["step"] == &"idle",
+		"A box that needs nothing says so: the player can let go")
+	var secured: Dictionary = {"phase": &"intact", "action": &"hold", "need_hands": false,
+		"sequence": {"steps": [&"up", &"left"], "index": 0, "solved": 1, "pending": false}}
+	_expect(CareGuide.next_step(secured, &"growing_weight", &"", "", keys)["step"] == &"idle",
+		"A load just secured doesn't ask for the next sequence yet")
+	calm["need_hands"] = true
+	calm["action"] = &"release"
+	_expect(CareGuide.next_step(calm, &"hostile", &"", "", keys)["step"] == &"release",
+		"The creature's NO TOCAR says hands off")
+	var crisis: Dictionary = {"phase": &"crisis", "missing": 2, "restore": true}
+	_expect(CareGuide.next_step(crisis, &"fragile", &"tape", "Encintar", keys)["step"] == &"collect",
+		"Pieces on the floor are picked up first")
+	crisis["missing"] = 0
+	var repair: Dictionary = CareGuide.next_step(crisis, &"fragile", &"repair", "Pegar piezas", keys)
+	_expect(repair["step"] == &"tool" and String(repair["title"]).contains("PEGAR PIEZAS"), "...then the rescue tool")
+	_expect(CargoCare.reach_step(keys, false)["title"] == "AGARRALA",
+		"A box within reach but not in hand says: pick it up")
 
 
 func _expect(condition: bool, message: String) -> void:

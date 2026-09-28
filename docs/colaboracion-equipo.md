@@ -1,11 +1,120 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-25
+> Última actualización: 2026-09-28
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
+
+## Aviso activo: ríos rehechos, límite por la ruta y secuencias a pie (2026-09-28)
+
+Lo hizo Nacho (con Claude) tras otra prueba propia:
+
+- `route/route_terrain.gd` (Nacho): el río de un puente angosto es un cauce más angosto que el
+  tablero (arranca `RIVER_INSET` adentro, baja en `RIVER_TAPER` = 6 m), serpentea y se afina
+  hacia su final; el agua es una superficie propia a `RIVER_FILL` de la profundidad (sin la loma),
+  sobre la grilla del terreno, y el lecho no se pinta como asfalto. `_natural_height()` suma el
+  parámetro `with_ridge`. `RIVER_MEANDER_MAX`/`RIVER_WOBBLE_MAX` cambiaron (los usa
+  `_clamp_river_reach()`).
+- `gameplay/play_area.gd`: ya no hay correa al camión; el límite es 45 m de la ruta más el
+  depósito y su patio.
+- `player/player_seat_pose.gd`, `player.gd`, `player_cargo_care.gd` (Slatex): a pie, los toques
+  de una secuencia solo cuentan con la acción primaria mantenida, que además frena la caminata.
+
+## Aviso activo: límite de juego, minijuego que termina y toasts sin pisarse (2026-09-28)
+
+Lo hizo Nacho (con Claude) tras una prueba propia:
+
+- `gameplay/play_area.gd` (nuevo, lo agrega `level_common.gd`): el jugador local no sale del
+  depósito + 10 m de patio antes de la salida, ni a más de 30 m del camión en ruta; avisa por
+  `depot_notice`. Un test que necesite al jugador lejos puede apagar el nodo `PlayArea`.
+- `traps/growing_weight_trap_behavior.gd` (Slatex): tras resolver, la carga queda asegurada y la
+  próxima secuencia recién se pide `ARM_WINDOW` segundos antes de crecer (`armed()`; entrada
+  ignorada mientras tanto). `sequence_state()` suma `pending`.
+- `ui/hud/care_guide.gd`: "sostenela" solo si la caja lo necesita (`need_hands`, calculado en
+  `player_cargo_care.gd`); si no, "TODO EN ORDEN". `hud.gd`: el toast va debajo del velocímetro
+  en la misma columna.
+
+## Aviso activo: rediseño del layout del HUD en ruta (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo ("que se vea profesional"). Toca `ui/hud/` (Slatex); los
+nombres de los widgets no cambian, solo dónde y cómo se ven:
+
+- `hud.gd`: arriba a la izquierda, una tarjeta de objetivo (sección, sesión, destino, barra de ruta)
+  reemplaza al logo "TAKE MY PACKAGE"; la cinta de sesión se oculta al arrancar. Se fue la barra
+  ancha de abajo: la carga pasó a la esquina inferior izquierda (fuera del `dashboard`, oculta si
+  está vacía) y abajo al centro quedan el aviso de interacción y dos pastillas oscuras (controles y
+  atajos). Evento, toast e interacción tienen placa oscura (`_plate()`); el evento, borde rojo.
+  Margen de bordes `EDGE_MARGIN` = 40 unidades.
+- `hud_prompts.gd`: la línea de controles se dibuja para fondo oscuro. `hud_results.gd`: los
+  resultados ocultan el HUD de juego; "Te falta 1 entrega" en singular.
+- No se tocó `GameSettings.HUD_SCALE_DEFAULT` (0.48): el HUD sigue diseñado a ~2x y achicado.
+- Test ajustado: `test_hud_flow` (orden del prompt y la pastilla de controles, "Te falta").
+
+## Aviso activo: minijuegos simplificados, guía "qué hacer ahora" y práctica (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo: que se entienda si hay que alzar la caja o qué hacer.
+Cambia **cómo se juega el cuidado** (dominio de Slatex) — Slatex, mirá esto antes de tocar cargas:
+
+- `package/package_care.gd`: mantener la acción primaria protege la caja (`HOLD_PROTECTION`), sin
+  el cursor de equilibrio con WASD; las herramientas solo piden mantener su botón (sin seguir
+  flechas). Nuevo `suggested_tool(kind, supplies)`: la herramienta que sirve ahora.
+- `traps/i_trap_behavior.gd`: nuevo `care_action()` (`&"hold"`/`&"release"`/`&""`); `hostile`
+  lo sobreescribe. `package_rescue.publish_care()` replica `action` y `hint` con el `care_state`.
+- `ui/hud/care_guide.gd` (nuevo): el paso más urgente (juntar piezas, secuencia, herramienta,
+  soltar, sostener). `ui/hud/care_card.gd` (nuevo) reemplaza el panel gris de
+  `player/player_cargo_care.gd` con una tarjeta crema; la herramienta se elige sola (X cambia).
+- `ui/hud/care_practice.gd` (nuevo): práctica de cinco pasos en el depósito antes de la primera
+  salida, una vez por perfil (`UnlockManager.seen_tips["care_practice"]`).
+- Tests: `test_package_rescue`, `test_care_prompt_view`.
+
+## Aviso activo: tarjeta animada con sonido en el panel de cuidado (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo: que los minijuegos se entiendan con animaciones que
+muestren qué usar, y con sonido. Toca la zona compartida y archivos de Slatex; **solo agrega**,
+ninguna firma existente cambia salvo `sequence_prompt()` (ver abajo):
+
+- `presentation/synth_audio.gd` (zona compartida): cinco funciones nuevas, `care_step()`,
+  `care_error()`, `care_success()`, `care_whoosh()` y `care_tick()`, cacheadas como las demás.
+  Los generadores están en el archivo nuevo `presentation/synth_audio_care.gd`.
+  `presentation/sound_audit.gd` las nombra en "Sonidos del juego".
+- `ui/hud/care_prompt_view.gd` (nuevo, Slatex): la tarjeta que dibuja qué apretar. En modo
+  trabajo muestra mouse o LT, tecla o stick, flechas que se deslizan y un anillo de progreso. En
+  modo secuencia muestra una fila de teclas: la que toca rebota y las hechas llevan tilde; si
+  errás aparece "¡TECLA EQUIVOCADA!". Todo suena en el bus SFX.
+- `player/player_cargo_care.gd` (Slatex): la tarjeta reemplaza a la barra de progreso.
+  `sequence_prompt()` ahora recibe el diccionario de la secuencia en vez del paquete.
+- `traps/i_trap_behavior.gd` (Slatex): nuevo `sequence_state()`, vacío por defecto. Lo
+  implementan `explosive_trap_behavior.gd` y `growing_weight_trap_behavior.gd`, que ahora
+  cuentan errores y resoluciones.
+- `package/package_rescue.gd` (Slatex): `publish_care()` suma `"sequence"` al `care_state`
+  replicado. Antes los clientes nunca veían el avance real de la bomba; el cartel 3D de
+  `package_feedback.gd` también lo lee ahora.
+- Tests: `test_care_prompt_view` (nuevo) y `test_package_rescue`. Captura con ventana:
+  `tests/render_care_prompt.gd`. Slatex: `git pull` antes de tocar esos archivos.
+
+## Aviso activo: regazo al sentarse, arranque sin carga y minijuegos más claros (2026-09-28)
+
+Lo hizo Nacho (con Claude) a partir de una prueba propia. Toca archivos de Slatex y la zona
+compartida; ninguna firma existente cambia:
+
+- `interaction/seat_point.gd` (Slatex): sentarse con una caja en la mano ya **no** la deja en el
+  estante; queda en el regazo (`tend_package` + `_lap_mount` apuntando a la bahía libre) y Q la
+  estantea con el `request_lap_toggle` que ya existía. El asiento del conductor ya no pide carga
+  cargada (se borró `_run_under_way()`).
+- `package/package.gd` (Slatex): nuevo `DeliveryPackage.is_aboard()` = en un estante o en el regazo
+  de quien la cuida sentado. Lo usan `level_common.gd`, `depot.gd`, `ui/hud/hud_pause.gd` y
+  `ui/depot_panel.gd` en lugar de `is_loaded` para decir "a bordo".
+- `level_base.gd` (zona compartida), `level_common.gd`, `level_endless.gd`: el recorrido arranca
+  cuando alguien se sienta a manejar, **con o sin cajas** (decisión de diseño: olvidarse la carga
+  es problema de la partida). Las cajas del regazo cuentan como carga del recorrido y siguen en mano.
+- `package/package_feedback.gd` (Slatex): el cartel del Explosivo dice "DESACTIVAR", flota sobre la
+  caja y se dibuja sin prueba de profundidad (antes quedaba hundido en una cara y enorme en mano).
+- `player/player_cargo_care.gd` (Slatex): el panel dice la tecla (`mantené clic der. + A (←)`) y,
+  para el Explosivo, cuál tocar a continuación (`sequence_prompt()`).
+- Tests ajustados: `test_package_handling`, `test_loading_flow`, `test_reference_truck`,
+  `test_package_rescue`, `test_explosive_visual`. Slatex: `git pull` antes de tocar esos archivos.
 
 ## Aviso activo: hito M6 de Nacho toca dominio de Slatex (2026-09-28)
 

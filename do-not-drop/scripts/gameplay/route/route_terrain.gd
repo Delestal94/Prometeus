@@ -31,10 +31,20 @@ var crests: Array[Dictionary] = []
 ## RNG) so it doesn't read as a perfectly straight ditch, and its edges
 ## wobble too so the shoreline is organic rather than a rectangle.
 var rivers: Array[Dictionary] = []
-## How far in from each end of a river's span the drop is still fading in --
-## matches the authored bank model's own taper (build_route_pieces.py
-## bridge_water(): half_len=18, banks slope over the last 3.2 m).
-const RIVER_TAPER: float = 3.2
+## How far in from each end of a river's span the drop is still fading in.
+## Longer than the authored bank model's own 3.2 m (build_route_pieces.py
+## bridge_water()): drawn on the 2 m terrain grid, a 1.8 m drop over 3.2 m
+## came out as steps and grass wedges at the bridge's ends (playtest
+## 2026-09-28).
+const RIVER_TAPER: float = 6.0
+## The ground stays whole this far in under each end of the deck before the
+## drop starts, so the deck covers the first, steepest part of the bank and
+## the road meets the bridge on level ground.
+const RIVER_INSET: float = 3.0
+## How much of a river's depth is water: the rest is bank above it. The
+## water is a surface of its own at that level (see _river_water_height()),
+## so the shoreline is wherever the carved ground crosses it.
+const RIVER_FILL: float = 0.45
 ## Defaults for a river entry that doesn't specify its own (only the tests'
 ## fixtures don't -- route.gd always sets both, see NarrowBridgeSegment's
 ## river_width/river_reach). Full depth out to RIVER_FULL_WIDTH from the
@@ -116,13 +126,16 @@ func _hill_height(p: Vector2) -> float:
 ## height_without_rivers() (what a bridge's own furniture and authored water
 ## model measure themselves against, so they float over the drop instead of
 ## sinking into it).
-func _natural_height(p: Vector2) -> float:
+func _natural_height(p: Vector2, with_ridge: bool = true) -> float:
 	var road: Vector3 = nearest(p)
 	var offroad: float = smoothstep(12.0, 29.0, road.x)
 	var hills: float = 1.7 + 1.4 * sin(p.x * 0.087 + p.y * 0.039) + 0.8 * cos(p.y * 0.11 - p.x * 0.043)
 	var height: float = base_height(p) - smoothstep(5.5, 9.0, road.x) * 0.08 + offroad * hills
 	# A rising forest ridge gives the playable corridor a visible boundary.
-	height += smoothstep(38.0, 61.0, road.x) * 12.0
+	# Left out of a river's water level: the water stops where the ridge
+	# lifts the ground out of it, instead of climbing the slope with it.
+	if with_ridge:
+		height += smoothstep(38.0, 61.0, road.x) * 12.0
 	for pad: Vector3 in pads:
 		var weight: float = 1.0 - smoothstep(5.0, 11.0, p.distance_to(Vector2(pad.x, pad.z)))
 		height = lerpf(height, pad.y, weight)
@@ -153,7 +166,7 @@ func _river_phase(river: Dictionary) -> float:
 ## or the meander could still swing the actual carved/visible river into
 ## whatever it was supposed to stop short of.
 const RIVER_MEANDER_MAX: float = 7.0
-const RIVER_WOBBLE_MAX: float = 2.1
+const RIVER_WOBBLE_MAX: float = 4.0
 const RIVER_MAX_DRIFT: float = RIVER_MEANDER_MAX + RIVER_WOBBLE_MAX
 
 
@@ -163,20 +176,32 @@ func _river_factor(river: Dictionary, p: Vector2) -> float:
 	var length: float = maxf(edge.length(), 0.001)
 	var dir: Vector2 = edge / length
 	var perp: Vector2 = Vector2(-dir.y, dir.x)
-	var s: float = clampf((p - a).dot(dir), 0.0, length)
 	var phase: float = _river_phase(river)
-	# A gentle meander (the centreline itself drifts sideways along the
-	# span) plus a smaller wobble on where the bank actually sits, so the
-	# river reads as a real, organic crossing instead of a straight ditch
-	# with a ruler-straight rectangle of water in it.
-	var meander: float = sin(s * 0.05 + phase) * 5.0 + sin(s * 0.13 + phase * 1.7) * 2.0
-	var side: float = absf((p - a).dot(perp) - meander)
-	var wobble: float = sin(s * 0.21 + phase * 2.3) * 1.5 + sin(side * 0.4 + phase) * 0.6
-	var full_width: float = maxf(float(river.get("full_width", RIVER_FULL_WIDTH)) + wobble, 1.0)
-	var bank_width: float = maxf(float(river.get("bank_width", RIVER_BANK_WIDTH)) + wobble, full_width + 1.0)
-	var along: float = smoothstep(0.0, RIVER_TAPER, s) * smoothstep(0.0, RIVER_TAPER, length - s)
-	var lateral: float = 1.0 - smoothstep(full_width, bank_width, side)
-	return along * lateral
+	# u: along the road from the bridge's middle; v: out from the road.
+	var u: float = (p - a).dot(dir) - length * 0.5
+	var v: float = (p - a).dot(perp)
+	var out: float = absf(v)
+	# The channel crosses under the deck, narrower than it: its banks end
+	# RIVER_INSET short of each end, so the road meets the bridge on whole
+	# ground. Straight right under the road, it meanders and changes width
+	# further out, so from the bank it reads as a river, not a canal.
+	var free: float = smoothstep(8.0, 30.0, out)
+	var centre: float = (sin(v * 0.09 + phase) * 5.5 + sin(v * 0.21 + phase * 1.7) * 1.5) * free
+	var full_width: float = float(river.get("full_width", RIVER_FULL_WIDTH))
+	var bank_width: float = maxf(float(river.get("bank_width", RIVER_BANK_WIDTH)), full_width + 1.0)
+	# Where it runs out, wobbling from one side of the channel to the other,
+	# so its end is never a line parallel to the road.
+	var end_reach: float = bank_width - 3.0 + sin(u * 0.23 + phase) * 3.0
+	# Out towards its end the channel narrows to a stream and fades: a creek
+	# coming down from the hills, not a pool cut off square (playtest
+	# 2026-09-28).
+	var pinch: float = 1.0 - smoothstep(end_reach * 0.3, end_reach * 0.8, out)
+	var half_width: float = (clampf(length * 0.5 - RIVER_INSET - RIVER_TAPER, 3.0, 14.0)
+		+ (sin(v * 0.13 + phase * 2.3) * 2.0 + 2.0) * free) * lerpf(0.1, 1.0, pinch)
+	var across: float = 1.0 - smoothstep(half_width, half_width + RIVER_TAPER, absf(u - centre))
+	# Fades only once it's narrowed: the water ends in a point, not a bulb.
+	var lengthwise: float = 1.0 - smoothstep(maxf(full_width, end_reach * 0.8), end_reach, out)
+	return across * lengthwise
 
 
 ## How far the ground drops for a river at `p`, 0 outside every registered
@@ -202,8 +227,14 @@ func _sample(key: Vector2i) -> Vector3:
 		return _samples[key]
 	var p := Vector2(key) * STEP
 	var road: Vector3 = nearest(p)
-	var height: float = _natural_height(p) - _river_drop(p)
-	var result := Vector3(height, road.x - road.z + 6.0, road.y)
+	var drop: float = _river_drop(p)
+	var height: float = _natural_height(p) - drop
+	# The road's paint stops at the riverbed: the shader draws asphalt by
+	# distance to the road, and the bed under the deck is not road.
+	var road_mask: float = road.x - road.z + 6.0
+	# 14: past the shader's shoulder (sand) and into its grass band.
+	road_mask = lerpf(road_mask, maxf(road_mask, 14.0), clampf(drop / 0.6, 0.0, 1.0))
+	var result := Vector3(height, road_mask, road.y)
 	_samples[key] = result
 	return result
 
@@ -251,17 +282,18 @@ func build() -> void:
 		_build_river_water(river)
 
 
-## The wide, organic water surface over a carved riverbed -- one flat-ish
-## mesh per river, built once here (never per frame). Every vertex sits
-## exactly on the already-carved ground (height_at(), which already includes
-## this same river's drop) plus a hair of clearance, so it can never float
-## over dry land or leave a gap against the bank; a quad is only emitted when
-## all four of its corners are "wet" per the same _river_factor() the carving
-## itself uses, so the shoreline follows the actual meander and bank wobble
-## instead of the grid's straight rows -- no rectangle, no seam.
-const RIVER_WATER_STEP: float = 3.0
-const RIVER_WATER_THRESHOLD: float = 0.08
-const RIVER_WATER_CLEARANCE: float = 0.03
+## The water over a carved riverbed -- one mesh per river, built once here
+## (never per frame). It used to be draped over the carved ground a few
+## centimetres up, wherever the carve was even slightly felt: water crept up
+## the banks and the ridge, and the ground poked through it between vertices
+## (playtest 2026-09-28). Now it's a surface of its own at RIVER_FILL of the
+## depth below the ground's natural (ridge-less) level: smooth, gently
+## following the land's long swells, and the shoreline is simply where the
+## carved ground rises through it -- the terrain hides the water past it.
+## Sampled on the terrain's own grid (STEP), so the two agree everywhere.
+const RIVER_WATER_STEP: float = STEP
+## Metres of water under which the surface fades out at the shore.
+const RIVER_WATER_FADE: float = 0.35
 const RIVER_WATER_COLOR := Color(0.29, 0.58, 0.74, 0.72)
 
 
@@ -272,7 +304,9 @@ func _build_river_water(river: Dictionary) -> void:
 	var dir: Vector2 = edge / length
 	var perp: Vector2 = Vector2(-dir.y, dir.x)
 	var reach: float = float(river.get("bank_width", RIVER_BANK_WIDTH)) + 6.0
-	var along_steps: int = maxi(1, ceili(length / RIVER_WATER_STEP))
+	# Out from the road the channel meanders past the span's own ends.
+	var overhang: float = RIVER_MAX_DRIFT + RIVER_TAPER
+	var along_steps: int = maxi(1, ceili((length + overhang * 2.0) / RIVER_WATER_STEP))
 	var side_steps: int = maxi(1, ceili((reach * 2.0) / RIVER_WATER_STEP))
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
@@ -281,29 +315,29 @@ func _build_river_water(river: Dictionary) -> void:
 	var wet: Dictionary = {}
 	var index_of: Dictionary = {}
 	for i: int in range(along_steps + 1):
-		var s: float = clampf(float(i) * RIVER_WATER_STEP, 0.0, length)
+		var s: float = -overhang + float(i) * RIVER_WATER_STEP
 		for j: int in range(side_steps + 1):
 			var lateral: float = -reach + float(j) * RIVER_WATER_STEP
 			var p: Vector2 = a + dir * s + perp * lateral
-			var factor: float = _river_factor(river, p)
 			var key := Vector2i(i, j)
-			var is_wet: bool = factor > RIVER_WATER_THRESHOLD
-			wet[key] = is_wet
-			if is_wet:
-				var h: float = height_at(Vector3(p.x, 0.0, p.y)) + RIVER_WATER_CLEARANCE
-				index_of[key] = vertices.size()
-				vertices.append(Vector3(p.x, h, p.y))
-				normals.append(Vector3.UP)
-				# Alpha eases in from the threshold: the coastline blends
-				# into the bank instead of cutting off hard.
-				colors.append(Color(1.0, 1.0, 1.0, clampf((factor - RIVER_WATER_THRESHOLD) * 4.0, 0.0, 1.0)))
+			var surface: float = _river_water_height(river, p)
+			var depth_below: float = surface - height_at(Vector3(p.x, 0.0, p.y))
+			wet[key] = depth_below > 0.0
+			index_of[key] = vertices.size()
+			vertices.append(Vector3(p.x, surface, p.y))
+			normals.append(Vector3.UP)
+			# Fades in over the first few centimetres of depth, so the edge
+			# the ground cuts through reads as a shore, not a hard line.
+			colors.append(Color(1.0, 1.0, 1.0, clampf(depth_below / RIVER_WATER_FADE, 0.0, 1.0)))
 	for i: int in range(along_steps):
 		for j: int in range(side_steps):
 			var k00 := Vector2i(i, j)
 			var k10 := Vector2i(i + 1, j)
 			var k01 := Vector2i(i, j + 1)
 			var k11 := Vector2i(i + 1, j + 1)
-			if wet.get(k00, false) and wet.get(k10, false) and wet.get(k01, false) and wet.get(k11, false):
+			# Any wet corner: the dry ones sit under the bank, and the
+			# ground's own depth test draws the shoreline between them.
+			if wet.get(k00, false) or wet.get(k10, false) or wet.get(k01, false) or wet.get(k11, false):
 				indices.append_array(PackedInt32Array([index_of[k00], index_of[k10], index_of[k01], index_of[k10],
 						index_of[k11], index_of[k01]]))
 	if indices.is_empty():
@@ -320,8 +354,11 @@ func _build_river_water(river: Dictionary) -> void:
 	material.albedo_color = RIVER_WATER_COLOR
 	material.vertex_color_use_as_albedo = true
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.roughness = 0.05
-	material.metallic = 0.1
+	# A faint, tight sheen: a broad specular lobe washed the channel milky
+	# and a sharp one left a white blot (render_river.gd, 2026-09-28).
+	material.roughness = 0.2
+	material.metallic = 0.0
+	material.metallic_specular = 0.15
 	# Back faces culled, same reasoning as _material(): a double-sided plane
 	# right above a slope this shallow shadowed its own underside.
 	mesh.surface_set_material(0, material)
@@ -329,6 +366,12 @@ func _build_river_water(river: Dictionary) -> void:
 	visual.name = "RiverWater"
 	visual.mesh = mesh
 	add_child(visual)
+
+
+## Where a river's water surface sits at `p`: RIVER_FILL of its depth below
+## the ground's natural level there, ridge left out.
+func _river_water_height(river: Dictionary, p: Vector2) -> float:
+	return _natural_height(p, false) - float(river.depth) * RIVER_FILL
 
 
 func _build_tile(key: Vector2i) -> void:

@@ -13,7 +13,6 @@ do-not-drop/scripts/gameplay/depot/depot_roller_door.gd|max-line-length 2
 do-not-drop/scripts/gameplay/interaction/interactable.gd|max-line-length 1
 do-not-drop/scripts/gameplay/interaction/package_pickup_point.gd|max-line-length 1
 do-not-drop/scripts/gameplay/interaction/seat_point.gd|max-line-length 1
-do-not-drop/scripts/gameplay/interaction/seat_point.gd|max-returns 1
 do-not-drop/scripts/gameplay/level_base.gd|max-line-length 2
 do-not-drop/scripts/gameplay/package/package.gd|max-line-length 4
 do-not-drop/scripts/gameplay/package/package.gd|max-public-methods 1

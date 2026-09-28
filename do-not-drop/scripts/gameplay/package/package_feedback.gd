@@ -185,6 +185,10 @@ func _apply_identity(package: Node) -> void:
 		collider.shape = shape
 	_add_shipping_label(shipping_data, shape_size)
 	_build_state_badge(shape_size)
+	if _explosive_display != null:
+		# Above the at-risk badge, clear of the lid: a sign sunk into the
+		# cardboard is unreadable, even more so held right under the eyes.
+		_explosive_display.position = Vector3(0.0, shape_size.y * 0.62 + 0.30, 0.0)
 	_disguise_text = Label3D.new()
 	_disguise_text.position = Vector3(0.0, shape_size.y * 0.22, -shape_size.z * 0.52)
 	_disguise_text.pixel_size = 0.0015
@@ -599,11 +603,15 @@ func _build_explosive_display() -> void:
 	_explosive_display = Label3D.new()
 	_explosive_display.name = "ExplosiveCountdown"
 	_explosive_display.font_size = 64
-	_explosive_display.pixel_size = 0.006
-	_explosive_display.outline_size = 6
+	_explosive_display.pixel_size = 0.0022
+	_explosive_display.outline_size = 12
 	_explosive_display.modulate = Color("ff5e5b")
 	_explosive_display.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_explosive_display.position = Vector3(0.0, 0.16, -0.34)
+	# Drawn over the box it floats on, never swallowed by it.
+	_explosive_display.no_depth_test = true
+	_explosive_display.render_priority = 2
+	_explosive_display.outline_render_priority = 1
+	_explosive_display.position = Vector3(0.0, 0.62, 0.0)
 	_box.add_child(_explosive_display)
 
 
@@ -615,8 +623,16 @@ func _apply_explosive(delta: float) -> void:
 		return
 	var seconds: float = float(package.trap_behavior.get("seconds_left"))
 	var direction: StringName = StringName(package.trap_behavior.call("next_direction"))
+	# The bomb only ticks on the host: every other peer reads the sequence
+	# the host publishes with the care state (PackageRescue.publish_care()).
+	var sequence: Dictionary = package.care_state.get("sequence", {})
+	if not sequence.is_empty():
+		var steps: Array = sequence.get("steps", [])
+		var index: int = int(sequence.get("index", 0))
+		seconds = float(sequence.get("seconds", seconds))
+		direction = StringName(steps[index]) if index < steps.size() else &""
 	var state: int = int(package.trap_behavior.call("get_state"))
-	_explosive_display.text = "DEFUSE\n%02d  %s" % [ceili(seconds), _explosive_arrow(direction)]
+	_explosive_display.text = "DESACTIVAR\n%02d s  %s" % [ceili(seconds), _explosive_arrow(direction)]
 	_explosive_display.modulate = UiTheme.state_color(state, _colorblind_palette_enabled())
 	# The countdown only means something once the bomb is on the road: on
 	# the depot's shelf it would just be a floating, ticking sign (depot.gd).

@@ -150,7 +150,7 @@ func preparation_text() -> String:
 		var aboard: bool = false
 		for package: Node in get_tree().get_nodes_in_group(&"cargo"):
 			if StringName(package.get(&"package_id")) == StringName(order.package_id):
-				aboard = bool(package.get(&"is_loaded"))
+				aboard = bool(package.call(&"is_aboard"))
 				break
 		parts.append(tr("HUD_PREP_ORDER") % [int(order.house) + 1, order.code, tr("HUD_PREP_ABOARD") if aboard else tr("HUD_PREP_MISSING")])
 	return "   ".join(parts)

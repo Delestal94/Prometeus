@@ -608,6 +608,9 @@ func _physics_process(delta: float) -> void:
 	var input_vector: Vector2 = Input.get_vector(&"drive_left", &"drive_right", &"walk_forward", &"walk_backward")
 	if Input.is_action_pressed(&"care_work") and _cargo_care.target != null:
 		input_vector = Vector2.ZERO
+	# Holding a box that asks for a tap sequence: WASD taps it, not walks.
+	if _cargo_care.tapping:
+		input_vector = Vector2.ZERO
 	var move_direction: Vector3 = (global_basis.x * input_vector.x) + (global_basis.z * input_vector.y)
 	if move_direction.length() > 1.0:
 		move_direction = move_direction.normalized()

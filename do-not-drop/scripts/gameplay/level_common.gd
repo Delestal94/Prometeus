@@ -37,6 +37,10 @@ var _driver_seated: bool = false
 func _ready() -> void:
 	RunManager.reset_run()
 	add_child(preload("res://scripts/presentation/ingame_music.gd").new())
+	var play_area: Node = preload("res://scripts/gameplay/play_area.gd").new()
+	play_area.name = "PlayArea"
+	play_area.set(&"level", self)
+	add_child(play_area)
 	vehicle.freeze = true
 	packages.assign(depot.withhold_locked(get_tree().get_nodes_in_group(&"cargo")))
 	for package: DeliveryPackage in packages:
@@ -202,28 +206,33 @@ func _on_package_loaded(_player: Node) -> void:
 	_maybe_start()
 
 
+## The driver taking the wheel is the start, cargo or not: forgetting the
+## boxes is the crew's problem, paid for at the doors.
 func _maybe_start() -> void:
-	if _driver_seated and _has_loaded_cargo():
+	if _driver_seated:
 		start_delivery()
 
 
 ## Read from the boxes themselves rather than counting mount events: a box
 ## can be loaded and taken back out again before anyone takes the wheel.
+## A box on a seated passenger's lap is aboard too (DeliveryPackage.is_aboard).
 func _has_loaded_cargo() -> bool:
 	for package: DeliveryPackage in packages:
-		if is_instance_valid(package) and package.is_loaded:
+		if is_instance_valid(package) and package.is_aboard():
 			return true
 	return false
 
 
 ## Unfreezes the boxes aboard and has them count for the run; returns them.
 ## Only what's aboard counts: a box left on the rack was never part of this
-## run, so it shouldn't drag the score down.
+## run, so it shouldn't drag the score down. A lap box stays frozen: it is
+## held, and follows its passenger until they shelve it.
 func _release_loaded_cargo() -> Array[DeliveryPackage]:
 	var loaded: Array[DeliveryPackage] = []
 	for package: DeliveryPackage in packages:
-		if is_instance_valid(package) and package.is_loaded:
-			package.freeze = false
+		if is_instance_valid(package) and package.is_aboard():
+			if package.is_loaded:
+				package.freeze = false
 			package.report_to_run()
 			loaded.append(package)
 	return loaded

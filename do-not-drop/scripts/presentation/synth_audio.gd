@@ -968,3 +968,27 @@ static func callout_voice(color_slot: int = 0, syllables: int = 3) -> AudioStrea
 	var count: int = clampi(syllables, 1, SynthAudioScenes.CALLOUT_MAX_SYLLABLES)
 	var key := StringName("callout_voice_%d_%d" % [slot, count])
 	return _cached(key, SynthAudioScenes.make_callout_voice.bind(slot, count))
+
+
+## Care panel cues (ui/hud/care_prompt_view.gd), built by synth_audio_care.gd.
+const SynthAudioCare = preload("res://scripts/presentation/synth_audio_care.gd")
+
+
+static func care_step() -> AudioStreamWAV:
+	return _cached(&"care_step", SynthAudioCare.make_care_step)
+
+
+static func care_error() -> AudioStreamWAV:
+	return _cached(&"care_error", SynthAudioCare.make_care_error)
+
+
+static func care_success() -> AudioStreamWAV:
+	return _cached(&"care_success", SynthAudioCare.make_care_success)
+
+
+static func care_whoosh() -> AudioStreamWAV:
+	return _cached(&"care_whoosh", SynthAudioCare.make_care_whoosh)
+
+
+static func care_tick() -> AudioStreamWAV:
+	return _cached(&"care_tick", SynthAudioCare.make_care_tick)

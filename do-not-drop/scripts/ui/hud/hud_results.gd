@@ -38,6 +38,9 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	hud.notices.clear_all_notices()
 	hud.overlay_mode = "results"
 	hud.overlay.show()
+	# The results card stands alone: the run's HUD peeking around its edges
+	# read as leftovers (HUD redesign 2026-09-28).
+	hud.hud_layer.hide()
 	hud.set_economy_visible(false)
 	hud.overlay_kicker.text = "RESULTADO"
 	var new_best: bool = bool(results.get("is_new_best", false))
@@ -168,7 +171,10 @@ func _show_unlock_progress() -> void:
 		needs.append("%d entrega%s" % [missing_deliveries, "" if missing_deliveries == 1 else "s"])
 	if missing_score > 0:
 		needs.append("%d pts" % missing_score)
-	hud.result_progress_label.text = "Te faltan %s para %s" % [" y ".join(needs), String(progress["title"])]
+	# "Te falta 1 entrega", but "Te faltan 2 entregas" or "... 1 entrega y 30 pts".
+	var singular: bool = needs.size() == 1 and missing_deliveries == 1
+	hud.result_progress_label.text = "Te %s %s para %s" % ["falta" if singular else "faltan", " y ".join(needs),
+		String(progress["title"])]
 	hud.result_progress_bar.value = float(progress["progress"]) * 100.0
 
 
