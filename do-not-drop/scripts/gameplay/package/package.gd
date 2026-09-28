@@ -816,7 +816,8 @@ func _simulate_cargo(delta: float) -> void:
 		speed = velocity_now.length()
 		if _motion_initialized:
 			var acceleration: Vector3 = (velocity_now - _motion_velocity) / maxf(delta, 0.001)
-			_motion_acceleration = _motion_acceleration.lerp(vehicle.global_basis.inverse() * acceleration, minf(1.0, delta * 8.0))
+			var local_acceleration: Vector3 = vehicle.global_basis.inverse() * acceleration
+			_motion_acceleration = _motion_acceleration.lerp(local_acceleration, minf(1.0, delta * 8.0))
 		_motion_velocity = velocity_now
 		_motion_initialized = true
 	else:
@@ -941,17 +942,21 @@ func submit_care_input(input: Dictionary) -> void:
 	if operator == null or _reach_origin(operator).distance_to(global_position) > 3.5:
 		return
 	var owns: bool = carrier == operator or tender_peer_id == peer
-	if not owns and ((is_instance_valid(carrier) and carrier != operator) or (_care_worker != 0 and _care_worker != peer and _tender_input_age < 0.3)):
+	var someone_else_holds: bool = is_instance_valid(carrier) and carrier != operator
+	var someone_else_works: bool = _care_worker != 0 and _care_worker != peer and _tender_input_age < 0.3
+	if not owns and (someone_else_holds or someone_else_works):
 		if bool(input.get("steady", false)):
 			_assist_age = 0.0
 		return
 	var balance: Variant = input.get("balance", Vector2.ZERO)
 	if not balance is Vector2 or not (balance as Vector2).is_finite():
 		return
-	var direction: StringName = StringName(input.get("direction_pressed", "")) if input.get("direction_pressed") != null else &""
+	var pressed: Variant = input.get("direction_pressed")
+	var direction: StringName = StringName(pressed) if pressed != null else &""
 	player_input = {"steady": bool(input.get("steady", false)), "calm": bool(input.get("calm", false)),
 		"balance": (balance as Vector2).limit_length(1.0), "work": bool(input.get("work", false)),
-		"tool": StringName(input.get("tool", "tape")), "direction_pressed": direction if direction in [&"up", &"down", &"left", &"right"] else null}
+		"tool": StringName(input.get("tool", "tape")),
+		"direction_pressed": direction if direction in [&"up", &"down", &"left", &"right"] else null}
 	if bool(player_input["work"]):
 		player_input["steady"] = false
 		player_input["calm"] = false

@@ -102,9 +102,17 @@ const REACTION_LINES: Dictionary = {
 ## DeliveryPackage.delivery_assessment()'s category (the rescue design): the
 ## same inspection always ends the same way, and the line names the clue.
 const CARE_LINES: Dictionary = {
-	&"repaired": ["WORLD_REACTION_CARE_REPAIRED_1", "WORLD_REACTION_CARE_REPAIRED_2", "WORLD_REACTION_CARE_REPAIRED_3"],
-	&"unconvincing": ["WORLD_REACTION_CARE_UNCONVINCING_1", "WORLD_REACTION_CARE_UNCONVINCING_2", "WORLD_REACTION_CARE_UNCONVINCING_3"],
-	&"substituted": ["WORLD_REACTION_CARE_SUBSTITUTED_1", "WORLD_REACTION_CARE_SUBSTITUTED_2", "WORLD_REACTION_CARE_SUBSTITUTED_3"],
+	&"repaired": [
+		"WORLD_REACTION_CARE_REPAIRED_1", "WORLD_REACTION_CARE_REPAIRED_2", "WORLD_REACTION_CARE_REPAIRED_3",
+	],
+	&"unconvincing": [
+		"WORLD_REACTION_CARE_UNCONVINCING_1", "WORLD_REACTION_CARE_UNCONVINCING_2",
+		"WORLD_REACTION_CARE_UNCONVINCING_3",
+	],
+	&"substituted": [
+		"WORLD_REACTION_CARE_SUBSTITUTED_1", "WORLD_REACTION_CARE_SUBSTITUTED_2",
+		"WORLD_REACTION_CARE_SUBSTITUTED_3",
+	],
 }
 
 ## Every way a stop can end. A dented box is its own outcome rather than
@@ -361,7 +369,9 @@ func _on_delivery_reaction(index: int, result: StringName, _package_id: StringNa
 		# A convincing repair is looked over and accepted; anything worse
 		# gets the head-in-hands scene.
 		var scene: StringName = OUTCOME_AT_RISK if care_category == &"repaired" else OUTCOME_RUINED
-		reaction.react(scene, tr(DoorReaction.pick_line(CARE_LINES[care_category], _session_seed(), house_index, care_category)))
+		var lines: Array = CARE_LINES[care_category]
+		var line: String = DoorReaction.pick_line(lines, _session_seed(), house_index, care_category)
+		reaction.react(scene, tr(line))
 		return
 	if index == house_index and REACTION_LINES.has(result):
 		reaction.react(result, tr(DoorReaction.pick_line(REACTION_LINES[result], _session_seed(), house_index, result)))

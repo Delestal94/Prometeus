@@ -161,7 +161,10 @@ func collect_part() -> bool:
 		return false
 	missing_parts -= 1
 	crisis_left = maxf(crisis_left, 8.0)
-	message = "Contenido recuperado. Recomponé y cerrá la caja." if missing_parts == 0 else "Quedan %d piezas por recuperar." % missing_parts
+	if missing_parts == 0:
+		message = "Contenido recuperado. Recomponé y cerrá la caja."
+	else:
+		message = "Quedan %d piezas por recuperar." % missing_parts
 	return true
 
 
@@ -176,25 +179,33 @@ func tool_name(tool: StringName, kind: StringName) -> String:
 func tool_blocker(tool: StringName, kind: StringName, speed: float, helped: bool = false) -> String:
 	if in_lap and tool in [&"repair", &"filler", &"rag", &"strap"]:
 		return "Con la caja en el regazo no tenés manos: devolvela al soporte."
+	var blocker: String = ""
 	match tool:
 		&"tape":
-			return "La caja ya está reforzada." if tape >= 2 and phase != &"crisis" else ""
+			blocker = "La caja ya está reforzada." if tape >= 2 and phase != &"crisis" else ""
 		&"filler":
 			if padded:
-				return "Ya tiene relleno."
-			return "Primero rescatá el contenido." if phase in [&"crisis", &"lost"] else ""
+				blocker = "Ya tiene relleno."
+			elif phase in [&"crisis", &"lost"]:
+				blocker = "Primero rescatá el contenido."
 		&"strap":
-			return "Ya está sujeta con la cincha." if strapped else ""
+			blocker = "Ya está sujeta con la cincha." if strapped else ""
 		&"rag":
 			if kind != &"liquid":
-				return "No hay nada que absorber."
-			return "" if phase == &"crisis" else "No hay ninguna fuga."
+				blocker = "No hay nada que absorber."
+			elif phase != &"crisis":
+				blocker = "No hay ninguna fuga."
 		&"substitute":
-			return "El juguete solo reemplaza una gallina perdida." if kind != &"noisy" or phase != &"lost" or substituted else ""
+			if kind != &"noisy" or phase != &"lost" or substituted:
+				blocker = "El juguete solo reemplaza una gallina perdida."
 		&"repair":
-			pass
+			blocker = _repair_blocker(kind, speed, helped)
 		_:
-			return "Herramienta desconocida."
+			blocker = "Herramienta desconocida."
+	return blocker
+
+
+func _repair_blocker(kind: StringName, speed: float, helped: bool) -> String:
 	if phase == &"lost":
 		return "El contenido ya no se puede recuperar."
 	if kind == &"liquid":
@@ -218,7 +229,8 @@ func work_direction() -> Vector2:
 
 ## Progress is earned by matching the visible direction, with partial progress
 ## retained on release. Supplies are spent atomically by the package on completion.
-func advance_work(delta: float, tool: StringName, input: Dictionary, kind: StringName, speed: float, available: bool, helped: bool = false) -> bool:
+func advance_work(delta: float, tool: StringName, input: Dictionary, kind: StringName, speed: float,
+		available: bool, helped: bool = false) -> bool:
 	if not bool(input.get("work", false)):
 		return false
 	message = tool_blocker(tool, kind, speed, helped)
@@ -250,7 +262,10 @@ func complete_tool(tool: StringName, kind: StringName = &"") -> void:
 			tape = mini(2, tape + 1)
 			if phase == &"crisis" and kind != &"liquid":
 				phase = &"damaged"
-			message = "Caja encintada. La reparación del contenido sigue pendiente." if needs_restore else "Caja encintada: amortigua los próximos golpes."
+			if needs_restore:
+				message = "Caja encintada. La reparación del contenido sigue pendiente."
+			else:
+				message = "Caja encintada: amortigua los próximos golpes."
 		&"repair":
 			repairs += 1
 			quality_cap = minf(quality_cap, float(RESCUE_CAPS.get(kind, 85.0)) - 10.0 * (repairs - 1))

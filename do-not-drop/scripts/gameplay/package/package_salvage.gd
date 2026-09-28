@@ -74,7 +74,8 @@ func _process(_delta: float) -> void:
 	var vehicle: Node3D = package.call(&"_find_vehicle")
 	for index: int in points.size():
 		var point: Area3D = points[index]
-		var active: bool = index < parts.size() and not (data.get("collected", []) as Array).has(index) and package.care.phase != &"lost"
+		var collected: bool = (data.get("collected", []) as Array).has(index)
+		var active: bool = index < parts.size() and not collected and package.care.phase != &"lost"
 		point.visible = active
 		point.collision_layer = 16 if active else 0
 		if not active:
@@ -84,8 +85,9 @@ func _process(_delta: float) -> void:
 			var run: Node = get_node_or_null(^"/root/RunManager")
 			var time: float = float(run.get(&"elapsed_seconds")) if run != null else 0.0
 			position += Vector3(sin(time * 2.2) * 0.42, absf(sin(time * 4.0)) * 0.08, cos(time * 1.8) * 0.35)
-		point.global_position = vehicle.to_global(position) if bool(data.get("aboard", false)) and vehicle != null else position
-		point.global_basis = vehicle.global_basis if bool(data.get("aboard", false)) and vehicle != null else Basis.IDENTITY
+		var in_truck: bool = bool(data.get("aboard", false)) and vehicle != null
+		point.global_position = vehicle.to_global(position) if in_truck else position
+		point.global_basis = vehicle.global_basis if in_truck else Basis.IDENTITY
 
 
 func _build_point(index: int) -> void:

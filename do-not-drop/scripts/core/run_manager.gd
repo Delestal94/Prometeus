@@ -51,7 +51,9 @@ const CARE_POINTS: Dictionary = {
 }
 ## The shared repair kit a crew starts every run with: enough for one simple
 ## rescue per box, not an endless heal.
-const CARE_SUPPLIES_START: Dictionary = {&"tape": 3, &"repair": 2, &"filler": 2, &"rag": 2, &"strap": 2, &"substitute": 1}
+const CARE_SUPPLIES_START: Dictionary = {
+	&"tape": 3, &"repair": 2, &"filler": 2, &"rag": 2, &"strap": 2, &"substitute": 1,
+}
 const RESCUE_NAMES: Dictionary = {&"fragile": "Jarrón", &"balance": "Torta", &"noisy": "Gallina",
 	&"growing_weight": "Paquete pesado", &"liquid": "Líquido", &"explosive": "Explosivo", &"hostile": "Criatura"}
 ## Delivery deadlines (docs/jugabilidad-paquetes-rescate.md, "Presión para
@@ -186,7 +188,8 @@ static func plan_deadlines(distances: Array) -> Array:
 	var planned: Array = []
 	for index: int in mini(distances.size(), MAX_DEADLINES):
 		var seconds: float = DEADLINE_SLACK + float(distances[index]) / DEADLINE_SPEED + index * DEADLINE_STOP_SECONDS
-		planned.append({"house": index, "seconds": roundf(seconds), "reason": DEADLINE_REASONS[index % DEADLINE_REASONS.size()]})
+		var reason: String = DEADLINE_REASONS[index % DEADLINE_REASONS.size()]
+		planned.append({"house": index, "seconds": roundf(seconds), "reason": reason})
 	return planned
 
 
@@ -500,7 +503,8 @@ func _resolve_deliveries() -> Dictionary:
 	_add_line(breakdown, "Entregas abolladas", int(counts.get(&"delivered_at_risk", 0)), POINTS_DELIVERED_AT_RISK)
 	_add_line(breakdown, "Entregas arruinadas", int(counts.get(&"delivered_ruined", 0)), POINTS_DELIVERED_RUINED)
 	_add_line(breakdown, "Reparaciones convincentes", int(rescued.get(&"repaired", 0)), POINTS_DELIVERED_REPAIRED)
-	_add_line(breakdown, "Arreglos poco convincentes", int(rescued.get(&"unconvincing", 0)), POINTS_DELIVERED_UNCONVINCING)
+	_add_line(breakdown, "Arreglos poco convincentes", int(rescued.get(&"unconvincing", 0)),
+			POINTS_DELIVERED_UNCONVINCING)
 	_add_line(breakdown, "Sustitutos descubiertos", int(rescued.get(&"substituted", 0)), POINTS_DELIVERED_SUBSTITUTED)
 	_add_line(breakdown, "Plazos cumplidos", int(tally["met"]), POINTS_DEADLINE_MET)
 	_add_line(breakdown, "Plazos vencidos", int(tally["missed"]), -PENALTY_DEADLINE_MISSED)

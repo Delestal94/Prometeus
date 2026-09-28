@@ -89,7 +89,8 @@ func _test_spill_on_tip() -> void:
 	_expect(bool(package.get(&"contents_spilled")), "An open box on its side spills")
 	# Spilling opens a rescue (docs/jugabilidad-paquetes-rescate.md), not an
 	# instant loss: the box is at risk until it's recovered or the window ends.
-	_expect(int(package.get(&"trap_state")) == ITrapBehavior.TrapState.AT_RISK and package.get(&"care").phase == &"crisis",
+	var rescuing: bool = package.get(&"care").phase == &"crisis"
+	_expect(int(package.get(&"trap_state")) == ITrapBehavior.TrapState.AT_RISK and rescuing,
 		"Spilling the contents starts a rescue instead of losing the package")
 	var spilled: int = 0
 	for node: Node in root.get_children():

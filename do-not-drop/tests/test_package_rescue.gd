@@ -50,7 +50,8 @@ func _check_crisis_and_repair() -> void:
 		"Working against the arrow makes no progress")
 	_expect(_work(care, &"repair", &"fragile", 6.0), "Following the arrows completes the repair")
 	_expect(care.phase == &"rescued" and not care.needs_restore, "The vase is rescued")
-	_expect(care.quality_cap <= 85.0 and care.worst_quality <= 20.0, "...but its history stays: capped quality, worst kept")
+	_expect(care.quality_cap <= 85.0 and care.worst_quality <= 20.0,
+		"...but its history stays: capped quality, worst kept")
 	_expect(_work(care, &"tape", &"fragile", 4.0) and care.tape == 1, "Tape reinforces the box")
 	_expect(care.impact_scale() < 1.0, "...and softens later hits")
 
@@ -85,11 +86,13 @@ func _check_content_rescues() -> void:
 	_expect(liquid.quality_cap <= 60.0, "...and it arrives partial")
 	var heavy = Care.new()
 	heavy.begin_crisis(&"growing_weight")
-	_expect(not heavy.tool_blocker(&"repair", &"growing_weight", 0.0, false).is_empty(), "Moving the heavy box alone is refused")
+	_expect(not heavy.tool_blocker(&"repair", &"growing_weight", 0.0, false).is_empty(),
+		"Moving the heavy box alone is refused")
 	_expect(heavy.tool_blocker(&"repair", &"growing_weight", 0.0, true).is_empty(), "...with a helper it can be done")
 	var cake = Care.new()
 	cake.begin_crisis(&"balance")
-	_expect(cake.missing_parts == 3 and cake.tool_name(&"repair", &"balance") == "Rearmar pisos", "A collapsed cake is restacked from its layers")
+	_expect(cake.missing_parts == 3 and cake.tool_name(&"repair", &"balance") == "Rearmar pisos",
+		"A collapsed cake is restacked from its layers")
 	var bomb = Care.new()
 	bomb.begin_crisis(&"explosive")
 	_expect(bomb.quality_cap <= 35.0 and bomb.missing_parts == 0, "A late bomb is scrap at best, nothing to collect")
@@ -141,7 +144,8 @@ func _check_deadlines() -> void:
 	_expect(int(tally["met"]) == 1 and int(tally["missed"]) == 2, "On time counts, late and undelivered don't")
 	var doors: Dictionary = run._resolve_deliveries()
 	var labels: String = str(doors["breakdown"])
-	_expect(labels.contains("Plazos cumplidos") and labels.contains("Plazos vencidos"), "Deadlines show in the breakdown")
+	_expect(labels.contains("Plazos cumplidos") and labels.contains("Plazos vencidos"),
+		"Deadlines show in the breakdown")
 	run.reset_run()
 	_expect(run.deadlines.is_empty(), "A new run starts without deadlines")
 
@@ -163,7 +167,8 @@ func _check_supplies_and_scoring() -> void:
 		"A convincing repair and a toy hen are paid by what the door saw")
 	_expect((doors["complaints"] as Array).is_empty(), "...without a random complaint")
 	var labels: String = str(doors["breakdown"])
-	_expect(labels.contains("Reparaciones convincentes") and labels.contains("Sustitutos"), "Both show in the breakdown")
+	_expect(labels.contains("Reparaciones convincentes") and labels.contains("Sustitutos"),
+		"Both show in the breakdown")
 	var stories: String = str(run.rescue_stories())
 	_expect(stories.contains("Jarrón") and stories.contains("juguete"), "The results tell the rescues")
 	run.reset_run()

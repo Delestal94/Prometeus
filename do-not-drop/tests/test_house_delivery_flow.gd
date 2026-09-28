@@ -101,9 +101,12 @@ func _run() -> void:
 	# met ones add, missed ones (the houses nobody rang) take a little off.
 	var tally: Dictionary = manager.deadline_tally()
 	_expect(int(tally["met"]) == 1, "The door rung right away made its deadline")
-	var expected: int = manager.POINTS_DELIVERED_INTACT + manager.POINTS_PHOTO_BONUS - unrung * manager.PENALTY_MISSED_HOUSE 		+ int(tally["met"]) * manager.POINTS_DEADLINE_MET - int(tally["missed"]) * manager.PENALTY_DEADLINE_MISSED
+	var expected: int = manager.POINTS_DELIVERED_INTACT + manager.POINTS_PHOTO_BONUS \
+		- unrung * manager.PENALTY_MISSED_HOUSE + int(tally["met"]) * manager.POINTS_DEADLINE_MET \
+		- int(tally["missed"]) * manager.PENALTY_DEADLINE_MISSED
 	_expect(int(results["delivery_points"]) == expected,
-		"Door points = intact delivery + photo - missed houses + deadlines (got %d, expected %d)" % [int(results["delivery_points"]), expected])
+		"Door points = delivery + photo - missed houses + deadlines (got %d, expected %d)" \
+		% [int(results["delivery_points"]), expected])
 	_expect(int(results["score"]) > 0, "A delivered run scores above zero")
 
 	level.free()

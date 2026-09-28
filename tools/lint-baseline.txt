@@ -117,7 +117,7 @@ do-not-drop/tests/test_horn.gd|duplicated-load 1
 do-not-drop/tests/test_horn.gd|max-line-length 3
 do-not-drop/tests/test_hostile_trap.gd|max-line-length 3
 do-not-drop/tests/test_house_assignment.gd|max-line-length 7
-do-not-drop/tests/test_house_delivery_flow.gd|max-line-length 7
+do-not-drop/tests/test_house_delivery_flow.gd|max-line-length 5
 do-not-drop/tests/test_house_waiting_marker.gd|max-line-length 22
 do-not-drop/tests/test_hud_flow.gd|max-line-length 3
 do-not-drop/tests/test_interaction.gd|max-line-length 4
@@ -141,7 +141,7 @@ do-not-drop/tests/test_package_handling.gd|duplicated-load 1
 do-not-drop/tests/test_package_handling.gd|max-line-length 4
 do-not-drop/tests/test_package_identity.gd|max-line-length 2
 do-not-drop/tests/test_package_unboxing.gd|duplicated-load 1
-do-not-drop/tests/test_package_unboxing.gd|max-line-length 3
+do-not-drop/tests/test_package_unboxing.gd|max-line-length 2
 do-not-drop/tests/test_phone_camera.gd|max-line-length 3
 do-not-drop/tests/test_player_character.gd|max-line-length 11
 do-not-drop/tests/test_reference_truck.gd|duplicated-load 4

@@ -16,7 +16,8 @@ func update_carried_package() -> void:
 		if seat != null:
 			var care = player.carried_package.care
 			carry_transform = seat.global_transform.translated_local(Vector3(care.balance_target.x * 0.1, -0.40, -0.65))
-			carry_transform.basis = carry_transform.basis * Basis.from_euler(Vector3(care.balance_target.y, 0.0, -care.balance_target.x) * 0.18)
+			var lean := Vector3(care.balance_target.y, 0.0, -care.balance_target.x) * 0.18
+			carry_transform.basis = carry_transform.basis * Basis.from_euler(lean)
 	# The box waits for the reaching hands, then follows the lift instead of
 	# teleporting to chest height on the first pickup tick.
 	if player._pickup_elapsed < 1.3 and player.seat_node_path.is_empty():

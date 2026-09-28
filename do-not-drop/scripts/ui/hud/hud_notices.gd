@@ -169,7 +169,9 @@ func refresh_deadline() -> void:
 		clear_notice(&"information", &"deadline")
 		return
 	var left: int = maxi(0, ceili(float(deadline["seconds"]) - RunManager.elapsed_seconds))
-	set_notice(&"information", &"deadline", "Casa %d: %s en %02d:%02d" % [int(deadline["house"]) + 1, deadline["reason"], left / 60, left % 60],
+	var house: int = int(deadline["house"]) + 1
+	var text: String = "Casa %d: %s en %02d:%02d" % [house, deadline["reason"], left / 60, left % 60]
+	set_notice(&"information", &"deadline", text,
 		40 if left > 20 else 75, Hud.MINT if left > 20 else Hud.YELLOW)
 
 

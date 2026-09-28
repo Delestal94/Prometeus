@@ -1,6 +1,12 @@
 extends Node
 ## Local input and a compact workbench HUD. All actual work happens on the host.
 const Care = preload("res://scripts/gameplay/package/package_care.gd")
+const PHASE_NAMES: Dictionary = {&"intact": "INTACTO", &"damaged": "DAÑADO", &"crisis": "¡RESCATE!",
+	&"rescued": "RESCATADO", &"lost": "PERDIDO"}
+const HELP_GAMEPAD: String = "RT + stick: equilibrar\n" \
+	+ "LT + flecha: trabajar · D-pad der.: herramienta · soltar: regazo/soporte"
+const HELP_KEYBOARD: String = "Clic izq. + WASD: equilibrar\n" \
+	+ "Clic der. + flecha: trabajar · X: herramienta · Q: regazo/soporte"
 var player: Node
 var tool_index: int = 0
 var panel: PanelContainer
@@ -98,16 +104,18 @@ func _physics_process(_delta: float) -> void:
 	input["tool"] = Care.TOOLS[tool_index]
 	target.rpc_id(1, &"submit_care_input", input)
 	var care = target.care
-	title.text = "%s · %s" % [String(target.trap_definition.display_name), {&"intact": "INTACTO", &"damaged": "DAÑADO", &"crisis": "¡RESCATE!", &"rescued": "RESCATADO", &"lost": "PERDIDO"}.get(care.phase, "")]
+	title.text = "%s · %s" % [String(target.trap_definition.display_name), PHASE_NAMES.get(care.phase, "")]
 	balance_view.care = care
 	balance_view.queue_redraw()
 	progress.value = care.work * 100.0
 	var arrows: Array[String] = ["←", "↑", "→", "↓"]
 	var stock: int = int(run.call(&"care_supply_count", Care.TOOLS[tool_index]))
-	details.text = "%s (%d) · %s\n%s" % [care.tool_name(Care.TOOLS[tool_index], target._trap_kind()), stock, arrows[care.work_step % 4], target.get_hint() if care.message.is_empty() else care.message]
+	var tool_label: String = care.tool_name(Care.TOOLS[tool_index], target._trap_kind())
+	var status: String = target.get_hint() if care.message.is_empty() else care.message
+	details.text = "%s (%d) · %s\n%s" % [tool_label, stock, arrows[care.work_step % 4], status]
 	if care.phase == &"crisis":
 		details.text += "\nRescate: %ds · quedan %d piezas" % [ceili(care.crisis_left), care.missing_parts]
-	instructions.text = "RT + stick: equilibrar\nLT + flecha: trabajar · D-pad der.: herramienta · soltar: regazo/soporte" if _using_gamepad() else "Clic izq. + WASD: equilibrar\nClic der. + flecha: trabajar · X: herramienta · Q: regazo/soporte"
+	instructions.text = HELP_GAMEPAD if _using_gamepad() else HELP_KEYBOARD
 
 
 ## Looked up by path: tests run with --script, where autoload names don't
