@@ -26,6 +26,10 @@ extends SceneTree
 ## - walking away lets go; a spare mirror ends it;
 ## - a peer joining mid-run gets the faults (drawn without debris), the spares
 ##   and who holds the phone.
+## N-214.4: each fault's line for the results screen (result_stories(), read
+## by RunManager.world_stories()): how it was fixed, "replaced by a phone"
+## even after letting go, or left broken (the door, with how many times it
+## swung open); run_started clears them.
 
 ## Loaded at run time: the script uses the EventBus autoload, which a
 ## SceneTree test can't resolve while it compiles.
@@ -236,6 +240,30 @@ func _check_repairs(bus: Node, faults_script: Script) -> void:
 	_expect(_repaired.back() == [&"mirror", &"spare"] and int(faults.get(&"spares")) == 1,
 			"The spare mirror goes on and one spare is left")
 	_expect(int(faults.get(&"phone_holder_id")) == 0 and not phone.visible, "The spare mirror ends the phone's watch")
+
+	# N-214.4: the results tell how each fault ended, through RunManager.
+	var told: Array = faults.call(&"result_stories")
+	_expect(told == [tr("WORLD_FAULT_STORY_REAR_DOOR_SPARE"), tr("WORLD_FAULT_STORY_MIRROR_SPARE")],
+			"The results tell each fault's fix, in break order (got %s)" % [told])
+	_expect(tr("WORLD_FAULT_STORY_MIRROR_SPARE") in (run.call(&"world_stories") as Array),
+			"RunManager's results read the faults' lines")
+	faults.call(&"reset_for_run")
+	_expect((faults.call(&"result_stories") as Array).is_empty(), "A new run starts with no fault to tell")
+	bus.relay(&"vehicle_fault_started", [&"mirror", Vector3.ZERO])
+	_expect(faults.call(&"result_stories") == [tr("WORLD_FAULT_STORY_MIRROR_LOST")],
+			"An unfixed mirror is told as lost")
+	_expect(bool(faults.call(&"hold_phone", player)), "A passenger can hold the phone up")
+	player.position = Vector3(0.0, 0.0, 20.0)
+	await physics_frame
+	_expect(faults.call(&"result_stories") == [tr("WORLD_FAULT_STORY_MIRROR_PHONE")],
+			"A mirror held up by a phone is told as replaced by it, even after letting go")
+	van.rear_open = false
+	bus.relay(&"vehicle_fault_started", [&"rear_door", Vector3.ZERO])
+	var pops: int = int(faults.get(&"door_pops"))
+	var door_line: String = tr("WORLD_FAULT_STORY_REAR_DOOR_OPEN") % pops
+	_expect(pops == 1 and (faults.call(&"result_stories") as Array).back() == door_line,
+			"An unfixed door is told with how many times it swung open")
+	player.position = mirror.position
 
 	# A peer joining mid-run: the faults as they stand, without a new crack.
 	faults.call(&"reset_for_run")

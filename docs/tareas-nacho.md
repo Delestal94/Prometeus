@@ -1,9 +1,12 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (tareas nuevas del usuario en el hito M7: N-115 correr, N-116
-> estacionamiento como parada final, N-312 personaje flaco y alto y N-606 el diario del día siguiente,
-> diseñado en `docs/diario-final.md`). Antes, el mismo día: (pruebas y trabajo pendiente de red y
-> rendimiento en N-215 a N-221; antes, el mismo día: auditoría de rendimiento: Endless fusiona cada tramo al generarlo y
+> Última actualización: 2026-09-29 (N-214.4: la pantalla de resultados cuenta cómo terminó cada avería
+> del camión, "Espejo reemplazado por un celular"; de N-214 solo falta N-214.3c). Antes, el mismo día:
+> (tareas nuevas del usuario en el hito M7: N-115 correr, N-116 estacionamiento como parada final,
+> N-312 personaje flaco y alto y N-606 el diario del día siguiente, diseñado en
+> `docs/diario-final.md`). Antes, el mismo día: (pruebas y trabajo pendiente de red y rendimiento en
+> N-215 a N-221; antes, el mismo día: auditoría de rendimiento: Endless fusiona cada tramo al
+> generarlo y
 > comparte sus materiales; antes, el mismo día: red por Steam tras playtest: el host mandaba 2-5 veces el límite
 > de Steam y el cliente veía el mundo cada vez más viejo; `care_state` solo al cambiar, sync a 60 Hz
 > fijos, caja predicha en las manos, Nagle apagado; investigación en `docs/investigacion-red.md`;
@@ -1061,8 +1064,14 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
       cámara de `phone_camera.gd` ni muestra la vista de atrás). Queda para cuando haya espejo real.
   - [ ] **N-214.3c** Confirmar con `revisor-visual` el punto del espejo (y el celular) en las variantes
     de camión que no son la clásica.
-- [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
-- [ ] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado.
+- [x] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular"). `29a24d5`
+  - `VehicleFaults` guarda cómo terminó cada avería del recorrido (cincha, repuesto, celular o sin
+    arreglar, la puerta con cuántas veces se abrió) y entra al grupo `run_stories`;
+    `RunManager.world_stories()` suma esas líneas a `results["stories"]`, junto a los rescates. El
+    celular cuenta aunque después lo suelten. Duda: las líneas se traducen en el host (como el resto
+    de los resultados que manda), así que un cliente en otro idioma las vería en el del host.
+- [x] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado
+  (cubierto desde N-214.1 y ampliado en cada subtarea, N-214.4 incluida).
 
 ### N-212 · Voz por proximidad — A · `Opus 5.5 · xhigh` · Aviso: sí (jugador y red)
 

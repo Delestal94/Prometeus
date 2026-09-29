@@ -167,3 +167,9 @@ WORLD_FAULT_REAR_DOOR_SPARE,Cambiar la traba de la puerta con el repuesto,Replac
 WORLD_FAULT_REAR_DOOR_STRAP,Atar la puerta con una cincha del kit,Tie the door shut with a strap from the kit
 WORLD_FAULT_MIRROR_SPARE,Poner el espejo de repuesto,Fit the spare mirror
 WORLD_FAULT_MIRROR_PHONE,Sostener el celular como espejo,Hold your phone up as the mirror
+WORLD_FAULT_STORY_REAR_DOOR_OPEN,Puerta trasera: se abrió sola %d vez/veces,Rear door: swung open on its own %d time(s)
+WORLD_FAULT_STORY_REAR_DOOR_STRAP,Puerta trasera: atada con una cincha,Rear door: tied shut with a strap
+WORLD_FAULT_STORY_REAR_DOOR_SPARE,Puerta trasera: traba cambiada por el repuesto,Rear door: latch replaced with the spare
+WORLD_FAULT_STORY_MIRROR_LOST,Espejo: se cayó y nadie lo reemplazó,Mirror: fell off and nobody replaced it
+WORLD_FAULT_STORY_MIRROR_PHONE,Espejo reemplazado por un celular,Mirror replaced by a phone
+WORLD_FAULT_STORY_MIRROR_SPARE,Espejo: cambiado por el de repuesto,Mirror: swapped for the spare
