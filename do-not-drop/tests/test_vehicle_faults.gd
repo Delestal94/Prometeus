@@ -210,7 +210,8 @@ func _check_repairs(bus: Node, faults_script: Script) -> void:
 	# The mirror without a spare: a passenger holds their phone up instead.
 	var me: int = player.get_multiplayer_authority()
 	bus.relay(&"vehicle_fault_started", [&"mirror", Vector3.ZERO])
-	_expect(String(mirror.call(&"get_prompt")) == tr("WORLD_FAULT_MIRROR_PHONE"), "Without a spare the mirror offers the phone")
+	_expect(String(mirror.call(&"get_prompt")) == tr("WORLD_FAULT_MIRROR_PHONE"),
+			"Without a spare the mirror offers the phone")
 	van.driver_peer_id = me
 	_expect(not bool(mirror.call(&"can_interact", player)), "The driver can't hold the phone")
 	van.driver_peer_id = 0
