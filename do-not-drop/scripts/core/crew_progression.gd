@@ -45,6 +45,7 @@ const CARD_NAMES := {
 const SUPPLIES := {
 	&"padding": {"title": "Acolchado de estantes", "detail": "Espuma en el rack: la carga sufre un 25 % menos por golpes en el próximo reparto.", "cost": 40},
 	&"insurance": {"title": "Seguro de envío", "detail": "Cada paquete que se entregue roto en el próximo reparto le devuelve $30 al equipo.", "cost": 35},
+	&"rescue_hook": {"title": "Gancho de rescate", "detail": "Desde la puerta trasera abierta, un pasajero engancha una caja caída cerca sin que el camión frene.", "cost": 30},
 }
 
 var team_money: int = STARTING_MONEY

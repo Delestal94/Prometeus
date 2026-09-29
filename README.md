@@ -385,6 +385,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   levantarla la cierra como rescatada y vuelve al estante, y si nadie la busca se pierde al vencer.
   N-213.4: abandonarla cierra el pedido de su casa como "PERDIDO" sin terminar la partida (aunque
   no quede otra caja), no admite foto y en los resultados se cobra como una casa sin entregar.
+  N-213.3: el gancho de rescate (suministro del depósito) va solo en el recorrido que lo llevó; con
+  la puerta trasera abierta engancha una caja caída al alcance y la deja en manos del pasajero, lo que
+  cierra la ventana como rescatada, y después tarda un momento en estar listo otra vez.
 - `test_vehicle_faults` — N-214.1: las averías del camión las decide el host con un golpe fuerte
   (un bache no rompe nada), como mucho una por entrega (se reinicia con cada recorrido), se repiten
   igual con la misma semilla y los mismos golpes, y `repair()` las saca de la lista de cada par.

@@ -244,6 +244,9 @@ func begin_run(vehicle: Node3D, loaded: Array) -> void:
 		for package: Node in loaded:
 			package.set(&"impact_absorption", PADDING_ABSORPTION)
 	_insured = taken.has(&"insurance")
+	var hook: Node = vehicle.get_node_or_null(^"RescueHook")
+	if taken.has(&"rescue_hook") and hook != null:
+		hook.call(&"arm")
 	_broadcast_supplies()
 	var missing: PackedStringArray = []
 	for order: Dictionary in orders:
