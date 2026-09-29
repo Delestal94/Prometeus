@@ -13,6 +13,10 @@ extends SceneTree
 ## "PERDIDO" in the results) without ending the run, even with nothing else
 ## aboard; the house can't be rung for it afterwards and it pays like a missed
 ## door, with its own line.
+## N-213.3: the rescue hook (a depot supply, gameplay/vehicle/rescue_hook.gd)
+## rides along only on the run that took it; from the open rear doors it
+## snags a fallen box within reach into the passenger's hands, which closes
+## its window as rescued, and then needs a moment before the next throw.
 
 var _failures: int = 0
 var _started: Array = []
@@ -41,10 +45,15 @@ func _run() -> void:
 	var mount: Node = vehicle.get_node(^"CargoBay/LeftShelfPackageMount/InteractionArea")
 	var seat: Node = vehicle.get_node(^"CabinInterior/DriverEyePoint/InteractionArea")
 	vehicle.call(&"set_door_open", &"cab_left", true)
+	var hook: Node3D = vehicle.get_node(^"RescueHook")
+	_expect(not bool(hook.get(&"armed")), "The rescue hook stays stowed until a run takes it")
+	# Bought at the depot: begin_run() hands it to the run that leaves.
+	(root.get_node(^"/root/CrewProgression").get(&"supplies") as Dictionary)[&"rescue_hook"] = true
 
 	pickup.interact(player)
 	mount.interact(player)
 	seat.interact(player)
+	_expect(bool(hook.get(&"armed")), "The run that took the hook from the depot carries it")
 	_expect(bool(manager.get(&"is_running")), "The run starts with the box aboard")
 	player.call(&"leave_seat")
 
@@ -77,6 +86,31 @@ func _run() -> void:
 	level._check_lost_cargo()
 	_expect(_started.size() == 1, "Back aboard, no new window opens (got %d)" % _started.size())
 
+	# --- N-213.3: the rescue hook snags it from the open rear doors ---
+	vehicle.call(&"set_door_open", &"rear", true)
+	player.set(&"global_position", hook.global_position)
+	_expect(not bool(hook.call(&"can_interact", player)), "With the box on its shelf there's nothing to hook")
+	var behind: Vector3 = hook.global_position + vehicle.global_basis.z * 5.0
+	package.global_position = behind
+	level._check_lost_cargo()
+	_expect(_started.size() == 2, "Falling out again opens a new window (got %d)" % _started.size())
+	package.global_position = hook.global_position + vehicle.global_basis.z * 12.0
+	_expect(not bool(hook.call(&"can_interact", player)), "A box far down the road is out of the hook's reach")
+	package.global_position = behind
+	vehicle.call(&"set_door_open", &"rear", false)
+	_expect(not bool(hook.call(&"can_interact", player)), "With the rear doors shut there's no hooking")
+	vehicle.call(&"set_door_open", &"rear", true)
+	_expect(bool(hook.call(&"can_interact", player)), "A fallen box close behind can be hooked")
+	hook.call(&"interact", player)
+	_expect(player.get(&"carried_package") == package, "The hook puts the box in the passenger's hands")
+	level._check_lost_cargo()
+	_expect(_ended.size() == 2 and _ended[1] == [package_id, true],
+		"Hooking it closes the window as rescued (got %s)" % [_ended])
+	_expect(float(hook.get(&"_cooldown_left")) > 0.0, "The hook needs a moment before the next throw")
+	player.set(&"global_position", vehicle.global_position)
+	mount.interact(player)
+	_expect(bool(package.get(&"is_loaded")), "The hooked box goes back on the shelf")
+
 	# --- it falls out again and nobody comes: lost ---
 	# Pinned so the test doesn't depend on which door the depot picked.
 	var house: Node = (level.get_node(^"World/Route").get(&"houses") as Array)[0]
@@ -86,7 +120,7 @@ func _run() -> void:
 	for i: int in 10:
 		level._check_lost_cargo()
 	_expect(int(package.get(&"trap_state")) == ITrapBehavior.TrapState.RUINED, "Past the window, the box is lost")
-	_expect(_ended.size() == 2 and _ended[1] == [package_id, false],
+	_expect(_ended.size() == 3 and _ended[2] == [package_id, false],
 		"The window closes as not rescued (got %s)" % [_ended])
 	await process_frame
 	_expect(not bool(marker.call(&"has_marker", package_id)), "The flag goes away once it's lost")
@@ -110,6 +144,7 @@ func _run() -> void:
 	manager.call(&"finish_run", true)
 	_expect(int((manager.get(&"results") as Dictionary).get("houses_lost", 0)) == 1,
 		"The results carry the lost order for the HUD and the depot's streak board")
+	_expect(not bool(hook.get(&"armed")), "The hook is stowed again when the run ends")
 	_expect(not bool(level.get_node(^"World/Route").call(&"close_lost_order", package_id)),
 		"An order closes only once")
 
@@ -117,7 +152,7 @@ func _run() -> void:
 	manager.call(&"reset_run")
 	await process_frame
 	if _failures == 0:
-		print("PASS: a box off the van gets a rescue window, a flag, and is lost only when it runs out")
+		print("PASS: a box off the van gets a rescue window, a flag and the hook, and is lost only when it runs out")
 	quit(_failures)
 
 

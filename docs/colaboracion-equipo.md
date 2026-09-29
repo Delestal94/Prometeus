@@ -1,11 +1,27 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-28
+> Última actualización: 2026-09-29
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
+
+## Aviso activo: N-213.3 gancho de rescate como suministro del depósito (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-213-rescue-hook`. Solo agrega; **ninguna firma cambia**, no se
+tocan archivos de Slatex y `vehicle.gd` sigue congelado:
+- `core/crew_progression.gd` (zona compartida): `SUPPLIES` suma `&"rescue_hook"` ($30). El panel del
+  depósito y la votación lo listan solos.
+- `gameplay/level_common.gd` (zona compartida): cuelga el nodo `RescueHook` del camión en cada par
+  (`World/Vehicle/RescueHook`, en `(-0.85, 1.6, 4.3)`: poste izquierdo de la puerta trasera). Slatex: si
+  el modelo nuevo del camión mueve esa puerta, hay que mover `RescueHook.LOCAL_POSITION`.
+- `gameplay/vehicle/rescue_hook.gd` (nuevo): `Interactable` que, con la puerta trasera abierta y las
+  manos libres, le da al pasajero la caja caída más cercana (≤ 7 m) con `DeliveryPackage.take_by()` en el
+  host. No da el mérito `rescued` al volver a subirla: `take_by()` solo lo marca si la caja no estaba
+  `is_loaded`, y una caja caída del estante lo sigue estando (pasa igual al levantarla a mano; es de
+  `package.gd`, de Slatex, si se quiere cambiar).
+- `translations/strings_world.csv`: clave `WORLD_HOOK_PROMPT`.
 
 ## Aviso activo: N-214.1 averías del camión, componente `VehicleFaults` (2026-09-28)
 
