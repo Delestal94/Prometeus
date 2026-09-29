@@ -616,7 +616,7 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_world_determinism` — el nivel entero construido dos veces con la misma semilla da
   las mismas posiciones de todo (ruta, decorado, jardines, depósito, cajas en los
   estantes), los mismos pedidos, códigos de estante y clima.
-- `test_world_quality` — cada nivel de calidad gráfica (Baja / Media / Alta) fija sombras,
+- `test_world_quality` — cada nivel de calidad gráfica (Baja / Media / Alta) fija MSAA (N-314), sombras,
   distancia de dibujado del decorado, partículas y escala 3D, se aplica en caliente y a lo
   que carga después, y se guarda con las opciones.
 - `test_leaderboard` — el top de puntajes local de `RunManager`: ordena,

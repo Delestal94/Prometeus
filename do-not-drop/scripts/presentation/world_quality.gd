@@ -9,7 +9,10 @@ class_name WorldQuality
 ##   - how far away the batched roadside dressing is still drawn
 ##     (DressingBatcher's visibility ranges, scaled);
 ##   - how many particles dust and rain emit (GPUParticles3D.amount);
-##   - the 3D render resolution (Viewport.scaling_3d_scale).
+##   - the 3D render resolution (Viewport.scaling_3d_scale);
+##   - multisample antialiasing (Viewport.msaa_3d, N-314): the low-poly
+##     silhouettes had no antialiasing at all. Low keeps it off and relies
+##     on its lower render scale; Medium 2x, High 4x.
 ## Not the number of plants: the dresser draws them from the session's
 ## shared RNG, so placing fewer on one machine would move every prop after
 ## them and every peer would see a different road.
@@ -18,9 +21,12 @@ enum Level { LOW, MEDIUM, HIGH }
 
 const NAMES: Array[String] = ["Baja", "Media", "Alta"]
 const PRESETS: Dictionary = {
-	Level.LOW: {"shadow_distance": 40.0, "range_scale": 0.55, "particle_scale": 0.35, "render_scale": 0.75},
-	Level.MEDIUM: {"shadow_distance": 65.0, "range_scale": 0.8, "particle_scale": 0.65, "render_scale": 0.9},
-	Level.HIGH: {"shadow_distance": 90.0, "range_scale": 1.0, "particle_scale": 1.0, "render_scale": 1.0},
+	Level.LOW: {"shadow_distance": 40.0, "range_scale": 0.55, "particle_scale": 0.35, "render_scale": 0.75,
+		"msaa": Viewport.MSAA_DISABLED},
+	Level.MEDIUM: {"shadow_distance": 65.0, "range_scale": 0.8, "particle_scale": 0.65, "render_scale": 0.9,
+		"msaa": Viewport.MSAA_2X},
+	Level.HIGH: {"shadow_distance": 90.0, "range_scale": 1.0, "particle_scale": 1.0, "render_scale": 1.0,
+		"msaa": Viewport.MSAA_4X},
 }
 ## Where each node's own full-quality value is kept, to scale from it.
 const BASE_RANGE_META: StringName = &"quality_base_range"
@@ -40,6 +46,7 @@ static func apply(tree: SceneTree, new_level: int) -> void:
 	if tree == null:
 		return
 	tree.root.scaling_3d_scale = setting("render_scale")
+	tree.root.msaa_3d = int(PRESETS[level]["msaa"]) as Viewport.MSAA
 	for node: Node in tree.root.find_children("*", "", true, false):
 		apply_to(node)
 
