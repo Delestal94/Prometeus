@@ -34,11 +34,14 @@ func _run() -> void:
 		_expect(dust.amount == roundi(100 * float(preset.particle_scale)), "%s: particles scaled to %d (%d)" % [name, roundi(100 * float(preset.particle_scale)), dust.amount])
 		_expect(is_equal_approx(dressing.visibility_range_end, 100.0 * float(preset.range_scale)), "%s: dressing drawn to %.0f m (%.0f)" % [name, 100.0 * float(preset.range_scale), dressing.visibility_range_end])
 		_expect(is_equal_approx(root.scaling_3d_scale, preset.render_scale), "%s: 3D rendered at %.0f%% (%.2f)" % [name, float(preset.render_scale) * 100.0, root.scaling_3d_scale])
+		_expect(root.msaa_3d == int(preset.msaa), "%s: MSAA %d (%d)" % [name, int(preset.msaa), root.msaa_3d])
 	# Lower quality really is lighter, level by level.
 	var low: Dictionary = WorldQuality.PRESETS[WorldQuality.Level.LOW]
 	var high: Dictionary = WorldQuality.PRESETS[WorldQuality.Level.HIGH]
 	for key: String in ["shadow_distance", "range_scale", "particle_scale", "render_scale"]:
 		_expect(float(low[key]) < float(high[key]), "Low trims %s below high" % key)
+	_expect(int(high.msaa) > int(low.msaa) and int(high.msaa) != Viewport.MSAA_DISABLED,
+		"High smooths the low-poly edges with MSAA; Low saves it (N-314)")
 
 	# What loads after the change gets the level too.
 	settings.set(&"graphics_quality", WorldQuality.Level.MEDIUM)

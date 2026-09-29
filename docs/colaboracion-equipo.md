@@ -24,6 +24,15 @@ literales en español por `tr("CLAVE")` (113 claves nuevas en `strings_ui.csv`, 
 - Slatex: si agregás un texto visible en `gameplay/`, `core/` o `presentation/`, va por `tr()`;
   `test_ui_translations` ahora lo exige (con una lista de excepciones al principio del test).
 
+## Aviso activo: N-118 Endless puntúa la carga (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-118-endless-cargo-score`. Solo agrega; **ninguna firma cambia**:
+- `core/run_manager.gd` (zona compartida): `_endless_score()` nuevo. El puntaje de Endless es el
+  promedio de metros que sobrevivió cada caja; con todo intacto da la distancia de siempre, así que
+  el leaderboard viejo sigue comparable. `_on_package_ruined()` guarda `ruined_at_m` en la entrada
+  de `cargo`. `results` tiene las mismas claves. Slatex: si el panel de resultados de Endless dice
+  "puntaje = distancia", ya no es así.
+
 ## Aviso activo: N-212 voz por proximidad, primer tramo (2026-09-29)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-212-proximity-voice`. Solo agrega; **ninguna firma cambia**:
