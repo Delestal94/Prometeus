@@ -276,6 +276,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_carry_prediction.gd
 <godot> --headless --path do-not-drop --script res://tests/test_net_bandwidth_budget.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
+<godot> --headless --path do-not-drop --script res://tests/test_proximity_voice.gd
 <godot> --headless --path do-not-drop --script res://tests/test_safe_json.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_stress.gd
@@ -503,6 +504,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   de audio de verdad, que los valores se recorten en vez de dejar el juego
   mudo o imposible de mirar, que `use_card` sea reasignable y que sobrevivan
   a cerrar el juego.
+- `test_proximity_voice` — voz por proximidad (N-212), con un Steam falso: con
+  el interruptor general apagado el micrófono nunca se abre; pulsar para hablar
+  graba solo mientras se aprieta la tecla, micrófono abierto sin tecla, LAN sin
+  voz, y que un compañero silenciado o un paquete gigante no lleguen al
+  decodificador.
 - `test_cards` — que solo se repartan Rescate, Descuento y Re-voto; que cada
   una se consuma al funcionar y que Rescate no se pierda si no hay evento.
 - `test_supply_vote` — mayoría, desempate por la oferta más barata y compra

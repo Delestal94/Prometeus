@@ -65,8 +65,21 @@ var impact_effects: bool = true:
 		impact_effects = value
 		_save()
 
-const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card"]
-const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G}
+## Proximity voice (N-212, proximity_voice.gd). The general switch: while it
+## is off the microphone is never opened, whatever key is held. Off by
+## default until playback (N-212.2) and its Options toggle (N-212.3) land.
+var voice_chat_enabled: bool = false:
+	set(value):
+		voice_chat_enabled = value
+		_save()
+## Push-to-talk is the default (critico-diseno, N-704.3); off means open mic.
+var voice_push_to_talk: bool = true:
+	set(value):
+		voice_push_to_talk = value
+		_save()
+
+const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card", &"voice_talk"]
+const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G, &"voice_talk": KEY_Z}
 var key_bindings: Dictionary = DEFAULT_KEY_BINDINGS.duplicate():
 	set(value):
 		key_bindings = value.duplicate()
@@ -244,6 +257,8 @@ func reset_to_defaults() -> void:
 	colorblind_palette = false
 	menu_text_scale = 1.0
 	sound_subtitles = false
+	voice_chat_enabled = false
+	voice_push_to_talk = true
 	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
 	set_language(LANGUAGE_DEFAULT)
 	_loading = false
@@ -334,6 +349,8 @@ func _load() -> void:
 	colorblind_palette = bool(config.get_value(SECTION, "colorblind_palette", false))
 	menu_text_scale = float(config.get_value(SECTION, "menu_text_scale", 1.0))
 	sound_subtitles = bool(config.get_value(SECTION, "sound_subtitles", false))
+	voice_chat_enabled = bool(config.get_value(SECTION, "voice_chat_enabled", false))
+	voice_push_to_talk = bool(config.get_value(SECTION, "voice_push_to_talk", true))
 	language = String(config.get_value(SECTION, "language", LANGUAGE_DEFAULT))
 	if language not in SUPPORTED_LANGUAGES:
 		language = LANGUAGE_DEFAULT
@@ -375,6 +392,8 @@ func _save() -> void:
 	config.set_value(SECTION, "colorblind_palette", colorblind_palette)
 	config.set_value(SECTION, "menu_text_scale", menu_text_scale)
 	config.set_value(SECTION, "sound_subtitles", sound_subtitles)
+	config.set_value(SECTION, "voice_chat_enabled", voice_chat_enabled)
+	config.set_value(SECTION, "voice_push_to_talk", voice_push_to_talk)
 	config.set_value(SECTION, "language", language)
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
