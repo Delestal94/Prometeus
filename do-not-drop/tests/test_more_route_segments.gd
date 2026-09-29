@@ -151,6 +151,18 @@ func _run() -> void:
 	var train_chug: AudioStreamPlayer3D = crossing.get(&"_train_chug")
 	_expect(train_horn.stream == SynthAudio.train_horn() and train_chug.stream == SynthAudio.train_chug_loop(),
 		"The train has its own horn and chugging loop, not silence while it crosses")
+	# Tunnels (2026-09-29): a rigid portal at each end of the track, whose
+	# mouths face each other, and the train comes out of one and goes into
+	# the other instead of popping up in the open.
+	for portal_name: String in ["TunnelPortalNear", "TunnelPortalFar"]:
+		var portal: Node3D = crossing.get_node_or_null(NodePath(portal_name))
+		_expect(portal != null and portal.has_meta(&"rigid"), "%s: the imported portal, kept rigid on the terrain" % portal_name)
+	var mouths: Array[Dictionary] = crossing.tunnel_mouths()
+	_expect(mouths.size() == 2 and (mouths[0].dir as Vector2).dot(mouths[1].dir as Vector2) < -0.99,
+		"Two tunnel mouths, one at each end, both leading away from the road")
+	var first_train_x: float = INF
+	var last_train_x: float = -INF
+	var hidden_in_bore: bool = false
 	var arm_down_seen: bool = false
 	var chug_seen_playing: bool = false
 	var chug_seen_stopped_after: bool = false
@@ -158,12 +170,21 @@ func _run() -> void:
 		await physics_frame
 		seen[crossing.state] = true
 		if crossing.state == RailCrossingSegment.State.TRAIN:
+			var train_x: float = crossing.get(&"_train_x")
+			if first_train_x == INF:
+				first_train_x = train_x
+				hidden_in_bore = not (crossing.get_node(^"TrainCar3") as Node3D).visible
+			last_train_x = train_x
 			arm_down_seen = arm_down_seen or absf(arm.rotation.z) < 0.05
 			chug_seen_playing = chug_seen_playing or train_chug.playing
 		elif chug_seen_playing:
 			chug_seen_stopped_after = chug_seen_stopped_after or not train_chug.playing
 	_expect(seen.has(RailCrossingSegment.State.WARNING) and seen.has(RailCrossingSegment.State.TRAIN) and crossing.state == RailCrossingSegment.State.DONE,
 		"Warning, train, done (states seen: %s, now %d)" % [str(seen.keys()), crossing.state])
+	_expect(first_train_x < -RailCrossingSegment.PORTAL_X - 1.0 and hidden_in_bore,
+		"The train starts inside the near tunnel, its last car out of sight beyond the bore (%.1f)" % first_train_x)
+	_expect(last_train_x - 3.0 * RailCrossingSegment.CAR_SPACING > RailCrossingSegment.PORTAL_X,
+		"...and is gone only once the last car is inside the far one (%.1f)" % last_train_x)
 	_expect(arm_down_seen and arm is StaticBody3D, "The arms are down across the road while the train passes, and solid")
 	_expect(absf(absf(arm.rotation.z) - PI * 0.5) < 0.05, "The arms are back up once it's gone")
 	_expect(chug_seen_playing, "The chugging loop actually plays while the train is on the tracks")
@@ -184,7 +205,8 @@ func _run() -> void:
 	_expect(absf(joined_arm.rotation.z) < 0.05 and first_car.visible, "Joining mid-train: arms already down, train already on the tracks")
 	_expect((joined.get(&"_train_chug") as AudioStreamPlayer3D).playing,
 			"...and the chugging already going, not silence until the next state change")
-	for _i: int in range(60 * 6):
+	# 7 s: the last car has to get well into the far tunnel before it's over.
+	for _i: int in range(60 * 7):
 		await physics_frame
 	_expect(joined.state == RailCrossingSegment.State.DONE and absf(absf(joined_arm.rotation.z) - PI * 0.5) < 0.05, "...and it finishes the cycle from there (now %d)" % joined.state)
 	_expect(not (joined.get(&"_train_chug") as AudioStreamPlayer3D).playing,

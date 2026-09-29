@@ -1,6 +1,7 @@
 extends Node3D
 ## One world-space height field, shared by rendering, physics and prop placement.
 ## Sparse square tiles cannot overlap at bends, even if the route doubles back.
+const RiverFalls = preload("res://scripts/gameplay/route/route_river_falls.gd")
 const TILE: float = 32.0
 const STEP: float = 2.0
 const HALO: float = 64.0
@@ -58,6 +59,19 @@ const RIVER_BANK_WIDTH: float = 60.0
 ## blends back out over FLAT_ZONE_BLEND -- the depot's footprint and yard
 ## (route.gd start_yard), so no hill ever pushes through its floor or walls.
 var flat_zones: Array[Rect2] = []
+## Railway tunnels (RailCrossingSegment.tunnel_mouths(), levelled by
+## route.gd): {"at": Vector2 the portal's facade on the track axis, "dir":
+## Vector2 into the hill, "level": track height, "bore_half", "bore_length",
+## "crown": the bore's size, "face_half": the facade's half-width, "height":
+## how high the hill stands over the track}. Behind each portal the ground
+## rises into a hill (_tunnel_hill()), sloping down toward the road beside the
+## cutting the portal's wing walls hold back, and the terrain leaves a hole
+## wherever it would cross the bore (_in_tunnel_bore()): a height field can't
+## arch over a tunnel, so the bore is the model's and the ground just gets
+## out of its way.
+var tunnels: Array[Dictionary] = []
+## The wing walls' flare (build_rail_crossing.py WING_ANGLE).
+const TUNNEL_WING_ANGLE: float = deg_to_rad(25.0)
 const FLAT_ZONE_BLEND: float = 10.0
 const FLAT_ZONE_HEIGHT: float = -0.02
 const HILL_FLANK: float = 55.0
@@ -139,10 +153,51 @@ func _natural_height(p: Vector2, with_ridge: bool = true) -> float:
 	for pad: Vector3 in pads:
 		var weight: float = 1.0 - smoothstep(5.0, 11.0, p.distance_to(Vector2(pad.x, pad.z)))
 		height = lerpf(height, pad.y, weight)
+	for tunnel: Dictionary in tunnels:
+		height = maxf(height, lerpf(height, float(tunnel.level) + float(tunnel.height), _tunnel_hill(tunnel, p, road.x)))
 	for zone: Rect2 in flat_zones:
 		var outside := Vector2(maxf(maxf(zone.position.x - p.x, p.x - zone.end.x), 0.0), maxf(maxf(zone.position.y - p.y, p.y - zone.end.y), 0.0))
 		height = lerpf(height, FLAT_ZONE_HEIGHT, 1.0 - smoothstep(0.0, FLAT_ZONE_BLEND, outside.length()))
 	return height
+
+
+## 0..1: how much of `tunnel`'s hill stands at `p`. Nothing in front of the
+## facade or inside the wing walls (the cutting), rising within a few metres
+## behind them, lower toward the road so the hill's front meets the wing walls
+## as they step down, fading into the landscape round about and never near
+## any road.
+func _tunnel_hill(tunnel: Dictionary, p: Vector2, road_distance: float) -> float:
+	var dir: Vector2 = tunnel.dir
+	var offset: Vector2 = p - (tunnel.at as Vector2)
+	var along: float = offset.dot(dir)
+	var side: float = absf(offset.dot(Vector2(-dir.y, dir.x))) - float(tunnel.face_half)
+	# How far into the hill: behind the facade, or out past a wing wall.
+	var inside: float = maxf(along, along * sin(TUNNEL_WING_ANGLE) + side * cos(TUNNEL_WING_ANGLE))
+	return (smoothstep(0.8, 3.8, inside) * smoothstep(-10.0, 1.0, along)
+		* (1.0 - smoothstep(18.0, 36.0, offset.length())) * smoothstep(16.0, 26.0, road_distance))
+
+
+## Whether the terrain cell whose first corner is `key` would show inside a
+## tunnel's bore: some corner lies over the bore (behind the facade) and the
+## cell is neither flat track bed nor high enough to clear the bore's roof.
+## Those cells are left out, so the bore model shows through.
+func _in_tunnel_bore(key: Vector2i) -> bool:
+	for tunnel: Dictionary in tunnels:
+		var dir: Vector2 = tunnel.dir
+		var over: bool = false
+		var low: float = INF
+		var high: float = -INF
+		for corner: Vector2i in [key, key + Vector2i(1, 0), key + Vector2i(0, 1), key + Vector2i(1, 1)]:
+			var offset: Vector2 = Vector2(corner) * STEP - (tunnel.at as Vector2)
+			var along: float = offset.dot(dir)
+			if along >= 0.0 and along <= float(tunnel.bore_length) + 1.0 					and absf(offset.dot(Vector2(-dir.y, dir.x))) < float(tunnel.bore_half) + 0.4:
+				over = true
+			var height: float = _sample(corner).x - float(tunnel.level)
+			low = minf(low, height)
+			high = maxf(high, height)
+		if over and high > 0.25 and low < float(tunnel.crown) + 0.6:
+			return true
+	return false
 
 
 ## A deterministic wobble for `river`, purely a function of its own fixed
@@ -186,7 +241,7 @@ func _river_factor(river: Dictionary, p: Vector2) -> float:
 	# ground. Straight right under the road, it meanders and changes width
 	# further out, so from the bank it reads as a river, not a canal.
 	var free: float = smoothstep(8.0, 30.0, out)
-	var centre: float = (sin(v * 0.09 + phase) * 5.5 + sin(v * 0.21 + phase * 1.7) * 1.5) * free
+	var centre: float = river_centre(river, v)
 	var full_width: float = float(river.get("full_width", RIVER_FULL_WIDTH))
 	var bank_width: float = maxf(float(river.get("bank_width", RIVER_BANK_WIDTH)), full_width + 1.0)
 	# Where it runs out, wobbling from one side of the channel to the other,
@@ -202,6 +257,15 @@ func _river_factor(river: Dictionary, p: Vector2) -> float:
 	# Fades only once it's narrowed: the water ends in a point, not a bulb.
 	var lengthwise: float = 1.0 - smoothstep(maxf(full_width, end_reach * 0.8), end_reach, out)
 	return across * lengthwise
+
+
+## Where the channel's (meandered) centreline sits along the road, measured
+## from the bridge's middle, `v` metres out from the road (see
+## _river_factor()). Also how RiverFalls follows the water out to its ends.
+func river_centre(river: Dictionary, v: float) -> float:
+	var phase: float = _river_phase(river)
+	var free: float = smoothstep(8.0, 30.0, absf(v))
+	return (sin(v * 0.09 + phase) * 5.5 + sin(v * 0.21 + phase * 1.7) * 1.5) * free
 
 
 ## How far the ground drops for a river at `p`, 0 outside every registered
@@ -280,6 +344,9 @@ func build() -> void:
 		_build_tile(key)
 	for river: Dictionary in rivers:
 		_build_river_water(river)
+		# A rocky waterfall at both ends, so the water comes from somewhere
+		# and goes somewhere instead of sitting in an isolated pool.
+		RiverFalls.build(self, river, float(river.get("bank_width", RIVER_BANK_WIDTH)) + RIVER_MAX_DRIFT)
 
 
 ## The water over a carved riverbed -- one mesh per river, built once here
@@ -374,6 +441,11 @@ func _river_water_height(river: Dictionary, p: Vector2) -> float:
 	return _natural_height(p, false) - float(river.depth) * RIVER_FILL
 
 
+## Public alias of _river_water_height() for RiverFalls.
+func river_water_height(river: Dictionary, p: Vector2) -> float:
+	return _river_water_height(river, p)
+
+
 func _build_tile(key: Vector2i) -> void:
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
@@ -400,6 +472,8 @@ func _build_tile(key: Vector2i) -> void:
 			colors.append(Color(path_weight, 0.0, 0.0))
 	for z: int in range(CELLS):
 		for x: int in range(CELLS):
+			if not tunnels.is_empty() and _in_tunnel_bore(key * CELLS + Vector2i(x, z)):
+				continue
 			var a: int = z * (CELLS + 1) + x
 			indices.append_array(PackedInt32Array([a, a + 1, a + CELLS + 1, a + 1, a + CELLS + 2, a + CELLS + 1]))
 	var arrays: Array = []
@@ -480,8 +554,10 @@ func conform_geometry(node: Node, ignore_rivers: bool = false) -> void:
 					child.transform = node.transform
 		return
 	# Parts that move later (a barrier arm, a train car) ride the terrain as
-	# rigid pieces: warping their vertices would bend them out of shape.
-	if node is Area3D or node is Label3D or (node is Node3D and node.has_meta(&"animated")):
+	# rigid pieces: warping their vertices would bend them out of shape. So
+	# does anything flagged &"rigid" (a tunnel portal and the track into it:
+	# the hill behind would lift the back of them).
+	if node is Area3D or node is Label3D or (node is Node3D and (node.has_meta(&"animated") or node.has_meta(&"rigid"))):
 		var p: Vector3 = to_local(node.global_position)
 		node.global_position.y += height_without_rivers(p) if ignore_rivers else height_at(p)
 		return

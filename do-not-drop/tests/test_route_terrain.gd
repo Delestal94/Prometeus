@@ -103,6 +103,43 @@ func _run() -> void:
 	expect(bare.is_empty(), "Laid on the terrain, the road barrier keeps its materials (bare: %s)" % str(bare))
 	terrain.free()
 	await process_frame
+	await _check_tunnel()
 	if failures == 0:
-		print("PASS: %d terrain rays, seams, hills, boundary and on-foot recovery" % checks)
+		print("PASS: %d terrain rays, seams, hills, boundary, on-foot recovery and a railway tunnel's hill" % checks)
 	quit(failures)
+
+
+## A level crossing's tunnel (RouteTerrain.tunnels, 2026-09-29): a hill rises
+## behind the portal, the cutting in front stays level with the track, and the
+## ground leaves a hole where it would cross the bore -- a vertical ray over
+## the bore just behind the facade finds no ground, one further in, over the
+## bore's roof, does.
+func _check_tunnel() -> void:
+	var terrain := Terrain.new()
+	root.add_child(terrain)
+	terrain.add_span(Vector3(0, 0, 20), Vector3(0, 0, -120))
+	var level: float = terrain.base_height(Vector2(0.0, -40.0))
+	var x: float = -42.0
+	while x <= 42.0:
+		terrain.pads.append(Vector3(x, level, -40.0))
+		x += 7.0
+	var crown: float = RailCrossingSegment.BORE_CROWN
+	terrain.tunnels.append({"at": Vector2(42.0, -40.0), "dir": Vector2(1.0, 0.0), "level": level,
+		"bore_half": RailCrossingSegment.BORE_HALF_WIDTH, "bore_length": RailCrossingSegment.BORE_LENGTH,
+		"crown": crown, "face_half": RailCrossingSegment.PORTAL_HALF_WIDTH,
+		"height": RailCrossingSegment.PORTAL_HEIGHT + 3.0})
+	terrain.build()
+	await physics_frame
+	await physics_frame
+	var behind: float = terrain.height_at(Vector3(52.0, 0.0, -40.0)) - level
+	expect(behind > crown + 1.0, "A hill stands over the tunnel behind the portal (%.1f m)" % behind)
+	var cutting: float = terrain.height_at(Vector3(37.0, 0.0, -40.0)) - level
+	expect(absf(cutting) < 0.3, "The cutting in front of the portal is level with the track (%.2f m)" % cutting)
+	var state := root.world_3d.direct_space_state
+	var near := PhysicsRayQueryParameters3D.create(Vector3(45.0, level + 30.0, -40.0), Vector3(45.0, level - 2.0, -40.0), 1)
+	expect(state.intersect_ray(near).is_empty(), "No ground cuts through the bore behind the facade")
+	var far := PhysicsRayQueryParameters3D.create(Vector3(52.0, level + 30.0, -40.0), Vector3(52.0, level - 2.0, -40.0), 1)
+	var roof: Dictionary = state.intersect_ray(far)
+	expect(not roof.is_empty() and roof.position.y > level + crown, "The hill closes over the bore further in")
+	terrain.free()
+	await process_frame
