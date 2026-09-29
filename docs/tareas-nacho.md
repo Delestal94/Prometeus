@@ -1,39 +1,5 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-212, primer tramo: captura y envío de voz por Steam,
-> LAN sin voz, interruptor general y pulsar para hablar en los ajustes). Antes, el mismo día: (N-214.3c: el punto del espejo y el celular revisados en cada
-> variante y pintura del camión; N-214 cerrada). Antes, el mismo día: (N-214.4: la pantalla de
-> resultados cuenta cómo terminó cada avería del camión, "Espejo reemplazado por un celular"). Antes:
-> (tareas nuevas del usuario en el hito M7: N-115 correr, N-116 estacionamiento como parada final,
-> N-312 personaje flaco y alto y N-606 el diario del día siguiente, diseñado en
-> `docs/diario-final.md`). Antes, el mismo día: (pruebas y trabajo pendiente de red y rendimiento en
-> N-215 a N-221; antes, el mismo día: auditoría de rendimiento: Endless fusiona cada tramo al
-> generarlo y
-> comparte sus materiales; antes, el mismo día: red por Steam tras playtest: el host mandaba 2-5 veces el límite
-> de Steam y el cliente veía el mundo cada vez más viejo; `care_state` solo al cambiar, sync a 60 Hz
-> fijos, caja predicha en las manos, Nagle apagado; investigación en `docs/investigacion-red.md`;
-> menú sin la tarjeta fantasma y sin DOF en Compatibility). Antes, el mismo día: (N-214.3b: un pasajero
-> sostiene el celular como espejo mientras no haya repuesto; quien se une a mitad del recorrido recibe
-> las averías; faltan los resultados, N-214.4).
-> Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
-> con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
-> espejo y los resultados). Antes, el mismo día: (túneles de tren en las dos puntas de la vía del paso a
-> nivel; repaso de las cascadas). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
-> espejo del conductor se cae a la ruta; faltan arreglos y resultados). Antes, el mismo día: (N-213.3: gancho de rescate como suministro del depósito; N-213 queda
-> cerrada). Antes, el mismo día: (N-213: test de red con dos clientes que agarran la misma caja; queda el
-> gancho N-213.3). Antes, el 2026-09-28: (cascadas con rocas en las dos puntas del río de cada
-> puente angosto). Antes, el mismo día: (N-214.1: componente `VehicleFaults` que decide en el host las averías
-> del camión por golpe fuerte, una por entrega; faltan efectos, arreglos y resultados). Antes, el mismo día: (N-213.4: abandonar la caja caída cierra su pedido como
-> "Perdido" sin terminar la partida; falta el gancho). Antes, el mismo día: (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
-> con cartel encima y se puede volver a subir; faltan el gancho y el pedido "Perdido"). Antes, el mismo día: (N-505 cerrada: la voz sintetizada de cada frase, con tono por
-> color de jugador). Antes, el mismo día: (N-505 parcial: rueda de ocho frases, enfriamiento de 1,5 s en el
-> host y la frase en el HUD del conductor; falta la voz sintetizada). Antes, el mismo día: (N-704 cerrada: diferencial corregido en los docs y veredictos de
-> `critico-diseno` en N-212, N-214 y N-112 — esta última en contra). Antes, el mismo día: (hito M6: 15 tareas tomadas de `analisis-competencia-backseat-rv.md`,
-> asignadas a Nacho aunque varias tocan el dominio de Slatex; N-907 nace pospuesta ⏸). Antes, el mismo día:
-> N-901 y todo lo de publicar/promocionar pospuesto a la iteración de lanzamiento. Antes: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
-> M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
-> N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
-> una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
 > Reescrita entera con el mismo formato que `docs/tareas-slatex.md`: las tareas 1-127 de la
 > versión anterior están cerradas o reubicadas (ver "Qué pasó con la lista anterior" al final).
 > Esta lista sigue los 9 pilares de producción y **solo tiene trabajo que Nacho puede terminar
@@ -191,8 +157,10 @@ archivos de Slatex: aviso en `colaboracion-equipo.md` en el mismo PR, como siemp
 - [x] Lint obligatorio en la protección de `main` (el #39 entró en rojo) y `test_proximity_voice` en verde.
 - [x] Auto-merge solo para ramas del repo (nunca forks). PR #40. El agente revisor que sumaba se sacó
   en el #46: gastaba el cupo del plan en cada PR.
-- [ ] **Manual (Nacho):** borrar los 7 worktrees extra, las ramas ya integradas y el stash (respaldo de lo
-  útil en `../Prometeus-stash-backup/`). Todo está en `main`; se verificó rama por rama.
+- [x] Worktrees extra, 26 ramas locales y 35 remotas ya integradas, y el stash, borrados (2026-09-29;
+  respaldo de lo útil del stash en `../Prometeus-stash-backup/`).
+- [x] `main` ya no exige la rama al día ("Require branches to be up to date" apagado): los PRs
+  encolados se mezclan solos sin actualizarlos a mano; CI corre igual sobre `main` en cada push.
 - [ ] **Manual (Nacho + Slatex):** purgar `builds/` del historial (`git filter-repo --path builds
   --invert-paths`), force-push con la protección abierta un momento, y que todos vuelvan a clonar.
   `.git` baja de ~474 MB. Después, actualizar los hashes citados en los docs con el `commit-map`.
@@ -231,22 +199,24 @@ pasajero es espectador.
 - Abierto (decisión del equipo): qué trampas salen en solo (el único jugador maneja y nadie atiende
   cajas en ruta) y si el conductor aguanta leer el código además de averías y espejo.
 
-### N-805 · Todo texto visible pasa por `tr()`, y el test lo ve — A · `Opus 5.5 · high` · Aviso: sí (`package_care.gd`, `hud_results.gd`)
-- [ ] `test_ui_translations` recorre también `scripts/gameplay` y `scripts/core` (lista de excepciones
+### N-805 · Todo texto visible pasa por `tr()`, y el test lo ve — A · `Opus 5.5 · high` · Aviso: sí (`package_care.gd`, `hud_results.gd`) · **[x] PR #44**
+- [x] `test_ui_translations` recorre también `scripts/gameplay` y `scripts/core` (lista de excepciones
   explícita). Hoy solo mira `scripts/ui` y queda verde con 24 literales en español en `package_care.gd`.
-- [ ] `package_care.gd` a claves `HUD_CARE_*`; `network_manager._fail()` y los `reason` de
+- [x] `package_care.gd` a claves `HUD_CARE_*` (113 claves en total); `network_manager._fail()` y los `reason` de
   `level_base.gd` pasan a claves (`hud_results` ya hace `tr(reason)`). Continúa N-211 fase 7b.
+- [ ] Queda: `display_name` de los `.tres`, "MULTIJUGADOR" en `hud_pause.gd`, "GARAJE" en `main_menu.gd`, y que
+  los textos que arma el host llegan al cliente en el idioma del host.
 
-### N-118 · Endless también puntúa la carga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`)
+### N-118 · Endless también puntúa la carga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`) · **[x] PR #42**
 `run_manager.gd:692` ("never subtracted"): el modo de los récords ignora el núcleo del juego. Hecho
 cuando el puntaje es distancia + bonus por caja intacta al final (y cero por perdida), la tabla de
 Endless se renombra para no mezclar récords viejos, y un test reconstruye la fórmula.
 
-### N-119 · Jugar solo no es la ruta más vacía — A · `Opus 5.5 · high` · Aviso: no
-`route_planner.gd:233`: solo = 1 casa y 1400 m. PR #43 (mínimo 2 casas) está **en borrador**: en solo
-el único jugador maneja y nadie cuida las cajas en ruta, así que una segunda caja es una pérdida casi
-segura, no contenido. Antes de mergear: decidir qué trampas salen en solo (p. ej. solo las que dependen
-del manejo: Frágil, Equilibrio) y alinear `UnlockManager.locked_traps()` (`maxi(crew - 1, 1)`).
+### N-119 · Jugar solo no es la ruta más vacía — A · `Opus 5.5 · high` · Aviso: no · **[x] PR #43**
+Hecho: mínimo 2 casas (`RoutePlanner.MIN_CREW_HOUSES`) y, en solo, los pedidos salen solo de trampas que
+se protegen manejando (`depot.gd` `SOLO_TRAPS`: Frágil y Equilibrio), porque el único jugador maneja y
+nadie cuida cajas en ruta. `UnlockManager.locked_traps()` guarda cajas para 2 casas. Tests
+`test_house_assignment`, `test_depot`, `test_cargo_overboard`.
 
 ### N-222 · Si el host se va, la partida termina con resultados — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `hud_results.gd`)
 Corrección: el cliente ya ve una pantalla de "desconectado" que dice que el anfitrión se fue
@@ -260,7 +230,8 @@ el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el 
 torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
 
 ### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
-- [ ] MSAA 2× (preset Alto/Medio), comparado en captura contra `render_scale` del preset Bajo.
+- [x] MSAA por preset: Baja sin MSAA, Media 2×, Alta 4× (`WorldQuality`, PR #45). Falta compararlo en
+  captura con `revisor-visual`.
 - [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
   se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
 
@@ -289,10 +260,12 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
 tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
 
-### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`)
-- [ ] Avisos de más de una semana de `colaboracion-equipo.md` a `docs/avisos/archivo.md`.
-- [ ] El encabezado "Última actualización" de las listas: una línea, sin "Antes, el mismo día".
-- [ ] La lista de tests del README a `docs/tests.md`.
+### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
+- [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
+  archivo nuevo en `docs/avisos/` (`colaboracion-equipo.md` quedó en ~100 líneas de política).
+- [x] Sin encabezado "Última actualización" en las listas (la fecha la tiene git; todos los PRs lo editaban).
+- [x] Sin lista de tests en el README: cada test se describe en su encabezado y `tools/list-tests.sh`
+  arma el índice; CI falla si uno no tiene descripción (`--missing`).
 
 ## 1. Game Design
 

@@ -34,6 +34,9 @@ jobs:
       - name: Lint against baseline
         run: bash tools/lint.sh
 
+      - name: Every test describes itself in its header
+        run: bash tools/list-tests.sh --missing
+
   headless:
     name: Tests headless (Godot 4.7.2)
     runs-on: ubuntu-latest
