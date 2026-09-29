@@ -21,6 +21,13 @@ func _initialize() -> void:
 	_expect(is_instance_valid(menu), "The menu scene instantiates without error")
 	_expect(network.get(&"transport") == NetworkManager.Transport.AUTO,
 		"Starts on AUTO, same as everywhere else in the project")
+	var brand_logo := menu.find_child("BrandLogo", true, false) as TextureRect
+	_expect(brand_logo != null and brand_logo.texture != null
+			and brand_logo.texture.get_width() == 2048 and brand_logo.texture.get_height() == 1024,
+		"The main menu uses the 2048 px image wordmark")
+	var stacked_logo := load("res://assets/ui/logo/tx_ui_logo_stacked_2048.png") as Texture2D
+	_expect(stacked_logo != null and stacked_logo.get_width() == 2048 and stacked_logo.get_height() == 2048,
+		"The square stacked logo is ready for store assets")
 
 	# This test only checks which transport each entry point picks, not
 	# what happens once a session is actually ready -- and Steam really is

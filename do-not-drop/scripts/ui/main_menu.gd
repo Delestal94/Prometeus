@@ -32,6 +32,7 @@ const RED: Color = UiTheme.RED
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const ENDLESS_LEVEL_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
 const MENU_ART: Texture2D = preload("res://assets/ui/backgrounds/tx_ui_menu_background_1920.png")
+const MENU_LOGO: Texture2D = preload("res://assets/ui/logo/tx_ui_logo_wordmark_2048.png")
 const PROGRESS_PANEL_SCRIPT := preload("res://scripts/ui/progress_panel.gd")
 const TUTORIAL_PANEL_SCRIPT := preload("res://scripts/ui/tutorial_panel.gd")
 const COSMETICS_PANEL_SCRIPT := preload("res://scripts/ui/cosmetics_panel.gd")
@@ -229,7 +230,14 @@ func _build_brand() -> void:
 	brand.add_theme_constant_override("separation", 14)
 	brand.position = Vector2(64, 48)
 	add_child(brand)
-	UiTheme.logo(brand, 78)
+	var logo := TextureRect.new()
+	logo.name = "BrandLogo"
+	logo.texture = MENU_LOGO
+	logo.custom_minimum_size = Vector2(420, 210)
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	brand.add_child(logo)
 	var chips := HBoxContainer.new()
 	chips.add_theme_constant_override("separation", 10)
 	brand.add_child(chips)

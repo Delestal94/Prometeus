@@ -246,52 +246,6 @@ static func chip(parent: Node, text: String, color: Color = WHITE, font_size: in
 	return node
 
 
-## The game's logo, built from type so it scales and localises: "TAKE MY"
-## over "PACKAGE" on a strip of yellow tape, both slightly off-kilter.
-static func logo(parent: Node, size: int = 64) -> VBoxContainer:
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", -int(size * 0.18))
-	parent.add_child(column)
-	var top_holder := MarginContainer.new()
-	_add_tilted(column, top_holder, -3.0)
-	_logo_line(top_holder, "TAKE MY", size, PAPER)
-	var tape := PanelContainer.new()
-	tape.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var style := StyleBoxFlat.new()
-	style.bg_color = YELLOW
-	style.border_color = INK
-	style.set_border_width_all(OUTLINE)
-	style.set_corner_radius_all(6)
-	style.shadow_color = INK
-	style.shadow_size = 1
-	style.shadow_offset = Vector2(0, SHADOW)
-	style.content_margin_left = int(size * 0.22)
-	style.content_margin_right = int(size * 0.22)
-	style.content_margin_top = int(size * 0.02)
-	style.content_margin_bottom = int(size * 0.06)
-	tape.add_theme_stylebox_override("panel", style)
-	_add_tilted(column, tape, -2.0)
-	_logo_line(tape, "PACKAGE", int(size * 1.1), INK, false)
-	return column
-
-
-static func _logo_line(parent: Node, text: String, size: int, color: Color, outlined: bool = true) -> Label:
-	var node := Label.new()
-	node.text = text
-	node.add_theme_font_override("font", display_font())
-	register_font_size(node, size, &"font_size", parent)
-	node.add_theme_color_override("font_color", color)
-	if outlined:
-		node.add_theme_color_override("font_outline_color", INK)
-		node.add_theme_constant_override("outline_size", maxi(8, size / 6))
-		node.add_theme_color_override("font_shadow_color", INK)
-		node.add_theme_constant_override("shadow_offset_x", 0)
-		node.add_theme_constant_override("shadow_offset_y", maxi(4, size / 12))
-		node.add_theme_constant_override("shadow_outline_size", maxi(8, size / 6))
-	parent.add_child(node)
-	return node
-
-
 ## Adds `child` to `parent` rotated by `degrees` around its own centre.
 ## Containers reset a child's rotation every time they lay it out, so the
 ## tilted piece sits inside a plain Control that only reserves its space (and

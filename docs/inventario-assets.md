@@ -1,6 +1,6 @@
 # Inventario de assets — Take My Package
 
-> Última actualización: 2026-09-28 (S-309: UI, personajes y paquetes verificados contra el código)
+> Última actualización: 2026-09-28 (S-306: logo integrado; S-309: UI, personajes y paquetes verificados)
 > Es **la lista** de assets del juego: qué existe, qué falta integrar y qué falta crear.
 > Cuando se crea o se integra algo, se actualiza acá. Complementa
 > `docs/especificaciones-visuales.md` (qué mejorar visualmente) y
@@ -38,7 +38,7 @@
 | Ícono de la app | `icon.png`, `ui/icons/tx_ui_app_icon_1024.png` | ✅ | `config/icon`. |
 | Ícono del .exe | `ui/icons/app_icon.ico` | ✅ | `export_presets.cfg` → `application/icon`. |
 | Íconos de trampa (×7) | `ui/icons/tx_ui_trap_{fragile,balance,growing_weight,noisy,liquid,explosive,hostile}_256.png` | ✅ | Un ícono low-poly transparente por trampa; en el HUD, al lado de cada paquete de la carga (se apagan si el paquete se pierde). |
-| Logo del juego (wordmark) | `UiTheme.logo()` | 🟡 | Armado con tipografía (Lilita One + cinta amarilla) en menú. Falta pasarlo a imagen para el splash, el ícono y Steam. |
+| Logo del juego (wordmark) | `ui/logo/tx_ui_logo_{wordmark,stacked}_2048.png` | ✅ | Wordmark 2048×1024 integrado en `main_menu.gd`; variante apilada 2048×2048 lista para Steam. |
 | Fondo de pantalla de resultados | — | ⬜ | Ilustración: la tripulación frente a la furgoneta al terminar la ruta. |
 | Cápsulas de Steam (460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240) | — | ⬜ | Necesitan el logo. Fase de lanzamiento. |
 | Íconos de acción del HUD (×9) | `ui/icons/tx_ui_action_*_128.png` | ✅ | Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja y usar carta; `UiTheme.action_icon()` los muestra junto a los avisos de interacción. |
@@ -203,7 +203,7 @@ jugador 1.568 triángulos están bien para el estilo.
    (2026-09-23)**.
 3. **Resolver el celular de Slatex:** el modelo está creado, pero debe rehacerse y S-304 tiene
    que integrarlo sin recuperar el viewmodel de manos flotantes.
-4. **Crear los ⬜ de mayor impacto:** el logo como imagen (lo necesitan splash y Steam), el
-   fondo de resultados y el marco del celular.
+4. **Crear los ⬜ de mayor impacto:** el fondo de resultados y el marco del celular. El logo de
+   S-306 ya está integrado y listo como base de las cápsulas de Steam.
 5. **Modelado (sección 10):** primero N-128 (conos y barrera de obras, solo código), después
    el tren y el paso a nivel (N-129/N-130), el celular (S-104) y los autos (N-136).
