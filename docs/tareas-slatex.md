@@ -643,13 +643,13 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
 
 ### S-509 · Idioma inglés — A (para lanzar) · `Sol · high` para extraer, `Luna · medium` para traducir · Aviso: sí (`project.godot`)
 
-Hoy todos los textos están escritos en español dentro del código.
+Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 
 - [x] (commit `8d66f72`) **S-509.1** Extraer los textos de **los archivos de Slatex** (`scripts/ui/`, avisos de
   `player.gd`/`package.gd`/`interaction/`, `get_hint()` de cada trampa, `UnlockManager`, `CrewProgression`,
   `RouteEventManager`) a `do-not-drop/translations/strings_ui.csv` con claves (`HUD_CARGO_TITLE`…) y columnas
   `es,en`. Usar `tr("CLAVE")`.
-- [ ] **S-509.2** Registrar el CSV en `project.godot` (internationalization) y opción "Idioma" en opciones.
+- [x] (commit `bf85e4b`) **S-509.2** Registrar el CSV en `project.godot` (internationalization) y opción "Idioma" en opciones.
 - [x] (commit `8d66f72`) **S-509.3** Traducir al inglés con tono de juego (no literal).
 - [x] (commit `8d66f72`) **S-509.4** Test `tests/test_ui_translations.gd`: toda clave usada existe en las dos columnas; ningún
   texto de la UI de Slatex queda sin pasar por `tr()` (buscar comillas con letras acentuadas en
