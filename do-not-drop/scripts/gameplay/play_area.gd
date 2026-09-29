@@ -25,8 +25,13 @@ var _notice_left: float = 0.0
 
 func _physics_process(delta: float) -> void:
 	_notice_left = maxf(0.0, _notice_left - delta)
-	var player := level.get(&"local_player") as CharacterBody3D
-	if not is_instance_valid(player) or not String(player.get(&"seat_node_path")).is_empty():
+	# Read before casting: while the host reloads the level, a client's
+	# player is despawned under a still-running old level.
+	var found: Variant = level.get(&"local_player")
+	if not is_instance_valid(found):
+		return
+	var player := found as CharacterBody3D
+	if player == null or not String(player.get(&"seat_node_path")).is_empty():
 		return
 	var kept: Vector3 = keep_inside(player.global_position)
 	if kept.is_equal_approx(player.global_position):

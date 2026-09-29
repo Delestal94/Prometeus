@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-28 (N-214.1: componente `VehicleFaults` que decide en el host las averías
+> Última actualización: 2026-09-29 (N-213: test de red con dos clientes que agarran la misma caja; queda el
+> gancho N-213.3). Antes, el 2026-09-28: (N-214.1: componente `VehicleFaults` que decide en el host las averías
 > del camión por golpe fuerte, una por entrega; faltan efectos, arreglos y resultados). Antes, el mismo día: (N-213.4: abandonar la caja caída cierra su pedido como
 > "Perdido" sin terminar la partida; falta el gancho). Antes, el mismo día: (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
 > con cartel encima y se puede volver a subir; faltan el gancho y el pedido "Perdido"). Antes, el mismo día: (N-505 cerrada: la voz sintetizada de cada frase, con tono por
@@ -832,10 +833,16 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
   partida. `RunManager.handed_over()` reemplaza los `!= &"missed"` (foto, plazos, pago de rescate); en
   resultados, "PERDIDO ✕" y la línea "Paquetes perdidos en la ruta" con la multa de una casa sin entregar;
   la pizarra del depósito marca "PERDIDO". "Abandonar" es dejar vencer la ventana: no hay botón aparte.
-- [ ] Tests `test_cargo_overboard.gd` (ventana, recogida, abandono) y ampliar el de red con dos clientes
+- [x] Tests `test_cargo_overboard.gd` (ventana, recogida, abandono) y ampliar el de red con dos clientes
   que intentan agarrar la misma caja. **Parcial (`d8a014b`):** `test_cargo_overboard.gd` cubre ventana,
   cartel, recogida y pérdida al vencer; faltan el abandono (N-213.4) y el caso de red. `33f7702`: suma el
   abandono (pedido "Perdido", la partida sigue, sin foto, línea propia en resultados); falta el caso de red.
+  `HASH`: el caso de red, en `tests/net_trio.gd`: los dos clientes piden a la vez la misma caja, el host
+  se la da a uno solo y los tres pares nombran al mismo dueño (`grab=`). El host arma de entrada las casas
+  de la tripulación completa, porque si no reinicia el nivel 3 s después del último en entrar
+  (`level_base.gd`). También `play_area.gd` ya no castea un jugador liberado mientras el host recarga.
+  La caja disputada está en el depósito, no caída en la ruta: el agarre pasa por el mismo `take_by()`.
+  Queda solo N-213.3 (gancho).
 
 ### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
 
