@@ -20,7 +20,10 @@ class_name VehicleFaults
 ## N-214.3 fixes them at a repair spot on the van (FaultRepairSpot): the
 ## rear door is tied shut with a strap from the shared kit; the depot's
 ## spare part (CrewProgression.SUPPLIES "spare_part") fixes either one when
-## the kit can't. The mirror's improvised fix (a passenger's phone) is pending.
+## the kit can't. The mirror's improvised fix is a passenger holding their
+## phone up where it was (N-214.3b): it isn't a repair, it only lasts while
+## they stay by it, hands free and off the wheel, so the paid spare goes first.
+## A peer that joins mid-run gets the list, the spares and who holds the phone.
 
 ## Every fault this version can roll, in roll order.
 const FAULTS: Array[StringName] = [&"rear_door", &"mirror"]
@@ -30,12 +33,13 @@ const EFFECTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_fault_ef
 const REPAIR_SPOT: Script = preload("res://scripts/gameplay/vehicle/fault_repair_spot.gd")
 ## The improvised fix from the shared kit (RunManager.care_supplies), per
 ## fault. No new tools: only what the kit already carries.
-const IMPROVISED: Dictionary = {&"rear_door": &"strap"}
+## &"phone" is no supply: see hold_phone().
+const IMPROVISED: Dictionary = {&"rear_door": &"strap", &"mirror": &"phone"}
 ## Repair spot prompt per fault and method. Spelled out, not built, so the
 ## translation test finds every key in use.
 const REPAIR_PROMPTS: Dictionary = {
 	&"rear_door": {&"spare": "WORLD_FAULT_REAR_DOOR_SPARE", &"strap": "WORLD_FAULT_REAR_DOOR_STRAP"},
-	&"mirror": {&"spare": "WORLD_FAULT_MIRROR_SPARE"},
+	&"mirror": {&"spare": "WORLD_FAULT_MIRROR_SPARE", &"phone": "WORLD_FAULT_MIRROR_PHONE"},
 }
 ## Where each repair spot hangs, in the van's frame: the rear door's right
 ## post (the rescue hook has the left one, the door control the middle), and
@@ -47,6 +51,11 @@ const SPOT_POSITIONS: Dictionary = {
 ## Mixed into the world seed so faults don't share their sequence with other
 ## seeded rolls of the run.
 const SEED_SALT: int = 214
+## How far the phone holder's reach (seat or feet) can drift from the mirror
+## spot before they let go. Over Interactable.REMOTE_REACH, the range they
+## start holding it from, and every cab seat (3.5-3.9 m from the driver's
+## mirror) fits: holding it while riding is the point.
+const PHONE_HOLD_RANGE: float = 5.0
 
 ## Impact strength (m/s of velocity change, as vehicle.gd measures it) that
 ## counts as a hard hit. The same one that makes the cabin's picture shake
@@ -74,10 +83,14 @@ var door_pops: int = 0
 ## until the run ends, not reset by run_started (the depot hands them over
 ## around the same moment).
 var spares: int = 0
+## Every peer: who holds a phone up as the mirror (peer id), 0 for nobody.
+var phone_holder_id: int = 0
 ## fault_id -> its FaultRepairSpot on the van (none without a van).
 var spots: Dictionary = {}
 var effects: Node3D
 var _rng := RandomNumberGenerator.new()
+## Host-only: the player behind phone_holder_id.
+var _phone_holder: Node
 
 
 func _ready() -> void:
@@ -91,6 +104,7 @@ func _ready() -> void:
 	add_child(effects)
 	add_to_group(&"vehicle_faults")
 	EventBus.run_ended.connect(func(_score: int, _results: Dictionary) -> void: _set_spares(0))
+	NetworkManager.peer_level_ready.connect(_on_peer_level_ready)
 	_hang_repair_spots()
 	reset_for_run()
 
@@ -100,6 +114,8 @@ func reset_for_run() -> void:
 	active.clear()
 	faults_this_run = 0
 	door_pops = 0
+	_phone_holder = null
+	_set_phone_holder(0)
 	_rng.seed = hash([NetworkManager.world_seed, SEED_SALT])
 
 
@@ -133,11 +149,16 @@ func _set_spares(count: int) -> void:
 ## How the crew would fix fault_id right now: the kit supply of its
 ## improvised fix, else &"spare", or &"" if it isn't broken or there's
 ## nothing to fix it with. The kit goes first so the paid spare is kept for
-## a fault the kit can't fix (the mirror).
+## a fault the kit can't fix (the mirror). The mirror's phone is the other way
+## round: it only stands in, so the spare goes first, and one phone at a time.
 func repair_method(fault_id: StringName) -> StringName:
 	if not active.has(fault_id):
 		return &""
 	var tool: StringName = IMPROVISED.get(fault_id, &"")
+	if tool == &"phone":
+		if spares > 0:
+			return &"spare"
+		return tool if phone_holder_id == 0 else &""
 	if not tool.is_empty() and RunManager.care_supply_count(tool) > 0:
 		return tool
 	if spares > 0:
@@ -154,16 +175,97 @@ func repair_prompt(fault_id: StringName) -> String:
 
 
 ## Host-only: fixes fault_id the best way available (repair_method()) and
-## spends what it took. Returns false if it couldn't.
-func fix(fault_id: StringName) -> bool:
+## spends what it took; player is who's fixing it (the phone needs one).
+## Returns false if it couldn't.
+func fix(fault_id: StringName, player: Node = null) -> bool:
 	if not NetworkManager.is_host():
 		return false
 	var method: StringName = repair_method(fault_id)
 	if method.is_empty():
 		return false
+	if method == &"phone":
+		return hold_phone(player)
 	if method != &"spare" and not RunManager.consume_care_supply(method):
 		return false
 	return repair(fault_id, method)
+
+
+## Host-only: player holds their phone up where the mirror was. Not a repair:
+## the fault stays active and it lasts while _phone_still_held(). The driver
+## can't: they need both hands and the phone is the mirror they'd look at.
+func hold_phone(player: Node) -> bool:
+	if not NetworkManager.is_host() or player == null or phone_holder_id != 0 or not active.has(&"mirror"):
+		return false
+	var peer_id: int = player.get_multiplayer_authority()
+	if is_driver(peer_id):
+		return false
+	_phone_holder = player
+	_share_phone_holder(peer_id)
+	return true
+
+
+## Whether peer_id is at the van's wheel.
+func is_driver(peer_id: int) -> bool:
+	return vehicle != null and &"driver_peer_id" in vehicle and int(vehicle.get(&"driver_peer_id")) == peer_id
+
+
+func _physics_process(_delta: float) -> void:
+	if phone_holder_id != 0 and NetworkManager.is_host() and not _phone_still_held():
+		_share_phone_holder(0)
+
+
+## Host-only: the holder is still by the mirror spot, not carrying a box and
+## not at the wheel.
+func _phone_still_held() -> bool:
+	if not active.has(&"mirror") or not is_instance_valid(_phone_holder) or not _phone_holder.is_inside_tree():
+		return false
+	if _phone_holder.get(&"carried_package") != null:
+		return false
+	if is_driver(phone_holder_id):
+		return false
+	var spot: Node3D = spots.get(&"mirror")
+	if spot == null or not spot.is_inside_tree():
+		return true
+	var origin: Vector3 = _phone_holder.call(&"reach_origin") if _phone_holder.has_method(&"reach_origin") \
+			else (_phone_holder as Node3D).global_position
+	return origin.distance_to(spot.global_position) <= PHONE_HOLD_RANGE
+
+
+func _share_phone_holder(peer_id: int) -> void:
+	if peer_id == 0:
+		_phone_holder = null
+	_set_phone_holder(peer_id)
+	if NetworkManager.is_online():
+		_set_phone_holder.rpc(peer_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _set_phone_holder(peer_id: int) -> void:
+	phone_holder_id = peer_id
+	if effects != null:
+		var spot: Node3D = spots.get(&"mirror")
+		effects.call(&"show_phone_mirror", peer_id != 0,
+				spot.position if spot != null else SPOT_POSITIONS[&"mirror"])
+
+
+## Host-only: a peer that joins mid-run gets the faults, the spares and the
+## phone. Deferred so it lands after RunManager.send_session_state(), whose
+## run_started would otherwise wipe it.
+func _on_peer_level_ready(peer_id: int) -> void:
+	if not NetworkManager.is_host() or not NetworkManager.is_online() or peer_id == NetworkManager.HOST_ID:
+		return
+	_receive_state.rpc_id.call_deferred(peer_id, active.keys(), spares, phone_holder_id)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_state(faults: Array, spare_count: int, holder_id: int) -> void:
+	for fault_id: StringName in faults:
+		if not active.has(fault_id):
+			active[fault_id] = true
+			if effects != null:
+				effects.call(&"show_fault", fault_id)
+	_set_spares(spare_count)
+	_set_phone_holder(holder_id)
 
 
 func _hang_repair_spots() -> void:
@@ -231,5 +333,9 @@ func _pop_rear_door() -> void:
 
 func _on_fault_repaired(fault_id: StringName, method: StringName) -> void:
 	active.erase(fault_id)
+	if fault_id == &"mirror" and phone_holder_id != 0:
+		if NetworkManager.is_host():
+			_phone_holder = null
+		_set_phone_holder(0)
 	if method == &"spare":
 		spares = maxi(0, spares - 1)

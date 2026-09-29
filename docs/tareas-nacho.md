@@ -2,7 +2,13 @@
 
 > Última actualización: 2026-09-29 (tareas nuevas del usuario en el hito M7: N-115 correr, N-116
 > estacionamiento como parada final, N-312 personaje flaco y alto y N-606 el diario del día siguiente,
-> diseñado en `docs/diario-final.md`). Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
+> diseñado en `docs/diario-final.md`). Antes, el mismo día: (red por Steam tras playtest: el host mandaba 2-5 veces el límite
+> de Steam y el cliente veía el mundo cada vez más viejo; `care_state` solo al cambiar, sync a 60 Hz
+> fijos, caja predicha en las manos, Nagle apagado; investigación en `docs/investigacion-red.md`;
+> menú sin la tarjeta fantasma y sin DOF en Compatibility). Antes, el mismo día: (N-214.3b: un pasajero
+> sostiene el celular como espejo mientras no haya repuesto; quien se une a mitad del recorrido recibe
+> las averías; faltan los resultados, N-214.4).
+> Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
 > con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
 > espejo y los resultados). Antes, el mismo día: (túneles de tren en las dos puntas de la vía del paso a
 > nivel; repaso de las cascadas). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
@@ -27,6 +33,25 @@
 > sin esperar a Slatex y sin playtesting**.
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
+
+## Hecho fuera de lista: red por Steam y bugs del playtest (2026-09-29)
+
+Playtest por Steam (Spacewar, dos PCs por internet): la caja que cargaba el cliente lo seguía con
+atraso y el camión "seguía andando" después de soltar las teclas. Medido: el host le mandaba a cada
+cliente 527-1263 KB/s contra los 256 KB/s que Steam permite por conexión, y Steam encolaba el resto.
+- `package.tscn`: `care_state` (diccionario de 19 claves, 85 % de cada envío) pasa de `ALWAYS` a
+  `ON_CHANGE`; `package.tscn` y `player.tscn` sincronizan a 60 Hz fijos (antes, por frame de render).
+  Peor caso ahora: 105 KB/s por cliente. `test_net_bandwidth_budget` lo cuida (tope 128 KB/s).
+- `package.gd predict_carry()` + `player_carry.gd`: el cliente dibuja la caja en sus manos al
+  instante; el host sigue decidiendo. `test_carry_prediction`.
+- `network_manager.gd`: `no_nagle` en el peer de Steam (5 ms menos por mensaje).
+- `main_menu.gd`: el vidrio esmerilado se reacomoda diferido; al cambiar el tamaño de la ventana
+  quedaba una segunda tarjeta desplazada detrás (`render_main_menu.gd` lo chequea).
+- `player.gd`: sin `CameraAttributesPractical` en GL Compatibility (el DOF nunca se veía y avisaba
+  en cada carga).
+- Pendiente (plan por fases en `docs/investigacion-red.md`): HUD de red y `--net-sim`, interpolación
+  con buffer para jugadores y cajas (y recién ahí bajar a 30 Hz), tolerancia de alcance por ping,
+  predicción del conductor, validación genérica de RPC y reconexión.
 
 ## Hecho fuera de lista: túneles del tren y repaso de las cascadas (2026-09-29)
 
@@ -928,9 +953,16 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
     `VehicleFaults` cuelga del camión) y el repuesto: `SUPPLIES` suma `spare_part` ($25), el depósito se
     lo pasa al recorrido y arregla la puerta o el espejo; la puerta rota se ata con una cincha del kit,
     que va antes que el repuesto para guardarlo para el espejo. Test `test_vehicle_faults` ampliado. `2c46ce4`
-  - [ ] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular (`phone_camera.gd`) como espejo.
-    Falta además mandar `active`/`spares` a quien se une a mitad del recorrido (hueco desde N-214.1) y
-    confirmar con `revisor-visual` el punto del espejo en las variantes de camión que no son la clásica.
+  - [x] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular como espejo. `77452a6`
+    - Sin repuesto, el punto del espejo ofrece "Sostener el celular como espejo" a cualquiera menos el
+      conductor, uno a la vez; no es arreglo: la avería sigue activa, se ve un celular donde estaba el
+      espejo en cada par y el host lo suelta si el que lo sostiene se aleja (> 5 m, alcanza desde
+      cualquier asiento), agarra una caja o toma el volante. El repuesto va primero y lo reemplaza.
+      Quien se une a mitad del recorrido recibe averías, repuestos y quién sostiene el celular.
+    - Duda: el camión no tiene vista de espejo funcional, así que el celular es visual (no abre la
+      cámara de `phone_camera.gd` ni muestra la vista de atrás). Queda para cuando haya espejo real.
+  - [ ] **N-214.3c** Confirmar con `revisor-visual` el punto del espejo (y el celular) en las variantes
+    de camión que no son la clásica.
 - [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
 - [ ] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado.
 

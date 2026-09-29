@@ -117,6 +117,12 @@ var _vehicle: Node3D = null
 ## the moving bay rides with it between the carrier's updates.
 var _carry_pose: Transform3D = Transform3D.IDENTITY
 var _carry_in_vehicle: bool = false
+## Carrier's own client: where its hands hold the box this tick (see
+## predict_carry()), in the truck's space when aboard.
+const PREDICTION_FRAMES: int = 2
+var _predicted_pose: Transform3D = Transform3D.IDENTITY
+var _predicted_in_vehicle: bool = false
+var _predicted_frame: int = -100
 ## Host: the peer whose seat looks after this box (seat_point.gd), the only
 ## one whose trap input counts, and how long since their last sample.
 var tender_peer_id: int = 0
@@ -246,19 +252,38 @@ func _physics_process(delta: float) -> void:
 		continuous_cd = sweep
 
 
-## Client: put the box where the host says, on this peer's truck if it rides.
+## Client: put the box where the host says, on this peer's truck if it rides
+## -- or, in the carrier's own hands, where they hold it right now.
 func _process(_delta: float) -> void:
-	if is_multiplayer_authority() or not _has_net_state or _consumed:
+	if is_multiplayer_authority() or _consumed:
 		return
+	var predicted: bool = Engine.get_physics_frames() - _predicted_frame <= PREDICTION_FRAMES
+	if not predicted and not _has_net_state:
+		return
+	var pose: Transform3D = _predicted_pose if predicted else net_transform
+	var riding: bool = _predicted_in_vehicle if predicted else net_in_vehicle
 	var vehicle: Node3D = _find_vehicle()
-	if net_in_vehicle and vehicle != null:
+	if riding and vehicle != null:
 		# A client's truck is frozen, so not interpolated: its interpolated
 		# transform is then last frame's cached one, not where the network
 		# just put it, and the box would trail the truck by a frame.
 		var vehicle_pose: Transform3D = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
-		global_transform = vehicle_pose * net_transform
+		global_transform = vehicle_pose * pose
 	else:
-		global_transform = net_transform
+		global_transform = pose
+
+
+## The carrier's own client, every physics tick next to submit_carry_transform:
+## draw the box in its hands now instead of when the host's copy comes back.
+## Over Steam it trailed the carrier by the whole round trip (playtest
+## 2026-09-29). The host still decides where the box is; this only lasts
+## while the carrier keeps calling it.
+func predict_carry(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
+	if is_multiplayer_authority():
+		return
+	_predicted_pose = carry_transform
+	_predicted_in_vehicle = in_vehicle
+	_predicted_frame = Engine.get_physics_frames()
 
 
 func _publish_net_state() -> void:

@@ -260,6 +260,8 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_cargo_shell.gd
 <godot> --headless --path do-not-drop --script res://tests/test_sound_check.gd
 <godot> --headless --path do-not-drop --script res://tests/test_session_sync.gd
+<godot> --headless --path do-not-drop --script res://tests/test_carry_prediction.gd
+<godot> --headless --path do-not-drop --script res://tests/test_net_bandwidth_budget.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
 <godot> --headless --path do-not-drop --script res://tests/test_safe_json.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
@@ -396,8 +398,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   el del lado del conductor, deja los pedazos en la ruta y el arreglo lo vuelve a mostrar.
   N-214.3: cada avería cuelga su punto de arreglo en el camión, que solo se ofrece con la avería
   activa; la puerta se ata con una cincha del kit (y la gasta) antes que con el repuesto; sin cincha ni
-  repuesto no se arregla; el repuesto del depósito arregla la puerta o el espejo y se gasta, el espejo
-  no tiene arreglo con el kit todavía y el fin del recorrido descarta los repuestos que sobran.
+  repuesto no se arregla; el repuesto del depósito arregla la puerta o el espejo y se gasta, y el fin
+  del recorrido descarta los repuestos que sobran. N-214.3b: sin repuesto, un pasajero (nunca el
+  conductor, uno a la vez) sostiene el celular como espejo; la avería sigue activa, se ve el celular,
+  alejarse lo suelta y el repuesto lo reemplaza; quien se une a mitad del recorrido recibe las averías
+  (sin volver a tirar pedazos), los repuestos y quién sostiene el celular.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
@@ -465,6 +470,13 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   alcance de un pasajero medido desde su asiento, interacciones remotas solo al
   alcance, sin bonus por fotos de casas salteadas, y una sesión que termina sin
   dejar su mundo ni borrar a los jugadores.
+- `test_carry_prediction` — la caja que carga un cliente se dibuja en sus manos
+  al instante (`predict_carry`), no un ping después cuando vuelve la copia del
+  host; al dejar de cargarla manda otra vez el host, y el host ignora predicciones.
+- `test_net_bandwidth_budget` — lo que el host le manda a cada cliente por segundo
+  (peor caso: 14 cajas, 4 jugadores, monitor de 144 Hz) queda bajo 128 KB/s, la
+  mitad del límite de Steam; ningún synchronizer manda por frame de render y
+  ninguna propiedad `ALWAYS` pesa más de 64 bytes (`docs/investigacion-red.md`).
 - `test_world_seed` — que todos los peers construyan el **mismo** mundo: misma
   semilla, misma ruta; semilla distinta, ruta distinta; y que jugar solo
   (semilla 0) siga variando entre partidas.

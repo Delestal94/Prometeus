@@ -36,10 +36,12 @@ func update_carried_package() -> void:
 	if aboard:
 		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
 	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard)
-	player._package_focus.dof_blur_far_enabled = true
-	player._package_focus.dof_blur_far_distance = 1.45
-	player._package_focus.dof_blur_far_transition = 1.0
-	player._package_focus.dof_blur_amount = 0.18
+	player.carried_package.predict_carry(carry_transform, aboard)
+	if player._package_focus != null:
+		player._package_focus.dof_blur_far_enabled = true
+		player._package_focus.dof_blur_far_distance = 1.45
+		player._package_focus.dof_blur_far_transition = 1.0
+		player._package_focus.dof_blur_amount = 0.18
 
 
 func clear_carry_focus() -> void:
