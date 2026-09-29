@@ -1,6 +1,8 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (red por Steam tras playtest: el host mandaba 2-5 veces el límite
+> Última actualización: 2026-09-29 (pruebas y trabajo pendiente de red y rendimiento en N-215 a N-221;
+> antes, el mismo día: auditoría de rendimiento: Endless fusiona cada tramo al generarlo y
+> comparte sus materiales; antes, el mismo día: red por Steam tras playtest: el host mandaba 2-5 veces el límite
 > de Steam y el cliente veía el mundo cada vez más viejo; `care_state` solo al cambiar, sync a 60 Hz
 > fijos, caja predicha en las manos, Nagle apagado; investigación en `docs/investigacion-red.md`;
 > menú sin la tarjeta fantasma y sin DOF en Compatibility). Antes, el mismo día: (N-214.3b: un pasajero
@@ -31,6 +33,21 @@
 > sin esperar a Slatex y sin playtesting**.
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
+
+## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
+
+Auditoría de `perfilador-rendimiento` (headless, Endless con 4 cajas, `Performance` cada 10 ticks):
+- `route_streamer.gd`: cada tramo de Endless ahora pasa por `DressingBatcher.merge_segment_geometry`
+  al generarse, como los del Reparto (`route.gd`); antes cada spawn sumaba ~500 nodos. Flag
+  `batch_geometry` para benches.
+- `route_segment.gd`: `_materials` es `static` (un material por color para todos los tramos); antes
+  cada tramo creaba 5 (+274 recursos por spawn). Los que tiñen ya duplicaban.
+- `test_level_endless` lo verifica (tramos sin cajas sueltas, material de ruta compartido).
+- Descartado: el "1693 Mesh leaked at exit" son cachés `static` acotados (modelos × 2 estaciones ×
+  3 luces), no crecen con la partida. Telemetría, audio sintetizado, sueño y CCD de cuerpos ya bien.
+- Pendiente: al generarse un tramo, `TIME_PHYSICS_PROCESS` pasó de ~3 ms a ~24 ms durante decenas
+  de frames (medido antes del merge, que no toca la física): hay que perfilarlo con ventana real. Faltan
+  también draw calls, sombras y transparencias con `revisor-visual`, y física con camión lleno.
 
 ## Hecho fuera de lista: red por Steam y bugs del playtest (2026-09-29)
 
@@ -406,6 +423,87 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
 - [ ] **Aparte:** faltan 14 `.uid` en `main` (Godot los genera en cada clon con valores distintos);
   commitearlos en un PR chico cuando nadie tenga copias sin trackear.
 - [ ] Bajar la línea base del lint (quedan ~990 líneas de más de 120 columnas, casi todas en tests).
+
+### N-215 · Repetir la prueba por Steam después de los PR #34 y #35 — A · manual (con un amigo) · Aviso: no
+
+Es la prueba que falta para dar por cerrado el lag del 2026-09-29. Hay que hacerla con dos PCs distintas
+por Steam (Spacewar 480), no con dos ventanas en la misma PC: ahí V-Sync reparte los FPS y aparece un
+lag que entre dos PCs no existe.
+- [ ] El camión ya no "sigue andando" segundos después de soltar las teclas. Queda el atraso de un ping
+  más 100 ms, que es lo que ataca N-218.
+- [ ] La caja cargada por el cliente va en sus manos, sin atraso.
+- [ ] El lag no crece con el tiempo: en Reparto, con las 14 cajas, a los 5 minutos se siente igual que al
+  empezar.
+- [ ] Anotar el ping aproximado y los monitores de los dos (60 o 144 Hz).
+- [ ] Del playtest anterior: con la ventana maximizada no aparece la tarjeta fantasma del menú, y el log no
+  muestra "Depth of field blur".
+- Si el lag acumulado vuelve, correr `test_net_bandwidth_budget` y revisar si alguien agregó una
+  propiedad `ALWAYS` grande. Después, N-216 para medir en vivo.
+
+### N-216 · HUD de red y simulación de mala conexión — A · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`)
+
+Fase 0 de `docs/investigacion-red.md`: medir antes de seguir optimizando.
+- [ ] Overlay (F3 u opción) con ping, pérdida, KB/s de entrada y salida y bytes en cola. En Steam sale de
+  `Steam.getConnectionRealTimeStatus`; en LAN, de `ENetPacketPeer`.
+- [ ] `--net-sim=lag,jitter,pérdida` usando la simulación de Steam (`NETWORKING_CONFIG_FAKE_PACKET_*`,
+  expuesta por GodotSteam 4.22.1) y el `--fake-lag` que ya existe para ENet.
+- [ ] Perfil de prueba estándar: 150 ms, ±20 ms y 2 % de pérdida. Documentarlo en el README.
+
+### N-217 · Suavizado de jugadores y cajas remotas, y sync a 30 Hz — A · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package.gd` de Slatex)
+
+Fase 2 de `docs/investigacion-red.md`. Hoy los jugadores remotos (`player.gd _apply_net_state`) y las cajas
+del cliente (`package.gd _process`) se colocan con el último valor que llegó, sin suavizar. Con el jitter
+de internet saltan.
+- [ ] Separar de `VehicleNetSmoother` un `NetSnapshotBuffer` genérico, con reloj del host, y usarlo en
+  jugadores y cajas.
+- [ ] Colchón adaptativo: 2 intervalos más 2 × el jitter medido, entre 50 y 200 ms.
+- [ ] Recién con eso, bajar `replication_interval` de caja y jugador a 1/30 s. `test_net_bandwidth_budget`
+  tiene que seguir pasando.
+- [ ] Tolerancia de alcance proporcional al ping en los chequeos del host (agarrar y usar cajas).
+
+### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: sí (`vehicle.gd` congelado)
+
+Fase 3 de `docs/investigacion-red.md`. Hoy el volante del conductor cliente tiene un ping más 100 ms de
+atraso.
+- [ ] El cliente que maneja descongela su copia del camión y la simula con sus inputs numerados.
+- [ ] El host devuelve su pose con el último input procesado. El cliente compara contra su historial y
+  corrige suave (posición en ~150 ms), sin re-simular.
+- [ ] Las cajas siguen en el host y se dibujan en el espacio del camión del cliente (`net_in_vehicle`).
+- [ ] Test con `--fake-lag`: el volante responde en el mismo tick, y la corrección no salta más de 10 cm
+  por frame.
+- Descartado: pasarle la autoridad del camión al conductor. El host terminaría simulando las cajas sobre
+  un camión que llega atrasado, y volverían las cajas que atraviesan las paredes.
+
+### N-219 · Pico de física al generar cada tramo de Endless — B · `Opus 5.5 · high` · Aviso: no
+
+La auditoría del 2026-09-29 midió que, al generarse un tramo, `TIME_PHYSICS_PROCESS` sube de ~3 ms a
+~24 ms durante decenas de frames (el límite a 60 Hz es 16,7 ms). Se midió antes del merge del PR #35, que
+no toca la física.
+- [ ] Reproducirlo con ventana real y ver quién gasta: los `StaticBody3D` y shapes del tramo, el terreno,
+  los scripts con `_physics_process` o el CCD.
+- [ ] Arreglar: armar el tramo repartido en varios frames, usar menos shapes o shapes más simples, o
+  generarlo antes y más lejos.
+- [ ] Test: el costo de física tras un spawn vuelve a la base en pocos frames.
+
+### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no
+
+Lo que la auditoría headless no pudo medir (`revisor-visual` o `perfilador-rendimiento` con pantalla).
+- [ ] Draw calls, sombras, transparencias y partículas en Reparto y en Endless: comparar antes y después del
+  PR #35.
+- [ ] Física de Jolt con 5 jugadores y el camión lleno (objetos activos y pares de colisión).
+- [ ] Tiempo de carga del menú y del nivel, y memoria.
+- [ ] Opcional: vaciar los cachés `static` de mallas al volver al menú. No es un leak: el "1693 Mesh
+  leaked at exit" son cachés acotados.
+
+### N-221 · Red defensiva: validación de RPC y reconexión — B · `Opus 5.5 · xhigh` · Aviso: sí (zona compartida)
+
+Fase 4 de `docs/investigacion-red.md`.
+- [ ] Validador común para RPC `any_peer`: remitente, `NaN`/`inf` en poses, tamaño de diccionarios y un
+  límite de pedidos por segundo por peer.
+- [ ] Test que recorra todos los `@rpc("any_peer"` y exija el chequeo del remitente.
+- [ ] Reconexión: el que se cae a mitad de una partida vuelve a su lugar.
+- [ ] Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.
+- [ ] Antes de jugar con gente de afuera: AppID propio (N-901).
 
 ## 3. Arte y dirección visual
 
