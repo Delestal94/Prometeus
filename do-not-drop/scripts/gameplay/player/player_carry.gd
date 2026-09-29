@@ -11,9 +11,16 @@ func _ready() -> void:
 
 func update_carried_package() -> void:
 	var carry_transform := Transform3D(player.global_basis, carry_position())
+	if not player.seat_node_path.is_empty():
+		var seat := player.get_node_or_null(player.seat_node_path) as Node3D
+		if seat != null:
+			var care = player.carried_package.care
+			carry_transform = seat.global_transform.translated_local(Vector3(care.balance_target.x * 0.1, -0.40, -0.65))
+			var lean := Vector3(care.balance_target.y, 0.0, -care.balance_target.x) * 0.18
+			carry_transform.basis = carry_transform.basis * Basis.from_euler(lean)
 	# The box waits for the reaching hands, then follows the lift instead of
 	# teleporting to chest height on the first pickup tick.
-	if player._pickup_elapsed < 1.3:
+	if player._pickup_elapsed < 1.3 and player.seat_node_path.is_empty():
 		var origin: Transform3D = player._pickup_from
 		var pickup_vehicle: Node3D = player._find_vehicle()
 		if player._pickup_in_vehicle and pickup_vehicle != null:
@@ -29,10 +36,12 @@ func update_carried_package() -> void:
 	if aboard:
 		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
 	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard)
-	player._package_focus.dof_blur_far_enabled = true
-	player._package_focus.dof_blur_far_distance = 1.45
-	player._package_focus.dof_blur_far_transition = 1.0
-	player._package_focus.dof_blur_amount = 0.18
+	player.carried_package.predict_carry(carry_transform, aboard)
+	if player._package_focus != null:
+		player._package_focus.dof_blur_far_enabled = true
+		player._package_focus.dof_blur_far_distance = 1.45
+		player._package_focus.dof_blur_far_transition = 1.0
+		player._package_focus.dof_blur_amount = 0.18
 
 
 func clear_carry_focus() -> void:

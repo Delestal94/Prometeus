@@ -17,8 +17,13 @@ func reach_origin() -> Vector3:
 func gather_package_input() -> Dictionary:
 	# A seated passenger is not walking, so the movement actions can also feed
 	# directional trap sequences while the primary action steadies the package.
+	# On foot they only do while the primary action is held -- which also
+	# stops the walk (player.gd) -- or every step taken with a box in hand
+	# read as a wrong key (playtest 2026-09-28).
 	var holding: bool = Input.is_action_pressed(&"package_action_primary")
 	var direction: Variant = null
+	if player.seat_node_path.is_empty() and not holding:
+		return {"steady": holding, "calm": holding, "direction_pressed": direction}
 	if Input.is_action_just_pressed(&"walk_forward"):
 		direction = &"up"
 	elif Input.is_action_just_pressed(&"walk_backward"):

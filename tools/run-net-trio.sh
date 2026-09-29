@@ -56,6 +56,8 @@ status=0
 for role in host a b; do
 	line="$(grep -m1 '^TRIO ' "$WORK/$role.log" || true)"
 	echo "${line:-TRIO role=$role (no line)}"
+	# Join timing: how close the level load came to the handshake timeout.
+	grep "^NETLOG " "$WORK/$role.log" || true
 	# Everything but the role must match across the three.
 	echo "$line" | sed 's/^TRIO role=[^ ]* //' >"$WORK/$role.fingerprint"
 	case "$line" in

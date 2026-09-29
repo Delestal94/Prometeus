@@ -2,8 +2,9 @@ class_name SynthAudioScenes
 extends RefCounted
 ## The generators behind SynthAudio's scene sounds -- the doorbell and the
 ## neighbour's reaction, the comic ruin stingers, the forklift, the river and
-## the train, the scanner. Split out of synth_audio.gd to keep it readable; SynthAudio still
-## hands them out (and caches them), so callers never use this class directly.
+## the train, the scanner, the callout voice. Split out of synth_audio.gd to
+## keep it readable; SynthAudio still hands them out (and caches them), so
+## callers never use this class directly.
 
 
 ## The delivery doorbell (docs/inventario-assets.md, "Timbre / panel de
@@ -301,4 +302,72 @@ static func make_scanner_beep() -> AudioStreamWAV:
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
 	stream.data = data
+	return stream
+
+
+## A crewmate's quick callout (N-505, the ping wheel): cartoon babble, not
+## words -- one "syllable" per vowel group of the phrase, a buzzing voice
+## through a mouth that jumps between vowels (the same formant trick as
+## dog_bark()). The voice's base pitch is the player's colour slot
+## (Player.PLAYER_COLORS, peer id modulo five), so with eyes on the road
+## the driver can still tell who is calling. Deterministic: slot and
+## syllable count pick the vowels, so every client hears the same call.
+
+## One base pitch (Hz) per player colour slot, low to high: far enough
+## apart (~20 %) that two crewmates never sound alike.
+const CALLOUT_VOICE_PITCHES: Array[float] = [150.0, 180.0, 215.0, 260.0, 310.0]
+const CALLOUT_MAX_SYLLABLES: int = 5
+const CALLOUT_SYLLABLE_SECONDS: float = 0.12
+const CALLOUT_VOICE_STREAM_LOUDEST_DB: float = -12.0
+## Vowel mouths [first formant, second formant] in Hz: a, e, i, o, u.
+const _VOWEL_FORMANTS: Array[Vector2] = [
+	Vector2(800.0, 1250.0), Vector2(500.0, 1850.0), Vector2(320.0, 2300.0),
+	Vector2(520.0, 900.0), Vector2(340.0, 750.0),
+]
+
+
+static func make_callout_voice(slot: int, count: int) -> AudioStreamWAV:
+	const RATE: int = 22050
+	var base_pitch: float = CALLOUT_VOICE_PITCHES[slot]
+	var duration: float = CALLOUT_SYLLABLE_SECONDS * count + 0.05
+	var sample_count: int = int(RATE * duration)
+	var mix := PackedFloat32Array()
+	mix.resize(sample_count)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7001 + slot * 16 + count
+	var vowels: Array[Vector2] = []
+	var lifts: Array[float] = []
+	for s: int in range(count):
+		vowels.append(_VOWEL_FORMANTS[rng.randi_range(0, _VOWEL_FORMANTS.size() - 1)])
+		lifts.append(rng.randf_range(0.92, 1.1))
+	var phase: float = 0.0
+	var mouth_low := SynthAudio._Resonator.new()
+	var mouth_high := SynthAudio._Resonator.new()
+	for i: int in range(sample_count):
+		var t: float = float(i) / RATE
+		var s: int = mini(int(t / CALLOUT_SYLLABLE_SECONDS), count - 1)
+		var local: float = (t - s * CALLOUT_SYLLABLE_SECONDS) / CALLOUT_SYLLABLE_SECONDS
+		# A call, not a statement: every syllable bends up a little and the
+		# phrase climbs toward its last one.
+		var bend: float = 1.0 + 0.1 * sin(PI * minf(local, 1.0))
+		var pitch: float = base_pitch * lifts[s] * (1.0 + 0.08 * float(s) / count) * bend
+		phase = fmod(phase + pitch / RATE, 1.0)
+		var voice: float = 0.0
+		var harmonics: int = mini(int(4500.0 / pitch), 16)
+		for n: int in range(1, harmonics + 1):
+			voice += sin(TAU * phase * n) / float(n)
+		# The mouth glides from the previous vowel into this one.
+		var previous: Vector2 = vowels[maxi(s - 1, 0)]
+		var mouth: Vector2 = previous.lerp(vowels[s], minf(local * 4.0, 1.0))
+		var sound: float = (mouth_low.filter(voice, mouth.x, 4.0, RATE)
+			+ mouth_high.filter(voice, mouth.y, 6.0, RATE) * 0.5)
+		# Each syllable opens fast and closes before the next one (a consonant's gap).
+		var envelope: float = 0.0
+		if local <= 1.0:
+			envelope = minf(local / 0.08, 1.0) * clampf((1.0 - local) / 0.25, 0.0, 1.0)
+		mix[i] = sound * envelope
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.data = SynthAudio._normalized(mix, RATE, CALLOUT_VOICE_STREAM_LOUDEST_DB, true)
 	return stream

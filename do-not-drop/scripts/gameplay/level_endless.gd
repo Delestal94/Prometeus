@@ -51,7 +51,7 @@ func _prepare_mode() -> void:
 func start_delivery() -> void:
 	if RunManager.is_running or not RunManager.results.is_empty():
 		return
-	if not _driver_seated or not _has_loaded_cargo():
+	if not _driver_seated:
 		return
 	vehicle.freeze = false
 	var loaded: Array[DeliveryPackage] = _release_loaded_cargo()

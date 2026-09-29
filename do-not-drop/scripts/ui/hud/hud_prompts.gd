@@ -91,10 +91,11 @@ func refresh_hint(delta: float) -> void:
 	if _hint_override_seconds > 0.0:
 		_hint_override_seconds -= delta
 		hud.hint_label.text = "[b]%s[/b]" % _hint_override
-		hud.hint_label.add_theme_color_override("default_color", Hud.STATE_TEXT[1])
+		hud.hint_label.add_theme_color_override("default_color", Hud.YELLOW)
 		return
-	hud.hint_label.text = UiTheme.keycaps(_base_hint())
-	hud.hint_label.add_theme_color_override("default_color", Hud.MUTED)
+	# On the dark controls pill (Hud._build_bottom_bar()).
+	hud.hint_label.text = UiTheme.keycaps(_base_hint(), true)
+	hud.hint_label.add_theme_color_override("default_color", Hud.PAPER)
 
 
 func _base_hint() -> String:

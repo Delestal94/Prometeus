@@ -15,6 +15,9 @@ func _initialize() -> void:
 	await process_frame
 	var bus: Node = root.get_node(^"/root/EventBus")
 	var network: Node = root.get_node(^"/root/NetworkManager")
+	# One player sends every option back to back below: switch the host's
+	# N-505.3 anti-spam cooldown off here (test_quick_callouts.gd covers it).
+	bus.set(&"ping_cooldown_seconds", 0.0)
 	bus.connect(&"ping_sent", func(peer_id: int, position: Vector3, label: String) -> void:
 		_received.append([peer_id, position, label]))
 
@@ -45,8 +48,8 @@ func _initialize() -> void:
 		_expect((_received[0][1] as Vector3).is_equal_approx(Vector3(1.0, 0.0, -2.0)),
 			"Pings carry the sending player's own position")
 	_expect(PingWheelScript.index_for_vector(Vector2.UP * 100.0) == 0, "Mouse/stick up selects Cuidado")
-	_expect(PingWheelScript.index_for_vector(Vector2.RIGHT * 100.0) == 1, "Mouse/stick right selects Ayuda")
-	_expect(PingWheelScript.index_for_vector(Vector2.DOWN * 100.0) == 3, "Mouse/stick down selects Acá")
+	_expect(PingWheelScript.index_for_vector(Vector2.RIGHT * 100.0) == 2, "Mouse/stick right selects Bache")
+	_expect(PingWheelScript.index_for_vector(Vector2.DOWN * 100.0) == 4, "Mouse/stick down selects Se cae")
 	player.free()
 
 	if _failures == 0:

@@ -4,7 +4,8 @@ extends SceneTree
 ## Carrying, setting down and handing over boxes: the cases that used to leave
 ## a box stuck (frozen on a shelf mid-run, floating after a disconnect), a
 ## player stuck (holding a box a resident already took), or the run stuck (a
-## passenger who boarded with their box in hand never counted as cargo).
+## passenger who boarded with their box in hand never counted as cargo). The
+## truck leaves without cargo too: forgetting the boxes is the crew's problem.
 
 var failures: int = 0
 
@@ -15,12 +16,13 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _passenger_boarding_with_box_counts_as_cargo()
+	await _driver_leaves_without_cargo()
 	await _remounting_mid_run_and_dropping()
 	await _handing_over_at_the_door_empties_hands()
 	await _carry_and_drop_respect_walls_and_floor()
 	await _disconnect_mid_carry_releases_the_box()
 	if failures == 0:
-		print("PASS: boarding with a box, remounting mid-run, door hand-over, walls/floor and disconnects")
+		print("PASS: boarding with a box, empty start, remounting mid-run, door hand-over, walls/floor and disconnects")
 	quit(failures)
 
 
@@ -35,16 +37,38 @@ func _passenger_boarding_with_box_counts_as_cargo() -> void:
 	package.get_node("InteractionArea").interact(player)
 	_expect(seat.can_interact(player), "A passenger can board their seat with the box still in hand")
 	seat.interact(player)
-	_expect(package.is_loaded and mount.occupied_by == package, "Boarding settles the box onto that seat's mount")
-	_expect(player.carried_package == null, "Boarding empties the passenger's hands")
-	_expect(package.carrier == null, "The box no longer has a carrier once mounted")
+	_expect(player.carried_package == package and package.is_held, "Boarding keeps the box on the passenger's lap")
+	_expect(mount.occupied_by == null, "...instead of shelving it on its own")
+	_expect(player.tended_package == package, "The passenger looks after the box on their lap")
+	_expect(package.is_aboard(), "A box on a seated passenger's lap counts as aboard")
+	package.request_lap_toggle()
+	_expect(package.is_loaded and mount.occupied_by == package, "Drop (Q) settles the lap box onto that seat's mount")
+	_expect(player.carried_package == null, "...and empties the passenger's hands")
+	package.request_lap_toggle()
+	_expect(player.carried_package == package and mount.occupied_by == null, "...and Q again brings it back to the lap")
 	var driver: Node = load("res://scenes/gameplay/player/player.tscn").instantiate()
 	driver.name = "Driver"
 	level.get_node("World").add_child(driver)
 	await process_frame
 	level.get_node("World/Vehicle").call(&"set_door_open", &"cab_left", true)  # Seat is behind the cab door.
 	level.get_node("World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea").interact(driver)
-	_expect(manager.is_running, "A box loaded by boarding is enough for the driver to start the run")
+	_expect(manager.is_running, "The driver starts the run with the box on a lap")
+	_expect(manager.cargo_names.has(package.package_id), "The lap box counts as this run's cargo")
+	_expect(package.freeze and package.is_held, "The lap box stays held when the run starts, not dropped loose")
+	await _unload_level(level)
+
+
+func _driver_leaves_without_cargo() -> void:
+	var level: Node = await _load_level()
+	var manager: Node = root.get_node("RunManager")
+	var player: Node = level.local_player
+	var vehicle: Node = level.get_node("World/Vehicle")
+	var seat: Node = vehicle.get_node("CabinInterior/DriverEyePoint/InteractionArea")
+	vehicle.call(&"set_door_open", &"cab_left", true)  # The seat is behind the cab door.
+	_expect(seat.can_interact(player), "The wheel takes a driver with nothing loaded")
+	seat.interact(player)
+	_expect(manager.is_running, "Taking the wheel starts the run even with an empty truck")
+	_expect(manager.cargo_names.is_empty(), "Boxes left at the depot aren't this run's cargo")
 	await _unload_level(level)
 
 
@@ -119,6 +143,9 @@ func _carry_and_drop_respect_walls_and_floor() -> void:
 	var player: Node = level.local_player
 	var package: Node = level.get_node("World/Package")
 	var origin := Vector3(400.0, 50.0, 0.0)
+	# This test floor is far outside the depot on purpose: the play area
+	# (play_area.gd) would walk the player back in.
+	level.get_node("PlayArea").set_physics_process(false)
 	var floor_body: StaticBody3D = _static_box(Vector3(20.0, 1.0, 20.0), origin + Vector3(0.0, -0.5, 0.0))
 	level.add_child(floor_body)
 	player.global_position = origin

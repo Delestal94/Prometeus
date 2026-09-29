@@ -17,6 +17,9 @@ const SCAN_DIRS: Array[String] = ["res://scripts"]
 const ACCENTED_LOOKUP_FILES: Array[String] = [
 	"res://scripts/ui/hud/hud_prompts.gd",
 	"res://scripts/ui/ui_theme.gd",
+	# Quick callouts travel as their Spanish phrase (a stable network id that
+	# also sets the voice's syllables); display_text() translates its "key".
+	"res://scripts/ui/ping_catalog.gd",
 ]
 
 var _failures: int = 0

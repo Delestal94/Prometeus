@@ -52,6 +52,7 @@ const SOUNDS: Array = [
 	["river", &"river_flow_loop", &"RIVER_DB", "noise"],
 	["train horn", &"train_horn", &"TRAIN_HORN_DB", "signal"],
 	["train chugging", &"train_chug_loop", &"TRAIN_CHUG_DB", "engine"],
+	["callout voice", &"callout_voice", &"CALLOUT_VOICE_DB", "signal"],
 ]
 
 ## Composed tracks (.ogg, tools/audio/compose_music.py): Godot can't hand a

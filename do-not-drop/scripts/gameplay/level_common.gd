@@ -12,6 +12,16 @@ class_name LevelCommon
 ## $World/PlayerSpawner), which is what makes this possible.
 
 const LOST_CARGO_DISTANCE: float = 8.0
+## A box that leaves the van isn't written off on the spot (N-213.1): it lies
+## on the road with a marker for this long, so someone can go fetch it and put
+## it back on a shelf. Longer than the 8-15 s rescue inside the van, since it
+## takes stopping, getting out and walking back. A var so tests can shorten it.
+var overboard_rescue_seconds: float = 30.0
+## Host-only: package_id -> seconds it has been out of the van so far.
+var _overboard_seconds: Dictionary = {}
+const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_marker.gd")
+const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
+const RESCUE_HOOK: Script = preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
 @onready var vehicle: VehicleBody3D = $World/Vehicle
 @onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
@@ -29,6 +39,10 @@ var _driver_seated: bool = false
 func _ready() -> void:
 	RunManager.reset_run()
 	add_child(preload("res://scripts/presentation/ingame_music.gd").new())
+	var play_area: Node = preload("res://scripts/gameplay/play_area.gd").new()
+	play_area.name = "PlayArea"
+	play_area.set(&"level", self)
+	add_child(play_area)
 	vehicle.freeze = true
 	packages.assign(depot.withhold_locked(get_tree().get_nodes_in_group(&"cargo")))
 	for package: DeliveryPackage in packages:
@@ -59,6 +73,20 @@ func _ready() -> void:
 	# Command line shortcut for smoke checks and development: skips the
 	# on-foot loading entirely, same as the HUD's debug button.
 	NetworkManager.level_ready.call_deferred()
+	# Every peer draws the flag over a box on the road; the host decides (N-213.1).
+	var overboard_marker: Node3D = OVERBOARD_MARKER.new()
+	overboard_marker.name = "OverboardMarker"
+	add_child(overboard_marker)
+	# Truck faults (N-214): every peer tracks them, the host rolls them.
+	var faults: Node = VEHICLE_FAULTS.new()
+	faults.name = "VehicleFaults"
+	faults.set(&"vehicle", vehicle)
+	add_child(faults)
+	# The rescue hook (N-213.3) hangs by the rear doors on every peer, stowed
+	# until a run takes it from the depot's supplies.
+	var hook: Node3D = RESCUE_HOOK.new()
+	hook.name = "RescueHook"
+	vehicle.add_child(hook)
 	if "--autostart" in OS.get_cmdline_user_args():
 		start_debug_delivery.call_deferred()
 	# The trailer's camera (N-902): F7 free camera, F5/F6/F8 rails. Debug
@@ -190,28 +218,33 @@ func _on_package_loaded(_player: Node) -> void:
 	_maybe_start()
 
 
+## The driver taking the wheel is the start, cargo or not: forgetting the
+## boxes is the crew's problem, paid for at the doors.
 func _maybe_start() -> void:
-	if _driver_seated and _has_loaded_cargo():
+	if _driver_seated:
 		start_delivery()
 
 
 ## Read from the boxes themselves rather than counting mount events: a box
 ## can be loaded and taken back out again before anyone takes the wheel.
+## A box on a seated passenger's lap is aboard too (DeliveryPackage.is_aboard).
 func _has_loaded_cargo() -> bool:
 	for package: DeliveryPackage in packages:
-		if is_instance_valid(package) and package.is_loaded:
+		if is_instance_valid(package) and package.is_aboard():
 			return true
 	return false
 
 
 ## Unfreezes the boxes aboard and has them count for the run; returns them.
 ## Only what's aboard counts: a box left on the rack was never part of this
-## run, so it shouldn't drag the score down.
+## run, so it shouldn't drag the score down. A lap box stays frozen: it is
+## held, and follows its passenger until they shelve it.
 func _release_loaded_cargo() -> Array[DeliveryPackage]:
 	var loaded: Array[DeliveryPackage] = []
 	for package: DeliveryPackage in packages:
-		if is_instance_valid(package) and package.is_loaded:
-			package.freeze = false
+		if is_instance_valid(package) and package.is_aboard():
+			if package.is_loaded:
+				package.freeze = false
 			package.report_to_run()
 			loaded.append(package)
 	return loaded
@@ -251,19 +284,38 @@ func _update_tipped(delta: float) -> void:
 
 
 func _check_lost_cargo() -> void:
-	# A box that falls out is written off on its own. Only losing every last
-	# one ends the run, and RunManager decides that.
+	# A box that falls out gets a rescue window (N-213.1) and is written off
+	# on its own once it runs out. Only losing every last one ends the run,
+	# and RunManager decides that.
 	for package: DeliveryPackage in packages:
 		# A box handed over at a door is freed on the spot -- this list
 		# outlives it, so skip what's already gone instead of reading a
 		# freed node's properties.
 		if not is_instance_valid(package):
 			continue
-		if not package.is_loaded:
+		var id: StringName = package.package_id
+		# Picked up (or never aboard) is no longer a box lying on the road:
+		# carrying it back is the rescue itself.
+		var out: bool = (package.is_loaded and package.trap_state != ITrapBehavior.TrapState.RUINED
+				and package.global_position.distance_to(vehicle.global_position) > LOST_CARGO_DISTANCE)
+		if not out:
+			if _overboard_seconds.has(id):
+				_overboard_seconds.erase(id)
+				EventBus.relay(&"cargo_overboard_ended", [id, package.trap_state != ITrapBehavior.TrapState.RUINED])
 			continue
-		var distance: float = package.global_position.distance_to(vehicle.global_position)
-		if distance > LOST_CARGO_DISTANCE:
+		if not _overboard_seconds.has(id):
+			_overboard_seconds[id] = 0.0
+			EventBus.relay(&"cargo_overboard", [id, package.global_position, overboard_rescue_seconds])
+		_overboard_seconds[id] = float(_overboard_seconds[id]) + get_physics_process_delta_time()
+		if float(_overboard_seconds[id]) >= overboard_rescue_seconds:
+			_overboard_seconds.erase(id)
+			# The order closes empty first (N-213.4), so RunManager no longer
+			# counts the box as cargo and writing it off can't end the run.
+			var route_node: Node = get_node_or_null(^"World/Route")
+			if route_node != null and route_node.has_method(&"close_lost_order"):
+				route_node.call(&"close_lost_order", id)
 			package.mark_lost("Se cayó del camión.")
+			EventBus.relay(&"cargo_overboard_ended", [id, false])
 
 
 func _on_run_ended(_score: int, _results: Dictionary) -> void:

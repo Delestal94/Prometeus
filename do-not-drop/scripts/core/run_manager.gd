@@ -37,6 +37,38 @@ const POINTS_PHOTO_BONUS: int = 25
 const COMPLAINT_PENALTY: int = 40
 const COMPLAINT_CHANCE_AT_RISK: float = 0.5
 
+## Cargo rescue (docs/jugabilidad-paquetes-rescate.md): a repair that holds
+## up at the door pays less than intact but well over a dented box; a
+## doubtful fix and a deliberate substitute pay little. None of these roll
+## dice for a complaint -- the same state always gets the same answer.
+const POINTS_DELIVERED_REPAIRED: int = 110
+const POINTS_DELIVERED_UNCONVINCING: int = 35
+const POINTS_DELIVERED_SUBSTITUTED: int = 10
+const CARE_POINTS: Dictionary = {
+	&"repaired": POINTS_DELIVERED_REPAIRED,
+	&"unconvincing": POINTS_DELIVERED_UNCONVINCING,
+	&"substituted": POINTS_DELIVERED_SUBSTITUTED,
+}
+## The shared repair kit a crew starts every run with: enough for one simple
+## rescue per box, not an endless heal.
+const CARE_SUPPLIES_START: Dictionary = {
+	&"tape": 3, &"repair": 2, &"filler": 2, &"rag": 2, &"strap": 2, &"substitute": 1,
+}
+const RESCUE_NAMES: Dictionary = {&"fragile": "Jarrón", &"balance": "Torta", &"noisy": "Gallina",
+	&"growing_weight": "Paquete pesado", &"liquid": "Líquido", &"explosive": "Explosivo", &"hostile": "Criatura"}
+## Delivery deadlines (docs/jugabilidad-paquetes-rescate.md, "Presión para
+## conducir rápido"): up to three houses get one, computed from where they
+## really are on the generated road. DEADLINE_SPEED sits a little over the
+## bench's average cruise (route.gd ROUTE_CRUISE_SPEED, 12.8 m/s), so taking
+## every bonus means pushing on several legs; DEADLINE_SLACK leaves room for
+## one short rescue stop. Missing one costs a little pay, never the cargo.
+const MAX_DEADLINES: int = 3
+const DEADLINE_SPEED: float = 13.5
+const DEADLINE_SLACK: float = 15.0
+const DEADLINE_STOP_SECONDS: float = 25.0
+const POINTS_DEADLINE_MET: int = 40
+const PENALTY_DEADLINE_MISSED: int = 15
+const DEADLINE_REASONS: Array[String] = ["el cliente sale de casa", "empieza el cumpleaños", "cierra el comercio"]
 const MODE_DELIVERY: StringName = &"delivery"
 const MODE_ENDLESS: StringName = &"endless"
 
@@ -90,6 +122,12 @@ var consumed_packages: Array[String] = []
 ## True once two or more packages were in trouble at the same moment. The
 ## score rewards it: surviving a shared scare is the story people retell.
 var had_simultaneous_risk: bool = false
+## Host-owned kit counts (CARE_SUPPLIES_START), mirrored to clients for the HUD.
+var care_supplies: Dictionary = CARE_SUPPLIES_START.duplicate()
+## This run's deadlines: [{house, seconds, reason}], same on every peer.
+var deadlines: Array = []
+## Care notes from the host that reached a client before their delivery did.
+var _pending_care: Dictionary = {}
 
 ## Overridable so tests don't read/write the real save file on disk --
 ## user:// is a real per-project directory, not an in-memory sandbox.
@@ -114,6 +152,8 @@ func _ready() -> void:
 	# makes it safe for the host to receive back the fact it just relayed.
 	EventBus.house_delivery_recorded.connect(_on_house_delivery_recorded)
 	EventBus.delivery_photo_taken.connect(_on_delivery_photo_taken)
+	EventBus.delivery_care_noted.connect(_on_delivery_care_noted)
+	EventBus.delivery_deadlines_set.connect(func(list: Array) -> void: deadlines = list.duplicate(true))
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.houses_assigned.connect(_on_houses_assigned)
 	_load_leaderboard()
@@ -143,6 +183,102 @@ func reset_run() -> void:
 	lost_time_bonus = false
 	RouteEventManager.reset_route()
 	consumed_packages = []
+	care_supplies = CARE_SUPPLIES_START.duplicate()
+	_pending_care = {}
+	deadlines = []
+
+
+## Deadlines for houses at these distances along the road (metres, in house
+## order). Each one budgets the driving at DEADLINE_SPEED plus the stops at
+## the houses before it -- a fixed timer would be impossible on a long route
+## and free on a short one.
+static func plan_deadlines(distances: Array) -> Array:
+	var planned: Array = []
+	for index: int in mini(distances.size(), MAX_DEADLINES):
+		var seconds: float = DEADLINE_SLACK + float(distances[index]) / DEADLINE_SPEED + index * DEADLINE_STOP_SECONDS
+		var reason: String = DEADLINE_REASONS[index % DEADLINE_REASONS.size()]
+		planned.append({"house": index, "seconds": roundf(seconds), "reason": reason})
+	return planned
+
+
+## Host, as the run starts: posts the deadlines to every peer.
+func set_deadlines(list: Array) -> void:
+	EventBus.relay(&"delivery_deadlines_set", [list])
+
+
+## The closest deadline still open, for the HUD: {} when there is none.
+func next_deadline() -> Dictionary:
+	var best: Dictionary = {}
+	for deadline: Dictionary in deadlines:
+		if _delivered_at(int(deadline["house"])) or elapsed_seconds > float(deadline["seconds"]):
+			continue
+		if best.is_empty() or float(deadline["seconds"]) < float(best["seconds"]):
+			best = deadline
+	return best
+
+
+func _delivered_at(house_index: int) -> bool:
+	for entry: Dictionary in deliveries:
+		if int(entry["house"]) == house_index:
+			return handed_over(StringName(entry["outcome"]))
+	return false
+
+
+## Whether the resident actually got a box: not a house the run drove past
+## (&"missed") nor an order closed empty because its box was left on the road
+## (&"lost", N-213.4). Only those can earn a photo, a met deadline or care pay.
+static func handed_over(outcome: StringName) -> bool:
+	return outcome != &"missed" and outcome != &"lost"
+
+
+## Met / missed counts over this run's deadlines, from the delivery record.
+func deadline_tally() -> Dictionary:
+	var met: int = 0
+	var missed: int = 0
+	for deadline: Dictionary in deadlines:
+		var on_time: bool = false
+		for entry: Dictionary in deliveries:
+			if int(entry["house"]) == int(deadline["house"]) and handed_over(StringName(entry["outcome"])):
+				on_time = float(entry.get("at", INF)) <= float(deadline["seconds"])
+		if on_time:
+			met += 1
+		else:
+			missed += 1
+	return {"met": met, "missed": missed}
+
+
+func care_supply_count(tool: StringName) -> int:
+	return int(care_supplies.get(tool, 0))
+
+
+## Host only: spends one unit, or says no if the last one is already gone
+## (two passengers finishing a repair on the same tick get one success).
+func consume_care_supply(tool: StringName) -> bool:
+	if NetworkManager.is_online() and not NetworkManager.is_host():
+		return false
+	if care_supply_count(tool) <= 0:
+		return false
+	care_supplies[tool] = care_supply_count(tool) - 1
+	if NetworkManager.is_online():
+		_sync_care_supplies.rpc(care_supplies)
+	return true
+
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_care_supplies(supplies: Dictionary) -> void:
+	care_supplies = supplies.duplicate()
+
+
+## What DeliveryPackage.delivery_assessment() last said about a box: kept with
+## its cargo entry so the door and the results can read it after the box is gone.
+func record_care(id: StringName, assessment: Dictionary) -> void:
+	_entry(id)["care"] = assessment.duplicate()
+
+
+func care_category(id: StringName) -> StringName:
+	if not cargo.has(id):
+		return &""
+	return StringName((cargo[id].get("care", {}) as Dictionary).get("category", ""))
 
 
 ## Online, only the host gets here: interactions resolve on the host
@@ -189,14 +325,23 @@ func register_delivery(house_index: int, outcome: StringName, package_id: String
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
 			return
+	var care: StringName = care_category(package_id) if handed_over(outcome) else &""
+	if care.is_empty():
+		care = StringName(_pending_care.get(house_index, &""))
 	deliveries.append({
 		"house": house_index,
 		"outcome": outcome,
 		"package_id": package_id,
 		"photo": false,
+		"care": care,
+		"at": elapsed_seconds,
 	})
 	if not package_id.is_empty() and cargo.has(package_id):
 		cargo[package_id]["delivered"] = true
+	# Before the delivery itself, so each door already knows which of its
+	# rescue lines to use when house_delivery_recorded reaches it.
+	if CARE_POINTS.has(care):
+		EventBus.relay(&"delivery_care_noted", [house_index, care])
 	EventBus.relay(&"house_delivery_recorded", [house_index, outcome, package_id])
 
 
@@ -226,7 +371,7 @@ func submit_delivery_photo(house_index: int) -> bool:
 		return attach_delivery_photo(house_index)
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
-			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
+			if bool(entry["photo"]) or not handed_over(StringName(entry["outcome"])):
 				return false
 			entry["photo"] = true
 			_request_delivery_photo.rpc_id(NetworkManager.HOST_ID, house_index)
@@ -268,7 +413,7 @@ func _mark_photo(house_index: int) -> bool:
 		if int(entry["house"]) == house_index:
 			# Nothing was delivered at a house the run drove past: there's
 			# nothing for a photo to prove, and it used to earn the bonus.
-			if bool(entry["photo"]) or StringName(entry["outcome"]) == &"missed":
+			if bool(entry["photo"]) or not handed_over(StringName(entry["outcome"])):
 				return false
 			entry["photo"] = true
 			return true
@@ -291,6 +436,15 @@ func _on_house_delivery_recorded(house_index: int, outcome: StringName, package_
 	register_delivery(house_index, outcome, package_id)
 
 
+## A client's cargo has no care record of its own: the host's note arrives
+## just before the delivery it belongs to.
+func _on_delivery_care_noted(house_index: int, category: StringName) -> void:
+	_pending_care[house_index] = category
+	for entry: Dictionary in deliveries:
+		if int(entry["house"]) == house_index:
+			entry["care"] = category
+
+
 func _on_delivery_photo_taken(house_index: int, accepted: bool) -> void:
 	if accepted:
 		_mark_photo(house_index)
@@ -310,14 +464,24 @@ func _resolve_deliveries() -> Dictionary:
 	var points: int = 0
 	var delivered_count: int = 0
 	var missed: int = 0
+	var lost: int = 0
 	var photos: int = 0
 	var complaints: Array[Dictionary] = []
+	var rescued: Dictionary = {}
 	for entry: Dictionary in deliveries:
 		var outcome: StringName = StringName(entry["outcome"])
-		var has_photo: bool = bool(entry["photo"]) and outcome != &"missed"
+		var has_photo: bool = bool(entry["photo"]) and handed_over(outcome)
 		if has_photo:
 			photos += 1
 			points += POINTS_PHOTO_BONUS
+		var care: StringName = StringName(entry.get("care", ""))
+		if handed_over(outcome) and CARE_POINTS.has(care):
+			# The resident inspected a rescued box: what they saw decides
+			# the pay, not the trap's bar or a roll for a complaint.
+			points += int(CARE_POINTS[care])
+			delivered_count += 1
+			rescued[care] = int(rescued.get(care, 0)) + 1
+			continue
 		match outcome:
 			&"delivered_ok":
 				points += POINTS_DELIVERED_INTACT
@@ -328,6 +492,11 @@ func _resolve_deliveries() -> Dictionary:
 				complaints.append(_complaint(entry, has_photo))
 			&"missed":
 				missed += 1
+				points -= PENALTY_MISSED_HOUSE
+			&"lost":
+				# Its box was left on the road (N-213.4): the resident waited
+				# for nothing, same as a door the run drove past.
+				lost += 1
 				points -= PENALTY_MISSED_HOUSE
 			&"delivered_at_risk":
 				# Handed over dented. Worth less than intact, and the
@@ -344,6 +513,8 @@ func _resolve_deliveries() -> Dictionary:
 	var unreached: int = maxi(expected_houses - deliveries.size(), 0)
 	missed += unreached
 	points -= unreached * PENALTY_MISSED_HOUSE
+	var tally: Dictionary = deadline_tally()
+	points += int(tally["met"]) * POINTS_DEADLINE_MET - int(tally["missed"]) * PENALTY_DEADLINE_MISSED
 	var unanswered: int = 0
 	for complaint: Dictionary in complaints:
 		if not bool(complaint["dismissed"]):
@@ -353,19 +524,29 @@ func _resolve_deliveries() -> Dictionary:
 	# sums as `points`, so the lines always add up to the score shown.
 	var counts: Dictionary = {}
 	for entry: Dictionary in deliveries:
+		if handed_over(StringName(entry["outcome"])) and CARE_POINTS.has(StringName(entry.get("care", ""))):
+			continue
 		counts[StringName(entry["outcome"])] = int(counts.get(StringName(entry["outcome"]), 0)) + 1
 	var breakdown: Array = []
 	_add_line(breakdown, "HUD_SCORE_PERFECT", int(counts.get(&"delivered_ok", 0)), POINTS_DELIVERED_INTACT)
 	_add_line(breakdown, "HUD_SCORE_DENTED", int(counts.get(&"delivered_at_risk", 0)), POINTS_DELIVERED_AT_RISK)
 	_add_line(breakdown, "HUD_SCORE_RUINED", int(counts.get(&"delivered_ruined", 0)), POINTS_DELIVERED_RUINED)
+	_add_line(breakdown, "HUD_SCORE_REPAIRED", int(rescued.get(&"repaired", 0)), POINTS_DELIVERED_REPAIRED)
+	_add_line(breakdown, "HUD_SCORE_UNCONVINCING", int(rescued.get(&"unconvincing", 0)),
+			POINTS_DELIVERED_UNCONVINCING)
+	_add_line(breakdown, "HUD_SCORE_SUBSTITUTED", int(rescued.get(&"substituted", 0)), POINTS_DELIVERED_SUBSTITUTED)
+	_add_line(breakdown, "HUD_SCORE_DEADLINE_MET", int(tally["met"]), POINTS_DEADLINE_MET)
+	_add_line(breakdown, "HUD_SCORE_DEADLINE_MISSED", int(tally["missed"]), -PENALTY_DEADLINE_MISSED)
 	_add_line(breakdown, "HUD_SCORE_PHOTOS", photos, POINTS_PHOTO_BONUS)
 	_add_line(breakdown, "HUD_SCORE_MISSED", missed, -PENALTY_MISSED_HOUSE)
+	_add_line(breakdown, "HUD_SCORE_LOST", lost, -PENALTY_MISSED_HOUSE)
 	_add_line(breakdown, "HUD_SCORE_COMPLAINTS", unanswered, -COMPLAINT_PENALTY)
 	return {
 		"breakdown": breakdown,
 		"delivery_points": points,
 		"houses_delivered": delivered_count,
 		"houses_missed": missed,
+		"houses_lost": lost,
 		"photos": photos,
 		"complaints": complaints,
 	}
@@ -446,8 +627,10 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"breakdown": breakdown,
 		"houses_delivered": houses_delivered,
 		"houses_missed": int(doors["houses_missed"]),
+		"houses_lost": int(doors["houses_lost"]),
 		"photos": int(doors["photos"]),
 		"complaints": doors["complaints"],
+		"stories": rescue_stories(),
 		"deliveries": _result_delivery_rows(),
 		"route_event": _result_route_event(),
 		"score": score,
@@ -569,6 +752,8 @@ func send_session_state(peer_id: int) -> void:
 		"consumed": consumed_packages.duplicate(),
 		"door_open": door_open,
 		"results": results.duplicate(true),
+		"care_supplies": care_supplies.duplicate(),
+		"deadlines": deadlines.duplicate(true),
 	})
 
 
@@ -585,6 +770,8 @@ func _receive_session_state(state: Dictionary) -> void:
 		if depot != null and depot.get(&"door") != null:
 			depot.get(&"door").call(&"set_open", false, false)
 	expected_houses = int(state.get("expected_houses", expected_houses))
+	care_supplies = (state.get("care_supplies", care_supplies) as Dictionary).duplicate()
+	deadlines = (state.get("deadlines", deadlines) as Array).duplicate(true)
 	deliveries.assign(state.get("deliveries", []))
 	cargo = (state.get("cargo", {}) as Dictionary).duplicate(true)
 	var host_results: Dictionary = state.get("results", {})
@@ -693,6 +880,23 @@ func _save_leaderboard() -> void:
 		push_warning("No se pudo guardar el leaderboard: " + save_path)
 
 
+## One line per box that needed rescuing, for the results screen to tell
+## the run's story ("Jarrón recompuesto", "Gallina sustituida por un juguete").
+func rescue_stories() -> Array[String]:
+	var stories: Array[String] = []
+	for entry: Dictionary in cargo.values():
+		var care: Dictionary = entry.get("care", {})
+		var kind := StringName(care.get("kind", ""))
+		var label: String = String(RESCUE_NAMES.get(kind, "Paquete"))
+		if bool(care.get("substituted", false)):
+			stories.append("%s: sustituida por un juguete" % label if kind == &"noisy" else "%s: sustituido" % label)
+		elif int(care.get("repairs", 0)) > 0:
+			stories.append("%s: %d arreglo(s) en el camino" % [label, int(care.get("repairs", 0))])
+		elif int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED and not care.is_empty():
+			stories.append("%s: perdido en el camino" % label)
+	return stories
+
+
 ## Worst state across the cargo, for readouts that only have room for one.
 func worst_state() -> int:
 	var worst: int = ITrapBehavior.TrapState.OK
@@ -729,6 +933,11 @@ func _on_package_ruined(id: StringName, cause: String) -> void:
 	for entry: Dictionary in cargo.values():
 		if not bool(entry.get("delivered", false)):
 			aboard += 1
+	# A lost hen can still go out as a toy while the kit has one: the run
+	# isn't over while there's a playable way out.
+	var kind := StringName((_entry(id).get("care", {}) as Dictionary).get("kind", ""))
+	if kind == &"noisy" and care_supply_count(&"substitute") > 0:
+		return
 	if aboard > 0 and _count_ruined() >= aboard:
 		finish_run(false, tr("HUD_RUN_ALL_CARGO_RUINED"))
 

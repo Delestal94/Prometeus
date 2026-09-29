@@ -1,6 +1,29 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
+> Última actualización: 2026-09-29 (pruebas y trabajo pendiente de red y rendimiento en N-215 a N-221;
+> antes, el mismo día: auditoría de rendimiento: Endless fusiona cada tramo al generarlo y
+> comparte sus materiales; antes, el mismo día: red por Steam tras playtest: el host mandaba 2-5 veces el límite
+> de Steam y el cliente veía el mundo cada vez más viejo; `care_state` solo al cambiar, sync a 60 Hz
+> fijos, caja predicha en las manos, Nagle apagado; investigación en `docs/investigacion-red.md`;
+> menú sin la tarjeta fantasma y sin DOF en Compatibility). Antes, el mismo día: (N-214.3b: un pasajero
+> sostiene el celular como espejo mientras no haya repuesto; quien se une a mitad del recorrido recibe
+> las averías; faltan los resultados, N-214.4).
+> Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
+> con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
+> espejo y los resultados). Antes, el mismo día: (túneles de tren en las dos puntas de la vía del paso a
+> nivel; repaso de las cascadas). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
+> espejo del conductor se cae a la ruta; faltan arreglos y resultados). Antes, el mismo día: (N-213.3: gancho de rescate como suministro del depósito; N-213 queda
+> cerrada). Antes, el mismo día: (N-213: test de red con dos clientes que agarran la misma caja; queda el
+> gancho N-213.3). Antes, el 2026-09-28: (cascadas con rocas en las dos puntas del río de cada
+> puente angosto). Antes, el mismo día: (N-214.1: componente `VehicleFaults` que decide en el host las averías
+> del camión por golpe fuerte, una por entrega; faltan efectos, arreglos y resultados). Antes, el mismo día: (N-213.4: abandonar la caja caída cierra su pedido como
+> "Perdido" sin terminar la partida; falta el gancho). Antes, el mismo día: (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
+> con cartel encima y se puede volver a subir; faltan el gancho y el pedido "Perdido"). Antes, el mismo día: (N-505 cerrada: la voz sintetizada de cada frase, con tono por
+> color de jugador). Antes, el mismo día: (N-505 parcial: rueda de ocho frases, enfriamiento de 1,5 s en el
+> host y la frase en el HUD del conductor; falta la voz sintetizada). Antes, el mismo día: (N-704 cerrada: diferencial corregido en los docs y veredictos de
+> `critico-diseno` en N-212, N-214 y N-112 — esta última en contra). Antes, el mismo día: (hito M6: 15 tareas tomadas de `analisis-competencia-backseat-rv.md`,
+> asignadas a Nacho aunque varias tocan el dominio de Slatex; N-907 nace pospuesta ⏸). Antes, el mismo día:
+> N-901 y todo lo de publicar/promocionar pospuesto a la iteración de lanzamiento. Antes: 2026-09-27 (repaso del depósito tras playtest; #180 cajas que se salían del camión; N-310, personaje cartoon gordito). Antes: 2026-09-25 (tanda sobre `claude/nacho-pending-tasks-qhxmmj`). M1, M2 y M3 cerrados;
 > M4 completo; de M5, N-210, N-703 y N-902 a N-906. Quedan abiertas solo las que no dependen de código:
 > N-901 (pagar Steam Direct y el AppID real), la meta de N-204 con el preset bajo en una PC modesta (no hay
 > una a mano; la nube renderiza por software) y #149 (probar con 3+ personas por Steam). N-702 es permanente.
@@ -10,6 +33,76 @@
 > sin esperar a Slatex y sin playtesting**.
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
+
+## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
+
+Auditoría de `perfilador-rendimiento` (headless, Endless con 4 cajas, `Performance` cada 10 ticks):
+- `route_streamer.gd`: cada tramo de Endless ahora pasa por `DressingBatcher.merge_segment_geometry`
+  al generarse, como los del Reparto (`route.gd`); antes cada spawn sumaba ~500 nodos. Flag
+  `batch_geometry` para benches.
+- `route_segment.gd`: `_materials` es `static` (un material por color para todos los tramos); antes
+  cada tramo creaba 5 (+274 recursos por spawn). Los que tiñen ya duplicaban.
+- `test_level_endless` lo verifica (tramos sin cajas sueltas, material de ruta compartido).
+- Descartado: el "1693 Mesh leaked at exit" son cachés `static` acotados (modelos × 2 estaciones ×
+  3 luces), no crecen con la partida. Telemetría, audio sintetizado, sueño y CCD de cuerpos ya bien.
+- Pendiente: al generarse un tramo, `TIME_PHYSICS_PROCESS` pasó de ~3 ms a ~24 ms durante decenas
+  de frames (medido antes del merge, que no toca la física): hay que perfilarlo con ventana real. Faltan
+  también draw calls, sombras y transparencias con `revisor-visual`, y física con camión lleno.
+
+## Hecho fuera de lista: red por Steam y bugs del playtest (2026-09-29)
+
+Playtest por Steam (Spacewar, dos PCs por internet): la caja que cargaba el cliente lo seguía con
+atraso y el camión "seguía andando" después de soltar las teclas. Medido: el host le mandaba a cada
+cliente 527-1263 KB/s contra los 256 KB/s que Steam permite por conexión, y Steam encolaba el resto.
+- `package.tscn`: `care_state` (diccionario de 19 claves, 85 % de cada envío) pasa de `ALWAYS` a
+  `ON_CHANGE`; `package.tscn` y `player.tscn` sincronizan a 60 Hz fijos (antes, por frame de render).
+  Peor caso ahora: 105 KB/s por cliente. `test_net_bandwidth_budget` lo cuida (tope 128 KB/s).
+- `package.gd predict_carry()` + `player_carry.gd`: el cliente dibuja la caja en sus manos al
+  instante; el host sigue decidiendo. `test_carry_prediction`.
+- `network_manager.gd`: `no_nagle` en el peer de Steam (5 ms menos por mensaje).
+- `main_menu.gd`: el vidrio esmerilado se reacomoda diferido; al cambiar el tamaño de la ventana
+  quedaba una segunda tarjeta desplazada detrás (`render_main_menu.gd` lo chequea).
+- `player.gd`: sin `CameraAttributesPractical` en GL Compatibility (el DOF nunca se veía y avisaba
+  en cada carga).
+- Pendiente (plan por fases en `docs/investigacion-red.md`): HUD de red y `--net-sim`, interpolación
+  con buffer para jugadores y cajas (y recién ahí bajar a 30 Hz), tolerancia de alcance por ping,
+  predicción del conductor, validación genérica de RPC y reconexión.
+
+## Hecho fuera de lista: túneles del tren y repaso de las cascadas (2026-09-29)
+
+~~El tren aparecía de la nada a 42 m de la ruta~~ **[x] Hecho (2026-09-29)** — Pedido del usuario.
+La vía del paso a nivel entra en un túnel en cada punta: portal de piedra nuevo
+(`sm_env_rail_tunnel_portal.glb`, builder `portal` de `assets/tools/build_rail_crossing.py`: arco con
+dovelas y clave, jambas, pilastras, cornisa y parapeto, muros de ala, relleno detrás, túnel de 12 m que
+se oscurece a negro por color de vértice). `RailCrossingSegment` lo pone rígido en ±42 m
+(`tunnel_mouths()`), el tren arranca adentro del túnel cercano y termina adentro del lejano, y un
+vagón se dibuja solo mientras está antes del fondo de un túnel (`_place_train()`). `route.gd` pasa las
+bocas a `RouteTerrain.tunnels`: loma detrás de cada portal (`_tunnel_hill()`), corte a nivel adelante y
+hueco en el terreno donde cruzaría el túnel (`_in_tunnel_bore()`); sin árboles en la vía ni frente a los
+portales. `conform_geometry()` respeta la meta `&"rigid"` (la vía también es rígida ahora).
+`LowpolyMaterials` suma `portal_stone`, `portal_trim` y `tunnel_soot`. Tests `test_route_terrain`
+(`_check_tunnel`) y `test_more_route_segments`; capturas `render_rail_tunnel.gd`.
+
+~~Cascada con aspecto de cinta plana~~ **[x] Hecho (2026-09-29)** — Pedido del usuario ("más
+profesional"). La lámina se curva (abombada al centro, bordes hacia atrás) y se dibuja en dos capas
+(cuerpo profundo + velo de hilos blancos más rápido), bordes irregulares que titilan; la espuma es un
+remolino que se aleja aguas abajo en vez de una estrella; bruma de partículas al pie (`_add_mist()`);
+rocas asentadas en el punto más bajo bajo su huella (ninguna cuelga sobre la orilla), columnas anchas
+abajo y angostas arriba, menos aplastadas y menos oscuras. Test `test_river_water`.
+
+## Hecho fuera de lista: cascadas en las puntas del río (2026-09-28)
+
+~~El agua del río terminaba contra el pasto como un charco aislado~~ **[x] Hecho (2026-09-28)** —
+Pedido del usuario tras mirar capturas. `route/route_river_falls.gd` (nuevo, lo llama
+`RouteTerrain.build()`) sigue el centro del cauce (`RouteTerrain.river_centre()`, sacado de
+`_river_factor()`) hasta donde se acaba el agua de cada lado y ahí arma una cascada: una cinta que
+cae corta y empinada desde un labio 2,6–5 m sobre el agua (`shaders/river_fall.gdshader`: chorros
+que bajan, espuma en el labio y al pie, charco de espuma), con pilas de rocas del bosque en
+proporción natural (`_add_column()`, nunca estiradas ni aplastadas) que forman el acantilado, lo
+enmarcan y tapan de dónde sale el agua, piedras en el charco y en la orilla, y un tono de piedra
+mojada (más oscuro que las rocas secas del bosque). Sin RNG: igual en todos los clientes; sin
+colisión, como las rocas del bosque. Test `test_river_water` (`_check_falls`), capturas
+`render_river_fall_*`.
 
 ## Hecho fuera de lista: repaso del depósito tras playtest (2026-09-27)
 
@@ -72,7 +165,8 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M2 — Ritmo y guía del jugador** | Una entrega de 2-5 minutos donde siempre se sabe adónde ir. | N-103, N-104, N-105, N-501, N-502, N-503 |
 | **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
-| **M5 — Preparación de lanzamiento** | Builds, tienda, tráiler. | N-210, N-703, N-901 a N-906 |
+| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
+| **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
@@ -329,6 +423,87 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
 - [ ] **Aparte:** faltan 14 `.uid` en `main` (Godot los genera en cada clon con valores distintos);
   commitearlos en un PR chico cuando nadie tenga copias sin trackear.
 - [ ] Bajar la línea base del lint (quedan ~990 líneas de más de 120 columnas, casi todas en tests).
+
+### N-215 · Repetir la prueba por Steam después de los PR #34 y #35 — A · manual (con un amigo) · Aviso: no
+
+Es la prueba que falta para dar por cerrado el lag del 2026-09-29. Hay que hacerla con dos PCs distintas
+por Steam (Spacewar 480), no con dos ventanas en la misma PC: ahí V-Sync reparte los FPS y aparece un
+lag que entre dos PCs no existe.
+- [ ] El camión ya no "sigue andando" segundos después de soltar las teclas. Queda el atraso de un ping
+  más 100 ms, que es lo que ataca N-218.
+- [ ] La caja cargada por el cliente va en sus manos, sin atraso.
+- [ ] El lag no crece con el tiempo: en Reparto, con las 14 cajas, a los 5 minutos se siente igual que al
+  empezar.
+- [ ] Anotar el ping aproximado y los monitores de los dos (60 o 144 Hz).
+- [ ] Del playtest anterior: con la ventana maximizada no aparece la tarjeta fantasma del menú, y el log no
+  muestra "Depth of field blur".
+- Si el lag acumulado vuelve, correr `test_net_bandwidth_budget` y revisar si alguien agregó una
+  propiedad `ALWAYS` grande. Después, N-216 para medir en vivo.
+
+### N-216 · HUD de red y simulación de mala conexión — A · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`)
+
+Fase 0 de `docs/investigacion-red.md`: medir antes de seguir optimizando.
+- [ ] Overlay (F3 u opción) con ping, pérdida, KB/s de entrada y salida y bytes en cola. En Steam sale de
+  `Steam.getConnectionRealTimeStatus`; en LAN, de `ENetPacketPeer`.
+- [ ] `--net-sim=lag,jitter,pérdida` usando la simulación de Steam (`NETWORKING_CONFIG_FAKE_PACKET_*`,
+  expuesta por GodotSteam 4.22.1) y el `--fake-lag` que ya existe para ENet.
+- [ ] Perfil de prueba estándar: 150 ms, ±20 ms y 2 % de pérdida. Documentarlo en el README.
+
+### N-217 · Suavizado de jugadores y cajas remotas, y sync a 30 Hz — A · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package.gd` de Slatex)
+
+Fase 2 de `docs/investigacion-red.md`. Hoy los jugadores remotos (`player.gd _apply_net_state`) y las cajas
+del cliente (`package.gd _process`) se colocan con el último valor que llegó, sin suavizar. Con el jitter
+de internet saltan.
+- [ ] Separar de `VehicleNetSmoother` un `NetSnapshotBuffer` genérico, con reloj del host, y usarlo en
+  jugadores y cajas.
+- [ ] Colchón adaptativo: 2 intervalos más 2 × el jitter medido, entre 50 y 200 ms.
+- [ ] Recién con eso, bajar `replication_interval` de caja y jugador a 1/30 s. `test_net_bandwidth_budget`
+  tiene que seguir pasando.
+- [ ] Tolerancia de alcance proporcional al ping en los chequeos del host (agarrar y usar cajas).
+
+### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: sí (`vehicle.gd` congelado)
+
+Fase 3 de `docs/investigacion-red.md`. Hoy el volante del conductor cliente tiene un ping más 100 ms de
+atraso.
+- [ ] El cliente que maneja descongela su copia del camión y la simula con sus inputs numerados.
+- [ ] El host devuelve su pose con el último input procesado. El cliente compara contra su historial y
+  corrige suave (posición en ~150 ms), sin re-simular.
+- [ ] Las cajas siguen en el host y se dibujan en el espacio del camión del cliente (`net_in_vehicle`).
+- [ ] Test con `--fake-lag`: el volante responde en el mismo tick, y la corrección no salta más de 10 cm
+  por frame.
+- Descartado: pasarle la autoridad del camión al conductor. El host terminaría simulando las cajas sobre
+  un camión que llega atrasado, y volverían las cajas que atraviesan las paredes.
+
+### N-219 · Pico de física al generar cada tramo de Endless — B · `Opus 5.5 · high` · Aviso: no
+
+La auditoría del 2026-09-29 midió que, al generarse un tramo, `TIME_PHYSICS_PROCESS` sube de ~3 ms a
+~24 ms durante decenas de frames (el límite a 60 Hz es 16,7 ms). Se midió antes del merge del PR #35, que
+no toca la física.
+- [ ] Reproducirlo con ventana real y ver quién gasta: los `StaticBody3D` y shapes del tramo, el terreno,
+  los scripts con `_physics_process` o el CCD.
+- [ ] Arreglar: armar el tramo repartido en varios frames, usar menos shapes o shapes más simples, o
+  generarlo antes y más lejos.
+- [ ] Test: el costo de física tras un spawn vuelve a la base en pocos frames.
+
+### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no
+
+Lo que la auditoría headless no pudo medir (`revisor-visual` o `perfilador-rendimiento` con pantalla).
+- [ ] Draw calls, sombras, transparencias y partículas en Reparto y en Endless: comparar antes y después del
+  PR #35.
+- [ ] Física de Jolt con 5 jugadores y el camión lleno (objetos activos y pares de colisión).
+- [ ] Tiempo de carga del menú y del nivel, y memoria.
+- [ ] Opcional: vaciar los cachés `static` de mallas al volver al menú. No es un leak: el "1693 Mesh
+  leaked at exit" son cachés acotados.
+
+### N-221 · Red defensiva: validación de RPC y reconexión — B · `Opus 5.5 · xhigh` · Aviso: sí (zona compartida)
+
+Fase 4 de `docs/investigacion-red.md`.
+- [ ] Validador común para RPC `any_peer`: remitente, `NaN`/`inf` en poses, tamaño de diccionarios y un
+  límite de pedidos por segundo por peer.
+- [ ] Test que recorra todos los `@rpc("any_peer"` y exija el chequeo del remitente.
+- [ ] Reconexión: el que se cae a mitad de una partida vuelve a su lugar.
+- [ ] Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.
+- [ ] Antes de jugar con gente de afuera: AppID propio (N-901).
 
 ## 3. Arte y dirección visual
 
@@ -678,7 +853,11 @@ Esto no es playtesting (no juzga diversión), busca errores.
 
 ## 9. Negocio, marketing y distribución
 
-### N-901 · Steamworks y AppID propio — A (decisión) · `Opus 5.5 · medium` · Aviso: no
+> **⏸ Pospuesto (2026-09-28):** estamos en desarrollo y refinamiento, así que lo de publicar en Steam
+> y promocionar el juego queda para una iteración de lanzamiento. Las tareas marcadas ⏸ no se trabajan
+> ni cuentan como pendientes hasta que se reabra esta sección.
+
+### N-901 · Steamworks y AppID propio — A (decisión) · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 
@@ -727,6 +906,262 @@ Tarea semanal: estos son los cuatro primeros; la costumbre sigue.
   menos de 8 MiB cada uno: el ciervo cruza delante del camión, el tren pasa entre la cámara y el camión
   frenado en la barrera, el camión vuelca, se queda tumbado y las cajas salen volando por atrás, y la
   persecución bajo la lluvia. `tools/devlog/make_gif.py` arma una paleta con cuadros de todo el clip.
+
+---
+
+## Mecánicas tomadas de la competencia (2026-09-28)
+
+Salen de `docs/analisis-competencia-backseat-rv.md` (Backseat Drivers y RV There Yet?); la columna
+**M-xx** es el id de ese documento, donde está el razonamiento completo. Los IDs siguen el pilar al que
+pertenece cada tarea. A diferencia del resto de la lista, varias tocan el dominio de Slatex (paquetes,
+jugador, UI): se asignaron a Nacho a pedido del usuario, así que llevan **Aviso: sí** y, antes de
+empezarlas, conviene pasar el plan por `guardian-dominios`. `vehicle.tscn` / `vehicle.gd` siguen
+congelados: nada de esta sección los edita; lo que necesita el camión se cuelga desde afuera.
+
+| ID | M-xx | Tarea | Prio |
+|---|---|---|---|
+| N-704 | — | Corregir el diferencial y pasar las ideas grandes por crítica | A |
+| N-505 | M-02 | Indicaciones rápidas con voz de personaje | A |
+| N-213 | M-04 | Carga que sale del camión y rescate afuera | A |
+| N-214 | M-03 | Averías del camión reparables con el kit | A |
+| N-212 | M-01 | Voz por proximidad | A |
+| N-109 | M-06 | Animales que se meten con la carga | B |
+| N-406 | M-09 | Radio del camión con función | B |
+| N-108 | M-05 | Tramo de barro/pendiente con salida cooperativa | B |
+| N-110 | M-07 | Paradas de servicio en la ruta | B |
+| N-311 | M-08 | Cosméticos para encontrar en el mundo | B |
+| N-113 | M-11 | Evento de visibilidad limitada para el conductor | C |
+| N-111 | M-14 | Modo "Mudanza" (viaje largo) | C |
+| N-112 | M-10 | Modo party "Clientes a bordo" | C |
+| N-114 | M-12 | Caja de cambios manual como variante | C |
+| N-907 | M-13 | Friend Pass y demo separada (⏸ pospuesta) | C |
+
+### N-704 · Corregir el diferencial y criticar las ideas grandes — A · `Opus 5.5 · low` · Aviso: no · **[x] `c0bfeb5`**
+
+- [x] **N-704.1** `docs/definicion-proyecto.md`: quitar "no encontramos roles asimétricos replicados"
+  (Backseat Drivers los tiene desde oct-2025). Diferencial nuevo: asimetría **entre pasajeros** (cada uno
+  con su trampa) + la carga como protagonista, con revisión del cliente en la puerta.
+- [x] **N-704.2** `docs/investigacion-mercado.md` y `docs/marketing/competidores-manejo.md` (N-904): sumar
+  RV There Yet? (4,5 M copias, ~8 USD, game jam) y Backseat Drivers (Friend Pass, ≈78 % positivas).
+- [x] **N-704.3** Pasar N-212, N-214 y N-112 por `critico-diseno` antes de empezarlas; anotar el
+  veredicto en cada tarea.
+- Hecho cuando: los tres docs dicen lo mismo sobre el diferencial y las tres tareas tienen veredicto.
+- Hecho: `definicion-proyecto.md`, `investigacion-mercado.md` y `competidores-manejo.md` dicen el mismo
+  diferencial (asimetría entre pasajeros + la carga protagonista, revisada en la puerta) y suman RV There Yet?
+  y Backseat Drivers. `critico-diseno`: N-212 y N-214 a favor con cambios, N-112 en contra (veredictos abajo).
+
+### N-505 · Indicaciones rápidas con voz de personaje — A · `Opus 5.5 · high` · Aviso: sí (UI y jugador de Slatex, `synth_audio.gd` solo funciones nuevas) · **[x] `c488838`**
+
+Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
+
+- [x] **N-505.1** Rueda radial (D-pad / rueda del mouse + tecla) con 6-8 frases: "¡Frená!", "¡Bache!",
+  "¡Ayuda acá!", "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!". `ad3e2d9` — se reusó la rueda de
+  pings que ya existía (mantener la tecla de ping, apuntar con mouse o stick derecho): `PingCatalog` pasa
+  de seis a ocho frases ("¡Cuidado!" sigue siendo el toque corto) con clave `HUD_CALLOUT_*` en
+  `strings_ui.csv`; lo que viaja por la red sigue siendo la frase en castellano. Salen "Acá", "Gracias"
+  y "Sí/No".
+- [x] **N-505.2** Cada frase: ícono sobre la cabeza del jugador, entrada en el HUD mínimo del conductor
+  ("pedidos de freno" de `jugabilidad-paquetes-rescate.md`) y voz sintetizada en `SynthAudio` con tono
+  por color de jugador. **Hecho (`ad3e2d9`):** el ícono ya lo ponía `HudNotices._mark_pinger()`; el conductor
+  ve la frase de otro tripulante grande en el centro (`ping_indicator`, color de la frase).
+  **Voz (`c488838`):** `SynthAudio.callout_voice(color, sílabas)` balbucea una sílaba por grupo de vocales
+  de la frase (`PingCatalog.syllables()`), con tono base según el color del jugador (peer id módulo
+  cinco, 150-310 Hz) y la boca que salta entre vocales como el ladrido del perro. `HudNotices._speak()`
+  la hace sonar desde la cabeza del que avisa (la propia, plana); nivel `CALLOUT_VOICE_DB` medido
+  como "signal" en `test_world_audio_levels`.
+- [x] **N-505.3** RPC confiable al host y reenvío a todos; enfriamiento de 1,5 s por jugador. `ad3e2d9` — el
+  RPC y el reenvío ya eran `EventBus.request_ping()`; el host ahora descarta la segunda frase del mismo
+  jugador dentro de `ping_cooldown_seconds` (1,5 s).
+- [x] Test `test_quick_callouts.gd`: la frase llega a todos, el enfriamiento corta el spam y el conductor
+  la ve en su HUD. Textos en el CSV de traducciones. `ad3e2d9` (`test_ping` ajustado a las ocho frases).
+
+### N-213 · Carga que sale del camión y rescate afuera — A · `Opus 5.5 · xhigh` · Aviso: sí (`DeliveryPackage`, `RunManager`) · **[x] `2ee38e1`**
+
+Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
+
+- [x] **N-213.1** Un paquete fuera del camión deja de ir directo a `RUINED`: queda en el suelo con marcador
+  y una ventana de rescate (más larga que los 8-15 s de adentro; medirla con el bot). `d8a014b` —
+  `LevelCommon._check_lost_cargo()` (host) abre una ventana de `overboard_rescue_seconds` (30 s) y
+  relaya `EventBus.cargo_overboard` / `cargo_overboard_ended`; `presentation/overboard_marker.gd` pone en
+  cada par un cartel "¡RESCATAR! N s" que sigue a la caja (rojo en los últimos 10 s). Al vencer, `mark_lost`.
+  **Pendiente:** los 30 s no se midieron con el bot (valor tentativo; ajustarlo con `bench_route_duration`
+  o playtesting).
+- [x] **N-213.2** Bajar a buscarlo: levantarlo y volver a subirlo al estante o al regazo. `d8a014b` — ya
+  se podía levantar y volver a montar; ahora levantarla cierra la ventana como rescatada (y la subida
+  premia `rescued` como antes).
+- [x] **N-213.3** Caña o gancho de rescate (mejora de tienda, rama Supervivencia): desde la puerta trasera,
+  un pasajero engancha una caja cercana sin frenar. El cliente solo manda la intención; el host resuelve.
+  `2ee38e1` — suministro `rescue_hook` del depósito ($30, se compra o se vota como el acolchado y el
+  seguro; los suministros no tienen ramas, la de Supervivencia queda en el texto). `depot.begin_run()` arma
+  `gameplay/vehicle/rescue_hook.gd`, un `Interactable` que `LevelCommon` cuelga del poste izquierdo de la
+  puerta trasera (sin tocar `vehicle.gd`), con un palo amarillo visible solo en ese recorrido. Con la
+  puerta abierta y las manos libres, "Enganchar la caja caída" le da al pasajero (`take_by()` en el host,
+  vía `request_interact`) la caja caída más cercana a ≤ 7 m del gancho; eso cierra la ventana como
+  rescatada. Enfriamiento de 3 s; se guarda al terminar la partida. **Pendiente:** el estado armado
+  llega por RPC en `begin_run`, así que un cliente que recarga a mitad de reparto no lo ve; el alcance
+  (7 m) es tentativo, sin medir con el bot.
+- [x] **N-213.4** Abandonarlo cierra el pedido vacío (resultado "Perdido"), sin terminar la partida.
+  `33f7702` — al vencer la ventana, `LevelCommon._check_lost_cargo()` llama a `Route.close_lost_order()`
+  antes de `mark_lost`: la casa queda resuelta con el resultado nuevo `&"lost"` (`DeliveryHouse.close_lost()`,
+  sin vecino en la puerta) y `RunManager` la saca de la carga, así que perder la última caja ya no corta la
+  partida. `RunManager.handed_over()` reemplaza los `!= &"missed"` (foto, plazos, pago de rescate); en
+  resultados, "PERDIDO ✕" y la línea "Paquetes perdidos en la ruta" con la multa de una casa sin entregar;
+  la pizarra del depósito marca "PERDIDO". "Abandonar" es dejar vencer la ventana: no hay botón aparte.
+- [x] Tests `test_cargo_overboard.gd` (ventana, recogida, abandono) y ampliar el de red con dos clientes
+  que intentan agarrar la misma caja. **Parcial (`d8a014b`):** `test_cargo_overboard.gd` cubre ventana,
+  cartel, recogida y pérdida al vencer; faltan el abandono (N-213.4) y el caso de red. `33f7702`: suma el
+  abandono (pedido "Perdido", la partida sigue, sin foto, línea propia en resultados); falta el caso de red.
+  `1e3c226`: el caso de red, en `tests/net_trio.gd`: los dos clientes piden a la vez la misma caja, el host
+  se la da a uno solo y los tres pares nombran al mismo dueño (`grab=`). El host arma de entrada las casas
+  de la tripulación completa, porque si no reinicia el nivel 3 s después del último en entrar
+  (`level_base.gd`). También `play_area.gd` ya no castea un jugador liberado mientras el host recarga.
+  La caja disputada está en el depósito, no caída en la ruta: el agarre pasa por el mismo `take_by()`.
+  Queda solo N-213.3 (gancho). `2ee38e1`: el gancho, en `test_cargo_overboard.gd` (estante: nada que
+  enganchar; lejos o con la puerta cerrada no; al alcance sí, cierra la ventana como rescatada).
+
+### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
+
+> **Veredicto `critico-diseno` (N-704.3, 2026-09-28): a favor con cambios.** Reutiliza el kit y da
+> historias para resultados, pero 2 de las 5 averías dependen de lluvia o noche, el asiento flojo no se ve y
+> sumar avería a un choque agranda el error. Condiciones: primera versión con **2 averías** (puerta trasera
+> que se abre sola, enganchada con N-213, y espejo reemplazado por el celular); cada avería se avisa con
+> sonido y algo visible en el golpe; **como mucho 1 por entrega**, ninguna saca al conductor ni va directo a
+> RUINED; el repuesto cuesta menos que lo que se pierde sin arreglarlo pero más que la cinta.
+> Limpiaparabrisas, faro y asiento esperan a que haya lluvia y noche en las rutas.
+
+- [x] **N-214.1** Componente `VehicleFaults` fuera de `vehicle.gd`: escucha los impactos y decide averías en
+  el host (una por golpe fuerte como máximo, con tope por entrega). `03868fe`
+  - `gameplay/vehicle/vehicle_faults.gd`: con `vehicle_impact` ≥ 9 el host tira por la semilla del mundo y
+    rompe la puerta trasera o el espejo (las 2 del veredicto), una por entrega; señales relayadas
+    `vehicle_fault_started`/`vehicle_fault_repaired` y `repair()` en el host. Sin efecto visible todavía.
+    Test `test_vehicle_faults` (determinista por semilla, tope, arreglo que llega a cada par).
+- [x] **N-214.2** Averías: puerta trasera que se abre sola, espejo caído, limpiaparabrisas roto (solo con
+  lluvia), faro roto (solo de noche), asiento flojo. Cada una con efecto visible y leve. `cfccf54`
+  - Las 2 del veredicto: con la puerta rota el host la abre en el golpe y otra vez con cada bache ≥ 4,5
+    (se puede cerrar, no se queda cerrada); el espejo del conductor se cae a la ruta con ruido de vidrio
+    (`vehicle_fault_effects.gd`, en cada par). Limpiaparabrisas, faro y asiento siguen esperando lluvia y
+    noche en las rutas (veredicto). Duda: el camión no tiene vista de espejo funcional, así que el espejo
+    caído es solo visual hasta N-214.3 (el celular que lo reemplaza).
+- [ ] **N-214.3** Arreglo oficial (repuesto de tienda) e improvisado con el kit existente (cinta, cincha,
+  trapo; el espejo lo reemplaza un pasajero con `phone_camera.gd`). Sin herramientas nuevas.
+  - [x] **N-214.3a** Puntos de arreglo (`fault_repair_spot.gd`, un `Interactable` por avería que
+    `VehicleFaults` cuelga del camión) y el repuesto: `SUPPLIES` suma `spare_part` ($25), el depósito se
+    lo pasa al recorrido y arregla la puerta o el espejo; la puerta rota se ata con una cincha del kit,
+    que va antes que el repuesto para guardarlo para el espejo. Test `test_vehicle_faults` ampliado. `2c46ce4`
+  - [x] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular como espejo. `77452a6`
+    - Sin repuesto, el punto del espejo ofrece "Sostener el celular como espejo" a cualquiera menos el
+      conductor, uno a la vez; no es arreglo: la avería sigue activa, se ve un celular donde estaba el
+      espejo en cada par y el host lo suelta si el que lo sostiene se aleja (> 5 m, alcanza desde
+      cualquier asiento), agarra una caja o toma el volante. El repuesto va primero y lo reemplaza.
+      Quien se une a mitad del recorrido recibe averías, repuestos y quién sostiene el celular.
+    - Duda: el camión no tiene vista de espejo funcional, así que el celular es visual (no abre la
+      cámara de `phone_camera.gd` ni muestra la vista de atrás). Queda para cuando haya espejo real.
+  - [ ] **N-214.3c** Confirmar con `revisor-visual` el punto del espejo (y el celular) en las variantes
+    de camión que no son la clásica.
+- [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
+- [ ] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado.
+
+### N-212 · Voz por proximidad — A · `Opus 5.5 · xhigh` · Aviso: sí (jugador y red)
+
+Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con Steam.
+
+> **Veredicto `critico-diseno` (N-704.3, 2026-09-28): a favor con cambios.** La voz posicional da los clips
+> (el "¡FRENÁ!" que el conductor no oye), pero cuesta L, toca red y jugador, y los bugs de voz fueron la
+> queja número uno en los dos juegos. Condiciones: empezarla **después de N-505**; solo Steam (N-212.4 se
+> resuelve "LAN sin voz"); tope de 5 días y, si no anda estable con 5 jugadores, se congela; interruptor
+> general, pulsar para hablar por defecto y silenciar por jugador; el filtro "a través de la chapa" es
+> extra (alcanza con atenuación 3D). Sugiere bajarla a prioridad B (no es condición para la demo).
+
+- [ ] **N-212.1** Steam: captura y envío con la voz de GodotSteam (`startVoiceRecording` / `getVoice` /
+  `decompressVoice`) por un canal no confiable, fuera de la simulación autoritativa.
+- [ ] **N-212.2** Reproducción en `AudioStreamPlayer3D` en la cabeza del jugador; dentro de la cabina se
+  oyen todos, afuera se atenúa y pasa por el bus Exterior con filtro (se oye "a través de la chapa").
+- [ ] **N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
+  jugador, y un interruptor general en Opciones.
+- [ ] **N-212.4** LAN/ENet: `AudioEffectCapture` o dejarlo fuera del MVP (decidir y anotar).
+- [ ] Medir con `auditor-red` el ancho de banda con 5 jugadores. Test de que el apagado general no
+  captura el micrófono.
+
+### N-109 · Animales que se meten con la carga — B · `Opus 5.5 · xhigh` · Aviso: sí (estados del paquete)
+
+Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
+
+- [ ] **N-109.1** Gaviota o carancho que baja a la caja del estante y trata de llevársela; se espanta con la
+  bocina o sujetando la caja.
+- [ ] **N-109.2** Perro que se sube a una caja abierta en una parada; se lo distrae tirándole algo.
+- [ ] **N-109.3** Abejas atraídas por la torta (Equilibrio) en zona de campo.
+- [ ] Cada uno anunciado con sonido o ícono antes de actuar (la queja principal de RV There Yet? es la
+  fauna sin aviso). Determinista por semilla, disparado por el host. Tests con el patrón de
+  `test_wildlife_crossing.gd`.
+
+### N-406 · Radio del camión con función — B · `Opus 5.5 · high` · Aviso: sí (trampa Ruidoso)
+
+- [ ] **N-406.1** Perilla en el tablero que cualquiera puede girar: tranquila / fuerte / noticiero /
+  apagada. Estado en el host.
+- [ ] **N-406.2** Música tranquila calma la trampa Ruidoso; la fuerte la altera.
+- [ ] **N-406.3** El noticiero anuncia el próximo evento de ruta ("inspección más adelante").
+- [ ] Test `test_truck_radio.gd`: el estado se sincroniza y modifica la agitación de Ruidoso.
+
+### N-108 · Tramo de barro/pendiente con salida cooperativa — B · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Tramo nuevo, raro y anunciado con carteles, donde el camión se puede atascar. Salidas: pasajeros que
+  bajan a empujar (mantener un botón en la zona correcta; el host aplica la fuerza) o eslinga de tienda.
+- [ ] El dilema tiene que existir: mientras empujan, sus cajas quedan sin atender.
+- [ ] Nunca bloquea para siempre: pasado un tiempo aparece una grúa cómica que lo saca, con multa.
+- [ ] Con `constructor-tramos`; tests de pacing y fuzz (N-103, N-801) siguen pasando.
+
+### N-110 · Paradas de servicio en la ruta — B · `Opus 5.5 · xhigh` · Aviso: sí (compra de suministros)
+
+- [ ] En rutas largas y en Endless, una estación de servicio opcional: reponer consumibles del kit con
+  dinero cooperativo, arreglar averías (N-214) y un cosmético escondido (N-311).
+- [ ] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
+- [ ] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
+
+### N-311 · Cosméticos para encontrar en el mundo — B · `Opus 5.5 · medium` · Aviso: sí (cosméticos del jugador)
+
+- [ ] Además de los que se desbloquean con mérito, algunos gorros aparecen en el depósito, en las paradas
+  (N-110) o en el jardín de un cliente. Recogerlos exige bajarse o desviarse unos metros.
+- [ ] Se guardan en la campaña por color de jugador, como el mérito. Test de guardado y carga.
+
+### N-113 · Evento de visibilidad limitada para el conductor — C · `Opus 5.5 · high` · Aviso: no
+
+- [ ] Evento de ruta de 10-20 s: niebla densa, parabrisas embarrado o una caja que tapa la vista. Un
+  pasajero en la ventana guía (con N-505 o N-212). Solo como evento corto: la premisa completa es la de
+  Backseat Drivers.
+- [ ] Shader con `artista-shaders`; test de que dura lo previsto y no se repite seguido.
+
+### N-111 · Modo "Mudanza" (viaje largo) — C · `Opus 5.5 · xhigh` · Aviso: sí (modo nuevo, zona compartida)
+
+- [ ] 20-40 min con una carga grande y paradas de servicio (N-110), sobre el streamer de Endless.
+- [ ] Guardado a mitad de camino en cada parada. Test de la duración con el bot de N-102.
+
+### N-112 · Modo party "Clientes a bordo" — C · `Opus 5.5 · xhigh` · Aviso: sí (modo nuevo, zona compartida)
+
+> **Veredicto `critico-diseno` (N-704.3, 2026-09-28): en contra; postergar a después del lanzamiento.**
+> Mete un rol con objetivo opuesto al grupo en un juego cuyo pilar es cooperar; con 5 jugadores como máximo,
+> cada saboteador es un cargador menos; el "pasajero caótico" ya son las trampas; el griefing sigue sin
+> resolver y un modo nuevo en la zona compartida cuesta M-L. Alternativa barata si se retoma: carta/evento de
+> ruta "Cliente a bordo" con un NPC que molesta 30-60 s, manejado por el host y reutilizando bocina y radio
+> (N-406). Revisarla como contenido de actualización cuando haya datos de jugadores reales.
+
+- [ ] Solo si N-704.3 le da luz verde. Uno o dos jugadores son pasajeros caóticos (cliente apurado,
+  chico) que ganan puntos propios molestando dentro de límites: bocina, radio, abrir una caja ajena.
+- [ ] Límites duros para que el sabotaje no arruine la partida (enfriamientos, lo que no pueden tocar).
+
+### N-114 · Caja de cambios manual como variante — C · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado)
+
+- [ ] Variante "clásico viejo" a elegir en el depósito, con marchas manuales opcionales y más paga o
+  mérito como compensación. Requiere acuerdo previo para tocar el manejo; si no, queda descartada.
+- [ ] Los tests de manejo (N-104) de las variantes existentes no cambian.
+
+### N-907 · Friend Pass y demo separada — C · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
+
+Es de publicación en Steam: queda pospuesta como el resto del pilar 9 (ver la nota de esa sección).
+
+- [ ] Averiguar en Steamworks cómo funciona el Friend Pass (Backseat Drivers lo usa) y si se puede
+  combinar con nuestro lobby de Steam. Decisión anotada en `docs/plan-desarrollo.md` Fase 7.
+- [ ] Evaluar publicar la demo (hito del 2026-12-18) como app aparte para acumular deseados.
+- Depende de N-901 (AppID propio).
 
 ---
 

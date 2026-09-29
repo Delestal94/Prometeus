@@ -3,10 +3,38 @@ HUD_ARRIVED,¡Llegaste! Frená dentro de la zona marcada para entregar.,You made
 HUD_BACK_TO_MENU,Volver al menú,Back to menu
 HUD_BACK_TO_ZONE,Volvé a la zona de entrega y detené la camioneta.,Go back to the delivery zone and stop the truck.
 HUD_BOXES_TO_SECURE,Faltan asegurar %d cajas,%d boxes left to secure
+HUD_CALLOUT_BRAKE,¡Frená!,Brake!
+HUD_CALLOUT_BUMP,¡Bache!,Bump!
+HUD_CALLOUT_CAREFUL,¡Cuidado!,Careful!
+HUD_CALLOUT_FALLING,¡Se cae!,It's falling!
+HUD_CALLOUT_GO,"¡Dale, dale!","Go, go!"
+HUD_CALLOUT_HELP,¡Ayuda acá!,Help here!
+HUD_CALLOUT_TAPE,Tengo la cinta,I've got the tape
+HUD_CALLOUT_WAIT,Esperá,Wait
 HUD_CARD,CARTA: %s   ·   %s,CARD: %s   ·   %s
 HUD_CARD_EARNED,Carta obtenida: %s,Card earned: %s
 HUD_CARD_USE_KEY,%s  usar,%s  use
 HUD_CARD_USE_PAD,D-pad izquierda  usar,D-pad left  use
+HUD_CARE_COLLECT,JUNTÁ LAS PIEZAS,PICK UP THE PIECES
+HUD_CARE_COLLECT_DETAIL,Quedan %d en el piso: acercate a cada una y apretá %s.,%d left on the ground: walk up to each one and press %s.
+HUD_CARE_HOLD_DETAIL,Mantené %s: la protege de golpes y curvas.,Hold %s: it shields the box from bumps and turns.
+HUD_CARE_IDLE,TODO EN ORDEN,ALL GOOD
+HUD_CARE_IDLE_DETAIL,Podés soltar. Mantené %s si se sacude o se pone en riesgo.,You can let go. Hold %s if it shakes or gets at risk.
+HUD_CARE_LOST,CONTENIDO PERDIDO,CONTENTS LOST
+HUD_CARE_LOST_DETAIL,Ya no se puede recuperar.,It can't be recovered anymore.
+HUD_CARE_RELEASE,¡SOLTALA!,LET GO!
+HUD_CARE_RELEASE_DETAIL,No toques la caja hasta que vuelva a pedir calma.,Don't touch the box until it asks for calm again.
+HUD_CARE_SEQUENCE,TOCÁ EN ORDEN,TAP IN ORDER
+HUD_CARE_SEQUENCE_DETAIL,"%s: %s. Si le errás, vuelve a empezar.",%s: %s. Miss one and it starts over.
+HUD_CARE_SEQUENCE_ON_FOOT,mantené %s y tocá una tecla por vez,hold %s and tap one key at a time
+HUD_CARE_SEQUENCE_SEATED,"una tecla por vez, sin clic","one key at a time, no click"
+HUD_CARE_TAP,TOCÁ,TAP
+HUD_CARE_TITLE_CALM,CALMALA,CALM IT DOWN
+HUD_CARE_TITLE_HOLD,SOSTENELA,HOLD IT
+HUD_CARE_TITLE_MOP,SECÁ EL DERRAME,MOP THE SPILL
+HUD_CARE_TITLE_STRAIGHTEN,ENDEREZALA,STRAIGHTEN IT
+HUD_CARE_TOOL,USÁ: %s,USE: %s
+HUD_CARE_TOOL_DETAIL,Mantené %s hasta llenar el círculo.,Hold %s until the circle fills.
 HUD_COMPLAINT_PAID,Casa %d reclamó que llegó roto y no tenías foto. Te lo descuentan.,House %d complained it arrived broken and you had no photo. It comes out of your pay.
 HUD_COMPLAINT_SETTLED,Casa %d reclamó que llegó roto — les mostraste la foto. Caso cerrado.,House %d complained it arrived broken — you showed them the photo. Case closed.
 HUD_CONTINUE,Continuar,Continue
@@ -55,12 +83,21 @@ HUD_PAUSE_STATS,Equipo: $%d\n%s para volver a la ruta.,Team: $%d\n%s to get back
 HUD_PLAYERS_MANY,%d jugadores,%d players
 HUD_PLAYERS_ONE,%d jugador,%d player
 HUD_POINTS,%d PTS,%d PTS
+HUD_PRACTICE_DONE,¡LISTO! YA SABÉS,DONE! YOU'VE GOT IT
+HUD_PRACTICE_STEP_GRAB,Agarrá una caja,Grab a box
+HUD_PRACTICE_STEP_HOLD,Mantené %s: la cuidás,Hold %s: you look after it
+HUD_PRACTICE_STEP_LOAD,Subila al estante o sentate con ella,Put it on the rack or sit down with it
+HUD_PRACTICE_STEP_SEQUENCE,"Con %s mantenido, tocá W, A, S (como la bomba)","With %s held, tap W, A, S (like the bomb)"
+HUD_PRACTICE_STEP_TOOL,Mantené %s: usás una herramienta,Hold %s: you use a tool
+HUD_PRACTICE_TAG,PRÁCTICA,PRACTICE
+HUD_PRACTICE_TITLE,CÓMO CUIDAR LA CARGA,HOW TO LOOK AFTER THE CARGO
 HUD_PREPARATION,PREPARACIÓN,PREPARATION
 HUD_PREPARE_DELIVERY,Preparar entrega,Prepare delivery
 HUD_PREP_ABOARD,(a bordo),(on board)
 HUD_PREP_LOAD_AND_DRIVE,Cargá paquetes y tomá el volante,Load packages and take the wheel
 HUD_PREP_MISSING,(falta),(missing)
 HUD_PREP_ORDER,Casa %d: %s %s,House %d: %s %s
+HUD_PROGRESS_REMAINING_ONE,Te falta %s para %s,You need %s to unlock %s
 HUD_PROMPT_DROP,[ %s ]  Soltar paquete,[ %s ]  Drop package
 HUD_PROMPT_INSIDE,Adentro:  %s,Inside:  %s
 HUD_RESCUED,¡%s a salvo!,%s is safe!
@@ -89,6 +126,12 @@ HUD_RESULT_STATS,En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s\nEquip
 HUD_RESULT_TEAM,\nEquipo: $%d,\nTeam: $%d
 HUD_RESULT_TOTAL,Total   %d pts,Total   %d pts
 HUD_RETRY,Volver a intentar,Try again
+HUD_SCORE_DEADLINE_MET,Plazos cumplidos,Deadlines met
+HUD_SCORE_DEADLINE_MISSED,Plazos vencidos,Deadlines missed
+HUD_SCORE_LOST,Paquetes perdidos en la ruta,Packages lost on the road
+HUD_SCORE_REPAIRED,Reparaciones convincentes,Convincing repairs
+HUD_SCORE_SUBSTITUTED,Sustitutos descubiertos,Substitutes spotted
+HUD_SCORE_UNCONVINCING,Arreglos poco convincentes,Unconvincing fixes
 HUD_SESSION_GUEST,EN SALA  ·  %s,IN ROOM  ·  %s
 HUD_SESSION_LAN,SALA LAN  ·  %s\nIP  %s,LAN ROOM  ·  %s\nIP  %s
 HUD_SESSION_NO_LAN,sin red local,no local network
@@ -270,6 +313,10 @@ UI_SOUND_PLAYING_MANY,SONANDO ×%d,PLAYING ×%d
 UI_SOUND_SOLO,Solo,Solo
 UI_SOUND_TITLE,Sonidos del juego,Game sounds
 UI_SOUND_UNMUTE_ALL,Activar todos,Unmute all
+UI_SUPPLY_RESCUE_HOOK,Gancho de rescate,Rescue hook
+UI_SUPPLY_RESCUE_HOOK_DETAIL,"Desde la puerta trasera abierta, un pasajero engancha una caja caída sin que el camión frene.","From the open rear door, a passenger hooks a fallen box without the truck stopping."
+UI_SUPPLY_SPARE_PART,Repuesto del camión,Truck spare part
+UI_SUPPLY_SPARE_PART_DETAIL,"Si el camión se rompe en el próximo reparto, la puerta o el espejo se arreglan en el lugar.","If the truck breaks on the next run, the door or mirror gets fixed on the spot."
 UI_TRUCK,Camión,Truck
 UI_TUT_BODY,1. Carguen paquetes en los anaqueles o llévenlos en mano.\n2. Un jugador conduce; los demás vigilan la carga incluso durante la marcha.\n3. Frágil: evitá golpes. Ruidoso: calmalo. Equilibrio: mantenelo derecho. Peso creciente: movelo pronto. Líquido: no lo inclines y secá el charco. Explosivo: seguí la secuencia antes de que llegue a cero. Hostil: obedecé CALMÁ o NO TOCAR.\n4. Las buenas acciones dan mérito individual; las entregas dan dinero al equipo.\n5. Entre entregas voten mejoras. Una carta de prioridad puede cambiar el resultado.,"1. Load packages onto the racks or carry them by hand.
 2. One player drives; the rest watch the cargo, even on the move.
@@ -372,16 +419,8 @@ HUD_HINT_NOISY_RUINED,Se escapó.,It escaped.
 HUD_HINT_WEIGHT_DANGER,¡Se está poniendo pesado! %s,It's getting heavy! %s
 HUD_HINT_WEIGHT_RUINED,Imposible de sostener.,Too heavy to hold.
 HUD_HINT_WEIGHT_SEQUENCE,Asegurá la carga: %s(%.0fs),Secure the cargo: %s(%.0fs)
-HUD_PACKAGE_CONTENT_SPILLED,Se le cayó el contenido.,The contents fell out.
 HUD_PACKAGE_PARASITE_DAMAGE,La caja parásita dañó su pareja.,The parasite box damaged its partner.
 HUD_PACKAGE_RUINED_IMPACTS,El paquete sufrió demasiados golpes.,The package took too many impacts.
-HUD_PACKAGE_RUINED_TRIP,El paquete no aguantó el viaje.,The package didn't survive the trip.
-HUD_PING_BRAKE,¡Frená!,Brake!
-HUD_PING_HELP,¡Ayuda!,Help!
-HUD_PING_HERE,Acá,Here
-HUD_PING_THANKS,Gracias,Thanks
-HUD_PING_WARNING,¡Cuidado!,Watch out!
-HUD_PING_YES_NO,Sí/No,Yes/No
 HUD_PROGRESS_AND,y,and
 HUD_PROGRESS_DELIVERY_MANY,%d entregas,%d deliveries
 HUD_PROGRESS_DELIVERY_ONE,%d entrega,%d delivery

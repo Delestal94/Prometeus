@@ -244,11 +244,17 @@ func begin_run(vehicle: Node3D, loaded: Array) -> void:
 		for package: Node in loaded:
 			package.set(&"impact_absorption", PADDING_ABSORPTION)
 	_insured = taken.has(&"insurance")
+	var hook: Node = vehicle.get_node_or_null(^"RescueHook")
+	if taken.has(&"rescue_hook") and hook != null:
+		hook.call(&"arm")
+	var faults: Node = get_tree().get_first_node_in_group(&"vehicle_faults")
+	if taken.has(&"spare_part") and faults != null:
+		faults.call(&"stock_spares", 1)
 	_broadcast_supplies()
 	var missing: PackedStringArray = []
 	for order: Dictionary in orders:
 		var package: Node = _stocked.get(order.package_id)
-		if package == null or not is_instance_valid(package) or not bool(package.get(&"is_loaded")):
+		if package == null or not is_instance_valid(package) or not bool(package.call(&"is_aboard")):
 			missing.append(tr("WORLD_DEPOT_NOTICE_MISSING_ITEM") % [int(order.house) + 1, order.code])
 	if not missing.is_empty():
 		_notice(tr("WORLD_DEPOT_NOTICE_MISSING") % ", ".join(missing))

@@ -8,6 +8,7 @@ var hud: Hud
 const PING_DISPLAY_SECONDS: float = 2.5
 const EVENT_DISPLAY_SECONDS: float = 6.0
 const PingCatalogData = preload("res://scripts/ui/ping_catalog.gd")
+const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## One label per fixed HUD zone. Each source keeps its queued entry here;
 ## hud_notices.gd renders only the highest-priority one in that zone.
 var _notice_sources: Dictionary = {&"critical": {}, &"information": {}}
@@ -29,12 +30,30 @@ func _ready() -> void:
 
 func _on_ping(peer_id: int, world_position: Vector3, label: String) -> void:
 	var who: String = tr("HUD_YOU") if peer_id == NetworkManager.local_id() else tr("UI_PLAYER_N") % peer_id
-	toast("%s  %s:  %s" % [_ping_arrow(world_position), who, tr(label)], 40)
+	var text: String = PingCatalogData.display_text(label)
+	toast("%s  %s:  %s" % [_ping_arrow(world_position), who, text], 40)
 	hud.ping_label.text = ""
 	hud.ping_indicator.text = ""
+	# The driver's minimal HUD (jugabilidad-paquetes-rescate.md, "pedidos de
+	# freno"): their eyes are on the road, so a crewmate's callout also goes
+	# big in the middle of the screen, in the phrase's colour.
+	if peer_id != NetworkManager.local_id() and local_is_driving():
+		var option: Dictionary = PingCatalogData.option(label)
+		hud.ping_indicator.text = "%s %s" % [option["icon"], text]
+		hud.ping_indicator.add_theme_color_override(&"font_color", option["color"])
 	hud.ping_seconds_left = PING_DISPLAY_SECONDS
 	if peer_id != NetworkManager.local_id():
 		_mark_pinger(peer_id, label)
+	_speak(peer_id, label)
+
+
+## Whether this client's player is the one at the wheel right now.
+func local_is_driving() -> bool:
+	for vehicle: Node in get_tree().get_nodes_in_group(&"vehicle"):
+		var driver: Variant = vehicle.get(&"driver_peer_id")
+		if driver is int and driver == NetworkManager.local_id():
+			return true
+	return false
 
 
 func _mark_pinger(peer_id: int, label: String) -> void:
@@ -63,6 +82,43 @@ func _mark_pinger(peer_id: int, label: String) -> void:
 		tween.tween_interval(PING_DISPLAY_SECONDS - 0.6)
 		tween.tween_property(marker, ^"modulate:a", 0.0, 0.6)
 		tween.tween_callback(marker.queue_free)
+
+
+## The callout's voice (N-505.2): babble pitched by the caller's colour slot,
+## from their head when their player is in the scene, flat otherwise (your own
+## call, or a lobby without bodies).
+func _speak(peer_id: int, label: String) -> void:
+	var slot: int = posmod(peer_id, Player.PLAYER_COLORS.size())
+	var stream: AudioStreamWAV = SynthAudio.callout_voice(slot, PingCatalogData.syllables(label))
+	var parent: Node = self
+	if peer_id != NetworkManager.local_id():
+		for player: Node in get_tree().get_nodes_in_group(&"player"):
+			if player is Node3D and player.get_multiplayer_authority() == peer_id:
+				parent = player
+	var old: Node = parent.get_node_or_null(^"CalloutVoice")
+	if old != null:
+		old.free()
+	var voice: Node
+	if parent is Node3D:
+		var voice_3d := AudioStreamPlayer3D.new()
+		voice_3d.unit_size = 6.0
+		voice_3d.max_distance = 40.0
+		voice_3d.position = Vector3(0.0, 1.7, 0.0)
+		voice_3d.volume_db = WorldMix.CALLOUT_VOICE_DB
+		voice_3d.stream = stream
+		voice_3d.bus = &"SFX" if AudioServer.get_bus_index(&"SFX") >= 0 else &"Master"
+		voice_3d.finished.connect(voice_3d.queue_free)
+		voice = voice_3d
+	else:
+		var voice_flat := AudioStreamPlayer.new()
+		voice_flat.volume_db = WorldMix.CALLOUT_VOICE_DB
+		voice_flat.stream = stream
+		voice_flat.bus = &"SFX" if AudioServer.get_bus_index(&"SFX") >= 0 else &"Master"
+		voice_flat.finished.connect(voice_flat.queue_free)
+		voice = voice_flat
+	voice.name = "CalloutVoice"
+	parent.add_child(voice)
+	voice.call(&"play")
 
 
 func _ping_arrow(world_position: Vector3) -> String:
@@ -169,6 +225,20 @@ func _on_route_event_resolved(event_id: StringName, success: bool, _peer_id: int
 	set_notice(&"critical", &"route_result", tr("HUD_EVENT_RESOLVED") if success else tr("HUD_EVENT_FAILED"), 70,
 			Hud.MINT if success else Hud.RED, PING_DISPLAY_SECONDS)
 	hud.event_seconds_left = PING_DISPLAY_SECONDS
+
+
+## The closest open delivery deadline, counting down; yellow in its last
+## 20 seconds so the driver knows it's time to push (or to let it go).
+func refresh_deadline() -> void:
+	var deadline: Dictionary = RunManager.next_deadline() if RunManager.is_running else {}
+	if deadline.is_empty():
+		clear_notice(&"information", &"deadline")
+		return
+	var left: int = maxi(0, ceili(float(deadline["seconds"]) - RunManager.elapsed_seconds))
+	var house: int = int(deadline["house"]) + 1
+	var text: String = "Casa %d: %s en %02d:%02d" % [house, deadline["reason"], left / 60, left % 60]
+	set_notice(&"information", &"deadline", text,
+		40 if left > 20 else 75, Hud.MINT if left > 20 else Hud.YELLOW)
 
 
 func set_notice(zone: StringName, key: StringName, text: String, priority: int,

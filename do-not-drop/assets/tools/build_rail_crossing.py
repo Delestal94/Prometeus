@@ -37,8 +37,9 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
+from mathutils import Vector  # noqa: E402
 from lowpoly_kit import (PALETTE, ROOT, blob, clear, cone, cube, cylinder,  # noqa: E402
-                         export, flat_poly, mat, triangle_count)
+                         export, flat_poly, jitter, mat, triangle_count)
 
 
 def srgb(hex_code):
@@ -344,8 +345,245 @@ def tanker():
     done("sm_env_rail_wagon_tanker.glb")
 
 
+# =============================================================================
+# Tunnel portal: the train comes out of one and goes into the other, instead
+# of popping into existence 42 m down the line (playtest 2026-09-28). One
+# model for both ends: the facade stands in the plane x = 0 facing -X (the
+# road), the bore runs 12 m into +X (the hill route_terrain.gd raises behind
+# it). Origin on the track axis at rail-base level, like the track model,
+# whose rails end exactly where these begin.
+#
+# Masonry: a warm stone facade with pilasters, a cornice and a parapet, a ring
+# of lighter voussoirs with a keystone, quoins up the jambs, wing walls that
+# hold back the cutting's slopes, and a plinth along the foot. Inside, the
+# bore darkens to black (vertex colours, which LowpolyMaterials multiplies in)
+# so the train fades into it rather than vanishing.
+# =============================================================================
+
+PORTAL_OPENING = 2.35      # half-width of the arch (RailCrossingSegment.BORE_HALF_WIDTH)
+PORTAL_SPRING = 3.7        # where the arch springs from the jambs
+PORTAL_CROWN = PORTAL_SPRING + PORTAL_OPENING   # 6.05, RailCrossingSegment.BORE_CROWN
+PORTAL_HALF = 5.6          # half-width of the facade (RailCrossingSegment.PORTAL_HALF_WIDTH)
+PORTAL_HEIGHT = 8.4        # top of the facade, under the cornice (PORTAL_HEIGHT)
+PORTAL_THICK = 1.0         # facade depth along the track
+BORE_LENGTH = 12.0         # RailCrossingSegment.BORE_LENGTH
+WING_LENGTH = 7.0
+WING_ANGLE = math.radians(25.0)
+
+
+def _mesh_object(name, bm, material):
+    mesh = bpy.data.meshes.new(name)
+    bm.to_mesh(mesh)
+    bm.free()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(mat(material))
+    return obj
+
+
+def prism(name, profile, origin, udir, vdir, thickness, material):
+    """A convex (u, z) outline laid out along `udir` from `origin`, extruded
+    `thickness` along `vdir` (both horizontal unit vectors)."""
+    bm = bmesh.new()
+
+    def at(u, z, w):
+        return (origin[0] + udir[0] * u + vdir[0] * w, origin[1] + udir[1] * u + vdir[1] * w, origin[2] + z)
+
+    a = [bm.verts.new(at(u, z, 0.0)) for u, z in profile]
+    b = [bm.verts.new(at(u, z, thickness)) for u, z in profile]
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    for i in range(len(profile)):
+        j = (i + 1) % len(profile)
+        bm.faces.new([a[i], a[j], b[j], b[i]])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _mesh_object(name, bm, material)
+
+
+def _arch_ring(radius, steps=16):
+    """The bore's cross-section (y, z), jamb foot to jamb foot over the arch."""
+    ring = [(radius, 0.0), (radius, PORTAL_SPRING * 0.5), (radius, PORTAL_SPRING)]
+    for i in range(1, steps):
+        a = math.pi * i / steps
+        ring.append((radius * math.cos(a), PORTAL_SPRING + radius * math.sin(a)))
+    ring += [(-radius, PORTAL_SPRING), (-radius, PORTAL_SPRING * 0.5), (-radius, 0.0)]
+    return ring
+
+
+def _sweep(name, ring, stations, material, inward):
+    """`ring` swept along +X through `stations`: an open tube (no floor),
+    faces turned toward the axis (`inward`) or away from it."""
+    bm = bmesh.new()
+    rows = [[bm.verts.new((x, y, z)) for y, z in ring] for x in stations]
+    for a, b in zip(rows, rows[1:]):
+        for j in range(len(ring) - 1):
+            bm.faces.new([a[j], a[j + 1], b[j + 1], b[j]])
+    bm.normal_update()
+    bm.faces.ensure_lookup_table()
+    probe = bm.faces[len(ring) // 2]   # a face up in the arch
+    centre = probe.calc_center_median()
+    towards_axis = Vector((centre.x, 0.0, PORTAL_SPRING * 0.5)) - centre
+    if (probe.normal.dot(towards_axis) > 0.0) != inward:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    return _mesh_object(name, bm, material)
+
+
+def _facade():
+    """The wall with the arch cut out of it: quads fanned between the arch
+    and the wall's outline (corners included), plus the two piers, extruded
+    back PORTAL_THICK."""
+    bm = bmesh.new()
+    rise = PORTAL_HEIGHT - PORTAL_SPRING
+    corner = math.atan2(rise, PORTAL_HALF)
+    angles = sorted(set([math.pi * i / 16 for i in range(17)] + [corner, math.pi - corner]))
+    inner, outer = [], []
+    for a in angles:
+        c, s = math.cos(a), math.sin(a)
+        inner.append(bm.verts.new((0.0, PORTAL_OPENING * c, PORTAL_SPRING + PORTAL_OPENING * s)))
+        t = min(PORTAL_HALF / abs(c) if abs(c) > 1e-6 else 1e9, rise / s if s > 1e-6 else 1e9)
+        outer.append(bm.verts.new((0.0, c * t, PORTAL_SPRING + s * t)))
+    faces = []
+    for i in range(len(angles) - 1):
+        faces.append(bm.faces.new([inner[i], outer[i], outer[i + 1], inner[i + 1]]))
+    for side, top_in, top_out in ((1.0, inner[0], outer[0]), (-1.0, inner[-1], outer[-1])):
+        foot_in = bm.verts.new((0.0, side * PORTAL_OPENING, 0.0))
+        foot_out = bm.verts.new((0.0, side * PORTAL_HALF, 0.0))
+        # Same winding as the arch quads on both sides.
+        pier = [foot_in, foot_out, top_out, top_in] if side > 0.0 else [foot_out, foot_in, top_in, top_out]
+        faces.append(bm.faces.new(pier))
+    extruded = bmesh.ops.extrude_face_region(bm, geom=faces)
+    moved = [e for e in extruded["geom"] if isinstance(e, bmesh.types.BMVert)]
+    bmesh.ops.translate(bm, vec=(PORTAL_THICK, 0.0, 0.0), verts=moved)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _mesh_object("PortalFacade", bm, "portal_stone")
+
+
+def _shade_bore():
+    """Vertex colours: full light on the outside, dimming through the depth of
+    the facade and down the bore to black a few metres short of its end."""
+    for obj in list(bpy.context.scene.objects):
+        if obj.type != "MESH":
+            continue
+        mesh = obj.data
+        colours = mesh.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+        mesh.color_attributes.active_color = colours
+        for loop in mesh.loops:
+            p = obj.matrix_world @ mesh.vertices[loop.vertex_index].co
+            light = 1.0
+            if abs(p.y) < PORTAL_OPENING + 0.08 and p.z < PORTAL_CROWN + 0.08 and p.x > 0.02:
+                depth = min(max(p.x / PORTAL_THICK, 0.0), 1.0)
+                far = min(max((p.x - PORTAL_THICK) / (BORE_LENGTH * 0.72 - PORTAL_THICK), 0.0), 1.0)
+                light = (1.0 - 0.4 * depth * depth * (3 - 2 * depth)) * (1.0 - far * far * (3 - 2 * far))
+            colours.data[loop.index].color = (light, light, light, 1.0)
+
+
+def tunnel_portal():
+    clear()
+    PALETTE.update({
+        "portal_stone": srgb("9a8f7e"), "portal_trim": srgb("cdbfa4"),
+        "tunnel_soot": srgb("4d4843"), "tunnel_black": srgb("050505"),
+    })
+    _facade()
+    # Voussoirs round the arch, the keystone deeper and prouder than the rest.
+    count = 15
+    gap = 0.025
+    for i in range(count):
+        a0 = math.pi * i / count + gap
+        a1 = math.pi * (i + 1) / count - gap
+        key = i == count // 2
+        r0, r1 = PORTAL_OPENING - 0.05, PORTAL_OPENING + (1.05 if key else 0.72)
+        outline = [(r0 * math.cos(a0), PORTAL_SPRING + r0 * math.sin(a0)),
+                   (r1 * math.cos(a0), PORTAL_SPRING + r1 * math.sin(a0)),
+                   (r1 * math.cos(a1), PORTAL_SPRING + r1 * math.sin(a1)),
+                   (r0 * math.cos(a1), PORTAL_SPRING + r0 * math.sin(a1))]
+        prism("Keystone" if key else "Voussoir", outline, (-0.22 if key else -0.13, 0.0, 0.0),
+              (0.0, 1.0, 0.0), (1.0, 0.0, 0.0), 0.6, "portal_trim")
+    for side in (-1.0, 1.0):
+        # Impost where the arch springs, quoins up the jamb (long and short
+        # in turn), the plinth along the foot.
+        cube("Impost", (0.1, side * (PORTAL_OPENING + 0.42), PORTAL_SPRING - 0.14), (0.7, 0.95, 0.28), "portal_trim", 0.03)
+        z = 0.0
+        for k, height in enumerate((0.8, 0.72, 0.8, 0.7)):
+            width = 0.85 if k % 2 == 0 else 0.55
+            cube("Quoin", (0.08, side * (PORTAL_OPENING + width / 2 - 0.04), z + height / 2),
+                 (0.56, width, height - 0.05), "portal_trim", 0.03)
+            z += height
+        cube("Plinth", (-0.35, side * (PORTAL_OPENING + 0.1 + (PORTAL_HALF - PORTAL_OPENING) / 2), -0.1),
+             (1.3, PORTAL_HALF - PORTAL_OPENING + 0.2, 0.6), "portal_trim", 0.04)
+        # Pilasters at the facade's edges, battered (thicker at the foot).
+        prism("Pilaster", [(-0.75, -0.3), (0.3, -0.3), (0.3, PORTAL_HEIGHT), (-0.32, PORTAL_HEIGHT)],
+              (0.0, side * PORTAL_HALF - (0.95 if side > 0 else 0.0), 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0),
+              0.95, "portal_stone")
+        # Wing walls flaring out toward the road, stepping down with the slope
+        # of the cutting they hold back, a coping on top and a pier at the end.
+        along = (-math.cos(WING_ANGLE), side * math.sin(WING_ANGLE), 0.0)
+        out = (math.sin(WING_ANGLE), side * math.cos(WING_ANGLE), 0.0)
+        root = (-0.3, side * (PORTAL_HALF - 0.55), 0.0)
+        top0, top1 = PORTAL_HEIGHT - 0.6, 1.3
+        prism("WingWall", [(0.0, -0.3), (WING_LENGTH, -0.3), (WING_LENGTH, top1), (0.0, top0)],
+              root, along, out, 0.8, "portal_stone")
+        coping_root = (root[0] - out[0] * 0.12, root[1] - out[1] * 0.12, 0.0)
+        prism("WingCoping", [(0.0, top0), (WING_LENGTH, top1), (WING_LENGTH, top1 + 0.24), (0.0, top0 + 0.24)],
+              coping_root, along, out, 1.04, "portal_trim")
+        end = (root[0] + along[0] * WING_LENGTH + out[0] * 0.4, root[1] + along[1] * WING_LENGTH + out[1] * 0.4)
+        yaw = math.atan2(along[1], along[0])
+        cube("WingPier", (end[0], end[1], 0.6), (1.1, 1.1, 1.9), "portal_stone", 0.04, rot=(0, 0, yaw))
+        cube("WingPierCap", (end[0], end[1], 1.62), (1.3, 1.3, 0.2), "portal_trim", 0.03, rot=(0, 0, yaw))
+    # Cornice, parapet and its coping along the top.
+    cube("Cornice", (0.3, 0, PORTAL_HEIGHT + 0.16), (PORTAL_THICK + 0.75, PORTAL_HALF * 2 + 0.5, 0.32), "portal_trim", 0.04)
+    cube("Parapet", (0.45, 0, PORTAL_HEIGHT + 0.62), (0.7, PORTAL_HALF * 2 - 0.2, 0.6), "portal_stone", 0.03)
+    cube("ParapetCoping", (0.45, 0, PORTAL_HEIGHT + 1.0), (0.9, PORTAL_HALF * 2, 0.16), "portal_trim", 0.03)
+    # A blank date stone over the keystone.
+    cube("Tablet", (-0.1, 0, PORTAL_CROWN + 1.55), (0.2, 1.7, 0.62), "portal_trim", 0.04)
+    # Moss where rain sits: on the cornice and the wing piers' caps.
+    for y, size in ((-3.9, 0.7), (-1.2, 0.45), (2.6, 0.8), (4.6, 0.5)):
+        moss = blob("Moss", (0.0, y, PORTAL_HEIGHT + 0.34), (0.35, size, 0.1), "moss")
+        jitter(moss, 0.04, int(abs(y) * 10))
+    # The bore: soot-dark masonry inside, its outer shell (only ever seen
+    # from above, through the hill) and a black end, a ballast floor with the
+    # track running on into the dark.
+    stations = [PORTAL_THICK - 0.02, 2.0, 3.5, 5.5, 8.0, BORE_LENGTH]
+    _sweep("BoreLining", _arch_ring(PORTAL_OPENING), stations, "tunnel_soot", True)
+    _sweep("BoreShell", _arch_ring(PORTAL_OPENING + 0.45), [PORTAL_THICK - 0.02, BORE_LENGTH], "portal_stone", False)
+    bm = bmesh.new()
+    cap = [bm.verts.new((BORE_LENGTH, y, z)) for y, z in _arch_ring(PORTAL_OPENING + 0.02)]
+    face = bm.faces.new(cap)
+    face.normal_update()
+    if face.normal.x > 0.0:
+        bmesh.ops.reverse_faces(bm, faces=[face])
+    _mesh_object("BoreEnd", bm, "tunnel_black")
+    # Ballast a few centimetres proud of the ground (like the track's berm),
+    # so the level ground the terrain keeps under the mouth never shows
+    # through, and a gravel apron across the foot of the facade covering
+    # where the terrain opens up for the bore.
+    extrude_x("BoreBallast", [(-PORTAL_OPENING, -0.3), (PORTAL_OPENING, -0.3), (PORTAL_OPENING, 0.04),
+                              (-PORTAL_OPENING, 0.04)], -0.2, BORE_LENGTH, 8, "ballast")
+    cube("Apron", (-1.2, 0, -0.13), (2.2, PORTAL_HALF * 2 - 0.4, 0.34), "ballast")
+    # Masonry backing behind the facade: the hill can't come right up against
+    # the wall on the terrain's 2 m grid, so this wedge fills the gap (and the
+    # terrain's hole over the bore), from under the parapet's coping down into
+    # the hill rising behind it.
+    prism("Backfill", [(0.85, PORTAL_CROWN + 0.45), (5.4, PORTAL_CROWN + 0.45), (5.4, PORTAL_CROWN + 0.9),
+                       (0.85, PORTAL_HEIGHT + 0.88)],
+          (0.0, -PORTAL_HALF - 0.15, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), PORTAL_HALF * 2 + 0.3, "portal_stone")
+    rail = [(-0.07, 0.0), (0.07, 0.0), (0.04, 0.12), (-0.04, 0.12)]
+    for y in (-RAIL_Y, RAIL_Y):
+        extrude_x("Rail", rail, 0.0, BORE_LENGTH, 6, "rail_steel", y)
+    x = 0.55
+    while x < BORE_LENGTH - 0.3:
+        cube("Sleeper", (x, 0, 0.035), (0.26, 2.3, 0.09), "wood")
+        x += 1.45
+    _shade_bore()
+    REPORT.append(("sm_env_rail_tunnel_portal.glb", triangle_count()))
+    path = os.path.join(OUT, "sm_env_rail_tunnel_portal.glb")
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True,
+                              export_materials="EXPORT", export_apply=True, export_vertex_color="ACTIVE")
+    print("EXPORTED", os.path.relpath(path, ROOT))
+
+
 BUILDERS = {"track": track, "signal": crossing_signal, "arm": barrier_arm,
-            "loco": locomotive, "boxcar": boxcar, "tanker": tanker}
+            "loco": locomotive, "boxcar": boxcar, "tanker": tanker, "portal": tunnel_portal}
 ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 for builder_name, builder in BUILDERS.items():
     if not ONLY or builder_name in ONLY:

@@ -136,6 +136,16 @@ var terrain: Node3D
 var _segments: Array[RouteSegment] = []
 
 
+## Host: closes the order whose box was left on the road (N-213.4). False
+## when no door is waiting for that box (Endless, or already resolved).
+func close_lost_order(package_id: StringName) -> bool:
+	for house: DeliveryHouse in houses:
+		if is_instance_valid(house) and not house.delivered and house.assigned_package_id == package_id:
+			house.close_lost()
+			return true
+	return false
+
+
 ## Overrides house_count before the node builds itself. Call before
 ## add_child()-ing this into the tree -- _ready() already builds geometry
 ## from house_count, same convention as any other @export here.
@@ -679,6 +689,15 @@ func _finish_terrain() -> void:
 			var level: float = terrain.base_height(Vector2(centre.x, centre.z))
 			for pad: Vector3 in (segment as RailCrossingSegment).track_pads():
 				terrain.pads.append(Vector3(pad.x, level, pad.z))
+				# No tree on the rails.
+				_clear_zones.append(Vector3(pad.x, pad.z, 4.0))
+			# A tunnel at each end, a hill over it; nothing grows in the
+			# cutting or out of the portal.
+			for mouth: Dictionary in (segment as RailCrossingSegment).tunnel_mouths():
+				mouth["level"] = level
+				terrain.tunnels.append(mouth)
+				var front: Vector2 = (mouth.at as Vector2) + (mouth.dir as Vector2) * 2.0
+				_clear_zones.append(Vector3(front.x, front.y, 11.0))
 	terrain.build()
 	for child: Node in get_children():
 		if child == terrain or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):

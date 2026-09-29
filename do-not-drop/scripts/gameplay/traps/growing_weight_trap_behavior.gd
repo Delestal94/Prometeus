@@ -6,6 +6,10 @@ extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
 ## everyone else's problem.
 
 const DIRECTIONS: Array[StringName] = [&"up", &"down", &"left", &"right"]
+## A solved load stays secured until this long before it starts to grow
+## again; only then is the next sequence asked for (playtest 2026-09-28: a
+## new one the instant the last was done read as a chore that never ends).
+const ARM_WINDOW: float = 3.0
 
 var sequence: Array[StringName] = []
 var sequence_index: int = 0
@@ -21,6 +25,8 @@ var _base_mass: float = 8.0
 var _time_since_solved: float = 0.0
 var _time_since_growth: float = 0.0
 var _rng := RandomNumberGenerator.new()
+var _mistakes: int = 0
+var _solved: int = 0
 
 
 func on_setup(package: Node, config: Dictionary) -> void:
@@ -60,6 +66,7 @@ func press_direction(direction: StringName) -> bool:
 		return false
 	if direction != sequence[sequence_index]:
 		sequence_index = 0
+		_mistakes += 1
 		return false
 	sequence_index += 1
 	if sequence_index < sequence.size():
@@ -83,12 +90,22 @@ func get_hint() -> String:
 	for index: int in range(sequence.size()):
 		pending += ("[%s] " % _arrow(sequence[index])) if index >= sequence_index else ""
 	var seconds_left: float = maxf(_puzzle_time_limit - _time_since_solved, 0.0)
+	if not armed():
+		return "Carga asegurada · la próxima secuencia en %ds" % ceili(seconds_left - ARM_WINDOW)
 	if seconds_left > 0.0:
 		return tr("HUD_HINT_WEIGHT_SEQUENCE") % [pending, seconds_left]
 	return tr("HUD_HINT_WEIGHT_DANGER") % pending
 
 
+func sequence_state() -> Dictionary:
+	if get_state() == TrapState.RUINED or sequence.is_empty():
+		return {}
+	return {"steps": sequence.duplicate(), "index": sequence_index, "mistakes": _mistakes, "solved": _solved,
+		"seconds": maxf(_puzzle_time_limit - _time_since_solved, 0.0), "verb": "Asegurar", "pending": armed()}
+
+
 func _solve() -> void:
+	_solved += 1
 	mass_multiplier = 1.0
 	_time_since_solved = 0.0
 	_time_since_growth = 0.0
@@ -104,7 +121,14 @@ func _roll_sequence() -> void:
 		sequence.append(DIRECTIONS[_rng.randi_range(0, DIRECTIONS.size() - 1)])
 
 
+## Whether the next sequence is being asked for yet.
+func armed() -> bool:
+	return _time_since_solved >= _puzzle_time_limit - ARM_WINDOW
+
+
 func _consume_input(input: Dictionary) -> void:
+	if not armed():
+		return
 	var pressed: Variant = input.get("direction_pressed")
 	if pressed != null and pressed is StringName:
 		press_direction(pressed as StringName)

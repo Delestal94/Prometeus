@@ -47,6 +47,16 @@ const CARD_NAMES := {
 const SUPPLIES := {
 	&"padding": {"title": "UI_SUPPLY_PADDING", "detail": "UI_SUPPLY_PADDING_DETAIL", "cost": 40},
 	&"insurance": {"title": "UI_SUPPLY_INSURANCE", "detail": "UI_SUPPLY_INSURANCE_DETAIL", "cost": 35},
+	&"rescue_hook": {
+		"title": "UI_SUPPLY_RESCUE_HOOK",
+		"detail": "UI_SUPPLY_RESCUE_HOOK_DETAIL",
+		"cost": 30,
+	},
+	&"spare_part": {
+		"title": "UI_SUPPLY_SPARE_PART",
+		"detail": "UI_SUPPLY_SPARE_PART_DETAIL",
+		"cost": 25,
+	},
 }
 
 var team_money: int = STARTING_MONEY

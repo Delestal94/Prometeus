@@ -11,6 +11,7 @@ var sequence: Array[StringName] = [&"up", &"left", &"down"]
 var _mistake_penalty: float = 1.5
 var _defused: bool = false
 var _last_input: StringName = &""
+var _mistakes: int = 0
 
 func on_setup(_package: Node, config: Dictionary) -> void:
 	super.on_setup(_package, config)
@@ -23,6 +24,7 @@ func on_setup(_package: Node, config: Dictionary) -> void:
 	sequence_index = 0
 	_defused = false
 	_last_input = &""
+	_mistakes = 0
 
 func on_physics_process(_package: Node, delta: float, context: Dictionary) -> void:
 	if _defused or seconds_left <= 0.0:
@@ -72,6 +74,13 @@ func _consume_direction(direction: StringName) -> void:
 	else:
 		seconds_left = maxf(0.0, seconds_left - _mistake_penalty)
 		sequence_index = 0
+		_mistakes += 1
+
+func sequence_state() -> Dictionary:
+	if seconds_left <= 0.0:
+		return {}
+	return {"steps": sequence.duplicate(), "index": sequence.size() if _defused else sequence_index,
+		"mistakes": _mistakes, "solved": 1 if _defused else 0, "seconds": seconds_left, "verb": "Desactivar"}
 
 func _sync_integrity() -> void:
 	if _defused:

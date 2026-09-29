@@ -11,6 +11,7 @@ WORLD_DEPOT_NOTICE_BOUGHT,Compraron %s (-$%d),Bought %s (-$%d)
 WORLD_DEPOT_NOTICE_DISCOUNT,Usaron Descuento en %s (-$%d),Used a Discount on %s (-$%d)
 WORLD_DEPOT_MARK_OK,OK,OK
 WORLD_DEPOT_MARK_RUINED,ROTO,BROKEN
+WORLD_DEPOT_MARK_LOST,PERDIDO,LOST
 WORLD_DEPOT_MARK_MISSED,NO,NO
 WORLD_DEPOT_NOTICE_INSURANCE,El seguro cubrió la caja rota: +$%d,Insurance covered the broken box: +$%d
 WORLD_DEPOT_FLOOR_FORKLIFT,CARRIL AUTOELEVADOR,FORKLIFT LANE
@@ -152,3 +153,17 @@ WORLD_REACTION_MISSED_3,Estuve esperando toda la tarde...,I waited all afternoon
 WORLD_REACTION_MISSED_4,"Si el paquete vuelve, llámenme. Gracias por nada.","If the parcel comes back, call me. Thanks for nothing."
 WORLD_REACTION_MISSED_5,Me fui a comprar. Déjenlo con la vecina (no).,Gone shopping. Leave it with the neighbour (don't).
 WORLD_DEPOT_GATE,PORTÓN,GATE
+WORLD_REACTION_CARE_REPAIRED_1,"¿Esa línea de pegamento es parte del diseño? Bueno... funciona.","Is that glue line part of the design? Well... it works."
+WORLD_REACTION_CARE_REPAIRED_2,"Se nota el arreglo, pero aguanta. Lo acepto.","I can see the fix, but it holds. I'll take it."
+WORLD_REACTION_CARE_REPAIRED_3,"Tiene más cinta que caja, pero está entero.","More tape than box, but it's in one piece."
+WORLD_REACTION_CARE_UNCONVINCING_1,"¿Qué le pasó a esto? No me mientan.","What happened to this? Don't lie to me."
+WORLD_REACTION_CARE_UNCONVINCING_2,"Esto se desarma solo de mirarlo...","It falls apart if I just look at it..."
+WORLD_REACTION_CARE_UNCONVINCING_3,"Pedí un paquete, no un rompecabezas.","I ordered a package, not a jigsaw puzzle."
+WORLD_REACTION_CARE_SUBSTITUTED_1,"¿Por qué mi gallina tiene pilas?","Why does my hen take batteries?"
+WORLD_REACTION_CARE_SUBSTITUTED_2,"Esto no es lo que pedí. Esto hace ruido de goma.","This isn't what I ordered. It squeaks like rubber."
+WORLD_REACTION_CARE_SUBSTITUTED_3,"Muy gracioso. ¿Y el pedido de verdad?","Very funny. And the real order?"
+WORLD_HOOK_PROMPT,Enganchar la caja caída,Hook the fallen box
+WORLD_FAULT_REAR_DOOR_SPARE,Cambiar la traba de la puerta con el repuesto,Replace the door latch with the spare part
+WORLD_FAULT_REAR_DOOR_STRAP,Atar la puerta con una cincha del kit,Tie the door shut with a strap from the kit
+WORLD_FAULT_MIRROR_SPARE,Poner el espejo de repuesto,Fit the spare mirror
+WORLD_FAULT_MIRROR_PHONE,Sostener el celular como espejo,Hold your phone up as the mirror

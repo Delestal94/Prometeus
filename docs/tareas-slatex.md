@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-28 (estado relevado sobre `dbe3e48`).
+> Última actualización: 2026-09-28 (estado relevado sobre `dbe3e48`; S-901, S-903, S-904 y S-907 pospuestas a la iteración de lanzamiento; S-902 y S-906 hechas igual).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -75,7 +75,7 @@ ChatGPT no ve el repo ni corre Godot solo (salvo que uses Codex conectado al rep
 | **M2 — Base técnica para lo que sigue** | Partir los archivos gigantes antes de sumarles UI; red robusta. | S-201, S-202, S-204, S-206, S-209 |
 | **M3 — Onboarding y UX** | Que alguien que nunca jugó entienda qué hacer sin que se lo expliquen. | S-106, S-107, S-501, S-502, S-504, S-505, S-506, S-508, S-510 |
 | **M4 — Balance medido y juice** | Números justificados por simulación; fallas que den ganas de clipear. | S-108, S-109, S-110, S-111, S-301, S-302, S-310, S-401 a S-404, S-601 a S-604 |
-| **M5 — Preparación de lanzamiento** | Inglés, tienda, capturas, logros. | S-509, S-306, S-901 a S-907, S-805 |
+| **M5 — Preparación de lanzamiento** | Inglés, logo, telemetría. Tienda, cápsulas, press kit y logros (S-901, S-903, S-904, S-907) ⏸ pospuestos a la iteración de lanzamiento; capturas (S-902) y monetización (S-906) hechas. | S-509, S-306, S-905, S-805 |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
@@ -333,6 +333,31 @@ del host. Hacerlo **solo visual y local**:
 - [x] (commit `5fa9277`) Test: tras `package_ruined` el `Engine.time_scale` sigue en 1.0 y las partículas vuelven a 1.0.
 
 ---
+
+### S-112 · Rescate de carga (`docs/jugabilidad-paquetes-rescate.md`) — A · Aviso: sí (`run_manager.gd`, `event_bus.gd`)
+
+**Hecho por Nacho (2026-09-27, pedido del usuario), corte vertical 1:**
+- [x] Estado de cuidado en el host (`package_care.gd`) separado de la barra de la trampa: rescate de
+  15 s, piezas para juntar (`package_salvage.gd`), cinta / recomponer / gallina de juguete con el
+  minijuego de flechas, equilibrio con stick (`player_cargo_care.gd`) y tope de calidad.
+- [x] Kit compartido en `RunManager` (3 cintas, 2 reparaciones, 1 juguete), sincronizado a clientes.
+- [x] La puerta lee la categoría (reparado / poco convincente / sustituto) y reacciona con su línea; el
+  pago no depende del azar; los resultados cuentan los rescates.
+- [x] Derramar ya no pierde la caja: abre un rescate. Una gallina perdida no corta la partida mientras
+  quede un juguete. Test: `tests/test_package_rescue.gd`.
+
+**Hecho después (2026-09-28), resto del diseño:**
+- [x] Plazos de entrega calculados sobre la distancia real de cada casa (`RunManager.plan_deadlines`,
+  hasta 3), cuenta regresiva en el HUD, +40 por plazo cumplido y −15 por vencido.
+- [x] Relleno, trapo y cincha; "recomponer" cambia según el contenido (pegar, rearmar, desactivar,
+  reparar jaula, reubicar entre dos); el líquido solo se rescata con trapo y llega parcial.
+- [x] Regazo o soporte: sentado, Q mueve la caja entre las dos. El regazo amortigua pero ocupa las
+  manos; el soporte libera las manos y pide cincha. La herramienta cambia con X (antes V, que era el ping).
+- [x] Líneas de la puerta en `strings_world.csv`.
+- [x] Si se desconecta quien atendía una caja en rescate, su ventana se mantiene (`peer_left`).
+
+**Pendiente:** prueba real en red con dos o tres PCs (desconexión en medio de un rescate) y ajustar
+cifras de plazos con `bench_route_duration` cuando se juegue.
 
 ## 2. Programación y arquitectura técnica
 
@@ -771,25 +796,30 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ## 9. Negocio, marketing y distribución
 
-### S-901 · Texto de la página de Steam — B · `Luna · medium` (redactar), `Sol · medium` (revisar) · Aviso: no
+> **⏸ Pospuesto (2026-09-28):** estamos en desarrollo y refinamiento, así que lo de publicar en Steam
+> y promocionar el juego queda para una iteración de lanzamiento. Las tareas marcadas ⏸ no se trabajan
+> ni cuentan como pendientes hasta que se reabra esta sección.
+> S-905 sigue activa: es investigación de onboarding que alimenta a S-506.
+
+### S-901 · Texto de la página de Steam — B · `Luna · medium` (redactar), `Sol · medium` (revisar) · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] `docs/marketing/steam-page.md` en español e inglés: descripción corta (≤ 300 caracteres), descripción
   larga con 5 viñetas de características, requisitos mínimos (GL Compatibility → hardware modesto),
   etiquetas (Co-op, Online Co-Op, Physics, Driving, Funny, Party Game).
 - [ ] Una frase de gancho que diga los roles asimétricos: "Uno maneja. Los demás intentan que nada explote."
 
-### S-902 · Modo captura para imágenes y tráiler — B · `Sol · high` · Aviso: no
+### S-902 · Modo captura para imágenes y tráiler — B · `Sol · high` · Aviso: no · ✅ (hecha pese a la pausa)
 
 - [x] Tecla de depuración (F10, solo build de debug) que oculta todo el HUD y el viewmodel.
 - [x] `tests/render_store_shots.gd`: 5 escenas fijas (depósito cargando, manejo con cajas en riesgo, entrega
   en una casa, caja explotando, resultados) a 1920×1080. Necesita ventana: la corrés vos.
 
-### S-903 · Cápsulas de Steam — C · generación de imagen · Aviso: no
+### S-903 · Cápsulas de Steam — C · generación de imagen · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] Con el logo (S-306): 460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240. `assets/store/`.
   Registrar en `art/ai-registro.md`.
 
-### S-904 · Press kit — C · `Luna · medium` · Aviso: no
+### S-904 · Press kit — C · `Luna · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] `docs/marketing/presskit.md`: ficha (nombre, equipo, plataforma, precio objetivo $8-15, fecha
   tentativa de Early Access), descripción, características, logo, capturas (S-902), contacto.
@@ -800,12 +830,12 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   Totally Reliable Delivery Service enseñan sus controles y sus reglas en los primeros 5 minutos, y qué
   tomar para S-506. Con fuentes.
 
-### S-906 · Registro de decisión de monetización — A · `Luna · medium` · Aviso: no
+### S-906 · Registro de decisión de monetización — A · `Luna · medium` · Aviso: no · ✅ (hecha pese a la pausa)
 
 - [x] (commit `e61d923`) En `docs/plan-desarrollo.md`: precio único $8-15, sin microtransacciones, cosméticos solo se
   ganan jugando, actualizaciones gratis. Verificar que ningún cosmético del código tenga precio en dinero real.
 
-### S-907 · Logros — B · `Sol · high` · Aviso: no
+### S-907 · Logros — B · `Sol · high` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
 - [ ] Diseñar 15 logros atados a hitos que ya existen o que suma esta lista (primera entrega, primer
   explosivo desactivado, entrega perfecta con 4 casas, 10 rescates, sacar foto a una caja arruinada…).

@@ -116,21 +116,10 @@ func can_interact(player: Node) -> bool:
 			return false
 	var carried: Node = player.get(&"carried_package")
 	if role == &"driver":
-		# Loaded cargo is what lets the delivery *start* (level_base.gd starts
-		# it when the driver sits with a box aboard). Once it's under way the
-		# boxes come off the rack to be delivered, and the last one leaves
-		# the van for good -- the driver still has to get back in and drive
-		# on, so past the start the rack doesn't get a say.
-		if not _run_under_way():
-			var has_loaded_cargo: bool = false
-			for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
-				if is_instance_valid(mount.get(&"occupied_by")):
-					has_loaded_cargo = true
-					break
-			if not has_loaded_cargo:
-				return false
-		# A box in hand still targets the seat, so its prompt can say why it
-		# won't take you (get_prompt()); interact() refuses it.
+		# The wheel never waits for cargo: sitting here starts the delivery
+		# (level_common.gd), and a crew that leaves boxes behind pays for it
+		# at the doors. A box in hand still targets the seat, so its prompt
+		# can say why it won't take you (get_prompt()); interact() refuses it.
 		return true
 	if not tend_mount_paths.is_empty():
 		return carried == null or _first_mount(false) != null
@@ -174,13 +163,10 @@ func interact(player: Node) -> void:
 		var package: Node = null
 		var carried: Node = player.get(&"carried_package")
 		if carried != null:
-			var free_mount: Node = _first_mount(false)
-			if free_mount != null:
-				free_mount.call(&"store", carried)
-				package = carried
-				if player.get(&"carried_package") == carried:
-					player.rpc(&"drop_carried")
-				free_mount.emit_signal(&"interacted", player)
+			# Boarding with a box keeps it on your lap; "drop" (Q) then shelves
+			# it in this column's free bay (package_rescue.gd's lap toggle).
+			package = carried
+			carried.set(&"_lap_mount", _first_mount(false))
 		else:
 			var full_mount: Node = _first_mount(true)
 			if full_mount != null:
@@ -195,28 +181,17 @@ func interact(player: Node) -> void:
 		var mount: Node = get_node_or_null(required_mount_path)
 		var package: Node = mount.get(&"occupied_by") if mount != null else null
 		if package == null:
-			# Boarded with it still in hand: settle it onto the mount now,
-			# right as they sit, instead of requiring them to put it down
-			# unattended first (see can_interact() above).
+			# Boarded with it still in hand: it stays on their lap, and "drop"
+			# (Q) settles it onto this seat's mount (see can_interact() above).
 			var carried: Node = player.get(&"carried_package")
-			if carried != null and mount != null and mount.has_method(&"store"):
-				mount.call(&"store", carried)
+			if carried != null and mount != null:
 				package = carried
-				if player.get(&"carried_package") == carried:
-					player.rpc(&"drop_carried")
-				# Same signal a hand-placed box sends, so the level counts it
-				# as loaded cargo and the driver can actually start the run.
-				mount.emit_signal(&"interacted", player)
+				carried.set(&"_lap_mount", mount)
 		if package != null and player.has_method(&"tend_package"):
 			if package.has_method(&"set_tender"):
 				package.call(&"set_tender", peer_id)
 			player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 	interacted.emit(player)
-
-
-func _run_under_way() -> bool:
-	var run: Node = get_node_or_null(^"/root/RunManager")
-	return run != null and (bool(run.get(&"is_running")) or not (run.get(&"results") as Dictionary).is_empty())
 
 
 func _local_player() -> Node:

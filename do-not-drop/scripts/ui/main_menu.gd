@@ -269,7 +269,7 @@ func _build_card() -> VBoxContainer:
 		style.draw_center = false
 		style.shadow_size = 0
 		_card.add_theme_stylebox_override("panel", style)
-		_card.item_rect_changed.connect(_fit_frost)
+		_card.item_rect_changed.connect(_fit_frost, CONNECT_DEFERRED)
 	_page_title = UiTheme.tag(column, tr(PAGE_TITLES[Page.HOME]), UiTheme.YELLOW, -1.5, 17)
 	_spacer(column, 2)
 	return column
@@ -450,7 +450,10 @@ func _build_frost() -> TextureRect:
 	material.set_shader_parameter(&"card_rect", Vector4.ZERO)
 	frost.material = material
 	add_child(frost)
-	frost.resized.connect(_fit_frost)
+	# Deferred: the frost is resized before the card's MarginContainer moves
+	# with the window, and fitted right then it masked the card's old spot --
+	# a second, offset card behind the real one (playtest 2026-09-29).
+	frost.resized.connect(_fit_frost, CONNECT_DEFERRED)
 	return frost
 
 

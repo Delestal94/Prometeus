@@ -38,6 +38,9 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	hud.notices.clear_all_notices()
 	hud.overlay_mode = "results"
 	hud.overlay.show()
+	# The results card stands alone: the run's HUD peeking around its edges
+	# read as leftovers (HUD redesign 2026-09-28).
+	hud.hud_layer.hide()
 	hud.set_economy_visible(false)
 	hud.overlay_kicker.text = "RESULTADO"
 	var new_best: bool = bool(results.get("is_new_best", false))
@@ -59,7 +62,8 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var intact: int = int(results.get("cargo_intact", 0))
 	var ruined: int = int(results.get("cargo_ruined", 0))
 	var delivered_doors: int = int(results.get("houses_delivered", 0))
-	var missed_doors: int = int(results.get("houses_missed", 0))
+	# A door whose box was left on the road (N-213.4) waited for nothing too.
+	var missed_doors: int = int(results.get("houses_missed", 0)) + int(results.get("houses_lost", 0))
 	if not success:
 		hud.overlay_title.text = tr("HUD_RESULT_FAILED_TITLE")
 	elif delivered_doors == 0 and missed_doors > 0:
@@ -68,6 +72,10 @@ func _on_ended(score: int, results: Dictionary) -> void:
 		hud.overlay_title.text = tr("HUD_RESULT_DELIVERED_TITLE")
 	hud.overlay_body.text = _delivery_summary(delivered_doors, missed_doors, total, ruined,
 			intact) if success else tr(String(results.get("reason", "")))
+	# The rescues are the run's story: "Jarrón: 1 arreglo(s) en el camino".
+	var stories: Array = results.get("stories", [])
+	if not stories.is_empty():
+		hud.overlay_body.text += "\n" + "\n".join(PackedStringArray(stories))
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = tr("HUD_RESULT_CHAOS_BONUS") % chaos if chaos > 1.0 else ""
 	var door_line: String = tr("HUD_RESULT_DOORS") % int(results.get("delivery_points",
@@ -121,6 +129,7 @@ func _add_delivery_row(entry: Dictionary) -> void:
 		&"delivered_at_risk": "CON REPAROS !",
 		&"delivered_ruined": "ARRUINADO ✕",
 		&"missed": "SIN ENTREGA",
+		&"lost": "PERDIDO ✕",
 	}.get(outcome, "SIN ENTREGA")
 	var label: Label = UiTheme.label(row, "Casa %d  ·  %s  ·  %s" % [int(entry.get("house", 0)) + 1, trap_name,
 			result_text], 15, Hud.INK)
@@ -166,7 +175,9 @@ func _show_unlock_progress() -> void:
 			else tr("HUD_PROGRESS_DELIVERY_MANY")) % missing_deliveries)
 	if missing_score > 0:
 		needs.append("%d pts" % missing_score)
-	hud.result_progress_label.text = tr("HUD_PROGRESS_REMAINING") % [
+	# "Te falta 1 entrega", but "Te faltan 2 entregas" or "... 1 entrega y 30 pts".
+	var singular: bool = needs.size() == 1 and missing_deliveries == 1
+	hud.result_progress_label.text = tr("HUD_PROGRESS_REMAINING_ONE" if singular else "HUD_PROGRESS_REMAINING") % [
 		(" " + tr("HUD_PROGRESS_AND") + " ").join(needs), tr(String(progress["title"]))]
 	hud.result_progress_bar.value = float(progress["progress"]) * 100.0
 

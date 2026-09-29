@@ -1,6 +1,6 @@
 # Coordinación de equipo — Nacho y Slatex
 
-> Última actualización: 2026-09-28
+> Última actualización: 2026-09-29
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
 > del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
@@ -18,6 +18,298 @@ No se modificaron los textos del mundo de Nacho ni `strings_world.csv`.
 `GameSettings` reemplazó el español fijo de N-605 por una preferencia persistente
 `language`; Opciones permite elegir Español/English y aplica el catálogo de ambos
 integrantes mediante `TranslationServer`.
+
+Al integrarlo con main (Nacho, con Claude): las indicaciones rápidas de N-505 siguen viajando con su
+frase en español como id estable (`ping_catalog.gd` la traduce con su `key` y cuenta las sílabas de la
+voz sobre ella), así que las claves `HUD_PING_*` no se usan y `ping_catalog.gd` está en
+`ACCENTED_LOOKUP_FILES` de `test_ui_translations`. Los suministros y líneas de puntaje que sumó main
+(gancho, repuesto, plazos, rescates, paquetes perdidos) tienen claves nuevas.
+
+## Aviso activo: red por Steam y bugs del playtest (2026-09-29)
+
+Lo hizo Nacho (con Claude). Toca archivos de Slatex y la zona compartida; **ninguna firma cambia**,
+solo se agrega. Slatex: `git pull` antes de seguir con paquete, jugador o menú.
+- `package/package.tscn` (Slatex): `care_state` ahora es `ON_CHANGE` (antes `ALWAYS`) y el
+  `MultiplayerSynchronizer` tiene `replication_interval = 0.0167`. Regla nueva, la cuida
+  `test_net_bandwidth_budget`: nada de diccionarios ni textos en `ALWAYS` (máximo 64 bytes por
+  propiedad) y ningún synchronizer con intervalo 0.
+- `player/player.tscn` (Slatex): `replication_interval = 0.0167`.
+- `package/package.gd` (Slatex): nuevo `predict_carry(pose, in_vehicle)`; `_process` del cliente
+  usa la pose predicha mientras llegue cada tick (`PREDICTION_FRAMES`).
+- `player/player_carry.gd` (Slatex): llama a `predict_carry` junto a `submit_carry_transform`, y
+  solo toca `_package_focus` si existe.
+- `player/player.gd` (Slatex): `_package_focus` queda en `null` en GL Compatibility.
+- `ui/main_menu.gd` (Slatex): `_fit_frost` conectado con `CONNECT_DEFERRED`.
+- `core/network_manager.gd` (zona compartida): `no_nagle = true` en los peers de Steam.
+
+## Aviso activo: N-214.3b celular como espejo y averías para quien se une tarde (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-phone-mirror`. Solo agrega; **ninguna firma pública cambia**
+(`VehicleFaults.fix()` suma un parámetro opcional `player`), no se tocan archivos de Slatex y
+`vehicle.gd`/`vehicle.tscn` siguen congelados:
+- `VehicleFaults` lee `vehicle.driver_peer_id` y, del jugador, `carried_package` y `reach_origin()`
+  (solo lectura): el conductor no puede sostener el celular y agarrar una caja lo suelta. Slatex: si
+  renombrás alguno de esos, avisá.
+- Se engancha a `NetworkManager.peer_level_ready` (después de `RunManager.send_session_state`) para
+  mandarle las averías al que se une a mitad del recorrido.
+- Dibuja `PhoneMirror` (un celular) como hijo del camión, en el punto del espejo.
+- `translations/strings_world.csv`: clave `WORLD_FAULT_MIRROR_PHONE`.
+
+## Aviso activo: N-214.3 arreglo de averías del camión (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-fault-repair`. Solo agrega; **ninguna firma cambia**, no se
+tocan archivos de Slatex y `vehicle.gd`/`vehicle.tscn` siguen congelados:
+- `core/crew_progression.gd` (zona compartida): `SUPPLIES` suma `&"spare_part"` ($25). El panel del
+  depósito lo lista solo.
+- `gameplay/vehicle/fault_repair_spot.gd` (nuevo): `VehicleFaults` cuelga del camión
+  `FaultRepair_rear_door` en `(0.85, 1.1, 4.3)` (poste derecho de la puerta trasera) y
+  `FaultRepair_mirror` sobre el espejo del conductor. Slatex: si el modelo nuevo del camión mueve la
+  puerta, hay que mover `VehicleFaults.SPOT_POSITIONS`.
+- Usa la cincha (`strap`) del kit compartido (`RunManager.consume_care_supply`) para atar la puerta.
+- `translations/strings_world.csv`: claves `WORLD_FAULT_*`.
+
+## Aviso activo: N-213.3 gancho de rescate como suministro del depósito (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-213-rescue-hook`. Solo agrega; **ninguna firma cambia**, no se
+tocan archivos de Slatex y `vehicle.gd` sigue congelado:
+- `core/crew_progression.gd` (zona compartida): `SUPPLIES` suma `&"rescue_hook"` ($30). El panel del
+  depósito y la votación lo listan solos.
+- `gameplay/level_common.gd` (zona compartida): cuelga el nodo `RescueHook` del camión en cada par
+  (`World/Vehicle/RescueHook`, en `(-0.85, 1.6, 4.3)`: poste izquierdo de la puerta trasera). Slatex: si
+  el modelo nuevo del camión mueve esa puerta, hay que mover `RescueHook.LOCAL_POSITION`.
+- `gameplay/vehicle/rescue_hook.gd` (nuevo): `Interactable` que, con la puerta trasera abierta y las
+  manos libres, le da al pasajero la caja caída más cercana (≤ 7 m) con `DeliveryPackage.take_by()` en el
+  host. No da el mérito `rescued` al volver a subirla: `take_by()` solo lo marca si la caja no estaba
+  `is_loaded`, y una caja caída del estante lo sigue estando (pasa igual al levantarla a mano; es de
+  `package.gd`, de Slatex, si se quiere cambiar).
+- `translations/strings_world.csv`: clave `WORLD_HOOK_PROMPT`.
+
+## Aviso activo: N-214.2 efectos de las averías del camión (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-fault-effects`. Solo agrega; **ninguna firma cambia**,
+no se tocan archivos de Slatex y `vehicle.gd`/`vehicle.tscn` siguen congelados:
+- `gameplay/level_common.gd` (zona compartida): una línea, le pasa el camión a `VehicleFaults`.
+- `gameplay/vehicle/vehicle_faults.gd`: con la puerta trasera rota el host la abre con
+  `set_rear_cargo_open(true)` en el golpe y otra vez con cada bache de fuerza ≥ 4,5 (la tripulación
+  la puede cerrar, pero no se queda cerrada hasta el arreglo). Con la puerta abierta vuelve el riesgo
+  de caja al agua de N-213. Slatex: si ves que tira demasiadas cajas, avisá y se sube el umbral.
+- `gameplay/vehicle/vehicle_fault_effects.gd` (nuevo, presentación en cada par): el espejo del lado
+  del conductor (`MirrorHousing_*`/`MirrorSurface_*` del modelo, se ocultan desde afuera) se cae a la
+  ruta con un ruido de vidrio; la puerta rota suena con un golpe metálico. El arreglo o una partida
+  nueva lo vuelven a mostrar.
+
+## Aviso activo: N-214.1 averías del camión, componente `VehicleFaults` (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-vehicle-faults`. Solo agrega; **ninguna firma cambia**,
+no se tocan archivos de Slatex y `vehicle.gd` sigue congelado:
+- `core/event_bus.gd` (zona compartida): señales nuevas `vehicle_fault_started(fault_id, impact_position)`
+  y `vehicle_fault_repaired(fault_id, method)`, relayadas por el host. Por ahora `fault_id` es
+  `&"rear_door"` o `&"mirror"` (veredicto de `critico-diseno`). Slatex: si querés avisarlas en el HUD
+  o contarlas en resultados (N-214.4), escuchalas ahí.
+- `gameplay/level_common.gd` (zona compartida): agrega el nodo `VehicleFaults` en cada par.
+- `gameplay/vehicle/vehicle_faults.gd` (nuevo): escucha `vehicle_impact`; con un golpe de fuerza ≥ 9
+  el host tira por semilla y rompe como mucho una cosa por entrega. Todavía no hay efecto visible ni
+  arreglo (N-214.2 y N-214.3), así que en el juego no cambia nada.
+
+## Aviso activo: N-213.4 pedido "Perdido" para la caja abandonada en la ruta (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-213-lost-order`. Suma funciones y un resultado nuevo,
+**ninguna firma cambia**:
+- `core/run_manager.gd` (zona compartida): resultado de entrega nuevo `&"lost"` (multa igual que
+  `missed`, línea "Paquetes perdidos en la ruta", clave `houses_lost` en `_resolve_deliveries()`) y
+  `static func handed_over(outcome)`, que reemplaza los `!= &"missed"` de foto, plazos y pago de rescate.
+  Si agregás otro chequeo de "¿se entregó algo?", usá `handed_over()`.
+- `ui/hud/hud_results.gd` (Slatex): la fila de un pedido perdido dice "PERDIDO ✕", y el título y el
+  resumen suman `results["houses_lost"]` a las casas sin entregar.
+- `presentation/phone_camera.gd`: `_was_delivered()` usa `handed_over()` (no se fotografía un pedido perdido).
+- Nacho: `DeliveryHouse.close_lost()`, `Route.close_lost_order()`, `LevelCommon._check_lost_cargo()` la
+  cierra antes de `mark_lost`, la pizarra del depósito marca "PERDIDO" (`WORLD_DEPOT_MARK_LOST`) y el
+  cartel "días sin accidentes" también vuelve a 0 con una caja perdida en la ruta.
+- Duda abierta: una gallina (Ruidoso) abandonada en la ruta ya no puede salvarse con el sustituto de
+  juguete, porque su pedido se cierra al vencer la ventana. Si Slatex quiere conservar esa salida, basta con
+  no cerrar el pedido en `_check_lost_cargo()` mientras quede un sustituto en el kit.
+
+## Aviso activo: ríos rehechos, límite por la ruta y secuencias a pie (2026-09-28)
+
+Lo hizo Nacho (con Claude) tras otra prueba propia:
+
+- `route/route_terrain.gd` (Nacho): el río de un puente angosto es un cauce más angosto que el
+  tablero (arranca `RIVER_INSET` adentro, baja en `RIVER_TAPER` = 6 m), serpentea y se afina
+  hacia su final; el agua es una superficie propia a `RIVER_FILL` de la profundidad (sin la loma),
+  sobre la grilla del terreno, y el lecho no se pinta como asfalto. `_natural_height()` suma el
+  parámetro `with_ridge`. `RIVER_MEANDER_MAX`/`RIVER_WOBBLE_MAX` cambiaron (los usa
+  `_clamp_river_reach()`).
+- `gameplay/play_area.gd`: ya no hay correa al camión; el límite es 45 m de la ruta más el
+  depósito y su patio.
+- `player/player_seat_pose.gd`, `player.gd`, `player_cargo_care.gd` (Slatex): a pie, los toques
+  de una secuencia solo cuentan con la acción primaria mantenida, que además frena la caminata.
+
+## Aviso activo: límite de juego, minijuego que termina y toasts sin pisarse (2026-09-28)
+
+Lo hizo Nacho (con Claude) tras una prueba propia:
+
+- `gameplay/play_area.gd` (nuevo, lo agrega `level_common.gd`): el jugador local no sale del
+  depósito + 10 m de patio antes de la salida, ni a más de 30 m del camión en ruta; avisa por
+  `depot_notice`. Un test que necesite al jugador lejos puede apagar el nodo `PlayArea`.
+- `traps/growing_weight_trap_behavior.gd` (Slatex): tras resolver, la carga queda asegurada y la
+  próxima secuencia recién se pide `ARM_WINDOW` segundos antes de crecer (`armed()`; entrada
+  ignorada mientras tanto). `sequence_state()` suma `pending`.
+- `ui/hud/care_guide.gd`: "sostenela" solo si la caja lo necesita (`need_hands`, calculado en
+  `player_cargo_care.gd`); si no, "TODO EN ORDEN". `hud.gd`: el toast va debajo del velocímetro
+  en la misma columna.
+
+## Aviso activo: rediseño del layout del HUD en ruta (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo ("que se vea profesional"). Toca `ui/hud/` (Slatex); los
+nombres de los widgets no cambian, solo dónde y cómo se ven:
+
+- `hud.gd`: arriba a la izquierda, una tarjeta de objetivo (sección, sesión, destino, barra de ruta)
+  reemplaza al logo "TAKE MY PACKAGE"; la cinta de sesión se oculta al arrancar. Se fue la barra
+  ancha de abajo: la carga pasó a la esquina inferior izquierda (fuera del `dashboard`, oculta si
+  está vacía) y abajo al centro quedan el aviso de interacción y dos pastillas oscuras (controles y
+  atajos). Evento, toast e interacción tienen placa oscura (`_plate()`); el evento, borde rojo.
+  Margen de bordes `EDGE_MARGIN` = 40 unidades.
+- `hud_prompts.gd`: la línea de controles se dibuja para fondo oscuro. `hud_results.gd`: los
+  resultados ocultan el HUD de juego; "Te falta 1 entrega" en singular.
+- No se tocó `GameSettings.HUD_SCALE_DEFAULT` (0.48): el HUD sigue diseñado a ~2x y achicado.
+- Test ajustado: `test_hud_flow` (orden del prompt y la pastilla de controles, "Te falta").
+
+## Aviso activo: minijuegos simplificados, guía "qué hacer ahora" y práctica (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo: que se entienda si hay que alzar la caja o qué hacer.
+Cambia **cómo se juega el cuidado** (dominio de Slatex) — Slatex, mirá esto antes de tocar cargas:
+
+- `package/package_care.gd`: mantener la acción primaria protege la caja (`HOLD_PROTECTION`), sin
+  el cursor de equilibrio con WASD; las herramientas solo piden mantener su botón (sin seguir
+  flechas). Nuevo `suggested_tool(kind, supplies)`: la herramienta que sirve ahora.
+- `traps/i_trap_behavior.gd`: nuevo `care_action()` (`&"hold"`/`&"release"`/`&""`); `hostile`
+  lo sobreescribe. `package_rescue.publish_care()` replica `action` y `hint` con el `care_state`.
+- `ui/hud/care_guide.gd` (nuevo): el paso más urgente (juntar piezas, secuencia, herramienta,
+  soltar, sostener). `ui/hud/care_card.gd` (nuevo) reemplaza el panel gris de
+  `player/player_cargo_care.gd` con una tarjeta crema; la herramienta se elige sola (X cambia).
+- `ui/hud/care_practice.gd` (nuevo): práctica de cinco pasos en el depósito antes de la primera
+  salida, una vez por perfil (`UnlockManager.seen_tips["care_practice"]`).
+- Tests: `test_package_rescue`, `test_care_prompt_view`.
+
+## Aviso activo: tarjeta animada con sonido en el panel de cuidado (2026-09-28)
+
+Lo hizo Nacho (con Claude), a pedido suyo: que los minijuegos se entiendan con animaciones que
+muestren qué usar, y con sonido. Toca la zona compartida y archivos de Slatex; **solo agrega**,
+ninguna firma existente cambia salvo `sequence_prompt()` (ver abajo):
+
+- `presentation/synth_audio.gd` (zona compartida): cinco funciones nuevas, `care_step()`,
+  `care_error()`, `care_success()`, `care_whoosh()` y `care_tick()`, cacheadas como las demás.
+  Los generadores están en el archivo nuevo `presentation/synth_audio_care.gd`.
+  `presentation/sound_audit.gd` las nombra en "Sonidos del juego".
+- `ui/hud/care_prompt_view.gd` (nuevo, Slatex): la tarjeta que dibuja qué apretar. En modo
+  trabajo muestra mouse o LT, tecla o stick, flechas que se deslizan y un anillo de progreso. En
+  modo secuencia muestra una fila de teclas: la que toca rebota y las hechas llevan tilde; si
+  errás aparece "¡TECLA EQUIVOCADA!". Todo suena en el bus SFX.
+- `player/player_cargo_care.gd` (Slatex): la tarjeta reemplaza a la barra de progreso.
+  `sequence_prompt()` ahora recibe el diccionario de la secuencia en vez del paquete.
+- `traps/i_trap_behavior.gd` (Slatex): nuevo `sequence_state()`, vacío por defecto. Lo
+  implementan `explosive_trap_behavior.gd` y `growing_weight_trap_behavior.gd`, que ahora
+  cuentan errores y resoluciones.
+- `package/package_rescue.gd` (Slatex): `publish_care()` suma `"sequence"` al `care_state`
+  replicado. Antes los clientes nunca veían el avance real de la bomba; el cartel 3D de
+  `package_feedback.gd` también lo lee ahora.
+- Tests: `test_care_prompt_view` (nuevo) y `test_package_rescue`. Captura con ventana:
+  `tests/render_care_prompt.gd`. Slatex: `git pull` antes de tocar esos archivos.
+
+## Aviso activo: regazo al sentarse, arranque sin carga y minijuegos más claros (2026-09-28)
+
+Lo hizo Nacho (con Claude) a partir de una prueba propia. Toca archivos de Slatex y la zona
+compartida; ninguna firma existente cambia:
+
+- `interaction/seat_point.gd` (Slatex): sentarse con una caja en la mano ya **no** la deja en el
+  estante; queda en el regazo (`tend_package` + `_lap_mount` apuntando a la bahía libre) y Q la
+  estantea con el `request_lap_toggle` que ya existía. El asiento del conductor ya no pide carga
+  cargada (se borró `_run_under_way()`).
+- `package/package.gd` (Slatex): nuevo `DeliveryPackage.is_aboard()` = en un estante o en el regazo
+  de quien la cuida sentado. Lo usan `level_common.gd`, `depot.gd`, `ui/hud/hud_pause.gd` y
+  `ui/depot_panel.gd` en lugar de `is_loaded` para decir "a bordo".
+- `level_base.gd` (zona compartida), `level_common.gd`, `level_endless.gd`: el recorrido arranca
+  cuando alguien se sienta a manejar, **con o sin cajas** (decisión de diseño: olvidarse la carga
+  es problema de la partida). Las cajas del regazo cuentan como carga del recorrido y siguen en mano.
+- `package/package_feedback.gd` (Slatex): el cartel del Explosivo dice "DESACTIVAR", flota sobre la
+  caja y se dibuja sin prueba de profundidad (antes quedaba hundido en una cara y enorme en mano).
+- `player/player_cargo_care.gd` (Slatex): el panel dice la tecla (`mantené clic der. + A (←)`) y,
+  para el Explosivo, cuál tocar a continuación (`sequence_prompt()`).
+- Tests ajustados: `test_package_handling`, `test_loading_flow`, `test_reference_truck`,
+  `test_package_rescue`, `test_explosive_visual`. Slatex: `git pull` antes de tocar esos archivos.
+
+## Aviso activo: hito M6 de Nacho toca dominio de Slatex (2026-09-28)
+
+`docs/analisis-competencia-backseat-rv.md` (Backseat Drivers y RV There Yet?) generó 15 tareas que
+quedaron en `tareas-nacho.md` como hito **M6**, todas asignadas a Nacho a pedido suyo. Varias tocan
+el dominio de Slatex y llevan `Aviso: sí`: N-505 (indicaciones rápidas: UI y jugador), N-213 (caja
+que sale del camión: `DeliveryPackage`, `RunManager`), N-212 (voz por proximidad), N-109 (animales
+que atacan la carga), N-406 (radio que calma a Ruidoso) y N-311 (cosméticos encontrables). Una
+rutina en la nube las va trabajando de a una, **con un PR por tarea** (ramas `nacho/N-xxx-…`):
+Slatex, revisá esos PRs antes de que entren si tocan tus archivos. `vehicle.tscn`/`vehicle.gd`
+siguen congelados: N-214 (averías) va como componente aparte, y N-114 (caja manual) queda
+descartada si no hay acuerdo.
+
+## Aviso activo: N-213 ventana de rescate para la caja que sale del camión (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-213-cargo-overboard-window`. Solo zona compartida y un archivo
+nuevo; **ninguna firma cambia** y no se tocan archivos de Slatex:
+- `gameplay/level_common.gd` (zona compartida): `_check_lost_cargo()` ya no llama `mark_lost` apenas la
+  caja cargada se aleja 8 m; abre una ventana de `overboard_rescue_seconds` (30 s) y la pierde al vencer.
+  Levantarla (deja de estar `is_loaded`) la cuenta como rescatada.
+- `core/event_bus.gd` (zona compartida): señales nuevas `cargo_overboard(package_id, position, seconds)` y
+  `cargo_overboard_ended(package_id, rescued)`, relayadas por el host. Slatex: si querés mostrarlo en el
+  HUD, escuchalas ahí.
+- `presentation/overboard_marker.gd` (nuevo): cartel "¡RESCATAR! N s" sobre la caja en cada par.
+
+## Aviso activo: N-505 voz de las indicaciones rápidas (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-505-callout-voice`. Suma funciones, **ninguna firma cambia**:
+- `ui/ping_catalog.gd` (Slatex): `syllables(label)` cuenta los grupos de vocales de la frase (1-5).
+- `ui/hud/hud_notices.gd` (Slatex): `_speak()` hace sonar cada frase con la voz del que la manda,
+  desde su cabeza (`AudioStreamPlayer3D` "CalloutVoice", bus SFX) o plana si es la propia.
+- `presentation/synth_audio.gd` y `world_mix.gd` (Nacho): `callout_voice(color, sílabas)` y
+  `CALLOUT_VOICE_DB`, medida en `test_world_audio_levels`.
+
+## Aviso activo: N-505 indicaciones rápidas en la rueda de pings (2026-09-28)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-505-quick-callouts`. Toca archivos de Slatex y la zona
+compartida; **ninguna firma cambia**:
+- `ui/ping_catalog.gd` (Slatex): ocho frases ("¡Cuidado!", "¡Frená!", "¡Bache!", "¡Ayuda acá!",
+  "¡Se cae!", "Tengo la cinta", "Esperá", "¡Dale, dale!"), cada una con clave `HUD_CALLOUT_*` en
+  `strings_ui.csv` y `display_text()` para mostrarla traducida. Salen "Acá", "Gracias" y "Sí/No";
+  la rueda (`ui/ping_wheel.gd`) solo cambia el texto que muestra.
+- `ui/hud/hud_notices.gd` (Slatex): el toast muestra la frase traducida y, si el jugador local
+  maneja, la frase de otro tripulante va grande en `ping_indicator` (`local_is_driving()`).
+- `core/event_bus.gd` (zona compartida): `request_ping()` descarta la segunda frase del mismo
+  jugador dentro de `ping_cooldown_seconds` (1,5 s). `reset_ping_cooldowns()` para tests.
+
+## Aviso activo: CI en verde otra vez (PR #15, 2026-09-28)
+
+Los PRs fallaban por tres cosas, ninguna del contenido de los PRs de docs:
+- **`package.tscn` con índices de replicación repetidos** (quedó así del merge del #12): pisaba
+  `tender_peer_id`/`assistant_peer_id` y rompía el spawn en red. Arreglado, con chequeo en
+  `test_ride_sync`.
+- **`test_route_fuzz` por timeout:** tarda 80-115 s y el límite de CI era 120 s. Los tests de
+  `SLOW_TESTS` en `tools/run-tests.sh` ahora tienen el doble (`SLOW_TEST_TIMEOUT`).
+- **Zona compartida, `core/network_manager.gd`:** `JOIN_HANDSHAKE_TIMEOUT` pasa de 8 s a 20 s.
+  El que se une carga el nivel antes de completar la autenticación; en CI (tres Godot en 2
+  núcleos) eso pasaba de 8 s y el host lo echaba: nivel cargado y cero jugadores. Una PC lenta
+  tiene el mismo problema. `net_pair`/`net_trio` ahora imprimen líneas `NETLOG` con el tiempo de
+  carga y el motivo si la sesión se cae.
+- **Segunda parte (rama `fix/enet-load-timeout`), también en `core/network_manager.gd`:** los `NETLOG` del #16 mostraron
+  que el corte real era de ENet: mientras un proceso carga el nivel no atiende la red, y ENet da
+  por caído al otro lado a los ~5 s (la carga llegó a 9,6 s en CI). `_tolerate_level_loads()` sube
+  ese margen a 15 s en las dos puntas de cada conexión ENet (no toca Steam). Cubre también el
+  reinicio del host con clientes conectados. Un par que se va limpio se sigue viendo al instante.
+
+## Aviso activo: Steam y marketing pospuestos (2026-09-28)
+
+Estamos en desarrollo y refinamiento: todo lo de publicar en Steam o promocionar el juego queda para
+una iteración de lanzamiento. Marcadas ⏸ en las listas: **N-901** (Steamworks y AppID) y **S-901 a
+S-904, S-906, S-907** (página de Steam, modo captura, cápsulas, press kit, monetización, logros).
+Siguen activas S-905 (alimenta el onboarding S-506), S-306 (logo del menú), S-509 (inglés) y S-805.
+Slatex: si querés reabrir alguna de las tuyas antes, sacale la marca ⏸.
 
 ## Aviso activo: cargas headless de helpers separados (2026-09-28)
 
@@ -160,6 +452,18 @@ Nacho, pedido del usuario. Toca tres archivos de Slatex y la zona compartida; ni
   "reiniciá con R".
 
 Hacer `git pull` antes de tocar esos archivos.
+
+## Aviso activo: rescate de carga y entregas urgentes (2026-09-27)
+
+Implementación solicitada por el usuario de `jugabilidad-paquetes-rescate.md`
+(corte vertical 1, detalle en `tareas-slatex.md` S-112). Se amplían paquetes,
+HUD del pasajero, resultados y reacciones de las casas; `RunManager` suma el kit de
+reparación, `record_care()` y el pago de entregas rescatadas; `EventBus` suma
+`delivery_care_noted`. Derramar abre un rescate en vez de perder la caja. 2026-09-28: plazos de
+entrega (`level_base.gd` los fija al arrancar, señal `delivery_deadlines_set`),
+regazo/soporte con Q sentado, y la acción `care_tool_next` pasa a X en `project.godot`. Se conserva el contrato de tres estados
+de las trampas y se agrega estado de cuidado replicado para el rescate. Hacer
+`git pull` antes de continuar en esas áreas. No cambia el manejo del vehículo.
 
 Aviso 2026-09-25: dirección sonora tranquila solicitada por el usuario, tomando
 como referencia la sensación de calma de Minecraft. Se ajustan

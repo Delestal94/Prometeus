@@ -432,7 +432,8 @@ func _test_packages_rest_on_deck() -> void:
 
 
 ## The fold-down seats face the rack: sitting in one tends a box in its bay
-## column, and boarding with a box in hand shelves it there first.
+## column, and boarding with a box in hand keeps it on the lap until drop (Q)
+## shelves it there.
 func _test_sit_with_the_cargo() -> void:
 	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	root.add_child(level)
@@ -444,12 +445,15 @@ func _test_sit_with_the_cargo() -> void:
 	var seat: Node = van.get_node(^"CargoBay/RackSeat2EyePoint/InteractionArea")
 	var lower: Node = van.get_node(^"CargoBay/RightSeat1PackageMount/InteractionArea")
 	_expect(String(seat.call(&"get_prompt")) == "Sentarse junto a la carga", "Fold-down seat offers to sit with the cargo")
-	player.call(&"pick_up", package.get_path())
+	package.call(&"take_by", player)
 	_expect(bool(seat.call(&"can_interact", player)), "Can board it holding a box")
 	seat.call(&"interact", player)
 	await process_frame
-	_expect(lower.get(&"occupied_by") == package, "Boarding shelves the box in the column's lower bay")
+	_expect(lower.get(&"occupied_by") == null and player.get(&"carried_package") == package,
+		"Boarding keeps the box on the lap instead of shelving it")
 	_expect(player.get(&"tended_package") == package, "...and the passenger now looks after it")
+	package.call(&"request_lap_toggle")
+	_expect(lower.get(&"occupied_by") == package, "Drop (Q) shelves the lap box in the column's lower bay")
 	for tick in range(40):
 		await process_frame
 	var fold := van.get_node(^"BodyVisuals/CargoFittings/RackSeat2Fold") as Node3D

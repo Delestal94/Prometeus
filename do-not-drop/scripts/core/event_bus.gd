@@ -28,6 +28,7 @@ signal package_lid_changed(package_id: StringName, open: bool)
 ## state is the trap state right before, so the pieces thrown out match
 ## what was in there (a whole vase, or its shards).
 signal package_contents_spilled(package_id: StringName, velocity: Vector3, state: int)
+signal package_contents_recovered(package_id: StringName)
 signal vehicle_telemetry(speed_kmh: float)
 signal vehicle_impact(strength: float, impact_position: Vector3)
 signal run_started(route_id: StringName, players: Array)
@@ -70,6 +71,11 @@ signal shop_resolved(offer_id: StringName, offer: Dictionary)
 ## at. photo_available says whether there's still something worth
 ## photographing there -- the phone camera uses it to offer the shot.
 signal house_delivery_recorded(house_index: int, outcome: StringName, package_id: StringName)
+## What the door saw of a rescued box (repaired / unconvincing / substituted),
+## relayed right before its house_delivery_recorded. Relayed.
+signal delivery_care_noted(house_index: int, category: StringName)
+## This run's delivery deadlines, [{house, seconds, reason}], as it starts. Relayed.
+signal delivery_deadlines_set(deadlines: Array)
 ## The delivery photo was filed against a door (or wasn't -- accepted says
 ## which), so the HUD can confirm the shot landed.
 signal delivery_photo_taken(house_index: int, accepted: bool)
@@ -97,7 +103,23 @@ signal depot_supplies_changed(supplies: Array, team_money: int)
 ## Something the whole crew should read in the depot or from it (a purchase,
 ## the door closing behind them, an order left on the shelf). Relayed.
 signal depot_notice(text: String)
+## A box left the van and lies on the road (N-213.1): the crew has
+## `seconds` to pick it up and put it back before it's written off. Relayed.
+signal cargo_overboard(package_id: StringName, position: Vector3, seconds: float)
+## That box's rescue window closed: back aboard (`rescued`) or lost. Relayed.
+signal cargo_overboard_ended(package_id: StringName, rescued: bool)
+## A hard hit broke something on the truck (N-214, vehicle_faults.gd):
+## &"rear_door" or &"mirror" for now. Host decides, relayed.
+signal vehicle_fault_started(fault_id: StringName, impact_position: Vector3)
+## That fault got fixed; method says how (&"part" from the shop, &"kit"...).
+## Relayed.
+signal vehicle_fault_repaired(fault_id: StringName, method: StringName)
 
+
+## Minimum seconds between two callouts from the same player (N-505.3).
+var ping_cooldown_seconds: float = 1.5
+## Host-side: peer_id -> Time.get_ticks_msec() of their last accepted callout.
+var _last_ping_ms: Dictionary = {}
 
 ## Emits locally and, if this is the host of an online session, rebroadcasts
 ## to every client so their own EventBus fires the same signal. Call this
@@ -119,13 +141,24 @@ func _relay(event_name: StringName, args: Array) -> void:
 ## decide a ping actually happened, same authority rule as every other
 ## player-initiated action in this project, then relay()s it as a fact so
 ## everyone's HUD (including the sender's) reacts identically.
+## The host also rate-limits each player to one callout per
+## ping_cooldown_seconds (N-505.3), so a held-down wheel can't spam the crew.
 @rpc("any_peer", "call_remote", "reliable")
 func request_ping(position: Vector3, label: String) -> void:
 	if NetworkManager.is_online() and not NetworkManager.is_host():
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else NetworkManager.local_id()
+	var now_ms: int = Time.get_ticks_msec()
+	if _last_ping_ms.has(peer_id) and now_ms - int(_last_ping_ms[peer_id]) < roundi(ping_cooldown_seconds * 1000.0):
+		return
+	_last_ping_ms[peer_id] = now_ms
 	relay(&"ping_sent", [peer_id, position, label])
+
+
+## Forgets every player's last callout, so the next one goes through.
+func reset_ping_cooldowns() -> void:
+	_last_ping_ms.clear()
 
 
 ## Same client->host->everyone shape as request_ping(), for the driver's horn.

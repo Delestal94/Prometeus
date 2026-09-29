@@ -225,6 +225,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
 <godot> --headless --path do-not-drop --script res://tests/test_progress_ui.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
+<godot> --headless --path do-not-drop --script res://tests/test_quick_callouts.gd
 <godot> --headless --path do-not-drop --script res://tests/test_tutorial.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_horn.gd
@@ -259,13 +260,21 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_route_difficulty.gd
 <godot> --headless --path do-not-drop --script res://tests/test_delivery_houses.gd
 <godot> --headless --path do-not-drop --script res://tests/test_house_delivery_flow.gd
+<godot> --headless --path do-not-drop --script res://tests/test_cargo_overboard.gd
+<godot> --headless --path do-not-drop --script res://tests/test_vehicle_faults.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_unboxing.gd
+<godot> --headless --path do-not-drop --script res://tests/test_package_rescue.gd
+<godot> --headless --path do-not-drop --script res://tests/test_care_prompt_view.gd
+<godot> --headless --path do-not-drop --script res://tests/test_play_area.gd
+<godot> --headless --path do-not-drop --script res://tests/test_river_water.gd
 <godot> --headless --path do-not-drop --script res://tests/test_package_identity.gd
 <godot> --headless --path do-not-drop --script res://tests/test_phone_camera.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ride_sync.gd
 <godot> --headless --path do-not-drop --script res://tests/test_cargo_shell.gd
 <godot> --headless --path do-not-drop --script res://tests/test_sound_check.gd
 <godot> --headless --path do-not-drop --script res://tests/test_session_sync.gd
+<godot> --headless --path do-not-drop --script res://tests/test_carry_prediction.gd
+<godot> --headless --path do-not-drop --script res://tests/test_net_bandwidth_budget.gd
 <godot> --headless --path do-not-drop --script res://tests/test_settings.gd
 <godot> --headless --path do-not-drop --script res://tests/test_safe_json.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_seed.gd
@@ -386,6 +395,27 @@ real con `--fixed-fps 60`:
 Imprime una línea por corrida y una tabla por cantidad de casas (minutos promedio, máximo y
 mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración de la entrega").
 
+- `test_cargo_overboard` — N-213: una caja que sale del camión no se pierde al instante:
+  abre una ventana de rescate (más larga que la de adentro) con un cartel "¡RESCATAR!" encima,
+  levantarla la cierra como rescatada y vuelve al estante, y si nadie la busca se pierde al vencer.
+  N-213.4: abandonarla cierra el pedido de su casa como "PERDIDO" sin terminar la partida (aunque
+  no quede otra caja), no admite foto y en los resultados se cobra como una casa sin entregar.
+  N-213.3: el gancho de rescate (suministro del depósito) va solo en el recorrido que lo llevó; con
+  la puerta trasera abierta engancha una caja caída al alcance y la deja en manos del pasajero, lo que
+  cierra la ventana como rescatada, y después tarda un momento en estar listo otra vez.
+- `test_vehicle_faults` — N-214.1: las averías del camión las decide el host con un golpe fuerte
+  (un bache no rompe nada), como mucho una por entrega (se reinicia con cada recorrido), se repiten
+  igual con la misma semilla y los mismos golpes, y `repair()` las saca de la lista de cada par.
+  N-214.2, con un camión de mentira: la puerta trasera rota se abre sola con el golpe y otra vez con
+  cada bache (≥ 4,5) después de cerrarla, y deja de abrirse al arreglarla; el espejo roto oculta solo
+  el del lado del conductor, deja los pedazos en la ruta y el arreglo lo vuelve a mostrar.
+  N-214.3: cada avería cuelga su punto de arreglo en el camión, que solo se ofrece con la avería
+  activa; la puerta se ata con una cincha del kit (y la gasta) antes que con el repuesto; sin cincha ni
+  repuesto no se arregla; el repuesto del depósito arregla la puerta o el espejo y se gasta, y el fin
+  del recorrido descarta los repuestos que sobran. N-214.3b: sin repuesto, un pasajero (nunca el
+  conductor, uno a la vez) sostiene el celular como espejo; la avería sigue activa, se ve el celular,
+  alejarse lo suelta y el repuesto lo reemplaza; quien se une a mitad del recorrido recibe las averías
+  (sin volver a tirar pedazos), los repuestos y quién sostiene el celular.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
@@ -394,6 +424,29 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   `Damage` y `Ruined`; además cubre abrir/cerrar, seguir el estado del paquete,
   derramar piezas físicas al volcar una caja abierta (y retenerlas cerrada),
   y que el vecino note una caja entregada abierta.
+- `test_package_rescue` — rescate de carga: una caja rota abre una ventana
+  de rescate con piezas para juntar, cinta/recomponer/juguete siguiendo las
+  flechas, un tope de calidad que ningún arreglo levanta, el kit compartido
+  que no se gasta dos veces, cómo pagan y se cuentan las entregas rescatadas,
+  los rescates propios de cada contenido (trapo, reubicar entre dos...), regazo
+  y cincha, la ventana que se sostiene si alguien se desconecta, y los plazos;
+  los controles simples (mantener para cuidar, mantener para la herramienta
+  sugerida) y la guía "qué hacer ahora", que lee acción, pista y secuencia de
+  la trampa replicadas con el estado de cuidado.
+- `test_play_area` — el jugador no llega al borde del mapa: hasta 45 m de la
+  ruta (la loma del bosque tapa el horizonte) más el depósito y su patio, con aviso.
+- `test_river_water` — el río de un puente angosto: agua con superficie propia
+  (sin agua trepando laderas ni pasto asomando), el lecho sin asfalto, y la
+  ruta llega al puente sobre suelo entero; una cascada con rocas en cada punta
+  del agua, que cae en el agua desde arriba y sale igual en cada armado, con un
+  velo de hilos blancos delante de la lámina y bruma donde cae. Capturas
+  con ventana: `tests/render_river.gd` → `user://render_river_*.png`.
+- `test_care_prompt_view` — la tarjeta de cuidado y su tira animada: cada
+  paso (sostener, soltar, herramienta, secuencia, juntar piezas) suena al
+  cambiar (cinco sonidos sintetizados, cortos y sin saturar), nada suena solo
+  por empezar a mirar una caja, y la práctica del depósito tilda cada paso
+  solo cuando el jugador lo hace. Capturas con ventana:
+  `tests/render_care_prompt.gd` → `user://render_care_card_*.png`.
 - `test_package_identity` — cada trampa viaja en su propia caja impresa, con
   su contenido, su colisión, la etiqueta que lo declara y sus abolladuras.
 - `test_phone_camera` — el celular elige la puerta correcta, archiva una
@@ -409,7 +462,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_route_terrain` — el terreno: colisión igual a lo que se ve, sin escalones en las
   uniones, relieve real, borde que no deja caer al vacío, el camión sube la loma, y un
   modelo importado apoyado sobre el terreno conserva todos sus materiales (la valla salía
-  gris).
+  gris); detrás del portal de un túnel de tren se levanta una loma, el corte de adelante
+  queda a nivel de la vía y el terreno deja un hueco donde pasaría por el túnel.
 - `test_sound_check` — "Sonidos del juego" (Opciones): cada sonido aparece por quién lo
   toca y qué es (el motor del autoelevador y el del camión por separado), se silencia con
   una copia muda que sigue sonando, "Solo" deja uno, se desmutea, el silencio alcanza a los
@@ -429,6 +483,13 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   alcance de un pasajero medido desde su asiento, interacciones remotas solo al
   alcance, sin bonus por fotos de casas salteadas, y una sesión que termina sin
   dejar su mundo ni borrar a los jugadores.
+- `test_carry_prediction` — la caja que carga un cliente se dibuja en sus manos
+  al instante (`predict_carry`), no un ping después cuando vuelve la copia del
+  host; al dejar de cargarla manda otra vez el host, y el host ignora predicciones.
+- `test_net_bandwidth_budget` — lo que el host le manda a cada cliente por segundo
+  (peor caso: 14 cajas, 4 jugadores, monitor de 144 Hz) queda bajo 128 KB/s, la
+  mitad del límite de Steam; ningún synchronizer manda por frame de render y
+  ninguna propiedad `ALWAYS` pesa más de 64 bytes (`docs/investigacion-red.md`).
 - `test_world_seed` — que todos los peers construyan el **mismo** mundo: misma
   semilla, misma ruta; semilla distinta, ruta distinta; y que jugar solo
   (semilla 0) siga variando entre partidas.
@@ -551,9 +612,14 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   real).
 - `test_progress_ui` — cada desbloqueo explica su premio y separa el avance de entregas
   y puntos; los récords alternan entre Entrega y Endless con fecha y tripulación legibles.
-- `test_ping` — la rueda de pings: las seis etiquetas llegan por
+- `test_ping` — la rueda de pings: las ocho frases llegan por
   `EventBus.request_ping()`, se atribuyen al emisor y `Player._send_ping()` conserva
   la posición y el mensaje reales.
+- `test_quick_callouts` — indicaciones rápidas (N-505): la rueda ofrece las frases pedidas
+  con texto en `strings_ui.csv`, el host corta el spam con 1,5 s por jugador y el
+  conductor ve en el centro de su HUD la frase de otro tripulante (no la propia); cada
+  frase suena con un balbuceo sintetizado cuyo tono sale del color del jugador, desde
+  su cabeza.
 - `test_tutorial` — cada trampa tiene una ficha completa, el tutorial muestra solo
   las desbloqueadas, el primer perfil resalta “Cómo jugar” y cada consejo en partida
   aparece una sola vez antes de quedar guardado en el perfil.
@@ -742,7 +808,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   caída por distancia), túnel sólido e iluminado, y el paso a nivel que baja
   barreras sólidas, deja pasar el tren (con su propio silbato y traqueteo) y reabre;
   quien se suma a mitad del cruce retoma la fase del host (barreras bajas, tren
-  pasando, traqueteo ya sonando) y termina el ciclo con el traqueteo apagado.
+  pasando, traqueteo ya sonando) y termina el ciclo con el traqueteo apagado. La vía
+  entra en un túnel en cada punta (portal importado, rígido): el tren arranca adentro
+  del túnel cercano, con los últimos vagones fuera de vista, y termina adentro del
+  lejano. Capturas con ventana: `tests/render_rail_tunnel.gd` →
+  `user://render_tunnel_*.png`.
 - `test_truck_variant` — la furgoneta ágil maneja distinto, la pintura cambia la carrocería
   sin tocar el material importado, ambas se replican y respetan los desbloqueos.
 - `test_spectator` — solo un pasajero sin caja que salvar puede pasar a la cámara de
@@ -875,7 +945,9 @@ Ambos imprimen `PASS` si se encuentran.
 
 Con tres jugadores (tareas de Nacho N-207), `tools/run-net-trio.sh` levanta un anfitrión y dos
 clientes ENet en localhost (el segundo entra 6 s tarde) y compara que los tres vean la misma
-semilla, las mismas casas, los mismos pedidos, la misma ruta y la misma fase del cruce de tren
+semilla, las mismas casas, los mismos pedidos, la misma ruta y la misma fase del cruce de tren.
+Después los dos clientes piden a la vez la misma caja (N-213): el anfitrión se la da a uno solo y
+los tres tienen que nombrar al mismo dueño (`grab=`)
 (`GODOT=<ejecutable sin _console> tools/run-net-trio.sh`).
 
 **Usá el ejecutable normal de Godot, no el que termina en `_console.exe`.**

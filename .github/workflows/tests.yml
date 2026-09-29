@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -65,14 +65,15 @@ jobs:
         env:
           GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
           JOBS: 2
-          # A hung test shows up in 2 minutes instead of 5.
+          # A hung test shows up in 2 minutes instead of 5. The known slow
+          # ones (SLOW_TESTS in run-tests.sh) get twice that.
           TEST_TIMEOUT: 120
           REPORT_FILE: ${{ runner.temp }}/godot-headless-report.csv
         run: bash tools/run-tests.sh -v
 
       - name: Upload per-test audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: godot-headless-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/godot-headless-report.csv
@@ -151,7 +152,7 @@ jobs:
 
       - name: Upload runtime audit
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: runtime-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/runtime-audit/
@@ -194,7 +195,7 @@ jobs:
 
       - name: Upload network latency audit
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: network-pair-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/network-pair-audit.log

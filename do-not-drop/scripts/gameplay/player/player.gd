@@ -71,6 +71,8 @@ var _highlighted: Node = null
 ## the editor-managed global class cache after this helper was split out.
 const PING_INPUT_PATH: String = "res://scripts/gameplay/player/player_ping_input.gd"
 var _ping_input: Variant = (load(PING_INPUT_PATH) as Script).new(self)
+## Rescue panel and assisting another box (player_cargo_care.gd).
+var _cargo_care: Node
 const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
@@ -228,6 +230,9 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
+	_cargo_care = preload("res://scripts/gameplay/player/player_cargo_care.gd").new()
+	_cargo_care.name = "CargoCare"
+	add_child(_cargo_care)
 	_last_safe_ground = global_position
 	if is_local():
 		var profile: Node = get_node_or_null("/root/UnlockManager")
@@ -237,10 +242,13 @@ func _ready() -> void:
 			face_mouth = profile.get("selected_mouth")
 			profile.progress_changed.connect(_sync_profile_appearance)
 	_build_body()
-	_package_focus = CameraAttributesPractical.new()
-	_package_focus.dof_blur_far_enabled = false
-	_package_focus.dof_blur_near_enabled = false
-	_camera.attributes = _package_focus
+	# Depth of field needs Forward+ or Mobile: GL Compatibility (this game's
+	# renderer) never drew it and warned on every carry.
+	if RenderingServer.get_current_rendering_method() != "gl_compatibility":
+		_package_focus = CameraAttributesPractical.new()
+		_package_focus.dof_blur_far_enabled = false
+		_package_focus.dof_blur_near_enabled = false
+		_camera.attributes = _package_focus
 	RenderLayers.configure_first_person(_camera)
 	# The spawn state is the host's copy of these, sent before the owner's
 	# first update: start them at the spawn point, not at the world origin.
@@ -585,27 +593,30 @@ func _physics_process(delta: float) -> void:
 		_publish_lid_hint(null)
 		return
 	if _seated:
-		var candidate: DeliveryPackage = (_assist_candidate() if tended_package != null
+		var candidate: DeliveryPackage = (_cargo_care.assist_candidate() if tended_package != null
 				and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null)
 		_publish_prompt(candidate.assist_prompt() if candidate != null and assisted_package == null else "")
 		_publish_lid_hint(_lid_target())
 		if carried_package != null:
 			_update_carried_package()
-		if tended_package != null and tended_package.run_state() != ITrapBehavior.TrapState.RUINED:
-			tended_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
 		if assisted_package != null:
-			_update_assisting()
+			_cargo_care.update_assisting()
 		elif candidate != null and Input.is_action_just_pressed(&"interact"):
 			candidate.rpc_id(1, &"request_assist")
 		return
 	_poll_interact()
 	if assisted_package != null:
-		_update_assisting()
+		_cargo_care.update_assisting()
 	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 	_apply_look(stick * stick_sensitivity * delta)
 	# get_vector's y is -1 for forward and +1 for back;
 	# local forward is -Z, so the two negatives cancel out to a plain +basis.z.
 	var input_vector: Vector2 = Input.get_vector(&"drive_left", &"drive_right", &"walk_forward", &"walk_backward")
+	if Input.is_action_pressed(&"care_work") and _cargo_care.target != null:
+		input_vector = Vector2.ZERO
+	# Holding a box that asks for a tap sequence: WASD taps it, not walks.
+	if _cargo_care.tapping:
+		input_vector = Vector2.ZERO
 	var move_direction: Vector3 = (global_basis.x * input_vector.x) + (global_basis.z * input_vector.y)
 	if move_direction.length() > 1.0:
 		move_direction = move_direction.normalized()
@@ -726,31 +737,6 @@ func _gather_package_input() -> Dictionary:
 	return _seat_pose_component.gather_package_input()
 
 
-func _assist_candidate() -> DeliveryPackage:
-	var best: DeliveryPackage = null
-	var best_distance: float = DeliveryPackage.ASSIST_REACH
-	for node: Node in get_tree().get_nodes_in_group(&"cargo"):
-		var package := node as DeliveryPackage
-		if package == null or package == tended_package or not package.can_assist(get_multiplayer_authority()):
-			continue
-		var distance: float = reach_origin().distance_to(package.global_position)
-		if distance <= best_distance:
-			best = package
-			best_distance = distance
-	return best
-
-
-func _update_assisting() -> void:
-	if not is_instance_valid(assisted_package):
-		assisted_package = null
-		return
-	if reach_origin().distance_to(assisted_package.global_position) > DeliveryPackage.ASSIST_REACH:
-		assisted_package.rpc_id(1, &"request_stop_assist")
-		assisted_package = null
-		return
-	assisted_package.rpc_id(1, &"submit_tender_input", _gather_package_input())
-
-
 func _publish_carry(carrying: bool) -> void:
 	if carrying == _last_carrying:
 		return
@@ -799,7 +785,7 @@ func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
 	return _carry_component.raycast(from, to, mask)
 
 
-const PING_LABEL: String = "HUD_PING_WARNING"
+const PING_LABEL: String = "¡Cuidado!"
 
 
 func _send_ping(label: String = PING_LABEL) -> void:
@@ -811,7 +797,12 @@ func _handle_package_input(event: InputEvent) -> bool:
 	if event.is_action_pressed(&"use_card"):
 		_use_card()
 	elif _is_drop_event(event):
-		_drop_carried()
+		# Seated, "drop" moves the box you tend between your lap and its rack
+		# (docs/jugabilidad-paquetes-rescate.md): never onto the floor.
+		if _seated and is_instance_valid(tended_package):
+			tended_package.rpc_id(1, &"request_lap_toggle")
+		else:
+			_drop_carried()
 	elif _is_open_event(event):
 		_toggle_package_lid()
 	else:
