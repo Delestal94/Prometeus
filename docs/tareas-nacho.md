@@ -184,19 +184,18 @@ Dentro de un hito, el orden de la tabla es el recomendado.
 ## M8 — Auditoría 2026-09-29
 
 Pedido del usuario: arreglar todo lo que marcó la auditoría (`docs/auditorias/2026-09-29.md`), salvo
-revisión humana de PRs (no se quiere: la puerta son los checks y un agente revisor). Varias tocan
+revisión humana de PRs ni agente revisor (no se quieren: la puerta son los checks obligatorios). Varias tocan
 archivos de Slatex: aviso en `colaboracion-equipo.md` en el mismo PR, como siempre.
 
 ### N-705 · Puertas automáticas y repo limpio — A · `Opus 5.5 · medium` · Aviso: no
 - [x] Lint obligatorio en la protección de `main` (el #39 entró en rojo) y `test_proximity_voice` en verde.
-- [x] Auto-merge solo para ramas del repo (nunca forks); agente revisor que comenta cada PR
-  (`agent-review.yml`, necesita el secreto `CLAUDE_CODE_OAUTH_TOKEN`). PR #40.
+- [x] Auto-merge solo para ramas del repo (nunca forks). PR #40. El agente revisor que sumaba se sacó
+  en el #46: gastaba el cupo del plan en cada PR.
 - [ ] **Manual (Nacho):** borrar los 7 worktrees extra, las ramas ya integradas y el stash (respaldo de lo
   útil en `../Prometeus-stash-backup/`). Todo está en `main`; se verificó rama por rama.
 - [ ] **Manual (Nacho + Slatex):** purgar `builds/` del historial (`git filter-repo --path builds
   --invert-paths`), force-push con la protección abierta un momento, y que todos vuelvan a clonar.
   `.git` baja de ~474 MB. Después, actualizar los hashes citados en los docs con el `commit-map`.
-- [ ] Cargar el secreto: `claude setup-token` y `gh secret set CLAUDE_CODE_OAUTH_TOKEN`.
 
 ### N-117 · Una acción propia por trampa, en el mundo y no en la tarjeta — A · `Opus 5.5 · xhigh` · Aviso: sí (trampas, `player_seat_pose.gd`, `player_cargo_care.gd`, HUD de Slatex)
 Hoy las 7 trampas son 3 acciones: Frágil no deja hacer nada ("Nothing the passenger does protects
