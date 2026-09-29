@@ -418,7 +418,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   (sin volver a tirar pedazos), los repuestos y quién sostiene el celular. N-214.4: cada avería deja
   su línea para los resultados (`result_stories()`, que lee `RunManager.world_stories()`): cómo se
   arregló, "Espejo reemplazado por un celular" aunque después lo suelten, o sin arreglar (la puerta,
-  con cuántas veces se abrió); cada recorrido nuevo las borra.
+  con cuántas veces se abrió); cada recorrido nuevo las borra. N-214.3c: en el camión de verdad
+  (`vehicle.tscn`), con cada variante y cada pintura, el modelo tiene espejo del lado del conductor,
+  su punto de arreglo y el celular quedan sobre él, cerca de la ventanilla, y romperlo lo oculta.
+  Capturas con ventana: `tests/render_fault_mirror.gd` → `user://review_fault_mirror_*.png`.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
