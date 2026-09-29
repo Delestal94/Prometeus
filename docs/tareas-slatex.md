@@ -802,7 +802,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ### S-906 · Registro de decisión de monetización — A · `Luna · medium` · Aviso: no
 
-- [ ] En `docs/plan-desarrollo.md`: precio único $8-15, sin microtransacciones, cosméticos solo se
+- [x] (commit `e61d923`) En `docs/plan-desarrollo.md`: precio único $8-15, sin microtransacciones, cosméticos solo se
   ganan jugando, actualizaciones gratis. Verificar que ningún cosmético del código tenga precio en dinero real.
 
 ### S-907 · Logros — B · `Sol · high` · Aviso: no
