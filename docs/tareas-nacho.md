@@ -1052,25 +1052,36 @@ antes de empezar. `vehicle.tscn` / `vehicle.gd` siguen congelados.
 | N-312 | Personaje flaco y alto | A |
 | N-606 | El diario del día siguiente | A |
 
-### N-115 · Correr — A · `Opus 5.5 · high` · Aviso: sí (`player.gd`, `player_animator.gd` y controles de Slatex)
+### N-115 · Correr — A · `Opus 5.5 · high` · Aviso: sí (`player.gd`, `player_animator.gd`, `player_carry.gd`, daño de paquetes y controles de Slatex)
 
 > Hoy el jugador tiene una sola velocidad (`Player.WALK_SPEED` = 3,6 m/s). Correr sirve sobre todo para
 > llegar a tiempo a una caja caída (los 30 s de rescate de N-213) y para moverse por el depósito.
 
 - [ ] **N-115.1** Mantener Correr (Shift en teclado, clic del stick izquierdo en gamepad; reasignable en
   Opciones como el resto) sube la velocidad a ~6 m/s. Sin estamina: el juego es cooperativo y casual.
-- [ ] **N-115.2** **Con una caja en brazos no se corre** (se camina como hoy): correr es para ir a buscar la
-  caja, volver con ella sigue siendo con cuidado. Tampoco sentado, manejando ni arriba del camión en
-  movimiento. Decisión a revisar si el usuario prefiere "se puede correr pero la caja se sacude".
+- [ ] **N-115.2** **Se puede correr con una caja en brazos, con el riesgo que conlleva** (decisión del
+  usuario, 2026-09-29). Es una apuesta: llegás antes, pero la caja la paga.
+  - Con caja se corre algo menos (~5 m/s); la caja de Peso Creciente ya cargada solo deja trotar.
+  - Cada paso de carrera sacude la caja: daño chico por paso por el camino de daño de siempre (lo aplica el
+    host), que cada trampa siente a su manera: el Frágil más que ninguno, la Torta/Equilibrio se inclina,
+    el Líquido derrama, la gallina del Ruidoso se altera y cacarea.
+  - Tropezón: corriendo con caja, un giro brusco, una pendiente o ripio, o chocar con algo puede hacer
+    tropezar (chance por semilla, más alta cuanto peor el terreno): la caja cae al suelo con golpe, como
+    un `drop_carried()` con impacto.
+  - Se tiene que ver venir: la caja rebota en los brazos, cruje, y la primera vez sale el consejo
+    "Correr con la caja la sacude".
+  - Sin correr sentado, manejando ni arriba del camión en movimiento.
 - [ ] **N-115.3** Clip `Run` nuevo en `art/rounded_character/animation_library.py` (zancada con fase de
   vuelo, brazos más abiertos) y elegido por `PlayerAnimator` por velocidad, con la misma histéresis que
   Walk/Stroll. En primera persona: balanceo más marcado y el FOV se abre un poco (+4°, suavizado).
   Pasos más rápidos en el sonido.
 - [ ] **N-115.4** Red: el estado de carrera viaja como `anim_state` (el dueño lo decide, los demás solo
   reproducen el clip).
-- Test: `test_player_sprint.gd` (velocidad al correr, no corre con caja, sentado ni manejando, elige `Run`,
-  el otro par ve el mismo clip). Captura del clip con `revisor-visual`.
-- Hecho cuando: se corre a pie en la ruta y en el depósito, con animación propia, y con caja se camina.
+- Test: `test_player_sprint.gd` (velocidad al correr con y sin caja, no corre sentado ni manejando, correr
+  con caja daña más que caminar, el tropezón deja la caja en el suelo y es igual en host y cliente con la
+  misma semilla, elige `Run`, el otro par ve el mismo clip). Captura del clip con `revisor-visual`.
+- Hecho cuando: se corre a pie en la ruta y en el depósito, con animación propia, y correr con una caja
+  la sacude y puede hacerte tropezar.
 
 ### N-116 · Parada final: estacionamiento de camiones de reparto — A · `Opus 5.5 · high` · Aviso: no
 
