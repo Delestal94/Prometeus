@@ -30,7 +30,10 @@ const MARKING := Color("d4d9c2")
 const WARNING := Color("e7be51")
 const CONCRETE := Color("8c9791")
 
-var _materials: Dictionary = {}
+## One material per colour for every segment: Endless builds a segment every
+## few seconds, and each used to make its own five (a +274 resource jump per
+## spawn, perf audit 2026-09-29). Segments that tint one duplicate it first.
+static var _materials: Dictionary = {}
 
 
 func _ready() -> void:
