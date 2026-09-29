@@ -897,7 +897,9 @@ Ambos imprimen `PASS` si se encuentran.
 
 Con tres jugadores (tareas de Nacho N-207), `tools/run-net-trio.sh` levanta un anfitrión y dos
 clientes ENet en localhost (el segundo entra 6 s tarde) y compara que los tres vean la misma
-semilla, las mismas casas, los mismos pedidos, la misma ruta y la misma fase del cruce de tren
+semilla, las mismas casas, los mismos pedidos, la misma ruta y la misma fase del cruce de tren.
+Después los dos clientes piden a la vez la misma caja (N-213): el anfitrión se la da a uno solo y
+los tres tienen que nombrar al mismo dueño (`grab=`)
 (`GODOT=<ejecutable sin _console> tools/run-net-trio.sh`).
 
 **Usá el ejecutable normal de Godot, no el que termina en `_console.exe`.**
