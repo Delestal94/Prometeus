@@ -736,11 +736,11 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ### S-802 · Tests de contrato para todo lo que se agrega por datos — A · `Sol · high` · Aviso: no
 
-- [ ] `tests/test_trap_contract.gd`: recorre `data/traps/*.tres` y verifica para cada una: crea su
+- [x] (commit `7abb1a3`) `tests/test_trap_contract.gd`: recorre `data/traps/*.tres` y verifica para cada una: crea su
   comportamiento, la integridad queda en [0, max] con input vacío y con input aleatorio durante 30 s
   simulados, `get_hint()` nunca vacío, tiene ícono (S-301), contenido propio (S-302), sonido de riesgo, y
   un desbloqueo o está en el set inicial. Una trampa nueva que no cumpla falla este test.
-- [ ] Mismo criterio para `data/contents/*.tres` (nodos `Filler`/`Intact`/`Damage`/`Ruined`).
+- [x] (commit `7abb1a3`) Mismo criterio para `data/contents/*.tres` (nodos `Filler`/`Intact`/`Damage`/`Ruined`).
 
 ### S-803 · Bot de caos — B · `Sol · xhigh` · Aviso: no
 
