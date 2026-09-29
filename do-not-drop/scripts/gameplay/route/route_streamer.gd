@@ -37,6 +37,9 @@ var hard_segments: Array[Script] = []
 ## Road kept built ahead of / behind the target, in metres along the road.
 @export var lookahead_distance: float = 60.0
 @export var behind_keep_distance: float = 40.0
+## Merge each segment's static boxes as it spawns (DressingBatcher). Off
+## only for benches that measure the unmerged parts.
+@export var batch_geometry: bool = true
 ## The very first segment ignores the random pick and is always this one
 ## (default: plain Straight) -- found the hard way while wiring this up to
 ## a real vehicle for the first time: a chicane or narrow bridge picked as
@@ -159,6 +162,10 @@ func _spawn_next() -> void:
 	_active.append(segment)
 	_record_path(segment)
 	_maybe_add_crossing(segment)
+	# Its static boxes folded into one mesh per material, as the delivery
+	# route does (route.gd): unmerged, each spawn added some 500 nodes.
+	if batch_geometry:
+		DressingBatcher.merge_segment_geometry([segment])
 	_next_distance += segment.length
 	segment.set_meta(&"route_end", _next_distance)
 	_cursor = _cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)

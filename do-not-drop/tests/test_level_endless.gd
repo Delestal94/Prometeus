@@ -62,6 +62,16 @@ func _initialize() -> void:
 	_expect(final_active.size() > 0, "Streaming never runs dry after a long drive")
 	_expect(final_active.size() < peak_active_count + 3,
 		"Active segment count stays bounded over a long session instead of only ever growing (peak %d, final %d)" % [peak_active_count, final_active.size()])
+	# Perf audit 2026-09-29: streamed segments are merged like the delivery
+	# route's (some 500 nodes a spawn unmerged) and share their materials.
+	for segment: Node in final_active:
+		var loose: Array = DressingBatcher._segment_parts(segment).filter(
+			func(part: MeshInstance3D) -> bool: return not String(part.name).begins_with("MergedGeometry"))
+		_expect(loose.is_empty(), "%s's static boxes are merged as it spawns (%d left loose)" % [segment.name, loose.size()])
+	var first_segment: RouteSegment = final_active[0]
+	var last_segment: RouteSegment = final_active[-1]
+	_expect(first_segment._material(RouteSegment.ROAD) == last_segment._material(RouteSegment.ROAD),
+		"Every segment shares one road material instead of building its own")
 
 	# The real regression check for #51: total node count under World should
 	# also stay bounded, not just the streamer's own bookkeeping array --
