@@ -1,5 +1,9 @@
 name: Auto-merge pull requests
 
+# No human review gate on purpose: the required checks (lint, headless tests,
+# network pair) are the gate, and the agent review (agent-review.yml) comments.
+# pull_request_target never checks out the PR's code here; it only queues the
+# merge. Forks are excluded so an outside PR can never merge itself.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, ready_for_review]
@@ -12,7 +16,8 @@ jobs:
   enable-auto-merge:
     if: >-
       ${{ !github.event.pull_request.draft &&
-      github.event.pull_request.base.ref == 'main' }}
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
       - name: Queue auto-merge after required checks

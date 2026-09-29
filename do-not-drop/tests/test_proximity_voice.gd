@@ -6,6 +6,8 @@ extends SceneTree
 ## held. Then push-to-talk, open mic, LAN without voice (N-212.4), muting a
 ## crewmate and the packet-size guard. Steam is a fake that counts calls.
 
+# The fake mirrors GodotSteam's camelCase API, so its names can't be snake_case.
+# gdlint: disable=function-name
 class FakeSteam extends Object:
 	var starts: int = 0
 	var stops: int = 0
@@ -31,6 +33,7 @@ class FakeSteam extends Object:
 		var pcm := PackedByteArray()
 		pcm.resize(voice.size() * 4)
 		return {"result": 0, "size": pcm.size(), "uncompressed": pcm}
+# gdlint: enable=function-name
 
 
 var failures: int = 0
@@ -47,7 +50,8 @@ func _run() -> void:
 	var fake := FakeSteam.new()
 	voice.backend = fake
 	voice.override_steam_session = 1
-	voice.voice_received.connect(func(peer: int, pcm: PackedByteArray, _rate: int) -> void: received.append([peer, pcm.size()]))
+	voice.voice_received.connect(
+		func(peer: int, pcm: PackedByteArray, _rate: int) -> void: received.append([peer, pcm.size()]))
 	var original_enabled: bool = settings.voice_chat_enabled
 	var original_ptt: bool = settings.voice_push_to_talk
 
