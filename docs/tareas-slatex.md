@@ -488,9 +488,9 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
 ### S-306 · Logo como imagen — B · generación de imagen + `Luna · medium` · Aviso: no
 
-- [ ] Wordmark "TAKE MY PACKAGE" en PNG transparente 2048 px de ancho, a partir de `UiTheme.logo()`
+- [x] (commit `004bb8b`) Wordmark "TAKE MY PACKAGE" en PNG transparente 2048 px de ancho, a partir de `UiTheme.logo()`
   (Lilita One + cinta amarilla), más una versión apilada cuadrada. `assets/ui/logo/`.
-- [ ] Usarlo en el menú en lugar del logo armado con tipografía. Es la base de las cápsulas (S-903).
+- [x] (commit `004bb8b`) Usarlo en el menú en lugar del logo armado con tipografía. Es la base de las cápsulas (S-903).
 
 ### S-307 · Ilustración de fondo de resultados — C · generación de imagen · Aviso: no
 
