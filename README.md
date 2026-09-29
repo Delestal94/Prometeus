@@ -396,8 +396,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   el del lado del conductor, deja los pedazos en la ruta y el arreglo lo vuelve a mostrar.
   N-214.3: cada avería cuelga su punto de arreglo en el camión, que solo se ofrece con la avería
   activa; la puerta se ata con una cincha del kit (y la gasta) antes que con el repuesto; sin cincha ni
-  repuesto no se arregla; el repuesto del depósito arregla la puerta o el espejo y se gasta, el espejo
-  no tiene arreglo con el kit todavía y el fin del recorrido descarta los repuestos que sobran.
+  repuesto no se arregla; el repuesto del depósito arregla la puerta o el espejo y se gasta, y el fin
+  del recorrido descarta los repuestos que sobran. N-214.3b: sin repuesto, un pasajero (nunca el
+  conductor, uno a la vez) sostiene el celular como espejo; la avería sigue activa, se ve el celular,
+  alejarse lo suelta y el repuesto lo reemplaza; quien se une a mitad del recorrido recibe las averías
+  (sin volver a tirar pedazos), los repuestos y quién sostiene el celular.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos

@@ -166,3 +166,4 @@ WORLD_HOOK_PROMPT,Enganchar la caja caída,Hook the fallen box
 WORLD_FAULT_REAR_DOOR_SPARE,Cambiar la traba de la puerta con el repuesto,Replace the door latch with the spare part
 WORLD_FAULT_REAR_DOOR_STRAP,Atar la puerta con una cincha del kit,Tie the door shut with a strap from the kit
 WORLD_FAULT_MIRROR_SPARE,Poner el espejo de repuesto,Fit the spare mirror
+WORLD_FAULT_MIRROR_PHONE,Sostener el celular como espejo,Hold your phone up as the mirror

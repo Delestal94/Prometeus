@@ -7,6 +7,19 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: N-214.3b celular como espejo y averías para quien se une tarde (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-phone-mirror`. Solo agrega; **ninguna firma pública cambia**
+(`VehicleFaults.fix()` suma un parámetro opcional `player`), no se tocan archivos de Slatex y
+`vehicle.gd`/`vehicle.tscn` siguen congelados:
+- `VehicleFaults` lee `vehicle.driver_peer_id` y, del jugador, `carried_package` y `reach_origin()`
+  (solo lectura): el conductor no puede sostener el celular y agarrar una caja lo suelta. Slatex: si
+  renombrás alguno de esos, avisá.
+- Se engancha a `NetworkManager.peer_level_ready` (después de `RunManager.send_session_state`) para
+  mandarle las averías al que se une a mitad del recorrido.
+- Dibuja `PhoneMirror` (un celular) como hijo del camión, en el punto del espejo.
+- `translations/strings_world.csv`: clave `WORLD_FAULT_MIRROR_PHONE`.
+
 ## Aviso activo: N-214.3 arreglo de averías del camión (2026-09-29)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-214-fault-repair`. Solo agrega; **ninguna firma cambia**, no se
