@@ -30,6 +30,10 @@ extends SceneTree
 ## by RunManager.world_stories()): how it was fixed, "replaced by a phone"
 ## even after letting go, or left broken (the door, with how many times it
 ## swung open); run_started clears them.
+## N-214.3c: on the real truck (vehicle.tscn), for every variant and paint:
+## the model has a driver's-side mirror, its repair spot and the held phone
+## sit on it, and breaking it hides only that side (render_fault_mirror.gd
+## is the visual check of the same thing).
 
 ## Loaded at run time: the script uses the EventBus autoload, which a
 ## SceneTree test can't resolve while it compiles.
@@ -102,10 +106,11 @@ func _run() -> void:
 	await process_frame
 	await _check_effects(bus, faults_script)
 	await _check_repairs(bus, faults_script)
+	await _check_real_truck_variants(bus, faults_script)
 	if _failures == 0:
 		print("PASS: truck faults break on hard hits only, one per delivery, repeat by seed,"
 				+ " repair on every peer, show on the van, get fixed with the kit, a spare or a held phone,"
-				+ " and reach a peer that joins mid-run")
+				+ " and reach a peer that joins mid-run, on every truck variant")
 	quit(_failures)
 
 
@@ -292,6 +297,57 @@ class FakeVan extends Node3D:
 
 	func set_rear_cargo_open(open: bool) -> void:
 		rear_open = open
+
+
+## N-214.3c: the mirror spot and the phone on the real model, every variant and paint.
+func _check_real_truck_variants(bus: Node, faults_script: Script) -> void:
+	var constants: Dictionary = load("res://scripts/gameplay/vehicle/vehicle.gd").get_script_constant_map()
+	var variants: Array = constants["VARIANTS"].keys()
+	var paints: Array = constants["PAINTS"].keys()
+	_expect(variants.size() > 1, "There are truck variants besides the classic")
+	for variant_id: StringName in variants:
+		for paint_id: StringName in paints:
+			var world := Node3D.new()
+			root.add_child(world)
+			var van: VehicleBody3D = load("res://scenes/gameplay/vehicle/vehicle.tscn").instantiate()
+			van.freeze = true
+			world.add_child(van)
+			van.variant_id = variant_id
+			van.paint_id = paint_id
+			var faults: Node = faults_script.new()
+			faults.set(&"vehicle", van)
+			world.add_child(faults)
+			await process_frame
+			var label: String = "%s/%s" % [variant_id, paint_id]
+			var effects: Node = faults.get(&"effects")
+			var mirror: Array = effects.call(&"driver_mirror_parts")
+			var spot: Node3D = van.get_node_or_null(^"FaultRepair_mirror")
+			_expect(not mirror.is_empty() and spot != null,
+					"%s: the model has a driver's mirror and its repair spot" % label)
+			if mirror.is_empty() or spot == null:
+				world.free()
+				continue
+			# Not the fallback SPOT_POSITIONS guess: moved onto the model's own mirror,
+			# out past the driver's window (the eye point) and within reach of it.
+			var fallback: Vector3 = faults_script.get_script_constant_map()["SPOT_POSITIONS"][&"mirror"]
+			_expect(not spot.position.is_equal_approx(fallback),
+					"%s: the mirror's spot moved onto the model's mirror" % label)
+			var eye: Node3D = van.get_node_or_null(^"CabinInterior/DriverEyePoint")
+			var eye_at: Vector3 = van.to_local(eye.global_position) if eye != null else Vector3.ZERO
+			_expect(eye != null and spot.position.x < eye_at.x - 0.4 and spot.position.distance_to(eye_at) < 2.0,
+					"%s: the spot is outside the driver's window, not in the cab or off the van (%s, eye %s)"
+					% [label, spot.position, eye_at])
+			bus.relay(&"vehicle_fault_started", [&"mirror", Vector3.ZERO])
+			var hidden: bool = true
+			for part: Node3D in mirror:
+				hidden = hidden and not part.visible
+			_expect(hidden, "%s: breaking the mirror hides the driver's side" % label)
+			effects.call(&"show_phone_mirror", true, spot.position)
+			var phone: Node3D = van.get_node_or_null(^"PhoneMirror")
+			_expect(phone != null and phone.visible and phone.position.is_equal_approx(spot.position),
+					"%s: the held phone shows where the mirror was" % label)
+			world.free()
+			await process_frame
 
 
 ## Ten hard hits on a fresh run with world_seed: [hit index, fault] of what broke.

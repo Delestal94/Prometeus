@@ -1,7 +1,8 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-214.4: la pantalla de resultados cuenta cómo terminó cada avería
-> del camión, "Espejo reemplazado por un celular"; de N-214 solo falta N-214.3c). Antes, el mismo día:
+> Última actualización: 2026-09-29 (N-214.3c: el punto del espejo y el celular revisados en cada
+> variante y pintura del camión; N-214 cerrada). Antes, el mismo día: (N-214.4: la pantalla de
+> resultados cuenta cómo terminó cada avería del camión, "Espejo reemplazado por un celular"). Antes:
 > (tareas nuevas del usuario en el hito M7: N-115 correr, N-116 estacionamiento como parada final,
 > N-312 personaje flaco y alto y N-606 el diario del día siguiente, diseñado en
 > `docs/diario-final.md`). Antes, el mismo día: (pruebas y trabajo pendiente de red y rendimiento en
@@ -1025,7 +1026,7 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
   Queda solo N-213.3 (gancho). `2ee38e1`: el gancho, en `test_cargo_overboard.gd` (estante: nada que
   enganchar; lejos o con la puerta cerrada no; al alcance sí, cierra la ventana como rescatada).
 
-### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
+### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte) · **[x] `dc0f925`**
 
 > **Veredicto `critico-diseno` (N-704.3, 2026-09-28): a favor con cambios.** Reutiliza el kit y da
 > historias para resultados, pero 2 de las 5 averías dependen de lluvia o noche, el asiento flojo no se ve y
@@ -1048,7 +1049,7 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
     (`vehicle_fault_effects.gd`, en cada par). Limpiaparabrisas, faro y asiento siguen esperando lluvia y
     noche en las rutas (veredicto). Duda: el camión no tiene vista de espejo funcional, así que el espejo
     caído es solo visual hasta N-214.3 (el celular que lo reemplaza).
-- [ ] **N-214.3** Arreglo oficial (repuesto de tienda) e improvisado con el kit existente (cinta, cincha,
+- [x] **N-214.3** Arreglo oficial (repuesto de tienda) e improvisado con el kit existente (cinta, cincha,
   trapo; el espejo lo reemplaza un pasajero con `phone_camera.gd`). Sin herramientas nuevas.
   - [x] **N-214.3a** Puntos de arreglo (`fault_repair_spot.gd`, un `Interactable` por avería que
     `VehicleFaults` cuelga del camión) y el repuesto: `SUPPLIES` suma `spare_part` ($25), el depósito se
@@ -1062,8 +1063,15 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
       Quien se une a mitad del recorrido recibe averías, repuestos y quién sostiene el celular.
     - Duda: el camión no tiene vista de espejo funcional, así que el celular es visual (no abre la
       cámara de `phone_camera.gd` ni muestra la vista de atrás). Queda para cuando haya espejo real.
-  - [ ] **N-214.3c** Confirmar con `revisor-visual` el punto del espejo (y el celular) en las variantes
-    de camión que no son la clásica.
+  - [x] **N-214.3c** Confirmar con `revisor-visual` el punto del espejo (y el celular) en las variantes
+    de camión que no son la clásica. `dc0f925`
+    - Las variantes (`classic`, `agile`) son el mismo modelo con otro ajuste y otra pintura, así que el
+      punto cae en el mismo lugar en todas. `tests/render_fault_mirror.gd` (vista de costado y desde
+      arriba, por variante × pintura) lo confirmó con `revisor-visual`: espejo del conductor oculto,
+      celular y punto afuera de la puerta, a la altura del marco de la ventanilla, pintura y detalles
+      correctos. `test_vehicle_faults` ampliado sobre `vehicle.tscn` de verdad con cada variante y
+      pintura. Dudas: desde afuera no se ve la pantalla del celular (mira al conductor), y el celular
+      a veces sale inclinado ~20° en la captura (pedazo del espejo cayendo o pose sin fijar).
 - [x] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular"). `29a24d5`
   - `VehicleFaults` guarda cómo terminó cada avería del recorrido (cincha, repuesto, celular o sin
     arreglar, la puerta con cuántas veces se abrió) y entra al grupo `run_stories`;
