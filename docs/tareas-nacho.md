@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-28 (N-213.4: abandonar la caja caída cierra su pedido como
+> Última actualización: 2026-09-28 (N-214.1: componente `VehicleFaults` que decide en el host las averías
+> del camión por golpe fuerte, una por entrega; faltan efectos, arreglos y resultados). Antes, el mismo día: (N-213.4: abandonar la caja caída cierra su pedido como
 > "Perdido" sin terminar la partida; falta el gancho). Antes, el mismo día: (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
 > con cartel encima y se puede volver a subir; faltan el gancho y el pedido "Perdido"). Antes, el mismo día: (N-505 cerrada: la voz sintetizada de cada frase, con tono por
 > color de jugador). Antes, el mismo día: (N-505 parcial: rueda de ocho frases, enfriamiento de 1,5 s en el
@@ -846,8 +847,12 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
 > RUINED; el repuesto cuesta menos que lo que se pierde sin arreglarlo pero más que la cinta.
 > Limpiaparabrisas, faro y asiento esperan a que haya lluvia y noche en las rutas.
 
-- [ ] **N-214.1** Componente `VehicleFaults` fuera de `vehicle.gd`: escucha los impactos y decide averías en
-  el host (una por golpe fuerte como máximo, con tope por entrega).
+- [x] **N-214.1** Componente `VehicleFaults` fuera de `vehicle.gd`: escucha los impactos y decide averías en
+  el host (una por golpe fuerte como máximo, con tope por entrega). `03868fe`
+  - `gameplay/vehicle/vehicle_faults.gd`: con `vehicle_impact` ≥ 9 el host tira por la semilla del mundo y
+    rompe la puerta trasera o el espejo (las 2 del veredicto), una por entrega; señales relayadas
+    `vehicle_fault_started`/`vehicle_fault_repaired` y `repair()` en el host. Sin efecto visible todavía.
+    Test `test_vehicle_faults` (determinista por semilla, tope, arreglo que llega a cada par).
 - [ ] **N-214.2** Averías: puerta trasera que se abre sola, espejo caído, limpiaparabrisas roto (solo con
   lluvia), faro roto (solo de noche), asiento flojo. Cada una con efecto visible y leve.
 - [ ] **N-214.3** Arreglo oficial (repuesto de tienda) e improvisado con el kit existente (cinta, cincha,

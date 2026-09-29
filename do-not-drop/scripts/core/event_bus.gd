@@ -108,6 +108,12 @@ signal depot_notice(text: String)
 signal cargo_overboard(package_id: StringName, position: Vector3, seconds: float)
 ## That box's rescue window closed: back aboard (`rescued`) or lost. Relayed.
 signal cargo_overboard_ended(package_id: StringName, rescued: bool)
+## A hard hit broke something on the truck (N-214, vehicle_faults.gd):
+## &"rear_door" or &"mirror" for now. Host decides, relayed.
+signal vehicle_fault_started(fault_id: StringName, impact_position: Vector3)
+## That fault got fixed; method says how (&"part" from the shop, &"kit"...).
+## Relayed.
+signal vehicle_fault_repaired(fault_id: StringName, method: StringName)
 
 
 ## Minimum seconds between two callouts from the same player (N-505.3).

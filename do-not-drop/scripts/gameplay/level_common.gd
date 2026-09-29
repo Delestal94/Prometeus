@@ -20,6 +20,7 @@ var overboard_rescue_seconds: float = 30.0
 ## Host-only: package_id -> seconds it has been out of the van so far.
 var _overboard_seconds: Dictionary = {}
 const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_marker.gd")
+const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
 @onready var vehicle: VehicleBody3D = $World/Vehicle
 @onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
@@ -75,6 +76,10 @@ func _ready() -> void:
 	var overboard_marker: Node3D = OVERBOARD_MARKER.new()
 	overboard_marker.name = "OverboardMarker"
 	add_child(overboard_marker)
+	# Truck faults (N-214): every peer tracks them, the host rolls them.
+	var faults: Node = VEHICLE_FAULTS.new()
+	faults.name = "VehicleFaults"
+	add_child(faults)
 	if "--autostart" in OS.get_cmdline_user_args():
 		start_debug_delivery.call_deferred()
 	# The trailer's camera (N-902): F7 free camera, F5/F6/F8 rails. Debug
