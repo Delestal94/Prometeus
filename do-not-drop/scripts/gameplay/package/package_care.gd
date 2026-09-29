@@ -12,12 +12,15 @@ extends RefCounted
 ##   substitute  a toy hen for a hen that got away
 
 const TOOLS: Array[StringName] = [&"tape", &"repair", &"filler", &"rag", &"strap", &"substitute"]
-const TOOL_NAMES: Dictionary = {&"tape": "Encintar", &"repair": "Recomponer", &"filler": "Relleno",
-	&"rag": "Trapo", &"strap": "Cincha", &"substitute": "Gallina de juguete"}
-## What "repair" is called for each content, so the HUD names the actual job.
-const REPAIR_NAMES: Dictionary = {&"fragile": "Pegar piezas", &"balance": "Rearmar pisos",
-	&"noisy": "Calmar y cerrar", &"hostile": "Reparar jaula", &"explosive": "Desactivar módulo",
-	&"growing_weight": "Reubicar (entre dos)"}
+## Tool -> strings_ui.csv key; tool_name() translates it.
+const TOOL_NAMES: Dictionary = {&"tape": "HUD_CARE_TOOL_TAPE", &"repair": "HUD_CARE_TOOL_REPAIR",
+	&"filler": "HUD_CARE_TOOL_FILLER", &"rag": "HUD_CARE_TOOL_RAG", &"strap": "HUD_CARE_TOOL_STRAP",
+	&"substitute": "HUD_CARE_TOOL_SUBSTITUTE"}
+## What "repair" is called for each content, so the HUD names the actual job
+## (strings_ui.csv keys, like TOOL_NAMES).
+const REPAIR_NAMES: Dictionary = {&"fragile": "HUD_CARE_REPAIR_FRAGILE", &"balance": "HUD_CARE_REPAIR_BALANCE",
+	&"noisy": "HUD_CARE_REPAIR_NOISY", &"hostile": "HUD_CARE_REPAIR_HOSTILE",
+	&"explosive": "HUD_CARE_REPAIR_EXPLOSIVE", &"growing_weight": "HUD_CARE_REPAIR_GROWING_WEIGHT"}
 ## Best a rescued box can be worth again, per content: a glued vase is never
 ## intact, a mopped-up liquid is only partial, a late-neutralized bomb is scrap.
 const RESCUE_CAPS: Dictionary = {&"fragile": 85.0, &"balance": 80.0, &"noisy": 75.0,
@@ -95,14 +98,14 @@ func begin_crisis(kind: StringName, spilled: bool = false) -> void:
 func crisis_prompt(kind: StringName) -> String:
 	match kind:
 		&"liquid":
-			return "¡Se derrama! Usá el trapo antes de que se pierda todo."
+			return tr("HUD_CARE_CRISIS_LIQUID")
 		&"explosive":
-			return "¡Cuenta regresiva! Desactivá el módulo de emergencia."
+			return tr("HUD_CARE_CRISIS_EXPLOSIVE")
 		&"growing_weight":
-			return "¡Se corrió la carga! Hacen falta dos para reubicarla."
+			return tr("HUD_CARE_CRISIS_GROWING_WEIGHT")
 		&"noisy", &"hostile":
-			return "¡Se escapó! Atrapala y cerrá la caja."
-	return "¡Rescate! Encintá para estabilizar y recuperá el contenido."
+			return tr("HUD_CARE_CRISIS_ESCAPED")
+	return tr("HUD_CARE_CRISIS_RESCUE")
 
 
 ## A player dropped out mid-rescue: their box is held for a while instead of
@@ -139,7 +142,7 @@ func advance(delta: float, acceleration: Vector3, input: Dictionary, assisted: b
 		crisis_left = maxf(0.0, crisis_left - delta)
 		if is_zero_approx(crisis_left):
 			phase = &"lost"
-			message = "Contenido perdido. Podés cerrar la caja o usar un sustituto disponible."
+			message = tr("HUD_CARE_MSG_LOST")
 	if strain >= 1.8 and recent_hit <= 0.0:
 		strain = 0.0
 		return true
@@ -158,7 +161,7 @@ func on_hard_hit(strength: float) -> void:
 		tape -= 1
 	if strapped:
 		strapped = false
-		message = "¡Se soltó la cincha! Volvé a ajustarla."
+		message = tr("HUD_CARE_MSG_STRAP_LOOSE")
 
 
 func collect_part() -> bool:
@@ -167,64 +170,64 @@ func collect_part() -> bool:
 	missing_parts -= 1
 	crisis_left = maxf(crisis_left, 8.0)
 	if missing_parts == 0:
-		message = "Contenido recuperado. Recomponé y cerrá la caja."
+		message = tr("HUD_CARE_MSG_RECOVERED")
 	else:
-		message = "Quedan %d piezas por recuperar." % missing_parts
+		message = tr("HUD_CARE_MSG_PIECES_LEFT") % missing_parts
 	return true
 
 
 func tool_name(tool: StringName, kind: StringName) -> String:
 	if tool == &"repair":
-		return String(REPAIR_NAMES.get(kind, TOOL_NAMES[&"repair"]))
-	return String(TOOL_NAMES.get(tool, tool))
+		return tr(String(REPAIR_NAMES.get(kind, TOOL_NAMES[&"repair"])))
+	return tr(String(TOOL_NAMES.get(tool, tool)))
 
 
 ## Why this tool can't be used right now, or "" if it can. `helped` is a
 ## second player steadying the same box this moment.
 func tool_blocker(tool: StringName, kind: StringName, speed: float, helped: bool = false) -> String:
 	if in_lap and tool in [&"repair", &"filler", &"rag", &"strap"]:
-		return "Con la caja en el regazo no tenés manos: devolvela al soporte."
+		return tr("HUD_CARE_BLOCK_LAP")
 	var blocker: String = ""
 	match tool:
 		&"tape":
-			blocker = "La caja ya está reforzada." if tape >= 2 and phase != &"crisis" else ""
+			blocker = tr("HUD_CARE_BLOCK_ALREADY_TAPED") if tape >= 2 and phase != &"crisis" else ""
 		&"filler":
 			if padded:
-				blocker = "Ya tiene relleno."
+				blocker = tr("HUD_CARE_BLOCK_ALREADY_PADDED")
 			elif phase in [&"crisis", &"lost"]:
-				blocker = "Primero rescatá el contenido."
+				blocker = tr("HUD_CARE_BLOCK_RESCUE_FIRST")
 		&"strap":
-			blocker = "Ya está sujeta con la cincha." if strapped else ""
+			blocker = tr("HUD_CARE_BLOCK_ALREADY_STRAPPED") if strapped else ""
 		&"rag":
 			if kind != &"liquid":
-				blocker = "No hay nada que absorber."
+				blocker = tr("HUD_CARE_BLOCK_NOTHING_TO_ABSORB")
 			elif phase != &"crisis":
-				blocker = "No hay ninguna fuga."
+				blocker = tr("HUD_CARE_BLOCK_NO_LEAK")
 		&"substitute":
 			if kind != &"noisy" or phase != &"lost" or substituted:
-				blocker = "El juguete solo reemplaza una gallina perdida."
+				blocker = tr("HUD_CARE_BLOCK_TOY_ONLY_HEN")
 		&"repair":
 			blocker = _repair_blocker(kind, speed, helped)
 		_:
-			blocker = "Herramienta desconocida."
+			blocker = tr("HUD_CARE_BLOCK_UNKNOWN_TOOL")
 	return blocker
 
 
 func _repair_blocker(kind: StringName, speed: float, helped: bool) -> String:
 	if phase == &"lost":
-		return "El contenido ya no se puede recuperar."
+		return tr("HUD_CARE_BLOCK_UNRECOVERABLE")
 	if kind == &"liquid":
-		return "Un líquido no se pega: usá el trapo." if phase == &"crisis" else "No hace falta reparar."
+		return tr("HUD_CARE_BLOCK_LIQUID") if phase == &"crisis" else tr("HUD_CARE_BLOCK_NO_REPAIR_NEEDED")
 	if missing_parts > 0:
-		return "Recuperá primero %d pieza(s) o la criatura." % missing_parts
+		return tr("HUD_CARE_BLOCK_PIECES_FIRST") % missing_parts
 	if repairs >= 2:
-		return "Este contenido ya no admite más arreglos."
+		return tr("HUD_CARE_BLOCK_MAX_REPAIRS")
 	if phase == &"intact" or not needs_restore and phase != &"damaged":
-		return "No hace falta reparar."
+		return tr("HUD_CARE_BLOCK_NO_REPAIR_NEEDED")
 	if kind == &"growing_weight" and not helped:
-		return "Pesa demasiado: pedí que otro la sostenga."
+		return tr("HUD_CARE_BLOCK_TOO_HEAVY")
 	if speed > 9.0:
-		return "Pedí bajar a menos de 32 km/h para recomponer."
+		return tr("HUD_CARE_BLOCK_TOO_FAST")
 	return ""
 
 
@@ -268,14 +271,14 @@ func advance_work(delta: float, tool: StringName, input: Dictionary, kind: Strin
 	if not message.is_empty():
 		return false
 	if not available:
-		message = "No quedan suministros de esta herramienta."
+		message = tr("HUD_CARE_MSG_NO_SUPPLIES")
 		return false
 	if work_tool != tool:
 		work_tool = tool
 		work = 0.0
 		work_step = 0
 	if recent_hit > 0.3:
-		message = "¡Se mueve! Sujetá la caja antes de seguir."
+		message = tr("HUD_CARE_MSG_MOVING")
 		return false
 	work = minf(1.0, work + delta / float(TOOL_SECONDS.get(tool, 5.0)))
 	work_step = mini(3, int(work * 4.0))
@@ -290,35 +293,35 @@ func complete_tool(tool: StringName, kind: StringName = &"") -> void:
 			if phase == &"crisis" and kind != &"liquid":
 				phase = &"damaged"
 			if needs_restore:
-				message = "Caja encintada. La reparación del contenido sigue pendiente."
+				message = tr("HUD_CARE_MSG_TAPED_PENDING")
 			else:
-				message = "Caja encintada: amortigua los próximos golpes."
+				message = tr("HUD_CARE_MSG_TAPED")
 		&"repair":
 			repairs += 1
 			quality_cap = minf(quality_cap, float(RESCUE_CAPS.get(kind, 85.0)) - 10.0 * (repairs - 1))
 			phase = &"rescued"
 			needs_restore = false
-			message = "Contenido recompuesto. Cerrá y protegé el arreglo."
+			message = tr("HUD_CARE_MSG_REPAIRED")
 		&"filler":
 			padded = true
-			message = "Relleno puesto: el contenido ya no baila en la caja."
+			message = tr("HUD_CARE_MSG_PADDED")
 		&"strap":
 			strapped = true
-			message = "Cincha ajustada: la caja se sostiene sola."
+			message = tr("HUD_CARE_MSG_STRAPPED")
 		&"rag":
 			# A leak stopped is saved, but what already ran out is gone.
 			repairs += 1
 			quality_cap = minf(quality_cap, RESCUE_CAPS[&"liquid"])
 			phase = &"rescued"
 			needs_restore = false
-			message = "Fuga contenida. Llega con contenido parcial."
+			message = tr("HUD_CARE_MSG_LEAK_CONTAINED")
 		&"substitute":
 			substituted = true
 			needs_restore = false
 			missing_parts = 0
 			quality_cap = 20.0
 			phase = &"rescued"
-			message = "Gallina de juguete. El cliente va a notar el cambio."
+			message = tr("HUD_CARE_MSG_TOY_HEN")
 	work = 0.0
 	work_step = 0
 	work_tool = &""

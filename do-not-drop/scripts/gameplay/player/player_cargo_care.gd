@@ -168,11 +168,10 @@ static func needs_hands(care, trap_state: int) -> bool:
 ## The card for a box within reach but not in your hands: how to take charge.
 static func reach_step(keys: Dictionary, seated: bool) -> Dictionary:
 	if seated:
-		return {"step": &"collect", "title": "ESTA CAJA NO ES TUYA",
-			"detail": "Cuidás la de tu asiento. Para esta, levantate y agarrala."}
-	return {"step": &"collect", "title": "AGARRALA",
-		"detail": "Apretá %s para alzarla, o sentate junto a ella en el camión para cuidarla sin moverla." \
-			% keys["interact"]}
+		return {"step": &"collect", "title": TranslationServer.translate("HUD_CARE_NOT_YOURS"),
+			"detail": TranslationServer.translate("HUD_CARE_NOT_YOURS_DETAIL")}
+	return {"step": &"collect", "title": TranslationServer.translate("HUD_CARE_GRAB"),
+		"detail": TranslationServer.translate("HUD_CARE_GRAB_DETAIL") % keys["interact"]}
 
 
 ## The secondary keys under the card, as UiTheme.keycaps() items.
@@ -182,12 +181,13 @@ static func footer_items(keys: Dictionary, tool_name: String, stock: int, handli
 	if not handling:
 		return items
 	if not tool_name.is_empty():
-		items.append("%s  %s · quedan %d" % [keys["tool"], tool_name, stock])
-	items.append("%s  otra herramienta" % keys["tool_next"])
+		items.append(TranslationServer.translate("HUD_CARE_FOOTER_TOOL") % [keys["tool"], tool_name, stock])
+	items.append(TranslationServer.translate("HUD_CARE_FOOTER_NEXT_TOOL") % keys["tool_next"])
 	if seated:
-		items.append("%s  %s" % [keys["drop"], "al estante" if in_lap else "al regazo"])
+		var place: String = "HUD_CARE_FOOTER_TO_RACK" if in_lap else "HUD_CARE_FOOTER_TO_LAP"
+		items.append(TranslationServer.translate(place) % keys["drop"])
 	else:
-		items.append("%s  soltar" % keys["drop"])
+		items.append(TranslationServer.translate("HUD_CARE_FOOTER_DROP") % keys["drop"])
 	return items
 
 
@@ -195,7 +195,9 @@ static func footer_items(keys: Dictionary, tool_name: String, stock: int, handli
 static func control_names(gamepad: bool, interact: String) -> Dictionary:
 	if gamepad:
 		return {"primary": "RT", "tool": "LT", "interact": interact, "tool_next": "D-pad →", "drop": "B"}
-	return {"primary": "Clic izq.", "tool": "Clic der.", "interact": interact, "tool_next": "X", "drop": "Q"}
+	return {"primary": TranslationServer.translate("HUD_CARE_KEY_LEFT_CLICK"),
+		"tool": TranslationServer.translate("HUD_CARE_KEY_RIGHT_CLICK"), "interact": interact, "tool_next": "X",
+		"drop": "Q"}
 
 
 ## The tool after `current` in the kit's order, wrapping around.

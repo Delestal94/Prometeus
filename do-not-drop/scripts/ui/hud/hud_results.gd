@@ -111,7 +111,7 @@ func _add_delivery_row(entry: Dictionary) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	hud.result_rows_box.add_child(row)
-	var trap_name: String = String(entry.get("trap", "PAQUETE"))
+	var trap_name: String = String(entry.get("trap", tr("HUD_RESULT_PACKAGE_FALLBACK")))
 	var texture: Texture2D = UiTheme.trap_icon(trap_name)
 	if texture != null:
 		var icon := TextureRect.new()
@@ -124,14 +124,14 @@ func _add_delivery_row(entry: Dictionary) -> void:
 		var fallback: Label = UiTheme.label(row, "◆", 17, Hud.YELLOW, true)
 		fallback.custom_minimum_size.x = 25
 	var outcome: StringName = StringName(entry.get("outcome", &"missed"))
-	var result_text: String = {
-		&"delivered_ok": "INTACTO ✓",
-		&"delivered_at_risk": "CON REPAROS !",
-		&"delivered_ruined": "ARRUINADO ✕",
-		&"missed": "SIN ENTREGA",
-		&"lost": "PERDIDO ✕",
-	}.get(outcome, "SIN ENTREGA")
-	var label: Label = UiTheme.label(row, "Casa %d  ·  %s  ·  %s" % [int(entry.get("house", 0)) + 1, trap_name,
+	var result_text: String = tr({
+		&"delivered_ok": "HUD_RESULT_OUTCOME_OK",
+		&"delivered_at_risk": "HUD_RESULT_OUTCOME_AT_RISK",
+		&"delivered_ruined": "HUD_RESULT_OUTCOME_RUINED",
+		&"missed": "HUD_RESULT_OUTCOME_MISSED",
+		&"lost": "HUD_RESULT_OUTCOME_LOST",
+	}.get(outcome, "HUD_RESULT_OUTCOME_MISSED"))
+	var label: Label = UiTheme.label(row, tr("HUD_RESULT_ROW") % [int(entry.get("house", 0)) + 1, trap_name,
 			result_text], 15, Hud.INK)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if bool(entry.get("photo", false)):

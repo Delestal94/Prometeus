@@ -1,26 +1,49 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_ui_translations.gd
 ##
-## The menus' and the HUD's texts are translatable (translations/strings_ui.csv),
-## the same way the world's are (test_world_translations):
+## The menus', the HUD's and the gameplay's texts are translatable
+## (translations/strings_ui.csv), the same way the world's are
+## (test_world_translations):
 ## - every key has a Spanish and an English text, with the same placeholders
 ##   (a "%d" missing in one language breaks the string at runtime);
 ## - every UI_* / HUD_* key the code asks for is in the table, and every key
 ##   in the table is used somewhere (no dead rows);
+## - no script under ui/, gameplay/, core/ or presentation/ draws a Spanish
+##   literal straight on screen (N-805: in English the player read Spanish
+##   care messages, run-end reasons and connection errors), except the files
+##   in SPANISH_LITERAL_FILES and debug output (print/push_warning/push_error);
 ## - Spanish stays the text the game always showed, and switching the locale
 ##   builds a panel in English.
 
 const CSV_PATH: String = "res://translations/strings_ui.csv"
 const SCAN_DIRS: Array[String] = ["res://scripts"]
-## These two tables match already-translated prompts/trap names to icons.
-## Their Spanish literals are lookup data, never text drawn directly.
-const ACCENTED_LOOKUP_FILES: Array[String] = [
+## Where a quoted accented literal means text shown untranslated.
+const LITERAL_SCAN_DIRS: Array[String] = [
+	"res://scripts/ui",
+	"res://scripts/gameplay",
+	"res://scripts/core",
+	"res://scripts/presentation",
+]
+## Files whose Spanish literals are legitimately never drawn as they are.
+const SPANISH_LITERAL_FILES: Array[String] = [
+	# These two tables match already-translated prompts/trap names to icons:
+	# lookup data, never text drawn directly.
 	"res://scripts/ui/hud/hud_prompts.gd",
 	"res://scripts/ui/ui_theme.gd",
 	# Quick callouts travel as their Spanish phrase (a stable network id that
 	# also sets the voice's syllables); display_text() translates its "key".
 	"res://scripts/ui/ping_catalog.gd",
+	# @export defaults of resource data; the screen gets TEXT_KEYS / NAME_KEYS
+	# through localized_name() and friends (.tres display names: separate task).
+	"res://scripts/gameplay/package/package_content.gd",
+	"res://scripts/gameplay/traps/trap_definition.gd",
+	# Made-up town names on road signs: proper nouns, the same in any language.
+	"res://scripts/gameplay/route/town_sign.gd",
+	# Developer tool that lists every sound by a Spanish label; never in the game.
+	"res://scripts/presentation/sound_audit.gd",
 ]
+## Debug output is for us, not the player.
+const DEBUG_CALLS: Array[String] = ["print(", "push_warning(", "push_error("]
 
 var _failures: int = 0
 
@@ -90,16 +113,21 @@ func _run() -> void:
 
 func _check_no_spanish_ui_literals() -> void:
 	var accented := RegEx.create_from_string('"[^"\\n]*[áéíóúñÁÉÍÓÚÑ¿¡][^"\\n]*"')
-	for file_path: String in _scripts("res://scripts/ui"):
-		if file_path in ACCENTED_LOOKUP_FILES:
+	var files: Array[String] = []
+	for dir_path: String in LITERAL_SCAN_DIRS:
+		files.append_array(_scripts(dir_path))
+	_expect(files.size() > 100, "The literal scan reads ui, gameplay, core and presentation (%d files)" % files.size())
+	for file_path: String in files:
+		if file_path in SPANISH_LITERAL_FILES:
 			continue
 		var line_number: int = 0
 		for line: String in FileAccess.get_file_as_string(file_path).split("\n"):
 			line_number += 1
-			if line.strip_edges().begins_with("#"):
+			var code: String = line.strip_edges()
+			if code.begins_with("#") or DEBUG_CALLS.any(func(debug: String) -> bool: return code.begins_with(debug)):
 				continue
 			_expect(accented.search(line) == null,
-				"%s:%d has no untranslated Spanish UI literal" % [file_path, line_number])
+				"%s:%d has no untranslated Spanish literal" % [file_path, line_number])
 
 
 ## key -> [es, en]

@@ -138,7 +138,8 @@ func _ready() -> void:
 	# say why here, where the player lands.
 	var reason: String = NetworkManager.take_failure_message()
 	if not reason.is_empty():
-		_set_status(reason, RED)
+		# A code ("version", "timeout"...) still needs its text; a sentence passes through.
+		_set_status(connection_error_text(reason), RED)
 	_handle_cmdline_args()
 
 

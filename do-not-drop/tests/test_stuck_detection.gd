@@ -68,7 +68,8 @@ func _run() -> void:
 			break
 	var reason: String = str((manager.get(&"results") as Dictionary).get("reason", ""))
 	_expect(ended_after > 0.0, "Pedal down and not moving, the run ends (still running after 10 s, speed %.2f)" % van.linear_velocity.length())
-	_expect(reason.contains("atascada"), "...as stuck (reason '%s')" % reason)
+	# The reason is a strings_ui.csv key; the results screen translates it.
+	_expect(reason.begins_with("HUD_RUN_STUCK"), "...as stuck (reason '%s')" % reason)
 	_expect(ended_after >= 6.0 or ended_after < 0.0, "...and not before STUCK_SECONDS (%.1f s)" % ended_after)
 	await _free_level(level)
 

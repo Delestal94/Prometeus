@@ -488,7 +488,7 @@ static func _reach_origin(player: Node) -> Vector3:
 
 func get_hint() -> String:
 	if care.phase == &"crisis":
-		return "¡%ds para rescatar! Encintá y recuperá %d pieza(s)." % [ceili(care.crisis_left), care.missing_parts]
+		return tr("HUD_CARE_CRISIS_HINT") % [ceili(care.crisis_left), care.missing_parts]
 	if care.needs_restore or care.phase == &"lost" or care.substituted:
 		return care.message
 	return String(trap_behavior.call("get_hint")) if trap_behavior != null else ""

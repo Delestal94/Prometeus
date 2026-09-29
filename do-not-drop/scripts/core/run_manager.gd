@@ -54,8 +54,10 @@ const CARE_POINTS: Dictionary = {
 const CARE_SUPPLIES_START: Dictionary = {
 	&"tape": 3, &"repair": 2, &"filler": 2, &"rag": 2, &"strap": 2, &"substitute": 1,
 }
-const RESCUE_NAMES: Dictionary = {&"fragile": "Jarrón", &"balance": "Torta", &"noisy": "Gallina",
-	&"growing_weight": "Paquete pesado", &"liquid": "Líquido", &"explosive": "Explosivo", &"hostile": "Criatura"}
+## What the results' rescue stories call each content (strings_ui.csv keys).
+const RESCUE_NAMES: Dictionary = {&"fragile": "HUD_RESCUE_VASE", &"balance": "HUD_RESCUE_CAKE",
+	&"noisy": "HUD_RESCUE_HEN", &"growing_weight": "HUD_RESCUE_HEAVY", &"liquid": "HUD_RESCUE_LIQUID",
+	&"explosive": "HUD_RESCUE_EXPLOSIVE", &"hostile": "HUD_RESCUE_CREATURE"}
 ## Delivery deadlines (docs/jugabilidad-paquetes-rescate.md, "Presión para
 ## conducir rápido"): up to three houses get one, computed from where they
 ## really are on the generated road. DEADLINE_SPEED sits a little over the
@@ -68,7 +70,9 @@ const DEADLINE_SLACK: float = 15.0
 const DEADLINE_STOP_SECONDS: float = 25.0
 const POINTS_DEADLINE_MET: int = 40
 const PENALTY_DEADLINE_MISSED: int = 15
-const DEADLINE_REASONS: Array[String] = ["el cliente sale de casa", "empieza el cumpleaños", "cierra el comercio"]
+## strings_ui.csv keys: they travel as keys and each peer's HUD translates them.
+const DEADLINE_REASONS: Array[String] = ["HUD_DEADLINE_REASON_LEAVING", "HUD_DEADLINE_REASON_BIRTHDAY",
+	"HUD_DEADLINE_REASON_SHOP"]
 const MODE_DELIVERY: StringName = &"delivery"
 const MODE_ENDLESS: StringName = &"endless"
 
@@ -609,9 +613,9 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	var score: int = maxi(roundi((cargo_points + time_bonus + delivery_points) * multiplier), 0)
 	var breakdown: Array = (doors["breakdown"] as Array).duplicate(true)
 	if cargo_points > 0:
-		breakdown.append({"label": "Carga que volvió sana (%d)" % (aboard - ruined), "points": cargo_points})
+		breakdown.append({"label": "HUD_SCORE_CARGO_BACK", "count": aboard - ruined, "points": cargo_points})
 	if time_bonus > 0:
-		breakdown.append({"label": "Rapidez", "points": time_bonus})
+		breakdown.append({"label": "HUD_SCORE_SPEED", "points": time_bonus})
 	var is_new_best: bool = _record_score(score, MODE_DELIVERY)
 	results = {
 		"delivered": successful,
@@ -649,7 +653,7 @@ func _result_delivery_rows() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for house: int in range(expected_houses):
 		var package_id: StringName = &""
-		var trap_name: String = "PAQUETE"
+		var trap_name: String = tr("HUD_RESULT_PACKAGE_FALLBACK")
 		if house < house_assignments.size():
 			var assignment: Array = house_assignments[house]
 			if not assignment.is_empty():
@@ -887,13 +891,13 @@ func rescue_stories() -> Array[String]:
 	for entry: Dictionary in cargo.values():
 		var care: Dictionary = entry.get("care", {})
 		var kind := StringName(care.get("kind", ""))
-		var label: String = String(RESCUE_NAMES.get(kind, "Paquete"))
+		var label: String = tr(String(RESCUE_NAMES.get(kind, "HUD_RESCUE_PACKAGE")))
 		if bool(care.get("substituted", false)):
-			stories.append("%s: sustituida por un juguete" % label if kind == &"noisy" else "%s: sustituido" % label)
+			stories.append(tr("HUD_STORY_SUBSTITUTED_TOY" if kind == &"noisy" else "HUD_STORY_SUBSTITUTED") % label)
 		elif int(care.get("repairs", 0)) > 0:
-			stories.append("%s: %d arreglo(s) en el camino" % [label, int(care.get("repairs", 0))])
+			stories.append(tr("HUD_STORY_REPAIRED") % [label, int(care.get("repairs", 0))])
 		elif int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED and not care.is_empty():
-			stories.append("%s: perdido en el camino" % label)
+			stories.append(tr("HUD_STORY_LOST") % label)
 	return stories
 
 
@@ -949,7 +953,8 @@ func _on_package_ruined(id: StringName, cause: String) -> void:
 	if kind == &"noisy" and care_supply_count(&"substitute") > 0:
 		return
 	if aboard > 0 and _count_ruined() >= aboard:
-		finish_run(false, tr("HUD_RUN_ALL_CARGO_RUINED"))
+		# A key, like every run-end reason: each peer's results screen translates it.
+		finish_run(false, "HUD_RUN_ALL_CARGO_RUINED")
 
 
 func _count_in_trouble() -> int:

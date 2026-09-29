@@ -242,7 +242,7 @@ func _host_enet(port: int) -> Error:
 	var peer := ENetMultiplayerPeer.new()
 	var error: Error = peer.create_server(port, MAX_PLAYERS - 1)
 	if error != OK:
-		session_failed.emit("No se pudo abrir el puerto %d." % port)
+		session_failed.emit(tr("UI_NET_PORT_FAILED") % port)
 		return error
 	multiplayer.multiplayer_peer = peer
 	active_transport = Transport.ENET
@@ -256,7 +256,7 @@ func _join_enet(address: String, port: int) -> Error:
 	var peer := ENetMultiplayerPeer.new()
 	var error: Error = peer.create_client(address, port)
 	if error != OK:
-		session_failed.emit("No se pudo conectar a %s:%d." % [address, port])
+		session_failed.emit(tr("UI_NET_CONNECT_FAILED") % [address, port])
 		return error
 	multiplayer.multiplayer_peer = peer
 	active_transport = Transport.ENET
@@ -302,7 +302,7 @@ func _connect_steam_signals() -> void:
 
 func _host_steam() -> Error:
 	if not _init_steam():
-		session_failed.emit("Steam no está disponible.")
+		session_failed.emit(tr("UI_NET_STEAM_UNAVAILABLE"))
 		return ERR_UNAVAILABLE
 	active_transport = Transport.STEAM
 	# Friends-only: this is a game you play with people you know, and it
@@ -313,10 +313,10 @@ func _host_steam() -> Error:
 
 func _join_steam(target_lobby: int) -> Error:
 	if not _init_steam():
-		session_failed.emit("Steam no está disponible.")
+		session_failed.emit(tr("UI_NET_STEAM_UNAVAILABLE"))
 		return ERR_UNAVAILABLE
 	if target_lobby == 0:
-		session_failed.emit("Falta el id de la sala.")
+		session_failed.emit(tr("UI_NET_NO_LOBBY_ID"))
 		return ERR_INVALID_PARAMETER
 	active_transport = Transport.STEAM
 	_steam.call(&"joinLobby", target_lobby)
@@ -325,7 +325,7 @@ func _join_steam(target_lobby: int) -> Error:
 
 func _on_lobby_created(status: int, created_lobby_id: int) -> void:
 	if status != 1:
-		session_failed.emit("No se pudo crear la sala de Steam.")
+		session_failed.emit(tr("UI_NET_LOBBY_CREATE_FAILED"))
 		return
 	lobby_id = created_lobby_id
 	var peer: Object = ClassDB.instantiate(&"SteamMultiplayerPeer")
@@ -340,7 +340,7 @@ func _on_lobby_created(status: int, created_lobby_id: int) -> void:
 
 func _on_lobby_joined(joined_lobby_id: int, _permissions: int, _locked: bool, response: int) -> void:
 	if response != 1:
-		_fail("full" if response == 4 else "No se pudo entrar a la sala.")
+		_fail("full" if response == 4 else tr("UI_NET_LOBBY_JOIN_FAILED"))
 		return
 	lobby_id = joined_lobby_id
 	var owner_id: int = int(_steam.call(&"getLobbyOwner", joined_lobby_id))
@@ -598,11 +598,13 @@ func _on_connection_failed() -> void:
 ## more: that made the level think it was now the host and delete every
 ## player, leaving a cameraless view behind the disconnect overlay.
 func _on_server_disconnected() -> void:
-	_fail("Se cortó la conexión con el anfitrión.")
+	_fail(tr("UI_NET_HOST_LOST"))
 
 
 ## Ends the session and says why, to whoever listens now (the menu, or the
 ## level's overlay) and to the menu once it's back up, if it wasn't then.
+## `reason` is either a short code the menu maps to its own text ("version",
+## "timeout", "full", "connection") or a sentence already passed through tr().
 func _fail(reason: String) -> void:
 	_end_session()
 	_failure_message = reason

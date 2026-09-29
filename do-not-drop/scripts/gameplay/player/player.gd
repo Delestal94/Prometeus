@@ -785,7 +785,9 @@ func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
 	return _carry_component.raycast(from, to, mask)
 
 
-const PING_LABEL: String = "¡Cuidado!"
+## The quick ping's callout: its network label (never translated), taken
+## from the catalog so the Spanish phrase lives in one place.
+const PING_LABEL: String = PingCatalog.OPTIONS[0]["label"]
 
 
 func _send_ping(label: String = PING_LABEL) -> void:
