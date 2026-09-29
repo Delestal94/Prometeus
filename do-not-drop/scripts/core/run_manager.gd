@@ -630,7 +630,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"houses_lost": int(doors["houses_lost"]),
 		"photos": int(doors["photos"]),
 		"complaints": doors["complaints"],
-		"stories": rescue_stories(),
+		"stories": rescue_stories() + world_stories(),
 		"deliveries": _result_delivery_rows(),
 		"route_event": _result_route_event(),
 		"score": score,
@@ -894,6 +894,16 @@ func rescue_stories() -> Array[String]:
 			stories.append("%s: %d arreglo(s) en el camino" % [label, int(care.get("repairs", 0))])
 		elif int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED and not care.is_empty():
 			stories.append("%s: perdido en el camino" % label)
+	return stories
+
+
+## Lines other systems add to the run's story, from every node in the
+## "run_stories" group with result_stories() (N-214.4: the van's faults).
+func world_stories() -> Array[String]:
+	var stories: Array[String] = []
+	for source: Node in get_tree().get_nodes_in_group(&"run_stories"):
+		if source.has_method(&"result_stories"):
+			stories.append_array(source.call(&"result_stories"))
 	return stories
 
 
