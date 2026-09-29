@@ -108,7 +108,8 @@ func target_package() -> DeliveryPackage:
 			continue
 		if package.trap_state == ITrapBehavior.TrapState.RUINED:
 			continue
-		if vehicle != null and vehicle.has_method(&"carries") and bool(vehicle.call(&"carries", package.global_position)):
+		if vehicle != null and vehicle.has_method(&"carries") \
+				and bool(vehicle.call(&"carries", package.global_position)):
 			continue
 		var distance: float = package.global_position.distance_to(global_position)
 		if distance <= best_distance:
