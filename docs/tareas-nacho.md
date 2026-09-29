@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-214.3b: un pasajero sostiene el celular como espejo mientras no
+> Última actualización: 2026-09-29 (N-214.4: la pantalla de resultados cuenta cómo terminó cada avería
+> del camión, "Espejo reemplazado por un celular"; de N-214 solo falta N-214.3c). Antes, el mismo día: (N-214.3b: un pasajero sostiene el celular como espejo mientras no
 > haya repuesto; quien se une a mitad del recorrido recibe las averías; faltan los resultados, N-214.4).
 > Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
 > con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
@@ -937,8 +938,14 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
       cámara de `phone_camera.gd` ni muestra la vista de atrás). Queda para cuando haya espejo real.
   - [ ] **N-214.3c** Confirmar con `revisor-visual` el punto del espejo (y el celular) en las variantes
     de camión que no son la clásica.
-- [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
-- [ ] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado.
+- [x] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular"). `29a24d5`
+  - `VehicleFaults` guarda cómo terminó cada avería del recorrido (cincha, repuesto, celular o sin
+    arreglar, la puerta con cuántas veces se abrió) y entra al grupo `run_stories`;
+    `RunManager.world_stories()` suma esas líneas a `results["stories"]`, junto a los rescates. El
+    celular cuenta aunque después lo suelten. Duda: las líneas se traducen en el host (como el resto
+    de los resultados que manda), así que un cliente en otro idioma las vería en el del host.
+- [x] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado
+  (cubierto desde N-214.1 y ampliado en cada subtarea, N-214.4 incluida).
 
 ### N-212 · Voz por proximidad — A · `Opus 5.5 · xhigh` · Aviso: sí (jugador y red)
 

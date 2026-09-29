@@ -7,6 +7,18 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: N-214.4 las averías en la pantalla de resultados (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-fault-results`. Solo agrega; **ninguna firma cambia** y no
+se tocan archivos de Slatex (`hud_results.gd` ya muestra `results["stories"]`):
+- `core/run_manager.gd` (zona compartida): nueva `world_stories()`, que junta las líneas de todo nodo
+  del grupo `run_stories` con `result_stories() -> Array[String]`; `results["stories"]` ahora es
+  `rescue_stories() + world_stories()`. Slatex: si querés sumar una línea al cuento del recorrido
+  desde otro sistema, alcanza con ese grupo.
+- `VehicleFaults` está en ese grupo: "Espejo reemplazado por un celular", "Puerta trasera: atada con
+  una cincha", etc. Se traducen en el host (claves `WORLD_FAULT_STORY_*` en `strings_world.csv`), como
+  el resto de los resultados que el host manda a los clientes.
+
 ## Aviso activo: N-214.3b celular como espejo y averías para quien se une tarde (2026-09-29)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-214-phone-mirror`. Solo agrega; **ninguna firma pública cambia**
