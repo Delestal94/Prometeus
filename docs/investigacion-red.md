@@ -265,6 +265,10 @@ exacto de la prueba. En LAN no se notaba porque ENet no tiene ese límite.
 
 ## 5. Plan por fases
 
+> Estado al 2026-09-29: ya se hicieron la fase 1 (PR #34, sin la parte de cajas dormidas) y la
+> caja predicha en las manos. Lo que falta está como tareas en `docs/tareas-nacho.md`: N-215 (prueba
+> por Steam), N-216 (fase 0), N-217 (fase 2), N-218 (fase 3) y N-221 (fase 4).
+
 **Fase 0: medir antes de tocar (1 día).**
 - HUD de red con ping, KB/s y cola (`getConnectionRealTimeStatus` en Steam; `ENetPacketPeer` en LAN).
 - `--net-sim=lag,jitter,pérdida` usando la simulación de Steam y `--fake-lag` en ENet.
