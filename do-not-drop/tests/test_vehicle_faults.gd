@@ -322,14 +322,16 @@ func _check_real_truck_variants(bus: Node, faults_script: Script) -> void:
 			var effects: Node = faults.get(&"effects")
 			var mirror: Array = effects.call(&"driver_mirror_parts")
 			var spot: Node3D = van.get_node_or_null(^"FaultRepair_mirror")
-			_expect(not mirror.is_empty() and spot != null, "%s: the model has a driver's mirror and its repair spot" % label)
+			_expect(not mirror.is_empty() and spot != null,
+					"%s: the model has a driver's mirror and its repair spot" % label)
 			if mirror.is_empty() or spot == null:
 				world.free()
 				continue
 			# Not the fallback SPOT_POSITIONS guess: moved onto the model's own mirror,
 			# out past the driver's window (the eye point) and within reach of it.
 			var fallback: Vector3 = faults_script.get_script_constant_map()["SPOT_POSITIONS"][&"mirror"]
-			_expect(not spot.position.is_equal_approx(fallback), "%s: the mirror's spot moved onto the model's mirror" % label)
+			_expect(not spot.position.is_equal_approx(fallback),
+					"%s: the mirror's spot moved onto the model's mirror" % label)
 			var eye: Node3D = van.get_node_or_null(^"CabinInterior/DriverEyePoint")
 			var eye_at: Vector3 = van.to_local(eye.global_position) if eye != null else Vector3.ZERO
 			_expect(eye != null and spot.position.x < eye_at.x - 0.4 and spot.position.distance_to(eye_at) < 2.0,
