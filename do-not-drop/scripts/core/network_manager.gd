@@ -331,6 +331,7 @@ func _on_lobby_created(status: int, created_lobby_id: int) -> void:
 	var peer: Object = ClassDB.instantiate(&"SteamMultiplayerPeer")
 	peer.call(&"create_host", 0)
 	peer.set(&"server_relay", true)
+	peer.set(&"no_nagle", true)
 	multiplayer.multiplayer_peer = peer as MultiplayerPeer
 	peer_ids = [HOST_ID]
 	roster_changed.emit(peer_ids.duplicate())
@@ -354,6 +355,9 @@ func _on_lobby_joined(joined_lobby_id: int, _permissions: int, _locked: bool, re
 	# each client saw the others stuck where they spawned, a metre in the air,
 	# and the boxes they carried floating on their own.
 	peer.set(&"server_relay", true)
+	# Steam holds small messages back (Nagle) to batch them: a few ms more on
+	# every pose and input, sent every tick anyway (playtest 2026-09-29).
+	peer.set(&"no_nagle", true)
 	multiplayer.multiplayer_peer = peer as MultiplayerPeer
 
 

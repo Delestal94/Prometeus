@@ -239,10 +239,13 @@ func _ready() -> void:
 			face_mouth = profile.get("selected_mouth")
 			profile.progress_changed.connect(_sync_profile_appearance)
 	_build_body()
-	_package_focus = CameraAttributesPractical.new()
-	_package_focus.dof_blur_far_enabled = false
-	_package_focus.dof_blur_near_enabled = false
-	_camera.attributes = _package_focus
+	# Depth of field needs Forward+ or Mobile: GL Compatibility (this game's
+	# renderer) never drew it and warned on every carry.
+	if RenderingServer.get_current_rendering_method() != "gl_compatibility":
+		_package_focus = CameraAttributesPractical.new()
+		_package_focus.dof_blur_far_enabled = false
+		_package_focus.dof_blur_near_enabled = false
+		_camera.attributes = _package_focus
 	RenderLayers.configure_first_person(_camera)
 	# The spawn state is the host's copy of these, sent before the owner's
 	# first update: start them at the spawn point, not at the world origin.
