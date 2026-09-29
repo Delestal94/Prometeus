@@ -13,6 +13,13 @@ extends SceneTree
 ##   the crew closes it; soft knocks under door_pop_strength don't;
 ## - a broken mirror hides the driver's-side (-X) mirror parts only, leaves a
 ##   piece on the road, and a repair puts them back.
+## N-214.3: the repair spots hung on the stand-in van:
+## - they only offer a fix while their fault is active;
+## - the rear door ties shut with a strap from the shared kit, which spends it;
+##   with no strap and no spare, nothing fixes it;
+## - the depot's spare part (a CrewProgression supply) fixes the door (only
+##   when the kit has no strap) or the mirror and is used up; the mirror has no kit fix yet; run_ended drops
+##   the spares left.
 
 ## Loaded at run time: the script uses the EventBus autoload, which a
 ## SceneTree test can't resolve while it compiles.
@@ -84,9 +91,10 @@ func _run() -> void:
 	faults.queue_free()
 	await process_frame
 	await _check_effects(bus, faults_script)
+	await _check_repairs(bus, faults_script)
 	if _failures == 0:
 		print("PASS: truck faults break on hard hits only, one per delivery, repeat by seed,"
-				+ " repair on every peer, and show on the van")
+				+ " repair on every peer, show on the van, and get fixed with the kit or a spare")
 	quit(_failures)
 
 
@@ -134,6 +142,74 @@ func _check_effects(bus: Node, faults_script: Script) -> void:
 	faults.call(&"repair", &"mirror", &"shop")
 	_expect(parts["MirrorHousing_Left"].visible and parts["MirrorSurface_Left"].visible,
 			"A repair puts the mirror back")
+	world.queue_free()
+	await process_frame
+
+
+## N-214.3 on a stand-in van: the repair spots, the kit's strap and the spare.
+func _check_repairs(bus: Node, faults_script: Script) -> void:
+	var run: Node = root.get_node(^"/root/RunManager")
+	var crew: Node = root.get_node(^"/root/CrewProgression")
+	_expect((crew.get(&"SUPPLIES") as Dictionary).has(&"spare_part"), "The depot sells a spare part")
+	var world := Node3D.new()
+	root.add_child(world)
+	var van := FakeVan.new()
+	world.add_child(van)
+	var mirror_part := MeshInstance3D.new()
+	mirror_part.name = "MirrorHousing_Left"
+	mirror_part.position = Vector3(-1.3, 2.0, -2.5)
+	van.add_child(mirror_part)
+	var faults: Node = faults_script.new()
+	faults.set(&"vehicle", van)
+	world.add_child(faults)
+	await process_frame
+	var door: Node = van.get_node_or_null(^"FaultRepair_rear_door")
+	var mirror: Node3D = van.get_node_or_null(^"FaultRepair_mirror")
+	_expect(door != null and mirror != null, "A repair spot hangs on the van for each fault")
+	if door == null or mirror == null:
+		world.queue_free()
+		return
+	_expect(mirror.position.is_equal_approx(mirror_part.position), "The mirror's spot sits on the driver's mirror")
+	var player := Node.new()
+	world.add_child(player)
+	_expect(not bool(door.call(&"can_interact", player)), "An intact door offers no repair")
+
+	# The kit's strap ties the door shut and is spent.
+	_repaired.clear()
+	(run.get(&"care_supplies") as Dictionary)[&"strap"] = 1
+	bus.relay(&"vehicle_fault_started", [&"rear_door", Vector3.ZERO])
+	_expect(String(door.call(&"get_prompt")) == tr("WORLD_FAULT_REAR_DOOR_STRAP"), "The door offers the strap")
+	door.call(&"interact", player)
+	_expect(_repaired == [[&"rear_door", &"strap"]], "The door is fixed with the strap (got %s)" % [_repaired])
+	_expect(int(run.call(&"care_supply_count", &"strap")) == 0, "The strap is spent")
+
+	# No strap and no spare: nothing fixes it.
+	bus.relay(&"vehicle_fault_started", [&"rear_door", Vector3.ZERO])
+	_expect(not bool(door.call(&"can_interact", player)), "Without a strap or a spare the door can't be fixed")
+	door.call(&"interact", player)
+	_expect(bool(faults.call(&"is_broken", &"rear_door")), "The door stays broken")
+
+	# The spare part fixes it and is used up.
+	faults.call(&"stock_spares", 1)
+	(run.get(&"care_supplies") as Dictionary)[&"strap"] = 1
+	_expect(StringName(faults.call(&"repair_method", &"rear_door")) == &"strap",
+			"The kit's strap goes before the paid spare")
+	(run.get(&"care_supplies") as Dictionary)[&"strap"] = 0
+	_expect(StringName(faults.call(&"repair_method", &"rear_door")) == &"spare", "Without a strap, the spare")
+	door.call(&"interact", player)
+	_expect(_repaired.back() == [&"rear_door", &"spare"], "The door is fixed with the spare")
+	_expect(int(faults.get(&"spares")) == 0, "The spare is used up")
+
+	# The mirror: no kit fix yet, only a spare; run_ended drops the spares left.
+	bus.relay(&"vehicle_fault_started", [&"mirror", Vector3.ZERO])
+	_expect(not bool(mirror.call(&"can_interact", player)), "The mirror has no kit fix")
+	faults.call(&"stock_spares", 2)
+	mirror.call(&"interact", player)
+	_expect(_repaired.back() == [&"mirror", &"spare"] and int(faults.get(&"spares")) == 1,
+			"The spare mirror goes on and one spare is left")
+	bus.emit_signal(&"run_ended", 0, {})
+	_expect(int(faults.get(&"spares")) == 0, "The run's end drops the spares left")
+	(run.get(&"care_supplies") as Dictionary)[&"strap"] = 2
 	world.queue_free()
 	await process_frame
 

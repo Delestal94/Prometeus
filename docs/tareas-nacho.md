@@ -1,6 +1,8 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-214.2: la puerta trasera rota se abre sola con los baches y el
+> Última actualización: 2026-09-29 (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
+> con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
+> espejo y los resultados). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
 > espejo del conductor se cae a la ruta; faltan arreglos y resultados). Antes, el mismo día: (N-213.3: gancho de rescate como suministro del depósito; N-213 queda
 > cerrada). Antes, el mismo día: (N-213: test de red con dos clientes que agarran la misma caja; queda el
 > gancho N-213.3). Antes, el 2026-09-28: (N-214.1: componente `VehicleFaults` que decide en el host las averías
@@ -881,6 +883,13 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
     caído es solo visual hasta N-214.3 (el celular que lo reemplaza).
 - [ ] **N-214.3** Arreglo oficial (repuesto de tienda) e improvisado con el kit existente (cinta, cincha,
   trapo; el espejo lo reemplaza un pasajero con `phone_camera.gd`). Sin herramientas nuevas.
+  - [x] **N-214.3a** Puntos de arreglo (`fault_repair_spot.gd`, un `Interactable` por avería que
+    `VehicleFaults` cuelga del camión) y el repuesto: `SUPPLIES` suma `spare_part` ($25), el depósito se
+    lo pasa al recorrido y arregla la puerta o el espejo; la puerta rota se ata con una cincha del kit,
+    que va antes que el repuesto para guardarlo para el espejo. Test `test_vehicle_faults` ampliado. `PENDIENTE_HASH`
+  - [ ] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular (`phone_camera.gd`) como espejo.
+    Falta además mandar `active`/`spares` a quien se une a mitad del recorrido (hueco desde N-214.1) y
+    confirmar con `revisor-visual` el punto del espejo en las variantes de camión que no son la clásica.
 - [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
 - [ ] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado.
 
