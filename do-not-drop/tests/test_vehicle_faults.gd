@@ -250,7 +250,8 @@ func _check_repairs(bus: Node, faults_script: Script) -> void:
 	faults.call(&"reset_for_run")
 	_expect((faults.call(&"result_stories") as Array).is_empty(), "A new run starts with no fault to tell")
 	bus.relay(&"vehicle_fault_started", [&"mirror", Vector3.ZERO])
-	_expect(faults.call(&"result_stories") == [tr("WORLD_FAULT_STORY_MIRROR_LOST")], "An unfixed mirror is told as lost")
+	_expect(faults.call(&"result_stories") == [tr("WORLD_FAULT_STORY_MIRROR_LOST")],
+			"An unfixed mirror is told as lost")
 	_expect(bool(faults.call(&"hold_phone", player)), "A passenger can hold the phone up")
 	player.position = Vector3(0.0, 0.0, 20.0)
 	await physics_frame
