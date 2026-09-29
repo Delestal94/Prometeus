@@ -1,5 +1,8 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_legacy_user_data.gd
+## Renaming the game to "Take My Package" (2026-09-22) moved user://, so settings
+## and the leaderboard looked wiped. They are copied once from the old "Do Not
+## Drop" folder, never over newer data, and never again after a reset.
 
 var _failures: int = 0
 

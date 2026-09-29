@@ -1,4 +1,8 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_crew_progression.gd
+## The crew's campaign economy: shop money is shared, a delivery pays the team,
+## merit (and rescue credit) stays personal, and a voted purchase spends the
+## cooperative wallet.
 
 var failures := 0
 

@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_explosive_visual.gd
+## Explosive trap feedback: the countdown floats over the box's lid (not inside
+## or on a face), shows DESACTIVAR, and ticks with its own sound.
 
 func _init() -> void:
 	call_deferred("_run")

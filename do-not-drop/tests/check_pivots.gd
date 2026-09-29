@@ -1,4 +1,7 @@
 extends SceneTree
+## Run (through the revisor-visual agent): Godot --path do-not-drop --script res://tests/check_pivots.gd
+## Prints each imported model's height, lowest point and XZ centre, to check its
+## pivot sits on the ground and centred before placing it in the world.
 
 const PATHS: Array[String] = [
 	"res://assets/models/truck_reference_lowpoly.glb",

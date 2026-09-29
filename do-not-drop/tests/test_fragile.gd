@@ -1,5 +1,7 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_fragile.gd
+## Fragile trap: damage thresholds, the OK / at-risk / ruined states, and two
+## packages taking damage independently.
 
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 var _failures: int = 0

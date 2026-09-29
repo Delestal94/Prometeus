@@ -1,4 +1,8 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_progress_ui.gd
+## Progress screens: every unlock explains its reward and keeps delivery progress
+## apart from points; the records switch between Delivery and Endless with a
+## readable date and crew.
 
 func _init() -> void:
 	call_deferred("_run")

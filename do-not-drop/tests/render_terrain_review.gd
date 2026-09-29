@@ -1,4 +1,7 @@
 extends SceneTree
+## Run (needs a GPU, not --headless): Godot --path do-not-drop --script res://tests/render_terrain_review.gd
+## Saves review shots of the route's terrain (seed 12345) to user://terrain_<view>.png
+## for a person or the revisor-visual agent to look at.
 
 func _initialize() -> void:
 	_run.call_deferred()

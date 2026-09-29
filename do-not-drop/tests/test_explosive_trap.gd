@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_explosive_trap.gd
+## Explosive trap rules: the right sequence defuses it, a wrong input costs
+## time instead of re-rolling the answer, and the timer reaching zero ruins it.
 
 func _init() -> void:
 	call_deferred("_run")

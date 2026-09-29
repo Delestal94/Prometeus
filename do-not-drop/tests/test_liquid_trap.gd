@@ -1,4 +1,8 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_liquid_trap.gd
+## Liquid trap rules: tilting spills, holding the action dries the puddle, a hard
+## hit spills suddenly, an unattended spill does permanent damage, and a big
+## puddle reads as at risk.
 
 func _init() -> void:
 	call_deferred("_run")

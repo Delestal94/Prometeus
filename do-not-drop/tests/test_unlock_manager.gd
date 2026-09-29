@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_unlock_manager.gd
+## Trap unlocks: each trap unlocks at its deliveries/points threshold (Liquid
+## stays locked until both are met), and unlocks survive a save and load.
 
 const TEST_PATH := "user://unlock_manager_test.json"
 
