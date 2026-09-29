@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-213: test de red con dos clientes que agarran la misma caja; queda el
+> Última actualización: 2026-09-29 (N-213.3: gancho de rescate como suministro del depósito; N-213 queda
+> cerrada). Antes, el mismo día: (N-213: test de red con dos clientes que agarran la misma caja; queda el
 > gancho N-213.3). Antes, el 2026-09-28: (N-214.1: componente `VehicleFaults` que decide en el host las averías
 > del camión por golpe fuerte, una por entrega; faltan efectos, arreglos y resultados). Antes, el mismo día: (N-213.4: abandonar la caja caída cierra su pedido como
 > "Perdido" sin terminar la partida; falta el gancho). Antes, el mismo día: (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
@@ -810,7 +811,7 @@ Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
 - [x] Test `test_quick_callouts.gd`: la frase llega a todos, el enfriamiento corta el spam y el conductor
   la ve en su HUD. Textos en el CSV de traducciones. `ad3e2d9` (`test_ping` ajustado a las ocho frases).
 
-### N-213 · Carga que sale del camión y rescate afuera — A · `Opus 5.5 · xhigh` · Aviso: sí (`DeliveryPackage`, `RunManager`)
+### N-213 · Carga que sale del camión y rescate afuera — A · `Opus 5.5 · xhigh` · Aviso: sí (`DeliveryPackage`, `RunManager`) · **[x] `2ee38e1`**
 
 Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
 
@@ -824,8 +825,17 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
 - [x] **N-213.2** Bajar a buscarlo: levantarlo y volver a subirlo al estante o al regazo. `d8a014b` — ya
   se podía levantar y volver a montar; ahora levantarla cierra la ventana como rescatada (y la subida
   premia `rescued` como antes).
-- [ ] **N-213.3** Caña o gancho de rescate (mejora de tienda, rama Supervivencia): desde la puerta trasera,
+- [x] **N-213.3** Caña o gancho de rescate (mejora de tienda, rama Supervivencia): desde la puerta trasera,
   un pasajero engancha una caja cercana sin frenar. El cliente solo manda la intención; el host resuelve.
+  `2ee38e1` — suministro `rescue_hook` del depósito ($30, se compra o se vota como el acolchado y el
+  seguro; los suministros no tienen ramas, la de Supervivencia queda en el texto). `depot.begin_run()` arma
+  `gameplay/vehicle/rescue_hook.gd`, un `Interactable` que `LevelCommon` cuelga del poste izquierdo de la
+  puerta trasera (sin tocar `vehicle.gd`), con un palo amarillo visible solo en ese recorrido. Con la
+  puerta abierta y las manos libres, "Enganchar la caja caída" le da al pasajero (`take_by()` en el host,
+  vía `request_interact`) la caja caída más cercana a ≤ 7 m del gancho; eso cierra la ventana como
+  rescatada. Enfriamiento de 3 s; se guarda al terminar la partida. **Pendiente:** el estado armado
+  llega por RPC en `begin_run`, así que un cliente que recarga a mitad de reparto no lo ve; el alcance
+  (7 m) es tentativo, sin medir con el bot.
 - [x] **N-213.4** Abandonarlo cierra el pedido vacío (resultado "Perdido"), sin terminar la partida.
   `33f7702` — al vencer la ventana, `LevelCommon._check_lost_cargo()` llama a `Route.close_lost_order()`
   antes de `mark_lost`: la casa queda resuelta con el resultado nuevo `&"lost"` (`DeliveryHouse.close_lost()`,
@@ -842,7 +852,8 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
   de la tripulación completa, porque si no reinicia el nivel 3 s después del último en entrar
   (`level_base.gd`). También `play_area.gd` ya no castea un jugador liberado mientras el host recarga.
   La caja disputada está en el depósito, no caída en la ruta: el agarre pasa por el mismo `take_by()`.
-  Queda solo N-213.3 (gancho).
+  Queda solo N-213.3 (gancho). `2ee38e1`: el gancho, en `test_cargo_overboard.gd` (estante: nada que
+  enganchar; lejos o con la puerta cerrada no; al alcance sí, cierra la ventana como rescatada).
 
 ### N-214 · Averías del camión reparables con el kit — A · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado: componente aparte)
 
