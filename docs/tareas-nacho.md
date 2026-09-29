@@ -175,10 +175,124 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313, N-314, N-223, N-315, N-224, N-225, N-316, N-706 |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
 ---
+
+## M8 — Auditoría 2026-09-29
+
+Pedido del usuario: arreglar todo lo que marcó la auditoría (`docs/auditorias/2026-09-29.md`), salvo
+revisión humana de PRs ni agente revisor (no se quieren: la puerta son los checks obligatorios). Varias tocan
+archivos de Slatex: aviso en `colaboracion-equipo.md` en el mismo PR, como siempre.
+
+### N-705 · Puertas automáticas y repo limpio — A · `Opus 5.5 · medium` · Aviso: no
+- [x] Lint obligatorio en la protección de `main` (el #39 entró en rojo) y `test_proximity_voice` en verde.
+- [x] Auto-merge solo para ramas del repo (nunca forks). PR #40. El agente revisor que sumaba se sacó
+  en el #46: gastaba el cupo del plan en cada PR.
+- [ ] **Manual (Nacho):** borrar los 7 worktrees extra, las ramas ya integradas y el stash (respaldo de lo
+  útil en `../Prometeus-stash-backup/`). Todo está en `main`; se verificó rama por rama.
+- [ ] **Manual (Nacho + Slatex):** purgar `builds/` del historial (`git filter-repo --path builds
+  --invert-paths`), force-push con la protección abierta un momento, y que todos vuelvan a clonar.
+  `.git` baja de ~474 MB. Después, actualizar los hashes citados en los docs con el `commit-map`.
+
+### N-117 · Una acción propia por trampa, en el mundo y no en la tarjeta — A · `Opus 5.5 · xhigh` · Aviso: sí (trampas, `player_seat_pose.gd`, `player_cargo_care.gd`, HUD de Slatex)
+Hoy las 7 trampas son 3 acciones: Frágil no deja hacer nada ("Nothing the passenger does protects
+it"), Equilibrio/Ruidoso/Líquido/Hostil son el mismo botón mantenido (`player_seat_pose.gd:26`,
+`{"steady": holding, "calm": holding}`) y Explosivo/Peso creciente son flechas. El playtest del
+2026-09-28 ya lo dijo: "se leía como una tarea que nunca termina". Hecho cuando cada trampa pide un
+gesto distinto, que se ve en el mundo (brazos, cuerpo, caja) y no solo en la tarjeta del HUD, y ningún
+pasajero es espectador.
+- [x] **N-117.1** Diseño, pasado por `critico-diseno` (2026-09-29, "construir con cambios"). Un botón,
+  un verbo por trampa, con ícono sobre la caja; nada de mouse (en el asiento mueve la cámara y es el
+  cursor que sacó el playtest del 28/09) ni reglas ocultas:
+  - **Frágil = Amortiguá:** un toque del primario en una ventana de ~0,35 s antes del bache (el camino ya
+    avisa); mantener no hace nada; espera después de cada toque.
+  - **Equilibrio = Contrapesá:** primario mantenido + A/D (stick X) hacia el lado contrario a la
+    inclinación que se ve en la caja. Sin tres zonas ni castigo por corregir de más.
+  - **Líquido = Fregá:** alternar izquierda/derecha, sin primario (la única de ritmo intenso).
+  - **Ruidoso = Abrazalo:** queda el primario mantenido (la trampa de aprendizaje).
+  - **Hostil = Leelo:** queda (mantener tranquilo / soltar enojado); el humor tiene que verse en la caja.
+  - **Explosivo = Pedí el código:** la secuencia se sortea en el host por partida (hoy es fija,
+    `data/traps/explosive.tres`: `[up, left, down]`, se memoriza) y la ve **el conductor** en el tablero.
+  - **Peso creciente = Asegurá:** queda la secuencia, y también cuentan las flechas del asistente
+    (`package.gd` `assistant_peer_id`).
+  Medida sin humanos: un bot que mantiene el primario todo el tiempo pierde ≥80 % en 5 de 7; matriz
+  cruzada (el bot experto de cada trampa jugando las otras pierde fuera de la diagonal); cada trampa
+  sigue en ausente 80-100 % / torpe 30-55 % / experto <12 % (`tests/sim_data/balance_report.md`), y el
+  experto con +150 ms no sube más de 8 puntos.
+- [ ] **N-117.2** Tanda 1: Explosivo sorteado y replicado con el código en el tablero del conductor;
+  toque de Frágil (+ test de red con dos clientes); bot "siempre mantiene" en el arnés de balance.
+- [ ] **N-117.3** Tanda 2: Equilibrio con A/D y Líquido alternado, con lo que se ve en el mundo
+  (inclinación, charco).
+- [ ] **N-117.4** Tanda 3: flechas del asistente en Peso creciente; íconos de verbo sobre cada caja y un
+  tip por trampa (`_show_first_trap_tip`); la tarjeta del HUD pasa a ser guía, no el juego.
+- Abierto (decisión del equipo): qué trampas salen en solo (el único jugador maneja y nadie atiende
+  cajas en ruta) y si el conductor aguanta leer el código además de averías y espejo.
+
+### N-805 · Todo texto visible pasa por `tr()`, y el test lo ve — A · `Opus 5.5 · high` · Aviso: sí (`package_care.gd`, `hud_results.gd`)
+- [ ] `test_ui_translations` recorre también `scripts/gameplay` y `scripts/core` (lista de excepciones
+  explícita). Hoy solo mira `scripts/ui` y queda verde con 24 literales en español en `package_care.gd`.
+- [ ] `package_care.gd` a claves `HUD_CARE_*`; `network_manager._fail()` y los `reason` de
+  `level_base.gd` pasan a claves (`hud_results` ya hace `tr(reason)`). Continúa N-211 fase 7b.
+
+### N-118 · Endless también puntúa la carga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`)
+`run_manager.gd:692` ("never subtracted"): el modo de los récords ignora el núcleo del juego. Hecho
+cuando el puntaje es distancia + bonus por caja intacta al final (y cero por perdida), la tabla de
+Endless se renombra para no mezclar récords viejos, y un test reconstruye la fórmula.
+
+### N-119 · Jugar solo no es la ruta más vacía — A · `Opus 5.5 · high` · Aviso: no
+`route_planner.gd:233`: solo = 1 casa y 1400 m. PR #43 (mínimo 2 casas) está **en borrador**: en solo
+el único jugador maneja y nadie cuida las cajas en ruta, así que una segunda caja es una pérdida casi
+segura, no contenido. Antes de mergear: decidir qué trampas salen en solo (p. ej. solo las que dependen
+del manejo: Frágil, Equilibrio) y alinear `UnlockManager.locked_traps()` (`maxi(crew - 1, 1)`).
+
+### N-222 · Si el host se va, la partida termina con resultados — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `hud_results.gd`)
+Corrección: el cliente ya ve una pantalla de "desconectado" que dice que el anfitrión se fue
+(`hud_pause.gd:166`), pero sin nada de lo jugado. Lo mínimo: esa pantalla muestra lo entregado hasta ese
+momento (casas, cajas intactas, distancia) desde el estado que el cliente ya tiene, y el test de red de
+tres lo cubre. Migración de host: después del lanzamiento.
+
+### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`)
+Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20,56-62`). Hecho cuando
+el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el modelo entero pegado al
+torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
+
+### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
+- [ ] MSAA 2× (preset Alto/Medio), comparado en captura contra `render_scale` del preset Bajo.
+- [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
+  se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
+
+### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: no
+`route.gd` busca linealmente en las muestras del camino dos veces por tick; `play_area.gd`,
+`seat_point.gd`, `route_sky.gd` y `route_event_manager.gd:377` escanean grupos/hijos por frame.
+Cachear el índice del camino (ventana ±2 alrededor del último) y bajar las señales del HUD a 8 Hz.
+Hecho con `bench_drive` antes/después anotado acá.
+
+### N-315 · Cajas de 2048² triplicadas — B · `Opus 5.5 · medium` · Aviso: no
+Cada textura de caja está tres veces (fuente en `art/cargo/`, volcado del importador en
+`assets/models/cargo/` y embebida en el `.glb`): ~5 MB × 3 × 4. Regenerar a 512² con
+`art/tools/make_cargo_textures.py` (`modelador-blender`), sacar los volcados del repo e ignorarlos.
+
+### N-224 · Menos despacho dinámico — C · `Opus 5.5 · high` · Aviso: sí (varios)
+251 `.call(&"…")`, 233 `.get(&"…")` y 112 rutas `/root/`: un renombre rompe en runtime. Por archivo,
+empezando por `crew_progression.gd` y `route_event_manager.gd`: referencias tipadas (`class_name`) o
+dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
+
+### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
+`synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
+932: están escritos contra `max-file-lines: 1000`, no partidos por responsabilidad. Orden:
+`synth_audio` → `reference_truck` → `route.gd` → `package.gd`.
+
+### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no
+Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
+tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
+
+### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`)
+- [ ] Avisos de más de una semana de `colaboracion-equipo.md` a `docs/avisos/archivo.md`.
+- [ ] El encabezado "Última actualización" de las listas: una línea, sin "Antes, el mismo día".
+- [ ] La lista de tests del README a `docs/tests.md`.
 
 ## 1. Game Design
 

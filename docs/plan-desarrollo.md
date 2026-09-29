@@ -291,7 +291,7 @@ se corren los que siguen, sin comprimirlos: los plazos de Steam no se acortan.
 | Contenido cerrado | 2026-10-30 (vie) | No entra ningún tramo, trampa, peligro ni pantalla nueva; de acá en adelante solo arreglos, balance y pulido. Las listas de Nacho y Slatex sin tareas A abiertas. | Tareas A de `tareas-nacho.md` y `tareas-slatex.md` |
 | Página de Steam publicada | 2026-11-27 (vie) | Página "Próximamente" pública con cápsulas, 5+ capturas y tráiler, para juntar wishlists. Steam pide la página visible al menos 2 semanas antes del lanzamiento y la revisión tarda unos días hábiles: se envía a revisión una semana antes. | AppID propio (N-901), capturas (N-905, S-902), tráiler (N-903/N-902) |
 | Build de demo | 2026-12-18 (vie) | Una entrega completa y el depósito, exportada con `tools`/CI (N-210), en una rama de Steam propia de la demo. Sirve para Steam Next Fest si la fecha del festival cae antes del Early Access. | Export automático (N-210), página publicada |
-| Early Access | 2027-01-22 (vie) | Lanzamiento con el contenido mínimo (1 vehículo, 1 set de tramos, 3-4 trampas), precio definido y build revisada por Steam (revisión de build: pedirla 2 semanas antes). | Demo publicada, playtesting de amigos |
+| Early Access | 2027-01-22 (vie) | Lanzamiento con el contenido mínimo (1 vehículo, 1 set de tramos, las 7 trampas con una acción propia cada una, N-117), precio definido y build revisada por Steam (revisión de build: pedirla 2 semanas antes). | Demo publicada, playtesting de amigos |
 
 ### Decisión de monetización (S-906, 2026-09-28)
 
@@ -323,7 +323,6 @@ lista. (Slatex completa su parte en la S-702 de `docs/tareas-slatex.md`.)
 | Curva peraltada | El asfalto sale del mismo campo de alturas del terreno; peraltarlo es rehacer el terreno de la ruta. | Nacho #65 |
 | Motion blur por velocidad | GL Compatibility no lo trae y un pase propio cuesta los 60 FPS. | Nacho #14 |
 | Rotonda | Sin tráfico no suma decisión al conductor; las curvas y cruces actuales ya cubren el manejo. | Nacho #60 |
-| Chat de voz propio | Steam, Discord y las plataformas ya cubren la conversación; capturar, comprimir, transmitir y moderar voz no mejora el loop de entrega. | Slatex S-702 |
 | Matchmaking público | Requiere backend, moderación y manejo de abandono. Early Access se limita a invitaciones de Steam y conexión LAN/IP. | Slatex S-702 |
 | Cartas Prioridad e Información | Dependían de sistemas fuera del MVP. El mazo queda cerrado en Rescate, Descuento y Re-voto. | Slatex S-103 / S-702 |
 | Tienda durante la ruta | Duplica el flujo de suministros del depósito y corta el ritmo de conducción. Las compras se resuelven antes de salir. | Slatex S-702 |
@@ -352,7 +351,11 @@ feedback real de Early Access.
    el cuello de botella, el diseño de sistemas sí.
 
 ## Próximo paso
-Si querés, el siguiente documento puede ser un detalle técnico de implementación de la
-Fase 1 (estructura de nodos/escenas concreta en Godot para el `VehicleBody3D` + el
-primer paquete "Frágil"), para tener algo directamente accionable al sentarte a
-programar.
+El trabajo pendiente vive en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`. Desde el
+2026-09-29 el hito que va primero es **M8** (auditoría); después, lo que quede de M6 y M7.
+
+### Cambios de alcance registrados
+- **2026-09-29 — Voz por proximidad entra al MVP** (N-212, decisión del usuario). Antes figuraba
+  en "Fuera del MVP" como "Chat de voz propio". Queda apagada por defecto hasta que la
+  reproducción esté lista; solo por Steam.
+- **2026-09-29 — M6 y M7 siguen**, con el cierre de contenido del 2026-10-30 igual.
