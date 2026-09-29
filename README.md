@@ -751,7 +751,7 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   solo en su zona (faroles y paradas en el pueblo, fardos
   en el campo), la ruta pasa por más de un tipo de lugar, y la misma semilla
   arma exactamente el mismo mundo en todos los jugadores.
-- `test_house_assignment` — una casa por pasajero (jugadores − 1, mínimo 1), en línea la
+- `test_house_assignment` — una casa por pasajero (jugadores − 1, mínimo 2: solo o de a dos hay dos paradas, N-119), en línea la
   cantidad la fija el host una vez por sesión y el que se suma usa esa, cada casa
   espera la caja que le asignó la pizarra del depósito desde que carga el nivel (se ve
   en su cartel, con el estante), y con la caja equivocada el vecino la devuelve sin

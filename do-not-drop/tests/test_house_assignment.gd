@@ -22,8 +22,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var route_script: Script = load("res://scripts/gameplay/route/route.gd")
-	_expect(route_script.crew_house_count(1) == 1, "Playing alone still gets one house")
-	_expect(route_script.crew_house_count(2) == 1, "Two players: the passenger's house")
+	_expect(route_script.crew_house_count(1) == 2, "Playing alone gets two stops, not one (N-119)")
+	_expect(route_script.crew_house_count(2) == 2, "Two players: two stops too")
+	_expect(route_script.crew_house_count(3) == 2, "Three players: one house per passenger")
 	_expect(route_script.crew_house_count(4) == 3, "Four players: three passengers, three houses")
 	await _check_session_house_count()
 
@@ -34,13 +35,13 @@ func _run() -> void:
 	await physics_frame
 	var route: Node = level.get_node(^"World/Route")
 	var houses: Array = route.get(&"houses")
-	_expect(houses.size() == 1, "Solo (one peer), the route builds a single house (got %d)" % houses.size())
+	_expect(houses.size() == 2, "Solo (one peer), the route builds two houses (N-119, got %d)" % houses.size())
 
 	# The depot posts the orders the moment the level loads: the house waits
 	# for that specific box from the start, and its sign says which.
 	var depot: Node = level.get_node(^"World/Depot")
 	var orders: Array = depot.get(&"orders")
-	_expect(orders.size() == 1, "One order per house on the depot's board (got %d)" % orders.size())
+	_expect(orders.size() == 2, "One order per house on the depot's board (got %d)" % orders.size())
 	var house: DeliveryHouse = houses[0]
 	var packages: Array = level.get(&"packages")
 	var first: Node = null
@@ -119,7 +120,7 @@ func _check_session_house_count() -> void:
 	network.world_seed = 0
 	network.world_house_count = 0
 	network.peer_ids = [1] as Array[int]
-	_expect(await _built_house_count() == 1 and int(network.world_house_count) == 0, "Solo play counts the crew and records nothing")
+	_expect(await _built_house_count() == 2 and int(network.world_house_count) == 0, "Solo play counts the crew and records nothing")
 	network.world_seed = original_seed
 	network.world_house_count = 0
 	network.peer_ids = original_roster
