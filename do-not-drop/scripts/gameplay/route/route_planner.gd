@@ -36,6 +36,8 @@ const MAX_SEGMENT_LENGTH: float = 70.0
 ## alone still allows Straight, Bump, Straight, Gravel, Straight... for as
 ## long as the RNG allows, all dead straight in world space.
 const MAX_STRAIGHT_STREAK: int = 2
+## Fewest houses a crew gets, alone or as a pair (see crew_house_count()).
+const MIN_CREW_HOUSES: int = 2
 ## Pacing inside each leg (tareas de Nacho N-103), see plan_spine(): something
 ## happens at least every MOMENT_SPACING metres -- a hard segment, a bend of
 ## SHARP_CURVE_DEG or more, or a house stop -- and the last QUIET_ZONE metres
@@ -228,6 +230,8 @@ static func _segment_length(script: Script) -> float:
 	return length
 
 
-## Players minus the driver, at least one house even playing alone.
+## Players minus the driver, but never under MIN_CREW_HOUSES: with one house
+## a solo run (the first thing a newcomer plays) was the emptiest route in
+## the game, 1400 m with a single stop (N-119).
 static func crew_house_count(player_count: int) -> int:
-	return maxi(player_count - 1, 1)
+	return maxi(player_count - 1, MIN_CREW_HOUSES)

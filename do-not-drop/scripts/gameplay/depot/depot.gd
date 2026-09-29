@@ -35,7 +35,10 @@ const TRAP_PATH: String = "res://data/traps/%s.tres"
 ## The level scene declares one package of every trap type; the depot stocks
 ## a second of each, so the shelves hold every kind twice over and picking
 ## the right one actually means reading the board.
-const EXTRA_STOCK: Array[String] = ["fragile", "growing_weight", "balance", "noisy", "liquid", "explosive", "hostile"]
+## Playing alone, the only player drives: nobody tends a box on the road, so
+## the orders come only from traps that careful driving protects (N-119).
+const SOLO_TRAPS: Array[StringName] = [&"fragile", &"balance"]
+const EXTRA_STOCK: Array[String] =["fragile", "growing_weight", "balance", "noisy", "liquid", "explosive", "hostile"]
 
 ## The depot's public measurements (levels, route and tests read these).
 const HALF_WIDTH: float = Layout.HALF_WIDTH
@@ -188,6 +191,7 @@ func post_orders(house_count: int) -> Array[Dictionary]:
 	orders.clear()
 	var candidates: Array = _stocked.values()
 	candidates.sort_custom(_by_package_id)
+	candidates = _solo_candidates(candidates, house_count)
 	var definitions: Array = candidates.map(func(package: Node) -> Resource: return package.get(&"trap_definition"))
 	var trap_ids: Array[StringName] = ORDER_BALANCER.build_order(definitions, house_count, _completed_runs(), _rng)
 	for package: Node in ORDER_BALANCER.packages_for_order(candidates, trap_ids):
@@ -563,6 +567,18 @@ func _shuffle(values: Array) -> void:
 func _is_online() -> bool:
 	var network: Node = _autoload(&"NetworkManager")
 	return network != null and bool(network.call(&"is_online"))
+
+
+## Solo: only SOLO_TRAPS boxes, as long as there are enough of them for every
+## house; otherwise (a stock that can't cover it) every box, as before.
+func _solo_candidates(candidates: Array, house_count: int) -> Array:
+	var network: Node = _autoload(&"NetworkManager")
+	if network == null or Array(network.get(&"peer_ids")).size() > 1:
+		return candidates
+	var solo: Array = candidates.filter(func(package: Node) -> bool:
+		var definition: Resource = package.get(&"trap_definition")
+		return definition != null and StringName(definition.get(&"id")) in SOLO_TRAPS)
+	return solo if solo.size() >= house_count else candidates
 
 
 ## Autoloads by path, not by name: a test that names this class compiles it

@@ -113,8 +113,11 @@ func _run() -> void:
 
 	# --- it falls out again and nobody comes: lost ---
 	# Pinned so the test doesn't depend on which door the depot picked.
-	var house: Node = (level.get_node(^"World/Route").get(&"houses") as Array)[0]
-	house.set(&"assigned_package_id", package_id)
+	# A solo route has two houses (N-119); only the first one waits for this box.
+	var houses: Array = level.get_node(^"World/Route").get(&"houses")
+	var house: Node = houses[0]
+	for other: Node in houses:
+		other.set(&"assigned_package_id", package_id if other == house else &"")
 	level.set(&"overboard_rescue_seconds", 0.05)
 	package.global_position = far
 	for i: int in 10:
@@ -136,7 +139,7 @@ func _run() -> void:
 	_expect(not bool(manager.call(&"_mark_photo", int(house.get(&"house_index")))),
 		"There's nothing to photograph at a door whose box was lost")
 	var doors: Dictionary = manager.call(&"_resolve_deliveries")
-	_expect(int(doors.get("houses_lost", 0)) == 1 and int(doors.get("houses_missed", 0)) == 0,
+	_expect(int(doors.get("houses_lost", 0)) == 1 and int(doors.get("houses_missed", 0)) == houses.size() - 1,
 		"The lost order is counted apart from missed doors (got %s)" % [doors])
 	var lines: Array = (doors["breakdown"] as Array).filter(func(line: Dictionary) -> bool:
 		return String(line["label"]) == "HUD_SCORE_LOST")

@@ -230,6 +230,16 @@ func _test_layout(depot: Node3D) -> void:
 	# The conveyor's end portal (1.2 m wide) ends well before the office wall.
 	_expect(float(layout.CONVEYOR_END_X) + 0.6 < 8.6 - 2.0, "The conveyor leaves the office door clear (ends at %.1f)" % float(layout.CONVEYOR_END_X))
 
+	# Solo with every trap unlocked: the only player drives, so both orders
+	# come from traps careful driving protects (N-119, depot.gd SOLO_TRAPS).
+	var solo_traps: Array = []
+	for order: Dictionary in depot.call(&"post_orders", 2):
+		for package: Node in current_scene.get(&"packages"):
+			if package.get(&"package_id") == order["package_id"]:
+				solo_traps.append(StringName(package.get(&"trap_definition").get(&"id")))
+	_expect(solo_traps.size() == 2 and solo_traps.all(func(id: StringName) -> bool: return id in depot.SOLO_TRAPS),
+		"Solo orders only boxes careful driving protects (got %s)" % [solo_traps])
+
 	# A full crew: 8 players, 7 houses, 7 rows that fit the board.
 	var orders: Array = depot.call(&"post_orders", int(board_rules.ROWS))
 	_expect(orders.size() == int(board_rules.ROWS), "A full crew gets an order per house (%d)" % orders.size())
