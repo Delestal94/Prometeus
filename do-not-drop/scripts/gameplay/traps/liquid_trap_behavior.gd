@@ -75,12 +75,12 @@ func get_state() -> int:
 
 func get_hint() -> String:
 	if get_state() == TrapState.RUINED:
-		return "Se derramó por completo."
+		return tr("HUD_HINT_LIQUID_RUINED")
 	if spill_amount >= integrity_max * 0.30:
-		return "¡Charco creciendo! Mantené para secar."
+		return tr("HUD_HINT_LIQUID_DANGER")
 	if tilt_degrees > _safe_angle:
-		return "Inclinado %.0f° · mantené para secar." % tilt_degrees
-	return "Líquido estable. Secá cualquier derrame."
+		return tr("HUD_HINT_LIQUID_TILTED") % tilt_degrees
+	return tr("HUD_HINT_LIQUID_OK")
 
 
 func _measure_tilt(package: Node) -> float:

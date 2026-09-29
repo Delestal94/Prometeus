@@ -12,6 +12,12 @@ extends SceneTree
 
 const CSV_PATH: String = "res://translations/strings_ui.csv"
 const SCAN_DIRS: Array[String] = ["res://scripts"]
+## These two tables match already-translated prompts/trap names to icons.
+## Their Spanish literals are lookup data, never text drawn directly.
+const ACCENTED_LOOKUP_FILES: Array[String] = [
+	"res://scripts/ui/hud/hud_prompts.gd",
+	"res://scripts/ui/ui_theme.gd",
+]
 
 var _failures: int = 0
 
@@ -22,7 +28,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var table: Dictionary = _read_csv()
-	_expect(table.size() > 200, "The UI table holds the menus' and HUD's texts (%d keys)" % table.size())
+	_expect(table.size() > 500, "The UI table holds the menus' and HUD's texts (%d keys)" % table.size())
 	var placeholder := RegEx.create_from_string("%[-+0-9.]*[dsf%]")
 	for key: String in table:
 		var es: String = table[key][0]
@@ -45,6 +51,7 @@ func _run() -> void:
 		_expect(table.has(key), "%s (asked for in %s) is in the table" % [key, used[key]])
 	for key: String in table:
 		_expect(used.has(key), "%s is used somewhere (no dead rows)" % key)
+	_check_no_spanish_ui_literals()
 
 	var locale: String = TranslationServer.get_locale()
 	_expect(locale.begins_with("es"), "The game starts in Spanish (locale %s)" % locale)
@@ -64,6 +71,20 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: the menus' and HUD's texts are all in the table, in both languages, and follow the locale")
 	quit(_failures)
+
+
+func _check_no_spanish_ui_literals() -> void:
+	var accented := RegEx.create_from_string('"[^"\\n]*[áéíóúñÁÉÍÓÚÑ¿¡][^"\\n]*"')
+	for file_path: String in _scripts("res://scripts/ui"):
+		if file_path in ACCENTED_LOOKUP_FILES:
+			continue
+		var line_number: int = 0
+		for line: String in FileAccess.get_file_as_string(file_path).split("\n"):
+			line_number += 1
+			if line.strip_edges().begins_with("#"):
+				continue
+			_expect(accented.search(line) == null,
+				"%s:%d has no untranslated Spanish UI literal" % [file_path, line_number])
 
 
 ## key -> [es, en]

@@ -306,7 +306,7 @@ func request_supply(supply_id: StringName) -> void:
 		return
 	if bool(crew.call(&"buy_supply", supply_id)):
 		var item: Dictionary = crew.get(&"SUPPLIES")[supply_id]
-		_notice(tr("WORLD_DEPOT_NOTICE_BOUGHT") % [String(item.title).to_lower(), int(item.cost)])
+		_notice(tr("WORLD_DEPOT_NOTICE_BOUGHT") % [tr(String(item.title)).to_lower(), int(item.cost)])
 	_broadcast_supplies()
 
 
@@ -336,7 +336,7 @@ func request_discounted_supply(supply_id: StringName) -> void:
 	if bool(crew.call(&"buy_supply_discounted", peer_id, supply_id)):
 		var item: Dictionary = crew.get(&"SUPPLIES")[supply_id]
 		var discounted_cost: int = maxi(0, roundi(int(item.cost) * 0.5))
-		_notice(tr("WORLD_DEPOT_NOTICE_DISCOUNT") % [String(item.title).to_lower(), discounted_cost])
+		_notice(tr("WORLD_DEPOT_NOTICE_DISCOUNT") % [tr(String(item.title)).to_lower(), discounted_cost])
 	_broadcast_supplies()
 
 

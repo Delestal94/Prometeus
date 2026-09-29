@@ -799,7 +799,7 @@ func _raycast(from: Vector3, to: Vector3, mask: int) -> Dictionary:
 	return _carry_component.raycast(from, to, mask)
 
 
-const PING_LABEL: String = "¡Cuidado!"
+const PING_LABEL: String = "HUD_PING_WARNING"
 
 
 func _send_ping(label: String = PING_LABEL) -> void:

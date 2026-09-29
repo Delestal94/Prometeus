@@ -91,7 +91,7 @@ func _build() -> void:
 		panel.position = direction * RADIUS - Vector2(74.0, 23.0)
 		panel.size = Vector2(148.0, 46.0)
 		var label := Label.new()
-		label.text = "%s  %s" % [option["icon"], option["label"]]
+		label.text = "%s  %s" % [option["icon"], tr(String(option["label"]))]
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.add_theme_font_override(&"font", load(UiTheme.DISPLAY_FONT_PATH))

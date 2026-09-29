@@ -40,4 +40,4 @@ func get_state() -> int:
 
 
 func get_hint() -> String:
-	return "Cada golpe deja huella."
+	return tr("HUD_HINT_FRAGILE")

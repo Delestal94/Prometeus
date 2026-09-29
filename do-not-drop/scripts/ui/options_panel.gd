@@ -85,7 +85,7 @@ func _build() -> void:
 	_fov_slider.value_changed.connect(func(value: float) -> void: GameSettings.preferred_fov = value)
 	_shake_slider = UiTheme.slider_row(column, tr("UI_OPT_SHAKE"), 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
 	_shake_slider.value_changed.connect(func(value: float) -> void: GameSettings.camera_shake_scale = value)
-	_impact_effects_check = UiTheme.check_box(column, "Efectos de impacto", GameSettings.impact_effects)
+	_impact_effects_check = UiTheme.check_box(column, tr("UI_OPT_IMPACT_EFFECTS"), GameSettings.impact_effects)
 	_impact_effects_check.toggled.connect(func(pressed: bool) -> void: GameSettings.impact_effects = pressed)
 
 	_sensitivity_slider = UiTheme.slider_row(column, tr("UI_OPT_SENSITIVITY"), 0.2, 3.0, 0.05, GameSettings.look_sensitivity)
@@ -147,7 +147,7 @@ func _build() -> void:
 		GameSettings.graphics_quality = int(value)
 		name_quality.call(value))
 
-	UiTheme.tag(column, "CONTROLES", UiTheme.MINT, -1.5, 15)
+	UiTheme.tag(column, tr("UI_OPT_CONTROLS_TITLE"), UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
 	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")]]:

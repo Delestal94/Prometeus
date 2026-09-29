@@ -7,6 +7,17 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: catálogo bilingüe de UI y jugabilidad (S-509, 2026-09-28)
+
+Slatex extrajo al catálogo `translations/strings_ui.csv` los textos restantes de
+sus tutoriales, progresión, paquetes, trampas, pings, eventos de ruta y pantallas
+de opciones/resultados. Los identificadores que viajan por red (pings y eventos)
+son ahora claves estables y cada cliente los traduce al mostrarlos.
+
+No se modificaron los textos del mundo de Nacho ni `strings_world.csv`. La
+selección y persistencia del idioma en Opciones queda para el siguiente bloque de
+S-509.
+
 ## Aviso activo: cargas headless de helpers separados (2026-09-28)
 
 Slatex corrigió dos dependencias que fallaban únicamente al ejecutar pruebas

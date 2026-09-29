@@ -76,12 +76,12 @@ func get_state() -> int:
 
 func get_hint() -> String:
 	if _escaped:
-		return "Se escapó."
+		return tr("HUD_HINT_NOISY_RUINED")
 	if agitation >= _agitation_max:
-		return "¡Se suelta! Mantené para calmarlo."
+		return tr("HUD_HINT_NOISY_DANGER")
 	if agitation >= _at_risk_at:
-		return "Muy inquieto · mantené para calmarlo."
-	return "Tranquilo por ahora. Los golpes lo alteran."
+		return tr("HUD_HINT_NOISY_RISK")
+	return tr("HUD_HINT_NOISY_OK")
 
 
 func _sync_integrity() -> void:

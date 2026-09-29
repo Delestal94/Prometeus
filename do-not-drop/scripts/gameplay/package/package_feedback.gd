@@ -179,7 +179,8 @@ func _apply_identity(package: Node) -> void:
 	if content != null:
 		shape_size = content.get(&"box_size")
 		box_scene = content.get(&"box_model")
-		shipping_data = "%s\n%s · %s" % [content.get(&"display_name"), content.get(&"declared_weight"), content.get(&"handling")]
+		shipping_data = "%s\n%s · %s" % [content.call(&"localized_name"),
+			content.get(&"declared_weight"), content.call(&"localized_handling")]
 	if box_scene == null:
 		box_scene = load(DEFAULT_BOX_MODEL)
 	var model: Node3D = box_scene.instantiate()
@@ -514,7 +515,8 @@ func _refresh_event_disguise() -> void:
 			if other is DeliveryPackage and other.package_id == _package.label_swapped_with:
 				var content: Resource = other.content_definition()
 				if content != null:
-					shown = "%s\n%s · %s" % [content.get("display_name"), content.get("declared_weight"), content.get("handling")]
+					shown = "%s\n%s · %s" % [content.call(&"localized_name"),
+						content.get("declared_weight"), content.call(&"localized_handling")]
 				break
 	_shipping_text.text = shown
 	var disguised: bool = not _package.disguise_trap_id.is_empty() and not _package.disguise_revealed
@@ -525,8 +527,8 @@ func _refresh_event_disguise() -> void:
 	if disguised:
 		var definition: Resource = load("res://data/traps/%s.tres" % _package.disguise_trap_id)
 		if definition != null:
-			_disguise_text.text = String(definition.get("display_name"))
-			_disguise_icon.texture = UiTheme.trap_icon(String(definition.get("display_name")))
+			_disguise_text.text = String(definition.call(&"localized_name"))
+			_disguise_icon.texture = UiTheme.trap_icon(String(definition.call(&"localized_name")))
 			_disguise_icon.visible = _disguise_icon.texture != null
 	if _package.disguise_revealed and not _was_disguise_revealed:
 		_burst_confetti()

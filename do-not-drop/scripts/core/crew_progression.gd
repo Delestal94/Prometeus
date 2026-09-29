@@ -8,7 +8,9 @@ const CAMPAIGN_VERSION: int = 1
 const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 ## Player.PLAYER_COLORS uses peer_id modulo five in this same order.
 const PLAYER_COLOR_KEYS: Array[String] = ["mint", "yellow", "coral", "sky", "violet"]
-const PLAYER_COLOR_NAMES: Array[String] = ["menta", "amarillo", "coral", "cielo", "violeta"]
+const PLAYER_COLOR_NAMES: Array[String] = [
+	"UI_COLOR_MINT", "UI_COLOR_YELLOW", "UI_COLOR_CORAL", "UI_COLOR_SKY", "UI_COLOR_VIOLET",
+]
 const MAX_CARD_PER_PLAYER: int = 1
 const BASE_CARD_CHANCE: float = 0.20
 const MERIT_CARD_BONUS: float = 0.01
@@ -32,19 +34,19 @@ enum Card { PRIORITY, REVOTE, DISCOUNT, RESCUE, INFORMATION }
 ## ids, but a delivery can never draw them.
 const DRAWABLE_CARDS := [Card.RESCUE, Card.DISCOUNT, Card.REVOTE]
 const CARD_NAMES := {
-	Card.RESCUE: "Rescate",
-	Card.DISCOUNT: "Descuento",
-	Card.REVOTE: "Re-voto",
-	Card.PRIORITY: "Prioridad",
-	Card.INFORMATION: "Información",
+	Card.RESCUE: "UI_CARD_RESCUE",
+	Card.DISCOUNT: "UI_CARD_DISCOUNT",
+	Card.REVOTE: "UI_CARD_REVOTE",
+	Card.PRIORITY: "UI_CARD_PRIORITY",
+	Card.INFORMATION: "UI_CARD_INFORMATION",
 }
 
 ## What the depot's supplies counter sells (depot.gd): bought with team money
 ## before a run and used up by the next delivery that leaves the depot.
 ## "cost" in team money; the effect lives where it applies (see depot.gd).
 const SUPPLIES := {
-	&"padding": {"title": "Acolchado de estantes", "detail": "Espuma en el rack: la carga sufre un 25 % menos por golpes en el próximo reparto.", "cost": 40},
-	&"insurance": {"title": "Seguro de envío", "detail": "Cada paquete que se entregue roto en el próximo reparto le devuelve $30 al equipo.", "cost": 35},
+	&"padding": {"title": "UI_SUPPLY_PADDING", "detail": "UI_SUPPLY_PADDING_DETAIL", "cost": 40},
+	&"insurance": {"title": "UI_SUPPLY_INSURANCE", "detail": "UI_SUPPLY_INSURANCE_DETAIL", "cost": 35},
 }
 
 var team_money: int = STARTING_MONEY
@@ -124,7 +126,7 @@ func player_color_key(peer_id: int) -> String:
 
 
 func player_color_name(peer_id: int) -> String:
-	return PLAYER_COLOR_NAMES[posmod(peer_id, PLAYER_COLOR_NAMES.size())]
+	return tr(PLAYER_COLOR_NAMES[posmod(peer_id, PLAYER_COLOR_NAMES.size())])
 
 
 func award_action(peer_id: int, action_id: StringName, points: int) -> bool:
@@ -178,10 +180,10 @@ func _delivery_awards() -> Array[Dictionary]:
 	var awards: Array[Dictionary] = []
 	var mvp: int = _best_peer(_run_merit)
 	if mvp > 0:
-		awards.append({"title": "MVP", "peer": mvp})
-	_append_milestone_award(awards, "Rescatista", [&"rescued"])
-	_append_milestone_award(awards, "Desactivador", [&"defused"])
-	_append_milestone_award(awards, "Mano firme", [&"leveled", &"calmed", &"dried", &"sequence"])
+		awards.append({"title": "HUD_AWARD_MVP", "peer": mvp})
+	_append_milestone_award(awards, "HUD_AWARD_RESCUER", [&"rescued"])
+	_append_milestone_award(awards, "HUD_AWARD_DEFUSER", [&"defused"])
+	_append_milestone_award(awards, "HUD_AWARD_STEADY_HAND", [&"leveled", &"calmed", &"dried", &"sequence"])
 	return awards
 
 
@@ -272,7 +274,7 @@ func consume_card(peer_id: int, card: Card) -> bool:
 
 
 func card_name(card_id: int) -> String:
-	return String(CARD_NAMES.get(card_id, "Carta"))
+	return tr(String(CARD_NAMES.get(card_id, "UI_CARD_GENERIC")))
 
 
 ## Usable from anywhere during a run. Clients ask the host, which derives
@@ -286,11 +288,12 @@ func request_use_card() -> bool:
 	var peer_id: int = sender_id if sender_id != 0 else int(network.call(&"local_id")) if network != null else 1
 	var held_card: int = int(cards.get(peer_id, -1))
 	if held_card != Card.RESCUE:
-		_send_card_notice(peer_id, "Esta carta se usa en el depósito" if held_card in [Card.DISCOUNT, Card.REVOTE] else "No tenés ninguna carta")
+		_send_card_notice(peer_id, "HUD_CARD_DEPOT_ONLY" if held_card in [Card.DISCOUNT, Card.REVOTE]
+			else "HUD_CARD_NONE")
 		return false
 	var route_events: Node = get_node_or_null(^"/root/RouteEventManager")
 	if route_events == null or StringName(route_events.get(&"active_event_id")).is_empty():
-		_send_card_notice(peer_id, "No hay nada que rescatar")
+		_send_card_notice(peer_id, "HUD_CARD_NOTHING_TO_RESCUE")
 		return false
 	return bool(route_events.call(&"use_rescue", peer_id))
 
@@ -307,7 +310,7 @@ func _send_card_notice(peer_id: int, text: String) -> void:
 func _receive_card_notice(text: String) -> void:
 	var bus: Node = event_bus if event_bus != null else get_node_or_null(^"/root/EventBus")
 	if bus != null:
-		bus.emit_signal(&"depot_notice", text)
+		bus.emit_signal(&"depot_notice", tr(text))
 
 
 func _grant_card_chance(peer_id: int) -> void:

@@ -278,3 +278,248 @@ UI_TUT_BODY,1. Carguen paquetes en los anaqueles o llévenlos en mano.\n2. Un ju
 5. Between deliveries, vote on upgrades. A priority card can swing the result."
 UI_TUT_GOT_IT,Entendido,Got it
 UI_TUT_TAG,COOPEREN O SE CAE TODO,WORK TOGETHER OR IT ALL FALLS
+HUD_AWARD_DEFUSER,Desactivador,Defuser
+HUD_AWARD_GENERIC,Premio,Award
+HUD_AWARD_MVP,MVP,MVP
+HUD_AWARD_RESCUER,Rescatista,Rescuer
+HUD_AWARD_STEADY_HAND,Mano firme,Steady hand
+HUD_CARD_DEPOT_ONLY,Esta carta se usa en el depósito,This card is used at the depot
+HUD_CARD_NONE,No tenés ninguna carta,You don't have a card
+HUD_CARD_NOTHING_TO_RESCUE,No hay nada que rescatar,There's nothing to rescue
+HUD_CONDITION_CAKE_OK,impecable,pristine
+HUD_CONDITION_CAKE_RISK,algo corrida,a little lopsided
+HUD_CONDITION_CAKE_RUINED,derrumbada,collapsed
+HUD_CONDITION_FIREWORKS_OK,sellada,sealed
+HUD_CONDITION_FIREWORKS_RISK,con la mecha expuesta,with an exposed fuse
+HUD_CONDITION_FIREWORKS_RUINED,consumida,burnt out
+HUD_CONDITION_GLASS_OK,alineada,aligned
+HUD_CONDITION_GLASS_RISK,tambaleando,wobbling
+HUD_CONDITION_GLASS_RUINED,hecha añicos,shattered
+HUD_CONDITION_HEN_OK,tranquila,calm
+HUD_CONDITION_HEN_RISK,muy nerviosa,very nervous
+HUD_CONDITION_HEN_RUINED,se escapó,escaped
+HUD_CONDITION_LAMP_OK,intacta,intact
+HUD_CONDITION_LAMP_RISK,con la pantalla fisurada,with a cracked shade
+HUD_CONDITION_LAMP_RUINED,desarmada,broken apart
+HUD_CONDITION_MILK_OK,lleno,full
+HUD_CONDITION_MILK_RISK,goteando,leaking
+HUD_CONDITION_MILK_RUINED,derramado,spilled
+HUD_CONDITION_PUPPY_OK,tranquilo,calm
+HUD_CONDITION_PUPPY_RISK,mordiendo la caja,chewing through the box
+HUD_CONDITION_PUPPY_RUINED,se escapó,escaped
+HUD_CONDITION_RACCOON_OK,encerrado,locked in
+HUD_CONDITION_RACCOON_RISK,forzando la jaula,forcing the cage open
+HUD_CONDITION_RACCOON_RUINED,se escapó,escaped
+HUD_CONDITION_SOURDOUGH_OK,leudando,rising
+HUD_CONDITION_SOURDOUGH_RISK,desbordándose,overflowing
+HUD_CONDITION_SOURDOUGH_RUINED,fuera de control,out of control
+HUD_CONDITION_VASE_OK,intacto,intact
+HUD_CONDITION_VASE_RISK,con fisuras,cracked
+HUD_CONDITION_VASE_RUINED,hecho añicos,shattered
+HUD_CONTENT_CAKE,Torta de bodas,Wedding cake
+HUD_CONTENT_EMPTY,Vacía: se cayó %s,Empty: %s fell out
+HUD_CONTENT_FIREWORKS,Caja de fuegos artificiales,Fireworks crate
+HUD_CONTENT_GLASS_TOWER,Torre de copas,Glass tower
+HUD_CONTENT_HEN,Gallina ponedora,Laying hen
+HUD_CONTENT_LAMP,Lámpara antigua,Antique lamp
+HUD_CONTENT_MILK,Bidón de leche,Milk canister
+HUD_CONTENT_PUPPY,Cachorro inquieto,Restless puppy
+HUD_CONTENT_RACCOON,Mapache en jaula,Caged raccoon
+HUD_CONTENT_SOURDOUGH,Masa madre de la abuela,Grandma's sourdough starter
+HUD_CONTENT_VASE,Jarrón de porcelana,Porcelain vase
+HUD_EVENT_CONFUSING_SHOP,Tienda confusa,Confusing shop
+HUD_EVENT_CONFUSING_SHOP_PROMPT,Consulten la oferta.,Check the offer.
+HUD_EVENT_DOOR_JAM,Puerta trasera atascada,Jammed rear door
+HUD_EVENT_DOOR_JAM_PROMPT,Liberen la puerta.,Free the door.
+HUD_EVENT_IMPATIENT,Cliente impaciente,Impatient customer
+HUD_EVENT_IMPATIENT_HOUSE,Entreguen intacto el pedido de la casa %d.,Deliver house %d's order intact.
+HUD_EVENT_IMPATIENT_PROMPT,Entreguen su pedido intacto.,Deliver the order intact.
+HUD_EVENT_INSPECTION,Inspección sorpresa,Surprise inspection
+HUD_EVENT_INSPECTION_PROMPT,Aseguren toda la carga y cierren las cajas.,Secure all cargo and close every box.
+HUD_EVENT_MIMIC,Paquete mimético,Mimic package
+HUD_EVENT_MIMIC_PROMPT,Mantengan sana la caja falsa tras revelarla.,Keep the fake box safe after revealing it.
+HUD_EVENT_MIMIC_REVEALED,Caja revelada: manténganla sana 20 s.,Box revealed: keep it safe for 20 seconds.
+HUD_EVENT_MIXED_LABELS,Etiquetas mezcladas,Mixed labels
+HUD_EVENT_MIXED_LABELS_PROMPT,Esperen un golpe y abran las dos cajas.,Wait for an impact and open both boxes.
+HUD_EVENT_MIXED_LABELS_SWAPPED,Etiquetas cambiadas: abran ambas cajas.,Labels swapped: open both boxes.
+HUD_EVENT_PARASITE,Caja parásita,Parasite box
+HUD_EVENT_PARASITE_PROMPT,Dos pasajeros: sostengan ambas cajas 2 s.,Two passengers: hold both boxes for 2 seconds.
+HUD_HANDLING_FRAGILE,FRÁGIL,FRAGILE
+HUD_HANDLING_HEAVY,PESADO,HEAVY
+HUD_HANDLING_HOSTILE,CONTENIDO HOSTIL,HOSTILE CONTENTS
+HUD_HANDLING_LIVE,CONTENIDO VIVO,LIVE CONTENTS
+HUD_HANDLING_NO_IMPACTS,NO GOLPEAR,DO NOT HIT
+HUD_HANDLING_UPRIGHT,MANTENER VERTICAL,KEEP UPRIGHT
+HUD_HINT_BALANCE_DANGER,¡Se está volcando! Mantené para enderezar.,It's tipping over! Hold to steady it.
+HUD_HINT_BALANCE_OK,Estable. Mantené para enderezar en las curvas.,Stable. Hold to steady it through turns.
+HUD_HINT_BALANCE_RUINED,Se volcó.,It tipped over.
+HUD_HINT_BALANCE_TILTED,Inclinado %.0f° · mantené para enderezar.,Tilted %.0f° · hold to steady.
+HUD_HINT_EXPLOSIVE_RUINED,BOOM.,BOOM.
+HUD_HINT_EXPLOSIVE_SAFE,Desactivada.,Defused.
+HUD_HINT_EXPLOSIVE_SEQUENCE,%02d s · secuencia: %s,%02d s · sequence: %s
+HUD_HINT_FRAGILE,Cada golpe deja huella.,Every impact leaves a mark.
+HUD_HINT_HOSTILE_CALM,CALMÁ (mantené),CALM (hold)
+HUD_HINT_HOSTILE_DONT_TOUCH,NO TOCAR (soltá),DON'T TOUCH (release)
+HUD_HINT_HOSTILE_RUINED,La criatura escapó.,The creature escaped.
+HUD_HINT_LIQUID_DANGER,¡Charco creciendo! Mantené para secar.,Puddle growing! Hold to mop it up.
+HUD_HINT_LIQUID_OK,Líquido estable. Secá cualquier derrame.,Liquid stable. Mop up any spill.
+HUD_HINT_LIQUID_RUINED,Se derramó por completo.,It spilled completely.
+HUD_HINT_LIQUID_TILTED,Inclinado %.0f° · mantené para secar.,Tilted %.0f° · hold to mop.
+HUD_HINT_NOISY_DANGER,¡Se suelta! Mantené para calmarlo.,It's breaking loose! Hold to calm it.
+HUD_HINT_NOISY_OK,Tranquilo por ahora. Los golpes lo alteran.,Calm for now. Impacts rile it up.
+HUD_HINT_NOISY_RISK,Muy inquieto · mantené para calmarlo.,Very restless · hold to calm it.
+HUD_HINT_NOISY_RUINED,Se escapó.,It escaped.
+HUD_HINT_WEIGHT_DANGER,¡Se está poniendo pesado! %s,It's getting heavy! %s
+HUD_HINT_WEIGHT_RUINED,Imposible de sostener.,Too heavy to hold.
+HUD_HINT_WEIGHT_SEQUENCE,Asegurá la carga: %s(%.0fs),Secure the cargo: %s(%.0fs)
+HUD_PACKAGE_CONTENT_SPILLED,Se le cayó el contenido.,The contents fell out.
+HUD_PACKAGE_PARASITE_DAMAGE,La caja parásita dañó su pareja.,The parasite box damaged its partner.
+HUD_PACKAGE_RUINED_IMPACTS,El paquete sufrió demasiados golpes.,The package took too many impacts.
+HUD_PACKAGE_RUINED_TRIP,El paquete no aguantó el viaje.,The package didn't survive the trip.
+HUD_PING_BRAKE,¡Frená!,Brake!
+HUD_PING_HELP,¡Ayuda!,Help!
+HUD_PING_HERE,Acá,Here
+HUD_PING_THANKS,Gracias,Thanks
+HUD_PING_WARNING,¡Cuidado!,Watch out!
+HUD_PING_YES_NO,Sí/No,Yes/No
+HUD_PROGRESS_AND,y,and
+HUD_PROGRESS_DELIVERY_MANY,%d entregas,%d deliveries
+HUD_PROGRESS_DELIVERY_ONE,%d entrega,%d delivery
+HUD_PROGRESS_REMAINING,Te faltan %s para %s,You need %s to unlock %s
+HUD_PROMPT_CLOSE_BOX,Cerrar caja,Close box
+HUD_PROMPT_DROP_TO_DRIVE,Dejá el paquete para manejar,Drop the package to drive
+HUD_PROMPT_HELP_PACKAGE,Ayudar con la caja de %s,Help with %s's box
+HUD_PROMPT_OPEN_BOX,Abrir caja,Open box
+HUD_PROMPT_PICK_UP_PACKAGE,Agarrar paquete,Pick up package
+HUD_PROMPT_SIT,Sentarse,Sit down
+HUD_PROMPT_SIT_BY_CARGO,Sentarse junto a la carga,Sit by the cargo
+HUD_PROMPT_UNLOAD_PACKAGE,Bajar paquete,Unload package
+HUD_RESULT_EVENT,Evento: %s\n%s,Event: %s\n%s
+HUD_RESULT_FAILED,FALLIDO ✕,FAILED ✕
+HUD_RESULT_PHOTO_OK,FOTO ✓,PHOTO ✓
+HUD_RESULT_RESOLVED,RESUELTO ✓,RESOLVED ✓
+HUD_RUN_ALL_CARGO_RUINED,Se arruinó toda la carga. No queda nada que entregar.,All cargo was ruined. There's nothing left to deliver.
+HUD_SCORE_COMPLAINTS,Reclamos sin foto,Complaints without a photo
+HUD_SCORE_DENTED,Entregas abolladas,Dented deliveries
+HUD_SCORE_MISSED,Vecinos sin su paquete,Customers without their package
+HUD_SCORE_PERFECT,Entregas perfectas,Perfect deliveries
+HUD_SCORE_PHOTOS,Fotos de entrega,Delivery photos
+HUD_SCORE_RUINED,Entregas arruinadas,Ruined deliveries
+HUD_TRAP_BALANCE,Equilibrio,Balance
+HUD_TRAP_EXPLOSIVE,Explosivo,Explosive
+HUD_TRAP_FRAGILE,Frágil,Fragile
+HUD_TRAP_GROWING_WEIGHT,Peso creciente,Growing weight
+HUD_TRAP_HOSTILE,Hostil,Hostile
+HUD_TRAP_LIQUID,Líquido,Liquid
+HUD_TRAP_NOISY,Ruidoso,Noisy
+HUD_YOUR_TEAMMATE,tu compañero,your teammate
+UI_CARD_DISCOUNT,Descuento,Discount
+UI_CARD_GENERIC,Carta,Card
+UI_CARD_INFORMATION,Información,Information
+UI_CARD_PRIORITY,Prioridad,Priority
+UI_CARD_RESCUE,Rescate,Rescue
+UI_CARD_REVOTE,Re-voto,Revote
+UI_COLOR_CORAL,coral,coral
+UI_COLOR_MINT,menta,mint
+UI_COLOR_SKY,cielo,sky
+UI_COLOR_VIOLET,violeta,violet
+UI_COLOR_YELLOW,amarillo,yellow
+UI_DELIVERIES,Entregas,Deliveries
+UI_FACE_EYES_CLASSIC,Clásicos,Classic
+UI_FACE_EYES_JOYFUL,Contentos,Joyful
+UI_FACE_EYES_LASHES,Pestañas,Lashes
+UI_FACE_EYES_NONE,Sin ojos,No eyes
+UI_FACE_EYES_SLEEPY,Dormilones,Sleepy
+UI_FACE_EYES_WINK,Guiño,Wink
+UI_FACE_EYES_WORRIED,Preocupados,Worried
+UI_FACE_MOUTH_GRIN,Dientes,Teeth
+UI_FACE_MOUTH_LAUGH,Carcajada,Laugh
+UI_FACE_MOUTH_NONE,Sin boca,No mouth
+UI_FACE_MOUTH_POUT,Puchero,Pout
+UI_FACE_MOUTH_SMILE,Sonrisa,Smile
+UI_FACE_MOUTH_SURPRISED,Sorpresa,Surprised
+UI_FACE_MOUTH_TONGUE,Lengüita,Tongue
+UI_LEAD_DELIVERY,Entrega,Delivery
+UI_LEAD_DELIVERY_SELECTED,●  ENTREGA,●  DELIVERY
+UI_LEAD_ENDLESS_EMPTY,Todavía no hay partidas Endless registradas.,No Endless runs recorded yet.
+UI_LEAD_NO_DATE,Sin fecha,No date
+UI_OPT_CONTROLS_TITLE,CONTROLES,CONTROLS
+UI_OPT_IMPACT_EFFECTS,Efectos de impacto,Impact effects
+UI_PAINT_FACTORY_WHITE,Blanco de fábrica,Factory white
+UI_PAINT_VIOLET,Pintura violeta,Violet paint
+UI_PLAYERS_MANY,%d jugadores,%d players
+UI_PLAYERS_ONE,%d jugador,%d player
+UI_POINTS,Puntos,Points
+UI_REWARD_AGILE_VAN,Nuevo vehículo: Furgoneta ágil,New vehicle: Agile van
+UI_REWARD_CORAL_UNIFORM,Nuevo uniforme: Coral,New uniform: Coral
+UI_REWARD_EXPLOSIVE,Nueva trampa: Explosivo,New trap: Explosive
+UI_REWARD_GROWING_WEIGHT,Nueva trampa: Peso creciente,New trap: Growing weight
+UI_REWARD_HOSTILE,Nueva trampa: Hostil,New trap: Hostile
+UI_REWARD_LIQUID,Nueva trampa: Líquido,New trap: Liquid
+UI_REWARD_NOISY,Nueva trampa: Ruidoso,New trap: Noisy
+UI_REWARD_SKY_UNIFORM,Nuevo uniforme: Cielo,New uniform: Sky
+UI_REWARD_VIOLET_PAINT,Nueva pintura: Violeta,New paint: Violet
+UI_SUPPLY_INSURANCE,Seguro de envío,Shipping insurance
+UI_SUPPLY_INSURANCE_DETAIL,Cada paquete que se entregue roto en el próximo reparto le devuelve $30 al equipo.,Every ruined package delivered on the next run refunds the team $30.
+UI_SUPPLY_PADDING,Acolchado de estantes,Shelf padding
+UI_SUPPLY_PADDING_DETAIL,Espuma en el rack: la carga sufre un 25 % menos por golpes en el próximo reparto.,Foam on the rack: cargo takes 25% less impact damage on the next run.
+UI_TRUCK_AGILE,Furgoneta ágil,Agile van
+UI_TRUCK_CLASSIC,Furgón clásico,Classic van
+UI_TRUCK_NERVOUS,rápida y nerviosa,fast and twitchy
+UI_TRUCK_STABLE,estable,stable
+UI_TUT_BALANCE_ACTION,Mantené la acción para enderezarla.,Hold the action to steady it.
+UI_TUT_BALANCE_BREAKS,Quedar inclinada demasiado tiempo.,Staying tilted for too long.
+UI_TUT_CONTROL_CALM,calmar,calm
+UI_TUT_CONTROL_DRIVE_SMOOTH,conducir suave,drive smoothly
+UI_TUT_CONTROL_DRY,secar,mop
+UI_TUT_CONTROL_OBEY,obedecer,obey
+UI_TUT_CONTROL_SEQUENCE,secuencia,sequence
+UI_TUT_CONTROL_STEADY,enderezar,steady
+UI_TUT_DPAD_DOWN,D-pad abajo,D-pad down
+UI_TUT_DRIVER_BODY,%s\n\nManejá suave; frená dentro de la zona de entrega y dejá que el equipo atienda la carga.,%s\n\nDrive smoothly; stop inside the delivery zone and let the crew tend the cargo.
+UI_TUT_DRIVER_CONTROL,%s  acelerar y frenar,%s  accelerate and brake
+UI_TUT_DRIVER_TITLE,Conductor,Driver
+UI_TUT_EXPLOSIVE_ACTION,Repetí la secuencia de flechas a tiempo.,Repeat the arrow sequence in time.
+UI_TUT_EXPLOSIVE_BREAKS,Dejar que la cuenta regresiva llegue a cero.,Letting the countdown reach zero.
+UI_TUT_FRAGILE_ACTION,Manejá suave y asegurala antes de salir.,Drive smoothly and secure it before leaving.
+UI_TUT_FRAGILE_BREAKS,Los golpes fuertes le quitan integridad.,Heavy impacts reduce its integrity.
+UI_TUT_HOSTILE_ACTION,Mantené o soltá según la orden de la caja.,Hold or release according to the box's command.
+UI_TUT_HOSTILE_BREAKS,Tocar cuando ordena NO TOCAR o ignorar CALMÁ.,Touching it when it says DON'T TOUCH or ignoring CALM.
+UI_TUT_LEFT_CLICK,Click izq.,Left click
+UI_TUT_LEFT_STICK,Stick izq.,Left stick
+UI_TUT_LIQUID_ACTION,Mantené la acción para secar el derrame.,Hold the action to mop up the spill.
+UI_TUT_LIQUID_BREAKS,Inclinarla y dejar crecer el charco.,Tilting it and letting the puddle grow.
+UI_TUT_NEXT,Siguiente,Next
+UI_TUT_NOISY_ACTION,Mantené la acción para calmarlo.,Hold the action to calm it.
+UI_TUT_NOISY_BREAKS,Los golpes lo alteran hasta que escapa.,Impacts rile it up until it escapes.
+UI_TUT_OBJECTIVE_BODY,"Leé la pizarra, cargá la caja correcta y entregala en la casa indicada. La caja puede ir asegurada o en tus manos.","Read the board, load the right box and deliver it to the assigned house. The box can be secured or carried by hand."
+UI_TUT_OBJECTIVE_TITLE,El objetivo,The objective
+UI_TUT_PASSENGER_BODY,%s\n\nSentate junto a una caja y reaccioná a su aviso. También podés abrirla para comprobar qué lleva.,%s\n\nSit by a box and react to its warning. You can also open it to check what's inside.
+UI_TUT_PASSENGER_CONTROL,%s  cuidar   ·   %s  abrir,%s  tend   ·   %s  open
+UI_TUT_PASSENGER_TITLE,Pasajero,Passenger
+UI_TUT_PREVIOUS,Anterior,Previous
+UI_TUT_REWARDS_BODY,Las entregas pagan dinero al equipo para comprar suministros. Las buenas acciones dan mérito personal y pueden otorgarte una carta.,Deliveries pay team money for supplies. Good actions earn personal merit and may award you a card.
+UI_TUT_REWARDS_TITLE,"Dinero, mérito y cartas","Money, merit and cards"
+UI_TUT_TRAP_BALANCE,Equilibrio,Balance
+UI_TUT_TRAP_BODY,[b]Qué la rompe[/b]\n%s\n\n[b]Qué hacer[/b]\n%s\n\n%s,[b]What breaks it[/b]\n%s\n\n[b]What to do[/b]\n%s\n\n%s
+UI_TUT_TRAP_EXPLOSIVE,Explosivo,Explosive
+UI_TUT_TRAP_FRAGILE,Frágil,Fragile
+UI_TUT_TRAP_GROWING_WEIGHT,Peso creciente,Growing weight
+UI_TUT_TRAP_HOSTILE,Hostil,Hostile
+UI_TUT_TRAP_LIQUID,Líquido,Liquid
+UI_TUT_TRAP_NOISY,Ruidoso,Noisy
+UI_TUT_WEIGHT_ACTION,Seguí las flechas sin soltar la caja.,Follow the arrows without releasing the box.
+UI_TUT_WEIGHT_BREAKS,No completar la secuencia antes de que pese demasiado.,Failing to finish the sequence before it gets too heavy.
+UI_UNIFORM_CORAL,Uniforme coral,Coral uniform
+UI_UNIFORM_MINT,Uniforme menta,Mint uniform
+UI_UNIFORM_SKY,Uniforme cielo,Sky uniform
+UI_UNIFORM_TEAM,Color de equipo (automático),Team colour (automatic)
+UI_UNLOCK_AGILE_VAN,Furgoneta ágil,Agile van
+UI_UNLOCK_CORAL_UNIFORM,Uniforme coral,Coral uniform
+UI_UNLOCK_EXPLOSIVE,Carga explosiva,Explosive cargo
+UI_UNLOCK_GROWING_WEIGHT,Carga de peso creciente,Growing-weight cargo
+UI_UNLOCK_HOSTILE,Carga hostil,Hostile cargo
+UI_UNLOCK_LIQUID,Carga líquida,Liquid cargo
+UI_UNLOCK_NOISY,Carga ruidosa,Noisy cargo
+UI_UNLOCK_SKY_UNIFORM,Uniforme cielo,Sky uniform
+UI_UNLOCK_VIOLET_PAINT,Pintura violeta,Violet paint

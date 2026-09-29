@@ -302,7 +302,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		_award_pending_trap_milestones()
 		# Traps that bleed over time (tilt, weight, agitation) change integrity
 		# here rather than on impact, so the same events still have to fire.
-		_report_change(before_integrity, before_state, "El paquete no aguantó el viaje.")
+		_report_change(before_integrity, before_state, tr("HUD_PACKAGE_RUINED_TRIP"))
 		_hint_relay_time += state.step
 		if _hint_relay_time >= HINT_RELAY_INTERVAL:
 			_hint_relay_time = 0.0
@@ -323,7 +323,7 @@ func apply_impact(delta_velocity: float) -> void:
 	var before_integrity: float = integrity
 	var before_state: int = trap_state
 	trap_behavior.call("on_impact", maxf(delta_velocity, 0.0) * impact_absorption)
-	_report_change(before_integrity, before_state, "El paquete sufrió demasiados golpes.")
+	_report_change(before_integrity, before_state, tr("HUD_PACKAGE_RUINED_IMPACTS"))
 
 
 func _on_body_entered(body: Node) -> void:
@@ -371,7 +371,7 @@ func _hit_player(player: Player) -> void:
 ## _ready: packages load before the level resets the run, and only cargo
 ## actually aboard should count toward the score.
 func report_to_run() -> void:
-	_emit_event(&"cargo_registered", [package_id, String(trap_definition.get("display_name"))])
+	_emit_event(&"cargo_registered", [package_id, String(trap_definition.call(&"localized_name"))])
 	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
 	_emit_event(&"package_state_changed", [package_id, trap_state])
 	_emit_event(&"package_hint_changed", [package_id, get_hint()])
@@ -423,7 +423,7 @@ func spill_contents(velocity: Vector3 = Vector3.ZERO) -> void:
 		return
 	contents_spilled = true
 	_emit_event(&"package_contents_spilled", [package_id, velocity, trap_state])
-	mark_lost("Se le cayó el contenido.")
+	mark_lost(tr("HUD_PACKAGE_CONTENT_SPILLED"))
 
 
 func _peer_within_reach(peer_id: int) -> bool:
@@ -467,7 +467,7 @@ func apply_parasite_damage(amount: float) -> void:
 	var before_state: int = trap_state
 	_sharing_parasite_damage = true
 	_parasite_damage = minf(_parasite_damage + amount, integrity_max)
-	_report_change(before_integrity, before_state, "La caja parásita dañó su pareja.")
+	_report_change(before_integrity, before_state, tr("HUD_PACKAGE_PARASITE_DAMAGE"))
 	_sharing_parasite_damage = false
 
 
@@ -545,8 +545,9 @@ func run_state() -> int:
 
 func assist_prompt() -> String:
 	var crew: Node = get_node_or_null(^"/root/CrewProgression") if is_inside_tree() else null
-	var color: String = String(crew.call(&"player_color_name", tender_peer_id)) if crew != null else "tu compañero"
-	return "Ayudar con la caja de %s" % color
+	var color: String = String(crew.call(&"player_color_name", tender_peer_id)) if crew != null \
+		else tr("HUD_YOUR_TEAMMATE")
+	return tr("HUD_PROMPT_HELP_PACKAGE") % color
 
 
 @rpc("any_peer", "call_local", "reliable")

@@ -13,13 +13,27 @@ const TRAP_PATHS: Array[String] = ["res://data/traps/fragile.tres", "res://data/
 const MIMIC_DISGUISE_IDS: Array[StringName] = [&"fragile", &"balance", &"growing_weight", &"noisy"]
 
 const EVENTS: Dictionary = {
-	&"inspection": {"type": Type.INSPECTION, "title": "Inspección sorpresa", "prompt": "Aseguren toda la carga y cierren las cajas.", "action": &"secure_cargo", "merit": 20, "reward": 25, "duration": 60.0, "fine": 20},
-	&"impatient_client": {"type": Type.IMPATIENT_CLIENT, "title": "Cliente impaciente", "prompt": "Entreguen su pedido intacto.", "action": &"expedite_delivery", "merit": 15, "reward": 20, "duration": 90.0, "fine": 25},
-	&"rear_door_jam": {"type": Type.REAR_DOOR_JAM, "title": "Puerta trasera atascada", "prompt": "Liberen la puerta.", "action": &"free_rear_door", "merit": 20, "reward": 15, "duration": 60.0, "fine": 20},
-	&"mixed_labels": {"type": Type.MIXED_LABELS, "title": "Etiquetas mezcladas", "prompt": "Esperen un golpe y abran las dos cajas.", "action": &"sort_labels", "merit": 15, "reward": 15, "duration": 75.0, "fine": 20},
-	&"mimetic_package": {"type": Type.MIMETIC_PACKAGE, "title": "Paquete mimético", "prompt": "Mantengan sana la caja falsa tras revelarla.", "action": &"identify_mimic", "merit": 25, "reward": 25, "duration": 75.0, "fine": 25},
-	&"parasite_box": {"type": Type.PARASITE_BOX, "title": "Caja parásita", "prompt": "Dos pasajeros: sostengan ambas cajas 2 s.", "action": &"isolate_parasite", "merit": 25, "reward": 25, "duration": 90.0, "fine": 30},
-	&"confusing_shop": {"type": Type.CONFUSING_SHOP, "title": "Tienda confusa", "prompt": "Consulten la oferta.", "action": &"clarify_offer", "merit": 10, "reward": 10, "duration": 60.0, "fine": 15},
+	&"inspection": {"type": Type.INSPECTION, "title": "HUD_EVENT_INSPECTION",
+		"prompt": "HUD_EVENT_INSPECTION_PROMPT", "action": &"secure_cargo",
+		"merit": 20, "reward": 25, "duration": 60.0, "fine": 20},
+	&"impatient_client": {"type": Type.IMPATIENT_CLIENT, "title": "HUD_EVENT_IMPATIENT",
+		"prompt": "HUD_EVENT_IMPATIENT_PROMPT", "action": &"expedite_delivery",
+		"merit": 15, "reward": 20, "duration": 90.0, "fine": 25},
+	&"rear_door_jam": {"type": Type.REAR_DOOR_JAM, "title": "HUD_EVENT_DOOR_JAM",
+		"prompt": "HUD_EVENT_DOOR_JAM_PROMPT", "action": &"free_rear_door",
+		"merit": 20, "reward": 15, "duration": 60.0, "fine": 20},
+	&"mixed_labels": {"type": Type.MIXED_LABELS, "title": "HUD_EVENT_MIXED_LABELS",
+		"prompt": "HUD_EVENT_MIXED_LABELS_PROMPT", "action": &"sort_labels",
+		"merit": 15, "reward": 15, "duration": 75.0, "fine": 20},
+	&"mimetic_package": {"type": Type.MIMETIC_PACKAGE, "title": "HUD_EVENT_MIMIC",
+		"prompt": "HUD_EVENT_MIMIC_PROMPT", "action": &"identify_mimic",
+		"merit": 25, "reward": 25, "duration": 75.0, "fine": 25},
+	&"parasite_box": {"type": Type.PARASITE_BOX, "title": "HUD_EVENT_PARASITE",
+		"prompt": "HUD_EVENT_PARASITE_PROMPT", "action": &"isolate_parasite",
+		"merit": 25, "reward": 25, "duration": 90.0, "fine": 30},
+	&"confusing_shop": {"type": Type.CONFUSING_SHOP, "title": "HUD_EVENT_CONFUSING_SHOP",
+		"prompt": "HUD_EVENT_CONFUSING_SHOP_PROMPT", "action": &"clarify_offer",
+		"merit": 10, "reward": 10, "duration": 60.0, "fine": 15},
 }
 
 var active_event_id: StringName = &""
@@ -94,7 +108,8 @@ func begin_event(event_id: StringName) -> StringName:
 				reset_route()
 				return &""
 			active_event["house"] = randi_range(0, _house_assignments.size() - 1)
-			active_event["prompt"] = "Entreguen intacto el pedido de la casa %d." % (int(active_event["house"]) + 1)
+			active_event["prompt"] = "HUD_EVENT_IMPATIENT_HOUSE"
+			active_event["prompt_args"] = [int(active_event["house"]) + 1]
 		&"mimetic_package":
 			if not _prepare_mimic():
 				reset_route()
@@ -202,13 +217,16 @@ func on_package_impact(package: DeliveryPackage, strength: float) -> void:
 	package.disguise_revealed = true
 	active_event["phase"] = &"revealed"
 	active_event["reveal_remaining"] = 20.0
-	active_event["prompt"] = "Caja revelada: manténganla sana 20 s."
+	active_event["prompt"] = "HUD_EVENT_MIMIC_REVEALED"
+	active_event.erase("prompt_args")
 	active_event["revealer"] = package.tender_peer_id
 	_emit_event(&"route_event_updated", [active_event_id, active_event.duplicate(true)])
 
 
 func current_prompt() -> String:
-	return String(active_event.get("prompt", ""))
+	var prompt: String = tr(String(active_event.get("prompt", "")))
+	var args: Array = active_event.get("prompt_args", [])
+	return prompt % args if not args.is_empty() else prompt
 
 
 func use_rescue(peer_id: int) -> bool:
@@ -239,7 +257,8 @@ func _on_vehicle_impact(strength: float, _position: Vector3) -> void:
 	active_event["packages"] = [packages[0].package_id, packages[1].package_id]
 	active_event["opened"] = {}
 	active_event["phase"] = &"swapped"
-	active_event["prompt"] = "Etiquetas cambiadas: abran ambas cajas."
+	active_event["prompt"] = "HUD_EVENT_MIXED_LABELS_SWAPPED"
+	active_event.erase("prompt_args")
 	_emit_event(&"route_event_updated", [active_event_id, active_event.duplicate(true)])
 
 
@@ -301,7 +320,7 @@ func _prepare_mimic() -> bool:
 	var disguise: Resource = option["disguise"]
 	package.disguise_trap_id = StringName(disguise.get("id"))
 	active_event["package"] = package.package_id
-	active_event["disguise_name"] = String(disguise.get("display_name"))
+	active_event["disguise_name"] = String(disguise.call(&"localized_name"))
 	return true
 
 

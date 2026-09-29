@@ -47,7 +47,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var client_line: String = "" if hud.prompts.can_restart() else tr("HUD_RESULT_GUEST_NOTE")
 	if results.has("distance_traveled"):
 		hud.overlay_title.text = tr("HUD_RESULT_ENDLESS_TITLE")
-		hud.overlay_body.text = String(results["reason"])
+		hud.overlay_body.text = tr(String(results["reason"]))
 		hud.overlay_stats.text = tr("HUD_RESULT_ENDLESS_STATS") % [float(results["distance_traveled"]), results["elapsed_seconds"], CrewProgression.team_money, best_line, client_line]
 		hud.complaints_label.visible = false
 		hud.photo_strip.visible = false
@@ -67,7 +67,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	else:
 		hud.overlay_title.text = tr("HUD_RESULT_DELIVERED_TITLE")
 	hud.overlay_body.text = _delivery_summary(delivered_doors, missed_doors, total, ruined,
-			intact) if success else String(results.get("reason", ""))
+			intact) if success else tr(String(results.get("reason", "")))
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	var chaos_line: String = tr("HUD_RESULT_CHAOS_BONUS") % chaos if chaos > 1.0 else ""
 	var door_line: String = tr("HUD_RESULT_DOORS") % int(results.get("delivery_points",
@@ -126,7 +126,7 @@ func _add_delivery_row(entry: Dictionary) -> void:
 			result_text], 15, Hud.INK)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if bool(entry.get("photo", false)):
-		UiTheme.tag(row, "FOTO ✓", UiTheme.SKY, -1.0, 13)
+		UiTheme.tag(row, tr("HUD_RESULT_PHOTO_OK"), UiTheme.SKY, -1.0, 13)
 
 
 func _show_awards(awards: Array) -> void:
@@ -134,8 +134,9 @@ func _show_awards(awards: Array) -> void:
 	for award: Dictionary in awards:
 		var peer: int = int(award.get("peer", 0))
 		var color: Color = RESULT_PLAYER_COLORS[posmod(peer, RESULT_PLAYER_COLORS.size())]
-		var player_name: String = "Vos" if peer == NetworkManager.local_id() else "Jugador %d" % peer
-		lines.append("[color=#%s]●[/color] [b]%s[/b]  %s" % [color.to_html(false), String(award.get("title", "Premio")),
+		var player_name: String = tr("HUD_YOU") if peer == NetworkManager.local_id() else tr("UI_PLAYER_N") % peer
+		lines.append("[color=#%s]●[/color] [b]%s[/b]  %s" % [color.to_html(false),
+				tr(String(award.get("title", "HUD_AWARD_GENERIC"))),
 				player_name])
 	hud.result_awards_label.text = "\n".join(lines)
 	hud.result_awards_label.visible = not lines.is_empty()
@@ -145,9 +146,9 @@ func _show_route_event(route_event: Dictionary) -> void:
 	hud.result_event_label.visible = not route_event.is_empty()
 	if route_event.is_empty():
 		return
-	hud.result_event_label.text = "Evento: %s\n%s" % [
-		String(route_event.get("title", "Evento de ruta")),
-		"RESUELTO ✓" if bool(route_event.get("success", false)) else "FALLIDO ✕",
+	hud.result_event_label.text = tr("HUD_RESULT_EVENT") % [
+		tr(String(route_event.get("title", "HUD_EVENT"))),
+		tr("HUD_RESULT_RESOLVED") if bool(route_event.get("success", false)) else tr("HUD_RESULT_FAILED"),
 	]
 
 
@@ -161,10 +162,12 @@ func _show_unlock_progress() -> void:
 	var missing_score: int = maxi(int(progress["target_score"]) - int(progress["current_score"]), 0)
 	var needs: PackedStringArray = []
 	if missing_deliveries > 0:
-		needs.append("%d entrega%s" % [missing_deliveries, "" if missing_deliveries == 1 else "s"])
+		needs.append((tr("HUD_PROGRESS_DELIVERY_ONE") if missing_deliveries == 1
+			else tr("HUD_PROGRESS_DELIVERY_MANY")) % missing_deliveries)
 	if missing_score > 0:
 		needs.append("%d pts" % missing_score)
-	hud.result_progress_label.text = "Te faltan %s para %s" % [" y ".join(needs), String(progress["title"])]
+	hud.result_progress_label.text = tr("HUD_PROGRESS_REMAINING") % [
+		(" " + tr("HUD_PROGRESS_AND") + " ").join(needs), tr(String(progress["title"]))]
 	hud.result_progress_bar.value = float(progress["progress"]) * 100.0
 
 
@@ -172,7 +175,12 @@ static func format_score_breakdown(results: Dictionary, score: int) -> String:
 	var lines: PackedStringArray = [TranslationServer.translate("HUD_RESULT_ON_ROAD") % float(results.get("elapsed_seconds", 0.0))]
 	for line: Dictionary in results.get("breakdown", []):
 		var points: int = int(line["points"])
-		lines.append("%s   %s%d" % [String(line["label"]), "+" if points >= 0 else "−", absi(points)])
+		var label: String = TranslationServer.translate(String(line["label"]))
+		var count: int = int(line.get("count", 0))
+		if count > 0:
+			label = "%s (%d)" % [label, count]
+		lines.append("%s   %s%d" % [label,
+			"+" if points >= 0 else "−", absi(points)])
 	var chaos: float = float(results.get("chaos_multiplier", 1.0))
 	if chaos > 1.0:
 		lines.append(TranslationServer.translate("HUD_RESULT_CHAOS_LINE") % chaos)

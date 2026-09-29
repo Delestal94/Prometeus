@@ -78,14 +78,14 @@ func _refresh_entries() -> void:
 		child.queue_free()
 	_delivery_button.disabled = false
 	_endless_button.disabled = false
-	_delivery_button.text = "●  ENTREGA" if _mode == &"delivery" else "Entrega"
+	_delivery_button.text = tr("UI_LEAD_DELIVERY_SELECTED") if _mode == &"delivery" else tr("UI_LEAD_DELIVERY")
 	_endless_button.text = "●  ENDLESS" if _mode == &"endless" else "Endless"
 	var rank: int = 1
 	for entry: Dictionary in RunManager.leaderboard:
 		if StringName(entry.get("mode", &"delivery")) != _mode:
 			continue
 		var crew: int = maxi(int(entry.get("crew_size", 1)), 1)
-		var crew_text: String = "1 jugador" if crew == 1 else "%d jugadores" % crew
+		var crew_text: String = (tr("UI_PLAYERS_ONE") if crew == 1 else tr("UI_PLAYERS_MANY")) % crew
 		var line := HBoxContainer.new()
 		line.name = "Rank%d" % rank
 		line.tooltip_text = tr("UI_LEAD_ROW") % [rank, int(entry.get("score", 0)), String(entry.get("mode",
@@ -103,12 +103,12 @@ func _refresh_entries() -> void:
 		date.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		rank += 1
 	if rank == 1:
-		var empty_text: String = tr("UI_LEAD_EMPTY") if _mode == &"delivery" else "Todavía no hay partidas Endless registradas."
+		var empty_text: String = tr("UI_LEAD_EMPTY") if _mode == &"delivery" else tr("UI_LEAD_ENDLESS_EMPTY")
 		UiTheme.label(_entries, empty_text, 18, UiTheme.MUTED)
 
 
 static func format_date(iso_date: String) -> String:
 	var parts: PackedStringArray = iso_date.split("-")
 	if parts.size() != 3:
-		return iso_date if not iso_date.is_empty() else "Sin fecha"
+		return iso_date if not iso_date.is_empty() else TranslationServer.translate("UI_LEAD_NO_DATE")
 	return "%s/%s/%s" % [parts[2], parts[1], parts[0]]

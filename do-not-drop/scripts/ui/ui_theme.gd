@@ -562,16 +562,20 @@ static func keycaps(line: String, on_dark: bool = false) -> String:
 
 ## Trap display name (as the HUD receives it) -> its icon, if there is one.
 static func trap_icon(display_name: String) -> Texture2D:
-	var ids: Dictionary = {
-		"FRÁGIL": "fragile",
-		"EQUILIBRIO": "balance",
-		"PESO CRECIENTE": "growing_weight",
-		"RUIDOSO": "noisy",
-		"LÍQUIDO": "liquid",
-		"EXPLOSIVO": "explosive",
-		"HOSTIL": "hostile",
+	var keys: Dictionary = {
+		"HUD_TRAP_FRAGILE": "fragile",
+		"HUD_TRAP_BALANCE": "balance",
+		"HUD_TRAP_GROWING_WEIGHT": "growing_weight",
+		"HUD_TRAP_NOISY": "noisy",
+		"HUD_TRAP_LIQUID": "liquid",
+		"HUD_TRAP_EXPLOSIVE": "explosive",
+		"HUD_TRAP_HOSTILE": "hostile",
 	}
-	var id: String = ids.get(display_name.to_upper(), "")
+	var id: String = ""
+	for key: String in keys:
+		if TranslationServer.translate(key).to_upper() == display_name.to_upper():
+			id = keys[key]
+			break
 	if id.is_empty():
 		return null
 	return load("res://assets/ui/icons/tx_ui_trap_%s_256.png" % id)

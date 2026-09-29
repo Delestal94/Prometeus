@@ -78,14 +78,14 @@ func get_state() -> int:
 
 func get_hint() -> String:
 	if get_state() == TrapState.RUINED:
-		return "Imposible de sostener."
+		return tr("HUD_HINT_WEIGHT_RUINED")
 	var pending: String = ""
 	for index: int in range(sequence.size()):
 		pending += ("[%s] " % _arrow(sequence[index])) if index >= sequence_index else ""
 	var seconds_left: float = maxf(_puzzle_time_limit - _time_since_solved, 0.0)
 	if seconds_left > 0.0:
-		return "Asegurá la carga: %s(%.0fs)" % [pending, seconds_left]
-	return "¡Se está poniendo pesado! %s" % pending
+		return tr("HUD_HINT_WEIGHT_SEQUENCE") % [pending, seconds_left]
+	return tr("HUD_HINT_WEIGHT_DANGER") % pending
 
 
 func _solve() -> void:
