@@ -41,6 +41,15 @@ const REPAIR_PROMPTS: Dictionary = {
 	&"rear_door": {&"spare": "WORLD_FAULT_REAR_DOOR_SPARE", &"strap": "WORLD_FAULT_REAR_DOOR_STRAP"},
 	&"mirror": {&"spare": "WORLD_FAULT_MIRROR_SPARE", &"phone": "WORLD_FAULT_MIRROR_PHONE"},
 }
+## N-214.4: the results screen's line for each fault, by how it ended (the
+## repair method, "phone" if a passenger held it up, "broken" if nobody fixed
+## it). Translated on the host, which sends the results to every client.
+const STORY_KEYS: Dictionary = {
+	&"rear_door": {&"broken": "WORLD_FAULT_STORY_REAR_DOOR_OPEN", &"strap": "WORLD_FAULT_STORY_REAR_DOOR_STRAP",
+		&"spare": "WORLD_FAULT_STORY_REAR_DOOR_SPARE"},
+	&"mirror": {&"broken": "WORLD_FAULT_STORY_MIRROR_LOST", &"phone": "WORLD_FAULT_STORY_MIRROR_PHONE",
+		&"spare": "WORLD_FAULT_STORY_MIRROR_SPARE"},
+}
 ## Where each repair spot hangs, in the van's frame: the rear door's right
 ## post (the rescue hook has the left one, the door control the middle), and
 ## the driver's mirror (moved onto the model's mirror when it's there).
@@ -87,6 +96,8 @@ var spares: int = 0
 var phone_holder_id: int = 0
 ## fault_id -> its FaultRepairSpot on the van (none without a van).
 var spots: Dictionary = {}
+## fault_id -> how it ended this run (a STORY_KEYS method), in break order.
+var outcomes: Dictionary = {}
 var effects: Node3D
 var _rng := RandomNumberGenerator.new()
 ## Host-only: the player behind phone_holder_id.
@@ -103,6 +114,7 @@ func _ready() -> void:
 	effects.set(&"vehicle", vehicle)
 	add_child(effects)
 	add_to_group(&"vehicle_faults")
+	add_to_group(&"run_stories")
 	EventBus.run_ended.connect(func(_score: int, _results: Dictionary) -> void: _set_spares(0))
 	NetworkManager.peer_level_ready.connect(_on_peer_level_ready)
 	_hang_repair_spots()
@@ -112,6 +124,7 @@ func _ready() -> void:
 ## Back to an intact van with a fresh roll sequence from the world seed.
 func reset_for_run() -> void:
 	active.clear()
+	outcomes.clear()
 	faults_this_run = 0
 	door_pops = 0
 	_phone_holder = null
@@ -121,6 +134,19 @@ func reset_for_run() -> void:
 
 func is_broken(fault_id: StringName) -> bool:
 	return active.has(fault_id)
+
+
+## One line per fault of this run for RunManager's results ("Espejo reemplazado
+## por un celular"), read through the "run_stories" group.
+func result_stories() -> Array[String]:
+	var stories: Array[String] = []
+	for fault_id: StringName in outcomes:
+		var key: String = String((STORY_KEYS.get(fault_id, {}) as Dictionary).get(outcomes[fault_id], ""))
+		if key.is_empty():
+			continue
+		var line: String = tr(key)
+		stories.append(line % door_pops if line.contains("%d") else line)
+	return stories
 
 
 ## Host-only: fixes a fault (whoever fixed it, officially or with the kit)
@@ -242,6 +268,8 @@ func _share_phone_holder(peer_id: int) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _set_phone_holder(peer_id: int) -> void:
 	phone_holder_id = peer_id
+	if peer_id != 0 and outcomes.get(&"mirror") == &"broken":
+		outcomes[&"mirror"] = &"phone"
 	if effects != null:
 		var spot: Node3D = spots.get(&"mirror")
 		effects.call(&"show_phone_mirror", peer_id != 0,
@@ -316,6 +344,7 @@ func _on_vehicle_impact(strength: float, impact_position: Vector3) -> void:
 
 func _on_fault_started(fault_id: StringName, _impact_position: Vector3) -> void:
 	active[fault_id] = true
+	outcomes[fault_id] = &"broken"
 	if fault_id == &"rear_door" and NetworkManager.is_host():
 		_pop_rear_door()
 
@@ -333,6 +362,7 @@ func _pop_rear_door() -> void:
 
 func _on_fault_repaired(fault_id: StringName, method: StringName) -> void:
 	active.erase(fault_id)
+	outcomes[fault_id] = method
 	if fault_id == &"mirror" and phone_holder_id != 0:
 		if NetworkManager.is_host():
 			_phone_holder = null

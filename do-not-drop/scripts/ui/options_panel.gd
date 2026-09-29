@@ -74,7 +74,8 @@ func _build() -> void:
 	var language_row := HBoxContainer.new()
 	language_row.add_theme_constant_override("separation", 12)
 	column.add_child(language_row)
-	UiTheme.label(language_row, tr("UI_OPT_LANGUAGE"), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var language_label: Label = UiTheme.label(language_row, tr("UI_OPT_LANGUAGE"), 16, UiTheme.PAPER)
+	language_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_language_option = OptionButton.new()
 	_language_option.name = "LanguageOption"
 	_language_option.add_item(tr("UI_LANGUAGE_SPANISH"))

@@ -415,7 +415,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   del recorrido descarta los repuestos que sobran. N-214.3b: sin repuesto, un pasajero (nunca el
   conductor, uno a la vez) sostiene el celular como espejo; la avería sigue activa, se ve el celular,
   alejarse lo suelta y el repuesto lo reemplaza; quien se une a mitad del recorrido recibe las averías
-  (sin volver a tirar pedazos), los repuestos y quién sostiene el celular.
+  (sin volver a tirar pedazos), los repuestos y quién sostiene el celular. N-214.4: cada avería deja
+  su línea para los resultados (`result_stories()`, que lee `RunManager.world_stories()`): cómo se
+  arregló, "Espejo reemplazado por un celular" aunque después lo suelten, o sin arreglar (la puerta,
+  con cuántas veces se abrió); cada recorrido nuevo las borra.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
