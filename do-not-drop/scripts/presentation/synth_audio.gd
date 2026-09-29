@@ -4,11 +4,8 @@ extends RefCounted
 ## assets -- same "no art yet, code is the source of truth" convention as
 ## route.gd's boxes and package_feedback.gd's confetti cubes.
 
-## Every sound is synthesized sample by sample in GDScript -- ~50 ms for
-## the wind bed -- so each one is built once and shared: a stream is
-## read-only data, and every AudioStreamPlayer keeps its own playback of it.
-## Without this, opening a box or ringing a door re-synthesized its sound on
-## the very frame it had to play.
+## Every sound is synthesized sample by sample (~50 ms for the wind bed), so each is built once and
+## shared: a stream is read-only data, and every AudioStreamPlayer keeps its own playback of it.
 static var _cache: Dictionary = {}
 const SCENE_SOUNDS_PATH: String = "res://scripts/presentation/synth_audio_scenes.gd"
 static var _scene_sounds_script: Script
@@ -20,10 +17,8 @@ static func _cached(key: StringName, build: Callable) -> AudioStreamWAV:
 	return _cache[key]
 
 
-## `--script` tests start before Godot rebuilds the editor-managed global
-## class cache. Load the recently split scene generators by path at runtime,
-## after this SynthAudio class has compiled, instead of relying on the
-## `SynthAudioScenes` global name during parsing.
+## Loaded by path at runtime: `--script` tests parse this before Godot rebuilds the global class
+## cache, and SynthAudioScenes calls back into SynthAudio.
 static func _scene_builder(method: StringName) -> Callable:
 	if _scene_sounds_script == null:
 		_scene_sounds_script = load(SCENE_SOUNDS_PATH) as Script
@@ -936,8 +931,7 @@ static func _make_sheep_bleat() -> AudioStreamWAV:
 	return stream
 
 
-## Scene sounds: built by SynthAudioScenes (see there for what each is),
-## cached here like every other stream.
+## Scene sounds: built by SynthAudioScenes (see there for each), cached here like the rest.
 static func doorbell_ding_dong() -> AudioStreamWAV:
 	return _cached(&"doorbell_ding_dong", _scene_builder(&"make_doorbell_ding_dong"))
 

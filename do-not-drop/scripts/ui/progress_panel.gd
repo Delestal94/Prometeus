@@ -89,8 +89,8 @@ func _refresh() -> void:
 func _add_unlock_row(unlock_id: StringName, rule: Dictionary, got: bool, summary: Dictionary) -> void:
 	var panel := PanelContainer.new()
 	panel.name = "Unlock_%s" % unlock_id
-	panel.tooltip_text = tr("UI_PROG_UNLOCK_LINE") % ["✓" if got else "○", tr(String(rule["title"])), rule["deliveries"],
-			rule["score"]]
+	panel.tooltip_text = tr("UI_PROG_UNLOCK_LINE") % ["✓" if got else "○", tr(String(rule["title"])),
+			rule["deliveries"], rule["score"]]
 	panel.add_theme_stylebox_override("panel", UiTheme.surface_style(10, UiTheme.WHITE))
 	_list.add_child(panel)
 	var row := HBoxContainer.new()
