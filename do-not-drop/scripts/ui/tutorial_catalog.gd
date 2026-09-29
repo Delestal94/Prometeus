@@ -7,45 +7,50 @@ const TRAP_ORDER: Array[StringName] = [
 ]
 const TRAPS: Dictionary = {
 	&"fragile": {
-		"title": "Frágil", "glyph": "!", "breaks": "Los golpes fuertes le quitan integridad.",
-		"action": "Manejá suave y asegurala antes de salir.", "keyboard": "W/S", "gamepad": "RT/LT",
-		"control_label": "conducir suave",
+		"title": "UI_TUT_TRAP_FRAGILE", "glyph": "!", "breaks": "UI_TUT_FRAGILE_BREAKS",
+		"action": "UI_TUT_FRAGILE_ACTION", "keyboard": "W/S", "gamepad": "RT/LT",
+		"control_label": "UI_TUT_CONTROL_DRIVE_SMOOTH",
 	},
 	&"balance": {
-		"title": "Equilibrio", "glyph": "↔", "breaks": "Quedar inclinada demasiado tiempo.",
-		"action": "Mantené la acción para enderezarla.", "keyboard": "Click izq.", "gamepad": "RT",
-		"control_label": "enderezar",
+		"title": "UI_TUT_TRAP_BALANCE", "glyph": "↔", "breaks": "UI_TUT_BALANCE_BREAKS",
+		"action": "UI_TUT_BALANCE_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"control_label": "UI_TUT_CONTROL_STEADY",
 	},
 	&"growing_weight": {
-		"title": "Peso creciente", "glyph": "↓", "breaks": "No completar la secuencia antes de que pese demasiado.",
-		"action": "Seguí las flechas sin soltar la caja.", "keyboard": "WASD", "gamepad": "Stick izq.",
-		"control_label": "secuencia",
+		"title": "UI_TUT_TRAP_GROWING_WEIGHT", "glyph": "↓", "breaks": "UI_TUT_WEIGHT_BREAKS",
+		"action": "UI_TUT_WEIGHT_ACTION", "keyboard": "WASD", "gamepad": "UI_TUT_LEFT_STICK",
+		"control_label": "UI_TUT_CONTROL_SEQUENCE",
 	},
 	&"liquid": {
-		"title": "Líquido", "glyph": "≈", "breaks": "Inclinarla y dejar crecer el charco.",
-		"action": "Mantené la acción para secar el derrame.", "keyboard": "Click izq.", "gamepad": "RT",
-		"control_label": "secar",
+		"title": "UI_TUT_TRAP_LIQUID", "glyph": "≈", "breaks": "UI_TUT_LIQUID_BREAKS",
+		"action": "UI_TUT_LIQUID_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"control_label": "UI_TUT_CONTROL_DRY",
 	},
 	&"noisy": {
-		"title": "Ruidoso", "glyph": "♪", "breaks": "Los golpes lo alteran hasta que escapa.",
-		"action": "Mantené la acción para calmarlo.", "keyboard": "Click izq.", "gamepad": "RT",
-		"control_label": "calmar",
+		"title": "UI_TUT_TRAP_NOISY", "glyph": "♪", "breaks": "UI_TUT_NOISY_BREAKS",
+		"action": "UI_TUT_NOISY_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"control_label": "UI_TUT_CONTROL_CALM",
 	},
 	&"explosive": {
-		"title": "Explosivo", "glyph": "✹", "breaks": "Dejar que la cuenta regresiva llegue a cero.",
-		"action": "Repetí la secuencia de flechas a tiempo.", "keyboard": "WASD", "gamepad": "Stick izq.",
-		"control_label": "secuencia",
+		"title": "UI_TUT_TRAP_EXPLOSIVE", "glyph": "✹", "breaks": "UI_TUT_EXPLOSIVE_BREAKS",
+		"action": "UI_TUT_EXPLOSIVE_ACTION", "keyboard": "WASD", "gamepad": "UI_TUT_LEFT_STICK",
+		"control_label": "UI_TUT_CONTROL_SEQUENCE",
 	},
 	&"hostile": {
-		"title": "Hostil", "glyph": "◆", "breaks": "Tocar cuando ordena NO TOCAR o ignorar CALMÁ.",
-		"action": "Mantené o soltá según la orden de la caja.", "keyboard": "Click izq.", "gamepad": "RT",
-		"control_label": "obedecer",
+		"title": "UI_TUT_TRAP_HOSTILE", "glyph": "◆", "breaks": "UI_TUT_HOSTILE_BREAKS",
+		"action": "UI_TUT_HOSTILE_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"control_label": "UI_TUT_CONTROL_OBEY",
 	},
 }
 
 
 static func card(trap_id: StringName) -> Dictionary:
-	return Dictionary(TRAPS.get(trap_id, {})).duplicate(true)
+	var result: Dictionary = Dictionary(TRAPS.get(trap_id, {})).duplicate(true)
+	for field: String in ["title", "breaks", "action", "keyboard", "gamepad", "control_label"]:
+		var value: String = String(result.get(field, ""))
+		if value.begins_with("UI_"):
+			result[field] = TranslationServer.translate(value)
+	return result
 
 
 static func available_traps(profile: Node) -> Array[StringName]:

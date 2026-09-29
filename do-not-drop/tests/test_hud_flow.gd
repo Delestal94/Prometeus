@@ -26,6 +26,35 @@ func _run() -> void:
 	await process_frame
 	bus.restart_requested.connect(func() -> void: _restarts += 1)
 
+	# --- F10 clean capture mode (debug builds only) ---
+	var capture_mode: Node = hud.get_node_or_null(^"CaptureMode")
+	_expect(capture_mode != null, "Debug HUD exposes the F10 capture switch")
+	var phone_overlay := CanvasLayer.new()
+	phone_overlay.name = "CaptureTestPhone"
+	root.add_child(phone_overlay)
+	var viewmodel := Node3D.new()
+	viewmodel.name = "CaptureTestViewmodel"
+	viewmodel.add_to_group(&"viewmodel")
+	root.add_child(viewmodel)
+	if capture_mode != null:
+		var f10 := InputEventKey.new()
+		f10.keycode = KEY_F10
+		f10.pressed = true
+		capture_mode.call(&"_unhandled_input", f10)
+		_expect(not hud.visible and not phone_overlay.visible and not viewmodel.visible,
+			"F10 capture mode hides every HUD layer and the viewmodel")
+		var late_overlay := CanvasLayer.new()
+		late_overlay.name = "CaptureTestLateOverlay"
+		root.add_child(late_overlay)
+		await process_frame
+		_expect(not late_overlay.visible, "Capture mode also hides overlays created while it is active")
+		capture_mode.call(&"set_enabled", false)
+		_expect(hud.visible and phone_overlay.visible and viewmodel.visible and late_overlay.visible,
+			"Leaving capture mode restores each previous visibility state")
+		late_overlay.free()
+	phone_overlay.free()
+	viewmodel.free()
+
 	# --- the start screen ---
 	_expect(hud.overlay_mode == "start" and hud.overlay.visible, "Opens on the start screen")
 	_expect(hud.action_button.visible and hud.options_button.visible and hud.menu_button.visible,

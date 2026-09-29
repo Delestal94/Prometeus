@@ -89,9 +89,11 @@ func _build(active_tab: int = 0) -> void:
 
 func open() -> void:
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_grab_first_button.call_deferred()
 
 func close() -> void:
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 
@@ -123,7 +125,7 @@ func _face_choices(parent: VBoxContainer, title: String, kind: String, options: 
 	for id: StringName in options:
 		var button: Button = UiTheme.button(grid, "", false, Vector2(108, 78))
 		button.name = kind.capitalize() + "_" + String(id)
-		button.tooltip_text = title + ": " + String(options[id])
+		button.tooltip_text = title + ": " + tr(String(options[id]))
 		button.toggle_mode = true
 		button.button_group = group
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -142,7 +144,7 @@ func _face_choices(parent: VBoxContainer, title: String, kind: String, options: 
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(icon)
-		var label := UiTheme.label(content, String(options[id]), 13)
+		var label := UiTheme.label(content, tr(String(options[id])), 13)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		button.pressed.connect(func() -> void:
@@ -178,7 +180,8 @@ func _grab_first_button() -> void:
 func _refresh_face() -> void:
 	_face_preview.shirt_color = UnlockManager.cosmetic_color()
 	_face_preview.set_expression(UnlockManager.selected_eyes, UnlockManager.selected_mouth)
-	_face_caption.text = "%s · %s" % [Catalog.EYES[UnlockManager.selected_eyes], Catalog.MOUTHS[UnlockManager.selected_mouth]]
+	_face_caption.text = "%s · %s" % [tr(Catalog.EYES[UnlockManager.selected_eyes]),
+		tr(Catalog.MOUTHS[UnlockManager.selected_mouth])]
 	if _mannequin_face != null:
 		_mannequin_face.set_expression(UnlockManager.selected_eyes, UnlockManager.selected_mouth)
 	for button: Button in _face_buttons:
@@ -196,8 +199,8 @@ func _section(column: VBoxContainer, title: String, subtitle: String, choices: A
 	for choice: Dictionary in choices:
 		var id: StringName = choice["id"]
 		var available: bool = bool(choice["available"])
-		var label: String = String(choice["title"])
-		if choice.has("detail"): label += " · " + String(choice["detail"])
+		var label: String = tr(String(choice["title"]))
+		if choice.has("detail"): label += " · " + tr(String(choice["detail"]))
 		if not available:
 			var rule: Dictionary = UnlockManager.requirements(StringName(choice["unlock"]))
 			label += tr("UI_COSM_LOCKED_SUFFIX") % [int(rule.get("deliveries", 0)), int(rule.get("score", 0))]

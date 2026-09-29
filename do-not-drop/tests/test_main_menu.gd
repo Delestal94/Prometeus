@@ -21,6 +21,13 @@ func _initialize() -> void:
 	_expect(is_instance_valid(menu), "The menu scene instantiates without error")
 	_expect(network.get(&"transport") == NetworkManager.Transport.AUTO,
 		"Starts on AUTO, same as everywhere else in the project")
+	var brand_logo := menu.find_child("BrandLogo", true, false) as TextureRect
+	_expect(brand_logo != null and brand_logo.texture != null
+			and brand_logo.texture.get_width() == 2048 and brand_logo.texture.get_height() == 1024,
+		"The main menu uses the 2048 px image wordmark")
+	var stacked_logo := load("res://assets/ui/logo/tx_ui_logo_stacked_2048.png") as Texture2D
+	_expect(stacked_logo != null and stacked_logo.get_width() == 2048 and stacked_logo.get_height() == 2048,
+		"The square stacked logo is ready for store assets")
 
 	# This test only checks which transport each entry point picks, not
 	# what happens once a session is actually ready -- and Steam really is
@@ -40,6 +47,29 @@ func _initialize() -> void:
 	var play: Control = pages[1]
 	var join: Control = pages[2]
 	var address_field: LineEdit = menu.get(&"_address_field")
+	var menu_buttons: Array[Button] = []
+	for page: Control in pages.values():
+		menu_buttons.append_array(_buttons(page))
+	menu_buttons.append(menu.get(&"_cancel_button") as Button)
+	_expect(not menu_buttons.is_empty(), "The menu exposes buttons to bind UI sounds")
+	for button: Button in menu_buttons:
+		_expect(UiTheme.UI_SOUNDS.is_button_bound(button),
+			"UiTheme binds hover and click sounds to '%s'" % button.text)
+	for cue: StringName in UiTheme.UI_SOUNDS.CUES:
+		var stream: AudioStreamWAV = UiTheme.UI_SOUNDS.stream_for(cue)
+		_expect(stream != null and not stream.data.is_empty(),
+			"The '%s' UI cue is a generated AudioStreamWAV" % cue)
+	UiTheme.UI_SOUNDS.play(menu, UiTheme.UI_SOUNDS.CLICK)
+	var click_player := root.get_node_or_null(^"UiSound_click") as AudioStreamPlayer
+	_expect(click_player != null and click_player.bus == &"SFX",
+		"UI sounds use the SFX bus controlled by the effects-volume setting")
+	var settings: Node = root.get_node(^"/root/GameSettings")
+	var old_effects_volume: float = float(settings.get(&"effects_volume"))
+	var sfx_bus: int = AudioServer.get_bus_index(&"SFX")
+	settings.set(&"effects_volume", 0.25)
+	_expect(sfx_bus >= 0 and is_equal_approx(AudioServer.get_bus_volume_db(sfx_bus), linear_to_db(0.25)),
+		"Changing effects volume updates the bus used by UI sounds")
+	settings.set(&"effects_volume", old_effects_volume)
 	_expect(home.visible and not play.visible and not join.visible, "The menu opens on its home page")
 	_expect(_visible_buttons(home) <= 5, "The home page shows at most five buttons (had %d)" % _visible_buttons(home))
 	_expect(not address_field.is_visible_in_tree(), "The LAN address field isn't on the home page")
@@ -124,6 +154,15 @@ func _visible_buttons(node: Node) -> int:
 			count += 1
 		count += _visible_buttons(child)
 	return count
+
+
+func _buttons(node: Node) -> Array[Button]:
+	var result: Array[Button] = []
+	for child: Node in node.get_children():
+		if child is Button:
+			result.append(child as Button)
+		result.append_array(_buttons(child))
+	return result
 
 
 func _expect(condition: bool, description: String) -> void:

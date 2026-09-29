@@ -19,6 +19,11 @@ const SAVE_PATH: String = "user://settings.cfg"
 const WORLD_QUALITY = preload("res://scripts/presentation/world_quality.gd")
 var save_path: String = SAVE_PATH
 const SECTION: String = "player"
+const LANGUAGE_DEFAULT: String = "es"
+const SUPPORTED_LANGUAGES: Array[String] = ["es", "en"]
+
+var language: String = LANGUAGE_DEFAULT
+signal language_changed(locale: String)
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
 var master_volume: float = 1.0:
@@ -178,10 +183,6 @@ func _ready() -> void:
 	if Engine.get_main_loop().get_script() != null:
 		save_path = "user://test_settings.cfg"
 	_load()
-	# The world's texts are translatable (translations/strings_world.csv, N-605)
-	# but the UI isn't yet: until the language option (S-509) lands, stay in
-	# Spanish even on an English system, so the two never mix on screen.
-	TranslationServer.set_locale("es")
 	WORLD_QUALITY.watch(get_tree())
 	WORLD_QUALITY.apply(get_tree(), graphics_quality)
 
@@ -213,6 +214,16 @@ func prompt(keyboard: String, gamepad: String) -> String:
 	return gamepad if using_gamepad else keyboard
 
 
+func set_language(locale: String) -> void:
+	var normalized: String = locale if locale in SUPPORTED_LANGUAGES else LANGUAGE_DEFAULT
+	var changed: bool = language != normalized
+	language = normalized
+	TranslationServer.set_locale(language)
+	if changed:
+		language_changed.emit(language)
+		_save()
+
+
 ## Back to how the game ships, for anyone who dragged a slider somewhere
 ## they can't get back from.
 func reset_to_defaults() -> void:
@@ -234,6 +245,7 @@ func reset_to_defaults() -> void:
 	menu_text_scale = 1.0
 	sound_subtitles = false
 	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
+	set_language(LANGUAGE_DEFAULT)
 	_loading = false
 	_save()
 
@@ -299,6 +311,7 @@ func _load() -> void:
 	LegacyUserData.migrate()
 	var config := ConfigFile.new()
 	if config.load(save_path) != OK:
+		TranslationServer.set_locale(language)
 		_apply_volume()
 		_apply_music_volume()
 		_apply_bus("SFX", effects_volume)
@@ -321,6 +334,10 @@ func _load() -> void:
 	colorblind_palette = bool(config.get_value(SECTION, "colorblind_palette", false))
 	menu_text_scale = float(config.get_value(SECTION, "menu_text_scale", 1.0))
 	sound_subtitles = bool(config.get_value(SECTION, "sound_subtitles", false))
+	language = String(config.get_value(SECTION, "language", LANGUAGE_DEFAULT))
+	if language not in SUPPORTED_LANGUAGES:
+		language = LANGUAGE_DEFAULT
+	TranslationServer.set_locale(language)
 	# Files saved before the HUD default dropped to 60 % hold the old 100 %
 	# default, not a choice anyone made: move them to the new one, once.
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
@@ -358,6 +375,7 @@ func _save() -> void:
 	config.set_value(SECTION, "colorblind_palette", colorblind_palette)
 	config.set_value(SECTION, "menu_text_scale", menu_text_scale)
 	config.set_value(SECTION, "sound_subtitles", sound_subtitles)
+	config.set_value(SECTION, "language", language)
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
 	config.set_value(SECTION, "key_bindings", key_bindings)

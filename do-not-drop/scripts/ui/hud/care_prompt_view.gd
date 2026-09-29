@@ -296,7 +296,7 @@ func _draw_sequence(center: Vector2) -> void:
 			_draw_ripple(key_center, 0.9, 30.0)
 			_draw_key(key_center + Vector2(0, -absf(sin(_time * 6.0)) * 7.0), glyph, direction, false, false, border,
 				1.0, true)
-			_draw_text("TOCÁ", key_center + Vector2(0, cap * 0.5 + 24), 16, UiThemeScript.INK)
+			_draw_text(tr("HUD_CARE_TAP"), key_center + Vector2(0, cap * 0.5 + 24), 16, UiThemeScript.INK)
 		else:
 			_draw_key(key_center, glyph, direction, false, false, border, 0.86, false, 0.4)
 

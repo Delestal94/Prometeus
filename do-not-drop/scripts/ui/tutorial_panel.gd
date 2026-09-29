@@ -72,11 +72,11 @@ func _build() -> void:
 	var navigation := HBoxContainer.new()
 	navigation.add_theme_constant_override(&"separation", 10)
 	column.add_child(navigation)
-	_previous_button = UiTheme.button(navigation, "Anterior")
+	_previous_button = UiTheme.button(navigation, tr("UI_TUT_PREVIOUS"))
 	_previous_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_previous_button.add_theme_color_override(&"font_disabled_color", UiTheme.MUTED)
 	_previous_button.pressed.connect(_change_page.bind(-1))
-	_next_button = UiTheme.button(navigation, "Siguiente", true)
+	_next_button = UiTheme.button(navigation, tr("UI_TUT_NEXT"), true)
 	_next_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_next_button.add_theme_color_override(&"font_disabled_color", UiTheme.MUTED)
 	_next_button.pressed.connect(_change_page.bind(1))
@@ -91,9 +91,11 @@ func open() -> void:
 	_page_index = 0
 	_refresh_page()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_next_button.grab_focus.call_deferred()
 
 func close() -> void:
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 
@@ -118,29 +120,24 @@ func page_titles() -> PackedStringArray:
 
 func _rebuild_pages() -> void:
 	_pages = [
-		_page("El objetivo",
-				"Leé la pizarra, cargá la caja correcta y entregala en la casa indicada. La caja puede ir asegurada o"
-				+ " en tus manos.", "⌂"),
-		_page("Conductor",
-				"%s\n\nManejá suave, frená dentro de la zona de entrega y dejá que el equipo atienda la carga."
-				% UiTheme.keycaps("%s  acelerar y frenar" % GameSettings.prompt("W/S", "RT/LT")), "▰"),
-		_page("Pasajero",
-				"%s\n\nSentate junto a una caja y reaccioná a su aviso. También podés abrirla para comprobar qué lleva."
-				% UiTheme.keycaps("%s  cuidar   ·   %s  abrir" % [GameSettings.prompt("Click izq.", "RT"),
-				GameSettings.prompt("T", "D-pad abajo")]), "☺"),
+		_page(tr("UI_TUT_OBJECTIVE_TITLE"), tr("UI_TUT_OBJECTIVE_BODY"), "⌂"),
+		_page(tr("UI_TUT_DRIVER_TITLE"), tr("UI_TUT_DRIVER_BODY")
+				% UiTheme.keycaps(tr("UI_TUT_DRIVER_CONTROL") % GameSettings.prompt("W/S", "RT/LT")), "▰"),
+		_page(tr("UI_TUT_PASSENGER_TITLE"), tr("UI_TUT_PASSENGER_BODY")
+				% UiTheme.keycaps(tr("UI_TUT_PASSENGER_CONTROL") % [
+					GameSettings.prompt(tr("UI_TUT_LEFT_CLICK"), "RT"),
+					GameSettings.prompt("T", tr("UI_TUT_DPAD_DOWN"))]), "☺"),
 	]
 	for trap_id: StringName in TutorialData.available_traps(UnlockManager):
 		var data: Dictionary = TutorialData.card(trap_id)
 		_pages.append({
 			"title": String(data["title"]),
-			"body": "[b]Qué la rompe[/b]\n%s\n\n[b]Qué hacer[/b]\n%s\n\n%s" % [data["breaks"], data["action"],
+			"body": tr("UI_TUT_TRAP_BODY") % [data["breaks"], data["action"],
 					UiTheme.keycaps("%s  %s" % [TutorialData.control(data), data["control_label"]])],
 			"glyph": String(data["glyph"]),
 			"texture": UiTheme.trap_icon(String(data["title"])),
 		})
-	_pages.append(_page("Dinero, mérito y cartas",
-			"Las entregas pagan dinero al equipo para comprar suministros. Las buenas acciones dan mérito personal y"
-			+ " pueden otorgarte una carta.", "$"))
+	_pages.append(_page(tr("UI_TUT_REWARDS_TITLE"), tr("UI_TUT_REWARDS_BODY"), "$"))
 	_page_index = clampi(_page_index, 0, maxi(_pages.size() - 1, 0))
 	if visible:
 		_refresh_page()

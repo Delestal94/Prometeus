@@ -15,9 +15,10 @@ extends RefCounted
 ## Pure data in, pure data out: CareCard draws it.
 
 ## What holding does, per content, as the card's headline.
-const HOLD_TITLES: Dictionary = {&"fragile": "SOSTENELA", &"balance": "ENDEREZALA",
-	&"liquid": "SECÁ EL DERRAME", &"noisy": "CALMALA", &"hostile": "CALMALA",
-	&"growing_weight": "SOSTENELA", &"explosive": "SOSTENELA"}
+## Keys in translations/strings_ui.csv, translated when the step is built.
+const HOLD_TITLES: Dictionary = {&"fragile": "HUD_CARE_TITLE_HOLD", &"balance": "HUD_CARE_TITLE_STRAIGHTEN",
+	&"liquid": "HUD_CARE_TITLE_MOP", &"noisy": "HUD_CARE_TITLE_CALM", &"hostile": "HUD_CARE_TITLE_CALM",
+	&"growing_weight": "HUD_CARE_TITLE_HOLD", &"explosive": "HUD_CARE_TITLE_HOLD"}
 
 
 ## `keys` names the controls as the player's device calls them:
@@ -32,30 +33,34 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 	var hint: String = String(state.get("hint", ""))
 	var working: bool = float(state.get("work", 0.0)) > 0.0 and StringName(state.get("tool", &"")) == tool
 	if phase == &"crisis" and missing > 0:
-		return _step(&"collect", "JUNTÁ LAS PIEZAS",
-			"Quedan %d en el piso: acercate a cada una y apretá %s." % [missing, keys.get("interact", "E")])
+		return _step(&"collect", _tr("HUD_CARE_COLLECT"),
+			_tr("HUD_CARE_COLLECT_DETAIL") % [missing, keys.get("interact", "E")])
 	var steps: Array = sequence.get("steps", [])
 	if int(sequence.get("index", 0)) < steps.size() and bool(sequence.get("pending", true)):
-		var how: String = "mantené %s y tocá una tecla por vez" % keys.get("primary", "Clic izq.") \
-			if bool(state.get("on_foot", false)) else "una tecla por vez, sin clic"
-		return _step(&"sequence", "TOCÁ EN ORDEN",
-			"%s: %s. Si le errás, vuelve a empezar." % [String(sequence.get("verb", "Resolver")), how])
+		var how: String = _tr("HUD_CARE_SEQUENCE_ON_FOOT") % keys.get("primary", "Clic izq.") \
+			if bool(state.get("on_foot", false)) else _tr("HUD_CARE_SEQUENCE_SEATED")
+		return _step(&"sequence", _tr("HUD_CARE_SEQUENCE"),
+			_tr("HUD_CARE_SEQUENCE_DETAIL") % [String(sequence.get("verb", "Resolver")), how])
 	var urgent: bool = phase in [&"crisis", &"lost"] or bool(state.get("restore", false))
 	if tool != &"" and (urgent or working):
-		return _step(&"tool", "USÁ: %s" % tool_name.to_upper(),
-			"Mantené %s hasta llenar el círculo." % keys.get("tool", "Clic der."))
+		return _step(&"tool", _tr("HUD_CARE_TOOL") % tool_name.to_upper(),
+			_tr("HUD_CARE_TOOL_DETAIL") % keys.get("tool", "Clic der."))
 	if phase == &"lost":
-		return _step(&"lost", "CONTENIDO PERDIDO", hint if not hint.is_empty() else "Ya no se puede recuperar.")
+		return _step(&"lost", _tr("HUD_CARE_LOST"), hint if not hint.is_empty() else _tr("HUD_CARE_LOST_DETAIL"))
 	if action == &"release":
-		return _step(&"release", "¡SOLTALA!", "No toques la caja hasta que vuelva a pedir calma.")
+		return _step(&"release", _tr("HUD_CARE_RELEASE"), _tr("HUD_CARE_RELEASE_DETAIL"))
 	# Hands are asked for when the box needs them -- at risk, strained or
 	# being thrown about -- not all the time: a card that always says "hold"
 	# never lets the player know they're done (playtest 2026-09-28).
 	if action == &"hold" and bool(state.get("need_hands", true)):
-		return _step(&"hold", String(HOLD_TITLES.get(kind, "SOSTENELA")),
-			"Mantené %s: la protege de golpes y curvas." % keys.get("primary", "Clic izq."))
-	return _step(&"idle", "TODO EN ORDEN", hint if not hint.is_empty()
-		else "Podés soltar. Mantené %s si se sacude o se pone en riesgo." % keys.get("primary", "Clic izq."))
+		return _step(&"hold", _tr(String(HOLD_TITLES.get(kind, "HUD_CARE_TITLE_HOLD"))),
+			_tr("HUD_CARE_HOLD_DETAIL") % keys.get("primary", "Clic izq."))
+	return _step(&"idle", _tr("HUD_CARE_IDLE"), hint if not hint.is_empty()
+		else _tr("HUD_CARE_IDLE_DETAIL") % keys.get("primary", "Clic izq."))
+
+
+static func _tr(key: String) -> String:
+	return TranslationServer.translate(key)
 
 
 static func _step(step: StringName, title: String, detail: String) -> Dictionary:

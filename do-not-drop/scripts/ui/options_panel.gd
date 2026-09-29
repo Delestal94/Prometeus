@@ -27,6 +27,7 @@ var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
 var _controls_label: Label
+var _language_option: OptionButton
 var _binding_buttons: Dictionary = {}
 ## Every sound in the game, to mute one by one (sound_check_panel.gd).
 var _sound_check: Control
@@ -38,6 +39,7 @@ func _ready() -> void:
 	_build()
 	hide()
 	GameSettings.input_device_changed.connect(_on_input_device_changed)
+	GameSettings.language_changed.connect(_on_language_changed)
 
 
 func _build() -> void:
@@ -69,6 +71,20 @@ func _build() -> void:
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(480, 0), 30)
 	column.add_theme_constant_override("separation", 16)
 	UiTheme.title(column, tr("UI_OPTIONS"), 36)
+	var language_row := HBoxContainer.new()
+	language_row.add_theme_constant_override("separation", 12)
+	column.add_child(language_row)
+	UiTheme.label(language_row, tr("UI_OPT_LANGUAGE"), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_language_option = OptionButton.new()
+	_language_option.name = "LanguageOption"
+	_language_option.add_item(tr("UI_LANGUAGE_SPANISH"))
+	_language_option.add_item(tr("UI_LANGUAGE_ENGLISH"))
+	_language_option.select(GameSettings.SUPPORTED_LANGUAGES.find(GameSettings.language))
+	_language_option.custom_minimum_size = Vector2(170, 40)
+	language_row.add_child(_language_option)
+	UiTheme.register_font_size(_language_option, 16)
+	_language_option.item_selected.connect(func(index: int) -> void:
+		GameSettings.set_language(GameSettings.SUPPORTED_LANGUAGES[index]))
 
 	_volume_slider = UiTheme.slider_row(column, tr("UI_OPT_MASTER_VOLUME"), 0.0, 1.0, 0.05, GameSettings.master_volume)
 	_volume_slider.value_changed.connect(func(value: float) -> void: GameSettings.master_volume = value)
@@ -85,7 +101,7 @@ func _build() -> void:
 	_fov_slider.value_changed.connect(func(value: float) -> void: GameSettings.preferred_fov = value)
 	_shake_slider = UiTheme.slider_row(column, tr("UI_OPT_SHAKE"), 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
 	_shake_slider.value_changed.connect(func(value: float) -> void: GameSettings.camera_shake_scale = value)
-	_impact_effects_check = UiTheme.check_box(column, "Efectos de impacto", GameSettings.impact_effects)
+	_impact_effects_check = UiTheme.check_box(column, tr("UI_OPT_IMPACT_EFFECTS"), GameSettings.impact_effects)
 	_impact_effects_check.toggled.connect(func(pressed: bool) -> void: GameSettings.impact_effects = pressed)
 
 	_sensitivity_slider = UiTheme.slider_row(column, tr("UI_OPT_SENSITIVITY"), 0.2, 3.0, 0.05, GameSettings.look_sensitivity)
@@ -147,7 +163,7 @@ func _build() -> void:
 		GameSettings.graphics_quality = int(value)
 		name_quality.call(value))
 
-	UiTheme.tag(column, "CONTROLES", UiTheme.MINT, -1.5, 15)
+	UiTheme.tag(column, tr("UI_OPT_CONTROLS_TITLE"), UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
 	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")]]:
@@ -189,6 +205,24 @@ func _refresh_controls() -> void:
 
 func _on_input_device_changed(_gamepad: bool) -> void:
 	_refresh_controls()
+
+
+func _on_language_changed(_locale: String) -> void:
+	_rebuild_for_language.call_deferred()
+
+
+func _rebuild_for_language() -> void:
+	var was_visible: bool = visible
+	for child: Node in get_children():
+		remove_child(child)
+		child.queue_free()
+	_binding_buttons.clear()
+	_sound_check = null
+	_listening_action = &""
+	_build()
+	visible = was_visible
+	if was_visible:
+		_language_option.grab_focus.call_deferred()
 
 
 func _listen_for_key(action: StringName) -> void:
@@ -244,6 +278,7 @@ func _sync_from_settings() -> void:
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
 	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)
 	_quality_slider.value_changed.emit(GameSettings.graphics_quality)
+	_language_option.select(GameSettings.SUPPORTED_LANGUAGES.find(GameSettings.language))
 	for action: StringName in _binding_buttons:
 		(_binding_buttons[action] as Button).text = GameSettings.binding_label(action)
 
@@ -259,6 +294,7 @@ func open() -> void:
 	_sync_from_settings()
 	_refresh_controls()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	# The first control, not the first Button: CheckBox counts as a Button,
 	# so that used to land a gamepad player below both sliders.
 	_volume_slider.grab_focus()
@@ -267,5 +303,6 @@ func open() -> void:
 func close() -> void:
 	if _sound_check != null and _sound_check.visible:
 		_sound_check.call(&"close")
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()

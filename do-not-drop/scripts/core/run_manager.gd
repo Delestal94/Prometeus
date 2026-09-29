@@ -528,19 +528,19 @@ func _resolve_deliveries() -> Dictionary:
 			continue
 		counts[StringName(entry["outcome"])] = int(counts.get(StringName(entry["outcome"]), 0)) + 1
 	var breakdown: Array = []
-	_add_line(breakdown, "Entregas perfectas", int(counts.get(&"delivered_ok", 0)), POINTS_DELIVERED_INTACT)
-	_add_line(breakdown, "Entregas abolladas", int(counts.get(&"delivered_at_risk", 0)), POINTS_DELIVERED_AT_RISK)
-	_add_line(breakdown, "Entregas arruinadas", int(counts.get(&"delivered_ruined", 0)), POINTS_DELIVERED_RUINED)
-	_add_line(breakdown, "Reparaciones convincentes", int(rescued.get(&"repaired", 0)), POINTS_DELIVERED_REPAIRED)
-	_add_line(breakdown, "Arreglos poco convincentes", int(rescued.get(&"unconvincing", 0)),
+	_add_line(breakdown, "HUD_SCORE_PERFECT", int(counts.get(&"delivered_ok", 0)), POINTS_DELIVERED_INTACT)
+	_add_line(breakdown, "HUD_SCORE_DENTED", int(counts.get(&"delivered_at_risk", 0)), POINTS_DELIVERED_AT_RISK)
+	_add_line(breakdown, "HUD_SCORE_RUINED", int(counts.get(&"delivered_ruined", 0)), POINTS_DELIVERED_RUINED)
+	_add_line(breakdown, "HUD_SCORE_REPAIRED", int(rescued.get(&"repaired", 0)), POINTS_DELIVERED_REPAIRED)
+	_add_line(breakdown, "HUD_SCORE_UNCONVINCING", int(rescued.get(&"unconvincing", 0)),
 			POINTS_DELIVERED_UNCONVINCING)
-	_add_line(breakdown, "Sustitutos descubiertos", int(rescued.get(&"substituted", 0)), POINTS_DELIVERED_SUBSTITUTED)
-	_add_line(breakdown, "Plazos cumplidos", int(tally["met"]), POINTS_DEADLINE_MET)
-	_add_line(breakdown, "Plazos vencidos", int(tally["missed"]), -PENALTY_DEADLINE_MISSED)
-	_add_line(breakdown, "Fotos de entrega", photos, POINTS_PHOTO_BONUS)
-	_add_line(breakdown, "Vecinos sin su paquete", missed, -PENALTY_MISSED_HOUSE)
-	_add_line(breakdown, "Paquetes perdidos en la ruta", lost, -PENALTY_MISSED_HOUSE)
-	_add_line(breakdown, "Reclamos sin foto", unanswered, -COMPLAINT_PENALTY)
+	_add_line(breakdown, "HUD_SCORE_SUBSTITUTED", int(rescued.get(&"substituted", 0)), POINTS_DELIVERED_SUBSTITUTED)
+	_add_line(breakdown, "HUD_SCORE_DEADLINE_MET", int(tally["met"]), POINTS_DEADLINE_MET)
+	_add_line(breakdown, "HUD_SCORE_DEADLINE_MISSED", int(tally["missed"]), -PENALTY_DEADLINE_MISSED)
+	_add_line(breakdown, "HUD_SCORE_PHOTOS", photos, POINTS_PHOTO_BONUS)
+	_add_line(breakdown, "HUD_SCORE_MISSED", missed, -PENALTY_MISSED_HOUSE)
+	_add_line(breakdown, "HUD_SCORE_LOST", lost, -PENALTY_MISSED_HOUSE)
+	_add_line(breakdown, "HUD_SCORE_COMPLAINTS", unanswered, -COMPLAINT_PENALTY)
 	return {
 		"breakdown": breakdown,
 		"delivery_points": points,
@@ -556,7 +556,7 @@ func _resolve_deliveries() -> Dictionary:
 ## filed against a delivery that has one is dismissed on the spot.
 func _add_line(breakdown: Array, label: String, count: int, each: int) -> void:
 	if count > 0:
-		breakdown.append({"label": "%s (%d)" % [label, count], "points": count * each})
+		breakdown.append({"label": label, "count": count, "points": count * each})
 
 
 func _complaint(entry: Dictionary, has_photo: bool) -> Dictionary:
@@ -732,7 +732,7 @@ func send_session_state(peer_id: int) -> void:
 	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
 		var id: StringName = package.get(&"package_id")
 		if cargo.has(id):
-			names[id] = String(package.get(&"trap_definition").get(&"display_name"))
+			names[id] = String(package.get(&"trap_definition").call(&"localized_name"))
 	var door_open: bool = true
 	var scene: Node = get_tree().current_scene
 	var depot: Node = scene.get(&"depot") as Node if scene != null else null
@@ -939,7 +939,7 @@ func _on_package_ruined(id: StringName, cause: String) -> void:
 	if kind == &"noisy" and care_supply_count(&"substitute") > 0:
 		return
 	if aboard > 0 and _count_ruined() >= aboard:
-		finish_run(false, "Se arruinó toda la carga. No queda nada que entregar.")
+		finish_run(false, tr("HUD_RUN_ALL_CARGO_RUINED"))
 
 
 func _count_in_trouble() -> int:

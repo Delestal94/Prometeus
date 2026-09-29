@@ -72,8 +72,8 @@ func care_action() -> StringName:
 
 func get_hint() -> String:
 	if get_state() == TrapState.RUINED:
-		return "La criatura escapó."
-	return "CALMÁ (mantené)" if command_calm else "NO TOCAR (soltá)"
+		return tr("HUD_HINT_HOSTILE_RUINED")
+	return tr("HUD_HINT_HOSTILE_CALM") if command_calm else tr("HUD_HINT_HOSTILE_DONT_TOUCH")
 
 func _sync_integrity() -> void:
 	integrity = integrity_max * (1.0 - aggression / integrity_max)

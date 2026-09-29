@@ -30,12 +30,14 @@ func get_prompt() -> String:
 		return ""
 	if _package.has_method(&"assist_available") and bool(_package.call(&"assist_available")):
 		return String(_package.call(&"assist_prompt"))
-	var action: String = "Bajar paquete" if bool(_package.get("is_loaded")) else "Agarrar paquete"
+	var action: String = tr("HUD_PROMPT_UNLOAD_PACKAGE") if bool(_package.get("is_loaded")) \
+		else tr("HUD_PROMPT_PICK_UP_PACKAGE")
 	# In the depot every box carries its bin code (depot.gd), which is what
 	# the order board asks for: say which one this is.
 	if _package.has_meta(&"dispatch_code"):
 		var trap: Resource = _package.get(&"trap_definition")
-		return "%s %s  ·  %s" % [action, String(_package.get_meta(&"dispatch_code")), String(trap.get(&"display_name")) if trap != null else ""]
+		var trap_name: String = String(trap.call(&"localized_name")) if trap != null else ""
+		return "%s %s  ·  %s" % [action, String(_package.get_meta(&"dispatch_code")), trap_name]
 	return action
 
 

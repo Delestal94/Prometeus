@@ -145,7 +145,7 @@ func _check_deadlines() -> void:
 	_expect(int(tally["met"]) == 1 and int(tally["missed"]) == 2, "On time counts, late and undelivered don't")
 	var doors: Dictionary = run._resolve_deliveries()
 	var labels: String = str(doors["breakdown"])
-	_expect(labels.contains("Plazos cumplidos") and labels.contains("Plazos vencidos"),
+	_expect(labels.contains("HUD_SCORE_DEADLINE_MET") and labels.contains("HUD_SCORE_DEADLINE_MISSED"),
 		"Deadlines show in the breakdown")
 	run.reset_run()
 	_expect(run.deadlines.is_empty(), "A new run starts without deadlines")
@@ -168,7 +168,7 @@ func _check_supplies_and_scoring() -> void:
 		"A convincing repair and a toy hen are paid by what the door saw")
 	_expect((doors["complaints"] as Array).is_empty(), "...without a random complaint")
 	var labels: String = str(doors["breakdown"])
-	_expect(labels.contains("Reparaciones convincentes") and labels.contains("Sustitutos"),
+	_expect(labels.contains("HUD_SCORE_REPAIRED") and labels.contains("HUD_SCORE_SUBSTITUTED"),
 		"Both show in the breakdown")
 	var stories: String = str(run.rescue_stories())
 	_expect(stories.contains("Jarrón") and stories.contains("juguete"), "The results tell the rescues")
