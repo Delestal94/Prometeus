@@ -53,7 +53,7 @@ func publish_lid_hint(package: DeliveryPackage) -> void:
 	var inside: String = ""
 	if package != null:
 		if not package.contents_spilled:
-			action = "Cerrar caja" if package.is_open else "Abrir caja"
+			action = tr("HUD_PROMPT_CLOSE_BOX") if package.is_open else tr("HUD_PROMPT_OPEN_BOX")
 		var view: Node = package.get_node_or_null(^"PackageContentsView")
 		if view != null:
 			inside = str(view.call(&"describe"))

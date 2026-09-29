@@ -171,18 +171,19 @@ func refresh_card() -> void:
 
 
 func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
-	toast(tr("HUD_UNLOCKED") % title)
+	toast(tr("HUD_UNLOCKED") % title, 20, UiTheme.UI_SOUNDS.UNLOCK)
 
 
-func toast(text: String, priority: int = 20) -> void:
+func toast(text: String, priority: int = 20, cue: StringName = UiTheme.UI_SOUNDS.TOAST) -> void:
 	_notice_serial += 1
 	set_notice(&"information", StringName("toast_%d" % _notice_serial), text, priority, Hud.MINT, PING_DISPLAY_SECONDS)
 	hud.toast_seconds_left = PING_DISPLAY_SECONDS
+	UiTheme.UI_SOUNDS.play(self, cue)
 
 
 func _on_route_event_started(event_id: StringName, event: Dictionary) -> void:
 	if bool(event.get("incident", false)):
-		toast("%s — %s" % [event.get("title", tr("HUD_INCIDENT")), event.get("prompt", "")])
+		toast("%s — %s" % [_event_text(event, "title", "HUD_INCIDENT"), _event_text(event, "prompt")])
 		return
 	hud.route_event_active_id = event_id
 	_on_route_event_updated(event_id, event)
@@ -192,18 +193,25 @@ func _on_route_event_started(event_id: StringName, event: Dictionary) -> void:
 func _on_route_event_updated(event_id: StringName, event: Dictionary) -> void:
 	if bool(event.get("incident", false)):
 		return
-	var objective: String = String(event.get("prompt", ""))
+	var objective: String = _event_text(event, "prompt")
 	if event_id == &"inspection" and int(event.get("loose", 0)) > 0:
 		objective = tr("HUD_BOXES_TO_SECURE") % int(event["loose"])
 	elif event_id == &"mixed_labels" and event.get("phase") == &"swapped":
 		objective = "%s  ?" % objective
 	var seconds: int = ceili(float(event.get("remaining", 0.0)))
-	var title: String = event.get("title", tr("HUD_EVENT"))
+	var title: String = _event_text(event, "title", "HUD_EVENT")
 	set_notice(&"critical", &"route_event",
 			"%s\n%s\n%02d:%02d" % [title, objective, seconds / 60, seconds % 60], 80, Hud.YELLOW)
 	if event_id in [&"mixed_labels", &"mimetic_package"]:
 		for id: StringName in hud.cargo_rows:
 			hud.cargo.refresh_row(id)
+
+
+func _event_text(event: Dictionary, field: String, fallback: String = "") -> String:
+	var key: String = String(event.get(field, fallback))
+	var text: String = tr(key)
+	var args: Array = event.get(field + "_args", [])
+	return text % args if not args.is_empty() else text
 
 
 func _on_route_event_resolved(event_id: StringName, success: bool, _peer_id: int) -> void:

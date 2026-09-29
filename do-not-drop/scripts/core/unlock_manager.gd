@@ -19,15 +19,15 @@ const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
 const UNLOCKS := {
-	&"growing_weight_trap": {"title": "Carga de peso creciente", "deliveries": 1, "score": 0},
-	&"noisy_trap": {"title": "Carga ruidosa", "deliveries": 2, "score": 100},
-	&"liquid_trap": {"title": "Carga líquida", "deliveries": 4, "score": 250},
-	&"explosive_trap": {"title": "Carga explosiva", "deliveries": 8, "score": 750},
-	&"hostile_trap": {"title": "Carga hostil", "deliveries": 13, "score": 1500},
-	&"violet_paint": {"title": "Pintura violeta", "deliveries": 5, "score": 450},
-	&"coral_uniform": {"title": "Uniforme coral", "deliveries": 2, "score": 150},
-	&"sky_uniform": {"title": "Uniforme cielo", "deliveries": 9, "score": 1000},
-	&"agile_van": {"title": "Furgoneta ágil", "deliveries": 4, "score": 350},
+	&"growing_weight_trap": {"title": "UI_UNLOCK_GROWING_WEIGHT", "deliveries": 1, "score": 0},
+	&"noisy_trap": {"title": "UI_UNLOCK_NOISY", "deliveries": 2, "score": 100},
+	&"liquid_trap": {"title": "UI_UNLOCK_LIQUID", "deliveries": 4, "score": 250},
+	&"explosive_trap": {"title": "UI_UNLOCK_EXPLOSIVE", "deliveries": 8, "score": 750},
+	&"hostile_trap": {"title": "UI_UNLOCK_HOSTILE", "deliveries": 13, "score": 1500},
+	&"violet_paint": {"title": "UI_UNLOCK_VIOLET_PAINT", "deliveries": 5, "score": 450},
+	&"coral_uniform": {"title": "UI_UNLOCK_CORAL_UNIFORM", "deliveries": 2, "score": 150},
+	&"sky_uniform": {"title": "UI_UNLOCK_SKY_UNIFORM", "deliveries": 9, "score": 1000},
+	&"agile_van": {"title": "UI_UNLOCK_AGILE_VAN", "deliveries": 4, "score": 350},
 }
 
 ## Which trap each unlock above puts on the depot's shelves (by the trap's
@@ -48,19 +48,19 @@ const MAX_DELIVERY_HOUSES := 4
 ## The truck the host brings to the route (vehicle.gd VARIANTS) and its paint
 ## (vehicle.gd PAINTS). Same unlock rules as everything else here.
 const TRUCKS := {
-	&"classic": {"title": "Furgón clásico", "detail": "estable", "unlock": &"starter_kit"},
-	&"agile": {"title": "Furgoneta ágil", "detail": "rápida y nerviosa", "unlock": &"agile_van"},
+	&"classic": {"title": "UI_TRUCK_CLASSIC", "detail": "UI_TRUCK_STABLE", "unlock": &"starter_kit"},
+	&"agile": {"title": "UI_TRUCK_AGILE", "detail": "UI_TRUCK_NERVOUS", "unlock": &"agile_van"},
 }
 const PAINTS := {
-	&"white": {"title": "Blanco de fábrica", "color": Color("dde2e8"), "unlock": &"starter_kit"},
-	&"violet": {"title": "Pintura violeta", "color": Color("7b52b9"), "unlock": &"violet_paint"},
+	&"white": {"title": "UI_PAINT_FACTORY_WHITE", "color": Color("dde2e8"), "unlock": &"starter_kit"},
+	&"violet": {"title": "UI_PAINT_VIOLET", "color": Color("7b52b9"), "unlock": &"violet_paint"},
 }
 
 const COSMETICS := {
-	&"team_color": {"title": "Color de equipo (automático)", "color": Color("f4c562"), "unlock": &"starter_kit", "auto": true},
-	&"mint_uniform": {"title": "Uniforme menta", "color": Color("83e2ba"), "unlock": &"starter_kit"},
-	&"coral_uniform": {"title": "Uniforme coral", "color": Color("f47e6d"), "unlock": &"coral_uniform"},
-	&"sky_uniform": {"title": "Uniforme cielo", "color": Color("6db3d6"), "unlock": &"sky_uniform"},
+	&"team_color": {"title": "UI_UNIFORM_TEAM", "color": Color("f4c562"), "unlock": &"starter_kit", "auto": true},
+	&"mint_uniform": {"title": "UI_UNIFORM_MINT", "color": Color("83e2ba"), "unlock": &"starter_kit"},
+	&"coral_uniform": {"title": "UI_UNIFORM_CORAL", "color": Color("f47e6d"), "unlock": &"coral_uniform"},
+	&"sky_uniform": {"title": "UI_UNIFORM_SKY", "color": Color("6db3d6"), "unlock": &"sky_uniform"},
 }
 
 var storage_path: String = SAVE_PATH
@@ -288,7 +288,7 @@ func record_run(score: int, results: Dictionary) -> Array[StringName]:
 	save_profile()
 	progress_changed.emit()
 	for unlock_id: StringName in newly_unlocked:
-		var title: String = str(UNLOCKS[unlock_id]["title"])
+		var title: String = tr(str(UNLOCKS[unlock_id]["title"]))
 		unlock_earned.emit(unlock_id, title)
 		var event_bus := _event_bus()
 		if event_bus != null:

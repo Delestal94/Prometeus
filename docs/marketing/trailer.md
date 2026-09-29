@@ -53,4 +53,3 @@ hace a la carga. El tráiler alterna **cabina tranquila** con **caja de carga en
 | Lluvia en el parabrisas y limpiaparabrisas (plano 9) | N-303 |
 | Porche encendido y casa que espera entrega (plano 11) | N-501 |
 | Reacción del vecino en la puerta (plano 11) | N-604 |
-| Logo en imagen para el cierre | `docs/inventario-assets.md` (logo 🟡) |

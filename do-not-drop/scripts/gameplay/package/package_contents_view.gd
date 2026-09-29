@@ -111,9 +111,10 @@ func describe() -> String:
 	var content: Resource = _package.call(&"content_definition") if _package.has_method(&"content_definition") else null
 	if content == null or not _open:
 		return ""
+	var content_name: String = String(content.call(&"localized_name"))
 	if _spilled:
-		return "Vacía: se cayó %s" % String(content.get(&"display_name")).to_lower()
-	return "%s (%s)" % [content.get(&"display_name"), content.call(&"condition_text", _state)]
+		return tr("HUD_CONTENT_EMPTY") % content_name.to_lower()
+	return "%s (%s)" % [content_name, content.call(&"condition_text", _state)]
 
 
 func _on_lid_changed(id: StringName, open: bool) -> void:

@@ -16,6 +16,8 @@ extends RefCounted
 ## A RefCounted with static members on purpose: nothing here has state worth
 ## a node in the tree. Fonts and the Theme are built once and cached.
 
+const UI_SOUNDS = preload("res://scripts/ui/ui_sounds.gd")
+
 # --- Palette ----------------------------------------------------------------
 ## Names kept from the old dark theme so every caller still compiles; the
 ## roles moved: panels are cream now, so text on them is INK.
@@ -49,8 +51,6 @@ const SHADOW: int = 6
 ## Hover lifts a button off its shadow by this much: the press sinks it,
 ## so the hover should do the opposite for the button to feel physical.
 const HOVER_LIFT: int = 2
-## The scanner beep every button plays when pressed (SynthAudio).
-const CLICK_DB: float = -14.0
 const BUTTON_HEIGHT: int = 50
 
 const DISPLAY_FONT_PATH: String = "res://assets/fonts/LilitaOne-Regular.ttf"
@@ -246,52 +246,6 @@ static func chip(parent: Node, text: String, color: Color = WHITE, font_size: in
 	return node
 
 
-## The game's logo, built from type so it scales and localises: "TAKE MY"
-## over "PACKAGE" on a strip of yellow tape, both slightly off-kilter.
-static func logo(parent: Node, size: int = 64) -> VBoxContainer:
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", -int(size * 0.18))
-	parent.add_child(column)
-	var top_holder := MarginContainer.new()
-	_add_tilted(column, top_holder, -3.0)
-	_logo_line(top_holder, "TAKE MY", size, PAPER)
-	var tape := PanelContainer.new()
-	tape.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var style := StyleBoxFlat.new()
-	style.bg_color = YELLOW
-	style.border_color = INK
-	style.set_border_width_all(OUTLINE)
-	style.set_corner_radius_all(6)
-	style.shadow_color = INK
-	style.shadow_size = 1
-	style.shadow_offset = Vector2(0, SHADOW)
-	style.content_margin_left = int(size * 0.22)
-	style.content_margin_right = int(size * 0.22)
-	style.content_margin_top = int(size * 0.02)
-	style.content_margin_bottom = int(size * 0.06)
-	tape.add_theme_stylebox_override("panel", style)
-	_add_tilted(column, tape, -2.0)
-	_logo_line(tape, "PACKAGE", int(size * 1.1), INK, false)
-	return column
-
-
-static func _logo_line(parent: Node, text: String, size: int, color: Color, outlined: bool = true) -> Label:
-	var node := Label.new()
-	node.text = text
-	node.add_theme_font_override("font", display_font())
-	register_font_size(node, size, &"font_size", parent)
-	node.add_theme_color_override("font_color", color)
-	if outlined:
-		node.add_theme_color_override("font_outline_color", INK)
-		node.add_theme_constant_override("outline_size", maxi(8, size / 6))
-		node.add_theme_color_override("font_shadow_color", INK)
-		node.add_theme_constant_override("shadow_offset_x", 0)
-		node.add_theme_constant_override("shadow_offset_y", maxi(4, size / 12))
-		node.add_theme_constant_override("shadow_outline_size", maxi(8, size / 6))
-	parent.add_child(node)
-	return node
-
-
 ## Adds `child` to `parent` rotated by `degrees` around its own centre.
 ## Containers reset a child's rotation every time they lay it out, so the
 ## tilted piece sits inside a plain Control that only reserves its space (and
@@ -318,8 +272,8 @@ static func _add_tilted(parent: Node, child: Control, degrees: float) -> void:
 # --- Buttons & inputs -------------------------------------------------------
 
 ## Chunky sticker buttons. `primary` is mint; the rest are white. Hover
-## lifts the button off its shadow, pressing sinks it onto it (with a
-## scanner beep); focus (gamepad) gets a sky ring.
+## lifts the button off its shadow, pressing sinks it onto it; hover and
+## press both have UI sounds, while focus (gamepad) gets a sky ring.
 static func button(parent: Node, text: String, primary: bool = false, minimum_size: Vector2 = Vector2(0, BUTTON_HEIGHT), color: Color = Color.TRANSPARENT) -> Button:
 	var node := Button.new()
 	node.text = text
@@ -357,26 +311,9 @@ static func button(parent: Node, text: String, primary: bool = false, minimum_si
 	for state: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		node.add_theme_color_override(state, INK)
 	node.add_theme_color_override("font_disabled_color", Color(INK, 0.4))
-	node.pressed.connect(_play_click.bind(node))
+	UI_SOUNDS.bind_button(node)
 	parent.add_child(node)
 	return node
-
-
-## One shared player on the root rather than one per button, so the beep
-## also outlives a press that changes the scene (Jugar, Salir al menú).
-static func _play_click(from: Node) -> void:
-	if not from.is_inside_tree():
-		return
-	var root: Window = from.get_tree().root
-	var player := root.get_node_or_null(^"UiClick") as AudioStreamPlayer
-	if player == null:
-		player = AudioStreamPlayer.new()
-		player.name = "UiClick"
-		player.stream = SynthAudio.scanner_beep()
-		player.bus = &"SFX"
-		player.volume_db = CLICK_DB
-		root.add_child(player)
-	player.play()
 
 
 static func _button_style(fill: Color, shadow: int) -> StyleBoxFlat:
@@ -579,16 +516,20 @@ static func keycaps(line: String, on_dark: bool = false) -> String:
 
 ## Trap display name (as the HUD receives it) -> its icon, if there is one.
 static func trap_icon(display_name: String) -> Texture2D:
-	var ids: Dictionary = {
-		"FRÁGIL": "fragile",
-		"EQUILIBRIO": "balance",
-		"PESO CRECIENTE": "growing_weight",
-		"RUIDOSO": "noisy",
-		"LÍQUIDO": "liquid",
-		"EXPLOSIVO": "explosive",
-		"HOSTIL": "hostile",
+	var keys: Dictionary = {
+		"HUD_TRAP_FRAGILE": "fragile",
+		"HUD_TRAP_BALANCE": "balance",
+		"HUD_TRAP_GROWING_WEIGHT": "growing_weight",
+		"HUD_TRAP_NOISY": "noisy",
+		"HUD_TRAP_LIQUID": "liquid",
+		"HUD_TRAP_EXPLOSIVE": "explosive",
+		"HUD_TRAP_HOSTILE": "hostile",
 	}
-	var id: String = ids.get(display_name.to_upper(), "")
+	var id: String = ""
+	for key: String in keys:
+		if TranslationServer.translate(key).to_upper() == display_name.to_upper():
+			id = keys[key]
+			break
 	if id.is_empty():
 		return null
 	return load("res://assets/ui/icons/tx_ui_trap_%s_256.png" % id)

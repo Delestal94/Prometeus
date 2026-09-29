@@ -150,8 +150,9 @@ borde, un radio (16 px), una escala tipográfica. Todas las pantallas lo toman d
 | CARDBOARD | `#e0a867` | El color de la caja (cinta "CARGA") |
 
 Tipografías (OFL, uso comercial libre, en `assets/fonts/`): **Lilita One** para títulos, números,
-botones y cintas; **Nunito** (variable, peso 700 por defecto) para el texto. El logo se arma con
-tipografía (`UiTheme.logo()`): "TAKE MY" sobre "PACKAGE" en cinta amarilla, todo algo torcido.
+botones y cintas; **Nunito** (variable, peso 700 por defecto) para el texto. El logo conserva ese
+sistema —"TAKE MY" crema sobre "PACKAGE" en cinta amarilla— en los PNG transparentes
+`assets/ui/logo/tx_ui_logo_{wordmark,stacked}_2048.png`.
 
 ### Escala tipográfica del HUD
 

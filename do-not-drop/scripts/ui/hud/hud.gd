@@ -19,6 +19,7 @@ const STATE_STATUS: Array[String] = ["HUD_STATE_OK", "HUD_STATE_AT_RISK", "HUD_S
 enum Role { ON_FOOT, DRIVER, PASSENGER }
 const SHORTCUT_VISIBLE_SECONDS: float = 60.0
 const RESTART_HOLD_SECONDS: float = 0.9
+const CAPTURE_MODE_SCRIPT: String = "res://scripts/tools/capture_mode.gd"
 ## The logical height the HUD is laid out for (project.godot's viewport).
 const BASE_HEIGHT: float = 720.0
 ## Safe margin from every screen edge, in HUD units (redesign 2026-09-28:
@@ -121,6 +122,12 @@ func _ready() -> void:
 	pause.name = "Pause"
 	pause.hud = self
 	add_child(pause)
+	# Store/trailer capture aid. Release builds never create it, so F10 keeps
+	# its platform/default meaning outside development.
+	if OS.is_debug_build() and ResourceLoader.exists(CAPTURE_MODE_SCRIPT):
+		var capture_mode: Node = load(CAPTURE_MODE_SCRIPT).new()
+		capture_mode.name = "CaptureMode"
+		add_child(capture_mode)
 	var level: Node = get_parent()
 	is_endless = level != null and &"distance_traveled" in level
 	local_merit_total = int(CrewProgression.merit.get(NetworkManager.local_id(), 0))

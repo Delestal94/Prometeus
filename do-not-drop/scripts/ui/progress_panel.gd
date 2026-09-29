@@ -3,15 +3,15 @@ class_name ProgressPanel
 
 signal closed
 const UNLOCK_REWARDS := {
-	&"growing_weight_trap": {"text": "Nueva trampa: Peso creciente", "trap": "PESO CRECIENTE", "glyph": "▣"},
-	&"noisy_trap": {"text": "Nueva trampa: Ruidoso", "trap": "RUIDOSO", "glyph": "♫"},
-	&"liquid_trap": {"text": "Nueva trampa: Líquido", "glyph": "◒"},
-	&"explosive_trap": {"text": "Nueva trampa: Explosivo", "glyph": "✦"},
-	&"hostile_trap": {"text": "Nueva trampa: Hostil", "glyph": "◆"},
-	&"violet_paint": {"text": "Nueva pintura: Violeta", "glyph": "●", "color": Color("7b52b9")},
-	&"coral_uniform": {"text": "Nuevo uniforme: Coral", "glyph": "●", "color": Color("f47e6d")},
-	&"sky_uniform": {"text": "Nuevo uniforme: Cielo", "glyph": "●", "color": Color("6db3d6")},
-	&"agile_van": {"text": "Nuevo vehículo: Furgoneta ágil", "glyph": "▰"},
+	&"growing_weight_trap": {"text": "UI_REWARD_GROWING_WEIGHT", "trap": "PESO CRECIENTE", "glyph": "▣"},
+	&"noisy_trap": {"text": "UI_REWARD_NOISY", "trap": "RUIDOSO", "glyph": "♫"},
+	&"liquid_trap": {"text": "UI_REWARD_LIQUID", "glyph": "◒"},
+	&"explosive_trap": {"text": "UI_REWARD_EXPLOSIVE", "glyph": "✦"},
+	&"hostile_trap": {"text": "UI_REWARD_HOSTILE", "glyph": "◆"},
+	&"violet_paint": {"text": "UI_REWARD_VIOLET_PAINT", "glyph": "●", "color": Color("7b52b9")},
+	&"coral_uniform": {"text": "UI_REWARD_CORAL_UNIFORM", "glyph": "●", "color": Color("f47e6d")},
+	&"sky_uniform": {"text": "UI_REWARD_SKY_UNIFORM", "glyph": "●", "color": Color("6db3d6")},
+	&"agile_van": {"text": "UI_REWARD_AGILE_VAN", "glyph": "▰"},
 }
 
 var _summary: Label
@@ -63,10 +63,12 @@ func open() -> void:
 	_reset_campaign_confirmation()
 	_refresh()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 	_new_campaign_button.grab_focus.call_deferred()
 
 func close() -> void:
 	_reset_campaign_confirmation()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
 
@@ -87,7 +89,7 @@ func _refresh() -> void:
 func _add_unlock_row(unlock_id: StringName, rule: Dictionary, got: bool, summary: Dictionary) -> void:
 	var panel := PanelContainer.new()
 	panel.name = "Unlock_%s" % unlock_id
-	panel.tooltip_text = tr("UI_PROG_UNLOCK_LINE") % ["✓" if got else "○", rule["title"], rule["deliveries"],
+	panel.tooltip_text = tr("UI_PROG_UNLOCK_LINE") % ["✓" if got else "○", tr(String(rule["title"])), rule["deliveries"],
 			rule["score"]]
 	panel.add_theme_stylebox_override("panel", UiTheme.surface_style(10, UiTheme.WHITE))
 	_list.add_child(panel)
@@ -114,13 +116,13 @@ func _add_unlock_row(unlock_id: StringName, rule: Dictionary, got: bool, summary
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 3)
 	row.add_child(content)
-	var title: Label = UiTheme.label(content, "%s  %s" % ["✓" if got else "○", String(rule["title"])], 18,
+	var title: Label = UiTheme.label(content, "%s  %s" % ["✓" if got else "○", tr(String(rule["title"]))], 18,
 			UiTheme.MINT if got else UiTheme.INK, true)
 	title.name = "Title"
-	var reward_label: Label = UiTheme.label(content, String(reward["text"]), 15, UiTheme.MUTED)
+	var reward_label: Label = UiTheme.label(content, tr(String(reward["text"])), 15, UiTheme.MUTED)
 	reward_label.name = "Reward"
-	_add_requirement_bar(content, "Entregas", int(summary["deliveries"]), int(rule["deliveries"]), got)
-	_add_requirement_bar(content, "Puntos", int(summary["score"]), int(rule["score"]), got)
+	_add_requirement_bar(content, tr("UI_DELIVERIES"), int(summary["deliveries"]), int(rule["deliveries"]), got)
+	_add_requirement_bar(content, tr("UI_POINTS"), int(summary["score"]), int(rule["score"]), got)
 
 
 func _add_requirement_bar(parent: VBoxContainer, label_text: String, current: int, target: int, got: bool) -> void:

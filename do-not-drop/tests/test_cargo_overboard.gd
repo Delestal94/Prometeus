@@ -139,7 +139,7 @@ func _run() -> void:
 	_expect(int(doors.get("houses_lost", 0)) == 1 and int(doors.get("houses_missed", 0)) == 0,
 		"The lost order is counted apart from missed doors (got %s)" % [doors])
 	var lines: Array = (doors["breakdown"] as Array).filter(func(line: Dictionary) -> bool:
-		return String(line["label"]).begins_with("Paquetes perdidos"))
+		return String(line["label"]) == "HUD_SCORE_LOST")
 	_expect(lines.size() == 1 and int(lines[0]["points"]) < 0, "The results list the lost box as a penalty")
 	manager.call(&"finish_run", true)
 	_expect(int((manager.get(&"results") as Dictionary).get("houses_lost", 0)) == 1,

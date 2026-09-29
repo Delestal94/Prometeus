@@ -122,7 +122,7 @@ los **gatillos** aceleran/frenan y el **botón sur** interactúa a pie o activa
 el freno de mano al conducir. Mirar desde el asiento no cambia la dirección
 del vehículo. La mirada se conserva después de las sacudidas de los impactos.
 
-**Opciones y salir**: el menú principal tiene **Opciones** (volumen,
+**Opciones y salir**: el menú principal tiene **Opciones** (idioma Español/English, volumen,
 sensibilidad de la mirada, efectos de impacto, invertir eje Y, pantalla completa — se guardan en
 `user://settings.cfg`) y **Salir**. Desde la pausa se llega a las mismas
 opciones y a **Menú**, que deja la sesión limpia antes de volver.
@@ -171,6 +171,17 @@ GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
 
 Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son
 parte de la batería (con Claude, los corre el agente `revisor-visual`).
+
+Para generar el lote fijo de Steam/tienda de S-902 (cinco PNG de 1920×1080 en
+`user://store_shots/`: depósito cargando, conducción con carga en riesgo, entrega,
+explosión y resultados):
+
+```
+<godot> --path do-not-drop --resolution 1920x1080 --script res://tests/render_store_shots.gd
+```
+
+En builds de depuración, **F10** activa o desactiva el modo captura: oculta todas
+las capas del HUD y cualquier viewmodel, y restaura su visibilidad al salir.
 
 El balance reproducible de trampas tampoco forma parte de la batería rápida. Primero
 `sim_record_drive.gd` maneja cinco rutas reales y guarda la aceleración, inclinación e impactos
@@ -229,8 +240,10 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_trap_visual_feedback.gd
 <godot> --headless --path do-not-drop --script res://tests/test_vehicle_audio.gd
 <godot> --headless --path do-not-drop --script res://tests/test_world_audio_levels.gd
+<godot> --headless --path do-not-drop --script res://tests/audio_loudness_report.gd
 <godot> --headless --path do-not-drop --script res://tests/test_contact_shadows.gd
 <godot> --headless --path do-not-drop --script res://tests/test_trap_audio.gd
+<godot> --headless --path do-not-drop --script res://tests/test_trap_contract.gd
 <godot> --headless --path do-not-drop --script res://tests/test_audio_polish.gd
 <godot> --headless --path do-not-drop --script res://tests/test_screen_fade.gd
 <godot> --headless --path do-not-drop --script res://tests/test_camera_polish.gd
@@ -666,6 +679,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   (motor, golpes, bocina, viento, pájaros, lluvia, cruce, perro, timbre, depósito...), lo mide en
   dBFS, le suma su nivel de `world_mix.gd` y exige quedar a ±2 dB del objetivo de su clase
   (`docs/audio-mundo.md`). `-- --report` imprime la tabla completa.
+- `audio_loudness_report` — genera los ocho sonidos de trampa y los ocho de interfaz, informa
+  RMS y pico en dBFS y verifica que su RMS final quede a ±2 dB de −18 y −24 respectivamente
+  (`docs/audio.md`).
 - `test_vehicle_audio` — el golpe suena más fuerte cuanto más fuerte es el
   impacto (y no suena si es lejano), y el chirrido de neumáticos sigue el
   patinaje real de las ruedas.
@@ -673,6 +689,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   Frágil (más grave si se arruina), gemido para Ruidoso que sube con la
   agitación, crujido para Peso Creciente que se reinicia al resolver el
   puzzle.
+- `test_trap_contract` — recorre todos los datos de trampas y contenidos: comportamiento e
+  integridad acotada durante 30 s simulados, aviso, ícono, contenido exclusivo, sonido de riesgo,
+  progresión y los cuatro estados visuales de cada modelo.
 - `test_trap_icons` — las siete definiciones de trampa resuelven a un ícono
   HUD propio, sin faltantes ni reutilización de un genérico.
 - `test_audio_polish` — pasada de pulido "cartoon cómico" (2026-09-27): el timbre ya

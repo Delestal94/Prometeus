@@ -19,6 +19,24 @@ se tocan archivos de Slatex (`hud_results.gd` ya muestra `results["stories"]`):
   una cincha", etc. Se traducen en el host (claves `WORLD_FAULT_STORY_*` en `strings_world.csv`), como
   el resto de los resultados que el host manda a los clientes.
 
+## Aviso activo: catálogo bilingüe de UI y jugabilidad (S-509, 2026-09-28)
+
+Slatex extrajo al catálogo `translations/strings_ui.csv` los textos restantes de
+sus tutoriales, progresión, paquetes, trampas, pings, eventos de ruta y pantallas
+de opciones/resultados. Los identificadores que viajan por red (pings y eventos)
+son ahora claves estables y cada cliente los traduce al mostrarlos.
+
+No se modificaron los textos del mundo de Nacho ni `strings_world.csv`.
+`GameSettings` reemplazó el español fijo de N-605 por una preferencia persistente
+`language`; Opciones permite elegir Español/English y aplica el catálogo de ambos
+integrantes mediante `TranslationServer`.
+
+Al integrarlo con main (Nacho, con Claude): las indicaciones rápidas de N-505 siguen viajando con su
+frase en español como id estable (`ping_catalog.gd` la traduce con su `key` y cuenta las sílabas de la
+voz sobre ella), así que las claves `HUD_PING_*` no se usan y `ping_catalog.gd` está en
+`ACCENTED_LOOKUP_FILES` de `test_ui_translations`. Los suministros y líneas de puntaje que sumó main
+(gancho, repuesto, plazos, rescates, paquetes perdidos) tienen claves nuevas.
+
 ## Aviso activo: red por Steam y bugs del playtest (2026-09-29)
 
 Lo hizo Nacho (con Claude). Toca archivos de Slatex y la zona compartida; **ninguna firma cambia**,
@@ -304,6 +322,32 @@ una iteración de lanzamiento. Marcadas ⏸ en las listas: **N-901** (Steamworks
 S-904, S-906, S-907** (página de Steam, modo captura, cápsulas, press kit, monetización, logros).
 Siguen activas S-905 (alimenta el onboarding S-506), S-306 (logo del menú), S-509 (inglés) y S-805.
 Slatex: si querés reabrir alguna de las tuyas antes, sacale la marca ⏸.
+
+## Aviso activo: cargas headless de helpers separados (2026-09-28)
+
+Slatex corrigió dos dependencias que fallaban únicamente al ejecutar pruebas
+aisladas con `--script`, antes de que Godot reconstruyera la caché global de clases:
+
+- **Zona compartida `presentation/synth_audio.gd`:** los generadores de
+  `synth_audio_scenes.gd` se cargan por ruta y de forma diferida. No cambia ninguna
+  función pública ni el audio generado; evita depender del nombre global nuevo
+  `SynthAudioScenes` durante el parseo inicial.
+- **Dominio de Slatex `player/player.gd`:** `player_ping_input.gd` también se carga
+  por ruta al crear el jugador, sin cambiar la API ni el comportamiento de pings.
+
+Verificado con `tutorial`, `audio_polish`, `world_audio_levels` y `ping`: 4/4 verdes.
+
+## Aviso activo: inventario y dirección visual sincronizados (S-309, 2026-09-28)
+
+Slatex auditó sus filas de jugador, paquetes y UI contra el juego actual. Solo cambió
+documentación compartida, no assets ni código de Nacho:
+
+- `especificaciones-visuales.md` ya reconoce el personaje redondeado, sus ocho clips, el IK
+  al cargar y conducir, las cuatro siluetas y diez contenidos de paquetes y el audio de las
+  siete trampas. Las manos flotantes figuran como retiradas por decisión del usuario.
+- `inventario-assets.md` §1-3 distingue el personaje actual del low-poly que conservan los
+  NPC, marca los guantes de viewmodel como no utilizables y deja explícito el bloqueo de
+  integración del celular tras retirar ese viewmodel.
 
 ## Aviso activo: PR #10 al día con main y con el lint (2026-09-28)
 

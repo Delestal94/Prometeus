@@ -28,11 +28,13 @@ func open(station_id: StringName, depot_node: Node) -> void:
 		_request_open_vote()
 	_rebuild()
 	show()
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)
 
 
 func close() -> void:
 	if not visible:
 		return
+	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	closed.emit()
@@ -55,6 +57,7 @@ func _ready() -> void:
 				_rebuild())
 		bus.connect(&"shop_vote_changed", func(_peer_id: int, _offer_id: StringName) -> void:
 			if visible and station == &"shop":
+				UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.VOTE)
 				_rebuild())
 		bus.connect(&"shop_resolved", _on_shop_resolved)
 		# Somebody else took the wheel: the depot is behind us now.
@@ -182,9 +185,10 @@ func _build_shop() -> void:
 		_body.add_child(row)
 		var have: bool = owned.has(supply_id)
 		var cost: int = int(item.cost)
-		var label: String = "%s%s  ·  $%d" % [tr("UI_DEPOT_VOTE_PREFIX") if voting else "", item.title, cost]
+		var item_title: String = tr(String(item.title))
+		var label: String = "%s%s  ·  $%d" % [tr("UI_DEPOT_VOTE_PREFIX") if voting else "", item_title, cost]
 		if have:
-			label = tr("UI_DEPOT_SUPPLY_READY") % item.title
+			label = tr("UI_DEPOT_SUPPLY_READY") % item_title
 		var enabled: bool = not have and money >= cost and (not voting or ShopVoteManager.active)
 		var button: Button = UiTheme.button(row, label, enabled, Vector2(0, 46))
 		button.disabled = not enabled
@@ -197,7 +201,7 @@ func _build_shop() -> void:
 					depot_node.call(&"buy_supply", supply_id))
 		if _first_focus == null and not button.disabled:
 			_first_focus = button
-		var detail: Label = UiTheme.label(row, String(item.detail), 15, UiTheme.MUTED)
+		var detail: Label = UiTheme.label(row, tr(String(item.detail)), 15, UiTheme.MUTED)
 		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		detail.custom_minimum_size.x = 560
 		if voting:
@@ -307,16 +311,19 @@ func _build_records() -> void:
 	for unlock_id: StringName in UnlockManager.UNLOCKS:
 		var rule: Dictionary = UnlockManager.requirements(unlock_id)
 		var got: bool = UnlockManager.is_unlocked(unlock_id)
-		UiTheme.label(_body, tr("UI_DEPOT_UNLOCK_LINE") % [tr("UI_DEPOT_UNLOCK_DONE") if got else tr("UI_DEPOT_UNLOCK_TODO"), rule.title, int(rule.deliveries), int(rule.score)], 17, UiTheme.MINT if got else UiTheme.MUTED)
+		UiTheme.label(_body, tr("UI_DEPOT_UNLOCK_LINE") % [
+			tr("UI_DEPOT_UNLOCK_DONE") if got else tr("UI_DEPOT_UNLOCK_TODO"),
+			tr(String(rule.title)), int(rule.deliveries), int(rule.score)], 17,
+			UiTheme.MINT if got else UiTheme.MUTED)
 
 
 func _choices(choices: Array[Dictionary], selected: StringName, select: Callable, enabled: bool) -> void:
 	for choice: Dictionary in choices:
 		var id: StringName = choice["id"]
 		var available: bool = bool(choice["available"])
-		var text: String = String(choice["title"])
+		var text: String = tr(String(choice["title"]))
 		if choice.has("detail"):
-			text += "  ·  " + String(choice["detail"])
+			text += "  ·  " + tr(String(choice["detail"]))
 		if not available:
 			var rule: Dictionary = UnlockManager.requirements(StringName(choice["unlock"]))
 			text += tr("UI_DEPOT_LOCKED_SUFFIX") % [int(rule.get("deliveries", 0)), int(rule.get("score", 0))]

@@ -61,12 +61,12 @@ func get_state() -> int:
 
 func get_hint() -> String:
 	if get_state() == TrapState.RUINED:
-		return "Se volcó."
+		return tr("HUD_HINT_BALANCE_RUINED")
 	if tilt_degrees > _angle_at_risk_max:
-		return "¡Se está volcando! Mantené para enderezar."
+		return tr("HUD_HINT_BALANCE_DANGER")
 	if tilt_degrees > _angle_ok_max:
-		return "Inclinado %.0f° · mantené para enderezar." % tilt_degrees
-	return "Estable. Mantené para enderezar en las curvas."
+		return tr("HUD_HINT_BALANCE_TILTED") % tilt_degrees
+	return tr("HUD_HINT_BALANCE_OK")
 
 
 func _measure_tilt(package: Node) -> float:
