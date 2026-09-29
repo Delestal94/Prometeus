@@ -21,6 +21,18 @@ aisladas con `--script`, antes de que Godot reconstruyera la caché global de cl
 
 Verificado con `tutorial`, `audio_polish`, `world_audio_levels` y `ping`: 4/4 verdes.
 
+## Aviso activo: inventario y dirección visual sincronizados (S-309, 2026-09-28)
+
+Slatex auditó sus filas de jugador, paquetes y UI contra el juego actual. Solo cambió
+documentación compartida, no assets ni código de Nacho:
+
+- `especificaciones-visuales.md` ya reconoce el personaje redondeado, sus ocho clips, el IK
+  al cargar y conducir, las cuatro siluetas y diez contenidos de paquetes y el audio de las
+  siete trampas. Las manos flotantes figuran como retiradas por decisión del usuario.
+- `inventario-assets.md` §1-3 distingue el personaje actual del low-poly que conservan los
+  NPC, marca los guantes de viewmodel como no utilizables y deja explícito el bloqueo de
+  integración del celular tras retirar ese viewmodel.
+
 ## Aviso activo: PR #10 al día con main y con el lint (2026-09-28)
 
 Nacho integró main (con #8, el pulido cartoon) en `codex/s504-gamepad-navigation`

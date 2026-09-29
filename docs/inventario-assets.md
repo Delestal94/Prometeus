@@ -1,6 +1,6 @@
 # Inventario de assets — Take My Package
 
-> Última actualización: 2026-09-24 (N-307: baranda de puente, cables, autos, obras y guantes verificados contra el código)
+> Última actualización: 2026-09-28 (S-309: UI, personajes y paquetes verificados contra el código)
 > Es **la lista** de assets del juego: qué existe, qué falta integrar y qué falta crear.
 > Cuando se crea o se integra algo, se actualiza acá. Complementa
 > `docs/especificaciones-visuales.md` (qué mejorar visualmente) y
@@ -50,9 +50,10 @@
 
 | Asset | Archivo | Estado | Notas |
 |---|---|---|---|
-| Jugador low-poly con 5 animaciones | `models/characters/sm_char_player_lowpoly.glb` | ✅ | |
-| Guantes del viewmodel (izq./der.) | `models/characters/sm_char_viewmodel_glove_{left,right}.glb` | ✅ | Espec. #20. Origen en la muñeca, dedos a +Z. La manga usa el material `PlayerTint` para teñirla por jugador. Los carga `player.gd` (`_build_viewmodel_gloves`). |
-| Celular en la mano | `models/props/handheld/sm_prop_phone.glb` | 🟡 | Pantalla hacia −Z en Godot, lente atrás. Para `phone_camera.gd`, que todavía no lo carga. Es de los más simples (92 triángulos) y se ve en primer plano: rehacerlo antes de integrarlo (sección 10). |
+| Jugador cartoon redondeado con rig y 8 clips | `models/characters/sm_char_player_rounded.glb` | ✅ | Cuerpo actual del jugador y del maniquí de cosméticos. Clips `Idle`, `Walk`, `Stroll`, `TurnInPlace`, `Jump`, `PickUpPackage`, `PickUpHigh` y `Sit`; IK de brazos para cargar cajas y conducir. La camiseta toma el color del equipo. Espec. #19, #29, #30, #32, #82 y #95. |
+| Jugador low-poly anterior | `models/characters/sm_char_player_lowpoly.glb` | ✅ | Sigue en uso solo para NPC del depósito y vecinos; no volver a usarlo como cuerpo del jugador. |
+| Guantes del viewmodel (izq./der.) | `models/characters/sm_char_viewmodel_glove_{left,right}.glb` | ⛔ | Assets conservados pero retirados del juego por decisión del usuario (2026-09-24). No hay manos flotantes en primera persona; las manos visibles son las del cuerpo real. Espec. #20. |
+| Celular en la mano | `models/props/handheld/sm_prop_phone.glb` | 🟡 | Pantalla hacia −Z en Godot, lente atrás. `phone_camera.gd` todavía no lo carga y ya no existe un viewmodel donde colgarlo: S-304 debe resolverlo con el cuerpo real o como overlay de UI. Rehacer el modelo antes de integrarlo (sección 10). |
 | Accesorios/cosméticos (gorras, chalecos) | — | ⬜ | Fase 5 (progresión). |
 
 ## 3. Paquetes (dominio Slatex)
@@ -200,9 +201,9 @@ jugador 1.568 triángulos están bien para el estilo.
    `tests/test_route_dressing_assets.gd`, capturas con `tests/render_route_dressing.gd`.
 2. ~~Refinar casas, árboles, señales y mobiliario; texturas sutiles; nubes pintadas~~ **Hecho
    (2026-09-23)**.
-3. **Avisar a Slatex** de lo 🟡 de su dominio (guantes, celular, cajas por trampa, íconos de
-   trampa): los assets ya están, solo falta enchufarlos.
-4. **Crear los ⬜ de mayor impacto:** el logo (lo necesitan menú, splash y Steam), los íconos
-   de acción del HUD y el timbre.
+3. **Resolver el celular de Slatex:** el modelo está creado, pero debe rehacerse y S-304 tiene
+   que integrarlo sin recuperar el viewmodel de manos flotantes.
+4. **Crear los ⬜ de mayor impacto:** el logo como imagen (lo necesitan splash y Steam), el
+   fondo de resultados y el marco del celular.
 5. **Modelado (sección 10):** primero N-128 (conos y barrera de obras, solo código), después
    el tren y el paso a nivel (N-129/N-130), el celular (S-104) y los autos (N-136).

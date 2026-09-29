@@ -1,6 +1,6 @@
 # 100 especificaciones visuales a mejorar — Take My Package
 
-> Última actualización: 2026-09-23
+> Última actualización: 2026-09-28 (S-309: jugador, paquetes y UI auditados contra el juego)
 > Complementa `docs/direccion-visual.md` (que define *cómo se ve y por qué*) con una
 > lista concreta y numerada de *qué falta*, para poder decir "hagamos el 47" sin
 > ambigüedad. Escrito leyendo el estado real del proyecto hoy, no como checklist
@@ -9,17 +9,12 @@
 
 ## Cómo leer esta lista
 
-**Estado de partida (verificado hoy):** toda la geometría del juego está generada en
-código con primitivas (cajas, cápsulas, cilindros, un toroide y un casco convexo para
-los badenes). No hay ni un solo asset de arte importado. **No hay ninguna animación en
-todo el proyecto** — ni `AnimationPlayer`, ni `AnimationTree`, ni un solo `Tween`. El
-único sonido que existe es la bocina, y está sintetizada en código. Las ruedas del
-vehículo nunca rotan visualmente y el volante tampoco: la física de dirección funciona
-(`steering` en `vehicle.gd`), pero ninguna malla la refleja.
-
-Eso no es un defecto del trabajo hecho, es exactamente dónde debería estar un prototipo
-que priorizó validar sistemas antes que arte (ver `docs/plan-desarrollo.md`). Esta lista
-es el mapa de lo que viene después.
+**Estado actual (verificado hoy):** el juego combina geometría procedural con modelos
+low-poly importados para el jugador, los paquetes, la ruta y sus props. El personaje
+redondeado tiene animación de locomoción, salto, recogida y asiento, además de IK para
+cargar cajas y conducir. Los paquetes tienen cuatro siluetas, diez contenidos y feedback
+visual/sonoro por trampa. Esta lista conserva el diagnóstico histórico en las filas ya
+cerradas y describe solamente como pendiente lo que todavía falta en el juego.
 
 **Prioridades:**
 
@@ -55,18 +50,18 @@ dónde empezar, es por ahí.
 | 14 | Pedales: ausentes. Se ven al mirar hacia abajo desde el asiento del conductor. | **C** |
 | 15 | Asientos con apoyacabezas y estructura; hoy son dos cajas (almohadón + respaldo). | **B** |
 | 16 | Cinturones de seguridad — venden "estoy atado a esto" en un juego que trata de sacudidas. | **C** |
-| 17 | **Paquete con identidad por trampa.** Hoy las cuatro trampas son la misma caja con distinto color y texto. Frágil debería leerse frágil (símbolos de copa rota), Ruidoso tener agujeros de ventilación, Equilibrio ser alto y angosto, Peso Creciente ser bajo y macizo. Es la mecánica central: tiene que reconocerse de un vistazo. | **B** |
-| 18 | Detalle de cartón en los paquetes: solapas, cinta, etiquetas, abolladuras. | **B** |
-| 19 | **Modelo humanoide para el jugador.** Hoy es una cápsula. Sin cabeza, torso, brazos ni piernas, no hay a quién mirar ni a quién animar. | **B** |
-| 20 | Manos del viewmodel con dedos y guantes (ver decisión de guantes en `docs/direccion-visual.md` §1). Hoy son dos cápsulas. | **B** |
+| 17 | ~~Paquete con identidad por trampa.~~ **[x] Hecho (2026-09-23).** Cuatro cajas abribles —cubo, ventilada, alta y plana— dan una silueta propia a las trampas base; los siete íconos de trampa y diez contenidos distintos completan la lectura. | **B** |
+| 18 | ~~Detalle de cartón en los paquetes.~~ **[x] Hecho (2026-09-23).** Los GLB incluyen solapas, cinta cortada en la unión, etiqueta de envío, logo, símbolos de manipulación, código de barras y sello inferior. | **B** |
+| 19 | ~~Modelo humanoide para el jugador.~~ **[x] Hecho (2026-09-24; refinado 2026-09-27).** `sm_char_player_rounded.glb` es el cuerpo cartoon redondeado de Astra, con rig, cara y camiseta teñida por equipo. | **B** |
+| 20 | ~~Manos flotantes del viewmodel.~~ **[x] Retirado por decisión del usuario (2026-09-24).** La cámara propia no dibuja guantes ni cápsulas independientes. Las manos visibles pertenecen al cuerpo real del personaje y usan IK al cargar o conducir; los GLB de guantes se conservan sin integrar. | **B** |
 
 ---
 
 ## 2. Animación (21-40)
 
-> Recordatorio: **no existe ninguna animación en el proyecto**. Todo lo de esta sección
-> parte de cero, pero varios ítems son código puro (rotar, interpolar, sacudir) y no
-> necesitan un animador ni un rig.
+> El personaje redondeado ya aporta ocho clips (`Idle`, `Walk`, `Stroll`,
+> `TurnInPlace`, `Jump`, `PickUpPackage`, `PickUpHigh` y `Sit`). Las filas abiertas de
+> esta sección son animaciones o reacciones adicionales, no ausencia de un pipeline base.
 
 | # | Especificación | Prio |
 |---|---|---|
@@ -78,11 +73,11 @@ dónde empezar, es por ahí.
 | 26 | ~~Ruidoso debería moverse solo.~~ **[x] Hecho (2026-09-21)** — `package_feedback.gd` sacude Box/correas/etiquetas con una fase distinta por paquete (para que dos Ruidosos juntos no tiemblen al unísono), proporcional a la agitación. Nunca toca el `RigidBody3D` real, así que no puede desincronizar física ni red. | **A** |
 | 27 | ~~Parpadeo de faros al recibir un impacto fuerte.~~ **[x] Hecho** — `VehiclePresentation._on_impact()` atenúa los faros un instante (`impact_flicker_seconds`) en golpes fuertes cerca del vehículo, nunca repetido. | **A** |
 | 28 | ~~Luces de freno que se encienden al frenar de verdad.~~ **[x] Hecho** — `presentation_braking` (replicado) sube la emisión de las luces traseras cuando `brake > 3.0` de verdad, no un valor fijo. | **A** |
-| 29 | Ciclo de caminata del jugador a pie. | **B** |
-| 30 | Idle con respiración — sin él, un personaje quieto se lee como muerto. | **B** |
+| 29 | ~~Ciclo de caminata del jugador a pie.~~ **[x] Hecho (2026-09-24; refinado 2026-09-25).** `Walk` y `Stroll` siguen la velocidad real; `TurnInPlace` evita que los pies giren clavados al mirar. | **B** |
+| 30 | ~~Idle con respiración.~~ **[x] Hecho (2026-09-24; refinado 2026-09-25).** El clip `Idle` de 6 s mantiene vivo al personaje quieto. | **B** |
 | 31 | Transición de sentarse: hoy abordar un asiento es un corte instantáneo de cámara. | **B** |
-| 32 | Manos del conductor siguiendo el volante con IK, en vez de estar fijas en el aire. | **B** |
-| 33 | Manos del pasajero agarrando físicamente su paquete mientras lo sostiene. | **B** |
+| 32 | ~~Manos del conductor siguiendo el volante con IK.~~ **[x] Hecho (2026-09-24).** Dos `SkeletonIK3D` resuelven continuamente brazo→mano contra puntos que giran con el volante; la bocina mueve la mano derecha real al centro. | **B** |
+| 33 | Las manos del pasajero sentado todavía no representan la acción de mantener/calmar/corregir su paquete. No reintroducir manos flotantes: el feedback futuro debe usar el cuerpo real. | **B** |
 | 34 | Animación de la acción de trampa (mantener/calmar/corregir) — hoy el input no tiene ninguna contraparte visual. | **B** |
 | 35 | Gesto de brazo al tocar bocina. | **C** |
 | 36 | Reacción de flinch/encogerse del personaje ante un golpe fuerte. | **B** |
@@ -99,7 +94,7 @@ dónde empezar, es por ahí.
 |---|---|---|
 | 41 | ~~Sonido de motor ligado a la velocidad.~~ **[x] Hecho (2026-09-21)** — `SynthAudio.engine_loop()` (armónicos sintetizados, sin asset) + `VehiclePresentation._update_engine()`: el pitch y volumen siguen velocidad y carga del motor en tiempo real. | **A** |
 | 42 | ~~Sonido de impacto al golpear algo, escalado por fuerza.~~ **[x] Hecho (2026-09-21)** — `SynthAudio.impact_thud()` (sintetizado, mezcla de golpe grave + ruido filtrado), volumen según la magnitud del golpe, mismo umbral y radio de distancia que ya usaba el parpadeo de faros. | **A** |
-| 43 | ~~Sonidos por trampa.~~ **[x] Hecho (2026-09-21)** — `package_feedback.gd`: Frágil tiene una campanita que suena al entrar en riesgo y una versión más grave al arruinarse; Ruidoso tiene un gemido grave en loop que sube de volumen/tono con la agitación; Peso Creciente tiene un crujido que se repite cada vez más seguido cuanto más cerca está de fallar. Los tres sintetizados en código (`synth_audio.gd`), sin assets. | **A** |
+| 43 | ~~Sonidos por trampa.~~ **[x] Hecho (2026-09-21; completado y balanceado 2026-09-28).** Las siete trampas tienen señales sintetizadas de riesgo/ruina o un loop reactivo propio. S-404 midió los 16 sonidos del dominio y dejó cada pico dentro de ±2 dB de su objetivo; detalle en `docs/audio.md`. | **A** |
 | 44 | ~~Chirrido de neumáticos al derrapar o frenar fuerte.~~ **[x] Hecho (2026-09-21)** — `VehiclePresentation` promedia el patinaje real de las 4 ruedas (`VehicleWheel3D.get_skidinfo()`, ya nativo, no hubo que calcular deslizamiento a mano) y lo usa para mezclar el volumen/tono de un loop de chirrido. | **A** |
 | 45 | ~~Ambiente exterior: viento, pájaros, ruido lejano de ruta.~~ **[x] Parcial (2026-09-21)** — viento sintetizado en loop (`SynthAudio.ambient_wind()`, ruido filtrado con un pasabajos de un polo), siempre presente vía `route.gd`. Pájaros y ruido lejano de ruta quedan pendientes; separar por bus interior/exterior también (#46, todavía no construido). | **A** |
 | 46 | ~~Reverb distinta dentro de la furgoneta vs. afuera.~~ **[x] Hecho (2026-09-21)** — buses "Interior" (`AudioEffectReverb` cerrado y húmedo) y "Exterior" (abierto y seco), `default_bus_layout.tres`. `VehiclePresentation` rutea motor/impacto/chirrido según si la cámara activa de cada cliente es un asiento propio de la furgoneta — cada cliente decide su propio ruteo, sin red. | **B** |
@@ -124,7 +119,7 @@ dónde empezar, es por ahí.
 
 | # | Especificación | Prio |
 |---|---|---|
-| 61 | ~~La cámara propia ve su propio cuerpo.~~ **[x] Hecho (2026-09-21)** — `render_layers.gd` separa capa `LOCAL_BODY` (excluida del `cull_mask` de la propia cámara) de `WORLD` (visible para las demás). Cada jugador deja de ver su propia cápsula; sigue viendo la de los demás. | **A** |
+| 61 | ~~La cámara propia ve su propio cuerpo.~~ **[x] Hecho (2026-09-21; actualizado al modelo redondeado 2026-09-24).** `render_layers.gd` separa `LOCAL_BODY` (excluido de la cámara propia) de `WORLD` (visible para las demás). Cada jugador deja de ver su propio cuerpo sin ocultárselo a los otros peers. | **A** |
 | 62 | ~~Transición al sentarse es un corte seco.~~ **[x] Hecho (2026-09-21), con otra técnica.** Interpolar la cámara no tenía sentido acá: son dos `Camera3D` distintas (la del jugador y la del asiento), no una sola que se mueve — Godot no mezcla entre cámaras. En cambio, `board_seat()` dispara un fundido a negro rápido (`EventBus.quick_fade_requested`, 0.2s) justo antes de cambiar de cámara, que tapa el corte en vez de suavizarlo. Mismo mecanismo que el #77. | **A** |
 | 63 | ~~Head bob al caminar a pie.~~ **[x] Hecho (2026-09-21)** — onda senoidal vertical sobre la cámara propia del jugador (`player.gd`), con fade in/out según velocidad real, no un interruptor. Como el paquete cargado sigue el punto de agarre de la cámara, también bobea con vos. | **A** |
 | 64 | ~~FOV distinto por contexto.~~ **[x] Hecho (2026-09-21)** — tres valores ahora: caminando 78° (`player.gd`), manejando 82° (`FirstPersonCamera.BASE_FOV`, más amplio, más conciencia espacial para maniobrar), cargando un paquete 70° (más cerrado, más "cuidado"). Transición suave, no un salto. | **A** |
@@ -152,7 +147,7 @@ dónde empezar, es por ahí.
 | # | Especificación | Prio |
 |---|---|---|
 | 81 | ~~Los jugadores sentados son invisibles.~~ **[x] Hecho (2026-09-21).** `board_seat()` ya no hace `visible = false`. En cambio, cada `Player` guarda `seat_node_path` (nueva propiedad replicada) y en `_process()` — en la copia de **cada** peer, no solo la del que se sentó — posiciona su `BodyVisual` en la pose del asiento cada frame. No se reparentó el nodo (habría roto la replicación de posición, que es local al padre actual); en cambio se dejó la posición/rotación real del `Player` sin tocar y solo se reposiciona la malla visual, que no es una propiedad de red. Cubierto por `tests/test_seated_body.gd`. | **A** |
-| 82 | El paquete sostenido flota frente a la cámara sin contacto con las manos; debería verse agarrado. | **B** |
+| 82 | ~~El paquete sostenido flota sin contacto con las manos.~~ **[x] Hecho (2026-09-24).** `carry_pose.gd` crea IK de ambos brazos contra las esquinas superiores de la caja real y adapta el contacto a sus dimensiones y al arco de levantamiento. | **B** |
 | 83 | Abolladuras o deformación progresiva del paquete según el daño acumulado — hoy solo cambia de color. | **B** |
 | 84 | Los paquetes deberían chocar entre sí de forma visible y encadenar caos (ya comparten capa de física). | **A** |
 | 85 | El cuerpo del jugador debería colisionar con el interior de la furgoneta, no atravesarlo. | **A** |
@@ -165,7 +160,7 @@ dónde empezar, es por ahí.
 | 92 | Un paquete suelto debería poder golpear a un jugador y empujarlo (con ragdoll, #37, es humor gratis). | **B** |
 | 93 | Traspaso de paquete entre jugadores mano a mano, sin pasar por el piso. | **C** |
 | 94 | ~~Indicación visual de asiento ocupado vs. libre.~~ **[x] Hecho (2026-09-21)** — una esfera emisiva por asiento (verde libre, roja ocupado, `seat_point.gd`), derivada del `seat_node_path` replicado de cada jugador (mismo dato que ya usa el #81) en vez de la variable `occupant`, que solo existe en la copia del host — así se ve igual en todos los clientes, no solo en el anfitrión. | **A** |
-| 95 | Las manos del conductor deberían ser visibles para los pasajeros — hoy nadie ve a nadie conducir. | **B** |
+| 95 | ~~Las manos del conductor deberían ser visibles para los pasajeros.~~ **[x] Hecho (2026-09-24).** El cuerpo redondeado permanece visible para los demás peers y sus manos reales siguen el volante mediante IK. | **B** |
 | 96 | ~~La furgoneta debería hundirse levemente según el peso total de la carga.~~ **[x] Hecho (2026-09-21)** — `VehiclePresentation` suma la masa real de todo lo cargado (grupo `cargo`, ya modificada en vivo por Peso Creciente) y hunde `BodyVisuals`, con tope para que una caja al máximo no hunda la furgoneta bajo el asfalto. | **A** |
 | 97 | Sombras de los personajes proyectadas dentro de la cabina, para que se sientan presentes en el espacio. | **B** |
 | 98 | ~~Resaltado del objeto interactuable al apuntarlo (outline).~~ **[x] Hecho (2026-09-21), con otra técnica — solo paquetes por ahora.** Un verdadero outline (casco invertido) necesita geometría extra por tipo de objeto; en cambio, `player.gd` llama `highlight(bool)` (duck-typed, `has_method`) sobre lo que esté mirando, y `package_pickup_point.gd` lo delega al `PackageFeedbackComponent` del paquete, que le suma un glow de emisión sin pelear con el color de estado que ya controla. Asientos y soportes de montaje no tienen todavía un `highlight()` propio — un soporte vacío no tiene qué brillar, y los asientos ya tienen el indicador del #94. | **A** |
