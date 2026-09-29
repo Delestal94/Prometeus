@@ -38,7 +38,7 @@ un shader en tiempo real saldría caro en Compatibility, y bajar texturas CC0 de
 - Nodos por `type`, nunca por nombre (Blender puede estar en español); enums leídos de `bl_rna`, no hardcodeados.
 - Verificá con `get_viewport_screenshot()` después de cada cambio.
 - Lo que Blender exporta al glTF es un `StandardMaterial3D` básico: todo lo que dependa de nodos procedurales hay que reimplementarlo en el `.gdshader` o hornearlo a textura. Decí explícitamente qué camino elegiste.
-- Texturas a `do-not-drop/assets/textures/`, con fuente y licencia anotadas en `do-not-drop/assets/README.md`. No modifiques modelos del camión ni `vehicle.tscn`: están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/colaboracion-equipo.md`.
+- Texturas a `do-not-drop/assets/textures/`, con fuente y licencia anotadas en `do-not-drop/assets/README.md`. No modifiques modelos del camión ni `vehicle.tscn`: están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/avisos/`.
 
 ## Texturas generadas (MCP `comfy-mcp`, ComfyUI local con Z-Image Turbo)
 

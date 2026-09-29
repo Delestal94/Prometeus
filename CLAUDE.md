@@ -18,7 +18,9 @@ sus logs son largos y gastan contexto.
 - La red de seguridad final es el hook `pre-push` (corre la batería completa) y CI en
   GitHub: no hace falta correr todo antes de cada commit.
 
-Los agentes están en `.claude/agents/` (versionados).
+Los agentes están en `.claude/agents/` (versionados). En la nube, el hook de arranque
+instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren con
+`xvfb-run` (render por software).
 
 ### Orquestación
 
@@ -32,15 +34,12 @@ Los agentes están en `.claude/agents/` (versionados).
   `modelador-blender` necesitan ComfyUI/Blender en la PC; `critico-diseno` y
   `empaquetador-release` son para sesiones en vivo (decisiones de diseño y builds,
   M5 en pausa). No hay revisión humana de PRs: los checks requeridos son la única
-  compuerta. El flujo de la rutina de
-  Nacho está en `.claude/rutinas/tareas-nacho.md`.
+  compuerta. El flujo de la rutina de Nacho está en `.claude/rutinas/tareas-nacho.md`.
 - `vehicle.tscn` / `vehicle.gd` están congelados desde el hito M6 (2026-09-28): lo nuevo
-  del camión va como componente aparte. La fuente es `docs/colaboracion-equipo.md`.
+  del camión va como componente aparte. Si se libera, lo dice un aviso en `docs/avisos/`.
 - Los dominios que usan hooks y agentes salen de `file_domain` en
   `.claude/hooks/lib.sh`; si cambia la tabla de `docs/colaboracion-equipo.md`,
-  actualizá las dos. En la nube, el hook de arranque
-instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren con
-`xvfb-run` (render por software).
+  actualizá las dos.
 
 ## Hooks de este repo (`.claude/settings.json`)
 
@@ -48,8 +47,9 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
   vuelve como feedback: arreglalo antes de correr tests.
 - No se editan a mano `*.uid`, `*.import`, `.godot/` ni `addons/godotsteam/` (el hook
   lo bloquea). Tocar un archivo del dominio del otro integrante está permitido sin
-  confirmación: el hook recuerda que el mismo commit lleve el aviso de qué cambió
-  (dueño según `TMP_DUENO=nacho|slatex` en `.claude/settings.local.json`, o el mail de git).
+  confirmación: el hook recuerda que el mismo commit lleve el aviso de qué cambió, un
+  archivo nuevo en `docs/avisos/` (dueño según `TMP_DUENO=nacho|slatex` en
+  `.claude/settings.local.json`, o el mail de git).
 
 ## Al terminar un cambio
 

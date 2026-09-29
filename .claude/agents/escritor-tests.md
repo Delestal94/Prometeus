@@ -13,7 +13,7 @@ ningún framework: cada test es un script `extends SceneTree` suelto.
 
 Leé primero `.claude/skills/nuevo-test/SKILL.md`: tiene la plantilla, las reglas (`_expect` +
 `push_error`, un único `print("PASS: ...")`, `quit(_failures)`, "needs a display" para SKIP, tope de
-120 s en CI) y cómo registrar el test en el README. Si este prompt y la skill no coinciden, gana la
+120 s en CI) y cómo describir el test en su encabezado. Si este prompt y la skill no coinciden, gana la
 skill. Lo que sigue son solo agregados.
 
 - **Nada de `assert()`**: si falla, el script se corta sin llegar a `quit()` y el test queda colgado

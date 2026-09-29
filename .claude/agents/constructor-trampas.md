@@ -37,5 +37,5 @@ es "un archivo de datos + un script de comportamiento", sin tocar el loop centra
 
 - Solo el host simula la trampa; los clientes reciben estado. No calcules daño en clientes.
 - La trampa reacciona al `context` que le pasa el paquete (aceleración, inclinación, impactos); si necesitás un dato nuevo del vehículo, agregalo al context en `package.gd` y no leas el vehículo directo desde la trampa.
-- Dominio: `traps/`, `package/` e `interaction/` son de Slatex. Si quien te invoca es Nacho (`bash -c '. .claude/hooks/lib.sh; current_owner'`), no frenes: listá al principio los archivos de Slatex que vas a tocar, para que el aviso en `docs/colaboracion-equipo.md` vaya en el mismo commit.
+- Dominio: `traps/`, `package/` e `interaction/` son de Slatex. Si quien te invoca es Nacho (`bash -c '. .claude/hooks/lib.sh; current_owner'`), no frenes: listá al principio los archivos de Slatex que vas a tocar, para que el aviso (archivo nuevo en `docs/avisos/`) vaya en el mismo commit.
 - Devolvé: resumen del diseño, archivos creados/modificados, resultado de los tests.

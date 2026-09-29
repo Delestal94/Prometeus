@@ -39,8 +39,8 @@ Antes de revisar, leé `docs/convenciones-godot.md` (sección 0 "Gotchas") y las
 - Nombres: snake_case archivos/funciones, PascalCase `class_name`, constantes UPPER_SNAKE.
 
 **Coordinación**
-- Si el diff toca `vehicle.tscn`/`vehicle.gd`, marcarlo como BUG de proceso: están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/colaboracion-equipo.md`.
-- Si toca archivos del dominio del otro integrante o la zona compartida (`file_domain` en `.claude/hooks/lib.sh`), el mismo commit tiene que traer su aviso en `docs/colaboracion-equipo.md`; si falta, marcarlo.
+- Si el diff toca `vehicle.tscn`/`vehicle.gd`, marcarlo como BUG de proceso: están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/avisos/`.
+- Si toca archivos del dominio del otro integrante o la zona compartida (`file_domain` en `.claude/hooks/lib.sh`), el mismo commit tiene que traer su aviso (archivo nuevo en `docs/avisos/`); si falta, marcarlo.
 
 **Textos y tests**
 - Texto que ve el jugador: `tr("CLAVE")` con la clave en `translations/strings_ui.csv` (UI) o `strings_world.csv` (mundo y resultados que traduce el host), columnas `keys,es,en`. Un string en español suelto en código de juego o UI es CONVENCIÓN (rompe el catálogo bilingüe de S-509/N-805).

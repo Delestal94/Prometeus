@@ -43,7 +43,7 @@ antes de trabajos pesados en Blender o de generar en Hyper3D/Hunyuan local.
 
 ## Límites
 
-- **No trabajes el camión/furgoneta**: el modelo de referencia ya está (`assets/models/truck_reference_lowpoly.glb`) y `vehicle.tscn`/`vehicle.gd` están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/colaboracion-equipo.md`. Si te lo piden, avisá y confirmá antes.
+- **No trabajes el camión/furgoneta**: el modelo de referencia ya está (`assets/models/truck_reference_lowpoly.glb`) y `vehicle.tscn`/`vehicle.gd` están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/avisos/`. Si te lo piden, avisá y confirmá antes.
 - Generación con IA (Hyper3D/Hunyuan3D) consume créditos: pedí confirmación antes de lanzar un job y reducí el resultado a low-poly real (decimate/retopo), no dejes mallas de 100k tris.
 
 Devolvé: ruta del `.glb`, tris, dimensiones, pivote, licencia/fuente, y una captura del viewport.

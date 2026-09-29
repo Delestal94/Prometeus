@@ -31,4 +31,4 @@ es un wrapper mínimo y la interfaz se construye en código.
 
 Corré `bash tools/run-tests.sh main_menu hud settings loading gamepad_focus` más los que cubran la pantalla tocada. Si agregás pantalla nueva, sumá un test siguiendo `.claude/skills/nuevo-test/SKILL.md`. Vos no podés lanzar otros agentes: si hace falta una captura, cerrá tu salida con "Recomiendo captura de <pantalla> con `revisor-visual`".
 
-Dominio: `scripts/ui/` es de Slatex. Si quien te invoca es Nacho (`bash -c '. .claude/hooks/lib.sh; current_owner'`), no frenes: listá al principio los archivos de Slatex que tocás, para que el aviso en `docs/colaboracion-equipo.md` vaya en el mismo commit.
+Dominio: `scripts/ui/` es de Slatex. Si quien te invoca es Nacho (`bash -c '. .claude/hooks/lib.sh; current_owner'`), no frenes: listá al principio los archivos de Slatex que tocás, para que el aviso (archivo nuevo en `docs/avisos/`) vaya en el mismo commit.
