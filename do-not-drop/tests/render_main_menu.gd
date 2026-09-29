@@ -17,6 +17,15 @@ func _run() -> void:
 	for i in range(10):
 		await process_frame
 	await _shot("render_main_menu.png")
+	# The frosted glass must follow the card when the window changes size: it
+	# used to stay at the card's old spot, a second card behind the real one.
+	root.size = root.size + Vector2i(260, 120)
+	for i in range(4):
+		await process_frame
+	if not _frost_matches_card(menu):
+		quit(1)
+		return
+	await _shot("render_main_menu_resized.png")
 	var unlocks: Node = root.get_node(^"UnlockManager")
 	unlocks.total_score = 225
 	unlocks.successful_deliveries = 3
@@ -47,3 +56,18 @@ func _shot(file_name: String) -> void:
 	var path: String = "user://" + file_name
 	root.get_texture().get_image().save_png(path)
 	print("Saved ", ProjectSettings.globalize_path(path))
+
+
+func _frost_matches_card(menu: Node) -> bool:
+	var frost := menu.get(&"_frost") as TextureRect
+	var card := menu.get(&"_card") as Control
+	if frost == null:
+		push_error("No frosted card was built.")
+		return false
+	var rect: Vector4 = (frost.material as ShaderMaterial).get_shader_parameter(&"card_rect")
+	var expected := Rect2(card.global_position - frost.global_position, card.size)
+	if Rect2(rect.x, rect.y, rect.z, rect.w).is_equal_approx(expected):
+		print("Frost follows the card after a resize.")
+		return true
+	push_error("Frost mask %s, card at %s" % [rect, expected])
+	return false
