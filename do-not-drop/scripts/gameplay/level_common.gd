@@ -80,6 +80,7 @@ func _ready() -> void:
 	# Truck faults (N-214): every peer tracks them, the host rolls them.
 	var faults: Node = VEHICLE_FAULTS.new()
 	faults.name = "VehicleFaults"
+	faults.set(&"vehicle", vehicle)
 	add_child(faults)
 	# The rescue hook (N-213.3) hangs by the rear doors on every peer, stowed
 	# until a run takes it from the depot's supplies.

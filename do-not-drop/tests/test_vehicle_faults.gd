@@ -8,6 +8,11 @@ extends SceneTree
 ##   hit (deterministic by seed);
 ## - at most max_faults_per_run per delivery, and run_started resets it;
 ## - repair() relays vehicle_fault_repaired and every peer's list clears it.
+## N-214.2: the effects, on a stand-in van:
+## - a broken rear door swings open on the hit and again on every bump after
+##   the crew closes it; soft knocks under door_pop_strength don't;
+## - a broken mirror hides the driver's-side (-X) mirror parts only, leaves a
+##   piece on the road, and a repair puts them back.
 
 ## Loaded at run time: the script uses the EventBus autoload, which a
 ## SceneTree test can't resolve while it compiles.
@@ -77,9 +82,70 @@ func _run() -> void:
 	_expect(seen_any, "A 50% chance does break something across a few seeds")
 
 	faults.queue_free()
+	await process_frame
+	await _check_effects(bus, faults_script)
 	if _failures == 0:
-		print("PASS: truck faults break on hard hits only, one per delivery, repeat by seed and repair on every peer")
+		print("PASS: truck faults break on hard hits only, one per delivery, repeat by seed, repair on every peer, and show on the van")
 	quit(_failures)
+
+
+## N-214.2 on a stand-in van: the door that won't stay shut and the mirror.
+func _check_effects(bus: Node, faults_script: Script) -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var van := FakeVan.new()
+	world.add_child(van)
+	var parts: Dictionary = {}
+	for part_name: String in ["MirrorHousing_Left", "MirrorSurface_Left", "MirrorHousing_Right", "MirrorSurface_Right"]:
+		var part := MeshInstance3D.new()
+		part.name = part_name
+		part.mesh = BoxMesh.new()
+		part.position = Vector3(-1.3 if part_name.ends_with("Left") else 1.3, 2.0, -2.5)
+		van.add_child(part)
+		parts[part_name] = part
+	var faults: Node = faults_script.new()
+	faults.set(&"vehicle", van)
+	world.add_child(faults)
+	await process_frame
+
+	# Rear door: open on the hit, and again on a bump once the crew closes it.
+	bus.relay(&"vehicle_fault_started", [&"rear_door", Vector3.ZERO])
+	_expect(van.rear_open, "The broken rear door swings open on the hit")
+	van.rear_open = false
+	bus.relay(&"vehicle_impact", [3.5, Vector3.ZERO])
+	_expect(not van.rear_open, "A knock under door_pop_strength leaves it shut")
+	bus.relay(&"vehicle_impact", [5.0, Vector3.ZERO])
+	_expect(van.rear_open, "A bump swings the broken door open again")
+	_expect(int(faults.get(&"door_pops")) == 2, "Two pops counted (got %d)" % int(faults.get(&"door_pops")))
+	faults.call(&"repair", &"rear_door", &"kit")
+	van.rear_open = false
+	bus.relay(&"vehicle_impact", [6.0, Vector3.ZERO])
+	_expect(not van.rear_open, "A repaired door stays shut on bumps")
+
+	# Mirror: the driver's side (-X) breaks off, a piece lands on the road, repair restores it.
+	var before: int = world.get_child_count()
+	bus.relay(&"vehicle_fault_started", [&"mirror", Vector3.ZERO])
+	_expect(not parts["MirrorHousing_Left"].visible and not parts["MirrorSurface_Left"].visible,
+			"The driver's-side mirror is gone")
+	_expect(parts["MirrorHousing_Right"].visible and parts["MirrorSurface_Right"].visible,
+			"The passenger-side mirror stays")
+	_expect(world.get_child_count() == before + 2, "The broken-off pieces are left in the world")
+	faults.call(&"repair", &"mirror", &"shop")
+	_expect(parts["MirrorHousing_Left"].visible and parts["MirrorSurface_Left"].visible,
+			"A repair puts the mirror back")
+	world.queue_free()
+	await process_frame
+
+
+## Stands in for vehicle.gd's door API (the only part of the van faults touch).
+class FakeVan extends Node3D:
+	var rear_open: bool = false
+
+	func is_door_open(door: StringName) -> bool:
+		return rear_open if door == &"rear" else false
+
+	func set_rear_cargo_open(open: bool) -> void:
+		rear_open = open
 
 
 ## Ten hard hits on a fresh run with world_seed: [hit index, fault] of what broke.

@@ -13,8 +13,11 @@ class_name VehicleFaults
 ##
 ## critico-diseno's verdict (N-704.3) caps the first version at two faults
 ## (the rear door that swings open and the fallen mirror), one per delivery,
-## none of them ending the run. Their visible effects and the fixes are
-## N-214.2 and N-214.3.
+## none of them ending the run. N-214.2 gives them their effect: the rear
+## door won't stay latched (the host swings it open on the hit and again on
+## every bump while it's broken, and the crew has to keep closing it), and
+## the driver's mirror breaks off (VehicleFaultEffects, on every peer). The
+## fixes are N-214.3.
 
 ## Every fault this version can roll, in roll order.
 const FAULTS: Array[StringName] = [&"rear_door", &"mirror"]
@@ -29,11 +32,22 @@ var hard_hit_strength: float = 9.0
 ## Chance that a hard hit breaks something, while under the cap.
 var fault_chance: float = 0.5
 var max_faults_per_run: int = 1
+## While the rear door is broken, a bump this hard knocks its latch open
+## again: a badén or a curb does it, not just a crash. Above the 3.0 floor
+## vehicle.gd reports impacts from, so the lightest knocks don't.
+var door_pop_strength: float = 4.5
+
+## The van whose parts break. LevelCommon sets it before adding the node;
+## null (the rolls-only test) leaves just the list.
+var vehicle: Node3D
 
 ## Every peer: fault_id -> true while it's broken.
 var active: Dictionary = {}
 ## Host-only: faults decided since the run started (repaired ones count too).
 var faults_this_run: int = 0
+## Host-only: times the broken rear door swung open by itself this run.
+var door_pops: int = 0
+var effects: VehicleFaultEffects
 var _rng := RandomNumberGenerator.new()
 
 
@@ -42,6 +56,10 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.vehicle_fault_started.connect(_on_fault_started)
 	EventBus.vehicle_fault_repaired.connect(_on_fault_repaired)
+	effects = VehicleFaultEffects.new()
+	effects.name = "Effects"
+	effects.vehicle = vehicle
+	add_child(effects)
 	reset_for_run()
 
 
@@ -49,6 +67,7 @@ func _ready() -> void:
 func reset_for_run() -> void:
 	active.clear()
 	faults_this_run = 0
+	door_pops = 0
 	_rng.seed = hash([NetworkManager.world_seed, SEED_SALT])
 
 
@@ -70,7 +89,11 @@ func _on_run_started(_route_id: StringName, _players: Array) -> void:
 
 
 func _on_vehicle_impact(strength: float, impact_position: Vector3) -> void:
-	if not NetworkManager.is_host() or strength < hard_hit_strength:
+	if not NetworkManager.is_host():
+		return
+	if active.has(&"rear_door") and strength >= door_pop_strength:
+		_pop_rear_door()
+	if strength < hard_hit_strength:
 		return
 	if faults_this_run >= max_faults_per_run:
 		return
@@ -91,6 +114,19 @@ func _on_vehicle_impact(strength: float, impact_position: Vector3) -> void:
 
 func _on_fault_started(fault_id: StringName, _impact_position: Vector3) -> void:
 	active[fault_id] = true
+	if fault_id == &"rear_door" and NetworkManager.is_host():
+		_pop_rear_door()
+
+
+## Host-only: the broken latch lets go. The van's synchronizer carries the
+## open door to every peer, and with it the N-213 overboard risk.
+func _pop_rear_door() -> void:
+	if vehicle == null or not vehicle.has_method(&"set_rear_cargo_open"):
+		return
+	if bool(vehicle.call(&"is_door_open", &"rear")):
+		return
+	vehicle.call(&"set_rear_cargo_open", true)
+	door_pops += 1
 
 
 func _on_fault_repaired(fault_id: StringName, _method: StringName) -> void:
