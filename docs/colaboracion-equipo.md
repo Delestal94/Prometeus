@@ -7,6 +7,23 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: red por Steam y bugs del playtest (2026-09-29)
+
+Lo hizo Nacho (con Claude). Toca archivos de Slatex y la zona compartida; **ninguna firma cambia**,
+solo se agrega. Slatex: `git pull` antes de seguir con paquete, jugador o menú.
+- `package/package.tscn` (Slatex): `care_state` ahora es `ON_CHANGE` (antes `ALWAYS`) y el
+  `MultiplayerSynchronizer` tiene `replication_interval = 0.0167`. Regla nueva, la cuida
+  `test_net_bandwidth_budget`: nada de diccionarios ni textos en `ALWAYS` (máximo 64 bytes por
+  propiedad) y ningún synchronizer con intervalo 0.
+- `player/player.tscn` (Slatex): `replication_interval = 0.0167`.
+- `package/package.gd` (Slatex): nuevo `predict_carry(pose, in_vehicle)`; `_process` del cliente
+  usa la pose predicha mientras llegue cada tick (`PREDICTION_FRAMES`).
+- `player/player_carry.gd` (Slatex): llama a `predict_carry` junto a `submit_carry_transform`, y
+  solo toca `_package_focus` si existe.
+- `player/player.gd` (Slatex): `_package_focus` queda en `null` en GL Compatibility.
+- `ui/main_menu.gd` (Slatex): `_fit_frost` conectado con `CONNECT_DEFERRED`.
+- `core/network_manager.gd` (zona compartida): `no_nagle = true` en los peers de Steam.
+
 ## Aviso activo: N-214.3b celular como espejo y averías para quien se une tarde (2026-09-29)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-214-phone-mirror`. Solo agrega; **ninguna firma pública cambia**
