@@ -30,7 +30,9 @@ Los agentes están en `.claude/agents/` (versionados).
 - En una rutina en la nube sirven `ejecutor-tests`, `cazador-bugs`, `revisor-visual`,
   `guardian-dominios`, `auditor-red` y `documentador`. Los artistas y
   `modelador-blender` necesitan ComfyUI/Blender en la PC; `critico-diseno` y
-  `empaquetador-release` necesitan a alguien que decida. El flujo de la rutina de
+  `empaquetador-release` son para sesiones en vivo (decisiones de diseño y builds,
+  M5 en pausa). No hay revisión humana de PRs: los checks requeridos son la única
+  compuerta. El flujo de la rutina de
   Nacho está en `.claude/rutinas/tareas-nacho.md`.
 - `vehicle.tscn` / `vehicle.gd` están congelados desde el hito M6 (2026-09-28): lo nuevo
   del camión va como componente aparte. La fuente es `docs/colaboracion-equipo.md`.

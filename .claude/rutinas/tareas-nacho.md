@@ -25,11 +25,15 @@ hook de arranque deja Godot en `~/godot` y `GODOT` definido.
 - **PR rojo** (un check requerido falló): arreglarlo es la tarea de esta corrida. Leé el log del check
   que falló (`gh run view <id> --log-failed`, solo las líneas de error), reproducí con `ejecutor-tests`
   y el filtro del test, y si la causa no es obvia pasalo por `cazador-bugs`. Máximo 3 intentos por PR
-  (contá los commits `fix:` que sumó la rutina); al tercero, etiqueta `necesita-revision-humana` (si no
-  existe: `gh label create necesita-revision-humana --color D93F0B`), un
-  comentario con lo que se probó, y seguí con otra cosa.
-- **3 PRs `nacho/` abiertos** (sin contar los que tienen `necesita-revision-humana`): no abras otro.
-  Terminá la corrida.
+  (contá los commits `fix:` que sumó la rutina).
+- **No hay revisión humana, nunca** (decisión del usuario): nada de etiquetas "para revisar", pedidos
+  de aprobación ni esperar a que alguien mire. Si el tercer intento tampoco pone el PR en verde:
+  cerralo con `gh pr close <n> --comment "<diagnóstico: qué falla, qué se probó, qué dijo cazador-bugs>"`
+  (la rama queda en origin), marcá la tarea en `docs/tareas-nacho.md` como
+  `⚠ Bloqueada (AAAA-MM-DD): <motivo en una línea>, PR #n cerrado` en un PR chico de docs, y seguí
+  con otra tarea. Una corrida futura la retoma desde cero solo si cambió algo que la destrabe (otra
+  tarea mergeada, un arreglo en main).
+- **3 PRs `nacho/` abiertos**: no abras otro. Terminá la corrida.
 
 ## 2. Elegir la tarea
 
