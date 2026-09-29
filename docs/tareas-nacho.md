@@ -175,10 +175,106 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313, N-314, N-223, N-315, N-224, N-225, N-316, N-706 |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
 ---
+
+## M8 — Auditoría 2026-09-29
+
+Pedido del usuario: arreglar todo lo que marcó la auditoría (`docs/auditorias/2026-09-29.md`), salvo
+revisión humana de PRs (no se quiere: la puerta son los checks y un agente revisor). Varias tocan
+archivos de Slatex: aviso en `colaboracion-equipo.md` en el mismo PR, como siempre.
+
+### N-705 · Puertas automáticas y repo limpio — A · `Opus 5.5 · medium` · Aviso: no
+- [x] Lint obligatorio en la protección de `main` (el #39 entró en rojo) y `test_proximity_voice` en verde.
+- [x] Auto-merge solo para ramas del repo (nunca forks); agente revisor que comenta cada PR
+  (`agent-review.yml`, necesita el secreto `CLAUDE_CODE_OAUTH_TOKEN`). PR #40.
+- [ ] **Manual (Nacho):** borrar los 7 worktrees extra, las ramas ya integradas y el stash (respaldo de lo
+  útil en `../Prometeus-stash-backup/`). Todo está en `main`; se verificó rama por rama.
+- [ ] **Manual (Nacho + Slatex):** purgar `builds/` del historial (`git filter-repo --path builds
+  --invert-paths`), force-push con la protección abierta un momento, y que todos vuelvan a clonar.
+  `.git` baja de ~474 MB. Después, actualizar los hashes citados en los docs con el `commit-map`.
+- [ ] Cargar el secreto: `claude setup-token` y `gh secret set CLAUDE_CODE_OAUTH_TOKEN`.
+
+### N-117 · Una acción propia por trampa, en el mundo y no en la tarjeta — A · `Opus 5.5 · xhigh` · Aviso: sí (trampas, `player_seat_pose.gd`, `player_cargo_care.gd`, HUD de Slatex)
+Hoy las 7 trampas son 3 acciones: Frágil no deja hacer nada ("Nothing the passenger does protects
+it"), Equilibrio/Ruidoso/Líquido/Hostil son el mismo botón mantenido (`player_seat_pose.gd:26`,
+`{"steady": holding, "calm": holding}`) y Explosivo/Peso creciente son flechas. El playtest del
+2026-09-28 ya lo dijo: "se leía como una tarea que nunca termina". Hecho cuando cada trampa pide un
+gesto distinto, que se ve en el mundo (brazos, cuerpo, caja) y no solo en la tarjeta del HUD, y ningún
+pasajero es espectador.
+- [ ] **N-117.1** Diseño: una acción por trampa, pasada por `critico-diseno`, en
+  `docs/jugabilidad-paquetes-rescate.md`. Punto de partida: Frágil = amortiguar (bajar la caja al
+  regazo/levantarla justo antes del bache que avisa el conductor); Equilibrio = compensar con el mouse
+  hacia el lado contrario de la inclinación; Líquido = inclinar la caja para llevar el derrame a la
+  esquina del trapo; Ruidoso = sacudir/mecer con ritmo; Hostil = tapar la jaula con la mano solo cuando
+  mira, soltar cuando se enoja; Explosivo y Peso creciente se quedan con secuencias, pero distintas
+  (cables por color vs. atar cinchas).
+- [ ] **N-117.2** Frágil y Equilibrio con su acción nueva + tests (`constructor-trampas`).
+- [ ] **N-117.3** Líquido, Ruidoso y Hostil.
+- [ ] **N-117.4** Explosivo y Peso creciente diferenciados; la tarjeta del HUD pasa a ser guía, no el juego.
+
+### N-805 · Todo texto visible pasa por `tr()`, y el test lo ve — A · `Opus 5.5 · high` · Aviso: sí (`package_care.gd`, `hud_results.gd`)
+- [ ] `test_ui_translations` recorre también `scripts/gameplay` y `scripts/core` (lista de excepciones
+  explícita). Hoy solo mira `scripts/ui` y queda verde con 24 literales en español en `package_care.gd`.
+- [ ] `package_care.gd` a claves `HUD_CARE_*`; `network_manager._fail()` y los `reason` de
+  `level_base.gd` pasan a claves (`hud_results` ya hace `tr(reason)`). Continúa N-211 fase 7b.
+
+### N-118 · Endless también puntúa la carga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`)
+`run_manager.gd:692` ("never subtracted"): el modo de los récords ignora el núcleo del juego. Hecho
+cuando el puntaje es distancia + bonus por caja intacta al final (y cero por perdida), la tabla de
+Endless se renombra para no mezclar récords viejos, y un test reconstruye la fórmula.
+
+### N-119 · Jugar solo no es la ruta más vacía — A · `Opus 5.5 · high` · Aviso: no
+`route_planner.gd:233`: solo = 1 casa y 1400 m. Hecho cuando solo hay al menos 2 paradas dentro del
+presupuesto de 2-5 min (`test_route_duration_budget` verde) y un test lo fija.
+
+### N-222 · Si el host se va, la partida termina con resultados — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `hud_results.gd`)
+`network_manager.gd:600` tira un error y se pierde todo. Migrar el host es caro; lo mínimo: el cliente
+ve la pantalla de resultados con lo entregado hasta ese momento ("El anfitrión se fue") en vez del
+error, y el test de red de tres lo cubre. Migración de host: después del lanzamiento.
+
+### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`)
+Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20,56-62`). Hecho cuando
+el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el modelo entero pegado al
+torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
+
+### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
+- [ ] MSAA 2× (preset Alto/Medio), comparado en captura contra `render_scale` del preset Bajo.
+- [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
+  se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
+
+### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: no
+`route.gd` busca linealmente en las muestras del camino dos veces por tick; `play_area.gd`,
+`seat_point.gd`, `route_sky.gd` y `route_event_manager.gd:377` escanean grupos/hijos por frame.
+Cachear el índice del camino (ventana ±2 alrededor del último) y bajar las señales del HUD a 8 Hz.
+Hecho con `bench_drive` antes/después anotado acá.
+
+### N-315 · Cajas de 2048² triplicadas — B · `Opus 5.5 · medium` · Aviso: no
+Cada textura de caja está tres veces (fuente en `art/cargo/`, volcado del importador en
+`assets/models/cargo/` y embebida en el `.glb`): ~5 MB × 3 × 4. Regenerar a 512² con
+`art/tools/make_cargo_textures.py` (`modelador-blender`), sacar los volcados del repo e ignorarlos.
+
+### N-224 · Menos despacho dinámico — C · `Opus 5.5 · high` · Aviso: sí (varios)
+251 `.call(&"…")`, 233 `.get(&"…")` y 112 rutas `/root/`: un renombre rompe en runtime. Por archivo,
+empezando por `crew_progression.gd` y `route_event_manager.gd`: referencias tipadas (`class_name`) o
+dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
+
+### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
+`synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
+932: están escritos contra `max-file-lines: 1000`, no partidos por responsabilidad. Orden:
+`synth_audio` → `reference_truck` → `route.gd` → `package.gd`.
+
+### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no
+Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
+tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
+
+### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`)
+- [ ] Avisos de más de una semana de `colaboracion-equipo.md` a `docs/avisos/archivo.md`.
+- [ ] El encabezado "Última actualización" de las listas: una línea, sin "Antes, el mismo día".
+- [ ] La lista de tests del README a `docs/tests.md`.
 
 ## 1. Game Design
 
