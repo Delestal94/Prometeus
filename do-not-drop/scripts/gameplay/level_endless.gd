@@ -81,9 +81,10 @@ func _physics_process(delta: float) -> void:
 		_stuck_seconds += delta
 	else:
 		_stuck_seconds = 0.0
+	# The reason travels as a key: every peer's results screen translates it.
 	if tipped_seconds > 4.0:
-		RunManager.finish_run(false, "La camioneta volcó. Tomá las curvas más despacio.")
+		RunManager.finish_run(false, "HUD_RUN_TIPPED")
 	elif vehicle.global_position.y < -8.0 or _streamer.distance_from_path(vehicle.global_position) > OUT_OF_BOUNDS_X:
-		RunManager.finish_run(false, "Te saliste de la ruta. Reiniciá para intentarlo de nuevo.")
+		RunManager.finish_run(false, "HUD_RUN_OFF_ROAD")
 	elif _stuck_seconds > STUCK_SECONDS:
-		RunManager.finish_run(false, "La camioneta quedó atascada contra la ruta. Reiniciá para intentarlo de nuevo.")
+		RunManager.finish_run(false, "HUD_RUN_STUCK_ROADSIDE")

@@ -118,7 +118,7 @@ func _build_point(index: int) -> void:
 		visual.mesh = shard
 		point.add_child(visual)
 	var label := Label3D.new()
-	label.text = "¡RECUPERAR!"
+	label.text = tr("HUD_SALVAGE_RECOVER")
 	label.font_size = 22
 	label.pixel_size = 0.004
 	label.position.y = 0.3

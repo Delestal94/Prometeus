@@ -554,9 +554,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_world_translations` — N-605: todos los textos del mundo están en
   `translations/strings_world.csv` en español e inglés con los mismos marcadores, no hay
   claves de más ni de menos, el juego arranca en español y cambiar el idioma cambia el mundo.
-- `test_ui_translations` — N-211: los textos de menús y HUD están en `translations/strings_ui.csv`
-  en español (el texto de siempre) e inglés con los mismos marcadores, no hay claves de más ni de
-  menos, y con el idioma en inglés el panel de opciones se arma en inglés.
+- `test_ui_translations` — N-211/N-805: los textos de menús, HUD y juego están en
+  `translations/strings_ui.csv` en español (el texto de siempre) e inglés con los mismos
+  marcadores, no hay claves de más ni de menos, ningún script de `ui/`, `gameplay/`, `core/` ni
+  `presentation/` muestra un literal en español sin traducir (salvo una lista de excepciones
+  justificadas), y con el idioma en inglés el panel de opciones se arma en inglés.
 - `test_acoustic_space` — N-402: eco largo dentro de los túneles y más corto bajo el techo
   del depósito, apagado al aire libre; una cámara pegada al camión desde afuera no cuenta
   como adentro (lluvia, #68).

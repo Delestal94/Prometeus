@@ -53,7 +53,7 @@ func _on_peer_level_ready(peer_id: int) -> void:
 	# the depot rebuilds itself for the crew that's actually here -- after a
 	# short wait, so friends joining together cost one reload, not several.
 	if _crew_outgrew_route():
-		EventBus.depot_notice.emit("Se sumó gente: preparando la ruta para %d casas..." % _wanted_houses())
+		EventBus.depot_notice.emit(tr("HUD_NOTICE_CREW_GREW") % _wanted_houses())
 		if not _crew_restart_pending:
 			_crew_restart_pending = true
 			await get_tree().create_timer(CREW_RESTART_DELAY).timeout
@@ -139,12 +139,13 @@ func _physics_process(delta: float) -> void:
 		stuck_seconds += delta
 	else:
 		stuck_seconds = 0.0
+	# The reason travels as a key: every peer's results screen translates it.
 	if tipped_seconds > 4.0:
-		RunManager.finish_run(false, "La camioneta volcó. Tomá las curvas más despacio.")
+		RunManager.finish_run(false, "HUD_RUN_TIPPED")
 	elif vehicle.global_position.y < -8.0 or route.distance_from_path(vehicle.global_position) > 42.0:
-		RunManager.finish_run(false, "Te saliste de la ruta. Reiniciá para intentarlo de nuevo.")
+		RunManager.finish_run(false, "HUD_RUN_OFF_ROAD")
 	elif stuck_seconds >= STUCK_SECONDS:
-		RunManager.finish_run(false, "La camioneta quedó atascada. Reiniciá para intentarlo de nuevo.")
+		RunManager.finish_run(false, "HUD_RUN_STUCK")
 
 
 func _should_count_as_stuck() -> bool:

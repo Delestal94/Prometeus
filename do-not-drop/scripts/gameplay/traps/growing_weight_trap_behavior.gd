@@ -91,7 +91,7 @@ func get_hint() -> String:
 		pending += ("[%s] " % _arrow(sequence[index])) if index >= sequence_index else ""
 	var seconds_left: float = maxf(_puzzle_time_limit - _time_since_solved, 0.0)
 	if not armed():
-		return "Carga asegurada · la próxima secuencia en %ds" % ceili(seconds_left - ARM_WINDOW)
+		return tr("HUD_HINT_WEIGHT_SECURED") % ceili(seconds_left - ARM_WINDOW)
 	if seconds_left > 0.0:
 		return tr("HUD_HINT_WEIGHT_SEQUENCE") % [pending, seconds_left]
 	return tr("HUD_HINT_WEIGHT_DANGER") % pending

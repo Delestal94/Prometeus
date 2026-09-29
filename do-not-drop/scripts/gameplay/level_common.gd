@@ -314,7 +314,7 @@ func _check_lost_cargo() -> void:
 			var route_node: Node = get_node_or_null(^"World/Route")
 			if route_node != null and route_node.has_method(&"close_lost_order"):
 				route_node.call(&"close_lost_order", id)
-			package.mark_lost("Se cayó del camión.")
+			package.mark_lost(tr("HUD_CARGO_FELL_OFF"))
 			EventBus.relay(&"cargo_overboard_ended", [id, false])
 
 

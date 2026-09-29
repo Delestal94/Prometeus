@@ -108,7 +108,7 @@ func _build_ui() -> void:
 	top.add_theme_constant_override("separation", 14)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_frame.add_child(top)
-	_label(top, "● CÁMARA", 15, RED)
+	_label(top, tr("HUD_PHONE_CAMERA"), 15, RED)
 	_status_label = _label(top, "", 15, MUTED)
 	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -131,9 +131,7 @@ func _build_ui() -> void:
 
 
 func _refresh_hint() -> void:
-	_hint_label.text = GameSettings.prompt(
-		"[ Click ]  sacar foto        [ F ]  guardar el celular",
-		"[ RB ]  sacar foto        [ LB ]  guardar el celular")
+	_hint_label.text = GameSettings.prompt(tr("HUD_PHONE_HINT_MOUSE"), tr("HUD_PHONE_HINT_PAD"))
 
 
 func _bracket(corner: Vector2) -> void:
@@ -271,14 +269,14 @@ func subject_house() -> int:
 func _refresh_status() -> void:
 	var index: int = subject_house()
 	if index < 0:
-		_status_label.text = "sin entrega cerca"
+		_status_label.text = tr("HUD_PHONE_NO_DELIVERY")
 		_status_label.add_theme_color_override("font_color", MUTED)
 		return
 	if _already_photographed(index):
-		_status_label.text = "CASA %d  ·  ya documentada" % (index + 1)
+		_status_label.text = tr("HUD_PHONE_HOUSE_DONE") % (index + 1)
 		_status_label.add_theme_color_override("font_color", MUTED)
 		return
-	_status_label.text = "CASA %d  ·  listo para documentar" % (index + 1)
+	_status_label.text = tr("HUD_PHONE_HOUSE_READY") % (index + 1)
 	_status_label.add_theme_color_override("font_color", MINT)
 
 
@@ -314,11 +312,11 @@ func shoot() -> void:
 	_shutter.play()
 	_play_flash()
 	if accepted:
-		_hint_label.text = "Foto de la casa %d guardada. Ahora tenés con qué contestarles." % (index + 1)
+		_hint_label.text = tr("HUD_PHONE_SAVED") % (index + 1)
 	elif index >= 0:
-		_hint_label.text = "Esa entrega ya estaba documentada."
+		_hint_label.text = tr("HUD_PHONE_ALREADY_DOCUMENTED")
 	else:
-		_hint_label.text = "Linda foto, pero no hay ninguna entrega que probar acá."
+		_hint_label.text = tr("HUD_PHONE_NOTHING_TO_PROVE")
 	_busy = false
 
 

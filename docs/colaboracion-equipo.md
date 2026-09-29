@@ -7,6 +7,23 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: N-805 textos de juego traducibles (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-805-gameplay-text-tr`. **Ninguna firma cambia**; solo se reemplazan
+literales en español por `tr("CLAVE")` (113 claves nuevas en `strings_ui.csv`, tras el bloque `HUD_CARE_*`):
+- Archivos de Slatex: `package_care.gd` (`TOOL_NAMES`/`REPAIR_NAMES` ahora guardan claves y `tool_name()`
+  las traduce; mensajes y bloqueos con `tr()`), `package.gd`, `package_rescue.gd`, `package_salvage.gd`,
+  `package_feedback.gd` (reusa `HUD_STATE_*`), `player.gd` (`PING_LABEL` sale de `PingCatalog.OPTIONS[0]`),
+  `player_cargo_care.gd` (tarjeta y pie con `TranslationServer.translate()`: son `static`),
+  `growing_weight_trap_behavior.gd`, `hud_results.gd`, `hud_notices.gd` y `main_menu.gd` (al volver al menú,
+  el motivo de desconexión pasa por `connection_error_text()` como en `_on_session_failed`).
+- Zona compartida: `level_base.gd`, `level_endless.gd` y `run_manager.gd` pasan el motivo de fin de partida
+  como **clave** (`HUD_RUN_TIPPED`, `HUD_RUN_STUCK`...; también `HUD_RUN_ALL_CARGO_RUINED`), que
+  `hud_results` ya traduce; los renglones "Carga que volvió sana" y "Rapidez" del puntaje y los motivos de
+  los plazos también viajan como clave. `network_manager.gd` emite sus errores ya traducidos.
+- Slatex: si agregás un texto visible en `gameplay/`, `core/` o `presentation/`, va por `tr()`;
+  `test_ui_translations` ahora lo exige (con una lista de excepciones al principio del test).
+
 ## Aviso activo: N-118 Endless puntúa la carga (2026-09-29)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-118-endless-cargo-score`. Solo agrega; **ninguna firma cambia**:

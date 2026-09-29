@@ -64,7 +64,7 @@ func _refresh(package_id: StringName) -> void:
 	var entry: Dictionary = _markers[package_id]
 	var left: float = float(entry["left"])
 	var label: Label3D = entry["label"]
-	label.text = "¡RESCATAR!\n%d s" % ceili(left)
+	label.text = tr("HUD_OVERBOARD_RESCUE") % ceili(left)
 	label.modulate = URGENT_COLOR if left <= URGENT_SECONDS else COLOR
 
 

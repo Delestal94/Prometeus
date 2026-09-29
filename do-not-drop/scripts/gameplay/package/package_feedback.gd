@@ -175,7 +175,7 @@ func _apply_identity(package: Node) -> void:
 	var content: Resource = package.call(&"content_definition") if package.has_method(&"content_definition") else null
 	var shape_size := Vector3(0.65, 0.65, 0.65)
 	var box_scene: PackedScene = null
-	var shipping_data: String = "Contenido sin declarar"
+	var shipping_data: String = tr("HUD_SHIPPING_UNDECLARED")
 	if content != null:
 		shape_size = content.get(&"box_size")
 		box_scene = content.get(&"box_model")
@@ -646,7 +646,7 @@ func _apply_explosive(delta: float) -> void:
 		seconds = float(sequence.get("seconds", seconds))
 		direction = StringName(steps[index]) if index < steps.size() else &""
 	var state: int = int(package.trap_behavior.call("get_state"))
-	_explosive_display.text = "DESACTIVAR\n%02d s  %s" % [ceili(seconds), _explosive_arrow(direction)]
+	_explosive_display.text = tr("HUD_EXPLOSIVE_DEFUSE") % [ceili(seconds), _explosive_arrow(direction)]
 	_explosive_display.modulate = UiTheme.state_color(state, _colorblind_palette_enabled())
 	# The countdown only means something once the bomb is on the road: on
 	# the depot's shelf it would just be a floating, ticking sign (depot.gd).
@@ -861,7 +861,7 @@ func _set_state(new_state: int) -> void:
 func _refresh_state_badge() -> void:
 	if _state_badge == null:
 		return
-	_state_badge.text = ["OK ✓", "EN RIESGO !", "ARRUINADA ✕"][clampi(_state, 0, 2)]
+	_state_badge.text = tr(["HUD_STATE_OK", "HUD_STATE_AT_RISK", "HUD_STATE_RUINED"][clampi(_state, 0, 2)])
 	_state_badge.modulate = UiTheme.state_color(_state, _colorblind_palette_enabled())
 	# Only trouble earns a marker: an "OK" floating over every healthy box
 	# on the shelves read as noise, not information.

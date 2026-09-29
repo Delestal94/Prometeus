@@ -42,7 +42,7 @@ func _physics_process(delta: float) -> void:
 		_notice_left = NOTICE_COOLDOWN
 		var bus: Node = get_node_or_null(^"/root/EventBus")
 		if bus != null:
-			bus.emit_signal(&"depot_notice", "No hay nada más allá: volvé hacia la ruta")
+			bus.emit_signal(&"depot_notice", tr("HUD_NOTICE_EDGE_OF_MAP"))
 
 
 ## `point` moved back inside the play area (unchanged if already inside).
