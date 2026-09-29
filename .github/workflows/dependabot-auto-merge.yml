@@ -1,7 +1,7 @@
 name: Auto-merge pull requests
 
 # No human review gate on purpose: the required checks (lint, headless tests,
-# network pair) are the gate, and the agent review (agent-review.yml) comments.
+# network pair) are the gate.
 # pull_request_target never checks out the PR's code here; it only queues the
 # merge. Forks are excluded so an outside PR can never merge itself.
 on:
