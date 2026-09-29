@@ -31,6 +31,12 @@ const REPAIR_SPOT: Script = preload("res://scripts/gameplay/vehicle/fault_repair
 ## The improvised fix from the shared kit (RunManager.care_supplies), per
 ## fault. No new tools: only what the kit already carries.
 const IMPROVISED: Dictionary = {&"rear_door": &"strap"}
+## Repair spot prompt per fault and method. Spelled out, not built, so the
+## translation test finds every key in use.
+const REPAIR_PROMPTS: Dictionary = {
+	&"rear_door": {&"spare": "WORLD_FAULT_REAR_DOOR_SPARE", &"strap": "WORLD_FAULT_REAR_DOOR_STRAP"},
+	&"mirror": {&"spare": "WORLD_FAULT_MIRROR_SPARE"},
+}
 ## Where each repair spot hangs, in the van's frame: the rear door's right
 ## post (the rescue hook has the left one, the door control the middle), and
 ## the driver's mirror (moved onto the model's mirror when it's there).
@@ -144,7 +150,7 @@ func repair_prompt(fault_id: StringName) -> String:
 	var method: StringName = repair_method(fault_id)
 	if method.is_empty():
 		return ""
-	return "WORLD_FAULT_%s_%s" % [String(fault_id).to_upper(), String(method).to_upper()]
+	return String((REPAIR_PROMPTS.get(fault_id, {}) as Dictionary).get(method, ""))
 
 
 ## Host-only: fixes fault_id the best way available (repair_method()) and
