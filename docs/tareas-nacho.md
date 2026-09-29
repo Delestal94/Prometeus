@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-214.3c: el punto del espejo y el celular revisados en cada
+> Última actualización: 2026-09-29 (N-212, primer tramo: captura y envío de voz por Steam,
+> LAN sin voz, interruptor general y pulsar para hablar en los ajustes). Antes, el mismo día: (N-214.3c: el punto del espejo y el celular revisados en cada
 > variante y pintura del camión; N-214 cerrada). Antes, el mismo día: (N-214.4: la pantalla de
 > resultados cuenta cómo terminó cada avería del camión, "Espejo reemplazado por un celular"). Antes:
 > (tareas nuevas del usuario en el hito M7: N-115 correr, N-116 estacionamiento como parada final,
@@ -1092,15 +1093,23 @@ Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con St
 > general, pulsar para hablar por defecto y silenciar por jugador; el filtro "a través de la chapa" es
 > extra (alcanza con atenuación 3D). Sugiere bajarla a prioridad B (no es condición para la demo).
 
-- [ ] **N-212.1** Steam: captura y envío con la voz de GodotSteam (`startVoiceRecording` / `getVoice` /
-  `decompressVoice`) por un canal no confiable, fuera de la simulación autoritativa.
+- [x] **N-212.1** Steam: captura y envío con la voz de GodotSteam (`startVoiceRecording` / `getVoice` /
+  `decompressVoice`) por un canal no confiable, fuera de la simulación autoritativa. `649c7fa`
+  `core/proximity_voice.gd` (autoload `ProximityVoice`): graba mientras se aprieta `voice_talk` (Z), manda
+  por RPC `unreliable_ordered` en el canal 3 y el que recibe descomprime y emite `voice_received`.
+  Probado con un Steam falso; **falta probarlo con Steam real** (entra con la prueba de N-212.2).
 - [ ] **N-212.2** Reproducción en `AudioStreamPlayer3D` en la cabeza del jugador; dentro de la cabina se
   oyen todos, afuera se atenúa y pasa por el bus Exterior con filtro (se oye "a través de la chapa").
 - [ ] **N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
-  jugador, y un interruptor general en Opciones.
-- [ ] **N-212.4** LAN/ENet: `AudioEffectCapture` o dejarlo fuera del MVP (decidir y anotar).
+  jugador, y un interruptor general en Opciones. Hecho en `649c7fa`: `GameSettings.voice_chat_enabled`
+  (apagado hasta que exista N-212.2) y `voice_push_to_talk` (por defecto; apagado = micrófono abierto),
+  la tecla reasignable y `ProximityVoice.set_peer_muted()` / `set_peer_volume()`. **Falta:** mostrarlos en
+  Opciones y en una lista de jugadores (UI de Slatex, `options_panel.gd`).
+- [x] **N-212.4** LAN/ENet: `AudioEffectCapture` o dejarlo fuera del MVP (decidir y anotar). `649c7fa`
+  Decidido: **LAN sin voz** (condición de `critico-diseno`); la razón quedó en `proximity_voice.gd`.
 - [ ] Medir con `auditor-red` el ancho de banda con 5 jugadores. Test de que el apagado general no
-  captura el micrófono.
+  captura el micrófono. El test ya está (`test_proximity_voice.gd`, `649c7fa`); falta medir el ancho de
+  banda (con N-212.2).
 
 ### N-109 · Animales que se meten con la carga — B · `Opus 5.5 · xhigh` · Aviso: sí (estados del paquete)
 
