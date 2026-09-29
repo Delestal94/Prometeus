@@ -53,10 +53,10 @@ func get_state() -> int:
 
 func get_hint() -> String:
 	if seconds_left <= 0.0:
-		return "BOOM."
+		return tr("HUD_HINT_EXPLOSIVE_RUINED")
 	if _defused:
-		return "Desactivada."
-	return "%02d s · secuencia: %s" % [ceili(seconds_left), _direction_text(sequence[sequence_index])]
+		return tr("HUD_HINT_EXPLOSIVE_SAFE")
+	return tr("HUD_HINT_EXPLOSIVE_SEQUENCE") % [ceili(seconds_left), _direction_text(sequence[sequence_index])]
 
 func next_direction() -> StringName:
 	return &"" if _defused or seconds_left <= 0.0 else sequence[sequence_index]

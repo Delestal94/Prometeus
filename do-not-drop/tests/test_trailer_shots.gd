@@ -25,6 +25,7 @@ extends SceneTree
 const EXPECTED: Array[String] = ["salida_deposito", "curva_bosque", "cruce_tren", "puente_lluvia", "casa_noche", "vuelco", "ciervo"]
 const ShotScript = preload("res://scripts/tools/trailer_shot.gd")
 const CameraScript = preload("res://scripts/tools/trailer_camera.gd")
+const StoreShotScript = preload("res://tests/render_store_shots.gd")
 
 var _failures: int = 0
 
@@ -34,6 +35,22 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	var store_shots: Array[Dictionary] = StoreShotScript.STORE_SHOTS
+	_expect(StoreShotScript.OUTPUT_SIZE == Vector2i(1920, 1080),
+		"Store captures have the required 1920x1080 output size")
+	_expect(store_shots.size() == 5, "The store batch has exactly five fixed scenes")
+	var store_labels: PackedStringArray = []
+	var store_files: Dictionary = {}
+	for store_shot: Dictionary in store_shots:
+		store_labels.append(String(store_shot.get("label", "")))
+		store_files[String(store_shot.get("file", ""))] = true
+		_expect(String(store_shot.get("scene", "")) in ShotScript.load_shots(),
+			"Store scene '%s' uses a saved deterministic setup" % store_shot.get("label", ""))
+	_expect(store_files.size() == 5, "Every store scene has a distinct output file")
+	for required: String in ["depósito cargando", "manejo con cajas en riesgo", "entrega en una casa",
+			"caja explotando", "resultados"]:
+		_expect(required in store_labels, "Store batch includes %s" % required)
+
 	var shots: Dictionary = ShotScript.load_shots()
 	for name: String in EXPECTED:
 		_expect(shots.has(name), "The shot '%s' is saved" % name)

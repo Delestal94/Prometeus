@@ -102,9 +102,9 @@ func get_prompt() -> String:
 		# won't let me in".
 		var local: Node = _local_player()
 		if local != null and local.get(&"carried_package") != null:
-			return "Dejá el paquete para manejar"
+			return tr("HUD_PROMPT_DROP_TO_DRIVE")
 		return "Subirse a manejar"
-	return "Sentarse junto a la carga" if not tend_mount_paths.is_empty() else "Sentarse"
+	return tr("HUD_PROMPT_SIT_BY_CARGO") if not tend_mount_paths.is_empty() else tr("HUD_PROMPT_SIT")
 
 
 func can_interact(player: Node) -> bool:

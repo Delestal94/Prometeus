@@ -12,6 +12,20 @@ extends Resource
 ## what's in the box when someone opens it.
 @export var contents: Array[Resource] = []
 
+const NAME_KEYS: Dictionary = {
+	&"fragile": "HUD_TRAP_FRAGILE",
+	&"balance": "HUD_TRAP_BALANCE",
+	&"growing_weight": "HUD_TRAP_GROWING_WEIGHT",
+	&"liquid": "HUD_TRAP_LIQUID",
+	&"noisy": "HUD_TRAP_NOISY",
+	&"explosive": "HUD_TRAP_EXPLOSIVE",
+	&"hostile": "HUD_TRAP_HOSTILE",
+}
+
+
+func localized_name() -> String:
+	return tr(String(NAME_KEYS.get(id, display_name)))
+
 
 ## Deterministic per package id, so every peer opens the same box without
 ## the choice having to travel over the network.

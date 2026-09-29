@@ -1,6 +1,6 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-28 (S-901 a S-904, S-906 y S-907 pospuestas a la iteración de lanzamiento). Antes: 2026-09-25 (estado relevado sobre `d15ad02`).
+> Última actualización: 2026-09-28 (estado relevado sobre `dbe3e48`; S-901, S-903, S-904 y S-907 pospuestas a la iteración de lanzamiento; S-902 y S-906 hechas igual).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar
@@ -75,7 +75,7 @@ ChatGPT no ve el repo ni corre Godot solo (salvo que uses Codex conectado al rep
 | **M2 — Base técnica para lo que sigue** | Partir los archivos gigantes antes de sumarles UI; red robusta. | S-201, S-202, S-204, S-206, S-209 |
 | **M3 — Onboarding y UX** | Que alguien que nunca jugó entienda qué hacer sin que se lo expliquen. | S-106, S-107, S-501, S-502, S-504, S-505, S-506, S-508, S-510 |
 | **M4 — Balance medido y juice** | Números justificados por simulación; fallas que den ganas de clipear. | S-108, S-109, S-110, S-111, S-301, S-302, S-310, S-401 a S-404, S-601 a S-604 |
-| **M5 — Preparación de lanzamiento** | Inglés, logo, telemetría. Tienda, capturas, press kit, monetización y logros (S-901 a S-904, S-906, S-907) ⏸ pospuestos a la iteración de lanzamiento. | S-509, S-306, S-905, S-805 |
+| **M5 — Preparación de lanzamiento** | Inglés, logo, telemetría. Tienda, cápsulas, press kit y logros (S-901, S-903, S-904, S-907) ⏸ pospuestos a la iteración de lanzamiento; capturas (S-902) y monetización (S-906) hechas. | S-509, S-306, S-905, S-805 |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
@@ -513,9 +513,9 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
 ### S-306 · Logo como imagen — B · generación de imagen + `Luna · medium` · Aviso: no
 
-- [ ] Wordmark "TAKE MY PACKAGE" en PNG transparente 2048 px de ancho, a partir de `UiTheme.logo()`
+- [x] (commit `004bb8b`) Wordmark "TAKE MY PACKAGE" en PNG transparente 2048 px de ancho, a partir de `UiTheme.logo()`
   (Lilita One + cinta amarilla), más una versión apilada cuadrada. `assets/ui/logo/`.
-- [ ] Usarlo en el menú en lugar del logo armado con tipografía. Es la base de las cápsulas (S-903).
+- [x] (commit `004bb8b`) Usarlo en el menú en lugar del logo armado con tipografía. Es la base de las cápsulas (S-903).
 
 ### S-307 · Ilustración de fondo de resultados — C · generación de imagen · Aviso: no
 
@@ -531,7 +531,7 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
 ### S-309 · Mantener al día la dirección visual del dominio — A · `Luna · medium` · Aviso: sí (`especificaciones-visuales.md`, filas propias)
 
-- [ ] Actualizar filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md` y
+- [x] (commit `3480986`) Actualizar filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md` y
   `docs/inventario-assets.md` §1-3 cada vez que se cierra una tarea de este pilar (antes #99).
 
 ### S-310 · Fallas distintas por trampa (momentos para clipear) — B · `Sol · high` · Aviso: no
@@ -550,11 +550,11 @@ Hoy toda caja arruinada tira el mismo confeti de cubitos.
 
 ### S-401 · Sonidos de interfaz — A · `Sol · high` · Aviso: no
 
-- [ ] `scripts/ui/ui_sounds.gd` (autocontenido, **sin tocar `synth_audio.gd`**, que es zona
+- [x] (commit `60c4dc4`) `scripts/ui/ui_sounds.gd` (autocontenido, **sin tocar `synth_audio.gd`**, que es zona
   compartida): pasar el mouse, clic, abrir y cerrar panel, toast, desbloqueo, voto, error. Sintetizados
   igual que `SynthAudio` (generar `AudioStreamWAV` en código), por el bus `SFX`.
-- [ ] `UiTheme.button()` conecta hover/press automáticamente, así todos los botones suenan.
-- [ ] Test: cada botón de `main_menu.gd` tiene el sonido conectado; el volumen de efectos lo afecta.
+- [x] (commit `60c4dc4`) `UiTheme.button()` conecta hover/press automáticamente, así todos los botones suenan.
+- [x] (commit `60c4dc4`) Test: cada botón de `main_menu.gd` tiene el sonido conectado; el volumen de efectos lo afecta.
 
 ### S-402 · Voces sin palabras ("gibberish") — B · `Sol · xhigh` · Aviso: no
 
@@ -577,9 +577,9 @@ lugar, balbuceo sintetizado estilo Animal Crossing, con tono propio por color de
 Balance de volumen sin depender del oído (Nacho dejó registrado en su #83 que editar valores a ciegas
 no sirve).
 
-- [ ] `tests/audio_loudness_report.gd`: genera cada sonido de trampa y de UI, calcula RMS y pico
+- [x] (commit `2dc4769`) `tests/audio_loudness_report.gd`: genera cada sonido de trampa y de UI, calcula RMS y pico
   en dBFS, y lista la diferencia contra un objetivo (−18 dBFS RMS para efectos de trampa, −24 para UI).
-- [ ] Ajustar el `volume_db` de cada reproductor del dominio de Slatex para quedar a ±2 dB del objetivo.
+- [x] (commit `2dc4769`) Ajustar el `volume_db` de cada reproductor del dominio de Slatex para quedar a ±2 dB del objetivo.
   Tabla antes/después en `docs/direccion-visual.md` (sección de audio) o un `docs/audio.md` nuevo.
 
 ---
@@ -668,18 +668,18 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
 
 ### S-509 · Idioma inglés — A (para lanzar) · `Sol · high` para extraer, `Luna · medium` para traducir · Aviso: sí (`project.godot`)
 
-Hoy todos los textos están escritos en español dentro del código.
+Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 
-- [ ] **S-509.1** Extraer los textos de **los archivos de Slatex** (`scripts/ui/`, avisos de
+- [x] (commit `8d66f72`) **S-509.1** Extraer los textos de **los archivos de Slatex** (`scripts/ui/`, avisos de
   `player.gd`/`package.gd`/`interaction/`, `get_hint()` de cada trampa, `UnlockManager`, `CrewProgression`,
-  `RouteEventManager`) a `do-not-drop/translations/strings.csv` con claves (`HUD_CARGO_TITLE`…) y columnas
+  `RouteEventManager`) a `do-not-drop/translations/strings_ui.csv` con claves (`HUD_CARGO_TITLE`…) y columnas
   `es,en`. Usar `tr("CLAVE")`.
-- [ ] **S-509.2** Registrar el CSV en `project.godot` (internationalization) y opción "Idioma" en opciones.
-- [ ] **S-509.3** Traducir al inglés con tono de juego (no literal).
-- [ ] **S-509.4** Test `tests/test_translations.gd`: toda clave usada existe en las dos columnas; ningún
+- [x] (commit `bf85e4b`) **S-509.2** Registrar el CSV en `project.godot` (internationalization) y opción "Idioma" en opciones.
+- [x] (commit `8d66f72`) **S-509.3** Traducir al inglés con tono de juego (no literal).
+- [x] (commit `8d66f72`) **S-509.4** Test `tests/test_ui_translations.gd`: toda clave usada existe en las dos columnas; ningún
   texto de la UI de Slatex queda sin pasar por `tr()` (buscar comillas con letras acentuadas en
   `scripts/ui/`).
-- [ ] Los textos de archivos de Nacho (casas, depósito) los extrae él: dejar el aviso con la lista de
+- [x] (commit `8d66f72`) Los textos de archivos de Nacho (casas, depósito) los extrae él: dejar el aviso con la lista de
   archivos y la convención de claves. No es bloqueante para esta tarea.
 
 ### S-510 · Progreso y récords que se entiendan — B · `Sol · high` · Aviso: no
@@ -737,7 +737,7 @@ Hoy todos los textos están escritos en español dentro del código.
 
 ### S-702 · Qué queda fuera del MVP (control de alcance) — A · `Luna · medium` · Aviso: no
 
-- [ ] Sección nueva en `docs/plan-desarrollo.md` con la lista cerrada de lo que **no** se hace antes de
+- [x] (commit `dbe3e48`) Sección nueva en `docs/plan-desarrollo.md` con la lista cerrada de lo que **no** se hace antes de
   Early Access: chat de voz propio, matchmaking público, cartas Prioridad e Información, tienda en ruta,
   tutorial jugable, más de 7 trampas, servidores dedicados, microtransacciones. Cualquier idea nueva se
   anota en una sección "Después del lanzamiento", no en esta lista.
@@ -755,17 +755,17 @@ Hoy todos los textos están escritos en español dentro del código.
 
 Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
-- [ ] Checklist en `docs/qa-recorrido.md`: abrir el juego, cambiar opciones, jugar solo una entrega
+- [x] (commit `ce7370b`) Checklist en `docs/qa-recorrido.md`: abrir el juego, cambiar opciones, jugar solo una entrega
   completa (agarrar, montar, manejar, bajar, timbre, foto), pausa, volver al menú, Endless 2 minutos,
   cerrar. Anotar cualquier error de la consola de Godot.
 
 ### S-802 · Tests de contrato para todo lo que se agrega por datos — A · `Sol · high` · Aviso: no
 
-- [ ] `tests/test_trap_contract.gd`: recorre `data/traps/*.tres` y verifica para cada una: crea su
+- [x] (commit `7abb1a3`) `tests/test_trap_contract.gd`: recorre `data/traps/*.tres` y verifica para cada una: crea su
   comportamiento, la integridad queda en [0, max] con input vacío y con input aleatorio durante 30 s
   simulados, `get_hint()` nunca vacío, tiene ícono (S-301), contenido propio (S-302), sonido de riesgo, y
   un desbloqueo o está en el set inicial. Una trampa nueva que no cumpla falla este test.
-- [ ] Mismo criterio para `data/contents/*.tres` (nodos `Filler`/`Intact`/`Damage`/`Ruined`).
+- [x] (commit `7abb1a3`) Mismo criterio para `data/contents/*.tres` (nodos `Filler`/`Intact`/`Damage`/`Ruined`).
 
 ### S-803 · Bot de caos — B · `Sol · xhigh` · Aviso: no
 
@@ -808,10 +808,10 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   etiquetas (Co-op, Online Co-Op, Physics, Driving, Funny, Party Game).
 - [ ] Una frase de gancho que diga los roles asimétricos: "Uno maneja. Los demás intentan que nada explote."
 
-### S-902 · Modo captura para imágenes y tráiler — B · `Sol · high` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
+### S-902 · Modo captura para imágenes y tráiler — B · `Sol · high` · Aviso: no · ✅ (hecha pese a la pausa)
 
-- [ ] Tecla de depuración (F10, solo build de debug) que oculta todo el HUD y el viewmodel.
-- [ ] `tests/render_store_shots.gd`: 5 escenas fijas (depósito cargando, manejo con cajas en riesgo, entrega
+- [x] Tecla de depuración (F10, solo build de debug) que oculta todo el HUD y el viewmodel.
+- [x] `tests/render_store_shots.gd`: 5 escenas fijas (depósito cargando, manejo con cajas en riesgo, entrega
   en una casa, caja explotando, resultados) a 1920×1080. Necesita ventana: la corrés vos.
 
 ### S-903 · Cápsulas de Steam — C · generación de imagen · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
@@ -830,9 +830,9 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   Totally Reliable Delivery Service enseñan sus controles y sus reglas en los primeros 5 minutos, y qué
   tomar para S-506. Con fuentes.
 
-### S-906 · Registro de decisión de monetización — A · `Luna · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
+### S-906 · Registro de decisión de monetización — A · `Luna · medium` · Aviso: no · ✅ (hecha pese a la pausa)
 
-- [ ] En `docs/plan-desarrollo.md`: precio único $8-15, sin microtransacciones, cosméticos solo se
+- [x] (commit `e61d923`) En `docs/plan-desarrollo.md`: precio único $8-15, sin microtransacciones, cosméticos solo se
   ganan jugando, actualizaciones gratis. Verificar que ningún cosmético del código tenga precio en dinero real.
 
 ### S-907 · Logros — B · `Sol · high` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**

@@ -15,7 +15,7 @@ un mini-nivel interactivo queda para una iteración posterior.
 
 > Basado en: `docs/requerimientos-tecnicos.md` (Godot 4.x, física real de vehículo +
 > streaming de tramos, confirmado 2026-09-20).
-> Última actualización: 2026-09-23
+> Última actualización: 2026-09-28
 > Principio guía: validar el loop central (conducir + manejar paquetes) lo antes
 > posible, **antes** de invertir en multiplayer, arte final o contenido extra. El
 > multiplayer y el arte son las partes más caras de rehacer si el loop no es divertido.
@@ -293,6 +293,23 @@ se corren los que siguen, sin comprimirlos: los plazos de Steam no se acortan.
 | Build de demo | 2026-12-18 (vie) | Una entrega completa y el depósito, exportada con `tools`/CI (N-210), en una rama de Steam propia de la demo. Sirve para Steam Next Fest si la fecha del festival cae antes del Early Access. | Export automático (N-210), página publicada |
 | Early Access | 2027-01-22 (vie) | Lanzamiento con el contenido mínimo (1 vehículo, 1 set de tramos, 3-4 trampas), precio definido y build revisada por Steam (revisión de build: pedirla 2 semanas antes). | Demo publicada, playtesting de amigos |
 
+### Decisión de monetización (S-906, 2026-09-28)
+
+- **Compra única:** precio objetivo de lanzamiento entre **USD 8 y 15**, que se fija de manera
+  definitiva antes de enviar la página de Steam a revisión.
+- **Sin microtransacciones:** no hay moneda prémium, cajas de botín, pases, anuncios, compras dentro
+  del juego ni una tienda que acepte dinero real.
+- **Cosméticos por jugar:** uniformes, pinturas y cualquier accesorio futuro se obtienen únicamente
+  con entregas y puntaje del perfil. No se venden por separado.
+- **Actualizaciones gratuitas:** los arreglos, balance y contenido agregado durante Early Access se
+  incluyen para quienes ya compraron el juego, sin dividir la comunidad con contenido de pago.
+
+Verificación del código: `UnlockManager.COSMETICS` solo declara título, color y una clave `unlock`;
+`cosmetic_choices()` expone esos desbloqueos y `select_cosmetic()` rechaza los que el perfil todavía
+no ganó. No hay campos de precio, moneda real ni llamadas de compra en `unlock_manager.gd` o
+`cosmetics_panel.gd`. El mostrador del depósito es otra economía: compra suministros consumibles con
+el dinero cooperativo ganado dentro de la campaña, nunca con dinero real.
+
 ## Fuera del MVP (control de alcance)
 
 Lista cerrada de lo que **no** se hace antes de Early Access. Sumar una fila acá es
@@ -306,6 +323,14 @@ lista. (Slatex completa su parte en la S-702 de `docs/tareas-slatex.md`.)
 | Curva peraltada | El asfalto sale del mismo campo de alturas del terreno; peraltarlo es rehacer el terreno de la ruta. | Nacho #65 |
 | Motion blur por velocidad | GL Compatibility no lo trae y un pase propio cuesta los 60 FPS. | Nacho #14 |
 | Rotonda | Sin tráfico no suma decisión al conductor; las curvas y cruces actuales ya cubren el manejo. | Nacho #60 |
+| Chat de voz propio | Steam, Discord y las plataformas ya cubren la conversación; capturar, comprimir, transmitir y moderar voz no mejora el loop de entrega. | Slatex S-702 |
+| Matchmaking público | Requiere backend, moderación y manejo de abandono. Early Access se limita a invitaciones de Steam y conexión LAN/IP. | Slatex S-702 |
+| Cartas Prioridad e Información | Dependían de sistemas fuera del MVP. El mazo queda cerrado en Rescate, Descuento y Re-voto. | Slatex S-103 / S-702 |
+| Tienda durante la ruta | Duplica el flujo de suministros del depósito y corta el ritmo de conducción. Las compras se resuelven antes de salir. | Slatex S-702 |
+| Tutorial jugable | Exige mantener un nivel especial junto con cada cambio de controles. El MVP usa fichas y consejos contextuales. | Slatex S-506 / S-702 |
+| Más de siete trampas | Las siete actuales ya cubren el alcance de contenido y necesitan balance conjunto antes de ampliar el catálogo. | Slatex S-702 |
+| Servidores dedicados | La simulación actual es host-autoritativa y orientada a partidas entre amigos; operar servidores agrega costo e infraestructura sin validar. | Slatex S-702 |
+| Microtransacciones | El precio es único y los cosméticos se obtienen jugando; no se diseña tienda de dinero real para Early Access. | Slatex S-702 / S-906 |
 
 ### Después del lanzamiento
 

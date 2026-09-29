@@ -21,9 +21,71 @@ Ejemplo: `godot --path do-not-drop -- --autostart --mood=niebla_atardecer`.
 
 ## Juego completo (Slatex, S-801)
 
-> Sección de Slatex: menú, opciones, una entrega completa a pie y en el camión (agarrar, montar,
-> manejar, bajar, timbre, foto), pausa, volver al menú, Endless 2 minutos, cerrar. La completa
-> con su S-801.
+Duración objetivo: **10 minutos**. Hacerlo en una build de desarrollo con la consola visible. No
+se evalúa balance ni diversión: cada casilla confirma que el flujo termina, responde al control y
+no genera errores nuevos.
+
+Antes de empezar, anotar la versión que se está recorriendo:
+
+| Fecha | Commit | Dispositivo | Resolución | Clima rotado |
+|---|---|---|---|---|
+| | | teclado/mouse o gamepad | | |
+
+### 1. Menú y opciones (1 minuto)
+
+- [ ] Abrir el juego desde cero: aparece el menú, hay un botón enfocado y se puede navegar sin
+  usar el mouse si el dispositivo elegido es gamepad.
+- [ ] Abrir **Opciones**, cambiar temporalmente volumen de efectos, escala de UI y una tecla
+  reasignable; aplicar y comprobar que el texto/sonido responde.
+- [ ] Cerrar Opciones con Atrás/Esc y volver a abrirlo: los valores siguen aplicados. Restaurar los
+  valores usados al inicio para no convertir el recorrido en un cambio de configuración.
+
+### 2. Una entrega completa en solitario (5 minutos)
+
+- [ ] Elegir **Jugar solo** y aparecer en el depósito. La pizarra muestra el pedido y el HUD no
+  presenta estados de una partida anterior.
+- [ ] Acercarse a una caja correcta, **agarrarla**, llevarla al camión y **montarla** en un asiento
+  de carga. El aviso de interacción, el modelo y el HUD cambian en cada paso.
+- [ ] Sentarse al volante y salir: la entrega comienza, el camión responde a acelerar, frenar,
+  girar y tocar bocina, y la carga sigue montada.
+- [ ] Durante el trayecto abrir Pausa, entrar y salir de Opciones y reanudar. El mundo permanece
+  pausado, el foco vuelve al botón correcto y no se duplica ningún panel.
+- [ ] Frenar en la casa asignada, **bajar**, retirar la caja y caminar hasta el porche. El marcador
+  de la casa y el aviso del timbre corresponden al pedido.
+- [ ] Usar el **timbre** para entregar. La caja desaparece una sola vez y el HUD registra el
+  resultado de esa casa.
+- [ ] Sacar el celular con **F / gatillo izquierdo**, tomar la **foto** con clic / RB y cerrarlo.
+  La foto aceptada aparece en el flujo de resultados o reclamo correspondiente.
+- [ ] Volver al camión, llegar a la meta y detenerse hasta cerrar la partida. Resultados muestra
+  casa, estado, foto, puntaje, mérito/progreso y permite continuar sin quedar bloqueado.
+
+### 3. Volver al menú (1 minuto)
+
+- [ ] Desde resultados volver al menú. No quedan HUD, audio de la ruta ni nodos de la partida
+  anterior; los botones responden una sola vez.
+- [ ] Abrir Pausa durante una segunda partida y usar **Volver al menú**. Confirmar el mismo estado
+  limpio sin tener que terminar la ruta.
+
+### 4. Endless (2 minutos)
+
+- [ ] Entrar en **Modo Endless (solo)**. El depósito y la pizarra indican Endless, sin pedidos ni
+  casas de entrega.
+- [ ] Cargar al menos una caja, conducir durante **2 minutos** y cruzar varios tramos. La distancia
+  y la dificultad avanzan; no aparece UI exclusiva de Entrega.
+- [ ] Terminar volcando, saliendo de ruta o perdiendo la carga. El resultado de Endless conserva
+  distancia/récord y vuelve al menú correctamente.
+
+### 5. Cierre y resultado del recorrido (1 minuto)
+
+- [ ] Cerrar el juego desde el botón **Salir**, no matando el proceso. La ventana y el proceso de
+  Godot terminan sin error.
+- [ ] Revisar toda la consola desde el arranque: no hay `SCRIPT ERROR`, `ERROR` ni `WARNING` nuevo.
+- [ ] Copiar cada problema a **Hallazgos** con pasos reproducibles. Si afecta un cambio que se va a
+  subir, el recorrido queda **fallido** hasta corregirlo o dejarlo expresamente fuera de alcance.
+
+El recorrido queda aprobado cuando todas las casillas aplicables están marcadas y los hallazgos
+que bloquean el cambio están resueltos. Las casillas se desmarcan para la siguiente ejecución; el
+historial permanente vive en la tabla de Hallazgos y en los commits que corrigen cada problema.
 
 ## Mundo, ruta y camión (Nacho, N-804)
 

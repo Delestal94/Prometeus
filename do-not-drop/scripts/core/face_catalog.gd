@@ -3,12 +3,14 @@ extends RefCounted
 const DEFAULT_EYES: StringName = &"classic"
 const DEFAULT_MOUTH: StringName = &"smile"
 const EYES: Dictionary = {
-	&"classic": "Clásicos", &"joyful": "Contentos", &"sleepy": "Dormilones",
-	&"worried": "Preocupados", &"wink": "Guiño", &"lashes": "Pestañas", &"none": "Sin ojos",
+	&"classic": "UI_FACE_EYES_CLASSIC", &"joyful": "UI_FACE_EYES_JOYFUL", &"sleepy": "UI_FACE_EYES_SLEEPY",
+	&"worried": "UI_FACE_EYES_WORRIED", &"wink": "UI_FACE_EYES_WINK",
+	&"lashes": "UI_FACE_EYES_LASHES", &"none": "UI_FACE_EYES_NONE",
 }
 const MOUTHS: Dictionary = {
-	&"smile": "Sonrisa", &"grin": "Dientes", &"surprised": "Sorpresa",
-	&"pout": "Puchero", &"tongue": "Lengüita", &"laugh": "Carcajada", &"none": "Sin boca",
+	&"smile": "UI_FACE_MOUTH_SMILE", &"grin": "UI_FACE_MOUTH_GRIN", &"surprised": "UI_FACE_MOUTH_SURPRISED",
+	&"pout": "UI_FACE_MOUTH_POUT", &"tongue": "UI_FACE_MOUTH_TONGUE",
+	&"laugh": "UI_FACE_MOUTH_LAUGH", &"none": "UI_FACE_MOUTH_NONE",
 }
 static var _textures: Dictionary = {}
 

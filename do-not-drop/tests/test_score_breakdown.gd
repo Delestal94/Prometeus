@@ -56,8 +56,9 @@ func _run() -> void:
 		labels.append(String(line["label"]))
 	var expected: int = maxi(roundi(sum * float(results["chaos_multiplier"])), 0)
 	_expect(expected == int(results["score"]), "The lines add up to the score (%d x %.1f vs %d)" % [sum, float(results["chaos_multiplier"]), int(results["score"])])
-	_expect("Vecinos sin su paquete (2)" in labels, "Both the skipped door and the one never reached cost points (%s)" % ", ".join(labels))
-	_expect("Fotos de entrega (1)" in labels, "The photo shows as its own line")
+	_expect("HUD_SCORE_MISSED" in labels and int(lines[labels.find("HUD_SCORE_MISSED")].get("count", 0)) == 2,
+			"Both the skipped door and the one never reached cost points (%s)" % ", ".join(labels))
+	_expect("HUD_SCORE_PHOTOS" in labels, "The photo shows as its own line")
 	var deliveries: Array = results.get("deliveries", [])
 	_expect(deliveries.size() == 4, "There is one result row per promised house")
 	_expect(String(deliveries[0].get("trap", "")) == "FRÁGIL" and bool(deliveries[0].get("photo", false)),
@@ -70,8 +71,9 @@ func _run() -> void:
 	var award_titles: PackedStringArray = []
 	for award: Dictionary in results.get("awards", []):
 		award_titles.append(String(award.get("title", "")))
-	_expect("MVP" in award_titles and "Rescatista" in award_titles and "Desactivador" in award_titles
-			and "Mano firme" in award_titles, "Merit produces all four result awards")
+	_expect("HUD_AWARD_MVP" in award_titles and "HUD_AWARD_RESCUER" in award_titles
+			and "HUD_AWARD_DEFUSER" in award_titles and "HUD_AWARD_STEADY_HAND" in award_titles,
+			"Merit produces all four result awards")
 	var next_unlock: Dictionary = unlocks.call(&"next_unlock_progress")
 	_expect(not next_unlock.is_empty() and float(next_unlock.get("progress", -1.0)) >= 0.0,
 			"The results can show progress toward the next unlock")

@@ -16,8 +16,9 @@ const HOLD_SECONDS: float = 1.0
 const PRACTICE_SEQUENCE: Array[StringName] = [&"up", &"left", &"down"]
 ## Shown after the last tick, then the card goes away for good.
 const FAREWELL_SECONDS: float = 2.5
-const STEP_TEXTS: Array[String] = ["Agarrá una caja", "Mantené %s: la cuidás", "Mantené %s: usás una herramienta",
-	"Con %s mantenido, tocá W, A, S (como la bomba)", "Subila al estante o sentate con ella"]
+## Keys in translations/strings_ui.csv.
+const STEP_TEXTS: Array[String] = ["HUD_PRACTICE_STEP_GRAB", "HUD_PRACTICE_STEP_HOLD", "HUD_PRACTICE_STEP_TOOL",
+	"HUD_PRACTICE_STEP_SEQUENCE", "HUD_PRACTICE_STEP_LOAD"]
 const STEP_VIEWS: Array[StringName] = [&"grab", &"hold", &"tool", &"sequence", &"load"]
 
 var step: int = 0
@@ -63,8 +64,8 @@ func _init() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	add_child(column)
-	UiThemeScript.tag(column, "PRÁCTICA", UiThemeScript.SKY, -2.0, 16)
-	_title = UiThemeScript.title(column, "CÓMO CUIDAR LA CARGA", 24)
+	UiThemeScript.tag(column, tr("HUD_PRACTICE_TAG"), UiThemeScript.SKY, -2.0, 16)
+	_title = UiThemeScript.title(column, tr("HUD_PRACTICE_TITLE"), 24)
 	prompt_view = CarePromptView.new()
 	prompt_view.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(prompt_view)
@@ -154,14 +155,14 @@ func _next() -> void:
 	if step >= STEP_TEXTS.size():
 		finished = true
 		_farewell = FAREWELL_SECONDS
-		_title.text = "¡LISTO! YA SABÉS"
+		_title.text = tr("HUD_PRACTICE_DONE")
 		if profile != null:
 			profile.call(&"mark_tip_seen", SEEN_ID)
 
 
 func _refresh(keys: Dictionary) -> void:
 	for i: int in _rows.size():
-		var text: String = STEP_TEXTS[i]
+		var text: String = tr(STEP_TEXTS[i])
 		if i == 1 or i == 3:
 			text = text % keys.get("primary", "Clic izq.")
 		elif i == 2:

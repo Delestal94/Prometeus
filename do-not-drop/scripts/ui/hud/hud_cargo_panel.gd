@@ -136,8 +136,9 @@ func refresh_row(id: StringName) -> void:
 			if hud.route_event_active_id == &"mimetic_package" and not node.disguise_trap_id.is_empty() and not node.disguise_revealed:
 				var disguise: Resource = load("res://data/traps/%s.tres" % node.disguise_trap_id)
 				if disguise != null:
-					display_name = String(disguise.get("display_name")).to_upper()
-					(row["icon"] as TextureRect).texture = UiTheme.trap_icon(String(disguise.get("display_name")))
+					display_name = String(disguise.call(&"localized_name")).to_upper()
+					(row["icon"] as TextureRect).texture = UiTheme.trap_icon(
+						String(disguise.call(&"localized_name")))
 			break
 	label.text = "%s  ·  %d%%  ·  %s" % [display_name, roundi(integrity), tr(Hud.STATE_STATUS[state])]
 	label.add_theme_color_override("font_color", _state_text_color(state))

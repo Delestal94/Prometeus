@@ -102,6 +102,13 @@ func _run() -> void:
 	settings.menu_text_scale = 1.4
 	_expect(is_equal_approx(settings.menu_text_scale, 1.5),
 		"Menu text scale snaps to one of the three supported sizes")
+	settings.call(&"set_language", "en")
+	_expect(TranslationServer.get_locale().begins_with("en"),
+		"Changing the language applies English immediately (got %s)" % TranslationServer.get_locale())
+	var language_config := ConfigFile.new()
+	language_config.load(original_path)
+	_expect(String(language_config.get_value("player", "language", "")) == "en",
+		"The selected language is saved")
 
 	# --- they survive a restart ---
 	settings.master_volume = 0.35
@@ -120,6 +127,7 @@ func _run() -> void:
 	settings.colorblind_palette = false
 	settings.menu_text_scale = 1.0
 	settings.sound_subtitles = false
+	settings.call(&"set_language", "es")
 	settings.impact_effects = true
 	settings.master_volume = 0.35
 	settings.look_sensitivity = 1.75
