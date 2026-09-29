@@ -154,7 +154,8 @@ func _natural_height(p: Vector2, with_ridge: bool = true) -> float:
 		var weight: float = 1.0 - smoothstep(5.0, 11.0, p.distance_to(Vector2(pad.x, pad.z)))
 		height = lerpf(height, pad.y, weight)
 	for tunnel: Dictionary in tunnels:
-		height = maxf(height, lerpf(height, float(tunnel.level) + float(tunnel.height), _tunnel_hill(tunnel, p, road.x)))
+		var hill: float = float(tunnel.level) + float(tunnel.height)
+		height = maxf(height, lerpf(height, hill, _tunnel_hill(tunnel, p, road.x)))
 	for zone: Rect2 in flat_zones:
 		var outside := Vector2(maxf(maxf(zone.position.x - p.x, p.x - zone.end.x), 0.0), maxf(maxf(zone.position.y - p.y, p.y - zone.end.y), 0.0))
 		height = lerpf(height, FLAT_ZONE_HEIGHT, 1.0 - smoothstep(0.0, FLAT_ZONE_BLEND, outside.length()))
@@ -190,7 +191,8 @@ func _in_tunnel_bore(key: Vector2i) -> bool:
 		for corner: Vector2i in [key, key + Vector2i(1, 0), key + Vector2i(0, 1), key + Vector2i(1, 1)]:
 			var offset: Vector2 = Vector2(corner) * STEP - (tunnel.at as Vector2)
 			var along: float = offset.dot(dir)
-			if along >= 0.0 and along <= float(tunnel.bore_length) + 1.0 					and absf(offset.dot(Vector2(-dir.y, dir.x))) < float(tunnel.bore_half) + 0.4:
+			var across: float = absf(offset.dot(Vector2(-dir.y, dir.x)))
+			if along >= 0.0 and along <= float(tunnel.bore_length) + 1.0 and across < float(tunnel.bore_half) + 0.4:
 				over = true
 			var height: float = _sample(corner).x - float(tunnel.level)
 			low = minf(low, height)
@@ -557,7 +559,8 @@ func conform_geometry(node: Node, ignore_rivers: bool = false) -> void:
 	# rigid pieces: warping their vertices would bend them out of shape. So
 	# does anything flagged &"rigid" (a tunnel portal and the track into it:
 	# the hill behind would lift the back of them).
-	if node is Area3D or node is Label3D or (node is Node3D and (node.has_meta(&"animated") or node.has_meta(&"rigid"))):
+	var rigid: bool = node is Node3D and (node.has_meta(&"animated") or node.has_meta(&"rigid"))
+	if node is Area3D or node is Label3D or rigid:
 		var p: Vector3 = to_local(node.global_position)
 		node.global_position.y += height_without_rivers(p) if ignore_rivers else height_at(p)
 		return

@@ -136,9 +136,11 @@ func _check_tunnel() -> void:
 	var cutting: float = terrain.height_at(Vector3(37.0, 0.0, -40.0)) - level
 	expect(absf(cutting) < 0.3, "The cutting in front of the portal is level with the track (%.2f m)" % cutting)
 	var state := root.world_3d.direct_space_state
-	var near := PhysicsRayQueryParameters3D.create(Vector3(45.0, level + 30.0, -40.0), Vector3(45.0, level - 2.0, -40.0), 1)
+	var near := PhysicsRayQueryParameters3D.create(
+		Vector3(45.0, level + 30.0, -40.0), Vector3(45.0, level - 2.0, -40.0), 1)
 	expect(state.intersect_ray(near).is_empty(), "No ground cuts through the bore behind the facade")
-	var far := PhysicsRayQueryParameters3D.create(Vector3(52.0, level + 30.0, -40.0), Vector3(52.0, level - 2.0, -40.0), 1)
+	var far := PhysicsRayQueryParameters3D.create(
+		Vector3(52.0, level + 30.0, -40.0), Vector3(52.0, level - 2.0, -40.0), 1)
 	var roof: Dictionary = state.intersect_ray(far)
 	expect(not roof.is_empty() and roof.position.y > level + crown, "The hill closes over the bore further in")
 	terrain.free()

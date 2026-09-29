@@ -156,7 +156,8 @@ func _run() -> void:
 	# the other instead of popping up in the open.
 	for portal_name: String in ["TunnelPortalNear", "TunnelPortalFar"]:
 		var portal: Node3D = crossing.get_node_or_null(NodePath(portal_name))
-		_expect(portal != null and portal.has_meta(&"rigid"), "%s: the imported portal, kept rigid on the terrain" % portal_name)
+		_expect(portal != null and portal.has_meta(&"rigid"),
+			"%s: the imported portal, kept rigid on the terrain" % portal_name)
 	var mouths: Array[Dictionary] = crossing.tunnel_mouths()
 	_expect(mouths.size() == 2 and (mouths[0].dir as Vector2).dot(mouths[1].dir as Vector2) < -0.99,
 		"Two tunnel mouths, one at each end, both leading away from the road")

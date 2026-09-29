@@ -63,7 +63,8 @@ func _check_falls(terrain: Node3D, river: Dictionary) -> void:
 	_expect(falls.find_children("FallFoam*", "MeshInstance3D", false, false).size() == 2, "Foam where each one lands")
 	# Polish pass (2026-09-29): a veil of white threads in front of each
 	# sheet, and spray drifting up where it lands.
-	_expect(falls.find_children("FallVeil*", "MeshInstance3D", false, false).size() == 2, "A veil in front of each sheet")
+	_expect(falls.find_children("FallVeil*", "MeshInstance3D", false, false).size() == 2,
+		"A veil in front of each sheet")
 	var mists: Array[Node] = falls.find_children("FallMist*", "CPUParticles3D", false, false)
 	_expect(mists.size() == 2 and (mists[0] as CPUParticles3D).emitting, "Spray rises where each one lands")
 	var rocks: int = falls.find_children("FallRock*", "Node3D", false, false).size()
@@ -83,7 +84,8 @@ func _check_falls(terrain: Node3D, river: Dictionary) -> void:
 		var foot_2d := Vector2(foot.x, foot.z)
 		var water: float = terrain.call(&"_river_water_height", river, foot_2d)
 		_expect(water - terrain.height_at(foot) > 0.0, "The fall lands in the water, not on the bank")
-		_expect(top.y - water >= RiverFalls.MIN_DROP - 0.01, "The fall drops from above the water (%.2f m)" % (top.y - water))
+		_expect(top.y - water >= RiverFalls.MIN_DROP - 0.01,
+			"The fall drops from above the water (%.2f m)" % (top.y - water))
 	# Built again from scratch, the same river puts every rock in the same spot.
 	var again: Node3D = RouteTerrain.new()
 	root.add_child(again)
