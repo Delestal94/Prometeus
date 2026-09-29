@@ -67,7 +67,8 @@ func _initialize() -> void:
 	for segment: Node in final_active:
 		var loose: Array = DressingBatcher._segment_parts(segment).filter(
 			func(part: MeshInstance3D) -> bool: return not String(part.name).begins_with("MergedGeometry"))
-		_expect(loose.is_empty(), "%s's static boxes are merged as it spawns (%d left loose)" % [segment.name, loose.size()])
+		_expect(loose.is_empty(),
+			"%s's static boxes are merged as it spawns (%d left loose)" % [segment.name, loose.size()])
 	var first_segment: RouteSegment = final_active[0]
 	var last_segment: RouteSegment = final_active[-1]
 	_expect(first_segment._material(RouteSegment.ROAD) == last_segment._material(RouteSegment.ROAD),

@@ -2,9 +2,8 @@ class_name DeliveryPackage
 extends RigidBody3D
 ## Physical entity and trap integration. Presentation subscribes independently.
 ##
-## Host-authoritative, like the van: authority defaults to the host since
-## this is a static, non-spawned node. Non-host peers freeze it and let
-## their MultiplayerSynchronizer puppet the transform instead.
+## Host-authoritative, like the van: authority defaults to the host since this is a static, non-spawned node.
+## Non-host peers freeze it and let their MultiplayerSynchronizer puppet the transform instead.
 
 @export var package_id: StringName = &"fragile_01"
 @export var trap_definition: Resource = preload("res://data/traps/fragile.tres")
@@ -61,9 +60,8 @@ var is_held: bool = false:
 		collision_layer = 0 if value else 4
 		collision_mask = 0 if value else LOOSE_MASK
 var is_loaded: bool = false
-## Set by place_at(), cleared by release_mount(). Lets a pickup free its
-## shelf slot with a direct reference instead of scanning every mount in
-## the "package_mount" group to find whichever one claims this package.
+## Set by place_at(), cleared by release_mount(). Lets a pickup free its shelf slot with a direct reference
+## instead of scanning every mount in the "package_mount" group to find whichever one claims this package.
 var current_mount: Node = null
 ## Replicate shelf occupancy as well as the box transform: clients use it
 ## to decide whether they may board, tend cargo or place another box.
@@ -80,9 +78,8 @@ var carrier: Node = null
 ## Written each frame by whoever is tending this package. Plain data, so the
 ## host can apply a remote client's input the same way once networking lands.
 var player_input: Dictionary = {}
-## Lid state, host-authoritative and replicated (see package.tscn). Opening
-## lets the crew check what they're carrying; an open box can spill, and
-## the resident notices one that shows up open.
+## Lid state, host-authoritative and replicated (see package.tscn). Opening lets the crew check what they're
+## carrying; an open box can spill, and the resident notices one that shows up open.
 var is_open: bool = false
 ## Host decides these event effects; MultiplayerSynchronizer copies them.
 var label_swapped_with: StringName = &""
@@ -99,12 +96,10 @@ var _parasite_damage: float = 0.0
 ## Replicated too: once the contents are on the floor there's nothing left
 ## to close the box on.
 var contents_spilled: bool = false
-## Replicated in place of position/rotation (see package.tscn). Inside the
-## truck's cargo bay the box is sent in the truck's own space, and a client
-## puts it back on *its* copy of the truck. In world space the two arrived
-## from separate synchronizers, out of step: at speed the boxes trailed the
-## truck by a good part of a metre, so on clients they bounced about, went
-## through the walls and seemed to fall out.
+## Replicated in place of position/rotation (see package.tscn). Inside the truck's cargo bay the box is sent
+## in the truck's own space, and a client puts it back on *its* copy of the truck. In world space the two
+## arrived from separate synchronizers, out of step: at speed the boxes trailed the truck by a good part of a
+## metre, so on clients they bounced about, went through the walls and seemed to fall out.
 var net_transform: Transform3D = Transform3D.IDENTITY:
 	set(value):
 		net_transform = value
@@ -112,9 +107,8 @@ var net_transform: Transform3D = Transform3D.IDENTITY:
 var net_in_vehicle: bool = false
 var _has_net_state: bool = false
 var _vehicle: Node3D = null
-## Host: the carrier's latest hold pose, in the truck's space when aboard.
-## Re-applied every tick against the host's own truck, so a box carried in
-## the moving bay rides with it between the carrier's updates.
+## Host: the carrier's latest hold pose, in the truck's space when aboard. Re-applied every tick against the
+## host's own truck, so a box carried in the moving bay rides with it between the carrier's updates.
 var _carry_pose: Transform3D = Transform3D.IDENTITY
 var _carry_in_vehicle: bool = false
 ## Carrier's own client: where its hands hold the box this tick (see
@@ -131,9 +125,8 @@ var assistant_peer_id: int = 0
 ## primary sample at full strength and one assistant at half strength.
 var _tender_inputs: Dictionary = {}
 var _assist_seconds: float = 0.0
-## Host-only merit attribution. Trap milestones belong to the last passenger
-## who sent an input that could actually affect the box; carry milestones
-## belong to the last player who held it.
+## Host-only merit attribution. Trap milestones belong to the last passenger who sent an input that could
+## actually affect the box; carry milestones belong to the last player who held it.
 var _last_tender_peer: int = 0
 var _last_holder_peer: int = 0
 var _rescue_pending: bool = false
@@ -176,11 +169,10 @@ var _hint_relay_time: float = 0.0
 var _package_hit_cooldowns: Dictionary = {}
 
 
-## Synced only to peers whose level is loaded (NetworkManager.is_peer_ready()),
-## same as the players. Installed before the synchronizer (a child) enters the
-## tree and registers: after a host restart the new level's boxes were synced
-## to clients still on the old level, where a box handed over last run was
-## gone; that client never resolved it and never saw that box move again.
+## Synced only to peers whose level is loaded (NetworkManager.is_peer_ready()), same as the players. Installed
+## before the synchronizer (a child) enters the tree and registers: after a host restart the new level's boxes
+## were synced to clients still on the old level, where a box handed over last run was gone; that client never
+## resolved it and never saw that box move again.
 func _enter_tree() -> void:
 	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
 	var network: Node = get_node_or_null(^"/root/NetworkManager")
@@ -201,9 +193,8 @@ func _on_peer_level_ready(peer_id: int) -> void:
 func _ready() -> void:
 	if not is_multiplayer_authority():
 		freeze = true
-		# Placed by the network every frame (_process), against the truck
-		# as it's drawn: interpolating between physics ticks on top of that
-		# only made it trail behind.
+		# Placed by the network every frame (_process), against the truck as it's drawn: interpolating between
+		# physics ticks on top of that only made it trail behind.
 		physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
 	initialize_trap()
 	_salvage_view = preload("res://scripts/gameplay/package/package_salvage.gd").new()
@@ -242,9 +233,8 @@ func _physics_process(delta: float) -> void:
 	if _is_run_active() and not _consumed and _registered_for_run():
 		_simulate_cargo(delta)
 	_publish_net_state()
-	# Continuous collision only while loose, or thrown about the bay: riding
-	# along with it on, a box was swept out through the shut rear doors
-	# (playtest 2026-09-27, see Vehicle.needs_sweep()).
+	# Continuous collision only while loose, or thrown about the bay: riding along with it on, a box was swept
+	# out through the shut rear doors (playtest 2026-09-27, see Vehicle.needs_sweep()).
 	var vehicle: Node3D = _find_vehicle()
 	var sweep: bool = vehicle == null or bool(vehicle.call(&"needs_sweep", self,
 			RIDE_MARGIN if net_in_vehicle else 0.0))
@@ -264,20 +254,18 @@ func _process(_delta: float) -> void:
 	var riding: bool = _predicted_in_vehicle if predicted else net_in_vehicle
 	var vehicle: Node3D = _find_vehicle()
 	if riding and vehicle != null:
-		# A client's truck is frozen, so not interpolated: its interpolated
-		# transform is then last frame's cached one, not where the network
-		# just put it, and the box would trail the truck by a frame.
+		# A client's truck is frozen, so not interpolated: its interpolated transform is then last frame's
+		# cached one, not where the network just put it, and the box would trail the truck by a frame.
 		var vehicle_pose: Transform3D = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
 		global_transform = vehicle_pose * pose
 	else:
 		global_transform = pose
 
 
-## The carrier's own client, every physics tick next to submit_carry_transform:
-## draw the box in its hands now instead of when the host's copy comes back.
-## Over Steam it trailed the carrier by the whole round trip (playtest
-## 2026-09-29). The host still decides where the box is; this only lasts
-## while the carrier keeps calling it.
+## The carrier's own client, every physics tick next to submit_carry_transform: draw the box in its hands now
+## instead of when the host's copy comes back. Over Steam it trailed the carrier by the whole round trip
+## (playtest 2026-09-29). The host still decides where the box is; this only lasts while the carrier keeps
+## calling it.
 func predict_carry(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
 	if is_multiplayer_authority():
 		return
@@ -422,9 +410,8 @@ func _hit_player(player: Player) -> void:
 	apply_impact(speed * 0.35)
 
 
-## Announces this package to the run. Called when the delivery starts, not at
-## _ready: packages load before the level resets the run, and only cargo
-## actually aboard should count toward the score.
+## Announces this package to the run. Called when the delivery starts, not at _ready: packages load before the
+## level resets the run, and only cargo actually aboard should count toward the score.
 func report_to_run() -> void:
 	_emit_event(&"cargo_registered", [package_id, String(trap_definition.get("display_name"))])
 	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
@@ -536,10 +523,9 @@ func apply_parasite_damage(amount: float) -> void:
 	_sharing_parasite_damage = false
 
 
-## The primary tender and, when present, one helper call this every physics
-## frame. Only the host combines their samples and advances trap behavior.
-## Same unreliable-ordered reasoning as the van's driver input -- a dropped
-## sample is superseded a frame later.
+## The primary tender and, when present, one helper call this every physics frame. Only the host combines
+## their samples and advances trap behavior. Same unreliable-ordered reasoning as the van's driver input -- a
+## dropped sample is superseded a frame later.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_tender_input(input: Dictionary) -> void:
 	if not is_multiplayer_authority():
@@ -691,15 +677,13 @@ func _player_for_peer(peer_id: int) -> Node:
 	return null
 
 
-## Whoever is carrying this package (on foot, not yet mounted) calls this
-## every physics frame instead of setting global_transform directly -- the
-## package is host-authoritative, so only the host's copy moving is real;
-## everyone else, carrier included, sees it through the MultiplayerSynchronizer.
+## Whoever is carrying this package (on foot, not yet mounted) calls this every physics frame instead of
+## setting global_transform directly -- the package is host-authoritative, so only the host's copy moving is
+## real; everyone else, carrier included, sees it through the MultiplayerSynchronizer.
 ##
 ## `in_vehicle`: the pose is in the truck's space (the carrier is in the bay),
-## and goes on the host's own truck -- each peer's copy of the truck is a
-## little behind the host's, and a world pose put the box a metre behind the
-## hands at speed.
+## and goes on the host's own truck -- each peer's copy of the truck is a little behind the host's, and a
+## world pose put the box a metre behind the hands at speed.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
 	if not is_multiplayer_authority():
@@ -729,9 +713,8 @@ func set_held(held: bool) -> void:
 	angular_velocity = Vector3.ZERO
 
 
-## Host-only: pickup points call this instead of set_held(true) directly, so
-## the package knows who has it -- needed to validate drop requests and to
-## clear that player's hands on every peer when the box leaves them.
+## Host-only: pickup points call this instead of set_held(true) directly, so the package knows who has it --
+## needed to validate drop requests and to clear that player's hands on every peer when the box leaves them.
 func take_by(player: Node) -> void:
 	var peer_id: int = int(player.get_multiplayer_authority())
 	var vehicle: Node3D = _find_vehicle()
@@ -858,10 +841,9 @@ func place_at(mount: Node3D, mount_point: Node = null) -> void:
 ## A resident took the box at the door. Its carrier's hands have to empty on
 ## every peer before the node goes away, or they keep "holding" a freed box.
 ##
-## With `hand_over_at` (the resident at the door) it doesn't just vanish
-## (tareas de Slatex #15): it floats from the hands to the doorway and the
-## resident takes it in, then it's gone. Already out of play from the first
-## frame -- no collisions, no longer cargo -- so nothing can grab it back.
+## With `hand_over_at` (the resident at the door) it doesn't just vanish (tareas de Slatex #15): it floats
+## from the hands to the doorway and the resident takes it in, then it's gone. Already out of play from the
+## first frame -- no collisions, no longer cargo -- so nothing can grab it back.
 const HAND_OVER_SECONDS: float = 0.45
 const TAKE_IN_SECONDS: float = 0.3
 
