@@ -16,14 +16,34 @@ class_name VehicleFaults
 ## none of them ending the run. N-214.2 gives them their effect: the rear
 ## door won't stay latched (the host swings it open on the hit and again on
 ## every bump while it's broken, and the crew has to keep closing it), and
-## the driver's mirror breaks off (VehicleFaultEffects, on every peer). The
-## fixes are N-214.3.
+## the driver's mirror breaks off (VehicleFaultEffects, on every peer).
+## N-214.3 fixes them at a repair spot on the van (FaultRepairSpot): the
+## rear door is tied shut with a strap from the shared kit; the depot's
+## spare part (CrewProgression.SUPPLIES "spare_part") fixes either one when
+## the kit can't. The mirror's improvised fix (a passenger's phone) is pending.
 
 ## Every fault this version can roll, in roll order.
 const FAULTS: Array[StringName] = [&"rear_door", &"mirror"]
 ## Preloaded, not by class_name: a new global class isn't in the class cache
 ## until the editor imports again, and headless runs load this first.
 const EFFECTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_fault_effects.gd")
+const REPAIR_SPOT: Script = preload("res://scripts/gameplay/vehicle/fault_repair_spot.gd")
+## The improvised fix from the shared kit (RunManager.care_supplies), per
+## fault. No new tools: only what the kit already carries.
+const IMPROVISED: Dictionary = {&"rear_door": &"strap"}
+## Repair spot prompt per fault and method. Spelled out, not built, so the
+## translation test finds every key in use.
+const REPAIR_PROMPTS: Dictionary = {
+	&"rear_door": {&"spare": "WORLD_FAULT_REAR_DOOR_SPARE", &"strap": "WORLD_FAULT_REAR_DOOR_STRAP"},
+	&"mirror": {&"spare": "WORLD_FAULT_MIRROR_SPARE"},
+}
+## Where each repair spot hangs, in the van's frame: the rear door's right
+## post (the rescue hook has the left one, the door control the middle), and
+## the driver's mirror (moved onto the model's mirror when it's there).
+const SPOT_POSITIONS: Dictionary = {
+	&"rear_door": Vector3(0.85, 1.1, 4.3),
+	&"mirror": Vector3(-1.2, 1.9, -2.4),
+}
 ## Mixed into the world seed so faults don't share their sequence with other
 ## seeded rolls of the run.
 const SEED_SALT: int = 214
@@ -50,6 +70,12 @@ var active: Dictionary = {}
 var faults_this_run: int = 0
 ## Host-only: times the broken rear door swung open by itself this run.
 var door_pops: int = 0
+## Every peer: spare parts the run took from the depot, one per fix. Kept
+## until the run ends, not reset by run_started (the depot hands them over
+## around the same moment).
+var spares: int = 0
+## fault_id -> its FaultRepairSpot on the van (none without a van).
+var spots: Dictionary = {}
 var effects: Node3D
 var _rng := RandomNumberGenerator.new()
 
@@ -63,6 +89,9 @@ func _ready() -> void:
 	effects.name = "Effects"
 	effects.set(&"vehicle", vehicle)
 	add_child(effects)
+	add_to_group(&"vehicle_faults")
+	EventBus.run_ended.connect(func(_score: int, _results: Dictionary) -> void: _set_spares(0))
+	_hang_repair_spots()
 	reset_for_run()
 
 
@@ -85,6 +114,74 @@ func repair(fault_id: StringName, method: StringName) -> bool:
 		return false
 	EventBus.relay(&"vehicle_fault_repaired", [fault_id, method])
 	return true
+
+
+## Host-only: the run leaving the depot took spare parts (depot.gd begin_run).
+func stock_spares(count: int) -> void:
+	if not NetworkManager.is_host():
+		return
+	_set_spares(count)
+	if NetworkManager.is_online():
+		_set_spares.rpc(count)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _set_spares(count: int) -> void:
+	spares = maxi(0, count)
+
+
+## How the crew would fix fault_id right now: the kit supply of its
+## improvised fix, else &"spare", or &"" if it isn't broken or there's
+## nothing to fix it with. The kit goes first so the paid spare is kept for
+## a fault the kit can't fix (the mirror).
+func repair_method(fault_id: StringName) -> StringName:
+	if not active.has(fault_id):
+		return &""
+	var tool: StringName = IMPROVISED.get(fault_id, &"")
+	if not tool.is_empty() and RunManager.care_supply_count(tool) > 0:
+		return tool
+	if spares > 0:
+		return &"spare"
+	return &""
+
+
+## Translation key of the repair spot's prompt, or "" when it can't be fixed.
+func repair_prompt(fault_id: StringName) -> String:
+	var method: StringName = repair_method(fault_id)
+	if method.is_empty():
+		return ""
+	return String((REPAIR_PROMPTS.get(fault_id, {}) as Dictionary).get(method, ""))
+
+
+## Host-only: fixes fault_id the best way available (repair_method()) and
+## spends what it took. Returns false if it couldn't.
+func fix(fault_id: StringName) -> bool:
+	if not NetworkManager.is_host():
+		return false
+	var method: StringName = repair_method(fault_id)
+	if method.is_empty():
+		return false
+	if method != &"spare" and not RunManager.consume_care_supply(method):
+		return false
+	return repair(fault_id, method)
+
+
+func _hang_repair_spots() -> void:
+	if vehicle == null:
+		return
+	for fault_id: StringName in FAULTS:
+		var spot: Interactable = REPAIR_SPOT.new()
+		spot.name = "FaultRepair_%s" % fault_id
+		spot.set(&"fault_id", fault_id)
+		spot.set(&"faults", self)
+		spot.position = SPOT_POSITIONS[fault_id]
+		vehicle.add_child(spot)
+		spots[fault_id] = spot
+	var mirror: Array = effects.call(&"driver_mirror_parts")
+	if not mirror.is_empty():
+		var part: Node3D = mirror[0]
+		spots[&"mirror"].position = vehicle.to_local(part.global_position) \
+				if part.is_inside_tree() and vehicle.is_inside_tree() else part.position
 
 
 func _on_run_started(_route_id: StringName, _players: Array) -> void:
@@ -132,5 +229,7 @@ func _pop_rear_door() -> void:
 	door_pops += 1
 
 
-func _on_fault_repaired(fault_id: StringName, _method: StringName) -> void:
+func _on_fault_repaired(fault_id: StringName, method: StringName) -> void:
 	active.erase(fault_id)
+	if method == &"spare":
+		spares = maxi(0, spares - 1)

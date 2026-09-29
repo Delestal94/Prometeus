@@ -50,6 +50,11 @@ const SUPPLIES := {
 		"detail": "Desde la puerta trasera abierta, un pasajero engancha una caja caída sin que el camión frene.",
 		"cost": 30,
 	},
+	&"spare_part": {
+		"title": "Repuesto del camión",
+		"detail": "Si el camión se rompe en el próximo reparto, la puerta o el espejo se arreglan en el lugar.",
+		"cost": 25,
+	},
 }
 
 var team_money: int = STARTING_MONEY

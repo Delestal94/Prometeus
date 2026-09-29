@@ -7,6 +7,19 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: N-214.3 arreglo de averías del camión (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-fault-repair`. Solo agrega; **ninguna firma cambia**, no se
+tocan archivos de Slatex y `vehicle.gd`/`vehicle.tscn` siguen congelados:
+- `core/crew_progression.gd` (zona compartida): `SUPPLIES` suma `&"spare_part"` ($25). El panel del
+  depósito lo lista solo.
+- `gameplay/vehicle/fault_repair_spot.gd` (nuevo): `VehicleFaults` cuelga del camión
+  `FaultRepair_rear_door` en `(0.85, 1.1, 4.3)` (poste derecho de la puerta trasera) y
+  `FaultRepair_mirror` sobre el espejo del conductor. Slatex: si el modelo nuevo del camión mueve la
+  puerta, hay que mover `VehicleFaults.SPOT_POSITIONS`.
+- Usa la cincha (`strap`) del kit compartido (`RunManager.consume_care_supply`) para atar la puerta.
+- `translations/strings_world.csv`: claves `WORLD_FAULT_*`.
+
 ## Aviso activo: N-213.3 gancho de rescate como suministro del depósito (2026-09-29)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-213-rescue-hook`. Solo agrega; **ninguna firma cambia**, no se

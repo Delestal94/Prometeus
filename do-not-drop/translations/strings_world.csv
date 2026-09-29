@@ -163,3 +163,6 @@ WORLD_REACTION_CARE_SUBSTITUTED_1,"¿Por qué mi gallina tiene pilas?","Why does
 WORLD_REACTION_CARE_SUBSTITUTED_2,"Esto no es lo que pedí. Esto hace ruido de goma.","This isn't what I ordered. It squeaks like rubber."
 WORLD_REACTION_CARE_SUBSTITUTED_3,"Muy gracioso. ¿Y el pedido de verdad?","Very funny. And the real order?"
 WORLD_HOOK_PROMPT,Enganchar la caja caída,Hook the fallen box
+WORLD_FAULT_REAR_DOOR_SPARE,Cambiar la traba de la puerta con el repuesto,Replace the door latch with the spare part
+WORLD_FAULT_REAR_DOOR_STRAP,Atar la puerta con una cincha del kit,Tie the door shut with a strap from the kit
+WORLD_FAULT_MIRROR_SPARE,Poner el espejo de repuesto,Fit the spare mirror

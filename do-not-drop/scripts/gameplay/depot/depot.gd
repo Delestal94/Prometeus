@@ -247,6 +247,9 @@ func begin_run(vehicle: Node3D, loaded: Array) -> void:
 	var hook: Node = vehicle.get_node_or_null(^"RescueHook")
 	if taken.has(&"rescue_hook") and hook != null:
 		hook.call(&"arm")
+	var faults: Node = get_tree().get_first_node_in_group(&"vehicle_faults")
+	if taken.has(&"spare_part") and faults != null:
+		faults.call(&"stock_spares", 1)
 	_broadcast_supplies()
 	var missing: PackedStringArray = []
 	for order: Dictionary in orders:

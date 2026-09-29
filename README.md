@@ -394,6 +394,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   N-214.2, con un camión de mentira: la puerta trasera rota se abre sola con el golpe y otra vez con
   cada bache (≥ 4,5) después de cerrarla, y deja de abrirse al arreglarla; el espejo roto oculta solo
   el del lado del conductor, deja los pedazos en la ruta y el arreglo lo vuelve a mostrar.
+  N-214.3: cada avería cuelga su punto de arreglo en el camión, que solo se ofrece con la avería
+  activa; la puerta se ata con una cincha del kit (y la gasta) antes que con el repuesto; sin cincha ni
+  repuesto no se arregla; el repuesto del depósito arregla la puerta o el espejo y se gasta, el espejo
+  no tiene arreglo con el kit todavía y el fin del recorrido descarta los repuestos que sobran.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
