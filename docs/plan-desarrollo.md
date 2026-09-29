@@ -293,6 +293,23 @@ se corren los que siguen, sin comprimirlos: los plazos de Steam no se acortan.
 | Build de demo | 2026-12-18 (vie) | Una entrega completa y el depósito, exportada con `tools`/CI (N-210), en una rama de Steam propia de la demo. Sirve para Steam Next Fest si la fecha del festival cae antes del Early Access. | Export automático (N-210), página publicada |
 | Early Access | 2027-01-22 (vie) | Lanzamiento con el contenido mínimo (1 vehículo, 1 set de tramos, 3-4 trampas), precio definido y build revisada por Steam (revisión de build: pedirla 2 semanas antes). | Demo publicada, playtesting de amigos |
 
+### Decisión de monetización (S-906, 2026-09-28)
+
+- **Compra única:** precio objetivo de lanzamiento entre **USD 8 y 15**, que se fija de manera
+  definitiva antes de enviar la página de Steam a revisión.
+- **Sin microtransacciones:** no hay moneda prémium, cajas de botín, pases, anuncios, compras dentro
+  del juego ni una tienda que acepte dinero real.
+- **Cosméticos por jugar:** uniformes, pinturas y cualquier accesorio futuro se obtienen únicamente
+  con entregas y puntaje del perfil. No se venden por separado.
+- **Actualizaciones gratuitas:** los arreglos, balance y contenido agregado durante Early Access se
+  incluyen para quienes ya compraron el juego, sin dividir la comunidad con contenido de pago.
+
+Verificación del código: `UnlockManager.COSMETICS` solo declara título, color y una clave `unlock`;
+`cosmetic_choices()` expone esos desbloqueos y `select_cosmetic()` rechaza los que el perfil todavía
+no ganó. No hay campos de precio, moneda real ni llamadas de compra en `unlock_manager.gd` o
+`cosmetics_panel.gd`. El mostrador del depósito es otra economía: compra suministros consumibles con
+el dinero cooperativo ganado dentro de la campaña, nunca con dinero real.
+
 ## Fuera del MVP (control de alcance)
 
 Lista cerrada de lo que **no** se hace antes de Early Access. Sumar una fila acá es
