@@ -172,6 +172,17 @@ GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
 Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son
 parte de la batería (con Claude, los corre el agente `revisor-visual`).
 
+Para generar el lote fijo de Steam/tienda de S-902 (cinco PNG de 1920×1080 en
+`user://store_shots/`: depósito cargando, conducción con carga en riesgo, entrega,
+explosión y resultados):
+
+```
+<godot> --path do-not-drop --resolution 1920x1080 --script res://tests/render_store_shots.gd
+```
+
+En builds de depuración, **F10** activa o desactiva el modo captura: oculta todas
+las capas del HUD y cualquier viewmodel, y restaura su visibilidad al salir.
+
 El balance reproducible de trampas tampoco forma parte de la batería rápida. Primero
 `sim_record_drive.gd` maneja cinco rutas reales y guarda la aceleración, inclinación e impactos
 de cada cuadro; después `sim_trap_balance.gd` repite esos recorridos con los siete

@@ -780,8 +780,8 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 ### S-902 · Modo captura para imágenes y tráiler — B · `Sol · high` · Aviso: no
 
-- [ ] Tecla de depuración (F10, solo build de debug) que oculta todo el HUD y el viewmodel.
-- [ ] `tests/render_store_shots.gd`: 5 escenas fijas (depósito cargando, manejo con cajas en riesgo, entrega
+- [x] Tecla de depuración (F10, solo build de debug) que oculta todo el HUD y el viewmodel.
+- [x] `tests/render_store_shots.gd`: 5 escenas fijas (depósito cargando, manejo con cajas en riesgo, entrega
   en una casa, caja explotando, resultados) a 1920×1080. Necesita ventana: la corrés vos.
 
 ### S-903 · Cápsulas de Steam — C · generación de imagen · Aviso: no
