@@ -1,6 +1,8 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
+> Última actualización: 2026-09-29 (tareas nuevas del usuario en el hito M7: N-115 correr, N-116
+> estacionamiento como parada final, N-312 personaje flaco y alto y N-606 el diario del día siguiente,
+> diseñado en `docs/diario-final.md`). Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
 > con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
 > espejo y los resultados). Antes, el mismo día: (túneles de tren en las dos puntas de la vía del paso a
 > nivel; repaso de las cascadas). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
@@ -125,6 +127,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
+| **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
@@ -1032,6 +1035,122 @@ Es de publicación en Steam: queda pospuesta como el resto del pilar 9 (ver la n
   combinar con nuestro lobby de Steam. Decisión anotada en `docs/plan-desarrollo.md` Fase 7.
 - [ ] Evaluar publicar la demo (hito del 2026-12-18) como app aparte para acumular deseados.
 - Depende de N-901 (AppID propio).
+
+---
+
+## Pedidos del usuario: correr, meta, personaje flaco y diario (2026-09-29)
+
+Cuatro tareas que pidió el usuario después de ver el juego terminado de punta a punta. Van en el hito
+**M7**, en este orden (de la más chica a la más grande). Tres tocan el dominio de Slatex (jugador, UI de
+personalización y resultados): llevan **Aviso: sí** y conviene pasar el plan por `guardian-dominios`
+antes de empezar. `vehicle.tscn` / `vehicle.gd` siguen congelados.
+
+| ID | Tarea | Prio |
+|---|---|---|
+| N-115 | Correr | A |
+| N-116 | Parada final: estacionamiento de camiones de reparto | A |
+| N-312 | Personaje flaco y alto | A |
+| N-606 | El diario del día siguiente | A |
+
+### N-115 · Correr — A · `Opus 5.5 · high` · Aviso: sí (`player.gd`, `player_animator.gd` y controles de Slatex)
+
+> Hoy el jugador tiene una sola velocidad (`Player.WALK_SPEED` = 3,6 m/s). Correr sirve sobre todo para
+> llegar a tiempo a una caja caída (los 30 s de rescate de N-213) y para moverse por el depósito.
+
+- [ ] **N-115.1** Mantener Correr (Shift en teclado, clic del stick izquierdo en gamepad; reasignable en
+  Opciones como el resto) sube la velocidad a ~6 m/s. Sin estamina: el juego es cooperativo y casual.
+- [ ] **N-115.2** **Con una caja en brazos no se corre** (se camina como hoy): correr es para ir a buscar la
+  caja, volver con ella sigue siendo con cuidado. Tampoco sentado, manejando ni arriba del camión en
+  movimiento. Decisión a revisar si el usuario prefiere "se puede correr pero la caja se sacude".
+- [ ] **N-115.3** Clip `Run` nuevo en `art/rounded_character/animation_library.py` (zancada con fase de
+  vuelo, brazos más abiertos) y elegido por `PlayerAnimator` por velocidad, con la misma histéresis que
+  Walk/Stroll. En primera persona: balanceo más marcado y el FOV se abre un poco (+4°, suavizado).
+  Pasos más rápidos en el sonido.
+- [ ] **N-115.4** Red: el estado de carrera viaja como `anim_state` (el dueño lo decide, los demás solo
+  reproducen el clip).
+- Test: `test_player_sprint.gd` (velocidad al correr, no corre con caja, sentado ni manejando, elige `Run`,
+  el otro par ve el mismo clip). Captura del clip con `revisor-visual`.
+- Hecho cuando: se corre a pie en la ruta y en el depósito, con animación propia, y con caja se camina.
+
+### N-116 · Parada final: estacionamiento de camiones de reparto — A · `Opus 5.5 · high` · Aviso: no
+
+> Hoy la meta es un arco de hormigón con la palabra META, una barrera y un `GoalArea`
+> (`route.gd::_build_goal()`): se termina al pasar por abajo. Pedido del usuario: una parada final de
+> verdad, la base de la empresa en el pueblo, donde se deja el camión.
+
+- [ ] **N-116.1** Playa de estacionamiento "Base Take My Package — {pueblo}" en lugar del arco (sacarlo de
+  `route.gd` a `route/route_goal_lot.gd`): explanada plana de ~40 × 30 m al final de la ruta, asfalto con
+  cordón, cerco perimetral, cartel grande de la empresa, garita con barrera que se levanta cuando llega el
+  camión, faroles que se prenden de noche (`WorldMood`), 5-6 bahías pintadas con camiones de la empresa
+  estacionados y **una bahía libre marcada** (número grande pintado, flecha y conos). Los camiones
+  estacionados son sólidos: chocarlos es un golpe normal (`vehicle_impact`), la carga lo siente.
+- [ ] **N-116.2** Terminar = estacionar: la partida termina cuando el camión queda **frenado dentro de la
+  bahía libre** (misma regla que la zona de entrega: casi quieto durante ~1,5 s), no al cruzar un arco. El
+  GPS y la guía apuntan a la bahía ("Estacioná en la bahía 7"). Estacionar derecho (menos de 10° de
+  desvío) suma una línea chica en los resultados, "Estacionamiento prolijo" (toca `run_manager.gd`,
+  zona compartida: aviso; si complica, queda para después).
+- [ ] **N-116.3** Vida en la base: un par de repartidores NPC (`DepotWorker`) descargando otro camión, un
+  carro con cajas, una manguera de lavado. Nada que se mueva por la bahía libre.
+- [ ] **N-116.4** Es el último plano antes del diario (N-606): la órbita de resultados muestra el camión
+  estacionado en la base.
+- Endless no tiene meta: no cambia.
+- Test: `test_route_goal_lot.gd` (la playa queda plana y sin árboles ni casas encima, la bahía libre es
+  alcanzable desde la ruta, pasar sin frenar no termina, frenar en la bahía sí, igual en host y cliente);
+  actualizar los tests que buscan `GoalArch*`/`GoalArea`. Capturas de día y de noche con `revisor-visual`.
+- Hecho cuando: la ruta termina en una base con bahías y la partida se cierra al dejar el camión en su
+  lugar.
+
+### N-312 · Personaje flaco y alto — A · `Opus 5.5 · xhigh` · Aviso: sí (apariencia y personalización del jugador, de Slatex)
+
+> Un segundo cuerpo jugable, en contraste con el redondeado de hoy: flaco, alto, cuello y brazos largos.
+> Se elige en la personalización; los dos juegan igual.
+
+- [ ] **N-312.1** Modelo en `art/tall_character/`, con el mismo camino que `art/rounded_character/`
+  (`build_character.py`, `head_shape.py`, render de revisión, validación en Godot): **mismo esqueleto y
+  mismos nombres de huesos**, camiseta con el color del equipo, manos tipo manopla, zapatos grandes. Se
+  exporta a `assets/models/characters/sm_char_player_tall.glb`. La cara (`CharacterFace`) necesita la
+  forma de la cabeza nueva (`HEAD_*` por cuerpo; ver `LEEME.md` del redondeado).
+- [ ] **N-312.2** Clips para sus proporciones con `animation_library.py`: Idle, Walk, Stroll, Jump,
+  PickUpPackage, PickUpHigh, Sit, TurnInPlace y el `Run` de N-115 (la zancada sale del largo de pierna,
+  los pies no deben patinar). Revisar la pose de manejo (IK del volante y pedales) y la de carga.
+- [ ] **N-312.3** Elegir cuerpo en el panel de personalización ("Redondeado / Flaco y alto"), guardado y
+  replicado con el resto de la apariencia (`player_appearance.gd`). **La cápsula de colisión y la altura
+  de la cámara no cambian**: el cuerpo es solo visual, así nadie tiene ventaja ni se rompen puertas,
+  asientos o estantes.
+- [ ] **N-312.4** Opcional: el Jefe del diario (N-606) y los NPC del depósito usan este cuerpo (hoy los NPC
+  siguen con el modelo viejo `sm_char_player_lowpoly.glb`).
+- Test: ampliar `test_player_character.gd` para los dos cuerpos (huesos que usa el juego, clips
+  presentes, cara ni enterrada ni flotando) y un caso de red donde cada par ve el cuerpo que eligió el
+  otro. Capturas de frente, tres cuartos, caminando, corriendo y manejando con `revisor-visual`.
+- Hecho cuando: se puede jugar con el personaje flaco y alto, con todas sus animaciones, y los demás lo
+  ven.
+
+### N-606 · El diario del día siguiente — A · `Opus 5.5 · xhigh` · Aviso: sí (`hud_results.gd`, apodo en jugador y personalización)
+
+> Diseño completo en [`docs/diario-final.md`](diario-final.md). Al terminar el recorrido, escena de ~30 s
+> que se puede saltar: a la mañana siguiente el Jefe del depósito lee *El Eco de {pueblo}* con 3-5 noticias
+> cómicas armadas con lo que pasó en la partida (pedidos que no llegaron, cajas abandonadas, averías,
+> fauna atropellada, la gallina sin cinchar), con planos de cine (general, diario giratorio, insertos,
+> reacción, sobre el hombro). Decisiones del usuario: lee siempre el Jefe, dura 30 s, se puede saltar,
+> y los chistes usan un **apodo del juego**, no el nombre de Steam.
+
+- [ ] **N-606.1** Apodo del jugador: se escribe en la personalización (16 caracteres); si queda vacío, el
+  juego asigna uno gracioso con la semilla del jugador; viaja con la apariencia.
+- [ ] **N-606.2** Contenido: `RunChronicle` (hechos de la partida desde el `EventBus`), `NewsDesk`
+  (redacción pura, determinista por semilla), catálogo `data/newspaper/stories.json` con 3+ variantes por
+  hecho, relay del host `newspaper_ready` (ids y casillas, no texto) y la página 2D mostrada antes de la
+  tarjeta de resultados. Tests `test_news_desk.gd` y `test_run_chronicle.gd`.
+- [ ] **N-606.3** La escena: set propio en su `World3D`, el Jefe sentado, diario 3D con la página en un
+  `SubViewport`, cámara por rieles (`data/newspaper/shots.json`, formato de `TrailerCamera`), bandas
+  negras, saltar manteniendo el botón, opción en Opciones y la tarjeta de resultados esperando
+  `newspaper_finished`. Test headless del director y captura con `revisor-visual`.
+- [ ] **N-606.4** Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
+  `CirclePen`, `SipMate`), diario giratorio, curva de página, expresiones, audio (gallo, "¡extra!",
+  papel, escupida) y hechos nuevos (vuelco, perro, tren).
+- [ ] **N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
+  puerta que se abre) que va al diario con trama de puntos.
+- Hecho cuando: cada entrega termina con el diario de esa partida, igual para todos los jugadores, y se
+  puede saltar.
 
 ---
 
