@@ -927,7 +927,7 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
     `VehicleFaults` cuelga del camión) y el repuesto: `SUPPLIES` suma `spare_part` ($25), el depósito se
     lo pasa al recorrido y arregla la puerta o el espejo; la puerta rota se ata con una cincha del kit,
     que va antes que el repuesto para guardarlo para el espejo. Test `test_vehicle_faults` ampliado. `2c46ce4`
-  - [x] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular como espejo. `HASH`
+  - [x] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular como espejo. `77452a6`
     - Sin repuesto, el punto del espejo ofrece "Sostener el celular como espejo" a cualquiera menos el
       conductor, uno a la vez; no es arreglo: la avería sigue activa, se ve un celular donde estaba el
       espejo en cada par y el host lo suelta si el que lo sostiene se aleja (> 5 m, alcanza desde
