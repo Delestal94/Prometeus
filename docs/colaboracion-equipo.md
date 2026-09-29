@@ -23,6 +23,20 @@ tocan archivos de Slatex y `vehicle.gd` sigue congelado:
   `package.gd`, de Slatex, si se quiere cambiar).
 - `translations/strings_world.csv`: clave `WORLD_HOOK_PROMPT`.
 
+## Aviso activo: N-214.2 efectos de las averías del camión (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-214-fault-effects`. Solo agrega; **ninguna firma cambia**,
+no se tocan archivos de Slatex y `vehicle.gd`/`vehicle.tscn` siguen congelados:
+- `gameplay/level_common.gd` (zona compartida): una línea, le pasa el camión a `VehicleFaults`.
+- `gameplay/vehicle/vehicle_faults.gd`: con la puerta trasera rota el host la abre con
+  `set_rear_cargo_open(true)` en el golpe y otra vez con cada bache de fuerza ≥ 4,5 (la tripulación
+  la puede cerrar, pero no se queda cerrada hasta el arreglo). Con la puerta abierta vuelve el riesgo
+  de caja al agua de N-213. Slatex: si ves que tira demasiadas cajas, avisá y se sube el umbral.
+- `gameplay/vehicle/vehicle_fault_effects.gd` (nuevo, presentación en cada par): el espejo del lado
+  del conductor (`MirrorHousing_*`/`MirrorSurface_*` del modelo, se ocultan desde afuera) se cae a la
+  ruta con un ruido de vidrio; la puerta rota suena con un golpe metálico. El arreglo o una partida
+  nueva lo vuelven a mostrar.
+
 ## Aviso activo: N-214.1 averías del camión, componente `VehicleFaults` (2026-09-28)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-214-vehicle-faults`. Solo agrega; **ninguna firma cambia**,

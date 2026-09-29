@@ -391,6 +391,9 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_vehicle_faults` — N-214.1: las averías del camión las decide el host con un golpe fuerte
   (un bache no rompe nada), como mucho una por entrega (se reinicia con cada recorrido), se repiten
   igual con la misma semilla y los mismos golpes, y `repair()` las saca de la lista de cada par.
+  N-214.2, con un camión de mentira: la puerta trasera rota se abre sola con el golpe y otra vez con
+  cada bache (≥ 4,5) después de cerrarla, y deja de abrirse al arreglarla; el espejo roto oculta solo
+  el del lado del conductor, deja los pedazos en la ruta y el arreglo lo vuelve a mostrar.
 - `test_house_delivery_flow` — el loop entero de una entrega: cargar una
   caja, volver a sacarla en la parada, que llevarla a pie no cuente como
   carga perdida, tocar el timbre, y que eso puntúe. Cada uno de esos pasos
