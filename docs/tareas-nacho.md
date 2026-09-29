@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (red por Steam tras playtest: el host mandaba 2-5 veces el límite
+> Última actualización: 2026-09-29 (auditoría de rendimiento: Endless fusiona cada tramo al generarlo y
+> comparte sus materiales; antes, el mismo día: red por Steam tras playtest: el host mandaba 2-5 veces el límite
 > de Steam y el cliente veía el mundo cada vez más viejo; `care_state` solo al cambiar, sync a 60 Hz
 > fijos, caja predicha en las manos, Nagle apagado; investigación en `docs/investigacion-red.md`;
 > menú sin la tarjeta fantasma y sin DOF en Compatibility). Antes, el mismo día: (N-214.3b: un pasajero
@@ -31,6 +32,21 @@
 > sin esperar a Slatex y sin playtesting**.
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
+
+## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
+
+Auditoría de `perfilador-rendimiento` (headless, Endless con 4 cajas, `Performance` cada 10 ticks):
+- `route_streamer.gd`: cada tramo de Endless ahora pasa por `DressingBatcher.merge_segment_geometry`
+  al generarse, como los del Reparto (`route.gd`); antes cada spawn sumaba ~500 nodos. Flag
+  `batch_geometry` para benches.
+- `route_segment.gd`: `_materials` es `static` (un material por color para todos los tramos); antes
+  cada tramo creaba 5 (+274 recursos por spawn). Los que tiñen ya duplicaban.
+- `test_level_endless` lo verifica (tramos sin cajas sueltas, material de ruta compartido).
+- Descartado: el "1693 Mesh leaked at exit" son cachés `static` acotados (modelos × 2 estaciones ×
+  3 luces), no crecen con la partida. Telemetría, audio sintetizado, sueño y CCD de cuerpos ya bien.
+- Pendiente: al generarse un tramo, `TIME_PHYSICS_PROCESS` pasó de ~3 ms a ~24 ms durante decenas
+  de frames (medido antes del merge, que no toca la física): hay que perfilarlo con ventana real. Faltan
+  también draw calls, sombras y transparencias con `revisor-visual`, y física con camión lleno.
 
 ## Hecho fuera de lista: red por Steam y bugs del playtest (2026-09-29)
 
