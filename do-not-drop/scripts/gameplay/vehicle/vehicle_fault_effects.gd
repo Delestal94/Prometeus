@@ -11,6 +11,8 @@ class_name VehicleFaultEffects
 ## - Rear door: a metal clank at the doors on the hit; the door swinging open
 ##   itself is VehicleFaults' job on the host and the van's own animation.
 ## A repair puts the mirror back.
+## - Phone mirror (N-214.3b): while a passenger holds their phone up as the
+##   mirror, a phone shows where it was, screen lit.
 
 ## Model node names of the exterior mirrors (truck_reference_lowpoly.glb);
 ## the side is picked by position, not by name.
@@ -23,6 +25,8 @@ const DEBRIS_SECONDS: float = 6.0
 var vehicle: Node3D
 ## Every peer: the mirror parts hidden by the current fault.
 var hidden_parts: Array[Node3D] = []
+## Every peer: the phone standing in for the mirror, while someone holds it.
+var phone_mirror: MeshInstance3D
 var _audio: AudioStreamPlayer3D
 
 
@@ -70,6 +74,42 @@ func _on_fault_started(fault_id: StringName, _impact_position: Vector3) -> void:
 func _on_fault_repaired(fault_id: StringName, _method: StringName) -> void:
 	if fault_id == &"mirror":
 		restore()
+
+
+## A fault that was already there, for a peer that joins mid-run: the same
+## look without the crack and the falling piece.
+func show_fault(fault_id: StringName) -> void:
+	if fault_id != &"mirror":
+		return
+	for part: Node3D in driver_mirror_parts():
+		if part.visible:
+			part.visible = false
+			hidden_parts.append(part)
+
+
+## Shows or hides the phone held up at at (the mirror spot, in the van's frame).
+func show_phone_mirror(held: bool, at: Vector3) -> void:
+	if not held:
+		if phone_mirror != null:
+			phone_mirror.visible = false
+		return
+	if vehicle == null:
+		return
+	if phone_mirror == null:
+		phone_mirror = MeshInstance3D.new()
+		phone_mirror.name = "PhoneMirror"
+		var body := BoxMesh.new()
+		body.size = Vector3(0.02, 0.16, 0.08)
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color("0a1418")
+		material.emission_enabled = true
+		material.emission = Color(0.55, 0.8, 0.9)
+		material.emission_energy_multiplier = 0.6
+		body.material = material
+		phone_mirror.mesh = body
+		vehicle.add_child(phone_mirror)
+	phone_mirror.position = at
+	phone_mirror.visible = true
 
 
 func _break_mirror() -> void:

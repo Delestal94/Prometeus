@@ -1,6 +1,8 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
+> Última actualización: 2026-09-29 (N-214.3b: un pasajero sostiene el celular como espejo mientras no
+> haya repuesto; quien se une a mitad del recorrido recibe las averías; faltan los resultados, N-214.4).
+> Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
 > con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
 > espejo y los resultados). Antes, el mismo día: (túneles de tren en las dos puntas de la vía del paso a
 > nivel; repaso de las cascadas). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
@@ -925,9 +927,16 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
     `VehicleFaults` cuelga del camión) y el repuesto: `SUPPLIES` suma `spare_part` ($25), el depósito se
     lo pasa al recorrido y arregla la puerta o el espejo; la puerta rota se ata con una cincha del kit,
     que va antes que el repuesto para guardarlo para el espejo. Test `test_vehicle_faults` ampliado. `2c46ce4`
-  - [ ] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular (`phone_camera.gd`) como espejo.
-    Falta además mandar `active`/`spares` a quien se une a mitad del recorrido (hueco desde N-214.1) y
-    confirmar con `revisor-visual` el punto del espejo en las variantes de camión que no son la clásica.
+  - [x] **N-214.3b** Espejo improvisado: un pasajero sostiene el celular como espejo. `77452a6`
+    - Sin repuesto, el punto del espejo ofrece "Sostener el celular como espejo" a cualquiera menos el
+      conductor, uno a la vez; no es arreglo: la avería sigue activa, se ve un celular donde estaba el
+      espejo en cada par y el host lo suelta si el que lo sostiene se aleja (> 5 m, alcanza desde
+      cualquier asiento), agarra una caja o toma el volante. El repuesto va primero y lo reemplaza.
+      Quien se une a mitad del recorrido recibe averías, repuestos y quién sostiene el celular.
+    - Duda: el camión no tiene vista de espejo funcional, así que el celular es visual (no abre la
+      cámara de `phone_camera.gd` ni muestra la vista de atrás). Queda para cuando haya espejo real.
+  - [ ] **N-214.3c** Confirmar con `revisor-visual` el punto del espejo (y el celular) en las variantes
+    de camión que no son la clásica.
 - [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
 - [ ] Test `test_vehicle_faults.gd`: determinista por semilla, tope respetado, arreglo sincronizado.
 

@@ -5,7 +5,8 @@ extends Interactable
 ## fault is active. The client sends the intent (Interactable.request_interact)
 ## and the host fixes it through VehicleFaults.fix(): the spare part from the
 ## depot if the crew bought one, otherwise the improvised fix from the shared
-## kit when this fault has one.
+## kit when this fault has one. The mirror's is a passenger holding their
+## phone up (VehicleFaults.hold_phone()), which the driver can't do.
 
 ## The fault this spot fixes (VehicleFaults.FAULTS).
 var fault_id: StringName
@@ -31,11 +32,14 @@ func get_prompt() -> String:
 func can_interact(player: Node) -> bool:
 	if faults == null or player.get(&"carried_package") != null:
 		return false
-	return not StringName(faults.call(&"repair_method", fault_id)).is_empty()
+	var method: StringName = faults.call(&"repair_method", fault_id)
+	if method == &"phone":
+		return not bool(faults.call(&"is_driver", player.get_multiplayer_authority()))
+	return not method.is_empty()
 
 
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
-	if bool(faults.call(&"fix", fault_id)):
+	if bool(faults.call(&"fix", fault_id, player)):
 		interacted.emit(player)
