@@ -223,6 +223,7 @@ ejecutable (ej. `D:\Descargas\Godot_v4.7.2-stable_win64_console.exe`):
 <godot> --headless --path do-not-drop --script res://tests/test_supply_vote.gd
 <godot> --headless --path do-not-drop --script res://tests/test_crew_campaign_save.gd
 <godot> --headless --path do-not-drop --script res://tests/test_leaderboard.gd
+<godot> --headless --path do-not-drop --script res://tests/test_endless_cargo_score.gd
 <godot> --headless --path do-not-drop --script res://tests/test_progress_ui.gd
 <godot> --headless --path do-not-drop --script res://tests/test_ping.gd
 <godot> --headless --path do-not-drop --script res://tests/test_quick_callouts.gd
@@ -622,6 +623,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   recorta a 10 entradas por modo, conserva tamaño de tripulación, marca correctamente un nuevo récord y sobrevive a
   guardar/cargar de disco (usa un archivo de prueba aparte, no el guardado
   real).
+- `test_endless_cargo_score` — Endless puntúa los metros que sobrevivió cada caja, promediados
+  (N-118): con todo intacto da la distancia, y perder cajas temprano baja el puntaje.
 - `test_progress_ui` — cada desbloqueo explica su premio y separa el avance de entregas
   y puntos; los récords alternan entre Entrega y Endless con fecha y tripulación legibles.
 - `test_ping` — la rueda de pings: las ocho frases llegan por
