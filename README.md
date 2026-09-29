@@ -122,7 +122,7 @@ los **gatillos** aceleran/frenan y el **botón sur** interactúa a pie o activa
 el freno de mano al conducir. Mirar desde el asiento no cambia la dirección
 del vehículo. La mirada se conserva después de las sacudidas de los impactos.
 
-**Opciones y salir**: el menú principal tiene **Opciones** (volumen,
+**Opciones y salir**: el menú principal tiene **Opciones** (idioma Español/English, volumen,
 sensibilidad de la mirada, efectos de impacto, invertir eje Y, pantalla completa — se guardan en
 `user://settings.cfg`) y **Salir**. Desde la pausa se llega a las mismas
 opciones y a **Menú**, que deja la sesión limpia antes de volver.

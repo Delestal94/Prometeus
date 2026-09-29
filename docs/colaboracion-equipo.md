@@ -14,9 +14,10 @@ sus tutoriales, progresión, paquetes, trampas, pings, eventos de ruta y pantall
 de opciones/resultados. Los identificadores que viajan por red (pings y eventos)
 son ahora claves estables y cada cliente los traduce al mostrarlos.
 
-No se modificaron los textos del mundo de Nacho ni `strings_world.csv`. La
-selección y persistencia del idioma en Opciones queda para el siguiente bloque de
-S-509.
+No se modificaron los textos del mundo de Nacho ni `strings_world.csv`.
+`GameSettings` reemplazó el español fijo de N-605 por una preferencia persistente
+`language`; Opciones permite elegir Español/English y aplica el catálogo de ambos
+integrantes mediante `TranslationServer`.
 
 ## Aviso activo: cargas headless de helpers separados (2026-09-28)
 

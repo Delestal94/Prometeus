@@ -523,3 +523,6 @@ UI_UNLOCK_LIQUID,Carga líquida,Liquid cargo
 UI_UNLOCK_NOISY,Carga ruidosa,Noisy cargo
 UI_UNLOCK_SKY_UNIFORM,Uniforme cielo,Sky uniform
 UI_UNLOCK_VIOLET_PAINT,Pintura violeta,Violet paint
+UI_LANGUAGE_ENGLISH,English,English
+UI_LANGUAGE_SPANISH,Español,Español
+UI_OPT_LANGUAGE,Idioma,Language

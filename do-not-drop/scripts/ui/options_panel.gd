@@ -27,6 +27,7 @@ var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
 var _controls_label: Label
+var _language_option: OptionButton
 var _binding_buttons: Dictionary = {}
 ## Every sound in the game, to mute one by one (sound_check_panel.gd).
 var _sound_check: Control
@@ -38,6 +39,7 @@ func _ready() -> void:
 	_build()
 	hide()
 	GameSettings.input_device_changed.connect(_on_input_device_changed)
+	GameSettings.language_changed.connect(_on_language_changed)
 
 
 func _build() -> void:
@@ -69,6 +71,20 @@ func _build() -> void:
 	var column: VBoxContainer = UiTheme.panel(center, Vector2(480, 0), 30)
 	column.add_theme_constant_override("separation", 16)
 	UiTheme.title(column, tr("UI_OPTIONS"), 36)
+	var language_row := HBoxContainer.new()
+	language_row.add_theme_constant_override("separation", 12)
+	column.add_child(language_row)
+	UiTheme.label(language_row, tr("UI_OPT_LANGUAGE"), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_language_option = OptionButton.new()
+	_language_option.name = "LanguageOption"
+	_language_option.add_item(tr("UI_LANGUAGE_SPANISH"))
+	_language_option.add_item(tr("UI_LANGUAGE_ENGLISH"))
+	_language_option.select(GameSettings.SUPPORTED_LANGUAGES.find(GameSettings.language))
+	_language_option.custom_minimum_size = Vector2(170, 40)
+	language_row.add_child(_language_option)
+	UiTheme.register_font_size(_language_option, 16)
+	_language_option.item_selected.connect(func(index: int) -> void:
+		GameSettings.set_language(GameSettings.SUPPORTED_LANGUAGES[index]))
 
 	_volume_slider = UiTheme.slider_row(column, tr("UI_OPT_MASTER_VOLUME"), 0.0, 1.0, 0.05, GameSettings.master_volume)
 	_volume_slider.value_changed.connect(func(value: float) -> void: GameSettings.master_volume = value)
@@ -191,6 +207,24 @@ func _on_input_device_changed(_gamepad: bool) -> void:
 	_refresh_controls()
 
 
+func _on_language_changed(_locale: String) -> void:
+	_rebuild_for_language.call_deferred()
+
+
+func _rebuild_for_language() -> void:
+	var was_visible: bool = visible
+	for child: Node in get_children():
+		remove_child(child)
+		child.queue_free()
+	_binding_buttons.clear()
+	_sound_check = null
+	_listening_action = &""
+	_build()
+	visible = was_visible
+	if was_visible:
+		_language_option.grab_focus.call_deferred()
+
+
 func _listen_for_key(action: StringName) -> void:
 	_listening_action = action
 	(_binding_buttons[action] as Button).text = tr("UI_OPT_PRESS_KEY")
@@ -244,6 +278,7 @@ func _sync_from_settings() -> void:
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
 	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)
 	_quality_slider.value_changed.emit(GameSettings.graphics_quality)
+	_language_option.select(GameSettings.SUPPORTED_LANGUAGES.find(GameSettings.language))
 	for action: StringName in _binding_buttons:
 		(_binding_buttons[action] as Button).text = GameSettings.binding_label(action)
 

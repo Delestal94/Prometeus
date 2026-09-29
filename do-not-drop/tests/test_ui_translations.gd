@@ -56,7 +56,8 @@ func _run() -> void:
 	var locale: String = TranslationServer.get_locale()
 	_expect(locale.begins_with("es"), "The game starts in Spanish (locale %s)" % locale)
 	_expect(tr("UI_MENU_PLAY") == "¡JUGAR!", "Spanish: the play button says '¡JUGAR!' (%s)" % tr("UI_MENU_PLAY"))
-	TranslationServer.set_locale("en")
+	var settings: Node = root.get_node(^"/root/GameSettings")
+	settings.call(&"set_language", "en")
 	# Loaded, not named: naming the class compiles it before the autoloads exist.
 	var options: Control = load("res://scripts/ui/options_panel.gd").new()
 	root.add_child(options)
@@ -65,8 +66,19 @@ func _run() -> void:
 		return (label as Label).text)
 	_expect("Options" in texts and "Master volume" in texts,
 		"English: the options panel is built in English (%s)" % ", ".join(texts.slice(0, 6)))
+	var language_option: OptionButton = options.find_child("LanguageOption", true, false) as OptionButton
+	_expect(language_option != null and language_option.selected == 1,
+		"The options panel selects the saved English language")
+	language_option.select(0)
+	language_option.item_selected.emit(0)
+	await process_frame
+	await process_frame
+	texts = options.find_children("*", "Label", true, false).map(func(label: Node) -> String:
+		return (label as Label).text)
+	_expect("Opciones" in texts and "Volumen general" in texts,
+		"Changing language rebuilds the open options panel in Spanish")
+	_expect(String(settings.get(&"language")) == "es", "The language selector updates GameSettings")
 	options.queue_free()
-	TranslationServer.set_locale("es")
 	await process_frame
 	if _failures == 0:
 		print("PASS: the menus' and HUD's texts are all in the table, in both languages, and follow the locale")
