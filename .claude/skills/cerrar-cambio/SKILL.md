@@ -1,6 +1,6 @@
 ---
 name: cerrar-cambio
-description: Checklist para cerrar un cambio en Take My Package antes de commitear - test, lista del README, docs de tareas, aviso de colaboración y mensaje de commit. Usala cuando termines una feature o un fix, o cuando pidan "cerrá el cambio", "commiteá" o "dejalo listo para subir".
+description: Checklist para cerrar un cambio en Take My Package antes de commitear - test con su encabezado, docs de tareas, aviso de colaboración y mensaje de commit. Usala cuando termines una feature o un fix, o cuando pidan "cerrá el cambio", "commiteá" o "dejalo listo para subir".
 ---
 
 # Cerrar un cambio
@@ -29,11 +29,11 @@ saltearlo en silencio.
   (nodos, posiciones, parámetros) y la parte visual la revisa el agente
   `revisor-visual`.
 
-## 3. README
+## 3. Descripción del test y README
 
-- Test nuevo → agregá su línea a la lista de "Tests" en `README.md`, con el
-  mismo formato que las demás:
-  `<godot> --headless --path do-not-drop --script res://tests/test_<tema>.gd`
+- Test nuevo → que diga qué cubre en su encabezado (`## ...` debajo de la línea
+  `## Run:`). No hay lista de tests que mantener a mano: `tools/list-tests.sh` la
+  arma, y `tools/list-tests.sh --missing` tiene que salir vacío.
 - Si el cambio altera algo que el README explica (controles, cómo correr, etc.),
   actualizá esa parte.
 
@@ -42,14 +42,15 @@ saltearlo en silencio.
 - En `docs/tareas-nacho.md` o `docs/tareas-slatex.md` (el del dueño del trabajo):
   si la tarea está en la lista, tachala con el mismo formato que las hechas
   (`~~texto~~ **[x] Hecho (AAAA-MM-DD)** — qué se hizo, con el archivo/función`).
-  Actualizá la fecha de "Última actualización" del encabezado.
+  Sin línea de "Última actualización" en el encabezado: la fecha la tiene git, y
+  esa línea hacía chocar a todos los PRs.
 - No toques la lista del otro integrante.
 
 ## 5. Aviso de colaboración
 
-Si se tocó la zona compartida o algún archivo del dominio del otro, agregá en
-`docs/colaboracion-equipo.md` una sección `## Aviso activo: <tema> (AAAA-MM-DD)`
-como las que ya hay: qué archivo, qué función o señal cambió, si cambió una firma
+Si se tocó la zona compartida o algún archivo del dominio del otro, creá un
+archivo nuevo `docs/avisos/AAAA-MM-DD-<tema>.md` (nunca edites uno existente ni
+`colaboracion-equipo.md`: un archivo por aviso no choca con otros PRs): qué archivo, qué función o señal cambió, si cambió una firma
 y qué tiene que hacer el otro (por ejemplo `git pull` antes de seguir).
 
 ## 6. Tests
@@ -64,5 +65,5 @@ Pedile al agente `ejecutor-tests` que corra los tests relacionados con el cambio
   `chore:`. Un tema por commit; la documentación del cambio va en el mismo commit
   que el código.
 - Cambios en zona compartida: commit chico y aislado, separado del resto.
-- No agregues archivos generados por Godot que no estén ya versionados
-  (`.godot/`, `*.import`).
+- `.godot/` nunca se versiona. Los `.uid` y `.import` que Godot genera para
+  archivos nuevos sí (Godot los necesita iguales en todos los clones).

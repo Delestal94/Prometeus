@@ -22,6 +22,6 @@ owner="$(current_owner)"
 domain="$(file_domain "$HOOK_REL")"
 if [ -n "$owner" ] && { [ "$domain" = nacho ] || [ "$domain" = slatex ]; } && [ "$domain" != "$owner" ]; then
 	other="Nacho"; [ "$domain" = slatex ] && other="Slatex"
-	printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"%s es del dominio de %s. Si lo tocás, dejá un aviso en docs/colaboracion-equipo.md (ver CONTRIBUTING.md, Dominios)."}}\n' "$HOOK_REL" "$other"
+	printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"%s es del dominio de %s. Si lo tocás, dejá un aviso como archivo nuevo en docs/avisos/ (ver CONTRIBUTING.md, Dominios)."}}\n' "$HOOK_REL" "$other"
 fi
 exit 0

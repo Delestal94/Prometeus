@@ -1,4 +1,6 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_hostile_visual.gd
+## Hostile trap feedback: the creature's eyes on the box and its hiss sound.
 
 func _init() -> void:
 	call_deferred("_run")

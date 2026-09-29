@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_route_event_manager.gd
+## Route events: the drawable pool, each event's right and wrong actions (e.g.
+## the jammed rear door), and individual merit for whoever helps.
 
 var failures := 0
 

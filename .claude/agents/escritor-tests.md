@@ -1,6 +1,6 @@
 ---
 name: escritor-tests
-description: Escribe tests headless nuevos para Take My Package siguiendo el patrón del repo (extends SceneTree, _expect, quit(_failures)) y los registra en el README. Usar cuando se agrega o arregla una mecánica y falta cobertura, o cuando un bug necesita un test que lo reproduzca antes de arreglarlo.
+description: Escribe tests headless nuevos para Take My Package siguiendo el patrón del repo (extends SceneTree, _expect, quit(_failures)) y los describen en su encabezado. Usar cuando se agrega o arregla una mecánica y falta cobertura, o cuando un bug necesita un test que lo reproduzca antes de arreglarlo.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
 ---
@@ -44,14 +44,14 @@ func _expect(condition: bool, description: String) -> void:
 
 ## Qué probar
 
-Probá comportamiento observable y los bordes que ya se rompieron alguna vez (el README explica el
-"por qué" de cada test existente — leelo). Un test debe fallar si se revierte el arreglo que cubre;
+Probá comportamiento observable y los bordes que ya se rompieron alguna vez (el encabezado de
+cada test explica su "por qué"; `tools/list-tests.sh <tema>` los muestra — leelos). Un test debe fallar si se revierte el arreglo que cubre;
 si podés, verificá eso revirtiendo mentalmente la línea clave.
 
 ## Al terminar
 
 1. Corré el test nuevo y confirmá `PASS` y exit 0. Si cubre un bug todavía no arreglado, confirmá que falla por la razón correcta y decilo.
-2. Agregá la línea del comando en el bloque de tests del `README.md` y un bullet `- \`test_<tema>\` — <qué protege y por qué>` en la lista de explicaciones, con el mismo tono que los existentes (español rioplatense, explica el bug que evita). No dupliques entradas (el README ya tiene algunas repetidas; no sumes más).
+2. En el encabezado del test (líneas `## ...` debajo de `## Run:`) escribí qué protege y qué bug evita. No hay lista de tests en el README: `tools/list-tests.sh --missing` tiene que salir vacío.
 3. Devolvé: ruta del test, qué casos cubre, salida de la corrida.
 
 Respetá los dominios de `docs/colaboracion-equipo.md`: un test nuevo en `tests/` es zona libre, pero

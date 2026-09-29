@@ -1,4 +1,8 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_refined_asset_axes.gd
+## The refined models import at their real size and orientation (lamp, parked
+## sedan, competitor van, tractor, phone); vehicles rest on their wheels and
+## run along Z.
 
 var failures: int = 0
 

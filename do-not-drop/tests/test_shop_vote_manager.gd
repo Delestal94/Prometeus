@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_shop_vote_manager.gd
+## The depot shop vote: the winning supply is bought once from the shared wallet,
+## and a priority card is consumed when used.
 
 var failures := 0
 

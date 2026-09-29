@@ -38,6 +38,6 @@ elif command -v gdparse >/dev/null 2>&1; then
 fi
 
 if [ "$(file_domain "$HOOK_REL")" = compartida ]; then
-	printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s es zona compartida: commit chico y aislado, preferir agregar antes que cambiar firmas, y aviso en docs/colaboracion-equipo.md."}}\n' "$HOOK_REL"
+	printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s es zona compartida: commit chico y aislado, preferir agregar antes que cambiar firmas, y aviso como archivo nuevo en docs/avisos/."}}\n' "$HOOK_REL"
 fi
 exit 0

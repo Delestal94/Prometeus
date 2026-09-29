@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_package_collisions.gd
+## Boxes hitting each other: both are told, they bounce and spin physically, and
+## a hard knock damages a fragile one.
 
 var failures := 0
 var collision_events := 0

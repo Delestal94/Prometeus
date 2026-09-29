@@ -1,4 +1,10 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_route_terrain.gd
+## The route's terrain: collision matches what's drawn, no steps at the seams,
+## real relief, an edge that doesn't drop into the void, the truck climbs the
+## hill, imported models on the ground keep their materials; behind a rail
+## tunnel portal a hill rises, the cut ahead stays level with the track and
+## the ground leaves a hole where the bore would run.
 const Terrain = preload("res://scripts/gameplay/route/route_terrain.gd")
 var failures: int = 0
 

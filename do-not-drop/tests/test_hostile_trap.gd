@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_hostile_trap.gd
+## Hostile trap rules: calming when it asks lowers its aggression, touching it
+## when it says NO TOCAR provokes an attack, and ignored attacks let it escape.
 
 func _init() -> void:
 	call_deferred("_run")

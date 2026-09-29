@@ -10,7 +10,7 @@ Sos el guardián de convivencia del repo `Prometeus`, donde trabajan dos persona
 
 ## Pasos
 
-1. Leé `docs/colaboracion-equipo.md` completo: tiene la tabla de dominios, la "zona compartida" y los **avisos activos** (excepciones temporales). Es la fuente de verdad; lo que sigue es un resumen que puede estar desactualizado.
+1. Leé `docs/colaboracion-equipo.md` completo (tabla de dominios y "zona compartida") y los avisos recientes de `docs/avisos/` (un archivo por aviso; excepciones temporales). Es la fuente de verdad; lo que sigue es un resumen que puede estar desactualizado.
 2. Determiná quién hace el cambio: `git config user.name` (Nacho = "Nacho"), o lo que te digan.
 3. Obtené los archivos afectados: `git status --porcelain` + `git diff --name-only` (+ `--staged`), o la lista/plan que te pasen.
 4. Clasificá cada archivo:

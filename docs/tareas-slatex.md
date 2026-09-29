@@ -1,6 +1,5 @@
 # Tareas de Slatex (Cristian) — Jugador, Paquetes, Interacción, UI y Progresión
 
-> Última actualización: 2026-09-28 (estado relevado sobre `dbe3e48`; S-901, S-903, S-904 y S-907 pospuestas a la iteración de lanzamiento; S-902 y S-906 hechas igual).
 > Reescrita entera: las tareas 1-100 de la versión anterior están cerradas o reubicadas
 > (ver "Qué pasó con la lista anterior" al final). Esta lista sigue los 9 pilares de
 > producción de un videojuego y **solo tiene trabajo que Slatex puede terminar sin esperar

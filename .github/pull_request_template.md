@@ -6,7 +6,7 @@
 
 - [ ] Nacho (vehículo, ruta, ambientación, depósito)
 - [ ] Slatex (jugador, paquetes, interacción, UI, progresión)
-- [ ] Zona compartida (`event_bus.gd`, `network_manager.gd`, `run_manager.gd`, `level_base.*`) — avisado en `docs/colaboracion-equipo.md`
+- [ ] Zona compartida (`event_bus.gd`, `network_manager.gd`, `run_manager.gd`, `level_base.*`) — avisado en `docs/avisos/`
 
 ## Cómo se probó
 
@@ -18,4 +18,4 @@
 ## Docs
 
 - [ ] `docs/tareas-nacho.md` / `docs/tareas-slatex.md` actualizados
-- [ ] README (lista de tests) si se agregó un test
+- [ ] El test nuevo describe qué cubre en su encabezado (`tools/list-tests.sh --missing` vacío)

@@ -1,4 +1,7 @@
 extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://tests/test_liquid_visual.gd
+## Liquid trap feedback: the puddle under the box grows with the tilt and the
+## slosh sound plays.
 
 func _init() -> void:
 	call_deferred("_run")
