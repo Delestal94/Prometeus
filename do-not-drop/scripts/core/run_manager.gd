@@ -687,11 +687,27 @@ func _result_route_event() -> Dictionary:
 	}
 
 
-## Endless (docs/tareas-nacho.md #44/#52): no delivery zone, so distance
-## traveled is the score, full stop -- cargo state is reported for the
-## results text but never subtracted from it. Kept as its own function
-## rather than more branching inside finish_run() above, which was already
-## written entirely around "did it arrive intact", not distance.
+## Endless score (N-118): the meters each box survived, averaged over the
+## boxes. All boxes intact scores exactly the distance, as before N-118, so old
+## records stay comparable; every box lost early drags the score down, so
+## the cargo -- the core of the game -- matters here too, not only as the
+## run's lives. No cargo at all scores the plain distance.
+func _endless_score() -> int:
+	if cargo.is_empty():
+		return roundi(current_distance * DISTANCE_POINTS_PER_METER)
+	var survived: float = 0.0
+	for entry: Dictionary in cargo.values():
+		if int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED:
+			survived += minf(float(entry.get("ruined_at_m", current_distance)), current_distance)
+		else:
+			survived += current_distance
+	return roundi(survived / cargo.size() * DISTANCE_POINTS_PER_METER)
+
+
+## Endless (docs/tareas-nacho.md #44/#52): no delivery zone, so the score is
+## distance weighted by the cargo that lived through it (_endless_score()).
+## Kept as its own function rather than more branching inside finish_run()
+## above, which was already written entirely around "did it arrive intact".
 func _finish_endless_run(reason: String) -> void:
 	var intact: int = 0
 	var ruined: int = 0
@@ -700,7 +716,7 @@ func _finish_endless_run(reason: String) -> void:
 			ruined += 1
 		else:
 			intact += 1
-	var score: int = roundi(current_distance * DISTANCE_POINTS_PER_METER)
+	var score: int = _endless_score()
 	var is_new_best: bool = _record_score(score, MODE_ENDLESS)
 	results = {
 		"delivered": false,
@@ -936,6 +952,10 @@ func _on_state_changed(id: StringName, state: int) -> void:
 func _on_package_ruined(id: StringName, cause: String) -> void:
 	print("[Package] ", id, " ruined: ", cause)
 	_entry(id)["state"] = ITrapBehavior.TrapState.RUINED
+	# Endless scores the meters each box survived (_endless_score()); the last
+	# ruin counts, so a box brought back by a substitute and lost again is
+	# scored up to its second loss.
+	_entry(id)["ruined_at_m"] = current_distance
 	# Only what's still in the van can end the run: boxes already handed over
 	# at a door are gone on purpose, and a delivered-everything run must not
 	# read as "nothing left to deliver".
