@@ -1,22 +1,18 @@
 extends SceneTree
-## Run without --headless. Saves a narrow bridge's river (route_terrain.gd)
-## under user:// -- terrain and water only, no bridge furniture -- from the
-## road coming up to it, from beside the road looking along the water, and
-## from above: to check the shoreline, the water's ends and the bridge's
-## approach after the 2026-09-28 river rework -- and the rocky waterfalls at
-## both ends of the water (route_river_falls.gd).
+## Run without --headless. Saves a level crossing's tunnels (rail_crossing_
+## segment.gd, route_terrain.gd tunnels) under user://: the train coming out
+## of the near portal, the far portal, both from the road as the driver sees
+## them, and from above and beside to check the hill over the bore and the
+## hole the terrain leaves for it. Terrain set up the way route.gd does it.
 
 const RouteTerrain = preload("res://scripts/gameplay/route/route_terrain.gd")
 
 const VIEWS: Array = [
-	["river_approach", Vector3(0.0, 2.2, -34.0), Vector3(0.0, 0.5, 0.0)],
-	["river_bank", Vector3(6.0, 2.0, -12.0), Vector3(40.0, -1.0, 6.0)],
-	["river_far_end", Vector3(8.0, 3.0, 0.0), Vector3(60.0, 2.0, 0.0)],
-	["river_above", Vector3(-30.0, 45.0, -40.0), Vector3(10.0, -1.0, 0.0)],
-	# The waterfalls at both ends of the water (route_river_falls.gd).
-	["river_fall_west", Vector3(-22.0, 3.5, 6.0), Vector3(-44.0, 1.0, 0.0)],
-	["river_fall_east", Vector3(28.0, 3.5, -5.0), Vector3(44.0, 1.0, 0.0)],
-	["river_fall_above", Vector3(-30.0, 16.0, 16.0), Vector3(-44.0, 0.0, 0.0)],
+	["tunnel_near_front", Vector3(-22.0, 4.0, -7.0), Vector3(-42.0, 3.0, -16.0)],
+	["tunnel_far_front", Vector3(22.0, 3.5, -24.0), Vector3(42.0, 3.5, -16.0)],
+	["tunnel_from_road", Vector3(1.5, 2.6, 6.0), Vector3(-42.0, 3.0, -16.0)],
+	["tunnel_above", Vector3(-22.0, 32.0, 8.0), Vector3(-48.0, 3.0, -16.0)],
+	["tunnel_side", Vector3(-38.0, 20.0, 16.0), Vector3(-47.0, 5.0, -16.0)],
 ]
 
 
@@ -46,10 +42,24 @@ func _run() -> void:
 	world.add_child(sun)
 	var terrain: Node3D = RouteTerrain.new()
 	world.add_child(terrain)
-	terrain.add_span(Vector3(0, 0, -120), Vector3(0, 0, 120))
-	terrain.rivers.append({"a": Vector2(0, -18), "b": Vector2(0, 18), "depth": 1.8, "full_width": 18.0,
-		"bank_width": 60.0})
+	terrain.add_span(Vector3(0, 0, 120), Vector3(0, 0, -120))
+	var crossing := RailCrossingSegment.new()
+	crossing.continuous_terrain = true
+	world.add_child(crossing)
+	var level: float = terrain.base_height(Vector2(0.0, crossing.track_z))
+	for pad: Vector3 in crossing.track_pads():
+		terrain.pads.append(Vector3(pad.x, level, pad.z))
+	for mouth: Dictionary in crossing.tunnel_mouths():
+		mouth["level"] = level
+		terrain.tunnels.append(mouth)
 	terrain.build()
+	terrain.conform_geometry(crossing)
+	crossing.set_meta(&"track_height", terrain.height_at(Vector3(0.0, 0.0, crossing.track_z)))
+	# The train halfway out of the near tunnel, frozen there.
+	crossing.set_physics_process(false)
+	crossing.state = RailCrossingSegment.State.TRAIN
+	crossing.set(&"_train_x", -RailCrossingSegment.PORTAL_X + 5.0)
+	crossing.call(&"_place_train")
 	var camera := Camera3D.new()
 	camera.fov = 70.0
 	world.add_child(camera)
@@ -60,8 +70,6 @@ func _run() -> void:
 		for _i: int in 4:
 			await process_frame
 		await _shot("render_%s.png" % view[0])
-	# Freed a frame before quitting: freeing the terrain's meshes and
-	# trimesh colliders in the same frame as quit() crashed on exit.
 	world.queue_free()
 	await process_frame
 	await process_frame

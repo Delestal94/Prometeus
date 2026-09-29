@@ -689,6 +689,15 @@ func _finish_terrain() -> void:
 			var level: float = terrain.base_height(Vector2(centre.x, centre.z))
 			for pad: Vector3 in (segment as RailCrossingSegment).track_pads():
 				terrain.pads.append(Vector3(pad.x, level, pad.z))
+				# No tree on the rails.
+				_clear_zones.append(Vector3(pad.x, pad.z, 4.0))
+			# A tunnel at each end, a hill over it; nothing grows in the
+			# cutting or out of the portal.
+			for mouth: Dictionary in (segment as RailCrossingSegment).tunnel_mouths():
+				mouth["level"] = level
+				terrain.tunnels.append(mouth)
+				var front: Vector2 = (mouth.at as Vector2) + (mouth.dir as Vector2) * 2.0
+				_clear_zones.append(Vector3(front.x, front.y, 11.0))
 	terrain.build()
 	for child: Node in get_children():
 		if child == terrain or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):
