@@ -19,6 +19,14 @@ class_name RailCrossingSegment
 ## N-130): track, signal, barrier arm and a cartoon steam train. What you hit
 ## is still the boxes this script always used -- post, arm, one per car -- so
 ## the models can change without touching the driving or the network sync.
+##
+## The track runs into a tunnel at each end (playtest 2026-09-28: the train
+## used to pop into existence in the open, 42 m down the line). The portals
+## are rigid models (sm_env_rail_tunnel_portal.glb) at +-PORTAL_X; route.gd
+## hands their mouths to RouteTerrain, which raises a hill behind each one and
+## leaves a hole where the bore runs through it (tunnel_mouths()). The train
+## starts inside one bore and ends inside the other, and a car is drawn only
+## while some of it is short of a bore's black end (_place_train()).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const APPROACH_TRIGGER: float = 55.0
@@ -34,6 +42,22 @@ const MODELS: String = "res://assets/models/environment/rail/"
 const TRACK_MODEL: String = MODELS + "sm_env_rail_track.glb"
 const SIGNAL_MODEL: String = MODELS + "sm_env_rail_crossing_signal.glb"
 const ARM_MODEL: String = MODELS + "sm_env_rail_barrier_arm.glb"
+const PORTAL_MODEL: String = MODELS + "sm_env_rail_tunnel_portal.glb"
+## Where each portal's facade stands (local x), right where the track model's
+## rails end, and the size of the tunnel behind it -- the same numbers as
+## build_rail_crossing.py's PORTAL_* and BORE_LENGTH, which RouteTerrain needs
+## to shape the hill and cut the bore out of it.
+const PORTAL_X: float = TRAIN_SPAN
+const BORE_LENGTH: float = 12.0
+const BORE_HALF_WIDTH: float = 2.35
+const BORE_CROWN: float = 6.05
+const PORTAL_HALF_WIDTH: float = 5.6
+const PORTAL_HEIGHT: float = 8.4
+## How far into the bore the train waits, and goes, out of sight.
+const TRAIN_HIDE_DEPTH: float = 6.0
+## Half a car, couplers and cowcatcher included.
+const CAR_HALF_LENGTH: float = 4.1
+const CAR_SPACING: float = 8.0
 ## Front to back: the locomotive leads (+X, the way the train runs).
 const TRAIN_MODELS: Array[String] = [
 	MODELS + "sm_env_rail_locomotive.glb",
@@ -73,8 +97,19 @@ func _build() -> void:
 	_box("Ground", Vector3(24.0, 1.0, length), Vector3(0.0, -0.8, -length * 0.5), SHOULDER, true)
 	_box("Road", Vector3(12.0, 0.4, length), Vector3(0.0, -0.2, -length * 0.5), ROAD, true)
 	# Tracks: rails, sleepers and ballast across the road and well beyond
-	# (TRAIN_SPAN each way), a plank deck where they cross it. No collision.
-	_dress(_model("RailTrack", TRACK_MODEL, Vector3(0.0, 0.0, track_z)))
+	# (TRAIN_SPAN each way, into the tunnels), a plank deck where they cross
+	# it. No collision.
+	# Rigid, not bent over the terrain: the ground along it is levelled anyway
+	# (track_pads()), and its ends meet the portals' own rails, which sit on
+	# that level while the hill rises behind them.
+	var track: Node3D = _dress(_model("RailTrack", TRACK_MODEL, Vector3(0.0, 0.0, track_z)))
+	if track != null:
+		track.set_meta(&"rigid", true)
+	for side: float in [-1.0, 1.0]:
+		var portal: Node3D = _dress(_model("TunnelPortal" + ("Far" if side > 0.0 else "Near"), PORTAL_MODEL,
+			Vector3(side * PORTAL_X, 0.0, track_z), 0.0 if side > 0.0 else PI))
+		if portal != null:
+			portal.set_meta(&"rigid", true)
 	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(1.5, 0.03, track_z + 5.5), MARKING)
 	_box("CrossingStopLine", Vector3(6.0, 0.02, 0.35), Vector3(-1.5, 0.03, track_z - 5.5), MARKING)
 	for side: float in [-1.0, 1.0]:
@@ -114,6 +149,20 @@ func track_pads() -> Array[Vector3]:
 		pads.append(transform * Vector3(x, 0.0, track_z))
 		x += 7.0
 	return pads
+
+
+## Where each tunnel starts, for RouteTerrain.tunnels: {"at": Vector2 world
+## x/z of the facade on the track axis, "dir": Vector2 into the hill}, and the
+## portal's size.
+func tunnel_mouths() -> Array[Dictionary]:
+	var mouths: Array[Dictionary] = []
+	for side: float in [-1.0, 1.0]:
+		var at: Vector3 = transform * Vector3(side * PORTAL_X, 0.0, track_z)
+		var inward: Vector3 = transform.basis * Vector3(side, 0.0, 0.0)
+		mouths.append({"at": Vector2(at.x, at.z), "dir": Vector2(inward.x, inward.z).normalized(),
+			"bore_half": BORE_HALF_WIDTH, "bore_length": BORE_LENGTH, "crown": BORE_CROWN,
+			"face_half": PORTAL_HALF_WIDTH, "height": PORTAL_HEIGHT + 3.0})
+	return mouths
 
 
 ## A post with the crossbuck, twin red lamps and a barrier arm that swings
@@ -255,20 +304,18 @@ func _physics_process(delta: float) -> void:
 				_set_arm(arm, clampf(_timer / ARM_SECONDS, 0.0, 1.0))
 			if _timer >= ARM_SECONDS:
 				state = State.TRAIN
-				_train_x = -TRAIN_SPAN - 4.0
+				# The locomotive's nose just out of sight in the near bore.
+				_train_x = -PORTAL_X - TRAIN_HIDE_DEPTH
 				for car: AnimatableBody3D in _train:
-					car.visible = true
 					car.process_mode = Node.PROCESS_MODE_INHERIT
+				_place_train()
 				_train_horn.play()
 				_train_chug.play()
 		State.TRAIN:
 			_train_x += TRAIN_SPEED * delta
-			for index: int in range(_train.size()):
-				var at: Vector3 = Vector3(_train_x - float(index) * 8.0, 0.0, track_z)
-				_train[index].position = Vector3(at.x, _ground_offset(at), at.z)
-			_train_horn.position = _train[0].position
-			_train_chug.position = _train[0].position
-			if _train_x - float(_train.size()) * 8.0 > TRAIN_SPAN:
+			_place_train()
+			# Gone once the last car is as deep in the far bore.
+			if _train_x - float(_train.size() - 1) * CAR_SPACING - CAR_HALF_LENGTH > PORTAL_X + TRAIN_HIDE_DEPTH:
 				for car: AnimatableBody3D in _train:
 					car.visible = false
 					car.process_mode = Node.PROCESS_MODE_DISABLED
@@ -286,6 +333,18 @@ func _physics_process(delta: float) -> void:
 	var phase: bool = fmod(Time.get_ticks_msec() / 450.0, 2.0) < 1.0
 	for index: int in range(_lamps.size()):
 		_lamps[index].emission_energy_multiplier = (2.2 if (index % 2 == 0) == phase else 0.0) if flashing else 0.0
+
+
+## Every car where _train_x puts it, drawn only while some of it is short of
+## either bore's black end -- beyond that it would stick out of the hill.
+func _place_train() -> void:
+	var hidden_past: float = PORTAL_X + BORE_LENGTH + CAR_HALF_LENGTH
+	for index: int in range(_train.size()):
+		var at: Vector3 = Vector3(_train_x - float(index) * CAR_SPACING, 0.0, track_z)
+		_train[index].position = Vector3(at.x, _ground_offset(at), at.z)
+		_train[index].visible = absf(at.x) < hidden_past
+	_train_horn.position = _train[0].position
+	_train_chug.position = _train[0].position
 
 
 ## The host saw the truck coming: the bell rings and the cycle starts, on
@@ -316,8 +375,10 @@ func _apply_state(new_state: int, timer: float, train_x: float) -> void:
 	_train_x = train_x
 	var train_on: bool = state == State.TRAIN
 	for car: AnimatableBody3D in _train:
-		car.visible = train_on
+		car.visible = false
 		car.process_mode = Node.PROCESS_MODE_INHERIT if train_on else Node.PROCESS_MODE_DISABLED
+	if train_on:
+		_place_train()
 	var down: float = 0.0
 	match state:
 		State.CLOSING:

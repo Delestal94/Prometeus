@@ -419,8 +419,10 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   ruta (la loma del bosque tapa el horizonte) más el depósito y su patio, con aviso.
 - `test_river_water` — el río de un puente angosto: agua con superficie propia
   (sin agua trepando laderas ni pasto asomando), el lecho sin asfalto, y la
-  ruta llega al puente sobre suelo entero. Capturas con ventana:
-  `tests/render_river.gd` → `user://render_river_*.png`.
+  ruta llega al puente sobre suelo entero; una cascada con rocas en cada punta
+  del agua, que cae en el agua desde arriba y sale igual en cada armado, con un
+  velo de hilos blancos delante de la lámina y bruma donde cae. Capturas
+  con ventana: `tests/render_river.gd` → `user://render_river_*.png`.
 - `test_care_prompt_view` — la tarjeta de cuidado y su tira animada: cada
   paso (sostener, soltar, herramienta, secuencia, juntar piezas) suena al
   cambiar (cinco sonidos sintetizados, cortos y sin saturar), nada suena solo
@@ -442,7 +444,8 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
 - `test_route_terrain` — el terreno: colisión igual a lo que se ve, sin escalones en las
   uniones, relieve real, borde que no deja caer al vacío, el camión sube la loma, y un
   modelo importado apoyado sobre el terreno conserva todos sus materiales (la valla salía
-  gris).
+  gris); detrás del portal de un túnel de tren se levanta una loma, el corte de adelante
+  queda a nivel de la vía y el terreno deja un hueco donde pasaría por el túnel.
 - `test_sound_check` — "Sonidos del juego" (Opciones): cada sonido aparece por quién lo
   toca y qué es (el motor del autoelevador y el del camión por separado), se silencia con
   una copia muda que sigue sonando, "Solo" deja uno, se desmutea, el silencio alcanza a los
@@ -774,7 +777,11 @@ mínimo, velocidad media). Resultados en `docs/parametros-diseno.md` ("Duración
   caída por distancia), túnel sólido e iluminado, y el paso a nivel que baja
   barreras sólidas, deja pasar el tren (con su propio silbato y traqueteo) y reabre;
   quien se suma a mitad del cruce retoma la fase del host (barreras bajas, tren
-  pasando, traqueteo ya sonando) y termina el ciclo con el traqueteo apagado.
+  pasando, traqueteo ya sonando) y termina el ciclo con el traqueteo apagado. La vía
+  entra en un túnel en cada punta (portal importado, rígido): el tren arranca adentro
+  del túnel cercano, con los últimos vagones fuera de vista, y termina adentro del
+  lejano. Capturas con ventana: `tests/render_rail_tunnel.gd` →
+  `user://render_tunnel_*.png`.
 - `test_truck_variant` — la furgoneta ágil maneja distinto, la pintura cambia la carrocería
   sin tocar el material importado, ambas se replican y respetan los desbloqueos.
 - `test_spectator` — solo un pasajero sin caja que salvar puede pasar a la cámara de

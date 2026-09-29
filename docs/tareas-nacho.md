@@ -2,10 +2,12 @@
 
 > Última actualización: 2026-09-29 (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
 > con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
-> espejo y los resultados). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
+> espejo y los resultados). Antes, el mismo día: (túneles de tren en las dos puntas de la vía del paso a
+> nivel; repaso de las cascadas). Antes, el mismo día: (N-214.2: la puerta trasera rota se abre sola con los baches y el
 > espejo del conductor se cae a la ruta; faltan arreglos y resultados). Antes, el mismo día: (N-213.3: gancho de rescate como suministro del depósito; N-213 queda
 > cerrada). Antes, el mismo día: (N-213: test de red con dos clientes que agarran la misma caja; queda el
-> gancho N-213.3). Antes, el 2026-09-28: (N-214.1: componente `VehicleFaults` que decide en el host las averías
+> gancho N-213.3). Antes, el 2026-09-28: (cascadas con rocas en las dos puntas del río de cada
+> puente angosto). Antes, el mismo día: (N-214.1: componente `VehicleFaults` que decide en el host las averías
 > del camión por golpe fuerte, una por entrega; faltan efectos, arreglos y resultados). Antes, el mismo día: (N-213.4: abandonar la caja caída cierra su pedido como
 > "Perdido" sin terminar la partida; falta el gancho). Antes, el mismo día: (N-213 parcial: la caja que sale del camión tiene 30 s de rescate
 > con cartel encima y se puede volver a subir; faltan el gancho y el pedido "Perdido"). Antes, el mismo día: (N-505 cerrada: la voz sintetizada de cada frase, con tono por
@@ -23,6 +25,42 @@
 > sin esperar a Slatex y sin playtesting**.
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
+
+## Hecho fuera de lista: túneles del tren y repaso de las cascadas (2026-09-29)
+
+~~El tren aparecía de la nada a 42 m de la ruta~~ **[x] Hecho (2026-09-29)** — Pedido del usuario.
+La vía del paso a nivel entra en un túnel en cada punta: portal de piedra nuevo
+(`sm_env_rail_tunnel_portal.glb`, builder `portal` de `assets/tools/build_rail_crossing.py`: arco con
+dovelas y clave, jambas, pilastras, cornisa y parapeto, muros de ala, relleno detrás, túnel de 12 m que
+se oscurece a negro por color de vértice). `RailCrossingSegment` lo pone rígido en ±42 m
+(`tunnel_mouths()`), el tren arranca adentro del túnel cercano y termina adentro del lejano, y un
+vagón se dibuja solo mientras está antes del fondo de un túnel (`_place_train()`). `route.gd` pasa las
+bocas a `RouteTerrain.tunnels`: loma detrás de cada portal (`_tunnel_hill()`), corte a nivel adelante y
+hueco en el terreno donde cruzaría el túnel (`_in_tunnel_bore()`); sin árboles en la vía ni frente a los
+portales. `conform_geometry()` respeta la meta `&"rigid"` (la vía también es rígida ahora).
+`LowpolyMaterials` suma `portal_stone`, `portal_trim` y `tunnel_soot`. Tests `test_route_terrain`
+(`_check_tunnel`) y `test_more_route_segments`; capturas `render_rail_tunnel.gd`.
+
+~~Cascada con aspecto de cinta plana~~ **[x] Hecho (2026-09-29)** — Pedido del usuario ("más
+profesional"). La lámina se curva (abombada al centro, bordes hacia atrás) y se dibuja en dos capas
+(cuerpo profundo + velo de hilos blancos más rápido), bordes irregulares que titilan; la espuma es un
+remolino que se aleja aguas abajo en vez de una estrella; bruma de partículas al pie (`_add_mist()`);
+rocas asentadas en el punto más bajo bajo su huella (ninguna cuelga sobre la orilla), columnas anchas
+abajo y angostas arriba, menos aplastadas y menos oscuras. Test `test_river_water`.
+
+## Hecho fuera de lista: cascadas en las puntas del río (2026-09-28)
+
+~~El agua del río terminaba contra el pasto como un charco aislado~~ **[x] Hecho (2026-09-28)** —
+Pedido del usuario tras mirar capturas. `route/route_river_falls.gd` (nuevo, lo llama
+`RouteTerrain.build()`) sigue el centro del cauce (`RouteTerrain.river_centre()`, sacado de
+`_river_factor()`) hasta donde se acaba el agua de cada lado y ahí arma una cascada: una cinta que
+cae corta y empinada desde un labio 2,6–5 m sobre el agua (`shaders/river_fall.gdshader`: chorros
+que bajan, espuma en el labio y al pie, charco de espuma), con pilas de rocas del bosque en
+proporción natural (`_add_column()`, nunca estiradas ni aplastadas) que forman el acantilado, lo
+enmarcan y tapan de dónde sale el agua, piedras en el charco y en la orilla, y un tono de piedra
+mojada (más oscuro que las rocas secas del bosque). Sin RNG: igual en todos los clientes; sin
+colisión, como las rocas del bosque. Test `test_river_water` (`_check_falls`), capturas
+`render_river_fall_*`.
 
 ## Hecho fuera de lista: repaso del depósito tras playtest (2026-09-27)
 
