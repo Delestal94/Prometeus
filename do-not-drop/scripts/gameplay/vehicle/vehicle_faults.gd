@@ -21,6 +21,9 @@ class_name VehicleFaults
 
 ## Every fault this version can roll, in roll order.
 const FAULTS: Array[StringName] = [&"rear_door", &"mirror"]
+## Preloaded, not by class_name: a new global class isn't in the class cache
+## until the editor imports again, and headless runs load this first.
+const EFFECTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_fault_effects.gd")
 ## Mixed into the world seed so faults don't share their sequence with other
 ## seeded rolls of the run.
 const SEED_SALT: int = 214
@@ -47,7 +50,7 @@ var active: Dictionary = {}
 var faults_this_run: int = 0
 ## Host-only: times the broken rear door swung open by itself this run.
 var door_pops: int = 0
-var effects: VehicleFaultEffects
+var effects: Node3D
 var _rng := RandomNumberGenerator.new()
 
 
@@ -56,9 +59,9 @@ func _ready() -> void:
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.vehicle_fault_started.connect(_on_fault_started)
 	EventBus.vehicle_fault_repaired.connect(_on_fault_repaired)
-	effects = VehicleFaultEffects.new()
+	effects = EFFECTS.new()
 	effects.name = "Effects"
-	effects.vehicle = vehicle
+	effects.set(&"vehicle", vehicle)
 	add_child(effects)
 	reset_for_run()
 

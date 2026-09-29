@@ -85,7 +85,8 @@ func _run() -> void:
 	await process_frame
 	await _check_effects(bus, faults_script)
 	if _failures == 0:
-		print("PASS: truck faults break on hard hits only, one per delivery, repeat by seed, repair on every peer, and show on the van")
+		print("PASS: truck faults break on hard hits only, one per delivery, repeat by seed,"
+				+ " repair on every peer, and show on the van")
 	quit(_failures)
 
 
