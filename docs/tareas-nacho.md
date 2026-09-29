@@ -205,16 +205,32 @@ it"), Equilibrio/Ruidoso/Líquido/Hostil son el mismo botón mantenido (`player_
 2026-09-28 ya lo dijo: "se leía como una tarea que nunca termina". Hecho cuando cada trampa pide un
 gesto distinto, que se ve en el mundo (brazos, cuerpo, caja) y no solo en la tarjeta del HUD, y ningún
 pasajero es espectador.
-- [ ] **N-117.1** Diseño: una acción por trampa, pasada por `critico-diseno`, en
-  `docs/jugabilidad-paquetes-rescate.md`. Punto de partida: Frágil = amortiguar (bajar la caja al
-  regazo/levantarla justo antes del bache que avisa el conductor); Equilibrio = compensar con el mouse
-  hacia el lado contrario de la inclinación; Líquido = inclinar la caja para llevar el derrame a la
-  esquina del trapo; Ruidoso = sacudir/mecer con ritmo; Hostil = tapar la jaula con la mano solo cuando
-  mira, soltar cuando se enoja; Explosivo y Peso creciente se quedan con secuencias, pero distintas
-  (cables por color vs. atar cinchas).
-- [ ] **N-117.2** Frágil y Equilibrio con su acción nueva + tests (`constructor-trampas`).
-- [ ] **N-117.3** Líquido, Ruidoso y Hostil.
-- [ ] **N-117.4** Explosivo y Peso creciente diferenciados; la tarjeta del HUD pasa a ser guía, no el juego.
+- [x] **N-117.1** Diseño, pasado por `critico-diseno` (2026-09-29, "construir con cambios"). Un botón,
+  un verbo por trampa, con ícono sobre la caja; nada de mouse (en el asiento mueve la cámara y es el
+  cursor que sacó el playtest del 28/09) ni reglas ocultas:
+  - **Frágil = Amortiguá:** un toque del primario en una ventana de ~0,35 s antes del bache (el camino ya
+    avisa); mantener no hace nada; espera después de cada toque.
+  - **Equilibrio = Contrapesá:** primario mantenido + A/D (stick X) hacia el lado contrario a la
+    inclinación que se ve en la caja. Sin tres zonas ni castigo por corregir de más.
+  - **Líquido = Fregá:** alternar izquierda/derecha, sin primario (la única de ritmo intenso).
+  - **Ruidoso = Abrazalo:** queda el primario mantenido (la trampa de aprendizaje).
+  - **Hostil = Leelo:** queda (mantener tranquilo / soltar enojado); el humor tiene que verse en la caja.
+  - **Explosivo = Pedí el código:** la secuencia se sortea en el host por partida (hoy es fija,
+    `data/traps/explosive.tres`: `[up, left, down]`, se memoriza) y la ve **el conductor** en el tablero.
+  - **Peso creciente = Asegurá:** queda la secuencia, y también cuentan las flechas del asistente
+    (`package.gd` `assistant_peer_id`).
+  Medida sin humanos: un bot que mantiene el primario todo el tiempo pierde ≥80 % en 5 de 7; matriz
+  cruzada (el bot experto de cada trampa jugando las otras pierde fuera de la diagonal); cada trampa
+  sigue en ausente 80-100 % / torpe 30-55 % / experto <12 % (`tests/sim_data/balance_report.md`), y el
+  experto con +150 ms no sube más de 8 puntos.
+- [ ] **N-117.2** Tanda 1: Explosivo sorteado y replicado con el código en el tablero del conductor;
+  toque de Frágil (+ test de red con dos clientes); bot "siempre mantiene" en el arnés de balance.
+- [ ] **N-117.3** Tanda 2: Equilibrio con A/D y Líquido alternado, con lo que se ve en el mundo
+  (inclinación, charco).
+- [ ] **N-117.4** Tanda 3: flechas del asistente en Peso creciente; íconos de verbo sobre cada caja y un
+  tip por trampa (`_show_first_trap_tip`); la tarjeta del HUD pasa a ser guía, no el juego.
+- Abierto (decisión del equipo): qué trampas salen en solo (el único jugador maneja y nadie atiende
+  cajas en ruta) y si el conductor aguanta leer el código además de averías y espejo.
 
 ### N-805 · Todo texto visible pasa por `tr()`, y el test lo ve — A · `Opus 5.5 · high` · Aviso: sí (`package_care.gd`, `hud_results.gd`)
 - [ ] `test_ui_translations` recorre también `scripts/gameplay` y `scripts/core` (lista de excepciones
@@ -228,13 +244,16 @@ cuando el puntaje es distancia + bonus por caja intacta al final (y cero por per
 Endless se renombra para no mezclar récords viejos, y un test reconstruye la fórmula.
 
 ### N-119 · Jugar solo no es la ruta más vacía — A · `Opus 5.5 · high` · Aviso: no
-`route_planner.gd:233`: solo = 1 casa y 1400 m. Hecho cuando solo hay al menos 2 paradas dentro del
-presupuesto de 2-5 min (`test_route_duration_budget` verde) y un test lo fija.
+`route_planner.gd:233`: solo = 1 casa y 1400 m. PR #43 (mínimo 2 casas) está **en borrador**: en solo
+el único jugador maneja y nadie cuida las cajas en ruta, así que una segunda caja es una pérdida casi
+segura, no contenido. Antes de mergear: decidir qué trampas salen en solo (p. ej. solo las que dependen
+del manejo: Frágil, Equilibrio) y alinear `UnlockManager.locked_traps()` (`maxi(crew - 1, 1)`).
 
 ### N-222 · Si el host se va, la partida termina con resultados — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `hud_results.gd`)
-`network_manager.gd:600` tira un error y se pierde todo. Migrar el host es caro; lo mínimo: el cliente
-ve la pantalla de resultados con lo entregado hasta ese momento ("El anfitrión se fue") en vez del
-error, y el test de red de tres lo cubre. Migración de host: después del lanzamiento.
+Corrección: el cliente ya ve una pantalla de "desconectado" que dice que el anfitrión se fue
+(`hud_pause.gd:166`), pero sin nada de lo jugado. Lo mínimo: esa pantalla muestra lo entregado hasta ese
+momento (casas, cajas intactas, distancia) desde el estado que el cliente ya tiene, y el test de red de
+tres lo cubre. Migración de host: después del lanzamiento.
 
 ### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`)
 Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20,56-62`). Hecho cuando
