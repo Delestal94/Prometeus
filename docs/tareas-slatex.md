@@ -506,7 +506,7 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
 ### S-309 · Mantener al día la dirección visual del dominio — A · `Luna · medium` · Aviso: sí (`especificaciones-visuales.md`, filas propias)
 
-- [ ] Actualizar filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md` y
+- [x] (commit `3480986`) Actualizar filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md` y
   `docs/inventario-assets.md` §1-3 cada vez que se cierra una tarea de este pilar (antes #99).
 
 ### S-310 · Fallas distintas por trampa (momentos para clipear) — B · `Sol · high` · Aviso: no
