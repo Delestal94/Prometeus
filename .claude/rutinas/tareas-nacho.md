@@ -25,7 +25,8 @@ hook de arranque deja Godot en `~/godot` y `GODOT` definido.
 - **PR rojo** (un check requerido falló): arreglarlo es la tarea de esta corrida. Leé el log del check
   que falló (`gh run view <id> --log-failed`, solo las líneas de error), reproducí con `ejecutor-tests`
   y el filtro del test, y si la causa no es obvia pasalo por `cazador-bugs`. Máximo 3 intentos por PR
-  (contá los commits `fix:` que sumó la rutina); al tercero, etiqueta `necesita-revision-humana`, un
+  (contá los commits `fix:` que sumó la rutina); al tercero, etiqueta `necesita-revision-humana` (si no
+  existe: `gh label create necesita-revision-humana --color D93F0B`), un
   comentario con lo que se probó, y seguí con otra cosa.
 - **3 PRs `nacho/` abiertos** (sin contar los que tienen `necesita-revision-humana`): no abras otro.
   Terminá la corrida.
