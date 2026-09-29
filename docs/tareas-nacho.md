@@ -161,9 +161,10 @@ archivos de Slatex: aviso en `colaboracion-equipo.md` en el mismo PR, como siemp
   respaldo de lo útil del stash en `../Prometeus-stash-backup/`).
 - [x] `main` ya no exige la rama al día ("Require branches to be up to date" apagado): los PRs
   encolados se mezclan solos sin actualizarlos a mano; CI corre igual sobre `main` en cada push.
-- [ ] **Manual (Nacho + Slatex):** purgar `builds/` del historial (`git filter-repo --path builds
-  --invert-paths`), force-push con la protección abierta un momento, y que todos vuelvan a clonar.
-  `.git` baja de ~474 MB. Después, actualizar los hashes citados en los docs con el `commit-map`.
+- [x] `builds/` pesado: no hizo falta reescribir el historial. Los ejecutables **nunca llegaron a GitHub**
+  (0 commits con `builds/` en origin, que pesa 189 MB); vivían solo en el `.git` local, retenidos por el
+  stash. Borrado el stash, `git gc` bajó el `.git` local de 475 a 194 MB. Nadie tiene que volver a clonar.
+- [x] El repo borra solo la rama de un PR al mezclarlo (`delete_branch_on_merge`).
 
 ### N-117 · Una acción propia por trampa, en el mundo y no en la tarjeta — A · `Opus 5.5 · xhigh` · Aviso: sí (trampas, `player_seat_pose.gd`, `player_cargo_care.gd`, HUD de Slatex)
 Hoy las 7 trampas son 3 acciones: Frágil no deja hacer nada ("Nothing the passenger does protects
