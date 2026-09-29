@@ -7,6 +7,17 @@
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 
+## Aviso activo: N-212 voz por proximidad, primer tramo (2026-09-29)
+
+Lo hizo Nacho (con Claude), PR `nacho/N-212-proximity-voice`. Solo agrega; **ninguna firma cambia**:
+- `project.godot` (zona compartida): autoload nuevo `ProximityVoice` (`core/proximity_voice.gd`) y acción
+  `voice_talk` (Z por defecto, reasignable). La voz viaja por RPC `unreliable_ordered` en el canal 3,
+  fuera de la simulación autoritativa; solo por Steam (LAN sin voz, N-212.4).
+- `core/game_settings.gd` (Slatex): `voice_chat_enabled` (interruptor general, apagado por ahora) y
+  `voice_push_to_talk` (pulsar para hablar, por defecto), guardados en `settings.cfg`; `voice_talk` se
+  sumó a `REBINDABLE_ACTIONS`. Slatex: falta ponerlos en Opciones (`options_panel.gd`, N-212.3), junto
+  con silenciar/volumen por jugador (`ProximityVoice.set_peer_muted()` / `set_peer_volume()`).
+
 ## Aviso activo: N-214.4 las averías en la pantalla de resultados (2026-09-29)
 
 Lo hizo Nacho (con Claude), PR `nacho/N-214-fault-results`. Solo agrega; **ninguna firma cambia** y no
