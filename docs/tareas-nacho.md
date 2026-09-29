@@ -1,6 +1,7 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
-> Última actualización: 2026-09-29 (N-213.3: gancho de rescate como suministro del depósito; N-213 queda
+> Última actualización: 2026-09-29 (N-214.2: la puerta trasera rota se abre sola con los baches y el
+> espejo del conductor se cae a la ruta; faltan arreglos y resultados). Antes, el mismo día: (N-213.3: gancho de rescate como suministro del depósito; N-213 queda
 > cerrada). Antes, el mismo día: (N-213: test de red con dos clientes que agarran la misma caja; queda el
 > gancho N-213.3). Antes, el 2026-09-28: (N-214.1: componente `VehicleFaults` que decide en el host las averías
 > del camión por golpe fuerte, una por entrega; faltan efectos, arreglos y resultados). Antes, el mismo día: (N-213.4: abandonar la caja caída cierra su pedido como
@@ -871,8 +872,13 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
     rompe la puerta trasera o el espejo (las 2 del veredicto), una por entrega; señales relayadas
     `vehicle_fault_started`/`vehicle_fault_repaired` y `repair()` en el host. Sin efecto visible todavía.
     Test `test_vehicle_faults` (determinista por semilla, tope, arreglo que llega a cada par).
-- [ ] **N-214.2** Averías: puerta trasera que se abre sola, espejo caído, limpiaparabrisas roto (solo con
-  lluvia), faro roto (solo de noche), asiento flojo. Cada una con efecto visible y leve.
+- [x] **N-214.2** Averías: puerta trasera que se abre sola, espejo caído, limpiaparabrisas roto (solo con
+  lluvia), faro roto (solo de noche), asiento flojo. Cada una con efecto visible y leve. `cfccf54`
+  - Las 2 del veredicto: con la puerta rota el host la abre en el golpe y otra vez con cada bache ≥ 4,5
+    (se puede cerrar, no se queda cerrada); el espejo del conductor se cae a la ruta con ruido de vidrio
+    (`vehicle_fault_effects.gd`, en cada par). Limpiaparabrisas, faro y asiento siguen esperando lluvia y
+    noche en las rutas (veredicto). Duda: el camión no tiene vista de espejo funcional, así que el espejo
+    caído es solo visual hasta N-214.3 (el celular que lo reemplaza).
 - [ ] **N-214.3** Arreglo oficial (repuesto de tienda) e improvisado con el kit existente (cinta, cincha,
   trapo; el espejo lo reemplaza un pasajero con `phone_camera.gd`). Sin herramientas nuevas.
 - [ ] **N-214.4** La pantalla de resultados cuenta la avería ("Espejo reemplazado por un celular").
