@@ -18,7 +18,25 @@ sus logs son largos y gastan contexto.
 - La red de seguridad final es el hook `pre-push` (corre la batería completa) y CI en
   GitHub: no hace falta correr todo antes de cada commit.
 
-Los agentes están en `.claude/agents/` (versionados). En la nube, el hook de arranque
+Los agentes están en `.claude/agents/` (versionados).
+
+### Orquestación
+
+- **Un subagente no puede lanzar otro.** La conversación principal (o la rutina) es la
+  única que orquesta: cuando un agente "recomienda" pasar algo por otro, lo hace ella.
+- Modelos fijados en cada agente (Opus 5.5 / Sonnet 5.5 con su `effort`): los que
+  corren y resumen (tests, capturas, dominios, docs) van en Sonnet con esfuerzo bajo;
+  diagnóstico, red y revisión en Opus.
+- En una rutina en la nube sirven `ejecutor-tests`, `cazador-bugs`, `revisor-visual`,
+  `guardian-dominios`, `auditor-red` y `documentador`. Los artistas y
+  `modelador-blender` necesitan ComfyUI/Blender en la PC; `critico-diseno` y
+  `empaquetador-release` necesitan a alguien que decida. El flujo de la rutina de
+  Nacho está en `.claude/rutinas/tareas-nacho.md`.
+- `vehicle.tscn` / `vehicle.gd` están congelados desde el hito M6 (2026-09-28): lo nuevo
+  del camión va como componente aparte. La fuente es `docs/colaboracion-equipo.md`.
+- Los dominios que usan hooks y agentes salen de `file_domain` en
+  `.claude/hooks/lib.sh`; si cambia la tabla de `docs/colaboracion-equipo.md`,
+  actualizá las dos. En la nube, el hook de arranque
 instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren con
 `xvfb-run` (render por software).
 

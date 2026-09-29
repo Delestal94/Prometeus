@@ -11,12 +11,12 @@ saltearlo en silencio.
 ## 1. Qué cambió y de quién es
 
 - `git status` y `git diff --stat` para ver los archivos tocados.
-- Clasificá cada archivo con la tabla de `docs/colaboracion-equipo.md`:
-  dominio de Nacho (vehículo, ruta, depósito, ambientación), de Slatex (jugador,
-  paquetes, trampas, interacción, UI, progresión) o **zona compartida**
-  (`event_bus.gd`, `network_manager.gd`, `run_manager.gd`, `first_person_camera.gd`,
-  `render_layers.gd`, `synth_audio.gd`, `level_base.gd`/`.tscn`, `project.godot`,
-  `README.md`, `docs/especificaciones-visuales.md`).
+- Clasificá cada archivo con la misma tabla que usan los hooks (refleja
+  `docs/colaboracion-equipo.md`):
+  `git diff --name-only | bash -c '. .claude/hooks/lib.sh; while read -r f; do printf "%s\t%s\n" "$(file_domain "$f")" "$f"; done'`
+  → `nacho`, `slatex`, `compartida` o vacío (libre).
+- `vehicle.tscn` / `vehicle.gd` están congelados desde el hito M6 (2026-09-28): si
+  aparecen en el diff, frená y sacalos (lo nuevo del camión va como componente aparte).
 - Quién está trabajando: `TMP_DUENO` o el mail de `git config user.email`
   (el de Nacho es `delestal.miguelignacio@...`, el de Slatex `skater.devil@...`).
   Si no se puede saber, preguntá.

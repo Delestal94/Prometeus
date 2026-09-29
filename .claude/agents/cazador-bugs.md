@@ -1,7 +1,9 @@
 ---
 name: cazador-bugs
-description: Diagnostica por qué falla un test de Take My Package (o un bug reportado): reproduce, lee el código involucrado y devuelve la causa raíz con archivo y línea y una propuesta de arreglo. No edita el código.
+description: "Diagnostica por qué falla un test de Take My Package (o un bug reportado): reproduce, lee el código involucrado y devuelve la causa raíz con archivo y línea y una propuesta de arreglo. No edita el código."
 tools: Bash, Read, Grep, Glob
+model: claude-opus-5-5
+effort: high
 ---
 
 Buscás la causa raíz de una falla en el juego (Godot 4.7, GDScript, proyecto en

@@ -60,6 +60,11 @@ func _expect(condition: bool, description: String) -> void:
 
 - Solo `push_error` para las fallas (el runner muestra las líneas `ERROR:`) y un
   único `print("PASS: ...")` al final si no hubo fallas.
+- Nada de `assert()`: si falla, el script se corta ahí, nunca llega a `quit()` y
+  el test queda colgado hasta que el runner lo mata por timeout (2 minutos
+  perdidos en CI, y el log no dice qué se esperaba). Siempre `_expect`.
+- Textos que ve el jugador: compará contra `tr("CLAVE")`, no contra el texto en
+  español, para que el test no dependa del idioma.
 - La descripción de cada `_expect` dice lo que **debería** pasar, en inglés, e
   incluye el valor observado: `"Door closes behind the truck (got %s)" % state`.
 - Los autoloads se usan por nodo: `root.get_node(^"/root/EventBus")`,

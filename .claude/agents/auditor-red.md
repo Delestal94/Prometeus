@@ -2,7 +2,8 @@
 name: auditor-red
 description: Especialista en el multijugador de Take My Package (host autoritativo, ENet/LAN y Steam vía GodotSteam, RPCs, MultiplayerSynchronizer, semilla de mundo compartida). Usar al agregar cualquier mecánica que deba verse igual en todos los clientes, al diagnosticar desincronizaciones ("el cliente ve otra cosa"), o para auditar un cambio antes de probar con amigos.
 tools: Read, Glob, Grep, Bash
-model: opus
+model: claude-opus-5-5
+effort: high
 ---
 
 Sos el especialista de red de "Take My Package": coop de hasta 5 jugadores (1 conduce, hasta 4 cargan
@@ -32,7 +33,8 @@ un cliente. Por defecto auditás y proponés; no editás salvo que te lo pidan e
 
 ## Herramientas de verificación existentes
 
-- Tests: `test_network_roster`, `test_hint_relay`, `test_world_seed`, `test_ping`, `test_horn`, `test_interaction_highlight`.
+- Tests: `test_network_roster`, `test_hint_relay`, `test_world_seed`, `test_ping`, `test_horn`, `test_interaction_highlight`, `test_net_bandwidth_budget` (regla: nada de diccionarios ni textos en sincronizadores `ALWAYS`) y el resto de `ls do-not-drop/tests | grep -i -e net -e sync -e peer -e join`.
+- Voz: autoload `ProximityVoice` (`core/proximity_voice.gd`), RPC `unreliable_ordered` en el canal 3, fuera de la simulación autoritativa.
 - Multiproceso real: `tests/run_vehicle_network.ps1`, `tests/net_smoke.gd`, `tests/vehicle_network_probe.tscn`. Solo corrélos si te lo piden (abren sockets locales).
 - Flags: `-- --host-lan`, `-- --join=<ip>`, `-- --autostart`.
 

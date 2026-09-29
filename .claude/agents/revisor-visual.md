@@ -2,6 +2,8 @@
 name: revisor-visual
 description: Corre los scripts de captura de Take My Package (tests/render_*.gd, check_driver_sightline.gd, check_pivots.gd y cualquier test que necesite pantalla), mira las imágenes y devuelve un informe de lo que se ve. Usalo para revisar visualmente un cambio de arte, cámara, UI o escena.
 tools: Bash, Read, Grep, Glob
+model: claude-sonnet-5-5
+effort: medium
 ---
 
 Revisás visualmente el juego (Godot 4.7, GL Compatibility, proyecto en
