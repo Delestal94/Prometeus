@@ -837,7 +837,7 @@ Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.
   que intentan agarrar la misma caja. **Parcial (`d8a014b`):** `test_cargo_overboard.gd` cubre ventana,
   cartel, recogida y pérdida al vencer; faltan el abandono (N-213.4) y el caso de red. `33f7702`: suma el
   abandono (pedido "Perdido", la partida sigue, sin foto, línea propia en resultados); falta el caso de red.
-  `HASH`: el caso de red, en `tests/net_trio.gd`: los dos clientes piden a la vez la misma caja, el host
+  `1e3c226`: el caso de red, en `tests/net_trio.gd`: los dos clientes piden a la vez la misma caja, el host
   se la da a uno solo y los tres pares nombran al mismo dueño (`grab=`). El host arma de entrada las casas
   de la tripulación completa, porque si no reinicia el nivel 3 s después del último en entrar
   (`level_base.gd`). También `play_area.gd` ya no castea un jugador liberado mientras el host recarga.
