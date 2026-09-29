@@ -1,8 +1,13 @@
 # Tareas de Nacho — Vehículo, Ruta, Ambientación y Depósito
 
 > Última actualización: 2026-09-29 (N-214.4: la pantalla de resultados cuenta cómo terminó cada avería
-> del camión, "Espejo reemplazado por un celular"; de N-214 solo falta N-214.3c). Antes, el mismo día: (N-214.3b: un pasajero sostiene el celular como espejo mientras no
-> haya repuesto; quien se une a mitad del recorrido recibe las averías; faltan los resultados, N-214.4).
+> del camión, "Espejo reemplazado por un celular"; de N-214 solo falta N-214.3c). Antes, el mismo día:
+> (red por Steam tras playtest: el host mandaba 2-5 veces el límite
+> de Steam y el cliente veía el mundo cada vez más viejo; `care_state` solo al cambiar, sync a 60 Hz
+> fijos, caja predicha en las manos, Nagle apagado; investigación en `docs/investigacion-red.md`;
+> menú sin la tarjeta fantasma y sin DOF en Compatibility). Antes, el mismo día: (N-214.3b: un pasajero
+> sostiene el celular como espejo mientras no haya repuesto; quien se une a mitad del recorrido recibe
+> las averías; faltan los resultados, N-214.4).
 > Antes, el mismo día: (N-214.3 parcial: puntos de arreglo en el camión; la puerta se ata
 > con la cincha del kit y el repuesto nuevo del depósito arregla puerta o espejo; falta el celular como
 > espejo y los resultados). Antes, el mismo día: (túneles de tren en las dos puntas de la vía del paso a
@@ -28,6 +33,25 @@
 > sin esperar a Slatex y sin playtesting**.
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
+
+## Hecho fuera de lista: red por Steam y bugs del playtest (2026-09-29)
+
+Playtest por Steam (Spacewar, dos PCs por internet): la caja que cargaba el cliente lo seguía con
+atraso y el camión "seguía andando" después de soltar las teclas. Medido: el host le mandaba a cada
+cliente 527-1263 KB/s contra los 256 KB/s que Steam permite por conexión, y Steam encolaba el resto.
+- `package.tscn`: `care_state` (diccionario de 19 claves, 85 % de cada envío) pasa de `ALWAYS` a
+  `ON_CHANGE`; `package.tscn` y `player.tscn` sincronizan a 60 Hz fijos (antes, por frame de render).
+  Peor caso ahora: 105 KB/s por cliente. `test_net_bandwidth_budget` lo cuida (tope 128 KB/s).
+- `package.gd predict_carry()` + `player_carry.gd`: el cliente dibuja la caja en sus manos al
+  instante; el host sigue decidiendo. `test_carry_prediction`.
+- `network_manager.gd`: `no_nagle` en el peer de Steam (5 ms menos por mensaje).
+- `main_menu.gd`: el vidrio esmerilado se reacomoda diferido; al cambiar el tamaño de la ventana
+  quedaba una segunda tarjeta desplazada detrás (`render_main_menu.gd` lo chequea).
+- `player.gd`: sin `CameraAttributesPractical` en GL Compatibility (el DOF nunca se veía y avisaba
+  en cada carga).
+- Pendiente (plan por fases en `docs/investigacion-red.md`): HUD de red y `--net-sim`, interpolación
+  con buffer para jugadores y cajas (y recién ahí bajar a 30 Hz), tolerancia de alcance por ping,
+  predicción del conductor, validación genérica de RPC y reconexión.
 
 ## Hecho fuera de lista: túneles del tren y repaso de las cascadas (2026-09-29)
 
