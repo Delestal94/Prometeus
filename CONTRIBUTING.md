@@ -46,7 +46,9 @@ tools/run-tests.sh -v traps     # con el log de cada falla
 - `render_*.gd` y `check_*.gd` generan capturas y necesitan pantalla y alguien que las
   mire: no entran en la batería (ver el agente `revisor-visual`).
 - Cada mecánica nueva o bug arreglado lleva su test (`tests/test_<tema>.gd`, patrón
-  `extends SceneTree` + `_expect` + `quit(_failures)`), anotado en la lista del README.
+  `extends SceneTree` + `_expect` + `quit(_failures)`), que describe qué cubre en su encabezado
+  (`## ...` debajo de `## Run:`). `tools/list-tests.sh` imprime el índice; `--missing` lista los que no
+  tienen descripción.
 
 ## Builds de release
 
@@ -70,7 +72,7 @@ en el mismo commit.
 ## Dominios
 
 Nacho: vehículo, ruta, ambientación, depósito. Slatex: jugador, paquetes, interacción, UI y
-progresión. Antes de tocar archivos del otro o la zona compartida, dejá un aviso en
-[docs/colaboracion-equipo.md](docs/colaboracion-equipo.md). Las tareas pendientes de cada
+progresión. Antes de tocar archivos del otro o la zona compartida, dejá un aviso como archivo nuevo en
+[docs/avisos/](docs/avisos/) (reglas en [docs/colaboracion-equipo.md](docs/colaboracion-equipo.md)). Las tareas pendientes de cada
 uno están en [docs/tareas-nacho.md](docs/tareas-nacho.md) y
 [docs/tareas-slatex.md](docs/tareas-slatex.md).

@@ -78,7 +78,7 @@ func _expect(condition: bool, description: String) -> void:
 
 ## Después
 
-- Anotá el test en la lista de "Tests" del `README.md`.
+- Describí qué cubre en el encabezado (`## ...` debajo de `## Run:`); `tools/list-tests.sh --missing` tiene que salir vacío.
 - Corrélo con el agente `ejecutor-tests` y el filtro por su nombre.
 - Si el hook de chequeo de GDScript marca un error al guardar, arreglalo antes de
   correr la batería.

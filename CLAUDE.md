@@ -34,7 +34,9 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 
 Seguí la skill `cerrar-cambio` (y `nuevo-test` para escribir el test). En resumen:
 
-- Test nuevo o ampliado para lo que se cambió, anotado en la lista del README.
+- Test nuevo o ampliado para lo que se cambió, con su descripción en el encabezado del test
+  (`tools/list-tests.sh` arma el índice; no hay lista a mano que mantener).
 - Actualizar `docs/tareas-nacho.md` / `docs/tareas-slatex.md` y, si se tocó la zona
-  compartida o archivos del otro integrante, un aviso en `docs/colaboracion-equipo.md`.
+  compartida o archivos del otro integrante, un aviso: un archivo nuevo en `docs/avisos/` (`AAAA-MM-DD-tema.md`).
+  Nunca se edita un archivo que todos los PRs tocan (así no chocan entre sí).
 - Commits con prefijo (`feat:`, `fix:`, `docs:`…), en inglés.
