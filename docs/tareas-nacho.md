@@ -489,6 +489,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
 932: están escritos contra `max-file-lines: 1000`, no partidos por responsabilidad. Orden:
 `synth_audio` → `reference_truck` → `route.gd` → `package.gd`.
+- [x] **N-225.1** `synth_audio.gd` **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: 999 → 249 líneas. Los
+  generadores pasan a `synth_audio_vehicle.gd` (160), `synth_audio_world.gd` (253), `synth_audio_handling.gd` (107),
+  `synth_audio_animals.gd` (82), `synth_audio_dsp.gd` (80: costura, normalizado, `Resonator`) y a
+  `synth_audio_traps.gd` (32 → 187); `SynthAudio` queda como puerta con el caché y los mismos accesores y claves
+  (los 43 streams salen byte por byte iguales). Sin `max-line-length` en el módulo (la baseline bajó 3).
+  `test_synth_audio_golden.gd` compara los 43 con lo que daba el archivo único. Aviso:
+  `docs/avisos/2026-09-30-n225-synth-audio-partido.md`.
+- [ ] **N-225.2** `reference_truck.gd` (932). **N-225.3** `route.gd`. **N-225.4** `package.gd` (999). Quedan
+  `player.gd` y `run_manager.gd` fuera del orden.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con

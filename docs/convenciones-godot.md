@@ -149,7 +149,7 @@ do-not-drop/
   modules/                      # portables: se copian a otro juego y funcionan (docs/modulos.md)
     persistence/                # SafeJson, UserDataMigration
     loc_text/                   # LocText
-    synth_audio/                # SynthAudio + escenas, cuidado, pasos, trampas, radio
+    synth_audio/                # SynthAudio + vehículo, trampas, mundo, animales, escenas, cuidado, pasos, radio, dsp
     net_pose_smoother/          # NetPoseSmoother
     render_budget/              # WorldQuality, DressingBatcher, DetailMaterials, ContactShadow
     acoustics/                  # AcousticSpace, AcousticZone

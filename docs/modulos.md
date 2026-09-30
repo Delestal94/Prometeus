@@ -60,7 +60,7 @@ adaptador, nunca el módulo directo, así el orden de inicialización no importa
 |---|---|---|---|
 | `persistence` | `SafeJson`, `UserDataMigration` | Guardado JSON a prueba de cortes (`.tmp` → `.bak` → archivo; lo corrupto va a `.bad` y vuelve el default) y migración única de archivos desde la carpeta de un nombre viejo | — |
 | `loc_text` | `LocText` | Una línea de texto que arma un peer y dibuja otro: viaja como `[clave, args...]` y cada uno la traduce | — |
-| `synth_audio` | `SynthAudio`, `SynthAudioScenes`, `SynthAudioCare`, `SynthAudioSteps`, `SynthAudioTraps`, `SynthAudioRadio` | Unos 110 sonidos sintetizados por código (motor, lluvia, pájaros, animales, bocina, campanas, cues de UI), cacheados y compartidos | — |
+| `synth_audio` | `SynthAudio` (la puerta y el caché), `SynthAudioVehicle`, `SynthAudioTraps`, `SynthAudioHandling`, `SynthAudioWorld`, `SynthAudioAnimals`, `SynthAudioScenes`, `SynthAudioCare`, `SynthAudioSteps`, `SynthAudioRadio`, `SynthAudioDsp` | Unos 110 sonidos sintetizados por código (motor, lluvia, pájaros, animales, bocina, campanas, cues de UI), cacheados y compartidos | — |
 | `net_pose_smoother` | `NetPoseSmoother` | El cliente dibuja un cuerpo del host un poco en el pasado, interpolando entre poses con reloj; simula lag, jitter y pérdida | — |
 | `render_budget` | `WorldQuality`, `DressingBatcher`, `DetailMaterials`, `ContactShadow` | Frames en hardware modesto con GL Compatibility: presets de calidad, miles de mallas estáticas en MultiMesh con colisiones, detalle triplanar con estaciones y luz de noche, sombras de contacto falsas | — |
 | `acoustics` | `AcousticSpace`, `AcousticZone` | Reverb en los buses del mundo mientras la cámara está dentro de un volumen (túnel, galpón) | — |
