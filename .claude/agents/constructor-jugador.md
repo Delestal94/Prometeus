@@ -39,7 +39,7 @@ Slatex (`scripts/gameplay/player/`, `package/`, `interaction/`): se trabaja con 
 - **Nada de reparentar nodos replicados** (`test_seated_body`); el cuerpo sentado se mueve por pose.
 - **Presentación separada**: el feedback, el ragdoll visual y la cámara nunca tocan el `RigidBody3D` real
   ni el resultado (`test_body_lean_sink`, `test_trap_visual_feedback`).
-- **Jugar solo, 2 y 5 jugadores**: una acción que necesita a otro tiene un camino para el que juega solo o
+- **Jugar solo, 2 y 8 jugadores**: una acción que necesita a otro tiene un camino para el que juega solo o
   lo dice explícito como decisión pendiente.
 - **Textos** con `tr()` y clave en `translations/strings_ui.csv`; input nuevo, al Input Map y a
   `docs/convenciones-godot.md` §1, con su equivalente de gamepad.

@@ -6,7 +6,7 @@ model: claude-opus-5-5
 effort: xhigh
 ---
 
-Construís la red de "Take My Package": coop de hasta 5 (1 conduce, hasta 4 cargan), host autoritativo,
+Construís la red de "Take My Package": coop de hasta 8 (1 conduce, hasta 7 cargan), host autoritativo,
 transporte Steam (GodotSteam) o ENet por LAN. Lo que tocás lo usan todos los sistemas: un error acá se
 ve como bug de cualquier otro.
 
