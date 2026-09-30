@@ -307,7 +307,9 @@ func refresh_bomb_code() -> void:
 	if codes.is_empty():
 		label.text = ""
 		return
-	label.text = ", ".join(DashboardGps.code_lines(codes, 1, tr("HUD_BOMB_CODE"), tr("HUD_BOMB_CODE_MORE")))
+	var code_text: String = ", ".join(DashboardGps.code_lines(codes, 1, tr("HUD_BOMB_CODE"), tr("HUD_BOMB_CODE_MORE")))
+	if label.text != code_text:
+		label.text = code_text
 	var code_color: Color = Hud.RED if float(codes[0]["seconds"]) <= 6.0 else Hud.YELLOW
 	if not label.has_theme_color_override("font_color") or label.get_theme_color("font_color") != code_color:
 		label.add_theme_color_override("font_color", code_color)

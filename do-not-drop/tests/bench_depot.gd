@@ -121,7 +121,7 @@ func _run() -> void:
 	var total: float = _avg(_to_ms(combined))
 	var verdict: String = "PASS" if total < GOAL_MS else "FAIL"
 	print("RESULT packages + HUD %.3f ms/frame (goal < %.1f ms): %s" % [total, GOAL_MS, verdict])
-	quit(0)
+	quit(0 if total < GOAL_MS else 1)
 
 
 func _feedback_nodes() -> Array[Node]:
