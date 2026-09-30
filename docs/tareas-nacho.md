@@ -2103,11 +2103,15 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 #### S-208 · Rendimiento del jugador, paquetes y UI — B · `Opus 5.5 · high` · Aviso: no
 
-- [ ] `tests/bench_depot.gd`: depósito con 14 cajas y 5 jugadores simulados, 600 frames; medir
-  `Performance.TIME_PROCESS` y el tiempo de `package_feedback.gd` y del HUD.
-- [ ] Meta: < 1,5 ms por frame entre paquetes + HUD. Candidatos típicos: labels que reescriben
-  `text` cada frame aunque no cambió (causa relayout), `find_child` en `_process`, materiales duplicados.
-- [ ] Resultado anotado en el README → Rendimiento.
+- [x] (rama `nacho/S-208-depot-bench`) `tests/bench_depot.gd`: depósito con 14 cajas y 5 jugadores simulados, 600 frames; medir
+  `Performance.TIME_PROCESS` y el tiempo de `package_feedback.gd` y del HUD. `TIME_PROCESS` se imprime pero
+  no se juzga: en headless por software salta varios ms entre pasadas iguales; la meta se mide llamando a mano
+  los `_process` de los 14 `package_feedback` y del HUD.
+- [x] (rama `nacho/S-208-depot-bench`) Meta: < 1,5 ms por frame entre paquetes + HUD. Ya se cumplía (0,67 ms); igual se
+  sacó el punto caliente: `refresh_hint` reescribía BBCode y color cada frame (0,28 ms). Ahora 0,41 ms (p95 0,59).
+  `hud_notices` y `package_feedback` también escriben solo si cambia. Queda: `keycaps(_base_hint())` se arma
+  cada frame (~76 µs), no vale el caché. Aviso `docs/avisos/2026-09-30-s208-depot-bench.md`.
+- [x] (rama `nacho/S-208-depot-bench`) Resultado anotado en el README → Rendimiento.
 
 #### S-209 · Jugador que se desconecta en medio de la partida — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`)
 

@@ -308,7 +308,9 @@ func refresh_bomb_code() -> void:
 		label.text = ""
 		return
 	label.text = ", ".join(DashboardGps.code_lines(codes, 1, tr("HUD_BOMB_CODE"), tr("HUD_BOMB_CODE_MORE")))
-	label.add_theme_color_override("font_color", Hud.RED if float(codes[0]["seconds"]) <= 6.0 else Hud.YELLOW)
+	var code_color: Color = Hud.RED if float(codes[0]["seconds"]) <= 6.0 else Hud.YELLOW
+	if not label.has_theme_color_override("font_color") or label.get_theme_color("font_color") != code_color:
+		label.add_theme_color_override("font_color", code_color)
 
 
 func set_notice(zone: StringName, key: StringName, text: String, priority: int,
@@ -375,8 +377,12 @@ func _render_notice_zone(zone: StringName) -> void:
 		label.text = ""
 		return
 	var best: Dictionary = sources[best_key]
-	label.text = String(best.text)
-	label.add_theme_color_override("font_color", best.color)
+	if label.text != String(best.text):
+		label.text = String(best.text)
+	# Overriding a theme colour notifies the label's whole subtree, even with
+	# the same value, and this runs every frame while a notice is up.
+	if not label.has_theme_color_override("font_color") or label.get_theme_color("font_color") != best.color:
+		label.add_theme_color_override("font_color", best.color)
 
 
 func _top_notice_key(sources: Dictionary) -> StringName:

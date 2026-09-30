@@ -265,6 +265,27 @@ sombras largas del sol bajo, sin medir todavía). Una vez compilados los shaders
 los primeros segundos o de cuando el piloto reubica el camión. La física promedia 0,55-0,75 ms
 por tick con picos de 12-19 ms. Falta medir el preset bajo en una PC modesta (N-205).
 
+`bench_depot.gd` (S-208) mide lo que cuestan por frame los paquetes y el HUD en el depósito:
+14 cajas, 5 jugadores, semilla 4242, 600 frames, headless (`--fixed-fps 60`, sin GPU). Llama a mano
+el `_process` de cada `package_feedback.gd` y del HUD con `Time.get_ticks_usec()` (esa es la cifra
+de la meta) y la contrasta con el tiempo de frame con esos scripts apagados;
+`Performance.TIME_PROCESS` se imprime pero oscila varios ms entre pasadas idénticas en render por
+software, así que no sirve para juzgar. Referencia del 2026-09-30, CPU de la nube, render por
+software (comparable solo con corridas de la misma máquina). Meta: paquetes + HUD < 1,5 ms por frame.
+
+| | Antes | Después |
+|---|---|---|
+| `package_feedback.gd` (14 nodos), prom. / p95 | 0,30 / 0,46 ms | 0,29 / 0,42 ms |
+| HUD `_process`, prom. / p95 | 0,37 / 0,50 ms | 0,12 / 0,18 ms |
+| Paquetes + HUD, prom. / p95 | 0,67 / 0,95 ms | 0,41 / 0,59 ms |
+| Frame completo con ellos encendidos menos apagados | 0,9-1,0 ms | 0,6-0,7 ms |
+
+Cumple la meta desde antes (0,67 ms) y con más margen ahora. El costo que sobraba estaba en
+`HudPrompts.refresh_hint()`: reescribía el texto BBCode y el color del `RichTextLabel` de
+controles cada frame aunque no hubieran cambiado (dos tercios del `_process` del HUD); ahora
+escribe solo si cambió, igual que los avisos (`hud_notices.gd`) y la etiqueta del envío de
+`package_feedback.gd`.
+
 `bench_route_shocks.gd` mide qué tan fuerte golpea cada tipo de tramo a la carga
 (headless, `--fixed-fps 60`, `-- --cruise=50` o `--cruise=30`); la tabla está en
 `docs/parametros-diseno.md` ("Golpes por tipo de tramo").

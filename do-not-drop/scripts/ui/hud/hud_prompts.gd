@@ -16,6 +16,8 @@ var _carrying: bool = false
 var _shortcut_learning_seconds: float = 0.0
 var _hint_override: String = ""
 var _hint_override_seconds: float = 0.0
+var _hint_shown_text: String = ""
+var _hint_shown_color: Color = Color(0.0, 0.0, 0.0, 0.0)
 var _sound_subtitle: String = ""
 var _role: int = Hud.Role.ON_FOOT
 
@@ -97,12 +99,22 @@ func _on_tutorial_tip_requested(text: String) -> void:
 func refresh_hint(delta: float) -> void:
 	if _hint_override_seconds > 0.0:
 		_hint_override_seconds -= delta
-		hud.hint_label.text = "[b]%s[/b]" % _hint_override
-		hud.hint_label.add_theme_color_override("default_color", Hud.YELLOW)
+		_show_hint("[b]%s[/b]" % _hint_override, Hud.YELLOW)
 		return
 	# On the dark controls pill (Hud._build_bottom_bar()).
-	hud.hint_label.text = UiTheme.keycaps(_base_hint(), true)
-	hud.hint_label.add_theme_color_override("default_color", Hud.PAPER)
+	_show_hint(UiTheme.keycaps(_base_hint(), true), Hud.PAPER)
+
+
+## Writes the hint only when it changed: every text or theme-override write
+## re-parses the BBCode and relayouts the pill, and this runs every frame
+## (S-208: 0.28 of the HUD's 0.37 ms per frame in the depot).
+func _show_hint(bbcode: String, color: Color) -> void:
+	if bbcode != _hint_shown_text:
+		_hint_shown_text = bbcode
+		hud.hint_label.text = bbcode
+	if color != _hint_shown_color:
+		_hint_shown_color = color
+		hud.hint_label.add_theme_color_override("default_color", color)
 
 
 func _base_hint() -> String:
