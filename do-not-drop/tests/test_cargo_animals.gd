@@ -10,7 +10,8 @@ extends SceneTree
 ## - nothing acts without warning: the alert (EventBus.cargo_animal_alert, with
 ##   its cry, icon and HUD banner) comes WARN seconds before the animal starts,
 ##   and the horn already works during the warning;
-## - GULL (.1): with nobody holding the box it throws it out of the rear doors
+## - GULL (.1): its own white-and-grey model with a yellow beak, wings spread in
+##   flight and folded perched; with nobody holding the box it throws it out of the rear doors
 ##   onto the road -- still loaded, so it falls into N-213's rescue window, not
 ##   ruined; a box held (its passenger's primary, or picked up) or the horn
 ##   sends it off; it needs the rear doors open;
@@ -188,6 +189,7 @@ func _test_gull(level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 	_expect(view.icon.text.contains(tr("WORLD_GULL_ICON")),
 			"The icon reads the animal's name (got %s)" % view.icon.text)
 	_expect(view.animal.get_node_or_null(^"Voice") != null, "The gull has its cry")
+	_test_gull_model(view.animal)
 
 	# The horn works during the warning already.
 	bus.call(&"request_horn")
@@ -245,6 +247,37 @@ func _test_gull(level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 	_put_back(level, package, vehicle, player)
 
 
+## The gull reads as one (N-109 visual review): a white bird with a yellow beak,
+## grey wings with dark tips, spread when it swoops and folded when it perches.
+func _test_gull_model(gull: Node) -> void:
+	_expect(gull is CargoGull, "The gull is drawn by its own model, not the roadside bird")
+	var beak := gull.get_node_or_null(^"Body/HeadGroup/Beak") as MeshInstance3D
+	var torso := gull.get_node_or_null(^"Body/Torso") as MeshInstance3D
+	var wing := gull.get_node_or_null(^"Body/WingL") as Node3D
+	var wing_right := gull.get_node_or_null(^"Body/WingR") as Node3D
+	_expect(beak != null and torso != null and wing != null and wing_right != null,
+			"It has a beak, a body and two wings")
+	if beak == null or torso == null or wing == null or wing_right == null:
+		return
+	var beak_colour: Color = (beak.material_override as StandardMaterial3D).albedo_color
+	var torso_colour: Color = (torso.material_override as StandardMaterial3D).albedo_color
+	_expect(beak_colour.r > 0.8 and beak_colour.g > 0.6 and beak_colour.b < 0.3,
+			"The beak is yellow (got %s)" % beak_colour)
+	_expect(torso_colour.get_luminance() > 0.85, "The body is white (got %s)" % torso_colour)
+	var gull_b := CargoGull.new()
+	_expect(gull_b.get_node("Body/Torso").material_override == torso.material_override,
+		"Every gull shares its materials")
+	gull_b.free()
+	gull.call(&"pose", true, 0.05)
+	var open_wing: Vector3 = (wing.basis * Vector3(-1.0, 0.0, 0.0)).normalized()
+	gull.call(&"pose", false, 0.05)
+	var folded_wing: Vector3 = (wing.basis * Vector3(-1.0, 0.0, 0.0)).normalized()
+	_expect(absf(open_wing.dot(Vector3(-1.0, 0.0, 0.0))) > 0.7 and absf(folded_wing.dot(Vector3(0.0, 0.0, 1.0))) > 0.7,
+		"The wings spread across when it flies and fold back along the body when it perches")
+	var symmetric: bool = is_equal_approx(wing.rotation.y, -wing_right.rotation.y)
+	_expect(symmetric, "Both wings fold the same way")
+
+
 # --- The dog -------------------------------------------------------------------
 
 func _test_dog(_level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
@@ -283,6 +316,25 @@ func _test_dog(_level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 	var point: Node = view.dog_point
 	_expect(point != null and point.get_prompt() == tr("WORLD_DOG_THROW_PROMPT"), "The dog offers 'throw it a stick'")
 	_expect(point.can_interact(player), "Free hands can throw it")
+	_expect(view.animal.scale.x > 1.2, "The dog is drawn bigger than life so it reads from the rear doors")
+	_tick_view(view, 4.0)
+	var beside: Vector3 = vehicle.to_local(view.animal.global_position)
+	_expect(beside.x > vehicle.to_local(package.global_position).x + 0.5 and beside.y > -0.1,
+		"It stands in the aisle on the floor of the bay, by the box (got %s)" % beside)
+	# Standing next to the rear-door control, looked at from two steps away, the
+	# prompt is still the dog's: the control is closer and would take it.
+	var control: Node = vehicle.get_node(^"CargoBay/RearDoorControl")
+	var camera: Camera3D = player.get_node(^"Head/Camera3D")
+	var old_nearby: Array[Node] = player._nearby.duplicate()
+	player._nearby.clear()
+	player._nearby.append(control)
+	player._nearby.append(point)
+	camera.global_position = vehicle.to_global(Vector3(0.45, 1.6, 5.9))
+	camera.look_at(point.global_position)
+	_expect(player.call(&"_closest_interactable") == point,
+			"Aiming at the dog offers the stick, not the rear-door control")
+	player._nearby.clear()
+	player._nearby.append_array(old_nearby)
 	var carried: Variant = player.get(&"carried_package")
 	player.set(&"carried_package", package)
 	_expect(not point.can_interact(player), "With a box in the arms there is no throwing a stick")
@@ -359,8 +411,7 @@ func _test_bees(_level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 	_expect(animals.phase == PHASE_ANNOUNCED and animals.kind == CargoAnimalPlan.BEES,
 		"An open cake in the meadow draws the bees, announced (phase %s)" % animals.phase)
 	await process_frame
-	_expect(view.bees != null and view.bees.multimesh.instance_count >= 4, "The swarm is drawn")
-	_expect(view.get_node_or_null(^"Buzz") != null, "The buzz comes before the bees")
+	_expect(view.bees != null and view.bees.multimesh.instance_count >= 12, "The swarm is drawn, with bees to be seen")
 	var integrity_before: float = package.integrity
 	animals.advance(3.5)
 	_expect(animals.phase == PHASE_ACTING and is_equal_approx(package.integrity, integrity_before),

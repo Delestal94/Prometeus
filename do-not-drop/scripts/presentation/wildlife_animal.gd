@@ -70,6 +70,9 @@ const DOG_GALLOP_ABOVE: float = 3.6
 const DOG_WALK_BELOW: float = 2.6
 const DOG_STILL_BELOW: float = 0.2
 var _dog_gait: StringName = &"Idle"
+## A clip the dog keeps while it stands still instead of looking about (the
+## dog at the cargo, cargo_animal_view.gd: it has to stay on its feet).
+var standing_clip: StringName = &""
 
 
 func _ready() -> void:
@@ -254,6 +257,9 @@ func _animate_rigged_dog(delta: float) -> void:
 		var galloping: bool = _dog_gait == &"Gallop"
 		gait = &"Gallop" if ground_speed > (DOG_WALK_BELOW if galloping else DOG_GALLOP_ABOVE) else &"Walk"
 	_dog_gait = gait
+	if gait == &"Idle" and standing_clip != &"":
+		_play(standing_clip)
+		return
 	if gait == &"Idle":
 		_idle_timer -= delta
 		if _idle_timer <= 0.0 or not _current_animation in DOG_IDLES:

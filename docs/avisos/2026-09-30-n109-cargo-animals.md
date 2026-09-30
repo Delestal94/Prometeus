@@ -25,6 +25,11 @@ N-109). Toca archivos de Slatex (`package.gd`, `package_rescue.gd`) y de la zona
   encuentra solo, sin cambios.
 - Textos nuevos en `strings_world.csv` (`WORLD_GULL_*`, `WORLD_DOG_*`, `WORLD_BEES_*`, `WORLD_ANIMAL_OUTCOME_*`,
   `WORLD_CARGO_*_RUINED`), sonidos en `presentation/cargo_animal_sounds.gd` y niveles en `world_mix.gd`.
+- **Prompt del palo (Slatex, `player_interaction.gd`).** `closest_interactable()` suma `aim_bonus` al puntaje de
+  un `Interactable` que lo declare (`area.get(&"aim_bonus")`; el resto no cambia). Lo usa `dog_distract_point.gd`:
+  el control de las puertas traseras, al lado del perro, le ganaba el prompt.
+- **`wildlife_animal.gd`** (presentación): `standing_clip` opcional, el clip que el perro mantiene quieto en vez de
+  mirar alrededor (el perro de la carga se queda parado). Por defecto vacío: el resto de los perros no cambia.
 - Tests: `test_cargo_animals.gd` nuevo; captura `tests/render_cargo_animals.gd`.
 
 ## Qué tiene que hacer Slatex

@@ -1592,7 +1592,12 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
     (`EventBus.relay`); tras irse uno no se anuncia otro en 3,5 s (el tiempo de su salida); quien entra tarde
     recibe el aviso otra vez sin reiniciar al bicho. Cada cliente lo
     dibuja (`CargoAnimalView`). El daño lo hace solo el host (`DeliveryPackage.apply_external_damage`).
-  - Test `test_cargo_animals.gd` (plan, sonidos, gaviota, perro, abejas, cliente vs host, ritmo). Capturas:
+  - Revisión visual (2026-09-30): la gaviota tiene modelo propio de primitivas (`cargo_gull.gd`: cuerpo blanco,
+    alas grises con puntas oscuras abiertas al volar y plegadas al posarse, pico amarillo); el perro (Shiba) sale
+    1,3 veces más grande, de pie en el pasillo junto a la caja; las abejas son 48 cápsulas amarillas y negras que
+    orbitan la torta; el ícono sobre la caja es más chico, con flecha y cuenta regresiva; y el palo sale como
+    prompt aunque el control de puertas esté más cerca (`aim_bonus`).
+  - Test `test_cargo_animals.gd` (plan, sonidos, modelos, gaviota, perro, abejas, cliente vs host, ritmo). Capturas:
     `tests/render_cargo_animals.gd` (para `revisor-visual`).
   - Aviso: `docs/avisos/2026-09-30-n109-cargo-animals.md`. `PROTOCOL_VERSION` 11 → 12.
   - En Endless solo viene la gaviota (no hay casas ni campo). El perro y las abejas piden la caja **abierta**:

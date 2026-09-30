@@ -14,6 +14,10 @@ signal thrown(peer_id: int)
 
 ## Whether the dog is there to be distracted (the view switches it).
 var active: bool = false
+## Added to the aiming score in player_interaction.gd: the rear-door control and
+## the box it stands by are closer to the player than the dog is, and would
+## take the prompt from it.
+var aim_bonus: float = 0.6
 
 
 func get_prompt() -> String:

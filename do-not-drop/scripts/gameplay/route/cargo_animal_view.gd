@@ -10,13 +10,14 @@ extends Node3D
 ## host relays (cargo_animals.gd), and never decides anything about the box:
 ## the timeline is the alert's own seconds, counted locally, and the animal
 ## sits wherever the box is, which the network already places on every peer.
-## Models: the roadside bird (scaled up for a gull) and the rigged village dog,
-## both animated by wildlife_animal.gd; the bees are one MultiMesh of dots.
+## Models: a gull of primitives (cargo_gull.gd: white, grey wings, yellow beak;
+## the roadside bird is a brown blob at this size), the rigged village dog
+## animated by wildlife_animal.gd and scaled up to be read, and the bees, one
+## MultiMesh of yellow and black capsules orbiting the cake.
 ##
 ## Cost: nothing while no animal is out (process is off). With one: a handful
 ## of transforms a frame, and one raycast when the dog arrives.
 
-const BIRD_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_bird.glb"
 const DOG_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_dog_rigged.glb"
 const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
@@ -25,7 +26,9 @@ signal dog_thrown(peer_id: int)
 
 enum State { NONE, WARN, ACT, LEAVE }
 
-const GULL_SCALE: float = 2.2
+const GULL_SCALE: float = 1.15
+## The village dog stands ~0.55 m; on a box it has to be read from across the bay.
+const DOG_SCALE: float = 1.3
 ## Where the gull starts its swoop, in the truck's space: behind it and high.
 const GULL_START: Vector3 = Vector3(0.0, 4.2, 15.0)
 ## Where the dog starts running from, in the truck's space, and the rear doors
@@ -37,8 +40,8 @@ const DOG_HOP_SECONDS: float = 0.45
 const DOG_RUN_SPEED: float = 8.0
 const STICK_TARGET: Vector3 = Vector3(-3.0, 0.0, 14.0)
 const STICK_FLIGHT_SECONDS: float = 0.7
-const BEE_COUNT: int = 14
-const BEE_RADIUS: float = 0.65
+const BEE_COUNT: int = 48
+const BEE_RADIUS: float = 0.8
 const LEAVE_SECONDS: Dictionary = {
 	CargoAnimalPlan.GULL: 2.2, CargoAnimalPlan.DOG: 3.0, CargoAnimalPlan.BEES: 1.6}
 ## Icon text by kind (keys written out in full, see test_world_translations).
@@ -190,6 +193,7 @@ func _process(delta: float) -> void:
 
 
 func _pose_gull(delta: float, vehicle: Node3D) -> void:
+	var gull := animal as CargoGull
 	var top: Vector3 = _box_top()
 	var here: Vector3 = animal.global_position
 	match state:
@@ -198,21 +202,22 @@ func _pose_gull(delta: float, vehicle: Node3D) -> void:
 			var eased: float = k * k * (3.0 - 2.0 * k)
 			here = vehicle.to_global(GULL_START.lerp(vehicle.to_local(top), eased)) + Vector3.UP * sin(k * PI) * 0.5
 			_turn_toward(here)
-			animal.call(&"run")
+			gull.pose(true, _age)
 		State.ACT:
-			here = top + Vector3.UP * (0.04 + absf(sin(_age * 7.0)) * 0.04)
-			animal.global_rotation = Vector3(0.0, vehicle.global_rotation.y, sin(_age * 16.0) * 0.14)
-			animal.call(&"idle")
+			here = top + Vector3.UP * 0.02
+			# Facing forward and a little toward the aisle, into the open of the rack: in
+			# profile from the crew's side, where head, beak and back can be told apart.
+			animal.global_rotation = Vector3(0.0, vehicle.global_rotation.y - 0.35, 0.0)
+			gull.pose(false, _age)
 		State.LEAVE:
 			var away: Vector3 = (vehicle.global_basis * Vector3(0.5, 0.5, 1.0)).normalized()
 			here += away * 9.0 * delta
 			_turn_toward(here)
-			animal.call(&"run")
+			gull.pose(true, _age)
 	animal.global_position = here
 
 
 func _pose_dog(delta: float, vehicle: Node3D) -> void:
-	var top: Vector3 = _box_top()
 	var here: Vector3 = animal.global_position
 	var speed: float = 0.0
 	match state:
@@ -225,9 +230,12 @@ func _pose_dog(delta: float, vehicle: Node3D) -> void:
 			_turn_toward(here)
 			animal.call(&"run")
 		State.ACT:
+			# Front paws up on the box, the dog standing beside it (a shelf above a
+			# box leaves no room to stand on it).
 			var hop: float = clampf(_phase_age / DOG_HOP_SECONDS, 0.0, 1.0)
-			here = _hop_from.lerp(top, hop) + Vector3.UP * sin(hop * PI) * 0.5
-			animal.global_rotation = Vector3(0.0, vehicle.global_rotation.y + PI, 0.0)
+			here = _hop_from.lerp(_dog_beside(vehicle), hop) + Vector3.UP * sin(hop * PI) * 0.4
+			var toward: Vector3 = _box.global_position - here
+			animal.global_rotation = Vector3(0.0, atan2(-toward.x, -toward.z), 0.0)
 			animal.call(&"idle")
 		State.LEAVE:
 			var goal: Vector3 = _on_ground(_leave_target)
@@ -238,7 +246,8 @@ func _pose_dog(delta: float, vehicle: Node3D) -> void:
 			speed = DOG_RUN_SPEED if flat.length() > 0.2 else 0.0
 			_turn_toward(here)
 			animal.call(&"run")
-	animal.set(&"ground_speed", lerpf(float(animal.get(&"ground_speed")), speed, 0.25))
+	# The clips are paced to the dog at its own size.
+	animal.set(&"ground_speed", lerpf(float(animal.get(&"ground_speed")), speed / DOG_SCALE, 0.25))
 	animal.global_position = here
 
 
@@ -261,11 +270,19 @@ func _pose_bees(vehicle: Node3D) -> void:
 	var multi: MultiMesh = bees.multimesh
 	for index: int in range(multi.instance_count):
 		var seed_value: float = _bee_seeds[index]
-		var angle: float = seed_value * TAU + _age * (2.5 + fmod(seed_value * 7.0, 2.0))
-		var reach: float = radius * (0.55 + fmod(seed_value * 13.0, 0.45))
-		var bob: float = sin(_age * 3.1 + seed_value * 20.0) * 0.25 * radius + 0.1
-		var offset := Vector3(cos(angle) * reach, bob, sin(angle) * reach)
-		multi.set_instance_transform(index, Transform3D(Basis(), centre + offset))
+		# Each bee has its own orbit speed, direction, tilt and height: a cloud that
+		# churns round the cake instead of a ring.
+		var turn: float = (2.6 + fmod(seed_value * 7.0, 2.2)) * (1.0 if index % 3 != 0 else -1.0)
+		var angle: float = seed_value * TAU + _age * turn
+		var reach: float = radius * (0.45 + fmod(seed_value * 13.0, 0.55))
+		var height: float = (fmod(seed_value * 29.0, 1.0) - 0.15) * radius * 1.3 + sin(_age * 3.1 + seed_value * 20.0) * 0.12
+		var offset := Vector3(cos(angle) * reach, height, sin(angle) * reach)
+		# Nose along the orbit, so they read as flying insects, not floating dots.
+		var heading := Vector3(-sin(angle), 0.1 * sin(_age * 5.0 + seed_value * 9.0), cos(angle)) * signf(turn)
+		var forward: Vector3 = heading.normalized()
+		var side: Vector3 = Vector3.UP.cross(forward).normalized()
+		var basis := Basis(side, forward, side.cross(forward))
+		multi.set_instance_transform(index, Transform3D(basis, centre + offset))
 	if is_instance_valid(_buzz):
 		_buzz.global_position = centre
 
@@ -276,21 +293,16 @@ func _build_animal() -> void:
 	if kind == CargoAnimalPlan.BEES:
 		_build_bees()
 		return
-	var path: String = BIRD_MODEL if kind == CargoAnimalPlan.GULL else DOG_MODEL
-	if ResourceLoader.exists(path):
-		animal = (load(path) as PackedScene).instantiate() as Node3D
-	else:
-		animal = Node3D.new()
-		var body := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(0.3, 0.3, 0.5)
-		body.mesh = box
-		animal.add_child(body)
-	animal.name = "Gull" if kind == CargoAnimalPlan.GULL else "Dog"
-	animal.set_script(ANIMAL_SCRIPT)
-	animal.set(&"steered", true)
 	if kind == CargoAnimalPlan.GULL:
+		animal = CargoGull.new()
 		animal.scale = Vector3.ONE * GULL_SCALE
+	else:
+		animal = _load_dog()
+		animal.name = "Dog"
+		animal.set_script(ANIMAL_SCRIPT)
+		animal.set(&"steered", true)
+		animal.set(&"standing_clip", &"Idle")
+		animal.scale = Vector3.ONE * DOG_SCALE
 	add_child(animal)
 	animal.global_position = _vehicle().to_global(GULL_START if kind == CargoAnimalPlan.GULL else DOG_START)
 	_voice = _make_voice(animal)
@@ -298,14 +310,27 @@ func _build_animal() -> void:
 		_build_dog_point()
 
 
+func _load_dog() -> Node3D:
+	if ResourceLoader.exists(DOG_MODEL):
+		return (load(DOG_MODEL) as PackedScene).instantiate() as Node3D
+	# No model (a stripped build): a box, so the warning still has a face.
+	var stand_in := Node3D.new()
+	var body := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.3, 0.3, 0.5)
+	body.mesh = box
+	stand_in.add_child(body)
+	return stand_in
+
+
 func _build_dog_point() -> void:
 	dog_point = DogDistractPoint.new()
 	dog_point.name = "DistractPoint"
 	dog_point.active = true
-	dog_point.position = Vector3(0.0, 0.5, 0.0)
+	dog_point.position = Vector3(0.0, 0.5 / DOG_SCALE, 0.0)
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
-	sphere.radius = 1.3
+	sphere.radius = 1.3 / DOG_SCALE
 	shape.shape = sphere
 	dog_point.add_child(shape)
 	animal.add_child(dog_point)
@@ -313,12 +338,14 @@ func _build_dog_point() -> void:
 
 
 func _build_bees() -> void:
-	var count: int = maxi(4, roundi(BEE_COUNT * WorldQuality.setting("particle_scale")))
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.035
-	mesh.height = 0.07
+	var count: int = maxi(12, roundi(BEE_COUNT * WorldQuality.setting("particle_scale")))
+	# A fat little capsule along Y (turned to the heading): a dot is lost at the distance
+	# you see the swarm from, a stripe of yellow and black is not.
+	var mesh := CapsuleMesh.new()
+	mesh.radius = 0.05
+	mesh.height = 0.18
 	mesh.radial_segments = 6
-	mesh.rings = 3
+	mesh.rings = 2
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.vertex_color_use_as_albedo = true
@@ -332,7 +359,7 @@ func _build_bees() -> void:
 	for index: int in range(count):
 		# Every peer draws the same swarm: the seeds come from the index.
 		_bee_seeds[index] = fmod(float(index) * 0.6180339, 1.0)
-		multi.set_instance_color(index, Color("f2c230") if index % 2 == 0 else Color("2b2418"))
+		multi.set_instance_color(index, Color("ffd21a") if index % 5 < 3 else Color("1d1a14"))
 	bees = MultiMeshInstance3D.new()
 	bees.name = "Bees"
 	bees.multimesh = multi
@@ -367,9 +394,9 @@ func _build_icon() -> void:
 	icon.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	icon.no_depth_test = true
 	icon.fixed_size = true
-	icon.pixel_size = 0.0015
-	icon.font_size = 56
-	icon.outline_size = 14
+	icon.pixel_size = 0.0011
+	icon.font_size = 40
+	icon.outline_size = 10
 	add_child(icon)
 	_update_icon()
 
@@ -382,7 +409,8 @@ func _update_icon() -> void:
 	# The seconds left to stop it: to arrive, and (the gull) to snatch.
 	if state == State.WARN or (state == State.ACT and kind == CargoAnimalPlan.GULL):
 		text += "  %d" % ceili(left)
-	icon.text = text
+	icon.text = text + "
+▼"
 	icon.modulate = ICON_WARN_COLOR if state == State.WARN else ICON_ACT_COLOR
 	icon.global_position = _box.global_position + Vector3.UP * (ICON_HEIGHT + _box_half_height())
 
@@ -486,6 +514,25 @@ func _dog_stop(vehicle: Node3D) -> Vector3:
 	if bool(vehicle.call(&"carries", _box.global_position, 0.6)):
 		return _on_ground(vehicle.to_global(DOG_AT_DOORS))
 	return _on_ground(_box.global_position)
+
+
+## Where the dog stands to work at the box: out in the aisle of the bay (the
+## rack opens onto it) at the floor under the box; by the box on the ground.
+func _dog_beside(vehicle: Node3D) -> Vector3:
+	var box_at: Vector3 = _box.global_position
+	var in_bay: bool = bool(vehicle.call(&"carries", box_at, 0.6))
+	var aside: Vector3 = vehicle.global_basis * Vector3(0.95 if in_bay else 0.7, 0.0, 0.0)
+	var spot: Vector3 = box_at + aside
+	if not in_bay:
+		return _on_ground(spot)
+	# The floor of the bay: the truck's shell (Vehicle.SHELL_LAYER), found with
+	# a ray down from the height of the box. A ray at the world layer would fall
+	# through to the ground under the truck.
+	var query := PhysicsRayQueryParameters3D.create(spot + Vector3.UP * 0.3, spot + Vector3.DOWN * 1.6, 64)
+	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return Vector3(spot.x, box_at.y - _box_half_height() - 0.4, spot.z)
+	return Vector3(spot.x, (hit["position"] as Vector3).y, spot.z)
 
 
 func _on_ground(point: Vector3) -> Vector3:
