@@ -20,7 +20,11 @@ extends SceneTree
 ##   out of frame): casa_noche stops the truck at the house, in the camera's
 ##   view; cruce_tren stops it at the barrier with the train going by in
 ##   view; ciervo's deer crosses in view and the truck doesn't hit it;
-## - recording a point takes the current view relative to the truck.
+## - recording a point takes the current view relative to the truck;
+## - the store stills (render_store_shots.gd, N-316) are the five store
+##   planes at 1920x1080, one file each named after its plane, every one with
+##   crew on screen and a box in someone's hands, and at least three with
+##   something going wrong.
 
 const EXPECTED: Array[String] = ["salida_deposito", "curva_bosque", "cruce_tren", "puente_lluvia", "casa_noche", "vuelco", "ciervo"]
 const ShotScript = preload("res://scripts/tools/trailer_shot.gd")
@@ -47,8 +51,24 @@ func _run() -> void:
 		_expect(String(store_shot.get("scene", "")) in ShotScript.load_shots(),
 			"Store scene '%s' uses a saved deterministic setup" % store_shot.get("label", ""))
 	_expect(store_files.size() == 5, "Every store scene has a distinct output file")
-	for required: String in ["depósito cargando", "manejo con cajas en riesgo", "entrega en una casa",
-			"caja explotando", "resultados"]:
+	# N-316: one still per store plane, each with people and boxes on screen,
+	# and most of them with something going wrong.
+	var store_scenes: Dictionary = {}
+	var mishaps: int = 0
+	for store_shot: Dictionary in store_shots:
+		var scene: String = String(store_shot.get("scene", ""))
+		store_scenes[scene] = true
+		_expect(String(store_shot.get("file", "")) == scene + ".png", "The %s still is saved as %s.png" % [scene,
+			scene])
+		_expect(int(store_shot.get("crew", 0)) >= 2, "The %s still has crew on screen (%d)" % [scene,
+			int(store_shot.get("crew", 0))])
+		_expect(int(store_shot.get("held", 0)) >= 1, "The %s still has a box in someone's hands" % scene)
+		if not String(store_shot.get("mishap", "")).is_empty():
+			mishaps += 1
+	for plane: String in ["salida_deposito", "curva_bosque", "cruce_tren", "puente_lluvia", "casa_noche"]:
+		_expect(store_scenes.has(plane), "The store batch has the %s plane" % plane)
+	_expect(mishaps >= 3, "At least three store stills show something going wrong (%d)" % mishaps)
+	for required: String in ["depósito cargando", "manejo con cajas en riesgo", "entrega en una casa"]:
 		_expect(required in store_labels, "Store batch includes %s" % required)
 
 	var shots: Dictionary = ShotScript.load_shots()
