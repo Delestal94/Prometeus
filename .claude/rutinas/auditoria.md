@@ -35,14 +35,15 @@ de lo ya conocido:
   2. **`planificador-tareas`** con los hallazgos, bajo estas reglas:
      - **Máximo 3 tareas nuevas por corrida**, en orden P0 → P1 → P2. P3 queda solo en el informe (si
        un P3 aparece en 3 informes seguidos, sube a P2).
-     - P0 → al principio de la lista del dueño, en la sección **"QA — bugs abiertos"** si es un bug,
+     - P0 → al principio de `tareas-nacho.md`, en la sección **"QA — bugs abiertos"** si es un bug,
        o **"Auditoría — urgente"** si no (creala si no existe).
      - Cambios de comportamiento de agentes, rutinas, hooks, `CLAUDE.md` o CI → tarea ⏸ "decide el
        usuario": las rutinas no se reescriben solas. Excepción: referencias muertas (una ruta o un
        agente que ya no existe) se arreglan directo en este PR.
      - Nada contra decisiones del usuario (ver reglas del agente): van a "Preguntas para el usuario".
      - Cada tarea lleva "Origen: auditoría integral AAAA-MM-DD, A-<id>".
-  3. Aviso en `docs/avisos/` si se agregaron tareas a `tareas-slatex.md`.
+  3. Todo va a `tareas-nacho.md` (lo del dominio de Slatex como `S-xxx` en "Heredadas de Slatex", nunca a
+     `tareas-slatex.md`); aviso en `docs/avisos/` si se agregaron tareas de su dominio.
   4. PR `docs: daily audit AAAA-MM-DD — pillar <n>` con auto-merge. Cuerpo: top 3, tareas creadas
      (IDs) y **"Para el usuario"** con las preguntas y las tareas ⏸, una por línea.
 

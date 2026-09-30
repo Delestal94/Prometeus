@@ -20,8 +20,8 @@ sesion-arte (a mano, en la PC) ◄── tareas "necesita PC" ◄─────
 
 | Rutina | Archivo | Cuándo (hora Argentina) | Rama | Qué produce |
 |---|---|---|---|---|
-| Construcción A | `construccion.md` (prioridad `nacho`) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
-| Construcción B | `construccion.md` (prioridad `slatex`) | cada hora, :37 | idem | una tarea → un PR |
+| Construcción A | `construccion.md` (prioridad `nacho`: `N-xxx` primero) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
+| Construcción B | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | cada hora, :37 | idem | una tarea → un PR |
 | QA | `qa.md` | todos los días 06:00 | `rutina/qa-AAAA-MM-DD` | hallazgos + tareas de bugs |
 | Auditoría integral | `auditoria.md` | todos los días 04:00 | `rutina/auditoria-AAAA-MM-DD` | un pilar a fondo + últimas 24 h, ≤ 3 tareas |
 | Revisión (la contra) | `revision.md` | lunes 09:00 | `rutina/revision-AAAA-MM-DD` | auditoría + tareas nuevas |
@@ -44,9 +44,11 @@ sesion-arte (a mano, en la PC) ◄── tareas "necesita PC" ◄─────
    conservador que encaje con `docs/` y escribilo como "Supuesto" en el PR. Las decisiones que solo
    puede tomar el usuario (borrar o recortar una feature, cambiar el alcance) no se
    ejecutan: se dejan como tarea ⏸ "decide el usuario" y van al cuerpo del PR.
-4. **Dominios**: se trabaja sobre archivos y tareas de Nacho **y de Slatex**. Tocar lo de Slatex o la
-   zona compartida exige un aviso nuevo en `docs/avisos/` en el mismo PR. No se pisa lo que Slatex
-   tenga en curso (PR abierto, rama `origin/slatex/S-xxx*` o la tarea marcada 🔧).
+4. **Dominios**: se trabaja solo sobre `docs/tareas-nacho.md` (las `N-xxx` y las `S-xxx` heredadas).
+   `docs/tareas-slatex.md` (S-311) es de Slatex: no se toman sus ítems ni se le agregan tareas; todo
+   hallazgo nuevo va a `tareas-nacho.md`. Tocar archivos de Slatex o la zona compartida exige un aviso
+   nuevo en `docs/avisos/` en el mismo PR. No se pisa lo que Slatex tenga en curso (PR abierto o rama
+   `origin/slatex/*`).
 5. **Godot solo por agentes** (`ejecutor-tests`, `revisor-visual`, `probador-qa`, `cazador-bugs`), tests
    siempre con filtro. La batería completa la corre CI.
 6. **Subida**: `SKIP_TESTS=1 git push -u origin HEAD` (nunca `--no-verify`), `gh pr create` con título en

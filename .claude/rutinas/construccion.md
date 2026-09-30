@@ -1,9 +1,11 @@
 # Rutina: construcción → una tarea, un PR
 
-Trabaja `docs/tareas-nacho.md` y `docs/tareas-slatex.md` sin nadie mirando. Corren dos triggers con
-este mismo archivo: **Prioridad: nacho** (tareas `N-xxx` primero) y **Prioridad: slatex** (tareas
-`S-xxx` primero, estén en `tareas-slatex.md` o en la sección "Heredadas de Slatex" de
-`tareas-nacho.md`). Así las dos corridas avanzan en frentes distintos y casi nunca compiten. Reglas comunes, freno de mano y sesión: `.claude/rutinas/README.md` (leelo primero).
+Trabaja **solo** `docs/tareas-nacho.md` sin nadie mirando: las `N-xxx` y las `S-xxx` de su sección
+"Heredadas de Slatex" (desde el 2026-09-29 son de Nacho). `docs/tareas-slatex.md` (S-311, el personaje
+de gelatina) es de Slatex y no se toca nunca: ni se toman sus ítems ni se le agregan tareas. Corren dos
+triggers con este mismo archivo: **Prioridad: nacho** (`N-xxx` primero) y **Prioridad: slatex**
+(heredadas `S-xxx` primero). Así las dos corridas avanzan en frentes distintos y casi nunca compiten.
+Reglas comunes, freno de mano y sesión: `.claude/rutinas/README.md` (leelo primero).
 
 Una corrida = **una** tarea, o arreglar PRs de rutina rojos o con conflicto.
 
@@ -26,13 +28,14 @@ Una corrida = **una** tarea, o arreglar PRs de rutina rojos o con conflicto.
 
 ## 2. Elegir la tarea
 
-Para las dos prioridades, primero la sección **"QA — bugs abiertos"** de cualquier lista (la llena la
+Para las dos prioridades, primero la sección **"QA — bugs abiertos"** de `tareas-nacho.md` (la llena la
 rutina de QA), con gravedad "bloquea" antes que el resto. Después:
 
-- **`nacho`**: las `N-xxx` en el orden de la tabla "Orden de ataque" de `tareas-nacho.md` (**M8
-  primero**); si no queda ninguna tomable, las `S-xxx`.
-- **`slatex`**: las `S-xxx` en el orden de sus hitos (tabla de `tareas-slatex.md`, o la de "Heredadas
-  de Slatex" en `tareas-nacho.md` si se mudaron ahí: S-M1 → S-M5); si no queda ninguna, las `N-xxx`.
+- **`nacho`**: las `N-xxx` en el orden de la tabla "Orden de ataque" (**M8 primero**); si no queda
+  ninguna tomable, las heredadas `S-xxx`.
+- **`slatex`**: las heredadas `S-xxx` en el orden de sus hitos (tabla de "Heredadas de Slatex":
+  S-M1 → S-M5; las que no figuran en ningún hito, después, por prioridad A → B → C); si no queda
+  ninguna, las `N-xxx`.
 
 Saltá:
 - ⏸ (incluye "decide el usuario"), ⚠ Bloqueada, N-211, N-702, la meta de FPS de N-204 y todo lo de
@@ -43,16 +46,14 @@ Saltá:
   rama sin PR cuyo único commit propio es `chore: claim <ID>` y tiene más de 6 h
   (`git log origin/main..origin/<rama> --format='%s %cr'`) es una corrida que se cayó: borrala
   (`git push origin --delete <rama>`) y la tarea queda libre;
-- **tareas de Slatex en curso**: PR abierto de `slatex/`, rama `origin/slatex/<ID>*`, o marca 🔧;
 - lo que exija editar `vehicle.tscn` / `vehicle.gd`: si se puede como componente aparte, hacelo así;
   si no, anotalo en la tarea y seguí;
 - personajes (modelo y apariencia): no hasta que el usuario lo pida (decisión del 2026-09-29). S-311
-  (personaje de gelatina) es de Slatex y lo que choque con ella (cuerpo, ragdoll, accesorios, emotes)
-  queda en pausa mientras siga abierta.
+  (personaje de gelatina, `tareas-slatex.md`) es de Slatex; sus ítems no se toman, y lo heredado que
+  choque con ella (cuerpo, ragdoll, accesorios, emotes) queda en pausa mientras siga abierta.
 
-Las tareas de Slatex traen modelos de ChatGPT anotados (`Sol`, `Astra`, `Luna`): ignoralos, se trabaja
-con Opus 5.5 y los agentes de acá. Antes de empezar una tarea de cualquiera de las dos listas, verificá
-en el código que no esté ya hecha (a veces se hizo y no se marcó): si lo está, marcala con el hash que
+Si una heredada todavía trae modelos de ChatGPT anotados (`Sol`, `Astra`, `Luna`), ignoralos: se
+trabaja con Opus 5.5 y los agentes de acá. Antes de empezar una tarea, verificá en el código que no esté ya hecha (a veces se hizo y no se marcó): si lo está, marcala con el hash que
 la hizo en un PR de docs y elegí otra.
 
 **Reclamala enseguida**, antes de trabajar, para que la otra corrida no la tome:
@@ -98,10 +99,9 @@ Nunca en la nube: `modelador-blender`, `artista-conceptual`, `empaquetador-relea
 
 ## 4. Cerrar y subir
 
-1. Skill `cerrar-cambio` completa: test documentado, tarea marcada `[x]` con el hash **en la lista donde
-   está escrita** (también `tareas-slatex.md`), aviso en `docs/avisos/` si tocó lo de Slatex o lo
-   compartido — y siempre que la tarea sea de Slatex, aunque no toque sus archivos, para que sepa que
-   ya está hecha.
+1. Skill `cerrar-cambio` completa: test documentado, tarea marcada `[x]` con el hash en
+   `tareas-nacho.md`, aviso en `docs/avisos/` si tocó archivos de Slatex o la zona compartida (las
+   heredadas casi siempre: son archivos de su dominio).
 2. Subida según el README (`SKIP_TESTS=1`, PR con prefijo, `--auto --squash`). Cuerpo: qué se hizo, cómo
    se verificó, agentes usados, supuestos, avisos. Si quedó a medias, "(partial)" en el título y las
    subtareas abiertas en el cuerpo.

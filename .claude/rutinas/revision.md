@@ -29,7 +29,7 @@ Rama `rutina/revision-AAAA-MM-DD` desde `origin/main`.
 1. `docs/auditorias/AAAA-MM-DD-revision.md`: resumen de las tres miradas (no el texto entero), con el
    top 3, las decisiones pendientes del usuario y qué quedó sin resolver de la auditoría anterior.
 2. **`planificador-tareas`** con los hallazgos, bajo estas reglas:
-   - **Máximo 8 tareas nuevas** por semana entre las dos listas; el resto queda en la auditoría.
+   - **Máximo 8 tareas nuevas** por semana; el resto queda en la auditoría.
    - MANTENER no genera tarea. SIMPLIFICAR y REFINAR chicos → tareas normales (agente sugerido:
      `pulidor-jugabilidad` o el artista del caso).
    - **BORRAR, RECORTAR, REHACER algo grande, POSTERGAR o DESCARTAR** una tarea → tarea ⏸ "decide el
@@ -37,6 +37,7 @@ Rama `rutina/revision-AAAA-MM-DD` desde `origin/main`.
    - Nada contra decisiones ya tomadas por el usuario (personajes en pausa,
      sin playtesting, decisiones de M8): si el abogado las ataca, va a la auditoría como pregunta, no
      como tarea.
-3. Aviso en `docs/avisos/` si se agregaron o anotaron tareas de Slatex.
+3. Todo va a `tareas-nacho.md` (lo del dominio de Slatex como `S-xxx` en "Heredadas de Slatex", nunca a
+   `tareas-slatex.md`); aviso en `docs/avisos/` si se agregaron o anotaron tareas de su dominio.
 4. PR `docs: weekly review AAAA-MM-DD` con auto-merge. Cuerpo: top 3, tareas creadas (IDs), y una
    sección **"Para el usuario"** con las decisiones ⏸ pendientes, cada una en una línea.
