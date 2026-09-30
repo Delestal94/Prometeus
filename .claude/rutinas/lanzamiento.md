@@ -13,7 +13,13 @@ con
 2. calendario hacia atrás desde la fecha objetivo de `docs/plan-desarrollo.md` (si no hay fecha,
    proponé una y marcala como decisión pendiente);
 3. qué cápsulas y capturas existen y cuáles faltan;
-4. qué cambió desde el mes pasado (lo mezclado en el mes, `git log --since="1 month ago"`).
+4. qué cambió desde el mes pasado (lo mezclado en el mes, `git log --since="1 month ago"`);
+5. **versiones de las dependencias del juego**: la de Godot que usan CI (`.github/workflows/tests.yml`),
+   el hook de arranque de la nube y la PC, contra el último parche estable 4.7.x; la de `addons/godotsteam`
+   contra su último release compatible (WebFetch de las páginas de releases oficiales). Un parche de
+   Godot con arreglos que nos tocan → tarea normal (cambiar la versión fijada en CI, hook, `run-tests.sh`
+   y la PC, y correr la batería). GodotSteam nuevo → tarea ⏸ "decide el usuario" (el hook bloquea editar
+   el addon a mano: lo actualiza una persona).
 
 ## 2. Registrar
 

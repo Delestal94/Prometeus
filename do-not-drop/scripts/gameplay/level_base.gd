@@ -17,8 +17,16 @@ const STUCK_SPEED: float = 0.3
 const STUCK_SECONDS: float = 6.0
 const HOUSE_STOP_RADIUS: float = 18.0
 @onready var route: Node3D = $World/Route
+## The HUD redraws its progress bar and hint at this rate, not every physics
+## tick (N-223); the run's own logic below still runs every tick. Keep it under
+## hud_prompts' 0.25 s hint flash or "hold still" flickers.
+const HUD_SIGNAL_INTERVAL: float = 0.125
 var stopped_seconds: float = 0.0
 var stuck_seconds: float = 0.0
+var _hud_signal_left: float = 0.0
+## What delivery_status_changed last said, to send a change at once.
+var _hud_in_zone: bool = false
+var _hud_stopped: bool = false
 
 
 func _prepare_mode() -> void:
@@ -91,6 +99,7 @@ func start_delivery() -> void:
 		return
 	vehicle.freeze = false
 	stuck_seconds = 0.0
+	_hud_signal_left = 0.0
 	var loaded: Array[DeliveryPackage] = _release_loaded_cargo()
 	EventBus.relay(&"houses_assigned", [_house_assignments()])
 	RunManager.start_run()
@@ -120,12 +129,11 @@ func _physics_process(delta: float) -> void:
 	# Furthest point reached, on every peer: a client left without a host
 	# shows it on its disconnect screen (RunTally, N-222).
 	RunManager.current_distance = maxf(RunManager.current_distance, progress * route.route_length)
-	EventBus.route_progress_changed.emit(progress, route.route_length * (1.0 - progress), route.get_section_name(vehicle.global_position))
 	if route.is_vehicle_in_delivery and vehicle.linear_velocity.length() < DELIVERY_MAX_SPEED:
 		stopped_seconds += delta
 	else:
 		stopped_seconds = 0.0
-	EventBus.delivery_status_changed.emit(route.is_vehicle_in_delivery, stopped_seconds)
+	_emit_hud_signals(delta, progress)
 	# Clients follow the run for the HUD; how it ends is the host's call.
 	if not NetworkManager.is_host():
 		return
@@ -149,6 +157,25 @@ func _physics_process(delta: float) -> void:
 		RunManager.finish_run(false, "HUD_RUN_OFF_ROAD")
 	elif stuck_seconds >= STUCK_SECONDS:
 		RunManager.finish_run(false, "HUD_RUN_STUCK")
+
+
+## The HUD's route and delivery readouts, at HUD_SIGNAL_INTERVAL; the delivery
+## status also goes out the moment it changes (in or out of the zone, holding
+## still or not), which is what its hint reacts to.
+func _emit_hud_signals(delta: float, progress: float) -> void:
+	var in_zone: bool = route.is_vehicle_in_delivery
+	var holding: bool = stopped_seconds > 0.0
+	_hud_signal_left -= delta
+	var due: bool = _hud_signal_left <= 0.0
+	if due:
+		_hud_signal_left += HUD_SIGNAL_INTERVAL
+		# A long frame must not queue a burst of catch-up emissions.
+		_hud_signal_left = maxf(_hud_signal_left, 0.0)
+		EventBus.route_progress_changed.emit(progress, route.route_length * (1.0 - progress), route.get_section_name(vehicle.global_position))
+	if due or in_zone != _hud_in_zone or holding != _hud_stopped:
+		_hud_in_zone = in_zone
+		_hud_stopped = holding
+		EventBus.delivery_status_changed.emit(in_zone, stopped_seconds)
 
 
 func _should_count_as_stuck() -> bool:

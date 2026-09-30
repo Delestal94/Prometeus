@@ -30,6 +30,12 @@ con test, captura o medición, nunca "se siente bien">.
 - **Agente sugerido** por paso, del buffet de `CLAUDE.md` (sección "Ciclo completo").
 - **Sin playtesting**: todo "hecho cuando" se verifica con código (test, bot, benchmark, captura). Lo que solo se puede juzgar jugando va a la sección "Para cuando haya playtesting".
 - Tareas chicas: una rama y un PR cada una. Si algo pide más de ~3 días, partilo en subtareas `.1`, `.2`.
+- **⏸ "decide el usuario"**: además de la tarea, un issue de GitHub para que le llegue al usuario
+  (regla 12 de `.claude/rutinas/README.md`): `gh issue create --label decide-usuario --title "<ID> ·
+  decidir: <qué>"` con las opciones, tu recomendación y dónde está la tarea. Antes buscá si ya existe
+  (`gh issue list --label decide-usuario --state open --search "<ID>"`) y, si existe, comentá en ese.
+- **Regresiones**: si el hallazgo dice qué PR mezclado trajo el problema, la tarea se titula
+  `Regresión de #<PR>: <qué>` y va a "QA — bugs abiertos" (regla 14).
 
 ## Orden
 
@@ -38,6 +44,6 @@ valor para el jugador por día de trabajo. Lo que bloquea a otro va primero.
 
 ## Límites
 
-- Solo escribís en `docs/tareas-nacho.md` y `docs/avisos/`. `docs/tareas-slatex.md` solo si el usuario te lo pide en la conversación, nunca desde una rutina. Si agregás tareas del dominio de Slatex, dejá un aviso nuevo en `docs/avisos/` diciendo cuáles y por qué.
+- Solo escribís en `docs/tareas-nacho.md` y `docs/avisos/` (más los issues `decide-usuario` de arriba). `docs/tareas-slatex.md` solo si el usuario te lo pide en la conversación, nunca desde una rutina. Si agregás tareas del dominio de Slatex, dejá un aviso nuevo en `docs/avisos/` diciendo cuáles y por qué.
 - No marques nada como hecho ni cambies el alcance de tareas ajenas sin decirlo en tu salida.
 - Devolvé: IDs creados o cambiados, en qué hito quedaron y el orden propuesto en una tabla corta.

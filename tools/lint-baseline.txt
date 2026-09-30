@@ -16,7 +16,7 @@ do-not-drop/scripts/gameplay/level_base.gd|max-line-length 2
 do-not-drop/scripts/gameplay/package/package.gd|max-line-length 4
 do-not-drop/scripts/gameplay/package/package.gd|max-public-methods 1
 do-not-drop/scripts/gameplay/package/package_contents_view.gd|max-line-length 2
-do-not-drop/scripts/gameplay/package/package_feedback.gd|max-line-length 2
+do-not-drop/scripts/gameplay/package/package_feedback.gd|max-line-length 1
 do-not-drop/scripts/gameplay/player/player.gd|max-line-length 6
 do-not-drop/scripts/gameplay/player/player_carry.gd|max-line-length 1
 do-not-drop/scripts/gameplay/player/player_interaction.gd|max-line-length 2
@@ -27,7 +27,7 @@ do-not-drop/scripts/gameplay/route/delivery_house.gd|max-line-length 3
 do-not-drop/scripts/gameplay/route/dressing_batcher.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/flock_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/roadside_story.gd|max-line-length 8
-do-not-drop/scripts/gameplay/route/route.gd|max-line-length 14
+do-not-drop/scripts/gameplay/route/route.gd|max-line-length 13
 do-not-drop/scripts/gameplay/route/route_segment.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/route_sky.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/route_smoke_check.gd|max-line-length 2
@@ -86,7 +86,6 @@ do-not-drop/tests/test_baked_ao.gd|max-line-length 5
 do-not-drop/tests/test_body_lean_sink.gd|max-line-length 2
 do-not-drop/tests/test_body_lean_sink.gd|unused-argument 2
 do-not-drop/tests/test_camera_polish.gd|max-line-length 1
-do-not-drop/tests/test_cargo_clutter.gd|max-line-length 1
 do-not-drop/tests/test_cargo_shell.gd|max-line-length 9
 do-not-drop/tests/test_character_faces.gd|max-line-length 6
 do-not-drop/tests/test_character_motion.gd|max-line-length 3

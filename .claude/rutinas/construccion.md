@@ -29,7 +29,8 @@ Una corrida = **una** tarea, o arreglar PRs de rutina rojos o con conflicto.
 ## 2. Elegir la tarea
 
 Para las dos prioridades, primero la sección **"QA — bugs abiertos"** de `tareas-nacho.md` (la llena la
-rutina de QA), con gravedad "bloquea" antes que el resto. Después:
+rutina de QA), con gravedad "bloquea" antes que el resto; entre ellas, las `Regresión de #<PR>` primero
+(regla 14 del README: si el arreglo no sale en esta corrida, `git revert` de ese PR). Después:
 
 - **`nacho`**: las `N-xxx` en el orden de la tabla "Orden de ataque" (**M8 primero**); si no queda
   ninguna tomable, las heredadas `S-xxx`.

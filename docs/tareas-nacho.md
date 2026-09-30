@@ -7,6 +7,26 @@
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
 
+## QA — bugs abiertos
+
+### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida)
+Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
+(`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta
+(`run_manager.gd:592-594`): solo cobran las que siguen en el camión. Los `delivery_points` (150/75/20,
+rescates, fotos, plazos) no pasan a plata. Endless no trae `cargo_points` (`run_manager.gd:728-738`). El bono
+`50 * (1 - elapsed/75)` (`run_manager.gd:9,611`) da siempre 0: la entrega más corta dura 125 s y desde N-119
+el mínimo son 2 casas (~200 s); por eso el castigo de Cliente impaciente tampoco hace nada
+(`route_event_manager.gd:187-190`). Los docs dicen lo contrario (`cartas-y-eventos-de-ruta.md:5`,
+`economia-y-contramedidas.md:5-6`). Ningún test lo ve: `test_crew_progression.gd:18-19` usa un diccionario
+inventado y `render_hud.gd:52` y `render_store_shots.gd:137` muestran un `time_bonus: 340` imposible.
+**La fórmula del pago queda pendiente de decisión del usuario** (pregunta 2 del informe: puntos de puerta,
+pago fijo por casa u otra cosa; si se borra el bono de tiempo en favor de los plazos). El test y los mocks
+no dependen de esa decisión y pueden hacerse ya. Hecho cuando un test con una entrega real comprueba que
+`team_money` sube, los mocks de `render_hud` y `render_store_shots` usan valores alcanzables y los tres docs
+dicen lo que hace el código.
+- [ ] **N-227.1** Test con una entrega real (no un diccionario inventado) que compruebe que `team_money` sube; arreglar los mocks de `render_hud.gd` y `render_store_shots.gd`. Con `constructor-progresion` y después `escritor-tests`; tests `crew_progression`.
+- [ ] **N-227.2** (bloqueada por la pregunta 2) Implementar la fórmula elegida y actualizar `cartas-y-eventos-de-ruta.md`, `economia-y-contramedidas.md` y `parametros-diseno.md`. Con `constructor-progresion`; tests `crew_progression`, `run_manager`.
+
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
 Auditoría de `perfilador-rendimiento` (headless, Endless con 4 cajas, `Performance` cada 10 ticks):
@@ -141,7 +161,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
@@ -293,7 +313,20 @@ tres lo cubre. Migración de host: después del lanzamiento.
 - [ ] (nota de `auditor-red`) Si el host se va con la pantalla de resultados abierta, el cliente la cambia por la de
   desconexión y pierde los resultados completos (ya pasaba antes). Podría quedarse en resultados.
 
-### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`)
+### N-226 · Color estable del jugador asignado por el anfitrión — B · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd` compartida; `player.gd` y `scripts/ui` de Slatex)
+Origen: auditoría integral 2026-09-30, A-4.3 (P1). Esfuerzo M. Mérito y cartas se identifican por un "color
+estable" (`cartas-y-eventos-de-ruta.md:12-14`), pero el color sale de `PLAYER_COLOR_KEYS[posmod(peer_id, 5)]`
+(`crew_progression.gd:134-135`, `player.gd:41-43`, `hud_results.gd:151`, `depot_panel.gd:274`). ENet da ids
+aleatorios: el color cambia entre sesiones y con 5 jugadores ~96 % de las veces dos comparten color, así que
+alguien que vuelve a la campaña puede heredar el mérito o la carta de otro. Hecho cuando el anfitrión asigna un
+índice de color por orden de llegada, lo replica en el roster, la campaña se guarda por ese índice y un test con
+ids aleatorios grandes verifica colores distintos y estables.
+- [ ] **N-226.1** Índice de color asignado por el anfitrión y replicado en el roster. Con `constructor-red`; después `auditor-red`; tests `network_roster`.
+- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd`; guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+- [ ] **N-226.3** Test con ids de peer aleatorios grandes. Con `escritor-tests`; tests `network_roster`.
+
+### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`) · ⏸ personajes en pausa (S-311)
+Origen de la pausa: auditoría integral 2026-09-30, A-102 (mismo trabajo que S-311.48; `constructor-jugador.md:43`: personajes y ragdoll no se tocan).
 Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20,56-62`). Hecho cuando
 el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el modelo entero pegado al
 torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
@@ -304,11 +337,18 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
 - [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
   se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
 
-### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: no
+### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`, `seat_point.gd`) · **[x] rama `nacho/N-223-less-per-frame`**
 `route.gd` busca linealmente en las muestras del camino dos veces por tick; `play_area.gd`,
 `seat_point.gd`, `route_sky.gd` y `route_event_manager.gd:377` escanean grupos/hijos por frame.
 Cachear el índice del camino (ventana ±2 alrededor del último) y bajar las señales del HUD a 8 Hz.
 Hecho con `bench_drive` antes/después anotado acá.
+- [x] Hecho (2026-09-30):
+  - Ventana alrededor del último índice en `route.gd` (±4 puntos del camino; las muestras de tramo siguen con búsqueda completa: son pocas y una horquilla haría fallar la ventana) y `route_streamer.gd` (Endless, ±3 tramos + memo de la última consulta, que tres llamadores pedían por tick con el mismo punto), con caída a la búsqueda completa. Test `test_route_lookup_cache` (compara contra la búsqueda completa en 8 rutas, con saltos y una posición NaN).
+  - Señales del HUD a 8 Hz (`level_base._emit_hud_signals`), el cambio de estado de entrega al instante.
+  - `seat_point.gd`: una pasada por frame del grupo `player` para todos los asientos.
+  - Se dejaron como estaban: `route_event_manager.gd:377` (corre al resolver un evento, no por tick; solo se sacó `_run()` del bucle de `_loose_count`), `route_sky.gd` (los `find_children` son de `_ready`; los grupos por frame devuelven 1 nodo) y `play_area.gd` (sus tramos mezclan ruta y caminos de casas: una ventana no daría lo mismo).
+  - `bench_drive --headless --cpu-only --seconds=30 --seed=1234` (física por tick, scripts + Jolt): entrega 1,67 → 1,55 ms (media de 3); Endless 1,46 → 1,41 ms (dentro del ruido). Frame, p99 y tirones sin cambio: el resto es Jolt.
+  - Aviso: `docs/avisos/2026-09-30-n223-menos-trabajo-por-frame.md`.
 
 ### N-315 · Cajas de 2048² triplicadas — B · `Opus 5.5 · medium` · Aviso: no
 Cada textura de caja está tres veces (fuente en `art/cargo/`, volcado del importador en
@@ -839,6 +879,31 @@ Pedido del usuario: modelo cartoon cómico y tierno, más gordito, "nivel Pixar"
   pantorrillas y ondas bajo el flequillo), rubor subido a los pómulos.
 - Pendiente: la nuca del conductor roza el techo inclinado de la cabina y los pasajeros vecinos
   se superponen (asientos a 0,48 m); ver "Límites conocidos" en `REFINAMIENTO.md`.
+
+### N-139 · Caja de herramientas y termo de la zona de carga con modelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-139-cargo-clutter`**
+
+Hoy `scripts/presentation/cargo_clutter.gd` arma la caja de herramientas (BoxMesh 0,36×0,2×0,2 m roja + manija) y el
+termo (CylinderMesh r 0,045 h 0,26 + tapa) con primitivas, y se ven de cerca en la zona de carga (`docs/inventario-assets.md`
+§10.1). Colisiones (BoxShape y CylinderShape), masas y capas NO cambian: solo la malla visual pasa a un GLB del mismo tamaño y
+centrado en el cuerpo, como la primitiva actual. **Necesita PC** (Blender). Origen: sesión de arte 2026-09-30.
+Hecho cuando hay dos GLB low-poly (caja de herramientas metálica roja con manija, cierres y bisagra; termo con tapa/vaso y asa)
+generados por script, dentro del presupuesto de props chicos de primer plano del inventario (~300-800 tris cada uno), cargados
+por `cargo_clutter.gd` en vez de las primitivas, con `test_cargo_clutter` ampliado para exigir que la malla viene del GLB,
+verificado con `revisor-visual` y `check_pivots.gd`, y con el inventario §10.1 actualizado.
+- [x] **N-139.1** ~~Modelar las dos piezas por script en `do-not-drop/assets/tools/` con `lowpoly_kit.py`, exportar a
+  `do-not-drop/assets/models/...` con las medidas y el origen de las primitivas. Con `modelador-blender`; tests `cargo_clutter`.~~
+  **[x] Hecho (2026-09-30)** — `assets/tools/build_cargo_clutter.py` → `models/props/cargo/sm_prop_cargo_toolbox.glb` (756 tris,
+  cuerpo exacto 0,36×0,20×0,20 + manija) y `sm_prop_cargo_thermos.glb` (600, r 0,045 × 0,26 + tapa-vaso y asa); origen en el
+  centro de la base, como el resto del pipeline.
+- [x] **N-139.2** ~~Cambiar `cargo_clutter.gd` para instanciar los GLB como malla visual, sin tocar formas de colisión, masas ni
+  capas; ampliar `test_cargo_clutter` (malla del GLB, tamaño y colisión iguales). Con `constructor-mundo` y `escritor-tests`;
+  tests `cargo_clutter`.~~ **[x] Hecho (2026-09-30)** — `cargo_clutter.gd` `_make_item()` instancia el GLB bajado −alto/2
+  (`TOOLBOX_MODEL`, `THERMOS_MODEL`), sin primitivas; `test_cargo_clutter` `_check_looks()` exige la escena del GLB, ninguna
+  `PrimitiveMesh`, las colisiones de siempre y que la malla quepa en ellas (salvo manija, tapa y asa).
+- [x] **N-139.3** ~~Verificar de cerca con `revisor-visual` (capturas de la zona de carga y `check_pivots.gd`) y actualizar
+  `docs/inventario-assets.md` §10.1. Con `revisor-visual` y `documentador`.~~ **[x] Hecho (2026-09-30)** — con GPU real: apoyan
+  en el piso y el banco, se leen como caja y termo; pivotes en la base (los dos GLB sumados a `check_pivots.gd`); inventario
+  §10.1 y `assets/README.md` al día.
 
 ## 4. Audio y diseño sonoro
 
@@ -1451,7 +1516,8 @@ antes de empezar.
 - Hecho cuando: la ruta termina en una base con bahías y la partida se cierra al dejar el camión en su
   lugar.
 
-### N-312 · Personaje flaco y alto — A · `Opus 5.5 · xhigh` · Aviso: sí (apariencia y personalización del jugador, de Slatex)
+### N-312 · Personaje flaco y alto — A · `Opus 5.5 · xhigh` · Aviso: sí (apariencia y personalización del jugador, de Slatex) · ⏸ personajes en pausa (S-311)
+Origen de la pausa: auditoría integral 2026-09-30, A-102.
 
 > Un segundo cuerpo jugable, en contraste con el redondeado de hoy: flaco, alto, cuello y brazos largos.
 > Se elige en la personalización; los dos juegan igual.
@@ -1468,7 +1534,7 @@ antes de empezar.
   replicado con el resto de la apariencia (`player_appearance.gd`). **La cápsula de colisión y la altura
   de la cámara no cambian**: el cuerpo es solo visual, así nadie tiene ventaja ni se rompen puertas,
   asientos o estantes.
-- [ ] **N-312.4** Opcional: el Jefe del diario (N-606) y los NPC del depósito usan este cuerpo (hoy los NPC
+- [ ] **N-312.4** ⏸ personajes en pausa (S-311) · Opcional: el Jefe del diario (N-606) y los NPC del depósito usan este cuerpo (hoy los NPC
   siguen con el modelo viejo `sm_char_player_lowpoly.glb`).
 - Test: ampliar `test_player_character.gd` para los dos cuerpos (huesos que usa el juego, clips
   presentes, cara ni enterrada ni flotando) y un caso de red donde cada par ve el cuerpo que eligió el
@@ -1495,7 +1561,7 @@ antes de empezar.
   `SubViewport`, cámara por rieles (`data/newspaper/shots.json`, formato de `TrailerCamera`), bandas
   negras, saltar manteniendo el botón, opción en Opciones y la tarjeta de resultados esperando
   `newspaper_finished`. Test headless del director y captura con `revisor-visual`.
-- [ ] **N-606.4** Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
+- [ ] **N-606.4** ⏸ personajes en pausa (S-311) · Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
   `CirclePen`, `SipMate`), diario giratorio, curva de página, expresiones, audio (gallo, "¡extra!",
   papel, escupida) y hechos nuevos (vuelco, perro, tren).
 - [ ] **N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
@@ -2155,12 +2221,12 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
   pueblo), tono (humor absurdo, nunca cruel ni con sangre). Lista de 10 clientes recurrentes con nombre
   y manía. Es la referencia para S-602 a S-604.
 
-#### S-602 · Remitentes, notas y etiquetas escritas a mano — B · `Opus 5.5 · medium` para textos, `Opus 5.5 · high` para código · Aviso: no
+#### S-602 · Remitentes, notas y etiquetas escritas a mano — B · `Opus 5.5 · medium` para textos, `Opus 5.5 · high` para código · Aviso: no · **[x] PR #74**
 
-- [ ] Campos nuevos en `package_content.gd`: `sender`, `recipient`, `notes: PackedStringArray` (3-5 por
+- [x] Campos nuevos en `package_content.gd`: `sender`, `recipient`, `notes: PackedStringArray` (3-5 por
   contenido). La etiqueta de envío muestra remitente y destinatario; al abrir la caja (T), la línea de
   "adentro" suma la nota ("Es la torta de mi boda. No la miren.").
-- [ ] Una garabateada a mano por caja ("NO AGITAR!!!", "ESTE LADO ARRIBA (EN SERIO)") como `Label3D` con
+- [x] Una garabateada a mano por caja ("NO AGITAR!!!", "ESTE LADO ARRIBA (EN SERIO)") como `Label3D` con
   tipografía de marcador. Narrativa ambiental sin cinemáticas.
 
 #### S-603 · La jefa habla en el depósito — C · `Opus 5.5 · medium` · Aviso: no
@@ -2281,9 +2347,10 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 #### S-905 · Cómo enseñan los competidores — B · `Opus 5.5 · medium` con búsqueda web · Aviso: no
 
-- [ ] Una página (`docs/marketing/onboarding-competidores.md`) comparando cómo PEAK, Lethal Company y
+- [x] Una página (`docs/marketing/onboarding-competidores.md`) comparando cómo PEAK, Lethal Company y
   Totally Reliable Delivery Service enseñan sus controles y sus reglas en los primeros 5 minutos, y qué
-  tomar para S-506. Con fuentes.
+  tomar para S-506. Con fuentes. Hecha con Backseat Drivers y RV There Yet? sumados, 4 recomendaciones y
+  4 tareas propuestas (rama `nacho/S-905-onboarding-research`).
 
 #### S-906 · Registro de decisión de monetización — A · `Opus 5.5 · medium` · Aviso: no · ✅ (hecha pese a la pausa)
 
