@@ -26,7 +26,13 @@ extends SceneTree
 ##   and a mode handed over silently sets the dial and music without the knob's click;
 ## - a shake that lands right after the radio turned loud (no physics tick in between,
 ##   the truck parked) already counts the new mode;
-## - request_interact from a sender with no player, or one out of reach, changes nothing.
+## - request_interact from a sender with no player, or one out of reach, changes nothing;
+## - the knob has a 250 ms cooldown on the host, in cycle() itself (so the host's own player is
+##   covered): a second click right after returns &"" and the mode advances once, knob.interact
+##   doesn't emit `interacted` twice, and past the cooldown it advances again (the tests rewind
+##   `_last_cycle_ms` instead of waiting);
+## - source check: the line before `func _set_mode` starts with @rpc("authority", so nobody
+##   turns it into any_peer.
 
 const TRUCK_RADIO_PATH: String = "res://scripts/gameplay/vehicle/truck_radio.gd"
 
@@ -99,6 +105,7 @@ func _check_sync_and_news(radio_script: Script) -> void:
 	_expect(_modes_seen == [&"calm"], "Hearing the same mode again changes nothing")
 	client.call(&"_set_mode", &"bogus")
 	_expect(client.get(&"mode") == &"calm", "A client ignores a mode that isn't on the dial")
+	host.set(&"_last_cycle_ms", -100000)
 	host.call(&"cycle")
 	client.call(&"_set_mode", host.get(&"mode"))
 	_expect(host.get(&"mode") == &"loud" and client.get(&"mode") == &"loud", "Both peers follow a second click")
@@ -233,6 +240,7 @@ func _check_real_truck(radio_script: Script) -> void:
 	_expect(program != null and program.bus == &"Interior", "The program plays through the Interior bus")
 	_expect(not program.playing, "Off is silent")
 	var started: int = Time.get_ticks_msec()
+	radio.set(&"_last_cycle_ms", -100000)
 	knob.call(&"interact", player)
 	_expect(radio.get(&"mode") == &"calm", "Pressing the knob cycles the host's mode")
 	var loop_mode: int = (program.stream as AudioStreamWAV).loop_mode if program.stream != null else -1
@@ -240,9 +248,11 @@ func _check_real_truck(radio_script: Script) -> void:
 	_expect(program.playing and loops,
 			"Calm plays a looping program")
 	var calm_stream: AudioStream = program.stream
+	radio.set(&"_last_cycle_ms", -100000)
 	knob.call(&"interact", player)
 	_expect(radio.get(&"mode") == &"loud" and program.playing and program.stream != calm_stream,
 			"Loud plays its own program")
+	radio.set(&"_last_cycle_ms", -100000)
 	knob.call(&"interact", player)
 	_expect(radio.get(&"mode") == &"news" and not program.playing, "The newscast has no music")
 	var cue: AudioStreamPlayer3D = view.get(&"cue_player")
@@ -260,11 +270,42 @@ func _check_real_truck(radio_script: Script) -> void:
 	var news_height: float = news_label.font_size * news_label.pixel_size
 	_expect(mode_height >= 0.025 and news_height >= 0.025,
 			"The dial's labels read from the seat (mode %.3f m, news %.3f m)" % [mode_height, news_height])
+	radio.set(&"_last_cycle_ms", -100000)
 	knob.call(&"interact", player)
 	_expect(radio.get(&"mode") == &"off" and news_label.text.is_empty(), "Off clears the newscast's line")
+	_check_cooldown(radio, knob, player)
 	print("radio: cycling through every mode and building its sounds took ", Time.get_ticks_msec() - started, " ms")
 	world.free()
 	await process_frame
+
+
+## The knob's cooldown on the host, and the _set_mode RPC staying authority-only.
+func _check_cooldown(radio: Node, knob: Node3D, player: Node) -> void:
+	var cooldown: int = int(radio.get_script().get_script_constant_map()["CYCLE_COOLDOWN_MS"])
+	_expect(cooldown == 250, "The knob's cooldown is 250 ms (got %d)" % cooldown)
+	radio.call(&"set_mode", &"off")
+	radio.set(&"_last_cycle_ms", -100000)
+	_expect(StringName(radio.call(&"cycle")) == &"calm", "A click with no recent one turns the knob")
+	_expect(StringName(radio.call(&"cycle")) == &"" and radio.get(&"mode") == &"calm",
+			"A second click right after does nothing: the mode advanced once (got %s)" % radio.get(&"mode"))
+	var clicks: Array = []
+	knob.connect(&"interacted", func(_who: Node) -> void: clicks.append(1))
+	knob.call(&"interact", player)
+	knob.call(&"interact", player)
+	_expect(clicks.is_empty() and radio.get(&"mode") == &"calm",
+			"Hammering the knob inside the cooldown emits nothing (clicks %d)" % clicks.size())
+	radio.set(&"_last_cycle_ms", Time.get_ticks_msec() - cooldown - 1)
+	knob.call(&"interact", player)
+	knob.call(&"interact", player)
+	_expect(clicks.size() == 1 and radio.get(&"mode") == &"loud",
+			"Past the cooldown the knob turns again, once (clicks %d, mode %s)" % [clicks.size(), radio.get(&"mode")])
+	# The RPC stays host-only: the line before its func is @rpc("authority".
+	var lines: PackedStringArray = FileAccess.get_file_as_string(TRUCK_RADIO_PATH).split("\n")
+	var rpc_line: String = ""
+	for i: int in range(1, lines.size()):
+		if lines[i].begins_with("func _set_mode"):
+			rpc_line = lines[i - 1]
+	_expect(rpc_line.begins_with("@rpc(\"authority\""), "_set_mode is @rpc(\"authority\", ...) (got '%s')" % rpc_line)
 
 
 ## Ruidoso's agitation under each mode, on the behavior and through the box.
