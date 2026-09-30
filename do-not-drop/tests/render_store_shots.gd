@@ -129,25 +129,24 @@ func _results() -> void:
 	hud.visible = true
 	var event_bus: Node = root.get_node(^"/root/EventBus")
 	var network: Node = root.get_node(^"/root/NetworkManager")
-	event_bus.emit_signal(&"run_ended", 2840, {
+	event_bus.emit_signal(&"run_ended", 510, {
 		"delivered": true,
 		"reason": "",
 		"elapsed_seconds": 212.4,
-		"cargo_points": 1200,
-		"time_bonus": 340,
-		"delivery_points": 900,
-		"chaos_multiplier": 1.4,
+		"cargo_points": 150,
+		"time_bonus": 0,
+		"delivery_points": 275,
+		"chaos_multiplier": 1.2,
 		"houses_delivered": 2,
 		"houses_missed": 0,
 		"cargo_total": 2,
 		"cargo_intact": 1,
 		"cargo_ruined": 0,
 		"is_new_best": true,
-		"best_score": 2840,
+		"best_score": 510,
 		"breakdown": [
-			{"label": "Carga entregada", "points": 1200},
-			{"label": "Dos casas", "points": 900},
-			{"label": "Bono de tiempo", "points": 340},
+			{"label": "Carga entregada", "points": 150},
+			{"label": "Dos casas", "points": 275},
 		],
 		"complaints": [],
 		"deliveries": [

@@ -47,11 +47,11 @@ func _run() -> void:
 	await _shot("render_hud_run.png")
 
 	event_bus.interaction_prompt_changed.emit("")
-	event_bus.run_ended.emit(1840, {
-		"delivered": true, "reason": "", "elapsed_seconds": 212.4, "cargo_points": 900,
-		"time_bonus": 340, "delivery_points": 600, "chaos_multiplier": 1.5,
+	event_bus.run_ended.emit(378, {
+		"delivered": true, "reason": "", "elapsed_seconds": 212.4, "cargo_points": 100,
+		"time_bonus": 0, "delivery_points": 215, "chaos_multiplier": 1.2,
 		"houses_delivered": 2, "houses_missed": 1, "cargo_total": 1, "cargo_intact": 1,
-		"cargo_ruined": 0, "is_new_best": true, "best_score": 1840,
+		"cargo_ruined": 0, "is_new_best": true, "best_score": 378,
 		"complaints": [{"house": 1, "dismissed": true}],
 		"deliveries": [
 			{"house": 0, "trap": "FRÁGIL", "outcome": &"delivered_ok", "photo": true},
