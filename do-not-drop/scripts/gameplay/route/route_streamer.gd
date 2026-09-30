@@ -58,6 +58,7 @@ const MAX_STRAIGHT_STREAK: int = 3
 const SAMPLE_SPACING: float = 10.0
 ## Spans either side of the last hit that _nearest_on_path() checks first, and
 ## how far (m) a hit may be for that window to be trusted over a full scan.
+## NEAREST_TRUST must stay under level_endless's OUT_OF_BOUNDS_X (42 m).
 const NEAREST_WINDOW: int = 3
 const NEAREST_TRUST: float = 4.0 * SAMPLE_SPACING
 

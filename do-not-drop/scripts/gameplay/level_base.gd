@@ -18,7 +18,8 @@ const STUCK_SECONDS: float = 6.0
 const HOUSE_STOP_RADIUS: float = 18.0
 @onready var route: Node3D = $World/Route
 ## The HUD redraws its progress bar and hint at this rate, not every physics
-## tick (N-223); the run's own logic below still runs every tick.
+## tick (N-223); the run's own logic below still runs every tick. Keep it under
+## hud_prompts' 0.25 s hint flash or "hold still" flickers.
 const HUD_SIGNAL_INTERVAL: float = 0.125
 var stopped_seconds: float = 0.0
 var stuck_seconds: float = 0.0

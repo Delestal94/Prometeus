@@ -28,10 +28,17 @@ func _expect(ok: bool, message: String) -> void:
 		_failures += 1
 
 
+const ROUTE_SEEDS: Array[int] = [4242, 1, 2, 3, 4, 5, 6, 7]
+
+
 func _run() -> void:
 	await process_frame
+	# Several built routes, so a hairpin or a stretch passing close to an
+	# earlier one turns up in at least some of them.
+	for seed_value: int in ROUTE_SEEDS:
+		root.get_node(^"/root/NetworkManager").set(&"world_seed", seed_value)
+		await _check_route()
 	root.get_node(^"/root/NetworkManager").set(&"world_seed", 4242)
-	await _check_route()
 	await _check_streamer()
 	await _check_level_throttle()
 	quit(_failures)
@@ -127,6 +134,9 @@ func _check_route() -> void:
 	for world: Vector3 in world_points:
 		_compare_route(route, world, "after a jump to %s" % world)
 		checks += 1
+	# A truck blown to NaN is off the road, as the full scan always said.
+	var lost: Vector3 = Vector3(NAN, NAN, NAN)
+	_expect(route.distance_from_path(lost) > 42.0, "a NaN position reads as off the road")
 	print("route lookups compared with a full scan: %d" % checks)
 	level.queue_free()
 	await process_frame

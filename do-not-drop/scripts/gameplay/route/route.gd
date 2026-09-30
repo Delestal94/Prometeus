@@ -45,10 +45,14 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 
-## How many entries either side of the last hit the nearest lookups check
-## before falling back to a full scan (N-223): segment boundaries are up to
-## ~60 m apart, path points ~10 m, and a tick moves the truck about a metre.
-const SAMPLE_WINDOW: int = 2
+## How many path points either side of the last hit the nearest-path lookups
+## check before falling back to a full scan (N-223): path points are ~10 m
+## apart and a tick moves the truck about a metre. The segment boundaries
+## (_progress_samples, up to ~70 m apart) are not windowed: a hairpin can put
+## a later stretch nearer than the truck's own boundaries, and there are few
+## enough of them to scan every tick. The trust radius (2 x widest path gap,
+## <= ~30 m) must stay under level_base's 42 m off-road limit, so a windowed
+## hit never decides a ruin on its own.
 const PATH_WINDOW: int = 4
 
 ## House/road proportions carried over unchanged from the old handcrafted
@@ -124,17 +128,15 @@ var _progress_samples: Array[Dictionary] = []
 var _path_points: Array[Vector3] = []
 ## Metres along the road to each of _path_points, worked out on first use.
 var _path_distances := PackedFloat32Array()
-## Where the last nearest-sample / nearest-path-point lookups landed, so the
+## Where the last nearest-path-point lookups landed, so the
 ## next one (a tick later, the truck a metre further on) only looks around
 ## there instead of scanning the whole route (N-223). -1 = no hint yet.
-var _sample_hint: int = -1
 var _path_hint: int = -1
 var _path_hint_3d: int = -1
 ## _progress_samples' positions as a flat array for the lookup (built on first
 ## use, and again after _finish_terrain() moves them), and the widest gap
-## between neighbours of each array: a hit further than that is not trusted.
+## between path points: a windowed hit further than twice that is not trusted.
 var _sample_points: Array[Vector3] = []
-var _sample_gap: float = -1.0
 var _path_gap: float = -1.0
 var _house_deck: Array[int] = []
 ## Road cursor and side each house was dealt, for furnishing it once its
@@ -719,10 +721,7 @@ func _nearest_sample(world_position: Vector3) -> Dictionary:
 		_sample_points.clear()
 		for sample: Dictionary in _progress_samples:
 			_sample_points.append(sample["position"])
-		_sample_gap = _widest_gap(_sample_points)
-	var local_position: Vector3 = to_local(world_position)
-	_sample_hint = _nearest_index(_sample_points, local_position, false, [_sample_hint, SAMPLE_WINDOW, _sample_gap])
-	return _progress_samples[_sample_hint]
+	return _progress_samples[_nearest_index(_sample_points, to_local(world_position), false)]
 
 
 ## How far `world_position` is from the nearest known point on the actual
@@ -736,6 +735,9 @@ func distance_from_path(world_position: Vector3) -> float:
 	if _path_points.is_empty():
 		return INF
 	var local_position: Vector3 = to_local(world_position)
+	# A truck blown to NaN is off the road (the old full scan answered INF).
+	if not local_position.is_finite():
+		return INF
 	_path_hint_3d = _nearest_index(_path_points, local_position, false, [_path_hint_3d, PATH_WINDOW, _path_gap_size()])
 	return _path_points[_path_hint_3d].distance_to(local_position)
 

@@ -310,7 +310,7 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
 Cachear el índice del camino (ventana ±2 alrededor del último) y bajar las señales del HUD a 8 Hz.
 Hecho con `bench_drive` antes/después anotado acá.
 - [x] Hecho (2026-09-30):
-  - Ventana alrededor del último índice en `route.gd` (±2 muestras, ±4 puntos del camino) y `route_streamer.gd` (Endless, ±3 tramos + memo de la última consulta, que tres llamadores pedían por tick con el mismo punto), con caída a la búsqueda completa. Test `test_route_lookup_cache` (compara contra la búsqueda completa en ~4000 puntos, con saltos).
+  - Ventana alrededor del último índice en `route.gd` (±4 puntos del camino; las muestras de tramo siguen con búsqueda completa: son pocas y una horquilla haría fallar la ventana) y `route_streamer.gd` (Endless, ±3 tramos + memo de la última consulta, que tres llamadores pedían por tick con el mismo punto), con caída a la búsqueda completa. Test `test_route_lookup_cache` (compara contra la búsqueda completa en 8 rutas, con saltos y una posición NaN).
   - Señales del HUD a 8 Hz (`level_base._emit_hud_signals`), el cambio de estado de entrega al instante.
   - `seat_point.gd`: una pasada por frame del grupo `player` para todos los asientos.
   - Se dejaron como estaban: `route_event_manager.gd:377` (corre al resolver un evento, no por tick; solo se sacó `_run()` del bucle de `_loose_count`), `route_sky.gd` (los `find_children` son de `_ready`; los grupos por frame devuelven 1 nodo) y `play_area.gd` (sus tramos mezclan ruta y caminos de casas: una ventana no daría lo mismo).
