@@ -1969,7 +1969,7 @@ Hoy toda caja arruinada tira el mismo confeti de cubitos.
 - [x] (commit `60c4dc4`) `UiTheme.button()` conecta hover/press automáticamente, así todos los botones suenan.
 - [x] (commit `60c4dc4`) Test: cada botón de `main_menu.gd` tiene el sonido conectado; el volumen de efectos lo afecta.
 
-#### S-402 · Voces sin palabras ("gibberish") — B · `Opus 5.5 · xhigh` · Aviso: no
+#### S-402 · Voces sin palabras ("gibberish") — B · `Opus 5.5 · xhigh` · Aviso: no · **[x] PR #62**
 
 **Actuación de voz (decisión)**: el MVP no tiene voces grabadas (costo, localización). En su
 lugar, balbuceo sintetizado estilo Animal Crossing, con tono propio por color de jugador.
