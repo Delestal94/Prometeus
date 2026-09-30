@@ -4,7 +4,8 @@ extends SceneTree
 ## The render_budget module on its own (docs/modulos.md):
 ## - WorldQuality: each level has its settings, apply_to() scales a sun's
 ##   shadow distance, a batch's draw range and a particle count from their
-##   base values, and watch() catches nodes added later;
+##   base values, keeps a ranked lamp's shadow only while its rank is under
+##   the level's budget ("shadowed_lights"), and watch() catches nodes added later;
 ## - DetailMaterials: with the game's tables handed in, a palette material
 ##   gets one shared triplanar twin per (entry, colour), unknown entries stay
 ##   flat, autumn tints only what the tables say, night glow lights only
@@ -61,6 +62,26 @@ func _test_world_quality(scene: Node3D) -> void:
 	WorldQuality.apply_to(particles)
 	_expect(particles.amount == roundi(100 * WorldQuality.setting("particle_scale")),
 		"Particles are scaled from their base amount (got %d)" % particles.amount)
+	# Lamps ranked for shadows: Low none, Medium one, High as many as it allows.
+	var lamps: Array[SpotLight3D] = []
+	for rank: int in range(5):
+		var lamp := SpotLight3D.new()
+		lamp.set_meta(WorldQuality.SHADOW_RANK_META, rank)
+		scene.add_child(lamp)
+		lamps.append(lamp)
+	var unranked := SpotLight3D.new()
+	unranked.shadow_enabled = true
+	scene.add_child(unranked)
+	for level: int in [WorldQuality.Level.LOW, WorldQuality.Level.MEDIUM, WorldQuality.Level.HIGH]:
+		WorldQuality.apply(self, level)
+		var casting: int = lamps.filter(func(lamp: SpotLight3D) -> bool: return lamp.shadow_enabled).size()
+		var allowed: int = mini(int(WorldQuality.setting("shadowed_lights")), lamps.size())
+		_expect(casting == allowed, "%s lets %d ranked lamps cast a shadow (got %d)" % [
+				WorldQuality.NAMES[level], allowed, casting])
+		_expect(lamps[0].shadow_enabled == (allowed > 0), "The best-ranked lamp is the first to keep its shadow")
+		_expect(unranked.shadow_enabled, "A lamp with no rank is left alone")
+	_expect(int(WorldQuality.PRESETS[WorldQuality.Level.LOW]["shadowed_lights"]) == 0, "Low has no lamp shadows")
+	WorldQuality.apply(self, WorldQuality.Level.LOW)
 	WorldQuality.apply(self, WorldQuality.Level.HIGH)
 	_expect(particles.amount == 100, "Back on High the base amount returns (got %d)" % particles.amount)
 	WorldQuality.apply(self, WorldQuality.Level.MEDIUM)

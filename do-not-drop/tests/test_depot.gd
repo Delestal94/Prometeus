@@ -16,9 +16,13 @@ extends SceneTree
 ##     the truck is out;
 ##   - in Endless the board shows the goal and the distance record, not an
 ##     empty order list;
-##   - signage (N-503): every place has a hanging sign, arrows on the floor
-##     by the spawn point at each station and chevrons beside the truck at
-##     the door, and at least four signs read from where the crew appears;
+##   - signage (N-503, N-319): every place has a hanging sign, one small arrow
+##     on the green walkways toward each station (within ARROW_REACH of the
+##     spawn) and chevrons beside the truck at the door, and at least three
+##     signs read from where the crew appears. N-319 hung each zone's smaller
+##     sign over the zone instead of crowding them in front of the spawn, so
+##     only what lies ahead (the board, the truck, the workshop) reads from
+##     there: the test asked for four when the signs were all up front.
 ##   - the props are the modelled ones (N-135, models/environment/depot/):
 ##     door slats, clock hands and the supplies use those meshes, and the
 ##     shelves and belt keep their colliders.
@@ -36,6 +40,11 @@ const DEPOT_MODELS: Array[String] = [
 const SPAWN_EYE := Vector3(0.0, 1.65, 17.4)
 const SPAWN_LOOK := Vector3(0.0, 1.5, 5.0)
 const SCREEN := Vector2(1920.0, 1080.0)
+## How far from the spawn centre (m) a place's arrow may start: they sit on the
+## walkways now (N-319), and the supplies cage's path leaves the spine at x -8.5.
+const ARROW_REACH: float = 11.0
+## Signs that must read from where the crew appears (N-319: three, see the header).
+const MIN_SIGNS: int = 3
 ## Smallest letter (the font's em, on a 1080p screen) that counts as readable.
 const READABLE_PX: float = 20.0
 
@@ -212,7 +221,8 @@ func _test_signage(depot: Node3D) -> void:
 			var off: float = rad_to_deg((Vector3(target.x, 0.0, target.z) - at).angle_to(guide.direction))
 			_expect(off < 25.0, "The %s arrow at %s points at it (%.0f° off)" % [caption, at, off])
 			if caption != "PORTÓN":
-				_expect(at.distance_to(spawn_centre) < 7.0, "The %s arrow starts by the spawn (%.1f m away)" % [caption, at.distance_to(spawn_centre)])
+				_expect(at.distance_to(spawn_centre) < ARROW_REACH,
+						"The %s arrow starts by the spawn (%.1f m away)" % [caption, at.distance_to(spawn_centre)])
 
 	# Readable from where the crew appears.
 	var views: Array = [[Transform3D(Basis.IDENTITY, SPAWN_EYE).looking_at(SPAWN_LOOK), 72.0, "the spawn view"]]
@@ -221,7 +231,8 @@ func _test_signage(depot: Node3D) -> void:
 		views.append([Transform3D(Basis.IDENTITY, Vector3(point.x, SPAWN_EYE.y, point.z)), 82.0, "spawn point %d" % index])
 	for view: Array in views:
 		var readable: Array = _readable_signs(depot, depot.global_transform * (view[0] as Transform3D), float(view[1]))
-		_expect(readable.size() >= 4, "At least four signs read from %s (got %s)" % [view[2], readable])
+		_expect(readable.size() >= MIN_SIGNS, "At least %d signs read from %s (got %s)" % [MIN_SIGNS, view[2],
+				readable])
 
 
 ## Where things stand and whether their words fit (playtest 2026-09-27):
