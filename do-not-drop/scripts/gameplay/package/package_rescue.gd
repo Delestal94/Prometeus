@@ -14,8 +14,9 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 	var vehicle: Node3D = p._find_vehicle()
 	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", p.global_position, 1.0))
 	var speed: float = 0.0
+	var velocity_now := Vector3.ZERO
 	if riding:
-		var velocity_now: Vector3 = vehicle.call(&"point_velocity", p.global_position)
+		velocity_now = vehicle.call(&"point_velocity", p.global_position)
 		speed = velocity_now.length()
 		if p._motion_initialized:
 			var acceleration: Vector3 = (velocity_now - p._motion_velocity) / maxf(delta, 0.001)
@@ -36,16 +37,33 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		input["steady"] = true
 		input["calm"] = true
 		input["balance"] = p.care.balance_target
-	var strained: bool = p.care.advance(delta, p._motion_acceleration, input, p._assist_age < 0.3)
+	# A trap answered by something other than holding gets no shield from
+	# hands on it (Fragile); the solo rack assistant is not hands.
+	var hands_count: bool = bool(p.trap_behavior.call(&"hold_protects"))
+	if not solo_assist and not hands_count:
+		input["steady"] = false
+	var strained: bool = p.care.advance(delta, p._motion_acceleration, input, hands_count and p._assist_age < 0.3)
 	if strained and riding:
 		p.apply_impact(4.5)
+	# The road ahead, for the traps that read it (Fragile's "Amortiguá").
+	var road: Dictionary = {}
+	if riding and bool(p.trap_behavior.call(&"wants_road_ahead")):
+		road = RoadImpacts.nearest_ahead(p.get_tree(), p.global_position, velocity_now, ROAD_LOOKAHEAD)
 	# Held bodies are frozen; the trap still advances here exactly once per tick.
 	# In a solo run complex traps pause while safely parked for repairs.
 	if not p.care.needs_restore and p.care.phase != &"lost" and not p.care.substituted:
 		if not solo_assist or speed > 1.0:
 			p.trap_behavior.call("on_physics_process", p, delta, {
-				"linear_velocity": p.linear_velocity, "angular_velocity": p.angular_velocity, "input": input})
+				"linear_velocity": p.linear_velocity, "angular_velocity": p.angular_velocity, "input": input,
+				"impact_ahead": float(road["eta"]) if not road.is_empty() else INF,
+				"code_reader": code_reader(p, vehicle)})
+			if _road_jolt(p, road, speed):
+				# apply_impact() already reported it.
+				before_integrity = p.integrity
+				before_state = p.trap_state
 		p._award_pending_trap_milestones()
+	consume_input_edges(p)
+	_publish_cushion_change(p)
 	check_recovery(p)
 	var tool := StringName(input.get("tool", "tape"))
 	var run: Node = p.get_node_or_null(^"/root/RunManager")
@@ -61,6 +79,113 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		p._care_publish_time = 0.0
 		publish_care(p)
 		p._emit_event(&"package_hint_changed", [p.package_id, p.get_hint()])
+
+
+## How far ahead (s) a box looks for a bump the road announces: a little
+## beyond the trap's own warning, so the trap decides when to show it.
+const ROAD_LOOKAHEAD: float = 1.2
+## What a trap that draws something (the bomb's code) rolls it from: the
+## session seed and the box, so the same session deals the same code to the
+## same box, and each box its own. 0 without a seeded session (solo): the
+## trap then draws from the clock.
+static func roll_seed(p: DeliveryPackage) -> int:
+	var network: Node = p.get_node_or_null(^"/root/NetworkManager") if p.is_inside_tree() else null
+	var session_seed: int = int(network.get(&"world_seed")) if network != null else 0
+	return hash([session_seed, String(p.package_id)]) if session_seed != 0 else 0
+
+
+## The tender's, the assistant's and the care worker's latest samples, mixed
+## into the one input the trap sees (player_input): holds add up (the
+## assistant at half strength), an edge from any of them counts.
+static func refresh_combined_input(p: DeliveryPackage) -> void:
+	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0,
+			"direction_pressed": null, "tap": false}
+	# The care worker (carrying it) counts in full, like the tender.
+	var worker: int = p._care_worker if p._care_worker not in [p.tender_peer_id, p.assistant_peer_id] else 0
+	for peer_id: int in [p.tender_peer_id, p.assistant_peer_id, worker]:
+		if peer_id <= 0 or not p._has_fresh_input(peer_id):
+			continue
+		var sample: Dictionary = p._tender_inputs[peer_id]["input"]
+		var weight: float = 0.5 if peer_id == p.assistant_peer_id else 1.0
+		if bool(sample.get("steady", false)):
+			combined["steady_strength"] = float(combined["steady_strength"]) + weight
+		if bool(sample.get("calm", false)):
+			combined["calm_strength"] = float(combined["calm_strength"]) + weight
+		if combined["direction_pressed"] == null and sample.get("direction_pressed") != null:
+			combined["direction_pressed"] = sample["direction_pressed"]
+		if bool(sample.get("tap", false)):
+			combined["tap"] = true
+	combined["steady"] = float(combined["steady_strength"]) > 0.0
+	combined["calm"] = float(combined["calm_strength"]) > 0.0
+	p.player_input = combined if float(combined["steady_strength"]) > 0.0 \
+			or float(combined["calm_strength"]) > 0.0 \
+			or combined["direction_pressed"] != null or bool(combined["tap"]) else {}
+	add_care_fields(p)
+
+
+## The edges of what the trap just saw (a sequence key, a tap) are spent. They
+## were true for one tick on the sender, but the host keeps the last sample
+## for up to TENDER_INPUT_TIMEOUT and may tick twice before the next one
+## arrives: without this one press could count twice.
+static func consume_input_edges(p: DeliveryPackage) -> void:
+	for raw_peer: Variant in p._tender_inputs.keys():
+		var sample: Dictionary = (p._tender_inputs[raw_peer] as Dictionary)["input"]
+		sample["direction_pressed"] = null
+		sample["tap"] = false
+	refresh_combined_input(p)
+
+
+## Who may read a bomb's code (see reader_for()).
+const READER_DRIVER: StringName = &"driver"
+const READER_OWNER: StringName = &"owner"
+
+
+## The box just crossed the bump the road announced: the trap says what that
+## does at this speed (0 when the truck took it slowly enough). True when it hurt.
+static func _road_jolt(p: DeliveryPackage, road: Dictionary, speed: float) -> bool:
+	if road.is_empty() or float(road["distance"]) > 0.0 or int(road["id"]) == p._road_jolted:
+		return false
+	p._road_jolted = int(road["id"])
+	var strength: float = float(p.trap_behavior.call(&"road_jolt_strength", speed))
+	if strength <= 0.0:
+		return false
+	p.apply_impact(strength)
+	return true
+
+
+## Whose screen shows a bomb's code: the driver's, unless the box's owner is
+## the driver (or nobody else is at the wheel), then the owner's.
+static func code_reader(p: DeliveryPackage, vehicle: Node3D) -> StringName:
+	var driver: int = int(vehicle.get(&"driver_peer_id")) if vehicle != null else 0
+	return reader_for(driver, owner_peer(p))
+
+
+static func reader_for(driver_peer: int, owner_peer_id: int) -> StringName:
+	return READER_DRIVER if driver_peer > 0 and driver_peer != owner_peer_id else READER_OWNER
+
+
+## The peer looking after the box: who sits at its seat, else who carries it
+## or is working on it.
+static func owner_peer(p: DeliveryPackage) -> int:
+	if p.tender_peer_id > 0:
+		return p.tender_peer_id
+	if is_instance_valid(p.carrier):
+		return int(p.carrier.get_multiplayer_authority())
+	return p._care_worker
+
+
+## The ring on the box and the card's "tap now" follow the trap's cushion
+## state, and a bump warning that arrives 0.1 s late is most of what a tap
+## can use: send it as soon as it changes.
+static func _publish_cushion_change(p: DeliveryPackage) -> void:
+	var cushion: Dictionary = p.trap_behavior.call(&"cushion_state")
+	if cushion.is_empty():
+		return
+	var signature: int = int(float(cushion["eta"]) >= 0.0) + 2 * int(bool(cushion["shield"])) \
+			+ 4 * int(cushion["saved"]) + 4096 * int(cushion["taps"])
+	if signature != p._cushion_signature:
+		p._cushion_signature = signature
+		p._care_publish_time = 0.1
 
 
 static func check_recovery(p: DeliveryPackage) -> void:
@@ -105,6 +230,9 @@ static func publish_care(p: DeliveryPackage) -> void:
 		var sequence: Dictionary = p.trap_behavior.call(&"sequence_state")
 		if not sequence.is_empty():
 			state["sequence"] = sequence
+		var cushion: Dictionary = p.trap_behavior.call(&"cushion_state")
+		if not cushion.is_empty():
+			state["cushion"] = cushion
 	p.care_state = state
 	var run: Node = p.get_node_or_null(^"/root/RunManager")
 	if run != null and (run.get(&"cargo") as Dictionary).has(p.package_id):
@@ -169,11 +297,12 @@ static func submit_care_input(p: DeliveryPackage, input: Dictionary) -> void:
 	var direction: StringName = StringName(pressed) if pressed != null else &""
 	var sample: Dictionary = {"steady": bool(input.get("steady", false)), "calm": bool(input.get("calm", false)),
 		"balance": (balance as Vector2).limit_length(1.0), "work": bool(input.get("work", false)),
-		"tool": StringName(input.get("tool", "tape")),
+		"tool": StringName(input.get("tool", "tape")), "tap": bool(input.get("tap", false)),
 		"direction_pressed": direction if direction in [&"up", &"down", &"left", &"right"] else null}
 	if bool(sample["work"]):
 		sample["steady"] = false
 		sample["calm"] = false
+		sample["tap"] = false
 	# Same per-peer samples as submit_tender_input(), so the two never fight
 	# over player_input; add_care_fields() adds the tool work on top.
 	p._tender_inputs[peer] = {"input": sample, "age": 0.0}
@@ -193,7 +322,8 @@ static func add_care_fields(p: DeliveryPackage) -> void:
 	if not own.has("tool"):
 		return
 	var combined: Dictionary = p.player_input.duplicate() if not p.player_input.is_empty() else {
-			"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0, "direction_pressed": null}
+			"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0, "direction_pressed": null,
+				"tap": false}
 	for key: String in ["balance", "work", "tool"]:
 		combined[key] = own[key]
 	if bool(combined["work"]):

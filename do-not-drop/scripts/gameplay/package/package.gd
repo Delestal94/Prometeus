@@ -131,6 +131,13 @@ var _last_tender_peer: int = 0
 var _last_holder_peer: int = 0
 var _rescue_pending: bool = false
 var _milestone_counts: Dictionary = {}
+## Host: the last announced bump this box already felt (RoadImpacts id, -1
+## none), so crossing one counts once.
+var _road_jolted: int = -1
+## Host: what the last published cushion state looked like (bump announced,
+## tap shielding, hits saved, taps), so a change goes out at once instead of
+## waiting for the next 0.1 s publish.
+var _cushion_signature: int = 0
 ## Stale trap input is dropped after this long: a passenger who paused, or
 ## tabbed out, holding "steady" would otherwise keep the trap calm forever.
 const TENDER_INPUT_TIMEOUT: float = 0.25
@@ -297,8 +304,10 @@ func initialize_trap() -> void:
 	trap_behavior = trap_definition.call("create_behavior")
 	if trap_behavior == null:
 		return
-	var config: Dictionary = trap_definition.get("params")
-	trap_behavior.call("on_setup", self, config.duplicate(true))
+	var config: Dictionary = (trap_definition.get("params") as Dictionary).duplicate(true)
+	config["roll_seed"] = PackageRescue.roll_seed(self)
+	trap_behavior.call("on_setup", self, config)
+	_road_jolted = -1
 	_age = 0.0
 	_impact_cooldown_remaining = 0.0
 	_has_previous_velocity = false
@@ -638,27 +647,7 @@ func _age_tender_inputs(delta: float) -> void:
 
 
 func _refresh_combined_input() -> void:
-	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0,
-			"direction_pressed": null}
-	# The care worker (carrying it, PackageRescue) counts in full, like the tender.
-	var worker: int = _care_worker if _care_worker not in [tender_peer_id, assistant_peer_id] else 0
-	for peer_id: int in [tender_peer_id, assistant_peer_id, worker]:
-		if peer_id <= 0 or not _has_fresh_input(peer_id):
-			continue
-		var sample: Dictionary = _tender_inputs[peer_id]["input"]
-		var weight: float = 0.5 if peer_id == assistant_peer_id else 1.0
-		if bool(sample.get("steady", false)):
-			combined["steady_strength"] = float(combined["steady_strength"]) + weight
-		if bool(sample.get("calm", false)):
-			combined["calm_strength"] = float(combined["calm_strength"]) + weight
-		if combined["direction_pressed"] == null and sample.get("direction_pressed") != null:
-			combined["direction_pressed"] = sample["direction_pressed"]
-	combined["steady"] = float(combined["steady_strength"]) > 0.0
-	combined["calm"] = float(combined["calm_strength"]) > 0.0
-	player_input = combined if float(combined["steady_strength"]) > 0.0 \
-			or float(combined["calm_strength"]) > 0.0 \
-			or combined["direction_pressed"] != null else {}
-	PackageRescue.add_care_fields(self)
+	PackageRescue.refresh_combined_input(self)
 
 
 func _has_fresh_input(peer_id: int) -> bool:

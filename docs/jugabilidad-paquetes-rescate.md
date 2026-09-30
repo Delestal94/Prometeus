@@ -169,7 +169,7 @@ si el vehículo se mueve, mostrar progreso, tensión y causa de interrupción.
 | Gallina / Ruidoso | Agitación, tapa abierta, fuga al interior. | Calmar en ritmo y asegurar respiradero sin taparlo. | Perseguirla dentro del vehículo y devolverla; si se escapa fuera, usar juguete de gallina. | Real recapturada: «estresada»; juguete: «sustituida». |
 | Líquido | Tapa floja, charco y pérdida gradual. | Mantener nivel y sujetar tapa. | Sellar, absorber y trasvasar lo recuperable si hay recipiente. | «Contenido parcial». |
 | Peso creciente | La caja se desplaza y bloquea trabajo/salida. | Resolver secuencia y asegurar soporte. | Dos personas levantan y reubican; completar puzzle reduce masa. | «Controlado», con marca por golpes sufridos. |
-| Explosivo | Cuenta atrás, sacudidas aceleran el riesgo. | Desactivar secuencia mientras otro lo inmoviliza. | Antes del cero: retirar módulo de emergencia o usar consumible limitado. Después: caja inutilizada y consecuencia cómica, sin borrar toda la ronda. | «Desactivado a tiempo» o «neutralizado tarde». |
+| Explosivo | Cuenta atrás, sacudidas aceleran el riesgo. | Pedirle el código al conductor (lo ve en el tablero) y tocarlo, mientras otro lo inmoviliza. | Antes del cero: retirar módulo de emergencia o usar consumible limitado. Después: caja inutilizada y consecuencia cómica, sin borrar toda la ronda. | «Desactivado a tiempo» o «neutralizado tarde». |
 | Hostil | Ataque, rotura de jaula, criatura suelta. | Leer señal «calmar/no tocar» y cerrar pestillo. | Contenerla entre dos jugadores o atraerla de vuelta; reparar jaula. | «Reenjaulado». |
 
 La sustitución de la gallina debe ser explícita para los jugadores. El juguete

@@ -6,6 +6,10 @@ class_name DashboardGps
 ## the code of the box it ordered; once every house is done, the way to the
 ## goal. In Endless, the distance driven and the record.
 ##
+## It also carries the bomb codes (N-117, Explosivo's "Pedí el código"): the
+## steps still to say aloud for the box about to go off, so the driver can
+## read them out to whoever holds it, who never sees them on their own card.
+##
 ## Presentation only: every peer works it out from its own copy of the truck
 ## and the route, and hears about finished houses through
 ## EventBus.house_delivery_recorded (relayed by the host to everyone).
@@ -18,10 +22,16 @@ const INK := Color("1d6f78")
 const GLOW := Color("39c4c9")
 const TEXT := Color("e8fbff")
 const WARN := Color("ffc93c")
+const ALERT := Color("ff6b5b")
+## Codes shown at once (the soonest to go off first); the rest is a "+N".
+const MAX_CODE_LINES: int = 2
+const ARROWS: Dictionary = {&"up": "↑", &"down": "↓", &"left": "←", &"right": "→"}
 const FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 
 var distance_label: Label3D
 var detail_label: Label3D
+## The bomb code lines, below the rest; hidden while there is none.
+var code_label: Label3D
 var arrow: MeshInstance3D
 ## Which house the screen points at (-1 once it points at the goal, or in
 ## Endless).
@@ -53,6 +63,7 @@ func refresh() -> void:
 	var route := _route()
 	if truck == null:
 		return
+	_show_bomb_code()
 	if route == null:
 		_show_endless()
 		return
@@ -75,6 +86,52 @@ func refresh() -> void:
 		detail_label.text = tr("WORLD_GPS_ARRIVAL")
 		toward = route.to_global((route.get(&"goal_transform") as Transform3D).origin)
 	_point_arrow(truck, toward)
+
+
+## The codes of the boxes about to go off whose code is the driver's to read,
+## the soonest first, and how many more there are behind them.
+func _show_bomb_code() -> void:
+	var codes: Array[Dictionary] = bomb_codes(get_tree().get_nodes_in_group(&"cargo"))
+	code_label.visible = not codes.is_empty()
+	if codes.is_empty():
+		return
+	var lines: PackedStringArray = []
+	for index: int in range(mini(codes.size(), MAX_CODE_LINES)):
+		var entry: Dictionary = codes[index]
+		lines.append(tr("WORLD_GPS_CODE") % [code_text(entry["steps"] as Array, int(entry["index"])),
+				ceili(float(entry["seconds"]))])
+	if codes.size() > MAX_CODE_LINES:
+		lines[lines.size() - 1] += " " + tr("WORLD_GPS_CODE_MORE") % (codes.size() - MAX_CODE_LINES)
+	code_label.text = "\n".join(lines)
+	code_label.modulate = ALERT if float(codes[0]["seconds"]) <= 6.0 else WARN
+
+
+## The bomb codes the driver has to read out, from the boxes' replicated care
+## state (so every peer builds the same list): [{steps, index, seconds}],
+## the soonest to go off first. A box whose owner reads its own code (no other
+## human at the wheel), one already defused and one already blown are left out.
+static func bomb_codes(boxes: Array) -> Array[Dictionary]:
+	var codes: Array[Dictionary] = []
+	for box: Variant in boxes:
+		if not is_instance_valid(box):
+			continue
+		var state: Variant = (box as Object).get(&"care_state")
+		var sequence: Dictionary = (state as Dictionary).get("sequence", {}) if state is Dictionary else {}
+		var steps: Array = sequence.get("steps", [])
+		if steps.is_empty() or StringName(sequence.get("reader", &"owner")) != &"driver" \
+				or int(sequence.get("index", 0)) >= steps.size() or float(sequence.get("seconds", 0.0)) <= 0.0:
+			continue
+		codes.append({"steps": steps, "index": int(sequence.get("index", 0)), "seconds": float(sequence["seconds"])})
+	codes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["seconds"]) < float(b["seconds"]))
+	return codes
+
+
+## The steps from `from` on, as arrows: what is still left to say.
+static func code_text(steps: Array, from: int) -> String:
+	var parts: PackedStringArray = []
+	for index: int in range(clampi(from, 0, steps.size()), steps.size()):
+		parts.append(String(ARROWS.get(StringName(steps[index]), "?")))
+	return " ".join(parts)
 
 
 func _show_endless() -> void:
@@ -157,6 +214,12 @@ func _build_screen() -> void:
 	distance_label.name = "Distance"
 	detail_label = _label("", Vector3(0.03, -0.035, -0.003), 40, WARN)
 	detail_label.name = "Detail"
+	code_label = _label("", Vector3(0.04, -0.048, -0.003), 24, WARN)
+	code_label.name = "BombCode"
+	code_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	# The arrows are not in the dashboard's display font: the engine's own.
+	code_label.font = null
+	code_label.visible = false
 
 
 func _label(text: String, at: Vector3, size: int, color: Color) -> Label3D:

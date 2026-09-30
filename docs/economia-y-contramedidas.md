@@ -19,10 +19,10 @@ un requisito para empezar una partida.
 
 | Riesgo | Respuesta activa | Mejora asociada |
 | --- | --- | --- |
-| Explosivo | Secuencia de desactivación bajo presión. | Caja blindada o temporizador más lento. |
+| Explosivo | Pedir el código al conductor (lo ve en el tablero, distinto en cada caja) y tocarlo bajo presión. | Caja blindada o temporizador más lento. |
 | Apestoso/tóxico | Sellarlo, ventilar o usar máscara. | Extractor, filtros y compartimento aislado. |
 | Líquido | Mantener nivelado y contener derrames. | Bandejas y material absorbente. |
-| Frágil | Sujetar y conducir suave. | Anaquel acolchado y cinchas. |
+| Frágil | Un toque justo antes del bache que avisa la caja; conducir suave. | Anaquel acolchado y cinchas. |
 | Ruidoso/hostil | Calmarlo entre varios jugadores. | Jaula insonorizada o sedante limitado. |
 | Peso creciente | Resolver su secuencia antes de que sea inmanejable. | Elevador y anaquel reforzado. |
 

@@ -103,8 +103,6 @@ do-not-drop/tests/test_door_reactions.gd|max-line-length 12
 do-not-drop/tests/test_driver_ik.gd|max-line-length 1
 do-not-drop/tests/test_endless_difficulty.gd|max-line-length 3
 do-not-drop/tests/test_endless_multi_cargo.gd|max-line-length 5
-do-not-drop/tests/test_explosive_trap.gd|duplicated-load 1
-do-not-drop/tests/test_explosive_trap.gd|max-line-length 1
 do-not-drop/tests/test_flock_crossing.gd|max-line-length 4
 do-not-drop/tests/test_fragile.gd|max-line-length 1
 do-not-drop/tests/test_hint_relay.gd|max-line-length 1

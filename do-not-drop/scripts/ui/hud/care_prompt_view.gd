@@ -6,7 +6,10 @@ extends Control
 ##               two hands grip it
 ##   release  -- hands off: the button crossed out, red if it's still held
 ##   tool     -- the tool button and a ring filling with the job
-##   sequence -- a row of keycaps, the next one bouncing
+##   sequence -- a row of keycaps, the next one bouncing (question marks
+##               when the driver holds the code, the bomb's "Pedí el código")
+##   cushion  -- Fragile: the primary button with a ring closing on it; the
+##               tap counts once the ring turns green (N-117 "Amortiguá")
 ##   collect  -- the interact key bouncing, with how many pieces are left
 ## Pure presentation, drawn on the card's cream: CareCard feeds it every frame
 ## and events come from comparing a frame with the last.
@@ -23,7 +26,7 @@ const TICK_EVERY: float = 0.1
 const ERROR_COOLDOWN: float = 0.6
 const CUES: Dictionary = {&"step": -12.0, &"error": -11.0, &"success": -9.0, &"whoosh": -15.0, &"tick": -19.0}
 ## Steps worth a swish when the card switches to them: something new to do.
-const ATTENTION_STEPS: Array[StringName] = [&"collect", &"sequence", &"tool", &"release"]
+const ATTENTION_STEPS: Array[StringName] = [&"collect", &"sequence", &"tool", &"release", &"cushion"]
 
 var step: StringName = &""
 var gamepad: bool = false
@@ -34,11 +37,17 @@ var sway: Vector2 = Vector2.ZERO
 var steps: Array = []
 var step_index: int = 0
 var missing: int = 0
+## The code is on the driver's dashboard: the keycaps stay hidden.
+var hidden_code: bool = false
+## Fragile's cushion state as the host published it (CushionState), and when
+## this frame received it, so the ring keeps closing between updates.
+var cushion: Dictionary = {}
 var interact_key: String = "E"
 ## Every cue played, newest last: what the tests read.
 var played: Array[StringName] = []
 
 var _time: float = 0.0
+var _cushion_at: float = 0.0
 var _pop: float = 0.0
 var _shake: float = 0.0
 var _flash: float = 0.0
@@ -85,7 +94,8 @@ func reset() -> void:
 
 
 ## One frame of the card. `data`: {pad, primary, tool_held, work, fixes,
-## sequence, missing, sway, interact}. Plays whatever changed since the last.
+## sequence, cushion, missing, sway, interact}. Plays whatever changed since the
+## last.
 func show_step(new_step: StringName, data: Dictionary) -> void:
 	var first: bool = _baseline.is_empty()
 	gamepad = bool(data.get("pad", false))
@@ -100,11 +110,13 @@ func show_step(new_step: StringName, data: Dictionary) -> void:
 	var solved: int = int(sequence.get("solved", _baseline.get("solved", 0)))
 	var mistakes: int = int(sequence.get("mistakes", _baseline.get("mistakes", 0)))
 	var index: int = int(sequence.get("index", 0))
+	var new_cushion: Dictionary = data.get("cushion", {})
+	var saved: int = int(new_cushion.get("saved", 0))
 	if not first:
 		if new_step != step and new_step in ATTENTION_STEPS:
 			_play(&"whoosh")
 			_pop = 1.0
-		if fixes > int(_baseline["fixes"]) or solved > int(_baseline["solved"]):
+		if fixes > int(_baseline["fixes"]) or solved > int(_baseline["solved"]) or saved > int(_baseline["saved"]):
 			_celebrate()
 		elif mistakes > int(_baseline["mistakes"]):
 			_fail()
@@ -126,12 +138,17 @@ func show_step(new_step: StringName, data: Dictionary) -> void:
 		if wrong and not bool(_baseline["wrong"]):
 			_fail()
 	_baseline = {"fixes": fixes, "solved": solved, "mistakes": mistakes, "index": index, "missing": new_missing,
+		"saved": saved,
 		"primary": holding_primary, "wrong": new_step == &"release" and holding_primary}
 	step = new_step
 	progress = work
 	steps = sequence.get("steps", [])
 	step_index = index
 	missing = new_missing
+	hidden_code = StringName(sequence.get("reader", &"owner")) == &"driver"
+	if new_cushion != cushion:
+		_cushion_at = _time
+	cushion = new_cushion
 
 
 ## For the caller's own moments (switching tools).
@@ -198,6 +215,8 @@ func _draw() -> void:
 			_draw_tool(center)
 		&"sequence":
 			_draw_sequence(center)
+		&"cushion":
+			_draw_cushion(center)
 		&"collect":
 			_draw_collect(center)
 		&"grab":
@@ -287,6 +306,10 @@ func _draw_sequence(center: Vector2) -> void:
 		var direction: Vector2 = STEP_VECTORS.get(StringName(steps[i]), Vector2.ZERO)
 		var key_center := Vector2(x0 + cap * 0.5 + i * (cap + gap), y)
 		var glyph: String = "" if gamepad else String(KEYS.get(direction, "?"))
+		if hidden_code:
+			# The driver has the code: here it is only how many are left.
+			direction = Vector2.ZERO
+			glyph = "" if i < step_index else "?"
 		var border: Color = UiThemeScript.RED if _error_flash > 0.25 and i == step_index else UiThemeScript.INK
 		if i < step_index:
 			var grow: float = 1.0 + 0.18 * _ease(_pop) if i == step_index - 1 else 1.0
@@ -299,6 +322,24 @@ func _draw_sequence(center: Vector2) -> void:
 			_draw_text(tr("HUD_CARE_TAP"), key_center + Vector2(0, cap * 0.5 + 24), 16, UiThemeScript.INK)
 		else:
 			_draw_key(key_center, glyph, direction, false, false, border, 0.86, false, 0.4)
+
+
+## Fragile: the primary button, and a ring closing on it as the bump nears.
+## Green from the moment a tap would count; grey while the last one still
+## makes the next one wait.
+func _draw_cushion(center: Vector2) -> void:
+	var lead: float = maxf(float(cushion.get("lead", 0.7)), 0.05)
+	var window: float = float(cushion.get("window", 0.35))
+	var eta: float = float(cushion.get("eta", -1.0)) - (_time - _cushion_at)
+	var button: Vector2 = center + Vector2(-46, -6)
+	_draw_primary_button(button, holding_primary)
+	var closing: float = clampf(eta / lead, 0.0, 1.0)
+	var ring: Color = UiThemeScript.MINT if eta <= window else UiThemeScript.ORANGE
+	draw_arc(button, 32.0, 0.0, TAU, 48, Color(UiThemeScript.INK, 0.35), 3.0, true)
+	draw_arc(button, 32.0 + 40.0 * closing, 0.0, TAU, 48, ring, 6.0, true)
+	var shake: float = sin(_time * 45.0) * 0.06 if eta < 0.2 else 0.0
+	_draw_cardboard(center + Vector2(82, 4), shake)
+	_draw_text(tr("HUD_CARE_TAP"), button + Vector2(0, 62), 16, UiThemeScript.INK)
 
 
 func _draw_collect(center: Vector2) -> void:

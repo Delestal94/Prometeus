@@ -14,6 +14,12 @@ extends SceneTree
 ## Then both clients reach for the same box at once (N-213: two crew members
 ## going for the one that fell out): the host resolves it, so exactly one of
 ## them ends up holding it and every peer names the same holder.
+## N-117: before that, the host turns the first box into a Fragile one and the
+## second into a bomb. The client that ends up holding the first taps its
+## primary (a care input over the real RPC) and the host counts the tap: every
+## peer reports `tap=1`, read from the care state the host replicates. Every
+## peer also reports the bomb's code and who reads it, drawn by the host from
+## the session seed: the three must agree (`code=` and `reader=`).
 ##
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
@@ -101,13 +107,17 @@ func _report() -> void:
 			waited += 0.05
 		await _pump(CROSSING_READ_SECONDS)
 		phase = str(int(crossing.get(&"state")))
+	var tap_box: Node3D = _contested_box()
+	var code_box: Node3D = _second_box()
+	await _prepare_traps(tap_box, code_box)
 	var grab: String = await _contest_box()
+	var tap: String = await _tap_box(tap_box)
 	var orders: Array = []
 	for order: Dictionary in _level.get_node(^"World/Depot").get(&"orders"):
 		orders.append("%s:%s" % [order.package_id, order.code])
-	print("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s" % [
+	print("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s code=%s" % [
 		_name, int(_network.get(&"world_seed")), (route.get(&"houses") as Array).size(), ",".join(orders),
-		_route_hash(route), phase, grab])
+		_route_hash(route), phase, grab, tap, _code_of(code_box)])
 	# The host stays up a little so the clients' own reads aren't cut short.
 	await _pump(4.0 if _host else 1.0)
 	_network.call(&"leave_session")
@@ -141,6 +151,78 @@ func _contest_box() -> String:
 	if holders[0] == "1":
 		return "FAIL-host-holds"
 	return holders[0]
+
+
+## The host makes the first box Fragile and the second a bomb (each draws
+## from the session seed and its own id), and everyone waits for the care
+## state to arrive.
+func _prepare_traps(fragile_box: Node3D, bomb_box: Node3D) -> void:
+	if _host and fragile_box != null and bomb_box != null:
+		fragile_box.set(&"trap_definition", load("res://data/traps/fragile.tres"))
+		fragile_box.call(&"initialize_trap")
+		fragile_box.call(&"_publish_care")
+		bomb_box.set(&"trap_definition", load("res://data/traps/explosive.tres"))
+		bomb_box.call(&"initialize_trap")
+		bomb_box.call(&"_publish_care")
+		# The host takes care input only while a run is on.
+		root.get_node(^"/root/RunManager").set(&"is_running", true)
+	await _pump(1.5)
+
+
+## Whoever holds the Fragile box sends one tap to the host; the host lets
+## the trap run one tick on it, and every peer reads how many taps counted
+## from the care state. FAIL when nobody could send it or it never arrived.
+func _tap_box(box: Node3D) -> String:
+	if box == null:
+		return "FAIL-no-box"
+	var mine: Node3D = _own_player()
+	var sender: bool = not _host and mine != null and mine.get(&"carried_package") == box
+	var applied: bool = false
+	var deadline: int = Time.get_ticks_msec() + 3000
+	while Time.get_ticks_msec() < deadline:
+		if sender:
+			box.rpc_id(1, &"submit_care_input", {"steady": false, "calm": false, "tap": true, "balance": Vector2.ZERO})
+		elif _host and not applied and _has_tap(box):
+			PackageRescue.simulate_cargo(box, 0.02)
+			applied = true
+		root.multiplayer.poll()
+		await _pump(0.1)
+	if _host:
+		root.get_node(^"/root/RunManager").set(&"is_running", false)
+	var cushion: Dictionary = (box.get(&"care_state") as Dictionary).get("cushion", {})
+	var taps: int = int(cushion.get("taps", -1))
+	return str(taps) if taps == 1 else "FAIL-%d-taps" % taps
+
+
+func _has_tap(box: Node3D) -> bool:
+	for sample: Dictionary in (box.get(&"_tender_inputs") as Dictionary).values():
+		if bool((sample["input"] as Dictionary).get("tap", false)):
+			return true
+	return false
+
+
+## The bomb's code and who reads it, as the host published them.
+func _code_of(box: Node3D) -> String:
+	if box == null:
+		return "FAIL-no-box"
+	var sequence: Dictionary = (box.get(&"care_state") as Dictionary).get("sequence", {})
+	if sequence.is_empty():
+		return "FAIL-no-code"
+	var steps: PackedStringArray = []
+	for step: Variant in sequence.get("steps", []):
+		steps.append(String(step))
+	return "%s/%s" % ["-".join(steps), sequence.get("reader", "?")]
+
+
+## The second box by id: the bomb.
+func _second_box() -> Node3D:
+	var boxes: Array = (_level.get(&"packages") as Array).filter(
+			func(p: Node) -> bool: return is_instance_valid(p))
+	if boxes.size() < 2:
+		return null
+	boxes.sort_custom(func(x: Node, y: Node) -> bool:
+		return String(x.get(&"package_id")) < String(y.get(&"package_id")))
+	return boxes[1]
 
 
 ## The same box on every peer: the level's cargo, first by id.

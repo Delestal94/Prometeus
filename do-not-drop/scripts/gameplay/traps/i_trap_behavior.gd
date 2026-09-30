@@ -11,6 +11,9 @@ extends Resource
 ## rather than as InputEvents: holds ("steady", "calm") are states, not
 ## events, and a plain data dictionary is what the host will receive from
 ## each client once networking lands (see docs/requerimientos-tecnicos.md).
+## Two are edges, true for one tick only: "direction_pressed" (a sequence
+## key) and "tap" (the primary action going down, N-117). The road ahead
+## comes the same way (see wants_road_ahead()).
 
 enum TrapState { OK, AT_RISK, RUINED }
 
@@ -49,6 +52,37 @@ func get_hint() -> String:
 ## sequence (sequence_state()) is shown on top of it.
 func care_action() -> StringName:
 	return &"hold"
+
+
+## Whether hands on the box (the primary action held) shield it from hits and
+## from the truck's sway, as PackageCare.HOLD_PROTECTION says for every trap by
+## default. Fragile says no (N-117: "Amortiguá" is a tap, holding does nothing);
+## a rack assistant in a solo run still counts.
+func hold_protects() -> bool:
+	return true
+
+
+## Whether this trap wants to hear about the road ahead: the package then
+## adds `impact_ahead` (seconds to the next announced bump, INF when there
+## is none) to the context and feeds road_jolt_strength() to apply_impact()
+## as the box crosses each one. See RoadImpacts.
+func wants_road_ahead() -> bool:
+	return false
+
+
+## What crossing a bump at `speed` (m/s) does to the box, as an impact
+## strength (m/s of velocity change); 0 when the trap doesn't care.
+func road_jolt_strength(_speed: float) -> float:
+	return 0.0
+
+
+## A trap answered by a tap of the primary action at the right moment
+## (`input["tap"]`, the rising edge) says where that stands so every peer can
+## draw it (published with the care state): {eta: seconds to the announced
+## hit or -1, ready: a tap would count, shield: a tap is protecting it,
+## wait: seconds until the next tap counts, taps, saved}. Empty for the rest.
+func cushion_state() -> Dictionary:
+	return {}
 
 
 ## A trap solved by tapping directions one at a time says where that stands,

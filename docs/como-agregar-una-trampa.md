@@ -22,6 +22,16 @@ rehacer el paquete ni el HUD.
    `test_trap_visual_feedback`, `test_trap_audio` y
    `test_interaction_highlight`.
 
+El contexto que el paquete le pasa a `on_physics_process` (N-117) trae, además de `input`
+(`steady`, `calm`, `direction_pressed` y `tap`, los dos últimos son flancos: valen un solo
+tick, el paquete los gasta después de cada uno), `code_reader` (`&"driver"` u `&"owner"`: quién
+lee lo que la trampa sortea) e `impact_ahead` (segundos al próximo bache que el camino anuncia,
+`INF` si no hay; solo si la trampa dice `wants_road_ahead()`). Una trampa sin protección por
+mantener aprieta lo contrario con `hold_protects()` (Frágil: `false`), publica su estado de
+toque con `cushion_state()` y convierte un bache tomado rápido en golpe con `road_jolt_strength()`.
+Lo que la trampa sortea sale de `config["roll_seed"]` (la semilla de sesión y el id de la caja;
+`0` sin sesión: el reloj). Nunca poner en `get_hint()` lo que un solo jugador debe ver.
+
 La autoridad de una trampa sigue siendo el anfitrión: un cliente puede pedir
 interactuar, pero no confirmar que se desactivó. Nunca guardar progreso o
 otorgar dinero desde el comportamiento de la trampa; eso pasa por

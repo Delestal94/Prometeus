@@ -6,6 +6,7 @@ extends SceneTree
 ## reference-distance level.
 
 const SynthAudio = preload("res://scripts/presentation/synth_audio.gd")
+const SynthAudioTraps = preload("res://scripts/presentation/synth_audio_traps.gd")
 const PackageFeedback = preload("res://scripts/gameplay/package/package_feedback.gd")
 const UiSounds = preload("res://scripts/ui/ui_sounds.gd")
 const TOLERANCE_DB: float = 2.0
@@ -18,6 +19,7 @@ const TRAP_SOUNDS: Array = [
 	[&"wood_creak", "Peso creciente"],
 	[&"liquid_slosh", "Líquido"],
 	[&"explosive_tick", "Explosivo"],
+	[&"cushion_pad", "Frágil, amortiguado", SynthAudioTraps],
 	[&"hostile_hiss", "Hostil"],
 	[&"comic_ruin_stinger", "Ruina general"],
 	[&"comic_boom", "Ruina explosiva"],
@@ -31,7 +33,8 @@ func _initialize() -> void:
 	var trap_levels: Dictionary = (PackageFeedback as Script).get_script_constant_map()[&"TRAP_SOUND_LEVELS_DB"]
 	for entry: Array in TRAP_SOUNDS:
 		var cue: StringName = entry[0]
-		var stream: AudioStreamWAV = (SynthAudio as Script).call(cue)
+		var source: Script = entry[2] if entry.size() > 2 else SynthAudio
+		var stream: AudioStreamWAV = source.call(cue)
 		_check(String(entry[1]), "trap", stream, float(trap_levels[cue]), TRAP_TARGET_DBFS)
 	for cue: StringName in UiSounds.CUES:
 		_check(String(cue), "ui", UiSounds.stream_for(cue), UiSounds.volume_db_for(cue), UI_TARGET_DBFS)

@@ -5,7 +5,9 @@ extends RefCounted
 ## snapshot plus the trap's action, hint and tap sequence that
 ## PackageRescue.publish_care() adds), so every peer tells the same story:
 ##   collect  -- a rescue with pieces on the floor: go and pick them up
-##   sequence -- a tap sequence pending (the bomb, Peso creciente)
+##   sequence -- a tap sequence pending (the bomb, Peso creciente); for the
+##               bomb the owner is told to ask the driver for the code
+##   cushion  -- Fragile with a bump announced ahead: one tap, right now
 ##   tool     -- a rescue that needs the kit, or a job already under way
 ##   release  -- the creature says hands off
 ##   hold     -- keep the primary action held: steady, calm, mop (only
@@ -39,8 +41,15 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 	if int(sequence.get("index", 0)) < steps.size() and bool(sequence.get("pending", true)):
 		var how: String = _tr("HUD_CARE_SEQUENCE_ON_FOOT") % keys.get("primary", "Clic izq.") \
 			if bool(state.get("on_foot", false)) else _tr("HUD_CARE_SEQUENCE_SEATED")
+		# The bomb's code is on the driver's dashboard, not on this card.
+		if StringName(sequence.get("reader", &"owner")) == &"driver":
+			return _step(&"sequence", _tr("HUD_CARE_ASK_CODE"), _tr("HUD_CARE_ASK_CODE_DETAIL") % how)
 		return _step(&"sequence", _tr("HUD_CARE_SEQUENCE"),
 			_tr("HUD_CARE_SEQUENCE_DETAIL") % [String(sequence.get("verb", "Resolver")), how])
+	var cushion: Dictionary = state.get("cushion", {})
+	if float(cushion.get("eta", -1.0)) >= 0.0 and bool(cushion.get("ready", false)):
+		return _step(&"cushion", _tr("HUD_CARE_CUSHION"),
+			_tr("HUD_CARE_CUSHION_DETAIL") % keys.get("primary", "Clic izq."))
 	var urgent: bool = phase in [&"crisis", &"lost"] or bool(state.get("restore", false))
 	if tool != &"" and (urgent or working):
 		return _step(&"tool", _tr("HUD_CARE_TOOL") % tool_name.to_upper(),
