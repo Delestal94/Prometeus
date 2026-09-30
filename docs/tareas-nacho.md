@@ -411,7 +411,7 @@ sigue en verde.
   Queda: la sombra dura de la loma frente al túnel es N-318.3; la lluvia de noche queda más oscura (calzada 0,07-0,12) a
   propósito.
 
-### N-318 · Cartel A-3 quemado, granero negro y borde duro de la loma — C · `Opus 5.5 · medium` · Aviso: no
+### N-318 · Cartel A-3 quemado, granero negro y borde duro de la loma — C · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-318-hill-shadow`**
 Origen: PC build 2026-09-30. Necesita PC (la toma la sesión de arte). Capturas de 390ee37: en `render_route_house.png` el
 cartel amarillo "A-3" tiene un globo amarillo plano y sobreexpuesto, sin detalle, cortado por el borde de la imagen,
 y el granero rojo queda negro. En `render_tunnel_from_road.png` y `render_tunnel_side.png` (día) la sombra de la
@@ -435,7 +435,18 @@ media medida); (4) la sombra de la loma con borde suave. Capturas antes/después
   su rojo puro no devuelve la luz fría: `LowpolyMaterials.LIFTED` lo aclara con el mismo tono (pared a contraluz de noche
   0,042 → 0,056, aplastados 25 % → 3 %; con luna 0,125 → 0,163; de día en sombra 0,290 → 0,313). Plano nuevo
   `render_route_barn.png` (seed 12 de día, `--seed=4` de noche). Tests `test_house_waiting_marker`, `test_baked_ao`.
-- [ ] **N-318.3** Suavizar la sombra de la loma sobre la calzada. Con `constructor-mundo`.
+- [x] **N-318.3** ~~Suavizar la sombra de la loma sobre la calzada. Con `constructor-mundo`.~~
+  **[x] Hecho (2026-09-30, sesión de arte)** — el "borde diagonal duro" de `render_tunnel_from_road` no era sombra sino el
+  borde asfalto/banquina (0,8 m de `smoothstep` en `route_terrain.gdshader`; el asfalto ahí está al sol, 0,40 como en
+  `tunnel_side`), y la captura usaba un sol propio, no el del juego. `render_rail_tunnel.gd` ahora toma `Sun` y
+  `WorldEnvironment` de `level_base.tscn` más `WorldMood`/`RouteSky`, y suma el plano `render_tunnel_shadow_edge.png`
+  (sol bajo, asfalto al sol contra asfalto a la sombra de la loma, mide el ancho del borde; `--quality`, `--shadow-filter`,
+  `--shadow-atlas`, `--shadow-opacity`). En Compatibility `shadow_blur` y `light_angular_distance` no hacen nada: el borde
+  lo dan el filtro PCF y el atlas, que ahora fija `WorldQuality.apply_shadow_softness()` por nivel (Bajo/Medio/Alto: filtro
+  2/3/4 y atlas 2048; antes 2 y 4096 en todos; a 1024 el borde salía escalonado). `Sun` de los dos niveles con
+  `shadow_opacity` 0,85. Borde de la loma (vieja → Alto): cociente sombra/sol 0,82 → 0,95-0,99, sin escalones ni acné;
+  sombras de contacto de casa, granero y carteles sin cambio visible. Test `test_world_quality` `_check_shadow_softness()`.
+  Aviso: `docs/avisos/2026-09-30-n318-3-sun-shadows.md`.
   Intento 2026-09-30 (sesión de arte): no se llegó a hacer (el agente se cortó). Pista: `render_rail_tunnel.gd` arma
   un `DirectionalLight3D` pelado; el sol del juego (`level_base.tscn`) ya tiene `shadow_blur = 1,6` y
   `directional_shadow_blend_splits`. Primero comprobar si el borde duro es solo de la captura.
