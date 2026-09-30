@@ -14,17 +14,21 @@ const FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 const INK_BLACK: Color = Color("15151a")
 const INK_RED: Color = Color("b3261e")
 ## Label3D pixel size and font size at the reference box (0.65 m wide): a letter
-## is ~9 cm tall, readable from 2-3 m.
-const PIXEL_SIZE: float = 0.0021
-const BASE_FONT_SIZE: int = 44
+## is ~5 cm tall, readable from 2-3 m and small enough to fit under the stamp.
+const PIXEL_SIZE: float = 0.0013
+const BASE_FONT_SIZE: int = 36
 const REFERENCE_WIDTH: float = 0.65
 ## Share of the face's width the text may fill.
-const FACE_FILL: float = 0.82
+const FACE_FILL: float = 0.9
 ## A few millimetres proud of the face, like the shipping label: closer and the
 ## depth buffer makes box and ink flicker.
 const OFFSET_OUT: float = 0.006
-const TILT_MIN_DEGREES: float = 4.0
-const TILT_MAX_DEGREES: float = 9.0
+## The box GLBs print the logo (upper 60-80 %) and a big stamp (15-60 %) on this
+## face, so the marker grows up from the free strip below the stamp, this far
+## above the bottom edge.
+const BOTTOM_MARGIN: float = 0.03
+const TILT_MIN_DEGREES: float = 2.0
+const TILT_MAX_DEGREES: float = 5.0
 
 
 ## Null when the package has no content (nothing to write) or it has no phrase.
@@ -47,11 +51,13 @@ static func build(content: Resource, package_id: StringName, box_size: Vector3) 
 	label.width = box_size.x * FACE_FILL / PIXEL_SIZE
 	label.line_spacing = -6.0
 	label.rotation.z = tilt(package_id)
-	label.position = Vector3(0.0, box_size.y * 0.06, box_size.z * 0.5 + OFFSET_OUT)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	label.position = Vector3(0.0, -box_size.y * 0.5 + BOTTOM_MARGIN, box_size.z * 0.5 + OFFSET_OUT)
 	return label
 
 
-## Radians, 4 to 9 degrees either way; the same for the same id.
+## Radians, 2 to 5 degrees either way (more and a corner of the text dips off
+## the bottom edge); the same for the same id.
 static func tilt(package_id: StringName) -> float:
 	var hashed: int = ("%s|tilt" % package_id).hash()
 	var amount: float = lerpf(TILT_MIN_DEGREES, TILT_MAX_DEGREES, float(hashed % 100) / 99.0)

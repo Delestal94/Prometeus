@@ -56,7 +56,7 @@ const LABEL_ASPECT: float = 320.0 / 512.0
 ## The "PARA:" rules of the printed label (512x320 texture px): centred at
 ## u=211 between the two ruled lines at v=99 and v=125, so recipient and sender
 ## sit on them. Font px * pixel_size (below) * 512/width = texture px.
-const PARTIES_CENTER_UV: Vector2 = Vector2(211.0, 100.0)
+const PARTIES_CENTER_UV: Vector2 = Vector2(211.0, 102.0)
 const PARTIES_MAX_TEXTURE_PX: float = 260.0
 const PARTIES_FONT_SIZE: int = 28
 const PARTIES_CHAR_EM: float = 0.56
