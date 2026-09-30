@@ -99,9 +99,9 @@ votación cooperativa, perfil versionado, telemetría.
 
 | Autoload | Responsabilidad | Estado |
 |---|---|---|
-| `EventBus` | Señales globales desacopladas (ver sección 5). Único punto de "broadcast" del juego. | Registrado |
+| `EventBus` | Señales globales desacopladas (ver sección 5). Único punto de "broadcast" del juego. Extiende `NetEventBus` (módulo `net_session`): `relay()` y `request()` viven ahí. | Registrado |
 | `RunManager` | Estado de la partida en curso (ruta actual, paquetes activos, puntaje, tiempo — se resetea entre partidas) **y** el leaderboard local persistente (top 10, `user://leaderboard.json`, sobrevive entre partidas y reinicios de la app). | Registrado |
-| `NetworkManager` | Setup de host/cliente (Steam y ENet), conexión de jugadores, mapeo de autoridad. | Registrado |
+| `NetworkManager` | Setup de host/cliente (Steam y ENet), conexión de jugadores, mapeo de autoridad. Extiende `NetSession` (módulo `net_session`) y solo aporta el estado del mundo que viaja en el handshake y los textos de falla. | Registrado |
 | `CrewProgression` | Economía y cartas del equipo durante la campaña. | Registrado |
 | `ShopVoteManager` | Votaciones cooperativas de tienda. | Registrado |
 | `RouteEventManager` | Eventos de ruta. | Registrado |
