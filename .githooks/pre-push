@@ -3,16 +3,21 @@
 # anything fails. Enable it once per clone with: tools/setup-hooks.sh
 #
 # Skipped when the commits being pushed only touch docs (nothing under
-# do-not-drop/, tools/ or .github/). Emergency bypass: SKIP_TESTS=1 git push
-# (CI on GitHub still runs the suite).
+# do-not-drop/, tools/ or .github/). SKIP_TESTS=1 git push skips the tests
+# (CI on GitHub still runs the suite) but not the lint: it takes a second, and a
+# PR that CI rejects for a long line costs a routine a whole run (#71).
 set -u
 
+ROOT="$(git rev-parse --show-toplevel)"
+
 if [ "${SKIP_TESTS:-0}" = "1" ]; then
+	if command -v gdlint >/dev/null 2>&1 && ! bash "$ROOT/tools/lint.sh"; then
+		echo "pre-push: el lint encontró problemas nuevos, no se sube nada (SKIP_TESTS no saltea el lint)."
+		exit 1
+	fi
 	echo "pre-push: SKIP_TESTS=1, no corro los tests (CI los va a correr igual)."
 	exit 0
 fi
-
-ROOT="$(git rev-parse --show-toplevel)"
 ZERO="0000000000000000000000000000000000000000"
 needs_tests=0
 refs=0

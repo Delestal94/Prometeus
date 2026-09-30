@@ -15,7 +15,9 @@ de construcción toma primero. Reglas comunes y sesión: `.claude/rutinas/README
    `bench_route_duration`). Una trampa que pasó a "REQUIERE AJUSTE" o una entrega fuera de rango es
    hallazgo "molesta" y la tarea va con `pulidor-jugabilidad`.
 5. Por cada hallazgo "bloquea" (máximo 3 por corrida): **`cazador-bugs`** con el escenario exacto, para
-   tener causa raíz y archivo:línea.
+   tener causa raíz y archivo:línea. Si el escenario pasaba en la corrida anterior de
+   `docs/qa-recorrido.md`, pedile también **qué PR lo trajo** (commits entre los dos, `git log -S`): la
+   tarea sale como `Regresión de #<PR>` (regla 14 del README).
 
 ## 2. Registrar
 

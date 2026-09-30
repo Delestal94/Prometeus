@@ -10,6 +10,11 @@ Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
   number,title,headRefName,files --limit 50`.
 - Las 2 auditorías anteriores en `docs/auditorias/` (para no repetir y ver qué quedó sin resolver).
 - Las próximas 5 tareas abiertas de cada lista según su "Orden de ataque".
+- **Respuestas del usuario**: issues `decide-usuario` cerrados en la semana (`gh issue list --label
+  decide-usuario --state closed --search "closed:>=<fecha>" --json number,title,comments`) y los que
+  siguen abiertos hace más de 7 días.
+- **Las 10 tareas abiertas más viejas** de `tareas-nacho.md` (las de fecha o ID más bajo que ninguna
+  rutina tomó), para decidir si todavía aplican.
 
 ## 2. Cuatro miradas, en este orden
 
@@ -48,6 +53,12 @@ Rama `rutina/revision-AAAA-MM-DD` desde `origin/main`.
    - Nada contra decisiones ya tomadas por el usuario (personajes en pausa,
      sin playtesting, decisiones de M8): si el abogado las ataca, va a la auditoría como pregunta, no
      como tarea.
+   - **Respuestas del usuario**: cada `decide-usuario` cerrado se aplica a su tarea en este PR (quitar
+     el ⏸ y anotar "Decidió el usuario (AAAA-MM-DD): <qué>", o tacharla si la descartó). Si la respuesta
+     no se entiende, reabrí el issue con la pregunta concreta.
+   - **Tareas viejas**: de las 10 más viejas, las que ya no aplican (el código cambió, otra tarea las
+     cubrió, contradicen una decisión posterior) → ⏸ "decide el usuario" con el argumento y su issue
+     (regla 12). Las que ya están hechas en el código → marcarlas `[x]` con el hash, sin preguntar.
 3. Todo va a `tareas-nacho.md` (lo del dominio de Slatex como `S-xxx` en "Heredadas de Slatex", nunca a
    `tareas-slatex.md`); aviso en `docs/avisos/` si se agregaron o anotaron tareas de su dominio.
 4. PR `docs: weekly review AAAA-MM-DD` con auto-merge. Cuerpo: top 3, tareas creadas (IDs), y una
