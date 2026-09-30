@@ -121,11 +121,13 @@ func _run() -> void:
 		_join(session, 1000 + index, "churn-%d" % index)
 		session._on_peer_disconnected(1000 + index)
 	var here: int = session.peer_ids.size()
-	_expect(session._identities.peer_by_identity.size() <= here + NetPeerIdentities.MEMORY,
-		"200 comings and goings leave %d identities remembered (crew %d)" % [session._identities.peer_by_identity.size(), here])
+	var remembered: int = session._identities.peer_by_identity.size()
+	_expect(remembered <= here + NetPeerIdentities.MEMORY,
+		"200 comings and goings leave %d identities remembered (crew %d)" % [remembered, here])
 
 	session.leave_session()
-	_expect(session._identities.peer_by_identity.is_empty() and session._identities.by_peer.is_empty(), "Leaving forgets everyone")
+	_expect(session._identities.peer_by_identity.is_empty() and session._identities.by_peer.is_empty(),
+		"Leaving forgets everyone")
 	session.free()
 	if _failures == 0:
 		print("PASS: rejoin by identity: hashed tokens, returns, ghosts dropped once, bounded memory")
