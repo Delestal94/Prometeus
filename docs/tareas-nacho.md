@@ -249,8 +249,13 @@ pasajero es espectador.
   explícita). Hoy solo mira `scripts/ui` y queda verde con 24 literales en español en `package_care.gd`.
 - [x] `package_care.gd` a claves `HUD_CARE_*` (113 claves en total); `network_manager._fail()` y los `reason` de
   `level_base.gd` pasan a claves (`hud_results` ya hace `tr(reason)`). Continúa N-211 fase 7b.
-- [ ] Queda: `display_name` de los `.tres`, "MULTIJUGADOR" en `hud_pause.gd`, "GARAJE" en `main_menu.gd`, y que
-  los textos que arma el host llegan al cliente en el idioma del host.
+- [x] ~~Queda: `display_name` de los `.tres`, "MULTIJUGADOR" en `hud_pause.gd`, "GARAJE" en `main_menu.gd`, y que
+  los textos que arma el host llegan al cliente en el idioma del host.~~ **[x] Hecho (2026-09-30)**: los nombres
+  de trampa viajan como clave (`TrapDefinition.name_key()`) y cada par los traduce: tarjetas de carga, resultados,
+  carteles de las casas (`Depot.assignments()` → `[id, clave, código]`) y la puerta que rechaza la caja. Nadie
+  muestra el `display_name` de un `.tres`. Claves nuevas para "MULTIJUGADOR", "PAUSA", "RESULTADO", "GARAJE" y
+  "silenciado". `test_ui_translations` lo vigila y `test_house_waiting_marker` prueba un par en inglés. Aviso:
+  `docs/avisos/2026-09-30-n805-textos-del-host.md`.
 
 ### N-118 · Endless también puntúa la carga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`) · **[x] PR #42**
 `run_manager.gd:692` ("never subtracted"): el modo de los récords ignora el núcleo del juego. Hecho

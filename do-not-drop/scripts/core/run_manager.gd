@@ -454,8 +454,8 @@ func _on_delivery_photo_taken(house_index: int, accepted: bool) -> void:
 		_mark_photo(house_index)
 
 
-func _on_cargo_registered(package_id: StringName, display_name: String) -> void:
-	cargo_names[package_id] = display_name
+func _on_cargo_registered(package_id: StringName, name_key: String) -> void:
+	cargo_names[package_id] = name_key
 
 
 func _on_houses_assigned(assignments: Array) -> void:
@@ -653,13 +653,15 @@ func _result_delivery_rows() -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
 	for house: int in range(expected_houses):
 		var package_id: StringName = &""
-		var trap_name: String = tr("HUD_RESULT_PACKAGE_FALLBACK")
+		# Translation keys: the results travel to clients, and hud_results
+		# translates them on each peer.
+		var trap_name: String = "HUD_RESULT_PACKAGE_FALLBACK"
 		if house < house_assignments.size():
 			var assignment: Array = house_assignments[house]
 			if not assignment.is_empty():
 				package_id = StringName(assignment[0])
 			if assignment.size() > 1:
-				trap_name = String(assignment[1]).split(" · ", false, 1)[0]
+				trap_name = String(assignment[1])
 		trap_name = String(cargo_names.get(package_id, trap_name))
 		var outcome: StringName = &"missed"
 		var has_photo: bool = false

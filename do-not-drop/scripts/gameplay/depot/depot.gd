@@ -55,7 +55,8 @@ const INSURANCE_REFUND: int = 30
 ## their own behind the start line (modo endless).
 @export var ground_apron: bool = false
 
-## Today's orders, one per house: {"house", "package_id", "code", "trap", "content"}.
+## Today's orders, one per house: {"house", "package_id", "code", "trap", "trap_key", "content"}
+## ("trap" and "content" already translated, for this peer's screens).
 var orders: Array[Dictionary] = []
 ## Supplies waiting for the next run, as the host last reported them.
 var supplies: Array = []
@@ -201,8 +202,9 @@ func post_orders(house_count: int) -> Array[Dictionary]:
 			"house": orders.size(),
 			"package_id": StringName(package.get(&"package_id")),
 			"code": String(package.get_meta(&"dispatch_code", "?")),
-			"trap": String(definition.get(&"display_name")),
-			"content": String(content.get(&"display_name")) if content != null else "",
+			"trap": String(definition.call(&"localized_name")),
+			"trap_key": String(definition.call(&"name_key")),
+			"content": String(content.call(&"localized_name")) if content != null else "",
 		})
 	_order_board.write(orders, _endless_best())
 	var bus: Node = _autoload(&"EventBus")
@@ -219,12 +221,13 @@ func _completed_runs() -> int:
 	return int(unlocks.get(&"completed_runs")) if unlocks != null else 0
 
 
-## [[package_id, label], ...] in house order, the shape route.assign_packages()
-## and the houses already understand.
+## [[package_id, trap_key, code], ...] in house order, the shape
+## route.assign_packages() understands. The host relays it as the run starts,
+## so the trap goes as its translation key and each peer names it itself.
 func assignments() -> Array:
 	var result: Array = []
 	for order: Dictionary in orders:
-		result.append([order.package_id, "%s %s" % [order.trap, order.code]])
+		result.append([order.package_id, order.trap_key, order.code])
 	return result
 
 

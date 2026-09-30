@@ -143,7 +143,7 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 		"axis_fwd": Input.get_axis(&"walk_backward", &"walk_forward"), "screen_tilt": _screen_tilt(gesture),
 		"missing": care.missing_parts,
 		"sway": care.balance_target, "interact": keys["interact"]}
-	card.update(String(target.trap_definition.display_name), int(entry.get("state", 0)), integrity, step,
+	card.update(target.trap_definition.localized_name(), int(entry.get("state", 0)), integrity, step,
 		view_data, footer_items(keys, tool_name, stock, handling, bool(player.get(&"_seated")), care.in_lap))
 
 

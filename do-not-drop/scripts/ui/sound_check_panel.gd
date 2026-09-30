@@ -114,7 +114,7 @@ func _refresh() -> void:
 		var muted: bool = Audit.is_muted(group.key)
 		var state: Label = row.state
 		if muted:
-			state.text = "silenciado"
+			state.text = tr("UI_SOUND_MUTED")
 			state.add_theme_color_override("font_color", UiTheme.MUTED)
 		elif int(group.playing) > 0:
 			state.text = tr("UI_SOUND_PLAYING") if int(group.playing) == 1 else tr("UI_SOUND_PLAYING_MANY") % int(group.playing)

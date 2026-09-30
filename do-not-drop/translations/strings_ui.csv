@@ -108,6 +108,9 @@ HUD_CARE_FOOTER_DROP,%s  soltar,%s  drop
 HUD_CARE_KEY_LEFT_CLICK,Clic izq.,Left click
 HUD_CARE_KEY_RIGHT_CLICK,Clic der.,Right click
 HUD_HINT_WEIGHT_SECURED,Carga asegurada · la próxima secuencia en %ds,Load secured · next sequence in %ds
+HUD_KICKER_MULTIPLAYER,MULTIJUGADOR,MULTIPLAYER
+HUD_KICKER_PAUSE,PAUSA,PAUSED
+HUD_KICKER_RESULTS,RESULTADO,RESULTS
 HUD_SALVAGE_RECOVER,¡RECUPERAR!,RECOVER!
 HUD_SHIPPING_UNDECLARED,Contenido sin declarar,Undeclared contents
 HUD_EXPLOSIVE_DEFUSE,DESACTIVAR\n%02d s  %s,DEFUSE\n%02d s  %s
@@ -372,6 +375,7 @@ UI_MENU_JOIN_LAN_HINT,Por red local: la IP del anfitrión aparece en su pantalla
 UI_MENU_JOIN_STEAM_HINT,Por Steam: aceptá la invitación de tu amigo desde la lista de amigos.,On Steam: accept your friend's invite from your friends list.
 UI_MENU_PAGE_HOME,¿LISTOS PARA REPARTIR?,READY TO DELIVER?
 UI_MENU_PAGE_JOIN,UNIRSE A UNA SALA,JOIN A ROOM
+UI_MENU_PAGE_GARAGE,GARAJE,GARAGE
 UI_MENU_PAGE_PLAY,¿CÓMO SALIMOS HOY?,HOW ARE WE HEADING OUT?
 UI_MENU_PLAY,¡JUGAR!,PLAY!
 UI_MENU_QUIT,Salir,Quit
@@ -442,6 +446,7 @@ UI_SOUND_EMPTY,"No hay sonidos cargados. Abrí esta pantalla desde la pausa, jug
 UI_SOUND_HELP,Silenciá uno por uno hasta que deje de sonar lo que molesta. Mientras esta pantalla está abierta el juego sigue sonando aunque esté en pausa. Lo que silencies queda así hasta cerrar el juego.,Mute them one by one until the annoying sound stops. While this screen is open the game keeps making sound even when paused. Whatever you mute stays muted until you close the game.
 UI_SOUND_IDLE,en espera,idle
 UI_SOUND_MUTE,Silenciar,Mute
+UI_SOUND_MUTED,silenciado,muted
 UI_SOUND_MUTE_ALL,Silenciar todos,Mute all
 UI_SOUND_PLAYING,SONANDO,PLAYING
 UI_SOUND_PLAYING_MANY,SONANDO ×%d,PLAYING ×%d

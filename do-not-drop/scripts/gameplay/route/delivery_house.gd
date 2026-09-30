@@ -395,7 +395,9 @@ func _on_refused_reaction(index: int, expected_label: String) -> void:
 	if index != house_index:
 		return
 	var line: String = tr(DoorReaction.pick_line(REACTION_LINES[&"wrong"], _session_seed(), house_index, &"wrong"))
-	reaction.refuse(line % expected_label if line.contains("%s") else line)
+	# This peer's own label: the host's arrives in the host's language.
+	var label: String = assigned_label if not assigned_label.is_empty() else expected_label
+	reaction.refuse(line % label if line.contains("%s") else line)
 
 
 func _session_seed() -> int:

@@ -12,6 +12,12 @@ extends SceneTree
 ##   literal straight on screen (N-805: in English the player read Spanish
 ##   care messages, run-end reasons and connection errors), except the files
 ##   in SPANISH_LITERAL_FILES and debug output (print/push_warning/push_error);
+##   nor sets a Label's .text to a plain word ("PAUSA", "GARAJE") that is not
+##   in SAME_IN_BOTH, and the main menu's page titles are all keys;
+## - trap names travel as keys (TrapDefinition.name_key()), each one in the
+##   table with the .tres display_name as its Spanish text, and no script
+##   draws a .tres display_name straight on screen: each peer translates the
+##   name into its own language, not the host's.
 ## - Spanish stays the text the game always showed, and switching the locale
 ##   builds a panel in English.
 
@@ -41,6 +47,13 @@ const SPANISH_LITERAL_FILES: Array[String] = [
 	"res://scripts/gameplay/route/town_sign.gd",
 	# Developer tool that lists every sound by a Spanish label; never in the game.
 	"res://scripts/presentation/sound_audit.gd",
+]
+## Words written the same in Spanish and English, allowed as a plain .text.
+const SAME_IN_BOTH: Array[String] = ["ENDLESS", "Endless", "PING"]
+## The only scripts that read a resource's display_name: they turn it into a key.
+const DISPLAY_NAME_FILES: Array[String] = [
+	"res://scripts/gameplay/package/package_content.gd",
+	"res://scripts/gameplay/traps/trap_definition.gd",
 ]
 ## Debug output is for us, not the player.
 const DEBUG_CALLS: Array[String] = ["print(", "push_warning(", "push_error("]
@@ -78,6 +91,14 @@ func _run() -> void:
 	for key: String in table:
 		_expect(used.has(key), "%s is used somewhere (no dead rows)" % key)
 	_check_no_spanish_ui_literals()
+	_check_no_plain_word_texts()
+	_check_trap_name_keys(table)
+	var menu_constants: Dictionary = load("res://scripts/ui/main_menu.gd").get_script_constant_map()
+	var page_titles: Dictionary = menu_constants.get("PAGE_TITLES", {})
+	_expect(not page_titles.is_empty(), "The main menu has page titles")
+	for page: int in page_titles:
+		var title: String = String(page_titles[page])
+		_expect(table.has(title), "Main menu page %d's title is a key (%s)" % [page, title])
 
 	var locale: String = TranslationServer.get_locale()
 	_expect(locale.begins_with("es"), "The game starts in Spanish (locale %s)" % locale)
@@ -128,6 +149,54 @@ func _check_no_spanish_ui_literals() -> void:
 				continue
 			_expect(accented.search(line) == null,
 				"%s:%d has no untranslated Spanish literal" % [file_path, line_number])
+
+
+func _check_no_plain_word_texts() -> void:
+	var assignment := RegEx.create_from_string('(\\.text|tooltip_text) = ')
+	# The literal assigned straight away, or the one after an inline "else".
+	var literal := RegEx.create_from_string('(?:(?:\\.text|tooltip_text) = |\\belse )"([^"\\n]*)"')
+	var letters := RegEx.create_from_string("[A-Za-z]{3,}")
+	var key := RegEx.create_from_string("^(UI|HUD|WORLD)_[A-Z0-9_]+$")
+	for dir_path: String in LITERAL_SCAN_DIRS:
+		for file_path: String in _scripts(dir_path):
+			var line_number: int = 0
+			for line: String in FileAccess.get_file_as_string(file_path).split("\n"):
+				line_number += 1
+				if line.strip_edges().begins_with("#") or assignment.search(line) == null:
+					continue
+				for found: RegExMatch in literal.search_all(line):
+					var text: String = found.get_string(1)
+					if letters.search(text) == null or text.contains("%") or key.search(text) != null:
+						continue
+					var word: String = text.replace("●", "").strip_edges()
+					_expect(word in SAME_IN_BOTH,
+						"%s:%d draws the plain word \"%s\" (use a key)" % [file_path, line_number, text])
+
+
+func _check_trap_name_keys(table: Dictionary) -> void:
+	var dir := DirAccess.open("res://data/traps")
+	var checked: int = 0
+	for file_name: String in dir.get_files():
+		if not file_name.ends_with(".tres"):
+			continue
+		var definition: Resource = load("res://data/traps/" + file_name)
+		var key: String = String(definition.call(&"name_key"))
+		checked += 1
+		_expect(table.has(key), "%s's name travels as a key in the table (%s)" % [file_name, key])
+		if table.has(key):
+			var spanish: String = table[key][0]
+			var display_name: String = String(definition.get(&"display_name"))
+			_expect(spanish == display_name,
+				"%s: the key's Spanish text is its display_name (%s vs %s)" % [file_name, spanish, display_name])
+			_expect(String(definition.call(&"localized_name")) == spanish, "%s reads in Spanish by default" % file_name)
+	_expect(checked == 7, "Every trap is checked (%d)" % checked)
+	var reads := RegEx.create_from_string('\\.display_name\\b|&"display_name"')
+	for dir_path: String in LITERAL_SCAN_DIRS:
+		for file_path: String in _scripts(dir_path):
+			if file_path in DISPLAY_NAME_FILES:
+				continue
+			_expect(reads.search(FileAccess.get_file_as_string(file_path)) == null,
+				"%s doesn't draw a .tres display_name (localized_name() / name_key())" % file_path)
 
 
 ## key -> [es, en]

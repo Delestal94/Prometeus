@@ -28,9 +28,12 @@ func _on_speed(speed: float) -> void:
 	hud.speed_label.text = "%02d" % roundi(absf(speed))
 
 
-func _on_cargo_registered(id: StringName, display_name: String) -> void:
+## The host relays the trap's translation key (TrapDefinition.name_key()), so
+## the card reads in this player's language, not the host's.
+func _on_cargo_registered(id: StringName, name_key: String) -> void:
 	if hud.cargo_rows.has(id):
 		return
+	var display_name: String = tr(name_key)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	hud.cargo_rows_box.add_child(row)

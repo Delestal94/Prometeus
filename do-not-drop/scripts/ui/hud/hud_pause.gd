@@ -88,7 +88,7 @@ func _pause() -> void:
 			return
 	hud.overlay_mode = "pause"
 	hud.overlay.show()
-	hud.overlay_kicker.text = "PAUSA"
+	hud.overlay_kicker.text = tr("HUD_KICKER_PAUSE")
 	hud.overlay_title.text = tr("HUD_PAUSED") if not hud.soft_pause else tr("HUD_MENU_TITLE")
 	hud.overlay_body.text = tr("HUD_PAUSE_BODY") if not hud.soft_pause else tr("HUD_SOFT_PAUSE_BODY")
 	hud.overlay_stats.text = _pause_stats()
@@ -170,7 +170,7 @@ func _on_connection_lost(reason: String) -> void:
 	hud.overlay_mode = "disconnected"
 	hud.overlay.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	hud.overlay_kicker.text = "MULTIJUGADOR"
+	hud.overlay_kicker.text = tr("HUD_KICKER_MULTIPLAYER")
 	hud.overlay_title.text = tr("HUD_DISCONNECTED")
 	hud.overlay_body.text = reason
 	hud.overlay_stats.text = tr("HUD_HOST_GONE")

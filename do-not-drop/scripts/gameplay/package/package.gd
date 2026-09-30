@@ -422,7 +422,7 @@ func _hit_player(player: Player) -> void:
 ## Announces this package to the run. Called when the delivery starts, not at _ready: packages load before the
 ## level resets the run, and only cargo actually aboard should count toward the score.
 func report_to_run() -> void:
-	_emit_event(&"cargo_registered", [package_id, String(trap_definition.call(&"localized_name"))])
+	_emit_event(&"cargo_registered", [package_id, String(trap_definition.call(&"name_key"))])
 	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
 	_emit_event(&"package_state_changed", [package_id, trap_state])
 	_emit_event(&"package_hint_changed", [package_id, get_hint()])

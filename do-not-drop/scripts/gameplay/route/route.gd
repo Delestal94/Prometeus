@@ -167,14 +167,17 @@ static func crew_house_count(player_count: int) -> int:
 
 
 ## Which box each house is waiting for, decided once the run starts (see
-## level_base.gd): [[package_id, display_name], ...] in house order. A house
+## level_base.gd): [[package_id, trap_key, code], ...] in house order
+## (Depot.assignments()); the trap is translated here, on each peer. A house
 ## past the end of the list takes whatever it's handed, as before.
 func assign_packages(assignments: Array) -> void:
 	for index: int in range(houses.size()):
 		var house: DeliveryHouse = houses[index]
 		var entry: Array = assignments[index] if index < assignments.size() else []
 		house.assigned_package_id = StringName(entry[0]) if entry.size() > 0 else &""
-		house.assigned_label = String(entry[1]) if entry.size() > 1 else ""
+		house.assigned_label = tr(String(entry[1])) if entry.size() > 1 else ""
+		if entry.size() > 2:
+			house.assigned_label += " %s" % entry[2]
 		if house.waiting_marker != null:
 			house.waiting_marker.set_order(house.assigned_label)
 		var label := get_node_or_null(NodePath("HouseNumber%d" % index)) as Label3D

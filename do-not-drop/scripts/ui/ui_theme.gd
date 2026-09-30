@@ -514,7 +514,8 @@ static func keycaps(line: String, on_dark: bool = false) -> String:
 	return separator.join(items)
 
 
-## Trap display name (as the HUD receives it) -> its icon, if there is one.
+## Trap name key (TrapDefinition.name_key()) or display name, in any case and
+## either language -> its icon, if there is one.
 static func trap_icon(display_name: String) -> Texture2D:
 	var keys: Dictionary = {
 		"HUD_TRAP_FRAGILE": "fragile",
@@ -527,7 +528,7 @@ static func trap_icon(display_name: String) -> Texture2D:
 	}
 	var id: String = ""
 	for key: String in keys:
-		if TranslationServer.translate(key).to_upper() == display_name.to_upper():
+		if key == display_name or TranslationServer.translate(key).to_upper() == display_name.to_upper():
 			id = keys[key]
 			break
 	if id.is_empty():

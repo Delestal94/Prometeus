@@ -144,7 +144,8 @@ func _ready() -> void:
 				if available:
 					notices.toast(tr("HUD_SPECTATE_AVAILABLE") % key_hint("Tab", "Back")))
 	EventBus.house_refused_package.connect(func(house_index: int, expected: String) -> void:
-		notices.toast(tr("HUD_HOUSE_REFUSED") % [house_index + 1, expected.to_lower()]))
+		var label: String = _house_order_label(house_index, expected)
+		notices.toast(tr("HUD_HOUSE_REFUSED") % [house_index + 1, label.to_lower()]))
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	GameSettings.hud_scale_changed.connect(func(_scale: float) -> void: apply_hud_scale())
 	GameSettings.control_help_mode_changed.connect(func(_mode: int) -> void: prompts.refresh_shortcuts())
@@ -605,6 +606,15 @@ func _process(delta: float) -> void:
 			ping_indicator.text = ""
 	toast_seconds_left = maxf(toast_seconds_left - delta, 0.0)
 	event_seconds_left = maxf(event_seconds_left - delta, 0.0)
+
+
+## The order as this peer's house labels it (Route.assign_packages()
+## translates it locally); the relayed one is in the host's language.
+func _house_order_label(house_index: int, relayed: String) -> String:
+	for house: Node in get_tree().get_nodes_in_group(&"delivery_house"):
+		if house is DeliveryHouse and house.house_index == house_index and not house.assigned_label.is_empty():
+			return house.assigned_label
+	return relayed
 
 
 func _on_roster_changed(_peer_ids: Array) -> void:
