@@ -100,16 +100,19 @@ var world_completed_runs: int = 0
 ## answers with a failure right away, so this only has to cover a slow level
 ## load: 8 s dropped joiners on 2-core CI runners (three Godots loading at
 ## once) with the level up and no players, and a slow PC is no faster. 20 s
-## stopped being enough once the level grew (loads of 18-34 s in the net pair).
-const JOIN_HANDSHAKE_TIMEOUT: float = 30.0
+## stopped being enough once the level grew (loads of 18-34 s in the net pair),
+## and 30 s left no margin over the slowest of those.
+const JOIN_HANDSHAKE_TIMEOUT: float = 45.0
 ## ENet drops a peer it hasn't heard from in about 5 s, and loading a level
 ## blocks the main thread -- and with it ENet's polling -- for longer than that
 ## on a slow machine (9.6 s on a CI runner): the joiner was cut off right after
 ## loading, and a host restart could drop everyone. A peer that really vanished
 ## is still noticed, just later; a clean leave is noticed at once.
+## MIN equals MAX: with a lower MIN, ENet's retry-limit rule cut a joiner after
+## 15 s of silence once its RTT had settled, mid-load (net trio, "0 players seen").
 const ENET_PEER_TIMEOUT_LIMIT: int = 32
-const ENET_PEER_TIMEOUT_MIN_MSEC: int = 15000
-const ENET_PEER_TIMEOUT_MAX_MSEC: int = 30000
+const ENET_PEER_TIMEOUT_MIN_MSEC: int = 45000
+const ENET_PEER_TIMEOUT_MAX_MSEC: int = 45000
 var _awaiting_handshake: bool = false
 ## The level the session plays in. The host records it whenever its own
 ## level is up, so a joiner arriving mid-reload still gets the right one.
