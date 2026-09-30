@@ -146,6 +146,11 @@ func closest_interactable() -> Node:
 		var distance: float = to_target.length()
 		var alignment: float = look.dot(to_target / distance) if distance > 0.001 else 1.0
 		var score: float = alignment - distance * player.AIM_DISTANCE_WEIGHT
+		# Something urgent can ask to be picked over its neighbours (the dog at the
+		# cargo, N-109: the rear-door control right beside it would win otherwise).
+		var bonus: Variant = area.get(&"aim_bonus")
+		if bonus != null:
+			score += float(bonus)
 		if score > best_score:
 			best_score = score
 			best = area

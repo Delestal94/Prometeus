@@ -34,6 +34,9 @@ const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
 @onready var depot: Depot = $World/Depot
 var local_player: Node = null
 var packages: Array[DeliveryPackage] = []
+## The gull, the dog and the bees that go for the cargo (N-109): the host
+## decides, every peer draws them.
+var cargo_animals: CargoAnimals
 var tipped_seconds: float = 0.0
 var _driver_seated: bool = false
 
@@ -57,6 +60,14 @@ func _ready() -> void:
 	EventBus.restart_requested.connect(restart_delivery)
 	EventBus.pause_requested.connect(toggle_pause)
 	EventBus.run_ended.connect(_on_run_ended)
+	# Animals that go for the boxes (N-109): the host rolls them from the session
+	# seed, every peer draws them. Before _prepare_mode(), which tells it about
+	# the level's houses and meadows.
+	cargo_animals = CargoAnimals.new()
+	cargo_animals.name = "CargoAnimals"
+	cargo_animals.vehicle = vehicle
+	cargo_animals.packages = packages
+	add_child(cargo_animals)
 	_prepare_mode()
 	# The host brings its own truck and paint; replication hands them to
 	# every client (vehicle.gd variant_id/paint_id).

@@ -90,6 +90,23 @@ static func radio_mode(p: DeliveryPackage) -> StringName:
 	return StringName(radio.get(&"mode")) if radio != null else &"off"
 
 
+## Harm that comes from outside the box's own trap -- the parasite sharing its
+## wear, a dog on an open box, bees round the cake (N-109, route/cargo_animals.gd).
+## Kept apart from the trap's own integrity for the parasite's reason: some traps
+## recompute theirs every frame. Reported like any other damage (package_damaged,
+## integrity, state) and never passed on to a parasite partner. `ruin_cause_key` is
+## the translation key of the reason shown if this ruins it.
+static func apply_external_damage(p: DeliveryPackage, amount: float, ruin_cause_key: String) -> void:
+	if not p.is_multiplayer_authority() or p.trap_behavior == null or amount <= 0.0:
+		return
+	var before_integrity: float = p.integrity
+	var before_state: int = p.trap_state
+	p._sharing_parasite_damage = true
+	p._parasite_damage = minf(p._parasite_damage + amount, p.integrity_max)
+	p._report_change(before_integrity, before_state, p.tr(ruin_cause_key))
+	p._sharing_parasite_damage = false
+
+
 ## How far ahead (s) a box looks for a bump the road announces: a little
 ## beyond the trap's own warning, so the trap decides when to show it.
 const ROAD_LOOKAHEAD: float = 1.2
