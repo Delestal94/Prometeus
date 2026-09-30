@@ -1885,11 +1885,14 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
   revisá la IP y que el firewall de Windows permita Take My Package (ver README)", "La sala está llena".
 - [x] (commit `03bd4e1`) **S-206.3** Test `tests/test_connection_errors.gd`: cada motivo muestra su texto.
 
-#### S-207 · Unirse por código corto en LAN — C · `Opus 5.5 · high` · Aviso: no
+#### S-207 · Unirse por código corto en LAN — C · `Opus 5.5 · high` · Aviso: sí (`main_menu.gd`, `hud.gd`)
 
-- [ ] `scripts/ui/room_code.gd` (estático): IPv4 + puerto ↔ código de 8 caracteres sin letras ambiguas
-  (sin O/0/I/1). El HUD del anfitrión muestra el código en vez de la IP; "Unirse" acepta código o IP.
-- [ ] Test: ida y vuelta para 1000 direcciones; un código mal tipeado se rechaza con mensaje.
+- [x] (rama `nacho/S-207-room-code`) `scripts/ui/room_code.gd` (estático, `RoomCode`): IPv4 + puerto ↔ código sin O/0/I/1.
+  Decisión: el puerto por defecto es implícito (8 caracteres, `K7QM-4TXA`); otro puerto suma 4 (12). Último
+  carácter de control (suma ponderada mod 32). El HUD del anfitrión LAN muestra el código en vez de la IP;
+  "Unirse" acepta código o IP (`RoomCode.resolve`). Steam no aplica. Aviso `docs/avisos/2026-09-30-s207-room-code.md`.
+- [x] (rama `nacho/S-207-room-code`) Test `tests/test_room_code.gd`: ida y vuelta para 1000 direcciones, todo símbolo mal
+  tipeado rechazado con mensaje, menú y HUD.
 
 #### S-208 · Rendimiento del jugador, paquetes y UI — B · `Opus 5.5 · high` · Aviso: no
 

@@ -20,8 +20,8 @@ Abrí `do-not-drop/project.godot` en Godot y ejecutá con **F5**. Arranca en un
 comportamiento de siempre); "Crear sala" hostea con el transporte que esté
 disponible (Steam si está corriendo, si no LAN) y entra directo a la
 furgoneta sin esperar en ninguna sala — los que se sumen después aparecen
-dinámicamente; "Unirse por IP" fuerza LAN y conecta a la dirección que
-escribas. Los amigos de Steam también pueden sumarse aceptando una
+dinámicamente; "Unirse por IP" fuerza LAN y conecta al código de sala (ej. `K7QM-4TXA`,
+que el HUD del anfitrión muestra en vez de la IP) o a la dirección que escribas. Los amigos de Steam también pueden sumarse aceptando una
 invitación desde la lista de amigos en cualquier momento.
 
 Atajos de línea de comandos para probar rápido sin clickear:
