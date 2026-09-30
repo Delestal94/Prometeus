@@ -36,8 +36,8 @@ código ya dice 8 (`network_manager.gd:27`). Los prompts de los agentes, `defini
   Para N-228.2: `vehicle.tscn` tiene 10 puntos de ojo de asiento (3 por lado, centro y 3 en el portaequipaje) pero solo 4 `*PackageMount` (Left/RightSeat1-2): con 7 pasajeros, tres se quedan sin soporte de caja enfrente.
 - [x] ~~**N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.~~
   **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-seats`, `ff635c0`)** — auditoría de código con `auditor-red`. Aguantan 8: transportes (ENet `max_players-1`, lobby de Steam, el 9º recibe "full"), slots de color del host (8), tablero de pedidos (`ROWS = 7`, `test_depot`), puntos de aparición del depósito (8), estantes (16 lugares), votación, espectador y asientos (conductor + 10 de pasajero; `seat_point.gd` no limita). Arreglado acá: `UnlockManager.MAX_DELIVERY_HOUSES` pasa de 4 a 7; con 4, ocho jugadores con perfil nuevo tenían 7 casas y solo 4 pedidos (3 casas "missed" seguras). Ahora un equipo completo libera Peso Creciente y Líquido para tener 8 cajas; `test_locked_traps` lo exige con `MAX_PLAYERS`. Lo que falta, abajo.
-- [ ] **N-228.3** Paleta de 8 colores: hoy hay 5 (`player.gd:43-45`, `hud_results.gd:8-10`, `crew_progression.gd:15-18`, 5 tonos de voz en `synth_audio_scenes.gd:318`, `strings_ui.csv:661-665`), así que los slots 5-7 repiten color. 8 colores distinguibles (también con daltonismo), claves y nombres traducidos y 8 tonos; va junto con N-226.2 (leer `color_slot()` en vez del `peer_id`). Test: `PLAYER_COLORS.size() >= NetworkManager.MAX_PLAYERS` y colores distintos. Con `constructor-progresion` y `constructor-ui`. Aviso: sí (`player.gd`, `scripts/ui/` de Slatex).
-- [ ] **N-228.4** Séptimo anclaje de caja: `vehicle.tscn` tiene 6 `PackageMount` (4 de asiento + 2 de estante) para hasta 7 cajas, y `LeftSeat3`, `CenterSeat` y `RightSeat3` no cuidan ninguna (sin `required_mount_path` ni `tend_mount_paths`). Sumar un anclaje (frente a un asiento 3 o en el piso central) y un test que cuente `package_mount >= MAX_PLAYERS - 1`. Con `constructor-camion`, después `auditor-red`.
+- [ ] **N-228.3** Paleta de 8 colores: hoy hay 5 (`player.gd:43-45`, `hud_results.gd:8-10`, `crew_progression.gd:15-18`, 5 tonos de voz en `synth_audio_scenes.gd:318`, `strings_ui.csv:661-665`), así que los slots 5-7 repiten color. 8 colores distinguibles (también con daltonismo), claves y nombres traducidos y 8 tonos; va junto con N-226.2 (leer `color_slot()` en vez del `peer_id`). Test: `PLAYER_COLORS.size() >= NetworkManager.MAX_PLAYERS` y colores distintos. Con `constructor-progresion` y `constructor-ui`. Aviso: sí (`player.gd`, `scripts/ui/` de Slatex). Va junto con N-226.2 y antes de N-241 (acta de mecánicas, fila 7).
+- [ ] **N-228.4** Séptimo anclaje de caja: `vehicle.tscn` tiene 6 `PackageMount` (4 de asiento + 2 de estante) para hasta 7 cajas, y `LeftSeat3`, `CenterSeat` y `RightSeat3` no cuidan ninguna (sin `required_mount_path` ni `tend_mount_paths`). Va después de N-240 (la caja sobrante del dúo usa los anclajes). Sumar un anclaje (frente a un asiento 3 o en el piso central) y un test que cuente `package_mount >= MAX_PLAYERS - 1`. Con `constructor-camion`, después `auditor-red`.
 - [ ] **N-228.5** Ancho de banda con 8: `test_net_bandwidth_budget.gd:11,22` calcula con `CREW = 4`; con 8 y 14 cajas da ~124 KB/s por cliente (97 % del tope de 128, sin encabezados) y ~7 Mbit/s de subida del host. Pasar `CREW` a `MAX_PLAYERS`, contar encabezados y la subida total del host; para bajar: cajas quietas o en estante sin envío, cajas a 30 Hz (`investigacion-red.md:27`), ruedas reconstruidas en el cliente en vez de 4 `Transform3D`. Con `constructor-red`, después `auditor-red`. Aviso: sí si toca `network_manager.gd`.
 - [ ] **N-228.6** UI con 8: captura del panel de pedidos del depósito con 7 pedidos (`depot_panel.gd:96`, 620 px sin scroll; si no entra, `ScrollContainer` o filas compactas) y un caso de 8 entradas en `test_crew_panel.gd` (hoy prueba 4). Con `constructor-ui` y `revisor-visual`. Aviso: sí (`scripts/ui/` de Slatex).
 - [ ] **N-228.7** Quien entra con la partida en curso aparece en el depósito aunque el camión esté en la ruta (`level_common.gd:181`): aparecer en un asiento libre del camión. También: al reconectarse, el slot de color puede cambiar (`network_manager.gd:162-164`), y la campaña se guarda por color. Con `constructor-jugador` y `constructor-red`.
@@ -58,6 +58,120 @@ hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 
   antes de recargar. `test_connection_errors` ya exige MIN == MAX y MAX ≥ handshake. Con `constructor-red`
   y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.
 - [ ] **N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).
+
+## M10 — Mecánicas del acta 2026-09-30
+
+Origen: `docs/decisiones/2026-09-30-mecanicas.md` (debate `critico-diseno` vs `abogado-del-diablo`, desempatado por `arbitro-decisiones`). Solo las filas
+**AHORA**; DESPUÉS (filas 10, 16, 17, 18) y NO (19, 20, 21) no generan tarea. Orden: N-243 y N-242 (chicas, sin
+dependencias) → N-236 (kit) → N-239 → N-237 → N-238 → N-240 → N-245 → N-241, N-244, N-246 ⏸. Aviso de todo el hito:
+`docs/avisos/2026-09-30-tareas-mecanicas.md`.
+
+### N-236 · Kit de tres herramientas a mano más dos contextuales — A · `Opus 5.5 · xhigh` · Aviso: sí (`package/` y `player/` de Slatex)
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 1. Hoy el kit tiene cinta, reparar, cincha y relleno; `DIRECTIONS` (`package_care.gd:32`) y
+`work_direction()` (`:239-240`) no tienen llamadores. Decisión: tres a mano en el ciclo (**cinta, reparar, cincha**);
+dos contextuales que el juego sugiere solo y no están en el ciclo (**trapo** para fuga de Líquido, **sustituto** para gallina
+perdida); se corta la herramienta **relleno** (el relleno de la tienda queda). Kit inicial por cajas: cinta = cajas + 1,
+reparar = ⌈cajas/2⌉, cincha = 1 + (cajas − pasajeros), trapo 1 si hay Líquido, sustituto 1 si hay Ruidosa. Hecho cuando
+`test_package_care` (y el de rescate) cubren el ciclo de 3, las sugeridas y el kit por tamaño de equipo (solo, dúo, 8), no
+quedan `DIRECTIONS` ni `work_direction()`, y el doc de rescate dice "mantener N s" sin minijuegos. Revisar si la telemetría
+(S-805) muestra que la cincha casi no se usa fuera de la puerta y la Inspección: pasa a contextual.
+- [ ] **N-236.1** Cortar `relleno` de la herramienta (no de la tienda), borrar `DIRECTIONS` y `work_direction()`, fijar el ciclo `care_tool_next` en cinta/reparar/cincha y dejar trapo y sustituto como sugeridas. Con `constructor-jugador`; tests `package_care`, `package_rescue`.
+- [ ] **N-236.2** Kit inicial escalado por cajas/pasajeros/trampas presentes. Con `constructor-jugador`; tests `package_care`, `depot`.
+- [ ] **N-236.3** Números finos con el arnés y `sim_trap_balance` sin empeorar N-229. Con `pulidor-jugabilidad`.
+- [ ] **N-236.4** Doc de rescate (`jugabilidad-paquetes-rescate.md`) y textos en `strings_ui.csv` (N-805). Con `documentador`.
+
+### N-237 · Eventos de ruta: Impaciente, Inspección real y Mimético acotado; premio 75 — A · `Opus 5.5 · high` · Aviso: no
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, filas 2 y 3. El sorteo (`route_event_manager.gd:17`) queda en **Cliente impaciente, Inspección, Paquete
+mimético**; **Caja parásita y Etiquetas mezcladas salen del sorteo sin borrar código** (Puerta trabada y Tienda confusa ya
+no salen; `test_run_relay` las usa de fixture). Inspección aprueba solo si cada caja está cargada, cerrada y con cinta o
+cincha (hoy se aprueba sola, `:147-151`). Mimético solo sale si la caja real es de dificultad ≥ 3 (Ruidosa, Explosiva,
+Hostil). Premio **75** en los tres; multa solo en Inspección (**75**); Impaciente y Mimético sin multa; `merit` queda.
+Hecho cuando `test_route_event` comprueba: el sorteo solo devuelve los tres, Inspección falla con una caja sin cinta/cincha y
+pasa con todas, Mimético no sale con Frágil + Equilibrio, y premios/multas valen lo dicho. Revisar si el arnés muestra que
+el Mimético arruina la caja revelada en > 70 % (sale) o si el premio pesa más que una entrega en dúo (bajar a 50).
+- [ ] **N-237.1** Sorteo de tres, Inspección estricta y Mimético solo con dificultad ≥ 3. Va después de N-236.1 (la cincha y la cinta del kit definen "protegida"). Con `constructor-progresion`; tests `route_event`, `run_relay`.
+- [ ] **N-237.2** Premios 75 y multa 75 solo en Inspección; actualizar `cartas-y-eventos-de-ruta.md`. Con `constructor-progresion`, números con `pulidor-jugabilidad`; tests `route_event`, `crew_progression`.
+
+### N-238 · Peso Creciente con consecuencia propia y Explosiva a tercera — A · `Opus 5.5 · xhigh` · Aviso: sí (`traps/` de Slatex)
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, filas 4 y 13. Peso Creciente no tiene `on_impact` (hereda el 0 de `ITrapBehavior`,
+`modules/hazards/i_trap_behavior.gd:38-39`) y la integridad se recalcula desde la masa cada tick
+(`growing_weight_trap_behavior.gd:152-156`). Decisión: `on_impact` propio que desgasta en proporción a
+(`mass_multiplier` − 1) en un **acumulador aparte** de la masa; cinta, cincha y relleno lo bajan por `impact_scale()`; solo host,
+sin RPC nuevo. En la curva, **Explosiva a 1 entrega/0 y Peso Creciente a 8/750** (`unlock_manager.gd:22`);
+`TRAP_DIFFICULTY_ORDER` no se toca. Hecho cuando `test_locked_traps` (con el orden de liberación intacto y `MAX_PLAYERS`) y
+un test del desgaste pasan, y `sim_trap_balance` muestra casi-pérdidas del torpe en Peso Creciente sin romper N-229; si
+no las hay, **no se corta** (pregunta 6 del acta): queda como trampa fácil de relleno y se anota. Va después de N-236.1.
+- [ ] **N-238.1** `on_impact` y acumulador de desgaste en Peso Creciente. Con `constructor-trampas`; tests `locked_traps`, `growing_weight`.
+- [ ] **N-238.2** Umbrales: Explosiva 1/0, Peso Creciente 8/750, sin tocar `TRAP_DIFFICULTY_ORDER`. Con `constructor-trampas`; tests `locked_traps`, `unlock`.
+- [ ] **N-238.3** Medir con `sim_trap_balance` y ajustar; decidir cortar o no según la pregunta 6. Con `pulidor-jugabilidad` y `escritor-tests`.
+
+### N-239 · Economía: foto sin multa y seguro de 100 que cubre la caja perdida — B · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida)
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, filas 5 y 11. `COMPLAINT_PENALTY` (`run_manager.gd:33-36`, `:530-533`) 40 → **0**: el reclamo por caja abollada
+sigue saliendo siempre pero no cobra; la foto sigue pagando +25; la línea de reclamos del resultado se muestra sin puntos.
+Seguro: precio 140 → **100** (`crew_progression.gd:59`) y paga 50 por caja arruinada **o perdida** (hoy solo entregada
+arruinada, `depot.gd:58`, `:461`). No debe premiar romper a propósito (20 + 50 < 75; perdida −60 + 50 < 20). Hecho cuando
+`test_crew_progression` y `test_depot` comprueban los tres casos de seguro (entregada arruinada, perdida, intacta) y que romper
+no rinde más que entregar, y un test del resultado comprueba el reclamo sin puntos. Revisar si casi nadie saca fotos
+(telemetría): foto automática al entregar. El doc de tienda se corrige en N-246.
+- [ ] **N-239.1** `COMPLAINT_PENALTY` 0 y línea de resultado sin puntos. Con `constructor-progresion` y `constructor-ui`; tests `crew_progression`, `run_manager`.
+- [ ] **N-239.2** Seguro a 100, paga también por caja perdida. Con `constructor-progresion` y `constructor-mundo`; tests `depot`, `crew_progression`.
+
+### N-240 · Dúo: la caja sobrante recibe asistente y sale de las trampas de solo — A · `Opus 5.5 · xhigh` · Aviso: sí (`package/` y `traps/` de Slatex)
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 6 (opción C). Con 2 jugadores hay 2 casas y 1 pasajero (`route_planner.gd:40,239`); el asistente es solo con 1
+jugador (`package_rescue.gd:34-36`) y el filtro de trampas fáciles solo en solo (`depot.gd:43`, `:643-650`). La cincha no da la
+entrada `steady`/`calm` que leen las trampas. Decisión: la caja sobrante (cajas − pasajeros; hoy solo el dúo) sale de
+`SOLO_TRAPS` (las que protege el manejo) y recibe el asistente de estante mientras nadie la cuida; más la cincha extra de
+N-236.2. Hecho cuando un test de depósito con 2 jugadores comprueba que la caja sobrante solo recibe trampas de `SOLO_TRAPS`,
+un test de rescate que el asistente la cuida mientras nadie la cuida y deja de hacerlo al tomarla, y `sim_trap_balance` en dúo
+no pierde la sobrante > 50 % (si pasa, revisar `MIN_CREW_HOUSES`). Va después de N-236.2.
+- [ ] **N-240.1** Filtro de trampas para la caja sobrante en el depósito. Con `constructor-mundo`; tests `depot`, `locked_traps`.
+- [ ] **N-240.2** Asistente de estante para la caja sobrante. Con `constructor-jugador`; tests `package_rescue`.
+- [ ] **N-240.3** Revisión de red del asistente con dos clientes. Con `auditor-red`.
+
+### N-241 · Bandera que apaga cartas, votación de tienda y mérito de campaña — B · `Opus 5.5 · high` · Aviso: sí (`scripts/ui/` de Slatex) · ⏸ pregunta 3 del acta
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 7. ⏸ **Decide el usuario** (pregunta 3: ¿la 1.0 sale sin cartas, votación ni mérito de campaña? Recomendación: sí,
+por bandera). Con la bandera apagada: sin cartas, la tienda es compra directa, sin mérito de campaña; queda el mérito de
+partida (`_run_merit`: MVP, Rescatista). El módulo `coop_vote` y el código quedan; la campaña v1 se sigue leyendo e
+ignora `merit`/`card`. Hecho cuando con la bandera apagada un test recorre una campaña sin cartas ni votación y el MVP y el
+Rescatista siguen saliendo, y con la bandera prendida todo funciona como hoy. **Achica N-226.2** (ver nota allá). Va después de N-239 y N-237.
+- [ ] **N-241.1** Bandera en `crew_progression.gd` y `run_manager.gd` (cartas, mérito de campaña). Con `constructor-progresion`; tests `crew_progression`, `route_event`.
+- [ ] **N-241.2** Tienda por compra directa y UI sin cartas ni voto con la bandera apagada. Con `constructor-ui`; tests `crew_panel`, `depot`.
+
+### N-242 · Espejo roto fuera del sorteo de fallas — C · `Opus 5.5 · low` · Aviso: no
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 8. `vehicle_fault_effects.gd` solo esconde la carcasa (`:81-86`) y no hay cámara de retrovisor. Sale del sorteo
+(queda la puerta trasera); código, lugar de reparación y `test_vehicle_faults` quedan. Hecho cuando `test_vehicle_faults`
+comprueba que el sorteo no devuelve Espejo roto y que la falla forzada a mano sigue funcionando. Con `constructor-camion`; tests `vehicle_faults`.
+- [ ] **N-242.1** Sacar Espejo roto del sorteo sin borrar código.
+
+### N-243 · Endless no termina al parar a reparar — A · `Opus 5.5 · medium` · Aviso: no
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 14. Endless termina tras 6 s bajo 0,3 m/s (`level_endless.gd:31-32`, `:82-93`) sin las excepciones del
+Reparto (`level_base.gd:183-195`): reparar exige ≤ 9 m/s y puede cerrar la partida. No depende de la pregunta 1. Hecho cuando
+`test_level_endless` comprueba que sin conductor o con el camión parado a propósito (reparando) no termina, y que sigue
+terminando con el camión trabado de verdad. Con `constructor-tramos`; tests `level_endless`. Si hace falta tocar `level_base.gd`
+(zona compartida), dejar aviso y reutilizar el helper en vez de copiarlo.
+- [ ] **N-243.1** Endless usa las mismas excepciones de atasco que el Reparto.
+- [ ] **N-243.2** ⏸ **Decide el usuario** (pregunta 1 del acta: ¿Endless sale en la 1.0? Recomendación: ocultarlo del menú por bandera y sacarlo en una actualización con sesión, casas y pago): bandera que oculta Endless en el menú, con test de que el menú no lo ofrece. Con `constructor-ui`; aviso: sí (`scripts/ui/`).
+
+### N-244 · Pings: "¡Izquierda!" y "¡Derecha!" por "Tengo la cinta" y "¡Cuidado!" — C · `Opus 5.5 · low` · Aviso: sí (`scripts/ui/ping_catalog.gd` de Slatex) · ⏸ pregunta 4 del acta
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 9. ⏸ **Decide el usuario** (pregunta 4: cruza la rueda de emotes S-311.89; recomendación: reemplazar ahora, solo datos
+y textos, sin tocar la rueda). Reemplazar 2 de 8 frases (`ping_catalog.gd:7-16`), no sumar. Hecho cuando el test del catálogo
+comprueba las 8 frases, sin "Tengo la cinta" ni "¡Cuidado!", con textos traducidos (N-805). Con `constructor-ui`; tests `ping`, `strings`.
+- [ ] **N-244.1** Datos, textos en `strings_ui.csv` y voces de N-505 para las dos frases nuevas.
+
+### N-245 · Frágil: medir el golpe por bache con recorridos grabados — C · `Opus 5.5 · medium` · Aviso: no
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 12, y el "a decidir" de N-117.2. El golpe por bache a más de 35 km/h (`bump_jolt_per_speed` 1,8) **queda
+así**; no se sube el badén. El arnés usa 3 baches sintéticos por recorrido: medir con recorridos grabados con ese golpe. Hecho
+cuando el informe de `sim_trap_balance` (`tests/sim_data/balance_report.md`) con recorridos grabados deja al torpe en Frágil
+entre 30 y 55 % de pérdida, o anota el porqué si no. Con `pulidor-jugabilidad`; tests `sim_trap_balance`. Va después de N-238 (mismo arnés).
+- [ ] **N-245.1** Recorridos grabados con el golpe por bache en el arnés y tabla antes/después.
+
+### N-246 · Doc de tienda con los 4 ítems reales y precios nuevos — C · `Opus 5.5 · low` · Aviso: no · ⏸ pregunta 7 del acta
+Origen: `docs/decisiones/2026-09-30-mecanicas.md`, fila 15. ⏸ **Decide el usuario** (pregunta 7: ¿la tienda vende algo más que 4 consumibles en la 1.0? Recomendación: no, se corrige el doc).
+`economia-y-contramedidas.md` promete más ítems que los 4 reales. Hecho cuando el doc lista los 4 ítems con los precios que
+deja N-239 (seguro 100) y no promete otros. Con `documentador`. Va después de N-239.
+- [ ] **N-246.1** Reescribir la sección de tienda de `economia-y-contramedidas.md`.
+
+---
 
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
@@ -195,6 +309,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
 | **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227, N-228, N-229 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
+| **M10 — Mecánicas del acta 2026-09-30** | Recortar y afinar las mecánicas antes del lanzamiento: kit de tres herramientas, eventos, Peso Creciente, dúo, economía, Endless sin atasco. Va **después de M8** y antes de las heredadas de Slatex; las ⏸ esperan al usuario. | N-243, N-242, N-236, N-239, N-237, N-238, N-240, N-245, N-241 ⏸, N-244 ⏸, N-246 ⏸ |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
@@ -307,7 +422,7 @@ pasajero es espectador.
     mantener no protege. Hallazgo que el diseño no tenía: los baches **no golpean** (la suspensión se los come,
     ya medido en N-105) y `HOLD_PROTECTION` le daba a Frágil 72 % menos de golpe al que mantiene. Se agregó
     el aviso de bache (`RoadImpacts`) y el golpe por bache tomado a más de 35 km/h
-    (`bump_jolt_per_speed`, en 0 se apaga); **a decidir**: si ese golpe entra así o se sube el badén.
+    (`bump_jolt_per_speed`, en 0 se apaga); **a decidir**: si ese golpe entra así o se sube el badén. *Decidido 2026-09-30 (acta de mecánicas, fila 12): entra así; medirlo con recorridos grabados es N-245.*
   - Arnés: perfil "siempre mantiene" y tabla antes/después. Siempre-mantiene pierde 80 %+ en 4 de 7 (antes 3);
     Frágil 0 → 100 / 49,2 / 2,8 % (con 3 baches sintéticos por recorrido: los grabados no golpean);
     Hostil ya estaba fuera de objetivo antes (83,2 % torpe).
@@ -415,7 +530,7 @@ ids aleatorios grandes verifica colores distintos y estables.
   `NetworkManager.color_slot(peer_id)` (host 0, cada joiner el libre más bajo desde que empieza a autenticarse; fuera de
   sesión, el `posmod` de siempre). Viaja en el handshake (`"colors"`) y por el RPC `_sync_color_slots` en cada join, salida
   o auth fallida; señal `color_slots_changed`. `PROTOCOL_VERSION` 9 → 10. `auditor-red`: sin bugs; par y trío en verde.
-- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+- [ ] **N-226.2** (se achica con N-241: si cartas y mérito de campaña quedan apagados, no hay que guardar mérito ni carta por color; acta de mecánicas, fila 7) Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
   Notas de `auditor-red` (N-226.1): `MAX_PLAYERS` es 8 y la paleta 5, así que se lee `posmod(color_slot(id), paleta.size())`;
   jugando solo el host da 1 y en sala 0 (decidir si solo se lee como 0); un índice liberado lo hereda el próximo que entra
   (mérito/carta por color dentro de la sesión: reservarlo mientras dure o documentarlo); los lectores escuchan también
