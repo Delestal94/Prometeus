@@ -42,6 +42,8 @@ for role in host client; do
 	line="$(grep -m1 "^PAIR role=$role " "$WORK/$role.log" || true)"
 	echo "${line:-PAIR role=$role (no result)}"
 	grep -m1 "^NETMETRIC " "$WORK/$role.log" || true
+	# What the F3 network overlay read on that side (N-216).
+	grep -m1 "^NETSTATS " "$WORK/$role.log" || true
 	# Join timing: how close the level load came to the handshake timeout.
 	grep "^NETLOG " "$WORK/$role.log" || true
 	case "$line" in
