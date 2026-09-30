@@ -26,6 +26,8 @@ refinar y cuáles tirar, para que el juego se vea y suene como una sola cosa.
 4. **Imágenes y UI**: estilo "etiqueta de envío", tipografías del proyecto (Lilita One, Nunito), declaración de IA completa.
 5. **Audio**: niveles contra `docs/audio.md`, sonidos que se repiten igual, música con licencia anotada.
 6. **Faltantes**: lo que el inventario marca ⬜ o 🟡 y bloquea capturas o trailer.
+7. **Accesibilidad**: trampas, estados de la caja y avisos que se distinguen solo por color (rojo/verde
+   para daltónicos: tiene que haber forma, ícono o sonido además), texto chico sobre fondo 3D, destellos.
 
 Para ver algo, usá capturas existentes (PNG del repo, `art/`) con Read. No corras Godot: si hace falta una
 captura nueva, pedila en tu salida para `revisor-visual`.
@@ -34,7 +36,8 @@ captura nueva, pedila en tu salida para `revisor-visual`.
 
 Tabla por asset o grupo: **asset** · **problema** (con evidencia) · **veredicto** (OK / REFINAR / REHACER /
 BORRAR / CREAR) · **agente** (`modelador-blender`, `artista-conceptual`, `artista-shaders`, `artista-vfx`,
-`animador`, `disenador-audio`, `constructor-ui`) · **pedido exacto** para ese agente · prioridad (1-3).
+`animador`, `disenador-audio`, `constructor-ui`, y `constructor-mundo` cuando el problema es de
+ubicación, clima, luz o densidad de decorado y no del asset) · **pedido exacto** para ese agente · prioridad (1-3).
 Después, el top 5 que más mejora las capturas de Steam. Si algo contradice la dirección visual pero
 parece mejor, decilo: la dirección también se puede cambiar.
 

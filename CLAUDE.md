@@ -47,13 +47,15 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 |---|---|
 | Cuestionar | `abogado-del-diablo` (lo ya hecho), `critico-diseno` (ideas antes de construir), `director-arte` (assets existentes), `auditor-integral` (todo el proyecto cruzando código, arte técnico, agentes, docs y pipeline; rutina diaria) |
 | Planificar | `planificador-tareas` (hallazgos → tareas N-/S- con agente, esfuerzo y aviso), `guardian-dominios` |
-| Construir código | `constructor-camion`, `constructor-tramos`, `constructor-trampas`, `constructor-progresion`, `constructor-ui`, `escritor-tests` |
-| Crear y refinar assets | `modelador-blender`* (3D), `artista-conceptual`* (imágenes, texturas), `artista-shaders`* (materiales), `artista-vfx` (partículas y efectos), `animador`* (clips y procedurales), `disenador-audio` (SFX) |
-| Pulir | `pulidor-jugabilidad` (tiempos, números, feedback de lo que ya existe) |
+| Construir código | `constructor-camion`, `constructor-tramos` (tipos de tramo y generación), `constructor-mundo` (depósito, casas, clima, fauna, decorado), `constructor-jugador` (jugador, paquete, interacción), `constructor-trampas`, `constructor-red` (red y Steam; siempre seguido de `auditor-red`), `constructor-progresion`, `constructor-ui` (incluye tutorial), `escritor-tests` |
+| Crear y refinar assets | `modelador-blender`* (3D), `artista-conceptual`* (imágenes, texturas), `artista-shaders`* (materiales), `artista-vfx` (partículas y efectos), `animador`* (clips y procedurales), `disenador-audio` (SFX y música compuesta por código) |
+| Pulir y balancear | `pulidor-jugabilidad` (tiempos, números, feedback, primera partida; balance con `sim_trap_balance` y `bench_*`) |
 | Verificar | `ejecutor-tests`, `probador-qa` (juego completo sin gente), `revisor-visual`, `cazador-bugs`, `revisor-gdscript`, `auditor-red`, `perfilador-rendimiento` |
 | Cerrar y lanzar | `documentador`, skill `cerrar-cambio`, `empaquetador-release`, `estratega-steam` (página, cápsulas, features de Steam, calendario) |
 
 \* necesitan Blender o ComfyUI en la PC para la parte de assets; su parte de código corre en cualquier lado.
+Qué rutina dispara cada etapa (incluidas las dormidas: post-lanzamiento, playtesting): tabla "Cobertura por
+etapa" de `.claude/rutinas/README.md`.
 Pasada de refinamiento típica: `director-arte` / `abogado-del-diablo` → `planificador-tareas` → el
 constructor o artista de cada tarea → `ejecutor-tests` + `revisor-visual` → `cerrar-cambio`.
 

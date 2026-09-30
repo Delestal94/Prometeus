@@ -32,6 +32,34 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 | Sesión de arte (PC) | `sesion-arte.md` | cada 2 h, a las :30 de las horas pares | `arte/<ID>-*` | un asset creado o refinado → un PR |
 | Build y rendimiento (PC) | `pc-build.md` | todos los días 03:15 | `rutina/pc-AAAA-MM-DD` | build de Windows probada, FPS con GPU, capturas con luz real |
 
+## Cobertura por etapa
+
+Cada etapa del desarrollo tiene una rutina que la dispara y agentes que la hacen. Si aparece una etapa o
+una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
+
+| Etapa | Rutina (cuándo) | Agentes |
+|---|---|---|
+| Juzgar ideas antes de construirlas | revisión (lunes, antes de que construcción tome tareas `xhigh` o mecánicas nuevas) | `critico-diseno` |
+| Hacerle la contra a lo hecho | revisión (lunes) | `abogado-del-diablo`, `director-arte` |
+| Planificar | todas las que registran hallazgos | `planificador-tareas`, `guardian-dominios` |
+| Construir código | construcción (2 por hora) | `constructor-tramos`, `constructor-mundo`, `constructor-camion`, `constructor-jugador`, `constructor-trampas`, `constructor-red`, `constructor-progresion`, `constructor-ui` |
+| Sonido, efectos, animación por código, shaders | construcción | `disenador-audio`, `artista-vfx`, `animador`, `artista-shaders` |
+| Assets con Blender o ComfyUI, música regenerada, capturas de tienda y tráiler | sesión de arte (PC, cada 2 h) | `modelador-blender`, `artista-conceptual`, `artista-shaders`, `artista-vfx`, `animador`, `disenador-audio` |
+| Pulir y balancear | construcción (tareas de revisión y QA) + QA de los domingos (simuladores) | `pulidor-jugabilidad`, `probador-qa` |
+| Primera partida y tutorial | revisión, semana 1 del mes → construcción | `pulidor-jugabilidad`, `constructor-ui` |
+| Accesibilidad | revisión, semana 2 del mes → construcción | `director-arte`, `constructor-ui` |
+| Red y plataforma | construcción (PRs de red) + mantenimiento (jueves) + revisión, semana 3 | `constructor-red`, `auditor-red` |
+| Rendimiento | QA (si hay leak) + revisión, semana 4 + build de la PC (diaria, FPS con GPU) | `perfilador-rendimiento` |
+| Verificar cada cambio | construcción | `ejecutor-tests`, `escritor-tests`, `cazador-bugs`, `revisor-gdscript`, `revisor-visual` |
+| Juego armado de punta a punta | QA (diario) | `probador-qa`, `cazador-bugs` |
+| Auditoría del proyecto entero | auditoría (diaria) | `auditor-integral` |
+| Docs, avisos, licencias | mantenimiento (jueves) | `documentador`, `guardian-dominios` |
+| Página de Steam, cápsulas, calendario, devlog | lanzamiento (mensual) → sesión de arte | `estratega-steam`, `artista-conceptual`, `revisor-visual` |
+| Build de prueba | build de la PC (diaria; publicar sigue ⏸ con M5) | `empaquetador-release`, `perfilador-rendimiento`, `revisor-visual` |
+| Post-lanzamiento (reseñas, parches) | lanzamiento, dormida hasta un tag `v1.*` | `estratega-steam`, `cazador-bugs`, `pulidor-jugabilidad`, `empaquetador-release` |
+| Playtesting con gente | ⏸ decisión del usuario (diferido al final): la lista vive en "Para cuando haya playtesting" de `tareas-nacho.md` | — |
+| Personajes (modelo y apariencia) | ⏸ decisión del usuario; S-311 es de Slatex | — |
+
 ## Reglas comunes (todas las rutinas)
 
 1. **Freno de mano**: si existe `.claude/rutinas/PAUSA` en `origin/main`, terminá la corrida sin hacer
@@ -71,8 +99,9 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 ## Límites de la nube
 
 Blender y ComfyUI no están: `modelador-blender`, `artista-conceptual` y la parte de assets de
-`animador`, `artista-shaders` y `artista-vfx` quedan para `sesion-arte.md`. Las capturas son render por
-software: composición, colores y UI valen; sombras y FPS no. Builds, FPS y luz real: `pc-build.md`.
+`animador`, `artista-shaders` y `artista-vfx` quedan para `sesion-arte.md` (también regenerar música
+con `tools/audio/compose_music.py`). Las capturas son render por software: composición, colores y UI
+valen; sombras y FPS no. Builds, FPS y luz real: `pc-build.md`; capturas de tienda y tráiler: `sesion-arte.md`.
 
 ## Los triggers de la nube
 

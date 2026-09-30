@@ -70,19 +70,26 @@ Los subagentes no pueden lanzar otros: todo lo que sigue lo decide la rutina.
 2. **Construir** con el agente del área, dándole el contexto completo de la tarea (pierde el tuyo), o
    vos mismo si cruza varias áreas. Revisá siempre lo que devuelva.
 
-   | Área | Agente |
+   | Área (carpeta) | Agente |
    |---|---|
-   | Ruta, tramos, decorado | `constructor-tramos` |
-   | Camión (`vehicle.gd`/`vehicle.tscn` y sus componentes) | `constructor-camion` |
-   | Trampas | `constructor-trampas` |
-   | Economía, progresión, eventos, puntaje | `constructor-progresion` |
-   | UI, HUD, menús | `constructor-ui` |
-   | Sonido | `disenador-audio` |
+   | Tipos de tramo y generación de la ruta (`route/segments/`, `route_streamer`, `route.gd`, terreno) | `constructor-tramos` |
+   | Depósito, casas, clima y hora, cielo, fauna, historias, carteles, decorado general, mezcla del mundo, calidad (`depot/`, el resto de `route/`) | `constructor-mundo` |
+   | Camión (`vehicle/`, `vehicle_presentation`; `vehicle.gd`/`.tscn` editables; sistemas nuevos como componente aparte) | `constructor-camion` |
+   | Jugador, paquete fuera de su trampa, interacción, cámaras de asiento, celular, espectador (`player/`, `package/`, `interaction/`) | `constructor-jugador` |
+   | Trampas (`traps/`, `data/traps/`) | `constructor-trampas` |
+   | Red y Steam (`network_manager`, `proximity_voice`, relays, sincronizadores, lobby, logros, nube) | `constructor-red` (y siempre `auditor-red` después) |
+   | Economía, progresión, eventos, puntaje, campaña | `constructor-progresion` |
+   | UI, HUD, menús, tutorial y tips de primera vez (`scripts/ui/`) | `constructor-ui` |
+   | Sonido y música (`synth_audio*`, `tools/audio/`) | `disenador-audio` |
    | Partículas y efectos | `artista-vfx` (sin ComfyUI) |
    | Animación por código, `PlayerAnimator` | `animador` (sin Blender) |
    | Shaders | `artista-shaders` (sin Blender/ComfyUI) |
-   | Pulir algo que ya existe | `pulidor-jugabilidad` |
+   | Pulir o balancear algo que ya existe (con los simuladores) | `pulidor-jugabilidad` |
    | Tests que faltan | `escritor-tests` |
+   | Rendimiento medido | `perfilador-rendimiento` |
+
+   Si la carpeta de la tarea no está en la tabla, hacela vos y anotá en el PR "área sin constructor:
+   <carpeta>": la auditoría (pilar 3) lo convierte en tarea.
 
 3. **Test** nuevo o ampliado (skill `nuevo-test`).
 4. **Correr** con `ejecutor-tests` y el filtro del área, nunca sin filtro.

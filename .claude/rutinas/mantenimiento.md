@@ -24,7 +24,10 @@ PRs mezclados en los últimos 7 días y su diff total:
    `compartida`) y los 3 archivos que más cambiaron.
 5. Chequeos baratos, directos: `bash tools/list-tests.sh --missing` vacío; `bash tools/lint.sh` sin
    errores nuevos respecto de `tools/lint-baseline.txt` (si la baseline se puede achicar, achicala);
-   `.uid` sin trackear de archivos que sí están trackeados → agregalos.
+   `.uid` sin trackear de archivos que sí están trackeados → agregalos; cada `.ogg` de
+   `do-not-drop/assets/audio/music/` tiene fila en su `LICENCIA.md` y cada imagen nueva de la semana en
+   `art/` o `assets/` tiene línea en `art/ai-registro.md` (si falta, agregala con lo que diga el commit
+   que la trajo; es la base de la declaración de IA de Steam).
 
 ## 3. Registrar
 
@@ -32,7 +35,8 @@ PRs mezclados en los últimos 7 días y su diff total:
 - Si no, rama `rutina/mant-AAAA-MM-DD`:
   - docs y avisos arreglados directamente;
   - hallazgos de código (BUG / RIESGO de `auditor-red`, bugs reales de `revisor-gdscript`) →
-    **`planificador-tareas`**, en `tareas-nacho.md`, prioridad según gravedad, con
-    `Origen: mantenimiento AAAA-MM-DD` y sujetas al freno de tareas (regla 11 del README);
+    **`planificador-tareas`**, en `tareas-nacho.md`, prioridad según gravedad (los de red con
+    `constructor-red` como agente sugerido), con `Origen: mantenimiento AAAA-MM-DD` y sujetas al freno
+    de tareas (regla 11 del README);
   - PR `chore: weekly maintenance AAAA-MM-DD` con auto-merge; cuerpo con lo arreglado y las tareas creadas.
 - Esta rutina no arregla código del juego (salvo `.uid` faltantes y lint trivial).

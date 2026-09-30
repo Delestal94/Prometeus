@@ -11,7 +11,10 @@ de construcción toma primero. Reglas comunes y sesión: `.claude/rutinas/README
    Pasale la tabla "Hallazgos" actual de `docs/qa-recorrido.md` para que no repita los conocidos.
 3. Si reporta crecimiento de nodos o memoria en el endless, o avisos cada frame: **`perfilador-rendimiento`**
    con esos números, para ubicar la causa (sin arreglarla acá).
-4. Por cada hallazgo "bloquea" (máximo 3 por corrida): **`cazador-bugs`** con el escenario exacto, para
+4. **Domingos** (`date +%u` = 7): además, el paso 6 de `probador-qa` (balance: `sim_trap_balance` y
+   `bench_route_duration`). Una trampa que pasó a "REQUIERE AJUSTE" o una entrega fuera de rango es
+   hallazgo "molesta" y la tarea va con `pulidor-jugabilidad`.
+5. Por cada hallazgo "bloquea" (máximo 3 por corrida): **`cazador-bugs`** con el escenario exacto, para
    tener causa raíz y archivo:línea.
 
 ## 2. Registrar

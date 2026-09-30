@@ -34,6 +34,20 @@ find "$OUT" -name '*.png'
 - Si el log tiene `SCRIPT ERROR`, reportalo tal cual en vez de inventar un
   análisis de imágenes que no se generaron.
 
+## Capturas de tienda y tráiler
+
+Solo en la PC (GPU real; en la nube sombras y luz no valen para la tienda):
+
+- `tests/render_store_shots.gd` — las capturas fijas de la página de Steam (1920x1080, con ventana,
+  nunca `--headless`), a `user://store_shots/`.
+- `scenes/tools/trailer_shot.tscn` con `-- --shot=<nombre>` — un plano del tráiler (definidos en
+  `data/trailer_shots.json`): `--write-movie <archivo>.avi` para el plano entero, `--still=<seg>
+  --out=<png>` para una foto, `--frames=<dir> --fps=12` para un GIF (`tools/devlog/make_gif.py`). Leé
+  la cabecera de `scripts/tools/trailer_shot.gd` antes. Salidas a `art/marketing/` o `art/devlog/`.
+
+Mirá cada imagen como la vería alguien en la tienda: ¿se entiende en 1 segundo qué es el juego?, ¿hay
+HUD, carteles de debug o cosas cortadas?, ¿la miniatura a 25 % se lee?
+
 ## Qué mirar
 
 Abrí cada PNG con Read. Compará con lo que pide el cambio y con

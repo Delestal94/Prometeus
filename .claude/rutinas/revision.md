@@ -11,14 +11,23 @@ Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
 - Las 2 auditorías anteriores en `docs/auditorias/` (para no repetir y ver qué quedó sin resolver).
 - Las próximas 5 tareas abiertas de cada lista según su "Orden de ataque".
 
-## 2. Tres miradas, en este orden
+## 2. Cuatro miradas, en este orden
 
 1. **`abogado-del-diablo`**: sobre lo mezclado en la semana y el hito en curso. Pedile los 6 ejes y el
    top 3 por valor/día.
 2. **`director-arte`**: sobre los assets que cambiaron en la semana más un área que rota por semana
    del mes (1: modelos 3D, 2: texturas e imágenes, 3: UI y animaciones, 4-5: audio y efectos). En la nube
    no hay Blender: que trabaje con los .glb, las imágenes y las capturas del repo.
-3. **`critico-diseno`**: sobre las próximas tareas que agregan una mecánica nueva o tienen esfuerzo
+3. **Rotación del mes** (una por semana según `date +%d`: días 1-7, 8-14, 15-21, 22-31):
+   - semana 1 — **primera partida**: `pulidor-jugabilidad` en modo "pasada de primera partida" (solo
+     informe: pedile que no aplique cambios, la rutina de construcción los toma como tareas);
+   - semana 2 — **accesibilidad y opciones**: `director-arte` con foco en su punto 7 más las opciones de
+     `ui/options_panel.gd` (subtítulos o texto para lo que solo suena, remapeo, color, sacudida);
+   - semana 3 — **red sin mirar un diff**: `auditor-red` sobre el flujo completo (crear sala, join tardío,
+     desconexiones, host que se va) para encontrar lo que ningún PR tocó;
+   - semana 4 — **rendimiento**: `perfilador-rendimiento` en modo medición (sin cambios) sobre endless y
+     entrega, contra los números de la auditoría anterior.
+4. **`critico-diseno`**: sobre las próximas tareas que agregan una mecánica nueva o tienen esfuerzo
    `xhigh` (máximo 3), **antes** de que la rutina de construcción las tome. Su veredicto se anota en la
    tarea: "Veredicto `critico-diseno` (AAAA-MM-DD): CONSTRUIR CON CAMBIOS — <cambios>".
 
@@ -26,7 +35,7 @@ Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
 
 Rama `rutina/revision-AAAA-MM-DD` desde `origin/main`.
 
-1. `docs/auditorias/AAAA-MM-DD-revision.md`: resumen de las tres miradas (no el texto entero), con el
+1. `docs/auditorias/AAAA-MM-DD-revision.md`: resumen de las cuatro miradas (no el texto entero), con el
    top 3, las decisiones pendientes del usuario y qué quedó sin resolver de la auditoría anterior.
 2. **`planificador-tareas`** con los hallazgos, bajo estas reglas:
    - **Máximo 8 tareas nuevas** por semana; el resto queda en la auditoría. Cada una lleva

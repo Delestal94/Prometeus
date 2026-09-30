@@ -60,6 +60,10 @@ repitas. Si uno sigue abierto y empeoró, decilo en una línea con su ID origina
 - Duplicación (dos agentes con el mismo trabajo), vacíos (una etapa sin dueño), contradicciones
   (una regla de un agente choca con el README de rutinas o con `CLAUDE.md`), referencias a archivos,
   herramientas o agentes que ya no existen, modelo/`effort` que no encaja con el trabajo.
+- Cobertura: cada carpeta de `do-not-drop/scripts/` tiene su constructor en la tabla de
+  `.claude/rutinas/construccion.md`, y cada etapa de la tabla "Cobertura por etapa" de
+  `.claude/rutinas/README.md` tiene rutina y agente que existen. Datos que un agente da como hechos
+  (listas de archivos, "hoy no hay X", tareas "en curso") contra el repo actual.
 - Rutinas: horarios que se pisan, ramas que chocan, pasos que nunca producen nada. Fallos
   silenciosos: `gh pr list --state all --search "head:rutina/" --limit 30` y `gh pr list --search
   "head:nacho/"` (PRs rojos o cerrados sin mezclar, rutinas que no abrieron PR en días).
