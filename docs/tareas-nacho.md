@@ -2317,9 +2317,12 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 #### S-803 · Bot de caos — B · `Opus 5.5 · xhigh` · Aviso: no
 
-- [ ] `tests/test_chaos_bot.gd`: un jugador bot hace acciones al azar (con semilla fija) durante 5 minutos
+- [x] `tests/test_chaos_bot.gd`: un jugador bot hace acciones al azar (con semilla fija) durante 5 minutos
   simulados en el nivel de entrega: agarrar, soltar, abrir, montar, sentarse, pararse, pingear, sacar foto.
   Falla si aparece un `push_error`, un NaN en posiciones o una caja fuera del mundo.
+  Hecho: 300 s simulados (18000 ticks a 1/60 s) en ~35 s de pared, acelerando con `physics_ticks_per_second` x
+  `time_scale` (solo `time_scale` alarga el paso, no acelera); errores capturados con un `Logger`. No entra en
+  los 20 s de S-806. Rama `nacho/S-803-chaos-bot`.
 
 #### S-804 · Nada anunciado queda colgado — A · `Opus 5.5 · high` · Aviso: no
 
