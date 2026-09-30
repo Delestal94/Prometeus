@@ -233,6 +233,7 @@ func _ready() -> void:
 	_cargo_care = preload("res://scripts/gameplay/player/player_cargo_care.gd").new()
 	_cargo_care.name = "CargoCare"
 	add_child(_cargo_care)
+	add_child(preload("res://scripts/gameplay/player/player_voice.gd").new())
 	_last_safe_ground = global_position
 	if is_local():
 		var profile: Node = get_node_or_null("/root/UnlockManager")
