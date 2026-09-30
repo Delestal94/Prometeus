@@ -44,7 +44,7 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 
 | Etapa | Agentes |
 |---|---|
-| Cuestionar | `abogado-del-diablo` (lo ya hecho), `critico-diseno` (ideas antes de construir), `director-arte` (assets existentes) |
+| Cuestionar | `abogado-del-diablo` (lo ya hecho), `critico-diseno` (ideas antes de construir), `director-arte` (assets existentes), `auditor-integral` (todo el proyecto cruzando código, arte técnico, agentes, docs y pipeline; rutina diaria) |
 | Planificar | `planificador-tareas` (hallazgos → tareas N-/S- con agente, esfuerzo y aviso), `guardian-dominios` |
 | Construir código | `constructor-camion`, `constructor-tramos`, `constructor-trampas`, `constructor-progresion`, `constructor-ui`, `escritor-tests` |
 | Crear y refinar assets | `modelador-blender`* (3D), `artista-conceptual`* (imágenes, texturas), `artista-shaders`* (materiales), `artista-vfx` (partículas y efectos), `animador`* (clips y procedurales), `disenador-audio` (SFX) |

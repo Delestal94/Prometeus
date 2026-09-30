@@ -10,7 +10,8 @@ Ninguna rutina habla con otra: se comunican por archivos del repo y por PRs.
 
 ```
 revision (lunes) ──► docs/auditorias/AAAA-MM-DD-revision.md ──┐
-qa (diario) ───────► docs/qa-recorrido.md (Hallazgos) ────────┼─► planificador-tareas ─► docs/tareas-*.md
+qa (diario) ───────► docs/qa-recorrido.md (Hallazgos) ────────┤
+auditoria (diaria) ► docs/auditorias/AAAA-MM-DD-integral.md ──┼─► planificador-tareas ─► docs/tareas-*.md
 mantenimiento (jue) ► docs arreglados + hallazgos de código ──┤                              │
 lanzamiento (mes) ─► docs/marketing/ ─────────────────────────┘                              ▼
                                                                construccion (2 por hora) ─► PR ─► CI ─► main
@@ -22,6 +23,7 @@ sesion-arte (a mano, en la PC) ◄── tareas "necesita PC" ◄─────
 | Construcción A | `construccion.md` (prioridad `nacho`) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
 | Construcción B | `construccion.md` (prioridad `slatex`) | cada hora, :37 | idem | una tarea → un PR |
 | QA | `qa.md` | todos los días 06:00 | `rutina/qa-AAAA-MM-DD` | hallazgos + tareas de bugs |
+| Auditoría integral | `auditoria.md` | todos los días 04:00 | `rutina/auditoria-AAAA-MM-DD` | un pilar a fondo + últimas 24 h, ≤ 3 tareas |
 | Revisión (la contra) | `revision.md` | lunes 09:00 | `rutina/revision-AAAA-MM-DD` | auditoría + tareas nuevas |
 | Mantenimiento | `mantenimiento.md` | jueves 09:00 | `rutina/mant-AAAA-MM-DD` | docs al día + hallazgos |
 | Lanzamiento | `lanzamiento.md` | día 1 de cada mes, 10:00 | `rutina/lanzamiento-AAAA-MM` | estado de Steam + tareas |
