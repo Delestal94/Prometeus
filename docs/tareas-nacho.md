@@ -220,12 +220,13 @@ carga/rol, el asiento del juego lo extiende), `seat_camera` (`SeatCamera` con `a
 **`UiTheme` se queda en el juego** (es la marca: paleta, fuentes e íconos; se lleva copiando el archivo),
 decisión en `docs/modulos.md`. Los tres módulos pasan `portability-check`; los tests del juego no cambian.
 
-### N-233 · Fase 4: generación de ruta y clima — B · `Opus 5.5 · xhigh` · Aviso: no · ⏸ en curso (sesión de Nacho)
-`route_gen` (`RouteStreamer`, `RouteSegment`, `RoutePlanner` con "paradas", `RouteTerrain`,
-`RouteDresser`, los tramos) y `world_mood` (`WorldMood.pick(seed)`, `RouteSky`, `WindshieldRain`). Los
-tramos reciben semilla, audio y materiales por configuración; el cruce de tren saca sus RPC a una señal
-que el juego relaya. Se parte por tramo. Hecho cuando `test_route*`, `test_world_mood`, `test_level_endless`
-y `route_smoke_check` pasan con las mismas semillas y los dos módulos pasan `portability-check`.
+### N-233 · Fase 4: generación de ruta y clima — B · `Opus 5.5 · xhigh` · Aviso: sí (`game_settings.gd` de Slatex, una línea) · **[x] rama `nacho/N-233-route-gen`**
+`route_gen` (`RouteSegment`, `SegmentStreamer` → `RouteStreamer` del juego lo extiende con su pool, la semilla, el cielo
+y los cruces; `TerrainField` → `route_terrain.gd` lo extiende con el shader, las texturas y las cascadas; los seis tramos
+construidos por código) y `world_mood` (`WorldMood` con la estación y la noche en `DetailMaterials`). `RoutePlanner`, los
+tramos con assets, `RouteDresser`, `RouteSky` y `WindshieldRain` se quedan en el juego (decisión en `docs/modulos.md`).
+Los dos módulos pasan `portability-check`; `test_route*`, `test_world_mood`, `test_level_endless` y `route_smoke_check`
+sin cambios.
 
 ### N-234 · Fase 5: contrato de peligros, votación, perfil y telemetría — C · `Opus 5.5 · high` · Aviso: sí (`traps/` de Slatex) · ⏸ en curso (sesión de Nacho)
 `hazards` (`ITrapBehavior` + `TrapDefinition` con `name_key` por `@export`, sin `NAME_KEYS` fijo),

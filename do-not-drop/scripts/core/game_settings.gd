@@ -190,6 +190,9 @@ func _init() -> void:
 
 func _ready() -> void:
 	super()
+	# The palette reaches the render_budget module before the first model is
+	# dressed (the route_gen and world_mood modules go to DetailMaterials directly).
+	LowpolyMaterials.configure()
 	WORLD_QUALITY.watch(get_tree())
 	WORLD_QUALITY.apply(get_tree(), graphics_quality)
 
