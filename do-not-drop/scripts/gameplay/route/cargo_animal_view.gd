@@ -13,7 +13,7 @@ extends Node3D
 ## Models: a gull of primitives (cargo_gull.gd: white, grey wings, yellow beak;
 ## the roadside bird is a brown blob at this size), the rigged village dog
 ## animated by wildlife_animal.gd and scaled up to be read, and the bees, one
-## MultiMesh of yellow and black capsules orbiting the cake.
+## MultiMesh of striped, winged bees (cargo_bee_mesh.gd) orbiting the cake.
 ##
 ## Cost: nothing while no animal is out (process is off). With one: a handful
 ## of transforms a frame, and one raycast when the dog arrives.
@@ -40,7 +40,7 @@ const DOG_HOP_SECONDS: float = 0.45
 const DOG_RUN_SPEED: float = 8.0
 const STICK_TARGET: Vector3 = Vector3(-3.0, 0.0, 14.0)
 const STICK_FLIGHT_SECONDS: float = 0.7
-const BEE_COUNT: int = 48
+const BEE_COUNT: int = 64
 const BEE_RADIUS: float = 0.8
 const LEAVE_SECONDS: Dictionary = {
 	CargoAnimalPlan.GULL: 2.2, CargoAnimalPlan.DOG: 3.0, CargoAnimalPlan.BEES: 1.6}
@@ -282,6 +282,8 @@ func _pose_bees(vehicle: Node3D) -> void:
 		var forward: Vector3 = heading.normalized()
 		var side: Vector3 = Vector3.UP.cross(forward).normalized()
 		var basis := Basis(side, forward, side.cross(forward))
+		# The wings are too fast to draw: the whole bee shivers about its heading.
+		basis = Basis(forward, sin(_age * 70.0 + seed_value * 40.0) * 0.45) * basis
 		multi.set_instance_transform(index, Transform3D(basis, centre + offset))
 	if is_instance_valid(_buzz):
 		_buzz.global_position = centre
@@ -339,27 +341,16 @@ func _build_dog_point() -> void:
 
 func _build_bees() -> void:
 	var count: int = maxi(12, roundi(BEE_COUNT * WorldQuality.setting("particle_scale")))
-	# A fat little capsule along Y (turned to the heading): a dot is lost at the distance
-	# you see the swarm from, a stripe of yellow and black is not.
-	var mesh := CapsuleMesh.new()
-	mesh.radius = 0.05
-	mesh.height = 0.18
-	mesh.radial_segments = 6
-	mesh.rings = 2
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.vertex_color_use_as_albedo = true
-	mesh.material = material
+	# One striped bee with wings per instance (CargoBeeMesh).
+	var mesh: ArrayMesh = CargoBeeMesh.mesh()
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
-	multi.use_colors = true
 	multi.mesh = mesh
 	multi.instance_count = count
 	_bee_seeds.resize(count)
 	for index: int in range(count):
 		# Every peer draws the same swarm: the seeds come from the index.
 		_bee_seeds[index] = fmod(float(index) * 0.6180339, 1.0)
-		multi.set_instance_color(index, Color("ffd21a") if index % 5 < 3 else Color("1d1a14"))
 	bees = MultiMeshInstance3D.new()
 	bees.name = "Bees"
 	bees.multimesh = multi

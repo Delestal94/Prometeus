@@ -412,6 +412,9 @@ func _test_bees(_level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 		"An open cake in the meadow draws the bees, announced (phase %s)" % animals.phase)
 	await process_frame
 	_expect(view.bees != null and view.bees.multimesh.instance_count >= 12, "The swarm is drawn, with bees to be seen")
+	_expect(view.bees.multimesh.mesh == CargoBeeMesh.mesh(), "Every bee is the one shared striped, winged mesh")
+	_expect(_bee_has_both_colours(CargoBeeMesh.mesh()),
+			"Each bee is yellow with black on it, and has see-through wings")
 	var integrity_before: float = package.integrity
 	animals.advance(3.5)
 	_expect(animals.phase == PHASE_ACTING and is_equal_approx(package.integrity, integrity_before),
@@ -442,6 +445,19 @@ func _test_bees(_level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 	_tick_view(view, 3.0)
 	await process_frame
 	_expect(view.state == VIEW_NONE and view.bees == null, "The swarm is freed once it has gone")
+
+
+## A bee is one mesh with yellow, black and a translucent white in it, not a dot of one colour.
+func _bee_has_both_colours(mesh: ArrayMesh) -> bool:
+	var colours: PackedColorArray = mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+	var yellow: bool = false
+	var black: bool = false
+	var wing: bool = false
+	for colour: Color in colours:
+		yellow = yellow or (colour.r > 0.9 and colour.g > 0.7 and colour.b < 0.3 and colour.a > 0.99)
+		black = black or (colour.get_luminance() < 0.15 and colour.a > 0.99)
+		wing = wing or (colour.get_luminance() > 0.95 and colour.a < 0.9)
+	return yellow and black and wing
 
 
 # --- Host and clients ----------------------------------------------------------

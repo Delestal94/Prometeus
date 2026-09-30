@@ -1594,18 +1594,20 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
     dibuja (`CargoAnimalView`). El daño lo hace solo el host (`DeliveryPackage.apply_external_damage`).
   - Revisión visual (2026-09-30): la gaviota tiene modelo propio de primitivas (`cargo_gull.gd`: cuerpo blanco,
     alas grises con puntas oscuras abiertas al volar y plegadas al posarse, pico amarillo); el perro (Shiba) sale
-    1,3 veces más grande, de pie en el pasillo junto a la caja; las abejas son 48 cápsulas amarillas y negras que
-    orbitan la torta; el ícono sobre la caja es más chico, con flecha y cuenta regresiva; y el palo sale como
+    1,3 veces más grande, de pie en el pasillo junto a la caja; las abejas son 64 bichos de una sola malla (amarillos con franjas
+    negras y alitas blancas) que orbitan la torta; el ícono sobre la caja es más chico, con flecha y cuenta regresiva; y el palo sale como
     prompt aunque el control de puertas esté más cerca (`aim_bonus`).
   - Test `test_cargo_animals.gd` (plan, sonidos, modelos, gaviota, perro, abejas, cliente vs host, ritmo). Capturas:
     `tests/render_cargo_animals.gd` (para `revisor-visual`).
   - Aviso: `docs/avisos/2026-09-30-n109-cargo-animals.md`. `PROTOCOL_VERSION` 11 → 12.
   - En Endless solo viene la gaviota (no hay casas ni campo). El perro y las abejas piden la caja **abierta**:
-    con la tapa cerrada no vienen (es lo que hace que cerrarla sea una salida). ⏸ decide el usuario: si
-    conviene que también rondan una caja cerrada (más frecuentes, pero sin la salida de cerrar la tapa).
-  - Falta (necesita PC): un modelo propio de gaviota con alas abiertas y abejas con sprite (hoy: el pájaro de
-    la ruta escalado y puntos); revisión visual (`revisor-visual` con `render_cargo_animals.gd`), medir el
-    ancho de banda de red (`auditor-red`) y dar mérito a quien espanta (`CrewProgression.award_milestone`).
+    con la tapa cerrada no vienen (es lo que hace que cerrarla sea una salida). **Decidido** (Claude, con delegación del usuario,
+    2026-09-30): el perro y las abejas van solo por cajas abiertas y cerrar la tapa es la contramedida que el
+    jugador aprende (`docs/decisiones/2026-09-30-preguntas-auditoria.md`).
+  - Revisión visual hecha (2026-09-30, con GPU): gaviota propia, perro más grande y abejas de una sola malla
+    (`cargo_bee_mesh.gd`: cuerpo amarillo con dos franjas negras, cabeza y aguijón negros y dos alitas blancas
+    translúcidas; la abeja entera vibra). Falta: medir el ancho de banda de red (`auditor-red`) y dar mérito a
+    quien espanta (`CrewProgression.award_milestone`).
 
 ### N-406 · Radio del camión con función — B · `Opus 5.5 · high` · Aviso: sí (trampa Ruidoso) · **[x] rama `nacho/N-406-truck-radio`**
 
