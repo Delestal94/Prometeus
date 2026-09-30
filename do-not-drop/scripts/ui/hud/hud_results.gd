@@ -27,11 +27,32 @@ func set_hero(visible_: bool, score: int = 0, new_best: bool = false) -> void:
 func set_buttons(primary: String, restart: bool, options: bool, menu: bool) -> void:
 	hud.action_button.visible = not primary.is_empty()
 	hud.action_button.text = primary
+	# Only show_host_gone() greys it out; on every other screen it works.
+	hud.action_button.disabled = false
+	hud.action_button.tooltip_text = ""
 	hud.second_button.visible = restart and hud.prompts.can_restart()
 	hud.options_button.visible = options
 	hud.menu_button.visible = menu
 	var first: Button = hud.action_button if hud.action_button.visible else hud.menu_button
 	first.grab_focus()
+
+
+## The host left with these results up (N-222). They stay as they are: the
+## score, the rows and the awards were the host's last word, and redrawing
+## them now would name the players wrong (this peer is offline, id 1). Only
+## the way on changes: the guest's note ("only the host can restart... rejoin
+## the room") gives way to one saying the room closed, and the retry shows,
+## greyed out, saying why (HudPrompts.session_lost). Calling it again changes
+## nothing.
+func show_host_gone() -> void:
+	var note: String = tr("HUD_RESULT_HOST_GONE_NOTE")
+	hud.overlay_stats.text = hud.overlay_stats.text.replace(tr("HUD_RESULT_GUEST_NOTE"), "").replace(note, "") + note
+	hud.action_button.visible = true
+	hud.action_button.text = tr("HUD_RETRY")
+	hud.action_button.disabled = true
+	hud.action_button.tooltip_text = tr("HUD_RETRY_NEEDS_HOST")
+	hud.menu_button.visible = true
+	hud.menu_button.grab_focus()
 
 
 func _on_ended(score: int, results: Dictionary) -> void:

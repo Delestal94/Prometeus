@@ -5,6 +5,10 @@ extends Node
 
 ## Set by Hud before this is added as its child.
 var hud: Hud
+## The session under this level ended (the host left, N-222; HudPause sets
+## it). Offline now, this peer would pass for a host that can restart, and a
+## restart would reload a solo world, not the crew's.
+var session_lost: bool = false
 var in_delivery: bool = false
 var _lid_action: String = ""
 var _lid_inside: String = ""
@@ -58,7 +62,7 @@ func refresh_shortcut_text() -> void:
 
 
 func can_restart() -> bool:
-	return not NetworkManager.is_online() or NetworkManager.is_host()
+	return not session_lost and (not NetworkManager.is_online() or NetworkManager.is_host())
 
 
 func refresh_role() -> void:

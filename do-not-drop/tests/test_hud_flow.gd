@@ -4,7 +4,9 @@ extends SceneTree
 ## The HUD's own rules, driven directly: which buttons each overlay offers,
 ## prompts that follow the device in hand, a restart that has to be held
 ## during play instead of firing on one stray key, and a client that loses
-## its host getting told so instead of being left in a frozen world.
+## its host getting told so instead of being left in a frozen world: on the
+## results screen the results stay, with the retry greyed out (N-222); mid-run
+## the disconnect screen opens, its "back to the menu" enabled.
 
 var failures: int = 0
 var _restarts: int = 0
@@ -287,11 +289,24 @@ func _run() -> void:
 	unlocks.successful_deliveries = original_deliveries
 	unlocks.unlocked = original_unlocked
 
-	# --- losing the host ---
+	# --- losing the host with the results up keeps them (N-222) ---
+	network.session_failed.emit("Se cortó la conexión con el anfitrión.")
+	await process_frame
+	_expect(hud.overlay_mode == "results" and hud.result_rows_box.get_child_count() == 2,
+		"Losing the host with the results up keeps them (overlay %s)" % hud.overlay_mode)
+	_expect(hud.action_button.visible and hud.action_button.disabled and hud.menu_button.visible
+		and not hud.menu_button.disabled, "The retry greys out and the menu stays open")
+	_restarts = 0
+	hud.pause.request_restart()
+	_expect(_restarts == 0, "No restart once the session is gone (got %d)" % _restarts)
+
+	# --- losing the host mid-run ---
+	hud._on_started(&"delivery", [])
 	network.session_failed.emit("Se cortó la conexión con el anfitrión.")
 	await process_frame
 	_expect(hud.overlay_mode == "disconnected" and hud.overlay.visible, "Losing the host opens its own screen")
-	_expect(hud.action_button.text == "Volver al menú", "The only way forward is back to the menu")
+	_expect(hud.action_button.text == "Volver al menú" and not hud.action_button.disabled,
+		"The only way forward is back to the menu, and it works")
 	_expect(not hud.second_button.visible and not hud.options_button.visible, "No restart into a dead session")
 
 	hud.free()
