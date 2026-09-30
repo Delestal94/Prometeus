@@ -22,11 +22,17 @@ el idioma del host.
   `localized_name()`.
 - `house_refused_package`: `hud.gd` (`_house_order_label`) y `delivery_house` usan el cartel de la casa
   local en vez del texto del host.
+- `RunManager.session_names()` es nueva: lo que recibe un join tardío sale de `cargo_names` (claves, también
+  las de cajas ya entregadas). `NetworkManager.PROTOCOL_VERSION` pasa a 3, porque una build vieja mostraría
+  las claves sin traducir.
 - `player_cargo_care.gd`: la tarjeta usa `localized_name()` y no `display_name`.
 - `progress_panel.gd`: las recompensas nombran la trampa con su clave.
 - Claves nuevas en `strings_ui.csv`: `HUD_KICKER_MULTIPLAYER` (`hud_pause`, pantalla de desconexión),
   `HUD_KICKER_PAUSE`, `HUD_KICKER_RESULTS`, `UI_MENU_PAGE_GARAGE` (`main_menu`) y `UI_SOUND_MUTED`
-  (`sound_check_panel`).
+  (`sound_check_panel`); `HUD_CARE_CHIP_*` (`care_card`, chip de estado), `HUD_CARGO_TITLE` y
+  `HUD_SESSION_MODE_DELIVERY` (`hud.gd`), `HUD_PROMPT_RECAPTURE` / `HUD_PROMPT_SALVAGE` (`package_salvage.gd`).
+- `hud_cargo_panel`: cada fila de `hud.cargo_rows` suma `"key"`; `hud_prompts.refresh_sound_subtitle()` elige el
+  subtítulo por esa clave (antes comparaba el nombre en español y fallaba en inglés).
 
 **Regla nueva en `test_ui_translations`:** ningún script fuera de `trap_definition.gd` /
 `package_content.gd` lee el `display_name` de un `.tres` para mostrarlo. Un `.text = "PALABRA"` suelto

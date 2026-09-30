@@ -747,14 +747,17 @@ func _finish_endless_run(reason: String) -> void:
 ## reaches clients as one-off events -- the start, each delivery, the door
 ## closing, a box handed over -- so someone arriving after them saw a run
 ## that hadn't started, boxes that were long gone and the depot door open.
+## Each box's name key, even delivered or lost ones; the joiner translates it (N-805).
+func session_names() -> Dictionary:
+	var names: Dictionary = {}
+	for id: StringName in cargo:
+		names[id] = String(cargo_names.get(id, "HUD_RESULT_PACKAGE_FALLBACK"))
+	return names
+
+
 func send_session_state(peer_id: int) -> void:
 	if not NetworkManager.is_online() or not NetworkManager.is_host() or peer_id == NetworkManager.HOST_ID:
 		return
-	var names: Dictionary = {}
-	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
-		var id: StringName = package.get(&"package_id")
-		if cargo.has(id):
-			names[id] = String(package.get(&"trap_definition").call(&"localized_name"))
 	var door_open: bool = true
 	var scene: Node = get_tree().current_scene
 	var depot: Node = scene.get(&"depot") as Node if scene != null else null
@@ -770,7 +773,7 @@ func send_session_state(peer_id: int) -> void:
 		"expected_houses": expected_houses,
 		"deliveries": deliveries.duplicate(true),
 		"cargo": cargo.duplicate(true),
-		"names": names,
+		"names": session_names(),
 		"consumed": consumed_packages.duplicate(),
 		"door_open": door_open,
 		"results": results.duplicate(true),

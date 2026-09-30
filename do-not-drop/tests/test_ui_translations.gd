@@ -12,8 +12,10 @@ extends SceneTree
 ##   literal straight on screen (N-805: in English the player read Spanish
 ##   care messages, run-end reasons and connection errors), except the files
 ##   in SPANISH_LITERAL_FILES and debug output (print/push_warning/push_error);
-##   nor sets a Label's .text to a plain word ("PAUSA", "GARAJE") that is not
-##   in SAME_IN_BOTH, and the main menu's page titles are all keys;
+##   nor sets a .text to a plain word ("PAUSA", "GARAJE") that is not in
+##   SAME_IN_BOTH (a literal assigned on the same line, or after an inline
+##   "else"; constants and helper arguments aren't seen), and the main menu's
+##   page titles are all keys;
 ## - trap names travel as keys (TrapDefinition.name_key()), each one in the
 ##   table with the .tres display_name as its Spanish text, and no script
 ##   draws a .tres display_name straight on screen: each peer translates the
@@ -175,8 +177,9 @@ func _check_no_plain_word_texts() -> void:
 
 func _check_trap_name_keys(table: Dictionary) -> void:
 	var dir := DirAccess.open("res://data/traps")
+	_expect(dir != null, "The trap definitions folder opens")
 	var checked: int = 0
-	for file_name: String in dir.get_files():
+	for file_name: String in dir.get_files() if dir != null else PackedStringArray():
 		if not file_name.ends_with(".tres"):
 			continue
 		var definition: Resource = load("res://data/traps/" + file_name)
@@ -189,7 +192,7 @@ func _check_trap_name_keys(table: Dictionary) -> void:
 			_expect(spanish == display_name,
 				"%s: the key's Spanish text is its display_name (%s vs %s)" % [file_name, spanish, display_name])
 			_expect(String(definition.call(&"localized_name")) == spanish, "%s reads in Spanish by default" % file_name)
-	_expect(checked == 7, "Every trap is checked (%d)" % checked)
+	_expect(checked >= TrapDefinition.NAME_KEYS.size(), "Every trap is checked (%d)" % checked)
 	var reads := RegEx.create_from_string('\\.display_name\\b|&"display_name"')
 	for dir_path: String in LITERAL_SCAN_DIRS:
 		for file_path: String in _scripts(dir_path):

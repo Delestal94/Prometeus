@@ -14,7 +14,7 @@ const WIDTH: float = 340.0
 const MIN_HEIGHT: float = 330.0
 ## Warm for "something to do now", readable on cream (UiTheme.ORANGE isn't).
 const URGENT_ORANGE: Color = Color("c26a00")
-const STATE_TEXTS: Array[String] = ["OK", "EN RIESGO", "ARRUINADA"]
+const STATE_TEXTS: Array[String] = ["HUD_CARE_CHIP_OK", "HUD_CARE_CHIP_AT_RISK", "HUD_CARE_CHIP_RUINED"]
 ## Headline colours per step: what needs doing now reads warm, all-good cool.
 const STEP_COLORS: Dictionary = {&"collect": URGENT_ORANGE, &"sequence": URGENT_ORANGE, &"cushion": URGENT_ORANGE,
 	&"lean": URGENT_ORANGE, &"scrub": URGENT_ORANGE,
@@ -105,7 +105,7 @@ func update(trap_name: String, state: int, integrity: float, step: Dictionary, v
 	var clamped: int = clampi(state, 0, 2)
 	var colorblind: bool = _colorblind()
 	var state_color: Color = UiThemeScript.state_color(clamped, colorblind)
-	state_chip.text = STATE_TEXTS[clamped]
+	state_chip.text = tr(STATE_TEXTS[clamped])
 	((state_chip.get_parent() as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat).bg_color = state_color
 	integrity_bar.value = clampf(integrity, 0.0, 100.0)
 	(integrity_bar.get_theme_stylebox("fill") as StyleBoxFlat).bg_color = state_color

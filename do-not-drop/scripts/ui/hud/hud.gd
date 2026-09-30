@@ -374,7 +374,7 @@ func _build_bottom_bar() -> void:
 	cargo_card.offset_left = EDGE_MARGIN
 	cargo_card.offset_bottom = -EDGE_MARGIN
 	cargo_card.offset_top = -EDGE_MARGIN
-	UiTheme.tag(cargo_panel, "CARGA", UiTheme.CARDBOARD, -2.0, 16)
+	UiTheme.tag(cargo_panel, tr("HUD_CARGO_TITLE"), UiTheme.CARDBOARD, -2.0, 16)
 	cargo_rows_box = VBoxContainer.new()
 	cargo_rows_box.add_theme_constant_override("separation", 10)
 	cargo_panel.add_child(cargo_rows_box)
@@ -624,7 +624,7 @@ func _on_roster_changed(_peer_ids: Array) -> void:
 func _refresh_session() -> void:
 	if session_label == null:
 		return
-	var mode: String = "ENDLESS" if is_endless else "ENTREGA"
+	var mode: String = "ENDLESS" if is_endless else tr("HUD_SESSION_MODE_DELIVERY")
 	if not NetworkManager.is_online():
 		session_label.text = tr("HUD_SESSION_SOLO") % mode
 		_session_color(MINT)

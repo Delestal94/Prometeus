@@ -158,7 +158,7 @@ func _run() -> void:
 	# --- cargo state never relies on red/green alone ---
 	var run_manager: Node = root.get_node("RunManager")
 	run_manager.cargo[&"accessible_box"] = {"integrity": 35.0, "maximum": 100.0, "state": 1}
-	bus.cargo_registered.emit(&"accessible_box", "Frágil")
+	bus.cargo_registered.emit(&"accessible_box", "HUD_TRAP_FRAGILE")
 	bus.package_state_changed.emit(&"accessible_box", 1)
 	var accessible_row: Dictionary = hud.cargo_rows[&"accessible_box"]
 	_expect(String((accessible_row["label"] as Label).text).contains("EN RIESGO !"),

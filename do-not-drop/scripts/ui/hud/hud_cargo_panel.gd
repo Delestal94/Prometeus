@@ -50,7 +50,8 @@ func _on_cargo_registered(id: StringName, name_key: String) -> void:
 	var label: Label = UiTheme.title(column, "%s  ·  100%%" % display_name.to_upper(), 18)
 	var bar: ProgressBar = UiTheme.bar(column, Hud.MINT, 12)
 	bar.value = 100
-	hud.cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "icon": icon, "row": row}
+	hud.cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "key": name_key,
+		"icon": icon, "row": row}
 
 
 func _on_integrity(id: StringName, integrity: float, maximum: float) -> void:

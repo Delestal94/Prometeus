@@ -256,6 +256,12 @@ pasajero es espectador.
   muestra el `display_name` de un `.tres`. Claves nuevas para "MULTIJUGADOR", "PAUSA", "RESULTADO", "GARAJE" y
   "silenciado". `test_ui_translations` lo vigila y `test_house_waiting_marker` prueba un par en inglés. Aviso:
   `docs/avisos/2026-09-30-n805-textos-del-host.md`.
+- [ ] Las pistas de carga (`package_hint_changed`, `get_hint()`, `care.message` de `package_care.gd`) se traducen en
+  el host y viajan ya armadas: un cliente en inglés ve en español el aviso de crisis de la caja que atiende. Mandar
+  `[clave, argumentos]` y hacer el `tr() % args` en `hud_cargo_panel._on_package_hint` (hallazgo de `auditor-red`,
+  2026-09-30). Subir `NetworkManager.PROTOCOL_VERSION` otra vez.
+- [ ] `hud_prompts._action_id_for_prompt()` busca palabras en español ("agarrar", "soltar", "timbre"…) en el
+  prompt ya traducido: en inglés los prompts se quedan sin ícono. Buscar por clave o por la acción.
 
 ### N-118 · Endless también puntúa la carga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`) · **[x] PR #42**
 `run_manager.gd:692` ("never subtracted"): el modo de los récords ignora el núcleo del juego. Hecho

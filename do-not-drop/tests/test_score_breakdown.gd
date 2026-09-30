@@ -22,13 +22,13 @@ func _run() -> void:
 	manager.set(&"expected_houses", 4)
 	manager.call(&"start_run")
 	root.get_node(^"/root/EventBus").emit_signal(&"houses_assigned", [
-		[&"a", "FRÁGIL · A1"],
-		[&"b", "EQUILIBRIO · B2"],
-		[&"c", "RUIDOSO · C3"],
-		[&"d", "PESO CRECIENTE · D4"],
+		[&"a", "HUD_TRAP_FRAGILE", "A1"],
+		[&"b", "HUD_TRAP_BALANCE", "B2"],
+		[&"c", "HUD_TRAP_NOISY", "C3"],
+		[&"d", "HUD_TRAP_GROWING_WEIGHT", "D4"],
 	])
-	root.get_node(^"/root/EventBus").emit_signal(&"cargo_registered", &"a", "FRÁGIL")
-	root.get_node(^"/root/EventBus").emit_signal(&"cargo_registered", &"b", "EQUILIBRIO")
+	root.get_node(^"/root/EventBus").emit_signal(&"cargo_registered", &"a", "HUD_TRAP_FRAGILE")
+	root.get_node(^"/root/EventBus").emit_signal(&"cargo_registered", &"b", "HUD_TRAP_BALANCE")
 	manager.set(&"cargo", {
 		&"a": {"integrity": 100.0, "maximum": 100.0, "state": 0},
 		&"b": {"integrity": 60.0, "maximum": 100.0, "state": 1},
@@ -61,8 +61,10 @@ func _run() -> void:
 	_expect("HUD_SCORE_PHOTOS" in labels, "The photo shows as its own line")
 	var deliveries: Array = results.get("deliveries", [])
 	_expect(deliveries.size() == 4, "There is one result row per promised house")
-	_expect(String(deliveries[0].get("trap", "")) == "FRÁGIL" and bool(deliveries[0].get("photo", false)),
-			"A row identifies its trap and delivery photo")
+	_expect(String(deliveries[0].get("trap", "")) == "HUD_TRAP_FRAGILE" and bool(deliveries[0].get("photo", false)),
+			"A row identifies its trap (as a key each peer translates) and delivery photo")
+	_expect(String(deliveries[3].get("trap", "")) == "HUD_TRAP_GROWING_WEIGHT",
+			"A house never reached still names its ordered trap by key")
 	_expect(StringName(deliveries[3].get("outcome", &"")) == &"missed",
 			"An unreached house is represented as a missed delivery")
 	var route_event: Dictionary = results.get("route_event", {})
