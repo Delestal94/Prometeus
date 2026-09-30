@@ -4,13 +4,35 @@
 #
 # Skipped when the commits being pushed only touch docs (nothing under
 # do-not-drop/, tools/ or .github/). SKIP_TESTS=1 git push skips the tests
-# (CI on GitHub still runs the suite) but not the lint: it takes a second, and a
-# PR that CI rejects for a long line costs a routine a whole run (#71).
+# (CI on GitHub still runs the suite) but not the lint nor tools/check_modules.py:
+# they take a second, and a PR that CI rejects for a long line costs a routine a
+# whole run (#71).
 set -u
 
 ROOT="$(git rev-parse --show-toplevel)"
 
+# Portable modules name nothing of the game (docs/modulos.md): one second, no
+# Godot. Like the lint, SKIP_TESTS doesn't skip it. On Windows "python3" can be
+# the Store's stub, so only an interpreter that actually runs counts.
+check_modules() {
+	local py=""
+	for candidate in python3 python; do
+		if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "" >/dev/null 2>&1; then
+			py="$candidate"; break
+		fi
+	done
+	if [ -z "$py" ]; then
+		echo "pre-push: sin Python, tools/check_modules.py queda para CI."
+		return 0
+	fi
+	if ! "$py" "$ROOT/tools/check_modules.py"; then
+		echo "pre-push: un módulo de do-not-drop/modules/ nombra algo del juego, no se sube nada."
+		exit 1
+	fi
+}
+
 if [ "${SKIP_TESTS:-0}" = "1" ]; then
+	check_modules
 	if command -v gdlint >/dev/null 2>&1 && ! bash "$ROOT/tools/lint.sh"; then
 		echo "pre-push: el lint encontró problemas nuevos, no se sube nada (SKIP_TESTS no saltea el lint)."
 		exit 1
@@ -47,6 +69,8 @@ if [ $needs_tests -eq 0 ]; then
 	echo "pre-push: solo cambios de documentación, no hace falta correr los tests."
 	exit 0
 fi
+
+check_modules
 
 # The lint takes a second; without gdtoolkit installed, CI still runs it.
 if command -v gdlint >/dev/null 2>&1; then

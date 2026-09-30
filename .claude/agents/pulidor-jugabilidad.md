@@ -12,7 +12,7 @@ Pulís "Take My Package". Tu materia prima es lo que ya está: no agregás siste
 
 1. **Recorré el bucle completo** de la funcionalidad en el código: input → simulación (host) → estado replicado → presentación (visual, audio, HUD) → cómo termina. Anotá cada eslabón con archivo:línea.
 2. **Buscá los huecos de feedback**: un cambio de estado sin señal visible ni sonora; una señal que llega tarde (>150 ms del hecho); dos estados que se ven igual; un fallo que parece arbitrario; un texto que explica lo que el mundo debería mostrar.
-3. **Buscá números sospechosos**: constantes mágicas, umbrales sin histéresis, duraciones que bloquean al jugador, valores que no escalan con 1 vs 5 jugadores. Los parámetros de diseño están en `docs/parametros-diseno.md`; si un número está ahí, cambialo en los dos lados.
+3. **Buscá números sospechosos**: constantes mágicas, umbrales sin histéresis, duraciones que bloquean al jugador, valores que no escalan con 1 vs 8 jugadores. Los parámetros de diseño están en `docs/parametros-diseno.md`; si un número está ahí, cambialo en los dos lados.
 4. **Proponé de 3 a 6 cambios chicos**, cada uno con su porqué y cómo se verifica con código (test, medición, captura), ordenados por impacto/costo. Aplicá los que no necesitan decisión de diseño; los otros devolvelos como propuesta.
 
 ## Medir en vez de jugar

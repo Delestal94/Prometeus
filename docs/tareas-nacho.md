@@ -9,7 +9,7 @@
 
 ## QA — bugs abiertos
 
-### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida)
+### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida) · **[x] PR #108**
 Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
 (`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta
 (`run_manager.gd:592-594`): solo cobran las que siguen en el camión. Los `delivery_points` (150/75/20,
@@ -34,7 +34,13 @@ código ya dice 8 (`network_manager.gd:27`). Los prompts de los agentes, `defini
 - [x] ~~**N-228.1** Barrer el resto de `docs/` (y `docs/marketing/`) buscando "5 jugadores", "cinco", "4 pasajeros", "hasta 4" y equivalentes en inglés, y corregirlos a 8 (1 conduce, hasta 7 cargan). Con `documentador`.~~
   **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-players`)** — a 8 jugadores / 7 pasajeros: `README.md`, `requerimientos-tecnicos.md` (encabezado y asientos), `narrativa.md`, `parametros-diseno.md`, `direccion-visual.md` (escala y oclusión), `marketing/trailer.md` ("1-8 jugadores") y `analisis-competencia-backseat-rv.md`. Se dejaron como están las mediciones con un número fijo de jugadores (`investigacion-red.md` "4 jugadores", `bench_depot` "5 jugadores" del README, "Solo, 2 y 5 jugadores" de `jugabilidad-paquetes-rescate.md`), los datos de competidores y los registros fechados (auditorías, avisos, decisiones).
   Para N-228.2: `vehicle.tscn` tiene 10 puntos de ojo de asiento (3 por lado, centro y 3 en el portaequipaje) pero solo 4 `*PackageMount` (Left/RightSeat1-2): con 7 pasajeros, tres se quedan sin soporte de caja enfrente.
-- [ ] **N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.
+- [x] ~~**N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.~~
+  **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-seats`, `ff635c0`)** — auditoría de código con `auditor-red`. Aguantan 8: transportes (ENet `max_players-1`, lobby de Steam, el 9º recibe "full"), slots de color del host (8), tablero de pedidos (`ROWS = 7`, `test_depot`), puntos de aparición del depósito (8), estantes (16 lugares), votación, espectador y asientos (conductor + 10 de pasajero; `seat_point.gd` no limita). Arreglado acá: `UnlockManager.MAX_DELIVERY_HOUSES` pasa de 4 a 7; con 4, ocho jugadores con perfil nuevo tenían 7 casas y solo 4 pedidos (3 casas "missed" seguras). Ahora un equipo completo libera Peso Creciente y Líquido para tener 8 cajas; `test_locked_traps` lo exige con `MAX_PLAYERS`. Lo que falta, abajo.
+- [ ] **N-228.3** Paleta de 8 colores: hoy hay 5 (`player.gd:43-45`, `hud_results.gd:8-10`, `crew_progression.gd:15-18`, 5 tonos de voz en `synth_audio_scenes.gd:318`, `strings_ui.csv:661-665`), así que los slots 5-7 repiten color. 8 colores distinguibles (también con daltonismo), claves y nombres traducidos y 8 tonos; va junto con N-226.2 (leer `color_slot()` en vez del `peer_id`). Test: `PLAYER_COLORS.size() >= NetworkManager.MAX_PLAYERS` y colores distintos. Con `constructor-progresion` y `constructor-ui`. Aviso: sí (`player.gd`, `scripts/ui/` de Slatex).
+- [ ] **N-228.4** Séptimo anclaje de caja: `vehicle.tscn` tiene 6 `PackageMount` (4 de asiento + 2 de estante) para hasta 7 cajas, y `LeftSeat3`, `CenterSeat` y `RightSeat3` no cuidan ninguna (sin `required_mount_path` ni `tend_mount_paths`). Sumar un anclaje (frente a un asiento 3 o en el piso central) y un test que cuente `package_mount >= MAX_PLAYERS - 1`. Con `constructor-camion`, después `auditor-red`.
+- [ ] **N-228.5** Ancho de banda con 8: `test_net_bandwidth_budget.gd:11,22` calcula con `CREW = 4`; con 8 y 14 cajas da ~124 KB/s por cliente (97 % del tope de 128, sin encabezados) y ~7 Mbit/s de subida del host. Pasar `CREW` a `MAX_PLAYERS`, contar encabezados y la subida total del host; para bajar: cajas quietas o en estante sin envío, cajas a 30 Hz (`investigacion-red.md:27`), ruedas reconstruidas en el cliente en vez de 4 `Transform3D`. Con `constructor-red`, después `auditor-red`. Aviso: sí si toca `network_manager.gd`.
+- [ ] **N-228.6** UI con 8: captura del panel de pedidos del depósito con 7 pedidos (`depot_panel.gd:96`, 620 px sin scroll; si no entra, `ScrollContainer` o filas compactas) y un caso de 8 entradas en `test_crew_panel.gd` (hoy prueba 4). Con `constructor-ui` y `revisor-visual`. Aviso: sí (`scripts/ui/` de Slatex).
+- [ ] **N-228.7** Quien entra con la partida en curso aparece en el depósito aunque el camión esté en la ruta (`level_common.gd:181`): aparecer en un asiento libre del camión. También: al reconectarse, el slot de color puede cambiar (`network_manager.gd:162-164`), y la campaña se guarda por color. Con `constructor-jugador` y `constructor-red`.
 
 ### N-229 · El jugador torpe vuelve a tener casi-pérdidas — C · `Opus 5.5 · medium` · Aviso: no
 Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 9).
@@ -423,7 +429,7 @@ Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20
 el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el modelo entero pegado al
 torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
 
-### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
+### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`) · **[x] PR #110** (la comparación MSAA en captura queda para `revisor-visual` con GPU en la sesión de arte)
 - [x] MSAA por preset: Baja sin MSAA, Media 2×, Alta 4× (`WorldQuality`, PR #45). Falta compararlo en
   captura con `revisor-visual`.
 - [x] ~~Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
