@@ -5,6 +5,8 @@ extends SceneTree
 
 const PATHS: Array[String] = [
 	"res://assets/models/truck_reference_lowpoly.glb",
+	"res://assets/models/props/cargo/sm_prop_cargo_toolbox.glb",
+	"res://assets/models/props/cargo/sm_prop_cargo_thermos.glb",
 	"res://assets/models/architecture/sm_arch_delivery_house_cottage.glb",
 	"res://assets/models/architecture/sm_arch_delivery_house_cabin.glb",
 	"res://assets/models/architecture/sm_arch_delivery_house_bungalow.glb",

@@ -844,6 +844,31 @@ Pedido del usuario: modelo cartoon cómico y tierno, más gordito, "nivel Pixar"
 - Pendiente: la nuca del conductor roza el techo inclinado de la cabina y los pasajeros vecinos
   se superponen (asientos a 0,48 m); ver "Límites conocidos" en `REFINAMIENTO.md`.
 
+### N-139 · Caja de herramientas y termo de la zona de carga con modelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-139-cargo-clutter`**
+
+Hoy `scripts/presentation/cargo_clutter.gd` arma la caja de herramientas (BoxMesh 0,36×0,2×0,2 m roja + manija) y el
+termo (CylinderMesh r 0,045 h 0,26 + tapa) con primitivas, y se ven de cerca en la zona de carga (`docs/inventario-assets.md`
+§10.1). Colisiones (BoxShape y CylinderShape), masas y capas NO cambian: solo la malla visual pasa a un GLB del mismo tamaño y
+centrado en el cuerpo, como la primitiva actual. **Necesita PC** (Blender). Origen: sesión de arte 2026-09-30.
+Hecho cuando hay dos GLB low-poly (caja de herramientas metálica roja con manija, cierres y bisagra; termo con tapa/vaso y asa)
+generados por script, dentro del presupuesto de props chicos de primer plano del inventario (~300-800 tris cada uno), cargados
+por `cargo_clutter.gd` en vez de las primitivas, con `test_cargo_clutter` ampliado para exigir que la malla viene del GLB,
+verificado con `revisor-visual` y `check_pivots.gd`, y con el inventario §10.1 actualizado.
+- [x] **N-139.1** ~~Modelar las dos piezas por script en `do-not-drop/assets/tools/` con `lowpoly_kit.py`, exportar a
+  `do-not-drop/assets/models/...` con las medidas y el origen de las primitivas. Con `modelador-blender`; tests `cargo_clutter`.~~
+  **[x] Hecho (2026-09-30)** — `assets/tools/build_cargo_clutter.py` → `models/props/cargo/sm_prop_cargo_toolbox.glb` (756 tris,
+  cuerpo exacto 0,36×0,20×0,20 + manija) y `sm_prop_cargo_thermos.glb` (600, r 0,045 × 0,26 + tapa-vaso y asa); origen en el
+  centro de la base, como el resto del pipeline.
+- [x] **N-139.2** ~~Cambiar `cargo_clutter.gd` para instanciar los GLB como malla visual, sin tocar formas de colisión, masas ni
+  capas; ampliar `test_cargo_clutter` (malla del GLB, tamaño y colisión iguales). Con `constructor-mundo` y `escritor-tests`;
+  tests `cargo_clutter`.~~ **[x] Hecho (2026-09-30)** — `cargo_clutter.gd` `_make_item()` instancia el GLB bajado −alto/2
+  (`TOOLBOX_MODEL`, `THERMOS_MODEL`), sin primitivas; `test_cargo_clutter` `_check_looks()` exige la escena del GLB, ninguna
+  `PrimitiveMesh`, las colisiones de siempre y que la malla quepa en ellas (salvo manija, tapa y asa).
+- [x] **N-139.3** ~~Verificar de cerca con `revisor-visual` (capturas de la zona de carga y `check_pivots.gd`) y actualizar
+  `docs/inventario-assets.md` §10.1. Con `revisor-visual` y `documentador`.~~ **[x] Hecho (2026-09-30)** — con GPU real: apoyan
+  en el piso y el banco, se leen como caja y termo; pivotes en la base (los dos GLB sumados a `check_pivots.gd`); inventario
+  §10.1 y `assets/README.md` al día.
+
 ## 4. Audio y diseño sonoro
 
 ### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas) · **[x] `8081c75`**

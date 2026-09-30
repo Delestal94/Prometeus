@@ -4,11 +4,22 @@ extends Node
 ## bodies that slide, tip over and clatter on every bump -- and roll out the
 ## back if someone drives off with the doors open (#17).
 ##
+## Their look is a low-poly GLB each (N-139, assets/tools/build_cargo_clutter.py),
+## origin at the centre of the base: the collision shapes stay the plain box and
+## cylinder they always were. The models keep their flat palette on purpose:
+## none of their materials is in LowpolyMaterials.DETAIL, so apply() would
+## change nothing and only cost a pass over the meshes.
+##
 ## Pure scenery, simulated separately on every client and never replicated:
 ## they only collide with the truck's cargo shell and the ground, never with
 ## packages (a thermos must not be what ruins a Fragile box) or players.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const TOOLBOX_MODEL: PackedScene = preload("res://assets/models/props/cargo/sm_prop_cargo_toolbox.glb")
+const THERMOS_MODEL: PackedScene = preload("res://assets/models/props/cargo/sm_prop_cargo_thermos.glb")
+## Collision sizes (m): the body of the toolbox, and the thermos' height.
+const TOOLBOX_SIZE: Vector3 = Vector3(0.36, 0.2, 0.2)
+const THERMOS_HEIGHT: float = 0.26
 const ENVIRONMENT_AND_SHELL: int = 1 | Vehicle.SHELL_LAYER
 ## Relative speed (m/s) for a knock to be heard.
 const RATTLE_MIN_SPEED: float = 0.9
@@ -31,7 +42,7 @@ func _spawn() -> void:
 	if world == null:
 		return
 	# Vehicle space: +X right, -Z toward the cab, cargo floor top at y 0.26.
-	_items.append(_make_item(world, "Toolbox", Vector3(0.36, 0.2, 0.2), Color("d2412f"), 3.5, Vector3(0.74, 0.37, 2.2)))
+	_items.append(_make_toolbox(world, Vector3(0.74, 0.37, 2.2)))
 	_items.append(_make_thermos(world, Vector3(0.82, 0.74, 1.05)))
 
 
@@ -68,7 +79,10 @@ func _physics_process(_delta: float) -> void:
 			item.continuous_cd = bool(vehicle.call(&"needs_sweep", item, 0.4))
 
 
-func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mass_kg: float, at: Vector3) -> RigidBody3D:
+## A rigid body with `shape` for collision and `model` (a GLB whose origin is
+## the centre of its base) as the look, dropped by `drop` so that base rests
+## on the floor of the collision shape (half its height).
+func _make_item(world: Node, item_name: String, shape: Shape3D, model: PackedScene, drop: float, mass_kg: float, at: Vector3) -> RigidBody3D:
 	var body := RigidBody3D.new()
 	body.name = "CargoClutter" + item_name
 	body.mass = mass_kg
@@ -80,31 +94,12 @@ func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mas
 	body.continuous_cd = true
 	body.contact_monitor = true
 	body.max_contacts_reported = 2
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = size
-	shape.shape = box
-	body.add_child(shape)
-	var mesh := MeshInstance3D.new()
-	var box_mesh := BoxMesh.new()
-	box_mesh.size = size
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.6
-	box_mesh.material = material
-	mesh.mesh = box_mesh
-	body.add_child(mesh)
-	if item_name == "Toolbox":
-		# A handle, so it reads as a toolbox rather than a red brick.
-		var handle := MeshInstance3D.new()
-		var handle_mesh := BoxMesh.new()
-		handle_mesh.size = Vector3(0.2, 0.03, 0.03)
-		var steel := StandardMaterial3D.new()
-		steel.albedo_color = Color("3b3f42")
-		handle_mesh.material = steel
-		handle.mesh = handle_mesh
-		handle.position = Vector3(0.0, size.y * 0.5 + 0.04, 0.0)
-		body.add_child(handle)
+	var collider := CollisionShape3D.new()
+	collider.shape = shape
+	body.add_child(collider)
+	var visual: Node3D = model.instantiate()
+	visual.position = Vector3(0.0, -drop, 0.0)
+	body.add_child(visual)
 	_add_rattle(body, 1.6 if item_name == "Toolbox" else 2.3)
 	world.add_child(body)
 	body.global_transform = vehicle.global_transform * Transform3D(Basis(Vector3.UP, randf_range(-0.3, 0.3)), at)
@@ -114,43 +109,17 @@ func _make_item(world: Node, item_name: String, size: Vector3, color: Color, mas
 	return body
 
 
+func _make_toolbox(world: Node, at: Vector3) -> RigidBody3D:
+	var box := BoxShape3D.new()
+	box.size = TOOLBOX_SIZE
+	return _make_item(world, "Toolbox", box, TOOLBOX_MODEL, TOOLBOX_SIZE.y * 0.5, 3.5, at)
+
+
 func _make_thermos(world: Node, at: Vector3) -> RigidBody3D:
-	var body := _make_item(world, "Thermos", Vector3(0.08, 0.26, 0.08), Color("2c7fb8"), 0.8, at)
-	# Swap the box look for a proper cylinder with a dark cap.
-	for child: Node in body.get_children():
-		if child is MeshInstance3D:
-			child.free()
-	var shape := body.get_child(0) as CollisionShape3D
-	var cylinder_shape := CylinderShape3D.new()
-	cylinder_shape.radius = 0.045
-	cylinder_shape.height = 0.26
-	shape.shape = cylinder_shape
-	var mesh := MeshInstance3D.new()
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = 0.045
-	cylinder.bottom_radius = 0.045
-	cylinder.height = 0.26
-	cylinder.radial_segments = 10
-	var paint := StandardMaterial3D.new()
-	paint.albedo_color = Color("2c7fb8")
-	paint.metallic = 0.4
-	paint.roughness = 0.35
-	cylinder.material = paint
-	mesh.mesh = cylinder
-	body.add_child(mesh)
-	var cap := MeshInstance3D.new()
-	var cap_mesh := CylinderMesh.new()
-	cap_mesh.top_radius = 0.04
-	cap_mesh.bottom_radius = 0.047
-	cap_mesh.height = 0.05
-	cap_mesh.radial_segments = 10
-	var dark := StandardMaterial3D.new()
-	dark.albedo_color = Color("1f2326")
-	cap_mesh.material = dark
-	cap.mesh = cap_mesh
-	cap.position = Vector3(0.0, 0.155, 0.0)
-	body.add_child(cap)
-	return body
+	var cylinder := CylinderShape3D.new()
+	cylinder.radius = 0.045
+	cylinder.height = THERMOS_HEIGHT
+	return _make_item(world, "Thermos", cylinder, THERMOS_MODEL, THERMOS_HEIGHT * 0.5, 0.8, at)
 
 
 func _add_rattle(body: RigidBody3D, pitch: float) -> void:

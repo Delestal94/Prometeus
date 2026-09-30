@@ -165,7 +165,7 @@ correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slate
 | Residente que abre la puerta | `delivery_house.gd` (cápsula) | Nacho | N-137 (puede reusar el modelo del jugador) |
 | Ragdoll del jugador | `player_ragdoll.gd` (cápsulas) | Slatex | S-101 |
 | Maniquí del panel de cosméticos | `cosmetics_panel.gd` (cápsula + esfera) | Slatex | S-102 |
-| Objetos sueltos de la zona de carga (caja de herramientas, termo) | `cargo_clutter.gd` | Nacho | N-139 |
+| ~~Objetos sueltos de la zona de carga (caja de herramientas, termo)~~ **[x] Hecho (2026-09-30)**: caja de herramientas (756 tris) y termo (600) en `models/props/cargo/` (`tools/build_cargo_clutter.py`); las colisiones, masas y el traqueteo siguen en el script | `cargo_clutter.gd` | Nacho | N-139 |
 | Accesorios cosméticos (gorras, chalecos) | — | Slatex | S-103 |
 
 ### 10.2 Modelos existentes demasiado simples
