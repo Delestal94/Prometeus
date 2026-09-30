@@ -7,7 +7,9 @@ extends SceneTree
 ##   - the board posts one order per house, each a different kind of box, and
 ##     the pickup prompt names the bin so the right one can be found;
 ##   - the stations open their screen on the player who used them;
-##   - supplies cost team money, once each, and the padding softens every
+##   - the insurance refund plus a ruined box's pay stays under a dented box's pay;
+##   - supplies cost team money (the test gives the crew $300 first: padding is $160,
+##     N-227.2), once each, and the padding softens every
 ##     loaded box for the run that takes it;
 ##   - leaving without an ordered box is called out;
 ##   - the door stays open while anyone is inside on foot, and rolls down once
@@ -106,7 +108,16 @@ func _run() -> void:
 		node.call(&"interact", player)
 	_expect(_opened == [&"orders", &"garage", &"wardrobe", &"shop", &"records"], "Each station opens its screen (got %s)" % str(_opened))
 
+	# The insurance never makes breaking a box worth it: ruined + refund < dented (N-227.2).
+	var run_script: GDScript = load("res://scripts/core/run_manager.gd")
+	var refund: int = int((depot.get_script() as GDScript).get_script_constant_map()["INSURANCE_REFUND"])
+	_expect(refund + int(run_script.POINTS_DELIVERED_RUINED) < int(run_script.POINTS_DELIVERED_AT_RISK),
+		"Insurance refund + ruined pay stays under the dented pay (%d + %d vs %d)" % [refund,
+		int(run_script.POINTS_DELIVERED_RUINED), int(run_script.POINTS_DELIVERED_AT_RISK)])
+
 	# Supplies: paid from team money, one of each.
+	# The crew starts with $100 and padding costs more now (N-227.2): a delivery's pay comes first.
+	crew.set(&"team_money", 300)
 	var start_money: int = int(crew.get(&"team_money"))
 	depot.call(&"buy_supply", &"padding")
 	depot.call(&"buy_supply", &"padding")

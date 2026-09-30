@@ -5,9 +5,9 @@ do-not-drop/modules/render_budget/dressing_batcher.gd|max-line-length 4
 do-not-drop/modules/render_budget/world_quality.gd|max-line-length 1
 do-not-drop/modules/synth_audio/synth_audio.gd|max-line-length 3
 do-not-drop/scripts/core/crew_progression.gd|max-line-length 1
-do-not-drop/scripts/core/network_manager.gd|max-line-length 2
+do-not-drop/scripts/core/network_manager.gd|max-line-length 1
 do-not-drop/scripts/core/route_event_manager.gd|max-line-length 6
-do-not-drop/scripts/core/run_manager.gd|max-line-length 2
+do-not-drop/scripts/core/run_manager.gd|max-line-length 1
 do-not-drop/scripts/core/shop_vote_manager.gd|max-line-length 1
 do-not-drop/scripts/core/unlock_manager.gd|max-line-length 2
 do-not-drop/scripts/gameplay/depot/depot_campaign_board.gd|max-line-length 4

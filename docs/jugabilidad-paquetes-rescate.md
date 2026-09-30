@@ -104,8 +104,8 @@ con un botón.
 
 ## Presión para conducir rápido
 
-El bono de rapidez actual es pequeño y no exige acelerar: cada ruta tendrá
-dos o tres **plazos de entrega** avisados con antelación (cliente que sale de
+El bono de tiempo global ya no existe (N-227.2): la velocidad se paga solo con
+plazos. Cada ruta tiene dos o tres **plazos de entrega** avisados con antelación (cliente que sale de
 casa, evento que empieza, comercio por cerrar). Llegar a tiempo da dinero y
 mérito; fallar un plazo reduce la paga sin arruinar carga. El calendario de
 plazos se ajusta al largo real de la ruta y las paradas previstas. Obtener la

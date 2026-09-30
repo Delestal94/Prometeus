@@ -1,11 +1,13 @@
-extends Node
+extends NetEventBus
 ## Facts shared by simulation and presentation. UI requests are separate from facts.
 ##
 ## In multiplayer these facts are decided on the host (the van and every
-## package are host-authoritative). relay() is how a host-side fact reaches
-## every client's own local EventBus, so their HUD and RunManager react the
-## same way theirs would offline. Emit UI requests (start_requested and
-## friends) with plain emit() as before -- those are per-peer, not facts.
+## package are host-authoritative). relay() (net_session module, NetEventBus,
+## docs/modulos.md) is how a host-side fact reaches every client's own local
+## EventBus, so their HUD and RunManager react the same way theirs would
+## offline. Emit UI requests (start_requested and friends) with plain emit()
+## as before -- those are per-peer, not facts. This file is the game's
+## signals and its two player-initiated requests (ping, horn).
 
 ## name_key: TrapDefinition.name_key(), translated by each listener (N-805).
 signal cargo_registered(package_id: StringName, name_key: String)
@@ -76,7 +78,8 @@ signal house_delivery_recorded(house_index: int, outcome: StringName, package_id
 ## What the door saw of a rescued box (repaired / unconvincing / substituted),
 ## relayed right before its house_delivery_recorded. Relayed.
 signal delivery_care_noted(house_index: int, category: StringName)
-## This run's delivery deadlines, [{house, seconds, reason}], as it starts. Relayed.
+## This run's delivery deadlines, [{house, seconds, reason}], as it starts, and again whenever one is shortened mid-run
+## (RunManager.shorten_next_deadline). Relayed.
 signal delivery_deadlines_set(deadlines: Array)
 ## The delivery photo was filed against a door (or wasn't -- accepted says
 ## which), so the HUD can confirm the shot landed.
@@ -124,23 +127,16 @@ signal low_visibility_changed(active: bool, kind: StringName, duration: float, e
 
 
 ## Minimum seconds between two callouts from the same player (N-505.3).
-var ping_cooldown_seconds: float = 1.5
-## Host-side: peer_id -> Time.get_ticks_msec() of their last accepted callout.
-var _last_ping_ms: Dictionary = {}
-
-## Emits locally and, if this is the host of an online session, rebroadcasts
-## to every client so their own EventBus fires the same signal. Call this
-## instead of emit_signal() for anything that originates from host-run
-## simulation (package/vehicle facts, run state) so clients stay in sync.
-func relay(event_name: StringName, args: Array = []) -> void:
-	callv(&"emit_signal", [event_name] + args)
-	if NetworkManager.is_online() and NetworkManager.is_host():
-		_relay.rpc(event_name, args)
+## The host rate-limits each player to one callout per this many seconds,
+## so a held-down wheel can't spam the crew (NetEventBus.request_cooldowns).
+var ping_cooldown_seconds: float = 1.5:
+	set(value):
+		ping_cooldown_seconds = value
+		request_cooldowns[&"ping_sent"] = value
 
 
-@rpc("authority", "call_remote", "reliable")
-func _relay(event_name: StringName, args: Array) -> void:
-	callv(&"emit_signal", [event_name] + args)
+func _init() -> void:
+	request_cooldowns[&"ping_sent"] = ping_cooldown_seconds
 
 
 ## Any peer calls this (directly if it's already the host, via rpc_id(1, ...)
@@ -148,31 +144,17 @@ func _relay(event_name: StringName, args: Array) -> void:
 ## decide a ping actually happened, same authority rule as every other
 ## player-initiated action in this project, then relay()s it as a fact so
 ## everyone's HUD (including the sender's) reacts identically.
-## The host also rate-limits each player to one callout per
-## ping_cooldown_seconds (N-505.3), so a held-down wheel can't spam the crew.
 @rpc("any_peer", "call_remote", "reliable")
 func request_ping(position: Vector3, label: String) -> void:
-	if NetworkManager.is_online() and not NetworkManager.is_host():
-		return
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	var peer_id: int = sender_id if sender_id != 0 else NetworkManager.local_id()
-	var now_ms: int = Time.get_ticks_msec()
-	if _last_ping_ms.has(peer_id) and now_ms - int(_last_ping_ms[peer_id]) < roundi(ping_cooldown_seconds * 1000.0):
-		return
-	_last_ping_ms[peer_id] = now_ms
-	relay(&"ping_sent", [peer_id, position, label])
+	request(&"ping_sent", [position, label])
 
 
 ## Forgets every player's last callout, so the next one goes through.
 func reset_ping_cooldowns() -> void:
-	_last_ping_ms.clear()
+	reset_request_cooldowns()
 
 
 ## Same client->host->everyone shape as request_ping(), for the driver's horn.
 @rpc("any_peer", "call_remote", "reliable")
 func request_horn() -> void:
-	if NetworkManager.is_online() and not NetworkManager.is_host():
-		return
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	var peer_id: int = sender_id if sender_id != 0 else NetworkManager.local_id()
-	relay(&"horn_honked", [peer_id])
+	request(&"horn_honked", [])

@@ -195,8 +195,11 @@ func _resolve(success: bool, peers: Array[int], charge_fine: bool = false) -> vo
 			bus.call(&"relay", &"team_money_changed", [crew.team_money])
 	if not success and event_id == &"impatient_client":
 		var run: RUN_MANAGER = _run()
+		# The client's impatience rubs off on the next door: its deadline gets
+		# shorter (RunManager.shorten_next_deadline: host only, relayed). Nothing
+		# happens once the run is over or when no later house is left.
 		if run != null:
-			run.lost_time_bonus = true
+			run.shorten_next_deadline(int(data.get("house", -1)))
 	_clear_effects()
 	resolved_events[event_id] = success
 	active_event_id = &""
