@@ -172,7 +172,7 @@ func _results_screen_shows_them() -> void:
 		TranslationServer.set_locale(locale)
 		hud.results._on_ended(120, {
 			"delivered": true, "reason": "", "elapsed_seconds": 40.0, "cargo_total": 0, "cargo_intact": 0,
-			"cargo_ruined": 0, "cargo_points": 0, "time_bonus": 0, "houses_delivered": 3, "houses_missed": 0,
+			"cargo_ruined": 0, "cargo_points": 0, "houses_delivered": 3, "houses_missed": 0,
 			"breakdown": [], "best_score": 120, "complaints": complaints.duplicate(true), "deliveries": [],
 		})
 		await process_frame

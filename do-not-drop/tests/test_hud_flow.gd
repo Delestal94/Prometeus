@@ -266,7 +266,8 @@ func _run() -> void:
 		"cargo_intact": 0,
 		"cargo_ruined": 0,
 		"cargo_points": 0,
-		"time_bonus": 0,
+		"delivery_points": 90,
+		"payout": 90,
 		"houses_delivered": 1,
 		"houses_missed": 1,
 		"breakdown": [{"label": "Entregas perfectas (1)", "points": 150}],
@@ -280,6 +281,8 @@ func _run() -> void:
 		"route_event": {"title": "Inspección sorpresa", "success": true},
 	})
 	await process_frame
+	_expect(String(hud.overlay_stats.text).contains(tr("HUD_RESULT_PAYOUT") % 90),
+		"Delivery results show the team payout line (got %s)" % String(hud.overlay_stats.text))
 	_expect(hud.result_rows_box.get_child_count() == 2, "Delivery results show one row per house")
 	_expect(String(hud.result_awards_label.text).contains("MVP"), "Delivery results show merit awards")
 	_expect(String(hud.result_event_label.text).contains("RESUELTO"), "Delivery results show how the route event ended")

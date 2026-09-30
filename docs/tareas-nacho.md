@@ -25,7 +25,7 @@ no dependen de esa decisión y pueden hacerse ya. Hecho cuando un test con una e
 `team_money` sube, los mocks de `render_hud` y `render_store_shots` usan valores alcanzables y los tres docs
 dicen lo que hace el código.
 - [x] ~~**N-227.1** Test con una entrega real (no un diccionario inventado) que compruebe que `team_money` sube; arreglar los mocks de `render_hud.gd` y `render_store_shots.gd`. Con `constructor-progresion` y después `escritor-tests`; tests `crew_progression`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-227-payout-test`: `test_crew_progression.gd` corre una entrega real por `RunManager` (una casa + una caja intacta a bordo, 130 s) y exige que `team_money` suba lo que paga `award_delivery`; mocks de `render_hud.gd` y `render_store_shots.gd` con valores alcanzables (`time_bonus` 0, score = (carga + puerta) × 1.2). Quedan `time_bonus: 20` inalcanzables en `test_run_relay.gd:55` y `test_host_gone_tally.gd:135`: barrerlos con N-227.2.
-- [ ] **N-227.2** Implementar la fórmula decidida en `docs/decisiones/2026-09-30-preguntas-auditoria.md` (preguntas 2 y 3): billetera compartida; pago = `delivery_points` + `cargo_points`, sin multiplicador de caos; se borra el bono de tiempo (`PAR_SECONDS`, `time_bonus`, `lost_time_bonus`, la fila `HUD_SCORE_SPEED`) y "Cliente impaciente" acorta el plazo de la casa siguiente; reclamo por caja abollada determinista; precios de tienda ajustados para que una entrega completa promedio compre un ítem de precio medio. Barrer los `time_bonus: 20` de `test_run_relay.gd:55` y `test_host_gone_tally.gd:135`. Actualizar `cartas-y-eventos-de-ruta.md`, `economia-y-contramedidas.md` y `parametros-diseno.md` (incluida la fórmula real de Endless). Con `constructor-progresion`; tests `crew_progression`, `run_manager`, `route_event`.
+- [x] ~~**N-227.2** Implementar la fórmula decidida en `docs/decisiones/2026-09-30-preguntas-auditoria.md` (preguntas 2 y 3): billetera compartida; pago = `delivery_points` + `cargo_points`, sin multiplicador de caos; se borra el bono de tiempo (`PAR_SECONDS`, `time_bonus`, `lost_time_bonus`, la fila `HUD_SCORE_SPEED`) y "Cliente impaciente" acorta el plazo de la casa siguiente; reclamo por caja abollada determinista; precios de tienda ajustados para que una entrega completa promedio compre un ítem de precio medio. Barrer los `time_bonus: 20` de `test_run_relay.gd:55` y `test_host_gone_tally.gd:135`. Actualizar `cartas-y-eventos-de-ruta.md`, `economia-y-contramedidas.md` y `parametros-diseno.md` (incluida la fórmula real de Endless). Con `constructor-progresion`; tests `crew_progression`, `run_manager`, `route_event`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-227-payout-formula`: pago = `delivery_points + cargo_points` (resultado `payout`, línea "Pago del equipo"); sin bono de tiempo; Cliente impaciente acorta un 15 % el plazo de la casa siguiente (`deadline_cut.gd`); reclamo abollado siempre; tienda x4 (160/140/120/100) y seguro 50; docs al día con la fórmula de Endless (no paga dinero). Aviso: `docs/avisos/2026-09-30-n227-pago-por-entrega.md`. Pendiente aparte: multas y premios de eventos/fauna (10..30) quedaron iguales.
 
 ### N-228 · El tope es 8 jugadores en todos lados — B · `Opus 5.5 · low` · Aviso: no
 Origen: decisión del usuario 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 1). El
@@ -415,9 +415,18 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
 ### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
 - [x] MSAA por preset: Baja sin MSAA, Media 2×, Alta 4× (`WorldQuality`, PR #45). Falta compararlo en
   captura con `revisor-visual`.
-- [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
+- [x] ~~Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
   se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
-  Necesita PC (editor de Godot con ventana; la toma la sesión de arte).
+  Necesita PC (editor de Godot con ventana; la toma la sesión de arte).~~
+  **[x] Hecho (2026-09-30, sesión de arte, b0a16d1)** — `scripts/tools/texture_import_3d.gd` pone `compress/mode=2`
+  (VRAM, S3TC/BPTC), mipmaps y `detect_3d` apagado en todo `assets/textures/{detail,terrain,cargo}` y
+  `Godot --headless --import` reescribe los `.import` (decisión 7 de `docs/decisiones/2026-09-30-preguntas-auditoria.md`):
+  14 texturas (10 de detalle, 3 de terreno, la etiqueta del courier). Las otras de la cuenta de 35 no eran 3D o no
+  van: íconos y fondos de UI y el ícono de la app son 2D; los volcados de las cajas ya no se versionan (N-315); las 14
+  caras (`textures/characters/faces/`) quedan como están por la pausa de personajes. Test nuevo `test_texture_import_3d`
+  (toda textura de esas carpetas importada como VRAM con mipmaps). `revisor-visual` con GPU, antes/después en
+  terreno, depósito, ruta de noche y cajas: sin artefactos de compresión, luminancia igual (±1), desaparece el grano
+  parpadeante de tejados, estuco y pasto de lejos; el suelo a ángulo rasante queda algo más suave.
 
 ### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`, `seat_point.gd`) · **[x] rama `nacho/N-223-less-per-frame`**
 `route.gd` busca linealmente en las muestras del camino dos veces por tick; `play_area.gd`,

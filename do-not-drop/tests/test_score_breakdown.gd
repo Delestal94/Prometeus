@@ -3,7 +3,8 @@ extends SceneTree
 ## The results screen's itemised score (docs/tareas-slatex.md #89): every
 ## line comes from RunManager's own sums, so together (times the chaos
 ## multiplier) they always make exactly the score shown -- including the
-## penalties for a door nobody reached.
+## penalties for a door nobody reached. There is no speed line: the time bonus
+## was removed in N-227.2, so the lines are doors + cargo + deadlines + photos.
 
 var _failures: int = 0
 
@@ -58,6 +59,7 @@ func _run() -> void:
 	_expect(expected == int(results["score"]), "The lines add up to the score (%d x %.1f vs %d)" % [sum, float(results["chaos_multiplier"]), int(results["score"])])
 	_expect("HUD_SCORE_MISSED" in labels and int(lines[labels.find("HUD_SCORE_MISSED")].get("count", 0)) == 2,
 			"Both the skipped door and the one never reached cost points (%s)" % ", ".join(labels))
+	_expect(not "HUD_SCORE_SPEED" in labels and not results.has("time_bonus"), "No time-bonus line or field any more")
 	_expect("HUD_SCORE_PHOTOS" in labels, "The photo shows as its own line")
 	var deliveries: Array = results.get("deliveries", [])
 	_expect(deliveries.size() == 4, "There is one result row per promised house")
