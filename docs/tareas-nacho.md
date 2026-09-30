@@ -2327,12 +2327,16 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
 #### S-304 · Celular en la mano y marco de la cámara — B · `Opus 5.5 · high` · Aviso: sí (`presentation/phone_camera.gd` no tiene dueño en el reparto)
 
-- [ ] Mostrar `models/props/handheld/sm_prop_phone.glb` en la mano derecha del viewmodel mientras la
+- [ ] ⏸ Mostrar `models/props/handheld/sm_prop_phone.glb` en la mano derecha del viewmodel mientras la
   cámara del celular está abierta (hoy el GLB está sin usar, `inventario-assets.md` §2). **Ojo
   (2026-09-24):** ya no hay manos de primera persona (pedido del usuario: nada de manos que no sean
   del personaje), así que el celular no puede colgar de una; ver aviso en `colaboracion-equipo.md`.
-- [ ] Marco de UI del celular (bordes redondeados, hora, batería, botón de obturador) como `Control`
-  en `scripts/ui/phone_frame.gd`.
+  ⏸ (2026-09-30) Toca el cuerpo y las manos del personaje: en pausa mientras siga abierta S-311.
+- [x] (rama `nacho/S-304-phone-frame`) Marco de UI del celular (bordes redondeados, hora, batería, botón de obturador) como `Control`
+  en `scripts/ui/phone_frame.gd`. `PhoneFrame`: bisel con esquinas interiores redondeadas (mismo
+  encuadre que antes), barra de estado con hora (arranca según `WorldMood` día/atardecer/noche y avanza
+  1 min cada 6 s) y batería decorativa, obturador en el bisel derecho conectado a
+  `PhoneCamera.shoot` (con el mouse capturado es decorativo: el clic ya dispara por la acción). Test `tests/test_phone_frame.gd`.
 
 #### S-305 · Accesorios cosméticos 3D — C · `Opus 5.5 · high` · Aviso: no
 
@@ -2652,7 +2656,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   (partidas, cajas, % arruinadas, segundos en riesgo), causas y eventos de ruta; `--roles host,solo` evita contar dos
   veces la misma partida jugada en red; salta archivos rotos. Rama `nacho/S-805-local-telemetry`.
 
-#### S-806 · Batería verde y rápida — A · — · Aviso: no
+#### S-806 · Batería verde y rápida — A · — · Aviso: no · **[x]**
 
 - [x] (commits `3c4ac88`, `37581a2`) Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
 - [x] (rama `nacho/S-806-faster-tests`) Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.

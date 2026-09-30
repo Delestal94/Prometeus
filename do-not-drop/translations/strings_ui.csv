@@ -171,6 +171,7 @@ HUD_PHONE_HOUSE_READY,CASA %d  ·  listo para documentar,HOUSE %d  ·  ready to 
 HUD_PHONE_SAVED,Foto de la casa %d guardada. Ahora tenés con qué contestarles.,Photo of house %d saved. Now you've got something to show them.
 HUD_PHONE_ALREADY_DOCUMENTED,Esa entrega ya estaba documentada.,That delivery was already documented.
 HUD_PHONE_NOTHING_TO_PROVE,"Linda foto, pero no hay ninguna entrega que probar acá.","Nice photo, but there's no delivery to prove here."
+HUD_PHONE_SHUTTER,Sacar foto,Take photo
 UI_NET_PORT_FAILED,No se pudo abrir el puerto %d.,Couldn't open port %d.
 UI_NET_CONNECT_FAILED,No se pudo conectar a %s:%d.,Couldn't connect to %s:%d.
 UI_NET_STEAM_UNAVAILABLE,Steam no está disponible.,Steam isn't available.
