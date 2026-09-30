@@ -33,12 +33,16 @@ El patrón es **módulo = mecanismo; el juego = tablas y cableado**, en un adapt
 | `net_pose_smoother` | `vehicle.gd` | `configure_sim(NetworkManager.pose_net_sim())` en `_ready`; el módulo no busca la sesión |
 | `ragdoll` | `player.gd` | `setup(jugador, camión, máscara)`: quién lo lleva y con qué capas chocan las piezas |
 | `acoustics` | `route_sky.gd`, `tunnel_segment.gd`, `depot.gd` | `buses` y `spaces` son configuración (defaults del juego); las zonas se anotan en el grupo `AcousticSpace.GROUP` |
+| `net_session` (`NetSession`) | `scripts/core/network_manager.gd` (`NetworkManager extends NetSession`) | `PROTOCOL_VERSION`, tope de jugadores, escenas de nivel y menú en `_init`; los hooks `_on_hosting`, `_session_state`, `_validate_session_state`, `_apply_session_state`, `_reset_session_state`, `_before_restart`, `_restart_state`, `_apply_restart_state`, `_failure_text` son el mundo de este juego (semilla, casas, trampas bloqueadas, corridas) y sus textos |
+| `net_session` (`NetEventBus`) | `scripts/core/event_bus.gd` (`EventBus extends NetEventBus`) | las 50+ señales del juego; `request_ping`/`request_horn` usan `request()` con `request_cooldowns[&"ping_sent"]` |
+| `net_session` (`SteamVoice`) | `scripts/core/proximity_voice.gd` (`ProximityVoice extends SteamVoice`) | `_voice_enabled`/`_push_to_talk` leen `GameSettings`; `session = NetworkManager` |
+| `net_session` (`NetStatsOverlay`) | `scripts/presentation/net_stats_overlay.gd` | `_theme()` con las fuentes y colores de `UiTheme`, `_severity_color()` con la paleta para daltonismo |
 
 Regla para escribir un adaptador: si el módulo necesita datos del juego, el adaptador se los da
 **antes del primer uso** (`LowpolyMaterials.configure()`), y los lectores del juego siguen usando el
 adaptador, nunca el módulo directo, así el orden de inicialización no importa.
 
-## Catálogo (fase 1, hecho)
+## Catálogo (fases 1 y 2, hechas)
 
 | Módulo | Clases | Qué es | Depende de |
 |---|---|---|---|
@@ -49,17 +53,22 @@ adaptador, nunca el módulo directo, así el orden de inicialización no importa
 | `render_budget` | `WorldQuality`, `DressingBatcher`, `DetailMaterials`, `ContactShadow` | Frames en hardware modesto con GL Compatibility: presets de calidad, miles de mallas estáticas en MultiMesh con colisiones, detalle triplanar con estaciones y luz de noche, sombras de contacto falsas | — |
 | `acoustics` | `AcousticSpace`, `AcousticZone` | Reverb en los buses del mundo mientras la cámara está dentro de un volumen (túnel, galpón) | — |
 | `ragdoll` | `PlayerRagdoll` | Ragdoll visual de cápsulas para un personaje sin huesos físicos | — |
+| `net_session` | `NetSession`, `NetEventBus`, `SteamVoice`, `NetStats`, `NetStatsOverlay` | Sesión cooperativa host-autoritativa: Steam (lobby, invitaciones) o ENet, handshake con versión que lleva el estado del host como diccionario opaco, roster, reinicio, códigos de falla; bus con `relay()` y pedidos de cualquier peer con límite de frecuencia; voz por Steam; estadísticas, `--net-sim` y overlay | — |
 
 `tools/check_modules.py --list` imprime esta tabla desde los `module.cfg`.
 
 ## Lo que sigue (fases 2 a 5)
 
 Cada fase es un PR que pasa CI. El orden es por valor (lo más caro de rehacer primero) y por riesgo.
-Tareas en `docs/tareas-nacho.md` (N-231 a N-234).
+Tareas en `docs/tareas-nacho.md` (N-231 a N-234). Cuando el juego ya tiene un autoload con la API que
+todos usan, la forma de sacarle el mecanismo es **herencia**: el módulo es la clase base con hooks
+virtuales (`_session_state()`, `_failure_text()`), el autoload la extiende y solo conserva lo suyo. Los
+tests que llaman `network.call(&"_handshake_error", ...)` o `network.set(&"world_seed", ...)` siguen
+funcionando porque la subclase hereda todo.
 
 | Fase | Módulo nuevo | De dónde sale | Lo que hay que desatar |
 |---|---|---|---|
-| 2 · Red | `net_session` (`NetSession` + `NetEventBus`), `proximity_voice`, `net_stats` | `network_manager.gd`, `event_bus.gd`, `proximity_voice.gd`, `net_stats.gd` + overlay | El handshake lleva `houses`/`locked`/`runs`: pasa a un `Dictionary` opaco que el juego registra (`session_state_provider`). `relay()` y el salto cliente→host→todos van a una clase base sin señales; `EventBus` del juego la extiende con sus 50+ señales. `NetworkManager` deja de llamar a `UnlockManager`/`RunManager` (señales `session_started`/`restart_requested` que el juego escucha). Siempre con `auditor-red` después. |
+| 2 · Red — **hecho (N-231)** | `net_session` | `network_manager.gd`, `event_bus.gd`, `proximity_voice.gd`, `net_stats.gd` + overlay | Resuelto por **herencia**: el autoload del juego extiende la clase del módulo y rellena hooks virtuales (ver la tabla de adaptadores). El handshake sigue siendo un diccionario plano (`version`, `scene` + lo que devuelve `_session_state()`), así los tests que lo arman a mano no cambian. `PROTOCOL_VERSION` 11: el RPC de reinicio lleva un diccionario y los pedidos de peers pasan por `request()`. |
 | 3 · Interacción y ajustes | `interaction` (`Interactable`, `SeatPoint` genérico), `seat_camera`, `settings_store`, `ui_theme` | `gameplay/interaction/`, `first_person_camera.gd`, `game_settings.gd`, `ui_theme.gd` | `Interactable`: capa de colisión y prompt por `@export`, el grupo del jugador como constante configurable. `SeatPoint`: lo de `carried_package`/`driver`/`tend_package` pasa a métodos virtuales que el asiento del juego sobreescribe. Cámara: `add_shake()`/`kick_fov()` públicos, el juego los conecta a `vehicle_impact`. `SettingsStore`: volumen por bus, teclas, gamepad, pantalla, idioma; los campos del juego (`hud_scale`, ayuda de controles, log) quedan en `GameSettings` que lo extiende. `UiTheme`: paleta y tipografías como `Resource` del juego. Dominio de Slatex: aviso. |
 | 4 · Ruta y clima | `route_gen` (`RouteStreamer`, `RouteSegment`, `RoutePlanner`, `RouteTerrain`, `RouteDresser`, tramos), `world_mood` (`WorldMood`, `RouteSky`, `WindshieldRain`) | `gameplay/route/` (parte), `presentation/` (parte) | El planner piensa en "paradas", no "casas". Los tramos reciben la semilla y el `SynthAudio`/materiales por configuración; el cruce de tren saca sus RPC a una señal que el juego relaya. `WorldMood.pick(seed)` en vez de leer `NetworkManager`. Es la fase más grande; se parte en subtareas por tramo. |
 | 5 · Sistemas de juego genéricos | `hazards` (`ITrapBehavior` + `TrapDefinition`), `coop_vote` (`ShopVoteManager`), `profile_store` (perfil versionado con migraciones), `event_log` (`RunTelemetry`) | `gameplay/traps/` (contrato), `shop_vote_manager.gd`, `unlock_manager.gd`, `run_telemetry.gd` | `TrapDefinition.NAME_KEYS` pasa a `@export name_key` (hoy hay que editar el archivo por cada trampa nueva). La votación cobra por un `Callable`, no por `CrewProgression`. El perfil separa el motor de versiones/migraciones del esquema del juego. La telemetría escucha un bus que se le pasa. |

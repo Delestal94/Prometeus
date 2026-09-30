@@ -200,14 +200,15 @@ acoustics,ragdoll}` con `module.cfg` y test propio; `tools/check_modules.py` (jo
 reciben lo que antes buscaban solos. Docs: `docs/modulos.md`, `arquitectura.md` 1.1, `convenciones-godot.md`,
 `CLAUDE.md`, aviso `docs/avisos/2026-09-30-modulos-portables.md`.
 
-### N-231 · Fase 2: kit de red portable — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `event_bus.gd`, zona compartida) · ⏸ en curso (sesión de Nacho)
-Módulo `net_session`: `NetSession` (Steam + ENet, lobby, handshake con versión, peers listos, tolerancia a
-cargas de nivel, `--net-sim`) con el estado del juego como `Dictionary` opaco que el juego registra, y
-`NetEventBus` (la plomería de `relay()` y el salto cliente→host→todos con límite de frecuencia) que
-`EventBus` extiende solo con señales. `proximity_voice` y `net_stats` reciben la sesión y los ajustes en
-vez de buscarlos por `/root/`. Hecho cuando el juego arranca, une y reinicia igual que hoy (tests `net_`,
-`network`, `net_stats`, `run_relay`, jobs `network-pair`/`network-trio`), `portability-check` pasa para los
-tres módulos y `auditor-red` no marca nada.
+### N-231 · Fase 2: kit de red portable — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `event_bus.gd`, zona compartida) · **[x] rama `nacho/N-231-net-session`**
+Módulo `net_session` (`docs/modulos.md`): `NetSession` (Steam + ENet, lobby e invitaciones, handshake con
+versión, peers listos, tolerancia a cargas de nivel, reinicio, `--net-sim`) con el estado del juego en hooks
+virtuales (`_session_state()`, `_apply_session_state()`, `_failure_text()`...); `NetEventBus` (`relay()` y
+`request()` cliente→host→todos con `request_cooldowns`); `SteamVoice`; `NetStats` + `NetStatsOverlay` base.
+`NetworkManager`, `EventBus`, `ProximityVoice` y el overlay del juego **extienden** esas clases y conservan
+su API (tests intactos). `PROTOCOL_VERSION` 11. Verificado con los tests de red, el par de red y
+`portability-check`. Pendiente de una pasada de `auditor-red` en la rutina de revisión (regla: todo PR de
+red la lleva).
 
 ### N-232 · Fase 3: interacción, cámara de asiento, ajustes y tema de UI — B · `Opus 5.5 · high` · Aviso: sí (`interaction/`, `game_settings.gd`, `ui_theme.gd` de Slatex) · ⏸ en curso (sesión de Nacho)
 `interaction` (`Interactable` con capa y prompt por `@export`; `SeatPoint` genérico con métodos virtuales

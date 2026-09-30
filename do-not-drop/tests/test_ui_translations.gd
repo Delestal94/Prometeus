@@ -28,7 +28,7 @@ extends SceneTree
 ##   builds a panel in English.
 
 const CSV_PATH: String = "res://translations/strings_ui.csv"
-const SCAN_DIRS: Array[String] = ["res://scripts"]
+const SCAN_DIRS: Array[String] = ["res://scripts", "res://modules"]
 ## Where a quoted accented literal means text shown untranslated.
 const LITERAL_SCAN_DIRS: Array[String] = [
 	"res://scripts/ui",
