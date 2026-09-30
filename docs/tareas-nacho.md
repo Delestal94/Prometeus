@@ -24,7 +24,7 @@ pago fijo por casa u otra cosa; si se borra el bono de tiempo en favor de los pl
 no dependen de esa decisión y pueden hacerse ya. Hecho cuando un test con una entrega real comprueba que
 `team_money` sube, los mocks de `render_hud` y `render_store_shots` usan valores alcanzables y los tres docs
 dicen lo que hace el código.
-- [ ] **N-227.1** Test con una entrega real (no un diccionario inventado) que compruebe que `team_money` sube; arreglar los mocks de `render_hud.gd` y `render_store_shots.gd`. Con `constructor-progresion` y después `escritor-tests`; tests `crew_progression`.
+- [x] ~~**N-227.1** Test con una entrega real (no un diccionario inventado) que compruebe que `team_money` sube; arreglar los mocks de `render_hud.gd` y `render_store_shots.gd`. Con `constructor-progresion` y después `escritor-tests`; tests `crew_progression`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-227-payout-test`: `test_crew_progression.gd` corre una entrega real por `RunManager` (una casa + una caja intacta a bordo, 130 s) y exige que `team_money` suba lo que paga `award_delivery`; mocks de `render_hud.gd` y `render_store_shots.gd` con valores alcanzables (`time_bonus` 0, score = (carga + puerta) × 1.2). Quedan `time_bonus: 20` inalcanzables en `test_run_relay.gd:55` y `test_host_gone_tally.gd:135`: barrerlos con N-227.2.
 - [ ] **N-227.2** (bloqueada por la pregunta 2) Implementar la fórmula elegida y actualizar `cartas-y-eventos-de-ruta.md`, `economia-y-contramedidas.md` y `parametros-diseno.md`. Con `constructor-progresion`; tests `crew_progression`, `run_manager`.
 
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
