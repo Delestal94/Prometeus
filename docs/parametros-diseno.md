@@ -1,7 +1,7 @@
 # Parámetros de diseño — valores iniciales
 
 > Basado en: `docs/requerimientos-tecnicos.md` (sección 4, catálogo de trampas).
-> Última actualización: 2026-09-27
+> Última actualización: 2026-09-30
 > **Importante**: todos los números de este documento son puntos de partida
 > razonables para poder empezar a programar, no valores finales. Se ajustan con
 > playtesting real (Fase 7 del plan de desarrollo). Cada valor está pensado para vivir
@@ -126,6 +126,32 @@ La respuesta es muy sensible a `correct_decay` (14: 83 %, 16: 50 %, 20: 9 % con 
 suben de 9,2 % a 22,4 %. El resultado global del reporte sigue en "REQUIERE AJUSTE" solo por las casi-pérdidas
 esperadas por viaje torpe (0,73, objetivo ≥ 1), con Ruidoso en 0 % y Frágil en 0,8 %.
 
+## N-229: el torpe vuelve a tener casi-pérdidas (2026-09-30)
+
+El reporte seguía en "REQUIERE AJUSTE" solo por las casi-pérdidas del torpe: 0,73 por viaje de 7 paquetes
+(objetivo ≥ 1, decisión 9 de `docs/decisiones/2026-09-30-preguntas-auditoria.md`). Casi pérdida = la caja llega con
+integridad entre 5 y 25. Dos trampas no daban ninguna:
+
+- **Frágil (0,8 %)**: a 50 km/h cada bache es un golpe pesado de 35 y el amortiguado deja pasar 3,5. Dos baches
+  sin amortiguar y uno amortiguado dejaban 26,5, apenas fuera de la banda; tres sin amortiguar, rota. Con
+  `impact_damage_heavy` 35 → **36** quedan 24,4: el caso más común del torpe (falla dos de tres) pasa a ser casi
+  pérdida sin cambiar cuántas pierde. Con 37 también cumple (37,2 %), pero el choque sin anunciar del recorrido
+  1085 más tres toques perfectos del experto deja 4,9 y le saca sus casi-pérdidas (16,8 % → 1,2 %); con 36 deja 7,2.
+- **Ruidoso (0 %)**: no se tocó. Las sacudidas de los recorridos llegan en ráfagas de 13 a 34 en pocos segundos
+  (+16 cada una) y llevan la agitación al máximo con cualquier perfil; ahí la integridad que ve el arnés es 0, así
+  que un rescate en el máximo no cuenta como casi pérdida. Bajar la ganancia para que pase por la banda deja vivo
+  al ausente en el recorrido 1082 (una sola ráfaga de 13). Queda como propuesta: medir la casi pérdida de Ruidoso
+  por "rescatada en el máximo" en vez de por integridad.
+
+Mismo arnés, mismas semillas, 5 recorridos × 50 repeticiones, 0 ms (perdidas / casi pérdidas del torpe):
+
+| Trampa | Torpe perdido antes → después | Casi pérdida torpe antes → después | Experto perdido | Ausente / siempre mantiene |
+|---|---:|---:|---:|---:|
+| Frágil | 49,2 → 49,2 | 0,8 → 37,6 | 2,8 → 2,8 (+150 ms: 3,2) | 100 / 100 sin cambio |
+| Las otras seis | sin cambio | sin cambio | sin cambio | sin cambio |
+
+Casi pérdidas esperadas por viaje torpe: **0,73 → 1,10**. El reporte pasa a **CUMPLE**.
+
 ## Tanda 2 de N-117: Contrapesá y Fregá (2026-09-29)
 
 Equilibrio y Líquido dejan de ser "mantener el botón". Porcentaje de cajas perdidas, 0 ms, mismos recorridos:
@@ -182,7 +208,7 @@ momentos clipeables) y que un solo error no arruine la partida de golpe.
 |---|---|---|
 | `integrity_max` | 100 | Medidor de integridad del paquete |
 | `impact_damage_light` | 10 | Daño si el impacto supera un umbral bajo |
-| `impact_damage_heavy` | 35 | Daño si el impacto supera un umbral alto |
+| `impact_damage_heavy` | 36 (N-229; antes 35) | Daño si el impacto supera un umbral alto. Dos golpes pesados sin amortiguar y uno amortiguado dejan 24,4: casi pérdida (5 a 25); un tercero la rompe. |
 | `impact_threshold_light` | 3.0 (m/s de cambio de velocidad instantáneo) | Equivalente aprox. a un pozo/lomada tomada a velocidad media (medido: la suspensión se los come; ver la tanda 1 de N-117) |
 | `impact_threshold_heavy` | 7.0 (m/s de cambio de velocidad instantáneo) | Frenada brusca o choque leve |
 | `ruined_at` | integrity <= 0 | Estado `Arruinado` |

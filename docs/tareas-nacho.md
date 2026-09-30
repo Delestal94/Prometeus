@@ -36,11 +36,11 @@ código ya dice 8 (`network_manager.gd:27`). Los prompts de los agentes, `defini
   Para N-228.2: `vehicle.tscn` tiene 10 puntos de ojo de asiento (3 por lado, centro y 3 en el portaequipaje) pero solo 4 `*PackageMount` (Left/RightSeat1-2): con 7 pasajeros, tres se quedan sin soporte de caja enfrente.
 - [ ] **N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.
 
-### N-229 · El jugador torpe vuelve a tener casi-pérdidas — C · `Opus 5.5 · medium` · Aviso: no
+### ~~N-229 · El jugador torpe vuelve a tener casi-pérdidas~~ **[x] Hecho (2026-09-30)** — C · `Opus 5.5 · medium` · Aviso: no
 Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 9).
 `tests/sim_data/balance_report.md:103` sigue en "REQUIERE AJUSTE": el objetivo de al menos una casi-pérdida
 por entrega para el perfil torpe se mantiene.
-- [ ] **N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.
+- [x] ~~**N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-229-clumsy-near-misses`: Frágil `impact_damage_heavy` 35 → 36 (dos baches sin amortiguar y uno amortiguado dejan 24,4 en vez de 26,5); casi-pérdidas del torpe en Frágil 0,8 → 37,6 %, por viaje 0,73 → 1,10, reporte **CUMPLE**; pérdidas de todos los perfiles sin cambio. Ruidoso sigue en 0 % (las ráfagas lo llevan al máximo con cualquier perfil): propuesta en `parametros-diseno.md`, sección N-229.
 
 ### N-235 · Una caída sucia se nota a los 45 s — C · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`, zona compartida)
 Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red`). Para que el que se une no

@@ -377,7 +377,9 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 		% FRAGILE_BUMPS + " crucero, anunciados como los anuncia el juego. Los choques sin anunciar (que nadie puede"
 		+ " amortiguar) son los que ya traen los recorridos grabados (el de la semilla 1085). El torpe y el experto"
 		+ " ven el aviso con una atención del 48 % y 95 % y clavan el toque con una dispersión de 0,20 s y 0,05 s"
-		+ " alrededor del medio de la ventana (0,35 s). Mantener apretado no protege.",
+		+ " alrededor del medio de la ventana (0,35 s). Mantener apretado no protege. N-229: el golpe pesado pasa"
+		+ " de 35 a 36; con 35 dos baches sin amortiguar y uno amortiguado dejaban 26,5 (fuera de la casi pérdida,"
+		+ " 5 a 25) y el torpe tenía 0,8 % de casi pérdidas acá; con 36 quedan 24,4.",
 		"",
 		"`hostile` (N-117.4): `command_seconds` 11 a 9 y `correct_decay` 14 a 16 por segundo. Con órdenes de 9 s el"
 		+ " ausente sigue perdiendo en la primera calma y el que siempre mantiene en las órdenes de soltar; el torpe"
