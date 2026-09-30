@@ -89,10 +89,10 @@ static func lamp_centres(mesh: MeshInstance3D) -> Array[Vector3]:
 	return [sides[0].get_center(), sides[1].get_center()] as Array[Vector3]
 
 
-## The halos for the current LowpolyMaterials.night_level, or null by day or
+## The halos for the current DetailMaterials.night_level, or null by day or
 ## when there's nothing to light.
 static func build(route: Node3D) -> MultiMeshInstance3D:
-	var level: float = LowpolyMaterials.night_level
+	var level: float = DetailMaterials.night_level
 	var spots: Array = halo_spots(route)
 	if level <= 0.0 or spots.is_empty():
 		return null

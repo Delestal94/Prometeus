@@ -89,7 +89,7 @@ static func unit_box() -> Array:
 ## it or swap materials. `variant` tells poses apart in the cache.
 static func merged_model(path: String, variant: String = "", prepare: Callable = Callable(),
 		apply_palette: bool = true) -> Mesh:
-	var key: String = "%s|%d|%.2f|%s" % [path, LowpolyMaterials.season, LowpolyMaterials.night_level, variant]
+	var key: String = "%s|%d|%.2f|%s" % [path, DetailMaterials.season, DetailMaterials.night_level, variant]
 	if _merged.has(key):
 		return _merged[key]
 	var packed := load(path) as PackedScene

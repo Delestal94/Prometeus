@@ -1,5 +1,5 @@
 class_name GrowingWeightTrapBehavior
-extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+extends ITrapBehavior
 ## Gets heavier unless its passenger keeps solving a short input sequence.
 ## "Asegurá" (N-117): the sequence is on the box for everyone to see, and the
 ## tender's helper (DeliveryPackage.assistant_peer_id) taps it too.

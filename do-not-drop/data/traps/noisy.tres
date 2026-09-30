@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TrapDefinition" load_steps=5 format=3]
 
-[ext_resource type="Script" path="res://scripts/gameplay/traps/trap_definition.gd" id="1_definition"]
+[ext_resource type="Script" path="res://modules/hazards/trap_definition.gd" id="1_definition"]
 [ext_resource type="Script" path="res://scripts/gameplay/traps/noisy_trap_behavior.gd" id="2_behavior"]
 [ext_resource type="Resource" path="res://data/contents/hen.tres" id="3_content"]
 [ext_resource type="Resource" path="res://data/contents/puppy.tres" id="4_content"]
@@ -9,6 +9,7 @@
 script = ExtResource("1_definition")
 id = &"noisy"
 display_name = "Ruidoso"
+translation_key = "HUD_TRAP_NOISY"
 behavior_script = ExtResource("2_behavior")
 difficulty = 3
 params = {

@@ -223,25 +223,28 @@ su API (tests intactos). `PROTOCOL_VERSION` 11. Verificado con los tests de red,
 `portability-check`. Pendiente de una pasada de `auditor-red` en la rutina de revisión (regla: todo PR de
 red la lleva).
 
-### N-232 · Fase 3: interacción, cámara de asiento, ajustes y tema de UI — B · `Opus 5.5 · high` · Aviso: sí (`interaction/`, `game_settings.gd`, `ui_theme.gd` de Slatex) · ⏸ en curso (sesión de Nacho)
-`interaction` (`Interactable` con capa y prompt por `@export`; `SeatPoint` genérico con métodos virtuales
-para lo de carga/rol), `seat_camera` (`add_shake()`/`kick_fov()` públicos, el juego los conecta),
-`settings_store` (volumen, teclas, gamepad, pantalla, idioma; `GameSettings` lo extiende con lo del
-juego), `ui_theme` (paleta y fuentes como `Resource`). Hecho cuando los tests de interacción, asientos,
-cámara, `settings` y UI pasan sin cambios de comportamiento y los cuatro módulos pasan `portability-check`.
+### N-232 · Fase 3: interacción, cámara de asiento y ajustes — B · `Opus 5.5 · high` · Aviso: sí (`interaction/`, `game_settings.gd` de Slatex) · **[x] rama `nacho/N-232-interaction-camera-settings`**
+`interaction` (`Interactable` con capa y grupo configurables; `SeatPoint` genérico con hooks para lo de
+carga/rol, el asiento del juego lo extiende), `seat_camera` (`SeatCamera` con `add_shake()`/`kick_fov()`;
+`first_person_camera.gd` lo extiende y conecta `EventBus`), `settings_store` (`SettingsStore` con
+`saved_keys`, idioma, pantalla, buses, teclas, gamepad y hooks de migración; `GameSettings` lo extiende).
+**`UiTheme` se queda en el juego** (es la marca: paleta, fuentes e íconos; se lleva copiando el archivo),
+decisión en `docs/modulos.md`. Los tres módulos pasan `portability-check`; los tests del juego no cambian.
 
-### N-233 · Fase 4: generación de ruta y clima — B · `Opus 5.5 · xhigh` · Aviso: no · ⏸ en curso (sesión de Nacho)
-`route_gen` (`RouteStreamer`, `RouteSegment`, `RoutePlanner` con "paradas", `RouteTerrain`,
-`RouteDresser`, los tramos) y `world_mood` (`WorldMood.pick(seed)`, `RouteSky`, `WindshieldRain`). Los
-tramos reciben semilla, audio y materiales por configuración; el cruce de tren saca sus RPC a una señal
-que el juego relaya. Se parte por tramo. Hecho cuando `test_route*`, `test_world_mood`, `test_level_endless`
-y `route_smoke_check` pasan con las mismas semillas y los dos módulos pasan `portability-check`.
+### N-233 · Fase 4: generación de ruta y clima — B · `Opus 5.5 · xhigh` · Aviso: sí (`game_settings.gd` de Slatex, una línea) · **[x] rama `nacho/N-233-route-gen`**
+`route_gen` (`RouteSegment`, `SegmentStreamer` → `RouteStreamer` del juego lo extiende con su pool, la semilla, el cielo
+y los cruces; `TerrainField` → `route_terrain.gd` lo extiende con el shader, las texturas y las cascadas; los seis tramos
+construidos por código) y `world_mood` (`WorldMood` con la estación y la noche en `DetailMaterials`). `RoutePlanner`, los
+tramos con assets, `RouteDresser`, `RouteSky` y `WindshieldRain` se quedan en el juego (decisión en `docs/modulos.md`).
+Los dos módulos pasan `portability-check`; `test_route*`, `test_world_mood`, `test_level_endless` y `route_smoke_check`
+sin cambios.
 
-### N-234 · Fase 5: contrato de peligros, votación, perfil y telemetría — C · `Opus 5.5 · high` · Aviso: sí (`traps/` de Slatex) · ⏸ en curso (sesión de Nacho)
-`hazards` (`ITrapBehavior` + `TrapDefinition` con `name_key` por `@export`, sin `NAME_KEYS` fijo),
-`coop_vote` (cobra por un `Callable`), `profile_store` (versiones y migraciones separadas del esquema del
-juego), `event_log` (escucha el bus que se le pasa). Hecho cuando `test_traps`, `test_shop_vote`,
-`test_unlock*`, `test_run_telemetry` pasan y los cuatro módulos pasan `portability-check`.
+### N-234 · Fase 5: contrato de peligros, votación, perfil y registro — C · `Opus 5.5 · high` · Aviso: sí (`traps/` de Slatex) · **[x] rama `nacho/N-234-game-systems`**
+`hazards` (`ITrapBehavior` + `TrapDefinition` con `translation_key` por `@export` en cada `.tres`, sin tabla fija),
+`coop_vote` (`CoopVote`; `ShopVoteManager` lo extiende con las cartas y la billetera), `unlock_profile`
+(`UnlockProfile` con reglas por umbral de estadísticas y migraciones; `UnlockManager` lo extiende), `run_log`
+(`RunLog`; `RunTelemetry` lo extiende). Los cuatro pasan `portability-check`; `test_traps`, `test_shop_vote_manager`,
+`test_unlock_manager`, `test_run_telemetry` sin cambios de comportamiento.
 
 ## M8 — Auditoría 2026-09-29
 

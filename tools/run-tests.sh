@@ -39,6 +39,14 @@ find_godot() {
 		if [ -x "$candidate" ] || [ -f "$candidate" ]; then echo "$candidate"; return; fi
 	done
 }
+# A test's key for its log and result: a module's test is prefixed with the
+# module, so modules/x/tests/test_a.gd never collides with tests/test_a.gd.
+key_of() {
+	case "$1" in
+		modules/*) echo "$(echo "$1" | cut -d/ -f2)__$(basename "$1" .gd)" ;;
+		*) basename "$1" .gd ;;
+	esac
+}
 GODOT_BIN="$(find_godot)"
 if [ -z "$GODOT_BIN" ]; then
 	echo "run-tests: no encuentro Godot. Definí GODOT=/ruta/al/Godot_v4.x_console" >&2
@@ -135,7 +143,7 @@ start=$(date +%s)
 # Godot teardown crash, see docs/colaboracion-equipo.md).
 run_one() {
 	local rel="$1" name
-	name="$(basename "$rel" .gd)"
+	name="$(key_of "$rel")"
 	local data="$WORK/userdata/$name" log="$WORK/$name.log"
 	mkdir -p "$data"
 	local data_native="$data"
@@ -168,7 +176,7 @@ run_one() {
 		echo "  $status $name (${duration}s)" >&3
 	fi
 }
-export -f run_one
+export -f run_one key_of
 export WORK GODOT_BIN PROJECT TEST_TIMEOUT SLOW_TEST_TIMEOUT SLOW_NAMES
 # Per-test progress lines: on in CI (GitHub sets CI=true), off locally.
 PROGRESS="${PROGRESS:-${CI:-}}"
@@ -182,7 +190,7 @@ printf '%s\n' "${TESTS[@]}" | xargs -P "$JOBS" -I{} bash -c 'run_one "$@"' _ {} 
 pass=0; fail=0; skip=0; flaky=0
 failed=(); skipped=(); flakies=()
 for rel in "${TESTS[@]}"; do
-	name="$(basename "$rel" .gd)"
+	name="$(key_of "$rel")"
 	read -r status code duration <"$WORK/$name.result" 2>/dev/null || { status=FAIL; code="?"; duration=0; }
 	case "$status" in
 		PASS) pass=$((pass + 1)) ;;
@@ -198,7 +206,7 @@ if [ -n "${REPORT_FILE:-}" ]; then
 	{
 		echo 'test,status,exit_code,duration_seconds'
 		for rel in "${TESTS[@]}"; do
-			name="$(basename "$rel" .gd)"
+			name="$(key_of "$rel")"
 			read -r status code duration <"$WORK/$name.result" 2>/dev/null || { status=FAIL; code="?"; duration=0; }
 			printf '%s,%s,%s,%s\n' "$name" "$status" "$code" "$duration"
 		done

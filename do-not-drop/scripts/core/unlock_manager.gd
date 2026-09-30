@@ -1,9 +1,10 @@
-extends Node
-## Persistent local profile for progression.  Currency/cards stay campaign
-## scoped in CrewProgression; this deliberately stores only permanent access.
-
-signal unlock_earned(unlock_id: StringName, title: String)
-signal progress_changed
+extends UnlockProfile
+## Take My Package's persistent profile on the unlock_profile module's
+## UnlockProfile (docs/modulos.md): the module keeps the file, the unlock
+## rules and the "seen once" cards; this file is what this game counts
+## (score, deliveries, runs), what it unlocks (traps, paint, uniforms, the
+## agile van), the player's choices and how the traps reach the depot's
+## shelves. Currency/cards stay campaign scoped in CrewProgression.
 
 const SAVE_PATH := "user://unlock_progress.json"
 ## 2: "team_color" became the default. Version 1 defaulted everyone to the
@@ -14,7 +15,6 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 4: first-time trap tutorial cards persist in seen_tips.
 const PROFILE_VERSION := 4
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
-const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
@@ -63,58 +63,36 @@ const COSMETICS := {
 	&"sky_uniform": {"title": "UI_UNIFORM_SKY", "color": Color("6db3d6"), "unlock": &"sky_uniform"},
 }
 
-var storage_path: String = SAVE_PATH
 var total_score: int = 0
 var successful_deliveries: int = 0
 var completed_runs: int = 0
-var unlocked: Dictionary = {&"starter_kit": true}
 var selected_cosmetic: StringName = TEAM_COLOR
 var selected_truck: StringName = &"classic"
 var selected_paint: StringName = &"white"
 var selected_eyes: StringName = FaceCatalog.DEFAULT_EYES
 var selected_mouth: StringName = FaceCatalog.DEFAULT_MOUTH
-var seen_tips: Dictionary = {}
+
+
+func _init() -> void:
+	storage_path = SAVE_PATH
+	profile_version = PROFILE_VERSION
+	unlock_rules = UNLOCKS
 
 
 func _ready() -> void:
-	# Under a test script (--script) the main loop has a script of its own:
-	# keep tests away from the player's real save, which they used to fill
-	# with dozens of scripted runs and unlocks.
-	if Engine.get_main_loop().get_script() != null:
-		storage_path = "user://test_unlock_progress.json"
-	load_profile()
+	super()
 	var event_bus := get_node_or_null("/root/EventBus")
 	if event_bus != null:
 		event_bus.run_ended.connect(_on_run_ended)
 
 
-func reset_profile() -> void:
-	total_score = 0
-	successful_deliveries = 0
-	completed_runs = 0
-	unlocked = {&"starter_kit": true}
-	selected_cosmetic = TEAM_COLOR
-	selected_truck = &"classic"
-	selected_paint = &"white"
-	selected_eyes = FaceCatalog.DEFAULT_EYES
-	selected_mouth = FaceCatalog.DEFAULT_MOUTH
-	seen_tips.clear()
-	save_profile()
-	progress_changed.emit()
-
-
-func is_unlocked(unlock_id: StringName) -> bool:
-	return bool(unlocked.get(unlock_id, false))
-
-
-## Returns true exactly once per trap and persists immediately, so changing
-## levels or closing the game cannot replay an already-read first-time card.
-func mark_tip_seen(trap_id: StringName) -> bool:
-	if trap_id.is_empty() or bool(seen_tips.get(trap_id, false)):
-		return false
-	seen_tips[trap_id] = true
-	save_profile()
-	return true
+func _stat(stat_name: StringName) -> int:
+	match stat_name:
+		&"deliveries":
+			return successful_deliveries
+		&"score":
+			return total_score
+	return 0
 
 
 ## Trap ids this profile hasn't unlocked yet: the depot leaves them off its
@@ -147,43 +125,6 @@ func _ensure_trap_capacity(locked: Array[StringName], required_boxes: int) -> Ar
 			result.erase(trap_id)
 			available_traps += 1
 	return result
-
-
-func requirements(unlock_id: StringName) -> Dictionary:
-	return Dictionary(UNLOCKS.get(unlock_id, {})).duplicate(true)
-
-
-## The closest locked reward, with one conservative percentage: both score
-## and deliveries are required, so the slower condition owns the bar.
-func next_unlock_progress() -> Dictionary:
-	var next_id: StringName = &""
-	var next_rule: Dictionary = {}
-	for unlock_id: StringName in UNLOCKS:
-		if is_unlocked(unlock_id):
-			continue
-		var rule: Dictionary = UNLOCKS[unlock_id]
-		if next_rule.is_empty() \
-				or int(rule["deliveries"]) < int(next_rule["deliveries"]) \
-				or (int(rule["deliveries"]) == int(next_rule["deliveries"])
-						and int(rule["score"]) < int(next_rule["score"])):
-			next_id = unlock_id
-			next_rule = rule
-	if next_rule.is_empty():
-		return {}
-	var target_deliveries: int = int(next_rule["deliveries"])
-	var target_score: int = int(next_rule["score"])
-	var delivery_ratio: float = (1.0 if target_deliveries <= 0
-			else minf(float(successful_deliveries) / target_deliveries, 1.0))
-	var score_ratio: float = 1.0 if target_score <= 0 else minf(float(total_score) / target_score, 1.0)
-	return {
-		"id": next_id,
-		"title": String(next_rule["title"]),
-		"current_deliveries": successful_deliveries,
-		"target_deliveries": target_deliveries,
-		"current_score": total_score,
-		"target_score": target_score,
-		"progress": minf(delivery_ratio, score_ratio),
-	}
 
 
 func cosmetic_choices() -> Array[Dictionary]:
@@ -285,88 +226,62 @@ func record_run(score: int, results: Dictionary) -> Array[StringName]:
 	total_score += maxi(score, 0)
 	if bool(results.get("delivered", false)):
 		successful_deliveries += 1
-	var newly_unlocked := _grant_eligible_unlocks()
-	save_profile()
-	progress_changed.emit()
-	for unlock_id: StringName in newly_unlocked:
-		var title: String = tr(str(UNLOCKS[unlock_id]["title"]))
-		unlock_earned.emit(unlock_id, title)
-		var event_bus := _event_bus()
-		if event_bus != null:
-			event_bus.emit_signal(&"unlock_earned", unlock_id, title)
+	var newly_unlocked: Array[StringName] = announce_new_unlocks()
+	var event_bus: Node = get_node_or_null("/root/EventBus") if is_inside_tree() else null
+	if event_bus != null:
+		for unlock_id: StringName in newly_unlocked:
+			event_bus.emit_signal(&"unlock_earned", unlock_id, tr(str(UNLOCKS[unlock_id]["title"])))
 	return newly_unlocked
 
 
-func save_profile() -> void:
-	var saved: bool = SAFE_JSON.write(storage_path, {
-		"version": PROFILE_VERSION,
+func _profile_fields() -> Dictionary:
+	return {
 		"total_score": total_score,
 		"successful_deliveries": successful_deliveries,
 		"completed_runs": completed_runs,
-		"unlocked": unlocked,
 		"selected_cosmetic": selected_cosmetic,
 		"selected_truck": selected_truck,
 		"selected_paint": selected_paint,
 		"selected_eyes": selected_eyes,
 		"selected_mouth": selected_mouth,
-		"seen_tips": seen_tips,
-	})
-	if not saved:
-		push_warning("No se pudo guardar progreso: " + storage_path)
+	}
 
 
-func load_profile() -> void:
-	if not FileAccess.file_exists(storage_path):
-		return
-	var parsed: Dictionary = SAFE_JSON.read(storage_path, {})
-	if parsed.is_empty():
-		reset_profile()
-		return
-	var saved_version := int(parsed.get("version", 1))
+func _read_profile(parsed: Dictionary, version: int) -> void:
 	total_score = maxi(int(parsed.get("total_score", 0)), 0)
 	successful_deliveries = maxi(int(parsed.get("successful_deliveries", 0)), 0)
 	completed_runs = maxi(int(parsed.get("completed_runs", 0)), 0)
-	unlocked = {&"starter_kit": true}
-	for key: Variant in Dictionary(parsed.get("unlocked", {})):
-		if bool(parsed["unlocked"].get(key, false)):
-			unlocked[StringName(key)] = true
-	var retroactive_unlocks := _grant_eligible_unlocks()
 	var saved_cosmetic := StringName(parsed.get("selected_cosmetic", TEAM_COLOR))
-	if saved_version < 2 and saved_cosmetic == &"mint_uniform":
+	if version < 2 and saved_cosmetic == &"mint_uniform":
 		saved_cosmetic = TEAM_COLOR
 	selected_cosmetic = saved_cosmetic if COSMETICS.has(saved_cosmetic) else TEAM_COLOR
+	selected_truck = StringName(parsed.get("selected_truck", &"classic"))
+	selected_paint = StringName(parsed.get("selected_paint", &"white"))
+	selected_eyes = FaceCatalog.valid_eyes(StringName(parsed.get("selected_eyes", FaceCatalog.DEFAULT_EYES)))
+	selected_mouth = FaceCatalog.valid_mouth(StringName(parsed.get("selected_mouth", FaceCatalog.DEFAULT_MOUTH)))
+
+
+## Choices that need an unlock this profile doesn't have fall back.
+func _after_load(_version: int) -> void:
 	var selected_rule: Dictionary = Dictionary(COSMETICS[selected_cosmetic])
 	if not is_unlocked(StringName(selected_rule.get("unlock", &"starter_kit"))):
 		selected_cosmetic = TEAM_COLOR
-	var saved_truck := StringName(parsed.get("selected_truck", &"classic"))
-	selected_truck = saved_truck if TRUCKS.has(saved_truck) and is_unlocked(StringName(TRUCKS[saved_truck]["unlock"])) else &"classic"
-	var saved_paint := StringName(parsed.get("selected_paint", &"white"))
-	selected_paint = saved_paint if PAINTS.has(saved_paint) and is_unlocked(StringName(PAINTS[saved_paint]["unlock"])) else &"white"
-	selected_eyes = FaceCatalog.valid_eyes(StringName(parsed.get("selected_eyes", FaceCatalog.DEFAULT_EYES)))
-	selected_mouth = FaceCatalog.valid_mouth(StringName(parsed.get("selected_mouth", FaceCatalog.DEFAULT_MOUTH)))
-	seen_tips.clear()
-	for trap_id: Variant in Dictionary(parsed.get("seen_tips", {})):
-		if bool(parsed["seen_tips"].get(trap_id, false)):
-			seen_tips[StringName(trap_id)] = true
-	if saved_version < PROFILE_VERSION or not retroactive_unlocks.is_empty():
-		save_profile()
+	if not TRUCKS.has(selected_truck) or not is_unlocked(StringName(TRUCKS[selected_truck]["unlock"])):
+		selected_truck = &"classic"
+	if not PAINTS.has(selected_paint) or not is_unlocked(StringName(PAINTS[selected_paint]["unlock"])):
+		selected_paint = &"white"
 
 
-func _grant_eligible_unlocks() -> Array[StringName]:
-	var newly_unlocked: Array[StringName] = []
-	for unlock_id: StringName in UNLOCKS:
-		if is_unlocked(unlock_id):
-			continue
-		var rule: Dictionary = UNLOCKS[unlock_id]
-		if successful_deliveries >= int(rule["deliveries"]) and total_score >= int(rule["score"]):
-			unlocked[unlock_id] = true
-			newly_unlocked.append(unlock_id)
-	return newly_unlocked
+func _reset_fields() -> void:
+	total_score = 0
+	successful_deliveries = 0
+	completed_runs = 0
+	selected_cosmetic = TEAM_COLOR
+	selected_truck = &"classic"
+	selected_paint = &"white"
+	selected_eyes = FaceCatalog.DEFAULT_EYES
+	selected_mouth = FaceCatalog.DEFAULT_MOUTH
 
 
 func _on_run_ended(score: int, results: Dictionary) -> void:
 	record_run(score, results)
-
-
-func _event_bus() -> Node:
-	return get_node_or_null("/root/EventBus") if is_inside_tree() else null

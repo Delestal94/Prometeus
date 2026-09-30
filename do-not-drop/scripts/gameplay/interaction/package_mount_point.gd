@@ -1,4 +1,4 @@
-extends "res://scripts/gameplay/interaction/interactable.gd"
+extends Interactable
 ## Lets a player carrying a package leave it here, if the mount is free.
 ## The mount marker itself is the parent -- this only adds the interaction.
 ##

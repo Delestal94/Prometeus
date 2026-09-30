@@ -10,7 +10,7 @@ extends SceneTree
 ##   switching the locale really switches what the world shows.
 
 const CSV_PATH: String = "res://translations/strings_world.csv"
-const SCAN_DIRS: Array[String] = ["res://scripts"]
+const SCAN_DIRS: Array[String] = ["res://scripts", "res://modules"]
 
 var _failures: int = 0
 

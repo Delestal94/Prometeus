@@ -2,11 +2,13 @@ extends Node3D
 class_name RouteSegment
 ## Base for a chainable, streamable route piece. Each segment builds itself
 ## in local space, centred on its own length along -Z (entry at z=0, exit at
-## z=-length) so RouteStreamer can place the next one right after it without
-## either segment knowing about the other's contents.
+## z=-length) so a SegmentStreamer (or a hand-laid route) can place the
+## next one right after it without either segment knowing about the other's
+## contents. Portable module (docs/modulos.md).
 ##
-## Deliberately code-built, no .tscn, same convention as the handcrafted
-## route.gd -- there's no art yet, so a script is the actual source of truth.
+## Deliberately code-built, no .tscn: a script is the source of truth. A
+## game's own segments extend this and may load their models with _model()
+## and _art().
 
 @export var length: float = 20.0
 
@@ -118,13 +120,13 @@ func _model(node_name: String, path: String, location: Vector3, rotation_y: floa
 	return model
 
 
-## _model() dressed in the kit's detail materials (LowpolyMaterials: the
-## stone, concrete and grass grain). For the imported route pieces that
-## replaced code-built boxes (tunnel, bridge, chicane).
+## _model() dressed in the detail materials (DetailMaterials, render_budget:
+## the stone, concrete and grass grain the game configured). For imported
+## route pieces that replaced code-built boxes (a tunnel, a bridge).
 func _art(node_name: String, path: String, location: Vector3, rotation_y: float = 0.0) -> Node3D:
 	var model: Node3D = _model(node_name, path, location, rotation_y)
 	if model != null:
-		LowpolyMaterials.apply(model)
+		DetailMaterials.apply(model)
 	return model
 
 
