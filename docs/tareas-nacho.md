@@ -48,6 +48,14 @@ Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md
 por entrega para el perfil torpe se mantiene.
 - [x] ~~**N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-229-clumsy-near-misses`: Frágil `impact_damage_heavy` 35 → 36 (dos baches sin amortiguar y uno amortiguado dejan 24,4 en vez de 26,5); casi-pérdidas del torpe en Frágil 0,8 → 37,6 %, por viaje 0,73 → 1,10, reporte **CUMPLE**; pérdidas de todos los perfiles sin cambio. Ruidoso: una caja rescatada tras tocar el máximo de agitación cuenta como casi-pérdida en el arnés (decisión delegada, pregunta 9); torpe 0 → 51,2 %, por viaje → **1,61**. Test `test_sim_near_miss.gd`.
 
+### N-237 · El tutorial de cuidado se dibuja encima de Opciones — B · `Opus 5.5 · low` · Aviso: sí (`player_cargo_care.gd`, archivos de Slatex) · **[x] rama `nacho/fix-tutorial-over-options`**
+Origen: captura con GPU 2026-09-30. Con Opciones abierta, la tarjeta "Cómo cuidar la carga" (`care_practice.gd`) se
+veía entera, sin oscurecer, a la derecha del panel. Causa: la tarjeta de cuidado y la de práctica viven en un
+`CanvasLayer` propio (`player_cargo_care.gd`) con `layer = 7`, y el HUD (Opciones, pausa, resultados, depósito,
+tripulación) es el `CanvasLayer` 1: todo lo del HUD quedaba por debajo. La guarda del mouse capturado lo tapaba
+casi siempre, pero no la práctica en el cuadro en que el jugador recaptura el mouse.
+- [x] ~~**N-237.1** Bajar la capa de las tarjetas de cuidado/práctica a `CARD_LAYER = 0` (debajo del HUD) y cubrirlo con `test_modal_layers.gd`. Tests `modal_layers`, `options`, `tutorial`, `hud`.~~ **[x] Hecho (2026-09-30)**.
+
 ### N-235 · Una caída sucia se nota a los 45 s — C · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`, zona compartida)
 Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red`). Para que el que se une no
 se corte mientras carga el nivel (bloquea el poll de ENet 18-34 s en CI), el timeout de ENet quedó fijo en
