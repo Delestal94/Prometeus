@@ -29,7 +29,7 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 @export var controls_enabled: bool = true
 ## The pose the host sends (tareas de Nacho N-208), replicated instead of
 ## position/rotation (vehicle.tscn): on the host they read the truck itself,
-## plus its own clock; on a client each packet goes into VehicleNetSmoother,
+## plus its own clock; on a client each packet goes into NetPoseSmoother,
 ## which draws the truck a touch in the past, interpolated, instead of
 ## jumping with every burst of packets.
 var net_time: float:
@@ -54,7 +54,7 @@ var net_rotation: Vector3:
 		_net_received |= 4
 		_commit_net_pose()
 var _host_clock: float = 0.0
-var _net_smoother := VehicleNetSmoother.new()
+var _net_smoother := NetPoseSmoother.new()
 var _net_incoming_time: float = 0.0
 var _net_incoming_position: Vector3 = Vector3.ZERO
 var _net_incoming_rotation: Vector3 = Vector3.ZERO
@@ -180,6 +180,9 @@ func _ready() -> void:
 		# the MultiplayerSynchronizer. Letting the physics engine run too would
 		# fight the incoming synced transform every frame.
 		freeze = true
+		# The pose buffer simulates a bad link only where the transport
+		# doesn't (LAN under --net-sim); over Steam the sockets do it.
+		_net_smoother.configure_sim(NetworkManager.pose_net_sim())
 	# Runs on every peer's copy of the van -- horn_honked is already relayed
 	# to everyone (see EventBus.request_horn()), so whoever's driving doesn't
 	# need to be this peer, or the host, for it to be heard here too.

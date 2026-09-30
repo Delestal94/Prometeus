@@ -11,7 +11,7 @@
 acepta: tortas de bodas, gallinas, mapaches, fuegos artificiales. Su lema, en la valla de la ruta, es
 **"entregamos (casi) todo"**; el diario local usa la variante "Todas las noticias que llegan (casi)
 enteras". El "casi" es el chiste de la casa: la empresa lo sabe, el cliente lo sabe y nadie lo dice.
-Trabaja con un solo camión, un depósito y un equipo de hasta 5 personas que se turnan para manejar
+Trabaja con un solo camión, un depósito y un equipo de hasta 8 personas que se turnan para manejar
 y cuidar cajas.
 
 ## Quién manda

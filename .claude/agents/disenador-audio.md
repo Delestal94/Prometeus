@@ -12,7 +12,7 @@ samples ni música de terceros ni de IA.
 
 ## Sistema actual (verificá con `ls`; los archivos se parten cuando llegan al límite de largo)
 
-- **Efectos**: `scripts/presentation/synth_audio.gd` (`SynthAudio`, reparte y cachea) y sus partes
+- **Efectos**: `modules/synth_audio/synth_audio.gd` (`SynthAudio`, reparte y cachea) y sus partes
   `synth_audio_traps.gd`, `synth_audio_care.gd`, `synth_audio_scenes.gd` (`SynthAudioScenes`). Generadores
   estáticos que devuelven `AudioStreamWAV`: sample rate y duración explícitos, sin estado global. Si
   `synth_audio.gd` está lleno, el sonido nuevo va a la parte del tema o a una nueva, como las otras.

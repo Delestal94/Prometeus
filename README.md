@@ -6,8 +6,8 @@ Proyecto de desarrollo de un videojuego indie (desarrollo en solitario, asistido
 IA), con el objetivo de aplicar patrones de éxito observados en juegos de Steam hechos
 por 1-2 personas.
 
-Nombre oficial del juego: **Take My Package** (desde 2026-09-22; antes el nombre de trabajo era "Do Not Drop", por eso el proyecto Godot sigue en `do-not-drop/`) — delivery cooperativo de hasta 5
-jugadores: 1 conduce, hasta 4 llevan un paquete con una "trampa" cada uno (ver
+Nombre oficial del juego: **Take My Package** (desde 2026-09-22; antes el nombre de trabajo era "Do Not Drop", por eso el proyecto Godot sigue en `do-not-drop/`) — delivery cooperativo de hasta 8
+jugadores: 1 conduce, hasta 7 llevan un paquete con una "trampa" cada uno (ver
 `docs/definicion-proyecto.md` y `docs/requerimientos-tecnicos.md`).
 
 ## Motor
@@ -171,6 +171,11 @@ GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
 
 Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son
 parte de la batería (con Claude, los corre el agente `revisor-visual`).
+
+Los **módulos portables** (`do-not-drop/modules/`, ver `docs/modulos.md`) traen sus propios tests en
+`modules/<nombre>/tests/`, que la batería también corre. `tools/portability-check.sh` prueba cada módulo
+solo, en un proyecto Godot vacío: si pasa, esa carpeta se puede copiar a otro juego y funciona.
+`python tools/check_modules.py` revisa que ningún módulo nombre algo del juego.
 
 Para generar el lote fijo de Steam/tienda de S-902 (cinco PNG de 1920×1080 en
 `user://store_shots/`: depósito cargando, conducción con carga en riesgo, entrega,

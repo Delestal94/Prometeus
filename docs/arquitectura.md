@@ -76,6 +76,25 @@ antes que el pase de arte).
 
 ---
 
+## 1.1 Módulos portables (`do-not-drop/modules/`)
+
+> Desde 2026-09-30 (N-230). Detalle, catálogo y reglas: `docs/modulos.md`.
+
+Lo genérico del juego vive en carpetas que se pueden copiar a otro proyecto Godot y funcionan:
+`modules/<nombre>/` con `module.cfg`, scripts con `class_name` y `tests/`. Adentro de un módulo no
+existe el juego (ni autoloads, ni `res://scripts/`, ni clases del juego): lo que necesita lo recibe
+por parámetro o por `static var` de configuración, y el juego lo conecta desde un adaptador chico
+en `scripts/` (`LowpolyMaterials` → `DetailMaterials`, `LegacyUserData` → `UserDataMigration`).
+Dos chequeos lo garantizan en CI: `tools/check_modules.py` (reglas estáticas) y
+`tools/portability-check.sh` (cada módulo solo, en un proyecto vacío, corriendo sus tests).
+
+Hoy: `persistence`, `loc_text`, `synth_audio`, `net_pose_smoother`, `render_budget`, `acoustics`,
+`ragdoll`. Siguen (fases 2-5 de `docs/modulos.md`): sesión de red y bus con relay, interacción y
+asientos, cámara de asiento, ajustes, tema de UI, generación de ruta y clima, contrato de peligros,
+votación cooperativa, perfil versionado, telemetría.
+
+---
+
 ## 2. Autoloads (singletons globales)
 
 | Autoload | Responsabilidad | Estado |

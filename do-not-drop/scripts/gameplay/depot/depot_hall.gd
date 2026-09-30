@@ -6,7 +6,7 @@ extends RefCounted
 ## DepotKit it's given; the few live nodes hang from the depot root.
 
 const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
-const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
+const ContactShadow = preload("res://modules/render_budget/contact_shadow.gd")
 
 ## Arrows painted on the floor: {"caption", "at", "direction"} in depot space.
 var guides: Array[Dictionary] = []

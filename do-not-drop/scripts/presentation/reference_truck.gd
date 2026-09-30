@@ -291,7 +291,7 @@ func _collect_doors() -> void:
 		_pose_door(1.0 if open else 0.0, door)
 		var audio := AudioStreamPlayer3D.new()
 		audio.name = "DoorAudio_" + String(door)
-		audio.stream = preload("res://scripts/presentation/synth_audio.gd").impact_thud()
+		audio.stream = preload("res://modules/synth_audio/synth_audio.gd").impact_thud()
 		audio.unit_size = 6.0
 		audio.max_distance = 30.0
 		if not leaves.is_empty():

@@ -46,7 +46,7 @@ func _run() -> void:
 		packets.append([sent + LAG + rng.randf_range(0.0, JITTER), sent])
 	packets.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
 
-	var smoother := VehicleNetSmoother.new()
+	var smoother := NetPoseSmoother.new()
 	smoother.fake_lag = 0.0
 	var raw := Transform3D.IDENTITY
 	var raw_time: float = -1.0
@@ -82,10 +82,10 @@ func _run() -> void:
 	print("net smoothing @ %.0f ms lag + %.0f ms jitter: raw worst %.1f cm/frame off smooth motion, smoothed %.1f cm, trailing the host by %.0f ms" % [LAG * 1000.0, JITTER * 1000.0, raw_jump * 100.0, smooth_jump * 100.0, worst_trail * 1000.0])
 	_expect(raw_jump > LIMIT, "Unsmoothed, the lagged truck jumps visibly (%.1f cm a frame)" % (raw_jump * 100.0))
 	_expect(smooth_jump < LIMIT, "Smoothed, it never jumps more than %.0f cm a frame (%.1f cm)" % [LIMIT * 100.0, smooth_jump * 100.0])
-	_expect(worst_trail < LAG + JITTER + VehicleNetSmoother.DELAY + 0.02, "It trails the host by the lag plus the buffer, no more (%.0f ms)" % (worst_trail * 1000.0))
+	_expect(worst_trail < LAG + JITTER + NetPoseSmoother.DELAY + 0.02, "It trails the host by the lag plus the buffer, no more (%.0f ms)" % (worst_trail * 1000.0))
 
 	# A respawn: snaps, doesn't slide.
-	var teleport := VehicleNetSmoother.new()
+	var teleport := NetPoseSmoother.new()
 	teleport.push(0.0, Transform3D(Basis.IDENTITY, Vector3.ZERO), 0.0)
 	teleport.push(1.0 / 60.0, Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -0.3)), 1.0 / 60.0)
 	teleport.push(2.0 / 60.0, Transform3D(Basis.IDENTITY, Vector3(200.0, 0.0, 0.0)), 2.0 / 60.0)
@@ -93,24 +93,24 @@ func _run() -> void:
 	_expect(after.origin.distance_to(Vector3(200.0, 0.0, 0.0)) < 0.5, "A teleport snaps to the new spot (%s)" % after.origin)
 
 	# --fake-lag holds poses back.
-	var lagged := VehicleNetSmoother.new()
+	var lagged := NetPoseSmoother.new()
 	lagged.fake_lag = 0.15
 	lagged.push(0.0, Transform3D(Basis.IDENTITY, Vector3(1.0, 0.0, 0.0)), 0.0)
 	_expect(lagged.sample(0.1) == Transform3D.IDENTITY, "With --fake-lag a pose isn't there before its time")
 	_expect(lagged.sample(0.25).origin.is_equal_approx(Vector3(1.0, 0.0, 0.0)), "...and is once the lag has passed")
 
 	# --net-sim on LAN (N-216): its own jitter, and lost poses.
-	var simulated := VehicleNetSmoother.new()
+	var simulated := NetPoseSmoother.new()
 	simulated.configure_sim({"lag_ms": 150, "jitter_ms": 20, "loss_pct": 0.0})
 	simulated.push(0.0, Transform3D(Basis.IDENTITY, Vector3(1.0, 0.0, 0.0)), 0.0)
 	_expect(simulated.sample(0.149) == Transform3D.IDENTITY, "With --net-sim a pose isn't there before the lag")
 	_expect(simulated.sample(0.171).origin.is_equal_approx(Vector3(1.0, 0.0, 0.0)),
 		"...and is once the lag and the most jitter (20 ms) have passed")
-	var lossy := VehicleNetSmoother.new()
+	var lossy := NetPoseSmoother.new()
 	lossy.configure_sim({"lag_ms": 0, "jitter_ms": 0, "loss_pct": 100.0})
 	lossy.push(0.0, Transform3D(Basis.IDENTITY, Vector3(1.0, 0.0, 0.0)), 0.0)
 	_expect(lossy.is_empty(), "With 100 %% loss no pose ever arrives")
-	var untouched := VehicleNetSmoother.new()
+	var untouched := NetPoseSmoother.new()
 	untouched.configure_sim({})
 	_expect(untouched.fake_loss == 0.0 and untouched.fake_jitter < 0.0, "No profile leaves --fake-lag as it was")
 

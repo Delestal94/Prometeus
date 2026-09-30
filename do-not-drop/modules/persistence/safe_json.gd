@@ -1,3 +1,4 @@
+class_name SafeJson
 extends RefCounted
 ## Small crash-safe JSON store. Data is written completely to .tmp before
 ## the previous file is rotated and the new one takes its place.

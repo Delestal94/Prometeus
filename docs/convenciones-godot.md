@@ -146,6 +146,15 @@ en `scripts/ui/ping_catalog.gd` y el envío en `Player._send_ping()`.
 
 ```
 do-not-drop/
+  modules/                      # portables: se copian a otro juego y funcionan (docs/modulos.md)
+    persistence/                # SafeJson, UserDataMigration
+    loc_text/                   # LocText
+    synth_audio/                # SynthAudio + escenas, cuidado, pasos, trampas, radio
+    net_pose_smoother/          # NetPoseSmoother
+    render_budget/              # WorldQuality, DressingBatcher, DetailMaterials, ContactShadow
+    acoustics/                  # AcousticSpace, AcousticZone
+    ragdoll/                    # PlayerRagdoll
+    <nombre>/module.cfg         # name, summary, depends; tests/ propios del módulo
   scenes/
     ui/
       main_menu.tscn            # wrapper mínimo, la UI se arma en main_menu.gd
@@ -171,7 +180,7 @@ do-not-drop/
       prototype_hud.gd          # HUD + resultados, sin escena propia
     presentation/
       first_person_camera.gd
-      synth_audio.gd            # waveforms generadas en código (bocina), sin assets
+      lowpoly_materials.gd      # adaptador: las tablas del juego para modules/render_budget
     gameplay/
       level_base.gd
       vehicle/

@@ -19,7 +19,7 @@ extends Node
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
-const SynthAudioSteps = preload("res://scripts/presentation/synth_audio_steps.gd")
+const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
 
 ## Ground speeds, m/s. Walking is Player.WALK_SPEED (3.6).
 const RUN_SPEED: float = 6.0

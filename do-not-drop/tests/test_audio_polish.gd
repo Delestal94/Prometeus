@@ -14,7 +14,7 @@ extends SceneTree
 ## Each now has its own cue (synth_audio.gd); this checks they're wired in
 ## and are genuinely their own clip, not the old stand-in still playing.
 
-const SynthAudio = preload("res://scripts/presentation/synth_audio.gd")
+const SynthAudio = preload("res://modules/synth_audio/synth_audio.gd")
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 
 var _failures: int = 0

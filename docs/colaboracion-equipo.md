@@ -53,8 +53,10 @@ cambiar**, hace el cambio en un commit chico y aislado, y avisa cuando ya está 
 para que el otro haga `git pull` antes de seguir.
 
 - `do-not-drop/scripts/core/event_bus.gd`, `network_manager.gd`, `run_manager.gd`
-- `do-not-drop/scripts/presentation/first_person_camera.gd`, `core/render_layers.gd`,
-  `synth_audio.gd` (lo usan tanto el vehículo como el jugador)
+- `do-not-drop/modules/*` (los módulos portables, `docs/modulos.md`: audio sintetizado, guardado,
+  suavizado de red, presupuesto de render, acústica, ragdoll…) y sus herramientas
+  `tools/check_modules.py`, `tools/portability-check.sh`
+- `do-not-drop/scripts/presentation/first_person_camera.gd`, `core/render_layers.gd`
 - `do-not-drop/scripts/gameplay/level_base.gd` y
   `do-not-drop/scenes/gameplay/level_base.tscn` (componen ambos dominios)
 - `do-not-drop/project.godot`

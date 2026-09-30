@@ -1,6 +1,6 @@
 extends RefCounted
-class_name VehicleNetSmoother
-## The host's truck, drawn smoothly on a client (tareas de Nacho N-208).
+class_name NetPoseSmoother
+## A host-owned body, drawn smoothly on a client (tareas de Nacho N-208).
 ##
 ## The host sends the truck's pose about 60 times a second, but they don't
 ## arrive that evenly: two land in one frame, then none for three, and with
@@ -51,15 +51,13 @@ func _init() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--fake-lag="):
 			fake_lag = maxf(float(arg.get_slice("=", 1)) / 1000.0, 0.0)
-	var tree := Engine.get_main_loop() as SceneTree
-	var network: Node = tree.root.get_node_or_null(^"NetworkManager") if tree != null else null
-	if network != null and network.has_method(&"pose_net_sim"):
-		configure_sim(network.call(&"pose_net_sim"))
 	_rng.randomize()
 
 
-## Takes a NetStats `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}); an
-## empty one leaves the buffer as it was.
+## Takes a `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}); an empty one
+## leaves the buffer as it was. The owner calls it (the game's NetworkManager
+## knows whether the transport already simulates the link): the buffer never
+## looks the session up by itself.
 func configure_sim(sim: Dictionary) -> void:
 	if sim.is_empty():
 		return

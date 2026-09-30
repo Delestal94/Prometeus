@@ -242,14 +242,17 @@ func _check_network_manager() -> void:
 		"NetworkManager keeps the parsed profile (got %s)" % network.get(&"net_sim"))
 	network.set(&"active_transport", 2)  # Transport.ENET
 	_expect(network.call(&"pose_net_sim") == NetStats.STANDARD_SIM, "On LAN the truck's pose buffer simulates it")
-	var smoother := VehicleNetSmoother.new()
+	var smoother := NetPoseSmoother.new()
+	smoother.configure_sim(network.call(&"pose_net_sim"))
 	_expect(is_equal_approx(smoother.fake_lag, 0.15) and is_equal_approx(smoother.fake_jitter, 0.02)
 			and is_equal_approx(smoother.fake_loss, 0.02),
 		"A truck built on LAN under --net-sim holds poses 150 ms + 0..20 ms and drops 2 %% (got %s, %s, %s)" % [
 			smoother.fake_lag, smoother.fake_jitter, smoother.fake_loss])
 	network.set(&"active_transport", 1)  # Transport.STEAM
 	_expect((network.call(&"pose_net_sim") as Dictionary).is_empty(), "On Steam the sockets simulate it, not the truck")
-	_expect(is_equal_approx(VehicleNetSmoother.new().fake_loss, 0.0),
+	var steam_smoother := NetPoseSmoother.new()
+	steam_smoother.configure_sim(network.call(&"pose_net_sim"))
+	_expect(is_equal_approx(steam_smoother.fake_loss, 0.0),
 		"A truck built on Steam doesn't drop poses itself")
 	var steam := FakeSteam.new()
 	network.set(&"_steam", steam)

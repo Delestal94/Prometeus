@@ -22,7 +22,7 @@ extends SceneTree
 
 const Sprint = preload("res://scripts/gameplay/player/player_sprint.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
-const SynthAudioSteps = preload("res://scripts/presentation/synth_audio_steps.gd")
+const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
 const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
 const TRAP_KINDS: Array[String] = ["fragile", "balance", "liquid", "noisy", "explosive", "hostile", "growing_weight"]
 

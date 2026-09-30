@@ -9,7 +9,7 @@
 #   tools/list-tests.sh --missing  # scripts whose header has no description
 set -euo pipefail
 
-cd "$(dirname "$0")/../do-not-drop/tests"
+cd "$(dirname "$0")/../do-not-drop"
 
 missing=0
 filters=()
@@ -18,9 +18,10 @@ for arg in "$@"; do
 done
 
 status=0
-for file in test_*.gd bench_*.gd net_*.gd render_*.gd check_*.gd; do
+for file in tests/test_*.gd tests/bench_*.gd tests/net_*.gd tests/render_*.gd tests/check_*.gd modules/*/tests/test_*.gd; do
 	[ -f "$file" ] || continue
-	name="${file%.gd}"
+	name="$(basename "$file" .gd)"
+	case "$file" in modules/*) name="${file#modules/}"; name="${name%%/*}/$(basename "$file" .gd)" ;; esac
 	if [ ${#filters[@]} -gt 0 ]; then
 		keep=0
 		for f in "${filters[@]}"; do [[ "$name" == *"$f"* ]] && keep=1; done

@@ -15,7 +15,7 @@ extends Node
 ## already translated on that peer, so it reads well but is not a stable key:
 ## group by `trap` when comparing files from different languages.
 
-const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
+const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 const TelemetryFormat = preload("res://scripts/core/run_telemetry_format.gd")
 
 ## ITrapBehavior.TrapState AT_RISK / RUINED: numbers kept here so this file

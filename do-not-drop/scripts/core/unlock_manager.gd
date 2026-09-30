@@ -14,7 +14,7 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 4: first-time trap tutorial cards persist in seen_tips.
 const PROFILE_VERSION := 4
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
-const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
+const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"

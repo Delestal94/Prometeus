@@ -1,3 +1,4 @@
+class_name SynthAudioSteps
 extends RefCounted
 ## The player's footfall (N-115: running makes steps you can hear, and the faster
 ## cadence is what tells a run from a walk). Split out like synth_audio_care.gd;

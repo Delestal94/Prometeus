@@ -28,7 +28,7 @@ hace a la carga. El tráiler alterna **cabina tranquila** con **caja de carga en
 | 10 | 0:45-0:50 | Ciervo cruzando: el conductor toca bocina y el ciervo escapa; corte a una segunda toma donde no toca y lo choca. | Bocina / golpe y multa. | — |
 | 11 | 0:50-0:57 | Llegada a una casa de noche (plano N-902): porche encendido, un pasajero baja con la caja, toca el timbre, el vecino abre y se agarra la cabeza. | Timbre, puerta, reacción. | "Entregá lo que quede." |
 | 12 | 0:57-1:05 | **Clímax.** Vuelco en una curva con cajas volando en cámara lenta (plano N-902 "vuelco"); corte a la cabina, el conductor mirando por el espejo. | La música se corta en el vuelco; vuelve en el corte. | — |
-| 13 | 1:05-1:10 | Pantalla de resultados con la tripulación frente al camión volcado; foto de la entrega con una caja rota. | Risa, fanfarria corta. | "1-4 jugadores · cooperativo en línea" |
+| 13 | 1:05-1:10 | Pantalla de resultados con la tripulación frente al camión volcado; foto de la entrega con una caja rota. | Risa, fanfarria corta. | "1-8 jugadores · cooperativo en línea" |
 | 14 | 1:10-1:15 | Logo, "Agregalo a tu lista de deseos", fecha o "Próximamente". | Última nota. | **TAKE MY PACKAGE · Wishlist en Steam** |
 
 ## Reglas para grabar

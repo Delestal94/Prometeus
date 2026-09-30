@@ -1,7 +1,7 @@
 # Requerimientos técnicos y funcionales — Take My Package
 
 > Basado en: `docs/definicion-proyecto.md` (idea base: delivery cooperativo, 1 conductor +
-> hasta 4 pasajeros con paquetes-trampa) y `docs/mecanicas-candidatas.md`.
+> hasta 7 pasajeros con paquetes-trampa) y `docs/mecanicas-candidatas.md`.
 > Última actualización: 2026-09-20
 > Objetivo de este documento: dejar sentada la base funcional y técnica necesaria para
 > que el juego sea adictivo y altamente rejugable desde el día del release, con arte
@@ -49,7 +49,7 @@ Early Access (docs/tareas-nacho.md N-308, antes #34).
 - **Cómo se compensa la oclusión ambiental:** oclusión horneada en los colores de vértice
   de los modelos (script de Blender, al exportar) y sombras de contacto falsas bajo autos
   estacionados, casas y cajas apiladas. Las dos son baratas en cualquier GPU. Las sombras
-  de contacto ya están (N-308.2, `scripts/presentation/contact_shadow.gd`): Compatibility
+  de contacto ya están (N-308.2, `modules/render_budget/contact_shadow.gd`): Compatibility
   tampoco tiene nodos `Decal`, así que son una malla plana sin luz, con una franja que se
   esfuma en metros alrededor de la base; en la ruta cada vértice se apoya en el terreno.
 - **Cuándo revisarlo:** solo si, con el juego ya en Early Access, las mediciones de
@@ -120,7 +120,7 @@ pedido de que "el conductor debe ver dentro de la cabina": cada jugador ve el mu
 desde los ojos de su personaje, sentado en su lugar dentro de la furgoneta.
 
 - **La furgoneta tiene interior real**: cabina del conductor con tablero y volante
-  visibles, y hasta 4 asientos de pasajero en los laterales de la zona de carga, cada
+  visibles, y asientos de pasajero para hasta 7 jugadores en la zona de carga, cada
   uno con su propio paquete-trampa enfrente (ver `Vehicle` en
   `docs/arquitectura.md` sección 3 — los asientos son `Marker3D` hijos del vehículo,
   no entidades separadas por ahora).
