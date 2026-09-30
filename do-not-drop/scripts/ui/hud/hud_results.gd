@@ -108,6 +108,9 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	# What the crew's wallet got from this delivery (CrewProgression.award_delivery):
 	# the same doors + cargo lines as above, without the chaos multiplier.
 	var payout_line: String = tr("HUD_RESULT_PAYOUT") % int(results["payout"]) if results.has("payout") else ""
+	# The old manual van's compensation (N-114), when this delivery earned any.
+	if int(results.get("pay_bonus", 0)) > 0:
+		payout_line += tr("HUD_RESULT_PAY_BONUS") % int(results["pay_bonus"])
 	if results.has("breakdown"):
 		hud.overlay_stats.text = format_score_breakdown(results, score) + payout_line \
 				+ tr("HUD_RESULT_TEAM") % CrewProgression.team_money + best_line + client_line

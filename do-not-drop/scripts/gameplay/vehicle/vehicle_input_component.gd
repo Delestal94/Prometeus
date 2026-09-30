@@ -23,6 +23,13 @@ func _physics_process(_delta: float) -> void:
 		handbrake = Input.is_action_pressed("drive_handbrake")
 		if Input.is_action_just_pressed(&"drive_horn"):
 			_send_horn()
+		# Manual gearbox (N-114): a shift is an event, not a level, so it goes
+		# reliably and on its own, not with the 60 Hz driving sample.
+		if _vehicle.has_method(&"has_manual_gearbox") and _vehicle.has_manual_gearbox():
+			if Input.is_action_just_pressed(&"drive_shift_up"):
+				_send_shift(1)
+			elif Input.is_action_just_pressed(&"drive_shift_down"):
+				_send_shift(-1)
 	if _vehicle.is_multiplayer_authority():
 		_vehicle.set_controls(throttle, steer, handbrake)
 	else:
@@ -33,6 +40,13 @@ func _is_local_driver() -> bool:
 	if not NetworkManager.is_online():
 		return true
 	return _vehicle.driver_peer_id == NetworkManager.local_id()
+
+
+func _send_shift(direction: int) -> void:
+	if _vehicle.is_multiplayer_authority():
+		_vehicle.request_gear_shift(direction)
+	else:
+		_vehicle.rpc_id(1, &"request_gear_shift", direction)
 
 
 ## Same call-direct-or-rpc_id(1,...) split as every other player-initiated

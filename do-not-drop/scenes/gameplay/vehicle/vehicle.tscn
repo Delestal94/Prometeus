@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle.gd" id="1_vehicle"]
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_input_component.gd" id="2_input"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/gameplay/interaction/package_mount_point.gd" id="5_mount"]
 [ext_resource type="Script" path="res://scripts/presentation/vehicle_presentation.gd" id="6_presentation"]
 [ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_door_interaction.gd" id="7_door"]
+[ext_resource type="Script" path="res://scripts/gameplay/vehicle/vehicle_gearbox.gd" id="8_gearbox"]
 
 [sub_resource type="SceneReplicationConfig" id="Repl_vehicle"]
 properties/0/path = NodePath(".:net_position")
@@ -72,6 +73,9 @@ properties/19/replication_mode = 2
 properties/20/path = NodePath(".:net_time")
 properties/20/spawn = true
 properties/20/replication_mode = 1
+properties/21/path = NodePath("Gearbox:gear")
+properties/21/spawn = true
+properties/21/replication_mode = 2
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_body"]
 friction = 0.7
@@ -151,6 +155,9 @@ controls_enabled = false
 
 [node name="VehicleInputComponent" type="Node" parent="."]
 script = ExtResource("2_input")
+
+[node name="Gearbox" type="Node" parent="."]
+script = ExtResource("8_gearbox")
 
 [node name="VehiclePresentation" type="Node3D" parent="."]
 script = ExtResource("6_presentation")
