@@ -9,7 +9,7 @@
 
 ## 0. Resumen del concepto (para referencia rápida)
 
-Hasta 5 jugadores en una camioneta: 1 conduce, hasta 4 llevan un paquete cada uno. Cada
+Hasta 8 jugadores en una camioneta: 1 conduce, hasta 7 llevan un paquete cada uno. Cada
 paquete tiene una "trampa" — una regla individual que el pasajero debe manejar mientras
 el vehículo se mueve (ej: no moverlo mucho, resolver un puzzle antes de que su peso
 aumente, mantenerlo en cierta posición, etc.). El caos surge del cruce entre la
@@ -60,7 +60,7 @@ Early Access (docs/tareas-nacho.md N-308, antes #34).
 ### Networking
 - API de multiplayer de alto nivel de Godot (`MultiplayerAPI`, `ENetMultiplayerPeer`,
   nodos `MultiplayerSynchronizer`/`MultiplayerSpawner` en Godot 4), modelo
-  **host-cliente** (uno de los 5 jugadores hostea la partida) — mismo criterio que
+  **host-cliente** (uno de los jugadores hostea la partida) — mismo criterio que
   antes: es el modelo más simple de implementar solo, sin servidores dedicados para
   el MVP.
 - Sincronizar: posición/física del vehículo (autoridad del host), estado de cada
@@ -269,7 +269,7 @@ barato):
 
 ## 5. Alcance del MVP (para no repetir el error de scope creep)
 
-- **Jugadores**: soportar de 1 a 5 (single-player opcional con bots o penalización de
+- **Jugadores**: soportar de 1 a 8 (single-player opcional con bots o penalización de
   puntaje, pero diseñado principalmente para coop).
 - **1 vehículo** inicial, **1 entorno** (set de tramos combinables), **3-4 tipos de
   trampa** — todo lo demás (vehículos/entornos/trampas extra) es contenido post-MVP.

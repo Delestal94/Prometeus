@@ -24,7 +24,7 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 |---|---|---|---|---|
 | Construcción A | `construccion.md` (prioridad `nacho`: `N-xxx` primero) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
 | Construcción B | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | cada hora, :37 | idem | una tarea → un PR |
-| QA | `qa.md` | todos los días 06:00 | `rutina/qa-AAAA-MM-DD` | hallazgos + tareas de bugs |
+| QA | `qa.md` | todos los días 06:00 y 18:00 | `rutina/qa-AAAA-MM-DD-HH` | hallazgos + tareas de bugs |
 | Auditoría integral | `auditoria.md` | todos los días 04:00 | `rutina/auditoria-AAAA-MM-DD` | un pilar a fondo + últimas 24 h, ≤ 3 tareas |
 | Revisión (la contra) | `revision.md` | lunes 09:00 | `rutina/revision-AAAA-MM-DD` | auditoría + tareas nuevas |
 | Mantenimiento | `mantenimiento.md` | jueves 09:00 | `rutina/mant-AAAA-MM-DD` | docs al día + hallazgos |
@@ -75,7 +75,9 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
    git config user.name "Nacho"
    git config user.email "delestal.miguelignacio@gmail.com"   # los hooks deducen el dueño de acá
    ```
-   Ramas siempre desde `origin/main` recién bajado. En la nube Godot está en `$GODOT`.
+   Ramas siempre desde `origin/main` recién bajado. En la nube Godot está en `$GODOT`. **En la nube no
+   hay `gh`**: cada `gh ...` de estas rutinas se hace con la herramienta `mcp__github__*` equivalente
+   (runs y logs de CI, PRs, auto-merge, issues). En la PC sí hay `gh`.
 3. **Nadie contesta**: no hay revisión humana ni preguntas. Si algo es ambiguo, elegí lo más
    conservador que encaje con `docs/` y escribilo como "Supuesto" en el PR. Las decisiones que solo
    puede tomar el usuario (borrar o recortar una feature, cambiar el alcance) no se
@@ -95,7 +97,9 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
    porque un PR que CI rechaza por una línea larga pierde una corrida entera (pasó en el #71).
 7. **Sin nada que hacer, sin PR**: si la corrida no encontró trabajo o hallazgos, termina sin abrir PR.
 8. **Nunca**: editar `*.uid`, `*.import`, `.godot/`, `addons/godotsteam/`; `--no-verify`; forzar sobre
-   `main`; borrar ramas ajenas; reescribir historial.
+   `main`; **borrar ramas** (ni propias ni ajenas: el control de permisos de la nube lo bloquea y la
+   corrida queda trabada esperando a un humano, como pasó el 2026-09-30; ver regla 15); reescribir
+   historial.
 9. **Un PR por corrida**, salvo arreglar PRs rojos o con conflicto (ver `construccion.md` §1).
 10. Cerrá todo proceso de Godot que hayas abierto.
 11. **Freno de tareas**: cada tarea que crea una rutina lleva `Origen: <rutina> AAAA-MM-DD` (auditoría
@@ -111,14 +115,24 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
     cerrándolo con un comentario; la revisión semanal lleva esa respuesta a la tarea. Los cuerpos de PR
     que se mezclan solos no los lee nadie: el issue le llega como notificación.
 13. **Cupo del plan**: si la corrida se queda sin cupo (error de límite de uso, o `api_retry` con
-    `rate_limit` que no se recupera), no reintentes en la misma corrida: si ya reclamaste una tarea y no
-    hay commits propios en la rama, borrá la rama (`git push origin --delete <rama>`) para que quede
-    libre, y terminá. Lo que ya estaba subido sigue: la próxima corrida lo retoma.
+    `rate_limit` que no se recupera), no reintentes en la misma corrida: terminá. No borres nada: una
+    reserva sin trabajo la retoma otra corrida (regla 15) y lo que ya estaba subido sigue igual.
 14. **Regresiones**: cuando QA, la build de la PC o la auditoría encuentran algo que antes andaba y
     `cazador-bugs` lo atribuye a un PR ya mezclado (con `git log -S`, `git bisect` o el diff del PR), la
     tarea se titula `Regresión de #<PR>: <qué>` y dice qué PR la trajo. La construcción la toma como un
     bug de QA; si el arreglo no es obvio en una corrida, hace `git revert` de ese PR (en una rama, con PR
     y tests como cualquier cambio) y deja una tarea nueva para rehacer la feature sin la regresión.
+15. **Reservas abandonadas se retoman, no se borran**: una rama `nacho/<ID>-*` sin PR abierto, cuyos
+    commits propios son solo `chore: claim <ID>` y cuyo último commit tiene más de **2 h**
+    (`git log origin/main..origin/<rama> --format='%s %cr'`), es de una corrida que se cayó. Tomala
+    sobre la misma rama, sin borrarla ni forzar:
+    ```bash
+    git switch -c <rama> origin/<rama>
+    git merge --no-edit origin/main
+    git commit --allow-empty -m "chore: reclaim <ID>"
+    SKIP_TESTS=1 git push origin HEAD
+    ```
+    Limpiar ramas viejas no es trabajo de las rutinas.
 
 ## Límites de la nube
 
@@ -143,6 +157,9 @@ Programador de tareas con `tools/pc/rutina-pc.ps1 -Rutina arte|build`, que:
 - sale enseguida si está `.claude/rutinas/PAUSA` en `origin/main` (el mismo freno de mano) o si otra
   rutina de la PC está corriendo (un solo candado: comparten la GPU de 8 GB; la de build espera hasta
   100 min, la de arte no espera);
+- deja el clon en `origin/main` y **se relanza desde esa copia** (`-Fresh`): el Programador ejecuta
+  el script que dejó la corrida anterior, que puede ser viejo (el 2026-09-30 una caída no abrió su
+  issue por eso);
 - abre Blender minimizado con el servidor MCP prendido (`tools/pc/blender_mcp_autostart.py`) si no
   está abierto, y deja `GODOT` apuntando al Godot de la PC;
 - actualiza Claude Code (`npm i -g @anthropic-ai/claude-code@latest`) antes de cada corrida: con una
