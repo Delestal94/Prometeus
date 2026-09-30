@@ -21,7 +21,9 @@
   costura → contraste normalizado). No cambian el color: lo multiplican. En los modelos los
   aplica `scripts/presentation/lowpoly_materials.gd` por nombre de material, con proyección
   triplanar en espacio de mundo; en el terreno, `shaders/route_terrain.gdshader` (de noche aclara
-  el asfalto con `night_road`, que pone `world_mood.gd`; N-317).
+  el asfalto con `night_road`, que pone `world_mood.gd`; N-317). Se importan como VRAM Compressed
+  con mipmaps (N-314): una textura nueva en `textures/{detail,terrain,cargo}` se pasa por
+  `scripts/tools/texture_import_3d.gd` y `Godot --headless --import` (si no, `test_texture_import_3d` falla).
 - Luz de noche: se mide sobre las capturas de `tests/render_route_dressing.gd -- --mood=soleado_noche_verano
   --seed=7` con `art/tools/measure_luminance.py` (calzada ≥ 0,12 de luminancia media; ver N-317).
 - Imágenes 2D: ComfyUI local + Z-Image Turbo con `art/tools/comfy_generate.py` (o el agente

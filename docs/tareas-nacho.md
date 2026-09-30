@@ -409,9 +409,18 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
 ### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
 - [x] MSAA por preset: Baja sin MSAA, Media 2×, Alta 4× (`WorldQuality`, PR #45). Falta compararlo en
   captura con `revisor-visual`.
-- [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
+- [x] ~~Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
   se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
-  Necesita PC (editor de Godot con ventana; la toma la sesión de arte).
+  Necesita PC (editor de Godot con ventana; la toma la sesión de arte).~~
+  **[x] Hecho (2026-09-30, sesión de arte)** — `scripts/tools/texture_import_3d.gd` pone `compress/mode=2`
+  (VRAM, S3TC/BPTC), mipmaps y `detect_3d` apagado en todo `assets/textures/{detail,terrain,cargo}` y
+  `Godot --headless --import` reescribe los `.import` (decisión 7 de `docs/decisiones/2026-09-30-preguntas-auditoria.md`):
+  14 texturas (10 de detalle, 3 de terreno, la etiqueta del courier). Las otras de la cuenta de 35 no eran 3D o no
+  van: íconos y fondos de UI y el ícono de la app son 2D; los volcados de las cajas ya no se versionan (N-315); las 14
+  caras (`textures/characters/faces/`) quedan como están por la pausa de personajes. Test nuevo `test_texture_import_3d`
+  (toda textura de esas carpetas importada como VRAM con mipmaps). `revisor-visual` con GPU, antes/después en
+  terreno, depósito, ruta de noche y cajas: sin artefactos de compresión, luminancia igual (±1), desaparece el grano
+  parpadeante de tejados, estuco y pasto de lejos; el suelo a ángulo rasante queda algo más suave.
 
 ### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`, `seat_point.gd`) · **[x] rama `nacho/N-223-less-per-frame`**
 `route.gd` busca linealmente en las muestras del camino dos veces por tick; `play_area.gd`,
