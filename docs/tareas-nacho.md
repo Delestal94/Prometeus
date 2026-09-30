@@ -359,11 +359,18 @@ Hecho con `bench_drive` antes/después anotado acá.
 Cada textura de caja está tres veces (fuente en `art/cargo/`, volcado del importador en
 `assets/models/cargo/` y embebida en el `.glb`): ~5 MB × 3 × 4. Regenerar a 512² con
 `art/tools/make_cargo_textures.py` (`modelador-blender`), sacar los volcados del repo e ignorarlos.
+Necesita PC (Blender; la toma la sesión de arte).
 
 ### N-224 · Menos despacho dinámico — C · `Opus 5.5 · high` · Aviso: sí (varios)
 251 `.call(&"…")`, 233 `.get(&"…")` y 112 rutas `/root/`: un renombre rompe en runtime. Por archivo,
 empezando por `crew_progression.gd` y `route_event_manager.gd`: referencias tipadas (`class_name`) o
 dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
+- [x] **N-224.1** `crew_progression.gd` (2026-09-30, rama `nacho/N-224-crew-progression-typed`): `NetworkManager`,
+  `RunManager` y `RouteEventManager` por constantes tipadas (`NETWORK_MANAGER`…, `get_node_or_null(...) as`), así que un
+  renombre falla al compilar. En el archivo: `.call` 15 → 1, `.get(&` 4 → 0, `/root/` 14 → 6; en `scripts/`: `.call`
+  313 → 299, `.get(&` 284 → 280, `/root/` 122 → 114. Queda EventBus por nombre (los tests lo cambian por un `Node`).
+  Trinquete: `test_dynamic_dispatch_budget.gd` (presupuesto por archivo y que cada constante sea el script del autoload).
+- [ ] **N-224.2** `route_event_manager.gd`, después el resto por conteo. Sumar cada archivo a `BUDGETS` del test.
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -373,6 +380,7 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
 tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
+Necesita PC (capturas de tienda con luz real; la toma la sesión de arte).
 
 ### N-317 · Ruta de noche legible (calzada, luz y horizonte) — B · `Opus 5.5 · high` · Aviso: no · **[x] rama `arte/N-317-night-road`**
 Origen: PC build 2026-09-30. Necesita PC (GPU real; la toma la sesión de arte). Capturas 1280×720 de
