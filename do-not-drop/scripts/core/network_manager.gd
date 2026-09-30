@@ -324,7 +324,8 @@ func _read_net_sim(args: PackedStringArray) -> void:
 		push_warning(("NetworkManager: --net-sim=%s not understood; expected lag,jitter,loss (ms, ms, %%)"
 			+ " or 'standard'") % value)
 		return
-	print("NetworkManager: --net-sim %s (Steam: every packet; LAN: the truck's poses)" % NetStats.describe_sim(net_sim))
+	print(("NetworkManager: --net-sim %s (Steam: every packet; LAN: the truck's poses and the care input"
+		+ " a client sends)") % NetStats.describe_sim(net_sim))
 
 
 ## On Steam the sockets simulate the whole connection, both ways: global

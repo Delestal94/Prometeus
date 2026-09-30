@@ -2102,12 +2102,19 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 #### S-205 · Respuesta inmediata al mantener, aunque haya lag — B · `Opus 5.5 · xhigh` · Aviso: no
 
-- [ ] Verificar si en un cliente la barra, el aviso de la trampa y las manos del asiento reaccionan al
-  presionar o recién cuando vuelve el estado del host. Probarlo con latencia artificial: opción de
-  depuración `--fake-lag=150` que retrasa `submit_tender_input` en `package.gd` (solo en build de debug).
-- [ ] Si esperan al host: mostrar localmente el "estoy sosteniendo" (manos, brillo del botón, sonido)
-  al instante y dejar que la integridad siga viniendo del host.
-- [ ] Test con el retraso activado: la pose de manos cambia el mismo frame del input.
+- [x] (rama `nacho/S-205-local-hold-feedback`) Verificado: el botón y el `tick` de la tarjeta de cuidado ya
+  salían del input local; el paso, el progreso, el aviso sobre la caja y la inclinación del cuerpo sentado
+  vienen del host. Ninguna mano reacciona a sostener (con o sin lag). `--fake-lag=<ms>` (y `--net-sim` en
+  LAN), solo en debug, retrasa `submit_care_input` y `submit_tender_input`
+  (`package/tender_input_lag.gd`).
+- [x] (rama `nacho/S-205-local-hold-feedback`) "Estoy sosteniendo" local el mismo frame:
+  `player/player_hold_feedback.gd` (flag `holding`, sin red) y brillo cálido de la caja
+  (`package_feedback.set_local_grip`). La integridad sigue viniendo del host.
+- [x] (rama `nacho/S-205-local-hold-feedback`) Test `tests/test_local_hold_feedback.gd`: con 150 ms de
+  retraso el flag y el brillo cambian en la misma llamada del input y el host no recibe nada hasta el
+  `flush`.
+- [ ] ⏸ Pose de manos al sostener: no existe hoy y tocaría el cuerpo (en pausa mientras siga abierta
+  S-311). Cuando se haga, que lea `PlayerHoldFeedback.holding`.
 
 #### S-206 · Errores de conexión que un jugador entienda — A · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`)
 

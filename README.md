@@ -422,9 +422,10 @@ mala:
   las dos direcciones (`NETWORKING_CONFIG_FAKE_PACKET_*`). La mitad del lag va a lo que sale y
   la mitad a lo que entra, así que la ida y vuelta crece en `lag`; cada paquete espera además
   entre 0 y `jitter` ms en cada dirección, y se pierde el `pérdida` % de los paquetes.
-- **LAN (ENet):** ENet no simula nada, así que solo se retienen las poses del camión en el
-  cliente (el mismo colchón que `--fake-lag`): `lag` más 0 a `jitter` ms tarde, y se pierde el
-  `pérdida` % de las poses.
+- **LAN (ENet):** ENet no simula nada, así que se retienen las poses del camión en el
+  cliente (el mismo colchón que `--fake-lag`) y el input de cuidado que el cliente manda al host
+  (`tender_input_lag.gd`, solo de ida): `lag` más 0 a `jitter` ms tarde, y se pierde el
+  `pérdida` % de las poses y de las muestras de input.
 
 Pasalo en un solo lado (el cliente): en los dos, se suman. El panel muestra la simulación
 activa.

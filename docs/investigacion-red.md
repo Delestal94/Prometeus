@@ -199,7 +199,7 @@ cliente con un bug manda basura igual que un tramposo.
   playtest.
 - **Simular mala red siempre.** Steam trae simulación incorporada (`FAKE_PACKET_LAG`, `_JITTER`,
   `_LOSS`, `_REORDER`, `_DUP`, `FAKE_RATE_LIMIT`), que se puede exponer como `--net-sim=150,20,5` (lag
-  ms, jitter ms, pérdida %). Para ENet ya existe `--fake-lag` en el camión; en Windows también está la
+  ms, jitter ms, pérdida %). Para ENet ya existe `--fake-lag` en el camión y en el input de cuidado del cliente (S-205, solo de ida); en Windows también está la
   herramienta *clumsy*.
 - **Perfil de prueba estándar:** 150 ms de ida y vuelta, ±20 ms de jitter y 2 % de pérdida. Toda feature
   de red se prueba así antes de darla por cerrada.
@@ -271,7 +271,8 @@ exacto de la prueba. En LAN no se notaba porque ENet no tiene ese límite.
 
 **Fase 0: medir antes de tocar (1 día).**
 - HUD de red con ping, KB/s y cola (`getConnectionRealTimeStatus` en Steam; `ENetPacketPeer` en LAN).
-- `--net-sim=lag,jitter,pérdida` usando la simulación de Steam y `--fake-lag` en ENet.
+- `--net-sim=lag,jitter,pérdida` usando la simulación de Steam y `--fake-lag` en ENet (poses del camión y, solo de ida, el input de cuidado del cliente; soltar,
+  agarrar y `request_stop_assist` salen sin retraso).
 - Test de presupuesto de ancho de banda en CI.
 
 **Fase 1: sacar la congestión (1-2 días).**
