@@ -2318,9 +2318,10 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 #### S-905 · Cómo enseñan los competidores — B · `Opus 5.5 · medium` con búsqueda web · Aviso: no
 
-- [ ] Una página (`docs/marketing/onboarding-competidores.md`) comparando cómo PEAK, Lethal Company y
+- [x] Una página (`docs/marketing/onboarding-competidores.md`) comparando cómo PEAK, Lethal Company y
   Totally Reliable Delivery Service enseñan sus controles y sus reglas en los primeros 5 minutos, y qué
-  tomar para S-506. Con fuentes.
+  tomar para S-506. Con fuentes. Hecha con Backseat Drivers y RV There Yet? sumados, 4 recomendaciones y
+  4 tareas propuestas (rama `nacho/S-905-onboarding-research`).
 
 #### S-906 · Registro de decisión de monetización — A · `Opus 5.5 · medium` · Aviso: no · ✅ (hecha pese a la pausa)
 
