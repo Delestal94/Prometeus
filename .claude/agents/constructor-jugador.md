@@ -16,16 +16,19 @@ Slatex (`scripts/gameplay/player/`, `package/`, `interaction/`): se trabaja con 
   componentes: `player_carry.gd` (levantar/soltar; el Player es dueño del estado replicado),
   `player_interaction.gd` (a qué apunta y qué prompt ve), `player_cargo_care.gd` (input local y tarjeta
   de cuidado), `player_seat_pose.gd` (sentarse, IK de manos del conductor), `player_ping_input.gd`,
-  `player_ragdoll.gd`, `player_appearance.gd`, `carry_pose.gd`, `player_spawner.gd` (el spawn es del host).
+  `modules/ragdoll/player_ragdoll.gd` (módulo; `player.gd` le pasa jugador, camión y capas), `player_appearance.gd`, `carry_pose.gd`, `player_spawner.gd` (el spawn es del host).
   La animación es de `animador` (`player_animator.gd`): vos decidís el estado, él lo reproduce.
-- **Interacción**: `interaction/interactable.gd` (`Interactable`, la base), `package_pickup_point.gd`,
-  `package_mount_point.gd`, `seat_point.gd`.
+- **Interacción**: las bases son del módulo `modules/interaction/` (`Interactable` y el `SeatPoint` genérico con
+  hooks); en `interaction/` del juego quedan `package_pickup_point.gd`, `package_mount_point.gd` y `seat_point.gd`
+  (extiende el `SeatPoint` del módulo con la carga, la columna de bahías y el cuidado).
 - **Paquete**: `package/package.gd` (`DeliveryPackage`: integridad, estado, red, `context` de la trampa),
   `package_care.gd` (simulación del host de manejo y recuperación, separada del peligro de la trampa),
   `package_rescue.gd`, `package_salvage.gd`, `package_content.gd`, `package_verb.gd` (la acción en el mundo
   de N-117). Presentación pura: `package_feedback.gd`, `package_contents_view.gd`.
-- **Cámaras y celular** (`scripts/presentation/`): `first_person_camera.gd` (zona compartida),
+- **Cámaras y celular** (`scripts/presentation/`): `first_person_camera.gd` (zona compartida; extiende
+  `SeatCamera` de `modules/seat_camera/` y le pasa ajustes y señales por hooks),
   `spectator_camera.gd`, `phone_camera.gd`.
+- **Módulos portables** (`modules/`, zona compartida, `docs/modulos.md`): algunas piezas de acá son la base de un módulo y el archivo del juego las extiende. Lo genérico va en el módulo (sin nombrar nada del juego: `python tools/check_modules.py`); lo que nombra al juego, en el adaptador de `scripts/`.
 - Diseño: `docs/jugabilidad-paquetes-rescate.md`, `docs/controles-y-ui.md`, `docs/parametros-diseno.md`.
 
 ## Reglas

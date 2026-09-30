@@ -12,9 +12,15 @@ ve como bug de cualquier otro.
 
 ## Cómo está armado (verificá en el código)
 
-- `scripts/core/network_manager.gd` (autoload `NetworkManager`, zona compartida): host/cliente, roster,
-  `world_seed` que el host pasa ANTES de cargar el nivel, errores de conexión con `reason` traducible.
-- `scripts/core/proximity_voice.gd` (`ProximityVoice`): voz, solo Steam, RPC `unreliable_ordered` en el
+- `modules/net_session/` (módulo portable, zona compartida, `docs/modulos.md`): `NetSession` (sesión Steam o
+  ENet, handshake con versión, roster, reinicio, códigos de falla), `NetEventBus` (`relay()` y pedidos con
+  límite de frecuencia), `SteamVoice`, `NetStats` y `NetStatsOverlay`. Adentro no se nombra nada del juego
+  (`python tools/check_modules.py`); sus tests están en `modules/net_session/tests/`.
+- `scripts/core/network_manager.gd` (autoload `NetworkManager extends NetSession`, zona compartida): lo del
+  juego por hooks (`_session_state`, `_apply_session_state`, `_restart_state`, `_failure_text`…): `world_seed`
+  que el host pasa ANTES de cargar el nivel, casas, trampas bloqueadas, textos de error traducibles.
+  `scripts/core/event_bus.gd` (`EventBus extends NetEventBus`) tiene las señales del juego.
+- `scripts/core/proximity_voice.gd` (`ProximityVoice extends SteamVoice`): voz, solo Steam, RPC `unreliable_ordered` en el
   canal 3, fuera de la simulación.
 - Relays: `EventBus` es local por proceso; lo que el host emite llega a los clientes por un RPC que la
   re-emite (modelo: hint relay y bocina, `test_hint_relay`, `test_horn`, `test_run_relay`).
@@ -35,10 +41,11 @@ ve como bug de cualquier otro.
   una sesión de uno sin sockets (`test_network_roster`).
 - **Steam**: todo lo de Steam se degrada sin Steam (LAN, CI, build sin cliente abierto): chequeá que el
   singleton exista antes de llamarlo. Logros y nube: el host no decide los logros de otro; los guardados
-  pasan por `safe_json.gd` y son por usuario. Nunca subas nada a Steamworks ni cambies `steam_appid.txt`
+  pasan por `modules/persistence/safe_json.gd` y son por usuario. Nunca subas nada a Steamworks ni cambies `steam_appid.txt`
   sin pedido explícito. M5 (lanzamiento) está ⏸: una feature de plataforma nueva solo si la tarea existe
   y no está pausada.
-- Cambios de firma en `network_manager.gd` o `event_bus.gd`: agregá, no cambies; si no hay otra, aviso.
+- Cambios de firma en `network_manager.gd`, `event_bus.gd` o `modules/net_session/`: agregá, no cambies; si no
+  hay otra, aviso. Lo genérico de sesión va al módulo; lo que sabe de casas, camión o trampas, al hook del juego.
 
 ## Pasos
 

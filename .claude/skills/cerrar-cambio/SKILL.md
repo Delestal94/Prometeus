@@ -22,7 +22,10 @@ saltearlo en silencio.
 ## 2. Test
 
 - Cada mecánica nueva o bug arreglado lleva un test `do-not-drop/tests/test_<tema>.gd`
-  nuevo o ampliado. Para escribirlo, seguí la skill `nuevo-test`.
+  nuevo o ampliado (o `modules/<nombre>/tests/` si el cambio es de un módulo). Para
+  escribirlo, seguí la skill `nuevo-test`.
+- Si se tocó `do-not-drop/modules/`: `python tools/check_modules.py` tiene que salir sin
+  errores (un segundo; también lo corren el `pre-push` y CI).
 - Si el cambio es solo visual, el test headless verifica lo verificable
   (nodos, posiciones, parámetros) y la parte visual la revisa el agente
   `revisor-visual`.

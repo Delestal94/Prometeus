@@ -23,6 +23,8 @@ skill. Lo que sigue son solo agregados.
   usá rutas de prueba aparte como hace `test_leaderboard.gd`.
 - Tests de red: jugar solo es "sesión de uno" sin sockets (ver `test_network_roster.gd`). No abras
   puertos salvo que el test sea explícitamente de red multiproceso.
+- Módulos portables (`modules/<nombre>/`): su test va en `modules/<nombre>/tests/` y corre solo en un
+  proyecto vacío, sin nada del juego (la skill lo explica). `python tools/check_modules.py` tiene que salir limpio.
 - Determinismo: fijá semillas (`NetworkManager.world_seed`, `seed()`) cuando el resultado dependa de azar.
 - Textos que ve el jugador: compará contra `tr("CLAVE")`, no contra el texto en español, así el test
   no se rompe al cambiar el idioma.

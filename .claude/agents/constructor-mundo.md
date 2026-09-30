@@ -18,13 +18,15 @@ entrega y todo lo que vive alrededor de la ruta. Dominio de Nacho, salvo donde s
   `constructor-progresion`, que es dueño de las reglas de campaña).
 - **Casas y entregas** (`scripts/gameplay/route/`): `delivery_house.gd`, `doorbell_point.gd`,
   `house_waiting_marker.gd` (presentación), `town_sign.gd`, `route_signage.gd`.
-- **Clima y hora**: `world_mood.gd` (`WorldMood`, `--mood=<clima>_<hora>`; vacío = sale de la semilla),
+- **Clima y hora**: `modules/world_mood/world_mood.gd` (`WorldMood`, módulo; `--mood=<clima>_<hora>`; vacío = sale de la semilla),
   `route_sky.gd`, `night_flares.gd`, `windshield_rain.gd`. Shaders de cielo y lluvia: `artista-shaders`.
 - **Fauna y vida**: `route_wildlife.gd`, `wildlife_crossing.gd`, `flock_crossing.gd`, `chasing_dog.gd`,
   `roadside_story.gd`, `road_impacts.gd`.
 - **Decorado fuera del tramo**: `route_dresser.gd`, `route_props.gd`, `route_power_lines.gd`,
-  `route_river_falls.gd`, `dressing_batcher.gd` (instancing), `route_placement.gd` (reglas de ubicación).
-- **Mezcla y calidad**: `scripts/presentation/world_mix.gd`, `acoustic_space.gd`, `world_quality.gd`.
+  `route_river_falls.gd`, `modules/render_budget/dressing_batcher.gd` (instancing, módulo), `route_placement.gd` (reglas de ubicación).
+- **Mezcla y calidad**: `scripts/presentation/world_mix.gd`, `modules/acoustics/acoustic_space.gd`,
+  `modules/render_budget/world_quality.gd` (los dos son módulos).
+- **Módulos portables** (`modules/`, zona compartida, `docs/modulos.md`): algunas piezas de acá son la base de un módulo y el archivo del juego las extiende. Lo genérico va en el módulo (sin nombrar nada del juego: `python tools/check_modules.py`); lo que nombra al juego, en el adaptador de `scripts/`.
 - Diseño: `docs/direccion-visual.md`, `docs/audio-mundo.md`, `docs/parametros-diseno.md`.
 
 ## Reglas

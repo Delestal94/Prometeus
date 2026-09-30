@@ -13,7 +13,12 @@ qué queda para la próxima partida.
 
 - `scripts/core/crew_progression.gd` — plata compartida y mérito/cartas individuales; el host es dueño del estado; campaña guardada en `user://crew_campaign.json` con `CAMPAIGN_VERSION`.
 - `scripts/core/unlock_manager.gd` — perfil local permanente (`user://unlock_progress.json`), solo accesos.
-- `scripts/core/shop_vote_manager.gd` — votación de la tienda, del host; la UI solo muestra y vota.
+  Extiende `UnlockProfile` (`modules/unlock_profile/`): las reglas y campos del juego van en el adaptador.
+- `scripts/core/shop_vote_manager.gd` — votación de la tienda, del host; la UI solo muestra y vota. Extiende
+  `CoopVote` (`modules/coop_vote/`); las cartas y la billetera son del juego.
+- `scripts/core/run_telemetry.gd` extiende `RunLog` (`modules/run_log/`).
+- Esos tres módulos son zona compartida (`docs/modulos.md`): adentro no se nombra nada del juego
+  (`python tools/check_modules.py`) y sus tests están en `modules/<nombre>/tests/`.
 - `scripts/core/route_event_manager.gd` — eventos entre paradas; solo se sortean los jugables.
 - `scripts/core/run_manager.gd` (zona compartida) — la corrida; `scripts/gameplay/depot/` (Nacho) — el depósito y su tablero de campaña.
 - `modules/persistence/safe_json.gd` — toda lectura de guardado pasa por acá.
