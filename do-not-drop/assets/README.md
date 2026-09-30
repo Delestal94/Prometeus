@@ -217,6 +217,38 @@ usan `DepotKit.merged_mesh()`, una malla con una superficie por material.
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_depot_props.py [-- door rack forklift conveyor lamps fan clock supplies shop staging]
 ```
 
+### Kit del depósito rediseñado (N-319.2, 2026-09-30)
+
+El mismo script, grupos `ceiling dispatch bay logistics office cage safety breakroom workshop`
+(40 GLB más). Frente hacia −Z y origen en el centro de la base; las piezas de pared tienen la
+espalda en z = 0 y el origen en el piso bajo ellas (vienen a su altura de montaje); las de techo
+cuelgan de su origen. Tris entre paréntesis.
+
+- Techo: `sm_env_depot_bay_lamp_bell` (768; `LampDisc` emisivo y `LampHalo` con alfa),
+  `..._tube_linear` (240), `..._duct_straight` (408, 3 m en X) y `..._duct_elbow` (428),
+  `..._cable_tray` (384, 3 m en X).
+- `..._dispatch_desk` (1.056). Bahía: `..._bollard` (360), `..._column_guard` (204),
+  `..._wheel_chock` (108), `..._wheel_stop` (112), `..._door_light` (364; `DoorLightRed` con X y
+  `DoorLightGreen` con flecha).
+- Logística: `..._roll_cage` (470) y `..._roll_cage_loaded` (806), `..._flat_cardboard_stack` (792),
+  `..._pallet_wrapped` (940; `FilmShell` con material `film`, alfa 0,35), `..._sorting_table`
+  (1.136), `..._rolling_ladder` (628).
+- Oficina: `..._stair` (800, coincide con `_build_stair()`), `..._railing_segment` (112) +
+  `..._railing_post` (60), `..._office_blind` (384), `..._window_frame` (132) + `..._window_mullion` (44).
+- Pañol: `..._cage_panel` (170) y `..._cage_window` (510); la malla es la textura alfa
+  `textures/depot/tx_depot_cage_mesh_256.png` (rombo de 25 cm por repetición).
+- Seguridad y servicios: `..._extinguisher` (248), `..._extinguisher_cabinet` (524),
+  `..._electrical_panel` (516), `..._first_aid` (124), `..._time_clock` (628),
+  `..._recycle_station` (520), `..._water_dispenser` (504), `..._wet_floor_cone` (152),
+  `..._wet_floor_sign` (148), `..._pictogram_sign` (58; `SignPlate` y `Pictogram`, mapeado a la
+  celda 0 de `textures/depot/tx_depot_pictograms_512.png`, 4 × 4 celdas de 128 px con 12
+  pictogramas).
+- Descanso: `..._fridge` (312), `..._kitchenette` (884). Taller: `..._scissor_lift` (872),
+  `..._compressor` (892), `..._workbench_vise` (716).
+
+Las dos texturas las dibuja el script (numpy) y se guardan en `textures/depot/`; Godot extrae la
+copia embebida de cada GLB junto al modelo (ignorada en git, como las de `models/cargo/`).
+
 ## Calle y ruta: autos, farol, hitos y mobiliario (2026-09-27)
 
 Propios, generados por `tools/build_street_props.py` (N-136 / N-140), misma línea cartoon que el

@@ -605,6 +605,11 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   registro de `docs/deposito-rediseno.md`; aviso `docs/avisos/2026-09-30-n319-deposito.md`.
 - [ ] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
   primitivas de `DepotKit` (`modelador-blender`, después `constructor-mundo`). Necesita PC.
+  **[x] Modelos hechos (2026-09-30, rama `nacho/N-319-depot-props`)** — 40 GLB `sm_env_depot_*` nuevos en
+  `models/environment/depot/` (grupos `ceiling dispatch bay logistics office cage safety breakroom workshop` del script),
+  más el atlas de 12 pictogramas y la malla de rombos en `assets/textures/depot/`. Lista, tris y pivotes en
+  `docs/inventario-assets.md` y `assets/README.md`. **Falta conectarlos al juego** (reemplazar las cajas de
+  `depot_zones.gd`, `depot_hall.gd` y compañía con `DepotKit.model()`): `constructor-mundo`.
 - [ ] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
   oficio (`constructor-mundo`).
 - [ ] **N-319.4** Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.
