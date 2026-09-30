@@ -6,8 +6,8 @@ Proyecto de desarrollo de un videojuego indie (desarrollo en solitario, asistido
 IA), con el objetivo de aplicar patrones de éxito observados en juegos de Steam hechos
 por 1-2 personas.
 
-Nombre oficial del juego: **Take My Package** (desde 2026-09-22; antes el nombre de trabajo era "Do Not Drop", por eso el proyecto Godot sigue en `do-not-drop/`) — delivery cooperativo de hasta 5
-jugadores: 1 conduce, hasta 4 llevan un paquete con una "trampa" cada uno (ver
+Nombre oficial del juego: **Take My Package** (desde 2026-09-22; antes el nombre de trabajo era "Do Not Drop", por eso el proyecto Godot sigue en `do-not-drop/`) — delivery cooperativo de hasta 8
+jugadores: 1 conduce, hasta 7 llevan un paquete con una "trampa" cada uno (ver
 `docs/definicion-proyecto.md` y `docs/requerimientos-tecnicos.md`).
 
 ## Motor

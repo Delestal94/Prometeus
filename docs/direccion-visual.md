@@ -80,7 +80,7 @@ realidad primera persona, no tercera como parece a simple vista).
 ## 2. El mundo: escala y proporción
 
 - **1 unidad de Godot = 1 metro**, confirmado desde Fase 0.
-- Camioneta: cabina + hasta 4 asientos de pasajero en los laterales de la zona de
+- Camioneta: cabina + asientos de pasajero para hasta 7 jugadores en la zona de
   carga (ver `vehicle.tscn`). Altura de ojos del conductor sentado: ver
   `DriverEyePoint` en `vehicle.tscn` (~1.15-1.35 m sobre el piso del vehículo,
   verificado por `check_driver_sightline.gd`).
@@ -244,7 +244,7 @@ específico de "campo de visión, qué ve y qué no".
 - **[x] Los pasajeros ven su paquete de cerca, ocupando buena parte del campo
   visual** — es la superficie principal de esa mecánica, tiene que ser lo primero
   que se lee al mirar al frente desde ese asiento.
-- **[ ] Oclusión entre pasajeros**: no evaluado todavía. Con hasta 4 pasajeros +
+- **[ ] Oclusión entre pasajeros**: no evaluado todavía. Con hasta 7 pasajeros +
   conductor en una furgoneta chica, ¿un pasajero puede ver a otro pasajero
   gestionando su propio paquete (refuerza la lectura social de "todos estamos en
   esto juntos"), o el diseño del interior los separa visualmente (cada uno
