@@ -282,7 +282,15 @@ func _set_phone_holder(peer_id: int) -> void:
 func _on_peer_level_ready(peer_id: int) -> void:
 	if not NetworkManager.is_host() or not NetworkManager.is_online() or peer_id == NetworkManager.HOST_ID:
 		return
-	_receive_state.rpc_id.call_deferred(peer_id, active.keys(), spares, phone_holder_id)
+	_send_state_to.call_deferred(peer_id)
+
+
+## Host-only: hands peer_id the state as it is now (not as it was when they
+## joined: a fault or a spare may have changed in between), if they're still here.
+func _send_state_to(peer_id: int) -> void:
+	if not NetworkManager.is_host() or not NetworkManager.is_online() or not multiplayer.get_peers().has(peer_id):
+		return
+	_receive_state.rpc_id(peer_id, active.keys(), spares, phone_holder_id)
 
 
 @rpc("authority", "call_remote", "reliable")

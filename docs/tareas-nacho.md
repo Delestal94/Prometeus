@@ -1410,13 +1410,31 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   fauna sin aviso). Determinista por semilla, disparado por el host. Tests con el patrón de
   `test_wildlife_crossing.gd`.
 
-### N-406 · Radio del camión con función — B · `Opus 5.5 · high` · Aviso: sí (trampa Ruidoso)
+### N-406 · Radio del camión con función — B · `Opus 5.5 · high` · Aviso: sí (trampa Ruidoso) · **[x] rama `nacho/N-406-truck-radio`**
 
-- [ ] **N-406.1** Perilla en el tablero que cualquiera puede girar: tranquila / fuerte / noticiero /
+- [x] **N-406.1** Perilla en el tablero que cualquiera puede girar: tranquila / fuerte / noticiero /
   apagada. Estado en el host.
-- [ ] **N-406.2** Música tranquila calma la trampa Ruidoso; la fuerte la altera.
-- [ ] **N-406.3** El noticiero anuncia el próximo evento de ruta ("inspección más adelante").
-- [ ] Test `test_truck_radio.gd`: el estado se sincroniza y modifica la agitación de Ruidoso.
+  - `gameplay/vehicle/truck_radio.gd` (`TruckRadio`, junto a `VehicleFaults`, lo agrega `level_common.gd`) y
+    `truck_radio_knob.gd` (un `Interactable` que cuelga del camión junto al GPS del tablero, mismo nombre en cada
+    par para `request_interact`). El host cicla apagada → tranquila → fuerte → noticiero y lo replica con un RPC
+    propio (`_set_mode`), y al que entra tarde se lo manda `peer_level_ready`. Sin señales nuevas en `EventBus`.
+  - Vista y sonido en cada par: `presentation/truck_radio_view.gd` (perilla que gira, nombre del modo, línea del
+    noticiero) y música sintetizada por el bus Interior (`synth_audio_radio.gd`, con su propio caché; se
+    arman en un hilo con `warm()`).
+- [x] **N-406.2** Música tranquila calma la trampa Ruidoso; la fuerte la altera.
+  - `noisy_trap_behavior.gd` lee `radio_mode` del contexto (que arma `package_rescue.gd` desde el grupo
+    `truck_radio`): tranquila +4/s de decaimiento pasivo; fuerte sacudidas ×1,25 y decaimiento ×0,4. Números en
+    `data/traps/noisy.tres` y `docs/parametros-diseno.md`; con la radio apagada (el arranque) el balance de
+    `sim_trap_balance` no cambia.
+- [x] **N-406.3** El noticiero anuncia el próximo evento de ruta ("inspección más adelante").
+  - Con el noticiero puesto, `route_event_started` (relevado a todos) suena con un jingle y muestra "Atención:
+    inspección más adelante" sobre la perilla durante 7 s; al poner el noticiero con un evento abierto lo repite.
+    Una línea por evento de `RouteEventManager.EVENTS`, con `tr()` (`WORLD_RADIO_NEWS_*`).
+- [x] Test `test_truck_radio.gd`: el estado se sincroniza y modifica la agitación de Ruidoso. Aviso:
+  `docs/avisos/2026-09-30-n406-truck-radio.md`.
+- [ ] Necesita PC: `revisor-visual` sobre la posición y el tamaño de la perilla y del cartelito en el tablero de
+  cada camión, y prueba a mano de que el tripulante a pie en la cabina llega a la perilla (el conductor y los
+  sentados no: `E` sentado los levanta). Con `auditor-red`, el RPC `_set_mode` y el tardío con dos jugadores.
 
 ### N-108 · Tramo de barro/pendiente con salida cooperativa — B · `Opus 5.5 · high` · Aviso: no
 
