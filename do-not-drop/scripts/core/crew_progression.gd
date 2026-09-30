@@ -6,6 +6,11 @@ const STARTING_MONEY: int = 100
 const CAMPAIGN_PATH: String = "user://crew_campaign.json"
 const CAMPAIGN_VERSION: int = 1
 const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
+## Typed handles on the autoloads this file talks to (N-224): a renamed
+## method or property fails when the script compiles, not mid-run.
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
+const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
+const ROUTE_EVENT_MANAGER := preload("res://scripts/core/route_event_manager.gd")
 ## Player.PLAYER_COLORS uses peer_id modulo five in this same order.
 const PLAYER_COLOR_KEYS: Array[String] = ["mint", "yellow", "coral", "sky", "violet"]
 const PLAYER_COLOR_NAMES: Array[String] = [
@@ -91,10 +96,9 @@ func _ready() -> void:
 	if bus != null and bus.has_signal(&"run_started") \
 			and not bus.is_connected(&"run_started", _on_run_started):
 		bus.connect(&"run_started", _on_run_started)
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network != null and network.has_signal(&"roster_changed") \
-			and not network.is_connected(&"roster_changed", _on_roster_changed):
-		network.connect(&"roster_changed", _on_roster_changed)
+	var network := _network()
+	if network != null and not network.roster_changed.is_connected(_on_roster_changed):
+		network.roster_changed.connect(_on_roster_changed)
 
 
 func reset_campaign(persist: bool = false) -> bool:
@@ -291,26 +295,26 @@ func card_name(card_id: int) -> String:
 ## the peer from the RPC sender and lets RouteEventManager resolve the event.
 @rpc("any_peer", "call_local", "reliable")
 func request_use_card() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+	var network := _network()
+	if network != null and network.is_online() and not network.is_host():
 		return false
 	var sender_id: int = multiplayer.get_remote_sender_id()
-	var peer_id: int = sender_id if sender_id != 0 else int(network.call(&"local_id")) if network != null else 1
+	var peer_id: int = sender_id if sender_id != 0 else network.local_id() if network != null else 1
 	var held_card: int = int(cards.get(peer_id, -1))
 	if held_card != Card.RESCUE:
 		_send_card_notice(peer_id, "HUD_CARD_DEPOT_ONLY" if held_card in [Card.DISCOUNT, Card.REVOTE]
 			else "HUD_CARD_NONE")
 		return false
-	var route_events: Node = get_node_or_null(^"/root/RouteEventManager")
-	if route_events == null or StringName(route_events.get(&"active_event_id")).is_empty():
+	var route_events := get_node_or_null(^"/root/RouteEventManager") as ROUTE_EVENT_MANAGER
+	if route_events == null or route_events.active_event_id.is_empty():
 		_send_card_notice(peer_id, "HUD_CARD_NOTHING_TO_RESCUE")
 		return false
-	return bool(route_events.call(&"use_rescue", peer_id))
+	return route_events.use_rescue(peer_id)
 
 
 func _send_card_notice(peer_id: int, text: String) -> void:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network != null and bool(network.call(&"is_online")) and peer_id != int(network.call(&"local_id")):
+	var network := _network()
+	if network != null and network.is_online() and peer_id != network.local_id():
 		_receive_card_notice.rpc_id(peer_id, text)
 	else:
 		_receive_card_notice(text)
@@ -435,11 +439,9 @@ func _capture_player(peer_id: int) -> void:
 
 
 func _current_peers() -> Array[int]:
-	var network: Node = get_node_or_null(^"/root/NetworkManager") if is_inside_tree() else null
+	var network := _network() if is_inside_tree() else null
 	if network != null:
-		var peers: Array[int] = []
-		peers.assign(network.get(&"peer_ids"))
-		return peers
+		return network.peer_ids.duplicate()
 	var peers: Array[int] = []
 	for source: Dictionary in [merit, cards, dry_deliveries]:
 		for raw_peer: Variant in source:
@@ -452,22 +454,22 @@ func _current_peers() -> Array[int]:
 
 
 func _can_write_campaign() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager") if is_inside_tree() else null
-	return network == null or not bool(network.call(&"is_online")) or bool(network.call(&"is_host"))
+	var network := _network() if is_inside_tree() else null
+	return network == null or not network.is_online() or network.is_host()
 
 
 func _on_roster_changed(raw_peers: Array) -> void:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	var network := _network()
 	if network == null:
 		return
-	if not bool(network.call(&"is_online")):
+	if not network.is_online():
 		if _using_host_campaign:
 			_using_host_campaign = false
 			load_campaign()
 		return
 	var peers: Array[int] = []
 	peers.assign(raw_peers)
-	if not bool(network.call(&"is_host")):
+	if not network.is_host():
 		_known_peers.assign(peers)
 		return
 	for old_peer: int in _known_peers:
@@ -484,8 +486,8 @@ func _on_roster_changed(raw_peers: Array) -> void:
 
 
 func _broadcast_campaign() -> void:
-	var network: Node = get_node_or_null(^"/root/NetworkManager") if is_inside_tree() else null
-	if network == null or not bool(network.call(&"is_online")) or not bool(network.call(&"is_host")):
+	var network := _network() if is_inside_tree() else null
+	if network == null or not network.is_online() or not network.is_host():
 		return
 	_capture_current_players()
 	_receive_campaign.rpc(_campaign_data())
@@ -493,8 +495,8 @@ func _broadcast_campaign() -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func _receive_campaign(data: Dictionary) -> void:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network == null or bool(network.call(&"is_host")):
+	var network := _network()
+	if network == null or network.is_host():
 		return
 	_using_host_campaign = true
 	_apply_campaign_data(data, false)
@@ -516,15 +518,13 @@ func _emit_event(signal_name: StringName, arguments: Array) -> void:
 func _on_delivery_photo_taken(_house_index: int, accepted: bool) -> void:
 	if not accepted:
 		return
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network != null and not bool(network.call(&"is_host")):
+	var network := _network()
+	if network != null and not network.is_host():
 		return
-	var run: Node = get_node_or_null(^"/root/RunManager")
+	var run := get_node_or_null(^"/root/RunManager") as RUN_MANAGER
 	if run == null:
 		return
-	var peer_id: int = int(run.get(&"last_photo_peer_id"))
-	var package_id := StringName(run.get(&"last_photo_package_id"))
-	award_milestone(peer_id, package_id, &"photo_saved", 1)
+	award_milestone(run.last_photo_peer_id, run.last_photo_package_id, &"photo_saved", 1)
 
 
 func _on_card_changed(peer_id: int, card_id: int) -> void:
@@ -532,3 +532,9 @@ func _on_card_changed(peer_id: int, card_id: int) -> void:
 		cards.erase(peer_id)
 	else:
 		cards[peer_id] = card_id
+
+
+## The NetworkManager autoload, or null outside a running game (a bare
+## CrewProgression in a test, or one not added to the tree yet).
+func _network() -> NETWORK_MANAGER:
+	return get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
