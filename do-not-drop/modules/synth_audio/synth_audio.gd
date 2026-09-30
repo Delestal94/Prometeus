@@ -7,7 +7,7 @@ extends RefCounted
 ## Every sound is synthesized sample by sample (~50 ms for the wind bed), so each is built once and
 ## shared: a stream is read-only data, and every AudioStreamPlayer keeps its own playback of it.
 static var _cache: Dictionary = {}
-const SCENE_SOUNDS_PATH: String = "res://scripts/presentation/synth_audio_scenes.gd"
+const SCENE_SOUNDS_FILE: String = "synth_audio_scenes.gd"
 static var _scene_sounds_script: Script
 
 
@@ -17,11 +17,11 @@ static func _cached(key: StringName, build: Callable) -> AudioStreamWAV:
 	return _cache[key]
 
 
-## Loaded by path at runtime: `--script` tests parse this before Godot rebuilds the global class
-## cache, and SynthAudioScenes calls back into SynthAudio.
+## Loaded by a path relative to this file (SynthAudioScenes calls back into SynthAudio, so no preload).
 static func _scene_builder(method: StringName) -> Callable:
 	if _scene_sounds_script == null:
-		_scene_sounds_script = load(SCENE_SOUNDS_PATH) as Script
+		var here: String = (SynthAudio as Script).resource_path.get_base_dir()
+		_scene_sounds_script = load(here.path_join(SCENE_SOUNDS_FILE)) as Script
 	return Callable(_scene_sounds_script, method)
 
 
@@ -976,8 +976,7 @@ static func callout_voice(color_slot: int = 0, syllables: int = 3) -> AudioStrea
 	return _cached(key, SynthAudioScenes.make_callout_voice.bind(slot, count))
 
 
-## Care panel cues (ui/hud/care_prompt_view.gd), built by synth_audio_care.gd.
-const SynthAudioCare = preload("res://scripts/presentation/synth_audio_care.gd")
+## Care panel cues (a HUD's short interface sounds), built by SynthAudioCare.
 
 
 static func care_step() -> AudioStreamWAV:

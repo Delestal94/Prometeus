@@ -1,3 +1,4 @@
+class_name ContactShadow
 extends RefCounted
 ## Fake contact shadows (tareas de Nacho N-308.2): GL Compatibility has no
 ## SSAO and no Decal nodes, so where something heavy meets the ground -- a

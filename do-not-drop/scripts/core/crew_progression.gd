@@ -5,7 +5,7 @@ extends Node
 const STARTING_MONEY: int = 100
 const CAMPAIGN_PATH: String = "user://crew_campaign.json"
 const CAMPAIGN_VERSION: int = 1
-const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
+const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 ## Typed handles on the autoloads this file talks to (N-224): a renamed
 ## method or property fails when the script compiles, not mid-run.
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")

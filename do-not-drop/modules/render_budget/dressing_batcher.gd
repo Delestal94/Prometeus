@@ -18,7 +18,10 @@ class_name DressingBatcher
 ## mirrored curve signs) stays a regular node, untouched.
 
 const CELL: float = 48.0
-const GROUPS: Array[String] = ["ForestDressing", "RoadsideDressing", "LandmarkDressing"]
+## Configuration (static, set once by the game before the first bake --
+## these defaults are Take My Package's): which child groups of a segment
+## hold placed pieces, and which placement rules (`rule` meta) get colliders.
+static var piece_groups: Array[String] = ["ForestDressing", "RoadsideDressing", "LandmarkDressing"]
 ## Draw distance by the batched mesh's largest dimension (metres). Past
 ## ~350 m the fog (density 0.008) has swallowed everything anyway.
 const SMALL_SIZE: float = 1.6
@@ -27,7 +30,7 @@ const SMALL_RANGE: float = 85.0
 const MEDIUM_RANGE: float = 190.0
 const LARGE_RANGE: float = 380.0
 ## Pieces that move after placement even without a script of their own.
-const ANIMATED_PARTS: Array[String] = ["WindmillRotor"]
+static var animated_parts: Array[String] = ["WindmillRotor"]
 
 ## Tests only: a headless run has a dummy renderer that can't hand instance
 ## transforms back, so when set each batch also keeps a copy as metadata.
@@ -39,8 +42,10 @@ static var record_instances: bool = false
 ## patch (cheap: static, never moving); a tree is a trunk cylinder, the rest
 ## the box of their model. Small loose things become sleeping rigid bodies
 ## instead, so the truck knocks them flying rather than stopping dead.
-const SOLID_RULES: Array[StringName] = [&"tree", &"landmark", &"parked_vehicle", &"tractor", &"competitor_van", &"guardrail", &"bus_stop", &"hazard_sign", &"delivery_sign", &"crossing_sign"]
-const KNOCKABLE_RULES: Array[StringName] = [&"roadworks", &"village_furniture", &"farm_props", &"milestone", &"yard"]
+static var solid_rules: Array[StringName] = [&"tree", &"landmark", &"parked_vehicle", &"tractor", &"competitor_van", &"guardrail", &"bus_stop", &"hazard_sign", &"delivery_sign", &"crossing_sign"]
+static var knockable_rules: Array[StringName] = [
+	&"roadworks", &"village_furniture", &"farm_props", &"milestone", &"yard",
+]
 ## Bigger than this and it isn't something a truck bats aside (a barn).
 const KNOCKABLE_MAX_SIZE: float = 2.5
 const TRUNK_RADIUS: float = 0.3
@@ -60,7 +65,7 @@ static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> in
 	var baked: int = 0
 	var groups: Array[Node] = []
 	for segment: Node in segments:
-		for group_name: String in GROUPS:
+		for group_name: String in piece_groups:
 			var group: Node = segment.get_node_or_null(NodePath(group_name))
 			if group != null:
 				groups.append(group)
@@ -75,7 +80,7 @@ static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> in
 				continue
 			var rule: StringName = StringName(piece.get_meta(&"rule", &""))
 			var mesh: Mesh = _model_mesh(piece as Node3D, parts)
-			if rule in KNOCKABLE_RULES and not piece.get_meta(&"on_porch", false) and mesh.get_aabb().get_longest_axis_size() < KNOCKABLE_MAX_SIZE:
+			if rule in knockable_rules and not piece.get_meta(&"on_porch", false) and mesh.get_aabb().get_longest_axis_size() < KNOCKABLE_MAX_SIZE:
 				_make_knockable(piece as Node3D, mesh.get_aabb())
 				continue
 			var origin: Vector3 = to_route * (piece as Node3D).global_position
@@ -83,7 +88,7 @@ static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> in
 			if not cells.has(cell):
 				cells[cell] = {}
 			var batches: Dictionary = cells[cell]
-			if rule in SOLID_RULES:
+			if rule in solid_rules:
 				if not solids.has(cell):
 					solids[cell] = []
 				(solids[cell] as Array).append([rule, to_route * (piece as Node3D).global_transform, mesh.get_aabb()])
@@ -185,7 +190,7 @@ static func _static_parts(piece: Node) -> Array[MeshInstance3D]:
 	var nodes: Array[Node] = [piece]
 	nodes.append_array(piece.find_children("*", "", true, false))
 	for node: Node in nodes:
-		if node.get_script() != null or String(node.name) in ANIMATED_PARTS:
+		if node.get_script() != null or String(node.name) in animated_parts:
 			return [] as Array[MeshInstance3D]
 		if node is MeshInstance3D:
 			var part := node as MeshInstance3D
@@ -207,7 +212,7 @@ static func _model_mesh(piece: Node3D, parts: Array[MeshInstance3D]) -> Mesh:
 	# Per season and darkness too: the merged mesh keeps the materials it was
 	# built with -- autumn's leaves aren't summer's (N-305), and a lamp lit at
 	# night isn't the daytime one (N-304).
-	var path: String = "%s|%d|%.2f" % [piece.scene_file_path, LowpolyMaterials.season, LowpolyMaterials.night_level] if piece.scene_file_path != "" else ""
+	var path: String = "%s|%d|%.2f" % [piece.scene_file_path, DetailMaterials.season, DetailMaterials.night_level] if piece.scene_file_path != "" else ""
 	if path != "" and _model_cache.has(path):
 		return _model_cache[path]
 	var inverse: Transform3D = piece.global_transform.affine_inverse()

@@ -21,7 +21,7 @@ fi
 
 # One "path|rule count" line per file and rule, sorted, with / separators so
 # the baseline is the same on Windows and Linux.
-current="$(gdlint do-not-drop/scripts do-not-drop/tests 2>&1 \
+current="$(gdlint do-not-drop/scripts do-not-drop/modules do-not-drop/tests 2>&1 \
 	| sed -n 's#\\#/#g; s#^\(do-not-drop/[^:]*\):[0-9]*: Error: .*(\([a-z-]*\))$#\1|\2#p' \
 	| sort | uniq -c | awk '{print $2, $1}')"
 

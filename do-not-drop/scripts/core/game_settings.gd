@@ -16,7 +16,7 @@ const SAVE_PATH: String = "user://settings.cfg"
 ## Headless `--script` tests do not build Godot's editor-managed global class
 ## cache before autoloads are parsed. Keep this dependency explicit so the
 ## settings autoload compiles in both the editor/game and the isolated runner.
-const WORLD_QUALITY = preload("res://scripts/presentation/world_quality.gd")
+const WORLD_QUALITY = preload("res://modules/render_budget/world_quality.gd")
 var save_path: String = SAVE_PATH
 const SECTION: String = "player"
 const LANGUAGE_DEFAULT: String = "es"

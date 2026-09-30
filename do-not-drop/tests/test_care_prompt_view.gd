@@ -12,7 +12,7 @@ extends SceneTree
 const CareCard = preload("res://scripts/ui/hud/care_card.gd")
 const CarePromptView = preload("res://scripts/ui/hud/care_prompt_view.gd")
 const CarePractice = preload("res://scripts/ui/hud/care_practice.gd")
-const SynthAudio = preload("res://scripts/presentation/synth_audio.gd")
+const SynthAudio = preload("res://modules/synth_audio/synth_audio.gd")
 
 var _failures: int = 0
 

@@ -175,11 +175,59 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
 | **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227, N-228, N-229 |
+| **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
 
 ---
+
+## M9 — Módulos portables
+
+Pedido del usuario (2026-09-30): que las piezas genéricas del juego puedan llevarse a otro proyecto con
+la seguridad de que funcionan. Análisis, reglas, catálogo y plan de fases en `docs/modulos.md`. Todo es
+zona compartida (`modules/`), y las fases 3 y 4 tocan archivos de Slatex: aviso en cada PR.
+**Las tareas abiertas las está haciendo Nacho en su sesión local (2026-09-30): no las toma la rutina de
+construcción hasta que este párrafo desaparezca.**
+
+### N-230 · Fases 0 y 1: reglas, chequeos y los siete módulos que ya eran genéricos — A · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd` de Slatex; `modules/` compartida) · **[x] rama `nacho/N-230-modulos-portables`**
+Origen: análisis de acoplamiento del 2026-09-30 (191 scripts; 83 sin autoloads ni clases de otras
+carpetas). Hecho: `do-not-drop/modules/{persistence,loc_text,synth_audio,net_pose_smoother,render_budget,
+acoustics,ragdoll}` con `module.cfg` y test propio; `tools/check_modules.py` (job `lint`) y
+`tools/portability-check.sh` (job `modules`: cada módulo solo en un proyecto vacío); `run-tests.sh`,
+`lint.sh` y `list-tests.sh` incluyen `modules/`; adaptadores `LowpolyMaterials` → `DetailMaterials` y
+`LegacyUserData` → `UserDataMigration`; `NetPoseSmoother` (ex `VehicleNetSmoother`) y `PlayerRagdoll`
+reciben lo que antes buscaban solos. Docs: `docs/modulos.md`, `arquitectura.md` 1.1, `convenciones-godot.md`,
+`CLAUDE.md`, aviso `docs/avisos/2026-09-30-modulos-portables.md`.
+
+### N-231 · Fase 2: kit de red portable — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `event_bus.gd`, zona compartida) · ⏸ en curso (sesión de Nacho)
+Módulo `net_session`: `NetSession` (Steam + ENet, lobby, handshake con versión, peers listos, tolerancia a
+cargas de nivel, `--net-sim`) con el estado del juego como `Dictionary` opaco que el juego registra, y
+`NetEventBus` (la plomería de `relay()` y el salto cliente→host→todos con límite de frecuencia) que
+`EventBus` extiende solo con señales. `proximity_voice` y `net_stats` reciben la sesión y los ajustes en
+vez de buscarlos por `/root/`. Hecho cuando el juego arranca, une y reinicia igual que hoy (tests `net_`,
+`network`, `net_stats`, `run_relay`, jobs `network-pair`/`network-trio`), `portability-check` pasa para los
+tres módulos y `auditor-red` no marca nada.
+
+### N-232 · Fase 3: interacción, cámara de asiento, ajustes y tema de UI — B · `Opus 5.5 · high` · Aviso: sí (`interaction/`, `game_settings.gd`, `ui_theme.gd` de Slatex) · ⏸ en curso (sesión de Nacho)
+`interaction` (`Interactable` con capa y prompt por `@export`; `SeatPoint` genérico con métodos virtuales
+para lo de carga/rol), `seat_camera` (`add_shake()`/`kick_fov()` públicos, el juego los conecta),
+`settings_store` (volumen, teclas, gamepad, pantalla, idioma; `GameSettings` lo extiende con lo del
+juego), `ui_theme` (paleta y fuentes como `Resource`). Hecho cuando los tests de interacción, asientos,
+cámara, `settings` y UI pasan sin cambios de comportamiento y los cuatro módulos pasan `portability-check`.
+
+### N-233 · Fase 4: generación de ruta y clima — B · `Opus 5.5 · xhigh` · Aviso: no · ⏸ en curso (sesión de Nacho)
+`route_gen` (`RouteStreamer`, `RouteSegment`, `RoutePlanner` con "paradas", `RouteTerrain`,
+`RouteDresser`, los tramos) y `world_mood` (`WorldMood.pick(seed)`, `RouteSky`, `WindshieldRain`). Los
+tramos reciben semilla, audio y materiales por configuración; el cruce de tren saca sus RPC a una señal
+que el juego relaya. Se parte por tramo. Hecho cuando `test_route*`, `test_world_mood`, `test_level_endless`
+y `route_smoke_check` pasan con las mismas semillas y los dos módulos pasan `portability-check`.
+
+### N-234 · Fase 5: contrato de peligros, votación, perfil y telemetría — C · `Opus 5.5 · high` · Aviso: sí (`traps/` de Slatex) · ⏸ en curso (sesión de Nacho)
+`hazards` (`ITrapBehavior` + `TrapDefinition` con `name_key` por `@export`, sin `NAME_KEYS` fijo),
+`coop_vote` (cobra por un `Callable`), `profile_store` (versiones y migraciones separadas del esquema del
+juego), `event_log` (escucha el bus que se le pasa). Hecho cuando `test_traps`, `test_shop_vote`,
+`test_unlock*`, `test_run_telemetry` pasan y los cuatro módulos pasan `portability-check`.
 
 ## M8 — Auditoría 2026-09-29
 
@@ -2562,7 +2610,17 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 #### S-806 · Batería verde y rápida — A · — · Aviso: no
 
 - [x] (commits `3c4ac88`, `37581a2`) Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
-- [ ] Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.
+- [x] (rama `nacho/S-806-faster-tests`) Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.
+  Revisados los de jugador/paquete/trampas/UI/progresión que pasaban de 20 s en CI (main, 2026-09-30). Casi todo el
+  tiempo es cargar `level_base` (~12-15 s cada vez), así que la única palanca es cargarlo menos veces:
+  `test_package_handling` 6 → 3 cargas (~89 s → ~45-51 s local), `test_host_gone_tally` 2 → 1 (~35 s → ~20-30 s);
+  ningún `_expect` cambió. Quedan igual: `test_locked_traps` (cada carga es un estado distinto del perfil que el
+  `_ready` del depósito tiene que leer), `test_boss_lines` (dos escenas distintas), `test_ruin_effects` (mide
+  segundos reales de vida del efecto) y `test_chaos_bot` (excepción de S-803). Los lentos de ruta, camión y mundo
+  (`test_route_fuzz` 196 s, `test_roadside_stories` 132 s, `test_route_duration_budget` 122 s,
+  `test_route_lookup_cache` 106 s, `test_world_seed` 101 s…) no son de esta tarea. Visto de paso: si una caja del
+  depósito se libera (entregada) antes de `Depot.begin_run`, `depot.gd:325` tira "freed instance"; en juego no
+  pasa hoy (cada partida recarga el nivel), el test lo esquiva corriendo el arranque vacío primero.
 
 ---
 

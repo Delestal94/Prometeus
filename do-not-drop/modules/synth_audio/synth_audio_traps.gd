@@ -1,3 +1,4 @@
+class_name SynthAudioTraps
 extends RefCounted
 ## Sounds of the traps' own actions that came after synth_audio.gd filled up
 ## (its file-length limit): same recipe as its trap cues, cached here.

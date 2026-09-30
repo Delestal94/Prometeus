@@ -5,8 +5,8 @@ extends SceneTree
 ## peak are reported; the acceptance target uses RMS at the player's configured
 ## reference-distance level.
 
-const SynthAudio = preload("res://scripts/presentation/synth_audio.gd")
-const SynthAudioTraps = preload("res://scripts/presentation/synth_audio_traps.gd")
+const SynthAudio = preload("res://modules/synth_audio/synth_audio.gd")
+const SynthAudioTraps = preload("res://modules/synth_audio/synth_audio_traps.gd")
 const PackageFeedback = preload("res://scripts/gameplay/package/package_feedback.gd")
 const UiSounds = preload("res://scripts/ui/ui_sounds.gd")
 const TOLERANCE_DB: float = 2.0

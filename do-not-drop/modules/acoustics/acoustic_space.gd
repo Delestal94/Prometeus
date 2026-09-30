@@ -1,25 +1,26 @@
 extends RefCounted
 class_name AcousticSpace
-## Echo under a roof (tareas de Nacho N-402): while the listener -- this
-## client's camera -- is inside a tunnel or the depot, the world's sounds get
-## a long reverb; out in the open, none. Purely local, like the Interior /
-## Exterior pick (vehicle_presentation.gd): each client hears the space its
-## own camera is in.
+## Echo under a roof: while the listener -- this client's camera -- is inside
+## a tunnel or a hall, the world's sounds get a long reverb; out in the open,
+## none. Purely local: each client hears the space its own camera is in.
 ##
-## Spaces are nodes in the "acoustic_space" group that answer
-## covers(point) and have an `acoustic_space` property (&"tunnel", &"roof"):
-## TunnelSegment's AcousticZone (an Area3D along the bore) and the depot.
-## RouteSky asks listening_space() every frame and hands the answer to
-## apply(), which switches one AudioEffectReverb on BUSES (added once, at
+## Spaces are nodes in the GROUP that answer covers(point) and have an
+## `acoustic_space` property (a key of `spaces`): an AcousticZone (an Area3D
+## box), or anything else that implements the same two members. Whoever
+## follows the camera asks listening_space() every frame and hands the answer
+## to apply(), which switches one AudioEffectReverb on `buses` (added once, at
 ## runtime: the bus layout file stays as it is).
+##
+## Portable module (docs/modulos.md): `buses` and `spaces` are configuration
+## with Take My Package's values as defaults.
 
-## The world's sounds (SFX: horn, bells, animals, the depot's machines) and
-## the truck heard from outside (Exterior). Inside the cab (Interior) the
-## cabin's own reverb already colours everything.
-const BUSES: Array[StringName] = [&"SFX", &"Exterior"]
+const GROUP: StringName = &"acoustic_space"
+## The buses that get the reverb (the world's sounds, and a vehicle heard from
+## outside; a cabin's own reverb already colours the inside).
+static var buses: Array[StringName] = [&"SFX", &"Exterior"]
 const EFFECT_NAME: String = "AcousticSpaceReverb"
-## [room_size, damping, wet, predelay_msec] per space.
-const SPACES: Dictionary = {
+## space -> [room_size, damping, wet, predelay_msec].
+static var spaces: Dictionary = {
 	&"tunnel": [0.95, 0.15, 0.42, 70.0],
 	&"roof": [0.8, 0.35, 0.26, 40.0],
 }
@@ -31,7 +32,7 @@ static var current: StringName = &"open"
 static func listening_space(tree: SceneTree, point: Vector3) -> StringName:
 	if tree == null:
 		return &"open"
-	for node: Node in tree.get_nodes_in_group(&"acoustic_space"):
+	for node: Node in tree.get_nodes_in_group(GROUP):
 		if node.has_method(&"covers") and bool(node.call(&"covers", point)):
 			return StringName(node.get(&"acoustic_space"))
 	return &"open"
@@ -43,13 +44,13 @@ static func apply(space: StringName) -> void:
 	if space == current and _all_buses_ready():
 		return
 	current = space
-	for bus_name: StringName in BUSES:
+	for bus_name: StringName in buses:
 		var bus: int = AudioServer.get_bus_index(bus_name)
 		if bus < 0:
 			continue
 		var index: int = _effect_index(bus)
 		var reverb := AudioServer.get_bus_effect(bus, index) as AudioEffectReverb
-		var settings: Array = SPACES.get(space, [])
+		var settings: Array = spaces.get(space, [])
 		if not settings.is_empty():
 			reverb.room_size = float(settings[0])
 			reverb.damping = float(settings[1])
@@ -74,7 +75,7 @@ static func _effect_index(bus: int) -> int:
 
 
 static func _all_buses_ready() -> bool:
-	for bus_name: StringName in BUSES:
+	for bus_name: StringName in buses:
 		var bus: int = AudioServer.get_bus_index(bus_name)
 		if bus < 0:
 			continue
@@ -90,7 +91,7 @@ static func _all_buses_ready() -> bool:
 
 ## Whether the reverb for a space is on right now, on every bus (tests).
 static func is_on() -> bool:
-	for bus_name: StringName in BUSES:
+	for bus_name: StringName in buses:
 		var bus: int = AudioServer.get_bus_index(bus_name)
 		if bus < 0:
 			continue

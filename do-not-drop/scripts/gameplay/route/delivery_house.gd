@@ -15,7 +15,7 @@ class_name DeliveryHouse
 ## possible at all (currently isn't -- see the note in tareas-nacho.md).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
-const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
+const ContactShadow = preload("res://modules/render_budget/contact_shadow.gd")
 const WALL := Color("9c8a6f")
 const ROOF := Color("6b4f3a")
 const DOOR := Color("46342a")
