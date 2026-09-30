@@ -76,6 +76,7 @@
 | `drive_horn` | H | Botón Este (B/Círculo) |
 | `ui_pause` | Esc | Start |
 | `run_restart` | R | Botón Oeste (X/Cuadrado) |
+| `toggle_net_stats` | F3 | — (panel de red, `net_stats_overlay.gd`; no reasignable) |
 
 Caminar y conducir comparten `W`/`S`: nunca están activos a la vez, porque un jugador
 es conductor o pasajero a pie, no ambos en la misma escena. La mirada en primera

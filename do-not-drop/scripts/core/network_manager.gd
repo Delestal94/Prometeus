@@ -111,6 +111,14 @@ const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 ## A Steam lobby to join as soon as the menu is up: an invite accepted from
 ## outside the menu, or the game launched by one (+connect_lobby <id>).
 var _pending_lobby: int = 0
+## `--net-sim=lag,jitter,loss` (N-216, net_stats.gd): the bad connection this
+## process simulates, {} for none. Steam's sockets take it as soon as Steam
+## is up (_apply_steam_net_sim); on LAN the truck's pose buffer does
+## (pose_net_sim(), vehicle_net_smoother.gd).
+var net_sim: Dictionary = {}
+## Loaded in _ready, not preloaded: it builds on UiTheme, which an autoload
+## this early shouldn't compile along with itself.
+const NET_STATS_OVERLAY_PATH: String = "res://scripts/presentation/net_stats_overlay.gd"
 
 
 ## Steam starts with the game, not with the first "Crear sala": until it was
@@ -119,6 +127,9 @@ var _pending_lobby: int = 0
 ## friends list went nowhere -- they had to press "Crear sala" first just to
 ## be found. Headless runs (tests, CI) leave the local Steam client alone.
 func _ready() -> void:
+	_read_net_sim(OS.get_cmdline_user_args())
+	# F3: ping, loss, KB/s and queue, on any screen (hidden until asked for).
+	add_child((load(NET_STATS_OVERLAY_PATH) as GDScript).new())
 	if DisplayServer.get_name() == "headless":
 		return
 	steam_available()
@@ -288,7 +299,43 @@ func _init_steam() -> bool:
 		return false
 	_steam_ready = true
 	_connect_steam_signals()
+	_apply_steam_net_sim()
 	return true
+
+
+# --- Bad-connection simulation (N-216) ---------------------------------------
+
+## Reads `--net-sim` once. A value that doesn't parse is reported, not
+## guessed at: a test run that silently simulated nothing would lie.
+func _read_net_sim(args: PackedStringArray) -> void:
+	var value: String = NetStats.find_net_sim_arg(args)
+	if value.is_empty():
+		return
+	net_sim = NetStats.parse_net_sim_value(value)
+	if net_sim.is_empty():
+		push_warning(("NetworkManager: --net-sim=%s not understood; expected lag,jitter,loss (ms, ms, %%)"
+			+ " or 'standard'") % value)
+		return
+	print("NetworkManager: --net-sim %s (Steam: every packet; LAN: the truck's poses)" % NetStats.describe_sim(net_sim))
+
+
+## On Steam the sockets simulate the whole connection, both ways: global
+## config, so it covers every connection this process opens from now on.
+func _apply_steam_net_sim() -> void:
+	if net_sim.is_empty() or _steam == null:
+		return
+	var applied: int = NetStats.apply_steam_sim(_steam, net_sim)
+	var total: int = NetStats.steam_sim_settings(net_sim).size()
+	if applied < total:
+		push_warning("NetworkManager: Steam took %d of %d --net-sim settings" % [applied, total])
+	else:
+		print("NetworkManager: Steam simulates %s" % NetStats.describe_sim(net_sim))
+
+
+## The profile the game itself has to simulate, for the truck's pose buffer:
+## on LAN, `--net-sim`; on Steam nothing, since the sockets already do it.
+func pose_net_sim() -> Dictionary:
+	return {} if active_transport == Transport.STEAM else net_sim.duplicate()
 
 
 func _connect_steam_signals() -> void:
