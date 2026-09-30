@@ -144,6 +144,12 @@ func _run_host() -> void:
 
 
 func _watch_client() -> void:
+	# Joining waits out the host's level load and then this process loads its
+	# own: on a slow CI runner that alone took 35 of the 40 s. The budget for
+	# the host's commands starts once the level is in.
+	var load_deadline: int = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 2.0 * 1000.0)
+	while _level == null and Time.get_ticks_msec() < load_deadline:
+		await get_tree().process_frame
 	var deadline: int = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 1000.0)
 	while not _finished and Time.get_ticks_msec() < deadline:
 		await get_tree().process_frame
