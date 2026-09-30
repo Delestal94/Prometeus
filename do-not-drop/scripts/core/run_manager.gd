@@ -205,7 +205,7 @@ static func plan_deadlines(distances: Array) -> Array:
 	return planned
 
 
-## Host, as the run starts: posts the deadlines to every peer.
+## Host, as the run starts or when a deadline is shortened: posts the full list to every peer.
 func set_deadlines(list: Array) -> void:
 	EventBus.relay(&"delivery_deadlines_set", [list])
 

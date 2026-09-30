@@ -18,7 +18,7 @@ para empezar una partida.
 | Pago de la entrega | puntos de puerta + de carga (típico 300-450) | Línea "Pago del equipo" de los resultados |
 | Recompensa / multa de evento de ruta | +10..25 / -15..30 | Aviso del evento |
 | Suministros del depósito | -100 a -160 (acolchado 160, seguro 140, gancho 120, repuesto 100) | Votación de la tienda, cobra el depósito |
-| Seguro de envío | +75 por caja arruinada entregada | Aviso del depósito |
+| Seguro de envío | +50 por caja arruinada entregada | Aviso del depósito |
 | Multa de fauna | -20 / -30 | Aviso en ruta |
 
 ### Contramedidas (qué exploit se cerró y cuál no)
@@ -31,7 +31,9 @@ para empezar una partida.
   carga perdida no paga: cobrar el mínimo y recomprar es peor que entregar (un pedido intacto
   vale 150 en la puerta).
 - **Seguro.** Arruinar cajas a propósito para cobrar el seguro no conviene: una caja arruinada
-  paga 20 + 75 de seguro contra 150 de una intacta, y el seguro cuesta 140.
+  paga 20 + 50 de seguro = 70, menos que una abollada (75) y mucho menos que una intacta (150);
+  además el seguro cuesta 140. Regla: reembolso + pago de arruinada < pago de abollada
+  (`Depot.INSURANCE_REFUND` + `POINTS_DELIVERED_RUINED` < `POINTS_DELIVERED_AT_RISK`, lo verifica `test_depot`).
 - **Ruta fácil.** El pago crece con las casas (150 por casa intacta, mínimo 2 por N-119) y
   no depende del tiempo: repetir la ruta mínima rinde lo mismo por casa que una larga. No se
   midió el dinero por minuto de cada largo; si hace falta, medirlo con

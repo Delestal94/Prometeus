@@ -145,17 +145,26 @@ func _check_shortened_deadlines(run: Node) -> void:
 	run.deadlines = planned.duplicate(true)
 	run.register_delivery(1, &"delivered_ok", &"skipped_box")
 	_expect(run.shorten_next_deadline(0) == 2, "A delivered house is skipped")
-	# Late in the run the cut never leaves less than IMPATIENT_MIN_LEFT seconds.
+	# Late in the run the cut never leaves less than DeadlineCut.MIN_LEFT seconds.
 	run.deadlines = planned.duplicate(true)
 	run.elapsed_seconds = float(planned[2]["seconds"]) - 12.0
 	run.register_delivery(1, &"delivered_ok", &"skipped_box")
 	_expect(run.shorten_next_deadline(1) == 2
 			and float(run.deadlines[2]["seconds"]) >= run.elapsed_seconds + DeadlineCut.MIN_LEFT - 1.0,
 			"The cut keeps the minimum time left (got %s)" % [run.deadlines])
-	# Nothing after the last house, nothing once the run is over.
+	# No house after the last one: the first open deadline overall takes the cut (house 1 is delivered here).
+	run.elapsed_seconds = 0.0
 	run.deadlines = planned.duplicate(true)
-	_expect(run.shorten_next_deadline(2) == -1, "The last house has no next house")
+	_expect(run.shorten_next_deadline(2) == 0 and int(run.deadlines[0]["seconds"]) < int(planned[0]["seconds"]),
+			"With no later house the first open deadline is shortened (got %s)" % [run.deadlines])
+	# Expired deadlines are not open: with none left nothing changes.
+	run.deadlines = planned.duplicate(true)
+	run.elapsed_seconds = float(planned[2]["seconds"]) + 1.0
+	_expect(run.shorten_next_deadline(0) == -1 and int(run.deadlines[2]["seconds"]) == int(planned[2]["seconds"]),
+			"No open deadline at all: nothing happens")
+	run.elapsed_seconds = 0.0
 	run.is_running = false
+	run.deadlines = planned.duplicate(true)
 	_expect(run.shorten_next_deadline(0) == -1 and int(run.deadlines[1]["seconds"]) == int(planned[1]["seconds"]),
 			"A finished run's deadlines stay put")
 	run.reset_run()

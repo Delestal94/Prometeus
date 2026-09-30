@@ -278,7 +278,7 @@ no cuenta acá, cuenta en la puerta):
 Precios de la tienda (`CrewProgression.SUPPLIES`): acolchado 160, seguro 140, gancho 120, repuesto 100
 (media 130). Una entrega típica de 2-3 casas con cajas intactas paga 300-450 (más plazos y fotos): alcanza
 para un ítem de precio medio y otro barato, y el estante entero (520) cuesta unas dos entregas. La
-billetera arranca con 100 (`STARTING_MONEY`). El seguro devuelve 75 por caja arruinada entregada
+billetera arranca con 100 (`STARTING_MONEY`). El seguro devuelve 50 por caja arruinada entregada
 (`Depot.INSURANCE_REFUND`).
 
 El multiplicador de "caos simultáneo" está para reforzar el diseño de momentos

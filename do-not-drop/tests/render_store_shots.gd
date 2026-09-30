@@ -135,6 +135,7 @@ func _results() -> void:
 		"elapsed_seconds": 212.4,
 		"cargo_points": 150,
 		"delivery_points": 275,
+		"payout": 425,
 		"chaos_multiplier": 1.2,
 		"houses_delivered": 2,
 		"houses_missed": 0,

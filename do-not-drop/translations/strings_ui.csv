@@ -699,7 +699,7 @@ UI_REWARD_NOISY,Nueva trampa: Ruidoso,New trap: Noisy
 UI_REWARD_SKY_UNIFORM,Nuevo uniforme: Cielo,New uniform: Sky
 UI_REWARD_VIOLET_PAINT,Nueva pintura: Violeta,New paint: Violet
 UI_SUPPLY_INSURANCE,Seguro de envío,Shipping insurance
-UI_SUPPLY_INSURANCE_DETAIL,Cada paquete que se entregue roto en el próximo reparto le devuelve $75 al equipo.,Every ruined package delivered on the next run refunds the team $75.
+UI_SUPPLY_INSURANCE_DETAIL,Cada paquete que se entregue roto en el próximo reparto le devuelve $50 al equipo.,Every ruined package delivered on the next run refunds the team $50.
 UI_SUPPLY_PADDING,Acolchado de estantes,Shelf padding
 UI_SUPPLY_PADDING_DETAIL,Espuma en el rack: la carga sufre un 25 % menos por golpes en el próximo reparto.,Foam on the rack: cargo takes 25% less impact damage on the next run.
 UI_TRUCK_AGILE,Furgoneta ágil,Agile van

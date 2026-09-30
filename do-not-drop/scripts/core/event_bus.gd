@@ -76,7 +76,8 @@ signal house_delivery_recorded(house_index: int, outcome: StringName, package_id
 ## What the door saw of a rescued box (repaired / unconvincing / substituted),
 ## relayed right before its house_delivery_recorded. Relayed.
 signal delivery_care_noted(house_index: int, category: StringName)
-## This run's delivery deadlines, [{house, seconds, reason}], as it starts. Relayed.
+## This run's delivery deadlines, [{house, seconds, reason}], as it starts, and again whenever one is shortened mid-run
+## (RunManager.shorten_next_deadline). Relayed.
 signal delivery_deadlines_set(deadlines: Array)
 ## The delivery photo was filed against a door (or wasn't -- accepted says
 ## which), so the HUD can confirm the shot landed.

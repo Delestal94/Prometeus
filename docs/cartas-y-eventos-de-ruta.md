@@ -44,7 +44,7 @@ si empatan, la opción más barata. En solitario la compra sigue siendo directa.
 | Orden | Evento | Efecto |
 | ---: | --- | --- |
 | 1 | Inspección sorpresa | Exige carga asegurada, material peligroso aislado o cabina sin olor. Fallar aplica multa, no termina la partida. |
-| 2 | Cliente impaciente | Una casa pide entrega intacta. Si falla (entrega no intacta o se acaba el plazo del evento), el plazo de la casa siguiente que aún tenga uno se acorta un 15 % (`RunManager.IMPATIENT_DEADLINE_CUT`), sin dejar menos de 10 s desde ese momento. Si no hay casa siguiente, o la corrida ya terminó, no pasa nada. |
+| 2 | Cliente impaciente | Una casa pide entrega intacta. Si falla (entrega no intacta o se acaba el plazo del evento), el plazo de la casa siguiente que aún tenga uno (si no queda ninguna posterior, el próximo plazo abierto) se acorta un 15 % (`RunManager.IMPATIENT_DEADLINE_CUT`), sin dejar menos de 10 s desde ese momento. Si no hay casa siguiente, o la corrida ya terminó, no pasa nada. |
 | 3 | Puerta trasera trabada | Una caja bloquea la salida y debe liberarse desde dentro. |
 | 4 | Etiquetas mezcladas | Un golpe confunde etiquetas y el equipo debe identificar la caja correcta. |
 | 5 | Paquete mimético | Revela su riesgo real al recibir un impacto. |
