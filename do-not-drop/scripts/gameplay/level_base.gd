@@ -89,7 +89,9 @@ func _crew_outgrew_route() -> bool:
 ## Only the host resolves doors (Interactable.interact() is host-only), and
 ## RunManager relays the record to everyone from there.
 func _on_house_resolved(house_index: int, outcome: StringName, package_id: StringName) -> void:
-	RunManager.register_delivery(house_index, outcome, package_id)
+	var houses: Array = route.get(&"houses")
+	var opened: bool = house_index < houses.size() and bool((houses[house_index] as Object).get(&"handed_over_open"))
+	RunManager.register_delivery(house_index, outcome, package_id, opened)
 
 
 func start_delivery() -> void:

@@ -59,7 +59,8 @@ const INSURANCE_REFUND: int = 30
 @export var ground_apron: bool = false
 
 ## Today's orders, one per house: {"house", "package_id", "code", "trap", "trap_key", "trap_id",
-## "content"} ("trap" and "content" already translated, for this peer's screens).
+## "content", "content_id"} ("trap" and "content" already translated, for this peer's screens;
+## "content_id" is the content's id, whose sender is the house's client, S-604).
 var orders: Array[Dictionary] = []
 ## What the Boss says over the radio today (S-603): LocText lines, [start] or
 ## [start, reaction to the last run]. The host draws them (BossLines) and
@@ -218,6 +219,7 @@ func post_orders(house_count: int) -> Array[Dictionary]:
 			"trap_key": String(definition.call(&"name_key")),
 			"trap_id": String(definition.get(&"id")),
 			"content": String(content.call(&"localized_name")) if content != null else "",
+			"content_id": StringName(content.get(&"id")) if content != null else &"",
 		})
 	_order_board.write(orders, _endless_best())
 	_open_the_radio()
@@ -280,13 +282,14 @@ func _completed_runs() -> int:
 	return int(unlocks.get(&"completed_runs")) if unlocks != null else 0
 
 
-## [[package_id, trap_key, code], ...] in house order, the shape
-## route.assign_packages() understands. The host relays it as the run starts,
+## [[package_id, trap_key, code, content_id], ...] in house order, the shape
+## route.assign_packages() understands (it ignores the fourth: it is the
+## house's client for the results, ClientComplaints). The host relays it as the run starts,
 ## so the trap goes as its translation key and each peer names it itself.
 func assignments() -> Array:
 	var result: Array = []
 	for order: Dictionary in orders:
-		result.append([order.package_id, order.trap_key, order.code])
+		result.append([order.package_id, order.trap_key, order.code, order.get("content_id", &"")])
 	return result
 
 
