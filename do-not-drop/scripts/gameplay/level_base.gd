@@ -117,6 +117,9 @@ func _physics_process(delta: float) -> void:
 	if not RunManager.is_running:
 		return
 	var progress: float = route.get_progress(vehicle.global_position)
+	# Furthest point reached, on every peer: a client left without a host
+	# shows it on its disconnect screen (RunTally, N-222).
+	RunManager.current_distance = maxf(RunManager.current_distance, progress * route.route_length)
 	EventBus.route_progress_changed.emit(progress, route.route_length * (1.0 - progress), route.get_section_name(vehicle.global_position))
 	if route.is_vehicle_in_delivery and vehicle.linear_velocity.length() < DELIVERY_MAX_SPEED:
 		stopped_seconds += delta

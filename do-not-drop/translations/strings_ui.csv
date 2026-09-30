@@ -189,6 +189,8 @@ HUD_EVENT_RESOLVED,Evento resuelto,Event resolved
 HUD_HIT,¡Golpe!  −%d de integridad. Bajá la velocidad antes del próximo obstáculo.,Hit!  −%d integrity. Slow down before the next obstacle.
 HUD_HOLD_STILL,Mantené la camioneta detenida…,Keep the truck stopped…
 HUD_HOST_GONE,La partida del anfitrión ya no está disponible.,The host's game is no longer available.
+HUD_HOST_GONE_TALLY,"Hasta acá: %d de %d casas entregadas, %d de %d cajas sanas, %d m recorridos en %s.","So far: %d of %d houses delivered, %d of %d boxes intact, %d m travelled in %s."
+HUD_HOST_GONE_TALLY_ENDLESS,"Hasta acá: %d m recorridos en %s, %d de %d cajas sanas.","So far: %d m travelled in %s, %d of %d boxes intact."
 HUD_HOUSE_REFUSED,"Casa %d: ""Ese no es mío, pedí %s""","House %d: \""That's not mine, I ordered %s\"""
 HUD_INCIDENT,Incidente,Incident
 HUD_KEYS_AT_HOUSE,WASD  caminar   ·   E  interactuar   ·   F  sacar una foto de la entrega,WASD  walk   ·   E  interact   ·   F  take a delivery photo

@@ -24,10 +24,15 @@ extends SceneTree
 ## its whole sequence alone: every peer reports `assist=1`.
 ## N-117.3: then the same holder scrubs the box, turned into a Liquid one: six
 ## alternating swings over the RPC and every peer reports `scrub=5`.
+## N-222: after the TRIO line the host starts a run, hands one door its box and
+## leaves. Each client prints a GONE line: it saw the host go, got the delivery,
+## its level stopped the run and RunTally tells 1 house delivered (the screen
+## itself: test_host_gone_tally.gd).
 ##
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
 
+const RUN_TALLY = preload("res://scripts/core/run_tally.gd")
 const PORT: int = 17991
 const TIMEOUT_MSEC: int = 60000
 const PLAYERS: int = 3
@@ -48,6 +53,7 @@ var _network: Node
 var _level: Node
 var _host: bool = false
 var _name: String = "host"
+var _host_gone: bool = false
 
 
 func _initialize() -> void:
@@ -62,6 +68,7 @@ func _initialize() -> void:
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
 	# NETLOG, not TRIO: run-net-trio.sh takes the first TRIO line as the result.
 	_network.connect(&"session_failed", func(reason: String) -> void:
+		_host_gone = true
 		print("NETLOG role=%s session failed at %.1f s: %s" % [_name, Time.get_ticks_msec() / 1000.0, reason]))
 	var error: Error = _network.call(&"host_session", PORT) if _host else _network.call(&"join_session", "127.0.0.1", PORT)
 	if error != OK:
@@ -126,8 +133,45 @@ func _report() -> void:
 		_route_hash(route), phase, grab, tap, scrub, assist, _code_of(code_box)])
 	# The host stays up a little so the clients' own reads aren't cut short.
 	await _pump(4.0 if _host else 1.0)
-	_network.call(&"leave_session")
+	if _host:
+		await _deliver_and_leave()
+	else:
+		await _report_host_gone()
 	quit(0)
+
+
+## Host: a run with one door served, then gone without a word (N-222).
+func _deliver_and_leave() -> void:
+	var run: Node = root.get_node(^"/root/RunManager")
+	run.call(&"start_run")
+	await _pump(1.0)
+	run.call(&"register_delivery", 0, &"delivered_ok", &"")
+	await _pump(1.5)
+	_network.call(&"leave_session")
+
+
+## Client: waits for the host to go, then says whether the disconnect screen
+## kept the run's tally.
+func _report_host_gone() -> void:
+	var waited: float = 0.0
+	while not _host_gone and waited < 35.0:
+		await _pump(0.1)
+		waited += 0.1
+	await process_frame
+	var run: Node = root.get_node(^"/root/RunManager")
+	var houses: int = (run.get(&"deliveries") as Array).size()
+	var tally: String = RUN_TALLY.describe(RUN_TALLY.of(run))
+	# Under --script this file compiles before the autoloads exist, so hud.gd
+	# (which names them) can't compile here and the HUD runs scriptless: the
+	# screen itself is test_host_gone_tally.gd's. When it does run, check it.
+	var screen: String = "unchecked"
+	var stats_label: Variant = _level.get_node(^"HUD").get(&"overlay_stats")
+	if stats_label is Label:
+		screen = "ok" if (stats_label as Label).text.contains(tally) else "missing"
+	var ok: bool = _host_gone and houses == 1 and not bool(run.get(&"is_running")) \
+			and RUN_TALLY.has_unfinished_run(run) and tally.contains("1") and screen != "missing"
+	print("GONE role=%s %s gone=%s houses=%d screen=%s tally=%s" % [_name, "ok" if ok else "FAIL", _host_gone,
+			houses, screen, tally])
 
 
 ## Both clients step up to the same box and ask the host for it in the same

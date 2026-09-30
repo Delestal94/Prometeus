@@ -65,6 +65,7 @@ func _ready() -> void:
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	NetworkManager.peer_level_ready.connect(_on_peer_level_ready)
 	NetworkManager.session_failed.connect(_keep_view)
+	NetworkManager.session_failed.connect(_stop_orphaned_run)
 	# Choices made in the depot (lockers, workshop) show at once.
 	UnlockManager.progress_changed.connect(_on_profile_changed)
 	# Offline is a session of one, so this same call covers both paths.
@@ -111,6 +112,14 @@ func start_delivery() -> void:
 func _on_roster_changed(peer_ids: Array) -> void:
 	if NetworkManager.is_host():
 		_sync_players(peer_ids)
+
+
+## The host is gone mid-run (N-222): stop this peer's copy of the run. With
+## the session closed this peer counts as an offline host, and would go on
+## to score and end the run itself, covering the disconnect screen (which
+## shows RunTally) with results. Not finish_run(): nothing is recorded or won.
+func _stop_orphaned_run(_reason: String) -> void:
+	RunManager.is_running = false
 
 
 ## The host is gone. Godot frees everything the host's spawner made -- every

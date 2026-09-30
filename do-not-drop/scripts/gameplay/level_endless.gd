@@ -71,7 +71,9 @@ func _physics_process(delta: float) -> void:
 	# only new ground counts, so reversing and coming back adds nothing.
 	_best_distance = maxf(_best_distance, _streamer.distance_along(vehicle.global_position))
 	distance_traveled = _best_distance
-	RunManager.current_distance = distance_traveled
+	# Only up: a late joiner's own count starts at 0 before the van syncs, and
+	# the session snapshot already brought the host's (RunTally, N-222).
+	RunManager.current_distance = maxf(RunManager.current_distance, distance_traveled)
 	# Clients follow the run for the HUD; how it ends is the host's call.
 	if not NetworkManager.is_host():
 		return

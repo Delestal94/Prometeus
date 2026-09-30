@@ -2,6 +2,8 @@ class_name HudPause
 extends Node
 ## Start, pause, restart-hold and disconnect screens, and the depot stations' panels.
 
+const RUN_TALLY = preload("res://scripts/core/run_tally.gd")
+
 ## Set by Hud before this is added as its child.
 var hud: Hud
 var _restart_hold: float = 0.0
@@ -174,6 +176,10 @@ func _on_connection_lost(reason: String) -> void:
 	hud.overlay_title.text = tr("HUD_DISCONNECTED")
 	hud.overlay_body.text = reason
 	hud.overlay_stats.text = tr("HUD_HOST_GONE")
+	# N-222: the host's results will never come, so what this peer saw of the
+	# run is what the crew gets to keep on screen.
+	if RUN_TALLY.has_unfinished_run(RunManager):
+		hud.overlay_stats.text += "\n" + RUN_TALLY.describe(RUN_TALLY.of(RunManager))
 	hud.results.set_hero(false)
 	hud.complaints_label.visible = false
 	hud.photo_strip.visible = false
