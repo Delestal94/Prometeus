@@ -179,8 +179,12 @@ func award_delivery(results: Dictionary, peers: Array) -> void:
 	# Door points + cargo that came back, with no chaos multiplier (that one is
 	# only in the score). Endless results carry neither, so it pays nothing.
 	# Shown on the results screen as "Pago del equipo" (results["payout"]).
-	var payout: int = maxi(int(results.get("delivery_points", 0)) + int(results.get("cargo_points", 0)), 0)
+	var base_payout: int = maxi(int(results.get("delivery_points", 0)) + int(results.get("cargo_points", 0)), 0)
+	# The manual van pays more (N-114): results["pay_multiplier"] is set by
+	# RunManager from the truck the crew drove; 1.0 (or absent) changes nothing.
+	var payout: int = roundi(base_payout * maxf(float(results.get("pay_multiplier", 1.0)), 1.0))
 	results["payout"] = payout
+	results["pay_bonus"] = payout - base_payout
 	team_money += payout
 	_credited_actions.clear()
 	_emit_event(&"team_money_changed", [team_money])

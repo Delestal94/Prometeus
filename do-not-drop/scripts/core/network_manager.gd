@@ -25,9 +25,11 @@ const MAX_PLAYERS: int = 8
 ## 10: the handshake carries the colour slots ("colors") and the host sends
 ## them again through _sync_color_slots, N-226;
 ## 11: the restart RPC carries a dictionary and the event bus relays peer
-## requests through one RPC, N-231).
+## requests through one RPC, N-231;
+## 12: the truck gets a Gearbox child (replicated gear) and the
+## request_gear_shift RPC, N-114).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 11
+const PROTOCOL_VERSION: int = 12
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

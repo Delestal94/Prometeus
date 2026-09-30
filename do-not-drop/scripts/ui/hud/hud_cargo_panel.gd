@@ -8,6 +8,7 @@ var hud: Hud
 var cargo_hints: Dictionary = {}
 var _last_states: Dictionary = {}
 var _rescue_player: AudioStreamPlayer
+var _gear_label: Label
 const RUIN_FLASH_SECONDS: float = 0.35
 const RUIN_FLASH_ALPHA: float = 0.24
 var _ruin_flash_left: float = 0.0
@@ -26,6 +27,34 @@ func _ready() -> void:
 
 func _on_speed(speed: float) -> void:
 	hud.speed_label.text = "%02d" % roundi(absf(speed))
+	_refresh_gear(speed)
+
+
+## The old manual van's gear under the speed (N-114): "MARCHA 3", and a
+## nudge to shift up (with the key) when the gear has no more to give. Shown
+## only for a manual truck; nothing is added for the others. Read from the
+## truck's own replicated state, so every peer sees the driver's gear.
+func _refresh_gear(speed_kmh: float) -> void:
+	var truck: Node = get_tree().get_first_node_in_group(&"vehicle")
+	var manual: bool = truck != null and truck.has_method(&"has_manual_gearbox") and truck.has_manual_gearbox()
+	if not manual:
+		if _gear_label != null:
+			_gear_label.visible = false
+		return
+	if _gear_label == null:
+		var metrics: Node = hud.speed_label.get_parent().get_parent()
+		_gear_label = UiTheme.label(metrics, "", 18, Hud.INK, true)
+		metrics.move_child(_gear_label, hud.speed_label.get_parent().get_index() + 1)
+	_gear_label.visible = true
+	var gearbox: VehicleGearbox = truck.gearbox
+	var gear: String = truck.gear_text()
+	var top_kmh: float = float(truck.get(&"maximum_speed_kmh"))
+	if gear != "R" and gearbox.at_limit(absf(speed_kmh), top_kmh):
+		_gear_label.text = tr("HUD_GEAR_SHIFT_UP") % [gear, GameSettings.binding_label(&"drive_shift_up")]
+		_gear_label.add_theme_color_override("font_color", Hud.RED)
+	else:
+		_gear_label.text = tr("HUD_GEAR") % gear
+		_gear_label.add_theme_color_override("font_color", Hud.INK)
 
 
 ## The host relays the trap's translation key (TrapDefinition.name_key()), so

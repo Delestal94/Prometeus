@@ -15,6 +15,7 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 4: first-time trap tutorial cards persist in seen_tips.
 const PROFILE_VERSION := 4
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
+const GearboxScript = preload("res://scripts/gameplay/vehicle/vehicle_gearbox.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
@@ -28,6 +29,7 @@ const UNLOCKS := {
 	&"coral_uniform": {"title": "UI_UNLOCK_CORAL_UNIFORM", "deliveries": 2, "score": 150},
 	&"sky_uniform": {"title": "UI_UNLOCK_SKY_UNIFORM", "deliveries": 9, "score": 1000},
 	&"agile_van": {"title": "UI_UNLOCK_AGILE_VAN", "deliveries": 4, "score": 350},
+	&"vintage_van": {"title": "UI_UNLOCK_VINTAGE_VAN", "deliveries": 6, "score": 550},
 }
 
 ## Which trap each unlock above puts on the depot's shelves (by the trap's
@@ -52,6 +54,9 @@ const MAX_DELIVERY_HOUSES := 7
 const TRUCKS := {
 	&"classic": {"title": "UI_TRUCK_CLASSIC", "detail": "UI_TRUCK_STABLE", "unlock": &"starter_kit"},
 	&"agile": {"title": "UI_TRUCK_AGILE", "detail": "UI_TRUCK_NERVOUS", "unlock": &"agile_van"},
+	# Manual gears, paid better (vehicle.gd VARIANTS "vintage", N-114).
+	&"vintage": {"title": "UI_TRUCK_VINTAGE", "detail": "UI_TRUCK_MANUAL", "unlock": &"vintage_van",
+		"pay_multiplier": GearboxScript.PAY_MULTIPLIER},
 }
 const PAINTS := {
 	&"white": {"title": "UI_PAINT_FACTORY_WHITE", "color": Color("dde2e8"), "unlock": &"starter_kit"},
@@ -162,6 +167,12 @@ func select_cosmetic(cosmetic_id: StringName) -> bool:
 
 func truck_choices() -> Array[Dictionary]:
 	return _choices(TRUCKS)
+
+
+## What the delivery payout is multiplied by for the truck this profile brings:
+## 1.0 except for the manual van's compensation (N-114, vehicle.gd VARIANTS).
+func selected_truck_pay_multiplier() -> float:
+	return float(Dictionary(TRUCKS.get(selected_truck, {})).get("pay_multiplier", 1.0))
 
 
 func paint_choices() -> Array[Dictionary]:

@@ -87,10 +87,13 @@ var save_run_log: bool = false:
 
 const REBINDABLE_ACTIONS := [
 	&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card", &"voice_talk", &"sprint",
+	&"drive_shift_up", &"drive_shift_down",
 ]
 const DEFAULT_KEY_BINDINGS := {
 	&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G,
 	&"voice_talk": KEY_Z, &"sprint": KEY_SHIFT,
+	# The old van's manual gearbox (N-114); the gamepad uses the bumpers.
+	&"drive_shift_up": KEY_UP, &"drive_shift_down": KEY_DOWN,
 }
 
 ## Multiplies whatever each look implementation already uses, so 1.0 is

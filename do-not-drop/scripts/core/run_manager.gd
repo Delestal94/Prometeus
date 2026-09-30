@@ -639,7 +639,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"route_event": _result_route_event(),
 		"score": score,
 		"is_new_best": is_new_best,
-		"best_score": best_score(MODE_DELIVERY),
+		"best_score": best_score(MODE_DELIVERY), "pay_multiplier": UnlockManager.selected_truck_pay_multiplier(),
 	}
 	print("[Run] ", results)
 	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
