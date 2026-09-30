@@ -2,6 +2,9 @@ extends Node
 ## Two-process gameplay race check. Run through tools/run-net-pair.sh.
 ## Also checks that the F3 network overlay (N-216) reads the live ENet link
 ## on both sides: ping and KB/s in and out (NETSTATS lines).
+## Last stage (N-221): the client that left holding a box joins again from the
+## same running game and gets its colour slot and merit back under its new
+## peer id.
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -16,6 +19,10 @@ var _client_peer_id: int = 0
 var _pickup_sent: bool = false
 var _race_sent: bool = false
 var _reports: Dictionary = {}
+## Client: how the disconnect stage went, reported with the final result.
+var _disconnect_ok: bool = false
+## Client: when to give up waiting for the host, pushed back by the rejoin.
+var _deadline: int = 0
 
 
 func _ready() -> void:
@@ -128,8 +135,15 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_drop", package.get_path())
 	await _wait_for_report(&"drop")
 
-	# The disconnect cleanup is the last check because the client process
-	# intentionally leaves. Its carried box must become loose on the host.
+	# The client leaves on purpose: its carried box must become loose on the
+	# host. Before that it earns some merit and its colour slot is noted, for
+	# the rejoin (_check_rejoin).
+	var old_client: int = _client_peer_id
+	var old_slot: int = int(_network.call(&"color_slot", old_client))
+	_expect(old_slot != int(_network.call(&"color_slot", 1)), "host and client wear different colour slots")
+	var crew: Node = get_node(^"/root/CrewProgression")
+	crew.call(&"award_action", old_client, &"net_pair:rejoin", 30)
+	var old_merit: int = int((crew.get(&"merit") as Dictionary).get(old_client, 0))
 	package.call(&"take_by", client_player)
 	await _pump(0.8)
 	_expect(client_player.carried_package == package and package.carrier == client_player,
@@ -144,9 +158,35 @@ func _run_host() -> void:
 	_expect(is_instance_valid(package) and package.is_inside_tree(), "disconnected client's package remains in the world")
 	_expect(not package.is_held and package.carrier == null and package.collision_layer == 4,
 		"disconnected client's package is loose on the host")
-	_client_peer_id = 0  # It already printed its own result and left cleanly.
-
+	await _check_rejoin(old_client, old_slot, old_merit)
 	await _finish(not _failed, "all pair checks passed")
+
+
+## N-221: the client comes back from the same running game (same identity in
+## its ready reply) under a new peer id. The host gives it its slot back, and
+## with it the merit CrewProgression keeps under that slot.
+func _check_rejoin(old_client: int, old_slot: int, old_merit: int) -> void:
+	_client_peer_id = 0
+	var rejoins: Array = []
+	_network.connect(&"peer_rejoined", func(old_id: int, new_id: int) -> void: rejoins.append([old_id, new_id]))
+	var came_back: bool = await _wait_until(func() -> bool:
+		var peers: PackedInt32Array = get_tree().root.multiplayer.get_peers()
+		return peers.size() == 1 and _player(peers[0]) != null, TIMEOUT_SECONDS * 2.0)
+	if not came_back:
+		_expect(false, "the client that left joins the session again")
+		return
+	_client_peer_id = int(get_tree().root.multiplayer.get_peers()[0])
+	await _pump(0.4)
+	var crew: Node = get_node(^"/root/CrewProgression")
+	var slot: int = int(_network.call(&"color_slot", _client_peer_id))
+	var merit: int = int((crew.get(&"merit") as Dictionary).get(_client_peer_id, -1))
+	_expect(_client_peer_id != old_client, "the rejoined client has a new peer id")
+	_expect(rejoins == [[old_client, _client_peer_id]], "the host recognises who came back (got %s)" % [rejoins])
+	_expect(slot == old_slot, "the rejoined client gets its colour slot back (slot %d, was %d)" % [slot, old_slot])
+	_expect(merit == old_merit, "the rejoined client gets its merit back (%d, was %d)" % [merit, old_merit])
+	# Not its suit: this client wears a uniform on purpose (test_network_rejoin covers the suit).
+	rpc_id(_client_peer_id, &"_client_check_rejoin", _client_peer_id, old_slot)
+	await _wait_for_report(&"rejoin")
 
 
 func _watch_client() -> void:
@@ -156,8 +196,8 @@ func _watch_client() -> void:
 	var load_deadline: int = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 2.0 * 1000.0)
 	while _level == null and Time.get_ticks_msec() < load_deadline:
 		await get_tree().process_frame
-	var deadline: int = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 1000.0)
-	while not _finished and Time.get_ticks_msec() < deadline:
+	_deadline = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 1000.0)
+	while not _finished and Time.get_ticks_msec() < _deadline:
 		await get_tree().process_frame
 	if not _finished:
 		print("PAIR role=client FAIL timed out waiting for host commands")
@@ -243,15 +283,33 @@ func _client_disconnect_while_carrying(package_path: NodePath) -> void:
 	var package: DeliveryPackage = get_node_or_null(package_path) as DeliveryPackage
 	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
 	var ok: bool = package != null and player != null and player.carried_package == package
-	_finished = true
 	_print_network_metrics("client")
 	var overlay_ok: bool = _overlay_reads_link("client")
-	print("PAIR role=client %s: disconnect while carrying%s" % ["PASS" if ok and overlay_ok else "FAIL",
+	# NETLOG, not PAIR: run-net-pair.sh takes the first PAIR line as the result.
+	print("NETLOG role=client disconnect while carrying: %s%s" % ["ok" if ok and overlay_ok else "FAIL",
 		"" if overlay_ok else " (the network overlay did not read the host's link)"])
-	ok = ok and overlay_ok
+	_disconnect_ok = ok and overlay_ok
 	await _pump(0.2)
 	_network.call(&"leave_session")
-	get_tree().quit(0 if ok else 1)
+	_level.queue_free()
+	_level = null
+	await _pump(1.0)
+	# Back into the same session, from the same running game (N-221). A new
+	# level load: the wait for the host starts over.
+	_deadline = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 2.0 * 1000.0)
+	var error: Error = _network.call(&"join_session", "127.0.0.1", PORT)
+	if error != OK:
+		print("PAIR role=client FAIL could not rejoin (error %d)" % error)
+		get_tree().quit(1)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _client_check_rejoin(my_id: int, slot: int) -> void:
+	await _pump(0.4)
+	var me: int = get_tree().root.multiplayer.get_unique_id()
+	var seen: int = int(_network.call(&"color_slot", me))
+	var ok: bool = me == my_id and seen == slot and _player(me) != null
+	_report(&"rejoin", ok, "the rejoined client sees its own colour slot again (slot %d, sees %d)" % [slot, seen])
 
 
 func _report(stage: StringName, ok: bool, detail: String) -> void:
@@ -269,10 +327,11 @@ func _receive_report(stage: StringName, ok: bool, detail: String) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _finish_client(ok: bool) -> void:
 	_finished = true
-	print("PAIR role=client %s" % ("PASS" if ok else "FAIL"))
+	var passed: bool = ok and _disconnect_ok
+	print("PAIR role=client %s" % ("PASS" if passed else "FAIL"))
 	await _pump(0.3)
 	_network.call(&"leave_session")
-	get_tree().quit(0 if ok else 1)
+	get_tree().quit(0 if passed else 1)
 
 
 func _finish(ok: bool, detail: String) -> void:
@@ -348,8 +407,8 @@ func _wait_for_report(stage: StringName) -> bool:
 	return arrived and bool(_reports.get(stage, false))
 
 
-func _wait_until(predicate: Callable) -> bool:
-	var deadline: int = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 1000.0)
+func _wait_until(predicate: Callable, seconds: float = TIMEOUT_SECONDS) -> bool:
+	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
 	while Time.get_ticks_msec() < deadline:
 		if predicate.call():
 			return true

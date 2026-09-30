@@ -24,6 +24,9 @@ extends SceneTree
 ## its whole sequence alone: every peer reports `assist=1`.
 ## N-117.3: then the same holder scrubs the box, turned into a Liquid one: six
 ## alternating swings over the RPC and every peer reports `scrub=5`.
+## N-226.2: every peer reports the colour slot of each player, in peer id
+## order (`slots=`): the host's map, the same in all three, three different
+## slots 0..2 (a repeated or out-of-range one prints `dup`).
 ## N-222: after the TRIO line the host starts a run, hands one door its box and
 ## leaves. Each client prints a GONE line: it saw the host go, got the delivery,
 ## its level stopped the run and RunTally tells 1 house delivered (the screen
@@ -131,9 +134,9 @@ func _report() -> void:
 	var orders: Array = []
 	for order: Dictionary in _level.get_node(^"World/Depot").get(&"orders"):
 		orders.append("%s:%s" % [order.package_id, order.code])
-	print("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s scrub=%s assist=%s code=%s" % [
-		_name, int(_network.get(&"world_seed")), (route.get(&"houses") as Array).size(), ",".join(orders),
-		_route_hash(route), phase, grab, tap, scrub, assist, _code_of(code_box)])
+	print(("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s scrub=%s assist=%s"
+		+ " code=%s slots=%s") % [_name, int(_network.get(&"world_seed")), (route.get(&"houses") as Array).size(),
+		",".join(orders), _route_hash(route), phase, grab, tap, scrub, assist, _code_of(code_box), _slots_text()])
 	# The host stays up a little so the clients' own reads aren't cut short.
 	await _pump(4.0 if _host else 1.0)
 	if _host:
@@ -141,6 +144,23 @@ func _report() -> void:
 	else:
 		await _report_host_gone()
 	quit(0)
+
+
+## Each player's colour slot (NetworkManager.color_slot()), in peer id order.
+func _slots_text() -> String:
+	var peers: Array[int] = []
+	for player: Node in get_nodes_in_group(&"player"):
+		peers.append(player.get_multiplayer_authority())
+	peers.sort()
+	var slots: PackedStringArray = []
+	var seen: Dictionary = {}
+	for peer: int in peers:
+		var slot: int = int(_network.call(&"color_slot", peer))
+		if seen.has(slot) or slot < 0 or slot >= PLAYERS:
+			return "dup"
+		seen[slot] = true
+		slots.append(str(slot))
+	return ",".join(slots)
 
 
 ## Host: a run with one door served, then gone without a word (N-222).

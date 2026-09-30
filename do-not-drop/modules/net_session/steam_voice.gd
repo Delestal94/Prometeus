@@ -150,7 +150,8 @@ func _send_pending_voice() -> void:
 
 @rpc("any_peer", "call_remote", "unreliable_ordered", VOICE_CHANNEL)
 func _receive_voice(packet: PackedByteArray) -> void:
-	receive_packet(multiplayer.get_remote_sender_id(), packet)
+	if RpcGuard.sender_ok(self):
+		receive_packet(multiplayer.get_remote_sender_id(), packet)
 
 
 ## Where a remote packet lands. Public so tests can feed it without a session.

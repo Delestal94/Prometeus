@@ -51,6 +51,8 @@ func interact(player: Node) -> void:
 func request_interact() -> void:
 	if multiplayer.multiplayer_peer != null and not multiplayer.is_server():
 		return
+	if not RpcGuard.allow_request(self):
+		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var player: Node = find_player(sender_id)
 	if player != null and _within_reach(player):

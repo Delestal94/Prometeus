@@ -288,7 +288,7 @@ func _add_voters(parent: Node, supply_id: StringName) -> void:
 		dot.custom_minimum_size = Vector2(20, 20)
 		dot.tooltip_text = tr("UI_PLAYER_N") % peer_id
 		var style := StyleBoxFlat.new()
-		style.bg_color = Player.PLAYER_COLORS[peer_id % Player.PLAYER_COLORS.size()]
+		style.bg_color = Player.PLAYER_COLORS[posmod(NetworkManager.color_slot(peer_id), Player.PLAYER_COLORS.size())]
 		style.border_color = UiTheme.INK
 		style.set_border_width_all(2)
 		style.set_corner_radius_all(99)

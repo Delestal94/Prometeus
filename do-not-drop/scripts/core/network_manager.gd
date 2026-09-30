@@ -25,9 +25,14 @@ const MAX_PLAYERS: int = 8
 ## 10: the handshake carries the colour slots ("colors") and the host sends
 ## them again through _sync_color_slots, N-226;
 ## 11: the restart RPC carries a dictionary and the event bus relays peer
-## requests through one RPC, N-231).
+## requests through one RPC, N-231;
+## 12: the handshake carries a session nonce and the ready reply an identity
+## (rejoin), every any_peer RPC goes through RpcGuard and the campaign
+## travels by colour slot, not by colour name, N-221/N-226.2).
+## Any change to an RPC, to what is replicated or to what a relayed payload
+## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 11
+const PROTOCOL_VERSION: int = 12
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -67,14 +72,31 @@ var world_locked_traps: Array = []
 ## locked list, it must be shared: a joiner's local profile may be different.
 var world_completed_runs: int = 0
 ## Which colour slot each peer wears, {peer_id: slot 0..MAX_PLAYERS-1}
-## (N-226, ColorSlots). The host hands them out in arrival order -- itself 0,
-## each joiner the lowest free one as it starts authenticating, so the join
-## handshake already carries it -- and sends the whole map to everyone again
+## (N-226, ColorSlots). The host hands them out -- itself HOST_SLOT (1, as
+## playing solo), each joiner the lowest free one (0, 2, 3...) as it starts
+## authenticating, so the join handshake already carries it -- and sends the
+## whole map to everyone again
 ## whenever it changes (_sync_color_slots). The random ids ENet and Steam give
 ## made posmod(peer_id, 5) a new colour every session, often a shared one.
 ## Kept across a host restart; empty outside a session. Read it through
 ## color_slot().
 var _color_slots: Dictionary = {}
+## Every side: the last slot of peers who left, {peer_id: slot}, so their
+## line in the results and the campaign entry the host keeps for them
+## (CrewProgression captures a leaver after its slot was released) still
+## match the colour they wore. The DEPARTED_MEMORY most recent.
+var _departed_slots: Dictionary = {}
+const DEPARTED_MEMORY: int = 16
+## Host (N-221): slots kept for someone who left and may come back,
+## {slot: {"identity": String, "peer": old peer id}}. A newcomer only gets one
+## when no other slot is free (the reservation is then lost); the one who left
+## gets it back when it rejoins (_peer_returned). One per slot at most.
+var _slot_reservations: Dictionary = {}
+## Host: peers who took a slot reserved for someone else because the room was
+## otherwise full, {peer_id: the old peer id it was kept for}. They start
+## clean instead of inheriting the merit and card the campaign keeps under
+## that slot (inherits_color_slot()) -- unless they turn out to be that one.
+var _fresh_slots: Dictionary = {}
 
 const DEFAULT_LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const LEVEL_SCENES: Array[String] = ["res://scenes/gameplay/level_base.tscn", "res://scenes/gameplay/level_endless.tscn"]
@@ -108,11 +130,21 @@ func _ready() -> void:
 
 ## The colour slot `peer_id` wears (N-226): 0..MAX_PLAYERS-1, handed out by
 ## the host in arrival order and the same on every peer for the whole session.
-## Outside a session, or for a peer the host hasn't announced yet, it is
-## posmod(peer_id, MAX_PLAYERS), as before slots existed: solo play (id 1)
-## keeps slot 1. Readers wrap it to their own palette size.
+## The host always wears ColorSlots.HOST_SLOT (1), solo play included. A peer who left keeps the
+## last one it wore (_departed_slots). For a peer the host hasn't announced
+## yet it is posmod(peer_id, MAX_PLAYERS). Readers wrap it to their own
+## palette size: posmod(color_slot(id), palette.size()).
 func color_slot(peer_id: int) -> int:
+	if not _color_slots.has(peer_id) and _departed_slots.has(peer_id):
+		return int(_departed_slots[peer_id])
 	return ColorSlots.slot_of(_color_slots, peer_id, MAX_PLAYERS)
+
+
+## Whether `peer_id` may take what the campaign keeps under its slot
+## (CrewProgression): false for a newcomer who took the slot kept for someone
+## who left, because the room was otherwise full (N-221).
+func inherits_color_slot(peer_id: int) -> bool:
+	return not _fresh_slots.has(peer_id)
 
 
 # --- What the handshake carries for this game ----------------------------------
@@ -127,13 +159,9 @@ func _on_hosting() -> void:
 	world_completed_runs = int(unlocks.get(&"completed_runs")) if unlocks != null else 0
 
 
-## Host, on creating the room: a fresh slot map with itself on slot 0.
+## Host, on creating the room: a fresh slot map with itself on HOST_SLOT.
 func _on_session_hosted() -> void:
 	_start_color_slots_as_host()
-
-
-func _on_session_left() -> void:
-	color_slots_changed.emit(_color_slots.duplicate())
 
 
 ## Its colour slot first, so the handshake already carries it (and the crew
@@ -155,11 +183,43 @@ func _peer_joined(id: int) -> void:
 		_publish_color_slots()
 
 
-## Its slot goes to the next one in; nobody else's moves. Also a joiner that
-## never made it in (its authentication failed).
+## Its slot is free for the next one in; nobody else's moves. If the host
+## knows who it was (NetSession.peer_identity(), N-221) the slot is kept for
+## it while others are free, so it finds its colour -- and with it its merit
+## -- when it comes back. Also a joiner that never made it in (its
+## authentication failed) and a ghost connection dropped for its rejoin.
 func _peer_left(id: int) -> void:
-	if multiplayer.is_server() and ColorSlots.release(_color_slots, id):
-		_publish_color_slots()
+	if not multiplayer.is_server() or not _color_slots.has(id):
+		return
+	var slot: int = int(_color_slots[id])
+	ColorSlots.release(_color_slots, id)
+	_remember_departed(id, slot)
+	_fresh_slots.erase(id)
+	var identity: String = peer_identity(id)
+	if not identity.is_empty():
+		_slot_reservations[slot] = {"identity": identity, "peer": id}
+	_publish_color_slots()
+
+
+## Host: `id` is `previous_id` back (N-221; the same id when Steam hands it
+## out again). It was handed a free slot while it authenticated; the one kept
+## for it replaces it. If the room was full and the only free slot was its
+## own, it already wears it and isn't a newcomer after all. Everyone hears of
+## it when `id` connects (_peer_joined).
+func _peer_returned(id: int, previous_id: int) -> void:
+	if _fresh_slots.has(id) and int(_fresh_slots[id]) == previous_id:
+		_fresh_slots.erase(id)
+		return
+	var kept: int = -1
+	for slot: int in _slot_reservations:
+		if int((_slot_reservations[slot] as Dictionary).get("peer", 0)) == previous_id:
+			kept = slot
+			break
+	if kept >= 0:
+		_slot_reservations.erase(kept)
+		if not _slot_worn_by_other(kept, id):
+			_color_slots[id] = kept
+			_fresh_slots.erase(id)
 
 
 func _session_state() -> Dictionary:
@@ -185,13 +245,19 @@ func _apply_session_state(state: Dictionary) -> void:
 	_apply_color_slots(state.get("colors", {}))
 
 
-## The next solo run must not keep building the old room's world.
+## The next solo run must not keep building the old room's world. Every way
+## out of a session comes through here (leaving, and a failure too), so the
+## emptied colour map is announced here.
 func _reset_session_state() -> void:
 	world_seed = 0
 	world_house_count = 0
 	world_locked_traps = []
 	world_completed_runs = 0
 	_color_slots = {}
+	_departed_slots = {}
+	_slot_reservations = {}
+	_fresh_slots = {}
+	color_slots_changed.emit({})
 
 
 ## The crew may have grown since the level was built, so the house count is
@@ -230,19 +296,43 @@ func _failure_text(code: String, args: Array = []) -> String:
 
 # --- Colour slots (N-226) -------------------------------------------------------
 
-## Host, on creating the room: a fresh map with itself on slot 0.
+## Host, on creating the room: a fresh map with itself on HOST_SLOT.
 func _start_color_slots_as_host() -> void:
 	_color_slots = {}
-	ColorSlots.assign(_color_slots, HOST_ID, MAX_PLAYERS)
+	ColorSlots.place_host(_color_slots, MAX_PLAYERS)
 	color_slots_changed.emit(_color_slots.duplicate())
 
 
-## Host: `id`'s slot, handing it the lowest free one if it had none. The host
-## is placed first if it somehow isn't, so it always wears 0. -1 when every
-## slot is taken. Doesn't tell anyone: the caller publishes.
+## Host: `id`'s slot, handing it the lowest free one if it had none -- one
+## kept for someone who left only if no other is free, and then that
+## reservation is lost and `id` starts clean (_fresh_slots). The host is placed
+## first if it somehow isn't, so it always wears HOST_SLOT. -1 when every slot
+## is taken. Doesn't tell anyone: the caller publishes.
 func _assign_color_slot(id: int) -> int:
-	ColorSlots.assign(_color_slots, HOST_ID, MAX_PLAYERS)
-	return ColorSlots.assign(_color_slots, id, MAX_PLAYERS)
+	ColorSlots.place_host(_color_slots, MAX_PLAYERS)
+	var had: bool = _color_slots.has(id)
+	var slot: int = ColorSlots.assign_avoiding(_color_slots, id, MAX_PLAYERS, _slot_reservations.keys())
+	if not had and slot >= 0:
+		_departed_slots.erase(id)
+		if _slot_reservations.has(slot):
+			_fresh_slots[id] = int((_slot_reservations[slot] as Dictionary).get("peer", 0))
+			_slot_reservations.erase(slot)
+	return slot
+
+
+func _slot_worn_by_other(slot: int, id: int) -> bool:
+	for peer: int in _color_slots:
+		if peer != id and int(_color_slots[peer]) == slot:
+			return true
+	return false
+
+
+## Every side: `id` left wearing `slot`. The oldest are forgotten first.
+func _remember_departed(id: int, slot: int) -> void:
+	_departed_slots.erase(id)
+	_departed_slots[id] = slot
+	while _departed_slots.size() > DEPARTED_MEMORY:
+		_departed_slots.erase(_departed_slots.keys()[0])
 
 
 ## Host: the map changed (or a newcomer needs it). Here and, online, on every
@@ -273,6 +363,11 @@ func _apply_color_slots(raw: Variant) -> bool:
 	var applied: Dictionary = {}
 	for peer: Variant in received:
 		applied[int(peer)] = int(received[peer])
+	for peer: int in _color_slots:
+		if not applied.has(peer):
+			_remember_departed(peer, int(_color_slots[peer]))
+	for peer: int in applied:
+		_departed_slots.erase(peer)
 	_color_slots = applied
 	color_slots_changed.emit(_color_slots.duplicate())
 	return true

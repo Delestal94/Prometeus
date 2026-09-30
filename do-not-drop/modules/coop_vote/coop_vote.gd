@@ -61,7 +61,7 @@ func vote(peer_id: int, offer_id: StringName) -> bool:
 ## or hands the asker the state of the one already running.
 @rpc("any_peer", "call_local", "reliable")
 func request_open() -> void:
-	if not is_host():
+	if not is_host() or not RpcGuard.allow_request(self):
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if not active:
@@ -72,7 +72,7 @@ func request_open() -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func request_vote(offer_id: StringName) -> bool:
-	if not is_host():
+	if not is_host() or not RpcGuard.allow_request(self):
 		return false
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else local_peer_id()

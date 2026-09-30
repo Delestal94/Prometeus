@@ -54,6 +54,30 @@
 - `SynthAudio` genera cada sonido una sola vez y lo comparte (hasta 12 ms por sonido
   en GDScript); no mutes el `AudioStreamWAV` que devuelve.
 
+## 0.2 Red: RPC y replicación (N-221, 2026-09-30)
+
+- **Subir `NetworkManager.PROTOCOL_VERSION` con cada cambio de RPC o de replicación:** agregar, sacar,
+  renombrar o cambiar los argumentos de un `@rpc` (Godot numera los RPC de cada script, así que un
+  cliente viejo llamaría a otro método), cambiar qué replica un `MultiplayerSynchronizer` o qué se
+  spawnea, o el significado de un dato que viaja (un texto que pasa a ser clave, un diccionario con
+  otras claves, lo que lleva el handshake). Se anota el motivo en el comentario de la constante. Así un
+  cliente viejo con un host nuevo recibe "otra versión" en el handshake en vez de un juego roto sin
+  explicación.
+- **Todo `@rpc("any_peer")` pasa por `RpcGuard`** (`modules/net_session/rpc_guard.gd`): el remitente
+  (`sender_ok()`, `from_host()` o `get_remote_sender_id()` comparado con quien corresponde), el cupo por
+  peer en los pedidos confiables (`allow_request()`: 40 de golpe y 20 por segundo; las llamadas del host
+  no gastan), `finite_float/vec2/vec3/transform()` para números, vectores y poses (un `NaN` en una pose
+  rompe Jolt para todos), `dict_ok()` para diccionarios, `args_ok()` para arreglos y `text_ok()` para
+  textos. `tests/test_rpc_guard.gd` lee cada RPC `any_peer` del proyecto (módulos incluidos) y falla si
+  falta alguno; el que no pueda cumplirlo va a su `EXCEPTIONS` con el motivo. `EventBus.request()`
+  solo acepta los eventos de `request_cooldowns`.
+- **El color de un jugador es `NetworkManager.color_slot(peer_id)`**, leído como
+  `posmod(color_slot(id), paleta.size())`, nunca `peer_id % 5`: lo decide el host por orden de llegada
+  (el host siempre el 1, amarillo, también jugando solo; los que entran el libre más bajo: 0, 2, 3…), es
+  igual en todos los peers y el que se cae y vuelve recupera el suyo. Los lectores que guardan el color escuchan `color_slots_changed`. En `player/` se
+  pide con `PlayerAppearance.crew_slot(jugador)` (busca el autoload por ruta: esos scripts se compilan
+  antes que los autoloads en los tests `--script`). La campaña guarda mérito y cartas por ese índice.
+
 ## 1. Input Map (Project Settings → Input Map)
 
 > Actualizado 2026-09-21 para reflejar lo que realmente está implementado en
@@ -154,7 +178,7 @@ do-not-drop/
     render_budget/              # WorldQuality, DressingBatcher, DetailMaterials, ContactShadow
     acoustics/                  # AcousticSpace, AcousticZone
     ragdoll/                    # PlayerRagdoll
-    net_session/                # NetSession, NetEventBus, SteamVoice, NetStats, NetStatsOverlay
+    net_session/                # NetSession, NetEventBus, RpcGuard, SteamVoice, NetStats, NetStatsOverlay
     interaction/                # Interactable, SeatPoint (genérico, con hooks)
     seat_camera/                # SeatCamera
     settings_store/             # SettingsStore

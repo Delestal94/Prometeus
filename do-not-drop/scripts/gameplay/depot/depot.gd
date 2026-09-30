@@ -378,6 +378,8 @@ func request_supply(supply_id: StringName) -> void:
 	var network: Node = _autoload(&"NetworkManager")
 	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
 		return
+	if not RpcGuard.allow_request(self):
+		return
 	var manager: Node = _autoload(&"RunManager")
 	if manager != null and (bool(manager.get(&"is_running")) or not (manager.get(&"results") as Dictionary).is_empty()):
 		return
@@ -404,6 +406,8 @@ func buy_supply(supply_id: StringName) -> void:
 func request_discounted_supply(supply_id: StringName) -> void:
 	var network: Node = _autoload(&"NetworkManager")
 	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+		return
+	if not RpcGuard.allow_request(self):
 		return
 	var manager: Node = _autoload(&"RunManager")
 	if manager != null and (bool(manager.get(&"is_running")) or not (manager.get(&"results") as Dictionary).is_empty()):

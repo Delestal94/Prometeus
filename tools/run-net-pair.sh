@@ -25,7 +25,7 @@ fi
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 run() {
-	timeout 90 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
+	timeout 150 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
 }
 
 run --host >"$WORK/host.log" 2>&1 &
@@ -63,4 +63,4 @@ if [ "$status" -ne 0 ]; then
 	echo "FAIL: net pair"
 	exit 1
 fi
-echo "PASS: two-process cosmetics and gameplay races"
+echo "PASS: two-process cosmetics, gameplay races and rejoin"

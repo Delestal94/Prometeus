@@ -309,7 +309,7 @@ static func make_scanner_beep() -> AudioStreamWAV:
 ## words -- one "syllable" per vowel group of the phrase, a buzzing voice
 ## through a mouth that jumps between vowels (the same formant trick as
 ## dog_bark()). The voice's base pitch is the player's colour slot
-## (Player.PLAYER_COLORS, peer id modulo five), so with eyes on the road
+## (the index the game gives each player, wrapped to these five), so with eyes on the road
 ## the driver can still tell who is calling. Deterministic: slot and
 ## syllable count pick the vowels, so every client hears the same call.
 

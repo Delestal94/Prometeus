@@ -4,14 +4,22 @@ extends Node
 
 const STARTING_MONEY: int = 100
 const CAMPAIGN_PATH: String = "user://crew_campaign.json"
-const CAMPAIGN_VERSION: int = 1
+## 1: each player's merit, card and dry deliveries kept under a colour name
+## (posmod(peer_id, 5); the host, peer 1, always "yellow").
+## 2 (N-226.2): kept under the colour slot the host hands out
+## (NetworkManager.color_slot(), "0".."7"): up to eight players and five
+## colours, so two of them can share a colour but never an entry. The host
+## always wears slot 1, yellow. A version 1 file is read by the colour's index
+## in PLAYER_COLOR_KEYS, which is its slot: the host's entry stays the host's.
+const CAMPAIGN_VERSION: int = 2
 const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 ## Typed handles on the autoloads this file talks to (N-224): a renamed
 ## method or property fails when the script compiles, not mid-run.
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
 const ROUTE_EVENT_MANAGER := preload("res://scripts/core/route_event_manager.gd")
-## Player.PLAYER_COLORS uses peer_id modulo five in this same order.
+## Same order as Player.PLAYER_COLORS: a player's colour is
+## posmod(NetworkManager.color_slot(peer_id), 5) (player_slot()).
 const PLAYER_COLOR_KEYS: Array[String] = ["mint", "yellow", "coral", "sky", "violet"]
 const PLAYER_COLOR_NAMES: Array[String] = [
 	"UI_COLOR_MINT", "UI_COLOR_YELLOW", "UI_COLOR_CORAL", "UI_COLOR_SKY", "UI_COLOR_VIOLET",
@@ -82,7 +90,9 @@ var event_bus: Node
 ## Supplies bought and waiting in the depot for the next run: id -> true.
 var supplies: Dictionary = {}
 var campaign_path: String = CAMPAIGN_PATH
-var _saved_players_by_color: Dictionary = {}
+## What the campaign keeps for each colour slot: "slot" -> {merit, card,
+## dry_deliveries}. Peers come and go under new ids; their slot is what stays.
+var _saved_players_by_slot: Dictionary = {}
 var _known_peers: Array[int] = []
 var _using_host_campaign: bool = false
 
@@ -104,6 +114,8 @@ func _ready() -> void:
 	var network := _network()
 	if network != null and not network.roster_changed.is_connected(_on_roster_changed):
 		network.roster_changed.connect(_on_roster_changed)
+	if network != null and not network.peer_rejoined.is_connected(_on_peer_rejoined):
+		network.peer_rejoined.connect(_on_peer_rejoined)
 
 
 func reset_campaign(persist: bool = false) -> bool:
@@ -115,7 +127,7 @@ func reset_campaign(persist: bool = false) -> bool:
 	_run_merit.clear()
 	_run_milestones.clear()
 	supplies.clear()
-	_saved_players_by_color.clear()
+	_saved_players_by_slot.clear()
 	_known_peers.assign(_current_peers())
 	_emit_event(&"team_money_changed", [team_money])
 	if persist:
@@ -141,11 +153,25 @@ func load_campaign() -> void:
 
 
 func player_color_key(peer_id: int) -> String:
-	return PLAYER_COLOR_KEYS[posmod(peer_id, PLAYER_COLOR_KEYS.size())]
+	return PLAYER_COLOR_KEYS[posmod(player_slot(peer_id), PLAYER_COLOR_KEYS.size())]
 
 
 func player_color_name(peer_id: int) -> String:
-	return tr(PLAYER_COLOR_NAMES[posmod(peer_id, PLAYER_COLOR_NAMES.size())])
+	return tr(PLAYER_COLOR_NAMES[posmod(player_slot(peer_id), PLAYER_COLOR_NAMES.size())])
+
+
+## The colour slot the host gave `peer_id` (NetworkManager.color_slot()), the
+## same on every peer and the key of its campaign entry. Without a
+## NetworkManager (a bare CrewProgression in a test), the offline rule.
+func player_slot(peer_id: int) -> int:
+	var network := _network() if is_inside_tree() else null
+	if network != null:
+		return network.color_slot(peer_id)
+	return ColorSlots.slot_of({}, peer_id, NETWORK_MANAGER.MAX_PLAYERS)
+
+
+func _slot_key(peer_id: int) -> String:
+	return str(player_slot(peer_id))
 
 
 func award_action(peer_id: int, action_id: StringName, points: int) -> bool:
@@ -307,6 +333,8 @@ func request_use_card() -> bool:
 	var network := _network()
 	if network != null and network.is_online() and not network.is_host():
 		return false
+	if not RpcGuard.allow_request(self):
+		return false
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else network.local_id() if network != null else 1
 	var held_card: int = int(cards.get(peer_id, -1))
@@ -365,7 +393,7 @@ func _campaign_data() -> Dictionary:
 		"version": CAMPAIGN_VERSION,
 		"team_money": team_money,
 		"supplies": supply_ids,
-		"players": _saved_players_by_color.duplicate(true),
+		"players": _saved_players_by_slot.duplicate(true),
 	}
 
 
@@ -376,9 +404,9 @@ func _apply_campaign_data(data: Dictionary, remember_players: bool) -> void:
 		var supply_id := StringName(raw_id)
 		if SUPPLIES.has(supply_id):
 			supplies[supply_id] = true
-	var normalized_players := _normalized_players(Dictionary(data.get("players", {})))
+	var normalized_players := _normalized_players(Dictionary(data.get("players", {})), int(data.get("version", 1)))
 	if remember_players:
-		_saved_players_by_color = normalized_players.duplicate(true)
+		_saved_players_by_slot = normalized_players.duplicate(true)
 	var old_peers: Array = merit.keys()
 	for peer: Variant in cards:
 		if not old_peers.has(peer):
@@ -400,15 +428,18 @@ func _apply_campaign_data(data: Dictionary, remember_players: bool) -> void:
 		_emit_event(&"card_changed", [peer_id, int(cards.get(peer_id, -1))])
 
 
-func _normalized_players(raw_players: Dictionary) -> Dictionary:
+## "slot" -> entry, from a file or the host's broadcast of either version;
+## anything that isn't a known slot (or, in version 1, colour) is dropped.
+func _normalized_players(raw_players: Dictionary, version: int) -> Dictionary:
 	var normalized: Dictionary = {}
-	for color: String in PLAYER_COLOR_KEYS:
-		var raw: Variant = raw_players.get(color, {})
-		if not raw is Dictionary:
+	for raw_key: Variant in raw_players:
+		var slot: int = _saved_slot(str(raw_key), version)
+		var raw: Variant = raw_players[raw_key]
+		if slot < 0 or not raw is Dictionary:
 			continue
 		var entry: Dictionary = raw
 		var card_id: int = int(entry.get("card", -1))
-		normalized[color] = {
+		normalized[str(slot)] = {
 			"merit": maxi(int(entry.get("merit", 0)), 0),
 			"card": card_id if card_id >= 0 and card_id < Card.size() else -1,
 			"dry_deliveries": maxi(int(entry.get("dry_deliveries", 0)), 0),
@@ -416,8 +447,19 @@ func _normalized_players(raw_players: Dictionary) -> Dictionary:
 	return normalized
 
 
-func _apply_player_entry(peer_id: int, players_by_color: Dictionary) -> void:
-	var entry: Dictionary = players_by_color.get(player_color_key(peer_id), {})
+## The slot a saved key stands for, or -1: a colour name in version 1 (its
+## index), the slot itself from version 2.
+func _saved_slot(key: String, version: int) -> int:
+	if version < 2:
+		return PLAYER_COLOR_KEYS.find(key)
+	if not key.is_valid_int():
+		return -1
+	var slot: int = key.to_int()
+	return slot if slot >= 0 and slot < NETWORK_MANAGER.MAX_PLAYERS else -1
+
+
+func _apply_player_entry(peer_id: int, players_by_slot: Dictionary) -> void:
+	var entry: Dictionary = players_by_slot.get(_slot_key(peer_id), {})
 	merit[peer_id] = maxi(int(entry.get("merit", 0)), 0)
 	dry_deliveries[peer_id] = maxi(int(entry.get("dry_deliveries", 0)), 0)
 	var card_id: int = int(entry.get("card", -1))
@@ -426,7 +468,13 @@ func _apply_player_entry(peer_id: int, players_by_color: Dictionary) -> void:
 
 
 func _apply_saved_player(peer_id: int) -> void:
-	_apply_player_entry(peer_id, _saved_players_by_color)
+	var network := _network() if is_inside_tree() else null
+	if network != null and not network.inherits_color_slot(peer_id):
+		# Took the slot kept for someone who left while the room was full
+		# (N-221): what's saved under it is theirs, so this player starts clean.
+		_apply_player_entry(peer_id, {})
+		return
+	_apply_player_entry(peer_id, _saved_players_by_slot)
 
 
 func _capture_current_players() -> void:
@@ -440,7 +488,7 @@ func _capture_current_players() -> void:
 
 
 func _capture_player(peer_id: int) -> void:
-	_saved_players_by_color[player_color_key(peer_id)] = {
+	_saved_players_by_slot[_slot_key(peer_id)] = {
 		"merit": maxi(int(merit.get(peer_id, 0)), 0),
 		"card": int(cards.get(peer_id, -1)),
 		"dry_deliveries": maxi(int(dry_deliveries.get(peer_id, 0)), 0),
@@ -494,6 +542,17 @@ func _on_roster_changed(raw_peers: Array) -> void:
 	_broadcast_campaign()
 
 
+## Host: someone who dropped is back under a new peer id (N-221). Their
+## campaign merit and card come back with their slot (_apply_saved_player,
+## when they reach the roster); what they earned this run so far, kept by peer
+## id, moves over here now.
+func _on_peer_rejoined(old_id: int, new_id: int) -> void:
+	for source: Dictionary in [_run_merit, _run_milestones]:
+		if source.has(old_id):
+			source[new_id] = source[old_id]
+			source.erase(old_id)
+
+
 func _broadcast_campaign() -> void:
 	var network := _network() if is_inside_tree() else null
 	if network == null or not network.is_online() or not network.is_host():
@@ -502,6 +561,9 @@ func _broadcast_campaign() -> void:
 	_receive_campaign.rpc(_campaign_data())
 
 
+## Same channel as NetworkManager._sync_color_slots(), which the host sends
+## first when someone joins: the campaign is applied by slot, so the slots
+## must already be here (test_rpc_guard checks the channel).
 @rpc("authority", "call_remote", "reliable")
 func _receive_campaign(data: Dictionary) -> void:
 	var network := _network()

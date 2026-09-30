@@ -402,7 +402,7 @@ tres lo cubre. Migración de host: después del lanzamiento.
   recargado el nivel como partida solo). Sin RPCs nuevos. Tests: `test_host_gone_tally.gd` y `test_hud_flow.gd`. Aviso:
   `docs/avisos/2026-09-30-n222b-resultados-quedan.md`. Rama `nacho/N-222b-results-stay-host-leaves`.
 
-### N-226 · Color estable del jugador asignado por el anfitrión — B · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd` compartida; `player.gd` y `scripts/ui` de Slatex)
+### N-226 · Color estable del jugador asignado por el anfitrión — B · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd` compartida; `player.gd` y `scripts/ui` de Slatex) · **[x] N-226.2 en la rama `nacho/N-221-rpc-guard-rejoin`**
 Origen: auditoría integral 2026-09-30, A-4.3 (P1). Esfuerzo M. Mérito y cartas se identifican por un "color
 estable" (`cartas-y-eventos-de-ruta.md:12-14`), pero el color sale de `PLAYER_COLOR_KEYS[posmod(peer_id, 5)]`
 (`crew_progression.gd:134-135`, `player.gd:41-43`, `hud_results.gd:151`, `depot_panel.gd:274`). ENet da ids
@@ -415,7 +415,22 @@ ids aleatorios grandes verifica colores distintos y estables.
   `NetworkManager.color_slot(peer_id)` (host 0, cada joiner el libre más bajo desde que empieza a autenticarse; fuera de
   sesión, el `posmod` de siempre). Viaja en el handshake (`"colors"`) y por el RPC `_sync_color_slots` en cada join, salida
   o auth fallida; señal `color_slots_changed`. `PROTOCOL_VERSION` 9 → 10. `auditor-red`: sin bugs; par y trío en verde.
-- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+- [x] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+  **[x] Hecho (2026-09-30, dentro de N-221)** — todos leen `posmod(NetworkManager.color_slot(id), paleta.size())`
+  (`player.gd`/`player_voice.gd` por `PlayerAppearance.crew_slot()`); el traje y el panel de tripulación
+  escuchan `color_slots_changed`. Campaña versión 2: mérito, carta y entregas secas por slot (`"0".."7"`);
+  un archivo versión 1 se migra por el índice del color (el amarillo del host sigue siendo el 1). Decisiones
+  sobre las notas de `auditor-red`: el host es el slot 1 (amarillo) también en sala, como jugando solo
+  (`ColorSlots.place_host()`; N-226.1 lo ponía en 0, menta, pero el guardarropa y la vista previa de la cara
+  muestran la remera propia amarilla), y los que entran toman 0, 2, 3…: el dueño del guardado tiene un solo
+  color y una sola entrada; el slot del que se va queda reservado mientras haya otros libres (N-221); el que
+  se fue sigue leyendo su último slot (resultados); `_fail` ahora anuncia el mapa vacío; `net_trio` compara
+  `slots=` en los tres procesos. Tests: `test_crew_color_slots` (ids grandes al azar: cinco colores distintos
+  y los mismos en otra sesión; la campaña de la primera sesión la encuentra el mismo orden de llegada en la
+  segunda; ocho jugadores sin compartir entrada; migración), `test_crew_campaign_save`, `test_network_roster`.
+  - [ ] Queda: el color va por orden de llegada, no por persona. Si otro día el mismo grupo entra en otro
+    orden, cada uno hereda el mérito del slot que le tocó. Arreglarlo del todo es guardar en la campaña
+    identidad → slot (Steam ID; en LAN no hay identidad estable entre sesiones).
   Notas de `auditor-red` (N-226.1): `MAX_PLAYERS` es 8 y la paleta 5, así que se lee `posmod(color_slot(id), paleta.size())`;
   jugando solo el host da 1 y en sala 0 (decidir si solo se lee como 0); un índice liberado lo hereda el próximo que entra
   (mérito/carta por color dentro de la sesión: reservarlo mientras dure o documentarlo); los lectores escuchan también
@@ -931,15 +946,41 @@ Lo que la auditoría headless no pudo medir (`revisor-visual` o `perfilador-rend
 - [ ] Opcional: vaciar los cachés `static` de mallas al volver al menú. No es un leak: el "1693 Mesh
   leaked at exit" son cachés acotados.
 
-### N-221 · Red defensiva: validación de RPC y reconexión — B · `Opus 5.5 · xhigh` · Aviso: sí (zona compartida)
+### N-221 · Red defensiva: validación de RPC y reconexión — B · `Opus 5.5 · xhigh` · Aviso: sí (zona compartida) · **[x] rama `nacho/N-221-rpc-guard-rejoin`** (salvo el AppID, ⏸ N-901)
 
 Fase 4 de `docs/investigacion-red.md`.
-- [ ] Validador común para RPC `any_peer`: remitente, `NaN`/`inf` en poses, tamaño de diccionarios y un
-  límite de pedidos por segundo por peer.
-- [ ] Test que recorra todos los `@rpc("any_peer"` y exija el chequeo del remitente.
-- [ ] Reconexión: el que se cae a mitad de una partida vuelve a su lugar.
-- [ ] Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.
-- [ ] Antes de jugar con gente de afuera: AppID propio (N-901).
+- [x] Validador común para RPC `any_peer`: remitente, `NaN`/`inf` en poses, tamaño de diccionarios y un
+  límite de pedidos por segundo por peer. **[x] 2026-09-30:** `RpcGuard` en el módulo `net_session`
+  (`modules/net_session/rpc_guard.gd`, estático): `sender_ok()`, `from_host()`, `allow_request()` (cupo por
+  peer: 40 de golpe, 20/s; el host nunca gasta), `finite_float/vec2/vec3/transform()`, `dict_ok()`,
+  `args_ok()`, `text_ok()`. Aplicado a los 36 `any_peer` (también los de los módulos: `NetEventBus.request`,
+  `NetSession._report_level_ready`, `SteamVoice`, `CoopVote`, `Interactable`, `SeatPoint`; `interaction`
+  pasa a depender de `net_session`). `NetEventBus.request()` era un RPC que relayaba cualquier evento:
+  ahora solo los de `request_cooldowns` (`ping_sent`, `horn_honked`), con argumentos planos, y `EventBus`
+  chequea su forma. El volante descarta `NaN` (`clampf()` lo dejaba pasar).
+- [x] Test que recorra todos los `@rpc("any_peer"` y exija el chequeo del remitente. **[x]** `test_rpc_guard`
+  (juego y módulos): remitente, `allow_request()` en los confiables que no vienen del host, chequeo por tipo
+  de parámetro (sigue un nivel de llamadas: mismo archivo, la clase que extiende, `Clase.función()`),
+  `_sync_color_slots` y `_receive_campaign` en el mismo canal, y el bus que no deja pedir hechos del juego.
+  Casos del validador en `net_session__test_rpc_guard`. `EXCEPTIONS` vacía.
+- [x] Reconexión: el que se cae a mitad de una partida vuelve a su lugar. **[x]** Lo sólido: misma
+  identidad, mismo color (slot de N-226) y con él el mérito. `NetSession` reconoce al que vuelve (Steam ID;
+  en LAN un hash del token del proceso con un nonce de la sesión que viaja en el handshake) y llama al hook
+  `_peer_returned` y a `peer_rejoined(old, new)`; si vuelve antes de que el host note la caída (con los
+  timeouts de 45 s es lo normal), la conexión vieja se cae como fantasma (`drop_peer()`: sale del roster,
+  suelta caja y asiento, se cierra con timeout corto). `NetworkManager` reserva el slot del que se fue
+  mientras haya otros libres; con la sala llena lo toma el que entra, pero arranca sin el mérito ni la carta
+  (`inherits_color_slot()`). `PROTOCOL_VERSION` 11 → 12. Tests: `test_network_rejoin`,
+  `net_session__test_net_session_rejoin` y la última etapa de `net_pair` (sale con la caja, vuelve desde el
+  mismo juego y recupera slot y mérito). Aviso: `docs/avisos/2026-09-30-n221-rpc-y-reconexion.md`.
+  - [ ] Falta: no recupera posición, asiento ni caja (se sueltan al irse, S-209; aparece como cualquier join
+    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); con la sala llena y el fantasma
+    todavía conectado, el transporte lo rechaza hasta que el host lo note (el tope de ENet cuenta al
+    fantasma); el fantasma por sockets reales (crash con Steam) solo está probado en un proceso.
+- [x] Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.
+  **[x]** §0.2, junto con `RpcGuard` y `color_slot()`. Filas NET-07 y NET-08 en
+  `matriz-comportamiento-cobertura.md`.
+- [ ] Antes de jugar con gente de afuera: AppID propio (N-901). ⏸ N-901 pospuesta (iteración de lanzamiento).
 
 ## 3. Arte y dirección visual
 

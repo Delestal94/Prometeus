@@ -6,15 +6,18 @@ extends SceneTree
 ##
 ## Colour slots (N-226: color_slots.gd, NetworkManager.color_slot()):
 ## - with the big random peer ids ENet and Steam hand out, five players get
-##   five different slots in arrival order, the host 0 (posmod(peer_id, 5), the
+##   five different slots in arrival order: the host HOST_SLOT (1, as playing
+##   solo), the joiners the lowest free one, 0, 2, 3, 4 (posmod(peer_id, 5), the
 ##   old colour, gave two of them the same one);
 ## - a slot freed by someone who left, or whose join failed, goes to the next
-##   one in, and nobody else's slot moves;
+##   one in (unless it is kept for someone who may come back: N-221,
+##   test_network_rejoin), and nobody else's slot moves; the one who left still
+##   reads its last slot (results, the campaign entry the host captures for it);
 ## - a slot map from the network (join handshake, _sync_color_slots) with a
 ##   slot out of range, a repeated slot or odd types is refused whole, and the
 ##   RPC is only taken from the host;
 ## - offline, and for an id the host hasn't announced, color_slot() is the old
-##   posmod(peer_id, MAX_PLAYERS): solo play keeps its colour.
+##   posmod(peer_id, MAX_PLAYERS): solo play keeps its colour, HOST_SLOT.
 
 ## ENet/Steam-sized ids. Under the old posmod(peer_id, 5) the host (1) and the
 ## first of these share a colour, and so do the last two.
@@ -100,11 +103,13 @@ func _check_slot_rules(max_players: int) -> void:
 		"These ids share a colour under the old posmod(peer_id, 5) (got %s)" % [old_colors])
 
 	var slots: Dictionary = {}
-	_expect(ColorSlots.assign(slots, 1, max_players) == 0, "The host, first in, takes slot 0")
+	_expect(ColorSlots.place_host(slots, max_players) == ColorSlots.HOST_SLOT and ColorSlots.HOST_SLOT == 1,
+		"The host, first in, takes HOST_SLOT (1, yellow, as playing solo)")
+	var joiner_slots: Array[int] = [0, 2, 3, 4]
 	for i: int in BIG_IDS.size():
 		var got: int = ColorSlots.assign(slots, BIG_IDS[i], max_players)
-		_expect(got == i + 1,
-			"Joiner %d (id %d) takes slot %d in arrival order (got %d)" % [i + 1, BIG_IDS[i], i + 1, got])
+		_expect(got == joiner_slots[i],
+			"Joiner %d (id %d) takes slot %d in arrival order (got %d)" % [i + 1, BIG_IDS[i], joiner_slots[i], got])
 	var values: Array = slots.values()
 	values.sort()
 	_expect(values == [0, 1, 2, 3, 4], "Five players wear five different slots (got %s)" % [values])
@@ -124,7 +129,15 @@ func _check_slot_rules(max_players: int) -> void:
 	ColorSlots.release(slots, BIG_IDS[2])
 	var first: int = ColorSlots.assign(slots, 2_100_000_001, max_players)
 	var second: int = ColorSlots.assign(slots, 2_100_000_002, max_players)
-	_expect(first == 1 and second == 3, "Two freed slots go lowest first: 1 then 3 (got %d, %d)" % [first, second])
+	_expect(first == 0 and second == 3, "Two freed slots go lowest first: 0 then 3 (got %d, %d)" % [first, second])
+	var avoiding: Dictionary = {1: 1, 22: 0}
+	_expect(ColorSlots.assign_avoiding(avoiding, 33, max_players, [2, 3]) == 4,
+		"assign_avoiding skips slots kept for someone while others are free")
+	var crowded_room: Dictionary = {}
+	for index: int in max_players - 1:
+		crowded_room[100 + index] = index
+	_expect(ColorSlots.assign_avoiding(crowded_room, 999, max_players, [max_players - 1]) == max_players - 1,
+		"...and hands a kept one out when it is the only free slot")
 
 	var id: int = 2_110_000_000
 	while slots.size() < max_players:
@@ -133,13 +146,14 @@ func _check_slot_rules(max_players: int) -> void:
 	_expect(ColorSlots.assign(slots, 2_120_000_000, max_players) == -1 and slots.size() == max_players,
 		"With every slot taken there is none to give (got %d entries)" % slots.size())
 
-	_expect(ColorSlots.slot_of({}, 1, max_players) == posmod(1, max_players),
-		"Without a slot the host falls back to posmod(1, MAX_PLAYERS)")
+	_expect(ColorSlots.slot_of({}, 1, max_players) == posmod(1, max_players)
+		and posmod(1, max_players) == ColorSlots.HOST_SLOT,
+		"Without a slot the host falls back to posmod(1, MAX_PLAYERS), its HOST_SLOT")
 	_expect(ColorSlots.slot_of({}, BIG_IDS[0], max_players) == posmod(BIG_IDS[0], max_players),
 		"Without a slot a peer falls back to posmod(peer_id, MAX_PLAYERS)")
 
 
-## Many crews of five random big ids: always slots 0..4, host 0, in arrival order.
+## Many crews of five random big ids: always slots 0..4, host 1, then 0, 2, 3, 4.
 func _check_random_ids(max_players: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 226
@@ -147,7 +161,7 @@ func _check_random_ids(max_players: int) -> void:
 	for round_index: int in 200:
 		var slots: Dictionary = {}
 		var order: Array[int] = [1]
-		ColorSlots.assign(slots, 1, max_players)
+		ColorSlots.place_host(slots, max_players)
 		while order.size() < 5:
 			var id: int = rng.randi_range(1_800_000_000, 2_147_483_647)
 			if order.has(id):
@@ -155,11 +169,11 @@ func _check_random_ids(max_players: int) -> void:
 			order.append(id)
 			ColorSlots.assign(slots, id, max_players)
 		for i: int in order.size():
-			if int(slots.get(order[i], -1)) != i:
+			if int(slots.get(order[i], -1)) != [1, 0, 2, 3, 4][i]:
 				bad_rounds += 1
 				break
 	_expect(bad_rounds == 0,
-		"200 crews of random big ids all get slots 0..4 in arrival order (%d didn't)" % bad_rounds)
+		"200 crews of random big ids all get slots 1, 0, 2, 3, 4 in arrival order (%d did not)" % bad_rounds)
 
 
 ## A slot map from the network is used whole or not at all.
@@ -201,22 +215,25 @@ func _check_manager_slots(network: Node, max_players: int) -> void:
 	network.connect(&"color_slots_changed", on_changed)
 	for id: int in BIG_IDS:
 		network.call(&"_on_peer_connected", id)
-	_expect(int(network.call(&"color_slot", 1)) == 0, "In a session the host wears slot 0")
+	_expect(int(network.call(&"color_slot", 1)) == 1, "In a session the host wears HOST_SLOT, as playing solo")
+	var joiner_slots: Array[int] = [0, 2, 3, 4]
 	for i: int in BIG_IDS.size():
 		var got: int = int(network.call(&"color_slot", BIG_IDS[i]))
-		_expect(got == i + 1, "Big-id joiner %d gets slot %d on the host (got %d)" % [i + 1, i + 1, got])
-	var expected: Dictionary = {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2, BIG_IDS[2]: 3, BIG_IDS[3]: 4}
+		_expect(got == joiner_slots[i],
+			"Big-id joiner %d gets slot %d on the host (got %d)" % [i + 1, joiner_slots[i], got])
+	var expected: Dictionary = {1: 1, BIG_IDS[0]: 0, BIG_IDS[1]: 2, BIG_IDS[2]: 3, BIG_IDS[3]: 4}
 	var last: Variant = changes[-1] if not changes.is_empty() else null
 	_expect(last == expected, "color_slots_changed carries the whole current map (got %s)" % [last])
 
 	network.call(&"_on_peer_disconnected", BIG_IDS[1])
-	_expect(int(network.call(&"color_slot", BIG_IDS[1])) == posmod(BIG_IDS[1], max_players),
-		"A peer that left has no slot any more")
+	_expect(int(network.call(&"color_slot", BIG_IDS[1])) == 2,
+		"A peer that left still reads its last slot, for the results")
+	_expect(not (network.get(&"_color_slots") as Dictionary).has(BIG_IDS[1]), "...but it no longer holds it")
 	network.call(&"_on_peer_connected", NEWCOMER_ID)
 	_expect(int(network.call(&"color_slot", NEWCOMER_ID)) == 2, "The next joiner reuses the freed slot 2")
 	var kept: Array = [int(network.call(&"color_slot", 1)), int(network.call(&"color_slot", BIG_IDS[0])),
 		int(network.call(&"color_slot", BIG_IDS[2])), int(network.call(&"color_slot", BIG_IDS[3]))]
-	_expect(kept == [0, 1, 3, 4], "Nobody else's slot moves when one leaves and one joins (got %s)" % [kept])
+	_expect(kept == [1, 0, 3, 4], "Nobody else's slot moves when one leaves and one joins (got %s)" % [kept])
 
 	# A joiner gets its slot as soon as it starts authenticating (the handshake
 	# carries it); if the join fails the slot is free again.
@@ -225,7 +242,7 @@ func _check_manager_slots(network: Node, max_players: int) -> void:
 	_expect(early == 5 and int(network.call(&"color_slot", pending)) == 5,
 		"A joiner still authenticating already holds the next slot (got %d)" % early)
 	network.call(&"_auth_failed", pending)
-	_expect(int(network.call(&"color_slot", pending)) == posmod(pending, max_players),
+	_expect(not (network.get(&"_color_slots") as Dictionary).has(pending),
 		"A joiner whose authentication failed gives its slot back")
 	_expect(int(network.call(&"_assign_color_slot", 2_066_666_666)) == 5, "...and the next one in takes it")
 

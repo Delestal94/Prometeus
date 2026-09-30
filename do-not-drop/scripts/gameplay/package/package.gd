@@ -452,7 +452,7 @@ func content_definition() -> Resource:
 ## player goes through the same checks (rpc_id(1, ...) resolves locally).
 @rpc("any_peer", "call_local", "reliable")
 func request_set_open(open: bool) -> void:
-	if not is_multiplayer_authority():
+	if not is_multiplayer_authority() or not RpcGuard.allow_request(self):
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and not _peer_within_reach(sender_id):
@@ -544,7 +544,7 @@ func apply_parasite_damage(amount: float) -> void:
 ## dropped sample is superseded a frame later.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_tender_input(input: Dictionary) -> void:
-	if not is_multiplayer_authority():
+	if not is_multiplayer_authority() or not RpcGuard.dict_ok(input):
 		return
 	# Only whoever sits at this box's seat (0: a genuine local call).
 	var sender: int = multiplayer.get_remote_sender_id()
@@ -619,7 +619,7 @@ func assist_prompt() -> String:
 
 @rpc("any_peer", "call_local", "reliable")
 func request_assist() -> void:
-	if not is_multiplayer_authority():
+	if not is_multiplayer_authority() or not RpcGuard.allow_request(self):
 		return
 	var sender: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
@@ -634,7 +634,7 @@ func request_assist() -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func request_stop_assist() -> void:
-	if not is_multiplayer_authority():
+	if not is_multiplayer_authority() or not RpcGuard.allow_request(self):
 		return
 	var sender: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
@@ -683,7 +683,7 @@ func _player_for_peer(peer_id: int) -> Node:
 ## world pose put the box a metre behind the hands at speed.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
-	if not is_multiplayer_authority():
+	if not is_multiplayer_authority() or not RpcGuard.finite_transform(carry_transform):
 		return
 	var sender: int = multiplayer.get_remote_sender_id()
 	if sender != 0 and (not is_instance_valid(carrier) or sender != carrier.get_multiplayer_authority()):
@@ -741,7 +741,7 @@ func is_aboard() -> bool:
 ## physical distance, so a client cannot pass cargo across the map.
 @rpc("any_peer", "call_local", "reliable")
 func request_transfer(recipient_path: NodePath) -> void:
-	if not is_multiplayer_authority() or not is_held or carrier == null:
+	if not is_multiplayer_authority() or not is_held or carrier == null or not RpcGuard.allow_request(self):
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and int(carrier.get_multiplayer_authority()) != sender_id:
@@ -763,7 +763,9 @@ func request_transfer(recipient_path: NodePath) -> void:
 ## placed on the host's truck and starts out moving with it.
 @rpc("any_peer", "call_local", "reliable")
 func request_drop(drop_transform: Transform3D, in_vehicle: bool = false) -> void:
-	if not is_multiplayer_authority() or not is_held:
+	if not is_multiplayer_authority() or not is_held or not RpcGuard.finite_transform(drop_transform):
+		return
+	if not RpcGuard.allow_request(self):
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and carrier != null and int(carrier.get_multiplayer_authority()) != sender_id:
@@ -792,7 +794,8 @@ func _ride_along_if_aboard() -> void:
 ## the rack frees them for tools but needs a strap (package_care.gd).
 @rpc("any_peer", "call_local", "reliable")
 func request_lap_toggle() -> void:
-	PackageRescue.request_lap_toggle(self)
+	if RpcGuard.allow_request(self):
+		PackageRescue.request_lap_toggle(self)
 
 
 ## Host: someone dropped out. If they were looking after this box, its
@@ -971,7 +974,8 @@ func collect_salvage(index: int, player: Node, point: Vector3) -> void:
 ## inventory and the final result are all checked by the host.
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_care_input(input: Dictionary) -> void:
-	PackageRescue.submit_care_input(self, input)
+	if RpcGuard.dict_ok(input):
+		PackageRescue.submit_care_input(self, input)
 
 
 func delivery_assessment() -> Dictionary:

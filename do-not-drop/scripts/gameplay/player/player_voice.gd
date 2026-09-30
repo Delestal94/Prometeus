@@ -43,7 +43,10 @@ const HEAD_HEIGHT: float = 1.7
 
 var player: Node
 var voice: AudioStreamPlayer3D
-## Slot in Player.PLAYER_COLORS (peer id modulo its size); picks the base pitch.
+## Slot in Player.PLAYER_COLORS (the host's colour slot,
+## PlayerAppearance.crew_slot(), wrapped to the palette); picks the base pitch.
+## Read again for every line: the host's slots can reach a joiner after its
+## spawn.
 var slot: int = 0
 var last_line: StringName = &""
 var _last_flinch: float = 0.0
@@ -61,7 +64,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	player = get_parent()
-	slot = posmod(player.get_multiplayer_authority(), Player.PLAYER_COLORS.size())
+	slot = _crew_slot()
 	position = Vector3(0.0, HEAD_HEIGHT, 0.0)
 	_rng.randomize()
 	voice = AudioStreamPlayer3D.new()
@@ -92,6 +95,10 @@ func _process(_delta: float) -> void:
 		_box_seen_at = Time.get_ticks_msec()
 
 
+func _crew_slot() -> int:
+	return posmod(PlayerAppearance.crew_slot(player), Player.PLAYER_COLORS.size())
+
+
 ## Starts a line ("hurt", "ragdoll", "cheer" or "ruined") unless the previous
 ## one is still inside the cooldown. Returns whether it played.
 func speak(kind: StringName) -> bool:
@@ -101,6 +108,7 @@ func speak(kind: StringName) -> bool:
 	_cooldown_until = now + COOLDOWN_MSEC
 	last_line = kind
 	var line: Dictionary = LINES[kind]
+	slot = _crew_slot()
 	var stream: AudioStreamWAV = SynthAudio.callout_voice(slot, int(line["syllables"]))
 	var jitter: float = 1.0 + _rng.randf_range(-PITCH_JITTER, PITCH_JITTER)
 	voice.stream = stream
