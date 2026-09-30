@@ -359,9 +359,9 @@ func _parasite_peers() -> Array[int]:
 
 func _loose_count() -> int:
 	var count: int = 0
+	var run: Node = _run()
+	var registered: Dictionary = run.get("cargo") if run != null else {}
 	for package: Node in _cargo_nodes():
-		var run: Node = _run()
-		var registered: Dictionary = run.get("cargo") if run != null else {}
 		if not registered.is_empty() and not registered.has(package.get("package_id")):
 			continue
 		if not bool(package.get("is_loaded")) or bool(package.get("is_open")):

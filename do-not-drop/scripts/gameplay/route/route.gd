@@ -45,6 +45,12 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 
+## How many entries either side of the last hit the nearest lookups check
+## before falling back to a full scan (N-223): segment boundaries are up to
+## ~60 m apart, path points ~10 m, and a tick moves the truck about a metre.
+const SAMPLE_WINDOW: int = 2
+const PATH_WINDOW: int = 4
+
 ## House/road proportions carried over unchanged from the old handcrafted
 ## route -- only WHERE the road goes changed, not how wide it or a house
 ## approach is.
@@ -118,6 +124,18 @@ var _progress_samples: Array[Dictionary] = []
 var _path_points: Array[Vector3] = []
 ## Metres along the road to each of _path_points, worked out on first use.
 var _path_distances := PackedFloat32Array()
+## Where the last nearest-sample / nearest-path-point lookups landed, so the
+## next one (a tick later, the truck a metre further on) only looks around
+## there instead of scanning the whole route (N-223). -1 = no hint yet.
+var _sample_hint: int = -1
+var _path_hint: int = -1
+var _path_hint_3d: int = -1
+## _progress_samples' positions as a flat array for the lookup (built on first
+## use, and again after _finish_terrain() moves them), and the widest gap
+## between neighbours of each array: a hit further than that is not trusted.
+var _sample_points: Array[Vector3] = []
+var _sample_gap: float = -1.0
+var _path_gap: float = -1.0
 var _house_deck: Array[int] = []
 ## Road cursor and side each house was dealt, for furnishing it once its
 ## final spot is known (see _keep_houses_off_road()).
@@ -597,7 +615,11 @@ func get_progress(world_position: Vector3) -> float:
 ## _path_points' ~10 m.
 func road_distance(world_position: Vector3) -> float:
 	var cumulative: PackedFloat32Array = _path_cumulative()
-	return cumulative[_nearest_path_index(to_local(world_position))] if not cumulative.is_empty() else 0.0
+	if cumulative.is_empty():
+		return 0.0
+	var local_position: Vector3 = to_local(world_position)
+	_path_hint = _nearest_index(_path_points, local_position, true, [_path_hint, PATH_WINDOW, _path_gap_size()])
+	return cumulative[_path_hint]
 
 
 ## Metres along the road from the start to house `index`'s stop, or to the
@@ -608,7 +630,8 @@ func stop_road_distance(index: int) -> float:
 		return 0.0
 	if index >= _house_anchors.size():
 		return cumulative[-1]
-	return cumulative[_nearest_path_index((_house_anchors[index].cursor as Transform3D).origin)]
+	var stop: Vector3 = (_house_anchors[index].cursor as Transform3D).origin
+	return cumulative[_nearest_index(_path_points, stop, true)]
 
 
 func _path_cumulative() -> PackedFloat32Array:
@@ -622,15 +645,58 @@ func _path_cumulative() -> PackedFloat32Array:
 	return _path_distances
 
 
-func _nearest_path_index(local_position: Vector3) -> int:
-	var nearest: int = 0
+## Same result as scanning every point (the first one wins a tie), but when
+## `hint` (where the last lookup landed) is given, only the `radius` points
+## either side of it are looked at first. The windowed answer is trusted only
+## if it isn't at the window's edge (the road may go on getting closer beyond
+## it) and isn't further than twice the widest gap between neighbours (a jump:
+## teleport, restart, a house's position); otherwise the whole array is
+## scanned. `planar` measures on the ground plane only. `window` is
+## [hint, radius, widest gap between neighbours], empty for a full scan.
+func _nearest_index(points: Array[Vector3], query: Vector3, planar: bool, window: Array = []) -> int:
+	var count: int = points.size()
+	if count == 0:
+		return 0
+	var hint: int = int(window[0]) if not window.is_empty() else -1
+	var radius: int = int(window[1]) if not window.is_empty() else 0
+	var gap: float = float(window[2]) if not window.is_empty() else 0.0
+	var low: int = 0
+	var high: int = count - 1
+	if hint >= 0 and hint < count:
+		low = maxi(0, hint - radius)
+		high = mini(count - 1, hint + radius)
+	var nearest: int = low
 	var best: float = INF
-	for index: int in range(_path_points.size()):
-		var gap: float = Vector2(_path_points[index].x - local_position.x, _path_points[index].z - local_position.z).length_squared()
-		if gap < best:
-			best = gap
+	for index: int in range(low, high + 1):
+		var gap_squared: float = _gap_squared(points[index], query, planar)
+		if gap_squared < best:
+			best = gap_squared
 			nearest = index
+	var windowed: bool = low > 0 or high < count - 1
+	var at_edge: bool = (nearest == low and low > 0) or (nearest == high and high < count - 1)
+	if windowed and (at_edge or best > 4.0 * gap * gap):
+		return _nearest_index(points, query, planar)
 	return nearest
+
+
+static func _gap_squared(point: Vector3, query: Vector3, planar: bool) -> float:
+	if planar:
+		return Vector2(point.x - query.x, point.z - query.z).length_squared()
+	return point.distance_squared_to(query)
+
+
+## Widest distance between consecutive points, to size "close enough to trust".
+static func _widest_gap(points: Array[Vector3]) -> float:
+	var widest: float = 1.0
+	for index: int in range(1, points.size()):
+		widest = maxf(widest, points[index].distance_to(points[index - 1]))
+	return widest
+
+
+func _path_gap_size() -> float:
+	if _path_gap < 0.0:
+		_path_gap = _widest_gap(_path_points)
+	return _path_gap
 
 
 func get_section_name(world_position: Vector3) -> String:
@@ -647,15 +713,16 @@ func get_section_name(world_position: Vector3) -> String:
 ## segment's own length -- plenty for a HUD "distance remaining" readout,
 ## not something gameplay-critical reads.
 func _nearest_sample(world_position: Vector3) -> Dictionary:
+	if _progress_samples.is_empty():
+		return {}
+	if _sample_points.size() != _progress_samples.size():
+		_sample_points.clear()
+		for sample: Dictionary in _progress_samples:
+			_sample_points.append(sample["position"])
+		_sample_gap = _widest_gap(_sample_points)
 	var local_position: Vector3 = to_local(world_position)
-	var best: Dictionary = {}
-	var best_distance: float = INF
-	for sample: Dictionary in _progress_samples:
-		var distance: float = (sample["position"] as Vector3).distance_to(local_position)
-		if distance < best_distance:
-			best_distance = distance
-			best = sample
-	return best
+	_sample_hint = _nearest_index(_sample_points, local_position, false, [_sample_hint, SAMPLE_WINDOW, _sample_gap])
+	return _progress_samples[_sample_hint]
 
 
 ## How far `world_position` is from the nearest known point on the actual
@@ -666,13 +733,11 @@ func _nearest_sample(world_position: Vector3) -> Dictionary:
 ## safety net needed to start measuring distance from the real path instead
 ## of from a world axis that stopped meaning anything once the road bent.
 func distance_from_path(world_position: Vector3) -> float:
+	if _path_points.is_empty():
+		return INF
 	var local_position: Vector3 = to_local(world_position)
-	var best_distance: float = INF
-	for point: Vector3 in _path_points:
-		var distance: float = point.distance_to(local_position)
-		if distance < best_distance:
-			best_distance = distance
-	return best_distance
+	_path_hint_3d = _nearest_index(_path_points, local_position, false, [_path_hint_3d, PATH_WINDOW, _path_gap_size()])
+	return _path_points[_path_hint_3d].distance_to(local_position)
 
 
 func _finish_terrain() -> void:
@@ -733,6 +798,7 @@ func _finish_terrain() -> void:
 		var p: Vector3 = sample.position
 		p.y = terrain.height_at(p)
 		sample.position = p
+	_sample_points.clear()
 	goal_transform.origin.y = terrain.height_at(goal_transform.origin)
 
 
