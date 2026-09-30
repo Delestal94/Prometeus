@@ -208,8 +208,26 @@ pasajero es espectador.
     Hostil ya estaba fuera de objetivo antes (83,2 % torpe).
   - Test de red: `net_trio.gd` (código de bomba igual en los tres y un toque de un cliente llegando al host).
     No entra en `run-tests.sh`: correr `tools/run-net-trio.sh`.
-- [ ] **N-117.3** Tanda 2: Equilibrio con A/D y Líquido alternado, con lo que se ve en el mundo
-  (inclinación, charco).
+- [x] **N-117.3** Tanda 2: Equilibrio con A/D y Líquido alternado, con lo que se ve en el mundo
+  (inclinación, charco). Aviso: `docs/avisos/2026-09-29-n117-tanda2.md`; números en `docs/parametros-diseno.md`
+  ("Tanda 2 de N-117").
+  - Equilibrio, "Contrapesá": dos ejes continuos `lean` (A/D) y `lean_fwd` (W/S), o el stick, en el marco de la
+    vista del jugador (`gather_package_input`); el host los pasa al marco del camión con la base del asiento de ese
+    jugador (`push_in_truck`; LeftSeat mira a la derecha del camión, RackSeat a la izquierda) y los combina como
+    `steady` (solo con el primario mantenido; el ayudante al medio). La corrección es cuánto empuja contra la
+    dirección de la inclinación (`tilt_dir`); una caja cabeceando se endereza empujando a lo largo del camión. Sin eje `lean` (el ayudante del rack en solo)
+    sigue enderezando como antes.
+  - Líquido, "Fregá": cada golpe al otro lado en `direction_pressed` (A/D o el stick) seca `scrub_amount`; el mismo
+    lado, o mantener el primario, no seca; un golpe suelto tras una pausa solo reinicia. A pie hay que mantener el
+    primario (frena la caminata, como con los códigos).
+  - Se ve en el mundo: la caja inclinada y el charco que crece y baja ya existían; el cuerpo sentado se inclina
+    hacia el lado del contrapeso o balancea con el fregado (`gesture_state()` a `care_state["gesture"]`, lo leen
+    todos los pares; la cabeza va hacia `truck_right * push` en cualquier asiento, con test). La tarjeta pasa a "¡CONTRAPESÁ!" (WASD en el marco de la pantalla del jugador, o stick) y
+    "¡FREGÁ!", con teclas que parpadean y se encienden con el eje local.
+  - Arnés: gesto nuevo para torpe/experto/siempre-mantiene. Siempre-mantiene pierde 80 %+ en **6 de 7** (antes 4);
+    Equilibrio 100 / 45,2 / 0 y Líquido 100 / 38,0 / 0; Hostil sigue fuera de objetivo desde antes.
+  - Red: `net_trio.gd` cubre ahora también un cliente que friega (seis golpes A D A D A D por el RPC, `scrub=5` en
+    los tres); el eje `lean` lo cubre `test_trap_gestures.gd` (incluida la limpieza en `submit_care_input`).
 - [ ] **N-117.4** Tanda 3: flechas del asistente en Peso creciente; íconos de verbo sobre cada caja y un
   tip por trampa (`_show_first_trap_tip`); la tarjeta del HUD pasa a ser guía, no el juego.
 - Abierto (decisión del equipo): qué trampas salen en solo (el único jugador maneja y nadie atiende

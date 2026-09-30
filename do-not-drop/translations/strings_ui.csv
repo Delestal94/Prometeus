@@ -37,6 +37,11 @@ HUD_CARE_SEQUENCE_SEATED,"una tecla por vez, sin clic","one key at a time, no cl
 HUD_CARE_TAP,TOCÁ,TAP
 HUD_CARE_TITLE_CALM,CALMALA,CALM IT DOWN
 HUD_CARE_TITLE_HOLD,SOSTENELA,HOLD IT
+HUD_CARE_LEAN,¡CONTRAPESÁ!,LEAN AGAINST IT!
+HUD_CARE_LEAN_DETAIL,Mantené %s y empujá con %s hacia el lado contrario a la inclinación de la caja.,Hold %s and push with %s toward the side opposite to the box's tilt.
+HUD_CARE_SCRUB,¡FREGÁ!,SCRUB!
+HUD_CARE_SCRUB_DETAIL,"Alterná %s rápido, sin apretar nada. Repetir el mismo lado no seca.","Swing %s from side to side, fast, holding nothing. The same side twice dries nothing."
+HUD_CARE_KEY_STICK,stick izq.,left stick
 HUD_CARE_TITLE_MOP,SECÁ EL DERRAME,MOP THE SPILL
 HUD_CARE_TITLE_STRAIGHTEN,ENDEREZALA,STRAIGHTEN IT
 HUD_CARE_TOOL,USÁ: %s,USE: %s
@@ -520,10 +525,10 @@ HUD_HANDLING_HOSTILE,CONTENIDO HOSTIL,HOSTILE CONTENTS
 HUD_HANDLING_LIVE,CONTENIDO VIVO,LIVE CONTENTS
 HUD_HANDLING_NO_IMPACTS,NO GOLPEAR,DO NOT HIT
 HUD_HANDLING_UPRIGHT,MANTENER VERTICAL,KEEP UPRIGHT
-HUD_HINT_BALANCE_DANGER,¡Se está volcando! Mantené para enderezar.,It's tipping over! Hold to steady it.
-HUD_HINT_BALANCE_OK,Estable. Mantené para enderezar en las curvas.,Stable. Hold to steady it through turns.
+HUD_HINT_BALANCE_DANGER,¡Se está volcando! Mantené y contrapesá con WASD.,It's tipping over! Hold and lean with WASD.
+HUD_HINT_BALANCE_OK,Estable. En las curvas: mantené y contrapesá con WASD.,Stable. In turns: hold and lean with WASD.
 HUD_HINT_BALANCE_RUINED,Se volcó.,It tipped over.
-HUD_HINT_BALANCE_TILTED,Inclinado %.0f° · mantené para enderezar.,Tilted %.0f° · hold to steady.
+HUD_HINT_BALANCE_TILTED,Inclinado %.0f° · mantené y contrapesá con WASD.,Tilted %.0f° · hold and lean with WASD.
 HUD_HINT_EXPLOSIVE_RUINED,BOOM.,BOOM.
 HUD_HINT_EXPLOSIVE_SAFE,Desactivada.,Defused.
 HUD_HINT_EXPLOSIVE_SEQUENCE,%02d s · secuencia: %s,%02d s · sequence: %s
@@ -532,10 +537,10 @@ HUD_HINT_FRAGILE,Cada golpe deja huella: un toque justo antes del bache lo amort
 HUD_HINT_HOSTILE_CALM,CALMÁ (mantené),CALM (hold)
 HUD_HINT_HOSTILE_DONT_TOUCH,NO TOCAR (soltá),DON'T TOUCH (release)
 HUD_HINT_HOSTILE_RUINED,La criatura escapó.,The creature escaped.
-HUD_HINT_LIQUID_DANGER,¡Charco creciendo! Mantené para secar.,Puddle growing! Hold to mop it up.
-HUD_HINT_LIQUID_OK,Líquido estable. Secá cualquier derrame.,Liquid stable. Mop up any spill.
+HUD_HINT_LIQUID_DANGER,¡Charco creciendo! Fregá: alterná A y D.,Puddle growing! Scrub: swing A and D.
+HUD_HINT_LIQUID_OK,Líquido estable. Fregá cualquier derrame alternando A y D.,Liquid stable. Scrub any spill by swinging A and D.
 HUD_HINT_LIQUID_RUINED,Se derramó por completo.,It spilled completely.
-HUD_HINT_LIQUID_TILTED,Inclinado %.0f° · mantené para secar.,Tilted %.0f° · hold to mop.
+HUD_HINT_LIQUID_TILTED,Inclinado %.0f° · fregá alternando A y D.,Tilted %.0f° · scrub by swinging A and D.
 HUD_HINT_NOISY_DANGER,¡Se suelta! Mantené para calmarlo.,It's breaking loose! Hold to calm it.
 HUD_HINT_NOISY_OK,Tranquilo por ahora. Los golpes lo alteran.,Calm for now. Impacts rile it up.
 HUD_HINT_NOISY_RISK,Muy inquieto · mantené para calmarlo.,Very restless · hold to calm it.
@@ -630,14 +635,16 @@ UI_TRUCK_AGILE,Furgoneta ágil,Agile van
 UI_TRUCK_CLASSIC,Furgón clásico,Classic van
 UI_TRUCK_NERVOUS,rápida y nerviosa,fast and twitchy
 UI_TRUCK_STABLE,estable,stable
-UI_TUT_BALANCE_ACTION,Mantené la acción para enderezarla.,Hold the action to steady it.
+UI_TUT_BALANCE_ACTION,Mantené la acción y empujá con WASD hacia el lado contrario a la inclinación de la caja.,Hold the action and push with WASD toward the side opposite to the box's tilt.
 UI_TUT_BALANCE_BREAKS,Quedar inclinada demasiado tiempo.,Staying tilted for too long.
 UI_TUT_CONTROL_CALM,calmar,calm
 UI_TUT_CONTROL_DRIVE_SMOOTH,conducir suave,drive smoothly
-UI_TUT_CONTROL_DRY,secar,mop
+UI_TUT_CONTROL_DRY,fregar,scrub
 UI_TUT_CONTROL_OBEY,obedecer,obey
 UI_TUT_CONTROL_SEQUENCE,secuencia,sequence
-UI_TUT_CONTROL_STEADY,enderezar,steady
+UI_TUT_CONTROL_STEADY,contrapesar,lean against it
+UI_TUT_CLICK_LEAN,Click izq. + WASD,Left click + WASD
+UI_TUT_TRIGGER_LEAN,RT + stick izq.,RT + left stick
 UI_TUT_DPAD_DOWN,D-pad abajo,D-pad down
 UI_TUT_DRIVER_BODY,%s\n\nManejá suave; frená dentro de la zona de entrega y dejá que el equipo atienda la carga.,%s\n\nDrive smoothly; stop inside the delivery zone and let the crew tend the cargo.
 UI_TUT_DRIVER_CONTROL,%s  acelerar y frenar,%s  accelerate and brake
@@ -650,7 +657,7 @@ UI_TUT_HOSTILE_ACTION,Mantené o soltá según la orden de la caja.,Hold or rele
 UI_TUT_HOSTILE_BREAKS,Tocar cuando ordena NO TOCAR o ignorar CALMÁ.,Touching it when it says DON'T TOUCH or ignoring CALM.
 UI_TUT_LEFT_CLICK,Click izq.,Left click
 UI_TUT_LEFT_STICK,Stick izq.,Left stick
-UI_TUT_LIQUID_ACTION,Mantené la acción para secar el derrame.,Hold the action to mop up the spill.
+UI_TUT_LIQUID_ACTION,Alterná izquierda y derecha rápido (sin apretar nada) para fregar el derrame.,Swing left and right fast (holding nothing) to scrub up the spill.
 UI_TUT_LIQUID_BREAKS,Inclinarla y dejar crecer el charco.,Tilting it and letting the puddle grow.
 UI_TUT_NEXT,Siguiente,Next
 UI_TUT_NOISY_ACTION,Mantené la acción para calmarlo.,Hold the action to calm it.

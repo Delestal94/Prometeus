@@ -20,6 +20,8 @@ extends SceneTree
 ## peer reports `tap=1`, read from the care state the host replicates. Every
 ## peer also reports the bomb's code and who reads it, drawn by the host from
 ## the session seed: the three must agree (`code=` and `reader=`).
+## N-117.3: then the same holder scrubs the box, turned into a Liquid one: six
+## alternating swings over the RPC and every peer reports `scrub=5`.
 ##
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
@@ -112,12 +114,13 @@ func _report() -> void:
 	await _prepare_traps(tap_box, code_box)
 	var grab: String = await _contest_box()
 	var tap: String = await _tap_box(tap_box)
+	var scrub: String = await _scrub_box(tap_box)
 	var orders: Array = []
 	for order: Dictionary in _level.get_node(^"World/Depot").get(&"orders"):
 		orders.append("%s:%s" % [order.package_id, order.code])
-	print("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s code=%s" % [
+	print("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s scrub=%s code=%s" % [
 		_name, int(_network.get(&"world_seed")), (route.get(&"houses") as Array).size(), ",".join(orders),
-		_route_hash(route), phase, grab, tap, _code_of(code_box)])
+		_route_hash(route), phase, grab, tap, scrub, _code_of(code_box)])
 	# The host stays up a little so the clients' own reads aren't cut short.
 	await _pump(4.0 if _host else 1.0)
 	_network.call(&"leave_session")
@@ -187,11 +190,59 @@ func _tap_box(box: Node3D) -> String:
 			applied = true
 		root.multiplayer.poll()
 		await _pump(0.1)
-	if _host:
-		root.get_node(^"/root/RunManager").set(&"is_running", false)
 	var cushion: Dictionary = (box.get(&"care_state") as Dictionary).get("cushion", {})
 	var taps: int = int(cushion.get("taps", -1))
 	return str(taps) if taps == 1 else "FAIL-%d-taps" % taps
+
+
+## N-117.3: the same holder scrubs (Liquid's "Fregá"): a few seconds after the
+## tap stage (the peers reach it a moment apart, and the tap was read from the
+## care state), the host turns the box into a leaking one. The holder waits to
+## see that, then sends six alternating swings, A D A D A D, as care inputs
+## through the real RPC; the host lets the trap run for each and every peer
+## reads from the care state how many counted: five (the first only starts a
+## scrub).
+func _scrub_box(box: Node3D) -> String:
+	if box == null:
+		return "FAIL-no-box"
+	if _host:
+		await _pump(6.0)
+		box.set(&"trap_definition", load("res://data/traps/liquid.tres"))
+		box.call(&"initialize_trap")
+		box.get(&"trap_behavior").set(&"spill_amount", 60.0)
+		box.call(&"_publish_care")
+	var mine: Node3D = _own_player()
+	var sender: bool = not _host and mine != null and mine.get(&"carried_package") == box
+	var sent: int = 0
+	var last_send: int = 0
+	var deadline: int = Time.get_ticks_msec() + 30000
+	while Time.get_ticks_msec() < deadline:
+		var gesture: Dictionary = (box.get(&"care_state") as Dictionary).get("gesture", {})
+		if int(gesture.get("scrubs", -1)) >= 5:
+			break
+		var liquid_now: bool = gesture.get("kind") == &"scrub"
+		if sender and liquid_now and sent < 6 and Time.get_ticks_msec() - last_send >= 150:
+			last_send = Time.get_ticks_msec()
+			box.rpc_id(1, &"submit_care_input", {"direction_pressed": &"left" if sent % 2 == 0 else &"right",
+				"balance": Vector2.ZERO})
+			sent += 1
+		elif _host and _has_swing(box):
+			PackageRescue.simulate_cargo(box, 0.15)
+		root.multiplayer.poll()
+		await _pump(0.02)
+	await _pump(1.0)
+	if _host:
+		root.get_node(^"/root/RunManager").set(&"is_running", false)
+	var final: Dictionary = (box.get(&"care_state") as Dictionary).get("gesture", {})
+	var scrubs: int = int(final.get("scrubs", -1))
+	return str(scrubs) if scrubs == 5 else "FAIL-%d-scrubs" % scrubs
+
+
+func _has_swing(box: Node3D) -> bool:
+	for sample: Dictionary in (box.get(&"_tender_inputs") as Dictionary).values():
+		if (sample["input"] as Dictionary).get("direction_pressed") != null:
+			return true
+	return false
 
 
 func _has_tap(box: Node3D) -> bool:

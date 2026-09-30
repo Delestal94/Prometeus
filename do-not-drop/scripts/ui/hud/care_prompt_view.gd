@@ -8,6 +8,11 @@ extends Control
 ##   tool     -- the tool button and a ring filling with the job
 ##   sequence -- a row of keycaps, the next one bouncing (question marks
 ##               when the driver holds the code, the bomb's "Pedí el código")
+##   lean     -- Balance: the box leaning, the primary held and the key that
+##               pushes against the tilt beckoning (W, A, S or D as this
+##               player's screen sees it, not the truck's: a side seat looks
+##               across the truck; the stick's side on a gamepad)
+##   scrub    -- Liquid: A and D taking turns to beckon, lit as they are pressed
 ##   cushion  -- Fragile: the primary button with a ring closing on it; the
 ##               tap counts once the ring turns green (N-117 "Amortiguá")
 ##   collect  -- the interact key bouncing, with how many pieces are left
@@ -26,7 +31,8 @@ const TICK_EVERY: float = 0.1
 const ERROR_COOLDOWN: float = 0.6
 const CUES: Dictionary = {&"step": -12.0, &"error": -11.0, &"success": -9.0, &"whoosh": -15.0, &"tick": -19.0}
 ## Steps worth a swish when the card switches to them: something new to do.
-const ATTENTION_STEPS: Array[StringName] = [&"collect", &"sequence", &"tool", &"release", &"cushion"]
+const ATTENTION_STEPS: Array[StringName] = [&"collect", &"sequence", &"tool", &"release", &"cushion", &"lean",
+	&"scrub"]
 
 var step: StringName = &""
 var gamepad: bool = false
@@ -44,6 +50,15 @@ var caption: String = ""
 ## Fragile's cushion state as the host published it (CushionState), and when
 ## this frame received it, so the ring keeps closing between updates.
 var cushion: Dictionary = {}
+## What the trap publishes for a movement (GestureState): the side the box
+## leans to, ..., and the local A/D or stick axis, which lights the keys at
+## once instead of when the host's copy comes back.
+var gesture: Dictionary = {}
+var axis: float = 0.0
+## The forward/back axis (W/S), and the box's tilt as this screen sees it (x to
+## the right of the view, y forward; zero when upright).
+var axis_fwd: float = 0.0
+var screen_tilt := Vector2.ZERO
 var interact_key: String = "E"
 ## Every cue played, newest last: what the tests read.
 var played: Array[StringName] = []
@@ -147,6 +162,14 @@ func show_step(new_step: StringName, data: Dictionary) -> void:
 	steps = sequence.get("steps", [])
 	step_index = index
 	missing = new_missing
+	gesture = data.get("gesture", {})
+	var new_axis: float = float(data.get("axis", 0.0))
+	# Each swing of the scrub clicks, higher to the right and lower to the left.
+	if not first and new_step == &"scrub" and absf(new_axis) > 0.5 and signf(new_axis) != signf(axis):
+		_play(&"tick", 1.15 if new_axis > 0.0 else 0.9)
+	axis = new_axis
+	axis_fwd = float(data.get("axis_fwd", 0.0))
+	screen_tilt = data.get("screen_tilt", Vector2.ZERO)
 	hidden_code = StringName(sequence.get("reader", &"owner")) == &"driver"
 	caption = tr("HUD_CARE_ASK") if hidden_code else tr("HUD_CARE_TAP")
 	if new_cushion != cushion:
@@ -220,6 +243,10 @@ func _draw() -> void:
 			_draw_sequence(center)
 		&"cushion":
 			_draw_cushion(center)
+		&"lean":
+			_draw_lean(center)
+		&"scrub":
+			_draw_scrub(center)
 		&"collect":
 			_draw_collect(center)
 		&"grab":
@@ -325,6 +352,58 @@ func _draw_sequence(center: Vector2) -> void:
 			_draw_text(caption, key_center + Vector2(0, cap * 0.5 + 24), 16, UiThemeScript.INK)
 		else:
 			_draw_key(key_center, glyph, direction, false, false, border, 0.86, false, 0.4)
+
+
+## The key that pushes against the box's tilt as this screen sees it: W, A, S
+## or D by the strongest way to go (screen up is forward), &"" when it is
+## upright and every key asks.
+func lean_key() -> StringName:
+	var counter: Vector2 = -screen_tilt
+	if maxf(absf(counter.x), absf(counter.y)) < 0.05:
+		return &""
+	if absf(counter.x) >= absf(counter.y):
+		return &"D" if counter.x > 0.0 else &"A"
+	return &"W" if counter.y > 0.0 else &"S"
+
+
+## Balance: the primary held, the box leaning one way on this player's screen
+## and the key that pushes against it beckoning. The four keys sit as on a
+## keyboard (W over A S D); a key lights as the axis is pressed toward it.
+## Upright (or no tilt yet) every key asks.
+func _draw_lean(center: Vector2) -> void:
+	_draw_primary_button(center + Vector2(-112, 0), holding_primary)
+	var slots: Array[Dictionary] = [
+		{"at": Vector2(-40, -26), "way": Vector2.UP, "glyph": "W", "pressed": axis_fwd},
+		{"at": Vector2(-76, 12), "way": Vector2.LEFT, "glyph": "A", "pressed": -axis},
+		{"at": Vector2(-40, 12), "way": Vector2.DOWN, "glyph": "S", "pressed": -axis_fwd},
+		{"at": Vector2(-4, 12), "way": Vector2.RIGHT, "glyph": "D", "pressed": axis},
+	]
+	for slot: Dictionary in slots:
+		var way: Vector2 = slot["way"]
+		var wanted: bool = lean_key() == &"" or lean_key() == StringName(slot["glyph"])
+		var key_center: Vector2 = center + (slot["at"] as Vector2) + Vector2(20, 0)
+		if wanted:
+			key_center.y -= absf(sin(_time * 6.0)) * 5.0
+		var lit: bool = float(slot["pressed"]) > 0.5 and holding_primary
+		_draw_key(key_center, "" if gamepad else String(slot["glyph"]), way, lit, lit, UiThemeScript.INK, 0.66,
+			wanted, 1.0 if wanted else 0.4)
+	_draw_cardboard(center + Vector2(104, 6), clampf(screen_tilt.x, -1.0, 1.0) * 0.3 * (1.0 + 0.2 * sin(_time * 3.0)))
+
+
+## Liquid: A and D take turns beckoning, like a metronome; each lights while it
+## is pressed. No button: the primary is not part of this one.
+func _draw_scrub(center: Vector2) -> void:
+	var turn: float = 1.0 if int(_time * 4.0) % 2 == 0 else -1.0
+	for way: float in [-1.0, 1.0]:
+		var wanted: bool = way == turn
+		var key_center: Vector2 = center + Vector2(-46.0 + (way + 1.0) * 46.0, 4.0)
+		if wanted:
+			key_center.y -= 7.0
+		var glyph: String = "" if gamepad else ("A" if way < 0.0 else "D")
+		_draw_key(key_center, glyph, Vector2(way, 0.0), axis * way > 0.5, axis * way > 0.5, UiThemeScript.INK, 1.0,
+			wanted, 1.0 if wanted else 0.55)
+	var wipe: float = sin(_time * 8.0) * 22.0
+	_draw_arrow(center + Vector2(wipe, 44.0), Vector2.RIGHT, 8.0, Color(UiThemeScript.INK, 0.5), 3.0)
 
 
 ## Fragile: the primary button, and a ring closing on it as the bump nears.

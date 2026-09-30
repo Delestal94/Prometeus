@@ -24,7 +24,7 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 
 | Acción genérica | Teclado | Gamepad | Uso según trampa |
 |---|---|---|---|
-| Acción primaria (mantener) | Click izquierdo (mantener) | Gatillo derecho (mantener) | Equilibrio: sostener: Ruidoso: calmar. Frágil no usa el mantener: pide un **toque** justo antes del bache (anillo sobre la caja) |
+| Acción primaria (mantener) | Click izquierdo (mantener) | Gatillo derecho (mantener) | Equilibrio: **mantener y contrapesar**: empujar con WASD (stick izq.) hacia el lado contrario a la inclinación de la caja, como lo ve la pantalla de cada asiento; Ruidoso y Hostil: calmar. Líquido no usa el botón: se **friega** alternando A y D (o el stick de lado a lado). Frágil no usa el mantener: pide un **toque** justo antes del bache (anillo sobre la caja) |
 | Acción secundaria (tap) | Click derecho / E | Botón A/X | Confirmar paso de secuencia (Peso creciente) |
 | Movimiento/dirección | WASD o mouse | Stick izquierdo | Input de secuencia (Peso creciente), dirección de corrección (Equilibrio) |
 | Abrir/cerrar la caja | T | D-pad abajo | Cualquier trampa: mirar el contenido. La del asiento, la que tenés en la mano o la que mirás. Abierta se puede derramar, y entregada abierta cuenta "con reparos" |

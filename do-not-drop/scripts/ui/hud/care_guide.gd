@@ -8,6 +8,8 @@ extends RefCounted
 ##   sequence -- a tap sequence pending (the bomb, Peso creciente); for the
 ##               bomb the owner is told to ask the driver for the code
 ##   cushion  -- Fragile with a bump announced ahead: one tap, right now
+##   lean     -- Balance: hold the primary and lean against the tilt (A/D)
+##   scrub    -- Liquid: swing A and D, side to side, nothing held
 ##   tool     -- a rescue that needs the kit, or a job already under way
 ##   release  -- the creature says hands off
 ##   hold     -- keep the primary action held: steady, calm, mop (only
@@ -64,6 +66,16 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 	# Hands are asked for when the box needs them -- at risk, strained or
 	# being thrown about -- not all the time: a card that always says "hold"
 	# never lets the player know they're done (playtest 2026-09-28).
+	# The two traps that answer to a movement (N-117): Balance leans against the
+	# tilt with the primary held, Liquid scrubs side to side with nothing held.
+	if action == &"lean" and bool(state.get("need_hands", true)):
+		return _step(&"lean", _tr("HUD_CARE_LEAN"),
+			_tr("HUD_CARE_LEAN_DETAIL") % [keys.get("primary", "Clic izq."), keys.get("sides", "WASD")])
+	if action == &"scrub" and bool(state.get("need_hands", true)):
+		var scrub: String = _tr("HUD_CARE_SCRUB_DETAIL") % keys.get("swing", "A / D")
+		if bool(state.get("on_foot", false)):
+			scrub += " " + _tr("HUD_CARE_ASK_CODE_ON_FOOT") % keys.get("primary", "Clic izq.")
+		return _step(&"scrub", _tr("HUD_CARE_SCRUB"), scrub)
 	if action == &"hold" and bool(state.get("need_hands", true)):
 		return _step(&"hold", _tr(String(HOLD_TITLES.get(kind, "HUD_CARE_TITLE_HOLD"))),
 			_tr("HUD_CARE_HOLD_DETAIL") % keys.get("primary", "Clic izq."))
