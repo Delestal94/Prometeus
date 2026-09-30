@@ -47,7 +47,9 @@ func build_signs() -> void:
 			tr("WORLD_DEPOT_POSTER_LIFT_BODY"), Color("4cc9f0"))
 	# Between the column at z 24.8 and the supplies shelf (from z 26.65),
 	# which used to hide half of it.
-	_poster(Vector3(Layout.HALF_WIDTH - 0.07, 2.2, 25.6), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"),
+	# On the wardrobe's partition, facing the hall: under the mezzanine it would
+	# hang in the dark.
+	_poster(Vector3(DepotZones.WALL_X - 0.08, 2.0, 14.3), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"),
 			tr("WORLD_DEPOT_POSTER_FRAGILE_BODY"), Color("ff5e5b"))
 	_poster(Vector3(-8.0, 2.4, Layout.DEPTH - 0.07), PI, tr("WORLD_DEPOT_POSTER_ONEBOX_TITLE"),
 			tr("WORLD_DEPOT_POSTER_ONEBOX_BODY"), Color("2dd4a3"))
@@ -123,10 +125,12 @@ func build_fans() -> void:
 
 
 func build_life() -> void:
-	var clerk := _worker(Vector3(10.4, Layout.FLOOR_TOP, 24.9), 0.0, Color("2dd4a3"), [
+	# The clerk behind the cage's window, facing the truck bay (+X).
+	var clerk := _worker(Vector3(-11.0, Layout.FLOOR_TOP, 5.4), -PI * 0.5, Color("2dd4a3"), [
 		tr("WORLD_DEPOT_CLERK_1"), tr("WORLD_DEPOT_CLERK_2"), tr("WORLD_DEPOT_CLERK_3")])
 	clerk.name = "Clerk"
-	var dispatcher := _worker(Vector3(11.4, Layout.FLOOR_TOP, 29.95), PI, Color("4cc9f0"), [
+	# At the desk in the office on the mezzanine.
+	var dispatcher := _worker(Vector3(11.4, Layout.FLOOR_TOP + Layout.MEZZANINE_HEIGHT, 29.95), PI, Color("4cc9f0"), [
 		tr("WORLD_DEPOT_DISPATCHER_1"), tr("WORLD_DEPOT_DISPATCHER_2")])
 	dispatcher.name = "Dispatcher"
 	var packer := _worker(Vector3(2.2, Layout.FLOOR_TOP, 28.2), 0.0, Color("ff9f1c"), [
@@ -144,7 +148,8 @@ func build_life() -> void:
 				25.2)]
 	var forklift := DepotForklift.new()
 	forklift.name = "Forklift"
-	forklift.place(Vector3(-12.05, Layout.FLOOR_TOP, 3.2), Vector3(-12.05, Layout.FLOOR_TOP, 26.2))
+	forklift.place(Vector3(Layout.FORKLIFT_LANE_X, Layout.FLOOR_TOP, Layout.FORKLIFT_LANE_Z.x + 1.6),
+			Vector3(Layout.FORKLIFT_LANE_X, Layout.FLOOR_TOP, 26.2))
 	_root.add_child(forklift)
 
 
