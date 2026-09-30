@@ -7,11 +7,13 @@
 #   tools/run-tests.sh                 # the whole suite
 #   tools/run-tests.sh depot traps     # only tests whose name contains one of these
 #   tools/run-tests.sh -v ...          # also print the log of every failure
+#   SHARD=1/4 tools/run-tests.sh       # only the 2nd quarter (CI splits the suite)
 #
 # Env: GODOT (path to the Godot 4 console binary), JOBS (parallel processes,
 # default: half the cores, at most 6), TEST_TIMEOUT (seconds per test, 300),
 # SLOW_TEST_TIMEOUT (seconds for the SLOW_TESTS below, twice TEST_TIMEOUT),
-# REPORT_FILE (optional CSV path for per-test status and duration).
+# REPORT_FILE (optional CSV path for per-test status and duration),
+# SHARD (i/n: run only every n-th test from the i-th, 0-based).
 #
 # Not run here, on purpose: render_*.gd and check_*.gd need a real display and
 # someone looking at the images -- that's the revisor-visual agent's job.
@@ -124,6 +126,27 @@ for rel in "${TESTS[@]}"; do
 	[ "$is_slow" -eq 1 ] || ORDERED_TESTS+=("$rel")
 done
 TESTS=("${ORDERED_TESTS[@]}")
+# SHARD=i/n deals the longest-first list round-robin, so each of CI's n
+# runners gets its share of the slow tests and they finish close together.
+if [ -n "${SHARD:-}" ]; then
+	shard_i="${SHARD%/*}"; shard_n="${SHARD#*/}"
+	case "$shard_i/$shard_n" in
+		*[!0-9/]*|/*|*/) echo "run-tests: SHARD tiene que ser i/n (0 <= i < n), no '$SHARD'" >&2; exit 2 ;;
+	esac
+	if [ "$shard_n" -lt 1 ] || [ "$shard_i" -ge "$shard_n" ]; then
+		echo "run-tests: SHARD tiene que ser i/n (0 <= i < n), no '$SHARD'" >&2
+		exit 2
+	fi
+	SHARDED=()
+	for index in "${!TESTS[@]}"; do
+		[ $(( index % shard_n )) -eq "$shard_i" ] && SHARDED+=("${TESTS[$index]}")
+	done
+	if [ ${#SHARDED[@]} -eq 0 ]; then
+		echo "Tests: 0/0 PASS, 0 FAIL, 0 SKIP  (shard $SHARD vacío)"
+		exit 0
+	fi
+	TESTS=("${SHARDED[@]}")
+fi
 # Space-padded so run_one can match whole names (arrays don't cross export).
 SLOW_NAMES=" ${SLOW_TESTS[*]} "
 

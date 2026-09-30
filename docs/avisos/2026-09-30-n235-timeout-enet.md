@@ -36,9 +36,9 @@ Lo hizo Nacho (con Claude), rama `ccr-7ed3ad6f-aszdmn` (N-235). Zona compartida:
 - `NetSession` suma `enet_timeout_msec(peer_id) -> int` (lo que esta punta tolera de ese peer; 0 fuera de
   ENet) y el hook `_reload_level()` (por defecto `reload_current_scene` diferido, lo mismo que antes; el
   test del módulo lo reemplaza). Steam no cambia: sus peers siguen con sus propios timeouts.
-- **Protocolo**: `PROTOCOL_VERSION` 11 → **12** (el RPC nuevo corre los ids de RPC del nodo
-  `NetworkManager`). Un cliente viejo con un host nuevo no se entiende: el handshake lo rechaza con
-  "otra versión del juego".
+- **Protocolo**: `PROTOCOL_VERSION` 12 → **13** (el RPC nuevo corre los ids de RPC del nodo
+  `NetworkManager`; el 12 lo tomó N-109, PR #115, que entró antes). Un cliente viejo con un host
+  nuevo no se entiende: el handshake lo rechaza con "otra versión del juego".
 - `tests/net_pair.gd` y `tests/net_trio.gd` imprimen `NETLOG ... WARNING slow level load` si la carga
   del que se une pasa de 35 s (10 s de margen sobre los 45 s), y `tools/run-net-pair.sh` /
   `tools/run-net-trio.sh` lo repiten como línea `WARNING:` (y `::warning::` en GitHub Actions). Sigue

@@ -266,6 +266,24 @@ Orden real en `project.godot` (importa por dependencias en `_ready()`):
 `GameManager` y `AudioManager` siguen en el plan original pero no están registrados.
 `UnlockManager` y `GameSettings` sí lo están (ver nota de la sección 3).
 
+## 6. `PROTOCOL_VERSION` (red)
+
+`NetworkManager.PROTOCOL_VERSION` (`scripts/core/network_manager.gd`) sube en **cada** cambio de RPC
+(uno nuevo, uno renombrado, argumentos distintos: los ids de RPC se ordenan por nombre y se corren
+todos) o de replicación (propiedades de un `MultiplayerSynchronizer`, spawners). Host y cliente con
+números distintos no se conectan, con un error claro; con el mismo número y distinto protocolo se
+desincronizan en silencio.
+
+Cómo elegir el número sin chocar con otro PR en vuelo:
+1. Antes de subirlo, mirá los PRs abiertos que tocan `network_manager.gd` (en la nube, con
+   `mcp__github__list_pull_requests` y su diff) y tomá **el siguiente al más alto** entre `main` y
+   esos PRs, no el siguiente al de `main`.
+2. Sumá la línea `## N: qué cambió, <ID>` al historial del comentario de arriba de la constante.
+   Así dos ramas con el mismo número chocan en git (líneas distintas en el mismo lugar) en vez de
+   mezclarse solas, y `test_protocol_version` (PR #122) exige el historial único y consecutivo.
+3. Si al mezclar `main` el número ya lo usó otro PR, subí al siguiente libre y corregí tu línea del
+   historial; nada más.
+
 ## Próximo paso
 Con esto, la Fase 1 del plan de desarrollo tiene todo lo necesario para arrancar sin
 ambigüedad: Input Map, capas de física y estructura de carpetas ya definidas. El

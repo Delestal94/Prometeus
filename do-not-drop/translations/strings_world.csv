@@ -316,3 +316,25 @@ WORLD_COMPLAINT_PUPPY_OPENED_1,Vino con la caja abierta. Casi se baja a mitad de
 WORLD_COMPLAINT_PUPPY_OPENED_2,Le abrieron la caja. Ahora sabe que hay un afuera.,You opened his box. Now he knows there is an outside.
 WORLD_COMPLAINT_PUPPY_WRONG_1,Este cachorro no me conoce. El mío sí. Que se lo lleven.,This puppy does not know me. Mine does. Take it away.
 WORLD_COMPLAINT_PUPPY_WRONG_2,No mueve la cola cuando me ve. No es mío.,It does not wag its tail when it sees me. It is not mine.
+WORLD_GULL_ICON,¡GAVIOTA!,GULL!
+WORLD_DOG_ICON,¡PERRO!,DOG!
+WORLD_BEES_ICON,¡ABEJAS!,BEES!
+WORLD_GULL_ALERT_TITLE,¡Una gaviota va por una caja!,A gull is going for a box!
+WORLD_GULL_ALERT_PROMPT,Tocá la bocina o sostené la caja antes de que se la lleve.,Honk the horn or hold the box before it takes it.
+WORLD_DOG_ALERT_TITLE,¡Un perro se va a subir a la caja abierta!,A dog is about to climb onto the open box!
+WORLD_DOG_ALERT_PROMPT,"Tocá la bocina, cerrá la tapa o tirale un palo.","Honk the horn, close the lid or throw it a stick."
+WORLD_BEES_ALERT_TITLE,¡Abejas tras la torta!,Bees are after the cake!
+WORLD_BEES_ALERT_PROMPT,Cerrá la tapa o tocá la bocina.,Close the lid or honk the horn.
+WORLD_GULL_GONE_TITLE,Gaviota fuera,Gull gone
+WORLD_DOG_GONE_TITLE,Perro fuera,Dog gone
+WORLD_BEES_GONE_TITLE,Abejas fuera,Bees gone
+WORLD_ANIMAL_OUTCOME_SCARED,La bocina lo espantó.,The horn scared it off.
+WORLD_ANIMAL_OUTCOME_HELD,Sostener la caja lo espantó.,Holding the box scared it off.
+WORLD_ANIMAL_OUTCOME_DISTRACTED,Se fue corriendo detrás del palo.,It ran off after the stick.
+WORLD_ANIMAL_OUTCOME_SEALED,Con la tapa cerrada perdió el interés.,With the lid shut it lost interest.
+WORLD_ANIMAL_OUTCOME_LEFT,Se cansó y se fue.,It got bored and left.
+WORLD_GULL_SNATCH_TITLE,¡La gaviota tiró la caja!,The gull dropped the box!
+WORLD_GULL_SNATCH_PROMPT,Quedó en la ruta: rescatala antes de que se pierda.,It's on the road: rescue it before it's lost.
+WORLD_DOG_THROW_PROMPT,Tirarle un palo al perro,Throw the dog a stick
+WORLD_CARGO_DOG_RUINED,El perro la dejó hecha un desastre.,The dog left it in ruins.
+WORLD_CARGO_BEES_RUINED,Las abejas arruinaron la torta.,The bees ruined the cake.

@@ -529,14 +529,13 @@ func _report_change(before_integrity: float, before_state: int, ruin_cause: Stri
 
 ## Damage is applied to the real trap state, so it survives event cleanup.
 func apply_parasite_damage(amount: float) -> void:
-	if trap_behavior == null or amount <= 0.0:
-		return
-	var before_integrity: float = integrity
-	var before_state: int = trap_state
-	_sharing_parasite_damage = true
-	_parasite_damage = minf(_parasite_damage + amount, integrity_max)
-	_report_change(before_integrity, before_state, tr("HUD_PACKAGE_PARASITE_DAMAGE"))
-	_sharing_parasite_damage = false
+	apply_external_damage(amount, "HUD_PACKAGE_PARASITE_DAMAGE")
+
+
+## Host-only. Harm from outside the box's own trap (a dog on it, bees round the
+## cake: N-109), reported like any damage; see PackageRescue.apply_external_damage().
+func apply_external_damage(amount: float, ruin_cause_key: String) -> void:
+	PackageRescue.apply_external_damage(self, amount, ruin_cause_key)
 
 
 ## The primary tender and, when present, one helper call this every physics frame. Only the host combines

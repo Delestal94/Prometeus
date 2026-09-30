@@ -55,6 +55,12 @@ const RAIN_UNDER_ROOF_BOOST_DB: float = 3.0
 const CROSSING_BELL_DB: float = 0.0
 const DOG_BARK_DB: float = -6.0
 const SHEEP_BLEAT_DB: float = -7.5
+## The animals that go for the cargo (cargo_animals.gd, N-109): the gull's cry
+## is a signal like the bark (class "signal", measured by test_cargo_animals); the
+## bees' buzz is a steady drone of the "noise" class, quiet enough to be a warning
+## you notice rather than one you're startled by.
+const GULL_CRY_DB: float = -5.0
+const BEE_BUZZ_DB: float = -14.5
 ## doorbell_ding_dong() and neighbor_cheer() self-normalise to their own
 ## *_STREAM_LOUDEST_DB (SynthAudio), so these two are just the "signal"
 ## target (-18) minus that -- same reasoning as DOG_BARK_DB.
