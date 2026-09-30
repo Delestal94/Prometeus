@@ -12,12 +12,27 @@ extends SceneTree
 ##   failure codes come out worded by the game;
 ## - The configured auth and ENet timeouts cover a blocking level load, with
 ##   no earlier ENet MIN that drops an authenticating peer mid-load;
+## - N-235, a real host and joiner over ENet in this process: both ends wait
+##   out the joiner's load (45 s), drop a silent peer within the session
+##   timeout (20 s) settle_delay_seconds after it's admitted, and go back to
+##   45 s when a restart is announced (announce_restart(), or begin_restart()
+##   alone) -- the notice leaves before the host polls again -- until the
+##   client reports its level is back and the margin passes; nobody settles
+##   while a restart is announced, a settle already scheduled checks again
+##   when it fires, and a report from an earlier restart neither settles nor
+##   counts the client ready while another one is owed or under way; a joiner
+##   on another version leaves nothing applied behind; leaving forgets it all;
 ## - NetEventBus relays a fact locally when offline, and a request from the
 ##   local host lands as `event(peer_id, args...)` subject to its cooldown;
 ## - NetStats parses --net-sim profiles and grades metrics;
 ## - SteamVoice never opens the microphone with the switch off, records with
 ##   push-to-talk over a fake Steam, drops oversize packets, and mutes;
 ## - NetStatsOverlay builds on first show with the default theme.
+
+const TIMEOUT_PORT: int = 7812
+## The host's settle margin here (the default is seconds; the checks wait past it).
+const SETTLE_SECONDS: float = 0.4
+const SESSION_MSEC: int = NetSession.ENET_PEER_TIMEOUT_SESSION_MSEC
 
 var _failures: int = 0
 
@@ -26,6 +41,11 @@ class GameSession extends NetSession:
 	var world_seed: int = 0
 	var houses: int = 0
 	var restarted: Array = []
+	var reloads: int = 0
+
+	## No level here to reload: counts it instead (level_ready() is called by hand).
+	func _reload_level() -> void:
+		reloads += 1
 
 	func _init() -> void:
 		protocol_version = 7
@@ -108,6 +128,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	await _test_session()
+	await _test_enet_timeouts()
 	_test_event_bus()
 	_test_net_stats()
 	_test_voice()
@@ -179,6 +200,205 @@ func _test_session() -> void:
 	session._apply_restart_state(session._restart_state())
 	_expect(session.restarted == [{"houses": 5}], "The restart payload round-trips through the game's hooks")
 	session.free()
+
+
+## N-235: a host and a joiner, each on its own SceneMultiplayer, over ENet on
+## localhost. What each end tolerates from the other is read back with
+## enet_timeout_msec() (ENet has no getter; the session keeps what it applied).
+func _test_enet_timeouts() -> void:
+	var load_msec: int = NetSession.ENET_PEER_TIMEOUT_MAX_MSEC
+	var session_msec: int = NetSession.ENET_PEER_TIMEOUT_SESSION_MSEC
+	_expect(session_msec >= 10000 and session_msec < load_msec,
+		"In session a silent peer is dropped sooner than the load budget (got %d ms)" % session_msec)
+	var defaults := NetSession.new()
+	_expect(defaults.settle_delay_seconds >= 2.0, "By default the load budget holds a few seconds more")
+	defaults.free()
+	var host := GameSession.new()
+	host.name = "TimeoutHost"
+	var client := GameSession.new()
+	client.name = "TimeoutClient"
+	root.add_child(host)
+	root.add_child(client)
+	set_multiplayer(SceneMultiplayer.new(), host.get_path())
+	set_multiplayer(SceneMultiplayer.new(), client.get_path())
+	host.transport = NetSession.Transport.ENET
+	client.transport = NetSession.Transport.ENET
+	host.settle_delay_seconds = SETTLE_SECONDS
+	var handshakes: Array = []
+	client.session_ready.connect(func(is_host: bool) -> void: handshakes.append(is_host))
+	_expect(host.enet_timeout_msec(NetSession.HOST_ID) == 0, "Offline nothing is applied")
+	var hosted: bool = host.host_session(TIMEOUT_PORT) == OK
+	var joining: bool = client.join_session("127.0.0.1", TIMEOUT_PORT) == OK
+	_expect(hosted and joining, "A host and a joiner come up on localhost")
+	if not (hosted and joining and await _wait_for(func() -> bool: return not handshakes.is_empty())):
+		_expect(false, "The joiner never got the host's handshake")
+		_drop_pair(host, client)
+		return
+	var joiner: int = client.multiplayer.get_unique_id()
+	_expect(_pair_at(host, client, joiner, load_msec),
+		"While the joiner loads its level both ends wait out the load (host %d, client %d ms)"
+		% [host.enet_timeout_msec(joiner), client.enet_timeout_msec(NetSession.HOST_ID)])
+
+	client.level_ready()  # Its level is up: it says ready and completes.
+	await _wait_for(func() -> bool: return host.multiplayer.get_peers().has(joiner))
+	_expect(host.enet_timeout_msec(joiner) == load_msec, "Just admitted, the host still waits out the joiner's level")
+	_expect(await _wait_for(func() -> bool: return _pair_at(host, client, joiner, session_msec)),
+		"settle_delay_seconds after it's in, both ends drop a silent peer within %d ms (host %d, client %d)"
+		% [session_msec, host.enet_timeout_msec(joiner), client.enet_timeout_msec(NetSession.HOST_ID)])
+
+	await _restart_without_announce(host, client, joiner)
+	await _restart_announced(host, client, joiner)
+	await _crossing_reports(host, client, joiner)
+	await _refused_joiner(host)
+
+	client.leave_session()
+	host.leave_session()
+	_expect(host.enet_timeout_msec(joiner) == 0 and client.enet_timeout_msec(NetSession.HOST_ID) == 0,
+		"Leaving forgets what was applied")
+	_drop_pair(host, client)
+
+
+## begin_restart() with nobody announcing it first: the host reloads right
+## after, blocking its polling, so its notice has to be on the wire already.
+## Only the client is polled here.
+func _restart_without_announce(host: GameSession, client: GameSession, joiner: int) -> void:
+	var load_msec: int = NetSession.ENET_PEER_TIMEOUT_MAX_MSEC
+	host.begin_restart()
+	_expect(host.enet_timeout_msec(joiner) == load_msec, "The host waits out its clients again before it reloads")
+	_expect(_client_told(client, load_msec), "The client waits out the host's reload, told before the host polls again")
+	host.level_ready()  # The host's new level is up: every client reloads.
+	_expect(await _wait_for(func() -> bool: return client.reloads == 1), "The client reloads for the restart")
+	_expect(_pair_at(host, client, joiner, load_msec), "While the client reloads both ends still wait out the load")
+	client.level_ready()  # Back from its reload: reports to the host.
+	await _wait_for(func() -> bool: return host.is_peer_ready(joiner))
+	_expect(_pair_at(host, client, joiner, load_msec), "Right after its report the load budget still holds")
+	_expect(await _wait_for(func() -> bool: return _pair_at(host, client, joiner, SESSION_MSEC)),
+		"Once the client is back both ends drop a silent peer within the session timeout again")
+
+
+## announce_restart() ahead of the reload (restart_delivery() does it before
+## its fade): both ends on the budget at once, nobody settles until the
+## restart runs, and a settle already scheduled checks again when it fires.
+func _restart_announced(host: GameSession, client: GameSession, joiner: int) -> void:
+	var load_msec: int = NetSession.ENET_PEER_TIMEOUT_MAX_MSEC
+	host.announce_restart()
+	_expect(host.enet_timeout_msec(joiner) == load_msec, "An announced restart puts the host on the load budget")
+	_expect(_client_told(client, load_msec), "An announced restart reaches the client while the host still polls")
+	client.level_ready()  # A report while the restart is only announced.
+	await _pump(SETTLE_SECONDS * 2.0)
+	_expect(_pair_at(host, client, joiner, load_msec), "While a restart is announced nobody settles")
+	host.announce_restart()
+	host.begin_restart()
+	_expect(_pair_at(host, client, joiner, load_msec) and not host.is_peer_ready(joiner),
+		"begin_restart() after an announce keeps the budget and waits for the client's level")
+	host.level_ready()
+	_expect(await _wait_for(func() -> bool: return client.reloads == 2), "The client reloads for the announced restart")
+	client.level_ready()
+	await _wait_for(func() -> bool: return host.is_peer_ready(joiner))
+	host.begin_restart()  # Within the settle margin: the scheduled settle must not go through.
+	await _pump(SETTLE_SECONDS * 2.0)
+	_expect(_pair_at(host, client, joiner, load_msec), "A settle scheduled before a restart began doesn't go through")
+	host.level_ready()
+	_expect(await _wait_for(func() -> bool: return client.reloads == 3), "The client reloads again")
+	client.level_ready()
+	_expect(await _wait_for(func() -> bool: return _pair_at(host, client, joiner, SESSION_MSEC)),
+		"After the restart runs, the client's report settles both ends")
+
+
+## Reports that cross a newer restart settle nothing and don't count the
+## client ready: it reloads again and reports again.
+func _crossing_reports(host: GameSession, client: GameSession, joiner: int) -> void:
+	var load_msec: int = NetSession.ENET_PEER_TIMEOUT_MAX_MSEC
+	host.begin_restart()
+	client.level_ready()
+	await _pump(0.3)
+	_expect(_pair_at(host, client, joiner, load_msec) and not host.is_peer_ready(joiner),
+		"A report arriving mid-restart keeps the load budget and doesn't count the client ready")
+	host.level_ready()
+	_expect(await _wait_for(func() -> bool: return client.reloads == 4), "The client reloads for the next restart")
+	# Two restarts back to back: the first one's report still owes the second.
+	host.begin_restart()
+	host.level_ready()
+	_expect(await _wait_for(func() -> bool: return client.reloads == 5), "The client reloads for a second restart")
+	host.begin_restart()
+	host.level_ready()
+	_expect(await _wait_for(func() -> bool: return client.reloads == 6), "The client reloads for a third restart")
+	client.level_ready()
+	client.level_ready()
+	await _pump(SETTLE_SECONDS * 2.0)
+	_expect(_pair_at(host, client, joiner, load_msec) and not host.is_peer_ready(joiner),
+		"A client still owing a reload keeps the load budget and isn't ready yet")
+	client.level_ready()
+	_expect(await _wait_for(func() -> bool: return _pair_at(host, client, joiner, SESSION_MSEC)),
+		"Its last report brings both ends back to the session timeout")
+	_expect(host.is_peer_ready(joiner), "Its last report counts it ready")
+
+
+## A joiner on another protocol version never makes it in: what the host had
+## applied to its link goes with it.
+func _refused_joiner(host: GameSession) -> void:
+	var stale := GameSession.new()
+	stale.name = "TimeoutStale"
+	stale.protocol_version = 6
+	root.add_child(stale)
+	set_multiplayer(SceneMultiplayer.new(), stale.get_path())
+	stale.transport = NetSession.Transport.ENET
+	var seen: Dictionary = {}
+	var failed: Array = []
+	var on_authenticating: Callable = func(id: int) -> void: seen[id] = host.enet_timeout_msec(id)
+	var on_failed: Callable = func(id: int) -> void: failed.append(id)
+	host.multiplayer.peer_authenticating.connect(on_authenticating)
+	host.multiplayer.peer_authentication_failed.connect(on_failed)
+	_expect(stale.join_session("127.0.0.1", TIMEOUT_PORT) == OK, "A joiner on another version can try")
+	var stale_id: int = stale.multiplayer.get_unique_id()
+	_expect(await _wait_for(func() -> bool: return failed.has(stale_id)), "The host sees its authentication fail")
+	_expect(int(seen.get(stale_id, 0)) == NetSession.ENET_PEER_TIMEOUT_MAX_MSEC,
+		"While it authenticated the host waited out its load")
+	_expect(host.enet_timeout_msec(stale_id) == 0, "Once it failed the host forgets what it applied to it")
+	host.multiplayer.peer_authenticating.disconnect(on_authenticating)
+	host.multiplayer.peer_authentication_failed.disconnect(on_failed)
+	stale.leave_session()
+	set_multiplayer(null, stale.get_path())
+	stale.free()
+
+
+## Polls only the client (the host stands still, as if blocked) until it
+## applies `msec` to the host, or a second passes.
+func _client_told(client: GameSession, msec: int) -> bool:
+	for attempt: int in 100:
+		OS.delay_msec(10)
+		client.multiplayer.poll()
+		if client.enet_timeout_msec(NetSession.HOST_ID) == msec:
+			return true
+	return false
+
+
+func _pair_at(host: NetSession, client: NetSession, joiner: int, msec: int) -> bool:
+	return host.enet_timeout_msec(joiner) == msec and client.enet_timeout_msec(NetSession.HOST_ID) == msec
+
+
+func _drop_pair(host: NetSession, client: NetSession) -> void:
+	client.leave_session()
+	host.leave_session()
+	set_multiplayer(null, host.get_path())
+	set_multiplayer(null, client.get_path())
+	host.free()
+	client.free()
+
+
+func _wait_for(done: Callable, seconds: float = 5.0) -> bool:
+	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		if done.call():
+			return true
+		await process_frame
+	return bool(done.call())
+
+
+func _pump(seconds: float) -> void:
+	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		await process_frame
 
 
 func _test_event_bus() -> void:

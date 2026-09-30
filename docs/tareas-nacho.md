@@ -48,11 +48,28 @@ Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red
 se corte mientras carga el nivel (bloquea el poll de ENet 18-34 s en CI), el timeout de ENet quedó fijo en
 45 s toda la sesión: si un jugador crashea, su caja sigue "sostenida", el volante ocupado y su voz activa
 hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 45 s.
-- [ ] **N-235.1** Bajar el timeout de ENet (MIN = MAX ≈ 20 s) una vez admitido el peer (host en
+- [x] ~~**N-235.1** Bajar el timeout de ENet (MIN = MAX ≈ 20 s) una vez admitido el peer (host en
   `_on_peer_connected`, cliente tras `complete_auth`) y volver a 45 s en `begin_restart` / `_remote_restart`
   antes de recargar. `test_connection_errors` ya exige MIN == MAX y MAX ≥ handshake. Con `constructor-red`
-  y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.
-- [ ] **N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).
+  y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: en `NetSession` (módulo), 20 s
+  (`ENET_PEER_TIMEOUT_SESSION_MSEC`, MIN = MAX) desde que el host admite al que se une y 45 s mientras
+  alguien puede estar cargando. Como la recarga del host bloquea su poll, los clientes se enteran antes:
+  RPC nuevo `_host_load_timeout(bool)` (reliable, host → clientes, con `flush`), que manda
+  `announce_restart()` (nuevo; `restart_delivery()` lo llama antes del fundido, así ENet puede reenviarlo;
+  `begin_restart()` anuncia solo si nadie lo hizo). El host baja a cada cliente a 20 s con su último
+  `_report_level_ready` pendiente, pasados `settle_delay_seconds` (3 s) y revalidando al vencer
+  (`_reloads_owed`: un reporte viejo no baja nada ni cuenta al cliente listo). `_auth_failed` olvida el
+  timeout del joiner. Hallazgos de `auditor-red` resueltos. `PROTOCOL_VERSION` 12. Tests:
+  `test_net_session` (host y cliente reales por ENet en un proceso: 45 → 20 al admitir con margen, 20 → 45
+  al reiniciar con o sin anuncio, reinicios seguidos, joiner de otra versión), `test_connection_errors`
+  (valores; `restart_delivery()` anuncia antes del fundido con dos `NetworkManager` reales) y `net_pair`
+  (20 s en las dos puntas). Aviso `docs/avisos/2026-09-30-n235-timeout-enet.md`.
+- [x] ~~**N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: `NETLOG ... WARNING slow level load` en
+  `net_pair.gd` / `net_trio.gd` (umbral = presupuesto de carga de `NetworkManager` − 10 s) y línea
+  `WARNING:` (más `::warning::` en GitHub Actions) en `tools/run-net-pair.sh` / `run-net-trio.sh`; sigue
+  siendo PASS.
 
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 

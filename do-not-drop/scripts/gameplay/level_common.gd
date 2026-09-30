@@ -283,6 +283,10 @@ func restart_delivery() -> void:
 	# half (see HudNotices._on_quick_fade_requested), since the
 	# fade-back-in half is moot once the whole tree gets torn down anyway.
 	EventBus.emit_signal(&"quick_fade_requested", 0.3)
+	# Online, every link goes to the level-load timeout now (N-235): the fade
+	# gives ENet time to resend the notice to a client if it's lost, which it
+	# couldn't once the reload below blocks this process.
+	NetworkManager.announce_restart()
 	await get_tree().create_timer(0.15).timeout
 	RunManager.reset_run()
 	# Online, every client reloads too, once this level is back up.
