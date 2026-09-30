@@ -101,7 +101,7 @@ static func roll_seed(p: DeliveryPackage) -> int:
 ## assistant at half strength), an edge from any of them counts.
 static func refresh_combined_input(p: DeliveryPackage) -> void:
 	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0,
-			"direction_pressed": null, "tap": false, "lean": 0.0, "lean_long": 0.0}
+			"direction_pressed": null, "tap": false, "lean": 0.0, "lean_long": 0.0, "directions": []}
 	# The care worker (carrying it) counts in full, like the tender.
 	var worker: int = p._care_worker if p._care_worker not in [p.tender_peer_id, p.assistant_peer_id] else 0
 	for peer_id: int in [p.tender_peer_id, p.assistant_peer_id, worker]:
@@ -120,6 +120,11 @@ static func refresh_combined_input(p: DeliveryPackage) -> void:
 			combined["calm_strength"] = float(combined["calm_strength"]) + weight
 		if combined["direction_pressed"] == null and sample.get("direction_pressed") != null:
 			combined["direction_pressed"] = sample["direction_pressed"]
+		# Every key pressed this tick, once each: the tender and their helper
+		# see the same arrows and may press the same one at the same moment.
+		var pressed: Variant = sample.get("direction_pressed")
+		if pressed != null and not (combined["directions"] as Array).has(pressed):
+			(combined["directions"] as Array).append(pressed)
 		if bool(sample.get("tap", false)):
 			combined["tap"] = true
 	combined["steady"] = float(combined["steady_strength"]) > 0.0
@@ -370,7 +375,7 @@ static func add_care_fields(p: DeliveryPackage) -> void:
 		return
 	var combined: Dictionary = p.player_input.duplicate() if not p.player_input.is_empty() else {
 			"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0, "direction_pressed": null,
-				"tap": false, "lean": 0.0, "lean_long": 0.0}
+				"tap": false, "lean": 0.0, "lean_long": 0.0, "directions": []}
 	for key: String in ["balance", "work", "tool"]:
 		combined[key] = own[key]
 	if bool(combined["work"]):

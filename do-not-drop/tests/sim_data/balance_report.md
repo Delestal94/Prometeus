@@ -11,20 +11,20 @@ Perfiles: ausente; torpe (0,8 s, 60 % de acierto, 20 % de abandono); experto (0,
 | explosive | 100.0% | 45.2% | 0.0% | 100.0% |
 | fragile | 100.0% | 49.2% | 2.8% | 100.0% |
 | growing_weight | 100.0% | 53.6% | 0.0% | 100.0% |
-| hostile | 100.0% | 83.2% | 0.0% | 100.0% |
+| hostile | 100.0% | 50.0% | 0.0% | 100.0% |
 | liquid | 100.0% | 38.0% | 0.0% | 100.0% |
 | noisy | 100.0% | 44.8% | 0.8% | 0.0% |
 
-Antes de N-117.3 (los mismos recorridos con Equilibrio y Líquido de la tanda 1, donde mantener el botón bastaba):
+Antes de N-117.4 (los mismos recorridos con Hostil de antes: órdenes de 11 s y decaimiento de 14 por segundo, que dejaba al torpe en 83 %):
 
 | Trampa | Ausente | Torpe | Experto | Siempre mantiene |
 |---|---:|---:|---:|---:|
-| balance | 100.0% | 45.2% | 0.0% | 0.0% |
+| balance | 100.0% | 46.0% | 0.0% | 100.0% |
 | explosive | 100.0% | 45.2% | 0.0% | 100.0% |
 | fragile | 100.0% | 49.2% | 2.8% | 100.0% |
 | growing_weight | 100.0% | 53.6% | 0.0% | 100.0% |
 | hostile | 100.0% | 83.2% | 0.0% | 100.0% |
-| liquid | 100.0% | 33.6% | 0.0% | 0.0% |
+| liquid | 100.0% | 38.0% | 0.0% | 100.0% |
 | noisy | 100.0% | 44.8% | 0.8% | 0.0% |
 
 El que siempre mantiene pierde el 80 % o más en 6 de 7 trampas (meta de N-117: 5 de 7, cuando cada trampa tenga su acción propia).
@@ -67,8 +67,8 @@ El que siempre mantiene pierde el 80 % o más en 6 de 7 trampas (meta de N-117: 
 | growing_weight | always | 150 ms | 100.0% | 18.0 | 0.0% |
 | hostile | absent | 0 ms | 100.0% | 4.0 | 0.0% |
 | hostile | absent | 150 ms | 100.0% | 4.0 | 0.0% |
-| hostile | clumsy | 0 ms | 83.2% | 19.3 | 9.2% |
-| hostile | clumsy | 150 ms | 79.2% | 20.3 | 11.6% |
+| hostile | clumsy | 0 ms | 50.0% | 16.9 | 22.4% |
+| hostile | clumsy | 150 ms | 48.4% | 17.2 | 22.8% |
 | hostile | expert | 0 ms | 0.0% | 0.0 | 0.0% |
 | hostile | expert | 150 ms | 0.0% | 0.0 | 0.0% |
 | hostile | always | 0 ms | 100.0% | 4.0 | 0.0% |
@@ -96,13 +96,15 @@ El que siempre mantiene pierde el 80 % o más en 6 de 7 trampas (meta de N-117: 
 - explosive: CUMPLE
 - fragile: CUMPLE
 - growing_weight: CUMPLE
-- hostile: FUERA DE OBJETIVO
+- hostile: CUMPLE
 - liquid: CUMPLE
 - noisy: CUMPLE
-- Casi pérdidas esperadas por viaje torpe (7 paquetes): 0.60 (objetivo ≥ 1).
+- Casi pérdidas esperadas por viaje torpe (7 paquetes): 0.73 (objetivo ≥ 1).
 - Resultado interactivo: **REQUIERE AJUSTE**.
 
 `fragile` (N-117, Amortiguá): los recorridos grabados pasan los baches sin golpe (la suspensión se los come, ver `docs/parametros-diseno.md`), así que el arnés le suma a cada recorrido 3 baches a la velocidad de crucero, anunciados como los anuncia el juego. Los choques sin anunciar (que nadie puede amortiguar) son los que ya traen los recorridos grabados (el de la semilla 1085). El torpe y el experto ven el aviso con una atención del 48 % y 95 % y clavan el toque con una dispersión de 0,20 s y 0,05 s alrededor del medio de la ventana (0,35 s). Mantener apretado no protege.
+
+`hostile` (N-117.4): `command_seconds` 11 a 9 y `correct_decay` 14 a 16 por segundo. Con órdenes de 9 s el ausente sigue perdiendo en la primera calma y el que siempre mantiene en las órdenes de soltar; el torpe (que se equivoca el 40 % del tiempo) pasa de 83 % a la mitad. La orden también se lee en la caja (`>:(` soltá, `:)` mantené).
 
 `balance` y `liquid` (N-117.3): el gesto nuevo se modela con los mismos tiempos de reacción, atención y abandono de cada perfil. Equilibrio: mientras el bot mantiene también se inclina hacia el lado contrario (los recorridos grabados siempre se inclinan a la derecha). Líquido: mientras friega alterna izquierda y derecha a 4.5 (torpe) y 5.5 (experto) golpes por segundo, un supuesto del arnés. El que siempre mantiene aprieta el botón y no se inclina ni friega: no protege.
 

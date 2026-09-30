@@ -20,6 +20,8 @@ extends SceneTree
 ## peer reports `tap=1`, read from the care state the host replicates. Every
 ## peer also reports the bomb's code and who reads it, drawn by the host from
 ## the session seed: the three must agree (`code=` and `reader=`).
+## N-117.4: last, the other client is the helper of a growing-weight box and taps
+## its whole sequence alone: every peer reports `assist=1`.
 ## N-117.3: then the same holder scrubs the box, turned into a Liquid one: six
 ## alternating swings over the RPC and every peer reports `scrub=5`.
 ##
@@ -115,12 +117,13 @@ func _report() -> void:
 	var grab: String = await _contest_box()
 	var tap: String = await _tap_box(tap_box)
 	var scrub: String = await _scrub_box(tap_box)
+	var assist: String = await _assist_box(tap_box, grab)
 	var orders: Array = []
 	for order: Dictionary in _level.get_node(^"World/Depot").get(&"orders"):
 		orders.append("%s:%s" % [order.package_id, order.code])
-	print("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s scrub=%s code=%s" % [
+	print("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s scrub=%s assist=%s code=%s" % [
 		_name, int(_network.get(&"world_seed")), (route.get(&"houses") as Array).size(), ",".join(orders),
-		_route_hash(route), phase, grab, tap, scrub, _code_of(code_box)])
+		_route_hash(route), phase, grab, tap, scrub, assist, _code_of(code_box)])
 	# The host stays up a little so the clients' own reads aren't cut short.
 	await _pump(4.0 if _host else 1.0)
 	_network.call(&"leave_session")
@@ -236,6 +239,60 @@ func _scrub_box(box: Node3D) -> String:
 	var final: Dictionary = (box.get(&"care_state") as Dictionary).get("gesture", {})
 	var scrubs: int = int(final.get("scrubs", -1))
 	return str(scrubs) if scrubs == 5 else "FAIL-%d-scrubs" % scrubs
+
+
+## N-117.4 ("Asegurá"): the box becomes a growing-weight one whose tender is the
+## client that holds it and whose helper is the other client; the helper alone
+## sends the whole sequence, key by key, as tender inputs through the real RPC.
+## The host lets the trap run for each and every peer reads from the care state
+## that it was solved once (`assist=1`).
+func _assist_box(box: Node3D, holder: String) -> String:
+	if box == null or not holder.is_valid_int():
+		return "FAIL-no-box"
+	var holder_id: int = int(holder)
+	if _host:
+		await _pump(6.0)
+		var run: Node = root.get_node(^"/root/RunManager")
+		run.set(&"is_running", true)
+		box.set(&"trap_definition", load("res://data/traps/growing_weight.tres"))
+		box.call(&"initialize_trap")
+		var trap: Object = box.get(&"trap_behavior")
+		# Armed and at risk, the state where the helper is let in.
+		trap.set(&"_time_since_solved", 6.0)
+		trap.set(&"mass_multiplier", 1.6)
+		box.call(&"set_tender", holder_id)
+		var helper: int = 0
+		for peer: int in root.multiplayer.get_peers():
+			if peer != holder_id:
+				helper = peer
+		box.call(&"set_assistant", helper)
+		box.call(&"_publish_care")
+	var mine: int = root.multiplayer.get_unique_id()
+	var sender: bool = not _host and mine != holder_id
+	var steps: Array = []
+	var sent: int = 0
+	var last_send: int = 0
+	var deadline: int = Time.get_ticks_msec() + 30000
+	while Time.get_ticks_msec() < deadline:
+		var sequence: Dictionary = (box.get(&"care_state") as Dictionary).get("sequence", {})
+		if int(sequence.get("solved", 0)) >= 1:
+			break
+		if steps.is_empty() and sequence.has("steps") and sequence.get("verb") != null:
+			steps = (sequence["steps"] as Array).duplicate()
+		if sender and not steps.is_empty() and sent < steps.size() and Time.get_ticks_msec() - last_send >= 250:
+			last_send = Time.get_ticks_msec()
+			box.rpc_id(1, &"submit_tender_input", {"direction_pressed": steps[sent], "steady": false})
+			sent += 1
+		elif _host and _has_swing(box):
+			PackageRescue.simulate_cargo(box, 0.1)
+		root.multiplayer.poll()
+		await _pump(0.02)
+	await _pump(1.0)
+	if _host:
+		root.get_node(^"/root/RunManager").set(&"is_running", false)
+	var final: Dictionary = (box.get(&"care_state") as Dictionary).get("sequence", {})
+	var solved: int = int(final.get("solved", -1))
+	return str(solved) if solved == 1 else "FAIL-%d-solved" % solved
 
 
 func _has_swing(box: Node3D) -> bool:

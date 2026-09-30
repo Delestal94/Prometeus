@@ -8,8 +8,8 @@ const TRAP_ORDER: Array[StringName] = [
 const TRAPS: Dictionary = {
 	&"fragile": {
 		"title": "UI_TUT_TRAP_FRAGILE", "glyph": "!", "breaks": "UI_TUT_FRAGILE_BREAKS",
-		"action": "UI_TUT_FRAGILE_ACTION", "keyboard": "W/S", "gamepad": "RT/LT",
-		"control_label": "UI_TUT_CONTROL_DRIVE_SMOOTH",
+		"action": "UI_TUT_FRAGILE_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"control_label": "UI_TUT_CONTROL_CUSHION",
 	},
 	&"balance": {
 		"title": "UI_TUT_TRAP_BALANCE", "glyph": "↔", "breaks": "UI_TUT_BALANCE_BREAKS",

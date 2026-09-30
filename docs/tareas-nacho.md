@@ -228,8 +228,18 @@ pasajero es espectador.
     Equilibrio 100 / 45,2 / 0 y Líquido 100 / 38,0 / 0; Hostil sigue fuera de objetivo desde antes.
   - Red: `net_trio.gd` cubre ahora también un cliente que friega (seis golpes A D A D A D por el RPC, `scrub=5` en
     los tres); el eje `lean` lo cubre `test_trap_gestures.gd` (incluida la limpieza en `submit_care_input`).
-- [ ] **N-117.4** Tanda 3: flechas del asistente en Peso creciente; íconos de verbo sobre cada caja y un
+- [x] **N-117.4** Tanda 3: flechas del asistente en Peso creciente; íconos de verbo sobre cada caja y un
   tip por trampa (`_show_first_trap_tip`); la tarjeta del HUD pasa a ser guía, no el juego.
+  Aviso: `docs/avisos/2026-09-29-n117-tanda3.md`; números en `docs/parametros-diseno.md` ("Tanda 3 de N-117").
+  - Asegurá: el ayudante (`assistant_peer_id`) avanza el mismo paso que el tender; misma flecha a la vez = un paso;
+    un error de cualquiera cuesta lo mismo. `net_trio.gd` cubre a un cliente ayudante completando una secuencia.
+  - Verbo en el mundo: `PackageVerb` + `Box/VerbIcon` (Amortiguá, Contrapesá, Fregá, Abrazalo, Leelo con `:)`/`>:(`,
+    Asegurá con las flechas que faltan); la bomba, su cartel "PEDÍ EL CÓDIGO". Solo mientras la caja pide algo.
+  - Tips: cada uno explica su verbo con la tecla correcta (Frágil y explosivo arreglados).
+  - Tarjeta como guía: revisadas las siete; ninguna se juega leyendo la tarjeta.
+  - Hostil a objetivo: `command_seconds` 9 y `correct_decay` 16; torpe 83,2 a 50,0 %. El resultado global del reporte
+    sigue en "REQUIERE AJUSTE" solo por las casi-pérdidas por viaje torpe (0,73, objetivo ≥ 1: Ruidoso 0 %,
+    Frágil 0,8 %).
 - Abierto (decisión del equipo): qué trampas salen en solo (el único jugador maneja y nadie atiende
   cajas en ruta) y si el conductor aguanta leer el código además de averías y espejo.
 

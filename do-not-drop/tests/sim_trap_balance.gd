@@ -28,15 +28,15 @@ const FRAGILE_FIRST_HIT: float = 15.0
 const FRAGILE_LAST_MARGIN: float = 8.0
 ## How far off the middle of the window a tap lands (s), by profile: timing
 ## a ring is skill, not reaction. Network latency blurs it a little more.
-## % of boxes lost per profile (absent, clumsy, expert, always) just before N-117.3
-## touched Balance and Liquid (the state after N-117.2), measured by this same harness.
-const BEFORE_TANDA_2 := {
-	"balance": [100.0, 45.2, 0.0, 0.0],
+## % of boxes lost per profile (absent, clumsy, expert, always) just before N-117.4
+## touched Hostile (the state after N-117.3), measured by this same harness.
+const BEFORE_TANDA_3 := {
+	"balance": [100.0, 46.0, 0.0, 100.0],
 	"explosive": [100.0, 45.2, 0.0, 100.0],
 	"fragile": [100.0, 49.2, 2.8, 100.0],
 	"growing_weight": [100.0, 53.6, 0.0, 100.0],
 	"hostile": [100.0, 83.2, 0.0, 100.0],
-	"liquid": [100.0, 33.6, 0.0, 0.0],
+	"liquid": [100.0, 38.0, 0.0, 100.0],
 	"noisy": [100.0, 44.8, 0.8, 0.0],
 }
 const TAP_SPREAD := {"clumsy": 0.20, "expert": 0.05}
@@ -333,11 +333,11 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 			cells.append("%.1f%%" % _find_row(rows, trap_id, profile_name, 0).get("ruined_pct", NAN))
 		always_lost += int(_find_row(rows, trap_id, "always", 0).get("ruined_pct", 0.0) >= 80.0)
 		lines.append("| %s | %s |" % [trap_id, " | ".join(cells)])
-	lines.append_array(["", "Antes de N-117.3 (los mismos recorridos con Equilibrio y Líquido de la tanda 1, donde"
-		+ " mantener el botón bastaba):", "", "| Trampa | Ausente | Torpe | Experto | Siempre mantiene |",
+	lines.append_array(["", "Antes de N-117.4 (los mismos recorridos con Hostil de antes: órdenes de 11 s y"
+		+ " decaimiento de 14 por segundo, que dejaba al torpe en 83 %):", "", "| Trampa | Ausente | Torpe | Experto | Siempre mantiene |",
 		"|---|---:|---:|---:|---:|"])
-	for trap_id: String in BEFORE_TANDA_2:
-		var before: Array = BEFORE_TANDA_2[trap_id]
+	for trap_id: String in BEFORE_TANDA_3:
+		var before: Array = BEFORE_TANDA_3[trap_id]
 		lines.append("| %s | %.1f%% | %.1f%% | %.1f%% | %.1f%% |" % [trap_id, before[0], before[1], before[2], before[3]])
 	lines.append_array([
 		"",
@@ -378,6 +378,11 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 		+ " amortiguar) son los que ya traen los recorridos grabados (el de la semilla 1085). El torpe y el experto"
 		+ " ven el aviso con una atención del 48 % y 95 % y clavan el toque con una dispersión de 0,20 s y 0,05 s"
 		+ " alrededor del medio de la ventana (0,35 s). Mantener apretado no protege.",
+		"",
+		"`hostile` (N-117.4): `command_seconds` 11 a 9 y `correct_decay` 14 a 16 por segundo. Con órdenes de 9 s el"
+		+ " ausente sigue perdiendo en la primera calma y el que siempre mantiene en las órdenes de soltar; el torpe"
+		+ " (que se equivoca el 40 % del tiempo) pasa de 83 % a la mitad. La orden también se lee en la caja"
+		+ " (`>:(` soltá, `:)` mantené).",
 		"",
 		"`balance` y `liquid` (N-117.3): el gesto nuevo se modela con los mismos tiempos de reacción, atención y"
 		+ " abandono de cada perfil. Equilibrio: mientras el bot mantiene también se inclina hacia el lado contrario"

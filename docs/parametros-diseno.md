@@ -105,6 +105,27 @@ Porcentaje de cajas perdidas, 0 ms:
   viaje torpe bajan de 0,83 a 0,66 (la de Frágil pasa de 20 % a 0,8 %): el resultado global sigue en
   "REQUIERE AJUSTE" y no lo causa esta tanda.
 
+## Tanda 3 de N-117: Hostil a objetivo (2026-09-29)
+
+Hostil estaba fuera de objetivo desde antes de N-117 (torpe 83,2 %, la tabla del 26/09 decía 36,8 %). Se llevó a
+objetivo con dos parámetros de `data/traps/hostile.tres`, medido con el arnés (5 recorridos × 50 repeticiones):
+
+| Parámetro | Antes → después | Motivo |
+|---|---:|---|
+| `command_seconds` | 11 → 9 s | La orden cambia más seguido y se lee en la caja (`:)` mantené, `>:(` soltá); 9 s alcanzan para que el ausente pierda en la primera calma. |
+| `correct_decay` | 14 → 16 /s | Con 14 el torpe (que se equivoca el 40 % del tiempo) casi siempre perdía; con 16 pierde la mitad. |
+
+| Perfil | Antes | Después |
+|---|---:|---:|
+| Ausente | 100 % | 100 % |
+| Torpe | 83,2 % | 50,0 % (+150 ms: 48,4 %) |
+| Experto | 0 % | 0 % (+150 ms: 0) |
+| Siempre mantiene | 100 % | 100 % |
+
+La respuesta es muy sensible a `correct_decay` (14: 83 %, 16: 50 %, 20: 9 % con órdenes de 11 s). Las casi-pérdidas del torpe
+suben de 9,2 % a 22,4 %. El resultado global del reporte sigue en "REQUIERE AJUSTE" solo por las casi-pérdidas
+esperadas por viaje torpe (0,73, objetivo ≥ 1), con Ruidoso en 0 % y Frágil en 0,8 %.
+
 ## Tanda 2 de N-117: Contrapesá y Fregá (2026-09-29)
 
 Equilibrio y Líquido dejan de ser "mantener el botón". Porcentaje de cajas perdidas, 0 ms, mismos recorridos:
