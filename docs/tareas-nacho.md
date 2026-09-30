@@ -61,11 +61,28 @@ Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red
 se corte mientras carga el nivel (bloquea el poll de ENet 18-34 s en CI), el timeout de ENet quedó fijo en
 45 s toda la sesión: si un jugador crashea, su caja sigue "sostenida", el volante ocupado y su voz activa
 hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 45 s.
-- [ ] **N-235.1** Bajar el timeout de ENet (MIN = MAX ≈ 20 s) una vez admitido el peer (host en
+- [x] ~~**N-235.1** Bajar el timeout de ENet (MIN = MAX ≈ 20 s) una vez admitido el peer (host en
   `_on_peer_connected`, cliente tras `complete_auth`) y volver a 45 s en `begin_restart` / `_remote_restart`
   antes de recargar. `test_connection_errors` ya exige MIN == MAX y MAX ≥ handshake. Con `constructor-red`
-  y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.
-- [ ] **N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).
+  y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: en `NetSession` (módulo), 20 s
+  (`ENET_PEER_TIMEOUT_SESSION_MSEC`, MIN = MAX) desde que el host admite al que se une y 45 s mientras
+  alguien puede estar cargando. Como la recarga del host bloquea su poll, los clientes se enteran antes:
+  RPC nuevo `_host_load_timeout(bool)` (reliable, host → clientes, con `flush`), que manda
+  `announce_restart()` (nuevo; `restart_delivery()` lo llama antes del fundido, así ENet puede reenviarlo;
+  `begin_restart()` anuncia solo si nadie lo hizo). El host baja a cada cliente a 20 s con su último
+  `_report_level_ready` pendiente, pasados `settle_delay_seconds` (3 s) y revalidando al vencer
+  (`_reloads_owed`: un reporte viejo no baja nada ni cuenta al cliente listo). `_auth_failed` olvida el
+  timeout del joiner. Hallazgos de `auditor-red` resueltos. `PROTOCOL_VERSION` 13 (el 12 es de N-109). Tests:
+  `test_net_session` (host y cliente reales por ENet en un proceso: 45 → 20 al admitir con margen, 20 → 45
+  al reiniciar con o sin anuncio, reinicios seguidos, joiner de otra versión), `test_connection_errors`
+  (valores; `restart_delivery()` anuncia antes del fundido con dos `NetworkManager` reales) y `net_pair`
+  (20 s en las dos puntas). Aviso `docs/avisos/2026-09-30-n235-timeout-enet.md`.
+- [x] ~~**N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: `NETLOG ... WARNING slow level load` en
+  `net_pair.gd` / `net_trio.gd` (umbral = presupuesto de carga de `NetworkManager` − 10 s) y línea
+  `WARNING:` (más `::warning::` en GitHub Actions) en `tools/run-net-pair.sh` / `run-net-trio.sh`; sigue
+  siendo PASS.
 
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
@@ -423,7 +440,16 @@ ids aleatorios grandes verifica colores distintos y estables.
   `NetworkManager.color_slot(peer_id)` (host 0, cada joiner el libre más bajo desde que empieza a autenticarse; fuera de
   sesión, el `posmod` de siempre). Viaja en el handshake (`"colors"`) y por el RPC `_sync_color_slots` en cada join, salida
   o auth fallida; señal `color_slots_changed`. `PROTOCOL_VERSION` 9 → 10. `auditor-red`: sin bugs; par y trío en verde.
-- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+- [x] **N-226.2** ~~Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: helper único `PlayerColorSlot.slot(peer_id, tamaño_paleta)`
+  (`scripts/core/player_color_slot.gd`) = `posmod(color_slot(id), paleta)` con el host fijo en 0 (solo y en sala el mismo
+  color); lo usan `crew_progression.gd`, `player.gd`, `player_voice.gd`, `hud_results.gd`, `depot_panel.gd`,
+  `crew_panel.gd` y `hud_notices.gd`, y los que dibujan escuchan `color_slots_changed`. Campaña `CAMPAIGN_VERSION` 2
+  por slot (`"0"`..`"4"`), con migración del 1 (host "yellow" → slot 0) y sin crashear con archivos corruptos o de
+  otra versión; quien se va se guarda con el slot que tenía. Slot liberado: lo hereda el siguiente (documentado, sin
+  reservarlo). Test: `test_crew_progression.gd`. Aviso `2026-09-30-n226-color-por-indice.md`. Queda, fuera de esta
+  tarea: `NetSession._fail` limpia el mapa sin emitir `color_slots_changed` (módulo de red, otra rama) y la prueba
+  multiproceso `net_trio.gd` con `slots=0,1,2`.
   Notas de `auditor-red` (N-226.1): `MAX_PLAYERS` es 8 y la paleta 5, así que se lee `posmod(color_slot(id), paleta.size())`;
   jugando solo el host da 1 y en sala 0 (decidir si solo se lee como 0); un índice liberado lo hereda el próximo que entra
   (mérito/carta por color dentro de la sesión: reservarlo mientras dure o documentarlo); los lectores escuchan también
@@ -502,6 +528,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
 932: están escritos contra `max-file-lines: 1000`, no partidos por responsabilidad. Orden:
 `synth_audio` → `reference_truck` → `route.gd` → `package.gd`.
+- [x] **N-225.1** `synth_audio.gd` **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: 999 → 249 líneas. Los
+  generadores pasan a `synth_audio_vehicle.gd` (160), `synth_audio_world.gd` (253), `synth_audio_handling.gd` (107),
+  `synth_audio_animals.gd` (82), `synth_audio_dsp.gd` (80: costura, normalizado, `Resonator`) y a
+  `synth_audio_traps.gd` (32 → 187); `SynthAudio` queda como puerta con el caché y los mismos accesores y claves
+  (los 43 streams salen byte por byte iguales). Sin `max-line-length` en el módulo (la baseline bajó 3).
+  `test_synth_audio_golden.gd` compara los 43 con lo que daba el archivo único. Aviso:
+  `docs/avisos/2026-09-30-n225-synth-audio-partido.md`.
+- [ ] **N-225.2** `reference_truck.gd` (932). **N-225.3** `route.gd`. **N-225.4** `package.gd` (999). Quedan
+  `player.gd` y `run_manager.gd` fuera del orden.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con

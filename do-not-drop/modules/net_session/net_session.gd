@@ -67,10 +67,31 @@ const JOIN_HANDSHAKE_TIMEOUT: float = 45.0
 ## just later; a clean leave is noticed at once.
 ## MIN must equal MAX: with a settled RTT, ENet's retry rule can disconnect at
 ## MIN, before MAX is reached. Both cover the handshake's level-load budget.
+## This is the budget while either end may be loading: a joiner until the host
+## admits it, and both ends from a host restart until the client is back.
 const ENET_PEER_TIMEOUT_LIMIT: int = 32
 const ENET_PEER_TIMEOUT_MIN_MSEC: int = 45000
 const ENET_PEER_TIMEOUT_MAX_MSEC: int = 45000
+## Once a peer is in and nobody is loading, a peer that went silent (a crash,
+## a pulled cable) is dropped after this long instead: what it held is freed
+## sooner, and a crashed host sends everyone back to the menu sooner. Used as
+## both MIN and MAX, for the reason above (N-235).
+const ENET_PEER_TIMEOUT_SESSION_MSEC: int = 20000
 var _awaiting_handshake: bool = false
+## The ENet timeout this end applies to each peer, {peer_id: msec}: ENet has
+## no getter for it (enet_timeout_msec()).
+var _enet_timeouts: Dictionary = {}
+## Host: how many restarts each client still has to report back from
+## (_report_level_ready). A report from an earlier restart can arrive after the
+## next one was sent; only the last one owed brings its timeout down.
+var _reloads_owed: Dictionary = {}
+## Host: seconds between a client's level being up (admitted, or back from a
+## restart) and both ends dropping to the session timeout. The first frames of
+## a new level can still stall (shader compilation on GL Compatibility), so the
+## load budget holds a little longer. A var so tests can shorten it.
+var settle_delay_seconds: float = 3.0
+## Host: announce_restart() ran and begin_restart() hasn't yet: nobody settles.
+var _restart_announced: bool = false
 ## The level the session plays in. The host records it whenever its own
 ## level is up, so a joiner arriving mid-reload still gets the right one.
 var session_scene: String = ""
@@ -200,7 +221,10 @@ func _end_session() -> void:
 	_reset_session_state()
 	_awaiting_handshake = false
 	_restart_pending = false
+	_restart_announced = false
 	_ready_peers = [HOST_ID]
+	_enet_timeouts.clear()
+	_reloads_owed.clear()
 	if lobby_id != 0 and _steam != null:
 		_steam.call(&"leaveLobby", lobby_id)
 	lobby_id = 0
@@ -434,12 +458,17 @@ func _on_peer_connected(id: int) -> void:
 	_peer_joined(id)
 	roster_changed.emit(peer_ids.duplicate())
 	if multiplayer.is_server():
+		# Its level is loaded: a silent joiner is dropped within the session
+		# timeout from now on (unless a restart is under way).
+		_settle_peer(id)
 		peer_level_ready.emit(id)
 
 
 func _on_peer_disconnected(id: int) -> void:
 	peer_ids.erase(id)
 	_ready_peers.erase(id)
+	_enet_timeouts.erase(id)
+	_reloads_owed.erase(id)
 	_peer_left(id)
 	roster_changed.emit(peer_ids.duplicate())
 
@@ -481,12 +510,99 @@ func _peer_authenticating(id: int) -> void:
 ## host) wait out a level load instead of dropping the other side. Steam
 ## peers keep their own timeouts.
 func _tolerate_level_loads(id: int) -> void:
+	_set_enet_timeout(id, true)
+
+
+# --- ENet timeouts (N-235) -------------------------------------------------------
+#
+# Loading a level blocks the main thread, and with it ENet's polling. Whoever
+# may be blocked, the other end waits the load budget (ENET_PEER_TIMEOUT_MAX_MSEC)
+# for it; otherwise both drop a silent peer within ENET_PEER_TIMEOUT_SESSION_MSEC.
+# Each end sets its own: the host for each client, a client for the host.
+#   joiner   load budget from authenticating until the host admits it, then
+#            the session one (the host says so: _host_load_timeout(false)),
+#            settle_delay_seconds after its level is up;
+#   restart  announce_restart() (or begin_restart(), if nobody announced)
+#            puts the host back on the budget and tells every client
+#            (_host_load_timeout(true)) while the host still polls, so ENet
+#            can resend a lost notice; each client also takes it in
+#            _remote_restart() before its own reload, and both come down
+#            settle_delay_seconds after its last owed report is in.
+
+## What this end tolerates from `id` right now, in ms: the load budget, the
+## session timeout, or 0 (not on ENet, or not a peer of this end).
+func enet_timeout_msec(id: int) -> int:
+	return int(_enet_timeouts.get(id, 0))
+
+
+## Applies the load budget (`loading`) or the session timeout to `id`, MIN =
+## MAX. Steam peers keep their own timeouts.
+func _set_enet_timeout(id: int, loading: bool) -> void:
 	var enet: ENetMultiplayerPeer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
 	if enet == null:
 		return
 	var packet_peer: ENetPacketPeer = enet.get_peer(id)
-	if packet_peer != null:
-		packet_peer.set_timeout(ENET_PEER_TIMEOUT_LIMIT, ENET_PEER_TIMEOUT_MIN_MSEC, ENET_PEER_TIMEOUT_MAX_MSEC)
+	if packet_peer == null:
+		return
+	var msec: int = ENET_PEER_TIMEOUT_MAX_MSEC if loading else ENET_PEER_TIMEOUT_SESSION_MSEC
+	packet_peer.set_timeout(ENET_PEER_TIMEOUT_LIMIT, msec, msec)
+	_enet_timeouts[id] = msec
+
+
+## Host: `id` has its level up and owes no reload: both ends go back to the
+## session timeout, settle_delay_seconds from now if nothing changed by then
+## (a restart announced or begun, a reload owed, the peer or session gone).
+func _settle_peer(id: int) -> void:
+	if not _may_settle(id):
+		return
+	if settle_delay_seconds <= 0.0 or not is_inside_tree():
+		_settle_now(id, multiplayer.multiplayer_peer)
+		return
+	get_tree().create_timer(settle_delay_seconds).timeout.connect(
+		_settle_now.bind(id, multiplayer.multiplayer_peer))
+
+
+func _settle_now(id: int, peer: MultiplayerPeer) -> void:
+	if multiplayer.multiplayer_peer != peer or not multiplayer.get_peers().has(id) or not _may_settle(id):
+		return
+	_set_enet_timeout(id, false)
+	_tell_host_load(id, false)
+
+
+func _may_settle(id: int) -> bool:
+	return not _restart_under_way() and int(_reloads_owed.get(id, 0)) == 0
+
+
+## Host: a restart was announced or begun and the clients haven't reloaded for
+## it yet (level_ready() sends _remote_restart and ends it).
+func _restart_under_way() -> bool:
+	return _restart_pending or _restart_announced
+
+
+## Host: tells a client (or all of them, `id` 0) whether to wait out a load on
+## the host's link. It must leave now: a host about to reload blocks its
+## polling right after. ENet's put_packet already sends at once (the module
+## test checks the notice arrives without the host polling); the flush keeps
+## that true without leaning on it.
+func _tell_host_load(id: int, loading: bool) -> void:
+	var enet: ENetMultiplayerPeer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
+	if enet == null:
+		return
+	if id == 0:
+		_host_load_timeout.rpc(loading)
+	else:
+		_host_load_timeout.rpc_id(id, loading)
+	if enet.host != null:
+		enet.host.flush()
+
+
+## Client: the host says whether it may block on a level load (a restart is
+## under way: the load budget) or everyone is settled (the session timeout).
+@rpc("authority", "call_remote", "reliable")
+func _host_load_timeout(loading: bool) -> void:
+	if multiplayer.is_server():
+		return
+	_set_enet_timeout(HOST_ID, loading)
 
 
 ## The level to hand a joiner: the one up right now, else the last one this
@@ -563,6 +679,11 @@ func level_ready() -> void:
 			session_scene = scene.scene_file_path
 		if _restart_pending:
 			_restart_pending = false
+			# Everyone connected reloads now and owes a report; until the last
+			# one owed is in, the host keeps waiting out their loads.
+			for id: int in multiplayer.get_peers():
+				_reloads_owed[id] = int(_reloads_owed.get(id, 0)) + 1
+				_set_enet_timeout(id, true)
 			_remote_restart.rpc(_restart_state())
 		return
 	if _awaiting_handshake:
@@ -581,37 +702,68 @@ func _report_level_ready() -> void:
 	var id: int = multiplayer.get_remote_sender_id()
 	if not peer_ids.has(id):
 		return
+	_reloads_owed[id] = maxi(int(_reloads_owed.get(id, 0)) - 1, 0)
+	# A report from a restart another one has replaced (begun, or sent and
+	# still owed): that client reloads again and reports again. Counting it
+	# ready now would spawn into a level that is about to go.
+	if _restart_pending or int(_reloads_owed.get(id, 0)) > 0:
+		return
 	if not _ready_peers.has(id):
 		_ready_peers.append(id)
+	_settle_peer(id)
 	peer_level_ready.emit(id)
 
 
 # --- Restart -----------------------------------------------------------------
 
+## Host, as soon as it knows it will reload for a restart (before a fade, say):
+## both ends of every ENet link go back to the load budget now, while the host
+## still polls and ENet can resend the notice if it's lost -- sent right before
+## the reload, a lost one would wait out the whole load. Until begin_restart()
+## nobody settles. A second call changes nothing; begin_restart() does this
+## itself if nobody announced.
+func announce_restart() -> void:
+	if not is_online() or not is_host() or _restart_announced or _restart_pending:
+		return
+	_restart_announced = true
+	for id: int in multiplayer.get_peers():
+		_set_enet_timeout(id, true)
+	_tell_host_load(0, true)
+
+
 ## Host only, right before reloading its level: every client reloads too,
 ## once the host's new level is up (level_ready() sends it then, so nothing
-## is spawned into the old one).
+## is spawned into the old one). The host's reload blocks its polling, so
+## both ends of every link are on the load budget first (announce_restart()).
 func begin_restart() -> void:
 	if not is_online() or not is_host():
 		return
+	announce_restart()
+	_restart_announced = false
 	_restart_pending = true
 	_ready_peers = [HOST_ID]
 	_before_restart()
 
 
 ## A client drops its run and reloads, then reports back (level_ready()).
+## Its own reload blocks its polling: it waits out the host meanwhile, and the
+## host waits for it until the report is in.
 @rpc("authority", "call_remote", "reliable")
 func _remote_restart(state: Dictionary) -> void:
+	_set_enet_timeout(HOST_ID, true)
 	_apply_restart_state(state)
 	get_tree().paused = false
-	get_tree().reload_current_scene.call_deferred()
+	_reload_level()
 
 
 # --- Failures ------------------------------------------------------------------
 
 func _auth_failed(id: int) -> void:
 	if is_host():
-		# A joiner that never made it in: whatever the game gave it goes back.
+		# A joiner that never made it in: whatever the game gave it goes back,
+		# and so does what this end applied to its link.
+		_enet_timeouts.erase(id)
+		_reloads_owed.erase(id)
 		_peer_left(id)
 		return
 	# Emitted from inside SceneMultiplayer.poll() -- its expiry loop, or
@@ -720,6 +872,12 @@ func _restart_state() -> Dictionary:
 
 func _apply_restart_state(_state: Dictionary) -> void:
 	pass
+
+
+## Client, on a host restart, after _apply_restart_state(): reload the level,
+## whose level_ready() then reports back. By default the current scene.
+func _reload_level() -> void:
+	get_tree().reload_current_scene.call_deferred()
 
 
 ## A failure code and its arguments as the player should read it. The

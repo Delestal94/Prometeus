@@ -91,14 +91,14 @@ func _initialize() -> void:
 	await process_frame
 	var body_mesh: MeshInstance3D = _find(player.get_node(^"BodyVisual"), "MeshInstance3D") as MeshInstance3D
 	var shirt := body_mesh.get_surface_override_material(0) as StandardMaterial3D
-	_expect(shirt != null and shirt.albedo_color == Color("f4c562"), "Peer 1's shirt wears its crew colour")
+	_expect(shirt != null and shirt.albedo_color == Color("83e2ba"), "The host (slot 0) wears the first crew colour")
 	_expect(shirt != null and shirt.vertex_color_use_as_albedo, "The crew-coloured shirt keeps the baked occlusion")
 	var trim_tinted: bool = false
 	for surface: int in body_mesh.mesh.get_surface_count():
 		var source: Material = body_mesh.mesh.surface_get_material(surface)
 		if source != null and source.resource_name == "ShirtTrim":
 			var trim := body_mesh.get_surface_override_material(surface) as StandardMaterial3D
-			trim_tinted = trim != null and trim.albedo_color == Color("f4c562").darkened(0.18)
+			trim_tinted = trim != null and trim.albedo_color == Color("83e2ba").darkened(0.18)
 	_expect(trim_tinted, "The T-shirt trim follows the crew colour, a shade darker")
 	_expect(_all_layers(player.get_node(^"BodyVisual"), 2), "Every body mesh of the local player is on LOCAL_BODY")
 
