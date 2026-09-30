@@ -4,6 +4,14 @@ extends Node
 
 enum Type { INSPECTION, IMPATIENT_CLIENT, REAR_DOOR_JAM, MIXED_LABELS, MIMETIC_PACKAGE, PARASITE_BOX, CONFUSING_SHOP }
 
+## Typed handles on the autoloads this file talks to (N-224): a renamed method
+## or property fails when the script compiles, not mid-run. EventBus stays by
+## name on purpose (see _emit_event). crew_progression.gd preloads this file
+## back; Godot resolves that cycle.
+const CREW_PROGRESSION := preload("res://scripts/core/crew_progression.gd")
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
+const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
+
 ## Door jam needs Nacho's truck doors; confusing shop needs a road shop.
 ## Keep their definitions for later, but only draw playable events.
 const ROUTE_POOL: Array[StringName] = [&"inspection", &"impatient_client", &"mixed_labels", &"mimetic_package", &"parasite_box"]
@@ -39,7 +47,7 @@ const EVENTS: Dictionary = {
 var active_event_id: StringName = &""
 var active_event: Dictionary = {}
 var resolved_events: Dictionary = {}
-var crew_progression: Node
+var crew_progression: CREW_PROGRESSION
 var event_bus: Node
 ## houses_assigned arrives before start_run; do not erase it in reset_route.
 var _house_assignments: Array = []
@@ -84,7 +92,7 @@ func begin_random(excluded: Array = []) -> StringName:
 		if event_id == &"mimetic_package":
 			var possible: bool = false
 			for package: DeliveryPackage in _loaded_packages():
-				if int(package.trap_definition.get("difficulty")) > 1:
+				if (package.trap_definition as TrapDefinition).difficulty > 1:
 					possible = true
 			if not possible:
 				continue
@@ -170,24 +178,25 @@ func _resolve(success: bool, peers: Array[int], charge_fine: bool = false) -> vo
 		return
 	var event_id: StringName = active_event_id
 	var data: Dictionary = active_event.duplicate(true)
-	var crew: Node = _crew()
+	var crew: CREW_PROGRESSION = _crew()
 	if success and crew != null:
 		for peer: int in peers:
 			if peer > 0:
 				crew.award_action(peer, StringName("event_%s:%d" % [event_id, peer]), int(data.get("merit", 0)))
 		crew.add_team_money(int(data.get("reward", 0)))
 	elif charge_fine and crew != null:
-		crew.spend(mini(int(data.get("fine", 0)), int(crew.get("team_money"))))
+		crew.spend(mini(int(data.get("fine", 0)), crew.team_money))
 	if crew != null:
 		var bus: Node = _bus()
 		if bus != null:
 			# CrewProgression is host-authoritative; publish the resulting
 			# balance so clients do not keep a stale HUD after a reward/fine.
-			bus.call(&"relay", &"team_money_changed", [int(crew.get("team_money"))])
+			# Relayed by name because a test may swap EventBus for a plain Node.
+			bus.call(&"relay", &"team_money_changed", [crew.team_money])
 	if not success and event_id == &"impatient_client":
-		var run: Node = _run()
+		var run: RUN_MANAGER = _run()
 		if run != null:
-			run.set(&"lost_time_bonus", true)
+			run.lost_time_bonus = true
 	_clear_effects()
 	resolved_events[event_id] = success
 	active_event_id = &""
@@ -211,7 +220,7 @@ func load_snapshot(snapshot: Dictionary) -> void:
 func on_package_impact(package: DeliveryPackage, strength: float) -> void:
 	if not _is_host() or active_event_id != &"mimetic_package" or active_event.get("phase") == &"revealed" or package.package_id != active_event.get("package"):
 		return
-	var params: Dictionary = package.trap_definition.get("params")
+	var params: Dictionary = (package.trap_definition as TrapDefinition).params
 	if strength <= float(params.get("impact_threshold_light", 3.0)):
 		return
 	package.disguise_revealed = true
@@ -230,8 +239,8 @@ func current_prompt() -> String:
 
 
 func use_rescue(peer_id: int) -> bool:
-	var crew: Node = _crew()
-	if not _is_host() or active_event_id.is_empty() or crew == null or not crew.consume_card(peer_id, crew.Card.RESCUE):
+	var crew: CREW_PROGRESSION = _crew()
+	if not _is_host() or active_event_id.is_empty() or crew == null or not crew.consume_card(peer_id, CREW_PROGRESSION.Card.RESCUE):
 		return false
 	return resolve_active(peer_id, StringName(active_event.get("action", &"")), true)
 
@@ -310,17 +319,19 @@ func _prepare_mimic() -> bool:
 	var options: Array[Dictionary] = []
 	for package: DeliveryPackage in _loaded_packages():
 		for path: String in TRAP_PATHS:
-			var candidate: Resource = load(path)
-			if candidate != null and candidate.get("id") in MIMIC_DISGUISE_IDS and candidate.get("id") != package.trap_definition.get("id") and int(candidate.get("difficulty")) <= int(package.trap_definition.get("difficulty")):
+			var candidate: TrapDefinition = load(path) as TrapDefinition
+			var own: TrapDefinition = package.trap_definition as TrapDefinition
+			if candidate != null and candidate.id in MIMIC_DISGUISE_IDS and candidate.id != own.id \
+					and candidate.difficulty <= own.difficulty:
 				options.append({"package": package, "disguise": candidate})
 	if options.is_empty():
 		return false
 	var option: Dictionary = options.pick_random()
 	var package: DeliveryPackage = option["package"]
-	var disguise: Resource = option["disguise"]
-	package.disguise_trap_id = StringName(disguise.get("id"))
+	var disguise: TrapDefinition = option["disguise"]
+	package.disguise_trap_id = disguise.id
 	active_event["package"] = package.package_id
-	active_event["disguise_name"] = String(disguise.call(&"localized_name"))
+	active_event["disguise_name"] = disguise.localized_name()
 	return true
 
 
@@ -359,12 +370,13 @@ func _parasite_peers() -> Array[int]:
 
 func _loose_count() -> int:
 	var count: int = 0
-	var run: Node = _run()
-	var registered: Dictionary = run.get("cargo") if run != null else {}
-	for package: Node in _cargo_nodes():
-		if not registered.is_empty() and not registered.has(package.get("package_id")):
+	var run: RUN_MANAGER = _run()
+	var registered: Dictionary = run.cargo if run != null else {}
+	for node: Node in _cargo_nodes():
+		var package: DeliveryPackage = node as DeliveryPackage
+		if not registered.is_empty() and not registered.has(package.package_id if package != null else null):
 			continue
-		if not bool(package.get("is_loaded")) or bool(package.get("is_open")):
+		if package == null or not package.is_loaded or package.is_open:
 			count += 1
 	return count
 
@@ -411,30 +423,34 @@ func _package_by_id(id: StringName) -> DeliveryPackage:
 
 
 func _peer_count() -> int:
-	var network: Node = get_node_or_null(^"/root/NetworkManager") if is_inside_tree() else null
-	return (network.get("peer_ids") as Array).size() if network != null else 1
+	var network: NETWORK_MANAGER = _network()
+	return network.peer_ids.size() if network != null else 1
 
 
 func _is_host() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager") if is_inside_tree() else null
-	return network == null or bool(network.call("is_host"))
+	var network: NETWORK_MANAGER = _network()
+	return network == null or network.is_host()
 
 
 func _run_active() -> bool:
-	var run: Node = _run()
-	return run != null and bool(run.get("is_running"))
+	var run: RUN_MANAGER = _run()
+	return run != null and run.is_running
 
 
-func _run() -> Node:
-	return get_node_or_null(^"/root/RunManager") if is_inside_tree() else null
+func _network() -> NETWORK_MANAGER:
+	return (get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER) if is_inside_tree() else null
 
 
-func _crew() -> Node:
+func _run() -> RUN_MANAGER:
+	return (get_node_or_null(^"/root/RunManager") as RUN_MANAGER) if is_inside_tree() else null
+
+
+func _crew() -> CREW_PROGRESSION:
 	if crew_progression != null:
 		return crew_progression
 	if not is_inside_tree():
 		return null
-	return get_node_or_null("/root/CrewProgression")
+	return get_node_or_null(^"/root/CrewProgression") as CREW_PROGRESSION
 
 
 func _bus() -> Node:
@@ -444,4 +460,5 @@ func _bus() -> Node:
 func _emit_event(signal_name: StringName, arguments: Array) -> void:
 	var bus: Node = _bus()
 	if bus != null and bus.has_signal(signal_name):
+		# By name on purpose: a test may swap EventBus for a plain Node.
 		bus.call(&"relay", signal_name, arguments)
