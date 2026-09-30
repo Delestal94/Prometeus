@@ -1,5 +1,7 @@
 extends Node
 ## Two-process gameplay race check. Run through tools/run-net-pair.sh.
+## Also checks that the F3 network overlay (N-216) reads the live ENet link
+## on both sides: ping and KB/s in and out (NETSTATS lines).
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -51,6 +53,9 @@ func _load_level() -> void:
 	_level = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	get_tree().root.add_child(_level)
 	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_role(), _seconds(), _seconds() - began])
+	# The F3 overlay (N-216) reads the live ENet link from here on; its last
+	# reading is checked before the client leaves (_overlay_reads_link).
+	_overlay().call(&"set_shown", true)
 
 
 func _run_host() -> void:
@@ -130,6 +135,7 @@ func _run_host() -> void:
 	_expect(client_player.carried_package == package and package.carrier == client_player,
 		"client holds the package before disconnecting")
 	_print_network_metrics("host")
+	_expect(_overlay_reads_link("host"), "host's network overlay reads the client's ENet link")
 	rpc_id(_client_peer_id, &"_client_disconnect_while_carrying", package.get_path())
 	var disconnected: bool = await _wait_until(func() -> bool:
 		return get_tree().root.multiplayer.get_peers().is_empty())
@@ -239,7 +245,10 @@ func _client_disconnect_while_carrying(package_path: NodePath) -> void:
 	var ok: bool = package != null and player != null and player.carried_package == package
 	_finished = true
 	_print_network_metrics("client")
-	print("PAIR role=client %s: disconnect while carrying" % ("PASS" if ok else "FAIL"))
+	var overlay_ok: bool = _overlay_reads_link("client")
+	print("PAIR role=client %s: disconnect while carrying%s" % ["PASS" if ok and overlay_ok else "FAIL",
+		"" if overlay_ok else " (the network overlay did not read the host's link)"])
+	ok = ok and overlay_ok
 	await _pump(0.2)
 	_network.call(&"leave_session")
 	get_tree().quit(0 if ok else 1)
@@ -298,6 +307,23 @@ func _print_network_metrics(role: String) -> void:
 		loss_percent,
 		loss_epoch_ms,
 	])
+
+
+func _overlay() -> Node:
+	return _network.get_node(^"NetStatsOverlay")
+
+
+## The overlay's last reading (it refreshes itself twice a second): LAN, one
+## row for the other side with a ping, and traffic both ways. Prints NETSTATS.
+func _overlay_reads_link(role: String) -> bool:
+	var sample: Dictionary = _overlay().get(&"last_sample")
+	var rows: Array = sample.get("peers", [])
+	var ping: int = int(rows[0].ping_ms) if rows.size() == 1 else -1
+	var in_kbps: float = float(sample.get("in_kbps", -1.0))
+	var out_kbps: float = float(sample.get("out_kbps", -1.0))
+	print("NETSTATS role=%s transport=%s rows=%d ping_ms=%d in_kbps=%.1f out_kbps=%.1f" % [role,
+		sample.get("transport", &"?"), rows.size(), ping, in_kbps, out_kbps])
+	return sample.get("transport") == &"enet" and rows.size() == 1 and ping >= 0 and in_kbps > 0.0 and out_kbps > 0.0
 
 
 func _expect(condition: bool, description: String) -> void:

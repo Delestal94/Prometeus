@@ -223,7 +223,7 @@ cliente con un bug manda basura igual que un tramposo.
 | Validación de RPC | Remitente chequeado en casi todos | NaN/inf, tamaños, rate limit, test | Media |
 | Handshake/versiones | Sí | Regla de subir versión | Baja |
 | Reconexión | Entrar tarde, sí | Retomar el lugar del que se cayó | Media |
-| HUD de red / simulación | `--fake-lag` solo en el camión | HUD + `--net-sim` con Steam | Alta |
+| HUD de red / simulación | F3 y `--net-sim` (N-216, 2026-09-30) | Verlo con Steam real entre dos PCs (N-215) | Hecho |
 | Nagle en Steam | Apagado (2026-09-29) | — | Hecho |
 
 ### 4.2 Mediciones de ancho de banda
@@ -266,7 +266,7 @@ exacto de la prueba. En LAN no se notaba porque ENet no tiene ese límite.
 ## 5. Plan por fases
 
 > Estado al 2026-09-29: ya se hicieron la fase 1 (PR #34, sin la parte de cajas dormidas) y la
-> caja predicha en las manos. Lo que falta está como tareas en `docs/tareas-nacho.md`: N-215 (prueba
+> caja predicha en las manos. El 2026-09-30, la fase 0 (N-216: panel F3 y `--net-sim`, ver el README). Lo que falta está como tareas en `docs/tareas-nacho.md`: N-215 (prueba
 > por Steam), N-216 (fase 0), N-217 (fase 2), N-218 (fase 3) y N-221 (fase 4).
 
 **Fase 0: medir antes de tocar (1 día).**

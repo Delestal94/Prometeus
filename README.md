@@ -386,6 +386,37 @@ manejo):
 <godot> --path do-not-drop -- --autostart
 ```
 
+### Medir la red y simular mala conexión
+
+**F3** abre, en cualquier pantalla, el panel de red de tu máquina: transporte (Steam o LAN) y
+rol, y una fila por conexión con ping, pérdida, KB/s que entran y salen, y bytes en cola, más
+los totales. En Steam los números salen de `Steam.getConnectionRealTimeStatus` (por conexión);
+en LAN, de ENet, que da ping y pérdida por jugador pero el tráfico solo como total y ninguna
+cola. `-- --net-stats` arranca con el panel abierto.
+
+`-- --net-sim=<lag>,<jitter>,<pérdida>` (ms, ms, %) convierte la conexión de ese proceso en una
+mala:
+
+- **Steam:** los sockets de Steam demoran, desordenan en el tiempo y pierden cada paquete, en
+  las dos direcciones (`NETWORKING_CONFIG_FAKE_PACKET_*`). La mitad del lag va a lo que sale y
+  la mitad a lo que entra, así que la ida y vuelta crece en `lag`; cada paquete espera además
+  entre 0 y `jitter` ms en cada dirección, y se pierde el `pérdida` % de los paquetes.
+- **LAN (ENet):** ENet no simula nada, así que solo se retienen las poses del camión en el
+  cliente (el mismo colchón que `--fake-lag`): `lag` más 0 a `jitter` ms tarde, y se pierde el
+  `pérdida` % de las poses.
+
+Pasalo en un solo lado (el cliente): en los dos, se suman. El panel muestra la simulación
+activa.
+
+**Perfil de prueba estándar: 150 ms, ±20 ms y 2 % de pérdida.** Toda feature de red se prueba
+así antes de darla por cerrada (`docs/investigacion-red.md`). `--net-sim` solo, o
+`--net-sim=standard`, es ese perfil:
+
+```
+<godot> --path do-not-drop -- --join=<ip> --net-sim
+<godot> --path do-not-drop -- --net-sim=150,20,2 --net-stats
+```
+
 ## Documentación
 
 ### Vigente (proyecto actual: Take My Package)
