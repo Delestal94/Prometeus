@@ -18,7 +18,9 @@ HUD_CARD_USE_PAD,D-pad izquierda  usar,D-pad left  use
 HUD_CARE_COLLECT,JUNTÁ LAS PIEZAS,PICK UP THE PIECES
 HUD_CARE_COLLECT_DETAIL,Quedan %d en el piso: acercate a cada una y apretá %s.,%d left on the ground: walk up to each one and press %s.
 HUD_CARE_ASK_CODE,PEDÍ EL CÓDIGO,ASK FOR THE CODE
-HUD_CARE_ASK_CODE_DETAIL,"El conductor lo ve en el tablero: pedíselo y tocá las flechas, %s. Si le errás, vuelve a empezar.","The driver reads it on the dashboard: ask for it and tap the arrows, %s. Miss one and it starts over."
+HUD_CARE_ASK,PEDÍ,ASK
+HUD_CARE_ASK_CODE_DETAIL,El conductor ve el código en el tablero: pedíselo y tocá las flechas en orden.,The driver sees the code on the dashboard: ask for it and tap the arrows in order.
+HUD_CARE_ASK_CODE_ON_FOOT,Mantené %s mientras tocás.,Hold %s while you tap.
 HUD_CARE_CUSHION,¡AMORTIGUÁ!,CUSHION IT!
 HUD_CARE_CUSHION_DETAIL,"Un toque de %s justo antes del bache. Mantener apretado no sirve.","One tap of %s right before the bump. Holding it does nothing."
 HUD_CARE_HOLD_DETAIL,Mantené %s: la protege de golpes y curvas.,Hold %s: it shields the box from bumps and turns.
@@ -104,6 +106,8 @@ HUD_HINT_WEIGHT_SECURED,Carga asegurada · la próxima secuencia en %ds,Load sec
 HUD_SALVAGE_RECOVER,¡RECUPERAR!,RECOVER!
 HUD_SHIPPING_UNDECLARED,Contenido sin declarar,Undeclared contents
 HUD_EXPLOSIVE_DEFUSE,DESACTIVAR\n%02d s  %s,DEFUSE\n%02d s  %s
+HUD_BOMB_CODE,CÓDIGO %s · %d s,CODE %s · %d s
+HUD_BOMB_CODE_MORE,+%d,+%d
 HUD_EXPLOSIVE_CODE_SIGN,CÓDIGO\n%02d s  %d/%d,CODE\n%02d s  %d/%d
 HUD_OVERBOARD_RESCUE,¡RESCATAR!\n%d s,RESCUE!\n%d s
 HUD_CARGO_FELL_OFF,Se cayó del camión.,It fell off the truck.

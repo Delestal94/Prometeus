@@ -43,7 +43,10 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 			if bool(state.get("on_foot", false)) else _tr("HUD_CARE_SEQUENCE_SEATED")
 		# The bomb's code is on the driver's dashboard, not on this card.
 		if StringName(sequence.get("reader", &"owner")) == &"driver":
-			return _step(&"sequence", _tr("HUD_CARE_ASK_CODE"), _tr("HUD_CARE_ASK_CODE_DETAIL") % how)
+			var ask: String = _tr("HUD_CARE_ASK_CODE_DETAIL")
+			if bool(state.get("on_foot", false)):
+				ask += " " + _tr("HUD_CARE_ASK_CODE_ON_FOOT") % keys.get("primary", "Clic izq.")
+			return _step(&"sequence", _tr("HUD_CARE_ASK_CODE"), ask)
 		return _step(&"sequence", _tr("HUD_CARE_SEQUENCE"),
 			_tr("HUD_CARE_SEQUENCE_DETAIL") % [String(sequence.get("verb", "Resolver")), how])
 	var cushion: Dictionary = state.get("cushion", {})

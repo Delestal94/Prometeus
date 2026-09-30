@@ -39,6 +39,8 @@ var step_index: int = 0
 var missing: int = 0
 ## The code is on the driver's dashboard: the keycaps stay hidden.
 var hidden_code: bool = false
+## What is written under the key to press: "TAP", or "ASK" when it is a "?".
+var caption: String = ""
 ## Fragile's cushion state as the host published it (CushionState), and when
 ## this frame received it, so the ring keeps closing between updates.
 var cushion: Dictionary = {}
@@ -146,6 +148,7 @@ func show_step(new_step: StringName, data: Dictionary) -> void:
 	step_index = index
 	missing = new_missing
 	hidden_code = StringName(sequence.get("reader", &"owner")) == &"driver"
+	caption = tr("HUD_CARE_ASK") if hidden_code else tr("HUD_CARE_TAP")
 	if new_cushion != cushion:
 		_cushion_at = _time
 	cushion = new_cushion
@@ -319,7 +322,7 @@ func _draw_sequence(center: Vector2) -> void:
 			_draw_ripple(key_center, 0.9, 30.0)
 			_draw_key(key_center + Vector2(0, -absf(sin(_time * 6.0)) * 7.0), glyph, direction, false, false, border,
 				1.0, true)
-			_draw_text(tr("HUD_CARE_TAP"), key_center + Vector2(0, cap * 0.5 + 24), 16, UiThemeScript.INK)
+			_draw_text(caption, key_center + Vector2(0, cap * 0.5 + 24), 16, UiThemeScript.INK)
 		else:
 			_draw_key(key_center, glyph, direction, false, false, border, 0.86, false, 0.4)
 

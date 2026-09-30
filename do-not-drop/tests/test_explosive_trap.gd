@@ -12,8 +12,8 @@ extends SceneTree
 ##   driver never names an arrow, and the care state says who reads it
 ##   (PackageRescue.reader_for(), the sequence state's "reader");
 ## - the dashboard lists the codes the driver has to read out, the soonest
-##   first, and leaves out boxes the owner reads themselves; its screen shows at
-##   most two of them, with a "+N" for the rest, and hides the line with none.
+##   first, and leaves out boxes the owner reads themselves; its screen shows one
+##   of them, with a "+N" for the rest, and hides the line with none.
 
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 const ARROWS: Array[String] = ["↑", "↓", "←", "→"]
@@ -237,10 +237,10 @@ func _test_dashboard_screen() -> void:
 		boxes.append(box)
 	gps.refresh()
 	_expect(gps.code_label.visible, "A bomb the driver reads shows its code")
-	var lines: PackedStringArray = gps.code_label.text.split("\n")
-	_expect(lines.size() == 2, "At most two codes at once (%d lines)" % lines.size())
-	_expect(lines[0].contains("5") and lines[0].contains("↑ ← ↓"), "The soonest comes first (%s)" % gps.code_label.text)
-	_expect(lines[1].contains("8") and lines[1].contains("+1"), "The rest is counted (%s)" % gps.code_label.text)
+	var text: String = gps.code_label.text
+	_expect(not text.contains("\n"), "One line on the screen (%s)" % text)
+	_expect(text.contains("5") and text.contains("↑ ← ↓") and text.contains("+2"),
+		"The soonest comes first, the rest is counted (%s)" % text)
 	_expect(gps.code_label.modulate == DashboardGps.ALERT, "Under six seconds it turns to the alert colour")
 	for box: DeliveryPackage in boxes:
 		box.care_state = {"sequence": {"steps": [&"up"], "index": 0, "seconds": 9.0, "reader": &"owner"}}

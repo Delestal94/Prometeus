@@ -636,7 +636,7 @@ func _build_cushion_ring(box_size: Vector3) -> void:
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.93
 	torus.outer_radius = 1.0
-	torus.rings = 32
+	torus.rings = 56
 	torus.ring_segments = 8
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -679,7 +679,7 @@ func _apply_cushion() -> void:
 	_cushion_ring.scale = Vector3(radius, radius, radius)
 	var color: Color = Color(1.0, 0.8, 0.25, 0.9)
 	if not bool(snapshot.get("ready", true)):
-		color = Color(0.7, 0.7, 0.7, 0.45)
+		color = Color(0.5, 0.5, 0.5, 0.65)
 	elif eta <= float(snapshot.get("window", 0.35)):
 		color = Color(0.35, 1.0, 0.6, 1.0)
 	(_cushion_ring.material_override as StandardMaterial3D).albedo_color = color

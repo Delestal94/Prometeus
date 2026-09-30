@@ -75,6 +75,8 @@ var interaction_icon: TextureRect
 var interaction_prompt: String = ""
 var ping_label: Label
 var ping_indicator: Label
+## The driver's line with the bomb's code (HudNotices.refresh_bomb_code()).
+var code_label: Label
 var ping_seconds_left: float = 0.0
 var event_label: Label
 var event_seconds_left: float = 0.0
@@ -429,6 +431,18 @@ func _build_floating_labels() -> void:
 	ping_indicator.offset_right = 130
 	ping_indicator.offset_top = -190
 	ping_indicator.offset_bottom = -145
+	# Big, on a plate, just under the callouts: what the driver reads out loud.
+	code_label = UiTheme.floating_label(hud_layer, "", 44, YELLOW, 640, 0)
+	# Upper third, not the centre: the middle of the screen is the road the
+	# driver is watching (revisor-visual, N-117.2).
+	code_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	code_label.offset_left = -320
+	code_label.offset_right = 320
+	code_label.offset_top = 104
+	code_label.offset_bottom = 174
+	code_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	code_label.remove_theme_font_override("font")
+	_plate(code_label, Color(INK, 0.88), INK)
 	# Under the van's numbers, in the same column, sized to its text.
 	toast_label = UiTheme.floating_label(_right_column, "", 18, MINT, 400, 0)
 	toast_label.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -559,11 +573,12 @@ func _process(delta: float) -> void:
 	cargo.refresh_state_pulses()
 	prompts.refresh_sound_subtitle()
 	notices.refresh_deadline()
+	notices.refresh_bomb_code()
 	notices.process_notices(delta)
 	var event_pulse: float = 0.84 + sin(Time.get_ticks_msec() * 0.008) * 0.16
 	event_label.modulate.a = event_pulse if not event_label.text.is_empty() else 1.0
 	# The plated messages (_plate()) would show an empty plate otherwise.
-	for plated: Label in [event_label, toast_label, interaction_label]:
+	for plated: Label in [event_label, toast_label, interaction_label, code_label]:
 		plated.visible = not plated.text.is_empty()
 	cargo_card.visible = cargo_rows_box.get_child_count() > 0
 	if overlay_mode == "pause" and not soft_pause and not get_tree().paused:
