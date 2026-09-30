@@ -25,6 +25,15 @@ const LIGHT_COLOR := Color("ffd27a")
 const SIGN_COLOR := Color("ffc93c")
 ## Deeper than the sign's yellow: against a pale sky it has to pop.
 const BALLOON_COLOR := Color("ffae00")
+const BALLOON_KNOT_COLOR := Color("c77800")
+## Lit, top-glowing, fog-free (N-318.2): see the shader's header.
+const BALLOON_SHADER: Shader = preload("res://shaders/house_balloon.gdshader")
+## Its own glow, as a share of its colour, by day and at full night
+## (LowpolyMaterials.night_level): by day low enough that the sun still shades
+## it, at night enough to stay a warm spot on a dark sky -- the moon is faint
+## and often behind it.
+const BALLOON_GLOW_DAY: float = 0.45
+const BALLOON_GLOW_NIGHT: float = 0.8
 const POST_COLOR := Color("5b4a3a")
 const INK := Color("1e2235")
 const FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
@@ -72,6 +81,7 @@ var number_label: Label3D
 var _bulb_material: StandardMaterial3D
 var _halo: MeshInstance3D
 var _bob: Tween
+static var _balloon_materials: Dictionary = {}
 
 
 func _ready() -> void:
@@ -242,24 +252,55 @@ func _build_balloon() -> void:
 	var string := _box(balloon, Vector3(0.025, height, 0.025), Vector3(0.0, height * 0.5, 0.0), Color("3a3a3a"))
 	string.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var ball := MeshInstance3D.new()
+	ball.name = "BalloonBall"
 	var sphere := SphereMesh.new()
 	sphere.radius = BALLOON_RADIUS
 	sphere.height = BALLOON_RADIUS * 2.3
-	sphere.radial_segments = 12
-	sphere.rings = 6
+	sphere.radial_segments = 16
+	sphere.rings = 8
 	ball.mesh = sphere
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = BALLOON_COLOR
-	# Fog would wash it to the grey of the sky, the one thing it must not be.
-	material.disable_fog = true
-	ball.material_override = material
+	ball.material_override = _balloon_material(BALLOON_COLOR)
 	ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ball.position = Vector3(0.0, height + BALLOON_RADIUS, 0.0)
 	balloon.add_child(ball)
+	# The knot where the string ties on: a small darker cone under the ball,
+	# so it reads as a balloon and not a floating yellow egg. A child of the
+	# ball, so it bobs with it.
+	var knot := MeshInstance3D.new()
+	knot.name = "Knot"
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.02
+	cone.bottom_radius = 0.16
+	cone.height = 0.22
+	cone.radial_segments = 8
+	cone.rings = 1
+	knot.mesh = cone
+	knot.material_override = _balloon_material(BALLOON_KNOT_COLOR)
+	knot.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	knot.position = Vector3(0.0, -BALLOON_RADIUS * 1.15 - 0.06, 0.0)
+	ball.add_child(knot)
 	_bob = create_tween().set_loops()
 	_bob.tween_property(ball, "scale", Vector3.ONE * 1.1, BALLOON_BOB_SECONDS * 0.5).set_trans(Tween.TRANS_SINE)
 	_bob.tween_property(ball, "scale", Vector3.ONE * 0.9, BALLOON_BOB_SECONDS * 0.5).set_trans(Tween.TRANS_SINE)
+
+
+## Lit like everything else, so the sun and the moon give it a bright side,
+## a dark side and a glint (unshaded, it read as a flat yellow disc, N-318.2),
+## plus a glow of its own, brighter on top, so it stays round and stands out
+## at night and far off by day without blowing out. No fog: it would wash it
+## to the grey of the sky, the one thing it must not be. One material per
+## (colour, darkness) for every house, shared.
+static func _balloon_material(color: Color) -> ShaderMaterial:
+	var night: float = LowpolyMaterials.night_level
+	var key: String = "%s|%.2f" % [color.to_html(), night]
+	if _balloon_materials.has(key):
+		return _balloon_materials[key]
+	var material := ShaderMaterial.new()
+	material.shader = BALLOON_SHADER
+	material.set_shader_parameter(&"albedo", color)
+	material.set_shader_parameter(&"glow", lerpf(BALLOON_GLOW_DAY, BALLOON_GLOW_NIGHT, night))
+	_balloon_materials[key] = material
+	return material
 
 
 ## The V's front tip: ahead of the house's front (porch, eaves), beside the path.

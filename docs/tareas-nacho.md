@@ -413,9 +413,24 @@ Hecho cuando (1) se verificó primero si el hueco es geometría rota: test en `t
 huecos sobre el portal fuera del túnel; (2) el globo del cartel tiene detalle (emisión bajada, sin píxeles
 saturados en >5 % del globo, medido en la captura) y entra entero en el encuadre; (3) el granero recibe luz (luminancia
 media medida); (4) la sombra de la loma con borde suave. Capturas antes/después con `revisor-visual`.
-- [ ] **N-318.1** Diagnosticar el hueco de `render_tunnel_side.png` (geometría vs. luz) y corregirlo. Con `cazador-bugs`; tests `route_terrain`, `more_route_segments`.
-- [ ] **N-318.2** Cartel y granero (emisivo, luz, encuadre del script). Con `artista-shaders`; captura `render_route_dressing.gd`.
+- [x] **N-318.1** ~~Diagnosticar el hueco de `render_tunnel_side.png` (geometría vs. luz) y corregirlo. Con `cazador-bugs`; tests `route_terrain`, `more_route_segments`.~~
+  **[x] Hecho (2026-09-30, sesión de arte)** — era geometría: la loma sube 11,4 m en ~3 m detrás de la fachada y
+  `_in_tunnel_bore()` sacaba la celda de 2 m entera, con su borde trasero por encima del Backfill del modelo (tapa 9,3 →
+  6,95 m): una ventana de ~3,7 × 8 m bajo el terreno por la que se veía el cielo. `route_terrain.gd` `_tunnel_shelf()`
+  deja la loma en un escalón a `crown + 0,75` justo detrás del portal (medidas del Backfill nombradas en
+  `RailCrossingSegment.BACKFILL_*`). `test_route_terrain` `_check_tunnel_hill_gaps()` (0° y 33°): el borde del hueco
+  daba 11,40 m y ahora 6,84 / 6,91 m (límite 6,95).
+- [x] **N-318.2** ~~Cartel y granero (emisivo, luz, encuadre del script). Con `artista-shaders`; captura `render_route_dressing.gd`.~~
+  **[x] Hecho (2026-09-30, sesión de arte)** — el globo pasa de unshaded a `shaders/house_balloon.gdshader` (lo iluminan
+  sol y luna, brillo propio más fuerte arriba y de noche, borde fresnel, sin niebla) con nudo, y el plano de la casa lo
+  encuadra entero; saturados < 5 % (noche 0,7-1,8 %, día 0,3-3,4 %). El granero salía negro de noche a contraluz porque
+  su rojo puro no devuelve la luz fría: `LowpolyMaterials.LIFTED` lo aclara con el mismo tono (pared a contraluz de noche
+  0,042 → 0,056, aplastados 25 % → 3 %; con luna 0,125 → 0,163; de día en sombra 0,290 → 0,313). Plano nuevo
+  `render_route_barn.png` (seed 12 de día, `--seed=4` de noche). Tests `test_house_waiting_marker`, `test_baked_ao`.
 - [ ] **N-318.3** Suavizar la sombra de la loma sobre la calzada. Con `constructor-mundo`.
+  Intento 2026-09-30 (sesión de arte): no se llegó a hacer (el agente se cortó). Pista: `render_rail_tunnel.gd` arma
+  un `DirectionalLight3D` pelado; el sol del juego (`level_base.tscn`) ya tiene `shadow_blur = 1,6` y
+  `directional_shadow_blend_splits`. Primero comprobar si el borde duro es solo de la captura.
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
