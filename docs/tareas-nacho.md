@@ -1969,16 +1969,16 @@ Hoy toda caja arruinada tira el mismo confeti de cubitos.
 - [x] (commit `60c4dc4`) `UiTheme.button()` conecta hover/press automáticamente, así todos los botones suenan.
 - [x] (commit `60c4dc4`) Test: cada botón de `main_menu.gd` tiene el sonido conectado; el volumen de efectos lo afecta.
 
-#### S-402 · Voces sin palabras ("gibberish") — B · `Opus 5.5 · xhigh` · Aviso: no
+#### S-402 · Voces sin palabras ("gibberish") — B · `Opus 5.5 · xhigh` · Aviso: no · **[x] PR #62**
 
 **Actuación de voz (decisión)**: el MVP no tiene voces grabadas (costo, localización). En su
 lugar, balbuceo sintetizado estilo Animal Crossing, con tono propio por color de jugador.
 
-- [ ] Síntesis de sílabas con formantes (3-4 vocales, 60-120 ms cada una), tono base por
+- [x] Síntesis de sílabas con formantes (3-4 vocales, 60-120 ms cada una), tono base por
   `PLAYER_COLORS`, por el bus `Voice`. En `scripts/gameplay/player/player_voice.gd`.
-- [ ] Disparadores: ping (según la opción de la rueda), golpe fuerte (el flinch de la vieja #12), ragdoll, entrega
+- [x] Disparadores: ping (según la opción de la rueda), golpe fuerte (el flinch de la vieja #12), ragdoll, entrega
   intacta, caja arruinada propia.
-- [ ] Opción de volumen "Voces" ya existe: verificar que lo respeta.
+- [x] Opción de volumen "Voces" ya existe: verificar que lo respeta.
 
 #### S-403 · Stingers de resultado y desbloqueo — B · `Opus 5.5 · high` · Aviso: no
 

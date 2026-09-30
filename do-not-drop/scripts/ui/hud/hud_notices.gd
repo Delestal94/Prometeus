@@ -95,6 +95,8 @@ func _speak(peer_id: int, label: String) -> void:
 		for player: Node in get_tree().get_nodes_in_group(&"player"):
 			if player is Node3D and player.get_multiplayer_authority() == peer_id:
 				parent = player
+	# The Voice bus, so the "Voces" slider owns it (S-402).
+	var bus_name: StringName = &"Voice" if AudioServer.get_bus_index(&"Voice") >= 0 else &"Master"
 	var old: Node = parent.get_node_or_null(^"CalloutVoice")
 	if old != null:
 		old.free()
@@ -106,14 +108,14 @@ func _speak(peer_id: int, label: String) -> void:
 		voice_3d.position = Vector3(0.0, 1.7, 0.0)
 		voice_3d.volume_db = WorldMix.CALLOUT_VOICE_DB
 		voice_3d.stream = stream
-		voice_3d.bus = &"SFX" if AudioServer.get_bus_index(&"SFX") >= 0 else &"Master"
+		voice_3d.bus = bus_name
 		voice_3d.finished.connect(voice_3d.queue_free)
 		voice = voice_3d
 	else:
 		var voice_flat := AudioStreamPlayer.new()
 		voice_flat.volume_db = WorldMix.CALLOUT_VOICE_DB
 		voice_flat.stream = stream
-		voice_flat.bus = &"SFX" if AudioServer.get_bus_index(&"SFX") >= 0 else &"Master"
+		voice_flat.bus = bus_name
 		voice_flat.finished.connect(voice_flat.queue_free)
 		voice = voice_flat
 	voice.name = "CalloutVoice"

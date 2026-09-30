@@ -86,6 +86,8 @@ func _initialize() -> void:
 	if from_head is AudioStreamPlayer3D:
 		_expect((from_head as AudioStreamPlayer3D).stream == SynthAudio.callout_voice(7 % 5, 3),
 			"The crewmate's voice uses their colour slot and the phrase's syllables")
+		_expect((from_head as AudioStreamPlayer3D).bus == &"Voice",
+			"The callout babble is on the Voice bus, so the Voces slider owns it (S-402)")
 	bus.emit_signal(&"ping_sent", int(network.call(&"local_id")), Vector3.ZERO, "¡Frená!")
 	_expect(not hud.find_children("CalloutVoice", "AudioStreamPlayer", true, false).is_empty(),
 		"Your own callout is voiced flat, without a body to hang it from")
