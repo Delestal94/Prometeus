@@ -412,7 +412,7 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
 - [x] ~~Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
   se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
   Necesita PC (editor de Godot con ventana; la toma la sesión de arte).~~
-  **[x] Hecho (2026-09-30, sesión de arte)** — `scripts/tools/texture_import_3d.gd` pone `compress/mode=2`
+  **[x] Hecho (2026-09-30, sesión de arte, b0a16d1)** — `scripts/tools/texture_import_3d.gd` pone `compress/mode=2`
   (VRAM, S3TC/BPTC), mipmaps y `detect_3d` apagado en todo `assets/textures/{detail,terrain,cargo}` y
   `Godot --headless --import` reescribe los `.import` (decisión 7 de `docs/decisiones/2026-09-30-preguntas-auditoria.md`):
   14 texturas (10 de detalle, 3 de terreno, la etiqueta del courier). Las otras de la cuenta de 35 no eran 3D o no
