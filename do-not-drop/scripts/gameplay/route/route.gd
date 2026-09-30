@@ -339,7 +339,7 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 		var road_slots: Array[Transform3D] = segment.get_dressing_slots(10.0)
 		road_slots.append(Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset))
 		for i: int in range(road_slots.size() - 1):
-			terrain.add_span((cursor * road_slots[i]).origin, (cursor * road_slots[i + 1]).origin, segment is GravelSegment, 3.0 if segment is NarrowBridgeSegment else 6.0)
+			terrain.add_span((cursor * road_slots[i]).origin, (cursor * road_slots[i + 1]).origin, segment is GravelSegment or segment is MudSegment, 3.0 if segment is NarrowBridgeSegment else 6.0)
 		# Where this segment's own stretch of _path_points starts and ends --
 		# _clamp_river_reach() needs it to tell "another part of the road" a
 		# river might run into from the river's own straight stretch under it.

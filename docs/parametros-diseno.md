@@ -391,12 +391,14 @@ con estas reglas, que `test_route_pacing` revisa en 200 semillas:
 
 | Regla | Valor |
 |---|---|
-| Siempre pasa algo: tramo difícil (chicana, puente angosto, curva en S, ripio, obras, cruce de tren), curva cerrada o parada en una casa | al menos cada `MOMENT_SPACING` = 250 m |
+| Siempre pasa algo: tramo difícil (chicana, puente angosto, curva en S, ripio, obras, cruce de tren, barro), curva cerrada o parada en una casa | al menos cada `MOMENT_SPACING` = 250 m |
 | Curva cerrada | `SHARP_CURVE_DEG` = 45° o más |
 | Dos tramos difíciles seguidos | nunca |
 | Llegada tranquila a cada casa: solo recta o curva suave | últimos `QUIET_ZONE` = 80 m; curva suave hasta `GENTLE_CURVE_DEG` = 30° |
 | Arranque sin obstáculos ni curvas | primeros `SAFE_START_LENGTH` = 100 m (antes 150) |
 | Dificultad creciente | peso de los tramos difíciles de 0,25 a 2,5 a lo largo de la entrega, la misma curva que Endless |
+| Barro (`MudSegment`, N-108): raro, cuenta como difícil, nunca en la llegada tranquila | peso fijo `MUD_WEIGHT` = 0,2; como mucho uno por entrega; en Endless no antes de 300 m ni dos a menos de 600 m |
+| Barro: salidas | cada pasajero a pie empujando suma 1/20 del avance por segundo (el motor solo, 1/90); eslinga de la tienda ($30): sale de una vez; grúa a los 45 s atascados, multa $40 (nunca deja el saldo en negativo; **en Endless la grúa no cobra**: Endless no paga nada, solo cuesta el tiempo); una sola vez por tramo (liberado, no se vuelve a hundir ahí); si la partida termina atascados, se cancela sin multa |
 
 Resultado en 200 semillas: los tramos difíciles pasan de ser minoría en la primera mitad de la
 entrega a ser más frecuentes en la segunda (el test imprime los porcentajes).

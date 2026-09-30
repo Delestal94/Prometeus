@@ -79,6 +79,7 @@
 | Señal de puente angosto | `…/sm_env_sign_narrow_bridge.glb` | ✅ | Antes de `NarrowBridgeSegment` / `ChicaneSegment`. |
 | Señal de ripio | `…/sm_env_sign_gravel.glb` | ✅ | Antes de `GravelSegment`. |
 | Señal de obras | `…/sm_env_sign_roadworks.glb` | ✅ | Antes de `ConstructionZoneSegment`. |
+| Señal de barro | (usa `sm_env_sign_gravel.glb` y el cartel propio "¡BARRO!" del tramo) | ⏳ | `MudSegment` (N-108): falta un modelo propio; necesita la PC. |
 | Cartel "entrega adelante" | `…/sm_env_sign_delivery_ahead.glb` | ✅ | ~80 m antes de cada casa, del lado de la casa. |
 | Guardarraíl (4 m) | `models/environment/props/sm_env_prop_guardrail.glb` | ✅ | Del lado de afuera de cada `CurveSegment`, cada 4 m. |
 | Baranda de puente (6 m) | `…/sm_env_prop_bridge_railing.glb` | ✅ | En `NarrowBridgeSegment` (`RAILING_MODEL`); la colisión sigue siendo la de código. |

@@ -17,6 +17,10 @@ const CROSSING_CHANCE: float = 0.12
 const CROSSING_MIN_GAP: float = 300.0
 const CROSSING_FIRST_AT: float = 120.0
 var _last_crossing_distance: float = -INF
+## Endless mud (N-108): none in the first metres, and spaced out.
+const MUD_FIRST_AT: float = 300.0
+const MUD_MIN_GAP: float = 600.0
+var _last_mud_distance: float = -INF
 ## Every model the Endless pool's segments instance (N-219): read on a
 ## background thread from the start of the level, so the first bridge, tunnel
 ## or roadworks does not load them in the physics tick that builds it. A new
@@ -41,8 +45,10 @@ func _init() -> void:
 		StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
 		SCurveSegment, GravelSegment, ConstructionZoneSegment, TunnelSegment,
 		CurveSegment, CurveSegment,  # weighted up: this is the one that turns
+		MudSegment,  # rare (RoutePlanner.MUD_WEIGHT): the crew gets the truck out together
 	]
-	hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment]
+	hard_segments = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment, ConstructionZoneSegment,
+			MudSegment]
 
 
 func _ready() -> void:
@@ -66,7 +72,24 @@ func _session_seed() -> int:
 	return int(network.get(&"world_seed")) if network != null else 0
 
 
+## Mud (N-108) is rare, comes after the first stretch and never twice within
+## MUD_MIN_GAP metres; if that leaves nothing, the rule gives way.
+func _limit_candidates(candidates: Array[Script]) -> Array[Script]:
+	if _next_distance >= MUD_FIRST_AT and _next_distance - _last_mud_distance >= MUD_MIN_GAP:
+		return candidates
+	var without_mud: Array[Script] = candidates.filter(func(s: Script) -> bool: return s != MudSegment)
+	return without_mud if not without_mud.is_empty() else candidates
+
+
+func _pick_weight(script: Script, hard_weight: float) -> float:
+	if script == MudSegment:
+		return RoutePlanner.MUD_WEIGHT
+	return super(script, hard_weight)
+
+
 func _on_segment_spawned(segment: RouteSegment) -> void:
+	if segment is MudSegment:
+		_last_mud_distance = _next_distance
 	var roll: float = _rng.randf()
 	var side: float = -1.0 if _rng.randf() < 0.5 else 1.0
 	if not segment is StraightSegment or _next_distance < CROSSING_FIRST_AT:

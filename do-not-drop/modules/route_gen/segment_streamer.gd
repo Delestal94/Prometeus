@@ -289,13 +289,14 @@ func _pick_next_script() -> Script:
 			candidates = easy_candidates
 	if _straight_streak >= MAX_STRAIGHT_STREAK and candidates.has(CurveSegment):
 		candidates = [CurveSegment]
+	candidates = _limit_candidates(candidates)
 	var hard_weight: float = hard_weight_at(_next_distance)
 	var total: float = 0.0
 	for script: Script in candidates:
-		total += hard_weight if hard_segments.has(script) else 1.0
+		total += _pick_weight(script, hard_weight)
 	var roll: float = _rng.randf() * total
 	for script: Script in candidates:
-		roll -= hard_weight if hard_segments.has(script) else 1.0
+		roll -= _pick_weight(script, hard_weight)
 		if roll <= 0.0:
 			return script
 	return candidates[-1]
@@ -326,6 +327,20 @@ func _cull_behind() -> void:
 
 
 # --- Hooks the game fills in ---------------------------------------------------
+
+## The odds of a type in the draw: a hard one weighs `hard_weight` (the ramp
+## at this distance), an easy one 1. The game overrides it for rarities.
+func _pick_weight(script: Script, hard_weight: float) -> float:
+	return hard_weight if hard_segments.has(script) else 1.0
+
+
+## Last word on the candidates after the built-in rules (no repeat, no three
+## hard in a row, the forced bend): the game takes out types that are not
+## allowed yet (a rare one too soon after the last). Must not return an empty
+## array; if nothing is left, return `candidates` as it came.
+func _limit_candidates(candidates: Array[Script]) -> Array[Script]:
+	return candidates
+
 
 ## The number every peer's road is built from; 0 randomizes.
 func _session_seed() -> int:

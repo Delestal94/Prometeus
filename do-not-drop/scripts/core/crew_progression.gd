@@ -76,6 +76,11 @@ const SUPPLIES := {
 		"detail": "UI_SUPPLY_SPARE_PART_DETAIL",
 		"cost": 100,
 	},
+	&"tow_strap": {
+		"title": "UI_SUPPLY_TOW_STRAP",
+		"detail": "UI_SUPPLY_TOW_STRAP_DETAIL",
+		"cost": 30,
+	},
 }
 
 var team_money: int = STARTING_MONEY

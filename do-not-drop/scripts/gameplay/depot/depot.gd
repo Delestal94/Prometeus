@@ -324,6 +324,8 @@ func begin_run(vehicle: Node3D, loaded: Array) -> void:
 	var hook: Node = vehicle.get_node_or_null(^"RescueHook")
 	if taken.has(&"rescue_hook") and hook != null:
 		hook.call(&"arm")
+	# The tow strap (N-108) is read by the mud segments off the truck itself.
+	vehicle.set_meta(&"tow_straps", 1 if taken.has(&"tow_strap") else 0)
 	var faults: Node = get_tree().get_first_node_in_group(&"vehicle_faults")
 	if taken.has(&"spare_part") and faults != null:
 		faults.call(&"stock_spares", 1)

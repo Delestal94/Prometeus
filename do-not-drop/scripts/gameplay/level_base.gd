@@ -194,6 +194,10 @@ func _emit_hud_signals(delta: float, progress: float) -> void:
 
 
 func _should_count_as_stuck() -> bool:
+	# In the mud (MudSegment, N-108) a truck that can't move is not a soft
+	# lock: the crew pushes it out or the crane comes.
+	if bool(vehicle.get_meta(&"in_mud", false)):
+		return false
 	if vehicle.linear_velocity.length() >= STUCK_SPEED or absf(vehicle.engine_force) <= 0.0:
 		return false
 	if int(vehicle.get(&"driver_peer_id")) == 0:

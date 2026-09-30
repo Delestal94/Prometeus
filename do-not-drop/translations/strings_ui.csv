@@ -511,6 +511,8 @@ UI_SUPPLY_RESCUE_HOOK,Gancho de rescate,Rescue hook
 UI_SUPPLY_RESCUE_HOOK_DETAIL,"Desde la puerta trasera abierta, un pasajero engancha una caja caída sin que el camión frene.","From the open rear door, a passenger hooks a fallen box without the truck stopping."
 UI_SUPPLY_SPARE_PART,Repuesto del camión,Truck spare part
 UI_SUPPLY_SPARE_PART_DETAIL,"Si el camión se rompe en el próximo reparto, la puerta o el espejo se arreglan en el lugar.","If the truck breaks on the next run, the door or mirror gets fixed on the spot."
+UI_SUPPLY_TOW_STRAP,Eslinga de remolque,Tow strap
+UI_SUPPLY_TOW_STRAP_DETAIL,"Si el camión se atasca en el barro en el próximo reparto, la eslinga lo saca de una vez, sin empujar y sin multa de la grúa.","If the truck bogs down in mud on the next run, the strap hauls it out at once: no pushing, no crane fine."
 UI_TRUCK,Camión,Truck
 UI_TUT_BODY,1. Carguen paquetes en los anaqueles o llévenlos en mano.\n2. Un jugador conduce; los demás vigilan la carga incluso durante la marcha.\n3. Frágil: evitá golpes. Ruidoso: calmalo. Equilibrio: mantenelo derecho. Peso creciente: movelo pronto. Líquido: no lo inclines y secá el charco. Explosivo: seguí la secuencia antes de que llegue a cero. Hostil: obedecé CALMÁ o NO TOCAR.\n4. Las buenas acciones dan mérito individual; las entregas dan dinero al equipo.\n5. Entre entregas voten mejoras. Una carta de prioridad puede cambiar el resultado.,"1. Load packages onto the racks or carry them by hand.
 2. One player drives; the rest watch the cargo, even on the move.
