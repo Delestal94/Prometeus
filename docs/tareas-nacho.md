@@ -1980,9 +1980,9 @@ lugar, balbuceo sintetizado estilo Animal Crossing, con tono propio por color de
   intacta, caja arruinada propia.
 - [x] Opción de volumen "Voces" ya existe: verificar que lo respeta.
 
-#### S-403 · Stingers de resultado y desbloqueo — B · `Opus 5.5 · high` · Aviso: no
+#### S-403 · Stingers de resultado y desbloqueo — B · `Opus 5.5 · high` · Aviso: no · **[x] `180765c`**
 
-- [ ] Frases musicales cortas sintetizadas (2-4 s): entrega perfecta, entrega con pérdidas, récord,
+- [x] (commit `180765c`) Frases musicales cortas sintetizadas (2-4 s): entrega perfecta, entrega con pérdidas, récord,
   desbloqueo, evento resuelto, evento fallido. Por el bus `Music`. En `ui_sounds.gd`.
 
 #### S-404 · Mezcla medida de los sonidos de trampa — A · `Opus 5.5 · high` · Aviso: no

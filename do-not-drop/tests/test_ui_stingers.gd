@@ -12,7 +12,10 @@ extends SceneTree
 ##     nothing was lost, LOSSES otherwise (hud_results.gd plays that pick);
 ##   - a route event resolving while the run is over (the run's end closes it as
 ##     failed) plays nothing, so it does not clash with the result stinger; the
-##     unlock stinger is queued behind the result one (hud_notices.gd).
+##     unlock stinger is queued behind the result one (hud_notices.gd), even
+##     when two unlocks arrive in the same frame; event stingers wait a moment
+##     and stay silent if the run ended meanwhile (a client's relayed close);
+##   - warm_stingers() fills the cache from a worker thread.
 
 const UiSounds = preload("res://scripts/ui/ui_sounds.gd")
 const MAX_PEAK: float = 0.708  # -3 dBFS
@@ -25,6 +28,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	await _test_warm()
 	_test_streams()
 	_test_single_music_player()
 	_test_result_choice()
@@ -32,6 +36,16 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: six distinct 2-4 s stingers on one Music-bus player, result choice and HUD triggers work")
 	quit(_failures)
+
+
+func _test_warm() -> void:
+	UiSounds._stinger_cache.clear()
+	UiSounds.warm_stingers()
+	var deadline: int = Time.get_ticks_msec() + 5000
+	while UiSounds._stinger_cache.size() < UiSounds.STINGERS.size() and Time.get_ticks_msec() < deadline:
+		await process_frame
+	_expect(UiSounds._stinger_cache.size() == UiSounds.STINGERS.size(),
+			"warm_stingers() builds all six off the main thread (got %d)" % UiSounds._stinger_cache.size())
 
 
 func _test_streams() -> void:
@@ -141,19 +155,32 @@ func _test_hud_triggers() -> void:
 	_silence()
 
 	# A route event resolving after the run ended stays silent...
+	var delay: float = hud.notices.EVENT_STINGER_DELAY + 0.1
 	run_manager.is_running = false
 	bus.route_event_resolved.emit(event_id, false, 0)
+	await create_timer(delay).timeout
 	_expect(_current() == null, "An event closed at the run's end plays no stinger")
+	# ...and so does one whose run ends before the delay (a client gets the
+	# host's relayed close just before its own run_ended)...
+	run_manager.is_running = true
+	bus.route_event_resolved.emit(event_id, false, 0)
+	run_manager.is_running = false
+	await create_timer(delay).timeout
+	_expect(_current() == null, "An event closed right before run_ended plays no stinger")
 	# ...while one resolved mid-run gets its own.
 	run_manager.is_running = true
 	bus.route_event_resolved.emit(event_id, true, 1)
+	await create_timer(delay).timeout
 	_expect(_current() == UiSounds.stinger_stream(UiSounds.STINGER_EVENT_WON), "A resolved event plays EVENT_WON")
 	bus.route_event_resolved.emit(event_id, false, 1)
+	await create_timer(delay).timeout
 	_expect(_current() == UiSounds.stinger_stream(UiSounds.STINGER_EVENT_FAILED), "A failed event plays EVENT_FAILED")
 	run_manager.is_running = false
 	_silence()
 
 	# Unlock waits for the result stinger that follows it in the same frame.
+	# Two unlocks in the same run_ended share the single queue slot.
+	bus.unlock_earned.emit(&"starter_kit", "Kit")
 	bus.unlock_earned.emit(&"starter_kit", "Kit")
 	hud.results._on_ended(400, {"delivered": true, "cargo_total": 1, "cargo_ruined": 0, "is_new_best": false})
 	await process_frame

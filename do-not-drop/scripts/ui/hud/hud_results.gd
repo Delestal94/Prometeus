@@ -12,6 +12,7 @@ const RESULT_PLAYER_COLORS: Array[Color] = [
 
 func _ready() -> void:
 	EventBus.run_ended.connect(_on_ended)
+	UiTheme.UI_SOUNDS.warm_stingers()
 
 
 func set_hero(visible_: bool, score: int = 0, new_best: bool = false) -> void:

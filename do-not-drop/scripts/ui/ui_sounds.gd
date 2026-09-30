@@ -41,6 +41,7 @@ const _SPECS: Dictionary = {
 
 const STINGER_PLAYER_NAME: String = "UiStinger"
 const STINGER_QUEUED_META: StringName = &"stinger_queued"
+const STINGER_PENDING_META: StringName = &"stinger_pending"
 const STINGER_RATE: int = 16000
 ## Normalised peak of every stinger: about -4 dBFS, so chords never clip.
 const STINGER_PEAK: float = 0.63
@@ -102,6 +103,7 @@ const _STINGER_SPECS: Dictionary = {
 
 static var _cache: Dictionary = {}
 static var _stinger_cache: Dictionary = {}
+static var _stingers_warming: bool = false
 
 
 static func bind_button(button: Button) -> void:
@@ -208,10 +210,21 @@ static func play_stinger(from: Node, id: StringName) -> AudioStreamPlayer:
 static func queue_stinger(from: Node, id: StringName) -> void:
 	if from == null or not from.is_inside_tree() or not _STINGER_SPECS.has(id):
 		return
-	from.get_tree().process_frame.connect(_start_queued.bind(from.get_tree().root, id), CONNECT_ONE_SHOT)
+	# One pending slot and one connection: several unlocks in the same frame
+	# (record_run can emit more than one) would otherwise connect the same
+	# method twice, which Godot rejects with an error (binds are ignored).
+	var tree: SceneTree = from.get_tree()
+	tree.root.set_meta(STINGER_PENDING_META, id)
+	if not tree.process_frame.is_connected(_start_queued):
+		tree.process_frame.connect(_start_queued.bind(tree.root), CONNECT_ONE_SHOT)
 
 
-static func _start_queued(root: Window, id: StringName) -> void:
+static func _start_queued(root: Window) -> void:
+	var id: StringName = StringName(root.get_meta(STINGER_PENDING_META, &""))
+	if root.has_meta(STINGER_PENDING_META):
+		root.remove_meta(STINGER_PENDING_META)
+	if id.is_empty():
+		return
 	var player: AudioStreamPlayer = _stinger_player(root)
 	if player.playing:
 		player.set_meta(STINGER_QUEUED_META, id)
@@ -232,6 +245,28 @@ static func stinger_stream(id: StringName) -> AudioStreamWAV:
 	if not _stinger_cache.has(id):
 		_stinger_cache[id] = _build_stinger(_STINGER_SPECS[id])
 	return _stinger_cache[id] as AudioStreamWAV
+
+
+## Builds every stinger on a worker thread (each takes 30-110 ms of GDScript
+## synthesis), so the first result or route-event stinger does not hitch the
+## frame it plays in. The cache is only written back on the main thread.
+static func warm_stingers() -> void:
+	if _stingers_warming or _stinger_cache.size() == STINGERS.size():
+		return
+	_stingers_warming = true
+	WorkerThreadPool.add_task(_warm_stingers_task)
+
+
+static func _warm_stingers_task() -> void:
+	for id: StringName in STINGERS:
+		_store_stinger.call_deferred(id, _build_stinger(_STINGER_SPECS[id]))
+
+
+static func _store_stinger(id: StringName, stream: AudioStreamWAV) -> void:
+	if not _stinger_cache.has(id):
+		_stinger_cache[id] = stream
+	if id == STINGERS[-1]:
+		_stingers_warming = false
 
 
 static func stinger_duration(id: StringName) -> float:
