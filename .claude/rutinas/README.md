@@ -87,8 +87,12 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
    `origin/slatex/*`).
 5. **Godot solo por agentes** (`ejecutor-tests`, `revisor-visual`, `probador-qa`, `cazador-bugs`), tests
    siempre con filtro. La batería completa la corre CI.
-6. **Subida**: `SKIP_TESTS=1 git push -u origin HEAD` (nunca `--no-verify`), `gh pr create` con título en
-   inglés con prefijo, `gh pr merge --auto --squash`. Los checks requeridos son la única compuerta.
+6. **Subida**: `SKIP_TESTS=1 git push -u origin HEAD` (nunca `--no-verify`), `gh pr create` con título
+   en inglés con prefijo, `gh pr merge --auto --squash`. Los checks requeridos son la única compuerta.
+   `SKIP_TESTS=1` saltea los tests del `pre-push` pero no el lint: si lo rechaza, arreglá lo que marca
+   (si dice que algo bajó, `bash tools/lint.sh --update-baseline` y commiteá la baseline). Sin `gdlint`
+   instalado el hook no lo corre: instalalo (`pip install "gdtoolkit==4.5.0"`) antes del primer push,
+   porque un PR que CI rechaza por una línea larga pierde una corrida entera (pasó en el #71).
 7. **Sin nada que hacer, sin PR**: si la corrida no encontró trabajo o hallazgos, termina sin abrir PR.
 8. **Nunca**: editar `*.uid`, `*.import`, `.godot/`, `addons/godotsteam/`; `--no-verify`; forzar sobre
    `main`; borrar ramas ajenas; reescribir historial.
