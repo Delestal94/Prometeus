@@ -8,7 +8,10 @@ YELLOW #ffc93c tape, CARDBOARD #e0a867, Lilita One + Nunito), real handling
 symbols (this way up, fragile, keep dry), a barcode and the corrugated
 board's certificate stamp on the bottom -- what a real parcel box carries.
 
-One 2048 atlas per box variant, split into a 3x3 grid of cells. Each printed
+One atlas per box variant, painted at 2048 and saved at 512 (LANCZOS): the
+print is drawn big so strokes and lettering stay crisp once reduced, and a
+512 atlas keeps each box at ~0.3 MiB of VRAM instead of ~5 MiB. The atlas is
+split into a 3x3 grid of cells. Each printed
 face (front/back/right/left/bottom) gets drawn at its true aspect ratio,
 centred in its cell; plain kraft (outside and inside), the flap print and the
 brand tape fill the last cells. The UV rectangle of every region goes to
@@ -17,8 +20,8 @@ do-not-drop/assets/tools/build_cargo_packages.py (Blender) reads to map each
 face -- this script is the single source of box sizes and layout.
 
 Outputs:
-    art/cargo/tx_cargo_box_<variant>_2048.png  (embedded into the GLBs, so
-                                                kept outside the Godot project)
+    art/cargo/tx_cargo_box_<variant>_512.png  (embedded into the GLBs, so
+                                               kept outside the Godot project)
     do-not-drop/assets/textures/cargo/tx_cargo_shipping_label_512.png
     do-not-drop/assets/tools/cargo_layout.json
 """
@@ -41,7 +44,8 @@ LAYOUT_OUT = GAME / "assets" / "tools" / "cargo_layout.json"
 FONT_TITLE = GAME / "assets" / "fonts" / "LilitaOne-Regular.ttf"
 FONT_TEXT = GAME / "assets" / "fonts" / "Nunito-Variable.ttf"
 
-SIZE = 2048
+SIZE = 2048      # paint resolution; UV rects are normalised, so they do not depend on it
+OUT_SIZE = 512   # saved atlas
 GRID = 3
 CELL = SIZE // GRID
 PAD = 14
@@ -486,8 +490,8 @@ def build_variant(variant: str, index: int) -> dict:
     x, y, w, _h = fit_rect(CELLS["tape"], 1.0)
     regions["tape_row"] = to_uv((x, y + TAPE_ROW, w, TAPE_ROW))
     ATLAS_DIR.mkdir(parents=True, exist_ok=True)
-    out = ATLAS_DIR / ("tx_cargo_box_%s_2048.png" % variant)
-    atlas.save(out, optimize=True)
+    out = ATLAS_DIR / ("tx_cargo_box_%s_%d.png" % (variant, OUT_SIZE))
+    atlas.resize((OUT_SIZE, OUT_SIZE), Image.LANCZOS).save(out, optimize=True)
     print("wrote", out.relative_to(ROOT))
     return {"dims": [W, D, H], "trap": VARIANTS[variant]["trap"], "texture": str(out.relative_to(ROOT)).replace("\\", "/"), "regions": regions}
 

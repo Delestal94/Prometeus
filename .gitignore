@@ -19,6 +19,11 @@ export_presets.cfg
 # without them every clone (and CI) reimports with defaults. The imported
 # binaries themselves live in .godot/, ignored above.
 
+# Box atlases Godot extracts from the cargo GLBs (embedded_image_handling=1):
+# importer output, the source lives in art/cargo/ (N-315).
+do-not-drop/assets/models/cargo/*_tx_*.png
+do-not-drop/assets/models/cargo/*_tx_*.png.import
+
 # Mono/C# specific
 .mono/
 data_*/
