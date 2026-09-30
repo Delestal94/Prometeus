@@ -341,6 +341,7 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
   captura con `revisor-visual`.
 - [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
   se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
+  Necesita PC (editor de Godot con ventana; la toma la sesión de arte).
 
 ### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`, `seat_point.gd`) · **[x] rama `nacho/N-223-less-per-frame`**
 `route.gd` busca linealmente en las muestras del camino dos veces por tick; `play_area.gd`,
@@ -370,7 +371,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   renombre falla al compilar. En el archivo: `.call` 15 → 1, `.get(&` 4 → 0, `/root/` 14 → 6; en `scripts/`: `.call`
   313 → 299, `.get(&` 284 → 280, `/root/` 122 → 114. Queda EventBus por nombre (los tests lo cambian por un `Node`).
   Trinquete: `test_dynamic_dispatch_budget.gd` (presupuesto por archivo y que cada constante sea el script del autoload).
-- [ ] **N-224.2** `route_event_manager.gd`, después el resto por conteo. Sumar cada archivo a `BUDGETS` del test.
+- [x] **N-224.2** `route_event_manager.gd` (2026-09-30, rama `nacho/N-224-route-event-manager-typed`): `CrewProgression`,
+  `NetworkManager` y `RunManager` por constantes tipadas (un solo `_network()`), trampas como `TrapDefinition` y la carga
+  como `DeliveryPackage`. En el archivo: `.call` 4 → 2 (los dos relays de EventBus), `/root/` 5 → 4, `.set(&` 1 → 0,
+  `.get("…")` sobre nodos y recursos 10 → 2 (`role`/`occupant` de las áreas de asiento, sin script). El preload cruzado
+  con `crew_progression.gd` compila. `test_dynamic_dispatch_budget.gd` suma el archivo a `BUDGETS` y chequea los handles
+  de los dos autoloads (`HANDLES`).
+- [ ] **N-224.3** El resto por conteo (`grep -c` de los patrones de `PATTERNS` en `scripts/`), un archivo por PR. Sumar
+  cada archivo a `BUDGETS` del test.
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
