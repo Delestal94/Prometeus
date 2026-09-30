@@ -1639,9 +1639,11 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
     Una línea por evento de `RouteEventManager.EVENTS`, con `tr()` (`WORLD_RADIO_NEWS_*`).
 - [x] Test `test_truck_radio.gd`: el estado se sincroniza y modifica la agitación de Ruidoso. Aviso:
   `docs/avisos/2026-09-30-n406-truck-radio.md`.
-- [ ] Necesita PC: `revisor-visual` sobre la posición y el tamaño de la perilla y del cartelito en el tablero de
-  cada camión, y prueba a mano de que el tripulante a pie en la cabina llega a la perilla (el conductor y los
-  sentados no: `E` sentado los levanta). Con `auditor-red`, el RPC `_set_mode` y el tardío con dos jugadores.
+- [x] `revisor-visual` sobre la perilla y el cartelito: hecho en el PR #116 (perilla y cartel legibles, texto más
+  grande). `auditor-red` revisó `_set_mode`, el tardío y el reinicio: sin hallazgos; el cooldown de la perilla
+  (250 ms en `TruckRadio.cycle()`, en el host) se arregló en `nacho/N-406-radio-cooldown`.
+- [ ] Necesita PC: prueba a mano de que el tripulante a pie en la cabina llega a la perilla (el conductor y los
+  sentados no: `E` sentado los levanta).
 
 ### N-108 · Tramo de barro/pendiente con salida cooperativa — B · `Opus 5.5 · high` · Aviso: no
 
