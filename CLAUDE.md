@@ -79,6 +79,18 @@ juego lo conecta desde un adaptador chico en `scripts/`. `modules/` es zona comp
   archivo nuevo en `docs/avisos/` (dueño según `TMP_DUENO=nacho|slatex` en
   `.claude/settings.local.json`, o el mail de git).
 
+## Antes de empezar una tarea
+
+Las rutinas trabajan `docs/tareas-nacho.md` a toda hora: una sesión a mano que toma una tarea sin
+avisar termina haciendo lo mismo que una rutina en paralelo (pasó con N-229.1, PRs #117 y #123).
+Antes de tocar código:
+- Saltá la tarea si ya tiene PR abierto o rama `origin/nacho/<ID>-*`.
+- Reclamala como las rutinas (`.claude/rutinas/construccion.md` §2): rama `nacho/<ID>-<tema>` desde
+  `origin/main` con un commit vacío `chore: claim <ID>`, pusheada. Si la sesión tiene su propia rama
+  asignada, igual pusheá la de reclamo (una por tarea; no se borra) y trabajá en la tuya.
+- Si el cambio toca RPC o replicación, el número de `PROTOCOL_VERSION` se elige como dice
+  `docs/convenciones-godot.md` §6.
+
 ## Al terminar un cambio
 
 Seguí la skill `cerrar-cambio` (y `nuevo-test` para escribir el test). En resumen:
