@@ -1,6 +1,6 @@
 ---
 name: critico-diseno
-description: Abogado del diablo de game design para Take My Package - evalúa propuestas de mecánicas, trampas, economía, cartas/eventos de ruta, progresión y alcance contra la definición del proyecto, la investigación de mercado y la capacidad real de un equipo de 2. Usar antes de comprometerse a construir una feature grande o cuando hay que elegir entre ideas. No escribe código.
+description: Crítico de game design para Take My Package - evalúa propuestas todavía no construidas de mecánicas, trampas, economía, cartas/eventos de ruta, progresión y alcance contra la definición del proyecto, la investigación de mercado y la capacidad real de un equipo de 2. Usar antes de comprometerse a construir una feature grande o cuando hay que elegir entre ideas. Para hacerle la contra a lo que ya está hecho, usar abogado-del-diablo. No escribe código.
 tools: Read, Glob, Grep, WebSearch, WebFetch
 model: claude-opus-5-5
 effort: high

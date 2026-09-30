@@ -29,17 +29,32 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 - Modelos fijados en cada agente (Opus 5.5 / Sonnet 5.5 con su `effort`): los que
   corren y resumen (tests, capturas, dominios, docs) van en Sonnet con esfuerzo bajo;
   diagnóstico, red y revisión en Opus.
-- En una rutina en la nube sirven `ejecutor-tests`, `cazador-bugs`, `revisor-visual`,
-  `guardian-dominios`, `auditor-red` y `documentador`. Los artistas y
-  `modelador-blender` necesitan ComfyUI/Blender en la PC; `critico-diseno` y
-  `empaquetador-release` son para sesiones en vivo (decisiones de diseño y builds,
-  M5 en pausa). No hay revisión humana de PRs: los checks requeridos son la única
-  compuerta. El flujo de la rutina de Nacho está en `.claude/rutinas/tareas-nacho.md`.
+- **Rutinas**: el sistema completo (qué rutina corre cuándo, cómo se pasan el trabajo, reglas
+  comunes y freno de mano `PAUSA`) está en `.claude/rutinas/README.md`. En la nube no hay
+  Blender ni ComfyUI: esos assets quedan para `.claude/rutinas/sesion-arte.md`. No hay revisión
+  humana de PRs: los checks requeridos son la única compuerta. Las rutinas toman tareas de las
+  dos listas (también de Slatex, con aviso), salvo lo que Slatex tenga en curso.
 - `vehicle.tscn` / `vehicle.gd` están congelados desde el hito M6 (2026-09-28): lo nuevo
   del camión va como componente aparte. Si se libera, lo dice un aviso en `docs/avisos/`.
 - Los dominios que usan hooks y agentes salen de `file_domain` en
   `.claude/hooks/lib.sh`; si cambia la tabla de `docs/colaboracion-equipo.md`,
   actualizá las dos.
+
+### Ciclo completo: qué agente para qué
+
+| Etapa | Agentes |
+|---|---|
+| Cuestionar | `abogado-del-diablo` (lo ya hecho), `critico-diseno` (ideas antes de construir), `director-arte` (assets existentes), `auditor-integral` (todo el proyecto cruzando código, arte técnico, agentes, docs y pipeline; rutina diaria) |
+| Planificar | `planificador-tareas` (hallazgos → tareas N-/S- con agente, esfuerzo y aviso), `guardian-dominios` |
+| Construir código | `constructor-camion`, `constructor-tramos`, `constructor-trampas`, `constructor-progresion`, `constructor-ui`, `escritor-tests` |
+| Crear y refinar assets | `modelador-blender`* (3D), `artista-conceptual`* (imágenes, texturas), `artista-shaders`* (materiales), `artista-vfx` (partículas y efectos), `animador`* (clips y procedurales), `disenador-audio` (SFX) |
+| Pulir | `pulidor-jugabilidad` (tiempos, números, feedback de lo que ya existe) |
+| Verificar | `ejecutor-tests`, `probador-qa` (juego completo sin gente), `revisor-visual`, `cazador-bugs`, `revisor-gdscript`, `auditor-red`, `perfilador-rendimiento` |
+| Cerrar y lanzar | `documentador`, skill `cerrar-cambio`, `empaquetador-release`, `estratega-steam` (página, cápsulas, features de Steam, calendario) |
+
+\* necesitan Blender o ComfyUI en la PC para la parte de assets; su parte de código corre en cualquier lado.
+Pasada de refinamiento típica: `director-arte` / `abogado-del-diablo` → `planificador-tareas` → el
+constructor o artista de cada tarea → `ejecutor-tests` + `revisor-visual` → `cerrar-cambio`.
 
 ## Hooks de este repo (`.claude/settings.json`)
 
