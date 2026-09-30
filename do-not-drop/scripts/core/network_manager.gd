@@ -82,8 +82,9 @@ var world_completed_runs: int = 0
 ## the connection is dropped (Godot's auth timeout). A host on another version
 ## answers with a failure right away, so this only has to cover a slow level
 ## load: 8 s dropped joiners on 2-core CI runners (three Godots loading at
-## once) with the level up and no players, and a slow PC is no faster.
-const JOIN_HANDSHAKE_TIMEOUT: float = 20.0
+## once) with the level up and no players, and a slow PC is no faster. 20 s
+## stopped being enough once the level grew (loads of 18-34 s in the net pair).
+const JOIN_HANDSHAKE_TIMEOUT: float = 30.0
 ## ENet drops a peer it hasn't heard from in about 5 s, and loading a level
 ## blocks the main thread -- and with it ENet's polling -- for longer than that
 ## on a slow machine (9.6 s on a CI runner): the joiner was cut off right after
@@ -552,12 +553,14 @@ func _receive_auth(id: int, data: PackedByteArray) -> void:
 	if id != HOST_ID:
 		return
 	var state: Variant = bytes_to_var(data)
+	# This is SceneMultiplayer's auth callback, run from inside its poll():
+	# failing here must not close the peer while it is being walked.
 	if state is Dictionary and state.has("failure"):
-		_fail(String(state.failure))
+		_fail_if_current.call_deferred(String(state.failure), multiplayer.multiplayer_peer)
 		return
 	var handshake_error: String = _handshake_error(state)
 	if not handshake_error.is_empty():
-		_fail(handshake_error)
+		_fail_if_current.call_deferred(handshake_error, multiplayer.multiplayer_peer)
 		return
 	world_seed = int(state.seed)
 	world_house_count = int(state.houses)
@@ -641,7 +644,20 @@ func _remote_restart(house_count_value: int, completed_runs_value: int) -> void:
 func _auth_failed(_id: int) -> void:
 	if is_host():
 		return
-	_fail("timeout")
+	# Emitted from inside SceneMultiplayer.poll() -- its expiry loop, or
+	# _del_peer inside the peer's own poll when the host drops a pending
+	# joiner: closing and replacing the peer right here freed it mid-poll
+	# (SIGSEGV in the net pair).
+	_fail_if_current.call_deferred("timeout", multiplayer.multiplayer_peer)
+
+
+## A failure raised inside SceneMultiplayer.poll() only ends the session it was
+## raised for: server_disconnected may already have ended it in the same poll
+## (one message, not two), or another session may have begun since.
+func _fail_if_current(reason: String, peer: MultiplayerPeer) -> void:
+	if multiplayer.multiplayer_peer != peer:
+		return
+	_fail(reason)
 
 
 func _on_connection_failed() -> void:
