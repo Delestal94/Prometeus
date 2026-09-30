@@ -51,7 +51,8 @@ func _initialize() -> void:
 		_expect(item.collision_layer == 0, "%s sits on no layer: nothing looks for it" % item.name)
 		_expect(item.collision_mask & (PACKAGE_LAYER | PLAYER_LAYER) == 0,
 			"%s never touches packages or players" % item.name)
-		_expect(item.collision_mask & SHELL_LAYER != 0, "%s still rattles against the truck's walls (its cargo shell)" % item.name)
+		_expect(item.collision_mask & SHELL_LAYER != 0,
+			"%s still rattles against the truck's walls (its cargo shell)" % item.name)
 		_expect(item.collision_mask & VEHICLE_LAYER == 0, "%s never pushes the truck's own body" % item.name)
 		_expect(host_truck.to_local(item.global_position).length() < 3.0, "%s starts inside the truck" % item.name)
 	_check_looks(items)
@@ -115,9 +116,11 @@ func _check_looks(items: Array[RigidBody3D]) -> void:
 		var half_height: float = cylinder.height * 0.5
 		_expect(absf(thermos_box.position.y + half_height) <= TOLERANCE,
 			"The thermos' base rests on the cylinder's floor (%s)" % thermos_box)
-		_expect(thermos_box.end.y <= half_height + 0.05, "The thermos' cap barely rises above its shape (%s)" % thermos_box)
-		_expect(absf(thermos_box.position.z) <= cylinder.radius + 0.005 and absf(thermos_box.end.z) <= cylinder.radius + 0.005
-				and thermos_box.position.x >= -cylinder.radius - 0.005 and thermos_box.end.x <= cylinder.radius + 0.03,
+		_expect(thermos_box.end.y <= half_height + 0.05,
+			"The thermos' cap barely rises above its shape (%s)" % thermos_box)
+		var r: float = cylinder.radius
+		_expect(absf(thermos_box.position.z) <= r + 0.005 and absf(thermos_box.end.z) <= r + 0.005
+				and thermos_box.position.x >= -r - 0.005 and thermos_box.end.x <= r + 0.03,
 			"The thermos is as wide as its shape, bar the handle (%s)" % thermos_box)
 
 
@@ -129,10 +132,12 @@ func _check_model(body: RigidBody3D, scene_path: String, mesh_name: String) -> v
 		if child.scene_file_path == scene_path:
 			from_glb = true
 	_expect(from_glb, "%s's look is the scene %s" % [body.name, scene_path])
-	_expect(body.find_child(mesh_name, true, false) is MeshInstance3D, "%s has the model's %s mesh" % [body.name, mesh_name])
+	_expect(body.find_child(mesh_name, true, false) is MeshInstance3D,
+		"%s has the model's %s mesh" % [body.name, mesh_name])
 	for node: Node in body.find_children("*", "MeshInstance3D", true, false):
 		var mesh: Mesh = (node as MeshInstance3D).mesh
-		_expect(mesh != null and not (mesh is PrimitiveMesh), "%s's mesh %s is modelled, not a primitive" % [body.name, node.name])
+		_expect(mesh != null and not (mesh is PrimitiveMesh),
+			"%s's mesh %s is modelled, not a primitive" % [body.name, node.name])
 
 
 func _shape_of(body: RigidBody3D) -> Shape3D:
