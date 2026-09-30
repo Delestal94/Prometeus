@@ -87,7 +87,9 @@ func _compare_route(route: Node3D, world: Vector3, label: String) -> void:
 		"get_progress differs from a full scan %s (%f)" % [label, progress])
 	var leg: int = int(expected["leg_index"])
 	var houses: int = int(route.get(&"house_count"))
-	var expected_name: String = tr("WORLD_ROUTE_SECTION_GOAL") if leg >= houses \
+	# The goal leg names the free bay of the base (N-116): "Estacioná en la bahía N".
+	var bay: int = int(route.call(&"goal_bay_number"))
+	var expected_name: String = tr("WORLD_ROUTE_SECTION_GOAL") % bay if leg >= houses \
 		else tr("WORLD_ROUTE_SECTION_LEG") % [leg + 1, houses]
 	_expect(String(route.call(&"get_section_name", world)) == expected_name, "get_section_name differs %s" % label)
 	var cumulative: PackedFloat32Array = route.call(&"_path_cumulative")
