@@ -7,8 +7,8 @@ extends SceneTree
 ##   heading and inside the lookahead, not behind, not off to the side, not
 ##   when barely moving;
 ## - a box riding over a bump at speed takes the jolt once, a slow one takes
-##   none, and a tap inside the window before it softens it (15 % of the
-##   damage, `cushion_leak` since N-229) while a tap held down, one that comes too early, or none does not;
+##   none, and a tap inside the window before it softens it (a tenth of the
+##   damage) while a tap held down, one that comes too early, or none does not;
 ## - the tap arrives like any other input (the care input's sample, and the
 ##   assistant's), counts once however many ticks the host makes before the
 ##   next sample, and the same goes for a sequence key (the edges are spent);
@@ -154,17 +154,17 @@ func _cross(kmh: float, tap_at: float, hold: bool = false) -> float:
 
 func _test_crossings() -> void:
 	var fast: float = _cross(50.0, -1.0)
-	_expect(is_equal_approx(fast, 35.0), "A bump at 50 km/h is a heavy hit, once (lost %.1f)" % fast)
+	_expect(is_equal_approx(fast, 36.0), "A bump at 50 km/h is a heavy hit, once (lost %.1f)" % fast)
 	_expect(is_equal_approx(_cross(30.0, -1.0), 0.0), "A bump at 30 km/h is swallowed by the truck")
 	_expect(is_equal_approx(_cross(40.0, -1.0), 0.0), "Around 40 km/h it does not hurt either")
 	var tapped: float = _cross(50.0, 0.25)
-	_expect(is_equal_approx(tapped, 5.25), "A tap a quarter second before softens it to 15 %% (lost %.2f)" % tapped)
-	_expect(is_equal_approx(_cross(50.0, 0.33), 5.25), "A tap at the edge of the window still counts")
-	_expect(is_equal_approx(_cross(50.0, 0.6), 35.0), "A tap that comes too early is spent by the time it lands")
-	_expect(is_equal_approx(_cross(50.0, -1.0, true), 35.0), "Holding the primary down protects nothing")
+	_expect(is_equal_approx(tapped, 3.6), "A tap a quarter second before softens it to a tenth (lost %.1f)" % tapped)
+	_expect(is_equal_approx(_cross(50.0, 0.33), 3.6), "A tap at the edge of the window still counts")
+	_expect(is_equal_approx(_cross(50.0, 0.6), 36.0), "A tap that comes too early is spent by the time it lands")
+	_expect(is_equal_approx(_cross(50.0, -1.0, true), 36.0), "Holding the primary down protects nothing")
 	await process_frame
 	var kmh: float = 60.0
-	_expect(_cross(kmh, -1.0) >= 35.0, "The fastest bump is at least as hard")
+	_expect(_cross(kmh, -1.0) >= 36.0, "The fastest bump is at least as hard")
 
 
 # --- The input's way in ----------------------------------------------------------

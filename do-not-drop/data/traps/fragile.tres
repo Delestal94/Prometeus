@@ -15,14 +15,14 @@ difficulty = 1
 params = {
 "integrity_max": 100.0,
 "impact_damage_light": 10.0,
-"impact_damage_heavy": 35.0,
+"impact_damage_heavy": 36.0,
 "impact_threshold_light": 3.0,
 "impact_threshold_heavy": 7.0,
 "at_risk_at": 40.0,
 "ruined_at": 0.0,
 "cushion_window": 0.35,
 "cushion_cooldown": 1.0,
-"cushion_leak": 0.15,
+"cushion_leak": 0.1,
 "warn_lead": 0.7,
 "bump_safe_speed": 9.7,
 "bump_jolt_per_speed": 1.8
