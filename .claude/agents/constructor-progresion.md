@@ -16,7 +16,7 @@ qué queda para la próxima partida.
 - `scripts/core/shop_vote_manager.gd` — votación de la tienda, del host; la UI solo muestra y vota.
 - `scripts/core/route_event_manager.gd` — eventos entre paradas; solo se sortean los jugables.
 - `scripts/core/run_manager.gd` (zona compartida) — la corrida; `scripts/gameplay/depot/` (Nacho) — el depósito y su tablero de campaña.
-- `scripts/core/safe_json.gd` — toda lectura de guardado pasa por acá.
+- `modules/persistence/safe_json.gd` — toda lectura de guardado pasa por acá.
 - Diseño: `docs/economia-y-contramedidas.md`, `docs/cartas-y-eventos-de-ruta.md`, `docs/parametros-diseno.md`, fase 5 de `docs/plan-desarrollo.md`.
 
 ## Reglas

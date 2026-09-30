@@ -1,19 +1,15 @@
 extends RefCounted
 class_name LowpolyMaterials
-## Subtle surface grain for the flat-colour low-poly models (the PEAK look:
-## colour first, texture only as a whisper).
+## Take My Package's palette on top of the render_budget module's
+## DetailMaterials (docs/modulos.md): which authored material gets which
+## detail map, the barn's lifted red, the autumn tints, what glows at night.
+## The mechanism (triplanar detail copies, seasonal tint, emissive twins,
+## caches) lives in the module; this file is only the game's tables and the
+## same static API every caller already uses.
 ##
 ## Every authored GLB names its materials after the palette entry that made
 ## them in Blender ("wood", "roof", "leaf", ... -- see assets/tools/
-## lowpoly_kit.py and build_lowpoly_glb_assets.py). apply() swaps the ones
-## listed in DETAIL for a copy that keeps the exact colour and multiplies in a
-## greyscale detail map from assets/textures/detail/.
-##
-## World-space triplanar mapping, because the models are built from scaled
-## primitives whose UVs stretch with every box: this way a plank is the same
-## size on a porch and on a barn, and a tree's bark doesn't grow with the tree.
-## Copies are cached per (material, colour), so every oak shares one material
-## and batching is unaffected.
+## lowpoly_kit.py and build_lowpoly_glb_assets.py).
 
 const DETAIL_DIR: String = "res://assets/textures/detail/tx_detail_%s_512.png"
 ## Detail maps average ~0.86 (art/tools/make_detail_textures.py); this puts
@@ -71,155 +67,76 @@ const AUTUMN: Dictionary = {
 ## leaf palette, so it can't go by material).
 const EVERGREEN: Array[String] = ["pine"]
 
-## The session's season (WorldMood.Season: 0 summer, 1 autumn). Set by
-## WorldMood.pick() before anything is dressed; part of every cache key, so a
-## restart into the other season never reuses the last one's leaves.
-static var season: int = 0
-static var _textures: Dictionary = {}
-static var _materials: Dictionary = {}
-
-
-static func set_season(value: int) -> void:
-	season = value
-
-
-## How dark it is (N-304): 0 by day, 0.5 at dusk, 1 at night. Set by
-## WorldMood.pick() with the season; light_up() and the batcher's cache read it.
-static var night_level: float = 0.0
-## What glows after dark: palette entry -> [light colour, emission energy at
-## full night]. Only where light_up() is asked to -- a car's "window" is glass,
-## a house's "window" is a lit room.
+## What glows after dark (N-304): palette entry -> [light colour, emission
+## energy at full night]. Only where light_up() is asked to -- a car's
+## "window" is glass, a house's "window" is a lit room.
 const NIGHT_GLOW: Dictionary = {
 	"lamp_glass": [Color(1.0, 0.8, 0.52), 3.2],
 	"lamp": [Color(1.0, 0.9, 0.72), 2.2],
 	"window": [Color(1.0, 0.72, 0.38), 1.3],
 }
-static var _glowing: Dictionary = {}
+
+## The session's season (WorldMood.Season: 0 summer, 1 autumn) and how dark
+## it is (0 by day, 0.5 at dusk, 1 at night). Set by WorldMood.pick() before
+## anything is dressed; readers use these, writers go through set_*().
+static var season: int = 0
+static var night_level: float = 0.0
+static var _configured: bool = false
+
+
+## Hands the game's tables to the module once, before its first use.
+static func configure() -> void:
+	if _configured:
+		return
+	_configured = true
+	DetailMaterials.detail_dir = DETAIL_DIR
+	DetailMaterials.detail_gain = DETAIL_GAIN
+	DetailMaterials.detail = DETAIL
+	DetailMaterials.lifted = LIFTED
+	DetailMaterials.autumn = AUTUMN
+	DetailMaterials.evergreen_words = EVERGREEN
+	DetailMaterials.night_glow = NIGHT_GLOW
+
+
+static func set_season(value: int) -> void:
+	configure()
+	season = value
+	DetailMaterials.set_season(value)
 
 
 static func set_night_level(value: float) -> void:
+	configure()
 	night_level = clampf(value, 0.0, 1.0)
+	DetailMaterials.set_night_level(value)
 
 
-## Switches on the NIGHT_GLOW `keys` under `root` for the current
-## night_level: an emissive twin of each matching material, shared per
-## (entry, colour, level) so batching still merges them. Nothing by day.
+## Switches on the NIGHT_GLOW `keys` under `root` for the current night_level.
 static func light_up(root: Node, keys: Array) -> int:
-	if night_level <= 0.0:
-		return 0
-	var lit: int = 0
-	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
-		var instance := node as MeshInstance3D
-		if instance.mesh == null:
-			continue
-		for surface: int in range(instance.mesh.get_surface_count()):
-			var source := instance.get_surface_override_material(surface) as BaseMaterial3D
-			if source == null:
-				source = instance.mesh.surface_get_material(surface) as BaseMaterial3D
-			if source == null:
-				continue
-			var key: String = source.resource_name.get_slice(".", 0).get_slice("|", 0)
-			if not keys.has(key) or not NIGHT_GLOW.has(key):
-				continue
-			var cache_key: String = "%s|%s|%.2f" % [key, source.albedo_color.to_html(), night_level]
-			if not _glowing.has(cache_key):
-				var glow := source.duplicate() as BaseMaterial3D
-				glow.resource_name = key + "|glow"
-				glow.emission_enabled = true
-				glow.emission = NIGHT_GLOW[key][0]
-				glow.emission_energy_multiplier = float(NIGHT_GLOW[key][1]) * night_level
-				_glowing[cache_key] = glow
-			instance.set_surface_override_material(surface, _glowing[cache_key])
-			lit += 1
-	return lit
+	configure()
+	return DetailMaterials.light_up(root, keys)
 
 
 ## The palette colour this season: summer as authored, autumn per AUTUMN.
 static func seasonal_color(key: String, color: Color, evergreen: bool = false) -> Color:
-	if season != 1 or evergreen or not AUTUMN.has(key):
-		return color
-	var target: Color = AUTUMN[key][0]
-	var shifted: Color = color.lerp(target, float(AUTUMN[key][1]))
-	shifted.a = color.a
-	return shifted
+	configure()
+	return DetailMaterials.seasonal_color(key, color, evergreen)
 
 
 ## Re-dresses every mesh under `root` in place. Safe to call more than once.
-##
-## A surface that brings its own vertex colour -- the ambient occlusion baked
-## into the houses, vehicles and big props by assets/tools/bake_vertex_ao.py
-## (N-308.1) -- gets it multiplied into the albedo: Godot's glTF importer
-## doesn't switch that on by itself. Those materials are cached apart, so a
-## model without the bake never shares a material with one that has it.
 static func apply(root: Node) -> void:
-	var evergreen: bool = is_evergreen(root.scene_file_path)
-	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
-		var instance := node as MeshInstance3D
-		if instance.mesh == null:
-			continue
-		for surface: int in range(instance.mesh.get_surface_count()):
-			var source := instance.get_surface_override_material(surface) as BaseMaterial3D
-			if source == null:
-				source = instance.mesh.surface_get_material(surface) as BaseMaterial3D
-			if source == null:
-				continue
-			var baked: bool = (instance.mesh.surface_get_format(surface) & Mesh.ARRAY_FORMAT_COLOR) != 0
-			var textured: BaseMaterial3D = textured_for(source, baked, evergreen)
-			if textured != null:
-				instance.set_surface_override_material(surface, textured)
-			elif baked and not source.vertex_color_use_as_albedo:
-				instance.set_surface_override_material(surface, _with_vertex_colour(source))
+	configure()
+	DetailMaterials.apply(root)
 
 
-static var _vertex_coloured: Dictionary = {}
-
-
-## The same material with the vertex colour multiplied in, shared per source.
 ## Whether the model at `path` keeps its green in autumn (EVERGREEN).
 static func is_evergreen(path: String) -> bool:
-	var file: String = path.get_file()
-	for word: String in EVERGREEN:
-		if file.contains(word):
-			return true
-	return false
-
-
-static func _with_vertex_colour(source: BaseMaterial3D) -> BaseMaterial3D:
-	var key: int = source.get_instance_id()
-	if not _vertex_coloured.has(key):
-		var copy := source.duplicate() as BaseMaterial3D
-		copy.vertex_color_use_as_albedo = true
-		_vertex_coloured[key] = copy
-	return _vertex_coloured[key]
+	configure()
+	return DetailMaterials.is_evergreen(path)
 
 
 ## The detailed twin of a palette material, or null when it has no detail
 ## entry (glass, paint, signs -- those stay flat on purpose).
-static func textured_for(source: BaseMaterial3D, vertex_colour: bool = false, evergreen: bool = false) -> BaseMaterial3D:
-	if source.albedo_texture != null and source.uv1_world_triplanar:
-		return null  # already one of ours
-	var key: String = source.resource_name.get_slice(".", 0)
-	if not DETAIL.has(key):
-		return null
-	var cache_key: String = "%s|%s|%d|%d" % [key, source.albedo_color.to_html(), season if AUTUMN.has(key) and not evergreen else 0, int(vertex_colour)]
-	if _materials.has(cache_key):
-		return _materials[cache_key]
-	var map: String = DETAIL[key][0]
-	var tile: float = DETAIL[key][1]
-	if not _textures.has(map):
-		_textures[map] = load(DETAIL_DIR % map)
-	var material := StandardMaterial3D.new()
-	material.resource_name = key
-	var authored: Color = LIFTED.get(key, source.albedo_color)
-	var base: Color = seasonal_color(key, Color(authored, source.albedo_color.a), evergreen)
-	material.albedo_color = Color(base.r * DETAIL_GAIN, base.g * DETAIL_GAIN, base.b * DETAIL_GAIN, base.a)
-	material.albedo_texture = _textures[map]
-	material.uv1_triplanar = true
-	material.uv1_world_triplanar = true
-	material.uv1_scale = Vector3.ONE / tile
-	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	material.roughness = source.roughness
-	material.metallic = source.metallic
-	material.vertex_color_use_as_albedo = vertex_colour
-	_materials[cache_key] = material
-	return material
+static func textured_for(source: BaseMaterial3D, vertex_colour: bool = false,
+		evergreen: bool = false) -> BaseMaterial3D:
+	configure()
+	return DetailMaterials.textured_for(source, vertex_colour, evergreen)

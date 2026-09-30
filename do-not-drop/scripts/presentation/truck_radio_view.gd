@@ -6,7 +6,7 @@ extends Node3D
 ## mode it shows is whatever the host decided. Hung by TruckRadio on the
 ## knob, in the van's frame (its screen faces +Z, toward the driver).
 
-const SOUNDS: Script = preload("res://scripts/presentation/synth_audio_radio.gd")
+const SOUNDS: Script = preload("res://modules/synth_audio/synth_audio_radio.gd")
 ## Dial angle around its axis (degrees) for each mode, turning clockwise.
 const DIAL_ANGLES: Dictionary = {&"calm": 60.0, &"loud": 20.0, &"news": -20.0, &"off": -60.0}
 ## Player level per mode (dB, on top of the loops' -24 dBFS RMS).

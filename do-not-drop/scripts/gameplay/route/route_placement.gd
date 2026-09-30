@@ -20,7 +20,7 @@ const NO_TERRAIN_DISTANCE: float = 250.0
 const RIVER_MISFIT_DEPTH: float = 0.5
 ## Fake contact shadows (presentation/contact_shadow.gd): how far the soft
 ## band reaches in and out of a parked car's footprint.
-const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
+const ContactShadow = preload("res://modules/render_budget/contact_shadow.gd")
 const CONTACT_SHADOW_MARGIN: float = 0.6
 ## What lights up after dark (N-304, LowpolyMaterials.light_up()), by model.
 const NIGHT_LIGHTS: Dictionary = {

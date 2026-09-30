@@ -7,7 +7,7 @@ extends Node
 ## with everyone else's without this script needing to know or care about the network.
 
 const PackageVerb = preload("res://scripts/gameplay/package/package_verb.gd")
-const SynthAudioTraps = preload("res://scripts/presentation/synth_audio_traps.gd")
+const SynthAudioTraps = preload("res://modules/synth_audio/synth_audio_traps.gd")
 const PackageRuinEffects = preload("res://scripts/gameplay/package/package_ruin_effects.gd")
 const PackageScribble = preload("res://scripts/gameplay/package/package_scribble.gd")
 const PackageShippingLabel = preload("res://scripts/gameplay/package/package_shipping_label.gd")

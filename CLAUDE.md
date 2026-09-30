@@ -59,6 +59,15 @@ etapa" de `.claude/rutinas/README.md`.
 Pasada de refinamiento típica: `director-arte` / `abogado-del-diablo` → `planificador-tareas` → el
 constructor o artista de cada tarea → `ejecutor-tests` + `revisor-visual` → `cerrar-cambio`.
 
+## Módulos portables (`do-not-drop/modules/`)
+
+Lo genérico vive en `modules/<nombre>/` (reglas, catálogo y fases pendientes: `docs/modulos.md`).
+Adentro de un módulo no se nombra nada del juego (autoloads, `res://scripts/`, clases del juego):
+`python tools/check_modules.py` lo comprueba en un segundo y CI corre además
+`tools/portability-check.sh` (cada módulo solo en un proyecto vacío, con sus `tests/`). Un script
+nuevo que no sabe de paquetes, camión ni HUD va en un módulo, con `module.cfg` y test propio; el
+juego lo conecta desde un adaptador chico en `scripts/`. `modules/` es zona compartida.
+
 ## Hooks de este repo (`.claude/settings.json`)
 
 - Al editar un `.gd`, Godot lo carga con los autoloads y, si no compila, el error

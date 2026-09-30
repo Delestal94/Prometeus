@@ -10,9 +10,9 @@ extends SceneTree
 ## attention (and the sparse chirps of birds and crickets) by their loudest
 ## 100 ms, hits by their peak.
 
-const SynthAudio = preload("res://scripts/presentation/synth_audio.gd")
+const SynthAudio = preload("res://modules/synth_audio/synth_audio.gd")
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
-const SynthAudioSteps = preload("res://scripts/presentation/synth_audio_steps.gd")
+const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
 const TOLERANCE_DB: float = 2.0
 ## class -> [measure, target dBFS]
 const CLASSES: Dictionary = {

@@ -918,9 +918,9 @@ func _activate_ragdoll(push: Vector3) -> void:
 	if _ragdolled:
 		return
 	_ragdolled = true
-	var ragdoll := preload("res://scripts/gameplay/player/player_ragdoll.gd").new()
+	var ragdoll := preload("res://modules/ragdoll/player_ragdoll.gd").new()
 	get_parent().add_child(ragdoll)
-	ragdoll.setup(self)
+	ragdoll.setup(self, get_tree().get_first_node_in_group(&"vehicle"), 1 | 64)
 	ragdoll.fall(push)
 	await get_tree().create_timer(2.8).timeout
 	_ragdolled = false

@@ -12,7 +12,7 @@ extends RefCounted
 ## frame can bring it back. A mute lasts until the game closes, level reloads
 ## included: a small node re-applies it to players that appear later.
 
-const SynthAudioScript = preload("res://scripts/presentation/synth_audio.gd")
+const SynthAudioScript = preload("res://modules/synth_audio/synth_audio.gd")
 const ORIGINAL_META := &"sound_audit_original"
 const PROCESS_META := &"sound_audit_process_mode"
 const REAPPLY_SECONDS: float = 0.3

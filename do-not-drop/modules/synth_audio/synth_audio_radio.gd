@@ -1,3 +1,4 @@
+class_name SynthAudioRadio
 extends RefCounted
 ## The generators behind the truck radio (tareas de Nacho N-406): a calm
 ## lo-fi pad, a loud driving beat, the newscast's jingle and the knob's click.

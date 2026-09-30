@@ -1,3 +1,4 @@
+class_name SynthAudioCare
 extends RefCounted
 ## The generators behind the care panel's cues (ui/hud/care_prompt_view.gd):
 ## short, bright interface sounds, so a passenger with their eyes on the road

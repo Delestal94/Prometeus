@@ -19,7 +19,7 @@ extends Control
 ## Pure presentation, drawn on the card's cream: CareCard feeds it every frame
 ## and events come from comparing a frame with the last.
 
-const SynthAudioScript = preload("res://scripts/presentation/synth_audio.gd")
+const SynthAudioScript = preload("res://modules/synth_audio/synth_audio.gd")
 const UiThemeScript = preload("res://scripts/ui/ui_theme.gd")
 const KEYS: Dictionary = {Vector2.LEFT: "A", Vector2.UP: "W", Vector2.RIGHT: "D", Vector2.DOWN: "S"}
 const STEP_VECTORS: Dictionary = {&"left": Vector2.LEFT, &"up": Vector2.UP, &"right": Vector2.RIGHT,

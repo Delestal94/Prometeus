@@ -10,7 +10,7 @@ extends SceneTree
 ##   - every delivery house has one around each block of walls;
 ##   - the depot has them under the cars outside, the dumpster and the pallets.
 
-const ContactShadow = preload("res://scripts/presentation/contact_shadow.gd")
+const ContactShadow = preload("res://modules/render_budget/contact_shadow.gd")
 
 var _failures: int = 0
 
@@ -90,7 +90,7 @@ func _expect_draped_patch(route: Node3D, terrain: Node, node: Node3D, what: Stri
 	_expect(patch != null, "%s has a contact shadow" % what)
 	if patch == null:
 		return
-	_expect(not DressingBatcher.GROUPS.has(String(patch.get_parent().name)), "%s: its band stays out of the batched groups (%s)" % [what, patch.get_parent().name])
+	_expect(not DressingBatcher.piece_groups.has(String(patch.get_parent().name)), "%s: its band stays out of the batched groups (%s)" % [what, patch.get_parent().name])
 	_expect(patch.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "%s: the band casts no shadow of its own" % what)
 	var to_route: Transform3D = route.global_transform.affine_inverse() * patch.global_transform
 	var lowest: float = INF

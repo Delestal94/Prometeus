@@ -85,7 +85,7 @@ extrapola un poco y después se congela. Gabriel Gambetta lo explica paso a paso
 grande con mala conexión. Overwatch ajusta así el buffer de input del servidor para cada cliente, y los
 teléfonos VoIP hacen lo mismo con el audio.
 
-**Para nosotros:** `VehicleNetSmoother` ya hace esto para el camión con 100 ms fijos. Los jugadores
+**Para nosotros:** `NetPoseSmoother` ya hace esto para el camión con 100 ms fijos. Los jugadores
 remotos (`player.gd _apply_net_state`) y las cajas en el cliente (`package.gd _process`) se colocan
 **crudos**, con el último valor recibido. Con el jitter de internet eso da saltos y tirones.
 
@@ -141,7 +141,7 @@ cuantizar (esto último solo si hace falta).
 
 Para interpolar hace falta saber en qué instante del host fue tomado cada snapshot. Lo estándar es
 marcarlos con el tiempo del servidor y estimar el offset de reloj con la llegada menos demorada (estilo
-NTP), suavizando los cambios. **`VehicleNetSmoother` ya lo hace bien** (`net_time`, `_clock_offset`);
+NTP), suavizando los cambios. **`NetPoseSmoother` ya lo hace bien** (`net_time`, `_clock_offset`);
 hay que reusarlo en jugadores y cajas en vez de inventar otro.
 
 ## 3. Medidas defensivas (robustez y seguridad)
@@ -284,7 +284,7 @@ exacto de la prueba. En LAN no se notaba porque ENet no tiene ese límite.
 - Validar con el perfil de 150 ms / 2 % que la cola de Steam queda en ~0.
 
 **Fase 2: que se vea suave (2-3 días).**
-- Sacar de `VehicleNetSmoother` un `NetSnapshotBuffer` genérico y usarlo en jugadores remotos y en cajas
+- Sacar de `NetPoseSmoother` un `NetSnapshotBuffer` genérico y usarlo en jugadores remotos y en cajas
   del cliente, marcados con el reloj del host.
 - Colchón adaptativo: 2 intervalos de envío + 2 × jitter medido, entre 50 y 200 ms.
 - Tolerancia de alcance por ping en los chequeos del host.

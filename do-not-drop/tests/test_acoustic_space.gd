@@ -32,7 +32,7 @@ func _run() -> void:
 
 	AcousticSpace.apply(&"tunnel")
 	_expect(AcousticSpace.is_on(), "In a tunnel the reverb is on")
-	for bus_name: StringName in AcousticSpace.BUSES:
+	for bus_name: StringName in AcousticSpace.buses:
 		var bus: int = AudioServer.get_bus_index(bus_name)
 		var reverb: AudioEffectReverb = null
 		for index: int in range(AudioServer.get_bus_effect_count(bus)):
