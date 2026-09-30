@@ -4,8 +4,10 @@ extends Node3D
 ## where the crew appears. Depot writes today's orders on it (write()) and
 ## ticks each house off as the run reports it (mark()).
 ##
-## Children keep fixed names -- Title, Rule, Row0..6, Mark0..6 -- that tests
-## and the HUD's depot panel look up.
+## Children keep fixed names -- Title, Rule, Row0..6, Mark0..6, Boss0, Boss1 --
+## that tests and the HUD's depot panel look up. Boss0/Boss1 are the Boss's
+## note under the orders (S-603): what she said over the radio this morning
+## and, when there is one, her reaction to the last run.
 
 const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const TITLE: String = "WORLD_DEPOT_BOARD_TITLE"
@@ -14,7 +16,14 @@ const RULE: String = "WORLD_DEPOT_BOARD_RULE"
 const ROWS: int = 7
 ## The writing area under the rule, down to the marker tray, and its width.
 const ROWS_TOP: float = 2.25
-const ROWS_BOTTOM: float = 0.95
+const ROWS_BOTTOM: float = 1.27
+## The Boss's note under the orders: where its two lines start, how far apart
+## they are, and their size.
+const NOTE_TOP: float = 1.2
+const NOTE_PITCH: float = 0.145
+const NOTE_FONT: int = 26
+const NOTE_INK := Color("1c6b47")
+const NOTE_KEY: String = "WORLD_BOSS_NOTE"
 const TEXT_WIDTH: float = 2.84
 const ROW_FONT: int = 32
 ## Up to this many orders each takes two lines (house and shelf, then the
@@ -35,6 +44,7 @@ var _title: Label3D
 var _rule: Label3D
 var _rows: Array[Label3D] = []
 var _marks: Array[Label3D] = []
+var _notes: Array[Label3D] = []
 
 
 func _ready() -> void:
@@ -81,6 +91,18 @@ func write(orders: Array[Dictionary], endless_best: int) -> void:
 	DepotLabels.fit_label(_rule, TEXT_WIDTH)
 
 
+## Writes the Boss's note: up to two already translated lines (the day's
+## start line, then her reaction to the last run). Fewer clears the rest.
+func say(lines: Array[String]) -> void:
+	for index: int in range(_notes.size()):
+		var note: Label3D = _notes[index]
+		note.font_size = NOTE_FONT
+		note.text = ""
+		if index < lines.size():
+			note.text = (tr(NOTE_KEY) % lines[index]) if index == 0 else lines[index]
+			DepotLabels.fit_label(note, TEXT_WIDTH - 0.2)
+
+
 ## Ticks a house's row with how its delivery went.
 func mark(house_index: int, outcome: StringName) -> void:
 	if house_index < 0 or house_index >= _marks.size():
@@ -104,6 +126,8 @@ func _build_stand() -> void:
 	var markers: Array[Color] = [BLUE_INK, RED_INK, Color("1f8a5b")]
 	for index: int in range(markers.size()):
 		kit.box(Vector3(0.12, 0.02, 0.02), Vector3(-1.2 + index * 0.2, 0.88, 0.09), DepotKit.flat(markers[index], 0.5))
+	# A rule between the orders and the Boss's note.
+	kit.box(Vector3(2.9, 0.012, 0.01), Vector3(0.0, ROWS_BOTTOM + 0.02, 0.03), DepotKit.flat(RED_INK, 0.5))
 	kit.collider(Vector3(3.5, 2.1, 0.2), Transform3D(Basis.IDENTITY, Vector3(0.0, 1.85, 0.0)))
 	kit.commit("Board")
 
@@ -131,3 +155,11 @@ func _build_labels() -> void:
 		mark_label.name = "Mark%d" % row
 		mark_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		_marks.append(mark_label)
+	# The Boss's note: dark green ink, so it reads as hers and not the crew's.
+	for index: int in range(2):
+		var note := DepotLabels.text(self, "", Vector3(-1.42, NOTE_TOP - index * NOTE_PITCH, 0.035), 0.0, NOTE_FONT,
+				NOTE_INK, Layout.BODY_FONT, 0.0045, 0)
+		note.name = "Boss%d" % index
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		note.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		_notes.append(note)

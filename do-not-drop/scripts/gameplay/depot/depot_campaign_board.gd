@@ -10,6 +10,9 @@ class_name DepotCampaignBoard
 ##     (phone_camera.gd -> RunManager.delivery_photos), newest first, the last
 ##     MAX_PHOTOS of them, saved to disk when each run ends.
 ##
+## The log also keeps a short summary of the last run ("last"), which is what
+## the Boss reacts to the next morning (boss_lines.gd, S-603).
+##
 ## Both live in user:// (LOG_PATH, PHOTO_DIR): every player keeps their own,
 ## like the rest of their profile -- the host doesn't hand its wall out, and a
 ## client that played the same runs counts the same days anyway, since it
@@ -52,9 +55,10 @@ func _ready() -> void:
 
 
 ## {"days": int, "best": int, "photos": [file names, newest first],
-## "serial": the last photo number used}.
+## "serial": the last photo number used, "last": BossLines.summarize_run() of
+## the last run, {} before the first}.
 static func load_log() -> Dictionary:
-	var log := {"days": 0, "best": 0, "photos": [], "serial": 0}
+	var log := {"days": 0, "best": 0, "photos": [], "serial": 0, "last": {}}
 	if not FileAccess.file_exists(LOG_PATH):
 		return log
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(LOG_PATH))
@@ -63,6 +67,8 @@ static func load_log() -> Dictionary:
 		log["best"] = int((parsed as Dictionary).get("best", 0))
 		log["photos"] = ((parsed as Dictionary).get("photos", []) as Array).duplicate()
 		log["serial"] = int((parsed as Dictionary).get("serial", 0))
+		var last: Variant = (parsed as Dictionary).get("last", {})
+		log["last"] = last if last is Dictionary else {}
 	return log
 
 
@@ -84,6 +90,7 @@ static func record_run(results: Dictionary, photos: Dictionary) -> Dictionary:
 	else:
 		log["days"] = int(log["days"]) + 1
 	log["best"] = maxi(int(log["best"]), int(log["days"]))
+	log["last"] = BossLines.summarize_run(results)
 	var names: Array = log["photos"]
 	DirAccess.make_dir_recursive_absolute(PHOTO_DIR)
 	# A running number, not the clock: two runs can end in the same millisecond

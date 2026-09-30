@@ -27,6 +27,9 @@ const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const ORDER_BALANCER = preload("res://scripts/gameplay/traps/order_balancer.gd")
 const CAMPAIGN_BOARD: Script = preload("res://scripts/gameplay/depot/depot_campaign_board.gd")
 const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
+const BOSS_LINES = preload("res://scripts/gameplay/depot/boss_lines.gd")
+## Seconds after the radio speaks before the toast shows, so the HUD is up.
+const BOSS_TOAST_DELAY: float = 1.5
 
 signal door_closed
 
@@ -55,9 +58,13 @@ const INSURANCE_REFUND: int = 30
 ## their own behind the start line (modo endless).
 @export var ground_apron: bool = false
 
-## Today's orders, one per house: {"house", "package_id", "code", "trap", "trap_key", "content"}
-## ("trap" and "content" already translated, for this peer's screens).
+## Today's orders, one per house: {"house", "package_id", "code", "trap", "trap_key", "trap_id",
+## "content"} ("trap" and "content" already translated, for this peer's screens).
 var orders: Array[Dictionary] = []
+## What the Boss says over the radio today (S-603): LocText lines, [start] or
+## [start, reaction to the last run]. The host draws them (BossLines) and
+## hands them to every peer; empty until they arrive.
+var boss_lines: Array = []
 ## Supplies waiting for the next run, as the host last reported them.
 var supplies: Array = []
 var team_money: int = 0
@@ -72,6 +79,7 @@ var _vehicle: Node3D = null
 var _watching_exit: bool = false
 var _insured: bool = false
 var _order_board: DepotOrderBoard
+var _boss_toasted: bool = false
 var _stats_label: Label3D
 var _supply_props: Dictionary = {}  # supply id -> Node3D shown on the counter
 
@@ -102,6 +110,10 @@ func _ready() -> void:
 		network.connect(&"roster_changed", func(_peers: Array) -> void:
 			if bool(network.call(&"is_host")):
 				_broadcast_supplies())
+		# A peer that just loaded this level hasn't heard the radio yet.
+		network.connect(&"peer_level_ready", func(peer_id: int) -> void:
+			if _is_online() and bool(network.call(&"is_host")) and peer_id != 1 and not boss_lines.is_empty():
+				_receive_boss_lines.rpc_id(peer_id, boss_lines))
 
 
 ## The depot's acoustics (N-402): a big roofed hall.
@@ -204,13 +216,60 @@ func post_orders(house_count: int) -> Array[Dictionary]:
 			"code": String(package.get_meta(&"dispatch_code", "?")),
 			"trap": String(definition.call(&"localized_name")),
 			"trap_key": String(definition.call(&"name_key")),
+			"trap_id": String(definition.get(&"id")),
 			"content": String(content.call(&"localized_name")) if content != null else "",
 		})
 	_order_board.write(orders, _endless_best())
+	_open_the_radio()
 	var bus: Node = _autoload(&"EventBus")
 	if bus != null:
 		bus.emit_signal(&"depot_orders_posted", orders.duplicate(true))
 	return orders
+
+
+## Host (or solo): draws the Boss's lines for today (BossLines, from the session
+## seed, the orders, the campaign and the last run) and gives them to this
+## screen; the other peers get them as each one finishes loading.
+func _open_the_radio() -> void:
+	var network: Node = _autoload(&"NetworkManager")
+	if network != null and _is_online() and not bool(network.call(&"is_host")):
+		return
+	var session_seed: int = int(network.get(&"world_seed")) if network != null else 0
+	if session_seed == 0:
+		var fresh := RandomNumberGenerator.new()
+		fresh.randomize()
+		session_seed = fresh.randi()
+	var crew: Node = _autoload(&"CrewProgression")
+	var money: int = int(crew.get(&"team_money")) if crew != null else team_money
+	var context: Dictionary = BOSS_LINES.make_context(orders, _completed_runs(), money,
+			CAMPAIGN_BOARD.load_log(), _endless_best())
+	_apply_boss_lines(BOSS_LINES.pick(context, session_seed))
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_boss_lines(lines: Array) -> void:
+	_apply_boss_lines(lines)
+
+
+func _apply_boss_lines(lines: Array) -> void:
+	boss_lines = lines
+	_order_board.say(boss_notes())
+	if _boss_toasted or lines.is_empty() or not is_inside_tree():
+		return
+	_boss_toasted = true
+	await get_tree().create_timer(BOSS_TOAST_DELAY).timeout
+	var manager: Node = _autoload(&"RunManager")
+	if not is_inside_tree() or (manager != null and bool(manager.get(&"is_running"))):
+		return
+	var spoken: Array[String] = boss_notes()
+	var bus: Node = _autoload(&"EventBus")
+	if bus != null and not spoken.is_empty():
+		bus.emit_signal(&"depot_notice", tr("WORLD_BOSS_RADIO") % spoken[0])
+
+
+## The Boss's lines in this peer's language, one text each.
+func boss_notes() -> Array[String]:
+	return BOSS_LINES.render(boss_lines)
 
 
 func _completed_runs() -> int:
