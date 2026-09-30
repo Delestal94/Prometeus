@@ -48,16 +48,41 @@ Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md
 por entrega para el perfil torpe se mantiene.
 - [x] ~~**N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-229-clumsy-near-misses`: Frágil `impact_damage_heavy` 35 → 36 (dos baches sin amortiguar y uno amortiguado dejan 24,4 en vez de 26,5); casi-pérdidas del torpe en Frágil 0,8 → 37,6 %, por viaje 0,73 → 1,10, reporte **CUMPLE**; pérdidas de todos los perfiles sin cambio. Ruidoso: una caja rescatada tras tocar el máximo de agitación cuenta como casi-pérdida en el arnés (decisión delegada, pregunta 9); torpe 0 → 51,2 %, por viaje → **1,61**. Test `test_sim_near_miss.gd`.
 
+### N-237 · El tutorial de cuidado se dibuja encima de Opciones — B · `Opus 5.5 · low` · Aviso: sí (`player_cargo_care.gd`, archivos de Slatex) · **[x] rama `nacho/fix-tutorial-over-options`**
+Origen: captura con GPU 2026-09-30. Con Opciones abierta, la tarjeta "Cómo cuidar la carga" (`care_practice.gd`) se
+veía entera, sin oscurecer, a la derecha del panel. Causa: la tarjeta de cuidado y la de práctica viven en un
+`CanvasLayer` propio (`player_cargo_care.gd`) con `layer = 7`, y el HUD (Opciones, pausa, resultados, depósito,
+tripulación) es el `CanvasLayer` 1: todo lo del HUD quedaba por debajo. La guarda del mouse capturado lo tapaba
+casi siempre, pero no la práctica en el cuadro en que el jugador recaptura el mouse.
+- [x] ~~**N-237.1** Bajar la capa de las tarjetas de cuidado/práctica a `CARD_LAYER = 0` (debajo del HUD) y cubrirlo con `test_modal_layers.gd`. Tests `modal_layers`, `options`, `tutorial`, `hud`.~~ **[x] Hecho (2026-09-30)**.
+
 ### N-235 · Una caída sucia se nota a los 45 s — C · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`, zona compartida)
 Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red`). Para que el que se une no
 se corte mientras carga el nivel (bloquea el poll de ENet 18-34 s en CI), el timeout de ENet quedó fijo en
 45 s toda la sesión: si un jugador crashea, su caja sigue "sostenida", el volante ocupado y su voz activa
 hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 45 s.
-- [ ] **N-235.1** Bajar el timeout de ENet (MIN = MAX ≈ 20 s) una vez admitido el peer (host en
+- [x] ~~**N-235.1** Bajar el timeout de ENet (MIN = MAX ≈ 20 s) una vez admitido el peer (host en
   `_on_peer_connected`, cliente tras `complete_auth`) y volver a 45 s en `begin_restart` / `_remote_restart`
   antes de recargar. `test_connection_errors` ya exige MIN == MAX y MAX ≥ handshake. Con `constructor-red`
-  y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.
-- [ ] **N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).
+  y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: en `NetSession` (módulo), 20 s
+  (`ENET_PEER_TIMEOUT_SESSION_MSEC`, MIN = MAX) desde que el host admite al que se une y 45 s mientras
+  alguien puede estar cargando. Como la recarga del host bloquea su poll, los clientes se enteran antes:
+  RPC nuevo `_host_load_timeout(bool)` (reliable, host → clientes, con `flush`), que manda
+  `announce_restart()` (nuevo; `restart_delivery()` lo llama antes del fundido, así ENet puede reenviarlo;
+  `begin_restart()` anuncia solo si nadie lo hizo). El host baja a cada cliente a 20 s con su último
+  `_report_level_ready` pendiente, pasados `settle_delay_seconds` (3 s) y revalidando al vencer
+  (`_reloads_owed`: un reporte viejo no baja nada ni cuenta al cliente listo). `_auth_failed` olvida el
+  timeout del joiner. Hallazgos de `auditor-red` resueltos. `PROTOCOL_VERSION` 13 (el 12 es de N-109). Tests:
+  `test_net_session` (host y cliente reales por ENet en un proceso: 45 → 20 al admitir con margen, 20 → 45
+  al reiniciar con o sin anuncio, reinicios seguidos, joiner de otra versión), `test_connection_errors`
+  (valores; `restart_delivery()` anuncia antes del fundido con dos `NetworkManager` reales) y `net_pair`
+  (20 s en las dos puntas). Aviso `docs/avisos/2026-09-30-n235-timeout-enet.md`.
+- [x] ~~**N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: `NETLOG ... WARNING slow level load` en
+  `net_pair.gd` / `net_trio.gd` (umbral = presupuesto de carga de `NetworkManager` − 10 s) y línea
+  `WARNING:` (más `::warning::` en GitHub Actions) en `tools/run-net-pair.sh` / `run-net-trio.sh`; sigue
+  siendo PASS.
 
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
@@ -193,7 +218,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227, N-228, N-229 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -415,7 +440,16 @@ ids aleatorios grandes verifica colores distintos y estables.
   `NetworkManager.color_slot(peer_id)` (host 0, cada joiner el libre más bajo desde que empieza a autenticarse; fuera de
   sesión, el `posmod` de siempre). Viaja en el handshake (`"colors"`) y por el RPC `_sync_color_slots` en cada join, salida
   o auth fallida; señal `color_slots_changed`. `PROTOCOL_VERSION` 9 → 10. `auditor-red`: sin bugs; par y trío en verde.
-- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+- [x] **N-226.2** ~~Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: helper único `PlayerColorSlot.slot(peer_id, tamaño_paleta)`
+  (`scripts/core/player_color_slot.gd`) = `posmod(color_slot(id), paleta)` con el host fijo en 0 (solo y en sala el mismo
+  color); lo usan `crew_progression.gd`, `player.gd`, `player_voice.gd`, `hud_results.gd`, `depot_panel.gd`,
+  `crew_panel.gd` y `hud_notices.gd`, y los que dibujan escuchan `color_slots_changed`. Campaña `CAMPAIGN_VERSION` 2
+  por slot (`"0"`..`"4"`), con migración del 1 (host "yellow" → slot 0) y sin crashear con archivos corruptos o de
+  otra versión; quien se va se guarda con el slot que tenía. Slot liberado: lo hereda el siguiente (documentado, sin
+  reservarlo). Test: `test_crew_progression.gd`. Aviso `2026-09-30-n226-color-por-indice.md`. Queda, fuera de esta
+  tarea: `NetSession._fail` limpia el mapa sin emitir `color_slots_changed` (módulo de red, otra rama) y la prueba
+  multiproceso `net_trio.gd` con `slots=0,1,2`.
   Notas de `auditor-red` (N-226.1): `MAX_PLAYERS` es 8 y la paleta 5, así que se lee `posmod(color_slot(id), paleta.size())`;
   jugando solo el host da 1 y en sala 0 (decidir si solo se lee como 0); un índice liberado lo hereda el próximo que entra
   (mérito/carta por color dentro de la sesión: reservarlo mientras dure o documentarlo); los lectores escuchan también
@@ -494,6 +528,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
 932: están escritos contra `max-file-lines: 1000`, no partidos por responsabilidad. Orden:
 `synth_audio` → `reference_truck` → `route.gd` → `package.gd`.
+- [x] **N-225.1** `synth_audio.gd` **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: 999 → 249 líneas. Los
+  generadores pasan a `synth_audio_vehicle.gd` (160), `synth_audio_world.gd` (253), `synth_audio_handling.gd` (107),
+  `synth_audio_animals.gd` (82), `synth_audio_dsp.gd` (80: costura, normalizado, `Resonator`) y a
+  `synth_audio_traps.gd` (32 → 187); `SynthAudio` queda como puerta con el caché y los mismos accesores y claves
+  (los 43 streams salen byte por byte iguales). Sin `max-line-length` en el módulo (la baseline bajó 3).
+  `test_synth_audio_golden.gd` compara los 43 con lo que daba el archivo único. Aviso:
+  `docs/avisos/2026-09-30-n225-synth-audio-partido.md`.
+- [ ] **N-225.2** `reference_truck.gd` (932). **N-225.3** `route.gd`. **N-225.4** `package.gd` (999). Quedan
+  `player.gd` y `run_manager.gd` fuera del orden.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
@@ -568,6 +611,38 @@ media medida); (4) la sombra de la loma con borde suave. Capturas antes/después
   Intento 2026-09-30 (sesión de arte): no se llegó a hacer (el agente se cortó). Pista: `render_rail_tunnel.gd` arma
   un `DirectionalLight3D` pelado; el sol del juego (`level_base.tscn`) ya tiene `shadow_blur = 1,6` y
   `directional_shadow_blend_splits`. Primero comprobar si el borde duro es solo de la captura.
+
+### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[ ] rama `nacho/N-319-depot-redesign`**
+Origen: pedido del usuario 2026-09-30 ("el galpón es muy genérico; que quede como el lobby de un juego profesional:
+distribución de espacios, áreas importantes, modelos genéricos"). El plan, el diagnóstico de la línea de base, la planta
+objetivo y el registro de cada iteración están en `docs/deposito-rediseno.md`; capturas de cada iteración en
+`D:/tmp/depot_review/iterN/` (fuera del repo). Necesita PC con GPU para las capturas y para los modelos (iteración 2).
+Restricciones (no se rompen): el juego no cambia (8 spawns, `TRUCK_BAY`, `TRUCK_CLEAR_Z`, portón, códigos y slots de
+estante, `DepotStation` con sus `station_id`, espejo, radio, pizarra de campaña); todo lo estático por `DepotKit`;
+`bench_depot` no empeora más de ~10 %; los cuerpos de los operarios son de Slatex (solo se mueven).
+Hecho cuando (1) adentro no hay velo lechoso: la luz marca el foco (camión, pizarra, estantes) y hay zonas en penumbra;
+(2) cada zona se lee por forma, luz y color antes que por carteles (pañol en jaula, taller en box, vestuario en cuarto,
+oficina en entrepiso con escalera), con un cartel chico por zona sobre la zona; (3) el recorrido spawn → pizarra →
+estantes → camión se sigue por las sendas verdes y el carril amarillo, con cruces cebra; (4) el espacio tiene capa de
+oficio (matafuegos, tableros, jaulas, bolardos, carteles chicos) y modelos propios en vez de primitivas; (5) `test_depot`,
+`test_start_yard`, `test_depot_campaign_board`, `test_depot_mirror`, `test_depot_zones` y `bench_depot` verdes; (6) la
+crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
+- [x] **N-319.1** ~~Iteración 1 — luz y atmósfera, planta por zonas, sendas y señalética (con `constructor-mundo`).~~
+  **[x] Hecho (2026-09-30, rama `nacho/N-319-depot-redesign`)** — sin niebla adentro (`DepotAtmosphere`: el `Environment`
+  del nivel se mezcla bajo el techo y vuelve al salir), ambiente más bajo, spots con sombra sobre camión, estantes y empaque
+  (presupuesto por nivel en `WorldQuality`: Baja 0, Media 1, Alta 3), spot cálido sobre la pizarra, pozos de luz bajo
+  las campanas, haces por los tragaluces, piso gris medio con juntas y desgaste, paredes en capas. Planta: isla de control
+  con la pizarra de 4,4 m, bahía oscura, pañol en jaula al frente a la izquierda, taller con media pared, vestuario con
+  tabiques, oficina en entrepiso con escalera que se sube (`depot_zones.gd`); sendas verdes, carril del autoelevador y
+  cuatro cruces cebra (`depot_circulation.gd`); carteles de zona un 15 % más chicos sobre su zona. `bench_depot` sin
+  cambio; GPU con sombras apagadas +2-11 % de llamadas de dibujo, con las de Alta +40-90 % adentro. Tests `test_depot_zones`
+  (nuevo), `test_depot` (umbrales de carteles/flechas a propósito), `test_render_budget`. Qué queda para la 2 en el
+  registro de `docs/deposito-rediseno.md`; aviso `docs/avisos/2026-09-30-n319-deposito.md`.
+- [ ] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
+  primitivas de `DepotKit` (`modelador-blender`, después `constructor-mundo`). Necesita PC.
+- [ ] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
+  oficio (`constructor-mundo`).
+- [ ] **N-319.4** Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
@@ -1567,13 +1642,47 @@ Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con St
 
 Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 
-- [ ] **N-109.1** Gaviota o carancho que baja a la caja del estante y trata de llevársela; se espanta con la
-  bocina o sujetando la caja.
-- [ ] **N-109.2** Perro que se sube a una caja abierta en una parada; se lo distrae tirándole algo.
-- [ ] **N-109.3** Abejas atraídas por la torta (Equilibrio) en zona de campo.
-- [ ] Cada uno anunciado con sonido o ícono antes de actuar (la queja principal de RV There Yet? es la
+- [x] **N-109.1** Gaviota que baja a la caja del estante y trata de llevársela; se espanta con la bocina o
+  sujetando la caja. Rama `nacho/N-109-cargo-animals`. Entra por la puerta trasera abierta; anunciada 3 s antes
+  (graznido + ícono con cuenta regresiva sobre la caja + cartel en el HUD); después tiene 6 s: si la caja no
+  está sujeta (el primario de quien la atiende, o alguien que la levanta; 1 s en total) ni suena la bocina,
+  la saca por la puerta con velocidad hacia atrás y sigue cargada, así que cae en la ventana de rescate de
+  N-213 (no la arruina de entrada). Modelo: el pájaro de la ruta (`sm_env_animal_bird.glb`) a escala ×2,2.
+- [x] **N-109.2** Perro que se sube a una caja abierta en una parada; se lo distrae tirándole algo. Rama
+  `nacho/N-109-cargo-animals`. En una parada a menos de 18 m de una casa, con una caja abierta a menos de 10 m
+  del camión: ladrido y carrera 3 s antes, y después la desgasta de a poco (2,5 de 100 por segundo, hasta 30 s:
+  nunca la arruina sola). Se va con la bocina, cerrando la tapa, levantando la caja o con **"Tirarle un palo al
+  perro"** (`dog_distract_point.gd`, un `Interactable` que va sobre el perro: apuntarle y apretar interactuar
+  con las manos libres; el palo vuela y el perro lo persigue).
+- [x] **N-109.3** Abejas atraídas por la torta (Equilibrio) en zona de campo. Rama `nacho/N-109-cargo-animals`.
+  Campaña, tramo de campo abierto (`RouteDresser.Zone.COUNTRYSIDE`), torta abierta a bordo: zumbido y nube
+  3 s antes; después desgastan la torta (3 por segundo, hasta 14 s) y le dan empujones que la inclinan (lo que
+  Equilibrio hace contrarrestar con el peso). Se van al cerrar la tapa, con la bocina o al salir del campo.
+- [x] Cada uno anunciado con sonido o ícono antes de actuar (la queja principal de RV There Yet? es la
   fauna sin aviso). Determinista por semilla, disparado por el host. Tests con el patrón de
-  `test_wildlife_crossing.gd`.
+  `test_wildlife_crossing.gd`. Rama `nacho/N-109-cargo-animals`.
+  - `CargoAnimalPlan` (semilla → tramo): ninguno en el primer tramo, uno por tramo como mucho y nunca en dos
+    seguidos, ~55 % de los demás; el host (`CargoAnimals`) mira si puede actuar (caja en el estante / caja
+    abierta), tope de 3 por partida, y lo cuenta a todos con `cargo_animal_alert` / `cargo_animal_ended`
+    (`EventBus.relay`); tras irse uno no se anuncia otro en 3,5 s (el tiempo de su salida); quien entra tarde
+    recibe el aviso otra vez sin reiniciar al bicho. Cada cliente lo
+    dibuja (`CargoAnimalView`). El daño lo hace solo el host (`DeliveryPackage.apply_external_damage`).
+  - Revisión visual (2026-09-30): la gaviota tiene modelo propio de primitivas (`cargo_gull.gd`: cuerpo blanco,
+    alas grises con puntas oscuras abiertas al volar y plegadas al posarse, pico amarillo); el perro (Shiba) sale
+    1,3 veces más grande, de pie en el pasillo junto a la caja; las abejas son 64 bichos de una sola malla (amarillos con franjas
+    negras y alitas blancas) que orbitan la torta; el ícono sobre la caja es más chico, con flecha y cuenta regresiva; y el palo sale como
+    prompt aunque el control de puertas esté más cerca (`aim_bonus`).
+  - Test `test_cargo_animals.gd` (plan, sonidos, modelos, gaviota, perro, abejas, cliente vs host, ritmo). Capturas:
+    `tests/render_cargo_animals.gd` (para `revisor-visual`).
+  - Aviso: `docs/avisos/2026-09-30-n109-cargo-animals.md`. `PROTOCOL_VERSION` 11 → 12.
+  - En Endless solo viene la gaviota (no hay casas ni campo). El perro y las abejas piden la caja **abierta**:
+    con la tapa cerrada no vienen (es lo que hace que cerrarla sea una salida). **Decidido** (Claude, con delegación del usuario,
+    2026-09-30): el perro y las abejas van solo por cajas abiertas y cerrar la tapa es la contramedida que el
+    jugador aprende (`docs/decisiones/2026-09-30-preguntas-auditoria.md`).
+  - Revisión visual hecha (2026-09-30, con GPU): gaviota propia, perro más grande y abejas de una sola malla
+    (`cargo_bee_mesh.gd`: cuerpo amarillo con dos franjas negras, cabeza y aguijón negros y dos alitas blancas
+    translúcidas; la abeja entera vibra). Falta: medir el ancho de banda de red (`auditor-red`) y dar mérito a
+    quien espanta (`CrewProgression.award_milestone`).
 
 ### N-406 · Radio del camión con función — B · `Opus 5.5 · high` · Aviso: sí (trampa Ruidoso) · **[x] rama `nacho/N-406-truck-radio`**
 
@@ -1597,9 +1706,11 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
     Una línea por evento de `RouteEventManager.EVENTS`, con `tr()` (`WORLD_RADIO_NEWS_*`).
 - [x] Test `test_truck_radio.gd`: el estado se sincroniza y modifica la agitación de Ruidoso. Aviso:
   `docs/avisos/2026-09-30-n406-truck-radio.md`.
-- [ ] Necesita PC: `revisor-visual` sobre la posición y el tamaño de la perilla y del cartelito en el tablero de
-  cada camión, y prueba a mano de que el tripulante a pie en la cabina llega a la perilla (el conductor y los
-  sentados no: `E` sentado los levanta). Con `auditor-red`, el RPC `_set_mode` y el tardío con dos jugadores.
+- [x] `revisor-visual` sobre la perilla y el cartelito: hecho en el PR #116 (perilla y cartel legibles, texto más
+  grande). `auditor-red` revisó `_set_mode`, el tardío y el reinicio: sin hallazgos; el cooldown de la perilla
+  (250 ms en `TruckRadio.cycle()`, en el host) se arregló en `nacho/N-406-radio-cooldown`.
+- [ ] Necesita PC: prueba a mano de que el tripulante a pie en la cabina llega a la perilla (el conductor y los
+  sentados no: `E` sentado los levanta).
 
 ### N-108 · Tramo de barro/pendiente con salida cooperativa — B · `Opus 5.5 · high` · Aviso: no
 

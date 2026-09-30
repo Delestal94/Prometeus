@@ -46,6 +46,9 @@ const VIEW: Script = preload("res://scripts/presentation/truck_radio_view.gd")
 const KNOB_FALLBACK_POSITION: Vector3 = Vector3(0.35, 1.5, -2.0)
 const KNOB_OFFSET_FROM_GPS: Vector3 = Vector3(0.3, -0.02, 0.0)
 
+## Shortest time between two clicks of the knob that count (host).
+const CYCLE_COOLDOWN_MS: int = 250
+
 ## The mode changed (every peer; also when a peer is handed the state).
 signal mode_changed(new_mode: StringName, silent: bool)
 ## The newscast said something (every peer with the newscast on).
@@ -61,6 +64,8 @@ var mode: StringName = DEFAULT_MODE
 var last_news: String = ""
 var knob: Interactable
 var view: Node3D
+## Host: when the knob last turned (Time.get_ticks_msec()).
+var _last_cycle_ms: int = -100000
 
 
 func _ready() -> void:
@@ -88,10 +93,14 @@ static func mode_key(of_mode: StringName) -> String:
 
 
 ## Host-only: one click of the knob. Returns the new mode, &"" if this peer
-## isn't the host.
+## isn't the host or the knob turned less than CYCLE_COOLDOWN_MS ago (so
+## hammering E can't restart the music and the jingle on every peer).
 func cycle() -> StringName:
+	if Time.get_ticks_msec() - _last_cycle_ms < CYCLE_COOLDOWN_MS:
+		return &""
 	if not set_mode(next_mode(mode)):
 		return &""
+	_last_cycle_ms = Time.get_ticks_msec()
 	return mode
 
 

@@ -94,6 +94,13 @@ func add_mesh(mesh: Mesh, xform: Transform3D, material: Material, casts_shadow: 
 		(_tools[id] as SurfaceTool).append_from(mesh, surface, xform)
 
 
+## Marks a material's whole batch as never casting a shadow (N-319): the floor
+## slab and the wall lining gain nothing from it, and every lamp that does cast
+## re-draws each batch it touches.
+func shadowless(material: Material) -> void:
+	_shadowless[material.get_instance_id()] = true
+
+
 ## An imported low-poly model (pallet, crate, cargo box...) folded into the
 ## batch with its own palette materials, detailed the same way the route's
 ## props are (LowpolyMaterials).
@@ -291,6 +298,75 @@ static func glow(color: Color, energy: float = 1.6) -> StandardMaterial3D:
 	return _material_cache[key]
 
 
+## A pool of warm light laid on a surface (N-319): additive and unshaded, a
+## soft disc fading to nothing at its rim. The floor under each lamp gets one,
+## so the hall reads as lit from above without a real light per lamp.
+static func light_pool(color: Color) -> StandardMaterial3D:
+	var key: String = "pool:%s" % color.to_html()
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.albedo_texture = _radial_texture()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		material.disable_fog = true
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
+## A soft stain on the floor (oil, rubber, wear): the same disc, dark and
+## see-through, lit like the floor it lies on.
+static func stain(color: Color) -> StandardMaterial3D:
+	var key: String = "stain:%s" % color.to_html()
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.albedo_texture = _radial_texture()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
+## Wire mesh on a flat panel: a square lattice with holes, world-mapped at
+## `cell` metres, for the supplies cage and the railings.
+static func wire_mesh(color: Color, cell: float = 0.12) -> StandardMaterial3D:
+	var key: String = "wire:%s:%.2f" % [color.to_html(), cell]
+	if not _material_cache.has(key):
+		var image := Image.create(16, 16, true, Image.FORMAT_RGBA8)
+		image.fill(Color(1.0, 1.0, 1.0, 0.0))
+		for index: int in range(16):
+			for thickness: int in range(2):
+				image.set_pixel(index, thickness, Color.WHITE)
+				image.set_pixel(thickness, index, Color.WHITE)
+		image.generate_mipmaps()
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.albedo_texture = ImageTexture.create_from_image(image)
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		material.alpha_scissor_threshold = 0.12
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		material.uv1_triplanar = true
+		material.uv1_world_triplanar = true
+		material.uv1_scale = Vector3.ONE / cell
+		material.roughness = 0.5
+		material.metallic = 0.4
+		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
+## A flat quad lying on the floor (or hung over it), `size` across (x by z),
+## turned `yaw` about Y. For paint, pools and stains: never casts a shadow.
+func floor_quad(size: Vector2, centre: Vector3, material: Material, yaw: float = 0.0) -> void:
+	var quad := QuadMesh.new()
+	quad.size = size
+	add_mesh(quad, Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, -PI * 0.5), centre), material, false)
+
+
 ## Slightly see-through glazing for the office and the skylights.
 static func glass(color: Color = Color(0.72, 0.86, 0.9, 0.32)) -> StandardMaterial3D:
 	var key: String = "glass:%s" % color.to_html()
@@ -346,6 +422,24 @@ static func stripes(a: Color, b: Color, period: float = 0.5, roughness: float = 
 		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 		_material_cache[key] = material
 	return _material_cache[key]
+
+
+static func _radial_texture() -> ImageTexture:
+	if _material_cache.has("radial_texture"):
+		return _material_cache["radial_texture"]
+	var size: int = 64
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	for y: int in range(size):
+		for x: int in range(size):
+			var distance: float = Vector2(x + 0.5 - size * 0.5, y + 0.5 - size * 0.5).length() / (size * 0.5)
+			var fade: float = clampf(1.0 - distance, 0.0, 1.0)
+			# Smooth at the centre and the rim: no ring shows where it ends.
+			var alpha: float = fade * fade * (3.0 - 2.0 * fade)
+			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha))
+	image.generate_mipmaps()
+	var texture := ImageTexture.create_from_image(image)
+	_material_cache["radial_texture"] = texture
+	return texture
 
 
 static func _rib_texture() -> ImageTexture:

@@ -44,6 +44,8 @@ var distance_traveled: float = 0.0
 ## to load anything and go. The road is already out there when you look
 ## through the door.
 func _prepare_mode() -> void:
+	# No doors and no meadows: the gull is the only animal that comes (N-109).
+	cargo_animals.endless = true
 	depot.post_orders(0)
 	_streamer.start(vehicle)
 

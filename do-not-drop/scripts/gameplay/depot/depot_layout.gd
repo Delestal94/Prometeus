@@ -37,10 +37,16 @@ const SPAWN_POINTS: Array[Vector3] = [
 	Vector3(-1.2, 1.0, 16.8), Vector3(0.0, 1.0, 16.8), Vector3(1.2, 1.0, 16.8), Vector3(2.4, 1.0, 16.8),
 	Vector3(-1.2, 1.0, 18.0), Vector3(0.0, 1.0, 18.0), Vector3(1.2, 1.0, 18.0), Vector3(2.4, 1.0, 18.0),
 ]
-## The order board: a whiteboard on a stand beside the truck, angled toward
-## where the crew appears.
-const BOARD_AT := Vector3(-4.5, 0.0, 13.0)
-const BOARD_YAW_DEGREES: float = 38.0
+## The control island's order board (N-319): a big whiteboard on a frame with
+## its own strip light, left of the truck's rear and angled toward where the
+## crew appears, so the orders read from the spawn.
+const BOARD_AT := Vector3(-5.5, 0.0, 10.9)
+const BOARD_YAW_DEGREES: float = 40.0
+## The control island's footprint (x/z): the board, the dispatcher's desk and
+## the painted floor around them.
+const ISLAND := Rect2(-8.0, 7.6, 4.6, 5.3)
+## Where the crew gathers when it appears: a painted rectangle around the spawn row.
+const GATHER := Rect2(-2.3, 16.0, 6.0, 3.0)
 ## The conveyor along the back wall; its boxes loop from start to end.
 const CONVEYOR_START_X: float = -9.8
 ## Ends well short of the office (x 8.6): at 7.2 its end portal stood right
@@ -61,6 +67,28 @@ const FLOOR_PAINT_STEP: float = 0.004
 const WORKSHOP_FLOOR := Rect2(9.4, 0.3, HALF_WIDTH - 9.4 - 0.06, 12.2)
 ## The truck and paint terminal: inside the workshop, facing the hall.
 const KIOSK_AT := Vector3(10.6, 0.0, 9.0)
+## The workshop's half wall along the hall, with the gap the kiosk is reached through.
+const WORKSHOP_WALL_X: float = 9.3
+const WORKSHOP_GAP := Vector2(7.4, 10.7)
+## The supplies cage (N-319): mesh cage with a service window, front left.
+## Its window looks east, toward the truck bay.
+const SHOP_CAGE := Rect2(-14.7, 1.6, 5.4, 7.6)
+const SHOP_STATION := Vector3(-8.85, 1.25, 5.4)
+## The wardrobe's station stays where the lockers' bench is.
+const WARDROBE_STATION := Vector3(14.0, 1.2, 15.5)
+## The office on its mezzanine (back right): platform top, where it starts
+## and the stair up to it.
+const MEZZANINE_HEIGHT: float = 2.9
+const MEZZANINE := Rect2(7.6, 24.3, 7.34, 7.64)
+const STAIR_X: float = 8.5
+const STAIR_RUN: float = 4.6
+## Lanes (x/z, N-319): pedestrians keep to the green walkways, the forklift to
+## its yellow lane down the left side.
+const WALK_WIDTH: float = 1.3
+const SPINE_Z: float = 14.3
+const FORKLIFT_LANE_X: float = -12.05
+const FORKLIFT_LANE_WIDTH: float = 1.85
+const FORKLIFT_LANE_Z := Vector2(10.4, 27.6)
 
 # --- Palette and type ------------------------------------------------------------
 
@@ -77,6 +105,8 @@ const BOARD_GREEN := Color("2e9e56")
 const LOCKERS_TEAL := Color("3f7f8c")
 const SHOP_PURPLE := Color("7b52b9")
 const WORKSHOP_RED := Color("c0392b")
+const WALK_GREEN := Color("3a9b5c")
+const LANE_YELLOW := Color("e7be51")
 
 # --- Assets ----------------------------------------------------------------------
 
@@ -91,20 +121,20 @@ const CRATE: String = "res://assets/models/environment/props/sm_env_prop_wooden_
 
 # --- Wayfinding and contact shadows ----------------------------------------------
 
-## Wayfinding from where the crew appears: an arrow painted on the floor
-## toward each place, and its name beside it. The words read facing the
-## truck, the way everyone spawns; each arrow aims at `toward`.
+## Wayfinding from where the crew appears: one small arrow in each place's
+## colour on the green walkways, aimed at `toward` (N-319: the words that
+## used to be painted beside them are gone, each place has its own sign).
 const FLOOR_GUIDES: Array[Dictionary] = [
-	{"caption": "WORLD_DEPOT_BOARD", "word": Vector3(-2.0, 0.0, 16.0),
-		"arrow": Vector3(-2.7, 0.0, 15.3), "toward": Vector3(-4.3, 0.0, 13.3), "colour": BOARD_GREEN},
-	{"caption": "WORLD_DEPOT_SHELVES", "word": Vector3(-3.0, 0.0, 17.4),
-		"arrow": Vector3(-4.9, 0.0, 17.4), "toward": Vector3(-6.3, 0.0, 17.4), "colour": SHELVES_BLUE},
-	{"caption": "WORLD_DEPOT_WORKSHOP", "word": Vector3(3.0, 0.0, 15.5),
-		"arrow": Vector3(4.4, 0.0, 15.2), "toward": Vector3(10.15, 0.0, 9.0), "colour": WORKSHOP_RED},
-	{"caption": "WORLD_DEPOT_LOCKERS", "word": Vector3(4.3, 0.0, 17.0),
-		"arrow": Vector3(6.3, 0.0, 17.0), "toward": Vector3(14.0, 0.0, 15.5), "colour": LOCKERS_TEAL},
-	{"caption": "WORLD_DEPOT_SUPPLIES", "word": Vector3(4.6, 0.0, 18.6),
-		"arrow": Vector3(6.9, 0.0, 19.0), "toward": Vector3(10.8, 0.0, 23.4), "colour": SHOP_PURPLE},
+	{"caption": "WORLD_DEPOT_BOARD", "arrow": Vector3(-1.5, 0.0, 15.45), "toward": Vector3(-5.3, 0.0, 11.2),
+		"colour": Color("14532c")},
+	{"caption": "WORLD_DEPOT_SHELVES", "arrow": Vector3(-3.7, 0.0, 14.3), "toward": Vector3(-8.5, 0.0, 15.0),
+		"colour": SHELVES_BLUE},
+	{"caption": "WORLD_DEPOT_SUPPLIES", "arrow": Vector3(-6.1, 0.0, 14.3), "toward": SHOP_STATION,
+		"colour": SHOP_PURPLE},
+	{"caption": "WORLD_DEPOT_WORKSHOP", "arrow": Vector3(4.9, 0.0, 14.3), "toward": Vector3(10.15, 0.0, 9.0),
+		"colour": WORKSHOP_RED},
+	{"caption": "WORLD_DEPOT_LOCKERS", "arrow": Vector3(6.9, 0.0, 14.3), "toward": WARDROBE_STATION,
+		"colour": LOCKERS_TEAL},
 ]
 ## Soft dark patches where heavy things meet the floor (tareas de Nacho
 ## N-308.2; no SSAO on GL Compatibility): the cars outside, the dumpster,
