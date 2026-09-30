@@ -7,9 +7,11 @@ class_name PhoneFrame
 ## the camera shows through.
 ##
 ## It only draws and reports: PhoneCamera decides what the status and hint
-## say and what a shot does. The shutter button is the mouse's extra way to
-## shoot -- the `phone_shutter` input action (click / RB) keeps working on its
-## own -- and just emits `shutter_pressed`.
+## say and what a shot does. The shutter button is mostly the picture of a
+## shutter: the phone opens with the mouse captured, so any click already
+## shoots through the `phone_shutter` action (click / RB). The button only
+## takes a click when the cursor is free (e.g. the ping wheel is up) and then
+## just emits `shutter_pressed`.
 ##
 ## Clock: there is no continuous world clock (WorldMood only knows DAY / DUSK
 ## / NIGHT), so the phone shows a plausible hour for the session's time of

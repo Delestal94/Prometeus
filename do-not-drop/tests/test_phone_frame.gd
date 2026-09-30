@@ -83,7 +83,7 @@ func _run() -> void:
 	frame.set_status("status line", PhoneFrame.MINT)
 	frame.set_hint("hint line")
 	_expect(frame.status_text() == "status line" and frame.hint_text() == "hint line", "Status and hint are settable")
-	_expect(not tr("HUD_PHONE_SHUTTER").is_empty(), "The shutter tooltip has a text")
+	_expect(tr("HUD_PHONE_SHUTTER") != "HUD_PHONE_SHUTTER", "The shutter tooltip has a translated text")
 	frame.free()
 
 	# --- PhoneCamera builds on it ---
@@ -99,6 +99,7 @@ func _run() -> void:
 	_expect(inner != null, "PhoneCamera contains a PhoneFrame")
 	if inner != null:
 		_expect(not inner.visible, "The frame stays hidden until the phone is pulled out")
+		_expect(not inner.is_processing(), "A put-away phone doesn't tick its clock or battery")
 		_expect(inner.shutter_pressed.is_connected(Callable(phone, &"shoot")),
 			"The shutter button is wired to PhoneCamera.shoot")
 		_expect(not inner.hint_text().is_empty(), "The frame shows the control hint")

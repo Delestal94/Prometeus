@@ -2316,8 +2316,8 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 - [x] (rama `nacho/S-304-phone-frame`) Marco de UI del celular (bordes redondeados, hora, batería, botón de obturador) como `Control`
   en `scripts/ui/phone_frame.gd`. `PhoneFrame`: bisel con esquinas interiores redondeadas (mismo
   encuadre que antes), barra de estado con hora (arranca según `WorldMood` día/atardecer/noche y avanza
-  1 min cada 6 s) y batería decorativa, obturador clickeable en el bisel derecho conectado a
-  `PhoneCamera.shoot`. Test `tests/test_phone_frame.gd`.
+  1 min cada 6 s) y batería decorativa, obturador en el bisel derecho conectado a
+  `PhoneCamera.shoot` (con el mouse capturado es decorativo: el clic ya dispara por la acción). Test `tests/test_phone_frame.gd`.
 
 #### S-305 · Accesorios cosméticos 3D — C · `Opus 5.5 · high` · Aviso: no
 
