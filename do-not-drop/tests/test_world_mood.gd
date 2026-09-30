@@ -10,7 +10,10 @@ extends SceneTree
 ##     autumn really recolours leaves and grass -- the models' materials
 ##     (LowpolyMaterials), the batched dressing, and the terrain's `autumn` --
 ##     while summer leaves the palette alone.
-##   - rain is heard louder in the cabin and not at all inside the depot.
+##   - rain is heard louder in the cabin and not at all inside the depot;
+##   - night is readable (N-317): ambient from a moonlit colour instead of the
+##     black sky, moon and ambient energy floors, the asphalt lifted only at
+##     night.
 
 var _failures: int = 0
 
@@ -53,6 +56,7 @@ func _run() -> void:
 		if wet >= 0.0:
 			break
 	_expect(is_equal_approx(wet, 1.0), "Rain soaks the road (wetness %.2f)" % wet)
+	_check_night_light(level, shared, world_environment.environment)
 	level.queue_free()
 	await process_frame
 	_check_outdoor_sounds()
@@ -60,6 +64,37 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: moods are shared by seed, varied across seeds, and never leak into the next load")
 	quit(_failures)
+
+
+## N-317: a night the road can be read in. The level's ambient comes from the
+## sky, black at night, so night swaps most of it for a flat moonlit colour
+## (shadows were 0,0,0 before); the moon and that ambient keep at least the
+## energy tuned against captures; the terrain lifts the asphalt at night and
+## only at night.
+func _check_night_light(level: Node, shared: Environment, night_environment: Environment) -> void:
+	var sky_share: float = night_environment.ambient_light_sky_contribution
+	_expect(sky_share <= 0.5 and is_equal_approx(shared.ambient_light_sky_contribution, 1.0),
+		"At night most ambient is the moonlit colour, not the black sky (share %.2f; shared untouched)" % sky_share)
+	_expect(WorldMood.NIGHT_AMBIENT_SCALE >= 0.6 and WorldMood.NIGHT_MOON_SCALE >= 0.55,
+		"Night ambient and moon keep the energy the road needs (%.2f, %.2f)"
+		% [WorldMood.NIGHT_AMBIENT_SCALE, WorldMood.NIGHT_MOON_SCALE])
+	var lift: Array[float] = []
+	for time: int in [WorldMood.TimeOfDay.NIGHT, WorldMood.TimeOfDay.DAY, WorldMood.TimeOfDay.DUSK]:
+		var mood := WorldMood.new()
+		mood.time_of_day = time
+		mood.apply_ground(level.get_node(^"World/Route"))
+		lift.append(_terrain_parameter(level, &"night_road"))
+	_expect(is_equal_approx(lift[0], 1.0) and is_zero_approx(lift[1]) and is_zero_approx(lift[2]),
+		"The asphalt is lifted at night, not by day or at dusk (%.1f / %.1f / %.1f)" % lift)
+
+
+func _terrain_parameter(level: Node, parameter: StringName) -> float:
+	for body: Node in level.get_node(^"World/Route").find_children("Terrain_*", "StaticBody3D", true, false):
+		for mesh: Node in body.get_children():
+			if mesh is MeshInstance3D and (mesh as MeshInstance3D).material_override is ShaderMaterial:
+				var terrain_material := (mesh as MeshInstance3D).material_override as ShaderMaterial
+				return float(terrain_material.get_shader_parameter(parameter))
+	return -1.0
 
 
 ## N-305: one season per session, drawn from the seed like the weather but

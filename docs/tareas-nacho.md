@@ -374,7 +374,7 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
 tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
 
-### N-317 · Ruta de noche legible (calzada, luz y horizonte) — B · `Opus 5.5 · high` · Aviso: no
+### N-317 · Ruta de noche legible (calzada, luz y horizonte) — B · `Opus 5.5 · high` · Aviso: no · **[x] rama `arte/N-317-night-road`**
 Origen: PC build 2026-09-30. Necesita PC (GPU real; la toma la sesión de arte). Capturas 1280×720 de
 `render_route_dressing.gd` sobre 390ee37 (RTX 4060 Ti): en `render_route_sign.png`, `render_route_guardrail.png` y
 `render_route_landmark.png` de noche la calzada es casi negra/azul marino, solo se leen las líneas del borde; el
@@ -386,8 +386,22 @@ Hecho cuando, en capturas de noche de esos cuatro planos, la calzada tiene lumin
 (anotar el valor antes/después con un script sobre el PNG), la transición de luz sin borde duro (caída suave) y el
 plano `horizon` no tiene cartel tapando >10 % del cuadro; `revisor-visual` lo confirma y `tools/run-tests.sh route`
 sigue en verde.
-- [ ] **N-317.1** Revisar el encuadre del plano `horizon` de `render_route_dressing.gd` (cartel pegado a la cámara) y medir luminancia de la calzada. Con `revisor-visual`.
-- [ ] **N-317.2** Subir luz ambiental/luna y suavizar el borde de los faros y `WorldMood` de noche; terreno, árboles y torre de agua con más valor. Con `artista-shaders` y `constructor-mundo`; tests `route`, `night_lights`.
+- [x] **N-317.1** ~~Revisar el encuadre del plano `horizon` de `render_route_dressing.gd` (cartel pegado a la cámara) y medir luminancia de la calzada. Con `revisor-visual`.~~
+  **[x] Hecho (2026-09-30, sesión de arte)** — el script acepta `--seed=N` (7 por defecto: antes cada corrida era otra ruta
+  y no se podía comparar) y el plano `horizon` sale de un punto de `route._path_points` a 70 m (o más) de ruta, descartando
+  los que tienen techo o un cartel en los primeros 25 m: el cartel "CUIDA…" era el portón del depósito (61 % → 0 %).
+  Medidor nuevo: `art/tools/measure_luminance.py`.
+- [x] **N-317.2** ~~Subir luz ambiental/luna y suavizar el borde de los faros y `WorldMood` de noche; terreno, árboles y torre de agua con más valor. Con `artista-shaders` y `constructor-mundo`; tests `route`, `night_lights`.~~
+  **[x] Hecho (2026-09-30, sesión de arte)** — el "borde tipo foco" no eran los faros (no hay en esas capturas) sino las
+  lámparas del túnel, sin sombras y con 11 m de alcance a 6 m de la boca: derramaban un disco afuera (`tunnel_segment.gd`:
+  7,5 m adentro y 9,5 m de alcance). Las sombras salían negras porque el ambiente del nivel viene del cielo (casi negro de
+  noche): `world_mood.gd` baja `ambient_light_sky_contribution` a 0,4 de noche, ambiente (0,4, 0,45, 0,58) ×0,6 y luna ×0,55;
+  `route_terrain.gdshader` aclara el asfalto ×1,4 con `night_road`; luz del porche más suave. Calzada de noche, seed 7
+  (1280×720, RTX 4060 Ti): sign 0,038 → 0,136, guardrail 0,036 → 0,135, horizon 0,032 → 0,130; terreno del landmark 0,094 →
+  0,188; cielo igual (0,050); 0 % quemados. Día y atardecer sin cambios (`night_road` = 0). Tests `world_mood` (nuevo
+  `_check_night_light`) y `more_route_segments` (la boca del túnel queda fuera del alcance de las lámparas).
+  Queda: la sombra dura de la loma frente al túnel es N-318.3; la lluvia de noche queda más oscura (calzada 0,07-0,12) a
+  propósito.
 
 ### N-318 · Cartel A-3 quemado, granero negro y borde duro de la loma — C · `Opus 5.5 · medium` · Aviso: no
 Origen: PC build 2026-09-30. Necesita PC (la toma la sesión de arte). Capturas de 390ee37: en `render_route_house.png` el
