@@ -17,6 +17,23 @@ const CROSSING_CHANCE: float = 0.12
 const CROSSING_MIN_GAP: float = 300.0
 const CROSSING_FIRST_AT: float = 120.0
 var _last_crossing_distance: float = -INF
+## Every model the Endless pool's segments instance (N-219): read on a
+## background thread from the start of the level, so the first bridge, tunnel
+## or roadworks does not load them in the physics tick that builds it. A new
+## segment with a model adds it here (test_route_streaming checks they exist).
+const WARM_MODELS: Array[String] = [
+	"res://assets/models/environment/route/sm_env_route_chicane_barrier.glb",
+	"res://assets/models/environment/route/sm_env_route_bridge_deck.glb",
+	"res://assets/models/environment/route/sm_env_route_bridge_post.glb",
+	"res://assets/models/environment/route/sm_env_route_bridge_water.glb",
+	"res://assets/models/environment/route/sm_env_route_tunnel_module.glb",
+	"res://assets/models/environment/route/sm_env_route_tunnel_portal.glb",
+	"res://assets/models/environment/route/sm_env_route_tunnel_lamp.glb",
+	"res://assets/models/environment/route/sm_env_route_tunnel_hill_props.glb",
+	"res://assets/models/environment/props/sm_env_prop_bridge_railing.glb",
+	"res://assets/models/environment/props/sm_env_prop_traffic_cone.glb",
+	"res://assets/models/environment/props/sm_env_prop_road_barrier.glb",
+]
 
 
 func _init() -> void:
@@ -30,6 +47,10 @@ func _init() -> void:
 
 func _ready() -> void:
 	super()
+	RouteSegment.warm_models(WARM_MODELS)
+	# The bridge's river loop is synthesized the first time it is asked for
+	# (~55 ms): cached here, while the level loads, not under the first bridge.
+	SynthAudio.river_flow_loop()
 	var sky := RouteSky.new()
 	sky.name = "Sky"
 	add_child(sky)
