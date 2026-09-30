@@ -6,7 +6,8 @@ extends SceneTree
 ##   - unlocking it puts it back;
 ##   - online, the list is the host's (NetworkManager.world_locked_traps,
 ##     handed over with the seed), whatever this player's own profile says --
-##     every peer has to shelve the same replicated boxes.
+##     every peer has to shelve the same replicated boxes;
+##   - a full crew of eight gets a box for each of its seven houses (N-228.2).
 
 var _failures: int = 0
 
@@ -42,7 +43,22 @@ func _run() -> void:
 		"Solo with a fresh profile: two starter traps, two boxes each (got %s)" % str(kinds))
 	var five_player_locked: Array = unlocks.call(&"locked_traps", 5)
 	var available_boxes: int = (unlocks.TRAP_DIFFICULTY_ORDER.size() - five_player_locked.size()) * unlocks.BOXES_PER_TRAP
-	_expect(available_boxes >= 4, "Four starter boxes cover the maximum four delivery houses")
+	_expect(available_boxes >= 4, "Five players on a fresh profile: a box for each of the four houses")
+	# N-228.2: a full crew of eight gets seven houses (RoutePlanner.crew_house_count)
+	# and needs seven boxes, or three houses end up with no order at all.
+	var max_players: int = int(network.get_script().get_script_constant_map()["MAX_PLAYERS"])
+	var full_houses: int = RoutePlanner.crew_house_count(max_players)
+	var house_cap: int = int(unlocks.MAX_DELIVERY_HOUSES)
+	_expect(max_players == 8 and house_cap >= full_houses,
+		"The box cap covers every house of a full crew (%d players, %d houses, cap %d)"
+		% [max_players, full_houses, house_cap])
+	var full_locked: Array = unlocks.call(&"locked_traps", max_players)
+	var full_traps: int = unlocks.TRAP_DIFFICULTY_ORDER.size() - full_locked.size()
+	var full_boxes: int = full_traps * unlocks.BOXES_PER_TRAP
+	_expect(full_boxes >= full_houses,
+		"%d players on a fresh profile: %d boxes for %d houses" % [max_players, full_boxes, full_houses])
+	_expect(not full_locked.has(&"growing_weight") and not full_locked.has(&"liquid") and full_locked.has(&"noisy"),
+		"A full crew releases the two easiest locked traps first (locked: %s)" % str(full_locked))
 	var shortage: Array[StringName] = [&"growing_weight", &"noisy", &"liquid", &"explosive", &"hostile"]
 	var recovered: Array = unlocks.call(&"_ensure_trap_capacity", shortage, 5)
 	_expect(not recovered.has(&"growing_weight") and recovered.has(&"noisy"),

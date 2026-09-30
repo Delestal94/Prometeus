@@ -43,7 +43,9 @@ const TRAP_DIFFICULTY_ORDER: Array[StringName] = [
 	&"fragile", &"balance", &"growing_weight", &"liquid", &"noisy", &"explosive", &"hostile",
 ]
 const BOXES_PER_TRAP := 2
-const MAX_DELIVERY_HOUSES := 4
+## One house per passenger at the 8-player cap (NetworkManager.MAX_PLAYERS - 1):
+## at 4, a full crew on a fresh profile got 7 houses and only 4 orders (N-228.2).
+const MAX_DELIVERY_HOUSES := 7
 
 ## The truck the host brings to the route (vehicle.gd VARIANTS) and its paint
 ## (vehicle.gd PAINTS). Same unlock rules as everything else here.
@@ -112,9 +114,9 @@ func locked_traps(player_count: int = -1) -> Array[StringName]:
 	return _ensure_trap_capacity(locked, required_boxes)
 
 
-## Keep enough physical boxes for one order per house. With today's two
-## starter traps this is already four boxes; the fallback makes that invariant
-## survive future changes to the starting catalogue or route size.
+## Keep enough physical boxes for one order per house. The two starter traps
+## give four boxes; a bigger crew releases the easiest locked traps until every
+## house has its box, and the invariant survives catalogue or route changes.
 func _ensure_trap_capacity(locked: Array[StringName], required_boxes: int) -> Array[StringName]:
 	var result := locked.duplicate()
 	var available_traps := TRAP_DIFFICULTY_ORDER.size() - result.size()
