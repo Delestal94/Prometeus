@@ -24,6 +24,10 @@ extends SceneTree
 ## its whole sequence alone: every peer reports `assist=1`.
 ## N-117.3: then the same holder scrubs the box, turned into a Liquid one: six
 ## alternating swings over the RPC and every peer reports `scrub=5`.
+## N-222: after the TRIO line the host starts a run, hands one door its box and
+## leaves. Each client prints a GONE line: its disconnect screen has to be up
+## and carry what it saw of the run (1 house delivered, RunTally), in its own
+## words.
 ##
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
@@ -48,6 +52,7 @@ var _network: Node
 var _level: Node
 var _host: bool = false
 var _name: String = "host"
+var _host_gone: bool = false
 
 
 func _initialize() -> void:
@@ -62,6 +67,7 @@ func _initialize() -> void:
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
 	# NETLOG, not TRIO: run-net-trio.sh takes the first TRIO line as the result.
 	_network.connect(&"session_failed", func(reason: String) -> void:
+		_host_gone = true
 		print("NETLOG role=%s session failed at %.1f s: %s" % [_name, Time.get_ticks_msec() / 1000.0, reason]))
 	var error: Error = _network.call(&"host_session", PORT) if _host else _network.call(&"join_session", "127.0.0.1", PORT)
 	if error != OK:
@@ -126,8 +132,40 @@ func _report() -> void:
 		_route_hash(route), phase, grab, tap, scrub, assist, _code_of(code_box)])
 	# The host stays up a little so the clients' own reads aren't cut short.
 	await _pump(4.0 if _host else 1.0)
-	_network.call(&"leave_session")
+	if _host:
+		await _deliver_and_leave()
+	else:
+		await _report_host_gone()
 	quit(0)
+
+
+## Host: a run with one door served, then gone without a word (N-222).
+func _deliver_and_leave() -> void:
+	var run: Node = root.get_node(^"/root/RunManager")
+	run.call(&"start_run")
+	await _pump(1.0)
+	run.call(&"register_delivery", 0, &"delivered_ok", &"")
+	await _pump(1.5)
+	_network.call(&"leave_session")
+
+
+## Client: waits for the host to go, then says whether the disconnect screen
+## kept the run's tally.
+func _report_host_gone() -> void:
+	var waited: float = 0.0
+	while not _host_gone and waited < 20.0:
+		await _pump(0.1)
+		waited += 0.1
+	await process_frame
+	var hud: Node = _level.get_node(^"HUD")
+	var stats: String = (hud.get(&"overlay_stats") as Label).text
+	var tally: String = TranslationServer.translate("HUD_HOST_GONE_TALLY").get_slice("%", 0)
+	var run: Node = root.get_node(^"/root/RunManager")
+	var houses: int = (run.get(&"deliveries") as Array).size()
+	var ok: bool = _host_gone and hud.get(&"overlay_mode") == "disconnected" and stats.contains(tally) \
+			and houses == 1 and not bool(run.get(&"is_running"))
+	print("GONE role=%s %s gone=%s overlay=%s houses=%d stats=%s" % [_name, "ok" if ok else "FAIL", _host_gone,
+			hud.get(&"overlay_mode"), houses, stats.replace("\n", " | ")])
 
 
 ## Both clients step up to the same box and ask the host for it in the same

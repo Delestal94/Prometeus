@@ -76,6 +76,15 @@ check_exit() {
 	fi
 	status=1
 }
+# N-222: both clients saw the host go mid-run and kept its tally on screen.
+for role in a b; do
+	gone="$(grep -m1 '^GONE ' "$WORK/$role.log" || true)"
+	echo "${gone:-GONE role=$role (no line)}"
+	case "$gone" in
+		*" ok "*) ;;
+		*) status=1 ;;
+	esac
+done
 check_exit host "$HOST_CODE"
 check_exit a "$A_CODE"
 check_exit b "$B_CODE"
@@ -93,4 +102,4 @@ if [ "$status" -ne 0 ]; then
 	exit 1
 fi
 [ ${#unstable[@]} -gt 0 ] && echo "  cierre inestable (imprimieron, el motor crasheó al salir): ${unstable[*]}"
-echo "PASS: host and two clients (one late) see the same seed, houses, orders, road, crossing, bomb code, Fragile tap, Liquid scrub and a helper's sequence"
+echo "PASS: host and two clients (one late) see the same seed, houses, orders, road, crossing, bomb code, Fragile tap, Liquid scrub, a helper's sequence and the run's tally once the host leaves"
