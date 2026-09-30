@@ -938,7 +938,7 @@ Fase 4 de `docs/investigacion-red.md`.
   límite de pedidos por segundo por peer.
 - [ ] Test que recorra todos los `@rpc("any_peer"` y exija el chequeo del remitente.
 - [ ] Reconexión: el que se cae a mitad de una partida vuelve a su lugar.
-- [ ] Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.
+- [x] ~~Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.~~ **[x] Hecho (2026-09-30)** — rama `nacho/ci-faster-prs`: §6, con cómo elegir el número sin chocar con otro PR en vuelo.
 - [ ] Antes de jugar con gente de afuera: AppID propio (N-901).
 
 ## 3. Arte y dirección visual
