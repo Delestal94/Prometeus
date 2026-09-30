@@ -200,6 +200,18 @@ HUD_NET_STATS_HINT,%s oculta este panel,%s hides this panel
 HUD_COMPLAINT_PAID,Casa %d reclamó que llegó roto y no tenías foto. Te lo descuentan.,House %d complained it arrived broken and you had no photo. It comes out of your pay.
 HUD_COMPLAINT_SETTLED,Casa %d reclamó que llegó roto — les mostraste la foto. Caso cerrado.,House %d complained it arrived broken — you showed them the photo. Case closed.
 HUD_CONTINUE,Continuar,Continue
+HUD_CREW_BOX,CON CAJA,HAS A BOX
+HUD_CREW_COUNT,%d / %d,%d / %d
+HUD_CREW_DRIVING,AL VOLANTE,AT THE WHEEL
+HUD_CREW_GUEST,El código de la sala lo ve el anfitrión.,Only the host sees the room code.
+HUD_CREW_HOST,ANFITRIÓN,HOST
+HUD_CREW_INVITE_IP,o escribiendo la IP: %s,or by typing the IP: %s
+HUD_CREW_INVITE_LAN,Pasales este código para unirse,Share this code so they can join
+HUD_CREW_INVITE_STEAM,Invitá a tus amigos desde la lista de Steam,Invite your friends from the Steam list
+HUD_CREW_NO_LAN,Sin red local: no hay código para pasar,No local network: there is no code to share
+HUD_CREW_TEAM_COLOR,Color de equipo,Team colour
+HUD_CREW_TITLE,TRIPULACIÓN,CREW
+HUD_CREW_YOU,VOS,YOU
 HUD_DISCONNECTED,SIN CONEXIÓN,DISCONNECTED
 HUD_EVENT,Evento,Event
 HUD_EVENT_FAILED,Evento fallido,Event failed
@@ -216,6 +228,7 @@ HUD_KEYS_DRIVER,W/S  acelerar y frenar   ·   A/D  girar   ·   Espacio  freno d
 HUD_KEYS_ON_FOOT,WASD  caminar   ·   Espacio  saltar   ·   E  agarrar / dejar   ·   Q  soltar paquete,WASD  walk   ·   Space  jump   ·   E  grab / place   ·   Q  drop package
 HUD_KEYS_PASSENGER,Click izq. (mantener)  cuidar tu paquete   ·   WASD  secuencias   ·   E  bajarte,Left click (hold)  tend your package   ·   WASD  sequences   ·   E  get out
 HUD_KEY_CENTER_VIEW,C  centrar vista,C  centre view
+HUD_KEY_CREW,Mantener Tab  tripulación,Hold Tab  crew
 HUD_KEY_LOOK_BACK,%s  mirar atrás,%s  look back
 HUD_KEY_PAUSE,Esc  pausa,Esc  pause
 HUD_KEY_PHONE,F  celular,F  phone
@@ -238,6 +251,7 @@ HUD_PAD_LOOK_BACK,Clic stick izq.  mirar atrás,L-stick click  look back
 HUD_PAD_ON_FOOT,Stick izq.  caminar   ·   X  saltar   ·   A  agarrar / dejar,L-stick  walk   ·   X  jump   ·   A  grab / place
 HUD_PAD_PASSENGER,RT (mantener)  cuidar tu paquete   ·   Stick izq.  secuencias   ·   A  bajarte,RT (hold)  tend your package   ·   L-stick  sequences   ·   A  get out
 HUD_PAD_PAUSE,Start  pausa,Start  pause
+HUD_PAD_CREW,Mantener Back  tripulación,Hold Back  crew
 HUD_PAD_PHONE,LB  celular,LB  phone
 HUD_PAD_PING,D-pad arriba  ping,D-pad up  ping
 HUD_PAD_RESTART,Mantener Y  reiniciar,Hold Y  restart
@@ -433,16 +447,16 @@ UI_OPT_BIND_LOOK_BACK,Mirar atrás,Look back
 UI_OPT_BIND_PING,Ping,Ping
 UI_OPT_BIND_USE_CARD,Usar carta,Use card
 UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
-UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa,"On foot: WASD walk  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
+UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
 Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out
 Passenger: Left click (hold) tend the package  ·  WASD sequences
 F phone  ·  Click take photo  ·  Wheel click ping  ·  G use card  ·  C centre view
-Esc pause  ·  hold R restart  ·  F11 full screen"
-UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar,"On foot: L-stick walk  ·  R-stick look  ·  A interact  ·  X jump
+Esc pause  ·  hold R restart  ·  F11 full screen  ·  hold Tab crew (depot)"
+UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener Back tripulación (depósito),"On foot: L-stick walk  ·  R-stick look  ·  A interact  ·  X jump
 Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out
 Passenger: RT (hold) tend the package  ·  L-stick sequences
 LB phone  ·  RB take photo  ·  D-pad up ping  ·  D-pad left use card
-R-stick click centre view  ·  Start pause  ·  hold Y restart"
+R-stick click centre view  ·  Start pause  ·  hold Y restart  ·  hold Back crew (depot)"
 UI_OPT_CONTROL_HELP,Ayudas de controles,Control hints
 UI_OPT_EFFECTS_VOLUME,Volumen de efectos,Effects volume
 UI_OPT_FOV,Campo de visión,Field of view

@@ -35,6 +35,7 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 | Ping/emote rápido | Rueda del mouse click / D-pad arriba | Tocar: “¡Cuidado!”. Mantener: rueda de seis mensajes; elegir con mouse o stick derecho. |
 | Usar carta | G (reasignable) / D-pad izquierda | Rescate en ruta; Descuento y Re-voto desde Suministros |
 | Pausa/menú | Esc / Start | — |
+| Tripulación (solo en el depósito) | **Mantener** Tab / Back | Lista de quién está, con uniforme, quién maneja y quién tiene caja; el anfitrión LAN ve además el código de sala |
 | Reiniciar | **Mantener** R / Y (en pausa o resultados, instantáneo) | Solo solo o anfitrión |
 | Pantalla completa | F11 | — |
 
@@ -75,6 +76,12 @@ Main Menu
   **vestuario** (uniforme), **taller** (camión y pintura, los elige el anfitrión),
   **suministros** (acolchado y seguro con la plata del equipo) y **equipo del mes**
   (progreso). Cubre buena parte de lo que iba a hacer el lobby de abajo.
+- **Panel de tripulación** (S-507, `scripts/ui/hud/crew_panel.gd`): mientras se mantiene Tab (Back en gamepad) en el
+  depósito, antes de salir, aparece una lista con todos los conectados: el color del uniforme y su nombre, un
+  ícono con texto para "al volante" y "con caja" (nunca solo color), y quién sos vos y quién es el anfitrión.
+  Abajo, solo para el anfitrión de una sala LAN, el código de sala y la IP para pasarlos; en Steam dice que se
+  invita desde la lista de amigos, y un cliente ve por qué no hay código. No pausa, no libera el cursor y no toma
+  foco: se puede caminar mientras se mira. Lee estado ya replicado (no hay RPC nuevos).
 - El host nunca espera en un lobby: `level_base.gd` ya spawnea jugadores dinámicamente
   a medida que se suman (`_sync_players`), así que entrar directo y dejar que los demás
   se sumen después ya funciona sin necesitar una pantalla de espera.
