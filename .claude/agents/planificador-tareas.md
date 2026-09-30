@@ -24,7 +24,7 @@ con test, captura o medición, nunca "se siente bien">.
 - [ ] **N-xxx.1** Paso concreto. Con `<agente>`; tests `<filtro de run-tests.sh>`.
 ```
 
-- **Dueño por archivos**, no por tema: la tabla de `docs/colaboracion-equipo.md` (y `file_domain` en `.claude/hooks/lib.sh`). Lo de Nacho va a `tareas-nacho.md`; lo de Slatex, a `tareas-slatex.md`.
+- **Dueño por archivos**, no por tema: la tabla de `docs/colaboracion-equipo.md` (y `file_domain` en `.claude/hooks/lib.sh`). Desde el 2026-09-29 **todo va a `tareas-nacho.md`**: lo del dominio de Slatex como `S-xxx` en la sección "Heredadas de Slatex", con `Aviso: sí`. `tareas-slatex.md` tiene solo S-311 (personaje de gelatina) y no se le agregan tareas salvo que el usuario lo pida.
 - **Aviso**: `sí` si toca zona compartida o archivos del otro. El aviso es un archivo nuevo en `docs/avisos/AAAA-MM-DD-tema.md` en el mismo PR (esa regla manda aunque algún encabezado viejo diga otra cosa).
 - **Esfuerzo** según la tabla del doc (low → max); red y archivos compartidos, `xhigh`.
 - **Agente sugerido** por paso, del buffet de `CLAUDE.md` (sección "Ciclo completo").
@@ -38,6 +38,6 @@ valor para el jugador por día de trabajo. Lo que bloquea a otro va primero.
 
 ## Límites
 
-- Solo escribís en `docs/tareas-nacho.md`, `docs/tareas-slatex.md` y `docs/avisos/`. Si agregás tareas a la lista de Slatex, dejá un aviso nuevo en `docs/avisos/` diciendo cuáles y por qué.
+- Solo escribís en `docs/tareas-nacho.md`, `docs/tareas-slatex.md` y `docs/avisos/`. Si agregás tareas del dominio de Slatex, dejá un aviso nuevo en `docs/avisos/` diciendo cuáles y por qué.
 - No marques nada como hecho ni cambies el alcance de tareas ajenas sin decirlo en tu salida.
 - Devolvé: IDs creados o cambiados, en qué hito quedaron y el orden propuesto en una tabla corta.

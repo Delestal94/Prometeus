@@ -38,7 +38,6 @@ acción = nombres de clip que espera `PlayerAnimator`. Exportá con las mismas o
 ## Dominios
 
 `scripts/gameplay/player/` y `package/` son de Slatex; `depot/` y `vehicle/`, de Nacho. Tocar lo del otro
-está permitido con un aviso nuevo en `docs/avisos/` en el mismo PR. No animes el camión por dentro de
-`vehicle.tscn`/`vehicle.gd` (congelados): va como componente aparte.
+está permitido con un aviso nuevo en `docs/avisos/` en el mismo PR.
 
 Devolvé: clips/archivos tocados, qué se ve distinto en una frase, tests y avisos.

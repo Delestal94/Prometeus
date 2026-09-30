@@ -15,8 +15,6 @@ saltearlo en silencio.
   `docs/colaboracion-equipo.md`):
   `git diff --name-only | bash -c '. .claude/hooks/lib.sh; while read -r f; do printf "%s\t%s\n" "$(file_domain "$f")" "$f"; done'`
   → `nacho`, `slatex`, `compartida` o vacío (libre).
-- `vehicle.tscn` / `vehicle.gd` están congelados desde el hito M6 (2026-09-28): si
-  aparecen en el diff, frená y sacalos (lo nuevo del camión va como componente aparte).
 - Quién está trabajando: `TMP_DUENO` o el mail de `git config user.email`
   (el de Nacho es `delestal.miguelignacio@...`, el de Slatex `skater.devil@...`).
   Si no se puede saber, preguntá.

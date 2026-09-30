@@ -90,8 +90,8 @@ repitas. Si uno sigue abierto y empeoró, decilo en una línea con su ID origina
   (`perfilador-rendimiento`, `revisor-visual`, `probador-qa`).
 - No corras Godot ni abras el editor. Leé código, escenas `.tscn`, recursos `.tres`, logs de CI y
   capturas existentes (PNG con Read).
-- Decisiones ya tomadas por el usuario no son hallazgos: `vehicle.tscn`/`vehicle.gd` congelados desde
-  M6, playtesting diferido al final, decisiones de M8 en `docs/tareas-nacho.md`, personajes en pausa.
+- Decisiones ya tomadas por el usuario no son hallazgos: playtesting diferido al final, decisiones de
+  M8 en `docs/tareas-nacho.md`, personajes en pausa.
   Si creés que alguna está costando caro, va a "Preguntas para el usuario", no a la matriz.
 
 ## Formato de entrega

@@ -34,8 +34,6 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
   Blender ni ComfyUI: esos assets quedan para `.claude/rutinas/sesion-arte.md`. No hay revisión
   humana de PRs: los checks requeridos son la única compuerta. Las rutinas toman tareas de las
   dos listas (también de Slatex, con aviso), salvo lo que Slatex tenga en curso.
-- `vehicle.tscn` / `vehicle.gd` están congelados desde el hito M6 (2026-09-28): lo nuevo
-  del camión va como componente aparte. Si se libera, lo dice un aviso en `docs/avisos/`.
 - Los dominios que usan hooks y agentes salen de `file_domain` en
   `.claude/hooks/lib.sh`; si cambia la tabla de `docs/colaboracion-equipo.md`,
   actualizá las dos.
