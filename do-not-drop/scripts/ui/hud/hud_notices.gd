@@ -7,6 +7,7 @@ extends Node
 var hud: Hud
 const PING_DISPLAY_SECONDS: float = 2.5
 const EVENT_DISPLAY_SECONDS: float = 6.0
+const EVENT_STINGER_DELAY: float = 0.3
 const PingCatalogData = preload("res://scripts/ui/ping_catalog.gd")
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## One label per fixed HUD zone. Each source keeps its queued entry here;
@@ -174,6 +175,22 @@ func refresh_card() -> void:
 
 func _on_unlock_earned(_unlock_id: StringName, title: String) -> void:
 	toast(tr("HUD_UNLOCKED") % title, 20, UiTheme.UI_SOUNDS.UNLOCK)
+	# Queued, not played: it fires right before the results screen (UnlockManager
+	# hears run_ended first), so the unlock phrase waits for the result one.
+	UiTheme.UI_SOUNDS.queue_stinger(self, UiTheme.UI_SOUNDS.STINGER_UNLOCK)
+
+
+## The run's end closes any open event as failed (RouteEventManager
+## close_for_run_end); that one stays silent so the result stinger is not
+## preceded by a "failed" jingle. A client gets the relayed close a moment
+## before its own run_ended, so the stinger waits EVENT_STINGER_DELAY and only
+## plays if the run is still going by then.
+func _play_event_stinger(id: StringName) -> void:
+	if not RunManager.is_running:
+		return
+	get_tree().create_timer(EVENT_STINGER_DELAY).timeout.connect(func() -> void:
+		if is_inside_tree() and RunManager.is_running:
+			UiTheme.UI_SOUNDS.play_stinger(self, id))
 
 
 func toast(text: String, priority: int = 20, cue: StringName = UiTheme.UI_SOUNDS.TOAST) -> void:
@@ -219,6 +236,7 @@ func _event_text(event: Dictionary, field: String, fallback: String = "") -> Str
 func _on_route_event_resolved(event_id: StringName, success: bool, _peer_id: int) -> void:
 	if event_id not in RouteEventManager.EVENTS:
 		return
+	_play_event_stinger(UiTheme.UI_SOUNDS.STINGER_EVENT_WON if success else UiTheme.UI_SOUNDS.STINGER_EVENT_FAILED)
 	if hud.route_event_active_id == event_id:
 		hud.route_event_active_id = &""
 	clear_notice(&"critical", &"route_event")

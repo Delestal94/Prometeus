@@ -12,6 +12,7 @@ const RESULT_PLAYER_COLORS: Array[Color] = [
 
 func _ready() -> void:
 	EventBus.run_ended.connect(_on_ended)
+	UiTheme.UI_SOUNDS.warm_stingers()
 
 
 func set_hero(visible_: bool, score: int = 0, new_best: bool = false) -> void:
@@ -45,6 +46,9 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	hud.overlay_kicker.text = tr("HUD_KICKER_RESULTS")
 	var new_best: bool = bool(results.get("is_new_best", false))
 	set_hero(true, score, new_best)
+	# The closing phrase (S-403): record > perfect > losses. UnlockManager's
+	# unlock_earned fires just before this, and queues its stinger behind it.
+	UiTheme.UI_SOUNDS.play_stinger(self, UiTheme.UI_SOUNDS.result_stinger(results, new_best))
 	var best_line: String = "" if new_best else tr("HUD_RESULT_RECORD") % int(results.get("best_score", 0))
 	var retry: String = tr("HUD_RETRY") if hud.prompts.can_restart() else ""
 	var client_line: String = "" if hud.prompts.can_restart() else tr("HUD_RESULT_GUEST_NOTE")
