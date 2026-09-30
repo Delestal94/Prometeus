@@ -18,6 +18,9 @@ extends Node3D
 ## - DepotHall / DepotFurnishing / DepotDressing: build the building, what
 ##   stands in it, and what makes it feel lived in; DepotAmbience animates the
 ##   moving parts; DepotOrderBoard: the board and its marks;
+## - DepotZones / DepotCirculation: the rooms and levels (cage, office on its
+##   mezzanine, wall line) and the floor paint (walkways, forklift lane);
+##   DepotLighting / DepotAtmosphere: the lights, and the air inside (N-319);
 ## - DepotKit: batching static geometry; DepotLabels: text and signage;
 ## - DepotRollerDoor, DepotStation, DepotWorker/DepotForklift, DepotMirror.
 ## Orders are drawn from the session seed, so every peer posts the same board
@@ -522,6 +525,10 @@ func _build() -> void:
 	ambience.belt_boxes = furnishing.belt_boxes
 	ambience.flicker_tube = hall.flicker_tube
 	add_child(ambience)
+	# No distance haze and a lower ambient under the roof (N-319).
+	var atmosphere := DepotAtmosphere.new(self)
+	atmosphere.name = "Atmosphere"
+	add_child(atmosphere)
 
 
 func _build_door() -> void:
@@ -581,8 +588,8 @@ func _build_stations() -> void:
 	var at_board: Vector3 = Layout.BOARD_AT + Vector3(0.0, 1.6, 0.0) + Layout.board_basis() * Vector3(0.0, 0.0, 0.35)
 	_station(&"orders", tr("WORLD_DEPOT_STATION_ORDERS"), at_board)
 	_station(&"garage", tr("WORLD_DEPOT_STATION_GARAGE"), Layout.KIOSK_AT + Vector3(-0.45, 1.3, 0.0))
-	_station(&"wardrobe", tr("WORLD_DEPOT_STATION_WARDROBE"), Vector3(14.0, 1.2, 15.5))
-	_station(&"shop", tr("WORLD_DEPOT_STATION_SHOP"), Vector3(10.8, 1.25, 23.4))
+	_station(&"wardrobe", tr("WORLD_DEPOT_STATION_WARDROBE"), Layout.WARDROBE_STATION)
+	_station(&"shop", tr("WORLD_DEPOT_STATION_SHOP"), Layout.SHOP_STATION)
 	_station(&"records", tr("WORLD_DEPOT_STATION_RECORDS"), Vector3(HALF_WIDTH - 0.5, 2.0, 22.5))
 
 

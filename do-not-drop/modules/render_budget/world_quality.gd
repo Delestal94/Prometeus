@@ -21,6 +21,10 @@ class_name WorldQuality
 ##     bigger texels, and the sun's cascades keep the shadows near the camera
 ##     (the truck's, the house's) sharp while the far ones (a hill's across the
 ##     road) go soft. Half the engine's atlas is also cheaper at every level.
+##   - how many lamps may cast a shadow (N-319, "shadowed_lights"): a lit
+##     interior marks a handful of its lights with a rank (SHADOW_RANK_META,
+##     0 = the one that matters most) and only those under the level's budget
+##     keep their shadow. Low has none.
 ## Not the number of plants: the dresser draws them from the session's
 ## shared RNG, so placing fewer on one machine would move every prop after
 ## them and every peer would see a different road.
@@ -36,15 +40,17 @@ const NAMES: Array[String] = ["Baja", "Media", "Alta"]
 ## a far hill's shadow on the road came out in visible steps.
 const PRESETS: Dictionary = {
 	Level.LOW: {"shadow_distance": 40.0, "range_scale": 0.55, "particle_scale": 0.35, "render_scale": 0.75,
-		"msaa": Viewport.MSAA_DISABLED, "shadow_filter": 2, "shadow_atlas": 2048},
+		"msaa": Viewport.MSAA_DISABLED, "shadow_filter": 2, "shadow_atlas": 2048, "shadowed_lights": 0},
 	Level.MEDIUM: {"shadow_distance": 65.0, "range_scale": 0.8, "particle_scale": 0.65, "render_scale": 0.9,
-		"msaa": Viewport.MSAA_2X, "shadow_filter": 3, "shadow_atlas": 2048},
+		"msaa": Viewport.MSAA_2X, "shadow_filter": 3, "shadow_atlas": 2048, "shadowed_lights": 1},
 	Level.HIGH: {"shadow_distance": 90.0, "range_scale": 1.0, "particle_scale": 1.0, "render_scale": 1.0,
-		"msaa": Viewport.MSAA_4X, "shadow_filter": 4, "shadow_atlas": 2048},
+		"msaa": Viewport.MSAA_4X, "shadow_filter": 4, "shadow_atlas": 2048, "shadowed_lights": 3},
 }
 ## Where each node's own full-quality value is kept, to scale from it.
 const BASE_RANGE_META: StringName = &"quality_base_range"
 const BASE_AMOUNT_META: StringName = &"quality_base_amount"
+## A light's place in the shadow queue: only ranks under "shadowed_lights" cast.
+const SHADOW_RANK_META: StringName = &"quality_shadow_rank"
 
 static var level: int = Level.HIGH
 static var _watched: SceneTree = null
@@ -85,6 +91,8 @@ static func apply_to(node: Node) -> void:
 		return
 	if node is DirectionalLight3D:
 		(node as DirectionalLight3D).directional_shadow_max_distance = setting("shadow_distance")
+	elif node is Light3D and node.has_meta(SHADOW_RANK_META):
+		(node as Light3D).shadow_enabled = int(node.get_meta(SHADOW_RANK_META)) < int(setting("shadowed_lights"))
 	elif node is GeometryInstance3D and node.has_meta(BASE_RANGE_META):
 		(node as GeometryInstance3D).visibility_range_end = float(node.get_meta(BASE_RANGE_META)) * setting("range_scale")
 	elif node is GPUParticles3D:
@@ -102,7 +110,8 @@ static func watch(tree: SceneTree) -> void:
 		return
 	_watched = tree
 	tree.node_added.connect(func(node: Node) -> void:
-		if node is DirectionalLight3D or node is GPUParticles3D or node.has_meta(BASE_RANGE_META):
+		if node is DirectionalLight3D or node is GPUParticles3D or node.has_meta(BASE_RANGE_META) \
+				or node.has_meta(SHADOW_RANK_META):
 			# Deferred: the node's owner sets its own values right after adding it.
 			# Checked before the call: a node freed in the meantime (a route
 			# built and thrown away in the same frame) can't even be passed to

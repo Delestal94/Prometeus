@@ -48,6 +48,14 @@ Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md
 por entrega para el perfil torpe se mantiene.
 - [x] ~~**N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-229-clumsy-near-misses`: Frágil `impact_damage_heavy` 35 → 36 (dos baches sin amortiguar y uno amortiguado dejan 24,4 en vez de 26,5); casi-pérdidas del torpe en Frágil 0,8 → 37,6 %, por viaje 0,73 → 1,10, reporte **CUMPLE**; pérdidas de todos los perfiles sin cambio. Ruidoso: una caja rescatada tras tocar el máximo de agitación cuenta como casi-pérdida en el arnés (decisión delegada, pregunta 9); torpe 0 → 51,2 %, por viaje → **1,61**. Test `test_sim_near_miss.gd`.
 
+### N-237 · El tutorial de cuidado se dibuja encima de Opciones — B · `Opus 5.5 · low` · Aviso: sí (`player_cargo_care.gd`, archivos de Slatex) · **[x] rama `nacho/fix-tutorial-over-options`**
+Origen: captura con GPU 2026-09-30. Con Opciones abierta, la tarjeta "Cómo cuidar la carga" (`care_practice.gd`) se
+veía entera, sin oscurecer, a la derecha del panel. Causa: la tarjeta de cuidado y la de práctica viven en un
+`CanvasLayer` propio (`player_cargo_care.gd`) con `layer = 7`, y el HUD (Opciones, pausa, resultados, depósito,
+tripulación) es el `CanvasLayer` 1: todo lo del HUD quedaba por debajo. La guarda del mouse capturado lo tapaba
+casi siempre, pero no la práctica en el cuadro en que el jugador recaptura el mouse.
+- [x] ~~**N-237.1** Bajar la capa de las tarjetas de cuidado/práctica a `CARD_LAYER = 0` (debajo del HUD) y cubrirlo con `test_modal_layers.gd`. Tests `modal_layers`, `options`, `tutorial`, `hud`.~~ **[x] Hecho (2026-09-30)**.
+
 ### N-235 · Una caída sucia se nota a los 45 s — C · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`, zona compartida)
 Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red`). Para que el que se une no
 se corte mientras carga el nivel (bloquea el poll de ENet 18-34 s en CI), el timeout de ENet quedó fijo en
@@ -210,7 +218,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227, N-228, N-229 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -603,6 +611,38 @@ media medida); (4) la sombra de la loma con borde suave. Capturas antes/después
   Intento 2026-09-30 (sesión de arte): no se llegó a hacer (el agente se cortó). Pista: `render_rail_tunnel.gd` arma
   un `DirectionalLight3D` pelado; el sol del juego (`level_base.tscn`) ya tiene `shadow_blur = 1,6` y
   `directional_shadow_blend_splits`. Primero comprobar si el borde duro es solo de la captura.
+
+### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[ ] rama `nacho/N-319-depot-redesign`**
+Origen: pedido del usuario 2026-09-30 ("el galpón es muy genérico; que quede como el lobby de un juego profesional:
+distribución de espacios, áreas importantes, modelos genéricos"). El plan, el diagnóstico de la línea de base, la planta
+objetivo y el registro de cada iteración están en `docs/deposito-rediseno.md`; capturas de cada iteración en
+`D:/tmp/depot_review/iterN/` (fuera del repo). Necesita PC con GPU para las capturas y para los modelos (iteración 2).
+Restricciones (no se rompen): el juego no cambia (8 spawns, `TRUCK_BAY`, `TRUCK_CLEAR_Z`, portón, códigos y slots de
+estante, `DepotStation` con sus `station_id`, espejo, radio, pizarra de campaña); todo lo estático por `DepotKit`;
+`bench_depot` no empeora más de ~10 %; los cuerpos de los operarios son de Slatex (solo se mueven).
+Hecho cuando (1) adentro no hay velo lechoso: la luz marca el foco (camión, pizarra, estantes) y hay zonas en penumbra;
+(2) cada zona se lee por forma, luz y color antes que por carteles (pañol en jaula, taller en box, vestuario en cuarto,
+oficina en entrepiso con escalera), con un cartel chico por zona sobre la zona; (3) el recorrido spawn → pizarra →
+estantes → camión se sigue por las sendas verdes y el carril amarillo, con cruces cebra; (4) el espacio tiene capa de
+oficio (matafuegos, tableros, jaulas, bolardos, carteles chicos) y modelos propios en vez de primitivas; (5) `test_depot`,
+`test_start_yard`, `test_depot_campaign_board`, `test_depot_mirror`, `test_depot_zones` y `bench_depot` verdes; (6) la
+crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
+- [x] **N-319.1** ~~Iteración 1 — luz y atmósfera, planta por zonas, sendas y señalética (con `constructor-mundo`).~~
+  **[x] Hecho (2026-09-30, rama `nacho/N-319-depot-redesign`)** — sin niebla adentro (`DepotAtmosphere`: el `Environment`
+  del nivel se mezcla bajo el techo y vuelve al salir), ambiente más bajo, spots con sombra sobre camión, estantes y empaque
+  (presupuesto por nivel en `WorldQuality`: Baja 0, Media 1, Alta 3), spot cálido sobre la pizarra, pozos de luz bajo
+  las campanas, haces por los tragaluces, piso gris medio con juntas y desgaste, paredes en capas. Planta: isla de control
+  con la pizarra de 4,4 m, bahía oscura, pañol en jaula al frente a la izquierda, taller con media pared, vestuario con
+  tabiques, oficina en entrepiso con escalera que se sube (`depot_zones.gd`); sendas verdes, carril del autoelevador y
+  cuatro cruces cebra (`depot_circulation.gd`); carteles de zona un 15 % más chicos sobre su zona. `bench_depot` sin
+  cambio; GPU con sombras apagadas +2-11 % de llamadas de dibujo, con las de Alta +40-90 % adentro. Tests `test_depot_zones`
+  (nuevo), `test_depot` (umbrales de carteles/flechas a propósito), `test_render_budget`. Qué queda para la 2 en el
+  registro de `docs/deposito-rediseno.md`; aviso `docs/avisos/2026-09-30-n319-deposito.md`.
+- [ ] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
+  primitivas de `DepotKit` (`modelador-blender`, después `constructor-mundo`). Necesita PC.
+- [ ] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
+  oficio (`constructor-mundo`).
+- [ ] **N-319.4** Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
@@ -1666,9 +1706,11 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
     Una línea por evento de `RouteEventManager.EVENTS`, con `tr()` (`WORLD_RADIO_NEWS_*`).
 - [x] Test `test_truck_radio.gd`: el estado se sincroniza y modifica la agitación de Ruidoso. Aviso:
   `docs/avisos/2026-09-30-n406-truck-radio.md`.
-- [ ] Necesita PC: `revisor-visual` sobre la posición y el tamaño de la perilla y del cartelito en el tablero de
-  cada camión, y prueba a mano de que el tripulante a pie en la cabina llega a la perilla (el conductor y los
-  sentados no: `E` sentado los levanta). Con `auditor-red`, el RPC `_set_mode` y el tardío con dos jugadores.
+- [x] `revisor-visual` sobre la perilla y el cartelito: hecho en el PR #116 (perilla y cartel legibles, texto más
+  grande). `auditor-red` revisó `_set_mode`, el tardío y el reinicio: sin hallazgos; el cooldown de la perilla
+  (250 ms en `TruckRadio.cycle()`, en el host) se arregló en `nacho/N-406-radio-cooldown`.
+- [ ] Necesita PC: prueba a mano de que el tripulante a pie en la cabina llega a la perilla (el conductor y los
+  sentados no: `E` sentado los levanta).
 
 ### N-108 · Tramo de barro/pendiente con salida cooperativa — B · `Opus 5.5 · high` · Aviso: no
 
