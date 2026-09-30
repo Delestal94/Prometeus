@@ -62,15 +62,41 @@ var _indicator_occupied: Variant = null
 
 
 func _process(_delta: float) -> void:
-	_update_indicator()
+	_update_indicator(false)
 
 
-func _update_indicator() -> void:
-	var occupied: bool = _is_occupied()
+## Who sits where, worked out once per frame for every seat's marker instead of
+## once per seat (N-223): seat path -> true, and the seat this client's own
+## player is in (empty when none).
+static var _seating_frame: int = -1
+static var _seated_paths: Dictionary = {}
+static var _local_seat_path: NodePath = NodePath()
+
+
+func _refresh_seating(tree: SceneTree, force: bool) -> void:
+	var frame: int = Engine.get_process_frames()
+	if not force and frame == _seating_frame:
+		return
+	_seating_frame = frame
+	_seated_paths.clear()
+	_local_seat_path = NodePath()
+	var found_local: bool = false
+	for player: Node in tree.get_nodes_in_group(&"player"):
+		var seat: NodePath = NodePath(player.get(&"seat_node_path"))
+		_seated_paths[seat] = true
+		if not found_local and player.has_method(&"is_local") and bool(player.call(&"is_local")):
+			found_local = true
+			_local_seat_path = seat
+
+
+## `force` looks at the players again even if this frame already did.
+func _update_indicator(force: bool = true) -> void:
+	_refresh_seating(get_tree(), force)
+	var occupied: bool = _seated_paths.has(_own_seat_path)
 	# The marker is for everyone else: whoever sits here would see it glowing
 	# at their shoulder whenever they turn their head (it showed up as a
 	# salmon disc hanging in the side window).
-	_indicator.visible = not _local_player_seated_here()
+	_indicator.visible = _local_seat_path != _own_seat_path
 	# Rewriting the material every frame re-uploaded it for nothing; the
 	# colour only changes when someone sits down or gets up.
 	if occupied == _indicator_occupied:
@@ -79,11 +105,6 @@ func _update_indicator() -> void:
 	var color: Color = Color("f47e6d") if occupied else Color("83e2ba")
 	_indicator_material.albedo_color = color
 	_indicator_material.emission = color
-
-
-func _local_player_seated_here() -> bool:
-	var local: Node = _local_player()
-	return local != null and NodePath(local.get(&"seat_node_path")) == _own_seat_path
 
 
 func _is_occupied() -> bool:

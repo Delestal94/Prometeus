@@ -27,7 +27,7 @@ do-not-drop/scripts/gameplay/route/delivery_house.gd|max-line-length 3
 do-not-drop/scripts/gameplay/route/dressing_batcher.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/flock_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/roadside_story.gd|max-line-length 8
-do-not-drop/scripts/gameplay/route/route.gd|max-line-length 14
+do-not-drop/scripts/gameplay/route/route.gd|max-line-length 13
 do-not-drop/scripts/gameplay/route/route_segment.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/route_sky.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/route_smoke_check.gd|max-line-length 2

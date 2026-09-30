@@ -337,11 +337,18 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
 - [ ] Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
   se reimportan con VRAM + mipmaps desde el editor (el hook bloquea editar `.import` a mano).
 
-### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: no
+### N-223 · Menos trabajo por frame — B · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`, `seat_point.gd`) · **[x] rama `nacho/N-223-less-per-frame`**
 `route.gd` busca linealmente en las muestras del camino dos veces por tick; `play_area.gd`,
 `seat_point.gd`, `route_sky.gd` y `route_event_manager.gd:377` escanean grupos/hijos por frame.
 Cachear el índice del camino (ventana ±2 alrededor del último) y bajar las señales del HUD a 8 Hz.
 Hecho con `bench_drive` antes/después anotado acá.
+- [x] Hecho (2026-09-30):
+  - Ventana alrededor del último índice en `route.gd` (±4 puntos del camino; las muestras de tramo siguen con búsqueda completa: son pocas y una horquilla haría fallar la ventana) y `route_streamer.gd` (Endless, ±3 tramos + memo de la última consulta, que tres llamadores pedían por tick con el mismo punto), con caída a la búsqueda completa. Test `test_route_lookup_cache` (compara contra la búsqueda completa en 8 rutas, con saltos y una posición NaN).
+  - Señales del HUD a 8 Hz (`level_base._emit_hud_signals`), el cambio de estado de entrega al instante.
+  - `seat_point.gd`: una pasada por frame del grupo `player` para todos los asientos.
+  - Se dejaron como estaban: `route_event_manager.gd:377` (corre al resolver un evento, no por tick; solo se sacó `_run()` del bucle de `_loose_count`), `route_sky.gd` (los `find_children` son de `_ready`; los grupos por frame devuelven 1 nodo) y `play_area.gd` (sus tramos mezclan ruta y caminos de casas: una ventana no daría lo mismo).
+  - `bench_drive --headless --cpu-only --seconds=30 --seed=1234` (física por tick, scripts + Jolt): entrega 1,67 → 1,55 ms (media de 3); Endless 1,46 → 1,41 ms (dentro del ruido). Frame, p99 y tirones sin cambio: el resto es Jolt.
+  - Aviso: `docs/avisos/2026-09-30-n223-menos-trabajo-por-frame.md`.
 
 ### N-315 · Cajas de 2048² triplicadas — B · `Opus 5.5 · medium` · Aviso: no
 Cada textura de caja está tres veces (fuente en `art/cargo/`, volcado del importador en

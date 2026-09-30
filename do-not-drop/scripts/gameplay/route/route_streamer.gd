@@ -56,6 +56,11 @@ const CURVE_TURN_MAX_DEG: float = 70.0
 const MAX_STRAIGHT_STREAK: int = 3
 ## Spacing of the road's centre-line samples (see _path).
 const SAMPLE_SPACING: float = 10.0
+## Spans either side of the last hit that _nearest_on_path() checks first, and
+## how far (m) a hit may be for that window to be trusted over a full scan.
+## NEAREST_TRUST must stay under level_endless's OUT_OF_BOUNDS_X (42 m).
+const NEAREST_WINDOW: int = 3
+const NEAREST_TRUST: float = 4.0 * SAMPLE_SPACING
 
 var target: Node3D = null
 
@@ -80,6 +85,14 @@ var _spawn_count: int = 0
 ## "distance": float}, ...] in order, every ~SAMPLE_SPACING metres, for the
 ## segments still alive.
 var _path: Array[Dictionary] = []
+## Bumped whenever _path changes, so a remembered lookup is not reused; the
+## span the last lookup landed in (moved back as the old road is culled); the
+## last point asked about and its answer (see _nearest_on_path()).
+var _path_version: int = 0
+var _nearest_hint: int = -1
+var _memo_query: Vector3 = Vector3.INF
+var _memo_version: int = -1
+var _memo_result: Dictionary = {}
 ## How far along the road the target is, as last worked out.
 var _target_distance: float = 0.0
 
@@ -198,28 +211,55 @@ func _record_path(segment: RouteSegment) -> void:
 		if not _path.is_empty() and (_path[-1].position as Vector3).distance_to(at) < 0.01:
 			continue
 		_path.append({"position": at, "distance": distance})
+		_path_version += 1
 
 
 ## The point on the live road nearest `local` (this node's space), and how
-## far along the road it is.
+## far along the road it is. Asked several times a tick with the same point
+## (the streamer, the level's progress, its out-of-bounds check), so the last
+## answer is kept until the point or the road changes; and a new point is
+## first looked for only around where the last one landed (N-223), falling
+## back to the whole road at the window's edge or on a jump (respawn, far
+## away), so the answer is always the one a full scan gives.
 func _nearest_on_path(local: Vector3) -> Dictionary:
 	if _path.is_empty():
 		return {"position": Vector3.ZERO, "distance": 0.0}
+	if _memo_version == _path_version and local == _memo_query:
+		return _memo_result
 	var flat := Vector2(local.x, local.z)
-	var best: Dictionary = {"position": _path[0].position, "distance": _path[0].distance}
-	var best_gap: float = INF
-	for index: int in range(maxi(_path.size() - 1, 1)):
-		var a: Dictionary = _path[index]
-		var b: Dictionary = _path[mini(index + 1, _path.size() - 1)]
-		var a2 := Vector2((a.position as Vector3).x, (a.position as Vector3).z)
-		var b2 := Vector2((b.position as Vector3).x, (b.position as Vector3).z)
-		var span: Vector2 = b2 - a2
+	var count: int = maxi(_path.size() - 1, 1)
+	var low: int = 0
+	var high: int = count - 1
+	if _nearest_hint >= 0 and _nearest_hint < count:
+		low = maxi(0, _nearest_hint - NEAREST_WINDOW)
+		high = mini(count - 1, _nearest_hint + NEAREST_WINDOW)
+	var best: Vector3 = _closest_span(flat, low, high)
+	if (low > 0 or high < count - 1) \
+			and (int(best.x) == low and low > 0 or int(best.x) == high and high < count - 1 \
+			or best.y > NEAREST_TRUST * NEAREST_TRUST):
+		best = _closest_span(flat, 0, count - 1)
+	_nearest_hint = int(best.x)
+	var a: Dictionary = _path[_nearest_hint]
+	var b: Dictionary = _path[mini(_nearest_hint + 1, _path.size() - 1)]
+	_memo_query = local
+	_memo_version = _path_version
+	_memo_result = {"position": (a.position as Vector3).lerp(b.position, best.z), "distance": lerpf(float(a.distance), float(b.distance), best.z)}
+	return _memo_result
+
+
+## The span between path[low] and path[high + 1] closest to `flat`, as
+## Vector3(index, squared gap, t along the span); the first of equals wins.
+func _closest_span(flat: Vector2, low: int, high: int) -> Vector3:
+	var best := Vector3(low, INF, 0.0)
+	for index: int in range(low, high + 1):
+		var a_position: Vector3 = _path[index].position
+		var b_position: Vector3 = _path[mini(index + 1, _path.size() - 1)].position
+		var a2 := Vector2(a_position.x, a_position.z)
+		var span := Vector2(b_position.x, b_position.z) - a2
 		var t: float = clampf((flat - a2).dot(span) / maxf(span.length_squared(), 0.0001), 0.0, 1.0)
-		var on: Vector2 = a2 + span * t
-		var gap: float = flat.distance_squared_to(on)
-		if gap < best_gap:
-			best_gap = gap
-			best = {"position": (a.position as Vector3).lerp(b.position, t), "distance": lerpf(float(a.distance), float(b.distance), t)}
+		var gap: float = flat.distance_squared_to(a2 + span * t)
+		if gap < best.y:
+			best = Vector3(index, gap, t)
 	return best
 
 
@@ -295,6 +335,8 @@ func _cull_behind() -> void:
 	var first_alive: float = float(_active[0].get_meta(&"route_distance", 0.0)) if not _active.is_empty() else _next_distance
 	while _path.size() > 2 and float(_path[1].distance) <= first_alive:
 		_path.pop_front()
+		_path_version += 1
+		_nearest_hint = maxi(_nearest_hint - 1, -1)
 
 
 ## Looked up by node path rather than by the NetworkManager identifier on
