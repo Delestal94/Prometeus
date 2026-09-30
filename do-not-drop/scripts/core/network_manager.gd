@@ -552,12 +552,14 @@ func _receive_auth(id: int, data: PackedByteArray) -> void:
 	if id != HOST_ID:
 		return
 	var state: Variant = bytes_to_var(data)
+	# This is SceneMultiplayer's auth callback, run from inside its poll():
+	# failing here must not close the peer while it is being walked.
 	if state is Dictionary and state.has("failure"):
-		_fail(String(state.failure))
+		_fail_if_current.call_deferred(String(state.failure), multiplayer.multiplayer_peer)
 		return
 	var handshake_error: String = _handshake_error(state)
 	if not handshake_error.is_empty():
-		_fail(handshake_error)
+		_fail_if_current.call_deferred(handshake_error, multiplayer.multiplayer_peer)
 		return
 	world_seed = int(state.seed)
 	world_house_count = int(state.houses)
@@ -641,9 +643,20 @@ func _remote_restart(house_count_value: int, completed_runs_value: int) -> void:
 func _auth_failed(_id: int) -> void:
 	if is_host():
 		return
-	# Emitted from inside SceneMultiplayer.poll(): closing and replacing the
-	# peer right here freed it mid-poll (SIGSEGV in the net pair).
-	_fail.call_deferred("timeout")
+	# Emitted from inside SceneMultiplayer.poll() -- its expiry loop, or
+	# _del_peer inside the peer's own poll when the host drops a pending
+	# joiner: closing and replacing the peer right here freed it mid-poll
+	# (SIGSEGV in the net pair).
+	_fail_if_current.call_deferred("timeout", multiplayer.multiplayer_peer)
+
+
+## A failure raised inside SceneMultiplayer.poll() only ends the session it was
+## raised for: server_disconnected may already have ended it in the same poll
+## (one message, not two), or another session may have begun since.
+func _fail_if_current(reason: String, peer: MultiplayerPeer) -> void:
+	if multiplayer.multiplayer_peer != peer:
+		return
+	_fail(reason)
 
 
 func _on_connection_failed() -> void:

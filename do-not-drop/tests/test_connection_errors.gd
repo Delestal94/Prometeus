@@ -47,6 +47,34 @@ func _initialize() -> void:
 	await process_frame
 	_expect(failures == ["timeout"], "The auth timeout still fails the session, one frame later")
 	_expect(network.multiplayer.multiplayer_peer is OfflineMultiplayerPeer, "The failed session goes back offline")
+	# The host dropping a pending joiner fires the auth failure and then
+	# server_disconnected in the same poll: the crew hears about it once.
+	failures.clear()
+	var dropped := ENetMultiplayerPeer.new()
+	dropped.create_client("127.0.0.1", 7799)
+	network.multiplayer.multiplayer_peer = dropped
+	network.call(&"_auth_failed", 1)
+	network.call(&"_on_server_disconnected")
+	await process_frame
+	_expect(failures.size() == 1, "An auth failure right before the host drop reports one failure, not two")
+	# A deferred failure never ends a session that began after it was raised.
+	failures.clear()
+	var old_peer := ENetMultiplayerPeer.new()
+	old_peer.create_client("127.0.0.1", 7799)
+	network.multiplayer.multiplayer_peer = old_peer
+	network.call(&"_auth_failed", 1)
+	var fresh := ENetMultiplayerPeer.new()
+	fresh.create_client("127.0.0.1", 7799)
+	network.multiplayer.multiplayer_peer = fresh
+	await process_frame
+	_expect(failures.is_empty() and network.multiplayer.multiplayer_peer == fresh,
+		"A stale auth failure leaves the next session alone")
+	# The host's "failure" reply arrives through the auth callback, also inside poll().
+	network.call(&"_receive_auth", 1, var_to_bytes({"failure": "version"}))
+	_expect(failures.is_empty() and network.multiplayer.multiplayer_peer == fresh,
+		"A version refusal leaves the peer alone while SceneMultiplayer is polling it")
+	await process_frame
+	_expect(failures == ["version"], "The version refusal still fails the session, one frame later")
 	network.session_failed.disconnect(on_failed)
 	network.call(&"take_failure_message")
 
