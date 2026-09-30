@@ -179,6 +179,24 @@ UI_NET_NO_LOBBY_ID,Falta el id de la sala.,The room id is missing.
 UI_NET_LOBBY_CREATE_FAILED,No se pudo crear la sala de Steam.,Couldn't create the Steam room.
 UI_NET_LOBBY_JOIN_FAILED,No se pudo entrar a la sala.,Couldn't join the room.
 UI_NET_HOST_LOST,Se cortó la conexión con el anfitrión.,The connection to the host was lost.
+HUD_NET_STATS_TITLE,Red · %s · %s,Network · %s · %s
+HUD_NET_STATS_TITLE_OFFLINE,Red,Network
+HUD_NET_STATS_STEAM,Steam,Steam
+HUD_NET_STATS_LAN,LAN,LAN
+HUD_NET_STATS_ROLE_HOST,Anfitrión,Host
+HUD_NET_STATS_ROLE_CLIENT,Cliente,Client
+HUD_NET_STATS_OFFLINE,Sin conexión: estás jugando solo.,Offline: you're playing solo.
+HUD_NET_STATS_ALONE,Todavía no se sumó nadie.,Nobody has joined yet.
+HUD_NET_STATS_SIM,Simulando mala conexión: %s,Simulating a bad connection: %s
+HUD_NET_STATS_SIM_LAN,"Simulando mala conexión: %s (en LAN, solo el camión)","Simulating a bad connection: %s (on LAN, the truck only)"
+HUD_NET_STATS_COL_PEER,Jugador,Player
+HUD_NET_STATS_COL_PING,Ping,Ping
+HUD_NET_STATS_COL_LOSS,Pérdida,Loss
+HUD_NET_STATS_COL_IN,Entra KB/s,In KB/s
+HUD_NET_STATS_COL_OUT,Sale KB/s,Out KB/s
+HUD_NET_STATS_COL_QUEUE,En cola,Queued
+HUD_NET_STATS_TOTAL,Total,Total
+HUD_NET_STATS_HINT,%s oculta este panel,%s hides this panel
 HUD_COMPLAINT_PAID,Casa %d reclamó que llegó roto y no tenías foto. Te lo descuentan.,House %d complained it arrived broken and you had no photo. It comes out of your pay.
 HUD_COMPLAINT_SETTLED,Casa %d reclamó que llegó roto — les mostraste la foto. Caso cerrado.,House %d complained it arrived broken — you showed them the photo. Case closed.
 HUD_CONTINUE,Continuar,Continue

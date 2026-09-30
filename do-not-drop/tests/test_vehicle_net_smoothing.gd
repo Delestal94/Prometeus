@@ -10,7 +10,8 @@ extends SceneTree
 ## - through the smoother, never more than 10 cm (the task's limit), and it
 ##   trails the host by the buffer's delay, not more;
 ## - a teleport (respawn) snaps instead of sliding across the map;
-## - `--fake-lag` really holds poses back;
+## - `--fake-lag` really holds poses back, and `--net-sim` on LAN (N-216)
+##   holds them lag + 0..jitter and drops its share of them;
 ## - wired into vehicle.gd: a client's copy follows the replicated pose.
 
 const SPEED: float = 60.0 / 3.6
@@ -97,6 +98,21 @@ func _run() -> void:
 	lagged.push(0.0, Transform3D(Basis.IDENTITY, Vector3(1.0, 0.0, 0.0)), 0.0)
 	_expect(lagged.sample(0.1) == Transform3D.IDENTITY, "With --fake-lag a pose isn't there before its time")
 	_expect(lagged.sample(0.25).origin.is_equal_approx(Vector3(1.0, 0.0, 0.0)), "...and is once the lag has passed")
+
+	# --net-sim on LAN (N-216): its own jitter, and lost poses.
+	var simulated := VehicleNetSmoother.new()
+	simulated.configure_sim({"lag_ms": 150, "jitter_ms": 20, "loss_pct": 0.0})
+	simulated.push(0.0, Transform3D(Basis.IDENTITY, Vector3(1.0, 0.0, 0.0)), 0.0)
+	_expect(simulated.sample(0.149) == Transform3D.IDENTITY, "With --net-sim a pose isn't there before the lag")
+	_expect(simulated.sample(0.171).origin.is_equal_approx(Vector3(1.0, 0.0, 0.0)),
+		"...and is once the lag and the most jitter (20 ms) have passed")
+	var lossy := VehicleNetSmoother.new()
+	lossy.configure_sim({"lag_ms": 0, "jitter_ms": 0, "loss_pct": 100.0})
+	lossy.push(0.0, Transform3D(Basis.IDENTITY, Vector3(1.0, 0.0, 0.0)), 0.0)
+	_expect(lossy.is_empty(), "With 100 %% loss no pose ever arrives")
+	var untouched := VehicleNetSmoother.new()
+	untouched.configure_sim({})
+	_expect(untouched.fake_loss == 0.0 and untouched.fake_jitter < 0.0, "No profile leaves --fake-lag as it was")
 
 	# Wired into the truck: a client's copy (not the authority) follows.
 	var van := (load("res://scenes/gameplay/vehicle/vehicle.tscn") as PackedScene).instantiate() as VehicleBody3D

@@ -18,6 +18,10 @@ class_name VehicleNetSmoother
 ## Debug: `--fake-lag=<ms>` on a client holds every arriving pose back that
 ## long, plus a random jitter of up to a third of it, to see what a bad
 ## connection does (measured in test_vehicle_net_smoothing.gd).
+## `--net-sim=lag,jitter,loss` (N-216, net_stats.gd) does the same on LAN with
+## its own jitter (0..jitter ms) and drops `loss` % of the poses, as a lossy
+## link would; over Steam the sockets simulate it instead
+## (NetworkManager.pose_net_sim() is empty there).
 
 const DELAY: float = 0.1
 ## Poses kept: a little over half a second at 60 Hz.
@@ -35,6 +39,11 @@ var _clock_offset: float = INF
 ## Arrived but held back by --fake-lag: [release_at, host_time, Transform3D].
 var _held: Array = []
 var fake_lag: float = 0.0
+## Seconds of random extra hold per pose, 0..this; below 0, the old
+## --fake-lag spread (up to a third of fake_lag).
+var fake_jitter: float = -1.0
+## Share of arriving poses dropped (0..1), like packets lost on the way.
+var fake_loss: float = 0.0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -42,7 +51,21 @@ func _init() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--fake-lag="):
 			fake_lag = maxf(float(arg.get_slice("=", 1)) / 1000.0, 0.0)
+	var tree := Engine.get_main_loop() as SceneTree
+	var network: Node = tree.root.get_node_or_null(^"NetworkManager") if tree != null else null
+	if network != null and network.has_method(&"pose_net_sim"):
+		configure_sim(network.call(&"pose_net_sim"))
 	_rng.randomize()
+
+
+## Takes a NetStats `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}); an
+## empty one leaves the buffer as it was.
+func configure_sim(sim: Dictionary) -> void:
+	if sim.is_empty():
+		return
+	fake_lag = maxf(float(sim.get("lag_ms", 0)) / 1000.0, 0.0)
+	fake_jitter = maxf(float(sim.get("jitter_ms", 0)) / 1000.0, 0.0)
+	fake_loss = clampf(float(sim.get("loss_pct", 0.0)) / 100.0, 0.0, 1.0)
 
 
 func is_empty() -> bool:
@@ -52,8 +75,11 @@ func is_empty() -> bool:
 ## A pose from the host, stamped with the host's clock, arriving at local
 ## time `now` (seconds).
 func push(host_time: float, pose: Transform3D, now: float) -> void:
-	if fake_lag > 0.0:
-		_held.append([now + fake_lag + _rng.randf_range(0.0, fake_lag / 3.0), host_time, pose])
+	if fake_loss > 0.0 and _rng.randf() < fake_loss:
+		return
+	if fake_lag > 0.0 or fake_jitter > 0.0:
+		var spread: float = fake_jitter if fake_jitter >= 0.0 else fake_lag / 3.0
+		_held.append([now + fake_lag + _rng.randf_range(0.0, spread), host_time, pose])
 		return
 	_accept(host_time, pose, now)
 
