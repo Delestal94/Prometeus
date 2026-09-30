@@ -31,5 +31,6 @@ Construís la ruta procedural de "Take My Package" (dominio de Nacho: `scripts/g
 ## Límites
 
 - Si el tramo necesita algo del vehículo, leé sus propiedades públicas; si hace falta cambiar `vehicle.gd`, que lo haga `constructor-camion`.
+- Lo de `route/` que no es un tipo de tramo ni la generación (casas, clima, cielo, fauna, historias al costado, carteles, decorado general) es de `constructor-mundo`.
 - Rendimiento: el endless genera tramos sin fin; todo nodo/material creado debe liberarse con el tramo. Reutilizá materiales en vez de crear uno por caja cuando sea posible.
 - Devolvé: archivos tocados, cómo se ve/juega el tramo en una frase, resultados de tests.

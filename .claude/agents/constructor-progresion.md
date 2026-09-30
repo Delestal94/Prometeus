@@ -29,7 +29,7 @@ qué queda para la próxima partida.
 
 ## Pasos
 
-1. Escribí el cambio como tabla: qué entra, qué sale, cuánto, por qué. Si es un cambio grande de diseño, recomendá pasarlo antes por `critico-diseno`.
+1. Escribí el cambio como tabla: qué entra, qué sale, cuánto, por qué. Si es un cambio grande de diseño, recomendá pasarlo antes por `critico-diseno`. Si el número depende de cuánto dura o cuánto cuesta una entrega, medilo con `tests/bench_route_duration.gd` / `bench_delivery_time.gd` (ver su cabecera; no son parte de la batería) en vez de estimarlo.
 2. Implementá en el manager correspondiente; señales nuevas antes que firmas cambiadas.
 3. Tests: `test_crew_progression.gd`, `test_unlock_manager.gd`, `test_shop_vote_manager.gd`, `test_progress_ui.gd` y el del puntaje que toques. Corré `bash tools/run-tests.sh progression unlock shop score` (ajustá el filtro).
 

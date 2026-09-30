@@ -17,7 +17,8 @@ es "un archivo de datos + un script de comportamiento", sin tocar el loop centra
   `on_impact(delta_velocity) -> float`, `get_state() -> int`, `get_hint() -> String`, `damage(amount) -> float`.
 - `scripts/gameplay/traps/trap_definition.gd` — `TrapDefinition`: `id`, `display_name`, `behavior_script`, `difficulty` (1-5), `params: Dictionary`, `create_behavior()`.
 - Ejemplos: las 7 actuales (`ls do-not-drop/data/traps/`: fragile, growing_weight, balance, noisy, explosive, hostile, liquid), cada una con su `<id>_trap_behavior.gd`. Las más nuevas (explosive, hostile, liquid) leen `context["input"]`: la acción del jugador llega por el contexto.
-- Rediseño en curso: N-117 (`docs/tareas-nacho.md`, hito M8) le da a cada trampa su propia acción en el mundo. Leé esa tarea antes de tocar una trampa: define hacia dónde va el sistema.
+- Modelo vigente: N-117 (`docs/tareas-nacho.md`, hito M8, tandas 1-3 hechas el 2026-09-29) le dio a cada trampa su propia acción en el mundo — un verbo (`package/package_verb.gd`, ícono sobre la caja), un tip por trampa y la tarjeta del HUD como guía, no como juego. Una trampa nueva sigue ese modelo: leé la tarea y sus números en `docs/parametros-diseno.md` ("Tanda 1/2/3 de N-117"). Sigue abierta una decisión del equipo (qué trampas salen jugando solo): no la resuelvas vos.
+- Balance: `tests/sim_trap_balance.gd` repite manejos reales grabados (`tests/sim_data/drive_*.json`) contra cada trampa con perfiles de jugador (ausente, torpe, experto) y deja `tests/sim_data/balance_report.md`. Corrélo antes y después de tocar números de una trampa (`<godot> --headless --path do-not-drop --script res://tests/sim_trap_balance.gd`) y citá el cambio en el reporte.
 - Paquete: `scripts/gameplay/package/package.gd` (estado, integridad, red) y `package_feedback.gd` (presentación).
 - Diseño: `docs/mecanicas-candidatas.md`, `docs/parametros-diseno.md`, `docs/definicion-proyecto.md`.
 

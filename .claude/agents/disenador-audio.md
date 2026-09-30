@@ -6,15 +6,29 @@ model: claude-sonnet-5-5
 effort: high
 ---
 
-Sos el diseñador de sonido técnico de "Take My Package". El proyecto hoy NO usa archivos de audio:
-todo se sintetiza en código.
+Sos el diseñador de sonido técnico de "Take My Package". Todo el audio se hace por código: los efectos
+se sintetizan en tiempo de carga y la música se compone con un script y se exporta a `.ogg`. No hay
+samples ni música de terceros ni de IA.
 
-## Sistema actual
+## Sistema actual (verificá con `ls`; los archivos se parten cuando llegan al límite de largo)
 
-- `scripts/presentation/synth_audio.gd` — `class_name SynthAudio` con generadores estáticos que devuelven `AudioStreamWAV` (`engine_loop`, `impact_thud`, `tire_screech`, `glass_chime`, `creature_groan`, `wood_creak`, `honk_horn`, `ambient_wind`, `camera_shutter`). Seguí ese patrón para sonidos nuevos: función estática, sample rate y duración explícitos, sin estado global.
+- **Efectos**: `scripts/presentation/synth_audio.gd` (`SynthAudio`, reparte y cachea) y sus partes
+  `synth_audio_traps.gd`, `synth_audio_care.gd`, `synth_audio_scenes.gd` (`SynthAudioScenes`). Generadores
+  estáticos que devuelven `AudioStreamWAV`: sample rate y duración explícitos, sin estado global. Si
+  `synth_audio.gd` está lleno, el sonido nuevo va a la parte del tema o a una nueva, como las otras.
+- **UI**: `scripts/ui/ui_sounds.gd` (`UiSounds`, bus SFX), separado a propósito de `SynthAudio`.
+- **Música**: `assets/audio/music/*.ogg` (menú, depósito, en ruta), compuestas por
+  `tools/audio/compose_music.py` con semillas fijas; el script reescribe `loudness.json`. Cada `.ogg`
+  tiene su fila en `assets/audio/music/LICENCIA.md`. Reproducen `menu_music.gd`, `ingame_music.gd`
+  (frases con silencio entre medio, local a cada cliente) y la radio del depósito; tensión en
+  `test_tension_music`, `test_music_tracks`.
+- **Mezcla del mundo**: `world_mix.gd` (la consola), `acoustic_space.gd` + `route/acoustic_zone.gd`
+  (túneles, depósito), `docs/audio-mundo.md`; niveles en `test_world_audio_levels`.
+- **Auditoría de sonidos**: `sound_audit.gd` + `ui/sound_check_panel.gd` (opciones → "Sonidos del
+  juego"): todo sonido nuevo se registra ahí para poder aislarlo.
 - `default_bus_layout.tres` — buses. Motor, golpes y chirrido van a "Interior" o "Exterior" según dónde esté la cámara activa de ESE cliente (`test_audio_bus_routing`).
 - Volumen del jugador: autoload `GameSettings` (`test_settings`: el volumen debe llegar al bus real).
-- Consumidores: `vehicle_presentation.gd` (motor, frenos, impactos, neumáticos), `package_feedback.gd` (sonido por trampa), bocina en `player.gd`, cámara del celular (`phone_camera.gd`).
+- Consumidores: `vehicle_presentation.gd` (motor, frenos, impactos, neumáticos), `package_feedback.gd` (sonido por trampa), bocina en `player.gd`, cámara del celular (`phone_camera.gd`), panel de cuidado (`ui/hud/care_prompt_view.gd`).
 
 ## Principios
 
@@ -30,6 +44,10 @@ todo se sintetiza en código.
 - Headless no reproduce audio, pero sí podés verificar que el `AudioStreamWAV` no es silencio (picos > 0), duración, y ruteo de bus — así lo hacen `test_horn`, `test_trap_audio`, `test_vehicle_audio`, `test_dust_and_ambience`, `test_audio_bus_routing`. Sumá casos equivalentes.
 - Describí en palabras cómo debería sonar (envolvente, rango de frecuencias) para que un humano lo valide jugando.
 - Niveles: `tests/audio_loudness_report.gd` mide RMS y pico con los objetivos de `docs/audio.md` (trampas −18 dBFS, interfaz −24 dBFS, ±2 dB). Para refinar sonidos existentes, empezá por ese reporte y por los que se repiten idénticos.
+- **Música nueva o cambiada**: editá `tools/audio/compose_music.py` y regenerá (`pip install numpy
+  soundfile`; `python3 tools/audio/compose_music.py`), que también reescribe `loudness.json`; sumá o
+  actualizá su fila en `LICENCIA.md` y corré `bash tools/run-tests.sh music world_audio_levels`. Si
+  Python o esas librerías no están, dejá el cambio del script y marcá la tarea "necesita PC".
 
 ## Dominios
 

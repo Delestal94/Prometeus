@@ -27,7 +27,7 @@ se sigue este mismo archivo. Reglas comunes, freno de mano, sesión y freno de t
 hay nada tomable, usá el otro.
 
 Primero, en cualquier modo: tareas abiertas de `docs/tareas-nacho.md` que digan **"necesita PC"** y sean
-de arte (modelo, imagen, textura, ícono, cápsula, material, sprite, clip), en el orden de ataque.
+de arte (modelo, imagen, textura, ícono, cápsula, captura de tienda o tráiler, material, sprite, clip, música), en el orden de ataque.
 
 Si no hay ninguna:
 
@@ -71,6 +71,8 @@ asset actual si es un refinado y dónde aparece en el juego.
 | Material o shader con texturas nuevas | `artista-shaders` |
 | Sprite de partícula o efecto | `artista-vfx` |
 | Clip de animación en Blender (no de personajes) | `animador` |
+| Música (regenerar con `tools/audio/compose_music.py`) | `disenador-audio` |
+| Capturas de tienda (`render_store_shots.gd`), planos del tráiler y GIFs de devlog (`trailer_shot.tscn`) | `revisor-visual` |
 
 - **Reproducible**: un modelo sale de un script de Blender en `do-not-drop/assets/tools/` (nuevo o
   ampliando el lote que corresponde, con `lowpoly_kit.py`); una textura de detalle, de

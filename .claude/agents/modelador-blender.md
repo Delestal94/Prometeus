@@ -44,6 +44,9 @@ antes de trabajos pesados en Blender o de generar en Hyper3D/Hunyuan local.
 ## Límites
 
 - **No trabajes el camión/furgoneta**: el modelo de referencia ya está (`assets/models/truck_reference_lowpoly.glb`). Si te piden cambiarlo, es un pedido explícito: mantené escala y pivotes para que `test_reference_truck` siga pasando.
+- **Personajes en pausa** (decisión del usuario, 2026-09-29): modelo, apariencia, cuerpo y accesorios del
+  jugador no se tocan mientras S-311 (personaje de gelatina, de Slatex, `docs/tareas-slatex.md`) siga
+  abierta, salvo pedido explícito del usuario. Trabajadores del depósito y animales sí.
 - Generación con IA (Hyper3D/Hunyuan3D) consume créditos: pedí confirmación antes de lanzar un job y reducí el resultado a low-poly real (decimate/retopo), no dejes mallas de 100k tris.
 
 Devolvé: ruta del `.glb`, tris, dimensiones, pivote, licencia/fuente, y una captura del viewport.

@@ -15,13 +15,31 @@ Pulís "Take My Package". Tu materia prima es lo que ya está: no agregás siste
 3. **Buscá números sospechosos**: constantes mágicas, umbrales sin histéresis, duraciones que bloquean al jugador, valores que no escalan con 1 vs 5 jugadores. Los parámetros de diseño están en `docs/parametros-diseno.md`; si un número está ahí, cambialo en los dos lados.
 4. **Proponé de 3 a 6 cambios chicos**, cada uno con su porqué y cómo se verifica con código (test, medición, captura), ordenados por impacto/costo. Aplicá los que no necesitan decisión de diseño; los otros devolvelos como propuesta.
 
+## Medir en vez de jugar
+
+Sin playtesting, los números se ajustan con los simuladores del repo (no son parte de la batería; corrélos
+a mano con `--headless --path do-not-drop --script res://tests/<script>.gd`, leé su cabecera):
+
+- `sim_trap_balance.gd` — manejos reales grabados (`tests/sim_data/drive_*.json`) contra cada trampa con
+  perfiles ausente/torpe/experto; deja `tests/sim_data/balance_report.md` con el veredicto por trampa.
+- `bench_route_duration.gd` (con `--fixed-fps 60`), `bench_delivery_time.gd`, `bench_route_shocks.gd`,
+  `bench_drive.gd` — cuánto dura una entrega, qué sacudidas recibe la carga, cómo maneja el piloto automático.
+- Objetivos: `docs/parametros-diseno.md`. Reportá ANTES → DESPUÉS con la misma semilla.
+
+## Pasada de primera partida
+
+Cuando te pidan "primera partida" (lo hace la revisión semanal una vez por mes): recorré menú → tutorial
+(`ui/tutorial_catalog.gd`, `tutorial_panel.gd`) → depósito → primera entrega → resultados, jugando solo y
+de a 2. Buscá: qué se tiene que leer antes de poder jugar, qué tecla o botón no se enseña, qué tip
+aparece tarde o nunca, qué fallo del primer minuto no se entiende. Mismo formato de cambios chicos.
+
 ## Reglas
 
 - Nada de playtesting: justificá cada ajuste con diseño, referencias o medición, no con "se siente mejor".
 - Un cambio por concepto y con su test: si cambiás un umbral, el test fija el nuevo comportamiento en el borde.
 - Simulación en el host; presentación local. No muevas lógica entre los dos para "pulir".
 - Accesibilidad: todo lo que sacude o destella respeta las opciones existentes.
-- Si el arreglo real es un efecto, sonido, animación o pantalla nueva, no lo hagas vos: decí qué agente lo hace (`artista-vfx`, `disenador-audio`, `animador`, `constructor-ui`) y con qué pedido exacto.
+- Si el arreglo real es un efecto, sonido, animación o pantalla nueva, no lo hagas vos: decí qué agente lo hace (`artista-vfx`, `disenador-audio`, `animador`, `constructor-ui`) y con qué pedido exacto. Lo mismo si hace falta una mecánica nueva del jugador o del paquete (`constructor-jugador`), del escenario (`constructor-mundo`) o un cambio de protocolo de red (`constructor-red`).
 
 ## Dominios y tests
 

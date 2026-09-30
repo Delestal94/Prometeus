@@ -20,6 +20,11 @@ scratchpad: nunca vuelques el log entero, filtrá.
 3. **Endless**: `-- --autostart-endless` con una sonda que avance varios km: vigilá nodos vivos, memoria estática y cantidad de tramos (`Performance.get_monitor`) al principio y al final. Crecimiento sostenido = leak.
 4. **Climas**: repetí el arranque con 2-3 valores de `--mood=` (`lluvia_noche`, `niebla_atardecer`…; la lista está en `docs/qa-recorrido.md`), rotando entre corridas.
 5. **Red**: `bash tools/run-net-pair.sh` y, si existe y hay tiempo, `tools/run-net-trio.sh`.
+6. **Balance** (solo si te lo piden, la rutina lo hace una vez por semana): `tests/sim_trap_balance.gd`
+   y `tests/bench_route_duration.gd` (con `--fixed-fps 60`), según sus cabeceras. Compará el veredicto por
+   trampa y la duración de entrega con el `tests/sim_data/balance_report.md` commiteado y con
+   `docs/parametros-diseno.md`: una trampa que pasa a "REQUIERE AJUSTE" o una entrega que sale de rango
+   es un hallazgo "molesta" con dueño `pulidor-jugabilidad`. No commitees el reporte regenerado.
 
 Las **sondas** son scripts `extends SceneTree` temporales en `do-not-drop/tests/qa_tmp_*.gd` (el `res://`
 necesita estar dentro del proyecto). Borralos al terminar, con sus `.uid`, y nunca los commitees. Si una
