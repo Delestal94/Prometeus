@@ -85,7 +85,6 @@ do-not-drop/tests/test_character_motion.gd|max-line-length 3
 do-not-drop/tests/test_chasing_dog.gd|max-line-length 1
 do-not-drop/tests/test_connection_errors.gd|max-line-length 1
 do-not-drop/tests/test_contact_shadows.gd|max-line-length 10
-do-not-drop/tests/test_crew_campaign_save.gd|max-line-length 1
 do-not-drop/tests/test_dashboard_gps.gd|max-line-length 8
 do-not-drop/tests/test_delivery_houses.gd|max-line-length 6
 do-not-drop/tests/test_depot_campaign_board.gd|max-line-length 5

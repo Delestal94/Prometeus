@@ -32,3 +32,14 @@ ninguna firma pública ni hay RPC nuevo. **Hace falta reimportar** (`godot --hea
   (con `push_warning`) o carga lo que pueda.
 - El progreso de quien se va se guarda con el slot que tenía cuando cambió el roster (la red libera el slot antes
   de avisar), y el slot liberado lo hereda el siguiente que entra: el slot es el asiento en la tripulación.
+
+## Tests de Slatex ajustados al mezclar con `main` (2026-09-30)
+
+- `test_assist.gd` (S-109): el que atiende la caja es el peer 1, el anfitrión, así que el cartel ahora dice
+  "menta" (slot 0) en vez de "amarillo". Además carga `package.gd` al correr en vez de nombrar `DeliveryPackage`:
+  con `--script` el test compila antes que los autoloads y `package.gd` arrastra el HUD, que nombra
+  `NetworkManager`; según el orden en que Godot recorría las dependencias fallaba ("Identifier not found:
+  NetworkManager" en `hud.gd`), también en `main` en Windows.
+- `test_crew_campaign_save.gd` (S-105): espera `CAMPAIGN_VERSION` 2 y jugadores por slot (`"0"`, `"1"`), con ids
+  del tamaño de ENet sentados a mano en `NetworkManager` (y restaurados), y que otro id en el mismo slot recupere
+  mérito y carta. Corre diferido, cuando el autoload ya está en el árbol.
