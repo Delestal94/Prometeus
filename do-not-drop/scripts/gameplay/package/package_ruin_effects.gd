@@ -130,10 +130,14 @@ static func _hold(root: Node3D, slow: bool, tween: Tween) -> void:
 		particles.speed_scale = HOLD_SPEED
 	if tween != null:
 		tween.set_speed_scale(HOLD_SPEED)
+	# Captures the id, not the node: a lambda holding a freed Object logs
+	# "Lambda capture ... was freed" when the timer fires after the effect ended.
+	var root_id: int = root.get_instance_id()
 	root.get_tree().create_timer(HOLD_SECONDS).timeout.connect(func() -> void:
-		if not is_instance_valid(root):
+		var alive: Node3D = instance_from_id(root_id) as Node3D
+		if alive == null:
 			return
-		for particles: GPUParticles3D in _all_particles(root):
+		for particles: GPUParticles3D in _all_particles(alive):
 			particles.speed_scale = 1.0
 		if tween != null and tween.is_valid():
 			tween.set_speed_scale(1.0))
@@ -151,9 +155,11 @@ static func _all_particles(root: Node) -> Array[GPUParticles3D]:
 ## Belt and braces: whatever happens to the tween or the `finished` signal, the
 ## effect never outlives its promised time.
 static func _free_after(root: Node, seconds: float) -> void:
+	var root_id: int = root.get_instance_id()  # see _hold(): never capture the node itself
 	root.get_tree().create_timer(seconds).timeout.connect(func() -> void:
-		if is_instance_valid(root):
-			root.queue_free())
+		var alive: Node = instance_from_id(root_id) as Node
+		if alive != null:
+			alive.queue_free())
 
 
 static func _material(color: Color, vertex_color: bool = false, translucent: bool = false) -> StandardMaterial3D:
