@@ -1567,13 +1567,40 @@ Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con St
 
 Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 
-- [ ] **N-109.1** Gaviota o carancho que baja a la caja del estante y trata de llevársela; se espanta con la
-  bocina o sujetando la caja.
-- [ ] **N-109.2** Perro que se sube a una caja abierta en una parada; se lo distrae tirándole algo.
-- [ ] **N-109.3** Abejas atraídas por la torta (Equilibrio) en zona de campo.
-- [ ] Cada uno anunciado con sonido o ícono antes de actuar (la queja principal de RV There Yet? es la
+- [x] **N-109.1** Gaviota que baja a la caja del estante y trata de llevársela; se espanta con la bocina o
+  sujetando la caja. Rama `nacho/N-109-cargo-animals`. Entra por la puerta trasera abierta; anunciada 3 s antes
+  (graznido + ícono con cuenta regresiva sobre la caja + cartel en el HUD); después tiene 6 s: si la caja no
+  está sujeta (el primario de quien la atiende, o alguien que la levanta; 1 s en total) ni suena la bocina,
+  la saca por la puerta con velocidad hacia atrás y sigue cargada, así que cae en la ventana de rescate de
+  N-213 (no la arruina de entrada). Modelo: el pájaro de la ruta (`sm_env_animal_bird.glb`) a escala ×2,2.
+- [x] **N-109.2** Perro que se sube a una caja abierta en una parada; se lo distrae tirándole algo. Rama
+  `nacho/N-109-cargo-animals`. En una parada a menos de 18 m de una casa, con una caja abierta a menos de 10 m
+  del camión: ladrido y carrera 3 s antes, y después la desgasta de a poco (2,5 de 100 por segundo, hasta 30 s:
+  nunca la arruina sola). Se va con la bocina, cerrando la tapa, levantando la caja o con **"Tirarle un palo al
+  perro"** (`dog_distract_point.gd`, un `Interactable` que va sobre el perro: apuntarle y apretar interactuar
+  con las manos libres; el palo vuela y el perro lo persigue).
+- [x] **N-109.3** Abejas atraídas por la torta (Equilibrio) en zona de campo. Rama `nacho/N-109-cargo-animals`.
+  Campaña, tramo de campo abierto (`RouteDresser.Zone.COUNTRYSIDE`), torta abierta a bordo: zumbido y nube
+  3 s antes; después desgastan la torta (3 por segundo, hasta 14 s) y le dan empujones que la inclinan (lo que
+  Equilibrio hace contrarrestar con el peso). Se van al cerrar la tapa, con la bocina o al salir del campo.
+- [x] Cada uno anunciado con sonido o ícono antes de actuar (la queja principal de RV There Yet? es la
   fauna sin aviso). Determinista por semilla, disparado por el host. Tests con el patrón de
-  `test_wildlife_crossing.gd`.
+  `test_wildlife_crossing.gd`. Rama `nacho/N-109-cargo-animals`.
+  - `CargoAnimalPlan` (semilla → tramo): ninguno en el primer tramo, uno por tramo como mucho y nunca en dos
+    seguidos, ~55 % de los demás; el host (`CargoAnimals`) mira si puede actuar (caja en el estante / caja
+    abierta), tope de 3 por partida, y lo cuenta a todos con `cargo_animal_alert` / `cargo_animal_ended`
+    (`EventBus.relay`); tras irse uno no se anuncia otro en 3,5 s (el tiempo de su salida); quien entra tarde
+    recibe el aviso otra vez sin reiniciar al bicho. Cada cliente lo
+    dibuja (`CargoAnimalView`). El daño lo hace solo el host (`DeliveryPackage.apply_external_damage`).
+  - Test `test_cargo_animals.gd` (plan, sonidos, gaviota, perro, abejas, cliente vs host, ritmo). Capturas:
+    `tests/render_cargo_animals.gd` (para `revisor-visual`).
+  - Aviso: `docs/avisos/2026-09-30-n109-cargo-animals.md`. `PROTOCOL_VERSION` 11 → 12.
+  - En Endless solo viene la gaviota (no hay casas ni campo). El perro y las abejas piden la caja **abierta**:
+    con la tapa cerrada no vienen (es lo que hace que cerrarla sea una salida). ⏸ decide el usuario: si
+    conviene que también rondan una caja cerrada (más frecuentes, pero sin la salida de cerrar la tapa).
+  - Falta (necesita PC): un modelo propio de gaviota con alas abiertas y abejas con sprite (hoy: el pájaro de
+    la ruta escalado y puntos); revisión visual (`revisor-visual` con `render_cargo_animals.gd`), medir el
+    ancho de banda de red (`auditor-red`) y dar mérito a quien espanta (`CrewProgression.award_milestone`).
 
 ### N-406 · Radio del camión con función — B · `Opus 5.5 · high` · Aviso: sí (trampa Ruidoso) · **[x] rama `nacho/N-406-truck-radio`**
 

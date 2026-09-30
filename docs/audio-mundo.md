@@ -68,10 +68,10 @@ desbalances. La elección de timbres y su comodidad se valida además escuchando
 |---|---|---|---|
 | motor | RMS del loop | −20 dBFS | motor del camión a fondo |
 | golpe | pico | −14 dBFS | el golpe más fuerte del camión |
-| ruido | RMS del loop | −35 dBFS | viento y ruta lejana: siseo de banda ancha (a −28 sonaba como lluvia sobre el techo del depósito) |
+| ruido | RMS del loop | −35 dBFS | viento y ruta lejana: siseo de banda ancha (a −28 sonaba como lluvia sobre el techo del depósito); zumbido de las abejas de la torta |
 | naturaleza | 100 ms más fuertes | −24 dBFS | pájaros o grillos (chirridos con silencio en el medio: su RMS no dice cuán fuerte suenan) |
 | lluvia | RMS del loop | −32 dBFS | afuera (era −24 y tapaba todo); en la cabina +3 dB; dentro del depósito no se oye (se apaga en ~½ s al entrar) |
-| señal | 100 ms más fuertes | −18 dBFS | bocina, derrape, campana del cruce, timbre, perro, ovejas, vecino, portón del depósito |
+| señal | 100 ms más fuertes | −18 dBFS | bocina, derrape, campana del cruce, timbre, perro, ovejas, graznido de la gaviota de la carga, vecino, portón del depósito |
 | detalle | pico | −26 dBFS | objetos sueltos en la caja de carga |
 | música | RMS del loop | −24 dBFS | la radio del depósito (bus Music) |
 | máquina | RMS del loop | −40 dBFS | el motor del autoelevador que va y viene |
