@@ -77,9 +77,11 @@ D:/Programas/comfy-venv/Scripts/python.exe art/tools/make_cargo_textures.py
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_cargo_packages.py -- boxes contents
 ```
 
-1. `make_cargo_textures.py` (PIL) pinta un atlas 2048 por caja con la impresión de marca
+1. `make_cargo_textures.py` (PIL) pinta el atlas de cada caja a 2048 y lo guarda a 512 (LANCZOS) con la impresión de marca
    (logo, símbolos de manejo ISO, código de barras, sello del fondo, cinta amarilla) y escribe
    `tools/cargo_layout.json` con medidas y rectángulos UV. Es la única fuente de las medidas.
+   El atlas va embebido en el GLB; Godot lo extrae a `models/cargo/*_tx_*.png`, que es salida
+   del importador y está en `.gitignore` (N-315).
 2. `build_cargo_packages.py` arma `models/cargo/sm_cargo_box_*.glb` (84 triángulos: cuerpo con
    interior, cuatro solapas con el origen en la bisagra, media cinta en cada solapa exterior) y
    `models/cargo/contents/sm_cargo_content_*.glb` (1000-2000 triángulos, nodos `Filler`,

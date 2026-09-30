@@ -378,11 +378,19 @@ Hecho con `bench_drive` antes/después anotado acá.
   - `bench_drive --headless --cpu-only --seconds=30 --seed=1234` (física por tick, scripts + Jolt): entrega 1,67 → 1,55 ms (media de 3); Endless 1,46 → 1,41 ms (dentro del ruido). Frame, p99 y tirones sin cambio: el resto es Jolt.
   - Aviso: `docs/avisos/2026-09-30-n223-menos-trabajo-por-frame.md`.
 
-### N-315 · Cajas de 2048² triplicadas — B · `Opus 5.5 · medium` · Aviso: no
-Cada textura de caja está tres veces (fuente en `art/cargo/`, volcado del importador en
-`assets/models/cargo/` y embebida en el `.glb`): ~5 MB × 3 × 4. Regenerar a 512² con
-`art/tools/make_cargo_textures.py` (`modelador-blender`), sacar los volcados del repo e ignorarlos.
-Necesita PC (Blender; la toma la sesión de arte).
+### N-315 · Cajas de 2048² triplicadas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-315-cargo-textures-512`**
+- [x] ~~Cada textura de caja está tres veces (fuente en `art/cargo/`, volcado del importador en
+  `assets/models/cargo/` y embebida en el `.glb`): ~5 MB × 3 × 4. Regenerar a 512² con
+  `art/tools/make_cargo_textures.py` (`modelador-blender`), sacar los volcados del repo e ignorarlos.
+  Necesita PC (Blender; la toma la sesión de arte).~~
+  **[x] Hecho (2026-09-30, sesión de arte)** — `make_cargo_textures.py` sigue dibujando a 2048 y guarda
+  `art/cargo/tx_cargo_box_<v>_512.png` con LANCZOS (`cargo_layout.json`: mismos rectángulos UV); los 4 GLB
+  reexportados con `build_cargo_packages.py -- boxes` (84 tris, nodos y bisagras iguales): 5,7/5,7/4,2/4,2 MB →
+  316/319/243/241 KB. Los volcados `*_tx_*.png` del importador salen del repo y van a `.gitignore`: ~57 MB menos,
+  VRAM de las cajas de ~10,7 a ~0,7 MiB. Test nuevo `test_cargo_box_textures` (atlas ≤ 512², 84 tris, solapas).
+  `revisor-visual` con GPU: se leen logo, FRÁGIL, VIVO, PESADO y MANTENER VERTICAL de cerca y en el depósito;
+  solo el texto chico secundario (sello, "RECICLABLE", "LEVANTAR ENTRE DOS" en la plana) queda como textura.
+  Quien tenga el proyecto abierto: al bajar, Godot reimporta los GLB solo (si no, `--import`).
 
 ### N-224 · Menos despacho dinámico — C · `Opus 5.5 · high` · Aviso: sí (varios)
 251 `.call(&"…")`, 233 `.get(&"…")` y 112 rutas `/root/`: un renombre rompe en runtime. Por archivo,
