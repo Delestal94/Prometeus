@@ -902,11 +902,24 @@ atraso.
 La auditoría del 2026-09-29 midió que, al generarse un tramo, `TIME_PHYSICS_PROCESS` sube de ~3 ms a
 ~24 ms durante decenas de frames (el límite a 60 Hz es 16,7 ms). Se midió antes del merge del PR #35, que
 no toca la física.
-- [ ] Reproducirlo con ventana real y ver quién gasta: los `StaticBody3D` y shapes del tramo, el terreno,
-  los scripts con `_physics_process` o el CCD.
-- [ ] Arreglar: armar el tramo repartido en varios frames, usar menos shapes o shapes más simples, o
-  generarlo antes y más lejos.
-- [ ] Test: el costo de física tras un spawn vuelve a la base en pocos frames.
+- [x] Reproducirlo con ventana real y ver quién gasta: los `StaticBody3D` y shapes del tramo, el terreno,
+  los scripts con `_physics_process` o el CCD. **[x] Hecho (2026-09-30, rama `nacho/N-219-endless-physics-spike`)** —
+  reproducido headless (`bench_drive.gd --endless --cpu-only`, semilla 4242, 90 s): pico de 103 ms por tick. No eran
+  los shapes ni el terreno (Endless no tiene terreno; un tramo son 7-105 nodos y pocas cajas): era el propio
+  `RouteStreamer._physics_process` armando el tramo. Puente 35-93 ms, túnel 22-28 ms, obras 18 ms, resto < 3 ms.
+  Causas: `RouteSegment._model()` hacía `load()` del `.glb` por cada riel, poste y módulo (~40 lecturas de disco por
+  puente; el `PackedScene` se liberaba al salir de `_model`), el primer puente sintetizaba el loop del río
+  (`SynthAudio.river_flow_loop()`, ~55 ms) y el `DressingBatcher` (5-11 ms) corría en el mismo tick que la
+  construcción. Con ventana real / GPU sin medir: lo que queda es la subida de mallas al renderer.
+- [x] Arreglar: armar el tramo repartido en varios frames, usar menos shapes o shapes más simples, o
+  generarlo antes y más lejos. **[x] Hecho** — `RouteSegment._scene()` guarda cada `PackedScene`;
+  `RouteStreamer.WARM_MODELS` y el loop del río se cargan al armar el nivel; `SegmentStreamer` une la geometría un
+  tick después de construir el tramo (uno por tick, `flush_batches()` en `start()`). Pico por tick 103 -> 10-13 ms
+  (1 corrida de 5 llegó a 21 ms y 1 a 127 ms por PC ocupada, sin relación con un spawn); tick promedio sin cambio
+  (1,0 ms). Detalle en `docs/rendimiento-pc.md`.
+- [x] Test: el costo de física tras un spawn vuelve a la base en pocos frames. **[x] Hecho** —
+  `tests/test_endless_physics_spike.gd` (modelos y loop calientes, tramo pesado < 30 ms, construir y unir nunca en el
+  mismo tick, cola vacía a los 3 ticks) y ampliación de `modules/route_gen/tests/test_route_gen.gd`.
 
 ### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no
 

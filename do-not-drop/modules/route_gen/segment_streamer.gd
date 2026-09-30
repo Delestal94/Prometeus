@@ -29,8 +29,8 @@ extends Node3D
 ## Road kept built ahead of / behind the target, in metres along the road.
 @export var lookahead_distance: float = 60.0
 @export var behind_keep_distance: float = 40.0
-## Merge each segment's static boxes as it spawns (DressingBatcher). Off
-## only for benches that measure the unmerged parts.
+## Merge each segment's static boxes (DressingBatcher), the tick after it
+## spawns. Off only for benches that measure the unmerged parts.
 @export var batch_geometry: bool = true
 ## The very first segment ignores the random pick and is always this one
 ## (default: plain Straight): an obstacle picked as segment #1 throws itself
@@ -61,6 +61,10 @@ const DIFFICULTY_RAMP_METERS: float = 2000.0
 var target: Node3D = null
 
 var _active: Array[RouteSegment] = []
+## Spawned segments whose geometry is not merged yet: one is merged per
+## physics tick that spawned nothing, so building a segment and merging it
+## (~4 and ~8 ms for the heavy ones) never land in the same tick (N-219).
+var _unbatched: Array[RouteSegment] = []
 ## Where the next segment starts: the pose (this node's space) and how far
 ## along the road that is.
 var _cursor: Transform3D = Transform3D.IDENTITY
@@ -106,13 +110,23 @@ func _ready() -> void:
 func start(tracked: Node3D) -> void:
 	target = tracked
 	_fill_ahead()
+	flush_batches()
 
 
 func _physics_process(_delta: float) -> void:
 	if target == null:
 		return
+	var spawned_before: int = _spawn_count
 	_fill_ahead()
+	if _spawn_count == spawned_before:
+		_batch_next()
 	_cull_behind()
+
+
+## Merges every segment still waiting for it, now (level start, tests).
+func flush_batches() -> void:
+	while not _unbatched.is_empty():
+		_batch_next()
 
 
 ## Metres along the road to the point on it nearest `world_position` (0 for
@@ -171,10 +185,10 @@ func _spawn_next() -> void:
 	_active.append(segment)
 	_record_path(segment)
 	_on_segment_spawned(segment)
-	# Its static boxes folded into one mesh per material: unmerged, each
-	# spawn added some 500 nodes.
+	# Its static boxes get folded into one mesh per material (_batch_next):
+	# unmerged, each spawn added some 500 nodes.
 	if batch_geometry:
-		DressingBatcher.merge_segment_geometry([segment])
+		_unbatched.append(segment)
 	_next_distance += segment.length
 	segment.set_meta(&"route_end", _next_distance)
 	_cursor = _cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)
@@ -287,10 +301,20 @@ func _pick_next_script() -> Script:
 	return candidates[-1]
 
 
+## Merges the oldest segment still waiting for it.
+func _batch_next() -> void:
+	if _unbatched.is_empty():
+		return
+	var segment: RouteSegment = _unbatched.pop_front()
+	if is_instance_valid(segment) and not segment.is_queued_for_deletion():
+		DressingBatcher.merge_segment_geometry([segment])
+
+
 func _cull_behind() -> void:
 	for segment: RouteSegment in _active.duplicate():
 		if float(segment.get_meta(&"route_end", 0.0)) < _target_distance - behind_keep_distance:
 			_active.erase(segment)
+			_unbatched.erase(segment)
 			segment.queue_free()
 	# Its stretch of centre line goes with it (keeping the point where the
 	# live road begins).
