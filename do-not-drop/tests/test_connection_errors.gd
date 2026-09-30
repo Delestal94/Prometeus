@@ -1,6 +1,7 @@
 extends SceneTree
 ## Connection failures are protocol reasons internally and actionable Spanish
-## messages at the menu boundary.
+## messages at the menu boundary; a joiner's auth timeout ends the session a
+## frame later, not inside SceneMultiplayer.poll() (that freed the peer mid-poll).
 
 var _failures: int = 0
 
@@ -31,6 +32,24 @@ func _initialize() -> void:
 	_expect(String(network.call(&"_ready_reply_error", {"ready": true, "version": protocol_version - 1})) == "version",
 		"Host rejects a ready reply from an old client")
 
+	# A joiner's auth timeout is reported from inside SceneMultiplayer.poll():
+	# ending the session there freed the peer mid-poll (SIGSEGV), so it has to
+	# wait for the next idle frame.
+	var client := ENetMultiplayerPeer.new()
+	_expect(client.create_client("127.0.0.1", 7799) == OK, "A client peer can be created for the auth check")
+	network.multiplayer.multiplayer_peer = client
+	var failures: Array[String] = []
+	var on_failed: Callable = func(reason: String) -> void: failures.append(reason)
+	network.session_failed.connect(on_failed)
+	network.call(&"_auth_failed", 1)
+	_expect(failures.is_empty() and network.multiplayer.multiplayer_peer == client,
+		"An auth timeout leaves the peer alone while SceneMultiplayer is polling it")
+	await process_frame
+	_expect(failures == ["timeout"], "The auth timeout still fails the session, one frame later")
+	_expect(network.multiplayer.multiplayer_peer is OfflineMultiplayerPeer, "The failed session goes back offline")
+	network.session_failed.disconnect(on_failed)
+	network.call(&"take_failure_message")
+
 	var expected: Dictionary = {
 		"version": "El anfitrión tiene otra versión del juego: actualicen los dos.",
 		"timeout": "No hubo respuesta en 8 s. Revisá la IP y que el firewall de Windows permita Take My Package.",
@@ -54,7 +73,8 @@ func _initialize() -> void:
 	menu.free()
 
 	if _failures == 0:
-		print("PASS: protocol mismatch, timeout, full room and connection errors are actionable")
+		print("PASS: protocol mismatch, timeout, full room and connection errors are actionable;"
+			+ " auth timeout ends the session outside the poll")
 	quit(_failures)
 
 

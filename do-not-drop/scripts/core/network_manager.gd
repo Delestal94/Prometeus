@@ -81,8 +81,9 @@ var world_completed_runs: int = 0
 ## the connection is dropped (Godot's auth timeout). A host on another version
 ## answers with a failure right away, so this only has to cover a slow level
 ## load: 8 s dropped joiners on 2-core CI runners (three Godots loading at
-## once) with the level up and no players, and a slow PC is no faster.
-const JOIN_HANDSHAKE_TIMEOUT: float = 20.0
+## once) with the level up and no players, and a slow PC is no faster. 20 s
+## stopped being enough once the level grew (loads of 18-34 s in the net pair).
+const JOIN_HANDSHAKE_TIMEOUT: float = 30.0
 ## ENet drops a peer it hasn't heard from in about 5 s, and loading a level
 ## blocks the main thread -- and with it ENet's polling -- for longer than that
 ## on a slow machine (9.6 s on a CI runner): the joiner was cut off right after
@@ -640,7 +641,9 @@ func _remote_restart(house_count_value: int, completed_runs_value: int) -> void:
 func _auth_failed(_id: int) -> void:
 	if is_host():
 		return
-	_fail("timeout")
+	# Emitted from inside SceneMultiplayer.poll(): closing and replacing the
+	# peer right here freed it mid-poll (SIGSEGV in the net pair).
+	_fail.call_deferred("timeout")
 
 
 func _on_connection_failed() -> void:
