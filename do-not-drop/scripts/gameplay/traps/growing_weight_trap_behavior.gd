@@ -1,6 +1,8 @@
 class_name GrowingWeightTrapBehavior
 extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
 ## Gets heavier unless its passenger keeps solving a short input sequence.
+## "Asegurá" (N-117): the sequence is on the box for everyone to see, and the
+## tender's helper (DeliveryPackage.assistant_peer_id) taps it too.
 ## The added mass is real, not cosmetic: a neglected box genuinely drags the
 ## van's handling down, which is what makes one distracted passenger
 ## everyone else's problem.
@@ -129,9 +131,16 @@ func armed() -> bool:
 func _consume_input(input: Dictionary) -> void:
 	if not armed():
 		return
-	var pressed: Variant = input.get("direction_pressed")
-	if pressed != null and pressed is StringName:
-		press_direction(pressed as StringName)
+	# "Asegurá" (N-117): the tender and their helper both tap the same
+	# sequence; any of them advances the same step and a mistake by either costs
+	# the same. The package hands over every key of the tick (`directions`,
+	# duplicates collapsed); a bare context has only `direction_pressed`.
+	var keys: Array = input.get("directions", []) as Array
+	if keys.is_empty() and input.get("direction_pressed") != null:
+		keys = [input["direction_pressed"]]
+	for pressed: Variant in keys:
+		if pressed is StringName or pressed is String:
+			press_direction(StringName(pressed))
 
 
 func _apply_mass(package: Node) -> void:

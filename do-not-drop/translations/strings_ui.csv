@@ -37,6 +37,11 @@ HUD_CARE_SEQUENCE_SEATED,"una tecla por vez, sin clic","one key at a time, no cl
 HUD_CARE_TAP,TOCÁ,TAP
 HUD_CARE_TITLE_CALM,CALMALA,CALM IT DOWN
 HUD_CARE_TITLE_HOLD,SOSTENELA,HOLD IT
+HUD_CARE_LEAN,¡CONTRAPESÁ!,LEAN AGAINST IT!
+HUD_CARE_LEAN_DETAIL,Mantené %s y empujá con %s hacia el lado contrario a la inclinación de la caja.,Hold %s and push with %s toward the side opposite to the box's tilt.
+HUD_CARE_SCRUB,¡FREGÁ!,SCRUB!
+HUD_CARE_SCRUB_DETAIL,"Alterná %s rápido, sin apretar nada. Repetir el mismo lado no seca.","Swing %s from side to side, fast, holding nothing. The same side twice dries nothing."
+HUD_CARE_KEY_STICK,stick izq.,left stick
 HUD_CARE_TITLE_MOP,SECÁ EL DERRAME,MOP THE SPILL
 HUD_CARE_TITLE_STRAIGHTEN,ENDEREZALA,STRAIGHTEN IT
 HUD_CARE_TOOL,USÁ: %s,USE: %s
@@ -108,7 +113,14 @@ HUD_SHIPPING_UNDECLARED,Contenido sin declarar,Undeclared contents
 HUD_EXPLOSIVE_DEFUSE,DESACTIVAR\n%02d s  %s,DEFUSE\n%02d s  %s
 HUD_BOMB_CODE,CÓDIGO %s · %d s,CODE %s · %d s
 HUD_BOMB_CODE_MORE,+%d,+%d
-HUD_EXPLOSIVE_CODE_SIGN,CÓDIGO\n%02d s  %d/%d,CODE\n%02d s  %d/%d
+HUD_EXPLOSIVE_CODE_SIGN,PEDÍ EL CÓDIGO\n%02d s  %d/%d,ASK FOR THE CODE\n%02d s  %d/%d
+HUD_VERB_FRAGILE,¡AMORTIGUÁ!,CUSHION IT!
+HUD_VERB_BALANCE,¡CONTRAPESÁ!,LEAN AGAINST IT!
+HUD_VERB_LIQUID,¡FREGÁ!,SCRUB!
+HUD_VERB_NOISY,¡ABRAZALO!,HUG IT!
+HUD_VERB_HOSTILE_CALM,LEELO  :)  MANTENÉ,READ IT  :)  HOLD
+HUD_VERB_HOSTILE_ANGRY,LEELO  >:(  ¡SOLTÁ!,READ IT  >:(  LET GO!
+HUD_VERB_WEIGHT,¡ASEGURÁ!  %s,SECURE IT!  %s
 HUD_OVERBOARD_RESCUE,¡RESCATAR!\n%d s,RESCUE!\n%d s
 HUD_CARGO_FELL_OFF,Se cayó del camión.,It fell off the truck.
 HUD_NOTICE_CREW_GREW,Se sumó gente: preparando la ruta para %d casas...,More people joined: setting up the route for %d houses...
@@ -520,10 +532,10 @@ HUD_HANDLING_HOSTILE,CONTENIDO HOSTIL,HOSTILE CONTENTS
 HUD_HANDLING_LIVE,CONTENIDO VIVO,LIVE CONTENTS
 HUD_HANDLING_NO_IMPACTS,NO GOLPEAR,DO NOT HIT
 HUD_HANDLING_UPRIGHT,MANTENER VERTICAL,KEEP UPRIGHT
-HUD_HINT_BALANCE_DANGER,¡Se está volcando! Mantené para enderezar.,It's tipping over! Hold to steady it.
-HUD_HINT_BALANCE_OK,Estable. Mantené para enderezar en las curvas.,Stable. Hold to steady it through turns.
+HUD_HINT_BALANCE_DANGER,¡Se está volcando! Mantené y contrapesá con WASD.,It's tipping over! Hold and lean with WASD.
+HUD_HINT_BALANCE_OK,Estable. En las curvas: mantené y contrapesá con WASD.,Stable. In turns: hold and lean with WASD.
 HUD_HINT_BALANCE_RUINED,Se volcó.,It tipped over.
-HUD_HINT_BALANCE_TILTED,Inclinado %.0f° · mantené para enderezar.,Tilted %.0f° · hold to steady.
+HUD_HINT_BALANCE_TILTED,Inclinado %.0f° · mantené y contrapesá con WASD.,Tilted %.0f° · hold and lean with WASD.
 HUD_HINT_EXPLOSIVE_RUINED,BOOM.,BOOM.
 HUD_HINT_EXPLOSIVE_SAFE,Desactivada.,Defused.
 HUD_HINT_EXPLOSIVE_SEQUENCE,%02d s · secuencia: %s,%02d s · sequence: %s
@@ -532,10 +544,10 @@ HUD_HINT_FRAGILE,Cada golpe deja huella: un toque justo antes del bache lo amort
 HUD_HINT_HOSTILE_CALM,CALMÁ (mantené),CALM (hold)
 HUD_HINT_HOSTILE_DONT_TOUCH,NO TOCAR (soltá),DON'T TOUCH (release)
 HUD_HINT_HOSTILE_RUINED,La criatura escapó.,The creature escaped.
-HUD_HINT_LIQUID_DANGER,¡Charco creciendo! Mantené para secar.,Puddle growing! Hold to mop it up.
-HUD_HINT_LIQUID_OK,Líquido estable. Secá cualquier derrame.,Liquid stable. Mop up any spill.
+HUD_HINT_LIQUID_DANGER,¡Charco creciendo! Fregá: alterná A y D.,Puddle growing! Scrub: swing A and D.
+HUD_HINT_LIQUID_OK,Líquido estable. Fregá cualquier derrame alternando A y D.,Liquid stable. Scrub any spill by swinging A and D.
 HUD_HINT_LIQUID_RUINED,Se derramó por completo.,It spilled completely.
-HUD_HINT_LIQUID_TILTED,Inclinado %.0f° · mantené para secar.,Tilted %.0f° · hold to mop.
+HUD_HINT_LIQUID_TILTED,Inclinado %.0f° · fregá alternando A y D.,Tilted %.0f° · scrub by swinging A and D.
 HUD_HINT_NOISY_DANGER,¡Se suelta! Mantené para calmarlo.,It's breaking loose! Hold to calm it.
 HUD_HINT_NOISY_OK,Tranquilo por ahora. Los golpes lo alteran.,Calm for now. Impacts rile it up.
 HUD_HINT_NOISY_RISK,Muy inquieto · mantené para calmarlo.,Very restless · hold to calm it.
@@ -630,30 +642,32 @@ UI_TRUCK_AGILE,Furgoneta ágil,Agile van
 UI_TRUCK_CLASSIC,Furgón clásico,Classic van
 UI_TRUCK_NERVOUS,rápida y nerviosa,fast and twitchy
 UI_TRUCK_STABLE,estable,stable
-UI_TUT_BALANCE_ACTION,Mantené la acción para enderezarla.,Hold the action to steady it.
+UI_TUT_BALANCE_ACTION,Contrapesá: mantené la acción y empujá con WASD contra la inclinación de la caja.,Lean against it: hold the action and push with WASD against the box's tilt.
 UI_TUT_BALANCE_BREAKS,Quedar inclinada demasiado tiempo.,Staying tilted for too long.
 UI_TUT_CONTROL_CALM,calmar,calm
-UI_TUT_CONTROL_DRIVE_SMOOTH,conducir suave,drive smoothly
-UI_TUT_CONTROL_DRY,secar,mop
+UI_TUT_CONTROL_DRY,fregar,scrub
 UI_TUT_CONTROL_OBEY,obedecer,obey
 UI_TUT_CONTROL_SEQUENCE,secuencia,sequence
-UI_TUT_CONTROL_STEADY,enderezar,steady
+UI_TUT_CONTROL_STEADY,contrapesar,lean against it
+UI_TUT_CONTROL_CUSHION,amortiguar,cushion
+UI_TUT_CLICK_LEAN,Click izq. + WASD,Left click + WASD
+UI_TUT_TRIGGER_LEAN,RT + stick izq.,RT + left stick
 UI_TUT_DPAD_DOWN,D-pad abajo,D-pad down
 UI_TUT_DRIVER_BODY,%s\n\nManejá suave; frená dentro de la zona de entrega y dejá que el equipo atienda la carga.,%s\n\nDrive smoothly; stop inside the delivery zone and let the crew tend the cargo.
 UI_TUT_DRIVER_CONTROL,%s  acelerar y frenar,%s  accelerate and brake
 UI_TUT_DRIVER_TITLE,Conductor,Driver
-UI_TUT_EXPLOSIVE_ACTION,Pedile el código al conductor y tocá las flechas a tiempo.,Ask the driver for the code and tap the arrows in time.
+UI_TUT_EXPLOSIVE_ACTION,Pedí el código: el conductor lo ve en el tablero; tocá las flechas que te diga.,Ask for the code: the driver sees it on the dashboard; tap the arrows they say.
 UI_TUT_EXPLOSIVE_BREAKS,Dejar que la cuenta regresiva llegue a cero.,Letting the countdown reach zero.
-UI_TUT_FRAGILE_ACTION,Tocá el botón justo antes de cada bache y manejá suave.,Tap the button right before each bump and drive smoothly.
+UI_TUT_FRAGILE_ACTION,Amortiguá: un toque del botón justo antes de cada bache, cuando se cierra el anillo.,Cushion it: one tap of the button right before each bump, as the ring closes.
 UI_TUT_FRAGILE_BREAKS,Los golpes fuertes le quitan integridad.,Heavy impacts reduce its integrity.
-UI_TUT_HOSTILE_ACTION,Mantené o soltá según la orden de la caja.,Hold or release according to the box's command.
+UI_TUT_HOSTILE_ACTION,Leelo: mantené si está tranquilo :) y soltá si está enojado >:(,Read it: hold while it is calm :) and let go when it is angry >:(
 UI_TUT_HOSTILE_BREAKS,Tocar cuando ordena NO TOCAR o ignorar CALMÁ.,Touching it when it says DON'T TOUCH or ignoring CALM.
 UI_TUT_LEFT_CLICK,Click izq.,Left click
 UI_TUT_LEFT_STICK,Stick izq.,Left stick
-UI_TUT_LIQUID_ACTION,Mantené la acción para secar el derrame.,Hold the action to mop up the spill.
+UI_TUT_LIQUID_ACTION,Fregá: alterná izquierda y derecha rápido, sin apretar nada.,Scrub: swing left and right fast, holding nothing.
 UI_TUT_LIQUID_BREAKS,Inclinarla y dejar crecer el charco.,Tilting it and letting the puddle grow.
 UI_TUT_NEXT,Siguiente,Next
-UI_TUT_NOISY_ACTION,Mantené la acción para calmarlo.,Hold the action to calm it.
+UI_TUT_NOISY_ACTION,Abrazalo: mantené la acción para calmarlo.,Hug it: hold the action to calm it.
 UI_TUT_NOISY_BREAKS,Los golpes lo alteran hasta que escapa.,Impacts rile it up until it escapes.
 UI_TUT_OBJECTIVE_BODY,"Leé la pizarra, cargá la caja correcta y entregala en la casa indicada. La caja puede ir asegurada o en tus manos.","Read the board, load the right box and deliver it to the assigned house. The box can be secured or carried by hand."
 UI_TUT_OBJECTIVE_TITLE,El objetivo,The objective
@@ -671,7 +685,7 @@ UI_TUT_TRAP_GROWING_WEIGHT,Peso creciente,Growing weight
 UI_TUT_TRAP_HOSTILE,Hostil,Hostile
 UI_TUT_TRAP_LIQUID,Líquido,Liquid
 UI_TUT_TRAP_NOISY,Ruidoso,Noisy
-UI_TUT_WEIGHT_ACTION,Seguí las flechas sin soltar la caja.,Follow the arrows without releasing the box.
+UI_TUT_WEIGHT_ACTION,Asegurá: tocá en orden las flechas que ves sobre la caja; un ayudante también puede.,Secure it: tap in order the arrows over the box; a helper can too.
 UI_TUT_WEIGHT_BREAKS,No completar la secuencia antes de que pese demasiado.,Failing to finish the sequence before it gets too heavy.
 UI_UNIFORM_CORAL,Uniforme coral,Coral uniform
 UI_UNIFORM_MINT,Uniforme menta,Mint uniform

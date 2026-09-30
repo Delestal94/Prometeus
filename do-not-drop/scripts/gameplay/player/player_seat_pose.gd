@@ -24,9 +24,16 @@ func gather_package_input() -> Dictionary:
 	# The primary going down, for the traps answered by one tap (Fragile's
 	# "Amortiguá"): the edge, so holding it never counts again.
 	var tap: bool = Input.is_action_just_pressed(&"package_action_primary")
+	# WASD or the left stick as two axes in the player's own view (A/D right,
+	# W/S forward): what Balance's "Contrapesá" pushes with. The host turns them
+	# into the truck's frame from the player's seat, and only counts them while
+	# the primary is held. The keys' edges (direction_pressed) are separate.
+	var lean: float = Input.get_axis(&"drive_left", &"drive_right")
+	var lean_fwd: float = Input.get_axis(&"walk_backward", &"walk_forward")
 	var direction: Variant = null
 	if player.seat_node_path.is_empty() and not holding:
-		return {"steady": holding, "calm": holding, "direction_pressed": direction, "tap": tap}
+		return {"steady": holding, "calm": holding, "direction_pressed": direction, "tap": tap, "lean": lean,
+			"lean_fwd": lean_fwd}
 	if Input.is_action_just_pressed(&"walk_forward"):
 		direction = &"up"
 	elif Input.is_action_just_pressed(&"walk_backward"):
@@ -35,7 +42,39 @@ func gather_package_input() -> Dictionary:
 		direction = &"left"
 	elif Input.is_action_just_pressed(&"drive_right"):
 		direction = &"right"
-	return {"steady": holding, "calm": holding, "direction_pressed": direction, "tap": tap}
+	return {"steady": holding, "calm": holding, "direction_pressed": direction, "tap": tap, "lean": lean,
+			"lean_fwd": lean_fwd}
+
+
+## How far a seated body rolls toward the side its box's gesture asks (rad).
+const GESTURE_ROLL: float = 0.22
+
+
+## What the box this player tends says their body is doing (Balance's lean,
+## Liquid's scrub, -1..1 with +1 to the truck's right): it comes with the
+## box's care state, so every peer sees the same lean.
+func gesture_push() -> float:
+	return push_for_peer(player.get_tree(), player.get_multiplayer_authority())
+
+
+## Rolls a seated body so its head goes toward `truck_right * push` (a seat on
+## the truck's side sits across it, so this is not its own roll or pitch): the
+## turn is about the horizontal axis at right angles to the truck's right.
+static func lean_body(body: Node3D, truck_right: Vector3, push: float) -> void:
+	if body == null or absf(push) <= 0.01:
+		return
+	var toward: Vector3 = body.global_basis.inverse() * truck_right
+	toward.y = 0.0
+	if toward.length() > 0.01:
+		body.rotate_object_local(Vector3.UP.cross(toward.normalized()), push * GESTURE_ROLL)
+
+
+static func push_for_peer(tree: SceneTree, peer_id: int) -> float:
+	for node: Node in tree.get_nodes_in_group(&"cargo"):
+		var package := node as DeliveryPackage
+		if package != null and package.tender_peer_id == peer_id:
+			return float((package.care_state.get("gesture", {}) as Dictionary).get("push", 0.0))
+	return 0.0
 
 
 func pose_seated_body(delta: float) -> void:
@@ -59,6 +98,12 @@ func pose_seated_body(delta: float) -> void:
 	player._body_visual.global_transform = player._body_visual.global_transform.interpolate_with(target_pose, player._seat_pose_blend)
 	var lean: float = 0.18 if seat.name == &"DriverEyePoint" else (0.0 if String(seat.name).begins_with("RackSeat") else 0.08)
 	player._body_visual.rotation.x = lean + sin(Time.get_ticks_msec() * 0.008) * 0.025
+	# Leaning into the counterweight, swaying with the scrub.
+	var push: float = lerpf(float(player.get_meta(&"seat_push", 0.0)), gesture_push(), minf(1.0, delta * 8.0))
+	player.set_meta(&"seat_push", push)
+	var truck: Node3D = player.get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	if truck != null:
+		lean_body(player._body_visual, truck.global_basis.x, push)
 	configure_driver_ik(seat)
 
 

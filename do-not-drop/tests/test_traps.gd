@@ -2,6 +2,13 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_traps.gd
 ## Covers the three traps added in Fase 2. Package instances are kept out of
 ## the SceneTree so autoload startup is irrelevant, same as test_fragile.gd.
+## Balance's "Contrapesá" (N-117): with the primary held, only a lean toward
+## the side opposite to the tilt (A or D, the stick's X) pushes the box back;
+## holding without leaning, leaning the same way, or leaning without holding
+## does nothing; a box pitched back (a hard brake) is pushed against along
+## the truck (`lean_long`), a sideways push doing nothing for it; a
+## plain steady with no lean axis (the solo rack assistant) works as before;
+## the gesture state names the side to lean against and sways the body.
 
 var _failures: int = 0
 
@@ -16,6 +23,7 @@ func _initialize() -> void:
 		run_manager.call(&"start_run")
 	_test_growing_weight()
 	_test_balance()
+	_test_balance_lean()
 	_test_noisy()
 	_test_shared_contract()
 	if _failures == 0:
@@ -77,6 +85,80 @@ func _test_balance() -> void:
 	_tilt(package, 50.0)
 	_step(package, 2.0)
 	_expect(int(trap.call(&"get_state")) == 2, "Held past the danger angle it spills")
+	package.free()
+
+
+func _test_balance_lean() -> void:
+	var package: RigidBody3D = _make_package("res://data/traps/balance.tres")
+	var trap: Resource = package.get(&"trap_behavior")
+	# Leaning to the right (+X in the world; the truck's right is the world's here).
+	_tilt(package, 20.0)
+	_step(package, 0.01)
+	_expect(float(trap.get(&"tilt_side")) == 1.0, "The box leans to the right")
+	var start: float = float(trap.get(&"tilt_degrees"))
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": 0.0})
+	_expect(is_equal_approx(float(trap.get(&"tilt_degrees")), start), "Holding without leaning does nothing")
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": 1.0})
+	_expect(is_equal_approx(float(trap.get(&"tilt_degrees")), start), "Leaning the same way does nothing")
+	_step(package, 0.5, {"steady": false, "steady_strength": 0.0, "lean": -1.0})
+	_expect(is_equal_approx(float(trap.get(&"tilt_degrees")), start), "Leaning without holding does nothing")
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": -1.0})
+	var pushed: float = float(trap.get(&"tilt_degrees"))
+	_expect(pushed < start - 3.0, "Holding and leaning against the tilt pushes back (%.1f to %.1f)" % [start, pushed])
+	var gesture: Dictionary = trap.call(&"gesture_state")
+	_expect(gesture["kind"] == &"lean" and float(gesture["side"]) == 1.0 and float(gesture["push"]) == -1.0,
+		"The gesture says lean left and the body is leaning left (%s)" % str(gesture))
+	_tilt(package, 20.0)
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": -0.5})
+	var half: float = 20.0 - float(trap.get(&"tilt_degrees"))
+	_tilt(package, 20.0)
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": -1.0})
+	var full: float = 20.0 - float(trap.get(&"tilt_degrees"))
+	_expect(_about(half * 2.0, full, 0.6), "Half a lean is half the push (%.2f, %.2f)" % [half, full])
+	# The other side: the box leans left, so the right key is the one.
+	package.call(&"initialize_trap")
+	trap = package.get(&"trap_behavior")
+	_tilt(package, -20.0)
+	_step(package, 0.01)
+	_expect(float(trap.get(&"tilt_side")) == -1.0, "The box leans to the left")
+	start = float(trap.get(&"tilt_degrees"))
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": -1.0})
+	_expect(is_equal_approx(float(trap.get(&"tilt_degrees")), start), "Now the left key is the wrong one")
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": 1.0})
+	_expect(float(trap.get(&"tilt_degrees")) < start - 3.0, "and the right one pushes it back")
+	# The truck's own right decides which side is which.
+	var mirrored: Resource = trap
+	package.call(&"initialize_trap")
+	mirrored = package.get(&"trap_behavior")
+	_tilt(package, 20.0)
+	mirrored.call(&"on_physics_process", package, 0.01, {"input": {}, "truck_right": Vector3.LEFT})
+	_expect(float(mirrored.get(&"tilt_side")) == -1.0, "A truck facing the other way sees the other side")
+	# Pitched back by a hard brake: the push that counters it is along the truck.
+	package.call(&"initialize_trap")
+	trap = package.get(&"trap_behavior")
+	package.global_transform = Transform3D(Basis(Vector3.RIGHT, deg_to_rad(20.0)), package.global_position)
+	_step(package, 0.01)
+	_expect(float(trap.get(&"tilt_side")) == 0.0, "A box pitched back leans to neither side")
+	_expect(trap.get(&"tilt_dir").y < -0.9, "It leans back along the truck")
+	start = float(trap.get(&"tilt_degrees"))
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": 1.0, "lean_long": 0.0})
+	_expect(is_equal_approx(float(trap.get(&"tilt_degrees")), start), "A sideways push does nothing for it")
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": 0.0, "lean_long": -1.0})
+	_expect(is_equal_approx(float(trap.get(&"tilt_degrees")), start), "Nor does a push the same way it leans")
+	_step(package, 0.5, {"steady": true, "steady_strength": 1.0, "lean": 0.0, "lean_long": 1.0})
+	_expect(float(trap.get(&"tilt_degrees")) < start - 3.0, "A push forward steadies it")
+	# The solo rack assistant sends no lean at all: plain steadying, as before.
+	package.call(&"initialize_trap")
+	trap = package.get(&"trap_behavior")
+	_tilt(package, 20.0)
+	_step(package, 0.01)
+	start = float(trap.get(&"tilt_degrees"))
+	_step(package, 0.5, {"steady": true})
+	_expect(float(trap.get(&"tilt_degrees")) < start - 3.0, "Plain steadying without a lean axis still works")
+	# Isolation: another box has its own lean.
+	var other: RigidBody3D = _make_package("res://data/traps/balance.tres")
+	_expect(float(other.get(&"trap_behavior").get(&"tilt_side")) == 0.0, "Another box starts with no side")
+	other.free()
 	package.free()
 
 

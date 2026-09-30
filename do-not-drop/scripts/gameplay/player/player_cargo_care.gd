@@ -124,9 +124,13 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 	var seated: bool = not String(player.get(&"seat_node_path")).is_empty()
 	state["on_foot"] = not seated
 	var sequence: Dictionary = state.get("sequence", {})
-	tapping = handling and not seated and bool(input.get("steady", false)) \
-		and int(sequence.get("index", 0)) < (sequence.get("steps", []) as Array).size() \
+	# On foot, holding the primary also locks the walk for what needs A/D or
+	# the stick: a code to tap, Balance's lean, Liquid's scrub.
+	var gesture: Dictionary = state.get("gesture", {})
+	var code_pending: bool = int(sequence.get("index", 0)) < (sequence.get("steps", []) as Array).size() \
 		and bool(sequence.get("pending", true))
+	tapping = handling and not seated and bool(input.get("steady", false)) \
+		and (code_pending or not gesture.is_empty())
 	var tool_name: String = care.tool_name(tool, kind) if tool != &"" else ""
 	var step: Dictionary = CareGuide.next_step(state, kind, tool, tool_name, keys) if handling \
 		else reach_step(keys, bool(player.get(&"_seated")))
@@ -135,10 +139,29 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 	var view_data: Dictionary = {"pad": gamepad, "primary": bool(input.get("steady", false)),
 		"tool_held": Input.is_action_pressed(&"care_work"), "work": care.work if care.work_tool == tool else 0.0,
 		"fixes": fix_count(care), "sequence": state.get("sequence", {}), "cushion": state.get("cushion", {}),
+		"gesture": gesture, "axis": Input.get_axis(&"drive_left", &"drive_right"),
+		"axis_fwd": Input.get_axis(&"walk_backward", &"walk_forward"), "screen_tilt": _screen_tilt(gesture),
 		"missing": care.missing_parts,
 		"sway": care.balance_target, "interact": keys["interact"]}
 	card.update(String(target.trap_definition.display_name), int(entry.get("state", 0)), integrity, step,
 		view_data, footer_items(keys, tool_name, stock, handling, bool(player.get(&"_seated")), care.in_lap))
+
+
+## The tilt the box's gesture reports (in the truck's frame) as this player's
+## screen sees it: x to the right of their view, y forward. What the card lights.
+func _screen_tilt(gesture: Dictionary) -> Vector2:
+	var truck: Node3D = player.get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	var direction: Variant = gesture.get("dir", Vector2.ZERO)
+	if truck == null or not direction is Vector2:
+		return Vector2.ZERO
+	return screen_frame(direction, truck.global_basis, PackageRescue.view_basis_of(player))
+
+
+## `direction` (x to the truck's right, y forward) in the frame of `view`:
+## x to the right of what that view sees, y forward.
+static func screen_frame(direction: Vector2, truck: Basis, view: Basis) -> Vector2:
+	var world: Vector3 = truck.x * direction.x + -truck.z * direction.y
+	return Vector2(world.dot(view.x), world.dot(-view.z))
 
 
 ## Before the first run: the practice card, while the crew is loading up in
@@ -195,10 +218,12 @@ static func footer_items(keys: Dictionary, tool_name: String, stock: int, handli
 ## What each control is called on the device in use.
 static func control_names(gamepad: bool, interact: String) -> Dictionary:
 	if gamepad:
-		return {"primary": "RT", "tool": "LT", "interact": interact, "tool_next": "D-pad →", "drop": "B"}
+		return {"primary": "RT", "tool": "LT", "interact": interact, "tool_next": "D-pad →", "drop": "B",
+			"sides": TranslationServer.translate("HUD_CARE_KEY_STICK"),
+			"swing": TranslationServer.translate("HUD_CARE_KEY_STICK")}
 	return {"primary": TranslationServer.translate("HUD_CARE_KEY_LEFT_CLICK"),
 		"tool": TranslationServer.translate("HUD_CARE_KEY_RIGHT_CLICK"), "interact": interact, "tool_next": "X",
-		"drop": "Q"}
+		"drop": "Q", "sides": "WASD", "swing": "A / D"}
 
 
 ## The tool after `current` in the kit's order, wrapping around.

@@ -17,6 +17,7 @@ const URGENT_ORANGE: Color = Color("c26a00")
 const STATE_TEXTS: Array[String] = ["OK", "EN RIESGO", "ARRUINADA"]
 ## Headline colours per step: what needs doing now reads warm, all-good cool.
 const STEP_COLORS: Dictionary = {&"collect": URGENT_ORANGE, &"sequence": URGENT_ORANGE, &"cushion": URGENT_ORANGE,
+	&"lean": URGENT_ORANGE, &"scrub": URGENT_ORANGE,
 	&"tool": UiThemeScript.INK, &"release": UiThemeScript.RED, &"hold": UiThemeScript.INK,
 	&"lost": UiThemeScript.MUTED, &"idle": UiThemeScript.INK}
 

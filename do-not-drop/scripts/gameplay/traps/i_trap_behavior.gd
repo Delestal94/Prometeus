@@ -85,6 +85,14 @@ func cushion_state() -> Dictionary:
 	return {}
 
 
+## A trap answered by a movement (N-117: Balance leans against the tilt, Liquid
+## scrubs side to side) says what the box shows and the card reads, published
+## with the care state: {kind: &"lean" | &"scrub", push: -1..1 what the passenger's
+## body does now (+1 = to the truck's right), ...}. Empty for the rest.
+func gesture_state() -> Dictionary:
+	return {}
+
+
 ## A trap solved by tapping directions one at a time says where that stands,
 ## so the care panel can show and sound it on every peer (the behavior only
 ## runs on the host; PackageRescue.publish_care() replicates this):

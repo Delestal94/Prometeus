@@ -8,12 +8,12 @@ const TRAP_ORDER: Array[StringName] = [
 const TRAPS: Dictionary = {
 	&"fragile": {
 		"title": "UI_TUT_TRAP_FRAGILE", "glyph": "!", "breaks": "UI_TUT_FRAGILE_BREAKS",
-		"action": "UI_TUT_FRAGILE_ACTION", "keyboard": "W/S", "gamepad": "RT/LT",
-		"control_label": "UI_TUT_CONTROL_DRIVE_SMOOTH",
+		"action": "UI_TUT_FRAGILE_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"control_label": "UI_TUT_CONTROL_CUSHION",
 	},
 	&"balance": {
 		"title": "UI_TUT_TRAP_BALANCE", "glyph": "↔", "breaks": "UI_TUT_BALANCE_BREAKS",
-		"action": "UI_TUT_BALANCE_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"action": "UI_TUT_BALANCE_ACTION", "keyboard": "UI_TUT_CLICK_LEAN", "gamepad": "UI_TUT_TRIGGER_LEAN",
 		"control_label": "UI_TUT_CONTROL_STEADY",
 	},
 	&"growing_weight": {
@@ -23,7 +23,7 @@ const TRAPS: Dictionary = {
 	},
 	&"liquid": {
 		"title": "UI_TUT_TRAP_LIQUID", "glyph": "≈", "breaks": "UI_TUT_LIQUID_BREAKS",
-		"action": "UI_TUT_LIQUID_ACTION", "keyboard": "UI_TUT_LEFT_CLICK", "gamepad": "RT",
+		"action": "UI_TUT_LIQUID_ACTION", "keyboard": "A/D", "gamepad": "UI_TUT_LEFT_STICK",
 		"control_label": "UI_TUT_CONTROL_DRY",
 	},
 	&"noisy": {

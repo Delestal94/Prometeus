@@ -105,6 +105,53 @@ Porcentaje de cajas perdidas, 0 ms:
   viaje torpe bajan de 0,83 a 0,66 (la de Frágil pasa de 20 % a 0,8 %): el resultado global sigue en
   "REQUIERE AJUSTE" y no lo causa esta tanda.
 
+## Tanda 3 de N-117: Hostil a objetivo (2026-09-29)
+
+Hostil estaba fuera de objetivo desde antes de N-117 (torpe 83,2 %, la tabla del 26/09 decía 36,8 %). Se llevó a
+objetivo con dos parámetros de `data/traps/hostile.tres`, medido con el arnés (5 recorridos × 50 repeticiones):
+
+| Parámetro | Antes → después | Motivo |
+|---|---:|---|
+| `command_seconds` | 11 → 9 s | La orden cambia más seguido y se lee en la caja (`:)` mantené, `>:(` soltá); 9 s alcanzan para que el ausente pierda en la primera calma. |
+| `correct_decay` | 14 → 16 /s | Con 14 el torpe (que se equivoca el 40 % del tiempo) casi siempre perdía; con 16 pierde la mitad. |
+
+| Perfil | Antes | Después |
+|---|---:|---:|
+| Ausente | 100 % | 100 % |
+| Torpe | 83,2 % | 50,0 % (+150 ms: 48,4 %) |
+| Experto | 0 % | 0 % (+150 ms: 0) |
+| Siempre mantiene | 100 % | 100 % |
+
+La respuesta es muy sensible a `correct_decay` (14: 83 %, 16: 50 %, 20: 9 % con órdenes de 11 s). Las casi-pérdidas del torpe
+suben de 9,2 % a 22,4 %. El resultado global del reporte sigue en "REQUIERE AJUSTE" solo por las casi-pérdidas
+esperadas por viaje torpe (0,73, objetivo ≥ 1), con Ruidoso en 0 % y Frágil en 0,8 %.
+
+## Tanda 2 de N-117: Contrapesá y Fregá (2026-09-29)
+
+Equilibrio y Líquido dejan de ser "mantener el botón". Porcentaje de cajas perdidas, 0 ms, mismos recorridos:
+
+| Trampa | Ausente antes → después | Torpe antes → después | Experto antes → después | Siempre mantiene antes → después |
+|---|---:|---:|---:|---:|
+| Equilibrio | 100 → 100 | 45,2 → 46,0 | 0 → 0 (+150 ms: 0) | 0 → 100 |
+| Explosivo | 100 → 100 | 45,2 → 45,2 | 0 → 0 | 100 → 100 |
+| Frágil | 100 → 100 | 49,2 → 49,2 | 2,8 → 2,8 | 100 → 100 |
+| Peso creciente | 100 → 100 | 53,6 → 53,6 | 0 → 0 | 100 → 100 |
+| Hostil | 100 → 100 | 83,2 → 83,2 | 0 → 0 | 100 → 100 |
+| Líquido | 100 → 100 | 33,6 → 38,0 | 0 → 0 (+150 ms: 0) | 0 → 100 |
+| Ruidoso | 100 → 100 | 44,8 → 44,8 | 0,8 → 0,8 | 0 → 0 |
+
+- El que siempre mantiene pierde 80 % o más en **6 de 7** (antes 4): Ruidoso queda como la trampa de aprendizaje
+  ("Abrazalo", mantener) y por eso es la única que ese bot todavía salva.
+- Equilibrio: `correction_strength` sigue en 9,8°/s; la corrección ahora es ese valor por cuánto empuja el
+  jugador contra la dirección de la inclinación (tope: cuánto sostiene), con los ejes tal como los ve su asiento
+  (LeftSeat mira a la derecha del camión y RackSeat a la izquierda: allí "izquierda" es adelante o atrás en la ruta). Sin tres zonas: el mismo eje sirve al ayudante (a
+  medio efecto) y no hay castigo por pasarse, solo que la caja no vuelve.
+- Líquido: `mop_rate` (9/s mantenido) se reemplaza por `scrub_amount` = 2 por golpe al otro lado, con
+  `scrub_gap` = 0,08 s entre golpes (un stick tembloroso no seca más de lo que puede una mano). Un fregado
+  rápido (5 golpes/s) equivale a los 10/s de antes. El arnés supone 4,5 golpes/s para el torpe y 5,5 para el
+  experto (asunciones, no medidas); con 3,5 el torpe perdía 71 %.
+- Hostil sigue fuera de objetivo desde antes de N-117 y no lo toca esta tanda.
+
 ### Frágil, "Amortiguá" (`data/traps/fragile.tres`)
 
 | Parámetro | Valor | Notas |

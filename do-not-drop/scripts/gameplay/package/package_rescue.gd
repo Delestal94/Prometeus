@@ -56,6 +56,8 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 			p.trap_behavior.call("on_physics_process", p, delta, {
 				"linear_velocity": p.linear_velocity, "angular_velocity": p.angular_velocity, "input": input,
 				"impact_ahead": float(road["eta"]) if not road.is_empty() else INF,
+				"truck_right": vehicle.global_basis.x if vehicle != null else Vector3.RIGHT,
+				"truck_forward": -vehicle.global_basis.z if vehicle != null else Vector3.FORWARD,
 				"code_reader": code_reader(p, vehicle)})
 			if _road_jolt(p, road, speed):
 				# apply_impact() already reported it.
@@ -99,7 +101,7 @@ static func roll_seed(p: DeliveryPackage) -> int:
 ## assistant at half strength), an edge from any of them counts.
 static func refresh_combined_input(p: DeliveryPackage) -> void:
 	var combined: Dictionary = {"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0,
-			"direction_pressed": null, "tap": false}
+			"direction_pressed": null, "tap": false, "lean": 0.0, "lean_long": 0.0, "directions": []}
 	# The care worker (carrying it) counts in full, like the tender.
 	var worker: int = p._care_worker if p._care_worker not in [p.tender_peer_id, p.assistant_peer_id] else 0
 	for peer_id: int in [p.tender_peer_id, p.assistant_peer_id, worker]:
@@ -109,10 +111,20 @@ static func refresh_combined_input(p: DeliveryPackage) -> void:
 		var weight: float = 0.5 if peer_id == p.assistant_peer_id else 1.0
 		if bool(sample.get("steady", false)):
 			combined["steady_strength"] = float(combined["steady_strength"]) + weight
+			# Pushing only counts with the primary held (Balance's "Contrapesá"),
+			# turned from the passenger's own view into the truck's frame.
+			var push: Vector2 = push_in_truck(p, peer_id, sample)
+			combined["lean"] = float(combined["lean"]) + weight * push.x
+			combined["lean_long"] = float(combined["lean_long"]) + weight * push.y
 		if bool(sample.get("calm", false)):
 			combined["calm_strength"] = float(combined["calm_strength"]) + weight
 		if combined["direction_pressed"] == null and sample.get("direction_pressed") != null:
 			combined["direction_pressed"] = sample["direction_pressed"]
+		# Every key pressed this tick, once each: the tender and their helper
+		# see the same arrows and may press the same one at the same moment.
+		var pressed: Variant = sample.get("direction_pressed")
+		if pressed != null and not (combined["directions"] as Array).has(pressed):
+			(combined["directions"] as Array).append(pressed)
 		if bool(sample.get("tap", false)):
 			combined["tap"] = true
 	combined["steady"] = float(combined["steady_strength"]) > 0.0
@@ -233,6 +245,9 @@ static func publish_care(p: DeliveryPackage) -> void:
 		var cushion: Dictionary = p.trap_behavior.call(&"cushion_state")
 		if not cushion.is_empty():
 			state["cushion"] = cushion
+		var gesture: Dictionary = p.trap_behavior.call(&"gesture_state")
+		if not gesture.is_empty():
+			state["gesture"] = gesture
 	p.care_state = state
 	var run: Node = p.get_node_or_null(^"/root/RunManager")
 	if run != null and (run.get(&"cargo") as Dictionary).has(p.package_id):
@@ -298,17 +313,54 @@ static func submit_care_input(p: DeliveryPackage, input: Dictionary) -> void:
 	var sample: Dictionary = {"steady": bool(input.get("steady", false)), "calm": bool(input.get("calm", false)),
 		"balance": (balance as Vector2).limit_length(1.0), "work": bool(input.get("work", false)),
 		"tool": StringName(input.get("tool", "tape")), "tap": bool(input.get("tap", false)),
+		"lean": clean_axis(input.get("lean", 0.0)), "lean_fwd": clean_axis(input.get("lean_fwd", 0.0)),
 		"direction_pressed": direction if direction in [&"up", &"down", &"left", &"right"] else null}
 	if bool(sample["work"]):
 		sample["steady"] = false
 		sample["calm"] = false
 		sample["tap"] = false
+		sample["lean"] = 0.0
+		sample["lean_fwd"] = 0.0
 	# Same per-peer samples as submit_tender_input(), so the two never fight
 	# over player_input; add_care_fields() adds the tool work on top.
 	p._tender_inputs[peer] = {"input": sample, "age": 0.0}
 	p._care_worker = peer
 	p._last_tender_peer = peer
 	p._refresh_combined_input()
+
+
+## What a passenger pressed (`lean` A/D, `lean_fwd` W/S, both as their own view
+## sees them) as a push in the truck's frame: x to the truck's right, y forward.
+## A seat on the truck's side looks across it, so its "left" is forward or back
+## on the road; the view is the seat's, or the body's on foot. With no player
+## or no truck to read them from, the axes are taken as they come.
+static func push_in_truck(p: DeliveryPackage, peer_id: int, sample: Dictionary) -> Vector2:
+	var pressed := Vector2(clean_axis(sample.get("lean", 0.0)), clean_axis(sample.get("lean_fwd", 0.0)))
+	var vehicle: Node3D = p._find_vehicle()
+	var player: Node = p._player_for_peer(peer_id) if p.is_inside_tree() else null
+	if vehicle == null or player == null or pressed == Vector2.ZERO:
+		return pressed
+	var view: Basis = view_basis_of(player)
+	var world: Vector3 = view.x * pressed.x + -view.z * pressed.y
+	var right: Vector3 = vehicle.global_basis.x
+	var forward: Vector3 = -vehicle.global_basis.z
+	return Vector2(world.dot(right), world.dot(forward)).limit_length(1.0)
+
+
+## Where a player's eyes face: their seat (its own -Z, the way the seat
+## camera looks), or their body on foot.
+static func view_basis_of(player: Node) -> Basis:
+	var recorded: Variant = player.get(&"seat_node_path")
+	var seat_path: NodePath = recorded if recorded is NodePath else NodePath()
+	var seat: Node3D = player.get_node_or_null(seat_path) as Node3D if not seat_path.is_empty() else null
+	return seat.global_basis if seat != null else (player as Node3D).global_basis
+
+
+## A stick or key axis from a client: a number in -1..1, or 0 for anything else.
+static func clean_axis(value: Variant) -> float:
+	if not (value is float or value is int) or not is_finite(float(value)):
+		return 0.0
+	return clampf(float(value), -1.0, 1.0)
 
 
 ## After the steady/calm mix: the balance, tool and work of whoever is working
@@ -323,7 +375,7 @@ static func add_care_fields(p: DeliveryPackage) -> void:
 		return
 	var combined: Dictionary = p.player_input.duplicate() if not p.player_input.is_empty() else {
 			"steady": false, "calm": false, "steady_strength": 0.0, "calm_strength": 0.0, "direction_pressed": null,
-				"tap": false}
+				"tap": false, "lean": 0.0, "lean_long": 0.0, "directions": []}
 	for key: String in ["balance", "work", "tool"]:
 		combined[key] = own[key]
 	if bool(combined["work"]):

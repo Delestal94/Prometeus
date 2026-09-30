@@ -6,6 +6,7 @@ extends Node
 ## (see package.gd's _emit_event), so each client's own local burst fires in lockstep
 ## with everyone else's without this script needing to know or care about the network.
 
+const PackageVerb = preload("res://scripts/gameplay/package/package_verb.gd")
 const SynthAudioTraps = preload("res://scripts/presentation/synth_audio_traps.gd")
 const CONFETTI_COLORS: Array[Color] = [Color("f47e6d"), Color("f4c562"), Color("83e2ba"), Color("6db3d6")]
 const CONFETTI_COUNT: int = 28
@@ -91,6 +92,9 @@ var _shipping_label: RigidBody3D
 var _shipping_text: Label3D
 var _shipping_data: String = ""
 var _state_badge: Label3D
+## The verb over the box (N-117): what to do about it, in the world, only while
+## it is asking (see _verb_text()).
+var _verb_label: Label3D
 var _disguise_text: Label3D
 var _disguise_icon: Sprite3D
 var _was_disguise_revealed: bool = false
@@ -211,6 +215,7 @@ func _apply_identity(package: Node) -> void:
 		collider.shape = shape
 	_add_shipping_label(shipping_data, shape_size)
 	_build_state_badge(shape_size)
+	_build_verb_label(shape_size)
 	if _trap_id == &"fragile":
 		_build_cushion_ring(shape_size)
 	if _explosive_display != null:
@@ -231,6 +236,39 @@ func _apply_identity(package: Node) -> void:
 	_box.add_child(_disguise_icon)
 	_add_dent_pieces(shape_size * 0.5)
 	_build_outline(shape_size)
+
+
+## The verb sign above the state badge: big, billboarded, drawn over the box.
+## The bomb has its own sign (ExplosiveCountdown) and does not get this one.
+func _build_verb_label(box_size: Vector3) -> void:
+	if _trap_id == &"explosive":
+		return
+	_verb_label = Label3D.new()
+	_verb_label.name = "VerbIcon"
+	_verb_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_verb_label.font_size = 54
+	_verb_label.pixel_size = 0.0022
+	_verb_label.outline_size = 14
+	_verb_label.outline_modulate = INK
+	_verb_label.no_depth_test = true
+	_verb_label.render_priority = 2
+	_verb_label.outline_render_priority = 1
+	_verb_label.position = Vector3(0.0, box_size.y * 0.62 + 0.38, 0.0)
+	_verb_label.visible = false
+	_box.add_child(_verb_label)
+
+
+func _apply_verb() -> void:
+	if _verb_label == null:
+		return
+	var ask: Dictionary = PackageVerb.ask(_trap_id, _state, _package.care_state if _package != null else {},
+			_package != null and bool(_package.call(&"_is_run_active")))
+	_verb_label.visible = not ask.is_empty()
+	if ask.is_empty():
+		return
+	_verb_label.text = String(ask["text"])
+	_verb_label.modulate = ask["color"]
+	_verb_label.scale = Vector3.ONE * (1.0 + sin(Time.get_ticks_msec() * 0.01) * 0.06)
 
 
 func _build_state_badge(box_size: Vector3) -> void:
@@ -525,6 +563,7 @@ func _process(delta: float) -> void:
 			_apply_hostile()
 		&"fragile":
 			_apply_cushion()
+	_apply_verb()
 
 
 func _refresh_event_disguise() -> void:
