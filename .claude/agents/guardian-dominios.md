@@ -31,6 +31,8 @@ interacción, UI, progresión). No editás nada.
    reciente cambia una firma de un archivo que el cambio usa, mencionalo.
 5. Para archivos `compartida`, mirá el diff (`git diff <archivo>`) y decí si es aditivo (señal nueva,
    entrada nueva: bajo riesgo) o modifica comportamiento o firmas existentes (avisar).
+   Si el cambio toca `do-not-drop/modules/`, corré además `python tools/check_modules.py` (un segundo):
+   un módulo que nombra algo del juego es 🔴 aunque el dueño sea el mismo.
 
 ## Salida (corta)
 

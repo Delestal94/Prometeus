@@ -154,6 +154,16 @@ do-not-drop/
     render_budget/              # WorldQuality, DressingBatcher, DetailMaterials, ContactShadow
     acoustics/                  # AcousticSpace, AcousticZone
     ragdoll/                    # PlayerRagdoll
+    net_session/                # NetSession, NetEventBus, SteamVoice, NetStats, NetStatsOverlay
+    interaction/                # Interactable, SeatPoint (genérico, con hooks)
+    seat_camera/                # SeatCamera
+    settings_store/             # SettingsStore
+    route_gen/                  # RouteSegment, SegmentStreamer, TerrainField, 6 tramos por código
+    world_mood/                 # WorldMood
+    hazards/                    # ITrapBehavior, TrapDefinition
+    coop_vote/                  # CoopVote
+    unlock_profile/             # UnlockProfile
+    run_log/                    # RunLog
     <nombre>/module.cfg         # name, summary, depends; tests/ propios del módulo
   scenes/
     ui/
@@ -172,14 +182,15 @@ do-not-drop/
       first_person_camera.tscn
   scripts/
     core/
-      event_bus.gd             # autoload
+      event_bus.gd             # autoload, extiende NetEventBus (modules/net_session)
       run_manager.gd           # autoload
-      network_manager.gd       # autoload
+      network_manager.gd       # autoload, extiende NetSession (modules/net_session)
+      game_settings.gd         # autoload, extiende SettingsStore (modules/settings_store)
     ui/
       main_menu.gd
       prototype_hud.gd          # HUD + resultados, sin escena propia
     presentation/
-      first_person_camera.gd
+      first_person_camera.gd    # extiende SeatCamera (modules/seat_camera)
       lowpoly_materials.gd      # adaptador: las tablas del juego para modules/render_budget
     gameplay/
       level_base.gd
@@ -191,14 +202,11 @@ do-not-drop/
         package_feedback.gd
       player/
         player.gd
-      interaction/
-        interactable.gd         # clase base para puntos interactuables
+      interaction/              # las bases (Interactable, SeatPoint) están en modules/interaction
         package_mount_point.gd
         package_pickup_point.gd
-        seat_point.gd
-      traps/
-        i_trap_behavior.gd      # clase base abstracta
-        trap_definition.gd
+        seat_point.gd           # extiende el SeatPoint del módulo con la carga
+      traps/                    # el contrato (ITrapBehavior, TrapDefinition) está en modules/hazards
         fragile_trap_behavior.gd
         growing_weight_trap_behavior.gd
         balance_trap_behavior.gd
@@ -206,13 +214,15 @@ do-not-drop/
       route/
         route.gd                 # ruta curada a mano, la que se juega hoy
         route_smoke_check.gd
-        route_segment.gd         # base chainable para streaming (Fase 3)
-        route_streamer.gd        # spawn/cull de tramos, no integrado al juego todavía
-        segments/
-          straight_segment.gd
-          speed_bump_segment.gd
+        route_planner.gd         # qué tramo va dónde en la ruta de entregas
+        route_streamer.gd        # extiende SegmentStreamer (modules/route_gen): pools y semilla del juego
+        route_terrain.gd         # extiende TerrainField (modules/route_gen)
+        segments/                # solo los tramos con assets; los de puro código están en modules/route_gen
           chicane_segment.gd
           narrow_bridge_segment.gd
+          construction_zone_segment.gd
+          rail_crossing_segment.gd
+          tunnel_segment.gd
   data/
     traps/
       fragile.tres
@@ -220,7 +230,7 @@ do-not-drop/
       balance.tres
       noisy.tres
   tests/
-    test_*.gd, check_*.gd       # scripts SceneTree, corren headless (ver README)
+    test_*.gd, check_*.gd       # scripts SceneTree, corren headless (ver README); los de cada módulo, en modules/<nombre>/tests/
 ```
 
 `UnlockManager` sí existe desde la Fase 5: centraliza el perfil local, los desbloqueos
