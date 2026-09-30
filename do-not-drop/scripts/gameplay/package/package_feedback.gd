@@ -51,6 +51,10 @@ const BOUNCE_AMPLITUDE: float = -0.16
 const BOUNCE_DECAY: float = 9.0
 const BOUNCE_FREQUENCY: float = 16.0
 const INK: Color = Color("1e2235")
+const GRIP_COLOR: Color = Color(1.0, 0.84, 0.48)
+const GRIP_ENERGY: float = 0.45
+## Glow gained per second holding (about a tenth of a second to full).
+const GRIP_EASE: float = 10.0
 const LABEL_DROP_DAMAGE: float = 18.0
 ## Fallback when a package has no PackageContent: the fragile box.
 const DEFAULT_BOX_MODEL: String = "res://assets/models/cargo/sm_cargo_box_cube.glb"
@@ -126,6 +130,10 @@ var _hostile_hiss_player: AudioStreamPlayer3D
 var _hostile_last_attack_count: int = 0
 var _shelf_straps: Array[MeshInstance3D] = []
 var _package: DeliveryPackage
+## The local player's own hold on this box (PlayerHoldFeedback, S-205): a warm
+## glow that eases in the frame they press, ahead of anything the host says.
+var _grip_wanted: bool = false
+var _grip_glow: float = 0.0
 ## Every trap's own "it broke" stinger (item #23-adjacent, playtest polish
 ## 2026-09-27): comic_ruin_stinger() for most traps, comic_boom() for
 ## Explosivo -- picked once in _ready(), see there.
@@ -144,6 +152,11 @@ func _ready() -> void:
 	_box = get_node(box_node_path) as Node3D
 	_material = StandardMaterial3D.new()
 	_material.roughness = 0.9
+	# Always on, at zero: switching emission on and off changes the shader
+	# variant, a hitch in GL Compatibility. The grip glow only moves the energy.
+	_material.emission_enabled = true
+	_material.emission = GRIP_COLOR
+	_material.emission_energy_multiplier = 0.0
 	call_deferred(&"_apply_identity", parent)
 	# Populated for every trap type, not just Ruidoso -- item #23's impact
 	# shake rides the same nodes regardless of what the package's trap is.
@@ -513,6 +526,7 @@ func _process(delta: float) -> void:
 	_apply_jitter(delta)
 	_apply_bounce(delta)
 	_apply_shelf_straps()
+	_apply_grip(delta)
 	if _state_badge != null:
 		var pulse: float = 1.0 + sin(Time.get_ticks_msec() * 0.009) * 0.08
 		_state_badge.scale = Vector3.ONE * (pulse if _state == ITrapBehavior.TrapState.AT_RISK else 1.0)
@@ -530,6 +544,25 @@ func _process(delta: float) -> void:
 		&"fragile":
 			_apply_cushion()
 	_apply_verb()
+
+
+## Lit by the local player's hold on this box, right away (see
+## player_hold_feedback.gd): presentation only, the host's care decides the rest.
+func set_local_grip(active: bool) -> void:
+	_grip_wanted = active
+
+
+## 0..1 how lit the grip glow is.
+func grip_glow() -> float:
+	return _grip_glow
+
+
+func _apply_grip(delta: float) -> void:
+	var target: float = 1.0 if _grip_wanted else 0.0
+	if is_equal_approx(_grip_glow, target):
+		return
+	_grip_glow = move_toward(_grip_glow, target, delta * GRIP_EASE)
+	_material.emission_energy_multiplier = _grip_glow * GRIP_ENERGY
 
 
 func _refresh_event_disguise() -> void:

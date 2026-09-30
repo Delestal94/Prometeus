@@ -13,6 +13,8 @@ const Care = preload("res://scripts/gameplay/package/package_care.gd")
 const CareCard = preload("res://scripts/ui/hud/care_card.gd")
 const CareGuide = preload("res://scripts/ui/hud/care_guide.gd")
 const CarePractice = preload("res://scripts/ui/hud/care_practice.gd")
+const HoldFeedback = preload("res://scripts/gameplay/player/player_hold_feedback.gd")
+const InputLag = preload("res://scripts/gameplay/package/tender_input_lag.gd")
 ## The logical height the card lays out for, like Hud.BASE_HEIGHT.
 const BASE_HEIGHT: float = 720.0
 var player: Node
@@ -26,6 +28,10 @@ var manual_tool: StringName = &""
 ## On foot with a box that asks for a tap sequence and the primary action
 ## held: WASD taps the sequence instead of walking (player.gd reads this).
 var tapping: bool = false
+## The "I'm holding" answer shown at once, whatever the host takes to reply (S-205).
+var hold_feedback := HoldFeedback.new()
+## Debug: holds the input back on its way to the host (`--fake-lag=<ms>`).
+var input_lag := InputLag.new()
 var _suggested: StringName = &""
 var _card_target: Node
 var _layer: CanvasLayer
@@ -64,9 +70,20 @@ func _ready() -> void:
 		practice.visible = false
 
 
+func _exit_tree() -> void:
+	hold_feedback.release()
+	input_lag.clear()
+
+
 func _physics_process(delta: float) -> void:
 	if card == null:
 		return
+	_tick(delta)
+	hold_feedback.end_frame()
+	input_lag.flush(_now())
+
+
+func _tick(delta: float) -> void:
 	_fit_to_screen()
 	var run: Node = get_node_or_null(^"/root/RunManager")
 	tapping = false
@@ -109,7 +126,7 @@ func _physics_process(delta: float) -> void:
 	input["work"] = handling and tool != &"" and Input.is_action_pressed(&"care_work")
 	input["tool"] = tool if tool != &"" else &"tape"
 	if handling:
-		target.rpc_id(1, &"submit_care_input", input)
+		send_input(target, &"submit_care_input", input)
 	_refresh_card(run, care, kind, tool, int(supplies.get(tool, 0)), input, handling)
 
 
@@ -287,4 +304,19 @@ func update_assisting() -> void:
 		player.assisted_package.rpc_id(1, &"request_stop_assist")
 		player.assisted_package = null
 		return
-	player.assisted_package.rpc_id(1, &"submit_tender_input", player._gather_package_input())
+	send_input(player.assisted_package, &"submit_tender_input", player._gather_package_input())
+
+
+## Every hold goes out through here: the local answer first, in this very
+## call, then the host's copy of it (late, with `--fake-lag`). What the hold
+## does to the box stays the host's to decide.
+func send_input(package: Node, method: StringName, input: Dictionary) -> void:
+	# The host drops the hold while a tool works (package_rescue.gd), so does this.
+	var steady: bool = bool(input.get("steady", false)) and not bool(input.get("work", false))
+	hold_feedback.set_input(package, steady, method == &"submit_tender_input")
+	var is_host: bool = player.multiplayer.is_server()
+	input_lag.send(package, method, input, is_host, _now())
+
+
+func _now() -> float:
+	return Time.get_ticks_msec() / 1000.0
