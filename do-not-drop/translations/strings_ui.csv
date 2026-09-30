@@ -279,7 +279,7 @@ HUD_SCORE_REPAIRED,Reparaciones convincentes,Convincing repairs
 HUD_SCORE_SUBSTITUTED,Sustitutos descubiertos,Substitutes spotted
 HUD_SCORE_UNCONVINCING,Arreglos poco convincentes,Unconvincing fixes
 HUD_SESSION_GUEST,EN SALA  ·  %s,IN ROOM  ·  %s
-HUD_SESSION_LAN,SALA LAN  ·  %s\nIP  %s,LAN ROOM  ·  %s\nIP  %s
+HUD_SESSION_LAN,SALA LAN  ·  %s\nCÓDIGO  %s,LAN ROOM  ·  %s\nCODE  %s
 HUD_SESSION_NO_LAN,sin red local,no local network
 HUD_SESSION_SOLO,%s  ·  SOLO,%s  ·  SOLO
 HUD_SESSION_MODE_DELIVERY,ENTREGA,DELIVERY
@@ -377,10 +377,10 @@ UI_MENU_FOOTER,Versión %s   ·   F11 pantalla completa,Version %s   ·   F11 fu
 UI_MENU_GARAGE,Garaje,Garage
 UI_MENU_GARAGE_HINT,"Apariencia, progreso y récords","Appearance, progress and records"
 UI_MENU_HOST,Crear sala,Host a room
-UI_MENU_HOST_IP,IP del anfitrión,Host's IP
+UI_MENU_HOST_IP,Código o IP del anfitrión,Host's code or IP
 UI_MENU_JOIN,Unirse a una sala,Join a room
 UI_MENU_JOIN_BUTTON,Unirse,Join
-UI_MENU_JOIN_LAN_HINT,Por red local: la IP del anfitrión aparece en su pantalla.,On a local network: the host's IP is shown on their screen.
+UI_MENU_JOIN_LAN_HINT,Por red local: escribí el código de sala que aparece en la pantalla del anfitrión (o su IP).,On a local network: type the room code shown on the host's screen (or their IP).
 UI_MENU_JOIN_STEAM_HINT,Por Steam: aceptá la invitación de tu amigo desde la lista de amigos.,On Steam: accept your friend's invite from your friends list.
 UI_MENU_PAGE_HOME,¿LISTOS PARA REPARTIR?,READY TO DELIVER?
 UI_MENU_PAGE_JOIN,UNIRSE A UNA SALA,JOIN A ROOM
@@ -389,7 +389,11 @@ UI_MENU_PAGE_PLAY,¿CÓMO SALIMOS HOY?,HOW ARE WE HEADING OUT?
 UI_MENU_PLAY,¡JUGAR!,PLAY!
 UI_MENU_QUIT,Salir,Quit
 UI_MENU_SOLO,Jugar solo,Play solo
+UI_MENU_STATUS_BAD_PORT,El puerto tiene que ser un número entre 1 y 65535.,The port must be a number between 1 and 65535.
 UI_MENU_STATUS_CANCELLED,Conexión cancelada.,Connection cancelled.
+UI_MENU_STATUS_CODE_CHARS,El código tiene un símbolo que no existe: nunca usa O ni I. Revisalo.,The code has a symbol that doesn't exist: it never uses O or I. Check it.
+UI_MENU_STATUS_CODE_CHECK,Ese código no es válido: revisá que esté bien tipeado.,That code isn't valid: check that you typed it right.
+UI_MENU_STATUS_CODE_LENGTH,"El código tiene que tener 8 letras y números, por ejemplo K7QM-4TXA.","The code must be 8 letters and numbers, like K7QM-4TXA."
 UI_MENU_STATUS_CONNECTING,Conectando a %s…,Connecting to %s…
 UI_MENU_STATUS_CONNECT_FAILED,No se pudo conectar (error %d).,Couldn't connect (error %d).
 UI_MENU_STATUS_ENTERING,Entrando…,Joining…
@@ -397,7 +401,7 @@ UI_MENU_STATUS_HOSTING,Creando sala…,Creating room…
 UI_MENU_STATUS_HOST_FAILED,No se pudo crear la sala (error %d).,Couldn't create the room (error %d).
 UI_MENU_STATUS_JOINING_FRIEND,Entrando a la sala de tu amigo…,Joining your friend's room…
 UI_MENU_STATUS_JOIN_FAILED,No se pudo entrar a la sala (error %d).,Couldn't join the room (error %d).
-UI_MENU_STATUS_NEED_IP,Escribí la IP del anfitrión primero.,Type the host's IP first.
+UI_MENU_STATUS_NEED_IP,Escribí el código o la IP del anfitrión primero.,Type the host's code or IP first.
 UI_MENU_TAG_COOP,DELIVERY COOPERATIVO,CO-OP DELIVERY
 UI_MENU_TAG_DONT_DROP,¡NO LO DEJES CAER!,DON'T DROP IT!
 UI_MENU_TAG_PLAYERS,1 A 5 JUGADORES,1 TO 5 PLAYERS

@@ -91,8 +91,9 @@ Main Menu
   todos); solo el anfitrión puede reiniciar (un cliente que recarga su nivel se queda
   sin jugadores); si se cae el anfitrión, el cliente ve una pantalla "Sin conexión".
   **Pendiente**: el reinicio del anfitrión todavía no recarga el mundo de los clientes.
-- El HUD muestra arriba a la izquierda el modo y la sesión; hosteando por LAN, la IP
-  para pasarle a los amigos.
+- El HUD muestra arriba a la izquierda el modo y la sesión; hosteando por LAN, el código de
+  sala (8 letras, `K7QM-4TXA`; ver `scripts/ui/room_code.gd`) para pasarle a los amigos. "Unirse" acepta
+  el código o la IP.
 - **Conexión real**: Steam (relayeado, sin abrir puertos) o IP directa por LAN (ENet) —
   la elección es automática (Steam si está corriendo) salvo en "Unirse por IP", que
   siempre fuerza LAN. Ver README sección "Multijugador".

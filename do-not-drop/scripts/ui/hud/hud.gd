@@ -635,9 +635,10 @@ func _refresh_session() -> void:
 		session_label.text = tr("HUD_SESSION_GUEST") % players
 		_session_color(UiTheme.SKY)
 	elif NetworkManager.active_transport == NetworkManager.Transport.ENET:
-		var address: String = NetworkManager.lan_address()
+		# The room code, not the raw IP (S-207): friends type it in "Unirse".
+		var code: String = RoomCode.encode(NetworkManager.lan_address(), NetworkManager.DEFAULT_PORT)
 		session_label.text = tr("HUD_SESSION_LAN") % [players,
-				address if not address.is_empty() else tr("HUD_SESSION_NO_LAN")]
+				code if not code.is_empty() else tr("HUD_SESSION_NO_LAN")]
 		_session_color(UiTheme.SKY)
 	else:
 		session_label.text = tr("HUD_SESSION_STEAM") % players

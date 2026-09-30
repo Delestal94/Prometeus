@@ -572,17 +572,19 @@ func _join_by_address() -> void:
 	if _busy:
 		return
 	_show_page(Page.JOIN, false)
-	var address: String = _address_field.text.strip_edges()
-	if address.is_empty():
-		_set_status(tr("UI_MENU_STATUS_NEED_IP"), RED)
+	# The field takes a room code ("K7QM-4TXA") or an address (S-207).
+	var target: Dictionary = RoomCode.resolve(_address_field.text)
+	if not bool(target["ok"]):
+		_set_status(tr(String(target["error"])), RED)
 		return
+	var address: String = String(target["address"])
 	_busy = true
 	_set_status(tr("UI_MENU_STATUS_CONNECTING") % address, MUTED)
 	# Typing an address only makes sense for ENet -- a Steam lobby is joined
 	# by id, not by IP, so AUTO would be the wrong choice here even if Steam
 	# happens to be running.
 	NetworkManager.transport = NetworkManager.Transport.ENET
-	var error: Error = NetworkManager.join_session(address)
+	var error: Error = NetworkManager.join_session(address, int(target["port"]))
 	if error != OK:
 		_busy = false
 		_set_status(tr("UI_MENU_STATUS_CONNECT_FAILED") % error, RED)
