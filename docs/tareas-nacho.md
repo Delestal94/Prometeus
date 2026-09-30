@@ -2532,7 +2532,17 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 #### S-806 · Batería verde y rápida — A · — · Aviso: no
 
 - [x] (commits `3c4ac88`, `37581a2`) Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
-- [ ] Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.
+- [x] (rama `nacho/S-806-faster-tests`) Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.
+  Revisados los de jugador/paquete/trampas/UI/progresión que pasaban de 20 s en CI (main, 2026-09-30). Casi todo el
+  tiempo es cargar `level_base` (~12-15 s cada vez), así que la única palanca es cargarlo menos veces:
+  `test_package_handling` 6 → 3 cargas (~89 s → ~45-51 s local), `test_host_gone_tally` 2 → 1 (~35 s → ~20-30 s);
+  ningún `_expect` cambió. Quedan igual: `test_locked_traps` (cada carga es un estado distinto del perfil que el
+  `_ready` del depósito tiene que leer), `test_boss_lines` (dos escenas distintas), `test_ruin_effects` (mide
+  segundos reales de vida del efecto) y `test_chaos_bot` (excepción de S-803). Los lentos de ruta, camión y mundo
+  (`test_route_fuzz` 196 s, `test_roadside_stories` 132 s, `test_route_duration_budget` 122 s,
+  `test_route_lookup_cache` 106 s, `test_world_seed` 101 s…) no son de esta tarea. Visto de paso: si una caja del
+  depósito se libera (entregada) antes de `Depot.begin_run`, `depot.gd:325` tira "freed instance"; en juego no
+  pasa hoy (cada partida recarga el nivel), el test lo esquiva corriendo el arranque vacío primero.
 
 ---
 

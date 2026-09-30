@@ -18,6 +18,7 @@ extends SceneTree
 ##   retry shows greyed out with its reason, and neither it nor R restarts
 ##   (HudPrompts.can_restart(): offline now, a restart would reload a solo
 ##   world); "back to the menu" gets there, with the run cleared.
+## Both halves share one level_base (loading it costs ~15 s).
 
 const RUN_TALLY = preload("res://scripts/core/run_tally.gd")
 const LEVEL: String = "res://scenes/gameplay/level_base.tscn"
@@ -107,9 +108,8 @@ func _run() -> void:
 	_expect(endless.contains("250") and endless != spanish, "Endless has its own line, in meters (got '%s')" % endless)
 
 	run.reset_run()
-	level.queue_free()
-	await process_frame
-	await _results_stay_when_the_host_leaves()
+	# Same level for the second half: loading it takes ~15 s.
+	await _results_stay_when_the_host_leaves(level)
 	if _failures == 0:
 		print("PASS: a client left without a host keeps the run's tally on the disconnect screen,"
 				+ " or the results if the run had ended")
@@ -117,14 +117,9 @@ func _run() -> void:
 
 
 ## The run is over and the host's results are on screen when the host drops.
-func _results_stay_when_the_host_leaves() -> void:
+func _results_stay_when_the_host_leaves(level: Node) -> void:
 	var run: Node = root.get_node(^"/root/RunManager")
 	var network: Node = root.get_node(^"/root/NetworkManager")
-	var level: Node = load(LEVEL).instantiate()
-	root.add_child(level)
-	current_scene = level
-	await process_frame
-	await physics_frame
 	var hud: Node = level.get_node(^"HUD")
 	var restarts: Array[int] = [0]
 	root.get_node(^"/root/EventBus").restart_requested.connect(func() -> void: restarts[0] += 1)
