@@ -114,7 +114,10 @@ func describe() -> String:
 	var content_name: String = String(content.call(&"localized_name"))
 	if _spilled:
 		return tr("HUD_CONTENT_EMPTY") % content_name.to_lower()
-	return "%s (%s)" % [content_name, content.call(&"condition_text", _state)]
+	var inside: String = "%s (%s)" % [content_name, content.call(&"condition_text", _state)]
+	# The sender's note (S-602), the same on every peer: picked from the package_id.
+	var note: String = String(content.call(&"pick_note", _package_id))
+	return inside if note.is_empty() else "%s\n%s" % [inside, tr("HUD_CONTENT_NOTE") % note]
 
 
 func _on_lid_changed(id: StringName, open: bool) -> void:

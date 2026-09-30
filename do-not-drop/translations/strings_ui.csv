@@ -722,3 +722,79 @@ UI_UNLOCK_VIOLET_PAINT,Pintura violeta,Violet paint
 UI_LANGUAGE_ENGLISH,English,English
 UI_LANGUAGE_SPANISH,Español,Español
 UI_OPT_LANGUAGE,Idioma,Language
+HUD_SHIPPING_FROM,De: %s,From: %s
+HUD_CONTENT_NOTE,“%s”,“%s”
+HUD_RECIPIENT_GLASS_TOWER,"Café La Copa, Villa Frágil","La Copa Café, Villa Frágil"
+HUD_NOTE_GLASS_TOWER_1,"Si sopla, no respiro yo tampoco.","If it blows, I stop breathing too."
+HUD_NOTE_GLASS_TOWER_2,Cierren la ventanilla. Y la puerta. Y el pueblo.,Close the window. And the door. And the town.
+HUD_NOTE_GLASS_TOWER_3,Son 24 copas y cada una tiene nombre. No las llamen a los gritos.,There are 24 glasses and each has a name. Do not shout for them.
+HUD_NOTE_GLASS_TOWER_4,"Prohibido estornudar. Sí, a vos también.","No sneezing. Yes, you too."
+HUD_RECIPIENT_CAKE,"Los novios, Colonia Esquina","The newlyweds, Colonia Esquina"
+HUD_NOTE_CAKE_1,Es la torta de mi boda. No la miren.,It's my wedding cake. Don't look at it.
+HUD_NOTE_CAKE_2,"Tres pisos. Cuatro, si Dios quiere.","Three tiers. Four, God willing."
+HUD_NOTE_CAKE_3,"Mis 14 hermanos ya la vieron. Ustedes, de lejos.","My 14 siblings already saw it. You, from a distance."
+HUD_NOTE_CAKE_4,"A las 14 se corta la cinta. Después, la torta.","At 2 pm the ribbon gets cut. Then, the cake."
+HUD_RECIPIENT_HEN,"Doña Mabel, Chacra El Nido","Mrs. Mabel, El Nido Farm"
+HUD_NOTE_HEN_1,"Trátenla bien, tiene carácter.","Treat her well, she has character."
+HUD_NOTE_HEN_2,"Se llama Rosita. Si les habla, contéstenle.","Her name is Rosita. If she talks to you, answer."
+HUD_NOTE_HEN_3,Contiene una gallina. Ella ya sabe que está en una caja. No la mires fijo.,Contains a hen. She already knows she's in a box. Don't stare.
+HUD_NOTE_HEN_4,Desayunó. Puede opinar del camino.,She had breakfast. She may comment on the road.
+HUD_RECIPIENT_RACCOON,"Sr. Ramos, Correo Viejo","Mr. Ramos, Old Post Office"
+HUD_NOTE_RACCOON_1,Viene con un recado. No lo abran.,It comes with a message. Do not open it.
+HUD_NOTE_RACCOON_2,No es un mapache: es un cartero con antifaz.,It's not a raccoon: it's a mail carrier in a mask.
+HUD_NOTE_RACCOON_3,"Si se hace el dormido, está memorizando la ruta.","If he plays asleep, he's memorizing the route."
+HUD_NOTE_RACCOON_4,Tiene ruta propia. Respétenle el horario.,He has his own route. Respect his schedule.
+HUD_RECIPIENT_FIREWORKS,Club Náutico Seco,The Dry Land Yacht Club
+HUD_NOTE_FIREWORKS_1,"Lo que no se enciende, se lo lleva el mar.","What doesn't light up, the sea takes."
+HUD_NOTE_FIREWORKS_2,Capitán retirado pide permiso para hacer ruido.,Retired captain requests permission to make noise.
+HUD_NOTE_FIREWORKS_3,Ni una chispa antes de tiempo. La fiesta se anuncia con trompetas.,Not a spark ahead of time. The party is announced with trumpets.
+HUD_NOTE_FIREWORKS_4,"Suelten amarras y aceleren, marineros de tierra.","Cast off and step on it, landlocked sailors."
+HUD_RECIPIENT_LAMP,"Don Rufo, Anticuario","Mr. Rufo, Antiques Dealer"
+HUD_NOTE_LAMP_1,"Se la dio Napoleón a mi bisabuela, creo.","Napoleon gave it to my great-grandmother, I think."
+HUD_NOTE_LAMP_2,"Tiene 200 años. La caja nueva también, no sé cómo.","It is 200 years old. The new box too, I do not know how."
+HUD_NOTE_LAMP_3,"Si se apaga sola, es que le hablaron mal.","If it goes out by itself, someone spoke to it rudely."
+HUD_NOTE_LAMP_4,"Prohibido decirle vieja. Es ""de época"".","Do not call it old. It is ""period""."
+HUD_RECIPIENT_SOURDOUGH,Panadería La Espiga,La Espiga Bakery
+HUD_NOTE_SOURDOUGH_1,No la sacudan: se ofende.,Don't shake her: she takes offense.
+HUD_NOTE_SOURDOUGH_2,Se llama Doña Levadura. Denle los buenos días.,Her name is Doña Levadura. Say good morning to her.
+HUD_NOTE_SOURDOUGH_3,"Le canté una canción antes de salir. Si crece, se acuerda.","I sang her a song before she left. If she rises, she remembers."
+HUD_NOTE_SOURDOUGH_4,"Tiene sus tiempos, como el pan. Y como el camión.","She keeps her own time, like bread. And like the truck."
+HUD_RECIPIENT_VASE,"Prima Eulalia, Vitrina 3","Cousin Eulalia, Cabinet 3"
+HUD_NOTE_VASE_1,"Es para mirar. Si lo usan, no vale.","It's for looking at. If you use it, it's worthless."
+HUD_NOTE_VASE_2,Ninguna flor. Nunca. Es una cuestión de principios.,No flowers. Ever. It's a matter of principle.
+HUD_NOTE_VASE_3,Tiene 30 hermanos jarrones. Se extrañan.,He has 30 vase siblings. They miss each other.
+HUD_NOTE_VASE_4,"Prohibido usarlo, llenarlo o mirarlo feo.","Do not use it, fill it or give it a dirty look."
+HUD_RECIPIENT_MILK,Quesería El Apuro,El Apuro Cheese Shop
+HUD_NOTE_MILK_1,Llegó fresca. Iba a decir: llegó.,It arrived fresh. I was going to say: it arrived.
+HUD_NOTE_MILK_2,"Ordeñada a las 6. De qué día, no digo.","Milked at 6. Which day, I'm not saying."
+HUD_NOTE_MILK_3,Sin apuro. Yo nunca llego a horario y me quieren igual.,No rush. I'm never on time and they like me anyway.
+HUD_NOTE_MILK_4,"Si hace chapoteo, es que está contenta.","If it sloshes, it's happy."
+HUD_RECIPIENT_PUPPY,"Familia Solís, casa con patio","The Solís family, house with a yard"
+HUD_NOTE_PUPPY_1,"Si aúlla, es que le gustó el camino.","If it howls, it liked the road."
+HUD_NOTE_PUPPY_2,Ya tuvo tres dueños. Este es el bueno.,It has had three owners. This one is the good one.
+HUD_NOTE_PUPPY_3,"Se llama Chispa. No entiende ""quieto"".","His name is Chispa. He doesn't understand ""stay""."
+HUD_NOTE_PUPPY_4,Puede que mastique la caja. Es su forma de decir gracias.,He might chew the box. It's how he says thanks.
+HUD_SCRIBBLE_FRAGILE_1,NO AGITAR!!!,DO NOT SHAKE!!!
+HUD_SCRIBBLE_FRAGILE_2,¡FRÁGIL! (EN SERIO),FRAGILE! (SERIOUSLY)
+HUD_SCRIBBLE_FRAGILE_3,"CON MUCHO CARIÑO, POR FA","HANDLE WITH LOVE, PLS"
+HUD_SCRIBBLE_FRAGILE_4,"SI SUENA, MAL SIGNO","IF IT RATTLES, BAD SIGN"
+HUD_SCRIBBLE_UPRIGHT_1,ESTE LADO ARRIBA (EN SERIO),THIS SIDE UP (SERIOUSLY)
+HUD_SCRIBBLE_UPRIGHT_2,NO ACOSTAR. NI UN POQUITO,NO TILTING. NOT EVEN A BIT
+HUD_SCRIBBLE_UPRIGHT_3,PATAS PARA ABAJO,FEET DOWN
+HUD_SCRIBBLE_UPRIGHT_4,¡DERECHITA!,KEEP IT STRAIGHT!
+HUD_SCRIBBLE_LIVE_1,HAY ALGUIEN ADENTRO,SOMEONE IS INSIDE
+HUD_SCRIBBLE_LIVE_2,NO MIRAR FIJO,DO NOT STARE
+HUD_SCRIBBLE_LIVE_3,TIENE OPINIONES,HAS OPINIONS
+HUD_SCRIBBLE_LIVE_4,"AIRE, POR FAVOR","AIR, PLEASE"
+HUD_SCRIBBLE_HEAVY_1,PESA MÁS DE LO QUE PARECE,HEAVIER THAN IT LOOKS
+HUD_SCRIBBLE_HEAVY_2,¡CUIDADO CON LA ESPALDA!,MIND YOUR BACK!
+HUD_SCRIBBLE_HEAVY_3,AGARRAR CON DOS MANOS,USE BOTH HANDS
+HUD_SCRIBBLE_HEAVY_4,NO SACUDIR,DO NOT SHAKE
+HUD_SCRIBBLE_NO_IMPACTS_1,¡NO GOLPEAR!!!,DO NOT HIT!!!
+HUD_SCRIBBLE_NO_IMPACTS_2,"SI HACE PUM, NO ES CULPA MÍA","IF IT GOES BOOM, NOT MY FAULT"
+HUD_SCRIBBLE_NO_IMPACTS_3,LEJOS DE LA COCINA,KEEP AWAY FROM THE KITCHEN
+HUD_SCRIBBLE_NO_IMPACTS_4,"SUAVECITO, CAPITÁN","GENTLY, CAPTAIN"
+HUD_SCRIBBLE_HOSTILE_1,NO ABRIR (EN SERIO),DO NOT OPEN (SERIOUSLY)
+HUD_SCRIBBLE_HOSTILE_2,NO LO MIREN A LOS OJOS,DO NOT LOOK IT IN THE EYES
+HUD_SCRIBBLE_HOSTILE_3,NO DARLE DE COMER,DO NOT FEED
+HUD_SCRIBBLE_HOSTILE_4,"SI SE MUEVE, ES NORMAL","IF IT MOVES, THAT IS NORMAL"
