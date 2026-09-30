@@ -20,7 +20,8 @@ con
 Rama `rutina/lanzamiento-AAAA-MM`.
 
 - `docs/marketing/estado-steam.md` actualizado (y los archivos de `docs/marketing/` que el agente toque).
-- **`planificador-tareas`** con lo que implica trabajo en el juego: **máximo 5 tareas** por mes. Cápsulas
+- **`planificador-tareas`** con lo que implica trabajo en el juego: **máximo 5 tareas** por mes, con
+  `Origen: lanzamiento AAAA-MM` y sujetas al freno de tareas (regla 11 del README). Cápsulas
   e imágenes → "necesita PC" (las hace la sesión de arte). Precio, fecha y alcance de idiomas → ⏸
   "decide el usuario".
 - PR `docs: launch status AAAA-MM` con auto-merge; sección "Para el usuario" con las decisiones pendientes.

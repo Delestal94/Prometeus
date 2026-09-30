@@ -52,5 +52,5 @@ de lo ya conocido:
 - No arregla código ni assets (salvo referencias muertas en `.claude/`): encuentra y planifica.
 - Sin Godot: el agente lee código, docs, logs de CI y capturas existentes. Si hace falta medir, la tarea
   es medir, con `perfilador-rendimiento` o `revisor-visual`.
-- Si la rutina de construcción no alcanza a consumir lo que esta genera (más de 10 tareas con "Origen:
-  auditoría integral" abiertas), no crees tareas nuevas ese día: solo el informe.
+- Freno de tareas (regla 11 del README): con más de 10 tareas abiertas con "Origen: auditoría
+  integral", no crees tareas nuevas ese día salvo los P0: solo el informe.

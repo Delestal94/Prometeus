@@ -46,8 +46,6 @@ Saltá:
   rama sin PR cuyo único commit propio es `chore: claim <ID>` y tiene más de 6 h
   (`git log origin/main..origin/<rama> --format='%s %cr'`) es una corrida que se cayó: borrala
   (`git push origin --delete <rama>`) y la tarea queda libre;
-- lo que exija editar `vehicle.tscn` / `vehicle.gd`: si se puede como componente aparte, hacelo así;
-  si no, anotalo en la tarea y seguí;
 - personajes (modelo y apariencia): no hasta que el usuario lo pida (decisión del 2026-09-29). S-311
   (personaje de gelatina, `tareas-slatex.md`) es de Slatex; sus ítems no se toman, y lo heredado que
   choque con ella (cuerpo, ragdoll, accesorios, emotes) queda en pausa mientras siga abierta.
@@ -75,7 +73,7 @@ Los subagentes no pueden lanzar otros: todo lo que sigue lo decide la rutina.
    | Área | Agente |
    |---|---|
    | Ruta, tramos, decorado | `constructor-tramos` |
-   | Camión (componentes) | `constructor-camion` |
+   | Camión (`vehicle.gd`/`vehicle.tscn` y sus componentes) | `constructor-camion` |
    | Trampas | `constructor-trampas` |
    | Economía, progresión, eventos, puntaje | `constructor-progresion` |
    | UI, HUD, menús | `constructor-ui` |
@@ -93,9 +91,13 @@ Los subagentes no pueden lanzar otros: todo lo que sigue lo decide la rutina.
    PR; arreglá lo que marque BUG o RIESGO alto, el resto al cuerpo del PR.
 7. **Visual**: `revisor-visual`.
 8. **Zona compartida o archivos de Slatex**: `revisor-gdscript` sobre el diff antes del PR.
+9. **Camión** (`vehicle.gd`/`vehicle.tscn`, se editan libremente desde el 2026-09-30): tests del camión
+   (`ejecutor-tests` con los filtros `vehicle` y `truck`) y `auditor-red`, porque su sincronización es la
+   más delicada del juego.
 
-Nunca en la nube: `modelador-blender`, `artista-conceptual`, `empaquetador-release`. `critico-diseno` y
-`abogado-del-diablo` son de la rutina de revisión, no de esta.
+Nunca en la nube: `modelador-blender`, `artista-conceptual`, `empaquetador-release` (los corren las
+rutinas de la PC: `sesion-arte.md` y `pc-build.md`). `critico-diseno` y `abogado-del-diablo` son de la
+rutina de revisión, no de esta.
 
 ## 4. Cerrar y subir
 
