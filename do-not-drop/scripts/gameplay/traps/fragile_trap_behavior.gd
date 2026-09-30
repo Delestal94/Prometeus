@@ -35,6 +35,9 @@ var _warn_lead: float = 0.7
 var _bump_safe_speed: float = 9.7
 ## Impact strength (m/s of velocity change) per m/s over the safe speed.
 var _bump_jolt_per_speed: float = 1.8
+## Integrity lost per running step with the box in the arms (N-115): the most of
+## any trap, the vase feels every footfall.
+var _run_step_damage: float = 1.4
 
 ## Seconds a tap still shields, and the wait before the next one.
 var _cushion_left: float = 0.0
@@ -62,6 +65,7 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	_warn_lead = maxf(float(config.get("warn_lead", 0.7)), _cushion_window)
 	_bump_safe_speed = maxf(float(config.get("bump_safe_speed", 9.7)), 0.0)
 	_bump_jolt_per_speed = maxf(float(config.get("bump_jolt_per_speed", 1.8)), 0.0)
+	_run_step_damage = maxf(float(config.get("run_step_damage", 1.4)), 0.0)
 	_cushion_left = 0.0
 	_cooldown_left = 0.0
 	_warn_left = 0.0
@@ -100,6 +104,12 @@ func on_impact(delta_velocity: float) -> float:
 		amount *= _cushion_leak
 		saved_hits += 1
 	return damage(amount)
+
+
+func on_carried_step(strength: float) -> float:
+	if get_state() == TrapState.RUINED:
+		return 0.0
+	return damage(_run_step_damage * strength)
 
 
 ## What crossing a bump at `speed` (m/s) does to this box, as the impact

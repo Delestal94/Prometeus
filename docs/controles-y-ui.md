@@ -18,6 +18,16 @@
 | Mirar alrededor (asiento, primera persona) | Mouse | Stick derecho |
 | Centrar la vista | C | Clic del stick derecho |
 
+### A pie
+| Acción | Teclado | Gamepad |
+|---|---|---|
+| Caminar / mirar | WASD / mouse | Stick izquierdo / stick derecho |
+| Correr (mantener) | Shift (reasignable en Opciones) | Clic del stick izquierdo |
+
+Correr sube la velocidad de 3,6 a 6 m/s sin estamina. Con una caja en brazos se corre a 5 m/s y cada paso la sacude
+(ver `jugabilidad-paquetes-rescate.md`, "Correr con la caja"). No se corre sentado, manejando ni arriba de un camión
+en movimiento. La primera vez que corrés con una caja sale el consejo "Correr con la caja la sacude".
+
 ### Pasajero (interacción con su paquete)
 Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de controles
 (consistencia = menos fricción para nuevos jugadores en una sesión de fiesta):

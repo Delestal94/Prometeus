@@ -1,5 +1,4 @@
 do-not-drop/scripts/core/crew_progression.gd|max-line-length 1
-do-not-drop/scripts/core/game_settings.gd|max-line-length 1
 do-not-drop/scripts/core/network_manager.gd|max-line-length 2
 do-not-drop/scripts/core/route_event_manager.gd|max-line-length 6
 do-not-drop/scripts/core/run_manager.gd|max-line-length 2

@@ -12,6 +12,8 @@ extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
 
 ## A scrub that pauses longer than this starts over (s).
 const SCRUB_MEMORY: float = 0.8
+## Spill per running step with the box in the arms.
+const RUN_STEP_SPILL: float = 1.6
 
 var spill_amount: float = 0.0
 var tilt_degrees: float = 0.0
@@ -94,6 +96,15 @@ func _scrub(direction: StringName) -> void:
 	if continuing:
 		scrubs += 1
 		spill_amount = maxf(0.0, spill_amount - _scrub_amount)
+
+
+## Every running step sloshes some out (N-115); nobody is mopping a box in
+## someone's arms, so it only dries once the carrier sets it down for a rag.
+func on_carried_step(strength: float) -> float:
+	if get_state() == TrapState.RUINED:
+		return 0.0
+	spill_amount = minf(integrity_max, spill_amount + RUN_STEP_SPILL * strength)
+	return 0.0
 
 
 func on_impact(delta_velocity: float) -> float:

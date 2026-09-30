@@ -12,6 +12,7 @@ extends SceneTree
 
 const SynthAudio = preload("res://scripts/presentation/synth_audio.gd")
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const SynthAudioSteps = preload("res://scripts/presentation/synth_audio_steps.gd")
 const TOLERANCE_DB: float = 2.0
 ## class -> [measure, target dBFS]
 const CLASSES: Dictionary = {
@@ -26,7 +27,8 @@ const CLASSES: Dictionary = {
 	"machine": ["rms", -40.0],
 	"repeat": ["loudest", -30.0],
 }
-## [what, SynthAudio function, its level in world_mix.gd, class]
+## [what, SynthAudio function, its level in world_mix.gd, class, (optional) the
+## script that owns the function when it is not SynthAudio's]
 const SOUNDS: Array = [
 	["truck engine", &"engine_loop", &"ENGINE_DB", "engine"],
 	["truck engine idle", &"engine_idle_loop", &"ENGINE_DB", "engine"],
@@ -53,6 +55,7 @@ const SOUNDS: Array = [
 	["train horn", &"train_horn", &"TRAIN_HORN_DB", "signal"],
 	["train chugging", &"train_chug_loop", &"TRAIN_CHUG_DB", "engine"],
 	["callout voice", &"callout_voice", &"CALLOUT_VOICE_DB", "signal"],
+	["running footstep", &"footstep", &"FOOTSTEP_DB", "detail", SynthAudioSteps],
 ]
 
 ## Composed tracks (.ogg, tools/audio/compose_music.py): Godot can't hand a
@@ -75,7 +78,7 @@ func _initialize() -> void:
 	if report:
 		print("REPORT | sound | class | measure | stream dBFS | level dB | result | target | off")
 	for sound: Array in SOUNDS:
-		var stream: AudioStreamWAV = (SynthAudio as Script).call(sound[1])
+		var stream: AudioStreamWAV = ((sound[4] if sound.size() > 4 else SynthAudio) as Script).call(sound[1])
 		var measure: String = CLASSES[sound[3]][0]
 		var target: float = CLASSES[sound[3]][1]
 		var measured: float = measure_dbfs(stream, measure)

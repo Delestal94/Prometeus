@@ -136,6 +136,29 @@ renuncia deliberadamente a velocidad y maneja bien. No debe ocurrir que un
 mientras un choque con tren puede generar un impulso extremo. Capar daño por
 evento y reforzar amenazas normales antes de subir daño global.
 
+## Correr con la caja (N-115)
+
+Decisión del usuario (2026-09-29): se puede correr con una caja en brazos, es una apuesta. Llegás antes a una caja
+caída (los 30 s del rescate) o al pedido, pero la caja lo paga. Lo decide el dueño del jugador (movimiento del cliente,
+como el resto a pie) y lo aplica el host.
+
+- **Velocidad**: 3,6 m/s caminando, 6 corriendo, 5 corriendo con caja, 4,2 (trote) con la caja de Peso Creciente.
+- **Cada paso sacude la caja** (un paso cada 2 m): el cliente avisa al host y el host llama al camino de daño de
+  siempre (`package_run_shake.gd` -> `ITrapBehavior.on_carried_step()`), escalado por el relleno y la cinta.
+  Cada trampa lo siente a su manera: Frágil pierde integridad (1,4 por paso, la que más), Equilibrio se inclina
+  (2,5 grados por paso, bajan al parar), Líquido derrama (1,6 por paso), Ruidoso se agita (3,5), Explosivo acorta
+  la mecha (0,12 s), Hostil se enoja (1,2). Peso Creciente no recibe daño por paso: lo que paga es la velocidad.
+- **Tropezón**: en cada paso con caja el host tira un dado que depende solo de la semilla de la sesión, del jugador
+  y del número de paso (el mismo en todos los pares). Probabilidad: 0,8 % por paso más hasta 14 % según lo mala que
+  sea la situación que informa el dueño: giro brusco de la vista, pendiente de más de 9 grados, ripio (1) o banquina
+  (0,25) del tramo (`Route.ground_roughness()`), y chocar con algo. Al tropezar la caja sale de las manos con un
+  empujón y un golpe fuerte (6 m/s de cambio de velocidad, como un `drop_carried()` con impacto), y no se puede
+  volver a correr por 1,5 s.
+- **Se ve venir**: la caja rebota en los brazos con cada paso (la malla, no el cuerpo), cruje cada dos pasos y la
+  primera vez sale el consejo "Correr con la caja la sacude".
+- **Solo, 2 y 5 jugadores**: no depende de nadie más. Sin semilla de sesión (jugando solo) el dado usa una semilla
+  propia del jugador.
+
 ## Kit y reparación común
 
 Cada equipo empieza con suficientes recursos para **un rescate simple por caja**.

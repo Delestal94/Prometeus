@@ -445,6 +445,7 @@ UI_OPT_BIND_HORN,Bocina,Horn
 UI_OPT_BIND_INTERACT,Interactuar,Interact
 UI_OPT_BIND_LOOK_BACK,Mirar atrás,Look back
 UI_OPT_BIND_PING,Ping,Ping
+UI_OPT_BIND_SPRINT,Correr,Sprint
 UI_OPT_BIND_USE_CARD,Usar carta,Use card
 UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
 UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
@@ -453,6 +454,12 @@ Passenger: Left click (hold) tend the package  ·  WASD sequences
 F phone  ·  Click take photo  ·  Wheel click ping  ·  G use card  ·  C centre view
 Esc pause  ·  hold R restart  ·  F11 full screen  ·  hold Tab crew (depot)"
 UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener Back tripulación (depósito),"On foot: L-stick walk  ·  R-stick look  ·  A interact  ·  X jump
+UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa,"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
+Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out
+Passenger: Left click (hold) tend the package  ·  WASD sequences
+F phone  ·  Click take photo  ·  Wheel click ping  ·  G use card  ·  C centre view
+Esc pause  ·  hold R restart  ·  F11 full screen"
+UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  clic stick izq. correr  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar,"On foot: L-stick walk  ·  L-stick click run  ·  R-stick look  ·  A interact  ·  X jump
 Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out
 Passenger: RT (hold) tend the package  ·  L-stick sequences
 LB phone  ·  RB take photo  ·  D-pad up ping  ·  D-pad left use card
@@ -611,6 +618,7 @@ HUD_HINT_WEIGHT_RUINED,Ni una grúa la levanta.,Not even a crane lifts it.
 HUD_HINT_WEIGHT_SEQUENCE,¡Engorda! Asegurá la carga: %s(%.0fs),Bulking up! Secure the cargo: %s(%.0fs)
 HUD_PACKAGE_PARASITE_DAMAGE,La caja parásita dañó su pareja.,The parasite box damaged its partner.
 HUD_PACKAGE_RUINED_IMPACTS,El paquete sufrió demasiados golpes.,The package took too many impacts.
+HUD_PACKAGE_RUINED_RUNNING,El paquete no aguantó la carrera.,The package did not survive the run.
 HUD_PROGRESS_AND,y,and
 HUD_PROGRESS_DELIVERY_MANY,%d entregas,%d deliveries
 HUD_PROGRESS_DELIVERY_ONE,%d entrega,%d delivery
@@ -736,6 +744,7 @@ UI_TUT_PASSENGER_TITLE,Pasajero,Passenger
 UI_TUT_PREVIOUS,Anterior,Previous
 UI_TUT_REWARDS_BODY,Las entregas pagan dinero al equipo para comprar suministros. Las buenas acciones dan mérito personal y pueden otorgarte una carta.,Deliveries pay team money for supplies. Good actions earn personal merit and may award you a card.
 UI_TUT_REWARDS_TITLE,"Dinero, mérito y cartas","Money, merit and cards"
+UI_TUT_TIP_SPRINT_CARRY,Correr con la caja la sacude.,Running with the box shakes it.
 UI_TUT_TRAP_BALANCE,Equilibrio,Balance
 UI_TUT_TRAP_BODY,[b]Qué la rompe[/b]\n%s\n\n[b]Qué hacer[/b]\n%s\n\n%s,[b]What breaks it[/b]\n%s\n\n[b]What to do[/b]\n%s\n\n%s
 UI_TUT_TRAP_EXPLOSIVE,Explosivo,Explosive
