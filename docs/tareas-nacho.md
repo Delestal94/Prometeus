@@ -310,8 +310,13 @@ tres lo cubre. Migración de host: después del lanzamiento.
   frena su copia de la partida (`level_common._stop_orphaned_run`) para que no puntúe ni tape la pantalla con
   resultados. `current_distance` ahora también se lleva en modo entrega. Tests: `test_host_gone_tally.gd` y la
   fase `GONE` de `net_trio.gd`. Aviso: `docs/avisos/2026-09-30-n222-host-se-va.md`.
-- [ ] (nota de `auditor-red`) Si el host se va con la pantalla de resultados abierta, el cliente la cambia por la de
+- [x] (nota de `auditor-red`) Si el host se va con la pantalla de resultados abierta, el cliente la cambia por la de
   desconexión y pierde los resultados completos (ya pasaba antes). Podría quedarse en resultados.
+  Hecho: con los resultados abiertos se quedan (`hud_pause._on_connection_lost` → `HudResults.show_host_gone()`); la
+  nota del invitado pasa a "El anfitrión se fue y la sala se cerró", "Volver a intentar" queda gris con el motivo en el
+  tooltip y "Volver al menú" con el foco. `HudPrompts.can_restart()` da `false` sin sesión (antes, ya offline, R habría
+  recargado el nivel como partida solo). Sin RPCs nuevos. Tests: `test_host_gone_tally.gd` y `test_hud_flow.gd`. Aviso:
+  `docs/avisos/2026-09-30-n222b-resultados-quedan.md`. Rama `nacho/N-222b-results-stay-host-leaves`.
 
 ### N-226 · Color estable del jugador asignado por el anfitrión — B · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd` compartida; `player.gd` y `scripts/ui` de Slatex)
 Origen: auditoría integral 2026-09-30, A-4.3 (P1). Esfuerzo M. Mérito y cartas se identifican por un "color

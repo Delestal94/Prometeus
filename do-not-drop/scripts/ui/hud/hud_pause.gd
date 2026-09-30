@@ -168,6 +168,12 @@ func _on_depot_station_opened(station: StringName) -> void:
 func _on_connection_lost(reason: String) -> void:
 	get_tree().paused = false
 	hud.soft_pause = false
+	hud.prompts.session_lost = true
+	# N-222: results already up are how the run ended, the host's last word.
+	# They stay; only the way on changes (HudResults.show_host_gone()).
+	if hud.overlay_mode == "results":
+		hud.results.show_host_gone()
+		return
 	hud.notices.clear_all_notices()
 	hud.overlay_mode = "disconnected"
 	hud.overlay.show()

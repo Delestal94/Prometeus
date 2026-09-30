@@ -263,6 +263,7 @@ HUD_RESULT_ENDLESS_TITLE,FIN DEL RECORRIDO,END OF THE ROAD
 HUD_RESULT_FAILED_TITLE,OTRA VUELTA,ONE MORE GO
 HUD_RESULT_FINISHED_TITLE,RUTA TERMINADA,ROUTE FINISHED
 HUD_RESULT_GUEST_NOTE,"\n\nSolo el anfitrión puede reiniciar. Para otra vuelta, volvé al menú y unite de nuevo a la sala.","\n\nOnly the host can restart. For another go, head back to the menu and rejoin the room."
+HUD_RESULT_HOST_GONE_NOTE,"\n\nEl anfitrión se fue y la sala se cerró. Los resultados quedan; para otra vuelta, volvé al menú.","\n\nThe host left and the room closed. The results stay; for another go, head back to the menu."
 HUD_RESULT_INTACT_SUFFIX,", intacto",", intact"
 HUD_RESULT_MISSED_MANY,%d vecinos se quedaron esperando.,%d neighbours were left waiting.
 HUD_RESULT_MISSED_ONE,1 vecino se quedó esperando.,1 neighbour was left waiting.
@@ -272,6 +273,7 @@ HUD_RESULT_STATS,En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s\nEquip
 HUD_RESULT_TEAM,\nEquipo: $%d,\nTeam: $%d
 HUD_RESULT_TOTAL,Total   %d pts,Total   %d pts
 HUD_RETRY,Volver a intentar,Try again
+HUD_RETRY_NEEDS_HOST,"Solo el anfitrión puede volver a intentar, y ya no está.","Only the host can try again, and they've left."
 HUD_SCORE_DEADLINE_MET,Plazos cumplidos,Deadlines met
 HUD_SCORE_DEADLINE_MISSED,Plazos vencidos,Deadlines missed
 HUD_SCORE_LOST,Paquetes perdidos en la ruta,Packages lost on the road

@@ -11,8 +11,17 @@ extends SceneTree
 ##   its copy of the run (level_common.gd) and no results cover the screen.
 ## - level_base.gd keeps RunManager.current_distance at the furthest point
 ##   reached in a delivery run, not only in Endless.
+## - If the run already ended and the host's results are up when the host
+##   drops, they stay (hud_pause.gd, HudResults.show_host_gone()): same title,
+##   score and rows; the guest's "only the host can restart" note gives way to
+##   one saying the host left (once, however many loss notices come); the
+##   retry shows greyed out with its reason, and neither it nor R restarts
+##   (HudPrompts.can_restart(): offline now, a restart would reload a solo
+##   world); "back to the menu" gets there, with the run cleared.
 
 const RUN_TALLY = preload("res://scripts/core/run_tally.gd")
+const LEVEL: String = "res://scenes/gameplay/level_base.tscn"
+const MAIN_MENU: String = "res://scenes/ui/main_menu.tscn"
 
 var _failures: int = 0
 var _ended: int = 0
@@ -25,7 +34,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var run: Node = root.get_node(^"/root/RunManager")
 	var network: Node = root.get_node(^"/root/NetworkManager")
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	var level: Node = load(LEVEL).instantiate()
 	root.add_child(level)
 	current_scene = level
 	await process_frame
@@ -100,9 +109,120 @@ func _run() -> void:
 	run.reset_run()
 	level.queue_free()
 	await process_frame
+	await _results_stay_when_the_host_leaves()
 	if _failures == 0:
-		print("PASS: a client left without a host keeps the run's tally on the disconnect screen")
+		print("PASS: a client left without a host keeps the run's tally on the disconnect screen,"
+				+ " or the results if the run had ended")
 	quit(_failures)
+
+
+## The run is over and the host's results are on screen when the host drops.
+func _results_stay_when_the_host_leaves() -> void:
+	var run: Node = root.get_node(^"/root/RunManager")
+	var network: Node = root.get_node(^"/root/NetworkManager")
+	var level: Node = load(LEVEL).instantiate()
+	root.add_child(level)
+	current_scene = level
+	await process_frame
+	await physics_frame
+	var hud: Node = level.get_node(^"HUD")
+	var restarts: Array[int] = [0]
+	root.get_node(^"/root/EventBus").restart_requested.connect(func() -> void: restarts[0] += 1)
+
+	# The host's results, as the relay leaves them (RunManager._remote_finish_run()).
+	var results: Dictionary = {
+		"score": 240, "delivered": true, "reason": "", "elapsed_seconds": 95.0,
+		"cargo_total": 2, "cargo_intact": 1, "cargo_ruined": 1, "cargo_points": 100, "time_bonus": 20,
+		"houses_delivered": 2, "houses_missed": 0, "houses_lost": 0,
+		"breakdown": [{"label": "Doors", "points": 150, "count": 2}],
+		"best_score": 240, "complaints": [],
+		"deliveries": [
+			{"house": 0, "outcome": &"delivered_ok", "photo": false},
+			{"house": 1, "outcome": &"delivered_ruined", "photo": false},
+		],
+	}
+	run.set(&"elapsed_seconds", 95.0)
+	run.set(&"results", results.duplicate(true))
+	hud.get(&"results").call(&"_on_ended", 240, results)
+	# What a guest's card has on top (can_restart() is false online, which a
+	# single process can't be): no retry, and the "only the host" note.
+	var stats_label: Label = hud.get(&"overlay_stats")
+	stats_label.text += tr("HUD_RESULT_GUEST_NOTE")
+	hud.get(&"results").call(&"set_buttons", "", false, false, true)
+	await process_frame
+	var title: String = (hud.get(&"overlay_title") as Label).text
+	var score: String = (hud.get(&"score_label") as Label).text
+	var rows_box: Node = hud.get(&"result_rows_box")
+	_expect(hud.get(&"overlay_mode") == "results" and rows_box.get_child_count() == 2,
+			"The results screen is up with a row per door (rows %d)" % rows_box.get_child_count())
+
+	# --- the host drops ---
+	network.call(&"_fail", tr("UI_NET_HOST_LOST"))
+	await process_frame
+	var mode: String = String(hud.get(&"overlay_mode"))
+	_expect(mode == "results" and (hud.get(&"overlay") as Control).visible,
+			"Losing the host with the results up keeps them (got %s)" % mode)
+	_expect((hud.get(&"overlay_title") as Label).text == title and (hud.get(&"score_label") as Label).text == score
+			and rows_box.get_child_count() == 2,
+			"Title, score and rows are the host's, untouched (got '%s', '%s', %d rows)" % [
+				(hud.get(&"overlay_title") as Label).text, (hud.get(&"score_label") as Label).text,
+				rows_box.get_child_count()])
+	var note: String = tr("HUD_RESULT_HOST_GONE_NOTE").strip_edges()
+	var guest_note: String = tr("HUD_RESULT_GUEST_NOTE").strip_edges()
+	_expect(stats_label.text.contains(note) and not stats_label.text.contains(guest_note)
+			and not stats_label.text.contains(tr("HUD_HOST_GONE")),
+			"The guest note gives way to 'the host left' (got '%s')" % stats_label.text)
+	var retry: Button = hud.get(&"action_button")
+	_expect(retry.visible and retry.disabled and retry.text == tr("HUD_RETRY")
+			and retry.tooltip_text == tr("HUD_RETRY_NEEDS_HOST"),
+			"The retry shows greyed out with its reason (visible %s, disabled %s, '%s', '%s')" % [
+				retry.visible, retry.disabled, retry.text, retry.tooltip_text])
+	var menu: Button = hud.get(&"menu_button")
+	_expect(menu.visible and not menu.disabled and menu.has_focus(),
+			"Back to the menu is there, enabled and focused (visible %s, disabled %s, focus %s)" % [
+				menu.visible, menu.disabled, menu.has_focus()])
+	network.call(&"_fail", tr("UI_NET_HOST_LOST"))
+	await process_frame
+	_expect(hud.get(&"overlay_mode") == "results" and stats_label.text.count(note) == 1,
+			"A second loss notice keeps the results and says it once (got '%s')" % stats_label.text)
+
+	# --- no restart into a world that isn't the crew's ---
+	var pause: Node = hud.get(&"pause")
+	pause.call(&"primary_action")
+	pause.call(&"request_restart")
+	var press := InputEventAction.new()
+	press.action = &"run_restart"
+	press.pressed = true
+	pause.call(&"_unhandled_input", press)
+	for i: int in 5:
+		await physics_frame
+	var still_up: bool = is_instance_valid(level) and current_scene == level
+	_expect(restarts[0] == 0 and still_up and not (run.get(&"results") as Dictionary).is_empty(),
+			"Neither the greyed retry nor R restarts or leaves (restart requests %d, level up %s)" % [
+				restarts[0], still_up])
+	if not still_up:
+		if current_scene != null:
+			current_scene.queue_free()
+		run.reset_run()
+		await process_frame
+		return
+
+	# --- back to the menu ---
+	menu.pressed.emit()
+	for i: int in 10:
+		if current_scene != null and current_scene != level:
+			break
+		await process_frame
+	var landed: Node = current_scene
+	_expect(landed != null and landed.scene_file_path == MAIN_MENU,
+			"Back to the menu lands there (got %s)" % (landed.scene_file_path if landed != null else "nothing"))
+	_expect((run.get(&"results") as Dictionary).is_empty(), "Leaving clears the run")
+	if landed != null and landed.scene_file_path == MAIN_MENU:
+		var status: Label = landed.get(&"_status_label")
+		_expect(status.text == tr("UI_NET_HOST_LOST"), "The menu says why the room closed (got '%s')" % status.text)
+		landed.queue_free()
+	run.reset_run()
+	await process_frame
 
 
 func _expect(condition: bool, description: String) -> void:
