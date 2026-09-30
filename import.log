@@ -1,0 +1,291 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started Inicialización del proyecto (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Escaneando la estructura del archivo...[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | Cargando nombres de clases globales...[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | Verificando GDExtensions...[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | Creando scripts de carga automática...[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | Inicializando plugins...[39m[0m
+[  83% ] [90m[1mfirst_scan_filesystem[22m | Iniciando escaneo de archivos...[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | Started Registrando clases globales... (206 steps)[39m[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | AcousticSpace[39m[0m
+[   0% ] [90m[1mupdate_scripts_classes[22m | AcousticZone[39m[0m
+[   1% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   1% ] [90m[1mupdate_scripts_classes[22m | CoopVote[39m[0m
+[   2% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   2% ] [90m[1mupdate_scripts_classes[22m | ITrapBehavior[39m[0m
+[   3% ] [90m[1mupdate_scripts_classes[22m | TrapDefinition[39m[0m
+[   3% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   4% ] [90m[1mupdate_scripts_classes[22m | Interactable[39m[0m
+[   4% ] [90m[1mupdate_scripts_classes[22m | SeatPoint[39m[0m
+[   5% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   5% ] [90m[1mupdate_scripts_classes[22m | LocText[39m[0m
+[   6% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   6% ] [90m[1mupdate_scripts_classes[22m | NetPoseSmoother[39m[0m
+[   7% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[   7% ] [90m[1mupdate_scripts_classes[22m | NetEventBus[39m[0m
+[   8% ] [90m[1mupdate_scripts_classes[22m | NetSession[39m[0m
+[   8% ] [90m[1mupdate_scripts_classes[22m | NetStats[39m[0m
+[   9% ] [90m[1mupdate_scripts_classes[22m | NetStatsOverlay[39m[0m
+[   9% ] [90m[1mupdate_scripts_classes[22m | SteamVoice[39m[0m
+[  10% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  10% ] [90m[1mupdate_scripts_classes[22m | SafeJson[39m[0m
+[  11% ] [90m[1mupdate_scripts_classes[22m | UserDataMigration[39m[0m
+[  11% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  12% ] [90m[1mupdate_scripts_classes[22m | PlayerRagdoll[39m[0m
+[  12% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  13% ] [90m[1mupdate_scripts_classes[22m | ContactShadow[39m[0m
+[  13% ] [90m[1mupdate_scripts_classes[22m | DetailMaterials[39m[0m
+[  14% ] [90m[1mupdate_scripts_classes[22m | DressingBatcher[39m[0m
+[  14% ] [90m[1mupdate_scripts_classes[22m | WorldQuality[39m[0m
+[  14% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  15% ] [90m[1mupdate_scripts_classes[22m | CurveSegment[39m[0m
+[  15% ] [90m[1mupdate_scripts_classes[22m | GravelSegment[39m[0m
+[  16% ] [90m[1mupdate_scripts_classes[22m | HillSegment[39m[0m
+[  16% ] [90m[1mupdate_scripts_classes[22m | RouteSegment[39m[0m
+[  17% ] [90m[1mupdate_scripts_classes[22m | SegmentStreamer[39m[0m
+[  17% ] [90m[1mupdate_scripts_classes[22m | SpeedBumpSegment[39m[0m
+[  18% ] [90m[1mupdate_scripts_classes[22m | StraightSegment[39m[0m
+[  18% ] [90m[1mupdate_scripts_classes[22m | SCurveSegment[39m[0m
+[  19% ] [90m[1mupdate_scripts_classes[22m | TerrainField[39m[0m
+[  19% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  20% ] [90m[1mupdate_scripts_classes[22m | RunLog[39m[0m
+[  20% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  21% ] [90m[1mupdate_scripts_classes[22m | SeatCamera[39m[0m
+[  21% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  22% ] [90m[1mupdate_scripts_classes[22m | SettingsStore[39m[0m
+[  22% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  23% ] [90m[1mupdate_scripts_classes[22m | SynthAudio[39m[0m
+[  23% ] [90m[1mupdate_scripts_classes[22m | SynthAudioCare[39m[0m
+[  24% ] [90m[1mupdate_scripts_classes[22m | SynthAudioRadio[39m[0m
+[  24% ] [90m[1mupdate_scripts_classes[22m | SynthAudioScenes[39m[0m
+[  25% ] [90m[1mupdate_scripts_classes[22m | SynthAudioSteps[39m[0m
+[  25% ] [90m[1mupdate_scripts_classes[22m | SynthAudioTraps[39m[0m
+[  26% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  26% ] [90m[1mupdate_scripts_classes[22m | UnlockProfile[39m[0m
+[  27% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  27% ] [90m[1mupdate_scripts_classes[22m | WorldMood[39m[0m
+[  28% ] [90m[1mupdate_scripts_classes[22m | ColorSlots[39m[0m
+[  28% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  28% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  29% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  29% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  30% ] [90m[1mupdate_scripts_classes[22m | LegacyUserData[39m[0m
+[  30% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  31% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  31% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  32% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  32% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  33% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  33% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  34% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  34% ] [90m[1mupdate_scripts_classes[22m | BossLines[39m[0m
+[  35% ] [90m[1mupdate_scripts_classes[22m | Depot[39m[0m
+[  35% ] [90m[1mupdate_scripts_classes[22m | DepotCampaignBoard[39m[0m
+[  36% ] [90m[1mupdate_scripts_classes[22m | DepotHall[39m[0m
+[  36% ] [90m[1mupdate_scripts_classes[22m | DepotOrderBoard[39m[0m
+[  37% ] [90m[1mupdate_scripts_classes[22m | DepotStation[39m[0m
+[  37% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  38% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  38% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  39% ] [90m[1mupdate_scripts_classes[22m | PackageContent[39m[0m
+[  39% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  40% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  40% ] [90m[1mupdate_scripts_classes[22m | PackageRescue[39m[0m
+[  41% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  41% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  42% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  42% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  42% ] [90m[1mupdate_scripts_classes[22m | TenderInputLag[39m[0m
+[  43% ] [90m[1mupdate_scripts_classes[22m | Player[39m[0m
+[  43% ] [90m[1mupdate_scripts_classes[22m | PlayerAnimator[39m[0m
+[  44% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  44% ] [90m[1mupdate_scripts_classes[22m | PlayerHoldFeedback[39m[0m
+[  45% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  45% ] [90m[1mupdate_scripts_classes[22m | RailCrossingSegment[39m[0m
+[  46% ] [90m[1mupdate_scripts_classes[22m | TunnelSegment[39m[0m
+[  46% ] [90m[1mupdate_scripts_classes[22m | ClientComplaints[39m[0m
+[  47% ] [90m[1mupdate_scripts_classes[22m | DeliveryHouse[39m[0m
+[  47% ] [90m[1mupdate_scripts_classes[22m | DoorbellPoint[39m[0m
+[  48% ] [90m[1mupdate_scripts_classes[22m | LowVisibilityEvent[39m[0m
+[  48% ] [90m[1mupdate_scripts_classes[22m | LowVisibilityPlan[39m[0m
+[  49% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  49% ] [90m[1mupdate_scripts_classes[22m | RouteGoalLot[39m[0m
+[  50% ] [90m[1mupdate_scripts_classes[22m | GoalLotKit[39m[0m
+[  50% ] [90m[1mupdate_scripts_classes[22m | RoutePlacement[39m[0m
+[  51% ] [90m[1mupdate_scripts_classes[22m | RoutePlanner[39m[0m
+[  51% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  52% ] [90m[1mupdate_scripts_classes[22m | RouteStreamer[39m[0m
+[  52% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  53% ] [90m[1mupdate_scripts_classes[22m | BalanceTrapBehavior[39m[0m
+[  53% ] [90m[1mupdate_scripts_classes[22m | ExplosiveTrapBehavior[39m[0m
+[  54% ] [90m[1mupdate_scripts_classes[22m | FragileTrapBehavior[39m[0m
+[  54% ] [90m[1mupdate_scripts_classes[22m | GrowingWeightTrapBehavior[39m[0m
+[  55% ] [90m[1mupdate_scripts_classes[22m | HostileTrapBehavior[39m[0m
+[  55% ] [90m[1mupdate_scripts_classes[22m | LiquidTrapBehavior[39m[0m
+[  56% ] [90m[1mupdate_scripts_classes[22m | NoisyTrapBehavior[39m[0m
+[  56% ] [90m[1mupdate_scripts_classes[22m | TruckRadio[39m[0m
+[  57% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  57% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  57% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  58% ] [90m[1mupdate_scripts_classes[22m | VehicleFaults[39m[0m
+[  58% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  59% ] [90m[1mupdate_scripts_classes[22m | LevelCommon[39m[0m
+[  59% ] [90m[1mupdate_scripts_classes[22m | DashboardGps[39m[0m
+[  60% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  60% ] [90m[1mupdate_scripts_classes[22m | HouseWaitingMarker[39m[0m
+[  61% ] [90m[1mupdate_scripts_classes[22m | LowpolyMaterials[39m[0m
+[  61% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  62% ] [90m[1mupdate_scripts_classes[22m | NightFlares[39m[0m
+[  62% ] [90m[1mupdate_scripts_classes[22m | ReferenceTruck[39m[0m
+[  63% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  63% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  64% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  64% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  65% ] [90m[1mupdate_scripts_classes[22m | WindshieldRain[39m[0m
+[  65% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  66% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  66% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  67% ] [90m[1mupdate_scripts_classes[22m | CrewPanel[39m[0m
+[  67% ] [90m[1mupdate_scripts_classes[22m | Hud[39m[0m
+[  68% ] [90m[1mupdate_scripts_classes[22m | HudNotices[39m[0m
+[  68% ] [90m[1mupdate_scripts_classes[22m | HudPause[39m[0m
+[  69% ] [90m[1mupdate_scripts_classes[22m | HudPrompts[39m[0m
+[  69% ] [90m[1mupdate_scripts_classes[22m | HudResults[39m[0m
+[  70% ] [90m[1mupdate_scripts_classes[22m | DepotPanel[39m[0m
+[  70% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  71% ] [90m[1mupdate_scripts_classes[22m | OptionsPanel[39m[0m
+[  71% ] [90m[1mupdate_scripts_classes[22m | RoomCode[39m[0m
+[  71% ] [90m[1mupdate_scripts_classes[22m | TutorialCatalog[39m[0m
+[  72% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  72% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  73% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  73% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  74% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  74% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  75% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  75% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  76% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  76% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  77% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  77% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  78% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  78% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  79% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  79% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  80% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  80% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  81% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  81% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  82% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  82% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  83% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  83% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  84% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  84% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  85% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  85% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  85% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  86% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  86% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  87% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  87% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  88% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  88% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  89% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  89% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  90% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  90% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  91% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  91% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  92% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  92% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  93% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  93% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  94% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  94% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  95% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  95% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  96% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  96% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  97% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  97% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  98% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  98% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[  99% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
+[92m[ DONE ][39m [1mupdate_scripts_classes[22m
+[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Started Escaneando acciones... (20 steps)[39m[0m
+[   0% ] [90m[1m_update_scan_actions[22m | sm_cargo_box_cube.glb[39m[0m
+[   4% ] [90m[1m_update_scan_actions[22m | sm_cargo_box_flat.glb[39m[0m
+[   9% ] [90m[1m_update_scan_actions[22m | sm_cargo_box_tall.glb[39m[0m
+[  14% ] [90m[1m_update_scan_actions[22m | sm_cargo_box_vented.glb[39m[0m
+[  19% ] [90m[1m_update_scan_actions[22m | tx_cargo_shipping_label_512.png[39m[0m
+[  23% ] [90m[1m_update_scan_actions[22m | tx_detail_asphalt_512.png[39m[0m
+[  28% ] [90m[1m_update_scan_actions[22m | tx_detail_bark_512.png[39m[0m
+[  33% ] [90m[1m_update_scan_actions[22m | tx_detail_earth_512.png[39m[0m
+[  38% ] [90m[1m_update_scan_actions[22m | tx_detail_foliage_512.png[39m[0m
+[  42% ] [90m[1m_update_scan_actions[22m | tx_detail_grass_512.png[39m[0m
+[  47% ] [90m[1m_update_scan_actions[22m | tx_detail_gravel_512.png[39m[0m
+[  52% ] [90m[1m_update_scan_actions[22m | tx_detail_plaster_512.png[39m[0m
+[  57% ] [90m[1m_update_scan_actions[22m | tx_detail_roof_shingles_512.png[39m[0m
+[  61% ] [90m[1m_update_scan_actions[22m | tx_detail_stone_512.png[39m[0m
+[  66% ] [90m[1m_update_scan_actions[22m | tx_detail_wood_planks_512.png[39m[0m
+[  71% ] [90m[1m_update_scan_actions[22m | tx_terraingravelseamless.png[39m[0m
+[  76% ] [90m[1m_update_scan_actions[22m | tx_terrainmossseamless.png[39m[0m
+[  80% ] [90m[1m_update_scan_actions[22m | tx_terrainsoilseamless.png[39m[0m
+[  85% ] [90m[1m_update_scan_actions[22m | strings_ui.csv[39m[0m
+[  90% ] [90m[1m_update_scan_actions[22m | strings_world.csv[39m[0m
+[92m[ DONE ][39m [1m_update_scan_actions[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started (Re)Importación de Assets (15 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[   6% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  12% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  18% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  25% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  31% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  37% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  43% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  50% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  56% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  62% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  68% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  75% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  81% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[  87% ] [90m[1mreimport[22m | Preparando archivos para reimportarlos...[39m[0m
+[   0% ] [90m[1mreimport[22m | Ejecutando operaciones de pre-reimportación...[39m[0m
+[   0% ] [90m[1mreimport[22m | strings_ui.csv[39m[0m
+[   6% ] [90m[1mreimport[22m | strings_ui.csv[39m[0m
+[  12% ] [90m[1mreimport[22m | tx_cargo_shipping_label_512.png[39m[0m
+[  18% ] [90m[1mreimport[22m | tx_detail_asphalt_512.png[39m[0m
+[  25% ] [90m[1mreimport[22m | tx_detail_bark_512.png[39m[0m
+[  31% ] [90m[1mreimport[22m | tx_detail_earth_512.png[39m[0m
+[  37% ] [90m[1mreimport[22m | tx_detail_foliage_512.png[39m[0m
+[  43% ] [90m[1mreimport[22m | tx_detail_grass_512.png[39m[0m
+[  50% ] [90m[1mreimport[22m | tx_detail_gravel_512.png[39m[0m
+[  56% ] [90m[1mreimport[22m | tx_detail_plaster_512.png[39m[0m
+[  62% ] [90m[1mreimport[22m | tx_detail_roof_shingles_512.png[39m[0m
+[  68% ] [90m[1mreimport[22m | tx_detail_stone_512.png[39m[0m
+[  75% ] [90m[1mreimport[22m | tx_detail_wood_planks_512.png[39m[0m
+[  81% ] [90m[1mreimport[22m | tx_terraingravelseamless.png[39m[0m
+[  87% ] [90m[1mreimport[22m | tx_terrainmossseamless.png[39m[0m
+[  93% ] [90m[1mreimport[22m | Finalizando la importación de recursos...[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started (Re)Importación de Assets (15 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | Ejecutando operaciones post-reimportación...[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Started Cargando editor (5 steps)[39m[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Cargando diseño del editor...[39m[0m
+[  16% ] [90m[1mloading_editor_layout[22m | Cargando docks...[39m[0m
+[  33% ] [90m[1mloading_editor_layout[22m | Reabriendo escenas...[39m[0m
+[  50% ] [90m[1mloading_editor_layout[22m | Cargando el diseño del editor central...[39m[0m
+[  66% ] [90m[1mloading_editor_layout[22m | Cargando Layout de la ventana del plugin...[39m[0m
+[  83% ] [90m[1mloading_editor_layout[22m | Diseño del editor listo.[39m[0m
+[92m[ DONE ][39m [1mloading_editor_layout[22m
+[0m
