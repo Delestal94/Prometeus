@@ -42,6 +42,17 @@ Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md
 por entrega para el perfil torpe se mantiene.
 - [ ] **N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.
 
+### N-235 · Una caída sucia se nota a los 45 s — C · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`, zona compartida)
+Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red`). Para que el que se une no
+se corte mientras carga el nivel (bloquea el poll de ENet 18-34 s en CI), el timeout de ENet quedó fijo en
+45 s toda la sesión: si un jugador crashea, su caja sigue "sostenida", el volante ocupado y su voz activa
+hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 45 s.
+- [ ] **N-235.1** Bajar el timeout de ENet (MIN = MAX ≈ 20 s) una vez admitido el peer (host en
+  `_on_peer_connected`, cliente tras `complete_auth`) y volver a 45 s en `begin_restart` / `_remote_restart`
+  antes de recargar. `test_connection_errors` ya exige MIN == MAX y MAX ≥ handshake. Con `constructor-red`
+  y después `auditor-red`; va después de N-231 (kit de red), que mueve `network_manager.gd`.
+- [ ] **N-235.2** `net_pair` / `net_trio` avisan si la carga del joiner pasa de 35 s (margen sobre los 45 s).
+
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
 Auditoría de `perfilador-rendimiento` (headless, Endless con 4 cajas, `Performance` cada 10 ticks):
