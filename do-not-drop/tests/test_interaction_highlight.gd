@@ -27,7 +27,10 @@ func _test_package_highlight() -> void:
 	_expect(outline != null and not outline.visible, "No outline before anyone looks at it")
 	pickup.call(&"highlight", true)
 	_expect(outline.visible, "Aiming at the pickup point outlines the package")
-	_expect(not material.emission_enabled, "The box itself isn't washed out white -- only a soft rim shows")
+	# Emission stays enabled at zero energy for the S-205 grip glow (no shader
+	# variant switch); what matters is that highlighting adds no glow.
+	var glowing: bool = material.emission_enabled and material.emission_energy_multiplier > 0.0
+	_expect(not glowing, "The box itself isn't washed out white -- only a soft rim shows")
 	pickup.call(&"highlight", false)
 	_expect(not outline.visible, "Turns back off when no longer the target")
 	package.free()
