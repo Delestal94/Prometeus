@@ -326,9 +326,18 @@ aleatorios: el color cambia entre sesiones y con 5 jugadores ~96 % de las veces 
 alguien que vuelve a la campaña puede heredar el mérito o la carta de otro. Hecho cuando el anfitrión asigna un
 índice de color por orden de llegada, lo replica en el roster, la campaña se guarda por ese índice y un test con
 ids aleatorios grandes verifica colores distintos y estables.
-- [ ] **N-226.1** Índice de color asignado por el anfitrión y replicado en el roster. Con `constructor-red`; después `auditor-red`; tests `network_roster`.
-- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd`; guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
-- [ ] **N-226.3** Test con ids de peer aleatorios grandes. Con `escritor-tests`; tests `network_roster`.
+- [x] **N-226.1** ~~Índice de color asignado por el anfitrión y replicado en el roster. Con `constructor-red`; después `auditor-red`; tests `network_roster`.~~
+  **[x] Hecho (2026-09-30)** — rama `nacho/N-226-host-color-index`: `ColorSlots` (`scripts/core/color_slots.gd`, lógica pura) y
+  `NetworkManager.color_slot(peer_id)` (host 0, cada joiner el libre más bajo desde que empieza a autenticarse; fuera de
+  sesión, el `posmod` de siempre). Viaja en el handshake (`"colors"`) y por el RPC `_sync_color_slots` en cada join, salida
+  o auth fallida; señal `color_slots_changed`. `PROTOCOL_VERSION` 9 → 10. `auditor-red`: sin bugs; par y trío en verde.
+- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+  Notas de `auditor-red` (N-226.1): `MAX_PLAYERS` es 8 y la paleta 5, así que se lee `posmod(color_slot(id), paleta.size())`;
+  jugando solo el host da 1 y en sala 0 (decidir si solo se lee como 0); un índice liberado lo hereda el próximo que entra
+  (mérito/carta por color dentro de la sesión: reservarlo mientras dure o documentarlo); los lectores escuchan también
+  `color_slots_changed` y recorren el roster, no el mapa; `_fail` limpia el mapa sin emitir la señal. Falta una prueba
+  multiproceso: `net_trio.gd` con `slots=0,1,2` iguales en los tres procesos.
+- [x] **N-226.3** ~~Test con ids de peer aleatorios grandes. Con `escritor-tests`; tests `network_roster`.~~ **[x] Hecho (2026-09-30)** junto con N-226.1: `test_network_roster.gd` (ids > 1,8e9, 200 tripulaciones al azar, reutilizar el libre más bajo, mapas inválidos rechazados).
 
 ### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`) · ⏸ personajes en pausa (S-311)
 Origen de la pausa: auditoría integral 2026-09-30, A-102 (mismo trabajo que S-311.48; `constructor-jugador.md:43`: personajes y ragdoll no se tocan).
