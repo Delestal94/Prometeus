@@ -251,6 +251,21 @@ Autos, molino y tanque llevan AO horneado: después de regenerarlos hay que volv
 "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/bake_vertex_ao.py -- do-not-drop/assets/models/vehicles/sm_vehicle_parked_hatchback.glb do-not-drop/assets/models/vehicles/sm_vehicle_parked_pickup.glb do-not-drop/assets/models/environment/landmarks/sm_env_landmark_windmill.glb do-not-drop/assets/models/environment/landmarks/sm_env_landmark_water_tower.glb
 ```
 
+## Objetos sueltos de la zona de carga (`models/props/cargo/`)
+
+- Propios, `tools/build_cargo_clutter.py` (tareas de Nacho N-139), misma línea cartoon que el
+  depósito. `sm_prop_cargo_toolbox.glb` (756 triángulos: caja roja de 0,36×0,20×0,20 m con tapa
+  biselada, manija de acero con grip, dos pestillos, bisagra de piano y chapita amarilla) y
+  `sm_prop_cargo_thermos.glb` (600: termo azul de r 0,045 con dos franjas claras, tapa-vaso
+  oscura y asa hacia +X). Origen en el centro de la base; un solo nodo de malla (`Toolbox`,
+  `Thermos`). `cargo_clutter.gd` los baja −alto/2 dentro del cuerpo rígido, cuyas colisiones
+  (caja y cilindro) no cambiaron. Materiales de color plano (`toolbox_red`, `tool_steel`,
+  `latch_steel`, `warning`, `thermos_*`) y sin AO horneado (a 20 cm oscurecería todo parejo).
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_cargo_clutter.py [-- toolbox thermos]
+```
+
 ## Timbre (`models/environment/props/sm_env_prop_doorbell_panel.glb`)
 
 - Propio, `tools/build_doorbell.py` (tareas de Nacho N-302): placa de 12×26 cm con la
