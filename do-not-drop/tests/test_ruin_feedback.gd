@@ -1,8 +1,10 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_ruin_feedback.gd
 ## Covers the "momento clipeable" from docs/requerimientos-tecnicos.md 3.4: a
-## ruined package bursts into a one-shot GPUParticles3D confetti burst instead
-## of just changing color. Regression coverage for a real bug found while
+## ruined package bursts into a one-shot GPUParticles3D burst instead of just
+## changing color (S-310: a Frágil box breaks into RuinShards porcelain, the
+## other traps have their own effect, see test_ruin_effects.gd; the 15 % hold,
+## position and cleanup are shared by all of them). Regression coverage for a real bug found while
 ## building this: setting global_position on a Node3D before it's inside the
 ## tree silently no-ops in Godot (get_global_transform requires is_inside_tree()),
 ## which made the very first version of this scatter confetti at the origin

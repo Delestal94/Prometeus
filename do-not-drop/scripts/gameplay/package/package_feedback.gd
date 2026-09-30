@@ -8,6 +8,7 @@ extends Node
 
 const PackageVerb = preload("res://scripts/gameplay/package/package_verb.gd")
 const SynthAudioTraps = preload("res://scripts/presentation/synth_audio_traps.gd")
+const PackageRuinEffects = preload("res://scripts/gameplay/package/package_ruin_effects.gd")
 const CONFETTI_COLORS: Array[Color] = [Color("f47e6d"), Color("f4c562"), Color("83e2ba"), Color("6db3d6")]
 const CONFETTI_COUNT: int = 28
 const CONFETTI_LIFETIME: float = 1.1
@@ -476,7 +477,9 @@ func _on_package_ruined(id: StringName, _cause: String) -> void:
 	if id == _package_id:
 		# The comic stinger is the ruin cue itself (it replaced the old impact
 		# thud), so it plays even with impact effects turned off.
-		_burst_confetti(_impact_effects_enabled())
+		if PackageRuinEffects.spawn(_trap_id, get_parent() as Node3D, _impact_effects_enabled()) == null:
+			_burst_confetti(_impact_effects_enabled())
+		if _trap_id == &"growing_weight": _bounce_time = 0.0  # S-310: per-trap ruin effect; the thud squashes the box
 		if _ruin_player != null:
 			_ruin_player.play()
 
