@@ -267,7 +267,7 @@ pasajero es espectador.
   - Busca por claves traducidas en el idioma del jugador.
   - Los prompts de los montajes de `vehicle.tscn` y "Subirse a manejar" pasan a claves (seguían en español
     también en inglés).
-  - Test: `test_hint_relay`. Aviso: `docs/avisos/2026-09-30-n805-pistas-y-prompts.md`.
+  - Test: `test_hint_relay`. Aviso: `docs/avisos/2026-09-30-n805-pistas-y-prompts.md`. Commit `d44b061`.
 
 ### N-118 · Endless también puntúa la carga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`) · **[x] PR #42**
 `run_manager.gd:692` ("never subtracted"): el modo de los récords ignora el núcleo del juego. Hecho
