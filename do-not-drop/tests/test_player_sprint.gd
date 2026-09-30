@@ -14,6 +14,8 @@ extends SceneTree
 ##   peer with the same seed, more likely on bad ground; on the host the box
 ##   ends up on the floor, no longer held, having taken a hit;
 ## - the first run with a box shows the tip once; the box bounces (feedback);
+## - the host gates step reports (owner only, not seated/still, token bucket, NaN hazard);
+##   a remote jog (Walk above walking pace) counts as running;
 ## - PlayerAnimator: Run picked with hysteresis, plays "Run" if the library has
 ##   it and Walk sped up if not; the other peer sees the same state
 ##   (anim_state / locomotion_speed are replicated) and hears the footfalls.
@@ -21,6 +23,7 @@ extends SceneTree
 const Sprint = preload("res://scripts/gameplay/player/player_sprint.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
 const SynthAudioSteps = preload("res://scripts/presentation/synth_audio_steps.gd")
+const PLAYER_SCENE: PackedScene = preload("res://scenes/gameplay/player/player.tscn")
 const TRAP_KINDS: Array[String] = ["fragile", "balance", "liquid", "noisy", "explosive", "hostile", "growing_weight"]
 
 var _failures: int = 0
@@ -40,6 +43,7 @@ func _run() -> void:
 	await _test_first_run_tip_and_box_bounce()
 	await _test_animator_picks_run_or_the_fallback()
 	await _test_other_peer_sees_the_run()
+	await _test_remote_jog_and_the_hosts_step_bucket()
 	if _failures == 0:
 		print("PASS: sprint speeds, no running seated/driving/on a moving truck, per-trap step shaking,"
 				+ " deterministic trip, tip, Run or Walk fallback with hysteresis, and the remote peer's run")
@@ -329,7 +333,7 @@ func _test_animator_picks_run_or_the_fallback() -> void:
 
 func _test_other_peer_sees_the_run() -> void:
 	var level: Node = await _load_level()
-	var remote: Player = load("res://scenes/gameplay/player/player.tscn").instantiate()
+	var remote: Player = PLAYER_SCENE.instantiate()
 	remote.name = "Player_2"
 	level.get_node("World").add_child(remote)
 	await physics_frame
@@ -343,7 +347,7 @@ func _test_other_peer_sees_the_run() -> void:
 	for i: int in 90:
 		await physics_frame
 	var footsteps: int = sprint.steps_taken - footsteps_before
-	_expect(sprint.running, "The other peer plays the run from anim_state alone")
+	_expect(sprint.running, "The other peer plays the run from anim_state and the pace")
 	_expect(footsteps in [4, 5], "Its footfalls come at the running cadence: 4-5 in 1.5 s (got %d)" % footsteps)
 	await process_frame
 	var playing: AnimationPlayer = remote.animator.anim_player
@@ -352,6 +356,7 @@ func _test_other_peer_sees_the_run() -> void:
 	_expect(sees_run, "...and sees Run, or Walk sped up while the clip is missing (got %s x%.2f)" % [
 			playing.current_animation, playing.speed_scale])
 	remote.anim_state = Player.ANIM_WALK
+	remote.locomotion_speed = Player.WALK_SPEED
 	await physics_frame
 	await physics_frame
 	_expect(not sprint.running, "Back to walking, the footfalls stop")
@@ -364,6 +369,63 @@ func _test_other_peer_sees_the_run() -> void:
 	var footstep: AudioStreamWAV = SynthAudioSteps.footstep()
 	_expect(footstep.data.size() > 1000 and footstep == SynthAudioSteps.footstep(),
 			"The footfall is a shared synthesized sound")
+	await _unload_level(level)
+
+
+func _test_remote_jog_and_the_hosts_step_bucket() -> void:
+	var level: Node = await _load_level()
+	var package: DeliveryPackage = level.get_node("World/Package")
+	var remote: Player = PLAYER_SCENE.instantiate()
+	remote.name = "Player_2"
+	level.get_node("World").add_child(remote)
+	await physics_frame
+	var sprint: Node = remote.get_node(^"Sprint")
+	var feedback: Node = package.get_node("PackageFeedbackComponent")
+	# The Growing weight jog stays Walk in anim_state, at 4.2 m/s: still a run for the others.
+	remote.carried_package = package
+	remote.anim_state = Player.ANIM_WALK
+	remote.locomotion_speed = 4.2
+	feedback.set("_impact_shake_strength", 0.0)
+	var before: int = sprint.steps_taken
+	for i: int in 60:
+		await physics_frame
+	_expect(sprint.running, "A remote jog (Walk at 4.2 m/s) counts as running")
+	_expect(sprint.steps_taken - before >= 2, "...its steps are counted (%d in 1 s)" % (sprint.steps_taken - before))
+	_expect(float(feedback.get("_impact_shake_strength")) > 0.0, "...and the box it carries bounces")
+	# Walking pace: no steps.
+	remote.locomotion_speed = 3.6
+	await physics_frame
+	await physics_frame
+	before = sprint.steps_taken
+	for i: int in 60:
+		await physics_frame
+	_expect(not sprint.running and sprint.steps_taken == before,
+			"A remote walking at 3.6 m/s counts no steps (%d)" % (sprint.steps_taken - before))
+	remote.carried_package = null
+
+	# The host's gate on step reports, with an injected clock.
+	remote.locomotion_speed = 4.2
+	var owner_peer: int = remote.get_multiplayer_authority()
+	_expect(is_equal_approx(sprint.host_accepts_step(owner_peer, 0.4, 1000), 0.4), "The owner's report is accepted")
+	_expect(sprint.host_accepts_step(owner_peer + 1, 0.4, 5000) < 0.0, "Somebody else's report is rejected")
+	remote.seat_node_path = NodePath("Somewhere/DriverEyePoint")
+	_expect(sprint.host_accepts_step(owner_peer, 0.4, 9000) < 0.0, "A seated player's report is rejected")
+	remote.seat_node_path = NodePath()
+	remote.locomotion_speed = 1.0
+	_expect(sprint.host_accepts_step(owner_peer, 0.4, 13000) < 0.0, "A report at a stand-still pace is rejected")
+	remote.locomotion_speed = 4.2
+	var accepted: int = 0
+	for i: int in 10:
+		accepted += int(sprint.host_accepts_step(owner_peer, 0.4, 100000) >= 0.0)
+	_expect(accepted == 2, "Ten reports in the same instant: the bucket lets 2 through (got %d)" % accepted)
+	accepted = 0
+	for i: int in 20:
+		accepted += int(sprint.host_accepts_step(owner_peer, 0.4, 200000 + i * 340) >= 0.0)
+	_expect(accepted == 20, "A full-speed runner's reports, one every 340 ms, all count (got %d)" % accepted)
+	_expect(is_equal_approx(sprint.host_accepts_step(owner_peer, NAN, 300000), 1.0), "A NaN hazard counts as the worst")
+	_expect(is_equal_approx(sprint.host_accepts_step(owner_peer, INF, 300400), 1.0),
+			"An infinite hazard is the worst too")
+	_expect(is_equal_approx(sprint.host_accepts_step(owner_peer, 7.0, 300800), 1.0), "A hazard past 1 is clamped")
 	await _unload_level(level)
 
 

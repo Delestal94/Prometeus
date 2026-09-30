@@ -5,13 +5,14 @@ extends Node
 ## speeds, the footfalls, and the two bets of running with a box:
 ##
 ## - every step shakes the box: the owner reports it, the HOST applies a small
-##   hit through the usual damage road (DeliveryPackage.apply_run_jolt(), which
-##   each trap feels its own way -- ITrapBehavior.on_carried_step());
+##   hit through the usual damage road (package_run_shake.gd, which each trap
+##   feels its own way -- ITrapBehavior.on_carried_step());
 ## - a step can also trip the runner: the owner reports how bad the ground is
 ##   (a sharp turn, a slope, gravel, a collision), the HOST rolls it against a
-##   seed and, on a trip, the box drops with an impact (DeliveryPackage.
-##   stumble_drop()). The roll is a pure function of (seed, step number, hazard):
-##   the same on every peer that counts the same steps.
+##   seed and, on a trip, the box drops with an impact (package_run_shake.gd).
+##   Only the host rolls (the others receive play_stumble); the roll is a pure
+##   function of (seed, step number, hazard), so a peer with the same seed and
+##   step count computes the same answer (tests use that to compare them).
 ##
 ## Nothing runs seated, driving, or on top of a truck that is moving.
 
@@ -30,6 +31,8 @@ const HEAVY_TRAP: StringName = &"growing_weight"
 const STEP_DISTANCE: float = 2.0
 ## Under this pace nobody is running, whatever the button says.
 const MIN_STEP_SPEED: float = 3.0
+## A remote peer counts as running above walking pace plus this, m/s.
+const REMOTE_RUN_MARGIN: float = 0.3
 ## First person: the view opens a little and the walk bob grows.
 const FOV_BONUS: float = 4.0
 const BOB_SCALE: float = 2.6
@@ -54,6 +57,10 @@ const VERGE_HAZARD: float = 0.2
 ## strings of the first-time tip live in tutorial_catalog.gd.
 const TIP_ID: StringName = &"sprint_carry"
 const FOOTSTEP_PITCH_SPREAD: float = 0.06
+## Host: step reports it accepts per second (a full-speed runner makes RUN_SPEED / STEP_DISTANCE), and how
+## many it lets pile up, so a client cannot flood the damage road.
+const STEP_TOKENS_PER_SECOND: float = RUN_SPEED / STEP_DISTANCE
+const STEP_TOKENS_MAX: float = 2.0
 
 ## Set by tests to fix the trip seed; 0 lets the session's seed decide.
 var seed_override: int = 0
@@ -76,6 +83,9 @@ var _was_running_with_box: bool = false
 ## The physics tick ground_speed() last decided in: a tick the controller
 ## skipped (a menu is open) is not a tick spent running.
 var _decided_tick: int = -1
+## Host: the step-report bucket of this player, and when it was last refilled.
+var _tokens: float = STEP_TOKENS_MAX
+var _tokens_at_msec: int = -1
 
 
 func _init() -> void:
@@ -160,7 +170,7 @@ func _physics_process(delta: float) -> void:
 	_stagger = maxf(_stagger - delta, 0.0)
 	var local: bool = player.is_local()
 	if not local:
-		running = player.anim_state == Player.ANIM_RUN and player.seat_node_path.is_empty()
+		running = remote_is_running()
 	elif _decided_tick != Engine.get_physics_frames() or not can_run():
 		running = false
 	run_blend = move_toward(run_blend, 1.0 if running else 0.0, BLEND_SPEED * delta)
@@ -171,6 +181,14 @@ func _physics_process(delta: float) -> void:
 	while _stride >= STEP_DISTANCE:
 		_stride -= STEP_DISTANCE
 		_on_step()
+
+
+## Another peer's runner, from what they replicate. Not anim_state alone: the jog with a
+## Growing weight box (4.2 m/s) stays Walk, and the host still counts its steps.
+func remote_is_running() -> bool:
+	if not player.seat_node_path.is_empty() or player.anim_state not in [Player.ANIM_WALK, Player.ANIM_RUN]:
+		return false
+	return player.locomotion_speed > Player.WALK_SPEED + REMOTE_RUN_MARGIN
 
 
 func _on_step() -> void:
@@ -262,10 +280,27 @@ func would_stumble(step: int, hazard: float) -> bool:
 func submit_run_step(hazard: float) -> void:
 	if not multiplayer.is_server():
 		return
-	var sender: int = multiplayer.get_remote_sender_id()
+	var safe_hazard: float = host_accepts_step(multiplayer.get_remote_sender_id(), hazard, Time.get_ticks_msec())
+	if safe_hazard >= 0.0:
+		host_run_step(safe_hazard)
+
+
+## Host: does this step report count? Returns the hazard made safe (0..1; NaN or infinite
+## counts as the worst), or -1 to drop it. Only the owner reports; not while seated; not
+## when the replicated pace is a stand-still; and no more than the bucket allows.
+## (Not can_run(): `_riding` only means something on the owner's own machine.)
+func host_accepts_step(sender: int, hazard: float, now_msec: int) -> float:
 	if sender != 0 and sender != player.get_multiplayer_authority():
-		return
-	host_run_step(hazard)
+		return -1.0
+	if not player.seat_node_path.is_empty() or player.locomotion_speed < MIN_STEP_SPEED:
+		return -1.0
+	if _tokens_at_msec >= 0:
+		_tokens = minf(_tokens + float(now_msec - _tokens_at_msec) / 1000.0 * STEP_TOKENS_PER_SECOND, STEP_TOKENS_MAX)
+	_tokens_at_msec = now_msec
+	if _tokens < 1.0:
+		return -1.0
+	_tokens -= 1.0
+	return 1.0 if is_nan(hazard) or is_inf(hazard) else clampf(hazard, 0.0, 1.0)
 
 
 ## The host's half of a step (also what tests call). Returns true when it tripped.
