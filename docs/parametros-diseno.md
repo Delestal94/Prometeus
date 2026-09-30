@@ -221,6 +221,17 @@ fuerza cruda — es más estable y fácil de tunear.
 | `agitation_passive_decay` | -5/segundo sin acción (decae solo un poco) | Para no ser 100% dependiente del jugador todo el tiempo |
 | `ruined_at` | agitation >= 100 sostenido por 2s | Se "escapa"/arruina el paquete |
 | `at_risk_at` | agitation >= 60 | Umbral de advertencia |
+| `radio_calm_extra_decay` | +4/s (N-406) | Con la radio del camión en **tranquila**, el decaimiento pasivo sube de 5 a 9/s. Solo cuando nadie lo calma y no está en el máximo. |
+| `radio_loud_gain_mult` | ×1,25 (N-406) | Con la radio **fuerte**, cada sacudida suma 20 en vez de 16. |
+| `radio_loud_passive_mult` | ×0,4 (N-406) | Con la radio **fuerte**, el decaimiento pasivo baja de 5 a 2/s. |
+
+**Radio (N-406).** `TruckRadio` (perilla del tablero, estado en el host) le pasa su modo a la trampa por el contexto
+(`radio_mode`); apagada (el modo de arranque) y noticiero no cambian nada, así que el balance medido con
+`tests/sim_trap_balance.gd` (que no manda `radio_mode`) sigue siendo el de la radio apagada: Ruidoso queda en
+100 / 44,8 / 0,8 / 0 % (ausente / torpe / experto / siempre mantiene). Los tres números son deliberadamente chicos:
+la radio ayuda o molesta, no reemplaza a quien calma la caja. Una caja ya en el máximo no se salva con música
+(`agitation >= agitation_max` sigue exigiendo a alguien calmándola). Si en un playtest la tranquila resulta
+obligatoria o la fuerte injugable, se ajustan en `data/traps/noisy.tres` sin tocar código.
 
 ---
 

@@ -19,6 +19,9 @@ params = {
 "agitation_decay_rate": 16.0,
 "agitation_passive_decay": 5.0,
 "at_risk_at": 60.0,
-"fail_seconds_at_max": 0.8
+"fail_seconds_at_max": 0.8,
+"radio_calm_extra_decay": 4.0,
+"radio_loud_gain_mult": 1.25,
+"radio_loud_passive_mult": 0.4
 }
 contents = Array[Resource]([ExtResource("3_content"), ExtResource("4_content")])

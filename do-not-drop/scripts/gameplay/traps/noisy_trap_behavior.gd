@@ -2,7 +2,8 @@ class_name NoisyTrapBehavior
 extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
 ## Something alive is in the box. Bumps agitate it; its passenger has to
 ## keep calming it down. It settles a little on its own, but never fast
-## enough to survive a rough stretch unattended.
+## enough to survive a rough stretch unattended. The truck's radio (N-406)
+## leans on it a little: calm music settles it faster, loud music stirs it.
 
 var agitation: float = 0.0
 ## Agitation per running step with the box in the arms.
@@ -17,6 +18,14 @@ var _at_risk_at: float = 60.0
 var _seconds_at_max: float = 0.0
 var _fail_seconds: float = 2.0
 var _escaped: bool = false
+## Radio (TruckRadio): extra settling per second under calm music, and under
+## loud music the multiplier on each shake's gain and on the passive settling.
+## The mode is read every tick from the context; off (the default) and the
+## newscast change nothing.
+var _radio_calm_extra_decay: float = 0.0
+var _radio_loud_gain_mult: float = 1.0
+var _radio_loud_passive_mult: float = 1.0
+var _radio_mode: StringName = &"off"
 
 
 func on_setup(package: Node, config: Dictionary) -> void:
@@ -28,12 +37,17 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	_passive_decay = float(config.get("agitation_passive_decay", 5.0))
 	_at_risk_at = float(config.get("at_risk_at", 60.0))
 	_fail_seconds = float(config.get("fail_seconds_at_max", 2.0))
+	_radio_calm_extra_decay = float(config.get("radio_calm_extra_decay", 0.0))
+	_radio_loud_gain_mult = float(config.get("radio_loud_gain_mult", 1.0))
+	_radio_loud_passive_mult = float(config.get("radio_loud_passive_mult", 1.0))
+	_radio_mode = &"off"
 	agitation = 0.0
 	_seconds_at_max = 0.0
 	_escaped = false
 
 
 func on_physics_process(_package: Node, delta: float, context: Dictionary) -> void:
+	_radio_mode = StringName(context.get("radio_mode", &"off"))
 	if _escaped:
 		return
 	var before_state: int = get_state()
@@ -50,7 +64,7 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 			_escaped = true
 		_sync_integrity()
 		return
-	var decay: float = lerpf(_passive_decay, _calm_rate, clampf(calm_strength, 0.0, 1.0))
+	var decay: float = lerpf(_radio_passive_decay(), _calm_rate, clampf(calm_strength, 0.0, 1.0))
 	agitation = clampf(agitation - decay * delta, 0.0, _agitation_max)
 	if agitation < _agitation_max:
 		_seconds_at_max = 0.0
@@ -63,7 +77,8 @@ func on_impact(delta_velocity: float) -> float:
 	if _escaped or delta_velocity < _shake_threshold:
 		return 0.0
 	var before: float = integrity
-	agitation = clampf(agitation + _gain_per_shake, 0.0, _agitation_max)
+	agitation = clampf(agitation + _gain_per_shake * (_radio_loud_gain_mult if _radio_mode == &"loud" else 1.0),
+			0.0, _agitation_max)
 	_sync_integrity()
 	return maxf(before - integrity, 0.0)
 
@@ -94,6 +109,16 @@ func hint_text() -> Array:
 	if agitation >= _at_risk_at:
 		return LocText.make("HUD_HINT_NOISY_RISK")
 	return LocText.make("HUD_HINT_NOISY_OK")
+
+
+## What it settles per second with nobody calming it, with the radio's say.
+func _radio_passive_decay() -> float:
+	match _radio_mode:
+		&"calm":
+			return _passive_decay + _radio_calm_extra_decay
+		&"loud":
+			return _passive_decay * _radio_loud_passive_mult
+	return _passive_decay
 
 
 func _sync_integrity() -> void:

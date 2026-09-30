@@ -21,6 +21,7 @@ var overboard_rescue_seconds: float = 30.0
 var _overboard_seconds: Dictionary = {}
 const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_marker.gd")
 const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
+const TRUCK_RADIO: Script = preload("res://scripts/gameplay/vehicle/truck_radio.gd")
 const RESCUE_HOOK: Script = preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
 const LOW_VISIBILITY: Script = preload("res://scripts/gameplay/route/low_visibility_event.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
@@ -90,6 +91,11 @@ func _ready() -> void:
 	low_visibility.name = "LowVisibilityEvent"
 	low_visibility.set(&"level", self)
 	add_child(low_visibility)
+	# The dashboard radio (N-406): the host owns its mode, every peer plays it.
+	var radio: Node = TRUCK_RADIO.new()
+	radio.name = "TruckRadio"
+	radio.set(&"vehicle", vehicle)
+	add_child(radio)
 	# The rescue hook (N-213.3) hangs by the rear doors on every peer, stowed
 	# until a run takes it from the depot's supplies.
 	var hook: Node3D = RESCUE_HOOK.new()

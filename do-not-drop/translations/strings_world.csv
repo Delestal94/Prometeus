@@ -214,3 +214,15 @@ WORLD_LOT_TIDY_PARKING,Estacionamiento prolijo,Tidy parking
 WORLD_LOT_WORKER_1,¡Dejalo en la bahía libre!,Leave it in the free bay!
 WORLD_LOT_WORKER_2,Cuidado con los conos.,Mind the cones.
 WORLD_LOT_WORKER_3,Este lote pesa una barbaridad.,This load weighs a ton.
+WORLD_RADIO_PROMPT,Radio: %s → %s,Radio: %s → %s
+WORLD_RADIO_MODE_CALM,Tranquila,Calm
+WORLD_RADIO_MODE_LOUD,Fuerte,Loud
+WORLD_RADIO_MODE_NEWS,Noticiero,News
+WORLD_RADIO_MODE_OFF,Apagada,Off
+WORLD_RADIO_NEWS_INSPECTION,Atención: inspección más adelante,Heads up: inspection ahead
+WORLD_RADIO_NEWS_IMPATIENT,Atención: un cliente impaciente más adelante,Heads up: an impatient customer ahead
+WORLD_RADIO_NEWS_DOOR_JAM,Atención: puerta trabada más adelante,Heads up: a jammed door ahead
+WORLD_RADIO_NEWS_MIXED_LABELS,Atención: etiquetas mezcladas más adelante,Heads up: mixed-up labels ahead
+WORLD_RADIO_NEWS_MIMIC,Atención: un paquete sospechoso más adelante,Heads up: a suspicious package ahead
+WORLD_RADIO_NEWS_PARASITE,Atención: una caja con parásito más adelante,Heads up: a parasite box ahead
+WORLD_RADIO_NEWS_SHOP,Atención: un local confuso más adelante,Heads up: a confusing shop ahead

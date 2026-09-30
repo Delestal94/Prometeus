@@ -58,7 +58,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 				"impact_ahead": float(road["eta"]) if not road.is_empty() else INF,
 				"truck_right": vehicle.global_basis.x if vehicle != null else Vector3.RIGHT,
 				"truck_forward": -vehicle.global_basis.z if vehicle != null else Vector3.FORWARD,
-				"code_reader": code_reader(p, vehicle)})
+				"code_reader": code_reader(p, vehicle), "radio_mode": radio_mode(p)})
 			if _road_jolt(p, road, speed):
 				# apply_impact() already reported it.
 				before_integrity = p.integrity
@@ -81,6 +81,13 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		p._care_publish_time = 0.0
 		publish_care(p)
 		p._emit_event(&"package_hint_changed", [p.package_id, p.hint_text()])
+
+
+## The truck radio's mode (TruckRadio, N-406), for the traps it moves (Ruidoso):
+## &"off" when the level has no radio.
+static func radio_mode(p: DeliveryPackage) -> StringName:
+	var radio: Node = p.get_tree().get_first_node_in_group(&"truck_radio") if p.is_inside_tree() else null
+	return StringName(radio.get(&"mode")) if radio != null else &"off"
 
 
 ## How far ahead (s) a box looks for a bump the road announces: a little
