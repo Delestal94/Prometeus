@@ -22,7 +22,7 @@ params = {
 "ruined_at": 0.0,
 "cushion_window": 0.35,
 "cushion_cooldown": 1.0,
-"cushion_leak": 0.1,
+"cushion_leak": 0.15,
 "warn_lead": 0.7,
 "bump_safe_speed": 9.7,
 "bump_jolt_per_speed": 1.8

@@ -10,6 +10,9 @@ extends SceneTree
 ##   are not softened; after the wait a new tap counts again;
 ## - a bump only hurts above the safe speed, and hurts more the faster it is;
 ## - reset with on_setup clears the taps, and two instances never share them.
+## - N-229, with the shipped data (`fragile.tres`): missing two of three heavy
+##   bumps and cushioning the third ends inside the near-miss band (5-25,
+##   sim_trap_balance), and three cushioned bumps leave the box OK.
 
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 var _failures: int = 0
@@ -152,6 +155,21 @@ func _test_cushion() -> void:
 	made.call(&"on_physics_process", null, 0.01, {"input": {"tap": true}})
 	_expect(int(made.get(&"tap_count")) == 1 and int(made_again.get(&"tap_count")) == 0,
 		"Two behaviors from the shared definition keep their own taps")
+	# N-229: the leak in the data puts the clumsy trip (two misses, one save) in the near-miss band.
+	var shipped: Dictionary = (definition.get(&"params") as Dictionary).duplicate(true)
+	var clumsy: FragileTrapBehavior = _new_trap(shipped)
+	_hit(clumsy, -1.0)
+	_hit(clumsy, -1.0)
+	_hit(clumsy, 0.2)
+	var near_miss := clumsy.integrity >= 5.0 and clumsy.integrity <= 25.0
+	_expect(near_miss and clumsy.get_state() != ITrapBehavior.TrapState.RUINED,
+		"Two missed heavy bumps and one cushioned end as a near miss (%.2f)" % clumsy.integrity)
+	var careful: FragileTrapBehavior = _new_trap(shipped)
+	for bump: int in range(3):
+		careful.on_physics_process(null, 1.1, {"input": {}})
+		_hit(careful, 0.2)
+	_expect(careful.get_state() == ITrapBehavior.TrapState.OK,
+		"Three cushioned heavy bumps leave the box OK (%.2f)" % careful.integrity)
 
 
 func _expect(condition: bool, description: String) -> void:

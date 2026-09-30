@@ -126,6 +126,13 @@ La respuesta es muy sensible a `correct_decay` (14: 83 %, 16: 50 %, 20: 9 % con 
 suben de 9,2 % a 22,4 %. El resultado global del reporte sigue en "REQUIERE AJUSTE" solo por las casi-pérdidas
 esperadas por viaje torpe (0,73, objetivo ≥ 1), con Ruidoso en 0 % y Frágil en 0,8 %.
 
+**N-229 (2026-09-30).** Frágil `cushion_leak` 0,1 → 0,15: el torpe que falla dos de los tres baches y amortigua el
+tercero quedaba en 26,5 de integridad (1,5 por encima de la franja de casi pérdida, 5-25) y ahora queda en 24,75. Casi
+pérdida torpe en Frágil 0,8 → 37,2 %, viaje torpe 0,73 → 1,10: el informe dice **CUMPLE**. Las pérdidas de cajas no
+cambian en ningún perfil ni trampa (Frágil sigue en 100 / 49,2 / 2,8 / 100 %); el experto baja de 16,8 % a 1,2 % de casi
+pérdida porque en el recorrido del choque (1085) ahora termina por debajo de 5, sin perder la caja. Ruidoso sigue en 0 % de
+casi pérdidas; no hizo falta tocarlo para llegar al objetivo.
+
 ## Tanda 2 de N-117: Contrapesá y Fregá (2026-09-29)
 
 Equilibrio y Líquido dejan de ser "mantener el botón". Porcentaje de cajas perdidas, 0 ms, mismos recorridos:
@@ -158,7 +165,7 @@ Equilibrio y Líquido dejan de ser "mantener el botón". Porcentaje de cajas per
 |---|---|---|
 | `cushion_window` | 0,35 s | Un toque protege los golpes anunciados que caen dentro de esta ventana. |
 | `cushion_cooldown` | 1,0 s | Espera después de cada toque: machacar no sirve. Solo cuenta el flanco de subida. |
-| `cushion_leak` | 0,1 | Fracción del daño que pasa aunque el toque sea bueno. |
+| `cushion_leak` | 0,15 (N-229; antes 0,1) | Fracción del daño que pasa aunque el toque sea bueno. Con 0,15, fallar dos de tres baches pesados y amortiguar el tercero deja la caja en 24,75: casi pérdida (≤ 25) en vez de 26,5. |
 | `warn_lead` | 0,7 s | Cuánto antes del bache la caja muestra el anillo que se cierra. |
 | `bump_safe_speed` | 9,7 m/s (35 km/h) | Por debajo, el camión se come el bache y no golpea. |
 | `bump_jolt_per_speed` | 1,8 | m/s de golpe por cada m/s sobre la velocidad segura: 40 km/h no llega al umbral leve, 50 km/h es un golpe pesado. En 0 se apaga. |

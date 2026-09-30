@@ -51,10 +51,10 @@ El que siempre mantiene pierde el 80 % o más en 6 de 7 trampas (meta de N-117: 
 | explosive | always | 150 ms | 100.0% | 6.0 | 0.0% |
 | fragile | absent | 0 ms | 100.0% | 22.8 | 0.0% |
 | fragile | absent | 150 ms | 100.0% | 22.8 | 0.0% |
-| fragile | clumsy | 0 ms | 49.2% | 21.2 | 0.8% |
-| fragile | clumsy | 150 ms | 47.2% | 18.6 | 0.0% |
-| fragile | expert | 0 ms | 2.8% | 9.2 | 16.8% |
-| fragile | expert | 150 ms | 3.2% | 9.1 | 16.8% |
+| fragile | clumsy | 0 ms | 49.2% | 21.2 | 37.2% |
+| fragile | clumsy | 150 ms | 47.2% | 18.6 | 34.0% |
+| fragile | expert | 0 ms | 2.8% | 9.2 | 1.2% |
+| fragile | expert | 150 ms | 3.2% | 9.1 | 0.4% |
 | fragile | always | 0 ms | 100.0% | 22.8 | 0.0% |
 | fragile | always | 150 ms | 100.0% | 22.8 | 0.0% |
 | growing_weight | absent | 0 ms | 100.0% | 18.0 | 0.0% |
@@ -99,10 +99,12 @@ El que siempre mantiene pierde el 80 % o más en 6 de 7 trampas (meta de N-117: 
 - hostile: CUMPLE
 - liquid: CUMPLE
 - noisy: CUMPLE
-- Casi pérdidas esperadas por viaje torpe (7 paquetes): 0.73 (objetivo ≥ 1).
-- Resultado interactivo: **REQUIERE AJUSTE**.
+- Casi pérdidas esperadas por viaje torpe (7 paquetes): 1.10 (objetivo ≥ 1).
+- Resultado interactivo: **CUMPLE**.
 
 `fragile` (N-117, Amortiguá): los recorridos grabados pasan los baches sin golpe (la suspensión se los come, ver `docs/parametros-diseno.md`), así que el arnés le suma a cada recorrido 3 baches a la velocidad de crucero, anunciados como los anuncia el juego. Los choques sin anunciar (que nadie puede amortiguar) son los que ya traen los recorridos grabados (el de la semilla 1085). El torpe y el experto ven el aviso con una atención del 48 % y 95 % y clavan el toque con una dispersión de 0,20 s y 0,05 s alrededor del medio de la ventana (0,35 s). Mantener apretado no protege.
+
+`fragile` (N-229): `cushion_leak` 0,1 a 0,15. El torpe que falla dos de los tres baches y amortigua el tercero quedaba en 26,5 de integridad, a 1,5 del borde de casi pérdida (25); con 0,15 queda en 24,75. Su casi pérdida pasa de 0,8 % a 37,2 % y las casi pérdidas por viaje torpe de 0,73 a 1,10; ningún perfil pierde más cajas (el daño que salva un toque bueno baja de 90 % a 85 %, los golpes sin amortiguar no cambian). El experto baja de 16,8 % a 1,2 % de casi pérdida: en el recorrido 1085 (choque sin anunciar) ahora termina debajo de 5, un punto que el arnés ya no cuenta como casi pérdida pero tampoco pierde la caja.
 
 `hostile` (N-117.4): `command_seconds` 11 a 9 y `correct_decay` 14 a 16 por segundo. Con órdenes de 9 s el ausente sigue perdiendo en la primera calma y el que siempre mantiene en las órdenes de soltar; el torpe (que se equivoca el 40 % del tiempo) pasa de 83 % a la mitad. La orden también se lee en la caja (`>:(` soltá, `:)` mantené).
 

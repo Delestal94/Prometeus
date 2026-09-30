@@ -40,7 +40,8 @@ código ya dice 8 (`network_manager.gd:27`). Los prompts de los agentes, `defini
 Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 9).
 `tests/sim_data/balance_report.md:103` sigue en "REQUIERE AJUSTE": el objetivo de al menos una casi-pérdida
 por entrega para el perfil torpe se mantiene.
-- [ ] **N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.
+- [x] ~~**N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: Frágil `cushion_leak` 0,1 → 0,15 (`data/traps/fragile.tres`). El torpe que falla dos de tres baches y amortigua el tercero pasa de 26,5 a 24,75 de integridad (entra en la franja de casi pérdida); su casi pérdida en Frágil sube de 0,8 % a 37,2 % y el viaje torpe de 0,73 a 1,10: el informe dice CUMPLE. Pérdidas de cajas sin cambios en todos los perfiles. Aviso `docs/avisos/2026-09-30-n229-balance-torpe.md`.
 
 ### N-235 · Una caída sucia se nota a los 45 s — C · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`, zona compartida)
 Origen: construcción 2026-09-30 (arreglo del trío de red en main, `auditor-red`). Para que el que se une no

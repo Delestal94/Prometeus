@@ -379,6 +379,14 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 		+ " ven el aviso con una atención del 48 % y 95 % y clavan el toque con una dispersión de 0,20 s y 0,05 s"
 		+ " alrededor del medio de la ventana (0,35 s). Mantener apretado no protege.",
 		"",
+		"`fragile` (N-229): `cushion_leak` 0,1 a 0,15. El torpe que falla dos de los tres baches y amortigua el"
+		+ " tercero quedaba en 26,5 de integridad, a 1,5 del borde de casi pérdida (25); con 0,15 queda en 24,75."
+		+ " Su casi pérdida pasa de 0,8 % a 37,2 % y las casi pérdidas por viaje torpe de 0,73 a 1,10; ningún"
+		+ " perfil pierde más cajas (el daño que salva un toque bueno baja de 90 % a 85 %, los golpes sin"
+		+ " amortiguar no cambian). El experto baja de 16,8 % a 1,2 % de casi pérdida: en el recorrido 1085 (choque"
+		+ " sin anunciar) ahora termina debajo de 5, un punto que el arnés ya no cuenta como casi pérdida pero"
+		+ " tampoco pierde la caja.",
+		"",
 		"`hostile` (N-117.4): `command_seconds` 11 a 9 y `correct_decay` 14 a 16 por segundo. Con órdenes de 9 s el"
 		+ " ausente sigue perdiendo en la primera calma y el que siempre mantiene en las órdenes de soltar; el torpe"
 		+ " (que se equivoca el 40 % del tiempo) pasa de 83 % a la mitad. La orden también se lee en la caja"
