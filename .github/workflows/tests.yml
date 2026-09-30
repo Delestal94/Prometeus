@@ -42,10 +42,17 @@ jobs:
       - name: Portable modules name nothing of the game
         run: python3 tools/check_modules.py
 
+  # The suite split across four runners (SHARD in run-tests.sh): one runner
+  # took ~21 min, a quarter each takes ~6. "Tests headless (Godot 4.7.2)"
+  # below is the single check branch protection requires.
   headless:
-    name: Tests headless (Godot 4.7.2)
+    name: Tests headless ${{ matrix.shard }}/4 (Godot 4.7.2)
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v7
 
@@ -77,16 +84,29 @@ jobs:
           # ones (SLOW_TESTS in run-tests.sh) get twice that.
           TEST_TIMEOUT: 120
           REPORT_FILE: ${{ runner.temp }}/godot-headless-report.csv
+          SHARD: ${{ matrix.shard }}/4
         run: bash tools/run-tests.sh -v
 
       - name: Upload per-test audit report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: godot-headless-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          name: godot-headless-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/godot-headless-report.csv
           if-no-files-found: warn
           retention-days: 90
+
+  headless-result:
+    name: Tests headless (Godot 4.7.2)
+    needs: headless
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every shard passed
+        run: |
+          echo "shards: ${{ needs.headless.result }}"
+          test "${{ needs.headless.result }}" = success
 
   modules:
     name: Portable modules in an empty project (Godot 4.7.2)
