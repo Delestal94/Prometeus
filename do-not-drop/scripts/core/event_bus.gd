@@ -116,6 +116,11 @@ signal vehicle_fault_started(fault_id: StringName, impact_position: Vector3)
 ## That fault got fixed; method says how (&"part" from the shop, &"kit"...).
 ## Relayed.
 signal vehicle_fault_repaired(fault_id: StringName, method: StringName)
+## The driver's view is (or stops being) blocked for a spell (N-113,
+## low_visibility_event.gd): `kind` is &"mud" for now; `duration` is how long
+## it lasts and `elapsed` how far in it already is (0 unless a late joiner is
+## catching up). `active` false = it ended. Host decides, relayed.
+signal low_visibility_changed(active: bool, kind: StringName, duration: float, elapsed: float)
 
 
 ## Minimum seconds between two callouts from the same player (N-505.3).
