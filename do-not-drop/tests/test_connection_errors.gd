@@ -2,6 +2,8 @@ extends SceneTree
 ## Connection failures are protocol reasons internally and actionable Spanish
 ## messages at the menu boundary; a joiner's auth timeout ends the session a
 ## frame later, not inside SceneMultiplayer.poll() (that freed the peer mid-poll).
+## The handshake and ENet peer timeouts outlast a blocking level load (18-34 s on
+## CI): MIN equals MAX, or ENet cuts a settled joiner at MIN, mid-load.
 
 var _failures: int = 0
 
@@ -13,6 +15,12 @@ func _initialize() -> void:
 
 	var protocol_version := int(network.get(&"PROTOCOL_VERSION"))
 	_expect(protocol_version >= 1, "The network protocol is versioned")
+	var handshake_seconds := float(network.get(&"JOIN_HANDSHAKE_TIMEOUT"))
+	var enet_min := int(network.get(&"ENET_PEER_TIMEOUT_MIN_MSEC"))
+	var enet_max := int(network.get(&"ENET_PEER_TIMEOUT_MAX_MSEC"))
+	_expect(handshake_seconds >= 40.0, "The join handshake outlasts the slowest CI level load")
+	_expect(enet_min == enet_max, "ENet's peer timeout has no lower MIN that cuts a joiner mid-load")
+	_expect(enet_min >= int(handshake_seconds * 1000.0), "ENet does not drop a joiner before the handshake times out")
 	var valid_state: Dictionary = {
 		"version": protocol_version,
 		"seed": 42,
