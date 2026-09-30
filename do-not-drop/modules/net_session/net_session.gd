@@ -59,15 +59,17 @@ var peer_ids: Array[int] = [HOST_ID]
 ## the connection is dropped (Godot's auth timeout). A host on another version
 ## answers with a failure right away, so this only has to cover a slow level
 ## load (loads of 18-34 s were measured on a 2-core CI runner).
-const JOIN_HANDSHAKE_TIMEOUT: float = 30.0
+const JOIN_HANDSHAKE_TIMEOUT: float = 45.0
 ## ENet drops a peer it hasn't heard from in about 5 s, and loading a level
 ## blocks the main thread -- and with it ENet's polling -- for longer than that
 ## on a slow machine: the joiner was cut off right after loading, and a host
 ## restart could drop everyone. A peer that really vanished is still noticed,
 ## just later; a clean leave is noticed at once.
+## MIN must equal MAX: with a settled RTT, ENet's retry rule can disconnect at
+## MIN, before MAX is reached. Both cover the handshake's level-load budget.
 const ENET_PEER_TIMEOUT_LIMIT: int = 32
-const ENET_PEER_TIMEOUT_MIN_MSEC: int = 15000
-const ENET_PEER_TIMEOUT_MAX_MSEC: int = 30000
+const ENET_PEER_TIMEOUT_MIN_MSEC: int = 45000
+const ENET_PEER_TIMEOUT_MAX_MSEC: int = 45000
 var _awaiting_handshake: bool = false
 ## The level the session plays in. The host records it whenever its own
 ## level is up, so a joiner arriving mid-reload still gets the right one.
