@@ -161,7 +161,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-706, N-226, N-227 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
@@ -373,6 +373,35 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
 tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
+
+### N-317 · Ruta de noche legible (calzada, luz y horizonte) — B · `Opus 5.5 · high` · Aviso: no
+Origen: PC build 2026-09-30. Necesita PC (GPU real; la toma la sesión de arte). Capturas 1280×720 de
+`render_route_dressing.gd` sobre 390ee37 (RTX 4060 Ti): en `render_route_sign.png`, `render_route_guardrail.png` y
+`render_route_landmark.png` de noche la calzada es casi negra/azul marino, solo se leen las líneas del borde; el
+corte entre lo iluminado y lo oscuro es duro (borde tipo foco); terreno y árboles oscuros y la torre de agua
+apagada. `render_route_horizon.png` es casi ilegible: la cámara queda pegada a un cartel "CUIDA…" que tapa la parte
+de arriba (puede ser el encuadre del script) y el contraste de la ruta es mínimo. Relacionada con N-304 (cerrada) y
+con la nota de N-905 (camión casi negro de noche), que no cubren la ruta.
+Hecho cuando, en capturas de noche de esos cuatro planos, la calzada tiene luminancia media ≥ un umbral medido
+(anotar el valor antes/después con un script sobre el PNG), la transición de luz sin borde duro (caída suave) y el
+plano `horizon` no tiene cartel tapando >10 % del cuadro; `revisor-visual` lo confirma y `tools/run-tests.sh route`
+sigue en verde.
+- [ ] **N-317.1** Revisar el encuadre del plano `horizon` de `render_route_dressing.gd` (cartel pegado a la cámara) y medir luminancia de la calzada. Con `revisor-visual`.
+- [ ] **N-317.2** Subir luz ambiental/luna y suavizar el borde de los faros y `WorldMood` de noche; terreno, árboles y torre de agua con más valor. Con `artista-shaders` y `constructor-mundo`; tests `route`, `night_lights`.
+
+### N-318 · Cartel A-3 quemado, granero negro y borde duro de la loma — C · `Opus 5.5 · medium` · Aviso: no
+Origen: PC build 2026-09-30. Necesita PC (la toma la sesión de arte). Capturas de 390ee37: en `render_route_house.png` el
+cartel amarillo "A-3" tiene un globo amarillo plano y sobreexpuesto, sin detalle, cortado por el borde de la imagen,
+y el granero rojo queda negro. En `render_tunnel_from_road.png` y `render_tunnel_side.png` (día) la sombra de la
+loma sobre la calzada es un borde diagonal muy duro; en `render_tunnel_side.png` se ve un hueco en la loma con
+cielo/blanco sobre el portal (puede ser el hueco `_in_tunnel_bore()` de `route_terrain.gd`).
+Hecho cuando (1) se verificó primero si el hueco es geometría rota: test en `test_route_terrain` que la loma no tiene
+huecos sobre el portal fuera del túnel; (2) el globo del cartel tiene detalle (emisión bajada, sin píxeles
+saturados en >5 % del globo, medido en la captura) y entra entero en el encuadre; (3) el granero recibe luz (luminancia
+media medida); (4) la sombra de la loma con borde suave. Capturas antes/después con `revisor-visual`.
+- [ ] **N-318.1** Diagnosticar el hueco de `render_tunnel_side.png` (geometría vs. luz) y corregirlo. Con `cazador-bugs`; tests `route_terrain`, `more_route_segments`.
+- [ ] **N-318.2** Cartel y granero (emisivo, luz, encuadre del script). Con `artista-shaders`; captura `render_route_dressing.gd`.
+- [ ] **N-318.3** Suavizar la sombra de la loma sobre la calzada. Con `constructor-mundo`.
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
