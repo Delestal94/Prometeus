@@ -46,6 +46,7 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 | Etapa | Agentes |
 |---|---|
 | Cuestionar | `abogado-del-diablo` (lo ya hecho), `critico-diseno` (ideas antes de construir), `director-arte` (assets existentes), `auditor-integral` (todo el proyecto cruzando código, arte técnico, agentes, docs y pipeline; rutina diaria) |
+| Decidir | `arbitro-decisiones` (desempata posturas enfrentadas, verifica los hechos en el código y deja el acta en `docs/decisiones/`) |
 | Planificar | `planificador-tareas` (hallazgos → tareas N-/S- con agente, esfuerzo y aviso), `guardian-dominios` |
 | Construir código | `constructor-camion`, `constructor-tramos` (tipos de tramo y generación), `constructor-mundo` (depósito, casas, clima, fauna, decorado), `constructor-jugador` (jugador, paquete, interacción), `constructor-trampas`, `constructor-red` (red y Steam; siempre seguido de `auditor-red`), `constructor-progresion`, `constructor-ui` (incluye tutorial), `escritor-tests` |
 | Crear y refinar assets | `modelador-blender`* (3D), `artista-conceptual`* (imágenes, texturas), `artista-shaders`* (materiales), `artista-vfx` (partículas y efectos), `animador`* (clips y procedurales), `disenador-audio` (SFX y música compuesta por código) |
@@ -56,7 +57,7 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 \* necesitan Blender o ComfyUI en la PC para la parte de assets; su parte de código corre en cualquier lado.
 Qué rutina dispara cada etapa (incluidas las dormidas: post-lanzamiento, playtesting): tabla "Cobertura por
 etapa" de `.claude/rutinas/README.md`.
-Pasada de refinamiento típica: `director-arte` / `abogado-del-diablo` → `planificador-tareas` → el
+Pasada de refinamiento típica: `director-arte` / `abogado-del-diablo` (si no coinciden, `arbitro-decisiones`) → `planificador-tareas` → el
 constructor o artista de cada tarea → `ejecutor-tests` + `revisor-visual` → `cerrar-cambio`.
 
 ## Módulos portables (`do-not-drop/modules/`)

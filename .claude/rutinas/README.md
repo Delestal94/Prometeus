@@ -41,6 +41,7 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 |---|---|---|
 | Juzgar ideas antes de construirlas | revisión (lunes, antes de que construcción tome tareas `xhigh` o mecánicas nuevas) | `critico-diseno` |
 | Hacerle la contra a lo hecho | revisión (lunes) | `abogado-del-diablo`, `director-arte` |
+| Desempatar posturas enfrentadas | revisión (lunes, cuando `critico-diseno` y `abogado-del-diablo` no coinciden) o a pedido | `arbitro-decisiones` |
 | Planificar | todas las que registran hallazgos | `planificador-tareas`, `guardian-dominios` |
 | Construir código | construcción (2 por hora) | `constructor-tramos`, `constructor-mundo`, `constructor-camion`, `constructor-jugador`, `constructor-trampas`, `constructor-red`, `constructor-progresion`, `constructor-ui` |
 | Sonido, efectos, animación por código, shaders | construcción | `disenador-audio`, `artista-vfx`, `animador`, `artista-shaders` |
