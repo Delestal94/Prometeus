@@ -54,7 +54,10 @@ static func warm() -> void:
 	if _warming or _cache.size() == SOUNDS.size():
 		return
 	_warming = true
-	WorkerThreadPool.add_task(_warm_task)
+	# High priority on purpose: UiSounds.warm_stingers() already holds the pool's
+	# only low-priority slot at level load, and a second low-priority task left
+	# queued at quit() deadlocks WorkerThreadPool::exit_languages_threads (4.7.2).
+	WorkerThreadPool.add_task(_warm_task, true)
 
 
 static func _warm_task() -> void:
