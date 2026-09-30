@@ -112,7 +112,7 @@ try {
     # Only Blender and ComfyUI: the routines need nothing else, and --strict-mcp-config skips the rest.
     $mcp = @{
         mcpServers = @{
-            'blender'   = @{ type = 'stdio'; command = 'uvx'; args = @('blender-mcp'); env = @{} }
+            'blender'   = @{ type = 'stdio'; command = 'uvx'; args = @('mcp-for-blender'); env = @{} }
             'comfy-mcp' = @{ type = 'stdio'; command = $ComfyMcp; args = @(); env = @{ COMFY_BIN = $ComfyBin } }
         }
     }
