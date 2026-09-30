@@ -49,18 +49,23 @@ const CARD_NAMES := {
 ## What the depot's supplies counter sells (depot.gd): bought with team money
 ## before a run and used up by the next delivery that leaves the depot.
 ## "cost" in team money; the effect lives where it applies (see depot.gd).
+## Prices (N-227.2): a typical delivery pays RunManager.POINTS_DELIVERED_INTACT
+## x 2-3 houses = 300-450, plus deadlines (+40) and photos (+25). Mean price is
+## 130 (100..160), so one delivery buys a mid-price item plus a cheap one, and
+## the whole shelf (520) takes about two. Before, prices were 25..40 against a
+## payout that never really reached the wallet; the old ratio was kept (x4).
 const SUPPLIES := {
-	&"padding": {"title": "UI_SUPPLY_PADDING", "detail": "UI_SUPPLY_PADDING_DETAIL", "cost": 40},
-	&"insurance": {"title": "UI_SUPPLY_INSURANCE", "detail": "UI_SUPPLY_INSURANCE_DETAIL", "cost": 35},
+	&"padding": {"title": "UI_SUPPLY_PADDING", "detail": "UI_SUPPLY_PADDING_DETAIL", "cost": 160},
+	&"insurance": {"title": "UI_SUPPLY_INSURANCE", "detail": "UI_SUPPLY_INSURANCE_DETAIL", "cost": 140},
 	&"rescue_hook": {
 		"title": "UI_SUPPLY_RESCUE_HOOK",
 		"detail": "UI_SUPPLY_RESCUE_HOOK_DETAIL",
-		"cost": 30,
+		"cost": 120,
 	},
 	&"spare_part": {
 		"title": "UI_SUPPLY_SPARE_PART",
 		"detail": "UI_SUPPLY_SPARE_PART_DETAIL",
-		"cost": 25,
+		"cost": 100,
 	},
 }
 
@@ -171,8 +176,12 @@ func award_milestone(peer_id: int, package_id: StringName, milestone: StringName
 func award_delivery(results: Dictionary, peers: Array) -> void:
 	results["merit_by_peer"] = _run_merit.duplicate(true)
 	results["awards"] = _delivery_awards()
-	var payout: int = int(results.get("cargo_points", 0)) + int(results.get("time_bonus", 0))
-	team_money += maxi(payout, 0)
+	# Door points + cargo that came back, with no chaos multiplier (that one is
+	# only in the score). Endless results carry neither, so it pays nothing.
+	# Shown on the results screen as "Pago del equipo" (results["payout"]).
+	var payout: int = maxi(int(results.get("delivery_points", 0)) + int(results.get("cargo_points", 0)), 0)
+	results["payout"] = payout
+	team_money += payout
 	_credited_actions.clear()
 	_emit_event(&"team_money_changed", [team_money])
 	for peer: Variant in peers:

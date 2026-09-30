@@ -2,10 +2,46 @@
 
 ## Bucle de recompensa
 
-Cada entrega otorga dinero por llegar, paquetes intactos, rapidez, rescatar
-carga caída y resolver crisis cooperativas. Se descuenta por carga perdida,
-daños a la furgoneta y consumibles usados. El dinero mejora la empresa; no es
-un requisito para empezar una partida.
+Cada entrega otorga dinero compartido por lo que pasó en las puertas y en el
+camión: paquetes entregados (150 intacto, 75 abollado, 20 arruinado, o lo que
+valga su rescate), fotos de entrega (+25), plazos cumplidos (+40) y la carga
+que volvió sana en el camión (100 / 50). Se descuenta por casas sin entregar
+(-60), plazos vencidos (-15) y reclamos sin foto (-40); el pago nunca baja de 0.
+Los eventos de ruta suman o restan aparte y se gastan consumibles en el
+depósito. No hay bono de tiempo: la rapidez solo se paga con los plazos. El
+multiplicador de caos (x1.2) afecta el puntaje, **no** el dinero. Endless no
+paga dinero (solo distancia). El dinero mejora la empresa; no es un requisito
+para empezar una partida.
+
+| Entra / sale | Cuánto | Por qué |
+| --- | ---: | --- |
+| Pago de la entrega | puntos de puerta + de carga (típico 300-450) | Línea "Pago del equipo" de los resultados |
+| Recompensa / multa de evento de ruta | +10..25 / -15..30 | Aviso del evento |
+| Suministros del depósito | -100 a -160 (acolchado 160, seguro 140, gancho 120, repuesto 100) | Votación de la tienda, cobra el depósito |
+| Seguro de envío | +75 por caja arruinada entregada | Aviso del depósito |
+| Multa de fauna | -20 / -30 | Aviso en ruta |
+
+### Contramedidas (qué exploit se cerró y cuál no)
+
+- **Reclamo determinista.** Una caja entregada abollada o arruinada siempre genera
+  reclamo (antes 50 % de azar para la abollada): lo único que lo cierra es la foto. Ya
+  no se puede "esperar la suerte" de que no se queje.
+- **Suicidar la corrida para recomprar.** Una corrida abandonada paga solo los puntos de
+  puerta ya ganados (las casas sin alcanzar restan -60 cada una y el pago no baja de 0) y la
+  carga perdida no paga: cobrar el mínimo y recomprar es peor que entregar (un pedido intacto
+  vale 150 en la puerta).
+- **Seguro.** Arruinar cajas a propósito para cobrar el seguro no conviene: una caja arruinada
+  paga 20 + 75 de seguro contra 150 de una intacta, y el seguro cuesta 140.
+- **Ruta fácil.** El pago crece con las casas (150 por casa intacta, mínimo 2 por N-119) y
+  no depende del tiempo: repetir la ruta mínima rinde lo mismo por casa que una larga. No se
+  midió el dinero por minuto de cada largo; si hace falta, medirlo con
+  `tests/bench_delivery_time.gd`.
+- **Cliente impaciente.** El castigo (plazo más corto) solo toca un plazo aún abierto,
+  nunca deja menos de 10 s y nunca se aplica al cerrar la corrida.
+- **Votar en bloque.** Sin cambios: la tienda la resuelve el anfitrión, el empate va al más barato
+  y solo el depósito cobra, una vez por suministro.
+- **Pendiente:** premios y multas de eventos (10..30) y las multas de fauna (20/30) quedaron
+  iguales; frente a un pago de 300+ pesan poco y conviene revisarlos con `critico-diseno`.
 
 ## Ramas de mejora
 

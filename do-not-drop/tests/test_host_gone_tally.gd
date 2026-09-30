@@ -132,7 +132,7 @@ func _results_stay_when_the_host_leaves() -> void:
 	# The host's results, as the relay leaves them (RunManager._remote_finish_run()).
 	var results: Dictionary = {
 		"score": 240, "delivered": true, "reason": "", "elapsed_seconds": 95.0,
-		"cargo_total": 2, "cargo_intact": 1, "cargo_ruined": 1, "cargo_points": 100, "time_bonus": 20,
+		"cargo_total": 2, "cargo_intact": 1, "cargo_ruined": 1, "cargo_points": 100,
 		"houses_delivered": 2, "houses_missed": 0, "houses_lost": 0,
 		"breakdown": [{"label": "Doors", "points": 150, "count": 2}],
 		"best_score": 240, "complaints": [],

@@ -3,6 +3,7 @@ extends SceneTree
 ##
 ## S-104 supply-vote contract: ShopVoteManager selects without charging,
 ## majority wins, ties prefer the cheaper offer, and no votes buy nothing.
+## Real shelf prices ($100..$160, N-227.2): the $100 starting wallet cannot buy padding.
 
 var _failures: int = 0
 
@@ -33,10 +34,12 @@ func _test_majority_and_single_charge(crew: Node, shop: Node) -> void:
 	_expect(winner == &"padding", "The two-vote majority selects padding (got %s)" % winner)
 	_expect(int(crew.team_money) == crew.STARTING_MONEY,
 		"Resolving a winner does not charge the wallet (got $%d)" % int(crew.team_money))
+	_expect(not crew.buy_supply(winner), "The $100 starting wallet cannot buy the $160 padding")
+	crew.team_money = 300
 	_expect(crew.buy_supply(winner), "The depot can purchase the selected supply")
-	_expect(int(crew.team_money) == 60, "The depot charges the $40 supply exactly once (got $%d)" % int(crew.team_money))
+	_expect(int(crew.team_money) == 140, "The depot charges the $160 supply exactly once (got $%d)" % int(crew.team_money))
 	_expect(not crew.buy_supply(winner), "The same pending supply cannot be purchased twice")
-	_expect(int(crew.team_money) == 60, "A rejected duplicate purchase does not charge again (got $%d)" % int(crew.team_money))
+	_expect(int(crew.team_money) == 140, "A rejected duplicate purchase does not charge again (got $%d)" % int(crew.team_money))
 
 
 func _test_cheapest_tie(crew: Node, shop: Node) -> void:
@@ -45,7 +48,7 @@ func _test_cheapest_tie(crew: Node, shop: Node) -> void:
 	shop.vote(1, &"padding")
 	shop.vote(2, &"insurance")
 	var winner: StringName = shop.resolve_winner([1, 2])
-	_expect(winner == &"insurance", "A 1-1 tie selects the cheaper $35 insurance offer (got %s)" % winner)
+	_expect(winner == &"insurance", "A 1-1 tie selects the cheaper $140 insurance offer (got %s)" % winner)
 	_expect(int(crew.team_money) == crew.STARTING_MONEY,
 		"Reading a tied winner never changes team money (got $%d)" % int(crew.team_money))
 

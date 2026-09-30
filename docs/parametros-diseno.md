@@ -237,13 +237,49 @@ obligatoria o la fuerte injugable, se ajustan en `data/traps/noisy.tres` sin toc
 
 ## Sistema de puntaje (para la pantalla de resultados)
 
+Esto es lo que hace `RunManager.finish_run()` (N-227.2, 2026-09-30). **Modo entrega**:
+
+`puntos de carga` = lo que sigue en el camión al terminar (la carga que ya se entregó en una puerta
+no cuenta acá, cuenta en la puerta):
+
+| Carga que volvió en el camión | Peso |
+|---|---|
+| Intacta (estado OK) | 100 pts (`POINTS_INTACT`) |
+| En riesgo (`EnRiesgo`, no arruinada) | 50 pts (`POINTS_AT_RISK`) |
+| Arruinada, o la entrega no llegó | 0 pts |
+
+`puntos de puerta` (`delivery_points`, lo arma `_resolve_deliveries()`):
+
 | Componente | Peso |
 |---|---|
-| Paquete entregado intacto (integrity/agitation en estado OK al llegar) | 100 pts |
-| Paquete entregado en riesgo (`EnRiesgo` pero no arruinado) | 50 pts |
-| Paquete arruinado | 0 pts |
-| Bonus por tiempo (llegar antes del promedio esperado de la ruta) | hasta +50 pts |
-| Multiplicador por jugadores simultáneos en riesgo alto (recompensa el caos) | x1.2 si 2+ paquetes estuvieron en `EnRiesgo` al mismo tiempo en algún momento | 
+| Entregada intacta en la puerta | +150 |
+| Entregada en riesgo (abollada) | +75 (y siempre un reclamo: -40 si no hay foto) |
+| Entregada arruinada | +20 (y siempre un reclamo: -40 si no hay foto) |
+| Reparada / dudosa / sustituto (rescate de carga) | +110 / +35 / +10, sin reclamo |
+| Foto de entrega aceptada | +25 (y cierra el reclamo de esa casa) |
+| Plazo cumplido / vencido | +40 / -15 |
+| Casa a la que no se llegó, o cuya caja quedó en el camino | -60 |
+
+- **Puntaje** = `max(round((puntos de carga + puntos de puerta) x multiplicador), 0)`. El
+  multiplicador es x1.2 (`CHAOS_MULTIPLIER`) si la entrega salió bien y 2+ paquetes estuvieron en
+  riesgo al mismo tiempo; si no, x1.
+- **Pago al equipo** (`CrewProgression.award_delivery()`) = `max(puntos de puerta + puntos de carga, 0)`,
+  **sin** el multiplicador de caos: el caos premia el puntaje, no la billetera. Se suma a la billetera
+  compartida y la pantalla de resultados lo muestra como "Pago del equipo".
+- **No hay bono de tiempo.** `PAR_SECONDS`, `time_bonus` y `lost_time_bonus` se borraron: la entrega
+  más corta dura más que los 75 s del promedio, así que el bono siempre valía 0. La velocidad
+  se premia solo con los plazos por casa (+40 / -15).
+- **Endless** no entrega: su resultado trae `distance_traveled` y `score`, y ni `cargo_points` ni
+  `delivery_points`. `score` = `round(suma de metros que sobrevivió cada caja / cantidad de cajas)`
+  (`DISTANCE_POINTS_PER_METER` = 1.0; si hay una caja arruinada cuenta hasta el metro en que se
+  arruinó; sin cargamento, la distancia a secas). Como no trae puntos de puerta ni de carga, **Endless no
+  paga dinero**: entra solo en su propio ranking.
+
+Precios de la tienda (`CrewProgression.SUPPLIES`): acolchado 160, seguro 140, gancho 120, repuesto 100
+(media 130). Una entrega típica de 2-3 casas con cajas intactas paga 300-450 (más plazos y fotos): alcanza
+para un ítem de precio medio y otro barato, y el estante entero (520) cuesta unas dos entregas. La
+billetera arranca con 100 (`STARTING_MONEY`). El seguro devuelve 75 por caja arruinada entregada
+(`Depot.INSURANCE_REFUND`).
 
 El multiplicador de "caos simultáneo" está para reforzar el diseño de momentos
 clipeables (sección 3.4 del doc técnico) — recompensa los momentos de tensión múltiple,

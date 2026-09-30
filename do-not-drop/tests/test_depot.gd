@@ -7,7 +7,8 @@ extends SceneTree
 ##   - the board posts one order per house, each a different kind of box, and
 ##     the pickup prompt names the bin so the right one can be found;
 ##   - the stations open their screen on the player who used them;
-##   - supplies cost team money, once each, and the padding softens every
+##   - supplies cost team money (the test gives the crew $300 first: padding is $160,
+##     N-227.2), once each, and the padding softens every
 ##     loaded box for the run that takes it;
 ##   - leaving without an ordered box is called out;
 ##   - the door stays open while anyone is inside on foot, and rolls down once
@@ -107,6 +108,8 @@ func _run() -> void:
 	_expect(_opened == [&"orders", &"garage", &"wardrobe", &"shop", &"records"], "Each station opens its screen (got %s)" % str(_opened))
 
 	# Supplies: paid from team money, one of each.
+	# The crew starts with $100 and padding costs more now (N-227.2): a delivery's pay comes first.
+	crew.set(&"team_money", 300)
 	var start_money: int = int(crew.get(&"team_money"))
 	depot.call(&"buy_supply", &"padding")
 	depot.call(&"buy_supply", &"padding")

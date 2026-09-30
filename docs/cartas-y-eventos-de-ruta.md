@@ -2,7 +2,10 @@
 
 ## Economía
 
-El dinero es cooperativo: se gana por completar entregas y se vota para comprar
+El dinero es cooperativo: una única billetera del equipo. Cada entrega paga
+`puntos de puerta + puntos de carga` (sin el multiplicador de caos, que solo
+cuenta en el puntaje; ver `docs/parametros-diseno.md`, "Sistema de puntaje"),
+más las recompensas y multas de los eventos de ruta. Se vota para comprar
 pinzas, mopas, máscaras, cajas blindadas, filtros y mejoras de la furgoneta.
 El mérito es individual y se obtiene solo por acciones útiles, como recuperar
 una caja caída, desactivar una bomba, contener un derrame o asistir a otro
@@ -41,7 +44,7 @@ si empatan, la opción más barata. En solitario la compra sigue siendo directa.
 | Orden | Evento | Efecto |
 | ---: | --- | --- |
 | 1 | Inspección sorpresa | Exige carga asegurada, material peligroso aislado o cabina sin olor. Fallar aplica multa, no termina la partida. |
-| 2 | Cliente impaciente | Reduce el bono de tiempo. |
+| 2 | Cliente impaciente | Una casa pide entrega intacta. Si falla (entrega no intacta o se acaba el plazo del evento), el plazo de la casa siguiente que aún tenga uno se acorta un 15 % (`RunManager.IMPATIENT_DEADLINE_CUT`), sin dejar menos de 10 s desde ese momento. Si no hay casa siguiente, o la corrida ya terminó, no pasa nada. |
 | 3 | Puerta trasera trabada | Una caja bloquea la salida y debe liberarse desde dentro. |
 | 4 | Etiquetas mezcladas | Un golpe confunde etiquetas y el equipo debe identificar la caja correcta. |
 | 5 | Paquete mimético | Revela su riesgo real al recibir un impacto. |

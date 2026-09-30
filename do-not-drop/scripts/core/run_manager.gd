@@ -6,17 +6,16 @@ extends Node
 ## mistake ending everyone's run would be miserable -- the run only collapses
 ## if every last package is gone.
 
-const PAR_SECONDS: float = 75.0
 const POINTS_INTACT: int = 100
 const POINTS_AT_RISK: int = 50
 const CHAOS_MULTIPLIER: float = 1.2
 const MAX_LEADERBOARD_ENTRIES: int = 10
 const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
+const DEADLINE_CUT = preload("res://scripts/core/deadline_cut.gd")
 
-## docs/tareas-nacho.md #44/#52: endless never "delivers" (no zone to reach),
-## so it can't use the cargo/time formula above -- distance is the only
-## thing that keeps going up the longer a run survives. Placeholder weight,
-## same as PAR_SECONDS above: tune by editing this constant, not the logic.
+## docs/tareas-nacho.md #44/#52: endless never "delivers" (no zone to reach), so
+## it can't use the cargo formula above -- distance is what keeps going up.
+## Placeholder weight: tune by editing this constant, not the logic.
 const DISTANCE_POINTS_PER_METER: float = 1.0
 
 ## Handing a box to a resident at their door is worth more than the same
@@ -32,10 +31,9 @@ const PENALTY_MISSED_HOUSE: int = 60
 ## The delivery photo (see the phone camera): a small reward on its own, and
 ## the only thing that settles a complaint afterwards.
 const POINTS_PHOTO_BONUS: int = 25
-## What an unanswered complaint costs. A resident whose box arrived wrecked
-## always complains; one whose box arrived dented sometimes does.
+## What an unanswered complaint costs. A wrecked or dented box always draws one
+## (no dice, N-227.2): only the delivery photo settles it.
 const COMPLAINT_PENALTY: int = 40
-const COMPLAINT_CHANCE_AT_RISK: float = 0.5
 
 ## Cargo rescue (docs/jugabilidad-paquetes-rescate.md): a repair that holds
 ## up at the door pays less than intact but well over a dented box; a
@@ -119,7 +117,6 @@ var last_photo_package_id: StringName = &""
 
 ## The route event drawn for this run, so a late joiner gets it too.
 var _event_id: StringName = &""
-var lost_time_bonus: bool = false
 ## Paths of the boxes handed over at a door this run. They're scene nodes, not
 ## spawned ones, so a joiner's freshly loaded level still has them: the host
 ## sends this list and the joiner frees them (send_session_state()).
@@ -188,7 +185,6 @@ func reset_run() -> void:
 	current_mode = MODE_DELIVERY
 	current_distance = 0.0
 	_event_id = &""
-	lost_time_bonus = false
 	RouteEventManager.reset_route()
 	consumed_packages = []
 	care_supplies = CARE_SUPPLIES_START.duplicate()
@@ -212,6 +208,17 @@ static func plan_deadlines(distances: Array) -> Array:
 ## Host, as the run starts: posts the deadlines to every peer.
 func set_deadlines(list: Array) -> void:
 	EventBus.relay(&"delivery_deadlines_set", [list])
+
+
+## Host, "impatient client" failed: the next open deadline after `after_house`
+## gets shorter (DEADLINE_CUT) and is relayed. Returns that house, or -1 if none.
+func shorten_next_deadline(after_house: int) -> int:
+	if not is_running or (NetworkManager.is_online() and not NetworkManager.is_host()):
+		return -1
+	var cut: Dictionary = DEADLINE_CUT.shorten_next(deadlines, after_house, elapsed_seconds, _delivered_at)
+	if not cut.is_empty():
+		set_deadlines(cut["list"])
+	return int(cut.get("house", -1))
 
 
 ## The closest deadline still open, for the HUD: {} when there is none.
@@ -301,7 +308,6 @@ func start_run(mode: StringName = MODE_DELIVERY) -> void:
 	if NetworkManager.is_online() and not NetworkManager.is_host():
 		return
 	RouteEventManager.reset_route()
-	lost_time_bonus = false
 	_begin_run(mode)
 	var event_id: StringName = RouteEventManager.begin_random()
 	_event_id = event_id
@@ -509,13 +515,11 @@ func _resolve_deliveries() -> Dictionary:
 				lost += 1
 				points -= PENALTY_MISSED_HOUSE
 			&"delivered_at_risk":
-				# Handed over dented. Worth less than intact, and the
-				# resident might bring it up later -- which is the case the
-				# delivery photo exists to answer.
+				# Handed over dented: worth less, and the resident always brings it
+				# up -- the case the delivery photo exists to answer.
 				points += POINTS_DELIVERED_AT_RISK
 				delivered_count += 1
-				if randf() < COMPLAINT_CHANCE_AT_RISK:
-					complaints.append(ClientComplaints.make(entry, has_photo, house_assignments, line_seed))
+				complaints.append(ClientComplaints.make(entry, has_photo, house_assignments, line_seed))
 			_:
 				push_warning("[Run] Unknown delivery outcome: %s" % outcome)
 	complaints.append_array(ClientComplaints.wrong_notes(refused_houses, complaints, house_assignments, line_seed))
@@ -608,14 +612,11 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	var delivery_points: int = int(doors["delivery_points"])
 	var houses_delivered: int = int(doors["houses_delivered"])
 	var successful: bool = delivered and (cargo_points > 0 or houses_delivered > 0)
-	var time_bonus: int = roundi(50.0 * clampf(1.0 - elapsed_seconds / PAR_SECONDS, 0.0, 1.0)) if successful and not lost_time_bonus else 0
 	var multiplier: float = CHAOS_MULTIPLIER if (successful and had_simultaneous_risk) else 1.0
-	var score: int = maxi(roundi((cargo_points + time_bonus + delivery_points) * multiplier), 0)
+	var score: int = maxi(roundi((cargo_points + delivery_points) * multiplier), 0)
 	var breakdown: Array = (doors["breakdown"] as Array).duplicate(true)
 	if cargo_points > 0:
 		breakdown.append({"label": "HUD_SCORE_CARGO_BACK", "count": aboard - ruined, "points": cargo_points})
-	if time_bonus > 0:
-		breakdown.append({"label": "HUD_SCORE_SPEED", "points": time_bonus})
 	var is_new_best: bool = _record_score(score, MODE_DELIVERY)
 	results = {
 		"delivered": successful,
@@ -625,7 +626,6 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"cargo_intact": intact,
 		"cargo_ruined": ruined,
 		"cargo_points": cargo_points,
-		"time_bonus": time_bonus,
 		"chaos_multiplier": multiplier,
 		"delivery_points": delivery_points,
 		"breakdown": breakdown,

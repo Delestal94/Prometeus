@@ -105,13 +105,16 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	var chaos_line: String = tr("HUD_RESULT_CHAOS_BONUS") % chaos if chaos > 1.0 else ""
 	var door_line: String = tr("HUD_RESULT_DOORS") % int(results.get("delivery_points",
 			0)) if results.has("delivery_points") else ""
+	# What the crew's wallet got from this delivery (CrewProgression.award_delivery):
+	# the same doors + cargo lines as above, without the chaos multiplier.
+	var payout_line: String = tr("HUD_RESULT_PAYOUT") % int(results["payout"]) if results.has("payout") else ""
 	if results.has("breakdown"):
-		hud.overlay_stats.text = format_score_breakdown(results,
-				score) + tr("HUD_RESULT_TEAM") % CrewProgression.team_money + best_line + client_line
+		hud.overlay_stats.text = format_score_breakdown(results, score) + payout_line \
+				+ tr("HUD_RESULT_TEAM") % CrewProgression.team_money + best_line + client_line
 	else:
 		hud.overlay_stats.text = tr("HUD_RESULT_STATS") % [float(results.get("elapsed_seconds", 0.0)),
-				int(results.get("cargo_points", 0)), int(results.get("time_bonus",
-				0)), door_line, chaos_line, CrewProgression.team_money, best_line, client_line]
+				int(results.get("cargo_points", 0)), door_line, chaos_line, CrewProgression.team_money,
+				best_line, client_line]
 	_show_complaints(results.get("complaints", []))
 	_show_photos()
 	_show_result_details(results)

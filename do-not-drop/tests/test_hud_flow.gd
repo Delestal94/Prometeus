@@ -266,7 +266,6 @@ func _run() -> void:
 		"cargo_intact": 0,
 		"cargo_ruined": 0,
 		"cargo_points": 0,
-		"time_bonus": 0,
 		"houses_delivered": 1,
 		"houses_missed": 1,
 		"breakdown": [{"label": "Entregas perfectas (1)", "points": 150}],

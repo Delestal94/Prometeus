@@ -1,6 +1,10 @@
 extends SceneTree
 ## RunManager/RouteEventManager: every drawable route event succeeds or expires,
 ## failure clamps team money, and no challenge survives the end of a run.
+## A failed "impatient client" shortens the deadline of the next house that still
+## has one (and only while the run lasts); the old time bonus no longer exists.
+
+const DeadlineCut = preload("res://scripts/core/deadline_cut.gd")
 
 var _failures: int = 0
 
@@ -89,12 +93,19 @@ func _run() -> void:
 		if event_id == &"inspection":
 			first.is_open = true
 		crew.team_money = 5
+		if event_id == &"impatient_client":
+			run.deadlines = run.plan_deadlines([200.0, 400.0])
 		routes._physics_process(float(routes.active_event.get("duration", 90.0)) + 1.0)
 		_expect(routes.active_event_id.is_empty(), "%s expires (got %s)" % [event_id, routes.active_event_id])
 		_expect(routes.resolved_events.get(event_id) == false, "%s records failure (got %s)" % [event_id, routes.resolved_events])
 		_expect(crew.team_money == 0, "%s fine clamps money at zero (got %s)" % [event_id, crew.team_money])
 		if event_id == &"impatient_client":
-			_expect(run.lost_time_bonus, "Impatient failure removes time bonus (got %s)" % run.lost_time_bonus)
+			var planned: Array = run.plan_deadlines([200.0, 400.0])
+			_expect(int(run.deadlines[0]["seconds"]) == int(planned[0]["seconds"]),
+					"Impatient failure leaves the client's own deadline alone (got %s)" % [run.deadlines])
+			_expect(int(run.deadlines[1]["seconds"]) == roundi(float(planned[1]["seconds"]) * 0.85),
+					"Impatient failure cuts 15%% off the next house's deadline (got %s)" % [run.deadlines])
+	_check_shortened_deadlines(run)
 	run.reset_run()
 	crew.reset_campaign()
 	_set_peers(network, [1])
@@ -118,6 +129,36 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: route events resolve, expire, and clean up correctly")
 	quit(_failures)
+
+
+## RunManager.shorten_next_deadline(): which house it picks, the floor, and when it does nothing.
+func _check_shortened_deadlines(run: Node) -> void:
+	run.reset_run()
+	run.is_running = true
+	var planned: Array = run.plan_deadlines([200.0, 400.0, 600.0])
+	run.deadlines = planned.duplicate(true)
+	_expect(run.shorten_next_deadline(0) == 1, "The house after the impatient one is shortened")
+	_expect(int(run.deadlines[1]["seconds"]) < int(planned[1]["seconds"]), "Its deadline is earlier")
+	_expect(int(run.deadlines[0]["seconds"]) == int(planned[0]["seconds"])
+			and int(run.deadlines[2]["seconds"]) == int(planned[2]["seconds"]), "No other deadline moves")
+	# A house already handed over has nothing left to shorten: the next open one is used.
+	run.deadlines = planned.duplicate(true)
+	run.register_delivery(1, &"delivered_ok", &"skipped_box")
+	_expect(run.shorten_next_deadline(0) == 2, "A delivered house is skipped")
+	# Late in the run the cut never leaves less than IMPATIENT_MIN_LEFT seconds.
+	run.deadlines = planned.duplicate(true)
+	run.elapsed_seconds = float(planned[2]["seconds"]) - 12.0
+	run.register_delivery(1, &"delivered_ok", &"skipped_box")
+	_expect(run.shorten_next_deadline(1) == 2
+			and float(run.deadlines[2]["seconds"]) >= run.elapsed_seconds + DeadlineCut.MIN_LEFT - 1.0,
+			"The cut keeps the minimum time left (got %s)" % [run.deadlines])
+	# Nothing after the last house, nothing once the run is over.
+	run.deadlines = planned.duplicate(true)
+	_expect(run.shorten_next_deadline(2) == -1, "The last house has no next house")
+	run.is_running = false
+	_expect(run.shorten_next_deadline(0) == -1 and int(run.deadlines[1]["seconds"]) == int(planned[1]["seconds"]),
+			"A finished run's deadlines stay put")
+	run.reset_run()
 
 
 func _expect(condition: bool, description: String) -> void:
