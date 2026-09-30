@@ -88,10 +88,13 @@ en `scripts/` (`LowpolyMaterials` → `DetailMaterials`, `LegacyUserData` → `U
 Dos chequeos lo garantizan en CI: `tools/check_modules.py` (reglas estáticas) y
 `tools/portability-check.sh` (cada módulo solo, en un proyecto vacío, corriendo sus tests).
 
-Hoy: `persistence`, `loc_text`, `synth_audio`, `net_pose_smoother`, `render_budget`, `acoustics`,
-`ragdoll`. Siguen (fases 2-5 de `docs/modulos.md`): sesión de red y bus con relay, interacción y
-asientos, cámara de asiento, ajustes, tema de UI, generación de ruta y clima, contrato de peligros,
-votación cooperativa, perfil versionado, telemetría.
+Hoy (17): `persistence`, `loc_text`, `synth_audio`, `net_pose_smoother`, `render_budget`, `acoustics`,
+`ragdoll`, `net_session`, `interaction`, `seat_camera`, `settings_store`, `route_gen`, `world_mood`,
+`hazards`, `coop_vote`, `unlock_profile`, `run_log`. Los autoloads `NetworkManager`, `EventBus`,
+`ProximityVoice`, `GameSettings`, `ShopVoteManager`, `UnlockManager` y `RunTelemetry` extienden la
+clase de su módulo y solo conservan lo del juego. Queda en el juego a propósito lo que es contenido o
+marca: `UiTheme`, `RoutePlanner`, los tramos con modelos, `RouteDresser`, `RouteSky`, `CrewProgression`,
+`RouteEventManager`, `RunManager`, el depósito, las casas, el HUD.
 
 ---
 

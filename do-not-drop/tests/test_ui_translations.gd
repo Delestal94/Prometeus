@@ -47,7 +47,7 @@ const SPANISH_LITERAL_FILES: Array[String] = [
 	# @export defaults of resource data; the screen gets TEXT_KEYS / NAME_KEYS
 	# through localized_name() and friends (.tres display names: separate task).
 	"res://scripts/gameplay/package/package_content.gd",
-	"res://scripts/gameplay/traps/trap_definition.gd",
+	"res://modules/hazards/trap_definition.gd",
 	# Made-up town names on road signs: proper nouns, the same in any language.
 	"res://scripts/gameplay/route/town_sign.gd",
 	# Developer tool that lists every sound by a Spanish label; never in the game.
@@ -58,7 +58,7 @@ const SAME_IN_BOTH: Array[String] = ["ENDLESS", "Endless", "PING"]
 ## The only scripts that read a resource's display_name: they turn it into a key.
 const DISPLAY_NAME_FILES: Array[String] = [
 	"res://scripts/gameplay/package/package_content.gd",
-	"res://scripts/gameplay/traps/trap_definition.gd",
+	"res://modules/hazards/trap_definition.gd",
 ]
 ## Debug output is for us, not the player.
 const DEBUG_CALLS: Array[String] = ["print(", "push_warning(", "push_error("]
@@ -196,7 +196,7 @@ func _check_trap_name_keys(table: Dictionary) -> void:
 			_expect(spanish == display_name,
 				"%s: the key's Spanish text is its display_name (%s vs %s)" % [file_name, spanish, display_name])
 			_expect(String(definition.call(&"localized_name")) == spanish, "%s reads in Spanish by default" % file_name)
-	_expect(checked >= TrapDefinition.NAME_KEYS.size(), "Every trap is checked (%d)" % checked)
+	_expect(checked >= DirAccess.get_files_at("res://data/traps").size(), "Every trap is checked (%d)" % checked)
 	var reads := RegEx.create_from_string('\\.display_name\\b|&"display_name"')
 	for dir_path: String in LITERAL_SCAN_DIRS:
 		for file_path: String in _scripts(dir_path):

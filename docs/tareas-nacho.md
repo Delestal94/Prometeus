@@ -228,11 +228,12 @@ tramos con assets, `RouteDresser`, `RouteSky` y `WindshieldRain` se quedan en el
 Los dos módulos pasan `portability-check`; `test_route*`, `test_world_mood`, `test_level_endless` y `route_smoke_check`
 sin cambios.
 
-### N-234 · Fase 5: contrato de peligros, votación, perfil y telemetría — C · `Opus 5.5 · high` · Aviso: sí (`traps/` de Slatex) · ⏸ en curso (sesión de Nacho)
-`hazards` (`ITrapBehavior` + `TrapDefinition` con `name_key` por `@export`, sin `NAME_KEYS` fijo),
-`coop_vote` (cobra por un `Callable`), `profile_store` (versiones y migraciones separadas del esquema del
-juego), `event_log` (escucha el bus que se le pasa). Hecho cuando `test_traps`, `test_shop_vote`,
-`test_unlock*`, `test_run_telemetry` pasan y los cuatro módulos pasan `portability-check`.
+### N-234 · Fase 5: contrato de peligros, votación, perfil y registro — C · `Opus 5.5 · high` · Aviso: sí (`traps/` de Slatex) · **[x] rama `nacho/N-234-game-systems`**
+`hazards` (`ITrapBehavior` + `TrapDefinition` con `translation_key` por `@export` en cada `.tres`, sin tabla fija),
+`coop_vote` (`CoopVote`; `ShopVoteManager` lo extiende con las cartas y la billetera), `unlock_profile`
+(`UnlockProfile` con reglas por umbral de estadísticas y migraciones; `UnlockManager` lo extiende), `run_log`
+(`RunLog`; `RunTelemetry` lo extiende). Los cuatro pasan `portability-check`; `test_traps`, `test_shop_vote_manager`,
+`test_unlock_manager`, `test_run_telemetry` sin cambios de comportamiento.
 
 ## M8 — Auditoría 2026-09-29
 

@@ -1,6 +1,6 @@
 # Módulos portables — qué se puede llevar a otro juego
 
-> Última actualización: 2026-09-30 (N-230, fases 0 y 1).
+> Última actualización: 2026-09-30 (N-230 a N-234: las cinco fases, 17 módulos).
 > Objetivo: que las piezas genéricas de Take My Package vivan en carpetas que se copian a otro
 > proyecto Godot y **funcionan**, con la garantía dada por CI y no por la memoria de nadie.
 
@@ -44,13 +44,17 @@ El patrón es **módulo = mecanismo; el juego = tablas y cableado**, en un adapt
 | `route_gen` (`TerrainField`) | `scripts/gameplay/route/route_terrain.gd` (extiende `TerrainField`; `route.gd` lo sigue precargando por ruta) | `_terrain_shader()` (el shader del juego), `_configure_material()` (las cuatro texturas de detalle), `_decorate_river()` (las cascadas, `RiverFalls`) |
 | `route_gen` (`RouteSegment`) | los tramos con assets del juego (`ChicaneSegment`, `NarrowBridgeSegment`, `ConstructionZoneSegment`, `TunnelSegment`, `RailCrossingSegment`) y `RoutePlanner` | `extends RouteSegment`; `_art()` viste los modelos con `DetailMaterials`. `RoutePlanner` se queda en el juego: nombra los tramos con assets y las reglas del depósito |
 | `world_mood` | `RouteSky`, `WindshieldRain`, `HUD` (leen `WorldMood.active`) | `GameSettings._ready` llama `LowpolyMaterials.configure()` para que la paleta esté en `DetailMaterials` antes de que el módulo la use; los lectores de estación y noche usan `DetailMaterials.season`/`night_level` |
+| `hazards` | las siete trampas (`extends ITrapBehavior`), `data/traps/*.tres` (`translation_key` en el recurso; antes una tabla en el script), `package.gd` | nada que configurar: el juego agrega una trampa con un script y un `.tres` |
+| `coop_vote` | `scripts/core/shop_vote_manager.gd` (`ShopVoteManager extends CoopVote`) | `_default_offers()` = `CrewProgression.SUPPLIES`, `_spend()` = la billetera; las cartas (prioridad, revotación, descuento, información) y las señales de `EventBus` |
+| `unlock_profile` | `scripts/core/unlock_manager.gd` (`UnlockManager extends UnlockProfile`) | `UNLOCKS` como reglas (`deliveries`, `score` → `_stat()`), contadores, camión, pintura, uniformes, caras, trampas bloqueadas; `_profile_fields`/`_read_profile`/`_after_load`/`_reset_fields` |
+| `run_log` | `scripts/core/run_telemetry.gd` (`RunTelemetry extends RunLog`) | qué escucha en `EventBus` y qué guarda de `RunManager`; `TelemetryFormat` sigue en el juego |
 | `settings_store` | `scripts/core/game_settings.gd` (`GameSettings extends SettingsStore`) | `SAVED_KEYS`, idiomas, teclas y todas las propiedades del juego con su setter; `_before_load` (migración de "Do Not Drop"), `_after_load`/`_needs_rewrite`/`_before_save` (marca del HUD) |
 
 Regla para escribir un adaptador: si el módulo necesita datos del juego, el adaptador se los da
 **antes del primer uso** (`LowpolyMaterials.configure()`), y los lectores del juego siguen usando el
 adaptador, nunca el módulo directo, así el orden de inicialización no importa.
 
-## Catálogo (fases 1 a 4, hechas)
+## Catálogo (fases 1 a 5, hechas)
 
 | Módulo | Clases | Qué es | Depende de |
 |---|---|---|---|
@@ -66,11 +70,15 @@ adaptador, nunca el módulo directo, así el orden de inicialización no importa
 | `settings_store` | `SettingsStore` | Base de un autoload de ajustes: guarda al cambiar, carga por cada setter, idioma, pantalla completa, volumen por bus, teclas reasignables, detección de gamepad, hooks de migración | — |
 | `route_gen` | `RouteSegment`, `SegmentStreamer`, `TerrainField`, `StraightSegment`, `SpeedBumpSegment`, `CurveSegment`, `SCurveSegment`, `GravelSegment`, `HillSegment` | Ruta procedural: tramos encadenables construidos por código, el streamer que los genera adelante del objetivo y los borra atrás (reglas de combinación, rampa de dificultad, línea central consultable) y el campo de alturas compartido por render, física y decorado (ríos, lomas, zonas planas, túneles) | `render_budget` |
 | `world_mood` | `WorldMood` | Clima, hora y estación desde la semilla de la sesión; se aplican al `Environment`, al sol, a un material de cielo y al del terreno; la estación y la oscuridad van a `DetailMaterials` | `render_budget` |
+| `hazards` | `ITrapBehavior`, `TrapDefinition` | El contrato de un peligro sobre un objeto (integridad en una sola escala, impactos, pasos, pistas, hitos, estados de cuidado) y su recurso de contenido (`.tres` con id, `name_key`, script, parámetros, contenidos) | `loc_text` |
+| `coop_vote` | `CoopVote` | Votación del host entre los peers sobre ofertas, espejada a todos; resuelve cuando votaron todos o se acabó el reloj; paga por un hook | `net_session` |
+| `unlock_profile` | `UnlockProfile` | Perfil JSON versionado de desbloqueos por umbrales de estadísticas (retroactivos al cargar), marcas "visto una vez", hooks para los campos y migraciones del juego | `persistence` |
+| `run_log` | `RunLog` | Un registro JSON por partida en una carpeta del guardado, con nombre por fecha y poda de los más viejos | `persistence` |
 | `net_session` | `NetSession`, `NetEventBus`, `SteamVoice`, `NetStats`, `NetStatsOverlay` | Sesión cooperativa host-autoritativa: Steam (lobby, invitaciones) o ENet, handshake con versión que lleva el estado del host como diccionario opaco, roster, reinicio, códigos de falla; bus con `relay()` y pedidos de cualquier peer con límite de frecuencia; voz por Steam; estadísticas, `--net-sim` y overlay | — |
 
 `tools/check_modules.py --list` imprime esta tabla desde los `module.cfg`.
 
-## Lo que sigue (fases 2 a 5)
+## Las fases (todas hechas el 2026-09-30)
 
 Cada fase es un PR que pasa CI. El orden es por valor (lo más caro de rehacer primero) y por riesgo.
 Tareas en `docs/tareas-nacho.md` (N-231 a N-234). Cuando el juego ya tiene un autoload con la API que
@@ -84,7 +92,7 @@ funcionando porque la subclase hereda todo.
 | 2 · Red — **hecho (N-231)** | `net_session` | `network_manager.gd`, `event_bus.gd`, `proximity_voice.gd`, `net_stats.gd` + overlay | Resuelto por **herencia**: el autoload del juego extiende la clase del módulo y rellena hooks virtuales (ver la tabla de adaptadores). El handshake sigue siendo un diccionario plano (`version`, `scene` + lo que devuelve `_session_state()`), así los tests que lo arman a mano no cambian. `PROTOCOL_VERSION` 11: el RPC de reinicio lleva un diccionario y los pedidos de peers pasan por `request()`. |
 | 3 · Interacción y ajustes — **hecho (N-232)** | `interaction`, `seat_camera`, `settings_store` | `gameplay/interaction/`, `first_person_camera.gd`, `game_settings.gd` | Herencia otra vez: `SeatPoint` genérico con hooks para lo de la carga; `SeatCamera` con `add_shake()`/`kick_fov()` que el juego conecta a sus eventos; `SettingsStore` con `saved_keys` y hooks de migración. **`UiTheme` queda en el juego a propósito**: es la marca (paleta, dos fuentes, íconos de trampas y acciones en `assets/ui/`); un juego nuevo se lo lleva copiando `ui_theme.gd` + `ui_sounds.gd` y las fuentes, y cambia las constantes. Convertirlo en `Resource` tocaría 40+ llamadores por una portabilidad que ya tiene. |
 | 4 · Ruta y clima — **hecho (N-233)** | `route_gen`, `world_mood` | `gameplay/route/` (parte), `world_mood.gd` | `RouteSegment`, `SegmentStreamer` (base de `RouteStreamer`), `TerrainField` (base de `route_terrain.gd`) y los seis tramos construidos por código van al módulo; `WorldMood` a `world_mood`. **Se quedan en el juego a propósito**: `RoutePlanner` (nombra los tramos con assets y las reglas del depósito y las casas), los cinco tramos con modelos y sonido (chicana, puente, obras, túnel, cruce de tren), `RouteDresser` (el catálogo de árboles y props es contenido), `RouteSky` y `WindshieldRain` (shaders y modelo del horizonte del juego). Otro juego trae sus tramos con `extends RouteSegment` y los mete en `segment_scripts`. |
-| 5 · Sistemas de juego genéricos | `hazards` (`ITrapBehavior` + `TrapDefinition`), `coop_vote` (`ShopVoteManager`), `profile_store` (perfil versionado con migraciones), `event_log` (`RunTelemetry`) | `gameplay/traps/` (contrato), `shop_vote_manager.gd`, `unlock_manager.gd`, `run_telemetry.gd` | `TrapDefinition.NAME_KEYS` pasa a `@export name_key` (hoy hay que editar el archivo por cada trampa nueva). La votación cobra por un `Callable`, no por `CrewProgression`. El perfil separa el motor de versiones/migraciones del esquema del juego. La telemetría escucha un bus que se le pasa. |
+| 5 · Sistemas de juego genéricos — **hecho (N-234)** | `hazards`, `coop_vote`, `unlock_profile`, `run_log` | `gameplay/traps/` (contrato), `shop_vote_manager.gd`, `unlock_manager.gd`, `run_telemetry.gd` | `TrapDefinition.translation_key` es un `@export` del `.tres` (se fue la tabla `NAME_KEYS`: una trampa nueva no toca ningún archivo del módulo). `CoopVote` paga por `_spend()`; las cartas quedan en el juego. `UnlockProfile` trata cada clave de una regla salvo `title` como una estadística que el juego responde con `_stat()`, así `UNLOCKS` no cambió. `RunLog` es solo el archivo; lo que se registra es del juego. `OrderBalancer` se queda: es puro pero habla de casas y trampas. |
 
 Quedan en el juego, a propósito: paquete y trampas concretas, depósito, casas, `CrewProgression`,
 `RouteEventManager`, `RunManager`, HUD, menú, jefe y quejas. Son *este* juego.
