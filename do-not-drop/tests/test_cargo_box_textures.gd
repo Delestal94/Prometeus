@@ -50,8 +50,10 @@ func _run() -> void:
 					var tex: Texture2D = (mat as BaseMaterial3D).albedo_texture
 					if tex != null:
 						textured += 1
-						_expect(tex.get_width() <= MAX_TEX and tex.get_height() <= MAX_TEX,
-							"%s albedo texture fits %dx%d (got %dx%d)" % [v, MAX_TEX, MAX_TEX, tex.get_width(), tex.get_height()])
+						var w: int = tex.get_width()
+						var h: int = tex.get_height()
+						_expect(w <= MAX_TEX and h <= MAX_TEX,
+							"%s albedo texture fits %dx%d (got %dx%d)" % [v, MAX_TEX, MAX_TEX, w, h])
 		_expect(textured > 0, "%s has at least one surface with an albedo texture (got %d)" % [v, textured])
 		_expect(tris == TRIANGLES, "%s has %d triangles (got %d)" % [v, TRIANGLES, tris])
 
