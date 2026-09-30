@@ -274,11 +274,18 @@ se protegen manejando (`depot.gd` `SOLO_TRAPS`: Frágil y Equilibrio), porque el
 nadie cuida cajas en ruta. `UnlockManager.locked_traps()` guarda cajas para 2 casas. Tests
 `test_house_assignment`, `test_depot`, `test_cargo_overboard`.
 
-### N-222 · Si el host se va, la partida termina con resultados — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `hud_results.gd`)
+### N-222 · Si el host se va, la partida termina con resultados — A · `Opus 5.5 · xhigh` · Aviso: sí (`hud_pause.gd`, `level_base.gd`) · **[x] rama `nacho/N-222-host-leaves-results`**
 Corrección: el cliente ya ve una pantalla de "desconectado" que dice que el anfitrión se fue
 (`hud_pause.gd:166`), pero sin nada de lo jugado. Lo mínimo: esa pantalla muestra lo entregado hasta ese
 momento (casas, cajas intactas, distancia) desde el estado que el cliente ya tiene, y el test de red de
 tres lo cubre. Migración de host: después del lanzamiento.
+- [x] La pantalla de desconexión suma "Hasta acá: N de M casas entregadas, X de Y cajas sanas, D m recorridos
+  en m:ss" (o la variante de Endless) con lo que el cliente ya tiene (`RunTally`, sin RPCs nuevos); el nivel
+  frena su copia de la partida (`level_common._stop_orphaned_run`) para que no puntúe ni tape la pantalla con
+  resultados. `current_distance` ahora también se lleva en modo entrega. Tests: `test_host_gone_tally.gd` y la
+  fase `GONE` de `net_trio.gd`. Aviso: `docs/avisos/2026-09-30-n222-host-se-va.md`.
+- [ ] (nota de `auditor-red`) Si el host se va con la pantalla de resultados abierta, el cliente la cambia por la de
+  desconexión y pierde los resultados completos (ya pasaba antes). Podría quedarse en resultados.
 
 ### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`)
 Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20,56-62`). Hecho cuando

@@ -166,9 +166,6 @@ func _on_depot_station_opened(station: StringName) -> void:
 
 
 func _on_connection_lost(reason: String) -> void:
-	# N-222: the host's results will never come, so what this peer saw of the
-	# run is what the crew gets to keep on screen.
-	var tally: Dictionary = RUN_TALLY.interrupt()
 	get_tree().paused = false
 	hud.soft_pause = false
 	hud.notices.clear_all_notices()
@@ -179,8 +176,10 @@ func _on_connection_lost(reason: String) -> void:
 	hud.overlay_title.text = tr("HUD_DISCONNECTED")
 	hud.overlay_body.text = reason
 	hud.overlay_stats.text = tr("HUD_HOST_GONE")
-	if not tally.is_empty():
-		hud.overlay_stats.text += "\n" + RUN_TALLY.describe(tally)
+	# N-222: the host's results will never come, so what this peer saw of the
+	# run is what the crew gets to keep on screen.
+	if RUN_TALLY.has_unfinished_run(RunManager):
+		hud.overlay_stats.text += "\n" + RUN_TALLY.describe(RUN_TALLY.of(RunManager))
 	hud.results.set_hero(false)
 	hud.complaints_label.visible = false
 	hud.photo_strip.visible = false

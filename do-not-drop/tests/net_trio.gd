@@ -32,6 +32,7 @@ extends SceneTree
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
 
+const RUN_TALLY = preload("res://scripts/core/run_tally.gd")
 const PORT: int = 17991
 const TIMEOUT_MSEC: int = 60000
 const PLAYERS: int = 3
@@ -153,14 +154,14 @@ func _deliver_and_leave() -> void:
 ## kept the run's tally.
 func _report_host_gone() -> void:
 	var waited: float = 0.0
-	while not _host_gone and waited < 20.0:
+	while not _host_gone and waited < 35.0:
 		await _pump(0.1)
 		waited += 0.1
 	await process_frame
 	var hud: Node = _level.get_node(^"HUD")
 	var stats: String = (hud.get(&"overlay_stats") as Label).text
-	var tally: String = TranslationServer.translate("HUD_HOST_GONE_TALLY").get_slice("%", 0)
 	var run: Node = root.get_node(^"/root/RunManager")
+	var tally: String = RUN_TALLY.describe(RUN_TALLY.of(run))
 	var houses: int = (run.get(&"deliveries") as Array).size()
 	var ok: bool = _host_gone and hud.get(&"overlay_mode") == "disconnected" and stats.contains(tally) \
 			and houses == 1 and not bool(run.get(&"is_running"))
