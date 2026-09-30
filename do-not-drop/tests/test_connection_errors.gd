@@ -20,8 +20,13 @@ func _initialize() -> void:
 		"locked": [],
 		"runs": 3,
 		"scene": "res://scenes/gameplay/level_base.tscn",
+		"colors": {1: 0, 1_874_223_901: 1},
 	}
 	_expect(String(network.call(&"_handshake_error", valid_state)).is_empty(), "Matching handshake is accepted")
+	var no_colors: Dictionary = valid_state.duplicate(true)
+	no_colors.erase("colors")
+	_expect(String(network.call(&"_handshake_error", no_colors)) == "connection",
+		"A handshake without the colour slots (N-226) is refused")
 	var old_state: Dictionary = valid_state.duplicate(true)
 	old_state.version = protocol_version - 1
 	_expect(String(network.call(&"_handshake_error", old_state)) == "version", "Old protocol is rejected as version")

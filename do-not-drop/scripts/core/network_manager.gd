@@ -35,9 +35,11 @@ const HOST_ID: int = 1
 ## N-115;
 ## 8: truck radio node + _set_mode RPC, N-406;
 ## 9: house orders carry the content id and results complaints carry
-## client + line key, S-604).
+## client + line key, S-604;
+## 10: the handshake carries the colour slots ("colors") and the host sends
+## them again through _sync_color_slots, N-226).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 9
+const PROTOCOL_VERSION: int = 10
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -45,6 +47,10 @@ const APP_ID_SPACEWAR: int = 480
 signal roster_changed(peer_ids: Array)
 signal session_ready(is_host: bool)
 signal session_failed(reason: String)
+## The {peer_id: colour slot} map changed (N-226): a copy of the whole map.
+## On a client a new peer may show up in roster_changed a moment before its
+## slot arrives here, so colour readers listen to both.
+signal color_slots_changed(slots: Dictionary)
 
 ## Force a transport for testing; AUTO picks Steam when it's available.
 var transport: Transport = Transport.AUTO
@@ -62,6 +68,15 @@ var peer_ids: Array[int] = [HOST_ID]
 ## level; 0 means "no session decided one", i.e. solo play, where randomize()
 ## is exactly right.
 var world_seed: int = 0
+## Which colour slot each peer wears, {peer_id: slot 0..MAX_PLAYERS-1}
+## (N-226, ColorSlots). The host hands them out in arrival order -- itself 0,
+## each joiner the lowest free one as it starts authenticating, so the join
+## handshake already carries it -- and sends the whole map to everyone again
+## whenever it changes (_sync_color_slots). The random ids ENet and Steam give
+## made posmod(peer_id, 5) a new colour every session, often a shared one.
+## Kept across a host restart; empty outside a session. Read it through
+## color_slot().
+var _color_slots: Dictionary = {}
 ## How many delivery houses this session's route has (docs/tareas-nacho.md
 ## #104). The route used to work it out from each machine's own roster, but a
 ## client's roster starts as just [host, itself], so from three players up
@@ -172,6 +187,15 @@ func local_id() -> int:
 	return multiplayer.get_unique_id() if is_online() else HOST_ID
 
 
+## The colour slot `peer_id` wears (N-226): 0..MAX_PLAYERS-1, handed out by
+## the host in arrival order and the same on every peer for the whole session.
+## Outside a session, or for a peer the host hasn't announced yet, it is
+## posmod(peer_id, MAX_PLAYERS), as before slots existed: solo play (id 1)
+## keeps slot 1. Readers wrap it to their own palette size.
+func color_slot(peer_id: int) -> int:
+	return ColorSlots.slot_of(_color_slots, peer_id, MAX_PLAYERS)
+
+
 ## The address friends on the same network should type into "Unirse", or ""
 ## when this machine has no private LAN address at all.
 func lan_address() -> String:
@@ -225,6 +249,7 @@ func join_session(target: String, port: int = DEFAULT_PORT) -> Error:
 func leave_session() -> void:
 	_end_session()
 	roster_changed.emit(peer_ids.duplicate())
+	color_slots_changed.emit(_color_slots.duplicate())
 
 
 ## Everything a session set up, undone: the next solo run must not keep
@@ -248,6 +273,7 @@ func _end_session() -> void:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	peer_ids = [HOST_ID]
+	_color_slots = {}
 
 
 ## The reason the last session ended, once (the menu shows it when it's back).
@@ -268,6 +294,7 @@ func _host_enet(port: int) -> Error:
 	multiplayer.multiplayer_peer = peer
 	active_transport = Transport.ENET
 	peer_ids = [HOST_ID]
+	_start_color_slots_as_host()
 	roster_changed.emit(peer_ids.duplicate())
 	session_ready.emit(true)
 	return OK
@@ -392,6 +419,7 @@ func _on_lobby_created(status: int, created_lobby_id: int) -> void:
 	peer.set(&"no_nagle", true)
 	multiplayer.multiplayer_peer = peer as MultiplayerPeer
 	peer_ids = [HOST_ID]
+	_start_color_slots_as_host()
 	roster_changed.emit(peer_ids.duplicate())
 	session_ready.emit(true)
 
@@ -464,8 +492,15 @@ func _on_peer_connected(id: int) -> void:
 		peer_ids.append(id)
 	if multiplayer.is_server() and not _ready_peers.has(id):
 		_ready_peers.append(id)
+	# Normally assigned while it authenticated; this only fills a gap. Before
+	# roster_changed, so whoever reacts to the new peer already sees its colour.
+	if multiplayer.is_server():
+		_assign_color_slot(id)
 	roster_changed.emit(peer_ids.duplicate())
 	if multiplayer.is_server():
+		# Everyone again, the newcomer included: its copy from the handshake may
+		# have gone stale while it loaded the level (others came and went).
+		_publish_color_slots()
 		peer_level_ready.emit(id)
 
 
@@ -473,6 +508,9 @@ func _on_peer_disconnected(id: int) -> void:
 	peer_ids.erase(id)
 	_ready_peers.erase(id)
 	roster_changed.emit(peer_ids.duplicate())
+	# Its slot goes to the next one in; nobody else's moves.
+	if multiplayer.is_server() and ColorSlots.release(_color_slots, id):
+		_publish_color_slots()
 
 
 func _on_connected_to_server() -> void:
@@ -493,11 +531,68 @@ func is_peer_ready(id: int) -> bool:
 func _peer_authenticating(id: int) -> void:
 	_tolerate_level_loads(id)
 	if multiplayer.is_server():
+		# Its colour slot first, so the handshake already carries it (and the
+		# crew already has it when the newcomer shows up). No free slot means
+		# no room: MAX_PLAYERS is also the transports' cap.
+		if _assign_color_slot(id) < 0:
+			multiplayer.send_auth(id, var_to_bytes({"failure": "full"}))
+			return
+		_publish_color_slots()
 		multiplayer.send_auth(id, var_to_bytes({"version": PROTOCOL_VERSION, "seed": world_seed,
 			"houses": world_house_count, "locked": world_locked_traps, "runs": world_completed_runs,
-			"scene": _current_level_scene()}))
+			"scene": _current_level_scene(), "colors": _color_slots}))
 	elif id != HOST_ID:
 		multiplayer.complete_auth(id)
+
+
+# --- Colour slots (N-226) -------------------------------------------------------
+
+## Host, on creating the room: a fresh map with itself on slot 0.
+func _start_color_slots_as_host() -> void:
+	_color_slots = {}
+	ColorSlots.assign(_color_slots, HOST_ID, MAX_PLAYERS)
+	color_slots_changed.emit(_color_slots.duplicate())
+
+
+## Host: `id`'s slot, handing it the lowest free one if it had none. The host
+## is placed first if it somehow isn't, so it always wears 0. -1 when every
+## slot is taken. Doesn't tell anyone: the caller publishes.
+func _assign_color_slot(id: int) -> int:
+	ColorSlots.assign(_color_slots, HOST_ID, MAX_PLAYERS)
+	return ColorSlots.assign(_color_slots, id, MAX_PLAYERS)
+
+
+## Host: the map changed (or a newcomer needs it). Here and, online, on every
+## connected client; one still authenticating gets it when it connects.
+func _publish_color_slots() -> void:
+	color_slots_changed.emit(_color_slots.duplicate())
+	if is_online() and multiplayer.is_server():
+		_sync_color_slots.rpc(_color_slots)
+
+
+## Host -> clients: the whole {peer_id: slot} map. Whole rather than a change:
+## it's a few ints, sent when someone joins or leaves, and a copy that went
+## stale can't drift further. Only the host's is taken, and only if it checks out.
+@rpc("authority", "call_remote", "reliable")
+func _sync_color_slots(slots: Variant) -> void:
+	if multiplayer.is_server() or multiplayer.get_remote_sender_id() != HOST_ID:
+		return
+	if not _apply_color_slots(slots):
+		push_warning("NetworkManager: ignored a colour slot map from the host that doesn't check out")
+
+
+## Client: takes a map from the host (handshake or _sync_color_slots) if it is
+## a proper one (ColorSlots.is_valid); a bad one leaves the previous in place.
+func _apply_color_slots(raw: Variant) -> bool:
+	if not ColorSlots.is_valid(raw, MAX_PLAYERS):
+		return false
+	var received: Dictionary = raw
+	var applied: Dictionary = {}
+	for peer: Variant in received:
+		applied[int(peer)] = int(received[peer])
+	_color_slots = applied
+	color_slots_changed.emit(_color_slots.duplicate())
+	return true
 
 
 ## Both ends of a new ENet link (the host for the joiner, the joiner for the
@@ -527,9 +622,11 @@ func _handshake_error(state: Variant) -> String:
 		return "version"
 	if int(state.get("version", -1)) != PROTOCOL_VERSION:
 		return "version"
-	if not state.has_all(["seed", "houses", "locked", "runs", "scene"]):
+	if not state.has_all(["seed", "houses", "locked", "runs", "scene", "colors"]):
 		return "connection"
 	if String(state.scene) not in LEVEL_SCENES:
+		return "connection"
+	if not ColorSlots.is_valid(state.colors, MAX_PLAYERS):
 		return "connection"
 	return ""
 
@@ -570,6 +667,7 @@ func _receive_auth(id: int, data: PackedByteArray) -> void:
 	world_locked_traps = state.locked
 	world_completed_runs = int(state.runs)
 	session_scene = String(state.scene)
+	_apply_color_slots(state.colors)
 	# The joiner always loads the level first and only then says "ready"
 	# (level_ready(), from the level itself): completing before that let the
 	# host's spawns arrive at a menu and the joiner saw no players at all.
@@ -644,8 +742,11 @@ func _remote_restart(house_count_value: int, completed_runs_value: int) -> void:
 	get_tree().reload_current_scene.call_deferred()
 
 
-func _auth_failed(_id: int) -> void:
+func _auth_failed(id: int) -> void:
 	if is_host():
+		# A joiner that never made it in gives its colour slot back.
+		if ColorSlots.release(_color_slots, id):
+			_publish_color_slots()
 		return
 	# Emitted from inside SceneMultiplayer.poll() -- its expiry loop, or
 	# _del_peer inside the peer's own poll when the host drops a pending
