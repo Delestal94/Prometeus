@@ -16,3 +16,5 @@ para cambiar alguna, la anota como hallazgo; no la cambia por su cuenta.
 | 7 | Texturas de N-314: ¿reimporte a mano o script? | **Lo hace la sesión de arte de la PC** abriendo Godot con un script que cambia los parámetros de importación por la API del editor y reimporta; Godot escribe los `.import`, no se editan a mano. | N-314 |
 | 8 | ¿Qué trampas salen en solo? | **Las de hoy**: Frágil y Equilibrio (`depot.gd`, `SOLO_TRAPS`), porque las demás piden un segundo par de manos. | ratificado, sin tarea |
 | 9 | ¿Se mantiene el objetivo de casi-pérdidas del jugador torpe (≥ 1)? | **Sí**. El balance que sigue en "REQUIERE AJUSTE" pasa a tarea. | N-229 |
+
+Pregunta 9, agregado: Ruidoso: una caja rescatada tras tocar el máximo de agitación cuenta como casi-pérdida (decidido por Claude con delegación del usuario, 2026-09-30).

@@ -15,7 +15,7 @@ difficulty = 1
 params = {
 "integrity_max": 100.0,
 "impact_damage_light": 10.0,
-"impact_damage_heavy": 35.0,
+"impact_damage_heavy": 36.0,
 "impact_threshold_light": 3.0,
 "impact_threshold_heavy": 7.0,
 "at_risk_at": 40.0,

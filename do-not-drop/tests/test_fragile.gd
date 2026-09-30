@@ -10,7 +10,11 @@ extends SceneTree
 ##   are not softened; after the wait a new tap counts again;
 ## - a bump only hurts above the safe speed, and hurts more the faster it is;
 ## - reset with on_setup clears the taps, and two instances never share them.
+## - N-229: with the data's numbers, two bumps missed and one softened leave the
+##   vase hanging by a thread (the harness's near miss, 5 to 25 of integrity)
+##   and a third miss breaks it.
 
+const FRAGILE_DATA: String = "res://data/traps/fragile.tres"
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 var _failures: int = 0
 
@@ -27,10 +31,10 @@ func _initialize() -> void:
 	first.call("apply_impact", 3.0)
 	_expect(float(first.get("integrity")) == 90.0, "Light threshold applies 10 damage")
 	first.call("apply_impact", 7.0)
-	_expect(float(first.get("integrity")) == 55.0, "Heavy threshold applies 35 damage")
+	_expect(float(first.get("integrity")) == 54.0, "Heavy threshold applies 36 damage")
 	_expect(int(first.get("trap_state")) == 0, "Integrity above 40 is OK")
 	first.call("apply_impact", 7.0)
-	_expect(float(first.get("integrity")) == 20.0, "Damage is progressive")
+	_expect(float(first.get("integrity")) == 18.0, "Damage is progressive")
 	_expect(int(first.get("trap_state")) == 1, "Low integrity enters AT_RISK")
 	_expect(float(second.get("integrity")) == 100.0, "Shared definition never shares mutable state")
 	first.call("apply_impact", 7.0)
@@ -47,6 +51,7 @@ func _initialize() -> void:
 	first.free()
 	second.free()
 	_test_cushion()
+	_test_near_miss()
 	if _failures == 0:
 		print("PASS: fragile package thresholds, states, reset and instance isolation")
 	quit(_failures)
@@ -145,13 +150,29 @@ func _test_cushion() -> void:
 	one.on_setup(null, {})
 	_expect(one.tap_count == 0 and one.saved_hits == 0 and one.cushion_state()["ready"],
 		"Setup clears the taps and the wait")
-	var definition: Resource = load("res://data/traps/fragile.tres")
+	var definition: Resource = load(FRAGILE_DATA)
 	var made: Resource = definition.call(&"create_behavior")
 	var made_again: Resource = definition.call(&"create_behavior")
 	made.call(&"on_setup", null, (definition.get(&"params") as Dictionary).duplicate(true))
 	made.call(&"on_physics_process", null, 0.01, {"input": {"tap": true}})
 	_expect(int(made.get(&"tap_count")) == 1 and int(made_again.get(&"tap_count")) == 0,
 		"Two behaviors from the shared definition keep their own taps")
+
+
+## N-229: the clumsy passenger's near miss sits on the heavy damage. With 35
+## two misses and a save left 26.5, just past the harness's 25, and the clumsy
+## profile had no near misses on Fragile (0.8 %, now 37.6 %).
+func _test_near_miss() -> void:
+	var params: Dictionary = (load(FRAGILE_DATA).get(&"params") as Dictionary).duplicate(true)
+	var trap: FragileTrapBehavior = _new_trap(params)
+	_hit(trap, -1.0)
+	_hit(trap, -1.0)
+	_hit(trap, 0.2)
+	_expect(trap.integrity >= 5.0 and trap.integrity <= 25.0,
+		"Two missed bumps and a softened one are a near miss (%.1f left)" % trap.integrity)
+	_expect(trap.get_state() == ITrapBehavior.TrapState.AT_RISK, "The near miss shows as at risk")
+	_hit(trap, -1.0)
+	_expect(trap.get_state() == ITrapBehavior.TrapState.RUINED, "A third missed bump breaks it")
 
 
 func _expect(condition: bool, description: String) -> void:
