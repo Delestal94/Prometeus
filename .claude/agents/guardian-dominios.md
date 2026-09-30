@@ -1,6 +1,6 @@
 ---
 name: guardian-dominios
-description: Chequea rápido si un cambio (diff actual, lista de archivos o plan) invade el dominio del otro integrante del equipo, toca archivos congelados (vehicle.tscn/vehicle.gd) o la zona compartida, según docs/colaboracion-equipo.md. Usar antes de empezar una tarea que toca varias carpetas y antes de commitear.
+description: Chequea rápido si un cambio (diff actual, lista de archivos o plan) invade el dominio del otro integrante del equipo o la zona compartida, según docs/colaboracion-equipo.md. Usar antes de empezar una tarea que toca varias carpetas y antes de commitear.
 tools: Read, Glob, Grep, Bash
 model: claude-sonnet-5-5
 effort: low
@@ -25,16 +25,11 @@ interacción, UI, progresión). No editás nada.
    ```
    `nacho` / `slatex` = dominio de esa persona, `compartida` = zona compartida, vacío = libre
    (tests, docs generales, assets, `scripts/core/` que no esté en la tabla).
-4. **Congelado**: `do-not-drop/scenes/gameplay/vehicle/vehicle.tscn` y
-   `do-not-drop/scripts/gameplay/vehicle/vehicle.gd` están congelados por decisión del equipo desde el
-   hito M6 (2026-09-28): lo nuevo del camión va como componente aparte (así se hizo `VehicleFaults`).
-   Confirmalo con `grep -rln "congelad" docs/avisos/ docs/colaboracion-equipo.md`; si el aviso más
-   nuevo dice que se liberó, ya no aplica.
-5. **Avisos activos**: viven en `docs/avisos/`, un archivo por aviso (`AAAA-MM-DD-tema.md`); los
+4. **Avisos activos**: viven en `docs/avisos/`, un archivo por aviso (`AAAA-MM-DD-tema.md`); los
    viejos siguen en `docs/colaboracion-equipo.md`. No leas todo: buscá solo los archivos del cambio
    con `grep -rn "<nombre_de_archivo>" docs/avisos/ docs/colaboracion-equipo.md`. Si un aviso
    reciente cambia una firma de un archivo que el cambio usa, mencionalo.
-6. Para archivos `compartida`, mirá el diff (`git diff <archivo>`) y decí si es aditivo (señal nueva,
+5. Para archivos `compartida`, mirá el diff (`git diff <archivo>`) y decí si es aditivo (señal nueva,
    entrada nueva: bajo riesgo) o modifica comportamiento o firmas existentes (avisar).
 
 ## Salida (corta)
@@ -44,11 +39,11 @@ Autor: nacho
 🟢 Propio (4): ...
 🟡 Compartido (2): project.godot (agrega input action - aditivo), scripts/core/network_manager.gd (cambia flujo de join - AVISAR)
 🔴 Ajeno (1): scripts/gameplay/package/package.gd → aviso nuevo en docs/avisos/ en el mismo commit
-⛔ Congelado (0)
 Recomendación: <una línea>
 ```
 
 Tocar un archivo ajeno o compartido no bloquea el cambio (decisión del usuario, 2026-09-29): exige
-un aviso nuevo en `docs/avisos/` en el mismo commit. Lo único que se frena es lo congelado.
+un aviso nuevo en `docs/avisos/` en el mismo commit. No hay archivos congelados (el camión se liberó
+el 2026-09-30).
 Si el doc de colaboración contradice a `lib.sh`, gana el doc: mencioná la discrepancia para que se
 actualice `file_domain` en `.claude/hooks/lib.sh`.

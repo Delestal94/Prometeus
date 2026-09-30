@@ -42,12 +42,11 @@ sesion-arte (a mano, en la PC) ◄── tareas "necesita PC" ◄─────
    Ramas siempre desde `origin/main` recién bajado. En la nube Godot está en `$GODOT`.
 3. **Nadie contesta**: no hay revisión humana ni preguntas. Si algo es ambiguo, elegí lo más
    conservador que encaje con `docs/` y escribilo como "Supuesto" en el PR. Las decisiones que solo
-   puede tomar el usuario (borrar o recortar una feature, cambiar el alcance, tocar lo congelado) no se
+   puede tomar el usuario (borrar o recortar una feature, cambiar el alcance) no se
    ejecutan: se dejan como tarea ⏸ "decide el usuario" y van al cuerpo del PR.
 4. **Dominios**: se trabaja sobre archivos y tareas de Nacho **y de Slatex**. Tocar lo de Slatex o la
    zona compartida exige un aviso nuevo en `docs/avisos/` en el mismo PR. No se pisa lo que Slatex
-   tenga en curso (PR abierto, rama `origin/slatex/S-xxx*` o la tarea marcada 🔧). `vehicle.tscn` /
-   `vehicle.gd` siguen congelados.
+   tenga en curso (PR abierto, rama `origin/slatex/S-xxx*` o la tarea marcada 🔧).
 5. **Godot solo por agentes** (`ejecutor-tests`, `revisor-visual`, `probador-qa`, `cazador-bugs`), tests
    siempre con filtro. La batería completa la corre CI.
 6. **Subida**: `SKIP_TESTS=1 git push -u origin HEAD` (nunca `--no-verify`), `gh pr create` con título en

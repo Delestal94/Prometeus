@@ -26,7 +26,7 @@ Pulís "Take My Package". Tu materia prima es lo que ya está: no agregás siste
 ## Dominios y tests
 
 Dueños según `docs/colaboracion-equipo.md`: tocar lo del otro está permitido con un aviso nuevo en
-`docs/avisos/` en el mismo PR. `vehicle.tscn`/`vehicle.gd` están congelados. Corré solo los tests del tema
+`docs/avisos/` en el mismo PR. Corré solo los tests del tema
 (`bash tools/run-tests.sh <filtro>`); si algo falla sin causa obvia, recomendá `cazador-bugs`.
 
 Devolvé: el mapa del bucle (corto), cambios aplicados con archivo:línea, propuestas pendientes, tests, avisos.

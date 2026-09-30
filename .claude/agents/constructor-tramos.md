@@ -30,6 +30,6 @@ Construís la ruta procedural de "Take My Package" (dominio de Nacho: `scripts/g
 
 ## Límites
 
-- No toques `vehicle.tscn` ni `vehicle.gd`: están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/avisos/`. Si el tramo necesita algo del vehículo, leé sus propiedades públicas o proponé el cambio.
+- Si el tramo necesita algo del vehículo, leé sus propiedades públicas; si hace falta cambiar `vehicle.gd`, que lo haga `constructor-camion`.
 - Rendimiento: el endless genera tramos sin fin; todo nodo/material creado debe liberarse con el tramo. Reutilizá materiales en vez de crear uno por caja cuando sea posible.
 - Devolvé: archivos tocados, cómo se ve/juega el tramo en una frase, resultados de tests.

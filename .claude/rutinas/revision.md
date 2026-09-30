@@ -34,7 +34,7 @@ Rama `rutina/revision-AAAA-MM-DD` desde `origin/main`.
      `pulidor-jugabilidad` o el artista del caso).
    - **BORRAR, RECORTAR, REHACER algo grande, POSTERGAR o DESCARTAR** una tarea → tarea ⏸ "decide el
      usuario" con el argumento: nunca se ejecuta sola.
-   - Nada contra decisiones ya tomadas por el usuario (congelado de `vehicle.*`, personajes en pausa,
+   - Nada contra decisiones ya tomadas por el usuario (personajes en pausa,
      sin playtesting, decisiones de M8): si el abogado las ataca, va a la auditoría como pregunta, no
      como tarea.
 3. Aviso en `docs/avisos/` si se agregaron o anotaron tareas de Slatex.

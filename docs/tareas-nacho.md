@@ -600,7 +600,7 @@ de internet saltan.
   tiene que seguir pasando.
 - [ ] Tolerancia de alcance proporcional al ping en los chequeos del host (agarrar y usar cajas).
 
-### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: sí (`vehicle.gd` congelado)
+### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: no
 
 Fase 3 de `docs/investigacion-red.md`. Hoy el volante del conductor cliente tiene un ping más 100 ms de
 atraso.
@@ -1054,8 +1054,7 @@ Salen de `docs/analisis-competencia-backseat-rv.md` (Backseat Drivers y RV There
 **M-xx** es el id de ese documento, donde está el razonamiento completo. Los IDs siguen el pilar al que
 pertenece cada tarea. A diferencia del resto de la lista, varias tocan el dominio de Slatex (paquetes,
 jugador, UI): se asignaron a Nacho a pedido del usuario, así que llevan **Aviso: sí** y, antes de
-empezarlas, conviene pasar el plan por `guardian-dominios`. `vehicle.tscn` / `vehicle.gd` siguen
-congelados: nada de esta sección los edita; lo que necesita el camión se cuelga desde afuera.
+empezarlas, conviene pasar el plan por `guardian-dominios`.
 
 | ID | M-xx | Tarea | Prio |
 |---|---|---|---|
@@ -1308,10 +1307,10 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   chico) que ganan puntos propios molestando dentro de límites: bocina, radio, abrir una caja ajena.
 - [ ] Límites duros para que el sabotaje no arruine la partida (enfriamientos, lo que no pueden tocar).
 
-### N-114 · Caja de cambios manual como variante — C · `Opus 5.5 · xhigh` · Aviso: sí (camión congelado)
+### N-114 · Caja de cambios manual como variante — C · `Opus 5.5 · xhigh` · Aviso: no
 
 - [ ] Variante "clásico viejo" a elegir en el depósito, con marchas manuales opcionales y más paga o
-  mérito como compensación. Requiere acuerdo previo para tocar el manejo; si no, queda descartada.
+  mérito como compensación.
 - [ ] Los tests de manejo (N-104) de las variantes existentes no cambian.
 
 ### N-907 · Friend Pass y demo separada — C · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
@@ -1330,7 +1329,7 @@ Es de publicación en Steam: queda pospuesta como el resto del pilar 9 (ver la n
 Cuatro tareas que pidió el usuario después de ver el juego terminado de punta a punta. Van en el hito
 **M7**, en este orden (de la más chica a la más grande). Tres tocan el dominio de Slatex (jugador, UI de
 personalización y resultados): llevan **Aviso: sí** y conviene pasar el plan por `guardian-dominios`
-antes de empezar. `vehicle.tscn` / `vehicle.gd` siguen congelados.
+antes de empezar.
 
 | ID | Tarea | Prio |
 |---|---|---|

@@ -1,6 +1,6 @@
 ---
 name: constructor-camion
-description: Construye y ajusta lo que vive alrededor del camión de Take My Package sin tocar vehicle.gd/vehicle.tscn (congelados desde M6) - componentes como VehicleFaults, efectos de fallas, puntos de reparación, gancho de rescate, puertas, suavizado de red, tablero/GPS y la presentación del vehículo. Usar para cualquier mecánica o ajuste nuevo del camión.
+description: Construye y ajusta el camión de Take My Package - vehicle.gd/vehicle.tscn (manejo, física, sincronización) y sus componentes como VehicleFaults, efectos de fallas, puntos de reparación, gancho de rescate, puertas, suavizado de red, tablero/GPS y la presentación del vehículo. Usar para cualquier mecánica o ajuste nuevo del camión.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: claude-sonnet-5-5
 effort: high
@@ -9,12 +9,14 @@ effort: high
 Construís el camión de "Take My Package" por fuera (dominio de Nacho: `scripts/gameplay/vehicle/`,
 `scenes/gameplay/vehicle/`, `scripts/presentation/vehicle_presentation.gd`).
 
-## La regla que manda
+## Dónde va cada cosa
 
-`vehicle.tscn` y `vehicle.gd` están **congelados** desde el hito M6 (2026-09-28). Todo lo nuevo va como
-componente aparte que escucha señales o lee propiedades públicas del vehículo. Antes de asumir lo
-contrario, buscá un aviso más nuevo en `docs/avisos/`. Si algo es imposible sin tocarlos, no lo toques:
-explicá qué haría falta y devolvelo.
+`vehicle.tscn` y `vehicle.gd` se pueden editar (dominio de Nacho; estuvieron congelados hasta el
+2026-09-30). Lo que es del vehículo en sí (manejo, física, dirección, sincronización de su pose) va
+ahí. Un sistema con estado y reglas propias (fallas, reparaciones, ganchos) va como componente aparte
+que escucha señales o lee propiedades públicas, para que `vehicle.gd` no crezca sin control.
+Cualquier cambio a `vehicle.*` mantiene verdes `test_reference_truck` y los tests de manejo y red del
+camión.
 
 ## Modelos a copiar (verificá en el código)
 
@@ -27,7 +29,7 @@ explicá qué haría falta y devolvelo.
 ## Pasos
 
 1. Definí en 3-4 líneas qué cambia para el conductor y para los cargadores, y quién decide (host) y quién solo muestra (todos).
-2. Componente nuevo en `scripts/gameplay/vehicle/` (o presentación en `scripts/presentation/`), agregado por código desde quien ya arma el camión, sin editar la escena congelada.
+2. Componente nuevo en `scripts/gameplay/vehicle/` (o presentación en `scripts/presentation/`), agregado por código desde quien ya arma el camión o en `vehicle.tscn`, lo que quede más claro.
 3. Simulación en el host; presentación en cada peer desde estado replicado o señales relayadas. Azar solo del RNG sembrado.
 4. Si necesitás una señal nueva en `EventBus` (zona compartida): agregala, nunca cambies la firma de una existente, y dejá el aviso en `docs/avisos/`.
 5. Test: ampliá el del tema (`test_vehicle_faults.gd`, `test_vehicle_*`) con frames de física reales. Corré `bash tools/run-tests.sh vehicle` y lo que toque (`world_seed`, `net`). Si falla sin causa obvia, recomendá `cazador-bugs`.

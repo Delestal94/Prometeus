@@ -39,7 +39,7 @@ Antes de revisar, leé `docs/convenciones-godot.md` (sección 0 "Gotchas") y las
 - Nombres: snake_case archivos/funciones, PascalCase `class_name`, constantes UPPER_SNAKE.
 
 **Coordinación**
-- Si el diff toca `vehicle.tscn`/`vehicle.gd`, marcarlo como BUG de proceso: están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/avisos/`.
+- Si el diff toca `vehicle.tscn`/`vehicle.gd`, revisá que no rompa la sincronización del camión (host autoritativo, clientes con la copia congelada por física) y que los tests del camión lo cubran.
 - Si toca archivos del dominio del otro integrante o la zona compartida (`file_domain` en `.claude/hooks/lib.sh`), el mismo commit tiene que traer su aviso (archivo nuevo en `docs/avisos/`); si falta, marcarlo.
 
 **Textos y tests**
