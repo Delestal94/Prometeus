@@ -532,7 +532,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.52, 0.795, 2.305)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat1PackageMount" groups=["package_mount"]]
 script = ExtResource("5_mount")
-prompt = "Dejar paquete acá"
+prompt = "HUD_PROMPT_PLACE_PACKAGE"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat1PackageMount/InteractionArea"]
 shape = SubResource("Shape_mount_interact")
@@ -542,7 +542,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.52, 1.815, 2.305)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftSeat2PackageMount" groups=["package_mount"]]
 script = ExtResource("5_mount")
-prompt = "Dejar paquete acá"
+prompt = "HUD_PROMPT_PLACE_PACKAGE"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat2PackageMount/InteractionArea"]
 shape = SubResource("Shape_mount_interact")
@@ -552,7 +552,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.52, 0.795, 3.125)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat1PackageMount" groups=["package_mount"]]
 script = ExtResource("5_mount")
-prompt = "Dejar paquete acá"
+prompt = "HUD_PROMPT_PLACE_PACKAGE"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat1PackageMount/InteractionArea"]
 shape = SubResource("Shape_mount_interact")
@@ -562,7 +562,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.52, 1.815, 3.125)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat2PackageMount" groups=["package_mount"]]
 script = ExtResource("5_mount")
-prompt = "Dejar paquete acá"
+prompt = "HUD_PROMPT_PLACE_PACKAGE"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat2PackageMount/InteractionArea"]
 shape = SubResource("Shape_mount_interact")
@@ -572,7 +572,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.52, 0.795, 3.945)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/LeftShelfPackageMount" groups=["package_mount"]]
 script = ExtResource("5_mount")
-prompt = "Guardar paquete en anaquel"
+prompt = "HUD_PROMPT_STORE_ON_SHELF"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftShelfPackageMount/InteractionArea"]
 shape = SubResource("Shape_mount_interact")
@@ -582,7 +582,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.52, 1.815, 3.945)
 
 [node name="InteractionArea" type="Area3D" parent="CargoBay/RightShelfPackageMount" groups=["package_mount"]]
 script = ExtResource("5_mount")
-prompt = "Guardar paquete en anaquel"
+prompt = "HUD_PROMPT_STORE_ON_SHELF"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightShelfPackageMount/InteractionArea"]
 shape = SubResource("Shape_mount_interact")

@@ -34,7 +34,8 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 	var missing: int = int(state.get("missing", 0))
 	var sequence: Dictionary = state.get("sequence", {})
 	var action := StringName(state.get("action", &"hold"))
-	var hint: String = String(state.get("hint", ""))
+	# A LocText line from the host, read in this player's language (N-805).
+	var hint: String = LocText.render(state.get("hint", []))
 	var working: bool = float(state.get("work", 0.0)) > 0.0 and StringName(state.get("tool", &"")) == tool
 	if phase == &"crisis" and missing > 0:
 		return _step(&"collect", _tr("HUD_CARE_COLLECT"),

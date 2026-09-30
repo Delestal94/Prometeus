@@ -218,7 +218,7 @@ func _check_guide() -> void:
 	var state: Dictionary = bomb.care_state
 	_expect(not (state.get("sequence", {}) as Dictionary).is_empty(),
 		"The bomb's sequence rides along with the care state")
-	_expect(state.get("action") == &"hold" and not String(state.get("hint", "")).is_empty(),
+	_expect(state.get("action") == &"hold" and not LocText.render(state.get("hint", [])).is_empty(),
 		"...and so do its action and hint")
 	var keys: Dictionary = CargoCare.control_names(false, "E")
 	var step: Dictionary = CareGuide.next_step(state, &"explosive", &"", "", keys)

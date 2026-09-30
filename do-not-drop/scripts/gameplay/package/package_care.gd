@@ -60,7 +60,8 @@ var strain: float = 0.0
 var work: float = 0.0
 var work_tool: StringName = &""
 var work_step: int = 0
-var message: String = ""
+## A LocText line ([key, args...]): the host builds it, each peer translates it.
+var message: Array = []
 var recent_hit: float = 0.0
 var elapsed: float = 0.0
 
@@ -95,17 +96,17 @@ func begin_crisis(kind: StringName, spilled: bool = false) -> void:
 	message = crisis_prompt(kind)
 
 
-func crisis_prompt(kind: StringName) -> String:
+func crisis_prompt(kind: StringName) -> Array:
 	match kind:
 		&"liquid":
-			return tr("HUD_CARE_CRISIS_LIQUID")
+			return LocText.make("HUD_CARE_CRISIS_LIQUID")
 		&"explosive":
-			return tr("HUD_CARE_CRISIS_EXPLOSIVE")
+			return LocText.make("HUD_CARE_CRISIS_EXPLOSIVE")
 		&"growing_weight":
-			return tr("HUD_CARE_CRISIS_GROWING_WEIGHT")
+			return LocText.make("HUD_CARE_CRISIS_GROWING_WEIGHT")
 		&"noisy", &"hostile":
-			return tr("HUD_CARE_CRISIS_ESCAPED")
-	return tr("HUD_CARE_CRISIS_RESCUE")
+			return LocText.make("HUD_CARE_CRISIS_ESCAPED")
+	return LocText.make("HUD_CARE_CRISIS_RESCUE")
 
 
 ## A player dropped out mid-rescue: their box is held for a while instead of
@@ -142,7 +143,7 @@ func advance(delta: float, acceleration: Vector3, input: Dictionary, assisted: b
 		crisis_left = maxf(0.0, crisis_left - delta)
 		if is_zero_approx(crisis_left):
 			phase = &"lost"
-			message = tr("HUD_CARE_MSG_LOST")
+			message = LocText.make("HUD_CARE_MSG_LOST")
 	if strain >= 1.8 and recent_hit <= 0.0:
 		strain = 0.0
 		return true
@@ -161,7 +162,7 @@ func on_hard_hit(strength: float) -> void:
 		tape -= 1
 	if strapped:
 		strapped = false
-		message = tr("HUD_CARE_MSG_STRAP_LOOSE")
+		message = LocText.make("HUD_CARE_MSG_STRAP_LOOSE")
 
 
 func collect_part() -> bool:
@@ -170,65 +171,69 @@ func collect_part() -> bool:
 	missing_parts -= 1
 	crisis_left = maxf(crisis_left, 8.0)
 	if missing_parts == 0:
-		message = tr("HUD_CARE_MSG_RECOVERED")
+		message = LocText.make("HUD_CARE_MSG_RECOVERED")
 	else:
-		message = tr("HUD_CARE_MSG_PIECES_LEFT") % missing_parts
+		message = LocText.make("HUD_CARE_MSG_PIECES_LEFT", [missing_parts])
 	return true
 
 
 func tool_name(tool: StringName, kind: StringName) -> String:
+	return tr(tool_name_key(tool, kind))
+
+
+func tool_name_key(tool: StringName, kind: StringName) -> String:
 	if tool == &"repair":
-		return tr(String(REPAIR_NAMES.get(kind, TOOL_NAMES[&"repair"])))
-	return tr(String(TOOL_NAMES.get(tool, tool)))
+		return String(REPAIR_NAMES.get(kind, TOOL_NAMES[&"repair"]))
+	return String(TOOL_NAMES.get(tool, tool))
 
 
-## Why this tool can't be used right now, or "" if it can. `helped` is a
-## second player steadying the same box this moment.
-func tool_blocker(tool: StringName, kind: StringName, speed: float, helped: bool = false) -> String:
+## Why this tool can't be used right now (a LocText line), or [] if it can.
+## `helped` is a second player steadying the same box this moment.
+func tool_blocker(tool: StringName, kind: StringName, speed: float, helped: bool = false) -> Array:
 	if in_lap and tool in [&"repair", &"filler", &"rag", &"strap"]:
-		return tr("HUD_CARE_BLOCK_LAP")
-	var blocker: String = ""
+		return LocText.make("HUD_CARE_BLOCK_LAP")
+	var blocker: Array = []
 	match tool:
 		&"tape":
-			blocker = tr("HUD_CARE_BLOCK_ALREADY_TAPED") if tape >= 2 and phase != &"crisis" else ""
+			blocker = LocText.make("HUD_CARE_BLOCK_ALREADY_TAPED") if tape >= 2 and phase != &"crisis" else []
 		&"filler":
 			if padded:
-				blocker = tr("HUD_CARE_BLOCK_ALREADY_PADDED")
+				blocker = LocText.make("HUD_CARE_BLOCK_ALREADY_PADDED")
 			elif phase in [&"crisis", &"lost"]:
-				blocker = tr("HUD_CARE_BLOCK_RESCUE_FIRST")
+				blocker = LocText.make("HUD_CARE_BLOCK_RESCUE_FIRST")
 		&"strap":
-			blocker = tr("HUD_CARE_BLOCK_ALREADY_STRAPPED") if strapped else ""
+			blocker = LocText.make("HUD_CARE_BLOCK_ALREADY_STRAPPED") if strapped else []
 		&"rag":
 			if kind != &"liquid":
-				blocker = tr("HUD_CARE_BLOCK_NOTHING_TO_ABSORB")
+				blocker = LocText.make("HUD_CARE_BLOCK_NOTHING_TO_ABSORB")
 			elif phase != &"crisis":
-				blocker = tr("HUD_CARE_BLOCK_NO_LEAK")
+				blocker = LocText.make("HUD_CARE_BLOCK_NO_LEAK")
 		&"substitute":
 			if kind != &"noisy" or phase != &"lost" or substituted:
-				blocker = tr("HUD_CARE_BLOCK_TOY_ONLY_HEN")
+				blocker = LocText.make("HUD_CARE_BLOCK_TOY_ONLY_HEN")
 		&"repair":
 			blocker = _repair_blocker(kind, speed, helped)
 		_:
-			blocker = tr("HUD_CARE_BLOCK_UNKNOWN_TOOL")
+			blocker = LocText.make("HUD_CARE_BLOCK_UNKNOWN_TOOL")
 	return blocker
 
 
-func _repair_blocker(kind: StringName, speed: float, helped: bool) -> String:
+func _repair_blocker(kind: StringName, speed: float, helped: bool) -> Array:
 	if phase == &"lost":
-		return tr("HUD_CARE_BLOCK_UNRECOVERABLE")
+		return LocText.make("HUD_CARE_BLOCK_UNRECOVERABLE")
 	if kind == &"liquid":
-		return tr("HUD_CARE_BLOCK_LIQUID") if phase == &"crisis" else tr("HUD_CARE_BLOCK_NO_REPAIR_NEEDED")
+		return LocText.make("HUD_CARE_BLOCK_LIQUID" if phase == &"crisis" else "HUD_CARE_BLOCK_NO_REPAIR_NEEDED")
 	if missing_parts > 0:
-		return tr("HUD_CARE_BLOCK_PIECES_FIRST") % missing_parts
+		return LocText.make("HUD_CARE_BLOCK_PIECES_FIRST", [missing_parts])
 	if repairs >= 2:
-		return tr("HUD_CARE_BLOCK_MAX_REPAIRS")
+		return LocText.make("HUD_CARE_BLOCK_MAX_REPAIRS")
 	if phase == &"intact" or not needs_restore and phase != &"damaged":
-		return tr("HUD_CARE_BLOCK_NO_REPAIR_NEEDED")
+		return LocText.make("HUD_CARE_BLOCK_NO_REPAIR_NEEDED")
 	if kind == &"growing_weight" and not helped:
-		return tr("HUD_CARE_BLOCK_TOO_HEAVY")
+		return LocText.make("HUD_CARE_BLOCK_TOO_HEAVY")
 	if speed > 9.0:
-		return tr("HUD_CARE_BLOCK_TOO_FAST")
-	return ""
+		return LocText.make("HUD_CARE_BLOCK_TOO_FAST")
+	return []
 
 
 func work_direction() -> Vector2:
@@ -271,18 +276,18 @@ func advance_work(delta: float, tool: StringName, input: Dictionary, kind: Strin
 	if not message.is_empty():
 		return false
 	if not available:
-		message = tr("HUD_CARE_MSG_NO_SUPPLIES")
+		message = LocText.make("HUD_CARE_MSG_NO_SUPPLIES")
 		return false
 	if work_tool != tool:
 		work_tool = tool
 		work = 0.0
 		work_step = 0
 	if recent_hit > 0.3:
-		message = tr("HUD_CARE_MSG_MOVING")
+		message = LocText.make("HUD_CARE_MSG_MOVING")
 		return false
 	work = minf(1.0, work + delta / float(TOOL_SECONDS.get(tool, 5.0)))
 	work_step = mini(3, int(work * 4.0))
-	message = "%s · %d%%" % [tool_name(tool, kind), roundi(work * 100.0)]
+	message = LocText.make("%s · %d%%", [[tool_name_key(tool, kind)], roundi(work * 100.0)])
 	return work >= 1.0
 
 
@@ -293,35 +298,35 @@ func complete_tool(tool: StringName, kind: StringName = &"") -> void:
 			if phase == &"crisis" and kind != &"liquid":
 				phase = &"damaged"
 			if needs_restore:
-				message = tr("HUD_CARE_MSG_TAPED_PENDING")
+				message = LocText.make("HUD_CARE_MSG_TAPED_PENDING")
 			else:
-				message = tr("HUD_CARE_MSG_TAPED")
+				message = LocText.make("HUD_CARE_MSG_TAPED")
 		&"repair":
 			repairs += 1
 			quality_cap = minf(quality_cap, float(RESCUE_CAPS.get(kind, 85.0)) - 10.0 * (repairs - 1))
 			phase = &"rescued"
 			needs_restore = false
-			message = tr("HUD_CARE_MSG_REPAIRED")
+			message = LocText.make("HUD_CARE_MSG_REPAIRED")
 		&"filler":
 			padded = true
-			message = tr("HUD_CARE_MSG_PADDED")
+			message = LocText.make("HUD_CARE_MSG_PADDED")
 		&"strap":
 			strapped = true
-			message = tr("HUD_CARE_MSG_STRAPPED")
+			message = LocText.make("HUD_CARE_MSG_STRAPPED")
 		&"rag":
 			# A leak stopped is saved, but what already ran out is gone.
 			repairs += 1
 			quality_cap = minf(quality_cap, RESCUE_CAPS[&"liquid"])
 			phase = &"rescued"
 			needs_restore = false
-			message = tr("HUD_CARE_MSG_LEAK_CONTAINED")
+			message = LocText.make("HUD_CARE_MSG_LEAK_CONTAINED")
 		&"substitute":
 			substituted = true
 			needs_restore = false
 			missing_parts = 0
 			quality_cap = 20.0
 			phase = &"rescued"
-			message = tr("HUD_CARE_MSG_TOY_HEN")
+			message = LocText.make("HUD_CARE_MSG_TOY_HEN")
 	work = 0.0
 	work_step = 0
 	work_tool = &""
@@ -353,7 +358,8 @@ func apply_snapshot(data: Dictionary) -> void:
 	work = float(data.get("work", 0.0))
 	work_tool = StringName(data.get("tool", ""))
 	work_step = int(data.get("step", 0))
-	message = String(data.get("message", ""))
+	var line: Variant = data.get("message", [])
+	message = line if line is Array else []
 	padded = bool(data.get("padded", false))
 	strapped = bool(data.get("strapped", false))
 	in_lap = bool(data.get("lap", false))

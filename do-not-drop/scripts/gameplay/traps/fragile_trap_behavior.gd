@@ -145,5 +145,5 @@ func get_state() -> int:
 	return TrapState.OK
 
 
-func get_hint() -> String:
-	return tr("HUD_HINT_FRAGILE")
+func hint_text() -> Array:
+	return LocText.make("HUD_HINT_FRAGILE")

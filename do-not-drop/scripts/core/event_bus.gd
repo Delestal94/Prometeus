@@ -12,7 +12,8 @@ signal cargo_registered(package_id: StringName, name_key: String)
 ## Low-rate (a few times a second, not every physics tick): a trap's hint
 ## text can change every frame (a countdown, say), and relaying that at full
 ## physics rate would spam the network for a label nobody reads that closely.
-signal package_hint_changed(package_id: StringName, hint: String)
+## hint is a LocText line ([key, args...]); each peer translates it (N-805).
+signal package_hint_changed(package_id: StringName, hint: Array)
 signal package_state_changed(package_id: StringName, new_state: int)
 signal package_integrity_changed(package_id: StringName, integrity: float, maximum: float)
 signal package_ruined(package_id: StringName, cause: String)

@@ -425,10 +425,11 @@ func report_to_run() -> void:
 	_emit_event(&"cargo_registered", [package_id, String(trap_definition.call(&"name_key"))])
 	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
 	_emit_event(&"package_state_changed", [package_id, trap_state])
-	_emit_event(&"package_hint_changed", [package_id, get_hint()])
+	_emit_event(&"package_hint_changed", [package_id, hint_text()])
 	_hint_relay_time = 0.0
 
 
+## cause: a translation key (or plain text), shown to each peer in its language.
 func mark_lost(cause: String) -> void:
 	if _lost:
 		return
@@ -436,9 +437,9 @@ func mark_lost(cause: String) -> void:
 	var before_state: int = trap_state
 	_lost = true
 	care.phase = &"lost"
-	care.message = cause
+	care.message = LocText.make(cause)
 	_publish_care()
-	_report_change(before_integrity, before_state, cause)
+	_report_change(before_integrity, before_state, tr(cause))
 
 
 func content_definition() -> Resource:
@@ -495,12 +496,18 @@ static func _reach_origin(player: Node) -> Vector3:
 	return player.call(&"reach_origin") if player.has_method(&"reach_origin") else (player as Node3D).global_position
 
 
-func get_hint() -> String:
+## What this box asks for now, as a LocText line: relayed as is, so each
+## peer reads it in its own language (N-805).
+func hint_text() -> Array:
 	if care.phase == &"crisis":
-		return tr("HUD_CARE_CRISIS_HINT") % [ceili(care.crisis_left), care.missing_parts]
+		return LocText.make("HUD_CARE_CRISIS_HINT", [ceili(care.crisis_left), care.missing_parts])
 	if care.needs_restore or care.phase == &"lost" or care.substituted:
 		return care.message
-	return String(trap_behavior.call("get_hint")) if trap_behavior != null else ""
+	return trap_behavior.call(&"hint_text") if trap_behavior != null else []
+
+
+func get_hint() -> String:
+	return LocText.render(hint_text())
 
 
 func _report_change(before_integrity: float, before_state: int, ruin_cause: String) -> void:

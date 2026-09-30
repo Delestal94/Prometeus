@@ -91,14 +91,14 @@ func get_state() -> int:
 	return TrapState.OK
 
 
-func get_hint() -> String:
+func hint_text() -> Array:
 	if get_state() == TrapState.RUINED:
-		return tr("HUD_HINT_BALANCE_RUINED")
+		return LocText.make("HUD_HINT_BALANCE_RUINED")
 	if tilt_degrees > _angle_at_risk_max:
-		return tr("HUD_HINT_BALANCE_DANGER")
+		return LocText.make("HUD_HINT_BALANCE_DANGER")
 	if tilt_degrees > _angle_ok_max:
-		return tr("HUD_HINT_BALANCE_TILTED") % tilt_degrees
-	return tr("HUD_HINT_BALANCE_OK")
+		return LocText.make("HUD_HINT_BALANCE_TILTED", [tilt_degrees])
+	return LocText.make("HUD_HINT_BALANCE_OK")
 
 
 ## The published gesture: which side to lean to and what the body is doing.

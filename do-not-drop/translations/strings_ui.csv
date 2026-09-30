@@ -573,13 +573,16 @@ HUD_PROGRESS_DELIVERY_ONE,%d entrega,%d delivery
 HUD_PROGRESS_REMAINING,Te faltan %s para %s,You need %s to unlock %s
 HUD_PROMPT_CLOSE_BOX,Cerrar caja,Close box
 HUD_PROMPT_DROP_TO_DRIVE,Dejá el paquete para manejar,Drop the package to drive
+HUD_PROMPT_DRIVE,Subirse a manejar,Get in and drive
 HUD_PROMPT_HELP_PACKAGE,Ayudar con la caja de %s,Help with %s's box
 HUD_PROMPT_OPEN_BOX,Abrir caja,Open box
 HUD_PROMPT_PICK_UP_PACKAGE,Agarrar paquete,Pick up package
+HUD_PROMPT_PLACE_PACKAGE,Dejar paquete acá,Put the package here
 HUD_PROMPT_RECAPTURE,Recapturar criatura,Recapture the creature
 HUD_PROMPT_SALVAGE,Recuperar pieza,Recover the piece
 HUD_PROMPT_SIT,Sentarse,Sit down
 HUD_PROMPT_SIT_BY_CARGO,Sentarse junto a la carga,Sit by the cargo
+HUD_PROMPT_STORE_ON_SHELF,Guardar paquete en anaquel,Store the package on the shelf
 HUD_PROMPT_UNLOAD_PACKAGE,Bajar paquete,Unload package
 HUD_RESULT_EVENT,Evento: %s\n%s,Event: %s\n%s
 HUD_RESULT_FAILED,FALLIDO ✕,FAILED ✕
