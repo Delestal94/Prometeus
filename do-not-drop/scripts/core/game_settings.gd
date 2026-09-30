@@ -181,6 +181,16 @@ var last_join_address: String = "":
 		_save()
 
 
+## The arrow keys read as arrows, not as the English "Up"/"Down" the engine
+## names them (N-114: the gear keys), here and wherever a prompt shows a key.
+const KEY_GLYPHS := {KEY_UP: "↑", KEY_DOWN: "↓", KEY_LEFT: "←", KEY_RIGHT: "→"}
+
+
+func binding_label(action: StringName) -> String:
+	var keycode: int = int(key_bindings.get(action, default_key_bindings.get(action, KEY_NONE)))
+	return String(KEY_GLYPHS.get(keycode, super(action)))
+
+
 func _init() -> void:
 	save_path = SAVE_PATH
 	section = SECTION

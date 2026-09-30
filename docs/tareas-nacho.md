@@ -1678,7 +1678,11 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 > la velocidad del HUD (rojo con "¡SUBÍ!" en el tope de la marcha) y el motor suena distinto por marcha (el contador de
 > revoluciones de `vehicle_presentation.gd` sigue la marcha elegida, con el embrague al cambiar). Compensación: el pago del equipo x1,25
 > (`pay_multiplier` en `results`, línea "(incluye +$N del furgón viejo)"), el puntaje no cambia. El clásico y el ágil no
-> cambian (caja automática, `drive_multiplier` 1.0). Tests: `test_manual_gearbox` (nuevo). Falta (ojos): captura del HUD con la marcha.
+> cambian (caja automática, `drive_multiplier` 1.0). Tests: `test_manual_gearbox` (nuevo).
+> Tras la auditoría de red y la revisión visual: un cambio que llega con el embrague adentro espera en una cola de un lugar
+> (no se pierde); el RPC exige dirección +1/-1 y deja el lugar para `RpcGuard` (N-221); la marcha se dibuja al instante
+> (`gear_changed`); el multiplicador de pago sale solo de `Vehicle.VARIANTS`; el furgón viejo tiene carrocería crema,
+> cromados (paragolpes y ópticas) y "¡SUBÍ!" grande y titilante; las flechas se muestran como "↑ ↓".
 
 ### N-907 · Friend Pass y demo separada — C · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 

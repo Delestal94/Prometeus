@@ -56,14 +56,36 @@ var gear: int = FIRST_GEAR:
 		gear_changed.emit(gear)
 ## Seconds left of the clutch being in after a shift (host only).
 var shift_left: float = 0.0
+## The one shift (+1 / -1) waiting for the clutch to come out, 0 for none.
+var _queued: int = 0
 
 
 ## Host only: the driver asks for one gear up (+1) or down (-1). False when it
-## doesn't apply (automatic truck, already at the end, mid-shift).
+## doesn't apply (automatic truck, already at the end). A request that arrives
+## with the clutch still in (two quick presses, or the packets bunched up by
+## jitter: the clutch is timed when the request reaches the host) isn't lost:
+## it waits in a one-place queue and is applied the moment the clutch is out.
+## A newer request replaces the one waiting.
 func request_shift(direction: int) -> bool:
-	if not enabled or direction == 0 or shift_left > 0.0:
+	if not enabled or direction == 0:
 		return false
-	var target: int = gear + signi(direction)
+	if shift_left > 0.0:
+		_queued = signi(direction)
+		return true
+	return _shift(signi(direction))
+
+
+## Host only, each physics tick.
+func tick(delta: float) -> void:
+	shift_left = maxf(shift_left - delta, 0.0)
+	if shift_left <= 0.0 and _queued != 0:
+		var waiting: int = _queued
+		_queued = 0
+		_shift(waiting)
+
+
+func _shift(direction: int) -> bool:
+	var target: int = gear + direction
 	if target < FIRST_GEAR or target > TOP_GEAR:
 		return false
 	gear = target
@@ -71,16 +93,12 @@ func request_shift(direction: int) -> bool:
 	return true
 
 
-## Host only, each physics tick.
-func tick(delta: float) -> void:
-	shift_left = maxf(shift_left - delta, 0.0)
-
-
 ## Back to first with the clutch out: the start of a delivery, or the variant
 ## changing.
 func reset() -> void:
 	gear = FIRST_GEAR
 	shift_left = 0.0
+	_queued = 0
 
 
 ## The fastest this gear goes, in km/h, for a truck with this top speed.

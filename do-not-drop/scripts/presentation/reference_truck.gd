@@ -770,6 +770,50 @@ func set_paint(body: Color, trim: Color) -> void:
 		(_paint_materials[name_] as BaseMaterial3D).albedo_color = pair[1]
 
 
+## The old van's retro dressing (N-114): a chrome strip along the top of the
+## front bumper and a chrome ring round each headlight. Pure presentation, in
+## the truck's own space (the lamps and the bumper are at those spots in the
+## authored model); removed again when the variant isn't retro.
+const RETRO_NAME := "RetroChrome"
+const CHROME := Color("d9dde2")
+
+
+func set_retro(enabled: bool) -> void:
+	if vehicle == null or model == null:
+		return
+	var existing: Node = vehicle.get_node_or_null(NodePath("BodyVisuals/" + RETRO_NAME))
+	if existing != null:
+		if enabled:
+			return
+		existing.free()
+		return
+	if not enabled:
+		return
+	var chrome := StandardMaterial3D.new()
+	chrome.albedo_color = CHROME
+	chrome.metallic = 0.85
+	chrome.roughness = 0.22
+	var holder := Node3D.new()
+	holder.name = RETRO_NAME
+	vehicle.get_node(^"BodyVisuals").add_child(holder)
+	# The bumper's top front edge: x +-1.05, top at y 0.63, front face at z -2.796.
+	_add_box(holder, Vector3(2.1, 0.06, 0.09), Vector3(0.0, 0.63, -2.83), chrome)
+	for side: float in [-1.0, 1.0]:
+		# Headlight lens centres at x +-0.752, y 0.526, on the nose's front.
+		var ring := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.135
+		torus.outer_radius = 0.17
+		torus.rings = 16
+		torus.ring_segments = 6
+		ring.mesh = torus
+		ring.material_override = chrome
+		ring.rotation.x = PI * 0.5
+		ring.scale = Vector3(1.0, 1.0, 0.45)
+		ring.position = Vector3(0.752 * side, 0.526, -2.835)
+		holder.add_child(ring)
+
+
 func set_ramp_deployed(deployed: bool) -> void:
 	if ramp_visual == null or deployed == _ramp_deployed:
 		return

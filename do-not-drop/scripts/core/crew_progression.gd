@@ -180,9 +180,12 @@ func award_delivery(results: Dictionary, peers: Array) -> void:
 	# only in the score). Endless results carry neither, so it pays nothing.
 	# Shown on the results screen as "Pago del equipo" (results["payout"]).
 	var base_payout: int = maxi(int(results.get("delivery_points", 0)) + int(results.get("cargo_points", 0)), 0)
-	# The manual van pays more (N-114): results["pay_multiplier"] is set by
-	# RunManager from the truck the crew drove; 1.0 (or absent) changes nothing.
-	var payout: int = roundi(base_payout * maxf(float(results.get("pay_multiplier", 1.0)), 1.0))
+	# The manual van pays more (N-114): the multiplier is the truck's own
+	# (vehicle.gd VARIANTS, the one source), read from the truck on the road.
+	# 1.0 (no truck, an ordinary one) changes nothing.
+	var multiplier: float = _truck_pay_multiplier()
+	results["pay_multiplier"] = multiplier
+	var payout: int = roundi(base_payout * multiplier)
 	results["payout"] = payout
 	results["pay_bonus"] = payout - base_payout
 	team_money += payout
@@ -192,6 +195,14 @@ func award_delivery(results: Dictionary, peers: Array) -> void:
 		_grant_card_chance(int(peer))
 	save_campaign()
 	_reset_run_merit()
+
+
+## What the truck the crew is driving multiplies the payout by (Vehicle.pay_multiplier()).
+func _truck_pay_multiplier() -> float:
+	var truck: Node = get_tree().get_first_node_in_group(&"vehicle") if is_inside_tree() else null
+	if truck == null or not truck.has_method(&"pay_multiplier"):
+		return 1.0
+	return maxf(float(truck.call(&"pay_multiplier")), 1.0)
 
 
 func _on_run_started(_route_id: StringName, _peers: Array) -> void:

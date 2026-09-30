@@ -8,7 +8,11 @@ var hud: Hud
 var cargo_hints: Dictionary = {}
 var _last_states: Dictionary = {}
 var _rescue_player: AudioStreamPlayer
-var _gear_label: Label
+## The manual van's readouts (N-114), built the first time a manual truck is seen.
+var gear_label: Label
+var shift_up_label: Label
+var _watched_gearbox: VehicleGearbox
+var _last_speed_kmh: float = 0.0
 const RUIN_FLASH_SECONDS: float = 0.35
 const RUIN_FLASH_ALPHA: float = 0.24
 var _ruin_flash_left: float = 0.0
@@ -23,38 +27,60 @@ func _ready() -> void:
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.package_hint_changed.connect(_on_package_hint)
 	GameSettings.colorblind_palette_changed.connect(_refresh_accessibility_colors)
+	# After the HUD has built its card: a manual truck already in the level
+	# gets its gear drawn (and watched) without waiting for telemetry.
+	_refresh_gear.call_deferred()
 
 
 func _on_speed(speed: float) -> void:
 	hud.speed_label.text = "%02d" % roundi(absf(speed))
-	_refresh_gear(speed)
+	_last_speed_kmh = absf(speed)
+	_refresh_gear()
 
 
-## The old manual van's gear under the speed (N-114): "MARCHA 3", and a
-## nudge to shift up (with the key) when the gear has no more to give. Shown
+## The old manual van's gear under the speed (N-114): "MARCHA 3", and a big
+## blinking "¡SUBÍ! [key]" under it when the gear has no more to give. Shown
 ## only for a manual truck; nothing is added for the others. Read from the
-## truck's own replicated state, so every peer sees the driver's gear.
-func _refresh_gear(speed_kmh: float) -> void:
+## truck's own replicated state, so every peer sees the driver's gear. It
+## refreshes with the telemetry and, at once, on every change of gear.
+func _refresh_gear() -> void:
+	if hud == null or hud.speed_label == null:
+		return
 	var truck: Node = get_tree().get_first_node_in_group(&"vehicle")
 	var manual: bool = truck != null and truck.has_method(&"has_manual_gearbox") and truck.has_manual_gearbox()
 	if not manual:
-		if _gear_label != null:
-			_gear_label.visible = false
+		if gear_label != null:
+			gear_label.visible = false
+			shift_up_label.visible = false
 		return
-	if _gear_label == null:
+	_watch_gearbox(truck.gearbox)
+	if gear_label == null:
 		var metrics: Node = hud.speed_label.get_parent().get_parent()
-		_gear_label = UiTheme.label(metrics, "", 18, Hud.INK, true)
-		metrics.move_child(_gear_label, hud.speed_label.get_parent().get_index() + 1)
-	_gear_label.visible = true
-	var gearbox: VehicleGearbox = truck.gearbox
+		var after_speed: int = hud.speed_label.get_parent().get_index() + 1
+		gear_label = UiTheme.label(metrics, "", 18, Hud.INK, true)
+		metrics.move_child(gear_label, after_speed)
+		# Big and saturated on the cream card; pulsed by refresh_state_pulses().
+		shift_up_label = UiTheme.label(metrics, "", 32, Color("d9151b"), true)
+		shift_up_label.add_theme_color_override("font_outline_color", Color.WHITE)
+		shift_up_label.add_theme_constant_override("outline_size", 5)
+		metrics.move_child(shift_up_label, after_speed + 1)
+	gear_label.visible = true
 	var gear: String = truck.gear_text()
+	gear_label.text = tr("HUD_GEAR") % gear
 	var top_kmh: float = float(truck.get(&"maximum_speed_kmh"))
-	if gear != "R" and gearbox.at_limit(absf(speed_kmh), top_kmh):
-		_gear_label.text = tr("HUD_GEAR_SHIFT_UP") % [gear, GameSettings.binding_label(&"drive_shift_up")]
-		_gear_label.add_theme_color_override("font_color", Hud.RED)
-	else:
-		_gear_label.text = tr("HUD_GEAR") % gear
-		_gear_label.add_theme_color_override("font_color", Hud.INK)
+	var at_limit: bool = gear != "R" and truck.gearbox.at_limit(_last_speed_kmh, top_kmh)
+	shift_up_label.visible = at_limit
+	if at_limit:
+		shift_up_label.text = tr("HUD_GEAR_SHIFT_UP") % GameSettings.binding_label(&"drive_shift_up")
+
+
+## Hooks the truck's gearbox once, so a shift shows on the HUD the moment it
+## happens (on the host, and on a client when the replicated gear arrives).
+func _watch_gearbox(gearbox: VehicleGearbox) -> void:
+	if _watched_gearbox == gearbox:
+		return
+	_watched_gearbox = gearbox
+	gearbox.gear_changed.connect(func(_gear: int) -> void: _refresh_gear())
 
 
 ## The host relays the trap's translation key (TrapDefinition.name_key()), so
@@ -200,6 +226,9 @@ func refresh_state_pulses() -> void:
 	for id: StringName in hud.cargo_rows:
 		var state: int = int(RunManager.cargo.get(id, {}).get("state", 0))
 		(hud.cargo_rows[id]["label"] as Label).modulate.a = pulse if state == ITrapBehavior.TrapState.AT_RISK else 1.0
+	if shift_up_label != null and shift_up_label.visible:
+		# A faster, deeper blink than the cargo's: it has to be seen at a glance.
+		shift_up_label.modulate.a = 0.45 + 0.55 * absf(sin(Time.get_ticks_msec() * 0.008))
 
 
 func _on_progress(progress: float, meters: float, section: String) -> void:

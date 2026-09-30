@@ -105,8 +105,8 @@ const VARIANTS: Dictionary = {
 	# the crew's delivery payout is multiplied by "pay_multiplier".
 	&"vintage": {
 		"maximum_speed_kmh": 68.0, "maximum_engine_force": 1700.0, "maximum_steering": 0.42,
-		"steering_response": 2.0, "mass": 1000.0, "trim": Color("b8873b"), "manual": true,
-		"pay_multiplier": VehicleGearbox.PAY_MULTIPLIER,
+		"steering_response": 2.0, "mass": 1000.0, "trim": Color("8a5a24"), "factory_body": Color("e6cf98"),
+		"retro": true, "manual": true, "pay_multiplier": VehicleGearbox.PAY_MULTIPLIER,
 	},
 }
 const PAINTS: Dictionary = {
@@ -483,7 +483,15 @@ func _apply_variant() -> void:
 func _apply_paint() -> void:
 	var reference_truck := get_node_or_null(^"ReferenceTruck")
 	if reference_truck != null:
-		reference_truck.call(&"set_paint", PAINTS[paint_id], VARIANTS[variant_id]["trim"])
+		var tuning: Dictionary = VARIANTS[variant_id]
+		var body: Color = PAINTS[paint_id]
+		# A variant with its own factory colour (the old van's cream) wears it
+		# while the crew hasn't picked another paint; a chosen paint still wins.
+		if paint_id == &"white" and tuning.has("factory_body"):
+			body = tuning["factory_body"]
+		reference_truck.call(&"set_paint", body, tuning["trim"])
+		if reference_truck.has_method(&"set_retro"):
+			reference_truck.call(&"set_retro", bool(tuning.get("retro", false)))
 
 
 func _on_horn_honked(_peer_id: int) -> void:
@@ -524,12 +532,22 @@ func has_manual_gearbox() -> bool:
 ## gear with no way to tell. Added with protocol version 12.
 @rpc("any_peer", "reliable")
 func request_gear_shift(direction: int) -> void:
-	if not is_multiplayer_authority():
+	# N-221: RpcGuard.allow_request(self) when it lands.
+	if not is_multiplayer_authority() or absi(direction) != 1:
 		return
+	# Only the current driver counts. Explicit comparison on purpose: with
+	# driver_peer_id == 0 (nobody at the wheel) a remote sender must not pass.
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and sender_id != driver_peer_id:
 		return
 	gearbox.request_shift(direction)
+
+
+## What this truck's variant multiplies the crew's delivery payout by (1.0 for
+## the ordinary ones, the manual van's compensation for the old one). The one
+## source of it: CrewProgression asks the truck on the road.
+func pay_multiplier() -> float:
+	return float(VARIANTS[variant_id].get("pay_multiplier", 1.0))
 
 
 ## What the gear readout shows: "1".."5", or "R" while backing up; empty when

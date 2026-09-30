@@ -855,5 +855,5 @@ UI_UNLOCK_VINTAGE_VAN,Furgón clásico viejo,Old classic van
 UI_OPT_BIND_SHIFT_UP,Subir marcha (furgón viejo),Shift up (old van)
 UI_OPT_BIND_SHIFT_DOWN,Bajar marcha (furgón viejo),Shift down (old van)
 HUD_GEAR,MARCHA %s,GEAR %s
-HUD_GEAR_SHIFT_UP,MARCHA %s · ¡SUBÍ! [%s],GEAR %s · SHIFT UP! [%s]
+HUD_GEAR_SHIFT_UP,¡SUBÍ! [%s],SHIFT UP! [%s]
 HUD_RESULT_PAY_BONUS,"  (incluye +$%d del furgón viejo)","  (includes +$%d from the old van)"

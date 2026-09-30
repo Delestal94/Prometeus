@@ -39,7 +39,10 @@ func _run() -> void:
 	await _check_automatic_trucks()
 	await _check_engine_follows_gear()
 	_check_input()
-	_check_unlock_and_pay()
+	await _check_network_contract()
+	await _check_hud()
+	await _check_look()
+	await _check_unlock_and_pay()
 	if _failures == 0:
 		print("PASS: the manual van shifts by hand, pays more, and leaves the automatic trucks alone")
 	quit(_failures)
@@ -57,9 +60,33 @@ func _check_rules() -> void:
 	var seen: Array[int] = []
 	box.gear_changed.connect(func(new_gear: int) -> void: seen.append(new_gear))
 	_expect(box.request_shift(1) and box.gear == 2, "One gear up")
-	_expect(not box.request_shift(1) and box.gear == 2, "A second shift inside the clutch time is refused")
+	_expect(box.request_shift(1) and box.gear == 2,
+			"A second request inside the clutch time waits in the queue: the gear holds")
 	box.tick(Gearbox.SHIFT_SECONDS + 0.01)
-	_expect(box.request_shift(1) and box.gear == 3, "After the clutch time it shifts again")
+	_expect(box.gear == 3, "...and is applied the moment the clutch is out (got %d)" % box.gear)
+	_expect(box.shift_left > 0.0, "...which puts the clutch in again")
+	box.tick(1.0)
+	_expect(box.gear == 3, "An empty queue shifts nothing")
+	# The queue holds one: two presses in the window end two gears up; a third
+	# replaces the waiting one instead of stacking.
+	box.reset()
+	box.request_shift(1)
+	box.request_shift(1)
+	box.tick(Gearbox.SHIFT_SECONDS + 0.01)
+	_expect(box.gear == 3, "Two quick +1 presses end two gears up (got %d)" % box.gear)
+	box.request_shift(1)
+	box.request_shift(1)
+	box.request_shift(-1)
+	box.tick(Gearbox.SHIFT_SECONDS + 0.01)
+	_expect(box.gear == 2, "A newer request replaces the waiting one, never stacking (got %d)" % box.gear)
+	box.tick(1.0)
+	box.reset()
+	box.request_shift(1)
+	box.request_shift(1)
+	box.reset()
+	box.tick(1.0)
+	_expect(box.gear == 1, "reset() drops a waiting shift")
+	box.gear = 3
 	for step: int in range(6):
 		box.tick(1.0)
 		box.request_shift(1)
@@ -113,7 +140,7 @@ func _world(variant: StringName) -> Dictionary:
 	shape.position.y = -0.5
 	ground.add_child(shape)
 	world.add_child(ground)
-	var van := (load("res://scenes/gameplay/vehicle/vehicle.tscn") as PackedScene).instantiate() as VehicleBody3D
+	var van: VehicleBody3D = _new_van()
 	van.set(&"variant_id", variant)
 	van.position = Vector3(0.0, 0.8, 500.0)
 	world.add_child(van)
@@ -288,6 +315,118 @@ func _check_input() -> void:
 			"The driver's input component sends the shifts to the host")
 
 
+## What goes over the wire: the gear is replicated on spawn and on change, and
+## the shift request only takes a +1 or -1 from the truck's host.
+func _check_network_contract() -> void:
+	var van: VehicleBody3D = _new_van()
+	var config: SceneReplicationConfig = null
+	for child: Node in van.get_children():
+		if child is MultiplayerSynchronizer:
+			config = (child as MultiplayerSynchronizer).replication_config
+	_expect(config != null, "The truck has its synchronizer")
+	if config != null:
+		var gear_path := NodePath("Gearbox:gear")
+		_expect(gear_path in config.get_properties(), "Gearbox:gear is in the truck's replication config")
+		_expect(config.property_get_spawn(gear_path),
+				"...sent with the spawn, so a late joiner starts in the right gear")
+		_expect(config.property_get_replication_mode(gear_path) == SceneReplicationConfig.REPLICATION_MODE_ON_CHANGE,
+				"...and on change, not every tick")
+	van.free()
+
+	_set_running(true)
+	var setup: Dictionary = await _world(&"vintage")
+	var vintage: VehicleBody3D = setup.van
+	var box: Node = vintage.get(&"gearbox")
+	vintage.call(&"request_gear_shift", 2)
+	_expect(int(box.get(&"gear")) == 1, "A request for 2 gears at once is refused")
+	vintage.call(&"request_gear_shift", 0)
+	vintage.call(&"request_gear_shift", -7)
+	_expect(int(box.get(&"gear")) == 1, "...and so are 0 and -7")
+	vintage.call(&"request_gear_shift", 1)
+	_expect(int(box.get(&"gear")) == 2, "+1 is taken")
+	var source: String = _vehicle_script().source_code
+	_expect(source.contains("sender_id != 0 and sender_id != driver_peer_id"),
+			"The request compares the sender with the driver explicitly (nobody at the wheel lets no remote through)")
+	_expect(source.contains("absi(direction) != 1"), "The request checks the direction itself")
+	setup.world.free()
+	_set_running(false)
+
+
+## The HUD shows a shift at once, not with the next telemetry.
+func _check_hud() -> void:
+	_set_running(true)
+	var setup: Dictionary = await _world(&"vintage")
+	var van: VehicleBody3D = setup.van
+	var hud: CanvasLayer = _new_hud()
+	root.add_child(hud)
+	await process_frame
+	await process_frame
+	var cargo: Node = hud.get(&"cargo")
+	var label: Label = cargo.get(&"gear_label")
+	_expect(label != null and label.visible, "A manual truck in the level gets its gear drawn without telemetry")
+	_expect(label.text.contains("1"), "It starts in first (%s)" % label.text)
+	var box: Node = van.get(&"gearbox")
+	box.set(&"gear", 3)
+	_expect(label.text.contains("3"), "A change of gear shows at once (%s)" % label.text)
+	box.set(&"gear", 2)
+	_expect(label.text.contains("2"), "...every time (%s)" % label.text)
+	var shift_label: Label = cargo.get(&"shift_up_label")
+	_expect(not shift_label.visible, "No shift-up prompt at a crawl")
+	root.get_node(^"/root/EventBus").emit_signal(&"vehicle_telemetry", Gearbox.gear_cap_kmh(2, TOP_KMH))
+	_expect(shift_label.visible and not shift_label.text.is_empty(),
+			"At the top of the gear the big prompt shows (%s)" % shift_label.text)
+	_expect(shift_label.get_theme_font_size("font_size") >= 24, "...in a big size")
+	box.set(&"gear", 3)
+	_expect(not shift_label.visible, "...and goes once the gear changes")
+	hud.free()
+	setup.world.free()
+	# An automatic truck draws nothing.
+	var plain: Dictionary = await _world(&"classic")
+	var hud_plain: CanvasLayer = _new_hud()
+	root.add_child(hud_plain)
+	await process_frame
+	await process_frame
+	root.get_node(^"/root/EventBus").emit_signal(&"vehicle_telemetry", 30.0)
+	_expect(hud_plain.get(&"cargo").get(&"gear_label") == null, "The classic's HUD has no gear readout")
+	hud_plain.free()
+	plain.world.free()
+	_set_running(false)
+
+
+## The old van looks like one, and its keys read as arrows.
+func _check_look() -> void:
+	var settings: Node = root.get_node(^"/root/GameSettings")
+	_expect(settings.binding_label(&"drive_shift_up") == "↑" and settings.binding_label(&"drive_shift_down") == "↓",
+			"The gear keys read as arrows, not as 'Up' and 'Down'")
+	_expect(settings.binding_label(&"drive_horn") == "H", "Other keys keep their name")
+	var colours: Dictionary = {}
+	for variant: StringName in [&"classic", &"agile", &"vintage"]:
+		var setup: Dictionary = await _world(variant)
+		var reference: Node = (setup.van as Node).get_node(^"ReferenceTruck")
+		var body: BaseMaterial3D = reference.get(&"_paint_materials")["DT_White"]
+		colours[variant] = body.albedo_color
+		var has_chrome: bool = (setup.van as Node).get_node_or_null(^"BodyVisuals/RetroChrome") != null
+		_expect(has_chrome == (variant == &"vintage"),
+				"%s %s the retro chrome" % [variant, "has" if has_chrome else "has no"])
+		if variant == &"vintage":
+			var van: Node = setup.van
+			van.set(&"paint_id", &"violet")
+			_expect(body.albedo_color.is_equal_approx(Color("7b52b9")),
+					"A paint the crew picked still wins over the factory cream")
+			van.set(&"paint_id", &"white")
+			_expect(body.albedo_color.is_equal_approx(colours[variant]), "...and white gives the factory cream back")
+			van.set(&"variant_id", &"classic")
+			_expect(van.get_node_or_null(^"BodyVisuals/RetroChrome") == null,
+					"Leaving the old van takes the chrome off")
+		setup.world.free()
+	var classic: Color = colours[&"classic"]
+	var vintage: Color = colours[&"vintage"]
+	_expect(classic.is_equal_approx(colours[&"agile"]), "The classic and the agile share the white body")
+	var distance: float = absf(vintage.h - classic.h) + absf(vintage.s - classic.s)
+	_expect(vintage.s > 0.2 and distance > 0.15,
+			"The old van's body is a clearly different colour (%s)" % vintage)
+
+
 func _check_unlock_and_pay() -> void:
 	if FileAccess.file_exists(TEST_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PATH))
@@ -310,15 +449,8 @@ func _check_unlock_and_pay() -> void:
 	profile.record_run(0, {"delivered": true})
 	_expect(profile.is_unlocked(&"vintage_van"), "Six deliveries and 550 points unlock the old van")
 	_expect(profile.select_truck(&"vintage") and profile.selected_truck == &"vintage", "...and it can be picked")
-	var multiplier: float = profile.selected_truck_pay_multiplier()
-	_expect(is_equal_approx(multiplier, Gearbox.PAY_MULTIPLIER),
-			"The profile reports the old van's pay multiplier (got %.2f)" % multiplier)
-	var vehicle_script := load("res://scripts/gameplay/vehicle/vehicle.gd") as GDScript
-	var variants: Dictionary = vehicle_script.get_script_constant_map()["VARIANTS"]
-	_expect(is_equal_approx(float(variants[&"vintage"]["pay_multiplier"]), multiplier),
-			"The truck and the profile agree on the multiplier")
-	profile.select_truck(&"classic")
-	_expect(is_equal_approx(profile.selected_truck_pay_multiplier(), 1.0), "The classic pays as always")
+	_expect(not profile.has_method(&"selected_truck_pay_multiplier"),
+			"The profile no longer keeps a second copy of the pay multiplier")
 	var restored := UnlockScript.new()
 	restored.storage_path = TEST_PATH
 	restored.load_profile()
@@ -327,28 +459,55 @@ func _check_unlock_and_pay() -> void:
 	profile.free()
 	restored.free()
 
+	# The payout's multiplier is the truck on the road's (Vehicle.VARIANTS, the
+	# one source), not anything in the results dictionary or the profile.
 	var crew: Node = root.get_node(^"/root/CrewProgression")
 	crew.call(&"reset_campaign")
 	var start_money: int = int(crew.get(&"team_money"))
 	var ordinary: Dictionary = {"cargo_points": 100, "delivery_points": 150}
 	crew.call(&"award_delivery", ordinary, [1])
 	_expect(int(ordinary["payout"]) == 250 and int(ordinary["pay_bonus"]) == 0,
+			"With no truck in the level the pay is doors + cargo, no bonus")
+	var classic: Dictionary = await _world(&"classic")
+	var classic_results: Dictionary = {"cargo_points": 100, "delivery_points": 150}
+	crew.call(&"award_delivery", classic_results, [1])
+	_expect(int(classic_results["payout"]) == 250 and int(classic_results["pay_bonus"]) == 0,
 			"An ordinary truck pays doors + cargo, no bonus")
-	var old_van: Dictionary = {"cargo_points": 100, "delivery_points": 150, "score": 250,
-			"pay_multiplier": Gearbox.PAY_MULTIPLIER}
+	classic.world.free()
+	var vintage: Dictionary = await _world(&"vintage")
+	var variants: Dictionary = _vehicle_script().get_script_constant_map()["VARIANTS"]
+	var expected: float = float(variants[&"vintage"]["pay_multiplier"])
+	_expect(is_equal_approx(float(vintage.van.call(&"pay_multiplier")), expected),
+			"The truck answers with its variant's multiplier")
+	var old_van: Dictionary = {"cargo_points": 100, "delivery_points": 150, "score": 250}
 	crew.call(&"award_delivery", old_van, [1])
 	_expect(int(old_van["payout"]) == 313 and int(old_van["pay_bonus"]) == 63,
 			"The old van pays 25 percent more: 250 -> 313 (got %d, bonus %d)" % [
 			int(old_van["payout"]), int(old_van["pay_bonus"])])
 	_expect(int(old_van["score"]) == 250, "The score is the same: the compensation is money, not points")
-	_expect(int(crew.get(&"team_money")) == start_money + 250 + 313, "The bonus reaches the team's wallet")
-	var cheated: Dictionary = {"cargo_points": 100, "delivery_points": 0, "pay_multiplier": 0.1}
-	crew.call(&"award_delivery", cheated, [1])
-	_expect(int(cheated["payout"]) == 100, "A multiplier under 1 never cuts the pay")
-	var endless: Dictionary = {"pay_multiplier": 1.25, "distance_traveled": 500.0}
+	_expect(int(crew.get(&"team_money")) == start_money + 250 + 250 + 313, "The bonus reaches the team's wallet")
+	var claimed: Dictionary = {"cargo_points": 100, "delivery_points": 0, "pay_multiplier": 9.0}
+	crew.call(&"award_delivery", claimed, [1])
+	_expect(int(claimed["payout"]) == 125,
+			"A multiplier already in the results is not believed (got %d)" % int(claimed["payout"]))
+	var endless: Dictionary = {"distance_traveled": 500.0}
 	crew.call(&"award_delivery", endless, [1])
 	_expect(int(endless["payout"]) == 0, "No doors or cargo, no payout, multiplier or not")
+	vintage.world.free()
 	crew.call(&"reset_campaign")
+
+
+## Loaded at run time: they name the autoloads, which are not up while this compiles.
+func _new_van() -> VehicleBody3D:
+	return (load("res://scenes/gameplay/vehicle/vehicle.tscn") as PackedScene).instantiate() as VehicleBody3D
+
+
+func _new_hud() -> CanvasLayer:
+	return load("res://scripts/ui/hud/hud.gd").new()
+
+
+func _vehicle_script() -> GDScript:
+	return load("res://scripts/gameplay/vehicle/vehicle.gd") as GDScript
 
 
 func _expect(condition: bool, description: String) -> void:
