@@ -31,7 +31,9 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
   diagnóstico, red y revisión en Opus.
 - **Rutinas**: el sistema completo (qué rutina corre cuándo, cómo se pasan el trabajo, reglas
   comunes y freno de mano `PAUSA`) está en `.claude/rutinas/README.md`. En la nube no hay
-  Blender ni ComfyUI: esos assets quedan para `.claude/rutinas/sesion-arte.md`. No hay revisión
+  Blender, ComfyUI ni GPU: eso lo hacen las rutinas de la PC, `.claude/rutinas/sesion-arte.md`
+  (crear y refinar assets) y `.claude/rutinas/pc-build.md` (build de Windows y FPS), lanzadas con
+  `tools/pc/rutina-pc.ps1`. No hay revisión
   humana de PRs: los checks requeridos son la única compuerta. Las rutinas trabajan solo
   `docs/tareas-nacho.md` (incluidas las `S-xxx` heredadas); `docs/tareas-slatex.md` (S-311) es
   de Slatex y no se toca.

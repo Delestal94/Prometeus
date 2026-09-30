@@ -1,8 +1,10 @@
 # Rutinas: el equipo de agentes trabajando solo
 
-Rutinas en la nube (triggers de Claude Code) que trabajan el repo sin nadie mirando. El prompt de
-cada trigger dice solo "leé y seguí `.claude/rutinas/<archivo>.md` de `origin/main`" (más un
-parámetro si lo tiene): para cambiar cómo trabaja una rutina se cambia su archivo con un PR.
+Rutinas que trabajan el repo sin nadie mirando: la mayoría en la nube (triggers de Claude Code) y
+dos en la PC de Nacho (Programador de tareas de Windows), para lo que necesita Blender, ComfyUI o una
+GPU real. El prompt de cada una dice solo "leé y seguí `.claude/rutinas/<archivo>.md` de
+`origin/main`" (más un parámetro si lo tiene): para cambiar cómo trabaja una rutina se cambia su
+archivo con un PR.
 
 ## Cómo se pasan el trabajo
 
@@ -11,11 +13,11 @@ Ninguna rutina habla con otra: se comunican por archivos del repo y por PRs.
 ```
 revision (lunes) ──► docs/auditorias/AAAA-MM-DD-revision.md ──┐
 qa (diario) ───────► docs/qa-recorrido.md (Hallazgos) ────────┤
-auditoria (diaria) ► docs/auditorias/AAAA-MM-DD-integral.md ──┼─► planificador-tareas ─► docs/tareas-*.md
+auditoria (diaria) ► docs/auditorias/AAAA-MM-DD-integral.md ──┼─► planificador-tareas ─► docs/tareas-nacho.md
 mantenimiento (jue) ► docs arreglados + hallazgos de código ──┤                              │
-lanzamiento (mes) ─► docs/marketing/ ─────────────────────────┘                              ▼
-                                                               construccion (2 por hora) ─► PR ─► CI ─► main
-sesion-arte (a mano, en la PC) ◄── tareas "necesita PC" ◄──────────────────────────────────────┘
+lanzamiento (mes) ─► docs/marketing/ ─────────────────────────┤                              ▼
+pc-build (PC, diaria) ► docs/rendimiento-pc.md ───────────────┘  construccion (2 por hora) ─► PR ─► CI ─► main
+sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + director-arte ──► PR ─► CI ─► main
 ```
 
 | Rutina | Archivo | Cuándo (hora Argentina) | Rama | Qué produce |
@@ -27,7 +29,8 @@ sesion-arte (a mano, en la PC) ◄── tareas "necesita PC" ◄─────
 | Revisión (la contra) | `revision.md` | lunes 09:00 | `rutina/revision-AAAA-MM-DD` | auditoría + tareas nuevas |
 | Mantenimiento | `mantenimiento.md` | jueves 09:00 | `rutina/mant-AAAA-MM-DD` | docs al día + hallazgos |
 | Lanzamiento | `lanzamiento.md` | día 1 de cada mes, 10:00 | `rutina/lanzamiento-AAAA-MM` | estado de Steam + tareas |
-| Sesión de arte | `sesion-arte.md` | a mano, con Blender/ComfyUI abiertos | `nacho/...` | assets de las tareas "necesita PC" |
+| Sesión de arte (PC) | `sesion-arte.md` | cada 2 h, a las :30 de las horas pares (hoy: en vivo, ver abajo) | `arte/<ID>-*` | un asset creado o refinado → un PR |
+| Build y rendimiento (PC) | `pc-build.md` | todos los días 03:15 (hoy: en vivo, ver abajo) | `rutina/pc-AAAA-MM-DD` | build de Windows probada, FPS con GPU, capturas con luz real |
 
 ## Reglas comunes (todas las rutinas)
 
@@ -58,15 +61,40 @@ sesion-arte (a mano, en la PC) ◄── tareas "necesita PC" ◄─────
    `main`; borrar ramas ajenas; reescribir historial.
 9. **Un PR por corrida**, salvo arreglar PRs rojos o con conflicto (ver `construccion.md` §1).
 10. Cerrá todo proceso de Godot que hayas abierto.
+11. **Freno de tareas**: cada tarea que crea una rutina lleva `Origen: <rutina> AAAA-MM-DD` (auditoría
+    integral, QA, revisión semanal, mantenimiento, lanzamiento, sesión de arte, PC build). Antes de
+    crear, contá las tareas abiertas (sin `[x]`) de `tareas-nacho.md` con el `Origen` de tu rutina: si
+    pasan de **10**, no crees ninguna esa corrida; los hallazgos quedan solo en el informe o el PR, y
+    en el cuerpo decís "freno de tareas: N abiertas". Siempre entran igual: bugs de QA "bloquea" y P0
+    de la auditoría. Así lo que se planifica no le gana a lo que la construcción alcanza a hacer.
 
 ## Límites de la nube
 
 Blender y ComfyUI no están: `modelador-blender`, `artista-conceptual` y la parte de assets de
 `animador`, `artista-shaders` y `artista-vfx` quedan para `sesion-arte.md`. Las capturas son render por
-software: composición, colores y UI valen; sombras y FPS no. `empaquetador-release` solo en vivo.
+software: composición, colores y UI valen; sombras y FPS no. Builds, FPS y luz real: `pc-build.md`.
 
-## Los triggers
+## Los triggers de la nube
 
 Los crea la conversación principal con la skill `schedule`. El prompt de cada uno es una línea:
 `Leé .claude/rutinas/<archivo>.md de origin/main y seguilo al pie de la letra.` (construcción suma
 `Prioridad: nacho` o `Prioridad: slatex`). Modelo: Opus 5.5.
+
+## Las rutinas de la PC
+
+La PC queda prendida y con la sesión de Windows abierta (Blender necesita pantalla). Las lanza el
+Programador de tareas con `tools/pc/rutina-pc.ps1 -Rutina arte|build`, que:
+
+- trabaja en un **clon aparte** (`Prometeus-rutina`, al lado del repo de trabajo): nunca toca la copia
+  donde trabaja Nacho;
+- sale enseguida si está `.claude/rutinas/PAUSA` en `origin/main` (el mismo freno de mano) o si otra
+  rutina de la PC está corriendo (un solo candado: comparten la GPU de 8 GB; la de build espera hasta
+  100 min, la de arte no espera);
+- abre Blender minimizado con el servidor MCP prendido (`tools/pc/blender_mcp_autostart.py`) si no
+  está abierto, y deja `GODOT` apuntando al Godot de la PC;
+- corre `claude -p` con Opus 5.5, permisos en modo `auto` (lo que pediría permiso se niega solo) y solo
+  los MCP de Blender y ComfyUI, y guarda el log en `%LOCALAPPDATA%\prometeus-rutinas\logs\`.
+
+Las tareas del Programador las registra Nacho a mano (pendiente al 2026-09-30); hasta entonces las dos
+rutinas se corren en vivo pidiéndolas ("corré la sesión de arte", "corré el build de la PC"). Para ver
+qué hizo una corrida, su log; para frenarlas solo en la PC, deshabilitá sus tareas del Programador.

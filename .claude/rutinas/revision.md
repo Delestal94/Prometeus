@@ -29,7 +29,9 @@ Rama `rutina/revision-AAAA-MM-DD` desde `origin/main`.
 1. `docs/auditorias/AAAA-MM-DD-revision.md`: resumen de las tres miradas (no el texto entero), con el
    top 3, las decisiones pendientes del usuario y qué quedó sin resolver de la auditoría anterior.
 2. **`planificador-tareas`** con los hallazgos, bajo estas reglas:
-   - **Máximo 8 tareas nuevas** por semana; el resto queda en la auditoría.
+   - **Máximo 8 tareas nuevas** por semana; el resto queda en la auditoría. Cada una lleva
+     `Origen: revisión semanal AAAA-MM-DD`, y con el freno de tareas activo (regla 11 del README) no
+     se crea ninguna: todo queda en la auditoría.
    - MANTENER no genera tarea. SIMPLIFICAR y REFINAR chicos → tareas normales (agente sugerido:
      `pulidor-jugabilidad` o el artista del caso).
    - **BORRAR, RECORTAR, REHACER algo grande, POSTERGAR o DESCARTAR** una tarea → tarea ⏸ "decide el
