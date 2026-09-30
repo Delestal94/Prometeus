@@ -545,7 +545,8 @@ func _refresh_event_disguise() -> void:
 					shown = content.call(&"shipping_contents")
 					shown_parties = content.call(&"shipping_parties")
 				break
-	_shipping_text.text = shown
+	if _shipping_text.text != shown:
+		_shipping_text.text = shown
 	if _shipping_parties != null and _shipping_parties.text != shown_parties:
 		PackageShippingLabel.write_parties(_shipping_parties, shown_parties)
 	var disguised: bool = not _package.disguise_trap_id.is_empty() and not _package.disguise_revealed
