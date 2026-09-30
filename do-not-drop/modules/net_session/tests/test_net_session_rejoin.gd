@@ -17,7 +17,7 @@ extends SceneTree
 ## - back under the same id: _peer_returned(id, id) but no peer_rejoined;
 ##   claiming nothing usable (not text, too long, empty): nothing at all;
 ## - a failed authentication forgets the identity; however many come and go,
-##   the memory of those who left stays bounded (IDENTITY_MEMORY).
+##   the memory of those who left stays bounded (NetPeerIdentities.MEMORY).
 
 var _failures: int = 0
 
@@ -50,22 +50,22 @@ func _run() -> void:
 	session.transport = NetSession.Transport.ENET
 
 	_expect(session.host_session(7813) == OK, "Hosting over ENet works")
-	var nonce: String = session._session_nonce
+	var nonce: String = session._identities.nonce
 	_expect(nonce.length() == 16, "Hosting makes a session nonce (got '%s')" % nonce)
 	session.leave_session()
-	_expect(session._session_nonce.is_empty(), "Leaving forgets it")
+	_expect(session._identities.nonce.is_empty(), "Leaving forgets it")
 
 	# The joiner's side of the handshake.
-	session._session_nonce = "abc123"
-	var token: String = session._local_identity()
+	session._identities.nonce = "abc123"
+	var token: String = session._identities.local_token()
 	var reply: Dictionary = session._ready_reply()
 	_expect(String(reply.identity) == (token + "abc123").sha256_text() and not String(reply.identity).contains(token),
 		"The ready reply carries the token hashed with the session nonce, not the token")
 	_expect(String(session._ready_reply().identity) == String(reply.identity), "...the same on every rejoin")
 	_expect(session._ready_reply_error(reply).is_empty(), "...and is still a valid ready reply")
-	session._session_nonce = "other"
+	session._identities.nonce = "other"
 	_expect(String(session._ready_reply().identity) != String(reply.identity), "...and another for another session")
-	session._session_nonce = ""
+	session._identities.nonce = ""
 
 	# The host's side: joiners identify themselves before they connect.
 	var rejoins: Array = []
@@ -121,11 +121,11 @@ func _run() -> void:
 		_join(session, 1000 + index, "churn-%d" % index)
 		session._on_peer_disconnected(1000 + index)
 	var here: int = session.peer_ids.size()
-	_expect(session._identity_peer.size() <= here + NetSession.IDENTITY_MEMORY,
-		"200 comings and goings leave %d identities remembered (crew %d)" % [session._identity_peer.size(), here])
+	_expect(session._identities.peer_by_identity.size() <= here + NetPeerIdentities.MEMORY,
+		"200 comings and goings leave %d identities remembered (crew %d)" % [session._identities.peer_by_identity.size(), here])
 
 	session.leave_session()
-	_expect(session._identity_peer.is_empty() and session._peer_identity.is_empty(), "Leaving forgets everyone")
+	_expect(session._identities.peer_by_identity.is_empty() and session._identities.by_peer.is_empty(), "Leaving forgets everyone")
 	session.free()
 	if _failures == 0:
 		print("PASS: rejoin by identity: hashed tokens, returns, ghosts dropped once, bounded memory")
