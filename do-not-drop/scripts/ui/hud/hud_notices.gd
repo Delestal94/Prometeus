@@ -14,6 +14,10 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 ## hud_notices.gd renders only the highest-priority one in that zone.
 var _notice_sources: Dictionary = {&"critical": {}, &"information": {}}
 var _notice_serial: int = 0
+## Seconds of the low-visibility event left as this HUD knows it (0 = none),
+## and whether the driver's notice for it is up.
+var _low_visibility_left: float = 0.0
+var _low_visibility_shown: bool = false
 
 
 func _ready() -> void:
@@ -26,6 +30,7 @@ func _ready() -> void:
 	EventBus.route_event_updated.connect(_on_route_event_updated)
 	EventBus.route_event_resolved.connect(_on_route_event_resolved)
 	EventBus.unlock_earned.connect(_on_unlock_earned)
+	EventBus.low_visibility_changed.connect(_on_low_visibility_changed)
 	EventBus.depot_notice.connect(toast)
 
 
@@ -226,6 +231,31 @@ func _on_route_event_updated(event_id: StringName, event: Dictionary) -> void:
 			hud.cargo.refresh_row(id)
 
 
+## The driver's view is blocked for a spell (N-113, low_visibility_event.gd):
+## the one at the wheel is told to get guided, everybody else to guide them
+## with the phrase wheel (N-505). Ends with the event.
+func _on_low_visibility_changed(is_starting: bool, _kind: StringName, duration: float, seconds_in: float) -> void:
+	_low_visibility_left = maxf(duration - seconds_in, 1.0) if is_starting else 0.0
+	refresh_low_visibility(0.0)
+	if is_starting and not local_is_driving():
+		toast(GameSettings.prompt(tr("HUD_LOW_VISIBILITY_GUIDE_KEY") % GameSettings.binding_label(&"ui_ping"),
+				tr("HUD_LOW_VISIBILITY_GUIDE_PAD")), 45)
+
+
+## Every frame while the event lasts: the driver's notice follows whoever is at
+## the wheel now (a swap mid-event moves it), and goes with the event.
+func refresh_low_visibility(delta: float) -> void:
+	_low_visibility_left = maxf(_low_visibility_left - delta, 0.0)
+	var wanted: bool = _low_visibility_left > 0.0 and local_is_driving()
+	if wanted == _low_visibility_shown:
+		return
+	_low_visibility_shown = wanted
+	if wanted:
+		set_notice(&"critical", &"low_visibility", tr("HUD_LOW_VISIBILITY_DRIVER"), 85, Hud.YELLOW)
+	else:
+		clear_notice(&"critical", &"low_visibility")
+
+
 func _event_text(event: Dictionary, field: String, fallback: String = "") -> String:
 	var key: String = String(event.get(field, fallback))
 	var text: String = tr(key)
@@ -319,6 +349,7 @@ func clear_all_notices() -> void:
 
 
 func process_notices(delta: float) -> void:
+	refresh_low_visibility(delta)
 	for zone: StringName in _notice_sources:
 		var sources: Dictionary = _notice_sources[zone]
 		var active_key := _top_notice_key(sources)

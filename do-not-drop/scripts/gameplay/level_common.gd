@@ -22,6 +22,7 @@ var _overboard_seconds: Dictionary = {}
 const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_marker.gd")
 const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
 const RESCUE_HOOK: Script = preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
+const LOW_VISIBILITY: Script = preload("res://scripts/gameplay/route/low_visibility_event.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
 @onready var vehicle: VehicleBody3D = $World/Vehicle
 @onready var _driver_seat: Area3D = $World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea
@@ -83,6 +84,12 @@ func _ready() -> void:
 	faults.name = "VehicleFaults"
 	faults.set(&"vehicle", vehicle)
 	add_child(faults)
+	# Mud over the windshield now and then (N-113): the host draws it from the
+	# world seed, every peer follows it; only the driver's view shows it.
+	var low_visibility: Node = LOW_VISIBILITY.new()
+	low_visibility.name = "LowVisibilityEvent"
+	low_visibility.set(&"level", self)
+	add_child(low_visibility)
 	# The rescue hook (N-213.3) hangs by the rear doors on every peer, stowed
 	# until a run takes it from the depot's supplies.
 	var hook: Node3D = RESCUE_HOOK.new()
