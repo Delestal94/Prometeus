@@ -26,6 +26,34 @@ function Write-Log($msg) {
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $msg" | Out-File -FilePath $log -Append -Encoding utf8
 }
 
+# The cloud can't read these logs, so a failed run opens (or comments on) one GitHub issue and a good
+# run closes it. The repo is public: only error lines go to the issue, never the whole log.
+$repo = 'Delestal94/Prometeus'
+function Report-Health([bool]$ok, [string]$detail) {
+    try {
+        $open = (gh issue list --repo $repo --label rutina-caida --state open --json number --jq '.[0].number') 2>$null
+        if ($ok) {
+            if ($open) {
+                gh issue close $open --repo $repo --comment "Volvió a andar: la rutina ``$Rutina`` terminó bien el $(Get-Date -Format 'yyyy-MM-dd HH:mm')." | Out-Null
+            }
+            return
+        }
+        $errors = Get-Content $log -Encoding utf8 -ErrorAction SilentlyContinue |
+            Where-Object { $_ -match 'API Error|error:|Error:|exited with|failed|fatal' -and $_ -notmatch 'Permission allow rule' } |
+            Select-Object -Last 8 | ForEach-Object { if ($_.Length -gt 300) { $_.Substring(0, 300) + '…' } else { $_ } }
+        $fence = '```'
+        $body = "La rutina ``$Rutina`` de la PC falló el $(Get-Date -Format 'yyyy-MM-dd HH:mm'): $detail`n`n" +
+            "Líneas de error (log completo en la PC: ``$log``):`n$fence`n$($errors -join "`n")`n$fence"
+        if ($open) {
+            $body | gh issue comment $open --repo $repo --body-file - | Out-Null
+        } else {
+            $body | gh issue create --repo $repo --title 'Rutina de PC caída' --label rutina-caida --body-file - | Out-Null
+        }
+    } catch {
+        Write-Log "could not report health to GitHub: $_"
+    }
+}
+
 # Keep the last 200 logs.
 Get-ChildItem $logs -Filter '*.log' | Sort-Object LastWriteTime -Descending |
     Select-Object -Skip 200 | Remove-Item -Force -ErrorAction SilentlyContinue
@@ -98,12 +126,24 @@ try {
         "(``git show origin/main:.claude/rutinas/$file``) y seguilo al pie de la letra. " +
         "Corrés en la PC de Nacho (rutina local, sin nadie mirando), en el clon $Clone."
 
+    # An old CLI rejects the current model with a 400 and the run dies in seconds (2026-09-30):
+    # update first; if the update fails the run still tries with what is installed.
+    Write-Log 'updating Claude Code'
+    & npm install --global '@anthropic-ai/claude-code@latest' --no-fund --no-audit --loglevel=error 2>&1 |
+        ForEach-Object { "$_" } | Out-File -FilePath $log -Append -Encoding utf8
+    Write-Log "claude $((& claude --version 2>$null) -join ' ')"
+
     Write-Log "claude -p ($file) starting"
+    # 2>&1 + Out-File utf8: Windows PowerShell's *>> writes UTF-16, which nobody could read.
     & claude -p $prompt --model $Model --permission-mode auto --permission-prompts none `
-        --mcp-config $mcpPath --strict-mcp-config --output-format text *>> $log
-    Write-Log "claude exited with $LASTEXITCODE"
+        --mcp-config $mcpPath --strict-mcp-config --output-format text 2>&1 |
+        ForEach-Object { "$_" } | Out-File -FilePath $log -Append -Encoding utf8
+    $code = $LASTEXITCODE
+    Write-Log "claude exited with $code"
+    if ($code -eq 0) { Report-Health $true '' } else { Report-Health $false "claude salió con código $code" }
 } catch {
     Write-Log "error: $_"
+    Report-Health $false "$_"
     exit 1
 } finally {
     # Only what this routine opened: Godot run on the clone and the exported build inside it.

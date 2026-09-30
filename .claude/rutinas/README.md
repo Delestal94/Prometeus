@@ -56,6 +56,11 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Docs, avisos, licencias | mantenimiento (jueves) | `documentador`, `guardian-dominios` |
 | Página de Steam, cápsulas, calendario, devlog | lanzamiento (mensual) → sesión de arte | `estratega-steam`, `artista-conceptual`, `revisor-visual` |
 | Build de prueba | build de la PC (diaria; publicar sigue ⏸ con M5) | `empaquetador-release`, `perfilador-rendimiento`, `revisor-visual` |
+| Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (diaria, "latido") + issue `rutina-caida` que abre la PC | `auditor-integral` |
+| Decisiones del usuario | toda rutina que crea un ⏸ abre un issue `decide-usuario` (regla 12); la revisión semanal junta las respuestas | `planificador-tareas` |
+| Regresiones de lo ya mezclado | QA, build de la PC y auditoría → tarea `Regresión de #PR` → construcción (arreglo o `git revert`, regla 14) | `cazador-bugs`, constructor del área |
+| Dependencias del juego (Godot, GodotSteam, addons) | lanzamiento (mensual) → tarea | `estratega-steam`, `constructor-red` |
+| Tareas viejas u obsoletas | revisión (lunes) → ⏸ "decide el usuario" si ya no aplican | `abogado-del-diablo`, `planificador-tareas` |
 | Post-lanzamiento (reseñas, parches) | lanzamiento, dormida hasta un tag `v1.*` | `estratega-steam`, `cazador-bugs`, `pulidor-jugabilidad`, `empaquetador-release` |
 | Playtesting con gente | ⏸ decisión del usuario (diferido al final): la lista vive en "Para cuando haya playtesting" de `tareas-nacho.md` | — |
 | Personajes (modelo y apariencia) | ⏸ decisión del usuario; S-311 es de Slatex | — |
@@ -95,6 +100,21 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
     pasan de **10**, no crees ninguna esa corrida; los hallazgos quedan solo en el informe o el PR, y
     en el cuerpo decís "freno de tareas: N abiertas". Siempre entran igual: bugs de QA "bloquea" y P0
     de la auditoría. Así lo que se planifica no le gana a lo que la construcción alcanza a hacer.
+12. **Decisiones del usuario, a la vista**: toda tarea ⏸ "decide el usuario" que crees o marques abre
+    también un issue de GitHub con la etiqueta `decide-usuario` (título `<ID> · decidir: <qué>`, cuerpo
+    con las opciones, tu recomendación y el link a la tarea). Antes, `gh issue list --label
+    decide-usuario --state open --search "<ID>"`: si ya existe, comentá en ese. El usuario contesta
+    cerrándolo con un comentario; la revisión semanal lleva esa respuesta a la tarea. Los cuerpos de PR
+    que se mezclan solos no los lee nadie: el issue le llega como notificación.
+13. **Cupo del plan**: si la corrida se queda sin cupo (error de límite de uso, o `api_retry` con
+    `rate_limit` que no se recupera), no reintentes en la misma corrida: si ya reclamaste una tarea y no
+    hay commits propios en la rama, borrá la rama (`git push origin --delete <rama>`) para que quede
+    libre, y terminá. Lo que ya estaba subido sigue: la próxima corrida lo retoma.
+14. **Regresiones**: cuando QA, la build de la PC o la auditoría encuentran algo que antes andaba y
+    `cazador-bugs` lo atribuye a un PR ya mezclado (con `git log -S`, `git bisect` o el diff del PR), la
+    tarea se titula `Regresión de #<PR>: <qué>` y dice qué PR la trajo. La construcción la toma como un
+    bug de QA; si el arreglo no es obvio en una corrida, hace `git revert` de ese PR (en una rama, con PR
+    y tests como cualquier cambio) y deja una tarea nueva para rehacer la feature sin la regresión.
 
 ## Límites de la nube
 
@@ -121,8 +141,17 @@ Programador de tareas con `tools/pc/rutina-pc.ps1 -Rutina arte|build`, que:
   100 min, la de arte no espera);
 - abre Blender minimizado con el servidor MCP prendido (`tools/pc/blender_mcp_autostart.py`) si no
   está abierto, y deja `GODOT` apuntando al Godot de la PC;
+- actualiza Claude Code (`npm i -g @anthropic-ai/claude-code@latest`) antes de cada corrida: con una
+  versión vieja, Opus 5.5 responde 400 y la corrida muere en segundos (pasó el 2026-09-30);
 - corre `claude -p` con Opus 5.5, permisos en modo `auto` (lo que pediría permiso se niega solo) y solo
-  los MCP de Blender y ComfyUI, y guarda el log en `%LOCALAPPDATA%\prometeus-rutinas\logs\`.
+  los MCP de Blender y ComfyUI, y guarda el log (UTF-8) en `%LOCALAPPDATA%\prometeus-rutinas\logs\`;
+- **si la corrida falla**, abre o comenta el issue "Rutina de PC caída" (etiqueta `rutina-caida`) con el
+  final del log, y lo cierra solo cuando una corrida vuelve a terminar bien. La nube no ve los logs de
+  la PC: ese issue es lo único que avisa (y la auditoría lo reporta).
+
+El clon `Prometeus-rutina` tiene que estar marcado como confiable en `~/.claude.json`
+(`projects["D:/Programas/Utilities/Proyectos/Prometeus-rutina"].hasTrustDialogAccepted: true`); si no,
+Claude Code ignora los permisos de `.claude/settings.json` del proyecto.
 
 Tareas del Programador (registradas el 2026-09-30): "Prometeus - Sesion de arte (PC)" y "Prometeus -
 Build y rendimiento (PC)", solo con la sesión de Windows abierta, máximo 3 h por corrida. También se

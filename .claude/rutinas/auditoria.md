@@ -15,6 +15,24 @@ tareas. Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
 4. **Ya conocido** (para no repetir): las 3 auditorías más recientes de `docs/auditorias/` (integrales y
    semanales), la tabla "Hallazgos" de `docs/qa-recorrido.md` y los títulos de las tareas abiertas de las
    dos listas.
+5. **Latido de las rutinas** (vos, antes de los agentes; es barato y es lo único que ve una rutina que
+   dejó de andar): el último PR de cada una con
+   `gh pr list --state all --limit 100 --json headRefName,createdAt,state`, más los issues abiertos
+   `rutina-caida` y `decide-usuario` (`gh issue list --label <etiqueta> --state open`).
+
+   | Rutina | Rama | Alarma si |
+   |---|---|---|
+   | Construcción | `nacho/*` | hay tareas tomables y ningún PR nuevo en 24 h |
+   | Build de la PC | `rutina/pc-*` | ningún PR en 36 h (sube una fila todos los días, haya o no hallazgos) |
+   | Sesión de arte | `arte/*` | ningún PR en 48 h y hay tareas "necesita PC" de arte abiertas |
+   | Revisión / mantenimiento | `rutina/revision-*`, `rutina/mant-*` | ningún PR en 8 días |
+   | Lanzamiento | `rutina/lanzamiento-*` | ningún PR en 32 días |
+   | Cualquiera | — | PRs de rutina rojos o cerrados sin mezclar, o un issue `rutina-caida` abierto |
+
+   Cada alarma es un hallazgo **P1** del pilar 3 que va directo al informe y a **"Para el usuario"**
+   (una rutina caída casi siempre se arregla fuera del repo: la PC, un trigger, el cupo). No genera
+   tarea salvo que la causa esté en el repo. QA no tiene alarma: sin hallazgos no abre PR. Sumá también
+   los `decide-usuario` abiertos hace más de 7 días, en una línea cada uno.
 
 ## 2. Dos pasadas en paralelo
 
@@ -27,7 +45,8 @@ de lo ya conocido:
 
 ## 3. Registrar
 
-- Sin hallazgos nuevos en ninguna pasada: terminá sin PR (regla 7 del README).
+- Sin hallazgos nuevos en ninguna pasada ni alarmas del latido: terminá sin PR (regla 7 del README).
+  Una alarma del latido sola ya alcanza para abrir el PR con el informe.
 - Con hallazgos: rama `rutina/auditoria-AAAA-MM-DD` desde `origin/main`.
   1. `docs/auditorias/AAAA-MM-DD-integral.md`: commit auditado, pilar del día, los hallazgos de las dos
      pasadas sin duplicados (formato del agente, recortado a lo esencial), la matriz impacto/esfuerzo,
