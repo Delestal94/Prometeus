@@ -14,7 +14,8 @@ extends SceneTree
 ## - on the real truck (vehicle.tscn) the knob hangs by the GPS inside the cab,
 ##   its prompt shows the mode and the next, a hand-full player can't turn it,
 ##   and turning it changes what every peer's view plays (calm and loud loops
-##   on the Interior bus, silence for news and off, a jingle for the news);
+##   on the Interior bus, silence for news and off, a jingle for the news),
+##   and the dial's labels are at least 2.5 cm tall (read from the seat);
 ## - Ruidoso (noisy_trap_behavior.gd): with the radio off nothing changes; calm
 ##   music settles it faster, loud music makes each shake bigger and settles it
 ##   slower, the newscast changes nothing, and a fully worked up box still
@@ -253,6 +254,12 @@ func _check_real_truck(radio_script: Script) -> void:
 	_expect(cue.playing, "The newscast opens with its jingle")
 	var label: Label3D = view.get(&"mode_label")
 	_expect(label.text == tr("WORLD_RADIO_MODE_NEWS"), "The dial's label names the mode (got %s)" % label.text)
+	# Read from the driver's seat, not only up close (N-406 visual check): the
+	# mode's letters at least 2.5 cm tall, the newscast's too.
+	var mode_height: float = label.font_size * label.pixel_size
+	var news_height: float = news_label.font_size * news_label.pixel_size
+	_expect(mode_height >= 0.025 and news_height >= 0.025,
+			"The dial's labels read from the seat (mode %.3f m, news %.3f m)" % [mode_height, news_height])
 	knob.call(&"interact", player)
 	_expect(radio.get(&"mode") == &"off" and news_label.text.is_empty(), "Off clears the newscast's line")
 	print("radio: cycling through every mode and building its sounds took ", Time.get_ticks_msec() - started, " ms")
