@@ -2208,11 +2208,19 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 - [x] Una garabateada a mano por caja ("NO AGITAR!!!", "ESTE LADO ARRIBA (EN SERIO)") como `Label3D` con
   tipografía de marcador. Narrativa ambiental sin cinemáticas.
 
-#### S-603 · La jefa habla en el depósito — C · `Opus 5.5 · medium` · Aviso: no
+#### S-603 · La jefa habla en el depósito — C · `Opus 5.5 · medium` · Aviso: sí (`depot_panel.gd`, `network_manager.gd`) · **[x] rama `nacho/S-603-boss-lines`**
 
-- [ ] Pool de 20 líneas de inicio de jornada según el pedido y la campaña ("Tres entregas. Una es una
-  gallina. No pregunten.") mostradas en la pizarra del `depot_panel.gd` y como toast al entrar.
-- [ ] Reacción según la última partida ("Ayer rompieron dos cosas. Hoy no.").
+- [x] Pool de 20 líneas de inicio de jornada según el pedido y la campaña ("Tres entregas. Una es una
+  gallina. No pregunten.") mostradas en la pizarra del `depot_panel.gd` y como toast al entrar. Hecho
+  (2026-09-30): `boss_lines.gd` (`BossLines`, módulo puro, determinista por semilla + partidas + casas) con 20
+  líneas de inicio por pedido (trampas, cantidad de casas) y campaña (partidas, plata) más 4 propias de Endless;
+  las decide el host y viajan como `LocText` (RPC `_receive_boss_lines` del depósito, `PROTOCOL_VERSION` 5). Se
+  ven en la pizarra (`OrderBoard/Boss0`), en la hoja de pedidos de `depot_panel.gd` y como toast una vez. 34
+  claves `WORLD_BOSS_*` en `strings_world.csv` + `UI_DEPOT_BOSS_TAG`.
+- [x] Reacción según la última partida ("Ayer rompieron dos cosas. Hoy no."). Hecho: 8 reacciones (primera
+  jornada, nada llegó, roto y perdido, rotas, una rota, perdidas, racha sin accidentes, entrega perfecta) desde
+  el resumen que `depot_campaign_board.gd` guarda en `depot_log.json`; van en `OrderBoard/Boss1` y en el panel.
+  Decisión Endless: líneas propias de inicio, sin reacción. Test `test_boss_lines.gd`.
 
 #### S-604 · Reclamos de clientes con voz propia — B · `Opus 5.5 · medium` · Aviso: no
 

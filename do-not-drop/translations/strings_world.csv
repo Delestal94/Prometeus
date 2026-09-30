@@ -175,3 +175,37 @@ WORLD_FAULT_STORY_REAR_DOOR_SPARE,Puerta trasera: traba cambiada por el repuesto
 WORLD_FAULT_STORY_MIRROR_LOST,Espejo: se cayó y nadie lo reemplazó,Mirror: fell off and nobody replaced it
 WORLD_FAULT_STORY_MIRROR_PHONE,Espejo reemplazado por un celular,Mirror replaced by a phone
 WORLD_FAULT_STORY_MIRROR_SPARE,Espejo: cambiado por el de repuesto,Mirror: swapped for the spare
+WORLD_BOSS_RADIO,"La Jefa, por radio: %s","The Boss, on the radio: %s"
+WORLD_BOSS_NOTE,JEFA  ·  %s,BOSS  ·  %s
+WORLD_BOSS_START_ONE,Una entrega. Una sola. Que cuente.,One delivery. Just one. Make it count.
+WORLD_BOSS_START_MANY,%d entregas hoy. Nadie almuerza tarde.,%d deliveries today. Nobody lunches late.
+WORLD_BOSS_START_HEN,%d entregas. Una es una gallina. No pregunten.,%d deliveries. One is a hen. Don't ask.
+WORLD_BOSS_START_NOISY,Una caja va a protestar todo el camino. Es su derecho.,One box will complain the whole way. It's her right.
+WORLD_BOSS_START_EXPLOSIVE,Hay fuegos artificiales en el pedido. Trátenlos con respeto.,There are fireworks in the order. Treat them with respect.
+WORLD_BOSS_START_FRAGILE,Hay vidrio en el pedido. Que nadie estornude.,There's glass in the order. Nobody sneeze.
+WORLD_BOSS_START_LIQUID,Algo gotea en el pedido. No es grave. Es líquido.,Something drips in the order. Not serious. It's liquid.
+WORLD_BOSS_START_GROWING,Una caja pesa más a cada rato. Dicen que es cariño.,One box gets heavier by the minute. They say it's affection.
+WORLD_BOSS_START_BALANCE,Una caja se cree equilibrista. No le aplaudan.,One box thinks it's a tightrope walker. Don't applaud.
+WORLD_BOSS_START_HOSTILE,Una caja viene de mal humor. Tiene sus motivos.,One box is in a bad mood. It has its reasons.
+WORLD_BOSS_START_MIXED,Hoy hay de todo un poco. Con moño.,A bit of everything today. Gift-wrapped.
+WORLD_BOSS_START_ROOKIE,Días de aprendizaje. Los baches también enseñan.,Learning days. Potholes teach too.
+WORLD_BOSS_START_VETERAN,%d jornadas juntos. Ya casi los considero personal.,%d days together. I almost count you as staff.
+WORLD_BOSS_START_RICH,Hay $%d en caja. Gastarlos en cinta no es de cobardes.,There's $%d in the till. Spending it on tape is no cowardice.
+WORLD_BOSS_START_POOR,En caja quedan $%d. Cuiden las cajas y el bolsillo.,$%d left in the till. Mind the boxes and the wallet.
+WORLD_BOSS_START_GENERIC_1,"Buen día. Cargan, manejan, entregan. Yo estoy en otra cosa.","Good morning. Load, drive, deliver. I'm on something else."
+WORLD_BOSS_START_GENERIC_2,Recuerden el lema: entregamos (casi) todo.,Remember the motto: we deliver (almost) everything.
+WORLD_BOSS_START_GENERIC_3,"La lista está en la pizarra. El resto, en la ruta.",The list is on the board. The rest is on the road.
+WORLD_BOSS_START_GENERIC_4,"Cualquier duda, resuélvanla solos. Estoy en una llamada.","Any doubts, sort them out yourselves. I'm on a call."
+WORLD_BOSS_START_GENERIC_5,Los baches ya estaban en la ruta. Yo no los puse.,The potholes were already on the road. I didn't put them there.
+WORLD_BOSS_ENDLESS_1,Hoy no hay lista. Anden hasta que el camión diga basta.,No list today. Drive until the truck says enough.
+WORLD_BOSS_ENDLESS_2,"Sin casas y sin apuro. Bueno, con algo de apuro.","No houses and no rush. Well, some rush."
+WORLD_BOSS_ENDLESS_3,"Ruta larga, cajas largas. Avisen si llegan a algún lado.","Long road, long boxes. Tell me if you get anywhere."
+WORLD_BOSS_ENDLESS_BEST,El mejor viaje fue de %d m. Lo anoté y todo.,The best trip was %d m. I even wrote it down.
+WORLD_BOSS_REACT_FIRST,Primera jornada. Lo que se rompa cuenta como aprendizaje.,First day. Whatever breaks counts as learning.
+WORLD_BOSS_REACT_NOTHING,Ayer no llegó nada. Es un buen punto de partida.,Yesterday nothing arrived. A good starting point.
+WORLD_BOSS_REACT_BOTH,Ayer se rompió algo y se perdió otra cosa. Equilibrado.,Yesterday something broke and something got lost. Balanced.
+WORLD_BOSS_REACT_RUINED_MANY,Ayer rompieron %d cosas. Hoy no.,Yesterday you broke %d things. Not today.
+WORLD_BOSS_REACT_RUINED_ONE,Ayer se rompió una cosa. Una. La anoté con cariño.,Yesterday one thing broke. One. I noted it fondly.
+WORLD_BOSS_REACT_LOST,Entregas perdidas ayer: %d. Alguna va a aparecer.,Deliveries lost yesterday: %d. One will turn up.
+WORLD_BOSS_REACT_STREAK,%d jornadas sin accidentes. No lo digan en voz alta.,%d days without accidents. Don't say it out loud.
+WORLD_BOSS_REACT_PERFECT,"Ayer, todo entero. Sospechoso. Hoy repitan.","Yesterday, everything in one piece. Suspicious. Do it again."

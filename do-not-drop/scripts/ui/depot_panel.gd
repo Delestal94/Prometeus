@@ -124,6 +124,7 @@ func _header(title: String, tag: String, tag_color: Color, subtitle: String) -> 
 
 func _build_orders() -> void:
 	_header(tr("UI_DEPOT_ORDERS"), tr("UI_DEPOT_ORDERS_TAG"), UiTheme.SKY, tr("UI_DEPOT_ORDERS_HINT"))
+	_add_boss_note()
 	var orders: Array = depot.get(&"orders") if depot != null else []
 	if orders.is_empty():
 		UiTheme.label(_body, tr("UI_DEPOT_ENDLESS_HINT"), 18)
@@ -143,6 +144,22 @@ func _build_orders() -> void:
 		UiTheme.label(text, tr("UI_DEPOT_ORDER_ROW") % [int(order.house) + 1, order.code], 22, UiTheme.INK, true)
 		var state: String = tr("UI_DEPOT_ON_BOARD") if _is_loaded(order.package_id) else tr("UI_DEPOT_ON_SHELF")
 		UiTheme.label(text, "%s · %s  —  %s" % [order.trap, String(order.content).to_lower(), state], 16, UiTheme.MINT if state == tr("UI_DEPOT_ON_BOARD") else UiTheme.MUTED)
+
+
+## The Boss's note from this morning's radio (S-603): her start line and, when
+## there is one, her reaction to the last run. The depot holds the lines; each
+## peer reads them in its own language.
+func _add_boss_note() -> void:
+	if depot == null or not depot.has_method(&"boss_notes"):
+		return
+	var notes: Array = depot.call(&"boss_notes")
+	if notes.is_empty():
+		return
+	UiTheme.tag(_body, tr("UI_DEPOT_BOSS_TAG"), UiTheme.MINT, -1.5, 14)
+	for note: String in notes:
+		var line: Label = UiTheme.label(_body, note, 18, UiTheme.INK, true)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		line.custom_minimum_size.x = 560
 
 
 func _build_wardrobe() -> void:
