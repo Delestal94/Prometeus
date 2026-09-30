@@ -2119,9 +2119,9 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 
 ### 6. Narrativa y guion
 
-#### S-601 · Premisa y tono en una página — B · `Opus 5.5 · medium` · Aviso: no
+#### S-601 · Premisa y tono en una página — B · `Opus 5.5 · medium` · Aviso: no · **[x] `01e81d2`**
 
-- [ ] `docs/narrativa.md`: qué es la empresa Take My Package, quién manda (una jefa que solo habla por
+- [x] (commit `01e81d2`) `docs/narrativa.md`: qué es la empresa Take My Package, quién manda (una jefa que solo habla por
   la radio del depósito y por notas), por qué los paquetes son tan raros (clientes excéntricos del
   pueblo), tono (humor absurdo, nunca cruel ni con sangre). Lista de 10 clientes recurrentes con nombre
   y manía. Es la referencia para S-602 a S-604.
