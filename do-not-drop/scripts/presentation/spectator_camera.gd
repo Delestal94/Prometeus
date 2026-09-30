@@ -101,6 +101,8 @@ func _local_can_spectate() -> bool:
 ## Results shot (docs/tareas-nacho.md #36): once the run ends, a slow orbit
 ## around the truck behind the results card -- wherever it ended up, dented,
 ## on its side or at the goal. Takes over from whatever camera was active.
+## Parked in the base's free bay (N-116.4) it frames the truck in the lot
+## instead of circling it (results_orbit.gd frame_parked()).
 static func orbit_results(truck: VehicleBody3D) -> Camera3D:
 	var camera := Camera3D.new()
 	camera.name = "ResultsCamera"
@@ -110,6 +112,9 @@ static func orbit_results(truck: VehicleBody3D) -> Camera3D:
 	camera.fov = 55.0
 	camera.set_script(preload("res://scripts/presentation/results_orbit.gd"))
 	camera.set(&"target", truck)
+	var lot: Node = truck.get_tree().get_first_node_in_group(&"goal_lot") if truck.is_inside_tree() else null
+	if lot != null and bool(lot.call(&"is_bay_occupied")):
+		camera.call(&"frame_parked", lot.call(&"results_direction"))
 	truck.add_child(camera)
 	camera.make_current()
 	return camera

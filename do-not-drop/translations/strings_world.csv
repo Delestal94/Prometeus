@@ -96,8 +96,7 @@ WORLD_HOUSE_NUMBER,CASA %d,HOUSE %d
 WORLD_ROUTE_START_SIGN,"SALIDA
 Cuidá la carga -- el camino serpentea","START
 Mind the cargo -- the road winds"
-WORLD_ROUTE_GOAL,META,FINISH
-WORLD_ROUTE_SECTION_GOAL,Meta,Finish
+WORLD_ROUTE_SECTION_GOAL,Estacioná en la bahía %d,Park in bay %d
 WORLD_ROUTE_SECTION_LEG,Camino a casa %d/%d,On the way to house %d/%d
 WORLD_DEER_HIT_TITLE,¡Chocaste un ciervo!,You hit a deer!
 WORLD_DEER_HIT_FINE,"Salió corriendo, pero la multa por daños es de $%d.","It ran off, but the damage fine is $%d."
@@ -115,7 +114,7 @@ WORLD_MOOD_SKY_FOG,con niebla,with fog
 WORLD_MOOD_SKY_CLEAR_NIGHT,despejada,clear
 WORLD_HOUSE_DELIVERY,ENTREGA,DELIVERY
 WORLD_GPS_HOUSE_CODE,CASA %d · %s,HOUSE %d · %s
-WORLD_GPS_ARRIVAL,LLEGADA,ARRIVAL
+WORLD_GPS_PARK,BAHÍA %d,BAY %d
 WORLD_GPS_BEST,RÉCORD %s,BEST %s
 WORLD_GPS_NO_BEST,SIN RÉCORD,NO RECORD
 WORLD_GPS_CODE,%s · %d s,%s · %d s
@@ -209,3 +208,9 @@ WORLD_BOSS_REACT_RUINED_ONE,Ayer se rompió una cosa. Una. La anoté con cariño
 WORLD_BOSS_REACT_LOST,Entregas perdidas ayer: %d. Alguna va a aparecer.,Deliveries lost yesterday: %d. One will turn up.
 WORLD_BOSS_REACT_STREAK,%d jornadas sin accidentes. No lo digan en voz alta.,%d days without accidents. Don't say it out loud.
 WORLD_BOSS_REACT_PERFECT,"Ayer, todo entero. Sospechoso. Hoy repitan.","Yesterday, everything in one piece. Suspicious. Do it again."
+WORLD_LOT_SIGN_TITLE,BASE TAKE MY PACKAGE,BASE TAKE MY PACKAGE
+WORLD_LOT_FREE_BAY,LIBRE,FREE
+WORLD_LOT_TIDY_PARKING,Estacionamiento prolijo,Tidy parking
+WORLD_LOT_WORKER_1,¡Dejalo en la bahía libre!,Leave it in the free bay!
+WORLD_LOT_WORKER_2,Cuidado con los conos.,Mind the cones.
+WORLD_LOT_WORKER_3,Este lote pesa una barbaridad.,This load weighs a ton.

@@ -115,20 +115,22 @@ static func plan_spine(session_seed: int, houses: int, avoid_tunnel_at_start: bo
 		var jitter: float = rng.randf_range(1.0 - LEG_LENGTH_JITTER, 1.0 + LEG_LENGTH_JITTER)
 		var target: float = clampf(leg_length_target * jitter, LEG_MIN_LENGTH, LEG_MAX_LENGTH)
 		var to_house: bool = leg < houses
-		# The last leg ends at the goal, not at a house: no warning, no calm.
+		# The last leg ends at the goal, not at a house: no warning sign.
 		var sign_placed: bool = not to_house
 		var leg_length: float = 0.0
 		while leg_length < target:
 			var remaining: float = target - leg_length
 			# Whatever comes now could reach into the last QUIET_ZONE metres
-			# (a leg ends once the segment crossing its target finishes).
-			var quiet: bool = to_house and remaining <= QUIET_ZONE + MAX_SEGMENT_LENGTH
+			# (a leg ends once the segment crossing its target finishes). The
+			# goal's leg is calm at its end too: the base's lot is levelled
+			# ground with nothing to cross (a river, a rail, a tunnel), N-116.
+			var quiet: bool = remaining <= QUIET_ZONE + MAX_SEGMENT_LENGTH
 			# Something has to happen now if one more uneventful segment could
 			# leave MOMENT_SPACING without anything, or if what's left before
 			# the house (the calm approach included) would.
 			var since: float = state.since_moment
 			var gap_ahead: bool = since + MAX_SEGMENT_LENGTH > MOMENT_SPACING
-			var near_house: bool = to_house and remaining <= QUIET_ZONE + 2.0 * MAX_SEGMENT_LENGTH
+			var near_house: bool = remaining <= QUIET_ZONE + 2.0 * MAX_SEGMENT_LENGTH
 			var calm_approach_too_long: bool = near_house and since + remaining + MAX_SEGMENT_LENGTH > MOMENT_SPACING
 			var must_move: bool = not quiet and (gap_ahead or calm_approach_too_long)
 			var progress: float = clampf(float(state.distance) / planned_total, 0.0, 1.0)

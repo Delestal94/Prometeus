@@ -96,6 +96,9 @@ const PORCH_DECK_HEIGHT: float = 0.3
 ## needs the goal's real location (tests, mainly) reads this instead of
 ## assuming an axis.
 var goal_transform: Transform3D = Transform3D.IDENTITY
+## The base at the end of the road (route_goal_lot.gd): where the run ends,
+## with the truck stopped in its free bay.
+var goal_lot: RouteGoalLot
 
 const ROAD := Color("394a50")
 const SHOULDER := Color("63736f")
@@ -107,6 +110,9 @@ const CONCRETE := Color("8c9791")
 var _delivery_vehicles: Array[Node3D] = []
 
 var _rng := RandomNumberGenerator.new()
+## The seed the spine was planned from (the session's, or a random one in solo
+## play): the goal lot draws its own stream from it.
+var _spine_seed: int = 0
 ## What plan_spine() decided for this route: the segments to build, in order.
 var _plan: Dictionary = {}
 ## This session's weather and time of day, picked once: the dressing (storm
@@ -216,7 +222,8 @@ func _ready() -> void:
 		_rng.randomize()
 	if house_count <= 0:
 		house_count = _session_house_count()
-	_plan = RoutePlanner.plan_spine(session_seed if session_seed != 0 else _rng.randi(), house_count, start_yard.has_area())
+	_spine_seed = session_seed if session_seed != 0 else _rng.randi()
+	_plan = RoutePlanner.plan_spine(_spine_seed, house_count, start_yard.has_area())
 	mood = WorldMood.pick(session_seed)
 	_house_deck = _shuffled_house_variants()
 	terrain = Terrain.new()
@@ -579,31 +586,34 @@ func _local_bounds(root_node: Node3D, node: Node) -> AABB:
 	return result
 
 
+## The base at the end of the road (N-116): a levelled lot at the cursor,
+## sized and dressed by RouteGoalLot. The ground under it is made level here
+## (a platform in the terrain), nothing is planted on it, and the road's dense
+## path carries on into its free bay so the GPS and the off-road check know
+## the way.
 func _build_goal(cursor: Transform3D) -> void:
-	terrain.add_span(cursor.origin, cursor * Vector3(0.0, 0.0, -18.0))
-	var arch_left: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(-4.5, 2.0, 0.0))
-	var arch_right: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(4.5, 2.0, 0.0))
-	var arch_top: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 4.0, 0.0))
-	RouteProps.box_at(self, "GoalArchLeft", Vector3(0.5, 4.0, 0.5), arch_left, CONCRETE, true)
-	RouteProps.box_at(self, "GoalArchRight", Vector3(0.5, 4.0, 0.5), arch_right, CONCRETE, true)
-	RouteProps.box_at(self, "GoalArchTop", Vector3(9.6, 0.5, 0.5), arch_top, TEAL, true)
-	RouteProps.label(self, "GoalTitle", tr("WORLD_ROUTE_GOAL"), arch_top.origin + Vector3(0.0, 0.9, 0.0), 0.014, TEAL)
-	var end_barrier: Transform3D = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.5, -10.0))
-	RouteProps.box_at(self, "EndBarrier", Vector3(15.0, 1.0, 0.6), end_barrier, CONCRETE, true)
-	var area := Area3D.new()
-	area.name = "GoalArea"
-	area.transform = cursor * Transform3D(Basis.IDENTITY, Vector3(0.0, 2.0, 3.0))
-	area.collision_layer = 32
-	area.collision_mask = 2
-	area.monitorable = false
-	var collider := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(9.0, 4.0, 6.0)
-	collider.shape = shape
-	area.add_child(collider)
-	add_child(area)
-	area.body_entered.connect(_on_delivery_body_entered)
-	area.body_exited.connect(_on_delivery_body_exited)
+	terrain.add_span(cursor.origin, cursor * Vector3(0.0, 0.0, -24.0))
+	goal_lot = RouteGoalLot.new()
+	goal_lot.name = "GoalLot"
+	var names: Array[String] = TownSign.names_for_seed(_spine_seed)
+	goal_lot.configure(_spine_seed, names[-1], mood.darkness())
+	var level: float = terrain.base_height(Vector2(cursor.origin.x, cursor.origin.z))
+	goal_lot.transform = Transform3D(cursor.basis, Vector3(cursor.origin.x, level, cursor.origin.z))
+	terrain.platforms.append(goal_lot.terrain_platform())
+	_clear_zones.append_array(goal_lot.clear_zones())
+	_path_points.append_array(goal_lot.path_points())
+	add_child(goal_lot)
+	goal_lot.bay_occupied_changed.connect(_on_bay_occupied_changed)
+
+
+## Where the truck has to end up, in the world: the middle of the free bay.
+func goal_target() -> Vector3:
+	return goal_lot.bay_centre() if goal_lot != null else to_global(goal_transform.origin)
+
+
+## The number painted on the free bay ("Estacioná en la bahía 7").
+func goal_bay_number() -> int:
+	return goal_lot.bay_number if goal_lot != null else 0
 
 
 func get_progress(world_position: Vector3) -> float:
@@ -704,7 +714,7 @@ func _path_gap_size() -> float:
 func get_section_name(world_position: Vector3) -> String:
 	var leg_index: int = int(_nearest_sample(world_position).get("leg_index", 0))
 	if leg_index >= house_count:
-		return tr("WORLD_ROUTE_SECTION_GOAL")
+		return tr("WORLD_ROUTE_SECTION_GOAL") % goal_bay_number()
 	if leg_index == 0:
 		return tr("WORLD_ROUTE_SECTION_LEG") % [1, house_count]
 	return tr("WORLD_ROUTE_SECTION_LEG") % [leg_index + 1, house_count]
@@ -770,7 +780,7 @@ func _finish_terrain() -> void:
 				_clear_zones.append(Vector3(front.x, front.y, 11.0))
 	terrain.build()
 	for child: Node in get_children():
-		if child == terrain or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):
+		if child == terrain or child == goal_lot or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):
 			continue
 		terrain.conform_geometry(child)
 	for segment: RouteSegment in _segments:
@@ -856,6 +866,14 @@ func _build_ambience() -> void:
 	player.volume_db = WorldMix.WIND_DB
 	player.autoplay = true
 	add_child(player)
+
+
+## The truck is in the free bay (or left it): what the old goal area said.
+func _on_bay_occupied_changed(occupied: bool, body: Node3D) -> void:
+	if occupied:
+		_on_delivery_body_entered(body)
+	else:
+		_on_delivery_body_exited(body)
 
 
 func _on_delivery_body_entered(body: Node3D) -> void:

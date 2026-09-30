@@ -4,7 +4,8 @@ class_name DashboardGps
 ## guide, inside the world instead of on the HUD. On a delivery it shows how
 ## far along the road the next house still waiting is, an arrow toward it and
 ## the code of the box it ordered; once every house is done, the way to the
-## goal. In Endless, the distance driven and the record.
+## free bay of the base where the truck is left. In Endless, the distance
+## driven and the record.
 ##
 ## It also carries the bomb code (N-117, Explosivo's "Pedí el código"): the
 ## steps still to say aloud for the box about to go off, so the driver can
@@ -86,8 +87,9 @@ func refresh() -> void:
 		detail_label.text = (tr("WORLD_GPS_HOUSE_CODE") % [target_house + 1, code.to_upper()]) if code != "" else tr("WORLD_HOUSE_NUMBER") % (target_house + 1)
 		toward = house.global_position
 	else:
-		detail_label.text = tr("WORLD_GPS_ARRIVAL")
-		toward = route.to_global((route.get(&"goal_transform") as Transform3D).origin)
+		# The base's free bay (N-116): "BAHÍA 7".
+		detail_label.text = tr("WORLD_GPS_PARK") % int(route.call(&"goal_bay_number"))
+		toward = route.call(&"goal_target")
 	_point_arrow(truck, toward)
 	_show_bomb_code()
 

@@ -3,7 +3,8 @@ extends SceneTree
 ## A delivery ends at the goal, not at the last house: with every house
 ## done the run goes on (the last leg to the goal is part of the 2-5 minute
 ## budget, and there's all the time the delivery photo needs), and it ends,
-## delivered, once the truck stops inside the goal zone.
+## delivered, once the truck stops inside the free bay of the base's lot
+## (route_goal_lot.gd, N-116) -- level_base.gd's stop timer.
 
 var _failures: int = 0
 
@@ -35,16 +36,18 @@ func _run() -> void:
 		await physics_frame
 	_expect(bool(manager.get(&"is_running")), "With every house done, the run goes on to the goal")
 
-	# Parked in the goal zone.
+	# Parked in the free bay.
 	var route: Node3D = level.get_node(^"World/Route")
-	var goal: Transform3D = route.global_transform * (route.get(&"goal_transform") as Transform3D)
+	var lot: Node3D = route.get(&"goal_lot")
+	_expect(lot != null, "The route ends in a goal lot")
+	var goal: Transform3D = lot.call(&"parking_pose")
 	# The boxes aboard come along, where they sit in the bay: left behind,
 	# they'd count as lost and end the run for another reason.
 	var aboard: Dictionary = {}
 	for package: RigidBody3D in level.get(&"packages"):
 		if is_instance_valid(package) and bool(package.get(&"is_loaded")):
 			aboard[package] = van.global_transform.affine_inverse() * package.global_transform
-	van.global_transform = Transform3D(goal.basis, goal.origin + goal.basis * Vector3(0.0, 1.0, 3.0))
+	van.global_transform = goal
 	van.linear_velocity = Vector3.ZERO
 	van.angular_velocity = Vector3.ZERO
 	for package: RigidBody3D in aboard:
@@ -58,7 +61,7 @@ func _run() -> void:
 		if not bool(manager.get(&"is_running")):
 			ended = true
 			break
-	_expect(ended, "Stopped in the goal zone, the run ends")
+	_expect(ended, "Stopped in the free bay, the run ends")
 	_expect(bool((manager.get(&"results") as Dictionary).get("delivered", false)), "...as delivered")
 
 	level.queue_free()

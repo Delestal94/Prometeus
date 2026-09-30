@@ -5,8 +5,8 @@ extends SceneTree
 ## on any given run. Instead it checks the invariants that still have to
 ## hold no matter what the RNG rolled: progress goes from 0 to 1, ground
 ## exists under sampled points actually pulled from the generated path, and
-## the goal area still detects entry/exit at wherever the goal really ended
-## up (route.goal_transform), not an assumed world position.
+## the goal lot's free bay still detects entry/exit at wherever the goal
+## really ended up (route.goal_lot), not an assumed world position.
 
 
 func _initialize() -> void:
@@ -62,20 +62,23 @@ func _check_route() -> void:
 	var vehicle := CharacterBody3D.new()
 	vehicle.collision_layer = 2
 	vehicle.collision_mask = 1
-	vehicle.position = (goal_transform * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.0, 3.0))).origin
+	var lot: Node3D = route.get(&"goal_lot")
+	assert(lot != null, "The route ends in a goal lot")
+	vehicle.position = (lot.call(&"parking_pose") as Transform3D).origin
+	vehicle.rotation = lot.global_rotation
 	var collider := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = Vector3(2.2, 1, 4)
 	collider.shape = box
 	vehicle.add_child(collider)
 	root.add_child(vehicle)
-	await physics_frame
-	await physics_frame
-	assert(route.is_vehicle_in_delivery, "Goal area did not detect layer 2 vehicle")
-	vehicle.position = (goal_transform * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.0, 20.0))).origin
-	await physics_frame
-	await physics_frame
-	assert(not route.is_vehicle_in_delivery, "Goal area did not clear after vehicle left")
+	for tick: int in range(4):
+		await physics_frame
+	assert(route.is_vehicle_in_delivery, "The free bay did not detect the layer 2 vehicle")
+	vehicle.position = (goal_transform * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.0, 45.0))).origin
+	for tick: int in range(4):
+		await physics_frame
+	assert(not route.is_vehicle_in_delivery, "The free bay did not clear after the vehicle left")
 
 	print("ROUTE SMOKE PASS: progress, generated-path ground collision, delivery entry/exit")
 	quit(0)

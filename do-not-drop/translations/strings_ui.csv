@@ -1,7 +1,7 @@
 keys,es,en
-HUD_ARRIVED,¡Llegaste! Frená dentro de la zona marcada para entregar.,You made it! Stop inside the marked zone to deliver.
+HUD_ARRIVED,¡En la bahía! Frená del todo para estacionar.,You are in the bay! Come to a full stop to park.
 HUD_BACK_TO_MENU,Volver al menú,Back to menu
-HUD_BACK_TO_ZONE,Volvé a la zona de entrega y detené la camioneta.,Go back to the delivery zone and stop the truck.
+HUD_BACK_TO_ZONE,Volvé a la bahía libre y detené la camioneta.,Go back to the free bay and stop the truck.
 HUD_BOXES_TO_SECURE,Faltan asegurar %d cajas,%d boxes left to secure
 HUD_CALLOUT_BRAKE,¡Frená!,Brake!
 HUD_CALLOUT_BUMP,¡Bache!,Bump!
