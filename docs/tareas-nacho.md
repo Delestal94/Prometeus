@@ -1425,12 +1425,26 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   (N-110) o en el jardín de un cliente. Recogerlos exige bajarse o desviarse unos metros.
 - [ ] Se guardan en la campaña por color de jugador, como el mérito. Test de guardado y carga.
 
-### N-113 · Evento de visibilidad limitada para el conductor — C · `Opus 5.5 · high` · Aviso: no
+### N-113 · Evento de visibilidad limitada para el conductor — C · `Opus 5.5 · high` · Aviso: sí (`event_bus.gd`, `network_manager.gd` y `hud_notices.gd`) · **[x] rama `nacho/N-113-low-visibility-event`**
 
-- [ ] Evento de ruta de 10-20 s: niebla densa, parabrisas embarrado o una caja que tapa la vista. Un
+- [x] Evento de ruta de 10-20 s: niebla densa, parabrisas embarrado o una caja que tapa la vista. Un
   pasajero en la ventana guía (con N-505 o N-212). Solo como evento corto: la premisa completa es la de
   Backseat Drivers.
-- [ ] Shader con `artista-shaders`; test de que dura lo previsto y no se repite seguido.
+- [x] Shader con `artista-shaders`; test de que dura lo previsto y no se repite seguido.
+
+> **Hecho (2026-09-30), rama `nacho/N-113-low-visibility-event`.** Variante **parabrisas embarrado** (la niebla local y la
+> caja que tapa la vista quedan sin hacer: `LowVisibilityPlan.KINDS` y el overlay ya trabajan por tipo, sumar uno es
+> agregar su valor y su efecto). `low_visibility_event.gd` (nodo de `level_common.gd`): el host sortea cada 5 s de
+> partida con `low_visibility_plan.gd` (función pura de semilla + número de sorteo, azar 1,5 %), dura 10-20 s, no antes de
+> los 45 s, con conductor y camión en marcha, enfriamiento de 2 min tras terminar, uno por entrega (Endless: solo el
+> enfriamiento), nunca si termina dentro de la zona tranquila (`RoutePlanner.QUIET_ZONE`) antes de una casa o la meta
+> (si el camión entra igual, se corta) ni con un evento de ruta abierto. `EventBus.low_visibility_changed` lo replica y
+> quien entra tarde recibe lo que queda (`_receive_state`, `PROTOCOL_VERSION` 5). `windshield_rain.gd` suma el overlay
+> `shaders/windshield_mud.gdshader` (manchones con chorreras, GL Compatibility, 9 vueltas de bucle) que solo ve quien
+> conduce desde el asiento; el pasajero ve la ruta y guía. Los limpiaparabrisas corren mientras dura y adelgazan el barro
+> (14 % por pasada, hasta 62 %) con la misma fórmula de barrido que la lluvia. HUD: aviso al conductor y toast a los
+> demás que sugiere la rueda de frases. Tests: `test_low_visibility_event` (nuevo). **Falta (necesita revisión de ojos):**
+> captura del parabrisas con barro (`revisor-visual`).
 
 ### N-111 · Modo "Mudanza" (viaje largo) — C · `Opus 5.5 · xhigh` · Aviso: sí (modo nuevo, zona compartida)
 

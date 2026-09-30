@@ -26,6 +26,7 @@ func _ready() -> void:
 	EventBus.route_event_updated.connect(_on_route_event_updated)
 	EventBus.route_event_resolved.connect(_on_route_event_resolved)
 	EventBus.unlock_earned.connect(_on_unlock_earned)
+	EventBus.low_visibility_changed.connect(_on_low_visibility_changed)
 	EventBus.depot_notice.connect(toast)
 
 
@@ -224,6 +225,21 @@ func _on_route_event_updated(event_id: StringName, event: Dictionary) -> void:
 	if event_id in [&"mixed_labels", &"mimetic_package"]:
 		for id: StringName in hud.cargo_rows:
 			hud.cargo.refresh_row(id)
+
+
+## The driver's view is blocked for a spell (N-113, low_visibility_event.gd):
+## the one at the wheel is told to get guided, everybody else to guide them
+## with the phrase wheel (N-505). Ends with the event.
+func _on_low_visibility_changed(is_starting: bool, _kind: StringName, duration: float, seconds_in: float) -> void:
+	if not is_starting:
+		clear_notice(&"critical", &"low_visibility")
+		return
+	var left: float = maxf(duration - seconds_in, 1.0)
+	if local_is_driving():
+		set_notice(&"critical", &"low_visibility", tr("HUD_LOW_VISIBILITY_DRIVER"), 85, Hud.YELLOW, left)
+		return
+	toast(GameSettings.prompt(tr("HUD_LOW_VISIBILITY_GUIDE_KEY") % GameSettings.binding_label(&"ui_ping"),
+			tr("HUD_LOW_VISIBILITY_GUIDE_PAD")), 45)
 
 
 func _event_text(event: Dictionary, field: String, fallback: String = "") -> String:

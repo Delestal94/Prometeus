@@ -9,9 +9,16 @@ class_name WindshieldRain
 ## outside it's never drawn anyway. The blades are posed from the same clock
 ## and formula as the shader clears the glass with (sweep_angle()).
 ##
+## The same glass also carries the mud of the low-visibility event (N-113,
+## low_visibility_event.gd, shaders/windshield_mud.gdshader): a second overlay
+## sharing the mesh, shown only to whoever is driving (the passenger at a
+## window sees the road, and guides), from inside the cab. The wipers run
+## while it lasts -- with the engine on -- and thin it a little each stroke.
+##
 ## ReferenceTruck adds it once the model is up (setup()).
 
 const SHADER: Shader = preload("res://shaders/windshield_rain.gdshader")
+const MUD_SHADER: Shader = preload("res://shaders/windshield_mud.gdshader")
 const PERIOD: float = 1.6
 const SWEEP: float = 1.7
 ## Pivots along the bottom edge (fractions of the width) and the blade's
@@ -24,11 +31,24 @@ const BLADE_REACH: float = 0.75
 ## How far inside the glass the drops sit, toward the cab.
 const INSET: float = 0.012
 const ARM_COLOR := Color("1d2226")
+## The mud sits a hair nearer the cab than the drops.
+const MUD_INSET: float = 0.004
+## Mud brightness by WorldMood time of day (day, dusk, night): unshaded, it
+## would glow in the dark.
+const MUD_LIGHT: Array[float] = [1.0, 0.72, 0.4]
 
 var vehicle: VehicleBody3D
 var overlay: MeshInstance3D
 var material: ShaderMaterial
 var arms: Array[Node3D] = []
+var mud_overlay: MeshInstance3D
+var mud_material: ShaderMaterial
+## The low-visibility event as this client last heard it (EventBus): seconds
+## in, how long it lasts and how many have landed (so each looks different).
+var mud_active: bool = false
+var mud_elapsed: float = 0.0
+var mud_duration: float = 0.0
+var mud_count: int = 0
 ## Seconds the wipers have been running; the shader's and the arms' clock.
 var wiper_time: float = 0.0
 var raining: bool = false
@@ -57,9 +77,30 @@ func setup(truck: VehicleBody3D, windshield: MeshInstance3D) -> void:
 	material.set_shader_parameter(&"aspect", width / maxf(height, 0.01))
 	overlay.material_override = material
 	add_child(overlay)
+	_build_mud(overlay.mesh)
 	for index: int in range(PIVOTS.size()):
 		arms.append(_build_arm(index))
 	_refresh(0.0)
+
+
+func _build_mud(mesh: Mesh) -> void:
+	mud_overlay = MeshInstance3D.new()
+	mud_overlay.name = "MudOverlay"
+	mud_overlay.mesh = mesh
+	mud_overlay.position.z = MUD_INSET
+	mud_overlay.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mud_overlay.visible = false
+	mud_material = ShaderMaterial.new()
+	mud_material.shader = MUD_SHADER
+	for key: StringName in [&"wiper_period", &"wiper_sweep", &"pivot_a", &"pivot_b", &"blade_reach", &"aspect"]:
+		mud_material.set_shader_parameter(key, material.get_shader_parameter(key))
+	mud_overlay.material_override = mud_material
+	add_child(mud_overlay)
+	# By path, not by name: naming an autoload here would break compiling this
+	# script wherever the autoloads are not up yet (the tests load it first).
+	var bus: Node = get_node_or_null(^"/root/EventBus")
+	if bus != null:
+		bus.connect(&"low_visibility_changed", _on_low_visibility_changed)
 
 
 ## The blades' angle at time `t`: flat along the bottom edge at 0, up to SWEEP
@@ -72,11 +113,36 @@ func _process(delta: float) -> void:
 	_refresh(delta)
 
 
+func _on_low_visibility_changed(is_starting: bool, _kind: StringName, duration: float, seconds_in: float) -> void:
+	mud_active = is_starting
+	mud_duration = duration
+	mud_elapsed = seconds_in
+	if is_starting:
+		mud_count += 1
+		# The wipers' clock as the mud lands: only strokes after it thin it.
+		mud_material.set_shader_parameter(&"mud_since", wiper_time)
+		mud_material.set_shader_parameter(&"pattern", float(mud_count) * 1.618)
+		var time_of_day: int = clampi(int(WorldMood.active.get("time", 0)), 0, MUD_LIGHT.size() - 1)
+		mud_material.set_shader_parameter(&"brightness", MUD_LIGHT[time_of_day])
+
+
+func _local_peer_id() -> int:
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	return int(network.call(&"local_id")) if network != null else 1
+
+
+## Whether this client is the one at the wheel: the only one the mud is on.
+func _local_is_driving() -> bool:
+	return vehicle != null and int(vehicle.get(&"driver_peer_id")) == _local_peer_id()
+
+
 func _refresh(delta: float) -> void:
 	raining = bool(WorldMood.active.get("rain", false))
 	var presentation: Node = vehicle.get_node_or_null(^"VehiclePresentation") if vehicle != null else null
 	var inside: bool = presentation != null and bool(presentation.call(&"viewer_inside"))
-	var running: bool = raining and vehicle != null and bool(vehicle.get(&"presentation_engine_running"))
+	# The wipers work in the rain, and against mud.
+	var engine_on: bool = vehicle != null and bool(vehicle.get(&"presentation_engine_running"))
+	var running: bool = (raining or mud_active) and engine_on
 	# The wipers run while it rains and the engine's on; parked, they rest flat.
 	if running:
 		wiper_time += delta
@@ -91,6 +157,19 @@ func _refresh(delta: float) -> void:
 	var angle: float = sweep_angle(wiper_time)
 	for arm: Node3D in arms:
 		arm.rotation.z = angle
+	_refresh_mud(delta, inside)
+
+
+func _refresh_mud(delta: float, inside: bool) -> void:
+	if mud_active:
+		mud_elapsed += delta
+	var shown: bool = mud_active and inside and _local_is_driving()
+	mud_overlay.visible = shown
+	if not shown:
+		return
+	mud_material.set_shader_parameter(&"coverage", LowVisibilityPlan.coverage(mud_elapsed, mud_duration))
+	mud_material.set_shader_parameter(&"wiper_time", wiper_time)
+	mud_material.set_shader_parameter(&"wipers_on", 1.0)
 
 
 func _build_arm(index: int) -> Node3D:

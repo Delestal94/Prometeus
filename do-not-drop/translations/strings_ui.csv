@@ -839,3 +839,6 @@ HUD_SCRIBBLE_HOSTILE_2,NO LO MIREN A LOS OJOS,DO NOT LOOK IT IN THE EYES
 HUD_SCRIBBLE_HOSTILE_3,NO DARLE DE COMER,DO NOT FEED
 HUD_SCRIBBLE_HOSTILE_4,"SI SE MUEVE, ES NORMAL","IF IT MOVES, THAT IS NORMAL"
 UI_DEPOT_BOSS_TAG,La Jefa por radio,The Boss on the radio
+HUD_LOW_VISIBILITY_DRIVER,¡No ves nada! Que te guíen,You can't see a thing! Get someone to guide you
+HUD_LOW_VISIBILITY_GUIDE_KEY,"¡El conductor no ve nada! Guialo con la rueda de frases (%s)","The driver can't see a thing! Guide them with the phrase wheel (%s)"
+HUD_LOW_VISIBILITY_GUIDE_PAD,¡El conductor no ve nada! Guialo con la rueda de frases (D-pad arriba),The driver can't see a thing! Guide them with the phrase wheel (D-pad up)
