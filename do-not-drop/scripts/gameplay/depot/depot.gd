@@ -50,7 +50,12 @@ const TRUCK_BAY: Vector3 = Layout.TRUCK_BAY
 const TRUCK_CLEAR_Z: float = Layout.TRUCK_CLEAR_Z
 ## Supplies (CrewProgression.SUPPLIES) and what they do once a run leaves.
 const PADDING_ABSORPTION: float = 0.75
-const INSURANCE_REFUND: int = 30
+## Per ruined box handed over (N-227.2). Kept low on purpose: a dented box pays
+## 75 at the door and a ruined one 20 plus this refund, so breaking a box on
+## purpose to cash the insurance never beats handing it over (20 + 50 < 75, let
+## alone intact 150). Must stay below POINTS_DELIVERED_AT_RISK - POINTS_DELIVERED_RUINED
+## (test_depot checks it). Shop price: 140.
+const INSURANCE_REFUND: int = 50
 
 ## Builds the stock of extra packages; tests of other systems can turn it off.
 @export var stock_extra_packages: bool = true

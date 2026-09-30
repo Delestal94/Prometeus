@@ -143,7 +143,6 @@ HUD_DEADLINE_REASON_LEAVING,el cliente sale de casa,the customer leaves home
 HUD_DEADLINE_REASON_BIRTHDAY,empieza el cumpleaños,the birthday party starts
 HUD_DEADLINE_REASON_SHOP,cierra el comercio,the shop closes
 HUD_SCORE_CARGO_BACK,Carga que volvió sana,Cargo back safe
-HUD_SCORE_SPEED,Rapidez,Speed
 HUD_RESULT_PACKAGE_FALLBACK,PAQUETE,PACKAGE
 HUD_RESULT_ROW,Casa %d  ·  %s  ·  %s,House %d  ·  %s  ·  %s
 HUD_RESULT_OUTCOME_OK,INTACTO ✓,INTACT ✓
@@ -304,7 +303,8 @@ HUD_RESULT_MISSED_MANY,%d vecinos se quedaron esperando.,%d neighbours were left
 HUD_RESULT_MISSED_ONE,1 vecino se quedó esperando.,1 neighbour was left waiting.
 HUD_RESULT_ON_ROAD,En ruta: %.1f s,On the road: %.1f s
 HUD_RESULT_RECORD,\nRécord: %d pts,\nRecord: %d pts
-HUD_RESULT_STATS,En ruta: %.1f s\nCarga: %d pts   +   Rapidez: %d pts%s%s\nEquipo: $%d%s%s,On the road: %.1f s\nCargo: %d pts   +   Speed: %d pts%s%s\nTeam: $%d%s%s
+HUD_RESULT_STATS,En ruta: %.1f s\nCarga: %d pts%s%s\nEquipo: $%d%s%s,On the road: %.1f s\nCargo: %d pts%s%s\nTeam: $%d%s%s
+HUD_RESULT_PAYOUT,\nPago del equipo: +$%d,\nTeam payout: +$%d
 HUD_RESULT_TEAM,\nEquipo: $%d,\nTeam: $%d
 HUD_RESULT_TOTAL,Total   %d pts,Total   %d pts
 HUD_RETRY,Volver a intentar,Try again
@@ -699,7 +699,7 @@ UI_REWARD_NOISY,Nueva trampa: Ruidoso,New trap: Noisy
 UI_REWARD_SKY_UNIFORM,Nuevo uniforme: Cielo,New uniform: Sky
 UI_REWARD_VIOLET_PAINT,Nueva pintura: Violeta,New paint: Violet
 UI_SUPPLY_INSURANCE,Seguro de envío,Shipping insurance
-UI_SUPPLY_INSURANCE_DETAIL,Cada paquete que se entregue roto en el próximo reparto le devuelve $30 al equipo.,Every ruined package delivered on the next run refunds the team $30.
+UI_SUPPLY_INSURANCE_DETAIL,Cada paquete que se entregue roto en el próximo reparto le devuelve $50 al equipo.,Every ruined package delivered on the next run refunds the team $50.
 UI_SUPPLY_PADDING,Acolchado de estantes,Shelf padding
 UI_SUPPLY_PADDING_DETAIL,Espuma en el rack: la carga sufre un 25 % menos por golpes en el próximo reparto.,Foam on the rack: cargo takes 25% less impact damage on the next run.
 UI_TRUCK_AGILE,Furgoneta ágil,Agile van

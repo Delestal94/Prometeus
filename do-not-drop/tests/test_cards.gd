@@ -76,7 +76,7 @@ func _test_discount(crew: Node) -> void:
 	crew.call(&"reset_campaign")
 	crew.cards[1] = crew.Card.DISCOUNT
 	_expect(bool(crew.call(&"buy_supply_discounted", 1, &"padding")), "Discount buys an available supply")
-	_expect(int(crew.team_money) == crew.STARTING_MONEY - 20, "Discount charges half of the $40 price")
+	_expect(int(crew.team_money) == crew.STARTING_MONEY - 80, "Discount charges half of the $160 price")
 	_expect(bool(crew.supplies.get(&"padding", false)), "The discounted supply is ready for the next run")
 	_expect(not crew.cards.has(1), "A successful Discount is consumed")
 

@@ -10,6 +10,7 @@ extends SceneTree
 ##     and the new-best flag are this player's own;
 ##   - the client's profile counts the run (UnlockManager hears run_ended),
 ##     and the team's money isn't paid out a second time.
+## The host's results mock carries doors + cargo points only (no time bonus, N-227.2).
 
 const TEST_SAVE_PATH: String = "user://test_run_relay_leaderboard.json"
 
@@ -52,16 +53,16 @@ func _run() -> void:
 	var money_before: int = int(crew.get(&"team_money"))
 	var runs_before: int = int(unlocks.get(&"completed_runs"))
 	var host_results: Dictionary = {
-		"delivered": true, "reason": "", "score": 240, "cargo_points": 100, "time_bonus": 20,
-		"breakdown": [{"label": "Casa 1 — intacto", "points": 150}, {"label": "Rapidez", "points": 20}],
+		"delivered": true, "reason": "", "score": 250, "cargo_points": 100, "delivery_points": 150,
+		"breakdown": [{"label": "Casa 1 — intacto", "points": 150}],
 		"houses_delivered": 1, "is_new_best": false, "best_score": 900,
 	}
 	manager.call(&"_remote_finish_run", &"delivery", host_results)
 	_expect(not bool(manager.get(&"is_running")), "The client's run is over")
-	_expect(_ended.size() == 1 and int(_ended[0][0]) == 240, "run_ended reaches the client with the host's score")
+	_expect(_ended.size() == 1 and int(_ended[0][0]) == 250, "run_ended reaches the client with the host's score")
 	var results: Dictionary = manager.get(&"results")
-	_expect((results.get("breakdown") as Array).size() == 2 and bool(results.get("delivered")), "Same breakdown and outcome as the host's")
-	_expect(bool(results.get("is_new_best")) and int(results.get("best_score")) == 240,
+	_expect((results.get("breakdown") as Array).size() == 1 and bool(results.get("delivered")), "Same breakdown and outcome as the host's")
+	_expect(bool(results.get("is_new_best")) and int(results.get("best_score")) == 250,
 		"New best and best score are the client's own leaderboard's, not the host's (%s / %d)" % [str(results.get("is_new_best")), int(results.get("best_score"))])
 	_expect((manager.get(&"leaderboard") as Array).size() == 1, "The run lands in the client's own leaderboard")
 	_expect(int(unlocks.get(&"completed_runs")) == runs_before + 1, "The client's profile counts the run")
