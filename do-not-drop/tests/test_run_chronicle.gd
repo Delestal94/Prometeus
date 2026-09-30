@@ -138,7 +138,6 @@ func _run() -> void:
 	var endless_slots: Dictionary = endless["front"]["slots"]
 	_expect(endless["front"]["id"] == "endless_end" and absf(float(endless_slots["km"]) - 3.2) < 0.01
 			and int(endless_slots["minutes"]) == 4,
-
 			"An Endless run is the truck last seen at its distance (got %s)" % str(endless["front"]))
 
 	# The crew is who is in the level, with the nickname each one carries.
@@ -153,6 +152,27 @@ func _run() -> void:
 	_expect(listed.any(func(member: Dictionary) -> bool: return member["peer"] == 2 and member["nick"] == "Ana"),
 			"The crew is read from the players in the level, with their nicknames (got %s)" % str(listed))
 	second.queue_free()
+
+	# A player a fact is about who leaves before the end is still the one named.
+	chronicle.facts.clear()
+	var leaver: Node3D = scene.instantiate()
+	leaver.name = "Player_3"
+	root.add_child(leaver)
+	await process_frame
+	leaver.set_physics_process(false)
+	leaver.get_node("PlayerNickname").set(&"nickname", "Beto")
+	chronicle.note("deer_hit", -1, [], 3)
+	_expect(chronicle.facts[0].get("nick") == "Beto",
+			"A fact about a player keeps their nickname (got %s)" % str(chronicle.facts[0]))
+	root.remove_child(leaver)
+	leaver.free()
+	var without: Dictionary = chronicle.compose({"delivered": true, "elapsed_seconds": 90.0}, crew, 4)
+	_expect(without["front"]["id"] == "deer_hit" and without["front"]["slots"]["player"] == "Beto",
+			"The paper still names the player who left, not someone else (got %s)"
+			% str(without["front"]["slots"]["player"]))
+	chronicle.note("sheep_hit", -1, [], 9)
+	_expect(not chronicle.facts[1].has("nick"), "A peer that was never in the level has no nickname to keep")
+	chronicle.facts.clear()
 
 	# The host relays the paper before run_ended.
 	_relayed.clear()
@@ -175,8 +195,9 @@ func _run() -> void:
 				"What went out is ids and slots, not the headline of %s" % entry["id"])
 
 	# After the run, nothing more is noted; a new run starts clean.
+	var noted: int = chronicle.facts.size()
 	bus.package_ruined.emit(&"p_hen", "late")
-	_expect(_kinds(chronicle).count("ruined_en_route") == 1, "Nothing is noted after the run ended")
+	_expect(chronicle.facts.size() == noted, "Nothing is noted after the run ended")
 	bus.run_started.emit(&"test_route", [1])
 	_expect(chronicle.facts.is_empty() and chronicle.paper.is_empty(), "A new run starts with no facts and no paper")
 

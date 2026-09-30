@@ -226,6 +226,9 @@ func _check_reading() -> void:
 	var hostile_text: String = DESK.fill("{player}", hostile["front"]["slots"])
 	_expect(not hostile_text.contains("{") and not hostile_text.contains("[") and not hostile_text.contains("%"),
 			"A nickname can't smuggle slots or markup into the paper (%s)" % hostile_text)
+	var isolated: String = DESK.fill("{player} y {neighbor}", {"player": "Ana", "neighbor": "Don Rufino"})
+	_expect(isolated == "\u2068Ana\u2069 y Don Rufino",
+			"A player's name is isolated from the sentence around it (first-strong isolate), other slots aren't")
 	var auto: Variant = DESK.compose([_fact("deer_hit", -1, [], 2)], _context(5))["front"]["slots"]["player"]
 	_expect(auto is Array and NICK.AUTO_KEYS.has(String((auto as Array)[0])),
 			"No nickname gets a funny one as a line to translate (got %s)" % str(auto))

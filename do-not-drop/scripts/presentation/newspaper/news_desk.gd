@@ -30,6 +30,9 @@ const SLOT_NAMES: Array[String] = ["town", "house", "neighbor", "player", "km", 
 ## A variant for a kind of box is preferred this often over a generic one.
 const TAGGED_CHANCE: float = 0.65
 const MAX_SLOT_TEXT: int = 40
+## First-strong isolate and pop: a name in a right-to-left script can't reorder the sentence around it.
+const ISOLATE_START: String = "\u2068"
+const ISOLATE_END: String = "\u2069"
 
 static var _catalog: Dictionary = {}
 
@@ -293,7 +296,8 @@ static func read(entry: Dictionary) -> Dictionary:
 static func fill(text: String, slots: Dictionary) -> String:
 	for slot: String in SLOT_NAMES:
 		if slots.has(slot):
-			text = text.replace("{%s}" % slot, slot_text(slots[slot]))
+			var value: String = slot_text(slots[slot])
+			text = text.replace("{%s}" % slot, ISOLATE_START + value + ISOLATE_END if slot == "player" else value)
 	return text
 
 

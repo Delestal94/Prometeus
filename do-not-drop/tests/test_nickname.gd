@@ -34,6 +34,22 @@ func _run() -> void:
 			"Longer than 16 is cut (got %s)" % clean.call("12345678901234567890"))
 	_expect(clean.call("Ñandú Ñu") == "Ñandú Ñu", "Accents are kept")
 	_expect(clean.call("               ") == "", "Only spaces is empty")
+	# A remote peer can send anything: a huge name costs nothing, and invisible or
+	# direction-changing characters never get in.
+	var began: int = Time.get_ticks_usec()
+	var huge: String = clean.call("x".repeat(100000))
+	var took_ms: float = (Time.get_ticks_usec() - began) / 1000.0
+	_expect(huge == "x".repeat(16) and took_ms < 50.0,
+			"A 100000 character name is cut to 16 in under 50 ms (took %.1f ms)" % took_ms)
+	began = Time.get_ticks_usec()
+	clean.call("a ".repeat(50000))
+	took_ms = (Time.get_ticks_usec() - began) / 1000.0
+	_expect(took_ms < 50.0, "A huge name of spaces is just as cheap (took %.1f ms)" % took_ms)
+	var hidden: String = clean.call("A\u202Eb\u200Bc d\u0085e")
+	_expect(hidden == "Abc de", "Bidi overrides, zero-width and C1 controls are dropped (got '%s')" % hidden)
+	_expect(clean.call("\uFEFF") == "" and clean.call("\u200E\u200F\u061C\u2028\u2029\u2060") == "",
+			"Only invisible characters is empty")
+	_expect(clean.call("a\u2066b\u2069c\U0E0041d\u007Fe") == "abcde", "Isolates, tag characters and DEL are dropped")
 	_expect(clean.call("abc def ghi jkl mno") == "abc def ghi jkl",
 			"The cut doesn't leave a trailing space (got '%s')" % clean.call("abc def ghi jkl mno"))
 

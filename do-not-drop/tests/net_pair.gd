@@ -19,6 +19,7 @@ var _pickup_sent: bool = false
 var _race_sent: bool = false
 var _reports: Dictionary = {}
 var _paper: Dictionary = {}
+var _order: Array = []
 
 
 func _ready() -> void:
@@ -32,7 +33,11 @@ func _ready() -> void:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		get_node(^"/root/UnlockManager").set(&"selected_cosmetic", CLIENT_COSMETIC)
 		get_node(^"/root/UnlockManager").set(&"nickname", CLIENT_NICKNAME)
-		get_node(^"/root/EventBus").connect(&"newspaper_ready", func(paper: Dictionary) -> void: _paper = paper)
+		var bus: Node = get_node(^"/root/EventBus")
+		bus.connect(&"newspaper_ready", func(paper: Dictionary) -> void:
+			_paper = paper
+			_order.append("paper"))
+		bus.connect(&"run_ended", func(_score: int, _results: Dictionary) -> void: _order.append("ended"))
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
 	# Without this a dropped join only showed up as a bare timeout 40 s later.
 	# NETLOG, not PAIR: run-net-pair.sh takes the first PAIR line as the result.
@@ -136,14 +141,18 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_drop", package.get_path())
 	await _wait_for_report(&"drop")
 
-	# The host's next-day newspaper (N-606.2) reaches the client as the same ids and slots.
+	# The host's next-day newspaper (N-606.2) reaches the client as the same ids and
+	# slots, before the results, from the run really ending on the host.
 	var chronicle: Node = _level.get_node(^"RunChronicle")
-	get_node(^"/root/EventBus").emit_signal(&"run_results_decided",
-		{"delivered": true, "elapsed_seconds": 90.0, "deliveries": [], "complaints": []})
+	var run: Node = get_node(^"/root/RunManager")
+	run.call(&"start_run")
+	await _pump(0.6)
+	run.call(&"finish_run", true)
 	_expect(NEWS_DESK.call(&"is_valid", chronicle.get(&"paper")),
 		"host writes a readable paper when the results are decided")
 	rpc_id(_client_peer_id, &"_client_check_paper", chronicle.get(&"paper"))
 	await _wait_for_report(&"paper")
+	await _wait_for_report(&"paper_order")
 
 	# The disconnect cleanup is the last check because the client process
 	# intentionally leaves. Its carried box must become loose on the host.
@@ -251,6 +260,10 @@ func _client_check_paper(host_paper: Dictionary) -> void:
 	await _pump(0.4)
 	var ok: bool = not _paper.is_empty() and _paper == host_paper and NEWS_DESK.call(&"is_valid", _paper)
 	_report(&"paper", ok, "client receives the host's newspaper as it is (got %s)" % str(_paper).left(80))
+	var hud: Node = _level.get_node(^"HUD")
+	_report(&"paper_order", _order == ["paper", "ended"] and hud.newspaper.is_open(),
+		"client gets the paper before run_ended, and its page is up (order %s, page %s)"
+		% [str(_order), hud.newspaper.is_open()])
 
 
 @rpc("authority", "call_remote", "reliable")

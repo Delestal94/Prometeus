@@ -78,8 +78,19 @@ static func family_of(content_id: Variant) -> String:
 
 
 func note(kind: String, house: int = -1, tags: Array = [], peer: int = 0) -> Dictionary:
-	var fact: Dictionary = {"kind": kind, "house": house, "tags": tags, "peer": peer, "at": RunManager.elapsed_seconds}
+	var fact: Dictionary = _stamp({"kind": kind, "house": house, "tags": tags, "peer": peer,
+			"at": RunManager.elapsed_seconds})
 	facts.append(fact)
+	return fact
+
+
+## A fact about a player keeps their nickname as it was: if they leave before the
+## run ends the paper still names them, not whoever is left.
+func _stamp(fact: Dictionary) -> Dictionary:
+	if int(fact["peer"]) != 0:
+		for member: Dictionary in current_crew():
+			if int(member["peer"]) == int(fact["peer"]):
+				fact["nick"] = member["nick"]
 	return fact
 
 
@@ -196,14 +207,14 @@ func compose(results: Dictionary, crew: Array = [], seed_value: int = 0) -> Dict
 	var endless: bool = results.has("distance_traveled")
 	var kilometres: float = float(results.get("distance_traveled", RunManager.current_distance)) / 1000.0
 	if endless:
-		all.append({"kind": "endless_end", "house": -1, "tags": [], "peer": _driver()})
+		all.append(_stamp({"kind": "endless_end", "house": -1, "tags": [], "peer": _driver()}))
 	elif not bool(results.get("delivered", false)):
-		all.append({"kind": "run_failed", "house": -1, "tags": [], "peer": _driver()})
+		all.append(_stamp({"kind": "run_failed", "house": -1, "tags": [], "peer": _driver()}))
 	all.append_array(_facts_from_results(results, all))
 	var context: Dictionary = {
 		"seed": seed_value if seed_value != 0 else session_seed(),
 		"town": town(),
-		"crew": crew if not crew.is_empty() else current_crew(),
+		"crew": _with_absent(crew if not crew.is_empty() else current_crew(), all),
 		"km": kilometres,
 		"minutes": maxi(roundi(float(results.get("elapsed_seconds", RunManager.elapsed_seconds)) / 60.0), 1),
 		"endless": endless,
@@ -239,6 +250,20 @@ func _facts_from_results(results: Dictionary, noted: Array) -> Array:
 	return extra
 
 
+## The crew plus whoever a fact is about and already left (by the nickname the fact kept).
+func _with_absent(crew: Array, all: Array) -> Array:
+	var full: Array = crew.duplicate()
+	var present: Dictionary = {}
+	for member: Dictionary in crew:
+		present[int(member["peer"])] = true
+	for fact: Dictionary in all:
+		var peer: int = int(fact.get("peer", 0))
+		if peer != 0 and not present.has(peer) and fact.has("nick"):
+			present[peer] = true
+			full.append({"peer": peer, "nick": String(fact["nick"])})
+	return full
+
+
 ## The crew as the paper names them: [{peer, nick}], by peer id.
 func current_crew() -> Array:
 	var crew: Array = []
@@ -250,9 +275,14 @@ func current_crew() -> Array:
 	return crew
 
 
-## The session's seed; alone (no world seed) each run gets a fresh one.
+## The session's seed; alone (no world seed) each run gets a fresh one, from an
+## RNG of its own so the global one (other systems' rolls) isn't touched.
 func session_seed() -> int:
-	return NetworkManager.world_seed if NetworkManager.world_seed != 0 else randi()
+	if NetworkManager.world_seed != 0:
+		return NetworkManager.world_seed
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	return rng.randi()
 
 
 func town() -> String:
