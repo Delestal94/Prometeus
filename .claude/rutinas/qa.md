@@ -24,7 +24,8 @@ de construcción toma primero. Reglas comunes y sesión: `.claude/rutinas/README
      **"QA — bugs abiertos"** al principio de la lista del dueño (creala si no existe), con el
      diagnóstico de `cazador-bugs` y "Hecho cuando: el escenario de QA pasa sin el error y hay un test
      que lo fija". Los cosméticos van a la sección que corresponda, prioridad C.
-  3. Aviso en `docs/avisos/` si se agregaron tareas a `tareas-slatex.md`.
+  3. Todo va a `tareas-nacho.md` (lo del dominio de Slatex como `S-xxx` en "Heredadas de Slatex"); aviso en
+     `docs/avisos/` si se agregaron tareas de su dominio.
   4. PR `docs: QA AAAA-MM-DD — <n> hallazgos` con la tabla en el cuerpo, auto-merge.
 
 ## 3. Límites
