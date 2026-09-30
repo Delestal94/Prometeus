@@ -3,7 +3,9 @@
 # ENet clients on localhost -- the second one joining late -- runs
 # do-not-drop/tests/net_trio.gd in each, and checks they all saw the same
 # world: session seed, house count, the depot's orders, the generated road
-# and the rail crossing's phase once the host set it off.
+# and the rail crossing's phase once the host set it off. Prints a WARNING
+# line when a joiner's level load came within 10 s of the 45 s network load
+# budget (N-235.2): still a pass, but close to flaking.
 #
 #   tools/run-net-trio.sh
 #
@@ -88,6 +90,14 @@ done
 check_exit host "$HOST_CODE"
 check_exit a "$A_CODE"
 check_exit b "$B_CODE"
+# N-235.2: a joiner's level load close to the network's 45 s load budget. Not
+# a failure yet, but the next slower runner drops it mid-load.
+slow="$(grep -h "^NETLOG .*WARNING slow level load" "$WORK/host.log" "$WORK/a.log" "$WORK/b.log" || true)"
+if [ -n "$slow" ]; then
+	echo "WARNING: a joiner's level load came within 10 s of the 45 s network load budget:"
+	echo "$slow" | sed 's/^NETLOG /  /'
+	[ -n "${GITHUB_ACTIONS:-}" ] && echo "::warning title=Net trio: slow joiner load::$(echo "$slow" | head -n1 | sed 's/^NETLOG //')"
+fi
 if ! cmp -s "$WORK/host.fingerprint" "$WORK/a.fingerprint" || ! cmp -s "$WORK/host.fingerprint" "$WORK/b.fingerprint"; then
 	echo "The three peers don't agree on the world."
 	status=1

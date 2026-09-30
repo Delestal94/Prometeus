@@ -30,6 +30,9 @@ var _hud_stopped: bool = false
 
 
 func _prepare_mode() -> void:
+	# The dog waits at the doors, the bees in the meadows (N-109).
+	cargo_animals.houses = route.get(&"houses")
+	cargo_animals.zone_probe = _is_open_country
 	# The doors are where the run is actually won: route.gd owns the houses,
 	# RunManager owns the scoring, and this is the one place that knows both.
 	# Without this the houses resolved into nothing and every delivery was
@@ -53,6 +56,16 @@ func _prepare_mode() -> void:
 func newspaper_town() -> String:
 	var goal: Object = route.get(&"goal_lot") as Object
 	return String(goal.get(&"town_name")) if goal != null else ""
+
+
+## Whether the road is running through open country at this point: where the
+## bees come for a cake (cargo_animals.gd).
+func _is_open_country(world_position: Vector3) -> bool:
+	var dresser: RouteDresser = route.get(&"dresser") as RouteDresser
+	if dresser == null:
+		return false
+	var zone: int = dresser.zone_at(route.to_local(world_position), route.road_distance(world_position))
+	return zone == RouteDresser.Zone.COUNTRYSIDE
 
 
 func _on_peer_level_ready(peer_id: int) -> void:

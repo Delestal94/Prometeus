@@ -52,7 +52,8 @@ desbalances. La elección de timbres y su comodidad se valida además escuchando
 
 ## Cómo se mide
 
-- Todos los sonidos salen de `modules/synth_audio/synth_audio.gd` (WAV mono de 16 bits).
+- Todos los sonidos salen de `modules/synth_audio/` (WAV mono de 16 bits): `synth_audio.gd` es la puerta y el
+  caché; cada sonido se genera en el script de su tema (`synth_audio_world.gd`, `_vehicle`, `_animals`...).
   `tests/test_world_audio_levels.gd` genera cada uno, lo mide en dBFS y le suma el `volume_db`
   con que se reproduce. Ese resultado tiene que caer a ±2 dB del objetivo de su clase.
 - Los niveles viven todos en un solo lugar: `scripts/presentation/world_mix.gd`. Los scripts
@@ -68,10 +69,10 @@ desbalances. La elección de timbres y su comodidad se valida además escuchando
 |---|---|---|---|
 | motor | RMS del loop | −20 dBFS | motor del camión a fondo |
 | golpe | pico | −14 dBFS | el golpe más fuerte del camión |
-| ruido | RMS del loop | −35 dBFS | viento y ruta lejana: siseo de banda ancha (a −28 sonaba como lluvia sobre el techo del depósito) |
+| ruido | RMS del loop | −35 dBFS | viento y ruta lejana: siseo de banda ancha (a −28 sonaba como lluvia sobre el techo del depósito); zumbido de las abejas de la torta |
 | naturaleza | 100 ms más fuertes | −24 dBFS | pájaros o grillos (chirridos con silencio en el medio: su RMS no dice cuán fuerte suenan) |
 | lluvia | RMS del loop | −32 dBFS | afuera (era −24 y tapaba todo); en la cabina +3 dB; dentro del depósito no se oye (se apaga en ~½ s al entrar) |
-| señal | 100 ms más fuertes | −18 dBFS | bocina, derrape, campana del cruce, timbre, perro, ovejas, vecino, portón del depósito |
+| señal | 100 ms más fuertes | −18 dBFS | bocina, derrape, campana del cruce, timbre, perro, ovejas, graznido de la gaviota de la carga, vecino, portón del depósito |
 | detalle | pico | −26 dBFS | objetos sueltos en la caja de carga |
 | música | RMS del loop | −24 dBFS | la radio del depósito (bus Music) |
 | máquina | RMS del loop | −40 dBFS | el motor del autoelevador que va y viene |
@@ -105,7 +106,7 @@ pedido del usuario, **se sacó**: el depósito ya no tiene zumbido.
 ## Sonidos rehechos por el playtest del 2026-09-25
 
 Reporte del usuario: "un ruido como de interferencia" que obligaba a bajar los efectos, el
-grillo en bucle y un ladrido que no parecía ladrido. En `synth_audio.gd`:
+grillo en bucle y un ladrido que no parecía ladrido. En `synth_audio_world.gd` y `synth_audio_animals.gd`:
 
 - **Viento** y **ruta lejana**: eran ruido por debajo de ~50-70 Hz, un retumbo sub-grave
   que en auriculares suena a viento pegando en un micrófono. Ahora son una banda de ruido

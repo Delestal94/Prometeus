@@ -35,6 +35,9 @@ const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
 @onready var depot: Depot = $World/Depot
 var local_player: Node = null
 var packages: Array[DeliveryPackage] = []
+## The gull, the dog and the bees that go for the cargo (N-109): the host
+## decides, every peer draws them.
+var cargo_animals: CargoAnimals
 var tipped_seconds: float = 0.0
 var _driver_seated: bool = false
 
@@ -58,6 +61,14 @@ func _ready() -> void:
 	EventBus.restart_requested.connect(restart_delivery)
 	EventBus.pause_requested.connect(toggle_pause)
 	EventBus.run_ended.connect(_on_run_ended)
+	# Animals that go for the boxes (N-109): the host rolls them from the session
+	# seed, every peer draws them. Before _prepare_mode(), which tells it about
+	# the level's houses and meadows.
+	cargo_animals = CargoAnimals.new()
+	cargo_animals.name = "CargoAnimals"
+	cargo_animals.vehicle = vehicle
+	cargo_animals.packages = packages
+	add_child(cargo_animals)
 	_prepare_mode()
 	# The host brings its own truck and paint; replication hands them to
 	# every client (vehicle.gd variant_id/paint_id).
@@ -294,6 +305,10 @@ func restart_delivery() -> void:
 	# half (see HudNotices._on_quick_fade_requested), since the
 	# fade-back-in half is moot once the whole tree gets torn down anyway.
 	EventBus.emit_signal(&"quick_fade_requested", 0.3)
+	# Online, every link goes to the level-load timeout now (N-235): the fade
+	# gives ENet time to resend the notice to a client if it's lost, which it
+	# couldn't once the reload below blocks this process.
+	NetworkManager.announce_restart()
 	await get_tree().create_timer(0.15).timeout
 	RunManager.reset_run()
 	# Online, every client reloads too, once this level is back up.

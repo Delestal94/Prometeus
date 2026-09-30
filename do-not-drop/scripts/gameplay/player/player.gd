@@ -38,8 +38,8 @@ const BOB_SMOOTH_SPEED: float = 3.0
 ## One color per player so teammates can be told apart at a glance -- there's
 ## no cosmetics system yet (docs/plan-desarrollo.md Fase 5), so this is the
 ## cheapest thing that actually solves "who is that". Same palette family as
-## the rest of the UI (docs/direccion-visual.md), picked by peer id so it's
-## stable and doesn't need any network sync of its own.
+## the rest of the UI (docs/direccion-visual.md), picked by the colour slot
+## the host gave the player (PlayerColorSlot, N-226): stable, distinct per player.
 const PLAYER_COLORS: Array[Color] = [
 	Color("83e2ba"), Color("f4c562"), Color("f47e6d"), Color("6db3d6"), Color("c9a0e0"),
 ]
@@ -248,6 +248,7 @@ func _ready() -> void:
 			face_mouth = profile.get("selected_mouth")
 			profile.progress_changed.connect(_sync_profile_appearance)
 	_build_body()
+	PlayerColorSlot.follow(_apply_cosmetic)
 	# Depth of field needs Forward+ or Mobile: GL Compatibility (this game's
 	# renderer) never drew it and warned on every carry.
 	if RenderingServer.get_current_rendering_method() != "gl_compatibility":
@@ -303,7 +304,7 @@ func _on_peer_level_ready(peer_id: int) -> void:
 
 
 ## The rigged character, so teammates have someone to see. Colored per
-## peer_id (see PLAYER_COLORS) doubles as the simplest possible "who is
+## colour slot (see PLAYER_COLORS) doubles as the simplest possible "who is
 ## that" cue: the imported suit material gets duplicated per instance (a
 ## surface override, not a mutation of the shared glTF resource) before
 ## recoloring, so tinting one player's suit never bleeds into every other
@@ -347,9 +348,8 @@ func _apply_cosmetic() -> void:
 	if _body_visual == null:
 		return
 	var profile: Node = get_node_or_null("/root/UnlockManager")
-	# The default ("team_color") keeps the per-peer crew colour, so teammates
-	# can be told apart; a uniform someone picked replaces it.
-	var color: Color = PLAYER_COLORS[get_multiplayer_authority() % PLAYER_COLORS.size()]
+	# "team_color" keeps the crew-slot colour (teammates stay apart); a picked uniform replaces it.
+	var color: Color = PLAYER_COLORS[PlayerColorSlot.slot(get_multiplayer_authority(), PLAYER_COLORS.size())]
 	if profile != null and not bool(profile.call(&"cosmetic_is_auto", cosmetic_id)):
 		color = profile.call(&"cosmetic_color", cosmetic_id)
 	PlayerAppearance.tint_shirt(_body_visual, color)
