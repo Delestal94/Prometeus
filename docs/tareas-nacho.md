@@ -1936,15 +1936,15 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 - [x] (commit `3480986`) Actualizar filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md` y
   `docs/inventario-assets.md` §1-3 cada vez que se cierra una tarea de este pilar (antes #99).
 
-#### S-310 · Fallas distintas por trampa (momentos para clipear) — B · `Opus 5.5 · high` · Aviso: no
+#### S-310 · Fallas distintas por trampa (momentos para clipear) — B · `Opus 5.5 · high` · Aviso: no · **[x] PR #58**
 
 Hoy toda caja arruinada tira el mismo confeti de cubitos.
 
-- [ ] En `package_feedback.gd`, un efecto por trampa: Frágil → esquirlas de porcelana; Líquido →
+- [x] (PR #58) En `package_feedback.gd`, un efecto por trampa: Frágil → esquirlas de porcelana; Líquido →
   salpicadura y charco en el piso; Explosivo → estallido de confeti y humo de colores (nada de fuego
   realista); Ruidoso y Hostil → el animal salta de la caja y escapa corriendo 3 s con física simple;
   Equilibrio → la torre se derrumba en piezas; Peso creciente → la caja se hunde con un golpe seco.
-- [ ] Cada efecto dura < 2 s y se libera solo. Test en `test_ruin_feedback.gd` por trampa.
+- [x] (PR #58, test en `test_ruin_effects.gd`; el animal de Ruidoso/Hostil corre 3 s como pide la tarea) Cada efecto dura < 2 s y se libera solo. Test en `test_ruin_feedback.gd` por trampa.
 
 ---
 
