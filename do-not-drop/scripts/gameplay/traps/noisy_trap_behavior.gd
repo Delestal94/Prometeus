@@ -74,14 +74,14 @@ func get_state() -> int:
 	return TrapState.OK
 
 
-func get_hint() -> String:
+func hint_text() -> Array:
 	if _escaped:
-		return tr("HUD_HINT_NOISY_RUINED")
+		return LocText.make("HUD_HINT_NOISY_RUINED")
 	if agitation >= _agitation_max:
-		return tr("HUD_HINT_NOISY_DANGER")
+		return LocText.make("HUD_HINT_NOISY_DANGER")
 	if agitation >= _at_risk_at:
-		return tr("HUD_HINT_NOISY_RISK")
-	return tr("HUD_HINT_NOISY_OK")
+		return LocText.make("HUD_HINT_NOISY_RISK")
+	return LocText.make("HUD_HINT_NOISY_OK")
 
 
 func _sync_integrity() -> void:

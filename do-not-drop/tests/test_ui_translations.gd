@@ -34,9 +34,8 @@ const LITERAL_SCAN_DIRS: Array[String] = [
 ]
 ## Files whose Spanish literals are legitimately never drawn as they are.
 const SPANISH_LITERAL_FILES: Array[String] = [
-	# These two tables match already-translated prompts/trap names to icons:
-	# lookup data, never text drawn directly.
-	"res://scripts/ui/hud/hud_prompts.gd",
+	# Matches already-translated trap names to icons: lookup data, never text
+	# drawn directly.
 	"res://scripts/ui/ui_theme.gd",
 	# Quick callouts travel as their Spanish phrase (a stable network id that
 	# also sets the voice's syllables); display_text() translates its "key".

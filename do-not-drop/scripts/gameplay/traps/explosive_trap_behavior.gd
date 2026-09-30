@@ -85,14 +85,15 @@ func get_state() -> int:
 
 ## The hint goes to every peer's HUD, so unless the owner is the one who
 ## reads the code it says who has it, never the code itself.
-func get_hint() -> String:
+func hint_text() -> Array:
 	if seconds_left <= 0.0:
-		return tr("HUD_HINT_EXPLOSIVE_RUINED")
+		return LocText.make("HUD_HINT_EXPLOSIVE_RUINED")
 	if _defused:
-		return tr("HUD_HINT_EXPLOSIVE_SAFE")
+		return LocText.make("HUD_HINT_EXPLOSIVE_SAFE")
 	if _code_reader == READER_OWNER:
-		return tr("HUD_HINT_EXPLOSIVE_SEQUENCE") % [ceili(seconds_left), _direction_text(sequence[sequence_index])]
-	return tr("HUD_HINT_EXPLOSIVE_CODE") % [ceili(seconds_left), sequence_index, sequence.size()]
+		return LocText.make("HUD_HINT_EXPLOSIVE_SEQUENCE",
+			[ceili(seconds_left), _direction_text(sequence[sequence_index])])
+	return LocText.make("HUD_HINT_EXPLOSIVE_CODE", [ceili(seconds_left), sequence_index, sequence.size()])
 
 
 func next_direction() -> StringName:
@@ -135,7 +136,7 @@ func sequence_state() -> Dictionary:
 		return {}
 	return {"steps": sequence.duplicate(), "index": sequence.size() if _defused else sequence_index,
 		"mistakes": _mistakes, "solved": 1 if _defused else 0, "seconds": seconds_left,
-		"verb": tr("HUD_CARE_VERB_DEFUSE"), "reader": _code_reader}
+		"verb": "HUD_CARE_VERB_DEFUSE", "reader": _code_reader}
 
 
 func _sync_integrity() -> void:

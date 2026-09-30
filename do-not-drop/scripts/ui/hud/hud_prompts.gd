@@ -152,28 +152,26 @@ func render_interaction_prompt() -> void:
 	hud.interaction_icon.visible = hud.interaction_icon.texture != null
 
 
-## Prompt words to the action they ask for, checked in this order.
+## Prompt translation keys to the action they ask for, checked in this order.
+## Matched against the prompt in this player's language, so an English prompt
+## gets its icon too (N-805).
 const PROMPT_ACTIONS: Array = [
-	[&"grab", ["agarrar", "bajar paquete"]],
-	[&"drop", ["soltar", "dejá el paquete", "dejar paquete"]],
-	[&"sit", ["sentar", "subirse"]],
-	[&"bell", ["timbre"]],
-	[&"photo", ["foto"]],
-	[&"horn", ["bocina"]],
-	[&"ping", ["ping"]],
+	[&"grab", ["HUD_PROMPT_PICK_UP_PACKAGE", "HUD_PROMPT_UNLOAD_PACKAGE"]],
+	[&"drop", ["HUD_PROMPT_DROP_TO_DRIVE", "HUD_PROMPT_PLACE_PACKAGE", "HUD_PROMPT_STORE_ON_SHELF"]],
+	[&"sit", ["HUD_PROMPT_DRIVE", "HUD_PROMPT_SIT_BY_CARGO", "HUD_PROMPT_SIT"]],
+	[&"bell", ["WORLD_DOORBELL_PROMPT"]],
+	[&"open_box", ["HUD_PROMPT_OPEN_BOX", "HUD_PROMPT_CLOSE_BOX"]],
 ]
 
 
 func _action_id_for_prompt(prompt: String) -> StringName:
 	var normalized: String = prompt.to_lower()
+	if normalized.is_empty():
+		return &""
 	for entry: Array in PROMPT_ACTIONS:
-		for word: String in entry[1]:
-			if word in normalized:
+		for key: String in entry[1]:
+			if tr(key).to_lower() in normalized:
 				return entry[0]
-	if "caja" in normalized and ("abrir" in normalized or "cerrar" in normalized):
-		return &"open_box"
-	if "carta" in normalized:
-		return &"use_card"
 	return &""
 
 

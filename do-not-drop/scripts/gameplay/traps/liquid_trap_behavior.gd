@@ -124,14 +124,14 @@ func get_state() -> int:
 	return TrapState.OK
 
 
-func get_hint() -> String:
+func hint_text() -> Array:
 	if get_state() == TrapState.RUINED:
-		return tr("HUD_HINT_LIQUID_RUINED")
+		return LocText.make("HUD_HINT_LIQUID_RUINED")
 	if spill_amount >= integrity_max * 0.30:
-		return tr("HUD_HINT_LIQUID_DANGER")
+		return LocText.make("HUD_HINT_LIQUID_DANGER")
 	if tilt_degrees > _safe_angle:
-		return tr("HUD_HINT_LIQUID_TILTED") % tilt_degrees
-	return tr("HUD_HINT_LIQUID_OK")
+		return LocText.make("HUD_HINT_LIQUID_TILTED", [roundi(tilt_degrees)])
+	return LocText.make("HUD_HINT_LIQUID_OK")
 
 
 func _measure_tilt(package: Node) -> float:

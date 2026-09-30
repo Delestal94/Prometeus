@@ -179,7 +179,9 @@ func _on_progress(progress: float, meters: float, section: String) -> void:
 	hud.section_label.text = section.to_upper()
 
 
-func _on_package_hint(package_id: StringName, hint: String) -> void:
+## The host relays the hint as a LocText line; it's translated here, when
+## shown, so it reads in this player's language (N-805).
+func _on_package_hint(package_id: StringName, hint: Array) -> void:
 	cargo_hints[package_id] = hint
 
 
@@ -192,7 +194,7 @@ func refresh_cargo_hint() -> void:
 	var package_id := local_package_id()
 	var entry: Dictionary = RunManager.cargo.get(package_id, {})
 	var at_risk: bool = int(entry.get("state", 0)) == ITrapBehavior.TrapState.AT_RISK
-	var text: String = String(cargo_hints.get(package_id, "")) if at_risk else ""
+	var text: String = LocText.render(cargo_hints.get(package_id, [])) if at_risk else ""
 	hud.notices.set_notice(&"critical", &"cargo", text, 100, Hud.RED)
 
 

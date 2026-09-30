@@ -70,10 +70,10 @@ func care_action() -> StringName:
 		return &""
 	return &"hold" if command_calm else &"release"
 
-func get_hint() -> String:
+func hint_text() -> Array:
 	if get_state() == TrapState.RUINED:
-		return tr("HUD_HINT_HOSTILE_RUINED")
-	return tr("HUD_HINT_HOSTILE_CALM") if command_calm else tr("HUD_HINT_HOSTILE_DONT_TOUCH")
+		return LocText.make("HUD_HINT_HOSTILE_RUINED")
+	return LocText.make("HUD_HINT_HOSTILE_CALM" if command_calm else "HUD_HINT_HOSTILE_DONT_TOUCH")
 
 func _sync_integrity() -> void:
 	integrity = integrity_max * (1.0 - aggression / integrity_max)

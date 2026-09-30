@@ -10,8 +10,9 @@ extends "res://scripts/gameplay/interaction/interactable.gd"
 var occupied_by: Node = null
 
 
+## prompt is a translation key (vehicle.tscn).
 func get_prompt() -> String:
-	return "" if occupied_by != null else prompt
+	return "" if occupied_by != null else tr(prompt)
 
 
 func can_interact(player: Node) -> bool:

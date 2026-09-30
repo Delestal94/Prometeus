@@ -77,7 +77,7 @@ func _run() -> void:
 	_expect(StringName(record["package_id"]) == package_id, "The record names the package that was handed over")
 	_expect(bool(manager.cargo[package_id].get("delivered", false)),
 		"A delivered box stops counting as cargo still aboard")
-	_expect(bool(seat.call(&"can_interact", player)) and String(seat.call(&"get_prompt")) == "Subirse a manejar",
+	_expect(bool(seat.call(&"can_interact", player)) and String(seat.call(&"get_prompt")) == tr("HUD_PROMPT_DRIVE"),
 		"With nothing left aboard the driver can still get back in to drive on")
 	seat.interact(player)
 	_expect(not NodePath(player.get(&"seat_node_path")).is_empty(), "...and does")

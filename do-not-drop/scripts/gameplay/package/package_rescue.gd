@@ -74,13 +74,13 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		if bool(run.call(&"consume_care_supply", tool)):
 			complete_care_tool(p, tool)
 		else:
-			p.care.message = p.tr("HUD_CARE_MSG_SUPPLY_TAKEN")
+			p.care.message = LocText.make("HUD_CARE_MSG_SUPPLY_TAKEN")
 	p._report_change(before_integrity, before_state, p.tr("HUD_CARE_RUINED_IN_RESCUE"))
 	p._care_publish_time += delta
 	if p._care_publish_time >= 0.1:
 		p._care_publish_time = 0.0
 		publish_care(p)
-		p._emit_event(&"package_hint_changed", [p.package_id, p.get_hint()])
+		p._emit_event(&"package_hint_changed", [p.package_id, p.hint_text()])
 
 
 ## How far ahead (s) a box looks for a bump the road announces: a little
@@ -238,7 +238,7 @@ static func publish_care(p: DeliveryPackage) -> void:
 	# (and the bomb's sign) shows the real thing.
 	if p.trap_behavior != null:
 		state["action"] = p.trap_behavior.call(&"care_action")
-		state["hint"] = String(p.trap_behavior.call(&"get_hint"))
+		state["hint"] = p.trap_behavior.call(&"hint_text")
 		var sequence: Dictionary = p.trap_behavior.call(&"sequence_state")
 		if not sequence.is_empty():
 			state["sequence"] = sequence

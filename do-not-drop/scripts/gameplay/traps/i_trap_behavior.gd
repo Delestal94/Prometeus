@@ -41,9 +41,15 @@ func get_state() -> int:
 
 
 ## Short line the HUD shows under the cargo readout, so each trap can tell
-## the player what it currently wants from them.
+## the player what it currently wants from them. A LocText line ([key,
+## args...]): the host relays it and each peer translates it (N-805).
+func hint_text() -> Array:
+	return []
+
+
+## hint_text() in this peer's language.
 func get_hint() -> String:
-	return ""
+	return LocText.render(hint_text())
 
 
 ## What the hands on this box should be doing right now: &"hold" (the

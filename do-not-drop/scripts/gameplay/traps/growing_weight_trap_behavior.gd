@@ -85,25 +85,26 @@ func get_state() -> int:
 	return TrapState.OK
 
 
-func get_hint() -> String:
+func hint_text() -> Array:
 	if get_state() == TrapState.RUINED:
-		return tr("HUD_HINT_WEIGHT_RUINED")
+		return LocText.make("HUD_HINT_WEIGHT_RUINED")
 	var pending: String = ""
 	for index: int in range(sequence.size()):
 		pending += ("[%s] " % _arrow(sequence[index])) if index >= sequence_index else ""
 	var seconds_left: float = maxf(_puzzle_time_limit - _time_since_solved, 0.0)
 	if not armed():
-		return tr("HUD_HINT_WEIGHT_SECURED") % ceili(seconds_left - ARM_WINDOW)
+		return LocText.make("HUD_HINT_WEIGHT_SECURED", [ceili(seconds_left - ARM_WINDOW)])
 	if seconds_left > 0.0:
-		return tr("HUD_HINT_WEIGHT_SEQUENCE") % [pending, seconds_left]
-	return tr("HUD_HINT_WEIGHT_DANGER") % pending
+		return LocText.make("HUD_HINT_WEIGHT_SEQUENCE", [pending, ceili(seconds_left)])
+	return LocText.make("HUD_HINT_WEIGHT_DANGER", [pending])
 
 
 func sequence_state() -> Dictionary:
 	if get_state() == TrapState.RUINED or sequence.is_empty():
 		return {}
 	return {"steps": sequence.duplicate(), "index": sequence_index, "mistakes": _mistakes, "solved": _solved,
-		"seconds": maxf(_puzzle_time_limit - _time_since_solved, 0.0), "verb": "Asegurar", "pending": armed()}
+		"seconds": maxf(_puzzle_time_limit - _time_since_solved, 0.0), "verb": "HUD_CARE_VERB_SECURE",
+		"pending": armed()}
 
 
 func _solve() -> void:

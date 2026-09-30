@@ -34,7 +34,8 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 	var missing: int = int(state.get("missing", 0))
 	var sequence: Dictionary = state.get("sequence", {})
 	var action := StringName(state.get("action", &"hold"))
-	var hint: String = String(state.get("hint", ""))
+	# A LocText line from the host, read in this player's language (N-805).
+	var hint: String = LocText.render(state.get("hint", []))
 	var working: bool = float(state.get("work", 0.0)) > 0.0 and StringName(state.get("tool", &"")) == tool
 	if phase == &"crisis" and missing > 0:
 		return _step(&"collect", _tr("HUD_CARE_COLLECT"),
@@ -50,7 +51,7 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 				ask += " " + _tr("HUD_CARE_ASK_CODE_ON_FOOT") % keys.get("primary", "Clic izq.")
 			return _step(&"sequence", _tr("HUD_CARE_ASK_CODE"), ask)
 		return _step(&"sequence", _tr("HUD_CARE_SEQUENCE"),
-			_tr("HUD_CARE_SEQUENCE_DETAIL") % [String(sequence.get("verb", "Resolver")), how])
+			_tr("HUD_CARE_SEQUENCE_DETAIL") % [_tr(String(sequence.get("verb", "HUD_CARE_VERB_SOLVE"))), how])
 	var cushion: Dictionary = state.get("cushion", {})
 	if float(cushion.get("eta", -1.0)) >= 0.0 and bool(cushion.get("ready", false)):
 		return _step(&"cushion", _tr("HUD_CARE_CUSHION"),
