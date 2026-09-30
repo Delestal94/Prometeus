@@ -23,7 +23,7 @@ camión.
 - `vehicle_faults.gd` (`VehicleFaults`): nodo al lado de la furgoneta, escucha `EventBus.vehicle_impact`, el host decide con el RNG sembrado por `NetworkManager.world_seed` y avisa por señales de `EventBus` que todos los peers aplican igual.
 - `vehicle_fault_effects.gd`: el efecto visible, en cada peer, pura presentación.
 - `fault_repair_spot.gd`, `rescue_hook.gd`, `vehicle_door_interaction.gd`: interacciones de la tripulación con el camión.
-- `vehicle_input_component.gd`, `vehicle_net_smoother.gd`: entrada y suavizado de red.
+- `vehicle_input_component.gd`, `modules/net_pose_smoother/net_pose_smoother.gd`: entrada y suavizado de red.
 - `scripts/presentation/vehicle_presentation.gd`, `vehicle_effects.gd`, `dashboard_gps.gd`: lo que se ve y se oye.
 
 ## Pasos

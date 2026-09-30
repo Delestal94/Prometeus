@@ -60,6 +60,7 @@ file_domain() {
 		do-not-drop/scripts/ui/*|do-not-drop/scripts/core/game_settings.gd|\
 		docs/tareas-slatex.md|docs/controles-y-ui.md)
 			echo slatex ;;
+		do-not-drop/modules/*|tools/check_modules.py|tools/portability-check.sh|docs/modulos.md|\
 		do-not-drop/scripts/core/event_bus.gd|do-not-drop/scripts/core/network_manager.gd|\
 		do-not-drop/scripts/core/run_manager.gd|\
 		do-not-drop/scripts/presentation/first_person_camera.gd|\

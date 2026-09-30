@@ -53,9 +53,11 @@ WORK="$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/tmp-tests-$$")"
 mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 
-# The tests: every test_*.gd plus the route smoke check, filtered by name.
+# The tests: every test_*.gd, each portable module's own tests
+# (modules/<name>/tests/, docs/modulos.md) and the route smoke check,
+# filtered by name.
 TESTS=()
-for file in "$PROJECT"/tests/test_*.gd "$PROJECT"/scripts/gameplay/route/route_smoke_check.gd; do
+for file in "$PROJECT"/tests/test_*.gd "$PROJECT"/modules/*/tests/test_*.gd "$PROJECT"/scripts/gameplay/route/route_smoke_check.gd; do
 	[ -f "$file" ] || continue
 	name="$(basename "$file" .gd)"
 	if [ ${#FILTERS[@]} -gt 0 ]; then

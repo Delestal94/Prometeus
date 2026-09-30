@@ -30,7 +30,7 @@ es "un archivo de datos + un script de comportamiento", sin tocar el loop centra
 4. Registrala donde se eligen las trampas (Grep `data/traps/` para encontrar la lista/pool).
 5. **Estado mutable por instancia**: nunca guardes estado en el `.tres` compartido; `create_behavior()` debe dar una instancia nueva por paquete (`test_fragile` verifica "Shared definition never shares mutable state").
 6. **Hint**: `get_hint()` devuelve el texto que el HUD muestra, siempre como `tr("HUD_HINT_<ID>")` con la clave en `translations/strings_ui.csv` (`keys,es,en`), nunca un string en español suelto. Tiene que llegar a todos los clientes por el relay existente (ver `test_hint_relay`).
-7. **Feedback** (presentación, sin tocar el `RigidBody3D` real): visual en `package_feedback.gd` y sonido con un generador en `scripts/presentation/synth_audio.gd` (zona compartida: solo funciones nuevas). Si el sonido es más que trivial, recomendá en tu salida pasarlo por `disenador-audio`; vos no podés lanzar otro agente.
+7. **Feedback** (presentación, sin tocar el `RigidBody3D` real): visual en `package_feedback.gd` y sonido con un generador en `modules/synth_audio/synth_audio.gd` (zona compartida: solo funciones nuevas). Si el sonido es más que trivial, recomendá en tu salida pasarlo por `disenador-audio`; vos no podés lanzar otro agente.
 8. **Test**: agregá casos a `tests/test_traps.gd` o a `tests/test_<id>_trap.gd` cubriendo umbrales, transición de estados, reset con `initialize_trap` y aislamiento entre instancias, con `_expect` (nunca `assert()`: ver `.claude/skills/nuevo-test/SKILL.md`). Corré `bash tools/run-tests.sh trap multi_cargo hint_relay`.
 9. Actualizá la tabla de trampas de la documentación que corresponda (`docs/mecanicas-candidatas.md` o donde estén listadas).
 

@@ -39,6 +39,9 @@ jobs:
       - name: Every test describes itself in its header
         run: bash tools/list-tests.sh --missing
 
+      - name: Portable modules name nothing of the game
+        run: python3 tools/check_modules.py
+
   headless:
     name: Tests headless (Godot 4.7.2)
     runs-on: ubuntu-latest
@@ -84,6 +87,35 @@ jobs:
           path: ${{ runner.temp }}/godot-headless-report.csv
           if-no-files-found: warn
           retention-days: 90
+
+  modules:
+    name: Portable modules in an empty project (Godot 4.7.2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v6
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+
+      - name: Each module's tests, alone with its declared dependencies
+        env:
+          GODOT: /home/runner/godot/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64
+          TEST_TIMEOUT: 120
+        run: bash tools/portability-check.sh -v
 
   runtime-audit:
     name: Runtime performance and visual captures (Godot 4.7.2)

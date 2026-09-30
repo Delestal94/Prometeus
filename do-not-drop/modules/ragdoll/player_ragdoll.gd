@@ -1,16 +1,30 @@
 class_name PlayerRagdoll
 extends Node3D
-## Lightweight physical ragdoll for the low-poly player. The shipped GLB has
-## no PhysicalBone rig, so this builds articulated rigid bodies at runtime
-## instead of pretending an animation is physics. It is visual-only: the
-## CharacterBody remains the network authority and is restored afterwards.
+## Lightweight physical ragdoll for a low-poly character with no
+## PhysicalBone rig: articulated rigid bodies built at runtime instead of
+## pretending an animation is physics. It is visual-only: the CharacterBody
+## remains the network authority, is hidden while the pieces fly and is
+## restored afterwards.
+##
+## Portable module (docs/modulos.md): the owner hands in what the pieces may
+## collide with and, optionally, a moving `carrier` (a vehicle the character
+## was riding in) so they start out moving with it.
 
 const LIFETIME := 2.8
+## Physics layers the pieces collide with (the ground by default).
+var collision_mask: int = 1
+var color: Color = Color("83e2ba")
+## A node answering carries(point) -> bool and point_velocity(point) ->
+## Vector3, or null: a knocked-over character keeps the carrier's velocity.
+var carrier: Node = null
 var _owner_player: CharacterBody3D
 var _active := false
 
-func setup(owner_player: CharacterBody3D) -> void:
+
+func setup(owner_player: CharacterBody3D, carrier_node: Node = null, mask: int = 1) -> void:
 	_owner_player = owner_player
+	carrier = carrier_node
+	collision_mask = mask
 
 
 func fall(impulse: Vector3) -> void:
@@ -22,9 +36,8 @@ func fall(impulse: Vector3) -> void:
 	# moving with it: from a standstill they were left on the road, or swept
 	# by the truck's walls.
 	var carried: Vector3 = Vector3.ZERO
-	var vehicle: Node = get_tree().get_first_node_in_group(&"vehicle")
-	if vehicle != null and vehicle.has_method(&"carries") and bool(vehicle.call(&"carries", _owner_player.global_position)):
-		carried = vehicle.call(&"point_velocity", _owner_player.global_position)
+	if carrier != null and carrier.has_method(&"carries") and bool(carrier.call(&"carries", _owner_player.global_position)):
+		carried = carrier.call(&"point_velocity", _owner_player.global_position)
 	var root := get_tree().current_scene if get_tree().current_scene != null else get_tree().root
 	global_transform = Transform3D(Basis.IDENTITY, _owner_player.global_position + Vector3.UP * 0.9)
 	reparent(root)
@@ -49,9 +62,7 @@ func _make_part(data: Dictionary, impulse: Vector3, carried: Vector3 = Vector3.Z
 	body.position = data["p"]
 	body.mass = 1.0
 	body.collision_layer = 0
-	# The ground and the truck's cargo shell (vehicle.gd SHELL_LAYER), never
-	# the truck itself: a ragdoll flopping in the bay mustn't shove it.
-	body.collision_mask = 1 | 64
+	body.collision_mask = collision_mask
 	var mesh := MeshInstance3D.new()
 	var capsule := CapsuleMesh.new()
 	var size: Vector3 = data["s"]
@@ -59,7 +70,7 @@ func _make_part(data: Dictionary, impulse: Vector3, carried: Vector3 = Vector3.Z
 	capsule.height = size.y
 	mesh.mesh = capsule
 	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("83e2ba")
+	material.albedo_color = color
 	material.roughness = 0.85
 	mesh.material_override = material
 	body.add_child(mesh)

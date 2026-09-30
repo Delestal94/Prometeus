@@ -52,7 +52,7 @@ desbalances. La elección de timbres y su comodidad se valida además escuchando
 
 ## Cómo se mide
 
-- Todos los sonidos salen de `scripts/presentation/synth_audio.gd` (WAV mono de 16 bits).
+- Todos los sonidos salen de `modules/synth_audio/synth_audio.gd` (WAV mono de 16 bits).
   `tests/test_world_audio_levels.gd` genera cada uno, lo mide en dBFS y le suma el `volume_db`
   con que se reproduce. Ese resultado tiene que caer a ±2 dB del objetivo de su clase.
 - Los niveles viven todos en un solo lugar: `scripts/presentation/world_mix.gd`. Los scripts

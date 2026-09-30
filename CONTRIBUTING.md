@@ -45,6 +45,9 @@ tools/run-tests.sh -v traps     # con el log de cada falla
   cerrarse. Es un crash conocido del motor al salir, se reintenta una vez y no bloquea.
 - `render_*.gd` y `check_*.gd` generan capturas y necesitan pantalla y alguien que las
   mire: no entran en la batería (ver el agente `revisor-visual`).
+- Los módulos portables (`do-not-drop/modules/`, `docs/modulos.md`) tienen sus tests en
+  `modules/<nombre>/tests/` y solo pueden usar el módulo: `python tools/check_modules.py` y
+  `tools/portability-check.sh` (cada módulo solo en un proyecto vacío) corren en CI.
 - Cada mecánica nueva o bug arreglado lleva su test (`tests/test_<tema>.gd`, patrón
   `extends SceneTree` + `_expect` + `quit(_failures)`), que describe qué cubre en su encabezado
   (`## ...` debajo de `## Run:`). `tools/list-tests.sh` imprime el índice; `--missing` lista los que no

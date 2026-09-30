@@ -11,7 +11,7 @@ const POINTS_INTACT: int = 100
 const POINTS_AT_RISK: int = 50
 const CHAOS_MULTIPLIER: float = 1.2
 const MAX_LEADERBOARD_ENTRIES: int = 10
-const SAFE_JSON = preload("res://scripts/core/safe_json.gd")
+const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 
 ## docs/tareas-nacho.md #44/#52: endless never "delivers" (no zone to reach),
 ## so it can't use the cargo/time formula above -- distance is the only
