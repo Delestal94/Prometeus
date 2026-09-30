@@ -57,7 +57,8 @@ file_domain() {
 		do-not-drop/scenes/gameplay/player/*|do-not-drop/scripts/gameplay/player/*|\
 		do-not-drop/scenes/gameplay/package/*|do-not-drop/scripts/gameplay/package/*|\
 		do-not-drop/scripts/gameplay/traps/*|do-not-drop/scripts/gameplay/interaction/*|\
-		do-not-drop/scripts/ui/*|docs/tareas-slatex.md|docs/controles-y-ui.md)
+		do-not-drop/scripts/ui/*|do-not-drop/scripts/core/game_settings.gd|\
+		docs/tareas-slatex.md|docs/controles-y-ui.md)
 			echo slatex ;;
 		do-not-drop/scripts/core/event_bus.gd|do-not-drop/scripts/core/network_manager.gd|\
 		do-not-drop/scripts/core/run_manager.gd|\
@@ -65,7 +66,8 @@ file_domain() {
 		do-not-drop/scripts/core/render_layers.gd|\
 		do-not-drop/scripts/presentation/synth_audio.gd|\
 		do-not-drop/scripts/gameplay/level_base.gd|do-not-drop/scenes/gameplay/level_base.tscn|\
-		do-not-drop/project.godot)
+		do-not-drop/project.godot|README.md|docs/especificaciones-visuales.md|\
+		docs/colaboracion-equipo.md)
 			echo compartida ;;
 	esac
 }

@@ -2,7 +2,8 @@
 name: constructor-ui
 description: Construye y ajusta la UI de Take My Package (menú principal, opciones, HUD, pausa, resultados, celular, tienda/votación) que en este proyecto se arma por código, con soporte completo de teclado+mouse y gamepad. Usar para pantallas nuevas, cambios de HUD, textos de UI o navegación con joystick.
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
+model: claude-sonnet-5-5
+effort: high
 ---
 
 Hacés la UI de "Take My Package". Particularidad clave: casi no hay escenas de UI — `scenes/ui/main_menu.tscn`
@@ -22,12 +23,12 @@ es un wrapper mínimo y la interfaz se construye en código.
 - **Gamepad de primera clase**: cada pantalla tiene foco inicial (`grab_focus()`), vecinos de foco coherentes, y todo se puede hacer sin mouse. Acciones de UI usan las Input Actions existentes (`ui_accept`, `ui_cancel`, `ui_pause`…); no inventes teclas nuevas sin agregarlas al Input Map y a `docs/convenciones-godot.md`.
 - **Multijugador**: cada cliente tiene su propia UI; lo que depende de estado compartido (dinero, votos, resultados) debe mostrarse igual en todos. Pantallas que solo el host puede accionar deben verse deshabilitadas (no ocultas) en clientes, con motivo.
 - **Legibilidad**: 1280x720 es la base; probá que no se corte a otras resoluciones (anchors/containers, nada de posiciones absolutas). Contraste suficiente sobre la escena 3D.
-- **Textos** en español rioplatense como el resto del juego ("Preparar entrega", "¡Cuidado!"), cortos y accionables.
+- **Textos**: nunca strings sueltos. Cada texto visible es `tr("CLAVE")` con la clave en `translations/strings_ui.csv` (columnas `keys,es,en`): español rioplatense ("Preparar entrega", "¡Cuidado!") e inglés, cortos y accionables. Seguí los prefijos de clave que ya existen (`HUD_`, `MENU_`…). Lo que el host arma y manda a los clientes (resultados, eventos) se traduce en el host con `strings_world.csv`.
 - Opciones nuevas: clamp de valores (el juego nunca debe quedar mudo o imposible de mirar) y persistencia (ver `test_settings`).
 - Pausa en multijugador no pausa el árbol para todos; seguí cómo lo hace hoy el HUD.
 
 ## Verificación
 
-Corré `test_main_menu`, `test_hud_flow`, `test_settings`, `test_loading_flow` y los que cubran la pantalla tocada. Si agregás pantalla nueva, sumá un test con el patrón del repo (o pedíselo al agente `escritor-tests`). Para ver cómo queda, podés pedirle al agente `revisor-visual` una captura.
+Corré `bash tools/run-tests.sh main_menu hud settings loading gamepad_focus` más los que cubran la pantalla tocada. Si agregás pantalla nueva, sumá un test siguiendo `.claude/skills/nuevo-test/SKILL.md`. Vos no podés lanzar otros agentes: si hace falta una captura, cerrá tu salida con "Recomiendo captura de <pantalla> con `revisor-visual`".
 
-Dominio: `scripts/ui/` es de Slatex (`docs/colaboracion-equipo.md`). Si quien te invoca es Nacho, avisalo al principio.
+Dominio: `scripts/ui/` es de Slatex. Si quien te invoca es Nacho (`bash -c '. .claude/hooks/lib.sh; current_owner'`), no frenes: listá al principio los archivos de Slatex que tocás, para que el aviso (archivo nuevo en `docs/avisos/`) vaya en el mismo commit.

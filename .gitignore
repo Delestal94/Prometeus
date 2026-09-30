@@ -38,6 +38,7 @@ Thumbs.db
 !.claude/agents/
 !.claude/skills/
 !.claude/hooks/
+!.claude/rutinas/
 !.claude/settings.json
 do-not-drop/.claude/
 *.local.json

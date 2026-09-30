@@ -38,7 +38,7 @@ un shader en tiempo real saldría caro en Compatibility, y bajar texturas CC0 de
 - Nodos por `type`, nunca por nombre (Blender puede estar en español); enums leídos de `bl_rna`, no hardcodeados.
 - Verificá con `get_viewport_screenshot()` después de cada cambio.
 - Lo que Blender exporta al glTF es un `StandardMaterial3D` básico: todo lo que dependa de nodos procedurales hay que reimplementarlo en el `.gdshader` o hornearlo a textura. Decí explícitamente qué camino elegiste.
-- Texturas a `do-not-drop/assets/textures/`, con fuente y licencia anotadas en `do-not-drop/assets/README.md`. No modifiques modelos del camión (Slatex lo está reemplazando).
+- Texturas a `do-not-drop/assets/textures/`, con fuente y licencia anotadas en `do-not-drop/assets/README.md`. No modifiques modelos del camión ni `vehicle.tscn`: están congelados por decisión del equipo desde el hito M6 (2026-09-28; lo nuevo del camión va como componente aparte, como `VehicleFaults`). Antes de asumir lo contrario, buscá un aviso más nuevo en `docs/avisos/`.
 
 ## Texturas generadas (MCP `comfy-mcp`, ComfyUI local con Z-Image Turbo)
 
@@ -46,10 +46,10 @@ Para texturas que no existen en Poly Haven (ej. estilo low-poly propio, carteles
 generalas con ComfyUI siguiendo las reglas de `.claude/agents/artista-conceptual.md` (8 pasos, CFG 1-2,
 prompt en inglés "seamless tileable texture, top-down, flat even lighting, no shadows", probar el
 mosaico 2x2) y registrá cada una en `art/ai-registro.md`. Para encargos grandes de imágenes,
-derivá al agente `artista-conceptual`.
+recomendá en tu salida pasarlos a `artista-conceptual` (vos no podés lanzar otro agente).
 
 ## Verificación
 
-- Headless compila shaders parcialmente; para ver el resultado usá los scripts de render sin `--headless` (`tests/render_terrain_review.gd`, `tests/render_vehicle_review.gd`) o pedíselo al agente `revisor-visual`.
+- Headless compila shaders parcialmente; para ver el resultado usá los scripts de render sin `--headless` (`tests/render_terrain_review.gd`, `tests/render_vehicle_review.gd`) o recomendá en tu salida una captura con `revisor-visual`.
 - Corré `test_route_terrain` si tocaste el terreno.
 - Reportá: qué hace el shader, uniforms expuestos y valores recomendados, costo estimado (texturas leídas, ops por fragmento), y capturas si las generaste.
