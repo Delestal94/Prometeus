@@ -25,9 +25,9 @@ extends SceneTree
 ## N-117.3: then the same holder scrubs the box, turned into a Liquid one: six
 ## alternating swings over the RPC and every peer reports `scrub=5`.
 ## N-222: after the TRIO line the host starts a run, hands one door its box and
-## leaves. Each client prints a GONE line: its disconnect screen has to be up
-## and carry what it saw of the run (1 house delivered, RunTally), in its own
-## words.
+## leaves. Each client prints a GONE line: it saw the host go, got the delivery,
+## its level stopped the run and RunTally tells 1 house delivered (the screen
+## itself: test_host_gone_tally.gd).
 ##
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
@@ -158,15 +158,20 @@ func _report_host_gone() -> void:
 		await _pump(0.1)
 		waited += 0.1
 	await process_frame
-	var hud: Node = _level.get_node(^"HUD")
-	var stats: String = (hud.get(&"overlay_stats") as Label).text
 	var run: Node = root.get_node(^"/root/RunManager")
-	var tally: String = RUN_TALLY.describe(RUN_TALLY.of(run))
 	var houses: int = (run.get(&"deliveries") as Array).size()
-	var ok: bool = _host_gone and hud.get(&"overlay_mode") == "disconnected" and stats.contains(tally) \
-			and houses == 1 and not bool(run.get(&"is_running"))
-	print("GONE role=%s %s gone=%s overlay=%s houses=%d stats=%s" % [_name, "ok" if ok else "FAIL", _host_gone,
-			hud.get(&"overlay_mode"), houses, stats.replace("\n", " | ")])
+	var tally: String = RUN_TALLY.describe(RUN_TALLY.of(run))
+	# Under --script this file compiles before the autoloads exist, so hud.gd
+	# (which names them) can't compile here and the HUD runs scriptless: the
+	# screen itself is test_host_gone_tally.gd's. When it does run, check it.
+	var screen: String = "unchecked"
+	var stats_label: Variant = _level.get_node(^"HUD").get(&"overlay_stats")
+	if stats_label is Label:
+		screen = "ok" if (stats_label as Label).text.contains(tally) else "missing"
+	var ok: bool = _host_gone and houses == 1 and not bool(run.get(&"is_running")) \
+			and RUN_TALLY.has_unfinished_run(run) and tally.contains("1") and screen != "missing"
+	print("GONE role=%s %s gone=%s houses=%d screen=%s tally=%s" % [_name, "ok" if ok else "FAIL", _host_gone,
+			houses, screen, tally])
 
 
 ## Both clients step up to the same box and ask the host for it in the same
