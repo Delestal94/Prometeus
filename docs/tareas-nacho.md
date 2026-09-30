@@ -489,7 +489,7 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 932: están escritos contra `max-file-lines: 1000`, no partidos por responsabilidad. Orden:
 `synth_audio` → `reference_truck` → `route.gd` → `package.gd`.
 
-### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no
+### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
 tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
 Necesita PC (capturas de tienda con luz real; la toma la sesión de arte).
