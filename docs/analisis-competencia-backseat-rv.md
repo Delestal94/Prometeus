@@ -193,7 +193,7 @@ previo.
   pegado a la cabeza del jugador.
 - **Costo:** L. **Dominio:** red/jugador (Slatex) + audio. **Red:** la voz no pasa
   por el host autoritativo del juego; es un flujo aparte y no toca la simulación.
-  Pedirle al agente `auditor-red` que valide el ancho de banda con 5 jugadores.
+  Pedirle al agente `auditor-red` que valide el ancho de banda con 8 jugadores.
 - **Riesgo:** los bugs de voz fueron la queja número uno en ambos juegos. Tiene que
   poder desactivarse y tener un volumen por jugador.
 

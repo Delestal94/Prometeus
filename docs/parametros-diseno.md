@@ -251,7 +251,7 @@ no solo la entrega prolija.
 
 ### Reglas que surgieron al implementarlo (2026-09-20)
 
-- **Arruinar un paquete ya no termina la entrega.** Con hasta cuatro pasajeros, que el
+- **Arruinar un paquete ya no termina la entrega.** Con hasta siete pasajeros, que el
   error de uno le corte la partida a todos sería miserable. La entrega sigue y
   simplemente se puntúa menos; solo termina si se pierde *toda* la carga.
 - **Solo puntúa la carga que subió a la furgoneta.** Un paquete que quedó en el depósito
