@@ -18,6 +18,8 @@ const INK_RED: Color = Color("b3261e")
 const PIXEL_SIZE: float = 0.0013
 const BASE_FONT_SIZE: int = 36
 const MIN_FONT_SIZE: int = 20
+## Tallest letter as a share of the face's height.
+const HEIGHT_SHARE: float = 0.09
 ## Width of an average LilitaOne capital, in font sizes: the phrase is shrunk
 ## to fit one line, since a second line climbs into the printed stamp.
 const CHAR_EM: float = 0.7
@@ -47,8 +49,11 @@ static func build(content: Resource, package_id: StringName, box_size: Vector3) 
 	label.text = phrase
 	label.font = FONT
 	var width_px: float = box_size.x * FACE_FILL / PIXEL_SIZE
+	# Low boxes print their stamp close to the bottom: the letter stays under
+	# HEIGHT_SHARE of the face so it doesn't climb into it.
+	var tallest: int = mini(BASE_FONT_SIZE, floori(box_size.y * HEIGHT_SHARE / PIXEL_SIZE))
 	label.font_size = clampi(floori(width_px / (float(maxi(phrase.length(), 1)) * CHAR_EM)),
-		MIN_FONT_SIZE, BASE_FONT_SIZE)
+		mini(MIN_FONT_SIZE, tallest), tallest)
 	label.pixel_size = PIXEL_SIZE
 	label.outline_size = 0
 	label.modulate = INK_RED if bool(content.call(&"scribble_is_red")) else INK_BLACK
