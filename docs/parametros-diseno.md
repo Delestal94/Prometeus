@@ -383,6 +383,25 @@ de no poder frenar a tiempo sino de los golpes (badenes, ripio, frenadas y volan
 curva de la ruta vuelca al camión por sí sola: un vuelco siempre viene de pegarle a un obstáculo
 o de salirse del camino.
 
+## Correr (N-115, 2026-09-30)
+
+Sin playtest todavía (el usuario dejó los playtests para el final): los números son un primer borrador, todos son
+constantes con nombre en `player_sprint.gd` y en el `on_carried_step()` de cada trampa.
+
+| Qué | Valor |
+|---|---|
+| Velocidad caminando / corriendo / con caja / con Peso Creciente | 3,6 / 6,0 / 5,0 / 4,2 m/s |
+| Distancia entre pasos al correr | 2,0 m (unos 2,5 pasos por segundo con caja) |
+| Chance de tropezar por paso | 0,008 + 0,14 x peligro (0 a 1) |
+| Peligro | giro de vista 1,6 a 3,6 rad/s (hasta 0,5), pendiente 9 a 24 grados (hasta 0,5), ripio 1 / banquina 0,25 (x 0,5), choque 0,8 |
+| Tras tropezar | 1,5 s sin correr, 0,5 s a media velocidad, caja con 6 m/s de golpe |
+| Frágil / Equilibrio / Líquido / Ruidoso / Explosivo / Hostil por paso | 1,4 de integridad / 2,5 grados / 1,6 de charco / 3,5 de agitación / 0,12 s de mecha / 1,2 de agresión |
+| Corriendo, primera persona | FOV +4 grados (suavizado), balanceo x 2,6 |
+
+Orden de magnitud: una caja Frágil aguanta unos 28 s de carrera continua antes de arruinarse, contra ninguno
+caminando; con estas probabilidades, en 20 s de carrera por asfalto se tropieza el 33 % de las veces (sin contar
+giros ni ripio). Ajustar acá cuando haya playtest.
+
 ## Próximo paso
 Estos valores van directo a los `TrapDefinition.tres` que se crean en la Fase 1-2 del
 plan de desarrollo. Cualquier ajuste posterior se hace editando esos Resources, sin

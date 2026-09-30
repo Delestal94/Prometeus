@@ -32,6 +32,9 @@ const SCREECH_DB: float = -8.0
 const HORN_DB: float = -10.5
 const CLUTTER_DB: float = -26.0
 
+# The crew (player_sprint.gd): a footfall while running, "detail" class.
+const FOOTSTEP_DB: float = -20.0
+
 # Outdoors (route.gd, route_sky.gd).
 ## The wind, the distant road, the crickets and the dog's bark are
 ## normalised by SynthAudio itself (its *_STREAM_*_DB constants), so these

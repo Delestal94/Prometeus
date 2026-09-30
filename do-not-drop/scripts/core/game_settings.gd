@@ -86,8 +86,13 @@ var save_run_log: bool = false:
 		save_run_log = value
 		_save()
 
-const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card", &"voice_talk"]
-const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G, &"voice_talk": KEY_Z}
+const REBINDABLE_ACTIONS := [
+	&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card", &"voice_talk", &"sprint",
+]
+const DEFAULT_KEY_BINDINGS := {
+	&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G,
+	&"voice_talk": KEY_Z, &"sprint": KEY_SHIFT,
+}
 var key_bindings: Dictionary = DEFAULT_KEY_BINDINGS.duplicate():
 	set(value):
 		key_bindings = value.duplicate()

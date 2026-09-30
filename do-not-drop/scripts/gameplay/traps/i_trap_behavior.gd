@@ -36,6 +36,15 @@ func on_impact(_delta_velocity: float) -> float:
 	return 0.0
 
 
+## The carrier ran one step with this box in their arms (N-115, player_sprint.gd).
+## `strength` is 1 for a plain step, already scaled by the padding and tape on
+## the box. Every trap feels the shaking its own way; returns the integrity lost
+## (0 for the traps whose failure axis is not integrity). Growing weight ignores
+## it: what running costs there is speed, not shaking.
+func on_carried_step(_strength: float) -> float:
+	return 0.0
+
+
 func get_state() -> int:
 	return TrapState.OK
 

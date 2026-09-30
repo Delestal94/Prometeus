@@ -14,6 +14,8 @@ extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
 const DIRECTIONS: Array[StringName] = [&"up", &"down", &"left", &"right"]
 const READER_DRIVER: StringName = &"driver"
 const READER_OWNER: StringName = &"owner"
+## Seconds off the fuse per running step with the box in the arms (N-115).
+const RUN_STEP_FUSE: float = 0.12
 
 var seconds_left: float = 14.0
 var _countdown_total: float = 14.0
@@ -64,6 +66,14 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 	if direction != null:
 		_consume_direction(StringName(direction))
 	_sync_integrity()
+
+
+## Running with a bomb in the arms: each step shaves a little off the fuse (N-115).
+func on_carried_step(strength: float) -> float:
+	if not _defused and seconds_left > 0.0:
+		seconds_left = maxf(0.0, seconds_left - RUN_STEP_FUSE * strength)
+		_sync_integrity()
+	return 0.0
 
 
 func on_impact(delta_velocity: float) -> float:

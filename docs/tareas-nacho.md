@@ -1509,14 +1509,16 @@ antes de empezar.
 | N-312 | Personaje flaco y alto | A |
 | N-606 | El diario del día siguiente | A |
 
-### N-115 · Correr — A · `Opus 5.5 · high` · Aviso: sí (`player.gd`, `player_animator.gd`, `player_carry.gd`, daño de paquetes y controles de Slatex)
+### N-115 · Correr — A · `Opus 5.5 · high` · Aviso: sí (`player.gd`, `player_animator.gd`, `player_carry.gd`, daño de paquetes y controles de Slatex) · rama `nacho/N-115-sprint`
 
 > Hoy el jugador tiene una sola velocidad (`Player.WALK_SPEED` = 3,6 m/s). Correr sirve sobre todo para
 > llegar a tiempo a una caja caída (los 30 s de rescate de N-213) y para moverse por el depósito.
 
-- [ ] **N-115.1** Mantener Correr (Shift en teclado, clic del stick izquierdo en gamepad; reasignable en
+- [x] **N-115.1** Mantener Correr (Shift en teclado, clic del stick izquierdo en gamepad; reasignable en
   Opciones como el resto) sube la velocidad a ~6 m/s. Sin estamina: el juego es cooperativo y casual.
-- [ ] **N-115.2** **Se puede correr con una caja en brazos, con el riesgo que conlleva** (decisión del
+  Hecho: acción `sprint` en `project.godot`, reasignable (`GameSettings`, fila "Correr" en Opciones),
+  `player_sprint.gd` (componente nuevo del jugador). Rama `nacho/N-115-sprint`.
+- [x] **N-115.2** **Se puede correr con una caja en brazos, con el riesgo que conlleva** (decisión del
   usuario, 2026-09-29). Es una apuesta: llegás antes, pero la caja la paga.
   - Con caja se corre algo menos (~5 m/s); la caja de Peso Creciente ya cargada solo deja trotar.
   - Cada paso de carrera sacude la caja: daño chico por paso por el camino de daño de siempre (lo aplica el
@@ -1528,15 +1530,33 @@ antes de empezar.
   - Se tiene que ver venir: la caja rebota en los brazos, cruje, y la primera vez sale el consejo
     "Correr con la caja la sacude".
   - Sin correr sentado, manejando ni arriba del camión en movimiento.
+  - Hecho: 6 / 5 / 4,2 m/s; el paso sacude la caja por `package_run_shake.gd` -> `on_carried_step()` de cada
+    trampa (lo aplica el host por el camino de daño de siempre, suavizado por el relleno y la cinta); el tropezón sale de un dado puro de
+    (semilla, jugador, paso) que tira el host con el peligro que informa el dueño (giro, pendiente, ripio y
+    banquina con `Route.ground_roughness()`, choque) y suelta la caja con golpe de 6 m/s; rebote y crujido de la
+    caja (solo la malla) y consejo "Correr con la caja la sacude" (`tutorial_catalog.gd`). Números en
+    `docs/parametros-diseno.md`; diseño en `docs/jugabilidad-paquetes-rescate.md`. El cacareo de la gallina del
+    Ruidoso al correr no se hizo (solo se agita); la caja cruje con el sonido de madera de siempre.
 - [ ] **N-115.3** Clip `Run` nuevo en `art/rounded_character/animation_library.py` (zancada con fase de
   vuelo, brazos más abiertos) y elegido por `PlayerAnimator` por velocidad, con la misma histéresis que
   Walk/Stroll. En primera persona: balanceo más marcado y el FOV se abre un poco (+4°, suavizado).
   Pasos más rápidos en el sonido.
-- [ ] **N-115.4** Red: el estado de carrera viaja como `anim_state` (el dueño lo decide, los demás solo
+  - [x] Parte de código: `PlayerAnimator` elige `Run` por velocidad con histéresis (entra sobre 4,6 m/s, sale
+    bajo 4,0) y, si la librería no lo tiene, reproduce Walk acelerado (`RUN_FALLBACK_MAX_SCALE` 1,9); primera
+    persona con FOV +4° suavizado y balanceo x 2,6; pisadas nuevas (`synth_audio_steps.gd`, `FOOTSTEP_DB` en
+    `world_mix.gd`) al ritmo de la carrera. Hoy no había pisadas de ningún tipo: solo suenan corriendo.
+  - [ ] **Clip `Run` en Blender — necesita PC** (`art/rounded_character/animation_library.py` + reexportar el
+    glb): hasta entonces se ve Walk acelerado. Captura del clip con `revisor-visual`.
+- [x] **N-115.4** Red: el estado de carrera viaja como `anim_state` (el dueño lo decide, los demás solo
   reproducen el clip).
+  Hecho: `anim_state` = `Run` + `locomotion_speed` (ya replicados); los otros pares cuentan las pisadas y el
+  rebote de la caja desde eso. RPCs nuevos en el hijo `Sprint` del jugador (`submit_run_step`, `play_stumble`):
+  `NetworkManager.PROTOCOL_VERSION` sube a 5. Falta `auditor-red`.
 - Test: `test_player_sprint.gd` (velocidad al correr con y sin caja, no corre sentado ni manejando, correr
   con caja daña más que caminar, el tropezón deja la caja en el suelo y es igual en host y cliente con la
   misma semilla, elige `Run`, el otro par ve el mismo clip). Captura del clip con `revisor-visual`.
+  Hecho el test (`test_player_sprint.gd`, más `test_world_audio_levels` con la pisada); la captura del clip
+  espera al clip de Blender. Aviso: `docs/avisos/2026-09-30-n115-correr.md`.
 - Hecho cuando: se corre a pie en la ruta y en el depósito, con animación propia, y correr con una caja
   la sacude y puede hacerte tropezar.
 

@@ -69,6 +69,11 @@ static func control(card_data: Dictionary) -> String:
 	return String(card_data["gamepad"] if using_gamepad else card_data["keyboard"])
 
 
+## First time the player runs with a box in their arms (N-115, player_sprint.gd).
+static func sprint_carry_tip() -> String:
+	return TranslationServer.translate("UI_TUT_TIP_SPRINT_CARRY")
+
+
 static func tip_text(trap_id: StringName) -> String:
 	var data: Dictionary = card(trap_id)
 	if data.is_empty():

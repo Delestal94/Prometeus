@@ -5,6 +5,8 @@ extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
 ## enough to survive a rough stretch unattended.
 
 var agitation: float = 0.0
+## Agitation per running step with the box in the arms.
+const RUN_STEP_AGITATION: float = 3.5
 
 var _agitation_max: float = 100.0
 var _gain_per_shake: float = 25.0
@@ -62,6 +64,16 @@ func on_impact(delta_velocity: float) -> float:
 		return 0.0
 	var before: float = integrity
 	agitation = clampf(agitation + _gain_per_shake, 0.0, _agitation_max)
+	_sync_integrity()
+	return maxf(before - integrity, 0.0)
+
+
+## The hen does not like being run with: each step riles it up (N-115).
+func on_carried_step(strength: float) -> float:
+	if _escaped:
+		return 0.0
+	var before: float = integrity
+	agitation = clampf(agitation + RUN_STEP_AGITATION * strength, 0.0, _agitation_max)
 	_sync_integrity()
 	return maxf(before - integrity, 0.0)
 

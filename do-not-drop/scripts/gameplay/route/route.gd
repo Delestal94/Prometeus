@@ -205,7 +205,27 @@ func assign_packages(assignments: Array) -> void:
 			label.text = tr("WORLD_HOUSE_NUMBER") % (index + 1) if house.assigned_label.is_empty() else "%s%s%s" % [tr("WORLD_HOUSE_NUMBER") % (index + 1), NEWLINE, house.assigned_label.to_upper()]
 
 
+## How bad the ground is under a runner (N-115, player_sprint.gd): 0 on the
+## asphalt, the yard and the depot's apron, VERGE_ROUGHNESS on the verge and the
+## fields, 1 on a gravel stretch. Feeds the chance to trip while running with a box.
+const VERGE_ROUGHNESS: float = 0.25
+
+
+func ground_roughness(world_point: Vector3) -> float:
+	if terrain == null:
+		return 0.0
+	var point := Vector2(world_point.x, world_point.z)
+	for zone: Rect2 in terrain.flat_zones:
+		if zone.has_point(point):
+			return 0.0
+	var road: Vector3 = terrain.nearest(point)  # x: distance to the road's centreline, y: gravel, z: its width.
+	if road.x <= road.z * 0.5 + 0.5:
+		return 1.0 if road.y > 0.5 else 0.0
+	return VERGE_ROUGHNESS
+
+
 func _ready() -> void:
+	add_to_group(&"route")  # The runner asks it how rough the ground is (ground_roughness()).
 	# One seed per session, not per machine: see NetworkManager.world_seed.
 	# Solo play leaves it at 0, which still means "a different route every
 	# time you press play".

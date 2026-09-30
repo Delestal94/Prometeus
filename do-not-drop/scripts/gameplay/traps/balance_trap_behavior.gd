@@ -31,6 +31,12 @@ var tilt_side: float = 0.0
 var tilt_dir := Vector2.ZERO
 ## What the passenger's body does (-1..1, +1 = right): the lean they hold.
 var _push: float = 0.0
+## Running with the box in the arms (N-115) rocks it: each step adds a few
+## degrees of lean on top of the real tilt, which settle once the carrier
+## stops. Kept under the danger angle: a cake tips, it is not thrown.
+const RUN_TILT_PER_STEP: float = 2.5
+const RUN_TILT_SETTLE: float = 4.0
+var _run_tilt: float = 0.0
 
 
 func on_setup(package: Node, config: Dictionary) -> void:
@@ -44,6 +50,7 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	tilt_side = 0.0
 	tilt_dir = Vector2.ZERO
 	_push = 0.0
+	_run_tilt = 0.0
 	_seconds_past_danger = 0.0
 
 
@@ -53,7 +60,8 @@ func on_physics_process(package: Node, delta: float, context: Dictionary) -> voi
 	var before_state: int = get_state()
 	var input: Dictionary = context.get("input", {}) as Dictionary
 	var held: float = float(input.get("steady_strength", 1.0 if bool(input.get("steady", false)) else 0.0))
-	tilt_degrees = _measure_tilt(package)
+	_run_tilt = maxf(_run_tilt - RUN_TILT_SETTLE * delta, 0.0)
+	tilt_degrees = _measure_tilt(package) + _run_tilt
 	tilt_dir = _measure_direction(package, context)
 	tilt_side = signf(tilt_dir.x) if absf(tilt_dir.x) > 0.02 else 0.0
 	# The push, already in the truck's frame (the host turns what the passenger
@@ -81,6 +89,13 @@ func on_physics_process(package: Node, delta: float, context: Dictionary) -> voi
 		damage(_damage_per_second * delta)
 	if before_state == TrapState.AT_RISK and get_state() == TrapState.OK:
 		_add_milestone(&"leveled")
+
+
+func on_carried_step(strength: float) -> float:
+	if get_state() == TrapState.RUINED:
+		return 0.0
+	_run_tilt = minf(_run_tilt + RUN_TILT_PER_STEP * strength, _angle_at_risk_max - 6.0)
+	return damage(0.4 * strength)
 
 
 func get_state() -> int:

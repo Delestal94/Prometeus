@@ -70,6 +70,7 @@
 | `walk_forward` / `walk_backward` | W / S | Stick izquierdo (eje Y) |
 | `look_left` / `look_right` / `look_up` / `look_down` | — (mouse, delta directo) | Stick derecho (ejes X/Y) |
 | `look_center` | C | Clic del stick derecho |
+| `sprint` | Shift (mantener, reasignable en Opciones) | Clic del stick izquierdo (mantener) |
 | `package_action_primary` | Clic izquierdo | Gatillo derecho (a pie, con paquete en mano) |
 | `ui_ping` | Clic de la rueda del mouse | Botón D-pad arriba |
 | `use_card` | G (reasignable) | Botón D-pad izquierda |
@@ -84,6 +85,9 @@ el espectador solo existe con el camión en ruta y el panel solo con el depósit
 así que nunca compiten. No quedan botones de gamepad libres (los cuatro del D-pad, los gatillos, los
 bumpers, los sticks, Start y las caras están tomados), y Tab es la tecla de "quién está en la sala".
 Si alguna vez se necesita el panel durante la ruta, hay que separar las teclas.
+
+`sprint` comparte botón con `look_back` en el gamepad (clic del stick izquierdo): nunca están activos a
+la vez, `sprint` es a pie y `look_back` es sentado (`player_sprint.gd`, `first_person_camera.gd`).
 
 Caminar y conducir comparten `W`/`S`: nunca están activos a la vez, porque un jugador
 es conductor o pasajero a pie, no ambos en la misma escena. La mirada en primera

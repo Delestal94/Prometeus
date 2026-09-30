@@ -4,6 +4,8 @@ extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
 ## between CALMAR and NO TOCAR. Holding at the wrong moment is an attack.
 
 var aggression: float = 0.0
+## Aggression per running step with the box in the arms.
+const RUN_STEP_AGGRESSION: float = 1.2
 var command_calm: bool = true
 var command_seconds: float = 2.8
 var attack_count: int = 0
@@ -51,6 +53,14 @@ func on_physics_process(_package: Node, delta: float, context: Dictionary) -> vo
 	_sync_integrity()
 	if before_state == TrapState.AT_RISK and get_state() == TrapState.OK:
 		_add_milestone(&"calmed")
+
+## Every running step irritates it a little (N-115).
+func on_carried_step(strength: float) -> float:
+	if get_state() != TrapState.RUINED:
+		aggression = minf(integrity_max, aggression + RUN_STEP_AGGRESSION * strength)
+		_sync_integrity()
+	return 0.0
+
 
 func on_impact(delta_velocity: float) -> float:
 	if delta_velocity >= 5.0:

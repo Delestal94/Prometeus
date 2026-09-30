@@ -33,6 +33,7 @@ const SOUND_NAMES: Dictionary = {
 	&"train_horn": "Silbato del tren", &"train_chug_loop": "Traqueteo del tren",
 	&"care_step": "Toque correcto", &"care_error": "Tecla equivocada", &"care_success": "Arreglo listo",
 	&"care_whoosh": "Giro de la flecha", &"care_tick": "Avance de la herramienta",
+	&"footstep": "Pisada",
 }
 ## Whoever plays it: the nearest ancestor's script, by file name.
 const SOURCE_NAMES: Dictionary = {
@@ -43,6 +44,7 @@ const SOURCE_NAMES: Dictionary = {
 	"phone_camera": "Celular", "hud": "Pantalla", "hud_cargo_panel": "Pantalla", "delivery_house": "Casa",
 	"chasing_dog": "Perro", "flock_crossing": "Ovejas", "rail_crossing_segment": "Paso a nivel",
 	"narrow_bridge_segment": "Puente", "care_prompt_view": "Panel de cuidado",
+	"player_sprint": "Jugador (correr)",
 }
 
 ## Keys muted this session.

@@ -73,6 +73,7 @@ const PING_INPUT_PATH: String = "res://scripts/gameplay/player/player_ping_input
 var _ping_input: Variant = (load(PING_INPUT_PATH) as Script).new(self)
 ## Rescue panel and assisting another box (player_cargo_care.gd).
 var _cargo_care: Node
+var _sprint: Node  # Speeds, footfalls, the box's shaking and the trip (player_sprint.gd).
 const RenderLayers = preload("res://scripts/core/render_layers.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
@@ -86,6 +87,8 @@ const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_rounded.glb")
 const ANIM_IDLE: StringName = &"Idle"
 const ANIM_WALK: StringName = &"Walk"
+## Held-sprint gait (player_sprint.gd); without the clip PlayerAnimator plays a faster Walk.
+const ANIM_RUN: StringName = &"Run"
 const ANIM_JUMP: StringName = &"Jump"
 const ANIM_PICKUP: StringName = &"PickUpPackage"
 ## PickUpPackage squats to the floor; PickUpHigh takes a box at the waist
@@ -233,6 +236,8 @@ func _ready() -> void:
 	_cargo_care = preload("res://scripts/gameplay/player/player_cargo_care.gd").new()
 	_cargo_care.name = "CargoCare"
 	add_child(_cargo_care)
+	_sprint = preload("res://scripts/gameplay/player/player_sprint.gd").new()
+	add_child(_sprint)
 	add_child(preload("res://scripts/gameplay/player/player_voice.gd").new())
 	_last_safe_ground = global_position
 	if is_local():
@@ -621,8 +626,9 @@ func _physics_process(delta: float) -> void:
 	var move_direction: Vector3 = (global_basis.x * input_vector.x) + (global_basis.z * input_vector.y)
 	if move_direction.length() > 1.0:
 		move_direction = move_direction.normalized()
-	velocity.x = move_direction.x * WALK_SPEED
-	velocity.z = move_direction.z * WALK_SPEED
+	var pace: float = _sprint.ground_speed(input_vector)
+	velocity.x = move_direction.x * pace
+	velocity.z = move_direction.z * pace
 	if is_on_floor():
 		# Keep the body snapped to slopes when walking, but preserve a newly
 		# requested jump impulse instead of immediately overwriting it.
@@ -717,10 +723,10 @@ func _apply_head_bob(delta: float, ground_speed: float) -> void:
 	var target_amount: float = 1.0 if moving else 0.0
 	_bob_amount = move_toward(_bob_amount, target_amount, BOB_SMOOTH_SPEED * delta)
 	if moving:
-		_bob_time += delta * BOB_FREQUENCY * clampf(ground_speed / WALK_SPEED, 0.45, 1.0)
+		_bob_time += delta * BOB_FREQUENCY * clampf(ground_speed / WALK_SPEED, 0.45, 1.7)
 	# Always write the offset so it eases back to eye height after stopping or
 	# jumping; previously it could freeze at the final high/low bob position.
-	_camera.position.y = sin(_bob_time * TAU) * BOB_AMPLITUDE * _bob_amount
+	_camera.position.y = sin(_bob_time * TAU) * BOB_AMPLITUDE * _sprint.bob_scale() * _bob_amount
 
 
 func _apply_context_fov(delta: float) -> void:
@@ -730,7 +736,7 @@ func _apply_context_fov(delta: float) -> void:
 	var settings: Node = get_node_or_null("/root/GameSettings")
 	var preferred_fov: float = float(settings.get("preferred_fov")) if settings != null else 82.0
 	var fov_offset: float = preferred_fov - 82.0
-	var target_fov: float = (CARRY_FOV if carried_package != null else WALK_FOV) + fov_offset
+	var target_fov: float = (CARRY_FOV if carried_package != null else WALK_FOV) + fov_offset + _sprint.fov_bonus()
 	_camera.fov = move_toward(_camera.fov, target_fov, FOV_SMOOTH_SPEED * delta)
 
 

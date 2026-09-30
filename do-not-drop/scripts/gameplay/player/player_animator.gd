@@ -19,6 +19,15 @@ const WALK_AUTHORED_SPEED: float = 3.6
 const STROLL_AUTHORED_SPEED: float = 1.5
 const STROLL_BELOW: float = 2.2
 const WALK_ABOVE: float = 2.6
+## Run (N-115): the owner switches Walk -> Run above RUN_ABOVE and back under
+## RUN_BELOW, so a pace held near the boundary doesn't flicker. The jog with a
+## Growing weight box (4.2 m/s) stays a fast Walk. Without a "Run" clip in the
+## character's library (the Blender one needs the PC), Walk plays faster instead,
+## up to RUN_FALLBACK_MAX_SCALE.
+const RUN_AUTHORED_SPEED: float = 6.0
+const RUN_ABOVE: float = 4.6
+const RUN_BELOW: float = 4.0
+const RUN_FALLBACK_MAX_SCALE: float = 1.9
 ## Pickup blends between PickUpPackage and PickUpHigh, baked once per step.
 const PICKUP_BLEND_STEPS: int = 8
 const PICKUP_BLEND_LIBRARY: StringName = &"pickup_blend"
@@ -32,7 +41,7 @@ const TURN_RATE_SMOOTHING: float = 10.0
 const IDLE_BELOW_SPEED: float = 0.3
 ## Clips that loop (the glTF importer drops Blender's loop flag).
 const LOOPING: Array[StringName] = [
-	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_SIT, Player.ANIM_TURN]
+	Player.ANIM_IDLE, Player.ANIM_WALK, Player.ANIM_STROLL, Player.ANIM_RUN, Player.ANIM_SIT, Player.ANIM_TURN]
 
 ## The character's AnimationPlayer; null for a model without one (state still runs).
 var anim_player: AnimationPlayer
@@ -40,6 +49,8 @@ var anim_player: AnimationPlayer
 var _player: Player
 var _face: Node
 var _strolling: bool = false
+## Owner: past RUN_ABOVE and not yet back under RUN_BELOW.
+var _running_gait: bool = false
 ## Last jump_anim_time seen here, to catch the touchdown (0.9) on every peer.
 var _seen_jump_time: float = 0.0
 ## Look yaw applied since the last physics tick (owner only).
@@ -84,16 +95,23 @@ func update_movement(ground_speed: float, pickup_elapsed: float) -> void:
 	if Time.get_ticks_msec() < _anim_lock_until_msec:
 		return
 	var turning: bool = _player.anim_state == Player.ANIM_TURN
-	var next_state: StringName = movement_state(ground_speed, _player.is_on_floor(), _player.turn_rate, turning)
+	if _running_gait and ground_speed < RUN_BELOW:
+		_running_gait = false
+	elif not _running_gait and ground_speed > RUN_ABOVE:
+		_running_gait = true
+	var next_state: StringName = movement_state(ground_speed, _player.is_on_floor(), _player.turn_rate, turning,
+			_running_gait)
 	if _player.anim_state != next_state:
 		_player.anim_state = next_state
 
 
-## Walk when moving on the floor; standing, TurnInPlace while turning faster
+## Walk when moving on the floor (Run when `running`, the gait the owner has
+## held since RUN_ABOVE); standing, TurnInPlace while turning faster
 ## than TURN_STEP_ABOVE (until it drops under TURN_STEP_BELOW), else Idle.
-static func movement_state(ground_speed: float, on_floor: bool, rate: float, turning: bool) -> StringName:
+static func movement_state(ground_speed: float, on_floor: bool, rate: float, turning: bool,
+		running: bool = false) -> StringName:
 	if ground_speed > IDLE_BELOW_SPEED and on_floor:
-		return Player.ANIM_WALK
+		return Player.ANIM_RUN if running else Player.ANIM_WALK
 	if on_floor and rate > (TURN_STEP_BELOW if turning else TURN_STEP_ABOVE):
 		return Player.ANIM_TURN
 	return Player.ANIM_IDLE
@@ -158,8 +176,12 @@ func animate() -> void:
 	if anim_player == null:
 		return
 	var clip: StringName = _player.anim_state if _player.seat_node_path.is_empty() else Player.ANIM_SIT
+	var run_fallback: bool = false
 	if clip == Player.ANIM_WALK:
 		clip = _gait_clip()
+	elif clip == Player.ANIM_RUN and not anim_player.has_animation(Player.ANIM_RUN):
+		clip = Player.ANIM_WALK
+		run_fallback = true
 	elif clip == Player.ANIM_PICKUP:
 		clip = pickup_clip()
 	elif clip == Player.ANIM_TURN and not anim_player.has_animation(Player.ANIM_TURN):
@@ -173,8 +195,11 @@ func animate() -> void:
 		if _player.jump_anim_time >= 0.9 and _seen_jump_time < 0.9 and _face != null:
 			_face.call(&"blink")
 		_seen_jump_time = _player.jump_anim_time
+	elif clip == Player.ANIM_RUN:
+		anim_player.speed_scale = clampf(_player.locomotion_speed / RUN_AUTHORED_SPEED, 0.7, 1.3)
 	elif clip == Player.ANIM_WALK:
-		anim_player.speed_scale = clampf(_player.locomotion_speed / WALK_AUTHORED_SPEED, 0.5, 1.5)
+		anim_player.speed_scale = clampf(_player.locomotion_speed / WALK_AUTHORED_SPEED, 0.5,
+				RUN_FALLBACK_MAX_SCALE if run_fallback else 1.5)
 	elif clip == Player.ANIM_STROLL:
 		anim_player.speed_scale = clampf(_player.locomotion_speed / STROLL_AUTHORED_SPEED, 0.2, 1.6)
 	else:
@@ -245,10 +270,10 @@ func _gait_clip() -> StringName:
 	return Player.ANIM_STROLL if _strolling and anim_player.has_animation(Player.ANIM_STROLL) else Player.ANIM_WALK
 
 
-## Both gaits start on the left foot's touchdown, so switching between them
+## The gaits all start on the left foot's touchdown, so switching between them
 ## keeps the cycle phase: the feet carry on instead of skating to a new step.
 func _play_clip(clip: StringName) -> void:
-	var gaits: Array[String] = [String(Player.ANIM_WALK), String(Player.ANIM_STROLL)]
+	var gaits: Array[String] = [String(Player.ANIM_WALK), String(Player.ANIM_STROLL), String(Player.ANIM_RUN)]
 	var phase: float = -1.0
 	if anim_player.current_animation in gaits and String(clip) in gaits:
 		phase = anim_player.current_animation_position / maxf(anim_player.current_animation_length, 0.001)
