@@ -29,3 +29,10 @@ todo se sintetiza en código.
 
 - Headless no reproduce audio, pero sí podés verificar que el `AudioStreamWAV` no es silencio (picos > 0), duración, y ruteo de bus — así lo hacen `test_horn`, `test_trap_audio`, `test_vehicle_audio`, `test_dust_and_ambience`, `test_audio_bus_routing`. Sumá casos equivalentes.
 - Describí en palabras cómo debería sonar (envolvente, rango de frecuencias) para que un humano lo valide jugando.
+- Niveles: `tests/audio_loudness_report.gd` mide RMS y pico con los objetivos de `docs/audio.md` (trampas −18 dBFS, interfaz −24 dBFS, ±2 dB). Para refinar sonidos existentes, empezá por ese reporte y por los que se repiten idénticos.
+
+## Dominios
+
+`synth_audio.gd` es zona compartida y `package_feedback.gd`/`player.gd` son de Slatex: tocarlos está permitido,
+con un aviso nuevo en `docs/avisos/AAAA-MM-DD-tema.md` en el mismo PR (qué función cambió y si cambió una firma).
+Agregá generadores nuevos antes que cambiar los que ya se usan.
