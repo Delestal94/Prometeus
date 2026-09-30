@@ -139,6 +139,7 @@ func primary_action() -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			hud.section_label.text = tr("HUD_PREPARATION")
 			hud.distance_label.text = preparation_text()
+			hud.prompts.refresh_shortcut_text()
 		"pause": _resume()
 		"results": request_restart()
 		"disconnected": leave_to_menu()

@@ -2199,11 +2199,15 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
   resaltado.
 - [x] **S-506.4** (commit `cffdbfc`) Test: cada trampa tiene su ficha; un consejo visto no vuelve a salir.
 
-#### S-507 · Panel de tripulación en el depósito — B · `Opus 5.5 · high` · Aviso: no
+#### S-507 · Panel de tripulación en el depósito — B · `Opus 5.5 · high` · Aviso: sí (`hud.gd`, `hud_pause.gd`, `hud_prompts.gd`, `project.godot`)
 
-- [ ] Con Tab en el depósito: lista de jugadores conectados con su color, uniforme, quién está sentado
-  al volante y quién tiene caja. Sirve de "lobby" sin frenar a nadie.
-- [ ] Para el anfitrión: el código o la IP de la sala (S-207) para pasar a los demás.
+- [x] (rama `nacho/S-507-crew-panel`) Con Tab (Back en gamepad) mantenido en el depósito: `scripts/ui/hud/crew_panel.gd` lista a los
+  conectados con el color de su uniforme y su nombre, quién está al volante y quién tiene caja (ícono + texto, no solo
+  color). No pausa ni toma foco. Acción nueva `crew_panel`: Tab ya era de `spectate_toggle` (solo en ruta), así que
+  comparte Tab/Back con él porque nunca coinciden; documentado en `convenciones-godot.md` §1 y `controles-y-ui.md`.
+  La barra de atajos lo enseña solo en el depósito. Sin RPC nuevos.
+- [x] (rama `nacho/S-507-crew-panel`) Para el anfitrión LAN: código de sala (`RoomCode`) e IP; en Steam "invitá desde la lista de amigos";
+  el cliente ve por qué no hay código. Test `tests/test_crew_panel.gd`. Aviso: `docs/avisos/2026-09-30-s507-crew-panel.md`.
 
 #### S-508 · Pantalla de resultados completa — A · `Opus 5.5 · high` · Aviso: no
 

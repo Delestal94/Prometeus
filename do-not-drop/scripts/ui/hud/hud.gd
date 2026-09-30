@@ -67,6 +67,7 @@ var options_button: Button
 var menu_button: Button
 var options_panel: OptionsPanel
 var depot_panel: DepotPanel
+var crew_panel: CrewPanel
 var orders: Array = []
 var _prep_refresh: float = 0.0
 var overlay_mode: String = "start"
@@ -544,6 +545,10 @@ func _build_panels() -> void:
 	depot_panel = DepotPanel.new()
 	depot_panel.name = "DepotPanel"
 	root.add_child(depot_panel)
+	# Hold Tab in the depot: who is here, who drives, who has a box (S-507).
+	crew_panel = CrewPanel.new()
+	crew_panel.hud = self
+	root.add_child(crew_panel)
 	# Back to the button that opened it: otherwise a gamepad player comes
 	# back from the options with nothing focused and no way to move.
 	options_panel.closed.connect(func() -> void:
@@ -659,6 +664,7 @@ func _on_started(_route: StringName, _players: Array) -> void:
 		notices.toast(tr("HUD_TODAYS_ROUTE") % String(WorldMood.active["description"]).to_lower())
 	overlay.hide()
 	overlay_mode = "run"
+	prompts.refresh_shortcut_text()
 	dashboard.show()
 	# Who's playing matters while gathering in the depot, not on the road.
 	session_label.get_parent().get_parent().hide()

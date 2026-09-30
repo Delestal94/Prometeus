@@ -56,6 +56,9 @@ func refresh_shortcut_text() -> void:
 		hud.key_hint(tr("HUD_KEY_LOOK_BACK") % GameSettings.binding_label(&"look_back"), tr("HUD_PAD_LOOK_BACK")),
 		hud.key_hint(tr("HUD_KEY_PAUSE"), tr("HUD_PAD_PAUSE")),
 	]
+	# Only while the depot is open: it is the one place the crew panel shows.
+	if hud.overlay_mode == "preparation":
+		items.append(hud.key_hint(tr("HUD_KEY_CREW"), tr("HUD_PAD_CREW")))
 	if can_restart():
 		items.append(hud.key_hint(tr("HUD_KEY_RESTART"), tr("HUD_PAD_RESTART")))
 	hud.shortcut_label.text = UiTheme.keycaps("   ·   ".join(items), true)
