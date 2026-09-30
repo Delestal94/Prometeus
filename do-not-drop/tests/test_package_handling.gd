@@ -6,6 +6,7 @@ extends SceneTree
 ## player stuck (holding a box a resident already took), or the run stuck (a
 ## passenger who boarded with their box in hand never counted as cargo). The
 ## truck leaves without cargo too: forgetting the boxes is the crew's problem.
+## Cases that can't disturb each other share a level_base (each load costs ~15 s).
 
 var failures: int = 0
 
@@ -15,12 +16,20 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# Loading level_base takes ~15 s, so the cases that can't disturb each
+	# other share a level: the empty-truck start (first, then the run is reset)
+	# and the three that only move boxes around. The two that load a box and
+	# start a run each get their own.
 	await _passenger_boarding_with_box_counts_as_cargo()
-	await _driver_leaves_without_cargo()
 	await _remounting_mid_run_and_dropping()
-	await _handing_over_at_the_door_empties_hands()
-	await _carry_and_drop_respect_walls_and_floor()
-	await _disconnect_mid_carry_releases_the_box()
+	var level: Node = await _load_level()
+	await _driver_leaves_without_cargo(level)
+	level.local_player.leave_seat()
+	root.get_node("RunManager").reset_run()
+	await _carry_and_drop_respect_walls_and_floor(level)
+	await _disconnect_mid_carry_releases_the_box(level)
+	await _handing_over_at_the_door_empties_hands(level)
+	await _unload_level(level)
 	if failures == 0:
 		print("PASS: boarding with a box, empty start, remounting mid-run, door hand-over, walls/floor and disconnects")
 	quit(failures)
@@ -58,8 +67,7 @@ func _passenger_boarding_with_box_counts_as_cargo() -> void:
 	await _unload_level(level)
 
 
-func _driver_leaves_without_cargo() -> void:
-	var level: Node = await _load_level()
+func _driver_leaves_without_cargo(level: Node) -> void:
 	var manager: Node = root.get_node("RunManager")
 	var player: Node = level.local_player
 	var vehicle: Node = level.get_node("World/Vehicle")
@@ -69,7 +77,6 @@ func _driver_leaves_without_cargo() -> void:
 	seat.interact(player)
 	_expect(manager.is_running, "Taking the wheel starts the run even with an empty truck")
 	_expect(manager.cargo_names.is_empty(), "Boxes left at the depot aren't this run's cargo")
-	await _unload_level(level)
 
 
 func _remounting_mid_run_and_dropping() -> void:
@@ -105,8 +112,7 @@ func _remounting_mid_run_and_dropping() -> void:
 	await _unload_level(level)
 
 
-func _handing_over_at_the_door_empties_hands() -> void:
-	var level: Node = await _load_level()
+func _handing_over_at_the_door_empties_hands(level: Node) -> void:
 	var player: Node = level.local_player
 	var package: Node = _ordered_package(level)
 	package.get_node("InteractionArea").interact(player)
@@ -122,7 +128,6 @@ func _handing_over_at_the_door_empties_hands() -> void:
 		await create_timer(1.1).timeout
 		_expect(not is_instance_valid(package), "The resident keeps the box")
 		_expect(package_pickup_ready(level, player), "With empty hands the player can pick up another box")
-	await _unload_level(level)
 
 
 func package_pickup_ready(level: Node, player: Node) -> bool:
@@ -138,8 +143,7 @@ func get_nodes_in_group_safe(_level: Node, group: StringName) -> Array[Node]:
 
 ## Own floor and wall far from the route, so this doesn't depend on the van
 ## model (which is being replaced) or on where the route's terrain lies.
-func _carry_and_drop_respect_walls_and_floor() -> void:
-	var level: Node = await _load_level()
+func _carry_and_drop_respect_walls_and_floor(level: Node) -> void:
 	var player: Node = level.local_player
 	var package: Node = level.get_node("World/Package")
 	var origin := Vector3(400.0, 50.0, 0.0)
@@ -186,11 +190,11 @@ func _carry_and_drop_respect_walls_and_floor() -> void:
 	var on_step: Vector3 = player._drop_position(half)
 	_expect(absf(on_step.y - (origin.y + 0.4 + half.y)) < 0.05,
 		"Dropping over a step lands on top of it (y=%.2f, expected %.2f)" % [on_step.y, origin.y + 0.4 + half.y])
-	await _unload_level(level)
 
 
-func _disconnect_mid_carry_releases_the_box() -> void:
-	var level: Node = await _load_level()
+func _disconnect_mid_carry_releases_the_box(level: Node) -> void:
+	# The carry case left the local player holding the box.
+	level.local_player._drop_carried()
 	var package: Node = level.get_node("World/Package")
 	var guest: Node = load("res://scenes/gameplay/player/player.tscn").instantiate()
 	guest.name = "Guest"
@@ -201,7 +205,6 @@ func _disconnect_mid_carry_releases_the_box() -> void:
 	guest.free()
 	_expect(not package.is_held and package.collision_layer == 4, "A carrier leaving drops their box back into the world")
 	_expect(package.carrier == null, "The box forgets a carrier that is gone")
-	await _unload_level(level)
 
 
 func _load_level() -> Node:
