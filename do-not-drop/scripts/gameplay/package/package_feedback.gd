@@ -6,6 +6,7 @@ extends Node
 ## (see package.gd's _emit_event), so each client's own local burst fires in lockstep
 ## with everyone else's without this script needing to know or care about the network.
 
+const SynthAudioTraps = preload("res://scripts/presentation/synth_audio_traps.gd")
 const CONFETTI_COLORS: Array[Color] = [Color("f47e6d"), Color("f4c562"), Color("83e2ba"), Color("6db3d6")]
 const CONFETTI_COUNT: int = 28
 const CONFETTI_LIFETIME: float = 1.1
@@ -19,6 +20,7 @@ const TRAP_SOUND_LEVELS_DB: Dictionary = {
 	&"wood_creak": -3.2,
 	&"liquid_slosh": 4.6,
 	&"explosive_tick": -2.7,
+	&"cushion_pad": -0.9,
 	&"hostile_hiss": 2.5,
 	&"comic_ruin_stinger": -5.3,
 	&"comic_boom": 0.0,
@@ -99,6 +101,15 @@ var _liquid_puddle: MeshInstance3D
 var _liquid_slosh_player: AudioStreamPlayer3D
 var _liquid_last_slosh_level: float = 0.0
 var _explosive_display: Label3D
+## Fragile's "Amortiguá": the ring that closes on the box as a bump nears, the
+## thump when a tap softened one, and the last cushion state it read (from
+## the host's care state) with the moment it did, so the ring keeps closing
+## between the host's updates.
+var _cushion_ring: MeshInstance3D
+var _cushion_player: AudioStreamPlayer3D
+var _cushion_snapshot: Dictionary = {}
+var _cushion_at: float = 0.0
+var _cushion_saved: int = 0
 var _explosive_tick_player: AudioStreamPlayer3D
 var _explosive_tick_timer: float = 0.0
 var _hostile_eyes: Node3D
@@ -154,6 +165,8 @@ func _ready() -> void:
 	# trap this package has never changes after _ready(). Explosivo gets its
 	# own "BOOM." (explosive_trap_behavior.gd's get_hint() literally says
 	# that once seconds_left hits 0) instead of the generic cartoon fail.
+	if _trap_id == &"fragile":
+		_cushion_player = _make_player(SynthAudioTraps.cushion_pad(), TRAP_SOUND_LEVELS_DB[&"cushion_pad"])
 	var explosive: bool = _trap_id == &"explosive"
 	_ruin_player = _make_player(SynthAudio.comic_boom() if explosive else SynthAudio.comic_ruin_stinger(),
 		TRAP_SOUND_LEVELS_DB[&"comic_boom"] if explosive else TRAP_SOUND_LEVELS_DB[&"comic_ruin_stinger"])
@@ -198,6 +211,8 @@ func _apply_identity(package: Node) -> void:
 		collider.shape = shape
 	_add_shipping_label(shipping_data, shape_size)
 	_build_state_badge(shape_size)
+	if _trap_id == &"fragile":
+		_build_cushion_ring(shape_size)
 	if _explosive_display != null:
 		# Above the at-risk badge, clear of the lid: a sign sunk into the
 		# cardboard is unreadable, even more so held right under the eyes.
@@ -508,6 +523,8 @@ func _process(delta: float) -> void:
 			_apply_explosive(delta)
 		&"hostile":
 			_apply_hostile()
+		&"fragile":
+			_apply_cushion()
 
 
 func _refresh_event_disguise() -> void:
@@ -613,6 +630,61 @@ func _apply_hostile() -> void:
 		_hostile_hiss_player.play()
 
 
+## A flat ring around the box: it shows only while the road announces a bump
+## (see _apply_cushion()).
+func _build_cushion_ring(box_size: Vector3) -> void:
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.93
+	torus.outer_radius = 1.0
+	torus.rings = 56
+	torus.ring_segments = 8
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.no_depth_test = true
+	_cushion_ring = MeshInstance3D.new()
+	_cushion_ring.name = "CushionRing"
+	_cushion_ring.mesh = torus
+	_cushion_ring.material_override = material
+	_cushion_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_cushion_ring.set_meta(&"box_radius", maxf(box_size.x, box_size.z) * 0.75)
+	_cushion_ring.visible = false
+	_box.add_child(_cushion_ring)
+
+
+## The ring closes on the box as the bump nears and turns green once a tap
+## would count; grey while the last tap still makes the next one wait. A tap
+## that softened a hit lands with a thump.
+func _apply_cushion() -> void:
+	if _cushion_ring == null or _package == null:
+		return
+	var snapshot: Dictionary = _package.care_state.get("cushion", {})
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if snapshot != _cushion_snapshot:
+		_cushion_snapshot = snapshot.duplicate()
+		_cushion_at = now
+	var eta: float = float(snapshot.get("eta", -1.0)) - (now - _cushion_at)
+	var saved: int = int(snapshot.get("saved", 0))
+	if saved > _cushion_saved and _cushion_player != null:
+		_cushion_player.play()
+		_bounce_time = 0.0
+	_cushion_saved = saved
+	var shown: bool = float(snapshot.get("eta", -1.0)) >= 0.0 and eta > -0.1
+	_cushion_ring.visible = shown
+	if not shown:
+		return
+	var lead: float = maxf(float(snapshot.get("lead", 0.7)), 0.05)
+	var closing: float = clampf(eta / lead, 0.0, 1.0)
+	var radius: float = float(_cushion_ring.get_meta(&"box_radius", 0.5)) * (1.0 + 0.9 * closing)
+	_cushion_ring.scale = Vector3(radius, radius, radius)
+	var color: Color = Color(1.0, 0.8, 0.25, 0.9)
+	if not bool(snapshot.get("ready", true)):
+		color = Color(0.5, 0.5, 0.5, 0.65)
+	elif eta <= float(snapshot.get("window", 0.35)):
+		color = Color(0.35, 1.0, 0.6, 1.0)
+	(_cushion_ring.material_override as StandardMaterial3D).albedo_color = color
+
+
 func _build_explosive_display() -> void:
 	_explosive_display = Label3D.new()
 	_explosive_display.name = "ExplosiveCountdown"
@@ -640,13 +712,22 @@ func _apply_explosive(delta: float) -> void:
 	# The bomb only ticks on the host: every other peer reads the sequence
 	# the host publishes with the care state (PackageRescue.publish_care()).
 	var sequence: Dictionary = package.care_state.get("sequence", {})
+	var done: int = int(package.trap_behavior.get("sequence_index"))
+	var total: int = (package.trap_behavior.get("sequence") as Array).size()
 	if not sequence.is_empty():
 		var steps: Array = sequence.get("steps", [])
-		var index: int = int(sequence.get("index", 0))
+		done = int(sequence.get("index", 0))
+		total = steps.size()
 		seconds = float(sequence.get("seconds", seconds))
-		direction = StringName(steps[index]) if index < steps.size() else &""
+		direction = StringName(steps[done]) if done < steps.size() else &""
 	var state: int = int(package.trap_behavior.call("get_state"))
-	_explosive_display.text = tr("HUD_EXPLOSIVE_DEFUSE") % [ceili(seconds), _explosive_arrow(direction)]
+	# The code is the driver's to read (dashboard_gps.gd): the box only counts
+	# how far along the owner is, unless the owner is the one who reads it.
+	var owner_reads: bool = not sequence.is_empty() and StringName(sequence.get("reader", &"owner")) == &"owner"
+	if not owner_reads:
+		_explosive_display.text = tr("HUD_EXPLOSIVE_CODE_SIGN") % [ceili(seconds), done, total]
+	else:
+		_explosive_display.text = tr("HUD_EXPLOSIVE_DEFUSE") % [ceili(seconds), _explosive_arrow(direction)]
 	_explosive_display.modulate = UiTheme.state_color(state, _colorblind_palette_enabled())
 	# The countdown only means something once the bomb is on the road: on
 	# the depot's shelf it would just be a floating, ticking sign (depot.gd).

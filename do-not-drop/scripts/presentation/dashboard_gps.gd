@@ -6,6 +6,13 @@ class_name DashboardGps
 ## the code of the box it ordered; once every house is done, the way to the
 ## goal. In Endless, the distance driven and the record.
 ##
+## It also carries the bomb code (N-117, Explosivo's "Pedí el código"): the
+## steps still to say aloud for the box about to go off, so the driver can
+## read them out to whoever holds it, who never sees them on their own card.
+## The screen is small from the driver's seat, so this is the diegetic backup:
+## the HUD's own line (HudNotices.refresh_bomb_code()) is what gets read.
+## While it shows, it takes the whole screen.
+##
 ## Presentation only: every peer works it out from its own copy of the truck
 ## and the route, and hears about finished houses through
 ## EventBus.house_delivery_recorded (relayed by the host to everyone).
@@ -18,10 +25,16 @@ const INK := Color("1d6f78")
 const GLOW := Color("39c4c9")
 const TEXT := Color("e8fbff")
 const WARN := Color("ffc93c")
+const ALERT := Color("ff6b5b")
+## Codes shown at once (the soonest to go off first); the rest is a "+N".
+const MAX_CODE_LINES: int = 1
+const ARROWS: Dictionary = {&"up": "↑", &"down": "↓", &"left": "←", &"right": "→"}
 const FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
 
 var distance_label: Label3D
 var detail_label: Label3D
+## The bomb code line, over the whole screen while there is one.
+var code_label: Label3D
 var arrow: MeshInstance3D
 ## Which house the screen points at (-1 once it points at the goal, or in
 ## Endless).
@@ -55,6 +68,7 @@ func refresh() -> void:
 		return
 	if route == null:
 		_show_endless()
+		_show_bomb_code()
 		return
 	var houses: Array = route.get(&"houses")
 	target_house = -1
@@ -75,6 +89,66 @@ func refresh() -> void:
 		detail_label.text = tr("WORLD_GPS_ARRIVAL")
 		toward = route.to_global((route.get(&"goal_transform") as Transform3D).origin)
 	_point_arrow(truck, toward)
+	_show_bomb_code()
+
+
+## The code of the box about to go off (and a "+N" for the rest) fills the
+## screen, big, in the alert colour when it is close; the distance, the detail
+## and the arrow step aside while it shows.
+func _show_bomb_code() -> void:
+	var codes: Array[Dictionary] = bomb_codes(get_tree().get_nodes_in_group(&"cargo"))
+	var shown: bool = not codes.is_empty()
+	code_label.visible = shown
+	distance_label.visible = not shown
+	detail_label.visible = not shown
+	if not shown:
+		return
+	arrow.visible = false
+	code_label.text = ", ".join(code_lines(codes, MAX_CODE_LINES, tr("WORLD_GPS_CODE"), tr("WORLD_GPS_CODE_MORE")))
+	code_label.modulate = ALERT if float(codes[0]["seconds"]) <= 6.0 else WARN
+
+
+## `codes` (bomb_codes()) as text, at most `max_lines` of them, the soonest
+## first: each `format` % [arrows still to say, seconds]; what does not fit is
+## `more_format` % how many, on the last line. Shared with the driver's HUD.
+static func code_lines(codes: Array[Dictionary], max_lines: int, format: String,
+		more_format: String) -> PackedStringArray:
+	var lines: PackedStringArray = []
+	for index: int in range(mini(codes.size(), max_lines)):
+		var entry: Dictionary = codes[index]
+		lines.append(format % [code_text(entry["steps"] as Array, int(entry["index"])),
+				ceili(float(entry["seconds"]))])
+	if codes.size() > max_lines and not lines.is_empty():
+		lines[lines.size() - 1] += " " + more_format % (codes.size() - max_lines)
+	return lines
+
+
+## The bomb codes the driver has to read out, from the boxes' replicated care
+## state (so every peer builds the same list): [{steps, index, seconds}],
+## the soonest to go off first. A box whose owner reads its own code (no other
+## human at the wheel), one already defused and one already blown are left out.
+static func bomb_codes(boxes: Array) -> Array[Dictionary]:
+	var codes: Array[Dictionary] = []
+	for box: Variant in boxes:
+		if not is_instance_valid(box):
+			continue
+		var state: Variant = (box as Object).get(&"care_state")
+		var sequence: Dictionary = (state as Dictionary).get("sequence", {}) if state is Dictionary else {}
+		var steps: Array = sequence.get("steps", [])
+		if steps.is_empty() or StringName(sequence.get("reader", &"owner")) != &"driver" \
+				or int(sequence.get("index", 0)) >= steps.size() or float(sequence.get("seconds", 0.0)) <= 0.0:
+			continue
+		codes.append({"steps": steps, "index": int(sequence.get("index", 0)), "seconds": float(sequence["seconds"])})
+	codes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["seconds"]) < float(b["seconds"]))
+	return codes
+
+
+## The steps from `from` on, as arrows: what is still left to say.
+static func code_text(steps: Array, from: int) -> String:
+	var parts: PackedStringArray = []
+	for index: int in range(clampi(from, 0, steps.size()), steps.size()):
+		parts.append(String(ARROWS.get(StringName(steps[index]), "?")))
+	return " ".join(parts)
 
 
 func _show_endless() -> void:
@@ -157,6 +231,13 @@ func _build_screen() -> void:
 	distance_label.name = "Distance"
 	detail_label = _label("", Vector3(0.03, -0.035, -0.003), 40, WARN)
 	detail_label.name = "Detail"
+	code_label = _label("", Vector3(0.015, 0.0, -0.003), 46, WARN)
+	code_label.name = "BombCode"
+	code_label.outline_size = 6
+	code_label.outline_modulate = Color("10161a")
+	# The arrows are not in the dashboard's display font: the engine's own.
+	code_label.font = null
+	code_label.visible = false
 
 
 func _label(text: String, at: Vector3, size: int, color: Color) -> Label3D:

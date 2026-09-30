@@ -17,6 +17,12 @@ HUD_CARD_USE_KEY,%s  usar,%s  use
 HUD_CARD_USE_PAD,D-pad izquierda  usar,D-pad left  use
 HUD_CARE_COLLECT,JUNTÁ LAS PIEZAS,PICK UP THE PIECES
 HUD_CARE_COLLECT_DETAIL,Quedan %d en el piso: acercate a cada una y apretá %s.,%d left on the ground: walk up to each one and press %s.
+HUD_CARE_ASK_CODE,PEDÍ EL CÓDIGO,ASK FOR THE CODE
+HUD_CARE_ASK,PEDÍ,ASK
+HUD_CARE_ASK_CODE_DETAIL,El conductor ve el código en el tablero: pedíselo y tocá las flechas en orden.,The driver sees the code on the dashboard: ask for it and tap the arrows in order.
+HUD_CARE_ASK_CODE_ON_FOOT,Mantené %s mientras tocás.,Hold %s while you tap.
+HUD_CARE_CUSHION,¡AMORTIGUÁ!,CUSHION IT!
+HUD_CARE_CUSHION_DETAIL,"Un toque de %s justo antes del bache. Mantener apretado no sirve.","One tap of %s right before the bump. Holding it does nothing."
 HUD_CARE_HOLD_DETAIL,Mantené %s: la protege de golpes y curvas.,Hold %s: it shields the box from bumps and turns.
 HUD_CARE_IDLE,TODO EN ORDEN,ALL GOOD
 HUD_CARE_IDLE_DETAIL,Podés soltar. Mantené %s si se sacude o se pone en riesgo.,You can let go. Hold %s if it shakes or gets at risk.
@@ -41,6 +47,7 @@ HUD_CARE_TOOL_FILLER,Relleno,Filler
 HUD_CARE_TOOL_RAG,Trapo,Rag
 HUD_CARE_TOOL_STRAP,Cincha,Strap
 HUD_CARE_TOOL_SUBSTITUTE,Gallina de juguete,Toy hen
+HUD_CARE_VERB_DEFUSE,Desactivar,Defuse
 HUD_CARE_REPAIR_FRAGILE,Pegar piezas,Glue the pieces
 HUD_CARE_REPAIR_BALANCE,Rearmar pisos,Restack the tiers
 HUD_CARE_REPAIR_NOISY,Calmar y cerrar,Calm and close
@@ -99,6 +106,9 @@ HUD_HINT_WEIGHT_SECURED,Carga asegurada · la próxima secuencia en %ds,Load sec
 HUD_SALVAGE_RECOVER,¡RECUPERAR!,RECOVER!
 HUD_SHIPPING_UNDECLARED,Contenido sin declarar,Undeclared contents
 HUD_EXPLOSIVE_DEFUSE,DESACTIVAR\n%02d s  %s,DEFUSE\n%02d s  %s
+HUD_BOMB_CODE,CÓDIGO %s · %d s,CODE %s · %d s
+HUD_BOMB_CODE_MORE,+%d,+%d
+HUD_EXPLOSIVE_CODE_SIGN,CÓDIGO\n%02d s  %d/%d,CODE\n%02d s  %d/%d
 HUD_OVERBOARD_RESCUE,¡RESCATAR!\n%d s,RESCUE!\n%d s
 HUD_CARGO_FELL_OFF,Se cayó del camión.,It fell off the truck.
 HUD_NOTICE_CREW_GREW,Se sumó gente: preparando la ruta para %d casas...,More people joined: setting up the route for %d houses...
@@ -517,7 +527,8 @@ HUD_HINT_BALANCE_TILTED,Inclinado %.0f° · mantené para enderezar.,Tilted %.0f
 HUD_HINT_EXPLOSIVE_RUINED,BOOM.,BOOM.
 HUD_HINT_EXPLOSIVE_SAFE,Desactivada.,Defused.
 HUD_HINT_EXPLOSIVE_SEQUENCE,%02d s · secuencia: %s,%02d s · sequence: %s
-HUD_HINT_FRAGILE,Cada golpe deja huella.,Every impact leaves a mark.
+HUD_HINT_EXPLOSIVE_CODE,%02d s · pedí el código al conductor (%d/%d),%02d s · ask the driver for the code (%d/%d)
+HUD_HINT_FRAGILE,Cada golpe deja huella: un toque justo antes del bache lo amortigua.,Every impact leaves a mark: one tap right before a bump softens it.
 HUD_HINT_HOSTILE_CALM,CALMÁ (mantené),CALM (hold)
 HUD_HINT_HOSTILE_DONT_TOUCH,NO TOCAR (soltá),DON'T TOUCH (release)
 HUD_HINT_HOSTILE_RUINED,La criatura escapó.,The creature escaped.
@@ -631,9 +642,9 @@ UI_TUT_DPAD_DOWN,D-pad abajo,D-pad down
 UI_TUT_DRIVER_BODY,%s\n\nManejá suave; frená dentro de la zona de entrega y dejá que el equipo atienda la carga.,%s\n\nDrive smoothly; stop inside the delivery zone and let the crew tend the cargo.
 UI_TUT_DRIVER_CONTROL,%s  acelerar y frenar,%s  accelerate and brake
 UI_TUT_DRIVER_TITLE,Conductor,Driver
-UI_TUT_EXPLOSIVE_ACTION,Repetí la secuencia de flechas a tiempo.,Repeat the arrow sequence in time.
+UI_TUT_EXPLOSIVE_ACTION,Pedile el código al conductor y tocá las flechas a tiempo.,Ask the driver for the code and tap the arrows in time.
 UI_TUT_EXPLOSIVE_BREAKS,Dejar que la cuenta regresiva llegue a cero.,Letting the countdown reach zero.
-UI_TUT_FRAGILE_ACTION,Manejá suave y asegurala antes de salir.,Drive smoothly and secure it before leaving.
+UI_TUT_FRAGILE_ACTION,Tocá el botón justo antes de cada bache y manejá suave.,Tap the button right before each bump and drive smoothly.
 UI_TUT_FRAGILE_BREAKS,Los golpes fuertes le quitan integridad.,Heavy impacts reduce its integrity.
 UI_TUT_HOSTILE_ACTION,Mantené o soltá según la orden de la caja.,Hold or release according to the box's command.
 UI_TUT_HOSTILE_BREAKS,Tocar cuando ordena NO TOCAR o ignorar CALMÁ.,Touching it when it says DON'T TOUCH or ignoring CALM.

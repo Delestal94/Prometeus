@@ -242,6 +242,25 @@ func refresh_deadline() -> void:
 		40 if left > 20 else 75, Hud.MINT if left > 20 else Hud.YELLOW)
 
 
+## The bomb's code, for the one at the wheel (N-117, "Pedí el código"): the
+## arrows still to say aloud, the seconds and a "+N" for other bombs, on the
+## HUD where a driver's eyes are, red in the last six seconds. Nobody else
+## gets it: the owner of the box has to ask (DashboardGps.bomb_codes() lists
+## only the codes whose reader is the driver).
+func refresh_bomb_code() -> void:
+	var label: Label = hud.code_label
+	if label == null:
+		return
+	var codes: Array[Dictionary] = []
+	if RunManager.is_running and local_is_driving():
+		codes = DashboardGps.bomb_codes(get_tree().get_nodes_in_group(&"cargo"))
+	if codes.is_empty():
+		label.text = ""
+		return
+	label.text = ", ".join(DashboardGps.code_lines(codes, 1, tr("HUD_BOMB_CODE"), tr("HUD_BOMB_CODE_MORE")))
+	label.add_theme_color_override("font_color", Hud.RED if float(codes[0]["seconds"]) <= 6.0 else Hud.YELLOW)
+
+
 func set_notice(zone: StringName, key: StringName, text: String, priority: int,
 		color: Color, duration: float = -1.0) -> void:
 	if not _notice_sources.has(zone):

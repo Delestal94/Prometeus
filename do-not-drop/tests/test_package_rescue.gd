@@ -222,8 +222,13 @@ func _check_guide() -> void:
 		"...and so do its action and hint")
 	var keys: Dictionary = CargoCare.control_names(false, "E")
 	var step: Dictionary = CareGuide.next_step(state, &"explosive", &"", "", keys)
+	_expect(step["step"] == &"sequence" and String(step["detail"]).begins_with("El conductor"),
+		"A pending sequence comes first, and the owner is told to ask the driver for the code")
+	var owner_state: Dictionary = state.duplicate(true)
+	(owner_state["sequence"] as Dictionary)["reader"] = &"owner"
+	step = CareGuide.next_step(owner_state, &"explosive", &"", "", keys)
 	_expect(step["step"] == &"sequence" and String(step["detail"]).begins_with("Desactivar"),
-		"A pending sequence comes first")
+		"An owner who reads the code themselves gets the plain sequence step")
 	bomb.trap_behavior.call(&"_consume_direction", &"nowhere")
 	_expect(int(bomb.trap_behavior.call(&"sequence_state")["mistakes"]) == 1,
 		"A wrong tap is counted, so every peer can buzz")

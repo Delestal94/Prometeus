@@ -39,6 +39,15 @@ static var _materials: Dictionary = {}
 func _ready() -> void:
 	exit_offset = Vector3(0.0, 0.0, -length)
 	_build()
+	if not announced_impacts().is_empty():
+		add_to_group(&"announced_impacts")
+
+
+## Where in this segment's local space it hits whatever rides over it, if it
+## does so at a known point: the road announces those to Fragile boxes
+## (RoadImpacts, N-117). None by default.
+func announced_impacts() -> Array[Vector3]:
+	return []
 
 
 ## Local-space transforms roughly `spacing` apart along the segment's ACTUAL

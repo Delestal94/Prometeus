@@ -5,13 +5,38 @@ extends SceneTree
 
 const TRIALS_PER_DRIVE: int = 50
 const LATENCIES: Array[float] = [0.0, 0.15]
-const PROFILE_ORDER: Array[String] = ["absent", "clumsy", "expert"]
+const PROFILE_ORDER: Array[String] = ["absent", "clumsy", "expert", "always"]
 const PROFILES := {
 	"absent": {"reaction": INF, "accuracy": 0.0, "dropout": 1.0},
 	"clumsy": {"reaction": 0.8, "accuracy": 0.60, "dropout": 0.20},
 	"expert": {"reaction": 0.25, "accuracy": 0.95, "dropout": 0.0},
+	# N-117: holds the primary action the whole run and never taps anything.
+	"always": {"reaction": INF, "accuracy": 1.0, "dropout": 0.0},
 }
 const DIRECTIONS: Array[StringName] = [&"up", &"down", &"left", &"right"]
+## Fragile (N-117 "Amortiguá"): the recorded drives take every bump gently
+## (the autopilot's speed never hurts a box), so the road gets bumps taken at
+## the drive's cruise speed, announced like the game announces them. The
+## crashes nobody announces are the ones already in the recordings (seed
+## 1085). Same schedule for every profile of a trial.
+const FRAGILE_BUMPS: int = 3
+const FRAGILE_FIRST_HIT: float = 15.0
+const FRAGILE_LAST_MARGIN: float = 8.0
+## How far off the middle of the window a tap lands (s), by profile: timing
+## a ring is skill, not reaction. Network latency blurs it a little more.
+## % of boxes lost per profile (absent, clumsy, expert, always) just before N-117.2
+## touched Explosive and Fragile, measured by this same harness.
+const BEFORE_TANDA_1 := {
+	"balance": [100.0, 45.2, 0.0, 0.0],
+	"explosive": [100.0, 38.8, 1.2, 100.0],
+	"fragile": [0.0, 0.0, 0.0, 0.0],
+	"growing_weight": [100.0, 53.6, 0.0, 100.0],
+	"hostile": [100.0, 83.2, 0.0, 100.0],
+	"liquid": [100.0, 33.6, 0.0, 0.0],
+	"noisy": [100.0, 44.8, 0.8, 0.0],
+}
+const TAP_SPREAD := {"clumsy": 0.20, "expert": 0.05}
+const LATENCY_BLUR: float = 0.25
 
 var _trials_per_drive: int = TRIALS_PER_DRIVE
 
@@ -47,8 +72,9 @@ func _run() -> void:
 					for trial: int in range(_trials_per_drive):
 						var seed_value: int = hash("%s:%s:%.2f:%d:%d" % [definition.id, profile_name, latency,
 								drive_index, trial])
+						var scenario_seed: int = hash("%s:%d:%d" % [definition.id, drive_index, trial])
 						var result: Dictionary = _simulate(definition, drives[drive_index], profile_name, latency,
-								seed_value)
+								seed_value, scenario_seed)
 						aggregate.runs += 1
 						aggregate.ruined += int(result.ruined)
 						aggregate.risk_seconds += result.risk_seconds
@@ -113,7 +139,7 @@ func _load_traps() -> Array[TrapDefinition]:
 
 
 func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: String, latency: float,
-		seed_value: int) -> Dictionary:
+		seed_value: int, scenario_seed: int = 0) -> Dictionary:
 	var package := RigidBody3D.new()
 	package.mass = 8.0
 	root.add_child(package)
@@ -126,6 +152,10 @@ func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: Stri
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var profile: Dictionary = PROFILES[profile_name]
+	var hits: Array[Dictionary] = []
+	if definition.id == &"fragile":
+		hits = _plan_fragile_hits(behavior, drive, profile_name, latency, profile, scenario_seed, rng)
+	var next_hit: int = 0
 	var reaction: float = float(profile.reaction) + latency
 	var time: float = 0.0
 	var next_press: float = reaction
@@ -148,7 +178,9 @@ func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: Stri
 		package.transform = Transform3D(Basis(Vector3.FORWARD, deg_to_rad(simulated_tilt)), Vector3.ZERO)
 		behavior.on_impact(float(frame.get("impact", 0.0)))
 		var input: Dictionary = {}
-		if profile_name != "absent":
+		if profile_name == "always":
+			input = {"steady": true, "calm": true}
+		elif profile_name != "absent":
 			if definition.id == &"growing_weight" or definition.id == &"explosive":
 				if time >= next_press:
 					next_press = time + reaction
@@ -178,7 +210,17 @@ func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: Stri
 					input.steady = holding
 				else:
 					input.calm = holding
-		behavior.on_physics_process(package, dt, {"input": input})
+		var context: Dictionary = {"input": input}
+		if definition.id == &"fragile":
+			for hit: Dictionary in hits:
+				if hit.tap_time >= 0.0 and not hit.tapped and time >= hit.tap_time:
+					hit.tapped = true
+					input["tap"] = true
+			context["impact_ahead"] = _eta_to_next(hits, next_hit, time)
+		behavior.on_physics_process(package, dt, context)
+		while next_hit < hits.size() and time >= float(hits[next_hit].time):
+			behavior.on_impact(float(hits[next_hit].strength))
+			next_hit += 1
 		simulated_tilt = rad_to_deg(package.basis.y.angle_to(Vector3.UP))
 		if behavior.get_state() == ITrapBehavior.TrapState.AT_RISK:
 			risk_seconds += dt
@@ -193,6 +235,35 @@ func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: Stri
 		"near_miss": not ruined and min_integrity >= 5.0 and min_integrity <= 25.0,
 		"min_integrity": min_integrity,
 	}
+
+
+## The bumps Fragile is put through in a drive, and when each tap of this
+## profile lands ({time, strength, tap_time, tapped}).
+func _plan_fragile_hits(behavior: ITrapBehavior, drive: Dictionary, profile_name: String, latency: float,
+		profile: Dictionary, scenario_seed: int, rng: RandomNumberGenerator) -> Array[Dictionary]:
+	var scenario := RandomNumberGenerator.new()
+	scenario.seed = scenario_seed
+	var count: int = FRAGILE_BUMPS
+	var duration: float = drive.frames.size() * float(drive.get("dt", 1.0 / 60.0))
+	var slot: float = (duration - FRAGILE_FIRST_HIT - FRAGILE_LAST_MARGIN) / count
+	var bump_strength: float = float(behavior.call(&"road_jolt_strength", float(drive.get("cruise_kmh", 50.0)) / 3.6))
+	var window: float = float(behavior.get("_cushion_window"))
+	var hits: Array[Dictionary] = []
+	for index: int in range(count):
+		var hit_time: float = FRAGILE_FIRST_HIT + slot * (index + scenario.randf_range(0.2, 0.8))
+		var tap_time: float = -1.0
+		if profile_name in TAP_SPREAD:
+			# Sees the ring and taps, or misses it: the profile's attention.
+			if rng.randf() <= float(profile.accuracy) * (1.0 - float(profile.dropout)):
+				var spread: float = sqrt(pow(float(TAP_SPREAD[profile_name]), 2.0) + pow(LATENCY_BLUR * latency, 2.0))
+				tap_time = hit_time - (window * 0.5 + rng.randfn(0.0, spread))
+		hits.append({"time": hit_time, "strength": bump_strength, "tap_time": tap_time, "tapped": false})
+	return hits
+
+
+## Seconds to the next bump, INF if none.
+func _eta_to_next(hits: Array[Dictionary], from_index: int, time: float) -> float:
+	return maxf(float(hits[from_index].time) - time, 0.0) if from_index < hits.size() else INF
 
 
 func _wanted_direction(behavior: ITrapBehavior, trap_id: StringName) -> StringName:
@@ -223,27 +294,51 @@ func _wanted_hold(behavior: ITrapBehavior, trap_id: StringName, tilt: float) -> 
 
 
 func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
+	var interactive: Array[String] = ["balance", "explosive", "fragile", "growing_weight", "hostile", "liquid", "noisy"]
 	var lines: Array[String] = [
 		"# S-108 · Balance de trampas",
 		"",
 		("Generado por `tests/sim_trap_balance.gd` con los comportamientos reales: 5 recorridos × %d repeticiones"
 		+ " por combinación.") % _trials_per_drive,
-		"Perfiles: ausente; torpe (0,8 s, 60 % de acierto, 20 % de abandono); experto (0,25 s, 95 %). Cada uno se mide"
-		+ " con 0 y 150 ms adicionales.",
+		"Perfiles: ausente; torpe (0,8 s, 60 % de acierto, 20 % de abandono); experto (0,25 s, 95 %); siempre mantiene"
+		+ " (aprieta el botón principal toda la partida y no toca nada más). Cada uno se mide con 0 y 150 ms"
+		+ " adicionales.",
+		"",
+		"## Resumen: % de cajas perdidas por trampa y perfil (0 ms)",
+		"",
+		"| Trampa | Ausente | Torpe | Experto | Siempre mantiene |",
+		"|---|---:|---:|---:|---:|",
+	]
+	var always_lost: int = 0
+	for trap_id: String in interactive:
+		var cells: Array[String] = []
+		for profile_name: String in PROFILE_ORDER:
+			cells.append("%.1f%%" % _find_row(rows, trap_id, profile_name, 0).get("ruined_pct", NAN))
+		always_lost += int(_find_row(rows, trap_id, "always", 0).get("ruined_pct", 0.0) >= 80.0)
+		lines.append("| %s | %s |" % [trap_id, " | ".join(cells)])
+	lines.append_array(["", "Antes de N-117.2 (los mismos recorridos con las trampas de entonces, sin código sorteado ni"
+		+ " toque de Frágil; Frágil sin baches, por eso 0 %):", "", "| Trampa | Ausente | Torpe | Experto | Siempre mantiene |",
+		"|---|---:|---:|---:|---:|"])
+	for trap_id: String in BEFORE_TANDA_1:
+		var before: Array = BEFORE_TANDA_1[trap_id]
+		lines.append("| %s | %.1f%% | %.1f%% | %.1f%% | %.1f%% |" % [trap_id, before[0], before[1], before[2], before[3]])
+	lines.append_array([
+		"",
+		("El que siempre mantiene pierde el 80 %% o más en %d de %d trampas (meta de N-117: 5 de 7, cuando cada"
+		+ " trampa tenga su acción propia).") % [always_lost, interactive.size()],
+		"",
+		"## Todas las filas",
 		"",
 		"| Trampa | Perfil | Latencia | Perdidos | Segundos en riesgo | Casi pérdida |",
 		"|---|---|---:|---:|---:|---:|",
-	]
+	])
 	for row: Dictionary in rows:
 		lines.append("| %s | %s | %d ms | %.1f%% | %.1f | %.1f%% |" % [
 			row.trap, row.profile, row.latency_ms, row.ruined_pct, row.risk_seconds, row.near_miss_pct])
 	lines.append_array(["", "## Objetivos", ""])
-	var interactive: Array[String] = ["balance", "explosive", "growing_weight", "hostile", "liquid", "noisy"]
 	var all_targets: bool = true
-	# Near misses are counted per complete seven-package trip. Fragile remains
-	# outside passenger-profile pass/fail, but its real near miss still happened.
-	var fragile_clumsy: Dictionary = _find_row(rows, "fragile", "clumsy", 0)
-	var clumsy_near_misses: float = fragile_clumsy.near_miss_pct / 100.0
+	# Near misses are counted per complete seven-package trip.
+	var clumsy_near_misses: float = 0.0
 	for trap_id: String in interactive:
 		var absent: Dictionary = _find_row(rows, trap_id, "absent", 0)
 		var clumsy: Dictionary = _find_row(rows, trap_id, "clumsy", 0)
@@ -260,13 +355,18 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 	lines.append("- Resultado interactivo: **%s**." % ("CUMPLE" if all_targets else "REQUIERE AJUSTE"))
 	lines.append_array([
 		"",
-		"`fragile` se informa aparte: no tiene acción de pasajero por diseño; sus seis filas deben coincidir y miden"
-		+ " solamente el manejo del conductor.",
+		"`fragile` (N-117, Amortiguá): los recorridos grabados pasan los baches sin golpe (la suspensión se los come,"
+		+ " ver `docs/parametros-diseno.md`), así que el arnés le suma a cada recorrido %d baches a la velocidad de"
+		% FRAGILE_BUMPS + " crucero, anunciados como los anuncia el juego. Los choques sin anunciar (que nadie puede"
+		+ " amortiguar) son los que ya traen los recorridos grabados (el de la semilla 1085). El torpe y el experto"
+		+ " ven el aviso con una atención del 48 % y 95 % y clavan el toque con una dispersión de 0,20 s y 0,05 s"
+		+ " alrededor del medio de la ventana (0,35 s). Mantener apretado no protege.",
 		"",
 		"Recorridos: %s." % _drive_summary(drives),
 		"",
 	])
-	return "\n".join(lines)
+	return "
+".join(lines)
 
 
 func _find_row(rows: Array[Dictionary], trap_id: String, profile: String, latency_ms: int) -> Dictionary:

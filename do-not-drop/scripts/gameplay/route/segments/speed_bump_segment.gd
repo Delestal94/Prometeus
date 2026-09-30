@@ -8,6 +8,12 @@ func _init() -> void:
 	length = 24.0
 
 
+## Where a truck starts to climb the bump: the front of its approach ramp (see
+## _build_bump(): 1.8 m before the crown).
+func announced_impacts() -> Array[Vector3]:
+	return [Vector3(0.0, 0.0, -length * 0.5 + 1.8)]
+
+
 func _build() -> void:
 	_box("Ground", Vector3(24.0, 1.0, length), Vector3(0.0, -0.8, -length * 0.5), SHOULDER, true)
 	_box("Road", Vector3(12.0, 0.4, length), Vector3(0.0, -0.2, -length * 0.5), ROAD, true)

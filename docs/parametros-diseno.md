@@ -17,11 +17,9 @@ combinación. Un pasajero ausente debe perder entre 80 % y 100 % de los paquetes
 menos de 12 %. Agregar 150 ms de latencia no debe aumentar la pérdida experta más de 8 puntos
 porcentuales.
 
-Estos objetivos se aplican a las seis trampas con una acción de pasajero. `Frágil` es la
-excepción explícita: su comportamiento no consume input y el propio diseño establece que la
-única defensa es conducir despacio. El simulador igualmente la mide en todos los perfiles para
-detectar cualquier divergencia accidental, pero su objetivo depende del conductor y sus seis
-filas deben ser idénticas.
+Estos objetivos se aplican a las siete trampas. `Frágil` era la excepción (no consumía input, la
+única defensa era conducir despacio); desde N-117.2 tiene su acción, el toque "Amortiguá", y entra
+en la regla como las demás (ver "Tanda 1 de N-117" más abajo).
 
 ### Ajuste medido de S-108 (2026-09-26)
 
@@ -75,6 +73,57 @@ Las seis trampas interactivas cumplen 80–100 % / 30–55 % / <12 %; el aumento
 **1,00 casi-pérdidas esperadas por viaje**. Las filas idénticas de Frágil confirman que el perfil
 del pasajero no altera una trampa que no consume input.
 
+## Tanda 1 de N-117: código del explosivo y toque de Frágil (2026-09-29)
+
+Se agregó el perfil **siempre mantiene** (aprieta el botón principal toda la partida y nunca toca
+nada más) y se volvió a correr el arnés (5 recorridos × 50 repeticiones, `tests/sim_data/balance_report.md`).
+Porcentaje de cajas perdidas, 0 ms:
+
+| Trampa | Ausente antes → después | Torpe antes → después | Experto antes → después | Siempre mantiene antes → después |
+|---|---:|---:|---:|---:|
+| Equilibrio | 100 → 100 | 45,2 → 45,2 | 0 → 0 | 0 → 0 |
+| Explosivo | 100 → 100 | 38,8 → 45,2 | 1,2 → 0 | 100 → 100 |
+| Frágil | 0 → 100 | 0 → 49,2 | 0 → 2,8 (+150 ms: 3,2) | 0 → 100 |
+| Peso creciente | 100 → 100 | 53,6 → 53,6 | 0 → 0 | 100 → 100 |
+| Hostil | 100 → 100 | 83,2 → 83,2 | 0 → 0 | 100 → 100 |
+| Líquido | 100 → 100 | 33,6 → 33,6 | 0 → 0 | 0 → 0 |
+| Ruidoso | 100 → 100 | 44,8 → 44,8 | 0,8 → 0,8 | 0 → 0 |
+
+- El que siempre mantiene pierde 80 % o más en **4 de 7** (antes 3 de 7); la meta de 5 de 7 pide las
+  tandas 2 y 3 (Equilibrio y Líquido).
+- **Explosivo** ya perdía el 100 % con "siempre mantiene" (sin flechas no se desactiva): lo que cambia es
+  que el código se sortea por caja y lo lee el conductor, así que el experto ya no lo memoriza. El
+  arnés le da el código al bot sin demora (no mide lo que tarda el conductor en decirlo).
+- **Frágil** no pierde con nadie en los recorridos grabados porque el piloto automático pasa los
+  baches sin golpe (la suspensión se los come, ver la tabla de golpes más abajo): se le suman a cada
+  recorrido 3 baches a la velocidad de crucero, anunciados. Sin esa carga el "antes" y el "después" no
+  se pueden comparar; con ella cumple 100 / 49,2 / 2,8 %. Los choques sin anunciar son los del
+  recorrido 1085. El torpe y el experto ven el aviso con atención del 48 % y 95 % y clavan el toque con
+  una dispersión de 0,20 s y 0,05 s alrededor del medio de la ventana: son supuestos del arnés, no medidas.
+- **Hostil** ya estaba fuera de objetivo antes de esta tanda (torpe 83,2 %, no 36,8 %: la tabla de
+  arriba es de 2026-09-26 y `hostile_trap_behavior.gd` cambió después). Las casi-pérdidas esperadas por
+  viaje torpe bajan de 0,83 a 0,66 (la de Frágil pasa de 20 % a 0,8 %): el resultado global sigue en
+  "REQUIERE AJUSTE" y no lo causa esta tanda.
+
+### Frágil, "Amortiguá" (`data/traps/fragile.tres`)
+
+| Parámetro | Valor | Notas |
+|---|---|---|
+| `cushion_window` | 0,35 s | Un toque protege los golpes anunciados que caen dentro de esta ventana. |
+| `cushion_cooldown` | 1,0 s | Espera después de cada toque: machacar no sirve. Solo cuenta el flanco de subida. |
+| `cushion_leak` | 0,1 | Fracción del daño que pasa aunque el toque sea bueno. |
+| `warn_lead` | 0,7 s | Cuánto antes del bache la caja muestra el anillo que se cierra. |
+| `bump_safe_speed` | 9,7 m/s (35 km/h) | Por debajo, el camión se come el bache y no golpea. |
+| `bump_jolt_per_speed` | 1,8 | m/s de golpe por cada m/s sobre la velocidad segura: 40 km/h no llega al umbral leve, 50 km/h es un golpe pesado. En 0 se apaga. |
+
+Decisión de diseño (supuesto, a validar en playtest): como la suspensión se come los baches a cualquier
+velocidad razonable (tabla de golpes más abajo), un bache anunciado no le hacía nada a una caja Frágil y
+"Amortiguá" no habría tenido nada que amortiguar. `FragileTrapBehavior.road_jolt_strength()` convierte
+el bache tomado rápido en un golpe que el paquete aplica al cruzarlo (`PackageRescue._road_jolt()`); a
+30-35 km/h sigue sin costar nada. Además mantener apretado ya no protege a una caja Frágil
+(`hold_protects()` en `false`; `HOLD_PROTECTION` le daba 72 % menos de golpe), salvo el ayudante del
+rack en una partida solo.
+
 ## Principio de diseño para los números
 En vez de fallas binarias e instantáneas (que se sienten injustas en un juego de
 fiesta), todas las trampas usan un **medidor de integridad 0-100** con degradación
@@ -87,7 +136,7 @@ momentos clipeables) y que un solo error no arruine la partida de golpe.
 | `integrity_max` | 100 | Medidor de integridad del paquete |
 | `impact_damage_light` | 10 | Daño si el impacto supera un umbral bajo |
 | `impact_damage_heavy` | 35 | Daño si el impacto supera un umbral alto |
-| `impact_threshold_light` | 3.0 (m/s de cambio de velocidad instantáneo) | Equivalente aprox. a un pozo/lomada tomada a velocidad media |
+| `impact_threshold_light` | 3.0 (m/s de cambio de velocidad instantáneo) | Equivalente aprox. a un pozo/lomada tomada a velocidad media (medido: la suspensión se los come; ver la tanda 1 de N-117) |
 | `impact_threshold_heavy` | 7.0 (m/s de cambio de velocidad instantáneo) | Frenada brusca o choque leve |
 | `ruined_at` | integrity <= 0 | Estado `Arruinado` |
 | `at_risk_at` | integrity <= 40 | Estado `EnRiesgo` (dispara feedback visual/sonoro de advertencia) |
@@ -258,7 +307,7 @@ Lo que dice:
   cuando el piloto (que sigue el eje de la ruta y no esquiva) le pega a los bloques; en el cruce de
   tren, cuando no frena ante la barrera y el tren se lo lleva puesto. La curva de 6,8 a 50 km/h
   fue un vuelco del piloto.
-- **Hallazgo para diseño, no resuelto acá:** el badén, el ripio y la loma no amenazan a una caja
+- **Hallazgo para diseño (N-117.2 lo resuelve del lado de la trampa, ver "Frágil, Amortiguá"):** el badén, el ripio y la loma no amenazan a una caja
   Frágil (a lo sumo 1,6 m/s, la mitad del umbral leve): la suspensión del camión se los come. Si
   se quiere que el badén "cueste" pasarlo rápido, hay que hacerlo más alto o más seco, y conviene
   medirlo junto con el simulador de balance de Slatex (S-108), porque este bench mide el anclaje

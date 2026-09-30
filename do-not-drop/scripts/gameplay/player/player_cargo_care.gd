@@ -134,7 +134,8 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 	var integrity: float = float(entry.get("integrity", 100.0)) / maxf(float(entry.get("maximum", 100.0)), 0.01) * 100.0
 	var view_data: Dictionary = {"pad": gamepad, "primary": bool(input.get("steady", false)),
 		"tool_held": Input.is_action_pressed(&"care_work"), "work": care.work if care.work_tool == tool else 0.0,
-		"fixes": fix_count(care), "sequence": state.get("sequence", {}), "missing": care.missing_parts,
+		"fixes": fix_count(care), "sequence": state.get("sequence", {}), "cushion": state.get("cushion", {}),
+		"missing": care.missing_parts,
 		"sway": care.balance_target, "interact": keys["interact"]}
 	card.update(String(target.trap_definition.display_name), int(entry.get("state", 0)), integrity, step,
 		view_data, footer_items(keys, tool_name, stock, handling, bool(player.get(&"_seated")), care.in_lap))

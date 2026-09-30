@@ -191,8 +191,23 @@ pasajero es espectador.
   cruzada (el bot experto de cada trampa jugando las otras pierde fuera de la diagonal); cada trampa
   sigue en ausente 80-100 % / torpe 30-55 % / experto <12 % (`tests/sim_data/balance_report.md`), y el
   experto con +150 ms no sube más de 8 puntos.
-- [ ] **N-117.2** Tanda 1: Explosivo sorteado y replicado con el código en el tablero del conductor;
+- [x] **N-117.2** Tanda 1: Explosivo sorteado y replicado con el código en el tablero del conductor;
   toque de Frágil (+ test de red con dos clientes); bot "siempre mantiene" en el arnés de balance.
+  Aviso: `docs/avisos/2026-09-29-n117-tanda1.md`. Números en `docs/parametros-diseno.md` ("Tanda 1 de N-117").
+  - Explosivo: código sorteado en el host por caja y sesión (`roll_seed`), viaja en `care_state["sequence"]`
+    con `reader` (conductor u dueño); lo muestra `DashboardGps` (línea "CÓDIGO ↑ ← ↓"), la tarjeta del dueño
+    dice "Pedí el código", el cartel de la caja y el hint no nombran flechas. Los flancos de entrada
+    (`direction_pressed`, `tap`) se gastan en el host (antes los tapaba `_last_input`).
+  - Frágil: toque del primario en 0,35 s antes de un golpe anunciado (1/10 del daño), espera de 1 s,
+    mantener no protege. Hallazgo que el diseño no tenía: los baches **no golpean** (la suspensión se los come,
+    ya medido en N-105) y `HOLD_PROTECTION` le daba a Frágil 72 % menos de golpe al que mantiene. Se agregó
+    el aviso de bache (`RoadImpacts`) y el golpe por bache tomado a más de 35 km/h
+    (`bump_jolt_per_speed`, en 0 se apaga); **a decidir**: si ese golpe entra así o se sube el badén.
+  - Arnés: perfil "siempre mantiene" y tabla antes/después. Siempre-mantiene pierde 80 %+ en 4 de 7 (antes 3);
+    Frágil 0 → 100 / 49,2 / 2,8 % (con 3 baches sintéticos por recorrido: los grabados no golpean);
+    Hostil ya estaba fuera de objetivo antes (83,2 % torpe).
+  - Test de red: `net_trio.gd` (código de bomba igual en los tres y un toque de un cliente llegando al host).
+    No entra en `run-tests.sh`: correr `tools/run-net-trio.sh`.
 - [ ] **N-117.3** Tanda 2: Equilibrio con A/D y Líquido alternado, con lo que se ve en el mundo
   (inclinación, charco).
 - [ ] **N-117.4** Tanda 3: flechas del asistente en Peso creciente; íconos de verbo sobre cada caja y un

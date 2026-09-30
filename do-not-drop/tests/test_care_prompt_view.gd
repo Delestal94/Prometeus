@@ -6,6 +6,8 @@ extends SceneTree
 ## also sounds -- a tap that counted, a wrong key, hands on a box that says
 ## hands off, tool progress, a piece picked up, a job done, a new thing to
 ## do -- and none of it fires just because the card started looking at a box.
+## A bomb whose code the driver reads (N-117) shows "?" keys under an "ASK"
+## caption instead of "TAP", and never the arrows.
 
 const CareCard = preload("res://scripts/ui/hud/care_card.gd")
 const CarePromptView = preload("res://scripts/ui/hud/care_prompt_view.gd")
@@ -34,6 +36,7 @@ func _initialize() -> void:
 	await process_frame
 	_check_players(view)
 	_check_sequence(view)
+	_check_hidden_code(view)
 	_check_hold_and_release(view)
 	_check_tool(view)
 	_check_collect(view)
@@ -87,6 +90,21 @@ func _check_sequence(view: CarePromptView) -> void:
 	view.reset()
 	view.show_step(&"hold", {"sequence": sequence})
 	_expect(view.played.count(&"success") == 1, "A box already solved when first seen isn't celebrated again")
+
+
+func _check_hidden_code(view: CarePromptView) -> void:
+	view.reset()
+	var sequence: Dictionary = {"steps": [&"up", &"left", &"down"], "index": 0, "mistakes": 0, "solved": 0}
+	view.show_step(&"sequence", {"sequence": sequence})
+	_expect(not view.hidden_code and view.caption == tr("HUD_CARE_TAP"), "A code the owner reads says TAP")
+	sequence["reader"] = &"driver"
+	view.show_step(&"sequence", {"sequence": sequence})
+	_expect(view.hidden_code and view.caption == tr("HUD_CARE_ASK") and view.caption != tr("HUD_CARE_TAP"),
+		"A code the driver reads says ASK under its question marks")
+	_expect(view.steps.size() == 3, "The strip still knows how many steps there are (no gap above the caption)")
+	sequence["reader"] = &"owner"
+	view.show_step(&"sequence", {"sequence": sequence})
+	_expect(not view.hidden_code and view.caption == tr("HUD_CARE_TAP"), "Handing the code back to the owner shows it")
 
 
 func _check_hold_and_release(view: CarePromptView) -> void:
