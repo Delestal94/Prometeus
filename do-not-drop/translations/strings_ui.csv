@@ -53,6 +53,8 @@ HUD_CARE_TOOL_RAG,Trapo,Rag
 HUD_CARE_TOOL_STRAP,Cincha,Strap
 HUD_CARE_TOOL_SUBSTITUTE,Gallina de juguete,Toy hen
 HUD_CARE_VERB_DEFUSE,Desactivar,Defuse
+HUD_CARE_VERB_SECURE,Asegurar,Secure
+HUD_CARE_VERB_SOLVE,Resolver,Solve
 HUD_CARE_REPAIR_FRAGILE,Pegar piezas,Glue the pieces
 HUD_CARE_REPAIR_BALANCE,Rearmar pisos,Restack the tiers
 HUD_CARE_REPAIR_NOISY,Calmar y cerrar,Calm and close

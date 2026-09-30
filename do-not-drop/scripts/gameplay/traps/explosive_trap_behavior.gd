@@ -136,7 +136,7 @@ func sequence_state() -> Dictionary:
 		return {}
 	return {"steps": sequence.duplicate(), "index": sequence.size() if _defused else sequence_index,
 		"mistakes": _mistakes, "solved": 1 if _defused else 0, "seconds": seconds_left,
-		"verb": tr("HUD_CARE_VERB_DEFUSE"), "reader": _code_reader}
+		"verb": "HUD_CARE_VERB_DEFUSE", "reader": _code_reader}
 
 
 func _sync_integrity() -> void:

@@ -130,7 +130,7 @@ func hint_text() -> Array:
 	if spill_amount >= integrity_max * 0.30:
 		return LocText.make("HUD_HINT_LIQUID_DANGER")
 	if tilt_degrees > _safe_angle:
-		return LocText.make("HUD_HINT_LIQUID_TILTED", [tilt_degrees])
+		return LocText.make("HUD_HINT_LIQUID_TILTED", [roundi(tilt_degrees)])
 	return LocText.make("HUD_HINT_LIQUID_OK")
 
 

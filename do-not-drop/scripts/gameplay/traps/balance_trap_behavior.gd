@@ -97,7 +97,7 @@ func hint_text() -> Array:
 	if tilt_degrees > _angle_at_risk_max:
 		return LocText.make("HUD_HINT_BALANCE_DANGER")
 	if tilt_degrees > _angle_ok_max:
-		return LocText.make("HUD_HINT_BALANCE_TILTED", [tilt_degrees])
+		return LocText.make("HUD_HINT_BALANCE_TILTED", [roundi(tilt_degrees)])
 	return LocText.make("HUD_HINT_BALANCE_OK")
 
 

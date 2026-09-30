@@ -11,6 +11,7 @@ extends SceneTree
 ## inside _integrate_forces.
 
 const PackageCare = preload("res://scripts/gameplay/package/package_care.gd")
+const CareGuide = preload("res://scripts/ui/hud/care_guide.gd")
 
 var _failures: int = 0
 var _received: Array = []
@@ -99,6 +100,16 @@ func _check_care_messages() -> void:
 	var copy: RefCounted = PackageCare.new()
 	copy.call(&"apply_snapshot", snapshot)
 	_expect(copy.get(&"message") == progress, "The message reaches clients as the same key line")
+	# A tap sequence's verb rides in care_state["sequence"] as a key too.
+	var guide_state: Dictionary = {"sequence": {"steps": [&"up", &"left"], "index": 0, "pending": true,
+		"verb": "HUD_CARE_VERB_SECURE"}}
+	var keys: Dictionary = {"primary": "LMB", "tool": "R", "interact": "E"}
+	TranslationServer.set_locale("en")
+	var detail: String = CareGuide.next_step(guide_state, &"growing_weight", &"", "", keys)["detail"]
+	TranslationServer.set_locale("es")
+	_expect(detail.begins_with("Secure:"),
+		"The sequence verb reads in the player's language (%s)" % detail)
+	_expect(LocText.render(["HUD_NOT_A_KEY", 3]) == "HUD_NOT_A_KEY 3", "An unknown key with values doesn't break")
 	copy.call(&"apply_snapshot", {"message": "texto viejo"})
 	_expect((copy.get(&"message") as Array).is_empty(), "An old build's text message is dropped, not shown raw")
 

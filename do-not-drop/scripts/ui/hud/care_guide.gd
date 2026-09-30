@@ -51,7 +51,7 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 				ask += " " + _tr("HUD_CARE_ASK_CODE_ON_FOOT") % keys.get("primary", "Clic izq.")
 			return _step(&"sequence", _tr("HUD_CARE_ASK_CODE"), ask)
 		return _step(&"sequence", _tr("HUD_CARE_SEQUENCE"),
-			_tr("HUD_CARE_SEQUENCE_DETAIL") % [String(sequence.get("verb", "Resolver")), how])
+			_tr("HUD_CARE_SEQUENCE_DETAIL") % [_tr(String(sequence.get("verb", "HUD_CARE_VERB_SOLVE"))), how])
 	var cushion: Dictionary = state.get("cushion", {})
 	if float(cushion.get("eta", -1.0)) >= 0.0 and bool(cushion.get("ready", false)):
 		return _step(&"cushion", _tr("HUD_CARE_CUSHION"),

@@ -26,4 +26,8 @@ static func render(text: Variant) -> String:
 	var args: Array = []
 	for arg: Variant in parts.slice(1):
 		args.append(render(arg) if arg is Array else arg)
+	# A key this build doesn't know (a newer host) comes back as the key:
+	# show it with its values rather than fail the format every frame.
+	if not line.contains("%"):
+		return " ".join([line] + args.map(func(arg: Variant) -> String: return str(arg)))
 	return line % args

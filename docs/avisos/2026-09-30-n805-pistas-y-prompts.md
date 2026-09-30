@@ -24,6 +24,10 @@ quedaban sin ícono.
 - `EventBus.package_hint_changed(package_id, hint: Array)`: el segundo argumento pasa a ser la línea.
   `hud_cargo_panel` guarda la línea y la traduce al mostrarla.
 - `care_state["hint"]` (en `package_rescue.publish_care`) también es la línea. `CareGuide.next_step` la traduce.
+- El `"verb"` de `sequence_state()` (bomba y peso creciente) también viaja como clave (`HUD_CARE_VERB_DEFUSE`,
+  `HUD_CARE_VERB_SECURE`, nuevas `HUD_CARE_VERB_SECURE`/`HUD_CARE_VERB_SOLVE`) y `CareGuide` lo traduce: antes el
+  peso creciente decía "Asegurar" en cualquier idioma.
+- Los números de las pistas van redondeados (grados y segundos enteros), como ya los mostraba el `%.0f`.
 - `NetworkManager.PROTOCOL_VERSION` pasa a 4.
 - `hud_prompts.PROMPT_ACTIONS` pasa a mapear cada acción a **claves**, que se buscan traducidas en el
   idioma del jugador. Salen foto, bocina, ping y carta: ningún prompt de interacción las usa.
