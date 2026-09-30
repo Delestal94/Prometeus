@@ -47,7 +47,7 @@ const KNOB_FALLBACK_POSITION: Vector3 = Vector3(0.35, 1.5, -2.0)
 const KNOB_OFFSET_FROM_GPS: Vector3 = Vector3(0.3, -0.02, 0.0)
 
 ## The mode changed (every peer; also when a peer is handed the state).
-signal mode_changed(new_mode: StringName)
+signal mode_changed(new_mode: StringName, silent: bool)
 ## The newscast said something (every peer with the newscast on).
 signal news_announced(line: String)
 
@@ -102,21 +102,23 @@ func set_mode(new_mode: StringName) -> bool:
 		return false
 	_apply_mode(new_mode)
 	if NetworkManager.is_online():
-		_set_mode.rpc(new_mode)
+		_set_mode.rpc(new_mode, false)
 	return true
 
 
+## `silent` is a state handed over (a peer joining), not a click: the view
+## sets its dial and music without the knob's sound.
 @rpc("authority", "call_remote", "reliable")
-func _set_mode(new_mode: StringName) -> void:
+func _set_mode(new_mode: StringName, silent: bool = false) -> void:
 	if MODES.has(new_mode):
-		_apply_mode(new_mode)
+		_apply_mode(new_mode, silent)
 
 
-func _apply_mode(new_mode: StringName) -> void:
+func _apply_mode(new_mode: StringName, silent: bool = false) -> void:
 	if new_mode == mode:
 		return
 	mode = new_mode
-	mode_changed.emit(mode)
+	mode_changed.emit(mode, silent)
 	if mode == &"news":
 		announce(RouteEventManager.active_event_id)
 
@@ -151,7 +153,16 @@ func _on_route_event_started(event_id: StringName, event: Dictionary) -> void:
 func _on_peer_level_ready(peer_id: int) -> void:
 	if not NetworkManager.is_host() or not NetworkManager.is_online() or peer_id == NetworkManager.HOST_ID:
 		return
-	_set_mode.rpc_id.call_deferred(peer_id, mode)
+	_send_mode_to.call_deferred(peer_id)
+
+
+## Host-only: hands peer_id the mode as it is now (the knob may have turned
+## between their joining and this frame), if they're still here. They take it
+## silently: no click for a state they didn't hear change.
+func _send_mode_to(peer_id: int) -> void:
+	if not NetworkManager.is_host() or not NetworkManager.is_online() or not multiplayer.get_peers().has(peer_id):
+		return
+	_set_mode.rpc_id(peer_id, mode, true)
 
 
 func _hang_knob() -> void:

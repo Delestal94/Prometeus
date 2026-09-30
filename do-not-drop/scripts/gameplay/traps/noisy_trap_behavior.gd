@@ -26,6 +26,9 @@ var _radio_calm_extra_decay: float = 0.0
 var _radio_loud_gain_mult: float = 1.0
 var _radio_loud_passive_mult: float = 1.0
 var _radio_mode: StringName = &"off"
+## The box, to ask the radio for its mode the moment a shake lands (the tick
+## only runs while the truck moves or the box is tended).
+var _box: Node
 
 
 func on_setup(package: Node, config: Dictionary) -> void:
@@ -41,6 +44,7 @@ func on_setup(package: Node, config: Dictionary) -> void:
 	_radio_loud_gain_mult = float(config.get("radio_loud_gain_mult", 1.0))
 	_radio_loud_passive_mult = float(config.get("radio_loud_passive_mult", 1.0))
 	_radio_mode = &"off"
+	_box = package
 	agitation = 0.0
 	_seconds_at_max = 0.0
 	_escaped = false
@@ -77,6 +81,7 @@ func on_impact(delta_velocity: float) -> float:
 	if _escaped or delta_velocity < _shake_threshold:
 		return 0.0
 	var before: float = integrity
+	_radio_mode = _current_radio_mode()
 	agitation = clampf(agitation + _gain_per_shake * (_radio_loud_gain_mult if _radio_mode == &"loud" else 1.0),
 			0.0, _agitation_max)
 	_sync_integrity()
@@ -109,6 +114,14 @@ func hint_text() -> Array:
 	if agitation >= _at_risk_at:
 		return LocText.make("HUD_HINT_NOISY_RISK")
 	return LocText.make("HUD_HINT_NOISY_OK")
+
+
+## The radio's mode right now: the box's truck when it can be asked, else the
+## last one a tick saw.
+func _current_radio_mode() -> StringName:
+	if is_instance_valid(_box) and _box is DeliveryPackage:
+		return PackageRescue.radio_mode(_box as DeliveryPackage)
+	return _radio_mode
 
 
 ## What it settles per second with nobody calming it, with the radio's say.

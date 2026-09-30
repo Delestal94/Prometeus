@@ -19,13 +19,20 @@ extends SceneTree
 ##   music settles it faster, loud music makes each shake bigger and settles it
 ##   slower, the newscast changes nothing, and a fully worked up box still
 ##   needs a hand; through package_rescue.gd the box reads its truck's radio;
-## - level_common.gd builds it on the real level's truck.
+## - level_common.gd builds it on the real level's truck;
+## - joining late: the radio listens to peer_level_ready, the state it hands over is
+##   read when it is sent (_send_mode_to takes only the peer), offline it does nothing,
+##   and a mode handed over silently sets the dial and music without the knob's click;
+## - a shake that lands right after the radio turned loud (no physics tick in between,
+##   the truck parked) already counts the new mode;
+## - request_interact from a sender with no player, or one out of reach, changes nothing.
 
 const TRUCK_RADIO_PATH: String = "res://scripts/gameplay/vehicle/truck_radio.gd"
 
 var _failures: int = 0
 var _modes_seen: Array = []
 var _news_seen: Array = []
+var _silent_seen: Array = []
 
 
 func _initialize() -> void:
@@ -73,7 +80,9 @@ func _check_sync_and_news(radio_script: Script) -> void:
 	world.add_child(client)
 	await process_frame
 	_modes_seen.clear()
-	client.connect(&"mode_changed", func(new_mode: StringName) -> void: _modes_seen.append(new_mode))
+	client.connect(&"mode_changed", func(new_mode: StringName, silent: bool) -> void:
+		_modes_seen.append(new_mode)
+		_silent_seen.append(silent))
 	_expect(host.get(&"mode") == &"off" and client.get(&"mode") == &"off", "Both peers start with the radio off")
 
 	_expect(not bool(host.call(&"set_mode", &"bogus")), "The host refuses a mode that isn't on the dial")
@@ -84,6 +93,7 @@ func _check_sync_and_news(radio_script: Script) -> void:
 	client.call(&"_set_mode", host.get(&"mode"))
 	_expect(client.get(&"mode") == &"calm", "The client lands on the host's mode (got %s)" % client.get(&"mode"))
 	_expect(_modes_seen == [&"calm"], "The client's mode_changed fires once (got %s)" % [_modes_seen])
+	_expect(_silent_seen == [false], "A click of the knob is not silent (got %s)" % [_silent_seen])
 	client.call(&"_set_mode", &"calm")
 	_expect(_modes_seen == [&"calm"], "Hearing the same mode again changes nothing")
 	client.call(&"_set_mode", &"bogus")
@@ -91,6 +101,26 @@ func _check_sync_and_news(radio_script: Script) -> void:
 	host.call(&"cycle")
 	client.call(&"_set_mode", host.get(&"mode"))
 	_expect(host.get(&"mode") == &"loud" and client.get(&"mode") == &"loud", "Both peers follow a second click")
+
+	# Joining late: the radio is wired to peer_level_ready, and what it defers is
+	# only the peer, so the mode is read when it is sent.
+	var network: Node = root.get_node(^"/root/NetworkManager")
+	var wired: bool = false
+	for connection: Dictionary in network.peer_level_ready.get_connections():
+		wired = wired or (connection["callable"] as Callable).get_object() == host
+	_expect(wired, "The radio listens to peer_level_ready")
+	var send_args: int = -1
+	for method: Dictionary in host.get_method_list():
+		if method["name"] == "_send_mode_to":
+			send_args = (method["args"] as Array).size()
+	_expect(send_args == 1, "A late peer's state is read at send time: _send_mode_to(peer) (args %d)" % send_args)
+	host.call(&"_send_mode_to", 2)
+	host.call(&"_on_peer_level_ready", 2)
+	await process_frame
+	_expect(host.get(&"mode") == &"loud", "Offline, handing the state to a peer does nothing")
+	client.call(&"_set_mode", &"news", true)
+	_expect(client.get(&"mode") == &"news" and _silent_seen[-1] == true, "A state handed over is flagged silent")
+	client.call(&"_set_mode", &"loud", true)
 
 	# The newscast: only with it on.
 	var inspection_line: String = tr("WORLD_RADIO_NEWS_INSPECTION")
@@ -178,6 +208,27 @@ func _check_real_truck(radio_script: Script) -> void:
 
 	var view: Node3D = radio.get(&"view")
 	var program: AudioStreamPlayer3D = view.get(&"music_player")
+	var cue_first: AudioStreamPlayer3D = view.get(&"cue_player")
+	# A peer handed the state (joining late) gets the music but not the click.
+	radio.call(&"_set_mode", &"calm", true)
+	_expect(program.playing and not cue_first.playing, "A silent sync plays the program without the knob's click")
+	radio.call(&"_set_mode", &"off", true)
+	_expect(not program.playing and not cue_first.playing, "A silent sync to off stays quiet")
+	# A remote press from a sender with no player, or from one out of reach, does nothing.
+	knob.call(&"request_interact")
+	_expect(radio.get(&"mode") == &"off", "A press from a sender with no player changes nothing")
+	var far := FakePlayer.new()
+	far.set_multiplayer_authority(0)
+	world.add_child(far)
+	far.global_position = Vector3(0.0, 0.0, 200.0)
+	far.add_to_group(&"player")
+	knob.call(&"request_interact")
+	_expect(radio.get(&"mode") == &"off", "A press from a player out of reach changes nothing")
+	far.global_position = knob.global_position
+	knob.call(&"request_interact")
+	_expect(radio.get(&"mode") == &"calm", "The same press from within reach turns the knob")
+	radio.call(&"_set_mode", &"off", true)
+	far.free()
 	_expect(program != null and program.bus == &"Interior", "The program plays through the Interior bus")
 	_expect(not program.playing, "Off is silent")
 	var started: int = Time.get_ticks_msec()
@@ -276,6 +327,18 @@ func _check_noisy(radio_script: Script) -> void:
 		package.free()
 	_expect(is_equal_approx(agitation[&"off"], 50.0 - passive) and agitation[&"calm"] < agitation[&"off"],
 			"In the game's own loop calm leaves it calmer (calm %s, off %s)" % [agitation[&"calm"], agitation[&"off"]])
+	# A shake right after the radio turns loud, no physics tick between (the truck is parked).
+	radio.call(&"set_mode", &"off")
+	var parked: RigidBody3D = package_scene.instantiate()
+	world.add_child(parked)
+	parked.set(&"trap_definition", definition)
+	parked.call(&"initialize_trap")
+	var parked_trap: Resource = parked.get(&"trap_behavior")
+	radio.call(&"set_mode", &"loud")
+	parked_trap.call(&"on_impact", 0.30)
+	_expect(is_equal_approx(float(parked_trap.get(&"agitation")), gain * loud_gain),
+			"A shake right after loud counts loud with no tick in between (got %s)" % parked_trap.get(&"agitation"))
+	parked.free()
 	world.free()
 	var alone: RigidBody3D = package_scene.instantiate()
 	root.add_child(alone)

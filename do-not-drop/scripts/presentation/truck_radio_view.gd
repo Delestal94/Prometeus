@@ -34,7 +34,7 @@ func _ready() -> void:
 		return
 	radio.connect(&"mode_changed", _show_mode)
 	radio.connect(&"news_announced", _on_news)
-	_show_mode(radio.get(&"mode"), false)
+	_show_mode(radio.get(&"mode"), true)
 
 
 func _process(delta: float) -> void:
@@ -45,7 +45,7 @@ func _process(delta: float) -> void:
 		news_label.text = ""
 
 
-func _show_mode(mode: StringName, with_click: bool = true) -> void:
+func _show_mode(mode: StringName, silent: bool = false) -> void:
 	dial.rotation.z = deg_to_rad(float(DIAL_ANGLES.get(mode, DIAL_ANGLES[&"off"])))
 	mode_label.text = tr(String(radio.call(&"mode_key", mode)))
 	mode_label.modulate = DIM if mode == &"off" else LIT
@@ -58,7 +58,7 @@ func _show_mode(mode: StringName, with_click: bool = true) -> void:
 		music_player.play()
 	else:
 		music_player.stop()
-	if with_click:
+	if not silent:
 		_cue(SOUNDS.call(&"knob_click"), CLICK_DB)
 
 
