@@ -29,8 +29,8 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 | Revisión (la contra) | `revision.md` | lunes 09:00 | `rutina/revision-AAAA-MM-DD` | auditoría + tareas nuevas |
 | Mantenimiento | `mantenimiento.md` | jueves 09:00 | `rutina/mant-AAAA-MM-DD` | docs al día + hallazgos |
 | Lanzamiento | `lanzamiento.md` | día 1 de cada mes, 10:00 | `rutina/lanzamiento-AAAA-MM` | estado de Steam + tareas |
-| Sesión de arte (PC) | `sesion-arte.md` | cada 2 h, a las :30 de las horas pares (hoy: en vivo, ver abajo) | `arte/<ID>-*` | un asset creado o refinado → un PR |
-| Build y rendimiento (PC) | `pc-build.md` | todos los días 03:15 (hoy: en vivo, ver abajo) | `rutina/pc-AAAA-MM-DD` | build de Windows probada, FPS con GPU, capturas con luz real |
+| Sesión de arte (PC) | `sesion-arte.md` | cada 2 h, a las :30 de las horas pares | `arte/<ID>-*` | un asset creado o refinado → un PR |
+| Build y rendimiento (PC) | `pc-build.md` | todos los días 03:15 | `rutina/pc-AAAA-MM-DD` | build de Windows probada, FPS con GPU, capturas con luz real |
 
 ## Reglas comunes (todas las rutinas)
 
@@ -95,6 +95,7 @@ Programador de tareas con `tools/pc/rutina-pc.ps1 -Rutina arte|build`, que:
 - corre `claude -p` con Opus 5.5, permisos en modo `auto` (lo que pediría permiso se niega solo) y solo
   los MCP de Blender y ComfyUI, y guarda el log en `%LOCALAPPDATA%\prometeus-rutinas\logs\`.
 
-Las tareas del Programador las registra Nacho a mano (pendiente al 2026-09-30); hasta entonces las dos
-rutinas se corren en vivo pidiéndolas ("corré la sesión de arte", "corré el build de la PC"). Para ver
-qué hizo una corrida, su log; para frenarlas solo en la PC, deshabilitá sus tareas del Programador.
+Tareas del Programador (registradas el 2026-09-30): "Prometeus - Sesion de arte (PC)" y "Prometeus -
+Build y rendimiento (PC)", solo con la sesión de Windows abierta, máximo 3 h por corrida. También se
+pueden correr en vivo pidiéndolas ("corré la sesión de arte", "corré el build de la PC"). Para ver qué
+hizo una corrida, su log; para frenarlas solo en la PC, deshabilitá esas dos tareas.
