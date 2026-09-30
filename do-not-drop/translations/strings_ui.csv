@@ -112,7 +112,7 @@ HUD_CARE_KEY_RIGHT_CLICK,Clic der.,Right click
 HUD_CARE_CHIP_AT_RISK,EN RIESGO,AT RISK
 HUD_CARE_CHIP_OK,OK,OK
 HUD_CARE_CHIP_RUINED,ARRUINADA,RUINED
-HUD_HINT_WEIGHT_SECURED,Carga asegurada · la próxima secuencia en %ds,Load secured · next sequence in %ds
+HUD_HINT_WEIGHT_SECURED,Quieta por ahora. Engorda en %ds.,Settled for now. Bulks up in %ds.
 HUD_KICKER_MULTIPLAYER,MULTIJUGADOR,MULTIPLAYER
 HUD_KICKER_PAUSE,PAUSA,PAUSED
 HUD_KICKER_RESULTS,RESULTADO,RESULTS
@@ -564,51 +564,51 @@ HUD_CONTENT_RACCOON,Mapache en jaula,Caged raccoon
 HUD_CONTENT_SOURDOUGH,Masa madre de la abuela,Grandma's sourdough starter
 HUD_CONTENT_VASE,Jarrón de porcelana,Porcelain vase
 HUD_EVENT_CONFUSING_SHOP,Tienda confusa,Confusing shop
-HUD_EVENT_CONFUSING_SHOP_PROMPT,Consulten la oferta.,Check the offer.
+HUD_EVENT_CONFUSING_SHOP_PROMPT,La oferta es un acertijo. Consúltenla.,Offer's a riddle. Check it.
 HUD_EVENT_DOOR_JAM,Puerta trasera atascada,Jammed rear door
-HUD_EVENT_DOOR_JAM_PROMPT,Liberen la puerta.,Free the door.
+HUD_EVENT_DOOR_JAM_PROMPT,La puerta no coopera. Libérenla.,The door won't cooperate. Free it.
 HUD_EVENT_IMPATIENT,Cliente impaciente,Impatient customer
-HUD_EVENT_IMPATIENT_HOUSE,Entreguen intacto el pedido de la casa %d.,Deliver house %d's order intact.
-HUD_EVENT_IMPATIENT_PROMPT,Entreguen su pedido intacto.,Deliver the order intact.
+HUD_EVENT_IMPATIENT_HOUSE,Casa %d mira el reloj. Entreguen intacto.,House %d taps its watch. Deliver intact.
+HUD_EVENT_IMPATIENT_PROMPT,Mira el reloj. Entreguen intacto.,Tapping the watch. Deliver it intact.
 HUD_EVENT_INSPECTION,Inspección sorpresa,Surprise inspection
-HUD_EVENT_INSPECTION_PROMPT,Aseguren toda la carga y cierren las cajas.,Secure all cargo and close every box.
+HUD_EVENT_INSPECTION_PROMPT,Cierren y aseguren todo: hay inspector.,Inspector's here: close and secure everything.
 HUD_EVENT_MIMIC,Paquete mimético,Mimic package
-HUD_EVENT_MIMIC_PROMPT,Mantengan sana la caja falsa tras revelarla.,Keep the fake box safe after revealing it.
-HUD_EVENT_MIMIC_REVEALED,Caja revelada: manténganla sana 20 s.,Box revealed: keep it safe for 20 seconds.
+HUD_EVENT_MIMIC_PROMPT,Caja mentirosa: revélenla y cuídenla.,"Lying box: reveal it, protect it."
+HUD_EVENT_MIMIC_REVEALED,¡Cayó la máscara! Cuídenla 20 s.,Mask off! Protect it 20 seconds.
 HUD_EVENT_MIXED_LABELS,Etiquetas mezcladas,Mixed labels
-HUD_EVENT_MIXED_LABELS_PROMPT,Esperen un golpe y abran las dos cajas.,Wait for an impact and open both boxes.
-HUD_EVENT_MIXED_LABELS_SWAPPED,Etiquetas cambiadas: abran ambas cajas.,Labels swapped: open both boxes.
+HUD_EVENT_MIXED_LABELS_PROMPT,"Con el próximo bache, abran ambas.","On the next bump, open both."
+HUD_EVENT_MIXED_LABELS_SWAPPED,¡Se mezclaron las etiquetas! Abran ambas.,Labels shuffled! Open both boxes.
 HUD_EVENT_PARASITE,Caja parásita,Parasite box
-HUD_EVENT_PARASITE_PROMPT,Dos pasajeros: sostengan ambas cajas 2 s.,Two passengers: hold both boxes for 2 seconds.
+HUD_EVENT_PARASITE_PROMPT,Caja polizón: sostengan ambas 2 s.,Stowaway box: hold both 2 s.
 HUD_HANDLING_FRAGILE,FRÁGIL,FRAGILE
 HUD_HANDLING_HEAVY,PESADO,HEAVY
 HUD_HANDLING_HOSTILE,CONTENIDO HOSTIL,HOSTILE CONTENTS
 HUD_HANDLING_LIVE,CONTENIDO VIVO,LIVE CONTENTS
 HUD_HANDLING_NO_IMPACTS,NO GOLPEAR,DO NOT HIT
 HUD_HANDLING_UPRIGHT,MANTENER VERTICAL,KEEP UPRIGHT
-HUD_HINT_BALANCE_DANGER,¡Se está volcando! Mantené y contrapesá con WASD.,It's tipping over! Hold and lean with WASD.
-HUD_HINT_BALANCE_OK,Estable. En las curvas: mantené y contrapesá con WASD.,Stable. In turns: hold and lean with WASD.
-HUD_HINT_BALANCE_RUINED,Se volcó.,It tipped over.
-HUD_HINT_BALANCE_TILTED,Inclinado %.0f° · mantené y contrapesá con WASD.,Tilted %.0f° · hold and lean with WASD.
-HUD_HINT_EXPLOSIVE_RUINED,BOOM.,BOOM.
-HUD_HINT_EXPLOSIVE_SAFE,Desactivada.,Defused.
-HUD_HINT_EXPLOSIVE_SEQUENCE,%02d s · secuencia: %s,%02d s · sequence: %s
-HUD_HINT_EXPLOSIVE_CODE,%02d s · pedí el código al conductor (%d/%d),%02d s · ask the driver for the code (%d/%d)
-HUD_HINT_FRAGILE,Cada golpe deja huella: un toque justo antes del bache lo amortigua.,Every impact leaves a mark: one tap right before a bump softens it.
-HUD_HINT_HOSTILE_CALM,CALMÁ (mantené),CALM (hold)
-HUD_HINT_HOSTILE_DONT_TOUCH,NO TOCAR (soltá),DON'T TOUCH (release)
-HUD_HINT_HOSTILE_RUINED,La criatura escapó.,The creature escaped.
-HUD_HINT_LIQUID_DANGER,¡Charco creciendo! Fregá: alterná A y D.,Puddle growing! Scrub: swing A and D.
-HUD_HINT_LIQUID_OK,Líquido estable. Fregá cualquier derrame alternando A y D.,Liquid stable. Scrub any spill by swinging A and D.
-HUD_HINT_LIQUID_RUINED,Se derramó por completo.,It spilled completely.
-HUD_HINT_LIQUID_TILTED,Inclinado %.0f° · fregá alternando A y D.,Tilted %.0f° · scrub by swinging A and D.
-HUD_HINT_NOISY_DANGER,¡Se suelta! Mantené para calmarlo.,It's breaking loose! Hold to calm it.
-HUD_HINT_NOISY_OK,Tranquilo por ahora. Los golpes lo alteran.,Calm for now. Impacts rile it up.
-HUD_HINT_NOISY_RISK,Muy inquieto · mantené para calmarlo.,Very restless · hold to calm it.
-HUD_HINT_NOISY_RUINED,Se escapó.,It escaped.
-HUD_HINT_WEIGHT_DANGER,¡Se está poniendo pesado! %s,It's getting heavy! %s
-HUD_HINT_WEIGHT_RUINED,Imposible de sostener.,Too heavy to hold.
-HUD_HINT_WEIGHT_SEQUENCE,Asegurá la carga: %s(%.0fs),Secure the cargo: %s(%.0fs)
+HUD_HINT_BALANCE_DANGER,¡Se vuelca! Mantené y contrapesá.,Tipping over! Hold and lean!
+HUD_HINT_BALANCE_OK,Firme por ahora. Contrapesá en curvas.,Steady for now. Lean against tilts.
+HUD_HINT_BALANCE_RUINED,Ganó la gravedad.,Gravity wins.
+HUD_HINT_BALANCE_TILTED,Torre de Pisa a %.0f°. Contrapesá.,"Leaning tower, %.0f°. Lean against it."
+HUD_HINT_EXPLOSIVE_RUINED,BOOM. Festejo anticipado.,BOOM. Early celebration.
+HUD_HINT_EXPLOSIVE_SAFE,Desactivada. Nadie festeja.,Defused. Nobody cheers.
+HUD_HINT_EXPLOSIVE_SEQUENCE,%02ds · Tocá la secuencia: %s,%02ds · Tap the sequence: %s
+HUD_HINT_EXPLOSIVE_CODE,%02ds · Pedí el código al conductor (%d/%d),%02ds · Ask the driver for the code (%d/%d)
+HUD_HINT_FRAGILE,Opina de los baches: amortiguá antes.,Has opinions on bumps: cushion early.
+HUD_HINT_HOSTILE_CALM,Pide mimos. Mantené para calmarlo.,Wants cuddles. Hold to calm it.
+HUD_HINT_HOSTILE_DONT_TOUCH,Mal día. No lo toques: soltá.,Bad day. Don't touch: let go.
+HUD_HINT_HOSTILE_RUINED,Escapó indignada. Y con razón.,"Escaped, outraged. Fair enough."
+HUD_HINT_LIQUID_DANGER,¡Charco con ambiciones! Fregá: alterná A/D.,Ambitious puddle! Scrub: swing A/D.
+HUD_HINT_LIQUID_OK,Quieto por ahora. Fregá cada derrame.,Still for now. Scrub any spill.
+HUD_HINT_LIQUID_RUINED,Ahora es un charco.,Now it's a puddle.
+HUD_HINT_LIQUID_TILTED,Inclinado %.0f°: quiere salir. Fregá A/D.,Tilted %.0f°: wants out. Scrub A/D.
+HUD_HINT_NOISY_DANGER,¡Se escapa! Abrazalo: mantené.,It's escaping! Hug it: hold.
+HUD_HINT_NOISY_OK,Tranquilo. Los baches le caen mal.,Calm. Bumps upset it.
+HUD_HINT_NOISY_RISK,Se pone nervioso. Abrazalo: mantené.,Getting jumpy. Hug it: hold.
+HUD_HINT_NOISY_RUINED,"Se escapó, indignado.","It escaped, outraged."
+HUD_HINT_WEIGHT_DANGER,¡Pesa una tonelada! Asegurá: %s,It weighs a ton! Secure it: %s
+HUD_HINT_WEIGHT_RUINED,Ni una grúa la levanta.,Not even a crane lifts it.
+HUD_HINT_WEIGHT_SEQUENCE,¡Engorda! Asegurá la carga: %s(%.0fs),Bulking up! Secure the cargo: %s(%.0fs)
 HUD_PACKAGE_PARASITE_DAMAGE,La caja parásita dañó su pareja.,The parasite box damaged its partner.
 HUD_PACKAGE_RUINED_IMPACTS,El paquete sufrió demasiados golpes.,The package took too many impacts.
 HUD_PROGRESS_AND,y,and
