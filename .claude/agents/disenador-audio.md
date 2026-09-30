@@ -22,7 +22,7 @@ samples ni música de terceros ni de IA.
   tiene su fila en `assets/audio/music/LICENCIA.md`. Reproducen `menu_music.gd`, `ingame_music.gd`
   (frases con silencio entre medio, local a cada cliente) y la radio del depósito; tensión en
   `test_tension_music`, `test_music_tracks`.
-- **Mezcla del mundo**: `world_mix.gd` (la consola), `acoustic_space.gd` + `route/acoustic_zone.gd`
+- **Mezcla del mundo**: `world_mix.gd` (la consola), `modules/acoustics/` (`acoustic_space.gd` + `acoustic_zone.gd`)
   (túneles, depósito), `docs/audio-mundo.md`; niveles en `test_world_audio_levels`.
 - **Auditoría de sonidos**: `sound_audit.gd` + `ui/sound_check_panel.gd` (opciones → "Sonidos del
   juego"): todo sonido nuevo se registra ahí para poder aislarlo.

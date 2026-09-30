@@ -84,6 +84,7 @@ func _test_streamer(scene: Node3D) -> void:
 	scene.add_child(again)
 	await process_frame
 	again.start(target)
+	_expect(again._unbatched.is_empty(), "start() leaves every starting segment merged")
 	_expect(first.spawned == again.spawned and first.spawned.size() >= 5,
 		"The same seed builds the same road (%d segments)" % first.spawned.size())
 	_expect(first.spawned[0] == "StraightSegment", "The first segment is the safe one")
@@ -128,6 +129,25 @@ func _test_streamer(scene: Node3D) -> void:
 		"Segments far behind the target are culled (%d alive of %d)" % [alive, first.spawned.size()])
 	_expect(first.next_distance() > 500.0,
 		"The road keeps growing ahead of the target (%.0f m)" % first.next_distance())
+	# A segment is merged on a tick after the one that built it, one per tick
+	# (N-219): start() leaves none waiting, a spawning tick leaves its own
+	# waiting, quiet ticks drain them, and flush_batches() clears the rest.
+	again.flush_batches()
+	target.global_position = again.point_at(again.next_distance() - 10.0)
+	again._physics_process(0.0)
+	_expect(not again._unbatched.is_empty(), "A tick that spawns leaves its segment to merge on the next one")
+	var waiting: int = again._unbatched.size()
+	again._physics_process(0.0)
+	_expect(again._unbatched.size() == waiting - 1,
+		"The next tick merges one (%d -> %d)" % [waiting, again._unbatched.size()])
+	for _tick: int in range(waiting):
+		again._physics_process(0.0)
+	_expect(again._unbatched.is_empty(), "Quiet ticks drain the queue")
+	again._spawn_next()
+	again._spawn_next()
+	_expect(again._unbatched.size() == 2, "Fresh segments wait to be merged")
+	again.flush_batches()
+	_expect(again._unbatched.is_empty(), "flush_batches() merges everything pending")
 	first.free()
 	again.free()
 	target.free()

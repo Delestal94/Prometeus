@@ -24,6 +24,7 @@ Antes de revisar, leé `docs/convenciones-godot.md` (sección 0 "Gotchas") y las
 **Arquitectura**
 - Simulación vs presentación: la lógica que decide el resultado (daño, puntaje, ruina, entrega) no puede depender de VFX/cámara/audio, y la presentación nunca muta estado de juego ni el `RigidBody3D`/`VehicleBody3D` real (hay tests que lo verifican, ej. `test_trap_visual_feedback`, `test_body_lean_sink`).
 - `gameplay/` no referencia `ui/` ni `presentation/` directamente: comunica por señales de `EventBus` (`scripts/core/event_bus.gd`). Señal nueva → declarada ahí, tipada.
+- Módulos portables (`modules/`, `docs/modulos.md`): adentro no se nombra nada del juego (autoloads, `res://scripts/`, `res://scenes/`, clases del juego, `/root/...`) ni otro módulo que no esté en `depends` de su `module.cfg`; corré `python tools/check_modules.py`. Lo que el módulo necesita del juego llega por parámetro, `static var` o hook que el adaptador de `scripts/` sobreescribe. Un script nuevo que no sabe del juego y quedó en `scripts/` es candidato a módulo: marcalo como sugerencia.
 - Contenido data-driven: trampas vía `TrapDefinition` (.tres) + `ITrapBehavior`; no hardcodear ids/parámetros que deberían vivir en `params`.
 - Nunca tocar `Engine.time_scale` para efectos (frena la física de todos).
 

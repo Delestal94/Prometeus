@@ -8,7 +8,7 @@ description: Cómo escribir un test headless nuevo para Take My Package (do-not-
 Los tests son scripts `extends SceneTree` que corren con
 `godot --headless --path do-not-drop --script res://tests/test_<tema>.gd` y salen
 con la cantidad de fallas como código de salida. `tools/run-tests.sh` toma todo
-`tests/test_*.gd` automáticamente.
+`tests/test_*.gd` y `modules/*/tests/test_*.gd` automáticamente.
 
 ## Antes de escribir
 
@@ -17,6 +17,17 @@ con la cantidad de fallas como código de salida. `tools/run-tests.sh` toma todo
 - Mirá un test parecido como modelo: `test_depot.gd` (nivel completo),
   `test_traps.gd` o `test_fragile.gd` (una mecánica), `test_settings.gd`
   (datos/guardado).
+
+## Test de un módulo portable
+
+Si lo que probás vive en `do-not-drop/modules/<nombre>/` (`docs/modulos.md`), el test va en
+`modules/<nombre>/tests/test_<tema>.gd` y su línea `## Run:` apunta a
+`res://modules/<nombre>/tests/...`. Tiene que correr solo en un proyecto vacío
+(`tools/portability-check.sh`): nada de `level_base.tscn`, autoloads, `res://scripts/` ni clases del
+juego. Si necesita algo del juego, definí en el test una subclase chica que haga de juego (modelo:
+`modules/coop_vote/tests/test_coop_vote.gd`). `python tools/check_modules.py` lo comprueba en un
+segundo. Lo que prueba cómo el juego usa el módulo (el adaptador de `scripts/`) va en `tests/` como
+cualquier otro test.
 
 ## Plantilla
 

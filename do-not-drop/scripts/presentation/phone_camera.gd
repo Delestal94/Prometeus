@@ -22,12 +22,9 @@ const FLASH_SECONDS: float = 0.28
 ## Thumbnails, not screenshots -- a handful of these live in memory until
 ## the results screen and then go away with the run.
 const PHOTO_SIZE: Vector2i = Vector2i(384, 216)
-## Darker than UiTheme.INK on purpose: this is the phone's body, not a panel.
-const INK: Color = Color("0a1418")
 const PAPER: Color = UiTheme.PAPER
 const MINT: Color = UiTheme.MINT
 const MUTED: Color = UiTheme.MUTED
-const RED: Color = UiTheme.RED
 
 var is_open: bool = false
 
@@ -37,9 +34,7 @@ var _previous_camera: Camera3D
 ## and the run's cards would otherwise sit on top of the viewfinder and end
 ## up in every photo.
 var _hud: CanvasLayer
-var _frame: Control
-var _status_label: Label
-var _hint_label: Label
+var _frame: PhoneFrame
 var _flash: ColorRect
 var _shutter: AudioStreamPlayer
 var _busy: bool = false
@@ -73,54 +68,18 @@ func _build_camera() -> void:
 
 
 func _build_ui() -> void:
-	_frame = Control.new()
-	_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_frame.visible = false
-	add_child(_frame)
-
 	# The phone's own body, drawn as a border around the whole screen: you
 	# are looking at its screen, so the bezel is the frame of the shot.
-	for side: String in ["top", "bottom", "left", "right"]:
-		var bezel := ColorRect.new()
-		bezel.color = Color(INK, 0.97)
-		bezel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		match side:
-			"top":
-				bezel.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-				bezel.offset_bottom = 58
-			"bottom":
-				bezel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-				bezel.offset_top = -58
-			"left":
-				bezel.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
-				bezel.offset_right = 130
-			_:
-				bezel.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
-				bezel.offset_left = -130
-		_frame.add_child(bezel)
-
-	var top := HBoxContainer.new()
-	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	top.offset_top = 16
-	top.offset_left = 150
-	top.offset_right = -150
-	top.add_theme_constant_override("separation", 14)
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_frame.add_child(top)
-	_label(top, tr("HUD_PHONE_CAMERA"), 15, RED)
-	_status_label = _label(top, "", 15, MUTED)
-	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_frame = PhoneFrame.new()
+	_frame.visible = false
+	add_child(_frame)
+	_frame.shutter_pressed.connect(shoot)
 
 	# Framing brackets, so there's something to aim with instead of a bare
 	# rectangle. Purely cosmetic: the shot is never actually cropped to them.
 	for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
 		_bracket(corner)
 
-	_hint_label = _label(_frame, "", 15, PAPER)
-	_hint_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	_hint_label.offset_top = -40
-	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_refresh_hint()
 
 	_flash = ColorRect.new()
@@ -131,7 +90,7 @@ func _build_ui() -> void:
 
 
 func _refresh_hint() -> void:
-	_hint_label.text = GameSettings.prompt(tr("HUD_PHONE_HINT_MOUSE"), tr("HUD_PHONE_HINT_PAD"))
+	_frame.set_hint(GameSettings.prompt(tr("HUD_PHONE_HINT_MOUSE"), tr("HUD_PHONE_HINT_PAD")))
 
 
 func _bracket(corner: Vector2) -> void:
@@ -153,18 +112,6 @@ func _bracket(corner: Vector2) -> void:
 		bar.offset_right = bar.offset_left + size.x
 		bar.offset_bottom = bar.offset_top + size.y
 		_frame.add_child(bar)
-
-
-func _label(parent: Node, text: String, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", INK)
-	label.add_theme_constant_override("outline_size", 6)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(label)
-	return label
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -269,15 +216,12 @@ func subject_house() -> int:
 func _refresh_status() -> void:
 	var index: int = subject_house()
 	if index < 0:
-		_status_label.text = tr("HUD_PHONE_NO_DELIVERY")
-		_status_label.add_theme_color_override("font_color", MUTED)
+		_frame.set_status(tr("HUD_PHONE_NO_DELIVERY"), MUTED)
 		return
 	if _already_photographed(index):
-		_status_label.text = tr("HUD_PHONE_HOUSE_DONE") % (index + 1)
-		_status_label.add_theme_color_override("font_color", MUTED)
+		_frame.set_status(tr("HUD_PHONE_HOUSE_DONE") % (index + 1), MUTED)
 		return
-	_status_label.text = tr("HUD_PHONE_HOUSE_READY") % (index + 1)
-	_status_label.add_theme_color_override("font_color", MINT)
+	_frame.set_status(tr("HUD_PHONE_HOUSE_READY") % (index + 1), MINT)
 
 
 ## A box was actually handed over there -- a house the run drove past is
@@ -312,11 +256,11 @@ func shoot() -> void:
 	_shutter.play()
 	_play_flash()
 	if accepted:
-		_hint_label.text = tr("HUD_PHONE_SAVED") % (index + 1)
+		_frame.set_hint(tr("HUD_PHONE_SAVED") % (index + 1))
 	elif index >= 0:
-		_hint_label.text = tr("HUD_PHONE_ALREADY_DOCUMENTED")
+		_frame.set_hint(tr("HUD_PHONE_ALREADY_DOCUMENTED"))
 	else:
-		_hint_label.text = tr("HUD_PHONE_NOTHING_TO_PROVE")
+		_frame.set_hint(tr("HUD_PHONE_NOTHING_TO_PROVE"))
 	_busy = false
 
 

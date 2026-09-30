@@ -9,7 +9,7 @@
 
 ## QA — bugs abiertos
 
-### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida)
+### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida) · **[x] PR #108**
 Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
 (`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta
 (`run_manager.gd:592-594`): solo cobran las que siguen en el camión. Los `delivery_points` (150/75/20,
@@ -34,7 +34,13 @@ código ya dice 8 (`network_manager.gd:27`). Los prompts de los agentes, `defini
 - [x] ~~**N-228.1** Barrer el resto de `docs/` (y `docs/marketing/`) buscando "5 jugadores", "cinco", "4 pasajeros", "hasta 4" y equivalentes en inglés, y corregirlos a 8 (1 conduce, hasta 7 cargan). Con `documentador`.~~
   **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-players`)** — a 8 jugadores / 7 pasajeros: `README.md`, `requerimientos-tecnicos.md` (encabezado y asientos), `narrativa.md`, `parametros-diseno.md`, `direccion-visual.md` (escala y oclusión), `marketing/trailer.md` ("1-8 jugadores") y `analisis-competencia-backseat-rv.md`. Se dejaron como están las mediciones con un número fijo de jugadores (`investigacion-red.md` "4 jugadores", `bench_depot` "5 jugadores" del README, "Solo, 2 y 5 jugadores" de `jugabilidad-paquetes-rescate.md`), los datos de competidores y los registros fechados (auditorías, avisos, decisiones).
   Para N-228.2: `vehicle.tscn` tiene 10 puntos de ojo de asiento (3 por lado, centro y 3 en el portaequipaje) pero solo 4 `*PackageMount` (Left/RightSeat1-2): con 7 pasajeros, tres se quedan sin soporte de caja enfrente.
-- [ ] **N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.
+- [x] ~~**N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.~~
+  **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-seats`, `ff635c0`)** — auditoría de código con `auditor-red`. Aguantan 8: transportes (ENet `max_players-1`, lobby de Steam, el 9º recibe "full"), slots de color del host (8), tablero de pedidos (`ROWS = 7`, `test_depot`), puntos de aparición del depósito (8), estantes (16 lugares), votación, espectador y asientos (conductor + 10 de pasajero; `seat_point.gd` no limita). Arreglado acá: `UnlockManager.MAX_DELIVERY_HOUSES` pasa de 4 a 7; con 4, ocho jugadores con perfil nuevo tenían 7 casas y solo 4 pedidos (3 casas "missed" seguras). Ahora un equipo completo libera Peso Creciente y Líquido para tener 8 cajas; `test_locked_traps` lo exige con `MAX_PLAYERS`. Lo que falta, abajo.
+- [ ] **N-228.3** Paleta de 8 colores: hoy hay 5 (`player.gd:43-45`, `hud_results.gd:8-10`, `crew_progression.gd:15-18`, 5 tonos de voz en `synth_audio_scenes.gd:318`, `strings_ui.csv:661-665`), así que los slots 5-7 repiten color. 8 colores distinguibles (también con daltonismo), claves y nombres traducidos y 8 tonos; va junto con N-226.2 (leer `color_slot()` en vez del `peer_id`). Test: `PLAYER_COLORS.size() >= NetworkManager.MAX_PLAYERS` y colores distintos. Con `constructor-progresion` y `constructor-ui`. Aviso: sí (`player.gd`, `scripts/ui/` de Slatex).
+- [ ] **N-228.4** Séptimo anclaje de caja: `vehicle.tscn` tiene 6 `PackageMount` (4 de asiento + 2 de estante) para hasta 7 cajas, y `LeftSeat3`, `CenterSeat` y `RightSeat3` no cuidan ninguna (sin `required_mount_path` ni `tend_mount_paths`). Sumar un anclaje (frente a un asiento 3 o en el piso central) y un test que cuente `package_mount >= MAX_PLAYERS - 1`. Con `constructor-camion`, después `auditor-red`.
+- [ ] **N-228.5** Ancho de banda con 8: `test_net_bandwidth_budget.gd:11,22` calcula con `CREW = 4`; con 8 y 14 cajas da ~124 KB/s por cliente (97 % del tope de 128, sin encabezados) y ~7 Mbit/s de subida del host. Pasar `CREW` a `MAX_PLAYERS`, contar encabezados y la subida total del host; para bajar: cajas quietas o en estante sin envío, cajas a 30 Hz (`investigacion-red.md:27`), ruedas reconstruidas en el cliente en vez de 4 `Transform3D`. Con `constructor-red`, después `auditor-red`. Aviso: sí si toca `network_manager.gd`.
+- [ ] **N-228.6** UI con 8: captura del panel de pedidos del depósito con 7 pedidos (`depot_panel.gd:96`, 620 px sin scroll; si no entra, `ScrollContainer` o filas compactas) y un caso de 8 entradas en `test_crew_panel.gd` (hoy prueba 4). Con `constructor-ui` y `revisor-visual`. Aviso: sí (`scripts/ui/` de Slatex).
+- [ ] **N-228.7** Quien entra con la partida en curso aparece en el depósito aunque el camión esté en la ruta (`level_common.gd:181`): aparecer en un asiento libre del camión. También: al reconectarse, el slot de color puede cambiar (`network_manager.gd:162-164`), y la campaña se guarda por color. Con `constructor-jugador` y `constructor-red`.
 
 ### N-229 · El jugador torpe vuelve a tener casi-pérdidas — C · `Opus 5.5 · medium` · Aviso: no
 Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 9).
@@ -450,7 +456,7 @@ Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20
 el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el modelo entero pegado al
 torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
 
-### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
+### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`) · **[x] PR #110** (la comparación MSAA en captura queda para `revisor-visual` con GPU en la sesión de arte)
 - [x] MSAA por preset: Baja sin MSAA, Media 2×, Alta 4× (`WorldQuality`, PR #45). Falta compararlo en
   captura con `revisor-visual`.
 - [x] ~~Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
@@ -525,7 +531,7 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 - [ ] **N-225.2** `reference_truck.gd` (932). **N-225.3** `route.gd`. **N-225.4** `package.gd` (999). Quedan
   `player.gd` y `run_manager.gd` fuera del orden.
 
-### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no
+### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
 tripulación, cajas en las manos y algo saliendo mal, después de N-117 (`trailer_shot`, `revisor-visual`).
 Necesita PC (capturas de tienda con luz real; la toma la sesión de arte).
@@ -932,11 +938,24 @@ atraso.
 La auditoría del 2026-09-29 midió que, al generarse un tramo, `TIME_PHYSICS_PROCESS` sube de ~3 ms a
 ~24 ms durante decenas de frames (el límite a 60 Hz es 16,7 ms). Se midió antes del merge del PR #35, que
 no toca la física.
-- [ ] Reproducirlo con ventana real y ver quién gasta: los `StaticBody3D` y shapes del tramo, el terreno,
-  los scripts con `_physics_process` o el CCD.
-- [ ] Arreglar: armar el tramo repartido en varios frames, usar menos shapes o shapes más simples, o
-  generarlo antes y más lejos.
-- [ ] Test: el costo de física tras un spawn vuelve a la base en pocos frames.
+- [x] Reproducirlo con ventana real y ver quién gasta: los `StaticBody3D` y shapes del tramo, el terreno,
+  los scripts con `_physics_process` o el CCD. **[x] Hecho (2026-09-30, rama `nacho/N-219-endless-physics-spike`)** —
+  reproducido headless (`bench_drive.gd --endless --cpu-only`, semilla 4242, 90 s): pico de 103 ms por tick. No eran
+  los shapes ni el terreno (Endless no tiene terreno; un tramo son 7-105 nodos y pocas cajas): era el propio
+  `RouteStreamer._physics_process` armando el tramo. Puente 35-93 ms, túnel 22-28 ms, obras 18 ms, resto < 3 ms.
+  Causas: `RouteSegment._model()` hacía `load()` del `.glb` por cada riel, poste y módulo (~40 lecturas de disco por
+  puente; el `PackedScene` se liberaba al salir de `_model`), el primer puente sintetizaba el loop del río
+  (`SynthAudio.river_flow_loop()`, ~55 ms) y el `DressingBatcher` (5-11 ms) corría en el mismo tick que la
+  construcción. Con ventana real / GPU sin medir: lo que queda es la subida de mallas al renderer.
+- [x] Arreglar: armar el tramo repartido en varios frames, usar menos shapes o shapes más simples, o
+  generarlo antes y más lejos. **[x] Hecho** — `RouteSegment._scene()` guarda cada `PackedScene`;
+  `RouteStreamer.WARM_MODELS` y el loop del río se cargan al armar el nivel; `SegmentStreamer` une la geometría un
+  tick después de construir el tramo (uno por tick, `flush_batches()` en `start()`). Pico por tick 103 -> 10-13 ms
+  (1 corrida de 5 llegó a 21 ms y 1 a 127 ms por PC ocupada, sin relación con un spawn); tick promedio sin cambio
+  (1,0 ms). Detalle en `docs/rendimiento-pc.md`.
+- [x] Test: el costo de física tras un spawn vuelve a la base en pocos frames. **[x] Hecho** —
+  `tests/test_endless_physics_spike.gd` (modelos y loop calientes, tramo pesado < 30 ms, construir y unir nunca en el
+  mismo tick, cola vacía a los 3 ticks) y ampliación de `modules/route_gen/tests/test_route_gen.gd`.
 
 ### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no
 
@@ -2344,12 +2363,16 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 
 #### S-304 · Celular en la mano y marco de la cámara — B · `Opus 5.5 · high` · Aviso: sí (`presentation/phone_camera.gd` no tiene dueño en el reparto)
 
-- [ ] Mostrar `models/props/handheld/sm_prop_phone.glb` en la mano derecha del viewmodel mientras la
+- [ ] ⏸ Mostrar `models/props/handheld/sm_prop_phone.glb` en la mano derecha del viewmodel mientras la
   cámara del celular está abierta (hoy el GLB está sin usar, `inventario-assets.md` §2). **Ojo
   (2026-09-24):** ya no hay manos de primera persona (pedido del usuario: nada de manos que no sean
   del personaje), así que el celular no puede colgar de una; ver aviso en `colaboracion-equipo.md`.
-- [ ] Marco de UI del celular (bordes redondeados, hora, batería, botón de obturador) como `Control`
-  en `scripts/ui/phone_frame.gd`.
+  ⏸ (2026-09-30) Toca el cuerpo y las manos del personaje: en pausa mientras siga abierta S-311.
+- [x] (rama `nacho/S-304-phone-frame`) Marco de UI del celular (bordes redondeados, hora, batería, botón de obturador) como `Control`
+  en `scripts/ui/phone_frame.gd`. `PhoneFrame`: bisel con esquinas interiores redondeadas (mismo
+  encuadre que antes), barra de estado con hora (arranca según `WorldMood` día/atardecer/noche y avanza
+  1 min cada 6 s) y batería decorativa, obturador en el bisel derecho conectado a
+  `PhoneCamera.shoot` (con el mouse capturado es decorativo: el clic ya dispara por la acción). Test `tests/test_phone_frame.gd`.
 
 #### S-305 · Accesorios cosméticos 3D — C · `Opus 5.5 · high` · Aviso: no
 
@@ -2669,7 +2692,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   (partidas, cajas, % arruinadas, segundos en riesgo), causas y eventos de ruta; `--roles host,solo` evita contar dos
   veces la misma partida jugada en red; salta archivos rotos. Rama `nacho/S-805-local-telemetry`.
 
-#### S-806 · Batería verde y rápida — A · — · Aviso: no
+#### S-806 · Batería verde y rápida — A · — · Aviso: no · **[x]**
 
 - [x] (commits `3c4ac88`, `37581a2`) Después de cada tarea: `tools/run-tests.sh` con filtro de lo tocado. Antes de push, el hook corre todo.
 - [x] (rama `nacho/S-806-faster-tests`) Si un test propio tarda más de 20 s, revisar si se puede acortar sin perder lo que verifica.

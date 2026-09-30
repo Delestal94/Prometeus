@@ -13,7 +13,8 @@ qué tan grave) y se lee en medio del caos sin tapar la ruta.
 
 - `scripts/presentation/vehicle_effects.gd` — humo de escape, chispas y polvo en golpes, marcas de derrape, aberración cromática en golpes fuertes.
 - `scripts/gameplay/package/package_feedback.gd` — confeti al arruinarse una caja (con cámara lenta local de las partículas, sin `Engine.time_scale`), feedback por trampa.
-- `night_flares.gd`, `contact_shadow.gd`, `route_river_falls.gd`, `route_sky.gd`, `world_quality.gd` (niveles de calidad).
+- `night_flares.gd`, `route_river_falls.gd`, `route_sky.gd`; y del módulo `modules/render_budget/` (zona compartida,
+  sin nada del juego adentro: `python tools/check_modules.py`): `contact_shadow.gd`, `world_quality.gd` (niveles de calidad).
 - `docs/direccion-visual.md` sección 6 (qué efectos existen y por qué, qué se descartó) y sección 3 (paleta).
 
 ## Reglas técnicas

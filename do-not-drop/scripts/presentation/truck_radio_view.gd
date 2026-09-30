@@ -15,7 +15,9 @@ const JINGLE_DB: float = -2.0
 const CLICK_DB: float = -6.0
 const NEWS_SECONDS: float = 7.0
 const LIT := Color("39c4c9")
-const DIM := Color("5b6b70")
+## Off still has to read from the driver's seat (N-406 visual check, 2026-09-30):
+## the old slate grey vanished against the dash.
+const DIM := Color("9fb3b8")
 
 ## The TruckRadio whose mode this shows. Set by it before the node enters the tree.
 var radio: Node
@@ -96,8 +98,9 @@ func _build() -> void:
 	notch.material_override = _flat(Color("ffc93c"))
 	notch.position = Vector3(0.0, 0.017, 0.017)
 	dial.add_child(notch)
-	mode_label = _label("ModeLabel", Vector3(0.0, -0.06, 0.01), 26)
-	news_label = _label("NewsLabel", Vector3(0.0, 0.085, 0.01), 30)
+	# Sized to read from the driver's seat, not only up close (N-406 visual check).
+	mode_label = _label("ModeLabel", Vector3(0.0, -0.07, 0.01), 40)
+	news_label = _label("NewsLabel", Vector3(0.0, 0.095, 0.01), 36)
 	news_label.modulate = Color("e8fbff")
 	music_player = _speaker("Program")
 	music_player.max_distance = 9.0
@@ -111,7 +114,7 @@ func _label(label_name: String, at: Vector3, size: int) -> Label3D:
 	label.position = at
 	label.pixel_size = 0.0007
 	label.font_size = size
-	label.outline_size = 6
+	label.outline_size = 10
 	label.no_depth_test = false
 	label.shaded = false
 	label.text = ""
