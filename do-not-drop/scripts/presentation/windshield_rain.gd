@@ -49,6 +49,10 @@ var mud_active: bool = false
 var mud_elapsed: float = 0.0
 var mud_duration: float = 0.0
 var mud_count: int = 0
+## An event cut short (the truck reached a stop's quiet zone) clears over
+## FADE_OUT_SECONDS from the coverage it had, not at once.
+var mud_release_left: float = 0.0
+var mud_release_from: float = 0.0
 ## Seconds the wipers have been running; the shader's and the arms' clock.
 var wiper_time: float = 0.0
 var raining: bool = false
@@ -114,6 +118,12 @@ func _process(delta: float) -> void:
 
 
 func _on_low_visibility_changed(is_starting: bool, _kind: StringName, duration: float, seconds_in: float) -> void:
+	if not is_starting:
+		var covered: float = LowVisibilityPlan.coverage(mud_elapsed, mud_duration) if mud_active else 0.0
+		mud_release_from = covered
+		mud_release_left = LowVisibilityPlan.FADE_OUT_SECONDS if covered > 0.01 else 0.0
+	else:
+		mud_release_left = 0.0
 	mud_active = is_starting
 	mud_duration = duration
 	mud_elapsed = seconds_in
@@ -161,13 +171,18 @@ func _refresh(delta: float) -> void:
 
 
 func _refresh_mud(delta: float, inside: bool) -> void:
+	var cover: float = 0.0
 	if mud_active:
 		mud_elapsed += delta
-	var shown: bool = mud_active and inside and _local_is_driving()
+		cover = LowVisibilityPlan.coverage(mud_elapsed, mud_duration)
+	elif mud_release_left > 0.0:
+		mud_release_left = maxf(mud_release_left - delta, 0.0)
+		cover = mud_release_from * mud_release_left / LowVisibilityPlan.FADE_OUT_SECONDS
+	var shown: bool = (mud_active or mud_release_left > 0.0) and inside and _local_is_driving()
 	mud_overlay.visible = shown
 	if not shown:
 		return
-	mud_material.set_shader_parameter(&"coverage", LowVisibilityPlan.coverage(mud_elapsed, mud_duration))
+	mud_material.set_shader_parameter(&"coverage", cover)
 	mud_material.set_shader_parameter(&"wiper_time", wiper_time)
 	mud_material.set_shader_parameter(&"wipers_on", 1.0)
 

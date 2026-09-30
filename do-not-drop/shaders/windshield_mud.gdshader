@@ -38,8 +38,8 @@ uniform float wipers_on = 0.0;
 // The wipers' clock (wiper_time) when this mud landed.
 uniform float mud_since = 0.0;
 
-const float CLEAR_PER_STROKE = 0.14;
-const float MAX_CLEARED = 0.62;
+const float CLEAR_PER_STROKE = 0.2;
+const float MAX_CLEARED = 0.7;
 // Glass heights: splat grid and the biggest splat's radius.
 const float CELL = 0.5;
 const float MAX_SPLAT = 0.4;

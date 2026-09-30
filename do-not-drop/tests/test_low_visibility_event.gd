@@ -227,6 +227,23 @@ func _check_host(network: Node, bus: Node) -> void:
 			"...and its glass and HUD hear it (%s)" % [_signals])
 	event.call(&"reset_for_run")
 
+	# The room's finished runs move the draws, so the same room does not see
+	# the mud at the same second in every delivery.
+	network.set(&"world_completed_runs", 7)
+	event.call(&"reset_for_run")
+	_expect(int(event.get(&"_salt")) == 7, "The runs the room has finished are in the salt (%s)" % event.get(&"_salt"))
+	network.set(&"world_completed_runs", 0)
+	event.call(&"reset_for_run")
+	# A joiner is sent what is left when the deferred call runs, never a stale copy.
+	var source: String = (load(EVENT_PATH) as GDScript).source_code
+	_expect(not source.contains("rpc_id.call_deferred"), "The late-join RPC does not capture the state when deferred")
+	event.call(&"_send_state", 5)
+	event.call(&"_receive_state", &"mud", 14.0, 1.0)
+	bus.emit_signal(&"run_ended", 0, {})
+	event.call(&"_send_state", 5)
+	_expect(not event.call(&"is_active"), "Nothing is sent for an event that ended (and offline nobody is)")
+	event.call(&"reset_for_run")
+
 	# The fade: the mud lands, holds, clears.
 	var clean_start: float = LowVisibilityPlan.coverage(0.0, 14.0)
 	var clean_end: float = LowVisibilityPlan.coverage(14.0, 14.0)
@@ -316,19 +333,70 @@ func _check_level_and_windshield(network: Node, run: Node) -> void:
 	van.set(&"driver_peer_id", me)
 	await process_frame
 	bus.emit_signal(&"low_visibility_changed", true, &"mud", 12.0, 0.0)
-	for frame: int in range(90):
+	var landed_at: float = rain.wiper_time
+	for frame: int in range(150):
 		await process_frame
 	_expect(rain.wiper_time > 0.5,
 			"With the engine on the wipers run against the mud, dry weather or not (%.2f s)" % rain.wiper_time)
 	_expect(float(rain.mud_material.get_shader_parameter(&"wipers_on")) > 0.5, "...and the mud shader knows")
+	# The blades thin it: the shader is fed the wipers' clock and the moment the
+	# mud landed, and a point in their fan has been swept since, more with each stroke.
+	var mud_since: float = float(rain.mud_material.get_shader_parameter(&"mud_since"))
+	_expect(is_equal_approx(mud_since, landed_at),
+			"The mud remembers when it landed (%.2f vs %.2f)" % [mud_since, landed_at])
+	_expect(is_equal_approx(float(rain.mud_material.get_shader_parameter(&"wiper_time")), rain.wiper_time),
+			"...and the shader reads the wipers' running clock")
+	var early: float = _thinning(rain, Vector2(0.4, 0.2), mud_since, landed_at + 0.9)
+	var later: float = _thinning(rain, Vector2(0.4, 0.2), mud_since, rain.wiper_time)
+	_expect(later > 0.0 and later > early - 0.001 and later <= 0.7 + 0.001,
+			"A point in the fan gets thinner with the strokes (%.2f at 0.9 s, %.2f now)" % [early, later])
+	_expect(_thinning(rain, Vector2(0.95, 0.9), mud_since, rain.wiper_time) == 0.0,
+			"...and one out of the blades' reach stays as it was")
 
+	# Cut short (the truck reached a quiet zone): it clears over FADE_OUT_SECONDS
+	# from the coverage it had, not in one frame.
+	var before: float = float(rain.mud_material.get_shader_parameter(&"coverage"))
 	bus.emit_signal(&"low_visibility_changed", false, &"mud", 0.0, 0.0)
 	await process_frame
+	var halfway: float = float(rain.mud_material.get_shader_parameter(&"coverage"))
+	_expect(rain.mud_overlay.visible and halfway > 0.0 and halfway < before,
+			"Cut short, the mud is still there and fading (%.2f from %.2f)" % [halfway, before])
+	rain.call(&"_refresh_mud", LowVisibilityPlan.FADE_OUT_SECONDS + 0.1, true)
+	_expect(not rain.mud_overlay.visible, "...and gone once the fade is over")
+	bus.emit_signal(&"low_visibility_changed", true, &"mud", 12.0, 0.0)
+	_expect(rain.mud_release_left == 0.0, "A new one does not inherit the old fade")
+	bus.emit_signal(&"low_visibility_changed", false, &"mud", 0.0, 0.0)
+	rain.call(&"_refresh_mud", 2.0, true)
 	_expect(not rain.mud_overlay.visible, "When it ends the glass is clean again")
 	WorldMood.active["time"] = 0
 	level.queue_free()
 	await process_frame
 	run.call(&"reset_run")
+
+
+## A GDScript copy of windshield_mud.gdshader's thinning at glass point `p` at
+## wiper clock `now`: how much of the mud the blades have lifted (0 = none).
+func _thinning(rain: WindshieldRain, p: Vector2, mud_since: float, now: float) -> float:
+	var swept: float = -1e6
+	for pivot: float in WindshieldRain.PIVOTS:
+		var v := Vector2((p.x - pivot) * rain.width / rain.height, p.y - 0.02)
+		if v.length() > WindshieldRain.BLADE_REACH:
+			continue
+		var angle: float = atan2(v.y, v.x)
+		if angle < 0.0 or angle > WindshieldRain.SWEEP:
+			continue
+		var ratio: float = clampf(1.0 - 2.0 * angle / WindshieldRain.SWEEP, -1.0, 1.0)
+		var base: float = acos(ratio) / TAU * WindshieldRain.PERIOD
+		var cycle: float = floorf(now / WindshieldRain.PERIOD) * WindshieldRain.PERIOD
+		for k: int in [-1, 0]:
+			var start: float = cycle + float(k) * WindshieldRain.PERIOD
+			for at: float in [start + base, start + WindshieldRain.PERIOD - base]:
+				if at <= now:
+					swept = maxf(swept, at)
+	if swept <= mud_since:
+		return 0.0
+	var strokes: float = floorf((swept - mud_since) / (WindshieldRain.PERIOD * 0.5)) + 1.0
+	return minf(strokes * 0.2, 0.7)
 
 
 ## The text of `function_name` in a shader, from its signature to the brace that closes it.
@@ -376,6 +444,22 @@ func _check_hud(network: Node, bus: Node) -> void:
 	_expect(hud.event_label.text.is_empty(), "A passenger does not get the driver's notice")
 	_expect(hud.toast_label.text.contains("(") and hud.toast_label.text != "HUD_LOW_VISIBILITY_GUIDE_KEY",
 		"...they are told to guide with the phrase wheel (%s)" % hud.toast_label.text)
+	bus.emit_signal(&"low_visibility_changed", false, &"mud", 0.0, 0.0)
+	# The wheel changes hands mid-event: the notice follows the driver.
+	vehicle.set(&"driver_peer_id", me + 1)
+	bus.emit_signal(&"low_visibility_changed", true, &"mud", 14.0, 2.0)
+	_expect(hud.event_label.text.is_empty(), "Not driving when it starts: no notice")
+	vehicle.set(&"driver_peer_id", me)
+	hud.notices.refresh_low_visibility(0.016)
+	_expect(hud.event_label.text == hud.tr("HUD_LOW_VISIBILITY_DRIVER"),
+			"Taking the wheel mid-event brings the notice (%s)" % hud.event_label.text)
+	vehicle.set(&"driver_peer_id", me + 1)
+	hud.notices.refresh_low_visibility(0.016)
+	_expect(hud.event_label.text.is_empty(), "Leaving the wheel takes it away (%s)" % hud.event_label.text)
+	vehicle.set(&"driver_peer_id", me)
+	hud.notices.refresh_low_visibility(0.016)
+	hud.notices.refresh_low_visibility(13.0)
+	_expect(hud.event_label.text.is_empty(), "It goes when the event's time is up even if no end arrived")
 	bus.emit_signal(&"low_visibility_changed", false, &"mud", 0.0, 0.0)
 	hud.queue_free()
 	vehicle.queue_free()

@@ -85,7 +85,9 @@ func reset_for_run() -> void:
 	_spacing_left = LowVisibilityPlan.SPACING
 	_context_left = 0.0
 	_context_cache = {}
-	_salt = 0
+	# The runs the room has finished move the salt, so the mud does not land at
+	# the same second in every delivery of the same room (the host alone reads it).
+	_salt = NetworkManager.world_completed_runs
 	if NetworkManager.world_seed == 0:
 		var fresh := RandomNumberGenerator.new()
 		fresh.randomize()
@@ -193,13 +195,22 @@ func _on_run_ended(_score: int, _results: Dictionary) -> void:
 
 
 ## Host-only: a peer that joins mid-event gets the rest of it. Deferred so it
-## lands after the session state, whose run_started would wipe it.
+## lands after the session state, whose run_started would wipe it; what is
+## sent is read when the deferred call runs, not now (_send_state()).
 func _on_peer_level_ready(peer_id: int) -> void:
 	if not NetworkManager.is_host() or not NetworkManager.is_online() or peer_id == NetworkManager.HOST_ID:
 		return
 	if active.is_empty():
 		return
-	_receive_state.rpc_id.call_deferred(peer_id, active.kind, float(active.duration), elapsed)
+	_send_state.call_deferred(peer_id)
+
+
+## What is left of the event, as of now: nothing if it ended in between (the
+## run's end clears it in the same frame) or if the peer left meanwhile.
+func _send_state(peer_id: int) -> void:
+	if active.is_empty() or not NetworkManager.is_online() or peer_id not in multiplayer.get_peers():
+		return
+	_receive_state.rpc_id(peer_id, active.kind, float(active.duration), elapsed)
 
 
 @rpc("authority", "call_remote", "reliable")

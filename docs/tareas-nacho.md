@@ -1442,7 +1442,7 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 > quien entra tarde recibe lo que queda (`_receive_state`, `PROTOCOL_VERSION` 5). `windshield_rain.gd` suma el overlay
 > `shaders/windshield_mud.gdshader` (manchones con chorreras, GL Compatibility, 9 vueltas de bucle) que solo ve quien
 > conduce desde el asiento; el pasajero ve la ruta y guía. Los limpiaparabrisas corren mientras dura y adelgazan el barro
-> (14 % por pasada, hasta 62 %) con la misma fórmula de barrido que la lluvia. HUD: aviso al conductor y toast a los
+> (20 % por pasada, hasta 70 %) con la misma fórmula de barrido que la lluvia. HUD: aviso al conductor y toast a los
 > demás que sugiere la rueda de frases. Tests: `test_low_visibility_event` (nuevo). **Falta (necesita revisión de ojos):**
 > captura del parabrisas con barro (`revisor-visual`).
 
