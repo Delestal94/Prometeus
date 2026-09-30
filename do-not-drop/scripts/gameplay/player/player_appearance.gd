@@ -21,27 +21,6 @@ static func enable_shadows(node: Node) -> void:
 		enable_shadows(child)
 
 
-## The colour slot `player` wears: the host's decision
-## (NetworkManager.color_slot(), N-226), the same on every peer and kept when
-## it rejoins. Looked up by path, not by the autoload's name: player/ scripts
-## compile before the autoloads in --script tests.
-static func crew_slot(player: Node) -> int:
-	var network: Node = player.get_node_or_null(^"/root/NetworkManager") if player.is_inside_tree() else null
-	var peer: int = player.get_multiplayer_authority()
-	if network != null:
-		return int(network.call(&"color_slot", peer))
-	return ColorSlots.slot_of({}, peer, 8)
-
-
-## Re-tints `player` (its _apply_cosmetic()) whenever the host's slot map
-## changes: a joiner's slots can arrive after its spawn, and a peer who comes
-## back takes its slot again. Bound to the player, so freeing it disconnects.
-static func follow_crew_slot(player: Node) -> void:
-	var network: Node = player.get_node_or_null(^"/root/NetworkManager")
-	if network != null and network.has_signal(&"color_slots_changed"):
-		network.connect(&"color_slots_changed", Callable(player, &"_apply_cosmetic").unbind(1))
-
-
 ## Tints the shirt: surface 0 is the T-shirt; its collar/hem trim follows a
 ## shade darker. The imported material is duplicated per instance (a surface
 ## override, not a mutation of the shared glTF resource), so tinting one

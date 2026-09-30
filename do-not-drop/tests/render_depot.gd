@@ -9,18 +9,24 @@ extends SceneTree
 ## [name, camera position, look-at] in depot space.
 const SHOTS := [
 	["spawn_view", Vector3(0.0, 1.65, 17.4), Vector3(0.0, 1.5, 5.0)],
-	["spawn_floor_arrows", Vector3(0.6, 6.0, 22.5), Vector3(0.6, 0.0, 15.0)],
+	# The game's own field of view (82), from the spawn row's left and right ends.
+	["spawn_view_game", Vector3(0.0, 1.65, 17.4), Vector3(0.0, 1.5, 5.0), 82.0],
+	["spawn_view_left_end", Vector3(-1.2, 1.65, 18.0), Vector3(0.0, 1.5, 5.0), 82.0],
+	["spawn_floor_arrows",Vector3(0.6, 6.0, 22.5), Vector3(0.6, 0.0, 15.0)],
 	["spawn_turned_left", Vector3(0.0, 1.65, 17.4), Vector3(-8.0, 1.8, 18.5)],
 	["spawn_turned_right", Vector3(0.0, 1.65, 17.4), Vector3(8.0, 1.8, 18.5)],
-	["order_board", Vector3(-2.6, 1.7, 15.2), Vector3(-4.5, 1.8, 13.0)],
+	["order_board", Vector3(-2.6, 1.7, 15.2), Vector3(-5.5, 2.0, 10.9)],
+	["control_island", Vector3(-1.5, 1.7, 15.0), Vector3(-6.2, 1.3, 11.5)],
 	["dispatch_shelves", Vector3(-4.2, 1.8, 14.0), Vector3(-8.5, 1.0, 21.0)],
 	["aisle_between_shelves", Vector3(-8.5, 1.65, 13.2), Vector3(-8.5, 1.2, 24.0)],
 	["workshop", Vector3(6.5, 1.8, 13.0), Vector3(13.0, 1.2, 6.0)],
-	["lockers_and_break", Vector3(9.0, 1.7, 16.0), Vector3(14.5, 1.6, 20.0)],
-	["supplies_counter", Vector3(10.8, 1.7, 20.2), Vector3(10.8, 1.3, 25.0)],
-	["stock_aisle_forklift", Vector3(-11.2, 2.2, 24.0), Vector3(-12.2, 1.2, 4.0)],
+	["lockers_and_break", Vector3(8.3, 1.7, 17.9), Vector3(14.5, 1.5, 20.0)],
+	["supplies_cage", Vector3(-5.6, 1.7, 9.0), Vector3(-10.5, 1.3, 5.0)],
+	["office_mezzanine", Vector3(3.0, 1.8, 21.0), Vector3(11.5, 3.6, 28.0)],
+	["stock_aisle_forklift", Vector3(-11.2, 2.2, 24.0), Vector3(-12.2, 1.2, 10.0)],
 	["back_of_depot", Vector3(2.0, 2.4, 20.0), Vector3(-2.0, 1.2, 30.5)],
 	["overview", Vector3(12.0, 6.2, 2.0), Vector3(-4.0, 0.5, 20.0)],
+	["overview_back", Vector3(-13.5, 6.6, 30.5), Vector3(4.0, 0.5, 6.0)],
 	["facade", Vector3(6.0, 2.0, -13.0), Vector3(-1.0, 3.6, 0.0)],
 ]
 
@@ -50,6 +56,7 @@ func _run() -> void:
 	_camera.near = 0.05
 	_level.add_child(_camera)
 	for shot: Array in SHOTS:
+		_camera.fov = float(shot[3]) if shot.size() > 3 else 72.0
 		_camera.global_position = _depot.to_global(shot[1])
 		_camera.look_at(_depot.to_global(shot[2]))
 		await _save(shot[0])

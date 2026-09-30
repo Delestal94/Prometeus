@@ -71,12 +71,11 @@
   textos. `tests/test_rpc_guard.gd` lee cada RPC `any_peer` del proyecto (módulos incluidos) y falla si
   falta alguno; el que no pueda cumplirlo va a su `EXCEPTIONS` con el motivo. `EventBus.request()`
   solo acepta los eventos de `request_cooldowns`.
-- **El color de un jugador es `NetworkManager.color_slot(peer_id)`**, leído como
-  `posmod(color_slot(id), paleta.size())`, nunca `peer_id % 5`: lo decide el host por orden de llegada
-  (el host siempre el 1, amarillo, también jugando solo; los que entran el libre más bajo: 0, 2, 3…), es
-  igual en todos los peers y el que se cae y vuelve recupera el suyo. Los lectores que guardan el color escuchan `color_slots_changed`. En `player/` se
-  pide con `PlayerAppearance.crew_slot(jugador)` (busca el autoload por ruta: esos scripts se compilan
-  antes que los autoloads en los tests `--script`). La campaña guarda mérito y cartas por ese índice.
+- **El color de un jugador es `PlayerColorSlot.slot(peer_id, paleta.size())`**, nunca `peer_id % 5`: sale
+  de `NetworkManager.color_slot()`, que el host reparte por orden de llegada (el host siempre el 0, también
+  jugando solo), es igual en todos los peers y el que se cae y vuelve recupera el suyo (N-221). Los lectores
+  que guardan el color escuchan `color_slots_changed` (`PlayerColorSlot.follow()`). La campaña guarda mérito
+  y cartas por ese índice.
 
 ## 1. Input Map (Project Settings → Input Map)
 
@@ -173,7 +172,7 @@ do-not-drop/
   modules/                      # portables: se copian a otro juego y funcionan (docs/modulos.md)
     persistence/                # SafeJson, UserDataMigration
     loc_text/                   # LocText
-    synth_audio/                # SynthAudio + escenas, cuidado, pasos, trampas, radio
+    synth_audio/                # SynthAudio + vehículo, trampas, mundo, animales, escenas, cuidado, pasos, radio, dsp
     net_pose_smoother/          # NetPoseSmoother
     render_budget/              # WorldQuality, DressingBatcher, DetailMaterials, ContactShadow
     acoustics/                  # AcousticSpace, AcousticZone
@@ -289,6 +288,24 @@ Orden real en `project.godot` (importa por dependencias en `_ready()`):
 
 `GameManager` y `AudioManager` siguen en el plan original pero no están registrados.
 `UnlockManager` y `GameSettings` sí lo están (ver nota de la sección 3).
+
+## 6. `PROTOCOL_VERSION` (red)
+
+`NetworkManager.PROTOCOL_VERSION` (`scripts/core/network_manager.gd`) sube en **cada** cambio de RPC
+(uno nuevo, uno renombrado, argumentos distintos: los ids de RPC se ordenan por nombre y se corren
+todos) o de replicación (propiedades de un `MultiplayerSynchronizer`, spawners). Host y cliente con
+números distintos no se conectan, con un error claro; con el mismo número y distinto protocolo se
+desincronizan en silencio.
+
+Cómo elegir el número sin chocar con otro PR en vuelo:
+1. Antes de subirlo, mirá los PRs abiertos que tocan `network_manager.gd` (en la nube, con
+   `mcp__github__list_pull_requests` y su diff) y tomá **el siguiente al más alto** entre `main` y
+   esos PRs, no el siguiente al de `main`.
+2. Sumá la línea `## N: qué cambió, <ID>` al historial del comentario de arriba de la constante.
+   Así dos ramas con el mismo número chocan en git (líneas distintas en el mismo lugar) en vez de
+   mezclarse solas, y `test_protocol_version` (PR #122) exige el historial único y consecutivo.
+3. Si al mezclar `main` el número ya lo usó otro PR, subí al siguiente libre y corregí tu línea del
+   historial; nada más.
 
 ## Próximo paso
 Con esto, la Fase 1 del plan de desarrollo tiene todo lo necesario para arrancar sin

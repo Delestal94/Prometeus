@@ -44,10 +44,10 @@ func _run() -> void:
 	var changes: Array[int] = [0]
 	network.connect(&"color_slots_changed", func(_slots: Dictionary) -> void: changes[0] += 1)
 
-	_expect(_slot(network, 1) == 1, "The host wears HOST_SLOT (1), solo play included")
+	_expect(int(crew.call(&"player_slot", 1)) == 0, "The host wears slot 0 (PlayerColorSlot), solo play included")
 	_join(network, A, "tok-a")
 	_join(network, B, "tok-b")
-	_expect(_slot(network, A) == 0 and _slot(network, B) == 2,
+	_expect(_slot(network, 1) == 0 and _slot(network, A) == 1 and _slot(network, B) == 2,
 		"Joiners take the free slots in arrival order (got %d, %d)" % [_slot(network, A), _slot(network, B)])
 
 	# A earns merit and drops. The online host captures a leaver at
@@ -55,13 +55,13 @@ func _run() -> void:
 	crew.call(&"award_action", A, &"test:rejoin", 30)
 	network.call(&"_on_peer_disconnected", A)
 	crew.call(&"_capture_player", A)
-	_expect(_slot(network, A) == 0, "Someone who left still reads its last slot (got %d)" % _slot(network, A))
+	_expect(_slot(network, A) == 1, "Someone who left still reads its last slot (got %d)" % _slot(network, A))
 	var saved: Dictionary = crew.get(&"_saved_players_by_slot")
-	_expect(int((saved.get("0", {}) as Dictionary).get("merit", 0)) == 30,
+	_expect(int((saved.get(1, {}) as Dictionary).get("merit", 0)) == 30,
 		"The leaver's merit is kept under its slot, captured after the slot was released (got %s)" % [saved])
-	_expect((network.get(&"_slot_reservations") as Dictionary).has(0), "Its slot is kept for it")
+	_expect((network.get(&"_slot_reservations") as Dictionary).has(1), "Its slot is kept for it")
 
-	# A newcomer leaves slot 0 for whoever might come back.
+	# A newcomer leaves slot 1 for whoever might come back.
 	var c: int = 1_955_001_337
 	_join(network, c, "tok-c")
 	_expect(_slot(network, c) == 3, "A newcomer skips a kept slot while others are free (got %d)" % _slot(network, c))
@@ -69,10 +69,10 @@ func _run() -> void:
 	# A comes back under a new id: same identity, same slot, same merit.
 	var a2: int = 2_001_234_568
 	_join(network, a2, "tok-a")
-	_expect(_slot(network, a2) == 0, "The returning player gets its slot back (got %d)" % _slot(network, a2))
+	_expect(_slot(network, a2) == 1, "The returning player gets its slot back (got %d)" % _slot(network, a2))
 	_expect(rejoins == [[A, a2]], "The host announces who came back as whom (got %s)" % [rejoins])
 	_expect(bool(network.call(&"inherits_color_slot", a2)), "A returning player inherits its slot")
-	_expect(String(crew.call(&"player_color_key", a2)) == String((crew.get(&"PLAYER_COLOR_KEYS") as Array)[0]),
+	_expect(String(crew.call(&"player_color_key", a2)) == String((crew.get(&"PLAYER_COLOR_KEYS") as Array)[1]),
 		"Its colour name follows the slot")
 	crew.call(&"_apply_saved_player", a2)
 	_expect(int((crew.get(&"merit") as Dictionary).get(a2, 0)) == 30,
@@ -80,7 +80,7 @@ func _run() -> void:
 	var run_merit: Dictionary = crew.get(&"_run_merit")
 	_expect(int(run_merit.get(a2, 0)) == 30 and not run_merit.has(A),
 		"This run's merit moves to the new peer id (got %s)" % [run_merit])
-	_expect(not (network.get(&"_slot_reservations") as Dictionary).has(0), "The reservation is used up")
+	_expect(not (network.get(&"_slot_reservations") as Dictionary).has(1), "The reservation is used up")
 
 	# Back before the host noticed the drop: B's connection is a ghost of b2.
 	var b2: int = 2_093_540_012
@@ -149,8 +149,8 @@ func _run() -> void:
 	# Not Player.PLAYER_COLORS: naming the class would compile player.gd with
 	# this script, before the autoloads it names exist (see test_player_colors).
 	var palette: Array = player.get_script().get_script_constant_map()["PLAYER_COLORS"]
-	_expect(_suit(player) == palette[0], "The rejoined player's suit is its slot's colour again")
-	var map: Dictionary = {1: 1, a2: 4}
+	_expect(_suit(player) == palette[1], "The rejoined player's suit is its slot's colour again")
+	var map: Dictionary = {1: 0, a2: 4}
 	_expect(bool(network.call(&"_apply_color_slots", map)), "A client takes the host's map")
 	_expect(_suit(player) == palette[4], "The suit changes when the host's map arrives after the spawn")
 	_expect(_slot(network, b2) == 2, "A peer missing from the new map keeps its last slot for the results")

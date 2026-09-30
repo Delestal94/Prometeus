@@ -14,8 +14,26 @@ extends SceneTree
 ##   has to rise by delivery_points + cargo_points (door points are paid, not
 ##   only the box still in the van), the score carries the chaos multiplier the
 ##   payout does not, the results carry no time bonus and show the payout.
+##
+## Colour slots (N-226.2: player_color_slot.gd, crew_progression.gd):
+## - the colour of a peer is the index the host gave it (NetworkManager.color_slot),
+##   wrapped to the five-colour palette, never posmod(peer_id, 5): with ENet-sized
+##   ids (> 1.8e9) the five of a crew all differ, the host is slot 0 playing solo
+##   and in a room, and slots 5..7 wrap onto 0..2;
+## - the campaign is saved by slot ("players": {"0": ...}, CAMPAIGN_VERSION 2):
+##   a new session with other random ids but the same slots gets the same merit
+##   and cards back, and swapped slots swap them;
+## - a leaver's progress is saved under the slot it wore when the roster last
+##   changed, even though the network freed that slot first;
+## - a version-1 save (colour names) migrates (the host, old "yellow", becomes
+##   slot 0); a corrupt, newer or oddly typed file starts a fresh campaign.
+##   The test uses its own save path, never the user's real file.
 
 const REAL_RUN_SECONDS: float = 130.0
+const TEST_SAVE: String = "user://test_n226_campaign.json"
+## Peer ids the size ENet and Steam hand out. Under posmod(id, 5) they are
+## 0, 4, 2, 1, 4: two share a colour, and so does the host (1) with the fourth.
+const BIG_IDS: Array[int] = [2043517840, 1873311209, 2110004977, 1966280031, 2017733559]
 
 var failures := 0
 
@@ -45,6 +63,7 @@ func _run() -> void:
 			"A voted purchase spends cooperative money")
 	_expect(not crew.call(&"spend", 151), "Cannot overspend team money")
 	_check_real_delivery(crew)
+	_check_color_slots(crew)
 	crew.call(&"reset_campaign")
 	if failures == 0:
 		print("PASS: shared money, personal merit and delivery rewards")
@@ -105,6 +124,180 @@ func _check_real_delivery(crew: Node) -> void:
 	_expect(gained == expected,
 			"The wallet rises by the payout the results carry (got +%d, expected +%d)" % [gained, expected])
 	manager.call(&"reset_run")
+
+
+## A crew in the room: the real NetworkManager with a slot map and roster set
+## by hand (offline, so nothing is sent), which CrewProgression reads.
+func _seat(network: Node, slots: Dictionary) -> void:
+	var peers: Array[int] = []
+	for peer: Variant in slots:
+		peers.append(int(peer))
+	network.set(&"_color_slots", slots)
+	network.set(&"peer_ids", peers)
+
+
+func _read_save() -> Dictionary:
+	var file := FileAccess.open(TEST_SAVE, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	return parsed if parsed is Dictionary else {}
+
+
+func _write_save(text: String) -> void:
+	var file := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	file.store_string(text)
+	file.close()
+
+
+func _clean_saves() -> void:
+	for suffix: String in ["", ".bak", ".bad", ".tmp"]:
+		if FileAccess.file_exists(TEST_SAVE + suffix):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE + suffix))
+
+
+func _check_color_slots(crew: Node) -> void:
+	var network: Node = root.get_node(^"/root/NetworkManager")
+	var constants: Dictionary = (crew.get_script() as GDScript).get_script_constant_map()
+	var keys: Array = constants["PLAYER_COLOR_KEYS"]
+	var old_slots: Dictionary = network.get(&"_color_slots").duplicate()
+	var old_peers: Array[int] = []
+	old_peers.assign(network.get(&"peer_ids"))
+	var old_path: String = String(crew.get(&"campaign_path"))
+	crew.set(&"campaign_path", TEST_SAVE)
+	_clean_saves()
+
+	# Solo play: the host is slot 0 offline (NetworkManager alone says 1 there).
+	_seat(network, {})
+	network.set(&"peer_ids", [1] as Array[int])
+	_expect(int(crew.call(&"player_slot", 1)) == 0 and crew.call(&"player_color_key", 1) == "mint",
+			"Playing solo the host is slot 0 (got %s)" % crew.call(&"player_slot", 1))
+
+	# A crew with ENet-sized ids: every colour comes from the host's index.
+	var crew_slots := {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2, BIG_IDS[2]: 3, BIG_IDS[3]: 4}
+	_seat(network, crew_slots)
+	var seen: Dictionary = {}
+	for peer: int in crew_slots:
+		var expected: String = keys[int(crew_slots[peer])]
+		_expect(crew.call(&"player_color_key", peer) == expected,
+				"Peer %d wears the colour of its slot %d (got %s)" % [peer, int(crew_slots[peer]),
+				crew.call(&"player_color_key", peer)])
+		seen[crew.call(&"player_color_key", peer)] = true
+	_expect(seen.size() == 5, "Five players, five different colours (got %d)" % seen.size())
+	var old_scheme: Dictionary = {}
+	for peer: int in crew_slots:
+		old_scheme[posmod(peer, 5)] = true
+	_expect(old_scheme.size() < 5, "These ids would have shared a colour under posmod(peer_id, 5)")
+	# Random crews: distinct colours for up to five, whatever the ids.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 226
+	for trial: int in 100:
+		var random_slots := {1: 0}
+		for slot: int in range(1, 5):
+			random_slots[rng.randi_range(1_000_000_000, 2_147_483_000)] = slot
+		_seat(network, random_slots)
+		var colors: Dictionary = {}
+		for peer: int in random_slots:
+			colors[crew.call(&"player_color_key", peer)] = true
+		if colors.size() != 5:
+			_expect(false, "A random crew of five shares a colour (got %d colours, %s)" % [colors.size(), random_slots])
+			break
+	# Eight seats, five colours: 5..7 wrap onto 0..2, never out of range.
+	_seat(network, {1: 0, BIG_IDS[0]: 5, BIG_IDS[1]: 6, BIG_IDS[2]: 7})
+	_expect(int(crew.call(&"player_slot", BIG_IDS[0])) == 0 and int(crew.call(&"player_slot", BIG_IDS[1])) == 1
+			and int(crew.call(&"player_slot", BIG_IDS[2])) == 2, "Slots 5..7 wrap onto the five-colour palette")
+
+	# Saved by slot. First session: host + two joiners.
+	_seat(network, {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2})
+	crew.call(&"reset_campaign")
+	crew.call(&"award_action", BIG_IDS[0], &"n226_a", 25)
+	crew.call(&"award_action", BIG_IDS[1], &"n226_b", 10)
+	crew.get(&"cards")[BIG_IDS[0]] = 3 # Card.RESCUE
+	_expect(crew.call(&"save_campaign"), "The campaign saves to the test path")
+	var saved: Dictionary = _read_save()
+	var players: Dictionary = saved.get("players", {})
+	_expect(int(saved.get("version", 0)) == int(constants["CAMPAIGN_VERSION"]) and int(saved.get("version", 0)) == 2,
+			"The save is version 2 (got %s)" % saved.get("version"))
+	_expect(players.has("1") and players.has("2") and players.has("0") and players.size() == 3,
+			"The save is keyed by slot (got %s)" % [players.keys()])
+	_expect(int(Dictionary(players.get("1", {})).get("merit", -1)) == 25
+			and int(Dictionary(players.get("2", {})).get("merit", -1)) == 10
+			and int(Dictionary(players.get("1", {})).get("card", -1)) == 3,
+			"Each slot keeps its own merit and card (got %s)" % [players])
+	for name_key: String in keys:
+		_expect(not players.has(name_key), "The save no longer uses colour names (found %s)" % name_key)
+	# Second session, other random ids, same seats: the progress comes back.
+	_seat(network, {1: 0, BIG_IDS[3]: 1, BIG_IDS[4]: 2})
+	crew.call(&"load_campaign")
+	var merit: Dictionary = crew.get(&"merit")
+	_expect(int(merit.get(BIG_IDS[3], -1)) == 25 and int(merit.get(BIG_IDS[4], -1)) == 10,
+			"New ids in the same slots get the same merit back (got %s)" % [merit])
+	_expect(int(crew.get(&"cards").get(BIG_IDS[3], -1)) == 3 and not crew.get(&"cards").has(BIG_IDS[4]),
+			"...and the card (got %s)" % [crew.get(&"cards")])
+	# Swapped seats swap the progress: it follows the slot, not the arrival.
+	_seat(network, {1: 0, BIG_IDS[3]: 2, BIG_IDS[4]: 1})
+	crew.call(&"load_campaign")
+	merit = crew.get(&"merit")
+	_expect(int(merit.get(BIG_IDS[3], -1)) == 10 and int(merit.get(BIG_IDS[4], -1)) == 25,
+			"Progress follows the slot, not the peer id (got %s)" % [merit])
+
+	# A leaver is saved under the slot it wore, although the map freed it first.
+	_seat(network, {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2})
+	crew.call(&"reset_campaign")
+	crew.call(&"award_action", BIG_IDS[0], &"n226_leaver", 30)
+	_seat(network, {1: 0, BIG_IDS[1]: 2, BIG_IDS[2]: 1})
+	_expect(int(crew.call(&"player_slot", BIG_IDS[0])) != 1, "The leaver's id no longer reads as slot 1")
+	crew.call(&"_capture_player", BIG_IDS[0])
+	var by_slot: Dictionary = crew.get(&"_saved_players_by_slot")
+	_expect(int(Dictionary(by_slot.get(1, {})).get("merit", -1)) == 30,
+			"A leaver's merit is saved under the slot it wore (got %s)" % [by_slot])
+	crew.call(&"_apply_saved_player", BIG_IDS[2])
+	_expect(int(crew.get(&"merit").get(BIG_IDS[2], -1)) == 30,
+			"The next one into the freed slot carries its progress on (the seat; N-221 reservations aside)")
+
+	# A version-1 save (colour names) still loads: the host (old "yellow") is slot 0.
+	_seat(network, {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2})
+	_write_save(JSON.stringify({"version": 1, "team_money": 250, "supplies": ["padding"], "players": {
+			"yellow": {"merit": 40, "card": 2, "dry_deliveries": 1},
+			"mint": {"merit": 7, "card": -1, "dry_deliveries": 0},
+			"coral": {"merit": 3, "card": -1, "dry_deliveries": 2}}}))
+	crew.call(&"load_campaign")
+	merit = crew.get(&"merit")
+	_expect(int(crew.get(&"team_money")) == 250 and crew.get(&"supplies").has(&"padding"),
+			"A version-1 save keeps its money and supplies")
+	_expect(int(merit.get(1, -1)) == 40 and int(merit.get(BIG_IDS[0], -1)) == 7 and int(merit.get(BIG_IDS[1], -1)) == 3,
+			"A version-1 save migrates: old yellow is the host, old mint slot 1 (got %s)" % [merit])
+	_expect(int(crew.get(&"cards").get(1, -1)) == 2 and int(crew.get(&"dry_deliveries").get(BIG_IDS[1], -1)) == 2,
+			"...with its card and dry deliveries")
+	crew.call(&"save_campaign")
+	var migrated: Dictionary = _read_save()
+	_expect(int(migrated.get("version", 0)) == 2 and Dictionary(migrated.get("players", {})).has("0"),
+			"The next save writes version 2 (got %s)" % [migrated])
+
+	# Files it must not crash on: corrupt, from a newer game, wrong types.
+	_seat(network, {1: 0})
+	_write_save("{not json at all")
+	crew.call(&"load_campaign")
+	_expect(int(crew.get(&"team_money")) == 100,
+			"A corrupt save starts a fresh campaign (got %d)" % int(crew.get(&"team_money")))
+	_clean_saves()
+	_write_save(JSON.stringify({"version": 99, "team_money": 999, "players": {"0": {"merit": 500}}}))
+	crew.call(&"load_campaign")
+	_expect(int(crew.get(&"team_money")) == 100 and int(crew.get(&"merit").get(1, -1)) == 0,
+			"A save from a newer game is not guessed at (got %d money)" % int(crew.get(&"team_money")))
+	_write_save(JSON.stringify({"version": 2, "team_money": 70, "supplies": "padding", "players": [1, 2]}))
+	crew.call(&"load_campaign")
+	_expect(int(crew.get(&"team_money")) == 70 and crew.get(&"supplies").is_empty(),
+			"A save with wrongly typed fields loads what it can")
+	_write_save(JSON.stringify({"version": 2, "players": {"0": {"merit": "lots", "card": 99}, "9": {"merit": 5}}}))
+	crew.call(&"load_campaign")
+	_expect(int(crew.get(&"merit").get(1, -1)) == 0 and not crew.get(&"cards").has(1),
+			"Nonsense values and out-of-palette slots are ignored")
+
+	_clean_saves()
+	crew.set(&"campaign_path", old_path)
+	network.set(&"_color_slots", old_slots)
+	network.set(&"peer_ids", old_peers)
 
 
 func _got(results: Dictionary, key: String) -> String:

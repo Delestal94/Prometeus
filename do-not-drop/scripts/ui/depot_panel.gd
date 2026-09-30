@@ -62,6 +62,10 @@ func _ready() -> void:
 		bus.connect(&"shop_resolved", _on_shop_resolved)
 		# Somebody else took the wheel: the depot is behind us now.
 		bus.connect(&"run_started", func(_route: StringName, _players: Array) -> void: close())
+	# The vote dots wear the host's colour slots, which change as people come and go.
+	NetworkManager.color_slots_changed.connect(func(_slots: Dictionary) -> void:
+		if visible and station == &"shop":
+			_rebuild())
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
 	if unlocks != null:
 		unlocks.connect(&"progress_changed", func() -> void:
@@ -288,7 +292,7 @@ func _add_voters(parent: Node, supply_id: StringName) -> void:
 		dot.custom_minimum_size = Vector2(20, 20)
 		dot.tooltip_text = tr("UI_PLAYER_N") % peer_id
 		var style := StyleBoxFlat.new()
-		style.bg_color = Player.PLAYER_COLORS[posmod(NetworkManager.color_slot(peer_id), Player.PLAYER_COLORS.size())]
+		style.bg_color = Player.PLAYER_COLORS[PlayerColorSlot.slot(peer_id, Player.PLAYER_COLORS.size())]
 		style.border_color = UiTheme.INK
 		style.set_border_width_all(2)
 		style.set_corner_radius_all(99)

@@ -172,7 +172,7 @@ func _show_awards(awards: Array) -> void:
 	var lines: PackedStringArray = []
 	for award: Dictionary in awards:
 		var peer: int = int(award.get("peer", 0))
-		var color: Color = RESULT_PLAYER_COLORS[posmod(NetworkManager.color_slot(peer), RESULT_PLAYER_COLORS.size())]
+		var color: Color = RESULT_PLAYER_COLORS[PlayerColorSlot.slot(peer, RESULT_PLAYER_COLORS.size())]
 		var player_name: String = tr("HUD_YOU") if peer == NetworkManager.local_id() else tr("UI_PLAYER_N") % peer
 		lines.append("[color=#%s]●[/color] [b]%s[/b]  %s" % [color.to_html(false),
 				tr(String(award.get("title", "HUD_AWARD_GENERIC"))),

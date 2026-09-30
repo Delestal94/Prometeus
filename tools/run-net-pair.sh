@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Starts one ENet host and one client for tests/net_pair.gd, then combines
 # their exit codes and compact PAIR result lines. Intended for local use and CI.
+# Prints a WARNING line when the joiner's level load came within 10 s of the
+# 45 s network load budget (N-235.2): still a pass, but close to flaking.
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -54,6 +56,14 @@ done
 for code in "$HOST_CODE" "$CLIENT_CODE"; do
 	[ "$code" -eq 0 ] || status=1
 done
+# N-235.2: a joiner's level load close to the network's 45 s load budget. Not
+# a failure yet, but the next slower runner drops it mid-load.
+slow="$(grep -h "^NETLOG .*WARNING slow level load" "$WORK/host.log" "$WORK/client.log" || true)"
+if [ -n "$slow" ]; then
+	echo "WARNING: the joiner's level load came within 10 s of the 45 s network load budget:"
+	echo "$slow" | sed 's/^NETLOG /  /'
+	[ -n "${GITHUB_ACTIONS:-}" ] && echo "::warning title=Net pair: slow joiner load::$(echo "$slow" | head -n1 | sed 's/^NETLOG //')"
+fi
 if [ "$status" -ne 0 ]; then
 	echo "Exit codes: host $HOST_CODE, client $CLIENT_CODE"
 	for role in host client; do

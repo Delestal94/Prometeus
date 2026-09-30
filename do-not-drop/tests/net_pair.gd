@@ -2,6 +2,9 @@ extends Node
 ## Two-process gameplay race check. Run through tools/run-net-pair.sh.
 ## Also checks that the F3 network overlay (N-216) reads the live ENet link
 ## on both sides: ping and KB/s in and out (NETSTATS lines).
+## N-235: once the client is in, both ends drop a silent peer within the
+## session timeout (20 s), not the load budget; a joiner's level load within
+## 10 s of that budget prints a NETLOG WARNING line.
 ## Last stage (N-221): the client that left holding a box joins again from the
 ## same running game and gets its colour slot and merit back under its new
 ## peer id.
@@ -9,6 +12,11 @@ extends Node
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
 const CLIENT_COSMETIC: StringName = &"mint_uniform"
+## N-235.2: the joiner loads its level with ENet's polling blocked, and the
+## host drops it if that outlasts NetworkManager's load budget (45 s). A load
+## within this margin of the budget prints a WARNING (35 s today), a sign the
+## pair is about to start failing on a slower runner.
+const SLOW_LOAD_MARGIN_SECONDS: float = 10.0
 
 var _network: Node
 var _level: Node
@@ -59,7 +67,10 @@ func _load_level() -> void:
 	var began: float = _seconds()
 	_level = load("res://scenes/gameplay/level_base.tscn").instantiate()
 	get_tree().root.add_child(_level)
-	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_role(), _seconds(), _seconds() - began])
+	var took: float = _seconds() - began
+	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_role(), _seconds(), took])
+	if not _host:
+		_warn_if_slow_load(took)
 	# The F3 overlay (N-216) reads the live ENet link from here on; its last
 	# reading is checked before the client leaves (_overlay_reads_link).
 	_overlay().call(&"set_shown", true)
@@ -78,6 +89,16 @@ func _run_host() -> void:
 		return
 	rpc_id(_client_peer_id, &"_client_check_order", _order_ids(), int(_network.get(&"world_completed_runs")))
 	await _wait_for_report(&"order")
+
+	# N-235: admitted and loaded, both ends drop a silent peer within the
+	# session timeout, not the 45 s load budget -- once the host's settle
+	# margin (settle_delay_seconds) has passed.
+	var settled: bool = await _wait_until(func() -> bool:
+		return int(_network.call(&"enet_timeout_msec", _client_peer_id)) == _session_timeout_msec())
+	_expect(settled, "host drops a silent client within the session timeout once it's in (got %d ms)"
+		% int(_network.call(&"enet_timeout_msec", _client_peer_id)))
+	rpc_id(_client_peer_id, &"_client_check_timeout")
+	await _wait_for_report(&"timeout")
 
 	# The client owns this property. The host must see the selected uniform.
 	var cosmetic_arrived: bool = await _wait_until(func() -> bool:
@@ -279,6 +300,15 @@ func _client_check_order(host_order: Array, host_completed_runs: int) -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
+func _client_check_timeout() -> void:
+	# The host settles its own end first, then tells this one.
+	var settled: bool = await _wait_until(func() -> bool:
+		return int(_network.call(&"enet_timeout_msec", 1)) == _session_timeout_msec())
+	_report(&"timeout", settled, "client drops a silent host within the session timeout once it's in (got %d ms)"
+		% int(_network.call(&"enet_timeout_msec", 1)))
+
+
+@rpc("authority", "call_remote", "reliable")
 func _client_disconnect_while_carrying(package_path: NodePath) -> void:
 	var package: DeliveryPackage = get_node_or_null(package_path) as DeliveryPackage
 	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
@@ -418,6 +448,20 @@ func _wait_until(predicate: Callable, seconds: float = TIMEOUT_SECONDS) -> bool:
 
 func _seconds() -> float:
 	return Time.get_ticks_msec() / 1000.0
+
+
+func _session_timeout_msec() -> int:
+	return int(_network.get(&"ENET_PEER_TIMEOUT_SESSION_MSEC"))
+
+
+## N-235.2: NETLOG, not PAIR (run-net-pair.sh repeats it as a WARNING line).
+func _warn_if_slow_load(took: float) -> void:
+	var budget: float = minf(float(_network.get(&"JOIN_HANDSHAKE_TIMEOUT")),
+		int(_network.get(&"ENET_PEER_TIMEOUT_MAX_MSEC")) / 1000.0)
+	if took > budget - SLOW_LOAD_MARGIN_SECONDS:
+		print(("NETLOG role=%s WARNING slow level load: %.1f s, over %.0f s"
+			+ " (the network waits %.0f s for a loading peer)")
+			% [_role(), took, budget - SLOW_LOAD_MARGIN_SECONDS, budget])
 
 
 func _pump(seconds: float) -> void:

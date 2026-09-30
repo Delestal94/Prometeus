@@ -8,7 +8,6 @@ do-not-drop/modules/route_gen/route_segment.gd|max-line-length 2
 do-not-drop/modules/route_gen/segment_streamer.gd|max-line-length 4
 do-not-drop/modules/route_gen/speed_bump_segment.gd|max-line-length 2
 do-not-drop/modules/route_gen/terrain_field.gd|max-line-length 2
-do-not-drop/modules/synth_audio/synth_audio.gd|max-line-length 3
 do-not-drop/modules/world_mood/world_mood.gd|max-line-length 2
 do-not-drop/scripts/core/crew_progression.gd|max-line-length 1
 do-not-drop/scripts/core/network_manager.gd|max-line-length 1

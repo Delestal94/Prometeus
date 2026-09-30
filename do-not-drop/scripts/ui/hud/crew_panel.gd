@@ -54,7 +54,7 @@ func _ready() -> void:
 	_body.add_theme_constant_override("separation", 10)
 	hide()
 	NetworkManager.roster_changed.connect(func(_peer_ids: Array) -> void: _dirty = true)
-	# A joiner's slot can arrive a moment after it shows up on the roster.
+	# The colours follow the host's slot map, which can change on its own.
 	NetworkManager.color_slots_changed.connect(func(_slots: Dictionary) -> void: _dirty = true)
 
 
@@ -151,7 +151,7 @@ static func build_entries(peer_ids: Array, players: Dictionary, local_id: int, o
 static func shirt_color(peer_id: int, cosmetic_id: StringName) -> Color:
 	var crew_colors: Array[Color] = Player.PLAYER_COLORS
 	if UnlockManager.cosmetic_is_auto(cosmetic_id):
-		return crew_colors[posmod(NetworkManager.color_slot(peer_id), crew_colors.size())]
+		return crew_colors[PlayerColorSlot.slot(peer_id, crew_colors.size())]
 	return UnlockManager.cosmetic_color(cosmetic_id)
 
 

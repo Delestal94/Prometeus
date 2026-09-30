@@ -33,7 +33,9 @@ extends SceneTree
 ## itself: test_host_gone_tally.gd).
 ## The joiners load the level blocking ENet's polling (18-34 s on CI): the
 ## handshake and ENet peer timeouts in network_manager.gd must outlast that, or
-## the host cuts them mid-load and the run ends with "0 players seen".
+## the host cuts them mid-load and the run ends with "0 players seen". A
+## joiner's load within SLOW_LOAD_MARGIN_SECONDS of that budget (35 s today)
+## prints a NETLOG WARNING line, repeated by run-net-trio.sh (N-235.2).
 ##
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
@@ -54,6 +56,8 @@ const GRAB_SETTLE_SECONDS: float = 1.0
 ## How long every peer waits, from the crossing read, before saying who holds
 ## the box: the clients' requests go out at GRAB_SETTLE_SECONDS.
 const GRAB_READ_SECONDS: float = 3.0
+## A joiner's level load this close to the network's load budget (45 s) warns.
+const SLOW_LOAD_MARGIN_SECONDS: float = 10.0
 
 var _network: Node
 var _level: Node
@@ -106,7 +110,14 @@ func _load_level() -> void:
 	root.add_child(_level)
 	current_scene = _level
 	var now: int = Time.get_ticks_msec()
-	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_name, now / 1000.0, (now - began) / 1000.0])
+	var took: float = (now - began) / 1000.0
+	print("NETLOG role=%s level loaded at %.1f s (took %.1f s)" % [_name, now / 1000.0, took])
+	var budget: float = minf(float(_network.get(&"JOIN_HANDSHAKE_TIMEOUT")),
+		int(_network.get(&"ENET_PEER_TIMEOUT_MAX_MSEC")) / 1000.0)
+	if not _host and took > budget - SLOW_LOAD_MARGIN_SECONDS:
+		print(("NETLOG role=%s WARNING slow level load: %.1f s, over %.0f s"
+			+ " (the network waits %.0f s for a loading peer)")
+			% [_name, took, budget - SLOW_LOAD_MARGIN_SECONDS, budget])
 
 
 func _report() -> void:

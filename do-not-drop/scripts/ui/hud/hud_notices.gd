@@ -94,7 +94,7 @@ func _mark_pinger(peer_id: int, label: String) -> void:
 ## from their head when their player is in the scene, flat otherwise (your own
 ## call, or a lobby without bodies).
 func _speak(peer_id: int, label: String) -> void:
-	var slot: int = posmod(NetworkManager.color_slot(peer_id), Player.PLAYER_COLORS.size())
+	var slot: int = PlayerColorSlot.slot(peer_id, Player.PLAYER_COLORS.size())
 	var stream: AudioStreamWAV = SynthAudio.callout_voice(slot, PingCatalogData.syllables(label))
 	var parent: Node = self
 	if peer_id != NetworkManager.local_id():

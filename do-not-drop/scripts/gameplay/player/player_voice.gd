@@ -43,10 +43,9 @@ const HEAD_HEIGHT: float = 1.7
 
 var player: Node
 var voice: AudioStreamPlayer3D
-## Slot in Player.PLAYER_COLORS (the host's colour slot,
-## PlayerAppearance.crew_slot(), wrapped to the palette); picks the base pitch.
+## Slot in Player.PLAYER_COLORS (the player's colour slot, PlayerColorSlot); picks the base pitch.
 ## Read again for every line: the host's slots can reach a joiner after its
-## spawn.
+## spawn, and a peer who rejoins takes its slot back (N-221).
 var slot: int = 0
 var last_line: StringName = &""
 var _last_flinch: float = 0.0
@@ -96,7 +95,7 @@ func _process(_delta: float) -> void:
 
 
 func _crew_slot() -> int:
-	return posmod(PlayerAppearance.crew_slot(player), Player.PLAYER_COLORS.size())
+	return PlayerColorSlot.slot(player.get_multiplayer_authority(), Player.PLAYER_COLORS.size())
 
 
 ## Starts a line ("hurt", "ragdoll", "cheer" or "ruined") unless the previous

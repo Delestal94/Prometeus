@@ -17,6 +17,11 @@ const HoldFeedback = preload("res://scripts/gameplay/player/player_hold_feedback
 const InputLag = preload("res://scripts/gameplay/package/tender_input_lag.gd")
 ## The logical height the card lays out for, like Hud.BASE_HEIGHT.
 const BASE_HEIGHT: float = 720.0
+## The care card and the depot practice card are part of the dashboard, so they
+## sit *under* the HUD's CanvasLayer (Hud, layer 1): the HUD's modals -- Options,
+## pause, results, the depot and crew panels -- must always paint over them
+## (N-237: at layer 7 the tutorial drew on top of Options).
+const CARD_LAYER: int = 0
 var player: Node
 var card: CareCard
 ## The depot's practice card (CarePractice), until this profile has done it.
@@ -44,7 +49,7 @@ func _ready() -> void:
 		set_physics_process(false)
 		return
 	_layer = CanvasLayer.new()
-	_layer.layer = 7
+	_layer.layer = CARD_LAYER
 	add_child(_layer)
 	_root = Control.new()
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -2,6 +2,14 @@ extends SceneTree
 ## S-109: one primary tender plus one helper. Continuous help counts at half
 ## strength, either player may send a sequence direction, and a third peer
 ## cannot take over the same package.
+##
+## The package script is loaded when the test runs, not named as a class: with
+## --script this file compiles before the autoloads exist, and package.gd pulls
+## in the HUD, which names NetworkManager. Whether that compile ran early or
+## late depended on the order Godot walked the dependencies, so the test failed
+## on some machines and CI runs and passed on others.
+
+const PACKAGE_SCRIPT: String = "res://scripts/gameplay/package/package.gd"
 
 var _failures: int = 0
 
@@ -11,31 +19,35 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var package := DeliveryPackage.new()
-	package.package_id = &"assist_test"
+	var package: RigidBody3D = (load(PACKAGE_SCRIPT) as GDScript).new()
+	package.set(&"package_id", &"assist_test")
 	package.freeze = true
 	root.add_child(package)
 	await process_frame
-	package.set_tender(1)
-	_expect(package.set_assistant(2), "A second peer can become the helper")
-	_expect(not package.set_assistant(3), "A third peer is ignored while the helper slot is occupied")
+	package.call(&"set_tender", 1)
+	_expect(bool(package.call(&"set_assistant", 2)), "A second peer can become the helper")
+	_expect(not bool(package.call(&"set_assistant", 3)),
+		"A third peer is ignored while the helper slot is occupied")
 
-	package._accept_tender_input(2, {"steady": true, "calm": true, "direction_pressed": &"left"})
-	_expect(is_equal_approx(float(package.player_input.get("steady_strength", 0.0)), 0.5),
+	package.call(&"_accept_tender_input", 2, {"steady": true, "calm": true, "direction_pressed": &"left"})
+	var input: Dictionary = package.get(&"player_input")
+	_expect(is_equal_approx(float(input.get("steady_strength", 0.0)), 0.5),
 		"Helper steady input contributes half strength")
-	_expect(is_equal_approx(float(package.player_input.get("calm_strength", 0.0)), 0.5),
+	_expect(is_equal_approx(float(input.get("calm_strength", 0.0)), 0.5),
 		"Helper calm input contributes half strength")
-	_expect(StringName(package.player_input.get("direction_pressed", &"")) == &"left",
+	_expect(StringName(input.get("direction_pressed", &"")) == &"left",
 		"The helper can advance a directional sequence")
 
-	package._accept_tender_input(1, {"steady": true, "calm": true, "direction_pressed": null})
-	_expect(is_equal_approx(float(package.player_input.get("steady_strength", 0.0)), 1.5),
+	package.call(&"_accept_tender_input", 1, {"steady": true, "calm": true, "direction_pressed": null})
+	input = package.get(&"player_input")
+	_expect(is_equal_approx(float(input.get("steady_strength", 0.0)), 1.5),
 		"Primary and helper correction combine to 150 percent")
-	var before: Dictionary = package.player_input.duplicate(true)
-	_expect(not package._accept_tender_input(3, {"steady": true, "direction_pressed": &"up"})
-			and package.player_input == before,
+	var before: Dictionary = input.duplicate(true)
+	_expect(not bool(package.call(&"_accept_tender_input", 3, {"steady": true, "direction_pressed": &"up"}))
+			and package.get(&"player_input") == before,
 		"Input from a third peer cannot affect the package")
-	_expect(package.assist_prompt().contains("amarillo"),
+	# The primary tender is peer 1, the host: colour slot 0, mint (N-226.2).
+	_expect(String(package.call(&"assist_prompt")).contains("menta"),
 			"The interaction prompt identifies the primary tender by colour")
 
 	var tilted := Node3D.new()

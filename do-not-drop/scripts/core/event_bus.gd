@@ -113,6 +113,18 @@ signal depot_notice(text: String)
 signal cargo_overboard(package_id: StringName, position: Vector3, seconds: float)
 ## That box's rescue window closed: back aboard (`rescued`) or lost. Relayed.
 signal cargo_overboard_ended(package_id: StringName, rescued: bool)
+## An animal is going for a box (N-109, route/cargo_animals.gd): `kind` is
+## &"gull", &"dog" or &"bees". It reaches the box in `warn_seconds` (the
+## warning: cry, bark or buzz plus the icon over the box) and then has
+## `act_seconds` to be stopped before it does its harm. Host decides,
+## relayed; sent again to a peer that joins in the middle of one.
+signal cargo_animal_alert(kind: StringName, package_id: StringName, warn_seconds: float, act_seconds: float)
+## That animal is gone. `outcome` says why: &"scared" (the horn), &"held" (the
+## crew held the box), &"distracted" (the dog took the stick), &"sealed" (the
+## lid was closed), &"left" (it gave up or had nothing left to go for) or
+## &"snatched" (the gull took the box). `peer_id` is who did it, 0 if nobody.
+## Relayed.
+signal cargo_animal_ended(kind: StringName, package_id: StringName, outcome: StringName, peer_id: int)
 ## A hard hit broke something on the truck (N-214, vehicle_faults.gd):
 ## &"rear_door" or &"mirror" for now. Host decides, relayed.
 signal vehicle_fault_started(fault_id: StringName, impact_position: Vector3)

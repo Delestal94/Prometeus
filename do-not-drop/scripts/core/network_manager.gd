@@ -26,13 +26,16 @@ const MAX_PLAYERS: int = 8
 ## them again through _sync_color_slots, N-226;
 ## 11: the restart RPC carries a dictionary and the event bus relays peer
 ## requests through one RPC, N-231;
-## 12: the handshake carries a session nonce and the ready reply an identity
-## (rejoin), every any_peer RPC goes through RpcGuard and the campaign
-## travels by colour slot, not by colour name, N-221/N-226.2).
+## 12: cargo_animal_alert / cargo_animal_ended are relayed, N-109;
+## 13: the host tells each client when to wait out its level loads
+## (_host_load_timeout, NetSession), N-235;
+## 14: the handshake carries a session nonce and the ready reply an identity
+## (rejoin), every any_peer RPC goes through RpcGuard, and a slot is kept for
+## a peer who left so it gets it back when it rejoins, N-221).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 12
+const PROTOCOL_VERSION: int = 14
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -72,10 +75,9 @@ var world_locked_traps: Array = []
 ## locked list, it must be shared: a joiner's local profile may be different.
 var world_completed_runs: int = 0
 ## Which colour slot each peer wears, {peer_id: slot 0..MAX_PLAYERS-1}
-## (N-226, ColorSlots). The host hands them out -- itself HOST_SLOT (1, as
-## playing solo), each joiner the lowest free one (0, 2, 3...) as it starts
-## authenticating, so the join handshake already carries it -- and sends the
-## whole map to everyone again
+## (N-226, ColorSlots). The host hands them out in arrival order -- itself 0,
+## each joiner the lowest free one as it starts authenticating, so the join
+## handshake already carries it -- and sends the whole map to everyone again
 ## whenever it changes (_sync_color_slots). The random ids ENet and Steam give
 ## made posmod(peer_id, 5) a new colour every session, often a shared one.
 ## Kept across a host restart; empty outside a session. Read it through
@@ -130,9 +132,9 @@ func _ready() -> void:
 
 ## The colour slot `peer_id` wears (N-226): 0..MAX_PLAYERS-1, handed out by
 ## the host in arrival order and the same on every peer for the whole session.
-## The host always wears ColorSlots.HOST_SLOT (1), solo play included. A peer who left keeps the
-## last one it wore (_departed_slots). For a peer the host hasn't announced
-## yet it is posmod(peer_id, MAX_PLAYERS). Readers wrap it to their own
+## A peer who left keeps the last one it wore (_departed_slots). Outside a
+## session, or for a peer the host hasn't announced yet, it is
+## posmod(peer_id, MAX_PLAYERS); PlayerColorSlot pins the host to 0 either way. Readers wrap it to their own
 ## palette size: posmod(color_slot(id), palette.size()).
 func color_slot(peer_id: int) -> int:
 	if not _color_slots.has(peer_id) and _departed_slots.has(peer_id):
@@ -159,7 +161,7 @@ func _on_hosting() -> void:
 	world_completed_runs = int(unlocks.get(&"completed_runs")) if unlocks != null else 0
 
 
-## Host, on creating the room: a fresh slot map with itself on HOST_SLOT.
+## Host, on creating the room: a fresh slot map with itself on slot 0.
 func _on_session_hosted() -> void:
 	_start_color_slots_as_host()
 
@@ -296,20 +298,20 @@ func _failure_text(code: String, args: Array = []) -> String:
 
 # --- Colour slots (N-226) -------------------------------------------------------
 
-## Host, on creating the room: a fresh map with itself on HOST_SLOT.
+## Host, on creating the room: a fresh map with itself on slot 0.
 func _start_color_slots_as_host() -> void:
 	_color_slots = {}
-	ColorSlots.place_host(_color_slots, MAX_PLAYERS)
+	ColorSlots.assign(_color_slots, HOST_ID, MAX_PLAYERS)
 	color_slots_changed.emit(_color_slots.duplicate())
 
 
 ## Host: `id`'s slot, handing it the lowest free one if it had none -- one
 ## kept for someone who left only if no other is free, and then that
 ## reservation is lost and `id` starts clean (_fresh_slots). The host is placed
-## first if it somehow isn't, so it always wears HOST_SLOT. -1 when every slot
-## is taken. Doesn't tell anyone: the caller publishes.
+## first if it somehow isn't, so it always wears 0. -1 when every slot is
+## taken. Doesn't tell anyone: the caller publishes.
 func _assign_color_slot(id: int) -> int:
-	ColorSlots.place_host(_color_slots, MAX_PLAYERS)
+	ColorSlots.assign(_color_slots, HOST_ID, MAX_PLAYERS)
 	var had: bool = _color_slots.has(id)
 	var slot: int = ColorSlots.assign_avoiding(_color_slots, id, MAX_PLAYERS, _slot_reservations.keys())
 	if not had and slot >= 0:

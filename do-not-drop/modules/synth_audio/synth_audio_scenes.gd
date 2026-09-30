@@ -38,7 +38,7 @@ static func make_doorbell_ding_dong() -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, DOORBELL_DING_DONG_STREAM_LOUDEST_DB, true)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, DOORBELL_DING_DONG_STREAM_LOUDEST_DB, true)
 	return stream
 
 
@@ -70,7 +70,7 @@ static func make_neighbor_cheer() -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, NEIGHBOR_CHEER_STREAM_LOUDEST_DB, true)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, NEIGHBOR_CHEER_STREAM_LOUDEST_DB, true)
 	return stream
 
 
@@ -110,7 +110,7 @@ static func make_comic_ruin_stinger() -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, RUIN_STINGER_STREAM_LOUDEST_DB, true)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, RUIN_STINGER_STREAM_LOUDEST_DB, true)
 	return stream
 
 
@@ -139,7 +139,7 @@ static func make_comic_boom() -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, COMIC_BOOM_STREAM_LOUDEST_DB, true)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, COMIC_BOOM_STREAM_LOUDEST_DB, true)
 	return stream
 
 
@@ -168,7 +168,7 @@ static func make_forklift_motor_loop() -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, FORKLIFT_MOTOR_STREAM_RMS_DB, false)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, FORKLIFT_MOTOR_STREAM_RMS_DB, false)
 	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	stream.loop_begin = 0
 	stream.loop_end = sample_count
@@ -212,7 +212,7 @@ static func make_river_flow_loop() -> AudioStreamWAV:
 			droplet = rng.randf_range(0.2, 0.5)
 		droplet *= 0.9
 		raw[i] = flow * 0.85 + droplet * rng.randf_range(-1.0, 1.0) * 0.15
-	return SynthAudio._loop(SynthAudio._normalized(SynthAudio._seamless_loop(raw, loop_count), RATE,
+	return SynthAudioDsp.loop(SynthAudioDsp.normalized(SynthAudioDsp.seamless_loop(raw, loop_count), RATE,
 			RIVER_FLOW_STREAM_RMS_DB), RATE, loop_count)
 
 
@@ -242,7 +242,7 @@ static func make_train_horn() -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, TRAIN_HORN_STREAM_LOUDEST_DB, true)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, TRAIN_HORN_STREAM_LOUDEST_DB, true)
 	return stream
 
 
@@ -275,7 +275,7 @@ static func make_train_chug_loop() -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, TRAIN_CHUG_STREAM_RMS_DB, false)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, TRAIN_CHUG_STREAM_RMS_DB, false)
 	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	stream.loop_begin = 0
 	stream.loop_end = sample_count
@@ -341,8 +341,8 @@ static func make_callout_voice(slot: int, count: int) -> AudioStreamWAV:
 		vowels.append(_VOWEL_FORMANTS[rng.randi_range(0, _VOWEL_FORMANTS.size() - 1)])
 		lifts.append(rng.randf_range(0.92, 1.1))
 	var phase: float = 0.0
-	var mouth_low := SynthAudio._Resonator.new()
-	var mouth_high := SynthAudio._Resonator.new()
+	var mouth_low := SynthAudioDsp.Resonator.new()
+	var mouth_high := SynthAudioDsp.Resonator.new()
 	for i: int in range(sample_count):
 		var t: float = float(i) / RATE
 		var s: int = mini(int(t / CALLOUT_SYLLABLE_SECONDS), count - 1)
@@ -369,5 +369,5 @@ static func make_callout_voice(slot: int, count: int) -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = RATE
-	stream.data = SynthAudio._normalized(mix, RATE, CALLOUT_VOICE_STREAM_LOUDEST_DB, true)
+	stream.data = SynthAudioDsp.normalized(mix, RATE, CALLOUT_VOICE_STREAM_LOUDEST_DB, true)
 	return stream
