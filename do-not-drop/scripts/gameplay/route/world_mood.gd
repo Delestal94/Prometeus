@@ -31,6 +31,15 @@ const WEATHER_ODDS := [[Weather.CLEAR, 45], [Weather.CLOUDY, 70], [Weather.RAIN,
 const TIME_ODDS := [[TimeOfDay.DAY, 60], [TimeOfDay.DUSK, 85], [TimeOfDay.NIGHT, 100]]
 const SEASON_NAMES := {Season.SUMMER: "verano", Season.AUTUMN: "otono"}
 const SEASON_ODDS := [[Season.SUMMER, 55], [Season.AUTUMN, 100]]
+## Night light (N-317). The level's ambient comes from the sky, and the night
+## sky is nearly black, so shadows came out 0,0,0 whatever the ambient colour
+## said: at night most of the ambient is this flat moonlit colour instead
+## (sky share 1 -> NIGHT_SKY_AMBIENT_SHARE). Scales of the level's ambient
+## and sun energy for the night and the moon (were 0.42 and 0.28).
+const NIGHT_AMBIENT := Color(0.4, 0.45, 0.58)
+const NIGHT_SKY_AMBIENT_SHARE: float = 0.4
+const NIGHT_AMBIENT_SCALE: float = 0.6
+const NIGHT_MOON_SCALE: float = 0.55
 
 ## What the rest of the game reads (headlights, rain, audio). Empty until a
 ## route has picked one.
@@ -175,8 +184,12 @@ func _apply_environment(environment: Environment) -> void:
 			ambient_energy *= 0.8
 		TimeOfDay.NIGHT:
 			fog = Color(0.05, 0.07, 0.1)
-			ambient = Color(0.32, 0.38, 0.55)
-			ambient_energy *= 0.42
+			# Moonlit, not pitch black: the road read as a black band with
+			# two white lines and every shadow as a hole (N-317). The sky
+			# stays dark; the ground and what stands on it read.
+			ambient = NIGHT_AMBIENT
+			ambient_energy *= NIGHT_AMBIENT_SCALE
+			environment.ambient_light_sky_contribution = NIGHT_SKY_AMBIENT_SHARE
 	match weather:
 		Weather.CLOUDY:
 			fog = fog.lerp(Color(0.5, 0.53, 0.54), 0.35)
@@ -205,7 +218,7 @@ func _apply_sun(sun: DirectionalLight3D) -> void:
 			# Moonlight: high, cold and faint, still casting soft shadows.
 			sun.rotation_degrees.x = -40.0
 			sun.light_color = Color(0.55, 0.66, 0.95)
-			energy *= 0.28
+			energy *= NIGHT_MOON_SCALE
 	match weather:
 		Weather.CLOUDY:
 			energy *= 0.55
@@ -266,4 +279,5 @@ func apply_ground(route_root: Node) -> void:
 				var terrain_material := (mesh as MeshInstance3D).material_override as ShaderMaterial
 				terrain_material.set_shader_parameter(&"wetness", wetness)
 				terrain_material.set_shader_parameter(&"autumn", 1.0 if season == Season.AUTUMN else 0.0)
+				terrain_material.set_shader_parameter(&"night_road", 1.0 if time_of_day == TimeOfDay.NIGHT else 0.0)
 				return

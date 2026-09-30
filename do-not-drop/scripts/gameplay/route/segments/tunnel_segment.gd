@@ -11,6 +11,9 @@ const PORTAL := Color("7d8784")
 ## Sodium-warm glow for the lenses and the light they throw.
 const LAMP_GLOW := Color("ff9326")
 const LAMP_LIGHT := Color("ffc07a")
+## Tunnel lamps: how far in the first and last hang, and their reach.
+const LAMP_INSET: float = 7.5
+const LAMP_RANGE: float = 9.5
 const MODELS: String = "res://assets/models/environment/route/"
 const BORE_MODEL: String = MODELS + "sm_env_route_tunnel_module.glb"
 const PORTAL_MODEL: String = MODELS + "sm_env_route_tunnel_portal.glb"
@@ -78,8 +81,13 @@ func _build() -> void:
 	lamp_material.emission_enabled = true
 	lamp_material.emission = LAMP_GLOW
 	lamp_material.emission_energy_multiplier = 1.3
+	# End lamps 7.5 m in and a 9.5 m reach (were 6 m and 11 m): no shadows,
+	# so the old range sphere spilled a lit disc through the mouth onto the
+	# road and the hill outside, cut off hard where the range ended -- the
+	# "spotlight edge" of the night captures (N-317). Now it dies out just
+	# inside the portal.
 	for index: int in range(4):
-		var z: float = -6.0 - float(index) * ((length - 12.0) / 3.0)
+		var z: float = -LAMP_INSET - float(index) * ((length - LAMP_INSET * 2.0) / 3.0)
 		# The fitting hangs from the vault's crown; its lens is the glowing strip.
 		var lamp: Node3D = _model("TunnelLamp", LAMP_MODEL, Vector3(0.0, HEIGHT - 0.02, z))
 		var lens := lamp.find_child("Lens", true, false) as MeshInstance3D if lamp != null else null
@@ -92,7 +100,7 @@ func _build() -> void:
 		light.name = "TunnelLight"
 		light.light_color = LAMP_LIGHT
 		light.light_energy = 3.4
-		light.spot_range = 11.0
+		light.spot_range = LAMP_RANGE
 		light.spot_angle = 80.0
 		light.spot_attenuation = 0.7
 		light.shadow_enabled = false

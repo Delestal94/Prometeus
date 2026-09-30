@@ -78,7 +78,7 @@ do-not-drop/tests/net_smoke.gd|max-line-length 1
 do-not-drop/tests/net_trio.gd|max-line-length 3
 do-not-drop/tests/render_house_waiting.gd|max-line-length 5
 do-not-drop/tests/render_player_character.gd|max-line-length 24
-do-not-drop/tests/render_route_dressing.gd|max-line-length 5
+do-not-drop/tests/render_route_dressing.gd|max-line-length 4
 do-not-drop/tests/render_terrain_review.gd|max-line-length 1
 do-not-drop/tests/render_world_features.gd|max-line-length 7
 do-not-drop/tests/test_acoustic_space.gd|max-line-length 5

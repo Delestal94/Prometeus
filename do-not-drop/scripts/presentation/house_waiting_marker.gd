@@ -168,8 +168,11 @@ func _build_porch_light() -> void:
 	porch_light = OmniLight3D.new()
 	porch_light.name = "PorchLight"
 	porch_light.light_color = LIGHT_COLOR
-	porch_light.light_energy = 2.2
-	porch_light.omni_range = 7.0
+	# A longer, steeper-then-flatter fall (was 2.2 / 7 m / 1.0): at 7 m the
+	# pool of light on the yard ended in a hard ring at night (N-317).
+	porch_light.light_energy = 3.0
+	porch_light.omni_range = 9.0
+	porch_light.omni_attenuation = 1.6
 	porch_light.shadow_enabled = false
 	porch_light.position = PORCH_LIGHT_AT + Vector3(0.0, -0.1, -0.25)
 	add_child(porch_light)

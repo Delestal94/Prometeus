@@ -23,6 +23,12 @@ uniform float wetness : hint_range(0.0, 1.0) = 0.0;
 // Season (world_mood.gd, N-305): 0 summer, 1 autumn. Dries the grass toward
 // straw, patchily, like LowpolyMaterials does for the grass models on it.
 uniform float autumn : hint_range(0.0, 1.0) = 0.0;
+// Night (world_mood.gd, N-317): 0 day, 1 night. Lifts the asphalt's grey so
+// under the moon the road reads as a pale band between darker verges instead
+// of a black strip with two white lines. 0 leaves day and dusk untouched.
+uniform float night_road : hint_range(0.0, 1.0) = 0.0;
+// How much lighter the asphalt gets at full night (x albedo).
+uniform float night_road_lift : hint_range(0.0, 2.0) = 0.4;
 
 float noise2(vec2 p) {
 	return sin(p.x * 1.17 + sin(p.y * 0.83)) * 0.5 + sin(p.y * 1.61 - p.x * 0.71) * 0.25;
@@ -43,7 +49,7 @@ void fragment() {
 	float gravel_mix = smoothstep(0.1, 0.9, UV.y);
 	float asphalt_grain = texture(asphalt_detail, p / asphalt_tile).r * detail_gain;
 	float gravel_grain = texture(gravel_detail, p / gravel_tile).r * detail_gain;
-	vec3 asphalt = mix(vec3(0.205, 0.244, 0.251) * asphalt_grain, vec3(0.48, 0.415, 0.30) * gravel_grain, gravel_mix);
+	vec3 asphalt = mix(vec3(0.205, 0.244, 0.251) * asphalt_grain * (1.0 + night_road * night_road_lift), vec3(0.48, 0.415, 0.30) * gravel_grain, gravel_mix);
 	asphalt += grain * 0.009;
 	vec3 earth = (vec3(0.46, 0.435, 0.325) + broad * 0.025 + grain * 0.012) * texture(earth_detail, p / earth_tile).r * detail_gain;
 	vec3 lawn = mix(vec3(0.285, 0.43, 0.205), vec3(0.41, 0.54, 0.27), broad * 0.5 + 0.5);

@@ -20,7 +20,10 @@
   `art/tools/make_detail_textures.py` (ComfyUI + Z-Image Turbo → pasa-altos → repetible sin
   costura → contraste normalizado). No cambian el color: lo multiplican. En los modelos los
   aplica `scripts/presentation/lowpoly_materials.gd` por nombre de material, con proyección
-  triplanar en espacio de mundo; en el terreno, `shaders/route_terrain.gdshader`.
+  triplanar en espacio de mundo; en el terreno, `shaders/route_terrain.gdshader` (de noche aclara
+  el asfalto con `night_road`, que pone `world_mood.gd`; N-317).
+- Luz de noche: se mide sobre las capturas de `tests/render_route_dressing.gd -- --mood=soleado_noche_verano
+  --seed=7` con `art/tools/measure_luminance.py` (calzada ≥ 0,12 de luminancia media; ver N-317).
 - Imágenes 2D: ComfyUI local + Z-Image Turbo con `art/tools/comfy_generate.py` (o el agente
   `artista-conceptual`). Estilo en `art/prompts/estilo-base.md`; cada imagen conservada se anota en
   `art/ai-registro.md` (declaración de IA de Steam).

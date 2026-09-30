@@ -10,7 +10,8 @@ extends SceneTree
 ##     road on either side), and the deck floats over the drop instead of
 ##     sinking into it; it also has its own flowing-water loop (positioned,
 ##     Exterior bus, playtest polish 2026-09-27);
-##   - a TunnelSegment has solid walls and roof, and light inside;
+##   - a TunnelSegment has solid walls and roof, and light inside that dies
+##     out at the mouths instead of spilling a hard-edged disc outside (N-317);
 ##   - a RailCrossingSegment that's due to close runs the whole cycle when the
 ##     truck comes up to it -- warning, arms down (and solid), train across
 ##     (with its own horn and chugging, playtest polish 2026-09-27), arms up --
@@ -116,6 +117,16 @@ func _run() -> void:
 			walls += 1
 	_expect(walls == 2 and tunnel.get_node_or_null(^"TunnelRoof") is StaticBody3D, "Two solid walls and a solid roof")
 	_expect(not tunnel.find_children("*", "SpotLight3D", true, false).is_empty(), "Lit inside")
+	# N-317: no shadows on these lamps, so whatever their range reaches past
+	# the mouths gets lit, cut off hard where the range ends. The road at each
+	# mouth has to be at the very rim of the nearest lamp's reach.
+	var closest_mouth: float = INF
+	for light: Node in tunnel.find_children("TunnelLight", "SpotLight3D", true, false):
+		var spot := light as SpotLight3D
+		for mouth_z: float in [0.0, -tunnel.length]:
+			closest_mouth = minf(closest_mouth, spot.position.distance_to(Vector3(0.0, 0.0, mouth_z)) / spot.spot_range)
+	_expect(closest_mouth >= 0.9,
+		"The tunnel lamps die out at the mouths, no lit disc outside (%.2f of their range)" % closest_mouth)
 	tunnel.free()
 
 	# Rail crossing: a truck stand-in coming up the road.
