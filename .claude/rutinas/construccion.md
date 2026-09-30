@@ -44,12 +44,12 @@ Saltá:
 - lo que necesita la PC (ComfyUI, Blender, generar imágenes, render con GPU real, FPS con ventana): si
   no dice "necesita PC", agregáselo en el mismo PR de tu tarea y seguí;
 - lo que ya tenga PR abierto o rama `origin/nacho/<ID>-*` (otra corrida la reclamó). Excepción: una
-  rama sin PR cuyo único commit propio es `chore: claim <ID>` y tiene más de 6 h
-  (`git log origin/main..origin/<rama> --format='%s %cr'`) es una corrida que se cayó: borrala
-  (`git push origin --delete <rama>`) y la tarea queda libre;
+  reserva abandonada (solo `chore: claim <ID>`, más de 2 h, sin PR) se retoma sobre la misma rama
+  según la regla 15 del README; nunca se borra;
 - personajes (modelo y apariencia): no hasta que el usuario lo pida (decisión del 2026-09-29). S-311
-  (personaje de gelatina, `tareas-slatex.md`) es de Slatex; sus ítems no se toman, y lo heredado que
-  choque con ella (cuerpo, ragdoll, accesorios, emotes) queda en pausa mientras siga abierta.
+  (personaje de gelatina, `tareas-slatex.md`) es de Slatex; sus ítems no se toman, y toda tarea N o S
+  que toque el cuerpo, el ragdoll, los clips o la apariencia del personaje (accesorios, emotes,
+  proporciones) queda en pausa mientras siga abierta, aunque no tenga ⏸ (decisión del 2026-09-30).
 
 Si una heredada todavía trae modelos de ChatGPT anotados (`Sol`, `Astra`, `Luna`), ignoralos: se
 trabaja con Opus 5.5 y los agentes de acá. Antes de empezar una tarea, verificá en el código que no esté ya hecha (a veces se hizo y no se marcó): si lo está, marcala con el hash que

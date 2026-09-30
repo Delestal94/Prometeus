@@ -6,8 +6,11 @@ de construcción toma primero. Reglas comunes y sesión: `.claude/rutinas/README
 ## 1. Recorrido
 
 1. `git switch --detach origin/main` y anotá el commit (`git rev-parse --short HEAD`).
-2. **`probador-qa`** con los 5 escenarios de su prompt. Clima del día: rotá según el día del mes
-   (`date +%d` módulo la cantidad de climas de `docs/qa-recorrido.md`) para cubrirlos todos en el mes.
+2. **`probador-qa`** con los 5 escenarios de su prompt. Corre dos veces por día (06:00 y 18:00 hora
+   Argentina). Clima de la corrida: índice `(2 × día del mes + (1 si es la de la tarde)) módulo` la
+   cantidad de climas de `docs/qa-recorrido.md`, así las dos del día prueban climas distintos. La de la
+   tarde, además, mira primero lo que se mezcló desde la de la mañana (`git log --since="12 hours ago"
+   --first-parent origin/main`) y le pide a `probador-qa` que apunte a esas áreas.
    Pasale la tabla "Hallazgos" actual de `docs/qa-recorrido.md` para que no repita los conocidos.
 3. Si reporta crecimiento de nodos o memoria en el endless, o avisos cada frame: **`perfilador-rendimiento`**
    con esos números, para ubicar la causa (sin arreglarla acá).
@@ -22,7 +25,7 @@ de construcción toma primero. Reglas comunes y sesión: `.claude/rutinas/README
 ## 2. Registrar
 
 - Sin hallazgos nuevos: terminá sin PR (regla 7 del README).
-- Con hallazgos: rama `rutina/qa-AAAA-MM-DD` desde `origin/main`.
+- Con hallazgos: rama `rutina/qa-AAAA-MM-DD-HH` (HH = hora de la corrida) desde `origin/main`.
   1. Filas nuevas en la tabla "Hallazgos" de `docs/qa-recorrido.md` (fecha, commit, escenario, qué pasó,
      causa si la hay). Hallazgos viejos que ya no aparecen: tachalos con la fecha.
   2. **`planificador-tareas`** con los hallazgos "bloquea" y "molesta": una tarea por bug, en la sección

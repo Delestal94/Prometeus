@@ -10,8 +10,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a PR's older run is stale. On main each commit gets its own group, so no run is cancelled
+  # or left pending behind another: every merged commit is tested whole.
+  group: tests-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GODOT_VERSION: 4.7.2

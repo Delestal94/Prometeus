@@ -7,8 +7,8 @@
 
 ## Concepto
 
-**Take My Package** (nombre oficial desde 2026-09-22; nombre de trabajo anterior: "Do Not Drop"): delivery cooperativo de hasta 5 jugadores. Uno
-conduce una camioneta, los demás (hasta 4) llevan un paquete cada uno. Cada paquete
+**Take My Package** (nombre oficial desde 2026-09-22; nombre de trabajo anterior: "Do Not Drop"): delivery cooperativo de hasta 8 jugadores. Uno
+conduce una camioneta, los demás (hasta 7) llevan un paquete cada uno. Cada paquete
 tiene una "trampa" — una regla individual que el pasajero debe manejar mientras el
 vehículo se mueve. El caos surge del cruce entre la conducción (afecta físicamente a
 todos los paquetes a la vez) y las reglas individuales de cada pasajero.

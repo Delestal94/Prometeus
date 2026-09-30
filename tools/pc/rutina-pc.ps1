@@ -12,7 +12,10 @@ param(
     [string]$Godot = 'D:\Descargas\Godot_v4.7.2-stable_win64_console.exe',
     [string]$ComfyMcp = 'D:\Programas\comfy-venv\Scripts\comfy-mcp.exe',
     [string]$ComfyBin = 'D:\Programas\comfy-venv\Scripts\comfy.exe',
-    [string]$Model = 'claude-opus-5-5'
+    [string]$Model = 'claude-opus-5-5',
+    # Internal: set when the script re-launches itself from the freshly checked-out clone.
+    [switch]$Fresh,
+    [string]$LogPath = ''
 )
 # Continue, not Stop: in 5.1 a native command's stderr becomes an error record; exit codes are checked by hand.
 $ErrorActionPreference = 'Continue'
@@ -20,7 +23,7 @@ $ErrorActionPreference = 'Continue'
 $state = Join-Path $env:LOCALAPPDATA 'prometeus-rutinas'
 $logs = Join-Path $state 'logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
-$log = Join-Path $logs ("{0}-{1}.log" -f $Rutina, (Get-Date -Format 'yyyyMMdd-HHmm'))
+$log = if ($LogPath) { $LogPath } else { Join-Path $logs ("{0}-{1}.log" -f $Rutina, (Get-Date -Format 'yyyyMMdd-HHmm')) }
 
 function Write-Log($msg) {
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $msg" | Out-File -FilePath $log -Append -Encoding utf8
@@ -59,10 +62,11 @@ Get-ChildItem $logs -Filter '*.log' | Sort-Object LastWriteTime -Descending |
     Select-Object -Skip 200 | Remove-Item -Force -ErrorAction SilentlyContinue
 
 # One PC routine at a time: they share the 8 GB GPU. The OS drops the lock if this process dies.
+# The re-launched copy (-Fresh) runs while its parent holds the lock.
 $lockPath = Join-Path $state 'rutina.lock'
 $lock = $null
 $deadline = (Get-Date).AddMinutes($LockWaitMinutes)
-while (-not $lock) {
+while (-not $lock -and -not $Fresh) {
     try {
         $lock = [System.IO.File]::Open($lockPath, 'OpenOrCreate', 'ReadWrite', 'None')
     } catch {
@@ -72,27 +76,38 @@ while (-not $lock) {
 }
 
 try {
-    if (-not (Test-Path (Join-Path $Clone '.git'))) {
-        Write-Log "cloning into $Clone"
-        git clone --quiet $Remote $Clone
-        if ($LASTEXITCODE -ne 0) { throw 'git clone failed' }
+    if (-not $Fresh) {
+        if (-not (Test-Path (Join-Path $Clone '.git'))) {
+            Write-Log "cloning into $Clone"
+            git clone --quiet $Remote $Clone
+            if ($LASTEXITCODE -ne 0) { throw 'git clone failed' }
+        }
+        Set-Location $Clone
+        git config user.name 'Nacho'
+        git config user.email 'delestal.miguelignacio@gmail.com'
+        git config core.hooksPath .githooks
+
+        git fetch --quiet --prune origin
+        if ($LASTEXITCODE -ne 0) { throw 'git fetch failed' }
+        # Hand brake: same file the cloud routines honour.
+        git cat-file -e origin/main:.claude/rutinas/PAUSA 2>$null
+        if ($LASTEXITCODE -eq 0) { Write-Log 'PAUSA on origin/main: skipped'; exit 0 }
+
+        # Start from a clean origin/main; ignored files (.godot import cache, builds/) survive.
+        git reset --quiet --hard
+        git clean -fdq
+        git switch --quiet --detach origin/main
+        if ($LASTEXITCODE -ne 0) { throw 'git switch failed' }
+
+        # This process runs whatever copy of the script the last routine left in the clone (a routine
+        # can leave it on an old branch: the 06:30 run of 2026-09-30 used a copy without the health
+        # issue). Hand over to the copy just checked out from origin/main.
+        $freshScript = Join-Path $Clone 'tools\pc\rutina-pc.ps1'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $freshScript -Rutina $Rutina -Fresh -LogPath $log `
+            -Clone $Clone -Remote $Remote -Blender $Blender -Godot $Godot -ComfyMcp $ComfyMcp -ComfyBin $ComfyBin -Model $Model
+        exit $LASTEXITCODE
     }
     Set-Location $Clone
-    git config user.name 'Nacho'
-    git config user.email 'delestal.miguelignacio@gmail.com'
-    git config core.hooksPath .githooks
-
-    git fetch --quiet --prune origin
-    if ($LASTEXITCODE -ne 0) { throw 'git fetch failed' }
-    # Hand brake: same file the cloud routines honour.
-    git cat-file -e origin/main:.claude/rutinas/PAUSA 2>$null
-    if ($LASTEXITCODE -eq 0) { Write-Log 'PAUSA on origin/main: skipped'; exit 0 }
-
-    # Start from a clean origin/main; ignored files (.godot import cache, builds/) survive.
-    git reset --quiet --hard
-    git clean -fdq
-    git switch --quiet --detach origin/main
-    if ($LASTEXITCODE -ne 0) { throw 'git switch failed' }
 
     if ($Rutina -eq 'arte') {
         $up = $false

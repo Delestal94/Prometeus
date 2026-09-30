@@ -25,7 +25,20 @@ no dependen de esa decisión y pueden hacerse ya. Hecho cuando un test con una e
 `team_money` sube, los mocks de `render_hud` y `render_store_shots` usan valores alcanzables y los tres docs
 dicen lo que hace el código.
 - [x] ~~**N-227.1** Test con una entrega real (no un diccionario inventado) que compruebe que `team_money` sube; arreglar los mocks de `render_hud.gd` y `render_store_shots.gd`. Con `constructor-progresion` y después `escritor-tests`; tests `crew_progression`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-227-payout-test`: `test_crew_progression.gd` corre una entrega real por `RunManager` (una casa + una caja intacta a bordo, 130 s) y exige que `team_money` suba lo que paga `award_delivery`; mocks de `render_hud.gd` y `render_store_shots.gd` con valores alcanzables (`time_bonus` 0, score = (carga + puerta) × 1.2). Quedan `time_bonus: 20` inalcanzables en `test_run_relay.gd:55` y `test_host_gone_tally.gd:135`: barrerlos con N-227.2.
-- [ ] **N-227.2** (bloqueada por la pregunta 2) Implementar la fórmula elegida y actualizar `cartas-y-eventos-de-ruta.md`, `economia-y-contramedidas.md` y `parametros-diseno.md`. Con `constructor-progresion`; tests `crew_progression`, `run_manager`.
+- [ ] **N-227.2** Implementar la fórmula decidida en `docs/decisiones/2026-09-30-preguntas-auditoria.md` (preguntas 2 y 3): billetera compartida; pago = `delivery_points` + `cargo_points`, sin multiplicador de caos; se borra el bono de tiempo (`PAR_SECONDS`, `time_bonus`, `lost_time_bonus`, la fila `HUD_SCORE_SPEED`) y "Cliente impaciente" acorta el plazo de la casa siguiente; reclamo por caja abollada determinista; precios de tienda ajustados para que una entrega completa promedio compre un ítem de precio medio. Barrer los `time_bonus: 20` de `test_run_relay.gd:55` y `test_host_gone_tally.gd:135`. Actualizar `cartas-y-eventos-de-ruta.md`, `economia-y-contramedidas.md` y `parametros-diseno.md` (incluida la fórmula real de Endless). Con `constructor-progresion`; tests `crew_progression`, `run_manager`, `route_event`.
+
+### N-228 · El tope es 8 jugadores en todos lados — B · `Opus 5.5 · low` · Aviso: no
+Origen: decisión del usuario 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 1). El
+código ya dice 8 (`network_manager.gd:27`). Los prompts de los agentes, `definicion-proyecto.md`,
+`requerimientos-tecnicos.md` y la descripción del repo ya se corrigieron el 2026-09-30.
+- [ ] **N-228.1** Barrer el resto de `docs/` (y `docs/marketing/`) buscando "5 jugadores", "cinco", "4 pasajeros", "hasta 4" y equivalentes en inglés, y corregirlos a 8 (1 conduce, hasta 7 cargan). Con `documentador`.
+- [ ] **N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.
+
+### N-229 · El jugador torpe vuelve a tener casi-pérdidas — C · `Opus 5.5 · medium` · Aviso: no
+Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 9).
+`tests/sim_data/balance_report.md:103` sigue en "REQUIERE AJUSTE": el objetivo de al menos una casi-pérdida
+por entrega para el perfil torpe se mantiene.
+- [ ] **N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.
 
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
@@ -161,7 +174,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-706, N-226, N-227, N-228, N-229 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
@@ -174,7 +187,7 @@ Pedido del usuario: arreglar todo lo que marcó la auditoría (`docs/auditorias/
 revisión humana de PRs ni agente revisor (no se quieren: la puerta son los checks obligatorios). Varias tocan
 archivos de Slatex: aviso en `colaboracion-equipo.md` en el mismo PR, como siempre.
 
-### N-705 · Puertas automáticas y repo limpio — A · `Opus 5.5 · medium` · Aviso: no
+### N-705 · Puertas automáticas y repo limpio — A · `Opus 5.5 · medium` · Aviso: no · **[x]**
 - [x] Lint obligatorio en la protección de `main` (el #39 entró en rojo) y `test_proximity_voice` en verde.
 - [x] Auto-merge solo para ramas del repo (nunca forks). PR #40. El agente revisor que sumaba se sacó
   en el #46: gastaba el cupo del plan en cada PR.
@@ -187,7 +200,7 @@ archivos de Slatex: aviso en `colaboracion-equipo.md` en el mismo PR, como siemp
   stash. Borrado el stash, `git gc` bajó el `.git` local de 475 a 194 MB. Nadie tiene que volver a clonar.
 - [x] El repo borra solo la rama de un PR al mezclarlo (`delete_branch_on_merge`).
 
-### N-117 · Una acción propia por trampa, en el mundo y no en la tarjeta — A · `Opus 5.5 · xhigh` · Aviso: sí (trampas, `player_seat_pose.gd`, `player_cargo_care.gd`, HUD de Slatex)
+### N-117 · Una acción propia por trampa, en el mundo y no en la tarjeta — A · `Opus 5.5 · xhigh` · Aviso: sí (trampas, `player_seat_pose.gd`, `player_cargo_care.gd`, HUD de Slatex) · **[x]**
 Hoy las 7 trampas son 3 acciones: Frágil no deja hacer nada ("Nothing the passenger does protects
 it"), Equilibrio/Ruidoso/Líquido/Hostil son el mismo botón mantenido (`player_seat_pose.gd:26`,
 `{"steady": holding, "calm": holding}`) y Explosivo/Peso creciente son flechas. El playtest del
@@ -1137,7 +1150,7 @@ Complementa la S-509 de Slatex sin esperarla.
   existe, sumar filas): tráfico en movimiento (#76/#77/#79 viejos), puente con prioridad de paso (#59), curva
   peraltada (#65), motion blur (#14), rotonda (#60). Cualquier idea nueva va a "Después del lanzamiento".
 
-### N-702 · Esta lista como tablero — A · `Opus 5.5 · low` · Aviso: no
+### N-702 · Esta lista como tablero — A · `Opus 5.5 · low` · Aviso: no · **[x]**
 
 Tarea permanente: no se cierra, se cumple en cada tanda.
 
@@ -1777,7 +1790,7 @@ Dentro de un hito, el orden de la tabla es el recomendado.
 
 ### 1. Game Design
 
-#### S-101 · Terminar los eventos de ruta (hoy se anuncian y nunca se resuelven) — A · `Opus 5.5 · xhigh` · Aviso: sí (`run_manager.gd`)
+#### S-101 · Terminar los eventos de ruta (hoy se anuncian y nunca se resuelven) — A · `Opus 5.5 · xhigh` · Aviso: sí (`run_manager.gd`) · **[x]**
 
 **Problema real**: `RunManager.start_run()` llama `RouteEventManager.begin_random()` y el
 HUD muestra el banner, pero **nadie llama nunca `resolve_active()`**. El evento queda activo
@@ -1839,7 +1852,7 @@ compartida), `scripts/gameplay/package/package.gd`, `scripts/gameplay/package/pa
 **Hecho cuando**: una partida con el nivel de entrega sortea un evento, lo muestra con cuenta
 regresiva, y termina resuelto o vencido en todos los casos; tests verdes.
 
-#### S-102 · Mérito individual por acciones reales — A · `Opus 5.5 · xhigh` · Aviso: sí (`run_manager.gd`)
+#### S-102 · Mérito individual por acciones reales — A · `Opus 5.5 · xhigh` · Aviso: sí (`run_manager.gd`) · **[x]**
 
 **Problema real**: `CrewProgression.award_action()` solo lo llama el evento de ruta (que nunca se
 resuelve, S-101). Hoy nadie gana mérito nunca, y `merit_changed` se emite en local, así que un
@@ -1871,7 +1884,7 @@ trampas en `scripts/gameplay/traps/`, `scripts/ui/prototype_hud.gd`.
 **Hecho cuando**: jugando solo, desactivar un explosivo muestra "Mérito +25" y el total aparece en
 resultados (S-508).
 
-#### S-103 · Cartas: dejar solo las que se pueden usar y hacerlas usables — A · `Opus 5.5 · xhigh` · Aviso: sí (`project.godot`, acción nueva)
+#### S-103 · Cartas: dejar solo las que se pueden usar y hacerlas usables — A · `Opus 5.5 · xhigh` · Aviso: sí (`project.godot`, acción nueva) · **[x]**
 
 **Problema real**: `_grant_card_chance()` reparte cartas, el HUD dice "Carta obtenida", y no hay
 ninguna forma de usarlas. Prioridad e Información dependen de una tienda en ruta que no existe.
@@ -1894,7 +1907,7 @@ conservan para no romper nada guardado).
 - [x] **S-103.6 Test** (commit `955e585`) `tests/test_cards.gd`: nunca sale Prioridad ni Información; Rescate resuelve el
   evento activo y se consume; sin evento no se consume.
 
-#### S-104 · Votación de suministros en el depósito — A · `Opus 5.5 · xhigh` · Aviso: no
+#### S-104 · Votación de suministros en el depósito — A · `Opus 5.5 · xhigh` · Aviso: no · **[x]**
 
 **Problema real**: `ShopVoteManager` está completo pero `open_shop()` no se llama nunca. En el
 mostrador de suministros compra el que llega primero.
@@ -1917,7 +1930,7 @@ tocar `depot.gd`**: la compra final se sigue haciendo con `depot.buy_supply(id)`
   instanciados sin red, como `test_shop_vote_manager.gd`): gana la mayoría, empate a la más barata,
   el dinero se descuenta una sola vez.
 
-#### S-105 · Guardar la campaña cooperativa — A · `Opus 5.5 · high` · Aviso: no
+#### S-105 · Guardar la campaña cooperativa — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 **Problema real**: el dinero, las cartas y el mérito viven en memoria: al cerrar el juego se
 pierden y la economía no significa nada entre sesiones.
@@ -1932,7 +1945,7 @@ pierden y la economía no significa nada entre sesiones.
 - [x] **S-105.5 Test** (commit `c694bdf`) `tests/test_crew_campaign_save.gd`: guarda, recarga, conserva; archivo corrupto
   no rompe y arranca con $100.
 
-#### S-106 · Introducción gradual de trampas desde el perfil — A · `Opus 5.5 · high` · Aviso: no
+#### S-106 · Introducción gradual de trampas desde el perfil — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 `docs/economia-y-contramedidas.md` dice que las primeras entregas presentan solo Frágil y
 Equilibrio. Hoy las 4 básicas salen desde la primera partida.
@@ -1948,7 +1961,7 @@ Equilibrio. Hoy las 4 básicas salen desde la primera partida.
   dificultad que falte. Test en `test_locked_traps.gd`.
 - [x] **S-106.4** (commit `2a2ad10`) Actualizar `docs/plan-desarrollo.md` Fase 5 con la curva nueva.
 
-#### S-107 · Reglas de dificultad para armar el pedido — B · `Opus 5.5 · high` · Aviso: sí (una línea en `depot.gd`)
+#### S-107 · Reglas de dificultad para armar el pedido — B · `Opus 5.5 · high` · Aviso: sí (una línea en `depot.gd`) · **[x]**
 
 Pendiente de `docs/controles-y-ui.md` ("la selección semi-aleatoria y sus reglas de balance
 siguen pendientes").
@@ -1991,7 +2004,7 @@ pide de los números.
 **Hecho**: el reporte muestra las 6 trampas interactivas dentro de los objetivos y documenta
 `Frágil` como excepción dependiente del conductor (sus perfiles son idénticos porque no consume input).
 
-#### S-109 · Algo que hacer cuando tu paquete ya se arruinó — A · `Opus 5.5 · xhigh` · Aviso: no
+#### S-109 · Algo que hacer cuando tu paquete ya se arruinó — A · `Opus 5.5 · xhigh` · Aviso: no · **[x]**
 
 `docs/critica-diseno-abogado-del-diablo.md` §6: quien pierde su caja pasa el resto del viaje sin
 hacer nada. El modo espectador ayuda a mirar, no a jugar.
@@ -2007,7 +2020,7 @@ hacer nada. El modo espectador ayuda a mirar, no a jugar.
 - [x] (commit `251b082`) **S-109.4** Test `tests/test_assist.gd`: dos peers simulados atienden la misma caja; la corrección
   combinada es la esperada; un tercer peer es ignorado.
 
-#### S-110 · Medir cuánto dura una entrega (regla de oro de 2-5 min) — B · `Opus 5.5 · high` · Aviso: no (solo informa a Nacho)
+#### S-110 · Medir cuánto dura una entrega (regla de oro de 2-5 min) — B · `Opus 5.5 · high` · Aviso: no (solo informa a Nacho) · **[x]**
 
 - [x] (commit `35787d6`) **S-110.1** `tests/bench_delivery_time.gd`: con el conductor automático de S-108.1 y un bot que
   baja, camina y toca el timbre, medir el tiempo total de una entrega con 1, 2, 3 y 4 casas, a
@@ -2016,7 +2029,7 @@ hacer nada. El modo espectador ayuda a mirar, no a jugar.
   a Nacho en `colaboracion-equipo.md` con los números. Ajustar el largo de la ruta es de Nacho: esta
   tarea termina al entregar la medición, no espera su respuesta.
 
-#### S-111 · Congelado breve al arruinarse una caja (el "slow-mo" pendiente) — C · `Opus 5.5 · high` · Aviso: no
+#### S-111 · Congelado breve al arruinarse una caja (el "slow-mo" pendiente) — C · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 `requerimientos-tecnicos.md` §3.4 lo deja pendiente porque `Engine.time_scale` rompe la física
 del host. Hacerlo **solo visual y local**:
@@ -2028,7 +2041,7 @@ del host. Hacerlo **solo visual y local**:
 
 ---
 
-#### S-112 · Rescate de carga (`docs/jugabilidad-paquetes-rescate.md`) — A · Aviso: sí (`run_manager.gd`, `event_bus.gd`)
+#### S-112 · Rescate de carga (`docs/jugabilidad-paquetes-rescate.md`) — A · Aviso: sí (`run_manager.gd`, `event_bus.gd`) · **[x]**
 
 **Hecho por Nacho (2026-09-27, pedido del usuario), corte vertical 1:**
 - [x] Estado de cuidado en el host (`package_care.gd`) separado de la barra de la trampa: rescate de
@@ -2055,7 +2068,7 @@ cifras de plazos con `bench_route_duration` cuando se juegue.
 
 ### 2. Programación y arquitectura técnica
 
-#### S-201 · Partir `prototype_hud.gd` (1176 líneas) en componentes — A · `Opus 5.5 · xhigh` · Aviso: no
+#### S-201 · Partir `prototype_hud.gd` (1176 líneas) en componentes — A · `Opus 5.5 · xhigh` · Aviso: no · **[x]**
 
 Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archivo.
 
@@ -2069,7 +2082,7 @@ Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archiv
   en cada uno (`tools/run-tests.sh hud score spectator ping`).
 - [x] (commit `f70b064`) **S-201.4** Captura con `tests/render_hud.gd` antes y después: tienen que verse iguales.
 
-#### S-202 · Partir `player.gd` (1131 líneas) — B · `Opus 5.5 · xhigh` · Aviso: no
+#### S-202 · Partir `player.gd` (1131 líneas) — B · `Opus 5.5 · xhigh` · Aviso: no · **[x]**
 
 - [x] (commits `bb4a862`, `f168819`, `42d5aa2`) Separar en nodos hijos con script propio: `player_interaction.gd` (alcance, avisos, E),
   `player_carry.gd` (caja en mano), `player_seat_pose.gd` (pose sentado, manos que atienden).
@@ -2077,7 +2090,7 @@ Antes de sumar todo lo de UX (pilar 5), porque cada tarea de UI toca este archiv
   se mueven, se rompe la red). Esas funciones solo delegan.
 - [x] (commits `bb4a862`, `f168819`, `42d5aa2`) Tests verdes: `interaction`, `seat`, `carry`, `player`, `driver` y `look`.
 
-#### S-203 · Detectar camión atascado también en el modo entrega — A · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`)
+#### S-203 · Detectar camión atascado también en el modo entrega — A · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`) · **[x]**
 
 Nacho encontró (su #97) que el camión puede quedar encajado sin volcar ni salir de la ruta;
 `level_endless.gd` ya lo detecta, `level_base.gd` no.
@@ -2088,7 +2101,7 @@ Nacho encontró (su #97) que el camión puede quedar encajado sin volcar ni sali
 - [x] (commit `204cfdc`) Test en `test_stuck_detection.gd`: parado en depósito, casa o sin conductor no dispara;
   encajado contra un obstáculo con el acelerador pedido sí.
 
-#### S-204 · Test automático de dos procesos (reemplaza "requiere playtest de red") — A · `Opus 5.5 · xhigh` · Aviso: no
+#### S-204 · Test automático de dos procesos (reemplaza "requiere playtest de red") — A · `Opus 5.5 · xhigh` · Aviso: no · **[x]**
 
 Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores con el mismo objeto).
 
@@ -2116,7 +2129,7 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 - [ ] ⏸ Pose de manos al sostener: no existe hoy y tocaría el cuerpo (en pausa mientras siga abierta
   S-311). Cuando se haga, que lea `PlayerHoldFeedback.holding`.
 
-#### S-206 · Errores de conexión que un jugador entienda — A · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`)
+#### S-206 · Errores de conexión que un jugador entienda — A · `Opus 5.5 · high` · Aviso: sí (`network_manager.gd`) · **[x]**
 
 - [x] (commit `03bd4e1`) **S-206.1** `NetworkManager.PROTOCOL_VERSION := 1` y enviarla en el handshake. Si no coincide, el
   host rechaza con motivo `version`. (El handshake ya cambió dos veces y hoy un cliente viejo solo ve un
@@ -2126,7 +2139,7 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
   revisá la IP y que el firewall de Windows permita Take My Package (ver README)", "La sala está llena".
 - [x] (commit `03bd4e1`) **S-206.3** Test `tests/test_connection_errors.gd`: cada motivo muestra su texto.
 
-#### S-207 · Unirse por código corto en LAN — C · `Opus 5.5 · high` · Aviso: sí (`main_menu.gd`, `hud.gd`)
+#### S-207 · Unirse por código corto en LAN — C · `Opus 5.5 · high` · Aviso: sí (`main_menu.gd`, `hud.gd`) · **[x]**
 
 - [x] (rama `nacho/S-207-room-code`) `scripts/ui/room_code.gd` (estático, `RoomCode`): IPv4 + puerto ↔ código sin O/0/I/1.
   Decisión: el puerto por defecto es implícito (8 caracteres, `K7QM-4TXA`); otro puerto suma 4 (12). Último
@@ -2135,7 +2148,7 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 - [x] (rama `nacho/S-207-room-code`) Test `tests/test_room_code.gd`: ida y vuelta para 1000 direcciones, todo símbolo mal
   tipeado rechazado con mensaje, menú y HUD.
 
-#### S-208 · Rendimiento del jugador, paquetes y UI — B · `Opus 5.5 · high` · Aviso: no
+#### S-208 · Rendimiento del jugador, paquetes y UI — B · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] (rama `nacho/S-208-depot-bench`) `tests/bench_depot.gd`: depósito con 14 cajas y 5 jugadores simulados, 600 frames; medir
   `Performance.TIME_PROCESS` y el tiempo de `package_feedback.gd` y del HUD. `TIME_PROCESS` se imprime pero
@@ -2147,14 +2160,14 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
   cada frame (~76 µs), no vale el caché. Aviso `docs/avisos/2026-09-30-s208-depot-bench.md`.
 - [x] (rama `nacho/S-208-depot-bench`) Resultado anotado en el README → Rendimiento.
 
-#### S-209 · Jugador que se desconecta en medio de la partida — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`)
+#### S-209 · Jugador que se desconecta en medio de la partida — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.gd`) · **[x]**
 
 - [x] (commits `c77194f`, `d20df06`) Cuando un peer se va: su caja en mano queda en el piso donde estaba; si estaba sentado, el
   asiento se libera; si conducía, el camión frena solo; su casa asignada sigue esperando.
 - [x] (commit `5dd2771`) Probarlo con `tests/net_pair.gd` (S-204): el cliente se cierra con caja en mano y el host sigue sin
   errores.
 
-#### S-210 · Guardados que no se corrompen — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd` para el leaderboard)
+#### S-210 · Guardados que no se corrompen — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd` para el leaderboard) · **[x]**
 
 - [x] (commit `c694bdf`) Función común `scripts/core/safe_json.gd`: escribe en `<archivo>.tmp` y renombra
   (`DirAccess.rename`), así un corte de luz no deja el archivo a medias; al leer, si el JSON es
@@ -2166,7 +2179,7 @@ Cierra lo que quedaba de #79 (cosméticos en dos clientes) y #96 (dos jugadores 
 
 ### 3. Arte y dirección visual
 
-#### S-301 · Íconos de Líquido, Explosivo y Hostil — A · `Opus 5.5 · medium` para el prompt, generación de imagen aparte · Aviso: no
+#### S-301 · Íconos de Líquido, Explosivo y Hostil — A · `Opus 5.5 · medium` para el prompt, generación de imagen aparte · Aviso: no · **[x]**
 
 El HUD ya tiene un ícono transparente propio para cada una de las 7 trampas
 (`assets/ui/icons/tx_ui_trap_*_256.png`).
@@ -2181,7 +2194,7 @@ El HUD ya tiene un ícono transparente propio para cada una de las 7 trampas
 - [x] (commit `81ee0e3`) Test `tests/test_trap_icons.gd`: cada `data/traps/*.tres` tiene ícono propio (ninguno cae en el
   genérico).
 
-#### S-302 · Contenidos propios para cada trampa — B · `Opus 5.5 · high` (Blender Python) · Aviso: no
+#### S-302 · Contenidos propios para cada trampa — B · `Opus 5.5 · high` (Blender Python) · Aviso: no · **[x]**
 
 Las siete trampas ya tienen contenidos propios: diez modelos en total, con una segunda opción para
 Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
@@ -2196,7 +2209,7 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
   contenidos quedan dentro de sus cajas).
 - [x] (commit `bc24f07`) `test_package_unboxing.gd` ampliado: cada contenido tiene los 4 nodos.
 
-#### S-303 · Íconos de acción del HUD — B · generación de imagen + `Opus 5.5 · high` para integrar · Aviso: no
+#### S-303 · Íconos de acción del HUD — B · generación de imagen + `Opus 5.5 · high` para integrar · Aviso: no · **[x]**
 
 - [x] (commit `d14cc56`) Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja, usar carta. 128×128, mismo
   estilo que los de trampa. `assets/ui/icons/tx_ui_action_<acción>_128.png`.
@@ -2219,7 +2232,7 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
 - [ ] Desbloqueos en `UnlockManager.COSMETICS` y columna nueva en `cosmetics_panel.gd`; replicar
   `accessory_id` como `cosmetic_id`.
 
-#### S-306 · Logo como imagen — B · generación de imagen + `Opus 5.5 · medium` · Aviso: no
+#### S-306 · Logo como imagen — B · generación de imagen + `Opus 5.5 · medium` · Aviso: no · **[x]**
 
 - [x] (commit `004bb8b`) Wordmark "TAKE MY PACKAGE" en PNG transparente 2048 px de ancho, a partir de `UiTheme.logo()`
   (Lilita One + cinta amarilla), más una versión apilada cuadrada. `assets/ui/logo/`.
@@ -2237,7 +2250,7 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
   poses nuevas en `art/rounded_character/build_game_export.py` (ver `assets/README.md`,
   "Personajes"). Las dispara la rueda de pings (S-505).
 
-#### S-309 · Mantener al día la dirección visual del dominio — A · `Opus 5.5 · medium` · Aviso: sí (`especificaciones-visuales.md`, filas propias)
+#### S-309 · Mantener al día la dirección visual del dominio — A · `Opus 5.5 · medium` · Aviso: sí (`especificaciones-visuales.md`, filas propias) · **[x]**
 
 - [x] (commit `3480986`) Actualizar filas de jugador/paquetes/UI en `docs/especificaciones-visuales.md` y
   `docs/inventario-assets.md` §1-3 cada vez que se cierra una tarea de este pilar (antes #99).
@@ -2256,7 +2269,7 @@ Hoy toda caja arruinada tira el mismo confeti de cubitos.
 
 ### 4. Audio y diseño sonoro
 
-#### S-401 · Sonidos de interfaz — A · `Opus 5.5 · high` · Aviso: no
+#### S-401 · Sonidos de interfaz — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] (commit `60c4dc4`) `scripts/ui/ui_sounds.gd` (autocontenido, **sin tocar `synth_audio.gd`**, que es zona
   compartida): pasar el mouse, clic, abrir y cerrar panel, toast, desbloqueo, voto, error. Sintetizados
@@ -2280,7 +2293,7 @@ lugar, balbuceo sintetizado estilo Animal Crossing, con tono propio por color de
 - [x] (commit `180765c`) Frases musicales cortas sintetizadas (2-4 s): entrega perfecta, entrega con pérdidas, récord,
   desbloqueo, evento resuelto, evento fallido. Por el bus `Music`. En `ui_sounds.gd`.
 
-#### S-404 · Mezcla medida de los sonidos de trampa — A · `Opus 5.5 · high` · Aviso: no
+#### S-404 · Mezcla medida de los sonidos de trampa — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 Balance de volumen sin depender del oído (Nacho dejó registrado en su #83 que editar valores a ciegas
 no sirve).
@@ -2294,7 +2307,7 @@ no sirve).
 
 ### 5. UI / UX
 
-#### S-501 · HUD con jerarquía: una cosa urgente a la vez — A · `Opus 5.5 · xhigh` (después de S-201) · Aviso: no
+#### S-501 · HUD con jerarquía: una cosa urgente a la vez — A · `Opus 5.5 · xhigh` (después de S-201) · Aviso: no · **[x]**
 
 Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 
@@ -2309,7 +2322,7 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 - [x] **S-501.5** Test en `test_hud_flow.gd`: con evento + aviso + toast a la vez, cada uno en su zona y
   ninguno tapado. Captura antes/después con `render_hud.gd`.
 
-#### S-502 · Accesibilidad: daltonismo, texto y efectos — A · `Opus 5.5 · high` · Aviso: no
+#### S-502 · Accesibilidad: daltonismo, texto y efectos — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] Estados de caja con forma además de color: OK ✓, En riesgo ! (con pulso), Arruinada ✕, en las filas
   de carga y sobre la caja.
@@ -2320,12 +2333,12 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
   zona de contexto, para los sonidos de trampa en riesgo.
 - [x] Todas persistidas en `GameSettings`; `test_settings.gd` ampliado.
 
-#### S-503 · Tipografía legible a distancia de sillón — C · `Opus 5.5 · medium` · Aviso: no
+#### S-503 · Tipografía legible a distancia de sillón — C · `Opus 5.5 · medium` · Aviso: no · **[x]**
 
 - [x] (commit `10218d0`) Revisar que ningún texto del HUD al 60 % de escala quede por debajo de 14 px efectivos a 1080p;
   subir los que no cumplan. Tabla de tamaños en `docs/direccion-visual.md` §3.
 
-#### S-504 · Todo el menú con gamepad — A · `Opus 5.5 · high` · Aviso: no
+#### S-504 · Todo el menú con gamepad — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] (commit `67cf588`) Cada panel (`options`, `progress`, `tutorial`, `cosmetics`, `leaderboard`, `depot_panel`, pausa y
   resultados) da foco a su primer botón al abrir y devuelve el foco al botón que lo abrió al cerrar.
@@ -2333,7 +2346,7 @@ Resuelve `critica-diseno-abogado-del-diablo.md` §5.
 - [x] (commit `67cf588`) B / Círculo cierra cualquier panel (hoy lo hacen algunos).
 - [x] (commit `67cf588`) Test `tests/test_gamepad_focus.gd`: al abrir cada panel hay un `Control` con foco.
 
-#### S-505 · Rueda de pings — B · `Opus 5.5 · xhigh` · Aviso: no
+#### S-505 · Rueda de pings — B · `Opus 5.5 · xhigh` · Aviso: no · **[x]**
 
 Hoy hay un único ping "¡Cuidado!" (`player.gd` `_send_ping`).
 
@@ -2344,7 +2357,7 @@ Hoy hay un único ping "¡Cuidado!" (`player.gd` `_send_ping`).
   voz (S-402) si existen.
 - [x] (commit `638b9a4`) Test en `test_ping.gd`: cada opción llega con su etiqueta.
 
-#### S-506 · Onboarding: tutorial en fichas y consejos de primera vez — A · `Opus 5.5 · high`, textos con `Opus 5.5 · medium` · Aviso: no
+#### S-506 · Onboarding: tutorial en fichas y consejos de primera vez — A · `Opus 5.5 · high`, textos con `Opus 5.5 · medium` · Aviso: no · **[x]**
 
 La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo párrafo largo.
 
@@ -2359,7 +2372,7 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
   resaltado.
 - [x] **S-506.4** (commit `cffdbfc`) Test: cada trampa tiene su ficha; un consejo visto no vuelve a salir.
 
-#### S-507 · Panel de tripulación en el depósito — B · `Opus 5.5 · high` · Aviso: sí (`hud.gd`, `hud_pause.gd`, `hud_prompts.gd`, `project.godot`)
+#### S-507 · Panel de tripulación en el depósito — B · `Opus 5.5 · high` · Aviso: sí (`hud.gd`, `hud_pause.gd`, `hud_prompts.gd`, `project.godot`) · **[x]**
 
 - [x] (rama `nacho/S-507-crew-panel`) Con Tab (Back en gamepad) mantenido en el depósito: `scripts/ui/hud/crew_panel.gd` lista a los
   conectados con el color de su uniforme y su nombre, quién está al volante y quién tiene caja (ícono + texto, no solo
@@ -2369,7 +2382,7 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
 - [x] (rama `nacho/S-507-crew-panel`) Para el anfitrión LAN: código de sala (`RoomCode`) e IP; en Steam "invitá desde la lista de amigos";
   el cliente ve por qué no hay código. Test `tests/test_crew_panel.gd`. Aviso: `docs/avisos/2026-09-30-s507-crew-panel.md`.
 
-#### S-508 · Pantalla de resultados completa — A · `Opus 5.5 · high` · Aviso: no
+#### S-508 · Pantalla de resultados completa — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] (commit `909a662`) Una fila por casa con ícono de la trampa, resultado y si tuvo foto.
 - [x] (commit `909a662`) Premios de la entrega a partir del mérito (S-102): "MVP" (más mérito), "Rescatista", "Desactivador",
@@ -2378,7 +2391,7 @@ La decisión de pantalla estática sigue (sin mini-nivel), pero hoy es un solo p
 - [x] (commit `909a662`) Evento de ruta de la partida y cómo terminó.
 - [x] (commit `909a662`) Test en `test_score_breakdown.gd` / `test_hud_flow.gd`.
 
-#### S-509 · Idioma inglés — A (para lanzar) · `Opus 5.5 · high` para extraer, `Opus 5.5 · medium` para traducir · Aviso: sí (`project.godot`)
+#### S-509 · Idioma inglés — A (para lanzar) · `Opus 5.5 · high` para extraer, `Opus 5.5 · medium` para traducir · Aviso: sí (`project.godot`) · **[x]**
 
 Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 
@@ -2394,7 +2407,7 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 - [x] (commit `8d66f72`) Los textos de archivos de Nacho (casas, depósito) los extrae él: dejar el aviso con la lista de
   archivos y la convención de claves. No es bloqueante para esta tarea.
 
-#### S-510 · Progreso y récords que se entiendan — B · `Opus 5.5 · high` · Aviso: no
+#### S-510 · Progreso y récords que se entiendan — B · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] (commit `c2dad6d`) `progress_panel.gd`: barra por desbloqueo (entregas y puntos por separado), ícono del contenido y
   qué da ("Nueva trampa: Explosivo").
@@ -2450,7 +2463,7 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
   route_events host_gone phone_camera connection_errors`. Sin capturar: recomiendo captura de la pantalla de resultados
   con `revisor-visual`. Queda abierto: la burbuja de la puerta (`REACTION_LINES`) sigue con frases genéricas.
 
-#### S-605 · Textos de trampas y eventos con tono — C · `Opus 5.5 · medium` · Aviso: no
+#### S-605 · Textos de trampas y eventos con tono — C · `Opus 5.5 · medium` · Aviso: no · **[x]**
 
 - [x] Reescribir `get_hint()` de las 7 trampas y los `prompt` de los eventos de ruta con el tono de
   S-601, máximo 6 palabras por aviso (se leen manejando). Hecho el 2026-09-30: 24 textos `HUD_HINT_*` y 10 de
@@ -2468,7 +2481,7 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
   pensado, partirla acá en subtareas antes de seguir.
 - [ ] Una vez por semana, actualizar "Última actualización" y mover a "Hecho" lo cerrado del hito.
 
-#### S-702 · Qué queda fuera del MVP (control de alcance) — A · `Opus 5.5 · medium` · Aviso: no
+#### S-702 · Qué queda fuera del MVP (control de alcance) — A · `Opus 5.5 · medium` · Aviso: no · **[x]**
 
 - [x] (commit `dbe3e48`) Sección nueva en `docs/plan-desarrollo.md` con la lista cerrada de lo que **no** se hace antes de
   Early Access: chat de voz propio, matchmaking público, cartas Prioridad e Información, tienda en ruta,
@@ -2484,7 +2497,7 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 
 ### 8. QA (sin playtesting)
 
-#### S-801 · Recorrido técnico de 10 minutos antes de cada push grande — A · — · Aviso: no
+#### S-801 · Recorrido técnico de 10 minutos antes de cada push grande — A · — · Aviso: no · **[x]**
 
 Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
@@ -2492,7 +2505,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   completa (agarrar, montar, manejar, bajar, timbre, foto), pausa, volver al menú, Endless 2 minutos,
   cerrar. Anotar cualquier error de la consola de Godot.
 
-#### S-802 · Tests de contrato para todo lo que se agrega por datos — A · `Opus 5.5 · high` · Aviso: no
+#### S-802 · Tests de contrato para todo lo que se agrega por datos — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] (commit `7abb1a3`) `tests/test_trap_contract.gd`: recorre `data/traps/*.tres` y verifica para cada una: crea su
   comportamiento, la integridad queda en [0, max] con input vacío y con input aleatorio durante 30 s
@@ -2500,7 +2513,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   un desbloqueo o está en el set inicial. Una trampa nueva que no cumpla falla este test.
 - [x] (commit `7abb1a3`) Mismo criterio para `data/contents/*.tres` (nodos `Filler`/`Intact`/`Damage`/`Ruined`).
 
-#### S-803 · Bot de caos — B · `Opus 5.5 · xhigh` · Aviso: no
+#### S-803 · Bot de caos — B · `Opus 5.5 · xhigh` · Aviso: no · **[x]**
 
 - [x] `tests/test_chaos_bot.gd`: un jugador bot hace acciones al azar (con semilla fija) durante 5 minutos
   simulados en el nivel de entrega: agarrar, soltar, abrir, montar, sentarse, pararse, pingear, sacar foto.
@@ -2509,13 +2522,13 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   `time_scale` (solo `time_scale` alarga el paso, no acelera); errores capturados con un `Logger`. No entra en
   los 20 s de S-806. Rama `nacho/S-803-chaos-bot`.
 
-#### S-804 · Nada anunciado queda colgado — A · `Opus 5.5 · high` · Aviso: no
+#### S-804 · Nada anunciado queda colgado — A · `Opus 5.5 · high` · Aviso: no · **[x]**
 
 - [x] (commit `6175d6e`) Test `tests/test_no_dangling_state.gd`: al terminar una partida, `RouteEventManager` no tiene evento
   activo, `ShopVoteManager.active` es falso fuera del depósito, ninguna caja queda con `occupied_by` de un
   jugador que ya no existe. Es el test que hubiera detectado S-101.
 
-#### S-805 · Telemetría local para cuando haya playtesting — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd`, `options_panel.gd`, `project.godot`)
+#### S-805 · Telemetría local para cuando haya playtesting — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd`, `options_panel.gd`, `project.godot`) · **[x]**
 
 - [x] Opción "Guardar registro de partidas" (apagada por defecto). Si está activa, al terminar cada partida
   escribe `user://telemetry/<fecha>.json` con: duración, trampas del pedido, tiempo en riesgo por trampa,
@@ -2566,7 +2579,7 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 - [ ] `docs/marketing/presskit.md`: ficha (nombre, equipo, plataforma, precio objetivo $8-15, fecha
   tentativa de Early Access), descripción, características, logo, capturas (S-902), contacto.
 
-#### S-905 · Cómo enseñan los competidores — B · `Opus 5.5 · medium` con búsqueda web · Aviso: no
+#### S-905 · Cómo enseñan los competidores — B · `Opus 5.5 · medium` con búsqueda web · Aviso: no · **[x]**
 
 - [x] Una página (`docs/marketing/onboarding-competidores.md`) comparando cómo PEAK, Lethal Company y
   Totally Reliable Delivery Service enseñan sus controles y sus reglas en los primeros 5 minutos, y qué

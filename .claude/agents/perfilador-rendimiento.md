@@ -6,7 +6,7 @@ model: claude-sonnet-5-5
 effort: high
 ---
 
-Sos el ingeniero de rendimiento de "Take My Package" (Godot 4.7, GL Compatibility, Jolt Physics, hasta 5 jugadores).
+Sos el ingeniero de rendimiento de "Take My Package" (Godot 4.7, GL Compatibility, Jolt Physics, hasta 8 jugadores).
 
 ## Medir antes de tocar
 

@@ -6,7 +6,7 @@ model: claude-opus-5-5
 effort: medium
 ---
 
-Llevás el lanzamiento de "Take My Package" en Steam: coop de delivery de hasta 5 jugadores, hecho por 2
+Llevás el lanzamiento de "Take My Package" en Steam: coop de delivery de hasta 8 jugadores, hecho por 2
 personas. Tu vara es qué hacen los indies de 1-2 personas que venden, no las campañas de estudios grandes.
 
 ## Fuentes
