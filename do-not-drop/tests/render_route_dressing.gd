@@ -1,7 +1,10 @@
 extends SceneTree
 ## Run without --headless. Saves views of the route dressing under user://:
-## a delivery house with its yard, a warning sign as the driver meets it, the
-## horizon + clouds from the road, a curve's guardrail and a far landmark.
+## a delivery house with its yard and its whole balloon, the farm's barn (the
+## first house that has one; skipped with a warning when none does), a warning
+## sign as the driver meets it, the horizon + clouds from the road, a curve's
+## guardrail and a far landmark. The barn (N-318.2): --seed=12 has it by day
+## at house 0, --seed=4 at night; -- --mood=soleado_noche forces the night.
 ## The same road every run, so before/after captures of a mood compare the
 ## same frames (N-317): default seed 7 (a curve sign, a guardrail and open
 ## road past the depot), -- --seed=N for another.
@@ -44,7 +47,26 @@ func _run() -> void:
 
 	var house: Node3D = route.get(&"houses")[0]
 	var house_front: Vector3 = -house.global_basis.z
-	await _shot(camera, house.global_position + house_front * 17.0 + Vector3.UP * 3.2, house.global_position + Vector3.UP * 1.6, "render_route_house.png")
+	# Back far enough, and aimed high enough, that the balloon over the roof
+	# stays in the frame with the whole house under it (N-318.2).
+	var house_at: Vector3 = house.global_position
+	var house_eye: Vector3 = house_at + house_front * 21.0 + Vector3.UP * 3.4
+	await _shot(camera, house_eye, house_at + Vector3.UP * 3.6, "render_route_house.png")
+
+	var barn: Node3D = _first(route, "sm_arch_barn")
+	if barn == null:
+		push_warning("No farmhouse with a barn on this road (seed %d): render_route_barn.png skipped; try --seed=N."
+			% seed_value)
+	else:
+		# Its farmhouse's front faces the road: look at the barn's long wall
+		# from the same side, the way the truck sees it.
+		var farm: Node = barn
+		while farm != null and not farm is DeliveryHouse:
+			farm = farm.get_parent()
+		var farm_front: Vector3 = -(farm as Node3D).global_basis.z.normalized() if farm != null else Vector3.BACK
+		var barn_at: Vector3 = barn.global_position
+		var barn_eye: Vector3 = barn_at + farm_front * 22.0 + Vector3.UP * 4.0
+		await _shot(camera, barn_eye, barn_at + Vector3.UP * 2.5, "render_route_barn.png")
 
 	var sign_node: Node3D = _first(route, "/signs/sm_env_sign_curve")
 	if sign_node == null:

@@ -9,7 +9,9 @@ extends SceneTree
 ## - vegetation never does: it's instanced by the thousand;
 ## - glass, frames and lamps stay untouched (white), and the darkest corner
 ##   is no darker than the bake's FLOOR;
-## - the bake keeps models light: under 2x a model's own vertex budget.
+## - the bake keeps models light: under 2x a model's own vertex budget;
+## - the barn's red walls keep enough green and blue that the cold light on a
+##   wall turned from the sun doesn't leave them black (N-318.2).
 
 const BAKED: Array[String] = [
 	"res://assets/models/architecture/sm_arch_delivery_house_cottage.glb",
@@ -85,9 +87,34 @@ func _run() -> void:
 			for surface: int in range(mesh.get_surface_count() if mesh != null else 0):
 				_expect((mesh.surface_get_format(surface) & Mesh.ARRAY_FORMAT_COLOR) == 0, "%s is never baked (instanced by the thousand)" % path.get_file())
 		plant.free()
+	_expect_barn_catches_cold_light()
 	if _failures == 0:
 		print("PASS: houses, vehicles and big props carry baked AO, used as albedo; plants never do")
 	quit(_failures)
+
+
+## The barn's red walls, dressed: with the bake and the detail on, enough
+## green and blue left in them that the cold light on a wall turned from the
+## sun (sky ambient, moonlight) still shows it. Authored, 0.06 green and 0.04
+## blue (linear) went black at night (N-318.2).
+func _expect_barn_catches_cold_light() -> void:
+	var barn: Node3D = (load("res://assets/models/architecture/sm_arch_barn.glb") as PackedScene).instantiate()
+	LowpolyMaterials.apply(barn)
+	var walls: int = 0
+	var dim: int = 0
+	for node: Node in barn.find_children("*", "MeshInstance3D", true, false):
+		var instance := node as MeshInstance3D
+		for surface: int in range(instance.mesh.get_surface_count() if instance.mesh != null else 0):
+			var material := instance.get_surface_override_material(surface) as BaseMaterial3D
+			if material == null or material.resource_name != "barn_red":
+				continue
+			walls += 1
+			var linear: Color = material.albedo_color.srgb_to_linear()
+			if linear.g < 0.1 or linear.b < 0.06:
+				dim += 1
+	_expect(walls > 0 and dim == 0,
+		"The barn's red walls keep some green and blue for the cold light (%d walls, %d too dark)" % [walls, dim])
+	barn.free()
 
 
 func _expect(condition: bool, description: String) -> void:

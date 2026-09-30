@@ -43,6 +43,16 @@ const DETAIL: Dictionary = {
 	"hay": ["grass", 0.8],
 }
 
+## Palette entries lifted before the detail goes on: palette entry -> the
+## colour it takes instead. The barn's red (linear 0.42, 0.06, 0.04) reflects
+## almost nothing but red, and the light that reaches a wall turned from the
+## sun is cold -- sky ambient by day, blue moonlight and ambient by night -- so
+## that wall went black (N-318.2: 0.04 mean on its backlit wall at night).
+## Same hue, more green and blue in it: it still reads barn red in the sun.
+const LIFTED: Dictionary = {
+	"barn_red": Color(0.72, 0.36, 0.29),
+}
+
 ## Foliage by season (N-305, WorldMood.Season): palette entry -> [autumn
 ## colour, how far toward it]. Summer keeps the palette as authored. Each
 ## green lands on its own ochre, so a tree's light and dark leaves still
@@ -200,7 +210,8 @@ static func textured_for(source: BaseMaterial3D, vertex_colour: bool = false, ev
 		_textures[map] = load(DETAIL_DIR % map)
 	var material := StandardMaterial3D.new()
 	material.resource_name = key
-	var base: Color = seasonal_color(key, source.albedo_color, evergreen)
+	var authored: Color = LIFTED.get(key, source.albedo_color)
+	var base: Color = seasonal_color(key, Color(authored, source.albedo_color.a), evergreen)
 	material.albedo_color = Color(base.r * DETAIL_GAIN, base.g * DETAIL_GAIN, base.b * DETAIL_GAIN, base.a)
 	material.albedo_texture = _textures[map]
 	material.uv1_triplanar = true

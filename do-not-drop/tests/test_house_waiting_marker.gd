@@ -10,6 +10,8 @@ extends SceneTree
 ## dark once its delivery is recorded; ringing happens where it always did.
 ## The order arrives as [package_id, trap_key, code] (N-805) and each peer
 ## writes the trap in its own language: English here reads "FRAGILE".
+## The balloon is shaded by the lights with a glow of its own, not a flat
+## unshaded disc, and fog never greys it (N-318.2).
 
 var _failures: int = 0
 
@@ -68,6 +70,7 @@ func _run() -> void:
 			_expect(deepest < front, "House %d: the sign stands in front of the porch (reaches z %.2f, porch at %.2f)" % [house.house_index, deepest, front])
 			var ball_top: float = house.to_local(marker.balloon.get_child(1).global_position).y
 			_expect(ball_top > marker.house_bounds.end.y, "House %d: the balloon floats over the roof (%.1f m, roof %.1f m)" % [house.house_index, ball_top, marker.house_bounds.end.y])
+		_expect_balloon(first, second)
 
 		# The doorbell panel, on every model.
 		for house: DeliveryHouse in houses:
@@ -125,6 +128,36 @@ func _expect_doorbell(house: DeliveryHouse) -> void:
 	_expect(house.doorbell_number.text == str(house.house_index + 1), "House %d: the doorbell shows its number (%s)" % [house.house_index, house.doorbell_number.text])
 	_expect(house.doorbell_number.global_basis.z.dot(-house.global_basis.z) > 0.99, "House %d: the number reads from the street side" % house.house_index)
 	_expect(house.doorbell_lit and _doorbell_glows(house), "House %d: a waiting house's doorbell is lit" % house.house_index)
+
+
+## The balloon is lit, not a flat unshaded disc (N-318.2): its own shader,
+## shaded by the scene's lights, fog-free so it never greys into the sky, one
+## material shared by every house, a knot under it, and more glow at night
+## than by day.
+func _expect_balloon(first: HouseWaitingMarker, second: HouseWaitingMarker) -> void:
+	var ball := first.balloon.get_node_or_null(^"BalloonBall") as MeshInstance3D
+	_expect(ball != null and ball.material_override is ShaderMaterial, "The balloon has its own material")
+	if ball == null or not ball.material_override is ShaderMaterial:
+		return
+	var material := ball.material_override as ShaderMaterial
+	var modes: String = ""
+	for line: String in material.shader.code.split("\n"):
+		if line.begins_with("render_mode"):
+			modes = line
+	_expect(modes.contains("fog_disabled") and not modes.contains("unshaded"),
+		"The balloon is shaded by the lights and fog never touches it")
+	var other := second.balloon.get_node_or_null(^"BalloonBall") as MeshInstance3D
+	_expect(other != null and other.material_override == material, "Every house's balloon shares one material")
+	_expect(ball.get_node_or_null(^"Knot") is MeshInstance3D, "The balloon has a knot where the string ties on")
+	var night: float = LowpolyMaterials.night_level
+	LowpolyMaterials.set_night_level(0.0)
+	var yellow: Color = HouseWaitingMarker.BALLOON_COLOR
+	var day_glow: float = HouseWaitingMarker._balloon_material(yellow).get_shader_parameter(&"glow")
+	LowpolyMaterials.set_night_level(1.0)
+	var night_glow: float = HouseWaitingMarker._balloon_material(yellow).get_shader_parameter(&"glow")
+	LowpolyMaterials.set_night_level(night)
+	_expect(night_glow > day_glow and day_glow < 1.0,
+		"It glows more at night (%.2f) than by day (%.2f), and by day it's lit, not a lamp" % [night_glow, day_glow])
 
 
 func _doorbell_glows(house: DeliveryHouse) -> bool:

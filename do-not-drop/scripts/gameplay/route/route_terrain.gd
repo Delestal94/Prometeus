@@ -79,6 +79,10 @@ const PLATFORM_BLEND: float = 12.0
 var tunnels: Array[Dictionary] = []
 ## The wing walls' flare (build_rail_crossing.py WING_ANGLE).
 const TUNNEL_WING_ANGLE: float = deg_to_rad(25.0)
+## How far above the bore's crown the hill's shelf behind a portal sits: over
+## the 0.6 m _in_tunnel_bore() treats as "clears the roof", and under the
+## Backfill's top (RailCrossingSegment.BACKFILL_ABOVE_CROWN).
+const TUNNEL_SHELF_ABOVE_CROWN: float = 0.75
 const FLAT_ZONE_BLEND: float = 10.0
 const FLAT_ZONE_HEIGHT: float = -0.02
 const HILL_FLANK: float = 55.0
@@ -163,6 +167,7 @@ func _natural_height(p: Vector2, with_ridge: bool = true) -> float:
 	for tunnel: Dictionary in tunnels:
 		var hill: float = float(tunnel.level) + float(tunnel.height)
 		height = maxf(height, lerpf(height, hill, _tunnel_hill(tunnel, p, road.x)))
+		height = _tunnel_shelf(tunnel, p, height)
 	for zone: Rect2 in flat_zones:
 		var outside := Vector2(maxf(maxf(zone.position.x - p.x, p.x - zone.end.x), 0.0), maxf(maxf(zone.position.y - p.y, p.y - zone.end.y), 0.0))
 		height = lerpf(height, FLAT_ZONE_HEIGHT, 1.0 - smoothstep(0.0, FLAT_ZONE_BLEND, outside.length()))
@@ -195,6 +200,27 @@ func _tunnel_hill(tunnel: Dictionary, p: Vector2, road_distance: float) -> float
 	var inside: float = maxf(along, along * sin(TUNNEL_WING_ANGLE) + side * cos(TUNNEL_WING_ANGLE))
 	return (smoothstep(0.8, 3.8, inside) * smoothstep(-10.0, 1.0, along)
 		* (1.0 - smoothstep(18.0, 36.0, offset.length())) * smoothstep(16.0, 26.0, road_distance))
+
+
+## `height` at `p`, held down to a shelf right behind a portal that stays no
+## higher than the portal model's Backfill top (RailCrossingSegment.BACKFILL_*).
+## The hill rises ~11 m within 3 m of the facade, and _in_tunnel_bore() drops
+## any cell over the bore whose low corner is under the crown: on the 2 m grid
+## that cell's back rim would stand at the hill's full height, above the
+## Backfill, leaving a window under the ground with the sky showing through.
+## The shelf is above crown + 0.6 (SHELF_ABOVE_CROWN), so it is never cut itself.
+func _tunnel_shelf(tunnel: Dictionary, p: Vector2, height: float) -> float:
+	var dir: Vector2 = tunnel.dir
+	var offset: Vector2 = p - (tunnel.at as Vector2)
+	var along: float = offset.dot(dir)
+	if along <= 0.0:
+		return height
+	var across: float = absf(offset.dot(Vector2(-dir.y, dir.x)))
+	var length: float = RailCrossingSegment.BACKFILL_LENGTH
+	var half_width: float = RailCrossingSegment.BACKFILL_HALF_WIDTH
+	var weight: float = ((1.0 - smoothstep(length, length + 3.6, along))
+		* (1.0 - smoothstep(half_width, half_width + 3.25, across)))
+	return minf(height, lerpf(height, float(tunnel.level) + float(tunnel.crown) + TUNNEL_SHELF_ABOVE_CROWN, weight))
 
 
 ## Whether the terrain cell whose first corner is `key` would show inside a

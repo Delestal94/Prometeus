@@ -91,7 +91,8 @@
 |---|---|---|---|
 | Casas cottage, cabin, bungalow | `models/architecture/sm_arch_delivery_house_*.glb` | ✅ | |
 | Casa de dos pisos, casa de campo con galería | `…/sm_arch_delivery_house_{two_story,farmhouse}.glb` | ✅ | Las cinco casas se reparten como un mazo con la semilla de la sesión (no se repiten hasta usarlas todas). Colisión propia por modelo en `delivery_house.gd`. |
-| Granero | `…/sm_arch_barn.glb` | ✅ | Aparece al lado de la casa de campo. |
+| Granero | `…/sm_arch_barn.glb` | ✅ | Aparece al lado de la casa de campo. Su rojo (`barn_red`) sale aclarado por `LowpolyMaterials.LIFTED` (N-318.2): el rojo puro no devolvía nada de la luz fría y la pared a contraluz de noche salía negra (0,042 → 0,056, aplastados 25 % → 3 %). Captura propia: `render_route_barn.png` de `render_route_dressing.gd` (seed 12 de día, 4 de noche). |
+| Globo de la casa que espera | `shaders/house_balloon.gdshader` + `house_waiting_marker.gd` | ✅ | N-318.2: iluminado por sol y luna, brillo propio más fuerte arriba y de noche, borde fresnel, sin niebla; esfera 16×8 con nudo. Antes era un disco amarillo plano (unshaded). |
 | Cerca de estacas, maceta, enano de jardín, cucha, felpudo | `models/environment/yard/sm_env_yard_*.glb` | ✅ | `route.gd::_build_yard()`: felpudo y macetas sobre el porche; cerca a los costados, enano, cucha (una de cada dos). Cada pieza del lote pasa por las reglas y se descarta si no entra. Sin colisión. |
 | Timbre / panel de puerta | `models/environment/props/sm_env_prop_doorbell_panel.glb` | ✅ | N-302, `tools/build_doorbell.py`. Placa con número, rejilla y botón; `delivery_house.gd` lo cuelga en la pared de cada modelo y enciende número y botón mientras la casa espera. |
 
