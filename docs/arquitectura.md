@@ -105,7 +105,7 @@ votación cooperativa, perfil versionado, telemetría.
 | `CrewProgression` | Economía y cartas del equipo durante la campaña. | Registrado |
 | `ShopVoteManager` | Votaciones cooperativas de tienda. | Registrado |
 | `RouteEventManager` | Eventos de ruta. | Registrado |
-| `GameSettings` | Preferencias locales persistentes de controles, audio y cámara. | Registrado |
+| `GameSettings` | Preferencias locales persistentes de controles, audio y cámara. Extiende `SettingsStore` (módulo `settings_store`): el archivo, el idioma, las teclas y los buses viven ahí. | Registrado |
 | `GameManager` | Estado de alto nivel del flujo del juego (menú → lobby → en partida → resultados). Máquina de estados. | **No existe aún** — el flujo de menú/nivel hoy lo maneja `main_menu.gd` + `get_tree().change_scene_to_file()`, sin autoload propio. |
 | `UnlockManager` | Progreso meta local, desbloqueos y elecciones de uniforme/vehículo/pintura; guarda JSON versionado en `user://unlock_progress.json`. | Registrado |
 | `AudioManager` | Reproducción centralizada de música/SFX. | **No existe aún** — la música y los efectos dinámicos actuales viven en scripts de presentación. |

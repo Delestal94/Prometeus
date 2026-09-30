@@ -1,4 +1,4 @@
-extends "res://scripts/gameplay/interaction/interactable.gd"
+extends Interactable
 class_name DoorbellPoint
 ## The doorbell at a DeliveryHouse's door. Extends Slatex's Interactable base
 ## (docs/colaboracion-equipo.md) read-only, same pattern package_mount_point.gd

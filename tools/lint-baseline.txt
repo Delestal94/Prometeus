@@ -15,8 +15,6 @@ do-not-drop/scripts/gameplay/depot/depot_forklift.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_kit.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_mirror.gd|max-line-length 1
 do-not-drop/scripts/gameplay/depot/depot_roller_door.gd|max-line-length 2
-do-not-drop/scripts/gameplay/interaction/interactable.gd|max-line-length 1
-do-not-drop/scripts/gameplay/interaction/seat_point.gd|max-line-length 1
 do-not-drop/scripts/gameplay/level_base.gd|max-line-length 2
 do-not-drop/scripts/gameplay/package/package.gd|max-line-length 4
 do-not-drop/scripts/gameplay/package/package.gd|max-public-methods 1
@@ -48,7 +46,6 @@ do-not-drop/scripts/presentation/cargo_clutter.gd|max-line-length 1
 do-not-drop/scripts/presentation/character_face.gd|max-line-length 2
 do-not-drop/scripts/presentation/dashboard_gps.gd|max-line-length 3
 do-not-drop/scripts/presentation/door_reaction.gd|max-line-length 2
-do-not-drop/scripts/presentation/first_person_camera.gd|max-line-length 1
 do-not-drop/scripts/presentation/house_waiting_marker.gd|max-line-length 1
 do-not-drop/scripts/presentation/night_flares.gd|max-line-length 2
 do-not-drop/scripts/presentation/reference_truck.gd|max-line-length 14

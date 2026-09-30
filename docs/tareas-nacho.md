@@ -212,12 +212,13 @@ su API (tests intactos). `PROTOCOL_VERSION` 11. Verificado con los tests de red,
 `portability-check`. Pendiente de una pasada de `auditor-red` en la rutina de revisión (regla: todo PR de
 red la lleva).
 
-### N-232 · Fase 3: interacción, cámara de asiento, ajustes y tema de UI — B · `Opus 5.5 · high` · Aviso: sí (`interaction/`, `game_settings.gd`, `ui_theme.gd` de Slatex) · ⏸ en curso (sesión de Nacho)
-`interaction` (`Interactable` con capa y prompt por `@export`; `SeatPoint` genérico con métodos virtuales
-para lo de carga/rol), `seat_camera` (`add_shake()`/`kick_fov()` públicos, el juego los conecta),
-`settings_store` (volumen, teclas, gamepad, pantalla, idioma; `GameSettings` lo extiende con lo del
-juego), `ui_theme` (paleta y fuentes como `Resource`). Hecho cuando los tests de interacción, asientos,
-cámara, `settings` y UI pasan sin cambios de comportamiento y los cuatro módulos pasan `portability-check`.
+### N-232 · Fase 3: interacción, cámara de asiento y ajustes — B · `Opus 5.5 · high` · Aviso: sí (`interaction/`, `game_settings.gd` de Slatex) · **[x] rama `nacho/N-232-interaction-camera-settings`**
+`interaction` (`Interactable` con capa y grupo configurables; `SeatPoint` genérico con hooks para lo de
+carga/rol, el asiento del juego lo extiende), `seat_camera` (`SeatCamera` con `add_shake()`/`kick_fov()`;
+`first_person_camera.gd` lo extiende y conecta `EventBus`), `settings_store` (`SettingsStore` con
+`saved_keys`, idioma, pantalla, buses, teclas, gamepad y hooks de migración; `GameSettings` lo extiende).
+**`UiTheme` se queda en el juego** (es la marca: paleta, fuentes e íconos; se lleva copiando el archivo),
+decisión en `docs/modulos.md`. Los tres módulos pasan `portability-check`; los tests del juego no cambian.
 
 ### N-233 · Fase 4: generación de ruta y clima — B · `Opus 5.5 · xhigh` · Aviso: no · ⏸ en curso (sesión de Nacho)
 `route_gen` (`RouteStreamer`, `RouteSegment`, `RoutePlanner` con "paradas", `RouteTerrain`,
