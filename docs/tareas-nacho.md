@@ -9,7 +9,7 @@
 
 ## QA — bugs abiertos
 
-### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida)
+### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida) · **[x] PR #108**
 Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
 (`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta
 (`run_manager.gd:592-594`): solo cobran las que siguen en el camión. Los `delivery_points` (150/75/20,
@@ -429,7 +429,7 @@ Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20
 el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el modelo entero pegado al
 torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
 
-### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`)
+### N-314 · Antialiasing y texturas 3D con mipmaps — B · `Opus 5.5 · medium` · Aviso: sí (`project.godot`) · **[x] PR #110** (la comparación MSAA en captura queda para `revisor-visual` con GPU en la sesión de arte)
 - [x] MSAA por preset: Baja sin MSAA, Media 2×, Alta 4× (`WorldQuality`, PR #45). Falta compararlo en
   captura con `revisor-visual`.
 - [x] ~~Las 35 texturas 3D sin compresión ni mipmaps (`compress/mode=0`, `mipmaps/generate=false`)
