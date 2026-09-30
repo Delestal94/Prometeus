@@ -2381,11 +2381,21 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
   el resumen que `depot_campaign_board.gd` guarda en `depot_log.json`; van en `OrderBoard/Boss1` y en el panel.
   Decisión Endless: líneas propias de inicio, sin reacción. Test `test_boss_lines.gd`.
 
-#### S-604 · Reclamos de clientes con voz propia — B · `Opus 5.5 · medium` · Aviso: no
+#### S-604 · Reclamos de clientes con voz propia — B · `Opus 5.5 · medium` · Aviso: sí (`docs/avisos/2026-09-30-s604-client-complaints.md`) · **[x] rama `nacho/S-604-client-complaints`**
 
-- [ ] Los reclamos de la pantalla de resultados salen de un pool por cliente y resultado (roto, en
+- [x] Los reclamos de la pantalla de resultados salen de un pool por cliente y resultado (roto, en
   riesgo, abierta, equivocada) en vez de un texto genérico. Pool en `data/text/complaints.json` o dentro
-  de la tabla de traducciones (S-509).
+  de la tabla de traducciones (S-509). Hecho: 90 líneas `WORLD_COMPLAINT_<CLIENTE>_<RESULTADO>_<n>` en
+  `strings_world.csv` (10 clientes de `docs/narrativa.md` x roto 3 / en riesgo 2 / abierta 2 / equivocada 2, es + en);
+  módulo puro `scripts/gameplay/route/client_complaints.gd` (`ClientComplaints`: cliente de la casa = `sender` del
+  contenido del pedido, que ahora viaja como 4.º elemento de `Depot.assignments()`; línea elegida por
+  semilla + casa + cliente + resultado; viaja la clave, cada par la traduce). `RunManager` guarda `client`,
+  `result` y `line` en cada reclamo, marca `opened` (caja intacta entregada abierta) y suma una nota gratis
+  ("equivocada") por puerta que rechazó una caja ajena; `hud_results.gd::complaint_line` muestra "Casa N · Cliente: «línea»"
+  + qué pasó (sin foto / caso cerrado / sin descuento). `PROTOCOL_VERSION` 4 -> 5. Test nuevo
+  `test_client_complaints.gd`; corridos `results score hud ui_translations world_translations house delivery depot
+  route_events host_gone phone_camera connection_errors`. Sin capturar: recomiendo captura de la pantalla de resultados
+  con `revisor-visual`. Queda abierto: la burbuja de la puerta (`REACTION_LINES`) sigue con frases genéricas.
 
 #### S-605 · Textos de trampas y eventos con tono — C · `Opus 5.5 · medium` · Aviso: no
 

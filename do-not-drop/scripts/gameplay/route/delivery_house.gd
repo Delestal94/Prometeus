@@ -136,6 +136,9 @@ var house_index: int = 0
 ## is what refutes a complaint at the results screen).
 var outcome: StringName = &""
 var delivered_package_id: StringName = &""
+## An intact box that was handed over open (it counts as dented): the results
+## give its client the "opened" complaint instead of the "dented" one (S-604).
+var handed_over_open: bool = false
 var visual_variant: int = 0
 ## The box this house ordered (route.assign_packages()), or empty for "any".
 ## Ringing with somebody else's box gets it handed straight back.
@@ -229,6 +232,7 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 			# has obviously been gone through: it counts as delivered with
 			# reservations, same as a dented one.
 			var opened: bool = carried_package.get(&"is_open") == true
+			handed_over_open = opened
 			_resolve(OUTCOME_AT_RISK if opened else OUTCOME_OK, carried_package)
 
 

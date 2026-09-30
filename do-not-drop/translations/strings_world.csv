@@ -226,3 +226,93 @@ WORLD_RADIO_NEWS_MIXED_LABELS,Atención: etiquetas mezcladas más adelante,Heads
 WORLD_RADIO_NEWS_MIMIC,Atención: un paquete sospechoso más adelante,Heads up: a suspicious package ahead
 WORLD_RADIO_NEWS_PARASITE,Atención: una caja con parásito más adelante,Heads up: a parasite box ahead
 WORLD_RADIO_NEWS_SHOP,Atención: un local confuso más adelante,Heads up: a confusing shop ahead
+WORLD_COMPLAINT_GLASS_TOWER_RUINED_1,Esto era una torre. Ahora es una opinión sobre torres.,This was a tower. Now it is an opinion about towers.
+WORLD_COMPLAINT_GLASS_TOWER_RUINED_2,Las copas cayeron en orden. Qué prolijas. Igual llamo a la empresa.,The glasses fell in order. So tidy. I am still calling the company.
+WORLD_COMPLAINT_GLASS_TOWER_RUINED_3,Escuché el tintineo desde acá. Fue el último.,I heard the clinking from here. It was the last one.
+WORLD_COMPLAINT_GLASS_TOWER_AT_RISK_1,Una copa está torcida. Yo sé cuándo una copa está torcida.,One glass is crooked. I know a crooked glass when I see one.
+WORLD_COMPLAINT_GLASS_TOWER_AT_RISK_2,Vino con viento. Yo pedí sin viento.,It came with wind. I ordered it without wind.
+WORLD_COMPLAINT_GLASS_TOWER_OPENED_1,Alguien miró mis copas. Las copas lo saben.,Somebody looked at my glasses. The glasses know.
+WORLD_COMPLAINT_GLASS_TOWER_OPENED_2,La caja llegó abierta. Las copas agarraron frío.,The box arrived open. The glasses caught a chill.
+WORLD_COMPLAINT_GLASS_TOWER_WRONG_1,Yo pedí copas. Esto suena a otra cosa.,I ordered glasses. This rattles like something else.
+WORLD_COMPLAINT_GLASS_TOWER_WRONG_2,"Esa caja no suena a mía. Llévensela, por favor.",That box does not sound like mine. Please take it away.
+WORLD_COMPLAINT_WEDDING_CAKE_RUINED_1,"Pedí tres pisos. Me trajeron uno solo, muy ancho.",I asked for three tiers. You brought one very wide tier.
+WORLD_COMPLAINT_WEDDING_CAKE_RUINED_2,Catorce hermanos y una torta en migas. Esto es un asunto de familia.,Fourteen siblings and a cake in crumbs. This is a family matter.
+WORLD_COMPLAINT_WEDDING_CAKE_RUINED_3,La novia va a preguntar por el segundo piso. No sé qué decirle.,The bride will ask about the second tier. I do not know what to tell her.
+WORLD_COMPLAINT_WEDDING_CAKE_AT_RISK_1,El piso de arriba se inclinó. Como saludando.,The top tier is leaning. Like it is waving.
+WORLD_COMPLAINT_WEDDING_CAKE_AT_RISK_2,Llegó con carácter... y con crema de un solo lado.,It arrived with character... and cream on one side only.
+WORLD_COMPLAINT_WEDDING_CAKE_OPENED_1,"La torta llegó destapada. Alguien probó una flor de azúcar, lo sé.","The cake came uncovered. Someone tried a sugar flower, I know it."
+WORLD_COMPLAINT_WEDDING_CAKE_OPENED_2,Caja abierta. Mi tercer hermano lo va a notar.,Open box. My third brother will notice.
+WORLD_COMPLAINT_WEDDING_CAKE_WRONG_1,Esto no es una torta. Es un paquete con ideas propias.,This is not a cake. It is a parcel with ideas of its own.
+WORLD_COMPLAINT_WEDDING_CAKE_WRONG_2,Yo espero azúcar. Acá hay otra cosa. Que se la lleven.,I am expecting sugar. This is something else. Take it away.
+WORLD_COMPLAINT_HEN_RUINED_1,Rosita salió de la caja indignada. Y con razón.,Rosita came out of the box indignant. And rightly so.
+WORLD_COMPLAINT_HEN_RUINED_2,Se presentó despeinada. Yo no la crié así.,She showed up ruffled. I did not raise her like that.
+WORLD_COMPLAINT_HEN_RUINED_3,Llegó una gallina con plumas de menos y opiniones de más.,A hen arrived with fewer feathers and more opinions.
+WORLD_COMPLAINT_HEN_AT_RISK_1,Está nerviosa. Me miró como diciendo: «¿viste?»,She is nervous. She looked at me as if to say: “see?”
+WORLD_COMPLAINT_HEN_AT_RISK_2,"Viene con las plumas paradas. Fue el camino, lo sé.","She has her feathers standing up. It was the road, I know."
+WORLD_COMPLAINT_HEN_OPENED_1,Le abrieron la caja. Ella ya sabe. No lo perdona.,You opened her box. She knows. She will not forgive it.
+WORLD_COMPLAINT_HEN_OPENED_2,Vino con la tapa abierta. Vio todo el paisaje. Está mareada.,She came with the lid open. She saw the whole landscape. She is dizzy.
+WORLD_COMPLAINT_HEN_WRONG_1,Esta no es Rosita. Rosita me mira distinto.,This is not Rosita. Rosita looks at me differently.
+WORLD_COMPLAINT_HEN_WRONG_2,No cacarea. Yo espero cacareo. Que la devuelvan.,It does not cluck. I expect clucking. Send it back.
+WORLD_COMPLAINT_RACCOON_CAGE_RUINED_1,El mapache salió indignado. El recado quedó sin entregar.,The raccoon left indignant. The message stayed undelivered.
+WORLD_COMPLAINT_RACCOON_CAGE_RUINED_2,Rompieron la jaula. Ahora el recado anda suelto por el pueblo.,The cage is broken. Now the message is loose around town.
+WORLD_COMPLAINT_RACCOON_CAGE_RUINED_3,Vino sin jaula y sin recado. Solo quedó la actitud.,It came with no cage and no message. Only the attitude is left.
+WORLD_COMPLAINT_RACCOON_CAGE_AT_RISK_1,La jaula está torcida. El mapache me miró como a un mal cartero.,The cage is crooked. The raccoon looked at me like a bad mailman.
+WORLD_COMPLAINT_RACCOON_CAGE_AT_RISK_2,Llegó con el recado arrugado y el orgullo también.,It arrived with a crumpled message and crumpled pride.
+WORLD_COMPLAINT_RACCOON_CAGE_OPENED_1,Alguien abrió la jaula. Dije que no la abrieran. Lo dije.,Somebody opened the cage. I said not to open it. I did say.
+WORLD_COMPLAINT_RACCOON_CAGE_OPENED_2,"El recado era confidencial. La jaula abierta, no tanto.","The message was confidential. The open cage, not so much."
+WORLD_COMPLAINT_RACCOON_CAGE_WRONG_1,Este no trae recado. Yo espero un mapache con recado.,This one carries no message. I expect a raccoon with a message.
+WORLD_COMPLAINT_RACCOON_CAGE_WRONG_2,Ese no es mi mensajero. Tiene otra mirada.,That is not my messenger. It has a different look.
+WORLD_COMPLAINT_FIREWORKS_CRATE_RUINED_1,Llegó todo desarmado. Yo quería estruendo y me dieron silencio.,It all arrived in pieces. I wanted a bang and got silence.
+WORLD_COMPLAINT_FIREWORKS_CRATE_RUINED_2,"Lo que no se enciende, se lo lleva el mar. Esto se lo llevó el camino.","What does not light up, the sea takes. This one the road took."
+WORLD_COMPLAINT_FIREWORKS_CRATE_RUINED_3,Sin fuegos no hay festejo. Sin festejo no hay capitán. Reclamo formal.,"No fireworks, no party. No party, no captain. Formal complaint."
+WORLD_COMPLAINT_FIREWORKS_CRATE_AT_RISK_1,Vino sacudida. Los fuegos artificiales no perdonan un mal viaje.,It came shaken. Fireworks do not forgive a bad trip.
+WORLD_COMPLAINT_FIREWORKS_CRATE_AT_RISK_2,Una mecha me miró raro. Lo dejo asentado.,A fuse gave me a look. I am putting it on record.
+WORLD_COMPLAINT_FIREWORKS_CRATE_OPENED_1,Vino abierta. Un cohete asomó a mirar el paisaje.,It came open. A rocket peeked out at the scenery.
+WORLD_COMPLAINT_FIREWORKS_CRATE_OPENED_2,Caja abierta en plena ruta. El mar se hubiera ofendido.,Box open in the middle of the road. The sea would have been offended.
+WORLD_COMPLAINT_FIREWORKS_CRATE_WRONG_1,Esto no hace ruido. No es mío.,This makes no noise. It is not mine.
+WORLD_COMPLAINT_FIREWORKS_CRATE_WRONG_2,Pedí estruendo. Acá hay silencio en una caja. Que se lo lleven.,I ordered a bang. Here is silence in a box. Take it away.
+WORLD_COMPLAINT_ANTIQUE_LAMP_RUINED_1,Tenía 200 años. Ahora tiene 200 años y varios pedazos.,It was 200 years old. Now it is 200 years old and in several pieces.
+WORLD_COMPLAINT_ANTIQUE_LAMP_RUINED_2,"Napoleón la cuidó mejor, creo.","Napoleon took better care of it, I think."
+WORLD_COMPLAINT_ANTIQUE_LAMP_RUINED_3,"La lámpara ya no alumbra. Ahora inspira, que es peor.","The lamp no longer lights. Now it inspires, which is worse."
+WORLD_COMPLAINT_ANTIQUE_LAMP_AT_RISK_1,Le falta un brillo. Yo sé cuál.,A shine is missing. I know which one.
+WORLD_COMPLAINT_ANTIQUE_LAMP_AT_RISK_2,Llegó con una abolladura nueva. Odio lo nuevo.,It came with a new dent. I hate anything new.
+WORLD_COMPLAINT_ANTIQUE_LAMP_OPENED_1,"La caja vino abierta. La lámpara se resfrió, seguro.",The box came open. The lamp must have caught a cold.
+WORLD_COMPLAINT_ANTIQUE_LAMP_OPENED_2,Le entró aire moderno a la caja. Muy mal.,Modern air got into the box. Very bad.
+WORLD_COMPLAINT_ANTIQUE_LAMP_WRONG_1,Esto tiene menos de cien años. No es mío.,This is under a hundred years old. It is not mine.
+WORLD_COMPLAINT_ANTIQUE_LAMP_WRONG_2,Esa caja es demasiado nueva para mí. Llévensela.,That box is far too new for me. Take it away.
+WORLD_COMPLAINT_SOURDOUGH_RUINED_1,La masa madre salió de la caja ofendida. No me habla.,The sourdough left the box offended. It is not speaking to me.
+WORLD_COMPLAINT_SOURDOUGH_RUINED_2,"Cuarenta años de masa, sacudidos en un viaje. Ni el ánimo le levanta.","Forty years of dough, shaken in one trip. It will not even rise to the occasion."
+WORLD_COMPLAINT_SOURDOUGH_RUINED_3,Ahora no crece. Se quedó pensando.,Now it will not rise. It stayed thinking.
+WORLD_COMPLAINT_SOURDOUGH_AT_RISK_1,La masa llegó inquieta. Burbujea en otro idioma.,The dough arrived restless. It bubbles in another language.
+WORLD_COMPLAINT_SOURDOUGH_AT_RISK_2,Tiene la tapa abollada y el orgullo aflojado.,The lid is dented and its pride is slack.
+WORLD_COMPLAINT_SOURDOUGH_OPENED_1,Vino destapada. La masa madre agarró una corriente de aire.,It came uncovered. The starter caught a draft.
+WORLD_COMPLAINT_SOURDOUGH_OPENED_2,Alguien la miró sin permiso. Se ofende por menos.,Someone looked at it without asking. It takes offense easily.
+WORLD_COMPLAINT_SOURDOUGH_WRONG_1,Este frasco no me saluda. No es mi masa.,This jar does not greet me. It is not my dough.
+WORLD_COMPLAINT_SOURDOUGH_WRONG_2,Mi masa me reconoce. Esta ni me mira. Que se la lleven.,My dough knows me. This one will not even look. Take it away.
+WORLD_COMPLAINT_PORCELAIN_VASE_RUINED_1,Tenía cuarenta jarrones para mirar. Ahora tengo treinta y nueve y una pala.,I had forty vases to look at. Now I have thirty-nine and a dustpan.
+WORLD_COMPLAINT_PORCELAIN_VASE_RUINED_2,No era para usar. Tampoco para romper. Lo dejo por escrito.,It was not for using. Nor for breaking. I am putting it in writing.
+WORLD_COMPLAINT_PORCELAIN_VASE_RUINED_3,"Llegó en pedazos prolijos. Igual, ya no vale.","It arrived in tidy pieces. Still, it is worth nothing now."
+WORLD_COMPLAINT_PORCELAIN_VASE_AT_RISK_1,"Una fisura. Chiquita. La vi de lejos, como se ven las cosas importantes.","A crack. A tiny one. I saw it from afar, the way you see important things."
+WORLD_COMPLAINT_PORCELAIN_VASE_AT_RISK_2,"Si lo giro, se nota. Y yo lo giro.","If I turn it, you can tell. And I turn it."
+WORLD_COMPLAINT_PORCELAIN_VASE_OPENED_1,La caja llegó abierta. Mi jarrón no está para vistas gratuitas.,The box arrived open. My vase is not for free views.
+WORLD_COMPLAINT_PORCELAIN_VASE_OPENED_2,Alguien lo vio antes que yo. Ya no vale lo mismo.,Someone saw it before I did. It is not worth the same now.
+WORLD_COMPLAINT_PORCELAIN_VASE_WRONG_1,Este jarrón parece de usar. No es mío.,This vase looks usable. It is not mine.
+WORLD_COMPLAINT_PORCELAIN_VASE_WRONG_2,Esto tiene asa. Mis jarrones no tienen asa. Que se lo lleven.,This has a handle. My vases have no handle. Take it away.
+WORLD_COMPLAINT_MILK_CANISTER_RUINED_1,"Se derramó el bidón. Hoy sí llegó todo a horario... al suelo.","The canister spilled. Today everything arrived on time... on the floor."
+WORLD_COMPLAINT_MILK_CANISTER_RUINED_2,"Leche fresca, dijeron. Ahora es un charco con historia.","Fresh milk, they said. Now it is a puddle with a past."
+WORLD_COMPLAINT_MILK_CANISTER_RUINED_3,Por primera vez llegó todo antes que yo. Y llegó roto.,For once everything arrived before I did. And it arrived broken.
+WORLD_COMPLAINT_MILK_CANISTER_AT_RISK_1,El bidón llegó abollado. Y sonaba a batido.,The canister came dented. And it sounded like a milkshake.
+WORLD_COMPLAINT_MILK_CANISTER_AT_RISK_2,Vino sacudido. Ahora la leche tiene apuro.,It came shaken. Now the milk is in a hurry.
+WORLD_COMPLAINT_MILK_CANISTER_OPENED_1,Vino destapado. La leche vio mundo antes de tiempo.,It came uncapped. The milk saw the world too early.
+WORLD_COMPLAINT_MILK_CANISTER_OPENED_2,"Yo llego tarde, pero mis bidones llegan cerrados.","I arrive late, but my canisters arrive closed."
+WORLD_COMPLAINT_MILK_CANISTER_WRONG_1,Este bidón no huele a mi tambo. No es mío.,This canister does not smell like my dairy. It is not mine.
+WORLD_COMPLAINT_MILK_CANISTER_WRONG_2,"Llegué tarde, pero este bidón llegó equivocado. Empatamos.","I was late, but this canister arrived wrong. We are even."
+WORLD_COMPLAINT_PUPPY_RUINED_1,Mi cachorro salió de la caja ofendido. Con razón: le faltaba una manta.,My puppy came out of the box offended. Fair enough: it lacked a blanket.
+WORLD_COMPLAINT_PUPPY_RUINED_2,Llegó despeinado y ladrando quejas. Le entiendo todas.,He arrived ruffled and barking complaints. I understand every one.
+WORLD_COMPLAINT_PUPPY_RUINED_3,Le prometí un viaje tranquilo. Ahora me lo recuerda.,I promised him a calm trip. Now he reminds me.
+WORLD_COMPLAINT_PUPPY_AT_RISK_1,Viene nervioso. Se me escondió detrás de la escoba.,He is nervous. He hid behind the broom.
+WORLD_COMPLAINT_PUPPY_AT_RISK_2,Está mareado. No le gustaron tantas curvas.,He is dizzy. He did not like so many curves.
+WORLD_COMPLAINT_PUPPY_OPENED_1,Vino con la caja abierta. Casi se baja a mitad de camino.,The box came open. He almost got off halfway.
+WORLD_COMPLAINT_PUPPY_OPENED_2,Le abrieron la caja. Ahora sabe que hay un afuera.,You opened his box. Now he knows there is an outside.
+WORLD_COMPLAINT_PUPPY_WRONG_1,Este cachorro no me conoce. El mío sí. Que se lo lleven.,This puppy does not know me. Mine does. Take it away.
+WORLD_COMPLAINT_PUPPY_WRONG_2,No mueve la cola cuando me ve. No es mío.,It does not wag its tail when it sees me. It is not mine.

@@ -33,9 +33,11 @@ const HOST_ID: int = 1
 ## 6: the low-visibility event's late-join RPC;
 ## 7: the player gets a Sprint child with RPCs and anim_state can be Run,
 ## N-115;
-## 8: truck radio node + _set_mode RPC, N-406).
+## 8: truck radio node + _set_mode RPC, N-406;
+## 9: house orders carry the content id and results complaints carry
+## client + line key, S-604).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 8
+const PROTOCOL_VERSION: int = 9
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

@@ -88,6 +88,8 @@ Pueblos sin cliente fijo todavía: Villa Caja Vacía y Cuesta Abajo.
 - **S-604 (reclamos con voz propia):** los reclamos de `REACTION_LINES` usan al cliente de la caja
   cuando se sabe: quejas exageradas y formales, sin insulto. Las frases genéricas actuales quedan de
   respaldo.
+  Hecho en la pantalla de resultados (`client_complaints.gd`, `WORLD_COMPLAINT_<CLIENTE>_<RESULTADO>_<n>`);
+  la burbuja de la puerta sigue con `REACTION_LINES`.
 - **S-605 (textos de trampas con tono):** las descripciones de las 7 trampas (Frágil, Peso creciente,
   Equilibrio, Ruidoso, Explosivo, Hostil, Líquido) hablan de la situación, no del jugador: un chiste,
   voseo, sin regaños.

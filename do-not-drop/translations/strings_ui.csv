@@ -199,6 +199,9 @@ HUD_NET_STATS_TOTAL,Total,Total
 HUD_NET_STATS_HINT,%s oculta este panel,%s hides this panel
 HUD_COMPLAINT_PAID,Casa %d reclamó que llegó roto y no tenías foto. Te lo descuentan.,House %d complained it arrived broken and you had no photo. It comes out of your pay.
 HUD_COMPLAINT_SETTLED,Casa %d reclamó que llegó roto — les mostraste la foto. Caso cerrado.,House %d complained it arrived broken — you showed them the photo. Case closed.
+HUD_COMPLAINT_VOICED_PAID,Casa %d · %s: «%s» Sin foto: te lo descuentan.,House %d · %s: “%s” No photo: it comes out of your pay.
+HUD_COMPLAINT_VOICED_SETTLED,Casa %d · %s: «%s» Les mostraste la foto: caso cerrado.,House %d · %s: “%s” You showed the photo: case closed.
+HUD_COMPLAINT_VOICED_NOTED,Casa %d · %s: «%s» Sin descuento: ya se arregló.,House %d · %s: “%s” No deduction: it was sorted out.
 HUD_CONTINUE,Continuar,Continue
 HUD_CREW_BOX,CON CAJA,HAS A BOX
 HUD_CREW_COUNT,%d / %d,%d / %d

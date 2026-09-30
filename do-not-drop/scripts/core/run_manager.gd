@@ -98,6 +98,8 @@ var deliveries: Array[Dictionary] = []
 ## every order, including a house the crew never reached.
 var cargo_names: Dictionary = {}
 var house_assignments: Array = []
+## Houses whose door was offered somebody else's box (house index -> true); a client remembers it.
+var refused_houses: Dictionary = {}
 ## How many doors this run was supposed to reach, set by the level once the
 ## route has built itself. Counting missed houses off this instead of off
 ## the houses that force-resolved themselves keeps the penalty honest no
@@ -160,6 +162,7 @@ func _ready() -> void:
 	EventBus.delivery_deadlines_set.connect(func(list: Array) -> void: deadlines = list.duplicate(true))
 	EventBus.cargo_registered.connect(_on_cargo_registered)
 	EventBus.houses_assigned.connect(_on_houses_assigned)
+	EventBus.house_refused_package.connect(func(i: int, _l: String) -> void: refused_houses[i] = true)
 	_load_leaderboard()
 
 
@@ -177,6 +180,7 @@ func reset_run() -> void:
 	deliveries = []
 	cargo_names = {}
 	house_assignments = []
+	refused_houses = {}
 	expected_houses = 0
 	delivery_photos = {}
 	last_photo_peer_id = 0
@@ -325,7 +329,7 @@ func _remote_start_run(mode: StringName, event_id: StringName) -> void:
 ## house_resolved). Records the outcome and takes the package out of the
 ## van's tally -- it isn't cargo any more, it's a delivery, and counting it
 ## in both places would pay twice for the same box.
-func register_delivery(house_index: int, outcome: StringName, package_id: StringName) -> void:
+func register_delivery(house_index: int, outcome: StringName, package_id: StringName, opened: bool = false) -> void:
 	for entry: Dictionary in deliveries:
 		if int(entry["house"]) == house_index:
 			return
@@ -338,6 +342,7 @@ func register_delivery(house_index: int, outcome: StringName, package_id: String
 		"package_id": package_id,
 		"photo": false,
 		"care": care,
+		"opened": opened,
 		"at": elapsed_seconds,
 	})
 	if not package_id.is_empty() and cargo.has(package_id):
@@ -472,6 +477,7 @@ func _resolve_deliveries() -> Dictionary:
 	var photos: int = 0
 	var complaints: Array[Dictionary] = []
 	var rescued: Dictionary = {}
+	var line_seed: int = NetworkManager.world_seed if NetworkManager.world_seed != 0 else randi()  # solo: fresh
 	for entry: Dictionary in deliveries:
 		var outcome: StringName = StringName(entry["outcome"])
 		var has_photo: bool = bool(entry["photo"]) and handed_over(outcome)
@@ -493,7 +499,7 @@ func _resolve_deliveries() -> Dictionary:
 			&"delivered_ruined":
 				points += POINTS_DELIVERED_RUINED
 				delivered_count += 1
-				complaints.append(_complaint(entry, has_photo))
+				complaints.append(ClientComplaints.make(entry, has_photo, house_assignments, line_seed))
 			&"missed":
 				missed += 1
 				points -= PENALTY_MISSED_HOUSE
@@ -509,9 +515,10 @@ func _resolve_deliveries() -> Dictionary:
 				points += POINTS_DELIVERED_AT_RISK
 				delivered_count += 1
 				if randf() < COMPLAINT_CHANCE_AT_RISK:
-					complaints.append(_complaint(entry, has_photo))
+					complaints.append(ClientComplaints.make(entry, has_photo, house_assignments, line_seed))
 			_:
 				push_warning("[Run] Unknown delivery outcome: %s" % outcome)
+	complaints.append_array(ClientComplaints.wrong_notes(refused_houses, complaints, house_assignments, line_seed))
 	# Doors the run never reached at all: no house ever resolved them, so
 	# they have no record of their own, but the resident still waited.
 	var unreached: int = maxi(expected_houses - deliveries.size(), 0)
@@ -561,13 +568,6 @@ func _resolve_deliveries() -> Dictionary:
 func _add_line(breakdown: Array, label: String, count: int, each: int) -> void:
 	if count > 0:
 		breakdown.append({"label": label, "count": count, "points": count * each})
-
-
-func _complaint(entry: Dictionary, has_photo: bool) -> Dictionary:
-	return {
-		"house": int(entry["house"]),
-		"dismissed": has_photo,
-	}
 
 
 func finish_run(delivered: bool, reason: String = "") -> void:

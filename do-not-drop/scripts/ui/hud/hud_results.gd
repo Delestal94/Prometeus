@@ -247,13 +247,27 @@ func _show_complaints(complaints: Array) -> void:
 		return
 	var lines: PackedStringArray = []
 	for complaint: Dictionary in complaints:
-		var house: int = int(complaint["house"]) + 1
-		if bool(complaint["dismissed"]):
-			lines.append(tr("HUD_COMPLAINT_SETTLED") % house)
-		else:
-			lines.append(tr("HUD_COMPLAINT_PAID") % house)
+		lines.append(complaint_line(complaint))
 	hud.complaints_label.text = "\n".join(lines)
 	hud.complaints_label.visible = true
+
+
+## One complaint as this peer reads it (S-604): the client's own words (the
+## host sends the line's KEY, chosen by ClientComplaints) plus what became of
+## it. Without a client -- an old result, a test -- the plain wording.
+static func complaint_line(complaint: Dictionary) -> String:
+	var house: int = int(complaint["house"]) + 1
+	var settled: bool = bool(complaint["dismissed"])
+	var client_name: String = ClientComplaints.client_name(StringName(complaint.get("client", "")))
+	var line_key: String = String(complaint.get("line", ""))
+	if client_name.is_empty() or line_key.is_empty():
+		return TranslationServer.translate("HUD_COMPLAINT_SETTLED" if settled else "HUD_COMPLAINT_PAID") % house
+	var ending: String = "HUD_COMPLAINT_VOICED_PAID"
+	if bool(complaint.get("noted", false)):
+		ending = "HUD_COMPLAINT_VOICED_NOTED"
+	elif settled:
+		ending = "HUD_COMPLAINT_VOICED_SETTLED"
+	return TranslationServer.translate(ending) % [house, client_name, TranslationServer.translate(line_key)]
 
 
 func _show_photos() -> void:
