@@ -30,9 +30,11 @@ const HOST_ID: int = 1
 ## handshake or meaning of a relayed payload (3: trap names travel as keys;
 ## 4: package hints and care messages travel as [key, args...];
 ## 5: the depot sends the Boss's radio lines as LocText, a new RPC on the depot;
-## 6: the low-visibility event's late-join RPC).
+## 6: the low-visibility event's late-join RPC;
+## 7: the player gets a Sprint child with RPCs and anim_state can be Run,
+## N-115).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 6
+const PROTOCOL_VERSION: int = 7
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
