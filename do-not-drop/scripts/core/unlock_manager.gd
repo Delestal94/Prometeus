@@ -15,6 +15,7 @@ const SAVE_PATH := "user://unlock_progress.json"
 ## 4: first-time trap tutorial cards persist in seen_tips.
 const PROFILE_VERSION := 4
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
+const NICKNAME = preload("res://scripts/core/nickname.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
 ## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
@@ -73,6 +74,9 @@ var selected_truck: StringName = &"classic"
 var selected_paint: StringName = &"white"
 var selected_eyes: StringName = FaceCatalog.DEFAULT_EYES
 var selected_mouth: StringName = FaceCatalog.DEFAULT_MOUTH
+## What the player typed to be called by (N-606.1), cleaned; empty = the game
+## hands out a funny one (Nickname.resolve). Travels with the appearance.
+var nickname: String = ""
 
 
 func _init() -> void:
@@ -214,6 +218,15 @@ func select_mouth(mouth_id: StringName) -> bool:
 	return true
 
 
+func set_nickname(text: String) -> void:
+	var cleaned: String = NICKNAME.clean(text)
+	if cleaned == nickname:
+		return
+	nickname = cleaned
+	save_profile()
+	progress_changed.emit()
+
+
 func progress_summary() -> Dictionary:
 	return {
 		"score": total_score,
@@ -246,6 +259,7 @@ func _profile_fields() -> Dictionary:
 		"selected_paint": selected_paint,
 		"selected_eyes": selected_eyes,
 		"selected_mouth": selected_mouth,
+		"nickname": nickname,
 	}
 
 
@@ -261,6 +275,7 @@ func _read_profile(parsed: Dictionary, version: int) -> void:
 	selected_paint = StringName(parsed.get("selected_paint", &"white"))
 	selected_eyes = FaceCatalog.valid_eyes(StringName(parsed.get("selected_eyes", FaceCatalog.DEFAULT_EYES)))
 	selected_mouth = FaceCatalog.valid_mouth(StringName(parsed.get("selected_mouth", FaceCatalog.DEFAULT_MOUTH)))
+	nickname = NICKNAME.clean(str(parsed.get("nickname", "")))
 
 
 ## Choices that need an unlock this profile doesn't have fall back.
@@ -283,6 +298,7 @@ func _reset_fields() -> void:
 	selected_paint = &"white"
 	selected_eyes = FaceCatalog.DEFAULT_EYES
 	selected_mouth = FaceCatalog.DEFAULT_MOUTH
+	nickname = ""
 
 
 func _on_run_ended(score: int, results: Dictionary) -> void:

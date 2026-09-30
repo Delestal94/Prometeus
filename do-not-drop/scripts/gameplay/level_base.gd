@@ -49,6 +49,12 @@ func _prepare_mode() -> void:
 		route.call(&"assign_packages", depot.assignments())
 
 
+## The village at the end of the road, which the newspaper is named after.
+func newspaper_town() -> String:
+	var goal: Object = route.get(&"goal_lot") as Object
+	return String(goal.get(&"town_name")) if goal != null else ""
+
+
 func _on_peer_level_ready(peer_id: int) -> void:
 	super(peer_id)
 	if not NetworkManager.is_host():

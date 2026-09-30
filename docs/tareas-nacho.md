@@ -1847,9 +1847,9 @@ Origen de la pausa: auditoría integral 2026-09-30, A-102.
 > reacción, sobre el hombro). Decisiones del usuario: lee siempre el Jefe, dura 30 s, se puede saltar,
 > y los chistes usan un **apodo del juego**, no el nombre de Steam.
 
-- [ ] **N-606.1** Apodo del jugador: se escribe en la personalización (16 caracteres); si queda vacío, el
+- [x] **N-606.1** Apodo del jugador: se escribe en la personalización (16 caracteres); si queda vacío, el
   juego asigna uno gracioso con la semilla del jugador; viaja con la apariencia.
-- [ ] **N-606.2** Contenido: `RunChronicle` (hechos de la partida desde el `EventBus`), `NewsDesk`
+- [x] **N-606.2** Contenido: `RunChronicle` (hechos de la partida desde el `EventBus`), `NewsDesk`
   (redacción pura, determinista por semilla), catálogo `data/newspaper/stories.json` con 3+ variantes por
   hecho, relay del host `newspaper_ready` (ids y casillas, no texto) y la página 2D mostrada antes de la
   tarjeta de resultados. Tests `test_news_desk.gd` y `test_run_chronicle.gd`.

@@ -6,6 +6,8 @@ extends Node
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
 const CLIENT_COSMETIC: StringName = &"mint_uniform"
+const CLIENT_NICKNAME: String = "Ana"
+const NEWS_DESK: Script = preload("res://scripts/presentation/newspaper/news_desk.gd")
 
 var _network: Node
 var _level: Node
@@ -16,6 +18,7 @@ var _client_peer_id: int = 0
 var _pickup_sent: bool = false
 var _race_sent: bool = false
 var _reports: Dictionary = {}
+var _paper: Dictionary = {}
 
 
 func _ready() -> void:
@@ -28,6 +31,8 @@ func _ready() -> void:
 	if not _host:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		get_node(^"/root/UnlockManager").set(&"selected_cosmetic", CLIENT_COSMETIC)
+		get_node(^"/root/UnlockManager").set(&"nickname", CLIENT_NICKNAME)
+		get_node(^"/root/EventBus").connect(&"newspaper_ready", func(paper: Dictionary) -> void: _paper = paper)
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
 	# Without this a dropped join only showed up as a bare timeout 40 s later.
 	# NETLOG, not PAIR: run-net-pair.sh takes the first PAIR line as the result.
@@ -76,6 +81,9 @@ func _run_host() -> void:
 	var cosmetic_arrived: bool = await _wait_until(func() -> bool:
 		return client_player.cosmetic_id == CLIENT_COSMETIC)
 	_expect(cosmetic_arrived, "host sees the client's selected uniform")
+	var nickname_arrived: bool = await _wait_until(func() -> bool:
+		return String(client_player.get_node("PlayerNickname").get(&"nickname")) == CLIENT_NICKNAME)
+	_expect(nickname_arrived, "host sees the client's nickname, replicated with the appearance")
 
 	# The client sends its pickup request and a sibling notification in one
 	# frame. Whichever request the host processes first may win; only one may.
@@ -127,6 +135,15 @@ func _run_host() -> void:
 		"neither host nor client keeps the dropped package in hand")
 	rpc_id(_client_peer_id, &"_client_check_drop", package.get_path())
 	await _wait_for_report(&"drop")
+
+	# The host's next-day newspaper (N-606.2) reaches the client as the same ids and slots.
+	var chronicle: Node = _level.get_node(^"RunChronicle")
+	get_node(^"/root/EventBus").emit_signal(&"run_results_decided",
+		{"delivered": true, "elapsed_seconds": 90.0, "deliveries": [], "complaints": []})
+	_expect(NEWS_DESK.call(&"is_valid", chronicle.get(&"paper")),
+		"host writes a readable paper when the results are decided")
+	rpc_id(_client_peer_id, &"_client_check_paper", chronicle.get(&"paper"))
+	await _wait_for_report(&"paper")
 
 	# The disconnect cleanup is the last check because the client process
 	# intentionally leaves. Its carried box must become loose on the host.
@@ -227,6 +244,13 @@ func _client_check_drop(package_path: NodePath) -> void:
 	var ok: bool = package != null and not package.is_held and _players_holding(package).is_empty() \
 		and package.collision_layer == 4
 	_report(&"drop", ok, "client sees the loose package on the floor")
+
+
+@rpc("authority", "call_remote", "reliable")
+func _client_check_paper(host_paper: Dictionary) -> void:
+	await _pump(0.4)
+	var ok: bool = not _paper.is_empty() and _paper == host_paper and NEWS_DESK.call(&"is_valid", _paper)
+	_report(&"paper", ok, "client receives the host's newspaper as it is (got %s)" % str(_paper).left(80))
 
 
 @rpc("authority", "call_remote", "reliable")
