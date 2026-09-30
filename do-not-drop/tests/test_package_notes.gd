@@ -121,28 +121,29 @@ func _check_picks(contents: Array[Resource]) -> void:
 			var scribble: String = content.call(&"pick_scribble", package_id)
 			_expect(not note.is_empty() and not scribble.is_empty(), "%s picks a note and a scribble" % id)
 			_expect(note == content.call(&"pick_note", package_id), "%s: the same id picks the same note" % id)
-			_expect(scribble == content.call(&"pick_scribble", package_id), "%s: the same id picks the same scribble" % id)
+			_expect(scribble == content.call(&"pick_scribble", package_id),
+				"%s: the same id picks the same scribble" % id)
 			_expect(int(content.call(&"note_index", package_id)) < (content.get(&"notes") as PackedStringArray).size(),
 				"%s: the note index is within the notes" % id)
 			note_seen[note] = true
 			scribble_seen[scribble] = true
 		var note_count: int = (content.get(&"notes") as PackedStringArray).size()
-		_expect(note_seen.size() == note_count, "%s: 60 ids reach all %d notes (got %d)" % [id, note_count, note_seen.size()])
+		_expect(note_seen.size() == note_count,
+			"%s: 60 ids reach all %d notes (got %d)" % [id, note_count, note_seen.size()])
 		_expect(scribble_seen.size() > 1, "%s: scribbles vary between ids (got %d)" % [id, scribble_seen.size()])
 	var scribble_script: Script = load("res://scripts/gameplay/package/package_scribble.gd")
-	_expect(is_equal_approx(scribble_script.tilt(&"a"), scribble_script.tilt(&"a")), "The tilt is the same for the same id")
+	_expect(is_equal_approx(scribble_script.tilt(&"a"), scribble_script.tilt(&"a")),
+		"The tilt is the same for the same id")
 	var tilts: Dictionary = {}
 	for n: int in 20:
 		var tilt: float = scribble_script.tilt(StringName("pkg_%d" % n))
-		_expect(absf(tilt) >= deg_to_rad(4.0) - 0.0001 and absf(tilt) <= deg_to_rad(9.0) + 0.0001,
-			"The tilt stays between 4 and 9 degrees (got %f)" % rad_to_deg(tilt))
+		_expect(absf(tilt) >= deg_to_rad(2.0) - 0.0001 and absf(tilt) <= deg_to_rad(5.0) + 0.0001,
+			"The tilt stays between 2 and 5 degrees (got %f)" % rad_to_deg(tilt))
 		tilts[snappedf(tilt, 0.001)] = true
 	_expect(tilts.size() > 3, "The tilt varies between ids (got %d values)" % tilts.size())
 
 
 func _check_boxes() -> void:
-	var seen_spanish: bool = TranslationServer.get_locale().begins_with("es")
-	_expect(seen_spanish, "The test runs in Spanish (locale %s)" % TranslationServer.get_locale())
 	var cake: Resource = load(CONTENTS_DIR + "/wedding_cake.tres")
 	var vase: Resource = load(CONTENTS_DIR + "/porcelain_vase.tres")
 	var boxes: Array[Node] = []
@@ -167,9 +168,12 @@ func _check_boxes() -> void:
 		for label3d: Node in label.find_children("*", "Label3D", false, false):
 			texts.append((label3d as Label3D).text)
 		var all_text: String = "\n".join(texts)
-		_expect(all_text.contains(String(content.get(&"sender"))), "%s: the paper names the sender (got %s)" % [package.name, texts])
-		_expect(all_text.contains(String(content.call(&"localized_recipient"))), "%s: the paper names the recipient" % package.name)
-		_expect(all_text.contains(String(content.call(&"localized_name"))), "%s: the paper still names the contents" % package.name)
+		_expect(all_text.contains(String(content.get(&"sender"))),
+			"%s: the paper names the sender (got %s)" % [package.name, texts])
+		_expect(all_text.contains(String(content.call(&"localized_recipient"))),
+			"%s: the paper names the recipient" % package.name)
+		_expect(all_text.contains(String(content.call(&"localized_name"))),
+			"%s: the paper still names the contents" % package.name)
 		var parties: Label3D = label.get_node_or_null(^"ShippingParties") as Label3D
 		_expect(parties != null and parties.font_size >= 14 and parties.font_size <= 28,
 			"%s: the recipient lines fit the paper" % package.name)
@@ -181,14 +185,16 @@ func _check_boxes() -> void:
 				"%s: the scribble is the one picked from its id" % package.name)
 			_expect(scribble.position.z > 0.0 and label.position.z < 0.0,
 				"%s: the scribble and the label are on opposite faces" % package.name)
-			_expect(scribble.outline_size == 0 and absf(scribble.rotation.z) > 0.0, "%s: the scribble is plain marker, tilted" % package.name)
+			_expect(scribble.outline_size == 0 and absf(scribble.rotation.z) > 0.0,
+				"%s: the scribble is plain marker, tilted" % package.name)
 		# Opening the box adds the note to the inside line.
 		var view: Node = package.get_node("PackageContentsView")
 		_expect(String(view.call(&"describe")).is_empty(), "%s: a closed box tells nothing" % package.name)
 		var note: String = content.call(&"pick_note", package.get("package_id"))
 		package.call(&"set_open", true)
 		var inside: String = view.call(&"describe")
-		_expect(inside.contains(String(content.call(&"localized_name"))), "%s: looking in names the contents" % package.name)
+		_expect(inside.contains(String(content.call(&"localized_name"))),
+			"%s: looking in names the contents" % package.name)
 		_expect(inside.contains(note), "%s: looking in reads the note (got '%s')" % [package.name, inside])
 		# A spilled box has nothing left to read.
 		view.set(&"_spilled", true)

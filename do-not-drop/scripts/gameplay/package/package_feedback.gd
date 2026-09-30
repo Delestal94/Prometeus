@@ -10,6 +10,7 @@ const PackageVerb = preload("res://scripts/gameplay/package/package_verb.gd")
 const SynthAudioTraps = preload("res://scripts/presentation/synth_audio_traps.gd")
 const PackageRuinEffects = preload("res://scripts/gameplay/package/package_ruin_effects.gd")
 const PackageScribble = preload("res://scripts/gameplay/package/package_scribble.gd")
+const PackageShippingLabel = preload("res://scripts/gameplay/package/package_shipping_label.gd")
 const CONFETTI_COLORS: Array[Color] = [Color("f47e6d"), Color("f4c562"), Color("83e2ba"), Color("6db3d6")]
 const CONFETTI_COUNT: int = 28
 const CONFETTI_LIFETIME: float = 1.1
@@ -51,17 +52,6 @@ const BOUNCE_DECAY: float = 9.0
 const BOUNCE_FREQUENCY: float = 16.0
 const INK: Color = Color("1e2235")
 const LABEL_DROP_DAMAGE: float = 18.0
-const LABEL_TEXTURE: Texture2D = preload("res://assets/textures/cargo/tx_cargo_shipping_label_512.png")
-const LABEL_ASPECT: float = 320.0 / 512.0
-## The "PARA:" rules of the printed label (512x320 texture px): centred at
-## u=211 between the two ruled lines at v=99 and v=125, so recipient and sender
-## sit on them. Font px * pixel_size (below) * 512/width = texture px.
-const PARTIES_CENTER_UV: Vector2 = Vector2(211.0, 102.0)
-const PARTIES_MAX_TEXTURE_PX: float = 260.0
-const PARTIES_FONT_SIZE: int = 28
-const PARTIES_CHAR_EM: float = 0.56
-const PARTIES_LINE_SPACING: float = 2.0
-const LABEL_TEXT_SCALE: float = 0.62
 ## Fallback when a package has no PackageContent: the fragile box.
 const DEFAULT_BOX_MODEL: String = "res://assets/models/cargo/sm_cargo_box_cube.glb"
 ## Printed cardboard is tinted, not repainted, by trap state: the print stays
@@ -384,90 +374,18 @@ func _add_dent_pieces(half: Vector3) -> void:
 		_dent_pieces.append(dent)
 
 
-## The courier's label, stuck on the back of the box: printed paper plus the
-## declared contents written on it. Same detachable rigid body as before --
-## a hard enough hit tears it off.
+## The courier's label (package_shipping_label.gd). Same detachable rigid
+## body as before -- a hard enough hit tears it off.
 func _add_shipping_label(shipping_data: String, parties: String, box_size: Vector3) -> void:
-	var width: float = minf(0.4, box_size.x * 0.78)
-	var height: float = width * LABEL_ASPECT
-	_shipping_label = RigidBody3D.new()
-	_shipping_label.name = "ShippingLabel"
-	_shipping_label.freeze = true
-	# While attached this is paper painted on the box, not a second solid
-	# object for the carrier to collide with. Collision is enabled only once
-	# a hard impact tears it free.
-	_shipping_label.collision_layer = 0
-	_shipping_label.collision_mask = 0
-	# A few millimetres proud of the face: closer than this and depth
-	# precision at a few metres makes box and paper fight (flicker).
-	_shipping_label.position = Vector3(0.0, -box_size.y * 0.5 + minf(box_size.y * 0.42, height * 0.5 + 0.06), -box_size.z * 0.5 - 0.006)
-	_shipping_label.rotation.y = PI
-	var collision := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(width, height, 0.01)
-	collision.shape = shape
-	_shipping_label.add_child(collision)
-	var paper := MeshInstance3D.new()
-	var quad := QuadMesh.new()
-	quad.size = Vector2(width, height)
-	paper.mesh = quad
-	paper.material_override = _label_material()
-	_shipping_label.add_child(paper)
-	var text := Label3D.new()
-	text.text = shipping_data
-	_shipping_text = text
+	_shipping_label = PackageShippingLabel.build(shipping_data, parties, box_size)
+	_shipping_text = _shipping_label.get_node(^"ShippingText") as Label3D
+	_shipping_parties = _shipping_label.get_node(^"ShippingParties") as Label3D
 	_shipping_data = shipping_data
-	text.font_size = 32
-	text.pixel_size = width / 512.0 * LABEL_TEXT_SCALE
-	text.outline_size = 0
-	text.modulate = INK
-	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	text.width = 480.0
-	# Under "CONTENIDO DECLARADO", on the left of the printed label.
-	text.position = Vector3(-width * 0.04, -height * 0.11, 0.004)
-	_shipping_label.add_child(text)
-	# Recipient and sender, written on the printed "PARA:" rules.
-	_shipping_parties = Label3D.new()
-	_shipping_parties.name = "ShippingParties"
-	_shipping_parties.pixel_size = width / 512.0 * LABEL_TEXT_SCALE
-	_shipping_parties.outline_size = 0
-	_shipping_parties.modulate = INK
-	_shipping_parties.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_shipping_parties.line_spacing = PARTIES_LINE_SPACING
-	_shipping_parties.position = Vector3((PARTIES_CENTER_UV.x / 512.0 - 0.5) * width,
-		(0.5 - PARTIES_CENTER_UV.y / 320.0) * height, 0.004)
-	_shipping_label.add_child(_shipping_parties)
 	_shipping_parties_data = parties
-	_set_parties(parties)
 	# On the Box, not the package root: the box wobbles, bounces and grows
 	# (traps, impacts, placing it down), and a label left behind had the box
 	# face sweeping back and forth through it -- the label kept vanishing.
 	_box.add_child(_shipping_label)
-
-
-## Writes the recipient/sender lines, shrinking the font so the longest one
-## stays between the "PARA:" rules (the paper is a fixed size).
-func _set_parties(parties: String) -> void:
-	if _shipping_parties == null:
-		return
-	_shipping_parties.text = parties
-	var longest: int = 1
-	for line: String in parties.split("\n"):
-		longest = maxi(longest, line.length())
-	var fit: float = PARTIES_MAX_TEXTURE_PX / LABEL_TEXT_SCALE / (float(longest) * PARTIES_CHAR_EM)
-	_shipping_parties.font_size = clampi(floori(fit), 14, PARTIES_FONT_SIZE)
-
-
-static var _label_material_cache: StandardMaterial3D
-
-
-func _label_material() -> StandardMaterial3D:
-	if _label_material_cache == null:
-		_label_material_cache = StandardMaterial3D.new()
-		_label_material_cache.albedo_texture = LABEL_TEXTURE
-		_label_material_cache.roughness = 0.8
-		_label_material_cache.cull_mode = BaseMaterial3D.CULL_DISABLED
-	return _label_material_cache
 
 
 func _box_piece(size: Vector3, color: Color) -> MeshInstance3D:
@@ -629,7 +547,7 @@ func _refresh_event_disguise() -> void:
 				break
 	_shipping_text.text = shown
 	if _shipping_parties != null and _shipping_parties.text != shown_parties:
-		_set_parties(shown_parties)
+		PackageShippingLabel.write_parties(_shipping_parties, shown_parties)
 	var disguised: bool = not _package.disguise_trap_id.is_empty() and not _package.disguise_revealed
 	if _disguise_text != null:
 		_disguise_text.visible = disguised

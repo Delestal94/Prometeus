@@ -149,7 +149,11 @@ func note_index(package_id: StringName) -> int:
 ## The note this box carries, translated; empty if the content has none.
 func pick_note(package_id: StringName) -> String:
 	var index: int = note_index(package_id)
-	return localized_notes()[index] if index >= 0 else ""
+	if index < 0:
+		return ""
+	# Only the picked note is translated: describe() runs every frame the box is aimed at.
+	var keys: Array = NOTE_KEYS.get(id, [])
+	return tr(String(keys[index + 1])) if keys.size() > index + 1 else notes[index]
 
 
 func _scribble_keys() -> Array:

@@ -20,9 +20,10 @@ const BASE_FONT_SIZE: int = 36
 const REFERENCE_WIDTH: float = 0.65
 ## Share of the face's width the text may fill.
 const FACE_FILL: float = 0.9
-## A few millimetres proud of the face, like the shipping label: closer and the
-## depth buffer makes box and ink flicker.
-const OFFSET_OUT: float = 0.006
+## Proud of the face like the shipping label (closer and the depth buffer makes
+## box and ink flicker), and past the damage dents on this face (they stick out
+## 10 mm, package_feedback.gd _add_dent_pieces) so they never cover the ink.
+const OFFSET_OUT: float = 0.012
 ## The box GLBs print the logo (upper 60-80 %) and a big stamp (15-60 %) on this
 ## face, so the marker grows up from the free strip below the stamp, this far
 ## above the bottom edge.
