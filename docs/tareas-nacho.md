@@ -2279,13 +2279,19 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   activo, `ShopVoteManager.active` es falso fuera del depósito, ninguna caja queda con `occupied_by` de un
   jugador que ya no existe. Es el test que hubiera detectado S-101.
 
-#### S-805 · Telemetría local para cuando haya playtesting — B · `Opus 5.5 · high` · Aviso: no
+#### S-805 · Telemetría local para cuando haya playtesting — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd`, `options_panel.gd`, `project.godot`)
 
-- [ ] Opción "Guardar registro de partidas" (apagada por defecto). Si está activa, al terminar cada partida
+- [x] Opción "Guardar registro de partidas" (apagada por defecto). Si está activa, al terminar cada partida
   escribe `user://telemetry/<fecha>.json` con: duración, trampas del pedido, tiempo en riesgo por trampa,
-  qué rompió cada caja, evento de ruta, puntaje. Nada se manda por red.
-- [ ] Script `tools/telemetry-summary.py` que resume una carpeta de registros en una tabla. Así el primer
-  playtesting ya produce datos sin preparar nada.
+  qué rompió cada caja, evento de ruta, puntaje. Nada se manda por red. Hecho: autoload `RunTelemetry`
+  (`scripts/core/run_telemetry.gd` + `run_telemetry_format.gd`) que solo escucha `EventBus` y escribe con `safe_json.gd`
+  `AAAA-MM-DD_HH-MM-SS.json` (sin `:`; tope de 300 archivos); `GameSettings.save_run_log` persistida y en el panel
+  de opciones (`UI_OPT_RUN_LOG`). La causa de ruina es el texto ya traducido que reporta la caja: agrupar por `trap`.
+  Test `test_run_telemetry`; aviso `docs/avisos/2026-09-30-s805-run-log.md`; rama `nacho/S-805-local-telemetry`.
+- [x] Script `tools/telemetry-summary.py` que resume una carpeta de registros en una tabla. Así el primer
+  playtesting ya produce datos sin preparar nada. Hecho: solo librería estándar; tablas general, por trampa
+  (partidas, cajas, % arruinadas, segundos en riesgo), causas y eventos de ruta; `--roles host,solo` evita contar dos
+  veces la misma partida jugada en red; salta archivos rotos. Rama `nacho/S-805-local-telemetry`.
 
 #### S-806 · Batería verde y rápida — A · — · Aviso: no
 

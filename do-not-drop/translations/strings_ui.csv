@@ -440,6 +440,8 @@ UI_OPT_MUSIC_VOLUME,Volumen de la música,Music volume
 UI_OPT_PRESS_KEY,Presioná una tecla…,Press a key…
 UI_OPT_QUALITY,Calidad gráfica,Graphics quality
 UI_OPT_RESET,Restablecer,Reset
+UI_OPT_RUN_LOG,Guardar registro de partidas,Save game log
+UI_OPT_RUN_LOG_HINT,"Al terminar cada partida guarda un archivo en tu compu (carpeta telemetry) para analizar el playtesting. No se envía nada por red.","After each run it saves a file on your PC (telemetry folder) for playtest analysis. Nothing is sent over the network."
 UI_OPT_SENSITIVITY,Sensibilidad de la mirada,Look sensitivity
 UI_OPT_SHAKE,Sacudida de cámara,Camera shake
 UI_OPT_SOUND_CHECK,Sonidos del juego (uno por uno)…,Game sounds (one by one)…

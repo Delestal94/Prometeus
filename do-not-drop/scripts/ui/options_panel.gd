@@ -23,6 +23,7 @@ var _control_help_option: OptionButton
 var _colorblind_check: CheckBox
 var _menu_text_option: OptionButton
 var _sound_subtitles_check: CheckBox
+var _run_log_check: CheckBox
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
@@ -147,6 +148,11 @@ func _build() -> void:
 
 	_sound_subtitles_check = UiTheme.check_box(column, tr("UI_OPT_SOUND_SUBTITLES"), GameSettings.sound_subtitles)
 	_sound_subtitles_check.toggled.connect(func(pressed: bool) -> void: GameSettings.sound_subtitles = pressed)
+
+	# Local playtest log (run_telemetry.gd): off by default, never leaves the PC.
+	_run_log_check = UiTheme.check_box(column, tr("UI_OPT_RUN_LOG"), GameSettings.save_run_log)
+	_run_log_check.tooltip_text = tr("UI_OPT_RUN_LOG_HINT")
+	_run_log_check.toggled.connect(func(pressed: bool) -> void: GameSettings.save_run_log = pressed)
 
 	_invert_check = UiTheme.check_box(column, tr("UI_OPT_INVERT_Y"), GameSettings.invert_look_y)
 	_invert_check.toggled.connect(func(pressed: bool) -> void: GameSettings.invert_look_y = pressed)
@@ -275,6 +281,7 @@ func _sync_from_settings() -> void:
 	_colorblind_check.set_pressed_no_signal(GameSettings.colorblind_palette)
 	_menu_text_option.select(_menu_text_scale_index())
 	_sound_subtitles_check.set_pressed_no_signal(GameSettings.sound_subtitles)
+	_run_log_check.set_pressed_no_signal(GameSettings.save_run_log)
 	_invert_check.set_pressed_no_signal(GameSettings.invert_look_y)
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
 	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)

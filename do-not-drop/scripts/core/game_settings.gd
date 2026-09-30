@@ -78,6 +78,14 @@ var voice_push_to_talk: bool = true:
 		voice_push_to_talk = value
 		_save()
 
+## Local run log (S-805, run_telemetry.gd): at the end of each run the game
+## writes one JSON file to user://telemetry/ for the playtest summary script.
+## Off by default; nothing ever leaves this machine.
+var save_run_log: bool = false:
+	set(value):
+		save_run_log = value
+		_save()
+
 const REBINDABLE_ACTIONS := [&"interact", &"ui_ping", &"drive_horn", &"look_back", &"use_card", &"voice_talk"]
 const DEFAULT_KEY_BINDINGS := {&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G, &"voice_talk": KEY_Z}
 var key_bindings: Dictionary = DEFAULT_KEY_BINDINGS.duplicate():
@@ -259,6 +267,7 @@ func reset_to_defaults() -> void:
 	sound_subtitles = false
 	voice_chat_enabled = false
 	voice_push_to_talk = true
+	save_run_log = false
 	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
 	set_language(LANGUAGE_DEFAULT)
 	_loading = false
@@ -351,6 +360,7 @@ func _load() -> void:
 	sound_subtitles = bool(config.get_value(SECTION, "sound_subtitles", false))
 	voice_chat_enabled = bool(config.get_value(SECTION, "voice_chat_enabled", false))
 	voice_push_to_talk = bool(config.get_value(SECTION, "voice_push_to_talk", true))
+	save_run_log = bool(config.get_value(SECTION, "save_run_log", false))
 	language = String(config.get_value(SECTION, "language", LANGUAGE_DEFAULT))
 	if language not in SUPPORTED_LANGUAGES:
 		language = LANGUAGE_DEFAULT
@@ -394,6 +404,7 @@ func _save() -> void:
 	config.set_value(SECTION, "sound_subtitles", sound_subtitles)
 	config.set_value(SECTION, "voice_chat_enabled", voice_chat_enabled)
 	config.set_value(SECTION, "voice_push_to_talk", voice_push_to_talk)
+	config.set_value(SECTION, "save_run_log", save_run_log)
 	config.set_value(SECTION, "language", language)
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
 	config.set_value(SECTION, "last_join_address", last_join_address)
