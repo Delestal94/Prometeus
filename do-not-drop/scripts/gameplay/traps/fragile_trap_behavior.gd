@@ -1,5 +1,5 @@
 class_name FragileTrapBehavior
-extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+extends ITrapBehavior
 ## Loses integrity on impacts. "Amortiguá" (N-117): the road announces its
 ## bumps a moment before the truck reaches them (`impact_ahead` in the
 ## context, from RoadImpacts), and one tap of the primary action inside a

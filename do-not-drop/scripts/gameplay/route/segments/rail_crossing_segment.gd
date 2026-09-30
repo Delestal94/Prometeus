@@ -58,8 +58,8 @@ const PORTAL_HEIGHT: float = 8.4
 ## back, that far in (along) and that far to each side of the axis. The terrain
 ## keeps its hill under that top just behind the portal, so the rim of the hole
 ## it cuts for the bore never stands over the wedge (which would show sky).
-const BACKFILL_LENGTH: float = 5.4
-const BACKFILL_HALF_WIDTH: float = 5.75
+const BACKFILL_LENGTH: float = TerrainField.BACKFILL_LENGTH
+const BACKFILL_HALF_WIDTH: float = TerrainField.BACKFILL_HALF_WIDTH
 const BACKFILL_ABOVE_CROWN: float = 0.9
 ## How far into the bore the train waits, and goes, out of sight.
 const TRAIN_HIDE_DEPTH: float = 6.0

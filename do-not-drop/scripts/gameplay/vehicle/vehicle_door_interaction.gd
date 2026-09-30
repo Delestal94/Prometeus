@@ -1,4 +1,4 @@
-extends "res://scripts/gameplay/interaction/interactable.gd"
+extends Interactable
 ## One openable door of the van: the pair of rear cargo leaves, or either cab
 ## door. The host owns the open/closed state on the vehicle (vehicle.gd) and
 ## its MultiplayerSynchronizer mirrors it, so every peer sees the same door.

@@ -149,7 +149,7 @@ func _expect_balloon(first: HouseWaitingMarker, second: HouseWaitingMarker) -> v
 	var other := second.balloon.get_node_or_null(^"BalloonBall") as MeshInstance3D
 	_expect(other != null and other.material_override == material, "Every house's balloon shares one material")
 	_expect(ball.get_node_or_null(^"Knot") is MeshInstance3D, "The balloon has a knot where the string ties on")
-	var night: float = LowpolyMaterials.night_level
+	var night: float = DetailMaterials.night_level
 	LowpolyMaterials.set_night_level(0.0)
 	var yellow: Color = HouseWaitingMarker.BALLOON_COLOR
 	var day_glow: float = HouseWaitingMarker._balloon_material(yellow).get_shader_parameter(&"glow")

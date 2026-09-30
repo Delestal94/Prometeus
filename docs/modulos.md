@@ -1,6 +1,6 @@
 # Módulos portables — qué se puede llevar a otro juego
 
-> Última actualización: 2026-09-30 (N-230, fases 0 y 1).
+> Última actualización: 2026-09-30 (N-230 a N-234: las cinco fases, 17 módulos).
 > Objetivo: que las piezas genéricas de Take My Package vivan en carpetas que se copian a otro
 > proyecto Godot y **funcionan**, con la garantía dada por CI y no por la memoria de nadie.
 
@@ -37,12 +37,24 @@ El patrón es **módulo = mecanismo; el juego = tablas y cableado**, en un adapt
 | `net_session` (`NetEventBus`) | `scripts/core/event_bus.gd` (`EventBus extends NetEventBus`) | las 50+ señales del juego; `request_ping`/`request_horn` usan `request()` con `request_cooldowns[&"ping_sent"]` |
 | `net_session` (`SteamVoice`) | `scripts/core/proximity_voice.gd` (`ProximityVoice extends SteamVoice`) | `_voice_enabled`/`_push_to_talk` leen `GameSettings`; `session = NetworkManager` |
 | `net_session` (`NetStatsOverlay`) | `scripts/presentation/net_stats_overlay.gd` | `_theme()` con las fuentes y colores de `UiTheme`, `_severity_color()` con la paleta para daltonismo |
+| `interaction` (`SeatPoint`) | `scripts/gameplay/interaction/seat_point.gd` (extiende `SeatPoint`) | `required_mount_path`, `tend_mount_paths` y los hooks `_free_prompt`, `_can_board`, `_accept_boarding`, `_on_boarded`, `_on_released`: la caja del pasajero, la columna de bahías, `carried_package`/`tend_package`/`set_tender` |
+| `interaction` (`Interactable`) | los 10 puntos de interacción del juego (`extends Interactable`) | `interaction_layer` (16) y `player_group` (`player`) son `static var` con los valores del juego como default |
+| `seat_camera` | `scripts/presentation/first_person_camera.gd` (extiende `SeatCamera`; la escena sigue apuntando ahí) | `_preferred_fov`/`_look_sensitivity`/`_look_y_sign`/`_shake_scale` leen `GameSettings`; `RenderLayers` oculta el cuerpo propio; `EventBus.vehicle_impact` → `add_shake` + `kick_fov`, `package_ruined` → `add_shake` |
+| `route_gen` (`SegmentStreamer`) | `scripts/gameplay/route/route_streamer.gd` (`RouteStreamer extends SegmentStreamer`) | el pool con los tramos con assets (chicana, puente, obras, túnel), la semilla de `NetworkManager` (`_session_seed`), el cielo (`RouteSky`) y los cruces de ciervos (`_on_segment_spawned`) |
+| `route_gen` (`TerrainField`) | `scripts/gameplay/route/route_terrain.gd` (extiende `TerrainField`; `route.gd` lo sigue precargando por ruta) | `_terrain_shader()` (el shader del juego), `_configure_material()` (las cuatro texturas de detalle), `_decorate_river()` (las cascadas, `RiverFalls`) |
+| `route_gen` (`RouteSegment`) | los tramos con assets del juego (`ChicaneSegment`, `NarrowBridgeSegment`, `ConstructionZoneSegment`, `TunnelSegment`, `RailCrossingSegment`) y `RoutePlanner` | `extends RouteSegment`; `_art()` viste los modelos con `DetailMaterials`. `RoutePlanner` se queda en el juego: nombra los tramos con assets y las reglas del depósito |
+| `world_mood` | `RouteSky`, `WindshieldRain`, `HUD` (leen `WorldMood.active`) | `GameSettings._ready` llama `LowpolyMaterials.configure()` para que la paleta esté en `DetailMaterials` antes de que el módulo la use; los lectores de estación y noche usan `DetailMaterials.season`/`night_level` |
+| `hazards` | las siete trampas (`extends ITrapBehavior`), `data/traps/*.tres` (`translation_key` en el recurso; antes una tabla en el script), `package.gd` | nada que configurar: el juego agrega una trampa con un script y un `.tres` |
+| `coop_vote` | `scripts/core/shop_vote_manager.gd` (`ShopVoteManager extends CoopVote`) | `_default_offers()` = `CrewProgression.SUPPLIES`, `_spend()` = la billetera; las cartas (prioridad, revotación, descuento, información) y las señales de `EventBus` |
+| `unlock_profile` | `scripts/core/unlock_manager.gd` (`UnlockManager extends UnlockProfile`) | `UNLOCKS` como reglas (`deliveries`, `score` → `_stat()`), contadores, camión, pintura, uniformes, caras, trampas bloqueadas; `_profile_fields`/`_read_profile`/`_after_load`/`_reset_fields` |
+| `run_log` | `scripts/core/run_telemetry.gd` (`RunTelemetry extends RunLog`) | qué escucha en `EventBus` y qué guarda de `RunManager`; `TelemetryFormat` sigue en el juego |
+| `settings_store` | `scripts/core/game_settings.gd` (`GameSettings extends SettingsStore`) | `SAVED_KEYS`, idiomas, teclas y todas las propiedades del juego con su setter; `_before_load` (migración de "Do Not Drop"), `_after_load`/`_needs_rewrite`/`_before_save` (marca del HUD) |
 
 Regla para escribir un adaptador: si el módulo necesita datos del juego, el adaptador se los da
 **antes del primer uso** (`LowpolyMaterials.configure()`), y los lectores del juego siguen usando el
 adaptador, nunca el módulo directo, así el orden de inicialización no importa.
 
-## Catálogo (fases 1 y 2, hechas)
+## Catálogo (fases 1 a 5, hechas)
 
 | Módulo | Clases | Qué es | Depende de |
 |---|---|---|---|
@@ -53,11 +65,20 @@ adaptador, nunca el módulo directo, así el orden de inicialización no importa
 | `render_budget` | `WorldQuality`, `DressingBatcher`, `DetailMaterials`, `ContactShadow` | Frames en hardware modesto con GL Compatibility: presets de calidad, miles de mallas estáticas en MultiMesh con colisiones, detalle triplanar con estaciones y luz de noche, sombras de contacto falsas | — |
 | `acoustics` | `AcousticSpace`, `AcousticZone` | Reverb en los buses del mundo mientras la cámara está dentro de un volumen (túnel, galpón) | — |
 | `ragdoll` | `PlayerRagdoll` | Ragdoll visual de cápsulas para un personaje sin huesos físicos | — |
+| `interaction` | `Interactable`, `SeatPoint` | Blanco pasivo que la sonda del jugador encuentra y activa (host-autoritativo vía `request_interact`) y asiento que sube al jugador, le da su cámara y al conductor el volante; hooks para lo que el asiento significa en el juego | — |
+| `seat_camera` | `SeatCamera` | Cámara en primera persona colgada del ancla del asiento: límites por asiento, despeje de paredes, mirar atrás, `add_shake()`, `kick_fov()`; ajustes por hooks | — |
+| `settings_store` | `SettingsStore` | Base de un autoload de ajustes: guarda al cambiar, carga por cada setter, idioma, pantalla completa, volumen por bus, teclas reasignables, detección de gamepad, hooks de migración | — |
+| `route_gen` | `RouteSegment`, `SegmentStreamer`, `TerrainField`, `StraightSegment`, `SpeedBumpSegment`, `CurveSegment`, `SCurveSegment`, `GravelSegment`, `HillSegment` | Ruta procedural: tramos encadenables construidos por código, el streamer que los genera adelante del objetivo y los borra atrás (reglas de combinación, rampa de dificultad, línea central consultable) y el campo de alturas compartido por render, física y decorado (ríos, lomas, zonas planas, túneles) | `render_budget` |
+| `world_mood` | `WorldMood` | Clima, hora y estación desde la semilla de la sesión; se aplican al `Environment`, al sol, a un material de cielo y al del terreno; la estación y la oscuridad van a `DetailMaterials` | `render_budget` |
+| `hazards` | `ITrapBehavior`, `TrapDefinition` | El contrato de un peligro sobre un objeto (integridad en una sola escala, impactos, pasos, pistas, hitos, estados de cuidado) y su recurso de contenido (`.tres` con id, `name_key`, script, parámetros, contenidos) | `loc_text` |
+| `coop_vote` | `CoopVote` | Votación del host entre los peers sobre ofertas, espejada a todos; resuelve cuando votaron todos o se acabó el reloj; paga por un hook | `net_session` |
+| `unlock_profile` | `UnlockProfile` | Perfil JSON versionado de desbloqueos por umbrales de estadísticas (retroactivos al cargar), marcas "visto una vez", hooks para los campos y migraciones del juego | `persistence` |
+| `run_log` | `RunLog` | Un registro JSON por partida en una carpeta del guardado, con nombre por fecha y poda de los más viejos | `persistence` |
 | `net_session` | `NetSession`, `NetEventBus`, `SteamVoice`, `NetStats`, `NetStatsOverlay` | Sesión cooperativa host-autoritativa: Steam (lobby, invitaciones) o ENet, handshake con versión que lleva el estado del host como diccionario opaco, roster, reinicio, códigos de falla; bus con `relay()` y pedidos de cualquier peer con límite de frecuencia; voz por Steam; estadísticas, `--net-sim` y overlay | — |
 
 `tools/check_modules.py --list` imprime esta tabla desde los `module.cfg`.
 
-## Lo que sigue (fases 2 a 5)
+## Las fases (todas hechas el 2026-09-30)
 
 Cada fase es un PR que pasa CI. El orden es por valor (lo más caro de rehacer primero) y por riesgo.
 Tareas en `docs/tareas-nacho.md` (N-231 a N-234). Cuando el juego ya tiene un autoload con la API que
@@ -69,9 +90,9 @@ funcionando porque la subclase hereda todo.
 | Fase | Módulo nuevo | De dónde sale | Lo que hay que desatar |
 |---|---|---|---|
 | 2 · Red — **hecho (N-231)** | `net_session` | `network_manager.gd`, `event_bus.gd`, `proximity_voice.gd`, `net_stats.gd` + overlay | Resuelto por **herencia**: el autoload del juego extiende la clase del módulo y rellena hooks virtuales (ver la tabla de adaptadores). El handshake sigue siendo un diccionario plano (`version`, `scene` + lo que devuelve `_session_state()`), así los tests que lo arman a mano no cambian. `PROTOCOL_VERSION` 11: el RPC de reinicio lleva un diccionario y los pedidos de peers pasan por `request()`. |
-| 3 · Interacción y ajustes | `interaction` (`Interactable`, `SeatPoint` genérico), `seat_camera`, `settings_store`, `ui_theme` | `gameplay/interaction/`, `first_person_camera.gd`, `game_settings.gd`, `ui_theme.gd` | `Interactable`: capa de colisión y prompt por `@export`, el grupo del jugador como constante configurable. `SeatPoint`: lo de `carried_package`/`driver`/`tend_package` pasa a métodos virtuales que el asiento del juego sobreescribe. Cámara: `add_shake()`/`kick_fov()` públicos, el juego los conecta a `vehicle_impact`. `SettingsStore`: volumen por bus, teclas, gamepad, pantalla, idioma; los campos del juego (`hud_scale`, ayuda de controles, log) quedan en `GameSettings` que lo extiende. `UiTheme`: paleta y tipografías como `Resource` del juego. Dominio de Slatex: aviso. |
-| 4 · Ruta y clima | `route_gen` (`RouteStreamer`, `RouteSegment`, `RoutePlanner`, `RouteTerrain`, `RouteDresser`, tramos), `world_mood` (`WorldMood`, `RouteSky`, `WindshieldRain`) | `gameplay/route/` (parte), `presentation/` (parte) | El planner piensa en "paradas", no "casas". Los tramos reciben la semilla y el `SynthAudio`/materiales por configuración; el cruce de tren saca sus RPC a una señal que el juego relaya. `WorldMood.pick(seed)` en vez de leer `NetworkManager`. Es la fase más grande; se parte en subtareas por tramo. |
-| 5 · Sistemas de juego genéricos | `hazards` (`ITrapBehavior` + `TrapDefinition`), `coop_vote` (`ShopVoteManager`), `profile_store` (perfil versionado con migraciones), `event_log` (`RunTelemetry`) | `gameplay/traps/` (contrato), `shop_vote_manager.gd`, `unlock_manager.gd`, `run_telemetry.gd` | `TrapDefinition.NAME_KEYS` pasa a `@export name_key` (hoy hay que editar el archivo por cada trampa nueva). La votación cobra por un `Callable`, no por `CrewProgression`. El perfil separa el motor de versiones/migraciones del esquema del juego. La telemetría escucha un bus que se le pasa. |
+| 3 · Interacción y ajustes — **hecho (N-232)** | `interaction`, `seat_camera`, `settings_store` | `gameplay/interaction/`, `first_person_camera.gd`, `game_settings.gd` | Herencia otra vez: `SeatPoint` genérico con hooks para lo de la carga; `SeatCamera` con `add_shake()`/`kick_fov()` que el juego conecta a sus eventos; `SettingsStore` con `saved_keys` y hooks de migración. **`UiTheme` queda en el juego a propósito**: es la marca (paleta, dos fuentes, íconos de trampas y acciones en `assets/ui/`); un juego nuevo se lo lleva copiando `ui_theme.gd` + `ui_sounds.gd` y las fuentes, y cambia las constantes. Convertirlo en `Resource` tocaría 40+ llamadores por una portabilidad que ya tiene. |
+| 4 · Ruta y clima — **hecho (N-233)** | `route_gen`, `world_mood` | `gameplay/route/` (parte), `world_mood.gd` | `RouteSegment`, `SegmentStreamer` (base de `RouteStreamer`), `TerrainField` (base de `route_terrain.gd`) y los seis tramos construidos por código van al módulo; `WorldMood` a `world_mood`. **Se quedan en el juego a propósito**: `RoutePlanner` (nombra los tramos con assets y las reglas del depósito y las casas), los cinco tramos con modelos y sonido (chicana, puente, obras, túnel, cruce de tren), `RouteDresser` (el catálogo de árboles y props es contenido), `RouteSky` y `WindshieldRain` (shaders y modelo del horizonte del juego). Otro juego trae sus tramos con `extends RouteSegment` y los mete en `segment_scripts`. |
+| 5 · Sistemas de juego genéricos — **hecho (N-234)** | `hazards`, `coop_vote`, `unlock_profile`, `run_log` | `gameplay/traps/` (contrato), `shop_vote_manager.gd`, `unlock_manager.gd`, `run_telemetry.gd` | `TrapDefinition.translation_key` es un `@export` del `.tres` (se fue la tabla `NAME_KEYS`: una trampa nueva no toca ningún archivo del módulo). `CoopVote` paga por `_spend()`; las cartas quedan en el juego. `UnlockProfile` trata cada clave de una regla salvo `title` como una estadística que el juego responde con `_stat()`, así `UNLOCKS` no cambió. `RunLog` es solo el archivo; lo que se registra es del juego. `OrderBalancer` se queda: es puro pero habla de casas y trampas. |
 
 Quedan en el juego, a propósito: paquete y trampas concretas, depósito, casas, `CrewProgression`,
 `RouteEventManager`, `RunManager`, HUD, menú, jefe y quejas. Son *este* juego.

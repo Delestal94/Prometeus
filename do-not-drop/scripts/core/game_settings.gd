@@ -1,53 +1,52 @@
-extends Node
-## Player-facing settings that survive closing the game.
+extends SettingsStore
+## Take My Package's settings on the settings_store module's SettingsStore
+## (docs/modulos.md): the module does the file, the language, fullscreen,
+## the audio buses and the rebindable keys; this file is what this game
+## lets the player change and what each setting does when it does.
 ##
 ## docs/critica-diseno-abogado-del-diablo.md section 4: a party game aimed at
 ## people who don't play much had no way to turn the volume down, no way to
 ## change look sensitivity, and no way to leave without Alt+F4. None of that
 ## is a feature anybody asks for by name -- it's the floor a game has to
 ## clear before it can be handed to someone else.
-##
-## Settings apply themselves the moment they change (volume writes straight
-## to the audio bus) so no screen has to remember to push them anywhere, and
-## they're saved on change rather than on exit, because the way a prototype
-## usually closes is a crash.
 
 const SAVE_PATH: String = "user://settings.cfg"
-## Headless `--script` tests do not build Godot's editor-managed global class
-## cache before autoloads are parsed. Keep this dependency explicit so the
-## settings autoload compiles in both the editor/game and the isolated runner.
+## Kept explicit so the settings autoload compiles the same in the
+## editor/game and the isolated test runner.
 const WORLD_QUALITY = preload("res://modules/render_budget/world_quality.gd")
-var save_path: String = SAVE_PATH
 const SECTION: String = "player"
 const LANGUAGE_DEFAULT: String = "es"
 const SUPPORTED_LANGUAGES: Array[String] = ["es", "en"]
-
-var language: String = LANGUAGE_DEFAULT
-signal language_changed(locale: String)
+const SAVED_KEYS: Array[StringName] = [
+	&"master_volume", &"music_volume", &"effects_volume", &"voice_volume", &"preferred_fov",
+	&"camera_shake_scale", &"impact_effects", &"look_sensitivity", &"invert_look_y", &"fullscreen",
+	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
+	&"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log", &"last_join_address",
+]
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
 var master_volume: float = 1.0:
 	set(value):
 		master_volume = clampf(value, 0.0, 1.0)
-		_apply_volume()
+		apply_bus_volume("Master", master_volume)
 		_save()
 
 ## Background music on its own bus, under the master volume.
 var music_volume: float = MUSIC_VOLUME_DEFAULT:
 	set(value):
 		music_volume = clampf(value, 0.0, 1.0)
-		_apply_music_volume()
+		apply_bus_volume("Music", music_volume)
 		_save()
 const MUSIC_VOLUME_DEFAULT: float = 0.7
 var effects_volume: float = 1.0:
 	set(value):
 		effects_volume = clampf(value, 0.0, 1.0)
-		_apply_bus("SFX", effects_volume)
+		apply_bus_volume("SFX", effects_volume)
 		_save()
 var voice_volume: float = 1.0:
 	set(value):
 		voice_volume = clampf(value, 0.0, 1.0)
-		_apply_bus("Voice", voice_volume)
+		apply_bus_volume("Voice", voice_volume)
 		_save()
 var preferred_fov: float = 82.0:
 	set(value):
@@ -93,12 +92,6 @@ const DEFAULT_KEY_BINDINGS := {
 	&"interact": KEY_E, &"ui_ping": KEY_V, &"drive_horn": KEY_H, &"look_back": KEY_B, &"use_card": KEY_G,
 	&"voice_talk": KEY_Z, &"sprint": KEY_SHIFT,
 }
-var key_bindings: Dictionary = DEFAULT_KEY_BINDINGS.duplicate():
-	set(value):
-		key_bindings = value.duplicate()
-		for action: StringName in REBINDABLE_ACTIONS:
-			_apply_key_binding(action, int(key_bindings.get(action, DEFAULT_KEY_BINDINGS[action])))
-		_save()
 
 ## Multiplies whatever each look implementation already uses, so 1.0 is
 ## exactly today's feel and nobody has to re-tune the defaults.
@@ -110,12 +103,6 @@ var look_sensitivity: float = 1.0:
 var invert_look_y: bool = false:
 	set(value):
 		invert_look_y = value
-		_save()
-
-var fullscreen: bool = false:
-	set(value):
-		fullscreen = value
-		_apply_fullscreen()
 		_save()
 
 ## Graphics quality preset, WorldQuality.Level (tareas de Nacho N-205):
@@ -190,64 +177,24 @@ var last_join_address: String = "":
 		last_join_address = value.strip_edges()
 		_save()
 
-## Not a saved setting: which device the player touched last. Every on-screen
-## prompt asks this instead of printing "E / A" and making the player work
-## out which half applies to them.
-var using_gamepad: bool = false
-signal input_device_changed(gamepad: bool)
 
-## Guards the setters while loading, so reading the file back doesn't write
-## it again four times.
-var _loading: bool = false
+func _init() -> void:
+	save_path = SAVE_PATH
+	section = SECTION
+	saved_keys = SAVED_KEYS.duplicate()
+	default_language = LANGUAGE_DEFAULT
+	supported_languages = SUPPORTED_LANGUAGES.duplicate()
+	rebindable_actions.assign(REBINDABLE_ACTIONS)
+	default_key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	# Under a test script (--script) the main loop has a script of its own:
-	# keep tests away from the player's real save, which they used to fill
-	# with dozens of scripted runs and unlocks.
-	if Engine.get_main_loop().get_script() != null:
-		save_path = "user://test_settings.cfg"
-	_load()
+	super()
+	# The palette reaches the render_budget module before the first model is
+	# dressed (the route_gen and world_mood modules go to DetailMaterials directly).
+	LowpolyMaterials.configure()
 	WORLD_QUALITY.watch(get_tree())
 	WORLD_QUALITY.apply(get_tree(), graphics_quality)
-
-
-func _input(event: InputEvent) -> void:
-	var gamepad: bool = using_gamepad
-	if event is InputEventJoypadButton:
-		gamepad = true
-	elif event is InputEventJoypadMotion:
-		# Stick drift sits well under this, and shouldn't flip the prompts
-		# back while someone is typing on the keyboard.
-		gamepad = gamepad or absf((event as InputEventJoypadMotion).axis_value) > 0.5
-	elif event is InputEventKey or event is InputEventMouseButton:
-		gamepad = false
-	if gamepad != using_gamepad:
-		using_gamepad = gamepad
-		input_device_changed.emit(gamepad)
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	# The shortcut every PC player tries first; it works on any screen.
-	if event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_F11:
-		fullscreen = not fullscreen
-		get_viewport().set_input_as_handled()
-
-
-## Picks the half of a prompt that matches the device in hand.
-func prompt(keyboard: String, gamepad: String) -> String:
-	return gamepad if using_gamepad else keyboard
-
-
-func set_language(locale: String) -> void:
-	var normalized: String = locale if locale in SUPPORTED_LANGUAGES else LANGUAGE_DEFAULT
-	var changed: bool = language != normalized
-	language = normalized
-	TranslationServer.set_locale(language)
-	if changed:
-		language_changed.emit(language)
-		_save()
 
 
 ## Back to how the game ships, for anyone who dragged a slider somewhere
@@ -279,139 +226,31 @@ func reset_to_defaults() -> void:
 	_save()
 
 
-## The sign to multiply vertical look motion by. Both look implementations
-## ask for this rather than each deciding what "inverted" means.
-func look_y_sign() -> float:
-	return -1.0 if invert_look_y else 1.0
-
-
-func bind_key(action: StringName, keycode: Key) -> void:
-	if action not in REBINDABLE_ACTIONS or keycode == KEY_NONE:
-		return
-	key_bindings[action] = keycode
-	_apply_key_binding(action, keycode)
-	_save()
-
-
-func binding_label(action: StringName) -> String:
-	return OS.get_keycode_string(int(key_bindings.get(action, DEFAULT_KEY_BINDINGS.get(action, KEY_NONE))))
-
-
-func _apply_key_binding(action: StringName, keycode: Key) -> void:
-	if not InputMap.has_action(action):
-		return
-	for event: InputEvent in InputMap.action_get_events(action):
-		if event is InputEventKey:
-			InputMap.action_erase_event(action, event)
-	var key_event := InputEventKey.new()
-	key_event.physical_keycode = keycode
-	InputMap.action_add_event(action, key_event)
-
-
-func _apply_volume() -> void:
-	var bus: int = AudioServer.get_bus_index("Master")
-	if bus < 0:
-		return
-	# Silence is -inf dB, which linear_to_db already returns for 0.0; setting
-	# the bus to that is what actually mutes it.
-	AudioServer.set_bus_volume_db(bus, linear_to_db(master_volume))
-
-
-func _apply_music_volume() -> void:
-	var bus: int = AudioServer.get_bus_index("Music")
-	if bus >= 0:
-		AudioServer.set_bus_volume_db(bus, linear_to_db(music_volume))
-
-func _apply_bus(name: String, volume: float) -> void:
-	var bus := AudioServer.get_bus_index(name)
-	if bus >= 0:
-		AudioServer.set_bus_volume_db(bus, linear_to_db(volume))
-
-
-func _apply_fullscreen() -> void:
-	if DisplayServer.get_name() == "headless":
-		return
-	DisplayServer.window_set_mode(
-		DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
-	)
-
-
-func _load() -> void:
+## The working-title save folder comes over once (LegacyUserData).
+func _before_load() -> void:
 	LegacyUserData.migrate()
-	var config := ConfigFile.new()
-	if config.load(save_path) != OK:
-		TranslationServer.set_locale(language)
-		_apply_volume()
-		_apply_music_volume()
-		_apply_bus("SFX", effects_volume)
-		_apply_bus("Voice", voice_volume)
-		return
-	_loading = true
-	master_volume = float(config.get_value(SECTION, "master_volume", 1.0))
-	music_volume = float(config.get_value(SECTION, "music_volume", MUSIC_VOLUME_DEFAULT))
-	effects_volume = float(config.get_value(SECTION, "effects_volume", 1.0))
-	voice_volume = float(config.get_value(SECTION, "voice_volume", 1.0))
-	preferred_fov = float(config.get_value(SECTION, "preferred_fov", 82.0))
-	camera_shake_scale = float(config.get_value(SECTION, "camera_shake_scale", 1.0))
-	impact_effects = bool(config.get_value(SECTION, "impact_effects", true))
-	look_sensitivity = float(config.get_value(SECTION, "look_sensitivity", 1.0))
-	invert_look_y = bool(config.get_value(SECTION, "invert_look_y", false))
-	fullscreen = bool(config.get_value(SECTION, "fullscreen", false))
-	graphics_quality = int(config.get_value(SECTION, "graphics_quality", WORLD_QUALITY.Level.HIGH))
-	hud_scale = minf(float(config.get_value(SECTION, "hud_scale", HUD_SCALE_DEFAULT)), HUD_SCALE_MAX)
-	control_help_mode = int(config.get_value(SECTION, "control_help_mode", ControlHelp.BEGINNING))
-	colorblind_palette = bool(config.get_value(SECTION, "colorblind_palette", false))
-	menu_text_scale = float(config.get_value(SECTION, "menu_text_scale", 1.0))
-	sound_subtitles = bool(config.get_value(SECTION, "sound_subtitles", false))
-	voice_chat_enabled = bool(config.get_value(SECTION, "voice_chat_enabled", false))
-	voice_push_to_talk = bool(config.get_value(SECTION, "voice_push_to_talk", true))
-	save_run_log = bool(config.get_value(SECTION, "save_run_log", false))
-	language = String(config.get_value(SECTION, "language", LANGUAGE_DEFAULT))
-	if language not in SUPPORTED_LANGUAGES:
-		language = LANGUAGE_DEFAULT
-	TranslationServer.set_locale(language)
-	# Files saved before the HUD default dropped to 60 % hold the old 100 %
-	# default, not a choice anyone made: move them to the new one, once.
+
+
+## No file yet: the defaults still have to reach their buses.
+func _apply_defaults() -> void:
+	apply_bus_volume("Master", master_volume)
+	apply_bus_volume("Music", music_volume)
+	apply_bus_volume("SFX", effects_volume)
+	apply_bus_volume("Voice", voice_volume)
+
+
+func _after_load(config: ConfigFile) -> void:
+	# Files saved before the HUD default dropped hold the old 100 % default,
+	# not a choice anyone made: move them to the new one, once.
 	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
 		hud_scale = HUD_SCALE_DEFAULT
-	last_join_address = String(config.get_value(SECTION, "last_join_address", ""))
-	var saved_bindings: Dictionary = Dictionary(config.get_value(SECTION, "key_bindings", DEFAULT_KEY_BINDINGS))
-	key_bindings = DEFAULT_KEY_BINDINGS.duplicate()
-	for action: StringName in REBINDABLE_ACTIONS:
-		key_bindings[action] = int(saved_bindings.get(action, DEFAULT_KEY_BINDINGS[action]))
-		_apply_key_binding(action, int(key_bindings[action]))
-	_loading = false
-	if not config.has_section_key(SECTION, HUD_DEFAULT_MARKER):
-		_save()
-	_apply_bus("SFX", effects_volume)
-	_apply_bus("Voice", voice_volume)
+	else:
+		hud_scale = minf(hud_scale, HUD_SCALE_MAX)
 
 
-func _save() -> void:
-	if _loading:
-		return
-	var config := ConfigFile.new()
-	config.set_value(SECTION, "master_volume", master_volume)
-	config.set_value(SECTION, "music_volume", music_volume)
-	config.set_value(SECTION, "effects_volume", effects_volume)
-	config.set_value(SECTION, "voice_volume", voice_volume)
-	config.set_value(SECTION, "preferred_fov", preferred_fov)
-	config.set_value(SECTION, "camera_shake_scale", camera_shake_scale)
-	config.set_value(SECTION, "impact_effects", impact_effects)
-	config.set_value(SECTION, "look_sensitivity", look_sensitivity)
-	config.set_value(SECTION, "invert_look_y", invert_look_y)
-	config.set_value(SECTION, "fullscreen", fullscreen)
-	config.set_value(SECTION, "graphics_quality", graphics_quality)
-	config.set_value(SECTION, "hud_scale", hud_scale)
-	config.set_value(SECTION, "control_help_mode", control_help_mode)
-	config.set_value(SECTION, "colorblind_palette", colorblind_palette)
-	config.set_value(SECTION, "menu_text_scale", menu_text_scale)
-	config.set_value(SECTION, "sound_subtitles", sound_subtitles)
-	config.set_value(SECTION, "voice_chat_enabled", voice_chat_enabled)
-	config.set_value(SECTION, "voice_push_to_talk", voice_push_to_talk)
-	config.set_value(SECTION, "save_run_log", save_run_log)
-	config.set_value(SECTION, "language", language)
+func _needs_rewrite(config: ConfigFile) -> bool:
+	return not config.has_section_key(SECTION, HUD_DEFAULT_MARKER)
+
+
+func _before_save(config: ConfigFile) -> void:
 	config.set_value(SECTION, HUD_DEFAULT_MARKER, true)
-	config.set_value(SECTION, "last_join_address", last_join_address)
-	config.set_value(SECTION, "key_bindings", key_bindings)
-	config.save(save_path)

@@ -1,5 +1,5 @@
 class_name BalanceTrapBehavior
-extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+extends ITrapBehavior
 ## Must stay upright. Tilting past the safe angle bleeds integrity, and
 ## staying past the danger angle spills it outright. "Contrapesá" (N-117): its
 ## passenger holds the primary action and pushes (WASD, the left stick, as the

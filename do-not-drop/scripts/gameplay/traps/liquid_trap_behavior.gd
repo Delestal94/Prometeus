@@ -1,5 +1,5 @@
 class_name LiquidTrapBehavior
-extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+extends ITrapBehavior
 ## A leaky package is not Balance 2.0: small tilts create a manageable
 ## puddle, impacts make it surge, and a passenger can mop it down before the
 ## leak becomes a full loss.  Cleaning lowers current spill, never restores

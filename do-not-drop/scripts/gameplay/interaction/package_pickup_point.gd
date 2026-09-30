@@ -1,4 +1,4 @@
-extends "res://scripts/gameplay/interaction/interactable.gd"
+extends Interactable
 ## Lets a nearby player pick up the package this is attached to.
 ##
 ## interact() only ever runs on the host (see interactable.gd), where the

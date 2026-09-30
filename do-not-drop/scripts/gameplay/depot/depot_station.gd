@@ -1,4 +1,4 @@
-extends "res://scripts/gameplay/interaction/interactable.gd"
+extends Interactable
 class_name DepotStation
 ## A place in the depot where the crew gets ready: the lockers (uniform), the
 ## workshop (truck and paint), the supplies counter, the order board.

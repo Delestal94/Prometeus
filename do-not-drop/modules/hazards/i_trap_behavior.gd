@@ -1,6 +1,9 @@
 class_name ITrapBehavior
 extends Resource
-## Mutable simulation state belongs to one package, never to a shared .tres.
+## The behavior of a hazard a carried object carries: one instance per
+## object, created from its TrapDefinition, so mutable simulation state
+## never lives in a shared .tres. Portable module (docs/modulos.md); the
+## hint travels as a LocText line (loc_text module).
 ##
 ## Every trap maps its own failure axis onto the same 0..integrity_max scale,
 ## so the HUD, the score and the EventBus contract stay identical no matter

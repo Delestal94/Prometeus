@@ -76,11 +76,10 @@ const NIGHT_GLOW: Dictionary = {
 	"window": [Color(1.0, 0.72, 0.38), 1.3],
 }
 
-## The session's season (WorldMood.Season: 0 summer, 1 autumn) and how dark
-## it is (0 by day, 0.5 at dusk, 1 at night). Set by WorldMood.pick() before
-## anything is dressed; readers use these, writers go through set_*().
-static var season: int = 0
-static var night_level: float = 0.0
+## The session's season and how dark it is live in DetailMaterials
+## (`season`, `night_level`): WorldMood.pick() sets them before anything is
+## dressed. configure() runs at startup (GameSettings) so the module knows
+## the palette before the first model is dressed.
 static var _configured: bool = false
 
 
@@ -100,13 +99,11 @@ static func configure() -> void:
 
 static func set_season(value: int) -> void:
 	configure()
-	season = value
 	DetailMaterials.set_season(value)
 
 
 static func set_night_level(value: float) -> void:
 	configure()
-	night_level = clampf(value, 0.0, 1.0)
 	DetailMaterials.set_night_level(value)
 
 

@@ -2,7 +2,7 @@ extends Node
 ## Recoverable pieces are stable scene children on every peer. Their poses are
 ## derived from the host snapshot in truck space, so they survive late joins.
 
-class SalvagePoint extends "res://scripts/gameplay/interaction/interactable.gd":
+class SalvagePoint extends Interactable:
 	var package: Node
 	var index: int
 

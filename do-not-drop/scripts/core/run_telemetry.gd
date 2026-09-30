@@ -1,6 +1,8 @@
-extends Node
-## Local run log for playtesting (S-805). Off unless the player turns on
-## "Guardar registro de partidas" (GameSettings.save_run_log).
+extends RunLog
+## Local run log for playtesting (S-805) on the run_log module's RunLog
+## (docs/modulos.md): the module writes, names and prunes the files; this
+## is what Take My Package records. Off unless the player turns on "Guardar
+## registro de partidas" (GameSettings.save_run_log).
 ##
 ## It only listens: every fact it records already travels on EventBus, so it
 ## adds no RPC, no replication and no state a run depends on. Each peer writes
@@ -15,22 +17,13 @@ extends Node
 ## already translated on that peer, so it reads well but is not a stable key:
 ## group by `trap` when comparing files from different languages.
 
-const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 const TelemetryFormat = preload("res://scripts/core/run_telemetry_format.gd")
 
 ## ITrapBehavior.TrapState AT_RISK / RUINED: numbers kept here so this file
 ## compiles on its own in the headless runner, where the class cache is cold.
 const STATE_AT_RISK: int = 1
 const STATE_RUINED: int = 2
-
-## Oldest files go first past this many, so leaving the option on for months
-## can't slowly fill the disk.
 const MAX_FILES: int = 300
-
-## Where the files go. Tests point it at a throwaway folder.
-var directory: String = "user://telemetry"
-## Path of the last file written ("" until one is), for tests and the UI.
-var last_file: String = ""
 
 var _recording: bool = false
 ## package_id -> {trap, risk_seconds, risk_episodes, risk_since, damage, ruined, ...}
@@ -41,10 +34,13 @@ var _impact_count: int = 0
 var _impact_peak: float = 0.0
 
 
+func _init() -> void:
+	directory = "user://telemetry"
+	max_files = MAX_FILES
+
+
 func _ready() -> void:
-	# Under a test script (--script) keep away from the player's real log.
-	if Engine.get_main_loop().get_script() != null:
-		directory = "user://test_telemetry"
+	super()
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.run_ended.connect(_on_run_ended)
 	EventBus.cargo_registered.connect(_on_cargo_registered)
@@ -147,7 +143,7 @@ func _on_run_ended(score: int, results: Dictionary) -> void:
 	for box: Dictionary in _boxes.values():
 		_close_risk(box)
 	var record: Dictionary = _build_record(score, results)
-	save_record(record)
+	save_record(record, TelemetryFormat.file_stem(Time.get_datetime_dict_from_system()))
 
 
 func _box(id: StringName) -> Dictionary:
@@ -229,44 +225,6 @@ func _build_record(score: int, results: Dictionary) -> Dictionary:
 			"distance_traveled": _round(float(results.get("distance_traveled", 0.0))),
 		},
 	}
-
-
-## Writes the record as a new file under `directory`. Returns the path, or ""
-## if the disk said no (a warning, never a crash: a playtest log must not
-## be able to break the results screen).
-func save_record(record: Dictionary) -> String:
-	if DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(directory)) != OK \
-			and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(directory)):
-		push_warning("[Telemetry] No se pudo crear la carpeta: " + directory)
-		return ""
-	var path: String = _free_path(TelemetryFormat.file_stem(Time.get_datetime_dict_from_system()))
-	if not SAFE_JSON.write(path, record):
-		push_warning("[Telemetry] No se pudo guardar el registro: " + path)
-		return ""
-	last_file = path
-	_prune()
-	return path
-
-
-func _free_path(stem: String) -> String:
-	var path: String = "%s/%s.json" % [directory, stem]
-	var copy: int = 2
-	while FileAccess.file_exists(path):
-		path = "%s/%s_%d.json" % [directory, stem, copy]
-		copy += 1
-	return path
-
-
-func _prune() -> void:
-	var names: PackedStringArray = []
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".json"):
-			names.append(file_name)
-	if names.size() <= MAX_FILES:
-		return
-	names.sort()
-	for index: int in names.size() - MAX_FILES:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path("%s/%s" % [directory, names[index]]))
 
 
 static func _round(value: float) -> float:

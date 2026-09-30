@@ -1,5 +1,5 @@
 class_name HostileTrapBehavior
-extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+extends ITrapBehavior
 ## A reactive creature: unlike Noisy (always hold to calm), its mood flips
 ## between CALMAR and NO TOCAR. Holding at the wrong moment is an attack.
 

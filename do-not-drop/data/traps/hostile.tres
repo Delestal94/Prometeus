@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TrapDefinition" load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scripts/gameplay/traps/trap_definition.gd" id="1_definition"]
+[ext_resource type="Script" path="res://modules/hazards/trap_definition.gd" id="1_definition"]
 [ext_resource type="Script" path="res://scripts/gameplay/traps/hostile_trap_behavior.gd" id="2_behavior"]
 [ext_resource type="Resource" path="res://data/contents/raccoon_cage.tres" id="3_content"]
 
@@ -8,6 +8,7 @@
 script = ExtResource("1_definition")
 id = &"hostile"
 display_name = "Hostil"
+translation_key = "HUD_TRAP_HOSTILE"
 behavior_script = ExtResource("2_behavior")
 difficulty = 4
 params = {

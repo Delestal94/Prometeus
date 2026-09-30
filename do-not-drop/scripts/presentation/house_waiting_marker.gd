@@ -29,7 +29,7 @@ const BALLOON_KNOT_COLOR := Color("c77800")
 ## Lit, top-glowing, fog-free (N-318.2): see the shader's header.
 const BALLOON_SHADER: Shader = preload("res://shaders/house_balloon.gdshader")
 ## Its own glow, as a share of its colour, by day and at full night
-## (LowpolyMaterials.night_level): by day low enough that the sun still shades
+## (DetailMaterials.night_level): by day low enough that the sun still shades
 ## it, at night enough to stay a warm spot on a dark sky -- the moon is faint
 ## and often behind it.
 const BALLOON_GLOW_DAY: float = 0.45
@@ -291,7 +291,7 @@ func _build_balloon() -> void:
 ## to the grey of the sky, the one thing it must not be. One material per
 ## (colour, darkness) for every house, shared.
 static func _balloon_material(color: Color) -> ShaderMaterial:
-	var night: float = LowpolyMaterials.night_level
+	var night: float = DetailMaterials.night_level
 	var key: String = "%s|%.2f" % [color.to_html(), night]
 	if _balloon_materials.has(key):
 		return _balloon_materials[key]

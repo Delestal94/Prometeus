@@ -1,24 +1,22 @@
 extends RefCounted
 class_name WorldMood
-## Weather and time of day for a route (docs/tareas-nacho.md #30/#31/#62/
-## #66-#73): each session draws one of four weathers (clear, cloudy, rain,
-## fog) and one of three times (day, dusk, night) from the world seed, so
-## every peer drives through the same evening drizzle. Solo play (seed 0)
-## still varies from run to run.
+## Weather, time of day and season for a session, drawn from the world seed
+## so every peer drives through the same evening drizzle; solo play (seed 0)
+## still varies from run to run. Portable module (docs/modulos.md); depends
+## on render_budget: the season and the darkness go straight to
+## DetailMaterials so every leaf and lamp dressed afterwards matches.
 ##
-## Applied once by RouteSky when the route is built: the sun, the level's
-## Environment (duplicated first -- the .tscn's is shared by every load of the
-## level, and a rainy night must not leak into the next run), the painted sky
-## and clouds, the terrain's wetness. Rain itself (drops + sound) lives in
-## RouteSky, which already follows the camera. Headlights read `active`.
+## Applied once when the world is built: the sun and the level's
+## Environment (duplicated first -- the .tscn's is shared by every load of
+## the level, and a rainy night must not leak into the next run); the
+## painted sky through apply_sky() on a sky ShaderMaterial with the
+## parameters named there; the ground through apply_ground() on a terrain
+## ShaderMaterial (wetness, autumn, night_road). Headlights and rain read
+## `active`.
 ##
 ## Force one for testing or screenshots with the user argument
-## --mood=<weather>_<time>, e.g. --mood=lluvia_noche.
-##
-## The season (N-305) is drawn the same way, from its own stream so it never
-## moves the weather: summer greens or autumn ochres for every leaf, fern and
-## blade of grass of the session (LowpolyMaterials.set_season() and the
-## terrain's `autumn`). Force it by adding "otono" or "verano" to --mood.
+## --mood=<weather>_<time>[_<season>], e.g. --mood=lluvia_noche, with the
+## names in WEATHER_NAMES, TIME_NAMES and SEASON_NAMES.
 
 enum Weather { CLEAR, CLOUDY, RAIN, FOG }
 enum TimeOfDay { DAY, DUSK, NIGHT }
@@ -31,18 +29,22 @@ const WEATHER_ODDS := [[Weather.CLEAR, 45], [Weather.CLOUDY, 70], [Weather.RAIN,
 const TIME_ODDS := [[TimeOfDay.DAY, 60], [TimeOfDay.DUSK, 85], [TimeOfDay.NIGHT, 100]]
 const SEASON_NAMES := {Season.SUMMER: "verano", Season.AUTUMN: "otono"}
 const SEASON_ODDS := [[Season.SUMMER, 55], [Season.AUTUMN, 100]]
-## Night light (N-317). The level's ambient comes from the sky, and the night
-## sky is nearly black, so shadows came out 0,0,0 whatever the ambient colour
-## said: at night most of the ambient is this flat moonlit colour instead
-## (sky share 1 -> NIGHT_SKY_AMBIENT_SHARE). Scales of the level's ambient
-## and sun energy for the night and the moon (were 0.42 and 0.28).
+## Night light. The level's ambient comes from the sky, and the night sky is
+## nearly black, so shadows came out 0,0,0 whatever the ambient colour said:
+## at night most of the ambient is this flat moonlit colour instead (sky
+## share 1 -> NIGHT_SKY_AMBIENT_SHARE). Scales of the level's ambient and sun
+## energy for the night and the moon.
 const NIGHT_AMBIENT := Color(0.4, 0.45, 0.58)
 const NIGHT_SKY_AMBIENT_SHARE: float = 0.4
 const NIGHT_AMBIENT_SCALE: float = 0.6
 const NIGHT_MOON_SCALE: float = 0.55
+## Translation keys of describe() (tr()): a game without them shows the keys.
+const TIME_KEYS: Array[String] = ["WORLD_MOOD_TIME_DAY", "WORLD_MOOD_TIME_DUSK", "WORLD_MOOD_TIME_NIGHT"]
+const SKY_KEYS: Array[String] = ["WORLD_MOOD_SKY_CLEAR", "WORLD_MOOD_SKY_CLOUDY", "WORLD_MOOD_SKY_RAIN", "WORLD_MOOD_SKY_FOG"]
+const CLEAR_NIGHT_KEY: String = "WORLD_MOOD_SKY_CLEAR_NIGHT"
 
 ## What the rest of the game reads (headlights, rain, audio). Empty until a
-## route has picked one.
+## world has picked one.
 static var active: Dictionary = {}
 ## Same as --mood=<...>, for tests and capture scripts; empty = from the seed.
 static var forced_label: String = ""
@@ -68,8 +70,7 @@ static func pick(session_seed: int) -> WorldMood:
 		for key: int in SEASON_NAMES:
 			if forced.contains(SEASON_NAMES[key]):
 				mood.season = key
-		LowpolyMaterials.set_season(mood.season)
-		LowpolyMaterials.set_night_level(mood.darkness())
+		mood._dress()
 		return mood
 	var rng := RandomNumberGenerator.new()
 	var season_rng := RandomNumberGenerator.new()
@@ -82,11 +83,15 @@ static func pick(session_seed: int) -> WorldMood:
 	mood.weather = _from_odds(WEATHER_ODDS, rng.randi_range(0, 99))
 	mood.time_of_day = _from_odds(TIME_ODDS, rng.randi_range(0, 99))
 	mood.season = _from_odds(SEASON_ODDS, season_rng.randi_range(0, 99))
-	# Before anything is dressed: the route picks its mood first thing, and
-	# Endless's sky picks it before the streamer builds a single segment.
-	LowpolyMaterials.set_season(mood.season)
-	LowpolyMaterials.set_night_level(mood.darkness())
+	mood._dress()
 	return mood
+
+
+## Before anything is dressed: the world picks its mood first thing, and a
+## streamer's sky picks it before a single segment is built.
+func _dress() -> void:
+	DetailMaterials.set_season(season)
+	DetailMaterials.set_night_level(darkness())
 
 
 static func _from_odds(odds: Array, roll: int) -> int:
@@ -100,17 +105,17 @@ func label() -> String:
 	return "%s_%s_%s" % [WEATHER_NAMES[weather], TIME_NAMES[time_of_day], SEASON_NAMES[season]]
 
 
-## For the HUD: "Noche con lluvia", "Atardecer despejado"...
+## For a HUD: "Night, rain", "Dusk, clear"...
 func describe() -> String:
-	var when: String = TranslationServer.translate(["WORLD_MOOD_TIME_DAY", "WORLD_MOOD_TIME_DUSK", "WORLD_MOOD_TIME_NIGHT"][time_of_day])
-	var sky: String = TranslationServer.translate(["WORLD_MOOD_SKY_CLEAR", "WORLD_MOOD_SKY_CLOUDY", "WORLD_MOOD_SKY_RAIN", "WORLD_MOOD_SKY_FOG"][weather])
+	var when: String = TranslationServer.translate(TIME_KEYS[time_of_day])
+	var sky: String = TranslationServer.translate(SKY_KEYS[weather])
 	if time_of_day == TimeOfDay.NIGHT and weather == Weather.CLEAR:
-		sky = TranslationServer.translate("WORLD_MOOD_SKY_CLEAR_NIGHT")
+		sky = TranslationServer.translate(CLEAR_NIGHT_KEY)
 	return "%s %s" % [when, sky]
 
 
-## How dark it is, for what lights up after dark (N-304): 0 by day, 0.5 at
-## dusk, 1 at night.
+## How dark it is, for what lights up after dark: 0 by day, 0.5 at dusk, 1
+## at night.
 func darkness() -> float:
 	return [0.0, 0.5, 1.0][time_of_day]
 
@@ -119,31 +124,31 @@ func is_raining() -> bool:
 	return weather == Weather.RAIN
 
 
-## Which nature sound goes under the wind (route_sky.gd): birds by day and at
-## dusk, crickets at night, and nothing when it rains -- the rain covers it,
-## and birds singing through a downpour sounds wrong.
+## Which nature sound goes under the wind: birds by day and at dusk,
+## crickets at night, and nothing when it rains -- the rain covers it, and
+## birds singing through a downpour sounds wrong.
 func nature_bed() -> StringName:
 	if is_raining():
 		return &""
 	return &"crickets" if time_of_day == TimeOfDay.NIGHT else &"birds"
 
 
-## The far mountains are unshaded, so their light level is set here.
+## Far unshaded scenery (a horizon ring): its light level.
 func horizon_light() -> float:
 	var light: float = 1.0
 	match time_of_day:
 		TimeOfDay.DUSK:
 			light = 0.72
 		TimeOfDay.NIGHT:
-			# Moonlit, a shade under the night sky's horizon: at 0.16 the ring
-			# was a black cut-out (playtest 2026-09-25).
+			# Moonlit, a shade under the night sky's horizon: any darker and
+			# the ring is a black cut-out.
 			light = 0.32
 	if weather == Weather.RAIN:
 		light *= 0.75
 	return light
 
 
-## How far into the fog colour the mountains fade (fog swallows them more).
+## How far into the fog colour far scenery fades (fog swallows it more).
 func horizon_haze(base: float) -> float:
 	return minf(base + (0.35 if weather == Weather.FOG else (0.15 if weather == Weather.RAIN else 0.0)), 0.95)
 
@@ -160,8 +165,8 @@ func headlight_boost() -> float:
 	return boost
 
 
-## Changes the level's light and sky. `world_environment` may be null (a route
-## built alone in a test): then only `active` is set.
+## Changes the level's light and sky. `world_environment` may be null (a
+## world built alone in a test): then only `active` is set.
 func apply(world_environment: WorldEnvironment, sun: DirectionalLight3D) -> void:
 	active = {"weather": weather, "time": time_of_day, "season": season, "label": label(), "description": describe(),
 		"headlight_boost": headlight_boost(), "rain": is_raining()}
@@ -185,8 +190,8 @@ func _apply_environment(environment: Environment) -> void:
 		TimeOfDay.NIGHT:
 			fog = Color(0.05, 0.07, 0.1)
 			# Moonlit, not pitch black: the road read as a black band with
-			# two white lines and every shadow as a hole (N-317). The sky
-			# stays dark; the ground and what stands on it read.
+			# two white lines and every shadow as a hole. The sky stays dark;
+			# the ground and what stands on it read.
 			ambient = NIGHT_AMBIENT
 			ambient_energy *= NIGHT_AMBIENT_SCALE
 			environment.ambient_light_sky_contribution = NIGHT_SKY_AMBIENT_SHARE
@@ -229,8 +234,9 @@ func _apply_sun(sun: DirectionalLight3D) -> void:
 	sun.light_energy = energy
 
 
-## The painted sky: gradient and clouds to match. Called by RouteSky once it
-## has installed stylized_sky.gdshader.
+## The painted sky: gradient and clouds to match, on a ShaderMaterial with
+## sky_top_color, sky_horizon_color, ground_horizon_color, cloud_color,
+## cloud_shade_color and coverage.
 func apply_sky(sky: ShaderMaterial, fog: Color) -> void:
 	if sky == null:
 		return
@@ -267,8 +273,9 @@ func apply_sky(sky: ShaderMaterial, fog: Color) -> void:
 	sky.set_shader_parameter(&"coverage", coverage)
 
 
-## Wet asphalt and the season's grass on the route's terrain (the one shared
-## ShaderMaterial).
+## Wet asphalt and the season's grass on a terrain: the first
+## "Terrain_*" StaticBody3D under `route_root` whose mesh has a
+## ShaderMaterial gets wetness, autumn and night_road.
 func apply_ground(route_root: Node) -> void:
 	if route_root == null:
 		return

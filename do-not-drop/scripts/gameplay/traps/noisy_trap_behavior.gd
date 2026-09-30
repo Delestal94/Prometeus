@@ -1,5 +1,5 @@
 class_name NoisyTrapBehavior
-extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+extends ITrapBehavior
 ## Something alive is in the box. Bumps agitate it; its passenger has to
 ## keep calming it down. It settles a little on its own, but never fast
 ## enough to survive a rough stretch unattended. The truck's radio (N-406)

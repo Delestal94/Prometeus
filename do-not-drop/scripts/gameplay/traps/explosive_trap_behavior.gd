@@ -1,5 +1,5 @@
 class_name ExplosiveTrapBehavior
-extends "res://scripts/gameplay/traps/i_trap_behavior.gd"
+extends ITrapBehavior
 ## "Pedí el código" (N-117): a short code under a real timer, drawn fresh for
 ## every box by the host (never the same answer twice, so it can't be
 ## memorized). The box's owner does not get to see it: the driver reads it
