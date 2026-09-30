@@ -32,8 +32,9 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 - **Rutinas**: el sistema completo (qué rutina corre cuándo, cómo se pasan el trabajo, reglas
   comunes y freno de mano `PAUSA`) está en `.claude/rutinas/README.md`. En la nube no hay
   Blender ni ComfyUI: esos assets quedan para `.claude/rutinas/sesion-arte.md`. No hay revisión
-  humana de PRs: los checks requeridos son la única compuerta. Las rutinas toman tareas de las
-  dos listas (también de Slatex, con aviso), salvo lo que Slatex tenga en curso.
+  humana de PRs: los checks requeridos son la única compuerta. Las rutinas trabajan solo
+  `docs/tareas-nacho.md` (incluidas las `S-xxx` heredadas); `docs/tareas-slatex.md` (S-311) es
+  de Slatex y no se toca.
 - Los dominios que usan hooks y agentes salen de `file_domain` en
   `.claude/hooks/lib.sh`; si cambia la tabla de `docs/colaboracion-equipo.md`,
   actualizá las dos.

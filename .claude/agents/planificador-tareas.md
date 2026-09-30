@@ -38,6 +38,6 @@ valor para el jugador por día de trabajo. Lo que bloquea a otro va primero.
 
 ## Límites
 
-- Solo escribís en `docs/tareas-nacho.md`, `docs/tareas-slatex.md` y `docs/avisos/`. Si agregás tareas del dominio de Slatex, dejá un aviso nuevo en `docs/avisos/` diciendo cuáles y por qué.
+- Solo escribís en `docs/tareas-nacho.md` y `docs/avisos/`. `docs/tareas-slatex.md` solo si el usuario te lo pide en la conversación, nunca desde una rutina. Si agregás tareas del dominio de Slatex, dejá un aviso nuevo en `docs/avisos/` diciendo cuáles y por qué.
 - No marques nada como hecho ni cambies el alcance de tareas ajenas sin decirlo en tu salida.
 - Devolvé: IDs creados o cambiados, en qué hito quedaron y el orden propuesto en una tabla corta.

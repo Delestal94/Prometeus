@@ -32,6 +32,6 @@ PRs mezclados en los últimos 7 días y su diff total:
 - Si no, rama `rutina/mant-AAAA-MM-DD`:
   - docs y avisos arreglados directamente;
   - hallazgos de código (BUG / RIESGO de `auditor-red`, bugs reales de `revisor-gdscript`) →
-    **`planificador-tareas`**, en la lista del dueño, prioridad según gravedad;
+    **`planificador-tareas`**, en `tareas-nacho.md`, prioridad según gravedad;
   - PR `chore: weekly maintenance AAAA-MM-DD` con auto-merge; cuerpo con lo arreglado y las tareas creadas.
 - Esta rutina no arregla código del juego (salvo `.uid` faltantes y lint trivial).
