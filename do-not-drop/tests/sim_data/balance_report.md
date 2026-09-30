@@ -83,10 +83,10 @@ El que siempre mantiene pierde el 80 % o más en 6 de 7 trampas (meta de N-117: 
 | liquid | always | 150 ms | 100.0% | 6.7 | 0.0% |
 | noisy | absent | 0 ms | 100.0% | 1.3 | 0.0% |
 | noisy | absent | 150 ms | 100.0% | 1.3 | 0.0% |
-| noisy | clumsy | 0 ms | 44.8% | 13.0 | 0.0% |
-| noisy | clumsy | 150 ms | 47.2% | 13.8 | 0.0% |
-| noisy | expert | 0 ms | 0.8% | 15.0 | 0.0% |
-| noisy | expert | 150 ms | 1.6% | 15.0 | 0.0% |
+| noisy | clumsy | 0 ms | 44.8% | 13.0 | 51.2% |
+| noisy | clumsy | 150 ms | 47.2% | 13.8 | 47.6% |
+| noisy | expert | 0 ms | 0.8% | 15.0 | 36.8% |
+| noisy | expert | 150 ms | 1.6% | 15.0 | 59.2% |
 | noisy | always | 0 ms | 0.0% | 14.5 | 0.0% |
 | noisy | always | 150 ms | 0.0% | 14.5 | 0.0% |
 
@@ -99,10 +99,12 @@ El que siempre mantiene pierde el 80 % o más en 6 de 7 trampas (meta de N-117: 
 - hostile: CUMPLE
 - liquid: CUMPLE
 - noisy: CUMPLE
-- Casi pérdidas esperadas por viaje torpe (7 paquetes): 1.10 (objetivo ≥ 1).
+- Casi pérdidas esperadas por viaje torpe (7 paquetes): 1.61 (objetivo ≥ 1).
 - Resultado interactivo: **CUMPLE**.
 
 `fragile` (N-117, Amortiguá): los recorridos grabados pasan los baches sin golpe (la suspensión se los come, ver `docs/parametros-diseno.md`), así que el arnés le suma a cada recorrido 3 baches a la velocidad de crucero, anunciados como los anuncia el juego. Los choques sin anunciar (que nadie puede amortiguar) son los que ya traen los recorridos grabados (el de la semilla 1085). El torpe y el experto ven el aviso con una atención del 48 % y 95 % y clavan el toque con una dispersión de 0,20 s y 0,05 s alrededor del medio de la ventana (0,35 s). Mantener apretado no protege. N-229: el golpe pesado pasa de 35 a 36; con 35 dos baches sin amortiguar y uno amortiguado dejaban 26,5 (fuera de la casi pérdida, 5 a 25) y el torpe tenía 0,8 % de casi pérdidas acá; con 36 quedan 24,4.
+
+`noisy` (N-229): las ráfagas de sacudidas de los recorridos llevan la agitación al máximo con cualquier perfil, y ahí la integridad es 0. Una caja de Ruidoso que llega rescatada después de tocar el máximo cuenta como casi pérdida (además de la banda de 5 a 25 de todas).
 
 `hostile` (N-117.4): `command_seconds` 11 a 9 y `correct_decay` 14 a 16 por segundo. Con órdenes de 9 s el ausente sigue perdiendo en la primera calma y el que siempre mantiene en las órdenes de soltar; el torpe (que se equivoca el 40 % del tiempo) pasa de 83 % a la mitad. La orden también se lee en la caja (`>:(` soltá, `:)` mantené).
 

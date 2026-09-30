@@ -249,9 +249,22 @@ func _simulate(definition: TrapDefinition, drive: Dictionary, profile_name: Stri
 	return {
 		"ruined": ruined,
 		"risk_seconds": risk_seconds,
-		"near_miss": not ruined and min_integrity >= 5.0 and min_integrity <= 25.0,
+		"near_miss": is_near_miss(definition.id, ruined, min_integrity),
 		"min_integrity": min_integrity,
 	}
+
+
+## A box that arrives with 5 to 25 of integrity was nearly lost. Noisy
+## (N-229, decided 2026-09-30): its integrity is its agitation, and the
+## bursts of shakes in the drives take it to the top with every profile, so
+## the box at 0 that someone calmed before it got loose is its "saved it in
+## the last second" too.
+static func is_near_miss(trap_id: StringName, ruined: bool, min_integrity: float) -> bool:
+	if ruined:
+		return false
+	if min_integrity >= 5.0 and min_integrity <= 25.0:
+		return true
+	return trap_id == &"noisy" and min_integrity <= 0.0
 
 
 ## The bumps Fragile is put through in a drive, and when each tap of this
@@ -380,6 +393,10 @@ func _make_report(rows: Array[Dictionary], drives: Array[Dictionary]) -> String:
 		+ " alrededor del medio de la ventana (0,35 s). Mantener apretado no protege. N-229: el golpe pesado pasa"
 		+ " de 35 a 36; con 35 dos baches sin amortiguar y uno amortiguado dejaban 26,5 (fuera de la casi pérdida,"
 		+ " 5 a 25) y el torpe tenía 0,8 % de casi pérdidas acá; con 36 quedan 24,4.",
+		"",
+		"`noisy` (N-229): las ráfagas de sacudidas de los recorridos llevan la agitación al máximo con cualquier"
+		+ " perfil, y ahí la integridad es 0. Una caja de Ruidoso que llega rescatada después de tocar el máximo"
+		+ " cuenta como casi pérdida (además de la banda de 5 a 25 de todas).",
 		"",
 		"`hostile` (N-117.4): `command_seconds` 11 a 9 y `correct_decay` 14 a 16 por segundo. Con órdenes de 9 s el"
 		+ " ausente sigue perdiendo en la primera calma y el que siempre mantiene en las órdenes de soltar; el torpe"

@@ -137,20 +137,26 @@ integridad entre 5 y 25. Dos trampas no daban ninguna:
   `impact_damage_heavy` 35 → **36** quedan 24,4: el caso más común del torpe (falla dos de tres) pasa a ser casi
   pérdida sin cambiar cuántas pierde. Con 37 también cumple (37,2 %), pero el choque sin anunciar del recorrido
   1085 más tres toques perfectos del experto deja 4,9 y le saca sus casi-pérdidas (16,8 % → 1,2 %); con 36 deja 7,2.
-- **Ruidoso (0 %)**: no se tocó. Las sacudidas de los recorridos llegan en ráfagas de 13 a 34 en pocos segundos
-  (+16 cada una) y llevan la agitación al máximo con cualquier perfil; ahí la integridad que ve el arnés es 0, así
-  que un rescate en el máximo no cuenta como casi pérdida. Bajar la ganancia para que pase por la banda deja vivo
-  al ausente en el recorrido 1082 (una sola ráfaga de 13). Queda como propuesta: medir la casi pérdida de Ruidoso
-  por "rescatada en el máximo" en vez de por integridad.
+- **Ruidoso (0 %)**: no se tocaron sus parámetros, se cambió el criterio del arnés. Las sacudidas de los recorridos
+  llegan en ráfagas de 13 a 34 en pocos segundos (+16 cada una) y llevan la agitación al máximo con cualquier perfil;
+  ahí la integridad que ve el arnés es 0, así que un rescate en el máximo no contaba como casi pérdida. Bajar la
+  ganancia para que pase por la banda deja vivo al ausente en el recorrido 1082 (una sola ráfaga de 13). Decisión
+  (Claude con delegación del usuario, anotada bajo la pregunta 9 de `docs/decisiones/2026-09-30-preguntas-auditoria.md`):
+  **una caja de Ruidoso que llega rescatada después de tocar el máximo de agitación cuenta como casi pérdida**
+  (`is_near_miss()` en `tests/sim_trap_balance.gd`, fijado por `tests/test_sim_near_miss.gd`). Es justo el "la
+  salvamos en el último segundo" que mide el objetivo. Casi pérdidas de Ruidoso, 0 ms (+150 ms): torpe 0 → 51,2 %
+  (0 → 47,6), experto 0 → 36,8 % (0 → 59,2), ausente y siempre mantiene 0 → 0; perdidas sin cambio
+  (100 / 44,8 / 0,8 / 0).
 
 Mismo arnés, mismas semillas, 5 recorridos × 50 repeticiones, 0 ms (perdidas / casi pérdidas del torpe):
 
 | Trampa | Torpe perdido antes → después | Casi pérdida torpe antes → después | Experto perdido | Ausente / siempre mantiene |
 |---|---:|---:|---:|---:|
 | Frágil | 49,2 → 49,2 | 0,8 → 37,6 | 2,8 → 2,8 (+150 ms: 3,2) | 100 / 100 sin cambio |
-| Las otras seis | sin cambio | sin cambio | sin cambio | sin cambio |
+| Ruidoso (criterio nuevo) | 44,8 → 44,8 | 0 → 51,2 | 0,8 → 0,8 (+150 ms: 1,6) | 100 / 0 sin cambio |
+| Las otras cinco | sin cambio | sin cambio | sin cambio | sin cambio |
 
-Casi pérdidas esperadas por viaje torpe: **0,73 → 1,10**. El reporte pasa a **CUMPLE**.
+Casi pérdidas esperadas por viaje torpe: **0,73 → 1,10** con Frágil, **→ 1,61** con el criterio de Ruidoso. El reporte pasa a **CUMPLE**; las siete trampas siguen en objetivo.
 
 ## Tanda 2 de N-117: Contrapesá y Fregá (2026-09-29)
 
