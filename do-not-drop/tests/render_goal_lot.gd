@@ -15,6 +15,7 @@ extends SceneTree
 ## -- --seed=N picks another road (default 4242, the same for every mood).
 
 const EYE_HEIGHT: float = 2.3
+const SpectatorCameraScript = preload("res://scripts/presentation/spectator_camera.gd")
 
 
 func _initialize() -> void:
@@ -61,8 +62,20 @@ func _run() -> void:
 	var gate: Vector3 = lot.to_global(Vector3(0.0, 0.0, RouteGoalLot.FRONT_Z))
 	var bay: Vector3 = lot.bay_centre()
 	lot.open_gate()
-	await _shot(camera, gate - forward * 90.0 + Vector3.UP * EYE_HEIGHT, gate + forward * 14.0 + Vector3.UP * 4.0, mood,
-			"approach")
+	# The barrier takes a moment to swing clear.
+	await create_timer(1.3).timeout
+	# The approach follows the real road back from the gate (it bends): a
+	# straight line back from the gate ends up in a field.
+	var path: Array = route.get(&"_path_points")
+	var gate_index: int = 0
+	for index: int in range(path.size()):
+		if (path[index] as Vector3).distance_to(route.to_local(lot.position)) < 1.0:
+			gate_index = index
+			break
+	for distance: float in [90.0, 30.0]:
+		var from: Vector3 = route.to_global(_back_along(path, gate_index, distance))
+		await _shot(camera, from + Vector3.UP * EYE_HEIGHT, gate + forward * 14.0 + Vector3.UP * 4.0, mood,
+				"approach" if distance > 50.0 else "approach_near")
 	await _shot(camera, gate - forward * 12.0 + Vector3.UP * EYE_HEIGHT, bay + Vector3.UP * 2.0, mood, "gate")
 	await _shot(camera, lot.to_global(Vector3(0.0, 0.0, -10.0)) + Vector3.UP * EYE_HEIGHT, bay + Vector3.UP * 1.0, mood,
 			"bay")
@@ -75,7 +88,7 @@ func _run() -> void:
 	van.global_transform = lot.parking_pose()
 	van.linear_velocity = Vector3.ZERO
 	await process_frame
-	var orbit: Camera3D = SpectatorCamera.orbit_results(van)
+	var orbit: Camera3D = SpectatorCameraScript.orbit_results(van)
 	for _i in range(8):
 		await process_frame
 	await RenderingServer.frame_post_draw
@@ -83,6 +96,19 @@ func _run() -> void:
 	print("Saved ", ProjectSettings.globalize_path("user://render_goal_lot_%s_parked.png" % mood))
 	orbit.queue_free()
 	quit()
+
+
+## The path point `distance` metres before `index`, along the road.
+func _back_along(path: Array, index: int, distance: float) -> Vector3:
+	var left: float = distance
+	var i: int = index
+	while i > 0:
+		var step: float = (path[i] as Vector3).distance_to(path[i - 1])
+		if step >= left:
+			return (path[i] as Vector3).lerp(path[i - 1], left / step)
+		left -= step
+		i -= 1
+	return path[0]
 
 
 func _shot(camera: Camera3D, from: Vector3, at: Vector3, mood: String, shot: String) -> void:

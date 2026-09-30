@@ -114,7 +114,7 @@ static func orbit_results(truck: VehicleBody3D) -> Camera3D:
 	camera.set(&"target", truck)
 	var lot: Node = truck.get_tree().get_first_node_in_group(&"goal_lot") if truck.is_inside_tree() else null
 	if lot != null and bool(lot.call(&"is_bay_occupied")):
-		camera.call(&"frame_parked", lot.call(&"results_direction"))
+		camera.call(&"frame_parked", lot.call(&"results_direction"), lot.call(&"results_focus"))
 	truck.add_child(camera)
 	camera.make_current()
 	return camera

@@ -86,7 +86,8 @@ const DARK := Color("1b2a2d")
 const HOSE_GREEN := Color("2f9e57")
 const CART := Color("5c6a70")
 
-const GATE_OPEN_ANGLE: float = -1.45
+## The open barrier swings along the road edge, out of the view of the sign.
+const GATE_OPEN_YAW: float = PI * 0.5
 const GATE_SECONDS: float = 0.9
 const ARM_SEGMENTS: int = 12
 const ARM_LENGTH: float = 9.0
@@ -212,6 +213,12 @@ func results_direction() -> Vector3:
 	return Vector3(out.x, 0.0, out.z).normalized()
 
 
+## How far the results camera looks toward the middle of the lot (world), so
+## the sign is not squeezed against the frame's edge when the bay is off-centre.
+func results_focus() -> Vector3:
+	return global_basis * Vector3(-bay_x(free_index) * 0.6, 0.0, 0.0)
+
+
 ## The tidy-parking line for the results screen (RunManager.world_stories()).
 func result_stories() -> Array[String]:
 	var stories: Array[String] = []
@@ -323,7 +330,7 @@ func open_gate() -> void:
 	if _gate_tween != null:
 		_gate_tween.kill()
 	_gate_tween = create_tween()
-	_gate_tween.tween_property(_arm, "rotation:z", GATE_OPEN_ANGLE, GATE_SECONDS) \
+	_gate_tween.tween_property(_arm, "rotation:y", GATE_OPEN_YAW, GATE_SECONDS) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
@@ -669,9 +676,10 @@ func _build_lights() -> void:
 	var lights: Array[Dictionary] = []
 	for spot: Vector3 in lamp_spots:
 		lights.append({"at": spot + Vector3(0.0, -0.3, 0.0), "colour": Color(1.0, 0.8, 0.55),
-				"energy": 1.3, "range": 15.0})
-	lights.append({"at": Vector3(bay_x(free_index), 4.6, BAY_FRONT_Z - 1.0), "colour": Color(0.6, 1.0, 0.9),
-			"energy": 1.1, "range": 12.0})
+				"energy": 2.6, "range": 22.0})
+	# Over the aisle in front of the free bay, near white so it does not tint the trucks.
+	lights.append({"at": Vector3(bay_x(free_index), 5.5, BAY_FRONT_Z + 3.0), "colour": Color(0.95, 1.0, 0.98),
+			"energy": 2.2, "range": 16.0})
 	for entry: Dictionary in lights:
 		var light := OmniLight3D.new()
 		light.name = "LotLight"
