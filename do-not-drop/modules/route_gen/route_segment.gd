@@ -36,6 +36,12 @@ const CONCRETE := Color("8c9791")
 ## few seconds, and each used to make its own five (a +274 resource jump per
 ## spawn, perf audit 2026-09-29). Segments that tint one duplicate it first.
 static var _materials: Dictionary = {}
+## Every model's PackedScene, kept once loaded. load() only returns a cached
+## one while somebody still holds it; a segment that drops its reference after
+## each instantiate() re-read the file from disk for every rail, post and deck
+## module (a bridge made ~40 loads in the physics tick that spawned it: 35-90
+## ms, N-219).
+static var _scenes: Dictionary = {}
 
 
 func _ready() -> void:
@@ -102,12 +108,31 @@ func _box(node_name: String, size: Vector3, location: Vector3, color: Color, sol
 	return root
 
 
+## Loads `paths` now and keeps them, for a level to call while it is being
+## built: the first segment that uses each model then finds it ready instead of
+## reading it in the physics tick that spawns it (a bridge's first build took
+## ~45 ms, N-219). Safe to call again and with paths that are already loaded.
+static func warm_models(paths: Array[String]) -> void:
+	for path: String in paths:
+		_scene(path)
+
+
+## The model's PackedScene, loaded once and kept.
+static func _scene(path: String) -> PackedScene:
+	var scene: PackedScene = _scenes.get(path) as PackedScene
+	if scene == null:
+		scene = load(path) as PackedScene
+		if scene != null:
+			_scenes[path] = scene
+	return scene
+
+
 ## Runtime route pieces remain code-built, but no longer have to rebuild every
 ## visible prop from cubes.  Keep collision primitives separate from imported
 ## art: the former are deterministic and cheap, while the latter can evolve
 ## without changing driving physics.
 func _model(node_name: String, path: String, location: Vector3, rotation_y: float = 0.0, scale_factor: float = 1.0) -> Node3D:
-	var scene := load(path) as PackedScene
+	var scene: PackedScene = _scene(path)
 	if scene == null:
 		push_warning("Missing route model: " + path)
 		return null
