@@ -100,6 +100,7 @@ shadow_enabled = true
 shadow_bias = 0.06
 shadow_normal_bias = 2.4
 shadow_blur = 1.6
+shadow_opacity = 0.85
 directional_shadow_blend_splits = true
 directional_shadow_max_distance = 90.0
 
