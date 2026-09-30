@@ -7,6 +7,26 @@
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
 
+## QA — bugs abiertos
+
+### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida)
+Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
+(`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta
+(`run_manager.gd:592-594`): solo cobran las que siguen en el camión. Los `delivery_points` (150/75/20,
+rescates, fotos, plazos) no pasan a plata. Endless no trae `cargo_points` (`run_manager.gd:728-738`). El bono
+`50 * (1 - elapsed/75)` (`run_manager.gd:9,611`) da siempre 0: la entrega más corta dura 125 s y desde N-119
+el mínimo son 2 casas (~200 s); por eso el castigo de Cliente impaciente tampoco hace nada
+(`route_event_manager.gd:187-190`). Los docs dicen lo contrario (`cartas-y-eventos-de-ruta.md:5`,
+`economia-y-contramedidas.md:5-6`). Ningún test lo ve: `test_crew_progression.gd:18-19` usa un diccionario
+inventado y `render_hud.gd:52` y `render_store_shots.gd:137` muestran un `time_bonus: 340` imposible.
+**La fórmula del pago queda pendiente de decisión del usuario** (pregunta 2 del informe: puntos de puerta,
+pago fijo por casa u otra cosa; si se borra el bono de tiempo en favor de los plazos). El test y los mocks
+no dependen de esa decisión y pueden hacerse ya. Hecho cuando un test con una entrega real comprueba que
+`team_money` sube, los mocks de `render_hud` y `render_store_shots` usan valores alcanzables y los tres docs
+dicen lo que hace el código.
+- [ ] **N-227.1** Test con una entrega real (no un diccionario inventado) que compruebe que `team_money` sube; arreglar los mocks de `render_hud.gd` y `render_store_shots.gd`. Con `constructor-progresion` y después `escritor-tests`; tests `crew_progression`.
+- [ ] **N-227.2** (bloqueada por la pregunta 2) Implementar la fórmula elegida y actualizar `cartas-y-eventos-de-ruta.md`, `economia-y-contramedidas.md` y `parametros-diseno.md`. Con `constructor-progresion`; tests `crew_progression`, `run_manager`.
+
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
 Auditoría de `perfilador-rendimiento` (headless, Endless con 4 cajas, `Performance` cada 10 ticks):
@@ -141,7 +161,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313, N-314, N-223, N-315, N-224, N-225, N-316, N-706 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-706, N-226, N-227 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
@@ -293,7 +313,20 @@ tres lo cubre. Migración de host: después del lanzamiento.
 - [ ] (nota de `auditor-red`) Si el host se va con la pantalla de resultados abierta, el cliente la cambia por la de
   desconexión y pierde los resultados completos (ya pasaba antes). Podría quedarse en resultados.
 
-### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`)
+### N-226 · Color estable del jugador asignado por el anfitrión — B · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd` compartida; `player.gd` y `scripts/ui` de Slatex)
+Origen: auditoría integral 2026-09-30, A-4.3 (P1). Esfuerzo M. Mérito y cartas se identifican por un "color
+estable" (`cartas-y-eventos-de-ruta.md:12-14`), pero el color sale de `PLAYER_COLOR_KEYS[posmod(peer_id, 5)]`
+(`crew_progression.gd:134-135`, `player.gd:41-43`, `hud_results.gd:151`, `depot_panel.gd:274`). ENet da ids
+aleatorios: el color cambia entre sesiones y con 5 jugadores ~96 % de las veces dos comparten color, así que
+alguien que vuelve a la campaña puede heredar el mérito o la carta de otro. Hecho cuando el anfitrión asigna un
+índice de color por orden de llegada, lo replica en el roster, la campaña se guarda por ese índice y un test con
+ids aleatorios grandes verifica colores distintos y estables.
+- [ ] **N-226.1** Índice de color asignado por el anfitrión y replicado en el roster. Con `constructor-red`; después `auditor-red`; tests `network_roster`.
+- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd`; guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+- [ ] **N-226.3** Test con ids de peer aleatorios grandes. Con `escritor-tests`; tests `network_roster`.
+
+### N-313 · El ragdoll con el cuerpo real — B · `Opus 5.5 · high` · Aviso: sí (`player_ragdoll.gd`) · ⏸ personajes en pausa (S-311)
+Origen de la pausa: auditoría integral 2026-09-30, A-102 (mismo trabajo que S-311.48; `constructor-jugador.md:43`: personajes y ragdoll no se tocan).
 Hoy esconde al personaje y dibuja seis cápsulas turquesa (`player_ragdoll.gd:20,56-62`). Hecho cuando
 el modelo real del jugador (con su color) es el que vuela y cae; lo mínimo, el modelo entero pegado al
 torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`.
@@ -1422,7 +1455,8 @@ antes de empezar.
 - Hecho cuando: la ruta termina en una base con bahías y la partida se cierra al dejar el camión en su
   lugar.
 
-### N-312 · Personaje flaco y alto — A · `Opus 5.5 · xhigh` · Aviso: sí (apariencia y personalización del jugador, de Slatex)
+### N-312 · Personaje flaco y alto — A · `Opus 5.5 · xhigh` · Aviso: sí (apariencia y personalización del jugador, de Slatex) · ⏸ personajes en pausa (S-311)
+Origen de la pausa: auditoría integral 2026-09-30, A-102.
 
 > Un segundo cuerpo jugable, en contraste con el redondeado de hoy: flaco, alto, cuello y brazos largos.
 > Se elige en la personalización; los dos juegan igual.
@@ -1439,7 +1473,7 @@ antes de empezar.
   replicado con el resto de la apariencia (`player_appearance.gd`). **La cápsula de colisión y la altura
   de la cámara no cambian**: el cuerpo es solo visual, así nadie tiene ventaja ni se rompen puertas,
   asientos o estantes.
-- [ ] **N-312.4** Opcional: el Jefe del diario (N-606) y los NPC del depósito usan este cuerpo (hoy los NPC
+- [ ] **N-312.4** ⏸ personajes en pausa (S-311) · Opcional: el Jefe del diario (N-606) y los NPC del depósito usan este cuerpo (hoy los NPC
   siguen con el modelo viejo `sm_char_player_lowpoly.glb`).
 - Test: ampliar `test_player_character.gd` para los dos cuerpos (huesos que usa el juego, clips
   presentes, cara ni enterrada ni flotando) y un caso de red donde cada par ve el cuerpo que eligió el
@@ -1466,7 +1500,7 @@ antes de empezar.
   `SubViewport`, cámara por rieles (`data/newspaper/shots.json`, formato de `TrailerCamera`), bandas
   negras, saltar manteniendo el botón, opción en Opciones y la tarjeta de resultados esperando
   `newspaper_finished`. Test headless del director y captura con `revisor-visual`.
-- [ ] **N-606.4** Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
+- [ ] **N-606.4** ⏸ personajes en pausa (S-311) · Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
   `CirclePen`, `SipMate`), diario giratorio, curva de página, expresiones, audio (gallo, "¡extra!",
   papel, escupida) y hechos nuevos (vuelco, perro, tren).
 - [ ] **N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
