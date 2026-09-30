@@ -22,10 +22,15 @@ static func halo_spots(route: Node3D) -> Array:
 	var spots: Array = []
 	var to_route: Transform3D = route.global_transform.affine_inverse()
 	for node: Node in route.find_children("*", "Node3D", true, false):
-		if not node.has_meta(&"rule"):
+		if not node.has_meta(&"rule") and not node.has_meta(&"halo_points"):
 			continue
 		var piece := node as Node3D
-		if piece.scene_file_path == STREET_LAMP:
+		if piece.has_meta(&"halo_points"):
+			# A place that lights its own lamps (the goal lot, N-116): the
+			# points are in its space.
+			for point: Vector3 in piece.get_meta(&"halo_points"):
+				spots.append([to_route * (piece.global_transform * point), LAMP_HALO_SIZE])
+		elif piece.scene_file_path == STREET_LAMP:
 			for mesh: Node in piece.find_children("*", "MeshInstance3D", true, false):
 				if _has_material(mesh as MeshInstance3D, "lamp_glass"):
 					var box: AABB = (mesh as MeshInstance3D).get_aabb()

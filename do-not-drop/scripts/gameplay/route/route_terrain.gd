@@ -59,6 +59,13 @@ const RIVER_BANK_WIDTH: float = 60.0
 ## blends back out over FLAT_ZONE_BLEND -- the depot's footprint and yard
 ## (route.gd start_yard), so no hill ever pushes through its floor or walls.
 var flat_zones: Array[Rect2] = []
+## Level platforms at a height of their own, turned with the road (the goal
+## lot, route_goal_lot.gd): {"centre": Vector2, "along": Vector2 (unit vector
+## down the platform's length), "half": Vector2 (across, along), "height":
+## metres}. Inside the rectangle the ground is exactly `height`; it blends
+## back to the landscape over PLATFORM_BLEND.
+var platforms: Array[Dictionary] = []
+const PLATFORM_BLEND: float = 12.0
 ## Railway tunnels (RailCrossingSegment.tunnel_mouths(), levelled by
 ## route.gd): {"at": Vector2 the portal's facade on the track axis, "dir":
 ## Vector2 into the hill, "level": track height, "bore_half", "bore_length",
@@ -159,7 +166,19 @@ func _natural_height(p: Vector2, with_ridge: bool = true) -> float:
 	for zone: Rect2 in flat_zones:
 		var outside := Vector2(maxf(maxf(zone.position.x - p.x, p.x - zone.end.x), 0.0), maxf(maxf(zone.position.y - p.y, p.y - zone.end.y), 0.0))
 		height = lerpf(height, FLAT_ZONE_HEIGHT, 1.0 - smoothstep(0.0, FLAT_ZONE_BLEND, outside.length()))
+	for platform: Dictionary in platforms:
+		var blend: float = smoothstep(0.0, PLATFORM_BLEND, _platform_gap(platform, p))
+		height = lerpf(height, float(platform.height), 1.0 - blend)
 	return height
+
+
+## How far `p` is outside a platform's rectangle (0 anywhere inside it).
+func _platform_gap(platform: Dictionary, p: Vector2) -> float:
+	var along: Vector2 = platform.along
+	var offset: Vector2 = p - (platform.centre as Vector2)
+	var half: Vector2 = platform.half
+	var local := Vector2(absf(offset.dot(Vector2(-along.y, along.x))), absf(offset.dot(along)))
+	return Vector2(maxf(local.x - half.x, 0.0), maxf(local.y - half.y, 0.0)).length()
 
 
 ## 0..1: how much of `tunnel`'s hill stands at `p`. Nothing in front of the

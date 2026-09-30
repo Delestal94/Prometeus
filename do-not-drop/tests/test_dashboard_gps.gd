@@ -3,7 +3,8 @@ extends SceneTree
 ## The GPS on the truck's dashboard (tareas de Nacho N-502): on a delivery it
 ## shows the distance along the road to the next house still waiting, the
 ## box code it ordered and an arrow toward it; once every house is done it
-## points at the goal. In Endless it shows the distance driven and the record.
+## points at the free bay of the base at the end of the road (N-116). In
+## Endless it shows the distance driven and the record.
 
 var _failures: int = 0
 
@@ -49,7 +50,15 @@ func _run() -> void:
 		bus.emit_signal(&"house_delivery_recorded", 0, &"delivered_ok", &"")
 		_expect(gps.target_house == 1 and gps.detail_label.text.begins_with("CASA 2"), "Delivered: it moves on to the next house (%s)" % gps.detail_label.text)
 		bus.emit_signal(&"house_delivery_recorded", 1, &"missed", &"")
-		_expect(gps.target_house == -1 and gps.detail_label.text == "LLEGADA", "All done: it points at the goal (%s)" % gps.detail_label.text)
+		var bay: int = int(route.call(&"goal_bay_number"))
+		_expect(bay > 0 and gps.target_house == -1 and gps.detail_label.text == "BAHÍA %d" % bay,
+				"All done: it points at the free bay of the base (%s, bay %d)" % [gps.detail_label.text, bay])
+		var to_bay: Vector3 = (route.call(&"goal_target") as Vector3) - truck.global_position
+		to_bay.y = 0.0
+		truck.global_basis = Basis.looking_at(to_bay, Vector3.UP)
+		gps.refresh()
+		var aim: float = rad_to_deg(gps.arrow.rotation.z)
+		_expect(gps.arrow.visible and absf(gps.arrow.rotation.z) < 0.2, "and the arrow aims at it (%.0f°)" % aim)
 	level.queue_free()
 	network.set(&"world_seed", 0)
 	network.set(&"world_house_count", 0)
@@ -70,7 +79,7 @@ func _run() -> void:
 	await process_frame
 
 	if _failures == 0:
-		print("PASS: the dashboard GPS guides to each waiting house, then the goal, and shows the record in Endless")
+		print("PASS: the dashboard GPS guides to each waiting house, then the free bay, and shows the record in Endless")
 	quit(_failures)
 
 
