@@ -76,7 +76,14 @@
 | `drive_horn` | H | Botón Este (B/Círculo) |
 | `ui_pause` | Esc | Start |
 | `run_restart` | R | Botón Oeste (X/Cuadrado) |
+| `crew_panel` | Tab (mantener) | Botón Back/Select (mantener) — panel de tripulación en el depósito (`crew_panel.gd`, S-507) |
 | `toggle_net_stats` | F3 | — (panel de red, `net_stats_overlay.gd`; no reasignable) |
+
+`crew_panel` comparte Tab y Back con `spectate_toggle` (vista de espectador, `spectator_camera.gd`) a propósito:
+el espectador solo existe con el camión en ruta y el panel solo con el depósito abierto (`CrewPanel.in_depot()`),
+así que nunca compiten. No quedan botones de gamepad libres (los cuatro del D-pad, los gatillos, los
+bumpers, los sticks, Start y las caras están tomados), y Tab es la tecla de "quién está en la sala".
+Si alguna vez se necesita el panel durante la ruta, hay que separar las teclas.
 
 Caminar y conducir comparten `W`/`S`: nunca están activos a la vez, porque un jugador
 es conductor o pasajero a pie, no ambos en la misma escena. La mirada en primera
