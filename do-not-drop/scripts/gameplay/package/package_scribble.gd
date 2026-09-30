@@ -17,7 +17,10 @@ const INK_RED: Color = Color("b3261e")
 ## is ~5 cm tall, readable from 2-3 m and small enough to fit under the stamp.
 const PIXEL_SIZE: float = 0.0013
 const BASE_FONT_SIZE: int = 36
-const REFERENCE_WIDTH: float = 0.65
+const MIN_FONT_SIZE: int = 20
+## Width of an average LilitaOne capital, in font sizes: the phrase is shrunk
+## to fit one line, since a second line climbs into the printed stamp.
+const CHAR_EM: float = 0.7
 ## Share of the face's width the text may fill.
 const FACE_FILL: float = 0.9
 ## Proud of the face like the shipping label (closer and the depth buffer makes
@@ -43,13 +46,16 @@ static func build(content: Resource, package_id: StringName, box_size: Vector3) 
 	label.name = "Scribble"
 	label.text = phrase
 	label.font = FONT
-	label.font_size = roundi(BASE_FONT_SIZE * clampf(box_size.x / REFERENCE_WIDTH, 0.72, 1.0))
+	var width_px: float = box_size.x * FACE_FILL / PIXEL_SIZE
+	label.font_size = clampi(floori(width_px / (float(maxi(phrase.length(), 1)) * CHAR_EM)),
+		MIN_FONT_SIZE, BASE_FONT_SIZE)
 	label.pixel_size = PIXEL_SIZE
 	label.outline_size = 0
 	label.modulate = INK_RED if bool(content.call(&"scribble_is_red")) else INK_BLACK
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Wraps only if even the smallest size doesn't fit (narrow boxes, long phrases).
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.width = box_size.x * FACE_FILL / PIXEL_SIZE
+	label.width = width_px
 	label.line_spacing = -6.0
 	label.rotation.z = tilt(package_id)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
