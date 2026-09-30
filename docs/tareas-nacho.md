@@ -2126,7 +2126,7 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
   pueblo), tono (humor absurdo, nunca cruel ni con sangre). Lista de 10 clientes recurrentes con nombre
   y manía. Es la referencia para S-602 a S-604.
 
-#### S-602 · Remitentes, notas y etiquetas escritas a mano — B · `Opus 5.5 · medium` para textos, `Opus 5.5 · high` para código · Aviso: no
+#### S-602 · Remitentes, notas y etiquetas escritas a mano — B · `Opus 5.5 · medium` para textos, `Opus 5.5 · high` para código · Aviso: no · **[x] PR #74**
 
 - [x] Campos nuevos en `package_content.gd`: `sender`, `recipient`, `notes: PackedStringArray` (3-5 por
   contenido). La etiqueta de envío muestra remitente y destinatario; al abrir la caja (T), la línea de
