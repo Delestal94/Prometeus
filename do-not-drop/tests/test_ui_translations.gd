@@ -20,6 +20,10 @@ extends SceneTree
 ##   table with the .tres display_name as its Spanish text, and no script
 ##   draws a .tres display_name straight on screen: each peer translates the
 ##   name into its own language, not the host's.
+## - S-605: the warnings read while driving are short: every trap hint
+##   (HUD_HINT_<TRAP>_*) and every route-event prompt (HUD_EVENT_*_PROMPT,
+##   *_HOUSE, *_REVEALED, *_SWAPPED) has at most 6 words, in Spanish and in
+##   English, not counting the values inserted at runtime (%d, %s, %.0f);
 ## - Spanish stays the text the game always showed, and switching the locale
 ##   builds a panel in English.
 
@@ -94,6 +98,7 @@ func _run() -> void:
 	_check_no_spanish_ui_literals()
 	_check_no_plain_word_texts()
 	_check_trap_name_keys(table)
+	_check_short_warnings(table)
 	var menu_constants: Dictionary = load("res://scripts/ui/main_menu.gd").get_script_constant_map()
 	var page_titles: Dictionary = menu_constants.get("PAGE_TITLES", {})
 	_expect(not page_titles.is_empty(), "The main menu has page titles")
@@ -199,6 +204,32 @@ func _check_trap_name_keys(table: Dictionary) -> void:
 				continue
 			_expect(reads.search(FileAccess.get_file_as_string(file_path)) == null,
 				"%s doesn't draw a .tres display_name (localized_name() / name_key())" % file_path)
+
+
+## S-605: trap hints and route-event prompts are read while driving: 6 words
+## at most. The runtime values (%d, %s, %.0f, with a trailing "s" or "°") and
+## bare symbols (·, /) are not words; a literal number or a word like "A/D" is.
+func _check_short_warnings(table: Dictionary) -> void:
+	var trap_hint := RegEx.create_from_string("^HUD_HINT_(FRAGILE|BALANCE|EXPLOSIVE|WEIGHT|HOSTILE|LIQUID|NOISY)(_|$)")
+	var event_text := RegEx.create_from_string("^HUD_EVENT_[A-Z_]+_(PROMPT|HOUSE|REVEALED|SWAPPED)$")
+	var inserted := RegEx.create_from_string("%[-+0-9.]*[dsf][s°]?")
+	var has_letters := RegEx.create_from_string("[A-Za-zÀ-ÿ0-9]")
+	var hints: int = 0
+	var prompts: int = 0
+	for key: String in table:
+		var is_hint: bool = trap_hint.search(key) != null
+		var is_prompt: bool = event_text.search(key) != null
+		if not is_hint and not is_prompt:
+			continue
+		hints += 1 if is_hint else 0
+		prompts += 1 if is_prompt else 0
+		for language: int in 2:
+			var words: int = 0
+			for token: String in inserted.sub(table[key][language], " ", true).split(" ", false):
+				words += 1 if has_letters.search(token) != null else 0
+			_expect(words <= 6, "%s (%s) has at most 6 words (%d)" % [key, ["es", "en"][language], words])
+	_expect(hints >= 20, "The 7 traps' hints are all checked (%d keys)" % hints)
+	_expect(prompts >= 10, "The route events' prompts are all checked (%d keys)" % prompts)
 
 
 ## key -> [es, en]

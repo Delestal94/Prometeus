@@ -2270,8 +2270,11 @@ Los textos de Slatex quedaron centralizados en el catálogo bilingüe de UI.
 
 #### S-605 · Textos de trampas y eventos con tono — C · `Opus 5.5 · medium` · Aviso: no
 
-- [ ] Reescribir `get_hint()` de las 7 trampas y los `prompt` de los eventos de ruta con el tono de
-  S-601, máximo 6 palabras por aviso (se leen manejando).
+- [x] Reescribir `get_hint()` de las 7 trampas y los `prompt` de los eventos de ruta con el tono de
+  S-601, máximo 6 palabras por aviso (se leen manejando). Hecho el 2026-09-30: 24 textos `HUD_HINT_*` y 10 de
+  prompts de evento reescritos en `strings_ui.csv` (es y en, mismas claves, verbos de N-117 intactos); ampliado
+  `test_ui_translations` con la aserción de <= 6 palabras; aviso `docs/avisos/2026-09-30-s605-trap-event-tone.md`;
+  rama `nacho/S-605-trap-event-tone`.
 
 ---
 
