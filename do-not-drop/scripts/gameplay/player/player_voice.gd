@@ -43,7 +43,7 @@ const HEAD_HEIGHT: float = 1.7
 
 var player: Node
 var voice: AudioStreamPlayer3D
-## Slot in Player.PLAYER_COLORS (peer id modulo its size); picks the base pitch.
+## Slot in Player.PLAYER_COLORS (the player's colour slot, PlayerColorSlot); picks the base pitch.
 var slot: int = 0
 var last_line: StringName = &""
 var _last_flinch: float = 0.0
@@ -61,7 +61,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	player = get_parent()
-	slot = posmod(player.get_multiplayer_authority(), Player.PLAYER_COLORS.size())
+	slot = PlayerColorSlot.slot(player.get_multiplayer_authority(), Player.PLAYER_COLORS.size())
 	position = Vector3(0.0, HEAD_HEIGHT, 0.0)
 	_rng.randomize()
 	voice = AudioStreamPlayer3D.new()

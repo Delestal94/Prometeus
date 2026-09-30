@@ -78,7 +78,8 @@ func _run() -> void:
 			"A player that has not spawned yet has neither wheel nor box")
 	_expect(bool(entries[1]["is_local"]) and not bool(entries[0]["is_local"]), "The local player is marked")
 	_expect(bool(entries[0]["is_host"]) and not bool(entries[1]["is_host"]), "The host is marked online")
-	_expect(entries[0]["color"] == _player.PLAYER_COLORS[1 % _player.PLAYER_COLORS.size()],
+	# The host (peer 1) is colour slot 0, in a room and playing solo (N-226.2).
+	_expect(entries[0]["color"] == _player.PLAYER_COLORS[0],
 			"The team-colour uniform shows the seat's crew colour (got %s)" % entries[0]["color"])
 	_expect(entries[1]["color"] == unlocks.call(&"cosmetic_color", &"coral_uniform")
 			and entries[2]["color"] == unlocks.call(&"cosmetic_color", &"sky_uniform"),

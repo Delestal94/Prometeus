@@ -410,7 +410,16 @@ ids aleatorios grandes verifica colores distintos y estables.
   `NetworkManager.color_slot(peer_id)` (host 0, cada joiner el libre más bajo desde que empieza a autenticarse; fuera de
   sesión, el `posmod` de siempre). Viaja en el handshake (`"colors"`) y por el RPC `_sync_color_slots` en cada join, salida
   o auth fallida; señal `color_slots_changed`. `PROTOCOL_VERSION` 9 → 10. `auditor-red`: sin bugs; par y trío en verde.
-- [ ] **N-226.2** Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.
+- [x] **N-226.2** ~~Leer el color desde ese índice en `crew_progression.gd`, `player.gd`, `hud_results.gd` y `depot_panel.gd` (también `crew_panel.gd:152` y `hud_notices.gd:97`); guardar la campaña por índice. Con `constructor-progresion`; tests `crew_progression`.~~
+  **[x] Hecho (2026-09-30)** — rama `ccr-7ed3ad6f-aszdmn`: helper único `PlayerColorSlot.slot(peer_id, tamaño_paleta)`
+  (`scripts/core/player_color_slot.gd`) = `posmod(color_slot(id), paleta)` con el host fijo en 0 (solo y en sala el mismo
+  color); lo usan `crew_progression.gd`, `player.gd`, `player_voice.gd`, `hud_results.gd`, `depot_panel.gd`,
+  `crew_panel.gd` y `hud_notices.gd`, y los que dibujan escuchan `color_slots_changed`. Campaña `CAMPAIGN_VERSION` 2
+  por slot (`"0"`..`"4"`), con migración del 1 (host "yellow" → slot 0) y sin crashear con archivos corruptos o de
+  otra versión; quien se va se guarda con el slot que tenía. Slot liberado: lo hereda el siguiente (documentado, sin
+  reservarlo). Test: `test_crew_progression.gd`. Aviso `2026-09-30-n226-color-por-indice.md`. Queda, fuera de esta
+  tarea: `NetSession._fail` limpia el mapa sin emitir `color_slots_changed` (módulo de red, otra rama) y la prueba
+  multiproceso `net_trio.gd` con `slots=0,1,2`.
   Notas de `auditor-red` (N-226.1): `MAX_PLAYERS` es 8 y la paleta 5, así que se lee `posmod(color_slot(id), paleta.size())`;
   jugando solo el host da 1 y en sala 0 (decidir si solo se lee como 0); un índice liberado lo hereda el próximo que entra
   (mérito/carta por color dentro de la sesión: reservarlo mientras dure o documentarlo); los lectores escuchan también
