@@ -10,6 +10,8 @@ extends SceneTree
 ##   session, says why once, and goes back to an offline peer; leaving resets
 ##   the game's state through its hook; the restart payload round-trips;
 ##   failure codes come out worded by the game;
+## - The configured auth and ENet timeouts cover a blocking level load, with
+##   no earlier ENet MIN that drops an authenticating peer mid-load;
 ## - NetEventBus relays a fact locally when offline, and a request from the
 ##   local host lands as `event(peer_id, args...)` subject to its cooldown;
 ## - NetStats parses --net-sim profiles and grades metrics;
@@ -133,6 +135,15 @@ func _test_session() -> void:
 	session.roster_changed.connect(func(ids: Array) -> void: rosters.append(ids))
 	session.session_failed.connect(func(reason: String) -> void: failures.append(reason))
 	_expect(session.host_session(7811) == OK, "Hosting over ENet works")
+	var auth_seconds: float = session.multiplayer.auth_timeout
+	_expect(auth_seconds >= 40.0,
+		"The configured auth timeout covers a slow level load (got %s s)" % auth_seconds)
+	_expect(is_equal_approx(auth_seconds, NetSession.JOIN_HANDSHAKE_TIMEOUT),
+		"Hosting applies the module's handshake timeout (got %s s)" % auth_seconds)
+	_expect(NetSession.ENET_PEER_TIMEOUT_MIN_MSEC == NetSession.ENET_PEER_TIMEOUT_MAX_MSEC,
+		"ENet has no earlier MIN that drops an authenticating peer mid-load")
+	_expect(NetSession.ENET_PEER_TIMEOUT_MIN_MSEC >= int(auth_seconds * 1000.0),
+		"ENet waits at least as long as authentication (got %s ms)" % NetSession.ENET_PEER_TIMEOUT_MIN_MSEC)
 	_expect(session.is_online() and session.is_host() and session.active_transport == NetSession.Transport.ENET,
 		"The host is online on ENet")
 	_expect(ready_flags == [true] and rosters == [[1]], "Hosting announces the roster and session_ready(true)")

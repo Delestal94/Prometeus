@@ -28,6 +28,9 @@ extends SceneTree
 ## leaves. Each client prints a GONE line: it saw the host go, got the delivery,
 ## its level stopped the run and RunTally tells 1 house delivered (the screen
 ## itself: test_host_gone_tally.gd).
+## The joiners load the level blocking ENet's polling (18-34 s on CI): the
+## handshake and ENet peer timeouts in network_manager.gd must outlast that, or
+## the host cuts them mid-load and the run ends with "0 players seen".
 ##
 ## As with net_smoke.gd: on Windows use the plain (non "_console") Godot
 ## executable, the one the firewall rule was approved for.
@@ -233,7 +236,7 @@ func _tap_box(box: Node3D) -> String:
 		if sender:
 			box.rpc_id(1, &"submit_care_input", {"steady": false, "calm": false, "tap": true, "balance": Vector2.ZERO})
 		elif _host and not applied and _has_tap(box):
-			PackageRescue.simulate_cargo(box, 0.02)
+			_package_rescue().call(&"simulate_cargo", box, 0.02)
 			applied = true
 		root.multiplayer.poll()
 		await _pump(0.1)
@@ -274,7 +277,7 @@ func _scrub_box(box: Node3D) -> String:
 				"balance": Vector2.ZERO})
 			sent += 1
 		elif _host and _has_swing(box):
-			PackageRescue.simulate_cargo(box, 0.15)
+			_package_rescue().call(&"simulate_cargo", box, 0.15)
 		root.multiplayer.poll()
 		await _pump(0.02)
 	await _pump(1.0)
@@ -328,7 +331,7 @@ func _assist_box(box: Node3D, holder: String) -> String:
 			box.rpc_id(1, &"submit_tender_input", {"direction_pressed": steps[sent], "steady": false})
 			sent += 1
 		elif _host and _has_swing(box):
-			PackageRescue.simulate_cargo(box, 0.1)
+			_package_rescue().call(&"simulate_cargo", box, 0.1)
 		root.multiplayer.poll()
 		await _pump(0.02)
 	await _pump(1.0)
@@ -435,3 +438,9 @@ func _pump(seconds: float) -> void:
 	while Time.get_ticks_msec() < until:
 		root.multiplayer.poll()
 		await process_frame
+
+
+## Loaded when used, not named: package_rescue.gd pulls in player.gd and hud.gd,
+## which read autoloads that --script hasn't registered yet while this compiles.
+func _package_rescue() -> Script:
+	return load("res://scripts/gameplay/package/package_rescue.gd")
