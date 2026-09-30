@@ -188,16 +188,18 @@ func refresh_sound_subtitle() -> void:
 					package_id = candidate
 					break
 		if not package_id.is_empty() and hud.cargo_rows.has(package_id):
-			var trap_name: String = String(hud.cargo_rows[package_id]["name"]).to_upper()
-			subtitle = {
-				"EXPLOSIVO": tr("HUD_SUB_EXPLOSIVE"),
-				"RUIDOSO": tr("HUD_SUB_NOISY"),
-				"FRÁGIL": tr("HUD_SUB_FRAGILE"),
-				"PESO CRECIENTE": tr("HUD_SUB_GROWING_WEIGHT"),
-				"LÍQUIDO": tr("HUD_SUB_LIQUID"),
-				"HOSTIL": tr("HUD_SUB_HOSTILE"),
-				"EQUILIBRIO": tr("HUD_SUB_BALANCE"),
-			}.get(trap_name, tr("HUD_SUB_DEFAULT"))
+			# By the trap's key (TrapDefinition.name_key()): the name is in this
+			# player's language, which may not be Spanish.
+			var trap_key: String = String(hud.cargo_rows[package_id].get("key", ""))
+			subtitle = tr({
+				"HUD_TRAP_EXPLOSIVE": "HUD_SUB_EXPLOSIVE",
+				"HUD_TRAP_NOISY": "HUD_SUB_NOISY",
+				"HUD_TRAP_FRAGILE": "HUD_SUB_FRAGILE",
+				"HUD_TRAP_GROWING_WEIGHT": "HUD_SUB_GROWING_WEIGHT",
+				"HUD_TRAP_LIQUID": "HUD_SUB_LIQUID",
+				"HUD_TRAP_HOSTILE": "HUD_SUB_HOSTILE",
+				"HUD_TRAP_BALANCE": "HUD_SUB_BALANCE",
+			}.get(trap_key, "HUD_SUB_DEFAULT"))
 	if subtitle != _sound_subtitle:
 		_sound_subtitle = subtitle
 		render_interaction_prompt()

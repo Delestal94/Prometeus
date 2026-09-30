@@ -28,9 +28,12 @@ func _on_speed(speed: float) -> void:
 	hud.speed_label.text = "%02d" % roundi(absf(speed))
 
 
-func _on_cargo_registered(id: StringName, display_name: String) -> void:
+## The host relays the trap's translation key (TrapDefinition.name_key()), so
+## the card reads in this player's language, not the host's.
+func _on_cargo_registered(id: StringName, name_key: String) -> void:
 	if hud.cargo_rows.has(id):
 		return
+	var display_name: String = tr(name_key)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	hud.cargo_rows_box.add_child(row)
@@ -47,7 +50,8 @@ func _on_cargo_registered(id: StringName, display_name: String) -> void:
 	var label: Label = UiTheme.title(column, "%s  ·  100%%" % display_name.to_upper(), 18)
 	var bar: ProgressBar = UiTheme.bar(column, Hud.MINT, 12)
 	bar.value = 100
-	hud.cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "icon": icon, "row": row}
+	hud.cargo_rows[id] = {"label": label, "bar": bar, "name": display_name.to_upper(), "key": name_key,
+		"icon": icon, "row": row}
 
 
 func _on_integrity(id: StringName, integrity: float, maximum: float) -> void:

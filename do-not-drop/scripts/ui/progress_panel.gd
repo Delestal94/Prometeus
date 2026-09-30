@@ -3,8 +3,8 @@ class_name ProgressPanel
 
 signal closed
 const UNLOCK_REWARDS := {
-	&"growing_weight_trap": {"text": "UI_REWARD_GROWING_WEIGHT", "trap": "PESO CRECIENTE", "glyph": "▣"},
-	&"noisy_trap": {"text": "UI_REWARD_NOISY", "trap": "RUIDOSO", "glyph": "♫"},
+	&"growing_weight_trap": {"text": "UI_REWARD_GROWING_WEIGHT", "trap": "HUD_TRAP_GROWING_WEIGHT", "glyph": "▣"},
+	&"noisy_trap": {"text": "UI_REWARD_NOISY", "trap": "HUD_TRAP_NOISY", "glyph": "♫"},
 	&"liquid_trap": {"text": "UI_REWARD_LIQUID", "glyph": "◒"},
 	&"explosive_trap": {"text": "UI_REWARD_EXPLOSIVE", "glyph": "✦"},
 	&"hostile_trap": {"text": "UI_REWARD_HOSTILE", "glyph": "◆"},

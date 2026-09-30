@@ -144,7 +144,8 @@ func _ready() -> void:
 				if available:
 					notices.toast(tr("HUD_SPECTATE_AVAILABLE") % key_hint("Tab", "Back")))
 	EventBus.house_refused_package.connect(func(house_index: int, expected: String) -> void:
-		notices.toast(tr("HUD_HOUSE_REFUSED") % [house_index + 1, expected.to_lower()]))
+		var label: String = _house_order_label(house_index, expected)
+		notices.toast(tr("HUD_HOUSE_REFUSED") % [house_index + 1, label.to_lower()]))
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	GameSettings.hud_scale_changed.connect(func(_scale: float) -> void: apply_hud_scale())
 	GameSettings.control_help_mode_changed.connect(func(_mode: int) -> void: prompts.refresh_shortcuts())
@@ -373,7 +374,7 @@ func _build_bottom_bar() -> void:
 	cargo_card.offset_left = EDGE_MARGIN
 	cargo_card.offset_bottom = -EDGE_MARGIN
 	cargo_card.offset_top = -EDGE_MARGIN
-	UiTheme.tag(cargo_panel, "CARGA", UiTheme.CARDBOARD, -2.0, 16)
+	UiTheme.tag(cargo_panel, tr("HUD_CARGO_TITLE"), UiTheme.CARDBOARD, -2.0, 16)
 	cargo_rows_box = VBoxContainer.new()
 	cargo_rows_box.add_theme_constant_override("separation", 10)
 	cargo_panel.add_child(cargo_rows_box)
@@ -607,6 +608,15 @@ func _process(delta: float) -> void:
 	event_seconds_left = maxf(event_seconds_left - delta, 0.0)
 
 
+## The order as this peer's house labels it (Route.assign_packages()
+## translates it locally); the relayed one is in the host's language.
+func _house_order_label(house_index: int, relayed: String) -> String:
+	for house: Node in get_tree().get_nodes_in_group(&"delivery_house"):
+		if house is DeliveryHouse and house.house_index == house_index and not house.assigned_label.is_empty():
+			return house.assigned_label
+	return relayed
+
+
 func _on_roster_changed(_peer_ids: Array) -> void:
 	_refresh_session()
 
@@ -614,7 +624,7 @@ func _on_roster_changed(_peer_ids: Array) -> void:
 func _refresh_session() -> void:
 	if session_label == null:
 		return
-	var mode: String = "ENDLESS" if is_endless else "ENTREGA"
+	var mode: String = "ENDLESS" if is_endless else tr("HUD_SESSION_MODE_DELIVERY")
 	if not NetworkManager.is_online():
 		session_label.text = tr("HUD_SESSION_SOLO") % mode
 		_session_color(MINT)

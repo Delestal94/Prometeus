@@ -26,9 +26,10 @@ enum Transport { AUTO, STEAM, ENET }
 const DEFAULT_PORT: int = 7777
 const MAX_PLAYERS: int = 8
 const HOST_ID: int = 1
-## Increment whenever peers can no longer share the same replicated scene or
-## handshake. Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 2
+## Increment whenever peers can no longer share the same replicated scene,
+## handshake or meaning of a relayed payload (3: trap names travel as keys).
+## Both sides exchange it before either starts scene replication.
+const PROTOCOL_VERSION: int = 3
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

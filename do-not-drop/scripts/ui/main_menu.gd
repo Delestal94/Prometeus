@@ -89,7 +89,7 @@ const PAGE_TITLES: Dictionary = {
 	Page.HOME: "UI_MENU_PAGE_HOME",
 	Page.PLAY: "UI_MENU_PAGE_PLAY",
 	Page.JOIN: "UI_MENU_PAGE_JOIN",
-	Page.GARAGE: "GARAJE",
+	Page.GARAGE: "UI_MENU_PAGE_GARAGE",
 }
 ## Where "Volver" (and Esc / B) lead from each sub-page.
 const PAGE_PARENT: Dictionary = {

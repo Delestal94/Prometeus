@@ -24,7 +24,14 @@ const NAME_KEYS: Dictionary = {
 
 
 func localized_name() -> String:
-	return tr(String(NAME_KEYS.get(id, display_name)))
+	return tr(name_key())
+
+
+## What travels over the network instead of the name itself: each peer
+## translates it into its own language (a host in Spanish no longer names
+## an English client's boxes in Spanish).
+func name_key() -> String:
+	return String(NAME_KEYS.get(id, display_name))
 
 
 ## Deterministic per package id, so every peer opens the same box without

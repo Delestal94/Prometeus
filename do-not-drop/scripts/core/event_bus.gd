@@ -7,7 +7,8 @@ extends Node
 ## same way theirs would offline. Emit UI requests (start_requested and
 ## friends) with plain emit() as before -- those are per-peer, not facts.
 
-signal cargo_registered(package_id: StringName, display_name: String)
+## name_key: TrapDefinition.name_key(), translated by each listener (N-805).
+signal cargo_registered(package_id: StringName, name_key: String)
 ## Low-rate (a few times a second, not every physics tick): a trap's hint
 ## text can change every frame (a countdown, say), and relaying that at full
 ## physics rate would spam the network for a label nobody reads that closely.
@@ -84,12 +85,12 @@ signal route_event_updated(event_id: StringName, event: Dictionary)
 signal route_event_resolved(event_id: StringName, success: bool, peer_id: int)
 signal unlock_earned(unlock_id: StringName, title: String)
 ## Which box each house waits for, decided by the host when the run starts:
-## [[package_id, display_name], ...] in house order (route.assign_packages()).
+## [[package_id, trap_key, code], ...] in house order (route.assign_packages()).
 signal houses_assigned(assignments: Array)
 ## Somebody rang with a box the house didn't order; it was handed back.
 signal house_refused_package(house_index: int, expected_label: String)
 ## The depot (depot.gd) posted today's orders on its board, one entry per
-## house in order: {"house", "package_id", "code", "trap", "content"}.
+## house in order: {"house", "package_id", "code", "trap", "trap_key", "content"}.
 ## Every peer works the same list out from the session seed, so this is a
 ## plain local emit, not a relay.
 signal depot_orders_posted(orders: Array)

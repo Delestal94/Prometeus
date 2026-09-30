@@ -42,7 +42,7 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	# read as leftovers (HUD redesign 2026-09-28).
 	hud.hud_layer.hide()
 	hud.set_economy_visible(false)
-	hud.overlay_kicker.text = "RESULTADO"
+	hud.overlay_kicker.text = tr("HUD_KICKER_RESULTS")
 	var new_best: bool = bool(results.get("is_new_best", false))
 	set_hero(true, score, new_best)
 	var best_line: String = "" if new_best else tr("HUD_RESULT_RECORD") % int(results.get("best_score", 0))
@@ -111,7 +111,9 @@ func _add_delivery_row(entry: Dictionary) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	hud.result_rows_box.add_child(row)
-	var trap_name: String = String(entry.get("trap", tr("HUD_RESULT_PACKAGE_FALLBACK")))
+	# A translation key from the host (TrapDefinition.name_key()); tr() leaves
+	# an already-written name as it is.
+	var trap_name: String = tr(String(entry.get("trap", "HUD_RESULT_PACKAGE_FALLBACK")))
 	var texture: Texture2D = UiTheme.trap_icon(trap_name)
 	if texture != null:
 		var icon := TextureRect.new()

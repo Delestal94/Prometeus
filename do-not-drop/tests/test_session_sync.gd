@@ -2,7 +2,8 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_session_sync.gd
 ##
 ## The second round of multiplayer fixes (cazador-bugs sweep, 2026-09-24):
-## what a late joiner is told about the run, boxes handed over at a door
+## what a late joiner is told about the run (box names as translation keys,
+## so each peer reads them in its own language), boxes handed over at a door
 ## going away everywhere, a box carried or set down in the moving truck
 ## staying on the host's truck, trap input only from whoever tends the box
 ## (and not forever), a seated passenger's reach measured from their seat,
@@ -98,6 +99,16 @@ func _initialize() -> void:
 	run.set(&"expected_houses", 1)
 	run.call(&"finish_run", true)
 	_expect(int((run.get(&"results") as Dictionary).get("photos", -1)) == 0, "A photo of a missed house earns nothing")
+
+	# --- a late joiner gets each box's name key, even a delivered one (N-805) ---
+	run.call(&"reset_run")
+	run.set(&"cargo", {&"box_k": {"integrity": 100.0}, &"box_gone": {"integrity": 0.0}})
+	run.set(&"cargo_names", {&"box_k": "HUD_TRAP_FRAGILE"})
+	var session_names: Dictionary = run.call(&"session_names")
+	_expect(String(session_names.get(&"box_k", "")) == "HUD_TRAP_FRAGILE",
+		"The joiner gets the trap's key, to read it in its own language (%s)" % session_names)
+	_expect(String(session_names.get(&"box_gone", "")) == "HUD_RESULT_PACKAGE_FALLBACK",
+		"A box without a name gets the generic key, not its raw id")
 
 	# --- what a late joiner is told ---
 	run.call(&"reset_run")

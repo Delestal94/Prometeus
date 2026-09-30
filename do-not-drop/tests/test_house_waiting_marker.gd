@@ -8,6 +8,8 @@ extends SceneTree
 ## record doesn't touch it. The doorbell panel (N-302) hangs on each model's
 ## wall beside the door with the house number, lit while the house waits and
 ## dark once its delivery is recorded; ringing happens where it always did.
+## The order arrives as [package_id, trap_key, code] (N-805) and each peer
+## writes the trap in its own language: English here reads "FRAGILE".
 
 var _failures: int = 0
 
@@ -26,7 +28,7 @@ func _run() -> void:
 	await process_frame
 	var houses: Array = route.get(&"houses")
 	_expect(houses.size() == 2, "Two houses on the route")
-	route.call(&"assign_packages", [[&"fragile_a", "Frágil A-3"], [&"noisy_b", "Ruidoso B-1"]])
+	route.call(&"assign_packages", [[&"fragile_a", "HUD_TRAP_FRAGILE", "A-3"], [&"noisy_b", "HUD_TRAP_NOISY", "B-1"]])
 
 	var first: HouseWaitingMarker = (houses[0] as DeliveryHouse).waiting_marker
 	var second: HouseWaitingMarker = (houses[1] as DeliveryHouse).waiting_marker
@@ -85,6 +87,13 @@ func _run() -> void:
 		_expect((houses[1] as DeliveryHouse).doorbell_lit and _doorbell_glows(houses[1]), "The other house's doorbell stays lit")
 		root.get_node(^"/root/EventBus").emit_signal(&"house_delivery_recorded", 1, &"missed", &"")
 		_expect(not second.sign_board.visible, "Driven past counts too: nothing left to wait for")
+		# Same order, English peer: the host's key reads in this peer's language.
+		var locale: String = TranslationServer.get_locale()
+		TranslationServer.set_locale("en")
+		route.call(&"assign_packages", [[&"fragile_a", "HUD_TRAP_FRAGILE", "A-3"]])
+		_expect((houses[0] as DeliveryHouse).assigned_label == "Fragile A-3",
+			"An English peer labels the order in English (%s)" % (houses[0] as DeliveryHouse).assigned_label)
+		TranslationServer.set_locale(locale)
 
 	route.free()
 	network.set(&"world_seed", 0)

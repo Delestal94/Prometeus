@@ -9,7 +9,8 @@ class SalvagePoint extends "res://scripts/gameplay/interaction/interactable.gd":
 	func get_prompt() -> String:
 		if package.care.phase == &"lost" or (package.salvage_state.get("collected", []) as Array).has(index):
 			return ""
-		return "Recapturar criatura" if package._trap_kind() in [&"noisy", &"hostile"] else "Recuperar pieza"
+		var creature: bool = package._trap_kind() in [&"noisy", &"hostile"]
+		return tr("HUD_PROMPT_RECAPTURE") if creature else tr("HUD_PROMPT_SALVAGE")
 
 	func interact(player: Node) -> void:
 		if not get_prompt().is_empty() and _within_reach(player):
