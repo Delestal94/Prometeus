@@ -706,6 +706,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   `docs/avisos/2026-10-01-n225-package-partido.md`.
 - [ ] **N-225.5** Quedan `player.gd` (1000), `run_manager.gd` (1000) y `package_feedback.gd` (1000) en el borde.
   Origen: construcción 2026-10-01.
+  **[x] `package_feedback.gd` (2026-10-01, rama `nacho/N-225-package-feedback-split`)** — 1000 → 444 líneas.
+  Helpers estáticos que reciben el nodo (ahora `class_name PackageFeedback`): lo propio de cada trampa, las correas
+  y el disfraz de evento a `package_trap_visuals.gd` (`PackageTrapVisuals`), cartón, contorno, material por
+  paquete, abolladuras y etiqueta a `package_box_dressing.gd` (`PackageBoxDressing`), y rebote, temblor,
+  deformación, etiqueta que se desprende y confeti a `package_box_motion.gd` (`PackageBoxMotion`). Todas las `var`,
+  las constantes que leen otros archivos, `_ready`/`_process` (mismo orden) y los métodos usados afuera quedan en el
+  nodo. `test_package_feedback_split.gd` fija ≤ 700 líneas, la API usada afuera, los nodos de cada trampa y el orden
+  de hijos de `Box`. La baseline del lint bajó 1. Aviso `docs/avisos/2026-10-01-n225-package-feedback-partido.md`.
+  Quedan `player.gd` y `run_manager.gd`.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
