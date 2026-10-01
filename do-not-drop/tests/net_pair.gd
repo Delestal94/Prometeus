@@ -8,6 +8,9 @@ extends Node
 ## Last stage (N-221): the client that left holding a box joins again from the
 ## same running game and gets its colour slot and merit back under its new
 ## peer id.
+## N-228.5: a box left alone sends its pose twice a second (NetRestThrottle);
+## moved, it goes out at once and at full rate again, not at the next slow
+## send.
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -117,6 +120,23 @@ func _run_host() -> void:
 	var nickname_arrived: bool = await _wait_until(func() -> bool:
 		return String(client_player.get_node("PlayerNickname").get(&"nickname")) == CLIENT_NICKNAME)
 	_expect(nickname_arrived, "host sees the client's nickname, replicated with the appearance")
+
+	# N-228.5: the last box is left alone until its synchronizer rests, then
+	# moved (frozen, so it stays where it's put).
+	var resting: DeliveryPackage = _level.packages[-1]
+	_expect(resting != _level.packages[0], "the rest stage leaves the first box to the pickup race")
+	var throttle: Node = resting.get_node(^"NetRestThrottle")
+	var was_frozen: bool = resting.freeze
+	var was_at: Vector3 = resting.global_position
+	resting.freeze = true
+	var rested: bool = await _wait_until(func() -> bool: return bool(throttle.call(&"is_resting")))
+	_expect(rested, "a box left alone drops to its rest interval on the host")
+	resting.global_position = was_at + Vector3(0.6, 0.0, 0.0)
+	rpc_id(_client_peer_id, &"_client_check_rest", resting.get_path(), resting.global_position,
+		float(throttle.get(&"rest_interval")))
+	await _wait_for_report(&"rest")
+	resting.global_position = was_at
+	resting.freeze = was_frozen
 
 	# The client sends its pickup request and a sibling notification in one
 	# frame. Whichever request the host processes first may win; only one may.
@@ -334,6 +354,29 @@ func _client_check_order(host_order: Array, host_completed_runs: int) -> void:
 		and int(_network.get(&"world_completed_runs")) == host_completed_runs \
 		and _order_ids() == host_order
 	_report(&"order", ok, "client uses the host's progression and posts the same order")
+
+
+## Sent the frame the host moved a resting box. The new pose has to get here,
+## and right behind it the box's full rate: a woken throttle sends every tick
+## for its settle window, a stuck one only every rest_interval. Counting the
+## syncs, not timing the first one, so a slow frame here can't pass or fail it.
+@rpc("authority", "call_remote", "reliable")
+func _client_check_rest(package_path: NodePath, moved_to: Vector3, rest_interval: float) -> void:
+	var package: Node3D = get_node_or_null(package_path) as Node3D
+	var arrived: bool = package != null and await _wait_until(func() -> bool:
+		return package.global_position.distance_to(moved_to) < 0.02, 5.0)
+	var syncs: Array[int] = [0]
+	if arrived:
+		var count := func() -> void: syncs[0] += 1
+		var sync := package.get_node(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
+		sync.synchronized.connect(count)
+		await _pump(rest_interval * 0.8)
+		sync.synchronized.disconnect(count)
+	print("NETLOG role=client a moved resting box arrived: %s, then %d syncs in %.2f s" % [
+		arrived, syncs[0], rest_interval * 0.8])
+	_report(&"rest", arrived and syncs[0] >= 3,
+		"client sees a resting box moved and sent at full rate again (arrived %s, %d syncs in %.2f s)"
+		% [arrived, syncs[0], rest_interval * 0.8])
 
 
 @rpc("authority", "call_remote", "reliable")

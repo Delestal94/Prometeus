@@ -1,5 +1,8 @@
 extends SceneTree
 ## Tests real wheel physics as well as presentation isolation and lifecycle.
+## A client's frozen copy of the truck draws the same wheels from what the
+## host replicates -- net_wheel_heights, steering and the speed -- instead of
+## four wheel transforms (N-228.5, vehicle.gd _pose_remote_wheels).
 var failures: int = 0
 
 
@@ -35,6 +38,7 @@ func _run() -> void:
 	for tick in range(20):
 		await physics_frame
 	_expect(absf(wheel.basis.x.z) > 0.05, "Native wheel axle changes direction while steering")
+	_check_client_wheels(van)
 	var physics_pose: Transform3D = van.transform
 	var wheel_pose: Transform3D = wheel.transform
 	visual.update_presentation(0.1)
@@ -89,6 +93,36 @@ func _run() -> void:
 	if failures == 0:
 		print("PASS: native wheel roll/steer/suspension, steering wheel, brakes, beams, impact dip and engine lifecycle")
 	quit(failures)
+
+
+## Mid-drive and steering: a client's copy given what the host sends puts each
+## wheel where the host's physics did, and spins it while the truck moves.
+func _check_client_wheels(van: VehicleBody3D) -> void:
+	var copy := (load("res://scenes/gameplay/vehicle/vehicle.tscn") as PackedScene).instantiate() as VehicleBody3D
+	copy.set_multiplayer_authority(2)
+	root.add_child(copy)
+	copy.get_node("VehiclePresentation").set_process(false)
+	_expect(copy.freeze, "A client's copy of the truck is frozen")
+	copy.global_transform = Transform3D(van.global_basis, van.global_position + Vector3(0.0, 60.0, 0.0))
+	copy.steering = van.steering
+	copy.linear_velocity = van.linear_velocity
+	copy.set(&"net_wheel_heights", van.get(&"net_wheel_heights"))
+	copy.call(&"_process", 1.0 / 60.0)
+	for wheel_name: String in ["FrontLeftWheel", "FrontRightWheel", "RearLeftWheel", "RearRightWheel"]:
+		var host: Transform3D = (van.get_node(wheel_name) as Node3D).transform
+		var drawn: Transform3D = (copy.get_node(wheel_name) as Node3D).transform
+		var off: float = drawn.origin.distance_to(host.origin)
+		_expect(off < 0.005, "A client draws %s where the host's is (off by %.4f m)" % [wheel_name, off])
+		_expect(drawn.basis.x.normalized().distance_to(host.basis.x.normalized()) < 0.01,
+			"...with the same axle, steering included (%s vs %s)" % [drawn.basis.x, host.basis.x])
+		_expect(signf(drawn.basis.determinant()) == signf(host.basis.determinant()),
+			"...and the same handedness as VehicleBody3D's own (%.2f vs %.2f)" % [
+				drawn.basis.determinant(), host.basis.determinant()])
+	var front: Node3D = copy.get_node("FrontLeftWheel")
+	var before: Vector3 = front.basis.y
+	copy.call(&"_process", 1.0 / 60.0)
+	_expect(not front.basis.y.is_equal_approx(before), "A client's wheels roll while the truck moves")
+	copy.free()
 
 
 func _expect(condition: bool, message: String) -> void:
