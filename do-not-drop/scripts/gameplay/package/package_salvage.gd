@@ -62,6 +62,17 @@ func _ready() -> void:
 	package.add_child.call_deferred(toy_mesh)
 
 
+## The tape and the hen are attached with call_deferred. If the package is freed
+## before that runs (a level freed in the same frame), the deferred call is dropped
+## and they never get a parent, so nobody frees them: free the ones still unparented.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_PREDELETE:
+		return
+	for orphan: Node in [tape_mesh, toy_mesh]:
+		if is_instance_valid(orphan) and orphan.get_parent() == null:
+			orphan.free()
+
+
 func _process(_delta: float) -> void:
 	var half: Vector3 = package.call(&"get_half_extents")
 	tape_mesh.position.y = half.y + 0.013
