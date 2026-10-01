@@ -124,13 +124,13 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### B. Cuerpo base con proporciones editables, en Blender (9-18) — *Necesita PC*
 
-- [ ] **S-311.9** `art/gel_character/build_gel_body.py`: script reproducible headless que parte del rig
+- [x] **S-311.9** (`9bf1593`) `art/gel_character/build_gel_body.py`: script reproducible headless que parte del rig
   de `art/rounded_character` (mismos nombres de huesos) y genera el cuerpo base con sus morphs. Reemplaza
   al candidato (que queda como historia en git).
 - [ ] **S-311.10** Cuerpo base = preset **Delgada**: calca la silueta de la referencia con las medidas del
   ítem 2. Malla única cerrada (watertight), sin partes sueltas: la transparencia muestra cualquier
   costura interna.
-- [ ] **S-311.11** Morphs de proporción (shape keys exportados como blend shapes del glTF), cada uno con
+- [x] **S-311.11** (`9bf1593`) Morphs de proporción (shape keys exportados como blend shapes del glTF), cada uno con
   rango −1…+1: grosor general (flaca ↔ rellena), panza, pecho, hombros, cadera, grosor de brazos, grosor
   de piernas, tamaño de manos, tamaño de pies, forma de cabeza (esfera ↔ ovalada), grosor de cuello. Lo
   que es **largo** (alto, piernas, brazos, torso, cuello, tamaño de cabeza) va por huesos (ítem 20), no
@@ -152,7 +152,7 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   piernas, pies) para skins por zona.
 - [ ] **S-311.17** LOD1 y LOD2 con los mismos morphs y la misma silueta (≤ 5 % de diferencia de píxeles en
   una captura a 15 m, en Delgada, Flaca y los extremos).
-- [ ] **S-311.18** `validate_glb.py` ampliado: huesos que usa el juego, pesos normalizados, ningún vértice
+- [x] **S-311.18** (`9bf1593`) `validate_glb.py` ampliado: huesos que usa el juego, pesos normalizados, ningún vértice
   sin peso, malla cerrada, triángulos y morphs dentro del presupuesto, pivote en los pies, y un barrido de
   los extremos de cada morph y de 30 combinaciones al azar sin autointersección.
 
@@ -160,8 +160,9 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 > LOD4704/1176/794tri generados; evidencia en `art/gel_character/review_bloque_b/`.
 > No reemplaza al jugador activo.10/13 conservan diferencias visuales;12 no está
 > certificado para todo el continuo de morphs;14/15 esperan D/E;16 falla15%UV;
-> 17 necesita el preset Flaca completo de C. Solo se marcarán los ítems realmente
-> verificados con el commit de implementación después de su revisión.
+> 17 necesita el preset Flaca completo de C.9/11/18 verificados en `9bf1593`,
+> con revisión independiente PASS,53muestras porLOD y4/4testsGodot. No se marca
+> como terminado todo B ni se certifican combinaciones continuas no muestreadas.
 
 ### C. Proporciones en el juego (19-26)
 
