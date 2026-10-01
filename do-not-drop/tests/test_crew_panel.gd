@@ -19,8 +19,8 @@ extends SceneTree
 ## - a full crew of eight (N-228.6): build_entries() lists all eight in roster
 ##   order with the wheel and the boxes right, and the panel shows eight
 ##   "Row_<peer>" rows, with the LAN invite block, inside the 1280x720 base
-##   screen (the palette has five colours, so seats 6-8 repeat one: only the
-##   rows' count and place are checked, not that the colours differ).
+##   screen (the palette has eight colours, N-228.3: only the rows' count and
+##   place are checked here, the colours' distinctness is test_player_colors').
 
 const ACTION: StringName = &"crew_panel"
 const INVITE_LAN: StringName = &"lan"

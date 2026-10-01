@@ -17,7 +17,20 @@ extends SceneTree
 ##   RUN_MANAGER, CREW_PROGRESSION, UNLOCK_MANAGER) are checked against the
 ##   script loaded from its path: each must be the script its autoload runs, or
 ##   `as <handle>` would give null and the depot would stop seeing the
-##   network (host, seed), the crew's money and supplies, and the unlocks.
+##   network (host, seed), the crew's money and supplies, and the unlocks;
+## - package.gd (the box), package_handling.gd (its hand-over) and
+##   package_rescue.gd (its care simulation) reach the network through package_autoloads.gd as a NetSession (the class
+##   NetworkManager extends): the NetworkManager autoload must be one, or
+##   `as NetSession` would give null and the box would stop seeing the network
+##   (its visibility filter, the hand-over, the seed its trap rolls from);
+## - player_cargo_care.gd is no autoload either: its GAME_SETTINGS handle is
+##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would
+##   give null and the care card would lose the HUD scale, the interact key's
+##   name and the gamepad check (it would size and label itself as if on keyboard).
+## - trailer_shot.gd (the trailer and store-capture tool) sets the shot's seed
+##   through its NETWORK_MANAGER handle: if that stopped being the script the
+##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
+##   store stills) would set up.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -39,6 +52,63 @@ const BUDGETS: Dictionary = {
 	# are the null-safe autoload accessors (NetworkManager, CrewProgression,
 	# UnlockManager, RunManager, EventBus).
 	"res://scripts/gameplay/depot/depot.gd": {"call": 1, "callv": 0, "get": 1, "root": 5},
+	# The trailer tool (N-902) drives the real level: level_base.gd, route.gd,
+	# vehicle.gd and package_mount_point.gd by preload (no class name), the
+	# camera, segments, deer crossing, house, player and boxes by class. The one
+	# /root/ lookup is the NetworkManager handle (NETWORK_MANAGER, below).
+	"res://scripts/tools/trailer_shot.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# Three .call left, one .get and one /root/ (N-225.4 moved the rest to the files below). Two .call go to
+	# the truck, found through the "vehicle" group: needs_sweep and carries. vehicle.gd has no class name,
+	# and tests put plain Node fakes with those methods in the group (`as` a typed vehicle would drop them).
+	# The .get reads RunManager's cargo: that autoload stays by name because preloading its script here makes
+	# every script that names DeliveryPackage compile it before the autoloads exist (see
+	# package_autoloads.gd). The last .call is the EventBus relay, by name because a test may replace
+	# EventBus with a plain Node; the one /root/ lookup is that EventBus node. Typed now: the trap definition
+	# and behavior (TrapDefinition, ITrapBehavior), the player (Player) and the network (NetSession).
+	"res://scripts/gameplay/package/package.gd": {"call": 3, "callv": 0, "get": 1, "root": 1},
+	# The box's autoload lookups, null-safe: NetworkManager (typed NetSession),
+	# RunManager, CrewProgression and RouteEventManager.
+	"res://scripts/gameplay/package/package_autoloads.gd": {"call": 0, "callv": 0, "get": 0, "root": 4},
+	# Carrying, passing, dropping and handing over the box (split out of package.gd, N-225.4). Three .call go
+	# to the truck, by name for the reason in package.gd: carries (x2, taking the box and riding along) and
+	# point_velocity. The one .get reads RunManager's consumed_packages, by name for the compile cycle
+	# package_autoloads.gd explains.
+	"res://scripts/gameplay/package/package_handling.gd": {"call": 3, "callv": 0, "get": 1, "root": 0},
+	# The tender, the helper and merit (split out of package.gd, N-225.4). Two .call: CrewProgression's
+	# player_color_name (the helper's prompt) and award_milestone; one .get: RunManager's cargo (the state the
+	# run counts for the box). All by name for the compile cycle package_autoloads.gd explains.
+	"res://scripts/gameplay/package/package_tending.gd": {"call": 2, "callv": 0, "get": 1, "root": 0},
+	# Hits (split out of package.gd, N-225.4). The one .call is RouteEventManager's on_package_impact, by name
+	# for the compile cycle package_autoloads.gd explains.
+	"res://scripts/gameplay/package/package_impacts.gd": {"call": 1, "callv": 0, "get": 0, "root": 0},
+	# The rescue (host care simulation) is typed like the box: the trap (ITrapBehavior,
+	# TrapDefinition, ExplosiveTrapBehavior for the defused flag), the player's seat
+	# on the carrier (Player), the network and the autoload
+	# lookups (PackageAutoloads). Seven .call left: carries (x2) and point_velocity go
+	# to the truck, found through the "vehicle" group (vehicle.gd has no class name and
+	# tests put Node fakes there); care_supply_count, consume_care_supply and
+	# record_care go to RunManager, by name for the cycle package_autoloads.gd
+	# explains; store goes to the lap mount (package_mount_point.gd has no class
+	# name). Six .get left: the truck's driver_peer_id, RunManager's cargo, the
+	# seat_node_path of the players in the "player" group (tests put Node3D fakes
+	# there, `as Player` would drop them), the lap mount's occupied_by and the
+	# session's world_seed (network_manager.gd declares it, NetSession does not)
+	# and the radio's mode (truck_radio.gd names autoloads bare: typing it would
+	# pull them into the compile graph of every script that names the box).
+	"res://scripts/gameplay/package/package_rescue.gd": {"call": 7, "callv": 0, "get": 6, "root": 0},
+	# Typed now: the player (Player), the box (DeliveryPackage), the settings
+	# (GAME_SETTINGS, below) and the profile (UnlockProfile). The one .call and
+	# the four .get left all go to RunManager (care_supply_count; is_running twice,
+	# cargo, results): by name because preloading run_manager.gd here compiles it
+	# before the autoloads exist (see package_autoloads.gd, whose run_manager()
+	# finds the node). The two /root/ lookups are the null-safe GameSettings and
+	# UnlockManager accessors.
+	"res://scripts/gameplay/player/player_cargo_care.gd": {"call": 1, "callv": 0, "get": 4, "root": 2},
+	# Nothing by name: the box (DeliveryPackage), the players (Player) and the
+	# seats (CargoSeatPoint, seat_point.gd's class name) are typed. Group members
+	# of another type (a test's stand-ins) are skipped with `as`, not called.
+	# The RPC to the player stays rpc_id by name, like every RPC.
+	"res://scripts/gameplay/interaction/seat_tending.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -67,6 +137,12 @@ const SCRIPT_HANDLES: Dictionary = {
 		"CREW_PROGRESSION": "/root/CrewProgression",
 		"UNLOCK_MANAGER": "/root/UnlockManager",
 	},
+	"res://scripts/tools/trailer_shot.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
+	"res://scripts/gameplay/player/player_cargo_care.gd": {
+		"GAME_SETTINGS": "/root/GameSettings",
+	},
 }
 
 var _failures: int = 0
@@ -92,6 +168,9 @@ func _run() -> void:
 		if owner_node == null:
 			continue
 		_check_handles(owner_path, owner_node.get_script() as Script, HANDLES[owner_path])
+
+	var session: Node = root.get_node_or_null(^"/root/NetworkManager")
+	_expect(session is NetSession, "The NetworkManager autoload is a NetSession (the box types it so)")
 
 	for script_path: String in SCRIPT_HANDLES:
 		var script: Script = load(script_path) as Script

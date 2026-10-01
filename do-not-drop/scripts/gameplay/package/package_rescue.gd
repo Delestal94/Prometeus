@@ -4,6 +4,16 @@ extends RefCounted
 ## simulation per tick, recovery, repair tools and salvaged parts. Split out of
 ## package.gd to keep it readable; DeliveryPackage keeps thin wrappers (and the
 ## RPC) so callers and the network surface are unchanged.
+##
+## By name on purpose (N-224.4, test_dynamic_dispatch_budget): the truck
+## (vehicle.gd has no class name and tests put plain-Node fakes in the "vehicle"
+## group: carries, point_velocity, driver_peer_id), RunManager (see
+## package_autoloads.gd: typing it makes a compile cycle), world_seed (declared
+## by network_manager.gd, not by NetSession), the seat path of the players in
+## the "player" group (tests put Node3D fakes there), the lap mount
+## (package_mount_point.gd has no class name) and the truck radio's mode
+## (truck_radio.gd names autoloads bare: typing it pulls them into the box's
+## compile graph).
 
 
 static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
@@ -11,7 +21,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		return
 	var before_integrity: float = p.integrity
 	var before_state: int = p.trap_state
-	var vehicle: Node3D = p._find_vehicle()
+	var vehicle: Node3D = p._find_vehicle()  # by name: see the top of the file
 	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", p.global_position, 1.0))
 	var speed: float = 0.0
 	var velocity_now := Vector3.ZERO
@@ -27,8 +37,8 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 	else:
 		p._motion_initialized = false
 		p._motion_acceleration = Vector3.ZERO
-	p.care.in_lap = (p.is_held and is_instance_valid(p.carrier)
-			and not String(p.carrier.get(&"seat_node_path")).is_empty())
+	var holder: Player = p.carrier as Player if is_instance_valid(p.carrier) else null
+	p.care.in_lap = p.is_held and holder != null and not holder.seat_node_path.is_empty()
 	var input: Dictionary = p.player_input.duplicate()
 	# Solo crews get a modest rack assistant; they still stop to repair.
 	var solo_assist: bool = (p.get_tree().get_nodes_in_group(&"player").size() == 1 and not p.is_held
@@ -39,7 +49,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		input["balance"] = p.care.balance_target
 	# A trap answered by something other than holding gets no shield from
 	# hands on it (Fragile); the solo rack assistant is not hands.
-	var hands_count: bool = bool(p.trap_behavior.call(&"hold_protects"))
+	var hands_count: bool = p.trap_behavior.hold_protects()
 	if not solo_assist and not hands_count:
 		input["steady"] = false
 	var strained: bool = p.care.advance(delta, p._motion_acceleration, input, hands_count and p._assist_age < 0.3)
@@ -47,13 +57,13 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 		p.apply_impact(4.5)
 	# The road ahead, for the traps that read it (Fragile's "Amortiguá").
 	var road: Dictionary = {}
-	if riding and bool(p.trap_behavior.call(&"wants_road_ahead")):
+	if riding and p.trap_behavior.wants_road_ahead():
 		road = RoadImpacts.nearest_ahead(p.get_tree(), p.global_position, velocity_now, ROAD_LOOKAHEAD)
 	# Held bodies are frozen; the trap still advances here exactly once per tick.
 	# In a solo run complex traps pause while safely parked for repairs.
 	if not p.care.needs_restore and p.care.phase != &"lost" and not p.care.substituted:
 		if not solo_assist or speed > 1.0:
-			p.trap_behavior.call("on_physics_process", p, delta, {
+			p.trap_behavior.on_physics_process(p, delta, {
 				"linear_velocity": p.linear_velocity, "angular_velocity": p.angular_velocity, "input": input,
 				"impact_ahead": float(road["eta"]) if not road.is_empty() else INF,
 				"truck_right": vehicle.global_basis.x if vehicle != null else Vector3.RIGHT,
@@ -68,7 +78,7 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 	_publish_cushion_change(p)
 	check_recovery(p)
 	var tool := StringName(input.get("tool", "tape"))
-	var run: Node = p.get_node_or_null(^"/root/RunManager")
+	var run: Node = PackageAutoloads.run_manager(p)
 	var available: bool = run != null and int(run.call(&"care_supply_count", tool)) > 0
 	if p.care.advance_work(delta, tool, input, p._trap_kind(), speed, available, p._assist_age < 0.3):
 		if bool(run.call(&"consume_care_supply", tool)):
@@ -86,6 +96,8 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 ## The truck radio's mode (TruckRadio, N-406), for the traps it moves (Ruidoso):
 ## &"off" when the level has no radio.
 static func radio_mode(p: DeliveryPackage) -> StringName:
+	# By name: typing TruckRadio would pull truck_radio.gd (it names autoloads bare)
+	# into the compile graph of every script that names DeliveryPackage.
 	var radio: Node = p.get_tree().get_first_node_in_group(&"truck_radio") if p.is_inside_tree() else null
 	return StringName(radio.get(&"mode")) if radio != null else &"off"
 
@@ -115,7 +127,8 @@ const ROAD_LOOKAHEAD: float = 1.2
 ## same box, and each box its own. 0 without a seeded session (solo): the
 ## trap then draws from the clock.
 static func roll_seed(p: DeliveryPackage) -> int:
-	var network: Node = p.get_node_or_null(^"/root/NetworkManager") if p.is_inside_tree() else null
+	var network := PackageAutoloads.network(p)
+	# world_seed is declared by network_manager.gd, not by NetSession: by name.
 	var session_seed: int = int(network.get(&"world_seed")) if network != null else 0
 	return hash([session_seed, String(p.package_id)]) if session_seed != 0 else 0
 
@@ -182,7 +195,7 @@ static func _road_jolt(p: DeliveryPackage, road: Dictionary, speed: float) -> bo
 	if road.is_empty() or float(road["distance"]) > 0.0 or int(road["id"]) == p._road_jolted:
 		return false
 	p._road_jolted = int(road["id"])
-	var strength: float = float(p.trap_behavior.call(&"road_jolt_strength", speed))
+	var strength: float = p.trap_behavior.road_jolt_strength(speed)
 	if strength <= 0.0:
 		return false
 	p.apply_impact(strength)
@@ -214,7 +227,7 @@ static func owner_peer(p: DeliveryPackage) -> int:
 ## state, and a bump warning that arrives 0.1 s late is most of what a tap
 ## can use: send it as soon as it changes.
 static func _publish_cushion_change(p: DeliveryPackage) -> void:
-	var cushion: Dictionary = p.trap_behavior.call(&"cushion_state")
+	var cushion: Dictionary = p.trap_behavior.cushion_state()
 	if cushion.is_empty():
 		return
 	var signature: int = int(float(cushion["eta"]) >= 0.0) + 2 * int(bool(cushion["shield"])) \
@@ -227,7 +240,7 @@ static func _publish_cushion_change(p: DeliveryPackage) -> void:
 static func check_recovery(p: DeliveryPackage) -> void:
 	if p._lost or p.trap_behavior == null:
 		return
-	var failed: bool = int(p.trap_behavior.call(&"get_state")) == ITrapBehavior.TrapState.RUINED or p.integrity <= 0.0
+	var failed: bool = p.trap_behavior.get_state() == ITrapBehavior.TrapState.RUINED or p.integrity <= 0.0
 	if p.care.observe(p.integrity, failed, p._trap_kind()):
 		spawn_salvage(p)
 		publish_care(p)
@@ -240,11 +253,11 @@ static func complete_care_tool(p: DeliveryPackage, tool: StringName) -> void:
 		p._parasite_damage = 0.0
 		p.contents_spilled = false
 		p.salvage_state = {}
-		var config: Dictionary = p.trap_definition.get(&"params")
-		p.trap_behavior.call(&"on_setup", p, config.duplicate(true))
+		p.trap_behavior.on_setup(p, p.trap_definition.params.duplicate(true))
 		# A neutralized explosive is inert, not a new bomb with a fresh timer.
-		if p._trap_kind() == &"explosive":
-			p.trap_behavior.set(&"_defused", true)
+		var bomb := p.trap_behavior as ExplosiveTrapBehavior
+		if p._trap_kind() == &"explosive" and bomb != null:
+			bomb._defused = true
 		p.care.recent_hit = 1.25
 		p._emit_event(&"package_contents_recovered", [p.package_id])
 		p._award_milestone(p._care_worker, &"rescued")
@@ -261,19 +274,19 @@ static func publish_care(p: DeliveryPackage) -> void:
 	# its hint and any tap sequence ride along, so every peer's care panel
 	# (and the bomb's sign) shows the real thing.
 	if p.trap_behavior != null:
-		state["action"] = p.trap_behavior.call(&"care_action")
-		state["hint"] = p.trap_behavior.call(&"hint_text")
-		var sequence: Dictionary = p.trap_behavior.call(&"sequence_state")
+		state["action"] = p.trap_behavior.care_action()
+		state["hint"] = p.trap_behavior.hint_text()
+		var sequence: Dictionary = p.trap_behavior.sequence_state()
 		if not sequence.is_empty():
 			state["sequence"] = sequence
-		var cushion: Dictionary = p.trap_behavior.call(&"cushion_state")
+		var cushion: Dictionary = p.trap_behavior.cushion_state()
 		if not cushion.is_empty():
 			state["cushion"] = cushion
-		var gesture: Dictionary = p.trap_behavior.call(&"gesture_state")
+		var gesture: Dictionary = p.trap_behavior.gesture_state()
 		if not gesture.is_empty():
 			state["gesture"] = gesture
 	p.care_state = state
-	var run: Node = p.get_node_or_null(^"/root/RunManager")
+	var run: Node = PackageAutoloads.run_manager(p)
 	if run != null and (run.get(&"cargo") as Dictionary).has(p.package_id):
 		run.call(&"record_care", p.package_id, p.delivery_assessment())
 
@@ -374,6 +387,7 @@ static func push_in_truck(p: DeliveryPackage, peer_id: int, sample: Dictionary) 
 ## Where a player's eyes face: their seat (its own -Z, the way the seat
 ## camera looks), or their body on foot.
 static func view_basis_of(player: Node) -> Basis:
+	# By name: tests put Node3D fakes in the "player" group, `as Player` would drop them.
 	var recorded: Variant = player.get(&"seat_node_path")
 	var seat_path: NodePath = recorded if recorded is NodePath else NodePath()
 	var seat: Node3D = player.get_node_or_null(seat_path) as Node3D if not seat_path.is_empty() else null
@@ -427,7 +441,7 @@ static func request_lap_toggle(p: DeliveryPackage) -> void:
 	if operator == null or not SeatTending.is_seated(p.get_tree(), operator, p.multiplayer.is_server()):
 		return
 	if p.is_held and p.carrier == operator:
-		var lap_mount: Node = SeatTending.lap_mount_of(p)
+		var lap_mount: Node = SeatTending.lap_mount_of(p)  # PackageMountPoint: no class name
 		if lap_mount != null and lap_mount.get(&"occupied_by") == null:
 			lap_mount.call(&"store", p)
 	elif p.is_loaded and not p.is_held and p.current_mount != null:

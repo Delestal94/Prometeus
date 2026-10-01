@@ -1,8 +1,9 @@
 extends BoneAttachment3D
-## Two curved alpha-cutout layers on the head. Works with GL Compatibility;
+## Three curved alpha-cutout layers on the head (eyes, brows, mouth). Works with GL Compatibility;
 ## no decals, per-player viewport, extra skeleton, or texture baking at runtime.
 const Catalog = preload("res://scripts/core/face_catalog.gd")
 var _eyes: MeshInstance3D
+var _brows: MeshInstance3D
 var _mouth: MeshInstance3D
 var eyes_id: StringName = Catalog.DEFAULT_EYES
 var mouth_id: StringName = Catalog.DEFAULT_MOUTH
@@ -10,9 +11,12 @@ var mouth_id: StringName = Catalog.DEFAULT_MOUTH
 ## Blinks: the eye layer squashes onto the eye line for a moment, every few
 ## seconds and sometimes twice. Presentation only: each peer blinks on its
 ## own clock, so nothing is replicated. Eye-line heights (texture v) come
-## from the SVGs; styles missing here (already-closed ^^ eyes, none) never blink.
+## from the SVGs (build_faces.py, eye centres at y 213 of 512); sleepy and
+## determined shut onto their lids. Styles missing here (already-closed ^^
+## eyes, none) never blink. The brows are their own layer and stay put.
 const EYE_LINE_V: Dictionary = {
-	&"classic": 0.416, &"wink": 0.416, &"lashes": 0.422, &"worried": 0.428, &"sleepy": 0.43,
+	&"classic": 0.416, &"wink": 0.416, &"lashes": 0.416, &"worried": 0.416,
+	&"sleepy": 0.42, &"determined": 0.43,
 }
 const BLINK_CLOSE: float = 0.06
 const BLINK_HOLD: float = 0.04
@@ -30,6 +34,7 @@ func setup(model: Node3D, skeleton: Skeleton3D, layers: int) -> void:
 	var head_rest: Transform3D = model.global_transform.affine_inverse() * skeleton.global_transform * skeleton.get_bone_global_rest(bone)
 	var mesh: ArrayMesh = _curved_patch(head_rest.affine_inverse())
 	_eyes = _layer("Eyes", mesh, layers)
+	_brows = _layer("Brows", mesh, layers)
 	_mouth = _layer("Mouth", mesh, layers)
 	_rng.randomize()
 	_next_blink = _rng.randf_range(0.8, 4.0)
@@ -41,8 +46,11 @@ func set_expression(eyes: StringName, mouth: StringName) -> void:
 	if _eyes == null:
 		return
 	(_eyes.material_override as StandardMaterial3D).albedo_texture = Catalog.texture("eyes", eyes_id)
+	var brows: Texture2D = Catalog.texture("brows", eyes_id)
+	(_brows.material_override as StandardMaterial3D).albedo_texture = brows
 	(_mouth.material_override as StandardMaterial3D).albedo_texture = Catalog.texture("mouth", mouth_id)
 	_eyes.visible = eyes_id != &"none"
+	_brows.visible = brows != null
 	_mouth.visible = mouth_id != &"none"
 	_blink_time = -1.0
 	_squash_eyes(0.0)
@@ -89,7 +97,9 @@ func _layer(label: String, mesh: ArrayMesh, layers: int) -> MeshInstance3D:
 	part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	material.alpha_scissor_threshold = 0.35
+	# Low: in a far mipmap a thin stroke's alpha averages down, and a higher
+	# cut broke brows and smiles into dots at a teammate's distance.
+	material.alpha_scissor_threshold = 0.22
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
@@ -109,8 +119,12 @@ const HEAD_JOWL: float = 0.07
 const FACE_OFFSET: float = 0.003
 
 ## Model-space point of the face patch for a texture coordinate.
+## u grows toward -X: the model faces -Z, so -X is the viewer's right and the
+## sheet reads as drawn (a wink on the right of the SVG winks on the right).
+## head_shape.py has +X there: Blender's model faces -Y, and the export's turn
+## to -Z mirrors x (N-506; until then every face was shown mirrored).
 static func _patch_point(uv: Vector2) -> Vector3:
-	var longitude: float = (uv.x - 0.5) * 1.9
+	var longitude: float = (0.5 - uv.x) * 1.9
 	var latitude: float = (0.5 - uv.y) * 1.5
 	var up: float = sin(latitude)
 	var jowl: float = 1.0 + HEAD_JOWL * (1.0 - smoothstep(-0.8, 0.2, up))

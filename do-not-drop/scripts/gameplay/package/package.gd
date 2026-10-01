@@ -4,9 +4,14 @@ extends RigidBody3D
 ##
 ## Host-authoritative, like the van: authority defaults to the host since this is a static, non-spawned node.
 ## Non-host peers freeze it and let their MultiplayerSynchronizer puppet the transform instead.
+##
+## Split by responsibility (N-225.4), the state stays here: PackageHandling (carry, pass, drop, shelve, hand
+## over), PackageTending (the tender, the helper, merit), PackageImpacts (hits), PackageRescue (care, rescue).
+## This script keeps the RPCs (each one checks the request and resolves the sender before delegating; the
+## helpers check the sender against the carrier) and thin wrappers.
 
 @export var package_id: StringName = &"fragile_01"
-@export var trap_definition: Resource = preload("res://data/traps/fragile.tres")
+@export var trap_definition: TrapDefinition = preload("res://data/traps/fragile.tres")
 @export_range(0.0, 5.0, 0.05) var spawn_grace_time: float = 1.25
 @export_range(0.0, 2.0, 0.05) var impact_cooldown: float = 0.30
 ## What's inside (PackageContent). Left empty, the trap picks one from its
@@ -21,13 +26,7 @@ extends RigidBody3D
 @export_range(0.0, 1.0, 0.05) var impact_absorption: float = 1.0
 ## How close a player has to be to open or close it.
 const OPEN_REACH: float = 3.0
-const TRANSFER_REACH: float = 2.4
 const ASSIST_REACH: float = 1.5
-const ASSIST_MERIT_SECONDS: float = 10.0
-const PACKAGE_COLLISION_MIN_SPEED: float = 2.2
-const PACKAGE_COLLISION_DAMAGE_SCALE: float = 0.62
-const PACKAGE_COLLISION_COOLDOWN: float = 0.16
-const PLAYER_HIT_MIN_SPEED: float = 4.0
 ## An impact at least this hard (m/s) briefly interrupts tool work.
 const HARD_HIT_SPEED: float = 6.0
 const CareModel = preload("res://scripts/gameplay/package/package_care.gd")
@@ -51,9 +50,8 @@ var lap_mount_path: NodePath = NodePath()
 ## truck's cargo shell (vehicle.gd SHELL_LAYER) -- never the truck's own body,
 ## which a box sliding about the bay used to shove (it drove in jerks).
 const LOOSE_MASK: int = 1 | 4 | 64
-const PLAYER_HIT_PUSH_SCALE: float = 0.38
 
-var trap_behavior: Resource
+var trap_behavior: ITrapBehavior
 var is_held: bool = false:
 	set(value):
 		is_held = value
@@ -149,11 +147,11 @@ var _consumed: bool = false
 const RIDE_MARGIN: float = 0.4
 var integrity: float:
 	get:
-		var raw: float = float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
+		var raw: float = trap_behavior.integrity if trap_behavior != null else 100.0
 		return minf(care.quality_cap, maxf(raw - _parasite_damage, 0.0))
 var integrity_max: float:
 	get:
-		return float(trap_behavior.get("integrity_max")) if trap_behavior != null else 100.0
+		return trap_behavior.integrity_max if trap_behavior != null else 100.0
 var trap_state: int:
 	get:
 		if _lost or care.phase == &"lost":
@@ -162,7 +160,7 @@ var trap_state: int:
 			return ITrapBehavior.TrapState.AT_RISK
 		if integrity <= 0.0:
 			return ITrapBehavior.TrapState.AT_RISK
-		return int(trap_behavior.call("get_state")) if trap_behavior != null else 0
+		return trap_behavior.get_state() if trap_behavior != null else 0
 ## A package can be written off for reasons no trap knows about -- falling out
 ## of the van, say -- without every trap needing its own concept of that.
 var _lost: bool = false
@@ -182,14 +180,13 @@ var _package_hit_cooldowns: Dictionary = {}
 ## resolved it and never saw that box move again.
 func _enter_tree() -> void:
 	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if sync == null or network == null or not network.has_signal(&"peer_level_ready") \
-			or network.is_connected(&"peer_level_ready", _on_peer_level_ready):
+	var network := PackageAutoloads.network(self)
+	if sync == null or network == null or network.peer_level_ready.is_connected(_on_peer_level_ready):
 		return
 	sync.add_visibility_filter(func(peer_id: int) -> bool:
-		return not multiplayer.is_server() or bool(network.call(&"is_peer_ready", peer_id)))
-	network.connect(&"peer_level_ready", _on_peer_level_ready)
-	network.connect(&"peer_removed", peer_left)  # Not peer_disconnected: late for a dropped ghost (N-221).
+		return not multiplayer.is_server() or network.is_peer_ready(peer_id))
+	network.peer_level_ready.connect(_on_peer_level_ready)
+	network.peer_removed.connect(peer_left)  # Not peer_disconnected: late for a dropped ghost (N-221).
 
 
 func _on_peer_level_ready(peer_id: int) -> void:
@@ -222,18 +219,7 @@ func _physics_process(delta: float) -> void:
 		var vehicle: Node3D = _find_vehicle()
 		if vehicle != null:
 			global_transform = vehicle.global_transform * _carry_pose
-	_age_tender_inputs(delta)
-	if assistant_peer_id > 0 and trap_state != ITrapBehavior.TrapState.AT_RISK:
-		set_assistant(0)
-	elif assistant_peer_id > 0 and _has_fresh_input(assistant_peer_id):
-		_assist_seconds += delta
-		if _assist_seconds >= ASSIST_MERIT_SECONDS:
-			_assist_seconds -= ASSIST_MERIT_SECONDS
-			_award_milestone(assistant_peer_id, &"assist")
-	# A care worker whose input stopped arriving is no longer working the box.
-	if _care_worker != 0 and not _has_fresh_input(_care_worker):
-		_care_worker = 0
-	_assist_age += delta
+	PackageTending.tick(self, delta)
 	# Worn off here, not in the care model, so a box outside the run's
 	# cargo (or not simulated this tick) can't stay shielded forever.
 	care.recent_hit = maxf(0.0, care.recent_hit - delta)
@@ -301,12 +287,12 @@ func _find_vehicle() -> Node3D:
 
 func initialize_trap() -> void:
 	# Definitions may be shared; behavior resources must not be.
-	trap_behavior = trap_definition.call("create_behavior")
+	trap_behavior = trap_definition.create_behavior() as ITrapBehavior
 	if trap_behavior == null:
 		return
-	var config: Dictionary = (trap_definition.get("params") as Dictionary).duplicate(true)
+	var config: Dictionary = trap_definition.params.duplicate(true)
 	config["roll_seed"] = PackageRescue.roll_seed(self)
-	trap_behavior.call("on_setup", self, config)
+	trap_behavior.on_setup(self, config)
 	_road_jolted = -1
 	_age = 0.0
 	_impact_cooldown_remaining = 0.0
@@ -327,102 +313,21 @@ func initialize_trap() -> void:
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
-	var current_velocity: Vector3 = state.linear_velocity
-	_age += state.step
-	_impact_cooldown_remaining = maxf(0.0, _impact_cooldown_remaining - state.step)
-	for other_id: int in _package_hit_cooldowns.keys():
-		var seconds: float = float(_package_hit_cooldowns[other_id]) - state.step
-		if seconds <= 0.0:
-			_package_hit_cooldowns.erase(other_id)
-		else:
-			_package_hit_cooldowns[other_id] = seconds
-	if _has_previous_velocity and _age >= spawn_grace_time and _is_run_active():
-		# Gravity during free fall is not an impact. Collision resolution changes
-		# velocity suddenly, while this subtraction removes the expected gravity step.
-		var collision_delta: Vector3 = current_velocity - _previous_velocity - state.total_gravity * state.step
-		if _impact_cooldown_remaining <= 0.0:
-			var previous_integrity: float = integrity
-			apply_impact(collision_delta.length())
-			if integrity < previous_integrity:
-				_impact_cooldown_remaining = impact_cooldown
-	if is_open and not contents_spilled and not is_held:
-		var hit: float = 0.0
-		if _has_previous_velocity and _age >= spawn_grace_time:
-			hit = (current_velocity - _previous_velocity - state.total_gravity * state.step).length()
-		if state.transform.basis.y.normalized().dot(Vector3.UP) < spill_tilt_cos or hit > spill_impact:
-			spill_contents(current_velocity)
-	_previous_velocity = current_velocity
-	_has_previous_velocity = true
+	PackageImpacts.integrate_forces(self, state)
 
 
 func apply_impact(delta_velocity: float) -> void:
-	if trap_behavior == null or not _is_run_active():
-		return
-	# Mid-rescue the contents are already out: nothing left for a hit to break.
-	# Echoes of one collision are already folded by PACKAGE_COLLISION_COOLDOWN.
-	if care.needs_restore or care.phase == &"lost":
-		return
-	if is_inside_tree():
-		var routes: Node = get_node_or_null(^"/root/RouteEventManager")
-		if routes != null:
-			routes.call(&"on_package_impact", self, delta_velocity)
-	var before_integrity: float = integrity
-	var before_state: int = trap_state
-	var strength: float = clampf(delta_velocity, 0.0, 9.0) * impact_absorption * care.impact_scale()
-	trap_behavior.call("on_impact", strength)
-	if delta_velocity >= HARD_HIT_SPEED:
-		# Shaken hard: tool work pauses a moment (package_care.gd advance_work).
-		care.recent_hit = 0.65
-	care.on_hard_hit(delta_velocity)
-	_check_recovery()
-	_report_change(before_integrity, before_state, tr("HUD_PACKAGE_RUINED_IMPACTS"))
+	PackageImpacts.apply_impact(self, delta_velocity)
 
 
 func _on_body_entered(body: Node) -> void:
-	if body is Player:
-		_hit_player(body as Player)
-		return
-	var other := body as DeliveryPackage
-	if other == null or other == self or is_held or other.is_held or freeze or other.freeze:
-		return
-	if not _is_run_active() or not other._is_run_active():
-		return
-	var other_id: int = other.get_instance_id()
-	if _package_hit_cooldowns.has(other_id):
-		return
-	var relative_velocity: Vector3 = linear_velocity - other.linear_velocity
-	var strength: float = relative_velocity.length()
-	if strength < PACKAGE_COLLISION_MIN_SPEED:
-		return
-	_package_hit_cooldowns[other_id] = PACKAGE_COLLISION_COOLDOWN
-	other._package_hit_cooldowns[get_instance_id()] = PACKAGE_COLLISION_COOLDOWN
-	# The normal physics bounce remains authoritative.  Adding a little spin
-	# lets a hard hit visibly cascade through a stack of loose cargo.
-	var spin: Vector3 = relative_velocity.normalized().cross(Vector3.UP)
-	apply_torque_impulse(spin * strength * 0.12)
-	other.apply_torque_impulse(-spin * strength * 0.12)
-	var damage_speed: float = strength * PACKAGE_COLLISION_DAMAGE_SCALE
-	apply_impact(damage_speed)
-	other.apply_impact(damage_speed)
-	_emit_event(&"package_collision", [package_id, other.package_id, strength])
-	_emit_event(&"package_collision", [other.package_id, package_id, strength])
-
-
-func _hit_player(player: Player) -> void:
-	if is_held or freeze or not _is_run_active():
-		return
-	var speed: float = linear_velocity.length()
-	if speed < PLAYER_HIT_MIN_SPEED:
-		return
-	var push: Vector3 = linear_velocity.normalized() * minf(speed * PLAYER_HIT_PUSH_SCALE, 5.0)
-	player.rpc(&"receive_package_hit", push)
-	apply_impact(speed * 0.35)
+	PackageImpacts.on_body_entered(self, body)
 
 
 ## Announces this package to the run. Called when the delivery starts, not at _ready: packages load before the
 ## level resets the run, and only cargo actually aboard should count toward the score.
 func report_to_run() -> void:
-	_emit_event(&"cargo_registered", [package_id, String(trap_definition.call(&"name_key"))])
+	_emit_event(&"cargo_registered", [package_id, trap_definition.name_key()])
 	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
 	_emit_event(&"package_state_changed", [package_id, trap_state])
 	_emit_event(&"package_hint_changed", [package_id, hint_text()])
@@ -443,8 +348,8 @@ func mark_lost(cause: String) -> void:
 
 
 func content_definition() -> Resource:
-	if content == null and trap_definition != null and trap_definition.has_method(&"pick_content"):
-		content = trap_definition.call(&"pick_content", package_id)
+	if content == null and trap_definition != null:
+		content = trap_definition.pick_content(package_id)
 	return content
 
 
@@ -493,7 +398,7 @@ func _peer_within_reach(peer_id: int) -> bool:
 
 ## A seated player's body stays where they sat down; their seat is where they are.
 static func _reach_origin(player: Node) -> Vector3:
-	return player.call(&"reach_origin") if player.has_method(&"reach_origin") else (player as Node3D).global_position
+	return (player as Player).reach_origin() if player is Player else (player as Node3D).global_position
 
 
 ## What this box asks for now, as a LocText line: relayed as is, so each
@@ -503,7 +408,7 @@ func hint_text() -> Array:
 		return LocText.make("HUD_CARE_CRISIS_HINT", [ceili(care.crisis_left), care.missing_parts])
 	if care.needs_restore or care.phase == &"lost" or care.substituted:
 		return care.message
-	return trap_behavior.call(&"hint_text") if trap_behavior != null else []
+	return trap_behavior.hint_text() if trap_behavior != null else []
 
 
 func get_hint() -> String:
@@ -511,20 +416,7 @@ func get_hint() -> String:
 
 
 func _report_change(before_integrity: float, before_state: int, ruin_cause: String) -> void:
-	var lost: float = before_integrity - integrity
-	if lost > 0.0:
-		_emit_event(&"package_damaged", [package_id, lost])
-		if not _sharing_parasite_damage and not parasite_partner_id.is_empty() and is_inside_tree():
-			for candidate: Node in get_tree().get_nodes_in_group(&"cargo"):
-				if candidate is DeliveryPackage and candidate.package_id == parasite_partner_id:
-					candidate.apply_parasite_damage(lost * 0.5)
-					break
-	if not is_equal_approx(before_integrity, integrity):
-		_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
-	if trap_state != before_state:
-		_emit_event(&"package_state_changed", [package_id, trap_state])
-		if trap_state == ITrapBehavior.TrapState.RUINED:
-			_emit_event(&"package_ruined", [package_id, ruin_cause])
+	PackageImpacts.report_change(self, before_integrity, before_state, ruin_cause)
 
 
 ## Damage is applied to the real trap state, so it survives event cleanup.
@@ -538,6 +430,12 @@ func apply_external_damage(amount: float, ruin_cause_key: String) -> void:
 	PackageRescue.apply_external_damage(self, amount, ruin_cause_key)
 
 
+## The peer behind a request: the remote sender, or this peer on a genuine local call (sender 0).
+func _caller_peer() -> int:
+	var sender: int = multiplayer.get_remote_sender_id()
+	return sender if sender != 0 else multiplayer.get_unique_id()
+
+
 ## The primary tender and, when present, one helper call this every physics frame. Only the host combines
 ## their samples and advances trap behavior. Same unreliable-ordered reasoning as the van's driver input -- a
 ## dropped sample is superseded a frame later.
@@ -545,111 +443,48 @@ func apply_external_damage(amount: float, ruin_cause_key: String) -> void:
 func submit_tender_input(input: Dictionary) -> void:
 	if not is_multiplayer_authority() or not RpcGuard.dict_ok(input):
 		return
-	# Only whoever sits at this box's seat (0: a genuine local call).
-	var sender: int = multiplayer.get_remote_sender_id()
-	var from: int = sender if sender != 0 else multiplayer.get_unique_id()
-	_accept_tender_input(from, input)
+	# Only whoever sits at this box's seat (see PackageTending.accept_input()).
+	_accept_tender_input(_caller_peer(), input)
 
 
 func _accept_tender_input(peer_id: int, input: Dictionary) -> bool:
-	if peer_id <= 0 or (peer_id != tender_peer_id and peer_id != assistant_peer_id):
-		return false
-	_tender_inputs[peer_id] = {"input": input.duplicate(true), "age": 0.0}
-	if _has_useful_input(input):
-		_last_tender_peer = peer_id
-	_refresh_combined_input()
-	return true
+	return PackageTending.accept_input(self, peer_id, input)
 
 
-## Host: the seat's occupant changed (seat_point.gd). Nobody tending means no
-## input at all -- not the last sample the previous passenger left behind.
 func set_tender(peer_id: int) -> void:
-	tender_peer_id = peer_id
-	_tender_inputs.clear()
-	player_input = {}
-	if peer_id == 0 or assistant_peer_id == peer_id:
-		set_assistant(0)
-	_assist_seconds = 0.0
+	PackageTending.set_tender(self, peer_id)
 
 
 func set_assistant(peer_id: int) -> bool:
-	if peer_id > 0 and (tender_peer_id <= 0 or peer_id == tender_peer_id or (assistant_peer_id > 0
-			and assistant_peer_id != peer_id)):
-		return false
-	var previous: int = assistant_peer_id
-	if previous > 0:
-		_tender_inputs.erase(previous)
-	assistant_peer_id = peer_id
-	_assist_seconds = 0.0
-	_refresh_combined_input()
-	if previous > 0 and previous != peer_id and is_inside_tree():
-		var previous_player: Node = _player_for_peer(previous)
-		if previous_player != null and previous_player.has_method(&"stop_assisting"):
-			previous_player.rpc_id(previous, &"stop_assisting", get_path())
-	return true
+	return PackageTending.set_assistant(self, peer_id)
 
 
 func can_assist(peer_id: int) -> bool:
-	return peer_id > 0 and peer_id != tender_peer_id and tender_peer_id > 0 \
-			and (assistant_peer_id == 0 or assistant_peer_id == peer_id) \
-			and assist_available()
+	return PackageTending.can_assist(self, peer_id)
 
 
 func assist_available() -> bool:
-	return tender_peer_id > 0 and run_state() == ITrapBehavior.TrapState.AT_RISK
+	return PackageTending.assist_available(self)
 
 
 func run_state() -> int:
-	if is_inside_tree():
-		var run: Node = get_node_or_null(^"/root/RunManager")
-		if run != null:
-			var run_cargo: Dictionary = run.get(&"cargo")
-			if run_cargo.has(package_id):
-				return int((run_cargo[package_id] as Dictionary).get("state", trap_state))
-	return trap_state
+	return PackageTending.run_state(self)
 
 
 func assist_prompt() -> String:
-	var crew: Node = get_node_or_null(^"/root/CrewProgression") if is_inside_tree() else null
-	var color: String = String(crew.call(&"player_color_name", tender_peer_id)) if crew != null \
-		else tr("HUD_YOUR_TEAMMATE")
-	return tr("HUD_PROMPT_HELP_PACKAGE") % color
+	return PackageTending.assist_prompt(self)
 
 
 @rpc("any_peer", "call_local", "reliable")
 func request_assist() -> void:
-	if not is_multiplayer_authority() or not RpcGuard.allow_request(self):
-		return
-	var sender: int = multiplayer.get_remote_sender_id()
-	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
-	if not can_assist(peer_id) or not _peer_within_assist_reach(peer_id):
-		return
-	if not set_assistant(peer_id):
-		return
-	var player: Node = _player_for_peer(peer_id)
-	if player != null and player.has_method(&"assist_package"):
-		player.rpc_id(peer_id, &"assist_package", get_path())
+	if is_multiplayer_authority() and RpcGuard.allow_request(self):
+		PackageTending.assist(self, _caller_peer())
 
 
 @rpc("any_peer", "call_local", "reliable")
 func request_stop_assist() -> void:
-	if not is_multiplayer_authority() or not RpcGuard.allow_request(self):
-		return
-	var sender: int = multiplayer.get_remote_sender_id()
-	var peer_id: int = sender if sender != 0 else multiplayer.get_unique_id()
-	if peer_id == assistant_peer_id:
-		set_assistant(0)
-
-
-func _age_tender_inputs(delta: float) -> void:
-	for raw_peer: Variant in _tender_inputs.keys():
-		var sample: Dictionary = _tender_inputs[raw_peer]
-		sample["age"] = float(sample.get("age", 0.0)) + delta
-		if float(sample["age"]) > TENDER_INPUT_TIMEOUT:
-			_tender_inputs.erase(raw_peer)
-		else:
-			_tender_inputs[raw_peer] = sample
-	_refresh_combined_input()
+	if is_multiplayer_authority() and RpcGuard.allow_request(self):
+		PackageTending.stop_assist(self, _caller_peer())
 
 
 func _refresh_combined_input() -> void:
@@ -657,136 +492,54 @@ func _refresh_combined_input() -> void:
 
 
 func _has_fresh_input(peer_id: int) -> bool:
-	return _tender_inputs.has(peer_id) and float((_tender_inputs[peer_id] as Dictionary).get("age",
-			INF)) <= TENDER_INPUT_TIMEOUT
-
-
-func _peer_within_assist_reach(peer_id: int) -> bool:
-	var player: Node = _player_for_peer(peer_id)
-	return player != null and _reach_origin(player).distance_to(global_position) <= ASSIST_REACH
+	return PackageTending.has_fresh_input(self, peer_id)
 
 
 func _player_for_peer(peer_id: int) -> Node:
-	for player: Node in get_tree().get_nodes_in_group(&"player"):
-		if player.get_multiplayer_authority() == peer_id:
-			return player
-	return null
+	return PackageTending.player_for_peer(self, peer_id)
 
 
 ## Whoever is carrying this package (on foot, not yet mounted) calls this every physics frame instead of
 ## setting global_transform directly -- the package is host-authoritative, so only the host's copy moving is
-## real; everyone else, carrier included, sees it through the MultiplayerSynchronizer.
-##
-## `in_vehicle`: the pose is in the truck's space (the carrier is in the bay),
-## and goes on the host's own truck -- each peer's copy of the truck is a little behind the host's, and a
-## world pose put the box a metre behind the hands at speed.
+## real; everyone else, carrier included, sees it through the MultiplayerSynchronizer. `in_vehicle`: the pose
+## is in the truck's space (see PackageHandling.accept_carry()).
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false) -> void:
-	if not is_multiplayer_authority() or not RpcGuard.finite_transform(carry_transform):
-		return
-	var sender: int = multiplayer.get_remote_sender_id()
-	if sender != 0 and (not is_instance_valid(carrier) or sender != carrier.get_multiplayer_authority()):
-		return
-	if not is_held:
-		return
-	var vehicle: Node3D = _find_vehicle()
-	_carry_in_vehicle = in_vehicle and vehicle != null
-	_carry_pose = carry_transform
-	global_transform = vehicle.global_transform * carry_transform if _carry_in_vehicle else carry_transform
+	if is_multiplayer_authority() and RpcGuard.finite_transform(carry_transform):
+		PackageHandling.accept_carry(self, multiplayer.get_remote_sender_id(), carry_transform, in_vehicle)
 
 
 func set_held(held: bool) -> void:
-	is_held = held
-	freeze = held
-	# Disabled while carried: a held package following the hold point every
-	# frame shouldn't shove the player or clip weirdly through the world.
-	collision_layer = 0 if held else 4
-	collision_mask = 0 if held else LOOSE_MASK
-	# The velocity sampled before a pickup has nothing to do with the first
-	# physics step after a drop; comparing the two read as a hard impact.
-	_has_previous_velocity = false
-	linear_velocity = Vector3.ZERO
-	angular_velocity = Vector3.ZERO
+	PackageHandling.set_held(self, held)
 
 
-## Host-only: pickup points call this instead of set_held(true) directly, so the package knows who has it --
-## needed to validate drop requests and to clear that player's hands on every peer when the box leaves them.
 func take_by(player: Node) -> void:
-	var peer_id: int = int(player.get_multiplayer_authority())
-	var vehicle: Node3D = _find_vehicle()
-	if _is_run_active() and not is_held and not is_loaded \
-			and (vehicle == null or not bool(vehicle.call(&"carries", global_position))):
-		_rescue_pending = true
-	lap_mount_path = NodePath()
-	if is_loaded:
-		release_mount()
-	set_held(true)
-	carrier = player
-	_last_holder_peer = peer_id
-	player.rpc(&"pick_up", get_path())
+	PackageHandling.take_by(self, player)
 
 
-## Riding with the crew: on a rack, or on the lap of whoever sits tending it
-## (seat_point.gd). Built from replicated state so every peer agrees; the
-## carrier check only narrows it on the host, where it is known.
 func is_aboard() -> bool:
-	if is_loaded:
-		return true
-	if not is_held or tender_peer_id <= 0:
-		return false
-	return carrier == null or int(carrier.get_multiplayer_authority()) == tender_peer_id
+	return PackageHandling.is_aboard(self)
 
 
-## Hand-to-hand transfer. The host checks both the caller's ownership and
-## physical distance, so a client cannot pass cargo across the map.
+## Hand-to-hand transfer: see PackageHandling.transfer().
 @rpc("any_peer", "call_local", "reliable")
 func request_transfer(recipient_path: NodePath) -> void:
 	if not is_multiplayer_authority() or not is_held or carrier == null or not RpcGuard.allow_request(self):
 		return
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	if sender_id != 0 and int(carrier.get_multiplayer_authority()) != sender_id:
-		return
-	var recipient: Player = get_node_or_null(recipient_path) as Player if RpcGuard.path_ok(recipient_path) else null
-	if recipient == null or recipient == carrier or recipient.carried_package != null:
-		return
-	if _reach_origin(recipient).distance_to(_reach_origin(carrier)) > TRANSFER_REACH:
-		return
-	var giver_peer_id: int = _last_holder_peer
-	take_by(recipient)
-	if _is_run_active():
-		_award_milestone(giver_peer_id, &"handover")
+	PackageHandling.transfer(self, multiplayer.get_remote_sender_id(), recipient_path)
 
 
-## A carrier can always put a box back on the floor. Unlike a mount this
-## keeps it loose and physical, so a mistaken pickup never traps the player.
-## `in_vehicle` as in submit_carry_transform(): set down in the truck, it's
-## placed on the host's truck and starts out moving with it. Critical (RpcGuard): a lost one leaves hands full.
+## Put the box back on the floor: see PackageHandling.drop(). Critical (RpcGuard): a lost one leaves hands full.
 @rpc("any_peer", "call_local", "reliable")
 func request_drop(drop_transform: Transform3D, in_vehicle: bool = false) -> void:
 	if not is_multiplayer_authority() or not is_held or not RpcGuard.finite_transform(drop_transform):
 		return
-	if not RpcGuard.allow_critical_request(self):
-		return
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	if sender_id != 0 and carrier != null and int(carrier.get_multiplayer_authority()) != sender_id:
-		return
-	_release_carrier()
-	var vehicle: Node3D = _find_vehicle()
-	global_transform = vehicle.global_transform * drop_transform if in_vehicle and vehicle != null else drop_transform
-	reset_physics_interpolation()
-	set_held(false)
-	_ride_along_if_aboard()
+	if RpcGuard.allow_critical_request(self):
+		PackageHandling.drop(self, multiplayer.get_remote_sender_id(), drop_transform, in_vehicle)
 
 
-## Let go of inside the moving truck (dropped, or put back on the rack
-## mid-run): start with the truck's own velocity, or the box behaves as if
-## dropped from a standstill and slams into the rear wall.
 func _ride_along_if_aboard() -> void:
-	if freeze:
-		return
-	var vehicle: Node3D = _find_vehicle()
-	if vehicle != null and bool(vehicle.call(&"carries", global_position)) and vehicle.has_method(&"point_velocity"):
-		linear_velocity = vehicle.call(&"point_velocity", global_position)
+	PackageHandling.ride_along_if_aboard(self)
 
 
 ## Host: the seated passenger tending this box moves it between their lap
@@ -805,83 +558,21 @@ func peer_left(peer_id: int) -> void:
 	PackageRescue.peer_left(self, peer_id)
 
 
-## For when the carrier goes away (disconnect) rather than letting go: the
-## box must not stay frozen mid-air with collisions off forever.
 func drop_loose(drop_transform: Transform3D) -> void:
-	if not is_held:
-		return
-	carrier = null
-	global_transform = drop_transform
-	reset_physics_interpolation()
-	set_held(false)
+	PackageHandling.drop_loose(self, drop_transform)
 
 
-## `mount` gives the transform to snap to (the marker); `mount_point` is the
-## Interactable that actually tracks occupancy (its InteractionArea child --
-## see package_mount_point.gd's `occupied_by`). They're usually different
-## nodes, so release_mount() needs the latter, not the former.
 func place_at(mount: Node3D, mount_point: Node = null) -> void:
-	_release_carrier()
-	global_transform = mount.global_transform
-	# Snapped onto the shelf: drawn there at once, not slid in from the hands.
-	reset_physics_interpolation()
-	set_held(false)
-	is_loaded = true
-	current_mount_path = (mount_point if mount_point != null else mount).get_path()
-	# Frozen while loading, until level_base.gd starts the run. A box put back
-	# mid-run has to ride physically like the rest, not stay glued to the shelf.
-	freeze = not _is_run_active()
-	_ride_along_if_aboard()
-	_emit_event(&"package_placed", [package_id])
-	if _rescue_pending:
-		_rescue_pending = false
-		_award_milestone(_last_holder_peer, &"rescued")
-
-
-## A resident took the box at the door. Its carrier's hands have to empty on
-## every peer before the node goes away, or they keep "holding" a freed box.
-##
-## With `hand_over_at` (the resident at the door) it doesn't just vanish (tareas de Slatex #15): it floats
-## from the hands to the doorway and the resident takes it in, then it's gone. Already out of play from the
-## first frame -- no collisions, no longer cargo -- so nothing can grab it back.
-const HAND_OVER_SECONDS: float = 0.45
-const TAKE_IN_SECONDS: float = 0.3
+	PackageHandling.place_at(self, mount, mount_point)
 
 
 func consume(hand_over_at: Variant = null) -> void:
-	_release_carrier()
-	release_mount()
-	# It's a scene node, not a spawned one: freeing it here never reached the
-	# clients, where it stayed at the door, full size and still "cargo".
-	if is_inside_tree():
-		var run: Node = get_node_or_null(^"/root/RunManager")
-		if run != null:
-			(run.get(&"consumed_packages") as Array).append(String(get_path()))
-		var network: Node = get_node_or_null(^"/root/NetworkManager")
-		if network != null and bool(network.call(&"is_online")) and bool(network.call(&"is_host")):
-			_remote_consume.rpc(hand_over_at)
-	_play_consume(hand_over_at)
+	PackageHandling.consume(self, hand_over_at)
 
 
 @rpc("authority", "call_remote", "reliable")
 func _remote_consume(hand_over_at: Variant) -> void:
-	_play_consume(hand_over_at)
-
-
-func _play_consume(hand_over_at: Variant) -> void:
-	_consumed = true
-	if hand_over_at == null or not is_inside_tree():
-		remove_from_group(&"cargo")
-		call_deferred(&"queue_free")
-		return
-	remove_from_group(&"cargo")
-	set_deferred(&"freeze", true)
-	collision_layer = 0
-	collision_mask = 0
-	var tween := create_tween()
-	tween.tween_property(self, ^"global_position", hand_over_at as Vector3, HAND_OVER_SECONDS) 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, ^"scale", Vector3.ONE * 0.05, TAKE_IN_SECONDS) 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	tween.tween_callback(queue_free)
+	PackageHandling.play_consume(self, hand_over_at)
 
 
 ## Trap types reshape the collider at runtime (package_feedback.gd), so this
@@ -894,57 +585,33 @@ func get_half_extents() -> Vector3:
 
 
 func _release_carrier() -> void:
-	lap_mount_path = NodePath()
-	if carrier != null and is_instance_valid(carrier) and carrier.is_inside_tree():
-		carrier.rpc(&"drop_carried")
-	carrier = null
+	PackageHandling.release_carrier(self)
 
 
-## Frees the shelf slot this package occupies, if any. Without this the mount
-## stays marked occupied forever and nothing can ever be placed there again --
-## including this same box on the way back (docs/colaboracion-equipo.md).
 func release_mount() -> void:
-	if current_mount != null and is_instance_valid(current_mount):
-		current_mount.set(&"occupied_by", null)
-	current_mount = null
-	current_mount_path = NodePath()
-	is_loaded = false
+	PackageHandling.release_mount(self)
 
 
 func _is_run_active() -> bool:
-	if not is_inside_tree():
-		return true
-	var run_manager: Node = get_node_or_null("/root/RunManager")
+	var run_manager: Node = PackageAutoloads.run_manager(self)
 	return run_manager == null or bool(run_manager.get("is_running"))
 
 
 func _award_pending_trap_milestones() -> void:
-	if trap_behavior == null or not trap_behavior.has_method(&"take_milestones"):
-		return
-	for milestone: StringName in trap_behavior.call(&"take_milestones"):
-		_award_milestone(_last_tender_peer, milestone)
+	PackageTending.award_pending_trap_milestones(self)
 
 
 func _award_milestone(peer_id: int, milestone: StringName) -> bool:
-	if peer_id <= 0 or milestone.is_empty() or not is_inside_tree():
-		return false
-	var progression: Node = get_node_or_null(^"/root/CrewProgression")
-	if progression == null or not progression.has_method(&"award_milestone"):
-		return false
-	var occurrence: int = int(_milestone_counts.get(milestone, 0)) + 1
-	if not bool(progression.call(&"award_milestone", peer_id, package_id, milestone, occurrence)):
-		return false
-	_milestone_counts[milestone] = occurrence
-	return true
+	return PackageTending.award_milestone(self, peer_id, milestone)
 
 
 func _registered_for_run() -> bool:
-	var run: Node = get_node_or_null(^"/root/RunManager")
+	var run: Node = PackageAutoloads.run_manager(self)
 	return run != null and (run.get(&"cargo") as Dictionary).has(package_id)
 
 
 func _trap_kind() -> StringName:
-	return StringName(trap_definition.get(&"id")) if trap_definition != null else &"fragile"
+	return trap_definition.id if trap_definition != null else &"fragile"
 
 
 func _simulate_cargo(delta: float) -> void:
@@ -984,12 +651,7 @@ func delivery_assessment() -> Dictionary:
 
 
 static func _has_useful_input(input: Dictionary) -> bool:
-	for value: Variant in input.values():
-		if value is bool and bool(value):
-			return true
-		if (value is StringName or value is String) and not String(value).is_empty():
-			return true
-	return false
+	return PackageTending.has_useful_input(input)
 
 
 func _emit_event(event_name: StringName, arguments: Array) -> void:

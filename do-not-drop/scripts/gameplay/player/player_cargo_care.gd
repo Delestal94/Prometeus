@@ -15,6 +15,10 @@ const CareGuide = preload("res://scripts/ui/hud/care_guide.gd")
 const CarePractice = preload("res://scripts/ui/hud/care_practice.gd")
 const HoldFeedback = preload("res://scripts/gameplay/player/player_hold_feedback.gd")
 const InputLag = preload("res://scripts/gameplay/package/tender_input_lag.gd")
+## The settings autoload's script, as a type (hud_scale, binding_label): it
+## names no other autoload, so preloading it here compiles before they exist.
+## test_dynamic_dispatch_budget checks it is the script GameSettings runs.
+const GAME_SETTINGS := preload("res://scripts/core/game_settings.gd")
 ## The logical height the card lays out for, like Hud.BASE_HEIGHT.
 const BASE_HEIGHT: float = 720.0
 ## The care card and the depot practice card are part of the dashboard, so they
@@ -22,11 +26,11 @@ const BASE_HEIGHT: float = 720.0
 ## pause, results, the depot and crew panels -- must always paint over them
 ## (N-237: at layer 7 the tutorial drew on top of Options).
 const CARD_LAYER: int = 0
-var player: Node
+var player: Player
 var card: CareCard
 ## The depot's practice card (CarePractice), until this profile has done it.
 var practice: CarePractice
-var target: Node
+var target: DeliveryPackage
 ## A tool picked by hand with care_tool_next; cleared when the box's needs
 ## change, so the card goes back to suggesting.
 var manual_tool: StringName = &""
@@ -38,14 +42,14 @@ var hold_feedback := HoldFeedback.new()
 ## Debug: holds the input back on its way to the host (`--fake-lag=<ms>`).
 var input_lag := InputLag.new()
 var _suggested: StringName = &""
-var _card_target: Node
+var _card_target: DeliveryPackage
 var _layer: CanvasLayer
 var _root: Control
 
 
 func _ready() -> void:
-	player = get_parent()
-	if not bool(player.call(&"is_local")):
+	player = get_parent() as Player
+	if not player.is_local():
 		set_physics_process(false)
 		return
 	_layer = CanvasLayer.new()
@@ -63,9 +67,10 @@ func _ready() -> void:
 	card.offset_left = -Hud.EDGE_MARGIN - CareCard.WIDTH
 	_root.add_child(card)
 	card.visible = false
-	if CarePractice.pending(get_node_or_null(^"/root/UnlockManager")):
+	var profile: UnlockProfile = _profile()
+	if CarePractice.pending(profile):
 		practice = CarePractice.new()
-		practice.profile = get_node_or_null(^"/root/UnlockManager")
+		practice.profile = profile
 		practice.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 		practice.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		practice.grow_vertical = Control.GROW_DIRECTION_BOTH
@@ -90,23 +95,22 @@ func _physics_process(delta: float) -> void:
 
 func _tick(delta: float) -> void:
 	_fit_to_screen()
-	var run: Node = get_node_or_null(^"/root/RunManager")
+	var run: Node = PackageAutoloads.run_manager(self)
 	tapping = false
 	_update_practice(delta, run)
 	target = null
 	if not bool(run.get(&"is_running")) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED \
-			or String(player.get(&"seat_node_path")).contains("DriverEyePoint"):
+			or String(player.seat_node_path).contains("DriverEyePoint"):
 		card.visible = false
 		return
-	var handling: bool = false
-	for key: StringName in [&"carried_package", &"tended_package"]:
-		var candidate: Variant = player.get(key)
-		if is_instance_valid(candidate):
-			target = candidate
-			handling = true
-			break
-	if target == null:
-		target = player.call(&"_lid_target")
+	var handling: bool = true
+	if is_instance_valid(player.carried_package):
+		target = player.carried_package
+	elif is_instance_valid(player.tended_package):
+		target = player.tended_package
+	else:
+		handling = false
+		target = player._lid_target()
 	card.visible = target != null
 	if target != _card_target:
 		_card_target = target
@@ -127,7 +131,7 @@ func _tick(delta: float) -> void:
 		manual_tool = next_tool(manual_tool if manual_tool != &"" else suggested)
 		card.prompt_view.play_cue(&"whoosh")
 	var tool: StringName = manual_tool if manual_tool != &"" else suggested
-	var input: Dictionary = player.call(&"_gather_package_input")
+	var input: Dictionary = player._gather_package_input()
 	input["work"] = handling and tool != &"" and Input.is_action_pressed(&"care_work")
 	input["tool"] = tool if tool != &"" else &"tape"
 	if handling:
@@ -139,11 +143,11 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 		handling: bool) -> void:
 	var gamepad: bool = _using_gamepad()
 	var keys: Dictionary = control_names(gamepad, _interact_label(gamepad))
-	var state: Dictionary = (target.get(&"care_state") if target.get(&"care_state") is Dictionary else {}).duplicate()
-	var cargo_entry: Dictionary = (run.get(&"cargo") as Dictionary).get(target.get(&"package_id"), {})
+	var state: Dictionary = target.care_state.duplicate()
+	var cargo_entry: Dictionary = (run.get(&"cargo") as Dictionary).get(target.package_id, {})
 	var entry_state: int = int(cargo_entry.get("state", 0))
 	state["need_hands"] = needs_hands(care, entry_state)
-	var seated: bool = not String(player.get(&"seat_node_path")).is_empty()
+	var seated: bool = not String(player.seat_node_path).is_empty()
 	state["on_foot"] = not seated
 	var sequence: Dictionary = state.get("sequence", {})
 	# On foot, holding the primary also locks the walk for what needs A/D or
@@ -155,9 +159,9 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 		and (code_pending or not gesture.is_empty())
 	var tool_name: String = care.tool_name(tool, kind) if tool != &"" else ""
 	var step: Dictionary = CareGuide.next_step(state, kind, tool, tool_name, keys) if handling \
-		else reach_step(keys, bool(player.get(&"_seated")))
-	var entry: Dictionary = (run.get(&"cargo") as Dictionary).get(target.get(&"package_id"), {})
-	var integrity: float = float(entry.get("integrity", 100.0)) / maxf(float(entry.get("maximum", 100.0)), 0.01) * 100.0
+		else reach_step(keys, player._seated)
+	var integrity: float = float(cargo_entry.get("integrity", 100.0)) \
+		/ maxf(float(cargo_entry.get("maximum", 100.0)), 0.01) * 100.0
 	var view_data: Dictionary = {"pad": gamepad, "primary": bool(input.get("steady", false)),
 		"tool_held": Input.is_action_pressed(&"care_work"), "work": care.work if care.work_tool == tool else 0.0,
 		"fixes": fix_count(care), "sequence": state.get("sequence", {}), "cushion": state.get("cushion", {}),
@@ -165,8 +169,8 @@ func _refresh_card(run: Node, care, kind: StringName, tool: StringName, stock: i
 		"axis_fwd": Input.get_axis(&"walk_backward", &"walk_forward"), "screen_tilt": _screen_tilt(gesture),
 		"missing": care.missing_parts,
 		"sway": care.balance_target, "interact": keys["interact"]}
-	card.update(target.trap_definition.localized_name(), int(entry.get("state", 0)), integrity, step,
-		view_data, footer_items(keys, tool_name, stock, handling, bool(player.get(&"_seated")), care.in_lap))
+	card.update(target.trap_definition.localized_name(), entry_state, integrity, step,
+		view_data, footer_items(keys, tool_name, stock, handling, player._seated, care.in_lap))
 
 
 ## The tilt the box's gesture reports (in the truck's frame) as this player's
@@ -193,13 +197,13 @@ func _update_practice(delta: float, run: Node) -> void:
 		return
 	var preparing: bool = not bool(run.get(&"is_running")) and (run.get(&"results") as Dictionary).is_empty()
 	practice.visible = preparing and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED \
-		and not String(player.get(&"seat_node_path")).contains("DriverEyePoint")
+		and not String(player.seat_node_path).contains("DriverEyePoint")
 	if not practice.visible:
 		return
 	var gamepad: bool = _using_gamepad()
 	var advancing: bool = practice.advance(delta, player, control_names(gamepad, _interact_label(gamepad)), gamepad)
 	tapping = advancing and practice.step == 3 and Input.is_action_pressed(&"package_action_primary") \
-		and is_instance_valid(player.get(&"carried_package"))
+		and is_instance_valid(player.carried_package)
 	if not advancing:
 		practice.queue_free()
 		practice = null
@@ -263,8 +267,8 @@ static func fix_count(care) -> int:
 ## Same scaling as the HUD (Hud.layout_scale()): the card follows the HUD
 ## size setting and keeps its size on screens taller than 16:9.
 func _fit_to_screen() -> void:
-	var settings: Node = get_node_or_null(^"/root/GameSettings")
-	var user_scale: float = float(settings.get(&"hud_scale")) if settings != null else 1.0
+	var settings: GAME_SETTINGS = _settings()
+	var user_scale: float = settings.hud_scale if settings != null else 1.0
 	var screen: Vector2 = _layer.get_viewport().get_visible_rect().size
 	var fit: float = user_scale * maxf(1.0, screen.y / BASE_HEIGHT)
 	_root.scale = Vector2(fit, fit)
@@ -274,15 +278,25 @@ func _fit_to_screen() -> void:
 func _interact_label(gamepad: bool) -> String:
 	if gamepad:
 		return "A"
-	var settings: Node = get_node_or_null(^"/root/GameSettings")
-	return String(settings.call(&"binding_label", &"interact")) if settings != null else "E"
+	var settings: GAME_SETTINGS = _settings()
+	return settings.binding_label(&"interact") if settings != null else "E"
 
 
-## Looked up by path: tests run with --script, where autoload names don't
-## resolve at compile time.
 func _using_gamepad() -> bool:
-	var settings: Node = get_node_or_null(^"/root/GameSettings")
-	return settings != null and bool(settings.get(&"using_gamepad"))
+	var settings: GAME_SETTINGS = _settings()
+	return settings != null and settings.using_gamepad
+
+
+## The autoloads, looked up by path (tests run with --script, where autoload
+## names don't resolve at compile time) and null-safe. The run's state stays
+## by name through PackageAutoloads: preloading run_manager.gd here would
+## compile it before the autoloads exist (see package_autoloads.gd).
+func _settings() -> GAME_SETTINGS:
+	return get_node_or_null(^"/root/GameSettings") as GAME_SETTINGS
+
+
+func _profile() -> UnlockProfile:
+	return get_node_or_null(^"/root/UnlockManager") as UnlockProfile
 
 
 ## The nearest box someone else tends that this player could steady.

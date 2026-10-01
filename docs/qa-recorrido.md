@@ -143,4 +143,4 @@ en pocos minutos. Tildar cuando se vio cada uno en este recorrido:
 
 | Fecha | Commit | Qué se estaba haciendo | Qué pasó | Estado |
 |---|---|---|---|---|
-| | | | | |
+| 2026-10-01 | e033559 | Rutina QA (mañana, clima `soleado_noche` + `niebla_atardecer`): instanciar `level_endless.tscn`, `start_debug_delivery`, `reset_run` y `level.free()`, repetido; `Node.print_orphan_nodes` | Cada nivel liberado deja ~50 nodos huérfanos (`Stray Node: RepairTape (MeshInstance3D)`, `Stray Node: ReplacementHen (Node3D)` con sus mallas); 63 reinicios → 3150. Causa probable (sin confirmar): `package_salvage.gd:28-59` crea `tape_mesh`/`toy_mesh` en `_ready()` y los cuelga con `package.add_child.call_deferred(...)`; si el paquete se libera antes del diferido, quedan sin padre. Molesta (fuga por nivel, no por km). Resto del recorrido limpio: entrega, endless 6 km (nodos 2102→2345 planos, memoria 211→234 MB aplanándose), climas, `run-net-pair` y `run-net-trio` PASS. | Abierto: tarea en `tareas-nacho.md` |

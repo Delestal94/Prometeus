@@ -358,10 +358,14 @@ UI_COSM_AUTOSAVE,Tus cambios se guardan automáticamente,Your changes are saved 
 UI_COSM_EYES,Ojos,Eyes
 UI_COSM_FACE,Rostro,Face
 UI_COSM_FACE_HINT,Combiná los ojos y la boca como quieras.,Mix and match eyes and mouth.
-UI_COSM_LOCKED_SUFFIX, — %d entregas / %d puntos, — %d deliveries / %d points
 UI_COSM_MOUTH,Boca,Mouth
-UI_COSM_PREVIEW_HINT,Tu personaje dentro del juego,Your character in game
+UI_COSM_PRESETS,Caras armadas,Ready-made faces
+UI_COSM_PRESETS_HINT,"Un toque y listo; después ajustá ojos y boca.","One tap, then fine-tune the eyes and mouth."
 UI_COSM_PREVIEW_TAG,ASÍ QUEDA,HOW IT LOOKS
+UI_COSM_RANDOM,Sorprendeme,Surprise me
+UI_COSM_RANDOM_HINT,Ojos y boca al azar (nunca los que ya tenés).,Random eyes and mouth (never the ones you have).
+UI_COSM_ROTATE_HINT,Arrastrá o usá el stick derecho para girar,Drag or use the right stick to turn
+UI_COSM_UNLOCK_AT,Se gana con %d entregas y %d pts,Earned at %d deliveries and %d pts
 UI_COSM_TITLE,Hacé tu personaje,Make your character
 UI_COSM_TRUCK_HINT,"Si sos el anfitrión, lo usa toda la tripulación.","If you're the host, the whole crew uses it."
 UI_COSM_UNIFORM,Uniforme,Uniform
@@ -386,7 +390,6 @@ UI_DEPOT_SUPPLIES_HINT,Se pagan con la plata del equipo y se usan en el próximo
 UI_DEPOT_SUPPLY_READY,%s  ·  listo para salir,%s  ·  ready to go
 UI_DEPOT_TEAM_CASH,CAJA DEL EQUIPO  ·  $%d,TEAM CASH  ·  $%d
 UI_DEPOT_UNIFORM_HINT,Tu color para esta partida. Lo ve todo el equipo.,Your colour for this run. The whole team sees it.
-UI_DEPOT_UNIFORM_TAG,UNIFORME,UNIFORM
 UI_DEPOT_UNLOCK_DONE,Listo:,Done:
 UI_DEPOT_UNLOCK_LINE,%s  %s  —  %d entregas + %d pts,%s  %s  —  %d deliveries + %d pts
 UI_DEPOT_UNLOCK_TODO,Falta:,To go:
@@ -661,26 +664,39 @@ UI_CARD_INFORMATION,Información,Information
 UI_CARD_PRIORITY,Prioridad,Priority
 UI_CARD_RESCUE,Rescate,Rescue
 UI_CARD_REVOTE,Re-voto,Revote
+UI_COLOR_COBALT,cobalto,cobalt
 UI_COLOR_CORAL,coral,coral
 UI_COLOR_MINT,menta,mint
 UI_COLOR_SKY,cielo,sky
+UI_COLOR_TEAL,turquesa,teal
 UI_COLOR_VIOLET,violeta,violet
+UI_COLOR_WHITE,blanco,white
 UI_COLOR_YELLOW,amarillo,yellow
 UI_DELIVERIES,Entregas,Deliveries
 UI_FACE_EYES_CLASSIC,Clásicos,Classic
+UI_FACE_EYES_DETERMINED,Decididos,Determined
 UI_FACE_EYES_JOYFUL,Contentos,Joyful
 UI_FACE_EYES_LASHES,Pestañas,Lashes
 UI_FACE_EYES_NONE,Sin ojos,No eyes
-UI_FACE_EYES_SLEEPY,Dormilones,Sleepy
+UI_FACE_EYES_SLEEPY,Con sueño,Sleepy
 UI_FACE_EYES_WINK,Guiño,Wink
-UI_FACE_EYES_WORRIED,Preocupados,Worried
+UI_FACE_EYES_WORRIED,Nerviosos,Nervous
 UI_FACE_MOUTH_GRIN,Dientes,Teeth
 UI_FACE_MOUTH_LAUGH,Carcajada,Laugh
 UI_FACE_MOUTH_NONE,Sin boca,No mouth
 UI_FACE_MOUTH_POUT,Puchero,Pout
+UI_FACE_MOUTH_SMIRK,Pícara,Smirk
 UI_FACE_MOUTH_SMILE,Sonrisa,Smile
 UI_FACE_MOUTH_SURPRISED,Sorpresa,Surprised
 UI_FACE_MOUTH_TONGUE,Lengüita,Tongue
+UI_FACE_PRESET_CHEEKY,Pícaro,Cheeky
+UI_FACE_PRESET_CHEERFUL,Alegre,Cheerful
+UI_FACE_PRESET_CLASSIC,Clásico,Classic
+UI_FACE_PRESET_COCKY,Canchero,Cocky
+UI_FACE_PRESET_GOOFY,Payaso,Goofy
+UI_FACE_PRESET_LAZY,Fiaca,Lazy
+UI_FACE_PRESET_SCARED,Asustado,Scared
+UI_FACE_PRESET_TOOTHY,Dientudo,Toothy
 UI_LEAD_DELIVERY,Entrega,Delivery
 UI_LEAD_DELIVERY_SELECTED,●  ENTREGA,●  DELIVERY
 UI_LEAD_ENDLESS_EMPTY,Todavía no hay partidas Endless registradas.,No Endless runs recorded yet.

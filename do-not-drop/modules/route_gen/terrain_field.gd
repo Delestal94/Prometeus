@@ -32,7 +32,7 @@ var crests: Array[Dictionary] = []
 ## Fades to nothing at both ends of the span (RIVER_TAPER) so it never leaves
 ## a seam against neighbouring, river-free terrain, and route.gd shrinks
 ## `bank_width` on its own to keep a long river from cutting into another
-## stretch of road, a house or the depot yard (_clamp_river_reach()).
+## stretch of road, a house or the depot yard (route_ground.gd clamp_river_reach()).
 ## Meanders a little (a smooth, position-seeded wobble, not the session's
 ## RNG) so it doesn't read as a perfectly straight ditch, and its edges
 ## wobble too so the shoreline is organic rather than a rectangle.
@@ -272,7 +272,7 @@ func _river_phase(river: Dictionary) -> float:
 ## doesn't follow -- both read the exact same shape.
 ## Meander/wobble amplitudes (see _river_factor()) and their combined worst
 ## case -- how far a "wet" point can ever sit past a river's nominal
-## `bank_width` in either direction. route.gd's _clamp_river_reach() has to
+## `bank_width` in either direction. route_ground.gd's clamp_river_reach() has to
 ## clear a hazard by at least this much (its own margin on top for comfort),
 ## or the meander could still swing the actual carved/visible river into
 ## whatever it was supposed to stop short of.

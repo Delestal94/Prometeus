@@ -3,7 +3,8 @@ extends SceneTree
 ##
 ## Every menu opened with a gamepad must put focus somewhere useful, let B
 ## close it, and return focus to the button that opened it. The cosmetics
-## grids also keep directional focus inside their own row/column layout.
+## grids also keep directional focus inside their own row/column layout, and
+## the depot's lockers (the same screen) focus a card and close with B.
 
 var _failures: int = 0
 
@@ -39,6 +40,16 @@ func _run() -> void:
 	_send_cancel(depot_panel)
 	await process_frame
 	_expect(not depot_panel.visible, "B closes the depot panel")
+	# The lockers show the appearance screen inside the depot panel (N-506).
+	depot_panel.call(&"open", &"wardrobe", null)
+	await process_frame
+	await process_frame
+	var wardrobe: Node = depot_panel.get_node_or_null(^"Wardrobe")
+	_expect(wardrobe != null and _focus_is_inside(wardrobe), "The lockers focus a card when opened")
+	if wardrobe != null:
+		_send_cancel(wardrobe)
+	await process_frame
+	_expect(not depot_panel.visible, "B closes the lockers and the depot panel")
 	depot_panel.queue_free()
 	await process_frame
 
@@ -82,21 +93,30 @@ func _check_menu_panel(menu: Control, button_text: String, panel: Control) -> vo
 		panel.emit_signal(&"closed")
 
 
+## The face cards (N-506: ready-made faces, eyes, mouths): arrows stay among
+## them, except left out of the first column (the nickname field, N-606.1), up
+## out of the top row (the tabs) and down out of the last row (Done).
 func _check_cosmetic_neighbors(panel: Control) -> void:
-	var buttons: Array = panel.get(&"_face_buttons")
-	for button: Button in buttons:
+	var cards: Array = panel.get(&"_cards")
+	for button: Button in cards:
+		if not button.get_meta(&"kind") in ["preset", "eyes", "mouth"]:
+			continue
 		for property: StringName in [&"focus_neighbor_left", &"focus_neighbor_right", &"focus_neighbor_top",
 				&"focus_neighbor_bottom"]:
-			# Up from the first row of eyes goes to the nickname field above them (N-606.1).
-			var field := button.get_node_or_null(button.get(property)) as LineEdit
-			if field != null and field.name == &"NicknameEdit":
-				_expect(property == &"focus_neighbor_top" and button.get_meta(&"kind") == "eyes",
-					"Only up from the first row of eyes reaches the nickname field")
-				continue
-			var neighbor := button.get_node_or_null(button.get(property)) as Button
-			_expect(neighbor != null and neighbor.get_meta(&"kind") == button.get_meta(&"kind"),
-				"Cosmetic grid keeps %s navigation inside the %s choices"
-				% [String(property).trim_prefix("focus_neighbor_"), button.get_meta(&"kind")])
+			var target: Node = button.get_node_or_null(button.get(property))
+			var way: String = String(property).trim_prefix("focus_neighbor_")
+			if target is LineEdit:
+				_expect(way == "left" and target.name == &"NicknameEdit",
+						"Only left out of the grid reaches the nickname")
+			elif target != null and String(target.name).begins_with("Tab_"):
+				_expect(way == "top" and button.get_meta(&"kind") == "preset",
+						"Only up from the top row reaches the tabs")
+			elif target != null and target.name == &"Done":
+				_expect(way == "bottom" and button.get_meta(&"kind") == "mouth",
+						"Only down from the last row reaches Done")
+			else:
+				_expect(target is Button and (target as Button).get_meta(&"kind", "") in ["preset", "eyes", "mouth"],
+						"The face grid keeps %s navigation among the face cards (%s)" % [way, button.name])
 
 
 func _button_named(parent: Node, text: String) -> Button:

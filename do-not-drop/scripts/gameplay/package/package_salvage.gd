@@ -32,7 +32,6 @@ func _ready() -> void:
 	material.albedo_color = Color("d9ad59")
 	mesh.material = material
 	tape_mesh.mesh = mesh
-	package.add_child.call_deferred(tape_mesh)
 	toy_mesh = Node3D.new()
 	toy_mesh.name = "ReplacementHen"
 	var body := MeshInstance3D.new()
@@ -59,7 +58,25 @@ func _ready() -> void:
 	beak.rotation.x = -PI / 2.0
 	beak.position = Vector3(0, 0.12, -0.19)
 	toy_mesh.add_child(beak)
-	package.add_child.call_deferred(toy_mesh)
+	_attach_meshes.call_deferred()
+
+
+## Deferred on this node, not on the package: if either is freed first the call is
+## dropped with it and nothing adds an already freed mesh.
+func _attach_meshes() -> void:
+	package.add_child(tape_mesh)
+	package.add_child(toy_mesh)
+
+
+## If the package (a level freed in the same frame) goes before _attach_meshes runs,
+## the tape and the hen never get a parent and nobody frees them (S-908).
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_PREDELETE:
+		return
+	if is_instance_valid(tape_mesh) and tape_mesh.get_parent() == null:
+		tape_mesh.free()
+	if is_instance_valid(toy_mesh) and toy_mesh.get_parent() == null:
+		toy_mesh.free()
 
 
 func _process(_delta: float) -> void:

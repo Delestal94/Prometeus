@@ -19,7 +19,7 @@ do-not-drop/scripts/gameplay/depot/depot_kit.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_mirror.gd|max-line-length 1
 do-not-drop/scripts/gameplay/depot/depot_roller_door.gd|max-line-length 2
 do-not-drop/scripts/gameplay/level_base.gd|max-line-length 2
-do-not-drop/scripts/gameplay/package/package.gd|max-line-length 4
+do-not-drop/scripts/gameplay/package/package.gd|max-line-length 2
 do-not-drop/scripts/gameplay/package/package.gd|max-public-methods 1
 do-not-drop/scripts/gameplay/package/package_contents_view.gd|max-line-length 2
 do-not-drop/scripts/gameplay/package/package_feedback.gd|max-line-length 1
@@ -31,7 +31,7 @@ do-not-drop/scripts/gameplay/route/chasing_dog.gd|max-line-length 3
 do-not-drop/scripts/gameplay/route/delivery_house.gd|max-line-length 3
 do-not-drop/scripts/gameplay/route/flock_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/roadside_story.gd|max-line-length 8
-do-not-drop/scripts/gameplay/route/route.gd|max-line-length 13
+do-not-drop/scripts/gameplay/route/route.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/route_sky.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/route_smoke_check.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/segments/construction_zone_segment.gd|max-line-length 2
@@ -45,7 +45,6 @@ do-not-drop/scripts/presentation/dashboard_gps.gd|max-line-length 3
 do-not-drop/scripts/presentation/door_reaction.gd|max-line-length 2
 do-not-drop/scripts/presentation/house_waiting_marker.gd|max-line-length 1
 do-not-drop/scripts/presentation/night_flares.gd|max-line-length 2
-do-not-drop/scripts/presentation/reference_truck.gd|max-line-length 14
 do-not-drop/scripts/presentation/sound_audit.gd|max-line-length 2
 do-not-drop/scripts/presentation/vehicle_effects.gd|max-line-length 1
 do-not-drop/scripts/presentation/vehicle_presentation.gd|max-line-length 6
@@ -53,7 +52,7 @@ do-not-drop/scripts/presentation/wildlife_animal.gd|max-line-length 6
 do-not-drop/scripts/presentation/windshield_rain.gd|max-line-length 2
 do-not-drop/scripts/tools/trailer_camera.gd|max-line-length 4
 do-not-drop/scripts/tools/trailer_shot.gd|max-line-length 10
-do-not-drop/scripts/ui/cosmetics_panel.gd|max-line-length 4
+do-not-drop/scripts/ui/cosmetics_panel.gd|max-line-length 2
 do-not-drop/scripts/ui/depot_panel.gd|max-line-length 3
 do-not-drop/scripts/ui/hud/hud_cargo_panel.gd|max-line-length 2
 do-not-drop/scripts/ui/hud/hud_pause.gd|max-line-length 3
