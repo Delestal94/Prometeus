@@ -66,10 +66,16 @@
 - **Todo `@rpc("any_peer")` pasa por `RpcGuard`** (`modules/net_session/rpc_guard.gd`): el remitente
   (`sender_ok()`, `from_host()` o `get_remote_sender_id()` comparado con quien corresponde), el cupo por
   peer en los pedidos confiables (`allow_request()`: 40 de golpe y 20 por segundo; las llamadas del host
-  no gastan), `finite_float/vec2/vec3/transform()` para números, vectores y poses (un `NaN` en una pose
-  rompe Jolt para todos), `dict_ok()` para diccionarios, `args_ok()` para arreglos y `text_ok()` para
-  textos. `tests/test_rpc_guard.gd` lee cada RPC `any_peer` del proyecto (módulos incluidos) y falla si
-  falta alguno; el que no pueda cumplirlo va a su `EXCEPTIONS` con el motivo. `EventBus.request()`
+  no gastan; `allow_critical_request()` para soltar algo, una caja o un asiento, que con el cupo gastado
+  todavía tiene una reserva de 10), `finite_float/vec2/vec3/transform()` para números, vectores y poses
+  (un `NaN` en una pose rompe Jolt para todos), `dict_ok()` para diccionarios, `args_ok()` para arreglos,
+  `text_ok()` para textos, `name_ok()` para `StringName` y `path_ok()` para `NodePath` (salvo que los
+  mande el host). `tests/test_rpc_guard.gd` lee cada RPC `any_peer` del proyecto (módulos incluidos) y falla si
+  falta alguno; el que no pueda cumplirlo va a su `EXCEPTIONS` con el motivo (o a `BUDGET_EXEMPT`, si
+  solo no gasta cupo, como `_report_level_ready`).
+- **Lo que suelta un jugador que se va** (caja, asiento, voto) escucha `NetworkManager.peer_removed`, no
+  `multiplayer.peer_disconnected`: un fantasma que se cae por la reconexión sale del roster enseguida y su
+  conexión se cierra 0,5-2 s después, cuando el nivel ya liberó a su jugador. `EventBus.request()`
   solo acepta los eventos de `request_cooldowns`.
 - **El color de un jugador es `PlayerColorSlot.slot(peer_id, paleta.size())`**, nunca `peer_id % 5`: sale
   de `NetworkManager.color_slot()`, que el host reparte por orden de llegada (el host siempre el 0, también

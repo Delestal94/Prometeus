@@ -422,14 +422,18 @@ static func request_lap_toggle(p: DeliveryPackage) -> void:
 	for candidate: Node in p.get_tree().get_nodes_in_group(&"player"):
 		if candidate.get_multiplayer_authority() == peer:
 			operator = candidate
-	if operator == null or String(operator.get(&"seat_node_path")).is_empty():
+	# Seated as the host sees it (the seat's occupant): the player's replicated
+	# seat path lags a sitting down, and the lap toggle is often the first thing pressed.
+	if operator == null or not SeatTending.is_seated(p.get_tree(), operator, p.multiplayer.is_server()):
 		return
 	if p.is_held and p.carrier == operator:
-		if is_instance_valid(p._lap_mount) and p._lap_mount.get(&"occupied_by") == null:
-			p._lap_mount.call(&"store", p)
+		var lap_mount: Node = SeatTending.lap_mount_of(p)
+		if lap_mount != null and lap_mount.get(&"occupied_by") == null:
+			lap_mount.call(&"store", p)
 	elif p.is_loaded and not p.is_held and p.current_mount != null:
-		p._lap_mount = p.current_mount
+		var shelf: Node = p.current_mount
 		p.take_by(operator)
+		SeatTending.bind_lap(p, shelf)
 	p.care.in_lap = p.is_held and p.carrier == operator
 	p._publish_care()
 
@@ -437,7 +441,11 @@ static func request_lap_toggle(p: DeliveryPackage) -> void:
 ## Host: someone dropped out. If they were looking after this box, its
 ## rescue window is held so the crew can reach it -- leaving never loses a
 ## box on the spot (docs/jugabilidad-paquetes-rescate.md, "Caída de un jugador").
+## Every peer hears of a leave (NetworkManager.peer_removed); only the host's
+## box changes.
 static func peer_left(p: DeliveryPackage, peer_id: int) -> void:
+	if not p.is_inside_tree() or not p.is_multiplayer_authority():
+		return
 	var carried_by_them: bool = is_instance_valid(p.carrier) and p.carrier.get_multiplayer_authority() == peer_id
 	if peer_id in [p.tender_peer_id, p._care_worker] or carried_by_them:
 		p.care.hold_crisis(DeliveryPackage.CareModel.CRISIS_SECONDS)

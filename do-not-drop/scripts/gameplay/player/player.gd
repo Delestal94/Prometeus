@@ -39,7 +39,8 @@ const BOB_SMOOTH_SPEED: float = 3.0
 ## no cosmetics system yet (docs/plan-desarrollo.md Fase 5), so this is the
 ## cheapest thing that actually solves "who is that". Same palette family as
 ## the rest of the UI (docs/direccion-visual.md), picked by the colour slot
-## the host gave the player (PlayerColorSlot, N-226): stable, distinct per player.
+## the host gave the player (PlayerColorSlot, N-226): stable for the session,
+## and with more than five aboard slots 5..7 wear the colours of 0..2 (N-228.2).
 const PLAYER_COLORS: Array[Color] = [
 	Color("83e2ba"), Color("f4c562"), Color("f47e6d"), Color("6db3d6"), Color("c9a0e0"),
 ]

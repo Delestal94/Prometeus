@@ -45,8 +45,8 @@ var _motion_velocity := Vector3.ZERO
 var _motion_initialized: bool = false
 var _motion_acceleration := Vector3.ZERO
 var _salvage_view: Node
-## The rack a box left for its tender's lap, to go back to.
-var _lap_mount: Node
+## Replicated: the rack bay a box on its tender's lap goes back to (SeatTending.bind_lap()).
+var lap_mount_path: NodePath = NodePath()
 ## What a loose box collides with: the environment, other boxes and the
 ## truck's cargo shell (vehicle.gd SHELL_LAYER) -- never the truck's own body,
 ## which a box sliding about the bay used to shove (it drove in jerks).
@@ -189,6 +189,7 @@ func _enter_tree() -> void:
 	sync.add_visibility_filter(func(peer_id: int) -> bool:
 		return not multiplayer.is_server() or bool(network.call(&"is_peer_ready", peer_id)))
 	network.connect(&"peer_level_ready", _on_peer_level_ready)
+	network.connect(&"peer_removed", peer_left)  # Not peer_disconnected: late for a dropped ghost (N-221).
 
 
 func _on_peer_level_ready(peer_id: int) -> void:
@@ -209,7 +210,6 @@ func _ready() -> void:
 	add_child(_salvage_view)
 	body_entered.connect(_on_body_entered)
 	if is_multiplayer_authority():
-		multiplayer.peer_disconnected.connect(peer_left)
 		_publish_net_state()
 
 
@@ -717,6 +717,7 @@ func take_by(player: Node) -> void:
 	if _is_run_active() and not is_held and not is_loaded \
 			and (vehicle == null or not bool(vehicle.call(&"carries", global_position))):
 		_rescue_pending = true
+	lap_mount_path = NodePath()
 	if is_loaded:
 		release_mount()
 	set_held(true)
@@ -745,7 +746,7 @@ func request_transfer(recipient_path: NodePath) -> void:
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and int(carrier.get_multiplayer_authority()) != sender_id:
 		return
-	var recipient := get_node_or_null(recipient_path) as Player
+	var recipient: Player = get_node_or_null(recipient_path) as Player if RpcGuard.path_ok(recipient_path) else null
 	if recipient == null or recipient == carrier or recipient.carried_package != null:
 		return
 	if _reach_origin(recipient).distance_to(_reach_origin(carrier)) > TRANSFER_REACH:
@@ -759,12 +760,12 @@ func request_transfer(recipient_path: NodePath) -> void:
 ## A carrier can always put a box back on the floor. Unlike a mount this
 ## keeps it loose and physical, so a mistaken pickup never traps the player.
 ## `in_vehicle` as in submit_carry_transform(): set down in the truck, it's
-## placed on the host's truck and starts out moving with it.
+## placed on the host's truck and starts out moving with it. Critical (RpcGuard): a lost one leaves hands full.
 @rpc("any_peer", "call_local", "reliable")
 func request_drop(drop_transform: Transform3D, in_vehicle: bool = false) -> void:
 	if not is_multiplayer_authority() or not is_held or not RpcGuard.finite_transform(drop_transform):
 		return
-	if not RpcGuard.allow_request(self):
+	if not RpcGuard.allow_critical_request(self):
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and carrier != null and int(carrier.get_multiplayer_authority()) != sender_id:
@@ -797,7 +798,7 @@ func request_lap_toggle() -> void:
 		PackageRescue.request_lap_toggle(self)
 
 
-## Host: someone dropped out. If they were looking after this box, its
+## Host: someone dropped out (peer_removed). If they were looking after this box, its
 ## rescue window is held so the crew can reach it -- leaving never loses a
 ## box on the spot (docs/jugabilidad-paquetes-rescate.md, "Caída de un jugador").
 func peer_left(peer_id: int) -> void:
@@ -893,6 +894,7 @@ func get_half_extents() -> Vector3:
 
 
 func _release_carrier() -> void:
+	lap_mount_path = NodePath()
 	if carrier != null and is_instance_valid(carrier) and carrier.is_inside_tree():
 		carrier.rpc(&"drop_carried")
 	carrier = null

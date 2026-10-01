@@ -68,6 +68,9 @@ properties/15/replication_mode = 2
 properties/16/path = NodePath(".:salvage_state")
 properties/16/spawn = true
 properties/16/replication_mode = 2
+properties/17/path = NodePath(".:lap_mount_path")
+properties/17/spawn = true
+properties/17/replication_mode = 2
 
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4

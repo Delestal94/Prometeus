@@ -9,10 +9,13 @@ extends SceneTree
 ##   or in a helper it calls: same file, the class it extends, or a
 ##   ClassName.function());
 ## - a reliable any_peer RPC either comes from the host (RpcGuard.from_host)
-##   or spends the sender's request budget (RpcGuard.allow_request);
+##   or spends the sender's request budget (RpcGuard.allow_request, or
+##   allow_critical_request with its reserve); letting go of a box or a seat
+##   is critical (CRITICAL_RPCS), and BUDGET_EXEMPT says why one spends none;
 ## - float/vector/transform parameters are checked for NaN/inf, Dictionary
-##   ones with RpcGuard.dict_ok(), String ones with RpcGuard.text_ok(), arrays
-##   by size;
+##   ones with RpcGuard.dict_ok(), String ones with RpcGuard.text_ok(),
+##   StringName ones with RpcGuard.name_ok() and NodePath ones with
+##   RpcGuard.path_ok() (unless the host sent them), arrays by size;
 ## - RPCs that rely on arriving in order share a reliable channel
 ##   (ORDERED_PAIRS: the colour slots before the campaign applied by slot);
 ## - EventBus only relays the requests a player can make (a callout, the
@@ -22,9 +25,23 @@ extends SceneTree
 ## "res://path.gd:function" -> why it can't follow the rules. Empty on purpose:
 ## every any_peer RPC in the project passes today.
 const EXCEPTIONS: Dictionary = {}
+## "res://path.gd:function" -> why a reliable request spends no budget at all
+## (every other rule still applies).
+const BUDGET_EXEMPT: Dictionary = {
+	"res://modules/net_session/net_session.gd:_report_level_ready":
+		"A lost one leaves the client's level without players; only a report the host owes does anything",
+}
+## Requests whose loss leaves host and peer disagreeing for good: they keep a
+## reserve once the sender's budget is spent (RpcGuard.allow_critical_request).
+const CRITICAL_RPCS: Array[String] = [
+	"res://scripts/gameplay/package/package.gd:request_drop",
+	"res://modules/interaction/seat_point.gd:release_occupant",
+]
+## Tokens that show a reliable request spends the sender's budget.
+const BUDGET_CHECKS: Array[String] = ["RpcGuard.allow_request(", "RpcGuard.allow_critical_request("]
 ## Tokens that show a function looked at its sender.
 const SENDER_CHECKS: Array[String] = ["get_remote_sender_id()", "RpcGuard.sender_ok(", "RpcGuard.sender(",
-	"RpcGuard.from_host(", "RpcGuard.allow_request("]
+	"RpcGuard.from_host(", "RpcGuard.allow_request(", "RpcGuard.allow_critical_request("]
 ## Tokens that show a float or vector was checked for NaN/inf.
 const FINITE_CHECKS: Array[String] = ["RpcGuard.finite", "is_finite(", "is_nan("]
 ## The project had 36 any_peer RPCs when this test was last updated: far
@@ -65,6 +82,10 @@ func _run() -> void:
 		"Portable modules are scanned too (NetEventBus.request)")
 	for key: String in EXCEPTIONS:
 		_expect(found.has(key), "Exception %s still names an any_peer RPC" % key)
+	for key: String in BUDGET_EXEMPT:
+		_expect(found.has(key), "Budget exemption %s still names an any_peer RPC" % key)
+	for key: String in CRITICAL_RPCS:
+		_expect(found.has(key), "Critical request %s still names an any_peer RPC" % key)
 
 	_check_ordered_pairs()
 	await _check_event_bus()
@@ -80,10 +101,14 @@ func _check_rpc(path: String, rpc: Dictionary) -> void:
 	if EXCEPTIONS.has(key):
 		return
 	var body: String = _expanded_body(path, rpc)
+	var from_host: bool = body.contains("RpcGuard.from_host(")
 	_expect(_has_any(body, SENDER_CHECKS), "%s checks who sent it (RpcGuard or get_remote_sender_id())" % key)
-	if bool(rpc.reliable) and not body.contains("RpcGuard.from_host("):
-		_expect(body.contains("RpcGuard.allow_request("),
+	if bool(rpc.reliable) and not from_host and not BUDGET_EXEMPT.has(key):
+		_expect(_has_any(body, BUDGET_CHECKS),
 			"%s is a reliable request: RpcGuard.allow_request() limits it per peer" % key)
+	if CRITICAL_RPCS.has(key):
+		_expect(body.contains("RpcGuard.allow_critical_request("),
+			"%s lets go of something: RpcGuard.allow_critical_request() keeps a reserve for it" % key)
 	for parameter: Dictionary in rpc.params:
 		var type_name: String = parameter.type
 		var name_: String = parameter.name
@@ -93,6 +118,10 @@ func _check_rpc(path: String, rpc: Dictionary) -> void:
 			_expect(body.contains("RpcGuard.dict_ok(%s" % name_), "%s bounds its dictionary %s" % [key, name_])
 		elif type_name == "String":
 			_expect(body.contains("RpcGuard.text_ok(%s" % name_), "%s bounds its text %s" % [key, name_])
+		elif type_name == "StringName" and not from_host:
+			_expect(body.contains("RpcGuard.name_ok(%s" % name_), "%s bounds its StringName %s" % [key, name_])
+		elif type_name == "NodePath" and not from_host:
+			_expect(body.contains("RpcGuard.path_ok(%s" % name_), "%s bounds its NodePath %s" % [key, name_])
 		elif type_name == "Array" or type_name.begins_with("Packed"):
 			_expect(body.contains(".size()") or body.contains("RpcGuard.args_ok(%s" % name_),
 				"%s bounds the size of %s" % [key, name_])

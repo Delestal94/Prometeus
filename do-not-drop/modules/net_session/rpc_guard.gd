@@ -9,11 +9,16 @@ extends RefCounted
 ##   sender_ok(node[, peer])  a local call, or a connected peer (exactly `peer`, if given)
 ##   from_host(node)          the host is telling this peer something
 ##   allow_request(node)      sender_ok() plus the sender's request budget (reliable requests)
+##   allow_critical_request(node)  the same, with a reserve of its own once the budget
+##                            is spent: for a request whose loss leaves the host and
+##                            the peer disagreeing for good (letting go of something)
 ##   finite_float/vec2/vec3/transform   no NaN, no inf, no absurd coordinates: one NaN
 ##                            in a pose breaks the physics engine for every peer
 ##   dict_ok(d, max_keys)     a small, flat dictionary of plain values
 ##   args_ok(a, max_size)     a short array of plain values
 ##   text_ok(s)               a short string
+##   name_ok(n)               a short StringName (an id, an event name)
+##   path_ok(p)               a NodePath of a sane length
 ##
 ## Whatever fails a check is dropped silently; the budget warns once per peer.
 ## A NetSession forgets a peer's budget when it leaves (forget_peer) and every
@@ -26,16 +31,26 @@ extends RefCounted
 ## spend it.
 const REQUESTS_PER_SECOND: float = 20.0
 const REQUEST_BURST: float = 40.0
+## Requests a peer must not lose to its own flood (allow_critical_request()):
+## dropped, the host and that peer disagree for good -- a box still in hands on
+## one side and on the floor on the other. They spend the ordinary budget while
+## there is some, then a reserve of their own: CRITICAL_RESERVE at once,
+## refilled at CRITICAL_PER_SECOND. A client looping one is still cut.
+const CRITICAL_RESERVE: float = 10.0
+const CRITICAL_PER_SECOND: float = 5.0
 ## Metres. Past this a coordinate is garbage (float precision was gone long
 ## before).
 const MAX_COORDINATE: float = 1.0e6
 const MAX_TEXT_LENGTH: int = 64
+## Characters. A node path from one peer's tree to another's: the deepest in a
+## level is under a hundred.
+const MAX_PATH_LENGTH: int = 256
 ## Per-frame input dictionaries carry a handful of keys.
 const MAX_INPUT_KEYS: int = 16
 ## Arguments of a relayed request (NetEventBus.request()).
 const MAX_ARGS: int = 8
 
-## Remote peer id -> {"tokens": float, "at": msec, "warned": bool}.
+## Remote peer id -> {"tokens": float, "reserve": float, "at": msec, "warned": bool}.
 static var _buckets: Dictionary = {}
 
 
@@ -96,25 +111,48 @@ static func allow_request(node: Node) -> bool:
 	return take_request(sender(node), Time.get_ticks_msec())
 
 
+## allow_request() for a request that must not be lost to the sender's own
+## flood: once its budget is spent it still has CRITICAL_RESERVE.
+static func allow_critical_request(node: Node) -> bool:
+	if not sender_ok(node):
+		return false
+	if is_local_call(node):
+		return true
+	return take_critical_request(sender(node), Time.get_ticks_msec())
+
+
 ## Spends one request from `peer_id`'s bucket at time `now_msec`. Public so
 ## tests can drive the clock.
 static func take_request(peer_id: int, now_msec: int) -> bool:
+	return _spend(peer_id, now_msec, false)
+
+
+## take_request() for a critical request: the reserve once the bucket is empty.
+static func take_critical_request(peer_id: int, now_msec: int) -> bool:
+	return _spend(peer_id, now_msec, true)
+
+
+static func _spend(peer_id: int, now_msec: int, critical: bool) -> bool:
 	var bucket: Dictionary = _buckets.get(peer_id, {})
 	if bucket.is_empty():
-		bucket = {"tokens": REQUEST_BURST, "at": now_msec, "warned": false}
+		bucket = {"tokens": REQUEST_BURST, "reserve": CRITICAL_RESERVE, "at": now_msec, "warned": false}
 		_buckets[peer_id] = bucket
 	var elapsed: float = maxf(0.0, float(now_msec - int(bucket["at"])) / 1000.0)
 	bucket["tokens"] = minf(REQUEST_BURST, float(bucket["tokens"]) + elapsed * REQUESTS_PER_SECOND)
+	bucket["reserve"] = minf(CRITICAL_RESERVE, float(bucket["reserve"]) + elapsed * CRITICAL_PER_SECOND)
 	bucket["at"] = now_msec
-	if float(bucket["tokens"]) < 1.0:
-		# Once per peer: a flood would otherwise flood the log too.
-		if not bool(bucket["warned"]):
-			bucket["warned"] = true
-			push_warning("RpcGuard: peer %d is over %d requests a second; dropping the rest"
-				% [peer_id, roundi(REQUESTS_PER_SECOND)])
-		return false
-	bucket["tokens"] = float(bucket["tokens"]) - 1.0
-	return true
+	if float(bucket["tokens"]) >= 1.0:
+		bucket["tokens"] = float(bucket["tokens"]) - 1.0
+		return true
+	if critical and float(bucket["reserve"]) >= 1.0:
+		bucket["reserve"] = float(bucket["reserve"]) - 1.0
+		return true
+	# Once per peer: a flood would otherwise flood the log too.
+	if not bool(bucket["warned"]):
+		bucket["warned"] = true
+		push_warning("RpcGuard: peer %d is over %d requests a second; dropping the rest"
+			% [peer_id, roundi(REQUESTS_PER_SECOND)])
+	return false
 
 
 ## A peer left: its budget goes with it.
@@ -154,6 +192,16 @@ static func finite_transform(value: Transform3D) -> bool:
 
 static func text_ok(value: String, max_length: int = MAX_TEXT_LENGTH) -> bool:
 	return value.length() <= max_length
+
+
+## An id or an event name that came over the network: short, like text_ok().
+static func name_ok(value: StringName, max_length: int = MAX_TEXT_LENGTH) -> bool:
+	return String(value).length() <= max_length
+
+
+## A node path that came over the network, before get_node() walks it.
+static func path_ok(value: NodePath, max_length: int = MAX_PATH_LENGTH) -> bool:
+	return String(value).length() <= max_length
 
 
 ## At most `max_keys` entries, string keys, and only plain values: null, bool,

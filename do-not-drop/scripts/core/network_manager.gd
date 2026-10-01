@@ -36,11 +36,17 @@ const MAX_PLAYERS: int = 8
 ## a peer who left so it gets it back when it rejoins, N-221;
 ## 16: the mud segment replicates its state and receives push beats over RPC, N-108;
 ## 17: the van has a seventh package mount (CargoBay/RightSeat3PackageMount, a new
-## interactable) and three passenger seats tend it, N-228.4).
+## interactable) and three passenger seats tend it, N-228.4;
+## 18: a package replicates lap_mount_path, the bay a lap box goes back to, N-228.8;
+## 19: the handshake and _sync_color_slots carry the slots of those who left
+## ("departed"), a full room takes back a player whose ghost still holds its
+## place (decided from its ready reply on LAN), a LAN identity is a hash chain
+## (each rejoin claims the link before), and _report_level_ready only counts a
+## report the host owes, N-221 follow-ups).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 17
+const PROTOCOL_VERSION: int = 19
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -91,7 +97,8 @@ var _color_slots: Dictionary = {}
 ## Every side: the last slot of peers who left, {peer_id: slot}, so their
 ## line in the results and the campaign entry the host keeps for them
 ## (CrewProgression captures a leaver after its slot was released) still
-## match the colour they wore. The DEPARTED_MEMORY most recent.
+## match the colour they wore. The DEPARTED_MEMORY most recent. The host sends
+## its own with the slot map, so a joiner who wasn't there reads the same.
 var _departed_slots: Dictionary = {}
 const DEPARTED_MEMORY: int = 16
 ## Host (N-221): slots kept for someone who left and may come back,
@@ -104,6 +111,11 @@ var _slot_reservations: Dictionary = {}
 ## clean instead of inheriting the merit and card the campaign keeps under
 ## that slot (inherits_color_slot()) -- unless they turn out to be that one.
 var _fresh_slots: Dictionary = {}
+## Host: the reservation a joiner took while it authenticated, {peer_id:
+## {"slot": int, "reservation": {...}}}, until it is on the roster. If it never
+## gets there, or turns out to be someone back for another kept slot, the
+## reservation goes back to whoever it was kept for (N-221).
+var _borrowed_reservations: Dictionary = {}
 
 const DEFAULT_LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const LEVEL_SCENES: Array[String] = ["res://scenes/gameplay/level_base.tscn", "res://scenes/gameplay/level_endless.tscn"]
@@ -154,6 +166,12 @@ func inherits_color_slot(peer_id: int) -> bool:
 	return not _fresh_slots.has(peer_id)
 
 
+## Who left the slot `peer_id` took without inheriting it (inherits_color_slot()
+## false), 0 if nobody: what the campaign keeps under it is theirs.
+func slot_kept_for(peer_id: int) -> int:
+	return int(_fresh_slots.get(peer_id, 0))
+
+
 # --- What the handshake carries for this game ----------------------------------
 
 ## Host: decided once, so every joiner gets the same world no matter which
@@ -172,8 +190,8 @@ func _on_session_hosted() -> void:
 
 
 ## Its colour slot first, so the handshake already carries it (and the crew
-## already has it when the newcomer shows up). No free slot means no room:
-## MAX_PLAYERS is also the transports' cap.
+## already has it when the newcomer shows up). No free slot means no room;
+## NetSession asks again once a joiner whose ghost holds a slot says who it is.
 func _admit_peer(id: int) -> String:
 	if _assign_color_slot(id) < 0:
 		return "full"
@@ -186,6 +204,8 @@ func _admit_peer(id: int) -> String:
 ## stale while it loaded the level (others came and went).
 func _peer_joined(id: int) -> void:
 	if multiplayer.is_server():
+		# On the roster: a reservation it took is spent for good.
+		_borrowed_reservations.erase(id)
 		_assign_color_slot(id)
 		_publish_color_slots()
 
@@ -194,16 +214,21 @@ func _peer_joined(id: int) -> void:
 ## knows who it was (NetSession.peer_identity(), N-221) the slot is kept for
 ## it while others are free, so it finds its colour -- and with it its merit
 ## -- when it comes back. Also a joiner that never made it in (its
-## authentication failed) and a ghost connection dropped for its rejoin.
+## authentication failed) and a ghost connection dropped for its rejoin. A
+## joiner that never made it in gives back the reservation it took.
 func _peer_left(id: int) -> void:
 	if not multiplayer.is_server() or not _color_slots.has(id):
 		return
 	var slot: int = int(_color_slots[id])
+	var borrowed: Dictionary = _borrowed_reservations.get(id, {})
 	ColorSlots.release(_color_slots, id)
 	_remember_departed(id, slot)
 	_fresh_slots.erase(id)
+	_borrowed_reservations.erase(id)
 	var identity: String = peer_identity(id)
-	if not identity.is_empty():
+	if not borrowed.is_empty() and int(borrowed.slot) == slot:
+		_slot_reservations[slot] = borrowed.reservation
+	elif not identity.is_empty():
 		_slot_reservations[slot] = {"identity": identity, "peer": id}
 	_publish_color_slots()
 
@@ -216,6 +241,7 @@ func _peer_left(id: int) -> void:
 func _peer_returned(id: int, previous_id: int) -> void:
 	if _fresh_slots.has(id) and int(_fresh_slots[id]) == previous_id:
 		_fresh_slots.erase(id)
+		_borrowed_reservations.erase(id)
 		return
 	var kept: int = -1
 	for slot: int in _slot_reservations:
@@ -225,21 +251,29 @@ func _peer_returned(id: int, previous_id: int) -> void:
 	if kept >= 0:
 		_slot_reservations.erase(kept)
 		if not _slot_worn_by_other(kept, id):
+			# The slot it was handed may have been kept for someone else: theirs again.
+			var borrowed: Dictionary = _borrowed_reservations.get(id, {})
+			if not borrowed.is_empty() and int(_color_slots.get(id, -1)) == int(borrowed.slot):
+				_slot_reservations[int(borrowed.slot)] = borrowed.reservation
+			_borrowed_reservations.erase(id)
 			_color_slots[id] = kept
 			_fresh_slots.erase(id)
 
 
 func _session_state() -> Dictionary:
 	return {"seed": world_seed, "houses": world_house_count, "locked": world_locked_traps,
-		"runs": world_completed_runs, "colors": _color_slots}
+		"runs": world_completed_runs, "colors": _color_slots, "departed": _departed_slots}
 
 
-## A handshake without the world, or with a colour slot map that doesn't
-## check out (N-226), is a connection error, not a version one.
+## A handshake without the world, or with a colour slot map (or the slots of
+## those who left) that doesn't check out (N-226), is a connection error, not
+## a version one.
 func _validate_session_state(state: Dictionary) -> String:
 	if not state.has_all(["seed", "houses", "locked", "runs", "colors"]):
 		return "connection"
 	if not ColorSlots.is_valid(state.colors, MAX_PLAYERS):
+		return "connection"
+	if not ColorSlots.is_valid_departed(state.get("departed", {}), MAX_PLAYERS, DEPARTED_MEMORY):
 		return "connection"
 	return ""
 
@@ -249,6 +283,7 @@ func _apply_session_state(state: Dictionary) -> void:
 	world_house_count = int(state.houses)
 	world_locked_traps = state.locked
 	world_completed_runs = int(state.runs)
+	_apply_departed_slots(state.get("departed", {}))
 	_apply_color_slots(state.get("colors", {}))
 
 
@@ -264,6 +299,7 @@ func _reset_session_state() -> void:
 	_departed_slots = {}
 	_slot_reservations = {}
 	_fresh_slots = {}
+	_borrowed_reservations = {}
 	color_slots_changed.emit({})
 
 
@@ -322,7 +358,9 @@ func _assign_color_slot(id: int) -> int:
 	if not had and slot >= 0:
 		_departed_slots.erase(id)
 		if _slot_reservations.has(slot):
-			_fresh_slots[id] = int((_slot_reservations[slot] as Dictionary).get("peer", 0))
+			var reservation: Dictionary = _slot_reservations[slot]
+			_fresh_slots[id] = int(reservation.get("peer", 0))
+			_borrowed_reservations[id] = {"slot": slot, "reservation": reservation}
 			_slot_reservations.erase(slot)
 	return slot
 
@@ -347,18 +385,36 @@ func _remember_departed(id: int, slot: int) -> void:
 func _publish_color_slots() -> void:
 	color_slots_changed.emit(_color_slots.duplicate())
 	if is_online() and multiplayer.is_server():
-		_sync_color_slots.rpc(_color_slots)
+		_sync_color_slots.rpc(_color_slots, _departed_slots)
 
 
-## Host -> clients: the whole {peer_id: slot} map. Whole rather than a change:
-## it's a few ints, sent when someone joins or leaves, and a copy that went
-## stale can't drift further. Only the host's is taken, and only if it checks out.
+## Host -> clients: the whole {peer_id: slot} map, and the slots of those who
+## left. Whole rather than a change: it's a few ints, sent when someone joins
+## or leaves, and a copy that went stale can't drift further. Only the host's
+## is taken, and only if both check out.
 @rpc("authority", "call_remote", "reliable")
-func _sync_color_slots(slots: Variant) -> void:
+func _sync_color_slots(slots: Variant, departed: Variant = {}) -> void:
 	if multiplayer.is_server() or multiplayer.get_remote_sender_id() != HOST_ID:
 		return
-	if not _apply_color_slots(slots):
+	if not ColorSlots.is_valid(slots, MAX_PLAYERS) \
+			or not ColorSlots.is_valid_departed(departed, MAX_PLAYERS, DEPARTED_MEMORY):
 		push_warning("NetworkManager: ignored a colour slot map from the host that doesn't check out")
+		return
+	_apply_departed_slots(departed)
+	_apply_color_slots(slots)
+
+
+## Client: the host's memory of who left wearing what (handshake or
+## _sync_color_slots), in place of this peer's own, before the map that may
+## add to it: a joiner reads the same colour for them as everyone else.
+func _apply_departed_slots(raw: Variant) -> bool:
+	if not ColorSlots.is_valid_departed(raw, MAX_PLAYERS, DEPARTED_MEMORY):
+		return false
+	var received: Dictionary = raw
+	_departed_slots = {}
+	for peer: Variant in received:
+		_departed_slots[int(peer)] = int(received[peer])
+	return true
 
 
 ## Client: takes a map from the host (handshake or _sync_color_slots) if it is

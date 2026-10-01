@@ -106,6 +106,13 @@ var _known_slots: Dictionary = {}
 ## The last campaign the host sent, kept to read it again if this client's
 ## slot map changes after it (the map and the campaign travel separately).
 var _last_host_data: Dictionary = {}
+## Host: campaign entries a newcomer pushed out (N-221). It took the slot kept
+## for someone who left, with the room otherwise full: the entry under that slot
+## is theirs, and the newcomer's own would overwrite it at the next capture.
+## {old peer id: entry}, moved along by peer_rejoined and given back when they
+## are on the roster again. Session only; the DISPLACED_MEMORY most recent.
+var _displaced_players: Dictionary = {}
+const DISPLACED_MEMORY: int = 16
 var _using_host_campaign: bool = false
 
 
@@ -142,6 +149,7 @@ func reset_campaign(persist: bool = false) -> bool:
 	_run_milestones.clear()
 	supplies.clear()
 	_saved_players_by_slot.clear()
+	_displaced_players.clear()
 	_last_host_data.clear()
 	_known_peers.assign(_current_peers())
 	_refresh_known_slots(_known_peers)
@@ -493,7 +501,10 @@ func _normalized_players(raw_players: Dictionary, version: int = CAMPAIGN_VERSIO
 
 
 func _apply_player_entry(peer_id: int, players_by_slot: Dictionary) -> void:
-	var entry: Dictionary = players_by_slot.get(player_slot(peer_id), {})
+	_apply_entry(peer_id, players_by_slot.get(player_slot(peer_id), {}))
+
+
+func _apply_entry(peer_id: int, entry: Dictionary) -> void:
 	merit[peer_id] = maxi(int(entry.get("merit", 0)), 0)
 	dry_deliveries[peer_id] = maxi(int(entry.get("dry_deliveries", 0)), 0)
 	var card_id: int = int(entry.get("card", -1))
@@ -503,12 +514,30 @@ func _apply_player_entry(peer_id: int, players_by_slot: Dictionary) -> void:
 
 func _apply_saved_player(peer_id: int) -> void:
 	var network := _network() if is_inside_tree() else null
+	var displaced: Dictionary = _displaced_players.get(peer_id, {})
+	_displaced_players.erase(peer_id)
 	if network != null and not network.inherits_color_slot(peer_id):
 		# Took the slot kept for someone who left while the room was full
-		# (N-221): what's saved under it is theirs, so this player starts clean.
-		_apply_player_entry(peer_id, {})
+		# (N-221): what's saved under it is theirs -- kept for them, before this
+		# player's own is captured over it -- so this player starts clean.
+		var owner: int = network.slot_kept_for(peer_id)
+		var slot: int = player_slot(peer_id)
+		if owner > 0 and _saved_players_by_slot.has(slot):
+			_keep_displaced(owner, _saved_players_by_slot[slot])
+		_apply_entry(peer_id, displaced)
+		return
+	if not displaced.is_empty():
+		# Back after a newcomer took its slot: its own entry, not the slot's.
+		_apply_entry(peer_id, displaced)
 		return
 	_apply_player_entry(peer_id, _saved_players_by_slot)
+
+
+func _keep_displaced(owner: int, entry: Dictionary) -> void:
+	_displaced_players.erase(owner)
+	_displaced_players[owner] = entry.duplicate(true)
+	while _displaced_players.size() > DISPLACED_MEMORY:
+		_displaced_players.erase(_displaced_players.keys()[0])
 
 
 func _capture_current_players() -> void:
@@ -563,6 +592,9 @@ func _on_roster_changed(raw_peers: Array) -> void:
 	if network == null:
 		return
 	if not network.is_online():
+		if raw_peers.size() <= 1:
+			# The session is over: the peer ids those were kept under mean nothing now.
+			_displaced_players.clear()
 		if _using_host_campaign:
 			_using_host_campaign = false
 			load_campaign()
@@ -600,7 +632,7 @@ func _on_color_slots_changed(_slots: Dictionary) -> void:
 ## when they reach the roster); what they earned this run so far, kept by peer
 ## id, moves over here now.
 func _on_peer_rejoined(old_id: int, new_id: int) -> void:
-	for source: Dictionary in [_run_merit, _run_milestones]:
+	for source: Dictionary in [_run_merit, _run_milestones, _displaced_players]:
 		if source.has(old_id):
 			source[new_id] = source[old_id]
 			source.erase(old_id)

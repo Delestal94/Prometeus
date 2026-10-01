@@ -5,9 +5,15 @@ extends Node
 ## N-235: once the client is in, both ends drop a silent peer within the
 ## session timeout (20 s), not the load budget; a joiner's level load within
 ## 10 s of that budget prints a NETLOG WARNING line.
-## Last stage (N-221): the client that left holding a box joins again from the
-## same running game and gets its colour slot and merit back under its new
-## peer id.
+## Next to last stage (N-221): the client that left holding a box joins again
+## from the same running game and gets its colour slot and merit back under its
+## new peer id.
+## Last stage (N-221 follow-up): the client vanishes without a word while
+## carrying a box in crisis -- its link is left open but nobody polls it, a
+## pulled cable -- and joins again before the host noticed. The host drops the
+## old connection as a ghost when the new one says who it is; the box's rescue
+## window is held right then (NetworkManager.peer_removed), not when the ghost's
+## connection closes 0.5-2 s later, once its player let go of the box.
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -35,6 +41,9 @@ var _disconnect_ok: bool = false
 var _deadline: int = 0
 var _paper: Dictionary = {}
 var _order: Array = []
+## Client: the link it vanished from, kept so it isn't freed -- freeing it
+## closes it, and the host would hear of it.
+var _vanished_peer: MultiplayerPeer
 
 
 func _ready() -> void:
@@ -206,6 +215,8 @@ func _run_host() -> void:
 	_expect(not package.is_held and package.carrier == null and package.collision_layer == 4,
 		"disconnected client's package is loose on the host")
 	await _check_rejoin(old_client, old_slot, old_merit)
+	if _client_peer_id > 0:
+		await _check_ghost_rejoin(old_slot)
 	await _finish(not _failed, "all pair checks passed")
 
 
@@ -234,6 +245,65 @@ func _check_rejoin(old_client: int, old_slot: int, old_merit: int) -> void:
 	# Not its suit: this client wears a uniform on purpose (test_network_rejoin covers the suit).
 	rpc_id(_client_peer_id, &"_client_check_rejoin", _client_peer_id, old_slot)
 	await _wait_for_report(&"rejoin")
+
+
+## N-221 follow-up: back from a pulled cable before the host noticed. The
+## client's link is a ghost the host only drops when the new one says who it
+## is; SceneMultiplayer lets go of it then and there (no peer_disconnected
+## for it, ever), and its link closes after the level freed its player.
+func _check_ghost_rejoin(slot: int) -> void:
+	var package: DeliveryPackage = _level.packages[0]
+	var ghost: int = _client_peer_id
+	var client_player: Player = _player(ghost)
+	package.call(&"take_by", client_player)
+	package.care = DeliveryPackage.CareModel.new()
+	package.care.begin_crisis(&"fragile")
+	package.care.crisis_left = 5.0
+	await _pump(0.8)
+	_expect(client_player.carried_package == package and package.carrier == client_player,
+		"client holds a box in crisis before vanishing")
+	# The host must not notice the silence before the client is back: that
+	# takes a level load.
+	var enet := get_tree().root.multiplayer.multiplayer_peer as ENetMultiplayerPeer
+	enet.get_peer(ghost).set_timeout(32, 120000, 120000)
+	var removed: Array = []
+	_network.connect(&"peer_removed", func(id: int) -> void: removed.append(id))
+	var disconnected: Array = []
+	var on_disconnected: Callable = func(id: int) -> void: disconnected.append(id)
+	get_tree().root.multiplayer.peer_disconnected.connect(on_disconnected)
+	_client_peer_id = 0
+	rpc_id(ghost, &"_client_vanish_and_rejoin")
+	var came_back: bool = await _wait_until(func() -> bool:
+		for peer: int in get_tree().root.multiplayer.get_peers():
+			if peer != ghost and _player(peer) != null:
+				return true
+		return false, TIMEOUT_SECONDS * 2.0)
+	if not came_back:
+		_expect(false, "the client that vanished joins the session again")
+		return
+	for peer: int in get_tree().root.multiplayer.get_peers():
+		if peer != ghost:
+			_client_peer_id = peer
+	await _pump(0.3)  # The level frees the ghost's player at the end of the frame it was dropped in.
+	_expect(not (_network.get(&"peer_ids") as Array).has(ghost) and removed == [ghost],
+		"the host drops the ghost as the client comes back (removed %s)" % [removed])
+	_expect(not package.is_held and package.carrier == null, "the ghost's box is loose on the host")
+	var window: float = package.care.crisis_left
+	_expect(window >= DeliveryPackage.CareModel.CRISIS_SECONDS - 1.0,
+		"the box's rescue window was held when the ghost was dropped (%.1f s left)" % window)
+	# SceneMultiplayer lets go of it as it is dropped (disconnect_peer(), its
+	# signals blocked), not when its link closes: nothing more is sent to a
+	# closing link ("max channels: 0"; run-net-pair.sh greps for it), and the
+	# other clients hear it left.
+	_expect(not get_tree().root.multiplayer.get_peers().has(ghost),
+		"the host's multiplayer lets go of the ghost as it is dropped")
+	await _pump(2.5)
+	get_tree().root.multiplayer.peer_disconnected.disconnect(on_disconnected)
+	_expect(not disconnected.has(ghost),
+		"the ghost is let go of by the host itself, not when its link closes (no peer_disconnected for it)")
+	_expect(removed == [ghost], "the ghost's link closing removes nothing more (removed %s)" % [removed])
+	rpc_id(_client_peer_id, &"_client_check_ghost_rejoin", _client_peer_id, slot)
+	await _wait_for_report(&"ghost_rejoin")
 
 
 func _watch_client() -> void:
@@ -368,6 +438,35 @@ func _client_disconnect_while_carrying(package_path: NodePath) -> void:
 	if error != OK:
 		print("PAIR role=client FAIL could not rejoin (error %d)" % error)
 		get_tree().quit(1)
+
+
+## A pulled cable: the link stays open, unpolled (_vanished_peer), and the
+## session ends on this side only. Then the game joins again.
+@rpc("authority", "call_remote", "reliable")
+func _client_vanish_and_rejoin() -> void:
+	await _pump(0.2)
+	var api: MultiplayerAPI = get_tree().root.multiplayer
+	_vanished_peer = api.multiplayer_peer
+	api.multiplayer_peer = OfflineMultiplayerPeer.new()
+	_network.call(&"leave_session")  # Nothing reaches the host: the link isn't closed.
+	_level.queue_free()
+	_level = null
+	await _pump(1.0)
+	_deadline = Time.get_ticks_msec() + int(TIMEOUT_SECONDS * 2.0 * 1000.0)
+	var error: Error = _network.call(&"join_session", "127.0.0.1", PORT)
+	if error != OK:
+		print("PAIR role=client FAIL could not rejoin after vanishing (error %d)" % error)
+		get_tree().quit(1)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _client_check_ghost_rejoin(my_id: int, slot: int) -> void:
+	await _pump(0.4)
+	var me: int = get_tree().root.multiplayer.get_unique_id()
+	var seen: int = int(_network.call(&"color_slot", me))
+	var ok: bool = me == my_id and seen == slot and _player(me) != null
+	_report(&"ghost_rejoin", ok,
+		"the client back after vanishing wears its slot again (slot %d, sees %d)" % [slot, seen])
 
 
 @rpc("authority", "call_remote", "reliable")

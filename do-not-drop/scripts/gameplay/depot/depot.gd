@@ -394,7 +394,7 @@ func request_supply(supply_id: StringName) -> void:
 	var network: NETWORK_MANAGER = _network()
 	if network != null and network.is_online() and not network.is_host():
 		return
-	if not RpcGuard.allow_request(self):
+	if not RpcGuard.allow_request(self) or not RpcGuard.name_ok(supply_id):
 		return
 	var manager: RUN_MANAGER = _run_manager()
 	if manager != null and (manager.is_running or not manager.results.is_empty()):
@@ -423,7 +423,7 @@ func request_discounted_supply(supply_id: StringName) -> void:
 	var network: NETWORK_MANAGER = _network()
 	if network != null and network.is_online() and not network.is_host():
 		return
-	if not RpcGuard.allow_request(self):
+	if not RpcGuard.allow_request(self) or not RpcGuard.name_ok(supply_id):
 		return
 	var manager: RUN_MANAGER = _run_manager()
 	if manager != null and (manager.is_running or not manager.results.is_empty()):
