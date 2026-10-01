@@ -16,7 +16,9 @@ extends SceneTree
 ##   - the light pass (N-319 pass 2): the shafts follow the weather, the glass
 ##     shows the sky, the sun shield is there, the paint is as designed (muted
 ##     walkways, no arrow to the board), the hanging signs are shipping labels
-##     and the office door has no small sign;
+##     and the office door has no small sign; with a low sun toward any corner the
+##     shafts, their dust and the floor patches stay inside the walls (they used
+##     to show outside, through them);
 ##   - the lights: a handful of real ones, the three big spots ranked for
 ##     shadows, and WorldQuality keeping as many as the level allows (none on Low);
 ##   - the signs hang smaller over their zones; everything static is batched;
@@ -412,6 +414,7 @@ func _test_light_pass(depot: Node3D) -> void:
 					bright.get_luminance(), dull.get_luminance(), dark.get_luminance()])
 	_expect(bright.b > bright.r and bright.get_luminance() < 0.8,
 			"The glass is a greyish blue, not white (%s)" % bright)
+	_test_shafts_stay_inside()
 	# The sun shield: shadow-only slabs around the hall, never drawn.
 	var shield := depot.get_node_or_null(^"SunShield")
 	_expect(shield != null and shield.get_child_count() == 4, "Four shadow-only slabs close the sun's leaks")
@@ -443,6 +446,53 @@ func _test_light_pass(depot: Node3D) -> void:
 		if material != null and material.albedo_color.is_equal_approx(Layout.INK) and material.albedo_texture == null:
 			ink_plates += 1
 	_expect(ink_plates >= 1, "The signs' INK plates are in the depot's batches")
+
+
+## A low sun slants the shafts up to SHAFT_MAX_DROP toward a wall: toward each corner of the hall,
+## no shaft, dust box or floor patch reaches past the walls (they used to show outside, through them).
+func _test_shafts_stay_inside() -> void:
+	var saved: Dictionary = WorldMood.active
+	WorldMood.active = {"weather": WorldMood.Weather.CLEAR, "time": WorldMood.TimeOfDay.DAY}
+	var bounds: Rect2 = DepotLighting.interior().grow(0.001)
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var sun := DirectionalLight3D.new()
+	holder.add_child(sun)
+	for toward: Vector2 in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
+		# Nearly flat, so the slant is the longest a shaft gets.
+		var heading := Vector3(toward.x, -0.2, toward.y).normalized()
+		sun.global_basis = Basis.looking_at(heading, Vector3.UP)
+		var slant: Vector3 = DepotLighting.sunlight(sun).slant
+		_expect(slant.length() > DepotLighting.SHAFT_MAX_DROP - 0.01,
+				"A low sun slants the shafts all the way (%.2f m toward %s)" % [slant.length(), toward])
+		var shafts: MeshInstance3D = DepotLighting.build_shafts(holder, sun)
+		var outside: int = 0
+		var vertices: PackedVector3Array = shafts.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for vertex: Vector3 in vertices:
+			if not bounds.has_point(Vector2(vertex.x, vertex.z)):
+				outside += 1
+		_expect(vertices.size() > 0 and outside == 0,
+				"Toward %s no shaft leaves the hall (%d of %d vertices outside)" % [toward, outside, vertices.size()])
+		shafts.free()
+		DepotLighting.build_dust(holder, sun)
+		for child: Node in holder.get_children():
+			var dust := child as CPUParticles3D
+			if dust == null:
+				continue
+			var extents: Vector3 = dust.emission_box_extents
+			var box := Rect2(Vector2(dust.position.x - extents.x, dust.position.z - extents.z),
+					Vector2(extents.x, extents.z) * 2.0)
+			_expect(bounds.encloses(box), "Toward %s the dust in %s stays inside the hall" % [toward, dust.name])
+			dust.free()
+		var kit := DepotKit.new(holder)
+		DepotLighting.build_pools(kit, sun)
+		for batch: MeshInstance3D in kit.commit("Pools"):
+			var reach: AABB = batch.get_aabb()
+			_expect(bounds.encloses(Rect2(reach.position.x, reach.position.z, reach.size.x, reach.size.z)),
+					"Toward %s the lamp pools and daylight patches stay on the hall's floor" % toward)
+			batch.free()
+	holder.free()
+	WorldMood.active = saved
 
 
 func _expect(condition: bool, description: String) -> void:
