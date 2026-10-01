@@ -1,6 +1,7 @@
 extends Node3D
 ## Presentation only. Native VehicleWheel3D poses come from physics on the host
-## and replication on clients; never rotate the wheels a second time here.
+## and vehicle.gd's _pose_remote_wheels on clients; never rotate the wheels a
+## second time here.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const SpectatorCameraScript = preload("res://scripts/presentation/spectator_camera.gd")

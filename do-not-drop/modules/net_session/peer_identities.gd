@@ -92,18 +92,36 @@ func peer_of(identity: String) -> int:
 	return int(peer_by_identity.get(known, 0)) if not known.is_empty() else 0
 
 
-## Host: the identity already known that `identity` is: a Steam id itself, a
-## LAN claim the one whose last claim it reaches when hashed forward 1 to
-## CHAIN_LENGTH times. "" for someone new.
+## Host: the identity already known that `identity` is: itself if known (a
+## Steam id, or a LAN claim already taken), else for a LAN claim the one whose
+## last claim it reaches when hashed forward 1 to CHAIN_LENGTH times. "" for
+## someone new.
 func known_as(identity: String) -> String:
+	if peer_by_identity.has(identity):
+		return identity
 	if not identity.begins_with(LAN_PREFIX):
-		return identity if peer_by_identity.has(identity) else ""
+		return ""
 	var value: String = identity.trim_prefix(LAN_PREFIX)
 	for step: int in CHAIN_LENGTH:
 		value = value.sha256_text()
 		if peer_by_identity.has(LAN_PREFIX + value):
 			return LAN_PREFIX + value
 	return ""
+
+
+## Host: a LAN claim that continues a known identity but is turned away (a
+## full room) still moves that identity on to it, under the same peer id: it
+## has been on the wire, so whoever overheard it can't use it before its owner
+## (is_replay()), and the owner's next link still continues the chain.
+func advance(identity: String) -> void:
+	var known: String = known_as(identity)
+	if known.is_empty() or known == identity:
+		return
+	var peer: int = int(peer_by_identity[known])
+	peer_by_identity.erase(known)
+	peer_by_identity[identity] = peer
+	if String(by_peer.get(peer, "")) == known:
+		by_peer[peer] = identity
 
 
 ## Host: a LAN claim the host already took for someone, or an older link of

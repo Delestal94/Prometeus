@@ -38,7 +38,8 @@ const MAX_PLAYERS: int = 8
 ## 17: the van has a seventh package mount (CargoBay/RightSeat3PackageMount, a new
 ## interactable) and three passenger seats tend it, N-228.4;
 ## 18: a package replicates lap_mount_path, the bay a lap box goes back to, N-228.8;
-## 19: the handshake and _sync_color_slots carry the slots of those who left
+## 19: the van replicates net_wheel_heights instead of its four wheel transforms, N-228.5;
+## 20: the handshake and _sync_color_slots carry the slots of those who left
 ## ("departed"), a full room takes back a player whose ghost still holds its
 ## place (decided from its ready reply on LAN), a LAN identity is a hash chain
 ## (each rejoin claims the link before), and _report_level_ready only counts a
@@ -46,7 +47,7 @@ const MAX_PLAYERS: int = 8
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 19
+const PROTOCOL_VERSION: int = 20
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
