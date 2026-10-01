@@ -7,7 +7,8 @@ extends RefCounted
 ## with it, so two people can sit facing the same box. The box has one tender
 ## (DeliveryPackage.tender_peer_id): the host only reads that peer's input.
 ##   - Whoever is already minding it keeps it when someone else sits down,
-##     except that the mount's own seat always takes charge of its box.
+##     except that the mount's own seat takes charge of its box when it sits
+##     down (an owner already seated while a neighbour shelves it waits its turn).
 ##   - When the tender gets up or drops out, another sitter facing that mount
 ##     takes over (the owner first), so a box never stays unattended with
 ##     someone seated right beside it.
