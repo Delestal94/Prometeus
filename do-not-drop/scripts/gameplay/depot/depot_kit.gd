@@ -20,6 +20,10 @@ var owner: Node3D
 ## Where solid pieces put their shapes: a StaticBody3D made here, or the
 ## owner itself when it's already a moving body (the forklift).
 var body: CollisionObject3D
+## Set while the depot builds itself over frames (N-408): the builders `await kit.tick()`
+## between their steps so a slice of work never holds the window for long. Null (the
+## default, and for every kit that is small): tick() returns at once.
+var slicer: FrameSlicer = null
 var _tools: Dictionary = {}  # material instance id -> SurfaceTool
 var _materials: Dictionary = {}  # material instance id -> Material
 var _shadowless: Dictionary = {}  # material instance id -> true
@@ -31,6 +35,8 @@ static var _model_cache: Dictionary = {}
 ## depot model's "depot_blue" lands in the same batch.
 static var _shared_materials: Dictionary = {}
 static var _merged_cache: Dictionary = {}
+## Texture paths that failed to load, warned about once each.
+static var _missing_textures: Dictionary = {}
 
 
 ## Path of one of the depot's own models, by file name without extension.
@@ -149,25 +155,50 @@ func collider(size: Vector3, xform: Transform3D) -> void:
 	body.add_child(shape)
 
 
+## Between two steps of a build that runs over frames: lets a frame draw if this
+## one's slice is spent (see FrameSlicer). A coroutine: `await kit.tick()`.
+func tick() -> void:
+	if slicer != null:
+		await slicer.tick()
+
+
 ## One MeshInstance3D per material. Call once, after everything is added.
 func commit(prefix: String = "Batch") -> Array[MeshInstance3D]:
 	var made: Array[MeshInstance3D] = []
 	var index: int = 0
 	for id: int in _tools:
-		var mesh := ArrayMesh.new()
-		(_tools[id] as SurfaceTool).commit(mesh)
-		mesh.surface_set_material(0, _materials[id])
-		var instance := MeshInstance3D.new()
-		instance.name = "%s%d" % [prefix, index]
-		instance.mesh = mesh
-		if _shadowless.has(id):
-			instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		owner.add_child(instance)
-		made.append(instance)
+		made.append(_commit_batch(id, prefix, index))
 		index += 1
 	_tools.clear()
 	_materials.clear()
 	return made
+
+
+## commit(), one material per slice: the big batch of the depot is dozens of
+## meshes built from thousands of triangles. The same nodes in the same order.
+func commit_sliced(prefix: String = "Batch") -> Array[MeshInstance3D]:
+	var made: Array[MeshInstance3D] = []
+	var index: int = 0
+	for id: int in _tools.keys():
+		made.append(_commit_batch(id, prefix, index))
+		index += 1
+		await tick()
+	_tools.clear()
+	_materials.clear()
+	return made
+
+
+func _commit_batch(id: int, prefix: String, index: int) -> MeshInstance3D:
+	var mesh := ArrayMesh.new()
+	(_tools[id] as SurfaceTool).commit(mesh)
+	mesh.surface_set_material(0, _materials[id])
+	var instance := MeshInstance3D.new()
+	instance.name = "%s%d" % [prefix, index]
+	instance.mesh = mesh
+	if _shadowless.has(id):
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	owner.add_child(instance)
+	return instance
 
 
 ## A model folded into one mesh, one surface per material: for pieces that
@@ -226,6 +257,16 @@ static func _model_parts(path: String) -> Array:
 		instance.free()
 	_model_cache[path] = parts
 	return parts
+
+
+## A texture of the depot's, or null with one warning for that path (a file caught
+## mid-reimport, a rename): the callers fall back to the flat colour instead of a white albedo.
+static func _texture(path: String) -> Texture2D:
+	var texture := load(path) as Texture2D
+	if texture == null and not _missing_textures.has(path):
+		_missing_textures[path] = true
+		push_warning("[DepotKit] The texture %s did not load; drawing the flat colour instead" % path)
+	return texture
 
 
 ## One material per (palette name, colour, finish) for plain flat GLB
@@ -299,7 +340,11 @@ static func pictograms() -> StandardMaterial3D:
 	var key: String = "pictograms"
 	if not _material_cache.has(key):
 		var material := StandardMaterial3D.new()
-		material.albedo_texture = load(PICTOGRAMS)
+		var atlas: Texture2D = _texture(PICTOGRAMS)
+		material.albedo_texture = atlas
+		if atlas == null:
+			# Without the atlas every pictogram would be a white square: draw none.
+			material.albedo_color = Color(1.0, 1.0, 1.0, 0.0)
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		material.vertex_color_use_as_albedo = true
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
@@ -330,7 +375,8 @@ static func detailed(color: Color, detail: String, metres: float, roughness: flo
 	if not _material_cache.has(key):
 		var material := StandardMaterial3D.new()
 		material.albedo_color = Color(minf(color.r * DETAIL_GAIN, 1.0), minf(color.g * DETAIL_GAIN, 1.0), minf(color.b * DETAIL_GAIN, 1.0), color.a)
-		material.albedo_texture = load(DETAIL_DIR % detail) if detail.find("/") == -1 else load(detail)
+		# A texture that doesn't load leaves the flat colour above, not a white surface.
+		material.albedo_texture = _texture(DETAIL_DIR % detail if detail.find("/") == -1 else detail)
 		material.uv1_triplanar = true
 		material.uv1_world_triplanar = true
 		material.uv1_scale = Vector3.ONE / metres

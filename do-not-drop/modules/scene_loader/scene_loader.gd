@@ -299,14 +299,25 @@ func _follow_redirect(tree: SceneTree) -> void:
 
 
 ## Shows the hidden nodes one per frame, then waits for the frames to run
-## smooth (or max_settle_seconds); settle_frames frames at least.
+## smooth (or max_settle_seconds); settle_frames frames at least. A node that
+## has `reveal_steps() -> Array[Callable]` splits its own first draw over
+## several frames (one callable per frame, the first one shows the node itself).
 func _settle(tree: SceneTree, hidden: Array[Node]) -> void:
 	var from: float = target_progress
-	var steps: int = hidden.size() + maxi(settle_frames, smooth_frames)
-	var step: int = 0
+	var reveals: Array[Callable] = []
 	for node: Node in hidden:
-		if is_instance_valid(node):
-			node.set(&"visible", true)
+		if not is_instance_valid(node):
+			continue
+		if node.has_method(&"reveal_steps"):
+			reveals.append_array(node.call(&"reveal_steps"))
+		else:
+			reveals.append(func() -> void:
+				if is_instance_valid(node):
+					node.set(&"visible", true))
+	var steps: int = reveals.size() + maxi(settle_frames, smooth_frames)
+	var step: int = 0
+	for reveal: Callable in reveals:
+		reveal.call()
 		step += 1
 		target_progress = lerpf(from, 0.98, float(step) / float(steps))
 		await tree.process_frame

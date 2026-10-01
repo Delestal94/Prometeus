@@ -89,16 +89,54 @@ static func arrow_shape(kit: DepotKit, xform: Transform3D, length: float, width:
 
 
 ## An arrow painted on the floor at `at`, pointing along `direction`. `length`
-## is its size (the head's width follows it); an `alpha` under 1 makes it a
-## see-through wash of paint over what is under it. Returns the guide it
-## draws: {"caption", "at", "direction"} in depot space.
+## is its size (the head's width follows it); `lift` raises it over the paint
+## already there (the walkways' white edges). It is one flat opaque piece in the
+## same finish as the floor's paint (the detail grain, shadows), not a see-through
+## box: a translucent one drew without the floor's grain and read as hovering.
+## Returns the guide it draws: {"caption", "at", "direction"} in depot space.
 static func paint_arrow(kit: DepotKit, caption: String, at: Vector3, direction: Vector3, colour: Color,
-		lift: float = 0.0, length: float = 1.1, alpha: float = 1.0) -> Dictionary:
-	var flat := Basis(direction, Vector3.UP.cross(direction), Vector3.UP)
-	var material: Material = DepotKit.flat(colour, 0.7) if alpha >= 1.0 else DepotKit.tint(Color(colour, alpha))
-	arrow_shape(kit, Transform3D(flat, Vector3(at.x, Layout.FLOOR_TOP + 0.004 + lift, at.z)), length,
-		length * 0.5636, 0.006, material)
-	return {"caption": caption, "at": Vector3(at.x, 0.0, at.z), "direction": direction}
+		lift: float = 0.0, length: float = 1.1) -> Dictionary:
+	# Along the floor: a place's station is up in the air, and an arrow aimed at it pitched
+	# its tip up and its tail into the concrete (it read as hovering, half sunk).
+	var heading := Vector3(direction.x, 0.0, direction.z).normalized()
+	var flat := Basis(heading, Vector3.UP, heading.cross(Vector3.UP))
+	kit.add_mesh(flat_arrow_mesh(length, length * 0.5636), Transform3D(flat,
+			Vector3(at.x, Layout.FLOOR_TOP + ARROW_PAINT_HEIGHT + lift, at.z)),
+			DepotKit.detailed(colour, "plaster", 1.5, 0.7), false)
+	return {"caption": caption, "at": Vector3(at.x, 0.0, at.z), "direction": heading}
+
+
+## Height of a painted arrow over the floor's slab at lift 0: over the bay's slab (4 mm).
+const ARROW_PAINT_HEIGHT: float = 0.007
+static var _flat_arrows: Dictionary = {}
+
+
+## The arrow as a single flat piece in the XZ plane, pointing along +X, facing up:
+## a shaft and a triangular head, as arrow_shape() makes them, with nothing to
+## overlap or fight with itself.
+static func flat_arrow_mesh(length: float, width: float) -> ArrayMesh:
+	var key: String = "%.3f|%.3f" % [length, width]
+	if _flat_arrows.has(key):
+		return _flat_arrows[key]
+	var head_length: float = length * 0.45
+	var neck: float = length * 0.5 - head_length
+	var half_shaft: float = width * 0.18
+	var half_head: float = width * 0.5
+	var tail: float = -length * 0.5
+	# Clockwise seen from above (+Y): Godot's front faces. Points are (x, z).
+	var triangles: Array[Vector2] = [
+		Vector2(tail, -half_shaft), Vector2(neck, -half_shaft), Vector2(tail, half_shaft),
+		Vector2(neck, -half_shaft), Vector2(neck, half_shaft), Vector2(tail, half_shaft),
+		Vector2(neck, -half_head), Vector2(length * 0.5, 0.0), Vector2(neck, half_head),
+	]
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	tool.set_normal(Vector3.UP)
+	for point: Vector2 in triangles:
+		tool.add_vertex(Vector3(point.x, 0.0, point.y))
+	var mesh: ArrayMesh = tool.commit()
+	_flat_arrows[key] = mesh
+	return mesh
 
 
 ## Hanging sign, one design for every zone (N-319): a shipping label. A dark
