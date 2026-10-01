@@ -975,7 +975,8 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `NETWORK_MANAGER` (preload de `network_manager.gd`: `world_seed` no está en `NetSession`). Queda por nombre el
     EventBus (dos `connect`: un test puede reemplazarlo por un Node). En el archivo: `.call` 2 → 0, `.get(&` 5 → 0,
     `/root/` 3 → 3; en `scripts/`: `.call` 172 → 170, `.get(&` 185 → 180. `test_dynamic_dispatch_budget.gd` suma el
-    archivo y su handle. Sin aviso (`route/` y `tests/`). Siguientes: `spectator_camera.gd` (10), `play_area.gd` (9),
+    archivo y su handle; `test_delivery_houses.gd` toca el timbre con cajas reales (`package.tscn`) en vez de nodos
+    con `trap_state` inventado. Sin aviso (`route/` y `tests/`). Siguientes: `spectator_camera.gd` (10), `play_area.gd` (9),
     `dashboard_gps.gd` (9), `vehicle_presentation.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí

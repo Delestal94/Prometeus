@@ -88,16 +88,18 @@ func _initialize() -> void:
 	quit(_failures)
 
 
+## A real package.tscn instance: delivery_house.gd reads the box as
+## DeliveryPackage (N-224.4), so a duck-typed Node would be rung as "no box".
+## Never enters the tree (it hangs off a bare fake player), so _ready doesn't
+## run and consume() takes the plain deferred-free path.
 func _make_fake_package(trap_state: int) -> Node:
-	var package := Node.new()
-	package.set_script(GDScript.new())
-	# A bare Node can't fake a real property getter cleanly without a real
-	# script resource, so this stores state as metadata and package.gd's own
-	# contract (trap_state, get()) is mimicked via a tiny inline script.
-	var script := GDScript.new()
-	script.source_code = "extends Node\nvar trap_state: int = %d\n" % trap_state
-	script.reload()
-	package.set_script(script)
+	var package: Node = (load("res://scenes/gameplay/package/package.tscn") as PackedScene).instantiate()
+	match trap_state:
+		ITrapBehavior.TrapState.RUINED:
+			package.get(&"care").phase = &"lost"
+		ITrapBehavior.TrapState.AT_RISK:
+			package.get(&"care").needs_restore = true
+	assert(int(package.get(&"trap_state")) == trap_state)
 	return package
 
 

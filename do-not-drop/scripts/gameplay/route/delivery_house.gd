@@ -224,7 +224,7 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 		wrong_package_offered.emit(assigned_label)
 		return
 	# The box's latest rescue record, so what the door inspects is current.
-	if box.is_multiplayer_authority():
+	if box.is_inside_tree() and box.is_multiplayer_authority():
 		box._publish_care()
 	match box.trap_state:
 		ITrapBehavior.TrapState.RUINED:
