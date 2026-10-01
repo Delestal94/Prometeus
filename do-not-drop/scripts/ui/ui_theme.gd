@@ -410,6 +410,11 @@ static func _box_icon(checked: bool) -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
+## The sky-blue ring a focused control wears, for ones that are not buttons.
+static func focus_ring() -> StyleBoxFlat:
+	return _focus_ring()
+
+
 static func _focus_ring() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.draw_center = false
