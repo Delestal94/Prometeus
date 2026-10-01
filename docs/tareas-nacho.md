@@ -1826,6 +1826,20 @@ Tarea permanente: no se cierra, se cumple en cada tanda.
 
 ---
 
+### N-323 · Que nada visible se cierre con cajas de color plano — A · `Opus 5.5 · low` · Aviso: no · **[x] rama `nacho/N-323-art-quality-gate`**
+
+Pregunta del usuario 2026-10-01 tras N-322 ("¿por qué no se hizo así desde un principio, quién es el encargado?"): el barro de
+N-108 salió con cajas naranjas porque el "hecho cuando" solo pedía la mecánica, `constructor-tramos` arma con `_box()`,
+`revisor-visual` miró que estuviera y no si estaba a la altura, y `director-arte` audita el inventario, donde la geometría
+por código no figura. Nadie tenía a cargo la calidad visual de lo que arma un constructor.
+~~Hecho cuando la cadena de agentes marca y deriva los placeholders visibles.~~
+**[x] Hecho (2026-10-01)** — `planificador-tareas`: toda tarea visible lleva en el "hecho cuando" la revisión de
+`director-arte` contra lo que la rodea y, si se arma con primitivas, una subtarea de arte desde el principio.
+`director-arte` (punto 8): busca la geometría por código con color plano a la vista. `auditor-integral` (pilar 2): marca
+los placeholders sin subtarea de arte. `constructor-tramos` y `constructor-mundo`: un placeholder visible sale como
+subtarea, nunca como hecho. Rutina de construcción (paso 7): `revisor-visual` compara contra el entorno y un suelo o
+material plano pasa por `artista-shaders` en la misma sesión.
+
 ## 8. QA (sin playtesting)
 
 ### N-801 · Fuzz de generación de ruta — A · `Opus 5.5 · high` · Aviso: no · **[x] `38ca576`**

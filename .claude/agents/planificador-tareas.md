@@ -28,6 +28,13 @@ con test, captura o medición, nunca "se siente bien">.
 - **Aviso**: `sí` si toca zona compartida o archivos del otro. El aviso es un archivo nuevo en `docs/avisos/AAAA-MM-DD-tema.md` en el mismo PR (esa regla manda aunque algún encabezado viejo diga otra cosa).
 - **Esfuerzo** según la tabla del doc (low → max); red y archivos compartidos, `xhigh`.
 - **Agente sugerido** por paso, del buffet de `CLAUDE.md` (sección "Ciclo completo").
+- **Calidad visual (N-323)**: si la tarea agrega o cambia algo que se ve en el juego (tramo, suelo, prop,
+  efecto, pantalla), el "hecho cuando" incluye "revisado por `director-arte` con la captura de
+  `revisor-visual` contra lo que lo rodea (terreno, props vecinos), sin superficies de color plano ni cajas
+  de placeholder a la vista". Si el constructor va a armarlo con primitivas (`_box()`, `BoxMesh`,
+  `StandardMaterial3D` de un color), agregá desde el principio una subtarea de arte (`.N`) con
+  `artista-shaders` (suelos y materiales; corre en la nube) o `modelador-blender` (modelos; necesita PC).
+  Antecedente: el barro de N-108 salió con cajas naranjas porque solo se pidió la mecánica (lo arregló N-322).
 - **Sin playtesting**: todo "hecho cuando" se verifica con código (test, bot, benchmark, captura). Lo que solo se puede juzgar jugando va a la sección "Para cuando haya playtesting".
 - Tareas chicas: una rama y un PR cada una. Si algo pide más de ~3 días, partilo en subtareas `.1`, `.2`.
 - **⏸ "decide el usuario"**: además de la tarea, un issue de GitHub para que le llegue al usuario
