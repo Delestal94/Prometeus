@@ -704,8 +704,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   `_mesh_base_offset` (sin llamadas). `test_route_golden.gd` firma tres rutas (nodos, casas, camino, terreno y ~600
   consultas cada una) contra `tests/data/route_golden.txt`, generado con el archivo único (`-- --write-golden`).
   La baseline del lint bajó. Aviso `docs/avisos/2026-10-01-n225-route-partido.md` (comentarios de `terrain_field.gd`).
-- [ ] **N-225.4** `package.gd` (999). Quedan
-  `player.gd` y `run_manager.gd` fuera del orden.
+- [x] **N-225.4** `package.gd` **[x] Hecho (2026-10-01)** — rama `nacho/N-225-package-split`: 995 → 661 líneas.
+  Helpers estáticos sobre el estado del paquete, como `PackageRescue`: llevar, pasar, soltar, anclar y entregar a
+  `package_handling.gd` (`PackageHandling`), la entrada del que cuida, el ayudante y el mérito a
+  `package_tending.gd` (`PackageTending`), y los golpes (`_integrate_forces`, impactos, choques entre cajas y con
+  jugadores, `_report_change`) a `package_impacts.gd` (`PackageImpacts`). Los 10 `@rpc` quedan en el paquete, con
+  sus guardas y en el mismo orden; los métodos que usan otros archivos o los tests quedan como envoltorios. Usos
+  por nombre: los mismos 9/0/3/1, repartidos entre los cuatro archivos (`test_dynamic_dispatch_budget.gd`).
+  `test_package_split.gd` fija la tabla de RPC del original, los métodos que usa el resto y ≤ 700 líneas. Aviso
+  `docs/avisos/2026-10-01-n225-package-partido.md`.
+- [ ] **N-225.5** Quedan `player.gd` (1000), `run_manager.gd` (1000) y `package_feedback.gd` (1000) en el borde.
+  Origen: construcción 2026-10-01.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
