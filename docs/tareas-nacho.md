@@ -997,6 +997,16 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 7 → 5; en `scripts/`: `.get(&` 180 → 178. Presupuesto ajustado en `test_dynamic_dispatch_budget.gd`. Sin
     aviso (`route/` y `tests/`). Para bajar más hay que pasar `test_mud_segment.gd` a jugadores reales. Siguientes (fuera
     de `BUDGETS`): `spectator_camera.gd` (12), `dashboard_gps.gd` (10), `vehicle_presentation.gd` (9), `play_area.gd` (9).
+  - [x] `spectator_camera.gd` (2026-10-01, rama `nacho/N-224-spectator-camera-typed`): la vista de espectador y la toma
+    de resultados. La sesión como `NetSession` (`local_id()`), el jugador local como `Player` (`_seated`,
+    `tended_package`), la caja como `DeliveryPackage` (`trap_state`), la toma de resultados por `preload` de
+    `results_orbit.gd` (`RESULTS_ORBIT.new()`: `target`, `frame_parked` directos, se va el `set_script`) y la meta como
+    `RouteGoalLot` (`is_bay_occupied`, `results_direction`, `results_focus`). Quedan por nombre `RunManager.is_running`
+    (precargar `run_manager.gd` desde la presentación del camión rompe la compilación bajo `--script`) y
+    `driver_peer_id` del camión (`vehicle.gd` precarga la presentación que crea esta cámara). En el archivo: 12 → 4
+    usos (`.call` 5 → 0, `.get(&` 5 → 2, `/root/` 2 → 2; también `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd`
+    suma el archivo; `test_spectator.gd` prueba también la toma de resultados. Sin aviso (`presentation/` libre y
+    `tests/`). Siguientes: `dashboard_gps.gd` (10), `vehicle_presentation.gd` (9), `play_area.gd` (9), `run_tally.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

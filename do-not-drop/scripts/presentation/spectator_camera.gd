@@ -15,6 +15,8 @@ const HEIGHT: float = 2.8
 const FOLLOW_SHARPNESS: float = 5.0
 const ORBIT_MOUSE: float = 0.004
 const ORBIT_STICK: float = 2.2
+## The results shot's script (extends Camera3D, no class_name).
+const RESULTS_ORBIT = preload("res://scripts/presentation/results_orbit.gd")
 
 var vehicle: VehicleBody3D
 var available: bool = false
@@ -79,22 +81,26 @@ func stop() -> void:
 
 ## Seated as a passenger (not driving) during a run, with no box to save.
 func _local_can_spectate() -> bool:
+	# RunManager stays by name: preloading run_manager.gd from the truck's
+	# presentation pulls autoload names into a --script compile.
 	var manager: Node = get_node_or_null(^"/root/RunManager")
 	if manager == null or not bool(manager.get(&"is_running")):
 		return false
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	var local_id: int = int(network.call(&"local_id")) if network != null else 1
+	var network := get_node_or_null(^"/root/NetworkManager") as NetSession
+	var local_id: int = network.local_id() if network != null else 1
+	# vehicle.gd preloads the presentation that creates this camera: by name.
 	if int(vehicle.get(&"driver_peer_id")) == local_id:
 		return false
-	for player: Node in get_tree().get_nodes_in_group(&"player"):
-		if player.get_multiplayer_authority() != local_id:
+	for node: Node in get_tree().get_nodes_in_group(&"player"):
+		var player := node as Player
+		if player == null or player.get_multiplayer_authority() != local_id:
 			continue
-		if not bool(player.get(&"_seated")):
+		if not player._seated:
 			return false
-		var tended: Variant = player.get(&"tended_package")
+		var tended: DeliveryPackage = player.tended_package
 		if tended == null or not is_instance_valid(tended):
 			return true
-		return int((tended as Node).get(&"trap_state")) == ITrapBehavior.TrapState.RUINED
+		return tended.trap_state == ITrapBehavior.TrapState.RUINED
 	return false
 
 
@@ -104,17 +110,16 @@ func _local_can_spectate() -> bool:
 ## Parked in the base's free bay (N-116.4) it frames the truck in the lot
 ## instead of circling it (results_orbit.gd frame_parked()).
 static func orbit_results(truck: VehicleBody3D) -> Camera3D:
-	var camera := Camera3D.new()
+	var camera: RESULTS_ORBIT = RESULTS_ORBIT.new()
 	camera.name = "ResultsCamera"
 	camera.top_level = true
 	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	camera.far = 600.0
 	camera.fov = 55.0
-	camera.set_script(preload("res://scripts/presentation/results_orbit.gd"))
-	camera.set(&"target", truck)
-	var lot: Node = truck.get_tree().get_first_node_in_group(&"goal_lot") if truck.is_inside_tree() else null
-	if lot != null and bool(lot.call(&"is_bay_occupied")):
-		camera.call(&"frame_parked", lot.call(&"results_direction"), lot.call(&"results_focus"))
+	camera.target = truck
+	var lot := truck.get_tree().get_first_node_in_group(&"goal_lot") as RouteGoalLot if truck.is_inside_tree() else null
+	if lot != null and lot.is_bay_occupied():
+		camera.frame_parked(lot.results_direction(), lot.results_focus())
 	truck.add_child(camera)
 	camera.make_current()
 	return camera
