@@ -78,6 +78,7 @@ func build_shell(kit: DepotKit) -> void:
 	kit.span(Vector3(outer_x, -0.4, -Layout.WALL), Vector3(outer_x + 0.06, 0.55, Layout.DEPTH + Layout.WALL), plinth)
 	kit.span(Vector3(-outer_x, -0.4, Layout.DEPTH + Layout.WALL),
 			Vector3(outer_x, 0.55, Layout.DEPTH + Layout.WALL + 0.06), plinth)
+	await kit.tick()
 	# Interior lining, in layers (N-319): a dark plinth, painted block, a trim
 	# line, light sheet up past the windows and a darker tone above them.
 	var layers := _lining_layers()
@@ -90,6 +91,7 @@ func build_shell(kit: DepotKit) -> void:
 		var inner: float = Layout.HALF_WIDTH - jamb
 		_lining(kit, layers, Vector2(side * (jamb + inner * 0.5), 0.01), inner, true, 1.0)
 	_lining(kit, layers, Vector2(0.0, 0.01), jamb * 2.0, true, 1.0, Layout.DOOR_HEIGHT + 0.9)
+	await kit.tick()
 	# Roof deck (a neutral mid-dark grey underneath, value ~35 %: the ceiling is
 	# the quiet part of the picture) and its skylights.
 	kit.span(Vector3(-outer_x, Layout.CEILING, -Layout.WALL),
@@ -107,8 +109,10 @@ func build_shell(kit: DepotKit) -> void:
 			for edge: float in [-1.0, 1.0]:
 				kit.box(Vector3(1.6 + 0.16, 0.08, 0.08), Vector3(x, Layout.CEILING - 0.05, z + edge * 3.54), truss)
 				kit.box(Vector3(0.08, 0.08, 7.0), Vector3(x + edge * 0.84, Layout.CEILING - 0.05, z), truss)
+	await kit.tick()
 	# Portal frames: columns along the walls, trusses across.
 	for z: float in Layout.PORTAL_FRAMES:
+		await kit.tick()
 		for side: float in [-1.0, 1.0]:
 			kit.box(Vector3(0.36, Layout.CEILING, 0.3),
 					Vector3(side * (Layout.HALF_WIDTH - 0.24), Layout.CEILING * 0.5, z), truss)
@@ -125,6 +129,7 @@ func build_shell(kit: DepotKit) -> void:
 			kit.box_xf(Vector3(diagonal, 0.07, 0.07),
 					Transform3D(Basis(Vector3.BACK, angle),
 					Vector3(x0 + 0.625, (6.55 + Layout.CEILING - 0.1) * 0.5, z)), truss)
+	await kit.tick()
 	# Purlins along the length.
 	for x: float in [-11.0, -3.8, 3.8, 11.0]:
 		kit.box(Vector3(0.1, 0.14, Layout.DEPTH), Vector3(x, Layout.CEILING - 0.18, Layout.DEPTH * 0.5), truss)
@@ -138,9 +143,11 @@ func build_shell(kit: DepotKit) -> void:
 		for x: float in [-7.6, 12.6]:
 			kit.model(duct, Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(x, 6.1, z)))
 		kit.model(tray, Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0.0, 6.5, z)))
+	await kit.tick()
 	# High strip windows (daylight inside, dark glass outside).
 	for side: float in [-1.0, 1.0]:
 		for z: float in [5.2, 10.8, 16.4, 22.0, 27.6]:
+			await kit.tick()
 			kit.box(Vector3(0.02, 1.1, 3.6), Vector3(side * (Layout.HALF_WIDTH - 0.07), 5.4, z), window_glow)
 			_window_frame(kit, side, z)
 			kit.box(Vector3(0.02, 1.1, 3.6), Vector3(side * (Layout.HALF_WIDTH + Layout.WALL + 0.01), 5.4, z),
@@ -259,6 +266,7 @@ func build_floor_markings(kit: DepotKit) -> void:
 		kit.add_mesh(mesh, Transform3D(Basis.IDENTITY, Vector3(0.0, Layout.FLOOR_TOP + 0.001, index * 6.0)), joint,
 				false)
 	_build_loading_zone(kit, hazard)
+	await kit.tick()
 	# The shelving units' footprints, in white: yellow is the forklift's.
 	for unit: Dictionary in Layout.SHELF_UNITS:
 		var x: float = float(unit.x)
@@ -270,8 +278,9 @@ func build_floor_markings(kit: DepotKit) -> void:
 		for end: float in [Layout.SHELF_START_Z - 0.3, Layout.SHELF_START_Z + length + 0.3]:
 			paint.call(Layout.SHELF_DEPTH + 0.68, 0.07, Vector3(x, 0.0, end), white)
 	# The truck bay, the walkways, the forklift's lane and the wear.
+	await kit.tick()
 	circulation = DepotCirculation.new(_root)
-	circulation.build(kit)
+	await circulation.build(kit)
 	DepotLabels.floor_text(_root, tr("WORLD_DEPOT_FLOOR_EXIT"), Vector3(0.0, 0.0, 2.9), 0.0, 80,
 			Color(Layout.TEAL, 0.9))
 
@@ -381,8 +390,9 @@ func build_contact_shadows() -> void:
 		ContactShadow.add(holder, (patch[0] as Vector3) + Vector3.UP * Layout.FLOOR_TOP, patch[1], patch[2], patch[3])
 
 
-func build_lights() -> void:
+func build_lights(slicer: FrameSlicer = null) -> void:
 	var kit := DepotKit.new(_root, "LightColliders")
+	kit.slicer = slicer
 	var lamp := DepotKit.glow(Color("fff1d6"), LAMP_DISC_ENERGY)
 	var fixtures: Array[Vector3] = []
 	for x: float in DepotLighting.LAMP_XS:
@@ -407,6 +417,7 @@ func build_lights() -> void:
 		bulb.height = 0.02
 		bulb.radial_segments = 14
 		kit.add_mesh(bulb, Transform3D(Basis.IDENTITY, at - Vector3(0.0, 0.16, 0.0)), lamp, false)
+	await kit.tick()
 	# Fluorescent tubes over the dispatch shelves; one of them is on its way out.
 	for unit: Dictionary in Layout.SHELF_UNITS:
 		for index: int in range(2):
@@ -426,13 +437,16 @@ func build_lights() -> void:
 			else:
 				# The linear fixture carries its own lit diffuser; its chains reach the trusses.
 				kit.model(tube_linear, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 5.2, z)))
+	await kit.tick()
 	var sun: DirectionalLight3D = _sun()
 	DepotLighting.build_pools(kit, sun)
-	kit.commit("Lamps")
+	await kit.commit_sliced("Lamps")
 	# Few real lights (the GL Compatibility renderer caps lights per mesh),
 	# each with a job (DepotLighting); the fixtures above and the pools and
 	# shafts of light on the floor do the rest of the look.
 	DepotLighting.build_lights(_root)
+	await kit.tick()
 	DepotLighting.build_shafts(_root, sun)
+	await kit.tick()
 	# Motes of dust inside each shaft of light (none at night, none on Low).
 	DepotLighting.build_dust(_root, sun)

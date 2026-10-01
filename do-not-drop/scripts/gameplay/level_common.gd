@@ -40,6 +40,8 @@ var packages: Array[DeliveryPackage] = []
 var cargo_animals: CargoAnimals
 var tipped_seconds: float = 0.0
 var _driver_seated: bool = false
+var _depot_stocked: bool = false
+var _after_depot_steps: Array[Callable] = []
 ## Where someone who joins with the truck already on the road goes (N-228.7).
 var _late_join: LateJoinSeating
 
@@ -52,10 +54,15 @@ func _ready() -> void:
 	play_area.set(&"level", self)
 	add_child(play_area)
 	vehicle.freeze = true
-	packages.assign(depot.withhold_locked(get_tree().get_nodes_in_group(&"cargo")))
-	for package: DeliveryPackage in packages:
-		package.freeze = true
-	depot.stock_shelves(packages)
+	# The depot may still be building (over frames, behind the loading cover:
+	# depot.gd, N-408): its floor isn't there yet, so the boxes the level brought
+	# wait frozen, and are shelved once it stands. Already built, as in a test, it's now.
+	if depot.is_built:
+		_stock_depot()
+	else:
+		for package: Node in get_tree().get_nodes_in_group(&"cargo"):
+			package.set(&"freeze", true)
+		depot.built.connect(_stock_depot, CONNECT_ONE_SHOT)
 	_driver_seat.interacted.connect(_on_driver_seated)
 	for mount: Node in get_tree().get_nodes_in_group(&"package_mount"):
 		mount.connect(&"interacted", _on_package_loaded)
@@ -144,22 +151,47 @@ func newspaper_town() -> String:
 	return ""
 
 
+## The depot stands: sends the locked traps' boxes to the back and puts the rest
+## on its shelves, then lets what was waiting for the stock go ahead (_after_depot()).
+func _stock_depot() -> void:
+	packages.assign(depot.withhold_locked(get_tree().get_nodes_in_group(&"cargo")))
+	for package: DeliveryPackage in packages:
+		package.freeze = true
+	depot.stock_shelves(packages)
+	_depot_stocked = true
+	var waiting: Array[Callable] = _after_depot_steps
+	_after_depot_steps = []
+	for step: Callable in waiting:
+		step.call()
+
+
+## Runs `step` once the depot is stocked: at once if it already is, else when its
+## build is over (it builds itself over frames behind the loading cover).
+func _after_depot(step: Callable) -> void:
+	if _depot_stocked:
+		step.call()
+	else:
+		_after_depot_steps.append(step)
+
+
 ## The level's own road and orders, set up once the depot is stocked.
 func _prepare_mode() -> void:
 	pass
 
 
-## Waits (a coroutine) until the level's world is complete: a road that builds
-## itself over several frames (route.gd) overrides it to wait for that. The
-## default has nothing to wait for, and doesn't suspend.
+## Waits (a coroutine) until the level's world is complete: the depot, and a road
+## that builds itself over several frames (route.gd) overrides it to wait for that
+## too. Doesn't suspend when it all stands already.
 func _wait_for_world() -> void:
-	pass
+	if not depot.is_built:
+		await depot.built
 
 
-## Whether the level's world stands (a road that builds itself over frames says no
-## until it does). Nobody is spawned into it before that: _sync_players().
+## Whether the level's world stands (the depot and a road that build themselves
+## over frames say no until they do). Nobody is spawned into it before that:
+## _sync_players().
 func _is_world_built() -> bool:
-	return true
+	return depot.is_built
 
 
 ## This peer's level is up: tells the session, once the world stands.

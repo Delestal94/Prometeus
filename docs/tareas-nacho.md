@@ -201,8 +201,15 @@ todos arreglados acá:
 - [x] Tests nuevos: `test_scene_loader_gates`, `test_synth_audio_warm`, `test_route_async_build`,
   `test_menu_to_level`, `test_menu_session_paths`, `test_level_loading_paths`; ampliados `test_route_gen`,
   `test_render_budget`, `test_route_golden`, `test_loading_flow`, `test_tension_music`.
-- [ ] El depósito todavía se arma en un bloque (~200-330 ms); si molesta, partirlo como la ruta
-  (`constructor-mundo`). `test_route_golden` difiere en Windows en el 4.º decimal (golden escrito en Linux): CI manda.
+- [x] **El depósito por cuadros** (rama `nacho/N-408b-depot-slices`, aviso `2026-10-01-n408-deposito-por-cuadros.md`):
+  `Depot` arma en rebanadas de 12 ms bajo un cargador (`is_built`, `built`, `loading_progress()`), el nivel espera a
+  depósito y ruta, y su primer dibujo se parte en ~13 pasos (`reveal_steps()`, uno por cuadro: 190-250 ms en uno
+  → máx. 45-100 ms). Cuadro del swap 430-500 → 325-415 ms: lo que queda es el resto del nivel (HUD, vehículo,
+  cajas, primer dibujo del mundo), sin partir. También: flechas del piso planas (parecían flotar: apuntaban en 3D),
+  texturas del depósito con respaldo de color liso y `DepotAtmosphere` acotado (`test_depot_textures`).
+- [ ] Siguen en un cuadro grande: el swap (~110 ms de `_ready` del nivel + ~150 ms del primer dibujo del mundo) y
+  el primer dibujo de `World/Route` (150-220 ms; partirlo como el depósito). `test_route_golden` difiere en Windows
+  en el 4.º decimal (golden escrito en Linux): CI manda.
 
 ### N-407 · Pantalla de carga entre el menú y el nivel — B · `Opus 5.5 · medium` · Aviso: sí (`main_menu.gd`, `scripts/ui/` de Slatex; `modules/` compartida) · **[x] rama `nacho/N-407-loading-screen`**
 

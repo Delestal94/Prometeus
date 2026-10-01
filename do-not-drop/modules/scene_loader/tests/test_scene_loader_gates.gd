@@ -4,7 +4,8 @@ extends SceneTree
 ## What keeps the scene_loader cover up, on the module alone (N-408): a node
 ## of the new scene in BUSY_GROUP holds it until it leaves the group, and the
 ## bar follows its loading_progress(); _scene_ready() holds it too; the
-## reveal_paths are hidden at the swap and shown before the cover lifts;
+## reveal_paths are hidden at the swap and shown before the cover lifts (a node
+## with reveal_steps() shows itself in several frames: one step per frame);
 ## prefetch_paths are loaded and cached during LOADING; a carried
 ## AudioStreamPlayer moves under the loader at the swap instead of dying with
 ## the old scene; redirect_to() lands on another scene before the cover lifts.
@@ -21,6 +22,18 @@ func _process(_delta: float) -> void:
 		remove_from_group(&"scene_loader_busy")
 func loading_progress() -> float:
 	return minf(float(frames) / %d.0, 1.0)
+"""
+
+## A node that splits its own first draw into three frames.
+const STAGED_SOURCE: String = """extends Node3D
+var shown_at: Array[int] = []
+func reveal_steps() -> Array[Callable]:
+	var steps: Array[Callable] = []
+	for index: int in range(3):
+		steps.append(func() -> void:
+			shown_at.append(Engine.get_process_frames())
+			visible = true)
+	return steps
 """
 
 var _failures: int = 0
@@ -48,7 +61,11 @@ func _run() -> void:
 	var file := FileAccess.open(builder_path, FileAccess.WRITE)
 	file.store_string(BUILDER_SOURCE % [BUILD_FRAMES, BUILD_FRAMES])
 	file.close()
-	var level_path: String = _save_level(load(builder_path) as Script)
+	var staged_path: String = DIR + "/staged.gd"
+	file = FileAccess.open(staged_path, FileAccess.WRITE)
+	file.store_string(STAGED_SOURCE)
+	file.close()
+	var level_path: String = _save_level(load(builder_path) as Script, load(staged_path) as Script)
 	var other_path: String = _save_plain("Other")
 	var prefetch_path: String = _save_plain("Prefetched")
 
@@ -72,7 +89,7 @@ func _run() -> void:
 	loader.fade_seconds = 0.0
 	loader.minimum_seconds = 0.0
 	loader.smooth_frame_seconds = 10.0
-	loader.reveal_paths = [^"Hidden"]
+	loader.reveal_paths = [^"Hidden", ^"Staged"]
 	loader.prefetch_paths = PackedStringArray([prefetch_path])
 	loader.carry_audio(music)
 	loader.audio_fade_seconds = 0.2
@@ -88,6 +105,7 @@ func _run() -> void:
 
 	var prefetch_seen: bool = false
 	var hidden_at_swap: int = -1
+	var staged_hidden_at_swap: bool = false
 	var builder_frames_at_settle: int = -1
 	var held_for_ready: bool = false
 	var frames: int = 0
@@ -103,6 +121,7 @@ func _run() -> void:
 			var hidden: Node3D = level.get_node(^"Hidden")
 			if hidden_at_swap == -1:
 				hidden_at_swap = 1 if not hidden.visible else 0
+				staged_hidden_at_swap = not (level.get_node(^"Staged") as Node3D).visible
 				_expect(music.get_parent() == loader, "The carried music moved under the loader at the swap")
 			var builder: Node = level.get_node(^"Builder")
 			if int(builder.get(&"frames")) >= BUILD_FRAMES + 5 and not loader.open:
@@ -115,6 +134,15 @@ func _run() -> void:
 	_expect(hidden_at_swap == 1, "A reveal path is hidden when the scene comes in")
 	_expect(current_scene != null and (current_scene.get_node(^"Hidden") as Node3D).visible,
 		"It is shown again before the cover lifts")
+	_expect(staged_hidden_at_swap, "A node with reveal_steps() is hidden when the scene comes in too")
+	var staged_frames: Array[int] = []
+	if current_scene != null:
+		staged_frames.assign(current_scene.get_node(^"Staged").get(&"shown_at"))
+		_expect((current_scene.get_node(^"Staged") as Node3D).visible, "...and visible once its steps ran")
+	_expect(staged_frames.size() == 3, "Each of its steps ran once (%d)" % staged_frames.size())
+	if staged_frames.size() == 3:
+		_expect(staged_frames[1] == staged_frames[0] + 1 and staged_frames[2] == staged_frames[1] + 1,
+			"...one per frame (%s)" % [staged_frames])
 	_expect(held_for_ready, "_scene_ready() keeps the cover up after the builders are done")
 	_expect(builder_frames_at_settle >= BUILD_FRAMES,
 		"A BUSY_GROUP node holds the cover until it leaves the group (%d frames)" % builder_frames_at_settle)
@@ -148,7 +176,7 @@ func _run() -> void:
 	quit(_failures)
 
 
-func _save_level(builder_script: Script) -> String:
+func _save_level(builder_script: Script, staged_script: Script) -> String:
 	var level := Node3D.new()
 	level.name = "Level"
 	var builder := Node3D.new()
@@ -160,6 +188,11 @@ func _save_level(builder_script: Script) -> String:
 	hidden.name = "Hidden"
 	level.add_child(hidden)
 	hidden.owner = level
+	var staged := Node3D.new()
+	staged.name = "Staged"
+	staged.set_script(staged_script)
+	level.add_child(staged)
+	staged.owner = level
 	return _pack(level, "level")
 
 
