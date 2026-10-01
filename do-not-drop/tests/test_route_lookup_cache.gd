@@ -58,25 +58,25 @@ func _brute_sample(route: Node3D, world: Vector3) -> Dictionary:
 	return best
 
 
-# One pass over the path for both answers: the nearest point on the ground
-# (road_distance) and the 3D distance to the nearest point (distance_from_path).
-func _brute_path(route: Node3D, world: Vector3) -> Dictionary:
+func _brute_path_index(route: Node3D, world: Vector3) -> int:
 	var local: Vector3 = route.to_local(world)
 	var points: Array[Vector3] = route.get(&"_path_points")
-	var best_flat: float = INF
-	var best_3d: float = INF
+	var best: float = INF
 	var nearest: int = 0
 	for index: int in range(points.size()):
-		var point: Vector3 = points[index]
-		var dx: float = point.x - local.x
-		var dz: float = point.z - local.z
-		var flat: float = dx * dx + dz * dz
-		if flat < best_flat:
-			best_flat = flat
+		var gap: float = Vector2(points[index].x - local.x, points[index].z - local.z).length_squared()
+		if gap < best:
+			best = gap
 			nearest = index
-		var dy: float = point.y - local.y
-		best_3d = minf(best_3d, flat + dy * dy)
-	return {"index": nearest, "distance": sqrt(best_3d)}
+	return nearest
+
+
+func _brute_distance_from_path(route: Node3D, world: Vector3) -> float:
+	var local: Vector3 = route.to_local(world)
+	var best: float = INF
+	for point: Vector3 in route.get(&"_path_points"):
+		best = minf(best, point.distance_to(local))
+	return best
 
 
 func _compare_route(route: Node3D, world: Vector3, label: String) -> void:
@@ -93,10 +93,9 @@ func _compare_route(route: Node3D, world: Vector3, label: String) -> void:
 		else tr("WORLD_ROUTE_SECTION_LEG") % [leg + 1, houses]
 	_expect(String(route.call(&"get_section_name", world)) == expected_name, "get_section_name differs %s" % label)
 	var cumulative: PackedFloat32Array = route.call(&"_path_cumulative")
-	var path: Dictionary = _brute_path(route, world)
-	_expect(is_equal_approx(float(route.call(&"road_distance", world)), cumulative[int(path["index"])]),
+	_expect(is_equal_approx(float(route.call(&"road_distance", world)), cumulative[_brute_path_index(route, world)]),
 		"road_distance differs from a full scan %s" % label)
-	_expect(is_equal_approx(float(route.call(&"distance_from_path", world)), float(path["distance"])),
+	_expect(is_equal_approx(float(route.call(&"distance_from_path", world)), _brute_distance_from_path(route, world)),
 		"distance_from_path differs from a full scan %s" % label)
 
 

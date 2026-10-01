@@ -69,8 +69,8 @@ usuario). Dominio libre (`tools/`, `tests/`).
   intermitente no era `mud_segment`: el log del run 36815889169 dice `FAIL test_route_lookup_cache (timeout
   120s)`, después de terminar las 8 rutas y el streamer. Causa: el test tarda ~105 s (medido acá, solo o con
   otro test pesado al lado) contra el límite de 120 s de CI y no estaba en `SLOW_TESTS`. Arreglo: va a
-  `SLOW_TESTS` (240 s, arranca primero) y sus dos barridos completos de los puntos del camino se juntan en uno
-  (`_brute_path`), sin bajar la cobertura.
+  `SLOW_TESTS` (240 s y arranca primero). Juntar sus dos barridos completos en uno no ahorró tiempo (106 s) y
+  cambiaba cómo se desempatan puntos equidistantes (float64 contra `Vector2` float32): se descartó.
 ### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida) · **[x] PR #108**
 Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
 (`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta
