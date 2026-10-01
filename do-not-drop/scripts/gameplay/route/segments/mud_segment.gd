@@ -165,7 +165,7 @@ func _ask_host_for_state() -> void:
 ## A client that just built this segment asks where the host's rescue is.
 @rpc("any_peer", "call_remote", "reliable")
 func _request_state() -> void:
-	if not _is_host() or state == State.IDLE:
+	if not _is_host() or state == State.IDLE or not RpcGuard.allow_request(self):
 		return
 	_apply_state.rpc_id(multiplayer.get_remote_sender_id(), state, progress, pushers, strap_ready, crane_left,
 			haul_method, _crane_arrive)
@@ -310,7 +310,7 @@ func set_pusher(peer_id: int, active: bool) -> void:
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
 func _push_beat() -> void:
-	if not _is_host():
+	if not _is_host() or not RpcGuard.sender_ok(self):
 		return
 	set_pusher(multiplayer.get_remote_sender_id(), true)
 
