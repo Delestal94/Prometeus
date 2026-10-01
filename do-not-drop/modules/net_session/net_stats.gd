@@ -211,6 +211,40 @@ static func from_enet(peer_id: int, rtt_ms: float, rtt_variance_ms: float, packe
 	return row
 
 
+## The round trip to one peer in ms, -1 when it isn't known (offline, not
+## connected, no such connection). Only that: unlike sample() it reads no
+## traffic counter (ENet's reset on every read), so a host can ask it for a
+## request without spoiling the overlay. `steam_api`: the Steam singleton, or a
+## stand-in in tests; picked up when left null.
+static func round_trip_ms(peer: Object, peer_id: int, steam_api: Object = null) -> float:
+	if peer == null or peer is OfflineMultiplayerPeer or not peer.has_method(&"get_unique_id") or peer_id <= 0:
+		return -1.0
+	var real_peer := peer as MultiplayerPeer
+	if real_peer != null and real_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+		return -1.0
+	var local: int = int(peer.call(&"get_unique_id"))
+	# A client only has a connection of its own to the host.
+	if peer_id == local or (local != 1 and peer_id != 1):
+		return -1.0
+	if peer is ENetMultiplayerPeer:
+		var packet_peer: ENetPacketPeer = (peer as ENetMultiplayerPeer).get_peer(peer_id)
+		return float(packet_peer.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME)) if packet_peer != null else -1.0
+	if not (peer.has_method(&"get_steam_id_for_peer_id") and peer.has_method(&"get_peer")):
+		return -1.0
+	if steam_api == null and Engine.has_singleton(&"Steam"):
+		steam_api = Engine.get_singleton(&"Steam")
+	if steam_api == null or not steam_api.has_method(&"getConnectionRealTimeStatus"):
+		return -1.0
+	var packet_peer: Object = peer.call(&"get_peer", peer_id)
+	if packet_peer == null or not packet_peer.has_method(&"get_connection_handle"):
+		return -1.0
+	var handle: int = int(packet_peer.call(&"get_connection_handle"))
+	if handle == 0:
+		return -1.0
+	var status: Variant = steam_api.call(&"getConnectionRealTimeStatus", handle, 0, true)
+	return float(from_steam_status(peer_id, status if status is Dictionary else {}).ping_ms)
+
+
 ## 0 fine, 1 worrying, 2 bad, for `metric` in &"ping", &"loss", &"queue";
 ## unknown values (below 0) are fine.
 static func severity(metric: StringName, value: float) -> int:

@@ -103,6 +103,10 @@ var net_transform: Transform3D = Transform3D.IDENTITY:
 		net_transform = value
 		_has_net_state = true
 var net_in_vehicle: bool = false
+## Replicated with them: the host's NetSnapshotBuffer.clock_ms() for this pose. A client draws the box from
+## a buffer of them, a little in the past and interpolated, not on whichever came last (N-217).
+var net_time: int = 0
+var _net_buffer := NetSnapshotBuffer.new()
 var _has_net_state: bool = false
 var _vehicle: Node3D = null
 ## Host: the carrier's latest hold pose, in the truck's space when aboard. Re-applied every tick against the
@@ -201,6 +205,9 @@ func _ready() -> void:
 		# Placed by the network every frame (_process), against the truck as it's drawn: interpolating between
 		# physics ticks on top of that only made it trail behind.
 		physics_interpolation_mode = PHYSICS_INTERPOLATION_MODE_OFF
+		var network: Node = get_node_or_null(^"/root/NetworkManager")
+		if network != null and network.has_method(&"pose_net_sim"):
+			_net_buffer.configure_sim(network.call(&"pose_net_sim"))
 	initialize_trap()
 	_salvage_view = preload("res://scripts/gameplay/package/package_salvage.gd").new()
 	_salvage_view.name = "PackageSalvage"
@@ -243,16 +250,18 @@ func _process(_delta: float) -> void:
 	var predicted: bool = Engine.get_physics_frames() - _predicted_frame <= PREDICTION_FRAMES
 	if not predicted and not _has_net_state:
 		return
-	var pose: Transform3D = _predicted_pose if predicted else net_transform
-	var riding: bool = _predicted_in_vehicle if predicted else net_in_vehicle
 	var vehicle: Node3D = _find_vehicle()
-	if riding and vehicle != null:
-		# A client's truck is frozen, so not interpolated: its interpolated transform is then last frame's
-		# cached one, not where the network just put it, and the box would trail the truck by a frame.
-		var vehicle_pose: Transform3D = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
-		global_transform = vehicle_pose * pose
-	else:
-		global_transform = pose
+	# A client's truck is frozen, so not interpolated: its interpolated transform is then last frame's cached
+	# one, not where the network just put it, and the box would trail the truck by a frame.
+	var truck: Transform3D = Transform3D.IDENTITY
+	if vehicle != null:
+		truck = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
+	if predicted:
+		global_transform = truck * _predicted_pose if _predicted_in_vehicle and vehicle != null else _predicted_pose
+		return
+	var now: float = NetSnapshotBuffer.local_now()
+	_net_buffer.take(net_time, net_transform, net_in_vehicle and vehicle != null, now)
+	global_transform = _net_buffer.sample(now, truck)
 
 
 ## The carrier's own client, every physics tick next to submit_carry_transform: draw the box in its hands now
@@ -276,6 +285,7 @@ func _publish_net_state() -> void:
 	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if net_in_vehicle else 0.0))
 	net_in_vehicle = riding
 	net_transform = vehicle.global_transform.affine_inverse() * global_transform if riding else global_transform
+	net_time = NetSnapshotBuffer.clock_ms()
 
 
 func _find_vehicle() -> Node3D:
@@ -392,13 +402,18 @@ func spill_contents(velocity: Vector3 = Vector3.ZERO) -> void:
 func _peer_within_reach(peer_id: int) -> bool:
 	for player: Node in get_tree().get_nodes_in_group(&"player"):
 		if player.get_multiplayer_authority() == peer_id:
-			return _reach_origin(player).distance_to(global_position) <= OPEN_REACH
+			return _reach_origin(player).distance_to(global_position) <= OPEN_REACH + _reach_slack(player)
 	return false
 
 
 ## A seated player's body stays where they sat down; their seat is where they are.
 static func _reach_origin(player: Node) -> Vector3:
 	return (player as Player).reach_origin() if player is Player else (player as Node3D).global_position
+
+
+## Host: how much further a client's request may reach, for how stale its player is here (N-217).
+static func _reach_slack(player: Node) -> float:
+	return (player as Player).reach_slack() if player is Player else 0.0
 
 
 ## What this box asks for now, as a LocText line: relayed as is, so each

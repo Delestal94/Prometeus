@@ -47,7 +47,8 @@ func can_interact(player: Node) -> bool:
 		var origin: Vector3 = (player.call(&"reach_origin") if player.has_method(&"reach_origin")
 				else (player as Node3D).global_position)
 		return player.get(&"carried_package") == null \
-				and origin.distance_to((_package as Node3D).global_position) <= DeliveryPackage.ASSIST_REACH
+				and origin.distance_to((_package as Node3D).global_position) \
+						<= DeliveryPackage.ASSIST_REACH + DeliveryPackage._reach_slack(player)
 	return not get_prompt().is_empty() and player.get(&"carried_package") == null
 
 

@@ -381,6 +381,10 @@ func reach_origin() -> Vector3:
 	return _seat_pose_component.reach_origin()
 
 
+func reach_slack() -> float:
+	return Ride.reach_slack(self)
+
+
 ## What an on-foot player collides with. Riding in the bay of a truck that's
 ## moving, not the loose boxes: a player is carried along by being moved
 ## between physics steps, so during each step they stood still in the world

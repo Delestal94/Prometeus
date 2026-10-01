@@ -1405,17 +1405,36 @@ Fase 0 de `docs/investigacion-red.md`: medir antes de seguir optimizando.
   que `--net-sim` en el cliente suba el ping unos 150 ms. **Necesita PC:** dos máquinas con Steam abierto; en
   CI no hay cliente de Steam y en una sola PC el P2P con la misma cuenta no anda.
 
-### N-217 · Suavizado de jugadores y cajas remotas, y sync a 30 Hz — A · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package.gd` de Slatex)
+### ~~N-217 · Suavizado de jugadores y cajas remotas, y sync a 30 Hz~~ **[x] Hecho (2026-10-01)** — A · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package.gd` de Slatex)
 
 Fase 2 de `docs/investigacion-red.md`. Hoy los jugadores remotos (`player.gd _apply_net_state`) y las cajas
 del cliente (`package.gd _process`) se colocan con el último valor que llegó, sin suavizar. Con el jitter
 de internet saltan.
-- [ ] Separar de `VehicleNetSmoother` un `NetSnapshotBuffer` genérico, con reloj del host, y usarlo en
-  jugadores y cajas.
-- [ ] Colchón adaptativo: 2 intervalos más 2 × el jitter medido, entre 50 y 200 ms.
-- [ ] Recién con eso, bajar `replication_interval` de caja y jugador a 1/30 s. `test_net_bandwidth_budget`
-  tiene que seguir pasando.
-- [ ] Tolerancia de alcance proporcional al ping en los chequeos del host (agarrar y usar cajas).
+- [x] ~~Separar de `VehicleNetSmoother` un `NetSnapshotBuffer` genérico, con reloj del host, y usarlo en
+  jugadores y cajas.~~
+- [x] ~~Colchón adaptativo: 2 intervalos más 2 × el jitter medido, entre 50 y 200 ms.~~
+- [x] ~~Recién con eso, bajar `replication_interval` de caja y jugador a 1/30 s. `test_net_bandwidth_budget`
+  tiene que seguir pasando.~~
+- [x] ~~Tolerancia de alcance proporcional al ping en los chequeos del host (agarrar y usar cajas).~~
+
+**[x] Hecho (2026-10-01, rama `claude/upbeat-mayer-udik89`; reclamo `nacho/N-217-snapshot-smoothing`)**:
+- `NetSnapshotBuffer` en el módulo `net_pose_smoother`:
+  - el reloj es de quien manda (`clock_ms()`) y el desfase sale de la llegada con menos atraso del último
+    segundo;
+  - colchón de 2 intervalos + 2 × jitter (RFC 3550), entre 50 y 200 ms, que se mueve de a poco;
+  - poses en el espacio del camión;
+  - teletransporte, extrapolación de 100 ms y arranque después de una caja quieta;
+  - `take()` lee las propiedades replicadas en cada cuadro.
+- El camión sigue con `NetPoseSmoother` (60 Hz, 100 ms fijos).
+- Jugador: nodo `PlayerNetPose` (`net_time`, `net_yaw` en vez de `.:rotation`; el giro va en el espacio del
+  camión cuando viaja en la caja). Caja: `net_time`. Los dos a 30 Hz.
+- `reach_slack()` en el host: 6 m/s × (ping + colchón), con tope de 1,5 m. Se aplica en
+  `Interactable._within_reach`, abrir, ayudar, pasar de mano en mano y agarrar para ayudar. El ping sale de
+  `NetStats.round_trip_ms()`.
+- Ancho de banda con 8 jugadores: 117,7 → 67,7 KB/s por cliente y 6,8 → 3,9 Mbit/s de subida del host.
+- `PROTOCOL_VERSION` 22. Tests: `test_net_snapshot_buffer`, `test_remote_smoothing`, `test_net_stats`.
+  Aviso `docs/avisos/2026-10-01-n217-suavizado-remotos.md`.
+- Falta probarlo en red real con `--net-sim` (dos procesos, `net_pair`) y por Steam.
 
 ### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: no
 

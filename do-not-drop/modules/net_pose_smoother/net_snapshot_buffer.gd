@@ -1,7 +1,7 @@
 class_name NetSnapshotBuffer
 extends RefCounted
-## Something another peer owns, drawn smoothly here (N-217; first built for
-## the truck in N-208, vehicle_net_smoother.gd).
+## Something another peer owns, drawn smoothly here (N-217: players and
+## boxes; NetPoseSmoother, the truck's from N-208, keeps a fixed delay).
 ##
 ## Poses come over the network at a fixed rate but don't land evenly: two in
 ## one frame, then none for three, a lost one now and then, and with an
@@ -23,6 +23,10 @@ extends RefCounted
 ##   drawing time would be a jump in where the node is drawn.
 ## - **Loss.** Past the newest pose it carries on at its last velocity for up
 ##   to MAX_EXTRAPOLATION, then holds.
+## - **Rest.** A sender that slows down while its pose stays put (a box at
+##   rest, NetRestThrottle) leaves a long gap before the first pose that moves
+##   again: the resting pose is repeated one interval before it, so the motion
+##   starts there instead of creeping across the whole gap.
 ## - **Order.** Poses are kept in sender order even when the network swapped
 ##   two; a repeated one is ignored.
 ## - **Truck space.** A pose can be `local`: in the space of something that
@@ -34,8 +38,8 @@ extends RefCounted
 ## Debug: `--fake-lag=<ms>` holds every arriving pose back that long, plus a
 ## random jitter of up to a third of it. `--net-sim=lag,jitter,loss` (N-216,
 ## net_stats.gd) does the same on LAN with its own jitter (0..jitter ms) and
-## drops `loss` % of the poses, as a lossy link would; over Steam the sockets
-## simulate it instead (NetworkManager.pose_net_sim() is empty there).
+## drops `loss` % of the poses, as a lossy link would. The owner hands that
+## profile in (configure_sim()): the buffer never looks the session up.
 
 const MIN_DELAY: float = 0.05
 const MAX_DELAY: float = 0.2
@@ -60,6 +64,9 @@ const LATE_STREAK: int = 6
 const JITTER_GAIN: float = 1.0 / 16.0
 ## Gaps longer than this (a hitch, a pause) say nothing about the link.
 const MAX_SAMPLE_GAP: float = 0.5
+## A gap of more than this many send intervals before a pose is a sender at
+## rest (or a burst lost): the pose before it is held until one interval before.
+const REST_GAP_INTERVALS: float = 4.0
 
 ## [sender_time, Transform3D, local], oldest first.
 var _snapshots: Array = []
@@ -83,16 +90,15 @@ var fake_jitter: float = -1.0
 ## Share of arriving poses dropped (0..1), like packets lost on the way.
 var fake_loss: float = 0.0
 var _rng := RandomNumberGenerator.new()
+## What take() last saw, and whether the buffer holds unstamped poses.
+var _taken: Array = []
+var _unstamped: bool = false
 
 
 func _init() -> void:
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--fake-lag="):
 			fake_lag = maxf(float(arg.get_slice("=", 1)) / 1000.0, 0.0)
-	var tree := Engine.get_main_loop() as SceneTree
-	var network: Node = tree.root.get_node_or_null(^"NetworkManager") if tree != null else null
-	if network != null and network.has_method(&"pose_net_sim"):
-		configure_sim(network.call(&"pose_net_sim"))
 	_rng.randomize()
 
 
@@ -113,8 +119,9 @@ static func local_now() -> float:
 	return Time.get_ticks_usec() / 1000000.0
 
 
-## Takes a NetStats `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}); an
-## empty one leaves the buffer as it was.
+## Takes a `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}); an empty one
+## leaves the buffer as it was. The owner calls it (the game knows whether the
+## transport already simulates the link).
 func configure_sim(sim: Dictionary) -> void:
 	if sim.is_empty():
 		return
@@ -140,6 +147,26 @@ func push(sender_time: float, pose: Transform3D, now: float, local: bool = false
 	_accept(sender_time, pose, now, local)
 
 
+## A replicated pose read straight off the synchronized properties, every
+## frame: only a new (stamp, pose, local) goes in, so the owner polls its
+## properties instead of hooking each setter (they land one by one, in any
+## order). `stamp_ms` is the sender's clock_ms(); 0, never stamped (a spawn
+## state from before the stamp, a test placing a body by hand), puts the pose
+## there at once, as if there were no buffer.
+func take(stamp_ms: int, pose: Transform3D, local: bool, now: float) -> void:
+	var state: Array = [stamp_ms, pose, local]
+	if state == _taken:
+		return
+	if stamp_ms <= 0 or _unstamped:
+		clear()
+	_taken = state
+	_unstamped = stamp_ms <= 0
+	if _unstamped:
+		_accept(now, pose, now, local)
+	else:
+		push(stamp_ms / 1000.0, pose, now, local)
+
+
 func _accept(sender_time: float, pose: Transform3D, now: float, local: bool) -> void:
 	_measure(sender_time, now)
 	if not _snapshots.is_empty():
@@ -154,10 +181,14 @@ func _accept(sender_time: float, pose: Transform3D, now: float, local: bool) -> 
 	if at > 0 and is_equal_approx(float(_snapshots[at - 1][0]), sender_time):
 		return
 	if at == _snapshots.size() and at > 0:
-		var gap: float = sender_time - float(_snapshots[at - 1][0])
+		var previous: Array = _snapshots[at - 1]
+		var gap: float = sender_time - float(previous[0])
 		if gap > 0.0 and gap < MAX_SAMPLE_GAP:
 			_interval = gap if not _interval_known else lerpf(_interval, gap, 0.1)
 			_interval_known = true
+		if gap > REST_GAP_INTERVALS * _interval:
+			_snapshots.append([sender_time - _interval, previous[1], previous[2]])
+			at += 1
 	_snapshots.insert(at, [sender_time, pose, local])
 	while _snapshots.size() > MAX_SNAPSHOTS:
 		_snapshots.pop_front()
@@ -285,3 +316,5 @@ func clear() -> void:
 	_interval_known = false
 	_jitter = 0.0
 	_last_transit = INF
+	_taken = []
+	_unstamped = false

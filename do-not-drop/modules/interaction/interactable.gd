@@ -65,11 +65,14 @@ func request_interact() -> void:
 const REMOTE_REACH: float = 4.5
 
 
+## Plus the player's `reach_slack()` when it has one: how far behind the
+## host's copy of a client's player may be drawn (its ping and smoothing).
 func _within_reach(player: Node) -> bool:
 	var origin: Vector3 = (player as Node3D).global_position
 	if player.has_method(&"reach_origin"):
 		origin = player.call(&"reach_origin")
-	return origin.distance_to(global_position) <= REMOTE_REACH
+	var slack: float = float(player.call(&"reach_slack")) if player.has_method(&"reach_slack") else 0.0
+	return origin.distance_to(global_position) <= REMOTE_REACH + slack
 
 
 ## The player node a peer controls, or null.

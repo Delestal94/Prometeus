@@ -44,7 +44,8 @@ static func ride_frame_by_frame(p: Player) -> void:
 
 
 ## Everyone else's copy of this player: where the owner says, inside this
-## peer's truck if they're riding in it. Each frame against the truck as
+## peer's truck if they're riding in it, a little in the past and
+## interpolated (PlayerNetPose, N-217). Each frame against the truck as
 ## drawn -- except riding a simulated (interpolated) truck, the host's: there
 ## this body is solid in the moving bay, and a frame's drawn pose is up to a
 ## tick behind the simulated one. So there it follows the truck on the ticks
@@ -63,10 +64,27 @@ static func apply_net_state(p: Player, on_tick: bool = false) -> void:
 		p.reset_physics_interpolation()
 	if on_tick != tick_placed:
 		return
-	if riding:
-		p.global_position = (vehicle.global_transform if on_tick else drawn_transform(vehicle)) * p.net_position
-	else:
-		p.global_position = p.net_position
+	var truck: Transform3D = Transform3D.IDENTITY
+	if vehicle != null:
+		truck = vehicle.global_transform if on_tick else drawn_transform(vehicle)
+	var pose_node: Node = net_pose(p)
+	if pose_node == null:
+		p.global_position = truck * p.net_position if riding else p.net_position
+		return
+	var pose: Transform3D = pose_node.drawn(p.net_position, riding, truck)
+	p.global_position = pose.origin
+	p.global_rotation = Vector3(0.0, pose_node.yaw_of(pose), 0.0)
+
+
+## The player's PlayerNetPose (player.tscn), or null on a bare test player.
+static func net_pose(p: Player) -> Node:
+	return p.get_node_or_null(^"PlayerNetPose")
+
+
+## Host: extra reach for this player's requests (PlayerNetPose.reach_slack()).
+static func reach_slack(p: Player) -> float:
+	var pose_node: Node = net_pose(p)
+	return float(pose_node.reach_slack(p.get_multiplayer_authority())) if pose_node != null else 0.0
 
 
 ## Where a node is drawn this frame. A client's truck is frozen and not
@@ -86,6 +104,9 @@ static func publish_net_state(p: Player) -> void:
 			Player.RIDE_MARGIN if p.net_in_vehicle else 0.0))
 	p.net_in_vehicle = riding
 	p.net_position = vehicle.to_local(p.global_position) if riding else p.global_position
+	var pose_node: Node = net_pose(p)
+	if pose_node != null:
+		pose_node.publish(p, vehicle, riding)
 
 
 ## Standing (or jumping) in the cargo bay, the owner is moved along with the

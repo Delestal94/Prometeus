@@ -46,7 +46,7 @@ const RPCS: Dictionary = {
 ## Methods the project calls on a player from outside player.gd (the player components, the box, the tests).
 const METHODS: Array[String] = [
 	"is_local", "leave_seat", "pick_up", "drop_carried", "board_seat", "tend_package", "assist_package",
-	"stop_assisting", "receive_package_hit", "reach_origin", "pickup_high_weight_for_package",
+	"stop_assisting", "receive_package_hit", "reach_origin", "reach_slack", "pickup_high_weight_for_package",
 	"_find_vehicle", "_on_foot_mask", "_apply_look", "_update_ground_safety", "_on_peer_level_ready",
 	"_send_ping", "_show_first_trap_tip", "_gather_package_input", "_drop_carried", "_try_interact",
 	"_toggle_package_lid", "_update_carried_package", "_closest_interactable", "_lid_target",

@@ -82,7 +82,9 @@ static func transfer(p: DeliveryPackage, sender_id: int, recipient_path: NodePat
 	var recipient: Player = p.get_node_or_null(recipient_path) as Player if RpcGuard.path_ok(recipient_path) else null
 	if recipient == null or recipient == p.carrier or recipient.carried_package != null:
 		return
-	if DeliveryPackage._reach_origin(recipient).distance_to(DeliveryPackage._reach_origin(p.carrier)) > TRANSFER_REACH:
+	var slack: float = DeliveryPackage._reach_slack(recipient) + DeliveryPackage._reach_slack(p.carrier)
+	if DeliveryPackage._reach_origin(recipient).distance_to(DeliveryPackage._reach_origin(p.carrier)) \
+			> TRANSFER_REACH + slack:
 		return
 	var giver_peer_id: int = p._last_holder_peer
 	take_by(p, recipient)

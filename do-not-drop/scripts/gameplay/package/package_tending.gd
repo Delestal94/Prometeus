@@ -129,7 +129,7 @@ static func has_fresh_input(p: DeliveryPackage, peer_id: int) -> bool:
 static func _peer_within_assist_reach(p: DeliveryPackage, peer_id: int) -> bool:
 	var player: Node = player_for_peer(p, peer_id)
 	return player != null and DeliveryPackage._reach_origin(player).distance_to(p.global_position) \
-			<= DeliveryPackage.ASSIST_REACH
+			<= DeliveryPackage.ASSIST_REACH + DeliveryPackage._reach_slack(player)
 
 
 static func player_for_peer(p: DeliveryPackage, peer_id: int) -> Node:
