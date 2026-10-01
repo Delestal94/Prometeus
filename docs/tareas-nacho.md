@@ -9,6 +9,51 @@
 
 ## QA — bugs abiertos
 
+
+### N-238 · `request_gear_shift` sin `RpcGuard` y un test que se deja engañar por comentarios — A · `Opus 5.5 · xhigh` · Aviso: no
+Origen: auditoría integral 2026-10-01, A-D.1 (P1). `request_gear_shift` en
+`do-not-drop/scripts/gameplay/vehicle/vehicle.gd:558-568` no llama `RpcGuard.allow_request(self)`: solo
+tiene un comentario TODO. `tests/test_rpc_guard.gd` busca el token como texto con los comentarios incluidos,
+así que el TODO lo hace pasar. El comentario "protocol version 12" de `vehicle.gd:557` es falso (el 12 es
+N-109; A-D.3). Hecho cuando `request_gear_shift` llama al guard, `test_rpc_guard` quita lo que sigue a `#`
+antes de buscar el token y tiene un caso negativo (token solo en un comentario => falla), y el comentario
+de versión dice la verdad. Si el cambio no toca firmas RPC no hace falta subir `PROTOCOL_VERSION` (solo se
+agrega una llamada interna; subirla solo si cambia alguna firma o el orden de los RPC). Dominio: nacho
+(`vehicle.gd`) y libre (`tests/`).
+- [ ] **N-238.1** Sumar `RpcGuard.allow_request(self)` a `request_gear_shift` y corregir el comentario de
+  `vehicle.gd:557`. Con `constructor-red`; tests `rpc_guard`, `vehicle`.
+- [ ] **N-238.2** `test_rpc_guard.gd` quita los comentarios `#…` antes de buscar el token y suma el caso
+  negativo (token solo en un comentario). Con `escritor-tests`, y después `auditor-red` sobre todo el diff;
+  tests `rpc_guard`.
+
+### N-239 · ⏸ decide el usuario: CI sin run en los commits del auto-merge — A · `Opus 5.5 · xhigh` · Aviso: no
+Origen: auditoría integral 2026-10-01, A-D.2 (P1). El auto-merge (`dependabot-auto-merge.yml` con
+`GITHUB_TOKEN`) no dispara CI: 19 de 49 commits de `main` no tienen run. `construccion.md:14` y
+`pc-build.md:13` miran `gh run list --branch main --limit 1` (el último run, no el de HEAD), así que una
+rutina puede dar por verde un `main` que nadie probó. Opciones: (a) GitHub App o PAT como secret para el
+auto-merge (los merges sí disparan CI; pide un secret); (b) workflow `schedule`/`workflow_run` que pruebe
+HEAD de `main` cuando no tenga run; (c) solo cambiar las rutinas para consultar el run del SHA de HEAD
+(`gh run list --commit <sha>`). Recomendación: (b)+(c), sin secretos; (a) si el usuario prefiere. Cambia CI y
+rutinas, por eso espera decisión (issue `decide-usuario`). Hecho cuando (según la opción) un commit de
+`main` hecho por el auto-merge termina con un run de CI verde o rojo, y las rutinas miran el run del SHA de
+HEAD y tratan "sin run" como "no verificado".
+- [ ] **N-239.0** ⏸ Decisión del usuario entre (a), (b)+(c) o (c) sola.
+- [ ] **N-239.1** Implementar la opción elegida en `.github/workflows/` y `.claude/rutinas/construccion.md`
+  / `pc-build.md`. Con la conversación principal; verificar con `gh run list --commit <sha>` sobre un commit
+  de auto-merge.
+
+### N-240 · Intermitente sin nombre en CI: anotar cada falla y cazarlo — A · `Opus 5.5 · high` · Aviso: no
+Origen: auditoría integral 2026-10-01, A-5.1 (P1). `main` quedó rojo en `8a51334` (run 36815889169, shard
+2/4) y el mismo árbol salió verde en #143; el sospechoso es `test_mud_segment`, pero el log no dice cuál
+falló. Hecho cuando `tools/run-tests.sh` emite, con `GITHUB_ACTIONS` definido, una línea
+`::error title=FAIL <test>::<primera línea ERROR>` por cada falla (el resultado pase/falla no cambia, con un
+test que lo comprueba) y el intermitente identificado por esa anotación tiene causa y arreglo con un test
+que lo reproduce o 50 corridas seguidas en verde. El reintento automático en CI queda fuera (pregunta al
+usuario). Dominio libre (`tools/`, `tests/`).
+- [ ] **N-240.1** Anotación `::error` por falla en `tools/run-tests.sh`. Con la conversación principal;
+  tests `run_tests` (o chequeo con un test de mentira) y `ejecutor-tests`.
+- [ ] **N-240.2** Con el nombre que dé la anotación (primero `mud_segment`), identificar y arreglar el
+  intermitente. Con `cazador-bugs`; tests `mud_segment` repetido.
 ### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida) · **[x] PR #108**
 Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
 (`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta
@@ -225,7 +270,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸ |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -950,8 +995,8 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
   (`Hud.set_economy_visible()`); "furgoneta" → "camión". Todo con aserciones en `test_hud_flow`.
   - [ ] A confirmar: en las capturas la escena 3D del depósito salió más fría en una tanda que en otra;
     probablemente el clima/`WorldMood` al azar de cada corrida (nada de iluminación cambió en esta rama).
-- [ ] **Aparte:** faltan 14 `.uid` en `main` (Godot los genera en cada clon con valores distintos);
-  commitearlos en un PR chico cuando nadie tenga copias sin trackear.
+- [x] **Aparte:** ~~faltan 14 `.uid` en `main` (Godot los genera en cada clon con valores distintos);
+  commitearlos en un PR chico cuando nadie tenga copias sin trackear.~~ **[x] Cerrada (2026-10-01):** hoy faltan 0, lo arregló #127 (auditoría integral 2026-10-01).
 - [ ] Bajar la línea base del lint (quedan ~990 líneas de más de 120 columnas, casi todas en tests).
 
 ### N-215 · Repetir la prueba por Steam después de los PR #34 y #35 — A · manual (con un amigo) · Aviso: no
