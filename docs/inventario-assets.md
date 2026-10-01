@@ -44,10 +44,10 @@
 | Ícono del .exe | `ui/icons/app_icon.ico` | ✅ | `export_presets.cfg` → `application/icon`. |
 | Íconos de trampa (×7) | `ui/icons/tx_ui_trap_{fragile,balance,growing_weight,noisy,liquid,explosive,hostile}_256.png` | ✅ | Un ícono low-poly transparente por trampa; en el HUD, al lado de cada paquete de la carga (se apagan si el paquete se pierde). |
 | Logo del juego (wordmark) | `ui/logo/tx_ui_logo_{wordmark,stacked}_2048.png` | ✅ | Wordmark 2048×1024 integrado en `main_menu.gd`; variante apilada 2048×2048 lista para Steam. |
-| Fondo de pantalla de resultados | — | ⬜ | Ilustración: la tripulación frente a la furgoneta al terminar la ruta. |
+| Fondo de pantalla de resultados | `ui/backgrounds/tx_ui_results_background_1920.png` | ✅ | S-307 (2026-10-01): porche con cajas, furgoneta y tripulación chiquita al atardecer; sujetos a los costados de la tarjeta centrada. `hud.gd` `results_backdrop`, solo en resultados, `modulate` 0,8. Prompt en `art/concept/results/prompt.txt` (semilla 902). |
 | Cápsulas de Steam (460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240) | — | ⬜ | Necesitan el logo. Fase de lanzamiento. |
 | Íconos de acción del HUD (×9) | `ui/icons/tx_ui_action_*_128.png` | ✅ | Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja y usar carta; `UiTheme.action_icon()` los muestra junto a los avisos de interacción. |
-| Marco del celular / UI de cámara | — | ⬜ | Para `phone_camera.gd`. |
+| Marco del celular / UI de cámara | `scripts/ui/phone_frame.gd` (por código) | ✅ | S-304: bisel, barra de estado y obturador armados como `Control`, sin imagen. |
 
 | Tipografías | `assets/fonts/LilitaOne-Regular.ttf`, `Nunito-Variable.ttf` | ✅ | OFL (licencias al lado). Sistema de UI en `docs/direccion-visual.md` §3. |
 
@@ -213,7 +213,7 @@ jugador 1.568 triángulos están bien para el estilo.
    (2026-09-23)**.
 3. **Resolver el celular de Slatex:** el modelo está creado, pero debe rehacerse y S-304 tiene
    que integrarlo sin recuperar el viewmodel de manos flotantes.
-4. **Crear los ⬜ de mayor impacto:** el fondo de resultados y el marco del celular. El logo de
+4. ~~**Crear los ⬜ de mayor impacto:** el fondo de resultados y el marco del celular.~~ **Hecho** (S-307 2026-10-01; el marco es por código, S-304). El logo de
    S-306 ya está integrado y listo como base de las cápsulas de Steam.
 5. **Modelado (sección 10):** primero N-128 (conos y barrera de obras, solo código), después
    el tren y el paso a nivel (N-129/N-130), el celular (S-104) y los autos (N-136).
