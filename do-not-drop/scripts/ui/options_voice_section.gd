@@ -69,7 +69,8 @@ func _on_voice_chat_toggled(pressed: bool) -> void:
 
 ## Rebuilds the crew list from the live session.
 func refresh_crew() -> void:
-	if _crew_box == null:
+	# Deferred: a language rebuild may have taken this section out of the tree.
+	if _crew_box == null or not is_inside_tree():
 		return
 	var players: Dictionary = {}
 	for player: Node in get_tree().get_nodes_in_group(&"player"):
@@ -89,7 +90,11 @@ static func crew_entries(peer_ids: Array, players: Dictionary, local_id: int, on
 
 
 ## One row per entry, or a single muted line when there is nobody else.
+## A gamepad player sitting on a crewmate's control keeps the focus there
+## (or on the voice switch when that crewmate left): a freed focus owner
+## would leave the stick with nothing to move.
 func render_crew(entries: Array[Dictionary]) -> void:
+	var focus_spot: PackedStringArray = _focused_crew_spot()
 	for child: Node in _crew_box.get_children():
 		_crew_box.remove_child(child)
 		child.queue_free()
@@ -99,6 +104,27 @@ func render_crew(entries: Array[Dictionary]) -> void:
 		return
 	for entry: Dictionary in entries:
 		_add_crewmate(entry)
+	if not focus_spot.is_empty():
+		var row: Node = _crew_box.get_node_or_null(NodePath(focus_spot[0]))
+		var again: Control = null
+		if row != null:
+			again = row.find_child(focus_spot[1], true, false) as Control
+		(again if again != null else voice_check).grab_focus()
+
+
+## Which crewmate row ("Peer_<id>") and which of its controls ("Mute",
+## "Volume") hold the focus, or empty. By name: the containers in between get
+## new generated names on every rebuild.
+func _focused_crew_spot() -> PackedStringArray:
+	if not is_inside_tree():
+		return PackedStringArray()
+	var owner_control: Control = get_viewport().gui_get_focus_owner()
+	if owner_control == null or not _crew_box.is_ancestor_of(owner_control):
+		return PackedStringArray()
+	var row: Node = owner_control
+	while row.get_parent() != _crew_box:
+		row = row.get_parent()
+	return PackedStringArray([String(row.name), String(owner_control.name)])
 
 
 func _add_crewmate(entry: Dictionary) -> void:

@@ -10,7 +10,8 @@ extends SceneTree
 ## - the crew list has one row per crewmate except this player (fed from a
 ##   roster, no Steam session needed), each with a mute and a volume that land
 ##   in ProximityVoice, shows what is already set when it is rebuilt, and says
-##   so when nobody else is there.
+##   so when nobody else is there; a rebuild keeps a gamepad player's focus
+##   (on the same crewmate's control, or on the voice switch if they left).
 
 var _failures: int = 0
 
@@ -94,6 +95,17 @@ func _run() -> void:
 		var again_volume: HSlider = section.find_child("Peer_3", true, false).find_child("Volume", true, false)
 		_expect(again_mute.button_pressed and is_equal_approx(again_volume.value, 0.4),
 			"A rebuilt list shows the mutes and volumes already set")
+		# A gamepad player on a crewmate's control keeps the focus through a rebuild...
+		again_volume.grab_focus()
+		section.call(&"render_crew", entries)
+		var focused: Control = options.get_viewport().gui_get_focus_owner()
+		_expect(focused != null and focused.is_inside_tree() and focused.name == &"Volume"
+			and section.find_child("Peer_3", true, false).is_ancestor_of(focused),
+			"A rebuild gives the focus back to the same crewmate's control")
+		# ...and lands on the voice switch when that crewmate left.
+		section.call(&"render_crew", section_script.call(&"crew_entries", [1, 2], {}, 1, true))
+		_expect(options.get_viewport().gui_get_focus_owner() == voice_check,
+			"When that crewmate left, the focus goes to the voice switch")
 	section.call(&"render_crew", section_script.call(&"crew_entries", [1], {}, 1, false))
 	_expect(section.find_child("Nobody", true, false) != null and section.find_child("Peer_2", true, false) == null,
 		"With nobody else, one line says so")
