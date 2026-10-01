@@ -29,9 +29,11 @@ const MAX_PLAYERS: int = 8
 ## 12: cargo_animal_alert / cargo_animal_ended are relayed, N-109;
 ## 13: the host tells each client when to wait out its level loads
 ## (_host_load_timeout, NetSession), N-235;
-## 14: the mud segment replicates its state and receives push beats over RPC, N-108).
+## 14: the player replicates its nickname and the host relays the next-day
+## newspaper (EventBus.newspaper_ready), N-606;
+## 15: the mud segment replicates its state and receives push beats over RPC, N-108).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 14
+const PROTOCOL_VERSION: int = 15
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

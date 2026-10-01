@@ -100,6 +100,14 @@ const VARIANTS: Dictionary = {
 	# Lighter and quicker, with twitchier steering: fast, and a lot less
 	# forgiving with fragile cargo.
 	&"agile": {"maximum_speed_kmh": 84.0, "maximum_engine_force": 1850.0, "maximum_steering": 0.5, "steering_response": 2.9, "mass": 800.0, "trim": Color("f08a24")},
+	# The old classic (N-114): a bit slower and heavier, with a manual gearbox
+	# (vehicle_gearbox.gd) the driver works by hand. The compensation is pay:
+	# the crew's delivery payout is multiplied by "pay_multiplier".
+	&"vintage": {
+		"maximum_speed_kmh": 68.0, "maximum_engine_force": 1700.0, "maximum_steering": 0.42,
+		"steering_response": 2.0, "mass": 1000.0, "trim": Color("8a5a24"), "factory_body": Color("e6cf98"),
+		"retro": true, "manual": true, "pay_multiplier": VehicleGearbox.PAY_MULTIPLIER,
+	},
 }
 const PAINTS: Dictionary = {
 	&"white": Color("dde2e8"),
@@ -171,6 +179,8 @@ const SHELL_LAYER: int = 64
 var _shell: StaticBody3D
 
 @onready var _package_spawn: Marker3D = $CargoBay/LeftSeat1PackageMount
+## The manual gearbox (N-114): always in the scene, only used by a manual variant.
+@onready var gearbox: VehicleGearbox = $Gearbox
 var _horn_player: AudioStreamPlayer3D
 
 
@@ -210,6 +220,7 @@ func _ready() -> void:
 	for door: StringName in [&"rear", &"cab_left", &"cab_right"]:
 		_apply_door(door, is_door_open(door))
 	rear_ramp_deployed = rear_ramp_deployed
+	_apply_variant()
 	if is_multiplayer_authority():
 		EventBus.package_placed.connect(_on_package_placed)
 
@@ -464,13 +475,25 @@ func _apply_variant() -> void:
 	maximum_steering = tuning["maximum_steering"]
 	steering_response = tuning["steering_response"]
 	mass = tuning["mass"]
+	if is_node_ready():
+		gearbox.enabled = bool(tuning.get("manual", false))
+		if not gearbox.enabled:
+			gearbox.reset()
 	_apply_paint()
 
 
 func _apply_paint() -> void:
 	var reference_truck := get_node_or_null(^"ReferenceTruck")
 	if reference_truck != null:
-		reference_truck.call(&"set_paint", PAINTS[paint_id], VARIANTS[variant_id]["trim"])
+		var tuning: Dictionary = VARIANTS[variant_id]
+		var body: Color = PAINTS[paint_id]
+		# A variant with its own factory colour (the old van's cream) wears it
+		# while the crew hasn't picked another paint; a chosen paint still wins.
+		if paint_id == &"white" and tuning.has("factory_body"):
+			body = tuning["factory_body"]
+		reference_truck.call(&"set_paint", body, tuning["trim"])
+		if reference_truck.has_method(&"set_retro"):
+			reference_truck.call(&"set_retro", bool(tuning.get("retro", false)))
 
 
 func _on_horn_honked(_peer_id: int) -> void:
@@ -498,6 +521,45 @@ func submit_driver_input(throttle: float, steering_input: float, handbrake: bool
 	if sender_id != 0 and sender_id != driver_peer_id:
 		return  # Ignore stale input from whoever just gave up the wheel.
 	set_controls(throttle, steering_input, handbrake)
+
+
+## Whether this truck's variant is worked by a manual gearbox (N-114).
+func has_manual_gearbox() -> bool:
+	return bool(VARIANTS[variant_id].get("manual", false))
+
+
+## Host only: the driver asks for a gear up (+1) or down (-1). Same packet
+## rules as submit_driver_input (only the current driver counts), but reliable
+## and not repeated: a shift that got lost would leave the driver in the wrong
+## gear with no way to tell. Added with protocol version 12.
+@rpc("any_peer", "reliable")
+func request_gear_shift(direction: int) -> void:
+	# N-221: RpcGuard.allow_request(self) when it lands.
+	if not is_multiplayer_authority() or absi(direction) != 1:
+		return
+	# Only the current driver counts. Explicit comparison on purpose: with
+	# driver_peer_id == 0 (nobody at the wheel) a remote sender must not pass.
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != 0 and sender_id != driver_peer_id:
+		return
+	gearbox.request_shift(direction)
+
+
+## What this truck's variant multiplies the crew's delivery payout by (1.0 for
+## the ordinary ones, the manual van's compensation for the old one). The one
+## source of it: CrewProgression asks the truck on the road.
+func pay_multiplier() -> float:
+	return float(VARIANTS[variant_id].get("pay_multiplier", 1.0))
+
+
+## What the gear readout shows: "1".."5", or "R" while backing up; empty when
+## the truck is automatic. Reads replicated state only, so it holds on a client.
+func gear_text() -> String:
+	if not gearbox.enabled:
+		return ""
+	if linear_velocity.dot(-global_basis.z) < -0.7:
+		return "R"
+	return str(gearbox.gear)
 
 
 func get_cargo_spawn_transform() -> Transform3D:
@@ -561,12 +623,22 @@ func _physics_process(delta: float) -> void:
 	elif throttle > 0.01 and forward_speed < -0.7:
 		brake = braking_force * throttle
 	elif throttle > 0.01 and forward_speed * 3.6 < maximum_speed_kmh:
-		engine_force = -throttle * maximum_engine_force
+		# 1.0 unless the variant has a manual gearbox (N-114).
+		var drive: float = gearbox.drive_multiplier(forward_speed * 3.6, maximum_speed_kmh)
+		engine_force = -throttle * maximum_engine_force * drive
 	elif throttle < -0.01 and forward_speed * 3.6 > -reverse_speed_kmh:
 		engine_force = -throttle * maximum_engine_force * 0.55
 	elif absf(throttle) < 0.01:
 		brake = 0.6
 	presentation_braking = running and brake > 3.0
+	if gearbox.enabled:
+		gearbox.tick(delta)
+		if not running:
+			gearbox.reset()
+		else:
+			# The engine holds the truck back when it is over its gear's limit;
+			# the brake lights stay off for that (decided above).
+			brake = maxf(brake, gearbox.engine_brake(forward_speed * 3.6, maximum_speed_kmh))
 
 	_telemetry_time += delta
 	if _telemetry_time >= 0.1:

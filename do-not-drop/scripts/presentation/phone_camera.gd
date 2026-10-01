@@ -136,6 +136,12 @@ func _open() -> void:
 	# from the driver's seat.
 	if is_open or get_tree().paused or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
+	# The gamepad's bumpers change gear in the old manual van (N-114): the
+	# driver of that one doesn't get the phone out with them.
+	var truck: Node = get_tree().get_first_node_in_group(&"vehicle")
+	if truck != null and truck.has_method(&"has_manual_gearbox") and truck.has_manual_gearbox() \
+			and int(truck.get(&"driver_peer_id")) == NetworkManager.local_id():
+		return
 	_previous_camera = get_viewport().get_camera_3d()
 	if _previous_camera == null:
 		return

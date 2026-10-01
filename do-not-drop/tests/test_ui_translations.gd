@@ -29,6 +29,8 @@ extends SceneTree
 
 const CSV_PATH: String = "res://translations/strings_ui.csv"
 const SCAN_DIRS: Array[String] = ["res://scripts", "res://modules"]
+## Data files that name keys: the newspaper's stories (N-606.2) are asked for by the catalogue, not by a script.
+const SCAN_DATA: Array[String] = ["res://data/newspaper/stories.json"]
 ## Where a quoted accented literal means text shown untranslated.
 const LITERAL_SCAN_DIRS: Array[String] = [
 	"res://scripts/ui",
@@ -91,6 +93,9 @@ func _run() -> void:
 		for file_path: String in _scripts(dir_path):
 			for found: RegExMatch in key_pattern.search_all(FileAccess.get_file_as_string(file_path)):
 				used[found.get_string(1)] = file_path
+	for data_path: String in SCAN_DATA:
+		for found: RegExMatch in key_pattern.search_all(FileAccess.get_file_as_string(data_path)):
+			used[found.get_string(1)] = data_path
 	for key: String in used:
 		_expect(table.has(key), "%s (asked for in %s) is in the table" % [key, used[key]])
 	for key: String in table:

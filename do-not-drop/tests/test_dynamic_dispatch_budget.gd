@@ -16,11 +16,13 @@ extends SceneTree
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
-	# The one .call left relays merit/card changes through EventBus, which a
-	# test may replace with a plain Node (event_bus); the .callv emits a
+	# Two .call left: one relays merit/card changes through EventBus, which a
+	# test may replace with a plain Node (event_bus); the other asks the truck
+	# for its pay_multiplier (N-114): vehicle.gd names the autoloads, so this
+	# autoload cannot preload it as a typed reference. The .callv emits a
 	# signal chosen by name. The /root/ lookups are the null-safe autoload
 	# handles (EventBus x3, NetworkManager, RunManager, RouteEventManager).
-	"res://scripts/core/crew_progression.gd": {"call": 1, "callv": 1, "get": 0, "root": 6},
+	"res://scripts/core/crew_progression.gd": {"call": 2, "callv": 1, "get": 0, "root": 6},
 	# The two .call left are the EventBus relays (team money and route events),
 	# by name for the same reason. The /root/ lookups are the null-safe handles
 	# (EventBus, NetworkManager, RunManager, CrewProgression).

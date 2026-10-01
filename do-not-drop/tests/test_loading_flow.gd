@@ -72,6 +72,12 @@ func _run() -> void:
 	level.toggle_pause()
 	manager.finish_run(true)
 	await process_frame
+	# The host's next-day newspaper comes before the results (N-606.2).
+	_expect(hud.newspaper.is_open() and hud.overlay_mode == "newspaper", "The newspaper opens before the results")
+	hud.newspaper.dismiss()
+	# Building the results (and their stinger) costs a frame; let it pass before
+	# the restart's own timers start, or they expire together.
+	await process_frame
 	_expect(hud.overlay.visible and hud.overlay_mode == "results", "Result screen opens")
 	_expect(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Results release mouse")
 	level.restart_delivery()

@@ -87,6 +87,12 @@ func _check_cosmetic_neighbors(panel: Control) -> void:
 	for button: Button in buttons:
 		for property: StringName in [&"focus_neighbor_left", &"focus_neighbor_right", &"focus_neighbor_top",
 				&"focus_neighbor_bottom"]:
+			# Up from the first row of eyes goes to the nickname field above them (N-606.1).
+			var field := button.get_node_or_null(button.get(property)) as LineEdit
+			if field != null and field.name == &"NicknameEdit":
+				_expect(property == &"focus_neighbor_top" and button.get_meta(&"kind") == "eyes",
+					"Only up from the first row of eyes reaches the nickname field")
+				continue
 			var neighbor := button.get_node_or_null(button.get(property)) as Button
 			_expect(neighbor != null and neighbor.get_meta(&"kind") == button.get_meta(&"kind"),
 				"Cosmetic grid keeps %s navigation inside the %s choices"

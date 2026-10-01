@@ -247,3 +247,35 @@ campo de visión real del juego, 82°: `SHOTS` admite un cuarto elemento con el 
 - Falta la capa de oficio chica: carteles de seguridad (casco, velocidad máxima, salida de emergencia, evacuación),
   matafuegos numerados, botiquín, reloj fichero.
 - Lo que no se vio todavía con la crítica de `director-arte`: color y desgaste en general.
+
+### Iteración 2, paso 1 (2026-09-30, rama `nacho/N-319-depot-props`, N-319.2) — kit de modelos en Blender
+
+`modelador-blender` armó el kit en `assets/tools/build_depot_props.py` (sección "N-319.2 kit", grupos `ceiling dispatch
+bay logistics office cage safety breakroom workshop`): 40 GLB `sm_env_depot_*` en `models/environment/depot/`, con la
+lista corregida por `director-arte` (calzas y tope de rueda en vez de topes de andén, una cocinita en vez de microondas,
+cafetera y pava sueltos, sin zunchadora, la cortina de tiras queda como material; se sumaron escalera de ruedas, cono y
+valla de piso mojado y el marco de ventana con parteluces). Todavía **no están conectados al juego**: los pone
+`constructor-mundo` en el paso siguiente. Renders de revisión en `D:/tmp/depot_review/iter2/blender/`.
+
+**Convenciones del kit** (las necesita `constructor-mundo`)
+- Frente hacia −Z, origen en el centro de la base. Las piezas de pared tienen la espalda en z = 0 y salen hacia −Z; su
+  origen está en el piso bajo ellas, así que ya vienen a su altura de montaje (matafuegos 0,9, tablero 1,1 con caños a
+  3,4, botiquín 1,35, reloj fichero 1,2). Las de techo cuelgan de su origen: campana (gancho, aro a 1,05 m), tubo lineal
+  (centro del artefacto), conducto recto de 3 m y codo (sobre el eje; el codo tiene bocas en (−0,9, 0, 0) y (0, 0, 0,9)),
+  bandeja de cables de 3 m (fondo de la bandeja).
+- Tramos que se repiten cada 1,2 m con una sola pieza de cierre: `railing_segment` + `railing_post`, `window_frame` +
+  `window_mullion`, `cage_panel`. La escalera coincide con `_build_stair()` (16 escalones, 2,9 m de alto en 4,6 m hacia
+  +Z, 1 m de ancho, origen en el primer contrahuella).
+- Nodos con nombre para el juego: `LampDisc` (emisivo) y `LampHalo` (alfa 0,35) en la campana; `DoorLightRed` (X roja) y
+  `DoorLightGreen` (flecha verde) en el semáforo del portón, materiales `signal_red`/`signal_green`; `FilmShell`
+  (material `film`, alfa 0,35 con brillo) en el pallet filmado; `SignPlate` (material `sign_plate`, para teñir) y
+  `Pictogram` en el cartel.
+- Cartel de pictograma: `Pictogram` está mapeado a la celda 0 de `textures/depot/tx_depot_pictograms_512.png` (4 × 4
+  celdas de 128 px, blanco sobre transparente). Para otro, desplazar la UV `(col, fila) × 0,25`, en este orden: casco,
+  chaleco, velocidad, salida, matafuegos, botiquín, punto de reunión, montacargas, manos, no fumar, eléctrico,
+  evacuación.
+- La malla del pañol y de las jaulas rodantes es una textura alfa de rombos de 25 cm (`tx_depot_cage_mesh_256.png`,
+  corte alfa), no barras finas.
+- Materiales: nombres de la paleta para que `DepotKit` los agrupe; nuevos solo `film`, `lamp_halo`, `lamp_disc`,
+  `cage_mesh`, `sign_pictogram`, `sign_plate`, `signal_red` y `signal_green` (los lotes de `DepotKit` están en 170: no
+  pasar de ~190 al conectarlos).
