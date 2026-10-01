@@ -27,11 +27,15 @@ extends SceneTree
 ##   something going wrong.
 
 const EXPECTED: Array[String] = ["salida_deposito", "curva_bosque", "cruce_tren", "puente_lluvia", "casa_noche", "vuelco", "ciervo"]
-const ShotScript = preload("res://scripts/tools/trailer_shot.gd")
+## Loaded in _run(), not preloaded: trailer_shot.gd types the level, the truck
+## and the crew, whose scripts name autoloads that a --script run only has
+## after _initialize().
+const SHOT_PATH: String = "res://scripts/tools/trailer_shot.gd"
 const CameraScript = preload("res://scripts/tools/trailer_camera.gd")
 const StoreShotScript = preload("res://tests/render_store_shots.gd")
 
 var _failures: int = 0
+var _shot_script: GDScript
 
 
 func _initialize() -> void:
@@ -39,6 +43,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_shot_script = load(SHOT_PATH)
 	var store_shots: Array[Dictionary] = StoreShotScript.STORE_SHOTS
 	_expect(StoreShotScript.OUTPUT_SIZE == Vector2i(1920, 1080),
 		"Store captures have the required 1920x1080 output size")
@@ -48,7 +53,7 @@ func _run() -> void:
 	for store_shot: Dictionary in store_shots:
 		store_labels.append(String(store_shot.get("label", "")))
 		store_files[String(store_shot.get("file", ""))] = true
-		_expect(String(store_shot.get("scene", "")) in ShotScript.load_shots(),
+		_expect(String(store_shot.get("scene", "")) in _shot_script.load_shots(),
 			"Store scene '%s' uses a saved deterministic setup" % store_shot.get("label", ""))
 	_expect(store_files.size() == 5, "Every store scene has a distinct output file")
 	# N-316: one still per store plane, each with people and boxes on screen,
@@ -71,7 +76,7 @@ func _run() -> void:
 	for required: String in ["depósito cargando", "manejo con cajas en riesgo", "entrega en una casa"]:
 		_expect(required in store_labels, "Store batch includes %s" % required)
 
-	var shots: Dictionary = ShotScript.load_shots()
+	var shots: Dictionary = _shot_script.load_shots()
 	for name: String in EXPECTED:
 		_expect(shots.has(name), "The shot '%s' is saved" % name)
 		if not shots.has(name):
@@ -83,8 +88,8 @@ func _run() -> void:
 		var start: Dictionary = shots[name].get("start", {})
 		if String(start.get("at", "")) == "segment":
 			var houses: int = int(shots[name].get("houses", 2))
-			var min_start: float = float(start.get("lead", 60.0)) + ShotScript.RUN_UP_MARGIN
-			var seed_value: int = ShotScript.find_seed(String(start.segment), houses, 1, min_start)
+			var min_start: float = float(start.get("lead", 60.0)) + _shot_script.RUN_UP_MARGIN
+			var seed_value: int = _shot_script.find_seed(String(start.segment), houses, 1, min_start)
 			var plan: Dictionary = (load("res://scripts/gameplay/route/route.gd") as Script).call(&"plan_spine", seed_value, houses, true)
 			var found: bool = false
 			for entry: Dictionary in plan.segments:
@@ -110,7 +115,7 @@ func _run() -> void:
 	camera.queue_free()
 
 	# A real shot: the roll.
-	var runner: Node = ShotScript.new()
+	var runner: Node = _shot_script.new()
 	runner.set(&"autoplay", false)
 	root.add_child(runner)
 	await runner.call(&"setup", shots["vuelco"])
@@ -166,7 +171,7 @@ func _run() -> void:
 	root.get_node(^"/root/RunManager").call(&"reset_run")
 
 	# Mirrored anchors: the rail's +x side is where the thing is.
-	var mirror: Node = ShotScript.new()
+	var mirror: Node = _shot_script.new()
 	var flipped: Transform3D = mirror.call(&"_mirrored_toward", Transform3D.IDENTITY, Vector3(-4.0, 0.0, 0.0))
 	_expect((flipped.affine_inverse() * Vector3(-4.0, 0.0, 0.0)).x > 0.0, "A mirrored anchor puts the house or the deer on +x")
 	_expect((mirror.call(&"_mirrored_toward", Transform3D.IDENTITY, Vector3(4.0, 0.0, 0.0)) as Transform3D) == Transform3D.IDENTITY, "...and leaves it alone when it already is")
@@ -200,7 +205,7 @@ func _run() -> void:
 func _play(definition: Dictionary) -> Dictionary:
 	var result := {"in_view_at_end": false, "end_speed_kmh": INF, "to_stop": INF, "train_in_view": false, "hit_train": false,
 		"deer_crossed": false, "deer_in_view": false, "deer_hit": false}
-	var runner: Node = ShotScript.new()
+	var runner: Node = _shot_script.new()
 	runner.set(&"autoplay", false)
 	root.add_child(runner)
 	await runner.call(&"setup", definition)
