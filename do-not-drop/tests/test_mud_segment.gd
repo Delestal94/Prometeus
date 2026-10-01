@@ -22,6 +22,11 @@ extends SceneTree
 const Route = preload("res://scripts/gameplay/route/route.gd")
 const SEEDS: int = 400
 const FLAT_ARENA_LENGTH: float = 200.0
+## Headless paces physics at wall-clock speed and the rescue runs ~140 s of it
+## (pushes, strap, a 45 s crane): FAST_FORWARD ticks per real tick, ticks/s and
+## time_scale raised together so each tick is still 1/60 s of game time, as in
+## test_vehicle_stress. MudSegment only counts physics delta, never the clock.
+const FAST_FORWARD: int = 8
 
 var _failures: int = 0
 var _manager: Node
@@ -56,6 +61,9 @@ func _run() -> void:
 		await _measure()
 		quit(0)
 		return
+	Engine.physics_ticks_per_second = 60 * FAST_FORWARD
+	Engine.time_scale = float(FAST_FORWARD)
+	Engine.max_physics_steps_per_frame = 8 * FAST_FORWARD
 	_check_generation()
 	await _check_real_route()
 	await _check_endless_pool()
@@ -76,6 +84,9 @@ func _run() -> void:
 	await _check_level_stuck_rules()
 	_network.set(&"world_seed", 0)
 	_network.set(&"world_house_count", 0)
+	Engine.time_scale = 1.0
+	Engine.physics_ticks_per_second = 60
+	Engine.max_physics_steps_per_frame = 8
 	if _failures == 0:
 		print("PASS: mud is rare and announced, bogs a slow truck, and pushing, the strap or the crane free it")
 	quit(_failures)
