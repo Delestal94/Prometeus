@@ -36,6 +36,9 @@ extends SceneTree
 ## - cargo_animals.gd (the gull, the dog and the bees) reads the session's world_seed, is_host and
 ##   peer_level_ready through its NETWORK_MANAGER handle: if that stopped being the script the autoload
 ##   runs, `as NETWORK_MANAGER` would give null and the animals would roll from seed 0 and act on every peer.
+## - delivery_house.gd (a delivery stop) reads the session's world_seed through its NETWORK_MANAGER handle to
+##   pick the neighbour's line: if that stopped being the script the autoload runs, every house would pick
+##   its lines from seed 0.
 ## - trailer_shot.gd (the trailer and store-capture tool) sets the shot's seed
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the
 ##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
@@ -222,6 +225,11 @@ const BUDGETS: Dictionary = {
 	# name: steered, standing_clip, ground_speed, run, idle). The one /root/ lookup is the null-safe EventBus
 	# handle: it connects by name because a test may replace EventBus with a plain Node.
 	"res://scripts/gameplay/route/cargo_animal_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# A delivery stop (N-224.4): the box at the door is a DeliveryPackage (package_id, trap_state, is_open,
+	# _publish_care, consume) and the session the NETWORK_MANAGER handle (world_seed, below). The three
+	# /root/ lookups are the null-safe accessors: NetworkManager and EventBus twice (the reaction and the
+	# doorbell light connect by name because a test may replace EventBus with a plain Node).
+	"res://scripts/gameplay/route/delivery_house.gd": {"call": 0, "callv": 0, "get": 0, "root": 3},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -257,6 +265,9 @@ const SCRIPT_HANDLES: Dictionary = {
 		"GAME_SETTINGS": "/root/GameSettings",
 	},
 	"res://scripts/gameplay/route/cargo_animals.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
+	"res://scripts/gameplay/route/delivery_house.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 	"res://scripts/gameplay/package/package_feedback.gd": {

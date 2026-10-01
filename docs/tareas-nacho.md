@@ -969,6 +969,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.call` 177 → 172, `.get(&` 186 → 185, `/root/` 109 → 106. La baseline del lint bajó 1.
     `test_dynamic_dispatch_budget.gd` suma el archivo y su handle. Aviso `docs/avisos/2026-10-01-n224-player-tipado.md`.
     Siguientes: `spectator_camera.gd` (11), `level_common.gd` (11).
+  - [x] `delivery_house.gd` (2026-10-01, rama `nacho/N-224-delivery-house-typed`): la caja que llega al timbre como
+    `DeliveryPackage` (`package_id`, `trap_state`, `is_open`, `_publish_care()` y `consume()` directos; se van los
+    `has_method` y el `queue_free` de respaldo, que ninguna caja real usaba) y la sesión por la constante
+    `NETWORK_MANAGER` (preload de `network_manager.gd`: `world_seed` no está en `NetSession`). Queda por nombre el
+    EventBus (dos `connect`: un test puede reemplazarlo por un Node). En el archivo: `.call` 2 → 0, `.get(&` 5 → 0,
+    `/root/` 3 → 3; en `scripts/`: `.call` 172 → 170, `.get(&` 185 → 180. `test_dynamic_dispatch_budget.gd` suma el
+    archivo y su handle. Sin aviso (`route/` y `tests/`). Siguientes: `spectator_camera.gd` (10), `play_area.gd` (9),
+    `dashboard_gps.gd` (9), `vehicle_presentation.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
