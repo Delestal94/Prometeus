@@ -720,6 +720,10 @@ func _identify_peer(id: int, reply: Dictionary) -> void:
 
 func _receive_auth(id: int, data: PackedByteArray) -> void:
 	if multiplayer.is_server():
+		# One ready reply per joiner: another, or one from a joiner turned away,
+		# isn't even read (NetAdmission.first_reply()).
+		if not _admission.first_reply(id):
+			return
 		# Protocol 0 sent the raw word "ready". Recognize it without asking
 		# bytes_to_var() to parse arbitrary UTF-8, then reject it explicitly.
 		var reply: Variant = bytes_to_var(data) if data.get_string_from_utf8() != "ready" else null

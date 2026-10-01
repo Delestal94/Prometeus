@@ -31,10 +31,18 @@ constantes; `_sync_color_slots` suma un segundo argumento opcional.
   nueva y el host lo ve como alguien nuevo. Steam no cambia (el Steam ID lo garantiza Valve).
   `NetPeerIdentities`: `CHAIN_LENGTH`, `chain_link()`, `known_as()`, `is_replay()`; `peer_of()` y `record()`
   siguen la cadena.
-- **Rechazos:** el host le manda la falla al que no entra (`"full"`, `"version"`, `"connection"`) y, si no se va
-  solo, lo corta 0,5 s después (`NetAdmission.refuse()`): antes ocupaba el lugar de sobra del transporte hasta
-  45 s. No es en el mismo frame porque cortar un enlace ENet descarta lo que todavía no tuvo ack
-  (`enet_peer_reset_queues`), y la falla se perdería.
+- **Rechazos:** el host le manda la falla al que no entra (`"full"`, `"version"`, `"connection"`) y lo suelta
+  (`NetAdmission.refuse()`): antes ocupaba el lugar de sobra del transporte hasta 45 s. En ENet con
+  `peer_disconnect_later()`, que corta recién cuando la falla tiene ack; en cualquier transporte, corte duro a los
+  3 s (`REFUSED_GRACE_SECONDS`) si sigue ahí. Cortar antes del ack descarta la falla (`enet_peer_reset_queues`) y el
+  que entra vería "timeout" en vez del motivo.
+- **Un solo "listo" por joiner** (`NetAdmission.first_reply()`, en `_receive_auth`): un segundo, o uno de un
+  joiner ya rechazado, ni se lee. Y `on_identified()` solo acepta a uno admitido o "sin lugar" al autenticar:
+  antes, un rechazado que mandaba su "listo" igual pasaba a `complete_auth`, por encima de `max_players` y sin
+  color. Cubre también el costo de hashear: un mismo id, una sola búsqueda de repeticiones.
+- **El eslabón de un intento rechazado por sala llena se anota igual** (`NetPeerIdentities.advance()`): la
+  identidad que continúa pasa a ese eslabón con el mismo peer id, así quien lo haya escuchado lo manda como
+  repetición ("connection") y el siguiente del dueño entra. `known_as()` reconoce también la coincidencia exacta.
 - **El fantasma se suelta del todo en el acto:** `NetAdmission.close_dropped()` (antes `_close_connection`) usa
   `SceneMultiplayer.disconnect_peer()`, que en Godot 4.7.2 hace `_del_peer` al momento (limpia replicador y caché,
   manda `DEL_PEER` a los otros clientes) con las señales bloqueadas: no hay `peer_disconnected` para el fantasma
@@ -83,8 +91,10 @@ que vuelven), `test_network_roster` (slots de los que se fueron en el handshake)
 `name_ok`, `path_ok`), `net_session__test_net_session_rejoin` (`peer_removed`, `NetAdmission`, y una sala de dos
 por ENet en un proceso: un fantasma soltado sale de `SceneMultiplayer` en un frame y un reinicio en ese frame
 no lo espera ni le debe nada; el que vuelve con su fantasma todavía conectado entra; el que repite su identidad
-oye "connection"; un extraño que ignora "full" queda cortado en menos de un segundo; repeticiones del último
-eslabón o de uno anterior, rechazadas, y el siguiente de verdad aceptado), `test_network_rejoin` también: el que
+oye "connection"; un extraño que ignora "full" lo recibe y queda afuera dentro del margen de 3 s aunque mande
+varios "listo"; uno rechazado al autenticar que contesta igual no entra; uno que manda su "listo" cuatro veces se
+lee una sola vez y entra una sola; repeticiones del último eslabón o de uno anterior, rechazadas, el eslabón de un
+intento rechazado por sala llena también, y el siguiente de verdad aceptado), `test_network_rejoin` también: el que
 vuelve a una sala llena sin fantasma oye "full" sin que se le mueva el mérito. Y una etapa nueva al final de
 `tests/net_pair.gd`: el cliente deja su conexión abierta sin sondear (cable desenchufado) con una caja en
 crisis, vuelve, y el host le sostiene la ventana de rescate y suelta al fantasma en el acto.
