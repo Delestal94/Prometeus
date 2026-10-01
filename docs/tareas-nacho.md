@@ -175,6 +175,42 @@ hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 
   `WARNING:` (más `::warning::` en GitHub Actions) en `tools/run-net-pair.sh` / `run-net-trio.sh`; sigue
   siendo PASS.
 
+### N-408 · Una pantalla de carga que no se congela y la regresión del flujo menú → jugable — A · `Opus 5.5 · xhigh` · Aviso: sí (`main_menu.gd`, `hud.gd`, `scripts/ui/` de Slatex; `modules/` y `network_manager.gd` compartidos) · **[x] rama `nacho/N-408-loading-no-freeze`**
+
+Pedido del usuario (2026-10-01): con N-407 la pantalla quedaba congelada 9-12 s en "Armando la ruta…" y el sonido
+se cortaba. Regresión del flujo completo (mapa, batería, QA real solo/endless/par/trío): todo anda; los hallazgos,
+todos arreglados acá:
+- [x] **Congelamiento al armar el nivel** (P1; perfilador: `Route._ready` 5,8 s en un solo bloque). La ruta se arma
+  por cuadros (`FrameSlicer`, presupuesto 12 ms; terreno y adaptación en `WorkerThreadPool`; mundo idéntico bit a
+  bit, `test_route_golden`); aviso `2026-10-01-n408-ruta-por-cuadros.md`. Mientras carga la escena, los modelos se
+  precargan en hilos y los 34 sonidos del nivel se sintetizan en un hilo (`SynthAudio.warm()`).
+- [x] **La tapa se levanta cuando el juego está listo de verdad**: espera a `SceneLoader.BUSY_GROUP` (la ruta) y a
+  que el jugador propio exista (un cliente: hasta que el anfitrión lo spawnea), muestra depósito y ruta de a uno
+  por cuadro (cada primer dibujo en su cuadro) y espera 8 cuadros fluidos; la barra llega al 100 % a la vista.
+- [x] **El anfitrión no atendía la red mientras armaba** (P2): consecuencia de lo anterior, resuelto con él.
+- [x] **Sonido**: la música del menú sigue bajo la pantalla de carga (`carry_audio`) y se funde bajo el nivel; la
+  primera frase de la música del juego entra a los 1,5-3 s (antes 18-35 s de silencio).
+- [x] **Reinicio de la entrega** (anfitrión y clientes) por la pantalla de carga: antes `reload_current_scene()`
+  congelaba ~4 s.
+- [x] **Menú**: "Crear sala Endless" (antes el anfitrión siempre cargaba el nivel normal); el motivo real de un
+  error al crear/unirse ya no lo pisa el genérico "error %d"; si la conexión se cae con el nivel ya armándose, la
+  pantalla de carga vuelve al menú con el motivo (`redirect_to`) y una invitación de Steam en ese momento queda
+  pendiente (`NetworkManager.defer_lobby`).
+- [x] **El que entra tarde** recupera el mouse cuando el arranque de la entrega le saca la tarjeta de inicio.
+- [x] El espejo del depósito saca su primera foto cuando el depósito está a la vista.
+- [x] Tests nuevos: `test_scene_loader_gates`, `test_synth_audio_warm`, `test_route_async_build`,
+  `test_menu_to_level`, `test_menu_session_paths`, `test_level_loading_paths`; ampliados `test_route_gen`,
+  `test_render_budget`, `test_route_golden`, `test_loading_flow`, `test_tension_music`.
+- [x] **El depósito por cuadros** (rama `nacho/N-408b-depot-slices`, aviso `2026-10-01-n408-deposito-por-cuadros.md`):
+  `Depot` arma en rebanadas de 12 ms bajo un cargador (`is_built`, `built`, `loading_progress()`), el nivel espera a
+  depósito y ruta, y su primer dibujo se parte en ~13 pasos (`reveal_steps()`, uno por cuadro: 190-250 ms en uno
+  → máx. 45-100 ms). Cuadro del swap 430-500 → 325-415 ms: lo que queda es el resto del nivel (HUD, vehículo,
+  cajas, primer dibujo del mundo), sin partir. También: flechas del piso planas (parecían flotar: apuntaban en 3D),
+  texturas del depósito con respaldo de color liso y `DepotAtmosphere` acotado (`test_depot_textures`).
+- [ ] Siguen en un cuadro grande: el swap (~110 ms de `_ready` del nivel + ~150 ms del primer dibujo del mundo) y
+  el primer dibujo de `World/Route` (150-220 ms; partirlo como el depósito). `test_route_golden` difiere en Windows
+  en el 4.º decimal (golden escrito en Linux): CI manda.
+
 ### N-407 · Pantalla de carga entre el menú y el nivel — B · `Opus 5.5 · medium` · Aviso: sí (`main_menu.gd`, `scripts/ui/` de Slatex; `modules/` compartida) · **[x] rama `nacho/N-407-loading-screen`**
 
 Pedido del usuario (2026-10-01): al tocar "¡JUGAR!" el menú se congelaba en su último frame mientras el nivel
@@ -359,16 +395,17 @@ distintos y que con seed fijo `completed_runs` 0 vs 1 dan planes distintos.
   `_kick_box`. `test_cargo_animals` (`_test_run_seed`, 40 tramos): solo, dos corridas distintas; en sala, mismo
   seed y corridas → mismos tramos, otra cantidad de corridas → otros.
 
-### N-910 · `cargo_animal_ended` y `cargo_animal_alert` en el mismo frame confunden al cliente — C · `Opus 5.5 · medium` · Aviso: no
+### N-910 · `cargo_animal_ended` y `cargo_animal_alert` en el mismo frame confunden al cliente — C · `Opus 5.5 · medium` · Aviso: no · **[x] rama `nacho/N-910-cargo-animal-same-frame`**
 Origen: mantenimiento 2026-10-01. `cargo_animal_view.gd:102-110` (y 303, 308), solo cliente. El cooldown es 3.5 s y la
 salida del perro 3.0 s (margen 0.5 s); si llegan juntos `ended` y el `alert` siguiente: (a) mismo animal/caja: entra
 a la rama "repetición para recién llegado" con estado LEAVE y no muestra el ataque nuevo; (b) otro perro: `_clear()`
 hace `queue_free` del "Dog" viejo y en el mismo frame se agrega otro "Dog", Godot lo renombra, la ruta de
 `DistractPoint` no coincide con la del host y el cliente no puede tirarle el palo. Hecho cuando un test simula
 `ended` + `alert` en el mismo frame en vista cliente y ve el ataque nuevo con la ruta del `DistractPoint` correcta.
-- [ ] **N-910.1** Exigir `state != State.LEAVE` en la rama de repetición y hacer `remove_child` (o free) del perro
-  viejo antes del `add_child`. Con `constructor-mundo`; tests `cargo_animals`.
-- [ ] **N-910.2** Test del mismo frame (casos a y b). Con `escritor-tests`; tests `cargo_animals`.
+- [x] ~~**N-910.1** Exigir `state != State.LEAVE` en la rama de repetición y hacer `remove_child` (o free) del perro
+  viejo antes del `add_child`. Con `constructor-mundo`; tests `cargo_animals`.~~
+- [x] ~~**N-910.2** Test del mismo frame (casos a y b). Con `escritor-tests`; tests `cargo_animals`.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-910-cargo-animal-same-frame`, `44be81e`)** — la rama de repetición de `_on_alert` saltea `LEAVE`, y un alerta nueva llama `_clear(true)`, que saca del árbol (`remove_child`) las piezas viejas antes del `queue_free` (desde `_exit_tree` sigue sin sacarlas). Test `_test_same_frame` en `test_cargo_animals`: (a) mismo perro y caja → animal nuevo en WARN; (b) otra caja → el perro nuevo se llama `Dog` y `Dog/DistractPoint` es su punto del palo.
 
 ### N-911 · ⏸ decide el usuario: origen y licencia de `mus_ingame_loop.ogg` — C · `Opus 5.5 · low` · Aviso: no
 Origen: mantenimiento 2026-10-01. `do-not-drop/assets/audio/music/mus_ingame_loop.ogg` (la música de cada partida) no
@@ -853,6 +890,42 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.call` 214 → 203, `.get(&` 216 → 210, `/root/` 111 → 109. `test_dynamic_dispatch_budget.gd` suma los dos
     archivos y el handle. Aviso `docs/avisos/2026-10-01-n224-package-feedback-tipado.md`. Siguientes:
     `depot_panel.gd` (13), `player.gd` (13), `package_contents_view.gd` (13), `seat_point.gd` (13).
+  - [x] `vehicle_faults.gd` (2026-10-01, rama `nacho/N-224-vehicle-faults-typed`): los efectos y los puntos de
+    reparación como `EFFECTS`/`REPAIR_SPOT` (preload inferido, sirve de tipo: `show_fault`, `show_phone_mirror`,
+    `driver_mirror_parts`, `fault_id`, `faults` directos), el que sostiene el celular como `Player` (`carried_package`,
+    `reach_origin`; el nodo plano de los tests no carga nada y usa su posición) y los `Dictionary.get(&"mirror")`
+    por `has`. Quedan por nombre los del camión (`driver_peer_id`, `is_door_open`, `set_rear_cargo_open`):
+    `test_vehicle_faults` mete un `FakeVan`. En el archivo: `.call` 6 → 2, `.get(&` 5 → 1, `.set(&` 3 → 0.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`). Siguientes:
+    `depot_panel.gd` (13), `cargo_animal_view.gd` (11), `seat_point.gd` (13).
+  - [x] `depot_panel.gd` (2026-10-01, rama `nacho/N-224-depot-panel-typed`): las compras a un `Depot` tipado
+    (`_depot_node() -> Depot`: `buy_supply`, `buy_supply_discounted`, `team_money`, `supplies`; el del nivel por
+    `LevelCommon.depot`), las cajas como `DeliveryPackage` y las señales de `EventBus` y `UnlockManager` conectadas
+    directo. Quedan por nombre `orders` y `boss_notes()` del `depot` que pasa la estación (`test_depot_panel` usa un
+    stand-in que no es `Depot`). En el archivo: 12 → 2 usos (`.call` 5 → 1, `.get(&` 5 → 1, `/root/` 2 → 0).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-depot-panel-tipado.md`.
+    Siguientes: `cargo_animal_view.gd` (13), `wildlife_crossing.gd` (13), `seat_point.gd` (13),
+    `package_contents_view.gd` (13); después `hud_pause.gd` (`level.get(&"depot")`, tipar a `LevelCommon`).
+  - [x] `wildlife_crossing.gd` (2026-10-01, rama `nacho/N-224-wildlife-crossing-typed`): el ciervo con el tipo de
+    `wildlife_animal.gd` (`ANIMAL_SCRIPT` por preload inferido, sin `class_name`: `steered`, `run`,
+    `freeze_in_headlights`, `tumble` directos). Quedan por nombre `team_money`/`spend` de `CrewProgression` (ciclo de
+    compilación, como en `mud_segment.gd`) y el relay de EventBus. En el archivo: `.call` 7 → 2, `.get(&` 1 → 1,
+    `/root/` 3 → 3, `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
+    `tests/`). Siguientes: `package_contents_view.gd` (13), `seat_point.gd` (13), `package_pickup_point.gd` (12),
+    `cargo_animal_view.gd` (11), `player.gd` (13).
+  - [x] `package_contents_view.gd` (2026-10-01, rama `nacho/N-224-contents-view-typed`): la caja como
+    `DeliveryPackage` (`package.gd` no carga la vista, sin ciclo; `package_id`, `trap_state`, `contents_spilled`,
+    `is_open` y `content_definition()` directos) y el contenido como `PackageContent` (`localized_name`,
+    `condition_text`, `pick_note`, `model`, `box_size`). Queda por nombre el `connect` al EventBus (un test puede
+    reemplazarlo por un Node). En el archivo: 13 → 1 uso (`.call` 5 → 0, `.get(&` 7 → 0, `/root/` 1 → 1).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-contents-view-tipado.md`.
+  - [x] `seat_point.gd` (2026-10-01, rama `nacho/N-224-seat-point-typed`): los asientos de la carga (`CargoSeatPoint`). El
+    jugador como `Player` (`_carried_by()`; el stand-in de `LateJoinSeating` no es `Player` y cuenta como "no carga
+    nada"), los anclajes por `preload` de `package_mount_point.gd` (`MountPoint`, `occupied_by` directo) y la caja
+    como `DeliveryPackage` (`tender_peer_id`); `has_method(&"tend_package")` pasa a `is Player`. En el archivo:
+    `.get(&` 13 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
+    `docs/avisos/2026-10-01-n224-seat-point-tipado.md`. Siguientes: `player.gd` (13), `spectator_camera.gd` (12),
+    `package_pickup_point.gd` (12), `cargo_animal_view.gd` (11).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -1759,6 +1832,43 @@ dejarlo casi invisible y que se note solo en ralentí y al arrancar; si se elige
 Parche de la vuelta 3 (emisor, `WheelDust.puff_material()` estático, test ampliado y `tests/render_exhaust.gd` con
 planos `rear`/`cargo`/`side` × ralentí/arranque a ≤ 10 km/h/a fondo, cada uno con un camión nuevo) y capturas de las tres
 vueltas: `D:/tmp/n324-intento/` y `D:/tmp/exhaust{,2,3}/` en la PC (fuera del repo).
+**Intento 2 2026-10-01 (sesión de arte, 3 vueltas, no se subió): la causa de fondo es dónde nace el humo.**
+`_try_build_exhaust()` ubica el caño con el AABB de todas las mallas de `body_visuals`, que incluye la rampa bajada y las
+puertas abiertas: el humo nace en la punta de la rampa, ~2,5 m detrás de la cola y afuera del costado (distancias del log:
+cámara de la caja a 3,7 m del caño, `rear` a 4,8 m). Por eso, en todas las vueltas, desde `rear` quedaba al lado o detrás de la
+cámara (un solo disco) y desde la caja, lejos y fuera del vano. Esto pasa también en el juego, no solo en la captura.
+- Vuelta 1 (hacia −X, gris de noche 0,52, degradé propio): de costado, columna; desde `rear` la tapa la puerta izquierda
+  abierta (+7) y desde la caja no entra al vano.
+- Vuelta 2 (atrás y arriba `(-0.3, 0.6, 1)`, gravedad +0,9, alfa máx. 1, primer puff 0,22 m y último 1,26 m, gris de noche
+  0,62): la mejor. `rear` +48 de día y de noche, caja de noche +21, de día ~0; sin bordes, tapa 0 % de la puerta, nada
+  a < 1,5 m de la cámara. Falla (b): un solo puff desde `rear`/caja, y de costado parecen bolitas de espuma con alfa 1.
+- Vuelta 3 (caño anclado a `FloorCollision` + `RearLeftWheel`, a 0,3 m sobre la ruta, columna lenta, gravedad +0,5): el
+  caño quedó demasiado bajo y los puffs nacen medio enterrados (corte recto contra el asfalto y bandas). Retroceso.
+Para la próxima: volver a los valores de la vuelta 2 y solo arreglar el ancla del caño. Ancla en la cola de la caja (sin
+rampa ni puertas), justo bajo el piso de la caja (`SMOKE_PIPE_HEIGHT` ~0,75 sobre la ruta, no 0,3), y comprobar la
+posición en tiempo de ejecución, no con cuentas de `vehicle.tscn`: en la vuelta 3 las distancias del log no coincidieron
+con la cuenta. Partículas suaves o `proximity_fade` si el puff toca el piso. Parche de la vuelta 3 (incluye
+`exhaust_anchor()`, test del ancla y `render_exhaust.gd`) en `D:/tmp/n324-intento2/`; capturas de las vueltas 1-3 en
+`D:/tmp/exhaust{4,5,6}/`.
+**Intento 3 2026-10-01 (sesión de arte, 3 vueltas, no se subió): el ancla quedó resuelta, el humo sigue sin verse desde
+atrás ni desde la caja.** Lo que sirve y se reusa: `exhaust_anchor()` sale solo de `FloorCollision` (forma fija; la rueda
+mueve su `position` con la suspensión y en la vuelta 1 dejó el caño 0,65 m bajo el asfalto): (−0,88; −0,055; 4,49) en el
+camión, 0,61 m sobre la ruta medido con un rayo hacia abajo, igual en las 18 tomas; el emisor cuelga de `vehicle`, no
+del arte. `test_dust_and_ambience` (ancla en la cola sin rampa ni puertas, 0,5-1,0 m por rayo, curva, billboard, sin
+`SphereMesh`) y `test_vehicle_presentation` en verde. `render_exhaust.gd` con `--mood=night` que da noche de verdad
+(`WorldMood.pick()` lee `--mood=` de la línea de comandos y pisaba el atajo) y `--nosmoke` (falta fijar la rampa entre
+corridas: no coinciden y el diff sale sucio).
+- Vuelta 1 (valores de la vuelta 2 del intento 2): caño enterrado; humo invisible desde `rear` y caja.
+- Vuelta 2 (ancla fija, hacia (−0,6; 0,7; 0,6)): la puerta izquierda abierta tapa la estela desde `rear`; de costado,
+  halos casi blancos contra la caja blanca.
+- Vuelta 3 (hacia (−0,2; 0,75; 0,9), gris de día 0,78, alfa máx. 0,85, 28 × 2,4 s): igual de invisible desde `rear` y caja;
+  de costado, 2 discos sueltos.
+**Pista para la próxima: en las tres vueltas hay 1-2 puffs en pantalla aunque el log dice `emitting true` (ratio 0,7-1)
+y son 28 × 2,4 s (~11 vivos).** No es (solo) de valores: antes de tocar color o alfa, `cazador-bugs` tiene que contar las
+partículas vivas y dónde se dibujan (quads opacos de depuración, o `amount_ratio`/`emitting` puestos cada frame en
+`update_exhaust()` que reinician la emisión, orden de transparencias con la caja, `visibility_aabb`). Si un cuarto intento
+tampoco lo logra, pasa a ⏸ con la alternativa de `director-arte` (casi invisible, solo en ralentí y al arrancar).
+Parche de la vuelta 3 y hojas de capturas en `D:/tmp/n324-intento3/`; capturas en `D:/tmp/exhaust{7,8,9}/`.
 - [ ] **N-324.1** Rehacer emisor y material según la receta (puff estático compartido con `WheelDust`) y ampliar el test.
   Con `artista-vfx` y `escritor-tests`; tests `dust`.
 - [ ] **N-324.2** Capturas reproducibles antes/después (caja y `rear`, día/noche, ralentí/a fondo). Con `revisor-visual`.
@@ -2247,13 +2357,31 @@ Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con St
   `core/proximity_voice.gd` (autoload `ProximityVoice`): graba mientras se aprieta `voice_talk` (Z), manda
   por RPC `unreliable_ordered` en el canal 3 y el que recibe descomprime y emite `voice_received`.
   Probado con un Steam falso; **falta probarlo con Steam real** (entra con la prueba de N-212.2).
-- [ ] **N-212.2** Reproducción en `AudioStreamPlayer3D` en la cabeza del jugador; dentro de la cabina se
+- [x] **N-212.2** (rama `nacho/N-212-voice-playback`, `e527214`) Reproducción en `AudioStreamPlayer3D` en la cabeza del jugador; dentro de la cabina se
   oyen todos, afuera se atenúa y pasa por el bus Exterior con filtro (se oye "a través de la chapa").
-- [ ] **N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
+  Módulo `net_session`: `VoicePlayback` (`AudioStreamGenerator` con búfer de jitter de 60 ms, tope de 0,3 s
+  que descarta lo viejo, se calla sola a los 0,5 s, `carry_in_room()` / `carry_in_open(muffled)`).
+  `proximity_voice.gd` le cuelga una ("VoiceChat") al jugador que habla, en su `Head` o en su asiento; los
+  dos en el camión (cámara de asiento + sentado) → bus `Interior` sin atenuación, si no → `Exterior` con
+  atenuación 3D (no se oye a 28 m) y apagada si uno está a bordo (sentado o parado en la caja) y el otro
+  no. Volumen = el del compañero × "Voces"; silenciar, volumen 0 o apagar la voz lo cortan en el acto; se
+  libera al irse (`peer_removed`) o al terminar la sesión (también si se va el host: `session_failed`).
+  `SteamVoice` decodifica como mucho 120 paquetes/s por peer (ráfaga 30). Sin RPC nuevo. Tests
+  `test_proximity_voice_playback` y `modules/net_session/tests/test_voice_playback`. **Falta probarlo con
+  Steam real** (con N-212.1): necesita PC.
+- [x] ~~**N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
   jugador, y un interruptor general en Opciones. Hecho en `649c7fa`: `GameSettings.voice_chat_enabled`
   (apagado hasta que exista N-212.2) y `voice_push_to_talk` (por defecto; apagado = micrófono abierto),
   la tecla reasignable y `ProximityVoice.set_peer_muted()` / `set_peer_volume()`. **Falta:** mostrarlos en
-  Opciones y en una lista de jugadores (UI de Slatex, `options_panel.gd`).
+  Opciones y en una lista de jugadores (UI de Slatex, `options_panel.gd`).~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-212-voice-options`)** — `scripts/ui/options_voice_section.gd`
+  (`OptionsVoiceSection`, debajo de "Sonidos del juego" en Opciones): "Chat de voz" y "Pulsar para hablar" (gris con
+  la voz apagada), aviso de solo Steam y "Voces de la tripulación": una fila por compañero (de
+  `CrewPanel.build_entries()`, sin uno mismo) con color, "Silenciar" y volumen 0-1 sobre `ProximityVoice`; se rearma
+  al abrir y si cambia el roster con el panel abierto. `voice_talk` (Z) entra en las teclas reasignables. Sigue
+  apagada por defecto hasta probarla con Steam real (supuesto conservador). Test `test_voice_options`;
+  `controles-y-ui.md` al día. Aviso `docs/avisos/2026-10-01-n212-opciones-de-voz.md`. Sin botón de mando para hablar
+  (no había; queda para N-913, voz en el mando).
 - [x] **N-212.4** LAN/ENet: `AudioEffectCapture` o dejarlo fuera del MVP (decidir y anotar). `649c7fa`
   Decidido: **LAN sin voz** (condición de `critico-diseno`); la razón quedó en `proximity_voice.gd`.
 - [ ] Medir con `auditor-red` el ancho de banda con 5 jugadores. Test de que el apagado general no
@@ -2483,7 +2611,7 @@ antes de empezar.
     caja (solo la malla) y consejo "Correr con la caja la sacude" (`tutorial_catalog.gd`). Números en
     `docs/parametros-diseno.md`; diseño en `docs/jugabilidad-paquetes-rescate.md`. El cacareo de la gallina del
     Ruidoso al correr no se hizo (solo se agita); la caja cruje con el sonido de madera de siempre.
-- [ ] **N-115.3** Clip `Run` nuevo en `art/rounded_character/animation_library.py` (zancada con fase de
+- [x] **N-115.3** Clip `Run` nuevo en `art/rounded_character/animation_library.py` (zancada con fase de
   vuelo, brazos más abiertos) y elegido por `PlayerAnimator` por velocidad, con la misma histéresis que
   Walk/Stroll. En primera persona: balanceo más marcado y el FOV se abre un poco (+4°, suavizado).
   Pasos más rápidos en el sonido.
@@ -2491,8 +2619,13 @@ antes de empezar.
     bajo 4,0) y, si la librería no lo tiene, reproduce Walk acelerado (`RUN_FALLBACK_MAX_SCALE` 1,9); primera
     persona con FOV +4° suavizado y balanceo x 2,6; pisadas nuevas (`synth_audio_steps.gd`, `FOOTSTEP_DB` en
     `world_mix.gd`) al ritmo de la carrera. Hoy no había pisadas de ningún tipo: solo suenan corriendo.
-  - [ ] **Clip `Run` en Blender — necesita PC** (`art/rounded_character/animation_library.py` + reexportar el
-    glb): hasta entonces se ve Walk acelerado. Captura del clip con `revisor-visual`.
+  - [x] **Clip `Run` en Blender** (`art/rounded_character/animation_library.py` + reexportar el glb). Hecho
+    (rama `nacho/N-115-run-clip`): `GAITS['Run']`, 0,33 s en loop a 6 m/s, 6 pasos/s de 1 m (un ciclo = 2 m = una
+    pisada sonora), vuelo de ~0,09 s, torso inclinado, rebote marcado, brazos abiertos con más recorrido;
+    `check_clearance` 52 (Walk 58). `PlayerAnimator` lo encuentra (sin respaldo) y su escala baja hasta 4/6 para
+    que no patine al salir. Tests: `test_player_sprint`, `test_character_motion`. Aviso
+    `docs/avisos/2026-10-01-n115-run-clip.md`.
+  - [ ] Captura del clip con `revisor-visual` (en juego). Revisado en Blender con renders laterales y de ¾.
 - [x] **N-115.4** Red: el estado de carrera viaja como `anim_state` (el dueño lo decide, los demás solo
   reproducen el clip).
   Hecho: `anim_state` = `Run` + `locomotion_speed` (ya replicados); los otros pares cuentan las pisadas y el
@@ -2506,7 +2639,7 @@ antes de empezar.
 - Hecho cuando: se corre a pie en la ruta y en el depósito, con animación propia, y correr con una caja
   la sacude y puede hacerte tropezar.
 
-### N-116 · Parada final: estacionamiento de camiones de reparto — A · `Opus 5.5 · high` · Aviso: no · **[x] rama `nacho/N-116-goal-lot`** (falta la revisión visual)
+### N-116 · Parada final: estacionamiento de camiones de reparto — A · `Opus 5.5 · high` · Aviso: no · **[x] rama `nacho/N-116-goal-lot`** (revisión visual hecha 2026-10-01; queda N-116.5)
 
 > Hoy la meta es un arco de hormigón con la palabra META, una barrera y un `GoalArea`
 > (`route.gd::_build_goal()`): se termina al pasar por abajo. Pedido del usuario: una parada final de
@@ -2568,10 +2701,23 @@ antes de empezar.
     `test_run_ends_at_goal`, `test_dashboard_gps` y `route_smoke_check`. Ningún test nombraba `GoalArch*`.
     El otro camino de host/cliente: la playa sale entera de la semilla y solo el host termina la partida
     (sin RPC nuevo ni cambio de `PROTOCOL_VERSION`).
-  - [ ] Capturas de día y de noche (`revisor-visual`): `tests/render_goal_lot.gd -- --mood=soleado_dia` y
+  - [x] ~~Capturas de día y de noche (`revisor-visual`): `tests/render_goal_lot.gd -- --mood=soleado_dia` y
     `--mood=soleado_noche` (aproximación, portón, bahía, vista aérea, descarga y el plano de resultados). Mirar
     sobre todo: si el cartel y la bahía libre se leen desde el asiento del conductor (`check_driver_sightline.gd`),
     el tamaño de los textos y el remate de la losa contra el camino.
+    **[x] Hecho (2026-10-01, rama `nacho/N-116-visual-review`)** — 7 planos × día/noche en la PC con GPU, sin
+    bloqueantes: losa contra el camino limpia (sin escalón ni z-fighting), sin mallas negras ni objetos flotando,
+    camiones, repartidores y faroles bien; el cartel de la base se lee desde `gate`/`bay` y la bahía libre se
+    encuentra de día y de noche por contraste. `check_driver_sightline.gd` no sirve acá (solo mira el propio
+    camión): la vista del conductor la dan `approach`, `approach_near` y `bay` (ojo a 2,3 m). Lo mejorable va a N-116.5.
+- [ ] **N-116.5** Bahía libre legible desde la entrada y de noche — C · necesita PC. Origen: revisión visual
+  2026-10-01. En `approach_near` (≈40 m) el cartel "LIBRE n" mide ~25 px y no se lee, y el número pintado se ve
+  como una mancha; de noche ni la bahía libre ni el cartel de la base tienen luz propia (a 90 m la base son
+  puntos de faroles). Hacer: cartel "LIBRE n" más grande y emisivo (`LowpolyMaterials.light_up`) o una baliza
+  sobre la bahía libre; spot u emisión sobre la bahía de noche; el "n" del piso más grueso y sin deformar de
+  cerca; el charco de la manguera como decal de borde suave en vez de un rectángulo plano. Hecho cuando en
+  `render_goal_lot.gd` el "LIBRE n" se lee en `approach_near` de día y de noche (revisado con `revisor-visual`).
+  Con `constructor-mundo` (o `artista-vfx` para la luz); tests `goal_lot`.
 - Hecho cuando: la ruta termina en una base con bahías y la partida se cierra al dejar el camión en su
   lugar.
 

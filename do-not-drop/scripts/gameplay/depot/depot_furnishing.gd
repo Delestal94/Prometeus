@@ -27,14 +27,21 @@ func _init(root: Node3D) -> void:
 ## mezzanine, the wall line, the control island) come from DepotZones.
 func build(kit: DepotKit) -> void:
 	_build_wall_racking(kit)
+	await kit.tick()
 	_build_dispatch_shelves(kit)
+	await kit.tick()
 	_build_workshop(kit)
+	await kit.tick()
 	_build_lockers(kit)
+	await kit.tick()
 	_build_break_area(kit)
+	await kit.tick()
 	var zones := DepotZones.new(_root)
-	zones.build(kit)
+	await zones.build(kit)
 	supply_props = zones.supply_props
+	await kit.tick()
 	_build_conveyor(kit)
+	await kit.tick()
 	_build_staging(kit)
 
 

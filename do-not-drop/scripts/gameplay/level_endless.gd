@@ -46,7 +46,7 @@ var distance_traveled: float = 0.0
 func _prepare_mode() -> void:
 	# No doors and no meadows: the gull is the only animal that comes (N-109).
 	cargo_animals.endless = true
-	depot.post_orders(0)
+	_after_depot(func() -> void: depot.post_orders(0))
 	_streamer.start(vehicle)
 
 

@@ -700,8 +700,15 @@ func _session_color(color: Color) -> void:
 func _on_started(_route: StringName, _players: Array) -> void:
 	if WorldMood.active.has("description"):
 		notices.toast(tr("HUD_TODAYS_ROUTE") % String(WorldMood.active["description"]).to_lower())
+	var was_start_card: bool = overlay.visible and overlay_mode == "start"
 	overlay.hide()
 	overlay_mode = "run"
+	# Someone who joined with the truck already on the road (N-408) was looking
+	# at the start card, cursor free: the run starting is what takes it away,
+	# so it hands the mouse back to the game too (it used to stay free and the
+	# player couldn't look or move until Esc → resume).
+	if was_start_card and not get_tree().paused:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	prompts.refresh_shortcut_text()
 	dashboard.show()
 	# Who's playing matters while gathering in the depot, not on the road.

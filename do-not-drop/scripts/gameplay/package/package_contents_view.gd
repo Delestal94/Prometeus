@@ -31,7 +31,9 @@ const FILLER_BITS: int = 10
 ## check.
 const DEBRIS_MASK: int = 1 | 64 | 4
 
-var _package: RigidBody3D
+## The box this view sits under. Typed (package.gd never loads this script, so
+## there is no compile cycle): its facts and content_definition() are read directly.
+var _package: DeliveryPackage
 var _package_id: StringName
 var _box: Node3D
 var _flaps: Dictionary = {}  ## flap name -> Node3D
@@ -54,8 +56,8 @@ var _audio: AudioStreamPlayer3D
 
 
 func _ready() -> void:
-	_package = get_parent() as RigidBody3D
-	_package_id = _package.get(&"package_id")
+	_package = get_parent() as DeliveryPackage
+	_package_id = _package.package_id
 	_box = _package.get_node_or_null(^"Box") as Node3D
 	_audio = AudioStreamPlayer3D.new()
 	_audio.unit_size = 5.0
@@ -80,10 +82,10 @@ func _build() -> void:
 			var flap: Node3D = model.find_child(String(flap_name), true, false) as Node3D
 			if flap != null:
 				_flaps[flap_name] = flap
-	var content: Resource = _package.call(&"content_definition") if _package.has_method(&"content_definition") else null
-	if content != null and content.get(&"model") != null:
-		var size: Vector3 = content.get(&"box_size")
-		_contents = (content.get(&"model") as PackedScene).instantiate()
+	var content: PackageContent = _package.content_definition() as PackageContent
+	if content != null and content.model != null:
+		var size: Vector3 = content.box_size
+		_contents = content.model.instantiate()
 		_contents.name = "Contents"
 		_contents.position.y = -size.y * 0.5 + BOARD
 		_box.add_child(_contents)
@@ -93,9 +95,9 @@ func _build() -> void:
 		_ruined = _contents.get_node_or_null(^"Ruined") as Node3D
 	# Late joiners (and a box opened before this ran) get the replicated
 	# state snapped into place, no animation.
-	_state = int(_package.get(&"trap_state"))
-	_spilled = bool(_package.get(&"contents_spilled"))
-	_open = bool(_package.get(&"is_open")) or _spilled
+	_state = _package.trap_state
+	_spilled = _package.contents_spilled
+	_open = _package.is_open or _spilled
 	_taped = not _open
 	open_amount = 1.0 if _open else 0.0
 	_refresh_contents()
@@ -108,15 +110,15 @@ func is_built() -> bool:
 ## What a player looking in would see, for the HUD: "Jarrón de porcelana
 ## (intacto)". Empty while closed.
 func describe() -> String:
-	var content: Resource = _package.call(&"content_definition") if _package.has_method(&"content_definition") else null
+	var content: PackageContent = _package.content_definition() as PackageContent
 	if content == null or not _open:
 		return ""
-	var content_name: String = String(content.call(&"localized_name"))
+	var content_name: String = content.localized_name()
 	if _spilled:
 		return tr("HUD_CONTENT_EMPTY") % content_name.to_lower()
-	var inside: String = "%s (%s)" % [content_name, content.call(&"condition_text", _state)]
+	var inside: String = "%s (%s)" % [content_name, content.condition_text(_state)]
 	# The sender's note (S-602), the same on every peer: picked from the package_id.
-	var note: String = String(content.call(&"pick_note", _package_id))
+	var note: String = content.pick_note(_package_id)
 	return inside if note.is_empty() else "%s\n%s" % [inside, tr("HUD_CONTENT_NOTE") % note]
 
 
@@ -134,9 +136,11 @@ func _on_lid_changed(id: StringName, open: bool) -> void:
 		_tween.kill()
 	_tween = create_tween()
 	if open:
-		_tween.tween_property(self, ^"open_amount", 1.0, OPEN_SECONDS).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_tween.tween_property(self, ^"open_amount", 1.0, OPEN_SECONDS) \
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	else:
-		_tween.tween_property(self, ^"open_amount", 0.0, CLOSE_SECONDS).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+		_tween.tween_property(self, ^"open_amount", 0.0, CLOSE_SECONDS) \
+				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	_tween.tween_callback(_refresh_contents)
 	_refresh_contents()
 

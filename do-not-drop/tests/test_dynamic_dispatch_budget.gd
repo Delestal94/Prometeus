@@ -37,6 +37,14 @@ extends SceneTree
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the
 ##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
 ##   store stills) would set up.
+## - vehicle_faults.gd (the truck's faults) holds its effects and repair spots by preload and the phone
+##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
+## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
+##   the crew's money and the incident relay stay by name.
+## - package_contents_view.gd (the box's flaps and contents) holds its box as DeliveryPackage and the
+##   contents as PackageContent; only the EventBus connects stay by name.
+## - seat_point.gd (the cargo seats) holds the player as Player, the boxes as DeliveryPackage and the mounts
+##   by preload; nothing stays by name.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -160,6 +168,36 @@ const BUDGETS: Dictionary = {
 	"res://scripts/gameplay/package/package_feedback.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# What each trap shows on the box (split out of package_feedback.gd, N-225.5), typed the same way.
 	"res://scripts/gameplay/package/package_trap_visuals.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The truck's faults (N-224.4) are typed: the effects (EFFECTS) and the repair spots (REPAIR_SPOT) by
+	# preload (no class name), the phone holder as Player (a stand-in Node3D, as in the tests, is treated as
+	# carrying nothing) and the Dictionary lookups indexed after has(). Two .call and one .get left, all on
+	# the van: is_door_open and set_rear_cargo_open (the pop of the rear door) and driver_peer_id. By name
+	# because the tests stand a FakeVan Node3D in (with only that API), which `as` a typed truck would drop.
+	"res://scripts/gameplay/vehicle/vehicle_faults.gd": {"call": 2, "callv": 0, "get": 1, "root": 0},
+	# The depot screen (N-224.4) is typed: the purchases go to the level's Depot (buy_supply,
+	# buy_supply_discounted, team_money, supplies), the boxes are DeliveryPackage (package_id, is_aboard),
+	# the level is a LevelCommon and the signals of EventBus and UnlockManager are connected directly (the
+	# panel's tests keep the real autoloads). One .get and one .call left, both on the `depot` the station
+	# hands in, which stays a Node: test_depot_panel gives it a stand-in with only `orders` and
+	# `boss_notes()`, and `as Depot` would drop it (the order sheet would come out empty).
+	"res://scripts/ui/depot_panel.gd": {"call": 1, "callv": 0, "get": 1, "root": 0},
+	# The deer crossing (N-224.4) is typed: the deer through wildlife_animal.gd by preload (no class name:
+	# steered, run, freeze_in_headlights, tumble). Two .call and one .get left: CrewProgression's
+	# team_money and spend, by name because preloading crew_progression.gd here compiles it before the
+	# autoloads exist (route.gd pulls this in, see mud_segment.gd), and the EventBus relay of the incident,
+	# by name because a test may replace EventBus with a plain Node. The three /root/ lookups are the
+	# null-safe accessors (EventBus twice, CrewProgression).
+	"res://scripts/gameplay/route/wildlife_crossing.gd": {"call": 2, "callv": 0, "get": 1, "root": 3},
+	# The box's flaps and contents (N-224.4) read the box as DeliveryPackage (package.gd never loads this
+	# view, so no cycle) and its content as PackageContent. The one /root/ lookup is the null-safe EventBus
+	# handle: it connects by name because a test may replace EventBus with a plain Node, as in
+	# package_feedback.gd.
+	"res://scripts/gameplay/package/package_contents_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The cargo seats (N-224.4) are typed: the player is a Player, the boxes DeliveryPackage and the mounts
+	# package_mount_point.gd by preload (no class name). Nothing left by name. What the tests stand in
+	# (LateJoinSeating as a "player" that carries nothing, Node3D mounts without the script) is not asked
+	# by name: `as` drops it and it reads as carrying nothing / holding nothing.
+	"res://scripts/gameplay/interaction/seat_point.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

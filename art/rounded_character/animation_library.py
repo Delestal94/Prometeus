@@ -15,8 +15,11 @@ box's height. TurnInPlace starts and ends on Idle's first frame too.
 - Legs stay IK. Feet roll about the ball (heel up) or the heel (toe up), so
   the point touching the ground does not slide while the foot pitches.
 - Walk is a short-legged scurry authored at the game's 3.6 m/s; Stroll is a
-  real walk at 1.5 m/s for partial stick input. Planted feet travel backward
-  at exactly the authored speed (player.gd scales playback by actual speed).
+  real walk at 1.5 m/s for partial stick input; Run is the sprint at 6 m/s
+  (N-115): the same 6 steps/s as Walk but 1 m strides, a long flight phase,
+  a deeper bounce, a forward lean and wide pumping arms. Planted feet travel
+  backward at exactly the authored speed (PlayerAnimator scales playback by
+  actual speed).
 """
 import math
 import bpy
@@ -31,19 +34,24 @@ GAITS = {
     'Walk':   dict(speed=3.6*BU, period=1/3, duty=.34, run=True),
     # A true walk: double support, heel strike, inverted-pendulum hips.
     'Stroll': dict(speed=1.5*BU, period=.6, duty=.62, run=False),
+    # The sprint (player_sprint.gd RUN_SPEED): 6 steps/s of 1 m, so a cycle
+    # covers 2 m, one footfall sound (STEP_DISTANCE). Short contact, both
+    # feet off the floor for ~0.09 s after each push. Same period as Walk,
+    # so the animator's phase-keeping switch lands on the same foot.
+    'Run':    dict(speed=6.0*BU, period=1/3, duty=.22, run=True, sprint=True),
 }
 IDLE_PERIOD = 6.0
 # Gait arms, (lower, ext, extra ext swinging forward): out from the sides and
 # turned out on the forward swing, so the fists pass the tummy. Tuned with
 # check_clearance.py: turning the bent running arm out drove the fist in.
-GAIT_ARMS = {'run': (52., -15., 40.), 'walk': (50., 0., 40.)}
+GAIT_ARMS = {'run': (52., -15., 40.), 'walk': (50., 0., 40.), 'sprint': (44., -12., 34.)}
 # Two small steps per loop (2.5 steps/s, Walk takes 6).
 TURN_PERIOD = .8
 DURATIONS = {'Idle': IDLE_PERIOD, 'Walk': GAITS['Walk']['period'],
-             'Stroll': GAITS['Stroll']['period'], 'Jump': 1.6,
+             'Stroll': GAITS['Stroll']['period'], 'Run': GAITS['Run']['period'], 'Jump': 1.6,
              'PickUpPackage': 1.6, 'PickUpHigh': 1.6, 'Sit': 4.0,
              'TurnInPlace': TURN_PERIOD}
-LOOPING = ('Idle', 'Walk', 'Stroll', 'Sit', 'TurnInPlace')
+LOOPING = ('Idle', 'Walk', 'Stroll', 'Run', 'Sit', 'TurnInPlace')
 
 # Foot geometry, relative to the ankle (IK target) at rest.
 BALL = Vector((0, -.245, -.227))   # ball of the foot on the ground
@@ -221,15 +229,18 @@ def idle(t):
 def gait(name, t):
     g = GAITS[name]
     T, D, v, run = g['period'], g['duty'], g['speed'], g['run']
+    # Run (sprint) takes Walk's running numbers except where S() says otherwise.
+    sprint = g.get('sprint', False)
+    S = lambda walk_run, run_value: run_value if sprint else walk_run
     p = (t/T) % 1.
     a = TAU*p
     stride = v*T                    # BU travelled per full cycle
     stance = stride*D               # ground travelled by a planted foot
-    centre = .03 if run else .0     # stance centred slightly behind the hip
-    lift = .26 if run else .13
+    centre = S(.03, .05) if run else .0     # stance centred slightly behind the hip
+    lift = S(.26, .44) if run else .13
     # Roll angles at touchdown / toe-off.
     r_td = -3. if run else -14.
-    r_to = 38. if run else 30.
+    r_to = S(38., 40.) if run else 30.
     heel_rise = (.45 if run else .55)   # fraction of stance before the heel lifts
 
     def foot(u):
@@ -272,17 +283,17 @@ def gait(name, t):
     mid = D/2
     phase2 = 2*TAU*(p-mid)
     if run:
-        pz = -.15 - .05*math.cos(phase2)
+        pz = S(-.15, -.14) - S(.05, .075)*math.cos(phase2)
     else:
         pz = -.05 + .03*math.cos(phase2)
     # + when the left foot is loaded. Left stance centres on p=mid.
     load = math.cos(TAU*(p-mid))
     reach = math.cos(a)             # + left leg forward (touchdown at p=0)
     lag = .07 if run else .05
-    arm_amp = 27. if run else 18.
-    bend = 78. if run else 24.
-    bend_amp = 20. if run else 8.
-    bias = 7. if run else 3.                 # arms swing further forward than back
+    arm_amp = S(27., 44.) if run else 18.
+    bend = S(78., 84.) if run else 24.
+    bend_amp = S(20., 22.) if run else 8.
+    bias = S(7., 10.) if run else 3.         # arms swing further forward than back
     twist = -42. if run else -18.            # loose fists, thumbs up
     swing_l = bias-arm_amp*math.cos(a-TAU*lag)  # left arm back while left leg forward
 
@@ -291,28 +302,28 @@ def gait(name, t):
         # the fist passes beside the tummy, not through it. Swinging back
         # the elbow opens.
         f = (forward+1)/2
-        lower, ext, ext_fwd = GAIT_ARMS['run' if run else 'walk']
+        lower, ext, ext_fwd = GAIT_ARMS['sprint' if sprint else 'run' if run else 'walk']
         return (lower, swing, bend+bend_amp*(2*f-1), twist, ext+ext_fwd*f, 0.)
-    lean = 7.5 if run else 2.5
+    lean = S(7.5, 13.) if run else 2.5
     bounce_lag = math.cos(phase2-1.1)       # head and belly trail the bounce
     return dict(
         px=(.035 if run else .03)*load, py=0., pz=pz,
-        p_pitch=2. if run else 0., p_roll=(-6. if run else -3.5)*load,
-        p_yaw=(-7. if run else -5.)*reach,
+        p_pitch=S(2., 4.) if run else 0., p_roll=(S(-6., -5.) if run else -3.5)*load,
+        p_yaw=(S(-7., -10.) if run else -5.)*reach,
         s_pitch=lean, s_roll=(2.5 if run else 1.4)*math.cos(TAU*(p-mid)-.5),
-        s_yaw=(4. if run else 3.)*reach,
-        c_pitch=2. if run else .5, c_roll=(1.8 if run else 1.)*math.cos(TAU*(p-mid)-.9),
-        c_yaw=(8. if run else 5.)*math.cos(a-TAU*lag*.5),
+        s_yaw=(S(4., 5.) if run else 3.)*reach,
+        c_pitch=S(2., 4.) if run else .5, c_roll=(1.8 if run else 1.)*math.cos(TAU*(p-mid)-.9),
+        c_yaw=(S(8., 12.) if run else 5.)*math.cos(a-TAU*lag*.5),
         # The head keeps the gaze steady: it cancels most of the lean and
         # twist, and nods a beat after each bounce.
-        h_pitch=-lean*.8 + (3.4 if run else 1.4)*bounce_lag,
+        h_pitch=-lean*.8 + (S(3.4, 4.5) if run else 1.4)*bounce_lag,
         h_roll=(2. if run else 1.)*math.cos(TAU*(p-mid)-1.4),
         h_yaw=-(5. if run else 4.)*math.cos(a-TAU*lag*1.5),
         # The tummy is heavy: it lags the bounce, swells as it lands and
         # sways a little toward the loaded side.
-        by=(.022 if run else .01)*math.sin(phase2-1.3),
-        bz=(-.055 if run else -.022)*bounce_lag,
-        bs=(.035 if run else .015)*max(0., bounce_lag),
+        by=(S(.022, .03) if run else .01)*math.sin(phase2-1.3),
+        bz=(S(-.055, -.08) if run else -.022)*bounce_lag,
+        bs=(S(.035, .05) if run else .015)*max(0., bounce_lag),
         armL=arm(swing_l, math.cos(a-TAU*lag+math.pi)),
         armR=arm(2*bias-swing_l, math.cos(a-TAU*lag)),
         footL=fl, footR=fr, groundL=gl, groundR=gr, toeL=tl, toeR=tr,
@@ -603,6 +614,7 @@ def build(rig):
         rot = (m.to_3x3().normalized() @ poser.rest['hand.'+side].to_3x3().inverted()).to_euler('XYZ')
         HANDS0[side] = (tuple(m.translation), tuple(math.degrees(x) for x in rot))
     clips = {'Idle': idle, 'Walk': lambda t: gait('Walk', t), 'Stroll': lambda t: gait('Stroll', t),
+             'Run': lambda t: gait('Run', t),
              'Jump': jump, 'PickUpPackage': pickup, 'PickUpHigh': pickup_high, 'Sit': sit,
              'TurnInPlace': turn_in_place}
     for name, duration in DURATIONS.items():

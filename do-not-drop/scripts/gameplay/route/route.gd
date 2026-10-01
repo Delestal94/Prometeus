@@ -29,6 +29,9 @@ const Ground = preload("res://scripts/gameplay/route/route_ground.gd")
 
 signal delivery_entered
 signal delivery_exited
+## The whole route stands: terrain, houses, dressing, everything (N-408). Until
+## then it builds itself a slice per frame -- see is_built and loading_progress().
+signal built
 ## Fires whenever any house resolves (delivered ok/ruined/missed) -- forwards
 ## DeliveryHouse.resolved so level_base.gd or the HUD can react without
 ## walking the house list themselves.
@@ -51,6 +54,20 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 ## route space (x/z): where the level puts its depot (depot.gd). Empty for no
 ## yard at all.
 @export var start_yard: Rect2 = Rect2()
+## Builds over several frames (a loading screen that never freezes, N-408), the
+## terrain's numbers on worker threads, when a loading cover is up to wait for it
+## (a SceneLoader in the tree: it holds the cover while this node is in
+## SceneLoader.BUSY_GROUP). Off, or with no cover (a test, a tool, a restart),
+## _ready() builds it all before it returns, on this thread, like it always did:
+## whatever reads the route right after add_child() keeps working. Set before
+## this node enters the tree.
+@export var async_build: bool = true
+## Slices the build even with no loading cover: the tests of the sliced build set
+## this (and the net tests, to run the handshake over it).
+static var always_slice: bool = false
+## Whether the route is complete (`built` fired). It is by the time _ready()
+## returns when async_build is off.
+var is_built: bool = false
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 ## Where the goal actually ended up -- with a curved, randomized-length road
@@ -116,6 +133,28 @@ var terrain: TerrainField
 var _segments: Array[RouteSegment] = []
 ## Deals the houses their spots and furnishes them (route_houses.gd), once the terrain exists.
 var _house_builder: Houses
+## Cuts the build into frames (null: all at once), and where the loading bar stands.
+var _slicer: FrameSlicer
+var _stage_start: float = 0.0
+var _stage_span: float = 0.0
+var _stage_fraction: float = 0.0
+var _stage_probe: Callable = Callable()
+var _progress: float = 0.0
+## [node, its process_mode] of what was built before the ground existed, held
+## still (see _freeze()) until the terrain stands.
+var _frozen: Array = []
+var _started_usec: int = 0
+## Wall time up to the end of each stage of the build, in ms, the whole of it,
+## and the longest slice the main thread held between two frames (tuning, tests).
+var build_stats: Dictionary = {}
+## Where each stage of the build ends on the loading bar: roughly by the time they take.
+const STAGE_LEGS: Vector2 = Vector2(0.0, 0.10)
+const STAGE_TERRAIN: Vector2 = Vector2(0.10, 0.36)
+const STAGE_CONFORM: Vector2 = Vector2(0.36, 0.62)
+const STAGE_DRESS: Vector2 = Vector2(0.62, 0.80)
+const STAGE_BAKE: Vector2 = Vector2(0.80, 0.97)
+## What the main thread works at a stretch before a frame is drawn, milliseconds.
+const BUILD_SLICE_MSEC: float = 12.0
 
 
 ## Host: closes the order whose box was left on the road (N-213.4). False
@@ -188,6 +227,11 @@ func ground_roughness(world_point: Vector3) -> float:
 
 func _ready() -> void:
 	add_to_group(&"route")  # The runner asks it how rough the ground is (ground_roughness()).
+	# A scene that builds itself over frames holds the loading cover up (SceneLoader).
+	add_to_group(SceneLoader.BUSY_GROUP)
+	_started_usec = Time.get_ticks_usec()
+	if async_build and (always_slice or _loading_cover_up()):
+		_slicer = FrameSlicer.new(get_tree(), BUILD_SLICE_MSEC)
 	# One seed per session, not per machine: see NetworkManager.world_seed.
 	# Solo play leaves it at 0, which still means "a different route every
 	# time you press play".
@@ -207,20 +251,79 @@ func _ready() -> void:
 	add_child(terrain)
 	_house_builder = Houses.new(self, terrain, houses, _house_anchors, _house_deck, _path_points, _clear_zones, _sight_zones)
 	Ground.reserve_start_yard(terrain, start_yard, _clear_zones)
+	_build()
+
+
+## Whether a loading cover is up (a SceneLoader under the root) and will wait for this node.
+func _loading_cover_up() -> bool:
+	for node: Node in get_tree().root.get_children():
+		if node is SceneLoader:
+			return true
+	return false
+
+
+## The whole build, a slice per frame when there is a slicer (see FrameSlicer).
+func _build() -> void:
 	var cursor: Transform3D = Transform3D.IDENTITY
 	_progress_samples.append({"cumulative": 0.0, "position": cursor.origin, "leg_index": 0})
 	_start_leg(cursor)
+	_enter_stage(STAGE_LEGS)
 	for leg_index: int in range(house_count + 1):
-		cursor = _build_leg(cursor, leg_index)
+		cursor = await _build_leg(cursor, leg_index)
 		if leg_index < house_count:
 			cursor = _build_house(cursor, leg_index)
+			await _tick()
 	goal_transform = cursor
 	_build_goal(cursor)
-	_finish_terrain()
+	await _tick()
+	await _finish_terrain()
 	_build_ambience()
+	_mark_stage("ambience")
+	await _tick()
 	var sky := RouteSky.new()
 	sky.name = "Sky"
 	add_child(sky)
+	_mark_stage("sky")
+	_complete()
+
+
+## The build is over: the route counts as built and the loading cover may lift.
+func _complete() -> void:
+	is_built = true
+	_progress = 1.0
+	var total: float = float(Time.get_ticks_usec() - _started_usec) / 1000.0
+	build_stats["total_msec"] = total
+	build_stats["longest_slice_msec"] = float(_slicer.longest_slice_usec) / 1000.0 if _slicer != null else total
+	build_stats["frames"] = _slicer.frames_waited if _slicer != null else 0
+	remove_from_group(SceneLoader.BUSY_GROUP)
+	built.emit()
+
+
+## How far the build has got, 0..1 and never going back: the loading bar follows
+## it (SceneLoader reads it from the nodes in BUSY_GROUP).
+func loading_progress() -> float:
+	if is_built:
+		return 1.0
+	var fraction: float = _stage_fraction
+	if _stage_probe.is_valid():
+		fraction = float(_stage_probe.call())
+	_progress = maxf(_progress, _stage_start + _stage_span * clampf(fraction, 0.0, 1.0))
+	return minf(_progress, 0.999)
+
+
+## The build moves on to the stage that fills `bar` (from, to) of the loading
+## bar; `probe` (optional) tells how far through it is, else _stage_fraction does.
+func _enter_stage(bar: Vector2, probe: Callable = Callable()) -> void:
+	_stage_start = bar.x
+	_stage_span = bar.y - bar.x
+	_stage_fraction = 0.0
+	_stage_probe = probe
+
+
+## Between two steps of the build: lets a frame draw if this one's slice is spent.
+func _tick() -> void:
+	if _slicer != null:
+		await _slicer.tick()
 
 
 ## Deals the house models out like a deck so a route never repeats one until
@@ -274,6 +377,7 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 		# A stable name, the same on every peer: segments with state of their
 		# own (RailCrossingSegment) are reached by RPC through their path.
 		segment.name = "Segment%d" % _segments.size()
+		_freeze(segment)
 		add_child(segment)
 		_segments.append(segment)
 		Ground.register_spans(terrain, segment, cursor)
@@ -285,6 +389,8 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 		route_length += segment.length
 		cursor = cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)
 		_progress_samples.append({"cumulative": route_length, "position": cursor.origin, "leg_index": leg_index})
+		_stage_fraction = float(_segments.size()) / float(maxi(_plan.segments.size(), 1))
+		await _tick()
 	return cursor
 
 
@@ -293,6 +399,7 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 ## part of the chain.
 func _build_house(cursor: Transform3D, index: int) -> Transform3D:
 	var house: DeliveryHouse = _house_builder.build_house(cursor, index)
+	_freeze(house)
 	var captured_index: int = index
 	house.resolved.connect(func(outcome: StringName, package_id: StringName) -> void: house_resolved.emit(captured_index, outcome, package_id))
 	return cursor
@@ -316,6 +423,7 @@ func _build_goal(cursor: Transform3D) -> void:
 	terrain.add_span(cursor.origin, cursor * Vector3(0.0, 0.0, -24.0))
 	goal_lot = RouteGoalLot.new()
 	goal_lot.name = "GoalLot"
+	_freeze(goal_lot)
 	var names: Array[String] = TownSign.names_for_seed(_spine_seed)
 	goal_lot.configure(_spine_seed, names[-1], mood.darkness())
 	var level: float = terrain.base_height(Vector2(cursor.origin.x, cursor.origin.z))
@@ -389,11 +497,17 @@ func _finish_terrain() -> void:
 		p.y = terrain.base_height(Vector2(p.x, p.z)) - 0.08
 		terrain.pads.append(p)
 	Ground.level_rail_crossings(terrain, _segments, _clear_zones)
-	terrain.build()
+	_mark_stage("legs")
+	_enter_stage(STAGE_TERRAIN, func() -> float: return terrain.build_progress)
+	await terrain.build_async(_slicer)
+	_mark_stage("terrain")
+	_enter_stage(STAGE_CONFORM, func() -> float: return terrain.conform_progress)
+	var to_conform: Array[Node] = []
 	for child: Node in get_children():
 		if child == terrain or child == goal_lot or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):
 			continue
-		terrain.conform_geometry(child)
+		to_conform.append(child)
+	await terrain.conform_all(to_conform, _slicer)
 	for segment: RouteSegment in _segments:
 		if segment is RailCrossingSegment:
 			var track: Vector3 = segment.transform * Vector3(0.0, 0.0, (segment as RailCrossingSegment).track_z)
@@ -402,19 +516,26 @@ func _finish_terrain() -> void:
 		house.position.y = terrain.height_at(house.position)
 		var label: Node3D = get_node(NodePath("HouseNumber%d" % house.house_index))
 		label.position.y = house.position.y + float(label.get_meta(&"height_above_house", 4.0))
+	_mark_stage("conform")
+	await _thaw()
 	# One draw from the session RNG after the whole road exists, so dressing
 	# can never change the road itself -- and every peer gets the same draw.
 	dresser = RouteDresser.new(self, terrain, _rng.randi())
 	dresser.raining = mood.is_raining()
-	dresser.dress(_segments, houses, _clear_zones, _sight_zones)
+	_enter_stage(STAGE_DRESS, func() -> float: return dresser.progress)
+	await dresser.dress(_segments, houses, _clear_zones, _sight_zones, _slicer)
+	_mark_stage("dress")
 	# Halos round the lamps after dark (N-304), found while they're still nodes.
 	var flares: MultiMeshInstance3D = NightFlares.build(self)
 	if flares != null:
 		add_child(flares)
+	await _tick()
+	_enter_stage(STAGE_BAKE)
 	if batch_dressing:
 		var yards: Array = houses.map(func(house: DeliveryHouse) -> Node: return house.get_node_or_null(^"Yard"))
-		DressingBatcher.bake(self, _segments, yards)
-		DressingBatcher.merge_segment_geometry(_segments)
+		await DressingBatcher.bake(self, _segments, yards, _slicer)
+		_stage_fraction = 0.8
+		await DressingBatcher.merge_segment_geometry(_segments, _slicer)
 	for i: int in range(_path_points.size()):
 		_path_points[i].y = terrain.height_at(_path_points[i])
 	for sample: Dictionary in _progress_samples:
@@ -423,6 +544,35 @@ func _finish_terrain() -> void:
 		sample.position = p
 	_path.invalidate_samples()
 	goal_transform.origin.y = terrain.height_at(goal_transform.origin)
+	_mark_stage("bake")
+
+
+## Holds `node` (a segment, a house, the goal lot) out of the physics and the
+## processing until the ground is there (_thaw()): the cones a segment drops are
+## bodies, and the physics runs between the frames the build is spread over, so
+## they would fall through the world before the terrain exists. Call it before
+## or right after the node enters the tree. Nothing when the build isn't
+## spread over frames.
+func _freeze(node: Node) -> void:
+	if _slicer == null:
+		return
+	_frozen.append([node, node.process_mode])
+	node.process_mode = Node.PROCESS_MODE_DISABLED
+
+
+## The terrain stands: whatever _freeze() held lives again, one at a time so no
+## frame pays for all of them.
+func _thaw() -> void:
+	for entry: Array in _frozen:
+		var node: Node = entry[0]
+		node.process_mode = entry[1]
+		await _tick()
+	_frozen.clear()
+
+
+## Writes down how long the build took, up to the end of `stage`.
+func _mark_stage(stage: String) -> void:
+	build_stats[stage + "_msec"] = float(Time.get_ticks_usec() - _started_usec) / 1000.0
 
 
 ## World ambience (item #45): a quiet, looping wind bed. Non-positional

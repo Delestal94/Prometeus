@@ -308,6 +308,22 @@ func _reset_session_state() -> void:
 
 ## The crew may have grown since the level was built, so the house count is
 ## decided afresh; the host's profile may have completed a run meanwhile.
+## An invite the menu can't take yet (its level is being built behind the
+## loading screen): the next menu joins it on arrival (take_pending_lobby()).
+func defer_lobby(lobby: int) -> void:
+	_pending_lobby = lobby
+
+
+## A host restart reloads the level behind the loading screen (N-408): a
+## bare reload_current_scene() froze the window while the road was rebuilt.
+func _reload_level() -> void:
+	var scene: Node = get_tree().current_scene
+	if scene == null or scene.scene_file_path.is_empty():
+		super._reload_level()
+		return
+	LoadingScreen.go(get_tree(), scene.scene_file_path, tr("UI_LOADING_TAG_RESTART"))
+
+
 func _before_restart() -> void:
 	world_house_count = 0
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")

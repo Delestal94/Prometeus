@@ -31,10 +31,17 @@ var _hud_signal_left: float = 0.0
 ## What delivery_status_changed last said, to send a change at once.
 var _hud_in_zone: bool = false
 var _hud_stopped: bool = false
+## Orders that came in before the houses were built.
+var _pending_assignments: Array = []
+## The pieces of handing the orders to the houses (_assign_orders()).
+var _orders_posted: bool = false
+var _route_stands: bool = false
+var _orders_assigned: bool = false
 
 
 func _prepare_mode() -> void:
-	# The dog waits at the doors, the bees in the meadows (N-109).
+	# The dog waits at the doors, the bees in the meadows (N-109). The houses
+	# list is filled as the route builds, so the same array serves.
 	cargo_animals.houses = route.houses
 	cargo_animals.zone_probe = _is_open_country
 	# The doors are where the run is actually won: route.gd owns the houses,
@@ -42,17 +49,66 @@ func _prepare_mode() -> void:
 	# Without this the houses resolved into nothing and every delivery was
 	# worth exactly as much as driving past (docs/colaboracion-equipo.md).
 	route.house_resolved.connect(_on_house_resolved)
-	RunManager.expected_houses = route.houses.size()
-	EventBus.houses_assigned.connect(func(assignments: Array) -> void: route.assign_packages(assignments))
+	RunManager.expected_houses = route.house_count
+	EventBus.houses_assigned.connect(_on_houses_assigned)
+	# Today's orders: one specific box per house, posted on the depot's
+	# board and on each house's sign from the start (every peer draws the
+	# same ones from the session seed).
+	# (The depot builds itself over frames too: once it is stocked.)
+	_after_depot(_post_orders)
+	# The houses themselves stand once the route has built (it takes several
+	# frames: route.gd, N-408); already built, as in a test, it's now.
+	if route.is_built:
+		_on_route_built()
+	else:
+		route.built.connect(_on_route_built, CONNECT_ONE_SHOT)
+
+
+## The depot is stocked: today's orders go on its board.
+func _post_orders() -> void:
+	depot.post_orders(route.house_count)
+	_orders_posted = true
+	_assign_orders()
+
+
+## What needs the houses to exist: what a refused box says, and their orders.
+func _on_route_built() -> void:
 	for house: DeliveryHouse in route.houses:
 		var index: int = house.house_index
 		house.wrong_package_offered.connect(func(expected: String) -> void:
 			EventBus.relay(&"house_refused_package", [index, expected]))
-	# Today's orders: one specific box per house, posted on the depot's
-	# board and on each house's sign from the start (every peer draws the
-	# same ones from the session seed).
-	depot.post_orders(route.houses.size())
-	route.assign_packages(depot.assignments())
+	_route_stands = true
+	_assign_orders()
+
+
+## The houses take their orders once they stand and the board has them (the
+## host's, if it already sent them), whichever of the route and the depot is last.
+func _assign_orders() -> void:
+	if not _route_stands or _orders_assigned or not (_orders_posted or not _pending_assignments.is_empty()):
+		return
+	_orders_assigned = true
+	route.assign_packages(_pending_assignments if not _pending_assignments.is_empty() else depot.assignments())
+	_pending_assignments = []
+
+
+## The orders arrive from the host (EventBus.houses_assigned); the houses may
+## still be on their way up, and take them as soon as they are.
+func _on_houses_assigned(assignments: Array) -> void:
+	if route.is_built:
+		route.assign_packages(assignments)
+	else:
+		_pending_assignments = assignments
+
+
+## The level's world is complete once the route and the depot are (they build over frames).
+func _is_world_built() -> bool:
+	return route.is_built and depot.is_built
+
+
+func _wait_for_world() -> void:
+	await super()
+	if not route.is_built:
+		await route.built
 
 
 ## The village at the end of the road, which the newspaper is named after.
@@ -105,7 +161,7 @@ func _wanted_houses() -> int:
 func _crew_outgrew_route() -> bool:
 	if not NetworkManager.is_host() or RunManager.is_running or not RunManager.results.is_empty():
 		return false
-	return _wanted_houses() > route.houses.size()
+	return _wanted_houses() > route.house_count
 
 
 ## Only the host resolves doors (Interactable.interact() is host-only), and

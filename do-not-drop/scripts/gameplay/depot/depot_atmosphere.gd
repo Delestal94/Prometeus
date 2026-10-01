@@ -33,6 +33,11 @@ const INSIDE_SKY_FIXED_SHARE: float = 0.97
 const INSIDE_SHADOW_OPACITY: float = 1.0
 ## Blend per second: a walk through the door takes about half a second.
 const FADE_PER_SECOND: float = 2.2
+## What the outdoor values recovered by _adopt() can be at most: the sky's share is
+## divided by (1 - 0.97 x blend), so an Environment that wasn't blended the way this
+## expects (an unblended copy swapped in while the camera is inside) would inflate them.
+const MAX_BASE_ENERGY: float = 4.0
+const MAX_BASE_DENSITY: float = 0.2
 
 var _depot: Node3D
 var _world_environment: WorldEnvironment
@@ -108,14 +113,16 @@ func _adopt(environment: Environment) -> void:
 	# value = base x (1 - w) + interior x w, with w = blend x fixed share: undone for base.
 	var weight: float = _blend * INSIDE_FIXED_SHARE
 	var keep: float = 1.0 - weight
-	_base_density = environment.fog_density / lerpf(1.0, INSIDE_FOG_SHARE, _blend)
-	_base_energy = (environment.ambient_light_energy - INSIDE_AMBIENT_ENERGY * weight) / keep
+	_base_density = clampf(environment.fog_density / lerpf(1.0, INSIDE_FOG_SHARE, _blend), 0.0, MAX_BASE_DENSITY)
+	_base_energy = clampf((environment.ambient_light_energy - INSIDE_AMBIENT_ENERGY * weight) / keep,
+			0.0, MAX_BASE_ENERGY)
 	var sky_weight: float = _blend * INSIDE_SKY_FIXED_SHARE
-	_base_sky = (environment.ambient_light_sky_contribution - INSIDE_SKY_CONTRIBUTION * sky_weight) / (1.0 - sky_weight)
+	_base_sky = clampf((environment.ambient_light_sky_contribution - INSIDE_SKY_CONTRIBUTION * sky_weight)
+			/ (1.0 - sky_weight), 0.0, 1.0)
 	var ambient: Color = environment.ambient_light_color
-	_base_colour = Color((ambient.r - INSIDE_AMBIENT_COLOUR.r * weight) / keep,
-			(ambient.g - INSIDE_AMBIENT_COLOUR.g * weight) / keep,
-			(ambient.b - INSIDE_AMBIENT_COLOUR.b * weight) / keep, ambient.a)
+	_base_colour = Color(clampf((ambient.r - INSIDE_AMBIENT_COLOUR.r * weight) / keep, 0.0, 1.0),
+			clampf((ambient.g - INSIDE_AMBIENT_COLOUR.g * weight) / keep, 0.0, 1.0),
+			clampf((ambient.b - INSIDE_AMBIENT_COLOUR.b * weight) / keep, 0.0, 1.0), ambient.a)
 
 
 func _apply() -> void:

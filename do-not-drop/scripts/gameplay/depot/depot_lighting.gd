@@ -64,6 +64,8 @@ const GLASS_WEATHER: Array[float] = [1.0, 0.78, 0.56, 0.85]
 const GLASS_TIME: Array[float] = [1.0, 0.7, 0.3]
 const GLASS_EMISSION: float = 0.35
 const SHAFT_MAX_DROP: float = 7.0
+## How far inside the walls' inner faces the daylight is cut (interior()).
+const WALL_INSET: float = 0.05
 ## Where a lamp sits on the ceiling (x, z) -- build_lights() hangs a fixture from each.
 const LAMP_XS: Array[float] = [-9.0, -3.0, 3.0, 9.0]
 const LAMP_ZS: Array[float] = [5.2, 13.0, 20.8, 28.0]
@@ -131,10 +133,22 @@ static func build_pools(kit: DepotKit, sun: DirectionalLight3D) -> void:
 	var tint: Color = DAYLIGHT_TINT
 	var patch := DepotKit.light_pool(Color(tint.r, tint.g, tint.b, shaft_peak() * PATCH_SHARE))
 	var slant: Vector3 = daylight.slant
+	var size: Vector2 = SKYLIGHT_SIZE + Vector2(1.6, 2.4)
 	for x: float in SKYLIGHT_XS:
 		for z: float in SKYLIGHT_ZS:
-			kit.floor_quad(SKYLIGHT_SIZE + Vector2(1.6, 2.4), Vector3(x + slant.x, Layout.FLOOR_TOP + 0.024,
-					z + slant.z), patch)
+			# A low sun throws the patch toward a wall: what would land past it is cut off.
+			var area := Rect2(Vector2(x + slant.x, z + slant.z) - size * 0.5, size).intersection(interior())
+			if area.has_area():
+				kit.floor_quad(area.size, Vector3(area.get_center().x, Layout.FLOOR_TOP + 0.024,
+						area.get_center().y), patch)
+
+
+## The floor inside the hall (x by z), from wall to wall a hair short of their
+## inner faces: the shafts, their patches and their dust never leave it, so a
+## low sun does not push daylight out through a wall.
+static func interior() -> Rect2:
+	return Rect2(-Layout.HALF_WIDTH + WALL_INSET, WALL_INSET, (Layout.HALF_WIDTH - WALL_INSET) * 2.0,
+			Layout.DEPTH - WALL_INSET * 2.0)
 
 
 ## The daylight that comes in through the skylights: the sun's direction
@@ -189,12 +203,13 @@ static func glass_look() -> Dictionary:
 ## Each face fades to nothing at its two side edges (a texture across it), is
 ## faint where it leaves the roof, brightest SHAFT_PEAK_AT of the way down and
 ## gone at the floor (vertex alpha along it), so no hard edge shows; strength by
-## weather and hour (shaft_peak), none at night.
+## weather and hour (shaft_peak), none at night. Cut at the walls (interior()).
 static func build_shafts(root: Node3D, sun: DirectionalLight3D) -> MeshInstance3D:
 	var daylight: Dictionary = sunlight(sun)
 	var tint: Color = DAYLIGHT_TINT
 	var slant: Vector3 = daylight.slant
 	var peak: float = shaft_peak()
+	var bounds: Rect2 = interior()
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var top_colour := Color(tint.r, tint.g, tint.b, peak * SHAFT_FACE_SHARE * SHAFT_TOP_SHARE)
@@ -217,9 +232,9 @@ static func build_shafts(root: Node3D, sun: DirectionalLight3D) -> MeshInstance3
 			for side: int in range(4):
 				var next: int = (side + 1) % 4
 				_face(tool, [corners_top[side], corners_top[next], corners_mid[next], corners_mid[side]],
-						top_colour, mid_colour)
+						top_colour, mid_colour, bounds)
 				_face(tool, [corners_mid[side], corners_mid[next], corners_foot[next], corners_foot[side]],
-						mid_colour, foot_colour)
+						mid_colour, foot_colour, bounds)
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -240,14 +255,40 @@ static func build_shafts(root: Node3D, sun: DirectionalLight3D) -> MeshInstance3
 
 ## A quad of a shaft's side (corners top-left, top-right, bottom-right, bottom-left
 ## as seen from outside) with `upper` colour on the first two and `lower` on the rest;
-## u runs across the face for the side-edge fade.
-static func _face(tool: SurfaceTool, corners: Array[Vector3], upper: Color, lower: Color) -> void:
+## u runs across the face for the side-edge fade. What lies outside `bounds` (x by z)
+## is cut away, colour and uv carried to the cut.
+static func _face(tool: SurfaceTool, corners: Array[Vector3], upper: Color, lower: Color, bounds: Rect2) -> void:
 	var uvs: Array[Vector2] = [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
 	var colours: Array[Color] = [upper, upper, lower, lower]
-	for index: int in [0, 1, 2, 0, 2, 3]:
-		tool.set_color(colours[index])
-		tool.set_uv(uvs[index])
-		tool.add_vertex(corners[index])
+	var polygon: Array[Dictionary] = []
+	for index: int in range(4):
+		polygon.append({"at": corners[index], "colour": colours[index], "uv": uvs[index]})
+	# Each wall as (normal x, normal z, offset): inside where normal . (x, z) >= offset.
+	for wall: Vector3 in [Vector3(1.0, 0.0, bounds.position.x), Vector3(-1.0, 0.0, -bounds.end.x),
+			Vector3(0.0, 1.0, bounds.position.y), Vector3(0.0, -1.0, -bounds.end.y)]:
+		polygon = _cut(polygon, wall)
+	for index: int in range(1, polygon.size() - 1):
+		for vertex: Dictionary in [polygon[0], polygon[index], polygon[index + 1]]:
+			tool.set_color(vertex.colour)
+			tool.set_uv(vertex.uv)
+			tool.add_vertex(vertex.at)
+
+
+## The part of a convex `polygon` on the inner side of `wall` (see _face).
+static func _cut(polygon: Array[Dictionary], wall: Vector3) -> Array[Dictionary]:
+	var kept: Array[Dictionary] = []
+	for index: int in range(polygon.size()):
+		var a: Dictionary = polygon[index]
+		var b: Dictionary = polygon[(index + 1) % polygon.size()]
+		var depth_a: float = wall.x * (a.at as Vector3).x + wall.y * (a.at as Vector3).z - wall.z
+		var depth_b: float = wall.x * (b.at as Vector3).x + wall.y * (b.at as Vector3).z - wall.z
+		if depth_a >= 0.0:
+			kept.append(a)
+		if (depth_a >= 0.0) != (depth_b >= 0.0):
+			var t: float = depth_a / (depth_a - depth_b)
+			kept.append({"at": (a.at as Vector3).lerp(b.at, t), "colour": (a.colour as Color).lerp(b.colour, t),
+					"uv": (a.uv as Vector2).lerp(b.uv, t)})
+	return kept
 
 
 ## Alpha across a face: 0 at both side edges, full in the middle (smooth, no ring).
@@ -281,6 +322,7 @@ static func build_dust(root: Node3D, sun: DirectionalLight3D) -> void:
 	material.albedo_color = Color(DUST_COLOUR, DUST_ALPHA * clampf(peak / SHAFT_PEAK[0], 0.2, 1.0))
 	mote.material = material
 	var half := SKYLIGHT_SIZE * 0.5
+	var bounds: Rect2 = interior()
 	var index: int = 0
 	for x: float in SKYLIGHT_XS:
 		for z: float in SKYLIGHT_ZS:
@@ -291,9 +333,13 @@ static func build_dust(root: Node3D, sun: DirectionalLight3D) -> void:
 			dust.lifetime = 8.0
 			dust.preprocess = 8.0
 			dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-			dust.emission_box_extents = Vector3(half.x + 0.2, 1.6, half.y)
-			# Mid-height of the fall, carried along the slant to where the shaft is at that height.
-			dust.position = Vector3(x, 4.3, z) + slant * 0.45
+			var extents := Vector3(half.x + 0.2, 1.6, half.y)
+			dust.emission_box_extents = extents
+			# Mid-height of the fall, carried along the slant to where the shaft is at that height,
+			# and kept off the walls (the shaft is cut there).
+			var centre: Vector3 = Vector3(x, 4.3, z) + slant * 0.45
+			dust.position = Vector3(clampf(centre.x, bounds.position.x + extents.x, bounds.end.x - extents.x), centre.y,
+					clampf(centre.z, bounds.position.y + extents.z, bounds.end.y - extents.z))
 			dust.direction = Vector3.UP
 			dust.spread = 180.0
 			dust.gravity = Vector3.ZERO

@@ -28,9 +28,10 @@ class_name VehicleFaults
 ## Every fault this version can roll, in roll order.
 const FAULTS: Array[StringName] = [&"rear_door", &"mirror"]
 ## Preloaded, not by class_name: a new global class isn't in the class cache
-## until the editor imports again, and headless runs load this first.
-const EFFECTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_fault_effects.gd")
-const REPAIR_SPOT: Script = preload("res://scripts/gameplay/vehicle/fault_repair_spot.gd")
+## until the editor imports again, and headless runs load this first. Inferred
+## (no `: Script`) so each one also works as a type.
+const EFFECTS := preload("res://scripts/gameplay/vehicle/vehicle_fault_effects.gd")
+const REPAIR_SPOT := preload("res://scripts/gameplay/vehicle/fault_repair_spot.gd")
 ## The improvised fix from the shared kit (RunManager.care_supplies), per
 ## fault. No new tools: only what the kit already carries.
 ## &"phone" is no supply: see hold_phone().
@@ -79,7 +80,10 @@ var max_faults_per_run: int = 1
 var door_pop_strength: float = 4.5
 
 ## The van whose parts break. LevelCommon sets it before adding the node;
-## null (the rolls-only test) leaves just the list.
+## null (the rolls-only test) leaves just the list. Not typed as vehicle.gd:
+## the tests stand a FakeVan Node3D in (with just the door API and
+## driver_peer_id), which `as` a typed truck would drop, so the van's own
+## members (driver_peer_id, is_door_open, set_rear_cargo_open) stay by name.
 var vehicle: Node3D
 
 ## Every peer: fault_id -> true while it's broken.
@@ -98,7 +102,7 @@ var phone_holder_id: int = 0
 var spots: Dictionary = {}
 ## fault_id -> how it ended this run (a STORY_KEYS method), in break order.
 var outcomes: Dictionary = {}
-var effects: Node3D
+var effects: EFFECTS
 var _rng := RandomNumberGenerator.new()
 ## Host-only: the player behind phone_holder_id.
 var _phone_holder: Node
@@ -111,7 +115,7 @@ func _ready() -> void:
 	EventBus.vehicle_fault_repaired.connect(_on_fault_repaired)
 	effects = EFFECTS.new()
 	effects.name = "Effects"
-	effects.set(&"vehicle", vehicle)
+	effects.vehicle = vehicle
 	add_child(effects)
 	add_to_group(&"vehicle_faults")
 	add_to_group(&"run_stories")
@@ -245,15 +249,16 @@ func _physics_process(_delta: float) -> void:
 func _phone_still_held() -> bool:
 	if not active.has(&"mirror") or not is_instance_valid(_phone_holder) or not _phone_holder.is_inside_tree():
 		return false
-	if _phone_holder.get(&"carried_package") != null:
+	# A Player, or a stand-in Node3D (the tests'): the stand-in carries nothing.
+	var holder := _phone_holder as Player
+	if holder != null and holder.carried_package != null:
 		return false
 	if is_driver(phone_holder_id):
 		return false
-	var spot: Node3D = spots.get(&"mirror")
+	var spot: Node3D = _mirror_spot()
 	if spot == null or not spot.is_inside_tree():
 		return true
-	var origin: Vector3 = _phone_holder.call(&"reach_origin") if _phone_holder.has_method(&"reach_origin") \
-			else (_phone_holder as Node3D).global_position
+	var origin: Vector3 = holder.reach_origin() if holder != null else (_phone_holder as Node3D).global_position
 	return origin.distance_to(spot.global_position) <= PHONE_HOLD_RANGE
 
 
@@ -268,12 +273,16 @@ func _share_phone_holder(peer_id: int) -> void:
 @rpc("authority", "call_remote", "reliable")
 func _set_phone_holder(peer_id: int) -> void:
 	phone_holder_id = peer_id
-	if peer_id != 0 and outcomes.get(&"mirror") == &"broken":
+	if peer_id != 0 and outcomes.has(&"mirror") and outcomes[&"mirror"] == &"broken":
 		outcomes[&"mirror"] = &"phone"
 	if effects != null:
-		var spot: Node3D = spots.get(&"mirror")
-		effects.call(&"show_phone_mirror", peer_id != 0,
-				spot.position if spot != null else SPOT_POSITIONS[&"mirror"])
+		var spot: Node3D = _mirror_spot()
+		effects.show_phone_mirror(peer_id != 0, spot.position if spot != null else SPOT_POSITIONS[&"mirror"])
+
+
+## The mirror's repair spot, or null without a van.
+func _mirror_spot() -> Node3D:
+	return spots[&"mirror"] if spots.has(&"mirror") else null
 
 
 ## Host-only: a peer that joins mid-run gets the faults, the spares and the
@@ -299,7 +308,7 @@ func _receive_state(faults: Array, spare_count: int, holder_id: int) -> void:
 		if not active.has(fault_id):
 			active[fault_id] = true
 			if effects != null:
-				effects.call(&"show_fault", fault_id)
+				effects.show_fault(fault_id)
 	_set_spares(spare_count)
 	_set_phone_holder(holder_id)
 
@@ -308,14 +317,14 @@ func _hang_repair_spots() -> void:
 	if vehicle == null:
 		return
 	for fault_id: StringName in FAULTS:
-		var spot: Interactable = REPAIR_SPOT.new()
+		var spot: REPAIR_SPOT = REPAIR_SPOT.new()
 		spot.name = "FaultRepair_%s" % fault_id
-		spot.set(&"fault_id", fault_id)
-		spot.set(&"faults", self)
+		spot.fault_id = fault_id
+		spot.faults = self
 		spot.position = SPOT_POSITIONS[fault_id]
 		vehicle.add_child(spot)
 		spots[fault_id] = spot
-	var mirror: Array = effects.call(&"driver_mirror_parts")
+	var mirror: Array[Node3D] = effects.driver_mirror_parts()
 	if not mirror.is_empty():
 		var part: Node3D = mirror[0]
 		spots[&"mirror"].position = vehicle.to_local(part.global_position) \

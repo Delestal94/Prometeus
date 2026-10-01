@@ -18,7 +18,9 @@ extends SceneTree
 ##   a remote jog (Walk above walking pace) counts as running;
 ## - PlayerAnimator: Run picked with hysteresis, plays "Run" if the library has
 ##   it and Walk sped up if not; the other peer sees the same state
-##   (anim_state / locomotion_speed are replicated) and hears the footfalls.
+##   (anim_state / locomotion_speed are replicated) and hears the footfalls;
+## - the real character (sm_char_player_rounded.glb) ships its own looping "Run"
+##   clip (N-115.3), played at speed / 6 m/s, never the Walk fallback.
 
 const Sprint = preload("res://scripts/gameplay/player/player_sprint.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
@@ -42,6 +44,7 @@ func _run() -> void:
 	await _test_trip_is_deterministic_and_drops_the_box()
 	await _test_first_run_tip_and_box_bounce()
 	await _test_animator_picks_run_or_the_fallback()
+	await _test_character_library_has_a_looping_run()
 	await _test_other_peer_sees_the_run()
 	await _test_remote_jog_and_the_hosts_step_bucket()
 	if _failures == 0:
@@ -331,6 +334,35 @@ func _test_animator_picks_run_or_the_fallback() -> void:
 	await _unload_level(level)
 
 
+## N-115.3: the Blender clip, not the fallback. Looping (the glTF importer drops the flag;
+## PlayerAnimator.LOOPING sets it), as long as Walk so the phase-keeping switch lands on
+## the same foot, and scaled by speed so the planted feet keep pace from 4 to 6 m/s.
+func _test_character_library_has_a_looping_run() -> void:
+	var level: Node = await _load_level()
+	var player: Player = level.local_player
+	var playing: AnimationPlayer = player.animator.anim_player
+	_expect(playing != null and playing.has_animation(Player.ANIM_RUN),
+			"The character's library has a Run clip (sm_char_player_rounded.glb)")
+	if playing == null or not playing.has_animation(Player.ANIM_RUN):
+		await _unload_level(level)
+		return
+	var run: Animation = playing.get_animation(Player.ANIM_RUN)
+	var walk_length: float = playing.get_animation(Player.ANIM_WALK).length
+	_expect(run.loop_mode == Animation.LOOP_LINEAR, "Run loops (got loop_mode %d)" % run.loop_mode)
+	_expect(is_equal_approx(run.length, walk_length),
+			"Run lasts as long as Walk (%.3f vs %.3f s)" % [run.length, walk_length])
+	player.seat_node_path = NodePath()
+	player.anim_state = Player.ANIM_RUN
+	for pace: float in [6.0, 5.0, 4.0]:
+		player.locomotion_speed = pace
+		player.animator.animate()
+		_expect(playing.current_animation == "Run", "At %.1f m/s the runner plays Run, not Walk (got %s)" % [
+				pace, playing.current_animation])
+		_expect(is_equal_approx(playing.speed_scale, pace / PlayerAnimator.RUN_AUTHORED_SPEED),
+				"...at speed / 6 m/s so the feet don't skate (%.1f m/s: x%.3f)" % [pace, playing.speed_scale])
+	await _unload_level(level)
+
+
 func _test_other_peer_sees_the_run() -> void:
 	var level: Node = await _load_level()
 	var remote: Player = PLAYER_SCENE.instantiate()
@@ -351,9 +383,8 @@ func _test_other_peer_sees_the_run() -> void:
 	_expect(footsteps in [4, 5], "Its footfalls come at the running cadence: 4-5 in 1.5 s (got %d)" % footsteps)
 	await process_frame
 	var playing: AnimationPlayer = remote.animator.anim_player
-	var sees_run: bool = playing.current_animation == "Run" \
-			or (playing.current_animation == "Walk" and playing.speed_scale > 1.5)
-	_expect(sees_run, "...and sees Run, or Walk sped up while the clip is missing (got %s x%.2f)" % [
+	_expect(playing.current_animation == "Run" and is_equal_approx(playing.speed_scale, 1.0),
+			"...and sees the character's Run clip at its authored pace (got %s x%.2f)" % [
 			playing.current_animation, playing.speed_scale])
 	remote.anim_state = Player.ANIM_WALK
 	remote.locomotion_speed = Player.WALK_SPEED
@@ -442,7 +473,10 @@ func _package(kind: String) -> DeliveryPackage:
 func _fake_animation_player(with_run: bool) -> AnimationPlayer:
 	var animation_player := AnimationPlayer.new()
 	var library := AnimationLibrary.new()
-	var clips: Array[StringName] = [&"Idle", &"Walk", &"Run"] if with_run else [&"Idle", &"Walk"]
+	# Not a ternary of literals: that yields an untyped Array, a runtime error that skipped this check.
+	var clips: Array[StringName] = [&"Idle", &"Walk"]
+	if with_run:
+		clips.append(&"Run")
 	for clip: StringName in clips:
 		var animation := Animation.new()
 		animation.length = 1.0

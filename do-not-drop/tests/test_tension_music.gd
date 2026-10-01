@@ -2,7 +2,8 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_tension_music.gd
 ## The in-game music's tension layer (docs/tareas-nacho.md #22/#84): silent
 ## while the cargo is fine or merely dented, gently swelling for at-risk boxes.
-## Music leaves breathing room between tracks and never changes tuning.
+## Music leaves breathing room between tracks and never changes tuning; the
+## first phrase comes soon after arriving (N-408).
 
 var _failures: int = 0
 
@@ -32,10 +33,12 @@ func _run() -> void:
 	_expect(music.bus == &"Music" and layer.bus == &"Music", "Both layers respect the music volume setting")
 	_expect(not music.playing, "The world is heard first when entering the level")
 	_expect(not (music.stream as AudioStreamOggVorbis).loop, "The song can finish instead of looping forever")
-	music.call(&"_process", 17.0)
-	_expect(not music.playing, "The first pause lasts at least 18 seconds")
-	music.call(&"_process", 19.0)
-	_expect(music.playing and music.volume_db <= -79.0, "The first track starts quietly within 35 seconds")
+	# N-408: the first phrase comes in as the menu's theme fades under the
+	# loading screen, not after 20-35 s of silence.
+	music.call(&"_process", 1.4)
+	_expect(not music.playing, "A short breath first (at least 1.5 seconds)")
+	music.call(&"_process", 1.7)
+	_expect(music.playing and music.volume_db <= -79.0, "The first track starts quietly within 3 seconds")
 	music.call(&"_process", 2.5)
 	var half_fade: float = music.volume_db
 	_expect(half_fade > -60.0 and half_fade < -17.0, "The song fades in gradually")

@@ -16,6 +16,11 @@ var fans: Array[Node3D] = []
 var _root: Node3D
 
 
+## Set while the depot builds itself over frames (N-408): the builders wait a frame
+## between two steps when this one's slice is spent. Null: they run through.
+var slicer: FrameSlicer = null
+
+
 func _init(root: Node3D) -> void:
 	_root = root
 
@@ -124,19 +129,24 @@ func build_life() -> void:
 	var clerk := _worker(Vector3(-11.0, Layout.FLOOR_TOP, 5.4), -PI * 0.5, Color("2dd4a3"), [
 		tr("WORLD_DEPOT_CLERK_1"), tr("WORLD_DEPOT_CLERK_2"), tr("WORLD_DEPOT_CLERK_3")])
 	clerk.name = "Clerk"
+	await _tick()
 	# At the desk in the office on the mezzanine.
 	var dispatcher := _worker(Vector3(11.4, Layout.FLOOR_TOP + Layout.MEZZANINE_HEIGHT, 29.95), PI, Color("4cc9f0"), [
 		tr("WORLD_DEPOT_DISPATCHER_1"), tr("WORLD_DEPOT_DISPATCHER_2")])
 	dispatcher.name = "Dispatcher"
+	await _tick()
 	var packer := _worker(Vector3(2.2, Layout.FLOOR_TOP, 28.2), 0.0, Color("ff9f1c"), [
 		tr("WORLD_DEPOT_PACKER_1"), tr("WORLD_DEPOT_PACKER_2"), tr("WORLD_DEPOT_PACKER_3")])
 	packer.name = "Packer"
+	await _tick()
 	var mechanic := _worker(Vector3(13.5, Layout.FLOOR_TOP, 5.2), -PI * 0.5, Color("c0392b"), [
 		tr("WORLD_DEPOT_MECHANIC_1"), tr("WORLD_DEPOT_MECHANIC_2")])
 	mechanic.name = "Mechanic"
+	await _tick()
 	var walker := _worker(Vector3(-8.5, Layout.FLOOR_TOP, 25.2), 0.0, Color("ffc93c"), [
 		tr("WORLD_DEPOT_WALKER_1"), tr("WORLD_DEPOT_WALKER_2"), tr("WORLD_DEPOT_WALKER_3")])
 	walker.name = "StockWalker"
+	await _tick()
 	walker.waypoints = [Vector3(-8.5, Layout.FLOOR_TOP, 14.4), Vector3(-8.5, Layout.FLOOR_TOP, 25.2),
 			Vector3(-2.6, Layout.FLOOR_TOP, 25.0),
 		Vector3(0.6, Layout.FLOOR_TOP, 29.0), Vector3(-2.6, Layout.FLOOR_TOP, 25.0), Vector3(-8.5, Layout.FLOOR_TOP,
@@ -146,6 +156,12 @@ func build_life() -> void:
 	forklift.place(Vector3(Layout.FORKLIFT_LANE_X, Layout.FLOOR_TOP, Layout.FORKLIFT_LANE_Z.x + 1.6),
 			Vector3(Layout.FORKLIFT_LANE_X, Layout.FLOOR_TOP, 26.2))
 	_root.add_child(forklift)
+
+
+## Between two steps: lets a frame draw if this one's slice is spent.
+func _tick() -> void:
+	if slicer != null:
+		await slicer.tick()
 
 
 func _worker(at: Vector3, yaw: float, uniform: Color, lines: Array) -> DepotWorker:

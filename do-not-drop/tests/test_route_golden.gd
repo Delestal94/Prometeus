@@ -1,7 +1,8 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_route_golden.gd
 ## Regenerate the expected file: add `-- --write-golden` to that command (only when the route is
-## meant to change; a pure refactor must leave the file untouched).
+## meant to change; a pure refactor must leave the file untouched). `-- --sync` builds the route
+## in one go on this thread (async_build off): it must sign exactly the same world.
 ##
 ## N-225.3: route.gd was split by responsibility (houses and yards, path lookups, river reach) and
 ## must build exactly the same world as the single-file version. The test builds route.tscn with a
@@ -18,6 +19,10 @@ extends SceneTree
 ## - the answers to get_progress, road_distance, stop_road_distance, distance_from_path,
 ##   get_section_name and ground_roughness on a grid of points along and around the road.
 ## tests/data/route_golden.txt was generated with the original single-file route.gd.
+## The file was written on Linux (CI): on Windows ~77 lines differ from it by the last digit of a
+## coordinate (a 4-decimal rounding that lands the other way: libm's sin/cos/pow differ in the last
+## bit), the same 77 before and after any change. To check a refactor there, write the golden
+## (-- --write-golden) before and after, compare the two files and `git checkout` the real one.
 
 const GOLDEN_PATH := "res://tests/data/route_golden.txt"
 const NETWORK_MANAGER: NodePath = ^"/root/NetworkManager"
@@ -44,6 +49,9 @@ func _run() -> void:
 	# Names that end in an instance counter ("Knockable_Node3D_3796") move with any new object.
 	_counters = RegEx.create_from_string("_\\d+\\b")
 	var network: Node = root.get_node(NETWORK_MANAGER)
+	# A headless run builds the route in one go unless told otherwise; this is the sliced build.
+	var route_script: GDScript = load("res://scripts/gameplay/route/route.gd") as GDScript
+	route_script.set(&"always_slice", not OS.get_cmdline_user_args().has("--sync"))
 	var original_seed: Variant = network.get(&"world_seed")
 	var original_houses: Variant = network.get(&"world_house_count")
 	var out := PackedStringArray()
@@ -54,9 +62,13 @@ func _run() -> void:
 		route.set(&"house_count", setup[1])
 		route.set(&"start_yard", setup[2])
 		route.set(&"batch_dressing", setup[3])
+		route.set(&"async_build", not OS.get_cmdline_user_args().has("--sync"))  # -- --sync: the blocking build
 		# Nothing may tick: animals, windmills and knockable fences move with real time.
 		route.process_mode = Node.PROCESS_MODE_DISABLED
 		root.add_child(route)
+		# The route builds over several frames (N-408); the world it signs is the finished one.
+		if not route.get(&"is_built"):
+			await Signal(route, &"built")
 		await process_frame
 		out.append("#### route seed=%d houses=%d yard=%s batch=%s" % [setup[0], setup[1], _variant(setup[2]), setup[3]])
 		out.append_array(_sign_route(route))

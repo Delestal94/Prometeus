@@ -42,8 +42,18 @@ const VEHICLE_FAULTS := preload("res://scripts/gameplay/vehicle/vehicle_faults.g
 const BOSS_LINES = preload("res://scripts/gameplay/depot/boss_lines.gd")
 ## Seconds after the radio speaks before the toast shows, so the HUD is up.
 const BOSS_TOAST_DELAY: float = 1.5
+## How much work one frame takes before the build lets it draw (route.gd's too).
+const BUILD_SLICE_MSEC: float = 12.0
+## How many `_step()` calls _build() makes: the loading bar's scale.
+const BUILD_STEPS: int = 17
+## How many first-draw pieces the building's mesh batches are cut into (reveal_steps).
+const REVEAL_BATCH_PARTS: int = 8
 
 signal door_closed
+## The whole depot stands: the building, what is in it, the door, the board, the
+## stock (N-408). Until then it builds itself a slice per frame when a loading cover
+## waits for it -- see is_built and loading_progress().
+signal built
 
 const PACKAGE_SCENE: PackedScene = preload("res://scenes/gameplay/package/package.tscn")
 const TRAP_PATH: String = "res://data/traps/%s.tres"
@@ -76,6 +86,15 @@ const INSURANCE_REFUND: int = 50
 ## A plain ground apron around the building, for levels with no terrain of
 ## their own behind the start line (modo endless).
 @export var ground_apron: bool = false
+## Builds over several frames (a loading screen that never freezes, N-408) when a
+## loading cover is up to wait for it (a SceneLoader in the tree: it holds the cover
+## while this node is in SceneLoader.BUSY_GROUP). Off, or with no cover (a test, a
+## tool), _ready() builds it all before it returns, on this thread, like it always
+## did: whatever reads the depot right after add_child() keeps working. Set before
+## this node enters the tree.
+@export var async_build: bool = true
+## Slices the build even with no loading cover: the tests of the sliced build set this.
+static var always_slice: bool = false
 
 ## Today's orders, one per house: {"house", "package_id", "code", "trap", "trap_key", "trap_id",
 ## "content", "content_id"} ("trap" and "content" already translated, for this peer's screens;
@@ -101,6 +120,17 @@ var _insured: bool = false
 var _order_board: DepotOrderBoard
 var _boss_toasted: bool = false
 var _supply_props: Dictionary = {}  # supply id -> Node3D shown on the counter
+## Whether the depot is complete (`built` fired). It is by the time _ready()
+## returns when the build isn't sliced.
+var is_built: bool = false
+## What the build cost: "total_msec", "longest_slice_msec", "frames" (tests and tuning).
+var build_stats: Dictionary = {}
+var _slicer: FrameSlicer
+var _started_usec: int = 0
+var _steps_done: int = 0
+## How many children the depot had after each stage of its build: the first-draw
+## groups of reveal_parts() are the runs of children between two of these.
+var _part_ends: Array[int] = []
 
 
 func _ready() -> void:
@@ -113,15 +143,11 @@ func _ready() -> void:
 	add_to_group(&"roofed_area")
 	# The hall rings a little (N-402, AcousticSpace): covers() is the same test.
 	add_to_group(&"acoustic_space")
-	_build()
-	if stock_extra_packages:
-		_spawn_extra_stock()
-	var crew: CREW_PROGRESSION = _crew()
-	if crew != null:
-		supplies = crew.supplies.keys()
-		team_money = crew.team_money
-	for supply_id: StringName in _supply_props:
-		(_supply_props[supply_id] as Node3D).visible = supplies.has(supply_id)
+	# A scene that builds itself over frames holds the loading cover up (SceneLoader).
+	add_to_group(SceneLoader.BUSY_GROUP)
+	_started_usec = Time.get_ticks_usec()
+	if async_build and (always_slice or _loading_cover_up()):
+		_slicer = FrameSlicer.new(get_tree(), BUILD_SLICE_MSEC)
 	var bus: Node = _bus()
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
@@ -133,6 +159,46 @@ func _ready() -> void:
 		network.peer_level_ready.connect(func(peer_id: int) -> void:
 			if _is_online() and network.is_host() and peer_id != 1 and not boss_lines.is_empty():
 				_receive_boss_lines.rpc_id(peer_id, boss_lines))
+	_build()
+
+
+## Whether a loading cover is up (a SceneLoader under the root) and will wait for this node.
+func _loading_cover_up() -> bool:
+	for node: Node in get_tree().root.get_children():
+		if node is SceneLoader:
+			return true
+	return false
+
+
+## The build is over: the depot counts as built and the loading cover may lift.
+func _complete() -> void:
+	is_built = true
+	var total: float = float(Time.get_ticks_usec() - _started_usec) / 1000.0
+	build_stats["total_msec"] = total
+	build_stats["longest_slice_msec"] = float(_slicer.longest_slice_usec) / 1000.0 if _slicer != null else total
+	build_stats["frames"] = _slicer.frames_waited if _slicer != null else 0
+	remove_from_group(SceneLoader.BUSY_GROUP)
+	built.emit()
+
+
+## How far the build has got, 0..1 and never going back: the loading bar follows it
+## (SceneLoader reads it from the nodes in BUSY_GROUP).
+func loading_progress() -> float:
+	if is_built:
+		return 1.0
+	return minf(float(_steps_done) / float(BUILD_STEPS), 0.999)
+
+
+## One step of the build done: the bar moves, and a frame draws if this one's slice is spent.
+func _step() -> void:
+	_steps_done += 1
+	await _tick()
+
+
+## Between two bits of work: lets a frame draw if this one's slice is spent.
+func _tick() -> void:
+	if _slicer != null:
+		await _slicer.tick()
 
 
 ## The depot's acoustics (N-402): a big roofed hall.
@@ -501,37 +567,65 @@ func _endless_best() -> int:
 # --- Building ----------------------------------------------------------------
 
 
-## Puts the building together. The order matters twice over: the static
-## geometry shares one batch (laid down in the order it always was), and
-## several nodes are looked up by name.
+## Puts the building together, a slice per frame when a loading cover waits for it
+## (see FrameSlicer; without one every step runs through, as it always did). The
+## order matters twice over: the static geometry shares one batch (laid down in the
+## order it always was), and several nodes are looked up by name.
 func _build() -> void:
 	var kit := DepotKit.new(self, "BuildingColliders")
+	kit.slicer = _slicer
 	var hall := DepotHall.new(self, ground_apron)
 	var furnishing := DepotFurnishing.new(self)
-	hall.build_shell(kit)
-	hall.build_floor_markings(kit)
+	var dressing := DepotDressing.new(self)
+	dressing.slicer = _slicer
+	await hall.build_shell(kit)
+	await _step()
+	await hall.build_floor_markings(kit)
+	await _step()
 	hall.build_wayfinding(kit)
-	furnishing.build(kit)
-	DepotProps.new(self).build(kit)
+	await _step()
+	await furnishing.build(kit)
+	await _step()
+	await DepotProps.new(self).build(kit)
+	await _step()
 	hall.build_exterior(kit)
-	kit.commit("Depot")
+	await _step()
+	var first_batch: int = get_child_count()
+	_part_ends.append(first_batch)
+	var batches: Array[MeshInstance3D] = await kit.commit_sliced("Depot")
+	# The batches are the bulk of the first draw: a few draws of their own (reveal_steps).
+	for quarter: int in range(1, REVEAL_BATCH_PARTS):
+		_part_ends.append(first_batch + batches.size() * quarter / REVEAL_BATCH_PARTS)
+	_part_ends.append(get_child_count())
+	await _step()
 	hall.build_contact_shadows()
 	hall.build_sun_shield()
+	_part_ends.append(get_child_count())
+	await _step()
 	_build_door()
-	var dressing := DepotDressing.new(self)
 	dressing.build_signs()
+	await _step()
 	_order_board = DepotOrderBoard.new()
 	_order_board.name = "OrderBoard"
 	add_child(_order_board)
+	await _step()
 	_build_team_board()
 	# "Días sin accidentes" and the wall of delivery photos (N-603).
 	var campaign: Node3D = CAMPAIGN_BOARD.new()
 	campaign.name = "CampaignBoard"
 	add_child(campaign)
+	await _step()
 	_build_stations()
-	hall.build_lights()
+	_part_ends.append(get_child_count())
+	await _step()
+	await hall.build_lights(_slicer)
+	_part_ends.append(get_child_count())
+	await _step()
 	dressing.build_fans()
-	dressing.build_life()
+	await _step()
+	await dressing.build_life()
+	_part_ends.append(get_child_count())
+	await _step()
 	dressing.build_audio()
 	slots = furnishing.slots
 	guides = hall.guides
@@ -549,6 +643,50 @@ func _build() -> void:
 	var atmosphere := DepotAtmosphere.new(self)
 	atmosphere.name = "Atmosphere"
 	add_child(atmosphere)
+	_part_ends.append(get_child_count())
+	await _step()
+	if stock_extra_packages:
+		await _spawn_extra_stock()
+	var crew: CREW_PROGRESSION = _crew()
+	if crew != null:
+		supplies = crew.supplies.keys()
+		team_money = crew.team_money
+	for supply_id: StringName in _supply_props:
+		(_supply_props[supply_id] as Node3D).visible = supplies.has(supply_id)
+	await _step()
+	_complete()
+
+
+## The depot's first draw in pieces, for the loading cover (SceneLoader runs one
+## step per frame, so the shader compiles of a whole hall don't land in one frame):
+## the building's own nodes in the order the build made them, cut where each stage
+## ended. Called once the depot is built, while it is hidden; hides what it will
+## show (only what is visible now) and returns the steps, the first one showing
+## the depot itself.
+func reveal_steps() -> Array[Callable]:
+	var steps: Array[Callable] = []
+	var from: int = 0
+	if is_built:
+		for end: int in _part_ends:
+			var members: Array[Node3D] = []
+			for index: int in range(from, mini(end, get_child_count())):
+				var child := get_child(index) as Node3D
+				if child != null and child.visible:
+					child.visible = false
+					members.append(child)
+			steps.append(_show_part.bind(members, steps.is_empty()))
+			from = end
+	if steps.is_empty():
+		steps.append(_show_part.bind([] as Array[Node3D], true))
+	return steps
+
+
+func _show_part(members: Array[Node3D], with_depot: bool) -> void:
+	if with_depot:
+		visible = true
+	for member: Node3D in members:
+		if is_instance_valid(member):
+			member.visible = true
 
 
 func _build_door() -> void:
@@ -626,6 +764,7 @@ func _spawn_extra_stock() -> void:
 		package.position = Vector3(0.0, 0.5, DEPTH - 1.0)
 		stock.add_child(package)
 		package.freeze = true
+		await _tick()
 
 
 # --- Helpers ----------------------------------------------------------------

@@ -21,11 +21,12 @@ const EDGE: float = 0.07
 const GATHER_LINE: float = 0.1
 const GATHER_DASH: float = 0.5
 const GATHER_GAP: float = 0.3
-## Zone arrows painted on the walkways: short, and half see-through.
+## Zone arrows painted on the walkways: short (their tip stays clear of the white
+## edge strips, 10 cm in from them on the 1 m walkway), opaque, in the floor's own finish.
 const ARROW_LENGTH: float = 0.6
-const ARROW_ALPHA: float = 0.5
-## How far over the floor's paint an arrow sits (paint_arrow's own base is 4 mm).
-const ARROW_LIFT: float = 0.012
+## How far over paint_arrow's base (7 mm over the slab) an arrow sits: its flat top at
+## 14 mm, over the walkway's green (8 mm) and clear of the white edges' top (12 mm).
+const ARROW_LIFT: float = 0.007
 ## Zebra bars: parallel to the traffic, this wide and this far apart.
 const ZEBRA_BAR: float = 0.22
 const ZEBRA_PITCH: float = 0.42
@@ -47,9 +48,12 @@ func _init(root: Node3D) -> void:
 func build(kit: DepotKit) -> void:
 	_build_bay(kit)
 	_build_pads(kit)
+	await kit.tick()
 	_build_walkways(kit)
+	await kit.tick()
 	_build_forklift_lane(kit)
 	_build_wear(kit)
+	await kit.tick()
 	_build_bollards(kit)
 
 
@@ -151,9 +155,9 @@ func _build_walkways(kit: DepotKit) -> void:
 	# One small arrow per place, in its colour, aimed at it.
 	for guide: Dictionary in Layout.FLOOR_GUIDES:
 		var at: Vector3 = guide.arrow
-		# Lifted over the walkway's paint and its white edges.
+		# Over the walkway's paint, short of its white edges.
 		_arrows.append(DepotLabels.paint_arrow(kit, _root.tr(guide.caption), at,
-				((guide.toward as Vector3) - at).normalized(), guide.colour, ARROW_LIFT))
+				((guide.toward as Vector3) - at).normalized(), guide.colour, ARROW_LIFT, ARROW_LENGTH))
 
 
 var _arrows: Array[Dictionary] = []
