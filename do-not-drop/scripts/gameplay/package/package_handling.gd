@@ -27,7 +27,33 @@ static func accept_carry(p: DeliveryPackage, sender: int, carry_transform: Trans
 	var vehicle: Node3D = p._find_vehicle()
 	p._carry_in_vehicle = in_vehicle and vehicle != null
 	p._carry_pose = carry_transform
-	p.global_transform = vehicle.global_transform * carry_transform if p._carry_in_vehicle else carry_transform
+	hold_on_host(p, true)
+
+
+## Host, every tick while held: the box in its carrier's hands. Aboard the moving truck the hold pose goes
+## back on the host's own truck. A client's hold pose comes with that client's newest pose, but the host draws
+## the client a cushion behind it (PlayerNetPose, N-217): the box goes in the hands as drawn instead of floating
+## ahead of them. A held box collides with nothing, so moving it here shoves nobody. `fresh`: a hold pose just
+## arrived (accept_carry); between arrivals a world hold pose is left alone, as the carrier's own updates place it.
+static func hold_on_host(p: DeliveryPackage, fresh: bool = false) -> void:
+	var vehicle: Node3D = p._find_vehicle()
+	if p._carry_in_vehicle and vehicle == null:
+		return
+	var hold: Transform3D = vehicle.global_transform * p._carry_pose if p._carry_in_vehicle else p._carry_pose
+	var carrier := p.carrier as Node3D
+	var pose_node: Node = carrier.get_node_or_null(^"PlayerNetPose") \
+			if is_instance_valid(carrier) and not carrier.is_multiplayer_authority() else null
+	if pose_node == null or (pose_node.buffer as NetSnapshotBuffer).is_empty():
+		if p._carry_in_vehicle or fresh:
+			p.global_transform = hold
+		return
+	var buffer: NetSnapshotBuffer = pose_node.buffer
+	var latest: Transform3D = buffer.latest_pose()
+	if buffer.latest_local():
+		if vehicle == null:
+			return
+		latest = vehicle.global_transform * latest
+	p.global_transform = carrier.global_transform * latest.affine_inverse() * hold
 
 
 static func set_held(p: DeliveryPackage, held: bool) -> void:
@@ -42,6 +68,10 @@ static func set_held(p: DeliveryPackage, held: bool) -> void:
 	p._has_previous_velocity = false
 	p.linear_velocity = Vector3.ZERO
 	p.angular_velocity = Vector3.ZERO
+	# Until the carrier's first hold pose arrives it stays where it was picked up, not on a previous carry's.
+	if held:
+		p._carry_in_vehicle = false
+		p._carry_pose = p.global_transform
 
 
 ## Host-only: pickup points call this instead of set_held(true) directly, so the package knows who has it --
@@ -82,7 +112,7 @@ static func transfer(p: DeliveryPackage, sender_id: int, recipient_path: NodePat
 	var recipient: Player = p.get_node_or_null(recipient_path) as Player if RpcGuard.path_ok(recipient_path) else null
 	if recipient == null or recipient == p.carrier or recipient.carried_package != null:
 		return
-	var slack: float = DeliveryPackage._reach_slack(recipient) + DeliveryPackage._reach_slack(p.carrier)
+	var slack: float = maxf(DeliveryPackage._reach_slack(recipient), DeliveryPackage._reach_slack(p.carrier))
 	if DeliveryPackage._reach_origin(recipient).distance_to(DeliveryPackage._reach_origin(p.carrier)) \
 			> TRANSFER_REACH + slack:
 		return

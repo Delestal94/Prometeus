@@ -14,12 +14,17 @@ extends SceneTree
 ##   heading sent, inside this peer's truck when riding.
 ## - A client's box: an unstamped pose is placed at once (spawn state, the
 ##   other tests); stamped ones are drawn in the past, between two poses.
+## - A box the client carried (predicted in its hands) is drawn where the host
+##   puts it as soon as it's let go, not back where it was picked up; on the
+##   host, a box a client carries sits in that client's hands as the host draws
+##   them, not where its newest pose says.
 ## - Reach (the host): a remote player's requests reach further by a running
 ##   speed over its ping plus cushion (Interactable._within_reach and the box's
-##   own checks); the host's own player gets nothing extra, and the slack is capped.
+##   own checks); the host's own player and a seated one get nothing extra, and the slack is capped.
 ## Offline, a node whose authority is another peer behaves like a client's copy.
 
 const RUN_SPEED: float = 6.0
+const PACKAGE_SCENE: String = "res://scenes/gameplay/package/package.tscn"
 
 var _failures: int = 0
 
@@ -43,6 +48,7 @@ func _initialize() -> void:
 	await process_frame
 	await _check_remote_player(remote, van)
 	await _check_box(world)
+	await _check_host_carry(world, remote)
 	_check_reach(player, remote)
 	level.free()
 	await create_timer(0.1).timeout
@@ -147,7 +153,7 @@ func _check_remote_player(remote: Node3D, van: Node3D) -> void:
 
 
 func _check_box(world: Node3D) -> void:
-	var puppet: Node3D = load("res://scenes/gameplay/package/package.tscn").instantiate()
+	var puppet: Node3D = load(PACKAGE_SCENE).instantiate()
 	puppet.set(&"package_id", &"test_smoothed_box")
 	puppet.set_multiplayer_authority(2)
 	world.add_child(puppet)
@@ -165,7 +171,45 @@ func _check_box(world: Node3D) -> void:
 			await process_frame
 	var x: float = puppet.global_position.x - here.x
 	_expect(x > 0.0 and x < 2.0, "Stamped box poses are drawn in the past, between two of them (x %.2f)" % x)
+	# Carried by this client (predicted), then let go 3 m away.
+	for frame: int in range(4):
+		puppet.call(&"predict_carry", Transform3D(Basis.IDENTITY, here + Vector3(0.0, 1.0, 1.5)))
+		await physics_frame
+	var dropped: Vector3 = here + Vector3(0.0, 0.0, 3.0)
+	puppet.set(&"net_time", 300_000)
+	puppet.set(&"net_transform", Transform3D(Basis.IDENTITY, dropped))
+	for frame: int in range(12):
+		await process_frame
+		if Engine.get_physics_frames() - int(puppet.get(&"_predicted_frame")) > 4:
+			_expect(puppet.global_position.distance_to(dropped) < 0.001,
+				"Let go, the box is drawn where the host put it at once (off by %.3f)"
+						% puppet.global_position.distance_to(dropped))
 	puppet.free()
+
+
+func _check_host_carry(world: Node3D, remote: Node3D) -> void:
+	var box: Node3D = load(PACKAGE_SCENE).instantiate()
+	box.set(&"package_id", &"test_host_carried_box")
+	world.add_child(box)
+	await process_frame
+	var pose_node: Node = remote.get_node(^"PlayerNetPose")
+	var buffer: NetSnapshotBuffer = pose_node.get(&"buffer")
+	buffer.clear()
+	var newest := Vector3(20.0, 0.3, 20.0)
+	buffer.push(1.0, Transform3D(Basis.IDENTITY, newest - Vector3(0.6, 0.0, 0.0)), 1.0)
+	buffer.push(1.1, Transform3D(Basis.IDENTITY, newest), 1.1)
+	remote.global_transform = Transform3D(Basis.IDENTITY, newest - Vector3(0.6, 0.0, 0.0))
+	box.set(&"carrier", remote)
+	PackageHandling.set_held(box, true)
+	var hands := Transform3D(Basis.IDENTITY, newest + Vector3(0.0, 1.0, -0.6))
+	PackageHandling.accept_carry(box, 2, hands, false)
+	var wanted: Vector3 = remote.global_position + Vector3(0.0, 1.0, -0.6)
+	_expect(box.global_position.distance_to(wanted) < 0.01,
+		"On the host a client's box sits in its hands as drawn, not ahead of them (off by %.3f)"
+				% box.global_position.distance_to(wanted))
+	box.set(&"carrier", null)
+	box.free()
+	buffer.clear()
 
 
 func _check_reach(player: Node3D, remote: Node3D) -> void:
@@ -183,6 +227,10 @@ func _check_reach(player: Node3D, remote: Node3D) -> void:
 	point.global_position = (player.call(&"reach_origin") as Vector3) + Vector3(reach + 0.2, 0.0, 0.0)
 	_expect(not point._within_reach(player), "The host's own player keeps the plain reach")
 	point.free()
+	remote.set(&"seat_node_path", NodePath("Somewhere/Seat"))
+	_expect(is_zero_approx(float(remote.call(&"reach_slack"))),
+		"A seated client gets no slack: the host knows the seat")
+	remote.set(&"seat_node_path", NodePath())
 
 
 func _expect(condition: bool, description: String) -> void:

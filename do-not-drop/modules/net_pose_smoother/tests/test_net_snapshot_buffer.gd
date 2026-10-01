@@ -17,6 +17,10 @@ extends SceneTree
 ## - take() reads replicated properties every frame: a repeated (stamp,
 ##   pose) is ignored, a new one goes in, an unstamped one (0: a spawn state, a
 ##   test) is drawn at once, and stamped ones after it start the buffer over.
+## - A moving sender that goes quiet (a lost burst, a hitch) is not drawn
+##   snapping back when it resumes; rest gaps don't count toward the send
+##   interval, even just under MAX_SAMPLE_GAP; a far jump into or out of the
+##   truck's space is a teleport too (auditor-red, N-217).
 ## - configure_sim() and clear().
 
 const RATE: float = 30.0
@@ -33,6 +37,7 @@ func _initialize() -> void:
 	_check_extrapolation()
 	_check_rest()
 	_check_take()
+	_check_audit_cases()
 	_check_sim_and_clear()
 	if _failures == 0:
 		print("PASS: NetSnapshotBuffer draws remote poses smoothly with an adaptive cushion")
@@ -170,6 +175,50 @@ func _check_take() -> void:
 	var drawn: float = buffer.sample(20.0 + 5 * 0.033).origin.z
 	_expect(drawn > _pose(5 * 0.033).origin.z and drawn < _pose(0.033).origin.z + 0.001,
 		"Stamped poses after unstamped ones are drawn in the past, between them (z %.3f)" % drawn)
+
+
+func _check_audit_cases() -> void:
+	# Running at SPEED, five poses lost in a row, then it goes on.
+	var lossy := NetSnapshotBuffer.new()
+	var previous: float = INF
+	var backward: float = 0.0
+	var frame: float = 0.0
+	var next_index: int = 0
+	while frame < 2.0:
+		while next_index / RATE <= frame:
+			if next_index < 30 or next_index > 35:
+				lossy.push(next_index / RATE, _pose(next_index / RATE), next_index / RATE + 0.02)
+			next_index += 1
+		if frame > 0.3:
+			var z: float = lossy.sample(frame).origin.z
+			if previous != INF:
+				backward = maxf(backward, z - previous)
+			previous = z
+		frame += 1.0 / 60.0
+	_expect(backward < 0.05, "A moving sender that lost a burst isn't drawn snapping back (%.3f m)" % backward)
+
+	var resting := NetSnapshotBuffer.new()
+	var sent: float = 0.0
+	for index: int in range(10):
+		sent = index / RATE
+		resting.push(sent, Transform3D.IDENTITY, sent)
+	for gap: int in range(4):
+		sent += 0.483
+		resting.push(sent, Transform3D.IDENTITY, sent)
+	_expect(absf(resting.interval() - 1.0 / RATE) < 0.002,
+		"Rest gaps just under MAX_SAMPLE_GAP leave the send interval alone (%.4f s)" % resting.interval())
+
+	var boarding := NetSnapshotBuffer.new()
+	var truck := Transform3D(Basis.IDENTITY, Vector3(100.0, 0.0, 0.0))
+	boarding.push(0.0, Transform3D.IDENTITY, 0.0)
+	boarding.push(1.0 / RATE, Transform3D.IDENTITY, 1.0 / RATE)
+	boarding.push(2.0 / RATE, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.0, 2.0)), 2.0 / RATE, true)
+	var crossing: float = INF
+	for step: int in range(30):
+		var drawn: Vector3 = boarding.sample(2.0 / RATE + step / 120.0, truck).origin
+		crossing = minf(crossing, absf(drawn.x - 50.0))
+	_expect(crossing > 40.0,
+		"A far jump into the truck's space isn't drawn across the map (%.1f m from midway)" % crossing)
 
 
 ## sender_time - local time - cushion, as the buffer draws it right now.

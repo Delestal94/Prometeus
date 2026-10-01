@@ -222,10 +222,8 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
 		return
-	if is_held and _carry_in_vehicle:
-		var vehicle: Node3D = _find_vehicle()
-		if vehicle != null:
-			global_transform = vehicle.global_transform * _carry_pose
+	if is_held:
+		PackageHandling.hold_on_host(self)
 	PackageTending.tick(self, delta)
 	# Worn off here, not in the care model, so a box outside the run's
 	# cargo (or not simulated this tick) can't stay shielded forever.
@@ -258,6 +256,8 @@ func _process(_delta: float) -> void:
 		truck = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
 	if predicted:
 		global_transform = truck * _predicted_pose if _predicted_in_vehicle and vehicle != null else _predicted_pose
+		# Its poses from before the pickup are stale: once let go, the host's first one is drawn at once.
+		_net_buffer.clear()
 		return
 	var now: float = NetSnapshotBuffer.local_now()
 	_net_buffer.take(net_time, net_transform, net_in_vehicle and vehicle != null, now)

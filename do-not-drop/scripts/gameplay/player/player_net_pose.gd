@@ -54,6 +54,9 @@ func drawn(position: Vector3, in_vehicle: bool, truck: Transform3D) -> Transform
 func reach_slack(peer_id: int) -> float:
 	if not is_inside_tree() or not multiplayer.is_server() or peer_id == multiplayer.get_unique_id():
 		return 0.0
+	# Seated, the host knows exactly where they are: at the seat.
+	if not (get_parent().get(&"seat_node_path") as NodePath).is_empty():
+		return 0.0
 	var round_trip: float = maxf(NetStats.round_trip_ms(multiplayer.multiplayer_peer, peer_id), 0.0) / 1000.0
 	return minf(Sprint.RUN_SPEED * (round_trip + buffer.delay()), MAX_REACH_SLACK)
 

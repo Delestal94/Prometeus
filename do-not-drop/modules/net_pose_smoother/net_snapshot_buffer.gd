@@ -25,8 +25,10 @@ extends RefCounted
 ##   to MAX_EXTRAPOLATION, then holds.
 ## - **Rest.** A sender that slows down while its pose stays put (a box at
 ##   rest, NetRestThrottle) leaves a long gap before the first pose that moves
-##   again: the resting pose is repeated one interval before it, so the motion
-##   starts there instead of creeping across the whole gap.
+##   again: when the two poses before the gap are the same, the resting pose
+##   is repeated one interval before it, so the motion starts there instead of
+##   creeping across the whole gap. A gap after motion is a loss: it carries
+##   on, and the rest gaps don't count toward the send interval.
 ## - **Order.** Poses are kept in sender order even when the network swapped
 ##   two; a repeated one is ignored.
 ## - **Truck space.** A pose can be `local`: in the space of something that
@@ -62,6 +64,8 @@ const CLOCK_SNAP: float = 0.25
 const LATE_STREAK: int = 6
 ## RFC 3550: the jitter estimate moves 1/16 of the way to each new sample.
 const JITTER_GAIN: float = 1.0 / 16.0
+## Two poses this close (metres) count as the same: a sender at rest.
+const REST_DISTANCE: float = 0.005
 ## Gaps longer than this (a hitch, a pause) say nothing about the link.
 const MAX_SAMPLE_GAP: float = 0.5
 ## A gap of more than this many send intervals before a pose is a sender at
@@ -183,10 +187,14 @@ func _accept(sender_time: float, pose: Transform3D, now: float, local: bool) -> 
 	if at == _snapshots.size() and at > 0:
 		var previous: Array = _snapshots[at - 1]
 		var gap: float = sender_time - float(previous[0])
-		if gap > 0.0 and gap < MAX_SAMPLE_GAP:
+		# A rest gap says nothing about the send rate (and a slow host can make one just under MAX_SAMPLE_GAP).
+		var rest_gap: bool = gap > REST_GAP_INTERVALS * _interval
+		if gap > 0.0 and gap < MAX_SAMPLE_GAP and not rest_gap:
 			_interval = gap if not _interval_known else lerpf(_interval, gap, 0.1)
 			_interval_known = true
-		if gap > REST_GAP_INTERVALS * _interval:
+		# Only a sender that was still: one that was moving and went quiet (a lost burst, a hitch on its side)
+		# would be drawn snapping back to where the silence began.
+		if rest_gap and at >= 2 and _same_pose(_snapshots[at - 2], previous):
 			_snapshots.append([sender_time - _interval, previous[1], previous[2]])
 			at += 1
 	_snapshots.insert(at, [sender_time, pose, local])
@@ -279,7 +287,12 @@ func sample(now: float, local_to_world: Transform3D = Transform3D.IDENTITY) -> T
 			if bool(a[2]) == bool(b[2]):
 				var between: Transform3D = (a[1] as Transform3D).interpolate_with(b[1], weight)
 				return local_to_world * between if bool(a[2]) else between
-			return _world(a, local_to_world).interpolate_with(_world(b, local_to_world), weight)
+			# Into or out of the truck: a far jump (a rescue, a respawn) is a teleport here too.
+			var world_a: Transform3D = _world(a, local_to_world)
+			var world_b: Transform3D = _world(b, local_to_world)
+			if world_a.origin.distance_to(world_b.origin) > TELEPORT_DISTANCE:
+				return world_b
+			return world_a.interpolate_with(world_b, weight)
 	# Past the newest pose: carry on its motion briefly, then hold.
 	var before: Array = _snapshots[-2]
 	var last: Array = _snapshots[-1]
@@ -289,6 +302,11 @@ func sample(now: float, local_to_world: Transform3D = Transform3D.IDENTITY) -> T
 		var ahead: float = minf(drawn_at - float(last[0]), MAX_EXTRAPOLATION)
 		pose.origin += ((last[1] as Transform3D).origin - (before[1] as Transform3D).origin) / step * ahead
 	return local_to_world * pose if bool(last[2]) else pose
+
+
+static func _same_pose(a: Array, b: Array) -> bool:
+	return bool(a[2]) == bool(b[2]) \
+			and (a[1] as Transform3D).origin.distance_to((b[1] as Transform3D).origin) <= REST_DISTANCE
 
 
 static func _world(snapshot: Array, local_to_world: Transform3D) -> Transform3D:

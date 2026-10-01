@@ -1434,6 +1434,22 @@ de internet saltan.
 - Ancho de banda con 8 jugadores: 117,7 → 67,7 KB/s por cliente y 6,8 → 3,9 Mbit/s de subida del host.
 - `PROTOCOL_VERSION` 22. Tests: `test_net_snapshot_buffer`, `test_remote_smoothing`, `test_net_stats`.
   Aviso `docs/avisos/2026-10-01-n217-suavizado-remotos.md`.
+- `auditor-red`, arreglado:
+  - #1: la caja que soltó el propio cliente se dibuja en el acto donde la pone el host (no vuelve un instante
+    a donde la levantó).
+  - #2: el arranque tras reposo solo se aplica si el que manda estaba quieto; una ráfaga perdida en
+    movimiento ya no tira para atrás.
+  - #3: en el host, la caja que carga un cliente va en sus manos tal como se lo dibuja
+    (`PackageHandling.hold_on_host`).
+  - #4: entrar o salir del camión con un salto largo cuenta como teletransporte.
+  - #5: un jugador sentado no tiene holgura; en `transfer` se toma el máximo, no la suma.
+  - #7: los huecos de reposo no cuentan para el intervalo.
+- Quedan, bajos:
+  - #6: con `--net-sim` en LAN la holgura no cuenta el lag simulado, y no hay caché del RTT.
+  - #8: un tirón de 0,15-0,25 s del que manda deja el reloj desfasado 1-3 s.
+  - #9: `Head:rotation`, `anim_state` y `jump_anim_time` llegan antes que el cuerpo.
+  - #10: pasos desparejos de un remoto montado en el camión del host.
+  - #11: en el host, golpes y fauna usan el cuerpo atrasado del remoto.
 - Falta probarlo en red real con `--net-sim` (dos procesos, `net_pair`) y por Steam.
 
 ### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: no

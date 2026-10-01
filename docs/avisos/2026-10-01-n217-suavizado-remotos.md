@@ -22,9 +22,13 @@ quien la manda y se dibuja un poco en el pasado, interpolada.
   el host también: la copia de un cliente va unos 50-200 ms atrás).
 - **`package.gd` (de Slatex):** `net_time`, un `NetSnapshotBuffer` por caja en el cliente y
   `_reach_slack()`. La caja que lleva el propio cliente en las manos sigue predicha, sin buffer.
+- **`package_handling.gd` (de Slatex):** `hold_on_host()`. En el host, la caja que carga un cliente va en sus
+  manos tal como el host lo dibuja (unos 50-200 ms atrás), no adelante. `set_held(true)` reinicia la pose
+  de carga, así una caja nueva no salta a la pose de la carga anterior.
 - **Alcance en el host:** al pedido de un jugador remoto se le suma 6 m/s × (ping + colchón), con tope de
   1,5 m. Vale para la interacción genérica, abrir la caja, ayudar, pasarla de mano en mano y agarrarla
-  para ayudar. El jugador del host no cambia.
+  para ayudar. Para pasar la caja de mano en mano se toma la holgura mayor de los dos jugadores. El jugador
+  del host y los jugadores sentados no reciben holgura.
 - **Si escribís una pose a mano en un test:** con `net_time` en 0 se coloca en el acto, como antes. Con un
   `net_time` puesto, se dibuja con el colchón.
 
