@@ -1328,9 +1328,19 @@ El #93 viejo midió CPU/física en headless; el costo de dibujado nunca se midi�
 - [x] Correr `tests/bench_drive.gd` **con ventana** (agente `revisor-visual`) en la PC de desarrollo, en las
   tres horas del día y con lluvia, en entrega y Endless. Anotar FPS promedio, 1 % más bajo y draw calls
   (`Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`).
-- [ ] Meta: 60 FPS estables a 1080p en la PC de desarrollo y ≥ 45 FPS con el preset bajo (N-205).
+- [x] Meta: 60 FPS estables a 1080p en la PC de desarrollo y ≥ 45 FPS con el preset bajo (N-205). **[x] 2026-10-01
+  (base `a6c56f6` + rama `nacho/N-220-gpu-audit`)** — 16 corridas de 90 s por la pantalla de carga del juego
+  (`--via-loader`), Reparto y Endless × día / atardecer / noche / lluvia × preset Alto y Bajo. Alto: el peor caso
+  (Reparto al atardecer) promedia 117 FPS y su 1 % bajo es 71 (p99 14,1 ms); el resto, 140-152 en Reparto y 332-391 en
+  Endless. Bajo: promedio mínimo 137 y 1 % bajo mínimo 69 (la meta es 45). 0-3 frames de más de 33 ms por corrida, el
+  peor de 72 ms. Tabla en README → Rendimiento.
 - [x] Resultado en README → Rendimiento, con la PC usada.
 - Medido el 2026-09-24 (tabla en README → Rendimiento): reparto 139-164 FPS, 1 % más bajo 85-104; Endless 312-393. Queda abierto medir el preset bajo en una PC modesta (no hay una a mano).
+- [ ] Medir el preset Bajo en una PC modesta de verdad. No hay una a mano. En esta PC el Bajo solo gana 9-17 % en Reparto
+  (el juego va limitado por la CPU, ~1 núcleo, no por la GPU); con 4× los píxeles (`--render-scale=2.0`) y con 7× al
+  atardecer el cuadro no se mueve (146 / 109 FPS en Reparto, 197 en Endless), y con 2 núcleos físicos tampoco, así
+  que lo que queda sin cubrir es una CPU de un hilo más lenta. `bench_drive.gd --quality=low` (nuevo) lo mide el día que
+  haya una (un playtester con una PC modesta, o la rutina en otra máquina).
 
 ### N-205 · Presets de calidad gráfica — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd` y `options_panel.gd` de Slatex, una fila) · **[x] `7151f84`**
 
@@ -1530,15 +1540,41 @@ no toca la física.
   `tests/test_endless_physics_spike.gd` (modelos y loop calientes, tramo pesado < 30 ms, construir y unir nunca en el
   mismo tick, cola vacía a los 3 ticks) y ampliación de `modules/route_gen/tests/test_route_gen.gd`.
 
-### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no
+### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no · **[x] rama `nacho/N-220-gpu-audit` (salvo el opcional de los cachés)**
 
 Lo que la auditoría headless no pudo medir (`revisor-visual` o `perfilador-rendimiento` con pantalla).
-- [ ] Draw calls, sombras, transparencias y partículas en Reparto y en Endless: comparar antes y después del
-  PR #35.
-- [ ] Física de Jolt con 5 jugadores y el camión lleno (objetos activos y pares de colisión).
-- [ ] Tiempo de carga del menú y del nivel, y memoria.
+- [x] Draw calls, sombras, transparencias y partículas en Reparto y en Endless: comparar antes y después del
+  PR #35. **[x] 2026-10-01** — experimentos `nodress|nosegvis|noshadow|nolights|noparticles|notransp|nobatch|...`
+  del bench (nuevos: `noparticles`, `nolights`, `notransp`, `nobatch`) y un censo de la escena; tablas en
+  `docs/rendimiento-pc.md`. El costo es de CPU y de cuántos objetos se dibujan: el decorado vale 50 % del frame del
+  Reparto (1.297 multimeshes de 2,6 instancias), las mallas de tramos 33 %, camión 12 %, casas 10 %, luces 9 %, sombras
+  8 % (36 % al atardecer, que es por qué es el caso caro); partículas y las 74 mallas transparentes, ruido. El PR #35
+  (Endless, 45 s en frío, `b1ff656` → `96c353a`): draw calls 1.079 → 442 (−59 %), 294 → 376 FPS; el Reparto no cambia
+  (2.644 → 2.641). Contra la referencia del 09-24 (`f5d50dd`): el Reparto pasó de 1.927 a 2.644 draw calls (+37 %) y
+  de 195 a 143 FPS por un mundo más grande (mallas 2.992 → 5.210, 8 → 26 `SpotLight3D`, ruta 1.412 → 2.086 m);
+  Endless 464 → 445 draw calls (plano).
+- [x] Física de Jolt con 5 jugadores y el camión lleno (objetos activos y pares de colisión). **[x] 2026-10-01** —
+  `bench_drive.gd --players=5 --cargo=full` (cuatro `Player_<peer>` falsos sentados y siete cajas, en un proceso). Jolt no
+  informa los monitores `PHYSICS_3D_*` (valen 0): el bench cuenta `RigidBody3D` despiertos (3 → 11-14 de 147) y parte el
+  tick en scripts y paso de Jolt (0,50 + 0,40 ms → 0,91 + 0,70 ms, el paso nunca pasa de 3 ms); 156 → 130 FPS, p99 9,4 →
+  11,4 ms. Los pares de colisión no se pueden leer con Jolt (queda dicho). Detalle en `docs/rendimiento-pc.md`.
+- [x] Hallazgo de esa medición, arreglado: derramar una caja arruinada costaba 40-110 ms en un tick de física (picos de
+  101 ms por tick con el camión lleno) por `create_convex_shape(true, true)` en `package_contents_view.gd`; con
+  `(true, false)` son < 2 ms. Pico por tick 101 → 28-42 ms, frame máximo 109 → 36 ms. Test en `test_package_unboxing`
+  (falla con el código viejo: 227 ms). Aviso `docs/avisos/2026-10-01-spill-convex-hull.md`.
+- [x] Tiempo de carga del menú y del nivel, y memoria. **[x] 2026-10-01** — `tests/bench_load_times.gd` (nuevo): motor →
+  menú dibujado 3,6 s; botón → cubierta arriba 4,5 s en Reparto la primera vez (3,3 s con cachés calientes) y 1,5 / 0,9 s en
+  Endless; sin frames de más de 23 ms en los primeros 120 después; memoria estática 136 MiB en el menú, 448 con el Reparto
+  (pico 479), 205 con Endless solo; al volver al menú 340 MiB estables en cuatro idas y vueltas, 0 huérfanos.
 - [ ] Opcional: vaciar los cachés `static` de mallas al volver al menú. No es un leak: el "1693 Mesh
-  leaked at exit" son cachés acotados.
+  leaked at exit" son cachés acotados. **Medido y no hecho (2026-10-01):** son ~200 MiB estáticos y ~150 MiB de video
+  sobre el menú, repartidos en más de 25 `static var` de `depot_kit.gd`, `dressing_batcher.gd`, `route_segment.gd`,
+  `synth_audio*.gd`... sin un registro común (no es trivial), y vaciarlos haría la segunda carga del Reparto pasar de
+  3,3 a 4,5 s. No crecen entre idas y vueltas. Si algún día hace falta, un `static func clear_caches()` por módulo y un
+  llamado desde el menú.
+- Observación: la corrida diaria de `pc-build` mide en frío (sin la pantalla de carga) y marca como tirones de 300-500 ms
+  lo que el jugador no ve (8 de 16 corridas contra 0 de 16 con `--via-loader`). Conviene sumar `--via-loader` a esa
+  corrida; es de la rutina (`.claude/rutinas/pc-build.md`), no se tocó.
 
 ### N-221 · Red defensiva: validación de RPC y reconexión — B · `Opus 5.5 · xhigh` · Aviso: sí (zona compartida) · **[x] rama `nacho/N-221-rpc-guard-rejoin`** (salvo el AppID, ⏸ N-901)
 
