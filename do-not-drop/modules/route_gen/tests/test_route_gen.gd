@@ -8,7 +8,11 @@ extends SceneTree
 ##   bend after MAX_STRAIGHT_STREAK straights, keeps the heading inside
 ##   MAX_HEADING_DEG, and answers distance_along()/distance_from_path()/
 ##   point_at() from the live centre line; _on_segment_spawned sees every
-##   segment;
+##   segment; _limit_candidates takes types out of the draw and _pick_weight
+##   sets their odds (a pool of one that is also limited still builds);
+## - GripZones: two zones over one vehicle in either order leave the lowest
+##   grip while either holds and the original when both are gone; entering
+##   twice never compounds;
 ## - every code-built segment builds without assets, exits where it says,
 ##   and CurveSegment's exit really turns;
 ## - a TerrainField with a span builds tiles with the default shader, is
@@ -38,6 +42,8 @@ func _run() -> void:
 	current_scene = scene
 	await _test_segments(scene)
 	await _test_streamer(scene)
+	await _test_hooks(scene)
+	_test_grip_zones(scene)
 	await _test_terrain(scene)
 	scene.queue_free()
 	await process_frame
@@ -67,6 +73,90 @@ func _test_segments(scene: Node3D) -> void:
 		"Its exit moved sideways and ahead (got %s)" % curve.exit_offset)
 	_expect(curve.get_dressing_slots(10.0).size() >= 3, "A curve hands out slots along its arc")
 	curve.free()
+
+
+class LimitedStreamer extends SeededStreamer:
+	func _limit_candidates(candidates: Array[Script]) -> Array[Script]:
+		var kept: Array[Script] = candidates.filter(func(s: Script) -> bool: return s != GravelSegment)
+		return kept if not kept.is_empty() else candidates
+
+	func _pick_weight(script: Script, hard_weight: float) -> float:
+		return 0.0 if script == SCurveSegment else super(script, hard_weight)
+
+
+func _test_hooks(scene: Node3D) -> void:
+	var target := Node3D.new()
+	scene.add_child(target)
+	var streamer := LimitedStreamer.new()
+	streamer.seed_value = 4242
+	streamer.lookahead_distance = 1500.0
+	scene.add_child(streamer)
+	await process_frame
+	streamer.start(target)
+	_expect(streamer.spawned.size() >= 10, "The limited streamer builds a long road (%d)" % streamer.spawned.size())
+	_expect(not streamer.spawned.has("GravelSegment"), "_limit_candidates kept a type out of the draw")
+	_expect(not streamer.spawned.has("SCurveSegment"), "A zero _pick_weight means never drawn")
+	_expect(streamer.spawned.has("StraightSegment") and streamer.spawned.has("CurveSegment"),
+		"The rest still get drawn")
+	var lone := LimitedStreamer.new()
+	lone.seed_value = 1
+	lone.segment_scripts = [GravelSegment]
+	lone.first_segment_script = null
+	lone.lookahead_distance = 50.0
+	scene.add_child(lone)
+	await process_frame
+	lone.start(target)
+	_expect(lone.spawned.size() >= 1, "A limit that would leave nothing gives way")
+	lone.free()
+	streamer.free()
+	target.free()
+
+
+func _test_grip_zones(scene: Node3D) -> void:
+	var vehicle := VehicleBody3D.new()
+	vehicle.add_to_group(&"vehicle")
+	for index: int in range(2):
+		var wheel := VehicleWheel3D.new()
+		wheel.wheel_friction_slip = 3.5
+		vehicle.add_child(wheel)
+	scene.add_child(vehicle)
+	var wet := Node.new()
+	var ice := Node.new()
+	GripZones.enter(vehicle, wet, 1.2)
+	GripZones.enter(vehicle, wet, 1.2)
+	_expect(_slips_are(vehicle, 1.2), "A zone lowers the wheels' grip (%s)" % [_slips(vehicle)])
+	GripZones.enter(vehicle, ice, 0.6)
+	_expect(_slips_are(vehicle, 0.6), "Two zones: the lowest holds (%s)" % [_slips(vehicle)])
+	GripZones.leave(vehicle, ice)
+	_expect(_slips_are(vehicle, 1.2), "Leaving the lower one leaves the other's grip (%s)" % [_slips(vehicle)])
+	GripZones.leave(vehicle, wet)
+	_expect(_slips_are(vehicle, 3.5), "Leaving the last restores the original, once (%s)" % [_slips(vehicle)])
+	_expect(not vehicle.has_meta(GripZones.ZONES_META), "...and leaves nothing registered on the vehicle")
+	# Other order: the second zone is entered while the first is held, and the first leaves first.
+	GripZones.enter(vehicle, ice, 0.6)
+	GripZones.enter(vehicle, wet, 1.2)
+	GripZones.leave(vehicle, ice)
+	_expect(_slips_are(vehicle, 1.2), "The other order: the remaining zone's grip stays (%s)" % [_slips(vehicle)])
+	GripZones.leave(vehicle, wet)
+	_expect(_slips_are(vehicle, 3.5), "...and the original is still 3.5 at the end (%s)" % [_slips(vehicle)])
+	wet.free()
+	ice.free()
+	vehicle.free()
+
+
+func _slips_are(vehicle: Node, expected: float) -> bool:
+	for slip: Variant in _slips(vehicle):
+		if not is_equal_approx(float(slip), expected):
+			return false
+	return true
+
+
+func _slips(vehicle: Node) -> Array:
+	var out: Array = []
+	for child: Node in vehicle.get_children():
+		if child is VehicleWheel3D:
+			out.append((child as VehicleWheel3D).wheel_friction_slip)
+	return out
 
 
 func _test_streamer(scene: Node3D) -> void:

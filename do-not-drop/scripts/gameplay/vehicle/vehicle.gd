@@ -416,7 +416,9 @@ func _update_parking() -> void:
 	if not RunManager.is_running:
 		_parked = false
 		return
-	var commanded: bool = driver_peer_id != 0 or absf(_throttle) > 0.01
+	# A truck somebody is hauling out of the mud (MudSegment, N-108) sets this meta
+	# so it is not frozen under the crane's cable or the crew's shoves.
+	var commanded: bool = driver_peer_id != 0 or absf(_throttle) > 0.01 or bool(get_meta(&"keep_awake", false))
 	if _parked:
 		if commanded:
 			_parked = false

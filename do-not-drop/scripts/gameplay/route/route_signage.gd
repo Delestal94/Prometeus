@@ -16,6 +16,9 @@ const HAZARD_SIGNS: Dictionary = {
 	"NarrowBridgeSegment": "sm_env_sign_narrow_bridge.glb",
 	"ChicaneSegment": "sm_env_sign_narrow_bridge.glb",
 	"GravelSegment": "sm_env_sign_gravel.glb",
+	# No mud sign model yet (needs the PC): the gravel one stands in, and the
+	# segment's own board says what it is (mud_segment.gd).
+	"MudSegment": "sm_env_sign_gravel.glb",
 	"ConstructionZoneSegment": "sm_env_sign_roadworks.glb",
 }
 const DELIVERY_SIGN: String = SIGN_DIR + "sm_env_sign_delivery_ahead.glb"

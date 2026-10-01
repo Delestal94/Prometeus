@@ -68,6 +68,11 @@ const ROUTE_TARGET_SECONDS: float = 240.0
 ## single straight segment wasn't enough runway.
 const SAFE_START_LENGTH: float = 100.0
 const SHARP_CURVE_DEG: float = 45.0
+## MudSegment (N-108) is rare: a fraction of an ordinary segment's odds, at
+## most one per route, and it counts as a hard segment (a moment for the
+## pacing, never in the calm approach to a house, never back to back with
+## another hard one).
+const MUD_WEIGHT: float = 0.2
 ## How long each leg aims to be for this many houses: the driving time left
 ## once every stop is paid for, shared out over the legs, in metres. Actual
 ## legs vary LEG_LENGTH_JITTER around it, and overshoot a little since a leg
@@ -98,17 +103,17 @@ static func plan_spine(session_seed: int, houses: int, avoid_tunnel_at_start: bo
 		StraightSegment, SpeedBumpSegment, ChicaneSegment, NarrowBridgeSegment,
 		SCurveSegment, GravelSegment, ConstructionZoneSegment,
 		CurveSegment, CurveSegment,  # weighted up: this is the one that turns
-		HillSegment, TunnelSegment, RailCrossingSegment,
+		HillSegment, TunnelSegment, RailCrossingSegment, MudSegment,
 	]
 	# Same "needs real steering/braking" set RouteStreamer uses, plus the
 	# rail crossing. CurveSegment isn't on it: turning is what driving here
 	# is; only a sharp bend counts as a moment.
 	var hard: Array[Script] = [ChicaneSegment, NarrowBridgeSegment, SCurveSegment, GravelSegment,
-			ConstructionZoneSegment, RailCrossingSegment]
+			ConstructionZoneSegment, RailCrossingSegment, MudSegment]
 	var leg_length_target: float = leg_target_length(houses)
 	var planned_total: float = leg_length_target * (houses + 1)
 	var state := {"distance": 0.0, "heading": 0.0, "last": null, "straight_streak": 0, "since_moment": 0.0,
-			"after_house": false}
+			"after_house": false, "mud_placed": false}
 	var segments: Array[Dictionary] = []
 	var stops: Array[float] = []
 	for leg: int in range(houses + 1):
@@ -159,6 +164,7 @@ static func plan_spine(session_seed: int, houses: int, avoid_tunnel_at_start: bo
 			state.heading += turn
 			state.since_moment = 0.0 if entry.moment else float(state.since_moment) + length
 			state.last = script
+			state.mud_placed = bool(state.mud_placed) or script == MudSegment
 			state.after_house = false
 			state.straight_streak = 0 if script == CurveSegment else int(state.straight_streak) + 1
 		if to_house:
@@ -186,6 +192,9 @@ static func _plan_pick(rng: RandomNumberGenerator, pool: Array[Script], hard: Ar
 	# Nor right past a house: the portal stood against its yard and hid it.
 	if bool(state.after_house):
 		rules.append(func(s: Script) -> bool: return s != TunnelSegment)
+	# One mud pit per delivery is plenty.
+	if bool(state.mud_placed):
+		rules.append(func(s: Script) -> bool: return s != MudSegment)
 	var last: Script = state.last
 	if last != null:
 		rules.append(func(s: Script) -> bool: return s != last)
@@ -202,13 +211,19 @@ static func _plan_pick(rng: RandomNumberGenerator, pool: Array[Script], hard: Ar
 			candidates = kept
 	var total: float = 0.0
 	for script: Script in candidates:
-		total += hard_weight if hard.has(script) else 1.0
+		total += _pick_weight(script, hard, hard_weight)
 	var roll: float = rng.randf() * total
 	for script: Script in candidates:
-		roll -= hard_weight if hard.has(script) else 1.0
+		roll -= _pick_weight(script, hard, hard_weight)
 		if roll <= 0.0:
 			return script
 	return candidates[-1]
+
+
+static func _pick_weight(script: Script, hard: Array[Script], hard_weight: float) -> float:
+	if script == MudSegment:
+		return MUD_WEIGHT
+	return hard_weight if hard.has(script) else 1.0
 
 
 ## A bend's angle in degrees: gentle on a house's approach, sharp when it's

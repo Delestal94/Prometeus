@@ -29,6 +29,9 @@ const DELIVERY_SECONDS: float = 180.0
 const DELIVERY_SEEDS: Array[int] = [11, 4242, 90210, 31337]
 const STUCK_SECONDS: float = 12.0
 const LOOKAHEAD: float = 12.0
+## MudSegment.crane_delay, plus how long the tow takes.
+const MUD_CRANE_SECONDS: float = 45.0
+const MUD_CRANE_MARGIN: float = 20.0
 
 var _failures: int = 0
 
@@ -139,6 +142,7 @@ func _stress_delivery_route() -> void:
 		var since_progress: float = 0.0
 		var window_start: Vector3 = van.global_position
 		var pinned: float = 0.0
+		var bogged: float = 0.0
 		# Up to a minute per seed, so every seed gets driven.
 		while ticks < 60 * 60 and driven < DELIVERY_SECONDS:
 			if not bool(manager.get(&"is_running")):
@@ -221,6 +225,19 @@ func _stress_delivery_route() -> void:
 				pinned = 0.0
 			else:
 				pinned += step
+			# Bogged in a MudSegment (N-108) is the one stop no level rule ends: the
+			# crew pushes or the crane comes after MUD_CRANE_SECONDS, which is what
+			# is checked instead (nobody pushes here, so it is the crane).
+			if bool(van.get_meta(&"mud_bogged", false)):
+				bogged += step
+				since_progress = 0.0
+				pinned = 0.0
+				_expect(bogged < MUD_CRANE_SECONDS + MUD_CRANE_MARGIN,
+						"seed %d: the crane never freed a truck bogged %.0f s (at %.1f s)" % [seed_value, bogged, t])
+				if bogged >= MUD_CRANE_SECONDS + MUD_CRANE_MARGIN:
+					break
+			else:
+				bogged = 0.0
 			if since_progress > STUCK_SECONDS and pinned > STUCK_SECONDS:
 				_expect(false, "seed %d: stuck %.0f s with no progress and the run still going -- nothing caught it (at %s, %.0f m along, %.1f s)" % [
 					seed_value, STUCK_SECONDS, position, progress, t])

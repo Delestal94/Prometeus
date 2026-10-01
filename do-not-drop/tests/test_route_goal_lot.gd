@@ -21,6 +21,8 @@ extends SceneTree
 ##     the section name and GPS ask for the bay by number;
 ##   - the coloured-box kit builds outward-facing geometry.
 
+## How much of the road before the lot the way-in check sweeps, metres.
+const APPROACH_LENGTH: float = 120.0
 const SEEDS: Array[int] = [11, 424, 65021, 271828]
 ## Slab and building, plus a little, in lot space.
 const LOT_X: float = 22.0
@@ -158,7 +160,10 @@ func _test_seed(seed_value: int, houses: int) -> void:
 	for index: int in range(1, path.size()):
 		var from: Vector3 = path[index - 1]
 		var to: Vector3 = path[index]
-		if lot.to_local(route.to_global(to)).z > 0.0:
+		# Only the approach: a route that bends can leave much earlier road (a bridge
+		# 600 m back) at the lot's negative z, and that is not the way in.
+		var to_lot: Vector3 = lot.to_local(route.to_global(to))
+		if to_lot.z > 0.0 or Vector2(to_lot.x, to_lot.z).length() > APPROACH_LENGTH:
 			continue
 		for step: int in range(5):
 			var at: Vector3 = route.to_global(from.lerp(to, float(step) / 5.0))

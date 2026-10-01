@@ -31,7 +31,7 @@ func _initialize() -> void:
 		streamer.call(&"_cull_behind")
 
 	var hard_segments: Array[Script] = streamer.get(&"hard_segments")
-	_expect(hard_segments.size() == 5, "RouteStreamer actually populated its hard-segment list (got %d)" % hard_segments.size())
+	_expect(hard_segments.size() == 6, "RouteStreamer actually populated its hard-segment list (got %d)" % hard_segments.size())
 
 	var hard_run: int = 0
 	var worst_run: int = 0

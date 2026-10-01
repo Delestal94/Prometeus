@@ -56,7 +56,7 @@ anfitrión atravesar casas que de su lado no estaban. Jugando solo la semilla
 queda en 0 y la ruta se sortea fresca cada vez, como antes. en vez de un
 trazado fijo, cada tramo entre una casa y la siguiente son 400-600m armados
 encadenando tipos de segmento (recta, badén, chicana, puente angosto, curva
-en S, ripio, zona de obras y curvas reales que doblan el rumbo del camino de
+en S, ripio, zona de obras, barro (raro: el camión se atasca y la tripulación lo saca empujando, con la eslinga de la tienda o esperando a la grúa con multa) y curvas reales que doblan el rumbo del camino de
 verdad). Las casas se calculan al construir la ruta: una por pasajero, con
 mínimo de una si jugás solo; por eso la distancia total varía según la
 tripulación. En multijugador la decide el host la primera vez que arma la ruta

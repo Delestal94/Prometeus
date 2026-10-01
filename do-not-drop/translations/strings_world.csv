@@ -335,3 +335,22 @@ WORLD_GULL_SNATCH_PROMPT,Quedó en la ruta: rescatala antes de que se pierda.,It
 WORLD_DOG_THROW_PROMPT,Tirarle un palo al perro,Throw the dog a stick
 WORLD_CARGO_DOG_RUINED,El perro la dejó hecha un desastre.,The dog left it in ruins.
 WORLD_CARGO_BEES_RUINED,Las abejas arruinaron la torta.,The bees ruined the cake.
+WORLD_MUD_SIGN,"¡BARRO!
+Sin velocidad te atascás -- si pasa, bajen a empujar","MUD!
+Slow down and you bog -- if it happens, get out and push"
+WORLD_MUD_PUSH_PROMPT,Mantené clic para empujar el camión,Hold click to push the truck
+WORLD_MUD_STRAP_PROMPT,Enganchar la eslinga y salir,Hook the strap and haul out
+WORLD_MUD_STATUS,Empujón %d %% -- grúa en %d s,Push %d %% -- crane in %d s
+WORLD_MUD_STATUS_CRANE,¡Llega la grúa!,The crane is coming!
+WORLD_MUD_CRANE_LABEL,GRÚA,TOW
+WORLD_MUD_NOTICE_BOGGED,¡Atascados en el barro! Bajen a empujar desde atrás (las cajas quedan solas) o usen la eslinga. Si no salen a tiempo llega la grúa.,Bogged down in the mud! Get out and push from behind (your boxes stay alone) or use the strap. Wait too long and the crane comes.
+WORLD_MUD_NOTICE_PUSH,¡Salieron del barro a empujones!,You pushed the truck out of the mud!
+WORLD_MUD_NOTICE_ENGINE,¡El camión salió del barro a pura fuerza de motor!,The truck ground its way out of the mud!
+WORLD_MUD_NOTICE_STRAP,La eslinga sacó al camión del barro.,The strap hauled the truck out of the mud.
+WORLD_MUD_NOTICE_CRANE,La grúa sacó al camión del barro. Multa: $%d,The crane hauled the truck out of the mud. Fine: $%d
+WORLD_MUD_STORY_PUSH,Barro: se atascaron y salieron empujando,Mud: bogged down and pushed out
+WORLD_MUD_STORY_ENGINE,Barro: se atascaron y salieron a pura fuerza de motor,Mud: bogged down and ground out on engine alone
+WORLD_MUD_STORY_STRAP,Barro: se atascaron y salieron con la eslinga,Mud: bogged down and hauled out with the strap
+WORLD_MUD_STORY_CRANE,Barro: los sacó una grúa (multa $%d),Mud: hauled out by a crane (fine $%d)
+WORLD_MUD_NOTICE_CRANE_FREE,La grúa sacó al camión del barro. Sin multa: acá solo se pierde tiempo.,The crane hauled the truck out of the mud. No fine: only time lost here.
+WORLD_MUD_STORY_CRANE_FREE,Barro: los sacó una grúa (sin multa),Mud: hauled out by a crane (no fine)

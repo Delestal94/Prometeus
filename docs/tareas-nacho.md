@@ -1746,11 +1746,24 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 
 ### N-108 · Tramo de barro/pendiente con salida cooperativa — B · `Opus 5.5 · high` · Aviso: no
 
-- [ ] Tramo nuevo, raro y anunciado con carteles, donde el camión se puede atascar. Salidas: pasajeros que
+- [x] Tramo nuevo, raro y anunciado con carteles, donde el camión se puede atascar. Salidas: pasajeros que
   bajan a empujar (mantener un botón en la zona correcta; el host aplica la fuerza) o eslinga de tienda.
-- [ ] El dilema tiene que existir: mientras empujan, sus cajas quedan sin atender.
-- [ ] Nunca bloquea para siempre: pasado un tiempo aparece una grúa cómica que lo saca, con multa.
-- [ ] Con `constructor-tramos`; tests de pacing y fuzz (N-103, N-801) siguen pasando.
+- [x] El dilema tiene que existir: mientras empujan, sus cajas quedan sin atender.
+- [x] Nunca bloquea para siempre: pasado un tiempo aparece una grúa cómica que lo saca, con multa.
+- [x] Con `constructor-tramos`; tests de pacing y fuzz (N-103, N-801) siguen pasando.
+
+> **Hecho (2026-09-30), rama `nacho/N-108-mud-segment`.** `MudSegment` (`segments/mud_segment.gd`): una entrada con
+> cartel "¡BARRO!" y el cartel de peligro de la ruta, un pozo de 12 m donde el camión se atasca si baja de 5 m/s; atascado
+> lo sostiene el host. Salidas: pasajeros a pie detrás del camión mantienen el botón primario (1/20 del avance por segundo
+> cada uno, el motor solo 1/90: no pueden empujar sentados ni con una caja en la mano, ahí está el dilema), la eslinga de
+> la tienda (`tow_strap`, $30) o la grúa cómica (`mud_crane.gd`) a los 45 s con multa de $40 que nunca deja el saldo en
+> negativo. Rara (`RoutePlanner.MUD_WEIGHT`, una por entrega, no en la llegada a una casa ni antes de los 100 m; en Endless
+> no antes de 300 m ni dos a menos de 600 m). `SegmentStreamer` ganó los ganchos `_pick_weight` y `_limit_candidates`.
+> `vehicle.gd`: un camión sin conductor se congelaba ("parking") bajo la grúa, ahora respeta el meta `keep_awake`.
+> `PROTOCOL_VERSION` 15. Tras la auditoría de red: fin de partida atascado cancela sin multa, agarre compartido con la grava (`GripZones`), unión tardía, una sola salida por tramo, grúa gratis en Endless. Test `test_mud_segment.gd` (generación, física con la camioneta real, empuje de 1 y 2, eslinga,
+> grúa con saldo 100 y 15, ambos niveles no cuentan "atascado" en el barro); captura con `tests/render_mud_segment.gd`.
+> Pendiente con la PC: modelo propio del cartel de barro (hoy el de ripio más el cartel del tramo) y el sonido.
+> Aviso: `docs/avisos/2026-09-30-n108-barro.md`.
 
 ### N-110 · Paradas de servicio en la ruta — B · `Opus 5.5 · xhigh` · Aviso: sí (compra de suministros)
 

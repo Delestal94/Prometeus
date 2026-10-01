@@ -15,9 +15,11 @@ const GRAVEL := Color("a08a5c")
 @export var default_friction_slip: float = 3.5
 @export var reduced_friction_slip: float = 1.1
 
-## wheel -> its friction_slip from just before this segment touched it, so
-## overlapping gravel segments (or re-entry) never compounds a reduction.
-var _original_friction: Dictionary = {}
+## The vehicles whose wheels this segment is holding down, so culling it
+## lets go of them. The grip itself lives in GripZones, shared with every
+## other segment that lowers it (overlapping ones, re-entry: never compounds
+## and never restores somebody else's lowered value).
+var _vehicles: Array[Node] = []
 
 
 func _init() -> void:
@@ -47,19 +49,16 @@ func _build() -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if not body.is_in_group(&"vehicle"):
 		return
-	for wheel: Node in body.get_children():
-		if wheel is VehicleWheel3D and not _original_friction.has(wheel):
-			_original_friction[wheel] = wheel.wheel_friction_slip
-			wheel.wheel_friction_slip = reduced_friction_slip
+	GripZones.enter(body, self, reduced_friction_slip)
+	if not _vehicles.has(body):
+		_vehicles.append(body)
 
 
 func _on_body_exited(body: Node3D) -> void:
 	if not body.is_in_group(&"vehicle"):
 		return
-	for wheel: Node in body.get_children():
-		if wheel is VehicleWheel3D and _original_friction.has(wheel):
-			wheel.wheel_friction_slip = _original_friction[wheel]
-			_original_friction.erase(wheel)
+	GripZones.leave(body, self)
+	_vehicles.erase(body)
 
 
 func _exit_tree() -> void:
@@ -67,7 +66,6 @@ func _exit_tree() -> void:
 	# still tracked (e.g. the vehicle reverses back out past the cull
 	# threshold instead of driving forward through body_exited normally) --
 	# without this, a culled segment could leave grip reduced forever.
-	for wheel: Variant in _original_friction.keys():
-		if is_instance_valid(wheel):
-			(wheel as VehicleWheel3D).wheel_friction_slip = _original_friction[wheel]
-	_original_friction.clear()
+	for vehicle: Node in _vehicles:
+		GripZones.leave(vehicle, self)
+	_vehicles.clear()

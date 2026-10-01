@@ -81,7 +81,8 @@ func _physics_process(delta: float) -> void:
 		return
 	_check_lost_cargo()
 	_update_tipped(delta)
-	if vehicle.linear_velocity.length() < STUCK_SPEED_THRESHOLD:
+	# A truck in the mud is the crew's to free, or the crane's (MudSegment, N-108).
+	if vehicle.linear_velocity.length() < STUCK_SPEED_THRESHOLD and not bool(vehicle.get_meta(&"in_mud", false)):
 		_stuck_seconds += delta
 	else:
 		_stuck_seconds = 0.0
