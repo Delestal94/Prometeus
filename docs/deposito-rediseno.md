@@ -406,8 +406,7 @@ frame 7,2 ms contra 6,9 ms (+4 %, vsync y ruido); no hay script nuevo por frame.
   `final/depot_photo_wall.png`.
 - "EQUIPO DEL MES": se borró el párrafo de estadísticas (y sus claves `WORLD_DEPOT_TEAM_STATS`, `_NEXT` y `_ALL_UNLOCKED`); la placa
   tiene el título, la foto `tx_depot_employee_month.png` de 0,9 x 1,125 m (casi el doble de lo que era, 1,8 veces: el alto de la
-  placa, 1,9 m con el frente de la heladera debajo, no deja más) y un solo nombre (`WORLD_DEPOT_MONTH_NAME`, Lilita One, INK, letra de
-  7 cm).
+  placa, 1,9 m con el frente de la heladera debajo, no deja más); el nombre lo trae la foto (un rótulo aparte la contradecía y se sacó, con su clave).
 - Tablero de muestras: "COLORES" (`WORLD_DEPOT_SWATCHES`) en Lilita One, INK, 4 cm, centrado en la franja y a 0,5 mm de la cara.
 - `render_depot.gd`: `overview` desde x 10,6 mirando 8 grados más a la derecha (la campana ya no tapa la T del mural; quedan el
   ventanal de OFICINA y el camión); `center_eye_level` 7 grados hacia arriba; `lockers_and_break` 1,5 m más cerca de la cocinita y 7

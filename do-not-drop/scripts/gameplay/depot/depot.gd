@@ -560,8 +560,8 @@ func _build_door() -> void:
 	add_child(door)
 
 
-## The crew of the month's board: a title, the photo (art) as big as the board allows and one name under it,
-## in letters over 6 cm. Nothing else on the plate (the team's figures are the records station's).
+## The crew of the month's board: a title and the photo (art) as big as the board allows -- the photo carries
+## the employee's name itself. Nothing else on the plate (the team's figures are the records station's).
 func _build_team_board() -> void:
 	var at := Vector3(HALF_WIDTH - 0.06, 2.85, 22.5)
 	var kit := DepotKit.new(self, "TeamBoardColliders")
@@ -585,10 +585,6 @@ func _build_team_board() -> void:
 	var title := DepotLabels.text(self, tr("WORLD_DEPOT_TEAM_TITLE"), at + Vector3(-0.04, 0.77, 0.0), -PI * 0.5, 36,
 			Layout.INK, Layout.DISPLAY_FONT, 0.005, 0)
 	DepotLabels.fit_label(title, 1.3)
-	var person := DepotLabels.text(self, tr("WORLD_DEPOT_MONTH_NAME"), at + Vector3(-0.04, -0.83, 0.0), -PI * 0.5, 30,
-			Layout.INK, Layout.DISPLAY_FONT, 0.0026, 0)
-	person.name = "MonthName"
-	DepotLabels.fit_label(person, 1.3)
 
 
 func _build_stations() -> void:
