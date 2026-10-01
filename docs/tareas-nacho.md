@@ -1850,6 +1850,25 @@ posición en tiempo de ejecución, no con cuentas de `vehicle.tscn`: en la vuelt
 con la cuenta. Partículas suaves o `proximity_fade` si el puff toca el piso. Parche de la vuelta 3 (incluye
 `exhaust_anchor()`, test del ancla y `render_exhaust.gd`) en `D:/tmp/n324-intento2/`; capturas de las vueltas 1-3 en
 `D:/tmp/exhaust{4,5,6}/`.
+**Intento 3 2026-10-01 (sesión de arte, 3 vueltas, no se subió): el ancla quedó resuelta, el humo sigue sin verse desde
+atrás ni desde la caja.** Lo que sirve y se reusa: `exhaust_anchor()` sale solo de `FloorCollision` (forma fija; la rueda
+mueve su `position` con la suspensión y en la vuelta 1 dejó el caño 0,65 m bajo el asfalto): (−0,88; −0,055; 4,49) en el
+camión, 0,61 m sobre la ruta medido con un rayo hacia abajo, igual en las 18 tomas; el emisor cuelga de `vehicle`, no
+del arte. `test_dust_and_ambience` (ancla en la cola sin rampa ni puertas, 0,5-1,0 m por rayo, curva, billboard, sin
+`SphereMesh`) y `test_vehicle_presentation` en verde. `render_exhaust.gd` con `--mood=night` que da noche de verdad
+(`WorldMood.pick()` lee `--mood=` de la línea de comandos y pisaba el atajo) y `--nosmoke` (falta fijar la rampa entre
+corridas: no coinciden y el diff sale sucio).
+- Vuelta 1 (valores de la vuelta 2 del intento 2): caño enterrado; humo invisible desde `rear` y caja.
+- Vuelta 2 (ancla fija, hacia (−0,6; 0,7; 0,6)): la puerta izquierda abierta tapa la estela desde `rear`; de costado,
+  halos casi blancos contra la caja blanca.
+- Vuelta 3 (hacia (−0,2; 0,75; 0,9), gris de día 0,78, alfa máx. 0,85, 28 × 2,4 s): igual de invisible desde `rear` y caja;
+  de costado, 2 discos sueltos.
+**Pista para la próxima: en las tres vueltas hay 1-2 puffs en pantalla aunque el log dice `emitting true` (ratio 0,7-1)
+y son 28 × 2,4 s (~11 vivos).** No es (solo) de valores: antes de tocar color o alfa, `cazador-bugs` tiene que contar las
+partículas vivas y dónde se dibujan (quads opacos de depuración, o `amount_ratio`/`emitting` puestos cada frame en
+`update_exhaust()` que reinician la emisión, orden de transparencias con la caja, `visibility_aabb`). Si un cuarto intento
+tampoco lo logra, pasa a ⏸ con la alternativa de `director-arte` (casi invisible, solo en ralentí y al arrancar).
+Parche de la vuelta 3 y hojas de capturas en `D:/tmp/n324-intento3/`; capturas en `D:/tmp/exhaust{7,8,9}/`.
 - [ ] **N-324.1** Rehacer emisor y material según la receta (puff estático compartido con `WheelDust`) y ampliar el test.
   Con `artista-vfx` y `escritor-tests`; tests `dust`.
 - [ ] **N-324.2** Capturas reproducibles antes/después (caja y `rear`, día/noche, ralentí/a fondo). Con `revisor-visual`.
