@@ -308,7 +308,8 @@ func _batch_next() -> void:
 		return
 	var segment: RouteSegment = _unbatched.pop_front()
 	if is_instance_valid(segment) and not segment.is_queued_for_deletion():
-		DressingBatcher.merge_segment_geometry([segment])
+		# Without a slicer it never waits for a frame: this stays one step.
+		await DressingBatcher.merge_segment_geometry([segment])
 
 
 func _cull_behind() -> void:

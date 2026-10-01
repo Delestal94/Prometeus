@@ -165,9 +165,13 @@ func _process(_delta: float) -> void:
 		_steam.call(&"run_callbacks")
 
 
-## True once a real peer is attached. Offline play leaves this false.
+## True once a real, open peer is attached: offline play leaves this false, and
+## so does a peer that already dropped (is_server() errored on it while the
+## session was being torn down).
 func is_online() -> bool:
-	return multiplayer.multiplayer_peer != null and multiplayer.multiplayer_peer is not OfflineMultiplayerPeer
+	var peer: MultiplayerPeer = multiplayer.multiplayer_peer
+	var open: bool = peer != null and peer.get_connection_status() != MultiplayerPeer.CONNECTION_DISCONNECTED
+	return open and peer is not OfflineMultiplayerPeer
 
 
 func is_host() -> bool:

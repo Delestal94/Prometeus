@@ -22,10 +22,71 @@ const SCENE_SOUNDS_FILE: String = "synth_audio_scenes.gd"
 static var _scene_sounds_script: Script
 
 
+## Built on a worker thread by warm() and handed to _cache on the main thread
+## by warm_done(): the worker never touches _cache, the main thread never
+## touches this until the worker is finished.
+static var _warm_results: Dictionary = {}
+static var _warm_task: int = -1
+
+
 static func _cached(key: StringName, build: Callable) -> AudioStreamWAV:
+	if OS.get_thread_caller_id() != OS.get_main_thread_id():
+		var built: AudioStreamWAV = build.call()
+		_warm_results[key] = built
+		return built
 	if not _cache.has(key):
 		_cache[key] = build.call()
 	return _cache[key]
+
+
+## Builds these sounds (accessor names: &"ambient_birds", &"engine_loop"...)
+## on a worker thread, so a scene that asks for them in _ready() finds them
+## built instead of synthesizing ~0.4 s of audio on the main thread. Poll
+## warm_done() from the main thread; it stores them once the worker is done.
+static func warm(accessors: Array[StringName]) -> void:
+	if _warm_task != -1:
+		return
+	var known: Dictionary = {}
+	for method: Dictionary in (SynthAudio as Script).get_script_method_list():
+		known[StringName(method["name"])] = true
+	var missing: Array[StringName] = []
+	for accessor: StringName in accessors:
+		if not _cache.has(accessor) and known.has(accessor):
+			missing.append(accessor)
+	if missing.is_empty():
+		return
+	# Loaded here, not lazily on the worker: a static var written by two threads.
+	if _scene_sounds_script == null:
+		var here: String = (SynthAudio as Script).resource_path.get_base_dir()
+		_scene_sounds_script = load(here.path_join(SCENE_SOUNDS_FILE)) as Script
+	_warm_results.clear()
+	# High priority: a low-priority task still queued at quit() deadlocks Godot
+	# 4.7.2 (WorkerThreadPool::exit_languages_threads).
+	_warm_task = WorkerThreadPool.add_task(_warm_all.bind(missing), true, "SynthAudio.warm")
+
+
+## True once nothing is warming; stores what the worker built.
+static func warm_done() -> bool:
+	if _warm_task == -1:
+		return true
+	if not WorkerThreadPool.is_task_completed(_warm_task):
+		return false
+	WorkerThreadPool.wait_for_task_completion(_warm_task)
+	_warm_task = -1
+	for key: StringName in _warm_results:
+		if not _cache.has(key):
+			_cache[key] = _warm_results[key]
+	_warm_results.clear()
+	return true
+
+
+static func is_cached(key: StringName) -> bool:
+	return _cache.has(key)
+
+
+static func _warm_all(accessors: Array[StringName]) -> void:
+	for accessor: StringName in accessors:
+		(SynthAudio as Script).call(accessor)
 
 
 ## Loaded by a path relative to this file (SynthAudioScenes used to call back into SynthAudio, so no preload).

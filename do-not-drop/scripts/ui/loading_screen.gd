@@ -21,11 +21,31 @@ const TIPS: Array[String] = [
 const STAGE_TEXT: Dictionary = {
 	Stage.LOADING: "UI_LOADING_STAGE_LOAD",
 	Stage.BUILDING: "UI_LOADING_STAGE_BUILD",
-	Stage.SETTLING: "UI_LOADING_STAGE_BUILD",
+	Stage.SETTLING: "UI_LOADING_STAGE_SETTLE",
 	Stage.DONE: "UI_LOADING_STAGE_READY",
 }
 ## The art creeps in this much over a load: the screen never looks frozen.
 const ART_ZOOM: float = 1.06
+## Every model a level may load() while it builds: fetched on threads while
+## the scene loads, so the depot kit, the roadside and the houses find them
+## cached (~220 ms of main-thread load() in the delivery level otherwise).
+const MODELS_DIR: String = "res://assets/models"
+## The synthesized sounds a level asks for in its _ready() (measured,
+## N-408): ~0.4 s of synthesis that moves to a worker thread.
+const LEVEL_SOUNDS: Array[StringName] = [
+	&"ambient_birds", &"ambient_wind", &"distant_road", &"river_flow_loop", &"tension_pulse",
+	&"doorbell_ding_dong", &"wood_creak", &"engine_idle_loop", &"dog_bark", &"care_success", &"train_horn",
+	&"engine_high_loop", &"comic_boom", &"forklift_motor_loop", &"comic_ruin_stinger", &"creature_groan",
+	&"roller_door", &"engine_loop", &"train_chug_loop", &"sheep_bleat", &"reverse_beep", &"glass_chime",
+	&"crossing_bell", &"honk_horn", &"care_error", &"tire_screech", &"hostile_hiss", &"liquid_slosh",
+	&"care_whoosh", &"impact_thud", &"camera_shutter", &"care_step", &"care_tick", &"explosive_tick",
+]
+## Hidden at the swap and shown one per frame once the level is built: the
+## depot's first draw (~180 ms of shader compiles) gets a frame of its own,
+## and the road isn't drawn while it builds (tens of thousands of pieces
+## before they are batched), so the build's frames stay short. Paths that a
+## level doesn't have are skipped.
+const REVEALS: Array[NodePath] = [^"World/Depot", ^"World/Route"]
 
 ## Not the same tip twice in a row.
 static var _last_tip: String = ""
@@ -44,8 +64,52 @@ var _shown_stage: int = -1
 static func go(tree: SceneTree, path: String, mode: String = "") -> LoadingScreen:
 	var screen := LoadingScreen.new()
 	screen.mode_text = mode
+	# Not headless: the dummy renderer crashes on meshes loaded on threads
+	# (blend shapes on uninitialized RIDs), and there's nothing to show anyway.
+	if DisplayServer.get_name() != "headless":
+		screen.prefetch_paths = model_paths()
+	screen.reveal_paths = REVEALS
 	SceneLoader.change_scene(tree, path, screen)
 	return screen
+
+
+## Every .glb under MODELS_DIR, as an exported build lists them too.
+static func model_paths() -> PackedStringArray:
+	var found := PackedStringArray()
+	_collect_models(MODELS_DIR, found)
+	return found
+
+
+static func _collect_models(directory: String, found: PackedStringArray) -> void:
+	for entry: String in ResourceLoader.list_directory(directory):
+		if entry.ends_with("/"):
+			_collect_models(directory.path_join(entry.trim_suffix("/")), found)
+		elif entry.get_extension() == "glb":
+			found.append(directory.path_join(entry))
+
+
+func _start_warm() -> void:
+	SynthAudio.warm(LEVEL_SOUNDS)
+
+
+func _warm_done() -> bool:
+	return SynthAudio.warm_done()
+
+
+## The cover stays until this peer's own player is in the level: a client
+## waits for the host to answer its ready report and spawn it. A session
+## that dropped meanwhile doesn't keep it waiting (the level shows why).
+func _scene_ready(scene: Node) -> bool:
+	if scene == null or scene.get_node_or_null(^"World/PlayerSpawner") == null:
+		return true
+	# By path, not the autoload's name: this class compiles on its own too.
+	var session: Node = get_node_or_null(^"/root/NetworkManager")
+	if session == null or not bool(session.call(&"is_online")):
+		return true
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		if player.is_multiplayer_authority():
+			return true
+	return false
 
 
 static func pick_tip() -> String:

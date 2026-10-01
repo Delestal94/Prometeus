@@ -175,6 +175,35 @@ hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 
   `WARNING:` (más `::warning::` en GitHub Actions) en `tools/run-net-pair.sh` / `run-net-trio.sh`; sigue
   siendo PASS.
 
+### N-408 · Una pantalla de carga que no se congela y la regresión del flujo menú → jugable — A · `Opus 5.5 · xhigh` · Aviso: sí (`main_menu.gd`, `hud.gd`, `scripts/ui/` de Slatex; `modules/` y `network_manager.gd` compartidos) · **[x] rama `nacho/N-408-loading-no-freeze`**
+
+Pedido del usuario (2026-10-01): con N-407 la pantalla quedaba congelada 9-12 s en "Armando la ruta…" y el sonido
+se cortaba. Regresión del flujo completo (mapa, batería, QA real solo/endless/par/trío): todo anda; los hallazgos,
+todos arreglados acá:
+- [x] **Congelamiento al armar el nivel** (P1; perfilador: `Route._ready` 5,8 s en un solo bloque). La ruta se arma
+  por cuadros (`FrameSlicer`, presupuesto 12 ms; terreno y adaptación en `WorkerThreadPool`; mundo idéntico bit a
+  bit, `test_route_golden`); aviso `2026-10-01-n408-ruta-por-cuadros.md`. Mientras carga la escena, los modelos se
+  precargan en hilos y los 34 sonidos del nivel se sintetizan en un hilo (`SynthAudio.warm()`).
+- [x] **La tapa se levanta cuando el juego está listo de verdad**: espera a `SceneLoader.BUSY_GROUP` (la ruta) y a
+  que el jugador propio exista (un cliente: hasta que el anfitrión lo spawnea), muestra depósito y ruta de a uno
+  por cuadro (cada primer dibujo en su cuadro) y espera 8 cuadros fluidos; la barra llega al 100 % a la vista.
+- [x] **El anfitrión no atendía la red mientras armaba** (P2): consecuencia de lo anterior, resuelto con él.
+- [x] **Sonido**: la música del menú sigue bajo la pantalla de carga (`carry_audio`) y se funde bajo el nivel; la
+  primera frase de la música del juego entra a los 1,5-3 s (antes 18-35 s de silencio).
+- [x] **Reinicio de la entrega** (anfitrión y clientes) por la pantalla de carga: antes `reload_current_scene()`
+  congelaba ~4 s.
+- [x] **Menú**: "Crear sala Endless" (antes el anfitrión siempre cargaba el nivel normal); el motivo real de un
+  error al crear/unirse ya no lo pisa el genérico "error %d"; si la conexión se cae con el nivel ya armándose, la
+  pantalla de carga vuelve al menú con el motivo (`redirect_to`) y una invitación de Steam en ese momento queda
+  pendiente (`NetworkManager.defer_lobby`).
+- [x] **El que entra tarde** recupera el mouse cuando el arranque de la entrega le saca la tarjeta de inicio.
+- [x] El espejo del depósito saca su primera foto cuando el depósito está a la vista.
+- [x] Tests nuevos: `test_scene_loader_gates`, `test_synth_audio_warm`, `test_route_async_build`,
+  `test_menu_to_level`, `test_menu_session_paths`, `test_level_loading_paths`; ampliados `test_route_gen`,
+  `test_render_budget`, `test_route_golden`, `test_loading_flow`, `test_tension_music`.
+- [ ] El depósito todavía se arma en un bloque (~200-330 ms); si molesta, partirlo como la ruta
+  (`constructor-mundo`). `test_route_golden` difiere en Windows en el 4.º decimal (golden escrito en Linux): CI manda.
+
 ### N-407 · Pantalla de carga entre el menú y el nivel — B · `Opus 5.5 · medium` · Aviso: sí (`main_menu.gd`, `scripts/ui/` de Slatex; `modules/` compartida) · **[x] rama `nacho/N-407-loading-screen`**
 
 Pedido del usuario (2026-10-01): al tocar "¡JUGAR!" el menú se congelaba en su último frame mientras el nivel
