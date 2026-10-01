@@ -795,6 +795,13 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `/root/` 7 → 3). `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso
     `docs/avisos/2026-10-01-n224-player-interaction-tipado.md`. Siguientes: `player.gd` (21), `level_base.gd` (19),
     `run_manager.gd` (18), `cargo_animals.gd` (16).
+  - [x] `level_base.gd` (2026-10-01, rama `nacho/N-224-level-base-typed`): la ruta como `RouteScript` (preload de
+    `route.gd`, sin `class_name`), las casas como `DeliveryHouse`, la meta como `RouteGoalLot`, `driver_peer_id` por
+    `VehicleScript` (preload de `vehicle.gd`) y las señales `house_resolved` / `wrong_package_offered` conectadas por
+    la señal (se fue el `has_signal`). En el archivo: 18 → 0 usos (`.call` 4 → 0, `.get(&` 14 → 0). La baseline del
+    lint bajó 1. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
+    `docs/avisos/2026-10-01-n224-level-base-tipado.md`. `run_manager.gd` ya no tiene usos por nombre tras N-225.5.
+    Siguientes: `player.gd` (21), `cargo_animals.gd` (16).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
