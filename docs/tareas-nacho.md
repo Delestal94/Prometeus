@@ -309,7 +309,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-320 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -1462,6 +1462,31 @@ con `test_mud_segment` ampliado (la grúa usa el GLB, `Beacon` existe, el gancho
   dos lados, cable del gancho al camión sin cortes, baliza visible, sin z-fighting ni caras invertidas. Inventario §7 y
   §10.1. Queda (menor): el patito no se reconoce a distancia, la cabina crema sale fría con la luz del cielo, y los planos
   `crane`/`crane_cable` de `render_mud_segment.gd` la encuadran chica detrás del camión de cajas; no hay plano de noche.
+
+### N-320 · Polvo de las ruedas legible y según el suelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-320-wheel-dust`**
+
+Hoy `scripts/presentation/vehicle_presentation.gd:453-488` (`_apply_dust` y el emisor) echa cubos `BoxMesh` de 0,05 m, 14 por
+rueda, vida 0,55 s, color fijo `9c8060`, opacos: son subpíxel a pocos metros desde la caja o el espejo, y el polvo es el mismo
+en asfalto, grava y con lluvia. Rehacer el efecto, no el sistema, con la receta del humo de escape (`vehicle_effects.gd:95`:
+esfera low-poly de 6 lados, sin sombra): bolas que crecen (curva 0,5→2,5) y se desvanecen (gradiente alfa ~0,35→0), color de
+la tierra de `route_terrain` (no naranja), intensidad según el suelo (grava/tierra 1, asfalto 0), apagado con `wetness` alto
+(lluvia), vida 0,9-1,2 s, emisor en las ruedas traseras hacia +Z y sin invadir ~1,5 m alrededor de la cámara de la caja.
+**Intento 2026-10-01 (02:30): corrida caída, capturas en `D:/tmp/wheel_dust/`; quedó demasiado opaco, anaranjado, con borde
+octogonal duro y con bolas que tapaban la cámara de la caja. No repetir: alfa bajo y con degradé, color de `route_terrain`,
+más lados o mezcla suave del borde, y corte duro de emisión cerca de la cámara de la caja.**
+**Necesita PC** (GPU real para las capturas; la toma la sesión de arte). Origen: sesión de arte 2026-10-01.
+Hecho cuando en grava se ve una nube suave y clara desde el espejo, la caja y atrás, de día y de noche; en asfalto no hay
+polvo; con lluvia se apaga; no hay bolas a menos de 1,5 m de la cámara de la caja; `test_dust_and_ambience.gd` ampliado (en
+asfalto no emite, en grava sí, con `wetness` alto no, material sin sombra y con alfa); hay capturas antes/después con
+`revisor-visual` desde un script reproducible en `tests/render_*.gd`; y el inventario de assets está al día.
+- [ ] **N-320.1** Rehacer el emisor y el material del polvo en `vehicle_presentation.gd` según la receta de arriba y ampliar
+  `test_dust_and_ambience.gd`. Con `artista-vfx` y `escritor-tests`; tests `dust`.
+- [ ] **N-320.2** Script de captura reproducible (`tests/render_*.gd`: grava y asfalto, día y noche, lluvia; vistas de espejo,
+  caja y atrás) y verificación visual antes/después, incluida la distancia mínima a la cámara de la caja. Con
+  `revisor-visual`; tests `dust`.
+- [ ] **N-320.3** Actualizar el inventario/spec (`docs/especificaciones-visuales.md`) con el polvo nuevo; si es chico,
+  corregir de paso los ítems 51 (marcas de frenada) y 90 (escombros), que figuran pendientes y ya existen. Con
+  `documentador`.
 
 ## 4. Audio y diseño sonoro
 
