@@ -470,6 +470,7 @@ UI_OPT_BIND_LOOK_BACK,Mirar atrás,Look back
 UI_OPT_BIND_PING,Ping,Ping
 UI_OPT_BIND_SPRINT,Correr,Sprint
 UI_OPT_BIND_USE_CARD,Usar carta,Use card
+UI_OPT_BIND_VOICE_TALK,Hablar (chat de voz),Talk (voice chat)
 UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
 UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte  ·  Flechas arriba/abajo marchas (furgón viejo)\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
 Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out  ·  Up/Down arrows gears (old van)
@@ -502,6 +503,13 @@ UI_OPT_SENSITIVITY,Sensibilidad de la mirada,Look sensitivity
 UI_OPT_SHAKE,Sacudida de cámara,Camera shake
 UI_OPT_SOUND_CHECK,Sonidos del juego (uno por uno)…,Game sounds (one by one)…
 UI_OPT_SOUND_SUBTITLES,Subtítulos de sonidos,Sound subtitles
+UI_OPT_VOICE_CHAT,Chat de voz,Voice chat
+UI_OPT_VOICE_CREW,Voces de la tripulación,Crew voices
+UI_OPT_VOICE_HINT,Solo en salas de Steam (en LAN no hay voz).,Steam rooms only (no voice over LAN).
+UI_OPT_VOICE_MUTE,Silenciar,Mute
+UI_OPT_VOICE_NOBODY,Sin compañeros conectados.,No crewmates connected.
+UI_OPT_VOICE_PEER_VOLUME,Volumen,Volume
+UI_OPT_VOICE_PTT,Pulsar para hablar,Push to talk
 UI_OPT_VOICE_VOLUME,Volumen de voces/pings,Voices/pings volume
 UI_PAINT,Pintura,Paint
 UI_PLAYER_N,Jugador %d,Player %d
