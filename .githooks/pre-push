@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Runs the headless test suite before every push and blocks the push if
-# anything fails. Enable it once per clone with: tools/setup-hooks.sh
+# Fast checks before every push; blocks the push if anything fails. Enable it
+# once per clone with: tools/setup-hooks.sh
+#
+# Always (a second each): tools/check_modules.py and the lint -- a PR that CI
+# rejects for a long line costs a routine a whole run (#71). Then only the
+# tests the push touches (affected_tests below), not the whole suite: CI runs
+# that on every PR across four runners and is the required gate, and the full
+# suite here took ~20 min, long enough for main to move under the push.
 #
 # Skipped when the commits being pushed only touch docs (nothing under
-# do-not-drop/, tools/ or .github/). SKIP_TESTS=1 git push skips the tests
-# (CI on GitHub still runs the suite) but not the lint nor tools/check_modules.py:
-# they take a second, and a PR that CI rejects for a long line costs a routine a
-# whole run (#71).
+# do-not-drop/, tools/ or .github/). SKIP_TESTS=1 git push skips the tests but
+# not the lint nor check_modules. FULL_TESTS=1 git push runs the whole suite.
 set -u
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -43,6 +47,7 @@ fi
 ZERO="0000000000000000000000000000000000000000"
 needs_tests=0
 refs=0
+CHANGED=
 while read -r local_ref local_sha remote_ref remote_sha; do
 	refs=$((refs + 1))
 	[ "$local_sha" = "$ZERO" ] && continue  # deleting a branch
@@ -54,7 +59,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 	if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null; then
 		needs_tests=1; continue
 	fi
-	if git diff --name-only "$base" "$local_sha" | grep -qE '^(do-not-drop|tools|\.github)/'; then
+	changed="$(git diff --name-only "$base" "$local_sha")"
+	CHANGED="$CHANGED"$'\n'"$changed"
+	if echo "$changed" | grep -qE '^(do-not-drop|tools|\.github)/'; then
 		needs_tests=1
 	fi
 done
@@ -82,8 +89,50 @@ else
 	echo "pre-push: sin gdlint (pip install \"gdtoolkit==4.5.0\"), el lint queda para CI."
 fi
 
-echo "pre-push: corriendo los tests antes de subir..."
-if ! bash "$ROOT/tools/run-tests.sh"; then
+# The tests this push touches, one name per line: every changed test (game or
+# module), and every test that names a changed .gd by file name or by its
+# class_name. More than PRE_PUSH_MAX_TESTS (default 25) means a wide change:
+# only the changed tests run here and CI covers the rest.
+affected_tests() {
+	local project="$ROOT/do-not-drop" selected="" direct="" file stem cls
+	while IFS= read -r file; do
+		case "$file" in
+			do-not-drop/*.gd) ;;
+			*) continue ;;
+		esac
+		[ -f "$ROOT/$file" ] || continue
+		stem="$(basename "$file" .gd)"
+		case "$stem" in
+			test_*) direct="$direct"$'\n'"$stem"; continue ;;
+		esac
+		selected="$selected"$'\n'"$(grep -lF "$stem.gd" "$project"/tests/test_*.gd "$project"/modules/*/tests/test_*.gd 2>/dev/null)"
+		cls="$(sed -n 's/^class_name[[:space:]]\{1,\}\([A-Za-z0-9_]*\).*/\1/p' "$ROOT/$file" | head -1)"
+		if [ -n "$cls" ]; then
+			selected="$selected"$'\n'"$(grep -lw "$cls" "$project"/tests/test_*.gd "$project"/modules/*/tests/test_*.gd 2>/dev/null)"
+		fi
+	done <<< "$CHANGED"
+	selected="$(echo "$selected" | sed '/^$/d' | xargs -r -n1 basename 2>/dev/null | sed 's/\.gd$//')"
+	local all
+	all="$(printf '%s\n%s\n' "$direct" "$selected" | sed '/^$/d' | sort -u)"
+	if [ "$(echo "$all" | sed '/^$/d' | wc -l)" -gt "${PRE_PUSH_MAX_TESTS:-25}" ]; then
+		echo "$direct" | sed '/^$/d' | sort -u
+	else
+		echo "$all"
+	fi
+}
+
+if [ "${FULL_TESTS:-0}" = "1" ]; then
+	echo "pre-push: FULL_TESTS=1, corriendo la batería completa..."
+	TESTS_TO_RUN=()
+else
+	mapfile -t TESTS_TO_RUN < <(affected_tests | sed '/^$/d')
+	if [ ${#TESTS_TO_RUN[@]} -eq 0 ]; then
+		echo "pre-push: ningún test nombra lo que cambió; la batería completa la corre CI."
+		exit 0
+	fi
+	echo "pre-push: corriendo ${#TESTS_TO_RUN[@]} tests afectados (la batería completa la corre CI; FULL_TESTS=1 para correrla acá)..."
+fi
+if ! bash "$ROOT/tools/run-tests.sh" "${TESTS_TO_RUN[@]}"; then
 	echo ""
 	echo "pre-push: hay tests fallando, no se sube nada. Arreglalos (o, si es urgente, SKIP_TESTS=1 git push)."
 	exit 1

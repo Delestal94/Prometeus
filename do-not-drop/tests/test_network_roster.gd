@@ -9,7 +9,9 @@ extends SceneTree
 ##   five different slots in arrival order, the host 0 (posmod(peer_id, 5), the
 ##   old colour, gave two of them the same one);
 ## - a slot freed by someone who left, or whose join failed, goes to the next
-##   one in, and nobody else's slot moves;
+##   one in (unless it is kept for someone who may come back: N-221,
+##   test_network_rejoin), and nobody else's slot moves; the one who left still
+##   reads its last slot (results, the campaign entry the host captures for it);
 ## - a slot map from the network (join handshake, _sync_color_slots) with a
 ##   slot out of range, a repeated slot or odd types is refused whole, and the
 ##   RPC is only taken from the host;
@@ -125,6 +127,14 @@ func _check_slot_rules(max_players: int) -> void:
 	var first: int = ColorSlots.assign(slots, 2_100_000_001, max_players)
 	var second: int = ColorSlots.assign(slots, 2_100_000_002, max_players)
 	_expect(first == 1 and second == 3, "Two freed slots go lowest first: 1 then 3 (got %d, %d)" % [first, second])
+	var avoiding: Dictionary = {1: 0, 22: 1}
+	_expect(ColorSlots.assign_avoiding(avoiding, 33, max_players, [2, 3]) == 4,
+		"assign_avoiding skips slots kept for someone while others are free")
+	var crowded_room: Dictionary = {}
+	for index: int in max_players - 1:
+		crowded_room[100 + index] = index
+	_expect(ColorSlots.assign_avoiding(crowded_room, 999, max_players, [max_players - 1]) == max_players - 1,
+		"...and hands a kept one out when it is the only free slot")
 
 	var id: int = 2_110_000_000
 	while slots.size() < max_players:
@@ -210,8 +220,9 @@ func _check_manager_slots(network: Node, max_players: int) -> void:
 	_expect(last == expected, "color_slots_changed carries the whole current map (got %s)" % [last])
 
 	network.call(&"_on_peer_disconnected", BIG_IDS[1])
-	_expect(int(network.call(&"color_slot", BIG_IDS[1])) == posmod(BIG_IDS[1], max_players),
-		"A peer that left has no slot any more")
+	_expect(int(network.call(&"color_slot", BIG_IDS[1])) == 2,
+		"A peer that left still reads its last slot, for the results")
+	_expect(not (network.get(&"_color_slots") as Dictionary).has(BIG_IDS[1]), "...but it no longer holds it")
 	network.call(&"_on_peer_connected", NEWCOMER_ID)
 	_expect(int(network.call(&"color_slot", NEWCOMER_ID)) == 2, "The next joiner reuses the freed slot 2")
 	var kept: Array = [int(network.call(&"color_slot", 1)), int(network.call(&"color_slot", BIG_IDS[0])),
@@ -225,7 +236,7 @@ func _check_manager_slots(network: Node, max_players: int) -> void:
 	_expect(early == 5 and int(network.call(&"color_slot", pending)) == 5,
 		"A joiner still authenticating already holds the next slot (got %d)" % early)
 	network.call(&"_auth_failed", pending)
-	_expect(int(network.call(&"color_slot", pending)) == posmod(pending, max_players),
+	_expect(not (network.get(&"_color_slots") as Dictionary).has(pending),
 		"A joiner whose authentication failed gives its slot back")
 	_expect(int(network.call(&"_assign_color_slot", 2_066_666_666)) == 5, "...and the next one in takes it")
 

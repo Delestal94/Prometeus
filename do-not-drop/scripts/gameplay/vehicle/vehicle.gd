@@ -520,6 +520,9 @@ func submit_driver_input(throttle: float, steering_input: float, handbrake: bool
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and sender_id != driver_peer_id:
 		return  # Ignore stale input from whoever just gave up the wheel.
+	# clampf() lets a NaN through, and one NaN in the wheels breaks Jolt (N-221).
+	if not RpcGuard.finite_float(throttle) or not RpcGuard.finite_float(steering_input):
+		return
 	set_controls(throttle, steering_input, handbrake)
 
 

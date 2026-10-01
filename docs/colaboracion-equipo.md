@@ -75,7 +75,8 @@ actualice su copia.
    mezcla solo (auto-merge, squash) cuando pasan los checks obligatorios: lint, tests headless y par
    de red. No hay revisión humana ni de agente: la puerta son esos checks.
 2. **`git pull` antes de empezar cada sesión.** Localmente alcanza con los tests del tema
-   (`tools/run-tests.sh <filtro>`); la batería entera la corren el hook `pre-push` y CI.
+   (`tools/run-tests.sh <filtro>`); la batería entera la corre CI (el hook `pre-push` corre
+   lint, `check_modules` y los tests afectados por el push).
 3. Tocar la zona compartida o un archivo del otro: cambio chico y aislado, y un aviso como archivo
    nuevo en `docs/avisos/` en el mismo PR.
 4. No se edita en un PR una línea que todos los PRs tocan (fechas de "Última actualización",

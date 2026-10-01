@@ -396,7 +396,7 @@ func submit_delivery_photo(house_index: int) -> bool:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _request_delivery_photo(house_index: int) -> void:
-	if not NetworkManager.is_host():
+	if not NetworkManager.is_host() or not RpcGuard.allow_request(self):
 		return
 	# The photo has to come from someone standing at that door, not from
 	# anywhere on the map.

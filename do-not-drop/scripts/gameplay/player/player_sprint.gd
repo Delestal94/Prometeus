@@ -278,7 +278,7 @@ func would_stumble(step: int, hazard: float) -> bool:
 ## acts on it, and only for the box this player is really carrying.
 @rpc("any_peer", "call_local", "reliable")
 func submit_run_step(hazard: float) -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or not RpcGuard.allow_request(self):
 		return
 	var safe_hazard: float = host_accepts_step(multiplayer.get_remote_sender_id(), hazard, Time.get_ticks_msec())
 	if safe_hazard >= 0.0:
@@ -323,8 +323,7 @@ func host_run_step(hazard: float) -> bool:
 ## The trip, on every peer: the runner staggers and cannot run for a moment.
 @rpc("any_peer", "call_local", "reliable")
 func play_stumble() -> void:
-	var sender: int = multiplayer.get_remote_sender_id()
-	if sender != 0 and sender != 1:
+	if not RpcGuard.from_host(self):
 		return
 	_lockout = STUMBLE_LOCKOUT
 	_stagger = STAGGER_SECONDS

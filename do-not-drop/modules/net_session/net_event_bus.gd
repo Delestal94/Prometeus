@@ -15,10 +15,15 @@ extends Node
 ##   to decide it actually happened, optionally rate-limits it per peer
 ##   (_accept_request), then relay()s it as a fact to everyone, the sender
 ##   included. The relayed signal gets the sender's peer id as its first
-##   argument.
+##   argument. Only the events listed in request_cooldowns can be requested,
+##   with a few plain arguments (RpcGuard.args_ok), and every remote request
+##   spends the sender's budget (RpcGuard.allow_request): request() is an
+##   any_peer RPC, and without a list any client could make the host relay
+##   any of the game's facts.
 
-## Per event name: minimum seconds between two accepted requests from the
-## same peer (0 = no limit). Host-side.
+## The events peers may request, each with the minimum seconds between two
+## accepted requests from the same peer (0 = no limit). An event not listed
+## here is refused. Host-side.
 var request_cooldowns: Dictionary = {}
 ## Host-side: [peer_id, event_name] -> Time.get_ticks_msec() of the last
 ## accepted request.
@@ -60,6 +65,8 @@ func _relay(event_name: StringName, args: Array) -> void:
 func request(event_name: StringName, args: Array = []) -> void:
 	if is_online() and not is_host():
 		return
+	if not RpcGuard.allow_request(self) or not RpcGuard.args_ok(args):
+		return
 	var peer_id: int = sender_id()
 	if not _accept_request(peer_id, event_name, args):
 		return
@@ -73,9 +80,12 @@ func sender_id() -> int:
 	return remote if remote != 0 else local_id()
 
 
-## Host: whether to relay a request. The default applies request_cooldowns;
-## the game overrides it for anything else (a role check, a phase).
+## Host: whether to relay a request. The default takes only the events in
+## request_cooldowns, at their pace; the game overrides it for anything else
+## (the shape of the arguments, a role check, a phase) and calls super().
 func _accept_request(peer_id: int, event_name: StringName, _args: Array) -> bool:
+	if not request_cooldowns.has(event_name):
+		return false
 	var cooldown: float = float(request_cooldowns.get(event_name, 0.0))
 	if cooldown <= 0.0:
 		return true

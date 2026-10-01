@@ -10,7 +10,7 @@
 
 ## Cómo se probó
 
-- [ ] `tools/run-tests.sh` en verde (lo corre también el hook de push y CI)
+- [ ] Tests del cambio en verde (`tools/run-tests.sh <filtro>`; la batería completa la corre CI)
 - [ ] Test nuevo o ampliado para lo que cambia: <!-- nombre -->
 - [ ] Cambio visual revisado con capturas (agente `revisor-visual`, scripts `render_*`)
 - [ ] Probado en red (host + cliente) si toca algo que se replica
