@@ -11,6 +11,11 @@ const PackageVerb = preload("res://scripts/gameplay/package/package_verb.gd")
 const SynthAudioTraps = preload("res://modules/synth_audio/synth_audio_traps.gd")
 const PackageRuinEffects = preload("res://scripts/gameplay/package/package_ruin_effects.gd")
 const PackageScribble = preload("res://scripts/gameplay/package/package_scribble.gd")
+## The settings autoload's script, as a type (impact_effects, colorblind_palette,
+## colorblind_palette_changed): it names no other autoload, so preloading it here
+## compiles before they exist. test_dynamic_dispatch_budget checks it is the script
+## GameSettings runs.
+const GAME_SETTINGS := preload("res://scripts/core/game_settings.gd")
 const CONFETTI_COLORS: Array[Color] = [Color("f47e6d"), Color("f4c562"), Color("83e2ba"), Color("6db3d6")]
 const CONFETTI_COUNT: int = 28
 const CONFETTI_LIFETIME: float = 1.1
@@ -131,9 +136,9 @@ var _ruin_player: AudioStreamPlayer3D
 func _ready() -> void:
 	var parent: Node = get_parent()
 	_package = parent as DeliveryPackage
-	_package_id = parent.get("package_id")
-	var definition: Resource = parent.get(&"trap_definition") as Resource
-	_trap_id = StringName(definition.get(&"id")) if definition != null else &""
+	_package_id = _package.package_id
+	var definition: TrapDefinition = _package.trap_definition
+	_trap_id = definition.id if definition != null else &""
 	# Distinct phase per package so several Ruidoso boxes riding together
 	# don't all shudder in perfect unison.
 	_wobble_seed = randf() * TAU
@@ -145,7 +150,7 @@ func _ready() -> void:
 	_material.emission_enabled = true
 	_material.emission = GRIP_COLOR
 	_material.emission_energy_multiplier = 0.0
-	call_deferred(&"_apply_identity", parent)
+	_apply_identity.call_deferred()
 	# Populated for every trap type, not just Ruidoso -- item #23's impact
 	# shake rides the same nodes regardless of what the package's trap is.
 	for wobble_name: StringName in WOBBLE_NODE_NAMES:
@@ -161,7 +166,7 @@ func _ready() -> void:
 			_creak_player = _make_player(SynthAudio.wood_creak(), TRAP_SOUND_LEVELS_DB[&"wood_creak"])
 			_creak_countdown = CREAK_INTERVAL_MAX
 		&"liquid":
-			PackageTrapVisuals.build_liquid_puddle(self, parent as DeliveryPackage)
+			PackageTrapVisuals.build_liquid_puddle(self, _package)
 			_liquid_slosh_player = _make_player(SynthAudio.liquid_slosh(), TRAP_SOUND_LEVELS_DB[&"liquid_slosh"])
 		&"explosive":
 			PackageTrapVisuals.build_explosive_display(self)
@@ -189,22 +194,23 @@ func _ready() -> void:
 		bus.connect("package_damaged", _on_package_damaged)
 		bus.connect("package_collision", _on_package_collision)
 		bus.connect("package_placed", _on_package_placed)
-	var settings: Node = get_node_or_null(^"/root/GameSettings")
+	var settings: GAME_SETTINGS = _settings()
 	if settings != null:
-		settings.connect(&"colorblind_palette_changed", _refresh_accessibility_palette)
+		settings.colorblind_palette_changed.connect(_refresh_accessibility_palette)
 
 
-func _apply_identity(package: Node) -> void:
-	var content: Resource = package.call(&"content_definition") if package.has_method(&"content_definition") else null
+func _apply_identity() -> void:
+	var package: DeliveryPackage = _package
+	var content: PackageContent = package.content_definition() as PackageContent
 	var shape_size := Vector3(0.65, 0.65, 0.65)
 	var box_scene: PackedScene = null
 	var shipping_data: String = tr("HUD_SHIPPING_UNDECLARED")
 	var shipping_parties: String = ""
 	if content != null:
-		shape_size = content.get(&"box_size")
-		box_scene = content.get(&"box_model")
-		shipping_data = content.call(&"shipping_contents")
-		shipping_parties = content.call(&"shipping_parties")
+		shape_size = content.box_size
+		box_scene = content.box_model
+		shipping_data = content.shipping_contents()
+		shipping_parties = content.shipping_parties()
 	if box_scene == null:
 		box_scene = load(DEFAULT_BOX_MODEL)
 	var model: Node3D = box_scene.instantiate()
@@ -262,7 +268,7 @@ func _apply_verb() -> void:
 	if _verb_label == null:
 		return
 	var ask: Dictionary = PackageVerb.ask(_trap_id, _state, _package.care_state if _package != null else {},
-			_package != null and bool(_package.call(&"_is_run_active")))
+			_package != null and _package._is_run_active())
 	_verb_label.visible = not ask.is_empty()
 	if ask.is_empty():
 		return
@@ -405,8 +411,8 @@ func _update_box_scale() -> void:
 
 
 func _impact_effects_enabled() -> bool:
-	var settings: Node = get_node_or_null(^"/root/GameSettings")
-	return bool(settings.get(&"impact_effects")) if settings != null else true
+	var settings: GAME_SETTINGS = _settings()
+	return settings.impact_effects if settings != null else true
 
 
 ## Called by package_pickup_point.gd while this package is (or stops being)
@@ -440,5 +446,10 @@ func _refresh_accessibility_palette(_enabled: bool) -> void:
 
 
 func _colorblind_palette_enabled() -> bool:
-	var settings: Node = get_node_or_null(^"/root/GameSettings")
-	return bool(settings.get(&"colorblind_palette")) if settings != null else false
+	var settings: GAME_SETTINGS = _settings()
+	return settings.colorblind_palette if settings != null else false
+
+
+## Null-safe: a box outside the tree (or a test without the autoload) gets null.
+func _settings() -> GAME_SETTINGS:
+	return get_node_or_null(^"/root/GameSettings") as GAME_SETTINGS
