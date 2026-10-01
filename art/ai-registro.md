@@ -42,3 +42,4 @@ decir de dónde vino cada una (agregadas por el mantenimiento del 2026-10-01).
 | 2026-10-01 | `art/rounded_character/review/{customization_*,face_lineup_*}.png` | Capturas del juego (`tests/render_character_faces.gd`, N-506, #151) | Revisión; no son assets del juego |
 | 2026-10-01 | `assets/textures/depot/tx_depot_{mural_brand,cork_photos,employee_month}.png` | Pillow + numpy (`assets/tools/depot_textures/`; las fotos del corcho son recortes de capturas del juego), N-319, #145 | Texturas del depósito |
 | 2026-10-01 | `assets/textures/depot/tx_depot_{pictograms_512,cage_mesh_256}.png` | Dibujadas por código (`assets/tools/build_depot_props.py`), N-319, #145 | Texturas del depósito |
+| 2026-10-01 | `art/concept/loading/loading_bg_seed1407.png` → `assets/ui/backgrounds/tx_ui_loading_background_1920.png` | 1407 (Z-Image Turbo, ComfyUI 0.37) | Fondo de la pantalla de carga (N-407) | ver `art/concept/loading/prompt.txt` |
