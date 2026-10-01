@@ -7,6 +7,9 @@ extends SceneTree
 ## - the plan comes from the session seed alone: the same seed deals the same
 ##   legs, other seeds deal others; the first leg is quiet, no two legs in a
 ##   row have one, all three animals turn up;
+## - the director deals from a per-run seed (N-909): alone (world seed 0) two
+##   runs deal different legs; in a room the same world seed and run count deal
+##   the same legs, another run count deals others;
 ## - nothing acts without warning: the alert (EventBus.cargo_animal_alert, with
 ##   its cry, icon and HUD banner) comes WARN seconds before the animal starts,
 ##   and the horn already works during the warning;
@@ -92,6 +95,7 @@ func _run() -> void:
 	await _test_bees(level, animals, view, vehicle, package, bus)
 	await _test_client(level, animals, view, vehicle, package)
 	_test_rhythm(level, animals, vehicle)
+	_test_run_seed(animals)
 
 	level.queue_free()
 	manager.call(&"reset_run")
@@ -550,6 +554,44 @@ func _test_rhythm(_level: Node, animals: Node, vehicle: RigidBody3D) -> void:
 		others = others or (not plan.is_empty() and StringName(plan["kind"]) != CargoAnimalPlan.GULL)
 	_expect(not others, "In Endless (no doors, no meadows) only the gull is planned")
 	animals.endless = false
+
+
+# --- Run seed ------------------------------------------------------------------
+
+## N-909: alone the world seed is 0, which used to deal the same animals every
+## run; now each run rolls its own, while a room stays reproducible.
+func _test_run_seed(animals: Node) -> void:
+	var network: Node = root.get_node(^"/root/NetworkManager")
+	var old_seed: Variant = network.get(&"world_seed")
+	var old_runs: Variant = network.get(&"world_completed_runs")
+	# Long enough that two independent runs coinciding is out of the question.
+	var legs: int = 40
+	network.set(&"world_seed", 0)
+	network.set(&"world_completed_runs", 0)
+	var alone_a: Array = _deal_run(animals, legs)
+	var alone_b: Array = _deal_run(animals, legs)
+	_expect(alone_a != alone_b, "Alone (world seed 0) two runs deal different legs")
+	network.set(&"world_seed", 4711)
+	network.set(&"world_completed_runs", 0)
+	var room_first: Array = _deal_run(animals, legs)
+	var room_again: Array = _deal_run(animals, legs)
+	_expect(room_first == room_again, "In a room the same world seed and run count deal the same legs")
+	network.set(&"world_completed_runs", 1)
+	var room_next: Array = _deal_run(animals, legs)
+	_expect(room_next != room_first, "In a room the next run deals other legs than the first")
+	network.set(&"world_seed", old_seed)
+	network.set(&"world_completed_runs", old_runs)
+	animals.call(&"_on_run_started", &"", [])
+
+
+## Starts a run on the director and returns the plans of its first `legs` legs.
+func _deal_run(animals: Node, legs: int) -> Array:
+	animals.call(&"_on_run_started", &"", [])
+	var plans: Array = []
+	for step: int in range(legs):
+		animals.call(&"_next_leg")
+		plans.append(animals.current_plan().duplicate())
+	return plans
 
 
 # --- Helpers -------------------------------------------------------------------
