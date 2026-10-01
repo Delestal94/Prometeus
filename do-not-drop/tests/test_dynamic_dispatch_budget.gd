@@ -102,6 +102,22 @@ const BUDGETS: Dictionary = {
 	# of another type (a test's stand-ins) are skipped with `as`, not called.
 	# The RPC to the player stays rpc_id by name, like every RPC.
 	"res://scripts/gameplay/interaction/seat_tending.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The mud stretch (N-108) is typed: the push spot (mud_spot.gd), the crane
+	# (mud_crane.gd) and the run log (mud_run_log.gd) by preload, the session as
+	# NetSession and the truck's freeze as the VehicleBody3D property it is.
+	# CrewProgression (team_money, spend, save_campaign) and RunManager
+	# (current_mode) stay by name: preloading their scripts here breaks both
+	# autoloads under --script (route.gd pulls this in, and those scripts name
+	# EventBus before the autoloads exist). The other three .call and five .get
+	# are on stand-ins the tests put in groups: the players of the
+	# "player" group (is_local; carried_package, seat_node_path and _ragdolled,
+	# twice for the first two) are FakePlayer Node3Ds, `as Player` would drop
+	# them; carries goes to the truck of the "vehicle" group (vehicle.gd names
+	# the autoloads, no class name). The last .call is the EventBus relay of
+	# the notices, by name because a test may replace EventBus with a plain
+	# Node. The four /root/ lookups are the null-safe accessors (EventBus,
+	# NetworkManager, CrewProgression, RunManager).
+	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 7, "root": 4},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

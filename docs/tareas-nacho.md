@@ -667,6 +667,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     276 → 261, `.get(&` 286 → 267. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-seat-tending-tipado.md`. Siguientes: `trailer_shot.gd` (24), `mud_segment.gd` (22),
     `player.gd` (21), `package_feedback.gd` (21).
+  - [x] `mud_segment.gd` (2026-10-01, rama `nacho/N-224-mud-segment-typed`): el punto de empuje, la grúa y el
+    registro de historias por `preload` (`mud_spot.gd`, `mud_crane.gd`, `mud_run_log.gd`), la red como `NetSession` y el
+    `freeze` del camión como propiedad de `VehicleBody3D`. Quedan por nombre los jugadores del grupo `player` (los
+    tests meten `FakePlayer`), `carries` del camión (`vehicle.gd` sin `class_name`), el relay de EventBus y
+    `CrewProgression`/`RunManager`: precargar sus scripts desde acá rompe los dos autoloads bajo `--script` (`route.gd`
+    arrastra este archivo y esos scripts nombran `EventBus` antes de que existan; lo vio `test_mud_segment`). En el
+    archivo: `.call` 10 → 5, `.get(&` 8 → 7, `/root/` 6 → 4, `.set(&` 3 → 0. `test_dynamic_dispatch_budget.gd` suma el
+    archivo. Sin aviso (`route/` y `tests/`). Siguientes: `player.gd` (21), `package_feedback.gd` (21),
+    `player_interaction.gd` (18), `level_base.gd` (18).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
