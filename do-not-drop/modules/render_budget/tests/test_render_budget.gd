@@ -15,7 +15,14 @@ extends SceneTree
 ##   MultiMesh with their transforms, pieces with a script or a knockable
 ##   rule stay nodes, solid rules get a collider;
 ## - ContactShadow: a band solid inside the footprint and gone `margin`
-##   outside, every vertex on the ground callback.
+##   outside, every vertex on the ground callback;
+## - FrameSlicer (N-408): tick() lets work through while the slice's budget
+##   lasts and gives a frame back once it is spent (so the window keeps drawing
+##   through a long job), frame() always waits one, a slicer without a tree
+##   never waits, and a job that also lets DressingBatcher bake with a slicer
+##   gets the very same batches.
+
+const FERN_PIECE: String = "res://modules/render_budget/tests/fern_piece.tscn"
 
 var _failures: int = 0
 
@@ -32,6 +39,7 @@ func _run() -> void:
 	_test_detail_materials()
 	await _test_batcher(scene)
 	_test_contact_shadow()
+	await _test_frame_slicer(scene)
 	scene.queue_free()
 	await process_frame
 	if _failures == 0:
@@ -181,7 +189,7 @@ func _test_batcher(scene: Node3D) -> void:
 	# Placed pieces are scene instances in a real route: the merged model
 	# mesh is cached per scene file, which is what puts three ferns (in the
 	# same CELL-sized patch) into one batch.
-	var fern_scene: PackedScene = load("res://modules/render_budget/tests/fern_piece.tscn")
+	var fern_scene: PackedScene = load(FERN_PIECE)
 	var placed: Array[Transform3D] = []
 	for index: int in range(3):
 		var piece := fern_scene.instantiate() as Node3D
@@ -214,7 +222,7 @@ func _test_batcher(scene: Node3D) -> void:
 	cone.add_child(cone_part)
 	group.add_child(cone)
 	await process_frame
-	var baked: int = DressingBatcher.bake(route, [segment])
+	var baked: int = await DressingBatcher.bake(route, [segment])
 	_expect(baked == 4, "The three ferns and the rock fold into batches (got %d)" % baked)
 	var holder: Node = route.get_node_or_null(^"BatchedDressing")
 	_expect(holder != null, "The batches live under BatchedDressing")
@@ -267,6 +275,82 @@ func _test_contact_shadow() -> void:
 	var shared: StandardMaterial3D = ContactShadow.material(0.4)
 	_expect(shared == ContactShadow.material(0.4), "One material per strength")
 	patch.free()
+
+
+## A job that does `steps` small steps of work, calling tick() between them.
+func _slice_job(slicer: FrameSlicer, steps: int, step_usec: int) -> void:
+	for _step: int in range(steps):
+		var until: int = Time.get_ticks_usec() + step_usec
+		while Time.get_ticks_usec() < until:
+			pass
+		await slicer.tick()
+
+
+func _test_frame_slicer(scene: Node3D) -> void:
+	# A budget nobody reaches: the job runs through without waiting for a frame.
+	var roomy := FrameSlicer.new(self, 10000.0)
+	var before: int = Engine.get_process_frames()
+	await _slice_job(roomy, 20, 100)
+	_expect(Engine.get_process_frames() == before and roomy.frames_waited == 0, "Within its budget a job never waits")
+	_expect(not roomy.due(), "...and the slice is not due")
+	# A tight budget: it waits, and a slice never runs far past the budget.
+	var tight := FrameSlicer.new(self, 2.0)
+	before = Engine.get_process_frames()
+	await _slice_job(tight, 40, 1000)
+	_expect(tight.frames_waited >= 10, "A job over its budget gives frames back (%d)" % tight.frames_waited)
+	_expect(Engine.get_process_frames() - before >= tight.frames_waited, "Each one is a real frame")
+	_expect(tight.longest_slice_usec < 6000,
+		"No slice ran much past the 2 ms budget (%d us)" % tight.longest_slice_usec)
+	# frame() waits one whatever the budget.
+	before = Engine.get_process_frames()
+	await roomy.frame()
+	_expect(Engine.get_process_frames() == before + 1, "frame() waits exactly one frame")
+	# Without a tree there's nothing to wait for: it never yields and is never due.
+	var treeless := FrameSlicer.new(null, 0.0)
+	before = Engine.get_process_frames()
+	await _slice_job(treeless, 5, 10)
+	await treeless.frame()
+	_expect(Engine.get_process_frames() == before and not treeless.due(), "A slicer without a tree never waits")
+	# A job freed while it waits is dropped quietly (the slicer waits on the tree, not on a node).
+	var worker := Node.new()
+	scene.add_child(worker)
+	var dropped_slicer := FrameSlicer.new(self, 0.0)
+	_run_on(worker, dropped_slicer)
+	await process_frame
+	worker.free()
+	await process_frame
+	await process_frame
+	_expect(true, "A job whose node was freed mid-wait goes quietly")
+	# DressingBatcher.bake() with a slicer batches the same as without.
+	var plain: Array = await _bake_pieces(scene, null)
+	var sliced: Array = await _bake_pieces(scene, FrameSlicer.new(self, 0.0))
+	_expect(plain == sliced and plain[0] > 0,
+		"bake() with a slicer folds the very same pieces (%s vs %s)" % [plain, sliced])
+
+
+func _run_on(_worker: Node, slicer: FrameSlicer) -> void:
+	await _slice_job(slicer, 10, 10)
+
+
+## Bakes a few identical pieces; returns [how many were folded, how many batches].
+func _bake_pieces(scene: Node3D, slicer: FrameSlicer) -> Array:
+	var route := Node3D.new()
+	scene.add_child(route)
+	var segment := Node3D.new()
+	route.add_child(segment)
+	var group := Node3D.new()
+	group.name = "Dressing"
+	segment.add_child(group)
+	var fern_scene: PackedScene = load(FERN_PIECE)
+	for index: int in range(12):
+		var piece := fern_scene.instantiate() as Node3D
+		piece.position = Vector3(float(index) * 3.0, 0.0, -10.0)
+		piece.set_meta(&"rule", &"fern")
+		group.add_child(piece)
+	var folded: int = await DressingBatcher.bake(route, [segment], [], slicer)
+	var batches: int = route.find_children("*", "MultiMeshInstance3D", true, false).size()
+	route.free()
+	return [folded, batches]
 
 
 func _expect(condition: bool, description: String) -> void:

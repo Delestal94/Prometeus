@@ -418,6 +418,7 @@ UI_MENU_FOOTER,Versión %s   ·   F11 pantalla completa,Version %s   ·   F11 fu
 UI_MENU_GARAGE,Garaje,Garage
 UI_MENU_GARAGE_HINT,"Apariencia, progreso y récords","Appearance, progress and records"
 UI_MENU_HOST,Crear sala,Host a room
+UI_MENU_HOST_ENDLESS,Crear sala Endless,Host an Endless room
 UI_MENU_HOST_IP,Código o IP del anfitrión,Host's code or IP
 UI_MENU_JOIN,Unirse a una sala,Join a room
 UI_MENU_JOIN_BUTTON,Unirse,Join
@@ -439,9 +440,11 @@ UI_MENU_STATUS_CONNECTING,Conectando a %s…,Connecting to %s…
 UI_MENU_STATUS_CONNECT_FAILED,No se pudo conectar (error %d).,Couldn't connect (error %d).
 UI_MENU_STATUS_ENTERING,Entrando…,Joining…
 UI_LOADING_TAG,En camino,On the way
+UI_LOADING_TAG_RESTART,Otra vuelta,One more run
 UI_LOADING_TAG_JOIN,Unirse a la sala,Joining the room
 UI_LOADING_STAGE_LOAD,Cargando el camión…,Loading the truck…
 UI_LOADING_STAGE_BUILD,Armando la ruta…,Building the route…
+UI_LOADING_STAGE_SETTLE,Últimos retoques…,Final touches…
 UI_LOADING_STAGE_READY,¡A repartir!,Let's deliver!
 UI_LOADING_FAILED,No se pudo cargar el nivel.,The level could not be loaded.
 UI_LOADING_TIP_TAG,CONSEJO,TIP

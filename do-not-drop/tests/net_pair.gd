@@ -67,6 +67,10 @@ func _ready() -> void:
 			_paper = paper
 			_order.append("paper"))
 		bus.connect(&"run_ended", func(_score: int, _results: Dictionary) -> void: _order.append("ended"))
+	# The route builds over several frames, as in the game, even headless (N-408): the host
+	# spawns nobody and the client reports no "ready" until its road stands.
+	var route_script: GDScript = load("res://scripts/gameplay/route/route.gd") as GDScript
+	route_script.set(&"always_slice", true)
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
 	# Without this a dropped join only showed up as a bare timeout 40 s later.
 	# NETLOG, not PAIR: run-net-pair.sh takes the first PAIR line as the result.

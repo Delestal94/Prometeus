@@ -80,12 +80,15 @@ func _run() -> void:
 	await process_frame
 	_expect(hud.overlay.visible and hud.overlay_mode == "results", "Result screen opens")
 	_expect(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Results release mouse")
+	var old_level: Node = level
 	level.restart_delivery()
-	# restart_delivery() now fades to black before reloading (see
-	# level_base.gd) -- waits out that real 0.15s delay instead of the
-	# reload happening on the very next frame.
-	await create_timer(0.2).timeout
-	await process_frame
+	# restart_delivery() fades to black, then reloads behind the loading
+	# screen (N-408), which rebuilds the road over frames: wait until the new
+	# level is in and the loader is gone.
+	var waited: int = 0
+	while waited < 3000 and (current_scene == old_level or root.get_node_or_null(^"SceneLoader") != null):
+		await process_frame
+		waited += 1
 	level = current_scene
 	_expect(not manager.is_running and manager.results.is_empty(), "Restart resets the full run")
 	level.start_debug_delivery()

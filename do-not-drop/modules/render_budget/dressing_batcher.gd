@@ -58,8 +58,10 @@ static var _model_cache: Dictionary = {}
 
 
 ## Returns how many pieces were folded into batches (and freed). `extra_groups`
-## are more nodes whose children are placed pieces (a house's Yard).
-static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> int:
+## are more nodes whose children are placed pieces (a house's Yard). With a
+## `slicer` (FrameSlicer) the work is cut into slices a frame apart each:
+## `await` it (the result is the same).
+static func bake(route: Node3D, segments: Array, extra_groups: Array = [], slicer: FrameSlicer = null) -> int:
 	var to_route: Transform3D = route.global_transform.affine_inverse()
 	var cells: Dictionary = {}
 	var baked: int = 0
@@ -102,6 +104,8 @@ static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> in
 			group.remove_child(piece)
 			piece.free()
 			baked += 1
+			if slicer != null:
+				await slicer.tick()
 	var holder := Node3D.new()
 	holder.name = "BatchedDressing"
 	route.add_child(holder)
@@ -114,6 +118,8 @@ static func bake(route: Node3D, segments: Array, extra_groups: Array = []) -> in
 			cell_node.add_child(_multimesh_instance(batches[key]))
 		if solids.has(cell):
 			cell_node.add_child(_colliders(solids[cell]))
+		if slicer != null:
+			await slicer.tick()
 	return baked
 
 
@@ -286,9 +292,12 @@ static func _multimesh_instance(batch: Dictionary) -> MultiMeshInstance3D:
 ## move again, so each segment's boxes are merged into one mesh (a surface
 ## per material). The nodes that own their collision stay exactly as they
 ## are; only their MeshInstance3D children are replaced.
-static func merge_segment_geometry(segments: Array) -> int:
+## With a `slicer` (FrameSlicer), a frame apart per slice: `await` it.
+static func merge_segment_geometry(segments: Array, slicer: FrameSlicer = null) -> int:
 	var merged_count: int = 0
 	for segment: Node in segments:
+		if slicer != null:
+			await slicer.tick()
 		var inverse: Transform3D = (segment as Node3D).global_transform.affine_inverse()
 		var tools: Dictionary = {}
 		var materials: Dictionary = {}
@@ -298,6 +307,8 @@ static func merge_segment_geometry(segments: Array) -> int:
 			var local: Transform3D = inverse * part.global_transform
 			if local.basis.determinant() <= 0.0:
 				continue
+			if slicer != null:
+				await slicer.tick()
 			for surface: int in range(part.mesh.get_surface_count()):
 				var material: Material = part.material_override
 				if material == null and surface < part.get_surface_override_material_count():

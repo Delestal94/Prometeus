@@ -88,12 +88,16 @@ func _ready() -> void:
 	NetworkManager.session_failed.connect(_stop_orphaned_run)
 	# Choices made in the depot (lockers, workshop) show at once.
 	UnlockManager.progress_changed.connect(_on_profile_changed)
-	# Offline is a session of one, so this same call covers both paths.
+	# Offline is a session of one, so this same call covers both paths. A world
+	# that is still building (route.gd, N-408) gets its players once it stands:
+	# _report_level_ready() below.
 	if NetworkManager.is_host():
 		_sync_players(NetworkManager.peer_ids)
 	# Command line shortcut for smoke checks and development: skips the
 	# on-foot loading entirely, same as the HUD's debug button.
-	NetworkManager.level_ready.call_deferred()
+	# Reported once the world stands (N-408): a client's "ready" is what makes the
+	# host spawn it, and the road it spawns onto builds itself over several frames.
+	_report_level_ready.call_deferred()
 	# Every peer draws the flag over a box on the road; the host decides (N-213.1).
 	var overboard_marker: Node3D = OVERBOARD_MARKER.new()
 	overboard_marker.name = "OverboardMarker"
@@ -124,7 +128,7 @@ func _ready() -> void:
 	hook.name = "RescueHook"
 	vehicle.add_child(hook)
 	if "--autostart" in OS.get_cmdline_user_args():
-		start_debug_delivery.call_deferred()
+		_autostart.call_deferred()
 	# The trailer's camera (N-902): F7 free camera, F5/F6/F8 rails. Debug
 	# builds only; the tools aren't even exported.
 	if OS.is_debug_build() and ResourceLoader.exists(TRAILER_CAMERA):
@@ -143,6 +147,37 @@ func newspaper_town() -> String:
 ## The level's own road and orders, set up once the depot is stocked.
 func _prepare_mode() -> void:
 	pass
+
+
+## Waits (a coroutine) until the level's world is complete: a road that builds
+## itself over several frames (route.gd) overrides it to wait for that. The
+## default has nothing to wait for, and doesn't suspend.
+func _wait_for_world() -> void:
+	pass
+
+
+## Whether the level's world stands (a road that builds itself over frames says no
+## until it does). Nobody is spawned into it before that: _sync_players().
+func _is_world_built() -> bool:
+	return true
+
+
+## This peer's level is up: tells the session, once the world stands.
+func _report_level_ready() -> void:
+	var waited: bool = not _is_world_built()
+	await _wait_for_world()
+	if not is_inside_tree():
+		return
+	# The players the host couldn't spawn while the world was still building.
+	if waited and NetworkManager.is_host():
+		_sync_players(NetworkManager.peer_ids)
+	NetworkManager.level_ready()
+
+
+func _autostart() -> void:
+	await _wait_for_world()
+	if is_inside_tree():
+		start_debug_delivery()
 
 
 ## The level's own start: unfreeze, report the cargo, start the run.
@@ -195,6 +230,8 @@ func _on_peer_level_ready(peer_id: int) -> void:
 
 
 func _sync_players(peer_ids: Array) -> void:
+	if not _is_world_built():
+		return
 	# Only the host spawns: MultiplayerSpawner replicates the result to
 	# everyone, so clients never invent players of their own.
 	for index: int in range(peer_ids.size()):
@@ -331,7 +368,11 @@ func restart_delivery() -> void:
 	RunManager.reset_run()
 	# Online, every client reloads too, once this level is back up.
 	NetworkManager.begin_restart()
-	get_tree().reload_current_scene()
+	# Behind the loading screen (N-408), which also lets the road build over
+	# frames: a bare reload_current_scene() froze the window ~4 s.
+	var loader: LoadingScreen = LoadingScreen.go(get_tree(), scene_file_path, tr("UI_LOADING_TAG_RESTART"))
+	# The music plays on under the loading screen instead of dying with this level.
+	loader.carry_audio(get_node_or_null(^"IngameMusic") as AudioStreamPlayer)
 
 
 func toggle_pause() -> void:

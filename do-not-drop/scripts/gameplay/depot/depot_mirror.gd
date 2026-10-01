@@ -81,7 +81,10 @@ func _process(delta: float) -> void:
 	if not active and not _drawn:
 		# Nobody near yet: one picture of the room, so from across the depot
 		# the glass isn't a black hole in the wall.
-		_first_picture_in -= delta
+		# Counted only while the room is on screen: the loading screen keeps the
+		# depot hidden for its first frames (N-408), and a picture then is empty.
+		if is_visible_in_tree():
+			_first_picture_in -= delta
 		if _first_picture_in > 0.0:
 			return
 		update_reflection(to_global(FIRST_EYE))
