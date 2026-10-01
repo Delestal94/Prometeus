@@ -165,8 +165,11 @@ que `Jump` termine en el primer cuadro de `Idle` y el alcance real de las muñec
 **La forma normal:** `tools/run-tests.sh` corre toda la batería headless en paralelo (~1 minuto)
 y muestra solo el resumen y las fallas; `tools/run-tests.sh depot traps` corre solo los tests
 cuyo nombre contiene esos textos. Después de clonar, `tools/setup-hooks.sh` activa el hook
-`pre-push`: cada `git push` con cambios de código corre la batería y no sube nada si falla.
-GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
+`pre-push`: cada `git push` con cambios de código corre el lint, `check_modules` y solo los tests
+afectados por lo que cambia la rama contra `main` (`FULL_TESTS=1 git push` corre la batería entera;
+`SKIP_TESTS=1` saltea los tests) y no sube nada si falla. GitHub Actions corre la batería completa
+repartida en cuatro runners en cada push a `main` y en cada PR (es la compuerta requerida); si un test
+falla en CI, `tools/run-tests.sh` anota el nombre con `::error`. Detalle en
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son

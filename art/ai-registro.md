@@ -29,3 +29,16 @@ Script: `art/tools/comfy_generate.py`.
 | 2026-09-30 | `art/gel_character/concept/comfy/guidance_v3/concept_guided_seed311073.png` | 311073 (Z-Image Turbo, ComfyUI 0.38.0, img2img denoise 0,15) | Variación comparada S-311.6; misma guía, no asset del juego | idem; JSON homónimo guarda prompt y workflow |
 | 2026-10-01 | `art/concept/results/results_bg_r2_seed902.png` → `assets/ui/backgrounds/tx_ui_results_background_1920.png` | 902 (Z-Image Turbo, ComfyUI 0.37) | Fondo de la pantalla de resultados (S-307) | ver `art/concept/results/prompt.txt` |
 | 2026-10-01 | `art/concept/results/results_bg_r3_seed1906.png`, `art/concept/results/results_bg_seed618.png` | 1906, 618 (Z-Image Turbo, ComfyUI 0.37) | Alternativas descartadas del fondo de resultados S-307; no son assets del juego | idem |
+
+## Imágenes sin IA
+
+Imágenes nuevas que no salieron de un generador. Se anotan para que la declaración de Steam pueda
+decir de dónde vino cada una (agregadas por el mantenimiento del 2026-10-01).
+
+| Fecha | Archivo | Origen | Uso |
+|---|---|---|---|
+| 2026-09-30 | `art/marketing/capturas/2026-09-30_{salida_deposito,curva_bosque,cruce_tren,puente_lluvia,casa_noche}.png` | Capturas del juego (`tests/render_store_shots.gd`, N-316, #121) | Capturas de tienda |
+| 2026-10-01 | `assets/textures/characters/faces/{eyes,brows,mouth}_*.svg` | Dibujadas por código (`art/rounded_character/build_faces.py`, N-506, #151) | Caras del personaje |
+| 2026-10-01 | `art/rounded_character/review/{customization_*,face_lineup_*}.png` | Capturas del juego (`tests/render_character_faces.gd`, N-506, #151) | Revisión; no son assets del juego |
+| 2026-10-01 | `assets/textures/depot/tx_depot_{mural_brand,cork_photos,employee_month}.png` | Pillow + numpy (`assets/tools/depot_textures/`; las fotos del corcho son recortes de capturas del juego), N-319, #145 | Texturas del depósito |
+| 2026-10-01 | `assets/textures/depot/tx_depot_{pictograms_512,cage_mesh_256}.png` | Dibujadas por código (`assets/tools/build_depot_props.py`), N-319, #145 | Texturas del depósito |
