@@ -46,10 +46,11 @@ func _run_belt(delta: float) -> void:
 			box.position.x -= Layout.CONVEYOR_END_X - Layout.CONVEYOR_START_X
 
 
-## Short stutters most of the time, now and then a few steady seconds.
+## Short stutters (never faster than 3 per second: photosensitivity) most of the time, now and then a few
+## steady seconds.
 func _flicker(delta: float) -> void:
 	_flicker_time -= delta
 	if _flicker_time > 0.0:
 		return
 	flicker_tube.visible = not flicker_tube.visible or randf() < 0.3
-	_flicker_time = randf_range(0.03, 0.12) if randf() < 0.7 else randf_range(1.5, 5.0)
+	_flicker_time = randf_range(0.36, 0.7) if randf() < 0.7 else randf_range(1.5, 5.0)

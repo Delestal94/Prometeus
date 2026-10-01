@@ -23,7 +23,7 @@ const INSIDE_FIXED_SHARE: float = 0.8
 ## The depot's own ambient: a cool, low grey-blue, none of it from the sky (the level's
 ## ambient comes from its sky, and under a roof that only made the hall cold and cyan).
 const INSIDE_AMBIENT_ENERGY: float = 0.25
-const INSIDE_AMBIENT_COLOUR := Color(0.46, 0.52, 0.62)
+const INSIDE_AMBIENT_COLOUR := Color("9c978f")
 const INSIDE_SKY_CONTRIBUTION: float = 0.0
 ## The sky's share of the ambient is almost all gone (the sky is far brighter than any
 ## colour the ambient is tinted with, and it is what made a clear day wash the hall out).

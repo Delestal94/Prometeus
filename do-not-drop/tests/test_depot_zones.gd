@@ -195,7 +195,7 @@ func _test_signs() -> void:
 	for label: Node in get_nodes_in_group(&"depot_sign"):
 		var caption: String = String(label.get_meta(&"sign"))
 		pixel_sizes[caption] = (label as Label3D).pixel_size
-	for caption: String in ["PIZARRA", "TALLER", "SUMINISTROS", "VESTUARIO", "OFICINA"]:
+	for caption: String in ["TALLER", "SUMINISTROS", "VESTUARIO", "OFICINA"]:
 		var found: bool = false
 		for key: String in pixel_sizes:
 			if key.contains(caption):
@@ -321,7 +321,8 @@ func _test_kit(depot: Node3D) -> void:
 		if material != null and material.albedo_texture != null \
 				and material.albedo_texture.resource_path == DepotKit.PICTOGRAMS:
 			pictograms += 1
-	_expect(pictograms == 1, "Every pictogram shares one atlas batch (%d)" % pictograms)
+	_expect(pictograms >= 1 and pictograms <= 2,
+			"The pictograms come from the atlas in one batch of the kit and one of the posters (%d)" % pictograms)
 	_expect(batches <= MAX_KIT_BATCHES, "The kit's batches stay under %d (%d)" % [MAX_KIT_BATCHES, batches])
 
 

@@ -38,47 +38,42 @@ func build_signs() -> void:
 			0.0, 64, Color("ffc93c"), Layout.DISPLAY_FONT, 0.008, 14)
 	exit_sign.rotation.x = 0.3
 	exit_sign.name = "ExitSign"
-	# Safety posters on the walls.
+	# Safety posters on the walls: a pictogram and a title, nothing to read in small print.
+	var posters := DepotKit.new(_root, "PosterColliders")
 	# On the front wall, left of the door: on the left wall it hung behind
 	# the stock racking, where nobody could read it.
-	_poster(Vector3(-7.5, 2.2, 0.06), 0.0, tr("WORLD_DEPOT_POSTER_VEST_TITLE"),
-			tr("WORLD_DEPOT_POSTER_VEST_BODY"), Color("ff9f1c"))
-	_poster(Vector3(-Layout.HALF_WIDTH + 0.07, 2.2, 31.2), PI * 0.5, tr("WORLD_DEPOT_POSTER_LIFT_TITLE"),
-			tr("WORLD_DEPOT_POSTER_LIFT_BODY"), Color("4cc9f0"))
-	# Between the column at z 24.8 and the supplies shelf (from z 26.65),
-	# which used to hide half of it.
+	_poster(posters, Vector3(-7.5, 2.2, 0.06), 0.0, tr("WORLD_DEPOT_POSTER_VEST_TITLE"), DepotLabels.ICON_VEST,
+			Color("ff9f1c"))
+	_poster(posters, Vector3(-Layout.HALF_WIDTH + 0.07, 2.2, 31.2), PI * 0.5, tr("WORLD_DEPOT_POSTER_LIFT_TITLE"),
+			DepotLabels.ICON_HANDS, Color("4cc9f0"))
 	# On the wardrobe's partition, facing the hall: under the mezzanine it would
 	# hang in the dark.
-	_poster(Vector3(DepotZones.WALL_X - 0.08, 2.0, 14.3), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"),
-			tr("WORLD_DEPOT_POSTER_FRAGILE_BODY"), Color("ff5e5b"))
-	_poster(Vector3(-8.0, 2.4, Layout.DEPTH - 0.07), PI, tr("WORLD_DEPOT_POSTER_ONEBOX_TITLE"),
-			tr("WORLD_DEPOT_POSTER_ONEBOX_BODY"), Color("2dd4a3"))
+	_poster(posters, Vector3(DepotZones.WALL_X - 0.08, 2.0, 14.3), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"),
+			DepotLabels.ICON_SPEED, Color("ff5e5b"))
+	_poster(posters, Vector3(-8.0, 2.4, Layout.DEPTH - 0.07), PI, tr("WORLD_DEPOT_POSTER_ONEBOX_TITLE"),
+			DepotLabels.ICON_BOX, Color("2dd4a3"))
+	posters.commit("Poster")
 	_build_clock()
 
 
-func _poster(at: Vector3, yaw: float, title: String, body: String, accent: Color) -> void:
-	var kit := DepotKit.new(_root, "PosterColliders")
+func _poster(kit: DepotKit, at: Vector3, yaw: float, title: String, icon: int, accent: Color) -> void:
 	var basis := Basis(Vector3.UP, yaw)
 	kit.box_xf(Vector3(1.1, 1.5, 0.02), Transform3D(basis, at), DepotKit.flat(Layout.PAPER, 0.9))
 	# The header band stands 1 cm proud of the paper (it was 2.5 mm, and the
 	# two faces shimmered into each other from across the hall).
 	var band_at: Vector3 = at + basis * Vector3(0.0, 0.0, 0.01) + Vector3(0.0, 0.58, 0.0)
 	kit.box_xf(Vector3(1.1, 0.34, 0.02), Transform3D(basis, band_at), DepotKit.flat(accent, 0.8))
-	kit.commit("Poster")
+	DepotLabels.pictogram(kit, icon, Transform3D(basis, at + basis * Vector3(0.0, -0.1, 0.012)), 0.78, Layout.INK)
 	var face: Vector3 = basis * Vector3(0.0, 0.0, 0.03)
 	var heading := DepotLabels.text(_root, title, at + face + Vector3(0.0, 0.58, 0.0), yaw, 34, Layout.PAPER,
 			Layout.DISPLAY_FONT, 0.0045, 6)
 	DepotLabels.fit_label(heading, 0.98)
-	var text := DepotLabels.text(_root, body, at + face + Vector3(0.0, -0.05, 0.0), yaw, 30, Layout.INK,
-			Layout.BODY_FONT, 0.004, 0)
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.width = 240
 
 
 func _build_clock() -> void:
 	var clock := Node3D.new()
 	clock.name = "WallClock"
-	clock.position = Vector3(3.0, 4.8, Layout.DEPTH - 0.08)
+	clock.position = Vector3(5.9, 4.8, Layout.DEPTH - 0.08)
 	clock.rotation.y = PI
 	_root.add_child(clock)
 	# Body, face and ticks: one model, face toward the clock's +Z.

@@ -9,8 +9,6 @@ const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const ContactShadow = preload("res://modules/render_budget/contact_shadow.gd")
 ## How big a zone's hanging sign is next to the old ones (N-319).
 const SIGN_SIZE: float = 0.85
-## Where the order board's sign hangs along the board (m from its middle).
-const SIGN_OFFSET_ON_BOARD: float = 1.1
 ## Lining layer tops: the dark plinth, and where the sheet changes tone.
 const PLINTH_TOP: float = 0.95
 const SHEET_SPLIT: float = 6.0
@@ -167,11 +165,11 @@ func build_shell(kit: DepotKit) -> void:
 ## every wall: one place to retune the room's colours.
 func _lining_layers() -> Array:
 	var plinth := DepotKit.detailed(Color("4c5a61"), "stone", 1.4)
-	var block := DepotKit.detailed(Color("84a09e"), "plaster", 1.4)
+	var block := DepotKit.detailed(Color("8a9693"), "plaster", 1.4)
 	# The sheet up past the windows is a mid grey-green (<= 58 % value, N-319) and the
 	# band above them darker still: the walls recede, the floor and the truck lead.
-	var sheet_low := DepotKit.ribbed(Color("8a938f"), 0.7, 0.6, 0.15)
-	var sheet_high := DepotKit.ribbed(Color("5d6669"), 0.7, 0.6, 0.15)
+	var sheet_low := DepotKit.ribbed(Color("8f918e"), 0.7, 0.6, 0.15)
+	var sheet_high := DepotKit.ribbed(Color("63666a"), 0.7, 0.6, 0.15)
 	return [
 		[Layout.FLOOR_TOP, PLINTH_TOP, plinth, DepotKit.flat(Color("2c3a40"), 0.6)],
 		[PLINTH_TOP, Layout.LINER_SPLIT, block, null],
@@ -311,14 +309,8 @@ func build_wayfinding(kit: DepotKit) -> void:
 		for z: float in [11.6, 7.6, 3.6]:
 			guides.append(DepotLabels.paint_arrow(kit, tr("WORLD_DEPOT_GATE"), Vector3(x, 0.0, z), Vector3.FORWARD,
 					Layout.TEAL))
-	# Over the control island, turned to the crew, and over the truck bay --
-	# high enough over the truck's roof to read above it from behind.
-	var yaw: float = deg_to_rad(Layout.BOARD_YAW_DEGREES)
-	# (Over the board's end nearest the truck: from the spawn row's far end it is still in view.)
-	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_BOARD"),
-			Layout.BOARD_AT + Layout.board_basis() * Vector3(SIGN_OFFSET_ON_BOARD, 0.0, 0.0) + Vector3(0.0, 4.6,
-					0.0), yaw,
-			Layout.BOARD_GREEN, Layout.CEILING - 0.25, Layout.PAPER, SIGN_SIZE, DepotLabels.ICON_HANDS)
+	# Over the truck bay, high enough over the truck's roof to read above it from behind. (The control
+	# island has no hanging sign: its lit board is the brightest thing in the hall.)
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_SIGN_TRUCK"), Vector3(0.0, 4.4, 11.0), 0.0,
 			Layout.TRUCK_YELLOW, Layout.CEILING - 0.25, Layout.PAPER, SIGN_SIZE, DepotLabels.ICON_EXIT)
 
@@ -442,27 +434,5 @@ func build_lights() -> void:
 	# shafts of light on the floor do the rest of the look.
 	DepotLighting.build_lights(_root)
 	DepotLighting.build_shafts(_root, sun)
-	# Motes drifting in the air under the skylights.
-	var dust := CPUParticles3D.new()
-	dust.name = "DustMotes"
-	dust.amount = 90
-	dust.lifetime = 12.0
-	dust.preprocess = 12.0
-	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	dust.emission_box_extents = Vector3(12.0, 2.5, 14.0)
-	dust.position = Vector3(0.0, 3.5, 16.0)
-	dust.direction = Vector3(0.2, 0.1, 0.1)
-	dust.spread = 180.0
-	dust.gravity = Vector3.ZERO
-	dust.initial_velocity_min = 0.02
-	dust.initial_velocity_max = 0.08
-	var mote := QuadMesh.new()
-	mote.size = Vector2(0.025, 0.025)
-	var mote_material := StandardMaterial3D.new()
-	mote_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mote_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	mote_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mote_material.albedo_color = Color(1.0, 0.95, 0.85, 0.35)
-	mote.material = mote_material
-	dust.mesh = mote
-	_root.add_child(dust)
+	# Motes of dust inside each shaft of light (none at night, none on Low).
+	DepotLighting.build_dust(_root, sun)

@@ -21,12 +21,19 @@ const WALL_X: float = 9.35
 const WALL_THICKNESS: float = 0.12
 const WALL_HEIGHT: float = 2.7
 const HALF_WALL_HEIGHT: float = 1.1
+## The workshop's wall: block #5f6763, a 10 cm red stripe on top, glass from the stripe up to 2.3 m.
+const WORKSHOP_BLOCK := Color("5f6763")
+const WORKSHOP_STRIPE := Color("b8443a")
+const WORKSHOP_GLASS_TOP: float = 2.3
 ## Where the wardrobe's doorway is (z).
 const WARDROBE_DOOR := Vector2(16.2, 19.6)
 ## The supplies cage's service window (z) and the counter's height.
 const CAGE_WINDOW := Vector2(4.25, 6.55)
 const CAGE_HEIGHT: float = 2.7
 const COUNTER_HEIGHT: float = 1.05
+## The Boss's window glass: warm and always lit.
+const WINDOW_WARM := Color("ffd9a0")
+const WINDOW_WARM_ENERGY: float = 1.3
 ## One kit cage panel's width.
 const CAGE_PANEL: float = 1.22
 ## The stair's treads.
@@ -67,6 +74,32 @@ func _build_island(kit: DepotKit) -> void:
 	kit.model(DepotKit.depot_model("sm_env_depot_dispatch_desk"),
 			frame * Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO))
 	kit.collider(Vector3(1.6, 1.0, 0.8), frame * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.5, 0.0)))
+	# The desk lamp: a small arm and an emissive shade, and its pool on the floor and the desk.
+	var lamp_at: Vector3 = frame * Vector3(0.55, 0.0, -0.1)
+	var steel := DepotKit.flat(Color("3b4c53"), 0.5, 0.4)
+	kit.cylinder(0.07, 0.03, Transform3D(Basis.IDENTITY, lamp_at + Vector3(0.0, 0.74, 0.0)), steel, 10)
+	kit.box_xf(Vector3(0.025, 0.4, 0.025), Transform3D(frame.basis, lamp_at + Vector3(0.0, 0.94, 0.0)), steel)
+	kit.box_xf(Vector3(0.22, 0.08, 0.16), Transform3D(frame.basis, lamp_at + Vector3(0.0, 1.16, 0.0)),
+			DepotKit.glow(Color("ffe2b8"), 1.8))
+	kit.floor_quad(Vector2(2.4, 2.4), Vector3(lamp_at.x, Layout.FLOOR_TOP + 0.022, lamp_at.z),
+			DepotKit.light_pool(DepotLighting.POOL_COLOUR))
+	# A cork board with a clipboard and a few sheets, on arms from the order board's right post.
+	var cork_at := Transform3D(Basis(Vector3.UP, deg_to_rad(Layout.BOARD_YAW_DEGREES)),
+			Layout.BOARD_AT + Vector3(0.0, Layout.FLOOR_TOP, 0.0))
+	var post_x: float = DepotOrderBoard.PANEL_WIDTH * 0.5 + 0.06
+	var wood_dark := DepotKit.flat(Color("263238"), 0.6)
+	_local_box(kit, cork_at, Vector3(post_x + 0.55, 1.55, 0.03), Vector3(0.98, 0.68, 0.03), wood_dark, false)
+	_local_box(kit, cork_at, Vector3(post_x + 0.55, 1.55, 0.05), Vector3(0.9, 0.6, 0.02),
+			DepotKit.flat(Color("c9a26b"), 0.9), false)
+	for arm_y: float in [1.35, 1.75]:
+		_local_box(kit, cork_at, Vector3(post_x + 0.1, arm_y, 0.03), Vector3(0.2, 0.04, 0.04), steel, false)
+	_local_box(kit, cork_at, Vector3(post_x + 0.3, 1.6, 0.075), Vector3(0.26, 0.34, 0.012),
+			DepotKit.flat(Color("c9a26b"), 0.9), false)
+	_local_box(kit, cork_at, Vector3(post_x + 0.3, 1.6, 0.084), Vector3(0.22, 0.3, 0.006),
+			DepotKit.flat(Layout.PAPER, 0.9), false)
+	for sheet: Array in [[0.62, 1.7, Color("ffc93c")], [0.8, 1.45, Layout.PAPER], [0.8, 1.72, Layout.PAPER]]:
+		_local_box(kit, cork_at, Vector3(post_x + float(sheet[0]), float(sheet[1]), 0.07), Vector3(0.2, 0.26, 0.006),
+				DepotKit.flat(sheet[2], 0.8), false)
 	var stool := Transform3D(frame.basis, frame * Vector3(-0.1, 0.0, 0.85))
 	kit.cylinder(0.2, 0.05, Transform3D(stool.basis, stool.origin + Vector3(0.0, 0.62, 0.0)),
 			DepotKit.flat(Color("e8772e"), 0.6), 12)
@@ -85,13 +118,18 @@ func _build_east_walls(kit: DepotKit) -> void:
 	var sheet := DepotKit.ribbed(Color("bcbfbd"), 0.72, 0.6, 0.15)
 	var steel := DepotKit.flat(Color("3b4c53"), 0.5, 0.4)
 	var dark := DepotKit.flat(Color("263238"), 0.6)
-	var red := DepotKit.flat(Layout.WORKSHOP_RED, 0.55)
+	var red := DepotKit.flat(WORKSHOP_STRIPE, 0.55)
+	var workshop_block := DepotKit.detailed(WORKSHOP_BLOCK, "plaster", 1.4)
 	var teal := DepotKit.flat(Layout.LOCKERS_TEAL, 0.55)
 	var gap: Vector2 = Layout.WORKSHOP_GAP
 	var workshop_end: float = Layout.WORKSHOP_FLOOR.end.y
 	# Workshop: half wall in two runs, red cap on each.
 	for run: Vector2 in [Vector2(Layout.WORKSHOP_FLOOR.position.y, gap.x), Vector2(gap.y, workshop_end)]:
-		_wall_run(kit, run, HALF_WALL_HEIGHT, block, null, red)
+		_wall_run(kit, run, HALF_WALL_HEIGHT, workshop_block, null, red)
+		# Opaque block up to 1.1 m, glass from there to 2.3 m: the bench is seen over the wall, not through it.
+		kit.box(Vector3(0.03, WORKSHOP_GLASS_TOP - HALF_WALL_HEIGHT - 0.1, run.y - run.x), Vector3(WALL_X,
+				Layout.FLOOR_TOP + (WORKSHOP_GLASS_TOP + HALF_WALL_HEIGHT + 0.1) * 0.5, (run.x + run.y) * 0.5),
+				DepotKit.glass(Color(0.74, 0.86, 0.9, 0.16)))
 	# Posts at every end, a header across the whole workshop front.
 	for z: float in [Layout.WORKSHOP_FLOOR.position.y + 0.07, 3.9, gap.x, gap.y, workshop_end - 0.05]:
 		_post(kit, z, 0.14, steel)
@@ -99,7 +137,7 @@ func _build_east_walls(kit: DepotKit) -> void:
 	kit.box(Vector3(0.16, 0.22, workshop_end - header_from), Vector3(WALL_X, WALL_HEIGHT + 0.06,
 			(header_from + workshop_end) * 0.5), red)
 	# A strip-curtain valance over the gap, hanging from the header.
-	var strip := DepotKit.glass(Color(0.78, 0.86, 0.8, 0.5))
+	var strip := DepotKit.glass(Color(1.0, 0.78, 0.45, 0.5))
 	var strips: int = int((gap.y - gap.x) / 0.2)
 	for index: int in range(strips):
 		kit.box(Vector3(0.02, 0.7, 0.16), Vector3(WALL_X, WALL_HEIGHT - 0.3, gap.x + 0.1 + index * 0.2), strip)
@@ -161,7 +199,7 @@ func _build_cage(kit: DepotKit) -> void:
 	var height: float = CAGE_HEIGHT
 	# Floor: a dark rubber pad marks the room.
 	kit.box(Vector3(cage.size.x, 0.008, cage.size.y), Vector3(cage.get_center().x, Layout.FLOOR_TOP + 0.004,
-			cage.get_center().y), DepotKit.detailed(Color("4a4760"), "plaster", 0.9, 0.9))
+			cage.get_center().y), DepotKit.detailed(Color("2a2c30"), "plaster", 0.9, 0.9))
 	# East face: kit panels (diamond mesh in a tubular frame) to either side of the service
 	# window, and the kit's window with its counter and sliding grille between them.
 	var window_width: float = CAGE_WINDOW.y - CAGE_WINDOW.x
@@ -222,6 +260,20 @@ func _build_cage(kit: DepotKit) -> void:
 				_:
 					var foam: String = "sm_env_depot_shop_foam_blue" if level == 1 else "sm_env_depot_shop_foam_orange"
 					kit.model(DepotKit.depot_model(foam), Transform3D(Basis(Vector3.UP, -PI * 0.5), at))
+	# Boxes between the small supplies, so the shelves read as full.
+	for level: int in range(3):
+		for index: int in range(8):
+			var box_path: String = Layout.CARGO_BOXES[(index + level) % Layout.CARGO_BOXES.size()]
+			var at := Vector3(shelf_x + 0.1, 0.47 + level * 0.7, south + 1.31 + index * 0.62)
+			kit.model(box_path, Transform3D(Basis(Vector3.UP, -PI * 0.5 + 0.1 * index).scaled(Vector3.ONE * 0.34), at))
+	# The window's sign: the kit's board says what it is, with the box pictogram.
+	var board_x: float = east + 0.045
+	var board_y: float = Layout.FLOOR_TOP + 2.82
+	DepotLabels.pictogram(kit, DepotLabels.ICON_BOX, Transform3D(Basis(Vector3.UP, PI * 0.5),
+			Vector3(board_x, board_y, window_centre - 0.45)), 0.12, Layout.INK)
+	var window_label := DepotLabels.text(_root, tr("WORLD_DEPOT_WINDOW"), Vector3(board_x + 0.003, board_y,
+			window_centre + 0.08), PI * 0.5, 30, Layout.INK, Layout.DISPLAY_FONT, 0.0036, 0)
+	DepotLabels.fit_label(window_label, 0.78)
 	# Stock waiting to go on the shelves, on a pallet by the north wall.
 	kit.model_grounded(Layout.PALLET, Transform3D(Basis(Vector3.UP, 0.1), Vector3(-12.4, Layout.FLOOR_TOP,
 			north - 1.1)))
@@ -260,7 +312,7 @@ func _build_cage(kit: DepotKit) -> void:
 		supply_props[supply[0]] = prop
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_SUPPLIES"), Vector3(east + 0.3, 3.6, window_centre), PI * 0.5,
 			Layout.SHOP_PURPLE, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE,
-			DepotLabels.ICON_FIRST_AID)
+			DepotLabels.ICON_BOX)
 
 
 ## A run of kit cage panels from `from` to `to` (floor level), the panels' fronts turned
@@ -360,7 +412,9 @@ func _build_stair(kit: DepotKit) -> void:
 func _build_office(kit: DepotKit) -> void:
 	var frame := DepotKit.flat(Color("263238"), 0.6, 0.3)
 	var panel := DepotKit.detailed(Color("d5d9d2"), "plaster", 1.6)
-	var glass := DepotKit.glass()
+	# The Boss's window is always lit, warm: after the truck and the board it is the third brightest thing
+	# in the hall, whatever the weather (one emissive batch).
+	var glass := DepotKit.glow(WINDOW_WARM, WINDOW_WARM_ENERGY)
 	var lift: float = Layout.MEZZANINE_HEIGHT
 	var x0: float = 8.6
 	var z0: float = 27.8
@@ -389,21 +443,29 @@ func _build_office(kit: DepotKit) -> void:
 			(z0 + depth_end) * 0.5), frame)
 	for x: float in [x0, 11.0, 13.2]:
 		kit.box(Vector3(0.06, 1.44, 0.14), Vector3(x, lift + 1.7, z0), frame)
-	# Blinds half drawn over the window's west third, and the warm light inside.
+	# Blinds half drawn over the window's west half (their slats are the kit's), and the warm light inside.
 	for x: float in [9.25, 10.5]:
 		kit.model(DepotKit.depot_model("sm_env_depot_office_blind"), Transform3D(Basis.IDENTITY,
 				Vector3(x, lift + 1.3, z0 + 0.15)))
+	# A warm pool on the terrace in front of the window (shares the lamps' pool batch).
+	kit.floor_quad(Vector2(3.0, 2.0), Vector3(11.4, lift + 0.02, z0 - 1.1),
+			DepotKit.light_pool(DepotLighting.POOL_COLOUR))
 	var lamp := DepotKit.glow(Color("fff1d6"), 2.2)
 	for z: float in [29.0, 30.9]:
 		kit.box(Vector3(3.4, 0.03, 0.14), Vector3(11.8, lift + 2.98, z), lamp)
-	# Desk with the dispatch computer, a chair and a filing cabinet.
+	# Desk 0.8 m behind the glass with the dispatch computer, its back to the hall: a silhouette against
+	# the lit window as seen from below, and the desk lamp that is the room's other light.
 	var wood := DepotKit.detailed(Color("b08a5a"), "wood_planks", 1.0)
-	kit.box(Vector3(2.0, 0.06, 0.8), Vector3(11.6, lift + 0.76, 30.6), wood, true)
+	var desk_z: float = z0 + 1.2
+	kit.box(Vector3(2.0, 0.06, 0.8), Vector3(11.6, lift + 0.76, desk_z), wood, true)
 	for x: float in [10.7, 12.5]:
-		kit.box(Vector3(0.06, 0.74, 0.7), Vector3(x, lift + 0.38, 30.6), frame)
-	kit.box(Vector3(0.6, 0.38, 0.05), Vector3(11.4, lift + 1.1, 30.85), frame)
-	kit.box(Vector3(0.54, 0.32, 0.02), Vector3(11.4, lift + 1.1, 30.82), DepotKit.glow(Color("8fd3e8"), 0.9))
-	kit.box(Vector3(0.45, 0.02, 0.15), Vector3(11.4, lift + 0.8, 30.35), frame)
+		kit.box(Vector3(0.06, 0.74, 0.7), Vector3(x, lift + 0.38, desk_z), frame)
+	kit.box(Vector3(0.6, 0.38, 0.05), Vector3(11.4, lift + 1.1, desk_z - 0.12), frame)
+	kit.box(Vector3(0.54, 0.32, 0.02), Vector3(11.4, lift + 1.1, desk_z - 0.095), DepotKit.glow(Color("8fd3e8"), 0.9))
+	kit.box(Vector3(0.45, 0.02, 0.15), Vector3(11.4, lift + 0.8, desk_z + 0.2), frame)
+	kit.cylinder(0.08, 0.03, Transform3D(Basis.IDENTITY, Vector3(12.3, lift + 0.805, desk_z)), frame, 10)
+	kit.box(Vector3(0.03, 0.34, 0.03), Vector3(12.3, lift + 0.98, desk_z), frame)
+	kit.box(Vector3(0.2, 0.1, 0.14), Vector3(12.3, lift + 1.17, desk_z - 0.04), DepotKit.glow(Color("ffe2b8"), 1.8))
 	kit.box(Vector3(0.5, 1.3, 0.6), Vector3(14.5, lift + 0.65, 29.2), DepotKit.flat(Color("8a9499"), 0.4, 0.5), true)
 	kit.box(Vector3(0.04, 0.9, 1.4), Vector3(14.95, lift + 1.8, 30.6), DepotKit.flat(Color("c9a26b"), 0.9))
 	for index: int in range(5):
@@ -411,7 +473,7 @@ func _build_office(kit: DepotKit) -> void:
 				DepotKit.flat(Layout.PAPER, 0.9))
 	var sign_at := Vector3(11.3, 4.75, Layout.MEZZANINE.position.y - 1.0)
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_OFFICE"), sign_at, PI, Layout.OFFICE_ORANGE,
-			Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE, DepotLabels.ICON_MEETING)
+			Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE, DepotLabels.ICON_PHONE)
 
 
 ## The terrace in front of the office (a bench, crates, a cup) and what hides

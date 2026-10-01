@@ -169,12 +169,18 @@ func _build_workshop(kit: DepotKit) -> void:
 	for z: float in [3.7, 7.3]:
 		kit.box(Vector3(0.8, 0.9, 0.06), Vector3(14.4, 0.48, z), dark)
 	kit.box(Vector3(0.8, 0.5, 3.4), Vector3(14.4, 0.55, 5.5), dark)
-	kit.box(Vector3(0.04, 1.3, 3.8), Vector3(14.93, 1.85, 5.5), pegboard)
-	for index: int in range(9):
-		var z: float = 3.9 + index * 0.4
-		var tool_height: float = 0.25 + (index % 3) * 0.12
-		kit.box(Vector3(0.04, tool_height, 0.05), Vector3(14.88, 2.0 - tool_height * 0.2, z),
-				steel if index % 2 == 0 else red)
+	# The tool board with its filled silhouettes is the kit's, when that model is in the project; until
+	# then, a pegboard with a few tools.
+	var tool_board: String = DepotKit.depot_model("sm_env_depot_tool_board")
+	if ResourceLoader.exists(tool_board):
+		kit.model(tool_board, Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(14.94, Layout.FLOOR_TOP, 5.5)))
+	else:
+		kit.box(Vector3(0.04, 1.3, 3.8), Vector3(14.93, 1.85, 5.5), pegboard)
+		for index: int in range(9):
+			var z: float = 3.9 + index * 0.4
+			var tool_height: float = 0.25 + (index % 3) * 0.12
+			kit.box(Vector3(0.04, tool_height, 0.05), Vector3(14.88, 2.0 - tool_height * 0.2, z),
+					steel if index % 2 == 0 else red)
 	kit.cylinder(0.12, 0.14, Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(14.1, 1.07, 6.8)),
 			DepotKit.flat(Color("ffc93c"), 0.5), 12)  # tape roll
 	kit.box(Vector3(0.3, 0.2, 0.45), Vector3(14.3, 1.09, 4.4), red)  # toolbox
@@ -191,8 +197,12 @@ func _build_workshop(kit: DepotKit) -> void:
 			kit.cylinder(0.11, 0.24,
 					Transform3D(Basis.IDENTITY, Vector3(14.35, 0.5 + level * 0.6, 10.85 + index * 0.3)),
 					DepotKit.flat(paints[(index + level) % paints.size()], 0.5, 0.3), 10)
+	# What the truck can wear: a framed swatch board on the wall over the paint rack, 3 x 2.
+	kit.box(Vector3(0.03, 0.66, 1.26), Vector3(14.9, 2.35, 11.0), DepotKit.flat(Color("263238"), 0.6))
+	kit.box(Vector3(0.02, 0.6, 1.2), Vector3(14.89, 2.35, 11.0), DepotKit.flat(Color("c9a26b"), 0.9))
 	for index: int in range(paints.size()):
-		kit.box(Vector3(0.02, 0.45, 0.45), Vector3(14.9, 3.0, 9.2 + index * 0.55), DepotKit.flat(paints[index], 0.6))
+		kit.box(Vector3(0.02, 0.22, 0.32), Vector3(14.875, 2.2 + (index / 3) * 0.28, 11.0 + (index % 3 - 1) * 0.38),
+				DepotKit.flat(paints[index], 0.6))
 	# Air compressor with its hose reel.
 	kit.model(DepotKit.depot_model("sm_env_depot_compressor"), Transform3D(Basis(Vector3.UP, PI * 0.5),
 			Vector3(13.1, Layout.FLOOR_TOP, 2.2)))
@@ -206,7 +216,7 @@ func _build_workshop(kit: DepotKit) -> void:
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_WORKSHOP"),
 			Vector3(Layout.WORKSHOP_WALL_X, 3.7, (Layout.WORKSHOP_GAP.x + Layout.WORKSHOP_GAP.y) * 0.5), -PI * 0.5,
 			Layout.WORKSHOP_RED, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE,
-			DepotLabels.ICON_HELMET)
+			DepotLabels.ICON_WRENCH)
 
 
 ## The kit's workshop pieces: the scissor lift in the middle of the floor, a bench with
@@ -218,6 +228,9 @@ func _build_workshop_kit(kit: DepotKit) -> void:
 	kit.model(DepotKit.depot_model("sm_env_depot_workbench_vise"), Transform3D(Basis(Vector3.UP, PI),
 			Vector3(10.3, Layout.FLOOR_TOP, 0.85)))
 	kit.collider(Vector3(1.6, 1.1, 0.8), Transform3D(Basis.IDENTITY, Vector3(10.3, 0.58, 0.85)))
+	# An oil stain under the lift (the circulation's oil material: same batch).
+	var oil := DepotKit.stain(Color(0.02, 0.02, 0.02, 0.32))
+	kit.floor_quad(Vector2(1.5, 0.9), Vector3(11.6, Layout.FLOOR_TOP + 0.012, 5.3), oil, 0.3)
 	kit.model(DepotKit.depot_model("sm_env_depot_wet_floor_cone"), Transform3D(Basis(Vector3.UP, 0.4),
 			Vector3(13.0, Layout.FLOOR_TOP, 8.0)))
 	kit.model(DepotKit.depot_model("sm_env_depot_wet_floor_sign"), Transform3D(Basis(Vector3.UP, -2.7),
@@ -254,19 +267,28 @@ func _build_workshop_floor(kit: DepotKit) -> void:
 	bench_lamp.light_energy = 1.5
 	bench_lamp.omni_range = 5.5
 	_root.add_child(bench_lamp)
-	for size: Vector2 in [Vector2(6.0, 7.0), Vector2(3.6, 4.4)]:
-		kit.floor_quad(size, Vector3(13.0, Layout.FLOOR_TOP + 0.022, 5.6),
-				DepotKit.light_pool(DepotLighting.POOL_COLOUR))
+	kit.floor_quad(Vector2(6.0, 7.0), Vector3(13.0, Layout.FLOOR_TOP + 0.022, 5.6),
+			DepotKit.light_pool(DepotLighting.POOL_COLOUR))
+	# The bench's own pool, amber, 1.6 m in radius.
+	kit.floor_quad(Vector2(3.2, 3.2), Vector3(14.0, Layout.FLOOR_TOP + 0.024, 5.5),
+			DepotKit.light_pool(Color(1.0, 0.69, 0.38, 0.22)))
 	var floor_y: float = Layout.FLOOR_TOP
 	kit.cylinder(0.29, 0.88, Transform3D(Basis.IDENTITY, Vector3(14.45, 0.44 + floor_y, 0.55)),
 			DepotKit.flat(Color("2f5d8a"), 0.5, 0.3), 16, true)
 	kit.cylinder(0.3, 0.03, Transform3D(Basis.IDENTITY, Vector3(14.45, 0.895 + floor_y, 0.55)),
 			DepotKit.flat(Color("c9ced0"), 0.4, 0.6), 16)
-	for index: int in range(3):
-		var tyre_at := Vector3(11.4, 0.1 + index * 0.21 + floor_y, 0.75)
-		kit.cylinder(0.34, 0.2, Transform3D(Basis.IDENTITY, tyre_at), DepotKit.flat(Color("1b1f22"), 0.9), 16,
-				index == 0)
-		kit.cylinder(0.18, 0.205, Transform3D(Basis.IDENTITY, tyre_at), DepotKit.flat(Color("8a9499"), 0.4, 0.6), 12)
+	# Three tyres piled in the corner: the kit's stack when it exists, otherwise plain cylinders.
+	var tire_stack: String = DepotKit.depot_model("sm_env_depot_tire_stack")
+	if ResourceLoader.exists(tire_stack):
+		kit.model(tire_stack, Transform3D(Basis(Vector3.UP, 0.2), Vector3(11.4, floor_y, 0.75)))
+		kit.collider(Vector3(0.7, 0.65, 0.7), Transform3D(Basis.IDENTITY, Vector3(11.4, 0.33 + floor_y, 0.75)))
+	else:
+		for index: int in range(3):
+			var tyre_at := Vector3(11.4, 0.1 + index * 0.21 + floor_y, 0.75)
+			kit.cylinder(0.34, 0.2, Transform3D(Basis.IDENTITY, tyre_at), DepotKit.flat(Color("1b1f22"), 0.9), 16,
+					index == 0)
+			kit.cylinder(0.18, 0.205, Transform3D(Basis.IDENTITY, tyre_at), DepotKit.flat(Color("8a9499"), 0.4, 0.6),
+					12)
 
 
 ## A proper terminal instead of a box with a screen: plinth, slim column, a
@@ -327,6 +349,16 @@ func _build_lockers(kit: DepotKit) -> void:
 			kit.box(Vector3(0.01, 0.02, 0.3), Vector3(14.4, 1.7 - vent * 0.05, z), dark)
 		kit.box(Vector3(0.03, 0.14, 0.03), Vector3(14.39, 1.05, z + 0.18), handle)
 		kit.box(Vector3(0.01, 0.07, 0.2), Vector3(14.4, 1.45, z), DepotKit.flat(Layout.PAPER, 0.8))
+	# Two lockers stand ajar (25 degrees): the open door, a dark inside, a vest and a hard hat hanging in it.
+	for ajar: int in [2, 5]:
+		var z: float = 13.3 + ajar * 0.62
+		kit.box(Vector3(0.012, 1.8, 0.46), Vector3(14.402, 1.0, z), dark)
+		var hinge := Vector3(14.4, 1.0, z - 0.25)
+		var door_basis := Basis(Vector3.UP, deg_to_rad(25.0))
+		kit.box_xf(Vector3(0.02, 1.85, 0.5), Transform3D(door_basis, hinge + door_basis * Vector3(0.0, 0.0, 0.25)),
+				DepotKit.ribbed(colours[ajar % 2], 0.08, 0.5, 0.3))
+		var gear: Color = Color("ff9f1c") if ajar == 2 else Color("ffc93c")
+		kit.box(Vector3(0.03, 0.5, 0.3), Vector3(14.385, 1.3, z), DepotKit.flat(gear, 0.8))
 	kit.collider(Vector3(0.58, 2.0, 5.0), Transform3D(Basis.IDENTITY, Vector3(14.68, 1.0, 13.3 + 3.5 * 0.62)))
 	# Bench in front of them, and a full-length mirror (a real one: DepotMirror)
 	# at the end of the row, to check the uniform.
@@ -380,7 +412,7 @@ func _build_lockers(kit: DepotKit) -> void:
 			Vector3(Layout.WORKSHOP_WALL_X, 3.7,
 					(DepotZones.WARDROBE_DOOR.x + DepotZones.WARDROBE_DOOR.y) * 0.5), -PI * 0.5,
 			Layout.LOCKERS_TEAL, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE,
-			DepotLabels.ICON_VEST)
+			DepotLabels.ICON_HANGER)
 
 
 func _build_break_area(kit: DepotKit) -> void:
@@ -398,8 +430,13 @@ func _build_break_area(kit: DepotKit) -> void:
 				Vector3(x, Layout.FLOOR_TOP, z)))
 		kit.collider(Vector3(depth, float(piece[4]), float(piece[2])), Transform3D(Basis.IDENTITY,
 				Vector3(x, float(piece[4]) * 0.5, z)))
-	DepotLabels.text(_root, tr("WORLD_DEPOT_COFFEE"), Vector3(Layout.HALF_WIDTH - 0.8, 1.75, 20.8), -PI * 0.5, 40,
-			Layout.PAPER, Layout.DISPLAY_FONT, 0.004, 4)
+	# A warm pool over the kitchenette, and five magnets on the fridge's door.
+	kit.floor_quad(Vector2(3.0, 3.0), Vector3(14.0, Layout.FLOOR_TOP + 0.022, 20.8),
+			DepotKit.light_pool(DepotLighting.POOL_COLOUR))
+	var magnets: Array[Color] = [Color("e8772e"), Color("2dd4a3"), Color("ffc93c"), Color("4cc9f0"), Color("ff5e5b")]
+	for index: int in range(magnets.size()):
+		kit.box(Vector3(0.012, 0.05, 0.05), Vector3(Layout.HALF_WIDTH - 0.06 - 0.71 - 0.004,
+				1.25 + (index % 3) * 0.11, 21.88 + (index / 2) * 0.1), DepotKit.flat(magnets[index], 0.6))
 	# Round table with two stools.
 	kit.cylinder(0.55, 0.05, Transform3D(Basis.IDENTITY, Vector3(12.6, 0.95, 20.8)),
 			DepotKit.flat(Color("e8ebe4"), 0.5), 18, true)

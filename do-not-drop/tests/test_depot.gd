@@ -16,13 +16,14 @@ extends SceneTree
 ##     the truck is out;
 ##   - in Endless the board shows the goal and the distance record, not an
 ##     empty order list;
-##   - signage (N-503, N-319): every place has a hanging sign, one small arrow
-##     on the green walkways toward each station (within ARROW_REACH of the
-##     spawn) and chevrons beside the truck at the door, and at least three
+##   - signage (N-503, N-319): every place but the board has a hanging sign, one
+##     small arrow where each branch leaves its road (within ARROW_REACH of the
+##     spawn) and chevrons beside the truck at the door, and at least two
 ##     signs read from where the crew appears. N-319 hung each zone's smaller
-##     sign over the zone instead of crowding them in front of the spawn, so
-##     only what lies ahead (the board, the truck, the workshop) reads from
-##     there: the test asked for four when the signs were all up front.
+##     sign over the zone instead of crowding them in front of the spawn, and
+##     the control island has no sign (its lit board is the brightest thing):
+##     only the truck's and the workshop's read from there; the test asked for
+##     four when the signs were all up front.
 ##   - the props are the modelled ones (N-135, models/environment/depot/):
 ##     door slats, clock hands and the supplies use those meshes, and the
 ##     shelves and belt keep their colliders.
@@ -43,8 +44,9 @@ const SCREEN := Vector2(1920.0, 1080.0)
 ## How far from the spawn centre (m) a place's arrow may start: they sit on the
 ## walkways now (N-319), and the supplies cage's path leaves the spine at x -8.5.
 const ARROW_REACH: float = 11.0
-## Signs that must read from where the crew appears (N-319: three, see the header).
-const MIN_SIGNS: int = 3
+## Signs that must read from where the crew appears (N-319: three, see the header; two since the
+## control island lost its hanging sign -- its lit board is the third thing the eye finds).
+const MIN_SIGNS: int = 2
 ## Smallest letter (the font's em, on a 1080p screen) that counts as readable.
 const READABLE_PX: float = 20.0
 
@@ -187,7 +189,7 @@ func _test_signage(depot: Node3D) -> void:
 	for label: Node in get_nodes_in_group(&"depot_sign"):
 		if not captions.has(String(label.get_meta(&"sign"))):
 			captions.append(String(label.get_meta(&"sign")))
-	for place: String in ["PIZARRA", "ESTANTE", "CAMIÓN", "PORTÓN", "TALLER", "VESTUARIO", "SUMINISTROS"]:
+	for place: String in ["ESTANTE", "CAMIÓN", "PORTÓN", "TALLER", "VESTUARIO", "SUMINISTROS"]:
 		_expect(captions.any(func(caption: String) -> bool: return caption.contains(place)), "A hanging sign names %s (signs: %s)" % [place, captions])
 
 	# Floor arrows: from around the spawn to each station, and to the door.
@@ -197,7 +199,6 @@ func _test_signage(depot: Node3D) -> void:
 	var spawn_centre := Vector3.ZERO
 	for point: Vector3 in layout.SPAWN_POINTS:
 		spawn_centre += Vector3(point.x, 0.0, point.z) / (layout.SPAWN_POINTS as Array).size()
-	var shelf_face_x: float = float(layout.SHELF_UNITS[0].x) + float(layout.SHELF_DEPTH) * 0.5
 	var shelf_end_z: float = float(layout.SHELF_START_Z) + float(layout.BAY_LENGTH) * int(layout.BAYS)
 	var targets := {
 		"PIZARRA": (depot.get_node(^"Station_orders") as Node3D).position,
@@ -215,7 +216,9 @@ func _test_signage(depot: Node3D) -> void:
 			var at: Vector3 = guide.at
 			var target: Vector3 = targets.get(caption, Vector3.ZERO)
 			if caption == "ESTANTES":
-				target = Vector3(shelf_face_x, 0.0, clampf(at.z, float(layout.SHELF_START_Z), shelf_end_z))
+				# The arrow stands at the aisle's mouth and points down the aisle between the units.
+				var aisle_x: float = (float(layout.SHELF_UNITS[0].x) + float(layout.SHELF_UNITS[1].x)) * 0.5
+				target = Vector3(aisle_x, 0.0, shelf_end_z)
 			elif caption == "PORTÓN":
 				# Anywhere through the opening, half a metre clear of the jambs.
 				var half_door: float = float(layout.DOOR_WIDTH) * 0.5 - 0.5

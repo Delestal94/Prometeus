@@ -31,6 +31,7 @@ const HORIZON_DEPTH: float = -6.0  # sinks the bases behind the forest ridge
 const HORIZON_HAZE: float = 0.5
 const CLOUD_WHITE := Color(0.95, 0.96, 0.93)
 const CLOUD_HAZE: float = 0.08
+const CLOUD_SHADE_DARKEN: float = 0.14
 const FALLBACK_FOG := Color(0.43, 0.55, 0.49)
 
 var horizon: Node3D
@@ -79,6 +80,7 @@ func _ready() -> void:
 	add_child(horizon)
 	_install_sky(environment, fog)
 	mood.apply_sky(sky_material, fog)
+	_neutral_cloud_shade()
 	# After the sky, whose horizon the mountains' foot fades into.
 	var sky_haze: Color = sky_material.get_shader_parameter(&"sky_horizon_color") if sky_material != null else fog
 	_tint(horizon, fog, mood.horizon_haze(HORIZON_HAZE), mood.horizon_light(), sky_haze)
@@ -220,6 +222,16 @@ func _inside_vehicle(camera: Node) -> bool:
 func _world_environment() -> WorldEnvironment:
 	var found: Array[Node] = get_tree().root.find_children("*", "WorldEnvironment", true, false)
 	return found[0] as WorldEnvironment if not found.is_empty() else null
+
+
+## The clouds' shade is the cloud colour pulled toward the sky's top, and under the level's
+## green fog that made a dirty grey-green stain in the sky (door_closed, cloudy days): a plain
+## darker shade of the cloud's own colour reads as a cloud.
+func _neutral_cloud_shade() -> void:
+	if sky_material == null:
+		return
+	var cloud: Color = sky_material.get_shader_parameter(&"cloud_color")
+	sky_material.set_shader_parameter(&"cloud_shade_color", cloud.darkened(CLOUD_SHADE_DARKEN))
 
 
 func _sun() -> DirectionalLight3D:

@@ -21,12 +21,12 @@ extends RefCounted
 
 const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 
-const WARM := Color("fff4e4")
+const WARM := Color("ffe6c8")
 const WARM_DEEP := Color("ffe2b4")
 const NEUTRAL := Color("f0f2f2")
 ## The lamps' floor pools.
 const POOL_RADIUS: float = 2.7
-const POOL_COLOUR := Color(1.0, 0.9, 0.72, 0.18)
+const POOL_COLOUR := Color(1.0, 0.863, 0.69, 0.22)
 ## Skylights (centres, x by z) and the daylight that falls through them.
 const SKYLIGHT_XS: Array[float] = [-7.5, 7.5]
 const SKYLIGHT_ZS: Array[float] = [5.0, 16.0, 27.0]
@@ -41,6 +41,13 @@ const SHAFT_PEAK: Array[float] = [0.25, 0.12, 0.06, 0.09]
 ## A shaft is four faces and you often see two of them one behind the other (additive): each
 ## face carries this share of the peak, so the shaft as a whole reads at the peak.
 const SHAFT_FACE_SHARE: float = 0.5
+## Daylight is the only cool light in the hall: the shafts and their patches on the floor.
+const DAYLIGHT_TINT := Color("d6e6ef")
+## Dust in the shafts: per shaft, size (m), colour and brightest alpha.
+const DUST_PER_SHAFT: int = 10
+const DUST_SIZE: float = 0.025
+const DUST_COLOUR := Color("fff4e0")
+const DUST_ALPHA: float = 0.35
 const SHAFT_TIME: Array[float] = [1.0, 0.7, 0.0]
 ## A shaft is at its strongest this far down from the skylight (share of the drop) and
 ## fades to nothing from there to the floor; it is also faint where it leaves the roof.
@@ -121,7 +128,7 @@ static func build_pools(kit: DepotKit, sun: DirectionalLight3D) -> void:
 			if not Layout.MEZZANINE.grow(0.6).has_point(Vector2(x, z)):
 				kit.floor_quad(Vector2.ONE * POOL_RADIUS * 2.0, Vector3(x, Layout.FLOOR_TOP + 0.02, z), pool)
 	var daylight: Dictionary = sunlight(sun)
-	var tint: Color = daylight.tint
+	var tint: Color = DAYLIGHT_TINT
 	var patch := DepotKit.light_pool(Color(tint.r, tint.g, tint.b, shaft_peak() * PATCH_SHARE))
 	var slant: Vector3 = daylight.slant
 	for x: float in SKYLIGHT_XS:
@@ -185,7 +192,7 @@ static func glass_look() -> Dictionary:
 ## weather and hour (shaft_peak), none at night.
 static func build_shafts(root: Node3D, sun: DirectionalLight3D) -> MeshInstance3D:
 	var daylight: Dictionary = sunlight(sun)
-	var tint: Color = daylight.tint
+	var tint: Color = DAYLIGHT_TINT
 	var slant: Vector3 = daylight.slant
 	var peak: float = shaft_peak()
 	var tool := SurfaceTool.new()
@@ -253,3 +260,45 @@ static func _across_texture() -> ImageTexture:
 		for y: int in range(2):
 			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha))
 	return ImageTexture.create_from_image(image)
+
+
+## Motes of dust drifting inside each skylight's shaft (and nowhere else): ten per shaft, a couple
+## of centimetres across, slow, additive; their brightness follows the shaft's (shaft_peak: none at
+## night, so none are built then) and the Low quality level has none. Static: no per-frame script.
+static func build_dust(root: Node3D, sun: DirectionalLight3D) -> void:
+	var peak: float = shaft_peak()
+	if peak <= 0.0 or WorldQuality.level == WorldQuality.Level.LOW:
+		return
+	var slant: Vector3 = sunlight(sun).slant
+	var mote := QuadMesh.new()
+	mote.size = Vector2(DUST_SIZE, DUST_SIZE)
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.disable_fog = true
+	material.albedo_color = Color(DUST_COLOUR, DUST_ALPHA * clampf(peak / SHAFT_PEAK[0], 0.2, 1.0))
+	mote.material = material
+	var half := SKYLIGHT_SIZE * 0.5
+	var index: int = 0
+	for x: float in SKYLIGHT_XS:
+		for z: float in SKYLIGHT_ZS:
+			var dust := CPUParticles3D.new()
+			dust.name = "ShaftDust%d" % index
+			index += 1
+			dust.amount = DUST_PER_SHAFT
+			dust.lifetime = 8.0
+			dust.preprocess = 8.0
+			dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+			dust.emission_box_extents = Vector3(half.x + 0.2, 1.6, half.y)
+			# Mid-height of the fall, carried along the slant to where the shaft is at that height.
+			dust.position = Vector3(x, 4.3, z) + slant * 0.45
+			dust.direction = Vector3.UP
+			dust.spread = 180.0
+			dust.gravity = Vector3.ZERO
+			dust.initial_velocity_min = 0.03
+			dust.initial_velocity_max = 0.08
+			dust.mesh = mote
+			dust.local_coords = true
+			root.add_child(dust)

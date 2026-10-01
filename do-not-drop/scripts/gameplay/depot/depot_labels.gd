@@ -24,6 +24,10 @@ const ICON_HANDS: int = 8
 const ICON_NO_SMOKING: int = 9
 const ICON_ELECTRIC: int = 10
 const ICON_EVACUATION: int = 11
+const ICON_WRENCH: int = 12
+const ICON_BOX: int = 13
+const ICON_HANGER: int = 14
+const ICON_PHONE: int = 15
 ## The zone-coloured tab's share of a hanging sign's width.
 const TAB_SHARE: float = 0.25
 
@@ -137,7 +141,7 @@ static func hanging_sign(parent: Node, kit: DepotKit, caption: String, at: Vecto
 	var body_centre: float = tab * 0.5
 	var tab_at: Vector3 = at + basis * Vector3(-width * 0.5 + tab * 0.5, 0.0, 0.0)
 	kit.box_xf(Vector3(width, height, 0.06), Transform3D(basis, at), DepotKit.flat(Layout.INK, 0.7))
-	kit.box_xf(Vector3(tab, height, 0.07), Transform3D(basis, tab_at), DepotKit.flat(colour, 0.65))
+	kit.box_xf(Vector3(tab, height, 0.07), Transform3D(basis, tab_at), DepotKit.unlit(colour))
 	kit.box_xf(Vector3(width + 0.08, 0.05, 0.08), Transform3D(basis, at + Vector3(0.0, height * 0.5 + 0.025, 0.0)),
 			DepotKit.flat(Color("3b4c53"), 0.5, 0.4))
 	# The pictogram in the tab, on both faces (ink on the light tabs, paper on the dark ones).
