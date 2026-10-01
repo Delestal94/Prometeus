@@ -10,7 +10,7 @@
 ## QA — bugs abiertos
 
 
-### S-908 · Nodos huérfanos de `package_salvage.gd` al liberar el nivel (heredada de Slatex) — B · `Opus 5.5 · medium` · Aviso: sí (`scripts/gameplay/package/package_salvage.gd`)
+### S-908 · Nodos huérfanos de `package_salvage.gd` al liberar el nivel (heredada de Slatex) — B · `Opus 5.5 · medium` · Aviso: sí (`scripts/gameplay/package/package_salvage.gd`) · **[x] rama `nacho/S-908-salvage-orphans`**
 Origen: QA 2026-10-01. Escenario: instanciar `level_endless.tscn`, `start_debug_delivery`, `reset_run` y
 `level.free()`, repetido; `Node.print_orphan_nodes`. Cada nivel liberado deja ~50 huérfanos (`Stray Node:
 RepairTape (MeshInstance3D)` y `Stray Node: ReplacementHen (Node3D)` con sus mallas hijas; 63 reinicios → 3150).
@@ -20,10 +20,17 @@ mismo frame) esos nodos nunca tienen padre y nadie los libera. Arreglo sugerido:
 `NOTIFICATION_PREDELETE` si no tienen padre, o crearlos sin dejarlos sueltos. Hecho cuando el escenario de QA pasa
 sin el error y hay un test que lo fija: instanciar un nivel con paquetes, liberarlo y afirmar que
 `Performance.OBJECT_ORPHAN_NODE_COUNT` vuelve al valor inicial.
-- [ ] **S-908.1** Confirmar la causa y arreglar `package_salvage.gd`. Con `cazador-bugs` (confirmar) y
-  `constructor-jugador`; tests `package`, `salvage`.
-- [ ] **S-908.2** Test de huérfanos (conteo inicial = final tras liberar el nivel con paquetes, también liberando en el
-  mismo frame). Con `escritor-tests`; tests `package`.
+- [x] ~~**S-908.1** Confirmar la causa y arreglar `package_salvage.gd`. Con `cazador-bugs` (confirmar) y
+  `constructor-jugador`; tests `package`, `salvage`.~~
+- [x] ~~**S-908.2** Test de huérfanos (conteo inicial = final tras liberar el nivel con paquetes, también liberando en el
+  mismo frame). Con `escritor-tests`; tests `package`.~~
+  **[x] Hecho (2026-10-01, rama `nacho/S-908-salvage-orphans`)** — causa confirmada: `package.gd:207-209` crea el
+  `PackageSalvage` y su `_ready()` (`package_salvage.gd:35` y `:62`) cuelga cinta y gallina con `call_deferred`; si el
+  paquete se libera antes, quedan 5 nodos sin padre por paquete. El diferido pasa a ser un método propio
+  (`_attach_meshes`, muere con el salvage) y `_notification(NOTIFICATION_PREDELETE)` libera los que sigan sin padre. `_build_point` no tenía el problema (agrega sincrónico). Test
+  `test_package_salvage_orphans` (paquete liberado en su primer frame, después del diferido y diez a la vez; sin el
+  arreglo da 5 huérfanos; además exige cero errores del motor con un `Logger`). Aviso
+  `docs/avisos/2026-10-01-salvage-orphans.md`.
 
 ### N-238 · `request_gear_shift` sin `RpcGuard` y un test que se deja engañar por comentarios — A · `Opus 5.5 · xhigh` · Aviso: no · **[x] rama `nacho/N-238-gear-shift-guard`**
 Origen: auditoría integral 2026-10-01, A-D.1 (P1). `request_gear_shift` en
