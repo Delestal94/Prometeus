@@ -309,13 +309,14 @@ static func make_scanner_beep() -> AudioStreamWAV:
 ## words -- one "syllable" per vowel group of the phrase, a buzzing voice
 ## through a mouth that jumps between vowels (the same formant trick as
 ## dog_bark()). The voice's base pitch is the player's colour slot
-## (the index the game gives each player, wrapped to these five), so with eyes on the road
+## (the index the game gives each player, wrapped to these eight), so with eyes on the road
 ## the driver can still tell who is calling. Deterministic: slot and
 ## syllable count pick the vowels, so every client hears the same call.
 
 ## One base pitch (Hz) per player colour slot, low to high: far enough
-## apart (~20 %) that two crewmates never sound alike.
-const CALLOUT_VOICE_PITCHES: Array[float] = [150.0, 180.0, 215.0, 260.0, 310.0]
+## apart (~20 %) that two crewmates never sound alike. One per seat of a full
+## room (N-228.3); the first five are unchanged, 5..7 keep climbing by ~20 %.
+const CALLOUT_VOICE_PITCHES: Array[float] = [150.0, 180.0, 215.0, 260.0, 310.0, 370.0, 440.0, 520.0]
 const CALLOUT_MAX_SYLLABLES: int = 5
 const CALLOUT_SYLLABLE_SECONDS: float = 0.12
 const CALLOUT_VOICE_STREAM_LOUDEST_DB: float = -12.0

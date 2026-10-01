@@ -35,14 +35,14 @@ const BOB_AMPLITUDE: float = 0.008
 const BOB_FREQUENCY: float = 3.2
 const BOB_SMOOTH_SPEED: float = 3.0
 
-## One color per player so teammates can be told apart at a glance -- there's
-## no cosmetics system yet (docs/plan-desarrollo.md Fase 5), so this is the
-## cheapest thing that actually solves "who is that". Same palette family as
-## the rest of the UI (docs/direccion-visual.md), picked by the colour slot
-## the host gave the player (PlayerColorSlot, N-226): stable for the session,
-## and with more than five aboard slots 5..7 wear the colours of 0..2 (N-228.2).
+## One color per seat of a full room (NetworkManager.MAX_PLAYERS, N-228.3), picked by the
+## colour slot the host gave the player (PlayerColorSlot, N-226): stable for the session.
+## Slots 0..4 keep their order (saves index by it); 5..7 (off-white, cobalt, teal) differ
+## in lightness too, so they survive deuteranopia/protanopia. Names: CrewProgression,
+## voices: SynthAudioScenes.CALLOUT_VOICE_PITCHES; grow all three together.
 const PLAYER_COLORS: Array[Color] = [
 	Color("83e2ba"), Color("f4c562"), Color("f47e6d"), Color("6db3d6"), Color("c9a0e0"),
+	Color("e8eaf0"), Color("5f7fd0"), Color("4f9a8f"),
 ]
 
 @onready var _head: Node3D = $Head

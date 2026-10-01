@@ -43,11 +43,13 @@ const MAX_PLAYERS: int = 8
 ## ("departed"), a full room takes back a player whose ghost still holds its
 ## place (decided from its ready reply on LAN), a LAN identity is a hash chain
 ## (each rejoin claims the link before), and _report_level_ready only counts a
-## report the host owes, N-221 follow-ups).
+## report the host owes, N-221 follow-ups;
+## 21: the player spawn data may carry vehicle_position, where a mid-run joiner
+## appears in the truck's own space, N-228.7).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 20
+const PROTOCOL_VERSION: int = 21
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -153,7 +155,7 @@ func _ready() -> void:
 ## A peer who left keeps the last one it wore (_departed_slots). Outside a
 ## session, or for a peer the host hasn't announced yet, it is
 ## posmod(peer_id, MAX_PLAYERS); PlayerColorSlot pins the host to 0 either way. Readers wrap it to their own
-## palette size: posmod(color_slot(id), palette.size()).
+## palette size (Player.PLAYER_COLORS has MAX_PLAYERS colours): posmod(color_slot(id), palette.size()).
 func color_slot(peer_id: int) -> int:
 	if not _color_slots.has(peer_id) and _departed_slots.has(peer_id):
 		return int(_departed_slots[peer_id])

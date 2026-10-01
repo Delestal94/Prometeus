@@ -34,6 +34,9 @@ func _free_prompt() -> String:
 	return tr("HUD_PROMPT_SIT_BY_CARGO") if not tend_mount_paths.is_empty() else tr("HUD_PROMPT_SIT")
 
 
+## `player` may be a stand-in rather than a Player: LateJoinSeating asks
+## before the newcomer exists, passing a node that answers only "carries
+## nothing" (get(&"carried_package") is null). Read nothing else off it.
 func _can_board(player: Node) -> bool:
 	var carried: Node = player.get(&"carried_package")
 	if role == &"driver":
@@ -131,6 +134,36 @@ func seated_peer() -> int:
 func owns_mount(mount: Node) -> bool:
 	return role != &"driver" and mount != null and not required_mount_path.is_empty() \
 			and get_node_or_null(required_mount_path) == mount
+
+
+## Host: how many boxes this seat would look after that nobody minds yet (no
+## tender), in its own mount and in the bay column it faces. A newcomer who
+## joins mid-run is sat where the most are (late_join_seating.gd).
+func unminded_cargo() -> int:
+	if role == &"driver":
+		return 0
+	var paths: Array[NodePath] = []
+	paths.append_array(tend_mount_paths)
+	if not required_mount_path.is_empty():
+		paths.append(required_mount_path)
+	var count: int = 0
+	for path: NodePath in paths:
+		var mount: Node = get_node_or_null(path)
+		var box: Variant = mount.get(&"occupied_by") if mount != null else null
+		if is_instance_valid(box) and int((box as Object).get(&"tender_peer_id")) == 0:
+			count += 1
+	return count
+
+
+## Host: whether sitting here would take a box off someone who is already
+## minding it: this seat owns a mount whose box has a tender, and the owner
+## takes charge of its box when it sits down (seat_tending.gd claim()).
+func would_displace() -> bool:
+	if role == &"driver" or required_mount_path.is_empty():
+		return false
+	var mount: Node = get_node_or_null(required_mount_path)
+	var box: Variant = mount.get(&"occupied_by") if mount != null else null
+	return is_instance_valid(box) and int((box as Object).get(&"tender_peer_id")) > 0
 
 
 ## Whether this seat looks after the box in `mount`, its own or by the column.
