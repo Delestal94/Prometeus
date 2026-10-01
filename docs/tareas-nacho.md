@@ -622,6 +622,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
 - [ ] **N-224.4** El resto por conteo (`grep -c` de los patrones de `PATTERNS` en `scripts/`), un archivo por PR. Sumar
   cada archivo a `BUDGETS` del test. Siguientes: `package_rescue.gd` (31), `player_cargo_care.gd` (24),
   `trailer_shot.gd` (24), `mud_segment.gd` (22).
+  - [x] `trailer_shot.gd` (2026-10-01, rama `nacho/N-224-trailer-shot-typed`): la herramienta del tráiler y de las
+    capturas de tienda. El nivel, la ruta, el camión y el anclaje de carga por `preload` (`level_base.gd`, `route.gd`,
+    `vehicle.gd`, `package_mount_point.gd`: sin `class_name`), `NetworkManager` por la constante `NETWORK_MANAGER`, y
+    la cámara (`TrailerCamera`), el tramo (`RouteSegment`, `RailCrossingSegment`), el cruce de ciervos
+    (`WildlifeCrossing`), la casa (`DeliveryHouse`), el jugador (`Player`) y las cajas (`DeliveryPackage`) por clase.
+    En el archivo: 24 → 1 uso (`.call` 12 → 0, `.get(&` 11 → 0, `/root/` 1 → 1; también `.set(&` 6 → 0); en
+    `scripts/`: `.call` 272 → 260, `.get(&` 273 → 262. `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
+    `test_trailer_shots.gd` y `render_store_shots.gd` cargan `trailer_shot.gd` con `load()` en vez de `preload`: el
+    nivel, el camión y el jugador nombran autoloads que un `--script` todavía no tiene al compilar. Sin aviso
+    (`scripts/tools/` y `tests/` no son de nadie). Siguientes: `mud_segment.gd` (22), `player.gd` (21),
+    `package_feedback.gd` (21).
   - [x] `package.gd` (2026-10-01, rama `nacho/N-224-package-typed`): trampas como `TrapDefinition`/`ITrapBehavior`
     (sin `has_method`), el que agarra como `Player`, red como `NetSession`; las búsquedas de autoloads en
     `package_autoloads.gd` (nuevo, `PackageAutoloads`), porque el archivo estaba en 1000 líneas (queda en 995).

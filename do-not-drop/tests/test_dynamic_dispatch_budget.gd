@@ -27,6 +27,10 @@ extends SceneTree
 ##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would
 ##   give null and the care card would lose the HUD scale, the interact key's
 ##   name and the gamepad check (it would size and label itself as if on keyboard).
+## - trailer_shot.gd (the trailer and store-capture tool) sets the shot's seed
+##   through its NETWORK_MANAGER handle: if that stopped being the script the
+##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
+##   store stills) would set up.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -48,6 +52,11 @@ const BUDGETS: Dictionary = {
 	# are the null-safe autoload accessors (NetworkManager, CrewProgression,
 	# UnlockManager, RunManager, EventBus).
 	"res://scripts/gameplay/depot/depot.gd": {"call": 1, "callv": 0, "get": 1, "root": 5},
+	# The trailer tool (N-902) drives the real level: level_base.gd, route.gd,
+	# vehicle.gd and package_mount_point.gd by preload (no class name), the
+	# camera, segments, deer crossing, house, player and boxes by class. The one
+	# /root/ lookup is the NetworkManager handle (NETWORK_MANAGER, below).
+	"res://scripts/tools/trailer_shot.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 	# Three .call left, one .get and one /root/ (N-225.4 moved the rest to the files below). Two .call go to
 	# the truck, found through the "vehicle" group: needs_sweep and carries. vehicle.gd has no class name,
 	# and tests put plain Node fakes with those methods in the group (`as` a typed vehicle would drop them).
@@ -127,6 +136,9 @@ const SCRIPT_HANDLES: Dictionary = {
 		"RUN_MANAGER": "/root/RunManager",
 		"CREW_PROGRESSION": "/root/CrewProgression",
 		"UNLOCK_MANAGER": "/root/UnlockManager",
+	},
+	"res://scripts/tools/trailer_shot.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 	"res://scripts/gameplay/player/player_cargo_care.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",

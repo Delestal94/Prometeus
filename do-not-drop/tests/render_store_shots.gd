@@ -18,10 +18,10 @@ extends SceneTree
 
 const OUTPUT_SIZE := Vector2i(1920, 1080)
 const OUTPUT_DIR := "user://store_shots"
-const ShotScript = preload("res://scripts/tools/trailer_shot.gd")
-## Loaded when the shots run, not preloaded: the headless metadata test
-## preloads this script before the autoloads exist, and the player's and the
-## box's scripts name them.
+const SHOT_PATH: String = "res://scripts/tools/trailer_shot.gd"
+## These, and SHOT_PATH, are loaded when the shots run, not preloaded: the
+## headless metadata test preloads this script before the autoloads exist, and
+## the player's, the box's and trailer_shot.gd's dependencies name them.
 const PACKAGE_SCENE_PATH: String = "res://scenes/gameplay/package/package.tscn"
 const PLAYER_SCENE_PATH: String = "res://scenes/gameplay/player/player.tscn"
 const TRAPS_DIR: String = "res://data/traps/"
@@ -337,10 +337,11 @@ func _hide_floating_labels() -> void:
 
 
 func _new_runner(shot_name: StringName, cargo_count: int) -> Node:
-	var definitions: Dictionary = ShotScript.load_shots()
+	var shot_script: GDScript = load(SHOT_PATH)
+	var definitions: Dictionary = shot_script.load_shots()
 	var definition: Dictionary = (definitions[String(shot_name)] as Dictionary).duplicate(true)
 	definition["cargo"] = cargo_count
-	_runner = ShotScript.new()
+	_runner = shot_script.new()
 	_runner.set(&"autoplay", false)
 	root.add_child(_runner)
 	await _runner.call(&"setup", definition)
