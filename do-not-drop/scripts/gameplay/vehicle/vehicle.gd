@@ -144,6 +144,24 @@ var _parked: bool = false
 const PARK_SPEED_KMH: float = 3.0
 ## Suspension attach points as authored; see _pose_frozen_wheels().
 var _wheel_mounts: Dictionary = {}
+## Each wheel's height in the truck's space (front left, front right, rear
+## left, rear right), replicated instead of the four wheel transforms
+## (N-228.5: 20 bytes a send, not 208). A client draws its wheels from it,
+## `steering` and the speed (_pose_remote_wheels).
+var net_wheel_heights: Vector4:
+	get:
+		var heights := Vector4.ZERO
+		for index: int in mini(_wheels.size(), 4):
+			heights[index] = _wheels[index].position.y
+		return heights
+	set(value):
+		_net_wheel_heights = value
+var _wheels: Array[VehicleWheel3D] = []
+var _net_wheel_heights := Vector4.ONE * (TIRE_RADIUS - RIDE_HEIGHT)
+var _wheel_spin := PackedFloat32Array()
+## A wheel's own axes as VehicleBody3D sets them (vehicle_body_3d.cpp
+## _update_wheel): the axle, up, and up x axle -- a mirrored basis.
+const WHEEL_AXES: Basis = Basis(Vector3.RIGHT, Vector3.UP, Vector3.FORWARD)
 
 ## Ramp hysteresis, in km/h: out below the first, stowed above the second.
 const RAMP_DEPLOY_SPEED: float = 2.0
@@ -210,6 +228,8 @@ func _ready() -> void:
 	for wheel: Node in get_children():
 		if wheel is VehicleWheel3D:
 			_wheel_mounts[wheel] = (wheel as VehicleWheel3D).position
+			_wheels.append(wheel as VehicleWheel3D)
+	_wheel_spin.resize(_wheels.size())
 	var reference_truck := preload("res://scripts/presentation/reference_truck.gd").new()
 	reference_truck.name = "ReferenceTruck"
 	add_child(reference_truck)
@@ -585,13 +605,33 @@ func _commit_net_pose() -> void:
 		transform = pose
 
 
-## A client draws the host's truck every frame from the smoother (N-208).
-func _process(_delta: float) -> void:
-	if is_multiplayer_authority() or _net_smoother.is_empty():
+## A client draws the host's truck every frame from the smoother (N-208),
+## and its wheels.
+func _process(delta: float) -> void:
+	if is_multiplayer_authority():
 		return
-	var pose: Transform3D = _net_smoother.sample(Time.get_ticks_usec() / 1000000.0)
-	if pose != Transform3D.IDENTITY:
-		transform = pose
+	if not _net_smoother.is_empty():
+		var pose: Transform3D = _net_smoother.sample(Time.get_ticks_usec() / 1000000.0)
+		if pose != Transform3D.IDENTITY:
+			transform = pose
+	_pose_remote_wheels(delta)
+
+
+## A client's truck is frozen, so physics never moves its wheels: they are put
+## where the host's are, from what it sends -- each one's height
+## (net_wheel_heights), `steering` on the front pair, and the speed, which
+## spins them as VehicleBody3D does (distance along the wheel's heading over
+## its radius). Steer about up, then spin about the axle, then WHEEL_AXES.
+func _pose_remote_wheels(delta: float) -> void:
+	for index: int in range(_wheels.size()):
+		var wheel: VehicleWheel3D = _wheels[index]
+		var mount: Vector3 = _wheel_mounts[wheel]
+		var steer := Basis(Vector3.UP, steering if wheel.use_as_steering else 0.0)
+		var rolled: float = linear_velocity.dot(global_basis * (steer * Vector3.BACK)) * delta / wheel.wheel_radius
+		_wheel_spin[index] = fposmod(_wheel_spin[index] + rolled, TAU)
+		var height: float = _net_wheel_heights[index] if index < 4 else mount.y
+		wheel.transform = Transform3D(steer * Basis(Vector3.RIGHT, _wheel_spin[index]) * WHEEL_AXES,
+				Vector3(mount.x, height, mount.z))
 
 
 func _physics_process(delta: float) -> void:

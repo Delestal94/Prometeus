@@ -1,6 +1,6 @@
 # Aviso: N-221, seguimiento de la auditoría de red de #125 (2026-10-01)
 
-Rama `nacho/N-221-followups`. **Cambia el protocolo**: `NetworkManager.PROTOCOL_VERSION` pasa de 18 a 19
+Rama `nacho/N-221-followups`. **Cambia el protocolo**: `NetworkManager.PROTOCOL_VERSION` pasa de 19 a 20
 (el handshake y `_sync_color_slots` llevan los slots de los que se fueron; con la sala llena la admisión se
 decide con la respuesta "listo"; `_report_level_ready` solo cuenta un reporte que el host debe; en LAN la
 identidad de la respuesta "listo" es un eslabón de una cadena de hashes). Un cliente viejo con un host nuevo
@@ -57,7 +57,7 @@ constantes; `_sync_color_slots` suma un segundo argumento opcional.
 `CoopVote.request_vote` chequea `name_ok(offer_id)`.
 
 **Juego, zona compartida:**
-- `network_manager.gd`: `PROTOCOL_VERSION` 19 (línea `## 19:` en el historial; el 17 y el 18 los tomaron N-228.4, #139, y N-228.8, #142). `_session_state()` suma
+- `network_manager.gd`: `PROTOCOL_VERSION` 20 (línea `## 20:` en el historial; el 17, el 18 y el 19 los tomaron N-228.4, #139, N-228.8, #142, y N-228.5, #144). `_session_state()` suma
   `"departed"` y `_sync_color_slots(slots, departed = {})` también: el que entra tarde ve el mismo color que los
   demás para los que se fueron antes. `_apply_departed_slots()`; `ColorSlots.is_valid_departed()`. La reserva
   de slot que tomó un joiner que no llegó a entrar, o que resultó ser otro que volvía a su propio slot, vuelve a
