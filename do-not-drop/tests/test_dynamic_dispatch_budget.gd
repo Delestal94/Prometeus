@@ -88,6 +88,11 @@ const BUDGETS: Dictionary = {
 	# finds the node). The two /root/ lookups are the null-safe GameSettings and
 	# UnlockManager accessors.
 	"res://scripts/gameplay/player/player_cargo_care.gd": {"call": 1, "callv": 0, "get": 4, "root": 2},
+	# Nothing by name: the box (DeliveryPackage), the players (Player) and the
+	# seats (CargoSeatPoint, seat_point.gd's class name) are typed. Group members
+	# of another type (a test's stand-ins) are skipped with `as`, not called.
+	# The RPC to the player stays rpc_id by name, like every RPC.
+	"res://scripts/gameplay/interaction/seat_tending.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

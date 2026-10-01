@@ -648,6 +648,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 286 → 273, `/root/` 124 → 120. `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
     Aviso `docs/avisos/2026-10-01-n224-cargo-care-tipado.md`.
     Siguientes: `trailer_shot.gd` (24), `mud_segment.gd` (22).
+  - [x] `seat_tending.gd` (2026-10-01, rama `nacho/N-224-seat-tending-typed`): el que más tenía tras N-228 (32 usos
+    por nombre). La caja como `DeliveryPackage`, el jugador como `Player` y el asiento como `CargoSeatPoint`
+    (`class_name` nuevo en `seat_point.gd`; el `SeatPoint` del módulo no tiene `seated_peer`/`owns_mount`/
+    `looks_at_mount`); `has_method(&"tend_package")` pasa a `is Player`. Quedan por nombre los anclajes (sin
+    `class_name`) y el RPC `tend_package`. En el archivo: `.call` 14 → 0, `.get(&` 18 → 0; en `scripts/`: `.call`
+    276 → 261, `.get(&` 286 → 267. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
+    `docs/avisos/2026-10-01-n224-seat-tending-tipado.md`. Siguientes: `trailer_shot.gd` (24), `mud_segment.gd` (22),
+    `player.gd` (21), `package_feedback.gd` (21).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
