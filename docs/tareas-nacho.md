@@ -10,7 +10,7 @@
 ## QA — bugs abiertos
 
 
-### N-238 · `request_gear_shift` sin `RpcGuard` y un test que se deja engañar por comentarios — A · `Opus 5.5 · xhigh` · Aviso: no
+### N-238 · `request_gear_shift` sin `RpcGuard` y un test que se deja engañar por comentarios — A · `Opus 5.5 · xhigh` · Aviso: no · **[x] rama `nacho/N-238-gear-shift-guard`**
 Origen: auditoría integral 2026-10-01, A-D.1 (P1). `request_gear_shift` en
 `do-not-drop/scripts/gameplay/vehicle/vehicle.gd:558-568` no llama `RpcGuard.allow_request(self)`: solo
 tiene un comentario TODO. `tests/test_rpc_guard.gd` busca el token como texto con los comentarios incluidos,
@@ -20,11 +20,19 @@ antes de buscar el token y tiene un caso negativo (token solo en un comentario =
 de versión dice la verdad. Si el cambio no toca firmas RPC no hace falta subir `PROTOCOL_VERSION` (solo se
 agrega una llamada interna; subirla solo si cambia alguna firma o el orden de los RPC). Dominio: nacho
 (`vehicle.gd`) y libre (`tests/`).
-- [ ] **N-238.1** Sumar `RpcGuard.allow_request(self)` a `request_gear_shift` y corregir el comentario de
-  `vehicle.gd:557`. Con `constructor-red`; tests `rpc_guard`, `vehicle`.
-- [ ] **N-238.2** `test_rpc_guard.gd` quita los comentarios `#…` antes de buscar el token y suma el caso
+- [x] ~~**N-238.1** Sumar `RpcGuard.allow_request(self)` a `request_gear_shift` y corregir el comentario de
+  `vehicle.gd:557`. Con `constructor-red`; tests `rpc_guard`, `vehicle`.~~
+- [x] ~~**N-238.2** `test_rpc_guard.gd` quita los comentarios `#…` antes de buscar el token y suma el caso
   negativo (token solo en un comentario). Con `escritor-tests`, y después `auditor-red` sobre todo el diff;
-  tests `rpc_guard`.
+  tests `rpc_guard`.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-238-gear-shift-guard`)** — `request_gear_shift` gasta el presupuesto
+  del que lo manda (`RpcGuard.allow_request`, después de autoridad y dirección; el host conduciendo es llamada
+  local y no gasta) y el comentario dice "Added with N-114" en vez de la versión 12. `test_rpc_guard` corta
+  cada línea en su `#` (salvo dentro de un string) antes de buscar tokens, también en los helpers expandidos,
+  con caso negativo y uno de `"#"` en un string (`_check_comments_ignored`). `PROTOCOL_VERSION` sin cambio
+  (ni firma ni orden). `auditor-red`: sin BUG ni riesgo alto; ningún otro RPC pasaba por un comentario. Riesgos
+  bajos que quedan: el presupuesto es compartido con bocina y demás (un cambio perdido se ve en el HUD y se
+  reintenta; la marcha la replica el host) y los `"""` multilínea no llevan estado de comilla entre líneas.
 
 ### N-239 · ⏸ decide el usuario: CI sin run en los commits del auto-merge — A · `Opus 5.5 · xhigh` · Aviso: no
 Origen: auditoría integral 2026-10-01, A-D.2 (P1). El auto-merge (`dependabot-auto-merge.yml` con
