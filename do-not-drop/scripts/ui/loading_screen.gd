@@ -13,6 +13,7 @@ extends SceneLoader
 ## sunrise, boxes already flying off the roof.
 const ART: Texture2D = preload("res://assets/ui/backgrounds/tx_ui_loading_background_1920.png")
 const LOGO: Texture2D = preload("res://assets/ui/logo/tx_ui_logo_wordmark_2048.png")
+const PackageRuinEffects = preload("res://scripts/gameplay/package/package_ruin_effects.gd")
 const TIPS: Array[String] = [
 	"UI_LOADING_TIP_FRAGILE", "UI_LOADING_TIP_RUN", "UI_LOADING_TIP_EXPLOSIVE",
 	"UI_LOADING_TIP_LIQUID", "UI_LOADING_TIP_NOISY", "UI_LOADING_TIP_HOSTILE",
@@ -86,6 +87,18 @@ static func _collect_models(directory: String, found: PackedStringArray) -> void
 			_collect_models(directory.path_join(entry.trim_suffix("/")), found)
 		elif entry.get_extension() == "glb":
 			found.append(directory.path_join(entry))
+
+
+## Warmed behind the cover with the level's own materials (N-409): each
+## trap's ruin effect, built the moment a box breaks -- the worst moment for
+## a shader-compile hitch. They spawn at `anchor`, in front of the camera.
+func _warm_samples(anchor: Node3D) -> Array[Node]:
+	var spawned: Array[Node] = []
+	for trap_id: StringName in PackageRuinEffects.TRAP_IDS:
+		var effect: Node3D = PackageRuinEffects.spawn(trap_id, anchor, false)
+		if effect != null:
+			spawned.append(effect)
+	return spawned
 
 
 func _start_warm() -> void:

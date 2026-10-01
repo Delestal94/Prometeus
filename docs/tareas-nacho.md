@@ -175,6 +175,24 @@ hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 
   `WARNING:` (más `::warning::` en GitHub Actions) en `tools/run-net-pair.sh` / `run-net-trio.sh`; sigue
   siendo PASS.
 
+### N-409 · Precalentar shaders en la pantalla de carga — B · `Opus 5.5 · high` · Aviso: sí (`loading_screen.gd` de Slatex; `modules/` compartida) · **[x] rama `nacho/N-409-shader-prewarm`**
+
+Pedido del usuario (2026-10-01), pensando en PCs sin placa de video: GL Compatibility compila cada shader la
+primera vez que algo se dibuja con él, bloqueando ese cuadro.
+- [x] `ShaderWarmer` (`modules/scene_loader/shader_warmer.gd`): junta una muestra por forma distinta de dibujar
+  (material y formato de malla, multimesh, partículas, Label3D/Sprite3D; también lo oculto) y la dibuja en
+  miniatura frente a la cámara, unas pocas por cuadro y adaptándose al tiempo de cuadro, detrás de la tapa.
+  `SceneLoader._settle()` la corre antes de los revelados (`prewarm_shaders`); `LoadingScreen._warm_samples()` suma
+  los 7 efectos de caja rota (`PackageRuinEffects.spawn`).
+- [x] Medido (RTX 4060 Ti, `perfilador-rendimiento`): **caché caliente** (del segundo arranque en adelante) el peor
+  cuadro al revelar depósito y ruta baja de 114 a 45 ms (+0,35 s de tapa). **Caché fría** (primer arranque): la
+  rotura de caja Frágil baja de 684 a ~150 ms y Explosiva de 152-163 a 52-64 ms; el revelado total de 17,5 a 6,8 s; pero
+  la tapa dura ~5 s más.
+- [ ] **No resuelto (primer arranque)**: el cuadro del cambio de escena compila cielo, entorno, camión y jugador de
+  una vez (~4,7 s en frío); las luces del depósito y de la ruta piden variantes que la grilla no ve (se compilan al
+  revelarlas); los tirones al empezar a manejar (~400 ms en frío) no cambian. Siguiente paso posible: encender las
+  luces antes de precalentar, y precalentar el cielo/sol/camión en un mundo aparte antes del cambio de escena.
+
 ### N-408 · Una pantalla de carga que no se congela y la regresión del flujo menú → jugable — A · `Opus 5.5 · xhigh` · Aviso: sí (`main_menu.gd`, `hud.gd`, `scripts/ui/` de Slatex; `modules/` y `network_manager.gd` compartidos) · **[x] rama `nacho/N-408-loading-no-freeze`**
 
 Pedido del usuario (2026-10-01): con N-407 la pantalla quedaba congelada 9-12 s en "Armando la ruta…" y el sonido

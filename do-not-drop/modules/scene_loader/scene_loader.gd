@@ -71,6 +71,10 @@ var load_share: float = 0.45
 var build_share: float = 0.4
 ## Off: load() on the main thread (the cover still hides the swap).
 var use_threads: bool = true
+## Before the reveals, draw every material of the new scene once behind the
+## cover (ShaderWarmer), a few per frame, so no first draw compiles shaders
+## in one long frame -- now or later in play.
+var prewarm_shaders: bool = true
 ## Seconds the carried music takes to fade under the new scene.
 var audio_fade_seconds: float = 2.5
 ## Over everything the scenes draw.
@@ -185,6 +189,14 @@ func _start_warm() -> void:
 
 func _warm_done() -> bool:
 	return true
+
+
+## What spawns later in play (effects, streamed pieces), so its materials
+## warm too: return nodes built off-tree, or spawned in the world at
+## `anchor` (a point right in front of the camera, behind the cover). The
+## loader collects them and frees them once warming is over.
+func _warm_samples(_anchor: Node3D) -> Array[Node]:
+	return []
 
 
 ## The game's last word on "ready to show", polled while building (its
@@ -303,6 +315,8 @@ func _follow_redirect(tree: SceneTree) -> void:
 ## has `reveal_steps() -> Array[Callable]` splits its own first draw over
 ## several frames (one callable per frame, the first one shows the node itself).
 func _settle(tree: SceneTree, hidden: Array[Node]) -> void:
+	if prewarm_shaders:
+		await _prewarm(tree, target_progress, lerpf(target_progress, 0.98, 0.6))
 	var from: float = target_progress
 	var reveals: Array[Callable] = []
 	for node: Node in hidden:
@@ -333,6 +347,42 @@ func _settle(tree: SceneTree, hidden: Array[Node]) -> void:
 		frames += 1
 		step = mini(step + 1, steps)
 		target_progress = maxf(target_progress, lerpf(from, 0.98, float(step) / float(steps)))
+
+
+## Draws every material of the new scene (hidden parts included) and of the
+## game's samples once, the bar going from `from` to `to`.
+func _prewarm(tree: SceneTree, from: float, to: float) -> void:
+	var warmer := ShaderWarmer.new()
+	warmer.name = "ShaderWarmer"
+	add_child(warmer)
+	# The game's samples first: they are the ones that free themselves.
+	warmer.global_transform = _anchor_transform()
+	var extras: Array[Node] = _warm_samples(warmer)
+	for sample: Node in extras:
+		warmer.collect(sample)
+	warmer.collect(tree.current_scene)
+	# Not awaited: it runs alongside, and the bar follows it.
+	warmer.warm()
+	while not warmer.done:
+		target_progress = maxf(target_progress, lerpf(from, to, warmer.progress()))
+		await tree.process_frame
+	target_progress = maxf(target_progress, to)
+	warmer.queue_free()
+	for sample: Node in extras:
+		if not is_instance_valid(sample):
+			continue
+		if sample.is_inside_tree():
+			sample.queue_free()
+		else:
+			sample.free()
+
+
+## In front of the active camera, where a spawned sample is drawn.
+func _anchor_transform() -> Transform3D:
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera == null:
+		return Transform3D.IDENTITY
+	return Transform3D(Basis.IDENTITY, camera.global_transform * Vector3(0.0, 0.0, -2.0))
 
 
 func _new_scene_pending(tree: SceneTree, old_scene_id: int) -> bool:
