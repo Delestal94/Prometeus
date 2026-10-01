@@ -34,6 +34,25 @@ func _run() -> void:
 	await process_frame
 	first.is_loaded = true
 	second.is_loaded = true
+	# Real mounts with a seat looking at each: the parasite event only counts a
+	# box some seat can tend (seat_tending.gd), not by the mount's name.
+	var seat_script: GDScript = load("res://scripts/gameplay/interaction/seat_point.gd")
+	for mount_name: String in ["LeftSeat1PackageMount", "RightSeat1PackageMount"]:
+		var mount := Node3D.new()
+		mount.name = mount_name
+		root.add_child(mount)
+		var area := Area3D.new()
+		area.name = "InteractionArea"
+		mount.add_child(area)
+		var seat := Node3D.new()
+		seat.name = mount_name.replace("PackageMount", "EyePoint")
+		root.add_child(seat)
+		var seat_area: Area3D = Area3D.new()
+		seat_area.set_script(seat_script)
+		seat_area.name = "InteractionArea"
+		seat_area.set(&"role", &"passenger")
+		seat_area.set(&"required_mount_path", NodePath("/root/%s/InteractionArea" % mount_name))
+		seat.add_child(seat_area)
 	first.current_mount_path = NodePath("/root/LeftSeat1PackageMount/InteractionArea")
 	second.current_mount_path = NodePath("/root/RightSeat1PackageMount/InteractionArea")
 	bus.houses_assigned.emit([[first.package_id, "First"]])

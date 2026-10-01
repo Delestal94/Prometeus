@@ -272,7 +272,6 @@ script = ExtResource("4_seat")
 role = &"driver"
 seat_camera_path = NodePath("../FirstPersonCamera")
 vehicle_path = NodePath("../../..")
-required_mount_path = NodePath("../../../CargoBay/LeftSeat1PackageMount/InteractionArea")
 required_door = &"cab_left"
 prompt = "Subirse a manejar"
 
@@ -300,8 +299,10 @@ door = &"cab_right"
 shape = SubResource("Shape_cab_door_interact")
 
 ; Seven passenger seats line both walls behind the bulkhead, exactly where
-; the model's seats are (four left, three right). The four rearmost ones
-; tend the boxes in the rack right behind them; the rest are free crew seats.
+; the model's seats are (four left, three right). The first four own a bay
+; of the rack behind them, the right-hand third one owns the floor bay by the
+; right wall and the other two (left third, centre) look after that same bay.
+; The fold-down seats by the rack tend its columns.
 [node name="CargoBay" type="Node3D" parent="."]
 
 [node name="LeftSeat1EyePoint" type="Marker3D" parent="CargoBay"]
@@ -411,7 +412,8 @@ script = ExtResource("4_seat")
 role = &"passenger"
 seat_camera_path = NodePath("../FirstPersonCamera")
 vehicle_path = NodePath("../../..")
-prompt = "Sentarse"
+tend_mount_paths = Array[NodePath]([NodePath("../../RightSeat3PackageMount/InteractionArea")])
+prompt = "Sentarse junto a la carga"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/LeftSeat3EyePoint/InteractionArea"]
 shape = SubResource("Shape_seat_interact")
@@ -435,7 +437,8 @@ script = ExtResource("4_seat")
 role = &"passenger"
 seat_camera_path = NodePath("../FirstPersonCamera")
 vehicle_path = NodePath("../../..")
-prompt = "Sentarse"
+tend_mount_paths = Array[NodePath]([NodePath("../../RightSeat3PackageMount/InteractionArea")])
+prompt = "Sentarse junto a la carga"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/CenterSeatEyePoint/InteractionArea"]
 shape = SubResource("Shape_seat_interact")
@@ -455,7 +458,8 @@ script = ExtResource("4_seat")
 role = &"passenger"
 seat_camera_path = NodePath("../FirstPersonCamera")
 vehicle_path = NodePath("../../..")
-prompt = "Sentarse"
+required_mount_path = NodePath("../../RightSeat3PackageMount/InteractionArea")
+prompt = "Sentarse y cuidar la carga"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat3EyePoint/InteractionArea"]
 shape = SubResource("Shape_seat_interact")
@@ -531,7 +535,9 @@ prompt = "Sentarse junto a la carga"
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RackSeat3EyePoint/InteractionArea"]
 shape = SubResource("Shape_mount_interact")
 
-; Six rack bays: three along the rack, lower and upper tier. Each marker is
+; Seven bays for the crew's seven boxes: six on the rack (three along it,
+; lower and upper tier) and a seventh on the floor against the right wall,
+; between the right seat row and the fold-down seats (see its note below). Each marker is
 ; where a 0.65 m box's centre sits on its deck; vehicle.gd re-seats taller
 ; or flatter boxes so they always rest on the deck, never float or sink.
 [node name="LeftSeat1PackageMount" type="Marker3D" parent="CargoBay"]
@@ -592,6 +598,22 @@ script = ExtResource("5_mount")
 prompt = "HUD_PROMPT_STORE_ON_SHELF"
 
 [node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightShelfPackageMount/InteractionArea"]
+shape = SubResource("Shape_mount_interact")
+
+; Seventh bay (N-228.4): on the floor against the right wall, in the gap
+; between the right seat row (its bench ends at z 1.32) and the fold-down
+; seats. x 0.5 keeps even the 0.95 m flat box off the wall (inner face at
+; 1.0) and z 1.82 clear of the bench; it leaves the aisle left of it open for
+; the cube and tall boxes. A passenger carries this one while seated at
+; RightSeat3; the name keeps "Seat" so the parasite event counts it.
+[node name="RightSeat3PackageMount" type="Marker3D" parent="CargoBay"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0.5, 0.58, 1.82)
+
+[node name="InteractionArea" type="Area3D" parent="CargoBay/RightSeat3PackageMount" groups=["package_mount"]]
+script = ExtResource("5_mount")
+prompt = "HUD_PROMPT_PLACE_PACKAGE"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="CargoBay/RightSeat3PackageMount/InteractionArea"]
 shape = SubResource("Shape_mount_interact")
 
 [node name="RearDoorControl" type="Area3D" parent="CargoBay"]
