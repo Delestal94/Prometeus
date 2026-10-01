@@ -82,7 +82,7 @@ func _on_boarded(player: Node, peer_id: int) -> void:
 			# Boarding with a box keeps it on your lap; "drop" (Q) then shelves
 			# it in this column's free bay (package_rescue.gd's lap toggle).
 			candidates.append(carried)
-			carried.set(&"_lap_mount", _free_bay(carried))
+			SeatTending.bind_lap(carried, _free_bay(carried))
 		else:
 			for path: NodePath in tend_mount_paths:
 				var full_mount: Node = get_node_or_null(path)
@@ -97,7 +97,7 @@ func _on_boarded(player: Node, peer_id: int) -> void:
 			# Boarded with it still in hand: it stays on their lap, and "drop"
 			# (Q) settles it onto this seat's mount (see _can_board() above).
 			package = carried
-			carried.set(&"_lap_mount", mount)
+			SeatTending.bind_lap(carried, mount)
 		if package != null:
 			candidates.append(package)
 	if not player.has_method(&"tend_package"):
@@ -158,23 +158,4 @@ func _free_bay(except: Node = null) -> Node:
 
 ## A box riding on a seated passenger's lap that will be shelved in `mount`.
 func _reserved(mount: Node, except: Node) -> bool:
-	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
-		if package == except or not bool(package.get(&"is_held")) or package.get(&"_lap_mount") != mount:
-			continue
-		var carrier: Variant = package.get(&"carrier")
-		if is_instance_valid(carrier) and _is_seated(carrier as Node):
-			return true
-	return false
-
-
-## Whether `player` sits in a seat. The host knows it from the seats' own
-## `occupant`: the player's replicated seat_node_path lags a sitting down or
-## getting up (and stays empty for a crewmate whose RPC never arrived). A
-## client only has the replicated path, which is enough for its prompts.
-func _is_seated(player: Node) -> bool:
-	if not multiplayer.is_server():
-		return not NodePath(player.get(&"seat_node_path")).is_empty()
-	for seat: Node in get_tree().get_nodes_in_group(SeatTending.SEAT_GROUP):
-		if int(seat.call(&"seated_peer")) > 0 and seat.get(&"occupant") == player:
-			return true
-	return false
+	return SeatTending.lap_reserves(get_tree(), mount, except, multiplayer.is_server())

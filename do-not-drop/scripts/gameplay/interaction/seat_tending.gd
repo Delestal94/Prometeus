@@ -72,25 +72,56 @@ static func hand_over(package: Node, leaving: int) -> void:
 
 ## Host: `package` was just placed in `mount` (package_mount_point.gd's store()).
 ## A tender whose seat does not look at that mount -- someone standing took the
-## box out of their bay and shelved it elsewhere -- stops tending it, and a
-## sitter facing the new mount takes over. The lap toggle and boarding store
-## into a mount the tender looks at, so nothing changes for them. Not done when
-## the box is taken out (take_by), or putting it back in the same mount would
-## lose its tender.
+## box out of their bay and shelved it elsewhere -- stops tending it. Then, with
+## or without a tender before, a sitter facing the mount takes over (a box
+## shelved by someone who just got up from its lap, or by a standing player,
+## would otherwise stay unminded beside a sitter). The lap toggle and boarding
+## store into a mount the tender looks at, so nothing changes for them. Not
+## done when the box is taken out (take_by), or putting it back in the same
+## mount would lose its tender.
 static func on_stored(package: Node, mount: Node) -> void:
+	if not package.is_multiplayer_authority() or not package.is_inside_tree():
+		return
 	var tender: int = int(package.get(&"tender_peer_id"))
-	if tender <= 0 or not package.is_inside_tree():
-		return
 	var tree: SceneTree = package.get_tree()
-	if _seat_of_peer(tree, tender, mount, null) != null:
-		return
-	package.call(&"set_tender", 0)
-	var seat: Node = _seat_of_peer(tree, tender, null, null, true)
-	if seat != null:
-		var displaced: Node = seat.get(&"occupant")
-		if displaced.has_method(&"tend_package"):
-			displaced.rpc_id(tender, &"tend_package", NodePath())
+	if tender > 0:
+		if _seat_of_peer(tree, tender, mount, null) != null:
+			return
+		package.call(&"set_tender", 0)
+		var seat: Node = _seat_of_peer(tree, tender, null, null, true)
+		if seat != null:
+			var displaced: Node = seat.get(&"occupant")
+			if displaced.has_method(&"tend_package"):
+				displaced.rpc_id(tender, &"tend_package", NodePath())
 	hand_over(package, tender)
+
+
+## Whether `player` sits in a seat. The host knows it from the seats' own
+## `occupant`: the player's replicated seat_node_path lags a sitting down or
+## getting up (and stays empty for a crewmate whose RPC never arrived). A
+## client has no occupants, only the replicated path.
+static func is_seated(tree: SceneTree, player: Node, is_server: bool) -> bool:
+	if not is_server:
+		return not NodePath(player.get(&"seat_node_path")).is_empty()
+	for seat: Node in tree.get_nodes_in_group(SEAT_GROUP):
+		if int(seat.call(&"seated_peer")) > 0 and seat.get(&"occupant") == player:
+			return true
+	return false
+
+
+## Whether a box riding on a seated passenger's lap will be shelved in `mount`
+## (`except` is the box about to be shelved there: its own reservation does not
+## count). Works on every peer from replicated state: the box's lap_mount_path,
+## its holder -- `carrier` on the host, otherwise the player whose
+## `carried_package` it is -- and whether that player sits (is_seated()).
+static func lap_reserves(tree: SceneTree, mount: Node, except: Node, is_server: bool) -> bool:
+	for package: Node in tree.get_nodes_in_group(&"cargo"):
+		if package == except or not bool(package.get(&"is_held")) or lap_mount_of(package) != mount:
+			continue
+		var carrier: Node = _holder_of(tree, package)
+		if carrier != null and is_seated(tree, carrier, is_server):
+			return true
+	return false
 
 
 ## The mount the box sits in or, in a seated passenger's lap, the one it goes
@@ -99,8 +130,20 @@ static func mount_of(package: Node) -> Node:
 	var mount: Variant = package.get(&"current_mount")
 	if is_instance_valid(mount):
 		return mount as Node
-	var lap: Variant = package.get(&"_lap_mount")
-	return lap as Node if is_instance_valid(lap) else null
+	return lap_mount_of(package)
+
+
+## The mount a box on a seated tender's lap goes back to, from its replicated
+## lap_mount_path (so on every peer); null when it is on no lap.
+static func lap_mount_of(package: Node) -> Node:
+	var path: NodePath = NodePath(package.get(&"lap_mount_path"))
+	return package.get_node_or_null(path) if not path.is_empty() and package.is_inside_tree() else null
+
+
+## Host: `package` is on its holder's lap, bound for `mount` (null: for none).
+static func bind_lap(package: Node, mount: Node) -> void:
+	var bound: bool = is_instance_valid(mount) and mount.is_inside_tree()
+	package.set(&"lap_mount_path", mount.get_path() if bound else NodePath())
 
 
 ## Whether some seat owns `mount` (`required_mount_path`). The parasite event
@@ -122,6 +165,18 @@ static func _seat_of_peer(tree: SceneTree, peer_id: int, mount: Node, except: No
 		if seat != except and int(seat.call(&"seated_peer")) == peer_id \
 				and (any_mount or seat.call(&"looks_at_mount", mount)):
 			return seat
+	return null
+
+
+## Who holds `package`: `carrier` (host only) or, on a client, the player whose
+## hands it is in (broadcast by the player's pick_up).
+static func _holder_of(tree: SceneTree, package: Node) -> Node:
+	var carrier: Variant = package.get(&"carrier")
+	if is_instance_valid(carrier):
+		return carrier as Node
+	for player: Node in tree.get_nodes_in_group(&"player"):
+		if player.get(&"carried_package") == package:
+			return player
 	return null
 
 
