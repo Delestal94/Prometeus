@@ -359,16 +359,17 @@ distintos y que con seed fijo `completed_runs` 0 vs 1 dan planes distintos.
   `_kick_box`. `test_cargo_animals` (`_test_run_seed`, 40 tramos): solo, dos corridas distintas; en sala, mismo
   seed y corridas → mismos tramos, otra cantidad de corridas → otros.
 
-### N-910 · `cargo_animal_ended` y `cargo_animal_alert` en el mismo frame confunden al cliente — C · `Opus 5.5 · medium` · Aviso: no
+### N-910 · `cargo_animal_ended` y `cargo_animal_alert` en el mismo frame confunden al cliente — C · `Opus 5.5 · medium` · Aviso: no · **[x] rama `nacho/N-910-cargo-animal-same-frame`**
 Origen: mantenimiento 2026-10-01. `cargo_animal_view.gd:102-110` (y 303, 308), solo cliente. El cooldown es 3.5 s y la
 salida del perro 3.0 s (margen 0.5 s); si llegan juntos `ended` y el `alert` siguiente: (a) mismo animal/caja: entra
 a la rama "repetición para recién llegado" con estado LEAVE y no muestra el ataque nuevo; (b) otro perro: `_clear()`
 hace `queue_free` del "Dog" viejo y en el mismo frame se agrega otro "Dog", Godot lo renombra, la ruta de
 `DistractPoint` no coincide con la del host y el cliente no puede tirarle el palo. Hecho cuando un test simula
 `ended` + `alert` en el mismo frame en vista cliente y ve el ataque nuevo con la ruta del `DistractPoint` correcta.
-- [ ] **N-910.1** Exigir `state != State.LEAVE` en la rama de repetición y hacer `remove_child` (o free) del perro
-  viejo antes del `add_child`. Con `constructor-mundo`; tests `cargo_animals`.
-- [ ] **N-910.2** Test del mismo frame (casos a y b). Con `escritor-tests`; tests `cargo_animals`.
+- [x] ~~**N-910.1** Exigir `state != State.LEAVE` en la rama de repetición y hacer `remove_child` (o free) del perro
+  viejo antes del `add_child`. Con `constructor-mundo`; tests `cargo_animals`.~~
+- [x] ~~**N-910.2** Test del mismo frame (casos a y b). Con `escritor-tests`; tests `cargo_animals`.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-910-cargo-animal-same-frame`, `44be81e`)** — la rama de repetición de `_on_alert` saltea `LEAVE`, y un alerta nueva llama `_clear(true)`, que saca del árbol (`remove_child`) las piezas viejas antes del `queue_free` (desde `_exit_tree` sigue sin sacarlas). Test `_test_same_frame` en `test_cargo_animals`: (a) mismo perro y caja → animal nuevo en WARN; (b) otra caja → el perro nuevo se llama `Dog` y `Dog/DistractPoint` es su punto del palo.
 
 ### N-911 · ⏸ decide el usuario: origen y licencia de `mus_ingame_loop.ogg` — C · `Opus 5.5 · low` · Aviso: no
 Origen: mantenimiento 2026-10-01. `do-not-drop/assets/audio/music/mus_ingame_loop.ogg` (la música de cada partida) no

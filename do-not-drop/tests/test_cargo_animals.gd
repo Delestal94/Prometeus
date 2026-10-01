@@ -25,6 +25,8 @@ extends SceneTree
 ## - the harm to the box happens only on the host: a peer that is not the host
 ##   never announces or hurts anything (but draws what the host relays), and
 ##   one that joins late is told again without restarting the animal;
+## - N-910: an end and the next alert in the same frame draw the new animal warning (not
+##   the old one leaving), and the new dog is still named "Dog" (stick point path);
 ## - rhythm: one animal per leg, at most MAX_PER_RUN a run, the pick among
 ##   boxes does not depend on the order of the list, and none is announced
 ##   while the last one is still leaving.
@@ -94,6 +96,7 @@ func _run() -> void:
 	await _test_dog(level, animals, view, vehicle, package, player, bus)
 	await _test_bees(level, animals, view, vehicle, package, bus)
 	await _test_client(level, animals, view, vehicle, package)
+	await _test_same_frame(level, view, vehicle, package)
 	_test_rhythm(level, animals, vehicle)
 	_test_run_seed(animals)
 
@@ -514,6 +517,43 @@ func _test_client(level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 	_expect(_alerts.size() == 1 and _alerts[0][0] == CargoAnimalPlan.GULL and float(_alerts[0][2]) > 0.0,
 		"A peer joining mid-warning is told again, with what is left of it (got %s)" % [_alerts])
 	animals.end_event(&"left", 0, true)
+
+
+## N-910: the director's cooldown (3.5 s) outlasts the dog's exit (3.0 s) by little, so
+## the end of one animal and the alert of the next can reach a client in one frame.
+func _test_same_frame(level: Node, view: Node, vehicle: RigidBody3D, package: Node) -> void:
+	_drive(vehicle, 15.0)
+	var bus: Node = root.get_node(^"/root/EventBus")
+	_tick_view(view, 4.0)
+	await process_frame
+	_expect(view.state == VIEW_NONE, "No animal is out before the same-frame cases")
+	var id: StringName = package.package_id
+	# Same animal, same box: the new alert is a new attack, not a repeat for a late joiner.
+	bus.emit_signal(&"cargo_animal_alert", CargoAnimalPlan.DOG, id, 1.0, 6.0)
+	_tick_view(view, 1.5)
+	_expect(view.state == VIEW_ACT, "The dog is on the box before it ends")
+	var first: Node = view.animal
+	bus.emit_signal(&"cargo_animal_ended", CargoAnimalPlan.DOG, id, &"left", 0)
+	bus.emit_signal(&"cargo_animal_alert", CargoAnimalPlan.DOG, id, 1.0, 6.0)
+	_expect(view.state == VIEW_WARN and view.animal != null and view.animal != first,
+		"An end and the next alert in the same frame draw a new animal warning, not the old one leaving")
+	_expect(view.animal.name == &"Dog", "The new dog keeps its name (got %s)" % view.animal.name)
+	# Another box, same frame: the old "Dog" is gone from the tree at once, so the new one
+	# is "Dog" too and its stick point has the path the host's throw names.
+	_tick_view(view, 1.5)
+	var other: Node = level.packages[1] if level.packages.size() > 1 else package
+	first = view.animal
+	bus.emit_signal(&"cargo_animal_ended", CargoAnimalPlan.DOG, id, &"left", 0)
+	bus.emit_signal(&"cargo_animal_alert", CargoAnimalPlan.DOG, other.package_id, 1.0, 6.0)
+	_expect(view.state == VIEW_WARN and view.animal != first, "The next dog is a new one")
+	_expect(view.animal.name == &"Dog", "The dog of the next alert is named Dog (got %s)" % view.animal.name)
+	_expect(view.dog_point != null and view.get_node_or_null(^"Dog/DistractPoint") == view.dog_point,
+		"Its stick point is where the host finds it: Dog/DistractPoint")
+	# Close it, so the rhythm test starts clean.
+	bus.emit_signal(&"cargo_animal_ended", CargoAnimalPlan.DOG, view.package_id, &"left", 0)
+	_tick_view(view, 4.0)
+	await process_frame
+	_expect(view.state == VIEW_NONE and view.animal == null, "The same-frame dogs are freed once gone")
 
 
 # --- Rhythm --------------------------------------------------------------------
