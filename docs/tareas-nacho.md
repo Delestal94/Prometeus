@@ -50,7 +50,7 @@ HEAD y tratan "sin run" como "no verificado".
   / `pc-build.md`. Con la conversación principal; verificar con `gh run list --commit <sha>` sobre un commit
   de auto-merge.
 
-### N-240 · Intermitente sin nombre en CI: anotar cada falla y cazarlo — A · `Opus 5.5 · high` · Aviso: no
+### N-240 · Intermitente sin nombre en CI: anotar cada falla y cazarlo — A · `Opus 5.5 · high` · Aviso: no · **[x] rama `nacho/N-240-ci-fail-annotation`**
 Origen: auditoría integral 2026-10-01, A-5.1 (P1). `main` quedó rojo en `8a51334` (run 36815889169, shard
 2/4) y el mismo árbol salió verde en #143; el sospechoso es `test_mud_segment`, pero el log no dice cuál
 falló. Hecho cuando `tools/run-tests.sh` emite, con `GITHUB_ACTIONS` definido, una línea
@@ -58,10 +58,19 @@ falló. Hecho cuando `tools/run-tests.sh` emite, con `GITHUB_ACTIONS` definido, 
 test que lo comprueba) y el intermitente identificado por esa anotación tiene causa y arreglo con un test
 que lo reproduce o 50 corridas seguidas en verde. El reintento automático en CI queda fuera (pregunta al
 usuario). Dominio libre (`tools/`, `tests/`).
-- [ ] **N-240.1** Anotación `::error` por falla en `tools/run-tests.sh`. Con la conversación principal;
-  tests `run_tests` (o chequeo con un test de mentira) y `ejecutor-tests`.
-- [ ] **N-240.2** Con el nombre que dé la anotación (primero `mud_segment`), identificar y arreglar el
-  intermitente. Con `cazador-bugs`; tests `mud_segment` repetido.
+- [x] ~~**N-240.1** Anotación `::error` por falla en `tools/run-tests.sh`. Con la conversación principal;
+  tests `run_tests` (o chequeo con un test de mentira) y `ejecutor-tests`.~~
+- [x] ~~**N-240.2** Con el nombre que dé la anotación (primero `mud_segment`), identificar y arreglar el
+  intermitente. Con `cazador-bugs`; tests `mud_segment` repetido.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-240-ci-fail-annotation`)** — con `GITHUB_ACTIONS` definido,
+  `run-tests.sh` emite `::error title=FAIL <test> (<motivo>)::<primera línea ERROR>` por falla (un cuelgue
+  lleva su timeout como motivo; `%` escapado); pase/falla igual. `tools/test-run-tests.sh` lo comprueba con un
+  Godot de mentira (falla, cuelgue, todo verde y sin `GITHUB_ACTIONS`) y CI lo corre en el job de lint. El
+  intermitente no era `mud_segment`: el log del run 36815889169 dice `FAIL test_route_lookup_cache (timeout
+  120s)`, después de terminar las 8 rutas y el streamer. Causa: el test tarda ~105 s (medido acá, solo o con
+  otro test pesado al lado) contra el límite de 120 s de CI y no estaba en `SLOW_TESTS`. Arreglo: va a
+  `SLOW_TESTS` (240 s, arranca primero) y sus dos barridos completos de los puntos del camino se juntan en uno
+  (`_brute_path`), sin bajar la cobertura.
 ### N-227 · El equipo cobra por las cajas que no entrega; el bono de tiempo nunca se paga — A · `Opus 5.5 · high` · Aviso: sí (`run_manager.gd`, zona compartida) · **[x] PR #108**
 Origen: auditoría integral 2026-09-30, A-4.1 (P0, bug). Hoy `payout = cargo_points + time_bonus`
 (`crew_progression.gd:169-171`). `cargo_points` saltea las cajas entregadas en la puerta

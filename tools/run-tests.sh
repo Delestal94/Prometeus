@@ -89,9 +89,11 @@ fi
 # isolation, coverage or parallelism. Refresh this list from the per-test
 # durations printed in CI; names not listed retain their normal discovery order.
 # These also get SLOW_TEST_TIMEOUT: test_route_fuzz takes 80-115 s on a normal
-# CI runner and went past the 120 s limit whenever the runner was slower.
+# CI runner and went past the 120 s limit whenever the runner was slower;
+# test_route_lookup_cache (~105 s) did the same on main in run 36815889169 (N-240).
 SLOW_TESTS=(
 	test_route_fuzz
+	test_route_lookup_cache
 	test_vehicle_stress
 	test_roadside_stories
 	test_vehicle_handling
