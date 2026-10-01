@@ -520,8 +520,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   `.get("…")` sobre nodos y recursos 10 → 2 (`role`/`occupant` de las áreas de asiento, sin script). El preload cruzado
   con `crew_progression.gd` compila. `test_dynamic_dispatch_budget.gd` suma el archivo a `BUDGETS` y chequea los handles
   de los dos autoloads (`HANDLES`).
-- [ ] **N-224.3** El resto por conteo (`grep -c` de los patrones de `PATTERNS` en `scripts/`), un archivo por PR. Sumar
-  cada archivo a `BUDGETS` del test.
+- [x] **N-224.3** `depot.gd` (2026-10-01, rama `nacho/N-224-typed-dispatch`, `98ac259`): el que más tenía (65).
+  `NetworkManager`, `CrewProgression`, `UnlockManager` y `RunManager` por constantes tipadas con un accesor cada uno
+  (`_network()`, `_crew()`…, se va `_autoload(name)`), señales conectadas por la señal, paquetes como `DeliveryPackage`,
+  trampas como `TrapDefinition`, contenidos como `PackageContent`, gancho y averías como `RescueHook`/`VehicleFaults`.
+  En el archivo: `.call` 31 → 1 (relay de EventBus), `.get(&` 33 → 1 (`seat_node_path`: los tests meten jugadores
+  falsos en el grupo `player`), `/root/` 1 → 5 (un accesor por autoload). En `scripts/`: `.call` 296 → 266,
+  `.get(&` 287 → 255, `/root/` 128 → 132. `test_dynamic_dispatch_budget.gd` suma `depot.gd` a `BUDGETS` y comprueba
+  sus handles (`SCRIPT_HANDLES`).
+- [ ] **N-224.4** El resto por conteo (`grep -c` de los patrones de `PATTERNS` en `scripts/`), un archivo por PR. Sumar
+  cada archivo a `BUDGETS` del test. Siguientes: `package.gd` (34), `package_rescue.gd` (31), `player_cargo_care.gd` (24),
+  `trailer_shot.gd` (24), `mud_segment.gd` (22).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

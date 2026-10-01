@@ -12,7 +12,12 @@ extends SceneTree
 ##   autoloads really run: `get_node_or_null(...) as <handle>` would quietly
 ##   give null if an autoload moved to another script, and the crew would stop
 ##   seeing the network, the route events and the delivery photos, or the route
-##   events would stop paying and fining.
+##   events would stop paying and fining;
+## - depot.gd is no autoload, so its handles (SCRIPT_HANDLES: NETWORK_MANAGER,
+##   RUN_MANAGER, CREW_PROGRESSION, UNLOCK_MANAGER) are checked against the
+##   script loaded from its path: each must be the script its autoload runs, or
+##   `as <handle>` would give null and the depot would stop seeing the
+##   network (host, seed), the crew's money and supplies, and the unlocks.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -27,6 +32,13 @@ const BUDGETS: Dictionary = {
 	# by name for the same reason. The /root/ lookups are the null-safe handles
 	# (EventBus, NetworkManager, RunManager, CrewProgression).
 	"res://scripts/core/route_event_manager.gd": {"call": 2, "callv": 0, "get": 0, "root": 4},
+	# One .call left: the EventBus relay of the depot notices, by name because
+	# a test may replace EventBus with a plain Node (_bus()). One .get left: the
+	# seat_node_path of the players in the "player" group, because tests put
+	# Node3D fakes there and `as Player` would drop them. The /root/ lookups
+	# are the null-safe autoload accessors (NetworkManager, CrewProgression,
+	# UnlockManager, RunManager, EventBus).
+	"res://scripts/gameplay/depot/depot.gd": {"call": 1, "callv": 0, "get": 1, "root": 5},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -45,6 +57,15 @@ const HANDLES: Dictionary = {
 		"CREW_PROGRESSION": "/root/CrewProgression",
 		"NETWORK_MANAGER": "/root/NetworkManager",
 		"RUN_MANAGER": "/root/RunManager",
+	},
+}
+## script that is no autoload -> {constant: autoload it stands for}.
+const SCRIPT_HANDLES: Dictionary = {
+	"res://scripts/gameplay/depot/depot.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+		"RUN_MANAGER": "/root/RunManager",
+		"CREW_PROGRESSION": "/root/CrewProgression",
+		"UNLOCK_MANAGER": "/root/UnlockManager",
 	},
 }
 
@@ -70,17 +91,27 @@ func _run() -> void:
 		_expect(owner_node != null, "The %s autoload is loaded" % owner_path)
 		if owner_node == null:
 			continue
-		var constants: Dictionary = (owner_node.get_script() as Script).get_script_constant_map()
-		for handle: String in HANDLES[owner_path]:
-			var target_path: String = HANDLES[owner_path][handle]
-			var autoload: Node = root.get_node_or_null(NodePath(target_path))
-			_expect(autoload != null, "%s is loaded" % target_path)
-			_expect(autoload != null and constants.get(handle) == autoload.get_script(),
-					"%s.%s is the script %s runs" % [owner_path, handle, target_path])
+		_check_handles(owner_path, owner_node.get_script() as Script, HANDLES[owner_path])
+
+	for script_path: String in SCRIPT_HANDLES:
+		var script: Script = load(script_path) as Script
+		_expect(script != null, "%s loads" % script_path)
+		if script != null:
+			_check_handles(script_path, script, SCRIPT_HANDLES[script_path])
 
 	if _failures == 0:
 		print("PASS: files moved to typed references stay within their by-name budget")
 	quit(_failures)
+
+
+func _check_handles(owner_name: String, script: Script, handles: Dictionary) -> void:
+	var constants: Dictionary = script.get_script_constant_map()
+	for handle: String in handles:
+		var target_path: String = handles[handle]
+		var autoload: Node = root.get_node_or_null(NodePath(target_path))
+		_expect(autoload != null, "%s is loaded" % target_path)
+		_expect(autoload != null and constants.get(handle) == autoload.get_script(),
+				"%s.%s is the script %s runs" % [owner_name, handle, target_path])
 
 
 func _expect(condition: bool, description: String) -> void:

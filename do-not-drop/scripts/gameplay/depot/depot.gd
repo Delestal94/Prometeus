@@ -29,7 +29,16 @@ extends Node3D
 const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const ORDER_BALANCER = preload("res://scripts/gameplay/traps/order_balancer.gd")
 const CAMPAIGN_BOARD: Script = preload("res://scripts/gameplay/depot/depot_campaign_board.gd")
+## The autoloads' scripts, as types (N-224.3): a renamed method or property
+## fails to compile here instead of at runtime. depot.gd is no autoload, so
+## it can preload them (the accessors at the end give the nodes).
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
+const CREW_PROGRESSION := preload("res://scripts/core/crew_progression.gd")
+const UNLOCK_MANAGER := preload("res://scripts/core/unlock_manager.gd")
+## The truck's rescue hook and faults, which begin_run() arms and stocks.
+const RESCUE_HOOK := preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
+const VEHICLE_FAULTS := preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
 const BOSS_LINES = preload("res://scripts/gameplay/depot/boss_lines.gd")
 ## Seconds after the radio speaks before the toast shows, so the HUD is up.
 const BOSS_TOAST_DELAY: float = 1.5
@@ -94,8 +103,8 @@ var _supply_props: Dictionary = {}  # supply id -> Node3D shown on the counter
 
 
 func _ready() -> void:
-	var network: Node = _autoload(&"NetworkManager")
-	var session_seed: int = int(network.get(&"world_seed")) if network != null else 0
+	var network: NETWORK_MANAGER = _network()
+	var session_seed: int = network.world_seed if network != null else 0
 	if session_seed != 0:
 		_rng.seed = session_seed ^ 0x5eed
 	else:
@@ -106,22 +115,22 @@ func _ready() -> void:
 	_build()
 	if stock_extra_packages:
 		_spawn_extra_stock()
-	var crew: Node = _autoload(&"CrewProgression")
+	var crew: CREW_PROGRESSION = _crew()
 	if crew != null:
-		supplies = (crew.get(&"supplies") as Dictionary).keys()
-		team_money = int(crew.get(&"team_money"))
+		supplies = crew.supplies.keys()
+		team_money = crew.team_money
 	for supply_id: StringName in _supply_props:
 		(_supply_props[supply_id] as Node3D).visible = supplies.has(supply_id)
-	var bus: Node = _autoload(&"EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
 	if network != null:
-		network.connect(&"roster_changed", func(_peers: Array) -> void:
-			if bool(network.call(&"is_host")):
+		network.roster_changed.connect(func(_peers: Array) -> void:
+			if network.is_host():
 				_broadcast_supplies())
 		# A peer that just loaded this level hasn't heard the radio yet.
-		network.connect(&"peer_level_ready", func(peer_id: int) -> void:
-			if _is_online() and bool(network.call(&"is_host")) and peer_id != 1 and not boss_lines.is_empty():
+		network.peer_level_ready.connect(func(peer_id: int) -> void:
+			if _is_online() and network.is_host() and peer_id != 1 and not boss_lines.is_empty():
 				_receive_boss_lines.rpc_id(peer_id, boss_lines))
 
 
@@ -151,8 +160,9 @@ func withhold_locked(packages: Array) -> Array:
 	for package: Node in packages:
 		if not is_instance_valid(package):
 			continue
-		var definition: Resource = package.get(&"trap_definition")
-		if definition != null and locked.has(StringName(definition.get(&"id"))):
+		var typed := package as DeliveryPackage
+		var definition: TrapDefinition = null if typed == null else typed.trap_definition as TrapDefinition
+		if definition != null and locked.has(definition.id):
 			# Out of the group right away (the level reads it next), gone at the
 			# end of the frame; pulling it out of the tree here instead left
 			# its own deferred setup reading a transform it no longer had.
@@ -166,11 +176,11 @@ func withhold_locked(packages: Array) -> Array:
 
 
 func locked_traps() -> Array:
-	var network: Node = _autoload(&"NetworkManager")
-	if network != null and int(network.get(&"world_seed")) != 0:
-		return network.get(&"world_locked_traps")
-	var unlocks: Node = _autoload(&"UnlockManager")
-	return unlocks.call(&"locked_traps") if unlocks != null else []
+	var network: NETWORK_MANAGER = _network()
+	if network != null and network.world_seed != 0:
+		return network.world_locked_traps
+	var unlocks: UNLOCK_MANAGER = _unlocks()
+	return unlocks.locked_traps() if unlocks != null else []
 
 
 ## Puts every package the level has onto the dispatch shelves, one per slot,
@@ -185,25 +195,23 @@ func stock_shelves(packages: Array) -> void:
 	_shuffle(order)
 	_stocked.clear()
 	for index: int in range(mini(sorted.size(), slots.size())):
-		var package: Node3D = sorted[index]
+		var package: DeliveryPackage = sorted[index]
 		var slot: Dictionary = slots[order[index]]
 		# The box's real size comes from its content; the collider only takes
 		# that shape a frame later (package_feedback.gd applies it deferred).
-		var content: Resource = null
-		if package.has_method(&"content_definition"):
-			content = package.call(&"content_definition")
+		var content: PackageContent = package.content_definition() as PackageContent
 		var half: Vector3
 		if content != null:
-			half = (content.get(&"box_size") as Vector3) * 0.5
+			half = content.box_size * 0.5
 		else:
-			half = package.call(&"get_half_extents")
+			half = package.get_half_extents()
 		var at: Transform3D = slot.transform
 		at.origin.y += half.y + 0.01
 		at.basis = at.basis * Basis(Vector3.UP, _rng.randf_range(-0.12, 0.12))
 		package.global_transform = global_transform * at
 		package.reset_physics_interpolation()
 		package.set_meta(&"dispatch_code", String(slot.code))
-		_stocked[StringName(package.get(&"package_id"))] = package
+		_stocked[package.package_id] = package
 
 
 ## Draws one order per house from what's on the shelves -- a different kind of
@@ -214,24 +222,24 @@ func post_orders(house_count: int) -> Array[Dictionary]:
 	var candidates: Array = _stocked.values()
 	candidates.sort_custom(_by_package_id)
 	candidates = _solo_candidates(candidates, house_count)
-	var definitions: Array = candidates.map(func(package: Node) -> Resource: return package.get(&"trap_definition"))
+	var definitions: Array = candidates.map(func(package: DeliveryPackage) -> Resource: return package.trap_definition)
 	var trap_ids: Array[StringName] = ORDER_BALANCER.build_order(definitions, house_count, _completed_runs(), _rng)
-	for package: Node in ORDER_BALANCER.packages_for_order(candidates, trap_ids):
-		var definition: Resource = package.get(&"trap_definition")
-		var content: Resource = package.call(&"content_definition")
+	for package: DeliveryPackage in ORDER_BALANCER.packages_for_order(candidates, trap_ids):
+		var definition: TrapDefinition = package.trap_definition as TrapDefinition
+		var content: PackageContent = package.content_definition() as PackageContent
 		orders.append({
 			"house": orders.size(),
-			"package_id": StringName(package.get(&"package_id")),
+			"package_id": package.package_id,
 			"code": String(package.get_meta(&"dispatch_code", "?")),
-			"trap": String(definition.call(&"localized_name")),
-			"trap_key": String(definition.call(&"name_key")),
-			"trap_id": String(definition.get(&"id")),
-			"content": String(content.call(&"localized_name")) if content != null else "",
-			"content_id": StringName(content.get(&"id")) if content != null else &"",
+			"trap": definition.localized_name(),
+			"trap_key": definition.name_key(),
+			"trap_id": String(definition.id),
+			"content": content.localized_name() if content != null else "",
+			"content_id": content.id if content != null else &"",
 		})
 	_order_board.write(orders, _endless_best())
 	_open_the_radio()
-	var bus: Node = _autoload(&"EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.emit_signal(&"depot_orders_posted", orders.duplicate(true))
 	return orders
@@ -241,16 +249,16 @@ func post_orders(house_count: int) -> Array[Dictionary]:
 ## seed, the orders, the campaign and the last run) and gives them to this
 ## screen; the other peers get them as each one finishes loading.
 func _open_the_radio() -> void:
-	var network: Node = _autoload(&"NetworkManager")
-	if network != null and _is_online() and not bool(network.call(&"is_host")):
+	var network: NETWORK_MANAGER = _network()
+	if network != null and _is_online() and not network.is_host():
 		return
-	var session_seed: int = int(network.get(&"world_seed")) if network != null else 0
+	var session_seed: int = network.world_seed if network != null else 0
 	if session_seed == 0:
 		var fresh := RandomNumberGenerator.new()
 		fresh.randomize()
 		session_seed = fresh.randi()
-	var crew: Node = _autoload(&"CrewProgression")
-	var money: int = int(crew.get(&"team_money")) if crew != null else team_money
+	var crew: CREW_PROGRESSION = _crew()
+	var money: int = crew.team_money if crew != null else team_money
 	var context: Dictionary = BOSS_LINES.make_context(orders, _completed_runs(), money,
 			CAMPAIGN_BOARD.load_log(), _endless_best())
 	_apply_boss_lines(BOSS_LINES.pick(context, session_seed))
@@ -268,11 +276,11 @@ func _apply_boss_lines(lines: Array) -> void:
 		return
 	_boss_toasted = true
 	await get_tree().create_timer(BOSS_TOAST_DELAY).timeout
-	var manager: Node = _autoload(&"RunManager")
-	if not is_inside_tree() or (manager != null and bool(manager.get(&"is_running"))):
+	var manager: RUN_MANAGER = _run_manager()
+	if not is_inside_tree() or (manager != null and manager.is_running):
 		return
 	var spoken: Array[String] = boss_notes()
-	var bus: Node = _autoload(&"EventBus")
+	var bus: Node = _bus()
 	if bus != null and not spoken.is_empty():
 		bus.emit_signal(&"depot_notice", tr("WORLD_BOSS_RADIO") % spoken[0])
 
@@ -283,11 +291,11 @@ func boss_notes() -> Array[String]:
 
 
 func _completed_runs() -> int:
-	var network: Node = _autoload(&"NetworkManager")
-	if network != null and int(network.get(&"world_seed")) != 0:
-		return int(network.get(&"world_completed_runs"))
-	var unlocks: Node = _autoload(&"UnlockManager")
-	return int(unlocks.get(&"completed_runs")) if unlocks != null else 0
+	var network: NETWORK_MANAGER = _network()
+	if network != null and network.world_seed != 0:
+		return network.world_completed_runs
+	var unlocks: UNLOCK_MANAGER = _unlocks()
+	return unlocks.completed_runs if unlocks != null else 0
 
 
 ## [[package_id, trap_key, code, content_id], ...] in house order, the shape
@@ -315,25 +323,25 @@ func spawn_position(index: int) -> Vector3:
 func begin_run(vehicle: Node3D, loaded: Array) -> void:
 	_vehicle = vehicle
 	_watching_exit = true
-	var crew: Node = _autoload(&"CrewProgression")
-	var taken: Array = crew.call(&"take_supplies") if crew != null else []
+	var crew: CREW_PROGRESSION = _crew()
+	var taken: Array = crew.take_supplies() if crew != null else []
 	if taken.has(&"padding"):
-		for package: Node in loaded:
-			package.set(&"impact_absorption", PADDING_ABSORPTION)
+		for package: DeliveryPackage in loaded:
+			package.impact_absorption = PADDING_ABSORPTION
 	_insured = taken.has(&"insurance")
-	var hook: Node = vehicle.get_node_or_null(^"RescueHook")
+	var hook := vehicle.get_node_or_null(^"RescueHook") as RESCUE_HOOK
 	if taken.has(&"rescue_hook") and hook != null:
-		hook.call(&"arm")
+		hook.arm()
 	# The tow strap (N-108) is read by the mud segments off the truck itself.
 	vehicle.set_meta(&"tow_straps", 1 if taken.has(&"tow_strap") else 0)
-	var faults: Node = get_tree().get_first_node_in_group(&"vehicle_faults")
+	var faults := get_tree().get_first_node_in_group(&"vehicle_faults") as VEHICLE_FAULTS
 	if taken.has(&"spare_part") and faults != null:
-		faults.call(&"stock_spares", 1)
+		faults.stock_spares(1)
 	_broadcast_supplies()
 	var missing: PackedStringArray = []
 	for order: Dictionary in orders:
-		var package: Node = _stocked.get(order.package_id)
-		if package == null or not is_instance_valid(package) or not bool(package.call(&"is_aboard")):
+		var package := _stocked.get(order.package_id) as DeliveryPackage
+		if package == null or not is_instance_valid(package) or not package.is_aboard():
 			missing.append(tr("WORLD_DEPOT_NOTICE_MISSING_ITEM") % [int(order.house) + 1, order.code])
 	if not missing.is_empty():
 		_notice(tr("WORLD_DEPOT_NOTICE_MISSING") % ", ".join(missing))
@@ -358,13 +366,15 @@ func _physics_process(_delta: float) -> void:
 func _close_door() -> void:
 	door.set_open(false)
 	door_closed.emit()
-	var network: Node = _autoload(&"NetworkManager")
-	if network == null or bool(network.call(&"is_host")):
+	var network: NETWORK_MANAGER = _network()
+	if network == null or network.is_host():
 		_notice(tr("WORLD_DEPOT_NOTICE_DOOR"))
 
 
 func _anyone_on_foot_inside() -> bool:
 	for node: Node in get_tree().get_nodes_in_group(&"player"):
+		# By name: tests put Node3D fakes with a seat_node_path in this group,
+		# and `as Player` would drop them.
 		var player := node as Node3D
 		if player == null or not String(player.get(&"seat_node_path")).is_empty():
 			continue
@@ -380,26 +390,26 @@ func _anyone_on_foot_inside() -> bool:
 ## Any peer asks (rpc_id(1, ...)); the host spends the team's money.
 @rpc("any_peer", "call_local", "reliable")
 func request_supply(supply_id: StringName) -> void:
-	var network: Node = _autoload(&"NetworkManager")
-	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+	var network: NETWORK_MANAGER = _network()
+	if network != null and network.is_online() and not network.is_host():
 		return
 	if not RpcGuard.allow_request(self):
 		return
-	var manager: Node = _autoload(&"RunManager")
-	if manager != null and (bool(manager.get(&"is_running")) or not (manager.get(&"results") as Dictionary).is_empty()):
+	var manager: RUN_MANAGER = _run_manager()
+	if manager != null and (manager.is_running or not manager.results.is_empty()):
 		return
-	var crew: Node = _autoload(&"CrewProgression")
+	var crew: CREW_PROGRESSION = _crew()
 	if crew == null:
 		return
-	if bool(crew.call(&"buy_supply", supply_id)):
-		var item: Dictionary = crew.get(&"SUPPLIES")[supply_id]
+	if crew.buy_supply(supply_id):
+		var item: Dictionary = CREW_PROGRESSION.SUPPLIES[supply_id]
 		_notice(tr("WORLD_DEPOT_NOTICE_BOUGHT") % [tr(String(item.title)).to_lower(), int(item.cost)])
 	_broadcast_supplies()
 
 
 ## Asks the host for a supply from whichever peer this is.
 func buy_supply(supply_id: StringName) -> void:
-	if _is_online() and not bool(_autoload(&"NetworkManager").call(&"is_host")):
+	if _is_online() and not _network().is_host():
 		request_supply.rpc_id(1, supply_id)
 	else:
 		request_supply(supply_id)
@@ -409,39 +419,39 @@ func buy_supply(supply_id: StringName) -> void:
 ## peer attached so only that player's Discount card can pay half price.
 @rpc("any_peer", "call_local", "reliable")
 func request_discounted_supply(supply_id: StringName) -> void:
-	var network: Node = _autoload(&"NetworkManager")
-	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+	var network: NETWORK_MANAGER = _network()
+	if network != null and network.is_online() and not network.is_host():
 		return
 	if not RpcGuard.allow_request(self):
 		return
-	var manager: Node = _autoload(&"RunManager")
-	if manager != null and (bool(manager.get(&"is_running")) or not (manager.get(&"results") as Dictionary).is_empty()):
+	var manager: RUN_MANAGER = _run_manager()
+	if manager != null and (manager.is_running or not manager.results.is_empty()):
 		return
-	var crew: Node = _autoload(&"CrewProgression")
+	var crew: CREW_PROGRESSION = _crew()
 	if crew == null:
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
-	var peer_id: int = sender_id if sender_id != 0 else int(network.call(&"local_id")) if network != null else 1
-	if bool(crew.call(&"buy_supply_discounted", peer_id, supply_id)):
-		var item: Dictionary = crew.get(&"SUPPLIES")[supply_id]
+	var peer_id: int = sender_id if sender_id != 0 else network.local_id() if network != null else 1
+	if crew.buy_supply_discounted(peer_id, supply_id):
+		var item: Dictionary = CREW_PROGRESSION.SUPPLIES[supply_id]
 		var discounted_cost: int = maxi(0, roundi(int(item.cost) * 0.5))
 		_notice(tr("WORLD_DEPOT_NOTICE_DISCOUNT") % [tr(String(item.title)).to_lower(), discounted_cost])
 	_broadcast_supplies()
 
 
 func buy_supply_discounted(supply_id: StringName) -> void:
-	if _is_online() and not bool(_autoload(&"NetworkManager").call(&"is_host")):
+	if _is_online() and not _network().is_host():
 		request_discounted_supply.rpc_id(1, supply_id)
 	else:
 		request_discounted_supply(supply_id)
 
 
 func _broadcast_supplies() -> void:
-	var crew: Node = _autoload(&"CrewProgression")
+	var crew: CREW_PROGRESSION = _crew()
 	if crew == null:
 		return
-	var list: Array = (crew.get(&"supplies") as Dictionary).keys()
-	var money: int = int(crew.get(&"team_money"))
+	var list: Array = crew.supplies.keys()
+	var money: int = crew.team_money
 	if _is_online():
 		_sync_supplies.rpc(list, money)
 	else:
@@ -452,11 +462,11 @@ func _broadcast_supplies() -> void:
 func _sync_supplies(list: Array, money: int) -> void:
 	supplies = list
 	team_money = money
-	var bus: Node = _autoload(&"EventBus")
-	var network: Node = _autoload(&"NetworkManager")
+	var bus: Node = _bus()
+	var network: NETWORK_MANAGER = _network()
 	if bus != null:
 		# The host's CrewProgression already announced its own money.
-		if network != null and not bool(network.call(&"is_host")):
+		if network != null and not network.is_host():
 			bus.emit_signal(&"team_money_changed", money)
 		bus.emit_signal(&"depot_supplies_changed", list.duplicate(), money)
 	for supply_id: StringName in _supply_props:
@@ -465,25 +475,26 @@ func _sync_supplies(list: Array, money: int) -> void:
 
 func _on_house_delivery_recorded(house_index: int, outcome: StringName, _package_id: StringName) -> void:
 	_order_board.mark(house_index, outcome)
-	var network: Node = _autoload(&"NetworkManager")
-	var host: bool = network == null or bool(network.call(&"is_host"))
+	var network: NETWORK_MANAGER = _network()
+	var host: bool = network == null or network.is_host()
 	if host and _insured and outcome == &"delivered_ruined":
-		var crew: Node = _autoload(&"CrewProgression")
+		var crew: CREW_PROGRESSION = _crew()
 		if crew != null:
-			crew.call(&"add_team_money", INSURANCE_REFUND)
+			crew.add_team_money(INSURANCE_REFUND)
 			_notice(tr("WORLD_DEPOT_NOTICE_INSURANCE") % INSURANCE_REFUND)
 			_broadcast_supplies()
 
 
 func _notice(text: String) -> void:
-	var bus: Node = _autoload(&"EventBus")
+	# EventBus stays by name: tests replace it with a plain Node.
+	var bus: Node = _bus()
 	if bus != null:
 		bus.call(&"relay", &"depot_notice", [text])
 
 
 func _endless_best() -> int:
-	var manager: Node = _autoload(&"RunManager")
-	return int(manager.call(&"best_score", RUN_MANAGER.MODE_ENDLESS)) if manager != null else 0
+	var manager: RUN_MANAGER = _run_manager()
+	return manager.best_score(RUN_MANAGER.MODE_ENDLESS) if manager != null else 0
 
 
 # --- Building ----------------------------------------------------------------
@@ -567,24 +578,24 @@ func _build_team_board() -> void:
 	_stats_label.width = 420
 	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	refresh_team_board()
-	var unlocks: Node = _autoload(&"UnlockManager")
+	var unlocks: UNLOCK_MANAGER = _unlocks()
 	if unlocks != null:
-		unlocks.connect(&"progress_changed", refresh_team_board)
+		unlocks.progress_changed.connect(refresh_team_board)
 
 
 func refresh_team_board() -> void:
 	if _stats_label == null:
 		return
-	var unlocks: Node = _autoload(&"UnlockManager")
-	var manager: Node = _autoload(&"RunManager")
+	var unlocks: UNLOCK_MANAGER = _unlocks()
+	var manager: RUN_MANAGER = _run_manager()
 	if unlocks == null:
 		return
-	var summary: Dictionary = unlocks.call(&"progress_summary")
-	var best: int = int(manager.call(&"best_score")) if manager != null else 0
+	var summary: Dictionary = unlocks.progress_summary()
+	var best: int = manager.best_score() if manager != null else 0
 	var next: String = tr("WORLD_DEPOT_TEAM_ALL_UNLOCKED")
-	for unlock_id: StringName in unlocks.get(&"UNLOCKS"):
-		if not bool(unlocks.call(&"is_unlocked", unlock_id)):
-			var rule: Dictionary = unlocks.get(&"UNLOCKS")[unlock_id]
+	for unlock_id: StringName in UNLOCK_MANAGER.UNLOCKS:
+		if not unlocks.is_unlocked(unlock_id):
+			var rule: Dictionary = UNLOCK_MANAGER.UNLOCKS[unlock_id]
 			next = tr("WORLD_DEPOT_TEAM_NEXT") % [rule.title, int(rule.deliveries)]
 			break
 	_stats_label.text = tr("WORLD_DEPOT_TEAM_STATS") % [int(summary.deliveries), int(summary.score), best, next]
@@ -621,22 +632,22 @@ func _spawn_extra_stock() -> void:
 		var definition: Resource = load(TRAP_PATH % trap)
 		if definition == null:
 			continue
-		var package: Node3D = PACKAGE_SCENE.instantiate()
+		var package: DeliveryPackage = PACKAGE_SCENE.instantiate()
 		package.name = "Package_%s_02" % trap
-		package.set(&"package_id", StringName("%s_02" % trap))
-		package.set(&"trap_definition", definition)
+		package.package_id = StringName("%s_02" % trap)
+		package.trap_definition = definition
 		# Parked out of the way until stock_shelves() puts it in its bin.
 		package.position = Vector3(0.0, 0.5, DEPTH - 1.0)
 		stock.add_child(package)
-		package.set(&"freeze", true)
+		package.freeze = true
 
 
 # --- Helpers ----------------------------------------------------------------
 
 
 ## Packages in a stable order every peer agrees on.
-static func _by_package_id(a: Node, b: Node) -> bool:
-	return String(a.get(&"package_id")) < String(b.get(&"package_id"))
+static func _by_package_id(a: DeliveryPackage, b: DeliveryPackage) -> bool:
+	return String(a.package_id) < String(b.package_id)
 
 
 func _shuffle(values: Array) -> void:
@@ -648,23 +659,42 @@ func _shuffle(values: Array) -> void:
 
 
 func _is_online() -> bool:
-	var network: Node = _autoload(&"NetworkManager")
-	return network != null and bool(network.call(&"is_online"))
+	var network: NETWORK_MANAGER = _network()
+	return network != null and network.is_online()
 
 
 ## Solo: only SOLO_TRAPS boxes, as long as there are enough of them for every
 ## house; otherwise (a stock that can't cover it) every box, as before.
 func _solo_candidates(candidates: Array, house_count: int) -> Array:
-	var network: Node = _autoload(&"NetworkManager")
-	if network == null or Array(network.get(&"peer_ids")).size() > 1:
+	var network: NETWORK_MANAGER = _network()
+	if network == null or network.peer_ids.size() > 1:
 		return candidates
-	var solo: Array = candidates.filter(func(package: Node) -> bool:
-		var definition: Resource = package.get(&"trap_definition")
-		return definition != null and StringName(definition.get(&"id")) in SOLO_TRAPS)
+	var solo: Array = candidates.filter(func(package: DeliveryPackage) -> bool:
+		var definition: TrapDefinition = package.trap_definition as TrapDefinition
+		return definition != null and definition.id in SOLO_TRAPS)
 	return solo if solo.size() >= house_count else candidates
 
 
-## Autoloads by path, not by name: a test that names this class compiles it
-## before the autoloads exist (same pattern as route.gd's _session_seed()).
-func _autoload(autoload_name: StringName) -> Node:
-	return get_node_or_null(NodePath("/root/%s" % autoload_name)) if is_inside_tree() else null
+## The autoloads by path, not by name, and as their script's type: a test that
+## names this class compiles it before the autoloads exist (same pattern as
+## route.gd's _session_seed()), and `as` gives null if the node isn't that script
+## (test_dynamic_dispatch_budget checks the constants above are the real ones).
+func _network() -> NETWORK_MANAGER:
+	return (get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER) if is_inside_tree() else null
+
+
+func _crew() -> CREW_PROGRESSION:
+	return (get_node_or_null(^"/root/CrewProgression") as CREW_PROGRESSION) if is_inside_tree() else null
+
+
+func _unlocks() -> UNLOCK_MANAGER:
+	return (get_node_or_null(^"/root/UnlockManager") as UNLOCK_MANAGER) if is_inside_tree() else null
+
+
+func _run_manager() -> RUN_MANAGER:
+	return (get_node_or_null(^"/root/RunManager") as RUN_MANAGER) if is_inside_tree() else null
+
+
+## EventBus by name, not typed: tests replace it with a plain Node.
+func _bus() -> Node:
+	return get_node_or_null(^"/root/EventBus") if is_inside_tree() else null
