@@ -10,7 +10,7 @@ de todos y sin forma de alcanzar al camión.
   si no, uno que no le saque la caja a quien ya la cuida; si no, cualquiera libre. Sin asiento posible,
   aparece de pie en el pasillo de la caja de carga (`BAY_SPOT`, sin chocar con las cajas del estante).
   Antes de que arranque la entrega, y con resultados en pantalla, sigue apareciendo en el depósito.
-- `scripts/gameplay/level_common.gd` (zona compartida): crea el nodo en `_ready` y lo usa en
+- `scripts/gameplay/level_common.gd`: crea el nodo en `_ready` y lo usa en
   `_sync_players`.
 - `scripts/gameplay/interaction/seat_point.gd` (de Slatex): dos consultas nuevas de host,
   `unminded_cargo()` y `would_displace()`. Nada existente cambió de firma.
