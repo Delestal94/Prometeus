@@ -39,6 +39,8 @@ extends SceneTree
 ##   store stills) would set up.
 ## - vehicle_faults.gd (the truck's faults) holds its effects and repair spots by preload and the phone
 ##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
+## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
+##   the crew's money and the incident relay stay by name.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -175,6 +177,13 @@ const BUDGETS: Dictionary = {
 	# hands in, which stays a Node: test_depot_panel gives it a stand-in with only `orders` and
 	# `boss_notes()`, and `as Depot` would drop it (the order sheet would come out empty).
 	"res://scripts/ui/depot_panel.gd": {"call": 1, "callv": 0, "get": 1, "root": 0},
+	# The deer crossing (N-224.4) is typed: the deer through wildlife_animal.gd by preload (no class name:
+	# steered, run, freeze_in_headlights, tumble). Two .call and one .get left: CrewProgression's
+	# team_money and spend, by name because preloading crew_progression.gd here compiles it before the
+	# autoloads exist (route.gd pulls this in, see mud_segment.gd), and the EventBus relay of the incident,
+	# by name because a test may replace EventBus with a plain Node. The three /root/ lookups are the
+	# null-safe accessors (EventBus twice, CrewProgression).
+	"res://scripts/gameplay/route/wildlife_crossing.gd": {"call": 2, "callv": 0, "get": 1, "root": 3},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
