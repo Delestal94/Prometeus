@@ -57,8 +57,8 @@ y qué tiene que hacer el otro (por ejemplo `git pull` antes de seguir).
 ## 6. Tests
 
 Pedile al agente `ejecutor-tests` que corra los tests relacionados con el cambio
-(filtro por nombre). No hace falta la batería entera: la corre el hook
-`pre-push` y CI.
+(filtro por nombre). No hace falta la batería entera: la corre CI (el hook
+`pre-push` corre los tests afectados por el push).
 
 ## 7. Commit
 
