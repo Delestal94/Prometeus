@@ -723,7 +723,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   las constantes que leen otros archivos, `_ready`/`_process` (mismo orden) y los métodos usados afuera quedan en el
   nodo. `test_package_feedback_split.gd` fija ≤ 700 líneas, la API usada afuera, los nodos de cada trampa y el orden
   de hijos de `Box`. La baseline del lint bajó 1. Aviso `docs/avisos/2026-10-01-n225-package-feedback-partido.md`.
-  Quedan `player.gd` y `run_manager.gd`.
+  **[x] `run_manager.gd` (2026-10-01, rama `nacho/N-225-run-manager-split`)** — 1000 → 669 líneas. Helpers estáticos
+  sin `class_name`, cargados solo por `run_manager.gd` y sin nombrar autoloads: puntaje (`run_scoring.gd`), filas e
+  historias del resultado (`run_results.gd`), plazos (`run_deadlines.gd`), registros de entrega y fotos
+  (`run_deliveries.gd`), tabla local (`run_leaderboard.gd`) y la parte de escena del ingreso tardío
+  (`run_session.gd`). Variables, señales, los cinco `@rpc` (mismo orden) y la API usada afuera quedan en el nodo;
+  las constantes movidas se reexportan con el mismo nombre. `test_run_manager_split.gd` fija ≤ 700 líneas, la tabla
+  de RPC, la API y tres corridas doradas por `finish_run` (entrega, fallida, infinito) calculadas con el original.
+  Aviso `docs/avisos/2026-10-01-n225-run-manager-partido.md`. Queda `player.gd`.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
