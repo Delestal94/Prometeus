@@ -1630,6 +1630,20 @@ con `test_mud_segment` ampliado (la grúa usa el GLB, `Beacon` existe, el gancho
   §10.1. Queda (menor): el patito no se reconoce a distancia, la cabina crema sale fría con la luz del cielo, y los planos
   `crane`/`crane_cable` de `render_mud_segment.gd` la encuadran chica detrás del camión de cajas; no hay plano de noche.
 
+### N-322 · Barro con la calidad del resto del suelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `nacho/N-322-mud-look`**
+
+Pedido del usuario 2026-10-01 ("el barro no tiene ni cerca la calidad ni textura que los demás suelos"): el barro de
+`MudSegment` (N-108) eran cajas planas de un color naranja (`MudSurface`, `MudPit`, `MudRut`), discos grises de charco y
+montículos cúbicos, sin textura; al lado del terreno con mapas de grano se veía de otro juego.
+~~Hecho cuando el barro es una superficie con textura y relieve que sigue el suelo, sin cajas ni discos.~~
+**[x] Hecho (2026-10-01)** — `shaders/mud_ground.gdshader`: una sola `PlaneMesh` `MudSurface` (subdividida a ~1 m, la
+acomoda `conform_geometry()`) con el grano de tierra (`tx_detail_earth_512.png`), barro marrón con costra seca y zonas
+mojadas, el pozo más húmedo donde está la física (`pit_start`/`pit_end`), dos huellas con dibujo que se cortan por tramos,
+agua turbia con brillo suave en lo bajo, relieve por normal y borde irregular (discard) con anillo de costra que lo funde con
+la ruta. Montículos: semiesferas low-poly con el mismo shader (`lump`). `mud_segment.gd` `_build()`/`_mud_material()`.
+`test_mud_segment` ampliado (shader y parámetros del pozo, sin cajas ni discos, montículos); revisado en 4 iteraciones con
+`revisor-visual` (`tests/render_mud_segment.gd`). Queda: el contorno se ve algo ruidoso a mucha distancia.
+
 ### N-320 · Polvo de las ruedas legible y según el suelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-320-wheel-dust`**
 
 Hoy `scripts/presentation/vehicle_presentation.gd:453-488` (`_apply_dust` y el emisor) echa cubos `BoxMesh` de 0,05 m, 14 por
@@ -1841,6 +1855,20 @@ Tarea permanente: no se cierra, se cumple en cada tanda.
 - Contenido cerrado 2026-10-30, página de Steam 2026-11-27, demo 2026-12-18, Early Access 2027-01-22, con qué significa "listo" y de qué depende cada uno (`plan-desarrollo.md` Fase 7).
 
 ---
+
+### N-323 · Que nada visible se cierre con cajas de color plano — A · `Opus 5.5 · low` · Aviso: no · **[x] rama `nacho/N-323-art-quality-gate`**
+
+Pregunta del usuario 2026-10-01 tras N-322 ("¿por qué no se hizo así desde un principio, quién es el encargado?"): el barro de
+N-108 salió con cajas naranjas porque el "hecho cuando" solo pedía la mecánica, `constructor-tramos` arma con `_box()`,
+`revisor-visual` miró que estuviera y no si estaba a la altura, y `director-arte` audita el inventario, donde la geometría
+por código no figura. Nadie tenía a cargo la calidad visual de lo que arma un constructor.
+~~Hecho cuando la cadena de agentes marca y deriva los placeholders visibles.~~
+**[x] Hecho (2026-10-01)** — `planificador-tareas`: toda tarea visible lleva en el "hecho cuando" la revisión de
+`director-arte` contra lo que la rodea y, si se arma con primitivas, una subtarea de arte desde el principio.
+`director-arte` (punto 8): busca la geometría por código con color plano a la vista. `auditor-integral` (pilar 2): marca
+los placeholders sin subtarea de arte. `constructor-tramos` y `constructor-mundo`: un placeholder visible sale como
+subtarea, nunca como hecho. Rutina de construcción (paso 7): `revisor-visual` compara contra el entorno y un suelo o
+material plano pasa por `artista-shaders` en la misma sesión.
 
 ## 8. QA (sin playtesting)
 

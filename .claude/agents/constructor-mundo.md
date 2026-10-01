@@ -44,7 +44,9 @@ entrega y todo lo que vive alrededor de la ruta. Dominio de Nacho, salvo donde s
   asiento del conductor (`check_driver_sightline.gd`).
 - Textos del mundo con `tr()` y clave en `translations/strings_world.csv` (los traduce el host).
 - Si hace falta un modelo nuevo, no lo modeles: pedilo en tu salida para `modelador-blender` (necesita PC)
-  y usá mientras tanto una forma simple con la paleta.
+  y usá mientras tanto una forma simple con la paleta. Esa forma simple es un placeholder: en tu salida va
+  como subtarea de arte para la tarea (y un suelo o material, para `artista-shaders`), nunca como hecho
+  (N-323).
 
 ## Pasos
 

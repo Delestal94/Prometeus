@@ -50,6 +50,10 @@ repitas. Si uno sigue abierto y empeoró, decilo en una línea con su ID origina
   --log`); no inventes FPS ni draw calls que no leíste.
 - Shaders: compatibilidad con GL Compatibility, `discard`/texturas de más, uniforms que ningún
   material usa, shaders casi iguales que podrían ser uno.
+- Placeholders que quedaron: geometría por código con primitivas y color plano a la vista (`_box(`,
+  `BoxMesh.new`, `StandardMaterial3D.new` en `scripts/` y `modules/`) en tramos o props que entraron
+  sin pasada de arte. Cruzalo con las tareas: si la tarea que lo creó no dejó una subtarea de arte, es
+  hallazgo (P2) para `director-arte` + `artista-shaders`/`modelador-blender` (caso: barro de N-108 → N-322).
 - Coherencia técnica con `docs/direccion-visual.md` e `docs/inventario-assets.md` (escala, pivotes,
   paleta, lenguaje de feedback de trampas e impactos). El juicio estético de un asset puntual es de
   `director-arte`: vos marcás el patrón y le pasás el caso.
