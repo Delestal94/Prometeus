@@ -11,12 +11,23 @@ extends Control
 
 signal closed
 
+## Room kept free around the card so its shadow and the screen edge never touch.
+const SCREEN_MARGIN: float = 16.0
+## The order list never gets squeezed below this, however short the screen.
+const ORDERS_MIN_VIEW: float = 120.0
+## Pixels one press of up / down scrolls the order list.
+const ORDERS_SCROLL_STEP: int = 64
+
 var station: StringName = &"orders"
 ## The level's depot, for its orders and to ask for a purchase.
 var depot: Node = null
 var _body: VBoxContainer
 var _first_focus: Control = null
 var _vote_timer_label: Label = null
+## The order rows live in a scroll box so seven orders (a full crew of eight)
+## still leave the Back button on screen; null on the other faces.
+var _orders_scroll: ScrollContainer = null
+var _orders_list: VBoxContainer = null
 
 
 func open(station_id: StringName, depot_node: Node) -> void:
@@ -62,6 +73,7 @@ func _ready() -> void:
 		bus.connect(&"shop_resolved", _on_shop_resolved)
 		# Somebody else took the wheel: the depot is behind us now.
 		bus.connect(&"run_started", func(_route: StringName, _players: Array) -> void: close())
+	get_viewport().size_changed.connect(_fit_orders_scroll)
 	# The vote dots wear the host's colour slots, which change as people come and go.
 	NetworkManager.color_slots_changed.connect(func(_slots: Dictionary) -> void:
 		if visible and station == &"shop":
@@ -90,6 +102,8 @@ func _rebuild() -> void:
 		child.queue_free()
 	_first_focus = null
 	_vote_timer_label = null
+	_orders_scroll = null
+	_orders_list = null
 	var dim := ColorRect.new()
 	dim.color = Color(UiTheme.BACKDROP, 0.78)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -114,6 +128,7 @@ func _rebuild() -> void:
 	back.pressed.connect(close)
 	if _first_focus == null:
 		_first_focus = back
+	_fit_orders_scroll()
 	_first_focus.call_deferred(&"grab_focus")
 
 
@@ -133,21 +148,79 @@ func _build_orders() -> void:
 	if orders.is_empty():
 		UiTheme.label(_body, tr("UI_DEPOT_ENDLESS_HINT"), 18)
 		return
-	for order: Dictionary in orders:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 12)
-		_body.add_child(row)
-		var icon := TextureRect.new()
-		icon.texture = UiTheme.trap_icon(String(order.trap))
-		icon.custom_minimum_size = Vector2(44, 44)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		row.add_child(icon)
-		var text := VBoxContainer.new()
-		row.add_child(text)
-		UiTheme.label(text, tr("UI_DEPOT_ORDER_ROW") % [int(order.house) + 1, order.code], 22, UiTheme.INK, true)
-		var state: String = tr("UI_DEPOT_ON_BOARD") if _is_loaded(order.package_id) else tr("UI_DEPOT_ON_SHELF")
-		UiTheme.label(text, "%s · %s  —  %s" % [order.trap, String(order.content).to_lower(), state], 16, UiTheme.MINT if state == tr("UI_DEPOT_ON_BOARD") else UiTheme.MUTED)
+	_orders_scroll = ScrollContainer.new()
+	_orders_scroll.name = "OrdersScroll"
+	_orders_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_orders_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_orders_scroll.focus_mode = Control.FOCUS_NONE
+	_orders_scroll.add_theme_stylebox_override("focus", UiTheme.focus_ring())
+	_orders_scroll.gui_input.connect(_on_orders_input)
+	_body.add_child(_orders_scroll)
+	_orders_list = VBoxContainer.new()
+	_orders_list.name = "OrdersList"
+	_orders_list.add_theme_constant_override("separation", 12)
+	_orders_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_orders_scroll.add_child(_orders_list)
+	for index: int in orders.size():
+		_add_order_row(index, orders[index])
+
+
+func _add_order_row(index: int, order: Dictionary) -> void:
+	var row := HBoxContainer.new()
+	row.name = "Order_%d" % index
+	row.add_theme_constant_override("separation", 12)
+	_orders_list.add_child(row)
+	var icon := TextureRect.new()
+	icon.texture = UiTheme.trap_icon(String(order.trap))
+	icon.custom_minimum_size = Vector2(44, 44)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	row.add_child(icon)
+	var text := VBoxContainer.new()
+	row.add_child(text)
+	UiTheme.label(text, tr("UI_DEPOT_ORDER_ROW") % [int(order.house) + 1, order.code], 22, UiTheme.INK, true)
+	var state: String = tr("UI_DEPOT_ON_BOARD") if _is_loaded(order.package_id) else tr("UI_DEPOT_ON_SHELF")
+	UiTheme.label(text, "%s · %s  —  %s" % [order.trap, String(order.content).to_lower(), state], 16, UiTheme.MINT if state == tr("UI_DEPOT_ON_BOARD") else UiTheme.MUTED)
+
+
+## Gives the order list all the height it needs, up to what the screen has left
+## once the rest of the card (title, notes, Back) is counted. A list that does
+## not fit becomes one more stop for the keyboard / gamepad focus, so up / down
+## can scroll it (the rows themselves are not buttons).
+func _fit_orders_scroll() -> void:
+	var scroll: ScrollContainer = _orders_scroll
+	if scroll == null or not is_instance_valid(scroll):
+		return
+	scroll.custom_minimum_size.y = 0.0
+	_apply_orders_height(_body.get_parent().get_combined_minimum_size().y)
+	# Wrapped notes only know their real height once laid out: measure again then.
+	await get_tree().process_frame
+	if scroll == _orders_scroll and is_instance_valid(scroll) and scroll.is_inside_tree():
+		_apply_orders_height(_body.get_parent().size.y - scroll.size.y)
+
+
+func _apply_orders_height(chrome: float) -> void:
+	var content: float = _orders_list.get_combined_minimum_size().y
+	var room: float = get_viewport_rect().size.y - SCREEN_MARGIN * 2.0 - chrome
+	var view: float = clampf(content, 0.0, maxf(room, ORDERS_MIN_VIEW))
+	_orders_scroll.custom_minimum_size.y = view
+	_orders_scroll.focus_mode = Control.FOCUS_ALL if content > view else Control.FOCUS_NONE
+
+
+func _on_orders_input(event: InputEvent) -> void:
+	var direction: int = 0
+	if event.is_action_pressed(&"ui_down", true):
+		direction = 1
+	elif event.is_action_pressed(&"ui_up", true):
+		direction = -1
+	if direction == 0 or _orders_scroll == null:
+		return
+	var bar: VScrollBar = _orders_scroll.get_v_scroll_bar()
+	var at_edge: bool = bar.value <= 0.0 if direction < 0 else bar.value >= bar.max_value - bar.page
+	if at_edge:
+		return # focus moves on to the neighbour (the Back button)
+	_orders_scroll.scroll_vertical += direction * ORDERS_SCROLL_STEP
+	get_viewport().set_input_as_handled()
 
 
 ## The Boss's note from this morning's radio (S-603): her start line and, when

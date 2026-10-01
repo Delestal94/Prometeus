@@ -15,7 +15,12 @@ extends SceneTree
 ## - the panel opens only while Tab is held AND the depot is open: not on the
 ##   start card, not while a depot station / options / pause is up, not once
 ##   the truck is on the road; it takes no mouse, no focus and no pause, so
-##   walking and looking keep working under it.
+##   walking and looking keep working under it;
+## - a full crew of eight (N-228.6): build_entries() lists all eight in roster
+##   order with the wheel and the boxes right, and the panel shows eight
+##   "Row_<peer>" rows, with the LAN invite block, inside the 1280x720 base
+##   screen (the palette has five colours, so seats 6-8 repeat one: only the
+##   rows' count and place are checked, not that the colours differ).
 
 const ACTION: StringName = &"crew_panel"
 const INVITE_LAN: StringName = &"lan"
@@ -208,6 +213,9 @@ func _run() -> void:
 			and String(panel.find_child("Hint", true, false).text) == tr("HUD_CREW_NO_LAN"),
 			"A host without a network is told so instead of showing an empty code")
 
+	# --- a full crew of eight ---
+	await _check_full_crew(panel, lan)
+
 	# --- the real thing: hosting on this machine ---
 	network.set(&"transport", network.Transport.ENET)
 	var hosted: Error = network.call(&"host_session")
@@ -238,6 +246,56 @@ func _run() -> void:
 		print("PASS: the crew panel lists everyone with colour, wheel and box, shows the code only to the LAN host, "
 				+ "and opens only in the depot")
 	quit(_failures)
+
+
+## Eight peers (1 drives, seven ride), each one a row, all of it on the base screen.
+func _check_full_crew(panel: Control, invite: Dictionary) -> void:
+	var roster: Array = [1, 2, 3, 4, 5, 6, 7, 8]
+	var boxes: Dictionary = {}
+	var crew: Dictionary = {}
+	for peer_id: int in roster:
+		var box: Node = null
+		if peer_id > 1:
+			box = Node.new()
+			boxes[peer_id] = box
+		crew[peer_id] = _stub_player(&"team_color", box, null)
+	var full: Array[Dictionary] = _crew.build_entries(roster, crew, 5, true, 1)
+	_expect(full.size() == 8, "All eight on the roster are listed (got %d)" % full.size())
+	_expect(full.map(func(e: Dictionary) -> int: return e["peer_id"]) == roster,
+			"Eight entries keep the roster order")
+	_expect(full.filter(func(e: Dictionary) -> bool: return e["driving"]).size() == 1 and bool(full[0]["driving"]),
+			"One driver among the eight")
+	_expect(full.filter(func(e: Dictionary) -> bool: return e["has_box"]).size() == 7 and not bool(full[0]["has_box"]),
+			"The seven passengers carry a box, the driver does not")
+	_expect(full.filter(func(e: Dictionary) -> bool: return e["is_local"]).size() == 1 and bool(full[4]["is_local"]),
+			"Only the local seat is marked among the eight")
+	root.size = Vector2i(1280, 720)
+	var base := Vector2(1280.0, 720.0)
+	Input.action_press(ACTION)
+	panel.set_process(false)
+	panel.show()
+	panel.call(&"render", full, invite)
+	await process_frame
+	await process_frame
+	var rows: Array[Node] = _rows(panel)
+	_expect(rows.size() == 8, "Eight players make eight rows (got %d)" % rows.size())
+	for peer_id: int in roster:
+		_expect(panel.find_child("Row_%d" % peer_id, true, false) != null, "Row_%d exists" % peer_id)
+	var card: Control = panel.get_child(0).get_child(0)
+	var rect: Rect2 = card.get_global_rect()
+	_expect(Rect2(Vector2.ZERO, base).encloses(rect.grow(2.0)),
+			"The panel with eight rows and the invite fits %s (got %s)" % [base, rect])
+	var last_row: Control = panel.find_child("Row_8", true, false)
+	_expect(Rect2(Vector2.ZERO, base).encloses(last_row.get_global_rect()),
+			"The last row is on screen (got %s)" % last_row.get_global_rect())
+	_expect(panel.find_child("Code", true, false) != null, "The room code still shows with eight rows")
+	Input.action_release(ACTION)
+	panel.hide()
+	panel.set_process(true)
+	for box: Node in boxes.values():
+		box.free()
+	for stub: Node in crew.values():
+		stub.free()
 
 
 func _stub_player(cosmetic: StringName, carried: Object, tended: Object) -> Node:
