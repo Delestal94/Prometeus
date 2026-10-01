@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/package/package.gd" id="1_package"]
 [ext_resource type="Script" path="res://scripts/gameplay/package/package_feedback.gd" id="2_feedback"]
 [ext_resource type="Resource" path="res://data/traps/fragile.tres" id="3_trap"]
 [ext_resource type="Script" path="res://scripts/gameplay/interaction/package_pickup_point.gd" id="4_pickup"]
 [ext_resource type="Script" path="res://scripts/gameplay/package/package_contents_view.gd" id="5_contents"]
+[ext_resource type="Script" path="res://modules/net_pose_smoother/net_rest_throttle.gd" id="6_rest"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_crate"]
 friction = 0.70
@@ -85,6 +86,12 @@ trap_definition = ExtResource("3_trap")
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_interval = 0.0167
 replication_config = SubResource("Repl_package")
+
+; A box at rest (on a shelf, riding still in the truck, asleep) sends its pose
+; twice a second instead of every tick (N-228.5, test_net_bandwidth_budget).
+[node name="NetRestThrottle" type="Node" parent="."]
+script = ExtResource("6_rest")
+watched = Array[StringName]([&"net_transform", &"net_in_vehicle"])
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("BoxShape3D_crate")
