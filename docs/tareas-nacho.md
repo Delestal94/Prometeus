@@ -9,6 +9,16 @@
 
 ## QA — bugs abiertos
 
+### N-917 · Aviso de Jolt "exceeded the maximum number of jobs" al cargar la entrega — C · `Opus 5.5 · medium` · Aviso: no
+Origen: QA 2026-10-01. Escenario: `godot --path do-not-drop -- --autostart --mood=nublado_dia` (o cualquier clima), o
+entrar a la entrega desde el menú; la consola muestra una vez `WARNING: Jolt Physics job system exceeded the maximum
+number of jobs. This should not happen. Please report this.` No se repite cada frame ni rompe nada; no aparecía en la
+corrida de la mañana (e033559), así que probablemente lo trajo el depósito que se arma por frames (#195, N-408b) o el
+precalentado de shaders (#205, N-409), que agregan muchos cuerpos o colisiones en pocos frames. Con `cazador-bugs`
+(confirmar qué PR y qué paso de la carga) y `constructor-mundo`. Hecho cuando: el escenario de QA pasa sin el aviso
+(repartir la creación de cuerpos en más frames, o ajustar los límites de Jolt en `project.godot` si corresponde) y hay
+un test que carga la entrega y falla con ese aviso (un `Logger` que cuente warnings de Jolt).
+
 
 ### S-908 · Nodos huérfanos de `package_salvage.gd` al liberar el nivel (heredada de Slatex) — B · `Opus 5.5 · medium` · Aviso: sí (`scripts/gameplay/package/package_salvage.gd`) · **[x] rama `nacho/S-908-salvage-orphans`**
 Origen: QA 2026-10-01. Escenario: instanciar `level_endless.tscn`, `start_debug_delivery`, `reset_run` y
