@@ -618,6 +618,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     En el archivo: 30 → 13 usos (`.call` 19 → 7, `.get(&` 8 → 6, `/root/` 3 → 0); en `scripts/`: 705 → 688.
     `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-package-rescue-tipado.md`.
     Siguientes: `player_cargo_care.gd` (24), `trailer_shot.gd` (24), `mud_segment.gd` (22).
+  - [x] `player_cargo_care.gd` (2026-10-01, rama `nacho/N-224-cargo-care-typed`): el jugador como `Player`, la caja
+    como `DeliveryPackage`, `GameSettings` por la constante `GAME_SETTINGS` (preload; el test comprueba que sea el
+    script del autoload), el perfil como `UnlockProfile` y `RunManager` por `PackageAutoloads`. Quedan por nombre
+    solo los de `RunManager` (`care_supply_count`, `is_running`, `cargo`, `results`: ciclo de compilación). En el
+    archivo: 28 → 7 usos (`.call` 5 → 1, `.get(&` 17 → 4, `/root/` 6 → 2); en `scripts/`: `.call` 276 → 272,
+    `.get(&` 286 → 273, `/root/` 124 → 120. `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
+    Aviso `docs/avisos/2026-10-01-n224-cargo-care-tipado.md`.
+    Siguientes: `trailer_shot.gd` (24), `mud_segment.gd` (22).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
