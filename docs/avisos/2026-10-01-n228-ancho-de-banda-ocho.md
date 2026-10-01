@@ -1,10 +1,10 @@
-# Ancho de banda con 8 jugadores: ruedas del cliente y cajas quietas a 2 Hz (protocolo 18; archivos de Slatex)
+# Ancho de banda con 8 jugadores: ruedas del cliente y cajas quietas a 2 Hz (protocolo 19; archivos de Slatex)
 
 N-228.5. Con 8 jugadores y el encuadre real contado, el host le mandaba a cada cliente 165 KB/s (tope del
 test: 128, la mitad de los 256 de Steam) y subía 9,5 Mbit/s. Ahora: 117,7 KB/s y 6,8 Mbit/s. Detalle y
 números en `docs/investigacion-red.md` §4.2.
 
-- **Protocolo: cambió.** `PROTOCOL_VERSION` pasa a **18** (`network_manager.gd`): la configuración de
+- **Protocolo: cambió.** `PROTOCOL_VERSION` pasa a **19** (`network_manager.gd`): la configuración de
   replicación del camión (`vehicle.tscn`, `Repl_vehicle`) ya no tiene `FrontLeftWheel:transform`,
   `FrontRightWheel:transform`, `RearLeftWheel:transform` ni `RearRightWheel:transform`, y suma
   `.:net_wheel_heights` (`Vector4`, ALWAYS). Un cliente viejo con un host nuevo no se entiende; el handshake
@@ -31,4 +31,4 @@ dibuja las ruedas donde las tiene el host) y `net_pair` (etapa nueva: una caja q
 llega al cliente y vuelve a mandarse a ritmo completo).
 
 Si al mezclar `main` choca el historial de `PROTOCOL_VERSION`: esta rama ya trae la línea 17 de `main`
-(N-228.4) igual y agrega la 18; quedarse con la versión de esta rama.
+(N-228.4) y la 18 de `main` (N-228.8) y agrega la 19.

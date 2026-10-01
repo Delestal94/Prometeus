@@ -282,7 +282,7 @@ Sin encuadre, como medía el test viejo, el "antes" daba ≈123 KB/s. Lo que se 
 (cualquiera de los dos solo no alcanza: sin las ruedas da 128,7 KB/s, sin el reposo 154):
 - **Ruedas reconstruidas en el cliente:** el camión manda `net_wheel_heights` (un `Vector4`, 20 B) en vez de
   las 4 `Transform3D` de rueda (208 B); el cliente las pone con `steering` y la velocidad
-  (`vehicle.gd _pose_remote_wheels`). `PROTOCOL_VERSION` 18.
+  (`vehicle.gd _pose_remote_wheels`). `PROTOCOL_VERSION` 19.
 - **Cajas quietas a 2 Hz:** `NetRestThrottle` (`modules/net_pose_smoother`, nodo en `package.tscn`) baja el
   `replication_interval` de la caja a 0,5 s después de 0,5 s sin moverse más de 5 mm o 0,01 rad (en el
   espacio del camión si viaja), y lo vuelve a 1/60 en el mismo tick en que se mueve. No cambia el protocolo.
