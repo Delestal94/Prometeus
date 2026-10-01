@@ -1,0 +1,141 @@
+{
+  "seed": 311073,
+  "denoise": 0.15,
+  "prompt_id": "7baed7a6-2bef-4198-b79d-b79a2c8c7b0d",
+  "source": "art\\gel_character\\concept\\concept_sheet_guidance_v3.png",
+  "prompt": "A clean studio reference board of continuous translucent milky gelatin figures. Preserve the supplied board's exact composition, fourteen full-body figures, silhouettes, colors, poses and spherical featureless heads. Top row: Delgada front, side and back; Flaca front, side and back; short broad extreme; tall fine extreme. Bottom row: six identical Delgada front views in lavender milk, strawberry pink, lime, grape, orange and sky blue. Every arm ends in one smooth rounded mitten mass with one inward thumb lobe. Every leg continues smoothly into a rounded flat-bottomed foot. All surfaces are uninterrupted soft jelly with tiny bubbles, dense pale rims, clear transmission and rectangular studio-window highlights. White background and pale soft contact shadows.",
+  "workflow": {
+    "unet": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "z_image_turbo_int8_convrot.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "shift": {
+      "class_type": "ModelSamplingAuraFlow",
+      "inputs": {
+        "model": [
+          "unet",
+          0
+        ],
+        "shift": 3
+      }
+    },
+    "clip": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+        "type": "lumina2",
+        "device": "default"
+      }
+    },
+    "vae": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "ae.safetensors"
+      }
+    },
+    "pos": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "clip",
+          0
+        ],
+        "text": "A clean studio reference board of continuous translucent milky gelatin figures. Preserve the supplied board's exact composition, fourteen full-body figures, silhouettes, colors, poses and spherical featureless heads. Top row: Delgada front, side and back; Flaca front, side and back; short broad extreme; tall fine extreme. Bottom row: six identical Delgada front views in lavender milk, strawberry pink, lime, grape, orange and sky blue. Every arm ends in one smooth rounded mitten mass with one inward thumb lobe. Every leg continues smoothly into a rounded flat-bottomed foot. All surfaces are uninterrupted soft jelly with tiny bubbles, dense pale rims, clear transmission and rectangular studio-window highlights. White background and pale soft contact shadows."
+      }
+    },
+    "neg": {
+      "class_type": "ConditioningZeroOut",
+      "inputs": {
+        "conditioning": [
+          "pos",
+          0
+        ]
+      }
+    },
+    "latent": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": [
+          "resize",
+          0
+        ],
+        "vae": [
+          "vae",
+          0
+        ]
+      }
+    },
+    "sample": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "shift",
+          0
+        ],
+        "positive": [
+          "pos",
+          0
+        ],
+        "negative": [
+          "neg",
+          0
+        ],
+        "latent_image": [
+          "latent",
+          0
+        ],
+        "seed": 311073,
+        "steps": 8,
+        "cfg": 1.0,
+        "sampler_name": "res_multistep",
+        "scheduler": "simple",
+        "denoise": 0.15
+      }
+    },
+    "decode": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "sample",
+          0
+        ],
+        "vae": [
+          "vae",
+          0
+        ]
+      }
+    },
+    "save": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "decode",
+          0
+        ],
+        "filename_prefix": "s311_guided"
+      }
+    },
+    "source": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "s311_guided_concept_sheet_guidance_v3.png"
+      }
+    },
+    "resize": {
+      "class_type": "ImageScale",
+      "inputs": {
+        "image": [
+          "source",
+          0
+        ],
+        "upscale_method": "lanczos",
+        "width": 1664,
+        "height": 960,
+        "crop": "disabled"
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+# Borrador de hoja conceptual S-311.6
+
+Generada el 2026-09-30 con ChatGPT imagegen incorporado, usando
+`referencia/referencia_frente.jpg` como referencia visual. Sin semilla expuesta.
+
+Este archivo documenta una exploración. **No cierra S-311.6**: la entrega final
+requiere 3–4 variaciones con semillas de Z-Image Turbo en ComfyUI, selección
+justificada y registro de la imagen elegida.
+
+## Prompt final
+
+```text
+Use case: stylized-concept
+Asset type: game character concept sheet for 3D modeling
+Input images: Image 1 is the mandatory visual reference for the character's silhouette,
+translucent milky gelatin material, smooth spherical featureless head, mitten hands with
+thumbs, and rounded boot feet.
+Primary request: create one polished landscape character design board for an original
+translucent gelatin delivery-game character. Show the Delgada and Flaca presets in
+orthographic front, exact side and back views; two safe proportion extremes; and six
+front-view Delgada color variants: milk-lavender, strawberry pink, lime green, grape
+purple, orange and sky blue.
+Scene/backdrop: clean warm-white studio board with a subtle ground shadow under each
+figure, no environment.
+Subject: the same smooth gender-neutral faceless character in every panel; continuous
+neck-to-shoulder transition; arms reach mid-thigh; rounded mitten hands with distinct
+thumbs; rounded boot feet with flat soles. Translucent milky gelatin with denser pale
+edges, visible background through the center, tiny internal bubbles, torso slightly more
+opaque than limbs and crisp rectangular studio-window reflections.
+Style/medium: high-end stylized 3D character turnaround, production-ready model sheet,
+simple readable geometry, neutral A-pose.
+Composition/framing: 16:9 landscape grid, orthographic views, generous spacing, no
+cropped limbs.
+Constraints: preserve the reference character identity and proportions; no face, eyes,
+mouth, clothing, hair, accessories, logos, text, watermark, perspective distortion,
+extra limbs or faceted surfaces.
+```
+
+La segunda pasada corrigió únicamente las vistas traseras duplicadas y conservó la
+composición, los colores y los extremos.
+
