@@ -1162,7 +1162,8 @@ def wall_back(name, w, h, y0, material="sign_ink", t=0.02):
 def bay_lamp_bell():
     """Round high-bay bell on a chain. Origin at the ceiling hook; the shade's
     rim is 1.05 m under it. `LampDisc` (emissive `lamp_disc`) and `LampHalo`
-    (emissive, alpha 0.35) are separate nodes so the game can dim them."""
+    (emissive, alpha 0.35) are separate nodes so the game can dim them. The
+    guard under the disc is a ring on three spokes (`GuardRing`, `GuardSpoke`)."""
     clear()
     cyl("Hook", (0, -0.02, 0), 0.06, 0.04, "sign_ink", 8)
     for i in range(6):
@@ -1198,8 +1199,15 @@ def bay_lamp_bell():
     bm.to_mesh(mesh)
     bm.free()
     _finish(halo, "lamp_halo")
-    for a in (0.0, math.pi / 2):
-        box("Guard", (0, -1.05, 0), (0.7, 0.02, 0.02), "sign_ink", yaw=a)
+    # Guard: a ring on three spokes at 120 degrees out to the rim (N-319, iter 3).
+    # It used to be an X, which from below read as a "forbidden" cross.
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.27, minor_radius=0.013, major_segments=12, minor_segments=3,
+                                     location=G(0, -1.05, 0))
+    _finish(bpy.context.object, "sign_ink").name = "GuardRing"
+    cyl("GuardHub", (0, -1.05, 0), 0.035, 0.024, "sign_ink", 8)
+    for i in range(3):
+        a = math.pi / 2 + i * math.tau / 3
+        box("GuardSpoke", (math.cos(a) * 0.25, -1.05, math.sin(a) * 0.25), (0.5, 0.02, 0.02), "sign_ink", yaw=-a)
     done("sm_env_depot_bay_lamp_bell.glb")
 
 
@@ -1851,12 +1859,14 @@ def recycle_station():
         box("BinFrontLip", (x, h * 0.3, -d / 2 - 0.004), (w * 0.7, 0.03, 0.006), "sign_ink")
         yt, yb = h + 0.018, h + 0.012
         if mouth == "slot":
-            floor_panel("Mouth", [(x - 0.14, -0.06), (x + 0.14, -0.06), (x + 0.14, -0.02), (x - 0.14, -0.02)], yb, yt, "sign_ink")
+            floor_panel("Mouth", [(x - 0.14, -0.06), (x + 0.14, -0.06), (x + 0.14, -0.02), (x - 0.14, -0.02)], yb, yt + 0.003,
+                        "sign_ink")
         elif mouth == "round":
             floor_panel("Mouth", [(x + math.cos(a) * 0.08, -0.04 + math.sin(a) * 0.08) for a in [k * math.tau / 14 for k in range(14)]],
-                        yb, yt, "sign_ink")
+                        yb, yt + 0.003, "sign_ink")
         else:
-            floor_panel("Mouth", [(x - 0.09, -0.12), (x + 0.09, -0.12), (x + 0.09, 0.05), (x - 0.09, 0.05)], yb, yt, "sign_ink")
+            floor_panel("Mouth", [(x - 0.09, -0.12), (x + 0.09, -0.12), (x + 0.09, 0.05), (x - 0.09, 0.05)], yb, yt + 0.003,
+                        "sign_ink")
         box("Rim", (x, yt - 0.002, -0.04), (0.33, 0.004, 0.26), colour)
     done("sm_env_depot_recycle_station.glb")
 
@@ -2097,6 +2107,350 @@ def workbench_vise():
     done("sm_env_depot_workbench_vise.glb")
 
 
+# =============================================================================
+# N-319 iteration 3 (2026-10-01): workshop, office and break-room props.
+#
+# Same conventions as the N-319.2 kit. Wall boards (tool, paint swatch, cork)
+# have their back on z = 0 and their origin on the floor under them, already
+# at their mounting height. The hanging hard hat and vest have their origin at
+# the wall peg they hang from. The locker door's origin is on its hinge axis
+# at the floor; the fridge magnets share the fridge's origin.
+# =============================================================================
+
+PALETTE.update({
+    "locker_teal": srgb("3f7f8c"),   # the lockers' colour in depot_furnishing.gd
+})
+
+
+def lathe(name, profile, material, segs=12, c=(0.0, 0.0, 0.0)):
+    """Revolves a closed Godot (r, y) profile about the vertical axis through
+    `c`. Points with r = 0 sit on the axis and close the shape with a fan."""
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+    rings = []
+    for r, y in profile:
+        if r < 1e-6:
+            v = bm.verts.new(G(c[0], c[1] + y, c[2]))
+            rings.append([v] * segs)
+        else:
+            rings.append([bm.verts.new(G(c[0] + math.cos(k * math.tau / segs) * r, c[1] + y,
+                                         c[2] + math.sin(k * math.tau / segs) * r)) for k in range(segs)])
+    n = len(rings)
+    for i in range(n):
+        r0, r1 = rings[i], rings[(i + 1) % n]
+        for k in range(segs):
+            m = (k + 1) % segs
+            verts = []
+            for v in (r0[k], r0[m], r1[m], r1[k]):
+                if v not in verts:
+                    verts.append(v)
+            if len(verts) >= 3:
+                bm.faces.new(verts)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    return _finish(obj, material)
+
+
+def flat_rect(name, cx, cy, w, h, z, material, ang=0.0):
+    """A single quad (2 tris) in the XY plane at depth z, facing -Z, turned by
+    `ang` about Z: paint on a board (tool silhouettes, peg holes)."""
+    ca, sa = math.cos(ang), math.sin(ang)
+    corners = []
+    for lx, ly in ((w / 2, -h / 2), (-w / 2, -h / 2), (-w / 2, h / 2), (w / 2, h / 2)):
+        corners.append((cx + lx * ca - ly * sa, cy + lx * sa + ly * ca, z))
+    return quad(name, corners, [(0, 0), (1, 0), (1, 1), (0, 1)], material)
+
+
+def place(o, at, pitch=0.0, yaw=0.0, roll=0.0):
+    """Moves an object built around the origin to Godot `at`, turned like box()."""
+    o.location = G(*at)
+    o.rotation_mode = "XYZ"
+    o.rotation_euler = (pitch, -roll, yaw)
+    return o
+
+
+def tire_stack():
+    """Three worn tyres lying flat, 0.66 across, a little off-centre on each
+    other; the top one still on its steel rim. Base centre."""
+    clear()
+    profile = [(0.2, -0.065), (0.235, -0.1), (0.305, -0.1), (0.33, -0.05), (0.33, 0.05), (0.305, 0.1),
+               (0.235, 0.1), (0.2, 0.065)]
+    for i, (dx, dz) in enumerate(((0.0, 0.0), (0.035, -0.02), (-0.025, 0.03))):
+        lathe("Tire", profile, "fork_dark", 12, (dx, 0.1 + i * 0.2, dz))
+    dx, dz = -0.025, 0.03
+    lathe("Rim", [(0.0, 0.56), (0.12, 0.56), (0.205, 0.545), (0.205, 0.455), (0.0, 0.455)], "steel_light", 12,
+          (dx, 0.0, dz))
+    for k in range(5):
+        a = k * math.tau / 5
+        cyl("LugNut", (dx + math.cos(a) * 0.06, 0.567, dz + math.sin(a) * 0.06), 0.012, 0.016, "steel", 6)
+    done("sm_env_depot_tire_stack.glb")
+
+
+def tool_board():
+    """1.2 x 0.8 m pegboard over the workbench (1.0 .. 1.8), each tool on its
+    pegs in front of its painted silhouette; one silhouette is empty (someone
+    has the wrench). Wall piece, front toward -Z; origin on the floor at the wall."""
+    clear()
+    y0, w, h = 1.0, 1.2, 0.8
+    box("Board", (0, y0 + h / 2, -0.01), (w, h, 0.02), "logo_cardboard", 0.006)
+    for x in (-w / 2 + 0.02, w / 2 - 0.02):
+        box("BoardEdge", (x, y0 + h / 2, -0.012), (0.04, h, 0.026), "depot_blue")
+    for y in (y0 + 0.02, y0 + h - 0.02):
+        box("BoardEdge", (0, y, -0.012), (w, 0.04, 0.026), "depot_blue")
+    zh, zs, zt = -0.0205, -0.021, -0.04
+    # Peg holes: a sparse 10 cm grid, skipping where the tools hang.
+    tools = []
+
+    def tool(parts, pegs, present=True):
+        tools.append(parts)
+        for cx, cy, tw, th, colour, ang in parts:
+            flat_rect("Silhouette", cx, cy, tw + 0.024, th + 0.024, zs, "sign_ink", ang)
+            if present:
+                box("Tool", (cx, cy, zt), (tw, th, 0.02), colour, roll=ang)
+        if present:
+            for px, py in pegs:
+                bar("Peg", (px, py, -0.02), (px, py + 0.01, -0.06), 0.012, "steel")
+
+    def covered(x, y):
+        for parts in tools:
+            for cx, cy, tw, th, _c, _a in parts:
+                if abs(x - cx) < tw / 2 + 0.05 and abs(y - cy) < th / 2 + 0.05:
+                    return True
+        return False
+
+    yc = y0 + h / 2
+    # Hammer.
+    tool([(-0.44, yc - 0.05, 0.035, 0.36, "wood", 0.0), (-0.44, yc + 0.15, 0.16, 0.05, "steel_light", 0.0)],
+         [(-0.49, yc + 0.11), (-0.39, yc + 0.11)])
+    # Two wrenches, and the empty place of a third.
+    for x, length, present in ((-0.27, 0.3, True), (-0.2, 0.25, True), (-0.13, 0.2, False)):
+        tool([(x, yc + 0.02, 0.03, length, "steel_light", 0.0), (x, yc + 0.02 + length / 2, 0.06, 0.05, "steel_light", 0.0)],
+             [(x, yc + 0.02 + length / 2 - 0.05)], present)
+    # Screwdrivers.
+    for x, colour in ((0.0, "ui_yellow"), (0.07, "danger_red")):
+        tool([(x, yc + 0.11, 0.035, 0.11, colour, 0.0), (x, yc - 0.02, 0.01, 0.16, "steel_light", 0.0)],
+             [(x - 0.03, yc + 0.06), (x + 0.03, yc + 0.06)])
+    # Pliers.
+    tool([(0.21, yc + 0.03, 0.025, 0.26, "danger_red", 0.16), (0.25, yc + 0.03, 0.025, 0.26, "danger_red", -0.16),
+          (0.23, yc + 0.17, 0.05, 0.06, "steel_light", 0.0)], [(0.23, yc + 0.11)])
+    # Hand saw.
+    tool([(0.44, yc - 0.06, 0.13, 0.28, "steel_light", 0.0), (0.44, yc + 0.14, 0.13, 0.1, "wood", 0.0)],
+         [(0.44, yc + 0.2)])
+    box("SawTeeth", (0.505, yc - 0.06, -0.051), (0.012, 0.27, 0.003), "sign_ink")
+    box("SawGrip", (0.44, yc + 0.14, -0.051), (0.07, 0.04, 0.003), "sign_ink")
+    # Tape measure low on the left.
+    tool([(-0.3, y0 + 0.12, 0.08, 0.08, "ui_yellow", 0.0)], [(-0.3, y0 + 0.18)])
+    for i in range(11):
+        for j in range(7):
+            x, y = -0.5 + i * 0.1, y0 + 0.1 + j * 0.1
+            if (i + j) % 2 == 0 and not covered(x, y):
+                flat_rect("PegHole", x, y, 0.014, 0.014, zh, "sign_ink")
+    done("sm_env_depot_tool_board.glb")
+
+
+def paint_swatch_board():
+    """1.2 x 0.6 m framed board (1.2 .. 1.8) with six truck paint swatches:
+    chip, a strip with the paint code and a tiny van; `Header` is a blank
+    band the game may write on. Wall piece, front toward -Z; origin on the
+    floor at the wall."""
+    clear()
+    y0, w, h = 1.2, 1.2, 0.6
+    box("Backing", (0, y0 + h / 2, -0.01), (w, h, 0.02), "paper", 0.005)
+    for x in (-w / 2 + 0.025, w / 2 - 0.025):
+        box("Frame", (x, y0 + h / 2, -0.02), (0.05, h, 0.04), "housing", 0.01)
+    for y in (y0 + 0.025, y0 + h - 0.025):
+        box("Frame", (0, y, -0.02), (w, 0.05, 0.04), "housing", 0.01)
+    box("Header", (0, y0 + h - 0.1, -0.022), (w - 0.16, 0.07, 0.004), "sign_ink").name = "Header"
+    colours = ("depot_blue", "danger_red", "go_green", "ui_yellow", "depot_orange", "ui_mint")
+    for i, colour in enumerate(colours):
+        x = -0.45 + i * 0.18
+        box("SwatchCard", (x, y0 + 0.25, -0.025), (0.15, 0.34, 0.01), "curtain")
+        box("Swatch%d" % i, (x, y0 + 0.3, -0.032), (0.13, 0.2, 0.006), colour).name = "Swatch%d" % i
+        box("SwatchCode", (x, y0 + 0.14, -0.031), (0.09, 0.018, 0.003), "sign_ink")
+        box("VanBody", (x - 0.01, y0 + 0.31, -0.036), (0.07, 0.04, 0.003), "curtain")
+        box("VanCab", (x + 0.035, y0 + 0.302, -0.036), (0.025, 0.025, 0.003), "curtain")
+        cyl("Pin", (x, y0 + 0.405, -0.035), 0.009, 0.012, "steel", 6, ALONG_Z)
+    done("sm_env_depot_paint_swatch_board.glb")
+
+
+def desk_lamp():
+    """Articulated desk lamp, 0.42 tall, head over the desk toward -Z.
+    `LampGlow` (emissive `lamp_disc`) is the bulb disc under the shade, its
+    own node so the game can switch it. Base centre."""
+    from mathutils import Euler
+    clear()
+    cyl("Base", (0, 0.012, 0.05), 0.08, 0.024, "depot_blue", 12)
+    cyl("Knuckle", (0, 0.04, 0.05), 0.02, 0.04, "sign_ink", 8, ALONG_X)
+    rod("ArmLower", (0, 0.04, 0.05), (0, 0.3, 0.1), 0.01, "depot_blue", 6)
+    cyl("Elbow", (0, 0.3, 0.1), 0.018, 0.04, "sign_ink", 8, ALONG_X)
+    rod("ArmUpper", (0, 0.3, 0.1), (0, 0.35, -0.13), 0.009, "depot_blue", 6)
+    rod("Spring", (0, 0.07, 0.07), (0, 0.27, 0.11), 0.004, "steel_light", 4)
+    tilt = 0.55
+    head_at = (0, 0.33, -0.17)
+    head = cyl("Shade", (0, 0, 0), 0.07, 0.11, "depot_blue", 12, r2=0.032)
+    place(head, head_at, pitch=tilt)
+    cap = cyl("ShadeCap", (0, 0, 0), 0.034, 0.03, "sign_ink", 8)
+    place(cap, head_at, pitch=tilt)
+    cap.location = Vector(G(*head_at)) + Euler((tilt, 0, 0)).to_matrix() @ Vector(G(0, 0.06, 0))
+    glow = cyl("LampGlow", (0, 0, 0), 0.06, 0.006, "lamp_disc", 12)
+    place(glow, head_at, pitch=tilt)
+    glow.location = Vector(G(*head_at)) + Euler((tilt, 0, 0)).to_matrix() @ Vector(G(0, -0.05, 0))
+    glow.name = "LampGlow"
+    done("sm_env_depot_desk_lamp.glb")
+
+
+def cork_board():
+    """0.9 x 0.6 m cork board (1.2 .. 1.8) in a wooden frame. `CorkSurface` is
+    one quad mapped 0..1 over the whole cork (u to the right, v up as seen
+    from the front) so the game can put a texture with the notes on it. Wall
+    piece, front toward -Z; origin on the floor at the wall."""
+    clear()
+    y0, w, h, f = 1.2, 0.9, 0.6, 0.04
+    box("Backing", (0, y0 + h / 2, -0.008), (w, h, 0.016), "housing")
+    for x in (-w / 2 + f / 2, w / 2 - f / 2):
+        box("Frame", (x, y0 + h / 2, -0.016), (f, h, 0.032), "wood", 0.008)
+    for y in (y0 + f / 2, y0 + h - f / 2):
+        box("Frame", (0, y, -0.016), (w, f, 0.032), "wood", 0.008)
+    x0, x1, ya, yb, z = -w / 2 + f, w / 2 - f, y0 + f, y0 + h - f, -0.0165
+    cork = quad("CorkSurface", [(x1, ya, z), (x0, ya, z), (x0, yb, z), (x1, yb, z)],
+                [(0, 0), (1, 0), (1, 1), (0, 1)], "tape_brown")
+    cork.name = "CorkSurface"
+    done("sm_env_depot_cork_board.glb")
+
+
+def mug():
+    """Coffee mug, 9.5 cm, handle toward +X, `Coffee` inside. Base centre."""
+    clear()
+    lathe("Mug", [(0.0, 0.0), (0.038, 0.0), (0.042, 0.008), (0.042, 0.095), (0.036, 0.095), (0.035, 0.012),
+                  (0.0, 0.012)], "danger_red", 12)
+    cyl("Coffee", (0, 0.078, 0), 0.0352, 0.004, "wood", 12).name = "Coffee"
+    tube("Handle", [(0.04, 0.078, 0), (0.07, 0.074, 0), (0.073, 0.03, 0), (0.04, 0.026, 0)], 0.008, "danger_red", 5)
+    cyl("Stripe", (0, 0.064, 0), 0.0425, 0.012, "paper", 12)
+    done("sm_env_depot_mug.glb")
+
+
+def service_bell():
+    """Counter service bell, 7 cm: dark base, chrome dome, plunger. Base centre."""
+    clear()
+    lathe("BellBase", [(0.0, 0.0), (0.055, 0.0), (0.058, 0.008), (0.055, 0.016), (0.0, 0.016)], "sign_ink", 12)
+    lathe("Dome", [(0.0, 0.016), (0.048, 0.016), (0.046, 0.034), (0.034, 0.052), (0.016, 0.06), (0.0, 0.062)],
+          "steel_light", 12)
+    cyl("Plunger", (0, 0.068, 0), 0.005, 0.014, "steel", 6)
+    ball("Button", (0, 0.076, 0), (0.011, 0.005, 0.011), "sign_ink")
+    done("sm_env_depot_service_bell.glb")
+
+
+def locker_door_open():
+    """One loose locker door (the lockers in depot_furnishing.gd: 0.58 wide,
+    1.95 tall, front at the body's face) to swing open about 25 degrees.
+    Origin on the hinge axis at the floor; the door runs from the hinge
+    toward +X (0 .. 0.54), outside toward -Z, 2 cm thick behind the origin's
+    plane (z -0.02 .. 0). Mirror it in X for a right-hand hinge. The inside
+    (+Z) has the folded rim, a coat hook and a photo."""
+    clear()
+    w, ya, yb, t = 0.54, 0.1, 1.9, 0.02
+    hgt = yb - ya
+    box("Door", (w / 2, ya + hgt / 2, -t / 2), (w, hgt, t), "locker_teal", 0.004)
+    for vent in range(3):
+        box("Vent", (w / 2, 1.7 - vent * 0.05, -t - 0.002), (0.3, 0.02, 0.004), "sign_ink")
+    box("Handle", (0.45, 1.05, -t - 0.015), (0.03, 0.14, 0.03), "fan_blade", 0.006)
+    box("NameCard", (w / 2, 1.45, -t - 0.002), (0.2, 0.07, 0.004), "paper")
+    box("Lock", (0.45, 1.16, -t - 0.004), (0.025, 0.025, 0.008), "steel")
+    # Inside: the folded rim (open toward +Z), a coat hook, a photo.
+    for x in (0.012, w - 0.012):
+        box("InnerRim", (x, ya + hgt / 2, 0.012), (0.024, hgt - 0.02, 0.024), "locker_teal")
+    for y in (ya + 0.012, yb - 0.012):
+        box("InnerRim", (w / 2, y, 0.012), (w - 0.05, 0.024, 0.024), "locker_teal")
+    box("Stiffener", (w / 2, ya + hgt / 2, 0.008), (0.06, hgt - 0.06, 0.016), "locker_teal")
+    tube("CoatHook", [(w / 2 + 0.12, 1.6, 0.0), (w / 2 + 0.12, 1.6, 0.05), (w / 2 + 0.12, 1.64, 0.06)], 0.006,
+         "fan_blade", 5)
+    box("Photo", (w / 2 - 0.12, 1.5, 0.0015), (0.1, 0.13, 0.003), "paper", roll=0.08)
+    box("PhotoImage", (w / 2 - 0.12, 1.51, 0.0035), (0.08, 0.09, 0.002), "foam_blue", roll=0.08)
+    for y in (0.4, 1.6):
+        cyl("Hinge", (0.0, y, -t / 2), 0.008, 0.08, "steel", 6)
+    done("sm_env_depot_locker_door_open.glb")
+
+
+def _hat(at, pitch):
+    """A hard hat around its own centre (rim plane), placed at `at`."""
+    parts = [lathe("Hat", [(0.0, 0.15), (0.075, 0.143), (0.12, 0.11), (0.142, 0.05), (0.148, 0.0), (0.0, 0.0)],
+                   "ui_yellow", 12),
+             lathe("Brim", [(0.13, 0.012), (0.175, 0.0), (0.175, -0.012), (0.13, -0.006)], "ui_yellow", 12),
+             box("Ridge", (0, 0.135, 0.0), (0.035, 0.04, 0.16), "ui_yellow", 0.01),
+             box("Peak", (0, 0.0, -0.17), (0.2, 0.012, 0.07), "ui_yellow"),
+             cyl("Harness", (0, -0.002, 0), 0.14, 0.004, "sign_ink", 12),
+             box("HatSticker", (0.0, 0.07, -0.135), (0.05, 0.035, 0.012), "depot_blue", pitch=-0.4)]
+    from mathutils import Euler, Matrix
+    m = Matrix.Translation(G(*at)) @ Euler((pitch, 0, 0)).to_matrix().to_4x4()
+    bpy.context.view_layer.update()
+    for o in parts:
+        o.rotation_mode = "XYZ"
+        o.matrix_world = m @ o.matrix_world
+    return parts
+
+
+def hard_hat():
+    """Yellow hard hat hanging on a wall peg, tipped forward a little.
+    Origin at the peg on the wall (the hat hangs from it). Back on z = 0."""
+    clear()
+    cyl("PegPlate", (0, 0, -0.005), 0.025, 0.01, "steel", 8, ALONG_Z)
+    rod("Peg", (0, 0, -0.01), (0, 0.03, -0.17), 0.01, "steel", 6)
+    _hat((0, -0.06, -0.16), -0.25)
+    done("sm_env_depot_hard_hat.glb")
+
+
+def safety_vest():
+    """Orange hi-vis vest on a hanger from a wall peg, two reflective bands
+    and shoulder strips. Origin at the peg on the wall; back on z = 0."""
+    clear()
+    cyl("PegPlate", (0, 0, -0.005), 0.025, 0.01, "steel", 8, ALONG_Z)
+    rod("Peg", (0, 0, -0.01), (0, 0.02, -0.09), 0.01, "steel", 6)
+    zf, zb = -0.1, -0.06
+    tube("HangerHook", [(0, -0.07, -0.08), (0, 0.025, -0.08), (0, 0.04, -0.06), (0, 0.025, -0.045)], 0.004,
+         "steel_light", 4)
+    tube("Hanger", [(-0.2, -0.14, -0.08), (0, -0.07, -0.08), (0.2, -0.14, -0.08)], 0.007, "wood", 5)
+    outline = [(-0.07, -0.08), (-0.15, -0.1), (-0.2, -0.17), (-0.24, -0.3), (-0.24, -0.72), (0.24, -0.72),
+               (0.24, -0.3), (0.2, -0.17), (0.15, -0.1), (0.07, -0.08), (0.0, -0.3)]
+    panel("Vest", outline, zf, zb, "depot_orange")
+    for y in (-0.48, -0.62):
+        box("ReflectiveBand", (0, y, (zf + zb) / 2), (0.49, 0.05, 0.046), "curtain")
+    for x in (-0.11, 0.11):
+        box("ReflectiveStrap", (x, -0.27, zf - 0.002), (0.045, 0.3, 0.004), "curtain", roll=-0.12 if x < 0 else 0.12)
+    box("Zip", (0, -0.51, zf - 0.003), (0.008, 0.42, 0.004), "sign_ink")
+    done("sm_env_depot_safety_vest.glb")
+
+
+def fridge_magnets():
+    """Five fridge magnets for sm_env_depot_fridge.glb, in the fridge's own
+    space (put this at the fridge's transform): a star, a heart, a round one
+    holding a photo, a parcel and a little van, clear of the handles and the
+    fridge's own notes."""
+    clear()
+    z0, z1 = -0.335, -0.345
+    star = []
+    for k in range(10):
+        a = math.pi / 2 + k * math.pi / 5
+        r = 0.032 if k % 2 == 0 else 0.014
+        star.append((-0.1 + math.cos(a) * r, 1.56 + math.sin(a) * r))
+    panel("MagnetStar", star, z0, z1, "ui_yellow")
+    heart = [(0.0, -0.03), (0.03, 0.0), (0.032, 0.016), (0.022, 0.026), (0.01, 0.024), (0.0, 0.014),
+             (-0.01, 0.024), (-0.022, 0.026), (-0.032, 0.016), (-0.03, 0.0)]
+    panel("MagnetHeart", [(0.05 + x, 1.05 + y) for x, y in heart], z0, z1, "danger_red")
+    box("Photo", (0.17, 1.41, -0.3365), (0.09, 0.11, 0.003), "paper", roll=-0.07)
+    box("PhotoImage", (0.17, 1.415, -0.3385), (0.075, 0.08, 0.002), "foam_blue", roll=-0.07)
+    cyl("MagnetRound", (0.17, 1.46, -0.341), 0.016, 0.012, "go_green", 8, ALONG_Z)
+    box("MagnetParcel", (-0.05, 0.62, -0.341), (0.05, 0.04, 0.012), "logo_cardboard")
+    box("MagnetParcelTape", (-0.05, 0.62, -0.348), (0.012, 0.04, 0.003), "tape_brown")
+    box("MagnetVan", (0.12, 0.5, -0.341), (0.06, 0.03, 0.012), "depot_blue")
+    box("MagnetVanCab", (0.158, 0.495, -0.341), (0.02, 0.022, 0.012), "depot_blue")
+    for x in (0.1, 0.145):
+        cyl("MagnetVanWheel", (x, 0.483, -0.348), 0.007, 0.004, "sign_ink", 6, ALONG_Z)
+    done("sm_env_depot_fridge_magnets.glb")
+
+
 _special_materials()
 
 
@@ -2122,6 +2476,9 @@ BUILDERS = {
                water_dispenser, wet_floor_cone, wet_floor_sign, pictogram_sign],
     "breakroom": [fridge, kitchenette],
     "workshop": [scissor_lift, compressor, workbench_vise],
+    # N-319 iteration 3.
+    "iter3": [tire_stack, tool_board, paint_swatch_board, desk_lamp, cork_board, mug, service_bell,
+              locker_door_open, hard_hat, safety_vest, fridge_magnets],
 }
 ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 for group, builders in BUILDERS.items():

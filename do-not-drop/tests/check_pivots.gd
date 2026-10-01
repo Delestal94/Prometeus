@@ -78,6 +78,20 @@ const PATHS: Array[String] = [
 	"res://assets/models/environment/depot/sm_env_depot_scissor_lift.glb",
 	"res://assets/models/environment/depot/sm_env_depot_compressor.glb",
 	"res://assets/models/environment/depot/sm_env_depot_workbench_vise.glb",
+	# N-319 iteration 3: floor props at min_y 0; wall boards at their mounting height
+	# (origin on the floor at the wall); hard hat and vest hang from their wall peg (origin);
+	# the locker door's origin is its hinge at the floor; the magnets share the fridge's origin.
+	"res://assets/models/environment/depot/sm_env_depot_tire_stack.glb",
+	"res://assets/models/environment/depot/sm_env_depot_tool_board.glb",
+	"res://assets/models/environment/depot/sm_env_depot_paint_swatch_board.glb",
+	"res://assets/models/environment/depot/sm_env_depot_desk_lamp.glb",
+	"res://assets/models/environment/depot/sm_env_depot_cork_board.glb",
+	"res://assets/models/environment/depot/sm_env_depot_mug.glb",
+	"res://assets/models/environment/depot/sm_env_depot_service_bell.glb",
+	"res://assets/models/environment/depot/sm_env_depot_locker_door_open.glb",
+	"res://assets/models/environment/depot/sm_env_depot_hard_hat.glb",
+	"res://assets/models/environment/depot/sm_env_depot_safety_vest.glb",
+	"res://assets/models/environment/depot/sm_env_depot_fridge_magnets.glb",
 ]
 
 
