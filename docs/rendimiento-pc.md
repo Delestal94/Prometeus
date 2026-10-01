@@ -24,6 +24,7 @@ vsync apagado (lo apaga el bench).
 | Fecha | Commit | Build | FPS reparto (prom / 1 % bajo) | FPS Endless (prom / 1 % bajo) | p99 ms (reparto / Endless) | Draw calls (reparto / Endless) | Memoria MiB (reparto / Endless) | Notas |
 |---|---|---|---|---|---|---|---|---|
 | 2026-09-30 | `390ee37` | OK, 136 MB | 142 / 72 | 333 / 152 | 13,9 / 6,6 | 2.165 / 463 | 388 / 228 | Primera fila. Reparto: `HUD_RUN_STUCK` a los 116 s (progreso 0,99); los últimos 34 s midieron la pantalla final. Endless: 16 tirones de física de 35-86 ms. Editor de Godot abierto en segundo plano. |
+| 2026-10-01 | `1234ed6` | OK, 131 MB | 153 / 95 | 395 / 250 | 10,5 / 4,0 | 2.263 / 460 | 462 / 276 | Reparto: terminó la ruta a los ~108 s, sin `HUD_RUN_STUCK`; 16 frames de más de 33 ms (11 en los primeros 2,2 s de carga, 5 sueltos de 64-195 ms sin física). Endless: 2 frames de más de 33 ms (83 y 255 ms, no son de física); ya no aparecen los 16 tirones de física de ayer. Pico de física por tick: 18,2 / 14,6 ms. La memoria subió 19-21 % contra la fila anterior; no es criterio de tarea, pero queda a la vista. Capturas con GPU OK. Editor de Godot abierto en segundo plano. |
 
 ## Pico de física al generar un tramo de Endless (N-219)
 
