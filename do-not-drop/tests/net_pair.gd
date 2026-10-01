@@ -283,7 +283,13 @@ func _check_ghost_rejoin(slot: int) -> void:
 	_expect(client_player.carried_package == package and package.carrier == client_player,
 		"client holds a box in crisis before vanishing")
 	# The host must not notice the silence before the client is back: that
-	# takes a level load.
+	# takes a level load. The host settles the previous rejoin
+	# settle_delay_seconds after it (session timeout, 20 s): wait that out
+	# first, or it overwrites the long timeout below and a slow load (CI) times
+	# the ghost out before the client is back to have it dropped.
+	var settled: bool = await _wait_until(func() -> bool:
+		return int(_network.call(&"enet_timeout_msec", ghost)) == _session_timeout_msec())
+	_expect(settled, "the rejoined client settles before it vanishes")
 	var enet := get_tree().root.multiplayer.multiplayer_peer as ENetMultiplayerPeer
 	enet.get_peer(ghost).set_timeout(32, 120000, 120000)
 	var removed: Array = []
