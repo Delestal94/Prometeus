@@ -1733,7 +1733,7 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 > negativo. Rara (`RoutePlanner.MUD_WEIGHT`, una por entrega, no en la llegada a una casa ni antes de los 100 m; en Endless
 > no antes de 300 m ni dos a menos de 600 m). `SegmentStreamer` ganó los ganchos `_pick_weight` y `_limit_candidates`.
 > `vehicle.gd`: un camión sin conductor se congelaba ("parking") bajo la grúa, ahora respeta el meta `keep_awake`.
-> `PROTOCOL_VERSION` 14. Tras la auditoría de red: fin de partida atascado cancela sin multa, agarre compartido con la grava (`GripZones`), unión tardía, una sola salida por tramo, grúa gratis en Endless. Test `test_mud_segment.gd` (generación, física con la camioneta real, empuje de 1 y 2, eslinga,
+> `PROTOCOL_VERSION` 15. Tras la auditoría de red: fin de partida atascado cancela sin multa, agarre compartido con la grava (`GripZones`), unión tardía, una sola salida por tramo, grúa gratis en Endless. Test `test_mud_segment.gd` (generación, física con la camioneta real, empuje de 1 y 2, eslinga,
 > grúa con saldo 100 y 15, ambos niveles no cuentan "atascado" en el barro); captura con `tests/render_mud_segment.gd`.
 > Pendiente con la PC: modelo propio del cartel de barro (hoy el de ripio más el cartel del tramo) y el sonido.
 > Aviso: `docs/avisos/2026-09-30-n108-barro.md`.
