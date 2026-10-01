@@ -11,14 +11,15 @@ comportamiento:
   `road_jolt_strength`, `cushion_state`, `get_state`, `on_setup`, `care_action`, `hint_text`, `sequence_state`,
   `gesture_state`) son directas sobre `ITrapBehavior`; `params` sale de `TrapDefinition`; la bomba desactivada
   se marca con `ExplosiveTrapBehavior._defused` (antes `.set(&"_defused")`).
-- La radio del camión se lee como `TruckRadio` y el que sostiene la caja en el regazo como `Player`.
+- El que sostiene la caja en el regazo se lee como `Player`.
 - `RunManager` y `NetworkManager` pasan por `PackageAutoloads` (red tipada como `NetSession`); se van los
   `/root/` sueltos.
 - Siguen por nombre: el camión (falsos en el grupo `vehicle`), los métodos de `RunManager` (ciclo de
   compilación, ver `package_autoloads.gd`), `world_seed` (lo declara `network_manager.gd`, no `NetSession`), el
-  `seat_node_path` de `view_basis_of` (falsos en el grupo `player`) y el anclaje de regazo (sin `class_name`).
+  `seat_node_path` de `view_basis_of` (falsos en el grupo `player`) el anclaje de regazo (sin `class_name`) y el `mode` de la radio (`truck_radio.gd` nombra autoloads
+  sin prefijo).
 
-`tests/test_dynamic_dispatch_budget.gd` suma el archivo a `BUDGETS` (call 7, get 5, root 0).
+`tests/test_dynamic_dispatch_budget.gd` suma el archivo a `BUDGETS` (call 7, get 6, root 0).
 
 ## Qué tiene que hacer Slatex
 

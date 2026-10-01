@@ -63,17 +63,19 @@ const BUDGETS: Dictionary = {
 	"res://scripts/gameplay/package/package_autoloads.gd": {"call": 0, "callv": 0, "get": 0, "root": 4},
 	# The rescue (host care simulation) is typed like the box: the trap (ITrapBehavior,
 	# TrapDefinition, ExplosiveTrapBehavior for the defused flag), the player's seat
-	# on the carrier (Player), the radio (TruckRadio), the network and the autoload
+	# on the carrier (Player), the network and the autoload
 	# lookups (PackageAutoloads). Seven .call left: carries (x2) and point_velocity go
 	# to the truck, found through the "vehicle" group (vehicle.gd has no class name and
 	# tests put Node fakes there); care_supply_count, consume_care_supply and
 	# record_care go to RunManager, by name for the cycle package_autoloads.gd
 	# explains; store goes to the lap mount (package_mount_point.gd has no class
-	# name). Five .get left: the truck's driver_peer_id, RunManager's cargo, the
+	# name). Six .get left: the truck's driver_peer_id, RunManager's cargo, the
 	# seat_node_path of the players in the "player" group (tests put Node3D fakes
 	# there, `as Player` would drop them), the lap mount's occupied_by and the
-	# session's world_seed (network_manager.gd declares it, NetSession does not).
-	"res://scripts/gameplay/package/package_rescue.gd": {"call": 7, "callv": 0, "get": 5, "root": 0},
+	# session's world_seed (network_manager.gd declares it, NetSession does not)
+	# and the radio's mode (truck_radio.gd names autoloads bare: typing it would
+	# pull them into the compile graph of every script that names the box).
+	"res://scripts/gameplay/package/package_rescue.gd": {"call": 7, "callv": 0, "get": 6, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

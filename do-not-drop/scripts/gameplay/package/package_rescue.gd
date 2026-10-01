@@ -10,8 +10,10 @@ extends RefCounted
 ## group: carries, point_velocity, driver_peer_id), RunManager (see
 ## package_autoloads.gd: typing it makes a compile cycle), world_seed (declared
 ## by network_manager.gd, not by NetSession), the seat path of the players in
-## the "player" group (tests put Node3D fakes there) and the lap mount
-## (package_mount_point.gd has no class name).
+## the "player" group (tests put Node3D fakes there), the lap mount
+## (package_mount_point.gd has no class name) and the truck radio's mode
+## (truck_radio.gd names autoloads bare: typing it pulls them into the box's
+## compile graph).
 
 
 static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
@@ -94,9 +96,10 @@ static func simulate_cargo(p: DeliveryPackage, delta: float) -> void:
 ## The truck radio's mode (TruckRadio, N-406), for the traps it moves (Ruidoso):
 ## &"off" when the level has no radio.
 static func radio_mode(p: DeliveryPackage) -> StringName:
-	var radio: TruckRadio = p.get_tree().get_first_node_in_group(&"truck_radio") as TruckRadio \
-			if p.is_inside_tree() else null
-	return radio.mode if radio != null else &"off"
+	# By name: typing TruckRadio would pull truck_radio.gd (it names autoloads bare)
+	# into the compile graph of every script that names DeliveryPackage.
+	var radio: Node = p.get_tree().get_first_node_in_group(&"truck_radio") if p.is_inside_tree() else null
+	return StringName(radio.get(&"mode")) if radio != null else &"off"
 
 
 ## Harm that comes from outside the box's own trap -- the parasite sharing its
