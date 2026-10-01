@@ -2,6 +2,10 @@
 
 > Estado: **diseño con decisiones tomadas** (2026-09-29). Tarea **N-606** de `tareas-nacho.md`
 > (hito M7), partida en las fases de abajo. Dueño de la idea: Nacho.
+> **Fase 1 hecha (2026-09-30, N-606.1 y N-606.2)**: apodo, `RunChronicle`, `NewsDesk`, catálogo y la página 2D
+> antes de los resultados (`scripts/presentation/newspaper/`, `hud_newspaper.gd`). Las casillas del catálogo
+> son `{town}`, `{house}`, `{neighbor}`, `{player}`, `{km}`, `{minutes}` y `{count}`; `test_news_desk` y
+> `test_run_chronicle` las cubren. Falta la escena 3D (N-606.3) y el resto.
 
 ## La idea en una línea
 

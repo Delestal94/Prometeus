@@ -170,6 +170,8 @@ func _on_connection_lost(reason: String) -> void:
 	get_tree().paused = false
 	hud.soft_pause = false
 	hud.prompts.session_lost = true
+	# The newspaper page up over the results: read or not, the results come next.
+	hud.newspaper.dismiss()
 	# N-222: results already up are how the run ended, the host's last word.
 	# They stay; only the way on changes (HudResults.show_host_gone()).
 	if hud.overlay_mode == "results":

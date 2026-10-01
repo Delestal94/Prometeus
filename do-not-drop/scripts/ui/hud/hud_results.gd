@@ -58,6 +58,13 @@ func show_host_gone() -> void:
 func _on_ended(score: int, results: Dictionary) -> void:
 	hud.soft_pause = false
 	hud.notices.clear_all_notices()
+	# The next-day newspaper comes first when the host sent one (N-606.2).
+	if hud.newspaper != null and hud.newspaper.present(show_results.bind(score, results)):
+		return
+	show_results(score, results)
+
+
+func show_results(score: int, results: Dictionary) -> void:
 	hud.overlay_mode = "results"
 	hud.overlay.show()
 	# The results card stands alone: the run's HUD peeking around its edges

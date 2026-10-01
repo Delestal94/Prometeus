@@ -37,6 +37,15 @@ signal vehicle_telemetry(speed_kmh: float)
 signal vehicle_impact(strength: float, impact_position: Vector3)
 signal run_started(route_id: StringName, players: Array)
 signal run_ended(score: int, results: Dictionary)
+## Host-side and local (a plain emit, not a relay): the run's results are
+## decided and about to be shared. RunChronicle writes the next-day newspaper
+## from them and relays newspaper_ready before anyone hears run_ended, so the
+## page is in every peer's hands when their results come up (N-606).
+signal run_results_decided(results: Dictionary)
+## The next-day newspaper, written by the host (RunChronicle + NewsDesk) and
+## relayed: story ids, variants and slots, never text -- each peer reads it in
+## its own language (NewsDesk.read). Arrives before run_ended. See NewsDesk.compose().
+signal newspaper_ready(paper: Dictionary)
 signal route_progress_changed(progress: float, remaining_meters: float, section: String)
 signal delivery_status_changed(in_zone: bool, stopped_seconds: float)
 signal start_requested

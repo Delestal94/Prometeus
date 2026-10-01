@@ -100,6 +100,7 @@ var local_merit_total: int = 0
 var cargo: HudCargoPanel
 var prompts: HudPrompts
 var notices: HudNotices
+var newspaper: HudNewspaper
 var results: HudResults
 var pause: HudPause
 
@@ -117,6 +118,10 @@ func _ready() -> void:
 	notices.name = "Notices"
 	notices.hud = self
 	add_child(notices)
+	newspaper = HudNewspaper.new()
+	newspaper.name = "Newspaper"
+	newspaper.hud = self
+	add_child(newspaper)
 	results = HudResults.new()
 	results.name = "Results"
 	results.hud = self
