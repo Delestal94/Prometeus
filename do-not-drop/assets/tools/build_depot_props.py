@@ -905,12 +905,13 @@ def _cage_mesh_texture():
 
 
 PICTOGRAMS = ["helmet", "vest", "speed", "exit", "extinguisher", "first_aid",
-              "assembly", "forklift", "hands", "no_smoking", "electric", "evacuation"]
+              "assembly", "forklift", "hands", "no_smoking", "electric", "evacuation",
+              "wrench", "open_box", "hanger", "phone"]
 
 
 def _pictogram_atlas():
-    """512 px atlas, 4 x 4 cells of 128 px, the 12 PICTOGRAMS in reading order
-    (cell k: column k % 4, row k // 4 from the top). White flat shapes on
+    """512 px atlas, 4 x 4 cells of 128 px, the PICTOGRAMS in reading order
+    (cell k: column k % 4, row k // 4 from the top; 16 now, the atlas is full). White flat shapes on
     transparent; drawn 4x larger and averaged down for clean edges."""
     ss = 4
     cell = 128 * ss
@@ -988,6 +989,18 @@ def _pictogram_atlas():
                                                         ((0.14, 0.74), (0.06, 0.74)), ((0.3, 0.36), (0.44, 0.46)),
                                                         ((0.3, 0.36), (0.16, 0.44))])
                             | poly([(0.52, 0.44), (0.74, 0.44), (0.74, 0.3), (0.95, 0.52), (0.74, 0.74), (0.74, 0.6), (0.52, 0.6)]))
+    # Row 3 (N-319): workshop, parcels, lockers and the dispatch phone.
+    shapes["wrench"] = ((line((0.3, 0.7), (0.66, 0.34), 0.13) | disc(0.7, 0.3, 0.18) | disc(0.25, 0.75, 0.13))
+                        & ~line((0.7, 0.3), (0.95, 0.05), 0.14) & ~disc(0.25, 0.75, 0.055))
+    shapes["open_box"] = ((rect(0.2, 0.52, 0.8, 0.88) & ~rect(0.3, 0.64, 0.52, 0.72))
+                          | poly([(0.2, 0.46), (0.47, 0.46), (0.33, 0.24), (0.04, 0.3)])
+                          | poly([(0.53, 0.46), (0.8, 0.46), (0.96, 0.3), (0.67, 0.24)]))
+    shapes["hanger"] = ((ring(0.5, 0.22, 0.1, 0.065) & ~((xx < 0.5) & (yy > 0.22)))
+                        | line((0.567, 0.25), (0.5, 0.42), 0.065)
+                        | line((0.5, 0.42), (0.1, 0.76), 0.075) | line((0.1, 0.76), (0.9, 0.76), 0.075)
+                        | line((0.9, 0.76), (0.5, 0.42), 0.075))
+    shapes["phone"] = ((ring(0.72, 0.28, 0.5, 0.13) & (xx <= 0.72) & (yy >= 0.28))
+                       | line((0.24, 0.14), (0.27, 0.32), 0.2) | line((0.68, 0.73), (0.86, 0.7), 0.2))
     for k, name in enumerate(PICTOGRAMS):
         col, row = k % 4, k // 4
         alpha[row * cell:(row + 1) * cell, col * cell:(col + 1) * cell] = shapes[name].astype(np.float32)
