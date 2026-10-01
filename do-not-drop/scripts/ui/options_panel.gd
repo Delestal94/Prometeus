@@ -15,6 +15,8 @@ var _sensitivity_slider: HSlider
 var _music_slider: HSlider
 var _effects_slider: HSlider
 var _voice_slider: HSlider
+## Voice chat switches and the per-crewmate list (options_voice_section.gd).
+var _voice_section: OptionsVoiceSection
 var _fov_slider: HSlider
 var _shake_slider: HSlider
 var _impact_effects_check: CheckBox
@@ -99,6 +101,9 @@ func _build() -> void:
 	_voice_slider.value_changed.connect(func(value: float) -> void: GameSettings.voice_volume = value)
 	var sounds: Button = UiTheme.button(column, tr("UI_OPT_SOUND_CHECK"), false, Vector2(0, 40))
 	sounds.pressed.connect(_open_sound_check)
+	_voice_section = OptionsVoiceSection.new()
+	column.add_child(_voice_section)
+	_voice_section.build()
 	_fov_slider = UiTheme.slider_row(column, tr("UI_OPT_FOV"), 65.0, 100.0, 1.0, GameSettings.preferred_fov)
 	_fov_slider.value_changed.connect(func(value: float) -> void: GameSettings.preferred_fov = value)
 	_shake_slider = UiTheme.slider_row(column, tr("UI_OPT_SHAKE"), 0.0, 1.0, 0.05, GameSettings.camera_shake_scale)
@@ -173,7 +178,8 @@ func _build() -> void:
 	UiTheme.tag(column, tr("UI_OPT_CONTROLS_TITLE"), UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
-	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")], [&"sprint", tr("UI_OPT_BIND_SPRINT")],
+	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")], [&"voice_talk", tr("UI_OPT_BIND_VOICE_TALK")],
+			[&"sprint", tr("UI_OPT_BIND_SPRINT")],
 			[&"drive_shift_up", tr("UI_OPT_BIND_SHIFT_UP")], [&"drive_shift_down", tr("UI_OPT_BIND_SHIFT_DOWN")]]:
 		var row := HBoxContainer.new()
 		column.add_child(row)
@@ -269,6 +275,7 @@ func _sync_from_settings() -> void:
 	_effects_slider.value_changed.emit(GameSettings.effects_volume)
 	_voice_slider.set_value_no_signal(GameSettings.voice_volume)
 	_voice_slider.value_changed.emit(GameSettings.voice_volume)
+	_voice_section.sync_from_settings()
 	_fov_slider.set_value_no_signal(GameSettings.preferred_fov)
 	_fov_slider.value_changed.emit(GameSettings.preferred_fov)
 	_shake_slider.set_value_no_signal(GameSettings.camera_shake_scale)
@@ -301,6 +308,7 @@ func _menu_text_scale_index() -> int:
 func open() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_sync_from_settings()
+	_voice_section.refresh_crew()
 	_refresh_controls()
 	show()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_OPEN)

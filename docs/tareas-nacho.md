@@ -2330,11 +2330,19 @@ Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con St
   `SteamVoice` decodifica como mucho 120 paquetes/s por peer (ráfaga 30). Sin RPC nuevo. Tests
   `test_proximity_voice_playback` y `modules/net_session/tests/test_voice_playback`. **Falta probarlo con
   Steam real** (con N-212.1): necesita PC.
-- [ ] **N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
+- [x] ~~**N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
   jugador, y un interruptor general en Opciones. Hecho en `649c7fa`: `GameSettings.voice_chat_enabled`
   (apagado hasta que exista N-212.2) y `voice_push_to_talk` (por defecto; apagado = micrófono abierto),
   la tecla reasignable y `ProximityVoice.set_peer_muted()` / `set_peer_volume()`. **Falta:** mostrarlos en
-  Opciones y en una lista de jugadores (UI de Slatex, `options_panel.gd`).
+  Opciones y en una lista de jugadores (UI de Slatex, `options_panel.gd`).~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-212-voice-options`)** — `scripts/ui/options_voice_section.gd`
+  (`OptionsVoiceSection`, debajo de "Sonidos del juego" en Opciones): "Chat de voz" y "Pulsar para hablar" (gris con
+  la voz apagada), aviso de solo Steam y "Voces de la tripulación": una fila por compañero (de
+  `CrewPanel.build_entries()`, sin uno mismo) con color, "Silenciar" y volumen 0-1 sobre `ProximityVoice`; se rearma
+  al abrir y si cambia el roster con el panel abierto. `voice_talk` (Z) entra en las teclas reasignables. Sigue
+  apagada por defecto hasta probarla con Steam real (supuesto conservador). Test `test_voice_options`;
+  `controles-y-ui.md` al día. Aviso `docs/avisos/2026-10-01-n212-opciones-de-voz.md`. Sin botón de mando para hablar
+  (no había; queda para N-913, voz en el mando).
 - [x] **N-212.4** LAN/ENet: `AudioEffectCapture` o dejarlo fuera del MVP (decidir y anotar). `649c7fa`
   Decidido: **LAN sin voz** (condición de `critico-diseno`); la razón quedó en `proximity_voice.gd`.
 - [ ] Medir con `auditor-red` el ancho de banda con 5 jugadores. Test de que el apagado general no

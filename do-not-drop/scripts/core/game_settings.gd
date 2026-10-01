@@ -66,7 +66,8 @@ var impact_effects: bool = true:
 
 ## Proximity voice (N-212, proximity_voice.gd). The general switch: while it
 ## is off the microphone is never opened, whatever key is held. Off by
-## default until playback (N-212.2) and its Options toggle (N-212.3) land.
+## default until it is tested with a real Steam session; it is switched on
+## in Options (options_voice_section.gd, N-212.3).
 var voice_chat_enabled: bool = false:
 	set(value):
 		voice_chat_enabled = value
