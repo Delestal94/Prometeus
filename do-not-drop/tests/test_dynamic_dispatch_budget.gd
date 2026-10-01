@@ -168,6 +168,13 @@ const BUDGETS: Dictionary = {
 	# the van: is_door_open and set_rear_cargo_open (the pop of the rear door) and driver_peer_id. By name
 	# because the tests stand a FakeVan Node3D in (with only that API), which `as` a typed truck would drop.
 	"res://scripts/gameplay/vehicle/vehicle_faults.gd": {"call": 2, "callv": 0, "get": 1, "root": 0},
+	# The depot screen (N-224.4) is typed: the purchases go to the level's Depot (buy_supply,
+	# buy_supply_discounted, team_money, supplies), the boxes are DeliveryPackage (package_id, is_aboard),
+	# the level is a LevelCommon and the signals of EventBus and UnlockManager are connected directly (the
+	# panel's tests keep the real autoloads). One .get and one .call left, both on the `depot` the station
+	# hands in, which stays a Node: test_depot_panel gives it a stand-in with only `orders` and
+	# `boss_notes()`, and `as Depot` would drop it (the order sheet would come out empty).
+	"res://scripts/ui/depot_panel.gd": {"call": 1, "callv": 0, "get": 1, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
