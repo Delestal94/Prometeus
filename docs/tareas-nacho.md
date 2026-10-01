@@ -346,6 +346,68 @@ es 100 % propio. Hecho cuando la pista figura en `LICENCIA.md` con origen y lice
 `music1.m4a` borrado).
 - [ ] **N-911.1** Decidir (a) o (b). Lo decide el usuario.
 - [ ] **N-911.2** Ejecutar la opción elegida. Con `disenador-audio` (b) o `documentador` (a).
+Nota lanzamiento 2026-10: la página de Steam y su declaración de IA no pueden cerrarse hasta resolver esto
+(`docs/marketing/estado-steam.md` §1). La frase de "música sin IA" del borrador solo vale con la opción (b).
+
+### N-912 · Botón "Invitar amigos" y presencia enriquecida de Steam — A · `Opus 5.5 · xhigh` · Aviso: sí (`net_session.gd`, `network_manager.gd`, `main_menu.gd`; zona compartida) · ⏸ M5
+Origen: lanzamiento 2026-10. El lobby de amigos y aceptar invitaciones existen (`modules/net_session/net_session.gd:380`,
+`:437`), pero ni `activateGameOverlayInviteDialog` ni `setRichPresence` aparecen en `scripts/` ni `modules/`: el anfitrión
+solo puede invitar desde la lista de amigos de Steam y los amigos no ven qué hace el grupo. Hecho cuando un test del
+módulo `net_session` (con el singleton de Steam simulado) comprueba que invitar llama al diálogo con el lobby actual y que
+la presencia cambia entre menú, depósito y ruta ("Repartiendo · 3/8"), y que sin Steam (LAN) ambos son no-op. Si toca RPC o
+replicación, `PROTOCOL_VERSION` según `docs/convenciones-godot.md` §6.
+- [ ] **N-912.1** Método `invite_friends()` en `net_session.gd` (sin nombres del juego) y botón en el depósito y el menú
+  de pausa del anfitrión. Con `constructor-red` y después `auditor-red`; tests `net_session`.
+- [ ] **N-912.2** `set_presence(clave, valor)` en el módulo y adaptador en `scripts/` que lo llama al cambiar de estado y
+  de cantidad de jugadores. Textos por `tr()`. Con `constructor-red`; tests `net_session`.
+- [ ] **N-912.3** Prueba real con AppID propio entre dos PCs: se suma al paso manual de N-215 (después de N-901).
+
+### N-913 · Mando y Steam Deck: voz en el mando y teclado en pantalla — B · `Opus 5.5 · high` · Aviso: sí (`project.godot`, `cosmetics_panel.gd`, `main_menu.gd`) · ⏸ M5
+Origen: lanzamiento 2026-10. `voice_talk` no tiene evento de mando (`do-not-drop/project.godot:166`) y pulsar-para-hablar
+es el valor por defecto (`scripts/core/proximity_voice.gd:22-23`); el apodo (`scripts/ui/cosmetics_panel.gd:39`) y la IP
+(`scripts/ui/main_menu.gd:102`) no se pueden escribir sin teclado: no se llama a `showFloatingGamepadTextInput`. Hecho
+cuando un test de entrada ve `voice_talk` con evento de mando, otro verifica que los dos campos piden el teclado de
+Steam si está disponible (no-op sin Steam), y el listado de acciones sin mando queda solo en las de desarrollo.
+- [ ] **N-913.1** Asignar un botón de mando a `voice_talk` sin pisar otro, y que la ayuda en pantalla (`HUD_PAD_*`) lo
+  muestre. Con `constructor-ui`; tests `input`, `hud_prompts`.
+- [ ] **N-913.2** Llamar al teclado en pantalla de Steam al enfocar el apodo y la IP con mando. Con `constructor-ui`;
+  tests `cosmetics`, `main_menu`.
+- [ ] **N-913.3** Prueba en un Steam Deck (manual) y rendimiento a 1280×800: lo anota el usuario.
+
+### N-914 · Guardado en la nube: rutas de `user://` para Steam Auto-Cloud — B · `Opus 5.5 · xhigh` · Aviso: no · ⏸ M5
+Origen: lanzamiento 2026-10. Todo el progreso vive en `user://` (`unlock_manager.gd:9`, `crew_progression.gd:6`,
+`run_manager.gd:119`, `game_settings.gd:13`, `depot_campaign_board.gd:21-22`) y no hay `use_custom_user_dir`. Auto-Cloud no
+necesita código pero sí la lista exacta de rutas por sistema. Hecho cuando `docs/marketing/steam-cloud.md` lista cada
+archivo con su ruta en Windows y Linux, marca qué sube y qué no (`user://telemetry/` y `user://trailer_still.png`
+excluidos; decisión sobre `depot_photos/`), y un test recorre el código buscando `user://` y falla si aparece una ruta
+que no está ni en la lista ni en la de exclusiones.
+- [ ] **N-914.1** Inventario de rutas y documento. Con `documentador`; tests `cloud_paths`.
+- [ ] **N-914.2** Test del inventario. Con `escritor-tests` (y `constructor-red` si hay que mover algo).
+- [ ] **N-914.3** Cargar las reglas en Steamworks: lo hace el usuario, después de N-901.
+
+### N-915 · Capturas y plano de tráiler con lo nuevo (8 jugadores, barro, animales, depósito) — A · `Opus 5.5 · high` · Aviso: no · ⏸ M5 · necesita PC
+Origen: lanzamiento 2026-10. `art/marketing/capturas/` (10 PNG) muestra las caras anteriores a N-506 y nada de la
+cuadrilla de 8, el barro (N-108), los animales (N-109) ni el depósito rediseñado (N-319); el guion del tráiler
+(`docs/marketing/trailer.md`) no tiene planos de barro ni de depósito con 8 jugadores y no hay video grabado. Detalle
+de las 7 escenas: `docs/marketing/estado-steam.md` §3.2. Necesita PC (ventana y GPU; la toma la sesión de arte). Se hace
+cuando N-319 esté cerrada. Hecho cuando hay 7 capturas 1920×1080 nuevas en `art/marketing/capturas/` con las caras
+actuales, sin HUD salvo la 1, revisadas por `revisor-visual` (de noche el camión se lee), y el guion suma los dos planos.
+- [ ] **N-915.1** Ampliar `tests/render_store_shots.gd` / `trailer_shot.tscn` con las 7 escenas del doc. Con
+  `revisor-visual`; tests `trailer_shots`.
+- [ ] **N-915.2** Sacar y revisar las capturas. Con `revisor-visual`.
+- [ ] **N-915.3** Sumar los planos de barro y de depósito con 8 al guion y grabar el tráiler. Con `revisor-visual`.
+  Las cápsulas son S-903 (corregida).
+
+### N-916 · ⏸ decide el usuario: fecha, Steam Direct, precio, idiomas y promesa de la página — A (decisión) · `Opus 5.5 · low` · Aviso: no · ⏸ M5
+Origen: lanzamiento 2026-10 (`docs/marketing/estado-steam.md` §2 y §6). Cinco decisiones juntas porque se condicionan:
+(1) fecha: Early Access 2027-01-22 sin Next Fest (A) o correrlo a 2027-03-12 para entrar al Next Fest 22-feb a 1-mar,
+inscripción hasta 2027-01-10 (B; recomendado, verificar que Next Fest exige juego sin lanzar); (2) pagar Steam Direct
+(USD 100, 30 días de espera) antes del 2026-10-16; (3) precio, objetivo $8-15, propuesta ≈9,99; (4) idiomas: no sumar
+ninguno hasta cerrar N-211 fase 7b; (5) qué promete la página: sin voz hasta N-212.2 y "hasta 8 jugadores" solo tras
+probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `docs/decisiones/` y las fechas de
+`docs/plan-desarrollo.md` coinciden.
+- [ ] **N-916.1** Decidir las cinco. Lo decide el usuario (issue `decide-usuario`).
+- [ ] **N-916.2** Aplicar: fechas en el plan, precio en S-904 y S-901. Con `documentador`.
 
 ## Orden de ataque (hitos)
 
@@ -355,7 +417,7 @@ es 100 % propio. Hecho cuando la pista figura en `LICENCIA.md` con origen y lice
 | **M2 — Ritmo y guía del jugador** | Una entrega de 2-5 minutos donde siempre se sabe adónde ir. | N-103, N-104, N-105, N-501, N-502, N-503 |
 | **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
-| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸ |
+| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
 | **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910 |
@@ -1762,7 +1824,9 @@ Hoy se usa el AppID 480 (Spacewar), que no se puede publicar.
 - [ ] Crear la cuenta de Steamworks y pagar el Steam Direct (USD 100 por juego). Anotar el AppID en
   `steam_appid.txt` y en `network_manager.gd` (aviso).
 - [ ] Volver a verificar el flujo de invitación de amigos con el AppID real (la crítica §7 avisa que nunca se
-  probó con el juego real).
+  probó con el juego real). Se hace junto con N-215 y N-912.3.
+- Nota lanzamiento 2026-10: Steam Direct tiene 30 días de espera entre el pago y poder lanzar; fecha de pago en N-916.
+  Sin AppID no hay logros (S-907), nube (N-914) ni prueba real.
 
 ### N-902 · Herramienta de cámara para tráiler — B · `Opus 5.5 · high` · Aviso: no · **[x] `8ffbb2f`**
 
@@ -3230,8 +3294,12 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
 
 #### S-903 · Cápsulas de Steam — C · generación de imagen · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
-- [ ] Con el logo (S-306): 460×215, 616×353, 231×87, 1232×706, 600×900, 3840×1240. `assets/store/`.
-  Registrar en `art/ai-registro.md`.
+- [ ] Con el logo (S-306): tamaños vigentes (los viejos 460×215, 616×353 y 231×87 ya no se aceptan; verificar con las
+  plantillas oficiales): header 920×430, small 462×174, main 1232×706, vertical 748×896, biblioteca capsule 600×900,
+  hero 3840×1240 (sin texto, lo importante en el centro 860×380) y logo de biblioteca (1280 de ancho / 720 de alto,
+  transparente); fondo de página 1438×810 opcional. La IA dibuja solo la escena y el logo real va encima
+  (`tx_ui_logo_wordmark_2048.png`; el stacked para vertical y capsule). `assets/store/`. Registrar en `art/ai-registro.md`.
+  Necesita PC (`artista-conceptual`, ComfyUI; la toma la sesión de arte). Detalle: `docs/marketing/estado-steam.md` §3.1.
 
 #### S-904 · Press kit — C · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 
@@ -3257,6 +3325,8 @@ Esto **no es playtesting** (no evalúa si es divertido): busca errores.
   Tabla en `docs/plan-desarrollo.md` Fase 5.
 - [ ] Sistema local en `UnlockManager` (`achievements` en el perfil) con toast. El puente a Steam queda para
   cuando haya AppID propio (hoy es el 480 de prueba).
+- Nota lanzamiento 2026-10: no hay ninguna llamada `setAchievement`/`storeStats` en el código. El sistema local
+  (`constructor-progresion`) se puede hacer sin AppID; el puente a Steam (`constructor-red`) espera a N-901.
 
 ---
 
