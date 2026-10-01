@@ -14,7 +14,7 @@ es un wrapper mínimo y la interfaz se construye en código.
 - `scripts/ui/main_menu.gd` — menú principal (Jugar solo, Crear sala, Unirse por IP, Modo Endless, Opciones, Salir).
 - `scripts/ui/options_panel.gd` — volumen, sensibilidad, invertir Y, pantalla completa; persiste vía autoload `GameSettings` en `user://settings.cfg` (`GameSettings extends SettingsStore`, del módulo `modules/settings_store/`: una opción nueva es una propiedad con setter y su clave en `SAVED_KEYS` del juego, el módulo no se toca).
 - `scripts/ui/hud/` — `hud.gd` arma el HUD en partida y delega en `hud_pause.gd`, `hud_results.gd` (reclamos, fotos, desglose), `hud_prompts.gd`, `hud_notices.gd`, `hud_cargo_panel.gd` y el cuidado de cajas (`care_card.gd`, `care_prompt_view.gd`, `care_practice.gd`).
-- Resto de pantallas (`ls do-not-drop/scripts/ui/`): `tutorial_panel.gd` + `tutorial_catalog.gd` (una fuente para el tutorial y los tips de primera vez), `ping_wheel.gd` + `ping_catalog.gd`, `depot_panel.gd`, `progress_panel.gd`, `leaderboard_panel.gd`, `cosmetics_panel.gd` + `face_preview.gd`, `sound_check_panel.gd`, `ui_sounds.gd`.
+- Resto de pantallas (`ls do-not-drop/scripts/ui/`): `tutorial_panel.gd` + `tutorial_catalog.gd` (una fuente para el tutorial y los tips de primera vez), `ping_wheel.gd` + `ping_catalog.gd`, `depot_panel.gd`, `progress_panel.gd`, `leaderboard_panel.gd`, `cosmetics_panel.gd`, `sound_check_panel.gd`, `ui_sounds.gd`.
 - `scripts/ui/ui_theme.gd` — estilos compartidos. Usalo siempre en vez de colores/fuentes sueltos.
 - Controles y diseño de UI: `docs/controles-y-ui.md`; Input Map real: `docs/convenciones-godot.md` §1.
 

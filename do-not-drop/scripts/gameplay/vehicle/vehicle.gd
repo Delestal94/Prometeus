@@ -554,11 +554,11 @@ func has_manual_gearbox() -> bool:
 ## Host only: the driver asks for a gear up (+1) or down (-1). Same packet
 ## rules as submit_driver_input (only the current driver counts), but reliable
 ## and not repeated: a shift that got lost would leave the driver in the wrong
-## gear with no way to tell. Added with protocol version 12.
+## gear with no way to tell. Added with N-114; it spends the sender's request
+## budget like every reliable any_peer RPC (N-221, N-238).
 @rpc("any_peer", "reliable")
 func request_gear_shift(direction: int) -> void:
-	# N-221: RpcGuard.allow_request(self) when it lands.
-	if not is_multiplayer_authority() or absi(direction) != 1:
+	if not is_multiplayer_authority() or absi(direction) != 1 or not RpcGuard.allow_request(self):
 		return
 	# Only the current driver counts. Explicit comparison on purpose: with
 	# driver_peer_id == 0 (nobody at the wheel) a remote sender must not pass.

@@ -42,7 +42,7 @@ const WATER_LENGTH: float = 36.0
 ## the ambient ground before it's lost in the landscape -- route.gd's
 ## "bank_width" ceiling. It shrinks this on its own if the river would
 ## otherwise run into another stretch of road, a house or the depot yard
-## (see route.gd's _clamp_river_reach()).
+## (see route_ground.gd's clamp_river_reach()).
 @export var river_reach: float = 60.0
 
 

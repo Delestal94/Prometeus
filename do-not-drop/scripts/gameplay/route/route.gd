@@ -15,8 +15,17 @@ extends Node3D
 ##
 ## Modo endless (RouteStreamer) chains its segments the same way since
 ## N-206, streaming and culling along the road instead of along -Z.
+##
+## N-225.3: this script chains the road and stays the route's one public face (houses, goal, the
+## queries, the signals); by responsibility the rest lives in route_houses.gd (each house, its yard,
+## number and sight lines), route_path.gd (nearest-point lookups over the road), route_ground.gd
+## (what the terrain is told about the road) and route_planner.gd (what to build where).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const Terrain = preload("res://scripts/gameplay/route/route_terrain.gd")
+const Houses = preload("res://scripts/gameplay/route/route_houses.gd")
+const PathLookup = preload("res://scripts/gameplay/route/route_path.gd")
+const Ground = preload("res://scripts/gameplay/route/route_ground.gd")
 
 signal delivery_entered
 signal delivery_exited
@@ -44,53 +53,6 @@ signal house_resolved(house_index: int, outcome: StringName, package_id: StringN
 @export var start_yard: Rect2 = Rect2()
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
-
-## How many path points either side of the last hit the nearest-path lookups
-## check before falling back to a full scan (N-223): path points are ~10 m
-## apart and a tick moves the truck about a metre. The segment boundaries
-## (_progress_samples, up to ~70 m apart) are not windowed: a hairpin can put
-## a later stretch nearer than the truck's own boundaries, and there are few
-## enough of them to scan every tick. The trust radius (2 x widest path gap,
-## <= ~30 m) must stay under level_base's 42 m off-road limit, so a windowed
-## hit never decides a ruin on its own.
-const PATH_WINDOW: int = 4
-
-## House/road proportions carried over unchanged from the old handcrafted
-## route -- only WHERE the road goes changed, not how wide it or a house
-## approach is.
-const HOUSE_LATERAL_OFFSET: float = 10.5
-const HOUSE_PATH_LATERAL_OFFSET: float = 7.9
-## Closest a house's front (porch step, roof eaves) may come to the road
-## centreline. Houses are dealt in different sizes -- the farmhouse's porch
-## reaches 4.3 m out of its origin -- so a fixed HOUSE_LATERAL_OFFSET put
-## some decks right over the edge line; each house steps back as needed.
-const HOUSE_FRONT_CLEARANCE: float = 7.6
-## Clear ground left between any part of a house and the asphalt's edge,
-## checked against the WHOLE finished road: a bend right before or after a
-## stop (or a later leg doubling back) can swing the road toward the house.
-## 3.0, was 1.4: the front yard needs room for the waiting house's sign and
-## mailbox (house_waiting_marker.gd) between the porch and the asphalt.
-const HOUSE_ROAD_MARGIN: float = 3.0
-const HOUSE_PUSH_STEP: float = 0.5
-const HOUSE_MAX_PUSH: float = 12.0
-## How far above the house's own roof its "CASA N" label floats. 1.0 let the
-## roof's peak cut the second line (the ordered box) from the road.
-const HOUSE_LABEL_CLEARANCE: float = 1.8
-## Kept clear of trees and roadside props: the lines of sight from the road,
-## every SIGHT_LINE_STEP metres over the last SIGHT_LINE_LENGTH before a
-## house, to the house itself -- the truck must see it coming (N-501). They
-## follow the real road, so a bend just before the house is covered too.
-const SIGHT_LINE_LENGTH: float = 120.0
-const SIGHT_LINE_STEP: float = 30.0
-const SIGHT_LINE_RADIUS: float = 3.5
-
-
-## Trees keep this far from a house centre: enough room for the yard (fence
-## line sits ~7-8 m out) without the forest growing through the porch.
-const HOUSE_CLEAR_RADIUS: float = 9.0
-## Every house model's porch deck is 0.30 m tall (both Blender batches).
-const PORCH_DECK_HEIGHT: float = 0.3
-
 ## Where the goal actually ended up -- with a curved, randomized-length road
 ## this is no longer reliably near world (0,0,something), so anything that
 ## needs the goal's real location (tests, mainly) reads this instead of
@@ -104,7 +66,7 @@ const ROAD := Color("394a50")
 const SHOULDER := Color("63736f")
 const MARKING := Color("d4d9c2")
 const WARNING := Color("e7be51")
-const TEAL := Color("65b5a1")
+const TEAL := Houses.TEAL
 ## The painted start line is road paint (worn white), not a glowing cyan strip.
 const START_LINE := Color("d4d9c2")
 const CONCRETE := Color("8c9791")
@@ -134,21 +96,12 @@ var _progress_samples: Array[Dictionary] = []
 ## meters "off path" just from boundary sparsity, dangerously close to the
 ## safety net's own threshold.
 var _path_points: Array[Vector3] = []
-## Metres along the road to each of _path_points, worked out on first use.
-var _path_distances := PackedFloat32Array()
-## Where the last nearest-path-point lookups landed, so the
-## next one (a tick later, the truck a metre further on) only looks around
-## there instead of scanning the whole route (N-223). -1 = no hint yet.
-var _path_hint: int = -1
-var _path_hint_3d: int = -1
-## _progress_samples' positions as a flat array for the lookup (built on first
-## use, and again after _finish_terrain() moves them), and the widest gap
-## between path points: a windowed hit further than twice that is not trusted.
-var _sample_points: Array[Vector3] = []
-var _path_gap: float = -1.0
+## Where the road is, for the nearest-point lookups (route_path.gd); it shares `_path_points` and
+## `_progress_samples` with this script.
+var _path := PathLookup.new(_path_points, _progress_samples)
 var _house_deck: Array[int] = []
 ## Road cursor and side each house was dealt, for furnishing it once its
-## final spot is known (see _keep_houses_off_road()).
+## final spot is known (route_houses.gd keep_houses_off_road()).
 var _house_anchors: Array[Dictionary] = []
 ## What placed the dressing, and how much of each kind (for tests/tuning).
 var dresser: RouteDresser
@@ -156,12 +109,13 @@ var dresser: RouteDresser
 ## stand -- each house with its yard, plus the farmhouse's barn.
 ## RouteDresser reads these; see route_dresser.gd for the placement rules.
 var _clear_zones: Array[Vector3] = []
-## Lines of sight from the road to each house (see _clear_sight_lines()):
+## Lines of sight from the road to each house (route_houses.gd):
 ## kept clear of trees and props, but not of road signs.
 var _sight_zones: Array[Vector3] = []
-const Terrain = preload("res://scripts/gameplay/route/route_terrain.gd")
-var terrain: Node3D
+var terrain: TerrainField
 var _segments: Array[RouteSegment] = []
+## Deals the houses their spots and furnishes them (route_houses.gd), once the terrain exists.
+var _house_builder: Houses
 
 
 ## Host: closes the order whose box was left on the road (N-213.4). False
@@ -251,7 +205,8 @@ func _ready() -> void:
 	terrain = Terrain.new()
 	terrain.name = "ContinuousTerrain"
 	add_child(terrain)
-	_reserve_start_yard()
+	_house_builder = Houses.new(self, terrain, houses, _house_anchors, _house_deck, _path_points, _clear_zones, _sight_zones)
+	Ground.reserve_start_yard(terrain, start_yard, _clear_zones)
 	var cursor: Transform3D = Transform3D.IDENTITY
 	_progress_samples.append({"cumulative": 0.0, "position": cursor.origin, "leg_index": 0})
 	_start_leg(cursor)
@@ -294,25 +249,8 @@ func _shuffled_house_variants() -> Array[int]:
 func _start_leg(cursor: Transform3D) -> void:
 	terrain.add_span(cursor.origin + Vector3(0.0, 0.0, 20.0), cursor.origin)
 	var sign_at: Vector3 = cursor.origin + Vector3(-7.6, 0.0, -5.0)
-	RouteProps.sign(self, "Salida", tr("WORLD_ROUTE_START_SIGN"), sign_at, _ground_height_at(sign_at.x), TEAL)
+	RouteProps.sign(self, "Salida", tr("WORLD_ROUTE_START_SIGN"), sign_at, Houses.ground_height_at(sign_at.x), TEAL)
 	RouteProps.box(self, "StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.03, -4.0), START_LINE)
-
-
-## The depot stands behind the start line: its footprint stays level and no
-## tree or roadside prop may grow into it. (Ground tiles already reach it:
-## the start apron's span makes them for 64 m around.)
-func _reserve_start_yard() -> void:
-	if not start_yard.has_area():
-		return
-	terrain.flat_zones.append(start_yard)
-	var step: float = 8.0
-	var x: float = start_yard.position.x + step * 0.5
-	while x < start_yard.end.x:
-		var z: float = start_yard.position.y + step * 0.5
-		while z < start_yard.end.y:
-			_clear_zones.append(Vector3(x, z, step * 0.75))
-			z += step
-		x += step
 
 
 ## Builds one leg's worth of road (leg_target_length() m of chained
@@ -338,275 +276,36 @@ func _build_leg(cursor: Transform3D, leg_index: int) -> Transform3D:
 		segment.name = "Segment%d" % _segments.size()
 		add_child(segment)
 		_segments.append(segment)
-		var road_slots: Array[Transform3D] = segment.get_dressing_slots(10.0)
-		road_slots.append(Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset))
-		for i: int in range(road_slots.size() - 1):
-			terrain.add_span((cursor * road_slots[i]).origin, (cursor * road_slots[i + 1]).origin, segment is GravelSegment or segment is MudSegment, 3.0 if segment is NarrowBridgeSegment else 6.0)
-		# Where this segment's own stretch of _path_points starts and ends --
-		# _clamp_river_reach() needs it to tell "another part of the road" a
-		# river might run into from the river's own straight stretch under it.
+		Ground.register_spans(terrain, segment, cursor)
+		# Where this segment's own stretch of _path_points starts and ends.
 		var path_start_index: int = _path_points.size()
 		for slot: Transform3D in segment.get_dressing_slots(10.0):
 			_path_points.append((cursor * slot).origin)
-		if segment is HillSegment:
-			var exit: Vector3 = (cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)).origin
-			terrain.crests.append({"a": Vector2(cursor.origin.x, cursor.origin.z), "b": Vector2(exit.x, exit.z), "height": (segment as HillSegment).crest_height})
-		# The riverbed under a narrow bridge (N-132 follow-up): carves the
-		# ground itself so it reads as a real crossing instead of guard
-		# rails standing over flat grass. The span exactly matches this
-		# straight segment (it never turns), so the deck/rails/water --
-		# all flagged &"ignore_river" -- float over the drop. `bank_width`
-		# starts at the segment's own preference and _clamp_river_reach()
-		# (called once the whole route exists) shrinks it if it would
-		# otherwise run into another stretch of road, a house or the yard.
-		if segment is NarrowBridgeSegment:
-			var bridge: NarrowBridgeSegment = segment as NarrowBridgeSegment
-			var river_end: Vector3 = (cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn),
-					segment.exit_offset)).origin
-			terrain.rivers.append({
-				"a": Vector2(cursor.origin.x, cursor.origin.z), "b": Vector2(river_end.x, river_end.z),
-				"depth": bridge.river_depth, "full_width": bridge.river_width, "bank_width": bridge.river_reach,
-				"path_start": path_start_index, "path_end": _path_points.size(), "route_start": route_length,
-			})
+		Ground.register_features(terrain, segment, cursor, path_start_index, _path_points.size(), route_length)
 		route_length += segment.length
 		cursor = cursor * Transform3D(Basis(Vector3.UP, segment.exit_turn), segment.exit_offset)
 		_progress_samples.append({"cumulative": route_length, "position": cursor.origin, "leg_index": leg_index})
 	return cursor
 
 
-## A river reaches for its own preferred `bank_width` (NarrowBridgeSegment's
-## river_reach, up to 60 m out) so it fades into the landscape instead of
-## reading as a rectangular pool -- but a winding route can bring another
-## stretch of road, a house or the depot yard back within that reach. Run
-## once the whole route (every leg, every house) exists, so unlike the
-## registration in _build_leg() this sees what comes both before AND after
-## the bridge. Shrinks `bank_width` to stop RIVER_HAZARD_MARGIN short of
-## whatever's closest, never below its own `full_width` + a visible margin,
-## so the crossing itself is never swallowed. The margin has to clear
-## route_terrain.gd's RIVER_MAX_DRIFT (how far the meander can ever swing the
-## actual wet edge past the plain `bank_width` this measures against) plus
-## some slack, or the meander could still carry the real river into what
-## this thought it had already cleared.
-const RIVER_HAZARD_MARGIN: float = 4.0 + Terrain.RIVER_MAX_DRIFT
-## The road immediately before and after the bridge is the SAME straight
-## lane the river runs under -- at zero sideways distance from its own
-## centreline, so without this it would always read as the nearest "hazard"
-## and clamp every river down to the floor. Matches test_route_fuzz.gd's
-## NEIGHBOUR_ALONG for the same idea: anything within this far along the
-## route of the bridge's own span is its approach/exit, not another part of
-## the road that happens to have come back close by.
-const RIVER_SELF_BUFFER: float = 60.0
-
-
-func _clamp_river_reach() -> void:
-	var cumulative: PackedFloat32Array = _path_cumulative()
-	for river: Dictionary in terrain.rivers:
-		var a: Vector2 = river.a
-		var edge: Vector2 = (river.b as Vector2) - a
-		var length: float = maxf(edge.length(), 0.001)
-		var dir: Vector2 = edge / length
-		var perp: Vector2 = Vector2(-dir.y, dir.x)
-		var route_start: float = float(river.get("route_start", 0.0))
-		var route_end: float = route_start + length
-		var hazard: float = INF
-		for index: int in range(_path_points.size()):
-			var travelled: float = cumulative[index] if index < cumulative.size() else 0.0
-			if travelled > route_start - RIVER_SELF_BUFFER and travelled < route_end + RIVER_SELF_BUFFER:
-				continue  # this bridge's own approach/exit, not a hazard
-			var q := Vector2(_path_points[index].x, _path_points[index].z)
-			var s: float = (q - a).dot(dir)
-			if s < -RIVER_HAZARD_MARGIN or s > length + RIVER_HAZARD_MARGIN:
-				continue
-			hazard = minf(hazard, absf((q - a).dot(perp)))
-		for house: DeliveryHouse in houses:
-			var q := Vector2(house.position.x, house.position.z)
-			var s: float = (q - a).dot(dir)
-			if s < -RIVER_HAZARD_MARGIN or s > length + RIVER_HAZARD_MARGIN:
-				continue
-			hazard = minf(hazard, absf((q - a).dot(perp)) - HOUSE_CLEAR_RADIUS)
-		if start_yard.has_area():
-			var center: Vector2 = start_yard.position + start_yard.size * 0.5
-			var s: float = (center - a).dot(dir)
-			if s >= -RIVER_HAZARD_MARGIN and s <= length + RIVER_HAZARD_MARGIN:
-				hazard = minf(hazard, absf((center - a).dot(perp)) - maxf(start_yard.size.x, start_yard.size.y) * 0.5)
-		var full_width: float = float(river.full_width)
-		var desired: float = float(river.bank_width)
-		river.bank_width = clampf(hazard - RIVER_HAZARD_MARGIN, full_width + 6.0, desired) if hazard < INF else desired
-
-
-## One house per package (docs/tareas-nacho.md house delivery system), one
-## per leg, positioned and oriented relative to the cursor's OWN heading at
-## this point in the road -- a fixed world-space side offset (the old
-## approach) would plant the house in the middle of the asphalt the moment
-## the road had turned away from the +X/-Z axes. Returns the cursor
-## unchanged: the house is a detour off the road, not part of the chain.
+## One house per package, one per leg (route_houses.gd build_house() deals it a spot beside the road at
+## the cursor's own heading). Returns the cursor unchanged: the house is a detour off the road, not
+## part of the chain.
 func _build_house(cursor: Transform3D, index: int) -> Transform3D:
-	var side: float = -1.0 if index % 2 == 0 else 1.0
-	var house := DeliveryHouse.new()
-	house.name = "House%d" % index
-	house.visual_variant = _house_deck[index % _house_deck.size()]
-	house.house_index = index
-	# The house model's entrance is on local -Z. Rotate that face toward the
-	# asphalt rather than along the road, so stops address the route.
-	house.transform = _house_transform(cursor, side, HOUSE_LATERAL_OFFSET)
-	add_child(house)
-	houses.append(house)
-	# Step back far enough that this model's porch clears the road.
-	var visual: Node3D = house.get_node_or_null(^"HouseVisual")
-	if visual != null:
-		var reach: float = -_local_bounds(house, visual).position.z
-		house.transform = _house_transform(cursor, side, maxf(HOUSE_LATERAL_OFFSET, HOUSE_FRONT_CLEARANCE + reach))
-	_house_anchors.append({"cursor": cursor, "side": side})
+	var house: DeliveryHouse = _house_builder.build_house(cursor, index)
 	var captured_index: int = index
 	house.resolved.connect(func(outcome: StringName, package_id: StringName) -> void: house_resolved.emit(captured_index, outcome, package_id))
 	return cursor
 
 
-func _house_transform(cursor: Transform3D, side: float, lateral: float) -> Transform3D:
-	return cursor * Transform3D(Basis(Vector3.UP, side * PI * 0.5), Vector3(side * lateral, _ground_height_at(lateral), 0.0))
-
-
-## Runs once the whole road exists: backs any house away (along its own
-## back, keeping it square to its stop) until every corner of it -- porch,
-## eaves, side bay -- stands HOUSE_ROAD_MARGIN clear of the asphalt, then
-## lays out its yard, path and number around where it finally stands.
-func _keep_houses_off_road() -> void:
-	for index: int in range(houses.size()):
-		var house: DeliveryHouse = houses[index]
-		var visual: Node3D = house.get_node_or_null(^"HouseVisual")
-		if visual != null:
-			var bounds: AABB = _local_bounds(house, visual)
-			var pushed: float = 0.0
-			while _house_road_gap(house, bounds) < HOUSE_ROAD_MARGIN and pushed < HOUSE_MAX_PUSH:
-				house.position += house.basis.z.normalized() * HOUSE_PUSH_STEP
-				pushed += HOUSE_PUSH_STEP
-		_build_yard(house, index)
-		var anchor: Dictionary = _house_anchors[index]
-		_build_house_path(anchor.cursor, anchor.side, house)
-		var top: float = _local_bounds(house, visual).end.y if visual != null else 4.0
-		var label_at: Vector3 = house.position + Vector3.UP * (top + HOUSE_LABEL_CLEARANCE)
-		RouteProps.label(self, "HouseNumber%d" % index, tr("WORLD_HOUSE_NUMBER") % (index + 1), label_at, 0.01, TEAL, true)
-		get_node(NodePath("HouseNumber%d" % index)).set_meta(&"height_above_house", top + HOUSE_LABEL_CLEARANCE)
-
-
-## Smallest distance from the house's footprint outline (corners and edge
-## midpoints of its model's bounds) to the edge of any asphalt on the route.
-func _house_road_gap(house: Node3D, bounds: AABB) -> float:
-	var gap: float = INF
-	var x0: float = bounds.position.x
-	var x1: float = bounds.end.x
-	var z0: float = bounds.position.z
-	var z1: float = bounds.end.z
-	for local: Vector2 in [Vector2(x0, z0), Vector2(x1, z0), Vector2(x0, z1), Vector2(x1, z1),
-			Vector2((x0 + x1) * 0.5, z0), Vector2((x0 + x1) * 0.5, z1), Vector2(x0, (z0 + z1) * 0.5), Vector2(x1, (z0 + z1) * 0.5)]:
-		var p: Vector3 = house.transform * Vector3(local.x, 0.0, local.y)
-		var road: Vector3 = terrain.nearest(Vector2(p.x, p.z))
-		gap = minf(gap, road.x - road.z)
-	return gap
-
-
-## A narrow worn path makes each stop feel connected to the road. It stops
-## at the shoulder rather than widening the driving lane or blocking traffic.
-func _build_house_path(cursor: Transform3D, side: float, house: Node3D) -> void:
-	var a: Vector3 = cursor * Vector3(side * 5.8, 0.0, 0.0)
-	var b: Vector3 = house.position
-	terrain.paths.append({"a": Vector2(a.x, a.z), "b": Vector2(b.x, b.z)})
-
-
-## Yard dressing so a delivery stop reads as someone's home, not a box
-## dropped by the road. Houses stand only ~10 m from the centreline and their
-## porch reaches to ~7 m, so there's no front garden to speak of: the doormat
-## and pots ride on the porch deck (part of the house, never moved), and the
-## lot -- fence down both sides, gnome, dog house, the farm's barn -- runs
-## along the sides and back. Lot pieces are only proposals: RouteDresser
-## validates each one like any other prop and drops what doesn't fit (which
-## is how a fence once ended up on the asphalt, before it did).
-## Choices come from the house index, not the RNG, so adding dressing never
-## reshuffles the road itself.
-func _build_yard(house: DeliveryHouse, index: int) -> void:
-	var yard := Node3D.new()
-	yard.name = "Yard"
-	house.add_child(yard)
-	var visual: Node3D = house.get_node_or_null(^"HouseVisual")
-	var bounds: AABB = _local_bounds(house, visual) if visual != null else AABB(Vector3(-3.0, 0.0, -3.0), Vector3(6.0, 3.0, 6.0))
-	var front: float = bounds.position.z
-	var flip: float = 1.0 if index % 2 == 0 else -1.0
-	# `front` includes the porch step (0.23 m); these sit back on the deck,
-	# between the door frame and the porch posts.
-	_yard_piece(yard, YARD_DOORMAT, Vector3(0.0, PORCH_DECK_HEIGHT, front + 0.75), 0.0, 0.5, true)
-	for x: float in [-0.95, 0.95]:
-		_yard_piece(yard, YARD_FLOWER_POT, Vector3(x, PORCH_DECK_HEIGHT, front + 0.6), 0.0, 0.3, true)
-	# Side fences: 2 m panels turned to run front-to-back beside the house.
-	for side: float in [-1.0, 1.0]:
-		var x: float = side * (bounds.size.x * 0.5 + 1.6)
-		var z: float = front + 1.0
-		while z < bounds.end.z + 2.0:
-			# 0.95, not 1.0: 2 m panels end to end would "touch" and fail the overlap check.
-			_yard_piece(yard, YARD_FENCE, Vector3(x, 0.0, z), PI * 0.5, 0.95, false)
-			z += 2.0
-	_yard_piece(yard, YARD_GNOME, Vector3((bounds.size.x * 0.5 + 0.7) * flip, 0.0, front + 1.6), deg_to_rad(20.0 * flip), 0.3, false)
-	if index % 2 == 1:
-		_yard_piece(yard, YARD_DOG_HOUSE, Vector3(-flip * (bounds.size.x * 0.5 + 0.8), 0.0, bounds.end.z - 0.4), PI, 0.7, false)
-	_clear_zones.append(Vector3(house.position.x, house.position.z, HOUSE_CLEAR_RADIUS))
-	_clear_sight_lines(house, (_house_anchors[index].cursor as Transform3D).origin)
-	# The farmhouse gets its barn beside it -- a farm, not a lone house.
-	if DeliveryHouse.HOUSE_VISUALS[posmod(house.visual_variant, DeliveryHouse.HOUSE_VISUALS.size())].ends_with("farmhouse.glb"):
-		# Turned a quarter, the barn's 12.7 m length runs sideways: 11 m out
-		# leaves a proper farmyard gap instead of a lean-to.
-		var barn: Node3D = _yard_piece(yard, BARN, Vector3(bounds.position.x - 11.0, 0.0, 4.0), PI * 0.5, 6.4, false)
-		if barn != null:
-			var barn_at: Vector3 = to_local(barn.global_position)
-			_clear_zones.append(Vector3(barn_at.x, barn_at.z, 9.0))
-
-
-## Nothing between the arriving truck and the house: walks the road back
-## from the house's stop and clears a line from each sample to the house.
-func _clear_sight_lines(house: Node3D, stop: Vector3) -> void:
-	var nearest: int = 0
-	for index: int in range(_path_points.size()):
-		if _path_points[index].distance_squared_to(stop) < _path_points[nearest].distance_squared_to(stop):
-			nearest = index
-	var travelled: float = 0.0
-	var next_sample: float = SIGHT_LINE_STEP
-	var index: int = nearest
-	while index > 0 and travelled < SIGHT_LINE_LENGTH:
-		travelled += _path_points[index].distance_to(_path_points[index - 1])
-		index -= 1
-		if travelled < next_sample:
-			continue
-		next_sample += SIGHT_LINE_STEP
-		var from: Vector3 = _path_points[index]
-		var length: float = Vector2(house.position.x - from.x, house.position.z - from.z).length()
-		var along: float = 0.0
-		while along <= length:
-			var at: Vector3 = from.lerp(house.position, along / maxf(length, 0.01))
-			_sight_zones.append(Vector3(at.x, at.z, SIGHT_LINE_RADIUS))
-			along += SIGHT_LINE_RADIUS * 2.0
-
-
-func _yard_piece(yard: Node3D, path: String, local_position: Vector3, yaw: float, footprint: float, on_porch: bool) -> Node3D:
-	var piece := _instantiate_dressing(path)
-	if piece == null:
-		return null
-	piece.transform = Transform3D(Basis(Vector3.UP, yaw), local_position)
-	piece.set_meta(&"footprint", footprint)
-	piece.set_meta(&"on_porch", on_porch)
-	yard.add_child(piece)
-	return piece
-
-
-## A model's visible extent in `root`'s space, so yard pieces line up with
-## whichever house shape was dealt instead of assuming one footprint.
+## What tests (test_route_fuzz.gd) ask of the house builder: a model's extent in the house's space,
+## and how far the house stands from the asphalt.
 func _local_bounds(root_node: Node3D, node: Node) -> AABB:
-	var result := AABB()
-	var first: bool = true
-	for child: Node in node.find_children("*", "VisualInstance3D", true, false):
-		var xform: Transform3D = root_node.global_transform.affine_inverse() * (child as Node3D).global_transform
-		var box: AABB = xform * (child as VisualInstance3D).get_aabb()
-		result = box if first else result.merge(box)
-		first = false
-	return result
+	return Houses.local_bounds(root_node, node)
 
+
+func _house_road_gap(house: Node3D, bounds: AABB) -> float:
+	return _house_builder.house_road_gap(house, bounds)
 
 ## The base at the end of the road (N-116): a levelled lot at the cursor,
 ## sized and dressed by RouteGoalLot. The ground under it is made level here
@@ -641,100 +340,31 @@ func goal_bay_number() -> int:
 func get_progress(world_position: Vector3) -> float:
 	if route_length <= 0.0:
 		return 0.0
-	return clampf(_nearest_sample(world_position).get("cumulative", 0.0) / route_length, 0.0, 1.0)
+	return clampf(_path.nearest_sample(to_local(world_position)).get("cumulative", 0.0) / route_length, 0.0, 1.0)
 
 
 ## Metres along the road from the start to where `world_position` is (its
 ## nearest point on the road), for the dashboard GPS (N-502). Resolution is
 ## _path_points' ~10 m.
 func road_distance(world_position: Vector3) -> float:
-	var cumulative: PackedFloat32Array = _path_cumulative()
-	if cumulative.is_empty():
-		return 0.0
-	var local_position: Vector3 = to_local(world_position)
-	_path_hint = _nearest_index(_path_points, local_position, true, [_path_hint, PATH_WINDOW, _path_gap_size()])
-	return cumulative[_path_hint]
+	return _path.road_distance(to_local(world_position))
 
 
 ## Metres along the road from the start to house `index`'s stop, or to the
 ## goal for an index past the last house.
 func stop_road_distance(index: int) -> float:
-	var cumulative: PackedFloat32Array = _path_cumulative()
-	if cumulative.is_empty():
-		return 0.0
 	if index >= _house_anchors.size():
-		return cumulative[-1]
-	var stop: Vector3 = (_house_anchors[index].cursor as Transform3D).origin
-	return cumulative[_nearest_index(_path_points, stop, true)]
+		return _path.total_distance()
+	return _path.stop_distance((_house_anchors[index].cursor as Transform3D).origin)
 
 
+## Metres along the road to each of _path_points (worked out on first use).
 func _path_cumulative() -> PackedFloat32Array:
-	if _path_distances.size() != _path_points.size():
-		_path_distances.resize(_path_points.size())
-		var total: float = 0.0
-		for index: int in range(_path_points.size()):
-			if index > 0:
-				total += _path_points[index].distance_to(_path_points[index - 1])
-			_path_distances[index] = total
-	return _path_distances
-
-
-## Same result as scanning every point (the first one wins a tie), but when
-## `hint` (where the last lookup landed) is given, only the `radius` points
-## either side of it are looked at first. The windowed answer is trusted only
-## if it isn't at the window's edge (the road may go on getting closer beyond
-## it) and isn't further than twice the widest gap between neighbours (a jump:
-## teleport, restart, a house's position); otherwise the whole array is
-## scanned. `planar` measures on the ground plane only. `window` is
-## [hint, radius, widest gap between neighbours], empty for a full scan.
-func _nearest_index(points: Array[Vector3], query: Vector3, planar: bool, window: Array = []) -> int:
-	var count: int = points.size()
-	if count == 0:
-		return 0
-	var hint: int = int(window[0]) if not window.is_empty() else -1
-	var radius: int = int(window[1]) if not window.is_empty() else 0
-	var gap: float = float(window[2]) if not window.is_empty() else 0.0
-	var low: int = 0
-	var high: int = count - 1
-	if hint >= 0 and hint < count:
-		low = maxi(0, hint - radius)
-		high = mini(count - 1, hint + radius)
-	var nearest: int = low
-	var best: float = INF
-	for index: int in range(low, high + 1):
-		var gap_squared: float = _gap_squared(points[index], query, planar)
-		if gap_squared < best:
-			best = gap_squared
-			nearest = index
-	var windowed: bool = low > 0 or high < count - 1
-	var at_edge: bool = (nearest == low and low > 0) or (nearest == high and high < count - 1)
-	if windowed and (at_edge or best > 4.0 * gap * gap):
-		return _nearest_index(points, query, planar)
-	return nearest
-
-
-static func _gap_squared(point: Vector3, query: Vector3, planar: bool) -> float:
-	if planar:
-		return Vector2(point.x - query.x, point.z - query.z).length_squared()
-	return point.distance_squared_to(query)
-
-
-## Widest distance between consecutive points, to size "close enough to trust".
-static func _widest_gap(points: Array[Vector3]) -> float:
-	var widest: float = 1.0
-	for index: int in range(1, points.size()):
-		widest = maxf(widest, points[index].distance_to(points[index - 1]))
-	return widest
-
-
-func _path_gap_size() -> float:
-	if _path_gap < 0.0:
-		_path_gap = _widest_gap(_path_points)
-	return _path_gap
+	return _path.cumulative()
 
 
 func get_section_name(world_position: Vector3) -> String:
-	var leg_index: int = int(_nearest_sample(world_position).get("leg_index", 0))
+	var leg_index: int = int(_path.nearest_sample(to_local(world_position)).get("leg_index", 0))
 	if leg_index >= house_count:
 		return tr("WORLD_ROUTE_SECTION_GOAL") % goal_bay_number()
 	if leg_index == 0:
@@ -742,64 +372,23 @@ func get_section_name(world_position: Vector3) -> String:
 	return tr("WORLD_ROUTE_SECTION_LEG") % [leg_index + 1, house_count]
 
 
-## Nearest-boundary lookup rather than exact arc-length math: with segment
-## boundaries every ~10-60m, the error this introduces is well under a
-## segment's own length -- plenty for a HUD "distance remaining" readout,
-## not something gameplay-critical reads.
-func _nearest_sample(world_position: Vector3) -> Dictionary:
-	if _progress_samples.is_empty():
-		return {}
-	if _sample_points.size() != _progress_samples.size():
-		_sample_points.clear()
-		for sample: Dictionary in _progress_samples:
-			_sample_points.append(sample["position"])
-	return _progress_samples[_nearest_index(_sample_points, to_local(world_position), false)]
-
-
 ## How far `world_position` is from the nearest known point on the actual
-## generated path -- level_base.gd's "you left the route" safety net used to
-## just check abs(world x) > 42, which only worked because the old road
-## never left world x≈0. A curving road drifts the asphalt itself well past
-## that on a wide turn while the vehicle is still perfectly on it, so the
-## safety net needed to start measuring distance from the real path instead
-## of from a world axis that stopped meaning anything once the road bent.
+## generated path -- level_base.gd's "you left the route" safety net (see
+## route_path.gd distance_from_path()).
 func distance_from_path(world_position: Vector3) -> float:
-	if _path_points.is_empty():
-		return INF
-	var local_position: Vector3 = to_local(world_position)
-	# A truck blown to NaN is off the road (the old full scan answered INF).
-	if not local_position.is_finite():
-		return INF
-	_path_hint_3d = _nearest_index(_path_points, local_position, false, [_path_hint_3d, PATH_WINDOW, _path_gap_size()])
-	return _path_points[_path_hint_3d].distance_to(local_position)
+	return _path.distance_from_path(to_local(world_position))
 
 
 func _finish_terrain() -> void:
-	_keep_houses_off_road()
-	_clamp_river_reach()
+	_house_builder.keep_houses_off_road()
+	Ground.clamp_river_reach(terrain, _path_points, _path_cumulative(), houses, start_yard)
 	# Level building pads blend back into the landscape, so the doorstep and
 	# access path remain walkable even on a hillside.
 	for house: Node3D in houses:
 		var p: Vector3 = house.position
 		p.y = terrain.base_height(Vector2(p.x, p.z)) - 0.08
 		terrain.pads.append(p)
-	# Level crossings: the ground along the tracks is levelled to the road, so
-	# the train runs flat instead of through the roadside hills.
-	for segment: RouteSegment in _segments:
-		if segment is RailCrossingSegment:
-			var centre: Vector3 = segment.transform * Vector3(0.0, 0.0, (segment as RailCrossingSegment).track_z)
-			var level: float = terrain.base_height(Vector2(centre.x, centre.z))
-			for pad: Vector3 in (segment as RailCrossingSegment).track_pads():
-				terrain.pads.append(Vector3(pad.x, level, pad.z))
-				# No tree on the rails.
-				_clear_zones.append(Vector3(pad.x, pad.z, 4.0))
-			# A tunnel at each end, a hill over it; nothing grows in the
-			# cutting or out of the portal.
-			for mouth: Dictionary in (segment as RailCrossingSegment).tunnel_mouths():
-				mouth["level"] = level
-				terrain.tunnels.append(mouth)
-				var front: Vector2 = (mouth.at as Vector2) + (mouth.dir as Vector2) * 2.0
-				_clear_zones.append(Vector3(front.x, front.y, 11.0))
+	Ground.level_rail_crossings(terrain, _segments, _clear_zones)
 	terrain.build()
 	for child: Node in get_children():
 		if child == terrain or child == goal_lot or child is DeliveryHouse or String(child.name).begins_with("HouseNumber"):
@@ -832,46 +421,8 @@ func _finish_terrain() -> void:
 		var p: Vector3 = sample.position
 		p.y = terrain.height_at(p)
 		sample.position = p
-	_sample_points.clear()
+	_path.invalidate_samples()
 	goal_transform.origin.y = terrain.height_at(goal_transform.origin)
-
-
-const YARD_DIR: String = "res://assets/models/environment/yard/"
-const YARD_DOORMAT: String = YARD_DIR + "sm_env_yard_doormat.glb"
-const YARD_FLOWER_POT: String = YARD_DIR + "sm_env_yard_flower_pot.glb"
-const YARD_FENCE: String = YARD_DIR + "sm_env_yard_picket_fence.glb"
-const YARD_GNOME: String = YARD_DIR + "sm_env_yard_garden_gnome.glb"
-const YARD_DOG_HOUSE: String = YARD_DIR + "sm_env_yard_dog_house.glb"
-const BARN: String = "res://assets/models/architecture/sm_arch_barn.glb"
-
-
-func _instantiate_dressing(path: String) -> Node3D:
-	var packed := load(path) as PackedScene
-	if packed == null:
-		return null
-	var node := packed.instantiate() as Node3D
-	LowpolyMaterials.apply(node)
-	return node
-
-
-## Kept for tests and older callers: how far a model's visible base sits
-## from its origin (see RoutePlacement.base_offset).
-func _mesh_base_offset(node: Node3D) -> float:
-	return RoutePlacement.base_offset(node)
-
-
-## The road, shoulder and terrain sit at three distinct elevations. Imported
-## props have their local origin at their base, so every dressed object needs
-## to be placed on the surface below it instead of blindly at world y = 0.
-## Pure function of lateral distance -- doesn't care whether the segment
-## it's dressing is straight or curved, so it needed no changes at all.
-func _ground_height_at(x: float) -> float:
-	var lateral: float = absf(x)
-	if lateral <= 6.0:
-		return 0.0
-	if lateral <= 14.0:
-		return -0.1
-	return -0.3
 
 
 ## World ambience (item #45): a quiet, looping wind bed. Non-positional
