@@ -15,12 +15,17 @@ de todos y sin forma de alcanzar al camión.
 - `scripts/gameplay/interaction/seat_point.gd` (de Slatex): dos consultas nuevas de host,
   `unminded_cargo()` y `would_displace()`. Nada existente cambió de firma.
 - Los datos de spawn del jugador (`player_spawner.gd`, de Slatex) pueden traer `vehicle_position`: el punto
-  de aparición en el espacio del camión, que cada peer resuelve contra su copia del camión (el cliente lo
-  dibuja ~0.1 s atrás del host). Sube `PROTOCOL_VERSION` a 21 (20 lo usa el PR #145: `test_protocol_version`
+  de aparición en el espacio del camión, que cada peer resuelve contra su copia del camión (los peers que ya
+  estaban dibujan el camión ~0.1 s atrás del host, así que un punto en mundo caería fuera de la caja). Sube `PROTOCOL_VERSION` a 21 (20 lo usa el PR #145: `test_protocol_version`
   queda en rojo hasta que ese PR entre o se renumere uno de los dos). Con asiento, el host además escribe
   `seat_node_path` en su copia al sentarlo, para que no quede sólida en la ruta hasta que llegue
   `board_seat`. El orden spawn → `board_seat` lo garantiza Godot (el spawn sale por el canal 0 confiable
   antes de que `spawn()` vuelva).
+- `scripts/gameplay/player/player.gd` (de Slatex): `_ride_with_vehicle` detecta un salto del camión (más de `RIDE_JUMP`, 5 m).
+  `player_spawner.gd` deja al recién llegado montado en su copia del camión (`_riding`,
+  `_ride_last_transform`), de modo que si esa copia salta a la ruta con su primera pose, `_ride_with_vehicle`
+  lo lleva con ella, y el salto reinicia `_last_safe_ground`, para que
+  el rescate de suelo no lo devuelva al depósito.
 - El slot de color al reconectarse ya lo conservaba N-221 (`test_network_rejoin`): no cambió.
 
 Test: `test_late_join_seating` (nuevo; entrega y Endless).

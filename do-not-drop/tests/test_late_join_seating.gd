@@ -128,9 +128,9 @@ func _run() -> void:
 					"%s: %s's standing spot is inside the truck" % [tag, seat.get_parent().name])
 
 		# Spawned in the truck's own space: wherever the truck is drawn, there.
+		var standing: Vector3 = late.call(&"floor_at", late.get_script().get_script_constant_map()["BAY_SPOT"])
 		truck.global_position += Vector3(3.0, 0.0, 7.0)
 		truck.global_rotation.y += 0.4
-		var standing: Vector3 = late.call(&"floor_at", late.get_script().get_script_constant_map()["BAY_SPOT"])
 		var stray: Node3D = world.get_node(^"PlayerSpawner").spawn(
 				{"peer_id": 9, "position": Vector3.ZERO, "vehicle_position": standing})
 		_expect(stray != null and stray.global_position.distance_to(truck.to_global(standing)) < 0.01,
@@ -140,6 +140,21 @@ func _run() -> void:
 				and (stray.get(&"net_position") as Vector3).distance_to(standing) < 0.01,
 				"%s: ...riding, in the truck's space" % tag)
 		stray.free()
+
+		# The joiner's own truck copy is still where it was built when the
+		# player spawns, and is teleported to the road by its first pose from
+		# the host: the player goes with it, and is not rescued to the depot.
+		truck.freeze = true
+		var before: Vector3 = truck.global_position
+		var own := world.get_node(^"PlayerSpawner").spawn(
+				{"peer_id": 1, "position": Vector3.ZERO, "vehicle_position": standing}) as Node3D
+		truck.global_position = before + Vector3(300.0, -20.0, 500.0)
+		for frame: int in range(3):
+			await physics_frame
+		_expect(truck.carries(own.global_position) and own.global_position.y > truck.global_position.y - 1.0,
+				"%s: a joiner whose truck jumps before its first tick stays aboard (at %s, truck %s)"
+				% [tag, own.global_position, truck.global_position])
+		own.free()
 
 		# Results showing: the depot again.
 		manager.set(&"results", {"score": 1})

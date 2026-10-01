@@ -489,6 +489,7 @@ func _ride_with_vehicle() -> void:
 	if _riding:
 		var motion: Transform3D = now * _ride_last_transform.affine_inverse()
 		global_position = motion * global_position
+		_last_safe_ground = global_position if motion.origin.length() > 5.0 else _last_safe_ground
 		var heading: Vector3 = motion.basis * -global_basis.z
 		heading.y = 0.0
 		if heading.length_squared() > 0.0001:
