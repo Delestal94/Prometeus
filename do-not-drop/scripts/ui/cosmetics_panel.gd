@@ -5,7 +5,9 @@ const PLAYER_SCENE: PackedScene = preload("res://assets/models/characters/sm_cha
 const Catalog = preload("res://scripts/core/face_catalog.gd")
 const FacePreview = preload("res://scripts/ui/face_preview.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
+const NICKNAME = preload("res://scripts/core/nickname.gd")
 signal closed
+var _nickname_edit: LineEdit
 var _face_preview: Control
 var _face_caption: Label
 var _mannequin: Node3D
@@ -67,8 +69,10 @@ func _build(active_tab: int = 0) -> void:
 	settings.add_child(_tabs)
 	var face: VBoxContainer = _tab(tr("UI_COSM_FACE"))
 	UiTheme.label(face, tr("UI_COSM_FACE_HINT"), 16, UiTheme.MUTED)
+	_nickname_row(face)
 	_face_choices(face, tr("UI_COSM_EYES"), "eyes", Catalog.EYES)
 	_face_choices(face, tr("UI_COSM_MOUTH"), "mouth", Catalog.MOUTHS)
+	_link_nickname_focus()
 	var uniform: VBoxContainer = _tab(tr("UI_COSM_UNIFORM"))
 	_section(uniform, tr("UI_COSM_YOUR_UNIFORM"), tr("UI_COSM_UNIFORM_HINT"),
 		UnlockManager.cosmetic_choices(), UnlockManager.selected_cosmetic, UnlockManager.select_cosmetic)
@@ -93,6 +97,7 @@ func open() -> void:
 	_grab_first_button.call_deferred()
 
 func close() -> void:
+	_commit_nickname()
 	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	closed.emit()
@@ -112,6 +117,35 @@ func _tab(label: String) -> VBoxContainer:
 	contents.add_theme_constant_override("separation", 12)
 	scroll.add_child(contents)
 	return contents
+
+## What the next-day newspaper calls you (N-606.1): up to 16 characters, saved
+## when you press Enter or leave the field; empty, the game picks a funny one.
+func _nickname_row(parent: VBoxContainer) -> void:
+	UiTheme.title(parent, tr("UI_COSM_NICKNAME"), 23)
+	UiTheme.label(parent, tr("UI_COSM_NICKNAME_HINT"), 14, UiTheme.MUTED)
+	_nickname_edit = UiTheme.line_edit(parent, tr("UI_COSM_NICKNAME_PLACEHOLDER"))
+	_nickname_edit.name = "NicknameEdit"
+	_nickname_edit.max_length = NICKNAME.MAX_LENGTH
+	_nickname_edit.text = UnlockManager.nickname
+	_nickname_edit.text_submitted.connect(func(_text: String) -> void:
+		_commit_nickname()
+		_nickname_edit.release_focus())
+	_nickname_edit.focus_exited.connect(_commit_nickname)
+
+func _commit_nickname() -> void:
+	if not is_instance_valid(_nickname_edit) or not _nickname_edit.is_inside_tree():
+		return
+	UnlockManager.set_nickname(_nickname_edit.text)
+	if _nickname_edit.text != UnlockManager.nickname:
+		_nickname_edit.text = UnlockManager.nickname
+
+## The field sits above the eyes: down reaches them, up from the first row comes back.
+func _link_nickname_focus() -> void:
+	if _face_buttons.is_empty():
+		return
+	_nickname_edit.focus_neighbor_bottom = _nickname_edit.get_path_to(_face_buttons[0])
+	for index: int in mini(4, _face_buttons.size()):
+		_face_buttons[index].focus_neighbor_top = _face_buttons[index].get_path_to(_nickname_edit)
 
 func _face_choices(parent: VBoxContainer, title: String, kind: String, options: Dictionary) -> void:
 	UiTheme.title(parent, title, 23)

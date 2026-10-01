@@ -58,6 +58,13 @@ func show_host_gone() -> void:
 func _on_ended(score: int, results: Dictionary) -> void:
 	hud.soft_pause = false
 	hud.notices.clear_all_notices()
+	# The next-day newspaper comes first when the host sent one (N-606.2).
+	if hud.newspaper != null and hud.newspaper.present(show_results.bind(score, results)):
+		return
+	show_results(score, results)
+
+
+func show_results(score: int, results: Dictionary) -> void:
 	hud.overlay_mode = "results"
 	hud.overlay.show()
 	# The results card stands alone: the run's HUD peeking around its edges
@@ -108,6 +115,9 @@ func _on_ended(score: int, results: Dictionary) -> void:
 	# What the crew's wallet got from this delivery (CrewProgression.award_delivery):
 	# the same doors + cargo lines as above, without the chaos multiplier.
 	var payout_line: String = tr("HUD_RESULT_PAYOUT") % int(results["payout"]) if results.has("payout") else ""
+	# The old manual van's compensation (N-114), when this delivery earned any.
+	if int(results.get("pay_bonus", 0)) > 0:
+		payout_line += tr("HUD_RESULT_PAY_BONUS") % int(results["pay_bonus"])
 	if results.has("breakdown"):
 		hud.overlay_stats.text = format_score_breakdown(results, score) + payout_line \
 				+ tr("HUD_RESULT_TEAM") % CrewProgression.team_money + best_line + client_line

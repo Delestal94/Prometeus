@@ -1,0 +1,583 @@
+{
+ "version": 1,
+ "neighbors": [
+  "Don Rufino",
+  "Doña Clotilde",
+  "Don Anselmo",
+  "Doña Mabel",
+  "Don Cirilo",
+  "Doña Eulalia",
+  "Don Gervasio",
+  "Doña Petrona",
+  "Don Facundo",
+  "Doña Remedios",
+  "Don Teófilo",
+  "Doña Zulema"
+ ],
+ "sections": {
+  "police": "HUD_NEWS_SECTION_POLICE",
+  "society": "HUD_NEWS_SECTION_SOCIETY",
+  "rural": "HUD_NEWS_SECTION_RURAL",
+  "economy": "HUD_NEWS_SECTION_ECONOMY",
+  "classified": "HUD_NEWS_SECTION_CLASSIFIED"
+ },
+ "stories": {
+  "missed": {
+   "section": "society",
+   "weight": 7,
+   "topic": "door",
+   "variants": [
+    {
+     "h": "HUD_NEWS_MISSED_1_H",
+     "b": "HUD_NEWS_MISSED_1_B"
+    },
+    {
+     "h": "HUD_NEWS_MISSED_2_H",
+     "b": "HUD_NEWS_MISSED_2_B"
+    },
+    {
+     "h": "HUD_NEWS_MISSED_3_H",
+     "b": "HUD_NEWS_MISSED_3_B"
+    },
+    {
+     "h": "HUD_NEWS_MISSED_4_H",
+     "b": "HUD_NEWS_MISSED_4_B",
+     "tags": [
+      "cake"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_MISSED_5_H",
+     "b": "HUD_NEWS_MISSED_5_B",
+     "tags": [
+      "vase"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_MISSED_6_H",
+     "b": "HUD_NEWS_MISSED_6_B",
+     "tags": [
+      "hen"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_MISSED_7_H",
+     "b": "HUD_NEWS_MISSED_7_B",
+     "tags": [
+      "fireworks"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_MISSED_8_H",
+     "b": "HUD_NEWS_MISSED_8_B",
+     "tags": [
+      "critter"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_MISSED_9_H",
+     "b": "HUD_NEWS_MISSED_9_B",
+     "tags": [
+      "liquid"
+     ]
+    }
+   ]
+  },
+  "abandoned": {
+   "section": "police",
+   "weight": 8,
+   "topic": "door",
+   "variants": [
+    {
+     "h": "HUD_NEWS_ABANDONED_1_H",
+     "b": "HUD_NEWS_ABANDONED_1_B"
+    },
+    {
+     "h": "HUD_NEWS_ABANDONED_2_H",
+     "b": "HUD_NEWS_ABANDONED_2_B"
+    },
+    {
+     "h": "HUD_NEWS_ABANDONED_3_H",
+     "b": "HUD_NEWS_ABANDONED_3_B"
+    },
+    {
+     "h": "HUD_NEWS_ABANDONED_4_H",
+     "b": "HUD_NEWS_ABANDONED_4_B",
+     "tags": [
+      "hen"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_ABANDONED_5_H",
+     "b": "HUD_NEWS_ABANDONED_5_B",
+     "tags": [
+      "vase"
+     ]
+    }
+   ]
+  },
+  "delivered_ruined": {
+   "section": "economy",
+   "weight": 6,
+   "topic": "ruin",
+   "variants": [
+    {
+     "h": "HUD_NEWS_DELIVERED_RUINED_1_H",
+     "b": "HUD_NEWS_DELIVERED_RUINED_1_B"
+    },
+    {
+     "h": "HUD_NEWS_DELIVERED_RUINED_2_H",
+     "b": "HUD_NEWS_DELIVERED_RUINED_2_B"
+    },
+    {
+     "h": "HUD_NEWS_DELIVERED_RUINED_3_H",
+     "b": "HUD_NEWS_DELIVERED_RUINED_3_B"
+    },
+    {
+     "h": "HUD_NEWS_DELIVERED_RUINED_4_H",
+     "b": "HUD_NEWS_DELIVERED_RUINED_4_B",
+     "tags": [
+      "cake"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_DELIVERED_RUINED_5_H",
+     "b": "HUD_NEWS_DELIVERED_RUINED_5_B",
+     "tags": [
+      "vase"
+     ]
+    }
+   ]
+  },
+  "cargo_fell": {
+   "section": "rural",
+   "weight": 8,
+   "topic": "cargo",
+   "variants": [
+    {
+     "h": "HUD_NEWS_CARGO_FELL_1_H",
+     "b": "HUD_NEWS_CARGO_FELL_1_B"
+    },
+    {
+     "h": "HUD_NEWS_CARGO_FELL_2_H",
+     "b": "HUD_NEWS_CARGO_FELL_2_B"
+    },
+    {
+     "h": "HUD_NEWS_CARGO_FELL_3_H",
+     "b": "HUD_NEWS_CARGO_FELL_3_B"
+    },
+    {
+     "h": "HUD_NEWS_CARGO_FELL_4_H",
+     "b": "HUD_NEWS_CARGO_FELL_4_B",
+     "tags": [
+      "hen"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_CARGO_FELL_5_H",
+     "b": "HUD_NEWS_CARGO_FELL_5_B",
+     "tags": [
+      "cake"
+     ]
+    }
+   ]
+  },
+  "cargo_recovered": {
+   "section": "society",
+   "weight": 3,
+   "topic": "cargo",
+   "variants": [
+    {
+     "h": "HUD_NEWS_CARGO_RECOVERED_1_H",
+     "b": "HUD_NEWS_CARGO_RECOVERED_1_B"
+    },
+    {
+     "h": "HUD_NEWS_CARGO_RECOVERED_2_H",
+     "b": "HUD_NEWS_CARGO_RECOVERED_2_B"
+    },
+    {
+     "h": "HUD_NEWS_CARGO_RECOVERED_3_H",
+     "b": "HUD_NEWS_CARGO_RECOVERED_3_B"
+    }
+   ],
+   "neutral": true
+  },
+  "deer_hit": {
+   "section": "rural",
+   "weight": 9,
+   "topic": "deer",
+   "variants": [
+    {
+     "h": "HUD_NEWS_DEER_HIT_1_H",
+     "b": "HUD_NEWS_DEER_HIT_1_B"
+    },
+    {
+     "h": "HUD_NEWS_DEER_HIT_2_H",
+     "b": "HUD_NEWS_DEER_HIT_2_B"
+    },
+    {
+     "h": "HUD_NEWS_DEER_HIT_3_H",
+     "b": "HUD_NEWS_DEER_HIT_3_B"
+    }
+   ]
+  },
+  "sheep_hit": {
+   "section": "rural",
+   "weight": 9,
+   "topic": "sheep",
+   "variants": [
+    {
+     "h": "HUD_NEWS_SHEEP_HIT_1_H",
+     "b": "HUD_NEWS_SHEEP_HIT_1_B"
+    },
+    {
+     "h": "HUD_NEWS_SHEEP_HIT_2_H",
+     "b": "HUD_NEWS_SHEEP_HIT_2_B"
+    },
+    {
+     "h": "HUD_NEWS_SHEEP_HIT_3_H",
+     "b": "HUD_NEWS_SHEEP_HIT_3_B"
+    }
+   ]
+  },
+  "fault_rear_door": {
+   "section": "police",
+   "weight": 6,
+   "topic": "fault",
+   "variants": [
+    {
+     "h": "HUD_NEWS_FAULT_REAR_DOOR_1_H",
+     "b": "HUD_NEWS_FAULT_REAR_DOOR_1_B"
+    },
+    {
+     "h": "HUD_NEWS_FAULT_REAR_DOOR_2_H",
+     "b": "HUD_NEWS_FAULT_REAR_DOOR_2_B"
+    },
+    {
+     "h": "HUD_NEWS_FAULT_REAR_DOOR_3_H",
+     "b": "HUD_NEWS_FAULT_REAR_DOOR_3_B"
+    }
+   ]
+  },
+  "fault_mirror": {
+   "section": "society",
+   "weight": 6,
+   "topic": "fault",
+   "variants": [
+    {
+     "h": "HUD_NEWS_FAULT_MIRROR_1_H",
+     "b": "HUD_NEWS_FAULT_MIRROR_1_B"
+    },
+    {
+     "h": "HUD_NEWS_FAULT_MIRROR_2_H",
+     "b": "HUD_NEWS_FAULT_MIRROR_2_B"
+    },
+    {
+     "h": "HUD_NEWS_FAULT_MIRROR_3_H",
+     "b": "HUD_NEWS_FAULT_MIRROR_3_B"
+    }
+   ]
+  },
+  "fault_police": {
+   "section": "police",
+   "weight": 6,
+   "topic": "fault",
+   "variants": [
+    {
+     "h": "HUD_NEWS_FAULT_POLICE_1_H",
+     "b": "HUD_NEWS_FAULT_POLICE_1_B"
+    },
+    {
+     "h": "HUD_NEWS_FAULT_POLICE_2_H",
+     "b": "HUD_NEWS_FAULT_POLICE_2_B"
+    },
+    {
+     "h": "HUD_NEWS_FAULT_POLICE_3_H",
+     "b": "HUD_NEWS_FAULT_POLICE_3_B"
+    }
+   ]
+  },
+  "substituted": {
+   "section": "society",
+   "weight": 7,
+   "topic": "care",
+   "variants": [
+    {
+     "h": "HUD_NEWS_SUBSTITUTED_1_H",
+     "b": "HUD_NEWS_SUBSTITUTED_1_B"
+    },
+    {
+     "h": "HUD_NEWS_SUBSTITUTED_2_H",
+     "b": "HUD_NEWS_SUBSTITUTED_2_B"
+    },
+    {
+     "h": "HUD_NEWS_SUBSTITUTED_3_H",
+     "b": "HUD_NEWS_SUBSTITUTED_3_B"
+    }
+   ]
+  },
+  "repaired_tape": {
+   "section": "economy",
+   "weight": 5,
+   "topic": "care",
+   "variants": [
+    {
+     "h": "HUD_NEWS_REPAIRED_TAPE_1_H",
+     "b": "HUD_NEWS_REPAIRED_TAPE_1_B"
+    },
+    {
+     "h": "HUD_NEWS_REPAIRED_TAPE_2_H",
+     "b": "HUD_NEWS_REPAIRED_TAPE_2_B"
+    },
+    {
+     "h": "HUD_NEWS_REPAIRED_TAPE_3_H",
+     "b": "HUD_NEWS_REPAIRED_TAPE_3_B"
+    }
+   ]
+  },
+  "ruined_en_route": {
+   "section": "police",
+   "weight": 5,
+   "topic": "ruin",
+   "variants": [
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_1_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_1_B"
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_2_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_2_B"
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_3_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_3_B"
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_4_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_4_B",
+     "tags": [
+      "fragile"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_5_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_5_B",
+     "tags": [
+      "liquid"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_6_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_6_B",
+     "tags": [
+      "explosive"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_7_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_7_B",
+     "tags": [
+      "noisy"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_8_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_8_B",
+     "tags": [
+      "hostile"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_9_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_9_B",
+     "tags": [
+      "growing_weight"
+     ]
+    },
+    {
+     "h": "HUD_NEWS_RUINED_EN_ROUTE_10_H",
+     "b": "HUD_NEWS_RUINED_EN_ROUTE_10_B",
+     "tags": [
+      "balance"
+     ]
+    }
+   ]
+  },
+  "complaint": {
+   "section": "economy",
+   "weight": 4,
+   "topic": "complaint",
+   "variants": [
+    {
+     "h": "HUD_NEWS_COMPLAINT_1_H",
+     "b": "HUD_NEWS_COMPLAINT_1_B"
+    },
+    {
+     "h": "HUD_NEWS_COMPLAINT_2_H",
+     "b": "HUD_NEWS_COMPLAINT_2_B"
+    },
+    {
+     "h": "HUD_NEWS_COMPLAINT_3_H",
+     "b": "HUD_NEWS_COMPLAINT_3_B"
+    }
+   ]
+  },
+  "photo": {
+   "section": "society",
+   "weight": 2,
+   "topic": "photo",
+   "variants": [
+    {
+     "h": "HUD_NEWS_PHOTO_1_H",
+     "b": "HUD_NEWS_PHOTO_1_B"
+    },
+    {
+     "h": "HUD_NEWS_PHOTO_2_H",
+     "b": "HUD_NEWS_PHOTO_2_B"
+    },
+    {
+     "h": "HUD_NEWS_PHOTO_3_H",
+     "b": "HUD_NEWS_PHOTO_3_B"
+    }
+   ],
+   "neutral": true
+  },
+  "delivered_ok": {
+   "section": "society",
+   "weight": 1,
+   "topic": "delivered",
+   "variants": [
+    {
+     "h": "HUD_NEWS_DELIVERED_OK_1_H",
+     "b": "HUD_NEWS_DELIVERED_OK_1_B"
+    },
+    {
+     "h": "HUD_NEWS_DELIVERED_OK_2_H",
+     "b": "HUD_NEWS_DELIVERED_OK_2_B"
+    },
+    {
+     "h": "HUD_NEWS_DELIVERED_OK_3_H",
+     "b": "HUD_NEWS_DELIVERED_OK_3_B"
+    }
+   ],
+   "neutral": true
+  },
+  "clean_run": {
+   "section": "society",
+   "weight": 9,
+   "topic": "scandal",
+   "variants": [
+    {
+     "h": "HUD_NEWS_CLEAN_RUN_1_H",
+     "b": "HUD_NEWS_CLEAN_RUN_1_B"
+    },
+    {
+     "h": "HUD_NEWS_CLEAN_RUN_2_H",
+     "b": "HUD_NEWS_CLEAN_RUN_2_B"
+    },
+    {
+     "h": "HUD_NEWS_CLEAN_RUN_3_H",
+     "b": "HUD_NEWS_CLEAN_RUN_3_B"
+    }
+   ]
+  },
+  "run_failed": {
+   "section": "police",
+   "weight": 10,
+   "topic": "ending",
+   "variants": [
+    {
+     "h": "HUD_NEWS_RUN_FAILED_1_H",
+     "b": "HUD_NEWS_RUN_FAILED_1_B"
+    },
+    {
+     "h": "HUD_NEWS_RUN_FAILED_2_H",
+     "b": "HUD_NEWS_RUN_FAILED_2_B"
+    },
+    {
+     "h": "HUD_NEWS_RUN_FAILED_3_H",
+     "b": "HUD_NEWS_RUN_FAILED_3_B"
+    }
+   ]
+  },
+  "endless_end": {
+   "section": "police",
+   "weight": 10,
+   "topic": "ending",
+   "variants": [
+    {
+     "h": "HUD_NEWS_ENDLESS_END_1_H",
+     "b": "HUD_NEWS_ENDLESS_END_1_B"
+    },
+    {
+     "h": "HUD_NEWS_ENDLESS_END_2_H",
+     "b": "HUD_NEWS_ENDLESS_END_2_B"
+    },
+    {
+     "h": "HUD_NEWS_ENDLESS_END_3_H",
+     "b": "HUD_NEWS_ENDLESS_END_3_B"
+    }
+   ]
+  },
+  "filler_classified": {
+   "section": "classified",
+   "weight": 0,
+   "topic": "filler",
+   "variants": [
+    {
+     "h": "HUD_NEWS_FILLER_CLASSIFIED_1_H",
+     "b": "HUD_NEWS_FILLER_CLASSIFIED_1_B"
+    },
+    {
+     "h": "HUD_NEWS_FILLER_CLASSIFIED_2_H",
+     "b": "HUD_NEWS_FILLER_CLASSIFIED_2_B"
+    },
+    {
+     "h": "HUD_NEWS_FILLER_CLASSIFIED_3_H",
+     "b": "HUD_NEWS_FILLER_CLASSIFIED_3_B"
+    }
+   ],
+   "filler": true
+  },
+  "filler_horoscope": {
+   "section": "classified",
+   "weight": 0,
+   "topic": "filler",
+   "variants": [
+    {
+     "h": "HUD_NEWS_FILLER_HOROSCOPE_1_H",
+     "b": "HUD_NEWS_FILLER_HOROSCOPE_1_B"
+    },
+    {
+     "h": "HUD_NEWS_FILLER_HOROSCOPE_2_H",
+     "b": "HUD_NEWS_FILLER_HOROSCOPE_2_B"
+    },
+    {
+     "h": "HUD_NEWS_FILLER_HOROSCOPE_3_H",
+     "b": "HUD_NEWS_FILLER_HOROSCOPE_3_B"
+    }
+   ],
+   "filler": true
+  },
+  "filler_forecast": {
+   "section": "classified",
+   "weight": 0,
+   "topic": "filler",
+   "variants": [
+    {
+     "h": "HUD_NEWS_FILLER_FORECAST_1_H",
+     "b": "HUD_NEWS_FILLER_FORECAST_1_B"
+    },
+    {
+     "h": "HUD_NEWS_FILLER_FORECAST_2_H",
+     "b": "HUD_NEWS_FILLER_FORECAST_2_B"
+    },
+    {
+     "h": "HUD_NEWS_FILLER_FORECAST_3_H",
+     "b": "HUD_NEWS_FILLER_FORECAST_3_B"
+    }
+   ],
+   "filler": true
+  }
+ }
+}

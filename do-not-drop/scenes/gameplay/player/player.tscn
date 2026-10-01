@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_interaction.gd" id="2_interaction"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_carry.gd" id="3_carry"]
 [ext_resource type="Script" path="res://scripts/gameplay/player/player_seat_pose.gd" id="4_seat_pose"]
+[ext_resource type="Script" path="res://scripts/gameplay/player/player_nickname.gd" id="5_nickname"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.35
@@ -49,6 +50,9 @@ properties/10/replication_mode = 2
 properties/11/path = NodePath(".:face_mouth")
 properties/11/spawn = true
 properties/11/replication_mode = 2
+properties/12/path = NodePath("PlayerNickname:nickname")
+properties/12/spawn = true
+properties/12/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 8
@@ -63,6 +67,9 @@ script = ExtResource("3_carry")
 
 [node name="PlayerSeatPose" type="Node" parent="."]
 script = ExtResource("4_seat_pose")
+
+[node name="PlayerNickname" type="Node" parent="."]
+script = ExtResource("5_nickname")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_interval = 0.0167

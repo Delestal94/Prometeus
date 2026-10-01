@@ -52,6 +52,12 @@ func _prepare_mode() -> void:
 		route.call(&"assign_packages", depot.assignments())
 
 
+## The village at the end of the road, which the newspaper is named after.
+func newspaper_town() -> String:
+	var goal: Object = route.get(&"goal_lot") as Object
+	return String(goal.get(&"town_name")) if goal != null else ""
+
+
 ## Whether the road is running through open country at this point: where the
 ## bees come for a cake (cargo_animals.gd).
 func _is_open_country(world_position: Vector3) -> bool:

@@ -29,13 +29,15 @@ const MAX_PLAYERS: int = 8
 ## 12: cargo_animal_alert / cargo_animal_ended are relayed, N-109;
 ## 13: the host tells each client when to wait out its level loads
 ## (_host_load_timeout, NetSession), N-235;
-## 14: the handshake carries a session nonce and the ready reply an identity
+## 14: the player replicates its nickname and the host relays the next-day
+## newspaper (EventBus.newspaper_ready), N-606;
+## 15: the handshake carries a session nonce and the ready reply an identity
 ## (rejoin), every any_peer RPC goes through RpcGuard, and a slot is kept for
 ## a peer who left so it gets it back when it rejoins, N-221).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 14
+const PROTOCOL_VERSION: int = 15
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

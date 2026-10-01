@@ -452,13 +452,13 @@ UI_OPT_BIND_PING,Ping,Ping
 UI_OPT_BIND_SPRINT,Correr,Sprint
 UI_OPT_BIND_USE_CARD,Usar carta,Use card
 UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
-UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
-Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out
+UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte  ·  Flechas arriba/abajo marchas (furgón viejo)\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
+Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out  ·  Up/Down arrows gears (old van)
 Passenger: Left click (hold) tend the package  ·  WASD sequences
 F phone  ·  Click take photo  ·  Wheel click ping  ·  G use card  ·  C centre view
 Esc pause  ·  hold R restart  ·  F11 full screen  ·  hold Tab crew (depot)"
-UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  clic stick izq. correr  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener Back tripulación (depósito),"On foot: L-stick walk  ·  L-stick click run  ·  R-stick look  ·  A interact  ·  X jump
-Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out
+UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  clic stick izq. correr  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte  ·  RB/LB marchas (furgón viejo)\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener Back tripulación (depósito),"On foot: L-stick walk  ·  L-stick click run  ·  R-stick look  ·  A interact  ·  X jump
+Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out  ·  RB/LB gears (old van)
 Passenger: RT (hold) tend the package  ·  L-stick sequences
 LB phone  ·  RB take photo  ·  D-pad up ping  ·  D-pad left use card
 R-stick click centre view  ·  Start pause  ·  hold Y restart  ·  hold Back crew (depot)"
@@ -849,3 +849,218 @@ UI_DEPOT_BOSS_TAG,La Jefa por radio,The Boss on the radio
 HUD_LOW_VISIBILITY_DRIVER,¡No ves nada! Que te guíen,You can't see a thing! Get someone to guide you
 HUD_LOW_VISIBILITY_GUIDE_KEY,"¡El conductor no ve nada! Guialo con la rueda de frases (%s)","The driver can't see a thing! Guide them with the phrase wheel (%s)"
 HUD_LOW_VISIBILITY_GUIDE_PAD,¡El conductor no ve nada! Guialo con la rueda de frases (D-pad arriba),The driver can't see a thing! Guide them with the phrase wheel (D-pad up)
+HUD_NEWS_MISSED_1_H,Casa {house}: esperaron hasta la cena y el camión ni frenó,House {house} waited until dinner and the truck never slowed
+HUD_NEWS_MISSED_1_B,{player} lo explicó así: 'Me pareció ver un bache lindo más adelante'.,{player} explained: 'I spotted a really nice pothole up ahead.'
+HUD_NEWS_MISSED_2_H,Vecinos de {town} piden un mapa para los repartidores,Neighbors in {town} ask for a map for the delivery crew
+HUD_NEWS_MISSED_2_B,{neighbor} cuenta que el camión pasó tan rápido que 'dejó el saludo en el aire'.,{neighbor} says the truck went by so fast it 'left the wave hanging in mid-air'.
+HUD_NEWS_MISSED_3_H,Casa {house} sigue esperando: 'Quizá llegue en la próxima vida',House {house} is still waiting: 'Maybe in the next life'
+HUD_NEWS_MISSED_3_B,La empresa promete revisar el asunto apenas {player} encuentre el freno.,The company promises to look into it as soon as {player} finds the brake.
+HUD_NEWS_MISSED_4_H,Cumpleaños en {town} se celebra sin torta,Birthday in {town} goes ahead without a cake
+HUD_NEWS_MISSED_4_B,"'Soplamos una vela clavada en un pan', contó {neighbor}. La casa {house} no lo olvida.","'We blew out a candle stuck in a bread roll,' said {neighbor}. House {house} will not forget."
+HUD_NEWS_MISSED_5_H,"Sin jarrón, las flores de la casa {house} se mudan a una lata de arvejas","No vase, so the flowers at house {house} move into a pea can"
+HUD_NEWS_MISSED_5_B,"'Quedan lindas, con etiqueta y todo', dijo {neighbor}.","'They look nice, label and all,' said {neighbor}."
+HUD_NEWS_MISSED_6_H,"Sin la gallina prometida, el gallo del barrio cae en una profunda depresión","Without the promised hen, the neighborhood rooster falls into deep depression"
+HUD_NEWS_MISSED_6_B,Testigos lo vieron mirando la ruta desde el alambrado durante horas.,Witnesses saw him staring at the road from the fence for hours.
+HUD_NEWS_MISSED_7_H,Se suspende el Año Nuevo en la casa {house},New Year is canceled at house {house}
+HUD_NEWS_MISSED_7_B,"'Hicimos ¡pum! con la boca', declaró {neighbor}. Los vecinos aplaudieron por compromiso.","'We went boom with our mouths,' said {neighbor}. The neighbors clapped out of politeness."
+HUD_NEWS_MISSED_8_H,Nene esperaba su mascota y lo consolaron con una piedra con ojitos,Kid waited for a pet and got a rock with googly eyes instead
+HUD_NEWS_MISSED_8_B,La piedra ya tiene nombre y come poco. La casa {house} dice que 'es un comienzo'.,The rock already has a name and eats very little. House {house} says 'it is a start'.
+HUD_NEWS_MISSED_9_H,"Sin el bidón, {neighbor} riega las plantas con mate cocido","With no canister, {neighbor} waters the plants with cold mate"
+HUD_NEWS_MISSED_9_B,"Las plantas, según la casa {house}, 'están despiertísimas'.","The plants, says house {house}, 'have never been so awake'."
+HUD_NEWS_ABANDONED_1_H,Denuncian a repartidores por quedarse con un pedido,Delivery crew reported for keeping an order
+HUD_NEWS_ABANDONED_1_B,La casa {house} asegura que {player} dijo 'ya te lo llevo' y nunca más se supo.,House {house} says {player} promised 'I will bring it right over' and was never seen again.
+HUD_NEWS_ABANDONED_2_H,Vecinos denuncian un asado a la vera de la ruta,Neighbors report a barbecue by the roadside
+HUD_NEWS_ABANDONED_2_B,"'Con lo que se cayó del camión', aclaró {neighbor}. La casa {house} aún espera su encomienda.","'Using whatever fell off the truck,' said {neighbor}. House {house} is still waiting for its parcel."
+HUD_NEWS_ABANDONED_3_H,El pedido de la casa {house} fue visto de adorno en el depósito,House {house}'s order spotted as decoration at the depot
+HUD_NEWS_ABANDONED_3_B,La empresa responde: 'Quedaba lindo ahí'. {player} no quiso hacer declaraciones.,The company replies: 'It looked nice there.' {player} declined to comment.
+HUD_NEWS_ABANDONED_4_H,Repartidores no entregaron la gallina porque 'se encariñaron',Crew did not deliver the hen because they 'got attached'
+HUD_NEWS_ABANDONED_4_B,"Ya le pusieron nombre. Según {player}, 'es de la familia'.","They already named her. According to {player}, 'she is family now'."
+HUD_NEWS_ABANDONED_5_H,El jarrón de la casa {house} fue visto de maceta en el depósito,House {house}'s vase spotted as a flower pot at the depot
+HUD_NEWS_ABANDONED_5_B,"'Tiene un potus hermoso', admitió {player}.","'It has a gorgeous pothos in it,' admitted {player}."
+HUD_NEWS_DELIVERED_RUINED_1_H,Entregan un paquete 'en perfecto estado de ruina',Parcel delivered 'in perfect state of ruin'
+HUD_NEWS_DELIVERED_RUINED_1_B,La casa {house} lo recibió con los ojos cerrados. {player} prometió 'pegarlo con amor'.,House {house} received it with eyes closed. {player} promised to 'glue it back with love'.
+HUD_NEWS_DELIVERED_RUINED_2_H,Casa {house} recibe su pedido en formato rompecabezas,House {house} gets its order as a jigsaw puzzle
+HUD_NEWS_DELIVERED_RUINED_2_B,Instrucciones incluidas: ninguna. Piezas incluidas: las que se encontraron.,Instructions included: none. Pieces included: whichever were found.
+HUD_NEWS_DELIVERED_RUINED_3_H,Vecino exige reembolso: 'Pedí una cosa y me llegaron varias',"Neighbor demands refund: 'I ordered one thing, I got several'"
+HUD_NEWS_DELIVERED_RUINED_3_B,{neighbor} sostiene que el camión 'hizo ruidos sospechosos todo el camino'.,{neighbor} claims the truck 'made suspicious noises the whole way'.
+HUD_NEWS_DELIVERED_RUINED_4_H,Torta de bodas llega en modo 'crema sobre cartón',Wedding cake arrives in 'frosting on cardboard' mode
+HUD_NEWS_DELIVERED_RUINED_4_B,Los novios la declararon 'rústica' y se la comieron con cuchara.,The couple called it 'rustic' and ate it with a spoon.
+HUD_NEWS_DELIVERED_RUINED_5_H,Jarrón llega en veinte pedazos y la casa {house} cuenta veintiuno,Vase arrives in twenty pieces and house {house} counts twenty-one
+HUD_NEWS_DELIVERED_RUINED_5_B,{neighbor} cree que una pieza 'vino de regalo'.,{neighbor} thinks one piece 'came as a gift'.
+HUD_NEWS_CARGO_FELL_1_H,Se cayó una caja del camión y la ruta la adoptó,A crate fell off the truck and the road adopted it
+HUD_NEWS_CARGO_FELL_1_B,Testigos vieron al equipo de {player} mirar hacia atrás y decir 'ya volvemos'.,Witnesses saw {player}'s crew look back and say 'be right back'.
+HUD_NEWS_CARGO_FELL_2_H,Hallan un paquete en la banquina: 'Estaba muy tranquilo',Parcel found on the roadside: 'It looked very calm'
+HUD_NEWS_CARGO_FELL_2_B,{neighbor} lo encontró cerca de {town} y no quiso tocarlo.,{neighbor} found it near {town} and would not touch it.
+HUD_NEWS_CARGO_FELL_3_H,Misterio en la ruta: la carga salió del camión 'por su cuenta',Highway mystery: cargo left the truck 'on its own'
+HUD_NEWS_CARGO_FELL_3_B,El camión no quiso dar explicaciones. {player} tampoco.,The truck refused to explain. So did {player}.
+HUD_NEWS_CARGO_FELL_4_H,Por fin se sabe por qué la gallina cruzó la ruta,At last we know why the hen crossed the road
+HUD_NEWS_CARGO_FELL_4_B,"'Nadie la había cinchado', declaró {player} bajando la mirada.","'Nobody had strapped her down,' said {player}, eyes lowered."
+HUD_NEWS_CARGO_FELL_5_H,Torta en la ruta: aparece un postre sin dueño,Cake on the road: a dessert with no owner appears
+HUD_NEWS_CARGO_FELL_5_B,Las hormigas de {town} ya hicieron fila.,The ants of {town} are already lining up.
+HUD_NEWS_CARGO_RECOVERED_1_H,Rescatan una caja que viajaba por su cuenta,Crate traveling on its own gets rescued
+HUD_NEWS_CARGO_RECOVERED_1_B,{player} corrió tras ella como si fuera el último colectivo.,{player} ran after it as if it were the last bus.
+HUD_NEWS_CARGO_RECOVERED_2_H,Final feliz en la banquina: la caja volvió al camión,Happy ending on the roadside: the crate is back in the truck
+HUD_NEWS_CARGO_RECOVERED_2_B,"'Me dio mucha ternura', dijo {player}.","'It was really touching,' said {player}."
+HUD_NEWS_CARGO_RECOVERED_3_H,La carga que se escapó regresó 'con ganas de quedarse',The runaway cargo came back 'wanting to stay'
+HUD_NEWS_CARGO_RECOVERED_3_B,"El equipo la cinchó, la miró fijo y le pidió que se portara bien.","The crew strapped it down, stared at it and asked it to behave."
+HUD_NEWS_DEER_HIT_1_H,Ciervo radica la denuncia: 'Me llevaron puesto y ni tocaron bocina',Deer files a complaint: 'They ran into me and never honked'
+HUD_NEWS_DEER_HIT_1_B,"El animal, ofendido pero ileso, pidió disculpas públicas de parte de {player}.","The animal, offended but unharmed, demanded a public apology from {player}."
+HUD_NEWS_DEER_HIT_2_H,Ciervo vuelve al bosque y le cuenta todo a sus amigos,Deer goes back to the forest and tells his friends everything
+HUD_NEWS_DEER_HIT_2_B,"'Era un camión enorme y gritaba mucho', dicen que dijo.","'It was a huge truck and it yelled a lot,' he reportedly said."
+HUD_NEWS_DEER_HIT_3_H,"Cruce de ciervos: el camión ganó, pero nadie se siente orgulloso","Deer crossing: the truck won, but nobody feels proud"
+HUD_NEWS_DEER_HIT_3_B,{player}: 'Fue sin querer'. El ciervo: 'Se nota'.,{player}: 'It was an accident.' The deer: 'Sure it was.'
+HUD_NEWS_SHEEP_HIT_1_H,Ecologistas acusan a Take My Package de 'atropellar la fauna local',Environmentalists accuse Take My Package of 'hitting local wildlife'
+HUD_NEWS_SHEEP_HIT_1_B,La empresa responde que 'la oveja se tiró'. La oveja no hizo comentarios.,The company answers that 'the sheep jumped'. The sheep declined to comment.
+HUD_NEWS_SHEEP_HIT_2_H,Rebaño cruza la ruta y el camión se lleva un 'beee' de recuerdo,Flock crosses the road and the truck takes a 'baaa' as a souvenir
+HUD_NEWS_SHEEP_HIT_2_B,"{neighbor}, dueño del rebaño, cuenta las ovejas: 'Están todas, pero enojadas'.","{neighbor}, the flock's owner, counts the sheep: 'All here, but angry.'"
+HUD_NEWS_SHEEP_HIT_3_H,Las ovejas de {town} exigen un carril propio,{town}'s sheep demand a lane of their own
+HUD_NEWS_SHEEP_HIT_3_B,"'Somos de perfil bajo pero de mucho rebote', declaró la líder del rebaño.","'Low profile but high bounce,' said the flock leader."
+HUD_NEWS_FAULT_REAR_DOOR_1_H,Una puerta de camión saludó a todo {town},A truck door waved hello to all of {town}
+HUD_NEWS_FAULT_REAR_DOOR_1_B,"Durante {minutes} minutos, dicen los vecinos, 'fue lo más simpático de la ruta'.","For {minutes} minutes, neighbors say, 'it was the friendliest thing on the road'."
+HUD_NEWS_FAULT_REAR_DOOR_2_H,Camión circula con las puertas abiertas: 'Es aire acondicionado',Truck drives around with its doors open: 'It is air conditioning'
+HUD_NEWS_FAULT_REAR_DOOR_2_B,{player} aseguró que la ventilación cruzada 'es tendencia'.,{player} insisted that cross ventilation 'is trending'.
+HUD_NEWS_FAULT_REAR_DOOR_3_H,"La puerta trasera se abrió, se cerró y volvió a abrirse: 'Está indecisa'","Rear door opened, closed and opened again: 'It cannot decide'"
+HUD_NEWS_FAULT_REAR_DOOR_3_B,El equipo la ató con una correa y le pidió que reflexione.,The crew tied it with a strap and asked it to reflect.
+HUD_NEWS_FAULT_MIRROR_1_H,Camión circula con un celular pegado como espejo,Truck rolls with a phone stuck on as a mirror
+HUD_NEWS_FAULT_MIRROR_1_B,"'Tiene mejor resolución', defendió {player}.","'It has better resolution,' defended {player}."
+HUD_NEWS_FAULT_MIRROR_2_H,Se cayó un espejo y nadie miró atrás,A mirror fell off and nobody looked back
+HUD_NEWS_FAULT_MIRROR_2_B,"Según {player}, 'lo importante es lo que viene adelante'.","According to {player}, 'what matters is what is up ahead'."
+HUD_NEWS_FAULT_MIRROR_3_H,Desaparece un espejo retrovisor: los vecinos lo buscan en {town},Rear-view mirror goes missing: neighbors search {town}
+HUD_NEWS_FAULT_MIRROR_3_B,Recompensa: un mate y la gratitud eterna del camión.,Reward: a mate and the truck's eternal gratitude.
+HUD_NEWS_FAULT_POLICE_1_H,Vecinos llaman a la policía: 'Tres sujetos con chaleco le arrancaban partes a un camión',Neighbors call the police: 'Three men in vests were tearing parts off a truck'
+HUD_NEWS_FAULT_POLICE_1_B,Eran los repartidores intentando arreglarlo.,It was the delivery crew trying to fix it.
+HUD_NEWS_FAULT_POLICE_2_H,Alarma en {town}: desarman un camión a plena luz del día,Alarm in {town}: truck taken apart in broad daylight
+HUD_NEWS_FAULT_POLICE_2_B,La policía llegó y se quedó a ayudar con la correa.,Police arrived and stayed to help with the strap.
+HUD_NEWS_FAULT_POLICE_3_H,Reparación en la ruta termina en aplausos,Roadside repair ends in applause
+HUD_NEWS_FAULT_POLICE_3_B,{neighbor} asegura que 'nunca vi gente tan concentrada con una cinta'.,{neighbor} swears 'I have never seen people so focused on a strap'.
+HUD_NEWS_SUBSTITUTED_1_H,Abuelo asegura que su gallina 'no pone huevos y hace ñiqui cuando la apretás',Grandpa swears his hen 'lays no eggs and squeaks when you squeeze her'
+HUD_NEWS_SUBSTITUTED_1_B,La casa {house} la aceptó igual: 'Al menos no pica'.,House {house} accepted her anyway: 'At least she does not peck.'
+HUD_NEWS_SUBSTITUTED_2_H,Cambiazo en la puerta: llegó un juguete en lugar del pedido,Switcheroo at the door: a toy arrives instead of the order
+HUD_NEWS_SUBSTITUTED_2_B,{player} insiste en que 'el cliente ni se dio cuenta'. El cliente se dio cuenta.,{player} insists 'the customer did not even notice'. The customer noticed.
+HUD_NEWS_SUBSTITUTED_3_H,Gallina de peluche cacarea y conquista a {town},Plush hen clucks and wins over {town}
+HUD_NEWS_SUBSTITUTED_3_B,Dicen que tiene pilas y mejor carácter que la original.,They say she has batteries and a better temper than the original.
+HUD_NEWS_REPAIRED_TAPE_1_H,Paquete llega unido con cinta de embalar y sus dueños lo declaran 'rústico',Parcel arrives held together with packing tape and its owners call it 'rustic'
+HUD_NEWS_REPAIRED_TAPE_1_B,La casa {house} lo exhibe en el living.,House {house} displays it in the living room.
+HUD_NEWS_REPAIRED_TAPE_2_H,"La cinta de embalar, heroína silenciosa de la jornada","Packing tape, silent hero of the day"
+HUD_NEWS_REPAIRED_TAPE_2_B,Se usó casi un rollo entero; {player} dice que 'cada vuelta valió la pena'.,Nearly a whole roll was used; {player} says 'every turn was worth it'.
+HUD_NEWS_REPAIRED_TAPE_3_H,"Arreglo casero en la casa {house}: 'Quedó mejor que nuevo, o casi'","Home repair at house {house}: 'Better than new, or nearly'"
+HUD_NEWS_REPAIRED_TAPE_3_B,{neighbor} no se anima a despegar la cinta por miedo a lo que hay debajo.,{neighbor} is afraid to peel the tape off for fear of what is underneath.
+HUD_NEWS_RUINED_EN_ROUTE_1_H,Una caja llega a destino hecha un misterio,A box reaches its destination as a mystery
+HUD_NEWS_RUINED_EN_ROUTE_1_B,Nadie sabe qué pasó; {player} sospecha de 'una curva con mala intención'.,Nobody knows what happened; {player} suspects 'a curve with bad intentions'.
+HUD_NEWS_RUINED_EN_ROUTE_2_H,Se arruinó un paquete y el camión 'no vio nada',A parcel is ruined and the truck 'saw nothing'
+HUD_NEWS_RUINED_EN_ROUTE_2_B,Los testigos declaran que el bache 'estaba ahí desde siempre'.,Witnesses state that the pothole 'had always been there'.
+HUD_NEWS_RUINED_EN_ROUTE_3_H,Investigan el caso de la caja que no aguantó,Investigation opened into the crate that could not take it
+HUD_NEWS_RUINED_EN_ROUTE_3_B,"'Era sensible', dijo {player} con los ojos húmedos.","'It was sensitive,' said {player}, eyes damp."
+HUD_NEWS_RUINED_EN_ROUTE_4_H,Se escuchó un crack en la ruta: no era el camión,A crack echoes on the road: it was not the truck
+HUD_NEWS_RUINED_EN_ROUTE_4_B,Era el pedido frágil. {player} pidió un minuto de silencio.,It was the fragile order. {player} asked for a minute of silence.
+HUD_NEWS_RUINED_EN_ROUTE_5_H,Derrame en la ruta: el camión dejó su huella líquida,Spill on the road: the truck leaves a liquid trail
+HUD_NEWS_RUINED_EN_ROUTE_5_B,Los patos de {town} ya aprovechan el charco.,The ducks of {town} are already enjoying the puddle.
+HUD_NEWS_RUINED_EN_ROUTE_6_H,¡Pum! Se oye un festejo a destiempo en {town},Boom! A celebration out of season rings over {town}
+HUD_NEWS_RUINED_EN_ROUTE_6_B,Nadie salió herido; sí quedaron despeinados {player} y el resto.,Nobody was hurt; {player} and the crew are just a bit disheveled.
+HUD_NEWS_RUINED_EN_ROUTE_7_H,Escándalo en la caja: la gallina pidió bajarse,Uproar in the crate: the hen asked to get off
+HUD_NEWS_RUINED_EN_ROUTE_7_B,Los vecinos de {town} oyeron cacareos hasta la zanja.,{town} neighbors heard clucking all the way to the ditch.
+HUD_NEWS_RUINED_EN_ROUTE_8_H,Una criatura enojada convierte una caja en escena de acción,An angry creature turns a crate into an action scene
+HUD_NEWS_RUINED_EN_ROUTE_8_B,{player} asegura que 'la caja se movía sola'. La criatura no hizo comentarios.,{player} swears 'the crate was moving by itself'. The creature had no comment.
+HUD_NEWS_RUINED_EN_ROUTE_9_H,Paquete misterioso 'engordó' durante el viaje,Mysterious parcel 'gained weight' during the trip
+HUD_NEWS_RUINED_EN_ROUTE_9_B,"'Cada curva pesaba más', dice {player}, que ahora quiere ir al gimnasio.","'It got heavier every curve,' says {player}, who now wants a gym."
+HUD_NEWS_RUINED_EN_ROUTE_10_H,Torre tambaleante se cae en plena ruta,Wobbly tower topples on the open road
+HUD_NEWS_RUINED_EN_ROUTE_10_B,"'Hizo equilibrio hasta donde pudo', la defendió {player}.","'It balanced as long as it could,' {player} defended it."
+HUD_NEWS_COMPLAINT_1_H,Casa {house} presenta un reclamo y pide hablar con el gerente,House {house} files a complaint and asks for the manager
+HUD_NEWS_COMPLAINT_1_B,El gerente es un mate con chaleco que no contesta.,The manager is a mate in a vest that does not answer.
+HUD_NEWS_COMPLAINT_2_H,Reclamo vecinal: 'A la entrega le faltó cariño',Neighbor complaint: 'The delivery lacked affection'
+HUD_NEWS_COMPLAINT_2_B,{neighbor} exige una disculpa y una cajita nueva.,{neighbor} demands an apology and a brand new little box.
+HUD_NEWS_COMPLAINT_3_H,El libro de quejas de {town} estrena página,{town}'s complaint book gets a fresh page
+HUD_NEWS_COMPLAINT_3_B,La casa {house} escribió una nota 'con mucho sentimiento y poca ortografía'.,House {house} wrote a note 'with lots of feeling and little spelling'.
+HUD_NEWS_PHOTO_1_H,Repartidor saca una foto de la casa {house}: 'Es para el archivo',Driver snaps a photo of house {house}: 'It is for the archive'
+HUD_NEWS_PHOTO_1_B,{player} aseguró que la casa 'salió con pose natural'.,{player} said the house 'came out with a natural pose'.
+HUD_NEWS_PHOTO_2_H,Fotógrafo anónimo retrata una entrega en {town},Anonymous photographer captures a delivery in {town}
+HUD_NEWS_PHOTO_2_B,Dicen que tiene buen pulso y mejor celular.,They say he has a steady hand and a better phone.
+HUD_NEWS_PHOTO_3_H,El álbum de {town} suma una foto con el camión,{town}'s album adds a photo with the truck
+HUD_NEWS_PHOTO_3_B,"La casa {house} salió sonriendo; el camión, de perfil.","House {house} came out smiling; the truck, in profile."
+HUD_NEWS_DELIVERED_OK_1_H,Casa {house} recibe su pedido y desconfía de tanta amabilidad,House {house} gets its order and distrusts such kindness
+HUD_NEWS_DELIVERED_OK_1_B,{neighbor} pregunta si hay cámaras ocultas.,{neighbor} asks whether there are hidden cameras.
+HUD_NEWS_DELIVERED_OK_2_H,Entrega sin novedades en {town}: los vecinos piden explicaciones,Uneventful delivery in {town}: neighbors demand explanations
+HUD_NEWS_DELIVERED_OK_2_B,"'Estamos acostumbrados a otra cosa', dijo {neighbor}.","'We are used to something else,' said {neighbor}."
+HUD_NEWS_DELIVERED_OK_3_H,Un paquete llega entero a la casa {house} y la ciencia no se lo explica,A parcel reaches house {house} in one piece and science cannot explain it
+HUD_NEWS_DELIVERED_OK_3_B,{player} solo dijo: 'Suerte de principiante'.,{player} only said: 'Beginner's luck.'
+HUD_NEWS_CLEAN_RUN_1_H,ESCÁNDALO: repartidores entregan todo intacto,SCANDAL: delivery crew hands over everything intact
+HUD_NEWS_CLEAN_RUN_1_B,Los vecinos de {town} sospechan: 'Algo traman'. {player} niega todo.,{town} neighbors are suspicious: 'They are up to something'. {player} denies everything.
+HUD_NEWS_CLEAN_RUN_2_H,Una jornada sin un solo rasguño inquieta a {town},A day without a single scratch worries {town}
+HUD_NEWS_CLEAN_RUN_2_B,"'Esto no es normal', declaró {neighbor}, revisando el camión por las dudas.","'This is not normal,' said {neighbor}, checking the truck just in case."
+HUD_NEWS_CLEAN_RUN_3_H,"No se rompió nada, no se perdió nada: investigan al equipo","Nothing broke, nothing got lost: crew under investigation"
+HUD_NEWS_CLEAN_RUN_3_B,Fuentes cercanas dicen que {player} 'manejó como en un sueño'.,Sources say {player} 'drove like in a dream'.
+HUD_NEWS_RUN_FAILED_1_H,Camión de reparto visto por última vez a {km} km del depósito,Delivery truck last seen {km} km from the depot
+HUD_NEWS_RUN_FAILED_1_B,"El viaje duró {minutes} minutos y el camión 'seguía de largo', dicen.","The trip lasted {minutes} minutes and the truck 'just kept going', they say."
+HUD_NEWS_RUN_FAILED_2_H,Fracaso total en la ruta: no quedó nada para entregar,Total failure on the road: nothing left to deliver
+HUD_NEWS_RUN_FAILED_2_B,{player} resumió el viaje con una sola palabra: 'Uf'.,{player} summed up the trip with a single word: 'Ugh.'
+HUD_NEWS_RUN_FAILED_3_H,Entrega frustrada: la carga no llegó y las explicaciones tampoco,"Delivery frustrated: the cargo did not arrive, and neither did the excuses"
+HUD_NEWS_RUN_FAILED_3_B,Se abre una investigación. Se cierra un mate.,An investigation opens. A mate closes.
+HUD_NEWS_ENDLESS_END_1_H,Camión de reparto visto por última vez a {km} km del depósito,Delivery truck last seen {km} km from the depot
+HUD_NEWS_ENDLESS_END_1_B,Testigos: 'Seguía de largo'. Duró {minutes} minutos sin parar.,Witnesses: 'It just kept going.' It lasted {minutes} minutes without stopping.
+HUD_NEWS_ENDLESS_END_2_H,Ruta sin fin: el camión que no sabía dónde parar,Endless road: the truck that did not know where to stop
+HUD_NEWS_ENDLESS_END_2_B,{player} juró que 'la próxima curva es la última'. No lo era.,{player} swore 'the next curve is the last one'. It was not.
+HUD_NEWS_ENDLESS_END_3_H,{town} despide al camión: {km} km y todavía quedan cajas,{town} bids farewell to the truck: {km} km and there are still crates
+HUD_NEWS_ENDLESS_END_3_B,El depósito solo pide que alguien avise cuando frene.,The depot only asks that someone call when it stops.
+HUD_NEWS_FILLER_CLASSIFIED_1_H,SE BUSCA gallina,WANTED: hen
+HUD_NEWS_FILLER_CLASSIFIED_1_B,Responde al nombre de 'Cacarea'. Se ofrece un mate de recompensa. Preguntar por {neighbor}.,Answers to the name 'Cluckers'. A mate is offered as reward. Ask for {neighbor}.
+HUD_NEWS_FILLER_CLASSIFIED_2_H,"VENDO camioncito, poco uso","FOR SALE: little truck, barely used"
+HUD_NEWS_FILLER_CLASSIFIED_2_B,"Con un espejo pegado con cinta. Consultar con {player}, que sabe mucho de frenos.","Mirror held on with tape. Ask {player}, who knows a lot about brakes."
+HUD_NEWS_FILLER_CLASSIFIED_3_H,BUSCO copiloto,SEEKING co-pilot
+HUD_NEWS_FILLER_CLASSIFIED_3_B,Para viajes largos por {town}. Requisito: aguantar los baches y los chistes de {player}.,For long trips around {town}. Requirement: put up with potholes and {player}'s jokes.
+HUD_NEWS_FILLER_HOROSCOPE_1_H,Horóscopo del repartidor: Frágil,Driver's horoscope: Fragile
+HUD_NEWS_FILLER_HOROSCOPE_1_B,"Hoy no es día de baches. {player}, evitá las curvas y las promesas.","Today is no day for potholes. {player}, avoid curves and promises."
+HUD_NEWS_FILLER_HOROSCOPE_2_H,Horóscopo del repartidor: Peso creciente,Driver's horoscope: Growing Weight
+HUD_NEWS_FILLER_HOROSCOPE_2_B,Cuidado con lo que cargás: hoy pesa más de lo que parece.,Watch what you carry: today it weighs more than it looks.
+HUD_NEWS_FILLER_HOROSCOPE_3_H,Horóscopo del repartidor: Ruidoso,Driver's horoscope: Noisy
+HUD_NEWS_FILLER_HOROSCOPE_3_B,Un cacareo inesperado marcará la tarde. No lo tomes a mal.,An unexpected cluck will mark the afternoon. Do not take it personally.
+HUD_NEWS_FILLER_FORECAST_1_H,Pronóstico: nublado con probabilidad de cajas,Forecast: cloudy with a chance of crates
+HUD_NEWS_FILLER_FORECAST_1_B,Se esperan baches aislados y una brisa suave desde la ruta.,"Isolated potholes expected, with a light breeze from the road."
+HUD_NEWS_FILLER_FORECAST_2_H,Pronóstico: lomas de burro por la tarde,Forecast: speed bumps in the afternoon
+HUD_NEWS_FILLER_FORECAST_2_B,"Temperatura agradable en {town}; dentro del camión, más bien sacudida.","Pleasant temperature in {town}; inside the truck, rather shaky."
+HUD_NEWS_FILLER_FORECAST_3_H,Pronóstico: sin ganas de frenar,Forecast: no mood to brake
+HUD_NEWS_FILLER_FORECAST_3_B,"Se recomienda cinta de embalar y paciencia, sobre todo en {town}.","Packing tape and patience recommended, especially in {town}."
+HUD_NEWS_SECTION_POLICE,Policiales,Crime
+HUD_NEWS_SECTION_SOCIETY,Sociedad,Society
+HUD_NEWS_SECTION_RURAL,Rurales,Countryside
+HUD_NEWS_SECTION_ECONOMY,Economía,Business
+HUD_NEWS_SECTION_CLASSIFIED,Clasificados,Classifieds
+UI_NICK_01,Manos de Manteca,Butterfingers
+UI_NICK_02,Turbo,Turbo
+UI_NICK_03,Frenos Flojos,Loose Brakes
+UI_NICK_04,Pie de Plomo,Lead Foot
+UI_NICK_05,Don Bache,Mr. Pothole
+UI_NICK_06,Cinta Adhesiva,Duct Tape
+UI_NICK_07,Rulemán,Ball Bearing
+UI_NICK_08,Volantazo,Swerve
+UI_NICK_09,Cajita Feliz,Happy Box
+UI_NICK_10,Mate Cocido,Cold Mate
+UI_NICK_11,Sin Mapa,No Map
+UI_NICK_12,Pedal a Fondo,Full Throttle
+UI_NICK_13,Trompo,Spinning Top
+UI_NICK_14,Señor Badén,Mister Bump
+UI_NICK_15,Reversa,Reverse
+UI_NICK_16,Bocinazo,Honk Honk
+UI_NICK_17,Cinturón Flojo,Loose Belt
+UI_NICK_18,Ruedita Pinchada,Flat Tire
+UI_NICK_19,Doña Curva,Lady Curve
+UI_NICK_20,Capitán Bache,Captain Bump
+UI_NICK_21,Frágil Fernández,Fragile Fred
+UI_NICK_22,Novato,Rookie
+UI_NICK_23,Sacudón,Big Shake
+UI_NICK_24,Gallina Mayor,Head Hen
+HUD_NEWS_MASTHEAD,El Eco de %s,The %s Echo
+HUD_NEWS_MOTTO,Todas las noticias que llegan (casi) enteras,All the news that arrives (almost) intact
+HUD_NEWS_EDITION,Edición de la mañana siguiente · Precio: ridículo,Next-morning edition · Price: ridiculous
+HUD_NEWS_EXTRA,¡EXTRA!,EXTRA!
+HUD_NEWS_CONTINUE,Ver resultados,See results
+UI_COSM_NICKNAME,Apodo,Nickname
+UI_COSM_NICKNAME_HINT,Así te nombra el diario del día siguiente. Hasta 16 letras.,What the next-day newspaper calls you. Up to 16 characters.
+UI_COSM_NICKNAME_PLACEHOLDER,Vacío: te ponemos uno gracioso,Empty: we pick a funny one
+UI_TRUCK_VINTAGE,Furgón clásico viejo,Old classic van
+UI_TRUCK_MANUAL,marchas manuales y pago +25 %,manual gears and +25% pay
+UI_UNLOCK_VINTAGE_VAN,Furgón clásico viejo,Old classic van
+UI_OPT_BIND_SHIFT_UP,Subir marcha (furgón viejo),Shift up (old van)
+UI_OPT_BIND_SHIFT_DOWN,Bajar marcha (furgón viejo),Shift down (old van)
+HUD_GEAR,MARCHA %s,GEAR %s
+HUD_GEAR_SHIFT_UP,¡SUBÍ! [%s],SHIFT UP! [%s]
+HUD_RESULT_PAY_BONUS,"  (incluye +$%d del furgón viejo)","  (includes +$%d from the old van)"

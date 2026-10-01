@@ -30,7 +30,7 @@ renombrado; varios RPC existentes ahora descartan lo que no pasa el chequeo.
   `request_vote`): cupo. `interaction/module.cfg` pasa a depender de `net_session`.
 
 **Zona compartida del juego:**
-- `network_manager.gd`: `PROTOCOL_VERSION` 14 (con la regla en el comentario). Sobre el N-226.2 de `main` (#123:
+- `network_manager.gd`: `PROTOCOL_VERSION` 15 (con la regla en el comentario; el 14 es el diario, N-606). Sobre el N-226.2 de `main` (#123:
   `PlayerColorSlot`, el host siempre en el slot 0): el slot del que se va queda reservado para él mientras haya
   otros libres (`_slot_reservations`) y vuelve a ser suyo al reconectarse; con la sala llena lo toma el que entra,
   que arranca sin el mérito ni la carta de ese slot (`inherits_color_slot(peer_id)`, nueva). Esto cambia la regla

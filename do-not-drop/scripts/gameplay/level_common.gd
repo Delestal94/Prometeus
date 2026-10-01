@@ -22,6 +22,7 @@ var _overboard_seconds: Dictionary = {}
 const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_marker.gd")
 const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
 const TRUCK_RADIO: Script = preload("res://scripts/gameplay/vehicle/truck_radio.gd")
+const RUN_CHRONICLE: Script = preload("res://scripts/presentation/newspaper/run_chronicle.gd")
 const RESCUE_HOOK: Script = preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
 const LOW_VISIBILITY: Script = preload("res://scripts/gameplay/route/low_visibility_event.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
@@ -96,6 +97,10 @@ func _ready() -> void:
 	faults.name = "VehicleFaults"
 	faults.set(&"vehicle", vehicle)
 	add_child(faults)
+	# The facts of the run, for the next-day newspaper (N-606): every peer notes
+	# them, the host writes the paper when the results are decided.
+	var chronicle: Node = RUN_CHRONICLE.new()
+	add_child(chronicle)
 	# Mud over the windshield now and then (N-113): the host draws it from the
 	# world seed, every peer follows it; only the driver's view shows it.
 	var low_visibility: Node = LOW_VISIBILITY.new()
@@ -121,6 +126,12 @@ func _ready() -> void:
 		trailer.name = "TrailerCamera"
 		trailer.set(&"target", vehicle)
 		add_child(trailer)
+
+
+## The town the next-day newspaper is named after (RunChronicle asks when it
+## writes); "" lets it pick one from the session seed (Endless has no road).
+func newspaper_town() -> String:
+	return ""
 
 
 ## The level's own road and orders, set up once the depot is stocked.

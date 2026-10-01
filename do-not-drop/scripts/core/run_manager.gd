@@ -641,9 +641,7 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 		"is_new_best": is_new_best,
 		"best_score": best_score(MODE_DELIVERY),
 	}
-	print("[Run] ", results)
-	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
-	_share_results()
+	_publish_results()
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 
@@ -736,9 +734,7 @@ func _finish_endless_run(reason: String) -> void:
 		"is_new_best": is_new_best,
 		"best_score": best_score(MODE_ENDLESS),
 	}
-	print("[Run] ", results)
-	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
-	_share_results()
+	_publish_results()
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 
@@ -826,7 +822,11 @@ func _receive_session_state(state: Dictionary) -> void:
 		EventBus.package_state_changed.emit(id, int(entry.get("state", 0)))
 
 
-func _share_results() -> void:
+## Results are final: pay out, let the newspaper write itself (run_results_decided), share them.
+func _publish_results() -> void:
+	print("[Run] ", results)
+	CrewProgression.award_delivery(results, NetworkManager.peer_ids)
+	EventBus.run_results_decided.emit(results.duplicate(true))
 	if NetworkManager.is_online() and NetworkManager.is_host():
 		_remote_finish_run.rpc(current_mode, results)
 
