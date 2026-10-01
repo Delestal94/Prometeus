@@ -152,6 +152,17 @@ func unminded_cargo() -> int:
 	return count
 
 
+## Host: whether sitting here would take a box off someone who is already
+## minding it: this seat owns a mount whose box has a tender, and the owner
+## takes charge of its box when it sits down (seat_tending.gd claim()).
+func would_displace() -> bool:
+	if role == &"driver" or required_mount_path.is_empty():
+		return false
+	var mount: Node = get_node_or_null(required_mount_path)
+	var box: Variant = mount.get(&"occupied_by") if mount != null else null
+	return is_instance_valid(box) and int((box as Object).get(&"tender_peer_id")) > 0
+
+
 ## Whether this seat looks after the box in `mount`, its own or by the column.
 func looks_at_mount(mount: Node) -> bool:
 	if mount == null or role == &"driver":
