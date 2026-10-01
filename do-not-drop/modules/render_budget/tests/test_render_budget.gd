@@ -5,7 +5,8 @@ extends SceneTree
 ## - WorldQuality: each level has its settings, apply_to() scales a sun's
 ##   shadow distance, a batch's draw range and a particle count from their
 ##   base values, keeps a ranked lamp's shadow only while its rank is under
-##   the level's budget ("shadowed_lights"), and watch() catches nodes added later;
+##   the level's budget ("shadowed_lights"), and watch() catches nodes added later
+##   -- and logs nothing for one freed in the frame it was added;
 ## - DetailMaterials: with the game's tables handed in, a palette material
 ##   gets one shared triplanar twin per (entry, colour), unknown entries stay
 ##   flat, autumn tints only what the tables say, night glow lights only
@@ -92,6 +93,18 @@ func _test_world_quality(scene: Node3D) -> void:
 	await process_frame
 	_expect(later.amount == roundi(40 * WorldQuality.setting("particle_scale")),
 		"A node added after watch() is scaled too (got %d)" % later.amount)
+	# Added and freed in the same frame (a route built and thrown away): the
+	# deferred apply must find nothing, without the engine logging an error.
+	var catcher := ErrorCatcher.new()
+	OS.add_logger(catcher)
+	var gone := GPUParticles3D.new()
+	scene.add_child(gone)
+	gone.free()
+	await process_frame
+	await process_frame
+	OS.remove_logger(catcher)
+	_expect(catcher.messages.is_empty(),
+		"A node freed the frame it was added logs nothing (got %s)" % [catcher.messages])
 	WorldQuality.apply(self, WorldQuality.Level.HIGH)
 
 
@@ -260,3 +273,16 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
+
+class ErrorCatcher extends Logger:
+	var messages: Array[String] = []
+	var _mutex := Mutex.new()
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
+			_editor_notify: bool, error_type: int, _backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type == Logger.ERROR_TYPE_WARNING:
+			return
+		_mutex.lock()
+		messages.append("%s (%s:%d in %s)" % [rationale if not rationale.is_empty() else code, file, line, function])
+		_mutex.unlock()

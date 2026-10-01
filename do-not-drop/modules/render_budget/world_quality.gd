@@ -113,10 +113,12 @@ static func watch(tree: SceneTree) -> void:
 		if node is DirectionalLight3D or node is GPUParticles3D or node.has_meta(BASE_RANGE_META) \
 				or node.has_meta(SHADOW_RANK_META):
 			# Deferred: the node's owner sets its own values right after adding it.
-			# Checked before the call: a node freed in the meantime (a route
-			# built and thrown away in the same frame) can't even be passed to
-			# apply_to()'s typed argument.
+			# By id, not the node: one freed in the meantime (a route built and
+			# thrown away in the same frame) made the engine log "Lambda capture
+			# was freed" before any check inside the lambda could run.
+			var node_id: int = node.get_instance_id()
 			var later: Callable = func() -> void:
-				if is_instance_valid(node):
-					apply_to(node)
+				var alive: Node = instance_from_id(node_id) as Node
+				if alive != null:
+					apply_to(alive)
 			later.call_deferred())
