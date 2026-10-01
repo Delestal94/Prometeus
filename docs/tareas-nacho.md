@@ -2282,8 +2282,18 @@ Brecha más grande frente a los dos juegos. Empezar por un prototipo solo con St
   `core/proximity_voice.gd` (autoload `ProximityVoice`): graba mientras se aprieta `voice_talk` (Z), manda
   por RPC `unreliable_ordered` en el canal 3 y el que recibe descomprime y emite `voice_received`.
   Probado con un Steam falso; **falta probarlo con Steam real** (entra con la prueba de N-212.2).
-- [ ] **N-212.2** Reproducción en `AudioStreamPlayer3D` en la cabeza del jugador; dentro de la cabina se
+- [x] **N-212.2** (rama `nacho/N-212-voice-playback`, `e527214`) Reproducción en `AudioStreamPlayer3D` en la cabeza del jugador; dentro de la cabina se
   oyen todos, afuera se atenúa y pasa por el bus Exterior con filtro (se oye "a través de la chapa").
+  Módulo `net_session`: `VoicePlayback` (`AudioStreamGenerator` con búfer de jitter de 60 ms, tope de 0,3 s
+  que descarta lo viejo, se calla sola a los 0,5 s, `carry_in_room()` / `carry_in_open(muffled)`).
+  `proximity_voice.gd` le cuelga una ("VoiceChat") al jugador que habla, en su `Head` o en su asiento; los
+  dos en el camión (cámara de asiento + sentado) → bus `Interior` sin atenuación, si no → `Exterior` con
+  atenuación 3D (no se oye a 28 m) y apagada si uno está a bordo (sentado o parado en la caja) y el otro
+  no. Volumen = el del compañero × "Voces"; silenciar, volumen 0 o apagar la voz lo cortan en el acto; se
+  libera al irse (`peer_removed`) o al terminar la sesión (también si se va el host: `session_failed`).
+  `SteamVoice` decodifica como mucho 120 paquetes/s por peer (ráfaga 30). Sin RPC nuevo. Tests
+  `test_proximity_voice_playback` y `modules/net_session/tests/test_voice_playback`. **Falta probarlo con
+  Steam real** (con N-212.1): necesita PC.
 - [ ] **N-212.3** Pulsar para hablar (con tecla configurable) y detección de voz, silenciar y volumen por
   jugador, y un interruptor general en Opciones. Hecho en `649c7fa`: `GameSettings.voice_chat_enabled`
   (apagado hasta que exista N-212.2) y `voice_push_to_talk` (por defecto; apagado = micrófono abierto),
