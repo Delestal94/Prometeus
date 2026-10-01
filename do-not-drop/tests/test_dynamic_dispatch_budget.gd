@@ -37,6 +37,8 @@ extends SceneTree
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the
 ##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
 ##   store stills) would set up.
+## - vehicle_faults.gd (the truck's faults) holds its effects and repair spots by preload and the phone
+##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -160,6 +162,12 @@ const BUDGETS: Dictionary = {
 	"res://scripts/gameplay/package/package_feedback.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# What each trap shows on the box (split out of package_feedback.gd, N-225.5), typed the same way.
 	"res://scripts/gameplay/package/package_trap_visuals.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The truck's faults (N-224.4) are typed: the effects (EFFECTS) and the repair spots (REPAIR_SPOT) by
+	# preload (no class name), the phone holder as Player (a stand-in Node3D, as in the tests, is treated as
+	# carrying nothing) and the Dictionary lookups indexed after has(). Two .call and one .get left, all on
+	# the van: is_door_open and set_rear_cargo_open (the pop of the rear door) and driver_peer_id. By name
+	# because the tests stand a FakeVan Node3D in (with only that API), which `as` a typed truck would drop.
+	"res://scripts/gameplay/vehicle/vehicle_faults.gd": {"call": 2, "callv": 0, "get": 1, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

@@ -854,6 +854,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.call` 214 → 203, `.get(&` 216 → 210, `/root/` 111 → 109. `test_dynamic_dispatch_budget.gd` suma los dos
     archivos y el handle. Aviso `docs/avisos/2026-10-01-n224-package-feedback-tipado.md`. Siguientes:
     `depot_panel.gd` (13), `player.gd` (13), `package_contents_view.gd` (13), `seat_point.gd` (13).
+  - [x] `vehicle_faults.gd` (2026-10-01, rama `nacho/N-224-vehicle-faults-typed`): los efectos y los puntos de
+    reparación como `EFFECTS`/`REPAIR_SPOT` (preload inferido, sirve de tipo: `show_fault`, `show_phone_mirror`,
+    `driver_mirror_parts`, `fault_id`, `faults` directos), el que sostiene el celular como `Player` (`carried_package`,
+    `reach_origin`; el nodo plano de los tests no carga nada y usa su posición) y los `Dictionary.get(&"mirror")`
+    por `has`. Quedan por nombre los del camión (`driver_peer_id`, `is_door_open`, `set_rear_cargo_open`):
+    `test_vehicle_faults` mete un `FakeVan`. En el archivo: `.call` 6 → 2, `.get(&` 5 → 1, `.set(&` 3 → 0.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`). Siguientes:
+    `depot_panel.gd` (13), `cargo_animal_view.gd` (11), `seat_point.gd` (13).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
