@@ -41,6 +41,8 @@ extends SceneTree
 ##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
 ## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
 ##   the crew's money and the incident relay stay by name.
+## - package_contents_view.gd (the box's flaps and contents) holds its box as DeliveryPackage and the
+##   contents as PackageContent; only the EventBus connects stay by name.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -184,6 +186,11 @@ const BUDGETS: Dictionary = {
 	# by name because a test may replace EventBus with a plain Node. The three /root/ lookups are the
 	# null-safe accessors (EventBus twice, CrewProgression).
 	"res://scripts/gameplay/route/wildlife_crossing.gd": {"call": 2, "callv": 0, "get": 1, "root": 3},
+	# The box's flaps and contents (N-224.4) read the box as DeliveryPackage (package.gd never loads this
+	# view, so no cycle) and its content as PackageContent. The one /root/ lookup is the null-safe EventBus
+	# handle: it connects by name because a test may replace EventBus with a plain Node, as in
+	# package_feedback.gd.
+	"res://scripts/gameplay/package/package_contents_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
