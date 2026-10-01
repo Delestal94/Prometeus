@@ -234,6 +234,12 @@ const BUDGETS: Dictionary = {
 	# /root/ lookups are the null-safe accessors: NetworkManager and EventBus twice (the reaction and the
 	# doorbell light connect by name because a test may replace EventBus with a plain Node).
 	"res://scripts/gameplay/route/delivery_house.gd": {"call": 0, "callv": 0, "get": 0, "root": 3},
+	# The spectator and results cameras (N-224.4): the session as NetSession (local_id), the local player as
+	# Player (_seated, tended_package), the box as DeliveryPackage (trap_state), the results shot through
+	# results_orbit.gd by preload (target, frame_parked) and the goal lot as RouteGoalLot. By name stay
+	# RunManager.is_running (preloading run_manager.gd from the truck's presentation breaks --script
+	# compiles) and the truck's driver_peer_id (vehicle.gd preloads the presentation that makes this camera).
+	"res://scripts/presentation/spectator_camera.gd": {"call": 0, "callv": 0, "get": 2, "root": 2},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
