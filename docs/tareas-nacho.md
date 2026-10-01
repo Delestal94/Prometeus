@@ -725,6 +725,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     archivo: `.call` 10 → 5, `.get(&` 8 → 7, `/root/` 6 → 4, `.set(&` 3 → 0. `test_dynamic_dispatch_budget.gd` suma el
     archivo. Sin aviso (`route/` y `tests/`). Siguientes: `player.gd` (21), `package_feedback.gd` (21),
     `player_interaction.gd` (18), `level_base.gd` (18).
+  - [x] `player_interaction.gd` (2026-10-01, rama `nacho/N-224-player-interaction-typed`): lo apuntado como
+    `Interactable` (`can_interact`/`interact` directos; la sonda junta solo `Interactable`), el `aim_bonus` del perro
+    de `DogDistractPoint`, la red como `NetSession` (`_network()`) y la vista del contenido por preload
+    (`PACKAGE_CONTENTS_VIEW`). Quedan por nombre `highlight` (sin base común), `request_ping` de EventBus y
+    `request_use_card` de CrewProgression (ciclo). En el archivo: 21 → 6 usos (`.call` 13 → 3, `.get(&` 1 → 0,
+    `/root/` 7 → 3). `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso
+    `docs/avisos/2026-10-01-n224-player-interaction-tipado.md`. Siguientes: `player.gd` (21), `level_base.gd` (19),
+    `run_manager.gd` (18), `cargo_animals.gd` (16).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
