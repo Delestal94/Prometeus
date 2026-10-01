@@ -298,6 +298,55 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 
 ---
 
+### N-908 · Quien entra tarde no sabe qué cajas llevan los demás — B · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package_handling.gd`, `seat_tending.gd`, dominio de Slatex)
+Origen: mantenimiento 2026-10-01. `carried_package` solo viaja en el broadcast `player.rpc(&"pick_up")` al levantar
+(`scripts/gameplay/package/package_handling.gd:61`, `scripts/gameplay/player/player.gd:302-305`). En el cliente que entra
+tarde `SeatTending._holder_of()` (`scripts/gameplay/interaction/seat_tending.gd:188-196`) da null, así que
+`lap_reserves()` (`seat_tending.gd:128`) da false y `CargoSeatPoint._can_board` / `_free_bay` muestran asientos y
+bahías libres que el host tiene reservados; además ve a los compañeros sin pose de carga. Hecho cuando un test en
+`test_late_join_seating.gd` (o el de seat tending) cubre la vista cliente con una caja en el regazo (`lap_reserves`
+true) y el reenvío del host a un peer nuevo.
+- [ ] **N-908.1** En el host, `Player._on_peer_level_ready`, tras `sync.update_visibility(peer_id)`: `if
+  is_instance_valid(carried_package): rpc_id(peer_id, &"pick_up", carried_package.get_path())`. Respaldo:
+  `_holder_of` en el cliente busca al jugador con autoridad = `package.tender_peer_id` cuando `is_held`. Con
+  `constructor-red` y después `auditor-red`; tests `late_join`, `seat_tending`.
+- [ ] **N-908.2** Test de vista cliente con caja en regazo y de reenvío de `pick_up` a un peer nuevo. Con
+  `escritor-tests`; tests `late_join`.
+
+### N-909 · El plan de animales de carga es siempre el mismo — B · `Opus 5.5 · medium` · Aviso: no
+Origen: mantenimiento 2026-10-01. `cargo_animals.gd:493` (y 250, 379, 417; `_world_seed()` en 522) usa
+`NetworkManager.world_seed` tal cual: jugando solo vale 0, así que sale el mismo animal, en el mismo tramo, con la
+misma caja en todas las partidas; en sala se repite cada partida (no mezcla `world_completed_runs`). Solo host, no
+toca `PROTOCOL_VERSION`. Hecho cuando `test_cargo_animals.gd` prueba que con seed 0 dos corridas dan planes
+distintos y que con seed fijo `completed_runs` 0 vs 1 dan planes distintos.
+- [ ] **N-909.1** En `_on_run_started` del host: `_run_seed = hash([world_seed, world_completed_runs])` si
+  `world_seed != 0`, si no `randi()` de un RNG con `randomize()`; usarlo en `_next_leg`, `_pick`, `_snatch` y
+  `_kick_box`. Con `constructor-mundo`; tests `cargo_animals`.
+- [ ] **N-909.2** Tests de las dos propiedades del "Hecho cuando". Con `escritor-tests`; tests `cargo_animals`.
+
+### N-910 · `cargo_animal_ended` y `cargo_animal_alert` en el mismo frame confunden al cliente — C · `Opus 5.5 · medium` · Aviso: no
+Origen: mantenimiento 2026-10-01. `cargo_animal_view.gd:102-110` (y 303, 308), solo cliente. El cooldown es 3.5 s y la
+salida del perro 3.0 s (margen 0.5 s); si llegan juntos `ended` y el `alert` siguiente: (a) mismo animal/caja: entra
+a la rama "repetición para recién llegado" con estado LEAVE y no muestra el ataque nuevo; (b) otro perro: `_clear()`
+hace `queue_free` del "Dog" viejo y en el mismo frame se agrega otro "Dog", Godot lo renombra, la ruta de
+`DistractPoint` no coincide con la del host y el cliente no puede tirarle el palo. Hecho cuando un test simula
+`ended` + `alert` en el mismo frame en vista cliente y ve el ataque nuevo con la ruta del `DistractPoint` correcta.
+- [ ] **N-910.1** Exigir `state != State.LEAVE` en la rama de repetición y hacer `remove_child` (o free) del perro
+  viejo antes del `add_child`. Con `constructor-mundo`; tests `cargo_animals`.
+- [ ] **N-910.2** Test del mismo frame (casos a y b). Con `escritor-tests`; tests `cargo_animals`.
+
+### N-911 · ⏸ decide el usuario: origen y licencia de `mus_ingame_loop.ogg` — C · `Opus 5.5 · low` · Aviso: no
+Origen: mantenimiento 2026-10-01. `do-not-drop/assets/audio/music/mus_ingame_loop.ogg` (la música de cada partida) no
+está en `assets/audio/music/LICENCIA.md`; entró con la importación inicial del repo (cc12c0e, 2026-09-25), no sale de
+`tools/audio/compose_music.py`; quizá derive de `art/audio/music1.m4a` (sin referencias ni procedencia). Ya lo marcó
+la auditoría 2026-09-29 §5.10 sin tarea. Bloquea la declaración de IA y las licencias de Steam. Opciones: (a) el
+usuario documenta origen y licencia en `LICENCIA.md` y en `art/ai-registro.md` si es IA; (b) reemplazarla por una pista
+compuesta con `compose_music.py` (sesión de arte en la PC) y borrar `music1.m4a`. Recomendación: (b) si el origen no
+es 100 % propio. Hecho cuando la pista figura en `LICENCIA.md` con origen y licencia (o fue reemplazada y
+`music1.m4a` borrado).
+- [ ] **N-911.1** Decidir (a) o (b). Lo decide el usuario.
+- [ ] **N-911.2** Ejecutar la opción elegida. Con `disenador-audio` (b) o `documentador` (a).
+
 ## Orden de ataque (hitos)
 
 | Hito | Objetivo | Tareas |
@@ -306,10 +355,10 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M2 — Ritmo y guía del jugador** | Una entrega de 2-5 minutos donde siempre se sabe adónde ir. | N-103, N-104, N-105, N-501, N-502, N-503 |
 | **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
-| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
+| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸ |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
