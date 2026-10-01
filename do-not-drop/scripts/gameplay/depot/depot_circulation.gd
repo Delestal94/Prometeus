@@ -230,17 +230,20 @@ func _build_wear(kit: DepotKit) -> void:
 				blot_at.x * 1.7)
 
 
-## Yellow and black bollards at the bay's corners: the truck's bay is not a
-## place to cut across with a pallet jack.
+## Yellow and black bollards at the bay's corners (the kit's model, solid as before):
+## the truck's bay is not a place to cut across with a pallet jack. Two wheel stops
+## ahead of the truck's front wheels and a pair of chocks left by the bollards.
 func _build_bollards(kit: DepotKit) -> void:
-	var yellow := DepotKit.flat(Layout.YELLOW, 0.5)
-	var dark := DepotKit.flat(Color("2b3136"), 0.6)
+	var bollard: String = DepotKit.depot_model("sm_env_depot_bollard")
 	for at: Vector2 in [Vector2(-3.85, 1.9), Vector2(3.85, 1.9), Vector2(-3.85, 12.9), Vector2(3.85, 12.9)]:
-		kit.cylinder(0.11, 1.0, Transform3D(Basis.IDENTITY, Vector3(at.x, Layout.FLOOR_TOP + 0.5, at.y)), yellow, 10,
-				true)
-		kit.cylinder(0.112, 0.16, Transform3D(Basis.IDENTITY, Vector3(at.x, Layout.FLOOR_TOP + 0.62, at.y)), dark, 10)
-		kit.cylinder(0.112, 0.16, Transform3D(Basis.IDENTITY, Vector3(at.x, Layout.FLOOR_TOP + 0.3, at.y)), dark, 10)
-		kit.cylinder(0.12, 0.04, Transform3D(Basis.IDENTITY, Vector3(at.x, Layout.FLOOR_TOP + 1.0, at.y)), dark, 10)
+		kit.model(bollard, Transform3D(Basis.IDENTITY, Vector3(at.x, Layout.FLOOR_TOP, at.y)))
+		kit.collider(Vector3(0.24, 1.0, 0.24), Transform3D(Basis.IDENTITY, Vector3(at.x, Layout.FLOOR_TOP + 0.5, at.y)))
+	var stop: String = DepotKit.depot_model("sm_env_depot_wheel_stop")
+	for x: float in [-1.05, 1.05]:
+		kit.model(stop, Transform3D(Basis.IDENTITY, Vector3(x, Layout.FLOOR_TOP, 4.55)))
+	var chock: String = DepotKit.depot_model("sm_env_depot_wheel_chock")
+	kit.model(chock, Transform3D(Basis(Vector3.UP, 0.35), Vector3(-3.45, Layout.FLOOR_TOP, 12.2)))
+	kit.model(chock, Transform3D(Basis(Vector3.UP, -0.25), Vector3(3.5, Layout.FLOOR_TOP, 2.5)))
 
 
 # --- Helpers ---------------------------------------------------------------------

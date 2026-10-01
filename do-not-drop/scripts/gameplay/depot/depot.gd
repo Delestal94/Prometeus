@@ -511,6 +511,7 @@ func _build() -> void:
 	hall.build_floor_markings(kit)
 	hall.build_wayfinding(kit)
 	furnishing.build(kit)
+	DepotProps.new(self).build(kit)
 	hall.build_exterior(kit)
 	kit.commit("Depot")
 	hall.build_contact_shadows()

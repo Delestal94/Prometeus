@@ -11,6 +11,19 @@ const SIGN_FONT_SIZE: int = 64
 const SIGN_PIXEL: float = 0.0065
 const SIGN_ARROW: float = 0.5
 const SIGN_GAP: float = 0.18
+## Cells of the pictogram atlas (DepotKit.PICTOGRAMS), row by row.
+const ICON_HELMET: int = 0
+const ICON_VEST: int = 1
+const ICON_SPEED: int = 2
+const ICON_EXIT: int = 3
+const ICON_EXTINGUISHER: int = 4
+const ICON_FIRST_AID: int = 5
+const ICON_MEETING: int = 6
+const ICON_FORKLIFT: int = 7
+const ICON_HANDS: int = 8
+const ICON_NO_SMOKING: int = 9
+const ICON_ELECTRIC: int = 10
+const ICON_EVACUATION: int = 11
 ## The zone-coloured tab's share of a hanging sign's width.
 const TAB_SHARE: float = 0.25
 
@@ -93,11 +106,13 @@ static func paint_arrow(kit: DepotKit, caption: String, at: Vector3, direction: 
 ## face (the one `yaw` turns toward +Z): read from behind it would point the
 ## wrong way, so the back just names the place. A sign hung under another stops
 ## its cables at `cable_top`. `colour` is the zone's colour (the tab), `ink` the
-## caption's; `size` scales the whole sign (1.0 is the size they all used to be).
+## caption's; `size` scales the whole sign (1.0 is the size they all used to be);
+## `icon` is the zone's pictogram (an ICON_* cell of the atlas; none keeps the empty disc).
 ## Every caption label is in the "depot_sign" group, tagged with the whole
 ## caption and its face (test_depot_signage).
 static func hanging_sign(parent: Node, kit: DepotKit, caption: String, at: Vector3, yaw: float, colour: Color,
-		cable_top: float = Layout.CEILING - 0.25, ink: Color = Layout.PAPER, size: float = 1.0) -> void:
+		cable_top: float = Layout.CEILING - 0.25, ink: Color = Layout.PAPER, size: float = 1.0,
+		icon: int = -1) -> void:
 	var basis := Basis(Vector3.UP, yaw)
 	var pixel: float = SIGN_PIXEL * size
 	var tokens: Array = sign_tokens(caption)
@@ -125,10 +140,16 @@ static func hanging_sign(parent: Node, kit: DepotKit, caption: String, at: Vecto
 	kit.box_xf(Vector3(tab, height, 0.07), Transform3D(basis, tab_at), DepotKit.flat(colour, 0.65))
 	kit.box_xf(Vector3(width + 0.08, 0.05, 0.08), Transform3D(basis, at + Vector3(0.0, height * 0.5 + 0.025, 0.0)),
 			DepotKit.flat(Color("3b4c53"), 0.5, 0.4))
-	# The pictogram's slot: a paper disc in the tab, showing on both faces.
+	# The pictogram in the tab, on both faces (ink on the light tabs, paper on the dark ones).
 	var slot: float = minf(tab, height) * 0.36
-	var face_turn: Basis = basis * Basis(Vector3.RIGHT, PI * 0.5)
-	kit.cylinder(slot, 0.078, Transform3D(face_turn, tab_at), DepotKit.flat(Layout.PAPER, 0.6), 16)
+	if icon >= 0:
+		var tint: Color = Layout.INK if colour.get_luminance() > 0.55 else Layout.PAPER
+		pictogram(kit, icon, Transform3D(basis, tab_at + basis * Vector3(0.0, 0.0, 0.039)), slot * 2.0, tint)
+		pictogram(kit, icon, Transform3D(basis * Basis(Vector3.UP, PI), tab_at + basis * Vector3(0.0, 0.0, -0.039)),
+				slot * 2.0, tint)
+	else:
+		var face_turn: Basis = basis * Basis(Vector3.RIGHT, PI * 0.5)
+		kit.cylinder(slot, 0.078, Transform3D(face_turn, tab_at), DepotKit.flat(Layout.PAPER, 0.6), 16)
 	# The tear line: short dashes where the tab meets the body.
 	for dash: int in range(5):
 		var y: float = (dash - 2) * height * 0.17
@@ -151,6 +172,26 @@ static func hanging_sign(parent: Node, kit: DepotKit, caption: String, at: Vecto
 		cursor += widths[index] + gap
 	_sign_label(parent, "  ·  ".join(words), at + basis * Vector3(body_centre, 0.0, -0.037), yaw + PI, ink, caption,
 			false, pixel)
+
+
+## A pictogram from the atlas: a `size` square facing +Z of `xform`, tinted `colour`,
+## folded into the kit's shared pictogram batch.
+static func pictogram(kit: DepotKit, cell: int, xform: Transform3D, size: float, colour: Color = Layout.PAPER) -> void:
+	var u0: float = (cell % 4) * 0.25
+	var v0: float = (cell / 4) * 0.25
+	var half: float = size * 0.5
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var corners: Array[Vector2] = [Vector2(-half, half), Vector2(half, half), Vector2(half, -half),
+			Vector2(-half, -half)]
+	var uvs: Array[Vector2] = [Vector2(u0, v0), Vector2(u0 + 0.25, v0), Vector2(u0 + 0.25, v0 + 0.25),
+			Vector2(u0, v0 + 0.25)]
+	tool.set_color(colour)
+	tool.set_normal(Vector3.BACK)
+	for index: int in [0, 1, 2, 0, 2, 3]:
+		tool.set_uv(uvs[index])
+		tool.add_vertex(Vector3(corners[index].x, corners[index].y, 0.0))
+	kit.add_mesh(tool.commit(), xform, DepotKit.pictograms(), false)
 
 
 ## "CAMIÓN → PORTÓN" -> ["CAMIÓN", 1, "PORTÓN"]: words, and -1 / 1 for

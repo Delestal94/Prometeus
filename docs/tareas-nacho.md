@@ -646,13 +646,22 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   cambio; GPU con sombras apagadas +2-11 % de llamadas de dibujo, con las de Alta +40-90 % adentro. Tests `test_depot_zones`
   (nuevo), `test_depot` (umbrales de carteles/flechas a propósito), `test_render_budget`. Qué queda para la 2 en el
   registro de `docs/deposito-rediseno.md`; aviso `docs/avisos/2026-09-30-n319-deposito.md`.
-- [ ] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
+- [x] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
   primitivas de `DepotKit` (`modelador-blender`, después `constructor-mundo`). Necesita PC.
   **[x] Modelos hechos (2026-09-30, rama `nacho/N-319-depot-props`)** — 40 GLB `sm_env_depot_*` nuevos en
   `models/environment/depot/` (grupos `ceiling dispatch bay logistics office cage safety breakroom workshop` del script),
   más el atlas de 12 pictogramas y la malla de rombos en `assets/textures/depot/`. Lista, tris y pivotes en
-  `docs/inventario-assets.md` y `assets/README.md`. **Falta conectarlos al juego** (reemplazar las cajas de
-  `depot_zones.gd`, `depot_hall.gd` y compañía con `DepotKit.model()`): `constructor-mundo`.
+  `docs/inventario-assets.md` y `assets/README.md`.
+  **[x] Pasada de luz y pintura + kit conectado (2026-10-01, rama `nacho/N-319-depot-finish`)** — el interior con luz propia
+  casi fija (`DepotAtmosphere`: ambiente fijo 0,25 al 80 %, sin aporte del cielo, sombras del sol a 1,0 bajo el techo;
+  `SunShield` de losas solo-sombra), haces de tragaluz en dos ejes por clima, vidrio celeste con emisión por clima, ventanas
+  con marcos del kit, techo gris y cerchas INK, sendas 1 m verde apagado con bordes gastados, contorno discontinuo con
+  estarcido para la reunión, carteles "etiqueta de envío" con pictograma del atlas. Kit conectado: campanas de la bahía,
+  tubos lineales, conductos y bandeja, protecciones de columna, bolardos, topes y calzas, mesa del despachante, escalera,
+  barandas, persianas, malla y ventanilla del pañol, semáforo del portón (sigue al portón), compresor, banco con morsa,
+  elevador de tijera, cocinita, heladera, dispensador, reciclaje; el centro del galpón (jaulas rodantes, pallet filmado,
+  mesa de clasificación, flat-packs, escalera de ruedas) y la pared izquierda z 9-12 (`depot_props.gd`). Lotes de
+  `DepotKit` 170 → 184 (tope ~190); `bench_depot` sin cambio. Detalle en `docs/deposito-rediseno.md`.
 - [ ] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
   oficio (`constructor-mundo`).
 - [ ] **N-319.4** Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.

@@ -267,6 +267,27 @@ static func tint(color: Color) -> StandardMaterial3D:
 	return _material_cache[key]
 
 
+## The pictogram atlas (assets/textures/depot): white shapes on transparent, 4 x 4 cells
+## of 128 px. Unlit and cut out (no sorting), tinted per quad through its vertex colour,
+## so every icon on every sign shares this one batch.
+const PICTOGRAMS: String = "res://assets/textures/depot/tx_depot_pictograms_512.png"
+
+
+static func pictograms() -> StandardMaterial3D:
+	var key: String = "pictograms"
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_texture = load(PICTOGRAMS)
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.vertex_color_use_as_albedo = true
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		material.alpha_scissor_threshold = 0.4
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
 ## Unlit paint, drawn at exactly its colour: shapes that sit beside Label3D
 ## text (unshaded too) and should read just as bright -- a sign's arrows.
 static func unlit(color: Color) -> StandardMaterial3D:

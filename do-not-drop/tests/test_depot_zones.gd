@@ -19,7 +19,12 @@ extends SceneTree
 ##     and the office door has no small sign;
 ##   - the lights: a handful of real ones, the three big spots ranked for
 ##     shadows, and WorldQuality keeping as many as the level allows (none on Low);
-##   - the signs hang smaller over their zones; everything static is batched.
+##   - the signs hang smaller over their zones; everything static is batched;
+##   - the modelled kit is connected (N-319.2): the door's signal light follows the
+##     door (green open, red shut), the middle of the hall has its cages, table and
+##     pallet (solid, clear of the walkways and the truck), the left wall its
+##     panel and cabinet, the pictograms come from the atlas, and the batches stay
+##     under the cap.
 
 const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const Labels = preload("res://scripts/gameplay/depot/depot_labels.gd")
@@ -28,8 +33,10 @@ const Labels = preload("res://scripts/gameplay/depot/depot_labels.gd")
 const MAX_DEPOT_LIGHTS: int = 7
 ## Most separate meshes the depot's root may carry: the static geometry goes
 ## through DepotKit, one batch per material (154 before N-319, 185 with the
-## zones). A node per box would be thousands.
+## zones, 202 with the modelled kit). A node per box would be thousands.
 const MAX_ROOT_MESHES: int = 220
+## The kit's own batches ("Depot..." and "Lamps...") stay under this (184 now).
+const MAX_KIT_BATCHES: int = 190
 
 var _failures: int = 0
 
@@ -53,6 +60,7 @@ func _run() -> void:
 	_test_signs()
 	_test_batching(depot)
 	_test_light_pass(depot)
+	_test_kit(depot)
 	await _test_air(level, depot)
 	level.queue_free()
 	await process_frame
@@ -263,6 +271,58 @@ func _test_air(level: Node, depot: Node3D) -> void:
 			and is_equal_approx(sun.shadow_opacity, outside_shadow))
 	_expect(put_back, "The Environment and the sun are put back when the depot leaves (%.4f)" % environment.fog_density)
 	depot.free()
+
+
+## The modelled kit in the game: the door's signal light, the middle of the hall, the
+## left wall, the pictogram atlas and the batch cap.
+func _test_kit(depot: Node3D) -> void:
+	var door := depot.get_node(^"RollerDoor") as DepotRollerDoor
+	var greens: Array[Node] = door.find_children("DoorLightGreen", "", true, false)
+	var reds: Array[Node] = door.find_children("DoorLightRed", "", true, false)
+	_expect(greens.size() == 2 and reds.size() == 2, "The door has a signal light on each side (%d green, %d red)" % [
+			greens.size(), reds.size()])
+	door.set_open(true, false)
+	_expect(greens.all(func(light: Node) -> bool: return (light as Node3D).visible)
+			and reds.all(func(light: Node) -> bool: return not (light as Node3D).visible),
+			"An open door shows the green arrow and not the red X")
+	door.set_open(false, false)
+	_expect(reds.all(func(light: Node) -> bool: return (light as Node3D).visible)
+			and greens.all(func(light: Node) -> bool: return not (light as Node3D).visible),
+			"A shut door shows the red X and not the green arrow")
+	door.set_open(true, false)
+	# The middle of the hall: solid things stand at the cages, the table and the pallet,
+	# none of it near the truck or the gathering rectangle.
+	var space: PhysicsDirectSpaceState3D = depot.get_world_3d().direct_space_state
+	for at: Vector3 in [Vector3(-3.9, 0.0, 21.4), Vector3(-2.75, 0.0, 21.05), Vector3(0.4, 0.0, 21.6),
+			Vector3(4.4, 0.0, 21.2)]:
+		var from: Vector3 = depot.to_global(at + Vector3.UP * 4.0)
+		var query := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 5.0, 1)
+		var hit: Dictionary = space.intersect_ray(query)
+		var height: float = depot.to_local(hit.position).y if not hit.is_empty() else -1.0
+		_expect(height > Layout.FLOOR_TOP + 0.5, "Something solid stands at %s in the middle (%.2f m)" % [at, height])
+		_expect(not Layout.GATHER.grow(0.5).has_point(Vector2(at.x, at.z)),
+				"The middle's props stay off the crew's rectangle (%s)" % at)
+		_expect(Vector2(at.x, at.z).distance_to(Vector2(Layout.TRUCK_BAY.x, Layout.TRUCK_BAY.z)) > 10.0,
+				"The middle's props stay clear of the truck (%s)" % at)
+	# The left wall's panel and cabinet are on the wall, not in the lane.
+	for z: float in [10.3, 11.35, 11.95]:
+		_expect(DepotProps.WEST_WALL_X < Layout.FORKLIFT_LANE_X - Layout.FORKLIFT_LANE_WIDTH * 0.5 - 1.0,
+				"The wall's kit stays clear of the forklift lane (z %.1f)" % z)
+	# Pictograms come from the atlas in one shared batch; the kit stays under its cap.
+	var batches: int = 0
+	var pictograms: int = 0
+	for child: Node in depot.get_children():
+		var part := child as MeshInstance3D
+		if part == null:
+			continue
+		if String(part.name).begins_with("Depot") or String(part.name).begins_with("Lamps"):
+			batches += 1
+		var material := part.mesh.surface_get_material(0) as StandardMaterial3D if part.mesh != null else null
+		if material != null and material.albedo_texture != null \
+				and material.albedo_texture.resource_path == DepotKit.PICTOGRAMS:
+			pictograms += 1
+	_expect(pictograms == 1, "Every pictogram shares one atlas batch (%d)" % pictograms)
+	_expect(batches <= MAX_KIT_BATCHES, "The kit's batches stay under %d (%d)" % [MAX_KIT_BATCHES, batches])
 
 
 ## The light and paint pass: what the weather does to the shafts and the glass, the

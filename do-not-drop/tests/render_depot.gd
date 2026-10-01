@@ -24,7 +24,7 @@ const SHOTS := [
 	["workshop", Vector3(6.5, 1.8, 13.0), Vector3(13.0, 1.2, 6.0)],
 	["lockers_and_break", Vector3(8.3, 1.7, 17.9), Vector3(14.5, 1.5, 20.0)],
 	["supplies_cage", Vector3(-5.6, 1.7, 9.0), Vector3(-10.5, 1.3, 5.0)],
-	["office_mezzanine", Vector3(3.0, 1.8, 21.0), Vector3(11.5, 3.6, 28.0)],
+	["office_mezzanine", Vector3(2.4, 1.8, 18.6), Vector3(11.5, 3.6, 28.0)],
 	["stock_aisle_forklift", Vector3(-11.2, 2.2, 24.0), Vector3(-12.2, 1.2, 10.0)],
 	["back_of_depot", Vector3(2.0, 2.4, 20.0), Vector3(-2.0, 1.2, 30.5)],
 	# Eye height in the middle of the hall, looking down its length (the game's field of view).

@@ -39,6 +39,10 @@ var _beacon_light: OmniLight3D
 var _beacon_lens: MeshInstance3D
 var _motor: AudioStreamPlayer3D
 var _beacon_time: float = 0.0
+## The door's signal lights (the kit's, one on each side of the wall): the red X shows
+## while the door is shut or moving, the green arrow only once it is fully open.
+var _signal_red: Array[Node3D] = []
+var _signal_green: Array[Node3D] = []
 
 
 func _ready() -> void:
@@ -88,6 +92,11 @@ func _apply_openness() -> void:
 		var slat: MeshInstance3D = _slats[index]
 		slat.visible = y < height
 		slat.position = Vector3(0.0, y, 0.0)
+	var green: bool = openness >= 0.99
+	for light: Node3D in _signal_green:
+		light.visible = green
+	for light: Node3D in _signal_red:
+		light.visible = not green
 	_bottom_bar.position = Vector3(0.0, bottom + 0.04, 0.0)
 	_bottom_bar.visible = bottom < height - 0.1
 	var closed_part: float = height - bottom
@@ -121,6 +130,7 @@ func _build() -> void:
 	for side: float in [-1.0, 1.0]:
 		kit.collider(Vector3(0.28, 1.1, 0.28), Transform3D(Basis.IDENTITY, Vector3(side * (width * 0.5 + 0.35), 0.55, -0.7)))
 	kit.commit("DoorFrame")
+	_build_signal_lights()
 	_beacon_lens = MeshInstance3D.new()
 	_beacon_lens.name = "BeaconLens"
 	var lens := SphereMesh.new()
@@ -155,3 +165,24 @@ func _build() -> void:
 	_motor.volume_db = WorldMix.ROLLER_DOOR_DB
 	_motor.position = Vector3(0.0, height + 0.4, 0.0)
 	add_child(_motor)
+
+
+## The kit's signal light, inside (facing +Z) and outside (facing -Z) at the right jamb's
+## wall, at head height: a red X for closed or moving, a green arrow for open.
+func _build_signal_lights() -> void:
+	var packed := load(DepotKit.depot_model("sm_env_depot_door_light")) as PackedScene
+	if packed == null:
+		return
+	for spec: Array in [[Vector3(width * 0.5 + 0.75, 1.9, 0.02), PI], [Vector3(width * 0.5 + 0.75, 1.9, -0.32), 0.0]]:
+		var light := packed.instantiate() as Node3D
+		LowpolyMaterials.apply(light)
+		light.name = "SignalLight%d" % maxi(_signal_red.size(), 0)
+		light.position = spec[0]
+		light.rotation.y = float(spec[1])
+		add_child(light)
+		var red := light.find_child("DoorLightRed", true, false) as Node3D
+		var green := light.find_child("DoorLightGreen", true, false) as Node3D
+		if red != null:
+			_signal_red.append(red)
+		if green != null:
+			_signal_green.append(green)

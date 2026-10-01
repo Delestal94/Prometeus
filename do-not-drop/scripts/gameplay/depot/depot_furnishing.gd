@@ -155,7 +155,7 @@ func _build_dispatch_shelves(kit: DepotKit) -> void:
 		# Named as the board reads ("ESTANTE A-3").
 		DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_SIGN_SHELF") % unit.aisle,
 				Vector3(x, 3.7, Layout.SHELF_START_Z + length * 0.5), PI * 0.5, Layout.SHELVES_BLUE,
-				Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE)
+				Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE, DepotLabels.ICON_FORKLIFT)
 
 
 func _build_workshop(kit: DepotKit) -> void:
@@ -194,16 +194,34 @@ func _build_workshop(kit: DepotKit) -> void:
 	for index: int in range(paints.size()):
 		kit.box(Vector3(0.02, 0.45, 0.45), Vector3(14.9, 3.0, 9.2 + index * 0.55), DepotKit.flat(paints[index], 0.6))
 	# Air compressor with its hose reel.
-	kit.cylinder(0.3, 1.0, Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(13.1, 0.4, 2.2)), red, 14, true)
-	kit.box(Vector3(0.4, 0.3, 0.3), Vector3(13.1, 0.85, 2.2), dark)
+	kit.model(DepotKit.depot_model("sm_env_depot_compressor"), Transform3D(Basis(Vector3.UP, PI * 0.5),
+			Vector3(13.1, Layout.FLOOR_TOP, 2.2)))
+	kit.collider(Vector3(0.5, 0.7, 0.95), Transform3D(Basis.IDENTITY, Vector3(13.1, 0.4, 2.2)))
 	kit.cylinder(0.22, 0.1, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(14.9, 1.6, 1.5)),
 			DepotKit.flat(Color("ffc93c"), 0.6), 14)
 	_build_workshop_floor(kit)
+	_build_workshop_kit(kit)
 	_build_workshop_kiosk()
 	# Over the gap in the half wall, turned to the hall.
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_WORKSHOP"),
 			Vector3(Layout.WORKSHOP_WALL_X, 3.7, (Layout.WORKSHOP_GAP.x + Layout.WORKSHOP_GAP.y) * 0.5), -PI * 0.5,
-			Layout.WORKSHOP_RED, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE)
+			Layout.WORKSHOP_RED, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE,
+			DepotLabels.ICON_HELMET)
+
+
+## The kit's workshop pieces: the scissor lift in the middle of the floor, a bench with
+## its vise against the door wall, and a wet-floor cone and sign by the lift.
+func _build_workshop_kit(kit: DepotKit) -> void:
+	kit.model(DepotKit.depot_model("sm_env_depot_scissor_lift"), Transform3D(Basis.IDENTITY,
+			Vector3(11.6, Layout.FLOOR_TOP, 5.3)))
+	kit.collider(Vector3(2.4, 0.5, 4.2), Transform3D(Basis.IDENTITY, Vector3(11.6, 0.3, 5.3)))
+	kit.model(DepotKit.depot_model("sm_env_depot_workbench_vise"), Transform3D(Basis(Vector3.UP, PI),
+			Vector3(10.3, Layout.FLOOR_TOP, 0.85)))
+	kit.collider(Vector3(1.6, 1.1, 0.8), Transform3D(Basis.IDENTITY, Vector3(10.3, 0.58, 0.85)))
+	kit.model(DepotKit.depot_model("sm_env_depot_wet_floor_cone"), Transform3D(Basis(Vector3.UP, 0.4),
+			Vector3(13.0, Layout.FLOOR_TOP, 8.0)))
+	kit.model(DepotKit.depot_model("sm_env_depot_wet_floor_sign"), Transform3D(Basis(Vector3.UP, -2.7),
+			Vector3(10.0, Layout.FLOOR_TOP, 8.2)))
 
 
 ## The workshop's own floor (sealed dark concrete with a red border, so the
@@ -361,23 +379,27 @@ func _build_lockers(kit: DepotKit) -> void:
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_LOCKERS"),
 			Vector3(Layout.WORKSHOP_WALL_X, 3.7,
 					(DepotZones.WARDROBE_DOOR.x + DepotZones.WARDROBE_DOOR.y) * 0.5), -PI * 0.5,
-			Layout.LOCKERS_TEAL, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE)
+			Layout.LOCKERS_TEAL, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE,
+			DepotLabels.ICON_VEST)
 
 
 func _build_break_area(kit: DepotKit) -> void:
 	var dark := DepotKit.flat(Color("263238"), 0.7)
-	# Coffee machine: body, glowing panel, drip tray and a cup.
-	kit.box(Vector3(0.6, 1.8, 0.7), Vector3(14.6, 0.9, 20.2), DepotKit.flat(Color("8c2f39"), 0.4, 0.2), true)
-	kit.box(Vector3(0.02, 0.5, 0.45), Vector3(14.29, 1.35, 20.2), DepotKit.glow(Color("ffd08a"), 0.9))
-	kit.box(Vector3(0.12, 0.03, 0.3), Vector3(14.26, 0.75, 20.2), dark)
-	kit.cylinder(0.04, 0.09, Transform3D(Basis.IDENTITY, Vector3(14.24, 0.81, 20.2)), DepotKit.flat(Layout.PAPER, 0.7),
-			10)
-	DepotLabels.text(_root, tr("WORLD_DEPOT_COFFEE"), Vector3(14.28, 1.7, 20.2), -PI * 0.5, 40, Layout.PAPER,
-			Layout.DISPLAY_FONT, 0.004, 4)
-	# Water cooler.
-	kit.box(Vector3(0.4, 1.0, 0.4), Vector3(14.6, 0.5, 21.2), DepotKit.flat(Color("e8ebe4"), 0.6), true)
-	kit.cylinder(0.17, 0.45, Transform3D(Basis.IDENTITY, Vector3(14.6, 1.25, 21.2)),
-			DepotKit.glass(Color(0.55, 0.78, 0.95, 0.55)), 14)
+	# The kitchenette (cabinet, worktop, microwave, coffee machine, kettle), the fridge,
+	# the water dispenser and the recycling station, in a row along the east wall.
+	var east_facing := Basis(Vector3.UP, PI * 0.5)
+	# [model, centre z, width along the wall, depth from it, height]
+	for piece: Array in [["kitchenette", 20.8, 1.4, 0.61, 1.3], ["fridge", 22.0, 0.62, 0.71, 1.75],
+			["water_dispenser", 22.75, 0.41, 0.38, 1.45], ["recycle_station", 23.62, 1.34, 0.51, 0.97]]:
+		var z: float = piece[1]
+		var depth: float = piece[3]
+		var x: float = Layout.HALF_WIDTH - 0.06 - depth * 0.5
+		kit.model(DepotKit.depot_model("sm_env_depot_" + String(piece[0])), Transform3D(east_facing,
+				Vector3(x, Layout.FLOOR_TOP, z)))
+		kit.collider(Vector3(depth, float(piece[4]), float(piece[2])), Transform3D(Basis.IDENTITY,
+				Vector3(x, float(piece[4]) * 0.5, z)))
+	DepotLabels.text(_root, tr("WORLD_DEPOT_COFFEE"), Vector3(Layout.HALF_WIDTH - 0.8, 1.75, 20.8), -PI * 0.5, 40,
+			Layout.PAPER, Layout.DISPLAY_FONT, 0.004, 4)
 	# Round table with two stools.
 	kit.cylinder(0.55, 0.05, Transform3D(Basis.IDENTITY, Vector3(12.6, 0.95, 20.8)),
 			DepotKit.flat(Color("e8ebe4"), 0.5), 18, true)
