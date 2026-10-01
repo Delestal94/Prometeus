@@ -21,11 +21,10 @@ const CAGE_FOOTPRINT := Vector3(0.85, 1.77, 0.75)
 const PALLET_FOOTPRINT := Vector3(1.22, 1.24, 1.03)
 const TABLE_FOOTPRINT := Vector3(2.0, 1.1, 0.91)
 ## The mural on the back wall (it arrives with the art: nothing is drawn while the file is missing):
-## 8 x 1.6 m, centred, from 4.5 to 6.1 m up, in worn paper white.
+## 8 x 1.6 m, centred, from 4.5 to 6.1 m up, worn paper white (the texture carries its 75 % alpha).
 const MURAL: String = "res://assets/textures/depot/tx_depot_mural_brand.png"
 const MURAL_SIZE := Vector2(8.0, 1.6)
 const MURAL_CENTRE_Y: float = 5.3
-const MURAL_ALPHA: float = 0.75
 ## The receiving door in the back wall, left of the conveyor's start: where the stock comes in.
 const RECEIVING_DOOR_X: float = -11.0
 const RECEIVING_DOOR := Vector2(6.6, 4.8)
@@ -141,7 +140,6 @@ func _build_back_wall(kit: DepotKit) -> void:
 		quad.size = MURAL_SIZE
 		var material := StandardMaterial3D.new()
 		material.albedo_texture = load(MURAL) as Texture2D
-		material.albedo_color = Color(Layout.PAPER, MURAL_ALPHA)
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		var mural := MeshInstance3D.new()

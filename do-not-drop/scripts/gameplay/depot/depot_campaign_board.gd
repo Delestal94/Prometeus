@@ -27,6 +27,9 @@ const PAPER := Color("f4f1e6")
 const INK := Color("263238")
 const SAFETY_GREEN := Color("1f8a5b")
 const CORK := Color("c9a26b")
+## The photo wall's backdrop (art): a framed cork with six polaroids and two papers pinned to it. The
+## crew's own photos pin over it; with none yet, it is what the wall looks like.
+const CORK_PHOTOS: String = "res://assets/textures/depot/tx_depot_cork_photos.png"
 ## Sign: on the front wall's inner face, right of the door, facing inward.
 const SIGN_AT := Vector3(6.6, 3.1, 0.17)
 ## Photo wall: on the right wall above the lockers, facing -X, between two
@@ -43,6 +46,7 @@ var days_label: Label3D
 var best_label: Label3D
 var photo_frames: Array[Sprite3D] = []
 var _empty_note: Label3D
+var _decorated: bool = false
 
 
 func _ready() -> void:
@@ -143,7 +147,7 @@ func refresh() -> void:
 		frame.visible = texture != null
 		if texture != null:
 			frame.pixel_size = PHOTO_SIZE.x / float(texture.get_width())
-	_empty_note.visible = names.is_empty()
+	_empty_note.visible = names.is_empty() and not _decorated
 
 
 func _build_sign() -> void:
@@ -166,6 +170,11 @@ func _build_photo_wall() -> void:
 	wall.rotation.y = -PI * 0.5
 	add_child(wall)
 	_box(wall, "Cork", Vector3(WALL_SIZE.x, WALL_SIZE.y, 0.03), Vector3.ZERO, CORK)
+	if ResourceLoader.exists(CORK_PHOTOS):
+		var cork_material := (wall.get_node(^"Cork") as MeshInstance3D).mesh.material as StandardMaterial3D
+		cork_material.albedo_texture = load(CORK_PHOTOS) as Texture2D
+		cork_material.albedo_color = Color.WHITE
+		_decorated = true
 	_box(wall, "Frame", Vector3(WALL_SIZE.x + 0.08, WALL_SIZE.y + 0.08, 0.02), Vector3(0.0, 0.0, -0.01), Color("59656a"))
 	_label(wall, "Title", tr("WORLD_DEPOT_PHOTOS_TITLE"), Vector3(0.0, WALL_SIZE.y * 0.5 + 0.12, 0.02), 30, INK, DISPLAY_FONT)
 	_empty_note = _label(wall, "Empty", tr("WORLD_DEPOT_PHOTOS_EMPTY"), Vector3(0.0, 0.0, 0.03), 26, INK, BODY_FONT)

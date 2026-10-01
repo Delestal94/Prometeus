@@ -51,7 +51,7 @@ func build_signs() -> void:
 	_poster(posters, Vector3(DepotZones.WALL_X - 0.08, 2.0, 14.3), -PI * 0.5, tr("WORLD_DEPOT_POSTER_FRAGILE_TITLE"),
 			DepotLabels.ICON_SPEED, Color("ff5e5b"))
 	_poster(posters, Vector3(-8.0, 2.4, Layout.DEPTH - 0.07), PI, tr("WORLD_DEPOT_POSTER_ONEBOX_TITLE"),
-			DepotLabels.ICON_BOX, Color("2dd4a3"))
+			DepotLabels.ICON_OPEN_BOX, Color("2dd4a3"))
 	posters.commit("Poster")
 	_build_clock()
 

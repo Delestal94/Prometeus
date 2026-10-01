@@ -56,6 +56,8 @@ const SOLO_TRAPS: Array[StringName] = [&"fragile", &"balance"]
 const EXTRA_STOCK: Array[String] =["fragile", "growing_weight", "balance", "noisy", "liquid", "explosive", "hostile"]
 
 ## The depot's public measurements (levels, route and tests read these).
+## The team board's photo (art, N-319): drawn only when the file is in the project.
+const EMPLOYEE_PHOTO: String = "res://assets/textures/depot/tx_depot_employee_month.png"
 const HALF_WIDTH: float = Layout.HALF_WIDTH
 const DEPTH: float = Layout.DEPTH
 const TRUCK_BAY: Vector3 = Layout.TRUCK_BAY
@@ -571,13 +573,27 @@ func _build_team_board() -> void:
 	kit.box(Vector3(0.01, 0.22, 0.22), at + Vector3(-0.025, -0.52, 0.82), DepotKit.flat(Color("ffc93c"), 0.8),
 			false, 0.1)
 	kit.commit("TeamBoard")
+	# The crew of the month's photo (art), when it is in the project: on the board's left, beside the figures.
+	if ResourceLoader.exists(EMPLOYEE_PHOTO):
+		var photo := MeshInstance3D.new()
+		photo.name = "MonthPhoto"
+		var quad := QuadMesh.new()
+		quad.size = Vector2(0.5, 0.625)
+		var photo_material := StandardMaterial3D.new()
+		photo_material.albedo_texture = load(EMPLOYEE_PHOTO) as Texture2D
+		photo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		quad.material = photo_material
+		photo.mesh = quad
+		photo.position = at + Vector3(-0.045, -0.12, 0.62)
+		photo.rotation.y = -PI * 0.5
+		add_child(photo)
 	var title := DepotLabels.text(self, tr("WORLD_DEPOT_TEAM_TITLE"), at + Vector3(-0.04, 0.5, 0.0), -PI * 0.5, 36,
 			Layout.INK, Layout.DISPLAY_FONT, 0.005, 0)
 	DepotLabels.fit_label(title, 1.8)
-	_stats_label = DepotLabels.text(self, "", at + Vector3(-0.04, -0.12, -0.05), -PI * 0.5, 28, Layout.INK,
+	_stats_label = DepotLabels.text(self, "", at + Vector3(-0.04, -0.12, -0.5), -PI * 0.5, 28, Layout.INK,
 			Layout.BODY_FONT, 0.0042, 0)
 	_stats_label.name = "TeamStats"
-	_stats_label.width = 420
+	_stats_label.width = 220
 	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	refresh_team_board()
 	var unlocks: UNLOCK_MANAGER = _unlocks()

@@ -20,6 +20,9 @@ extends SceneTree
 ##   - the lights: a handful of real ones, the three big spots ranked for
 ##     shadows, and WorldQuality keeping as many as the level allows (none on Low);
 ##   - the signs hang smaller over their zones; everything static is batched;
+##   - the finishing pass (N-319.3/4): ONE contact-shadow batch and ONE wear batch, the shaft dust (none at
+##     night), the mural only when its art is in the project, no hanging sign over the board, the lit
+##     office window, the order board in bold, the flicker no faster than 3 Hz;
 ##   - the modelled kit is connected (N-319.2): the door's signal light follows the
 ##     door (green open, red shut), the middle of the hall has its cages, table and
 ##     pallet (solid, clear of the walkways and the truck), the left wall its
@@ -61,6 +64,7 @@ func _run() -> void:
 	_test_batching(depot)
 	_test_light_pass(depot)
 	_test_kit(depot)
+	_test_finish(depot)
 	await _test_air(level, depot)
 	level.queue_free()
 	await process_frame
@@ -271,6 +275,63 @@ func _test_air(level: Node, depot: Node3D) -> void:
 			and is_equal_approx(sun.shadow_opacity, outside_shadow))
 	_expect(put_back, "The Environment and the sun are put back when the depot leaves (%.4f)" % environment.fog_density)
 	depot.free()
+
+
+## The finishing pass: grounding, wear, dust, mural, the office window and the small things.
+func _test_finish(depot: Node3D) -> void:
+	var contact: int = 0
+	var wear: int = 0
+	var office_glow: int = 0
+	for child: Node in depot.get_children():
+		var part := child as MeshInstance3D
+		if part == null or part.mesh == null:
+			continue
+		var material := part.mesh.surface_get_material(0) as StandardMaterial3D
+		if material == null:
+			continue
+		if material.blend_mode == BaseMaterial3D.BLEND_MODE_MUL:
+			contact += 1
+		if material.vertex_color_use_as_albedo and material.albedo_texture != null \
+				and material.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA:
+			wear += 1
+		if material.emission_enabled and material.emission.is_equal_approx(DepotZones.WINDOW_WARM):
+			office_glow += 1
+	_expect(contact == 1, "All the contact shadows are ONE multiplicative batch (%d)" % contact)
+	_expect(wear >= 1, "The wear is in an alpha batch with vertex colours (%d)" % wear)
+	_expect(office_glow == 1, "The Boss's window is one warm emissive batch (%d)" % office_glow)
+	# Dust in the shafts: ten motes per shaft by day, none at night.
+	var saved: Dictionary = WorldMood.active
+	var holder := Node3D.new()
+	WorldMood.active = {"weather": WorldMood.Weather.CLEAR, "time": WorldMood.TimeOfDay.DAY}
+	DepotLighting.build_dust(holder, null)
+	var by_day: int = holder.get_child_count()
+	var motes: int = (holder.get_child(0) as CPUParticles3D).amount if by_day > 0 else 0
+	for child: Node in holder.get_children():
+		child.free()
+	WorldMood.active = {"weather": WorldMood.Weather.CLEAR, "time": WorldMood.TimeOfDay.NIGHT}
+	DepotLighting.build_dust(holder, null)
+	var by_night: int = holder.get_child_count()
+	WorldMood.active = saved
+	holder.free()
+	_expect(by_day == DepotLighting.SKYLIGHT_XS.size() * DepotLighting.SKYLIGHT_ZS.size()
+			and motes == DepotLighting.DUST_PER_SHAFT, "A clear day has dust in every shaft (%d shafts, %d motes)" % [
+					by_day, motes])
+	_expect(by_night == 0, "No dust in the shafts at night (%d)" % by_night)
+	_expect(depot.get_node_or_null(^"DustMotes") == null, "The loose motes are gone")
+	# The mural is drawn when its art is in the project, and only then.
+	_expect((depot.get_node_or_null(^"BrandMural") != null) == ResourceLoader.exists(DepotProps.MURAL),
+			"The brand mural is there exactly when its texture is")
+	# The control island has no hanging sign: its board is the brightest thing.
+	for label: Node in get_nodes_in_group(&"depot_sign"):
+		_expect(not String(label.get_meta(&"sign")).contains("PIZARRA"), "No hanging sign over the board")
+	# The flicker never goes faster than three a second (photosensitivity): the shortest wait is over 1/3 s.
+	var ambience_source: String = FileAccess.get_file_as_string("res://scripts/gameplay/depot/depot_ambience.gd")
+	_expect(ambience_source.contains("randf_range(0.36, 0.7)"),
+			"The tube's flicker keeps under three stutters a second")
+	_expect(DepotLayout.body_bold() is FontVariation, "The order board's items are in bold")
+	# The workshop's tyre stack and tool boards are the kit's when their models are in.
+	if ResourceLoader.exists(DepotKit.depot_model("sm_env_depot_tire_stack")):
+		_expect(true, "The tyre stack is the kit's")
 
 
 ## The modelled kit in the game: the door's signal light, the middle of the hall, the

@@ -662,9 +662,15 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   elevador de tijera, cocinita, heladera, dispensador, reciclaje; el centro del galpón (jaulas rodantes, pallet filmado,
   mesa de clasificación, flat-packs, escalera de ruedas) y la pared izquierda z 9-12 (`depot_props.gd`). Lotes de
   `DepotKit` 170 → 184 (tope ~190); `bench_depot` sin cambio. Detalle en `docs/deposito-rediseno.md`.
-- [ ] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
+- [x] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
   oficio (`constructor-mundo`).
-- [ ] **N-319.4** Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.
+- [x] **N-319.4** ~~Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.~~
+  **[x] Hecho junto con la 3 (2026-10-01, rama `nacho/N-319-depot-finish`)** — color neutro cálido, oficina del Jefe con
+  ventanal cálido, pictogramas de zona (celdas 12-15 del atlas), taller con media pared opaca y tableros del kit, isla con
+  lámpara y corcho, pañol sin violeta, descanso con lockers entreabiertos, sombras de contacto en un lote, desgaste en un lote,
+  polvo en los haces, portón de recepción y mural del fondo, flechas solo en bifurcaciones, nube y línea de salida de afuera,
+  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Falta la pasada de `director-arte` sobre `D:/tmp/depot_review/iter3/` y los
+  textos que el arte dejó vacíos (ver el registro en `docs/deposito-rediseno.md`). **Todavía sin PR.**
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un

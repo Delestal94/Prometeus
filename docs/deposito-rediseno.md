@@ -339,3 +339,68 @@ de pintura, carteles, semáforo del portón, centro y pared, atlas en un lote, t
 
 **Qué queda**: el centro y los carteles de seguridad se juzgaron solo en captura; el pozo de la cocina y la oficina del Jefe
 (ventanal cálido) son de la iteración 3; sombras de contacto bajo los props nuevos y polvo en los haces, de la 4.
+
+### Iteraciones 3 y 4 (2026-10-01, rama `nacho/N-319-depot-finish`, N-319.3 y N-319.4) — color, estaciones, desgaste y oficio
+
+Lista final de `director-arte` (color y temperatura, oficina, pictogramas, taller, isla, pañol, descanso, carteles, sombras de
+contacto, desgaste, polvo, portón del fondo, mural). Capturas con GPU en `D:/tmp/depot_review/iter3/` (las 22 vistas, con
+`workshop_bench` nueva, en `nublado_dia`) y `iter3/moods/<clima>/` (overview, spawn_view_game y center_eye_level en
+soleado_dia, nublado_dia, niebla_atardecer y soleado_noche). Los modelos y las texturas de esta pasada los hicieron otros
+agentes (rama `nacho/N-319-depot-assets`, ya mezclada): acá solo se conectan.
+
+**Color (I1)**: el gris azulado frío se fue. Ambiente interior neutro cálido #9c978f; campanas, spots y pozos en #ffdcb0 (alfa
+del pozo 0,22); los haces y sus manchas son lo único frío (#d6e6ef); chapa de pared y bloque menos verdes; sendas #559472;
+las lengüetas de los carteles son `unlit` (el color de la zona es el color en pantalla) y los amarillos del kit (`warning`,
+`ui_yellow`: bolardos, protecciones, postes, carteles de piso) llevan una emisión de 0,7 para no quedar oliva bajo la luz baja
+(`DepotKit._glowing_yellow`).
+
+**Oficina del Jefe (I2)**: ventanal emisivo #ffd9a0 (energía 1,3, un lote) siempre prendido, persianas del kit, escritorio a 0,8
+m del vidrio con el monitor de espaldas y la lámpara del kit (silueta desde abajo), pozo cálido de 3 x 2 m en la terraza y
+cartel con el teléfono. Es la tercera cosa más brillante después del camión y la pizarra en los cuatro climas.
+
+**Pictogramas (I3b)**: celdas 12-15 del atlas (`ICON_WRENCH`, `ICON_OPEN_BOX`, `ICON_HANGER`, `ICON_PHONE`): taller llave,
+suministros caja abierta, vestuario percha, oficina teléfono; la cruz queda para el botiquín. Sin cartel colgante PIZARRA (la
+pizarra encendida ya es lo más brillante; `test_depot` pide 2 carteles legibles desde el spawn en vez de 3, por eso).
+
+**Taller (I4)**: media pared opaca de bloque #5f6763 con franja roja de 10 cm (#b8443a) y vidrio hasta 2,3 m; cortina de tiras
+ámbar; banco con los dos tableros de herramientas del kit y el tablero de muestras del kit encima (nada flotando); pozo ámbar
+(#ffb060, 1,6 m de radio) sobre el banco; mancha de aceite bajo el elevador; las cubiertas son el `tire_stack` del kit.
+**Isla (I5)**: lámpara del kit con pozo #ffe2b8, corcho del kit con portapapeles y hojas colgado por brazos del poste, tira de
+luz de la pizarra +20 %, items de la pizarra en Nunito Bold (`DepotLayout.body_bold()`, eje `wght` 700).
+**Pañol (I6)**: piso de goma #2a2c30 (sin violeta), estantes con cajas entre los insumos, cartel VENTANILLA con la caja abierta
+sobre el tablero del kit (clave `WORLD_DEPOT_WINDOW`), timbre del kit.
+**Descanso (I7)**: sin la etiqueta CAFÉ flotante (se borraron las claves muertas `WORLD_DEPOT_COFFEE`, `WORLD_DEPOT_BOARD` y los
+cuatro `..._BODY` de los carteles), pozo cálido sobre la cocinita, tazas, imanes y foto del kit en la heladera, dos lockers
+entreabiertos con chaleco y casco del kit; el corcho de "NUESTRAS ENTREGAS" usa `tx_depot_cork_photos.png` de fondo (las fotos
+del equipo se pinchan encima; con el fondo puesto no se muestra la nota de "vacío"); "EQUIPO DEL MES" con la foto
+`tx_depot_employee_month.png` (el texto queda como estaba, más angosto, a la izquierda de la foto).
+**Carteles chicos (I8)**: pictograma grande y título, sin cuerpo (los cuatro carteles de pared comparten un solo `DepotKit`).
+
+**Sombras de contacto (I9)**: UN lote multiplicativo (`DepotKit.contact_material()`, `GradientTexture2D` radial de 64 px al 45 %
+que muere en el borde; la mezcla multiplicativa ignora el alfa, así que el sombreado va en el color) bajo bolardos,
+protecciones, estantes, jaulas, mesas, pallets, escritorio, pie de la escalera, elevador, compresor, banco, cocinita, heladera,
+dispensador, reciclaje y lockers.
+**Desgaste (I11)**: UN lote de alfa con color por vértice (`DepotKit.wear_material()`): manchas suaves por losa (unos pocos
+puntos de valor, no son cuadrados parejos), suciedad de 40 cm al pie de las tres paredes (#2b2f33 al 35 %), bordes de senda
+comidos en los cruces, óxido y raspones al pie de bolardos y protecciones; mancha de aceite bajo el camión.
+**Polvo (I12)**: diez motas de 2,5 cm por haz (`DepotLighting.build_dust`), con la intensidad atada al pico del haz y ninguna de
+noche ni en Calidad Baja; salieron las 90 motas sueltas.
+**Flechas (O15)**: solo en las bifurcaciones (cuatro, cada una donde su rama sale de su camino); `test_depot` apunta la de los
+estantes por el pasillo.
+**Portón del fondo (O14)**: portón de recepción cerrado detrás de la cinta (x −11): las lamas del kit al ras de la pared, jambas
+con rayas y dintel (sin marco hondo, que cortaría la cinta). **Mural (I10)**: `tx_depot_mural_brand.png` de 8 x 1,6 m a 5,3 m de
+altura, centrado (`DepotProps.MURAL`; no se dibuja si falta el archivo); el reloj se mudó a x 5,9 para dejarle lugar.
+**Afuera (O16)**: la mancha gris verdosa del cielo de `door_closed` era la sombra de las nubes (se mezclaba con el verde de la
+niebla del nivel): ahora es el color de la nube oscurecido (`RouteSky._neutral_cloud_shade`); la línea de salida de la ruta
+pasó de cian a pintura gastada (`route.gd START_LINE`).
+**Accesibilidad**: el tubo que parpadea no pasa de 3 destellos por segundo (antes hasta 16); los reciclajes del kit tienen las
+bocas distintas (lo dijo el modelador; no lo verifiqué en cámara).
+
+**Costo**: lotes de `DepotKit` ("Depot" + "Lamps") 182 (tope 190; hubo que unificar la malla de rombos de las tres piezas que la
+usan y reusar materiales ya existentes), luces reales 7. `bench_depot` en este equipo (muy cargado durante la medición):
+frame 7,2 ms contra 6,9 ms (+4 %, vsync y ruido); no hay script nuevo por frame.
+
+**Qué no quedó** (la reja en X de la campana ya la resolvió el modelo, con su aro de 3 radios): los textos "EMPLEADO DEL
+MES" y el nombre grande, el encabezado en blanco del tablero de muestras y los carteles chicos de seguridad con más palabras
+quedaron sin texto (el modelo trae el encabezado vacío y no hay texto de diseño); el brillo del Jefe y la medición de los
+amarillos en captura (tono 42-50°, valor >= 60 %) se juzgaron a ojo, el valor medido del bolardo en captura es ~36 %.

@@ -25,7 +25,7 @@ const ICON_NO_SMOKING: int = 9
 const ICON_ELECTRIC: int = 10
 const ICON_EVACUATION: int = 11
 const ICON_WRENCH: int = 12
-const ICON_BOX: int = 13
+const ICON_OPEN_BOX: int = 13
 const ICON_HANGER: int = 14
 const ICON_PHONE: int = 15
 ## The zone-coloured tab's share of a hanging sign's width.

@@ -30,7 +30,7 @@ const WARDROBE_DOOR := Vector2(16.2, 19.6)
 ## The supplies cage's service window (z) and the counter's height.
 const CAGE_WINDOW := Vector2(4.25, 6.55)
 const CAGE_HEIGHT: float = 2.7
-const COUNTER_HEIGHT: float = 1.05
+const COUNTER_HEIGHT: float = 1.07
 ## The Boss's window glass: warm and always lit.
 const WINDOW_WARM := Color("ffd9a0")
 const WINDOW_WARM_ENERGY: float = 1.3
@@ -74,31 +74,29 @@ func _build_island(kit: DepotKit) -> void:
 	kit.model(DepotKit.depot_model("sm_env_depot_dispatch_desk"),
 			frame * Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO))
 	kit.collider(Vector3(1.6, 1.0, 0.8), frame * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.5, 0.0)))
-	# The desk lamp: a small arm and an emissive shade, and its pool on the floor and the desk.
+	# The desk lamp (the kit's, its shade glows) with a mug beside it, and its pool on the floor.
 	var lamp_at: Vector3 = frame * Vector3(0.55, 0.0, -0.1)
 	var steel := DepotKit.flat(Color("3b4c53"), 0.5, 0.4)
-	kit.cylinder(0.07, 0.03, Transform3D(Basis.IDENTITY, lamp_at + Vector3(0.0, 0.74, 0.0)), steel, 10)
-	kit.box_xf(Vector3(0.025, 0.4, 0.025), Transform3D(frame.basis, lamp_at + Vector3(0.0, 0.94, 0.0)), steel)
-	kit.box_xf(Vector3(0.22, 0.08, 0.16), Transform3D(frame.basis, lamp_at + Vector3(0.0, 1.16, 0.0)),
-			DepotKit.glow(Color("ffe2b8"), 1.8))
+	kit.model(DepotKit.depot_model("sm_env_depot_desk_lamp"),
+			Transform3D(frame.basis, lamp_at + Vector3(0.0, 0.72, 0.0)))
+	kit.model(DepotKit.depot_model("sm_env_depot_mug"), Transform3D(frame.basis * Basis(Vector3.UP, 0.6),
+			frame * Vector3(0.1, 0.72, 0.2)))
 	kit.floor_quad(Vector2(2.4, 2.4), Vector3(lamp_at.x, Layout.FLOOR_TOP + 0.022, lamp_at.z),
 			DepotKit.light_pool(DepotLighting.POOL_COLOUR))
 	# A cork board with a clipboard and a few sheets, on arms from the order board's right post.
 	var cork_at := Transform3D(Basis(Vector3.UP, deg_to_rad(Layout.BOARD_YAW_DEGREES)),
 			Layout.BOARD_AT + Vector3(0.0, Layout.FLOOR_TOP, 0.0))
 	var post_x: float = DepotOrderBoard.PANEL_WIDTH * 0.5 + 0.06
-	var wood_dark := DepotKit.flat(Color("263238"), 0.6)
-	_local_box(kit, cork_at, Vector3(post_x + 0.55, 1.55, 0.03), Vector3(0.98, 0.68, 0.03), wood_dark, false)
-	_local_box(kit, cork_at, Vector3(post_x + 0.55, 1.55, 0.05), Vector3(0.9, 0.6, 0.02),
-			DepotKit.flat(Color("c9a26b"), 0.9), false)
+	kit.model(DepotKit.depot_model("sm_env_depot_cork_board"), cork_at * Transform3D(Basis(Vector3.UP, PI),
+			Vector3(post_x + 0.55, 0.0, 0.04)))
 	for arm_y: float in [1.35, 1.75]:
 		_local_box(kit, cork_at, Vector3(post_x + 0.1, arm_y, 0.03), Vector3(0.2, 0.04, 0.04), steel, false)
-	_local_box(kit, cork_at, Vector3(post_x + 0.3, 1.6, 0.075), Vector3(0.26, 0.34, 0.012),
+	_local_box(kit, cork_at, Vector3(post_x + 0.3, 1.6, 0.085), Vector3(0.26, 0.34, 0.012),
 			DepotKit.flat(Color("c9a26b"), 0.9), false)
-	_local_box(kit, cork_at, Vector3(post_x + 0.3, 1.6, 0.084), Vector3(0.22, 0.3, 0.006),
+	_local_box(kit, cork_at, Vector3(post_x + 0.3, 1.6, 0.093), Vector3(0.22, 0.3, 0.006),
 			DepotKit.flat(Layout.PAPER, 0.9), false)
 	for sheet: Array in [[0.62, 1.7, Color("ffc93c")], [0.8, 1.45, Layout.PAPER], [0.8, 1.72, Layout.PAPER]]:
-		_local_box(kit, cork_at, Vector3(post_x + float(sheet[0]), float(sheet[1]), 0.07), Vector3(0.2, 0.26, 0.006),
+		_local_box(kit, cork_at, Vector3(post_x + float(sheet[0]), float(sheet[1]), 0.08), Vector3(0.2, 0.26, 0.006),
 				DepotKit.flat(sheet[2], 0.8), false)
 	var stool := Transform3D(frame.basis, frame * Vector3(-0.1, 0.0, 0.85))
 	kit.cylinder(0.2, 0.05, Transform3D(stool.basis, stool.origin + Vector3(0.0, 0.62, 0.0)),
@@ -269,7 +267,7 @@ func _build_cage(kit: DepotKit) -> void:
 	# The window's sign: the kit's board says what it is, with the box pictogram.
 	var board_x: float = east + 0.045
 	var board_y: float = Layout.FLOOR_TOP + 2.82
-	DepotLabels.pictogram(kit, DepotLabels.ICON_BOX, Transform3D(Basis(Vector3.UP, PI * 0.5),
+	DepotLabels.pictogram(kit, DepotLabels.ICON_OPEN_BOX, Transform3D(Basis(Vector3.UP, PI * 0.5),
 			Vector3(board_x, board_y, window_centre - 0.45)), 0.12, Layout.INK)
 	var window_label := DepotLabels.text(_root, tr("WORLD_DEPOT_WINDOW"), Vector3(board_x + 0.003, board_y,
 			window_centre + 0.08), PI * 0.5, 30, Layout.INK, Layout.DISPLAY_FONT, 0.0036, 0)
@@ -289,14 +287,8 @@ func _build_cage(kit: DepotKit) -> void:
 			DepotKit.flat(Color("2a3439"), 0.5))
 	kit.box(Vector3(0.02, 0.12, 0.26), Vector3(east + 0.14, counter_top + 0.22, window_centre - 0.75),
 			DepotKit.glow(Color("2dd4a3"), 0.8))
-	var bell := SphereMesh.new()
-	bell.radius = 0.07
-	bell.height = 0.07
-	bell.is_hemisphere = true
-	bell.radial_segments = 10
-	bell.rings = 3
-	kit.add_mesh(bell, Transform3D(Basis.IDENTITY, Vector3(east + 0.32, counter_top + 0.05, window_centre + 0.85)),
-			DepotKit.flat(Color("c9a26b"), 0.3, 0.8))
+	kit.model(DepotKit.depot_model("sm_env_depot_service_bell"), Transform3D(Basis.IDENTITY,
+			Vector3(east + 0.32, counter_top, window_centre + 0.85)))
 	var supplies: Array = [
 		[&"padding", Vector3(east + 0.2, counter_top + 0.05, window_centre - 0.05), "sm_env_depot_supply_padding"],
 		[&"insurance", Vector3(east + 0.2, counter_top + 0.05, window_centre + 0.45), "sm_env_depot_supply_insurance"],
@@ -312,7 +304,7 @@ func _build_cage(kit: DepotKit) -> void:
 		supply_props[supply[0]] = prop
 	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_SUPPLIES"), Vector3(east + 0.3, 3.6, window_centre), PI * 0.5,
 			Layout.SHOP_PURPLE, Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE,
-			DepotLabels.ICON_BOX)
+			DepotLabels.ICON_OPEN_BOX)
 
 
 ## A run of kit cage panels from `from` to `to` (floor level), the panels' fronts turned
@@ -463,9 +455,10 @@ func _build_office(kit: DepotKit) -> void:
 	kit.box(Vector3(0.6, 0.38, 0.05), Vector3(11.4, lift + 1.1, desk_z - 0.12), frame)
 	kit.box(Vector3(0.54, 0.32, 0.02), Vector3(11.4, lift + 1.1, desk_z - 0.095), DepotKit.glow(Color("8fd3e8"), 0.9))
 	kit.box(Vector3(0.45, 0.02, 0.15), Vector3(11.4, lift + 0.8, desk_z + 0.2), frame)
-	kit.cylinder(0.08, 0.03, Transform3D(Basis.IDENTITY, Vector3(12.3, lift + 0.805, desk_z)), frame, 10)
-	kit.box(Vector3(0.03, 0.34, 0.03), Vector3(12.3, lift + 0.98, desk_z), frame)
-	kit.box(Vector3(0.2, 0.1, 0.14), Vector3(12.3, lift + 1.17, desk_z - 0.04), DepotKit.glow(Color("ffe2b8"), 1.8))
+	kit.model(DepotKit.depot_model("sm_env_depot_desk_lamp"), Transform3D(Basis.IDENTITY,
+			Vector3(12.3, lift + 0.79, desk_z)))
+	kit.model(DepotKit.depot_model("sm_env_depot_mug"),
+			Transform3D(Basis.IDENTITY, Vector3(11.0, lift + 0.79, desk_z + 0.1)))
 	kit.box(Vector3(0.5, 1.3, 0.6), Vector3(14.5, lift + 0.65, 29.2), DepotKit.flat(Color("8a9499"), 0.4, 0.5), true)
 	kit.box(Vector3(0.04, 0.9, 1.4), Vector3(14.95, lift + 1.8, 30.6), DepotKit.flat(Color("c9a26b"), 0.9))
 	for index: int in range(5):
