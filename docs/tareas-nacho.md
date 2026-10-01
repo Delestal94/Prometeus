@@ -960,6 +960,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     reemplazarlo por un Node). En el archivo: 13 → 1 uso (`.call` 5 → 0, `.get(&` 4 → 0, `.set(&` 3 → 0,
     `has_method` 1 → 0, `/root/` 1 → 1). `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
     `tests/`). Siguientes: `player.gd` (13), `spectator_camera.gd` (11), `level_common.gd` (11).
+  - [x] `player.gd` (2026-10-01, rama `nacho/N-224-player-typed`): la red como `NetSession` (`is_host()` en
+    `_exit_tree`), el perfil por `_profile()` tipado con `UNLOCK_MANAGER` (preload de `unlock_manager.gd`, sin
+    `class_name`; no rompe los autoloads bajo `--script`: `selected_*`, `cosmetic_is_auto`, `cosmetic_color`,
+    `mark_tip_seen` directos), la caja de `pickup_high_weight_for_package` como `DeliveryPackage` y
+    `trap_definition.id` directo. Queda por nombre el EventBus (`carry_changed`, `tutorial_tip_requested`: un test
+    puede reemplazarlo por un Node). En el archivo: `.call` 5 → 0, `.get(&` 4 → 0, `/root/` 9 → 4; en `scripts/`:
+    `.call` 177 → 172, `.get(&` 186 → 185, `/root/` 109 → 106. La baseline del lint bajó 1.
+    `test_dynamic_dispatch_budget.gd` suma el archivo y su handle. Aviso `docs/avisos/2026-10-01-n224-player-tipado.md`.
+    Siguientes: `spectator_camera.gd` (11), `level_common.gd` (11).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

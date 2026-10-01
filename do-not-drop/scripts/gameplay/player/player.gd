@@ -78,6 +78,7 @@ const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
+const UNLOCK_MANAGER := preload("res://scripts/core/unlock_manager.gd")  # What the UnlockManager autoload runs.
 ## Astra's rounded character (2026-09-24), game export built by
 ## art/rounded_character/build_game_export.py -- see assets/README.md
 ## "Personajes" for its clips (Idle/Walk/Stroll/TurnInPlace/Jump/PickUpPackage/
@@ -221,8 +222,8 @@ func _enter_tree() -> void:
 ## this only acts there.
 func _exit_tree() -> void:
 	_ping_input.close_wheel()
-	var network: Node = get_node_or_null("/root/NetworkManager")
-	if network != null and network.call(&"is_host"):
+	var network: NetSession = get_node_or_null(^"/root/NetworkManager") as NetSession
+	if network != null and network.is_host():
 		_seat_pose_component.release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
 	if not is_instance_valid(carried_package) or carried_package.carrier != self:
 		return
@@ -240,11 +241,9 @@ func _ready() -> void:
 	add_child(preload("res://scripts/gameplay/player/player_voice.gd").new())
 	_last_safe_ground = global_position
 	if is_local():
-		var profile: Node = get_node_or_null("/root/UnlockManager")
+		var profile: UNLOCK_MANAGER = _profile()
 		if profile != null:
-			cosmetic_id = profile.get("selected_cosmetic")
-			face_eyes = profile.get("selected_eyes")
-			face_mouth = profile.get("selected_mouth")
+			_sync_profile_appearance()
 			profile.progress_changed.connect(_sync_profile_appearance)
 	_build_body()
 	PlayerColorSlot.follow(_apply_cosmetic)
@@ -317,7 +316,7 @@ func _apply_face() -> void:
 
 
 func _sync_profile_appearance() -> void:
-	var profile: Node = get_node_or_null("/root/UnlockManager")
+	var profile: UNLOCK_MANAGER = _profile()
 	if profile != null and is_local():
 		cosmetic_id = profile.selected_cosmetic
 		face_eyes = profile.selected_eyes
@@ -327,11 +326,11 @@ func _sync_profile_appearance() -> void:
 func _apply_cosmetic() -> void:
 	if _body_visual == null:
 		return
-	var profile: Node = get_node_or_null("/root/UnlockManager")
+	var profile: UNLOCK_MANAGER = _profile()
 	# "team_color" keeps the crew-slot colour (teammates stay apart); a picked uniform replaces it.
 	var color: Color = PLAYER_COLORS[PlayerColorSlot.slot(get_multiplayer_authority(), PLAYER_COLORS.size())]
-	if profile != null and not bool(profile.call(&"cosmetic_is_auto", cosmetic_id)):
-		color = profile.call(&"cosmetic_color", cosmetic_id)
+	if profile != null and not profile.cosmetic_is_auto(cosmetic_id):
+		color = profile.cosmetic_color(cosmetic_id)
 	PlayerAppearance.tint_shirt(_body_visual, color)
 
 
@@ -342,8 +341,8 @@ static func pickup_high_weight_for(grip_height: float) -> float:
 
 
 ## Same contact point carry_pose.gd puts the hands on: the box's upper sides.
-func pickup_high_weight_for_package(package: Node3D) -> float:
-	var half: Vector3 = package.call(&"get_half_extents") if package.has_method(&"get_half_extents") else Vector3.ONE * 0.325
+func pickup_high_weight_for_package(package: DeliveryPackage) -> float:
+	var half: Vector3 = package.get_half_extents()
 	var grip: float = package.global_position.y + minf(half.y * 0.65, 0.16)
 	return pickup_high_weight_for(grip - global_position.y)
 
@@ -493,7 +492,7 @@ func _publish_carry(carrying: bool) -> void:
 	if carrying == _last_carrying:
 		return
 	_last_carrying = carrying
-	var bus: Node = get_node_or_null("/root/EventBus")
+	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:
 		bus.emit_signal(&"carry_changed", carrying)
 
@@ -534,14 +533,18 @@ func _send_ping(label: String = PING_LABEL) -> void:
 func _show_first_trap_tip(package: DeliveryPackage) -> void:
 	if package == null or package.trap_definition == null:
 		return
-	var trap_id: StringName = StringName(package.trap_definition.get(&"id"))
-	var profile: Node = get_node_or_null(^"/root/UnlockManager")
-	if profile == null or not bool(profile.call(&"mark_tip_seen", trap_id)):
+	var trap_id: StringName = package.trap_definition.id
+	var profile: UNLOCK_MANAGER = _profile()
+	if profile == null or not profile.mark_tip_seen(trap_id):
 		return
 	var text: String = TutorialData.tip_text(trap_id)
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null and not text.is_empty():
 		bus.emit_signal(&"tutorial_tip_requested", text)
+
+
+func _profile() -> UNLOCK_MANAGER:
+	return get_node_or_null(^"/root/UnlockManager") as UNLOCK_MANAGER
 
 
 func _try_interact() -> void:
