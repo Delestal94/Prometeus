@@ -25,6 +25,14 @@ const BASE_HEIGHT: float = 720.0
 ## Safe margin from every screen edge, in HUD units (redesign 2026-09-28:
 ## 24 put the cards against the bezel on a TV).
 const EDGE_MARGIN: int = 40
+## Behind the results card only (S-307): the porch-at-sunset illustration.
+const RESULTS_ART: Texture2D = preload("res://assets/ui/backgrounds/tx_ui_results_background_1920.png")
+## The plain dim of the start/pause/results overlay over the 3D scene.
+const OVERLAY_DIM: float = 0.72
+## Under the illustration the overlay turns opaque (the picture covers it and
+## nothing of the 3D scene shows through) and the picture itself is darkened a
+## notch, so the card's edge stays the brightest thing on screen.
+const RESULTS_ART_TINT: Color = Color(0.8, 0.8, 0.8)
 
 var root: Control
 var hud_layer: Control
@@ -47,6 +55,7 @@ var cargo_rows: Dictionary = {}
 var route_bar: ProgressBar
 var hint_label: RichTextLabel
 var overlay: ColorRect
+var results_backdrop: TextureRect
 var card: VBoxContainer
 var overlay_kicker: Label
 var overlay_title: Label
@@ -70,7 +79,11 @@ var depot_panel: DepotPanel
 var crew_panel: CrewPanel
 var orders: Array = []
 var _prep_refresh: float = 0.0
-var overlay_mode: String = "start"
+## Every screen the overlay shows goes through here, so the results
+## illustration can never be left on under another one (start, pause, the
+## newspaper, a lost connection, a restart).
+var overlay_mode: String = "start":
+	set = _set_overlay_mode
 var interaction_label: Label
 var interaction_icon: TextureRect
 var interaction_prompt: String = ""
@@ -472,7 +485,18 @@ func _build_overlay_card() -> void:
 	overlay = ColorRect.new()
 	root.add_child(overlay)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.color = Color(UiTheme.BACKDROP, 0.72)
+	overlay.color = Color(UiTheme.BACKDROP, OVERLAY_DIM)
+	# First child: it paints under the card. Hidden except on the results.
+	results_backdrop = TextureRect.new()
+	results_backdrop.name = "ResultsBackdrop"
+	results_backdrop.texture = RESULTS_ART
+	results_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	results_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	results_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	results_backdrop.modulate = RESULTS_ART_TINT
+	results_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	results_backdrop.hide()
+	overlay.add_child(results_backdrop)
 	overlay_center = CenterContainer.new()
 	overlay.add_child(overlay_center)
 	card = make_panel(overlay_center, Vector2(900, 0))
@@ -560,6 +584,15 @@ func _build_panels() -> void:
 		notices.refresh_card()
 		if overlay.visible:
 			options_button.grab_focus())
+
+
+func _set_overlay_mode(mode: String) -> void:
+	overlay_mode = mode
+	if overlay == null or results_backdrop == null:
+		return
+	var art: bool = mode == "results"
+	results_backdrop.visible = art
+	overlay.color = Color(UiTheme.BACKDROP, 1.0 if art else OVERLAY_DIM)
 
 
 func _build_fade() -> void:

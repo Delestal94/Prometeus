@@ -6,7 +6,9 @@ extends SceneTree
 ## during play instead of firing on one stray key, and a client that loses
 ## its host getting told so instead of being left in a frozen world: on the
 ## results screen the results stay, with the retry greyed out (N-222); mid-run
-## the disconnect screen opens, its "back to the menu" enabled.
+## the disconnect screen opens, its "back to the menu" enabled. The results
+## illustration (S-307) shows behind the card only on the results screen, in
+## delivery and endless alike, and every other screen puts it away again.
 
 var failures: int = 0
 var _restarts: int = 0
@@ -62,6 +64,7 @@ func _run() -> void:
 	_expect(hud.action_button.visible and hud.options_button.visible and hud.menu_button.visible,
 		"Start offers begin, options and menu")
 	_expect(not hud.second_button.visible, "Nothing to restart before anything started")
+	_expect_results_art(hud, false, "the start screen")
 	_expect(hud.route_bar.visible, "Outside endless the route bar is shown")
 	_expect(String(hud.session_label.text).contains("SOLO"), "Offline, the session corner says so")
 	for action_id: StringName in [&"grab", &"drop", &"sit", &"bell", &"photo", &"horn", &"ping", &"open_box",
@@ -250,6 +253,11 @@ func _run() -> void:
 	_expect(not hud.options_button.visible and not hud.second_button.visible, "Results don't carry stale buttons")
 	_expect(String(hud.overlay_stats.text).contains("$%d" % int(root.get_node("CrewProgression").team_money)),
 		"Results show team money")
+	_expect_results_art(hud, true, "the endless results")
+	hud.overlay_mode = "pause"
+	_expect_results_art(hud, false, "the pause screen after results")
+	hud.pause.show_start()
+	_expect_results_art(hud, false, "the start screen after results")
 
 	# --- delivery results explain each stop and what comes next ---
 	var original_score: int = int(unlocks.total_score)
@@ -284,6 +292,7 @@ func _run() -> void:
 	_expect(String(hud.overlay_stats.text).contains(tr("HUD_RESULT_PAYOUT") % 90),
 		"Delivery results show the team payout line (got %s)" % String(hud.overlay_stats.text))
 	_expect(hud.result_rows_box.get_child_count() == 2, "Delivery results show one row per house")
+	_expect_results_art(hud, true, "the delivery results")
 	_expect(String(hud.result_awards_label.text).contains("MVP"), "Delivery results show merit awards")
 	_expect(String(hud.result_event_label.text).contains("RESUELTO"), "Delivery results show how the route event ended")
 	_expect(hud.result_progress_bar.visible and String(hud.result_progress_label.text).contains("Te falta"),
@@ -299,6 +308,7 @@ func _run() -> void:
 		"Losing the host with the results up keeps them (overlay %s)" % hud.overlay_mode)
 	_expect(hud.action_button.visible and hud.action_button.disabled and hud.menu_button.visible
 		and not hud.menu_button.disabled, "The retry greys out and the menu stays open")
+	_expect_results_art(hud, true, "the results after losing the host")
 	_restarts = 0
 	hud.pause.request_restart()
 	_expect(_restarts == 0, "No restart once the session is gone (got %d)" % _restarts)
@@ -311,6 +321,7 @@ func _run() -> void:
 	_expect(hud.action_button.text == "Volver al menú" and not hud.action_button.disabled,
 		"The only way forward is back to the menu, and it works")
 	_expect(not hud.second_button.visible and not hud.options_button.visible, "No restart into a dead session")
+	_expect_results_art(hud, false, "the disconnect screen")
 
 	hud.free()
 	if failures == 0:
@@ -339,6 +350,23 @@ func _expect_hud_text_readable(hud: CanvasLayer) -> void:
 			too_small.append("%s: %.1f px" % [str(hud.hud_layer.get_path_to(node)), effective_size])
 	_expect(too_small.is_empty(),
 		"Every HUD label stays at least 14 px at 60%% scale and 1080p (%s)" % ", ".join(too_small))
+
+
+## The results illustration is on (with its texture, and the overlay opaque
+## under it) only when `shown`; otherwise hidden and the overlay has its usual dim.
+func _expect_results_art(hud: CanvasLayer, shown: bool, screen: String) -> void:
+	var art: TextureRect = hud.results_backdrop
+	_expect(art != null and art.visible == shown, "The results illustration is %s on %s" % [
+			"shown" if shown else "hidden", screen])
+	if art == null:
+		return
+	_expect(art.get_parent() == hud.overlay and art.get_index() < hud.overlay_center.get_index(),
+		"The illustration sits under the card")
+	_expect(art.mouse_filter == Control.MOUSE_FILTER_IGNORE, "The illustration never takes clicks")
+	_expect(art.texture != null and art.texture.resource_path.ends_with("tx_ui_results_background_1920.png"),
+		"The illustration is the results background")
+	_expect(is_equal_approx(hud.overlay.color.a, 1.0 if shown else hud.OVERLAY_DIM),
+		"The overlay colour is %s on %s" % ["opaque" if shown else "the usual dim", screen])
 
 
 func _overlap(a: Control, b: Control) -> bool:
