@@ -13,7 +13,8 @@ extends SceneTree
 ##   - a TunnelSegment has solid walls and roof, and light inside that dies
 ##     out at the mouths instead of spilling a hard-edged disc outside (N-317);
 ##   - a RailCrossingSegment that's due to close runs the whole cycle when the
-##     truck comes up to it -- warning, arms down (and solid), train across
+##     truck comes up to it -- warning, arms down (solid; one over a truck
+##     rests on it, never inside it), train across
 ##     (with its own horn and chugging, playtest polish 2026-09-27), arms up --
 ##     and one that isn't due never moves.
 
@@ -224,6 +225,46 @@ func _run() -> void:
 	_expect(not (joined.get(&"_train_chug") as AudioStreamPlayer3D).playing,
 			"...and the chugging stops once it's done too")
 	joined.free()
+
+	# Playtest 2026-10-01: an arm lowered onto a truck caught under it appeared
+	# inside it and flung it away. Now it rests on the roof, solid, never
+	# inside, and finishes coming down once the truck has gone.
+	var caught: RailCrossingSegment = RailCrossingSegment.new()
+	root.add_child(caught)
+	await process_frame
+	var caught_arm: Node3D = caught.get_node(^"BarrierArm")
+	var stuck_truck := StaticBody3D.new()
+	stuck_truck.collision_layer = 2
+	var stuck_shape := CollisionShape3D.new()
+	var stuck_box := BoxShape3D.new()
+	stuck_box.size = Vector3(2.4, 2.0, 5.0)
+	stuck_shape.shape = stuck_box
+	stuck_truck.add_child(stuck_shape)
+	root.add_child(stuck_truck)
+	var arm_side: float = float(caught_arm.get_meta(&"side"))
+	stuck_truck.global_position = caught.global_transform * Vector3(arm_side * 1.5, 1.0, caught_arm.position.z)
+	await physics_frame
+	caught.call(&"_begin_cycle")
+	for _i: int in range(60 * 3):
+		await physics_frame
+	var rested_at: float = caught.arm_down(0)
+	var space := caught.get_world_3d().direct_space_state
+	var arm_query := PhysicsShapeQueryParameters3D.new()
+	var caught_shape := caught_arm.find_children("*", "CollisionShape3D", false, false)[0] as CollisionShape3D
+	arm_query.shape = caught_shape.shape
+	arm_query.transform = caught_shape.global_transform
+	arm_query.collision_mask = 2
+	_expect(caught.state == RailCrossingSegment.State.TRAIN and rested_at > 0.3 and rested_at < 0.99,
+		"An arm over a truck comes to rest on it instead of going through (down %.2f)" % rested_at)
+	_expect(space.intersect_shape(arm_query, 1).is_empty() and not caught_shape.disabled,
+		"...solid, and never inside the truck (what used to fling it)")
+	_expect(is_equal_approx(caught.arm_down(1), 1.0), "...while the clear arm goes all the way down")
+	stuck_truck.free()
+	for _i: int in range(10):
+		await physics_frame
+	_expect(is_equal_approx(caught.arm_down(0), 1.0),
+		"...and the resting arm finishes coming down once the truck is gone")
+	caught.free()
 
 	var quiet: RailCrossingSegment = RailCrossingSegment.new()
 	root.add_child(quiet)
