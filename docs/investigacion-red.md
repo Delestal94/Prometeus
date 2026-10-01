@@ -263,6 +263,34 @@ exacto de la prueba. En LAN no se notaba porque ENet no tiene ese límite.
 | + caja y jugador a 30 Hz fijos | ≈62 KB/s | ≈62 KB/s |
 | + cajas dormidas sin enviar | unos KB/s menos | unos KB/s menos |
 
+**2026-10-01, con 8 jugadores y el encuadre contado (N-228.5).** `test_net_bandwidth_budget` pasó de 4
+jugadores a `NetworkManager.MAX_PLAYERS` y ahora cuenta lo que va en el cable, como lo arma
+`SceneMultiplayer` (Godot 4.7): 3 B por paquete de sync, 8 B por sincronizador, paquetes de hasta 1350 B,
+bools e ints comprimidos; la pose de cada jugador de otro cliente llega por el host (`server_relay`) en un
+paquete propio con 6 B más; y cada paquete es un datagrama con 80 B de encabezado (IPv4 + UDP 28, encabezado
+de datos de Steam ≤ 20, etiqueta AES-GCM 16, encabezado del mensaje 7, acks 9: un techo, Steam puede juntar
+mensajes y ENet lo hace). Por envío: caja 93 B, jugador 73 B, camión 308 B → 120 B.
+
+| Host → un cliente (8 jugadores, 14 cajas, 60 Hz) | Antes | Después |
+|---|---|---|
+| Estable: 8 cajas moviéndose, 6 quietas | 165,0 KB/s (129 % de 128) | **117,7 KB/s** (92 %) |
+| Todas las cajas moviéndose a la vez | 165,0 KB/s | 154,0 KB/s (60 % de los 256 de Steam) |
+| Subida del host, estable (7 clientes) | 9,5 Mbit/s | **6,8 Mbit/s** (tope del test: 8, el 80 % de 10) |
+| Subida de cada cliente (su pose, 1 al host y 6 reenviadas) | 66 KB/s | 66 KB/s |
+
+Sin encuadre, como medía el test viejo, el "antes" daba ≈123 KB/s. Lo que se hizo, lo mínimo para entrar
+(cualquiera de los dos solo no alcanza: sin las ruedas da 128,7 KB/s, sin el reposo 154):
+- **Ruedas reconstruidas en el cliente:** el camión manda `net_wheel_heights` (un `Vector4`, 20 B) en vez de
+  las 4 `Transform3D` de rueda (208 B); el cliente las pone con `steering` y la velocidad
+  (`vehicle.gd _pose_remote_wheels`). `PROTOCOL_VERSION` 19.
+- **Cajas quietas a 2 Hz:** `NetRestThrottle` (`modules/net_pose_smoother`, nodo en `package.tscn`) baja el
+  `replication_interval` de la caja a 0,5 s después de 0,5 s sin moverse más de 5 mm o 0,01 rad (en el
+  espacio del camión si viaja), y lo vuelve a 1/60 en el mismo tick en que se mueve. No cambia el protocolo.
+  Medido manejando con 4 cajas en los anclajes: cada una queda en reposo el 42-67 % del tiempo.
+- Las cajas a 30 Hz quedan para N-217 (necesitan interpolación). Lo que más pesa ahora son las poses de los
+  otros jugadores: 6 datagramas chicos por tick y por cliente, ≈57 KB/s con sus encabezados (la mitad del
+  total). Bajarlas a 30 Hz con N-217 es el próximo ahorro grande.
+
 ## 5. Plan por fases
 
 > Estado al 2026-09-29: ya se hicieron la fase 1 (PR #34, sin la parte de cajas dormidas) y la
