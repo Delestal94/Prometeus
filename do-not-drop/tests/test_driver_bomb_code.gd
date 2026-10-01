@@ -10,9 +10,11 @@ extends SceneTree
 ## - the dashboard's screen backs it up with a single line, big and outlined,
 ##   and steps its distance, detail and arrow aside while it shows.
 
-## Loaded at run time, and no DeliveryPackage type: naming it would compile the
-## HUD before the autoloads exist (it reads NetworkManager).
+## Loaded at run time, and no DeliveryPackage or DashboardGps type: naming them
+## would compile the HUD before the autoloads exist (it reads NetworkManager;
+## the GPS reaches it through DeliveryHouse, which reads the box as a package).
 const PACKAGE_PATH: String = "res://scenes/gameplay/package/package.tscn"
+const GPS_PATH: String = "res://scripts/presentation/dashboard_gps.gd"
 const VEHICLE_SOURCE: String = "extends Node3D\nvar driver_peer_id: int = 0\n"
 
 var _failures: int = 0
@@ -85,7 +87,9 @@ func _run() -> void:
 	# The dashboard's screen: one line, the rest steps aside.
 	var truck := VehicleBody3D.new()
 	root.add_child(truck)
-	var gps := DashboardGps.new()
+	var gps_script: GDScript = load(GPS_PATH)
+	var gps: Node3D = gps_script.new()
+	var alert: Color = gps_script.get_script_constant_map()[&"ALERT"]
 	truck.add_child(gps)
 	await process_frame
 	boxes[0].care_state = _state([&"up", &"left", &"down"], 0, 9.0, &"driver")
@@ -95,7 +99,7 @@ func _run() -> void:
 		"One line on the screen (%s)" % gps.code_label.text)
 	_expect("→ ↓" in gps.code_label.text and "+1" in gps.code_label.text, "The soonest, the rest counted")
 	_expect(gps.code_label.font_size >= 44 and gps.code_label.outline_size >= 6, "Big and outlined")
-	_expect(gps.code_label.modulate == DashboardGps.ALERT, "The colour follows the code shown")
+	_expect(gps.code_label.modulate == alert, "The colour follows the code shown")
 	_expect(not gps.distance_label.visible and not gps.detail_label.visible and not gps.arrow.visible,
 		"The other readouts step aside while it shows")
 	for box: Node in boxes:
