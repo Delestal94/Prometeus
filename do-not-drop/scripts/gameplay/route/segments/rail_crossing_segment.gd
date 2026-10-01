@@ -15,6 +15,12 @@ class_name RailCrossingSegment
 ## timers from there. Only the host's physics decides anything, and there the
 ## barrier arms and train cars are solid.
 ##
+## The arms are static bodies turned by hand, so they never move into
+## anything: a step that would put an arm inside the truck, a box or a player
+## isn't taken, and the arm rests where it is until there's room (_drive_arm),
+## like a real barrier's obstacle sensor. Before that an arm lowered onto the
+## truck appeared inside it and Jolt flung the truck out (playtest 2026-10-01).
+##
 ## What you see is imported art (assets/tools/build_rail_crossing.py, N-129 /
 ## N-130): track, signal, barrier arm and a cartoon steam train. What you hit
 ## is still the boxes this script always used -- post, arm, one per car -- so
@@ -73,6 +79,8 @@ const TRAIN_MODELS: Array[String] = [
 	MODELS + "sm_env_rail_wagon_tanker.glb",
 	MODELS + "sm_env_rail_wagon_boxcar.glb",
 ]
+## What an arm never swings into: vehicle, package, player.
+const ARM_CLEARANCE_MASK: int = 2 | 4 | 8
 ## The lenses the signal model names; each gets its own glow material.
 const LAMP_NODES: Array[StringName] = [&"LampLeft", &"LampRight"]
 const CAR_SIZE := Vector3(7.5, 3.0, 2.6)
@@ -84,6 +92,8 @@ var state: int = State.WAITING
 var track_z: float = 0.0
 var _timer: float = 0.0
 var _arms: Array[Node3D] = []
+## Each arm's collision, tested at the next pose before the arm turns there.
+var _arm_shapes: Array[CollisionShape3D] = []
 var _lamps: Array[StandardMaterial3D] = []
 var _train: Array[AnimatableBody3D] = []
 var _train_x: float = 0.0
@@ -215,6 +225,7 @@ func _build_signal(at: Vector3, side: float) -> void:
 	shape.shape = box_shape
 	shape.position = Vector3(-side * arm_length * 0.5, 0.0, 0.0)
 	pivot.add_child(shape)
+	_arm_shapes.append(shape)
 	pivot.set_meta(&"side", side)
 	# A script-driven part: keeps it out of the static geometry merge.
 	pivot.set_meta(&"animated", true)
@@ -226,6 +237,38 @@ func _build_signal(at: Vector3, side: float) -> void:
 func _set_arm(arm: Node3D, down: float) -> void:
 	var side: float = float(arm.get_meta(&"side", 1.0))
 	arm.rotation.z = side * lerpf(-PI * 0.5, 0.0, down)
+	arm.set_meta(&"down", down)
+
+
+## How far down an arm is (see _set_arm).
+func arm_down(index: int) -> float:
+	return float(_arms[index].get_meta(&"down", 0.0))
+
+
+## Turns every arm toward `down`, each only as far as it's free to go.
+func _drive_arms(down: float) -> void:
+	for index: int in range(_arms.size()):
+		_drive_arm(index, down)
+
+
+## Moves the arm to `down` unless that pose overlaps something it would have
+## to push out of the way; then it stays put and tries again next tick.
+func _drive_arm(index: int, down: float) -> void:
+	var arm: Node3D = _arms[index]
+	var was: float = arm_down(index)
+	if is_equal_approx(was, down):
+		return
+	_set_arm(arm, down)
+	if is_inside_tree() and _arm_blocked(_arm_shapes[index]):
+		_set_arm(arm, was)
+
+
+func _arm_blocked(shape: CollisionShape3D) -> bool:
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape.shape
+	query.transform = shape.global_transform
+	query.collision_mask = ARM_CLEARANCE_MASK
+	return not get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 
 func _build_train() -> void:
@@ -308,8 +351,7 @@ func _physics_process(delta: float) -> void:
 				_timer = 0.0
 		State.CLOSING:
 			_timer += delta
-			for arm: Node3D in _arms:
-				_set_arm(arm, clampf(_timer / ARM_SECONDS, 0.0, 1.0))
+			_drive_arms(clampf(_timer / ARM_SECONDS, 0.0, 1.0))
 			if _timer >= ARM_SECONDS:
 				state = State.TRAIN
 				# The locomotive's nose just out of sight in the near bore.
@@ -320,6 +362,8 @@ func _physics_process(delta: float) -> void:
 				_train_horn.play()
 				_train_chug.play()
 		State.TRAIN:
+			# An arm that came to rest on something finishes once it's clear.
+			_drive_arms(1.0)
 			_train_x += TRAIN_SPEED * delta
 			_place_train()
 			# Gone once the last car is as deep in the far bore.
@@ -332,11 +376,15 @@ func _physics_process(delta: float) -> void:
 				_timer = 0.0
 		State.OPENING:
 			_timer += delta
-			for arm: Node3D in _arms:
-				_set_arm(arm, 1.0 - clampf(_timer / ARM_SECONDS, 0.0, 1.0))
+			var rise: float = 1.0 - clampf(_timer / ARM_SECONDS, 0.0, 1.0)
+			for index: int in range(_arms.size()):
+				# Up from wherever it got to, never down again.
+				_drive_arm(index, minf(rise, arm_down(index)))
 			if _timer >= ARM_SECONDS:
 				state = State.DONE
 				_bell.stop()
+		State.DONE:
+			_drive_arms(0.0)
 	var flashing: bool = state in [State.WARNING, State.CLOSING, State.TRAIN, State.OPENING]
 	var phase: bool = fmod(Time.get_ticks_msec() / 450.0, 2.0) < 1.0
 	for index: int in range(_lamps.size()):
@@ -395,8 +443,7 @@ func _apply_state(new_state: int, timer: float, train_x: float) -> void:
 			down = 1.0
 		State.OPENING:
 			down = 1.0 - clampf(_timer / ARM_SECONDS, 0.0, 1.0)
-	for arm: Node3D in _arms:
-		_set_arm(arm, down)
+	_drive_arms(down)
 	if state != State.DONE and not _bell.playing:
 		_bell.play()
 	# A client joining mid-crossing picks up the chugging already in

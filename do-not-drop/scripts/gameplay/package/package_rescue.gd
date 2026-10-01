@@ -445,11 +445,15 @@ static func peer_left(p: DeliveryPackage, peer_id: int) -> void:
 	var carried_by_them: bool = is_instance_valid(p.carrier) and p.carrier.get_multiplayer_authority() == peer_id
 	if peer_id in [p.tender_peer_id, p._care_worker] or carried_by_them:
 		p.care.hold_crisis(DeliveryPackage.CareModel.CRISIS_SECONDS)
-		if p.tender_peer_id == peer_id:
+		var was_tender: bool = p.tender_peer_id == peer_id
+		if was_tender:
 			p.tender_peer_id = 0
 		p._care_worker = 0
 		p.player_input = {}
 		p._publish_care()
+		if was_tender:
+			# Someone else sitting at a seat facing this mount takes it over.
+			SeatTending.hand_over(p, peer_id)
 
 
 static func delivery_assessment(p: DeliveryPackage) -> Dictionary:

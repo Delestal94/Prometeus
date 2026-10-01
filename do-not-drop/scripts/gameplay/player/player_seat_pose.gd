@@ -160,6 +160,8 @@ func stop_driver_ik() -> void:
 
 func apply_board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	player._seated = true
+	# Whatever this seat gives them comes next (tend_package); nothing carries over.
+	player.tended_package = null
 	player._seat_pose_blend = 0.0
 	player.collision_layer = 0
 	player.collision_mask = 0
@@ -176,6 +178,11 @@ func apply_board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 
 
 func apply_tend_package(package_path: NodePath) -> void:
+	# The host hands a box over to whoever is seated there; one who already
+	# stood up here (the host's message crossed their own leave) has no seat to
+	# tend from. An empty path (let go of it) is always fine.
+	if not package_path.is_empty() and not player._seated:
+		return
 	player.tended_package = player.get_node_or_null(package_path) as DeliveryPackage
 	if player.is_local() and player.tended_package != null:
 		player._show_first_trap_tip(player.tended_package)

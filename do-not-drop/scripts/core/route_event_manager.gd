@@ -341,9 +341,9 @@ func _prepare_mimic() -> bool:
 func _prepare_parasite() -> bool:
 	var packages: Array[DeliveryPackage] = []
 	for package: DeliveryPackage in _loaded_packages():
-		# Only the four mounts paired with passenger seats are tendable. The
-		# two free shelf mounts cannot complete this cooperative event.
-		if "Seat" in String(package.current_mount_path):
+		# Only a box in a mount a seat owns can be tended by its own sitter,
+		# which this cooperative event needs (two shelf bays share one seat).
+		if SeatTending.is_owned_mount(get_tree(), package.current_mount):
 			packages.append(package)
 	if packages.size() < 2 or _peer_count() < 2:
 		return false

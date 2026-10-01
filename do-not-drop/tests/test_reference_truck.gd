@@ -9,7 +9,7 @@ const FLAT := Vector3(0.95, 0.42, 0.95)
 const TALL := Vector3(0.42, 0.98, 0.42)
 const CUBE := Vector3(0.65, 0.65, 0.65)
 const MOUNTS := ["LeftSeat1PackageMount", "LeftSeat2PackageMount", "RightSeat1PackageMount",
-	"RightSeat2PackageMount", "LeftShelfPackageMount", "RightShelfPackageMount"]
+	"RightSeat2PackageMount", "LeftShelfPackageMount", "RightShelfPackageMount", "RightSeat3PackageMount"]
 
 var _failures: int = 0
 
@@ -415,7 +415,7 @@ func _test_packages_rest_on_deck() -> void:
 	var packages: Array[Node] = []
 	packages.assign(root.get_tree().get_nodes_in_group(&"cargo"))
 	var index := 0
-	# More trap types (7) than rack bays (6): every bay gets a box.
+	# As many trap types (7) as bays (6 on the rack, 1 on the floor): every bay gets a box.
 	for package: Node in packages.slice(0, MOUNTS.size()):
 		var mount_name: String = MOUNTS[index]
 		index += 1
