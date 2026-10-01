@@ -17,9 +17,15 @@ extends SceneTree
 ##     balance under zero, leaving its line for the results.
 ##   - Holding the primary button near the truck is what sends a push.
 ##   - Neither level ends the run on "stuck" while the truck is in the mud.
+##   - The crane is a model (N-321, sm_vehicle_tow_crane.glb), not boxes: its
+##     body is that scene under Body, no MeshInstance3D has a PrimitiveMesh,
+##     the Beacon is emissive and spins, the boards stay on the flanks, and
+##     hook_position() stays 0.5 m under the cable's anchor (0, 2.1, 3.6) and
+##     within 0.6 m of the Hook's eye, wherever the crane stands.
 ## Pass -- --measure to print the pass/bog table by entry speed.
 
 const Route = preload("res://scripts/gameplay/route/route.gd")
+const Crane = preload("res://scripts/gameplay/route/mud_crane.gd")
 const SEEDS: int = 400
 const FLAT_ARENA_LENGTH: float = 200.0
 ## Headless paces physics at wall-clock speed and the rescue runs ~140 s of it
@@ -67,6 +73,7 @@ func _run() -> void:
 	_check_generation()
 	await _check_real_route()
 	await _check_endless_pool()
+	await _check_crane_model()
 	_manager.set(&"is_running", true)
 	await _check_bog_and_grip()
 	await _check_push()
@@ -219,6 +226,68 @@ func _check_endless_pool() -> void:
 	var real_muds: int = muds.filter(func(at: float) -> bool: return at >= 0.0).size()
 	_expect(real_muds * 10 <= int(stats.segments), "Endless mud is rare: %d in %d segments" % [real_muds,
 			int(stats.segments)])
+
+
+# --- The crane's model (N-321) ---------------------------------------------------------
+
+
+## The crane stands somewhere rotated, spins its beacon over a few frames and
+## is built from the GLB, not from boxes.
+func _check_crane_model() -> void:
+	var crane: Node3D = Crane.new()
+	crane.transform = Transform3D(Basis(Vector3.UP, 0.7), Vector3(12.0, 3.0, -40.0))
+	root.add_child(crane)
+	var before: Vector3 = crane.global_transform * (Crane.HOOK_LOCAL - Vector3(0.0, 0.5, 0.0))
+	var hook_at: Vector3 = crane.call(&"hook_position")
+	_expect(hook_at.distance_to(before) < 0.001,
+			"hook_position() is unchanged: 0.5 m under the anchor, in the crane's frame (%s)" % hook_at)
+	_expect_crane_model(crane, "A new crane")
+	var beacon := crane.find_child("Beacon", true, false) as Node3D
+	var spin_before: float = beacon.rotation.y if beacon != null else 0.0
+	for _i: int in range(3):
+		await process_frame
+	_expect(beacon != null and not is_equal_approx(beacon.rotation.y, spin_before),
+			"The beacon spins in place")
+	var body := crane.get_node_or_null(^"Body") as Node3D
+	_expect(body != null and is_equal_approx(body.position.y, sin(float(crane.get("_time")) * 14.0) * 0.025),
+			"The whole model rattles with Body")
+	crane.free()
+
+
+func _expect_crane_model(crane: Node3D, who: String) -> void:
+	_expect(crane != null, "%s exists" % who)
+	if crane == null:
+		return
+	var body := crane.get_node_or_null(^"Body") as Node3D
+	var from_scene: bool = false
+	if body != null:
+		for child: Node in body.get_children():
+			from_scene = from_scene or child.scene_file_path == Crane.MODEL_PATH
+	_expect(from_scene, "%s is the model's scene under Body" % who)
+	var meshes: Array[Node] = crane.find_children("*", "MeshInstance3D", true, false)
+	var primitives: int = 0
+	for node: Node in meshes:
+		primitives += int((node as MeshInstance3D).mesh is PrimitiveMesh)
+	_expect(not meshes.is_empty() and primitives == 0,
+			"%s has %d meshes and %d primitives" % [who, meshes.size(), primitives])
+	for part: String in ["Chassis", "Cab", "Boom", "Wheels", "Light", "TailLights", "Hook"]:
+		_expect(crane.find_child(part, true, false) != null, "%s has its %s" % [who, part])
+	var beacon := crane.find_child("Beacon", true, false) as MeshInstance3D
+	_expect(beacon != null, "%s has its Beacon" % who)
+	if beacon != null:
+		var material := beacon.get_surface_override_material(0) as BaseMaterial3D
+		if material == null:
+			material = beacon.mesh.surface_get_material(0) as BaseMaterial3D
+		_expect(material != null and material.emission_enabled, "%s: the Beacon is emissive" % who)
+	var hook := crane.find_child("Hook", true, false) as Node3D
+	if hook != null and crane.is_inside_tree():
+		var cable_at: Vector3 = crane.call(&"hook_position")
+		var gap: float = cable_at.distance_to(hook.global_position)
+		_expect(gap < 0.6, "%s: the cable starts %.2f m from the Hook's eye" % [who, gap])
+	for board_name: String in ["Board", "BoardLeft"]:
+		var board := crane.get_node_or_null(NodePath(board_name)) as Label3D
+		_expect(board != null and absf(board.position.x) > 1.3 and absf(board.position.x) < 1.4,
+				"%s keeps its %s on the flank" % [who, board_name])
 
 
 # --- The arena --------------------------------------------------------------------
@@ -574,6 +643,7 @@ func _check_replication() -> void:
 			"The client keeps the host's numbers")
 	segment._apply_state(MudSegment.State.CRANE_COMING, 0.42, 0, false, 0.0, &"", 0.0)
 	_expect(segment.get_node_or_null(^"MudCrane") != null, "A client sees the crane arrive")
+	_expect_crane_model(segment.get_node_or_null(^"MudCrane") as Node3D, "The crane a client sees")
 	segment._apply_state(MudSegment.State.IDLE, 1.0, 0, false, 0.0, &"crane", 0.0)
 	_expect(not status.visible, "...and the board goes away when the truck is free")
 	await _free_arena(arena)
