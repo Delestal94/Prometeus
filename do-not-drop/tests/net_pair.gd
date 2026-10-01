@@ -249,7 +249,8 @@ func _check_rejoin(old_client: int, old_slot: int, old_merit: int) -> void:
 
 ## N-221 follow-up: back from a pulled cable before the host noticed. The
 ## client's link is a ghost the host only drops when the new one says who it
-## is; it closes 0.5-2 s later, after the level freed the ghost's player.
+## is; SceneMultiplayer lets go of it then and there (no peer_disconnected
+## for it, ever), and its link closes after the level freed its player.
 func _check_ghost_rejoin(slot: int) -> void:
 	var package: DeliveryPackage = _level.packages[0]
 	var ghost: int = _client_peer_id
@@ -267,6 +268,9 @@ func _check_ghost_rejoin(slot: int) -> void:
 	enet.get_peer(ghost).set_timeout(32, 120000, 120000)
 	var removed: Array = []
 	_network.connect(&"peer_removed", func(id: int) -> void: removed.append(id))
+	var disconnected: Array = []
+	var on_disconnected: Callable = func(id: int) -> void: disconnected.append(id)
+	get_tree().root.multiplayer.peer_disconnected.connect(on_disconnected)
 	_client_peer_id = 0
 	rpc_id(ghost, &"_client_vanish_and_rejoin")
 	var came_back: bool = await _wait_until(func() -> bool:
@@ -287,12 +291,16 @@ func _check_ghost_rejoin(slot: int) -> void:
 	var window: float = package.care.crisis_left
 	_expect(window >= DeliveryPackage.CareModel.CRISIS_SECONDS - 1.0,
 		"the box's rescue window was held when the ghost was dropped (%.1f s left)" % window)
-	# SceneMultiplayer lets go of it as it is dropped, not when its link closes
-	# 0.5-2 s later: nothing more is sent to a closing link ("max channels: 0"),
-	# and the other clients hear it left.
+	# SceneMultiplayer lets go of it as it is dropped (disconnect_peer(), its
+	# signals blocked), not when its link closes: nothing more is sent to a
+	# closing link ("max channels: 0"; run-net-pair.sh greps for it), and the
+	# other clients hear it left.
 	_expect(not get_tree().root.multiplayer.get_peers().has(ghost),
 		"the host's multiplayer lets go of the ghost as it is dropped")
 	await _pump(2.5)
+	get_tree().root.multiplayer.peer_disconnected.disconnect(on_disconnected)
+	_expect(not disconnected.has(ghost),
+		"the ghost is let go of by the host itself, not when its link closes (no peer_disconnected for it)")
 	_expect(removed == [ghost], "the ghost's link closing removes nothing more (removed %s)" % [removed])
 	rpc_id(_client_peer_id, &"_client_check_ghost_rejoin", _client_peer_id, slot)
 	await _wait_for_report(&"ghost_rejoin")
