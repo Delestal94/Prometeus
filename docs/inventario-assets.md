@@ -122,6 +122,7 @@
 | Camioneta de la competencia | `models/vehicles/sm_vehicle_competitor_van.glb` | ✅ | Solo frente al depósito; en la ruta, con N-306. |
 | Tractor | `models/vehicles/sm_vehicle_tractor.glb` | 🟡 | Creado, sin usar todavía: va en zona de campo con N-306. |
 | Grúa del tramo de barro | `models/vehicles/sm_vehicle_tow_crane.glb` | ✅ | 2.393 tris con AO (`tools/build_street_props.py -- crane` + `bake_vertex_ao.py`). La instancia `mud_crane.gd`; anima `Beacon` y cuelga el cable de `Hook`. N-321. |
+| Polvo de las ruedas (efecto) | `scripts/presentation/wheel_dust.gd` | ✅ | Por código, sin textura: quad con degradé radial, 2 emisores × 32 partículas, solo en grava/tierra, apagado con lluvia. Capturas: `tests/render_wheel_dust.gd`. N-320. |
 
 ## 8. Audio (hoy todo sintetizado en `synth_audio.gd`)
 
