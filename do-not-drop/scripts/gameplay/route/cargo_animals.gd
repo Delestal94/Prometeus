@@ -31,6 +31,14 @@ extends Node
 ## Cost: nothing while idle but a poll twice a second; while an animal is at
 ## work a few comparisons a frame (no scans: the level's box list is used).
 
+## The truck's and the session's scripts, as types (N-224.4): a renamed method
+## or property fails to compile here instead of mid-run. The truck has no
+## class name (vehicle.gd), and the session is the script the NetworkManager
+## autoload runs (it declares world_seed, which NetSession does not).
+## RunManager and EventBus stay by name, see _run_active() and _bus().
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
+
 enum Phase { IDLE, ANNOUNCED, ACTING }
 
 ## Truck speed that counts as driving, and as stopped at a door (m/s).
@@ -141,15 +149,15 @@ func _ready() -> void:
 	view.name = "View"
 	add_child(view)
 	view.dog_thrown.connect(_on_dog_thrown)
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.connect(&"horn_honked", _on_horn_honked)
 		bus.connect(&"house_delivery_recorded", _on_house_delivery_recorded)
 		bus.connect(&"run_started", _on_run_started)
 		bus.connect(&"run_ended", _on_run_ended)
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if network != null and network.has_signal(&"peer_level_ready"):
-		network.connect(&"peer_level_ready", _on_peer_level_ready)
+	var network: NETWORK_MANAGER = _network()
+	if network != null:
+		network.peer_level_ready.connect(_on_peer_level_ready)
 
 
 func _physics_process(delta: float) -> void:
@@ -210,7 +218,7 @@ func _gull_candidates() -> Array:
 	var found: Array = []
 	for candidate: Variant in packages:
 		var box := candidate as DeliveryPackage
-		if _alive(box) and box.is_loaded and not box.is_held and vehicle.call(&"carries", box.global_position):
+		if _alive(box) and box.is_loaded and not box.is_held and _truck().carries(box.global_position):
 			found.append(box)
 	return found
 
@@ -220,7 +228,7 @@ func _bee_candidates() -> Array:
 	var found: Array = []
 	for candidate: Variant in packages:
 		var box := candidate as DeliveryPackage
-		if _alive(box) and box.is_open and _is_cake(box) and vehicle.call(&"carries", box.global_position):
+		if _alive(box) and box.is_open and _is_cake(box) and _truck().carries(box.global_position):
 			found.append(box)
 	return found
 
@@ -242,8 +250,8 @@ func _alive(box: DeliveryPackage) -> bool:
 
 
 func _is_cake(box: DeliveryPackage) -> bool:
-	var content: Resource = box.content_definition()
-	return content != null and StringName(content.get(&"id")) == &"wedding_cake"
+	var content := box.content_definition() as PackageContent
+	return content != null and content.id == &"wedding_cake"
 
 
 ## Deterministic: the candidates in a fixed order, one drawn from the session
@@ -339,7 +347,7 @@ func _lost_interest() -> StringName:
 			if not _rear_open() or not (target.is_loaded or target.is_held):
 				return &"left"
 			# A box that has slid out of the bay is no longer on the rack to take.
-			if not target.is_held and not vehicle.call(&"carries", target.global_position, 0.6):
+			if not target.is_held and not _truck().carries(target.global_position, 0.6):
 				return &"left"
 		CargoAnimalPlan.DOG:
 			if not target.is_open or target.contents_spilled:
@@ -385,7 +393,7 @@ func _snatch() -> void:
 	_rng.seed = hash([_run_seed(), leg, &"cargo_animal_snatch"])
 	var side: float = _rng.randf_range(-0.5, 0.5)
 	var out: Vector3 = vehicle.to_global(SNATCH_OUT + Vector3(side, 0.0, 0.0))
-	var carried: Vector3 = vehicle.call(&"point_velocity", out)
+	var carried: Vector3 = _truck().point_velocity(out)
 	box.freeze = false
 	box.global_position = out
 	var push: Vector3 = SNATCH_PUSH + Vector3(side * 2.0, 0.0, 0.0)
@@ -394,7 +402,7 @@ func _snatch() -> void:
 			_rng.randf_range(-1.5, 1.5))
 	box.reset_physics_interpolation()
 	# The throw is not a collision: don't read the jump in speed as a hit.
-	box.set(&"_has_previous_velocity", false)
+	box._has_previous_velocity = false
 	end_event(&"snatched", 0, true)
 	WildlifeCrossing.report_incident(get_tree(), &"cargo_gull_snatch", "WORLD_GULL_SNATCH_TITLE",
 			"WORLD_GULL_SNATCH_PROMPT")
@@ -510,7 +518,7 @@ func _speed() -> float:
 
 
 func _rear_open() -> bool:
-	return bool(vehicle.get(&"rear_cargo_open"))
+	return _truck().rear_cargo_open
 
 
 func _in_countryside() -> bool:
@@ -526,15 +534,29 @@ func _at_house_stop() -> bool:
 	return false
 
 
+## The truck, typed (the `vehicle` the level hands over is a plain Node3D).
+func _truck() -> VehicleScript:
+	return vehicle as VehicleScript
+
+
+## The NetworkManager autoload, or null outside a running game.
+func _network() -> NETWORK_MANAGER:
+	return get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
+
+
+## The EventBus node, by name: a test may replace it with a plain Node.
+func _bus() -> Node:
+	return get_node_or_null(^"/root/EventBus")
+
+
 ## Dealt once per run. A room (world seed set) mixes in the runs finished, so
-## every peer's host deals the same animals for the same world and run but not
-## the same ones every run; alone (seed 0) it is a fresh roll each run.
+## the host deals the same animals for the same world and run but not the same
+## ones every run; alone (seed 0) it is a fresh roll each run.
 func _roll_run_seed() -> void:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	var world_seed: int = int(network.get(&"world_seed")) if network != null else 0
+	var network: NETWORK_MANAGER = _network()
+	var world_seed: int = network.world_seed if network != null else 0
 	if world_seed != 0:
-		var runs: int = int(network.get(&"world_completed_runs"))
-		_seed = hash([world_seed, runs])
+		_seed = hash([world_seed, network.world_completed_runs])
 	else:
 		var roll := RandomNumberGenerator.new()
 		roll.randomize()
@@ -551,10 +573,12 @@ func _run_seed() -> int:
 
 
 func _is_host() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return network == null or bool(network.call(&"is_host"))
+	var network: NETWORK_MANAGER = _network()
+	return network == null or network.is_host()
 
 
+## RunManager by name: preloading run_manager.gd here compiles it before the
+## autoloads exist (see package_autoloads.gd).
 func _run_active() -> bool:
 	var run: Node = get_node_or_null(^"/root/RunManager")
 	return run != null and bool(run.get(&"is_running"))
@@ -562,6 +586,6 @@ func _run_active() -> bool:
 
 ## Host: tell everyone (offline it just fires locally).
 func _relay(event_name: StringName, args: Array) -> void:
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.call(&"relay", event_name, args)
