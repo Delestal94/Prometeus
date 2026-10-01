@@ -11,6 +11,16 @@ extends SceneTree
 ##   - the mount's own seat does take it from a neighbour, who is told;
 ##   - when the tender gets up or drops out, the other sitter takes over, and
 ##     if the neighbour leaves instead the tender is unchanged.
+##
+## N-228.8 (leftovers of that task):
+##   - a box a standing player takes out of a seated tender's mount and shelves
+##     in a mount that tender does not look at loses that tender (told with an
+##     empty path), and a sitter facing the new mount takes over; putting it
+##     back in the same mount keeps the tender (SeatTending.on_stored);
+##   - a lap reserves its bay by the seats' occupant, not the replicated
+##     seat_node_path of the carrier;
+##   - RightSeat3 takes an empty-handed player while a neighbour's lap is bound
+##     for its empty mount: they just sit, the neighbour keeps the box.
 ## Peers other than the host are simulated (authority only), so the log shows
 ## "unknown peer" for RPCs sent to them; the host's player checks what is told.
 
@@ -189,6 +199,88 @@ func _run() -> void:
 		"The rack seat leaves the first bay's box to its tender (got %d)" % _tender(rack_box))
 	_expect(_tender(other_box) == 1 and host.get(&"tended_package") == other_box,
 		"...and tends the other bay's box instead (got %d)" % _tender(other_box))
+
+	# N-228.8 (a): someone standing takes the host's box out of the rack seat's
+	# bay and shelves it in the same bay: the tender is kept. Shelved in a mount
+	# the rack seat does not face (RightSeat3's), the host stops tending it.
+	box.call(&"release_mount")
+	var stander: Node = _player(8)
+	await process_frame
+	neighbour.call(&"interact", minder)
+	_expect(_tender(other_box) == 1, "Setup: the rack seat tends the second bay's box (got %d)" % _tender(other_box))
+	other_box.call(&"take_by", stander)
+	second_bay.call(&"store", other_box)
+	_expect(_tender(other_box) == 1 and host.get(&"tended_package") == other_box,
+		"Putting the box back in the same bay keeps its tender (got %d)" % _tender(other_box))
+	other_box.call(&"take_by", stander)
+	_expect(_tender(other_box) == 1, "Taking it out alone does not clear the tender (got %d)" % _tender(other_box))
+	mount.call(&"store", other_box)
+	_expect(_tender(other_box) == 2,
+		"Shelved where the rack seat does not look, the sitter there takes over (got %d)" % _tender(other_box))
+	_expect(host.get(&"tended_package") == null, "...and the rack sitter is told it is no longer theirs")
+	# Nobody facing the new mount: the box is left without a tender.
+	neighbour.call(&"release_occupant", 2)
+	_expect(_tender(other_box) == 0, "The heir getting up leaves it untended (got %d)" % _tender(other_box))
+	host.call(&"leave_seat")
+	other_box.call(&"set_tender", 5)  # a tender that is not seated anywhere
+	other_box.call(&"take_by", stander)
+	second_bay.call(&"store", other_box)
+	_expect(_tender(other_box) == 0,
+		"A tender who is not seated loses a box stored elsewhere (got %d)" % _tender(other_box))
+	other_box.call(&"release_mount")
+
+	# N-228.8 (b): a lap reserves its bay by who sits (the seat's occupant), not
+	# by the replicated seat_node_path, which these simulated crewmates never get.
+	var lapper: Node = _player(9)
+	var lap_box: Node = _spare_box(5)
+	await process_frame
+	lap_box.call(&"take_by", lapper)
+	neighbour_two.call(&"interact", lapper)
+	_expect(lapper.get(&"seat_node_path") == NodePath(), "Setup: the lapper's replicated seat path is empty")
+	_expect(lap_box.get(&"_lap_mount") == mount and _tender(lap_box) == 9, "The lap box is bound for RightSeat3's bay")
+	_expect(bool(owner_seat.call(&"_reserved", mount, null)),
+		"A seated lap reserves its bay without the replicated seat path")
+	_expect(not bool(owner_seat.call(&"_reserved", mount, lap_box)), "...but not against its own box")
+	# The other way round: a stale path on someone standing reserves nothing.
+	neighbour_two.call(&"release_occupant", 9)
+	lapper.set(&"seat_node_path", NodePath("World/Vehicle"))
+	_expect(bool(lap_box.get(&"is_held")) and not bool(owner_seat.call(&"_reserved", mount, null)),
+		"A standing carrier with a stale seat path reserves nothing")
+	lapper.set(&"seat_node_path", NodePath())
+
+	# N-228.8 (c): while a neighbour's lap is bound for RightSeat3's empty bay,
+	# its own seat takes an empty-handed sitter (it used to refuse them: an empty
+	# mount wanted a box in hand). They just sit; the neighbour keeps the box.
+	neighbour_two.call(&"interact", lapper)
+	_expect(_tender(lap_box) == 9, "Setup: the lapper tends the box again (got %d)" % _tender(lap_box))
+	var empty_handed: Node = _player(10)
+	var loaded: Node = _player(11)
+	await process_frame
+	var spare_two: Node = _spare_box(6)
+	spare_two.call(&"take_by", loaded)
+	_expect(bool(owner_seat.call(&"can_interact", empty_handed)),
+		"The owner seat takes an empty-handed player while a lap is bound for its bay")
+	_expect(not bool(owner_seat.call(&"can_interact", loaded)),
+		"...but not one carrying another box, which would have nowhere to settle")
+	owner_seat.call(&"interact", host)
+	_expect(host.get(&"seat_node_path") == owner_seat.get_parent().get_path(),
+		"The empty-handed player sits at RightSeat3")
+	_expect(_tender(lap_box) == 9 and host.get(&"tended_package") == null,
+		"They do not take the box from the neighbour's lap (got %d)" % _tender(lap_box))
+	_expect(lap_box.get(&"_lap_mount") == mount and bool(lap_box.get(&"is_held")), "The lap box is untouched")
+	mount.call(&"store", lap_box)
+	_expect(_tender(lap_box) == 9,
+		"Shelved by the neighbour, who still faces the mount, it stays theirs (got %d)" % _tender(lap_box))
+	neighbour_two.call(&"release_occupant", 9)
+	_expect(_tender(lap_box) == 1 and host.get(&"tended_package") == lap_box,
+		"The neighbour getting up hands it to the owner seat's sitter (got %d)" % _tender(lap_box))
+	# With no lap reserved and nothing in the bay the old rule stands.
+	host.call(&"leave_seat")
+	lap_box.call(&"release_mount")
+	_expect(not bool(owner_seat.call(&"can_interact", empty_handed)),
+		"An empty bay with no lap still wants a box in hand")
+	for extra: Node in [stander, lapper, empty_handed, loaded]:
+		extra.free()
 
 	courier.free()  # still holding a box that goes with the level
 	_level.queue_free()

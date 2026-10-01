@@ -69,6 +69,29 @@ static func hand_over(package: Node, leaving: int) -> void:
 		player.rpc_id(heir, &"tend_package", package.get_path())
 
 
+## Host: `package` was just placed in `mount` (package_mount_point.gd's store()).
+## A tender whose seat does not look at that mount -- someone standing took the
+## box out of their bay and shelved it elsewhere -- stops tending it, and a
+## sitter facing the new mount takes over. The lap toggle and boarding store
+## into a mount the tender looks at, so nothing changes for them. Not done when
+## the box is taken out (take_by), or putting it back in the same mount would
+## lose its tender.
+static func on_stored(package: Node, mount: Node) -> void:
+	var tender: int = int(package.get(&"tender_peer_id"))
+	if tender <= 0 or not package.is_inside_tree():
+		return
+	var tree: SceneTree = package.get_tree()
+	if _seat_of_peer(tree, tender, mount, null) != null:
+		return
+	package.call(&"set_tender", 0)
+	var seat: Node = _seat_of_peer(tree, tender, null, null, true)
+	if seat != null:
+		var displaced: Node = seat.get(&"occupant")
+		if displaced.has_method(&"tend_package"):
+			displaced.rpc_id(tender, &"tend_package", NodePath())
+	hand_over(package, tender)
+
+
 ## The mount the box sits in or, in a seated passenger's lap, the one it goes
 ## back to.
 static func mount_of(package: Node) -> Node:

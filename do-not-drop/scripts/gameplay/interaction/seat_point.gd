@@ -56,6 +56,12 @@ func _can_board(player: Node) -> bool:
 			return false
 		if is_instance_valid(mount.get(&"occupied_by")):
 			return carried == null
+		# Empty, but a neighbour's lap (LeftSeat3 / CenterSeat) may be riding
+		# a box that will be shelved here: then this seat is just a seat, with
+		# nothing to carry and nothing to take from them. A box of one's own
+		# would have nowhere to settle.
+		if _reserved(mount, carried):
+			return carried == null
 		return carried != null
 	return carried == null
 
@@ -156,6 +162,19 @@ func _reserved(mount: Node, except: Node) -> bool:
 		if package == except or not bool(package.get(&"is_held")) or package.get(&"_lap_mount") != mount:
 			continue
 		var carrier: Variant = package.get(&"carrier")
-		if is_instance_valid(carrier) and not NodePath((carrier as Node).get(&"seat_node_path")).is_empty():
+		if is_instance_valid(carrier) and _is_seated(carrier as Node):
+			return true
+	return false
+
+
+## Whether `player` sits in a seat. The host knows it from the seats' own
+## `occupant`: the player's replicated seat_node_path lags a sitting down or
+## getting up (and stays empty for a crewmate whose RPC never arrived). A
+## client only has the replicated path, which is enough for its prompts.
+func _is_seated(player: Node) -> bool:
+	if not multiplayer.is_server():
+		return not NodePath(player.get(&"seat_node_path")).is_empty()
+	for seat: Node in get_tree().get_nodes_in_group(SeatTending.SEAT_GROUP):
+		if int(seat.call(&"seated_peer")) > 0 and seat.get(&"occupant") == player:
 			return true
 	return false
