@@ -156,6 +156,13 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
   sin peso, malla cerrada, triángulos y morphs dentro del presupuesto, pivote en los pies, y un barrido de
   los extremos de cada morph y de 30 combinaciones al azar sin autointersección.
 
+> Preparación B (2026-10-01): cuerpo aislado,11morphs,20huesos,9clips y
+> LOD4704/1176/794tri generados; evidencia en `art/gel_character/review_bloque_b/`.
+> No reemplaza al jugador activo.10/13 conservan diferencias visuales;12 no está
+> certificado para todo el continuo de morphs;14/15 esperan D/E;16 falla15%UV;
+> 17 necesita el preset Flaca completo de C. Solo se marcarán los ítems realmente
+> verificados con el commit de implementación después de su revisión.
+
 ### C. Proporciones en el juego (19-26)
 
 - [ ] **S-311.19** Recurso `GelBodyProportions` (`scripts/gameplay/player/gel/`): cada parámetro con

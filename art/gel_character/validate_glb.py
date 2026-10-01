@@ -223,14 +223,41 @@ def validate(path, max_triangles=None):
                         "unweighted_vertices": unweighted}}
 
 
+def validate_gel_body(path, lod=0):
+    """Opt-in strict checks; generic validate() deliberately remains unchanged."""
+    from gel_body_validation import check
+    if lod not in (0, 1, 2):
+        raise ValueError("LOD must be 0, 1 or 2")
+    report = validate(path)
+    if report["valid"]:
+        errors, details = check(Asset(path), lod)
+        report["errors"].extend(errors)
+        report["gel_body"] = details
+        report["valid"] = not report["errors"]
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("glb", type=Path)
     parser.add_argument("--max-triangles", type=int, help="Optional geometry budget")
+    parser.add_argument("--gel-body", action="store_true", help="S-311 strict exported body checks")
+    parser.add_argument("--lod", type=int, choices=(0, 1, 2), help="Gel triangle budget (default: infer filename, else LOD0)")
     args = parser.parse_args()
     try:
-        report = validate(args.glb, args.max_triangles)
-    except (OSError, ValueError, KeyError, IndexError, struct.error) as error:
+        if args.gel_body:
+            lod = args.lod
+            if lod is None:
+                lod = next((i for i in (0, 1, 2) if f"lod{i}" in args.glb.stem.lower()), 0)
+            report = validate_gel_body(args.glb, lod)
+            if args.max_triangles is not None and report.get("triangles", 0) > args.max_triangles:
+                report["errors"].append("Additional triangle budget exceeded")
+                report["valid"] = False
+        else:
+            if args.lod is not None:
+                raise ValueError("--lod requires --gel-body")
+            report = validate(args.glb, args.max_triangles)
+    except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError, OverflowError, struct.error) as error:
         report = {"file": str(args.glb), "valid": False, "errors": [str(error)]}
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0 if report["valid"] else 1
