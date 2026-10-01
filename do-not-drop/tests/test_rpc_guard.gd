@@ -21,6 +21,8 @@ extends SceneTree
 ## - EventBus only relays the requests a player can make (a callout, the
 ##   horn), each with its own shape: request() is itself an any_peer RPC.
 ## A function that can't follow a rule goes in EXCEPTIONS with the reason.
+## Tokens only count in code: a `# ...` comment is cut before searching, so a
+## TODO naming RpcGuard can't stand in for the call (N-238).
 
 ## "res://path.gd:function" -> why it can't follow the rules. Empty on purpose:
 ## every any_peer RPC in the project passes today.
@@ -87,6 +89,7 @@ func _run() -> void:
 	for key: String in CRITICAL_RPCS:
 		_expect(found.has(key), "Critical request %s still names an any_peer RPC" % key)
 
+	_check_comments_ignored()
 	_check_ordered_pairs()
 	await _check_event_bus()
 
@@ -195,15 +198,53 @@ func _params(text: String) -> Array[Dictionary]:
 	return params
 
 
-## Every indented or blank line after the signature, up to the next top-level one.
+## Every indented or blank line after the signature, up to the next top-level
+## one, without its comments.
 func _body(lines: PackedStringArray, func_index: int) -> String:
 	var body: PackedStringArray = []
 	for index: int in range(func_index + 1, lines.size()):
 		var line: String = lines[index]
 		if not line.strip_edges().is_empty() and not (line.begins_with("\t") or line.begins_with(" ")):
 			break
-		body.append(line)
+		body.append(_code_only(line))
 	return "\n".join(body)
+
+
+## The line up to its `#` comment; a `#` inside a string literal stays.
+func _code_only(line: String) -> String:
+	var quote: String = ""
+	var index: int = 0
+	while index < line.length():
+		var character: String = line[index]
+		if not quote.is_empty():
+			if character == "\\":
+				index += 1
+			elif character == quote:
+				quote = ""
+		elif character == "\"" or character == "'":
+			quote = character
+		elif character == "#":
+			return line.substr(0, index)
+		index += 1
+	return line
+
+
+## N-238: a check named only in a comment doesn't count, one in code does, and
+## a `#` inside a string doesn't cut the line.
+func _check_comments_ignored() -> void:
+	var commented: PackedStringArray = ["func request(direction: int) -> void:",
+		"\t# N-221: RpcGuard.allow_request(self) when it lands.",
+		"\tif direction != 1: # TODO get_remote_sender_id()",
+		"\t\treturn"]
+	var body: String = _body(commented, 0)
+	_expect(not _has_any(body, BUDGET_CHECKS) and not _has_any(body, SENDER_CHECKS),
+		"A budget or sender check that only appears in a comment doesn't count")
+	var real: PackedStringArray = ["func request(label: String) -> void:",
+		"\tif label == \"#1\" or not RpcGuard.allow_request(self):  # budget",
+		"\t\treturn"]
+	body = _body(real, 0)
+	_expect(_has_any(body, BUDGET_CHECKS) and not body.contains("budget"),
+		"A check in code counts after a '#' inside a string, and its trailing comment is cut")
 
 
 func _functions(path: String) -> Dictionary:
