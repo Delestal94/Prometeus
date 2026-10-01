@@ -69,6 +69,10 @@ const ENGINE_PROFILES: Dictionary = {
 		"ratios": [3.4, 2.1, 1.45, 1.0], "shift_seconds": 0.38, "pitch": 1.0},
 	&"agile": {"idle_rpm": 950.0, "redline_rpm": 5800.0, "shift_up_rpm": 5000.0, "shift_down_rpm": 2100.0,
 		"ratios": [3.2, 2.25, 1.65, 1.25, 1.0], "shift_seconds": 0.16, "pitch": 1.14},
+	# The old manual van (N-114): revs follow the gear the driver picked
+	# (VehicleGearbox.CAP_FRACTIONS, inverted), so each gear sounds its own.
+	&"vintage": {"idle_rpm": 750.0, "redline_rpm": 3900.0, "shift_up_rpm": 3400.0, "shift_down_rpm": 1300.0,
+		"ratios": [3.33, 2.0, 1.43, 1.14, 1.0], "shift_seconds": 0.3, "pitch": 0.9},
 }
 var impact_player: AudioStreamPlayer3D
 var screech_player: AudioStreamPlayer3D
@@ -328,6 +332,15 @@ func _engine_profile() -> Dictionary:
 	return ENGINE_PROFILES.get(StringName(vehicle.get(&"variant_id")), ENGINE_PROFILES[&"classic"])
 
 
+## The gear (0 = first) the driver of a manual van has picked, from the truck's
+## replicated gearbox; -1 when the truck is automatic (or has no gearbox).
+func _manual_gear(gear_count: int) -> int:
+	var gearbox: Object = vehicle.get(&"gearbox")
+	if gearbox == null or not bool(gearbox.get(&"enabled")):
+		return -1
+	return clampi(int(gearbox.get(&"gear")) - 1, 0, gear_count - 1)
+
+
 ## Revs from road speed through the current gear (top gear reaches just under
 ## the shift point at top speed), a flare of revs off the line under load, and
 ## the gearbox: over shift_up_rpm it changes up -- throttle lifted for
@@ -341,8 +354,14 @@ func update_rev_counter(delta: float, speed_kmh: float, load_amount: float) -> v
 	var top_speed: float = maxf(float(vehicle.get(&"maximum_speed_kmh")), 1.0)
 	var per_kmh: float = float(profile.shift_up_rpm) * 0.96 / (top_speed * float(ratios[-1]))
 	engine_gear = clampi(engine_gear, 0, ratios.size() - 1)
+	# A manual van has the driver's gear, not one worked out here: a change of
+	# it is a clutch-in (revs drop to the new gear's) like the automatic's.
+	var manual_gear: int = _manual_gear(ratios.size())
+	if manual_gear >= 0 and manual_gear != engine_gear:
+		engine_gear = manual_gear
+		shift_remaining = float(profile.shift_seconds)
 	var from_road: float = absf(speed_kmh) * per_kmh * float(ratios[engine_gear])
-	if shift_remaining <= 0.0:
+	if manual_gear < 0 and shift_remaining <= 0.0:
 		if from_road > float(profile.shift_up_rpm) and engine_gear < ratios.size() - 1:
 			engine_gear += 1
 			shift_remaining = float(profile.shift_seconds)

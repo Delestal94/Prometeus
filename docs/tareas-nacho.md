@@ -640,6 +640,11 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   registro de `docs/deposito-rediseno.md`; aviso `docs/avisos/2026-09-30-n319-deposito.md`.
 - [ ] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
   primitivas de `DepotKit` (`modelador-blender`, después `constructor-mundo`). Necesita PC.
+  **[x] Modelos hechos (2026-09-30, rama `nacho/N-319-depot-props`)** — 40 GLB `sm_env_depot_*` nuevos en
+  `models/environment/depot/` (grupos `ceiling dispatch bay logistics office cage safety breakroom workshop` del script),
+  más el atlas de 12 pictogramas y la malla de rombos en `assets/textures/depot/`. Lista, tris y pivotes en
+  `docs/inventario-assets.md` y `assets/README.md`. **Falta conectarlos al juego** (reemplazar las cajas de
+  `depot_zones.gd`, `depot_hall.gd` y compañía con `DepotKit.model()`): `constructor-mundo`.
 - [ ] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
   oficio (`constructor-mundo`).
 - [ ] **N-319.4** Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.
@@ -1772,11 +1777,28 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   chico) que ganan puntos propios molestando dentro de límites: bocina, radio, abrir una caja ajena.
 - [ ] Límites duros para que el sabotaje no arruine la partida (enfriamientos, lo que no pueden tocar).
 
-### N-114 · Caja de cambios manual como variante — C · `Opus 5.5 · xhigh` · Aviso: no
+### N-114 · Caja de cambios manual como variante — C · `Opus 5.5 · xhigh` · Aviso: sí (archivos de Slatex y zona compartida, `docs/avisos/2026-09-30-n114-manual-gearbox.md`) · **[x] rama `nacho/N-114-manual-gearbox-v2`**
 
-- [ ] Variante "clásico viejo" a elegir en el depósito, con marchas manuales opcionales y más paga o
+- [x] Variante "clásico viejo" a elegir en el depósito, con marchas manuales opcionales y más paga o
   mérito como compensación.
-- [ ] Los tests de manejo (N-104) de las variantes existentes no cambian.
+- [x] Los tests de manejo (N-104) de las variantes existentes no cambian.
+
+> **Hecho (2026-09-30), rama `nacho/N-114-manual-gearbox-v2`.** Variante `vintage` ("Furgón clásico viejo", 68 km/h,
+> 1000 kg) que se desbloquea con 6 entregas y 550 puntos (`vintage_van`) y se elige en el taller como las otras. Caja
+> manual de 5 marchas en un componente aparte, `vehicle_gearbox.gd` (nodo `Gearbox` del camión): cada marcha tira hasta su
+> tope (30/50/70/88/100 % de la velocidad máxima) y ahí corta, las bajas tiran más fuerte, una marcha alta a paso de hombre
+> "arrastra" (nunca se cala), cambiar toma 0,3 s con el embrague adentro (sin tracción) y una reducción a destiempo frena con
+> el motor. La marcha de atrás no es una marcha (frenar parado retrocede). El host manda: el conductor pide subir o bajar con
+> el RPC confiable `request_gear_shift` (solo cuenta el conductor actual) y `Gearbox:gear` se replica; `PROTOCOL_VERSION`
+> 12. Acciones `drive_shift_up/down` (flechas arriba/abajo, bumpers del mando), reasignables en Opciones. Se ve: "MARCHA n" bajo
+> la velocidad del HUD (rojo con "¡SUBÍ!" en el tope de la marcha) y el motor suena distinto por marcha (el contador de
+> revoluciones de `vehicle_presentation.gd` sigue la marcha elegida, con el embrague al cambiar). Compensación: el pago del equipo x1,25
+> (`pay_multiplier` en `results`, línea "(incluye +$N del furgón viejo)"), el puntaje no cambia. El clásico y el ágil no
+> cambian (caja automática, `drive_multiplier` 1.0). Tests: `test_manual_gearbox` (nuevo).
+> Tras la auditoría de red y la revisión visual: un cambio que llega con el embrague adentro espera en una cola de un lugar
+> (no se pierde); el RPC exige dirección +1/-1 y deja el lugar para `RpcGuard` (N-221); la marcha se dibuja al instante
+> (`gear_changed`); el multiplicador de pago sale solo de `Vehicle.VARIANTS`; el furgón viejo tiene carrocería crema,
+> cromados (paragolpes y ópticas) y "¡SUBÍ!" grande y titilante; las flechas se muestran como "↑ ↓".
 
 ### N-907 · Friend Pass y demo separada — C · `Opus 5.5 · medium` · Aviso: no · **⏸ Pospuesta (iteración de lanzamiento)**
 

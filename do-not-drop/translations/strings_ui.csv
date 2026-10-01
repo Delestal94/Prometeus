@@ -452,13 +452,13 @@ UI_OPT_BIND_PING,Ping,Ping
 UI_OPT_BIND_SPRINT,Correr,Sprint
 UI_OPT_BIND_USE_CARD,Usar carta,Use card
 UI_OPT_COLORBLIND,Paleta para daltonismo,Colorblind palette
-UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
-Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out
+UI_OPT_CONTROLS_KEYS,A pie: WASD caminar  ·  Shift correr  ·  Mouse mirar  ·  E interactuar  ·  Espacio saltar  ·  Q soltar\nManejando: W/S acelerar y frenar  ·  A/D girar  ·  Espacio freno de mano  ·  H bocina  ·  E bajarte  ·  Flechas arriba/abajo marchas (furgón viejo)\nPasajero: Click izq. (mantener) cuidar el paquete  ·  WASD secuencias\nF celular  ·  Click sacar foto  ·  Click rueda ping  ·  G usar carta  ·  C centrar vista\nEsc pausa  ·  mantener R reiniciar  ·  F11 pantalla completa  ·  mantener Tab tripulación (depósito),"On foot: WASD walk  ·  Shift run  ·  Mouse look  ·  E interact  ·  Space jump  ·  Q drop
+Driving: W/S accelerate and brake  ·  A/D steer  ·  Space handbrake  ·  H horn  ·  E get out  ·  Up/Down arrows gears (old van)
 Passenger: Left click (hold) tend the package  ·  WASD sequences
 F phone  ·  Click take photo  ·  Wheel click ping  ·  G use card  ·  C centre view
 Esc pause  ·  hold R restart  ·  F11 full screen  ·  hold Tab crew (depot)"
-UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  clic stick izq. correr  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener Back tripulación (depósito),"On foot: L-stick walk  ·  L-stick click run  ·  R-stick look  ·  A interact  ·  X jump
-Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out
+UI_OPT_CONTROLS_PAD,A pie: stick izq. caminar  ·  clic stick izq. correr  ·  stick der. mirar  ·  A interactuar  ·  X saltar\nManejando: RT acelerar  ·  LT frenar  ·  X freno de mano  ·  B bocina  ·  A bajarte  ·  RB/LB marchas (furgón viejo)\nPasajero: RT (mantener) cuidar el paquete  ·  stick izq. secuencias\nLB celular  ·  RB sacar foto  ·  D-pad arriba ping  ·  D-pad izquierda usar carta\nClic stick der. centrar vista  ·  Start pausa  ·  mantener Y reiniciar  ·  mantener Back tripulación (depósito),"On foot: L-stick walk  ·  L-stick click run  ·  R-stick look  ·  A interact  ·  X jump
+Driving: RT accelerate  ·  LT brake  ·  X handbrake  ·  B horn  ·  A get out  ·  RB/LB gears (old van)
 Passenger: RT (hold) tend the package  ·  L-stick sequences
 LB phone  ·  RB take photo  ·  D-pad up ping  ·  D-pad left use card
 R-stick click centre view  ·  Start pause  ·  hold Y restart  ·  hold Back crew (depot)"
@@ -1056,3 +1056,11 @@ HUD_NEWS_CONTINUE,Ver resultados,See results
 UI_COSM_NICKNAME,Apodo,Nickname
 UI_COSM_NICKNAME_HINT,Así te nombra el diario del día siguiente. Hasta 16 letras.,What the next-day newspaper calls you. Up to 16 characters.
 UI_COSM_NICKNAME_PLACEHOLDER,Vacío: te ponemos uno gracioso,Empty: we pick a funny one
+UI_TRUCK_VINTAGE,Furgón clásico viejo,Old classic van
+UI_TRUCK_MANUAL,marchas manuales y pago +25 %,manual gears and +25% pay
+UI_UNLOCK_VINTAGE_VAN,Furgón clásico viejo,Old classic van
+UI_OPT_BIND_SHIFT_UP,Subir marcha (furgón viejo),Shift up (old van)
+UI_OPT_BIND_SHIFT_DOWN,Bajar marcha (furgón viejo),Shift down (old van)
+HUD_GEAR,MARCHA %s,GEAR %s
+HUD_GEAR_SHIFT_UP,¡SUBÍ! [%s],SHIFT UP! [%s]
+HUD_RESULT_PAY_BONUS,"  (incluye +$%d del furgón viejo)","  (includes +$%d from the old van)"

@@ -173,7 +173,8 @@ func _build() -> void:
 	UiTheme.tag(column, tr("UI_OPT_CONTROLS_TITLE"), UiTheme.MINT, -1.5, 15)
 	_controls_label = UiTheme.label(column, "", 14, UiTheme.MUTED)
 	_refresh_controls()
-	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")], [&"sprint", tr("UI_OPT_BIND_SPRINT")]]:
+	for pair: Array in [[&"interact", tr("UI_OPT_BIND_INTERACT")], [&"ui_ping", tr("UI_OPT_BIND_PING")], [&"drive_horn", tr("UI_OPT_BIND_HORN")], [&"look_back", tr("UI_OPT_BIND_LOOK_BACK")], [&"use_card", tr("UI_OPT_BIND_USE_CARD")], [&"sprint", tr("UI_OPT_BIND_SPRINT")],
+			[&"drive_shift_up", tr("UI_OPT_BIND_SHIFT_UP")], [&"drive_shift_down", tr("UI_OPT_BIND_SHIFT_DOWN")]]:
 		var row := HBoxContainer.new()
 		column.add_child(row)
 		UiTheme.label(row, String(pair[1]), 16, UiTheme.INK).size_flags_horizontal = Control.SIZE_EXPAND_FILL

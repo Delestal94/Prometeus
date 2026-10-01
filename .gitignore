@@ -23,6 +23,10 @@ export_presets.cfg
 # importer output, the source lives in art/cargo/ (N-315).
 do-not-drop/assets/models/cargo/*_tx_*.png
 do-not-drop/assets/models/cargo/*_tx_*.png.import
+# Same for the depot kit's cage mesh and pictogram atlas (source in
+# assets/textures/depot/, drawn by build_depot_props.py, N-319.2).
+do-not-drop/assets/models/environment/depot/*_tx_*.png
+do-not-drop/assets/models/environment/depot/*_tx_*.png.import
 
 # Mono/C# specific
 .mono/
