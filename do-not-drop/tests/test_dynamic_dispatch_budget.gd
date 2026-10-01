@@ -43,6 +43,8 @@ extends SceneTree
 ##   the crew's money and the incident relay stay by name.
 ## - package_contents_view.gd (the box's flaps and contents) holds its box as DeliveryPackage and the
 ##   contents as PackageContent; only the EventBus connects stay by name.
+## - seat_point.gd (the cargo seats) holds the player as Player, the boxes as DeliveryPackage and the mounts
+##   by preload; nothing stays by name.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -191,6 +193,11 @@ const BUDGETS: Dictionary = {
 	# handle: it connects by name because a test may replace EventBus with a plain Node, as in
 	# package_feedback.gd.
 	"res://scripts/gameplay/package/package_contents_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The cargo seats (N-224.4) are typed: the player is a Player, the boxes DeliveryPackage and the mounts
+	# package_mount_point.gd by preload (no class name). Nothing left by name. What the tests stand in
+	# (LateJoinSeating as a "player" that carries nothing, Node3D mounts without the script) is not asked
+	# by name: `as` drops it and it reads as carrying nothing / holding nothing.
+	"res://scripts/gameplay/interaction/seat_point.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
