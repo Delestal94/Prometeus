@@ -2578,7 +2578,7 @@ antes de empezar.
     caja (solo la malla) y consejo "Correr con la caja la sacude" (`tutorial_catalog.gd`). Números en
     `docs/parametros-diseno.md`; diseño en `docs/jugabilidad-paquetes-rescate.md`. El cacareo de la gallina del
     Ruidoso al correr no se hizo (solo se agita); la caja cruje con el sonido de madera de siempre.
-- [ ] **N-115.3** Clip `Run` nuevo en `art/rounded_character/animation_library.py` (zancada con fase de
+- [x] **N-115.3** Clip `Run` nuevo en `art/rounded_character/animation_library.py` (zancada con fase de
   vuelo, brazos más abiertos) y elegido por `PlayerAnimator` por velocidad, con la misma histéresis que
   Walk/Stroll. En primera persona: balanceo más marcado y el FOV se abre un poco (+4°, suavizado).
   Pasos más rápidos en el sonido.
@@ -2586,8 +2586,13 @@ antes de empezar.
     bajo 4,0) y, si la librería no lo tiene, reproduce Walk acelerado (`RUN_FALLBACK_MAX_SCALE` 1,9); primera
     persona con FOV +4° suavizado y balanceo x 2,6; pisadas nuevas (`synth_audio_steps.gd`, `FOOTSTEP_DB` en
     `world_mix.gd`) al ritmo de la carrera. Hoy no había pisadas de ningún tipo: solo suenan corriendo.
-  - [ ] **Clip `Run` en Blender — necesita PC** (`art/rounded_character/animation_library.py` + reexportar el
-    glb): hasta entonces se ve Walk acelerado. Captura del clip con `revisor-visual`.
+  - [x] **Clip `Run` en Blender** (`art/rounded_character/animation_library.py` + reexportar el glb). Hecho
+    (rama `nacho/N-115-run-clip`): `GAITS['Run']`, 0,33 s en loop a 6 m/s, 6 pasos/s de 1 m (un ciclo = 2 m = una
+    pisada sonora), vuelo de ~0,09 s, torso inclinado, rebote marcado, brazos abiertos con más recorrido;
+    `check_clearance` 52 (Walk 58). `PlayerAnimator` lo encuentra (sin respaldo) y su escala baja hasta 4/6 para
+    que no patine al salir. Tests: `test_player_sprint`, `test_character_motion`. Aviso
+    `docs/avisos/2026-10-01-n115-run-clip.md`.
+  - [ ] Captura del clip con `revisor-visual` (en juego). Revisado en Blender con renders laterales y de ¾.
 - [x] **N-115.4** Red: el estado de carrera viaja como `anim_state` (el dueño lo decide, los demás solo
   reproducen el clip).
   Hecho: `anim_state` = `Run` + `locomotion_speed` (ya replicados); los otros pares cuentan las pisadas y el

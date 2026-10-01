@@ -29,6 +29,7 @@ y termina en el primer cuadro de `Idle`.
 | --- | --- | --- |
 | `Idle` | 6 s, loop | Dos respiraciones, un cambio de peso lento entre pies, mirada que acompaña; los brazos pendulan detrás de la cadera. |
 | `Walk` | 0,33 s, loop | Trote corto y rápido (6 pasos/s, 0,6 m por paso) a 3,6 m/s, con fase de vuelo, balanceo de pato, barriga que rebota con retraso, brazos que bombean y se abren al pasar junto a la panza. |
+| `Run` | 0,33 s, loop | Carrera a 6 m/s (N-115): los mismos 6 pasos/s que `Walk` pero de 1 m, apoyo corto (22 % del ciclo) y ~0,09 s con los dos pies en el aire tras cada impulso, rodilla y talón más altos, torso inclinado 13°, rebote de 0,15 BU, brazos más abiertos (`GAIT_ARMS['sprint']`) con 44° de recorrido. Mismo largo y mismo pie inicial que `Walk`: el cambio conserva la fase. `check_clearance`: 52. |
 | `Stroll` | 0,6 s, loop | Caminata real a 1,5 m/s: doble apoyo, taco primero, cadera en péndulo invertido. Para el stick a medias. |
 | `Jump` | 1,6 s | Brazos que vienen desde atrás y abajo (el impulso), "Y" de festejo arriba con piernas recogidas, aleteo cómico al caer, piernas que buscan el piso. Al tocar: aplastamiento que sigue la velocidad de caída, cabeza y barriga que siguen de largo, brazos que bajan tarde. Parpadeo de impacto. |
 | `PickUpPackage` | 1,6 s | Los ojos van primero, mini subida antes de bajar, sentadilla con cola atrás (no se dobla de cintura), abrazo a la caja, subida con las piernas y leve esfuerzo hacia atrás, asentamiento. Tiempos iguales a los de la caja en `player.gd`. |

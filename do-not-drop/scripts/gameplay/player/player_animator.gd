@@ -21,12 +21,15 @@ const STROLL_BELOW: float = 2.2
 const WALK_ABOVE: float = 2.6
 ## Run (N-115): the owner switches Walk -> Run above RUN_ABOVE and back under
 ## RUN_BELOW, so a pace held near the boundary doesn't flicker. The jog with a
-## Growing weight box (4.2 m/s) stays a fast Walk. Without a "Run" clip in the
-## character's library (the Blender one needs the PC), Walk plays faster instead,
-## up to RUN_FALLBACK_MAX_SCALE.
+## Growing weight box (4.2 m/s) stays a fast Walk. The rounded character's Run
+## (animation_library.py) is authored at RUN_AUTHORED_SPEED: 6 steps/s of 1 m.
+## Its playback scale spans RUN_BELOW..RUN_AUTHORED_SPEED*1.3 so the planted foot
+## keeps pace down to the switch back to Walk. Without a "Run" clip in the
+## library (another model), Walk plays faster instead, up to RUN_FALLBACK_MAX_SCALE.
 const RUN_AUTHORED_SPEED: float = 6.0
 const RUN_ABOVE: float = 4.6
 const RUN_BELOW: float = 4.0
+const RUN_MIN_SCALE: float = RUN_BELOW / RUN_AUTHORED_SPEED
 const RUN_FALLBACK_MAX_SCALE: float = 1.9
 ## Pickup blends between PickUpPackage and PickUpHigh, baked once per step.
 const PICKUP_BLEND_STEPS: int = 8
@@ -196,7 +199,7 @@ func animate() -> void:
 			_face.call(&"blink")
 		_seen_jump_time = _player.jump_anim_time
 	elif clip == Player.ANIM_RUN:
-		anim_player.speed_scale = clampf(_player.locomotion_speed / RUN_AUTHORED_SPEED, 0.7, 1.3)
+		anim_player.speed_scale = clampf(_player.locomotion_speed / RUN_AUTHORED_SPEED, RUN_MIN_SCALE, 1.3)
 	elif clip == Player.ANIM_WALK:
 		anim_player.speed_scale = clampf(_player.locomotion_speed / WALK_AUTHORED_SPEED, 0.5,
 				RUN_FALLBACK_MAX_SCALE if run_fallback else 1.5)
