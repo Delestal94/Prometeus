@@ -321,7 +321,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 
 ---
 
-### N-908 · Quien entra tarde no sabe qué cajas llevan los demás — B · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package_handling.gd`, `seat_tending.gd`, dominio de Slatex)
+### N-908 · Quien entra tarde no sabe qué cajas llevan los demás — B · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package_handling.gd`, `seat_tending.gd`, dominio de Slatex) · **[x] rama `nacho/N-908-late-join-carry`**
 Origen: mantenimiento 2026-10-01. `carried_package` solo viaja en el broadcast `player.rpc(&"pick_up")` al levantar
 (`scripts/gameplay/package/package_handling.gd:61`, `scripts/gameplay/player/player.gd:302-305`). En el cliente que entra
 tarde `SeatTending._holder_of()` (`scripts/gameplay/interaction/seat_tending.gd:188-196`) da null, así que
@@ -329,12 +329,19 @@ tarde `SeatTending._holder_of()` (`scripts/gameplay/interaction/seat_tending.gd:
 bahías libres que el host tiene reservados; además ve a los compañeros sin pose de carga. Hecho cuando un test en
 `test_late_join_seating.gd` (o el de seat tending) cubre la vista cliente con una caja en el regazo (`lap_reserves`
 true) y el reenvío del host a un peer nuevo.
-- [ ] **N-908.1** En el host, `Player._on_peer_level_ready`, tras `sync.update_visibility(peer_id)`: `if
+- [x] ~~**N-908.1** En el host, `Player._on_peer_level_ready`, tras `sync.update_visibility(peer_id)`: `if
   is_instance_valid(carried_package): rpc_id(peer_id, &"pick_up", carried_package.get_path())`. Respaldo:
   `_holder_of` en el cliente busca al jugador con autoridad = `package.tender_peer_id` cuando `is_held`. Con
-  `constructor-red` y después `auditor-red`; tests `late_join`, `seat_tending`.
-- [ ] **N-908.2** Test de vista cliente con caja en regazo y de reenvío de `pick_up` a un peer nuevo. Con
-  `escritor-tests`; tests `late_join`.
+  `constructor-red` y después `auditor-red`; tests `late_join`, `seat_tending`.~~
+- [x] ~~**N-908.2** Test de vista cliente con caja en regazo y de reenvío de `pick_up` a un peer nuevo. Con
+  `escritor-tests`; tests `late_join`.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-908-late-join-carry`)** — `player_net_visibility.gd` `refresh_peer()`: el host,
+  tras `update_visibility(peer_id)`, reenvía `pick_up` a ese peer solo si el jugador tiene caja (mismo RPC, canal 0
+  confiable, después del spawn). `seat_tending.gd` `_holder_of()`: respaldo por `tender_peer_id` solo con `is_held` y
+  `lap_mount_path`. Sin RPC nuevo: `PROTOCOL_VERSION` igual. `test_late_join_seating` (fase "late carry") y etapa nueva
+  en `net_pair.gd`. `auditor-red`: sin BUG ni riesgo alto; quedan riesgos bajos (respaldo con el tender que ya lleva otra
+  caja, reenvío desde un jugador ya en `queue_free`, el test no mira el orden spawn → RPC, trío con un tercero tarde).
+  Aviso `docs/avisos/2026-10-01-n908-caja-en-mano-al-entrar-tarde.md`.
 
 ### N-909 · El plan de animales de carga es siempre el mismo — B · `Opus 5.5 · medium` · Aviso: no
 Origen: mantenimiento 2026-10-01. `cargo_animals.gd:493` (y 250, 379, 417; `_world_seed()` en 522) usa

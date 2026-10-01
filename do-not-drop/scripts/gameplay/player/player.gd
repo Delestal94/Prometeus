@@ -278,7 +278,7 @@ func _ready() -> void:
 	_probe.area_exited.connect(_interaction_component.on_probe_exited)
 
 
-## The callable the NetworkManager signal is connected to (player_net_visibility.gd).
+## The callable the NetworkManager signal is connected to (player_net_visibility.gd; re-sends pick_up, N-908).
 func _on_peer_level_ready(peer_id: int) -> void:
 	NetVisibility.refresh_peer(self, peer_id)
 
