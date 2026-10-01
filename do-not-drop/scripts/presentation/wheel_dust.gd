@@ -15,7 +15,7 @@ extends Node
 ##
 ## The look (receta del humo de escape, vehicle_effects.gd, but with a soft quad):
 ## a camera-facing quad with a procedural radial gradient (no texture file) that
-## grows 0.5 -> 2.5 and fades from alpha 0.38 to 0, unshaded, no shadow, in a
+## grows 0.5 -> 2.5 and fades from alpha 0.8 to 0, unshaded, no shadow, in a
 ## pale desaturated tone of the terrain's gravel (route_terrain.gdshader). A
 ## sphere's low-poly silhouette showed as a hard octagon in the first attempt.
 ##
@@ -26,18 +26,26 @@ extends Node
 ## Created by VehiclePresentation, which owns the vehicle.
 
 const SAMPLE_SECONDS: float = 0.2
-## Pale and desaturated next to the gravel's (0.48, 0.415, 0.30): it must read
-## as the same ground, lifted into the air, not as orange smoke.
-const DUST_COLOR := Color(0.66, 0.6, 0.5)
+## Lighter and less saturated than the gravel's (0.48, 0.415, 0.30): it has to
+## stand out against that ground (the first, darker tone vanished into it) and
+## still read as the same earth lifted into the air, not as orange smoke.
+const DUST_COLOR := Color(0.88, 0.83, 0.72)
 ## Dust is unshaded, so it is dimmed with the light: DAY, DUSK, NIGHT
 ## (WorldMood.TimeOfDay), like WorldMood.horizon_light() for far scenery.
 const LIGHT_BY_TIME: Array[float] = [1.0, 0.75, 0.35]
+## And thinner in the dark, so at night it reads as a faint haze, not a brown stain.
+const ALPHA_BY_TIME: Array[float] = [1.0, 0.9, 0.75]
 const FOG_WETNESS: float = 0.35
+## Share of the truck's own speed the puffs keep: the trail stays dense near the
+## truck instead of being left one puff per metre.
+const INHERIT_VELOCITY: float = 0.35
+## Fewest puffs shown when the dust is on at all: a thin trail is still a trail.
+const MIN_AMOUNT_RATIO: float = 0.6
 ## Roughness of the verge (0.25) lands at 0.4 of the full trail.
 const ROUGHNESS_TO_DUST: float = 1.6
 const CAMERA_CLEARANCE: float = 1.5
-const PUFFS_PER_WHEEL: int = 12
-const PUFF_LIFETIME: float = 1.1
+const PUFFS_PER_WHEEL: int = 32
+const PUFF_LIFETIME: float = 1.2
 
 @export var min_speed_kmh: float = 6.0
 
@@ -99,7 +107,7 @@ func update(delta: float) -> void:
 		var near_camera: bool = camera != null \
 				and camera.global_position.distance_to(particles.global_position) < CAMERA_CLEARANCE
 		particles.emitting = intensity > 0.05 and not near_camera
-		particles.amount_ratio = clampf(lerpf(0.3, 1.0, intensity), 0.1, 1.0)
+		particles.amount_ratio = clampf(lerpf(MIN_AMOUNT_RATIO, 1.0, intensity), 0.1, 1.0)
 
 
 ## Asks the route about the ground under each rear wheel and reads the mood.
@@ -115,7 +123,8 @@ func sample_now() -> void:
 	var time_of_day: int = int(WorldMood.active.get("time", WorldMood.TimeOfDay.DAY))
 	time_of_day = clampi(time_of_day, 0, LIGHT_BY_TIME.size() - 1)
 	var light: float = LIGHT_BY_TIME[time_of_day]
-	_material.color = Color(DUST_COLOR.r * light, DUST_COLOR.g * light, DUST_COLOR.b * light, 1.0)
+	_material.color = Color(DUST_COLOR.r * light, DUST_COLOR.g * light, DUST_COLOR.b * light,
+			ALPHA_BY_TIME[time_of_day])
 
 
 func _build() -> void:
@@ -123,11 +132,14 @@ func _build() -> void:
 	# Behind the truck (+Z is the rear; the emitter's axes are the body's) and a
 	# little up, slow: the cloud is left behind in the world as the truck moves
 	# on, and must not climb into the cargo box's view.
-	_material.direction = Vector3(0.0, 0.3, 1.0)
-	_material.spread = 18.0
-	_material.initial_velocity_min = 0.4
-	_material.initial_velocity_max = 0.9
-	_material.gravity = Vector3(0.0, 0.12, 0.0)
+	_material.direction = Vector3(0.0, 0.5, 1.0)
+	_material.spread = 40.0
+	_material.initial_velocity_min = 0.5
+	_material.initial_velocity_max = 1.4
+	_material.inherit_velocity_ratio = INHERIT_VELOCITY
+	_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	_material.emission_box_extents = Vector3(0.5, 0.1, 0.25)
+	_material.gravity = Vector3(0.0, 0.25, 0.0)
 	_material.damping_min = 0.5
 	_material.damping_max = 1.0
 	_material.scale_min = 0.8
@@ -145,12 +157,12 @@ func _build() -> void:
 	# A little denser at birth, then gone quickly: never a solid ball.
 	var fade := Gradient.new()
 	fade.offsets = PackedFloat32Array([0.0, 0.25, 1.0])
-	fade.colors = PackedColorArray([Color(1, 1, 1, 0.38), Color(1, 1, 1, 0.3), Color(1, 1, 1, 0.0)])
+	fade.colors = PackedColorArray([Color(1, 1, 1, 0.8), Color(1, 1, 1, 0.7), Color(1, 1, 1, 0.0)])
 	var fade_texture := GradientTexture1D.new()
 	fade_texture.gradient = fade
 	_material.color_ramp = fade_texture
 	var puff := QuadMesh.new()
-	puff.size = Vector2(0.6, 0.6)
+	puff.size = Vector2(1.3, 1.3)
 	puff.material = _puff_material()
 	for wheel: VehicleWheel3D in _wheels:
 		var particles := GPUParticles3D.new()
@@ -161,8 +173,10 @@ func _build() -> void:
 		particles.process_material = _material
 		particles.draw_pass_1 = puff
 		particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		# Behind the tyre and just above the ground it touches.
-		particles.position = wheel.position + Vector3(0.0, 0.25 - wheel.wheel_radius, wheel.wheel_radius + 0.15)
+		# Behind the tyre and 0.75 m above the ground it touches: lower, the quads are
+		# cut by the terrain and the cloud looks sliced.
+		particles.position = wheel.position \
+				+ Vector3(0.0, 0.75 - wheel.wheel_radius, wheel.wheel_radius + 0.15)
 		# The cloud stays where it was born: the truck leaves it up to ~25 m behind.
 		particles.visibility_aabb = AABB(Vector3(-3.0, -1.0, -1.0), Vector3(6.0, 4.0, 28.0))
 		vehicle.add_child.call_deferred(particles)

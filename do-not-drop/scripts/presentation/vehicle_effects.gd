@@ -80,6 +80,7 @@ func _try_build_exhaust() -> void:
 	material.scale_min = 0.6
 	material.scale_max = 1.0
 	var grow := Curve.new()
+	grow.max_value = 3.5  # A Curve clamps its points to 0..1 unless told otherwise.
 	grow.add_point(Vector2(0.0, 0.5))
 	grow.add_point(Vector2(1.0, 3.2))
 	var grow_texture := CurveTexture.new()

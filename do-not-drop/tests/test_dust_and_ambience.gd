@@ -7,7 +7,7 @@ extends SceneTree
 ##   asphalt, full on gravel, thin on the verge, none in rain, none when the
 ##   viewer's camera is within CAMERA_CLEARANCE, dimmed at night;
 ## - the look: a quad (not a cube), unshaded, alpha-blended, no shadow, a colour
-##   ramp that ends at alpha 0, a growing scale curve, 0.9-1.2 s of life.
+##   ramp that ends at alpha 0, a growing scale curve, 0.9-1.2 s of life, at most 32 puffs a wheel.
 
 const WheelDust = preload("res://scripts/presentation/wheel_dust.gd")
 
@@ -184,12 +184,13 @@ func _check_look(particles: GPUParticles3D) -> void:
 	_expect(particles.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "The dust casts no shadow")
 	_expect(particles.lifetime >= 0.9 and particles.lifetime <= 1.2, "Lives 0.9-1.2 s (%.2f)" % particles.lifetime)
 	_expect(not particles.one_shot, "A continuous trail, not a burst")
+	_expect(particles.amount <= 32, "Cheap: at most 32 puffs a wheel (%d)" % particles.amount)
 	var material := particles.process_material as ParticleProcessMaterial
 	_expect(material.direction.z > 0.5, "The dust goes backwards (+Z is the rear)")
 	var ramp: Gradient = (material.color_ramp as GradientTexture1D).gradient
 	var last: int = ramp.get_point_count() - 1
 	_expect(ramp.get_color(last).a == 0.0, "The colour ramp ends at alpha 0")
-	_expect(ramp.get_color(0).a > 0.0 and ramp.get_color(0).a <= 0.45,
+	_expect(ramp.get_color(0).a > 0.0 and ramp.get_color(0).a <= 0.85,
 			"It starts light, never opaque (alpha %.2f)" % ramp.get_color(0).a)
 	var grow: Curve = (material.scale_curve as CurveTexture).curve
 	_expect(grow.sample(1.0) > grow.sample(0.0) * 3.0, "The puff grows as it fades")
