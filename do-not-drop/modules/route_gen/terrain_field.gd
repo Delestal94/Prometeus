@@ -443,6 +443,20 @@ func height_without_rivers(p: Vector3) -> float:
 	return d + (c - d) * (1.0 - f.x) + (b - d) * (1.0 - f.y)
 
 
+## Worker threads a sliced build may take: all but one. Jolt runs its physics
+## jobs on the same WorkerThreadPool and only frees each one once a pool thread
+## has run it; a group holding every thread for a second or more runs its fixed
+## pool of jobs dry ("Jolt Physics job system exceeded the maximum number of
+## jobs") and the physics step then spins on the main thread until the group
+## ends (N-917).
+static func worker_tasks() -> int:
+	var pool: int = OS.get_processor_count()
+	var max_threads: int = int(ProjectSettings.get_setting("threading/worker_pool/max_threads", -1))
+	if max_threads > 0:
+		pool = mini(pool, max_threads)
+	return maxi(1, pool - 1)
+
+
 ## Builds the whole terrain now, on the calling thread (tests, tools).
 func build() -> void:
 	_begin_build()
@@ -469,7 +483,10 @@ func build_async(slicer: FrameSlicer) -> void:
 	if not keys.is_empty():
 		# High priority: a low-priority task still pending when the game quits
 		# deadlocks the pool (4.7.2, see SynthAudio's warm task).
-		_build_group = WorkerThreadPool.add_group_task(_compute_tile_job, keys.size(), -1, true, "TerrainField.tiles")
+		var tasks: int = worker_tasks()
+		_build_group = WorkerThreadPool.add_group_task(
+			_compute_tile_job, keys.size(), tasks, true, "TerrainField.tiles"
+		)
 		while not WorkerThreadPool.is_group_task_completed(_build_group):
 			var done: int = WorkerThreadPool.get_group_processed_element_count(_build_group)
 			build_progress = 0.6 * float(done) / float(keys.size())
@@ -775,7 +792,10 @@ func conform_all(roots: Array[Node], slicer: FrameSlicer) -> void:
 	_conform_jobs = jobs
 	if not jobs.is_empty():
 		_workers_reading = true
-		_conform_group = WorkerThreadPool.add_group_task(_conform_task, jobs.size(), -1, true, "TerrainField.conform")
+		var tasks: int = worker_tasks()
+		_conform_group = WorkerThreadPool.add_group_task(
+			_conform_task, jobs.size(), tasks, true, "TerrainField.conform"
+		)
 		while not WorkerThreadPool.is_group_task_completed(_conform_group):
 			var done: int = WorkerThreadPool.get_group_processed_element_count(_conform_group)
 			conform_progress = 0.2 + 0.6 * float(done) / float(jobs.size())

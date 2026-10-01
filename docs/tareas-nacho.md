@@ -9,7 +9,7 @@
 
 ## QA — bugs abiertos
 
-### N-917 · Aviso de Jolt "exceeded the maximum number of jobs" al cargar la entrega — C · `Opus 5.5 · medium` · Aviso: no
+### N-917 · Aviso de Jolt "exceeded the maximum number of jobs" al cargar la entrega — C · `Opus 5.5 · medium` · Aviso: sí (`modules/route_gen/`, zona compartida) · **[x] rama `nacho/N-917-jolt-jobs`**
 Origen: QA 2026-10-01. Escenario: `godot --path do-not-drop -- --autostart --mood=nublado_dia` (o cualquier clima), o
 entrar a la entrega desde el menú; la consola muestra una vez `WARNING: Jolt Physics job system exceeded the maximum
 number of jobs. This should not happen. Please report this.` No se repite cada frame ni rompe nada; no aparecía en la
@@ -18,6 +18,15 @@ precalentado de shaders (#205, N-409), que agregan muchos cuerpos o colisiones e
 (confirmar qué PR y qué paso de la carga) y `constructor-mundo`. Hecho cuando: el escenario de QA pasa sin el aviso
 (repartir la creación de cuerpos en más frames, o ajustar los límites de Jolt en `project.godot` si corresponde) y hay
 un test que carga la entrega y falla con ese aviso (un `Logger` que cuente warnings de Jolt).
+  **[x] Hecho (2026-10-01, rama `nacho/N-917-jolt-jobs`)** — con `cazador-bugs`: no era #195 ni #205 sino #191
+  (`4140b19`, N-408): `TerrainField.build_async()` y `conform_all()` (`modules/route_gen/terrain_field.gd`) lanzaban
+  su `add_group_task` con `tasks_needed = -1` y prioridad alta, que ocupa todo el `WorkerThreadPool` 1,5–3 s. Jolt
+  corre sus jobs en ese pool y solo los libera cuando un hilo los ejecuta: se acumulaban ~24 por paso hasta agotar
+  los 2048 fijos, y el paso de física esperaba en el hilo principal (cuadros de 0,4–1,8 s bajo la pantalla de
+  carga; aparecía ~3 de cada 4 corridas). Los límites de Jolt de `project.godot` no influyen (el tope es de
+  compilación). Arreglo: los dos grupos usan `TerrainField.worker_tasks()` = núcleos − 1 (mínimo 1). Test
+  `test_jolt_job_budget` (un `Logger` cuenta el aviso durante una ruta por rebanadas con un cuerpo despierto, y
+  `worker_tasks()` deja un hilo libre). Aviso `docs/avisos/2026-10-01-n917-terreno-deja-hilo-a-jolt.md`.
 
 
 ### S-908 · Nodos huérfanos de `package_salvage.gd` al liberar el nivel (heredada de Slatex) — B · `Opus 5.5 · medium` · Aviso: sí (`scripts/gameplay/package/package_salvage.gd`) · **[x] rama `nacho/S-908-salvage-orphans`**
