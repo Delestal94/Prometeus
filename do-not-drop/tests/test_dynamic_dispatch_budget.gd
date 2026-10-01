@@ -18,10 +18,11 @@ extends SceneTree
 ##   script loaded from its path: each must be the script its autoload runs, or
 ##   `as <handle>` would give null and the depot would stop seeing the
 ##   network (host, seed), the crew's money and supplies, and the unlocks;
-## - package.gd (the box) reaches the network through package_autoloads.gd as
-##   a NetSession (the class NetworkManager extends): the NetworkManager
-##   autoload must be one, or `as NetSession` would give null and the box would
-##   stop seeing the network (its visibility filter, the hand-over).
+## - package.gd (the box) and package_rescue.gd (its care simulation) reach the
+##   network through package_autoloads.gd as a NetSession (the class
+##   NetworkManager extends): the NetworkManager autoload must be one, or
+##   `as NetSession` would give null and the box would stop seeing the network
+##   (its visibility filter, the hand-over, the seed its trap rolls from).
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -60,6 +61,19 @@ const BUDGETS: Dictionary = {
 	# The box's autoload lookups, null-safe: NetworkManager (typed NetSession),
 	# RunManager, CrewProgression and RouteEventManager.
 	"res://scripts/gameplay/package/package_autoloads.gd": {"call": 0, "callv": 0, "get": 0, "root": 4},
+	# The rescue (host care simulation) is typed like the box: the trap (ITrapBehavior,
+	# TrapDefinition, ExplosiveTrapBehavior for the defused flag), the player's seat
+	# on the carrier (Player), the radio (TruckRadio), the network and the autoload
+	# lookups (PackageAutoloads). Seven .call left: carries (x2) and point_velocity go
+	# to the truck, found through the "vehicle" group (vehicle.gd has no class name and
+	# tests put Node fakes there); care_supply_count, consume_care_supply and
+	# record_care go to RunManager, by name for the cycle package_autoloads.gd
+	# explains; store goes to the lap mount (package_mount_point.gd has no class
+	# name). Five .get left: the truck's driver_peer_id, RunManager's cargo, the
+	# seat_node_path of the players in the "player" group (tests put Node3D fakes
+	# there, `as Player` would drop them), the lap mount's occupied_by and the
+	# session's world_seed (network_manager.gd declares it, NetSession does not).
+	"res://scripts/gameplay/package/package_rescue.gd": {"call": 7, "callv": 0, "get": 5, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -115,7 +129,7 @@ func _run() -> void:
 		_check_handles(owner_path, owner_node.get_script() as Script, HANDLES[owner_path])
 
 	var session: Node = root.get_node_or_null(^"/root/NetworkManager")
-	_expect(session is NetSession, "The NetworkManager autoload is a NetSession (package.gd types it so)")
+	_expect(session is NetSession, "The NetworkManager autoload is a NetSession (the box types it so)")
 
 	for script_path: String in SCRIPT_HANDLES:
 		var script: Script = load(script_path) as Script

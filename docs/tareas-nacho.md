@@ -547,6 +547,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     EventBus), `.get(&` 4 → 3, `/root/` 10 → 1. En `scripts/`: `.call` 290 → 278, `.get(&` 284 → 283, `/root/`
     132 → 127. `test_dynamic_dispatch_budget.gd` suma los dos archivos y exige que `NetworkManager` sea `NetSession`.
     Aviso `docs/avisos/2026-10-01-n224-package-tipado.md`.
+  - [x] `package_rescue.gd` (2026-10-01, rama `nacho/N-224-package-rescue-typed`): la trampa como `ITrapBehavior`
+    (11 métodos directos), `params` de `TrapDefinition`, la bomba desactivada como `ExplosiveTrapBehavior`, la radio como
+    `TruckRadio`, el que sostiene como `Player`, `RunManager` y la red (`NetSession`) por `PackageAutoloads`. Quedan por
+    nombre el camión (falsos en el grupo `vehicle`), los métodos de `RunManager` (ciclo), `world_seed` (no está en
+    `NetSession`), el `seat_node_path` de `view_basis_of` (falsos en `player`) y el anclaje de regazo (sin `class_name`).
+    En el archivo: 30 → 12 usos (`.call` 19 → 7, `.get(&` 8 → 5, `/root/` 3 → 0); en `scripts/`: 705 → 687.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-package-rescue-tipado.md`.
+    Siguientes: `player_cargo_care.gd` (24), `trailer_shot.gd` (24), `mud_segment.gd` (22).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
