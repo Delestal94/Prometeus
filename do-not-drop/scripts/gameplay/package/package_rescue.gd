@@ -437,7 +437,11 @@ static func request_lap_toggle(p: DeliveryPackage) -> void:
 ## Host: someone dropped out. If they were looking after this box, its
 ## rescue window is held so the crew can reach it -- leaving never loses a
 ## box on the spot (docs/jugabilidad-paquetes-rescate.md, "Caída de un jugador").
+## Every peer hears of a leave (NetworkManager.peer_removed); only the host's
+## box changes.
 static func peer_left(p: DeliveryPackage, peer_id: int) -> void:
+	if not p.is_inside_tree() or not p.is_multiplayer_authority():
+		return
 	var carried_by_them: bool = is_instance_valid(p.carrier) and p.carrier.get_multiplayer_authority() == peer_id
 	if peer_id in [p.tender_peer_id, p._care_worker] or carried_by_them:
 		p.care.hold_crisis(DeliveryPackage.CareModel.CRISIS_SECONDS)

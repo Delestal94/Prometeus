@@ -26,8 +26,9 @@ fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
+# Three level loads on the client (join, rejoin, rejoin over a ghost): 18-34 s each on CI.
 run() {
-	timeout 150 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
+	timeout 240 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
 }
 
 run --host >"$WORK/host.log" 2>&1 &
@@ -73,4 +74,4 @@ if [ "$status" -ne 0 ]; then
 	echo "FAIL: net pair"
 	exit 1
 fi
-echo "PASS: two-process cosmetics, gameplay races and rejoin"
+echo "PASS: two-process cosmetics, gameplay races, rejoin and rejoin over a ghost"

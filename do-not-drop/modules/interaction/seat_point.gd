@@ -164,9 +164,11 @@ func interact(player: Node) -> void:
 ## The player owns the local "leave seat" gesture, but driving state is host
 ## authoritative. Clearing it here prevents the same input from being read
 ## by both the on-foot controller and the vehicle after the driver exits.
+## A critical request (RpcGuard): dropped, the seat stays taken on the host
+## while its player is already up and walking.
 @rpc("any_peer", "call_local", "reliable")
 func release_occupant(peer_id: int) -> void:
-	if not multiplayer.is_server() or not RpcGuard.allow_request(self):
+	if not multiplayer.is_server() or not RpcGuard.allow_critical_request(self):
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and sender_id != peer_id:

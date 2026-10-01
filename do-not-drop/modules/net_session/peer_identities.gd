@@ -54,6 +54,12 @@ func record(id: int, identity: String) -> int:
 	return previous
 
 
+## Host: the peer id that last had `identity`, here or gone; 0 if none. Unlike
+## record(), only looks.
+func peer_of(identity: String) -> int:
+	return int(peer_by_identity.get(identity, 0))
+
+
 ## `id` left (or never made it in): it stays remembered among those who left.
 func forget(id: int) -> void:
 	by_peer.erase(id)
