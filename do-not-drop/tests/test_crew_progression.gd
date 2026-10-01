@@ -253,7 +253,7 @@ func _check_color_slots(crew: Node) -> void:
 			"A leaver's merit is saved under the slot it wore (got %s)" % [by_slot])
 	crew.call(&"_apply_saved_player", BIG_IDS[2])
 	_expect(int(crew.get(&"merit").get(BIG_IDS[2], -1)) == 30,
-			"The next one into the freed slot carries its progress on (documented: the slot is the seat)")
+			"The next one into the freed slot carries its progress on (the seat; N-221 reservations aside)")
 
 	# A version-1 save (colour names) still loads: the host (old "yellow") is slot 0.
 	_seat(network, {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2})

@@ -123,6 +123,8 @@ func _ready() -> void:
 		network.roster_changed.connect(_on_roster_changed)
 	if network != null and not network.color_slots_changed.is_connected(_on_color_slots_changed):
 		network.color_slots_changed.connect(_on_color_slots_changed)
+	if network != null and not network.peer_rejoined.is_connected(_on_peer_rejoined):
+		network.peer_rejoined.connect(_on_peer_rejoined)
 
 
 func reset_campaign(persist: bool = false) -> bool:
@@ -349,6 +351,8 @@ func request_use_card() -> bool:
 	var network := _network()
 	if network != null and network.is_online() and not network.is_host():
 		return false
+	if not RpcGuard.allow_request(self):
+		return false
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else network.local_id() if network != null else 1
 	var held_card: int = int(cards.get(peer_id, -1))
@@ -493,6 +497,12 @@ func _apply_player_entry(peer_id: int, players_by_slot: Dictionary) -> void:
 
 
 func _apply_saved_player(peer_id: int) -> void:
+	var network := _network() if is_inside_tree() else null
+	if network != null and not network.inherits_color_slot(peer_id):
+		# Took the slot kept for someone who left while the room was full
+		# (N-221): what's saved under it is theirs, so this player starts clean.
+		_apply_player_entry(peer_id, {})
+		return
 	_apply_player_entry(peer_id, _saved_players_by_slot)
 
 
@@ -580,6 +590,17 @@ func _on_color_slots_changed(_slots: Dictionary) -> void:
 	_apply_campaign_data(_last_host_data, false)
 
 
+## Host: someone who dropped is back under a new peer id (N-221). Their
+## campaign merit and card come back with their slot (_apply_saved_player,
+## when they reach the roster); what they earned this run so far, kept by peer
+## id, moves over here now.
+func _on_peer_rejoined(old_id: int, new_id: int) -> void:
+	for source: Dictionary in [_run_merit, _run_milestones]:
+		if source.has(old_id):
+			source[new_id] = source[old_id]
+			source.erase(old_id)
+
+
 func _broadcast_campaign() -> void:
 	var network := _network() if is_inside_tree() else null
 	if network == null or not network.is_online() or not network.is_host():
@@ -588,6 +609,9 @@ func _broadcast_campaign() -> void:
 	_receive_campaign.rpc(_campaign_data())
 
 
+## Same channel as NetworkManager._sync_color_slots(), which the host sends
+## first when someone joins: the campaign is applied by slot, so the slots
+## must already be here (test_rpc_guard checks the channel).
 @rpc("authority", "call_remote", "reliable")
 func _receive_campaign(data: Dictionary) -> void:
 	var network := _network()

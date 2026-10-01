@@ -112,4 +112,4 @@ if [ "$status" -ne 0 ]; then
 	exit 1
 fi
 [ ${#unstable[@]} -gt 0 ] && echo "  cierre inestable (imprimieron, el motor crasheó al salir): ${unstable[*]}"
-echo "PASS: host and two clients (one late) see the same seed, houses, orders, road, crossing, bomb code, Fragile tap, Liquid scrub, a helper's sequence and the run's tally once the host leaves"
+echo "PASS: host and two clients (one late) see the same seed, houses, orders, road, crossing, bomb code, Fragile tap, Liquid scrub, a helper's sequence, the colour slots and the run's tally once the host leaves"

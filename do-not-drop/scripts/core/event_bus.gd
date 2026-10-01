@@ -156,8 +156,25 @@ var ping_cooldown_seconds: float = 1.5:
 		request_cooldowns[&"ping_sent"] = value
 
 
+## The two events a player may request (NetEventBus refuses any other):
+## callouts at their pace, the horn as often as it's pressed.
 func _init() -> void:
 	request_cooldowns[&"ping_sent"] = ping_cooldown_seconds
+	request_cooldowns[&"horn_honked"] = 0.0
+
+
+## Host: the shape of each request as well (N-221), since request() itself is
+## an RPC any peer can call: a callout is a place and a short label, the horn
+## carries nothing.
+func _accept_request(peer_id: int, event_name: StringName, args: Array) -> bool:
+	match event_name:
+		&"ping_sent":
+			if args.size() != 2 or not args[0] is Vector3 or not (args[1] is String or args[1] is StringName):
+				return false
+		&"horn_honked":
+			if not args.is_empty():
+				return false
+	return super(peer_id, event_name, args)
 
 
 ## Any peer calls this (directly if it's already the host, via rpc_id(1, ...)
@@ -167,7 +184,8 @@ func _init() -> void:
 ## everyone's HUD (including the sender's) reacts identically.
 @rpc("any_peer", "call_remote", "reliable")
 func request_ping(position: Vector3, label: String) -> void:
-	request(&"ping_sent", [position, label])
+	if RpcGuard.finite_vec3(position) and RpcGuard.text_ok(label):
+		request(&"ping_sent", [position, label])
 
 
 ## Forgets every player's last callout, so the next one goes through.

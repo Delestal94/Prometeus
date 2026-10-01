@@ -166,7 +166,7 @@ func interact(player: Node) -> void:
 ## by both the on-foot controller and the vehicle after the driver exits.
 @rpc("any_peer", "call_local", "reliable")
 func release_occupant(peer_id: int) -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or not RpcGuard.allow_request(self):
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	if sender_id != 0 and sender_id != peer_id:

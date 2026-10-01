@@ -52,7 +52,7 @@ func use_revote(peer_id: int) -> bool:
 
 @rpc("any_peer", "call_local", "reliable")
 func request_revote() -> bool:
-	if not is_host():
+	if not is_host() or not RpcGuard.allow_request(self):
 		return false
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else local_peer_id()
@@ -67,7 +67,7 @@ func request_revote() -> bool:
 ## purchase; the card is only consumed if that purchase succeeds.
 @rpc("any_peer", "call_local", "reliable")
 func request_discount(offer_id: StringName) -> bool:
-	if not is_host() or not active:
+	if not is_host() or not active or not RpcGuard.allow_request(self):
 		return false
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else local_peer_id()

@@ -901,7 +901,7 @@ func _on_probe_exited(area: Area3D) -> void:
 @rpc("any_peer", "call_local", "unreliable")
 func receive_package_hit(push: Vector3) -> void:
 	# Loose boxes are simulated on the host; nobody else gets to knock people over.
-	if not _from_host():
+	if not _from_host() or not RpcGuard.finite_vec3(push):
 		return
 	if _package_hit_cooldown > 0.0 or _seated:
 		return
@@ -996,5 +996,4 @@ func _release_seat_occupant(seat: Node3D) -> void:
 
 
 func _from_host() -> bool:
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	return sender_id == 0 or sender_id == 1  # 0: a genuine local call (offline).
+	return RpcGuard.from_host(self)  # Also a genuine local call (offline).

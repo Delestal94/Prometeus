@@ -14,6 +14,7 @@ extends RefCounted
 ## tested without sockets (test_network_roster.gd).
 
 
+
 ## The slot `peer_id` holds, or else the lowest free one, which it now holds: a
 ## slot freed by someone who left goes to the next one in, and nobody else's
 ## changes. -1 when all `count` slots are taken.
@@ -26,6 +27,19 @@ static func assign(slots: Dictionary, peer_id: int, count: int) -> int:
 			slots[peer_id] = slot
 			return slot
 	return -1
+
+
+## Like assign(), but a free slot in `reserved` (kept for someone who left and
+## may come back, N-221) is only handed out when no other slot is free.
+static func assign_avoiding(slots: Dictionary, peer_id: int, count: int, reserved: Array) -> int:
+	if slots.has(peer_id):
+		return int(slots[peer_id])
+	var taken: Array = slots.values()
+	for slot: int in count:
+		if not taken.has(slot) and not reserved.has(slot):
+			slots[peer_id] = slot
+			return slot
+	return assign(slots, peer_id, count)
 
 
 ## Frees `peer_id`'s slot for the next one in. True when it had one.

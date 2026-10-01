@@ -369,7 +369,7 @@ func _begin_cycle() -> void:
 ## A client that just built this segment asks where the host's cycle is.
 @rpc("any_peer", "call_remote", "reliable")
 func _request_state() -> void:
-	if not _is_host() or state in [State.WAITING, State.DONE]:
+	if not _is_host() or state in [State.WAITING, State.DONE] or not RpcGuard.allow_request(self):
 		return
 	_apply_state.rpc_id(multiplayer.get_remote_sender_id(), state, _timer, _train_x)
 

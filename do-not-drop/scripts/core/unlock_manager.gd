@@ -17,7 +17,7 @@ const PROFILE_VERSION := 4
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const NICKNAME = preload("res://scripts/core/nickname.gd")
 ## Not a uniform: each player keeps the colour of their seat in the crew
-## (Player.PLAYER_COLORS by peer), so teammates stay told apart by default.
+## (NetworkManager.color_slot(), N-226), so teammates stay told apart by default.
 const TEAM_COLOR := &"team_color"
 const UNLOCKS := {
 	&"growing_weight_trap": {"title": "UI_UNLOCK_GROWING_WEIGHT", "deliveries": 1, "score": 0},
