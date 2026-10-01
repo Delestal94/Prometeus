@@ -420,7 +420,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -795,6 +795,13 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `/root/` 7 → 3). `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso
     `docs/avisos/2026-10-01-n224-player-interaction-tipado.md`. Siguientes: `player.gd` (21), `level_base.gd` (19),
     `run_manager.gd` (18), `cargo_animals.gd` (16).
+  - [x] `level_base.gd` (2026-10-01, rama `nacho/N-224-level-base-typed`): la ruta como `RouteScript` (preload de
+    `route.gd`, sin `class_name`), las casas como `DeliveryHouse`, la meta como `RouteGoalLot`, `driver_peer_id` por
+    `VehicleScript` (preload de `vehicle.gd`) y las señales `house_resolved` / `wrong_package_offered` conectadas por
+    la señal (se fue el `has_signal`). En el archivo: 18 → 0 usos (`.call` 4 → 0, `.get(&` 14 → 0). La baseline del
+    lint bajó 1. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
+    `docs/avisos/2026-10-01-n224-level-base-tipado.md`. `run_manager.gd` ya no tiene usos por nombre tras N-225.5.
+    Siguientes: `player.gd` (21), `cargo_animals.gd` (16).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -832,7 +839,7 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   por nombre: los mismos 9/0/3/1, repartidos entre los cuatro archivos (`test_dynamic_dispatch_budget.gd`).
   `test_package_split.gd` fija la tabla de RPC del original, los métodos que usa el resto y ≤ 700 líneas. Aviso
   `docs/avisos/2026-10-01-n225-package-partido.md`.
-- [ ] **N-225.5** Quedan `player.gd` (1000), `run_manager.gd` (1000) y `package_feedback.gd` (1000) en el borde.
+- [x] **N-225.5** Quedan `player.gd` (1000), `run_manager.gd` (1000) y `package_feedback.gd` (1000) en el borde.
   Origen: construcción 2026-10-01.
   **[x] `package_feedback.gd` (2026-10-01, rama `nacho/N-225-package-feedback-split`)** — 1000 → 444 líneas.
   Helpers estáticos que reciben el nodo (ahora `class_name PackageFeedback`): lo propio de cada trampa, las correas
@@ -850,6 +857,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   las constantes movidas se reexportan con el mismo nombre. `test_run_manager_split.gd` fija ≤ 700 líneas, la tabla
   de RPC, la API y tres corridas doradas por `finish_run` (entrega, fallida, infinito) calculadas con el original.
   Aviso `docs/avisos/2026-10-01-n225-run-manager-partido.md`. Queda `player.gd`.
+  **[x] `player.gd` (2026-10-01, rama `nacho/N-225-player-split`)** — 1000 → 695 líneas. Helpers estáticos sin
+  `class_name` que reciben al jugador: viaje con el camión y estado de red (`player_ride.gd`), movimiento a pie,
+  mirada, balanceo, FOV y red de seguridad del piso (`player_movement.gd`), entrada (`player_input.gd`) y filtro de
+  visibilidad para peers listos (`player_net_visibility.gd`). Los siete `@rpc` quedan en el nodo, mismo orden y
+  guardas; constantes movidas reexportadas; 15 envoltorios privados sin usos de afuera se quitaron. Sin tocar cuerpo,
+  ragdoll ni apariencia (S-311). `test_player_split.gd` fija ≤ 700 líneas, la tabla de RPC, la API usada afuera y
+  corridas chicas doradas. La baseline del lint bajó 4. Aviso `docs/avisos/2026-10-01-n225-player-partido.md`.
+  **N-225 completa.**
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con
@@ -1621,6 +1636,46 @@ la ruta. Montículos: semiesferas low-poly con el mismo shader (`lump`). `mud_se
 `test_mud_segment` ampliado (shader y parámetros del pozo, sin cajas ni discos, montículos); revisado en 4 iteraciones con
 `revisor-visual` (`tests/render_mud_segment.gd`). Queda: el contorno se ve algo ruidoso a mucha distancia.
 
+### N-320 · Polvo de las ruedas legible y según el suelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-320-wheel-dust`**
+
+Hoy `scripts/presentation/vehicle_presentation.gd:453-488` (`_apply_dust` y el emisor) echa cubos `BoxMesh` de 0,05 m, 14 por
+rueda, vida 0,55 s, color fijo `9c8060`, opacos: son subpíxel a pocos metros desde la caja o el espejo, y el polvo es el mismo
+en asfalto, grava y con lluvia. Rehacer el efecto, no el sistema, con la receta del humo de escape (`vehicle_effects.gd:95`:
+esfera low-poly de 6 lados, sin sombra): bolas que crecen (curva 0,5→2,5) y se desvanecen (gradiente alfa ~0,35→0), color de
+la tierra de `route_terrain` (no naranja), intensidad según el suelo (grava/tierra 1, asfalto 0), apagado con `wetness` alto
+(lluvia), vida 0,9-1,2 s, emisor en las ruedas traseras hacia +Z y sin invadir ~1,5 m alrededor de la cámara de la caja.
+**Intento 2026-10-01 (02:30): corrida caída, capturas en `D:/tmp/wheel_dust/`; quedó demasiado opaco, anaranjado, con borde
+octogonal duro y con bolas que tapaban la cámara de la caja. No repetir: alfa bajo y con degradé, color de `route_terrain`,
+más lados o mezcla suave del borde, y corte duro de emisión cerca de la cámara de la caja.**
+**Necesita PC** (GPU real para las capturas; la toma la sesión de arte). Origen: sesión de arte 2026-10-01.
+Hecho cuando en grava se ve una nube suave y clara desde el espejo, la caja y atrás, de día y de noche; en asfalto no hay
+polvo; con lluvia se apaga; no hay bolas a menos de 1,5 m de la cámara de la caja; `test_dust_and_ambience.gd` ampliado (en
+asfalto no emite, en grava sí, con `wetness` alto no, material sin sombra y con alfa); hay capturas antes/después con
+`revisor-visual` desde un script reproducible en `tests/render_*.gd`; y el inventario de assets está al día.
+- [x] **N-320.1** ~~Rehacer el emisor y el material del polvo según la receta de arriba y ampliar
+  `test_dust_and_ambience.gd`. Con `artista-vfx` y `escritor-tests`; tests `dust`.~~ **[x] Hecho (2026-10-01, sesión de arte)** —
+  componente nuevo `scripts/presentation/wheel_dust.gd` (`WheelDust`, lo crea `vehicle_presentation.gd`, que pierde
+  `_build_dust_emitters`/`_apply_dust`): 2 emisores en la carrocería, uno por rueda trasera (la rueda gira y arrastraba la
+  dirección), quad billboard de 1,3 m con degradé radial por código (la esfera low-poly dejaba el octógono del intento
+  anterior), unshaded, sin sombra, color `e0d4b8` (más claro que la grava, no naranja), alfa 0,8 → 0,7 → 0, escala 0,5 → 2,5
+  (`Curve.max_value` 3), 32 partículas × 1,2 s, `inherit_velocity_ratio` 0,35. Intensidad = máx(velocidad, derrape) ×
+  suelo (`Route.ground_roughness()` × 1,6: asfalto 0, banquina 0,4, grava 1; sin ruta, 0) × (1 − wetness de `WorldMood`:
+  lluvia 1, niebla 0,35), muestreada cada 0,2 s; de noche color ×0,35 y alfa ×0,75. No emite con la cámara activa a
+  < 1,5 m. `test_dust_and_ambience.gd` con ruta falsa y mood fijo: asfalto no, grava sí, banquina más rala, lluvia no,
+  niebla menos, noche más oscuro, corte de cámara, material.
+- [x] **N-320.2** ~~Script de captura reproducible y verificación visual antes/después. Con `revisor-visual`; tests
+  `dust`.~~ **[x] Hecho (2026-10-01, sesión de arte)** — `tests/render_wheel_dust.gd` (`--mood`, `--seed`, `--out`,
+  `--ground`, `--dry`): el camión real a ~42 km/h en grava y asfalto, planos `mirror`, `cargo` y `rear`. Con GPU real
+  (RTX 4060 Ti, 1280×720): antes (cubos de 0,05 m) no se veía nada; después, estela clara en grava, luminancia sobre la
+  estela vs. grava limpia en `rear` 189 vs. 150 de día y 69 vs. 49 de noche; asfalto y lluvia, 0 de 2 emisores; tapa
+  ~10-15 % de la puerta trasera abierta en `rear`. En `mirror` la caja tapa la estela (pose de la cámara, no del efecto).
+- [x] **N-320.3** ~~Actualizar el inventario/spec; corregir de paso los ítems 51 y 90.~~ **[x] Hecho (2026-10-01)** —
+  `docs/inventario-assets.md` §7 y `docs/especificaciones-visuales.md` #49 (polvo nuevo), #51 (marcas de frenada) y #90
+  (escombros), que ya existían en `vehicle_effects.gd`.
+- Queda (fuera de N-320): el humo de escape de `vehicle_effects.gd` se ve desde la caja como una hilera de 5-6 puntitos
+  oscuros nítidos (`SMOKE_COLOR` gris 0,32 con alfa 0,42), y su `scale_curve` 0,5 → 3,2 no crece porque `Curve` recorta a
+  `max_value` 1. Subir `max_value` solo no lo arregló en la captura: pide color más claro y otra forma (la de `WheelDust`).
+
 ## 4. Audio y diseño sonoro
 
 ### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas) · **[x] `8081c75`**
@@ -1792,6 +1847,20 @@ Tarea permanente: no se cierra, se cumple en cada tanda.
 - Contenido cerrado 2026-10-30, página de Steam 2026-11-27, demo 2026-12-18, Early Access 2027-01-22, con qué significa "listo" y de qué depende cada uno (`plan-desarrollo.md` Fase 7).
 
 ---
+
+### N-323 · Que nada visible se cierre con cajas de color plano — A · `Opus 5.5 · low` · Aviso: no · **[x] rama `nacho/N-323-art-quality-gate`**
+
+Pregunta del usuario 2026-10-01 tras N-322 ("¿por qué no se hizo así desde un principio, quién es el encargado?"): el barro de
+N-108 salió con cajas naranjas porque el "hecho cuando" solo pedía la mecánica, `constructor-tramos` arma con `_box()`,
+`revisor-visual` miró que estuviera y no si estaba a la altura, y `director-arte` audita el inventario, donde la geometría
+por código no figura. Nadie tenía a cargo la calidad visual de lo que arma un constructor.
+~~Hecho cuando la cadena de agentes marca y deriva los placeholders visibles.~~
+**[x] Hecho (2026-10-01)** — `planificador-tareas`: toda tarea visible lleva en el "hecho cuando" la revisión de
+`director-arte` contra lo que la rodea y, si se arma con primitivas, una subtarea de arte desde el principio.
+`director-arte` (punto 8): busca la geometría por código con color plano a la vista. `auditor-integral` (pilar 2): marca
+los placeholders sin subtarea de arte. `constructor-tramos` y `constructor-mundo`: un placeholder visible sale como
+subtarea, nunca como hecho. Rutina de construcción (paso 7): `revisor-visual` compara contra el entorno y un suelo o
+material plano pasa por `artista-shaders` en la misma sesión.
 
 ## 8. QA (sin playtesting)
 

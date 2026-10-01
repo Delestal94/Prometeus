@@ -29,6 +29,15 @@ refinar y cuáles tirar, para que el juego se vea y suene como una sola cosa.
 7. **Accesibilidad**: trampas, estados de la caja y avisos que se distinguen solo por color (rojo/verde
    para daltónicos: tiene que haber forma, ícono o sonido además), texto chico sobre fondo 3D, destellos.
 
+8. **Geometría armada por código** (no está en el inventario, así que nadie más la mira): superficies y
+   props hechos con primitivas y un color plano que se ven en el juego. Buscalos con
+   `grep -rn "_box(\|BoxMesh.new\|CylinderMesh.new\|StandardMaterial3D.new" do-not-drop/scripts do-not-drop/modules --include=*.gd`
+   y quedate con lo que se ve de cerca o cubre mucha pantalla (suelos de tramo, charcos, montículos,
+   carteles, vehículos), no con colisiones, triggers o piezas chicas. Al lado del terreno
+   (`route_terrain.gdshader`, con mapas de grano) o de un modelo refinado, una caja de color plano es
+   REHACER: suelo o material → `artista-shaders`; objeto → `modelador-blender`. Pedí la captura del
+   tramo a `revisor-visual` si no hay una (`ls do-not-drop/tests/render_*.gd`).
+
 Para ver algo, usá capturas existentes (PNG del repo, `art/`) con Read. No corras Godot: si hace falta una
 captura nueva, pedila en tu salida para `revisor-visual`.
 

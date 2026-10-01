@@ -36,11 +36,6 @@ const HEADLIGHT_ENERGY_BOOST_CAP: float = 1.6
 @export var cargo_sink_per_kg: float = 0.0025
 @export var cargo_sink_max: float = 0.08
 @export var sink_smooth_speed: float = 2.0
-## Dust under the wheels (#49): a continuous, low-key puff while grounded
-## and moving, ramping up with skid. Not a one-shot burst like the confetti
-## on a ruined package -- a steady trickle, on or off.
-@export var dust_color: Color = Color("9c8060")
-@export var dust_min_speed_kmh: float = 6.0
 
 ## Reusable across vehicles (docs/tareas-nacho.md #87): everything this
 ## script needs from its parent is found by node name/pattern anywhere under
@@ -84,7 +79,6 @@ var _steering_rest: Basis
 var _front_materials: Array[StandardMaterial3D] = []
 var _rear_materials: Array[StandardMaterial3D] = []
 var _wheels: Array[VehicleWheel3D] = []
-var _dust_emitters: Array[GPUParticles3D] = []
 ## Development-only third-person view (#75): only ever built in a debug
 ## build (OS.is_debug_build() -- editor runs and non-optimized exports, off
 ## in a real release export), so it never ships as a real feature for
@@ -158,11 +152,14 @@ func _ready() -> void:
 	for wheel: Node in vehicle.get_children():
 		if wheel is VehicleWheel3D:
 			_wheels.append(wheel)
-	_build_dust_emitters()
 	_collect_seat_cameras(vehicle)
 	var effects: Node = preload("res://scripts/presentation/vehicle_effects.gd").new()
 	effects.name = "VehicleEffects"
 	add_child(effects)
+	# Dust behind the rear wheels, by the ground and the weather (N-320).
+	var dust: Node = preload("res://scripts/presentation/wheel_dust.gd").new()
+	dust.name = "WheelDust"
+	add_child(dust)
 	var clutter: Node = preload("res://scripts/presentation/cargo_clutter.gd").new()
 	clutter.name = "CargoClutter"
 	add_child(clutter)
@@ -252,7 +249,6 @@ func update_presentation(delta: float) -> void:
 	_update_screech(delta)
 	_apply_body_lean(delta)
 	_apply_cargo_sink(delta)
-	_apply_dust()
 
 
 func _update_horn_hand(delta: float) -> void:
@@ -445,47 +441,6 @@ func _update_screech(delta: float) -> void:
 		return
 	screech_player.volume_db = screech_volume_db + linear_to_db(_screech_mix)
 	screech_player.pitch_scale = lerpf(0.85, 1.15, _screech_mix)
-
-
-## One small dust puff per wheel, parented to the wheel itself so it rides
-## along with suspension travel and steering for free -- no particle texture
-## needed, same tiny-box-mesh trick as the confetti burst on a ruined package.
-func _build_dust_emitters() -> void:
-	var process_material := ParticleProcessMaterial.new()
-	process_material.direction = Vector3.UP
-	process_material.spread = 35.0
-	process_material.initial_velocity_min = 0.4
-	process_material.initial_velocity_max = 1.4
-	process_material.gravity = Vector3(0.0, -3.5, 0.0)
-	process_material.color = dust_color
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3.ONE * 0.05
-	for wheel: VehicleWheel3D in _wheels:
-		var particles := GPUParticles3D.new()
-		particles.name = "DustEmitter"
-		particles.emitting = false
-		particles.amount = 14
-		particles.lifetime = 0.55
-		particles.explosiveness = 0.0
-		particles.process_material = process_material
-		particles.draw_pass_1 = mesh
-		particles.position = Vector3(0.0, -wheel.wheel_radius, 0.0)
-		wheel.add_child(particles)
-		_dust_emitters.append(particles)
-
-
-## Continuous, not a one-shot burst: on while grounded, moving and (mostly)
-## on the road, ramping up with skid rather than snapping to full intensity.
-func _apply_dust() -> void:
-	var speed_factor: float = clampf((vehicle.speed_kmh - dust_min_speed_kmh) / 20.0, 0.0, 1.0)
-	for index: int in range(_wheels.size()):
-		var wheel: VehicleWheel3D = _wheels[index]
-		var particles: GPUParticles3D = _dust_emitters[index]
-		var grounded: bool = wheel.is_in_contact()
-		var skid: float = (1.0 - wheel.get_skidinfo()) if grounded else 0.0
-		var intensity: float = clampf(maxf(speed_factor, skid) if grounded else 0.0, 0.0, 1.0)
-		particles.emitting = intensity > 0.05
-		particles.amount_ratio = maxf(intensity, 0.15)
 
 
 func _collect_seat_cameras(node: Node) -> void:

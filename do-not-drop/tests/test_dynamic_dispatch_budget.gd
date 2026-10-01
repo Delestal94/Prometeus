@@ -133,6 +133,11 @@ const BUDGETS: Dictionary = {
 	# Node. The four /root/ lookups are the null-safe accessors (EventBus,
 	# NetworkManager, CrewProgression, RunManager).
 	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 7, "root": 4},
+	# The delivery level is typed: the route and the truck through their scripts
+	# (route.gd and vehicle.gd by preload, no class name), the houses as
+	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'
+	# signals are connected by the signal. Nothing left by name.
+	"res://scripts/gameplay/level_base.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
