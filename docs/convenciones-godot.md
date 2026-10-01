@@ -183,7 +183,7 @@ do-not-drop/
     render_budget/              # WorldQuality, DressingBatcher, DetailMaterials, ContactShadow
     acoustics/                  # AcousticSpace, AcousticZone
     ragdoll/                    # PlayerRagdoll
-    net_session/                # NetSession, NetEventBus, RpcGuard, SteamVoice, NetStats, NetStatsOverlay
+    net_session/                # NetSession, NetEventBus, RpcGuard, SteamVoice, VoicePlayback, NetStats, NetStatsOverlay
     interaction/                # Interactable, SeatPoint (genérico, con hooks)
     seat_camera/                # SeatCamera
     settings_store/             # SettingsStore
