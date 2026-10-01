@@ -111,6 +111,8 @@ var _page_title: Label
 var _card: Control
 var _frost: TextureRect
 var _page: Page = Page.HOME
+## The loading screen on its way to a level, until it swaps the menu out.
+var _loading: LoadingScreen
 ## One VBoxContainer per Page, and the button each one focuses on arrival.
 var _pages: Dictionary = {}
 var _page_focus: Dictionary = {}
@@ -531,13 +533,13 @@ func _quit_game() -> void:
 func _play_solo() -> void:
 	if _busy:
 		return
-	_go_to_level(LEVEL_SCENE)
+	_go_to_level(LEVEL_SCENE, tr("UI_MENU_SOLO"))
 
 
 func _play_endless() -> void:
 	if _busy:
 		return
-	_go_to_level(ENDLESS_LEVEL_SCENE)
+	_go_to_level(ENDLESS_LEVEL_SCENE, tr("UI_MENU_ENDLESS"))
 
 
 func _host_session(transport: int = NetworkManager.Transport.AUTO) -> void:
@@ -558,6 +560,7 @@ func join_steam_lobby(lobby: int) -> void:
 	# Always taken, even mid-connection: NetworkManager already left whatever
 	# was in progress, and returning here left the menu stuck "Conectando…"
 	# with the invite thrown away.
+	_cancel_loading()
 	_show_page(Page.JOIN, false)
 	_busy = true
 	_set_status(tr("UI_MENU_STATUS_JOINING_FRIEND"), MUTED)
@@ -597,7 +600,8 @@ func _on_session_ready(is_host: bool) -> void:
 	if not is_host:
 		GameSettings.last_join_address = _address_field.text
 	_set_status(tr("UI_MENU_STATUS_ENTERING"), MINT)
-	_go_to_level(NetworkManager.session_scene if not NetworkManager.session_scene.is_empty() else LEVEL_SCENE)
+	_go_to_level(NetworkManager.session_scene if not NetworkManager.session_scene.is_empty() else LEVEL_SCENE,
+		tr("UI_MENU_HOST") if is_host else tr("UI_LOADING_TAG_JOIN"))
 
 
 func _cancel_connection() -> void:
@@ -610,6 +614,7 @@ func _cancel_connection() -> void:
 
 func _on_session_failed(reason: String) -> void:
 	NetworkManager.take_failure_message()  # Shown right here; not again later.
+	_cancel_loading()
 	_busy = false
 	_set_status(connection_error_text(reason), RED)
 
@@ -618,12 +623,31 @@ static func connection_error_text(reason: String) -> String:
 	return TranslationServer.translate(String(CONNECTION_ERROR_TEXT.get(reason, reason)))
 
 
-func _go_to_level(scene_path: String) -> void:
-	# Deferred: this can be reached from _ready() (the --autostart/--host/
-	# --join shortcuts), and the tree is still mid-setup at that point --
-	# change_scene_to_file() removing this node right then errors ("Parent
-	# node is busy adding/removing children").
-	get_tree().change_scene_to_file.call_deferred(scene_path)
+## Through the loading screen (N-407): the level loads on a thread behind the
+## menu's art instead of freezing the menu on its last frame. The loader adds
+## itself deferred: this can be reached from _ready() (the --autostart/--host/
+## --join shortcuts), and the tree is still mid-setup at that point.
+func _go_to_level(scene_path: String, mode: String = "") -> void:
+	if _loading != null and is_instance_valid(_loading):
+		return
+	_busy = true
+	_loading = LoadingScreen.go(get_tree(), scene_path, mode)
+	_loading.failed.connect(_on_level_load_failed)
+
+
+## A connection that fell through while its level loaded: the menu stays.
+func _cancel_loading() -> void:
+	if _loading != null and is_instance_valid(_loading):
+		_loading.cancel()
+	_loading = null
+
+
+func _on_level_load_failed(_path: String) -> void:
+	_loading = null
+	if NetworkManager.is_online():
+		NetworkManager.leave_session()
+	_busy = false
+	_set_status(tr("UI_LOADING_FAILED"), RED)
 
 
 func _set_status(text: String, color: Color) -> void:

@@ -438,6 +438,22 @@ UI_MENU_STATUS_CODE_LENGTH,"El código tiene que tener 8 letras y números, por 
 UI_MENU_STATUS_CONNECTING,Conectando a %s…,Connecting to %s…
 UI_MENU_STATUS_CONNECT_FAILED,No se pudo conectar (error %d).,Couldn't connect (error %d).
 UI_MENU_STATUS_ENTERING,Entrando…,Joining…
+UI_LOADING_TAG,En camino,On the way
+UI_LOADING_TAG_JOIN,Unirse a la sala,Joining the room
+UI_LOADING_STAGE_LOAD,Cargando el camión…,Loading the truck…
+UI_LOADING_STAGE_BUILD,Armando la ruta…,Building the route…
+UI_LOADING_STAGE_READY,¡A repartir!,Let's deliver!
+UI_LOADING_FAILED,No se pudo cargar el nivel.,The level could not be loaded.
+UI_LOADING_TIP_TAG,CONSEJO,TIP
+UI_LOADING_TIP_FRAGILE,"Frágil: un toque justo antes de cada bache, cuando se cierra el anillo.","Fragile: one tap right before each bump, as the ring closes."
+UI_LOADING_TIP_RUN,Correr con una caja en brazos la sacude. Caminá.,Running with a box in your arms shakes it. Walk.
+UI_LOADING_TIP_EXPLOSIVE,"El código del explosivo lo ve el conductor en el tablero: pedíselo.","The driver sees the explosive's code on the dashboard: ask for it."
+UI_LOADING_TIP_LIQUID,Líquido: fregá izquierda y derecha rápido antes de que crezca el charco.,Liquid: scrub left and right fast before the puddle grows.
+UI_LOADING_TIP_NOISY,Ruidoso: abrazalo para calmarlo antes de que se escape.,Noisy: hug it to calm it down before it escapes.
+UI_LOADING_TIP_HOSTILE,Hostil: mantené si está tranquilo :) y soltá si está enojado >:(,Hostile: hold while it is calm :) and let go when it is angry >:(
+UI_LOADING_TIP_PARK,Frená del todo dentro de la zona de entrega para estacionar.,Come to a full stop inside the delivery zone to park.
+UI_LOADING_TIP_BOARD,Leé la pizarra del depósito antes de cargar: cada caja va a su casa.,Read the depot board before loading: every box has its own house.
+UI_LOADING_TIP_MERIT,"Las entregas pagan al equipo; las buenas acciones te dan mérito y cartas.","Deliveries pay the team; good actions earn you merit and cards."
 UI_MENU_STATUS_HOSTING,Creando sala…,Creating room…
 UI_MENU_STATUS_HOST_FAILED,No se pudo crear la sala (error %d).,Couldn't create the room (error %d).
 UI_MENU_STATUS_JOINING_FRIEND,Entrando a la sala de tu amigo…,Joining your friend's room…
