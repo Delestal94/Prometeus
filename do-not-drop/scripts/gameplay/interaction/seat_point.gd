@@ -15,6 +15,11 @@ extends SeatPoint
 @export var tend_mount_paths: Array[NodePath] = []
 
 
+func _ready() -> void:
+	super._ready()
+	add_to_group(SeatTending.SEAT_GROUP)
+
+
 func _free_prompt() -> String:
 	if role == &"driver":
 		# Said out loud instead of the seat just not answering: with a box
@@ -83,16 +88,42 @@ func _on_boarded(player: Node, peer_id: int) -> void:
 			package = carried
 			carried.set(&"_lap_mount", mount)
 	if package != null and player.has_method(&"tend_package"):
-		if package.has_method(&"set_tender"):
-			package.call(&"set_tender", peer_id)
+		# Several seats can look at the same mount: someone already minding the
+		# box keeps it (seat_tending.gd), the newcomer just sits.
+		if package.has_method(&"set_tender") and not SeatTending.claim(self, package, peer_id):
+			return
 		player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
 
 
-## Whatever box they were looking after stops taking their input.
+## Whatever box they were looking after stops taking their input -- unless
+## another seat looks at the same mount, which then takes it over.
 func _on_released(peer_id: int) -> void:
 	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
 		if int(package.get(&"tender_peer_id")) == peer_id and package.has_method(&"set_tender"):
 			package.call(&"set_tender", 0)
+			SeatTending.hand_over(package, peer_id)
+
+
+## Who sits here (host; 0 when the seat is free).
+func seated_peer() -> int:
+	return int(occupant.get_multiplayer_authority()) if is_instance_valid(occupant) else 0
+
+
+## This seat's own mount: the one it is `required_mount_path` for.
+func owns_mount(mount: Node) -> bool:
+	return mount != null and not required_mount_path.is_empty() and get_node_or_null(required_mount_path) == mount
+
+
+## Whether this seat looks after the box in `mount`, its own or by the column.
+func looks_at_mount(mount: Node) -> bool:
+	if mount == null:
+		return false
+	if owns_mount(mount):
+		return true
+	for path: NodePath in tend_mount_paths:
+		if get_node_or_null(path) == mount:
+			return true
+	return false
 
 
 ## First mount of this seat's column that is occupied (or free), in the
