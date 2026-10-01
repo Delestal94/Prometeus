@@ -23,11 +23,6 @@ const TEST_SAVE_PATH: String = "user://test_run_manager_split_leaderboard.json"
 const HELPERS: Array[String] = [
 	"run_scoring", "run_results", "run_deadlines", "run_deliveries", "run_leaderboard", "run_session",
 ]
-## Autoload names no helper may use in code (comments aside).
-const AUTOLOADS: Array[String] = [
-	"EventBus", "NetworkManager", "RunManager", "CrewProgression", "RouteEventManager", "UnlockManager",
-	"GameSettings",
-]
 
 ## Order of the @rpc functions in run_manager.gd, with the annotation of each.
 const RPC_ORDER: Array = [
@@ -166,13 +161,14 @@ func _check_api(manager: Node, script: GDScript) -> void:
 
 
 func _check_helpers() -> void:
+	_expect(_autoload_names().has("RunManager"), "project.godot autoloads are readable")
 	for helper: String in HELPERS:
 		var path: String = "res://scripts/core/%s.gd" % helper
 		_expect(load(path) is GDScript, "%s loads" % path)
 		var code: String = ""
 		for line: String in FileAccess.get_file_as_string(path).split("\n"):
 			code += line.get_slice("#", 0) + "\n"
-		for autoload: String in AUTOLOADS:
+		for autoload: String in _autoload_names():
 			_expect(not code.contains(autoload), "%s names no autoload in code (found %s)" % [path, autoload])
 		_expect(not code.contains("class_name"), "%s has no class_name: only run_manager.gd loads it" % path)
 
@@ -288,7 +284,7 @@ func _check_runs(manager: Node) -> void:
 		"delivered": true, "reason": "HUD_RUN_ARRIVED", "elapsed_seconds": 123.5, "cargo_total": 3,
 		"cargo_intact": 1, "cargo_ruined": 1, "cargo_points": 150, "chaos_multiplier": 1.2,
 		"delivery_points": 320, "houses_delivered": 4, "houses_missed": 1, "houses_lost": 1, "photos": 3,
-		"score": 564, "is_new_best": true, "best_score": 564, "payout": 470,
+		"score": 564, "is_new_best": true, "best_score": 564,
 	}, "Delivery run")
 	_expect(results.get("breakdown") == [
 		{"label": "HUD_SCORE_PERFECT", "count": 1, "points": 150},
@@ -343,7 +339,6 @@ func _check_runs(manager: Node) -> void:
 		"delivered": false, "reason": "HUD_RUN_TIPPED", "cargo_total": 2, "cargo_intact": 0, "cargo_ruined": 2,
 		"cargo_points": 0, "chaos_multiplier": 1.0, "delivery_points": -120, "houses_delivered": 0,
 		"houses_missed": 2, "houses_lost": 0, "photos": 0, "score": 0, "is_new_best": false, "best_score": 564,
-		"payout": 0,
 	}, "Failed run")
 	_expect(results.get("breakdown") == [{"label": "HUD_SCORE_MISSED", "count": 2, "points": -120}],
 			"Failed run: the two doors never reached are the only line (got %s)" % str(results.get("breakdown")))
@@ -400,3 +395,13 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
+
+## Every autoload in project.godot: no helper may name one in code (comments aside).
+func _autoload_names() -> Array[String]:
+	var names: Array[String] = []
+	for property: Dictionary in ProjectSettings.get_property_list():
+		var key: String = property.get("name", "")
+		if key.begins_with("autoload/"):
+			names.append(key.trim_prefix("autoload/"))
+	return names
