@@ -8,10 +8,12 @@ extends SceneTree
 ## - a phrase waits for its jitter cushion (prebuffer_seconds of audio, or that
 ##   long) before it starts playing;
 ## - pushing far more than real time never holds more than
-##   max_latency_seconds: the oldest audio is dropped and counted;
+##   max_latency_seconds: the oldest audio is dropped and counted; a single
+##   2 s packet is cut to its newest part before it is converted;
 ## - a new sample rate restarts the generator at that rate, dropping audio
 ##   queued at the old one;
-## - gain 0 drops what is queued and refuses more; gain 0.5 is -6 dB; restarted
+## - gain scales the samples, not volume_db (which would also turn the
+##   distance filter up); gain 0 drops what is queued and refuses more; restarted
 ##   from outside (a sound check playing it again) it feeds the new playback;
 ## - with nothing coming in it stops after idle_stop_seconds;
 ## - it copies its position from `follow` every frame;
@@ -46,6 +48,8 @@ func _check_conversion() -> void:
 	var pcm := PackedByteArray([0x00, 0x80, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x40, 0x12])
 	var frames: PackedVector2Array = VoicePlayback.pcm_to_frames(pcm)
 	_expect(frames.size() == 4, "Four whole samples, the odd trailing byte ignored (got %d)" % frames.size())
+	var scaled: PackedVector2Array = VoicePlayback.pcm_to_frames(pcm, 0.25)
+	_expect(scaled.size() == 4 and is_equal_approx(scaled[3].x, 0.125), "A scale multiplies every sample")
 	if frames.size() == 4:
 		_expect(is_equal_approx(frames[0].x, -1.0) and frames[0].x == frames[0].y,
 			"-32768 is -1 on both channels (got %s)" % frames[0])
@@ -88,6 +92,15 @@ func _check_latency_cap() -> void:
 		"Buffered seconds stay under the cap (got %.3f)" % voice.buffered_seconds())
 	voice.queue_free()
 	await process_frame
+	# One huge packet: only what can be heard is converted.
+	voice = await _new_voice()
+	voice.push_pcm(_pcm(2.0), RATE)
+	_expect(voice.converted_frames <= limit,
+		"A 2 s packet converts no more than the cap (converted %d, cap %d)" % [voice.converted_frames, limit])
+	_expect(voice.dropped_frames == 2 * RATE - limit,
+		"...and counts the rest as dropped (got %d)" % voice.dropped_frames)
+	voice.queue_free()
+	await process_frame
 
 
 func _check_rate_and_gain() -> void:
@@ -102,8 +115,16 @@ func _check_rate_and_gain() -> void:
 		"Audio queued at the old rate is dropped (got %d)" % voice.queued_frames())
 	voice.push_pcm(_pcm(0.05), 0)
 	_expect(voice.sample_rate == VoicePlayback.FALLBACK_SAMPLE_RATE, "A rate of 0 falls back to 24 kHz")
+	var full_db: float = voice.volume_db
 	voice.gain = 0.5
-	_expect(absf(voice.volume_db - linear_to_db(0.5)) < 0.01, "Gain 0.5 is -6 dB (got %.2f)" % voice.volume_db)
+	_expect(is_equal_approx(voice.volume_db, full_db), "Gain leaves volume_db (and the filter) alone")
+	voice.silence()
+	var packet: PackedByteArray = _pcm(0.02)
+	voice.push_pcm(packet, RATE)
+	var unscaled: PackedVector2Array = VoicePlayback.pcm_to_frames(packet)
+	var queued: PackedVector2Array = voice._pending
+	_expect(queued.size() == unscaled.size() and queued[40].is_equal_approx(unscaled[40] * 0.5),
+		"Gain 0.5 halves the samples (got %s for %s)" % [queued[40] if queued.size() > 40 else null, unscaled[40]])
 	voice.gain = 0.0
 	_expect(not voice.playing and voice.queued_frames() == 0, "Gain 0 drops what was queued")
 	voice.push_pcm(_pcm(0.1), RATE)

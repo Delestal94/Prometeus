@@ -20,6 +20,14 @@ extends AudioStreamPlayer3D
 ## at `hearing_distance`, and with `muffled` heard through a wall: quieter and
 ## without its highs). `gain` is the linear volume; 0 drops what is queued.
 ##
+## `gain` scales the samples as they come in, not `volume_db`: in Godot's
+## AudioStreamPlayer3D a lower volume_db also counts as distance for the
+## attenuation filter (measured: -20 dB of volume_db took a tone above the
+## cutoff down 63 dB), so a crewmate turned down would also sound muffled.
+## A new gain applies to the next packet; 0 is silent at once.
+## A packet longer than the latency cap is cut to its newest part before it is
+## converted: a flood costs at most that much conversion per packet.
+##
 ## Nothing here is replicated: every peer plays the others locally.
 
 const PCM_SCALE: float = 1.0 / 32768.0
@@ -48,18 +56,22 @@ const MUFFLED_DB: float = -6.0
 @export var full_volume_distance: float = 3.0
 ## Open air: the distance past which it is not heard at all (metres).
 @export var hearing_distance: float = 28.0
-## Added to the gain, in dB (the owner's mix level for voices).
+## The owner's mix level for voices, in dB (volume_db; see `gain` above).
 @export var base_volume_db: float = 0.0
 
 ## What this player copies its position from every frame; null leaves it be.
 var follow: Node3D = null
-## Linear volume, 0..1. At 0 nothing is queued and what was is dropped.
+## Linear volume, 0..1, applied to the samples of each packet. At 0 nothing
+## is queued and what was is dropped.
 var gain: float = 1.0:
 	set = set_gain
 ## The rate the generator runs at (the last push_pcm()'s).
 var sample_rate: int = FALLBACK_SAMPLE_RATE
 ## Frames dropped to keep the latency bounded since this was created.
 var dropped_frames: int = 0
+## Frames converted from PCM since this was created (never more than the
+## latency cap per packet).
+var converted_frames: int = 0
 ## Whether carry_in_open(true) is in effect.
 var muffled: bool = false
 
@@ -95,7 +107,15 @@ func push_pcm(pcm: PackedByteArray, rate: int) -> void:
 	var clamped: int = clampi(rate, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE) if rate > 0 else FALLBACK_SAMPLE_RATE
 	if clamped != sample_rate:
 		_set_rate(clamped)
-	_pending.append_array(pcm_to_frames(pcm))
+	var samples: int = pcm.size() >> 1
+	var limit: int = _latency_limit()
+	if samples > limit:
+		# Only the newest part can ever be heard: don't convert the rest.
+		dropped_frames += samples - limit
+		pcm = pcm.slice((samples - limit) << 1, samples << 1)
+		samples = limit
+	_pending.append_array(pcm_to_frames(pcm, gain))
+	converted_frames += samples
 	_idle = 0.0
 	_trim()
 	_feed()
@@ -136,7 +156,6 @@ func silence() -> void:
 
 func set_gain(value: float) -> void:
 	gain = clampf(value, 0.0, 1.0)
-	_apply_volume()
 	if gain <= 0.0:
 		silence()
 
@@ -176,24 +195,23 @@ func is_speaking() -> bool:
 	return playing and queued_frames() > 0
 
 
-## 16-bit signed little-endian mono samples to stereo frames in -1..1.
-static func pcm_to_frames(pcm: PackedByteArray) -> PackedVector2Array:
+## 16-bit signed little-endian mono samples to stereo frames in -1..1, times `scale`.
+static func pcm_to_frames(pcm: PackedByteArray, scale: float = 1.0) -> PackedVector2Array:
 	var count: int = pcm.size() >> 1
 	var frames := PackedVector2Array()
 	frames.resize(count)
+	var factor: float = PCM_SCALE * scale
 	for index: int in count:
-		var sample: float = pcm.decode_s16(index << 1) * PCM_SCALE
+		var sample: float = pcm.decode_s16(index << 1) * factor
 		frames[index] = Vector2(sample, sample)
 	return frames
 
 
 ## The ceiling follows the volume: up close, open air is never louder than
-## the same voice in a room (and a gain under 1 is not clamped away).
+## the same voice in a room. Muffled, the lower volume_db also makes the
+## distance filter bite up close: that is the wall.
 func _apply_volume() -> void:
-	if gain <= 0.0:
-		volume_db = -80.0
-	else:
-		volume_db = base_volume_db + linear_to_db(gain) + (MUFFLED_DB if muffled else 0.0)
+	volume_db = base_volume_db + (MUFFLED_DB if muffled else 0.0)
 	max_db = clampf(volume_db, -24.0, 6.0)
 
 

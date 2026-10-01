@@ -17,7 +17,12 @@ extends SceneTree
 ##   mid-phrase; the "Voces" slider scales it;
 ## - a flood of packets never buffers more than the latency cap;
 ## - a crewmate who leaves (peer_removed), a peer that disconnects and a
-##   session that ends free their playbacks.
+##   session that ends free their playbacks; one that fails (the host is gone,
+##   session_failed, no roster change) frees them and forgets mutes and
+##   volumes; a player respawned in the same frame gets the voice, not the
+##   one going away;
+## - the sound list (sound_audit.gd) names it "Voz de compañero · Voz", its
+##   mute holds through a change of how it carries, and unmuting restores it.
 
 # The fake mirrors GodotSteam's camelCase API, so its names can't be snake_case.
 # gdlint: disable=function-name
@@ -210,7 +215,60 @@ func _run() -> void:
 	voice._process(0.0)
 	_expect(voice.speaker(3) == null, "A player freed with the level takes their playback along")
 
+	# --- a respawn in the same frame: the new player gets the voice ---
+	var ana: Node3D = _crewmate(world, 4, Vector3(3.0, 0.0, 3.0))
+	voice.receive_packet(4, _packet)
+	var ana_voice: VoicePlayback = voice.speaker(4)
+	ana.queue_free()
+	var ana_again: Node3D = _crewmate(world, 4, Vector3(3.0, 0.0, 3.0))
+	voice.receive_packet(4, _packet)
+	_expect(voice.speaker(4) != null and voice.speaker(4).get_parent() == ana_again,
+		"Respawned in the same frame, her voice moves to the new player")
+	await process_frame
+	_expect(not is_instance_valid(ana_voice), "...and the old playback goes with the old one")
+
+	# --- the sound check (sound_audit.gd) can mute a crewmate's voice ---
+	await _check_sound_check(voice, voice.speaker(4), seat_camera, street_camera)
+
+	# --- the host is gone: session_failed, with no roster change ---
+	voice.set_peer_muted(3, true)
+	voice.set_peer_volume(4, 0.4)
+	voice.receive_packet(4, _packet)
+	var last_voice: VoicePlayback = voice.speaker(4)
+	network.session_failed.emit("host_lost")
+	await process_frame
+	_expect(voice.speaker(4) == null and not is_instance_valid(last_voice),
+		"When the session fails (the host left) every playback is freed")
+	_expect(not voice.is_peer_muted(3) and is_equal_approx(voice.peer_volume(4), 1.0),
+		"...and mutes and volumes don't outlive the session")
+
 	await _finish(voice, settings, fake, world, original_enabled, original_volume)
+
+
+func _check_sound_check(voice: Node, playback: VoicePlayback, seat_camera: Camera3D, street_camera: Camera3D) -> void:
+	var audit: Script = load("res://scripts/presentation/sound_audit.gd")
+	if playback == null:
+		_expect(false, "A playback to check the sound list with")
+		return
+	_expect(audit.label_of(playback) == "Voz de compañero · Voz",
+		"The sound list names it (got %s)" % audit.label_of(playback))
+	var normal_db: float = playback.volume_db
+	audit.set_muted(self, audit.key_of(playback), true)
+	voice.receive_packet(4, _packet)
+	voice._process(0.0)
+	_expect(playback.volume_db <= -79.0, "Muted from the sound list, the voice is down (%.1f dB)" % playback.volume_db)
+	seat_camera.current = true
+	voice._process(0.0)
+	_expect(playback.muffled and playback.volume_db <= -79.0, "...and stays down when how it carries changes")
+	street_camera.current = true
+	voice._process(0.0)
+	_expect(playback.volume_db <= -79.0, "...either way")
+	audit.unmute_all(self)
+	voice._process(0.0)
+	_expect(is_equal_approx(playback.volume_db, normal_db),
+		"Unmuted, it is back to its volume (%.1f dB)" % playback.volume_db)
+	voice.receive_packet(4, _packet)
+	_expect(playback.playing, "...and still plays after the sound list restarted it")
 
 
 func _play(voice: Node, peer_id: int) -> void:

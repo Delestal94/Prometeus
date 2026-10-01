@@ -34,6 +34,8 @@ const SOUND_NAMES: Dictionary = {
 	&"care_step": "Toque correcto", &"care_error": "Tecla equivocada", &"care_success": "Arreglo listo",
 	&"care_whoosh": "Giro de la flecha", &"care_tick": "Avance de la herramienta",
 	&"footstep": "Pisada",
+	# Not a synthesized sound: a crewmate's voice chat (VoicePlayback, N-212.2).
+	&"AudioStreamGenerator": "Voz",
 }
 ## Whoever plays it: the nearest ancestor's script, by file name.
 const SOURCE_NAMES: Dictionary = {
@@ -44,7 +46,7 @@ const SOURCE_NAMES: Dictionary = {
 	"phone_camera": "Celular", "hud": "Pantalla", "hud_cargo_panel": "Pantalla", "delivery_house": "Casa",
 	"chasing_dog": "Perro", "flock_crossing": "Ovejas", "rail_crossing_segment": "Paso a nivel",
 	"narrow_bridge_segment": "Puente", "care_prompt_view": "Panel de cuidado",
-	"player_sprint": "Jugador (correr)",
+	"player_sprint": "Jugador (correr)", "voice_playback": "Voz de compañero",
 }
 
 ## Keys muted this session.

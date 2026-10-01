@@ -25,15 +25,27 @@ extends SteamVoice
 ## Neither bus is under the "Voces" slider, so GameSettings.voice_volume
 ## scales the gain along with the crewmate's own volume; muted, at volume 0
 ## or with voice switched off it is silent at once. A crewmate who leaves
-## (NetworkManager.peer_removed) or a session that ends takes theirs along.
+## (NetworkManager.peer_removed) takes theirs along; a session that ends --
+## left (roster_changed to a session of one) or failed (session_failed: the
+## host is gone, which announces no roster) -- takes every playback and every
+## mute and volume (clear_peers()): peer ids are reused by the next session.
+## The sound check (sound_audit.gd) mutes a voice by its volume_db (a
+## generator has no silent copy) and never gives it back: this holds it down
+## while muted and restores it after.
 
+const SoundAudit = preload("res://scripts/presentation/sound_audit.gd")
 const PLAYBACK_NAME: StringName = &"VoiceChat"
 const INTERIOR_BUS: StringName = &"Interior"
 const EXTERIOR_BUS: StringName = &"Exterior"
 ## Where the voice sits on a player without a Head node (player.tscn's is at 1.6 m).
 const HEAD_HEIGHT: float = 1.6
+const SILENT_DB: float = -80.0
 
 var _speakers: Dictionary = {}  # peer_id -> VoicePlayback
+# Who listens and from where, worked out once per frame (_refresh_listener()).
+var _vehicle: Node = null
+var _listener_seated: bool = false
+var _listener_aboard: bool = false
 
 
 func _ready() -> void:
@@ -43,10 +55,14 @@ func _ready() -> void:
 	if session != null:
 		session.peer_removed.connect(release_speaker)
 		session.roster_changed.connect(_on_roster_changed)
+		session.session_failed.connect(_on_session_failed)
 
 
 func _process(delta: float) -> void:
 	super(delta)
+	if _speakers.is_empty():
+		return
+	_refresh_listener()
 	for peer_id: int in _speakers.keys():
 		var playback: VoicePlayback = speaker(peer_id)
 		# Also one still gathering its cushion: muting it must not let it start.
@@ -55,12 +71,24 @@ func _process(delta: float) -> void:
 
 
 ## The VoicePlayback a crewmate is heard through, or null while they have none.
+## One on a player that is going away (freed this frame, a respawn putting a
+## new Player_<id> in its place) no longer counts: the next packet builds one
+## on the new player.
 func speaker(peer_id: int) -> VoicePlayback:
 	var playback: Variant = _speakers.get(peer_id)
-	if is_instance_valid(playback) and not (playback as Node).is_queued_for_deletion():
-		return playback as VoicePlayback
-	_speakers.erase(peer_id)
-	return null
+	if not is_instance_valid(playback):
+		_speakers.erase(peer_id)
+		return null
+	var node := playback as VoicePlayback
+	var parent: Node = node.get_parent()
+	if node.is_queued_for_deletion() or not node.is_inside_tree() or parent == null \
+			or parent.is_queued_for_deletion():
+		_speakers.erase(peer_id)
+		node.silence()
+		if not node.is_queued_for_deletion():
+			node.queue_free()
+		return null
+	return node
 
 
 ## Frees a crewmate's playback (they left, or the session ended).
@@ -83,12 +111,21 @@ func _forget_peer(peer_id: int) -> void:
 	release_speaker(peer_id)
 
 
-## A session of one (left, or the host is gone) has nobody to hear; otherwise
-## only those still on the roster keep theirs.
+## A session of one (it was left) has nobody to hear and forgets every mute
+## and volume; otherwise only those still on the roster keep theirs.
 func _on_roster_changed(peer_ids: Array) -> void:
+	if not _connected():
+		clear_peers()
+		return
 	for peer_id: int in _speakers.keys():
-		if not _connected() or not peer_ids.has(peer_id):
+		if not peer_ids.has(peer_id):
 			release_speaker(peer_id)
+
+
+## The session ended on a failure (the host is gone, a timeout): no roster
+## change is announced for it, so let go of everyone here.
+func _on_session_failed(_reason: String) -> void:
+	clear_peers()
 
 
 func _on_voice_received(peer_id: int, pcm: PackedByteArray, sample_rate: int) -> void:
@@ -102,11 +139,21 @@ func _on_voice_received(peer_id: int, pcm: PackedByteArray, sample_rate: int) ->
 		playback.position = Vector3(0.0, HEAD_HEIGHT, 0.0)
 		player.add_child(playback)
 		_speakers[peer_id] = playback
+	# Outside _process: this packet may change how it carries before the next frame.
+	_refresh_listener()
 	_route(peer_id, playback)
 	playback.push_pcm(pcm, sample_rate)
 
 
-## Where the voice comes from, which bus, how it carries and how loud.
+## The truck and where this peer listens from, once for every playback.
+func _refresh_listener() -> void:
+	_vehicle = get_tree().get_first_node_in_group(&"vehicle")
+	_listener_seated = _listener_inside(_vehicle)
+	_listener_aboard = _listener_seated or _standing_aboard(_player_of(multiplayer.get_unique_id()))
+
+
+## Where the voice comes from, which bus, how it carries and how loud
+## (with what _refresh_listener() found this frame).
 func _route(peer_id: int, playback: VoicePlayback) -> void:
 	var gain: float = _gain(peer_id)
 	if not is_equal_approx(playback.gain, gain):
@@ -114,24 +161,28 @@ func _route(peer_id: int, playback: VoicePlayback) -> void:
 	var player := playback.get_parent() as Node3D
 	if player == null:
 		return
-	var vehicle: Node = get_tree().get_first_node_in_group(&"vehicle")
 	var seat: Node3D = _seat_of(player)
 	var head: Node3D = player.get_node_or_null(^"Head") as Node3D
 	playback.follow = seat if seat != null else head
-	var speaker_seated: bool = seat != null and vehicle != null and vehicle.is_ancestor_of(seat)
-	var listener_seated: bool = _listener_inside(vehicle)
-	if speaker_seated and listener_seated:
+	var speaker_seated: bool = seat != null and _vehicle != null and _vehicle.is_ancestor_of(seat)
+	# carry_in_*() also sets volume_db: called again to give it back once the
+	# sound check lets go of it.
+	var checked: bool = playback.has_meta(SoundAudit.ORIGINAL_META)
+	var restore: bool = not checked and playback.volume_db <= SILENT_DB
+	if speaker_seated and _listener_seated:
 		_set_bus(playback, INTERIOR_BUS)
-		if playback.attenuation_model != AudioStreamPlayer3D.ATTENUATION_DISABLED:
+		if restore or playback.attenuation_model != AudioStreamPlayer3D.ATTENUATION_DISABLED:
 			playback.carry_in_room()
-		return
-	_set_bus(playback, EXTERIOR_BUS)
-	# Standing in the cargo bay is aboard too: no sheet metal in between.
-	var speaker_aboard: bool = speaker_seated or _standing_aboard(player)
-	var listener_aboard: bool = listener_seated or _standing_aboard(_player_of(multiplayer.get_unique_id()))
-	var through_wall: bool = speaker_aboard != listener_aboard
-	if playback.attenuation_model == AudioStreamPlayer3D.ATTENUATION_DISABLED or playback.muffled != through_wall:
-		playback.carry_in_open(through_wall)
+	else:
+		_set_bus(playback, EXTERIOR_BUS)
+		# Standing in the cargo bay is aboard too: no sheet metal in between.
+		var speaker_aboard: bool = speaker_seated or _standing_aboard(player)
+		var through_wall: bool = speaker_aboard != _listener_aboard
+		if restore or playback.attenuation_model == AudioStreamPlayer3D.ATTENUATION_DISABLED \
+				or playback.muffled != through_wall:
+			playback.carry_in_open(through_wall)
+	if checked:
+		playback.volume_db = SILENT_DB
 
 
 ## The crewmate's volume times the "Voces" slider; 0 when muted or with
