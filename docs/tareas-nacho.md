@@ -845,6 +845,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 4 → 1, `/root/` 6 → 3, `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
     Sin aviso (`route/` y `tests/`). Siguientes: `package_feedback.gd` (14), `depot_panel.gd` (13), `player.gd` (13),
     `package_contents_view.gd` (13), `seat_point.gd` (13).
+  - [x] `package_feedback.gd` + `package_trap_visuals.gd` (2026-10-01, rama `nacho/N-224-package-feedback-typed`): el
+    padre como `DeliveryPackage` (`package_id`, `trap_definition` como `TrapDefinition`, `content_definition()` como
+    `PackageContent`, `_is_run_active()`), `GameSettings` por la constante `GAME_SETTINGS` (accesor `_settings()`) y
+    los comportamientos de trampa como `HostileTrapBehavior`/`ExplosiveTrapBehavior`/`LiquidTrapBehavior`. Queda por
+    nombre solo `EventBus`. En los dos archivos: `.call` 11 → 0, `.get(&` 6 → 0, `/root/` 4 → 2; en `scripts/`:
+    `.call` 214 → 203, `.get(&` 216 → 210, `/root/` 111 → 109. `test_dynamic_dispatch_budget.gd` suma los dos
+    archivos y el handle. Aviso `docs/avisos/2026-10-01-n224-package-feedback-tipado.md`. Siguientes:
+    `depot_panel.gd` (13), `player.gd` (13), `package_contents_view.gd` (13), `seat_point.gd` (13).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -1715,9 +1723,46 @@ asfalto no emite, en grava sí, con `wetness` alto no, material sin sombra y con
 - [x] **N-320.3** ~~Actualizar el inventario/spec; corregir de paso los ítems 51 y 90.~~ **[x] Hecho (2026-10-01)** —
   `docs/inventario-assets.md` §7 y `docs/especificaciones-visuales.md` #49 (polvo nuevo), #51 (marcas de frenada) y #90
   (escombros), que ya existían en `vehicle_effects.gd`.
-- Queda (fuera de N-320): el humo de escape de `vehicle_effects.gd` se ve desde la caja como una hilera de 5-6 puntitos
-  oscuros nítidos (`SMOKE_COLOR` gris 0,32 con alfa 0,42), y su `scale_curve` 0,5 → 3,2 no crece porque `Curve` recorta a
-  `max_value` 1. Subir `max_value` solo no lo arregló en la captura: pide color más claro y otra forma (la de `WheelDust`).
+- Queda (fuera de N-320): el humo de escape de `vehicle_effects.gd` → N-324.
+
+### N-324 · Humo de escape suave y claro — B · `Opus 5.5 · medium` · Aviso: no
+
+`scripts/presentation/vehicle_effects.gd:11` y `:60-114` (`_try_build_exhaust`): `SMOKE_COLOR` gris 0,32 con alfa 0,42 y
+`SphereMesh` 6×3 de 0,15 m unshaded; desde la caja se ve una hilera de 5-6 puntitos oscuros de borde nítido. Además la
+`scale_curve` 0,5 → 3,2 queda en 0,5 → 1 porque `Curve` recorta a `max_value` 1 (el mismo bug está en
+`package_ruin_effects.gd:203` y `route_river_falls.gd:326`, fuera de esta tarea). Subir `max_value` solo no lo arregló en
+la captura de N-320: pide color más claro y otra forma. Desentona con el polvo claro y suave de N-320.
+**Necesita PC** (GPU real para las capturas; la toma la sesión de arte). Origen: sesión de arte 2026-10-01 (`director-arte`,
+área materiales y efectos).
+Receta: quad billboard de 0,45 m con el material de degradé radial de `WheelDust._puff_material()` (volverlo estático y
+reusarlo, no copiarlo); color gris claro tibio (0,80; 0,80; 0,78) con alfa en rampa [0 → 0,30 → 0,18 → 0] en offsets
+[0; 0,12; 0,45; 1]; `grow.max_value` 3 con escala 0,4 → 2,6; rotación aleatoria ±180 y velocidad angular ±25; amount 14,
+lifetime 1,6; dirección atrás y algo arriba, gravedad +0,35; `amount_ratio` según acelerador como hoy; color × luz según la
+hora y alfa × 0,6 con lluvia/niebla, como `wheel_dust.gd`.
+Hecho cuando: (a) en capturas desde la caja y atrás (`rear`), de día y de noche, en ralentí y a fondo, ninguna partícula
+tiene borde visible ni es más oscura que el asfalto detrás; (b) el último puff mide ≥ 1 m en pantalla y el primero ≤ 0,25 m;
+(c) a fondo tapa ≤ 10 % de la puerta trasera abierta; (d) un test (`test_dust_and_ambience.gd` u otro de efectos del
+vehículo) fija `curve.max_value >= max(puntos)`, material billboard sin sombra y con alfa, y sin `SphereMesh`; las capturas
+salen de un `tests/render_*.gd` reproducible (ampliar `render_wheel_dust.gd` o uno nuevo), revisadas con `revisor-visual`;
+y el inventario §7 y `docs/especificaciones-visuales.md` #50 están al día.
+**Intento 2026-10-01 (sesión de arte, 3 vueltas, no se subió): desde `rear` y desde la caja el humo no se lee.** Con la
+receta tal cual, el humo era invisible: +0,007 de luminancia sobre el asfalto en `rear`. En la vuelta 3 se usó alfa máx.
+0,85, quad de 0,6 m (0,33 → 1,5 m), 28 partículas × 2,4 s, salida a 1,4-2,2 m/s y color 0,86. Con eso de costado sí se lee
+como estela (3-4 puffs, el mayor de ~1 m), pero desde atrás y desde la caja la estela se ve de punta y se apila en un solo
+disco difuso (de día `idle_rear` +0,12, `launch_rear` +0,03, `launch_cargo` +0,04). De noche (luz ×0,55) no se ve:
++0,008 / +0,03. Bordes y oscuridad (a) bien en las tres vueltas, y tapa ~0 % de la puerta.
+No repetir: alfa y tamaño solos no alcanzan. Para la próxima vuelta: (1) que el caño salga hacia el costado (hacia −X,
+bajo el chasis) o que la estela tenga componente lateral y suba más, para que se despliegue en vez de quedar de punta a la
+cámara; (2) piso de brillo de noche (no ×0,55 de un gris); (3) degradé propio del humo, porque el de
+`WheelDust.puff_material()` (1 → 0,55 a medio radio) baja el alfa efectivo. Alternativa de dirección (`director-arte`):
+dejarlo casi invisible y que se note solo en ralentí y al arrancar; si se elige, cambia el "hecho cuando" (b)/(d).
+Parche de la vuelta 3 (emisor, `WheelDust.puff_material()` estático, test ampliado y `tests/render_exhaust.gd` con
+planos `rear`/`cargo`/`side` × ralentí/arranque a ≤ 10 km/h/a fondo, cada uno con un camión nuevo) y capturas de las tres
+vueltas: `D:/tmp/n324-intento/` y `D:/tmp/exhaust{,2,3}/` en la PC (fuera del repo).
+- [ ] **N-324.1** Rehacer emisor y material según la receta (puff estático compartido con `WheelDust`) y ampliar el test.
+  Con `artista-vfx` y `escritor-tests`; tests `dust`.
+- [ ] **N-324.2** Capturas reproducibles antes/después (caja y `rear`, día/noche, ralentí/a fondo). Con `revisor-visual`.
+- [ ] **N-324.3** Actualizar inventario §7 y `docs/especificaciones-visuales.md` #50. Con `documentador`.
 
 ## 4. Audio y diseño sonoro
 

@@ -27,6 +27,9 @@ extends SceneTree
 ##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would
 ##   give null and the care card would lose the HUD scale, the interact key's
 ##   name and the gamepad check (it would size and label itself as if on keyboard).
+## - package_feedback.gd (the box's presentation) is no autoload either: its GAME_SETTINGS handle is
+##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would give null and the box
+##   would ignore the impact-effects and colorblind-palette options.
 ## - cargo_animals.gd (the gull, the dog and the bees) reads the session's world_seed, is_host and
 ##   peer_level_ready through its NETWORK_MANAGER handle: if that stopped being the script the autoload
 ##   runs, `as NETWORK_MANAGER` would give null and the animals would roll from seed 0 and act on every peer.
@@ -149,6 +152,14 @@ const BUDGETS: Dictionary = {
 	# package_autoloads.gd). The three /root/ lookups are the null-safe accessors (EventBus, NetworkManager,
 	# RunManager).
 	"res://scripts/gameplay/route/cargo_animals.gd": {"call": 1, "callv": 0, "get": 1, "root": 3},
+	# The box's presentation (N-224.4) is typed: the box (DeliveryPackage), its trap (TrapDefinition,
+	# HostileTrapBehavior, ExplosiveTrapBehavior, LiquidTrapBehavior), its contents (PackageContent) and the
+	# settings (GAME_SETTINGS, below). Nothing left by name but two /root/ lookups: the null-safe GameSettings
+	# accessor and EventBus, whose signals it connects by name because a test may replace EventBus with a
+	# plain Node.
+	"res://scripts/gameplay/package/package_feedback.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
+	# What each trap shows on the box (split out of package_feedback.gd, N-225.5), typed the same way.
+	"res://scripts/gameplay/package/package_trap_visuals.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -185,6 +196,9 @@ const SCRIPT_HANDLES: Dictionary = {
 	},
 	"res://scripts/gameplay/route/cargo_animals.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
+	"res://scripts/gameplay/package/package_feedback.gd": {
+		"GAME_SETTINGS": "/root/GameSettings",
 	},
 }
 

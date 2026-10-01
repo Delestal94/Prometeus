@@ -63,11 +63,12 @@ static func refresh_event_disguise(f: PackageFeedback) -> void:
 	var shown_parties: String = f._shipping_parties_data
 	if not f._package.label_swapped_with.is_empty():
 		for other: Node in f.get_tree().get_nodes_in_group(&"cargo"):
-			if other is DeliveryPackage and other.package_id == f._package.label_swapped_with:
-				var content: Resource = other.content_definition()
+			var other_package := other as DeliveryPackage
+			if other_package != null and other_package.package_id == f._package.label_swapped_with:
+				var content: PackageContent = other_package.content_definition() as PackageContent
 				if content != null:
-					shown = content.call(&"shipping_contents")
-					shown_parties = content.call(&"shipping_parties")
+					shown = content.shipping_contents()
+					shown_parties = content.shipping_parties()
 				break
 	if f._shipping_text.text != shown:
 		f._shipping_text.text = shown
@@ -79,10 +80,10 @@ static func refresh_event_disguise(f: PackageFeedback) -> void:
 	if f._disguise_icon != null:
 		f._disguise_icon.visible = false
 	if disguised:
-		var definition: Resource = load("res://data/traps/%s.tres" % f._package.disguise_trap_id)
+		var definition := load("res://data/traps/%s.tres" % f._package.disguise_trap_id) as TrapDefinition
 		if definition != null:
-			f._disguise_text.text = String(definition.call(&"localized_name"))
-			f._disguise_icon.texture = UiTheme.trap_icon(String(definition.call(&"localized_name")))
+			f._disguise_text.text = definition.localized_name()
+			f._disguise_icon.texture = UiTheme.trap_icon(definition.localized_name())
 			f._disguise_icon.visible = f._disguise_icon.texture != null
 	if f._package.disguise_revealed and not f._was_disguise_revealed:
 		PackageBoxMotion.burst_confetti(f)
@@ -125,12 +126,13 @@ static func apply_hostile(f: PackageFeedback) -> void:
 	if f._hostile_eyes == null:
 		return
 	var package := f.get_parent() as DeliveryPackage
-	if package == null or package.trap_behavior == null:
+	var behavior: HostileTrapBehavior = (package.trap_behavior as HostileTrapBehavior) if package != null else null
+	if behavior == null:
 		return
-	var aggression: float = float(package.trap_behavior.get("aggression")) / maxf(package.integrity_max, 1.0)
+	var aggression: float = behavior.aggression / maxf(package.integrity_max, 1.0)
 	f._hostile_eyes.visible = aggression > 0.04
 	f._hostile_eyes.scale = Vector3.ONE * lerpf(0.35, 1.25, aggression)
-	var attacks: int = int(package.trap_behavior.get("attack_count"))
+	var attacks: int = behavior.attack_count
 	if attacks > f._hostile_last_attack_count:
 		f._hostile_last_attack_count = attacks
 		f._hostile_hiss_player.play()
@@ -211,22 +213,23 @@ static func apply_explosive(f: PackageFeedback, delta: float) -> void:
 	if f._explosive_display == null:
 		return
 	var package := f.get_parent() as DeliveryPackage
-	if package == null or package.trap_behavior == null:
+	var behavior: ExplosiveTrapBehavior = (package.trap_behavior as ExplosiveTrapBehavior) if package != null else null
+	if behavior == null:
 		return
-	var seconds: float = float(package.trap_behavior.get("seconds_left"))
-	var direction: StringName = StringName(package.trap_behavior.call("next_direction"))
+	var seconds: float = behavior.seconds_left
+	var direction: StringName = behavior.next_direction()
 	# The bomb only ticks on the host: every other peer reads the sequence
 	# the host publishes with the care state (PackageRescue.publish_care()).
 	var sequence: Dictionary = package.care_state.get("sequence", {})
-	var done: int = int(package.trap_behavior.get("sequence_index"))
-	var total: int = (package.trap_behavior.get("sequence") as Array).size()
+	var done: int = behavior.sequence_index
+	var total: int = behavior.sequence.size()
 	if not sequence.is_empty():
 		var steps: Array = sequence.get("steps", [])
 		done = int(sequence.get("index", 0))
 		total = steps.size()
 		seconds = float(sequence.get("seconds", seconds))
 		direction = StringName(steps[done]) if done < steps.size() else &""
-	var state: int = int(package.trap_behavior.call("get_state"))
+	var state: int = behavior.get_state()
 	# The code is the driver's to read (dashboard_gps.gd): the box only counts
 	# how far along the owner is, unless the owner is the one who reads it.
 	var owner_reads: bool = not sequence.is_empty() and StringName(sequence.get("reader", &"owner")) == &"owner"
@@ -237,7 +240,7 @@ static func apply_explosive(f: PackageFeedback, delta: float) -> void:
 	f._explosive_display.modulate = UiTheme.state_color(state, f._colorblind_palette_enabled())
 	# The countdown only means something once the bomb is on the road: on
 	# the depot's shelf it would just be a floating, ticking sign (depot.gd).
-	f._explosive_display.visible = bool(package.call(&"_is_run_active"))
+	f._explosive_display.visible = package._is_run_active()
 	if not f._explosive_display.visible or seconds <= 0.0 or direction == &"":
 		return
 	f._explosive_tick_timer -= delta
@@ -278,9 +281,10 @@ static func apply_liquid(f: PackageFeedback) -> void:
 	if f._liquid_puddle == null:
 		return
 	var package := f.get_parent() as DeliveryPackage
-	if package == null or package.trap_behavior == null:
+	var behavior: LiquidTrapBehavior = (package.trap_behavior as LiquidTrapBehavior) if package != null else null
+	if behavior == null:
 		return
-	var amount: float = float(package.trap_behavior.get("spill_amount"))
+	var amount: float = behavior.spill_amount
 	var ratio: float = clampf(amount / maxf(package.integrity_max, 1.0), 0.0, 1.0)
 	var radius: float = lerpf(0.02, 0.52, ratio)
 	f._liquid_puddle.scale = Vector3(radius, 1.0, radius)
