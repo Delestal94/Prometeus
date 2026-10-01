@@ -906,6 +906,12 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `/root/` 3 → 3, `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
     `tests/`). Siguientes: `package_contents_view.gd` (13), `seat_point.gd` (13), `package_pickup_point.gd` (12),
     `cargo_animal_view.gd` (11), `player.gd` (13).
+  - [x] `package_contents_view.gd` (2026-10-01, rama `nacho/N-224-contents-view-typed`): la caja como
+    `DeliveryPackage` (`package.gd` no carga la vista, sin ciclo; `package_id`, `trap_state`, `contents_spilled`,
+    `is_open` y `content_definition()` directos) y el contenido como `PackageContent` (`localized_name`,
+    `condition_text`, `pick_note`, `model`, `box_size`). Queda por nombre el `connect` al EventBus (un test puede
+    reemplazarlo por un Node). En el archivo: 13 → 1 uso (`.call` 5 → 0, `.get(&` 7 → 0, `/root/` 1 → 1).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-contents-view-tipado.md`.
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
