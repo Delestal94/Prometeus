@@ -18,8 +18,8 @@ extends SceneTree
 ##   script loaded from its path: each must be the script its autoload runs, or
 ##   `as <handle>` would give null and the depot would stop seeing the
 ##   network (host, seed), the crew's money and supplies, and the unlocks;
-## - package.gd (the box) and package_rescue.gd (its care simulation) reach the
-##   network through package_autoloads.gd as a NetSession (the class
+## - package.gd (the box), package_handling.gd (its hand-over) and
+##   package_rescue.gd (its care simulation) reach the network through package_autoloads.gd as a NetSession (the class
 ##   NetworkManager extends): the NetworkManager autoload must be one, or
 ##   `as NetSession` would give null and the box would stop seeing the network
 ##   (its visibility filter, the hand-over, the seed its trap rolls from);
@@ -57,23 +57,30 @@ const BUDGETS: Dictionary = {
 	# camera, segments, deer crossing, house, player and boxes by class. The one
 	# /root/ lookup is the NetworkManager handle (NETWORK_MANAGER, below).
 	"res://scripts/tools/trailer_shot.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
-	# Nine .call left. Five go to the truck, found through the "vehicle" group:
-	# needs_sweep, carries (x3) and point_velocity. vehicle.gd has no class name,
-	# and tests put plain Node fakes with those methods in the group (`as` a
-	# typed vehicle would drop them). Three go to CrewProgression (the tender's
-	# color, award_milestone) and RouteEventManager (on_package_impact), and
-	# three .get read RunManager (cargo twice, consumed_packages): those
-	# autoloads stay by name because preloading their scripts here makes every
-	# script that names DeliveryPackage compile them before the autoloads exist
-	# (see package_autoloads.gd). The last .call is the EventBus relay, by name
-	# because a test may replace EventBus with a plain Node. The one /root/
-	# lookup is that EventBus node. Typed now: the trap definition and behavior
-	# (TrapDefinition, ITrapBehavior), the player (Player) and the network
-	# (NetSession).
-	"res://scripts/gameplay/package/package.gd": {"call": 9, "callv": 0, "get": 3, "root": 1},
+	# Three .call left, one .get and one /root/ (N-225.4 moved the rest to the files below). Two .call go to
+	# the truck, found through the "vehicle" group: needs_sweep and carries. vehicle.gd has no class name,
+	# and tests put plain Node fakes with those methods in the group (`as` a typed vehicle would drop them).
+	# The .get reads RunManager's cargo: that autoload stays by name because preloading its script here makes
+	# every script that names DeliveryPackage compile it before the autoloads exist (see
+	# package_autoloads.gd). The last .call is the EventBus relay, by name because a test may replace
+	# EventBus with a plain Node; the one /root/ lookup is that EventBus node. Typed now: the trap definition
+	# and behavior (TrapDefinition, ITrapBehavior), the player (Player) and the network (NetSession).
+	"res://scripts/gameplay/package/package.gd": {"call": 3, "callv": 0, "get": 1, "root": 1},
 	# The box's autoload lookups, null-safe: NetworkManager (typed NetSession),
 	# RunManager, CrewProgression and RouteEventManager.
 	"res://scripts/gameplay/package/package_autoloads.gd": {"call": 0, "callv": 0, "get": 0, "root": 4},
+	# Carrying, passing, dropping and handing over the box (split out of package.gd, N-225.4). Three .call go
+	# to the truck, by name for the reason in package.gd: carries (x2, taking the box and riding along) and
+	# point_velocity. The one .get reads RunManager's consumed_packages, by name for the compile cycle
+	# package_autoloads.gd explains.
+	"res://scripts/gameplay/package/package_handling.gd": {"call": 3, "callv": 0, "get": 1, "root": 0},
+	# The tender, the helper and merit (split out of package.gd, N-225.4). Two .call: CrewProgression's
+	# player_color_name (the helper's prompt) and award_milestone; one .get: RunManager's cargo (the state the
+	# run counts for the box). All by name for the compile cycle package_autoloads.gd explains.
+	"res://scripts/gameplay/package/package_tending.gd": {"call": 2, "callv": 0, "get": 1, "root": 0},
+	# Hits (split out of package.gd, N-225.4). The one .call is RouteEventManager's on_package_impact, by name
+	# for the compile cycle package_autoloads.gd explains.
+	"res://scripts/gameplay/package/package_impacts.gd": {"call": 1, "callv": 0, "get": 0, "root": 0},
 	# The rescue (host care simulation) is typed like the box: the trap (ITrapBehavior,
 	# TrapDefinition, ExplosiveTrapBehavior for the defused flag), the player's seat
 	# on the carrier (Player), the network and the autoload
