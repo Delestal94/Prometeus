@@ -5,9 +5,8 @@ extends Node
 ## Set by Hud before this is added as its child.
 var hud: Hud
 
-const RESULT_PLAYER_COLORS: Array[Color] = [
-	Color("83e2ba"), Color("f4c562"), Color("f47e6d"), Color("6db3d6"), Color("c9a0e0"),
-]
+## The crew's colours, not a copy of them (N-228.3): an award dot matches the suit.
+const RESULT_PLAYER_COLORS: Array[Color] = Player.PLAYER_COLORS
 
 
 func _ready() -> void:
@@ -184,7 +183,9 @@ func _show_awards(awards: Array) -> void:
 		var peer: int = int(award.get("peer", 0))
 		var color: Color = RESULT_PLAYER_COLORS[PlayerColorSlot.slot(peer, RESULT_PLAYER_COLORS.size())]
 		var player_name: String = tr("HUD_YOU") if peer == NetworkManager.local_id() else tr("UI_PLAYER_N") % peer
-		lines.append("[color=#%s]●[/color] [b]%s[/b]  %s" % [color.to_html(false),
+		# INK outline: the white slot (N-228.3) vanishes on the cream card without it.
+		lines.append(("[outline_size=3][outline_color=#%s][color=#%s]●[/color][/outline_color][/outline_size]"
+				+ " [b]%s[/b]  %s") % [UiTheme.INK.to_html(false), color.to_html(false),
 				tr(String(award.get("title", "HUD_AWARD_GENERIC"))),
 				player_name])
 	hud.result_awards_label.text = "\n".join(lines)

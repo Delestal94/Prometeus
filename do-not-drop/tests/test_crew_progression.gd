@@ -17,9 +17,9 @@ extends SceneTree
 ##
 ## Colour slots (N-226.2: player_color_slot.gd, crew_progression.gd):
 ## - the colour of a peer is the index the host gave it (NetworkManager.color_slot),
-##   wrapped to the five-colour palette, never posmod(peer_id, 5): with ENet-sized
-##   ids (> 1.8e9) the five of a crew all differ, the host is slot 0 playing solo
-##   and in a room, and slots 5..7 wrap onto 0..2;
+##   wrapped to the eight-colour palette (N-228.3), never posmod(peer_id, 5): with
+##   ENet-sized ids (> 1.8e9) the five of a crew all differ, the host is slot 0
+##   playing solo and in a room, and slots 5..7 have colours of their own;
 ## - the campaign is saved by slot ("players": {"0": ...}, CAMPAIGN_VERSION 2):
 ##   a new session with other random ids but the same slots gets the same merit
 ##   and cards back, and swapped slots swap them;
@@ -202,10 +202,12 @@ func _check_color_slots(crew: Node) -> void:
 		if colors.size() != 5:
 			_expect(false, "A random crew of five shares a colour (got %d colours, %s)" % [colors.size(), random_slots])
 			break
-	# Eight seats, five colours: 5..7 wrap onto 0..2, never out of range.
+	# Eight seats, eight colours (N-228.3): 5..7 are their own, never wrapped.
 	_seat(network, {1: 0, BIG_IDS[0]: 5, BIG_IDS[1]: 6, BIG_IDS[2]: 7})
-	_expect(int(crew.call(&"player_slot", BIG_IDS[0])) == 0 and int(crew.call(&"player_slot", BIG_IDS[1])) == 1
-			and int(crew.call(&"player_slot", BIG_IDS[2])) == 2, "Slots 5..7 wrap onto the five-colour palette")
+	_expect(int(crew.call(&"player_slot", BIG_IDS[0])) == 5 and int(crew.call(&"player_slot", BIG_IDS[1])) == 6
+			and int(crew.call(&"player_slot", BIG_IDS[2])) == 7, "Slots 5..7 have their own colours")
+	_expect(crew.call(&"player_color_key", BIG_IDS[2]) == keys[7] and keys.size() == 8,
+			"The crew's palette has one key per seat of a full room (got %d)" % keys.size())
 
 	# Saved by slot. First session: host + two joiners.
 	_seat(network, {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2})
@@ -273,6 +275,21 @@ func _check_color_slots(crew: Node) -> void:
 	var migrated: Dictionary = _read_save()
 	_expect(int(migrated.get("version", 0)) == 2 and Dictionary(migrated.get("players", {})).has("0"),
 			"The next save writes version 2 (got %s)" % [migrated])
+
+	# Slots 5..7 (N-228.3) save and load like the rest; a five-slot file still loads.
+	_seat(network, {1: 0, BIG_IDS[0]: 7})
+	crew.call(&"reset_campaign")
+	crew.call(&"award_action", BIG_IDS[0], &"n228_slot7", 12)
+	crew.call(&"save_campaign")
+	_expect(Dictionary(_read_save().get("players", {})).has("7"), "The eighth seat is saved under slot 7")
+	_seat(network, {1: 0, BIG_IDS[1]: 7})
+	crew.call(&"load_campaign")
+	_expect(int(crew.get(&"merit").get(BIG_IDS[1], -1)) == 12, "...and its merit comes back to the seat")
+	_write_save(JSON.stringify({"version": 2, "team_money": 90, "players": {"4": {"merit": 9}}}))
+	_seat(network, {1: 0, BIG_IDS[0]: 4, BIG_IDS[1]: 7})
+	crew.call(&"load_campaign")
+	_expect(int(crew.get(&"merit").get(BIG_IDS[0], -1)) == 9 and int(crew.get(&"merit").get(BIG_IDS[1], -1)) == 0,
+			"A save from the five-colour days loads: slot 4 keeps its merit, the new seats start clean")
 
 	# Files it must not crash on: corrupt, from a newer game, wrong types.
 	_seat(network, {1: 0})
