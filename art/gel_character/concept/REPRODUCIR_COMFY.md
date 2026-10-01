@@ -77,3 +77,20 @@ Las exploraciones fallidas se conservaron localmente en
 `.beads/concept_explorations/`, fuera de la entrega versionada; sus prompts
 R1–R5 sí permanecen para reproducir el historial. No cuentan como rondas del
 bloque E ni como aprobación cuantitativa del personaje de Godot.
+
+## Resultados de la serie final
+
+Generación completada con guía v3 y denoise 0,15, inspección de las tres variantes:
+
+| Semilla | PNG en `comfy/guidance_v3/` | Inspección conceptual |
+|---|---|---|
+| 311071 | `concept_guided_seed311071.png` | Conserva 14 figuras, manoplas, dorso/talones y seis colores; transmisión algo más contrastada. |
+| 311072 | `concept_guided_seed311072.png` | **Recomendada por el artista:** mantiene anatomía y composición; reflejos algo más uniformes y lectura lechosa suave. |
+| 311073 | `concept_guided_seed311073.png` | Conserva los rasgos; motas y pequeños brillos algo más perlados. |
+
+La diferencia entre semillas es deliberadamente pequeña por el denoise bajo,
+necesario para no reintroducir los defectos de anatomía. Cada PNG tiene su
+manifest `.json` completo. Esta recomendación no sustituye la revisión visual
+independiente registrada en `seleccion_comfy.md` ni aprueba ratios exactos.
+La selección final es **311071**, por la prioridad dada por el revisor a la
+legibilidad del pulgar de perfil; 311072 conserva la preferencia material del artista.
