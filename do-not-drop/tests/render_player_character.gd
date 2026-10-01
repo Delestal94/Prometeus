@@ -160,7 +160,7 @@ func _run() -> void:
 	# --- Optional preview of candidate offsets (render-only). ---------------
 	# PREVIEW_DELTAS maps a seat name to a delta added to what player.gd's
 	# _seat_body_offset() returns now. The players stop processing so
-	# _pose_seated_body() doesn't undo it; BodyVisual keeps animating (and
+	# pose_seated_body() (PlayerSeatPose) doesn't undo it; BodyVisual keeps animating (and
 	# the driver's IK keeps solving).
 	if not PREVIEW_DELTAS.is_empty():
 		for i: int in range(seats.size()):

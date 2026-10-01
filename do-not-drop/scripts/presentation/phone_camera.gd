@@ -10,7 +10,7 @@ class_name PhoneCamera
 ## Deliberately self-contained. It borrows the active camera's pose into a
 ## camera of its own instead of touching player.gd (Slatex's file, see
 ## docs/colaboracion-equipo.md), and never writes the player's FOV, which
-## _apply_context_fov() lerps every physics frame and would fight it. Drop
+## player_movement.gd apply_context_fov() lerps every physics frame and would fight it. Drop
 ## this node into a level and it works; nothing else has to know it exists.
 
 const PHONE_FOV: float = 52.0

@@ -24,6 +24,7 @@ Se quitaron 15 envoltorios privados que solo reenviaban a componentes y nadie us
 `_pose_seated_body`, `_configure_driver_ik`, `_stop_driver_ik`): se llama directo al componente.
 
 `tests/test_player_split.gd` falla si `player.gd` pasa de 700 líneas, si cambia la tabla de RPC o si se pierde algo de
-la API usada desde otros archivos.
+la API usada desde otros archivos. Margen chico a propósito (695 de 700): si un cambio grande lo pasa, se muda
+a un helper o componente, no se sube el tope.
 
 Qué hacer: `git pull` antes de tocar el jugador; lo nuevo va en el helper o componente de su responsabilidad.

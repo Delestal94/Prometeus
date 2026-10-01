@@ -196,7 +196,7 @@ var _riding: bool = false
 var _ride_last_transform: Transform3D = Transform3D.IDENTITY
 ## Physics layers of the truck and of its cargo shell (vehicle.gd SHELL_LAYER),
 ## the kinematic copy of it that players actually collide with. The truck
-## carries its riders by hand (_ride_with_vehicle), so the controller's own
+## carries its riders by hand (Ride.ride_with_vehicle), so the controller's own
 ## platform handling must ignore both or they'd move twice.
 const VEHICLE_LAYER: int = 2
 const SHELL_LAYER: int = 64
