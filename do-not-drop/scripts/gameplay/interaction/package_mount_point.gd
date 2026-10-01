@@ -38,3 +38,5 @@ func interact(player: Node) -> void:
 func store(package: DeliveryPackage) -> void:
 	package.place_at(get_parent() as Node3D, self)
 	occupied_by = package
+	# A seated tender whose seat does not face this mount stops tending it.
+	SeatTending.on_stored(package, self)
