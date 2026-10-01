@@ -56,6 +56,8 @@ extends SceneTree
 ## - cargo_animal_view.gd (what the crew sees of the cargo animals) holds its director as CargoAnimals, the
 ##   truck by preload of vehicle.gd, the box as DeliveryPackage and the dog through wildlife_animal.gd; only
 ##   the EventBus connects stay by name.
+## - mud_segment.gd (the mud stretch) holds its spot, crane, run log and session typed; the crew's money, the
+##   run mode, the truck's `carries` and the tests' FakePlayers stay by name (see its budget).
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -154,16 +156,18 @@ const BUDGETS: Dictionary = {
 	# CrewProgression (team_money, spend, save_campaign) and RunManager
 	# (current_mode) stay by name: preloading their scripts here breaks both
 	# autoloads under --script (route.gd pulls this in, and those scripts name
-	# EventBus before the autoloads exist). The other three .call and five .get
+	# EventBus before the autoloads exist). The other three .call and three .get
 	# are on stand-ins the tests put in groups: the players of the
-	# "player" group (is_local; carried_package, seat_node_path and _ragdolled,
-	# twice for the first two) are FakePlayer Node3Ds, `as Player` would drop
-	# them; carries goes to the truck of the "vehicle" group (vehicle.gd names
-	# the autoloads, no class name). The last .call is the EventBus relay of
-	# the notices, by name because a test may replace EventBus with a plain
-	# Node. The four /root/ lookups are the null-safe accessors (EventBus,
-	# NetworkManager, CrewProgression, RunManager).
-	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 7, "root": 4},
+	# "player" group (is_local; carried_package and seat_node_path, read once in
+	# _hands_busy; _ragdolled) are FakePlayer Node3Ds, `as Player` would drop
+	# them and the push tests would stop pushing; carries goes to the truck of
+	# the "vehicle" group (vehicle.gd names the autoloads bare, so preloading it
+	# here breaks the --script compile like the two above, and it has no class
+	# name). The last .call is the EventBus relay of the notices, by name because
+	# a test may replace EventBus with a plain Node. The four /root/ lookups are
+	# the null-safe accessors (EventBus, NetworkManager, CrewProgression,
+	# RunManager).
+	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 5, "root": 4},
 	# The delivery level is typed: the route and the truck through their scripts
 	# (route.gd and vehicle.gd by preload, no class name), the houses as
 	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'

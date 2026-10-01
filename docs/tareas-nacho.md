@@ -988,6 +988,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     archivo y su handle; `test_delivery_houses.gd` toca el timbre con cajas reales (`package.tscn`) en vez de nodos
     con `trap_state` inventado. Sin aviso (`route/` y `tests/`). Siguientes: `spectator_camera.gd` (10), `play_area.gd` (9),
     `dashboard_gps.gd` (9), `vehicle_presentation.gd` (9).
+  - [x] `mud_segment.gd` (2026-10-01, rama `nacho/N-224-mud-segment-typed`): ya estaba en `BUDGETS` desde N-108 y es el
+    que más usos por nombre tiene en `scripts/` (16), pero casi todos son forzados. "Manos ocupadas" (`carried_package`,
+    `seat_node_path`) se lee una sola vez en `_hands_busy()`. Quedan por nombre los `FakePlayer` de
+    `test_mud_segment.gd` (`as Player` los dejaría fuera y nadie empujaría), `carries` del camión y `CrewProgression`/
+    `RunManager` (precargar `vehicle.gd`, `crew_progression.gd` o `run_manager.gd` desde acá rompe la compilación bajo
+    `--script`: `route.gd` lo carga y esos scripts nombran autoloads sueltos) y el relay de EventBus. En el archivo:
+    `.get(&` 7 → 5; en `scripts/`: `.get(&` 180 → 178. Presupuesto ajustado en `test_dynamic_dispatch_budget.gd`. Sin
+    aviso (`route/` y `tests/`). Para bajar más hay que pasar `test_mud_segment.gd` a jugadores reales. Siguientes (fuera
+    de `BUDGETS`): `spectator_camera.gd` (12), `dashboard_gps.gd` (10), `vehicle_presentation.gd` (9), `play_area.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
