@@ -156,7 +156,7 @@ const BUDGETS: Dictionary = {
 	# CrewProgression (team_money, spend, save_campaign) and RunManager
 	# (current_mode) stay by name: preloading their scripts here breaks both
 	# autoloads under --script (route.gd pulls this in, and those scripts name
-	# EventBus before the autoloads exist). The other two .call and three .get
+	# EventBus before the autoloads exist). The other three .call and three .get
 	# are on stand-ins the tests put in groups: the players of the
 	# "player" group (is_local; carried_package and seat_node_path, read once in
 	# _hands_busy; _ragdolled) are FakePlayer Node3Ds, `as Player` would drop
