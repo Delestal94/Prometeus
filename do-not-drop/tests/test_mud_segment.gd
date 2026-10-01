@@ -17,6 +17,9 @@ extends SceneTree
 ##     balance under zero, leaving its line for the results.
 ##   - Holding the primary button near the truck is what sends a push.
 ##   - Neither level ends the run on "stuck" while the truck is in the mud.
+##   - The mud's look (N-322): one MudSurface drawn by mud_ground.gdshader with
+##     the segment's pit and length, followed onto the ground; no flat boxes
+##     or puddle discs left; the lumps are rounded, with the same shader.
 ##   - The crane is a model (N-321, sm_vehicle_tow_crane.glb), not boxes: its
 ##     body is that scene under Body, no MeshInstance3D has a PrimitiveMesh,
 ##     the Beacon is emissive and spins, the boards stay on the flanks, and
@@ -175,10 +178,49 @@ func _check_real_route() -> void:
 		_expect(sign_found, "The road's hazard sign stands at the mud's entry")
 		_expect(mud.get_node_or_null(^"PushSpot") != null and mud.get_node_or_null(^"StrapSpot") != null,
 				"Both rescue spots exist on every peer under fixed names")
+		_check_mud_look(mud)
 	route.free()
 	_network.set(&"world_seed", 0)
 	_network.set(&"world_house_count", 0)
 	await process_frame
+
+
+## N-322: the mud is one shaded surface over the road, not flat coloured boxes.
+func _check_mud_look(mud: MudSegment) -> void:
+	var surface: MeshInstance3D = mud.get_node_or_null(^"MudSurface") as MeshInstance3D
+	_expect(surface != null, "The mud is one MudSurface")
+	if surface == null:
+		return
+	var material: ShaderMaterial = surface.material_override as ShaderMaterial
+	_expect(material != null and material.shader == load("res://shaders/mud_ground.gdshader"),
+			"MudSurface is drawn by mud_ground.gdshader")
+	if material != null:
+		_expect(material.get_shader_parameter(&"earth_detail") is Texture2D, "The mud has the earth grain map")
+		_expect(is_equal_approx(float(material.get_shader_parameter(&"pit_start")), mud.pit_start)
+				and is_equal_approx(float(material.get_shader_parameter(&"pit_end")), mud.pit_end)
+				and is_equal_approx(float(material.get_shader_parameter(&"stretch_length")), mud.length),
+				"The shader draws the pit where the physics has it")
+		_expect(float(material.get_shader_parameter(&"lump")) == 0.0, "The surface is not drawn as a lump")
+	# conform_geometry() turned it into the ground-following ArrayMesh, with
+	# enough vertices to bend over the road's hills.
+	_expect(surface.mesh != null and surface.mesh.get_faces().size() / 3 >= 200,
+			"MudSurface is finely divided so it follows the ground")
+	var lumps: int = 0
+	var leftovers: Array[String] = []
+	for child: Node in mud.get_children():
+		for old: String in ["MudPuddle", "MudPit", "MudRut"]:
+			if String(child.name).begins_with(old):
+				leftovers.append(String(child.name))
+		if String(child.name).begins_with("MudMound"):
+			lumps += 1
+			var lump_mesh: MeshInstance3D = child as MeshInstance3D
+			var lump_material: ShaderMaterial = null
+			if lump_mesh != null:
+				lump_material = lump_mesh.material_override as ShaderMaterial
+			_expect(lump_material != null and float(lump_material.get_shader_parameter(&"lump")) == 1.0,
+					"%s is a rounded lump with the mud shader" % child.name)
+	_expect(leftovers.is_empty(), "No flat puddle discs or rut boxes are left: %s" % [leftovers])
+	_expect(lumps == 10, "Ten lumps of churned mud line the edges")
 
 
 ## Endless: mud is in the pool and counted hard, but starts late and is spaced out.

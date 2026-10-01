@@ -27,6 +27,9 @@ extends SceneTree
 ##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would
 ##   give null and the care card would lose the HUD scale, the interact key's
 ##   name and the gamepad check (it would size and label itself as if on keyboard).
+## - cargo_animals.gd (the gull, the dog and the bees) reads the session's world_seed, is_host and
+##   peer_level_ready through its NETWORK_MANAGER handle: if that stopped being the script the autoload
+##   runs, `as NETWORK_MANAGER` would give null and the animals would roll from seed 0 and act on every peer.
 ## - trailer_shot.gd (the trailer and store-capture tool) sets the shot's seed
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the
 ##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
@@ -138,6 +141,14 @@ const BUDGETS: Dictionary = {
 	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'
 	# signals are connected by the signal. Nothing left by name.
 	"res://scripts/gameplay/level_base.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The animals that go for the cargo (N-109) are typed: the truck through vehicle.gd by preload (no class
+	# name), the session through NETWORK_MANAGER (world_seed, is_host and peer_level_ready, below), the box
+	# (DeliveryPackage, its _has_previous_velocity too) and its contents (PackageContent). One .call left: the
+	# EventBus relay, by name because a test may replace EventBus with a plain Node. One .get left: RunManager's
+	# is_running, by name because preloading run_manager.gd here compiles it before the autoloads exist (see
+	# package_autoloads.gd). The three /root/ lookups are the null-safe accessors (EventBus, NetworkManager,
+	# RunManager).
+	"res://scripts/gameplay/route/cargo_animals.gd": {"call": 1, "callv": 0, "get": 1, "root": 3},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -171,6 +182,9 @@ const SCRIPT_HANDLES: Dictionary = {
 	},
 	"res://scripts/gameplay/player/player_cargo_care.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",
+	},
+	"res://scripts/gameplay/route/cargo_animals.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 }
 
