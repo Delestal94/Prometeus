@@ -279,3 +279,147 @@ valla de piso mojado y el marco de ventana con parteluces). Todavía **no están
 - Materiales: nombres de la paleta para que `DepotKit` los agrupe; nuevos solo `film`, `lamp_halo`, `lamp_disc`,
   `cage_mesh`, `sign_pictogram`, `sign_plate`, `signal_red` y `signal_green` (los lotes de `DepotKit` están en 170: no
   pasar de ~190 al conectarlos).
+
+### Iteración 2, paso 2 (2026-10-01, rama `nacho/N-319-depot-finish`, N-319.2) — pasada de luz y pintura, kit conectado
+
+Capturas con GPU (`tests/render_depot.gd`; ahora acepta `-- --out=<carpeta> --only=a,b --mood=... --sun=<energía>`) en
+`D:/tmp/depot_review/iter2b/` (21 vistas, clima `nublado_dia`) y `iter2b/moods/<clima>/` (overview, spawn_view_game y la vista
+nueva `center_eye_level`, ojos en (0, z 17) mirando +Z, en soleado_dia, nublado_dia, niebla_atardecer y soleado_noche).
+
+**Decisión de luz** (delegada por el usuario, crítica de `director-arte`): el interior tiene su luz casi fija; el clima solo
+se nota en tragaluces, ventanas y portón.
+- `DepotAtmosphere`: bajo el techo cada valor es `base x (1 - 0,8) + interior x 0,8` (reversible, así que sigue
+  recuperando la base si `WorldMood` cambia el `Environment`): ambiente 0,25 de color gris azulado frío, sin aporte del cielo
+  (el cielo claro era lo que lavaba el galpón y teñía de cian) y las sombras del sol pasan de 0,85 a 1,0 (el 15 % que se
+  colaba por el techo subía el piso de los días claros). Al salir todo vuelve.
+- `DepotHall.build_sun_shield()`: cuatro losas gruesas que solo proyectan sombra (techo y paredes laterales y del fondo)
+  cierran las fugas del sesgo de sombra del sol del nivel contra un techo de 22 cm.
+- Pozos de luz x1,6 (alfa 0,18) y disco de las campanas a 3,6; haces rehechos (`DepotLighting.build_shafts`): cuatro caras
+  por tragadero, perfil transversal que muere en los bordes (textura), tenues al salir del techo, máximo a 40 % de la
+  caída y nulos al piso; pico por clima 0,25 sol / 0,12 nublado / 0,06 lluvia / 0,09 niebla, nulo de noche, y cada cara
+  lleva la mitad (se ven dos una detrás de otra). Vidrio de tragaluces y ventanas celeste grisáceo (`glass_look`),
+  atenuado por clima y hora.
+- Chapa a media altura #8a938f y la de arriba #5d6669; techo gris neutro #585858; cerchas, columnas y largueros en INK;
+  marcos oscuros alrededor de los tragaluces.
+
+**Pintura y carteles** (`depot_circulation.gd`, `depot_labels.gd`)
+- Sendas de 1 m en verde apagado #4f8a6a con bordes y cebras en MARKING #d4d9c2 con textura de desgaste; flechas de zona de
+  0,6 m al 50 % (material `DepotKit.tint`); sin la flecha grande a la pizarra (el tablero se ve desde el spawn; su entrada
+  salió de `FLOOR_GUIDES` y de `test_depot`). Reunión: contorno discontinuo amarillo de 10 cm y tres personas estarcidas,
+  sin relleno.
+- Carteles colgantes "etiqueta de envío": chapa INK, texto PAPER en Lilita One, lengüeta del color de la zona (25 %) con
+  el pictograma del atlas (`DepotLabels.pictogram`: un cuadrado con la UV de su celda y el color por vértice, todos en un
+  solo lote `DepotKit.pictograms()`), línea de corte punteada. Sin el "OFICINA" chico de la puerta.
+
+**Kit conectado** (todo por `DepotKit.model()`, los colisionadores quedan como estaban)
+- Techo: campanas `bay_lamp_bell` sobre la bahía (con disco y halo propios), `tube_linear` sobre los estantes (el tubo que
+  parpadea conserva su artefacto viejo), dos conductos y una bandeja en piezas de 3 m (x −7,6 y 12,6; bandeja en x 0), todo
+  entre los cordones de las cerchas.
+- Paredes y pisos: marcos de ventana (tres de 1,2 m por ventana), protecciones de columna, bolardos de la bahía, topes de
+  rueda y calzas, persianas de la oficina, escalera y barandas del entrepiso (tramos de 1,25 m estirados), mesa del
+  despachante.
+- Pañol: paneles de malla de rombos y ventanilla del kit (`CAGE_WINDOW` 4,25-6,55 para su ancho); sin la franja violeta.
+- Taller: compresor, banco con morsa contra el portón, elevador de tijera en el centro del piso, cono y cartel de piso mojado.
+- Descanso: cocinita, heladera, dispensador y reciclaje en fila sobre la pared este.
+- Portón: semáforo del kit adentro y afuera (`DepotRollerDoor._build_signal_lights`): X roja con el portón cerrado o en
+  movimiento, flecha verde solo del todo abierto.
+- `depot_props.gd` (nuevo): el centro del galpón (dos jaulas rodantes con carga, mesa de clasificación, pallet filmado,
+  flat-packs y escalera de ruedas, a más de 10 m del camión y fuera de la reunión y las sendas), la pared izquierda z 9-13
+  (tablero eléctrico con la bandeja, gabinete de matafuegos, botiquín, reloj fichero) y carteles chicos de pictograma
+  (salida, eléctrico, botiquín, velocidad, casco).
+
+**Costo**: lotes de `DepotKit` ("Depot" + "Lamps") 170 → 184 (tope ~190), meshes directos del depósito 202 (tope del test
+220). `bench_depot` mismo equipo, antes y después: tiempo de frame 6,88-6,90 ms contra 6,88-6,90 ms (limitado por el
+vsync), `packages + HUD` 0,27-0,33 contra 0,31-0,37 ms (ruido); nodos 13 162 → 13 588 (las dos luces del portón son
+escenas). Los GLB no suman nodos por pieza: se funden en los lotes.
+
+**Tests**: `test_depot` (se quitó la flecha a la pizarra; arreglado el `SCRIPT ERROR` del reloj: los punteros están en
+`WallClock`, no en `Depot`), `test_depot_zones` (aire fijo y sombras, haces y vidrio por clima, losas de sombra, medidas
+de pintura, carteles, semáforo del portón, centro y pared, atlas en un lote, tope de lotes).
+
+**Qué queda**: el centro y los carteles de seguridad se juzgaron solo en captura; el pozo de la cocina y la oficina del Jefe
+(ventanal cálido) son de la iteración 3; sombras de contacto bajo los props nuevos y polvo en los haces, de la 4.
+
+### Iteraciones 3 y 4 (2026-10-01, rama `nacho/N-319-depot-finish`, N-319.3 y N-319.4) — color, estaciones, desgaste y oficio
+
+Lista final de `director-arte` (color y temperatura, oficina, pictogramas, taller, isla, pañol, descanso, carteles, sombras de
+contacto, desgaste, polvo, portón del fondo, mural). Capturas con GPU en `D:/tmp/depot_review/iter3/` (las 22 vistas, con
+`workshop_bench` nueva, en `nublado_dia`) y `iter3/moods/<clima>/` (overview, spawn_view_game y center_eye_level en
+soleado_dia, nublado_dia, niebla_atardecer y soleado_noche). Los modelos y las texturas de esta pasada los hicieron otros
+agentes (rama `nacho/N-319-depot-assets`, ya mezclada): acá solo se conectan.
+
+**Color (I1)**: el gris azulado frío se fue. Ambiente interior neutro cálido #9c978f; campanas, spots y pozos en #ffdcb0 (alfa
+del pozo 0,22); los haces y sus manchas son lo único frío (#d6e6ef); chapa de pared y bloque menos verdes; sendas #559472;
+las lengüetas de los carteles son `unlit` (el color de la zona es el color en pantalla) y los amarillos del kit (`warning`,
+`ui_yellow`: bolardos, protecciones, postes, carteles de piso) llevan una emisión de 0,7 para no quedar oliva bajo la luz baja
+(`DepotKit._glowing_yellow`).
+
+**Oficina del Jefe (I2)**: ventanal emisivo #ffd9a0 (energía 1,3, un lote) siempre prendido, persianas del kit, escritorio a 0,8
+m del vidrio con el monitor de espaldas y la lámpara del kit (silueta desde abajo), pozo cálido de 3 x 2 m en la terraza y
+cartel con el teléfono. Es la tercera cosa más brillante después del camión y la pizarra en los cuatro climas.
+
+**Pictogramas (I3b)**: celdas 12-15 del atlas (`ICON_WRENCH`, `ICON_OPEN_BOX`, `ICON_HANGER`, `ICON_PHONE`): taller llave,
+suministros caja abierta, vestuario percha, oficina teléfono; la cruz queda para el botiquín. Sin cartel colgante PIZARRA (la
+pizarra encendida ya es lo más brillante; `test_depot` pide 2 carteles legibles desde el spawn en vez de 3, por eso).
+
+**Taller (I4)**: media pared opaca de bloque #5f6763 con franja roja de 10 cm (#b8443a) y vidrio hasta 2,3 m; cortina de tiras
+ámbar; banco con los dos tableros de herramientas del kit y el tablero de muestras del kit encima (nada flotando); pozo ámbar
+(#ffb060, 1,6 m de radio) sobre el banco; mancha de aceite bajo el elevador; las cubiertas son el `tire_stack` del kit.
+**Isla (I5)**: lámpara del kit con pozo #ffe2b8, corcho del kit con portapapeles y hojas colgado por brazos del poste, tira de
+luz de la pizarra +20 %, items de la pizarra en Nunito Bold (`DepotLayout.body_bold()`, eje `wght` 700).
+**Pañol (I6)**: piso de goma #2a2c30 (sin violeta), estantes con cajas entre los insumos, cartel VENTANILLA con la caja abierta
+sobre el tablero del kit (clave `WORLD_DEPOT_WINDOW`), timbre del kit.
+**Descanso (I7)**: sin la etiqueta CAFÉ flotante (se borraron las claves muertas `WORLD_DEPOT_COFFEE`, `WORLD_DEPOT_BOARD` y los
+cuatro `..._BODY` de los carteles), pozo cálido sobre la cocinita, tazas, imanes y foto del kit en la heladera, dos lockers
+entreabiertos con chaleco y casco del kit; el corcho de "NUESTRAS ENTREGAS" usa `tx_depot_cork_photos.png` de fondo (las fotos
+del equipo se pinchan encima; con el fondo puesto no se muestra la nota de "vacío"); "EQUIPO DEL MES" con la foto
+`tx_depot_employee_month.png` (el texto queda como estaba, más angosto, a la izquierda de la foto).
+**Carteles chicos (I8)**: pictograma grande y título, sin cuerpo (los cuatro carteles de pared comparten un solo `DepotKit`).
+
+**Sombras de contacto (I9)**: UN lote multiplicativo (`DepotKit.contact_material()`, `GradientTexture2D` radial de 64 px al 45 %
+que muere en el borde; la mezcla multiplicativa ignora el alfa, así que el sombreado va en el color) bajo bolardos,
+protecciones, estantes, jaulas, mesas, pallets, escritorio, pie de la escalera, elevador, compresor, banco, cocinita, heladera,
+dispensador, reciclaje y lockers.
+**Desgaste (I11)**: UN lote de alfa con color por vértice (`DepotKit.wear_material()`): manchas suaves por losa (unos pocos
+puntos de valor, no son cuadrados parejos), suciedad de 40 cm al pie de las tres paredes (#2b2f33 al 35 %), bordes de senda
+comidos en los cruces, óxido y raspones al pie de bolardos y protecciones; mancha de aceite bajo el camión.
+**Polvo (I12)**: diez motas de 2,5 cm por haz (`DepotLighting.build_dust`), con la intensidad atada al pico del haz y ninguna de
+noche ni en Calidad Baja; salieron las 90 motas sueltas.
+**Flechas (O15)**: solo en las bifurcaciones (cuatro, cada una donde su rama sale de su camino); `test_depot` apunta la de los
+estantes por el pasillo.
+**Portón del fondo (O14)**: portón de recepción cerrado detrás de la cinta (x −11): las lamas del kit al ras de la pared, jambas
+con rayas y dintel (sin marco hondo, que cortaría la cinta). **Mural (I10)**: `tx_depot_mural_brand.png` de 8 x 1,6 m a 5,3 m de
+altura, centrado (`DepotProps.MURAL`; no se dibuja si falta el archivo); el reloj se mudó a x 5,9 para dejarle lugar.
+**Afuera (O16)**: la mancha gris verdosa del cielo de `door_closed` era la sombra de las nubes (se mezclaba con el verde de la
+niebla del nivel): ahora es el color de la nube oscurecido (`RouteSky._neutral_cloud_shade`); la línea de salida de la ruta
+pasó de cian a pintura gastada (`route.gd START_LINE`).
+**Accesibilidad**: el tubo que parpadea no pasa de 3 destellos por segundo (antes hasta 16); los reciclajes del kit tienen las
+bocas distintas (lo dijo el modelador; no lo verifiqué en cámara).
+
+**Costo**: lotes de `DepotKit` ("Depot" + "Lamps") 182 (tope 190; hubo que unificar la malla de rombos de las tres piezas que la
+usan y reusar materiales ya existentes), luces reales 7. `bench_depot` en este equipo (muy cargado durante la medición):
+frame 7,2 ms contra 6,9 ms (+4 %, vsync y ruido); no hay script nuevo por frame.
+
+**Retoques finales (pedidos tras la crítica de `director-arte`)**
+- El corcho "NUESTRAS ENTREGAS" muestra `tx_depot_cork_photos.png` entera (su propio quad de 1,8 x 1,2 m con la proporción 3:2 de la
+  textura, no un `BoxMesh`, cuyas UV recortaban la imagen); las fotos del equipo la reemplazan cuando existen. Captura de cerca:
+  `final/depot_photo_wall.png`.
+- "EQUIPO DEL MES": se borró el párrafo de estadísticas (y sus claves `WORLD_DEPOT_TEAM_STATS`, `_NEXT` y `_ALL_UNLOCKED`); la placa
+  tiene el título, la foto `tx_depot_employee_month.png` de 0,9 x 1,125 m (casi el doble de lo que era, 1,8 veces: el alto de la
+  placa, 1,9 m con el frente de la heladera debajo, no deja más); el nombre lo trae la foto (un rótulo aparte la contradecía y se sacó, con su clave).
+- Tablero de muestras: "COLORES" (`WORLD_DEPOT_SWATCHES`) en Lilita One, INK, 4 cm, centrado en la franja y a 0,5 mm de la cara.
+- `render_depot.gd`: `overview` desde x 10,6 mirando 8 grados más a la derecha (la campana ya no tapa la T del mural; quedan el
+  ventanal de OFICINA y el camión); `center_eye_level` 7 grados hacia arriba; `lockers_and_break` 1,5 m más cerca de la cocinita y 7
+  grados hacia arriba; vistas nuevas `workshop_bench` y `photo_wall`; opciones `--out`, `--only`, `--mood`, `--sun`, `--bias`.
+  El script esconde las fotos del equipo de `user://` y muestra el corcho de fábrica.
+- Capturas finales a 1920 x 1080 en `D:/tmp/depot_review/final/` (las 10 vistas más `photo_wall`) y `final/moods/<clima>/` (spawn_view_game,
+  overview y center_eye_level en soleado_dia, nublado_dia, niebla_atardecer y soleado_noche).
+- **Medición del bolardo, corregida**: el ~36 % que figuraba antes estaba mal medido (era la banda negra). `director-arte` midió el
+  cuerpo amarillo en 47 grados, 61 % de saturación y 80 % de valor (79 % de noche): cumple.
+- **Para quien capture**: una toma de `lockers_and_break` hecha en los primeros segundos de la escena (la primera o la segunda de una
+  corrida) sale con paredes y piso del vestuario en gris liso: es el espejo (`DepotMirror`) activándose recién empezada la escena en
+  el driver de GL Compatibility (escondiéndolo, el cuadro sale bien; la misma toma sale bien más adelante en una corrida larga). Es de
+  las capturas, no del contenido; si se ve en el juego hay que abrir tarea.
+
+**Qué no quedó** (la reja en X de la campana ya la resolvió el modelo, con su aro de 3 radios): el encabezado del tablero de muestras
+y los carteles chicos de seguridad con más palabras; las bocas distintas de los reciclajes no se verificaron en cámara.

@@ -73,7 +73,7 @@ func _initialize() -> void:
 	var high: AudioStreamWAV = SynthAudio.callout_voice(1, 3)
 	_expect(low != null and high != null and low.data != high.data, "Each player colour has its own voice")
 	_expect(SynthAudio.callout_voice(5, 3) == low,
-		"The voice is cached and picked by colour slot (peer id modulo five)")
+		"The voice is cached and picked by colour slot, wrapped to the five voices (slot 5 sounds like 0)")
 	_expect(SynthAudio.callout_voice(0, 4).get_length() > low.get_length(), "A longer phrase babbles longer")
 	var crewmate := Node3D.new()
 	crewmate.name = "Crewmate"

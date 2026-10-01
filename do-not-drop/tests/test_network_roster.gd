@@ -15,6 +15,9 @@ extends SceneTree
 ## - a slot map from the network (join handshake, _sync_color_slots) with a
 ##   slot out of range, a repeated slot or odd types is refused whole, and the
 ##   RPC is only taken from the host;
+## - the slots of those who left travel with it (N-221 follow-up): a joiner
+##   reads the host's slot for someone who left before it came, and a bad
+##   list of them is refused like a bad map;
 ## - offline, and for an id the host hasn't announced, color_slot() is the old
 ##   posmod(peer_id, MAX_PLAYERS): solo play keeps its colour.
 
@@ -265,6 +268,7 @@ func _check_handshake_and_rpc(network: Node, max_players: int) -> void:
 	missing.erase("colors")
 	_expect(String(network.call(&"_handshake_error", missing)) == "connection",
 		"A handshake without a slot map is refused as a connection error")
+	_check_departed_slots(network, state, max_players)
 
 	var good: Dictionary = {1: 0, BIG_IDS[0]: 1, BIG_IDS[1]: 2}
 	_expect(bool(network.call(&"_apply_color_slots", good)), "A client applies a proper map from the host")
@@ -278,6 +282,46 @@ func _check_handshake_and_rpc(network: Node, max_players: int) -> void:
 	# processes (net_trio).
 	network.call(&"_sync_color_slots", {1: 3})
 	_expect(int(network.call(&"color_slot", 1)) == 0, "On the host the slot RPC is a no-op")
+
+
+## N-221 follow-up: who left before a joiner arrived still reads, on that
+## joiner, the slot the host remembers for them -- their line in the results,
+## their campaign entry -- instead of posmod(peer_id, MAX_PLAYERS).
+func _check_departed_slots(network: Node, state: Dictionary, max_players: int) -> void:
+	var gone: int = 1_766_000_003
+	network.call(&"leave_session")
+	for id: int in [BIG_IDS[0], gone, BIG_IDS[1]]:
+		network.call(&"_on_peer_connected", id)
+	var gone_slot: int = int(network.call(&"color_slot", gone))
+	network.call(&"_on_peer_disconnected", gone)
+	var host_state: Dictionary = network.call(&"_session_state")
+	_expect(int((host_state.get("departed", {}) as Dictionary).get(gone, -1)) == gone_slot,
+		"The host's handshake carries the slots of those who left (got %s)" % [host_state.get("departed")])
+	network.call(&"leave_session")
+
+	var joined: Dictionary = state.duplicate(true)
+	joined["departed"] = {gone: gone_slot, 1_766_000_004: gone_slot}
+	_expect(String(network.call(&"_handshake_error", joined)).is_empty(),
+		"A handshake with the slots of those who left is accepted, two of them on one slot included")
+	var too_many: Dictionary = {}
+	for index: int in int(network.get(&"DEPARTED_MEMORY")) + 1:
+		too_many[1_700_000_000 + index] = 1
+	for bad: Variant in [{gone: max_players}, {gone: 1.0}, {"x": 1}, {0: 1}, [gone], too_many]:
+		var broken: Dictionary = joined.duplicate(true)
+		broken["departed"] = bad
+		_expect(String(network.call(&"_handshake_error", broken)) == "connection",
+			"A handshake whose departed slots are %s is refused as a connection error" % [str(bad).left(40)])
+	_expect(int(network.call(&"color_slot", gone)) == posmod(gone, max_players), "Before the handshake: the fallback")
+	network.call(&"_apply_session_state", joined)
+	_expect(int(network.call(&"color_slot", gone)) == gone_slot,
+		"A joiner reads the host's slot for someone who left before it came (got %d, host %d)"
+		% [int(network.call(&"color_slot", gone)), gone_slot])
+	_expect(int(network.call(&"color_slot", BIG_IDS[0])) == 1, "...and the map for those aboard")
+	_expect(not bool(network.call(&"_apply_departed_slots", {gone: -1}))
+		and int(network.call(&"color_slot", gone)) == gone_slot, "A departed map that doesn't check out is refused")
+	_expect(bool(network.call(&"_apply_departed_slots", {gone: 4})) and int(network.call(&"color_slot", gone)) == 4,
+		"The host's memory replaces this peer's (_sync_color_slots)")
+	network.call(&"leave_session")
 
 
 func _has_repeats(values: Array) -> bool:

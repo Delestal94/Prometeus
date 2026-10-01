@@ -8,11 +8,15 @@ extends SceneTree
 ## - dictionaries: too many keys, nested values, arrays, objects, non-text keys,
 ##   long text or non-finite numbers are rejected; the key limit is the caller's;
 ## - argument arrays: too long or not plain is rejected;
-## - long text is rejected;
+## - long text, a long StringName and an absurdly long NodePath are rejected;
 ## - the per-peer request budget cuts a burst at REQUEST_BURST, refills at
 ##   REQUESTS_PER_SECOND, is per peer, starts full again after forget_peer()
 ##   and reset(); the host's own (local) calls are never limited and count as
 ##   from the host;
+## - a critical request (letting go of a box) still gets through once a flood
+##   spent the budget, from a reserve of CRITICAL_RESERVE refilled at
+##   CRITICAL_PER_SECOND, and is cut once that is spent too; ordinary requests
+##   never touch the reserve;
 ## - NetEventBus.request() only relays events listed in request_cooldowns, with
 ##   a few plain arguments.
 
@@ -63,6 +67,13 @@ func _check_values() -> void:
 	_expect(RpcGuard.text_ok("¡Cuidado!"), "A callout label passes")
 	_expect(RpcGuard.text_ok("x".repeat(RpcGuard.MAX_TEXT_LENGTH)), "Text right at the limit passes")
 	_expect(not RpcGuard.text_ok("x".repeat(RpcGuard.MAX_TEXT_LENGTH + 1)), "Text past the limit is rejected")
+	_expect(RpcGuard.name_ok(&"tow_strap") and RpcGuard.name_ok(&""), "An id passes")
+	_expect(not RpcGuard.name_ok(StringName("x".repeat(RpcGuard.MAX_TEXT_LENGTH + 1))),
+		"A StringName past the text limit is rejected")
+	_expect(RpcGuard.path_ok(^"Level/World/Vehicle/CargoBay/LeftSeat1PackageMount/InteractionArea/Player_1874223901"),
+		"A deep path passes")
+	_expect(not RpcGuard.path_ok(NodePath("Level/" + "n/".repeat(RpcGuard.MAX_PATH_LENGTH))),
+		"A path past MAX_PATH_LENGTH is rejected")
 
 
 func _check_containers() -> void:
@@ -115,6 +126,37 @@ func _check_budget() -> void:
 		if RpcGuard.take_request(33, 2000):
 			fresh += 1
 	_expect(fresh == burst, "Ending the session resets every budget (got %d)" % fresh)
+	RpcGuard.reset()
+	_check_critical_reserve()
+
+
+## A flood of ordinary requests must not cost a peer the one that lets go of
+## a box; a flood of critical ones is still cut.
+func _check_critical_reserve() -> void:
+	var burst: int = int(RpcGuard.REQUEST_BURST)
+	var reserve: int = int(RpcGuard.CRITICAL_RESERVE)
+	for index: int in burst + 10:
+		RpcGuard.take_request(44, 1000)
+	_expect(not RpcGuard.take_request(44, 1000), "A flood spends the ordinary budget")
+	var critical: int = 0
+	for index: int in reserve + 5:
+		if RpcGuard.take_critical_request(44, 1000):
+			critical += 1
+	_expect(critical == reserve, "Critical requests still get through, %d of them (got %d)" % [reserve, critical])
+	_expect(not RpcGuard.take_critical_request(44, 1000), "...and are cut once the reserve is spent too")
+	var refilled: int = 0
+	for index: int in burst + reserve:
+		if RpcGuard.take_critical_request(44, 2000):
+			refilled += 1
+	var expected: int = int(RpcGuard.REQUESTS_PER_SECOND) + int(RpcGuard.CRITICAL_PER_SECOND)
+	_expect(refilled == expected, "A second later both refill: %d more (got %d)" % [expected, refilled])
+	RpcGuard.reset()
+	var ordinary: int = 0
+	for index: int in burst + reserve:
+		if RpcGuard.take_request(55, 3000):
+			ordinary += 1
+	_expect(ordinary == burst, "Ordinary requests never touch the reserve (got %d of %d)" % [ordinary, burst])
+	_expect(RpcGuard.take_critical_request(55, 3000), "...which is still there for a critical one")
 	RpcGuard.reset()
 
 

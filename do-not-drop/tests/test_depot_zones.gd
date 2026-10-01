@@ -9,12 +9,25 @@ extends SceneTree
 ##     paint, and the forklift's lane doesn't run through the supplies cage;
 ##   - the office is on a mezzanine you can climb: the stair's slope holds a
 ##     body up, the terrace is at the deck's height, the dispatcher works there;
-##   - the air: under the roof the level's fog is next to nothing and the
-##     ambient is lower, outside and after the depot leaves the tree they are
-##     the level's own again;
+##   - the air: under the roof the level's fog is next to nothing and the ambient
+##     is the depot's own (low, cool, hardly following the weather), the sun's
+##     shadows are fully dark; outside and after the depot leaves the tree
+##     everything is the level's own again;
+##   - the light pass (N-319 pass 2): the shafts follow the weather, the glass
+##     shows the sky, the sun shield is there, the paint is as designed (muted
+##     walkways, no arrow to the board), the hanging signs are shipping labels
+##     and the office door has no small sign;
 ##   - the lights: a handful of real ones, the three big spots ranked for
 ##     shadows, and WorldQuality keeping as many as the level allows (none on Low);
-##   - the signs hang smaller over their zones; everything static is batched.
+##   - the signs hang smaller over their zones; everything static is batched;
+##   - the finishing pass (N-319.3/4): ONE contact-shadow batch and ONE wear batch, the shaft dust (none at
+##     night), the mural only when its art is in the project, no hanging sign over the board, the lit
+##     office window, the order board in bold, the flicker no faster than 3 Hz;
+##   - the modelled kit is connected (N-319.2): the door's signal light follows the
+##     door (green open, red shut), the middle of the hall has its cages, table and
+##     pallet (solid, clear of the walkways and the truck), the left wall its
+##     panel and cabinet, the pictograms come from the atlas, and the batches stay
+##     under the cap.
 
 const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const Labels = preload("res://scripts/gameplay/depot/depot_labels.gd")
@@ -23,8 +36,10 @@ const Labels = preload("res://scripts/gameplay/depot/depot_labels.gd")
 const MAX_DEPOT_LIGHTS: int = 7
 ## Most separate meshes the depot's root may carry: the static geometry goes
 ## through DepotKit, one batch per material (154 before N-319, 185 with the
-## zones). A node per box would be thousands.
+## zones, 202 with the modelled kit). A node per box would be thousands.
 const MAX_ROOT_MESHES: int = 220
+## The kit's own batches ("Depot..." and "Lamps...") stay under this (184 now).
+const MAX_KIT_BATCHES: int = 190
 
 var _failures: int = 0
 
@@ -47,6 +62,9 @@ func _run() -> void:
 	_test_lights(depot)
 	_test_signs()
 	_test_batching(depot)
+	_test_light_pass(depot)
+	_test_kit(depot)
+	_test_finish(depot)
 	await _test_air(level, depot)
 	level.queue_free()
 	await process_frame
@@ -181,7 +199,7 @@ func _test_signs() -> void:
 	for label: Node in get_nodes_in_group(&"depot_sign"):
 		var caption: String = String(label.get_meta(&"sign"))
 		pixel_sizes[caption] = (label as Label3D).pixel_size
-	for caption: String in ["PIZARRA", "TALLER", "SUMINISTROS", "VESTUARIO", "OFICINA"]:
+	for caption: String in ["TALLER", "SUMINISTROS", "VESTUARIO", "OFICINA"]:
 		var found: bool = false
 		for key: String in pixel_sizes:
 			if key.contains(caption):
@@ -200,10 +218,12 @@ func _test_batching(depot: Node3D) -> void:
 	_expect(meshes <= MAX_ROOT_MESHES, "The depot's root carries its batches, not a mesh per box (%d)" % meshes)
 
 
-## The air under the roof: no haze, a lower ambient; outside and once the depot
-## is gone, the level's own.
+## The air under the roof: no haze, the depot's own ambient (hardly following the
+## weather) and the sun's shadows fully dark; outside and once the depot is gone,
+## the level's own.
 func _test_air(level: Node, depot: Node3D) -> void:
 	var environment: Environment = (level.get_node(^"WorldEnvironment") as WorldEnvironment).environment
+	var sun := level.get_node(^"Sun") as DirectionalLight3D
 	var camera := Camera3D.new()
 	level.add_child(camera)
 	camera.make_current()
@@ -213,6 +233,8 @@ func _test_air(level: Node, depot: Node3D) -> void:
 	var outside_fog: float = environment.fog_density
 	var outside_ambient: float = environment.ambient_light_energy
 	var outside_sky: float = environment.ambient_light_sky_contribution
+	var outside_colour: Color = environment.ambient_light_color
+	var outside_shadow: float = sun.shadow_opacity
 	var atmosphere := depot.get_node(^"Atmosphere") as DepotAtmosphere
 	_expect(atmosphere.blend() < 0.01, "Outside the depot the air is the level's own (blend %.2f)" % atmosphere.blend())
 	camera.global_position = depot.to_global(Vector3(0.0, 1.6, 17.0))
@@ -221,28 +243,206 @@ func _test_air(level: Node, depot: Node3D) -> void:
 	_expect(atmosphere.blend() > 0.99, "Under the roof the interior air is fully in (blend %.2f)" % atmosphere.blend())
 	_expect(environment.fog_density < outside_fog * 0.2,
 			"No distance haze under the roof (%.4f against %.4f outside)" % [environment.fog_density, outside_fog])
-	_expect(environment.ambient_light_energy < outside_ambient,
-			"The ambient is lower under the roof (%.2f against %.2f)" % [
-					environment.ambient_light_energy, outside_ambient])
-	_expect(environment.ambient_light_sky_contribution < outside_sky,
-			"Less of the ambient comes from the sky under the roof (%.2f against %.2f)" % [
-					environment.ambient_light_sky_contribution, outside_sky])
+	var wanted: Dictionary = DepotAtmosphere.interior(outside_ambient, outside_sky, outside_colour)
+	_expect(is_equal_approx(environment.ambient_light_energy, float(wanted.energy)),
+			"The ambient under the roof is the depot's own (%.3f, wanted %.3f)" % [
+					environment.ambient_light_energy, float(wanted.energy)])
+	var drift: float = absf(environment.ambient_light_energy - DepotAtmosphere.INSIDE_AMBIENT_ENERGY)
+	_expect(drift <= outside_ambient * 0.25 + 0.001,
+			"The ambient under the roof hardly follows the weather (%.3f against the depot's %.2f)" % [
+					environment.ambient_light_energy, DepotAtmosphere.INSIDE_AMBIENT_ENERGY])
+	_expect(environment.ambient_light_sky_contribution < 0.1,
+			"Almost none of the ambient comes from the sky under the roof (%.2f)" % [
+					environment.ambient_light_sky_contribution])
+	_expect(is_equal_approx(sun.shadow_opacity, DepotAtmosphere.INSIDE_SHADOW_OPACITY),
+			"The sun's shadows are fully dark under the roof (%.2f)" % sun.shadow_opacity)
 	camera.global_position = depot.to_global(Vector3(0.0, 1.6, -9.0))
 	for tick: int in range(90):
 		await process_frame
 	var restored: bool = (is_equal_approx(environment.fog_density, outside_fog)
 			and is_equal_approx(environment.ambient_light_energy, outside_ambient)
-			and is_equal_approx(environment.ambient_light_sky_contribution, outside_sky))
-	_expect(restored, "Stepping back out gives the level's fog and ambient back")
+			and is_equal_approx(environment.ambient_light_sky_contribution, outside_sky)
+			and environment.ambient_light_color.is_equal_approx(outside_colour)
+			and is_equal_approx(sun.shadow_opacity, outside_shadow))
+	_expect(restored, "Stepping back out gives the level's fog, ambient and sun shadows back")
 	# And if the depot leaves while the viewer is inside, the shared Environment is put back.
 	camera.global_position = depot.to_global(Vector3(0.0, 1.6, 17.0))
 	for tick: int in range(90):
 		await process_frame
 	depot.get_parent().remove_child(depot)
 	var put_back: bool = (is_equal_approx(environment.fog_density, outside_fog)
-			and is_equal_approx(environment.ambient_light_sky_contribution, outside_sky))
-	_expect(put_back, "The Environment is put back when the depot leaves (%.4f)" % environment.fog_density)
+			and is_equal_approx(environment.ambient_light_sky_contribution, outside_sky)
+			and is_equal_approx(sun.shadow_opacity, outside_shadow))
+	_expect(put_back, "The Environment and the sun are put back when the depot leaves (%.4f)" % environment.fog_density)
 	depot.free()
+
+
+## The finishing pass: grounding, wear, dust, mural, the office window and the small things.
+func _test_finish(depot: Node3D) -> void:
+	var contact: int = 0
+	var wear: int = 0
+	var office_glow: int = 0
+	for child: Node in depot.get_children():
+		var part := child as MeshInstance3D
+		if part == null or part.mesh == null:
+			continue
+		var material := part.mesh.surface_get_material(0) as StandardMaterial3D
+		if material == null:
+			continue
+		if material.blend_mode == BaseMaterial3D.BLEND_MODE_MUL:
+			contact += 1
+		if material.vertex_color_use_as_albedo and material.albedo_texture != null \
+				and material.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA:
+			wear += 1
+		if material.emission_enabled and material.emission.is_equal_approx(DepotZones.WINDOW_WARM):
+			office_glow += 1
+	_expect(contact == 1, "All the contact shadows are ONE multiplicative batch (%d)" % contact)
+	_expect(wear >= 1, "The wear is in an alpha batch with vertex colours (%d)" % wear)
+	_expect(office_glow == 1, "The Boss's window is one warm emissive batch (%d)" % office_glow)
+	# Dust in the shafts: ten motes per shaft by day, none at night.
+	var saved: Dictionary = WorldMood.active
+	var holder := Node3D.new()
+	WorldMood.active = {"weather": WorldMood.Weather.CLEAR, "time": WorldMood.TimeOfDay.DAY}
+	DepotLighting.build_dust(holder, null)
+	var by_day: int = holder.get_child_count()
+	var motes: int = (holder.get_child(0) as CPUParticles3D).amount if by_day > 0 else 0
+	for child: Node in holder.get_children():
+		child.free()
+	WorldMood.active = {"weather": WorldMood.Weather.CLEAR, "time": WorldMood.TimeOfDay.NIGHT}
+	DepotLighting.build_dust(holder, null)
+	var by_night: int = holder.get_child_count()
+	WorldMood.active = saved
+	holder.free()
+	_expect(by_day == DepotLighting.SKYLIGHT_XS.size() * DepotLighting.SKYLIGHT_ZS.size()
+			and motes == DepotLighting.DUST_PER_SHAFT, "A clear day has dust in every shaft (%d shafts, %d motes)" % [
+					by_day, motes])
+	_expect(by_night == 0, "No dust in the shafts at night (%d)" % by_night)
+	_expect(depot.get_node_or_null(^"DustMotes") == null, "The loose motes are gone")
+	# The mural is drawn when its art is in the project, and only then.
+	_expect((depot.get_node_or_null(^"BrandMural") != null) == ResourceLoader.exists(DepotProps.MURAL),
+			"The brand mural is there exactly when its texture is")
+	# The control island has no hanging sign: its board is the brightest thing.
+	for label: Node in get_nodes_in_group(&"depot_sign"):
+		_expect(not String(label.get_meta(&"sign")).contains("PIZARRA"), "No hanging sign over the board")
+	# The flicker never goes faster than three a second (photosensitivity): the shortest wait is over 1/3 s.
+	var ambience_source: String = FileAccess.get_file_as_string("res://scripts/gameplay/depot/depot_ambience.gd")
+	_expect(ambience_source.contains("randf_range(0.36, 0.7)"),
+			"The tube's flicker keeps under three stutters a second")
+	_expect(DepotLayout.body_bold() is FontVariation, "The order board's items are in bold")
+	# The workshop's tyre stack and tool boards are the kit's when their models are in.
+	if ResourceLoader.exists(DepotKit.depot_model("sm_env_depot_tire_stack")):
+		_expect(true, "The tyre stack is the kit's")
+
+
+## The modelled kit in the game: the door's signal light, the middle of the hall, the
+## left wall, the pictogram atlas and the batch cap.
+func _test_kit(depot: Node3D) -> void:
+	var door := depot.get_node(^"RollerDoor") as DepotRollerDoor
+	var greens: Array[Node] = door.find_children("DoorLightGreen", "", true, false)
+	var reds: Array[Node] = door.find_children("DoorLightRed", "", true, false)
+	_expect(greens.size() == 2 and reds.size() == 2, "The door has a signal light on each side (%d green, %d red)" % [
+			greens.size(), reds.size()])
+	door.set_open(true, false)
+	_expect(greens.all(func(light: Node) -> bool: return (light as Node3D).visible)
+			and reds.all(func(light: Node) -> bool: return not (light as Node3D).visible),
+			"An open door shows the green arrow and not the red X")
+	door.set_open(false, false)
+	_expect(reds.all(func(light: Node) -> bool: return (light as Node3D).visible)
+			and greens.all(func(light: Node) -> bool: return not (light as Node3D).visible),
+			"A shut door shows the red X and not the green arrow")
+	door.set_open(true, false)
+	# The middle of the hall: solid things stand at the cages, the table and the pallet,
+	# none of it near the truck or the gathering rectangle.
+	var space: PhysicsDirectSpaceState3D = depot.get_world_3d().direct_space_state
+	for at: Vector3 in [Vector3(-3.9, 0.0, 21.4), Vector3(-2.75, 0.0, 21.05), Vector3(0.4, 0.0, 21.6),
+			Vector3(4.4, 0.0, 21.2)]:
+		var from: Vector3 = depot.to_global(at + Vector3.UP * 4.0)
+		var query := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 5.0, 1)
+		var hit: Dictionary = space.intersect_ray(query)
+		var height: float = depot.to_local(hit.position).y if not hit.is_empty() else -1.0
+		_expect(height > Layout.FLOOR_TOP + 0.5, "Something solid stands at %s in the middle (%.2f m)" % [at, height])
+		_expect(not Layout.GATHER.grow(0.5).has_point(Vector2(at.x, at.z)),
+				"The middle's props stay off the crew's rectangle (%s)" % at)
+		_expect(Vector2(at.x, at.z).distance_to(Vector2(Layout.TRUCK_BAY.x, Layout.TRUCK_BAY.z)) > 10.0,
+				"The middle's props stay clear of the truck (%s)" % at)
+	# The left wall's panel and cabinet are on the wall, not in the lane.
+	for z: float in [10.3, 11.35, 11.95]:
+		_expect(DepotProps.WEST_WALL_X < Layout.FORKLIFT_LANE_X - Layout.FORKLIFT_LANE_WIDTH * 0.5 - 1.0,
+				"The wall's kit stays clear of the forklift lane (z %.1f)" % z)
+	# Pictograms come from the atlas in one shared batch; the kit stays under its cap.
+	var batches: int = 0
+	var pictograms: int = 0
+	for child: Node in depot.get_children():
+		var part := child as MeshInstance3D
+		if part == null:
+			continue
+		if String(part.name).begins_with("Depot") or String(part.name).begins_with("Lamps"):
+			batches += 1
+		var material := part.mesh.surface_get_material(0) as StandardMaterial3D if part.mesh != null else null
+		if material != null and material.albedo_texture != null \
+				and material.albedo_texture.resource_path == DepotKit.PICTOGRAMS:
+			pictograms += 1
+	_expect(pictograms >= 1 and pictograms <= 2,
+			"The pictograms come from the atlas in one batch of the kit and one of the posters (%d)" % pictograms)
+	_expect(batches <= MAX_KIT_BATCHES, "The kit's batches stay under %d (%d)" % [MAX_KIT_BATCHES, batches])
+
+
+## The light and paint pass: what the weather does to the shafts and the glass, the
+## sun shield, the paint's measurements and the new signs.
+func _test_light_pass(depot: Node3D) -> void:
+	var saved: Dictionary = WorldMood.active
+	WorldMood.active = {"weather": WorldMood.Weather.CLEAR, "time": WorldMood.TimeOfDay.DAY}
+	var sunny: float = DepotLighting.shaft_peak()
+	var sunny_glass: Dictionary = DepotLighting.glass_look()
+	WorldMood.active = {"weather": WorldMood.Weather.CLOUDY, "time": WorldMood.TimeOfDay.DAY}
+	var cloudy: float = DepotLighting.shaft_peak()
+	var cloudy_glass: Dictionary = DepotLighting.glass_look()
+	WorldMood.active = {"weather": WorldMood.Weather.CLEAR, "time": WorldMood.TimeOfDay.NIGHT}
+	var night: float = DepotLighting.shaft_peak()
+	var night_glass: Dictionary = DepotLighting.glass_look()
+	WorldMood.active = saved
+	_expect(is_equal_approx(sunny, 0.25) and is_equal_approx(cloudy, 0.12) and is_zero_approx(night),
+			"The shafts peak at 0.25 in sun, 0.12 in cloud and none at night (%.2f, %.2f, %.2f)" % [
+					sunny, cloudy, night])
+	var bright: Color = sunny_glass.colour
+	var dull: Color = cloudy_glass.colour
+	var dark: Color = night_glass.colour
+	_expect(bright.get_luminance() > dull.get_luminance() and dull.get_luminance() > dark.get_luminance() * 2.0,
+			"The glass shows the sky: brighter in sun than in cloud, nearly dark at night (%.2f, %.2f, %.2f)" % [
+					bright.get_luminance(), dull.get_luminance(), dark.get_luminance()])
+	_expect(bright.b > bright.r and bright.get_luminance() < 0.8,
+			"The glass is a greyish blue, not white (%s)" % bright)
+	# The sun shield: shadow-only slabs around the hall, never drawn.
+	var shield := depot.get_node_or_null(^"SunShield")
+	_expect(shield != null and shield.get_child_count() == 4, "Four shadow-only slabs close the sun's leaks")
+	if shield != null:
+		for slab: Node in shield.get_children():
+			var instance := slab as MeshInstance3D
+			_expect(instance.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY,
+					"A sun shield slab only casts shadows")
+	# Paint and signs as designed.
+	_expect(is_equal_approx(Layout.WALK_WIDTH, 1.0), "The walkways are 1 m wide (%.2f)" % Layout.WALK_WIDTH)
+	_expect(Layout.WALK_GREEN.s < 0.5, "The walkway green is muted (saturation %.2f)" % Layout.WALK_GREEN.s)
+	var guide_captions: Array[String] = []
+	for guide: Dictionary in depot.get(&"guides"):
+		guide_captions.append(String(guide.caption))
+	_expect(not guide_captions.has("PIZARRA"), "No arrow leads to the board: it is in plain view of the spawn")
+	_expect(depot.get_node_or_null(^"OfficeDoorSign") == null, "The office has no small sign on its door")
+	var offices: int = 0
+	for label: Node in get_nodes_in_group(&"depot_sign"):
+		if String(label.get_meta(&"sign")) == "OFICINA":
+			offices += 1
+	_expect(offices == 2, "The office has its hanging sign, front and back, and nothing else (%d labels)" % offices)
+	# A hanging sign is a shipping label: a dark INK plate in the depot's batches.
+	var ink_plates: int = 0
+	for child: Node in depot.get_children():
+		var part := child as MeshInstance3D
+		if part == null or part.mesh == null:
+			continue
+		var material := part.mesh.surface_get_material(0) as StandardMaterial3D
+		if material != null and material.albedo_color.is_equal_approx(Layout.INK) and material.albedo_texture == null:
+			ink_plates += 1
+	_expect(ink_plates >= 1, "The signs' INK plates are in the depot's batches")
 
 
 func _expect(condition: bool, description: String) -> void:

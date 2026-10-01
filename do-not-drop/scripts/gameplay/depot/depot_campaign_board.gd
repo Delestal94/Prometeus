@@ -27,6 +27,12 @@ const PAPER := Color("f4f1e6")
 const INK := Color("263238")
 const SAFETY_GREEN := Color("1f8a5b")
 const CORK := Color("c9a26b")
+## The photo wall's backdrop (art): a framed cork with six polaroids and two papers pinned to it, 512 x 340
+## (a 3:2 board, its frame included), shown whole on its own quad. With none of the crew's photos yet it is what
+## the wall looks like; once there are some they take its place.
+const CORK_PHOTOS: String = "res://assets/textures/depot/tx_depot_cork_photos.png"
+## The board's size with that art: the texture's proportion, 1.8 x 1.2 m.
+const DECORATED_SIZE := Vector2(1.8, 1.2)
 ## Sign: on the front wall's inner face, right of the door, facing inward.
 const SIGN_AT := Vector3(6.6, 3.1, 0.17)
 ## Photo wall: on the right wall above the lockers, facing -X, between two
@@ -43,6 +49,10 @@ var days_label: Label3D
 var best_label: Label3D
 var photo_frames: Array[Sprite3D] = []
 var _empty_note: Label3D
+var _decorated: bool = false
+var _art: MeshInstance3D
+## How much smaller the wall is than WALL_SIZE (the layout of the photos follows).
+var _scale: float = 1.0
 
 
 func _ready() -> void:
@@ -142,8 +152,10 @@ func refresh() -> void:
 		frame.texture = texture
 		frame.visible = texture != null
 		if texture != null:
-			frame.pixel_size = PHOTO_SIZE.x / float(texture.get_width())
-	_empty_note.visible = names.is_empty()
+			frame.pixel_size = PHOTO_SIZE.x * _scale / float(texture.get_width())
+	_empty_note.visible = names.is_empty() and not _decorated
+	if _art != null:
+		_art.visible = names.is_empty()
 
 
 func _build_sign() -> void:
@@ -165,9 +177,26 @@ func _build_photo_wall() -> void:
 	wall.position = WALL_AT
 	wall.rotation.y = -PI * 0.5
 	add_child(wall)
-	_box(wall, "Cork", Vector3(WALL_SIZE.x, WALL_SIZE.y, 0.03), Vector3.ZERO, CORK)
-	_box(wall, "Frame", Vector3(WALL_SIZE.x + 0.08, WALL_SIZE.y + 0.08, 0.02), Vector3(0.0, 0.0, -0.01), Color("59656a"))
-	_label(wall, "Title", tr("WORLD_DEPOT_PHOTOS_TITLE"), Vector3(0.0, WALL_SIZE.y * 0.5 + 0.12, 0.02), 30, INK, DISPLAY_FONT)
+	var size: Vector2 = WALL_SIZE
+	_decorated = ResourceLoader.exists(CORK_PHOTOS)
+	if _decorated:
+		size = DECORATED_SIZE
+		_scale = size.x / WALL_SIZE.x
+	_box(wall, "Cork", Vector3(size.x, size.y, 0.03), Vector3.ZERO, CORK)
+	_box(wall, "Frame", Vector3(size.x + 0.08, size.y + 0.08, 0.02), Vector3(0.0, 0.0, -0.01), Color("59656a"))
+	if _decorated:
+		var quad := QuadMesh.new()
+		quad.size = size
+		var material := StandardMaterial3D.new()
+		material.albedo_texture = load(CORK_PHOTOS) as Texture2D
+		material.roughness = 0.9
+		quad.material = material
+		_art = MeshInstance3D.new()
+		_art.name = "CorkArt"
+		_art.mesh = quad
+		_art.position = Vector3(0.0, 0.0, 0.017)
+		wall.add_child(_art)
+	_label(wall, "Title", tr("WORLD_DEPOT_PHOTOS_TITLE"), Vector3(0.0, size.y * 0.5 + 0.12, 0.02), 30, INK, DISPLAY_FONT)
 	_empty_note = _label(wall, "Empty", tr("WORLD_DEPOT_PHOTOS_EMPTY"), Vector3(0.0, 0.0, 0.03), 26, INK, BODY_FONT)
 	# Four across, two rows, slightly askew like pinned photos.
 	for index: int in range(MAX_PHOTOS):
@@ -175,7 +204,7 @@ func _build_photo_wall() -> void:
 		var row: int = index / 4
 		var frame := Sprite3D.new()
 		frame.name = "Photo%d" % index
-		frame.position = Vector3(-0.84 + column * 0.56, 0.22 - row * 0.44, 0.025)
+		frame.position = Vector3(-0.84 + column * 0.56, 0.22 - row * 0.44, 0.025) * _scale
 		frame.rotation.z = deg_to_rad([-3.0, 2.0, -1.5, 3.5, 1.0, -2.5, 2.5, -1.0][index])
 		frame.shaded = false
 		frame.visible = false
