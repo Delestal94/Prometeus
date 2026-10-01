@@ -568,7 +568,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   (los 43 streams salen byte por byte iguales). Sin `max-line-length` en el módulo (la baseline bajó 3).
   `test_synth_audio_golden.gd` compara los 43 con lo que daba el archivo único. Aviso:
   `docs/avisos/2026-09-30-n225-synth-audio-partido.md`.
-- [ ] **N-225.2** `reference_truck.gd` (932). **N-225.3** `route.gd`. **N-225.4** `package.gd` (999). Quedan
+- [x] **N-225.2** `reference_truck.gd` **[x] Hecho (2026-10-01)** — rama `nacho/N-225-reference-truck-split`: 976 → 394
+  líneas. `ReferenceTruck` queda como orquestador (mismo orden en `_ready()`, API pública y `panel_lines`/`_paint_materials`);
+  la cabina pasa a `reference_truck_cab.gd` (367: ventanas, volante, vestido, pedales), la carga a `reference_truck_cargo.gd`
+  (162: herrajes, asientos rebatibles, rampa), las juntas a `reference_truck_panel_lines.gd` (133) y los helpers de malla y
+  material a `reference_truck_props.gd` (72), todos tipados (sin `.call`/`.get` nuevos). `test_reference_truck_golden.gd`
+  firma cada nodo que arma el camión (y los cambios tras puertas, rampa, pintura, retro y pedales) contra
+  `tests/data/reference_truck_golden.txt`, generado con el archivo único. La baseline del lint bajó 1.
+- [ ] **N-225.3** `route.gd`. **N-225.4** `package.gd` (999). Quedan
   `player.gd` y `run_manager.gd` fuera del orden.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
