@@ -56,7 +56,7 @@ do-not-drop/scripts/ui/options_panel.gd|max-line-length 8
 do-not-drop/scripts/ui/sound_check_panel.gd|max-line-length 1
 do-not-drop/scripts/ui/ui_theme.gd|max-line-length 8
 do-not-drop/tests/bench_drive.gd|class-variable-name 1
-do-not-drop/tests/bench_drive.gd|max-line-length 10
+do-not-drop/tests/bench_drive.gd|max-line-length 8
 do-not-drop/tests/bench_route_duration.gd|max-line-length 4
 do-not-drop/tests/bench_route_shocks.gd|max-line-length 2
 do-not-drop/tests/check_interpolation.gd|max-line-length 4
