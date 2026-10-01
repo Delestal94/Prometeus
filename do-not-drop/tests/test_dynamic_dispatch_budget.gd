@@ -22,7 +22,11 @@ extends SceneTree
 ##   network through package_autoloads.gd as a NetSession (the class
 ##   NetworkManager extends): the NetworkManager autoload must be one, or
 ##   `as NetSession` would give null and the box would stop seeing the network
-##   (its visibility filter, the hand-over, the seed its trap rolls from).
+##   (its visibility filter, the hand-over, the seed its trap rolls from);
+## - player_cargo_care.gd is no autoload either: its GAME_SETTINGS handle is
+##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would
+##   give null and the care card would lose the HUD scale, the interact key's
+##   name and the gamepad check (it would size and label itself as if on keyboard).
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -76,6 +80,14 @@ const BUDGETS: Dictionary = {
 	# and the radio's mode (truck_radio.gd names autoloads bare: typing it would
 	# pull them into the compile graph of every script that names the box).
 	"res://scripts/gameplay/package/package_rescue.gd": {"call": 7, "callv": 0, "get": 6, "root": 0},
+	# Typed now: the player (Player), the box (DeliveryPackage), the settings
+	# (GAME_SETTINGS, below) and the profile (UnlockProfile). The one .call and
+	# the four .get left all go to RunManager (care_supply_count; is_running twice,
+	# cargo, results): by name because preloading run_manager.gd here compiles it
+	# before the autoloads exist (see package_autoloads.gd, whose run_manager()
+	# finds the node). The two /root/ lookups are the null-safe GameSettings and
+	# UnlockManager accessors.
+	"res://scripts/gameplay/player/player_cargo_care.gd": {"call": 1, "callv": 0, "get": 4, "root": 2},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -103,6 +115,9 @@ const SCRIPT_HANDLES: Dictionary = {
 		"RUN_MANAGER": "/root/RunManager",
 		"CREW_PROGRESSION": "/root/CrewProgression",
 		"UNLOCK_MANAGER": "/root/UnlockManager",
+	},
+	"res://scripts/gameplay/player/player_cargo_care.gd": {
+		"GAME_SETTINGS": "/root/GameSettings",
 	},
 }
 
