@@ -91,33 +91,34 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 
 ### A. Referencia, medidas y dirección (1-8)
 
-- [ ] **S-311.1** `art/gel_character/LEEME.md`: qué es el personaje, de dónde parte, cómo se construye
+- [x] **S-311.1** (`b4270c6`) `art/gel_character/LEEME.md`: qué es el personaje, de dónde parte, cómo se construye
   (comandos de Blender headless), dónde está cada archivo y la lista de rasgos **obligatorios** de la
   referencia. La imagen ya está en `art/gel_character/referencia/referencia_frente.jpg`.
-- [ ] **S-311.2** Hoja de proporciones medida sobre la imagen, con la imagen anotada
-  (`referencia/proporciones.png` + tabla en `LEEME.md`): alto total en cabezas (≈5), ancho de hombros
+- [x] **S-311.2** (`b4270c6`) Hoja de proporciones medida sobre la imagen, con la imagen anotada
+  (`referencia/proporciones.png` + tabla en `LEEME.md`): alto total medido **3,68 cabezas** (corrige ≈5), ancho de hombros
   contra cabeza, largo de brazo (las manos llegan a media altura del muslo), largo de pierna (≈40 % del
   alto), ancho y largo del pie, cuello. Son los valores del preset **Delgada**.
-- [ ] **S-311.3** Material objetivo medido de la foto (`referencia/material_objetivo.md`): color del
+- [x] **S-311.3** (`b4270c6`) Material objetivo medido de la foto (`referencia/material_objetivo.md`): color del
   cuerpo (muestras de píxeles en cabeza, torso y piernas; blanco lechoso con tinte lavanda-azul), color
   de las zonas densas y de las transparentes, forma y tamaño de los reflejos (ventana de estudio en la
   cabeza, línea vertical en brazos y piernas), sombra de contacto.
-- [ ] **S-311.4** Los **12 criterios "igual que la imagen"** que usa el bloque E: (1) silueta, (2) cabeza
+- [x] **S-311.4** (`b4270c6`) Los **12 criterios "igual que la imagen"** que usa el bloque E: (1) silueta, (2) cabeza
   esférica y lisa, (3) transición cuello-hombros continua, (4) reflejos tipo ventana en la cabeza, (5)
   borde más denso y claro que el centro, (6) se ve el fondo a través, (7) motas o burbujas internas
   finas, (8) manos manopla con pulgar, (9) pies de bota redondeada, (10) sombra de contacto suave, (11)
   torso un poco más opaco que las extremidades, (12) cero facetas o aristas visibles.
-- [ ] **S-311.5** `art/gel_character/referencias.md`: 10-15 referencias de estudio (Fall Guys, Gang
+- [x] **S-311.5** (`b4270c6`) `art/gel_character/referencias.md`: 10-15 referencias de estudio (Fall Guys, Gang
   Beasts, Human Fall Flat, Slime Rancher, creadores de personaje con sliders, gomitas y jaleas reales,
   shaders de gelatina publicados) y qué se toma de cada una. Nada se copia: solo se describe qué funciona.
-- [ ] **S-311.6** Hoja de concepto con `artista-conceptual` (ComfyUI): turnaround frente/perfil/espalda
+- [x] **S-311.6** (`b4270c6`) Hoja de concepto con `artista-conceptual` (ComfyUI): turnaround frente/perfil/espalda
   de los presets Delgada y Flaca, los extremos de los rangos y Delgada en 6 colores, respetando la
-  referencia. Registro en `art/ai-registro.md`. *Necesita PC.*
-- [ ] **S-311.7** Presupuesto técnico en `LEEME.md`: triángulos por LOD (LOD0 ≤ 6000, LOD1 ≤ 2500, LOD2
+  referencia. Registro en `art/ai-registro.md`. Selección guiada **311071**, tres variantes revisadas;
+  reservas en `concept/seleccion_comfy.md` (no aprueba el bloque E). *Necesita PC.*
+- [x] **S-311.7** (`b4270c6`) Presupuesto técnico en `LEEME.md`: triángulos por LOD (LOD0 ≤ 6000, LOD1 ≤ 2500, LOD2
   ≤ 800), ≤ 16 morphs de proporción, huesos del juego + huesos de jiggle (≤ 20), texturas ≤ 1024², ≤ 3
   draw calls por personaje vestido, costo de GPU ≤ +0,5 ms con 4 personajes en pantalla contra el
   personaje de hoy.
-- [ ] **S-311.8** Plan de archivos pasado por `guardian-dominios`: lo nuevo va en
+- [x] **S-311.8** (`b4270c6`) Plan de archivos pasado por `guardian-dominios`: lo nuevo va en
   `scripts/gameplay/player/gel/`, `assets/models/characters/gel/` y `shaders/gel/`; lista de archivos de
   Nacho que se van a tocar (IK de manejo, asientos, resultados, depósito) y en qué ítems.
 
