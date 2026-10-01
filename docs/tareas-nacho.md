@@ -1622,6 +1622,20 @@ con `test_mud_segment` ampliado (la grúa usa el GLB, `Beacon` existe, el gancho
   §10.1. Queda (menor): el patito no se reconoce a distancia, la cabina crema sale fría con la luz del cielo, y los planos
   `crane`/`crane_cable` de `render_mud_segment.gd` la encuadran chica detrás del camión de cajas; no hay plano de noche.
 
+### N-322 · Barro con la calidad del resto del suelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `nacho/N-322-mud-look`**
+
+Pedido del usuario 2026-10-01 ("el barro no tiene ni cerca la calidad ni textura que los demás suelos"): el barro de
+`MudSegment` (N-108) eran cajas planas de un color naranja (`MudSurface`, `MudPit`, `MudRut`), discos grises de charco y
+montículos cúbicos, sin textura; al lado del terreno con mapas de grano se veía de otro juego.
+~~Hecho cuando el barro es una superficie con textura y relieve que sigue el suelo, sin cajas ni discos.~~
+**[x] Hecho (2026-10-01)** — `shaders/mud_ground.gdshader`: una sola `PlaneMesh` `MudSurface` (subdividida a ~1 m, la
+acomoda `conform_geometry()`) con el grano de tierra (`tx_detail_earth_512.png`), barro marrón con costra seca y zonas
+mojadas, el pozo más húmedo donde está la física (`pit_start`/`pit_end`), dos huellas con dibujo que se cortan por tramos,
+agua turbia con brillo suave en lo bajo, relieve por normal y borde irregular (discard) con anillo de costra que lo funde con
+la ruta. Montículos: semiesferas low-poly con el mismo shader (`lump`). `mud_segment.gd` `_build()`/`_mud_material()`.
+`test_mud_segment` ampliado (shader y parámetros del pozo, sin cajas ni discos, montículos); revisado en 4 iteraciones con
+`revisor-visual` (`tests/render_mud_segment.gd`). Queda: el contorno se ve algo ruidoso a mucha distancia.
+
 ### N-320 · Polvo de las ruedas legible y según el suelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-320-wheel-dust`**
 
 Hoy `scripts/presentation/vehicle_presentation.gd:453-488` (`_apply_dust` y el emisor) echa cubos `BoxMesh` de 0,05 m, 14 por
