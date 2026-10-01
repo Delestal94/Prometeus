@@ -293,7 +293,7 @@ func can_use_spot(kind: StringName, player: Node) -> bool:
 		return false
 	if kind == &"push":
 		return _may_push(player)
-	if player.get(&"carried_package") != null or not String(player.get(&"seat_node_path")).is_empty():
+	if _hands_busy(player):
 		return false
 	return strap_ready
 
@@ -363,9 +363,7 @@ func _may_push(player: Node, reach: float = PUSH_REACH) -> bool:
 	var truck: Node3D = _truck()
 	if truck == null or not player is Node3D:
 		return false
-	if player.get(&"carried_package") != null or player.get(&"_ragdolled") == true:
-		return false
-	if not String(player.get(&"seat_node_path")).is_empty():
+	if _hands_busy(player) or player.get(&"_ragdolled") == true:
 		return false
 	var at: Vector3 = (player as Node3D).global_position
 	if truck.to_local(at).z < PUSH_SPOT_LOCAL.z - PUSH_BEHIND_MARGIN:
@@ -374,6 +372,12 @@ func _may_push(player: Node, reach: float = PUSH_REACH) -> bool:
 	if Vector2(at.x - spot.x, at.z - spot.z).length() > reach:
 		return false
 	return not (truck.has_method(&"carries") and bool(truck.call(&"carries", at)))
+
+
+## Holding a box or sitting in a seat. By name, once for everyone: the tests put
+## FakePlayer Node3Ds in the "player" group, which `as Player` would drop.
+func _hands_busy(player: Node) -> bool:
+	return player.get(&"carried_package") != null or not String(player.get(&"seat_node_path")).is_empty()
 
 
 func _valid_pushers() -> int:
