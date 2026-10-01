@@ -6,8 +6,9 @@ extends RefCounted
 ## campaign's merit and cards -- asks for `slot()` and wraps nothing itself.
 ##
 ## The index is NetworkManager.color_slot() (the host hands them out in arrival
-## order, N-226.1), wrapped to the palette: MAX_PLAYERS is 8 and the palette 5,
-## so slots 5..7 share a colour with 0..2 (an 8-player room, N-228.2).
+## order, N-226.1), wrapped to the palette: MAX_PLAYERS is 8 and so is the
+## palette (N-228.3), so in a room nobody repeats; the wrap only matters to a
+## reader with a shorter palette, or to an id with no announced slot.
 ##
 ## Two decisions that live here on purpose:
 ## - The host is always slot 0, in a room and playing solo. NetworkManager

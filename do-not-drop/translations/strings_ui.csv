@@ -661,10 +661,13 @@ UI_CARD_INFORMATION,Información,Information
 UI_CARD_PRIORITY,Prioridad,Priority
 UI_CARD_RESCUE,Rescate,Rescue
 UI_CARD_REVOTE,Re-voto,Revote
+UI_COLOR_COBALT,cobalto,cobalt
 UI_COLOR_CORAL,coral,coral
 UI_COLOR_MINT,menta,mint
 UI_COLOR_SKY,cielo,sky
+UI_COLOR_TEAL,turquesa,teal
 UI_COLOR_VIOLET,violeta,violet
+UI_COLOR_WHITE,blanco,white
 UI_COLOR_YELLOW,amarillo,yellow
 UI_DELIVERIES,Entregas,Deliveries
 UI_FACE_EYES_CLASSIC,Clásicos,Classic

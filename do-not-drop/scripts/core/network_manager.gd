@@ -153,7 +153,7 @@ func _ready() -> void:
 ## A peer who left keeps the last one it wore (_departed_slots). Outside a
 ## session, or for a peer the host hasn't announced yet, it is
 ## posmod(peer_id, MAX_PLAYERS); PlayerColorSlot pins the host to 0 either way. Readers wrap it to their own
-## palette size: posmod(color_slot(id), palette.size()).
+## palette size (Player.PLAYER_COLORS has MAX_PLAYERS colours): posmod(color_slot(id), palette.size()).
 func color_slot(peer_id: int) -> int:
 	if not _color_slots.has(peer_id) and _departed_slots.has(peer_id):
 		return int(_departed_slots[peer_id])

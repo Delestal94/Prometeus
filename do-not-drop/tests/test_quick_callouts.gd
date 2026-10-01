@@ -72,8 +72,8 @@ func _initialize() -> void:
 	var low: AudioStreamWAV = SynthAudio.callout_voice(0, 3)
 	var high: AudioStreamWAV = SynthAudio.callout_voice(1, 3)
 	_expect(low != null and high != null and low.data != high.data, "Each player colour has its own voice")
-	_expect(SynthAudio.callout_voice(5, 3) == low,
-		"The voice is cached and picked by colour slot, wrapped to the five voices (slot 5 sounds like 0)")
+	_expect(SynthAudio.callout_voice(8, 3) == low and SynthAudio.callout_voice(5, 3) != low,
+		"The voice is cached, picked by colour slot and wrapped to the eight voices (8 sounds like 0, 5 is its own)")
 	_expect(SynthAudio.callout_voice(0, 4).get_length() > low.get_length(), "A longer phrase babbles longer")
 	var crewmate := Node3D.new()
 	crewmate.name = "Crewmate"
@@ -84,7 +84,7 @@ func _initialize() -> void:
 	var from_head: Node = crewmate.get_node_or_null(^"CalloutVoice")
 	_expect(from_head is AudioStreamPlayer3D, "A crewmate's callout is voiced from their head")
 	if from_head is AudioStreamPlayer3D:
-		_expect((from_head as AudioStreamPlayer3D).stream == SynthAudio.callout_voice(7 % 5, 3),
+		_expect((from_head as AudioStreamPlayer3D).stream == SynthAudio.callout_voice(7, 3),
 			"The crewmate's voice uses their colour slot and the phrase's syllables")
 		_expect((from_head as AudioStreamPlayer3D).bus == &"Voice",
 			"The callout babble is on the Voice bus, so the Voces slider owns it (S-402)")

@@ -5,9 +5,8 @@ extends Node
 ## Set by Hud before this is added as its child.
 var hud: Hud
 
-const RESULT_PLAYER_COLORS: Array[Color] = [
-	Color("83e2ba"), Color("f4c562"), Color("f47e6d"), Color("6db3d6"), Color("c9a0e0"),
-]
+## The crew's colours, not a copy of them (N-228.3): an award dot matches the suit.
+const RESULT_PLAYER_COLORS: Array[Color] = Player.PLAYER_COLORS
 
 
 func _ready() -> void:
