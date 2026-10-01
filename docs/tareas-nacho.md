@@ -2537,10 +2537,17 @@ Equilibrio, Frágil y Ruidoso (`data/traps/*.tres` → `contents`).
   (Lilita One + cinta amarilla), más una versión apilada cuadrada. `assets/ui/logo/`.
 - [x] (commit `004bb8b`) Usarlo en el menú en lugar del logo armado con tipografía. Es la base de las cápsulas (S-903).
 
-#### S-307 · Ilustración de fondo de resultados — C · generación de imagen · Aviso: no
+#### S-307 · Ilustración de fondo de resultados — C · generación de imagen · Aviso: sí (`hud.gd`) · **[x] rama `arte/S-307-results-backdrop`**
 
-- [ ] La tripulación frente a la furgoneta al terminar la ruta, 1920×1080, con zona libre a la
-  izquierda para el puntaje. Registrar en `art/ai-registro.md`.
+- [x] ~~La tripulación frente a la furgoneta al terminar la ruta, 1920×1080, con zona libre a la
+  izquierda para el puntaje. Registrar en `art/ai-registro.md`.~~ **[x] Hecho (2026-10-01, sesión de arte)** —
+  `assets/ui/backgrounds/tx_ui_results_background_1920.png` (Z-Image Turbo, semilla 902, prompt en
+  `art/concept/results/prompt.txt`): porche con cajas entregadas a la izquierda, furgoneta de la marca a la derecha,
+  tripulación chiquita en el medio, atardecer. Como la tarjeta de resultados va centrada, los sujetos quedan a los
+  costados y el centro calmo (no "zona libre a la izquierda"). `hud.gd` la muestra solo en resultados
+  (`results_backdrop`, setter de `overlay_mode`, `modulate` 0,8); test `test_hud_flow`. Aviso
+  `docs/avisos/2026-10-01-s307-fondo-resultados.md`. Queda: las puertas traseras salen cerradas (abierta la
+  lateral) y en 4:3 la tarjeta la tapa casi entera.
 
 #### S-308 · Animaciones de emote — C · `Opus 5.5 · high` (Blender Python) · Aviso: no
 
