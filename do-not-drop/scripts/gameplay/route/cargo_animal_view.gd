@@ -99,7 +99,10 @@ func _exit_tree() -> void:
 # --- Events ------------------------------------------------------------------
 
 func _on_alert(animal_kind: StringName, id: StringName, warn_seconds: float, act_seconds: float) -> void:
-	if state != State.NONE and animal_kind == kind and id == package_id:
+	# Not while it is leaving: the ended and the next alert can land in the same frame
+	# (the director's cooldown is longer than the exit, but not by much), and that one
+	# is a new attack, not a repeat.
+	if state != State.NONE and state != State.LEAVE and animal_kind == kind and id == package_id:
 		# The host repeating itself for a peer that just joined: adjust, don't restart.
 		if state == State.WARN:
 			_warn_left = warn_seconds
@@ -107,7 +110,9 @@ func _on_alert(animal_kind: StringName, id: StringName, warn_seconds: float, act
 				_begin_act()
 		_act_left = act_seconds
 		return
-	_clear()
+	# Detached, so a new "Dog" keeps its name (and the path of its DistractPoint, which
+	# the host's stick throw uses) even when the old one is only queued to be freed.
+	_clear(true)
 	var found: Node3D = _find_box(id)
 	if found == null or _vehicle() == null:
 		return
@@ -447,11 +452,16 @@ func _update_stick(delta: float) -> void:
 	_stick.rotate_x(delta * 14.0)
 
 
-func _clear() -> void:
+## Frees everything the animal made. `detach` also takes the pieces out of the tree
+## right away, so their names are free again this same frame (queue_free alone
+## leaves them in until the frame ends); not wanted when the view itself is leaving.
+func _clear(detach: bool = false) -> void:
 	state = State.NONE
 	set_process(false)
 	for node: Node in [animal, bees, icon, _buzz, _stick]:
 		if is_instance_valid(node):
+			if detach and node.get_parent() == self:
+				remove_child(node)
 			node.queue_free()
 	animal = null
 	bees = null
