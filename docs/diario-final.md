@@ -206,3 +206,43 @@ Agentes por pieza: `modelador-blender` (set, diario, clips), `artista-shaders` (
   - Viaja a los demás como el resto de la apariencia (`player_appearance.gd`), para que el host lo meta en
     las casillas del diario.
   - Toca jugador y UI (dominio de Slatex): lleva aviso en `colaboracion-equipo.md`.
+
+## Estudio visual de la escena (2026-10-01)
+
+Prueba de dirección de arte en Godot con assets del juego, **no** la cinemática N-606.3: no toca
+`NewspaperPage`, `NewsDesk`, `HudResults`, la red ni el flujo de resultados. Script, shaders y forma
+de correrlo: `scripts/tools/newspaper_concept/` y `art/newspaper/LEEME.md`. Capturas en
+`art/newspaper/review/`.
+
+### Decisiones
+
+- **Set**: réplica aislada de la oficina del depósito N-319 (escritorio, lámpara, reloj, persianas y
+  corcho del kit), fondo con menos contraste que la cara y el diario. Luz cálida, sin post.
+- **El Jefe**: el cuerpo redondeado actual con `CharacterFace`, pero con **camisa celeste de oficina y
+  bigote** para que no se confunda con la tripulación (mismo cuerpo, en naranja). No se crea otro cuerpo.
+- **El diario es papel de diario, no UI**: papel gris cálido y tinta casi negra (no la crema y el azul
+  de `UiTheme`), iluminado como el resto del set, con fibra, pliegues, bordes amarillentos y el reverso
+  apenas transparentado. Cuatro pliegos con pliegue central en V; sostenido solo por abajo, las puntas
+  de afuera se caen.
+- **Diagramación de diario**: folio con fecha arriba de cada página, etiqueta de sección, titular,
+  bajada, foto con trama de puntos y pie, columnas con filetes, recuadro de clasificados y avisos chicos.
+  Las noticias de la partida van grandes; alrededor, columnas de texto chico justificado de relleno que
+  dan la textura de un diario de verdad sin competir con ellas. La tapa (el lado que ve la oficina
+  mientras el Jefe lee) tiene cabezal, fecha, número y precio.
+- **Tipografías**: Lilita One en titulares, Nunito en bajadas y cuerpos grandes. El relleno y los pies
+  usan una serif del sistema en el estudio; **producción lleva una serif OFL empaquetada** (como ya
+  pedía la sección de arquitectura).
+- **Legibilidad**: la doble página orienta; cada bloque tiene su primer plano casi perpendicular al
+  papel, del lado opuesto a la cabeza del Jefe, con el texto de la noticia a 24 px o más a 720p. Las
+  manos sostienen las esquinas sin tapar noticias. Si un texto real no entra, se pagina; nunca se achica.
+- **Ritmo (30 s, salteable)**: general con rótulo → recorrido por el costado hasta la doble página →
+  primer plano de cada noticia con pausa de lectura (5–5,5 s) → doble página → el Jefe baja el diario y
+  reacciona → resultados con la cara despejada. La cámara se detiene antes de leer; no orbita sobre el
+  texto. La reacción va según la partida; escupir el mate queda para desastres excepcionales.
+- **Formato**: 16:9 sin bandas (revisa la propuesta de 2,35:1), para no perder superficie de lectura.
+
+### Pendiente para producción
+
+Integrarlo con `NewsDesk` (3–5 noticias y sus textos reales, con traducciones), audio, paso de
+página, birome, saltar y resultados reales, contacto fino de los dedos y los clips del Jefe. Las
+noticias, el pueblo y "3 de 5" del estudio son de ejemplo.
