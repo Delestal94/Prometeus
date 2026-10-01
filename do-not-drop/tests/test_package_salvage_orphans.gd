@@ -8,8 +8,10 @@ extends SceneTree
 ## - Freed in the same frame it entered the tree (before the deferred calls run).
 ## - Freed after the deferred calls ran (tape and hen already children).
 ## - Several packages freed at once, as when a whole level goes away.
+## - None of it logs an engine error (freeing must not touch already freed meshes).
 
 var _failures: int = 0
+var _catcher := ErrorCatcher.new()
 
 
 func _initialize() -> void:
@@ -17,6 +19,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	OS.add_logger(_catcher)
 	await process_frame
 	var baseline: int = _orphans()
 
@@ -47,6 +50,10 @@ func _run() -> void:
 	await process_frame
 	_expect_orphans(baseline, "Ten packages freed in their first frame leave no orphans")
 
+	var errors: Array[String] = _catcher.take()
+	_expect(errors.is_empty(), "Freeing packages logs no engine errors: %s" % [errors])
+	OS.remove_logger(_catcher)
+
 	if _failures == 0:
 		print("PASS: freeing a package, early or late, leaves no salvage orphans")
 	quit(_failures)
@@ -73,3 +80,23 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
+
+class ErrorCatcher extends Logger:
+	var _mutex := Mutex.new()
+	var _messages: Array[String] = []
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
+			_editor_notify: bool, error_type: int, _backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type == Logger.ERROR_TYPE_WARNING:
+			return
+		_mutex.lock()
+		_messages.append("%s (%s:%d in %s)" % [rationale if not rationale.is_empty() else code, file, line, function])
+		_mutex.unlock()
+
+	func take() -> Array[String]:
+		_mutex.lock()
+		var out: Array[String] = _messages.duplicate()
+		_messages.clear()
+		_mutex.unlock()
+		return out

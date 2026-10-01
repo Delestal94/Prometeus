@@ -26,10 +26,11 @@ sin el error y hay un test que lo fija: instanciar un nivel con paquetes, libera
   mismo frame). Con `escritor-tests`; tests `package`.~~
   **[x] Hecho (2026-10-01, rama `nacho/S-908-salvage-orphans`)** — causa confirmada: `package.gd:207-209` crea el
   `PackageSalvage` y su `_ready()` (`package_salvage.gd:35` y `:62`) cuelga cinta y gallina con `call_deferred`; si el
-  paquete se libera antes, quedan 5 nodos sin padre por paquete. `_notification(NOTIFICATION_PREDELETE)` libera los
-  que sigan sin padre. `_build_point` no tenía el problema (agrega sincrónico). Test
+  paquete se libera antes, quedan 5 nodos sin padre por paquete. El diferido pasa a ser un método propio
+  (`_attach_meshes`, muere con el salvage) y `_notification(NOTIFICATION_PREDELETE)` libera los que sigan sin padre. `_build_point` no tenía el problema (agrega sincrónico). Test
   `test_package_salvage_orphans` (paquete liberado en su primer frame, después del diferido y diez a la vez; sin el
-  arreglo da 5 huérfanos). Aviso `docs/avisos/2026-10-01-salvage-orphans.md`.
+  arreglo da 5 huérfanos; además exige cero errores del motor con un `Logger`). Aviso
+  `docs/avisos/2026-10-01-salvage-orphans.md`.
 
 ### N-238 · `request_gear_shift` sin `RpcGuard` y un test que se deja engañar por comentarios — A · `Opus 5.5 · xhigh` · Aviso: no · **[x] rama `nacho/N-238-gear-shift-guard`**
 Origen: auditoría integral 2026-10-01, A-D.1 (P1). `request_gear_shift` en

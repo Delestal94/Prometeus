@@ -4,8 +4,9 @@
 
 ## Qué cambió
 
-`scripts/gameplay/package/package_salvage.gd` (tu dominio): nuevo `_notification(NOTIFICATION_PREDELETE)`.
-`_ready()` cuelga `RepairTape` y `ReplacementHen` del paquete con `add_child.call_deferred`; si el paquete (o el
+`scripts/gameplay/package/package_salvage.gd` (tu dominio): `_ready()` colgaba `RepairTape` y `ReplacementHen` del
+paquete con `package.add_child.call_deferred`; ahora difiere un método propio (`_attach_meshes`) y suma
+`_notification(NOTIFICATION_PREDELETE)`. Antes, si el paquete (o el
 nivel entero) se libera antes de que corra ese diferido, el llamado se descarta y los dos nodos (5 con las mallas
 de la gallina) quedaban huérfanos para siempre: ~50 por nivel liberado en el recorrido de QA. Ahora, al borrarse
 el nodo de salvataje, libera los que sigan sin padre; los que ya están colgados del paquete no se tocan. Ninguna
