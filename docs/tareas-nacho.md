@@ -1048,9 +1048,23 @@ Fase 4 de `docs/investigacion-red.md`.
   `net_session__test_net_session_rejoin` y la última etapa de `net_pair` (sale con la caja, vuelve desde el
   mismo juego y recupera slot y mérito). Aviso: `docs/avisos/2026-09-30-n221-rpc-y-reconexion.md`.
   - [ ] Falta: no recupera posición, asiento ni caja (se sueltan al irse, S-209; aparece como cualquier join
-    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); con la sala llena y el fantasma
-    todavía conectado, el transporte lo rechaza hasta que el host lo note (el tope de ENet cuenta al
-    fantasma); el fantasma por sockets reales (crash con Steam) solo está probado en un proceso.
+    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); en LAN un extraño a una sala llena
+    carga el nivel antes de oír "full" (quién es llega con su respuesta de listo); el fantasma de un crash con
+    Steam no está probado con sockets reales (por ENet sí: `net_pair`).
+- [x] Seguimiento de la auditoría de #125 (`auditor-red`), rama `nacho/N-221-followups`. La caja de un
+  fantasma conserva su ventana de rescate: `NetSession.peer_removed` (antes de `roster_changed`, una vez por
+  salida), que `package.gd` escucha en lugar de `multiplayer.peer_disconnected`. Sala llena: ENet acepta una
+  conexión de más y `NetAdmission` (módulo) decide; el que vuelve recupera el lugar de su fantasma y un extraño
+  oye "full" (en Steam al autenticar, en LAN con la respuesta de listo). `_report_level_ready` fuera del cupo
+  (solo cuenta un reporte que el host debe); `request_drop` y `release_occupant` con reserva crítica
+  (`RpcGuard.allow_critical_request`); `name_ok`/`path_ok` para los `StringName` y `NodePath` de RPC
+  (`supply_id`, `offer_id`, `event_name`, `recipient_path`) y la regla en `test_rpc_guard`. Los slots de los que
+  se fueron viajan en el handshake y en `_sync_color_slots`. El recién llegado que toma un slot reservado ya no
+  pisa la entrada de campaña del que se fue (se aparta y se le devuelve), y la reserva que tomó un joiner que no
+  entró, o que volvía a otro slot, vuelve a su dueño. `_settle_now` ya no le devuelve 20 s a un fantasma soltado.
+  `PROTOCOL_VERSION` 16 → 17. Tests: `test_network_rejoin`, `test_network_roster`, `test_rpc_guard`,
+  `net_session__test_rpc_guard`, `net_session__test_net_session_rejoin` (sala llena por ENet) y la última etapa
+  de `net_pair` (fantasma real con la caja en crisis). Aviso: `docs/avisos/2026-10-01-n221-seguimiento-red.md`.
 - [x] ~~Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.~~
   **[x] Hecho (2026-09-30)** — rama `nacho/ci-faster-prs`: §6, con cómo elegir el número sin chocar con otro PR
   en vuelo; N-221 suma §0.2, junto con `RpcGuard` y el color. Filas NET-07 y NET-08 en
