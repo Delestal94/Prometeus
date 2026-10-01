@@ -30,6 +30,9 @@ extends SceneTree
 ## - package_feedback.gd (the box's presentation) is no autoload either: its GAME_SETTINGS handle is
 ##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would give null and the box
 ##   would ignore the impact-effects and colorblind-palette options.
+## - player.gd (the player) holds the unlock profile through its UNLOCK_MANAGER handle: if that stopped being
+##   the script the autoload runs, `as UNLOCK_MANAGER` would give null and the local player would lose their
+##   picked uniform and face, and the first-trap tips would never show.
 ## - cargo_animals.gd (the gull, the dog and the bees) reads the session's world_seed, is_host and
 ##   peer_level_ready through its NETWORK_MANAGER handle: if that stopped being the script the autoload
 ##   runs, `as NETWORK_MANAGER` would give null and the animals would roll from seed 0 and act on every peer.
@@ -128,6 +131,12 @@ const BUDGETS: Dictionary = {
 	# of another type (a test's stand-ins) are skipped with `as`, not called.
 	# The RPC to the player stays rpc_id by name, like every RPC.
 	"res://scripts/gameplay/interaction/seat_tending.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The player (N-224.4) is typed: the session (NetSession), the profile (UNLOCK_MANAGER, below: the picked
+	# uniform and face, the tip flags), the box (DeliveryPackage: get_half_extents) and its trap
+	# (TrapDefinition.id). Nothing left by name but four /root/ lookups, the null-safe accessors: NetworkManager
+	# (`as NetSession`), UnlockManager (_profile()) and EventBus twice (the carry and tip notices, emitted by
+	# name because a test may replace EventBus with a plain Node).
+	"res://scripts/gameplay/player/player.gd": {"call": 0, "callv": 0, "get": 0, "root": 4},
 	# Typed now: the interactables (Interactable: can_interact, interact; DogDistractPoint for the aim
 	# bonus), the network (NetSession) and the box's contents view (preload, no class name). Three .call
 	# left: `highlight`, asked by name because what is aimed at (the pickup point, the box's feedback,
@@ -252,6 +261,9 @@ const SCRIPT_HANDLES: Dictionary = {
 	},
 	"res://scripts/gameplay/package/package_feedback.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",
+	},
+	"res://scripts/gameplay/player/player.gd": {
+		"UNLOCK_MANAGER": "/root/UnlockManager",
 	},
 }
 
