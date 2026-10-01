@@ -11,7 +11,7 @@ Con 8 jugadores el depósito puede tener 7 pedidos y la hoja de pedidos medía ~
   `_fit_orders_scroll()` le da el alto que necesita hasta lo que deja la pantalla (el resto de la tarjeta se mide
   después del layout, por las notas del Jefe que se parten en líneas); se recalcula en `size_changed`. El botón
   Volver queda siempre visible y conserva el foco inicial.
-- Si la lista no entra, el scroll es una parada más del foco: con él enfocado, arriba/abajo lo desplazan
+- Si la lista no entra, el scroll es una parada más del foco (con su anillo: `draw_focus_border`, stylebox `focus` sin márgenes de contenido): con él enfocado, arriba/abajo lo desplazan
   (`ORDERS_SCROLL_STEP`) y en los extremos el foco sigue al vecino (Volver); la rueda del mouse anda sola. Si entra
   entera no toma foco.
 - Una cara nueva del panel que tenga una lista larga puede copiar este patrón.

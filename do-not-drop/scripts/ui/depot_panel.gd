@@ -153,7 +153,13 @@ func _build_orders() -> void:
 	_orders_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_orders_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_orders_scroll.focus_mode = Control.FOCUS_NONE
-	_orders_scroll.add_theme_stylebox_override("focus", UiTheme.focus_ring())
+	# The ring is drawn outside the box (expand margin): with draw_focus_border the
+	# scroll would otherwise reserve its 3 px border inside, and a list sized to
+	# its content would scroll those few pixels with no focus stop.
+	var ring: StyleBoxFlat = UiTheme.focus_ring()
+	ring.set_content_margin_all(0)
+	_orders_scroll.add_theme_stylebox_override("focus", ring)
+	_orders_scroll.draw_focus_border = true
 	_orders_scroll.gui_input.connect(_on_orders_input)
 	_body.add_child(_orders_scroll)
 	_orders_list = VBoxContainer.new()

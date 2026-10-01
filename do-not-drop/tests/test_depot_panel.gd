@@ -7,7 +7,8 @@ extends SceneTree
 ## - the whole card, Back button included, fits the base resolution (1280x720)
 ##   even with the Boss's two notes on it, and so does a short list;
 ## - when the list does not fit it scrolls: the box takes focus, up / down move
-##   it and the mouse wheel works; at the ends focus moves on to Back;
+##   it (driven through the viewport, like a pad) and the mouse wheel works; at
+##   the ends focus moves on to Back; the focused box draws its focus ring;
 ## - a list that fits is not a focus stop (Back keeps the first focus).
 
 const HOUSES_MAX: int = 7
@@ -56,6 +57,26 @@ func _run() -> void:
 	_expect(scroll != null and scroll.focus_mode == Control.FOCUS_ALL,
 			"A list that does not fit becomes a focus stop")
 	_expect(root.gui_get_focus_owner() == back, "Back still takes the first focus")
+	_expect(scroll != null and scroll.draw_focus_border,
+			"The focused list draws its focus ring (without it nothing on screen shows the focus)")
+
+	# Through the viewport, as a pad would: up from Back lands on the list, and
+	# at the bottom down hands the focus back to Back.
+	if scroll != null and back != null:
+		_push(&"ui_up")
+		await process_frame
+		_expect(root.gui_get_focus_owner() == scroll,
+				"Up from Back focuses the list (focus on %s)" % root.gui_get_focus_owner())
+		for _i: int in 20:
+			_push(&"ui_down")
+			await process_frame
+			if root.gui_get_focus_owner() != scroll:
+				break
+		var end_bar: VScrollBar = scroll.get_v_scroll_bar()
+		_expect(end_bar.value >= end_bar.max_value - end_bar.page - 0.5 and root.gui_get_focus_owner() == back,
+				"Down scrolls to the end, then focus moves on to Back (at %s, focus on %s)"
+				% [end_bar.value, root.gui_get_focus_owner()])
+		scroll.scroll_vertical = 0
 
 	# The pad can reach every row: up from Back lands on the list, down scrolls it.
 	if scroll != null and back != null:
@@ -137,6 +158,15 @@ func _fits(panel: Control, screen: Vector2) -> bool:
 func _back_button() -> Button:
 	var buttons: Array[Node] = _panel.find_children("*", "Button", true, false)
 	return buttons[buttons.size() - 1] as Button if not buttons.is_empty() else null
+
+
+## Sends a press and its release through the viewport, like a real key or pad.
+func _push(action: StringName) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventAction.new()
+		event.action = action
+		event.pressed = pressed
+		root.push_input(event)
 
 
 func _press(target: Control, action: StringName) -> void:
