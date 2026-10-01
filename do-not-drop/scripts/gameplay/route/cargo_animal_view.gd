@@ -19,7 +19,10 @@ extends Node3D
 ## of transforms a frame, and one raycast when the dog arrives.
 
 const DOG_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_dog_rigged.glb"
-const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
+## The dog's script and the truck's, as types (N-224.4): a renamed method or property fails to
+## compile here instead of mid-run. Neither has a class name (wildlife_animal.gd, vehicle.gd).
+const ANIMAL_SCRIPT := preload("res://scripts/presentation/wildlife_animal.gd")
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 
 signal dog_thrown(peer_id: int)
@@ -64,7 +67,9 @@ var bees: MultiMeshInstance3D
 var icon: Label3D
 var dog_point: DogDistractPoint
 
-var _box: Node3D
+var _box: DeliveryPackage
+## The dog, typed (`animal` is the gull or the dog, by kind); null for the others.
+var _dog: ANIMAL_SCRIPT
 var _warn_left: float = 0.0
 var _warn_total: float = 1.0
 var _act_left: float = 0.0
@@ -113,7 +118,7 @@ func _on_alert(animal_kind: StringName, id: StringName, warn_seconds: float, act
 	# Detached, so a new "Dog" keeps its name (and the path of its DistractPoint, which
 	# the host's stick throw uses) even when the old one is only queued to be freed.
 	_clear(true)
-	var found: Node3D = _find_box(id)
+	var found: DeliveryPackage = _find_box(id)
 	if found == null or _vehicle() == null:
 		return
 	kind = animal_kind
@@ -163,7 +168,7 @@ func _begin_act() -> void:
 # --- Frame -------------------------------------------------------------------
 
 func _process(delta: float) -> void:
-	var vehicle: Node3D = _vehicle()
+	var vehicle: VehicleScript = _vehicle()
 	if state == State.NONE or vehicle == null:
 		return
 	if not is_instance_valid(_box):
@@ -197,7 +202,7 @@ func _process(delta: float) -> void:
 	_update_stick(delta)
 
 
-func _pose_gull(delta: float, vehicle: Node3D) -> void:
+func _pose_gull(delta: float, vehicle: VehicleScript) -> void:
 	var gull := animal as CargoGull
 	var top: Vector3 = _box_top()
 	var here: Vector3 = animal.global_position
@@ -222,7 +227,7 @@ func _pose_gull(delta: float, vehicle: Node3D) -> void:
 	animal.global_position = here
 
 
-func _pose_dog(delta: float, vehicle: Node3D) -> void:
+func _pose_dog(delta: float, vehicle: VehicleScript) -> void:
 	var here: Vector3 = animal.global_position
 	var speed: float = 0.0
 	match state:
@@ -233,7 +238,7 @@ func _pose_dog(delta: float, vehicle: Node3D) -> void:
 			here = start.lerp(stop, k)
 			speed = start.distance_to(stop) / _warn_total
 			_turn_toward(here)
-			animal.call(&"run")
+			_dog.run()
 		State.ACT:
 			# Front paws up on the box, the dog standing beside it (a shelf above a
 			# box leaves no room to stand on it).
@@ -241,7 +246,7 @@ func _pose_dog(delta: float, vehicle: Node3D) -> void:
 			here = _hop_from.lerp(_dog_beside(vehicle), hop) + Vector3.UP * sin(hop * PI) * 0.4
 			var toward: Vector3 = _box.global_position - here
 			animal.global_rotation = Vector3(0.0, atan2(-toward.x, -toward.z), 0.0)
-			animal.call(&"idle")
+			_dog.idle()
 		State.LEAVE:
 			var goal: Vector3 = _on_ground(_leave_target)
 			var flat: Vector3 = Vector3(goal.x - here.x, 0.0, goal.z - here.z)
@@ -250,13 +255,13 @@ func _pose_dog(delta: float, vehicle: Node3D) -> void:
 			here.y = move_toward(here.y, _ground_y, 6.0 * delta)
 			speed = DOG_RUN_SPEED if flat.length() > 0.2 else 0.0
 			_turn_toward(here)
-			animal.call(&"run")
+			_dog.run()
 	# The clips are paced to the dog at its own size.
-	animal.set(&"ground_speed", lerpf(float(animal.get(&"ground_speed")), speed / DOG_SCALE, 0.25))
+	_dog.ground_speed = lerpf(_dog.ground_speed, speed / DOG_SCALE, 0.25)
 	animal.global_position = here
 
 
-func _pose_bees(vehicle: Node3D) -> void:
+func _pose_bees(vehicle: VehicleScript) -> void:
 	if not is_instance_valid(bees):
 		return
 	var centre: Vector3 = _box.global_position
@@ -307,8 +312,9 @@ func _build_animal() -> void:
 		animal = _load_dog()
 		animal.name = "Dog"
 		animal.set_script(ANIMAL_SCRIPT)
-		animal.set(&"steered", true)
-		animal.set(&"standing_clip", &"Idle")
+		_dog = animal as ANIMAL_SCRIPT
+		_dog.steered = true
+		_dog.standing_clip = &"Idle"
 		animal.scale = Vector3.ONE * DOG_SCALE
 	add_child(animal)
 	animal.global_position = _vehicle().to_global(GULL_START if kind == CargoAnimalPlan.GULL else DOG_START)
@@ -464,6 +470,7 @@ func _clear(detach: bool = false) -> void:
 				remove_child(node)
 			node.queue_free()
 	animal = null
+	_dog = null
 	bees = null
 	icon = null
 	dog_point = null
@@ -477,18 +484,20 @@ func _clear(detach: bool = false) -> void:
 
 # --- Where things are --------------------------------------------------------
 
-func _vehicle() -> Node3D:
-	var parent: Node = get_parent()
-	return parent.get(&"vehicle") as Node3D if parent != null else null
+## The truck the director (the parent) hands over, typed; null with no director.
+func _vehicle() -> VehicleScript:
+	var director := get_parent() as CargoAnimals
+	return director.vehicle as VehicleScript if director != null else null
 
 
-func _find_box(id: StringName) -> Node3D:
-	var parent: Node = get_parent()
-	if parent == null:
+func _find_box(id: StringName) -> DeliveryPackage:
+	var director := get_parent() as CargoAnimals
+	if director == null:
 		return null
-	for candidate: Variant in parent.get(&"packages"):
-		if is_instance_valid(candidate) and StringName((candidate as Node).get(&"package_id")) == id:
-			return candidate as Node3D
+	for candidate: Variant in director.packages:
+		var box := candidate as DeliveryPackage if is_instance_valid(candidate) else null
+		if box != null and box.package_id == id:
+			return box
 	return null
 
 
@@ -500,9 +509,9 @@ func _player_of(peer_id: int) -> Node3D:
 
 
 func _box_half_height() -> float:
-	if _box == null or not _box.has_method(&"get_half_extents"):
+	if _box == null:
 		return 0.33
-	return float((_box.call(&"get_half_extents") as Vector3).y)
+	return _box.get_half_extents().y
 
 
 func _box_top() -> Vector3:
@@ -511,17 +520,17 @@ func _box_top() -> Vector3:
 
 ## Where the dog runs to: the rear doors when the box is in the bay, else the
 ## foot of the box.
-func _dog_stop(vehicle: Node3D) -> Vector3:
-	if bool(vehicle.call(&"carries", _box.global_position, 0.6)):
+func _dog_stop(vehicle: VehicleScript) -> Vector3:
+	if vehicle.carries(_box.global_position, 0.6):
 		return _on_ground(vehicle.to_global(DOG_AT_DOORS))
 	return _on_ground(_box.global_position)
 
 
 ## Where the dog stands to work at the box: out in the aisle of the bay (the
 ## rack opens onto it) at the floor under the box; by the box on the ground.
-func _dog_beside(vehicle: Node3D) -> Vector3:
+func _dog_beside(vehicle: VehicleScript) -> Vector3:
 	var box_at: Vector3 = _box.global_position
-	var in_bay: bool = bool(vehicle.call(&"carries", box_at, 0.6))
+	var in_bay: bool = vehicle.carries(box_at, 0.6)
 	var aside: Vector3 = vehicle.global_basis * Vector3(0.95 if in_bay else 0.7, 0.0, 0.0)
 	var spot: Vector3 = box_at + aside
 	if not in_bay:
@@ -541,7 +550,7 @@ func _on_ground(point: Vector3) -> Vector3:
 
 
 func _ground_height() -> float:
-	var vehicle: Node3D = _vehicle()
+	var vehicle: VehicleScript = _vehicle()
 	if vehicle == null or not is_inside_tree():
 		return 0.0
 	var origin: Vector3 = vehicle.global_position

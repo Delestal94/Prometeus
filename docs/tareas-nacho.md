@@ -952,6 +952,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-pickup-point-tipado.md`. Siguientes: `player.gd` (13), `spectator_camera.gd` (12),
     `cargo_animal_view.gd` (11).
+  - [x] `cargo_animal_view.gd` (2026-10-01, rama `nacho/N-224-cargo-animal-view-typed`): lo que se ve de la gaviota,
+    el perro y las abejas. El director (el padre) como `CargoAnimals` (`vehicle`, `packages` directos), el camión por
+    `preload` de `vehicle.gd` (`VehicleScript`: `carries` directo), la caja como `DeliveryPackage`
+    (`get_half_extents()`, `package_id`) y el perro con el tipo de `wildlife_animal.gd` (`_dog`: `run`, `idle`,
+    `steered`, `standing_clip`, `ground_speed`). Queda por nombre solo el `connect` al EventBus (un test puede
+    reemplazarlo por un Node). En el archivo: 13 → 1 uso (`.call` 5 → 0, `.get(&` 4 → 0, `.set(&` 3 → 0,
+    `has_method` 1 → 0, `/root/` 1 → 1). `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
+    `tests/`). Siguientes: `player.gd` (13), `spectator_camera.gd` (11), `level_common.gd` (11).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

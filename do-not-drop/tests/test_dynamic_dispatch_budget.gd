@@ -47,6 +47,9 @@ extends SceneTree
 ##   by preload; nothing stays by name.
 ## - package_pickup_point.gd (picking a box up) holds its box as DeliveryPackage, the feedback as
 ##   PackageFeedback and the player as Player; nothing stays by name.
+## - cargo_animal_view.gd (what the crew sees of the cargo animals) holds its director as CargoAnimals, the
+##   truck by preload of vehicle.gd, the box as DeliveryPackage and the dog through wildlife_animal.gd; only
+##   the EventBus connects stay by name.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -204,6 +207,12 @@ const BUDGETS: Dictionary = {
 	# player a Player. A stand-in in the player group carries nothing and reaches from where it stands.
 	# The assist RPC stays rpc_id by name, like every RPC.
 	"res://scripts/gameplay/interaction/package_pickup_point.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# What the crew sees of the cargo animals (N-224.4) is typed: the director (the parent) as CargoAnimals
+	# (vehicle, packages), the truck through vehicle.gd by preload (no class name: carries), the box as
+	# DeliveryPackage (package_id, get_half_extents) and the dog through wildlife_animal.gd by preload (no class
+	# name: steered, standing_clip, ground_speed, run, idle). The one /root/ lookup is the null-safe EventBus
+	# handle: it connects by name because a test may replace EventBus with a plain Node.
+	"res://scripts/gameplay/route/cargo_animal_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
