@@ -495,6 +495,8 @@ func _on_peer_connected(id: int) -> void:
 func _on_peer_disconnected(id: int) -> void:
 	if not peer_ids.has(id) and not _ready_peers.has(id):
 		RpcGuard.forget_peer(id)
+		_enet_timeouts.erase(id)
+		_reloads_owed.erase(id)
 		return
 	_remove_from_roster(id)
 
@@ -515,26 +517,14 @@ func _remove_from_roster(id: int) -> void:
 
 
 ## Host: takes `id` off the roster now, as if it had left, and closes its
-## connection. For a connection that turned out to be a ghost: its player is
-## already back under a new id (_identify_peer()).
+## connection (NetAdmission.close_dropped(), deferred: this can run inside
+## SceneMultiplayer's poll). For a connection that turned out to be a ghost:
+## its player is already back under a new id (_identify_peer()).
 func drop_peer(id: int) -> void:
 	if not multiplayer.is_server() or id == HOST_ID or not peer_ids.has(id):
 		return
 	_remove_from_roster(id)
-	_close_connection.call_deferred(id)
-
-
-## Deferred: drop_peer() can run inside SceneMultiplayer's poll (the auth
-## callback). A dead peer answers nothing, so its timeout is cut first.
-func _close_connection(id: int) -> void:
-	if not is_online() or not multiplayer.get_peers().has(id):
-		return
-	var enet: ENetMultiplayerPeer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
-	var packet_peer: ENetPacketPeer = enet.get_peer(id) if enet != null else null
-	if packet_peer != null:
-		packet_peer.set_timeout(DROPPED_PEER_TIMEOUT_LIMIT, DROPPED_PEER_TIMEOUT_MIN_MSEC,
-			DROPPED_PEER_TIMEOUT_MAX_MSEC)
-	multiplayer.multiplayer_peer.disconnect_peer(id)
+	_admission.close_dropped.call_deferred(weakref(self), id)
 
 
 ## Host: who `peer_id` is across reconnections ("" when it didn't say, or
@@ -567,7 +557,7 @@ func _peer_authenticating(id: int) -> void:
 		# means no handshake, and the joiner hears why.
 		var refusal: String = _admission.on_authenticating(self, id)
 		if not refusal.is_empty():
-			multiplayer.send_auth(id, var_to_bytes({"failure": refusal}))
+			_admission.refuse(self, id, refusal)
 			return
 		var state: Dictionary = {"version": protocol_version, "scene": _current_level_scene(),
 			"session": _identities.nonce}
@@ -653,6 +643,12 @@ func _restart_under_way() -> bool:
 	return _restart_pending or _restart_announced
 
 
+## Host: the clients on the roster whose link is up, not a ghost still closing.
+func _linked_clients() -> Array:
+	var linked: PackedInt32Array = multiplayer.get_peers()
+	return peer_ids.filter(func(id: int) -> bool: return id != HOST_ID and linked.has(id))
+
+
 ## Host: tells a client (or all of them, `id` 0) whether to wait out a load on
 ## the host's link. It must leave now: a host about to reload blocks its
 ## polling right after. ENet's put_packet already sends at once (the module
@@ -726,18 +722,14 @@ func _receive_auth(id: int, data: PackedByteArray) -> void:
 	if multiplayer.is_server():
 		# Protocol 0 sent the raw word "ready". Recognize it without asking
 		# bytes_to_var() to parse arbitrary UTF-8, then reject it explicitly.
-		if data.get_string_from_utf8() == "ready":
-			multiplayer.send_auth(id, var_to_bytes({"failure": "version"}))
-			return
-		var reply: Variant = bytes_to_var(data)
-		if not _ready_reply_error(reply).is_empty():
-			multiplayer.send_auth(id, var_to_bytes({"failure": "version"}))
-			return
-		var refusal: String = _admission.on_identified(self, id, reply)
+		var reply: Variant = bytes_to_var(data) if data.get_string_from_utf8() != "ready" else null
+		var refusal: String = _ready_reply_error(reply)
+		if refusal.is_empty():
+			refusal = _admission.on_identified(self, id, reply)
 		if refusal.is_empty():
 			multiplayer.complete_auth(id)
 		else:
-			multiplayer.send_auth(id, var_to_bytes({"failure": refusal}))
+			_admission.refuse(self, id, refusal)
 		return
 	if id != HOST_ID:
 		return
@@ -774,7 +766,7 @@ func level_ready() -> void:
 			_restart_pending = false
 			# Everyone connected reloads now and owes a report; until the last
 			# one owed is in, the host keeps waiting out their loads.
-			for id: int in multiplayer.get_peers():
+			for id: int in _linked_clients():
 				_reloads_owed[id] = int(_reloads_owed.get(id, 0)) + 1
 				_set_enet_timeout(id, true)
 			_remote_restart.rpc(_restart_state())
@@ -821,7 +813,7 @@ func announce_restart() -> void:
 	if not is_online() or not is_host() or _restart_announced or _restart_pending:
 		return
 	_restart_announced = true
-	for id: int in multiplayer.get_peers():
+	for id: int in _linked_clients():
 		_set_enet_timeout(id, true)
 	_tell_host_load(0, true)
 

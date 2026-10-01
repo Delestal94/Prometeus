@@ -41,6 +41,9 @@ const B: int = 1_802_117_455
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
 
 var _failures: int = 0
+## A stand-in joiner per token: its hash chain of claims (NetPeerIdentities),
+## so each join of the same "running game" sends the next link.
+var _chains: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -180,6 +183,7 @@ func _run() -> void:
 
 	await _check_ghost_holds_box(network)
 	_check_full_room(network, crew)
+	_check_turned_away_before_anything_moves(network, crew)
 	_check_displaced_entry(network, crew)
 	_check_borrowed_reservations(network)
 	network.call(&"leave_session")
@@ -212,7 +216,7 @@ func _check_ghost_holds_box(network: Node) -> void:
 	# connected after: with no real peer, a box can't update its visibility.)
 	var back: int = 1_201_000_002
 	network.call(&"_admit_peer", back)
-	network.call(&"_identify_peer", back, {"ready": true, "identity": "tok-ghost"})
+	network.call(&"_identify_peer", back, _reply("tok-ghost"))
 	_expect(not (network.get(&"peer_ids") as Array).has(ghost), "Back before the drop was noticed: the ghost goes")
 	var window: float = float(care.get(&"crisis_left"))
 	_expect(window >= 14.9, "The box's rescue window is held as the ghost is dropped (%.1f s left)" % window)
@@ -249,7 +253,7 @@ func _check_full_room(network: Node, crew: Node) -> void:
 		"Back while its ghost holds a place, a joiner goes on unplaced")
 	_expect(not (network.get(&"_color_slots") as Dictionary).has(back), "...without a slot of its own yet")
 	_expect(String(admission.call(&"on_authenticating", network, stranger)).is_empty(), "...and so does a stranger")
-	var reply: Dictionary = {"ready": true, "identity": "tok-full-3"}
+	var reply: Dictionary = _reply("tok-full-3")
 	_expect(String(admission.call(&"on_identified", network, back, reply)).is_empty(),
 		"Its ready reply says it is the ghost's player: it is let in")
 	crew.call(&"_capture_player", ghost)  # The online host captures a leaver at roster_changed.
@@ -261,10 +265,40 @@ func _check_full_room(network: Node, crew: Node) -> void:
 		"It wears the ghost's slot and inherits it (slot %d, was %d)" % [_slot(network, back), ghost_slot])
 	crew.call(&"_apply_saved_player", back)
 	_expect(int((crew.get(&"merit") as Dictionary).get(back, 0)) == 25, "...and its merit comes back with it")
-	_expect(String(admission.call(&"on_identified", network, stranger, {"ready": true, "identity": "tok-z"})) == "full",
+	_expect(String(admission.call(&"on_identified", network, stranger, _reply("tok-z"))) == "full",
 		"The stranger hears full once it says who it is")
 	network.call(&"_auth_failed", stranger)
 	_expect(not (network.get(&"_color_slots") as Dictionary).has(stranger), "...holding no slot")
+	network.call(&"leave_session")
+	crew.call(&"reset_campaign")
+
+
+## N-221 follow-up: someone who left comes back to a room that filled up
+## again, with no ghost of its own to make room. It hears "full" before
+## anything moves: identify() used to run first, and peer_rejoined moved this
+## run's merit to a peer id that never got in.
+func _check_turned_away_before_anything_moves(network: Node, crew: Node) -> void:
+	network.call(&"leave_session")
+	crew.call(&"reset_campaign")
+	var admission: Object = network.get(&"_admission")
+	var aboard: Array[int] = _fill_room(network, "tok-away")
+	var gone: int = aboard[2]
+	crew.call(&"award_action", gone, &"test:turned-away", 30)
+	network.call(&"_on_peer_disconnected", gone)
+	_join(network, 1_420_000_001, "tok-away-new")  # The room fills up again.
+	var rejoins: Array = []
+	var on_rejoined: Callable = func(old_id: int, new_id: int) -> void: rejoins.append([old_id, new_id])
+	network.connect(&"peer_rejoined", on_rejoined)
+	var back: int = 1_420_000_002
+	_expect(String(admission.call(&"on_authenticating", network, back)).is_empty(), "Back to a full room: unplaced")
+	_expect(String(admission.call(&"on_identified", network, back, _reply("tok-away-2"))) == "full",
+		"With no ghost of its own to make room it hears full")
+	var run_merit: Dictionary = crew.get(&"_run_merit")
+	_expect(rejoins.is_empty() and int(run_merit.get(gone, 0)) == 30 and not run_merit.has(back),
+		"...before anything moves: its run's merit stays where it was (rejoins %s, merit %s)" % [rejoins, run_merit])
+	_expect(not (network.get(&"_color_slots") as Dictionary).has(back), "...and no slot is handed to it")
+	network.call(&"_auth_failed", back)
+	network.disconnect(&"peer_rejoined", on_rejoined)
 	network.call(&"leave_session")
 	crew.call(&"reset_campaign")
 
@@ -332,7 +366,7 @@ func _check_borrowed_reservations(network: Node) -> void:
 	var second_back: int = 1_510_000_002
 	_expect(String(network.call(&"_admit_peer", second_back)).is_empty() and _slot(network, second_back) == first_slot,
 		"Someone coming back is handed the lowest kept slot while it authenticates")
-	network.call(&"_identify_peer", second_back, {"ready": true, "identity": "tok-borrow-1"})
+	network.call(&"_identify_peer", second_back, _reply("tok-borrow-1"))
 	network.call(&"_on_peer_connected", second_back)
 	reservations = network.get(&"_slot_reservations")
 	_expect(_slot(network, second_back) == second_slot and bool(network.call(&"inherits_color_slot", second_back)),
@@ -356,13 +390,23 @@ func _fill_room(network: Node, prefix: String) -> Array[int]:
 	return aboard
 
 
+## The next claim of the stand-in joiner `token`: the first time the end of
+## its chain, then each time the link before (NetPeerIdentities.claim()).
+func _reply(token: String) -> Dictionary:
+	if not _chains.has(token):
+		var chain := NetPeerIdentities.new()
+		chain._token = token
+		_chains[token] = chain
+	return {"ready": true, "identity": (_chains[token] as NetPeerIdentities).claim()}
+
+
 ## What the host does for a joiner through NetAdmission (NetSession's
 ## handshake): a place as it authenticates, who it is from its ready reply,
 ## then its connection. "" when it got in.
 func _admit(network: Node, admission: Object, id: int, token: String) -> String:
 	var refusal: String = admission.call(&"on_authenticating", network, id)
 	if refusal.is_empty():
-		refusal = admission.call(&"on_identified", network, id, {"ready": true, "identity": token})
+		refusal = admission.call(&"on_identified", network, id, _reply(token))
 	if refusal.is_empty():
 		network.call(&"_on_peer_connected", id)
 	return refusal
@@ -372,7 +416,7 @@ func _admit(network: Node, admission: Object, id: int, token: String) -> String:
 ## from its ready reply, then its connection.
 func _join(network: Node, id: int, token: String) -> void:
 	_expect(String(network.call(&"_admit_peer", id)).is_empty(), "Peer %d is admitted" % id)
-	network.call(&"_identify_peer", id, {"ready": true, "identity": token})
+	network.call(&"_identify_peer", id, _reply(token))
 	network.call(&"_on_peer_connected", id)
 
 

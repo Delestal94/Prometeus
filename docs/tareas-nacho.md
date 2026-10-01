@@ -1053,6 +1053,10 @@ Fase 4 de `docs/investigacion-red.md`.
     tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); en LAN un extraño a una sala llena
     carga el nivel antes de oír "full" (quién es llega con su respuesta de listo); el fantasma de un crash con
     Steam no está probado con sockets reales (por ENet sí: `net_pair`).
+  - [ ] Pedir la identidad antes del estado completo: con la sala llena en LAN, el host manda primero solo el
+    nonce, el que entra contesta su eslabón de la cadena y recién ahí (fantasma suyo o lugar libre) recibe el
+    estado y carga el nivel; si no, oye "full" sin cargar nada. Cambia el handshake (otro `PROTOCOL_VERSION`).
+    Lo dejó anotado la segunda pasada de `auditor-red` sobre `nacho/N-221-followups`.
 - [x] Seguimiento de la auditoría de #125 (`auditor-red`), rama `nacho/N-221-followups`. La caja de un
   fantasma conserva su ventana de rescate: `NetSession.peer_removed` (antes de `roster_changed`, una vez por
   salida), que `package.gd` escucha en lugar de `multiplayer.peer_disconnected`. Sala llena: ENet acepta una
@@ -1064,6 +1068,11 @@ Fase 4 de `docs/investigacion-red.md`.
   se fueron viajan en el handshake y en `_sync_color_slots`. El recién llegado que toma un slot reservado ya no
   pisa la entrada de campaña del que se fue (se aparta y se le devuelve), y la reserva que tomó un joiner que no
   entró, o que volvía a otro slot, vuelve a su dueño. `_settle_now` ya no le devuelve 20 s a un fantasma soltado.
+  Segunda pasada de `auditor-red`: identidad LAN como cadena de hashes (Lamport; un valor repetido se rechaza
+  y el peer vivo sigue), el rechazado se corta a los 0,5 s (`NetAdmission.refuse`), el que vuelve a una sala
+  llena sin fantasma oye "full" antes de que se mueva nada, el fantasma se suelta con
+  `SceneMultiplayer.disconnect_peer()` (sin "max channels: 0" ni fantasma visible) y el reinicio recorre solo
+  los clientes con enlace (`_linked_clients`).
   `PROTOCOL_VERSION` 17 → 18 (el 17 lo tomó N-228.4). Tests: `test_network_rejoin`, `test_network_roster`, `test_rpc_guard`,
   `net_session__test_rpc_guard`, `net_session__test_net_session_rejoin` (sala llena por ENet) y la última etapa
   de `net_pair` (fantasma real con la caja en crisis). Aviso: `docs/avisos/2026-10-01-n221-seguimiento-red.md`.

@@ -287,10 +287,13 @@ func _check_ghost_rejoin(slot: int) -> void:
 	var window: float = package.care.crisis_left
 	_expect(window >= DeliveryPackage.CareModel.CRISIS_SECONDS - 1.0,
 		"the box's rescue window was held when the ghost was dropped (%.1f s left)" % window)
-	var closed: bool = await _wait_until(func() -> bool:
-		return not get_tree().root.multiplayer.get_peers().has(ghost), 10.0)
-	_expect(closed, "the ghost's connection closes soon after it is dropped")
-	_expect(removed == [ghost], "the ghost's late close removes nothing more (removed %s)" % [removed])
+	# SceneMultiplayer lets go of it as it is dropped, not when its link closes
+	# 0.5-2 s later: nothing more is sent to a closing link ("max channels: 0"),
+	# and the other clients hear it left.
+	_expect(not get_tree().root.multiplayer.get_peers().has(ghost),
+		"the host's multiplayer lets go of the ghost as it is dropped")
+	await _pump(2.5)
+	_expect(removed == [ghost], "the ghost's link closing removes nothing more (removed %s)" % [removed])
 	rpc_id(_client_peer_id, &"_client_check_ghost_rejoin", _client_peer_id, slot)
 	await _wait_for_report(&"ghost_rejoin")
 

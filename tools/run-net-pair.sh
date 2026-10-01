@@ -57,6 +57,15 @@ done
 for code in "$HOST_CODE" "$CLIENT_CODE"; do
 	[ "$code" -eq 0 ] || status=1
 done
+# N-221: a ghost the host drops leaves SceneMultiplayer at once
+# (NetAdmission.close_dropped); a send to an ENet link that is closing means
+# it stayed listed and the engine kept writing to it.
+closing="$(grep -h "Unable to send packet" "$WORK/host.log" "$WORK/client.log" || true)"
+if [ -n "$closing" ]; then
+	echo "A peer kept sending to a closing ENet link (a dropped ghost still listed):"
+	echo "$closing" | head -n 3
+	status=1
+fi
 # N-235.2: a joiner's level load close to the network's 45 s load budget. Not
 # a failure yet, but the next slower runner drops it mid-load.
 slow="$(grep -h "^NETLOG .*WARNING slow level load" "$WORK/host.log" "$WORK/client.log" || true)"
