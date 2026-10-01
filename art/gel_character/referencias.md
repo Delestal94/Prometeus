@@ -160,4 +160,3 @@ efectos.
   centro transmisivo, torso algo más opaco, motas finas y sombra suave.
 - **Implementación:** empezar por malla cerrada, grosor, Fresnel, especular, alpha y
   motas; sumar refracción solo si mejora de forma medible el render de Godot.
-

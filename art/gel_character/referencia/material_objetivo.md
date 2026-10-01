@@ -80,4 +80,3 @@ aproximado 15. Debe verse blanda y sin borde duro.
 
 Estos valores se fijan en los bloques B–E mediante perfil/turnaround, mapa de grosor
 y renders de Godot; no se deducen falsamente del JPG frontal.
-

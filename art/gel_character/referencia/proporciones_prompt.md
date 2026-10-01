@@ -14,4 +14,3 @@ anotada es una ayuda visual y no reemplaza la tabla reproducible.
 La edición generativa cambia resolución y puede desplazar trazos o detalles:
 no se mide sobre esta lámina ni se usa como máscara del comparador. En particular,
 la cota del pie expresa el tamaño de una bota, no la separación entre ambas.
-

@@ -195,4 +195,3 @@ ocupación, volante y liberación no se duplican en el controlador de poses.
 Los colores consumen `PlayerColorSlot.slot()` y respetan reconexiones, sin derivarse
 del ID del jugador. SynthAudio conserva su API; sonidos nuevos se agregan en el
 generador responsable y mediante un accesor en `modules/synth_audio/synth_audio.gd`.
-

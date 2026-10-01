@@ -38,4 +38,3 @@ extra limbs or faceted surfaces.
 
 La segunda pasada corrigió únicamente las vistas traseras duplicadas y conservó la
 composición, los colores y los extremos.
-
