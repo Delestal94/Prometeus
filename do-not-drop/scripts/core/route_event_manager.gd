@@ -341,7 +341,7 @@ func _prepare_mimic() -> bool:
 func _prepare_parasite() -> bool:
 	var packages: Array[DeliveryPackage] = []
 	for package: DeliveryPackage in _loaded_packages():
-		# Only the four mounts paired with passenger seats are tendable. The
+		# Only the five mounts paired with passenger seats are tendable. The
 		# two free shelf mounts cannot complete this cooperative event.
 		if "Seat" in String(package.current_mount_path):
 			packages.append(package)
