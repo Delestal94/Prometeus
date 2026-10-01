@@ -1776,6 +1776,24 @@ dejarlo casi invisible y que se note solo en ralentí y al arrancar; si se elige
 Parche de la vuelta 3 (emisor, `WheelDust.puff_material()` estático, test ampliado y `tests/render_exhaust.gd` con
 planos `rear`/`cargo`/`side` × ralentí/arranque a ≤ 10 km/h/a fondo, cada uno con un camión nuevo) y capturas de las tres
 vueltas: `D:/tmp/n324-intento/` y `D:/tmp/exhaust{,2,3}/` en la PC (fuera del repo).
+**Intento 2 2026-10-01 (sesión de arte, 3 vueltas, no se subió): la causa de fondo es dónde nace el humo.**
+`_try_build_exhaust()` ubica el caño con el AABB de todas las mallas de `body_visuals`, que incluye la rampa bajada y las
+puertas abiertas: el humo nace en la punta de la rampa, ~2,5 m detrás de la cola y afuera del costado (distancias del log:
+cámara de la caja a 3,7 m del caño, `rear` a 4,8 m). Por eso, en todas las vueltas, desde `rear` quedaba al lado o detrás de la
+cámara (un solo disco) y desde la caja, lejos y fuera del vano. Esto pasa también en el juego, no solo en la captura.
+- Vuelta 1 (hacia −X, gris de noche 0,52, degradé propio): de costado, columna; desde `rear` la tapa la puerta izquierda
+  abierta (+7) y desde la caja no entra al vano.
+- Vuelta 2 (atrás y arriba `(-0.3, 0.6, 1)`, gravedad +0,9, alfa máx. 1, primer puff 0,22 m y último 1,26 m, gris de noche
+  0,62): la mejor. `rear` +48 de día y de noche, caja de noche +21, de día ~0; sin bordes, tapa 0 % de la puerta, nada
+  a < 1,5 m de la cámara. Falla (b): un solo puff desde `rear`/caja, y de costado parecen bolitas de espuma con alfa 1.
+- Vuelta 3 (caño anclado a `FloorCollision` + `RearLeftWheel`, a 0,3 m sobre la ruta, columna lenta, gravedad +0,5): el
+  caño quedó demasiado bajo y los puffs nacen medio enterrados (corte recto contra el asfalto y bandas). Retroceso.
+Para la próxima: volver a los valores de la vuelta 2 y solo arreglar el ancla del caño. Ancla en la cola de la caja (sin
+rampa ni puertas), justo bajo el piso de la caja (`SMOKE_PIPE_HEIGHT` ~0,75 sobre la ruta, no 0,3), y comprobar la
+posición en tiempo de ejecución, no con cuentas de `vehicle.tscn`: en la vuelta 3 las distancias del log no coincidieron
+con la cuenta. Partículas suaves o `proximity_fade` si el puff toca el piso. Parche de la vuelta 3 (incluye
+`exhaust_anchor()`, test del ancla y `render_exhaust.gd`) en `D:/tmp/n324-intento2/`; capturas de las vueltas 1-3 en
+`D:/tmp/exhaust{4,5,6}/`.
 - [ ] **N-324.1** Rehacer emisor y material según la receta (puff estático compartido con `WheelDust`) y ampliar el test.
   Con `artista-vfx` y `escritor-tests`; tests `dust`.
 - [ ] **N-324.2** Capturas reproducibles antes/después (caja y `rear`, día/noche, ralentí/a fondo). Con `revisor-visual`.
