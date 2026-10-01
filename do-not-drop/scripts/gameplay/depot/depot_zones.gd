@@ -408,11 +408,6 @@ func _build_office(kit: DepotKit) -> void:
 	kit.box(Vector3(0.14, 0.1, 1.06), Vector3(x0 - 0.02, lift + 2.2, door_z), frame)
 	kit.box(Vector3(0.05, 0.04, 0.16), Vector3(x0 - 0.07, lift + 1.05, depth_end - 1.1), DepotKit.flat(Color("c9ced0"),
 			0.3, 0.8))
-	var plate_at := Vector3(x0 - 0.08, lift + 2.55, door_z)
-	var plate := DepotLabels.text(_root, tr("WORLD_DEPOT_OFFICE"), plate_at, -PI * 0.5, 36, Layout.PAPER,
-			Layout.DISPLAY_FONT, 0.005, 8)
-	plate.name = "OfficeDoorSign"
-	DepotLabels.fit_label(plate, 1.0)
 	# Roof and mullions.
 	kit.box(Vector3(side_width + 0.1, 0.1, wall_depth + 0.1), Vector3((x0 + x1) * 0.5, lift + 3.05,
 			(z0 + depth_end) * 0.5), frame)
@@ -439,8 +434,8 @@ func _build_office(kit: DepotKit) -> void:
 		kit.box(Vector3(0.01, 0.22, 0.18), Vector3(14.92, lift + 1.65 + (index % 2) * 0.35, 30.1 + index * 0.24),
 				DepotKit.flat(Layout.PAPER, 0.9))
 	var sign_at := Vector3(11.3, 4.75, Layout.MEZZANINE.position.y - 1.0)
-	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_OFFICE"), sign_at, PI, Color("263238"), Layout.CEILING - 0.25,
-			Layout.PAPER, DepotHall.SIGN_SIZE)
+	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_OFFICE"), sign_at, PI, Layout.OFFICE_ORANGE,
+			Layout.CEILING - 0.25, Layout.PAPER, DepotHall.SIGN_SIZE)
 
 
 ## The terrace in front of the office (a bench, crates, a cup) and what hides

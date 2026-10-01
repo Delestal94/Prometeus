@@ -514,6 +514,7 @@ func _build() -> void:
 	hall.build_exterior(kit)
 	kit.commit("Depot")
 	hall.build_contact_shadows()
+	hall.build_sun_shield()
 	_build_door()
 	var dressing := DepotDressing.new(self)
 	dressing.build_signs()

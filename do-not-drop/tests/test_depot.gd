@@ -206,7 +206,9 @@ func _test_signage(depot: Node3D) -> void:
 		"SUMINISTROS": (depot.get_node(^"Station_shop") as Node3D).position,
 	}
 	var guides: Array = depot.get(&"guides")
-	for caption: String in ["PIZARRA", "ESTANTES", "TALLER", "VESTUARIO", "SUMINISTROS", "PORTÓN"]:
+	# (No arrow to the board: it stands lit in plain view of the spawn, and the big arrow that
+	# led to it lay right under the crew's feet -- N-319 pass 2.)
+	for caption: String in ["ESTANTES", "TALLER", "VESTUARIO", "SUMINISTROS", "PORTÓN"]:
 		var mine: Array = guides.filter(func(guide: Dictionary) -> bool: return guide.caption == caption)
 		_expect(not mine.is_empty(), "An arrow on the floor leads to %s" % caption)
 		for guide: Dictionary in mine:
@@ -380,7 +382,9 @@ func _test_models(depot: Node3D) -> void:
 	_expect(window != null and window.mesh != slat.mesh, "One slat has the vision panes")
 	var padding := depot.get_node(^"Supply_padding") as MeshInstance3D
 	_expect(padding.mesh is ArrayMesh and padding.mesh.get_surface_count() >= 3, "The padding on the counter is the bubble-wrap model")
-	var hands: Array = [depot.get(&"_clock_hour"), depot.get(&"_clock_minute")]
+	# The hands' pivots are the clock's last two children (DepotDressing._build_clock).
+	var clock := depot.get_node(^"WallClock")
+	var hands: Array = [clock.get_child(clock.get_child_count() - 2), clock.get_child(clock.get_child_count() - 1)]
 	for hand: Node3D in hands:
 		var mesh_instance := hand.get_child(0) as MeshInstance3D
 		_expect(mesh_instance.position.is_zero_approx() and mesh_instance.mesh is ArrayMesh, "Each clock hand is its model, pivoting on the spindle")

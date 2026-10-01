@@ -84,7 +84,7 @@ const STAIR_X: float = 8.5
 const STAIR_RUN: float = 4.6
 ## Lanes (x/z, N-319): pedestrians keep to the green walkways, the forklift to
 ## its yellow lane down the left side.
-const WALK_WIDTH: float = 1.3
+const WALK_WIDTH: float = 1.0
 const SPINE_Z: float = 14.3
 const FORKLIFT_LANE_X: float = -12.05
 const FORKLIFT_LANE_WIDTH: float = 1.85
@@ -105,7 +105,12 @@ const BOARD_GREEN := Color("2e9e56")
 const LOCKERS_TEAL := Color("3f7f8c")
 const SHOP_PURPLE := Color("7b52b9")
 const WORKSHOP_RED := Color("c0392b")
-const WALK_GREEN := Color("3a9b5c")
+## Muted: the walkways say "walk here" without out-shouting the truck and the signs.
+const WALK_GREEN := Color("4f8a6a")
+## Worn white paint: walkway edges, zebra bars, bay lines.
+const MARKING := Color("d4d9c2")
+const OFFICE_ORANGE := Color("e8772e")
+const TRUCK_YELLOW := Color("ffc93c")
 const LANE_YELLOW := Color("e7be51")
 
 # --- Assets ----------------------------------------------------------------------
@@ -123,10 +128,10 @@ const CRATE: String = "res://assets/models/environment/props/sm_env_prop_wooden_
 
 ## Wayfinding from where the crew appears: one small arrow in each place's
 ## colour on the green walkways, aimed at `toward` (N-319: the words that
-## used to be painted beside them are gone, each place has its own sign).
+## used to be painted beside them are gone, each place has its own sign). The
+## order board has none: it stands in plain view of the spawn, lit, and the
+## big arrow that led to it sat right under the crew's feet.
 const FLOOR_GUIDES: Array[Dictionary] = [
-	{"caption": "WORLD_DEPOT_BOARD", "arrow": Vector3(-1.5, 0.0, 15.45), "toward": Vector3(-5.3, 0.0, 11.2),
-		"colour": Color("14532c")},
 	{"caption": "WORLD_DEPOT_SHELVES", "arrow": Vector3(-3.7, 0.0, 14.3), "toward": Vector3(-8.5, 0.0, 15.0),
 		"colour": SHELVES_BLUE},
 	{"caption": "WORLD_DEPOT_SUPPLIES", "arrow": Vector3(-6.1, 0.0, 14.3), "toward": SHOP_STATION,

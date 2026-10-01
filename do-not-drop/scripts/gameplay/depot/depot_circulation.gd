@@ -17,6 +17,13 @@ const LAYER_WALK: int = 1
 const LAYER_LINE: int = 2
 const LAYER_MARK: int = 3
 const EDGE: float = 0.07
+## The crew's rectangle: dashed outline, 10 cm wide, dash and gap lengths.
+const GATHER_LINE: float = 0.1
+const GATHER_DASH: float = 0.5
+const GATHER_GAP: float = 0.3
+## Zone arrows painted on the walkways: short, and half see-through.
+const ARROW_LENGTH: float = 0.6
+const ARROW_ALPHA: float = 0.5
 ## How far over the floor's paint an arrow sits (paint_arrow's own base is 4 mm).
 const ARROW_LIFT: float = 0.012
 ## Zebra bars: parallel to the traffic, this wide and this far apart.
@@ -31,8 +38,9 @@ var _yellow: StandardMaterial3D
 
 func _init(root: Node3D) -> void:
 	_root = root
-	_green = DepotKit.flat(Layout.WALK_GREEN, 0.6)
-	_white = DepotKit.flat(Color("e8ebe4"), 0.7)
+	# Worn paint: the plaster's detail map breaks the colour up a little.
+	_green = DepotKit.detailed(Layout.WALK_GREEN, "plaster", 1.5, 0.7)
+	_white = DepotKit.detailed(Layout.MARKING, "stone", 0.8, 0.8)
 	_yellow = DepotKit.flat(Layout.LANE_YELLOW, 0.7)
 
 
@@ -59,12 +67,11 @@ func _build_bay(kit: DepotKit) -> void:
 			Layout.DOOR_WIDTH, 1.2), LAYER_MARK)
 
 
-## The crew's gathering rectangle around the spawn row and the control
-## island's pad, each with its own corner marks.
+## The crew's gathering rectangle around the spawn row (a dashed yellow
+## outline and a stencilled group of people, no fill) and the control island's
+## pad, with its own edge lines.
 func _build_pads(kit: DepotKit) -> void:
-	var gather: Rect2 = Layout.GATHER
-	_paint(kit, DepotKit.detailed(Color("5f7b7d"), "plaster", 2.0, 0.5), gather, LAYER_SLAB)
-	_corner_marks(kit, gather, 0.7)
+	_build_gathering(kit, Layout.GATHER)
 	var island: Rect2 = Layout.ISLAND
 	_paint(kit, DepotKit.detailed(Color("4f6467"), "plaster", 2.0, 0.45), island, LAYER_SLAB)
 	for edge: Rect2 in [Rect2(island.position.x, island.position.y, island.size.x, 0.08),
@@ -74,18 +81,36 @@ func _build_pads(kit: DepotKit) -> void:
 		_paint(kit, _white, edge, LAYER_LINE)
 
 
-## White L-shaped marks at the four corners of `area`.
-func _corner_marks(kit: DepotKit, area: Rect2, leg: float) -> void:
-	for corner: Vector2 in [area.position, Vector2(area.end.x, area.position.y), Vector2(area.position.x, area.end.y),
-			area.end]:
-		var toward_x: float = 1.0 if corner.x <= area.get_center().x else -1.0
-		var toward_z: float = 1.0 if corner.y <= area.get_center().y else -1.0
-		var along_x := Rect2(corner.x if toward_x > 0.0 else corner.x - leg,
-				corner.y if toward_z > 0.0 else corner.y - 0.07, leg, 0.07)
-		var along_z := Rect2(corner.x if toward_x > 0.0 else corner.x - 0.07,
-				corner.y if toward_z > 0.0 else corner.y - leg, 0.07, leg)
-		_paint(kit, _white, along_x, LAYER_LINE)
-		_paint(kit, _white, along_z, LAYER_LINE)
+## A dashed outline of `area` in warning yellow, and the stencil of three people
+## standing together in the middle of it (heads are discs, bodies are rounded
+## slabs: paint, like the rest).
+func _build_gathering(kit: DepotKit, area: Rect2) -> void:
+	for edge: int in range(4):
+		var along_x: bool = edge < 2
+		var start: Vector2 = area.position if edge % 2 == 0 else area.end
+		var length: float = area.size.x if along_x else area.size.y
+		# Whole dashes, spread so each side starts and ends on one.
+		var pitch: float = GATHER_DASH + GATHER_GAP
+		var count: int = maxi(int(round((length + GATHER_GAP) / pitch)), 1)
+		var dash: float = (length - GATHER_GAP * (count - 1)) / count
+		for index: int in range(count):
+			var from: float = index * (dash + GATHER_GAP)
+			if along_x:
+				var z: float = start.y - (GATHER_LINE if edge == 1 else 0.0)
+				_paint(kit, _yellow, Rect2(area.position.x + from, z, dash, GATHER_LINE), LAYER_MARK)
+			else:
+				var x: float = start.x - (GATHER_LINE if edge == 3 else 0.0)
+				_paint(kit, _yellow, Rect2(x, area.position.y + from, GATHER_LINE, dash), LAYER_MARK)
+	# The stencil: the middle person a little taller, the side ones a step back.
+	var middle: Vector2 = area.get_center()
+	for person: Array in [[-0.62, 0.0, 0.85], [0.0, 0.08, 1.0], [0.62, 0.0, 0.85]]:
+		var scale: float = person[2]
+		var foot := Vector3(middle.x + float(person[0]), Layout.FLOOR_TOP + (LAYER_MARK + 0.5) * PAINT_THICKNESS,
+				middle.y + float(person[1]))
+		_paint(kit, _yellow, Rect2(foot.x - 0.17 * scale, foot.z - 0.05 * scale, 0.34 * scale, 0.42 * scale),
+				LAYER_MARK)
+		kit.cylinder(0.11 * scale, PAINT_THICKNESS, Transform3D(Basis.IDENTITY, foot + Vector3(0.0, 0.0, -0.3 * scale)),
+				_yellow, 14)
 
 
 ## The network of green walkways. The spine runs behind the truck's loading

@@ -1,7 +1,10 @@
 class_name DepotLighting
 extends RefCounted
 ## How the depot is lit (N-319): a handful of real lights, each with a job,
-## and the cheap fakes that make them read as many.
+## and the cheap fakes that make them read as many. The hall has its own light:
+## its lamps are always on and the ambient under the roof hardly follows the
+## weather (DepotAtmosphere); the sky only shows in the skylights, the strip
+## windows and the door (their glass and the shafts of daylight below, here).
 ##
 ##   - Real lights: a spot over the truck, one over the shelves, one over the
 ##     packing area, a spot on the order board, a fill for the middle of the
@@ -23,18 +26,36 @@ const WARM_DEEP := Color("ffe2b4")
 const NEUTRAL := Color("f0f2f2")
 ## The lamps' floor pools.
 const POOL_RADIUS: float = 2.7
-const POOL_COLOUR := Color(1.0, 0.9, 0.72, 0.11)
+const POOL_COLOUR := Color(1.0, 0.9, 0.72, 0.18)
 ## Skylights (centres, x by z) and the daylight that falls through them.
 const SKYLIGHT_XS: Array[float] = [-7.5, 7.5]
 const SKYLIGHT_ZS: Array[float] = [5.0, 16.0, 27.0]
 const SKYLIGHT_SIZE := Vector2(1.6, 7.0)
 ## The sun's energy in level_base.tscn: the shafts fade as the sun dims.
 const SUN_ENERGY_REFERENCE: float = 0.65
-const SHAFT_ALPHA: float = 0.15
 ## How much of the sun's strength counts as daylight by WorldMood.TimeOfDay: day, dusk, night.
 const TIME_DAYLIGHT: Array[float] = [1.0, 0.65, 0.12]
-## The daylight patch a skylight leaves on the floor.
-const PATCH_ALPHA: float = 0.16
+## A shaft's brightest alpha by WorldMood.Weather (clear, cloudy, rain, fog) and how
+## much of it each WorldMood.TimeOfDay keeps (day, dusk, night: none, the moon is no daylight).
+const SHAFT_PEAK: Array[float] = [0.25, 0.12, 0.06, 0.09]
+## A shaft is four faces and you often see two of them one behind the other (additive): each
+## face carries this share of the peak, so the shaft as a whole reads at the peak.
+const SHAFT_FACE_SHARE: float = 0.5
+const SHAFT_TIME: Array[float] = [1.0, 0.7, 0.0]
+## A shaft is at its strongest this far down from the skylight (share of the drop) and
+## fades to nothing from there to the floor; it is also faint where it leaves the roof.
+const SHAFT_PEAK_AT: float = 0.4
+const SHAFT_TOP_SHARE: float = 0.5
+## The daylight patch a skylight leaves on the floor, at a shaft's peak alpha.
+const PATCH_SHARE: float = 0.3
+## Skylight and window glass: a greyish sky blue, how bright it is by weather (clear,
+## cloudy, rain, fog) and by time (day, dusk, night), and its dusk and night tints.
+const GLASS_COLOUR := Color("8fb0c2")
+const GLASS_DUSK := Color("c79c86")
+const GLASS_NIGHT := Color("243347")
+const GLASS_WEATHER: Array[float] = [1.0, 0.78, 0.56, 0.85]
+const GLASS_TIME: Array[float] = [1.0, 0.7, 0.3]
+const GLASS_EMISSION: float = 0.35
 const SHAFT_MAX_DROP: float = 7.0
 ## Where a lamp sits on the ceiling (x, z) -- build_lights() hangs a fixture from each.
 const LAMP_XS: Array[float] = [-9.0, -3.0, 3.0, 9.0]
@@ -101,7 +122,7 @@ static func build_pools(kit: DepotKit, sun: DirectionalLight3D) -> void:
 				kit.floor_quad(Vector2.ONE * POOL_RADIUS * 2.0, Vector3(x, Layout.FLOOR_TOP + 0.02, z), pool)
 	var daylight: Dictionary = sunlight(sun)
 	var tint: Color = daylight.tint
-	var patch := DepotKit.light_pool(Color(tint.r, tint.g, tint.b, PATCH_ALPHA * float(daylight.strength)))
+	var patch := DepotKit.light_pool(Color(tint.r, tint.g, tint.b, shaft_peak() * PATCH_SHARE))
 	var slant: Vector3 = daylight.slant
 	for x: float in SKYLIGHT_XS:
 		for z: float in SKYLIGHT_ZS:
@@ -133,41 +154,72 @@ static func sunlight(sun: DirectionalLight3D) -> Dictionary:
 	return {"heading": heading, "strength": strength, "tint": tint, "slant": slant}
 
 
-## Daylight falling through the skylights: one additive mesh of slanted shafts,
-## fainter as the sun dims (a clouded sky, dusk, rain).
+## The brightest alpha a skylight's shaft reaches now: by the weather and the
+## hour of WorldMood (a clear day when none has been picked, as in a test).
+static func shaft_peak() -> float:
+	var weather: int = int((WorldMood.active as Dictionary).get("weather", WorldMood.Weather.CLEAR))
+	var time: int = int((WorldMood.active as Dictionary).get("time", WorldMood.TimeOfDay.DAY))
+	return SHAFT_PEAK[clampi(weather, 0, SHAFT_PEAK.size() - 1)] * SHAFT_TIME[clampi(time, 0, SHAFT_TIME.size() - 1)]
+
+
+## What the skylights' and the windows' glass shows of the sky: {"colour",
+## "energy"}, for DepotKit.glow. Greyish blue by day, dimmer in cloud, rain and
+## at dusk, and nearly dark at night.
+static func glass_look() -> Dictionary:
+	var weather: int = int((WorldMood.active as Dictionary).get("weather", WorldMood.Weather.CLEAR))
+	var time: int = int((WorldMood.active as Dictionary).get("time", WorldMood.TimeOfDay.DAY))
+	time = clampi(time, 0, GLASS_TIME.size() - 1)
+	var base: Color = GLASS_COLOUR
+	if time == WorldMood.TimeOfDay.DUSK:
+		base = GLASS_COLOUR.lerp(GLASS_DUSK, 0.55)
+	elif time == WorldMood.TimeOfDay.NIGHT:
+		base = GLASS_NIGHT
+	var brightness: float = GLASS_WEATHER[clampi(weather, 0, GLASS_WEATHER.size() - 1)] * GLASS_TIME[time]
+	return {"colour": Color(base.r * brightness, base.g * brightness, base.b * brightness), "energy": GLASS_EMISSION}
+
+
+## Daylight falling through the skylights: one additive mesh of slanted shafts.
+## Each face fades to nothing at its two side edges (a texture across it), is
+## faint where it leaves the roof, brightest SHAFT_PEAK_AT of the way down and
+## gone at the floor (vertex alpha along it), so no hard edge shows; strength by
+## weather and hour (shaft_peak), none at night.
 static func build_shafts(root: Node3D, sun: DirectionalLight3D) -> MeshInstance3D:
 	var daylight: Dictionary = sunlight(sun)
 	var tint: Color = daylight.tint
 	var slant: Vector3 = daylight.slant
+	var peak: float = shaft_peak()
 	var tool := SurfaceTool.new()
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var top_colour := Color(tint.r, tint.g, tint.b, SHAFT_ALPHA * float(daylight.strength))
+	var top_colour := Color(tint.r, tint.g, tint.b, peak * SHAFT_FACE_SHARE * SHAFT_TOP_SHARE)
+	var mid_colour := Color(tint.r, tint.g, tint.b, peak * SHAFT_FACE_SHARE)
 	var foot_colour := Color(tint.r, tint.g, tint.b, 0.0)
 	for x: float in SKYLIGHT_XS:
 		for z: float in SKYLIGHT_ZS:
 			var half := SKYLIGHT_SIZE * 0.5
 			var top_y: float = Layout.CEILING - 0.05
 			var corners_top: Array[Vector3] = []
+			var corners_mid: Array[Vector3] = []
 			var corners_foot: Array[Vector3] = []
 			for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 				var at := Vector3(x + corner.x * half.x, top_y, z + corner.y * half.y)
 				corners_top.append(at)
 				# The shaft widens a little as it falls.
-				corners_foot.append(Vector3(at.x + corner.x * 0.5, Layout.FLOOR_TOP + 0.03,
-						at.z + corner.y * 0.9) + slant)
+				var foot := Vector3(at.x + corner.x * 0.5, Layout.FLOOR_TOP + 0.03, at.z + corner.y * 0.9) + slant
+				corners_foot.append(foot)
+				corners_mid.append(at.lerp(foot, SHAFT_PEAK_AT))
 			for side: int in range(4):
 				var next: int = (side + 1) % 4
-				_vertex(tool, corners_top[side], top_colour)
-				_vertex(tool, corners_top[next], top_colour)
-				_vertex(tool, corners_foot[next], foot_colour)
-				_vertex(tool, corners_top[side], top_colour)
-				_vertex(tool, corners_foot[next], foot_colour)
-				_vertex(tool, corners_foot[side], foot_colour)
+				_face(tool, [corners_top[side], corners_top[next], corners_mid[next], corners_mid[side]],
+						top_colour, mid_colour)
+				_face(tool, [corners_mid[side], corners_mid[next], corners_foot[next], corners_foot[side]],
+						mid_colour, foot_colour)
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = _across_texture()
+	material.texture_repeat = false
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.disable_fog = true
 	var shafts := MeshInstance3D.new()
@@ -179,6 +231,25 @@ static func build_shafts(root: Node3D, sun: DirectionalLight3D) -> MeshInstance3
 	return shafts
 
 
-static func _vertex(tool: SurfaceTool, at: Vector3, colour: Color) -> void:
-	tool.set_color(colour)
-	tool.add_vertex(at)
+## A quad of a shaft's side (corners top-left, top-right, bottom-right, bottom-left
+## as seen from outside) with `upper` colour on the first two and `lower` on the rest;
+## u runs across the face for the side-edge fade.
+static func _face(tool: SurfaceTool, corners: Array[Vector3], upper: Color, lower: Color) -> void:
+	var uvs: Array[Vector2] = [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+	var colours: Array[Color] = [upper, upper, lower, lower]
+	for index: int in [0, 1, 2, 0, 2, 3]:
+		tool.set_color(colours[index])
+		tool.set_uv(uvs[index])
+		tool.add_vertex(corners[index])
+
+
+## Alpha across a face: 0 at both side edges, full in the middle (smooth, no ring).
+static func _across_texture() -> ImageTexture:
+	var width: int = 32
+	var image := Image.create(width, 2, false, Image.FORMAT_RGBA8)
+	for x: int in range(width):
+		var across: float = (x + 0.5) / width
+		var alpha: float = pow(sin(PI * across), 1.3)
+		for y: int in range(2):
+			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha))
+	return ImageTexture.create_from_image(image)

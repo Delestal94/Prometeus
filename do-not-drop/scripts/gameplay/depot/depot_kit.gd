@@ -254,6 +254,19 @@ static func flat(color: Color, roughness: float = 0.85, metallic: float = 0.0) -
 	return _material_cache[key]
 
 
+## Paint that lets what is under it show through (`color`'s alpha): a worn
+## arrow on a walkway. Lit like the floor it lies on.
+static func tint(color: Color) -> StandardMaterial3D:
+	var key: String = "tint:%s" % color.to_html()
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.roughness = 0.7
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
 ## Unlit paint, drawn at exactly its colour: shapes that sit beside Label3D
 ## text (unshaded too) and should read just as bright -- a sign's arrows.
 static func unlit(color: Color) -> StandardMaterial3D:

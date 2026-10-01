@@ -11,6 +11,8 @@ const SIGN_FONT_SIZE: int = 64
 const SIGN_PIXEL: float = 0.0065
 const SIGN_ARROW: float = 0.5
 const SIGN_GAP: float = 0.18
+## The zone-coloured tab's share of a hanging sign's width.
+const TAB_SHARE: float = 0.25
 
 
 static func text(parent: Node, value: String, at: Vector3, yaw: float, font_size: int, colour: Color,
@@ -69,23 +71,29 @@ static func arrow_shape(kit: DepotKit, xform: Transform3D, length: float, width:
 	kit.add_mesh(head, xform * head_at, material, false)
 
 
-## An arrow painted on the floor at `at`, pointing along `direction`. Returns
-## the guide it draws: {"caption", "at", "direction"} in depot space.
+## An arrow painted on the floor at `at`, pointing along `direction`. `length`
+## is its size (the head's width follows it); an `alpha` under 1 makes it a
+## see-through wash of paint over what is under it. Returns the guide it
+## draws: {"caption", "at", "direction"} in depot space.
 static func paint_arrow(kit: DepotKit, caption: String, at: Vector3, direction: Vector3, colour: Color,
-		lift: float = 0.0) -> Dictionary:
+		lift: float = 0.0, length: float = 1.1, alpha: float = 1.0) -> Dictionary:
 	var flat := Basis(direction, Vector3.UP.cross(direction), Vector3.UP)
-	arrow_shape(kit, Transform3D(flat, Vector3(at.x, Layout.FLOOR_TOP + 0.004 + lift, at.z)), 1.1, 0.62, 0.006,
-		DepotKit.flat(colour, 0.7))
+	var material: Material = DepotKit.flat(colour, 0.7) if alpha >= 1.0 else DepotKit.tint(Color(colour, alpha))
+	arrow_shape(kit, Transform3D(flat, Vector3(at.x, Layout.FLOOR_TOP + 0.004 + lift, at.z)), length,
+		length * 0.5636, 0.006, material)
 	return {"caption": caption, "at": Vector3(at.x, 0.0, at.z), "direction": direction}
 
 
-## Hanging sign: a board on two cables with its caption on both faces. An
-## arrow in the caption ("← ESTANTES", "CAMIÓN → PORTÓN") is drawn as a
-## shape, not a glyph, and only on the front face (the one `yaw` turns toward
-## +Z): read from behind it would point the wrong way, so the back just names
-## the place. A sign hung under another stops its cables at `cable_top`.
-## `size` scales the whole sign (N-319: each zone's own sign hangs smaller,
-## over the zone; 1.0 is the size they all used to be).
+## Hanging sign, one design for every zone (N-319): a shipping label. A dark
+## INK plate on two cables, the caption in PAPER on both faces, and at the left
+## a tab in the zone's colour (a quarter of the sign) with a round slot for the
+## zone's pictogram -- an empty disc until the pictogram atlas exists -- and a
+## dashed tear line between the two. An arrow in the caption ("← ESTANTES",
+## "CAMIÓN → PORTÓN") is drawn as a shape, not a glyph, and only on the front
+## face (the one `yaw` turns toward +Z): read from behind it would point the
+## wrong way, so the back just names the place. A sign hung under another stops
+## its cables at `cable_top`. `colour` is the zone's colour (the tab), `ink` the
+## caption's; `size` scales the whole sign (1.0 is the size they all used to be).
 ## Every caption label is in the "depot_sign" group, tagged with the whole
 ## caption and its face (test_depot_signage).
 static func hanging_sign(parent: Node, kit: DepotKit, caption: String, at: Vector3, yaw: float, colour: Color,
@@ -106,28 +114,43 @@ static func hanging_sign(parent: Node, kit: DepotKit, caption: String, at: Vecto
 			token_width = measured.x * pixel
 		widths.append(token_width)
 		content += token_width
-	var width: float = content + 0.7 * size
+	# The tab is a quarter of the sign, the caption sits in the rest.
 	var height: float = 0.6 * size
-	kit.box_xf(Vector3(width, height, 0.06), Transform3D(basis, at), DepotKit.flat(colour, 0.7))
-	kit.box_xf(Vector3(width + 0.08, 0.06, 0.08), Transform3D(basis, at + Vector3(0.0, height * 0.5 + 0.03, 0.0)),
-		DepotKit.flat(Color("e8ebe4"), 0.6))
+	var body: float = content + 0.5 * size
+	var width: float = maxf(body / (1.0 - TAB_SHARE), height * 2.0)
+	var tab: float = width * TAB_SHARE
+	var body_centre: float = tab * 0.5
+	var tab_at: Vector3 = at + basis * Vector3(-width * 0.5 + tab * 0.5, 0.0, 0.0)
+	kit.box_xf(Vector3(width, height, 0.06), Transform3D(basis, at), DepotKit.flat(Layout.INK, 0.7))
+	kit.box_xf(Vector3(tab, height, 0.07), Transform3D(basis, tab_at), DepotKit.flat(colour, 0.65))
+	kit.box_xf(Vector3(width + 0.08, 0.05, 0.08), Transform3D(basis, at + Vector3(0.0, height * 0.5 + 0.025, 0.0)),
+			DepotKit.flat(Color("3b4c53"), 0.5, 0.4))
+	# The pictogram's slot: a paper disc in the tab, showing on both faces.
+	var slot: float = minf(tab, height) * 0.36
+	var face_turn: Basis = basis * Basis(Vector3.RIGHT, PI * 0.5)
+	kit.cylinder(slot, 0.078, Transform3D(face_turn, tab_at), DepotKit.flat(Layout.PAPER, 0.6), 16)
+	# The tear line: short dashes where the tab meets the body.
+	for dash: int in range(5):
+		var y: float = (dash - 2) * height * 0.17
+		kit.box_xf(Vector3(0.012, height * 0.09, 0.066), Transform3D(basis,
+				at + basis * Vector3(-width * 0.5 + tab, y, 0.0)), DepotKit.flat(Layout.PAPER, 0.7))
 	for side: float in [-0.4, 0.4]:
 		var cable_at: Vector3 = at + basis * Vector3(side * width, 0.0, 0.0)
 		var cable_mid := Vector3(cable_at.x, (cable_top + at.y + height * 0.5) * 0.5, cable_at.z)
 		kit.box_xf(Vector3(0.015, cable_top - at.y - height * 0.5, 0.015), Transform3D(Basis.IDENTITY, cable_mid),
 			DepotKit.flat(Color("263238"), 0.6))
-	var cursor: float = -content * 0.5
+	var cursor: float = body_centre - content * 0.5
 	for index: int in range(tokens.size()):
 		var centre: float = cursor + widths[index] * 0.5
 		if tokens[index] is String:
-			_sign_label(parent, tokens[index], at + basis * Vector3(centre, 0.0, 0.035), yaw, ink, caption, true, pixel)
+			_sign_label(parent, tokens[index], at + basis * Vector3(centre, 0.0, 0.037), yaw, ink, caption, true, pixel)
 		else:
 			var turn := Basis(Vector3.BACK, PI if int(tokens[index]) < 0 else 0.0)
-			arrow_shape(kit, Transform3D(basis * turn, at + basis * Vector3(centre, 0.0, 0.036)), SIGN_ARROW * size,
+			arrow_shape(kit, Transform3D(basis * turn, at + basis * Vector3(centre, 0.0, 0.038)), SIGN_ARROW * size,
 				0.34 * size, 0.012, DepotKit.unlit(ink))
 		cursor += widths[index] + gap
-	_sign_label(parent, "  ·  ".join(words), at + basis * Vector3(0.0, 0.0, -0.035), yaw + PI, ink, caption, false,
-			pixel)
+	_sign_label(parent, "  ·  ".join(words), at + basis * Vector3(body_centre, 0.0, -0.037), yaw + PI, ink, caption,
+			false, pixel)
 
 
 ## "CAMIÓN → PORTÓN" -> ["CAMIÓN", 1, "PORTÓN"]: words, and -1 / 1 for
