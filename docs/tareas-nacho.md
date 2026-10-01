@@ -2601,7 +2601,7 @@ antes de empezar.
 - Hecho cuando: se corre a pie en la ruta y en el depósito, con animación propia, y correr con una caja
   la sacude y puede hacerte tropezar.
 
-### N-116 · Parada final: estacionamiento de camiones de reparto — A · `Opus 5.5 · high` · Aviso: no · **[x] rama `nacho/N-116-goal-lot`** (falta la revisión visual)
+### N-116 · Parada final: estacionamiento de camiones de reparto — A · `Opus 5.5 · high` · Aviso: no · **[x] rama `nacho/N-116-goal-lot`** (revisión visual hecha 2026-10-01; queda N-116.5)
 
 > Hoy la meta es un arco de hormigón con la palabra META, una barrera y un `GoalArea`
 > (`route.gd::_build_goal()`): se termina al pasar por abajo. Pedido del usuario: una parada final de
@@ -2663,10 +2663,23 @@ antes de empezar.
     `test_run_ends_at_goal`, `test_dashboard_gps` y `route_smoke_check`. Ningún test nombraba `GoalArch*`.
     El otro camino de host/cliente: la playa sale entera de la semilla y solo el host termina la partida
     (sin RPC nuevo ni cambio de `PROTOCOL_VERSION`).
-  - [ ] Capturas de día y de noche (`revisor-visual`): `tests/render_goal_lot.gd -- --mood=soleado_dia` y
+  - [x] ~~Capturas de día y de noche (`revisor-visual`): `tests/render_goal_lot.gd -- --mood=soleado_dia` y
     `--mood=soleado_noche` (aproximación, portón, bahía, vista aérea, descarga y el plano de resultados). Mirar
     sobre todo: si el cartel y la bahía libre se leen desde el asiento del conductor (`check_driver_sightline.gd`),
     el tamaño de los textos y el remate de la losa contra el camino.
+    **[x] Hecho (2026-10-01, rama `nacho/N-116-visual-review`)** — 7 planos × día/noche en la PC con GPU, sin
+    bloqueantes: losa contra el camino limpia (sin escalón ni z-fighting), sin mallas negras ni objetos flotando,
+    camiones, repartidores y faroles bien; el cartel de la base se lee desde `gate`/`bay` y la bahía libre se
+    encuentra de día y de noche por contraste. `check_driver_sightline.gd` no sirve acá (solo mira el propio
+    camión): la vista del conductor la dan `approach`, `approach_near` y `bay` (ojo a 2,3 m). Lo mejorable va a N-116.5.
+- [ ] **N-116.5** Bahía libre legible desde la entrada y de noche — C · necesita PC. Origen: revisión visual
+  2026-10-01. En `approach_near` (≈40 m) el cartel "LIBRE n" mide ~25 px y no se lee, y el número pintado se ve
+  como una mancha; de noche ni la bahía libre ni el cartel de la base tienen luz propia (a 90 m la base son
+  puntos de faroles). Hacer: cartel "LIBRE n" más grande y emisivo (`LowpolyMaterials.light_up`) o una baliza
+  sobre la bahía libre; spot u emisión sobre la bahía de noche; el "n" del piso más grueso y sin deformar de
+  cerca; el charco de la manguera como decal de borde suave en vez de un rectángulo plano. Hecho cuando en
+  `render_goal_lot.gd` el "LIBRE n" se lee en `approach_near` de día y de noche (revisado con `revisor-visual`).
+  Con `constructor-mundo` (o `artista-vfx` para la luz); tests `goal_lot`.
 - Hecho cuando: la ruta termina en una base con bahías y la partida se cierra al dejar el camión en su
   lugar.
 
