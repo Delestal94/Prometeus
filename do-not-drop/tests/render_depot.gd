@@ -25,6 +25,8 @@ const SHOTS := [
 	# The workbench with its boards, 3.5 m away, from inside the workshop's mouth (the lift is behind the camera).
 	["workshop_bench", Vector3(11.9, 1.6, 8.1), Vector3(14.4, 1.3, 5.5), 82.0],
 	["lockers_and_break", Vector3(8.3, 1.7, 17.9), Vector3(14.5, 1.5, 20.0)],
+	# The photo wall up close (its art whole, as it looks before the crew has taken any photos).
+	["photo_wall", Vector3(12.0, 2.5, 16.4), Vector3(14.9, 2.95, 16.4), 60.0],
 	["supplies_cage", Vector3(-5.6, 1.7, 9.0), Vector3(-10.5, 1.3, 5.0)],
 	["office_mezzanine", Vector3(7.2, 1.8, 16.2), Vector3(11.5, 3.6, 28.0)],
 	["stock_aisle_forklift", Vector3(-11.2, 2.2, 24.0), Vector3(-12.2, 1.2, 10.0)],
@@ -74,6 +76,16 @@ func _run() -> void:
 		(_level.get_node(^"Sun") as DirectionalLight3D).shadow_normal_bias = _bias
 	if _sun_energy >= 0.0:
 		(_level.get_node(^"Sun") as DirectionalLight3D).light_energy = _sun_energy
+	# The photo wall as a new player sees it: the crew's own photos from earlier runs (user://) stay out.
+	var photo_board := _depot.get_parent().get_node_or_null(^"Depot/CampaignBoard")
+	if photo_board == null:
+		photo_board = _depot.get_node_or_null(^"CampaignBoard")
+	if photo_board != null:
+		for frame: Node3D in photo_board.get(&"photo_frames"):
+			frame.visible = false
+		var art := photo_board.get_node_or_null(^"PhotoWall/CorkArt") as Node3D
+		if art != null:
+			art.visible = true
 	# Hide the start card and the HUD: these shots are of the place.
 	var hud: CanvasLayer = _level.get_node(^"HUD")
 	hud.visible = false
