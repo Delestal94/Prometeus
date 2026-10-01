@@ -2897,6 +2897,11 @@ Origen de la pausa: auditoría integral 2026-09-30, A-102.
   papel, escupida) y hechos nuevos (vuelco, perro, tren).
 - [ ] **N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
   puerta que se abre) que va al diario con trama de puntos.
+- [x] **N-606.6** Estudio visual de la escena (2026-10-01): set, Jefe con camisa y bigote, diario de
+  papel de diario con diagramación real (columnas, clasificados, foto con trama), hojas que se caen, y un
+  primer plano legible por noticia. Prueba de dirección de arte para N-606.3, no la cinemática:
+  `scripts/tools/newspaper_concept/`, capturas en `art/newspaper/review/`, decisiones en
+  `diario-final.md` («Estudio visual de la escena»).
 - Hecho cuando: cada entrega termina con el diario de esa partida, igual para todos los jugadores, y se
   puede saltar.
 
