@@ -246,9 +246,17 @@ for entry in "${failed[@]+"${failed[@]}"}"; do
 	[ "$code" = "124" ] && reason="timeout ${limit}s" || reason="exit $code"
 	echo "FAIL $name ($reason)"
 	# Only the test's own failures, not engine noise from the dummy renderer.
-	grep -E "^(ERROR|SCRIPT ERROR|Parse Error)" "$WORK/$name.log" \
-		| grep -vE 'material" is null|resources still in use|unknown peer ID|is_inside_tree\(\)' \
-		| sort | uniq | head -6 | sed 's/^/    /'
+	errors="$(grep -E "^(ERROR|SCRIPT ERROR|Parse Error)" "$WORK/$name.log" \
+		| grep -vE 'material" is null|resources still in use|unknown peer ID|is_inside_tree\(\)')"
+	[ -n "$errors" ] && printf '%s\n' "$errors" | sort | uniq | head -6 | sed 's/^/    /'
+	# On GitHub Actions, one annotation per failure: it names the test on
+	# the run's summary page, so an intermittent one can be told apart (N-240).
+	if [ -n "${GITHUB_ACTIONS:-}" ]; then
+		first="$(printf '%s\n' "$errors" | head -1)"
+		[ -n "$first" ] || first="no ERROR line in the log"
+		first="${first//'%'/%25}"; first="${first//$'\r'/%0D}"
+		echo "::error title=FAIL $name ($reason)::$first"
+	fi
 	if [ $VERBOSE -eq 1 ]; then
 		sed 's/^/    | /' "$WORK/$name.log" | tail -40
 	fi

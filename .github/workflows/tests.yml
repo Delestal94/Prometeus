@@ -42,6 +42,9 @@ jobs:
       - name: Portable modules name nothing of the game
         run: python3 tools/check_modules.py
 
+      - name: run-tests.sh annotates each failure (fake Godot)
+        run: bash tools/test-run-tests.sh
+
   # The suite split across four runners (SHARD in run-tests.sh): one runner
   # took ~21 min, a quarter each takes ~6. "Tests headless (Godot 4.7.2)"
   # below is the single check branch protection requires.
