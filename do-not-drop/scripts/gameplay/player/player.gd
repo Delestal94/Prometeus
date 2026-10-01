@@ -16,24 +16,17 @@ const GRAVITY: float = 18.0
 ## Roughly 1.25 metres high: enough to clear a fallen branch or a small
 ## roadside obstacle without turning the on-foot traversal into floaty parkour.
 const JUMP_VELOCITY: float = 6.7
-const MOUSE_SENSITIVITY: float = 0.0028
-const PITCH_LIMIT: float = 1.4  # radians, ~80 degrees
 @export var stick_sensitivity: float = 2.4
 
-## Three contexts, three frames -- walking, driving (FirstPersonCamera's own
-## BASE_FOV) and carrying a package don't feel like the same view even
-## though they used to share one flat 78°.
-const WALK_FOV: float = 78.0
-const CARRY_FOV: float = 70.0
-const FOV_SMOOTH_SPEED: float = 6.0
-## Footstep bob: a small vertical sine wave on the camera itself, so a held
-## package (which follows the camera's hold point) bobs with it too --
-## before this, walking anywhere felt perfectly flat, "on rails."
-## Keep the first-person walk almost still. The former values read as a hard
-## camera thump rather than natural gait, especially at the short walk speed.
-const BOB_AMPLITUDE: float = 0.008
-const BOB_FREQUENCY: float = 3.2
-const BOB_SMOOTH_SPEED: float = 3.0
+## Look, view and footstep constants live in player_movement.gd / player_input.gd; same names here.
+const MOUSE_SENSITIVITY: float = OnFootInput.MOUSE_SENSITIVITY
+const PITCH_LIMIT: float = Movement.PITCH_LIMIT
+const WALK_FOV: float = Movement.WALK_FOV
+const CARRY_FOV: float = Movement.CARRY_FOV
+const FOV_SMOOTH_SPEED: float = Movement.FOV_SMOOTH_SPEED
+const BOB_AMPLITUDE: float = Movement.BOB_AMPLITUDE
+const BOB_FREQUENCY: float = Movement.BOB_FREQUENCY
+const BOB_SMOOTH_SPEED: float = Movement.BOB_SMOOTH_SPEED
 
 ## One color per seat of a full room (NetworkManager.MAX_PLAYERS, N-228.3), picked by the
 ## colour slot the host gave the player (PlayerColorSlot, N-226): stable for the session.
@@ -76,6 +69,11 @@ var _ping_input: Variant = (load(PING_INPUT_PATH) as Script).new(self)
 var _cargo_care: Node
 var _sprint: Node  # Speeds, footfalls, the box's shaking and the trip (player_sprint.gd).
 const RenderLayers = preload("res://scripts/core/render_layers.gd")
+## Split out of this file (N-225.5): static helpers that take the player and keep no state of their own.
+const Ride = preload("res://scripts/gameplay/player/player_ride.gd")
+const Movement = preload("res://scripts/gameplay/player/player_movement.gd")
+const OnFootInput = preload("res://scripts/gameplay/player/player_input.gd")
+const NetVisibility = preload("res://scripts/gameplay/player/player_net_visibility.gd")
 const CarryPose = preload("res://scripts/gameplay/player/carry_pose.gd")
 const FaceCatalog = preload("res://scripts/core/face_catalog.gd")
 const CharacterFace = preload("res://scripts/presentation/character_face.gd")
@@ -198,7 +196,7 @@ var _riding: bool = false
 var _ride_last_transform: Transform3D = Transform3D.IDENTITY
 ## Physics layers of the truck and of its cargo shell (vehicle.gd SHELL_LAYER),
 ## the kinematic copy of it that players actually collide with. The truck
-## carries its riders by hand (_ride_with_vehicle), so the controller's own
+## carries its riders by hand (Ride.ride_with_vehicle), so the controller's own
 ## platform handling must ignore both or they'd move twice.
 const VEHICLE_LAYER: int = 2
 const SHELL_LAYER: int = 64
@@ -215,7 +213,7 @@ func _enter_tree() -> void:
 			set_multiplayer_authority(peer)
 	# Before the synchronizer (a child) enters the tree: it registers with the
 	# network right then, and without the filter it counted as public.
-	_limit_visibility_to_ready_peers()
+	NetVisibility.limit_to_ready_peers(self)
 
 
 ## A player who disconnects mid-carry must not leave their box frozen in the
@@ -225,7 +223,7 @@ func _exit_tree() -> void:
 	_ping_input.close_wheel()
 	var network: Node = get_node_or_null("/root/NetworkManager")
 	if network != null and network.call(&"is_host"):
-		_release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
+		_seat_pose_component.release_seat_occupant(get_node_or_null(seat_node_path) as Node3D)
 	if not is_instance_valid(carried_package) or carried_package.carrier != self:
 		return
 	if not carried_package.is_inside_tree() or carried_package.is_queued_for_deletion():
@@ -276,32 +274,13 @@ func _ready() -> void:
 	_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_ping_input.build_wheel()
-	_probe.area_entered.connect(_on_probe_entered)
-	_probe.area_exited.connect(_on_probe_exited)
+	_probe.area_entered.connect(_interaction_component.on_probe_entered)
+	_probe.area_exited.connect(_interaction_component.on_probe_exited)
 
 
-## Spawned into, and synced to, only the peers whose level is loaded (the
-## host's call -- NetworkManager.is_peer_ready()). After a host restart each
-## client reloads at its own pace; a spawn sent to one still on the old level
-## was lost, and that client never saw this player again. Installed from
-## _enter_tree(): set up in _ready, the synchronizer had already registered as
-## public, and the host's own player started syncing to clients mid-reload --
-## who couldn't resolve it and never saw the host move again.
-func _limit_visibility_to_ready_peers() -> void:
-	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if sync == null or network == null or network.is_connected(&"peer_level_ready", _on_peer_level_ready):
-		return
-	sync.add_visibility_filter(func(peer_id: int) -> bool:
-		return not multiplayer.is_server() or bool(network.call(&"is_peer_ready", peer_id)))
-	if network.has_signal(&"peer_level_ready"):
-		network.connect(&"peer_level_ready", _on_peer_level_ready)
-
-
+## The callable the NetworkManager signal is connected to (player_net_visibility.gd).
 func _on_peer_level_ready(peer_id: int) -> void:
-	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-	if sync != null and multiplayer.is_server():
-		sync.update_visibility(peer_id)
+	NetVisibility.refresh_peer(self, peer_id)
 
 
 ## The rigged character, so teammates have someone to see. Colored per
@@ -374,32 +353,7 @@ func is_local() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_local():
-		return
-	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not _ping_input.wheel_open:
-		return
-	if _ping_input.handle_event(event) or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		return
-	if _handle_package_input(event):
-		return
-	if _seated:
-		if _is_interact_event(event):
-			# Mark this press as used, or _poll_interact() would read the
-			# still-held E on the next physics tick and sit right back down.
-			_interact_was_down = true
-			leave_seat()
-		return
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_apply_look(event.relative * MOUSE_SENSITIVITY)
-	elif event.is_action_pressed(&"look_center"):
-		_pitch = 0.0
-		_head.rotation.x = 0.0
-	elif _is_interact_event(event):
-		# Same press must not also reach _poll_interact() on the next physics
-		# tick: two interactions per E put a box on the shelf and grabbed it
-		# straight back, or opened a door and shut it again.
-		_interact_was_down = true
-		_try_interact()
+	OnFootInput.handle_event(self, event)
 
 
 ## Runs on every peer's copy of this player, seated or driving, local or
@@ -410,92 +364,13 @@ func _process(delta: float) -> void:
 	_ping_input.update(delta)
 	animator.animate()
 	if not is_local():
-		_apply_net_state()
+		Ride.apply_net_state(self)
 	elif not _seated:
-		_ride_frame_by_frame()
+		Ride.ride_frame_by_frame(self)
 	if not is_physics_interpolated_and_enabled():
-		_pose_seated_body(delta)
+		_seat_pose_component.pose_seated_body(delta)
 	if _carry_pose != null:
 		_carry_pose.update_pose(carried_package, _pickup_elapsed, delta)
-
-
-## A client's truck is teleported by the network whenever an update lands,
-## not on physics ticks, and isn't interpolated. A rider moved with it only
-## on ticks, and drawn interpolated between them, was drawn up to a metre
-## behind it at speed: the view jumped against the truck's own walls. While
-## riding such a truck the owner follows it every frame, uninterpolated.
-func _ride_frame_by_frame() -> void:
-	var vehicle: Node3D = _find_vehicle()
-	var per_frame: bool = _riding and vehicle != null and not vehicle.is_physics_interpolated_and_enabled()
-	var wanted: Node.PhysicsInterpolationMode = PHYSICS_INTERPOLATION_MODE_OFF if per_frame else PHYSICS_INTERPOLATION_MODE_INHERIT
-	if physics_interpolation_mode != wanted:
-		physics_interpolation_mode = wanted
-		reset_physics_interpolation()
-	if per_frame:
-		_ride_with_vehicle()
-
-
-## Everyone else's copy of this player: where the owner says, inside this
-## peer's truck if they're riding in it. Each frame against the truck as
-## drawn -- except riding a simulated (interpolated) truck, the host's: there
-## this body is solid in the moving bay, and a frame's drawn pose is up to a
-## tick behind the simulated one. So there it follows the truck on the ticks
-## (`on_tick`, from _physics_process) and is drawn interpolated along with it;
-## placed per frame it rammed the loose boxes at every step.
-func _apply_net_state(on_tick: bool = false) -> void:
-	if not _has_net_state:
-		return
-	var vehicle: Node3D = _find_vehicle()
-	var riding: bool = net_in_vehicle and vehicle != null
-	var tick_placed: bool = riding and vehicle.is_physics_interpolated_and_enabled()
-	var wanted: Node.PhysicsInterpolationMode = PHYSICS_INTERPOLATION_MODE_INHERIT if tick_placed else PHYSICS_INTERPOLATION_MODE_OFF
-	if physics_interpolation_mode != wanted:
-		physics_interpolation_mode = wanted
-		reset_physics_interpolation()
-	if on_tick != tick_placed:
-		return
-	if riding:
-		global_position = (vehicle.global_transform if on_tick else _drawn_transform(vehicle)) * net_position
-	else:
-		global_position = net_position
-
-
-## Where a node is drawn this frame. A client's truck is frozen and not
-## interpolated, and then get_global_transform_interpolated() hands back last
-## frame's cached pose instead of where the network just put it.
-static func _drawn_transform(node: Node3D) -> Transform3D:
-	return node.get_global_transform_interpolated() if node.is_physics_interpolated_and_enabled() else node.global_transform
-
-
-func _publish_net_state() -> void:
-	var vehicle: Node3D = _find_vehicle()
-	# A little give once aboard, so standing right at the rear doors doesn't
-	# flip between the truck's space and the world's every other frame.
-	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if net_in_vehicle else 0.0))
-	net_in_vehicle = riding
-	net_position = vehicle.to_local(global_position) if riding else global_position
-
-
-## Standing (or jumping) in the cargo bay, the owner is moved along with the
-## truck by however much it moved since the last tick, turning with it. On a
-## client the truck is a copy the network teleports, which carries nobody by
-## itself: its walls just slid over the player (through the closed doors,
-## and out the back).
-func _ride_with_vehicle() -> void:
-	var vehicle: Node3D = _find_vehicle()
-	if vehicle == null:
-		_riding = false
-		return
-	var now: Transform3D = vehicle.global_transform
-	if _riding:
-		var motion: Transform3D = now * _ride_last_transform.affine_inverse()
-		global_position = motion * global_position
-		var heading: Vector3 = motion.basis * -global_basis.z
-		heading.y = 0.0
-		if heading.length_squared() > 0.0001:
-			rotate_y((-global_basis.z).signed_angle_to(heading.normalized(), Vector3.UP))
-	_riding = bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if _riding else 0.0))
-	_ride_last_transform = now
 
 
 ## Where this player is for anything within reach -- opening a box, a
@@ -520,28 +395,16 @@ const RIDING_SPEED: float = 1.0
 
 
 func _on_foot_mask(riding: bool) -> int:
-	if not riding:
-		return ON_FOOT_MASK
-	var vehicle: Node3D = _find_vehicle()
-	var moving: bool = vehicle is RigidBody3D and (vehicle as RigidBody3D).linear_velocity.length() > RIDING_SPEED
-	return RIDING_MASK if moving else ON_FOOT_MASK
+	return Ride.on_foot_mask(self, riding)
 
 
 func _find_vehicle() -> Node3D:
-	if not is_instance_valid(_vehicle) and is_inside_tree():
-		var found: Node = get_tree().get_first_node_in_group(&"vehicle")
-		_vehicle = found as Node3D if found != null and found.has_method(&"carries") else null
-	return _vehicle
+	return Ride.find_vehicle(self)
 
 
-## With physics interpolation on, the van is drawn between its physics ticks.
-## A body snapped to the seat every rendered frame would sit at the raw tick
-## pose instead and shake against the smoothly drawn cab, so the owner's own
-## body is posed on the ticks (from _physics_process) and interpolated right
-## along with it. Everyone else's copy isn't interpolated (it's placed by the
-## network each frame), so it's posed every frame against the seat as drawn.
-func _pose_seated_body(delta: float) -> void:
-	_seat_pose_component.pose_seated_body(delta)
+## Where a node is drawn this frame (see Ride.drawn_transform).
+static func _drawn_transform(node: Node3D) -> Transform3D:
+	return Ride.drawn_transform(node)
 
 
 ## Where the rounded character's root goes, in the seat marker's space, so
@@ -558,19 +421,6 @@ func _seat_body_offset(seat_name: StringName) -> Vector3:
 	return _seat_pose_component.seat_body_offset(seat_name)
 
 
-## Real skeletal IK for the driver: the two target nodes live on the wheel,
-## therefore they rotate with it and SkeletonIK3D solves upper arm → forearm
-## → hand every frame. It only activates on the designated driver anchor;
-## passengers keep the Sit clip's hands-on-lap pose. The rounded character's
-## own arms reach the wheel, so the old stand-in arm cylinders are gone.
-func _configure_driver_ik(seat: Node3D) -> void:
-	_seat_pose_component.configure_driver_ik(seat)
-
-
-func _stop_driver_ik() -> void:
-	_seat_pose_component.stop_driver_ik()
-
-
 func _physics_process(delta: float) -> void:
 	_package_hit_cooldown = maxf(0.0, _package_hit_cooldown - delta)
 	_pickup_elapsed += delta
@@ -579,9 +429,9 @@ func _physics_process(delta: float) -> void:
 	if not is_local():
 		collision_layer = 8 if seat_node_path.is_empty() else 0
 		collision_mask = _on_foot_mask(net_in_vehicle) if seat_node_path.is_empty() else 0
-		_apply_net_state(true)
+		Ride.apply_net_state(self, true)
 	if is_physics_interpolated_and_enabled():
-		_pose_seated_body(delta)
+		_seat_pose_component.pose_seated_body(delta)
 	if not is_local():
 		return
 	# Before any early return: a menu open in the back of a moving truck
@@ -589,93 +439,34 @@ func _physics_process(delta: float) -> void:
 	if _seated:
 		_riding = false
 	else:
-		_ride_with_vehicle()
+		Ride.ride_with_vehicle(self)
 		collision_mask = _on_foot_mask(_riding)
-	_publish_net_state()
+	Ride.publish_net_state(self)
 	if carried_package != null and not is_instance_valid(carried_package):
 		carried_package = null
 	_publish_carry(carried_package != null)
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		_publish_prompt("")
-		_publish_lid_hint(null)
+		_interaction_component.publish_prompt("")
+		_interaction_component.publish_lid_hint(null)
 		return
 	if _seated:
 		var candidate: DeliveryPackage = (_cargo_care.assist_candidate() if tended_package != null
 				and tended_package.run_state() == ITrapBehavior.TrapState.RUINED else null)
-		_publish_prompt(candidate.assist_prompt() if candidate != null and assisted_package == null else "")
-		_publish_lid_hint(_lid_target())
+		_interaction_component.publish_prompt(
+				candidate.assist_prompt() if candidate != null and assisted_package == null else "")
+		_interaction_component.publish_lid_hint(_lid_target())
 		if carried_package != null:
-			_update_carried_package()
+			_carry_component.update_carried_package()
 		if assisted_package != null:
 			_cargo_care.update_assisting()
 		elif candidate != null and Input.is_action_just_pressed(&"interact"):
 			candidate.rpc_id(1, &"request_assist")
 		return
-	_poll_interact()
-	if assisted_package != null:
-		_cargo_care.update_assisting()
-	var stick: Vector2 = Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
-	_apply_look(stick * stick_sensitivity * delta)
-	# get_vector's y is -1 for forward and +1 for back;
-	# local forward is -Z, so the two negatives cancel out to a plain +basis.z.
-	var input_vector: Vector2 = Input.get_vector(&"drive_left", &"drive_right", &"walk_forward", &"walk_backward")
-	if Input.is_action_pressed(&"care_work") and _cargo_care.target != null:
-		input_vector = Vector2.ZERO
-	# Holding a box that asks for a tap sequence: WASD taps it, not walks.
-	if _cargo_care.tapping:
-		input_vector = Vector2.ZERO
-	var move_direction: Vector3 = (global_basis.x * input_vector.x) + (global_basis.z * input_vector.y)
-	if move_direction.length() > 1.0:
-		move_direction = move_direction.normalized()
-	var pace: float = _sprint.ground_speed(input_vector)
-	velocity.x = move_direction.x * pace
-	velocity.z = move_direction.z * pace
-	if is_on_floor():
-		# Keep the body snapped to slopes when walking, but preserve a newly
-		# requested jump impulse instead of immediately overwriting it.
-		if Input.is_action_just_pressed(&"jump"):
-			velocity.y = JUMP_VELOCITY
-			animator.play_one_shot(ANIM_JUMP, JUMP_ANIM_LOCK_MS)
-		else:
-			velocity.y = -0.2
-	else:
-		velocity.y -= GRAVITY * delta
-	move_and_slide()
-	_update_ground_safety()
-	var ground_speed: float = Vector2(velocity.x, velocity.z).length()
-	locomotion_speed = ground_speed
-	animator.update_jump(delta, ground_speed)
-	_apply_head_bob(delta, ground_speed)
-	animator.update_movement(ground_speed, _pickup_elapsed)
-	_apply_context_fov(delta)
-	if carried_package != null:
-		_update_carried_package()
-	var target: Node = _closest_interactable()
-	_publish_prompt(str(target.call(&"get_prompt")) if target != null else "")
-	_update_highlight(target)
-	_publish_lid_hint(_lid_target(target))
+	Movement.on_foot_step(self, delta)
 
 
 func _update_ground_safety() -> void:
-	# A last grounded position also works on hills, unlike an absolute Y cutoff.
-	if global_position.y < _last_safe_ground.y - 15.0:
-		global_position = _last_safe_ground + Vector3.UP * 0.5
-		velocity = Vector3.ZERO
-		reset_physics_interpolation()  # A rescue, not a fall: no streak between the two spots.
-	elif is_on_floor():
-		_last_safe_ground = global_position
-
-
-func _is_interact_event(event: InputEvent) -> bool:
-	return _interaction_component.is_interact_event(event)
-
-
-func _is_drop_event(event: InputEvent) -> bool:
-	return _interaction_component.is_drop_event(event)
-
-
-func _is_open_event(event: InputEvent) -> bool:
-	return _interaction_component.is_open_event(event)
+	Movement.update_ground_safety(self)
 
 
 ## The box a lid action applies to: the one in hand first, then the one at
@@ -690,55 +481,8 @@ func _toggle_package_lid() -> void:
 	_interaction_component.toggle_package_lid()
 
 
-func _publish_lid_hint(package: DeliveryPackage) -> void:
-	_interaction_component.publish_lid_hint(package)
-
-
-func _poll_interact() -> void:
-	_interaction_component.poll_interact()
-
-
 func _apply_look(motion: Vector2) -> void:
-	# Sensitivity and Y inversion are player settings now (GameSettings), and
-	# both get applied in this one place so mouse and stick stay consistent
-	# with each other. 1.0 / not-inverted is exactly the tuning this shipped
-	# with, so the defaults change nothing.
-	var settings: Node = get_node_or_null("/root/GameSettings")
-	var sensitivity: float = float(settings.get("look_sensitivity")) if settings != null else 1.0
-	var y_sign: float = float(settings.call(&"look_y_sign")) if settings != null else 1.0
-	motion.x *= sensitivity
-	motion.y *= sensitivity * y_sign
-	rotate_y(-motion.x)
-	animator.add_look_yaw(motion.x)
-	_pitch = clampf(_pitch - motion.y, -PITCH_LIMIT, PITCH_LIMIT)
-	_head.rotation.x = _pitch
-
-
-## Only runs on foot (the seated/driving path returns early above, and
-## FirstPersonCamera -- a different node entirely -- has its own shake
-## instead). A footstep sine wave that fades in/out with actual ground
-## speed rather than snapping on the instant a key is pressed.
-func _apply_head_bob(delta: float, ground_speed: float) -> void:
-	# Do not bob while airborne: the jump already provides the vertical motion.
-	var moving: bool = ground_speed > 0.3 and is_on_floor()
-	var target_amount: float = 1.0 if moving else 0.0
-	_bob_amount = move_toward(_bob_amount, target_amount, BOB_SMOOTH_SPEED * delta)
-	if moving:
-		_bob_time += delta * BOB_FREQUENCY * clampf(ground_speed / WALK_SPEED, 0.45, 1.7)
-	# Always write the offset so it eases back to eye height after stopping or
-	# jumping; previously it could freeze at the final high/low bob position.
-	_camera.position.y = sin(_bob_time * TAU) * BOB_AMPLITUDE * _sprint.bob_scale() * _bob_amount
-
-
-func _apply_context_fov(delta: float) -> void:
-	# The options FOV is the neutral reference. Carrying still narrows the
-	# view by the same readable amount, rather than silently ignoring a
-	# player's accessibility preference.
-	var settings: Node = get_node_or_null("/root/GameSettings")
-	var preferred_fov: float = float(settings.get("preferred_fov")) if settings != null else 82.0
-	var fov_offset: float = preferred_fov - 82.0
-	var target_fov: float = (CARRY_FOV if carried_package != null else WALK_FOV) + fov_offset + _sprint.fov_bonus()
-	_camera.fov = move_toward(_camera.fov, target_fov, FOV_SMOOTH_SPEED * delta)
+	Movement.apply_look(self, motion)
 
 
 func _gather_package_input() -> Dictionary:
@@ -754,24 +498,9 @@ func _publish_carry(carrying: bool) -> void:
 		bus.emit_signal(&"carry_changed", carrying)
 
 
-func _publish_prompt(value: String) -> void:
-	_interaction_component.publish_prompt(value)
-
-
-## A visible glow on whatever the player is currently looking at (item #98),
-## instead of only the HUD's text prompt. Duck-typed via has_method(): not
-## every Interactable bothers implementing highlight() (a package mount is
-## an empty slot, nothing to glow), so this is opt-in per type.
-func _update_highlight(target: Node) -> void:
-	_interaction_component.update_highlight(target)
-
-
 func _update_carried_package() -> void:
 	_carry_component.update_carried_package()
 
-
-func _clear_carry_focus() -> void:
-	_carry_component.clear_carry_focus()
 
 ## Collisions are off while carried, so without this the box pokes straight
 ## through the van's walls, doors and shelves whenever the player faces them.
@@ -800,28 +529,6 @@ const PING_LABEL: String = PingCatalog.OPTIONS[0]["label"]
 
 func _send_ping(label: String = PING_LABEL) -> void:
 	_interaction_component.send_ping(label)
-
-
-## Card, drop and lid keys; true when the event was one of them.
-func _handle_package_input(event: InputEvent) -> bool:
-	if event.is_action_pressed(&"use_card"):
-		_use_card()
-	elif _is_drop_event(event):
-		# Seated, "drop" moves the box you tend between your lap and its rack
-		# (docs/jugabilidad-paquetes-rescate.md): never onto the floor.
-		if _seated and is_instance_valid(tended_package):
-			tended_package.rpc_id(1, &"request_lap_toggle")
-		else:
-			_drop_carried()
-	elif _is_open_event(event):
-		_toggle_package_lid()
-	else:
-		return false
-	return true
-
-
-func _use_card() -> void:
-	_interaction_component.use_card()
 
 
 func _show_first_trap_tip(package: DeliveryPackage) -> void:
@@ -885,14 +592,6 @@ func _closest_interactable() -> Node:
 
 func _within_reach(target: Node3D) -> bool:
 	return _interaction_component.within_reach(target)
-
-
-func _on_probe_entered(area: Area3D) -> void:
-	_interaction_component.on_probe_entered(area)
-
-
-func _on_probe_exited(area: Area3D) -> void:
-	_interaction_component.on_probe_exited(area)
 
 
 ## A loose package can bowl somebody over. This intentionally stays a
@@ -990,10 +689,6 @@ func leave_seat() -> void:
 ## floor is under that spot -- never left at eye height or inside a wall.
 func _seat_exit_position(seat: Node3D) -> Vector3:
 	return _seat_pose_component.seat_exit_position(seat)
-
-
-func _release_seat_occupant(seat: Node3D) -> void:
-	_seat_pose_component.release_seat_occupant(seat)
 
 
 func _from_host() -> bool:

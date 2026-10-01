@@ -839,7 +839,7 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   por nombre: los mismos 9/0/3/1, repartidos entre los cuatro archivos (`test_dynamic_dispatch_budget.gd`).
   `test_package_split.gd` fija la tabla de RPC del original, los métodos que usa el resto y ≤ 700 líneas. Aviso
   `docs/avisos/2026-10-01-n225-package-partido.md`.
-- [ ] **N-225.5** Quedan `player.gd` (1000), `run_manager.gd` (1000) y `package_feedback.gd` (1000) en el borde.
+- [x] **N-225.5** Quedan `player.gd` (1000), `run_manager.gd` (1000) y `package_feedback.gd` (1000) en el borde.
   Origen: construcción 2026-10-01.
   **[x] `package_feedback.gd` (2026-10-01, rama `nacho/N-225-package-feedback-split`)** — 1000 → 444 líneas.
   Helpers estáticos que reciben el nodo (ahora `class_name PackageFeedback`): lo propio de cada trampa, las correas
@@ -857,6 +857,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   las constantes movidas se reexportan con el mismo nombre. `test_run_manager_split.gd` fija ≤ 700 líneas, la tabla
   de RPC, la API y tres corridas doradas por `finish_run` (entrega, fallida, infinito) calculadas con el original.
   Aviso `docs/avisos/2026-10-01-n225-run-manager-partido.md`. Queda `player.gd`.
+  **[x] `player.gd` (2026-10-01, rama `nacho/N-225-player-split`)** — 1000 → 695 líneas. Helpers estáticos sin
+  `class_name` que reciben al jugador: viaje con el camión y estado de red (`player_ride.gd`), movimiento a pie,
+  mirada, balanceo, FOV y red de seguridad del piso (`player_movement.gd`), entrada (`player_input.gd`) y filtro de
+  visibilidad para peers listos (`player_net_visibility.gd`). Los siete `@rpc` quedan en el nodo, mismo orden y
+  guardas; constantes movidas reexportadas; 15 envoltorios privados sin usos de afuera se quitaron. Sin tocar cuerpo,
+  ragdoll ni apariencia (S-311). `test_player_split.gd` fija ≤ 700 líneas, la tabla de RPC, la API usada afuera y
+  corridas chicas doradas. La baseline del lint bajó 4. Aviso `docs/avisos/2026-10-01-n225-player-partido.md`.
+  **N-225 completa.**
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con

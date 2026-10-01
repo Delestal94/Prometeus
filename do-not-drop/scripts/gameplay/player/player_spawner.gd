@@ -10,8 +10,8 @@ extends MultiplayerSpawner
 ## would land a few metres ahead of it and outside the cargo bay. The joiner's
 ## own copy may not have its first pose yet, so the player starts out riding it
 ## (Player._riding / _ride_last_transform) and goes wherever that copy is
-## teleported (player.gd _ride_with_vehicle(), which also takes a jump of more than 5 m
-## for a teleport, not a fall: no ground-safety rescue back to the depot).
+## teleported (player_ride.gd ride_with_vehicle()): no ground-safety rescue
+## back to the depot.
 
 func _ready() -> void:
 	clear_spawnable_scenes()
