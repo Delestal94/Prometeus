@@ -1,7 +1,9 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_multi_cargo.gd
 ## The Fase 2 question: does the van actually carry several traps at once,
-## and does losing one stop being everybody's game over?
+## and does losing one stop being everybody's game over? Also (N-228.4): there
+## is a package mount per passenger at the 8-player cap and every passenger
+## seat looks after at least one of them.
 
 var _failures: int = 0
 
@@ -25,12 +27,18 @@ func _initialize() -> void:
 	# The level declares one box per trap; the depot (depot.gd) stocks a
 	# second of each on its shelves.
 	_expect(packages.size() == 14, "The depot holds two packages of every trap (got %d)" % packages.size())
-	_expect(mounts.size() == 6, "Four seat mounts plus two shelf mounts are available (got %d)" % mounts.size())
+	# One box per passenger at the 8-player cap (N-228.4): six rack bays plus
+	# the floor bay by the right wall.
+	var network: Node = root.get_node(^"/root/NetworkManager")
+	var max_players: int = int(network.get(&"MAX_PLAYERS"))
+	_expect(mounts.size() >= max_players - 1,
+		"A mount for every passenger at the cap (%d mounts, %d passengers)" % [mounts.size(), max_players - 1])
+	_expect(mounts.size() == 7, "Five seat mounts plus two shelf mounts are available (got %d)" % mounts.size())
 	var seat_mounts: Array[Node] = []
 	for mount: Node in mounts:
 		if String(mount.get_parent().name).contains("Seat"):
 			seat_mounts.append(mount)
-	_expect(seat_mounts.size() == 4, "Every cargo-tending seat keeps its own mount")
+	_expect(seat_mounts.size() == 5, "Every cargo-tending seat keeps its own mount")
 
 	var trap_ids: Array = []
 	for package: Node in packages:
@@ -43,13 +51,29 @@ func _initialize() -> void:
 	_expect(kinds == ["balance", "explosive", "fragile", "growing_weight", "hostile", "liquid", "noisy"] and trap_ids.size() == 14,
 		"All seven trap types are represented (got %s)" % str(trap_ids))
 
-	# Seven passenger places fit behind the driver; the four outer seats own
-	# cargo mounts while the remaining three are free crew seats.
+	# Seven passenger places fit behind the driver, plus three fold-down seats by
+	# the rack. Every one of them looks after at least one mount (its own, or
+	# the bay column in front of it): no seat is left without cargo to mind.
 	var seats: Array[Node] = []
 	for node: Node in _all_nodes(level):
 		if node.get(&"role") == &"passenger":
 			seats.append(node)
 	_expect(seats.size() == 10, "Seven passenger seats plus three fold-down seats by the rack (got %d)" % seats.size())
+	var tended: Array[Node] = []
+	for seat: Node in seats:
+		var looked_after: Array[Node] = []
+		var required_path: NodePath = seat.get(&"required_mount_path")
+		if not required_path.is_empty():
+			looked_after.append(seat.get_node_or_null(required_path))
+		for path: NodePath in seat.get(&"tend_mount_paths"):
+			looked_after.append(seat.get_node_or_null(path))
+		looked_after = looked_after.filter(func(mount: Node) -> bool: return mount != null and mounts.has(mount))
+		_expect(not looked_after.is_empty(), "%s looks after at least one package mount" % seat.get_parent().name)
+		for mount: Node in looked_after:
+			if not tended.has(mount):
+				tended.append(mount)
+	_expect(tended.size() == mounts.size(),
+		"Every package mount has a seat looking after it (%d of %d)" % [tended.size(), mounts.size()])
 
 	var player: Node = level.local_player
 	var manager: Node = root.get_node(^"/root/RunManager")
