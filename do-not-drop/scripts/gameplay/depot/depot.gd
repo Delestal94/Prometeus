@@ -100,7 +100,6 @@ var _watching_exit: bool = false
 var _insured: bool = false
 var _order_board: DepotOrderBoard
 var _boss_toasted: bool = false
-var _stats_label: Label3D
 var _supply_props: Dictionary = {}  # supply id -> Node3D shown on the counter
 
 
@@ -561,62 +560,35 @@ func _build_door() -> void:
 	add_child(door)
 
 
-## The team's corkboard: deliveries, best score and the next unlock.
+## The crew of the month's board: a title, the photo (art) as big as the board allows and one name under it,
+## in letters over 6 cm. Nothing else on the plate (the team's figures are the records station's).
 func _build_team_board() -> void:
-	var at := Vector3(HALF_WIDTH - 0.06, 2.55, 22.5)
+	var at := Vector3(HALF_WIDTH - 0.06, 2.85, 22.5)
 	var kit := DepotKit.new(self, "TeamBoardColliders")
-	# Frame behind, cork 1 cm in front of it, the note 1 cm in front of that:
-	# 5 mm apart they flickered. The note sits in the bottom corner, clear of
-	# the title it used to cover.
-	kit.box(Vector3(0.03, 1.5, 2.1), at + Vector3(0.02, 0.0, 0.0), DepotKit.flat(Color("59656a"), 0.5, 0.4))
-	kit.box(Vector3(0.03, 1.4, 2.0), at, DepotKit.flat(Color("c9a26b"), 0.9))
-	kit.box(Vector3(0.01, 0.22, 0.22), at + Vector3(-0.025, -0.52, 0.82), DepotKit.flat(Color("ffc93c"), 0.8),
-			false, 0.1)
+	# Frame behind, cork 1 cm in front of it: 5 mm apart they flickered.
+	kit.box(Vector3(0.03, 2.0, 1.5), at + Vector3(0.02, 0.0, 0.0), DepotKit.flat(Color("59656a"), 0.5, 0.4))
+	kit.box(Vector3(0.03, 1.9, 1.4), at, DepotKit.flat(Color("c9a26b"), 0.9))
 	kit.commit("TeamBoard")
-	# The crew of the month's photo (art), when it is in the project: on the board's left, beside the figures.
 	if ResourceLoader.exists(EMPLOYEE_PHOTO):
 		var photo := MeshInstance3D.new()
 		photo.name = "MonthPhoto"
 		var quad := QuadMesh.new()
-		quad.size = Vector2(0.5, 0.625)
+		quad.size = Vector2(0.9, 1.125)
 		var photo_material := StandardMaterial3D.new()
 		photo_material.albedo_texture = load(EMPLOYEE_PHOTO) as Texture2D
 		photo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		quad.material = photo_material
 		photo.mesh = quad
-		photo.position = at + Vector3(-0.045, -0.12, 0.62)
+		photo.position = at + Vector3(-0.045, -0.07, 0.0)
 		photo.rotation.y = -PI * 0.5
 		add_child(photo)
-	var title := DepotLabels.text(self, tr("WORLD_DEPOT_TEAM_TITLE"), at + Vector3(-0.04, 0.5, 0.0), -PI * 0.5, 36,
+	var title := DepotLabels.text(self, tr("WORLD_DEPOT_TEAM_TITLE"), at + Vector3(-0.04, 0.77, 0.0), -PI * 0.5, 36,
 			Layout.INK, Layout.DISPLAY_FONT, 0.005, 0)
-	DepotLabels.fit_label(title, 1.8)
-	_stats_label = DepotLabels.text(self, "", at + Vector3(-0.04, -0.12, -0.5), -PI * 0.5, 28, Layout.INK,
-			Layout.BODY_FONT, 0.0042, 0)
-	_stats_label.name = "TeamStats"
-	_stats_label.width = 220
-	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	refresh_team_board()
-	var unlocks: UNLOCK_MANAGER = _unlocks()
-	if unlocks != null:
-		unlocks.progress_changed.connect(refresh_team_board)
-
-
-func refresh_team_board() -> void:
-	if _stats_label == null:
-		return
-	var unlocks: UNLOCK_MANAGER = _unlocks()
-	var manager: RUN_MANAGER = _run_manager()
-	if unlocks == null:
-		return
-	var summary: Dictionary = unlocks.progress_summary()
-	var best: int = manager.best_score() if manager != null else 0
-	var next: String = tr("WORLD_DEPOT_TEAM_ALL_UNLOCKED")
-	for unlock_id: StringName in UNLOCK_MANAGER.UNLOCKS:
-		if not unlocks.is_unlocked(unlock_id):
-			var rule: Dictionary = UNLOCK_MANAGER.UNLOCKS[unlock_id]
-			next = tr("WORLD_DEPOT_TEAM_NEXT") % [rule.title, int(rule.deliveries)]
-			break
-	_stats_label.text = tr("WORLD_DEPOT_TEAM_STATS") % [int(summary.deliveries), int(summary.score), best, next]
+	DepotLabels.fit_label(title, 1.3)
+	var person := DepotLabels.text(self, tr("WORLD_DEPOT_MONTH_NAME"), at + Vector3(-0.04, -0.83, 0.0), -PI * 0.5, 30,
+			Layout.INK, Layout.DISPLAY_FONT, 0.0026, 0)
+	person.name = "MonthName"
+	DepotLabels.fit_label(person, 1.3)
 
 
 func _build_stations() -> void:

@@ -400,7 +400,27 @@ bocas distintas (lo dijo el modelador; no lo verifiqué en cámara).
 usan y reusar materiales ya existentes), luces reales 7. `bench_depot` en este equipo (muy cargado durante la medición):
 frame 7,2 ms contra 6,9 ms (+4 %, vsync y ruido); no hay script nuevo por frame.
 
-**Qué no quedó** (la reja en X de la campana ya la resolvió el modelo, con su aro de 3 radios): los textos "EMPLEADO DEL
-MES" y el nombre grande, el encabezado en blanco del tablero de muestras y los carteles chicos de seguridad con más palabras
-quedaron sin texto (el modelo trae el encabezado vacío y no hay texto de diseño); el brillo del Jefe y la medición de los
-amarillos en captura (tono 42-50°, valor >= 60 %) se juzgaron a ojo, el valor medido del bolardo en captura es ~36 %.
+**Retoques finales (pedidos tras la crítica de `director-arte`)**
+- El corcho "NUESTRAS ENTREGAS" muestra `tx_depot_cork_photos.png` entera (su propio quad de 1,8 x 1,2 m con la proporción 3:2 de la
+  textura, no un `BoxMesh`, cuyas UV recortaban la imagen); las fotos del equipo la reemplazan cuando existen. Captura de cerca:
+  `final/depot_photo_wall.png`.
+- "EQUIPO DEL MES": se borró el párrafo de estadísticas (y sus claves `WORLD_DEPOT_TEAM_STATS`, `_NEXT` y `_ALL_UNLOCKED`); la placa
+  tiene el título, la foto `tx_depot_employee_month.png` de 0,9 x 1,125 m (casi el doble de lo que era, 1,8 veces: el alto de la
+  placa, 1,9 m con el frente de la heladera debajo, no deja más) y un solo nombre (`WORLD_DEPOT_MONTH_NAME`, Lilita One, INK, letra de
+  7 cm).
+- Tablero de muestras: "COLORES" (`WORLD_DEPOT_SWATCHES`) en Lilita One, INK, 4 cm, centrado en la franja y a 0,5 mm de la cara.
+- `render_depot.gd`: `overview` desde x 10,6 mirando 8 grados más a la derecha (la campana ya no tapa la T del mural; quedan el
+  ventanal de OFICINA y el camión); `center_eye_level` 7 grados hacia arriba; `lockers_and_break` 1,5 m más cerca de la cocinita y 7
+  grados hacia arriba; vistas nuevas `workshop_bench` y `photo_wall`; opciones `--out`, `--only`, `--mood`, `--sun`, `--bias`.
+  El script esconde las fotos del equipo de `user://` y muestra el corcho de fábrica.
+- Capturas finales a 1920 x 1080 en `D:/tmp/depot_review/final/` (las 10 vistas más `photo_wall`) y `final/moods/<clima>/` (spawn_view_game,
+  overview y center_eye_level en soleado_dia, nublado_dia, niebla_atardecer y soleado_noche).
+- **Medición del bolardo, corregida**: el ~36 % que figuraba antes estaba mal medido (era la banda negra). `director-arte` midió el
+  cuerpo amarillo en 47 grados, 61 % de saturación y 80 % de valor (79 % de noche): cumple.
+- **Para quien capture**: una toma de `lockers_and_break` hecha en los primeros segundos de la escena (la primera o la segunda de una
+  corrida) sale con paredes y piso del vestuario en gris liso: es el espejo (`DepotMirror`) activándose recién empezada la escena en
+  el driver de GL Compatibility (escondiéndolo, el cuadro sale bien; la misma toma sale bien más adelante en una corrida larga). Es de
+  las capturas, no del contenido; si se ve en el juego hay que abrir tarea.
+
+**Qué no quedó** (la reja en X de la campana ya la resolvió el modelo, con su aro de 3 radios): el encabezado del tablero de muestras
+y los carteles chicos de seguridad con más palabras; las bocas distintas de los reciclajes no se verificaron en cámara.

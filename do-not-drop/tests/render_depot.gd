@@ -24,7 +24,7 @@ const SHOTS := [
 	["workshop", Vector3(6.5, 1.8, 13.0), Vector3(13.0, 1.2, 6.0)],
 	# The workbench with its boards, 3.5 m away, from inside the workshop's mouth (the lift is behind the camera).
 	["workshop_bench", Vector3(11.9, 1.6, 8.1), Vector3(14.4, 1.3, 5.5), 82.0],
-	["lockers_and_break", Vector3(8.3, 1.7, 17.9), Vector3(14.5, 1.5, 20.0)],
+	["lockers_and_break", Vector3(9.66, 1.7, 18.53), Vector3(14.5, 2.15, 18.9)],
 	# The photo wall up close (its art whole, as it looks before the crew has taken any photos).
 	["photo_wall", Vector3(12.0, 2.5, 16.4), Vector3(14.9, 2.95, 16.4), 60.0],
 	["supplies_cage", Vector3(-5.6, 1.7, 9.0), Vector3(-10.5, 1.3, 5.0)],
@@ -32,8 +32,9 @@ const SHOTS := [
 	["stock_aisle_forklift", Vector3(-11.2, 2.2, 24.0), Vector3(-12.2, 1.2, 10.0)],
 	["back_of_depot", Vector3(2.0, 2.4, 20.0), Vector3(-2.0, 1.2, 30.5)],
 	# Eye height in the middle of the hall, looking down its length (the game's field of view).
-	["center_eye_level", Vector3(0.0, 1.65, 17.0), Vector3(0.0, 1.65, 30.0), 82.0],
-	["overview", Vector3(12.0, 6.2, 2.0), Vector3(-4.0, 0.5, 20.0)],
+	["center_eye_level", Vector3(0.0, 1.65, 17.0), Vector3(0.0, 3.2, 30.0), 82.0],
+	# Turned 8 degrees to the right of the old framing, so the bay lamp stays off the mural's lettering.
+	["overview", Vector3(10.6, 6.2, 2.0), Vector3(-6.2, 0.5, 18.2)],
 	["overview_back", Vector3(-13.5, 6.6, 30.5), Vector3(4.0, 0.5, 6.0)],
 	["facade", Vector3(6.0, 2.0, -13.0), Vector3(-1.0, 3.6, 0.0)],
 ]
