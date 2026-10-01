@@ -862,6 +862,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `test_vehicle_faults` mete un `FakeVan`. En el archivo: `.call` 6 → 2, `.get(&` 5 → 1, `.set(&` 3 → 0.
     `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`). Siguientes:
     `depot_panel.gd` (13), `cargo_animal_view.gd` (11), `seat_point.gd` (13).
+  - [x] `depot_panel.gd` (2026-10-01, rama `nacho/N-224-depot-panel-typed`): las compras a un `Depot` tipado
+    (`_depot_node() -> Depot`: `buy_supply`, `buy_supply_discounted`, `team_money`, `supplies`; el del nivel por
+    `LevelCommon.depot`), las cajas como `DeliveryPackage` y las señales de `EventBus` y `UnlockManager` conectadas
+    directo. Quedan por nombre `orders` y `boss_notes()` del `depot` que pasa la estación (`test_depot_panel` usa un
+    stand-in que no es `Depot`). En el archivo: 12 → 2 usos (`.call` 5 → 1, `.get(&` 5 → 1, `/root/` 2 → 0).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-depot-panel-tipado.md`.
+    Siguientes: `cargo_animal_view.gd` (13), `wildlife_crossing.gd` (13), `seat_point.gd` (13),
+    `package_contents_view.gd` (13); después `hud_pause.gd` (`level.get(&"depot")`, tipar a `LevelCommon`).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
