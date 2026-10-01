@@ -9,7 +9,7 @@ extends SceneTree
 ## - it is part of the profile (unlock_manager.gd): typed, clamped, saved,
 ##   loaded, and forgotten on reset;
 ## - the appearance panel has a field for it that saves on Enter or leaving it
-##   and is reachable from the face options by focus (cosmetics_panel.gd);
+##   and is reachable from the face cards by focus, left of them (cosmetics_panel.gd);
 ## - it travels with the appearance: the player's PlayerNickname is replicated on
 ##   spawn and on change, and cleans whatever a remote peer writes.
 
@@ -166,15 +166,21 @@ func _check_panel() -> void:
 	edit.text = "Beto"
 	panel.call(&"close")
 	_expect(String(unlocks.get(&"nickname")) == "Beto", "Closing the panel saves it")
+	# The field sits under the character, left of the cards (N-506): right
+	# reaches the first picked face card (the ready-made "classic" face on a
+	# fresh profile), left from the cards' first column comes back.
 	var eyes: Button = panel.find_child("Eyes_classic", true, false) as Button
-	_expect(eyes != null and edit.get_node(edit.focus_neighbor_bottom) == eyes,
-			"Down from the field reaches the first eyes")
-	_expect(eyes != null and eyes.get_node(eyes.focus_neighbor_top) == edit, "Up from the first eyes reaches the field")
+	var right := edit.get_node(edit.focus_neighbor_right) as Button
+	_expect(right != null and right.button_pressed and right.get_meta(&"kind") in ["preset", "eyes"],
+			"Right from the field reaches the picked face card")
+	_expect(eyes != null and eyes.get_node(eyes.focus_neighbor_left) == edit,
+			"Left from the first eyes reaches the field")
 	var face_buttons: Array = panel.find_children("Eyes_*", "Button", true, false)
-	_expect(face_buttons.size() >= 4, "The eyes are in a grid under it")
-	for index: int in mini(4, face_buttons.size()):
-		_expect((face_buttons[index] as Button).get_node((face_buttons[index] as Button).focus_neighbor_top) == edit,
-				"Every button of the first row goes up to the field")
+	_expect(face_buttons.size() >= 8, "The eyes are in a grid next to it")
+	var columns: int = (face_buttons[0].get_parent() as GridContainer).columns if not face_buttons.is_empty() else 1
+	for index: int in range(0, face_buttons.size(), columns):
+		_expect((face_buttons[index] as Button).get_node((face_buttons[index] as Button).focus_neighbor_left) == edit,
+				"Every row's first card goes left to the field")
 	panel.queue_free()
 	unlocks.call(&"reset_profile")
 	await process_frame

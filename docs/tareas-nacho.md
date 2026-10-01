@@ -1601,6 +1601,31 @@ Versión barata de la voz (N-212) que funciona sin micrófono y en solitario.
 - [x] Test `test_quick_callouts.gd`: la frase llega a todos, el enfriamiento corta el spam y el conductor
   la ve en su HUD. Textos en el CSV de traducciones. `ad3e2d9` (`test_ping` ajustado a las ocho frases).
 
+### N-506 · Pantalla "Hacé tu personaje" profesional, caras rubber hose y vestuario del depósito — A · `Opus 5.5 · xhigh` · Aviso: sí (`cosmetics_panel.gd`, `depot_panel.gd`, `scripts/ui/customize/` de Slatex, `docs/avisos/2026-10-01-n506-pantalla-personaje.md`) · **[x] rama `nacho/N-506-character-customization`**
+
+Pedido del usuario (2026-10-01): la pantalla de personaje se veía fea, las caras poco profesionales y
+tenían que ser más caricatura (referencia: hojas de caras rubber hose de los años 30), y cambiarlas también en
+el vestuario del depósito.
+
+- [x] **N-506.1** Caras rubber hose originales (`art/rounded_character/build_faces.py`): ojos altos y juntos,
+  pupila en cuña, cejas cortas, paréntesis en las comisuras, bocas oscuras con lengua; ojos un 15 % y
+  bocas un 22 % más grandes. 8 ojos (+ "Decididos") y 8 bocas (+ "Pícara"); los IDs viejos siguen valiendo.
+- [x] **N-506.2** Cejas en capa propia (`brows_*.svg`, `CharacterFace` "Brows"): el parpadeo ya no las baja
+  (antes "Preocupados" las aplastaba contra los ojos). `EYE_LINE_V` y los recortes de tarjeta medidos sobre
+  los SVG.
+- [x] **N-506.3** Pantalla nueva (`cosmetics_panel.gd`): personaje 3D real en estudio con luz propia
+  (`customize/character_preview.gd`), cara en primer plano o cuerpo entero según la pestaña, giro con mouse
+  o stick derecho, rebote al cambiar; apodo y "Sorprendeme" debajo; pestañas con subrayado y tarjetas con
+  dibujo (`customize/customize_swatch.gd`): ocho caras armadas (`FaceCatalog.PRESETS`), los 8 ojos y las 8
+  bocas a la vista sin scroll, remeras altas como en un perchero y furgonetas; tilde en la elegida y candado
+  con "se gana con…" en las bloqueadas. Se actualiza en el lugar, sin reconstruirse.
+- [x] **N-506.4** El vestuario del depósito abre la misma pantalla en modo depósito (Rostro + Uniforme): lo
+  elegido llega en vivo al jugador y al resto por la réplica que ya había. Con "Color de equipo" la vista
+  previa muestra el color del slot propio.
+- [x] **N-506.5** Tests: `test_customization_screen` (nuevo); `test_character_faces`, `test_nickname` y
+  `test_gamepad_focus` adaptados. Capturas en `tests/render_character_faces.gd` (pestañas, modo depósito y
+  las 16 caras sobre cabezas reales a 5 y 9 m).
+
 ### N-213 · Carga que sale del camión y rescate afuera — A · `Opus 5.5 · xhigh` · Aviso: sí (`DeliveryPackage`, `RunManager`) · **[x] `2ee38e1`**
 
 Generaliza "la gallina se escapa afuera" a cualquier caja despedida del camión.

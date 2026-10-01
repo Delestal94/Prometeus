@@ -45,7 +45,9 @@ func open(station_id: StringName, depot_node: Node) -> void:
 func close() -> void:
 	if not visible:
 		return
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
+	# The lockers' screen plays its own when it closes (CosmeticsPanel.close).
+	if station != &"wardrobe":
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	closed.emit()
@@ -81,7 +83,9 @@ func _ready() -> void:
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
 	if unlocks != null:
 		unlocks.connect(&"progress_changed", func() -> void:
-			if visible and station in [&"wardrobe", &"garage", &"records"]:
+			# Not the lockers: their screen follows the profile itself, without
+			# rebuilding (it would reset the character's turn on every pick).
+			if visible and station in [&"garage", &"records"]:
 				_rebuild())
 
 
@@ -104,6 +108,9 @@ func _rebuild() -> void:
 	_vote_timer_label = null
 	_orders_scroll = null
 	_orders_list = null
+	if station == &"wardrobe":
+		_build_wardrobe()
+		return
 	var dim := ColorRect.new()
 	dim.color = Color(UiTheme.BACKDROP, 0.78)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -114,8 +121,6 @@ func _rebuild() -> void:
 	_body = UiTheme.panel(center, Vector2(620, 0), 28)
 	_body.add_theme_constant_override("separation", 12)
 	match station:
-		&"wardrobe":
-			_build_wardrobe()
 		&"garage":
 			_build_garage()
 		&"shop":
@@ -245,9 +250,18 @@ func _add_boss_note() -> void:
 		line.custom_minimum_size.x = 560
 
 
+## The lockers open the whole appearance screen (N-506): face, uniform and
+## nickname, with the character on show, in its depot mode (no truck: that is
+## the workshop's). Every pick reaches your player, and through it the crew,
+## while the screen is open. Closing it closes this panel.
 func _build_wardrobe() -> void:
-	_header(tr("UI_DEPOT_LOCKERS"), tr("UI_DEPOT_UNIFORM_TAG"), UiTheme.MINT, tr("UI_DEPOT_UNIFORM_HINT"))
-	_choices(UnlockManager.cosmetic_choices(), UnlockManager.selected_cosmetic, UnlockManager.select_cosmetic, true)
+	var wardrobe := CosmeticsPanel.new()
+	wardrobe.name = "Wardrobe"
+	wardrobe.mode = CosmeticsPanel.Mode.DEPOT
+	wardrobe.page = CosmeticsPanel.Page.FACE
+	add_child(wardrobe)
+	wardrobe.closed.connect(close)
+	wardrobe.focus_first()
 
 
 func _build_garage() -> void:
