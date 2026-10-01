@@ -39,6 +39,17 @@
 > acá (`networking/`, `progression/`, `ui/menus/`) no llegaron a crearse porque su
 > contenido todavía no existe (ver sección 2 de más abajo).
 
+> **Estado real (2026-10-01)**: desde N-225 los scripts grandes se partieron por responsabilidad
+> sin cambiar su interfaz pública: `route.gd` (`route_path`, `route_ground`, `route_houses`,
+> `route_props`, `route_signage`, `route_sky`...), `package.gd` y `package_feedback.gd` (`package_*.gd`
+> en `scripts/gameplay/package/`), `reference_truck.gd` (`reference_truck_cab/_cargo/_props/_panel_lines.gd`
+> en `scripts/presentation/`) y `synth_audio` (`synth_audio_*.gd` en `modules/synth_audio/`). Los HUD
+> viven en `scripts/ui/hud/` (`hud.gd` + `hud_*.gd`; ya no existe `prototype_hud.gd`). Nuevos desde
+> 2026-09-24: depósito (`scripts/gameplay/depot/`), tramo de barro (`segments/mud_segment.gd`, `mud_crane.gd`),
+> animales de carga (`cargo_animals.gd`...), caja manual (`vehicle_gearbox.gd`), `late_join_seating.gd`,
+> `seat_tending.gd`, `color_slots.gd`/`player_color_slot.gd`, `nickname.gd`, `face_catalog.gd`. Ubicación
+> exacta: `docs/convenciones-godot.md` §3.
+
 ```
 res://
   core/                 # Sistemas centrales, independientes del contenido específico

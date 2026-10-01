@@ -151,7 +151,7 @@ dinero del equipo se reserva para decisiones: depósito, pausa y resultados; no 
 ruta mientras se maneja.
 
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.
-  **[x] Implementado** (`prototype_hud.gd`: `speed_label`, `distance_label`).
+  **[x] Implementado** (`scripts/ui/hud/hud.gd`, antes `prototype_hud.gd`: `speed_label`, `distance_label`).
 - **Pasajero**: su propio paquete en pantalla con el medidor de integridad/agitación
   visible (OK ✓, En riesgo ! con pulso, Arruinada ✕; paleta normal u Okabe-Ito), y el prompt de
   la acción correspondiente a su trampa. **[x] Implementado** (`cargo_hint_label`,
@@ -165,7 +165,7 @@ ruta mientras se maneja.
 
 ### Pantalla de resultados
 - Desglose de puntaje por paquete (según fórmula de `parametros-diseno.md`).
-  **[x] Implementado** (overlay de resultados de `prototype_hud.gd`).
+  **[x] Implementado** (overlay de resultados de `scripts/ui/hud/hud_results.gd`).
 - Récord local. **[x] Implementado** (no estaba en el plan original, se sumó después:
   "¡NUEVO RÉCORD!" o el récord actual, ver `RunManager` y README sección Tests /
   `test_leaderboard`).

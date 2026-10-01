@@ -42,9 +42,13 @@ const MUD_WET := Color("4a2d1a")
 const PUDDLE := Color("3a281d")
 const RUT := Color("2a1a11")
 const MOUND := Color("6a4426")
-const SPOT_PUSH: Script = preload("res://scripts/gameplay/route/mud_spot.gd")
-const CRANE: Script = preload("res://scripts/gameplay/route/mud_crane.gd")
-const RUN_LOG: Script = preload("res://scripts/gameplay/route/mud_run_log.gd")
+const SPOT_PUSH := preload("res://scripts/gameplay/route/mud_spot.gd")
+const CRANE := preload("res://scripts/gameplay/route/mud_crane.gd")
+const RUN_LOG := preload("res://scripts/gameplay/route/mud_run_log.gd")
+## CrewProgression and RunManager stay by name, never preloaded: route.gd pulls
+## this script in, and under --script a test compiles it before the autoloads
+## exist; run_manager.gd and crew_progression.gd name EventBus and the others,
+## fail to compile there and leave both autoloads as script-less Nodes.
 
 ## Where the pit is, metres from the entry (z = -this).
 @export var pit_start: float = 18.0
@@ -114,9 +118,9 @@ var crane_left: float = 0.0
 var haul_method: StringName = &""
 
 var _grip_on: bool = false
-var _push_spot: Interactable
-var _strap_spot: Interactable
-var _crane: Node3D
+var _push_spot: SPOT_PUSH
+var _strap_spot: SPOT_PUSH
+var _crane: CRANE
 var _cable: MeshInstance3D
 var _strap_anchor: Node3D
 var _crane_time: float = 0.0
@@ -146,7 +150,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	super()
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null and bus.has_signal(&"run_ended"):
 		bus.connect(&"run_ended", _on_run_ended)
 		bus.connect(&"run_started", _on_run_started)
@@ -258,11 +262,11 @@ static func _puddle_material() -> StandardMaterial3D:
 	return _puddle
 
 
-func _make_spot(kind: StringName) -> Interactable:
-	var spot: Interactable = SPOT_PUSH.new()
+func _make_spot(kind: StringName) -> SPOT_PUSH:
+	var spot: SPOT_PUSH = SPOT_PUSH.new()
 	spot.name = "PushSpot" if kind == &"push" else "StrapSpot"
-	spot.set(&"kind", kind)
-	spot.set(&"mud", self)
+	spot.kind = kind
+	spot.mud = self
 	add_child(spot)
 	spot.position = Vector3(0.0, -40.0, 0.0)
 	return spot
@@ -405,8 +409,8 @@ func _physics_process(delta: float) -> void:
 	# the crew or the crane are getting it out.
 	if state != State.IDLE:
 		truck.set_meta(&"keep_awake", true)
-		if bool(truck.get(&"freeze")) and not _run_over:
-			truck.set(&"freeze", false)
+		if truck.freeze and not _run_over:
+			truck.freeze = false
 	_set_grip(truck, inside)
 	if inside:
 		var flat := Vector3(truck.linear_velocity.x, 0.0, truck.linear_velocity.z)
@@ -545,7 +549,7 @@ func _begin_haul(method: StringName) -> void:
 ## The crane's fine: CRANE_FINE, or whatever the team has if that is less --
 ## the balance never goes negative. Saved with the campaign like any spend.
 func _charge_fine() -> int:
-	var crew: Node = get_node_or_null(^"/root/CrewProgression")
+	var crew: Node = _crew()
 	if crew == null:
 		return 0
 	var fine: int = mini(crane_fine, int(crew.get(&"team_money")))
@@ -661,7 +665,7 @@ func _show_status() -> void:
 		text = tr("WORLD_MUD_STATUS") % [roundi(progress * 100.0), ceili(crane_left)]
 	elif state == State.CRANE_COMING:
 		text = tr("WORLD_MUD_STATUS_CRANE")
-	_push_spot.call(&"show_status", text)
+	_push_spot.show_status(text)
 
 
 # --- Visuals (every peer) ------------------------------------------------------------
@@ -808,7 +812,7 @@ func _place_cable() -> void:
 		return
 	var from: Vector3
 	if haul_method == &"crane" and _crane != null:
-		from = _crane.call(&"hook_position")
+		from = _crane.hook_position()
 	elif _strap_anchor != null:
 		from = _strap_anchor.global_position + Vector3.UP * 1.3
 	else:
@@ -834,7 +838,7 @@ func _truck() -> Node3D:
 
 
 func _notice(text: String) -> void:
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.call(&"relay", &"depot_notice", [text])
 
@@ -843,24 +847,41 @@ func _story(line: String) -> void:
 	var owner_node: Node = get_parent()
 	if owner_node == null:
 		return
-	var log_node: Node = owner_node.get_node_or_null(^"MudRunLog")
+	var log_node: RUN_LOG = owner_node.get_node_or_null(^"MudRunLog") as RUN_LOG
 	if log_node == null:
 		log_node = RUN_LOG.new()
 		log_node.name = "MudRunLog"
 		owner_node.add_child(log_node)
-	log_node.call(&"add_story", line)
+	log_node.add_story(line)
 
 
 func _is_endless() -> bool:
-	var manager: Node = get_node_or_null(^"/root/RunManager")
+	var manager: Node = _run_manager()
 	return manager != null and manager.get(&"current_mode") == &"endless"
 
 
 func _is_online() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return network != null and bool(network.call(&"is_online"))
+	var network: NetSession = _network()
+	return network != null and network.is_online()
 
 
 func _is_host() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return network == null or bool(network.call(&"is_host"))
+	var network: NetSession = _network()
+	return network == null or network.is_host()
+
+
+## EventBus by name, not typed: tests replace it with a plain Node.
+func _bus() -> Node:
+	return get_node_or_null(^"/root/EventBus")
+
+
+func _network() -> NetSession:
+	return get_node_or_null(^"/root/NetworkManager") as NetSession
+
+
+func _crew() -> Node:
+	return get_node_or_null(^"/root/CrewProgression")
+
+
+func _run_manager() -> Node:
+	return get_node_or_null(^"/root/RunManager")

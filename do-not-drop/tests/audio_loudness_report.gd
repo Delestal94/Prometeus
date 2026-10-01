@@ -7,7 +7,7 @@ extends SceneTree
 
 const SynthAudio = preload("res://modules/synth_audio/synth_audio.gd")
 const SynthAudioTraps = preload("res://modules/synth_audio/synth_audio_traps.gd")
-const PackageFeedback = preload("res://scripts/gameplay/package/package_feedback.gd")
+const PackageFeedbackScript = preload("res://scripts/gameplay/package/package_feedback.gd")
 const UiSounds = preload("res://scripts/ui/ui_sounds.gd")
 const TOLERANCE_DB: float = 2.0
 const TRAP_TARGET_DBFS: float = -18.0
@@ -30,7 +30,7 @@ var _failures: int = 0
 
 func _initialize() -> void:
 	print("REPORT | group | sound | stream RMS | stream peak | level | result RMS | target | off")
-	var trap_levels: Dictionary = (PackageFeedback as Script).get_script_constant_map()[&"TRAP_SOUND_LEVELS_DB"]
+	var trap_levels: Dictionary = (PackageFeedbackScript as Script).get_script_constant_map()[&"TRAP_SOUND_LEVELS_DB"]
 	for entry: Array in TRAP_SOUNDS:
 		var cue: StringName = entry[0]
 		var source: Script = entry[2] if entry.size() > 2 else SynthAudio

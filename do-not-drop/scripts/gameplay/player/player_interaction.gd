@@ -1,6 +1,15 @@
 extends Node
 ## Local interaction targeting and prompts. The Player keeps its established
 ## method surface (and every RPC); those small wrappers delegate here.
+##
+## Typed (N-224.4): the interactables (Interactable, DogDistractPoint for the aim
+## bonus), the network (NetSession, the class NetworkManager extends) and the
+## contents view (preloaded, it has no class name). By name stay the autoloads
+## that scripts and tests swap or that would compile before the autoloads exist
+## (EventBus, CrewProgression) and the highlight, which things of unrelated types
+## answer.
+
+const PACKAGE_CONTENTS_VIEW := preload("res://scripts/gameplay/package/package_contents_view.gd")
 
 var player: Player
 
@@ -20,13 +29,15 @@ func is_interact_event(event: InputEvent) -> bool:
 func is_drop_event(event: InputEvent) -> bool:
 	if event.is_action_pressed(&"package_drop"):
 		return true
-	return event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_Q or event.physical_keycode == KEY_Q)
+	return event is InputEventKey and event.pressed and not event.echo \
+			and (event.keycode == KEY_Q or event.physical_keycode == KEY_Q)
 
 
 func is_open_event(event: InputEvent) -> bool:
 	if event.is_action_pressed(&"package_open"):
 		return true
-	return event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_T or event.physical_keycode == KEY_T)
+	return event is InputEventKey and event.pressed and not event.echo \
+			and (event.keycode == KEY_T or event.physical_keycode == KEY_T)
 
 
 func lid_target(aimed: Node = null) -> DeliveryPackage:
@@ -54,14 +65,14 @@ func publish_lid_hint(package: DeliveryPackage) -> void:
 	if package != null:
 		if not package.contents_spilled:
 			action = tr("HUD_PROMPT_CLOSE_BOX") if package.is_open else tr("HUD_PROMPT_OPEN_BOX")
-		var view: Node = package.get_node_or_null(^"PackageContentsView")
+		var view: PACKAGE_CONTENTS_VIEW = package.get_node_or_null(^"PackageContentsView") as PACKAGE_CONTENTS_VIEW
 		if view != null:
-			inside = str(view.call(&"describe"))
+			inside = view.describe()
 	var key: String = action + "|" + inside
 	if key == player._last_lid_hint:
 		return
 	player._last_lid_hint = key
-	var bus: Node = player.get_node_or_null("/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.emit_signal(&"package_lid_hint_changed", action, inside)
 
@@ -77,7 +88,7 @@ func publish_prompt(value: String) -> void:
 	if value == player._last_prompt:
 		return
 	player._last_prompt = value
-	var bus: Node = player.get_node_or_null("/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.emit_signal(&"interaction_prompt_changed", value)
 
@@ -85,30 +96,35 @@ func publish_prompt(value: String) -> void:
 func update_highlight(target: Node) -> void:
 	if target == player._highlighted:
 		return
-	if is_instance_valid(player._highlighted) and player._highlighted.has_method(&"highlight"):
-		player._highlighted.call(&"highlight", false)
+	_set_highlight(player._highlighted, false)
 	player._highlighted = target
-	if is_instance_valid(player._highlighted) and player._highlighted.has_method(&"highlight"):
-		player._highlighted.call(&"highlight", true)
+	_set_highlight(player._highlighted, true)
+
+
+## Whatever is aimed at answers `highlight` (the box's pickup point, its feedback,
+## the depot stations) with no common base class, so it is asked by name.
+func _set_highlight(target: Node, on: bool) -> void:
+	if is_instance_valid(target) and target.has_method(&"highlight"):
+		target.call(&"highlight", on)
 
 
 func send_ping(label: String) -> void:
-	var network: Node = player.get_node_or_null("/root/NetworkManager")
-	var bus: Node = player.get_node_or_null("/root/EventBus")
+	var network: NetSession = _network()
+	var bus: Node = _bus()
 	if bus == null:
 		return
-	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
+	if network != null and network.is_online() and not network.is_host():
 		bus.rpc_id(1, &"request_ping", player.reach_origin(), label)
 	else:
 		bus.call(&"request_ping", player.reach_origin(), label)
 
 
 func use_card() -> void:
-	var network: Node = player.get_node_or_null(^"/root/NetworkManager")
+	var network: NetSession = _network()
 	var crew: Node = player.get_node_or_null(^"/root/CrewProgression")
 	if crew == null:
 		return
-	if network != null and bool(network.call(&"is_online")) and not bool(network.call(&"is_host")):
+	if network != null and network.is_online() and not network.is_host():
 		crew.rpc_id(1, &"request_use_card")
 	else:
 		crew.call(&"request_use_card")
@@ -120,37 +136,35 @@ func try_interact() -> void:
 		if teammate != null:
 			player.carried_package.rpc_id(1, &"request_transfer", teammate.get_path())
 			return
-	var target: Node = closest_interactable()
+	var target: Interactable = closest_interactable()
 	if target == null:
 		return
-	var network: Node = player.get_node_or_null("/root/NetworkManager")
-	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
+	var network: NetSession = _network()
+	if network != null and network.is_online() and not network.is_host():
 		target.rpc_id(1, &"request_interact")
 	else:
-		target.call(&"interact", player)
+		target.interact(player)
 
 
-func closest_interactable() -> Node:
-	var best: Node = null
+func closest_interactable() -> Interactable:
+	var best: Interactable = null
 	var best_score: float = -INF
 	var eye: Vector3 = player._camera.global_position
 	var look: Vector3 = -player._camera.global_basis.z
-	for area: Node in player._nearby:
-		if not is_instance_valid(area):
+	for node: Node in player._nearby:
+		var area: Interactable = node as Interactable if is_instance_valid(node) else null
+		if area == null or not area.can_interact(player):
 			continue
-		if not bool(area.call(&"can_interact", player)):
+		if not within_reach(area):
 			continue
-		if not within_reach(area as Node3D):
-			continue
-		var to_target: Vector3 = (area as Node3D).global_position - eye
+		var to_target: Vector3 = area.global_position - eye
 		var distance: float = to_target.length()
 		var alignment: float = look.dot(to_target / distance) if distance > 0.001 else 1.0
 		var score: float = alignment - distance * player.AIM_DISTANCE_WEIGHT
 		# Something urgent can ask to be picked over its neighbours (the dog at the
 		# cargo, N-109: the rear-door control right beside it would win otherwise).
-		var bonus: Variant = area.get(&"aim_bonus")
-		if bonus != null:
-			score += float(bonus)
+		if area is DogDistractPoint:
+			score += (area as DogDistractPoint).aim_bonus
 		if score > best_score:
 			best_score = score
 			best = area
@@ -166,9 +180,17 @@ func within_reach(target: Node3D) -> bool:
 
 
 func on_probe_entered(area: Area3D) -> void:
-	if area.has_method(&"interact"):
+	if area is Interactable:
 		player._nearby.append(area)
 
 
 func on_probe_exited(area: Area3D) -> void:
 	player._nearby.erase(area)
+
+
+func _bus() -> Node:
+	return player.get_node_or_null("/root/EventBus")
+
+
+func _network() -> NetSession:
+	return player.get_node_or_null(^"/root/NetworkManager") as NetSession

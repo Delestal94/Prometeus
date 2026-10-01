@@ -24,7 +24,7 @@ sin el error y hay un test que lo fija: instanciar un nivel con paquetes, libera
   `constructor-jugador`; tests `package`, `salvage`.~~
 - [x] ~~**S-908.2** Test de huérfanos (conteo inicial = final tras liberar el nivel con paquetes, también liberando en el
   mismo frame). Con `escritor-tests`; tests `package`.~~
-  **[x] Hecho (2026-10-01, rama `nacho/S-908-salvage-orphans`)** — causa confirmada: `package.gd:207-209` crea el
+  **[x] Hecho (2026-10-01, rama `nacho/S-908-salvage-orphans`, #164)** — causa confirmada: `package.gd:207-209` crea el
   `PackageSalvage` y su `_ready()` (`package_salvage.gd:35` y `:62`) cuelga cinta y gallina con `call_deferred`; si el
   paquete se libera antes, quedan 5 nodos sin padre por paquete. El diferido pasa a ser un método propio
   (`_attach_meshes`, muere con el salvage) y `_notification(NOTIFICATION_PREDELETE)` libera los que sigan sin padre. `_build_point` no tenía el problema (agrega sincrónico). Test
@@ -47,7 +47,7 @@ agrega una llamada interna; subirla solo si cambia alguna firma o el orden de lo
 - [x] ~~**N-238.2** `test_rpc_guard.gd` quita los comentarios `#…` antes de buscar el token y suma el caso
   negativo (token solo en un comentario). Con `escritor-tests`, y después `auditor-red` sobre todo el diff;
   tests `rpc_guard`.~~
-  **[x] Hecho (2026-10-01, rama `nacho/N-238-gear-shift-guard`)** — `request_gear_shift` gasta el presupuesto
+  **[x] Hecho (2026-10-01, rama `nacho/N-238-gear-shift-guard`, #159)** — `request_gear_shift` gasta el presupuesto
   del que lo manda (`RpcGuard.allow_request`, después de autoridad y dirección; el host conduciendo es llamada
   local y no gasta) y el comentario dice "Added with N-114" en vez de la versión 12. `test_rpc_guard` corta
   cada línea en su `#` (salvo dentro de un string) antes de buscar tokens, también en los helpers expandidos,
@@ -84,7 +84,7 @@ usuario). Dominio libre (`tools/`, `tests/`).
   tests `run_tests` (o chequeo con un test de mentira) y `ejecutor-tests`.~~
 - [x] ~~**N-240.2** Con el nombre que dé la anotación (primero `mud_segment`), identificar y arreglar el
   intermitente. Con `cazador-bugs`; tests `mud_segment` repetido.~~
-  **[x] Hecho (2026-10-01, rama `nacho/N-240-ci-fail-annotation`)** — con `GITHUB_ACTIONS` definido,
+  **[x] Hecho (2026-10-01, rama `nacho/N-240-ci-fail-annotation`, #160)** — con `GITHUB_ACTIONS` definido,
   `run-tests.sh` emite `::error title=FAIL <test> (<motivo>)::<primera línea ERROR>` por falla (un cuelgue
   lleva su timeout como motivo; `%` escapado); pase/falla igual. `tools/test-run-tests.sh` lo comprueba con un
   Godot de mentira (falla, cuelgue, todo verde y sin `GITHUB_ACTIONS`) y CI lo corre en el job de lint. El
@@ -116,30 +116,30 @@ Origen: decisión del usuario 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-
 código ya dice 8 (`network_manager.gd:27`). Los prompts de los agentes, `definicion-proyecto.md`,
 `requerimientos-tecnicos.md` y la descripción del repo ya se corrigieron el 2026-09-30.
 - [x] ~~**N-228.1** Barrer el resto de `docs/` (y `docs/marketing/`) buscando "5 jugadores", "cinco", "4 pasajeros", "hasta 4" y equivalentes en inglés, y corregirlos a 8 (1 conduce, hasta 7 cargan). Con `documentador`.~~
-  **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-players`)** — a 8 jugadores / 7 pasajeros: `README.md`, `requerimientos-tecnicos.md` (encabezado y asientos), `narrativa.md`, `parametros-diseno.md`, `direccion-visual.md` (escala y oclusión), `marketing/trailer.md` ("1-8 jugadores") y `analisis-competencia-backseat-rv.md`. Se dejaron como están las mediciones con un número fijo de jugadores (`investigacion-red.md` "4 jugadores", `bench_depot` "5 jugadores" del README, "Solo, 2 y 5 jugadores" de `jugabilidad-paquetes-rescate.md`), los datos de competidores y los registros fechados (auditorías, avisos, decisiones).
+  **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-players`, )** — a 8 jugadores / 7 pasajeros: `README.md`, `requerimientos-tecnicos.md` (encabezado y asientos), `narrativa.md`, `parametros-diseno.md`, `direccion-visual.md` (escala y oclusión), `marketing/trailer.md` ("1-8 jugadores") y `analisis-competencia-backseat-rv.md`. Se dejaron como están las mediciones con un número fijo de jugadores (`investigacion-red.md` "4 jugadores", `bench_depot` "5 jugadores" del README, "Solo, 2 y 5 jugadores" de `jugabilidad-paquetes-rescate.md`), los datos de competidores y los registros fechados (auditorías, avisos, decisiones).
   Para N-228.2: `vehicle.tscn` tiene 10 puntos de ojo de asiento (3 por lado, centro y 3 en el portaequipaje) pero solo 4 `*PackageMount` (Left/RightSeat1-2): con 7 pasajeros, tres se quedan sin soporte de caja enfrente.
 - [x] ~~**N-228.2** Verificar que el juego aguanta 8: asientos o lugares de carga para 7 pasajeros, filas del tablero de pedidos, colores del roster (se cruza con N-226) y el presupuesto de ancho de banda. Lo que falte, subtareas acá. Con `auditor-red` y `constructor-camion`.~~
   **[x] Hecho (2026-09-30, rama `nacho/N-228-eight-seats`, `ff635c0`)** — auditoría de código con `auditor-red`. Aguantan 8: transportes (ENet `max_players-1`, lobby de Steam, el 9º recibe "full"), slots de color del host (8), tablero de pedidos (`ROWS = 7`, `test_depot`), puntos de aparición del depósito (8), estantes (16 lugares), votación, espectador y asientos (conductor + 10 de pasajero; `seat_point.gd` no limita). Arreglado acá: `UnlockManager.MAX_DELIVERY_HOUSES` pasa de 4 a 7; con 4, ocho jugadores con perfil nuevo tenían 7 casas y solo 4 pedidos (3 casas "missed" seguras). Ahora un equipo completo libera Peso Creciente y Líquido para tener 8 cajas; `test_locked_traps` lo exige con `MAX_PLAYERS`. Lo que falta, abajo.
 - [x] **N-228.3** Paleta de 8 colores: hoy hay 5 (`player.gd:43-45`, `hud_results.gd:8-10`, `crew_progression.gd:15-18`, 5 tonos de voz en `synth_audio_scenes.gd:318`, `strings_ui.csv:661-665`), así que los slots 5-7 repiten color. 8 colores distinguibles (también con daltonismo), claves y nombres traducidos y 8 tonos; va junto con N-226.2 (leer `color_slot()` en vez del `peer_id`). Test: `PLAYER_COLORS.size() >= NetworkManager.MAX_PLAYERS` y colores distintos. Con `constructor-progresion` y `constructor-ui`. Aviso: sí (`player.gd`, `scripts/ui/` de Slatex).
-  **[x] Hecho (2026-10-01, rama `nacho/N-228-eight-colors`)** — `Player.PLAYER_COLORS` con 8 (blanco hielo, cobalto, turquesa en 5-7; los 5 primeros intactos), claves/nombres `UI_COLOR_*` y 8 tonos de voz; `hud_results.gd` lee la misma paleta. Test: `test_player_colors` (tamaño, distancia Lab también con deuteranopía/protanopía, nombres es/en, tonos). Aviso: `avisos/2026-10-01-n228-paleta-ocho.md`.
+  **[x] Hecho (2026-10-01, rama `nacho/N-228-eight-colors`, #148)** — `Player.PLAYER_COLORS` con 8 (blanco hielo, cobalto, turquesa en 5-7; los 5 primeros intactos), claves/nombres `UI_COLOR_*` y 8 tonos de voz; `hud_results.gd` lee la misma paleta. Test: `test_player_colors` (tamaño, distancia Lab también con deuteranopía/protanopía, nombres es/en, tonos). Aviso: `avisos/2026-10-01-n228-paleta-ocho.md`.
 - [x] ~~**N-228.4** Séptimo anclaje de caja: `vehicle.tscn` tiene 6 `PackageMount` (4 de asiento + 2 de estante) para hasta 7 cajas, y `LeftSeat3`, `CenterSeat` y `RightSeat3` no cuidan ninguna (sin `required_mount_path` ni `tend_mount_paths`). Sumar un anclaje (frente a un asiento 3 o en el piso central) y un test que cuente `package_mount >= MAX_PLAYERS - 1`. Con `constructor-camion`, después `auditor-red`.~~
-  **[x] Hecho (2026-10-01, rama `nacho/N-228-seventh-mount`)** — anclaje `RightSeat3PackageMount` en el piso contra la pared derecha (0.5, 0.58, 1.82); `RightSeat3` es su dueño y `LeftSeat3`/`CenterSeat` lo cuidan: los 10 asientos de pasajero cuidan algún anclaje. `PROTOCOL_VERSION` 17. Con `auditor-red`: arreglado que el último en sentarse frente a un anclaje compartido le sacaba el cuidado al anterior (`seat_tending.gd`: el que cuida se queda la caja salvo que llegue el dueño; al levantarse o caerse, la hereda otro sentado frente al anclaje), el conductor fuera del reparto, la caja en brazos al sentarse, `tend_package` tardío estando de pie y dos regazos reservando el mismo anclaje. El evento parásito elige cajas en anclajes con asiento dueño. Tests `test_multi_cargo`, `test_reference_truck`, `test_seat_tending` (nuevo), `test_route_events`. Aviso `docs/avisos/2026-10-01-n228-septimo-anclaje.md`.
+  **[x] Hecho (2026-10-01, rama `nacho/N-228-seventh-mount`, #139)** — anclaje `RightSeat3PackageMount` en el piso contra la pared derecha (0.5, 0.58, 1.82); `RightSeat3` es su dueño y `LeftSeat3`/`CenterSeat` lo cuidan: los 10 asientos de pasajero cuidan algún anclaje. `PROTOCOL_VERSION` 17. Con `auditor-red`: arreglado que el último en sentarse frente a un anclaje compartido le sacaba el cuidado al anterior (`seat_tending.gd`: el que cuida se queda la caja salvo que llegue el dueño; al levantarse o caerse, la hereda otro sentado frente al anclaje), el conductor fuera del reparto, la caja en brazos al sentarse, `tend_package` tardío estando de pie y dos regazos reservando el mismo anclaje. El evento parásito elige cajas en anclajes con asiento dueño. Tests `test_multi_cargo`, `test_reference_truck`, `test_seat_tending` (nuevo), `test_route_events`. Aviso `docs/avisos/2026-10-01-n228-septimo-anclaje.md`.
 - [x] ~~**N-228.8** Restos de bajo riesgo de N-228.4 (`auditor-red`): (a) si alguien parado saca la caja del anclaje de un tender sentado y la guarda en otro, el sentado la sigue cuidando desde un asiento que no la mira: en `store()` del mount, si el tender no `looks_at_mount`, `set_tender(0)` + `SeatTending.hand_over` (no se limpia en `take_by` porque rompe devolverla al mismo anclaje); (b) `_reserved` (`seat_point.gd`) decide "sentado" con `seat_node_path` replicado: usar el `occupant` de los asientos en el host; (c) una caja en el regazo de un vecino deja a `RightSeat3` sin poder sentarse con las manos vacías. Origen: construcción 2026-10-01. Con `constructor-jugador`, después `auditor-red`.~~
-  **[x] Hecho (2026-10-01, rama `nacho/N-228-tending-leftovers`)** — `SeatTending.on_stored()` (lo llama `store()` del anclaje, host): si el que cuida no está sentado frente al anclaje nuevo, deja de cuidarla (se le avisa con `tend_package` vacío) y la hereda otro sentado frente a ese anclaje; `_reserved` decide "sentado" con el `occupant` de los asientos en el host (en el cliente, el `seat_node_path` replicado); un asiento dueño con su anclaje vacío pero reservado por el regazo de un vecino deja sentarse con las manos vacías (sin sacarle la caja al vecino) y rechaza a quien trae otra caja. Con `auditor-red`: `lap_mount_path` replicado en el paquete (el cliente también ve la reserva del regazo), `request_lap_toggle` decide "sentado" con `SeatTending.is_seated`, y una caja guardada sin cuidador la toma quien esté sentado frente al anclaje. `PROTOCOL_VERSION` 18. Test `test_seat_tending`. Aviso `docs/avisos/2026-10-01-n228-cuidado-restos.md`.
+  **[x] Hecho (2026-10-01, rama `nacho/N-228-tending-leftovers`, #142)** — `SeatTending.on_stored()` (lo llama `store()` del anclaje, host): si el que cuida no está sentado frente al anclaje nuevo, deja de cuidarla (se le avisa con `tend_package` vacío) y la hereda otro sentado frente a ese anclaje; `_reserved` decide "sentado" con el `occupant` de los asientos en el host (en el cliente, el `seat_node_path` replicado); un asiento dueño con su anclaje vacío pero reservado por el regazo de un vecino deja sentarse con las manos vacías (sin sacarle la caja al vecino) y rechaza a quien trae otra caja. Con `auditor-red`: `lap_mount_path` replicado en el paquete (el cliente también ve la reserva del regazo), `request_lap_toggle` decide "sentado" con `SeatTending.is_seated`, y una caja guardada sin cuidador la toma quien esté sentado frente al anclaje. `PROTOCOL_VERSION` 18. Test `test_seat_tending`. Aviso `docs/avisos/2026-10-01-n228-cuidado-restos.md`.
 - [x] ~~**N-228.5** Ancho de banda con 8: `test_net_bandwidth_budget.gd:11,22` calcula con `CREW = 4`; con 8 y 14 cajas da ~124 KB/s por cliente (97 % del tope de 128, sin encabezados) y ~7 Mbit/s de subida del host. Pasar `CREW` a `MAX_PLAYERS`, contar encabezados y la subida total del host; para bajar: cajas quietas o en estante sin envío, cajas a 30 Hz (`investigacion-red.md:27`), ruedas reconstruidas en el cliente en vez de 4 `Transform3D`. Con `constructor-red`, después `auditor-red`. Aviso: sí si toca `network_manager.gd`.~~
-  **[x] Hecho (2026-10-01, rama `nacho/N-228-bandwidth-eight`)** — `test_net_bandwidth_budget` usa `MAX_PLAYERS` y cuenta el encuadre de `SceneMultiplayer` (3 B por paquete, 8 por sincronizador, MTU 1350, 6 B de relay por pose de otro cliente) y 80 B de encabezado por datagrama; también la subida del host y la de cada cliente. Antes, con 8 y 14 cajas: 165 KB/s por cliente y 9,5 Mbit/s de subida del host. Arreglado (las dos hacían falta): el camión manda `net_wheel_heights` en vez de 4 `Transform3D` de rueda y el cliente reconstruye las ruedas (`vehicle.gd _pose_remote_wheels`, `PROTOCOL_VERSION` 19), y las cajas quietas mandan a 2 Hz (`NetRestThrottle`, módulo `net_pose_smoother`, nodo en `package.tscn`). Después: 117,7 KB/s estable (8 cajas moviéndose), 154 con todas moviéndose, 6,8 Mbit/s de subida (tope 8). Números en `investigacion-red.md` §4.2. Lo que más pesa ahora son las poses relayadas de los jugadores (N-217). Aviso: `docs/avisos/2026-10-01-n228-ancho-de-banda-ocho.md`.
+  **[x] Hecho (2026-10-01, rama `nacho/N-228-bandwidth-eight`, #144)** — `test_net_bandwidth_budget` usa `MAX_PLAYERS` y cuenta el encuadre de `SceneMultiplayer` (3 B por paquete, 8 por sincronizador, MTU 1350, 6 B de relay por pose de otro cliente) y 80 B de encabezado por datagrama; también la subida del host y la de cada cliente. Antes, con 8 y 14 cajas: 165 KB/s por cliente y 9,5 Mbit/s de subida del host. Arreglado (las dos hacían falta): el camión manda `net_wheel_heights` en vez de 4 `Transform3D` de rueda y el cliente reconstruye las ruedas (`vehicle.gd _pose_remote_wheels`, `PROTOCOL_VERSION` 19), y las cajas quietas mandan a 2 Hz (`NetRestThrottle`, módulo `net_pose_smoother`, nodo en `package.tscn`). Después: 117,7 KB/s estable (8 cajas moviéndose), 154 con todas moviéndose, 6,8 Mbit/s de subida (tope 8). Números en `investigacion-red.md` §4.2. Lo que más pesa ahora son las poses relayadas de los jugadores (N-217). Aviso: `docs/avisos/2026-10-01-n228-ancho-de-banda-ocho.md`.
 - [x] ~~**N-228.6** UI con 8: captura del panel de pedidos del depósito con 7 pedidos (`depot_panel.gd:96`, 620 px sin scroll; si no entra, `ScrollContainer` o filas compactas) y un caso de 8 entradas en `test_crew_panel.gd` (hoy prueba 4). Con `constructor-ui` y `revisor-visual`. Aviso: sí (`scripts/ui/` de Slatex).~~
-  **[x] Hecho (2026-10-01, rama `nacho/N-228-ui-eight`)** — con 7 pedidos y las notas del Jefe la hoja medía ~799 px en 720: las filas van en un `ScrollContainer` "OrdersScroll" (`_fit_orders_scroll()`, alto hasta lo que deja la pantalla; Volver siempre visible); si no entra, el scroll es una parada de foco con su anillo (`draw_focus_border`) y arriba/abajo lo desplazan. Queda sin probar con mando real: el stick analógico puede desplazar varios pasos por empujón (igual que la navegación de foco del resto de los menús). El panel de tripulación con 8 entradas ya entraba (511 px). Tests `test_depot_panel.gd` (nuevo, 1280x720) y `test_crew_panel.gd` (8 entradas). Aviso `docs/avisos/2026-10-01-depot-orders-scroll-8-jugadores.md`.
+  **[x] Hecho (2026-10-01, rama `nacho/N-228-ui-eight`, #143)** — con 7 pedidos y las notas del Jefe la hoja medía ~799 px en 720: las filas van en un `ScrollContainer` "OrdersScroll" (`_fit_orders_scroll()`, alto hasta lo que deja la pantalla; Volver siempre visible); si no entra, el scroll es una parada de foco con su anillo (`draw_focus_border`) y arriba/abajo lo desplazan. Queda sin probar con mando real: el stick analógico puede desplazar varios pasos por empujón (igual que la navegación de foco del resto de los menús). El panel de tripulación con 8 entradas ya entraba (511 px). Tests `test_depot_panel.gd` (nuevo, 1280x720) y `test_crew_panel.gd` (8 entradas). Aviso `docs/avisos/2026-10-01-depot-orders-scroll-8-jugadores.md`.
 - [x] ~~**N-228.7** Quien entra con la partida en curso aparece en el depósito aunque el camión esté en la ruta (`level_common.gd:181`): aparecer en un asiento libre del camión. También: al reconectarse, el slot de color puede cambiar (`network_manager.gd:162-164`), y la campaña se guarda por color. Con `constructor-jugador` y `constructor-red`.~~
-  **[x] Hecho (2026-10-01, rama `nacho/N-228-late-join-seat`)** — `LateJoinSeating` (`scripts/gameplay/late_join_seating.gd`, host): con la partida en curso el que entra aparece en el `ExitPoint` de un asiento de pasajero libre y se sienta con `seat.interact()` tras el `spawn()` (prefiere el asiento con más cajas sin cuidador y nunca uno que le saque la caja a quien la cuida, `would_displace()`); sin asiento, de pie en el pasillo de la caja de carga. Antes del arranque y con resultados, en el depósito como siempre. Con `auditor-red`: sin reintentos (el orden spawn → `board_seat` lo garantiza Godot; un reintento por plazo desincronizaba al cliente lento). El punto de aparición viaja en espacio del camión (`vehicle_position` en los datos de spawn, `player_spawner.gd`), así el cliente que entra lo resuelve contra su propia copia del camión aunque su primera pose llegue después; el host le escribe `seat_node_path` a la copia en el acto. El slot de color al reconectarse ya lo conservaba N-221 (`test_network_rejoin`). `PROTOCOL_VERSION` 21 (el 20 es del PR #145). Test `test_late_join_seating` (nuevo). Aviso `docs/avisos/2026-10-01-n228-entrada-tardia-en-camion.md`. Falta probar el orden en red real con dos procesos (etapa de `net_pair`).
+  **[x] Hecho (2026-10-01, rama `nacho/N-228-late-join-seat`, #149)** — `LateJoinSeating` (`scripts/gameplay/late_join_seating.gd`, host): con la partida en curso el que entra aparece en el `ExitPoint` de un asiento de pasajero libre y se sienta con `seat.interact()` tras el `spawn()` (prefiere el asiento con más cajas sin cuidador y nunca uno que le saque la caja a quien la cuida, `would_displace()`); sin asiento, de pie en el pasillo de la caja de carga. Antes del arranque y con resultados, en el depósito como siempre. Con `auditor-red`: sin reintentos (el orden spawn → `board_seat` lo garantiza Godot; un reintento por plazo desincronizaba al cliente lento). El punto de aparición viaja en espacio del camión (`vehicle_position` en los datos de spawn, `player_spawner.gd`), así el cliente que entra lo resuelve contra su propia copia del camión aunque su primera pose llegue después; el host le escribe `seat_node_path` a la copia en el acto. El slot de color al reconectarse ya lo conservaba N-221 (`test_network_rejoin`). `PROTOCOL_VERSION` 21 (el 20 es del PR #145). Test `test_late_join_seating` (nuevo). Aviso `docs/avisos/2026-10-01-n228-entrada-tardia-en-camion.md`. Falta probar el orden en red real con dos procesos (etapa de `net_pair`).
 
 ### ~~N-229 · El jugador torpe vuelve a tener casi-pérdidas~~ **[x] Hecho (2026-09-30)** — C · `Opus 5.5 · medium` · Aviso: no
 Origen: decisión 2026-09-30 (`docs/decisiones/2026-09-30-preguntas-auditoria.md`, pregunta 9).
 `tests/sim_data/balance_report.md:103` sigue en "REQUIERE AJUSTE": el objetivo de al menos una casi-pérdida
 por entrega para el perfil torpe se mantiene.
-- [x] ~~**N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-229-clumsy-near-misses`: Frágil `impact_damage_heavy` 35 → 36 (dos baches sin amortiguar y uno amortiguado dejan 24,4 en vez de 26,5); casi-pérdidas del torpe en Frágil 0,8 → 37,6 %, por viaje 0,73 → 1,10, reporte **CUMPLE**; pérdidas de todos los perfiles sin cambio. Ruidoso: una caja rescatada tras tocar el máximo de agitación cuenta como casi-pérdida en el arnés (decisión delegada, pregunta 9); torpe 0 → 51,2 %, por viaje → **1,61**. Test `test_sim_near_miss.gd`.
+- [x] ~~**N-229.1** Ajustar las trampas que no llegan al objetivo con `sim_trap_balance` hasta que el informe diga OK, sin romper los demás perfiles. Con `pulidor-jugabilidad`.~~ **[x] Hecho (2026-09-30)** — rama `nacho/N-229-clumsy-near-misses` (#117): Frágil `impact_damage_heavy` 35 → 36 (dos baches sin amortiguar y uno amortiguado dejan 24,4 en vez de 26,5); casi-pérdidas del torpe en Frágil 0,8 → 37,6 %, por viaje 0,73 → 1,10, reporte **CUMPLE**; pérdidas de todos los perfiles sin cambio. Ruidoso: una caja rescatada tras tocar el máximo de agitación cuenta como casi-pérdida en el arnés (decisión delegada, pregunta 9); torpe 0 → 51,2 %, por viaje → **1,61**. Test `test_sim_near_miss.gd`.
 
-### N-237 · El tutorial de cuidado se dibuja encima de Opciones — B · `Opus 5.5 · low` · Aviso: sí (`player_cargo_care.gd`, archivos de Slatex) · **[x] rama `nacho/fix-tutorial-over-options`**
+### N-237 · El tutorial de cuidado se dibuja encima de Opciones — B · `Opus 5.5 · low` · Aviso: sí (`player_cargo_care.gd`, archivos de Slatex) · **[x] rama `nacho/fix-tutorial-over-options` (#128)**
 Origen: captura con GPU 2026-09-30. Con Opciones abierta, la tarjeta "Cómo cuidar la carga" (`care_practice.gd`) se
 veía entera, sin oscurecer, a la derecha del panel. Causa: la tarjeta de cuidado y la de práctica viven en un
 `CanvasLayer` propio (`player_cargo_care.gd`) con `layer = 7`, y el HUD (Opciones, pausa, resultados, depósito,
@@ -298,6 +298,55 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 
 ---
 
+### N-908 · Quien entra tarde no sabe qué cajas llevan los demás — B · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package_handling.gd`, `seat_tending.gd`, dominio de Slatex)
+Origen: mantenimiento 2026-10-01. `carried_package` solo viaja en el broadcast `player.rpc(&"pick_up")` al levantar
+(`scripts/gameplay/package/package_handling.gd:61`, `scripts/gameplay/player/player.gd:302-305`). En el cliente que entra
+tarde `SeatTending._holder_of()` (`scripts/gameplay/interaction/seat_tending.gd:188-196`) da null, así que
+`lap_reserves()` (`seat_tending.gd:128`) da false y `CargoSeatPoint._can_board` / `_free_bay` muestran asientos y
+bahías libres que el host tiene reservados; además ve a los compañeros sin pose de carga. Hecho cuando un test en
+`test_late_join_seating.gd` (o el de seat tending) cubre la vista cliente con una caja en el regazo (`lap_reserves`
+true) y el reenvío del host a un peer nuevo.
+- [ ] **N-908.1** En el host, `Player._on_peer_level_ready`, tras `sync.update_visibility(peer_id)`: `if
+  is_instance_valid(carried_package): rpc_id(peer_id, &"pick_up", carried_package.get_path())`. Respaldo:
+  `_holder_of` en el cliente busca al jugador con autoridad = `package.tender_peer_id` cuando `is_held`. Con
+  `constructor-red` y después `auditor-red`; tests `late_join`, `seat_tending`.
+- [ ] **N-908.2** Test de vista cliente con caja en regazo y de reenvío de `pick_up` a un peer nuevo. Con
+  `escritor-tests`; tests `late_join`.
+
+### N-909 · El plan de animales de carga es siempre el mismo — B · `Opus 5.5 · medium` · Aviso: no
+Origen: mantenimiento 2026-10-01. `cargo_animals.gd:493` (y 250, 379, 417; `_world_seed()` en 522) usa
+`NetworkManager.world_seed` tal cual: jugando solo vale 0, así que sale el mismo animal, en el mismo tramo, con la
+misma caja en todas las partidas; en sala se repite cada partida (no mezcla `world_completed_runs`). Solo host, no
+toca `PROTOCOL_VERSION`. Hecho cuando `test_cargo_animals.gd` prueba que con seed 0 dos corridas dan planes
+distintos y que con seed fijo `completed_runs` 0 vs 1 dan planes distintos.
+- [ ] **N-909.1** En `_on_run_started` del host: `_run_seed = hash([world_seed, world_completed_runs])` si
+  `world_seed != 0`, si no `randi()` de un RNG con `randomize()`; usarlo en `_next_leg`, `_pick`, `_snatch` y
+  `_kick_box`. Con `constructor-mundo`; tests `cargo_animals`.
+- [ ] **N-909.2** Tests de las dos propiedades del "Hecho cuando". Con `escritor-tests`; tests `cargo_animals`.
+
+### N-910 · `cargo_animal_ended` y `cargo_animal_alert` en el mismo frame confunden al cliente — C · `Opus 5.5 · medium` · Aviso: no
+Origen: mantenimiento 2026-10-01. `cargo_animal_view.gd:102-110` (y 303, 308), solo cliente. El cooldown es 3.5 s y la
+salida del perro 3.0 s (margen 0.5 s); si llegan juntos `ended` y el `alert` siguiente: (a) mismo animal/caja: entra
+a la rama "repetición para recién llegado" con estado LEAVE y no muestra el ataque nuevo; (b) otro perro: `_clear()`
+hace `queue_free` del "Dog" viejo y en el mismo frame se agrega otro "Dog", Godot lo renombra, la ruta de
+`DistractPoint` no coincide con la del host y el cliente no puede tirarle el palo. Hecho cuando un test simula
+`ended` + `alert` en el mismo frame en vista cliente y ve el ataque nuevo con la ruta del `DistractPoint` correcta.
+- [ ] **N-910.1** Exigir `state != State.LEAVE` en la rama de repetición y hacer `remove_child` (o free) del perro
+  viejo antes del `add_child`. Con `constructor-mundo`; tests `cargo_animals`.
+- [ ] **N-910.2** Test del mismo frame (casos a y b). Con `escritor-tests`; tests `cargo_animals`.
+
+### N-911 · ⏸ decide el usuario: origen y licencia de `mus_ingame_loop.ogg` — C · `Opus 5.5 · low` · Aviso: no
+Origen: mantenimiento 2026-10-01. `do-not-drop/assets/audio/music/mus_ingame_loop.ogg` (la música de cada partida) no
+está en `assets/audio/music/LICENCIA.md`; entró con la importación inicial del repo (cc12c0e, 2026-09-25), no sale de
+`tools/audio/compose_music.py`; quizá derive de `art/audio/music1.m4a` (sin referencias ni procedencia). Ya lo marcó
+la auditoría 2026-09-29 §5.10 sin tarea. Bloquea la declaración de IA y las licencias de Steam. Opciones: (a) el
+usuario documenta origen y licencia en `LICENCIA.md` y en `art/ai-registro.md` si es IA; (b) reemplazarla por una pista
+compuesta con `compose_music.py` (sesión de arte en la PC) y borrar `music1.m4a`. Recomendación: (b) si el origen no
+es 100 % propio. Hecho cuando la pista figura en `LICENCIA.md` con origen y licencia (o fue reemplazada y
+`music1.m4a` borrado).
+- [ ] **N-911.1** Decidir (a) o (b). Lo decide el usuario.
+- [ ] **N-911.2** Ejecutar la opción elegida. Con `disenador-audio` (b) o `documentador` (a).
+
 ## Orden de ataque (hitos)
 
 | Hito | Objetivo | Tareas |
@@ -306,10 +355,10 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M2 — Ritmo y guía del jugador** | Una entrega de 2-5 minutos donde siempre se sabe adónde ir. | N-103, N-104, N-105, N-501, N-502, N-503 |
 | **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
-| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
+| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸ |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-320 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -667,6 +716,23 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     276 → 261, `.get(&` 286 → 267. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-seat-tending-tipado.md`. Siguientes: `trailer_shot.gd` (24), `mud_segment.gd` (22),
     `player.gd` (21), `package_feedback.gd` (21).
+  - [x] `mud_segment.gd` (2026-10-01, rama `nacho/N-224-mud-segment-typed`): el punto de empuje, la grúa y el
+    registro de historias por `preload` (`mud_spot.gd`, `mud_crane.gd`, `mud_run_log.gd`), la red como `NetSession` y el
+    `freeze` del camión como propiedad de `VehicleBody3D`. Quedan por nombre los jugadores del grupo `player` (los
+    tests meten `FakePlayer`), `carries` del camión (`vehicle.gd` sin `class_name`), el relay de EventBus y
+    `CrewProgression`/`RunManager`: precargar sus scripts desde acá rompe los dos autoloads bajo `--script` (`route.gd`
+    arrastra este archivo y esos scripts nombran `EventBus` antes de que existan; lo vio `test_mud_segment`). En el
+    archivo: `.call` 10 → 5, `.get(&` 8 → 7, `/root/` 6 → 4, `.set(&` 3 → 0. `test_dynamic_dispatch_budget.gd` suma el
+    archivo. Sin aviso (`route/` y `tests/`). Siguientes: `player.gd` (21), `package_feedback.gd` (21),
+    `player_interaction.gd` (18), `level_base.gd` (18).
+  - [x] `player_interaction.gd` (2026-10-01, rama `nacho/N-224-player-interaction-typed`): lo apuntado como
+    `Interactable` (`can_interact`/`interact` directos; la sonda junta solo `Interactable`), el `aim_bonus` del perro
+    de `DogDistractPoint`, la red como `NetSession` (`_network()`) y la vista del contenido por preload
+    (`PACKAGE_CONTENTS_VIEW`). Quedan por nombre `highlight` (sin base común), `request_ping` de EventBus y
+    `request_use_card` de CrewProgression (ciclo). En el archivo: 21 → 6 usos (`.call` 13 → 3, `.get(&` 1 → 0,
+    `/root/` 7 → 3). `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso
+    `docs/avisos/2026-10-01-n224-player-interaction-tipado.md`. Siguientes: `player.gd` (21), `level_base.gd` (19),
+    `run_manager.gd` (18), `cargo_animals.gd` (16).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -706,6 +772,22 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   `docs/avisos/2026-10-01-n225-package-partido.md`.
 - [ ] **N-225.5** Quedan `player.gd` (1000), `run_manager.gd` (1000) y `package_feedback.gd` (1000) en el borde.
   Origen: construcción 2026-10-01.
+  **[x] `package_feedback.gd` (2026-10-01, rama `nacho/N-225-package-feedback-split`)** — 1000 → 444 líneas.
+  Helpers estáticos que reciben el nodo (ahora `class_name PackageFeedback`): lo propio de cada trampa, las correas
+  y el disfraz de evento a `package_trap_visuals.gd` (`PackageTrapVisuals`), cartón, contorno, material por
+  paquete, abolladuras y etiqueta a `package_box_dressing.gd` (`PackageBoxDressing`), y rebote, temblor,
+  deformación, etiqueta que se desprende y confeti a `package_box_motion.gd` (`PackageBoxMotion`). Todas las `var`,
+  las constantes que leen otros archivos, `_ready`/`_process` (mismo orden) y los métodos usados afuera quedan en el
+  nodo. `test_package_feedback_split.gd` fija ≤ 700 líneas, la API usada afuera, los nodos de cada trampa y el orden
+  de hijos de `Box`. La baseline del lint bajó 1. Aviso `docs/avisos/2026-10-01-n225-package-feedback-partido.md`.
+  **[x] `run_manager.gd` (2026-10-01, rama `nacho/N-225-run-manager-split`)** — 1000 → 669 líneas. Helpers estáticos
+  sin `class_name`, cargados solo por `run_manager.gd` y sin nombrar autoloads: puntaje (`run_scoring.gd`), filas e
+  historias del resultado (`run_results.gd`), plazos (`run_deadlines.gd`), registros de entrega y fotos
+  (`run_deliveries.gd`), tabla local (`run_leaderboard.gd`) y la parte de escena del ingreso tardío
+  (`run_session.gd`). Variables, señales, los cinco `@rpc` (mismo orden) y la API usada afuera quedan en el nodo;
+  las constantes movidas se reexportan con el mismo nombre. `test_run_manager_split.gd` fija ≤ 700 líneas, la tabla
+  de RPC, la API y tres corridas doradas por `finish_run` (entrega, fallida, infinito) calculadas con el original.
+  Aviso `docs/avisos/2026-10-01-n225-run-manager-partido.md`. Queda `player.gd`.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**
 Las 5 capturas de `art/marketing/capturas/` no muestran una persona ni un paquete. Rehacerlas con

@@ -27,7 +27,7 @@ const CHAR_EM: float = 0.7
 const FACE_FILL: float = 0.9
 ## Proud of the face like the shipping label (closer and the depth buffer makes
 ## box and ink flicker), and past the damage dents on this face (they stick out
-## 10 mm, package_feedback.gd _add_dent_pieces) so they never cover the ink.
+## 10 mm, PackageBoxDressing.add_dent_pieces) so they never cover the ink.
 const OFFSET_OUT: float = 0.012
 ## The box GLBs print the logo (upper 60-80 %) and a big stamp (15-60 %) on this
 ## face, so the marker grows up from the free strip below the stamp, this far

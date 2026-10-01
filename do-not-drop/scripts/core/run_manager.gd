@@ -5,72 +5,54 @@ extends Node
 ## the delivery, it just scores less. With four passengers, one person's
 ## mistake ending everyone's run would be miserable -- the run only collapses
 ## if every last package is gone.
+##
+## Split by responsibility (N-225.5). The state, the signals and every RPC stay here; the rest are static
+## helpers over that state: RunScoring (door points, the van's cargo tally, the endless score), RunResults
+## (rows, route event, stories), RunDeadlines (plan, next one, tally), RunDeliveries (door records and
+## photos), RunLeaderboard (the local board) and RunSession (the level side of a late join). The constants
+## they define are re-exported below and the methods other files and tests call stay here as wrappers.
 
-const POINTS_INTACT: int = 100
-const POINTS_AT_RISK: int = 50
-const CHAOS_MULTIPLIER: float = 1.2
-const MAX_LEADERBOARD_ENTRIES: int = 10
-const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 const DEADLINE_CUT = preload("res://scripts/core/deadline_cut.gd")
+const RUN_SCORING = preload("res://scripts/core/run_scoring.gd")
+const RUN_RESULTS = preload("res://scripts/core/run_results.gd")
+const RUN_DEADLINES = preload("res://scripts/core/run_deadlines.gd")
+const RUN_DELIVERIES = preload("res://scripts/core/run_deliveries.gd")
+const RUN_LEADERBOARD = preload("res://scripts/core/run_leaderboard.gd")
+const RUN_SESSION = preload("res://scripts/core/run_session.gd")
 
-## docs/tareas-nacho.md #44/#52: endless never "delivers" (no zone to reach), so
-## it can't use the cargo formula above -- distance is what keeps going up.
-## Placeholder weight: tune by editing this constant, not the logic.
-const DISTANCE_POINTS_PER_METER: float = 1.0
+# What each delivery outcome pays and costs (run_scoring.gd).
+const POINTS_INTACT: int = RUN_SCORING.POINTS_INTACT
+const POINTS_AT_RISK: int = RUN_SCORING.POINTS_AT_RISK
+const CHAOS_MULTIPLIER: float = RUN_SCORING.CHAOS_MULTIPLIER
+const DISTANCE_POINTS_PER_METER: float = RUN_SCORING.DISTANCE_POINTS_PER_METER
+const POINTS_DELIVERED_INTACT: int = RUN_SCORING.POINTS_DELIVERED_INTACT
+const POINTS_DELIVERED_AT_RISK: int = RUN_SCORING.POINTS_DELIVERED_AT_RISK
+const POINTS_DELIVERED_RUINED: int = RUN_SCORING.POINTS_DELIVERED_RUINED
+const PENALTY_MISSED_HOUSE: int = RUN_SCORING.PENALTY_MISSED_HOUSE
+const POINTS_PHOTO_BONUS: int = RUN_SCORING.POINTS_PHOTO_BONUS
+const COMPLAINT_PENALTY: int = RUN_SCORING.COMPLAINT_PENALTY
+const POINTS_DELIVERED_REPAIRED: int = RUN_SCORING.POINTS_DELIVERED_REPAIRED
+const POINTS_DELIVERED_UNCONVINCING: int = RUN_SCORING.POINTS_DELIVERED_UNCONVINCING
+const POINTS_DELIVERED_SUBSTITUTED: int = RUN_SCORING.POINTS_DELIVERED_SUBSTITUTED
+const CARE_POINTS: Dictionary = RUN_SCORING.CARE_POINTS
+# Deadlines (run_deadlines.gd), the results' rescue names (run_results.gd), the board (run_leaderboard.gd) and
+# the phone's range (run_deliveries.gd).
+const MAX_DEADLINES: int = RUN_DEADLINES.MAX_DEADLINES
+const DEADLINE_SPEED: float = RUN_DEADLINES.DEADLINE_SPEED
+const DEADLINE_SLACK: float = RUN_DEADLINES.DEADLINE_SLACK
+const DEADLINE_STOP_SECONDS: float = RUN_DEADLINES.DEADLINE_STOP_SECONDS
+const POINTS_DEADLINE_MET: int = RUN_DEADLINES.POINTS_DEADLINE_MET
+const PENALTY_DEADLINE_MISSED: int = RUN_DEADLINES.PENALTY_DEADLINE_MISSED
+const DEADLINE_REASONS: Array[String] = RUN_DEADLINES.DEADLINE_REASONS
+const RESCUE_NAMES: Dictionary = RUN_RESULTS.RESCUE_NAMES
+const MAX_LEADERBOARD_ENTRIES: int = RUN_LEADERBOARD.MAX_LEADERBOARD_ENTRIES
+const PHOTO_REACH: float = RUN_DELIVERIES.PHOTO_REACH
 
-## Handing a box to a resident at their door is worth more than the same
-## box merely surviving the trip in the van -- delivering is the goal, not
-## hoarding. Showing up with a wrecked box still beats never showing up:
-## the resident gets something, and the run gets a story.
-const POINTS_DELIVERED_INTACT: int = 150
-const POINTS_DELIVERED_AT_RISK: int = 75
-const POINTS_DELIVERED_RUINED: int = 20
-## Driving past a house nobody ever rang. Deliberately worse than delivering
-## a ruined box: the resident waited for nothing.
-const PENALTY_MISSED_HOUSE: int = 60
-## The delivery photo (see the phone camera): a small reward on its own, and
-## the only thing that settles a complaint afterwards.
-const POINTS_PHOTO_BONUS: int = 25
-## What an unanswered complaint costs. A wrecked or dented box always draws one
-## (no dice, N-227.2): only the delivery photo settles it.
-const COMPLAINT_PENALTY: int = 40
-
-## Cargo rescue (docs/jugabilidad-paquetes-rescate.md): a repair that holds
-## up at the door pays less than intact but well over a dented box; a
-## doubtful fix and a deliberate substitute pay little. None of these roll
-## dice for a complaint -- the same state always gets the same answer.
-const POINTS_DELIVERED_REPAIRED: int = 110
-const POINTS_DELIVERED_UNCONVINCING: int = 35
-const POINTS_DELIVERED_SUBSTITUTED: int = 10
-const CARE_POINTS: Dictionary = {
-	&"repaired": POINTS_DELIVERED_REPAIRED,
-	&"unconvincing": POINTS_DELIVERED_UNCONVINCING,
-	&"substituted": POINTS_DELIVERED_SUBSTITUTED,
-}
 ## The shared repair kit a crew starts every run with: enough for one simple
 ## rescue per box, not an endless heal.
 const CARE_SUPPLIES_START: Dictionary = {
 	&"tape": 3, &"repair": 2, &"filler": 2, &"rag": 2, &"strap": 2, &"substitute": 1,
 }
-## What the results' rescue stories call each content (strings_ui.csv keys).
-const RESCUE_NAMES: Dictionary = {&"fragile": "HUD_RESCUE_VASE", &"balance": "HUD_RESCUE_CAKE",
-	&"noisy": "HUD_RESCUE_HEN", &"growing_weight": "HUD_RESCUE_HEAVY", &"liquid": "HUD_RESCUE_LIQUID",
-	&"explosive": "HUD_RESCUE_EXPLOSIVE", &"hostile": "HUD_RESCUE_CREATURE"}
-## Delivery deadlines (docs/jugabilidad-paquetes-rescate.md, "Presión para
-## conducir rápido"): up to three houses get one, computed from where they
-## really are on the generated road. DEADLINE_SPEED sits a little over the
-## bench's average cruise (route.gd ROUTE_CRUISE_SPEED, 12.8 m/s), so taking
-## every bonus means pushing on several legs; DEADLINE_SLACK leaves room for
-## one short rescue stop. Missing one costs a little pay, never the cargo.
-const MAX_DEADLINES: int = 3
-const DEADLINE_SPEED: float = 13.5
-const DEADLINE_SLACK: float = 15.0
-const DEADLINE_STOP_SECONDS: float = 25.0
-const POINTS_DEADLINE_MET: int = 40
-const PENALTY_DEADLINE_MISSED: int = 15
-## strings_ui.csv keys: they travel as keys and each peer's HUD translates them.
-const DEADLINE_REASONS: Array[String] = ["HUD_DEADLINE_REASON_LEAVING", "HUD_DEADLINE_REASON_BIRTHDAY",
-	"HUD_DEADLINE_REASON_SHOP"]
 const MODE_DELIVERY: StringName = &"delivery"
 const MODE_ENDLESS: StringName = &"endless"
 
@@ -192,17 +174,9 @@ func reset_run() -> void:
 	deadlines = []
 
 
-## Deadlines for houses at these distances along the road (metres, in house
-## order). Each one budgets the driving at DEADLINE_SPEED plus the stops at
-## the houses before it -- a fixed timer would be impossible on a long route
-## and free on a short one.
+## Deadlines for houses at these distances along the road (metres, in house order); see RunDeadlines.plan().
 static func plan_deadlines(distances: Array) -> Array:
-	var planned: Array = []
-	for index: int in mini(distances.size(), MAX_DEADLINES):
-		var seconds: float = DEADLINE_SLACK + float(distances[index]) / DEADLINE_SPEED + index * DEADLINE_STOP_SECONDS
-		var reason: String = DEADLINE_REASONS[index % DEADLINE_REASONS.size()]
-		planned.append({"house": index, "seconds": roundf(seconds), "reason": reason})
-	return planned
+	return RUN_DEADLINES.plan(distances)
 
 
 ## Host, as the run starts or when a deadline is shortened: posts the full list to every peer.
@@ -223,43 +197,21 @@ func shorten_next_deadline(after_house: int) -> int:
 
 ## The closest deadline still open, for the HUD: {} when there is none.
 func next_deadline() -> Dictionary:
-	var best: Dictionary = {}
-	for deadline: Dictionary in deadlines:
-		if _delivered_at(int(deadline["house"])) or elapsed_seconds > float(deadline["seconds"]):
-			continue
-		if best.is_empty() or float(deadline["seconds"]) < float(best["seconds"]):
-			best = deadline
-	return best
+	return RUN_DEADLINES.next_open(deadlines, deliveries, elapsed_seconds)
 
 
 func _delivered_at(house_index: int) -> bool:
-	for entry: Dictionary in deliveries:
-		if int(entry["house"]) == house_index:
-			return handed_over(StringName(entry["outcome"]))
-	return false
+	return RUN_DELIVERIES.delivered_at(deliveries, house_index)
 
 
-## Whether the resident actually got a box: not a house the run drove past
-## (&"missed") nor an order closed empty because its box was left on the road
-## (&"lost", N-213.4). Only those can earn a photo, a met deadline or care pay.
+## Whether the resident actually got a box (not a house driven past, nor an order closed empty): RunDeliveries.
 static func handed_over(outcome: StringName) -> bool:
-	return outcome != &"missed" and outcome != &"lost"
+	return RUN_DELIVERIES.handed_over(outcome)
 
 
 ## Met / missed counts over this run's deadlines, from the delivery record.
 func deadline_tally() -> Dictionary:
-	var met: int = 0
-	var missed: int = 0
-	for deadline: Dictionary in deadlines:
-		var on_time: bool = false
-		for entry: Dictionary in deliveries:
-			if int(entry["house"]) == int(deadline["house"]) and handed_over(StringName(entry["outcome"])):
-				on_time = float(entry.get("at", INF)) <= float(deadline["seconds"])
-		if on_time:
-			met += 1
-		else:
-			missed += 1
-	return {"met": met, "missed": missed}
+	return RUN_DEADLINES.tally(deadlines, deliveries)
 
 
 func care_supply_count(tool: StringName) -> int:
@@ -372,7 +324,7 @@ func _attach_delivery_photo(house_index: int, peer_id: int) -> bool:
 	var accepted: bool = _mark_photo(house_index)
 	if accepted:
 		last_photo_peer_id = peer_id
-		last_photo_package_id = _claim_package_at(house_index)
+		last_photo_package_id = RUN_DELIVERIES.claim_package_at(deliveries, house_index)
 		EventBus.relay(&"delivery_photo_taken", [house_index, true])
 	return accepted
 
@@ -401,50 +353,13 @@ func _request_delivery_photo(house_index: int) -> void:
 	# The photo has to come from someone standing at that door, not from
 	# anywhere on the map.
 	var sender_id: int = multiplayer.get_remote_sender_id()
-	if not _peer_near_house(sender_id, house_index):
+	if not RUN_DELIVERIES.peer_near_house(get_tree(), sender_id, house_index):
 		return
 	_attach_delivery_photo(house_index, sender_id)
 
 
-## The phone's own range plus some slack for the time the request travelled.
-const PHOTO_REACH: float = 20.0
-
-
-func _peer_near_house(peer_id: int, house_index: int) -> bool:
-	var house_position: Variant = null
-	for house: Node in get_tree().get_nodes_in_group(&"delivery_house"):
-		if int(house.get(&"house_index")) == house_index:
-			house_position = house.call(&"porch_position")
-	if house_position == null:
-		return false
-	for player: Node in get_tree().get_nodes_in_group(&"player"):
-		if player.get_multiplayer_authority() == peer_id:
-			return (player.call(&"reach_origin") as Vector3).distance_to(house_position) <= PHOTO_REACH
-	return false
-
-
 func _mark_photo(house_index: int) -> bool:
-	for entry: Dictionary in deliveries:
-		if int(entry["house"]) == house_index:
-			# Nothing was delivered at a house the run drove past: there's
-			# nothing for a photo to prove, and it used to earn the bonus.
-			if bool(entry["photo"]) or not handed_over(StringName(entry["outcome"])):
-				return false
-			entry["photo"] = true
-			return true
-	return false
-
-
-## Only a damaged delivery can have a complaint dismissed. Intact-delivery
-## photos still earn their normal run bonus, but not the photo_saved merit.
-func _claim_package_at(house_index: int) -> StringName:
-	for entry: Dictionary in deliveries:
-		if int(entry["house"]) != house_index:
-			continue
-		var outcome := StringName(entry["outcome"])
-		if outcome in [&"delivered_at_risk", &"delivered_ruined"]:
-			return StringName(entry["package_id"])
-	return &""
+	return RUN_DELIVERIES.mark_photo(deliveries, house_index)
 
 
 func _on_house_delivery_recorded(house_index: int, outcome: StringName, package_id: StringName) -> void:
@@ -473,105 +388,11 @@ func _on_houses_assigned(assignments: Array) -> void:
 	house_assignments = assignments.duplicate(true)
 
 
-## Points and complaints from the doors, kept apart from the van tally in
-## finish_run() so each side stays readable on its own.
+## Points and complaints from the doors, apart from the van tally in finish_run() (RunScoring.resolve_deliveries()).
 func _resolve_deliveries() -> Dictionary:
-	var points: int = 0
-	var delivered_count: int = 0
-	var missed: int = 0
-	var lost: int = 0
-	var photos: int = 0
-	var complaints: Array[Dictionary] = []
-	var rescued: Dictionary = {}
 	var line_seed: int = NetworkManager.world_seed if NetworkManager.world_seed != 0 else randi()  # solo: fresh
-	for entry: Dictionary in deliveries:
-		var outcome: StringName = StringName(entry["outcome"])
-		var has_photo: bool = bool(entry["photo"]) and handed_over(outcome)
-		if has_photo:
-			photos += 1
-			points += POINTS_PHOTO_BONUS
-		var care: StringName = StringName(entry.get("care", ""))
-		if handed_over(outcome) and CARE_POINTS.has(care):
-			# The resident inspected a rescued box: what they saw decides
-			# the pay, not the trap's bar or a roll for a complaint.
-			points += int(CARE_POINTS[care])
-			delivered_count += 1
-			rescued[care] = int(rescued.get(care, 0)) + 1
-			continue
-		match outcome:
-			&"delivered_ok":
-				points += POINTS_DELIVERED_INTACT
-				delivered_count += 1
-			&"delivered_ruined":
-				points += POINTS_DELIVERED_RUINED
-				delivered_count += 1
-				complaints.append(ClientComplaints.make(entry, has_photo, house_assignments, line_seed))
-			&"missed":
-				missed += 1
-				points -= PENALTY_MISSED_HOUSE
-			&"lost":
-				# Its box was left on the road (N-213.4): the resident waited
-				# for nothing, same as a door the run drove past.
-				lost += 1
-				points -= PENALTY_MISSED_HOUSE
-			&"delivered_at_risk":
-				# Handed over dented: worth less, and the resident always brings it
-				# up -- the case the delivery photo exists to answer.
-				points += POINTS_DELIVERED_AT_RISK
-				delivered_count += 1
-				complaints.append(ClientComplaints.make(entry, has_photo, house_assignments, line_seed))
-			_:
-				push_warning("[Run] Unknown delivery outcome: %s" % outcome)
-	complaints.append_array(ClientComplaints.wrong_notes(refused_houses, complaints, house_assignments, line_seed))
-	# Doors the run never reached at all: no house ever resolved them, so
-	# they have no record of their own, but the resident still waited.
-	var unreached: int = maxi(expected_houses - deliveries.size(), 0)
-	missed += unreached
-	points -= unreached * PENALTY_MISSED_HOUSE
-	var tally: Dictionary = deadline_tally()
-	points += int(tally["met"]) * POINTS_DEADLINE_MET - int(tally["missed"]) * PENALTY_DEADLINE_MISSED
-	var unanswered: int = 0
-	for complaint: Dictionary in complaints:
-		if not bool(complaint["dismissed"]):
-			points -= COMPLAINT_PENALTY
-			unanswered += 1
-	# Line by line, for the results screen (tareas de Slatex #89): the same
-	# sums as `points`, so the lines always add up to the score shown.
-	var counts: Dictionary = {}
-	for entry: Dictionary in deliveries:
-		if handed_over(StringName(entry["outcome"])) and CARE_POINTS.has(StringName(entry.get("care", ""))):
-			continue
-		counts[StringName(entry["outcome"])] = int(counts.get(StringName(entry["outcome"]), 0)) + 1
-	var breakdown: Array = []
-	_add_line(breakdown, "HUD_SCORE_PERFECT", int(counts.get(&"delivered_ok", 0)), POINTS_DELIVERED_INTACT)
-	_add_line(breakdown, "HUD_SCORE_DENTED", int(counts.get(&"delivered_at_risk", 0)), POINTS_DELIVERED_AT_RISK)
-	_add_line(breakdown, "HUD_SCORE_RUINED", int(counts.get(&"delivered_ruined", 0)), POINTS_DELIVERED_RUINED)
-	_add_line(breakdown, "HUD_SCORE_REPAIRED", int(rescued.get(&"repaired", 0)), POINTS_DELIVERED_REPAIRED)
-	_add_line(breakdown, "HUD_SCORE_UNCONVINCING", int(rescued.get(&"unconvincing", 0)),
-			POINTS_DELIVERED_UNCONVINCING)
-	_add_line(breakdown, "HUD_SCORE_SUBSTITUTED", int(rescued.get(&"substituted", 0)), POINTS_DELIVERED_SUBSTITUTED)
-	_add_line(breakdown, "HUD_SCORE_DEADLINE_MET", int(tally["met"]), POINTS_DEADLINE_MET)
-	_add_line(breakdown, "HUD_SCORE_DEADLINE_MISSED", int(tally["missed"]), -PENALTY_DEADLINE_MISSED)
-	_add_line(breakdown, "HUD_SCORE_PHOTOS", photos, POINTS_PHOTO_BONUS)
-	_add_line(breakdown, "HUD_SCORE_MISSED", missed, -PENALTY_MISSED_HOUSE)
-	_add_line(breakdown, "HUD_SCORE_LOST", lost, -PENALTY_MISSED_HOUSE)
-	_add_line(breakdown, "HUD_SCORE_COMPLAINTS", unanswered, -COMPLAINT_PENALTY)
-	return {
-		"breakdown": breakdown,
-		"delivery_points": points,
-		"houses_delivered": delivered_count,
-		"houses_missed": missed,
-		"houses_lost": lost,
-		"photos": photos,
-		"complaints": complaints,
-	}
-
-
-## A photo of the doorstep is proof of what was handed over, so a complaint
-## filed against a delivery that has one is dismissed on the spot.
-func _add_line(breakdown: Array, label: String, count: int, each: int) -> void:
-	if count > 0:
-		breakdown.append({"label": label, "count": count, "points": count * each})
+	return RUN_SCORING.resolve_deliveries(deliveries, house_assignments, refused_houses, expected_houses,
+			deadlines, line_seed)
 
 
 func finish_run(delivered: bool, reason: String = "") -> void:
@@ -590,52 +411,27 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	# -- they left the van on purpose, so counting them here too would pay
 	# twice for the same package.
 	var doors: Dictionary = _resolve_deliveries()
-	var cargo_points: int = 0
-	var intact: int = 0
-	var ruined: int = 0
-	var aboard: int = 0
-	for entry: Dictionary in cargo.values():
-		if bool(entry.get("delivered", false)):
-			continue
-		aboard += 1
-		if not delivered:
-			ruined += 1
-			continue
-		match int(entry.get("state", 0)):
-			ITrapBehavior.TrapState.OK:
-				cargo_points += POINTS_INTACT
-				intact += 1
-			ITrapBehavior.TrapState.AT_RISK:
-				cargo_points += POINTS_AT_RISK
-			_:
-				ruined += 1
-	var delivery_points: int = int(doors["delivery_points"])
-	var houses_delivered: int = int(doors["houses_delivered"])
-	var successful: bool = delivered and (cargo_points > 0 or houses_delivered > 0)
-	var multiplier: float = CHAOS_MULTIPLIER if (successful and had_simultaneous_risk) else 1.0
-	var score: int = maxi(roundi((cargo_points + delivery_points) * multiplier), 0)
-	var breakdown: Array = (doors["breakdown"] as Array).duplicate(true)
-	if cargo_points > 0:
-		breakdown.append({"label": "HUD_SCORE_CARGO_BACK", "count": aboard - ruined, "points": cargo_points})
+	var settled: Dictionary = RUN_SCORING.settle(cargo, doors, delivered, had_simultaneous_risk)
+	var score: int = int(settled["score"])
 	var is_new_best: bool = _record_score(score, MODE_DELIVERY)
 	results = {
-		"delivered": successful,
+		"delivered": settled["successful"],
 		"reason": reason,
 		"elapsed_seconds": elapsed_seconds,
-		"cargo_total": aboard,
-		"cargo_intact": intact,
-		"cargo_ruined": ruined,
-		"cargo_points": cargo_points,
-		"chaos_multiplier": multiplier,
-		"delivery_points": delivery_points,
-		"breakdown": breakdown,
-		"houses_delivered": houses_delivered,
-		"houses_missed": int(doors["houses_missed"]),
-		"houses_lost": int(doors["houses_lost"]),
-		"photos": int(doors["photos"]),
+		"cargo_total": settled["aboard"],
+		"cargo_intact": settled["intact"],
+		"cargo_ruined": settled["ruined"],
+		"cargo_points": settled["cargo_points"],
+		"chaos_multiplier": settled["multiplier"],
+		"delivery_points": doors["delivery_points"],
+		"breakdown": settled["breakdown"],
+		"houses_delivered": doors["houses_delivered"],
+		"houses_missed": doors["houses_missed"],
+		"houses_lost": doors["houses_lost"],
+		"photos": doors["photos"],
 		"complaints": doors["complaints"],
 		"stories": rescue_stories() + world_stories(),
-		"deliveries": _result_delivery_rows(),
+		"deliveries": RUN_RESULTS.delivery_rows(expected_houses, house_assignments, cargo_names, deliveries),
 		"route_event": _result_route_event(),
 		"score": score,
 		"is_new_best": is_new_best,
@@ -645,71 +441,13 @@ func finish_run(delivered: bool, reason: String = "") -> void:
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 
-## One stable row per promised stop. A missing record is still useful result
-## data: it means that house never received its order.
-func _result_delivery_rows() -> Array[Dictionary]:
-	var rows: Array[Dictionary] = []
-	for house: int in range(expected_houses):
-		var package_id: StringName = &""
-		# Translation keys: the results travel to clients, and hud_results
-		# translates them on each peer.
-		var trap_name: String = "HUD_RESULT_PACKAGE_FALLBACK"
-		if house < house_assignments.size():
-			var assignment: Array = house_assignments[house]
-			if not assignment.is_empty():
-				package_id = StringName(assignment[0])
-			if assignment.size() > 1:
-				trap_name = String(assignment[1])
-		trap_name = String(cargo_names.get(package_id, trap_name))
-		var outcome: StringName = &"missed"
-		var has_photo: bool = false
-		for delivery: Dictionary in deliveries:
-			if int(delivery["house"]) == house:
-				outcome = StringName(delivery["outcome"])
-				has_photo = bool(delivery["photo"])
-				if package_id.is_empty():
-					package_id = StringName(delivery["package_id"])
-				break
-		rows.append({
-			"house": house,
-			"package_id": package_id,
-			"trap": trap_name,
-			"outcome": outcome,
-			"photo": has_photo,
-		})
-	return rows
-
-
 func _result_route_event() -> Dictionary:
-	if _event_id.is_empty():
-		return {}
-	var definition: Dictionary = RouteEventManager.EVENTS.get(_event_id, {})
-	return {
-		"id": _event_id,
-		"title": String(definition.get("title", String(_event_id))),
-		"success": bool(RouteEventManager.resolved_events.get(_event_id, false)),
-	}
-
-
-## Endless score (N-118): the meters each box survived, averaged over the
-## boxes. All boxes intact scores exactly the distance, as before N-118, so old
-## records stay comparable; every box lost early drags the score down, so
-## the cargo -- the core of the game -- matters here too, not only as the
-## run's lives. No cargo at all scores the plain distance.
-func _endless_score() -> int:
-	if cargo.is_empty():
-		return roundi(current_distance * DISTANCE_POINTS_PER_METER)
-	var survived: float = 0.0
-	for entry: Dictionary in cargo.values():
-		if int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED:
-			survived += minf(float(entry.get("ruined_at_m", current_distance)), current_distance)
-		else:
-			survived += current_distance
-	return roundi(survived / cargo.size() * DISTANCE_POINTS_PER_METER)
+	return RUN_RESULTS.route_event(_event_id, RouteEventManager.EVENTS.get(_event_id, {}),
+			bool(RouteEventManager.resolved_events.get(_event_id, false)))
 
 
 ## Endless (docs/tareas-nacho.md #44/#52): no delivery zone, so the score is
-## distance weighted by the cargo that lived through it (_endless_score()).
+## distance weighted by the cargo that lived through it (RunScoring.endless_score()).
 ## Kept as its own function rather than more branching inside finish_run()
 ## above, which was already written entirely around "did it arrive intact".
 func _finish_endless_run(reason: String) -> void:
@@ -720,7 +458,7 @@ func _finish_endless_run(reason: String) -> void:
 			ruined += 1
 		else:
 			intact += 1
-	var score: int = _endless_score()
+	var score: int = RUN_SCORING.endless_score(cargo, current_distance)
 	var is_new_best: bool = _record_score(score, MODE_ENDLESS)
 	results = {
 		"delivered": false,
@@ -745,20 +483,12 @@ func _finish_endless_run(reason: String) -> void:
 ## that hadn't started, boxes that were long gone and the depot door open.
 ## Each box's name key, even delivered or lost ones; the joiner translates it (N-805).
 func session_names() -> Dictionary:
-	var names: Dictionary = {}
-	for id: StringName in cargo:
-		names[id] = String(cargo_names.get(id, "HUD_RESULT_PACKAGE_FALLBACK"))
-	return names
+	return RUN_SESSION.names(cargo, cargo_names)
 
 
 func send_session_state(peer_id: int) -> void:
 	if not NetworkManager.is_online() or not NetworkManager.is_host() or peer_id == NetworkManager.HOST_ID:
 		return
-	var door_open: bool = true
-	var scene: Node = get_tree().current_scene
-	var depot: Node = scene.get(&"depot") as Node if scene != null else null
-	if depot != null and depot.get(&"door") != null:
-		door_open = bool(depot.get(&"door").get(&"is_open"))
 	_receive_session_state.rpc_id(peer_id, {
 		"running": is_running,
 		"mode": current_mode,
@@ -771,7 +501,7 @@ func send_session_state(peer_id: int) -> void:
 		"cargo": cargo.duplicate(true),
 		"names": session_names(),
 		"consumed": consumed_packages.duplicate(),
-		"door_open": door_open,
+		"door_open": RUN_SESSION.depot_door_open(get_tree().current_scene),
 		"results": results.duplicate(true),
 		"care_supplies": care_supplies.duplicate(),
 		"deadlines": deadlines.duplicate(true),
@@ -780,16 +510,9 @@ func send_session_state(peer_id: int) -> void:
 
 @rpc("authority", "call_remote", "reliable")
 func _receive_session_state(state: Dictionary) -> void:
-	for path: String in state.get("consumed", []):
-		var package: Node = get_node_or_null(NodePath(path))
-		if package != null:
-			package.remove_from_group(&"cargo")
-			package.queue_free()
+	RUN_SESSION.free_consumed(self, state.get("consumed", []))
 	if not bool(state.get("door_open", true)):
-		var scene: Node = get_tree().current_scene
-		var depot: Node = scene.get(&"depot") as Node if scene != null else null
-		if depot != null and depot.get(&"door") != null:
-			depot.get(&"door").call(&"set_open", false, false)
+		RUN_SESSION.close_depot_door(get_tree().current_scene)
 	expected_houses = int(state.get("expected_houses", expected_houses))
 	care_supplies = (state.get("care_supplies", care_supplies) as Dictionary).duplicate()
 	deadlines = (state.get("deadlines", deadlines) as Array).duplicate(true)
@@ -818,7 +541,8 @@ func _receive_session_state(state: Dictionary) -> void:
 	for id: StringName in cargo:
 		var entry: Dictionary = cargo[id]
 		EventBus.cargo_registered.emit(id, String(names.get(id, id)))
-		EventBus.package_integrity_changed.emit(id, float(entry.get("integrity", 100.0)), float(entry.get("maximum", 100.0)))
+		EventBus.package_integrity_changed.emit(
+				id, float(entry.get("integrity", 100.0)), float(entry.get("maximum", 100.0)))
 		EventBus.package_state_changed.emit(id, int(entry.get("state", 0)))
 
 
@@ -850,86 +574,31 @@ func _remote_finish_run(mode: StringName, host_results: Dictionary) -> void:
 	EventBus.run_ended.emit(score, results.duplicate(true))
 
 
-## Local top-N high scores, kept across runs and across app restarts. Every
-## finished run gets recorded (even a 0-point failure) -- sorting keeps the
-## list meaningful on its own, no need to filter before inserting.
-## Entries written before endless existed have no "mode" key -- treated as
-## MODE_DELIVERY so old saves keep working instead of vanishing from the board.
+## Local top-N high scores (RunLeaderboard), kept across runs and across app restarts.
 func best_score(mode: StringName = MODE_DELIVERY) -> int:
-	for entry: Dictionary in leaderboard:
-		if StringName(entry.get("mode", MODE_DELIVERY)) == mode:
-			return int(entry["score"])
-	return 0
+	return RUN_LEADERBOARD.best_score(leaderboard, mode)
 
 
 func _record_score(score: int, mode: StringName = MODE_DELIVERY, crew_size: int = -1) -> bool:
 	var is_new_best: bool = score > best_score(mode)
 	var players: int = maxi(crew_size if crew_size > 0 else NetworkManager.peer_ids.size(), 1)
-	leaderboard.append({
-		"score": score,
-		"date": Time.get_date_string_from_system(),
-		"mode": mode,
-		"crew_size": players,
-	})
-	leaderboard.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["score"]) > int(b["score"]))
-	_trim_leaderboard()
-	_save_leaderboard()
+	leaderboard = RUN_LEADERBOARD.add(leaderboard, score, mode, players)
+	RUN_LEADERBOARD.save_board(save_path, leaderboard)
 	return is_new_best
 
 
-## Caps MAX_LEADERBOARD_ENTRIES per mode, not across the whole array -- a
-## flat global cap would let endless's distance-based scores (a completely
-## different scale from delivery's ~0-360) crowd delivery runs out of the
-## saved board entirely, or vice versa. Relies on the array already being
-## score-sorted (always true here, called right after sort_custom above),
-## so each mode's kept slice is naturally its own top N.
-func _trim_leaderboard() -> void:
-	var kept: Array = []
-	var counts: Dictionary = {}
-	for entry: Dictionary in leaderboard:
-		var mode: StringName = StringName(entry.get("mode", MODE_DELIVERY))
-		var count: int = int(counts.get(mode, 0))
-		if count < MAX_LEADERBOARD_ENTRIES:
-			kept.append(entry)
-			counts[mode] = count + 1
-	leaderboard = kept
-
-
 func _load_leaderboard() -> void:
-	LegacyUserData.migrate()
-	leaderboard = SAFE_JSON.read(save_path, [])
+	leaderboard = RUN_LEADERBOARD.load_board(save_path)
 
 
-func _save_leaderboard() -> void:
-	if not SAFE_JSON.write(save_path, leaderboard):
-		push_warning("No se pudo guardar el leaderboard: " + save_path)
-
-
-## One line per box that needed rescuing, for the results screen to tell
-## the run's story ("Jarrón recompuesto", "Gallina sustituida por un juguete").
+## One line per box that needed rescuing, for the results screen (RunResults.rescue_stories()).
 func rescue_stories() -> Array[String]:
-	var stories: Array[String] = []
-	for entry: Dictionary in cargo.values():
-		var care: Dictionary = entry.get("care", {})
-		var kind := StringName(care.get("kind", ""))
-		var label: String = tr(String(RESCUE_NAMES.get(kind, "HUD_RESCUE_PACKAGE")))
-		if bool(care.get("substituted", false)):
-			stories.append(tr("HUD_STORY_SUBSTITUTED_TOY" if kind == &"noisy" else "HUD_STORY_SUBSTITUTED") % label)
-		elif int(care.get("repairs", 0)) > 0:
-			stories.append(tr("HUD_STORY_REPAIRED") % [label, int(care.get("repairs", 0))])
-		elif int(entry.get("state", 0)) == ITrapBehavior.TrapState.RUINED and not care.is_empty():
-			stories.append(tr("HUD_STORY_LOST") % label)
-	return stories
+	return RUN_RESULTS.rescue_stories(cargo)
 
 
-## Lines other systems add to the run's story, from every node in the
-## "run_stories" group with result_stories() (N-214.4: the van's faults).
+## Lines other systems add to the run's story (RunResults.world_stories()).
 func world_stories() -> Array[String]:
-	var stories: Array[String] = []
-	for source: Node in get_tree().get_nodes_in_group(&"run_stories"):
-		if source.has_method(&"result_stories"):
-			stories.append_array(source.call(&"result_stories"))
-	return stories
+	return RUN_RESULTS.world_stories(get_tree())
 
 
 ## Worst state across the cargo, for readouts that only have room for one.
@@ -961,7 +630,7 @@ func _on_state_changed(id: StringName, state: int) -> void:
 func _on_package_ruined(id: StringName, cause: String) -> void:
 	print("[Package] ", id, " ruined: ", cause)
 	_entry(id)["state"] = ITrapBehavior.TrapState.RUINED
-	# Endless scores the meters each box survived (_endless_score()); the last
+	# Endless scores the meters each box survived (RunScoring.endless_score()); the last
 	# ruin counts, so a box brought back by a substitute and lost again is
 	# scored up to its second loss.
 	_entry(id)["ruined_at_m"] = current_distance
