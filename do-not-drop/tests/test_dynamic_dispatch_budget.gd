@@ -17,7 +17,11 @@ extends SceneTree
 ##   RUN_MANAGER, CREW_PROGRESSION, UNLOCK_MANAGER) are checked against the
 ##   script loaded from its path: each must be the script its autoload runs, or
 ##   `as <handle>` would give null and the depot would stop seeing the
-##   network (host, seed), the crew's money and supplies, and the unlocks.
+##   network (host, seed), the crew's money and supplies, and the unlocks;
+## - package.gd (the box) reaches the network through package_autoloads.gd as
+##   a NetSession (the class NetworkManager extends): the NetworkManager
+##   autoload must be one, or `as NetSession` would give null and the box would
+##   stop seeing the network (its visibility filter, the hand-over).
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -39,6 +43,23 @@ const BUDGETS: Dictionary = {
 	# are the null-safe autoload accessors (NetworkManager, CrewProgression,
 	# UnlockManager, RunManager, EventBus).
 	"res://scripts/gameplay/depot/depot.gd": {"call": 1, "callv": 0, "get": 1, "root": 5},
+	# Nine .call left. Five go to the truck, found through the "vehicle" group:
+	# needs_sweep, carries (x3) and point_velocity. vehicle.gd has no class name,
+	# and tests put plain Node fakes with those methods in the group (`as` a
+	# typed vehicle would drop them). Three go to CrewProgression (the tender's
+	# color, award_milestone) and RouteEventManager (on_package_impact), and
+	# three .get read RunManager (cargo twice, consumed_packages): those
+	# autoloads stay by name because preloading their scripts here makes every
+	# script that names DeliveryPackage compile them before the autoloads exist
+	# (see package_autoloads.gd). The last .call is the EventBus relay, by name
+	# because a test may replace EventBus with a plain Node. The one /root/
+	# lookup is that EventBus node. Typed now: the trap definition and behavior
+	# (TrapDefinition, ITrapBehavior), the player (Player) and the network
+	# (NetSession).
+	"res://scripts/gameplay/package/package.gd": {"call": 9, "callv": 0, "get": 3, "root": 1},
+	# The box's autoload lookups, null-safe: NetworkManager (typed NetSession),
+	# RunManager, CrewProgression and RouteEventManager.
+	"res://scripts/gameplay/package/package_autoloads.gd": {"call": 0, "callv": 0, "get": 0, "root": 4},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -92,6 +113,9 @@ func _run() -> void:
 		if owner_node == null:
 			continue
 		_check_handles(owner_path, owner_node.get_script() as Script, HANDLES[owner_path])
+
+	var session: Node = root.get_node_or_null(^"/root/NetworkManager")
+	_expect(session is NetSession, "The NetworkManager autoload is a NetSession (package.gd types it so)")
 
 	for script_path: String in SCRIPT_HANDLES:
 		var script: Script = load(script_path) as Script

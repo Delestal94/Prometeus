@@ -6,7 +6,7 @@ extends RigidBody3D
 ## Non-host peers freeze it and let their MultiplayerSynchronizer puppet the transform instead.
 
 @export var package_id: StringName = &"fragile_01"
-@export var trap_definition: Resource = preload("res://data/traps/fragile.tres")
+@export var trap_definition: TrapDefinition = preload("res://data/traps/fragile.tres")
 @export_range(0.0, 5.0, 0.05) var spawn_grace_time: float = 1.25
 @export_range(0.0, 2.0, 0.05) var impact_cooldown: float = 0.30
 ## What's inside (PackageContent). Left empty, the trap picks one from its
@@ -53,7 +53,7 @@ var lap_mount_path: NodePath = NodePath()
 const LOOSE_MASK: int = 1 | 4 | 64
 const PLAYER_HIT_PUSH_SCALE: float = 0.38
 
-var trap_behavior: Resource
+var trap_behavior: ITrapBehavior
 var is_held: bool = false:
 	set(value):
 		is_held = value
@@ -149,11 +149,11 @@ var _consumed: bool = false
 const RIDE_MARGIN: float = 0.4
 var integrity: float:
 	get:
-		var raw: float = float(trap_behavior.get("integrity")) if trap_behavior != null else 100.0
+		var raw: float = trap_behavior.integrity if trap_behavior != null else 100.0
 		return minf(care.quality_cap, maxf(raw - _parasite_damage, 0.0))
 var integrity_max: float:
 	get:
-		return float(trap_behavior.get("integrity_max")) if trap_behavior != null else 100.0
+		return trap_behavior.integrity_max if trap_behavior != null else 100.0
 var trap_state: int:
 	get:
 		if _lost or care.phase == &"lost":
@@ -162,7 +162,7 @@ var trap_state: int:
 			return ITrapBehavior.TrapState.AT_RISK
 		if integrity <= 0.0:
 			return ITrapBehavior.TrapState.AT_RISK
-		return int(trap_behavior.call("get_state")) if trap_behavior != null else 0
+		return trap_behavior.get_state() if trap_behavior != null else 0
 ## A package can be written off for reasons no trap knows about -- falling out
 ## of the van, say -- without every trap needing its own concept of that.
 var _lost: bool = false
@@ -182,14 +182,13 @@ var _package_hit_cooldowns: Dictionary = {}
 ## resolved it and never saw that box move again.
 func _enter_tree() -> void:
 	var sync := get_node_or_null(^"MultiplayerSynchronizer") as MultiplayerSynchronizer
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	if sync == null or network == null or not network.has_signal(&"peer_level_ready") \
-			or network.is_connected(&"peer_level_ready", _on_peer_level_ready):
+	var network := PackageAutoloads.network(self)
+	if sync == null or network == null or network.peer_level_ready.is_connected(_on_peer_level_ready):
 		return
 	sync.add_visibility_filter(func(peer_id: int) -> bool:
-		return not multiplayer.is_server() or bool(network.call(&"is_peer_ready", peer_id)))
-	network.connect(&"peer_level_ready", _on_peer_level_ready)
-	network.connect(&"peer_removed", peer_left)  # Not peer_disconnected: late for a dropped ghost (N-221).
+		return not multiplayer.is_server() or network.is_peer_ready(peer_id))
+	network.peer_level_ready.connect(_on_peer_level_ready)
+	network.peer_removed.connect(peer_left)  # Not peer_disconnected: late for a dropped ghost (N-221).
 
 
 func _on_peer_level_ready(peer_id: int) -> void:
@@ -301,12 +300,12 @@ func _find_vehicle() -> Node3D:
 
 func initialize_trap() -> void:
 	# Definitions may be shared; behavior resources must not be.
-	trap_behavior = trap_definition.call("create_behavior")
+	trap_behavior = trap_definition.create_behavior() as ITrapBehavior
 	if trap_behavior == null:
 		return
-	var config: Dictionary = (trap_definition.get("params") as Dictionary).duplicate(true)
+	var config: Dictionary = trap_definition.params.duplicate(true)
 	config["roll_seed"] = PackageRescue.roll_seed(self)
-	trap_behavior.call("on_setup", self, config)
+	trap_behavior.on_setup(self, config)
 	_road_jolted = -1
 	_age = 0.0
 	_impact_cooldown_remaining = 0.0
@@ -362,14 +361,13 @@ func apply_impact(delta_velocity: float) -> void:
 	# Echoes of one collision are already folded by PACKAGE_COLLISION_COOLDOWN.
 	if care.needs_restore or care.phase == &"lost":
 		return
-	if is_inside_tree():
-		var routes: Node = get_node_or_null(^"/root/RouteEventManager")
-		if routes != null:
-			routes.call(&"on_package_impact", self, delta_velocity)
+	var routes: Node = PackageAutoloads.routes(self)
+	if routes != null:
+		routes.call(&"on_package_impact", self, delta_velocity)
 	var before_integrity: float = integrity
 	var before_state: int = trap_state
 	var strength: float = clampf(delta_velocity, 0.0, 9.0) * impact_absorption * care.impact_scale()
-	trap_behavior.call("on_impact", strength)
+	trap_behavior.on_impact(strength)
 	if delta_velocity >= HARD_HIT_SPEED:
 		# Shaken hard: tool work pauses a moment (package_care.gd advance_work).
 		care.recent_hit = 0.65
@@ -422,7 +420,7 @@ func _hit_player(player: Player) -> void:
 ## Announces this package to the run. Called when the delivery starts, not at _ready: packages load before the
 ## level resets the run, and only cargo actually aboard should count toward the score.
 func report_to_run() -> void:
-	_emit_event(&"cargo_registered", [package_id, String(trap_definition.call(&"name_key"))])
+	_emit_event(&"cargo_registered", [package_id, trap_definition.name_key()])
 	_emit_event(&"package_integrity_changed", [package_id, integrity, integrity_max])
 	_emit_event(&"package_state_changed", [package_id, trap_state])
 	_emit_event(&"package_hint_changed", [package_id, hint_text()])
@@ -443,8 +441,8 @@ func mark_lost(cause: String) -> void:
 
 
 func content_definition() -> Resource:
-	if content == null and trap_definition != null and trap_definition.has_method(&"pick_content"):
-		content = trap_definition.call(&"pick_content", package_id)
+	if content == null and trap_definition != null:
+		content = trap_definition.pick_content(package_id)
 	return content
 
 
@@ -493,7 +491,7 @@ func _peer_within_reach(peer_id: int) -> bool:
 
 ## A seated player's body stays where they sat down; their seat is where they are.
 static func _reach_origin(player: Node) -> Vector3:
-	return player.call(&"reach_origin") if player.has_method(&"reach_origin") else (player as Node3D).global_position
+	return (player as Player).reach_origin() if player is Player else (player as Node3D).global_position
 
 
 ## What this box asks for now, as a LocText line: relayed as is, so each
@@ -503,7 +501,7 @@ func hint_text() -> Array:
 		return LocText.make("HUD_CARE_CRISIS_HINT", [ceili(care.crisis_left), care.missing_parts])
 	if care.needs_restore or care.phase == &"lost" or care.substituted:
 		return care.message
-	return trap_behavior.call(&"hint_text") if trap_behavior != null else []
+	return trap_behavior.hint_text() if trap_behavior != null else []
 
 
 func get_hint() -> String:
@@ -600,17 +598,16 @@ func assist_available() -> bool:
 
 
 func run_state() -> int:
-	if is_inside_tree():
-		var run: Node = get_node_or_null(^"/root/RunManager")
-		if run != null:
-			var run_cargo: Dictionary = run.get(&"cargo")
-			if run_cargo.has(package_id):
-				return int((run_cargo[package_id] as Dictionary).get("state", trap_state))
+	var run: Node = PackageAutoloads.run_manager(self)
+	if run != null:
+		var run_cargo: Dictionary = run.get(&"cargo")
+		if run_cargo.has(package_id):
+			return int((run_cargo[package_id] as Dictionary).get("state", trap_state))
 	return trap_state
 
 
 func assist_prompt() -> String:
-	var crew: Node = get_node_or_null(^"/root/CrewProgression") if is_inside_tree() else null
+	var crew: Node = PackageAutoloads.crew(self)
 	var color: String = String(crew.call(&"player_color_name", tender_peer_id)) if crew != null \
 		else tr("HUD_YOUR_TEAMMATE")
 	return tr("HUD_PROMPT_HELP_PACKAGE") % color
@@ -854,11 +851,11 @@ func consume(hand_over_at: Variant = null) -> void:
 	# It's a scene node, not a spawned one: freeing it here never reached the
 	# clients, where it stayed at the door, full size and still "cargo".
 	if is_inside_tree():
-		var run: Node = get_node_or_null(^"/root/RunManager")
+		var run: Node = PackageAutoloads.run_manager(self)
 		if run != null:
 			(run.get(&"consumed_packages") as Array).append(String(get_path()))
-		var network: Node = get_node_or_null(^"/root/NetworkManager")
-		if network != null and bool(network.call(&"is_online")) and bool(network.call(&"is_host")):
+		var network := PackageAutoloads.network(self)
+		if network != null and network.is_online() and network.is_host():
 			_remote_consume.rpc(hand_over_at)
 	_play_consume(hand_over_at)
 
@@ -912,23 +909,21 @@ func release_mount() -> void:
 
 
 func _is_run_active() -> bool:
-	if not is_inside_tree():
-		return true
-	var run_manager: Node = get_node_or_null("/root/RunManager")
+	var run_manager: Node = PackageAutoloads.run_manager(self)
 	return run_manager == null or bool(run_manager.get("is_running"))
 
 
 func _award_pending_trap_milestones() -> void:
-	if trap_behavior == null or not trap_behavior.has_method(&"take_milestones"):
+	if trap_behavior == null:
 		return
-	for milestone: StringName in trap_behavior.call(&"take_milestones"):
+	for milestone: StringName in trap_behavior.take_milestones():
 		_award_milestone(_last_tender_peer, milestone)
 
 
 func _award_milestone(peer_id: int, milestone: StringName) -> bool:
 	if peer_id <= 0 or milestone.is_empty() or not is_inside_tree():
 		return false
-	var progression: Node = get_node_or_null(^"/root/CrewProgression")
+	var progression: Node = PackageAutoloads.crew(self)
 	if progression == null or not progression.has_method(&"award_milestone"):
 		return false
 	var occurrence: int = int(_milestone_counts.get(milestone, 0)) + 1
@@ -939,12 +934,12 @@ func _award_milestone(peer_id: int, milestone: StringName) -> bool:
 
 
 func _registered_for_run() -> bool:
-	var run: Node = get_node_or_null(^"/root/RunManager")
+	var run: Node = PackageAutoloads.run_manager(self)
 	return run != null and (run.get(&"cargo") as Dictionary).has(package_id)
 
 
 func _trap_kind() -> StringName:
-	return StringName(trap_definition.get(&"id")) if trap_definition != null else &"fragile"
+	return trap_definition.id if trap_definition != null else &"fragile"
 
 
 func _simulate_cargo(delta: float) -> void:

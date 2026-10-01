@@ -534,8 +534,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   `.get(&` 287 → 255, `/root/` 128 → 132. `test_dynamic_dispatch_budget.gd` suma `depot.gd` a `BUDGETS` y comprueba
   sus handles (`SCRIPT_HANDLES`).
 - [ ] **N-224.4** El resto por conteo (`grep -c` de los patrones de `PATTERNS` en `scripts/`), un archivo por PR. Sumar
-  cada archivo a `BUDGETS` del test. Siguientes: `package.gd` (34), `package_rescue.gd` (31), `player_cargo_care.gd` (24),
+  cada archivo a `BUDGETS` del test. Siguientes: `package_rescue.gd` (31), `player_cargo_care.gd` (24),
   `trailer_shot.gd` (24), `mud_segment.gd` (22).
+  - [x] `package.gd` (2026-10-01, rama `nacho/N-224-package-typed`): trampas como `TrapDefinition`/`ITrapBehavior`
+    (sin `has_method`), el que agarra como `Player`, red como `NetSession`; las búsquedas de autoloads en
+    `package_autoloads.gd` (nuevo, `PackageAutoloads`), porque el archivo estaba en 1000 líneas (queda en 995).
+    `RunManager`, `CrewProgression` y `RouteEventManager` siguen por nombre: precargarlos desde el paquete rompe la
+    compilación (ciclo con `crew_progression.gd`/`route_event_manager.gd` y autoloads aún no cargados en los tests).
+    En el archivo: `.call` 21 → 9 (5 del camión, que los tests reemplazan por falsos; 3 de autoloads; relay de
+    EventBus), `.get(&` 4 → 3, `/root/` 10 → 1. En `scripts/`: `.call` 290 → 278, `.get(&` 284 → 283, `/root/`
+    132 → 127. `test_dynamic_dispatch_budget.gd` suma los dos archivos y exige que `NetworkManager` sea `NetSession`.
+    Aviso `docs/avisos/2026-10-01-n224-package-tipado.md`.
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
