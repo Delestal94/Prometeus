@@ -65,7 +65,7 @@ func _relay(event_name: StringName, args: Array) -> void:
 func request(event_name: StringName, args: Array = []) -> void:
 	if is_online() and not is_host():
 		return
-	if not RpcGuard.allow_request(self) or not RpcGuard.args_ok(args):
+	if not RpcGuard.allow_request(self) or not RpcGuard.name_ok(event_name) or not RpcGuard.args_ok(args):
 		return
 	var peer_id: int = sender_id()
 	if not _accept_request(peer_id, event_name, args):

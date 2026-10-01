@@ -9,11 +9,18 @@ const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const ContactShadow = preload("res://modules/render_budget/contact_shadow.gd")
 ## How big a zone's hanging sign is next to the old ones (N-319).
 const SIGN_SIZE: float = 0.85
-## Where the order board's sign hangs along the board (m from its middle).
-const SIGN_OFFSET_ON_BOARD: float = 1.1
 ## Lining layer tops: the dark plinth, and where the sheet changes tone.
 const PLINTH_TOP: float = 0.95
 const SHEET_SPLIT: float = 6.0
+## How thick the shadow-only slabs around the hall are (build_sun_shield).
+const SHIELD: float = 1.6
+## How hard the lamps' discs glow: the hall's focal points under the dark roof.
+const LAMP_DISC_ENERGY: float = 3.6
+## The roof's underside: neutral grey at about a third of full value.
+const CEILING_GREY := Color("585858")
+## Strip windows: the pane's width (a kit frame each) and the window's size.
+const WINDOW_PANE: float = 1.2
+const WINDOW_SIZE := Vector2(3.6, 1.1)
 
 ## Arrows painted on the floor: {"caption", "at", "direction"} in depot space.
 var guides: Array[Dictionary] = []
@@ -34,7 +41,8 @@ func _init(root: Node3D, ground_apron: bool) -> void:
 func build_shell(kit: DepotKit) -> void:
 	var outside := DepotKit.ribbed(Color("3f6f7a"), 0.8)
 	var trim := DepotKit.flat(Color("24363d"), 0.6, 0.3)
-	var steel := DepotKit.flat(Color("3b4c53"), 0.5, 0.4)
+	# The roof's steel -- columns, trusses, purlins -- in the palette's ink.
+	var truss := DepotKit.flat(Layout.INK, 0.6, 0.3)
 	# Medium grey polished concrete (N-319): it was nearly the walls' colour.
 	var floor := DepotKit.detailed(Color("6f7272"), "plaster", 4.0, 0.5)
 	var outer_x: float = Layout.HALF_WIDTH + Layout.WALL
@@ -82,44 +90,59 @@ func build_shell(kit: DepotKit) -> void:
 		var inner: float = Layout.HALF_WIDTH - jamb
 		_lining(kit, layers, Vector2(side * (jamb + inner * 0.5), 0.01), inner, true, 1.0)
 	_lining(kit, layers, Vector2(0.0, 0.01), jamb * 2.0, true, 1.0, Layout.DOOR_HEIGHT + 0.9)
-	# Roof deck and its skylights.
+	# Roof deck (a neutral mid-dark grey underneath, value ~35 %: the ceiling is
+	# the quiet part of the picture) and its skylights.
 	kit.span(Vector3(-outer_x, Layout.CEILING, -Layout.WALL),
 			Vector3(outer_x, Layout.CEILING + 0.22, Layout.DEPTH + Layout.WALL),
-			DepotKit.ribbed(Color("98a3a6"), 0.9, 0.7, 0.2))
-	# The skylights and the strip windows are as bright as the day outside (N-319:
-	# at night they were still daylight).
-	var daylight: float = float(DepotLighting.sunlight(_sun()).strength)
-	var dimming: float = 0.78 * (1.0 - minf(daylight, 1.0))
-	var skylight := DepotKit.glow(Color("c4d8d6").darkened(dimming), 0.85)
-	var window_glow := DepotKit.glow(Color("d6ecec").darkened(dimming), 0.75)
+			DepotKit.ribbed(CEILING_GREY, 0.9, 0.85, 0.1))
+	# The skylights and the strip windows show the sky outside: greyish blue glass,
+	# by weather and hour (DepotLighting.glass_look); the hall's own light does not.
+	var look: Dictionary = DepotLighting.glass_look()
+	var skylight := DepotKit.glow(look.colour, float(look.energy))
+	var window_glow := DepotKit.glow(look.colour, float(look.energy))
 	for x: float in DepotLighting.SKYLIGHT_XS:
 		for z: float in DepotLighting.SKYLIGHT_ZS:
 			kit.box(Vector3(1.6, 0.04, 7.0), Vector3(x, Layout.CEILING - 0.01, z), skylight)
+			# A dark frame round each skylight, so it is a window and not a hole of white.
+			for edge: float in [-1.0, 1.0]:
+				kit.box(Vector3(1.6 + 0.16, 0.08, 0.08), Vector3(x, Layout.CEILING - 0.05, z + edge * 3.54), truss)
+				kit.box(Vector3(0.08, 0.08, 7.0), Vector3(x + edge * 0.84, Layout.CEILING - 0.05, z), truss)
 	# Portal frames: columns along the walls, trusses across.
 	for z: float in Layout.PORTAL_FRAMES:
 		for side: float in [-1.0, 1.0]:
 			kit.box(Vector3(0.36, Layout.CEILING, 0.3),
-					Vector3(side * (Layout.HALF_WIDTH - 0.24), Layout.CEILING * 0.5, z), steel)
-			kit.box(Vector3(0.4, 0.3, 0.34), Vector3(side * (Layout.HALF_WIDTH - 0.24), 0.18, z),
-					DepotKit.flat(Color("e7be51"), 0.6))
-		kit.box(Vector3(Layout.HALF_WIDTH * 2.0, 0.16, 0.16), Vector3(0.0, 6.55, z), steel)
-		kit.box(Vector3(Layout.HALF_WIDTH * 2.0, 0.16, 0.16), Vector3(0.0, Layout.CEILING - 0.1, z), steel)
+					Vector3(side * (Layout.HALF_WIDTH - 0.24), Layout.CEILING * 0.5, z), truss)
+			kit.model(DepotKit.depot_model("sm_env_depot_column_guard"), Transform3D(Basis(Vector3.UP, PI * 0.5),
+					Vector3(side * (Layout.HALF_WIDTH - 0.24), Layout.FLOOR_TOP, z)))
+		kit.box(Vector3(Layout.HALF_WIDTH * 2.0, 0.16, 0.16), Vector3(0.0, 6.55, z), truss)
+		kit.box(Vector3(Layout.HALF_WIDTH * 2.0, 0.16, 0.16), Vector3(0.0, Layout.CEILING - 0.1, z), truss)
 		for index: int in range(12):
 			var x0: float = -Layout.HALF_WIDTH + 1.25 + index * 2.5
-			kit.box(Vector3(0.08, Layout.CEILING - 6.55, 0.08), Vector3(x0, (6.55 + Layout.CEILING) * 0.5, z), steel)
+			kit.box(Vector3(0.08, Layout.CEILING - 6.55, 0.08), Vector3(x0, (6.55 + Layout.CEILING) * 0.5, z), truss)
 			var rise: float = Layout.CEILING - 0.1 - 6.55
 			var diagonal: float = sqrt(1.25 * 1.25 + rise * rise)
 			var angle: float = atan2(rise, 1.25) * (1.0 if index % 2 == 0 else -1.0)
 			kit.box_xf(Vector3(diagonal, 0.07, 0.07),
 					Transform3D(Basis(Vector3.BACK, angle),
-					Vector3(x0 + 0.625, (6.55 + Layout.CEILING - 0.1) * 0.5, z)), steel)
+					Vector3(x0 + 0.625, (6.55 + Layout.CEILING - 0.1) * 0.5, z)), truss)
 	# Purlins along the length.
 	for x: float in [-11.0, -3.8, 3.8, 11.0]:
-		kit.box(Vector3(0.1, 0.14, Layout.DEPTH), Vector3(x, Layout.CEILING - 0.18, Layout.DEPTH * 0.5), steel)
+		kit.box(Vector3(0.1, 0.14, Layout.DEPTH), Vector3(x, Layout.CEILING - 0.18, Layout.DEPTH * 0.5), truss)
+	# Two ducts and a cable tray along the hall in 3 m pieces, between the trusses' chords;
+	# their hangers reach the roof. Clear of the lamps, the fans and the signs' cables.
+	var pieces: int = int((Layout.DEPTH - 0.6) / 3.0)
+	var duct: String = DepotKit.depot_model("sm_env_depot_duct_straight")
+	var tray: String = DepotKit.depot_model("sm_env_depot_cable_tray")
+	for index: int in range(pieces):
+		var z: float = 0.3 + 1.5 + index * 3.0
+		for x: float in [-7.6, 12.6]:
+			kit.model(duct, Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(x, 6.1, z)))
+		kit.model(tray, Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0.0, 6.5, z)))
 	# High strip windows (daylight inside, dark glass outside).
 	for side: float in [-1.0, 1.0]:
 		for z: float in [5.2, 10.8, 16.4, 22.0, 27.6]:
 			kit.box(Vector3(0.02, 1.1, 3.6), Vector3(side * (Layout.HALF_WIDTH - 0.07), 5.4, z), window_glow)
+			_window_frame(kit, side, z)
 			kit.box(Vector3(0.02, 1.1, 3.6), Vector3(side * (Layout.HALF_WIDTH + Layout.WALL + 0.01), 5.4, z),
 					DepotKit.flat(Color("22343b"), 0.15, 0.3))
 			kit.box(Vector3(0.08, 1.24, 3.74), Vector3(side * (Layout.HALF_WIDTH + Layout.WALL + 0.02), 5.4, z), trim)
@@ -142,9 +165,11 @@ func build_shell(kit: DepotKit) -> void:
 ## every wall: one place to retune the room's colours.
 func _lining_layers() -> Array:
 	var plinth := DepotKit.detailed(Color("4c5a61"), "stone", 1.4)
-	var block := DepotKit.detailed(Color("84a09e"), "plaster", 1.4)
-	var sheet_low := DepotKit.ribbed(Color("bcbfbd"), 0.7, 0.6, 0.15)
-	var sheet_high := DepotKit.ribbed(Color("7d8587"), 0.7, 0.6, 0.15)
+	var block := DepotKit.detailed(Color("8a9693"), "plaster", 1.4)
+	# The sheet up past the windows is a mid grey-green (<= 58 % value, N-319) and the
+	# band above them darker still: the walls recede, the floor and the truck lead.
+	var sheet_low := DepotKit.ribbed(Color("8f918e"), 0.7, 0.6, 0.15)
+	var sheet_high := DepotKit.ribbed(Color("63666a"), 0.7, 0.6, 0.15)
 	return [
 		[Layout.FLOOR_TOP, PLINTH_TOP, plinth, DepotKit.flat(Color("2c3a40"), 0.6)],
 		[PLINTH_TOP, Layout.LINER_SPLIT, block, null],
@@ -171,8 +196,48 @@ func _lining(kit: DepotKit, layers: Array, centre: Vector2, length: float, along
 			kit.box(bar, Vector3(centre.x, top, centre.y) + proud, layer[3])
 
 
+## The sun must not light the hall: its lamps do, and the weather only shows
+## at the windows. The level's sun has a coarse shadow bias and the roof and
+## walls are thin, so its light leaked in through them and a clear noon washed
+## the floor out. Thick slabs over the roof and outside the side and back walls
+## that only cast shadows (never drawn) close the leak: 4 boxes, no draw calls.
+func build_sun_shield() -> void:
+	var outer_x: float = Layout.HALF_WIDTH + Layout.WALL
+	var back: float = Layout.DEPTH + Layout.WALL
+	var slabs: Array[AABB] = [
+		AABB(Vector3(-outer_x - SHIELD, Layout.CEILING + 0.22, -Layout.WALL),
+				Vector3(outer_x * 2.0 + SHIELD * 2.0, SHIELD, back + Layout.WALL + SHIELD)),
+		AABB(Vector3(-outer_x - SHIELD, -0.4, -Layout.WALL),
+				Vector3(SHIELD, Layout.CEILING + 0.62, back + Layout.WALL)),
+		AABB(Vector3(outer_x, -0.4, -Layout.WALL), Vector3(SHIELD, Layout.CEILING + 0.62, back + Layout.WALL)),
+		AABB(Vector3(-outer_x, -0.4, back), Vector3(outer_x * 2.0, Layout.CEILING + 0.62, SHIELD)),
+	]
+	var holder := Node3D.new()
+	holder.name = "SunShield"
+	_root.add_child(holder)
+	for slab: AABB in slabs:
+		var box := BoxMesh.new()
+		box.size = slab.size
+		var instance := MeshInstance3D.new()
+		instance.mesh = box
+		instance.position = slab.get_center()
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		holder.add_child(instance)
+
+
+## A strip window's frame from the kit: three 1.2 m frames side by side (the shared
+## sides are the mullions), on the inside face of the wall at `side` (-1 west, +1 east).
+func _window_frame(kit: DepotKit, side: float, z: float) -> void:
+	var frame: String = DepotKit.depot_model("sm_env_depot_window_frame")
+	var panes: int = int(round(WINDOW_SIZE.x / WINDOW_PANE))
+	for index: int in range(panes):
+		var along: float = z + (index - (panes - 1) * 0.5) * WINDOW_PANE
+		kit.model(frame, Transform3D(Basis(Vector3.UP, side * PI * 0.5),
+				Vector3(side * (Layout.HALF_WIDTH - 0.06), 5.4 - WINDOW_SIZE.y * 0.5 - 0.1, along)))
+
+
 func build_floor_markings(kit: DepotKit) -> void:
-	var white := DepotKit.flat(Color("e8ebe4"), 0.7)
+	var white := DepotKit.detailed(Layout.MARKING, "stone", 0.8, 0.8)
 	var hazard := DepotKit.stripes(Layout.YELLOW, Color("2b3136"), 0.25)
 	var paint := func(size_x: float, size_z: float, centre: Vector3, material: Material) -> void:
 		var mesh := BoxMesh.new()
@@ -244,16 +309,10 @@ func build_wayfinding(kit: DepotKit) -> void:
 		for z: float in [11.6, 7.6, 3.6]:
 			guides.append(DepotLabels.paint_arrow(kit, tr("WORLD_DEPOT_GATE"), Vector3(x, 0.0, z), Vector3.FORWARD,
 					Layout.TEAL))
-	# Over the control island, turned to the crew, and over the truck bay --
-	# high enough over the truck's roof to read above it from behind.
-	var yaw: float = deg_to_rad(Layout.BOARD_YAW_DEGREES)
-	# (Over the board's end nearest the truck: from the spawn row's far end it is still in view.)
-	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_BOARD"),
-			Layout.BOARD_AT + Layout.board_basis() * Vector3(SIGN_OFFSET_ON_BOARD, 0.0, 0.0) + Vector3(0.0, 4.6,
-					0.0), yaw,
-			Layout.BOARD_GREEN, Layout.CEILING - 0.25, Layout.PAPER, SIGN_SIZE)
-	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_SIGN_TRUCK"), Vector3(0.0, 4.4, 11.0), 0.0, Layout.INK,
-			Layout.CEILING - 0.25, Color("ffc93c"), SIGN_SIZE)
+	# Over the truck bay, high enough over the truck's roof to read above it from behind. (The control
+	# island has no hanging sign: its lit board is the brightest thing in the hall.)
+	DepotLabels.hanging_sign(_root, kit, tr("WORLD_DEPOT_SIGN_TRUCK"), Vector3(0.0, 4.4, 11.0), 0.0,
+			Layout.TRUCK_YELLOW, Layout.CEILING - 0.25, Layout.PAPER, SIGN_SIZE, DepotLabels.ICON_EXIT)
 
 
 func build_exterior(kit: DepotKit) -> void:
@@ -324,7 +383,7 @@ func build_contact_shadows() -> void:
 
 func build_lights() -> void:
 	var kit := DepotKit.new(_root, "LightColliders")
-	var lamp := DepotKit.glow(Color("fff1d6"), 2.2)
+	var lamp := DepotKit.glow(Color("fff1d6"), LAMP_DISC_ENERGY)
 	var fixtures: Array[Vector3] = []
 	for x: float in DepotLighting.LAMP_XS:
 		for z: float in DepotLighting.LAMP_ZS:
@@ -333,7 +392,13 @@ func build_lights() -> void:
 				fixtures.append(Vector3(x, 5.9, z))
 	var high_bay: String = DepotKit.depot_model("sm_env_depot_high_bay_lamp")
 	var tube_fixture: String = DepotKit.depot_model("sm_env_depot_tube_fixture")
+	var tube_linear: String = DepotKit.depot_model("sm_env_depot_tube_linear")
+	var bell: String = DepotKit.depot_model("sm_env_depot_bay_lamp_bell")
 	for at: Vector3 in fixtures:
+		# The truck's bay is lit by the big bell lamps (with their own disc and halo).
+		if absf(at.x) < 3.5 and at.z < 14.0:
+			kit.model(bell, Transform3D(Basis.IDENTITY, Vector3(at.x, 6.75, at.z)))
+			continue
 		# Shade model hangs from its hook, 0.65 m above the shade's centre.
 		kit.model(high_bay, Transform3D(Basis.IDENTITY, at + Vector3(0.0, 0.65, 0.0)))
 		var bulb := CylinderMesh.new()
@@ -346,8 +411,9 @@ func build_lights() -> void:
 	for unit: Dictionary in Layout.SHELF_UNITS:
 		for index: int in range(2):
 			var z: float = Layout.SHELF_START_Z + 2.0 + index * 4.0
-			kit.model(tube_fixture, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 4.3, z)))
 			if unit.aisle == "B" and index == 1:
+				# The old fixture, on its way out.
+				kit.model(tube_fixture, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 4.3, z)))
 				flicker_tube = MeshInstance3D.new()
 				flicker_tube.name = "FlickeringTube"
 				var tube := BoxMesh.new()
@@ -358,10 +424,8 @@ func build_lights() -> void:
 				flicker_tube.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				_root.add_child(flicker_tube)
 			else:
-				var tube_mesh := BoxMesh.new()
-				tube_mesh.size = Vector3(0.1, 0.04, 1.2)
-				kit.add_mesh(tube_mesh, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 4.26, z)),
-						DepotKit.glow(Color("eaf6ff"), 2.0), false)
+				# The linear fixture carries its own lit diffuser; its chains reach the trusses.
+				kit.model(tube_linear, Transform3D(Basis.IDENTITY, Vector3(float(unit.x), 5.2, z)))
 	var sun: DirectionalLight3D = _sun()
 	DepotLighting.build_pools(kit, sun)
 	kit.commit("Lamps")
@@ -370,27 +434,5 @@ func build_lights() -> void:
 	# shafts of light on the floor do the rest of the look.
 	DepotLighting.build_lights(_root)
 	DepotLighting.build_shafts(_root, sun)
-	# Motes drifting in the air under the skylights.
-	var dust := CPUParticles3D.new()
-	dust.name = "DustMotes"
-	dust.amount = 90
-	dust.lifetime = 12.0
-	dust.preprocess = 12.0
-	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	dust.emission_box_extents = Vector3(12.0, 2.5, 14.0)
-	dust.position = Vector3(0.0, 3.5, 16.0)
-	dust.direction = Vector3(0.2, 0.1, 0.1)
-	dust.spread = 180.0
-	dust.gravity = Vector3.ZERO
-	dust.initial_velocity_min = 0.02
-	dust.initial_velocity_max = 0.08
-	var mote := QuadMesh.new()
-	mote.size = Vector2(0.025, 0.025)
-	var mote_material := StandardMaterial3D.new()
-	mote_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mote_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	mote_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mote_material.albedo_color = Color(1.0, 0.95, 0.85, 0.35)
-	mote.material = mote_material
-	dust.mesh = mote
-	_root.add_child(dust)
+	# Motes of dust inside each shaft of light (none at night, none on Low).
+	DepotLighting.build_dust(_root, sun)

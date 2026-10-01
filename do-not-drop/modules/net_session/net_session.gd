@@ -38,6 +38,10 @@ signal peer_level_ready(peer_id: int)
 ## new peer id. Emitted while the newcomer authenticates, before it is on
 ## the roster; if the old connection was still up, it has been dropped.
 signal peer_rejoined(old_id: int, new_id: int)
+## A peer left the roster (every side), right before roster_changed; also a
+## ghost (drop_peer()). For what a leaver held, rather than
+## multiplayer.peer_disconnected: a ghost's comes 0.5-2 s late.
+signal peer_removed(peer_id: int)
 
 ## Configuration the game sets (in _init or _ready of its subclass).
 ## Bumped by the game whenever peers can no longer share the same replicated
@@ -108,6 +112,8 @@ var _ready_peers: Array[int] = [HOST_ID]
 ## Who a peer is across reconnections (host) and this process's own claim
 ## (joiner): NetPeerIdentities, for rejoining.
 var _identities := NetPeerIdentities.new()
+## Host: who gets a place in the room, and back into it (NetAdmission).
+var _admission := NetAdmission.new(_identities)
 ## Short ENet timeouts for a connection the host already dropped: a peer that
 ## is really gone answers nothing, and the 45 s budget for a level load would
 ## keep its ghost in the transport for that long.
@@ -237,6 +243,7 @@ func _end_session() -> void:
 	_restart_pending = false
 	_restart_announced = false
 	_ready_peers = [HOST_ID]
+	_admission.reset()
 	_identities.reset()
 	RpcGuard.reset()
 	_enet_timeouts.clear()
@@ -259,9 +266,11 @@ func take_failure_message() -> String:
 
 # --- ENet ------------------------------------------------------------------
 
+## One connection more than the room's clients, for someone back while its
+## ghost still holds one: NetAdmission decides, not the transport.
 func _host_enet(port: int) -> Error:
 	var peer := ENetMultiplayerPeer.new()
-	var error: Error = peer.create_server(port, max_players - 1)
+	var error: Error = peer.create_server(port, max_players)
 	if error != OK:
 		session_failed.emit(_failure_text("port", [port]))
 		return error
@@ -465,6 +474,7 @@ func _ensure_signals() -> void:
 ## On the host a peer only connects once its authentication completed, which
 ## it does after loading the level (level_ready()): it can take spawns now.
 func _on_peer_connected(id: int) -> void:
+	_admission.forget(id)
 	if not peer_ids.has(id):
 		peer_ids.append(id)
 	if multiplayer.is_server() and not _ready_peers.has(id):
@@ -485,45 +495,36 @@ func _on_peer_connected(id: int) -> void:
 func _on_peer_disconnected(id: int) -> void:
 	if not peer_ids.has(id) and not _ready_peers.has(id):
 		RpcGuard.forget_peer(id)
+		_enet_timeouts.erase(id)
+		_reloads_owed.erase(id)
 		return
 	_remove_from_roster(id)
 
 
-## Off the roster, with the game told before roster_changed (_peer_left) and
-## the peer's identity and request budget forgotten after it: the game may
-## still ask who it was (peer_identity()) while letting go of what it had.
+## Off the roster, with the game told before roster_changed (_peer_left and
+## peer_removed) and the peer's identity and request budget forgotten after it:
+## the game may still ask who it was (peer_identity()) while letting go.
 func _remove_from_roster(id: int) -> void:
 	peer_ids.erase(id)
 	_ready_peers.erase(id)
 	_enet_timeouts.erase(id)
 	_reloads_owed.erase(id)
 	_peer_left(id)
+	peer_removed.emit(id)
 	_identities.forget(id)
 	RpcGuard.forget_peer(id)
 	roster_changed.emit(peer_ids.duplicate())
 
 
 ## Host: takes `id` off the roster now, as if it had left, and closes its
-## connection. For a connection that turned out to be a ghost: its player is
-## already back under a new id (_identify_peer()).
+## connection (NetAdmission.close_dropped(), deferred: this can run inside
+## SceneMultiplayer's poll). For a connection that turned out to be a ghost:
+## its player is already back under a new id (_identify_peer()).
 func drop_peer(id: int) -> void:
 	if not multiplayer.is_server() or id == HOST_ID or not peer_ids.has(id):
 		return
 	_remove_from_roster(id)
-	_close_connection.call_deferred(id)
-
-
-## Deferred: drop_peer() can run inside SceneMultiplayer's poll (the auth
-## callback). A dead peer answers nothing, so its timeout is cut first.
-func _close_connection(id: int) -> void:
-	if not is_online() or not multiplayer.get_peers().has(id):
-		return
-	var enet: ENetMultiplayerPeer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
-	var packet_peer: ENetPacketPeer = enet.get_peer(id) if enet != null else null
-	if packet_peer != null:
-		packet_peer.set_timeout(DROPPED_PEER_TIMEOUT_LIMIT, DROPPED_PEER_TIMEOUT_MIN_MSEC,
-			DROPPED_PEER_TIMEOUT_MAX_MSEC)
-	multiplayer.multiplayer_peer.disconnect_peer(id)
+	_admission.close_dropped.call_deferred(weakref(self), id)
 
 
 ## Host: who `peer_id` is across reconnections ("" when it didn't say, or
@@ -552,11 +553,11 @@ func is_peer_ready(id: int) -> bool:
 func _peer_authenticating(id: int) -> void:
 	_tolerate_level_loads(id)
 	if multiplayer.is_server():
-		# The game gets the first word (a seat, a colour): no room means no
-		# handshake, and the joiner hears why.
-		var refusal: String = _admit_peer(id)
+		# The room and the game (a seat, a colour) get the first word: refused
+		# means no handshake, and the joiner hears why.
+		var refusal: String = _admission.on_authenticating(self, id)
 		if not refusal.is_empty():
-			multiplayer.send_auth(id, var_to_bytes({"failure": refusal}))
+			_admission.refuse(self, id, refusal)
 			return
 		var state: Dictionary = {"version": protocol_version, "scene": _current_level_scene(),
 			"session": _identities.nonce}
@@ -623,7 +624,10 @@ func _settle_peer(id: int) -> void:
 
 
 func _settle_now(id: int, peer: MultiplayerPeer) -> void:
-	if multiplayer.multiplayer_peer != peer or not multiplayer.get_peers().has(id) or not _may_settle(id):
+	# A ghost already dropped (drop_peer()) keeps its short timeout until it closes.
+	if multiplayer.multiplayer_peer != peer or not peer_ids.has(id) or not multiplayer.get_peers().has(id):
+		return
+	if not _may_settle(id):
 		return
 	_set_enet_timeout(id, false)
 	_tell_host_load(id, false)
@@ -637,6 +641,12 @@ func _may_settle(id: int) -> bool:
 ## it yet (level_ready() sends _remote_restart and ends it).
 func _restart_under_way() -> bool:
 	return _restart_pending or _restart_announced
+
+
+## Host: the clients on the roster whose link is up, not a ghost still closing.
+func _linked_clients() -> Array:
+	var linked: PackedInt32Array = multiplayer.get_peers()
+	return peer_ids.filter(func(id: int) -> bool: return id != HOST_ID and linked.has(id))
 
 
 ## Host: tells a client (or all of them, `id` 0) whether to wait out a load on
@@ -702,42 +712,28 @@ func _ready_reply() -> Dictionary:
 
 
 ## Host, from a joiner's ready reply (inside SceneMultiplayer's poll, before
-## complete_auth): who it is. Someone who was here before gets its place back
-## through the game (_peer_returned) and peer_rejoined; if its old connection
-## is still up -- it came back before the host noticed the drop, which with
-## timeouts that outlast a level load is the usual case -- that one is a
-## ghost and goes (drop_peer()).
+## complete_auth): who it is, and whether it was here before
+## (NetAdmission.identify()).
 func _identify_peer(id: int, reply: Dictionary) -> void:
-	var identity: String = NetPeerIdentities.identity_of(multiplayer.multiplayer_peer, id, reply)
-	if identity.is_empty():
-		return
-	var previous: int = _identities.record(id, identity)
-	if previous == 0:
-		return
-	if previous == id:
-		# Back under the same id (Steam can hand it out again): nothing moves,
-		# but the game gives back what it kept.
-		_peer_returned(id, id)
-		return
-	if peer_ids.has(previous):
-		drop_peer(previous)
-	_peer_returned(id, previous)
-	peer_rejoined.emit(previous, id)
+	_admission.identify(self, id, reply)
 
 
 func _receive_auth(id: int, data: PackedByteArray) -> void:
 	if multiplayer.is_server():
+		# One ready reply per joiner: another, or one from a joiner turned away,
+		# isn't even read (NetAdmission.first_reply()).
+		if not _admission.first_reply(id):
+			return
 		# Protocol 0 sent the raw word "ready". Recognize it without asking
 		# bytes_to_var() to parse arbitrary UTF-8, then reject it explicitly.
-		if data.get_string_from_utf8() == "ready":
-			multiplayer.send_auth(id, var_to_bytes({"failure": "version"}))
-			return
-		var reply: Variant = bytes_to_var(data)
-		if _ready_reply_error(reply).is_empty():
-			_identify_peer(id, reply)
+		var reply: Variant = bytes_to_var(data) if data.get_string_from_utf8() != "ready" else null
+		var refusal: String = _ready_reply_error(reply)
+		if refusal.is_empty():
+			refusal = _admission.on_identified(self, id, reply)
+		if refusal.is_empty():
 			multiplayer.complete_auth(id)
 		else:
-			multiplayer.send_auth(id, var_to_bytes({"failure": "version"}))
+			_admission.refuse(self, id, refusal)
 		return
 	if id != HOST_ID:
 		return
@@ -774,7 +770,7 @@ func level_ready() -> void:
 			_restart_pending = false
 			# Everyone connected reloads now and owes a report; until the last
 			# one owed is in, the host keeps waiting out their loads.
-			for id: int in multiplayer.get_peers():
+			for id: int in _linked_clients():
 				_reloads_owed[id] = int(_reloads_owed.get(id, 0)) + 1
 				_set_enet_timeout(id, true)
 			_remote_restart.rpc(_restart_state())
@@ -788,14 +784,16 @@ func level_ready() -> void:
 	_report_level_ready.rpc_id(HOST_ID)
 
 
+## Off the request budget: one lost would leave the client's level without
+## players. Only a report the host owes does anything, so a flood does nothing.
 @rpc("any_peer", "call_remote", "reliable")
 func _report_level_ready() -> void:
-	if not multiplayer.is_server() or not RpcGuard.allow_request(self):
+	if not multiplayer.is_server() or not RpcGuard.sender_ok(self):
 		return
 	var id: int = multiplayer.get_remote_sender_id()
-	if not peer_ids.has(id):
+	if not peer_ids.has(id) or int(_reloads_owed.get(id, 0)) <= 0:
 		return
-	_reloads_owed[id] = maxi(int(_reloads_owed.get(id, 0)) - 1, 0)
+	_reloads_owed[id] = int(_reloads_owed[id]) - 1
 	# A report from a restart another one has replaced (begun, or sent and
 	# still owed): that client reloads again and reports again. Counting it
 	# ready now would spawn into a level that is about to go.
@@ -819,7 +817,7 @@ func announce_restart() -> void:
 	if not is_online() or not is_host() or _restart_announced or _restart_pending:
 		return
 	_restart_announced = true
-	for id: int in multiplayer.get_peers():
+	for id: int in _linked_clients():
 		_set_enet_timeout(id, true)
 	_tell_host_load(0, true)
 
@@ -856,6 +854,7 @@ func _auth_failed(id: int) -> void:
 		# A joiner that never made it in: whatever the game gave it goes back,
 		# and so does what this end applied to its link; who it said it was
 		# is forgotten.
+		_admission.forget(id)
 		_enet_timeouts.erase(id)
 		_reloads_owed.erase(id)
 		_peer_left(id)
@@ -939,8 +938,9 @@ func _on_session_left() -> void:
 	pass
 
 
-## Host, as a joiner starts authenticating: "" admits it, a failure code
-## ("full") refuses it before the handshake.
+## Host, as a joiner starts authenticating and the room has a place: "" admits
+## it, a failure code ("full") refuses it. Can run twice for one joiner whose
+## ghost may hold its place (NetAdmission).
 func _admit_peer(_id: int) -> String:
 	return ""
 

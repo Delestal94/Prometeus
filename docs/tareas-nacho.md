@@ -652,16 +652,31 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   cambio; GPU con sombras apagadas +2-11 % de llamadas de dibujo, con las de Alta +40-90 % adentro. Tests `test_depot_zones`
   (nuevo), `test_depot` (umbrales de carteles/flechas a propósito), `test_render_budget`. Qué queda para la 2 en el
   registro de `docs/deposito-rediseno.md`; aviso `docs/avisos/2026-09-30-n319-deposito.md`.
-- [ ] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
+- [x] **N-319.2** Iteración 2 — kit de modelos nuevos en Blender (`assets/tools/build_depot_props.py`) y reemplazo de las
   primitivas de `DepotKit` (`modelador-blender`, después `constructor-mundo`). Necesita PC.
   **[x] Modelos hechos (2026-09-30, rama `nacho/N-319-depot-props`)** — 40 GLB `sm_env_depot_*` nuevos en
   `models/environment/depot/` (grupos `ceiling dispatch bay logistics office cage safety breakroom workshop` del script),
   más el atlas de 12 pictogramas y la malla de rombos en `assets/textures/depot/`. Lista, tris y pivotes en
-  `docs/inventario-assets.md` y `assets/README.md`. **Falta conectarlos al juego** (reemplazar las cajas de
-  `depot_zones.gd`, `depot_hall.gd` y compañía con `DepotKit.model()`): `constructor-mundo`.
-- [ ] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
+  `docs/inventario-assets.md` y `assets/README.md`.
+  **[x] Pasada de luz y pintura + kit conectado (2026-10-01, rama `nacho/N-319-depot-finish`)** — el interior con luz propia
+  casi fija (`DepotAtmosphere`: ambiente fijo 0,25 al 80 %, sin aporte del cielo, sombras del sol a 1,0 bajo el techo;
+  `SunShield` de losas solo-sombra), haces de tragaluz en dos ejes por clima, vidrio celeste con emisión por clima, ventanas
+  con marcos del kit, techo gris y cerchas INK, sendas 1 m verde apagado con bordes gastados, contorno discontinuo con
+  estarcido para la reunión, carteles "etiqueta de envío" con pictograma del atlas. Kit conectado: campanas de la bahía,
+  tubos lineales, conductos y bandeja, protecciones de columna, bolardos, topes y calzas, mesa del despachante, escalera,
+  barandas, persianas, malla y ventanilla del pañol, semáforo del portón (sigue al portón), compresor, banco con morsa,
+  elevador de tijera, cocinita, heladera, dispensador, reciclaje; el centro del galpón (jaulas rodantes, pallet filmado,
+  mesa de clasificación, flat-packs, escalera de ruedas) y la pared izquierda z 9-12 (`depot_props.gd`). Lotes de
+  `DepotKit` 170 → 184 (tope ~190); `bench_depot` sin cambio. Detalle en `docs/deposito-rediseno.md`.
+- [x] **N-319.3** Iteración 3 — estaciones a fondo (pañol, taller, vestuario/descanso, isla de control, oficina) y capa de
   oficio (`constructor-mundo`).
-- [ ] **N-319.4** Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.
+- [x] **N-319.4** ~~Iteración 4 — pulido con la crítica de `director-arte`: color, desgaste, detalle, lo que falte.~~
+  **[x] Hecho junto con la 3 (2026-10-01, rama `nacho/N-319-depot-finish`)** — color neutro cálido, oficina del Jefe con
+  ventanal cálido, pictogramas de zona (celdas 12-15 del atlas), taller con media pared opaca y tableros del kit, isla con
+  lámpara y corcho, pañol sin violeta, descanso con lockers entreabiertos, sombras de contacto en un lote, desgaste en un lote,
+  polvo en los haces, portón de recepción y mural del fondo, flechas solo en bifurcaciones, nube y línea de salida de afuera,
+  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Falta la pasada de `director-arte` sobre `D:/tmp/depot_review/iter3/` y los
+  textos que el arte dejó vacíos (ver el registro en `docs/deposito-rediseno.md`). **Todavía sin PR.**
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
@@ -1054,9 +1069,39 @@ Fase 4 de `docs/investigacion-red.md`.
   `net_session__test_net_session_rejoin` y la última etapa de `net_pair` (sale con la caja, vuelve desde el
   mismo juego y recupera slot y mérito). Aviso: `docs/avisos/2026-09-30-n221-rpc-y-reconexion.md`.
   - [ ] Falta: no recupera posición, asiento ni caja (se sueltan al irse, S-209; aparece como cualquier join
-    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); con la sala llena y el fantasma
-    todavía conectado, el transporte lo rechaza hasta que el host lo note (el tope de ENet cuenta al
-    fantasma); el fantasma por sockets reales (crash con Steam) solo está probado en un proceso.
+    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); en LAN un extraño a una sala llena
+    carga el nivel antes de oír "full" (quién es llega con su respuesta de listo); el fantasma de un crash con
+    Steam no está probado con sockets reales (por ENet sí: `net_pair`).
+  - [ ] Pedir la identidad antes del estado completo: con la sala llena en LAN, el host manda primero solo el
+    nonce, el que entra contesta su eslabón de la cadena y recién ahí (fantasma suyo o lugar libre) recibe el
+    estado y carga el nivel; si no, oye "full" sin cargar nada. Cambia el handshake (otro `PROTOCOL_VERSION`).
+    Lo dejó anotado la segunda pasada de `auditor-red` sobre `nacho/N-221-followups`.
+  - [ ] Nota para cuando exista la UI de silenciar (`SteamVoice`): el silencio y el volumen se guardan por peer id
+    (`_muted`, `_peer_volume`), así que el que vuelve con otro id llega sin silenciar; y para un fantasma no llega
+    `peer_disconnected` (`SceneMultiplayer.disconnect_peer()` lo bloquea), así que sus entradas quedan hasta que
+    termina la sesión. Cuando haya UI: guardarlo por identidad (`peer_identity()`) y olvidarlo con `peer_removed`.
+- [x] Seguimiento de la auditoría de #125 (`auditor-red`), rama `nacho/N-221-followups`. La caja de un
+  fantasma conserva su ventana de rescate: `NetSession.peer_removed` (antes de `roster_changed`, una vez por
+  salida), que `package.gd` escucha en lugar de `multiplayer.peer_disconnected`. Sala llena: ENet acepta una
+  conexión de más y `NetAdmission` (módulo) decide; el que vuelve recupera el lugar de su fantasma y un extraño
+  oye "full" (en Steam al autenticar, en LAN con la respuesta de listo). `_report_level_ready` fuera del cupo
+  (solo cuenta un reporte que el host debe); `request_drop` y `release_occupant` con reserva crítica
+  (`RpcGuard.allow_critical_request`); `name_ok`/`path_ok` para los `StringName` y `NodePath` de RPC
+  (`supply_id`, `offer_id`, `event_name`, `recipient_path`) y la regla en `test_rpc_guard`. Los slots de los que
+  se fueron viajan en el handshake y en `_sync_color_slots`. El recién llegado que toma un slot reservado ya no
+  pisa la entrada de campaña del que se fue (se aparta y se le devuelve), y la reserva que tomó un joiner que no
+  entró, o que volvía a otro slot, vuelve a su dueño. `_settle_now` ya no le devuelve 20 s a un fantasma soltado.
+  Segunda pasada de `auditor-red`: identidad LAN como cadena de hashes (Lamport; un valor repetido se rechaza
+  y el peer vivo sigue), el rechazado se corta a los 0,5 s (`NetAdmission.refuse`), el que vuelve a una sala
+  llena sin fantasma oye "full" antes de que se mueva nada, el fantasma se suelta con
+  `SceneMultiplayer.disconnect_peer()` (sin "max channels: 0" ni fantasma visible) y el reinicio recorre solo
+  los clientes con enlace (`_linked_clients`). Tercera pasada (en el PR #145): un solo "listo" por joiner y solo
+  de uno admitido o sin lugar (un rechazado ya no llega a `complete_auth`), el eslabón de un intento rechazado
+  por sala llena se anota (`advance`) y el rechazo en ENet espera el ack (`peer_disconnect_later`, corte duro a
+  3 s).
+  `PROTOCOL_VERSION` 19 → 20 (el 17, el 18 y el 19 los tomaron N-228.4, N-228.8 y N-228.5). Tests: `test_network_rejoin`, `test_network_roster`, `test_rpc_guard`,
+  `net_session__test_rpc_guard`, `net_session__test_net_session_rejoin` (sala llena por ENet) y la última etapa
+  de `net_pair` (fantasma real con la caja en crisis). Aviso: `docs/avisos/2026-10-01-n221-seguimiento-red.md`.
 - [x] ~~Regla en `convenciones-godot.md`: subir `PROTOCOL_VERSION` con cada cambio de RPC o de replicación.~~
   **[x] Hecho (2026-09-30)** — rama `nacho/ci-faster-prs`: §6, con cómo elegir el número sin chocar con otro PR
   en vuelo; N-221 suma §0.2, junto con `RpcGuard` y el color. Filas NET-07 y NET-08 en

@@ -10,6 +10,7 @@ extends RefCounted
 ## Everything is placed in the owner's local space. Solid pieces also get a
 ## box shape on one shared StaticBody3D (world layer, like route.gd's boxes).
 
+const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const DETAIL_DIR: String = "res://assets/textures/detail/tx_detail_%s_512.png"
 const DETAIL_GAIN: float = 1.16
 ## The depot's own low-poly pieces (assets/tools/build_depot_props.py).
@@ -232,14 +233,35 @@ static func _model_parts(path: String) -> Array:
 ## see-through or glowing ones are left alone.
 static func _shared(material: Material) -> Material:
 	var base := material as StandardMaterial3D
+	# The diamond mesh is the same material in the cage panels, the window and the roll cages: one batch.
+	if base != null and base.resource_name.get_slice(".", 0) == "cage_mesh" and base.albedo_texture != null:
+		if not _shared_materials.has("cage_mesh"):
+			_shared_materials["cage_mesh"] = base
+		return _shared_materials["cage_mesh"]
 	if (base == null or base.albedo_texture != null or base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED
 			or base.emission_enabled):
 		return material
 	var key: String = "%s|%s|%.2f|%.2f|%d" % [base.resource_name.get_slice(".", 0), base.albedo_color.to_html(),
 			base.roughness, base.metallic, int(base.vertex_color_use_as_albedo)]
 	if not _shared_materials.has(key):
-		_shared_materials[key] = base
+		_shared_materials[key] = _glowing_yellow(base)
 	return _shared_materials[key]
+
+
+## The kit's yellows (the "warning" and "ui_yellow" palette materials: bollards, guards, posts, signs) glow a
+## little on their own, so under the hall's low light they stay yellow and not olive.
+const YELLOW_MATERIALS: Array[String] = ["warning", "ui_yellow"]
+const YELLOW_EMISSION: float = 0.7
+
+
+static func _glowing_yellow(base: StandardMaterial3D) -> StandardMaterial3D:
+	if not YELLOW_MATERIALS.has(base.resource_name.get_slice(".", 0)):
+		return base
+	var made := base.duplicate() as StandardMaterial3D
+	made.emission_enabled = true
+	made.emission = base.albedo_color
+	made.emission_energy_multiplier = YELLOW_EMISSION
+	return made
 
 
 ## A flat palette colour -- glass, paint, plastic. Shared per colour.
@@ -250,6 +272,40 @@ static func flat(color: Color, roughness: float = 0.85, metallic: float = 0.0) -
 		material.albedo_color = color
 		material.roughness = roughness
 		material.metallic = metallic
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
+## Paint that lets what is under it show through (`color`'s alpha): a worn
+## arrow on a walkway. Lit like the floor it lies on.
+static func tint(color: Color) -> StandardMaterial3D:
+	var key: String = "tint:%s" % color.to_html()
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_color = color
+		material.roughness = 0.7
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
+## The pictogram atlas (assets/textures/depot): white shapes on transparent, 4 x 4 cells
+## of 128 px. Unlit and cut out (no sorting), tinted per quad through its vertex colour,
+## so every icon on every sign shares this one batch.
+const PICTOGRAMS: String = "res://assets/textures/depot/tx_depot_pictograms_512.png"
+
+
+static func pictograms() -> StandardMaterial3D:
+	var key: String = "pictograms"
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_texture = load(PICTOGRAMS)
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.vertex_color_use_as_albedo = true
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		material.alpha_scissor_threshold = 0.4
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		_material_cache[key] = material
 	return _material_cache[key]
 
@@ -365,6 +421,84 @@ func floor_quad(size: Vector2, centre: Vector3, material: Material, yaw: float =
 	var quad := QuadMesh.new()
 	quad.size = size
 	add_mesh(quad, Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, -PI * 0.5), centre), material, false)
+
+
+## Contact shadows (N-319, no SSAO in GL Compatibility): ONE multiplicative batch for the whole depot. A
+## radial gradient (a GradientTexture2D, 64 px, 40 % darker in the middle and none at the rim) darkens what is
+## under it, so a quad a little bigger than a prop's footprint grounds the prop on the floor.
+const CONTACT_ALPHA: float = 0.45
+const CONTACT_MARGIN: float = 1.2
+
+
+static func contact_material() -> StandardMaterial3D:
+	var key: String = "contact"
+	if not _material_cache.has(key):
+		var gradient := Gradient.new()
+		# Multiplicative blending ignores alpha: the shade is the colour (1 - CONTACT_ALPHA at the middle,
+		# white at the rim).
+		gradient.set_color(0, Color(1.0 - CONTACT_ALPHA, 1.0 - CONTACT_ALPHA, 1.0 - CONTACT_ALPHA, 1.0))
+		gradient.set_color(1, Color.WHITE)
+		var texture := GradientTexture2D.new()
+		texture.gradient = gradient
+		texture.fill = GradientTexture2D.FILL_RADIAL
+		texture.fill_from = Vector2(0.5, 0.5)
+		texture.fill_to = Vector2(1.0, 0.5)
+		texture.width = 64
+		texture.height = 64
+		var material := StandardMaterial3D.new()
+		material.albedo_texture = texture
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		material.disable_fog = true
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
+## A soft shadow under a prop standing at `at` (its base, on the floor) with the footprint `size` (x by z),
+## turned `yaw`: the quad is CONTACT_MARGIN times the footprint.
+func contact(at: Vector3, size: Vector2, yaw: float = 0.0) -> void:
+	floor_quad(size * CONTACT_MARGIN + Vector2.ONE * 0.1, Vector3(at.x, Layout.FLOOR_TOP + 0.026, at.z),
+			contact_material(), yaw)
+
+
+## Wear and grime: ONE alpha batch with vertex colours and the soft radial fade, for scuffs, rust, the
+## floor's slab-to-slab variation and the dirt at the foot of the walls.
+static func wear_material() -> StandardMaterial3D:
+	var key: String = "wear"
+	if not _material_cache.has(key):
+		var material := StandardMaterial3D.new()
+		material.albedo_texture = _radial_texture()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.vertex_color_use_as_albedo = true
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		material.disable_fog = true
+		_material_cache[key] = material
+	return _material_cache[key]
+
+
+## A soft patch of `colour` (its alpha is the strength) `size` across, placed by `xform` (a quad facing +Z).
+func wear(xform: Transform3D, size: Vector2, colour: Color) -> void:
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half := size * 0.5
+	var corners: Array[Vector2] = [Vector2(-half.x, half.y), Vector2(half.x, half.y), Vector2(half.x, -half.y),
+			Vector2(-half.x, -half.y)]
+	var uvs: Array[Vector2] = [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+	tool.set_color(colour)
+	tool.set_normal(Vector3.BACK)
+	for index: int in [0, 1, 2, 0, 2, 3]:
+		tool.set_uv(uvs[index])
+		tool.add_vertex(Vector3(corners[index].x, corners[index].y, 0.0))
+	add_mesh(tool.commit(), xform, wear_material(), false)
+
+
+## A wear patch lying on the floor (see wear()), `lift` above the floor's top.
+func wear_floor(centre: Vector2, size: Vector2, colour: Color, yaw: float = 0.0, lift: float = 0.03) -> void:
+	wear(Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, -PI * 0.5),
+			Vector3(centre.x, Layout.FLOOR_TOP + lift, centre.y)), size, colour)
 
 
 ## Slightly see-through glazing for the office and the skylights.

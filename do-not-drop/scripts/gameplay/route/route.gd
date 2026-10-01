@@ -105,6 +105,8 @@ const SHOULDER := Color("63736f")
 const MARKING := Color("d4d9c2")
 const WARNING := Color("e7be51")
 const TEAL := Color("65b5a1")
+## The painted start line is road paint (worn white), not a glowing cyan strip.
+const START_LINE := Color("d4d9c2")
 const CONCRETE := Color("8c9791")
 
 var _delivery_vehicles: Array[Node3D] = []
@@ -293,7 +295,7 @@ func _start_leg(cursor: Transform3D) -> void:
 	terrain.add_span(cursor.origin + Vector3(0.0, 0.0, 20.0), cursor.origin)
 	var sign_at: Vector3 = cursor.origin + Vector3(-7.6, 0.0, -5.0)
 	RouteProps.sign(self, "Salida", tr("WORLD_ROUTE_START_SIGN"), sign_at, _ground_height_at(sign_at.x), TEAL)
-	RouteProps.box(self, "StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.03, -4.0), TEAL)
+	RouteProps.box(self, "StartLine", Vector3(11.4, 0.02, 0.35), cursor.origin + Vector3(0.0, 0.03, -4.0), START_LINE)
 
 
 ## The depot stands behind the start line: its footprint stays level and no

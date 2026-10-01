@@ -137,7 +137,7 @@ func _build_stand() -> void:
 		kit.box(Vector3(0.05, 0.05, 0.3), Vector3(x * 0.92, top + 0.1, 0.15), frame)  # arm of the light
 	# The strip light over the top edge: its housing, and the glowing tube under it.
 	kit.box(Vector3(PANEL_WIDTH, 0.1, 0.24), Vector3(0.0, top + 0.16, 0.3), dark)
-	kit.box(Vector3(PANEL_WIDTH - 0.2, 0.02, 0.12), Vector3(0.0, top + 0.1, 0.3), DepotKit.glow(Color("fff1d6"), 2.4))
+	kit.box(Vector3(PANEL_WIDTH - 0.2, 0.02, 0.12), Vector3(0.0, top + 0.1, 0.3), DepotKit.glow(Color("fff1d6"), 2.9))
 	var markers: Array[Color] = [BLUE_INK, RED_INK, Color("1f8a5b")]
 	for index: int in range(markers.size()):
 		kit.box(Vector3(0.12, 0.02, 0.02), Vector3(-1.6 + index * 0.2, bottom - 0.01, 0.09),
@@ -167,7 +167,7 @@ func _build_labels() -> void:
 	for row: int in range(ROWS):
 		# Left-aligned from the board's left margin, whatever its length.
 		var line := DepotLabels.text(self, "", Vector3(left, ROWS_TOP, 0.035), 0.0, ROW_FONT, BLUE_INK,
-				Layout.BODY_FONT, PIXEL, 0)
+				Layout.body_bold(), PIXEL, 0)
 		line.name = "Row%d" % row
 		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		line.vertical_alignment = VERTICAL_ALIGNMENT_TOP

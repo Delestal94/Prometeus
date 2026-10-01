@@ -75,3 +75,19 @@ static func is_valid(raw: Variant, count: int) -> bool:
 			return false
 		seen[value] = true
 	return true
+
+
+## The slots of peers who left, as the host sends them (N-221): like
+## is_valid(), but several may have worn the same slot, and there are at most
+## `max_entries` of them.
+static func is_valid_departed(raw: Variant, count: int, max_entries: int) -> bool:
+	if not raw is Dictionary or (raw as Dictionary).size() > max_entries:
+		return false
+	var map: Dictionary = raw
+	for key: Variant in map:
+		var value: Variant = map[key]
+		if typeof(key) != TYPE_INT or typeof(value) != TYPE_INT:
+			return false
+		if int(key) <= 0 or int(value) < 0 or int(value) >= count:
+			return false
+	return true

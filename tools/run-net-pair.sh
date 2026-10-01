@@ -26,8 +26,9 @@ fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
+# Three level loads on the client (join, rejoin, rejoin over a ghost): 18-34 s each on CI.
 run() {
-	timeout 150 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
+	timeout 240 "$GODOT_BIN" --headless --path "$PROJECT" res://tests/net_pair.tscn -- "$@"
 }
 
 run --host >"$WORK/host.log" 2>&1 &
@@ -56,6 +57,15 @@ done
 for code in "$HOST_CODE" "$CLIENT_CODE"; do
 	[ "$code" -eq 0 ] || status=1
 done
+# N-221: a ghost the host drops leaves SceneMultiplayer at once
+# (NetAdmission.close_dropped); a send to an ENet link that is closing means
+# it stayed listed and the engine kept writing to it.
+closing="$(grep -h "Unable to send packet" "$WORK/host.log" "$WORK/client.log" || true)"
+if [ -n "$closing" ]; then
+	echo "A peer kept sending to a closing ENet link (a dropped ghost still listed):"
+	echo "$closing" | head -n 3
+	status=1
+fi
 # N-235.2: a joiner's level load close to the network's 45 s load budget. Not
 # a failure yet, but the next slower runner drops it mid-load.
 slow="$(grep -h "^NETLOG .*WARNING slow level load" "$WORK/host.log" "$WORK/client.log" || true)"
@@ -73,4 +83,4 @@ if [ "$status" -ne 0 ]; then
 	echo "FAIL: net pair"
 	exit 1
 fi
-echo "PASS: two-process cosmetics, gameplay races and rejoin"
+echo "PASS: two-process cosmetics, gameplay races, rejoin and rejoin over a ghost"
