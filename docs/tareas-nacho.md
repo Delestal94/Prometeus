@@ -566,7 +566,16 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   material a `reference_truck_props.gd` (72), todos tipados (sin `.call`/`.get` nuevos). `test_reference_truck_golden.gd`
   firma cada nodo que arma el camión (y los cambios tras puertas, rampa, pintura, retro y pedales) contra
   `tests/data/reference_truck_golden.txt`, generado con el archivo único. La baseline del lint bajó 1.
-- [ ] **N-225.3** `route.gd`. **N-225.4** `package.gd` (999). Quedan
+- [x] **N-225.3** `route.gd` **[x] Hecho (2026-10-01)** — rama `nacho/N-225-route-split`: 948 → 499 líneas. `route.gd`
+  queda como cara pública (señales, exports, API de consultas, `_ready`, encadenado de tramos, meta, terreno, ambiente,
+  callbacks de entrega y los arrays de estado que leen los tests); las casas y patios pasan a `route_houses.gd` (289),
+  las consultas sobre el camino (punto más cercano, distancias acumuladas, hueco más ancho) a `route_path.gd` (170) y
+  lo que se le dice al terreno (tramos, crestas, ríos, recorte del alcance del río, patio de salida) a
+  `route_ground.gd` (159). Helpers por `preload`, que comparten los arrays de `route.gd` por referencia. Se borró
+  `_mesh_base_offset` (sin llamadas). `test_route_golden.gd` firma tres rutas (nodos, casas, camino, terreno y ~600
+  consultas cada una) contra `tests/data/route_golden.txt`, generado con el archivo único (`-- --write-golden`).
+  La baseline del lint bajó. Aviso `docs/avisos/2026-10-01-n225-route-partido.md` (comentarios de `terrain_field.gd`).
+- [ ] **N-225.4** `package.gd` (999). Quedan
   `player.gd` y `run_manager.gd` fuera del orden.
 
 ### N-316 · Capturas de tienda con gente y cajas — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-316-store-shots-crew`**

@@ -146,7 +146,7 @@ func _check_built(seed_value: int, houses: int) -> void:
 					river_tree_failed = true
 
 	# A river never reaches far enough to touch another stretch of the same
-	# road or a house -- route.gd's _clamp_river_reach() is supposed to
+	# road or a house -- route_ground.gd's clamp_river_reach() is supposed to
 	# shrink it before that happens (N-132 follow-up, "no corte otros
 	# tramos"). Every river remembers which stretch of `path` is its own.
 	# Checked against THIS river's own contribution (_river_factor), not the
