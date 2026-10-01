@@ -121,6 +121,7 @@
 | Sedán estacionado | `models/vehicles/sm_vehicle_parked_sedan_refined.glb` | ✅ | En la ruta (`route_dresser.gd`) y frente al depósito. Espec. #55. |
 | Camioneta de la competencia | `models/vehicles/sm_vehicle_competitor_van.glb` | ✅ | Solo frente al depósito; en la ruta, con N-306. |
 | Tractor | `models/vehicles/sm_vehicle_tractor.glb` | 🟡 | Creado, sin usar todavía: va en zona de campo con N-306. |
+| Grúa del tramo de barro | `models/vehicles/sm_vehicle_tow_crane.glb` | ✅ | 2.393 tris con AO (`tools/build_street_props.py -- crane` + `bake_vertex_ao.py`). La instancia `mud_crane.gd`; anima `Beacon` y cuelga el cable de `Hook`. N-321. |
 
 ## 8. Audio (hoy todo sintetizado en `synth_audio.gd`)
 
@@ -176,6 +177,7 @@ correspondientes están en `docs/tareas-nacho.md` §128-139 y `docs/tareas-slate
 | Ragdoll del jugador | `player_ragdoll.gd` (cápsulas) | Slatex | S-101 |
 | Maniquí del panel de cosméticos | `cosmetics_panel.gd` (cápsula + esfera) | Slatex | S-102 |
 | ~~Objetos sueltos de la zona de carga (caja de herramientas, termo)~~ **[x] Hecho (2026-09-30)**: caja de herramientas (756 tris) y termo (600) en `models/props/cargo/` (`tools/build_cargo_clutter.py`); las colisiones, masas y el traqueteo siguen en el script | `cargo_clutter.gd` | Nacho | N-139 |
+| ~~Grúa cómica del tramo de barro~~ **[x] Hecho (2026-10-01)**: grúa de remolque cartoon (2.393 tris con AO: chasis, cabina con cara, pluma con malacate y cable, gancho `Hook`, baliza `Beacon`, faros `Light`, patito de goma) en `models/vehicles/sm_vehicle_tow_crane.glb` (`tools/build_street_props.py`, grupo `crane`); los carteles, el traqueteo y el cable siguen en el script | `mud_crane.gd` | Nacho | N-321 |
 | Accesorios cosméticos (gorras, chalecos) | — | Slatex | S-103 |
 
 ### 10.2 Modelos existentes demasiado simples

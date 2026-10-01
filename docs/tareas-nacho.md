@@ -225,7 +225,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-321 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -1300,6 +1300,39 @@ verificado con `revisor-visual` y `check_pivots.gd`, y con el inventario §10.1 
   `docs/inventario-assets.md` §10.1. Con `revisor-visual` y `documentador`.~~ **[x] Hecho (2026-09-30)** — con GPU real: apoyan
   en el piso y el banco, se leen como caja y termo; pivotes en la base (los dos GLB sumados a `check_pivots.gd`); inventario
   §10.1 y `assets/README.md` al día.
+
+### N-321 · Grúa del tramo de barro con modelo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-321-mud-crane`**
+
+Hoy `scripts/gameplay/route/mud_crane.gd` (la grúa cómica del tramo de barro, N-108) se arma con ~12 BoxMesh: chasis amarillo
+2,6×0,7×6 m, cabina blanca, parabrisas, paragolpes rojo, pluma inclinada −16°, gancho, 4 ruedas cuadradas y una baliza que gira
+y late. Aparece pegada al camión del jugador cuando se atasca, así que se ve de cerca. Pasarla a un GLB low-poly generado por
+script de Blender (`do-not-drop/assets/tools/` con `lowpoly_kit.py`, ampliando `build_street_props.py` o con un script nuevo)
+en `do-not-drop/assets/models/vehicles/` (p. ej. `sm_vehicle_tow_crane.glb`), del mismo tamaño y orientación (frente a −Z,
+gancho atrás +Z en `HOOK_LOCAL` (0, 2.1, 3.6)), con presupuesto como los autos refinados (~1.500-2.500 tris) y nodos con nombre
+para lo que anima el script (`Beacon`, que gira y late, y el gancho). `mud_crane.gd` lo instancia en vez de las primitivas, sin
+cambiar `hook_position()`, los carteles `Board`/`BoardLeft`, el traqueteo ni nada de la lógica de `mud_segment.gd`.
+**Necesita PC** (Blender; la toma la sesión de arte). Origen: sesión de arte 2026-10-01.
+Hecho cuando hay un GLB de grúa de remolque dentro del presupuesto, cargado por `mud_crane.gd` sin ninguna `PrimitiveMesh`,
+con `test_mud_segment` ampliado (la grúa usa el GLB, `Beacon` existe, el gancho queda donde estaba), verificado con
+`revisor-visual` (`tests/render_mud_segment.gd`) y `check_pivots.gd`, y con el inventario §10.1 actualizado.
+- [x] **N-321.1** ~~Modelar la grúa por script y exportar el GLB con las medidas y la orientación de la versión de
+  primitivas. Con `modelador-blender`.~~ **[x] Hecho (2026-10-01, sesión de arte)** — `build_street_props.py -- crane`
+  (`tow_crane()`) → `models/vehicles/sm_vehicle_tow_crane.glb`, 2.028 tris (2.393 con el AO de `bake_vertex_ao.py`):
+  `Chassis`, `Cab` (faros-ojos y parrilla-sonrisa), `Boom` (dos tramos, cilindro hidráulico, malacate, cable fijo),
+  `Wheels`, `Light` (`lamp`), `TailLights` (`danger`), `Beacon` (origen en (0; 2,55; −1,9), emisivo `beacon`) y `Hook`
+  (origen en el ojo, (0; 2,05; 3,6)); lados del chasis planos en |x| = 1,30 para los carteles; patito de goma en la cola.
+- [x] **N-321.2** ~~Cambiar `mud_crane.gd` para instanciar el GLB y ampliar `test_mud_segment`. Con `constructor-tramos`.~~
+  **[x] Hecho (2026-10-01)** — `mud_crane.gd` `_build_model()` instancia el GLB bajo `Body` (sigue traqueteando), lo pasa
+  por `LowpolyMaterials.apply()` y `light_up(["lamp"])` como los autos estacionados y toma `Beacon` del modelo; sin
+  primitivas. `HOOK_LOCAL`, `hook_position()`, `Board`/`BoardLeft` y `mud_segment.gd` sin cambios. `test_mud_segment`
+  `_check_crane_model()`/`_expect_crane_model()` (escena del GLB, ninguna `PrimitiveMesh`, nodos con nombre, `Beacon`
+  emisivo que gira, gancho a < 0,6 m de `hook_position()`, carteles afuera del chasis); GLB sumado a `check_pivots.gd` y
+  `test_baked_ao`.
+- [x] **N-321.3** ~~Verificar de cerca con `revisor-visual` y `check_pivots.gd`, y actualizar el inventario.~~
+  **[x] Hecho (2026-10-01)** — con GPU real: pivote en el suelo (centro XZ (0; 0,19) por la pluma), "GRÚA" legible en los
+  dos lados, cable del gancho al camión sin cortes, baliza visible, sin z-fighting ni caras invertidas. Inventario §7 y
+  §10.1. Queda (menor): el patito no se reconoce a distancia, la cabina crema sale fría con la luz del cielo, y los planos
+  `crane`/`crane_cable` de `render_mud_segment.gd` la encuadran chica detrás del camión de cajas; no hay plano de noche.
 
 ## 4. Audio y diseño sonoro
 

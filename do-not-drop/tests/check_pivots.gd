@@ -36,6 +36,8 @@ const PATHS: Array[String] = [
 	"res://assets/models/environment/props/sm_env_prop_road_barrier.glb",
 	"res://assets/models/vehicles/sm_vehicle_parked_hatchback.glb",
 	"res://assets/models/vehicles/sm_vehicle_parked_pickup.glb",
+	# N-321 tow crane of the mud stretch: wheels on y=0, origin at the centre of the base, faces -Z.
+	"res://assets/models/vehicles/sm_vehicle_tow_crane.glb",
 	# N-319.2 depot kit: floor pieces sit at min_y 0; wall pieces too (origin on the floor at
 	# the wall); ceiling pieces (lamp, tube, ducts, tray) hang from their origin.
 	"res://assets/models/environment/depot/sm_env_depot_bay_lamp_bell.glb",
