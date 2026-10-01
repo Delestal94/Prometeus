@@ -45,6 +45,8 @@ extends SceneTree
 ##   contents as PackageContent; only the EventBus connects stay by name.
 ## - seat_point.gd (the cargo seats) holds the player as Player, the boxes as DeliveryPackage and the mounts
 ##   by preload; nothing stays by name.
+## - package_pickup_point.gd (picking a box up) holds its box as DeliveryPackage, the feedback as
+##   PackageFeedback and the player as Player; nothing stays by name.
 
 ## path -> {kind: max}. Kinds: "call", "callv", "get", "root".
 const BUDGETS: Dictionary = {
@@ -198,6 +200,10 @@ const BUDGETS: Dictionary = {
 	# (LateJoinSeating as a "player" that carries nothing, Node3D mounts without the script) is not asked
 	# by name: `as` drops it and it reads as carrying nothing / holding nothing.
 	"res://scripts/gameplay/interaction/seat_point.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# Picking a box up (N-224.4): the box is a DeliveryPackage, its feedback a PackageFeedback and the
+	# player a Player. A stand-in in the player group carries nothing and reaches from where it stands.
+	# The assist RPC stays rpc_id by name, like every RPC.
+	"res://scripts/gameplay/interaction/package_pickup_point.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
