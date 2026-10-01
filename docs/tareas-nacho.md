@@ -175,6 +175,29 @@ hasta 45 s; si crashea el anfitrión, los demás ven "anfitrión perdido" a los 
   `WARNING:` (más `::warning::` en GitHub Actions) en `tools/run-net-pair.sh` / `run-net-trio.sh`; sigue
   siendo PASS.
 
+### N-407 · Pantalla de carga entre el menú y el nivel — B · `Opus 5.5 · medium` · Aviso: sí (`main_menu.gd`, `scripts/ui/` de Slatex; `modules/` compartida) · **[x] rama `nacho/N-407-loading-screen`**
+
+Pedido del usuario (2026-10-01): al tocar "¡JUGAR!" el menú se congelaba en su último frame mientras el nivel
+cargaba y se armaba.
+- [x] Módulo portable `scene_loader` (`SceneLoader`): carga la escena en un hilo
+  (`ResourceLoader.load_threaded_request`) con la tapa ya puesta, la instancia con la tapa arriba y la saca recién
+  cuando la escena nueva dibujó `settle_frames` frames (compilación de shaders y subida de mallas: el tirón que se
+  veía). Mínimo 0,9 s en pantalla, fundido de 0,25 s, input tragado mientras está, `cancel()` mientras carga,
+  `failed` si la ruta no carga. Hooks `_build_cover(cover)` y `_show_progress(ratio, stage)`.
+- [x] `scripts/ui/loading_screen.gd` (`LoadingScreen extends SceneLoader`): arte propio
+  (`tx_ui_loading_background_1920.png`, ComfyUI con `artista-conceptual`, semilla 1407, `art/concept/loading/`,
+  fila en `art/ai-registro.md`: la camioneta saliendo al amanecer con cajas volando del techo) y el logo del menú en
+  el mismo lugar, tinta abajo, tarjeta con cinta del modo ("JUGAR SOLO", "CREAR SALA", "UNIRSE A LA SALA", "MODO
+  ENDLESS"), caja de cartón que salta sobre la ruta, etapa ("Cargando el camión…" → "Armando la ruta…" → "¡A
+  repartir!"), barra y un consejo al azar (nunca el mismo dos veces seguidas). Textos `UI_LOADING_*`.
+- [x] `main_menu.gd`: `_go_to_level(path, mode)` pasa por `LoadingScreen.go()`; un segundo toque no arma otra
+  carga; si la conexión se cae mientras carga (`_on_session_failed`) o llega una invitación de Steam, se cancela y
+  el menú queda con el error.
+- [x] Tests `test_scene_loader` (módulo, también en `portability-check.sh`) y `test_loading_screen`. Capturas:
+  `tests/render_loading_screen.gd` (`revisor-visual` con GPU, 2026-10-01: arte sin estirar, logo 420×210, tarjetas
+  legibles también a 1024×600, el nivel cargado en hilo sin texturas negras ni rosas).
+- [ ] Fuera de alcance: el reinicio de la entrega (`restart_delivery`, ya tiene fundido a negro) y la vuelta al menú.
+
 ## Hecho fuera de lista: auditoría de rendimiento (2026-09-29)
 
 Auditoría de `perfilador-rendimiento` (headless, Endless con 4 cajas, `Performance` cada 10 ticks):
@@ -298,7 +321,7 @@ anotado en la lista del README y, si hubo aviso, la entrada en `colaboracion-equ
 
 ---
 
-### N-908 · Quien entra tarde no sabe qué cajas llevan los demás — B · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package_handling.gd`, `seat_tending.gd`, dominio de Slatex)
+### N-908 · Quien entra tarde no sabe qué cajas llevan los demás — B · `Opus 5.5 · xhigh` · Aviso: sí (`player.gd`, `package_handling.gd`, `seat_tending.gd`, dominio de Slatex) · **[x] rama `nacho/N-908-late-join-carry`**
 Origen: mantenimiento 2026-10-01. `carried_package` solo viaja en el broadcast `player.rpc(&"pick_up")` al levantar
 (`scripts/gameplay/package/package_handling.gd:61`, `scripts/gameplay/player/player.gd:302-305`). En el cliente que entra
 tarde `SeatTending._holder_of()` (`scripts/gameplay/interaction/seat_tending.gd:188-196`) da null, así que
@@ -306,23 +329,35 @@ tarde `SeatTending._holder_of()` (`scripts/gameplay/interaction/seat_tending.gd:
 bahías libres que el host tiene reservados; además ve a los compañeros sin pose de carga. Hecho cuando un test en
 `test_late_join_seating.gd` (o el de seat tending) cubre la vista cliente con una caja en el regazo (`lap_reserves`
 true) y el reenvío del host a un peer nuevo.
-- [ ] **N-908.1** En el host, `Player._on_peer_level_ready`, tras `sync.update_visibility(peer_id)`: `if
+- [x] ~~**N-908.1** En el host, `Player._on_peer_level_ready`, tras `sync.update_visibility(peer_id)`: `if
   is_instance_valid(carried_package): rpc_id(peer_id, &"pick_up", carried_package.get_path())`. Respaldo:
   `_holder_of` en el cliente busca al jugador con autoridad = `package.tender_peer_id` cuando `is_held`. Con
-  `constructor-red` y después `auditor-red`; tests `late_join`, `seat_tending`.
-- [ ] **N-908.2** Test de vista cliente con caja en regazo y de reenvío de `pick_up` a un peer nuevo. Con
-  `escritor-tests`; tests `late_join`.
+  `constructor-red` y después `auditor-red`; tests `late_join`, `seat_tending`.~~
+- [x] ~~**N-908.2** Test de vista cliente con caja en regazo y de reenvío de `pick_up` a un peer nuevo. Con
+  `escritor-tests`; tests `late_join`.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-908-late-join-carry`)** — `player_net_visibility.gd` `refresh_peer()`: el host,
+  tras `update_visibility(peer_id)`, reenvía `pick_up` a ese peer solo si el jugador tiene caja (mismo RPC, canal 0
+  confiable, después del spawn). `seat_tending.gd` `_holder_of()`: respaldo por `tender_peer_id` solo con `is_held` y
+  `lap_mount_path`. Sin RPC nuevo: `PROTOCOL_VERSION` igual. `test_late_join_seating` (fase "late carry") y etapa nueva
+  en `net_pair.gd`. `auditor-red`: sin BUG ni riesgo alto; quedan riesgos bajos (respaldo con el tender que ya lleva otra
+  caja, reenvío desde un jugador ya en `queue_free`, el test no mira el orden spawn → RPC, trío con un tercero tarde).
+  Aviso `docs/avisos/2026-10-01-n908-caja-en-mano-al-entrar-tarde.md`.
 
-### N-909 · El plan de animales de carga es siempre el mismo — B · `Opus 5.5 · medium` · Aviso: no
+### N-909 · El plan de animales de carga es siempre el mismo — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `nacho/N-909-cargo-animal-seed`**
 Origen: mantenimiento 2026-10-01. `cargo_animals.gd:493` (y 250, 379, 417; `_world_seed()` en 522) usa
 `NetworkManager.world_seed` tal cual: jugando solo vale 0, así que sale el mismo animal, en el mismo tramo, con la
 misma caja en todas las partidas; en sala se repite cada partida (no mezcla `world_completed_runs`). Solo host, no
 toca `PROTOCOL_VERSION`. Hecho cuando `test_cargo_animals.gd` prueba que con seed 0 dos corridas dan planes
 distintos y que con seed fijo `completed_runs` 0 vs 1 dan planes distintos.
-- [ ] **N-909.1** En `_on_run_started` del host: `_run_seed = hash([world_seed, world_completed_runs])` si
+- [x] ~~**N-909.1** En `_on_run_started` del host: `_run_seed = hash([world_seed, world_completed_runs])` si
   `world_seed != 0`, si no `randi()` de un RNG con `randomize()`; usarlo en `_next_leg`, `_pick`, `_snatch` y
-  `_kick_box`. Con `constructor-mundo`; tests `cargo_animals`.
-- [ ] **N-909.2** Tests de las dos propiedades del "Hecho cuando". Con `escritor-tests`; tests `cargo_animals`.
+  `_kick_box`. Con `constructor-mundo`; tests `cargo_animals`.~~
+- [x] ~~**N-909.2** Tests de las dos propiedades del "Hecho cuando". Con `escritor-tests`; tests `cargo_animals`.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-909-cargo-animal-seed`, `512da58`)** — `CargoAnimals._roll_run_seed()` en
+  `_on_run_started` (y perezoso en `_run_seed()` si se pide un tramo antes): en sala `hash([world_seed,
+  world_completed_runs])`, solo una tirada nueva con `randomize()`. Lo usan `_next_leg`, `_pick`, `_snatch` y
+  `_kick_box`. `test_cargo_animals` (`_test_run_seed`, 40 tramos): solo, dos corridas distintas; en sala, mismo
+  seed y corridas → mismos tramos, otra cantidad de corridas → otros.
 
 ### N-910 · `cargo_animal_ended` y `cargo_animal_alert` en el mismo frame confunden al cliente — C · `Opus 5.5 · medium` · Aviso: no
 Origen: mantenimiento 2026-10-01. `cargo_animal_view.gd:102-110` (y 303, 308), solo cliente. El cooldown es 3.5 s y la
@@ -802,6 +837,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     lint bajó 1. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-level-base-tipado.md`. `run_manager.gd` ya no tiene usos por nombre tras N-225.5.
     Siguientes: `player.gd` (21), `cargo_animals.gd` (16).
+  - [x] `cargo_animals.gd` (2026-10-01, rama `nacho/N-224-cargo-animals-typed`): el camión por `preload` de
+    `vehicle.gd` (`VehicleScript`, accesor `_truck()`: `carries`, `point_velocity`, `rear_cargo_open`), la red por la
+    constante `NETWORK_MANAGER` (`world_seed`, `is_host`, la señal `peer_level_ready` sin `has_signal`), el contenido
+    como `PackageContent` y el arranque de la gaviota escribe `_has_previous_velocity` directo. Quedan por nombre el
+    relay de EventBus y `RunManager.is_running` (ciclo de compilación). En el archivo: 17 → 5 usos (`.call` 6 → 1,
+    `.get(&` 4 → 1, `/root/` 6 → 3, `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
+    Sin aviso (`route/` y `tests/`). Siguientes: `package_feedback.gd` (14), `depot_panel.gd` (13), `player.gd` (13),
+    `package_contents_view.gd` (13), `seat_point.gd` (13).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

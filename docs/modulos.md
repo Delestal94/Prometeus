@@ -1,6 +1,6 @@
 # Módulos portables — qué se puede llevar a otro juego
 
-> Última actualización: 2026-09-30 (N-230 a N-234: las cinco fases, 17 módulos).
+> Última actualización: 2026-09-30 (N-230 a N-234: las cinco fases, 17 módulos; `scene_loader` de N-407 el 2026-10-01).
 > Objetivo: que las piezas genéricas de Take My Package vivan en carpetas que se copian a otro
 > proyecto Godot y **funcionan**, con la garantía dada por CI y no por la memoria de nadie.
 
@@ -49,6 +49,7 @@ El patrón es **módulo = mecanismo; el juego = tablas y cableado**, en un adapt
 | `unlock_profile` | `scripts/core/unlock_manager.gd` (`UnlockManager extends UnlockProfile`) | `UNLOCKS` como reglas (`deliveries`, `score` → `_stat()`), contadores, camión, pintura, uniformes, caras, trampas bloqueadas; `_profile_fields`/`_read_profile`/`_after_load`/`_reset_fields` |
 | `run_log` | `scripts/core/run_telemetry.gd` (`RunTelemetry extends RunLog`) | qué escucha en `EventBus` y qué guarda de `RunManager`; `TelemetryFormat` sigue en el juego |
 | `settings_store` | `scripts/core/game_settings.gd` (`GameSettings extends SettingsStore`) | `SAVED_KEYS`, idiomas, teclas y todas las propiedades del juego con su setter; `_before_load` (migración de "Do Not Drop"), `_after_load`/`_needs_rewrite`/`_before_save` (marca del HUD) |
+| `scene_loader` | `scripts/ui/loading_screen.gd` (`LoadingScreen extends SceneLoader`), usado por `main_menu.gd` | `_build_cover()` con el arte, el logo y las tarjetas de `UiTheme`; `_show_progress()` con la etapa traducida (`UI_LOADING_*`) |
 
 Regla para escribir un adaptador: si el módulo necesita datos del juego, el adaptador se los da
 **antes del primer uso** (`LowpolyMaterials.configure()`), y los lectores del juego siguen usando el
@@ -75,6 +76,7 @@ adaptador, nunca el módulo directo, así el orden de inicialización no importa
 | `unlock_profile` | `UnlockProfile` | Perfil JSON versionado de desbloqueos por umbrales de estadísticas (retroactivos al cargar), marcas "visto una vez", hooks para los campos y migraciones del juego | `persistence` |
 | `run_log` | `RunLog` | Un registro JSON por partida en una carpeta del guardado, con nombre por fecha y poda de los más viejos | `persistence` |
 | `net_session` | `NetSession`, `NetAdmission`, `NetEventBus`, `RpcGuard`, `SteamVoice`, `NetStats`, `NetStatsOverlay` | Sesión cooperativa host-autoritativa: Steam (lobby, invitaciones) o ENet, handshake con versión que lleva el estado del host como diccionario opaco, roster, reinicio, códigos de falla, reconexión por identidad (Steam ID, o en LAN una cadena de hashes de un token por proceso, que no sirve repetida; el fantasma de una conexión vieja se suelta en el acto, `peer_rejoined`, `peer_removed`); admisión (`NetAdmission`: lugar entre `max_players` contando a los que autentican; con la sala llena el que vuelve recupera el lugar de su fantasma, el transporte ENet acepta una conexión de más); bus con `relay()` y pedidos de cualquier peer, solo de eventos declarados y con límite de frecuencia; chequeos para todo RPC `any_peer` (remitente, `NaN`/`inf`, tamaños, ids y rutas, cupo por peer con reserva para los críticos); voz por Steam; estadísticas, `--net-sim` y overlay | — |
+| `scene_loader` | `SceneLoader` | Cambio de escena detrás de una tapa: carga en un hilo con barra de progreso, instancia con la tapa arriba y la levanta cuando la escena nueva ya dibujó sus primeros frames; mínimo en pantalla, fundido, input bloqueado, `cancel()` y `failed` | — |
 
 `tools/check_modules.py --list` imprime esta tabla desde los `module.cfg`.
 
