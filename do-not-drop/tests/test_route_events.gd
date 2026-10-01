@@ -50,6 +50,7 @@ func _run() -> void:
 		var seat_area: Area3D = Area3D.new()
 		seat_area.set_script(seat_script)
 		seat_area.name = "InteractionArea"
+		seat_area.set(&"role", &"passenger")
 		seat_area.set(&"required_mount_path", NodePath("/root/%s/InteractionArea" % mount_name))
 		seat.add_child(seat_area)
 	first.current_mount_path = NodePath("/root/LeftSeat1PackageMount/InteractionArea")

@@ -17,7 +17,9 @@ extends SeatPoint
 
 func _ready() -> void:
 	super._ready()
-	add_to_group(SeatTending.SEAT_GROUP)
+	# The wheel has no cargo to mind: it never joins the seats that share bays.
+	if role != &"driver":
+		add_to_group(SeatTending.SEAT_GROUP)
 
 
 func _free_prompt() -> String:
@@ -42,7 +44,7 @@ func _can_board(player: Node) -> bool:
 		# refuses it.
 		return true
 	if not tend_mount_paths.is_empty():
-		return carried == null or _first_mount(false) != null
+		return carried == null or _free_bay(carried) != null
 	if not required_mount_path.is_empty():
 		# A passenger's tending mount can be filled two ways: someone already
 		# left the package there, or this player is still holding it and
@@ -65,34 +67,42 @@ func _accept_boarding(player: Node) -> bool:
 func _on_boarded(player: Node, peer_id: int) -> void:
 	if role == &"driver":
 		return
-	var package: Node = null
+	# The boxes this seat could look after, in order: it keeps the first one it
+	# can claim (a rack seat faces two bays, one of them may be minded already).
+	var candidates: Array[Node] = []
 	var carried: Node = player.get(&"carried_package")
 	if not tend_mount_paths.is_empty():
 		if carried != null:
 			# Boarding with a box keeps it on your lap; "drop" (Q) then shelves
 			# it in this column's free bay (package_rescue.gd's lap toggle).
-			package = carried
-			carried.set(&"_lap_mount", _first_mount(false))
+			candidates.append(carried)
+			carried.set(&"_lap_mount", _free_bay(carried))
 		else:
-			var full_mount: Node = _first_mount(true)
-			if full_mount != null:
-				package = full_mount.get(&"occupied_by")
+			for path: NodePath in tend_mount_paths:
+				var full_mount: Node = get_node_or_null(path)
+				if full_mount != null and is_instance_valid(full_mount.get(&"occupied_by")):
+					candidates.append(full_mount.get(&"occupied_by"))
 	elif not required_mount_path.is_empty():
 		# A passenger takes charge of the package at their own seat: from here
 		# their input is what keeps that trap under control.
 		var mount: Node = get_node_or_null(required_mount_path)
-		package = mount.get(&"occupied_by") if mount != null else null
+		var package: Node = mount.get(&"occupied_by") if mount != null else null
 		if package == null and carried != null and mount != null:
 			# Boarded with it still in hand: it stays on their lap, and "drop"
 			# (Q) settles it onto this seat's mount (see _can_board() above).
 			package = carried
 			carried.set(&"_lap_mount", mount)
-	if package != null and player.has_method(&"tend_package"):
+		if package != null:
+			candidates.append(package)
+	if not player.has_method(&"tend_package"):
+		return
+	for box: Node in candidates:
 		# Several seats can look at the same mount: someone already minding the
 		# box keeps it (seat_tending.gd), the newcomer just sits.
-		if package.has_method(&"set_tender") and not SeatTending.claim(self, package, peer_id):
-			return
-		player.rpc_id(peer_id, &"tend_package", (package as Node).get_path())
+		if box.has_method(&"set_tender") and not SeatTending.claim(self, box, peer_id):
+			continue
+		player.rpc_id(peer_id, &"tend_package", box.get_path())
+		return
 
 
 ## Whatever box they were looking after stops taking their input -- unless
@@ -106,17 +116,20 @@ func _on_released(peer_id: int) -> void:
 
 ## Who sits here (host; 0 when the seat is free).
 func seated_peer() -> int:
+	if role == &"driver":
+		return 0
 	return int(occupant.get_multiplayer_authority()) if is_instance_valid(occupant) else 0
 
 
 ## This seat's own mount: the one it is `required_mount_path` for.
 func owns_mount(mount: Node) -> bool:
-	return mount != null and not required_mount_path.is_empty() and get_node_or_null(required_mount_path) == mount
+	return role != &"driver" and mount != null and not required_mount_path.is_empty() \
+			and get_node_or_null(required_mount_path) == mount
 
 
 ## Whether this seat looks after the box in `mount`, its own or by the column.
 func looks_at_mount(mount: Node) -> bool:
-	if mount == null:
+	if mount == null or role == &"driver":
 		return false
 	if owns_mount(mount):
 		return true
@@ -126,11 +139,23 @@ func looks_at_mount(mount: Node) -> bool:
 	return false
 
 
-## First mount of this seat's column that is occupied (or free), in the
-## order listed -- lower bay before upper.
-func _first_mount(occupied: bool) -> Node:
+## First bay of this seat's column that is free and that no other seated
+## passenger's lap has reserved (`except` is the box about to be shelved there:
+## its own reservation does not count). Lower bay before upper.
+func _free_bay(except: Node = null) -> Node:
 	for path: NodePath in tend_mount_paths:
 		var mount: Node = get_node_or_null(path)
-		if mount != null and is_instance_valid(mount.get(&"occupied_by")) == occupied:
+		if mount != null and not is_instance_valid(mount.get(&"occupied_by")) and not _reserved(mount, except):
 			return mount
 	return null
+
+
+## A box riding on a seated passenger's lap that will be shelved in `mount`.
+func _reserved(mount: Node, except: Node) -> bool:
+	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
+		if package == except or not bool(package.get(&"is_held")) or package.get(&"_lap_mount") != mount:
+			continue
+		var carrier: Variant = package.get(&"carrier")
+		if is_instance_valid(carrier) and not NodePath((carrier as Node).get(&"seat_node_path")).is_empty():
+			return true
+	return false

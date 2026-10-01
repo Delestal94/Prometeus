@@ -17,3 +17,12 @@ N-228.4: con 8 jugadores hay hasta 7 cajas y el camión tenía 6 anclajes.
 
 Tests: `test_multi_cargo` (anclajes >= `MAX_PLAYERS - 1`, cada asiento cuida uno), `test_reference_truck`,
 `test_seat_tending` (nuevo), `test_route_events`.
+
+Después de la revisión de `auditor-red` y `revisor-gdscript` también cambiaron:
+- `seat_point.gd`: el conductor no entra al grupo `cargo_seat` ni cuenta como dueño de un anclaje (se borró
+  su `required_mount_path`, que nadie leía); quien se sienta con una caja en brazos pasa a cuidarla; un asiento
+  que cuida con caja en mano exige un anclaje libre que ningún otro regazo reservó; los asientos de columna
+  toman la primera caja sin cuidar.
+- `scripts/gameplay/player/player_seat_pose.gd` (de Slatex): `apply_tend_package` ignora una caja si el
+  jugador ya no está sentado, y `apply_board_seat` limpia `tended_package`.
+Pendiente de bajo riesgo: N-228.8.

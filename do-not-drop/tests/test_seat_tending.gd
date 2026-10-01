@@ -91,6 +91,63 @@ func _run() -> void:
 	host.call(&"leave_seat")
 	_expect(_tender(box) == 0, "With nobody left facing the mount nobody tends it (got %d)" % _tender(box))
 
+	# A stale hand-over: the host's "you tend this" crossing the player's own
+	# leave must not leave a standing player holding a box.
+	host.call(&"tend_package", box.get_path())
+	_expect(host.get(&"tended_package") == null, "A standing player ignores a box handed to them")
+	host.set(&"tended_package", box)
+	_seat("RackSeat3EyePoint").call(&"interact", host)
+	_expect(host.get(&"tended_package") == null, "Sitting down starts without the box tended before")
+	host.call(&"leave_seat")
+
+	# A box in someone's hands is theirs when they sit with it, whoever minded
+	# it before: CenterSeat's sitter tends the box in RightSeat3's bay, the host
+	# takes it out and sits at LeftSeat3 holding it.
+	var minder: Node = _player(2)
+	var courier: Node = _player(3)
+	await process_frame
+	neighbour.call(&"interact", minder)
+	_expect(_tender(box) == 2, "A neighbour tends the box when alone with it (got %d)" % _tender(box))
+	box.call(&"take_by", host)
+	neighbour_two.call(&"interact", host)
+	_expect(host.get(&"seat_node_path") == neighbour_two.get_parent().get_path(), "The host sits with the box in hand")
+	_expect(_tender(box) == 1 and host.get(&"tended_package") == box,
+		"Sitting with a box in hand takes it from its old tender (got %d)" % _tender(box))
+	_expect(bool(box.call(&"is_aboard")), "The box on the lap counts as aboard")
+
+	# That lap reserves the column's only bay: nobody else sits down with a box.
+	var spare: Node = _spare_box(4)
+	spare.call(&"take_by", courier)
+	neighbour.call(&"release_occupant", 2)
+	_expect(not bool(neighbour.call(&"can_interact", courier)),
+		"A second neighbour cannot sit with a box while the bay is promised to a lap")
+	_expect(bool(neighbour.call(&"can_interact", minder)), "...but one with empty hands can")
+	host.call(&"leave_seat")
+	mount.call(&"store", box)
+	_expect(host.get(&"carried_package") == null, "The host's hands are empty again")
+	box.call(&"set_tender", 0)
+
+	# The wheel's seat never inherits a box (it used to name LeftSeat1's bay).
+	var driver_seat: Node = _level.get_node("World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea")
+	driver_seat.get_parent().get_parent().get_parent().call(&"set_door_open", &"cab_left", true)
+	var driver: Node = _player(6)
+	await process_frame
+	driver_seat.call(&"interact", driver)
+	_expect(int(driver_seat.call(&"seated_peer")) == 0 and not bool(driver_seat.call(&"looks_at_mount", mount)),
+		"The driver's seat looks after no mount")
+	var column_bay: Node = _level.get_node(VEHICLE + "LeftSeat1PackageMount/InteractionArea")
+	var driven_box: Node = _spare_box(3)
+	column_bay.call(&"store", driven_box)
+	var column_seat: Node = _seat("LeftSeat1EyePoint")
+	var column_sitter: Node = _player(4)
+	await process_frame
+	column_seat.call(&"interact", column_sitter)
+	_expect(_tender(driven_box) == 4, "The bay's own sitter tends its box (got %d)" % _tender(driven_box))
+	column_seat.call(&"release_occupant", 4)
+	_expect(_tender(driven_box) == 0, "Getting up does not pass the box to the driver (got %d)" % _tender(driven_box))
+	driver_seat.call(&"release_occupant", 6)
+	driven_box.call(&"release_mount")
+
 	# The same on a rack column: LeftSeat1 owns the bay RackSeat1 also tends.
 	var bay: Node = _level.get_node(VEHICLE + "LeftSeat1PackageMount/InteractionArea")
 	var rack_box: Node = packages[1]
@@ -118,6 +175,22 @@ func _run() -> void:
 	_expect(_tender(rack_box) == 1 and host.get(&"tended_package") == rack_box,
 		"The owner leaving hands it to the rack sitter (got %d)" % _tender(rack_box))
 
+	# A rack seat facing two bays keeps the one nobody minds.
+	host.call(&"leave_seat")
+	var column_owner_two: Node = _player(7)
+	await process_frame
+	column_owner.call(&"interact", column_owner_two)
+	_expect(_tender(rack_box) == 7, "The bay's owner tends its box again (got %d)" % _tender(rack_box))
+	var second_bay: Node = _level.get_node(VEHICLE + "LeftSeat2PackageMount/InteractionArea")
+	var other_box: Node = _spare_box(2)
+	second_bay.call(&"store", other_box)
+	rack.call(&"interact", host)
+	_expect(_tender(rack_box) == 7,
+		"The rack seat leaves the first bay's box to its tender (got %d)" % _tender(rack_box))
+	_expect(_tender(other_box) == 1 and host.get(&"tended_package") == other_box,
+		"...and tends the other bay's box instead (got %d)" % _tender(other_box))
+
+	courier.free()  # still holding a box that goes with the level
 	_level.queue_free()
 	await process_frame
 	if _failures == 0:
@@ -135,6 +208,16 @@ func _player(peer_id: int) -> Node:
 	player.set_multiplayer_authority(peer_id)
 	root.add_child(player)
 	return player
+
+
+## A loose extra box (the level only declares a few).
+func _spare_box(index: int) -> Node:
+	var box: Node = load("res://scenes/gameplay/package/package.tscn").instantiate()
+	box.set(&"package_id", StringName("seat_tending_spare_%d" % index))
+	box.name = "SeatTendingSpare%d" % index
+	box.set(&"freeze", true)
+	_level.add_child(box)
+	return box
 
 
 func _tender(package: Node) -> int:

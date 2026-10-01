@@ -23,13 +23,17 @@ const SEAT_GROUP: StringName = &"cargo_seat"
 static func claim(seat: Node, package: Node, peer_id: int) -> bool:
 	var current: int = int(package.get(&"tender_peer_id"))
 	if current > 0 and current != peer_id:
-		var mount: Node = mount_of(package)
-		var holder: Node = _seat_of_peer(seat.get_tree(), current, mount, seat)
+		var tree: SceneTree = seat.get_tree()
+		var in_hands: bool = _carried_by(package, peer_id)
+		# A box the newcomer sits down with is theirs whoever minded it before.
+		var mount: Node = null if in_hands else mount_of(package)
+		var holder: Node = _seat_of_peer(tree, current, mount, seat, in_hands)
 		if holder != null:
-			if not seat.call(&"owns_mount", mount) or holder.call(&"owns_mount", mount):
+			if not in_hands and (not seat.call(&"owns_mount", mount) or holder.call(&"owns_mount", mount)):
 				return false
-			# The owner arrives after a neighbour took over: the neighbour's HUD
-			# stops claiming a box whose input the host no longer reads.
+			# The owner arrives after a neighbour took over (or the box came
+			# in someone's hands): the neighbour's HUD stops claiming a box
+			# whose input the host no longer reads.
 			var displaced: Node = holder.get(&"occupant")
 			if displaced.has_method(&"tend_package"):
 				displaced.rpc_id(current, &"tend_package", NodePath())
@@ -38,30 +42,35 @@ static func claim(seat: Node, package: Node, peer_id: int) -> bool:
 
 
 ## Host: `leaving` stopped tending `package` (got up, or dropped out). The
-## best other sitter facing its mount, if any, takes it from here.
+## best other sitter facing its mount, if any, takes it from here. Only a box
+## still in its bay is handed over: not one in someone's hands or on the floor.
 static func hand_over(package: Node, leaving: int) -> void:
-	if not package.is_inside_tree() or bool(package.get(&"is_held")):
+	if not package.is_inside_tree() or bool(package.get(&"is_held")) or not bool(package.get(&"is_loaded")):
 		return
-	var mount: Node = mount_of(package)
+	var current: Variant = package.get(&"current_mount")
+	var mount: Node = current as Node if is_instance_valid(current) else null
 	if mount == null:
 		return
+	var tree: SceneTree = package.get_tree()
 	var best: Node = null
-	for seat: Node in package.get_tree().get_nodes_in_group(SEAT_GROUP):
+	for seat: Node in tree.get_nodes_in_group(SEAT_GROUP):
 		var peer: int = int(seat.call(&"seated_peer"))
 		if peer <= 0 or peer == leaving or not seat.call(&"looks_at_mount", mount) \
-				or _tends_something(package.get_tree(), peer):
+				or _tends_something(tree, peer):
 			continue
 		if best == null or (seat.call(&"owns_mount", mount) and not best.call(&"owns_mount", mount)):
 			best = seat
 	if best == null:
 		return
+	var heir: int = int(best.call(&"seated_peer"))
 	var player: Node = best.get(&"occupant")
-	package.call(&"set_tender", int(best.call(&"seated_peer")))
+	package.call(&"set_tender", heir)
 	if player.has_method(&"tend_package"):
-		player.rpc_id(int(best.call(&"seated_peer")), &"tend_package", package.get_path())
+		player.rpc_id(heir, &"tend_package", package.get_path())
 
 
-## The mount the box sits in (or, in someone's lap, the one it goes back to).
+## The mount the box sits in or, in a seated passenger's lap, the one it goes
+## back to.
 static func mount_of(package: Node) -> Node:
 	var mount: Variant = package.get(&"current_mount")
 	if is_instance_valid(mount):
@@ -82,11 +91,20 @@ static func is_owned_mount(tree: SceneTree, mount: Node) -> bool:
 	return false
 
 
-static func _seat_of_peer(tree: SceneTree, peer_id: int, mount: Node, except: Node) -> Node:
+## The seat `peer_id` sits in, other than `except`, that looks at `mount`
+## (`any_mount`: whichever it is).
+static func _seat_of_peer(tree: SceneTree, peer_id: int, mount: Node, except: Node, any_mount: bool = false) -> Node:
 	for seat: Node in tree.get_nodes_in_group(SEAT_GROUP):
-		if seat != except and int(seat.call(&"seated_peer")) == peer_id and seat.call(&"looks_at_mount", mount):
+		if seat != except and int(seat.call(&"seated_peer")) == peer_id \
+				and (any_mount or seat.call(&"looks_at_mount", mount)):
 			return seat
 	return null
+
+
+static func _carried_by(package: Node, peer_id: int) -> bool:
+	var carrier: Variant = package.get(&"carrier")
+	return bool(package.get(&"is_held")) and is_instance_valid(carrier) \
+			and int((carrier as Node).get_multiplayer_authority()) == peer_id
 
 
 ## A sitter already minding another box (a rack seat facing two bays) keeps
