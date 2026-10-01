@@ -1479,14 +1479,29 @@ Hecho cuando en grava se ve una nube suave y clara desde el espejo, la caja y at
 polvo; con lluvia se apaga; no hay bolas a menos de 1,5 m de la cámara de la caja; `test_dust_and_ambience.gd` ampliado (en
 asfalto no emite, en grava sí, con `wetness` alto no, material sin sombra y con alfa); hay capturas antes/después con
 `revisor-visual` desde un script reproducible en `tests/render_*.gd`; y el inventario de assets está al día.
-- [ ] **N-320.1** Rehacer el emisor y el material del polvo en `vehicle_presentation.gd` según la receta de arriba y ampliar
-  `test_dust_and_ambience.gd`. Con `artista-vfx` y `escritor-tests`; tests `dust`.
-- [ ] **N-320.2** Script de captura reproducible (`tests/render_*.gd`: grava y asfalto, día y noche, lluvia; vistas de espejo,
-  caja y atrás) y verificación visual antes/después, incluida la distancia mínima a la cámara de la caja. Con
-  `revisor-visual`; tests `dust`.
-- [ ] **N-320.3** Actualizar el inventario/spec (`docs/especificaciones-visuales.md`) con el polvo nuevo; si es chico,
-  corregir de paso los ítems 51 (marcas de frenada) y 90 (escombros), que figuran pendientes y ya existen. Con
-  `documentador`.
+- [x] **N-320.1** ~~Rehacer el emisor y el material del polvo según la receta de arriba y ampliar
+  `test_dust_and_ambience.gd`. Con `artista-vfx` y `escritor-tests`; tests `dust`.~~ **[x] Hecho (2026-10-01, sesión de arte)** —
+  componente nuevo `scripts/presentation/wheel_dust.gd` (`WheelDust`, lo crea `vehicle_presentation.gd`, que pierde
+  `_build_dust_emitters`/`_apply_dust`): 2 emisores en la carrocería, uno por rueda trasera (la rueda gira y arrastraba la
+  dirección), quad billboard de 1,3 m con degradé radial por código (la esfera low-poly dejaba el octógono del intento
+  anterior), unshaded, sin sombra, color `e0d4b8` (más claro que la grava, no naranja), alfa 0,8 → 0,7 → 0, escala 0,5 → 2,5
+  (`Curve.max_value` 3), 32 partículas × 1,2 s, `inherit_velocity_ratio` 0,35. Intensidad = máx(velocidad, derrape) ×
+  suelo (`Route.ground_roughness()` × 1,6: asfalto 0, banquina 0,4, grava 1; sin ruta, 0) × (1 − wetness de `WorldMood`:
+  lluvia 1, niebla 0,35), muestreada cada 0,2 s; de noche color ×0,35 y alfa ×0,75. No emite con la cámara activa a
+  < 1,5 m. `test_dust_and_ambience.gd` con ruta falsa y mood fijo: asfalto no, grava sí, banquina más rala, lluvia no,
+  niebla menos, noche más oscuro, corte de cámara, material.
+- [x] **N-320.2** ~~Script de captura reproducible y verificación visual antes/después. Con `revisor-visual`; tests
+  `dust`.~~ **[x] Hecho (2026-10-01, sesión de arte)** — `tests/render_wheel_dust.gd` (`--mood`, `--seed`, `--out`,
+  `--ground`, `--dry`): el camión real a ~42 km/h en grava y asfalto, planos `mirror`, `cargo` y `rear`. Con GPU real
+  (RTX 4060 Ti, 1280×720): antes (cubos de 0,05 m) no se veía nada; después, estela clara en grava, luminancia sobre la
+  estela vs. grava limpia en `rear` 189 vs. 150 de día y 69 vs. 49 de noche; asfalto y lluvia, 0 de 2 emisores; tapa
+  ~10-15 % de la puerta trasera abierta en `rear`. En `mirror` la caja tapa la estela (pose de la cámara, no del efecto).
+- [x] **N-320.3** ~~Actualizar el inventario/spec; corregir de paso los ítems 51 y 90.~~ **[x] Hecho (2026-10-01)** —
+  `docs/inventario-assets.md` §7 y `docs/especificaciones-visuales.md` #49 (polvo nuevo), #51 (marcas de frenada) y #90
+  (escombros), que ya existían en `vehicle_effects.gd`.
+- Queda (fuera de N-320): el humo de escape de `vehicle_effects.gd` se ve desde la caja como una hilera de 5-6 puntitos
+  oscuros nítidos (`SMOKE_COLOR` gris 0,32 con alfa 0,42), y su `scale_curve` 0,5 → 3,2 no crece porque `Curve` recorta a
+  `max_value` 1. Subir `max_value` solo no lo arregló en la captura: pide color más claro y otra forma (la de `WheelDust`).
 
 ## 4. Audio y diseño sonoro
 
