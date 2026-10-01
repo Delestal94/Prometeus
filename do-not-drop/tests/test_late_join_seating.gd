@@ -18,8 +18,8 @@ extends SceneTree
 ## - once results are showing the depot is the place again (no seating);
 ## - Endless, which has no depot to go back to, seats newcomers the same way.
 
-## Loaded by path, not by class name: this script is compiled before the
-## autoloads exist, and the seating script talks to RunManager.
+## The seating script is reached by node and get()/call(), not by class name:
+## this script is compiled before the autoloads exist, and it talks to RunManager.
 const SEAT_GROUP: StringName = &"cargo_seat"
 var _failures: int = 0
 
@@ -80,8 +80,9 @@ func _run() -> void:
 		_expect(flat.length() < 0.3,
 				"%s: the newcomer spawns by the seat, not at the depot (got %s, spot %s)"
 				% [tag, joiner.global_position, stand])
-		_expect(not String(joiner.get(&"seat_node_path")).is_empty(),
-				"%s: the newcomer's player took the seat (board_seat reached it)" % tag)
+		_expect(NodePath(joiner.get(&"seat_node_path")) == expected.get_parent().get_path(),
+				"%s: the newcomer's player is marked as sitting in that seat" % tag)
+		_expect(bool(joiner.get(&"net_in_vehicle")), "%s: the newcomer starts out riding in the truck" % tag)
 		var next_seat: Node = late.call(&"pick_seat")
 		_expect(next_seat != null and next_seat != expected, "%s: the next newcomer is offered another seat" % tag)
 		await create_timer(0.3).timeout
@@ -125,6 +126,20 @@ func _run() -> void:
 			var stand_here: Vector3 = truck.to_global(late.call(&"standing_spot", seat))
 			_expect(truck.carries(stand_here),
 					"%s: %s's standing spot is inside the truck" % [tag, seat.get_parent().name])
+
+		# Spawned in the truck's own space: wherever the truck is drawn, there.
+		truck.global_position += Vector3(3.0, 0.0, 7.0)
+		truck.global_rotation.y += 0.4
+		var standing: Vector3 = late.call(&"floor_at", late.get_script().get_script_constant_map()["BAY_SPOT"])
+		var stray: Node3D = world.get_node(^"PlayerSpawner").spawn(
+				{"peer_id": 9, "position": Vector3.ZERO, "vehicle_position": standing})
+		_expect(stray != null and stray.global_position.distance_to(truck.to_global(standing)) < 0.01,
+				"%s: a spawn with vehicle_position lands at that spot of the truck (got %s, want %s)"
+				% [tag, stray.global_position, truck.to_global(standing)])
+		_expect(stray != null and bool(stray.get(&"net_in_vehicle"))
+				and (stray.get(&"net_position") as Vector3).distance_to(standing) < 0.01,
+				"%s: ...riding, in the truck's space" % tag)
+		stray.free()
 
 		# Results showing: the depot again.
 		manager.set(&"results", {"score": 1})

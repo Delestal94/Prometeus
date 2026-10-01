@@ -208,12 +208,15 @@ func _sync_players(peer_ids: Array) -> void:
 		# The truck already out on the road: the depot is behind the crew, so
 		# the newcomer appears aboard (late_join_seating.gd).
 		var seat: Node = null
-		var spot: Vector3 = depot.spawn_position(index)
+		var data: Dictionary = {"peer_id": id, "position": _world.to_local(depot.spawn_position(index))}
 		if _late_join.underway():
 			var placed: Dictionary = _late_join.place()
 			seat = placed.seat
-			spot = placed.position
-		var player: Node = $World/PlayerSpawner.spawn({"peer_id": id, "position": _world.to_local(spot)})
+			data.position = _world.to_local(placed.position)
+			# In the truck's own space too: each peer draws its truck a little
+			# behind the host's (player_spawner.gd).
+			data.vehicle_position = placed.local
+		var player: Node = $World/PlayerSpawner.spawn(data)
 		if seat != null and player != null:
 			_late_join.seat_player(player, seat)
 	for child: Node in _world.get_children():

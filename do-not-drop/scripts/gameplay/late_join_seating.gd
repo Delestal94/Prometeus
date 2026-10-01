@@ -26,9 +26,13 @@ extends Node
 ## the aisle between the front seats and the rack, clear of the cushions and
 ## of the boxes in every bay (tests/test_late_join_seating.gd checks it).
 const BAY_SPOT: Vector3 = Vector3(0.0, 0.285, 0.9)
-## Height of the cargo floor plus a hair, for a player standing at a seat's
-## exit.
+## Where the cargo floor is in the truck's space when a ray can't find it (the
+## truck's model has it at 0.255), plus a hair: a standing player's feet.
 const FLOOR_Y: float = 0.285
+## A hair above the floor the ray finds.
+const FLOOR_CLEARANCE: float = 0.03
+## What the floor ray hits: the truck's body and its cargo shell (vehicle.gd).
+const FLOOR_MASK: int = 1 | 2 | 64
 ## How far from the seat toward the aisle a standing newcomer is put when
 ## the seat has no ExitPoint of its own (player.gd SEAT_EXIT_STEP).
 const EXIT_STEP: float = 0.55
@@ -42,13 +46,13 @@ func underway() -> bool:
 	return is_instance_valid(vehicle) and RunManager.is_running and RunManager.results.is_empty()
 
 
-## The seat a newcomer boards and the world position they spawn at. The seat
-## is null when none will have them: they stand in the bay instead.
+## The seat a newcomer boards and where they spawn, in the truck's own space
+## ("local", what the spawn data carries) and in the world ("position"). The
+## seat is null when none will have them: they stand in the bay instead.
 func place() -> Dictionary:
 	var seat: Node = pick_seat()
-	if seat == null:
-		return {"seat": null, "position": vehicle.to_global(BAY_SPOT)}
-	return {"seat": seat, "position": vehicle.to_global(standing_spot(seat))}
+	var local: Vector3 = floor_at(BAY_SPOT if seat == null else standing_spot(seat))
+	return {"seat": seat, "local": local, "position": vehicle.to_global(local)}
 
 
 ## Where a newcomer stands for a moment at `seat`, in the truck's space: the
@@ -58,8 +62,16 @@ func standing_spot(seat: Node) -> Vector3:
 	var exit_point := eye.get_node_or_null(^"ExitPoint") as Node3D
 	var world: Vector3 = exit_point.global_position if exit_point != null \
 			else eye.global_position - eye.global_basis.z * EXIT_STEP
-	var spot: Vector3 = vehicle.to_local(world)
-	spot.y = FLOOR_Y
+	return floor_at(vehicle.to_local(world))
+
+
+## `spot` (truck space) with its height put on the cargo floor below it, found
+## with a ray as player_seat_pose.gd's seat_exit_position() does.
+func floor_at(spot: Vector3) -> Vector3:
+	var query := PhysicsRayQueryParameters3D.create(vehicle.to_global(spot + Vector3.UP * 1.0),
+			vehicle.to_global(spot + Vector3.DOWN * 1.0), FLOOR_MASK)
+	var hit: Dictionary = vehicle.get_world_3d().direct_space_state.intersect_ray(query)
+	spot.y = vehicle.to_local(hit.position as Vector3).y + FLOOR_CLEARANCE if not hit.is_empty() else FLOOR_Y
 	return spot
 
 
@@ -81,6 +93,12 @@ func pick_seat() -> Node:
 
 
 ## Sits `player` (just spawned) at `seat`, once; if the seat refuses, they
-## stay where they spawned, standing at its exit inside the truck.
+## stay where they spawned, standing at its exit inside the truck. The host's
+## copy is marked as seated at once: the owner writes seat_node_path itself
+## when board_seat reaches it, a round trip later, and until then the copy
+## would stand solid in the road while the truck drives on (player.gd turns
+## its collision off and poses it at the seat as soon as the path is set).
 func seat_player(player: Node, seat: Node) -> void:
 	seat.call(&"interact", player)
+	if seat.get(&"occupant") == player:
+		player.set(&"seat_node_path", seat.get_parent().get_path())

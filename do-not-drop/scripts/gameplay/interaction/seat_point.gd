@@ -34,6 +34,9 @@ func _free_prompt() -> String:
 	return tr("HUD_PROMPT_SIT_BY_CARGO") if not tend_mount_paths.is_empty() else tr("HUD_PROMPT_SIT")
 
 
+## `player` may be a stand-in rather than a Player: LateJoinSeating asks
+## before the newcomer exists, passing a node that answers only "carries
+## nothing" (get(&"carried_package") is null). Read nothing else off it.
 func _can_board(player: Node) -> bool:
 	var carried: Node = player.get(&"carried_package")
 	if role == &"driver":
@@ -139,7 +142,7 @@ func owns_mount(mount: Node) -> bool:
 func unminded_cargo() -> int:
 	if role == &"driver":
 		return 0
-	var paths: Array = []
+	var paths: Array[NodePath] = []
 	paths.append_array(tend_mount_paths)
 	if not required_mount_path.is_empty():
 		paths.append(required_mount_path)
