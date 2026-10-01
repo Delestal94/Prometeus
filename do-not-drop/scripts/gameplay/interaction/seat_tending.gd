@@ -124,7 +124,8 @@ static func is_seated(tree: SceneTree, player: Node, is_server: bool) -> bool:
 ## (`except` is the box about to be shelved there: its own reservation does not
 ## count). Works on every peer from replicated state: the box's lap_mount_path,
 ## its holder -- `carrier` on the host, otherwise the player whose
-## `carried_package` it is -- and whether that player sits (is_seated()).
+## `carried_package` it is or, failing that, its tender (_holder_of()) -- and
+## whether that player sits (is_seated()).
 static func lap_reserves(tree: SceneTree, mount: Node, except: Node, is_server: bool) -> bool:
 	for node: Node in tree.get_nodes_in_group(&"cargo"):
 		var package: DeliveryPackage = node as DeliveryPackage
@@ -184,16 +185,27 @@ static func _seat_of_peer(tree: SceneTree, peer_id: int, mount: Node, except: No
 
 
 ## Who holds `package`: `carrier` (host only) or, on a client, the player whose
-## hands it is in (broadcast by the player's pick_up).
+## hands it is in (broadcast by the player's pick_up, and repeated to a peer
+## that joins late: player_net_visibility.gd). Until that pick_up lands, a held
+## box bound for a lap is held by its tender (N-908): its bay is bound
+## (bind_lap()) just as whoever holds it sits down with it, or takes it back
+## with the lap toggle, and becomes its tender (claim()); anyone else taking it
+## clears the bay (PackageHandling.take_by()). Not so for a box someone took
+## out of a seated tender's bay: that keeps its tender, but has no lap bay.
 static func _holder_of(tree: SceneTree, package: DeliveryPackage) -> Node:
 	var carrier: Variant = package.carrier
 	if is_instance_valid(carrier):
 		return carrier as Node
+	var tender: Node = null
 	for node: Node in tree.get_nodes_in_group(&"player"):
 		var player: Player = node as Player
-		if player != null and player.carried_package == package:
+		if player == null:
+			continue
+		if player.carried_package == package:
 			return player
-	return null
+		if package.tender_peer_id > 0 and player.get_multiplayer_authority() == package.tender_peer_id:
+			tender = player
+	return tender if package.is_held and not package.lap_mount_path.is_empty() else null
 
 
 static func _carried_by(package: DeliveryPackage, peer_id: int) -> bool:

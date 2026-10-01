@@ -17,6 +17,20 @@ extends SceneTree
 ##   query on the truck's collision layers);
 ## - once results are showing the depot is the place again (no seating);
 ## - Endless, which has no depot to go back to, seats newcomers the same way.
+##
+## N-908: what a late joiner learns about a crewmate already holding a box
+## (player_net_visibility.gd refresh_peer(), seat_tending.gd _holder_of()):
+## - when a new peer's level is up, the host repeats a crewmate's pick_up to
+##   that peer alone (the same reliable RPC, with the box's path), and nothing
+##   for a crewmate with empty hands; a client's copy never does;
+## - in the late joiner's view (no carrier, and no pick_up yet: replicated
+##   fields only) a box on a seated crewmate's lap already reserves its bay
+##   (SeatTending.lap_reserves(is_server = false)), its holder being its tender
+##   (only for a box bound for a lap: one taken out of a tender's bay is not);
+## - the re-sent pick_up alone shows that lap too, and on that copy (not its
+##   owner's) it puts the box in hand without the pickup clip or a trap tip.
+## The host's RPCs are written down by a stand-in MultiplayerAPI under the
+## crewmates' branch of the tree (RpcRecorder), so nothing goes out.
 
 ## The seating script is reached by node and get()/call(), not by class name:
 ## this script is compiled before the autoloads exist, and it talks to RunManager.
@@ -163,9 +177,134 @@ func _run() -> void:
 		level.queue_free()
 		await process_frame
 		manager.call(&"reset_run")
+	await _late_carry()
 	if _failures == 0:
-		print("PASS: late joiners are seated in the truck once it is on the road")
+		print("PASS: late joiners are seated in the truck once it is on the road and see what the crew carries")
 	quit(_failures)
+
+
+## N-908: a crewmate (peer 2) sits at LeftSeat3 holding a box bound for
+## RightSeat3's bay; peer 5 joins after that.
+func _late_carry() -> void:
+	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	root.add_child(level)
+	current_scene = level
+	await process_frame
+	await physics_frame
+	var crew := Node3D.new()
+	crew.name = "LateCarryCrew"
+	root.add_child(crew)
+	var recorder := RpcRecorder.new()
+	set_multiplayer(recorder, crew.get_path())
+	var player_scene: PackedScene = load("res://scenes/gameplay/player/player.tscn")
+	var lapper: Node = player_scene.instantiate()
+	lapper.name = "Player_2"  # Authority from the name, as the spawner's players.
+	crew.add_child(lapper)
+	var idle: Node = player_scene.instantiate()
+	idle.name = "Player_3"
+	crew.add_child(idle)
+	await process_frame
+	var tips: Array[String] = []
+	var bus: Node = root.get_node(^"/root/EventBus")
+	var on_tip := func(text: String) -> void: tips.append(text)
+	bus.connect(&"tutorial_tip_requested", on_tip)
+	_expect(lapper.multiplayer == recorder and lapper.multiplayer.is_server() and not lapper.call(&"is_local"),
+			"late carry: the crewmates are the host's copies of peers 2 and 3")
+	var hook := Callable(lapper, &"_on_peer_level_ready")
+	_expect(root.get_node(^"/root/NetworkManager").is_connected(&"peer_level_ready", hook),
+			"late carry: each player hears when a peer's level is up")
+
+	# By path, like the seating script: SeatTending's class pulls in scripts that
+	# name the autoloads, which don't exist yet when this file compiles.
+	var tending: Script = load("res://scripts/gameplay/interaction/seat_tending.gd")
+	var vehicle: String = "World/Vehicle/CargoBay/"
+	var mount: Node = level.get_node(vehicle + "RightSeat3PackageMount/InteractionArea")
+	var lap_seat: Node = level.get_node(vehicle + "LeftSeat3EyePoint/InteractionArea")
+	var box: Node = null
+	for node: Node in get_nodes_in_group(&"cargo"):
+		if node.get(&"trap_definition") != null:
+			box = node
+			break
+	_expect(box != null, "late carry: the level has a box with a trap")
+	if box == null:
+		await _end_late_carry(level, crew, bus, on_tip)
+		return
+	box.call(&"take_by", lapper)
+	lap_seat.call(&"interact", lapper)
+	_expect(lapper.get(&"carried_package") == box and tending.call(&"lap_mount_of", box) == mount
+			and int(box.get(&"tender_peer_id")) == 2,
+			"late carry: the crewmate sits with the box on the lap, bound for RightSeat3's bay")
+
+	# The host when peer 5's level is up.
+	recorder.sent.clear()
+	hook.call(5)
+	idle.call(&"_on_peer_level_ready", 5)
+	_expect(recorder.sent.size() == 1, "late carry: one RPC goes out for the new peer (got %s)" % [recorder.sent])
+	var resent: Array = recorder.sent[0] if not recorder.sent.is_empty() else [0, null, &"", []]
+	_expect(int(resent[0]) == 5 and resent[1] == lapper and StringName(resent[2]) == &"pick_up"
+			and resent[3] == [box.get_path()],
+			"late carry: the host repeats the crewmate's pick_up to peer 5 alone, with the box (got %s)" % [resent])
+	recorder.client_id = 4
+	recorder.sent.clear()
+	hook.call(5)
+	_expect(recorder.sent.is_empty(), "late carry: a client's copy repeats nothing (got %s)" % [recorder.sent])
+	recorder.client_id = 0
+
+	# Peer 5's view before that lands: the host's carrier is unknown there and
+	# the crewmate's hands look empty; the seat path, the box's lap bay and its
+	# tender are replicated.
+	var tree: SceneTree = root.get_tree()
+	var host_carrier: Variant = box.get(&"carrier")
+	box.set(&"carrier", null)
+	lapper.set(&"carried_package", null)
+	lapper.set(&"seat_node_path", lap_seat.get_parent().get_path())
+	_expect(bool(tending.call(&"lap_reserves", tree, mount, null, false)),
+			"late carry: the late joiner sees the lap reserve its bay by the box's tender, before any pick_up")
+	box.set(&"tender_peer_id", 0)  # Only the re-sent pick_up left to go by.
+	_expect(not bool(tending.call(&"lap_reserves", tree, mount, null, false)),
+			"late carry: with neither the tender nor the pick_up the bay looks free (the bug)")
+	var state_before: StringName = lapper.get(&"anim_state")
+	if StringName(resent[2]) == &"pick_up":
+		lapper.callv(&"pick_up", resent[3])  # As peer 5's copy of the crewmate receives it.
+	_expect(lapper.get(&"carried_package") == box,
+			"late carry: the re-sent pick_up puts the box in the crewmate's hands")
+	_expect(bool(tending.call(&"lap_reserves", tree, mount, null, false)),
+			"late carry: ...and the late joiner sees the lap reserve the bay from it alone")
+	_expect(not bool(tending.call(&"lap_reserves", tree, mount, box, false)),
+			"late carry: ...but not against its own box")
+	_expect(lapper.get(&"anim_state") == state_before and tips.is_empty(),
+			"late carry: on a copy that isn't the owner's it plays no pickup clip (%s) and shows no tip (%d)"
+			% [lapper.get(&"anim_state"), tips.size()])
+	# Standing up, the same box reserves nothing, by tender or by hands.
+	box.set(&"tender_peer_id", 2)
+	lapper.set(&"seat_node_path", NodePath())
+	_expect(not bool(tending.call(&"lap_reserves", tree, mount, null, false)),
+			"late carry: a crewmate standing with the box reserves nothing")
+	lapper.set(&"carried_package", null)
+	_expect(not bool(tending.call(&"lap_reserves", tree, mount, null, false)),
+			"late carry: ...neither by the tender alone")
+	_expect(tending.call(&"_holder_of", tree, box) == lapper, "late carry: a lap box's tender is taken for its holder")
+	# Taken out of a seated tender's bay by someone else, a box keeps its tender
+	# but has no lap bay: the tender is not taken for its holder then.
+	box.set(&"lap_mount_path", NodePath())
+	_expect(tending.call(&"_holder_of", tree, box) == null,
+			"late carry: a held box with a tender and no lap bay has no known holder on a client")
+	box.set(&"lap_mount_path", mount.get_path())
+	lapper.set(&"carried_package", box)
+	box.set(&"carrier", host_carrier)
+	lap_seat.call(&"release_occupant", 2)
+	await _end_late_carry(level, crew, bus, on_tip)
+
+
+func _end_late_carry(level: Node, crew: Node, bus: Node, on_tip: Callable) -> void:
+	bus.disconnect(&"tutorial_tip_requested", on_tip)
+	for player: Node in crew.get_children():
+		player.free()
+	set_multiplayer(null, crew.get_path())
+	crew.free()
+	level.queue_free()
+	await process_frame
+	root.get_node(^"/root/RunManager").call(&"reset_run")
 
 
 func _expect(condition: bool, description: String) -> void:
@@ -201,3 +340,48 @@ func _hits_at(truck: Node3D, world_spot: Vector3, level: Node) -> int:
 	for body: Node in dummies:
 		body.free()
 	return hits
+
+
+## Stands in for the host's MultiplayerAPI under one branch of the tree: an
+## offline SceneMultiplayer (peer 1, the server) does the work and every RPC is
+## written down. Calls to other peers stop here, there is nobody at the other
+## end; `client_id` other than 0 makes this branch a client with that id.
+class RpcRecorder extends MultiplayerAPIExtension:
+	var base := SceneMultiplayer.new()
+	var sent: Array = []
+	var client_id: int = 0
+
+	func _init() -> void:
+		base.multiplayer_peer = OfflineMultiplayerPeer.new()
+
+	func _poll() -> Error:
+		return base.poll()
+
+	func _set_multiplayer_peer(peer: MultiplayerPeer) -> void:
+		base.multiplayer_peer = peer
+
+	func _get_multiplayer_peer() -> MultiplayerPeer:
+		return base.multiplayer_peer
+
+	func _get_unique_id() -> int:
+		return client_id if client_id != 0 else base.get_unique_id()
+
+	func _get_peer_ids() -> PackedInt32Array:
+		return base.get_peers()
+
+	func _get_remote_sender_id() -> int:
+		return base.get_remote_sender_id()
+
+	func _rpc(peer: int, object: Object, method: StringName, args: Array) -> Error:
+		sent.append([peer, object, method, args])
+		if peer == 0 or peer == base.get_unique_id():
+			return base.rpc(peer, object, method, args)
+		return OK
+
+	## Only the branch's root path reaches the real one: the synchronizers of
+	## these players have nobody to sync to.
+	func _object_configuration_add(object: Object, config: Variant) -> Error:
+		return base.object_configuration_add(object, config) if object == null else OK
+
+	func _object_configuration_remove(object: Object, config: Variant) -> Error:
+		return base.object_configuration_remove(object, config) if object == null else OK
