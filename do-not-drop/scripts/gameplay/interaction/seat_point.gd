@@ -6,6 +6,14 @@ extends SeatPoint
 ## passenger's own package at their seat, or the bay column a fold-down seat
 ## looks after -- and the prompts that say it. It has a class name so that
 ## seat_tending.gd can type the seats it walks (N-224.4).
+##
+## Typed (N-224.4): the player is a Player, the boxes DeliveryPackage and the
+## mounts package_mount_point.gd by preload (it has no class name). A node that
+## is none of those (LateJoinSeating's stand-in, a test's mount without the
+## script) reads as "carries nothing" / "holds nothing" instead of being asked
+## by name.
+
+const MountPoint = preload("res://scripts/gameplay/interaction/package_mount_point.gd")
 
 ## A passenger seat with one mount of its own: the box on it (or the box in
 ## the player's hands, settled there as they sit) is theirs to look after.
@@ -29,18 +37,17 @@ func _free_prompt() -> String:
 		# Said out loud instead of the seat just not answering: with a box
 		# in hand nothing showed up at the wheel, and it read as "the truck
 		# won't let me in".
-		var local: Node = local_player()
-		if local != null and local.get(&"carried_package") != null:
+		if _carried_by(local_player()) != null:
 			return tr("HUD_PROMPT_DROP_TO_DRIVE")
 		return tr("HUD_PROMPT_DRIVE")
 	return tr("HUD_PROMPT_SIT_BY_CARGO") if not tend_mount_paths.is_empty() else tr("HUD_PROMPT_SIT")
 
 
 ## `player` may be a stand-in rather than a Player: LateJoinSeating asks
-## before the newcomer exists, passing a node that answers only "carries
-## nothing" (get(&"carried_package") is null). Read nothing else off it.
+## before the newcomer exists, passing a node that is no Player, which
+## _carried_by() reads as "carries nothing". Read nothing else off it.
 func _can_board(player: Node) -> bool:
-	var carried: Node = player.get(&"carried_package")
+	var carried: Node = _carried_by(player)
 	if role == &"driver":
 		# The wheel never waits for cargo: sitting here starts the delivery
 		# (level_common.gd), and a crew that leaves boxes behind pays for it
@@ -56,10 +63,10 @@ func _can_board(player: Node) -> bool:
 		# boards with it in hand -- _on_boarded settles it onto the mount as
 		# part of sitting down, so there's never a bare "put it down first"
 		# step where it could be dropped and broken.
-		var mount: Node = get_node_or_null(required_mount_path)
+		var mount: MountPoint = _mount_at(required_mount_path)
 		if mount == null:
 			return false
-		if is_instance_valid(mount.get(&"occupied_by")):
+		if is_instance_valid(mount.occupied_by):
 			return carried == null
 		# Empty, but a neighbour's lap (LeftSeat3 / CenterSeat) may be riding
 		# a box that will be shelved here: then this seat is just a seat, with
@@ -72,7 +79,7 @@ func _can_board(player: Node) -> bool:
 
 
 func _accept_boarding(player: Node) -> bool:
-	return not (role == &"driver" and player.get(&"carried_package") != null)
+	return not (role == &"driver" and _carried_by(player) != null)
 
 
 func _on_boarded(player: Node, peer_id: int) -> void:
@@ -81,7 +88,8 @@ func _on_boarded(player: Node, peer_id: int) -> void:
 	# The boxes this seat could look after, in order: it keeps the first one it
 	# can claim (a rack seat faces two bays, one of them may be minded already).
 	var candidates: Array[DeliveryPackage] = []
-	var carried: DeliveryPackage = player.get(&"carried_package") as DeliveryPackage
+	var tender: Player = player as Player
+	var carried: DeliveryPackage = _carried_by(player)
 	if not tend_mount_paths.is_empty():
 		if carried != null:
 			# Boarding with a box keeps it on your lap; "drop" (Q) then shelves
@@ -90,16 +98,14 @@ func _on_boarded(player: Node, peer_id: int) -> void:
 			SeatTending.bind_lap(carried, _free_bay(carried))
 		else:
 			for path: NodePath in tend_mount_paths:
-				var full_mount: Node = get_node_or_null(path)
-				if full_mount != null and is_instance_valid(full_mount.get(&"occupied_by")):
-					var stored: DeliveryPackage = full_mount.get(&"occupied_by") as DeliveryPackage
-					if stored != null:
-						candidates.append(stored)
+				var stored: DeliveryPackage = _box_in(_mount_at(path))
+				if stored != null:
+					candidates.append(stored)
 	elif not required_mount_path.is_empty():
 		# A passenger takes charge of the package at their own seat: from here
 		# their input is what keeps that trap under control.
-		var mount: Node = get_node_or_null(required_mount_path)
-		var package: DeliveryPackage = mount.get(&"occupied_by") as DeliveryPackage if mount != null else null
+		var mount: MountPoint = _mount_at(required_mount_path)
+		var package: DeliveryPackage = _box_in(mount)
 		if package == null and carried != null and mount != null:
 			# Boarded with it still in hand: it stays on their lap, and "drop"
 			# (Q) settles it onto this seat's mount (see _can_board() above).
@@ -107,14 +113,14 @@ func _on_boarded(player: Node, peer_id: int) -> void:
 			SeatTending.bind_lap(carried, mount)
 		if package != null:
 			candidates.append(package)
-	if not player.has_method(&"tend_package"):
+	if tender == null:
 		return
 	for box: DeliveryPackage in candidates:
 		# Several seats can look at the same mount: someone already minding the
 		# box keeps it (seat_tending.gd), the newcomer just sits.
 		if not SeatTending.claim(self, box, peer_id):
 			continue
-		player.rpc_id(peer_id, &"tend_package", box.get_path())
+		tender.rpc_id(peer_id, &"tend_package", box.get_path())
 		return
 
 
@@ -153,9 +159,8 @@ func unminded_cargo() -> int:
 		paths.append(required_mount_path)
 	var count: int = 0
 	for path: NodePath in paths:
-		var mount: Node = get_node_or_null(path)
-		var box: Variant = mount.get(&"occupied_by") if mount != null else null
-		if is_instance_valid(box) and int((box as Object).get(&"tender_peer_id")) == 0:
+		var box: DeliveryPackage = _box_in(_mount_at(path))
+		if box != null and box.tender_peer_id == 0:
 			count += 1
 	return count
 
@@ -166,9 +171,8 @@ func unminded_cargo() -> int:
 func would_displace() -> bool:
 	if role == &"driver" or required_mount_path.is_empty():
 		return false
-	var mount: Node = get_node_or_null(required_mount_path)
-	var box: Variant = mount.get(&"occupied_by") if mount != null else null
-	return is_instance_valid(box) and int((box as Object).get(&"tender_peer_id")) > 0
+	var box: DeliveryPackage = _box_in(_mount_at(required_mount_path))
+	return box != null and box.tender_peer_id > 0
 
 
 ## Whether this seat looks after the box in `mount`, its own or by the column.
@@ -188,10 +192,27 @@ func looks_at_mount(mount: Node) -> bool:
 ## its own reservation does not count). Lower bay before upper.
 func _free_bay(except: Node = null) -> Node:
 	for path: NodePath in tend_mount_paths:
-		var mount: Node = get_node_or_null(path)
-		if mount != null and not is_instance_valid(mount.get(&"occupied_by")) and not _reserved(mount, except):
+		var mount: MountPoint = _mount_at(path)
+		if mount != null and not is_instance_valid(mount.occupied_by) and not _reserved(mount, except):
 			return mount
 	return null
+
+
+## The mount at `path`, or null if there is none or it is no package_mount_point.gd.
+func _mount_at(path: NodePath) -> MountPoint:
+	return get_node_or_null(path) as MountPoint
+
+
+## The box lying in `mount` (null: none, or `mount` is null).
+func _box_in(mount: MountPoint) -> DeliveryPackage:
+	return mount.occupied_by as DeliveryPackage if mount != null and is_instance_valid(mount.occupied_by) else null
+
+
+## The box `player` holds in their hands; null for no one, a Player with empty
+## hands or a stand-in that is no Player (see _can_board()).
+func _carried_by(player: Node) -> DeliveryPackage:
+	var typed: Player = player as Player
+	return typed.carried_package if typed != null else null
 
 
 ## A box riding on a seated passenger's lap that will be shelved in `mount`.

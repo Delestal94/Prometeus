@@ -919,6 +919,13 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `condition_text`, `pick_note`, `model`, `box_size`). Queda por nombre el `connect` al EventBus (un test puede
     reemplazarlo por un Node). En el archivo: 13 → 1 uso (`.call` 5 → 0, `.get(&` 7 → 0, `/root/` 1 → 1).
     `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-contents-view-tipado.md`.
+  - [x] `seat_point.gd` (2026-10-01, rama `nacho/N-224-seat-point-typed`): los asientos de la carga (`CargoSeatPoint`). El
+    jugador como `Player` (`_carried_by()`; el stand-in de `LateJoinSeating` no es `Player` y cuenta como "no carga
+    nada"), los anclajes por `preload` de `package_mount_point.gd` (`MountPoint`, `occupied_by` directo) y la caja
+    como `DeliveryPackage` (`tender_peer_id`); `has_method(&"tend_package")` pasa a `is Player`. En el archivo:
+    `.get(&` 13 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
+    `docs/avisos/2026-10-01-n224-seat-point-tipado.md`. Siguientes: `player.gd` (13), `spectator_camera.gd` (12),
+    `package_pickup_point.gd` (12), `cargo_animal_view.gd` (11).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
