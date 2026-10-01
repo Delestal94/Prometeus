@@ -15,8 +15,9 @@ sus logs son largos y gastan contexto.
   `check_pivots.gd`, cualquier cosa que necesite pantalla o mirar imágenes): agente
   `revisor-visual`.
 - **Diagnóstico de un test que falla**: agente `cazador-bugs`.
-- La red de seguridad final es el hook `pre-push` (corre la batería completa) y CI en
-  GitHub: no hace falta correr todo antes de cada commit.
+- La batería completa la corre CI en GitHub (checks requeridos, la única compuerta). El hook
+  `pre-push` solo corre lint, `check_modules` y los tests afectados por el push
+  (`FULL_TESTS=1` para la batería entera): no hace falta correr todo antes de cada commit.
 
 Los agentes están en `.claude/agents/` (versionados). En la nube, el hook de arranque
 instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren con
