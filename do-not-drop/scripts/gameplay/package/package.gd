@@ -45,8 +45,8 @@ var _motion_velocity := Vector3.ZERO
 var _motion_initialized: bool = false
 var _motion_acceleration := Vector3.ZERO
 var _salvage_view: Node
-## The rack a box left for its tender's lap, to go back to.
-var _lap_mount: Node
+## Replicated: the rack bay a box on its tender's lap goes back to (SeatTending.bind_lap()).
+var lap_mount_path: NodePath = NodePath()
 ## What a loose box collides with: the environment, other boxes and the
 ## truck's cargo shell (vehicle.gd SHELL_LAYER) -- never the truck's own body,
 ## which a box sliding about the bay used to shove (it drove in jerks).
@@ -717,6 +717,7 @@ func take_by(player: Node) -> void:
 	if _is_run_active() and not is_held and not is_loaded \
 			and (vehicle == null or not bool(vehicle.call(&"carries", global_position))):
 		_rescue_pending = true
+	lap_mount_path = NodePath()
 	if is_loaded:
 		release_mount()
 	set_held(true)
@@ -893,6 +894,7 @@ func get_half_extents() -> Vector3:
 
 
 func _release_carrier() -> void:
+	lap_mount_path = NodePath()
 	if carrier != null and is_instance_valid(carrier) and carrier.is_inside_tree():
 		carrier.rpc(&"drop_carried")
 	carrier = null
