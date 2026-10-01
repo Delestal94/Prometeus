@@ -40,6 +40,8 @@ var packages: Array[DeliveryPackage] = []
 var cargo_animals: CargoAnimals
 var tipped_seconds: float = 0.0
 var _driver_seated: bool = false
+## Where someone who joins with the truck already on the road goes (N-228.7).
+var _late_join: LateJoinSeating
 
 
 func _ready() -> void:
@@ -75,6 +77,10 @@ func _ready() -> void:
 	if NetworkManager.is_host():
 		vehicle.variant_id = UnlockManager.selected_truck
 		vehicle.paint_id = UnlockManager.selected_paint
+	_late_join = LateJoinSeating.new()
+	_late_join.name = "LateJoinSeating"
+	_late_join.vehicle = vehicle
+	add_child(_late_join)
 	$World/PlayerSpawner.spawned.connect(func(_player: Node) -> void: _refresh_local_player())
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	NetworkManager.peer_level_ready.connect(_on_peer_level_ready)
@@ -199,8 +205,20 @@ func _sync_players(peer_ids: Array) -> void:
 		# reloads at its own pace (NetworkManager.is_peer_ready()).
 		if not NetworkManager.is_peer_ready(id):
 			continue
-		$World/PlayerSpawner.spawn({"peer_id": id,
-			"position": _world.to_local(depot.spawn_position(index))})
+		# The truck already out on the road: the depot is behind the crew, so
+		# the newcomer appears aboard (late_join_seating.gd).
+		var seat: Node = null
+		var data: Dictionary = {"peer_id": id, "position": _world.to_local(depot.spawn_position(index))}
+		if _late_join.underway():
+			var placed: Dictionary = _late_join.place()
+			seat = placed.seat
+			data.position = _world.to_local(placed.position)
+			# In the truck's own space too: each peer draws its truck a little
+			# behind the host's (player_spawner.gd).
+			data.vehicle_position = placed.local
+		var player: Node = $World/PlayerSpawner.spawn(data)
+		if seat != null and player != null:
+			_late_join.seat_player(player, seat)
 	for child: Node in _world.get_children():
 		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
 			child.queue_free()
