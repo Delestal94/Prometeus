@@ -50,6 +50,8 @@ extends SceneTree
 ##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
 ## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
 ##   the crew's money and the incident relay stay by name.
+## - flock_crossing.gd (the sheep crossing) drives its sheep through the wildlife_animal.gd type; only the
+##   crew's money (the fine) stays by name.
 ## - package_contents_view.gd (the box's flaps and contents) holds its box as DeliveryPackage and the
 ##   contents as PackageContent; only the EventBus connects stay by name.
 ## - seat_point.gd (the cargo seats) holds the player as Player, the boxes as DeliveryPackage and the mounts
@@ -237,6 +239,11 @@ const BUDGETS: Dictionary = {
 	# by name because a test may replace EventBus with a plain Node. The three /root/ lookups are the
 	# null-safe accessors (EventBus twice, CrewProgression).
 	"res://scripts/gameplay/route/wildlife_crossing.gd": {"call": 2, "callv": 0, "get": 1, "root": 3},
+	# The sheep crossing (N-224.4) drives its flock through wildlife_animal.gd by preload, like the deer (run,
+	# idle, tumble, steered). One .call and one .get left: CrewProgression's spend and team_money, by name for
+	# the compile reason in wildlife_crossing.gd. The two /root/ lookups are the null-safe accessors (EventBus
+	# for the horn, connected by name because a test may replace it with a plain Node; CrewProgression).
+	"res://scripts/gameplay/route/flock_crossing.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
 	# The box's flaps and contents (N-224.4) read the box as DeliveryPackage (package.gd never loads this
 	# view, so no cycle) and its content as PackageContent. The one /root/ lookup is the null-safe EventBus
 	# handle: it connects by name because a test may replace EventBus with a plain Node, as in

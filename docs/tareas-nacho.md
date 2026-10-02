@@ -972,6 +972,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `/root/` 3 → 3, `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
     `tests/`). Siguientes: `package_contents_view.gd` (13), `seat_point.gd` (13), `package_pickup_point.gd` (12),
     `cargo_animal_view.gd` (11), `player.gd` (13).
+  - [x] `flock_crossing.gd` (2026-10-01, rama `nacho/N-224-flock-crossing-typed`): las ovejas con el tipo de
+    `wildlife_animal.gd` (`ANIMAL_SCRIPT` por preload inferido, `sheep: Array[ANIMAL_SCRIPT]`: `run`, `idle`,
+    `tumble`, `steered` directos), como el ciervo. Quedan por nombre `team_money`/`spend` de `CrewProgression` (ciclo
+    de compilación, como en `wildlife_crossing.gd`). En el archivo: `.call` 3 → 1, `.get(&` 1 → 1, `/root/` 2 → 2,
+    `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`).
   - [x] `play_area.gd` (2026-10-01, rama `nacho/N-224-play-area-typed`): el borde del mapa. El nivel como
     `LevelCommon` (`local_player`, `depot` como `Depot`), el jugador como `Player` (`seat_node_path`), el camino del
     infinito como `SegmentStreamer` (`_nearest_on_path` directo, sin `has_method`) y el terreno de la ruta como
