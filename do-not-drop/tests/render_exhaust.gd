@@ -29,7 +29,9 @@ extends SceneTree
 ## with --headless: a smoke test of the setup).
 
 const RouteTerrain = preload("res://scripts/gameplay/route/route_terrain.gd")
-const VehicleEffects = preload("res://scripts/presentation/vehicle_effects.gd")
+## Loaded at run time, not preloaded: vehicle_effects.gd preloads vehicle.gd, which names autoloads that a
+## --script does not have yet when it compiles (same as trailer_shot.gd in test_trailer_shots.gd).
+const VEHICLE_EFFECTS_PATH: String = "res://scripts/presentation/vehicle_effects.gd"
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const VEHICLE_SCENE: String = "res://scenes/gameplay/vehicle/vehicle.tscn"
 const DEFAULT_MOOD: String = "soleado_dia_verano"
@@ -217,7 +219,7 @@ func _make_mood(label: String) -> WorldMood:
 func _print_pipe(van: VehicleBody3D, smoke: GPUParticles3D) -> void:
 	var local: Vector3 = van.to_local(smoke.global_position)
 	var line: String = "  pipe: truck space (%.2f, %.2f, %.2f), anchor %s, world (%.2f, %.2f, %.2f)" % [
-			local.x, local.y, local.z, VehicleEffects.exhaust_anchor(van),
+			local.x, local.y, local.z, load(VEHICLE_EFFECTS_PATH).exhaust_anchor(van),
 			smoke.global_position.x, smoke.global_position.y, smoke.global_position.z]
 	print(line)
 	print("  pipe height above the road: %s" % _height_above_road(van, smoke.global_position))

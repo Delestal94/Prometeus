@@ -9,6 +9,10 @@ extends Node
 ## Created by VehiclePresentation, which it reads for the wheels and cameras.
 
 const WheelDust = preload("res://scripts/presentation/wheel_dust.gd")
+## vehicle_presentation.gd and vehicle.gd have no class_name; this preloads them for the types (N-224.4).
+const VehiclePresentation = preload("res://scripts/presentation/vehicle_presentation.gd")
+const Vehicle = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+const GAME_SETTINGS := preload("res://scripts/core/game_settings.gd")
 
 ## A pale neutral grey, lighter than the asphalt behind it (N-324): the old dark
 ## 0.32 grey read as a row of dots. The alpha lives in the colour ramp.
@@ -65,8 +69,8 @@ const SKID_MIN_SPEED_KMH: float = 12.0
 ## get_skidinfo() is 1 while the tyre grips and drops toward 0 as it slides.
 const SKID_THRESHOLD: float = 0.55
 
-var presentation: Node
-var vehicle: VehicleBody3D
+var presentation: VehiclePresentation
+var vehicle: Vehicle
 var _exhaust: GPUParticles3D
 var _smoke_material: ParticleProcessMaterial
 static var _smoke_puff_material: StandardMaterial3D
@@ -80,8 +84,8 @@ var _aberration_peak: float = 0.0
 
 
 func _ready() -> void:
-	presentation = get_parent()
-	vehicle = presentation.get(&"vehicle")
+	presentation = get_parent() as VehiclePresentation
+	vehicle = presentation.vehicle
 	_build_skid_marks()
 	_build_aberration()
 	var bus: Node = get_node_or_null(^"/root/EventBus")
@@ -152,7 +156,7 @@ func update_exhaust(delta: float) -> void:
 	_smoke_sample_left -= delta
 	if _smoke_sample_left <= 0.0:
 		sample_smoke_look()
-	var running: bool = bool(vehicle.get(&"presentation_engine_running"))
+	var running: bool = vehicle.presentation_engine_running
 	var throttle: float = clampf(absf(vehicle.engine_force) / 1700.0, 0.0, 1.0)
 	var camera: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
 	var near_camera: bool = camera != null and camera.global_position.distance_to(
@@ -253,8 +257,8 @@ func _on_impact(strength: float, impact_position: Vector3) -> void:
 	if strength >= DEBRIS_MIN_STRENGTH:
 		_burst_debris(impact_position, strength)
 	if strength >= ABERRATION_MIN_STRENGTH and _riding_inside():
-		var settings: Node = get_node_or_null(^"/root/GameSettings")
-		var scale: float = float(settings.get(&"camera_shake_scale")) if settings != null else 1.0
+		var settings: GAME_SETTINGS = get_node_or_null(^"/root/GameSettings") as GAME_SETTINGS
+		var scale: float = settings.camera_shake_scale if settings != null else 1.0
 		_aberration_peak = clampf(strength / 20.0, 0.0, 1.0) * 0.018 * scale
 		_aberration_left = ABERRATION_SECONDS if _aberration_peak > 0.0 else 0.0
 
@@ -332,7 +336,7 @@ func _update_skids() -> void:
 		_skid_last.clear()
 		return
 	var multimesh: MultiMesh = _skids.multimesh
-	for wheel: VehicleWheel3D in presentation.get(&"_wheels"):
+	for wheel: VehicleWheel3D in presentation.wheels():
 		if not wheel.is_in_contact() or wheel.get_skidinfo() > SKID_THRESHOLD:
 			_skid_last.erase(wheel)
 			continue
@@ -385,4 +389,4 @@ void fragment() {
 ## something shouldn't have their own view split.
 func _riding_inside() -> bool:
 	var camera: Camera3D = get_viewport().get_camera_3d()
-	return camera != null and camera in (presentation.get(&"_seat_cameras") as Array)
+	return camera != null and presentation.is_seat_camera(camera)
