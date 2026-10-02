@@ -176,6 +176,10 @@ const BUDGETS: Dictionary = {
 	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'
 	# signals are connected by the signal. Nothing left by name.
 	"res://scripts/gameplay/level_base.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The truck radio's dial and program (N-224.4): the radio as TruckRadio (mode, mode_key, its signals
+	# connected by the signal) and the sounds through synth_audio_radio.gd by preload (warm, the loops and
+	# cues). Nothing left by name.
+	"res://scripts/presentation/truck_radio_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The animals that go for the cargo (N-109) are typed: the truck through vehicle.gd by preload (no class
 	# name), the session through NETWORK_MANAGER (world_seed, is_host and peer_level_ready, below), the box
 	# (DeliveryPackage, its _has_previous_velocity too) and its contents (PackageContent). One .call left: the
