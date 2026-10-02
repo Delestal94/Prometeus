@@ -52,8 +52,9 @@ const MAX_PLAYERS: int = 8
 ## package a net_time pose clock, both at 30 Hz, N-217;
 ## 24: a package replicates carrier_peer_id and hold_offset, and
 ## submit_carry_transform carries the pose in the carrier's body space, N-217;
-## 25: skipped (N-218 bumped to it but the merge kept main's 26, so builds
-## b68207e..7496de3 carry 26 without N-218);
+## 25: skipped (N-218 bumped to it but the merge kept main's 26: builds
+## b68207e..7496de3 carry 26 without N-218 and c760998..805a8c9 carry 26 with
+## it; 27 tells them apart);
 ## 26: a joiner to a full LAN room is asked who it is (the nonce alone, its
 ## identity reply) before it gets the state and loads the level, N-221;
 ## 27: the client driver predicts the truck: submit_driver_input carries an input
