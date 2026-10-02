@@ -26,6 +26,7 @@ const Terrain = preload("res://scripts/gameplay/route/route_terrain.gd")
 const Houses = preload("res://scripts/gameplay/route/route_houses.gd")
 const PathLookup = preload("res://scripts/gameplay/route/route_path.gd")
 const Ground = preload("res://scripts/gameplay/route/route_ground.gd")
+const Reveal = preload("res://scripts/gameplay/route/route_reveal.gd")
 
 signal delivery_entered
 signal delivery_exited
@@ -312,6 +313,15 @@ func loading_progress() -> float:
 		fraction = float(_stage_probe.call())
 	_progress = maxf(_progress, _stage_start + _stage_span * clampf(fraction, 0.0, 1.0))
 	return minf(_progress, 0.999)
+
+
+## The route's first draw in pieces, one per frame under the loading cover
+## (SceneLoader, like Depot.reveal_steps()): see route_reveal.gd.
+func reveal_steps() -> Array[Callable]:
+	if not is_built:
+		var whole: Array[Callable] = [func() -> void: visible = true]
+		return whole
+	return Reveal.steps(self, terrain)
 
 
 ## The build moves on to the stage that fills `bar` (from, to) of the loading
