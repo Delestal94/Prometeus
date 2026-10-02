@@ -423,3 +423,26 @@ frame 7,2 ms contra 6,9 ms (+4 %, vsync y ruido); no hay script nuevo por frame.
 
 **Qué no quedó** (la reja en X de la campana ya la resolvió el modelo, con su aro de 3 radios): el encabezado del tablero de muestras
 y los carteles chicos de seguridad con más palabras; las bocas distintas de los reciclajes no se verificaron en cámara.
+
+### Cierre (2026-10-01, rama `nacho/N-319-depot-finish`) — crítica final y textos que faltaban
+
+Capturas con GPU sobre `main` (con el #145 ya mezclado) en `D:/tmp/depot_review/iter5/` (las 29 vistas) y las retocadas en
+`iter5b/`. **Crítica (estilo `director-arte`, contra el "hecho cuando")**: ya no es un galpón genérico. Desde el spawn se lee la
+jerarquía camión → pizarra → zonas; cada zona tiene su forma (jaula del pañol con su ventanilla, box del taller con media pared
+roja, vestuario con lockers y descanso con cocinita, oficina en entrepiso con ventanal cálido y escalera), su luz (pozos cálidos,
+penumbra entre zonas, haces fríos) y un cartel chico; el piso cuenta el recorrido (sendas, carril amarillo, cebras, flechas solo
+en las bifurcaciones) y hay capa de oficio en todos lados (bolardos, protecciones, tableros, matafuegos, cinta, autoelevador,
+operarios). Lo que todavía se veía "sin terminar" eran textos que el arte había dejado en blanco, y se arreglaron:
+- **Tablero de muestras**: la franja de arriba es `sign_ink` (oscura) y la palabra iba en INK, así que no se veía. Ahora dice
+  "COLORES DEL CAMIÓN" (`WORLD_DEPOT_SWATCHES`) en PAPER, 4,6 cm.
+- **Carteles de seguridad con palabra**: los cinco pictogramas de pared (salida, alta tensión, botiquín, 10 km/h, casco) llevan
+  debajo una tira del mismo color (en el mismo lote) con su palabra (`WORLD_DEPOT_SAFETY_*`, un `Label3D` cada uno, grupo
+  `depot_safety_caption`).
+- **"NUESTRAS ENTREGAS"**: el título iba en INK directo sobre la chapa oscura y casi no se leía; ahora va en PAPER sobre su propia
+  franja INK, del ancho del corcho.
+`test_depot_zones` lo comprueba. `bench_depot`: 2,08 ms de frame contra 2,41 ms de `main` en la misma máquina (ruido; paquetes y
+HUD 0,216 contra 0,219 ms). Lotes de `DepotKit` sin cambio (las tiras usan el material de su placa).
+
+**Queda (menor, sin tarea)**: los conductos del tablero eléctrico pasan por delante de la tira "ALTA TENSIÓN"; las bocas distintas
+de los reciclajes siguen sin verificarse en cámara; la toma de `lockers_and_break` al principio de una corrida sale gris por el
+espejo (es de la captura).

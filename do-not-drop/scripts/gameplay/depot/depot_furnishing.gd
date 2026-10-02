@@ -208,10 +208,10 @@ func _build_workshop(kit: DepotKit) -> void:
 	# What the truck can wear: the kit's swatch board, over the bench next to the tool boards.
 	kit.model(DepotKit.depot_model("sm_env_depot_paint_swatch_board"),
 			Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(14.94, Layout.FLOOR_TOP, 6.7)))
-	# Its header strip (a 7 cm band at 1.70 m, face 2.5 cm out from the wall) says what it is: 4 cm letters, half
-	# a millimetre off the face.
+	# Its header strip (a dark 7 cm band at 1.70 m, face 2.5 cm out from the wall) says what it is: 4.6 cm PAPER
+	# letters (INK ones vanished into the band), half a millimetre off the face.
 	var swatches_label := DepotLabels.text(_root, tr("WORLD_DEPOT_SWATCHES"), Vector3(14.9155 - 0.0005, 1.7, 6.7),
-			-PI * 0.5, 40, Layout.INK, Layout.DISPLAY_FONT, 0.001, 0)
+			-PI * 0.5, 46, Layout.PAPER, Layout.DISPLAY_FONT, 0.001, 0)
 	swatches_label.name = "SwatchesLabel"
 	# Air compressor with its hose reel.
 	kit.model(DepotKit.depot_model("sm_env_depot_compressor"), Transform3D(Basis(Vector3.UP, PI * 0.5),
