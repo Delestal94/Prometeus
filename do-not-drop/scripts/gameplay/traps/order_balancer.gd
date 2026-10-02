@@ -39,31 +39,33 @@ static func packages_for_order(packages: Array, trap_ids: Array[StringName]) -> 
 	var selected: Array = []
 	for trap_id: StringName in trap_ids:
 		for package: Variant in remaining:
-			var definition: Variant = package.get(&"trap_definition")
-			if definition != null and StringName(definition.get(&"id")) == trap_id:
+			var box := package as DeliveryPackage
+			var definition: TrapDefinition = box.trap_definition if box != null else null
+			if definition != null and definition.id == trap_id:
 				selected.append(package)
 				remaining.erase(package)
 				break
 	return selected
 
 
-static func _unique_traps(available_traps: Array) -> Array:
+static func _unique_traps(available_traps: Array) -> Array[TrapDefinition]:
 	var by_id: Dictionary = {}
-	for trap: Variant in available_traps:
+	for entry: Variant in available_traps:
+		var trap := entry as TrapDefinition
 		if trap == null:
 			continue
-		var trap_id := StringName(trap.get(&"id"))
+		var trap_id := trap.id
 		if trap_id != &"" and not by_id.has(trap_id):
 			by_id[trap_id] = trap
 	var ids: Array = by_id.keys()
 	ids.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
-	var result: Array = []
+	var result: Array[TrapDefinition] = []
 	for trap_id: StringName in ids:
 		result.append(by_id[trap_id])
 	return result
 
 
-static func _fill_order(traps: Array, target: int, completed_runs: int, budget: int,
+static func _fill_order(traps: Array[TrapDefinition], target: int, completed_runs: int, budget: int,
 		rng: RandomNumberGenerator, result: Array[StringName], total: int,
 		hard_count: int) -> bool:
 	if result.size() == target:
@@ -76,27 +78,27 @@ static func _fill_order(traps: Array, target: int, completed_runs: int, budget: 
 	for index: int in range(cycle_start, result.size()):
 		used_this_cycle[result[index]] = true
 
-	var candidates: Array = []
-	for trap: Variant in traps:
-		if not used_this_cycle.has(StringName(trap.get(&"id"))):
+	var candidates: Array[TrapDefinition] = []
+	for trap: TrapDefinition in traps:
+		if not used_this_cycle.has(trap.id):
 			candidates.append(trap)
 	_shuffle(candidates, rng)
-	for trap: Variant in candidates:
-		var difficulty := int(trap.get(&"difficulty"))
+	for trap: TrapDefinition in candidates:
+		var difficulty := trap.difficulty
 		var next_total := total + difficulty
 		var next_hard_count := hard_count + (1 if difficulty == 4 else 0)
 		if next_total > budget or (completed_runs < 10 and next_hard_count > 1):
 			continue
-		result.append(StringName(trap.get(&"id")))
+		result.append(trap.id)
 		if _fill_order(traps, target, completed_runs, budget, rng, result, next_total, next_hard_count):
 			return true
 		result.pop_back()
 	return false
 
 
-static func _has_easy(traps: Array, result: Array[StringName]) -> bool:
-	for trap: Variant in traps:
-		if int(trap.get(&"difficulty")) <= 2 and result.has(StringName(trap.get(&"id"))):
+static func _has_easy(traps: Array[TrapDefinition], result: Array[StringName]) -> bool:
+	for trap: TrapDefinition in traps:
+		if trap.difficulty <= 2 and result.has(trap.id):
 			return true
 	return false
 
