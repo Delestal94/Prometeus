@@ -123,6 +123,7 @@
 | Tractor | `models/vehicles/sm_vehicle_tractor.glb` | 🟡 | Creado, sin usar todavía: va en zona de campo con N-306. |
 | Grúa del tramo de barro | `models/vehicles/sm_vehicle_tow_crane.glb` | ✅ | 2.393 tris con AO (`tools/build_street_props.py -- crane` + `bake_vertex_ao.py`). La instancia `mud_crane.gd`; anima `Beacon` y cuelga el cable de `Hook`. N-321. |
 | Polvo de las ruedas (efecto) | `scripts/presentation/wheel_dust.gd` | ✅ | Por código, sin textura: quad con degradé radial, 2 emisores × 32 partículas, solo en grava/tierra, apagado con lluvia. Capturas: `tests/render_wheel_dust.gd`. N-320. |
+| Humo de escape (efecto) | `scripts/presentation/vehicle_effects.gd` | ✅ | Por código, sin textura: quad billboard de 0,44 m con degradé radial propio (`smoke_puff_material()`), 28 × 2,4 s, crece 0,22 → 1,3 m, gris por hora (0,78/0,68/0,5), alfa × 0,6 con lluvia/niebla. Caño en `exhaust_anchor()` (de `FloorCollision`, 0,6 m sobre la ruta). Se congela mientras ninguna cámara ve su `visibility_aabb` (comportamiento de `GPUParticles3D`). Capturas: `tests/render_exhaust.gd`. N-324. |
 
 ## 8. Audio (hoy todo sintetizado en `synth_audio.gd`)
 

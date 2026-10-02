@@ -70,6 +70,8 @@ static var always_slice: bool = false
 var is_built: bool = false
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
+## The station on this road, if it is long enough for one (ServiceStop, N-110).
+var service_stop: Node3D
 ## Where the goal actually ended up -- with a curved, randomized-length road
 ## this is no longer reliably near world (0,0,something), so anything that
 ## needs the goal's real location (tests, mainly) reads this instead of
@@ -275,6 +277,7 @@ func _build() -> void:
 			await _tick()
 	goal_transform = cursor
 	_build_goal(cursor)
+	_reserve_service_stop()
 	await _tick()
 	await _finish_terrain()
 	_build_ambience()
@@ -324,6 +327,31 @@ func _enter_stage(bar: Vector2, probe: Callable = Callable()) -> void:
 func _tick() -> void:
 	if _slicer != null:
 		await _slicer.tick()
+
+
+## A long route has one service station (N-110, ServiceStopSegment): its yard
+## is levelled to the road's height (terrain pads that fade out before the
+## lane, ServiceStopRules.YARD_PADS), and no tree or roadside prop
+## grows where the forecourt, kiosk and price pole stand.
+func _reserve_service_stop() -> void:
+	for segment: RouteSegment in _segments:
+		if segment.get_script() != RoutePlanner.SERVICE_STOP.SEGMENT:
+			continue
+		service_stop = segment.get(&"stop")
+		for local: Vector3 in RoutePlanner.SERVICE_STOP.YARD_PADS:
+			var at: Vector3 = segment.transform * local
+			var road: Vector3 = segment.transform * Vector3(0.0, 0.0, local.z)
+			terrain.pads.append(Vector3(at.x, terrain.base_height(Vector2(road.x, road.z)), at.z))
+		for z: int in range(-40, -104, -8):
+			for x: float in [16.0, 24.0]:
+				var at: Vector3 = segment.transform * Vector3(x, 0.0, z)
+				_clear_zones.append(Vector3(at.x, at.z, 7.0))
+
+
+## Whether a world point is on the service station's lay-by (a truck pulled in
+## to shop), so a crew that parked there isn't counted as stuck.
+func in_service_bay(world_point: Vector3) -> bool:
+	return is_instance_valid(service_stop) and bool(service_stop.call(&"in_bay", world_point))
 
 
 ## Deals the house models out like a deck so a route never repeats one until

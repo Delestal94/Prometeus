@@ -2013,7 +2013,7 @@ asfalto no emite, en grava sí, con `wetness` alto no, material sin sombra y con
   (escombros), que ya existían en `vehicle_effects.gd`.
 - Queda (fuera de N-320): el humo de escape de `vehicle_effects.gd` → N-324.
 
-### N-324 · Humo de escape suave y claro — B · `Opus 5.5 · medium` · Aviso: no
+### N-324 · Humo de escape suave y claro — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-324-exhaust-smoke-4`**
 
 `scripts/presentation/vehicle_effects.gd:11` y `:60-114` (`_try_build_exhaust`): `SMOKE_COLOR` gris 0,32 con alfa 0,42 y
 `SphereMesh` 6×3 de 0,15 m unshaded; desde la caja se ve una hilera de 5-6 puntitos oscuros de borde nítido. Además la
@@ -2084,10 +2084,26 @@ partículas vivas y dónde se dibujan (quads opacos de depuración, o `amount_ra
 `update_exhaust()` que reinician la emisión, orden de transparencias con la caja, `visibility_aabb`). Si un cuarto intento
 tampoco lo logra, pasa a ⏸ con la alternativa de `director-arte` (casi invisible, solo en ralentí y al arrancar).
 Parche de la vuelta 3 y hojas de capturas en `D:/tmp/n324-intento3/`; capturas en `D:/tmp/exhaust{7,8,9}/`.
-- [ ] **N-324.1** Rehacer emisor y material según la receta (puff estático compartido con `WheelDust`) y ampliar el test.
-  Con `artista-vfx` y `escritor-tests`; tests `dust`.
-- [ ] **N-324.2** Capturas reproducibles antes/después (caja y `rear`, día/noche, ralentí/a fondo). Con `revisor-visual`.
-- [ ] **N-324.3** Actualizar inventario §7 y `docs/especificaciones-visuales.md` #50. Con `documentador`.
+**Intento 4 2026-10-01 (sesión de arte): resuelto.** `cazador-bugs` encontró la causa: `render_exhaust.gd` hacía la
+precarga de 2,5 s con la cámara a ~70 m mirando a otro lado y la ponía sobre el camión dos cuadros antes de la toma; las
+`GPUParticles3D` no simulan fuera de toda cámara, así que el emisor tenía ~3 cuadros de vida (de ahí 1-2 puffs). Además el
+`damping` (0,8-1,2) frenaba cada puff a los 0,6-0,9 m y subían en columna, tapados por la puerta izquierda.
+- [x] **N-324.1** ~~Rehacer emisor y material según la receta y ampliar el test.~~ **[x] Hecho (2026-10-01, sesión de
+  arte)** — `vehicle_effects.gd`: quad billboard 0,44 m con degradé propio (`smoke_puff_material()`, estático y cacheado;
+  no el de `WheelDust`, que baja el alfa a medio radio), 28 × 2,4 s, crece ×0,5 → ×2,86, rampa de alfa [0; 0,85; 0,55; 0],
+  gris por hora `SMOKE_GREY_BY_TIME` (0,78/0,68/0,5), alfa × 0,6 con lluvia/niebla, dirección (−0,15; 0,35; 1), velocidad
+  1,6-2,2, `damping` 0,2-0,4, subida 0,4; caño en `exhaust_anchor()` (de `FloorCollision`, 0,6 m sobre la ruta);
+  `visibility_aabb` de 30 m hacia atrás; sin emisión a < 1,5 m de la cámara. `test_dust_and_ambience` ampliado (ancla por
+  rayo, curva con `max_value`, billboard sin sombra con alfa, sin `SphereMesh`, damping y dirección).
+- [x] **N-324.2** ~~Capturas reproducibles antes/después.~~ **[x] Hecho (2026-10-01)** — `tests/render_exhaust.gd`
+  (`rear`/`cargo`/`side` × ralentí/arranque/a fondo, `--mood=night`, `--nosmoke` para restar), con la cámara puesta antes
+  de la precarga y `rear` a 6,8 m del caño. `revisor-visual` con GPU real, contra `--nosmoke`: estela de 6-8 puffs desde
+  `rear` y la caja, de día y de noche; +19 a +29 de luminancia sobre el humo en ralentí y +5 a +20 andando, ningún píxel
+  del humo más oscuro que el asfalto; el último puff ~1 m y el primero < 0,25 m; puerta trasera tapada 0,5 % a fondo
+  (peor caso 7 % al arrancar). Antes: `D:/tmp/exhaust9/`; después: `D:/tmp/exhaust11/` (en la PC, fuera del repo).
+- [x] **N-324.3** ~~Actualizar inventario §7 y `docs/especificaciones-visuales.md` #50.~~ **[x] Hecho (2026-10-01)**.
+- Límite conocido: como toda `GPUParticles3D`, el humo se congela mientras ninguna cámara ve su `visibility_aabb` (p. ej.
+  la cabina mirando adelante) y sigue desde ahí. En ralentí, desde la caja, solo se ven 2-3 puffs tenues.
 
 ## 4. Audio y diseño sonoro
 
@@ -2698,12 +2714,34 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 > Pendiente con la PC: modelo propio del cartel de barro (hoy el de ripio más el cartel del tramo) y el sonido.
 > Aviso: `docs/avisos/2026-09-30-n108-barro.md`.
 
-### N-110 · Paradas de servicio en la ruta — B · `Opus 5.5 · xhigh` · Aviso: sí (compra de suministros)
+### N-110 · Paradas de servicio en la ruta — B · `Opus 5.5 · xhigh` · Aviso: sí (compra de suministros) · **[x] rama `nacho/N-110-service-stops`**
 
-- [ ] En rutas largas y en Endless, una estación de servicio opcional: reponer consumibles del kit con
+- [x] En rutas largas y en Endless, una estación de servicio opcional: reponer consumibles del kit con
   dinero cooperativo, arreglar averías (N-214) y un cosmético escondido (N-311).
-- [ ] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
-- [ ] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
+- [x] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
+- [x] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
+- [ ] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
+  kiosco con mostrador, poste de precios, carteles de "estación de servicio"): hoy son cajas `DepotKit` con tres props
+  del depósito (timbre, pallet envuelto, matafuego). Después, captura con `revisor-visual` en entrega y en Endless.
+
+> **Hecho (2026-10-01), rama `nacho/N-110-service-stops`.** `ServiceStopRules` (`service_stop_rules.gd`, puro y
+> estático): una ruta de 3+ casas o 2000+ m lleva una estación (en la práctica todas las de 3-4 casas), en el borde
+> de tramos más cercano a la mitad que deje 150 m desde la salida, 40 m después de una casa, 110 m antes de la
+> próxima (más que la llegada tranquila) y 60 m antes de la meta, nunca al lado de puente, túnel, paso a nivel o
+> loma; `RoutePlanner.plan_spine()` la inserta como un tramo más (`ServiceStopSegment`, 110 m) y corre las
+> distancias de lo que sigue, así el plazo cuenta ese camino y parar es tiempo gastado (el reloj nunca se frena).
+> En Endless `RouteStreamer` la pone a 450-800 m y luego cada 900-1500 m, sorteado de la semilla y su número,
+> nunca justo después de un tramo difícil. El tramo trae dársena a la derecha, dos carteles y la estación
+> (`ServiceStop`: techo, surtidores, kiosco, poste de precios, punto `hidden_cosmetic_spot` para N-311); en la
+> entrega el terreno se nivela bajo ella con dos `pads` y no crecen árboles ni postes. El mostrador
+> (`ServiceCounter`) abre la tienda (`ServiceStopShop`): repone lo que falta del kit (cinta, pegamento, relleno,
+> trapos, cinchas, gallina) y vende el repuesto, que arregla en el acto la puerta o el espejo, un 40 % más caro
+> que el depósito. Online la compra pasa por la misma votación del depósito (`ShopVoteManager`, ofertas con
+> `venue`), solo se compra al toque; `DepotPanel` ganó la cara `service`. Parado en la dársena no cuenta como
+> trabado. `PROTOCOL_VERSION` 22. Test `test_service_stop.gd`; `tests/data/route_golden.txt` regenerado (las
+> rutas de 3 y 4 casas del golden ahora tienen estación). De paso: un cartel de pueblo cuyo lugar está ocupado se
+> corre al siguiente paso libre (`route_signage.gd`, antes quedaba un pueblo sin salida) y el chaos bot ya no se cae
+> leyendo una caja entregada (liberada). Aviso: `docs/avisos/2026-10-01-service-stops.md`.
 
 ### N-311 · Cosméticos para encontrar en el mundo — B · `Opus 5.5 · medium` · Aviso: sí (cosméticos del jugador)
 

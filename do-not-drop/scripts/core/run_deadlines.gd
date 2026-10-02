@@ -11,6 +11,8 @@ const DELIVERIES = preload("res://scripts/core/run_deliveries.gd")
 ## bench's average cruise (route.gd ROUTE_CRUISE_SPEED, 12.8 m/s), so taking
 ## every bonus means pushing on several legs; DEADLINE_SLACK leaves room for
 ## one short rescue stop. Missing one costs a little pay, never the cargo.
+## A service station (N-110) is in the distances like any road, but the clock
+## never stops for it: pulling in to shop is spent time, a decision.
 const MAX_DEADLINES: int = 3
 const DEADLINE_SPEED: float = 13.5
 const DEADLINE_SLACK: float = 15.0

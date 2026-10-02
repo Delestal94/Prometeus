@@ -78,30 +78,45 @@ func dress_signs(segment: RouteSegment) -> void:
 ## where it leaves (N-601): walks the road in TOWN_SIGN_STEP steps and puts
 ## one up at every change into or out of the VILLAGE zone. A route that ends
 ## inside a village (the goal next to the last house) gets no exit sign.
+## A sign whose spot is taken (a service station's yard, N-110) goes up at the
+## next free step on the same side of the boundary; a village entered again
+## before its exit sign found room just carries on, so a village is always
+## left before the next one is entered.
 func dress_town_signs(segments: Array) -> void:
 	var names: Array[String] = TownSign.names_for_seed(_seed)
 	var town: int = -1
 	var inside: bool = false
 	var last_inside: Array = []
+	var entry_owed: bool = false
+	var exit_owed: bool = false
 	for segment: RouteSegment in segments:
 		var start_distance: float = float(segment.get_meta(&"route_distance", 0.0))
 		for slot: Transform3D in segment.get_dressing_slots(TOWN_SIGN_STEP):
 			var now_inside: bool = _dresser.zone_at(segment.transform * slot.origin,
 					start_distance - slot.origin.z) == RouteDresser.Zone.VILLAGE
 			if now_inside and not inside:
-				town += 1
-				_place_town_sign(segment, slot, names[town % names.size()], false)
-			elif inside and not now_inside and not last_inside.is_empty():
-				_place_town_sign(last_inside[0], last_inside[1], names[town % names.size()], true)
+				if exit_owed:
+					exit_owed = false
+				else:
+					town += 1
+					entry_owed = not _place_town_sign(segment, slot, names[town % names.size()], false)
+			elif now_inside and entry_owed:
+				entry_owed = not _place_town_sign(segment, slot, names[town % names.size()], false)
+			elif inside and not now_inside and not last_inside.is_empty() and not entry_owed:
+				exit_owed = not _place_town_sign(last_inside[0], last_inside[1], names[town % names.size()], true)
+			elif not now_inside and exit_owed:
+				exit_owed = not _place_town_sign(segment, slot, names[town % names.size()], true)
+			if not now_inside:
+				entry_owed = false
 			inside = now_inside
 			if now_inside:
 				last_inside = [segment, slot]
 
 
 ## On the driver's right, facing the traffic, through the same checks as any
-## sign; stepped further out if the first spot is taken. Kept as a node (it
+## sign; stepped further out if the first spot is taken (false if none was free). Kept as a node (it
 ## builds its own board and text), so the batcher leaves it alone.
-func _place_town_sign(segment: RouteSegment, slot: Transform3D, town_name: String, is_exit: bool) -> void:
+func _place_town_sign(segment: RouteSegment, slot: Transform3D, town_name: String, is_exit: bool) -> bool:
 	var reach: float = TownSign.POST_GAP * 0.5 + 0.1
 	for lateral: float in [TOWN_SIGN_LATERAL, TOWN_SIGN_LATERAL + 1.0, TOWN_SIGN_LATERAL + 2.0]:
 		var xform: Transform3D = slot * Transform3D(Basis.IDENTITY, Vector3(lateral, 0.0, 0.0))
@@ -122,7 +137,8 @@ func _place_town_sign(segment: RouteSegment, slot: Transform3D, town_name: Strin
 		_placement.occupy(p, TownSign.BOARD_SIZE.x * 0.5)
 		town_signs.append(sign_node)
 		_placement.count(&"town_sign")
-		return
+		return true
+	return false
 
 
 ## Little stories by the road (RoadsideStory, N-602): at most one every

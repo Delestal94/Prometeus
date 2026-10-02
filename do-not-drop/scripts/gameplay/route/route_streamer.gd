@@ -21,6 +21,13 @@ var _last_crossing_distance: float = -INF
 const MUD_FIRST_AT: float = 300.0
 const MUD_MIN_GAP: float = 600.0
 var _last_mud_distance: float = -INF
+## Service stations (N-110, ServiceStopRules): when the next one is due and
+## how many have been laid. Their spacing comes from the seed and their number,
+## not from _rng, so a station only takes the place of the segment it replaces.
+const SERVICE_STOP = preload("res://scripts/gameplay/route/service_stop_rules.gd")
+var _service_seed: int = 0
+var _service_count: int = 0
+var _service_next_at: float = INF
 ## Every model the Endless pool's segments instance (N-219): read on a
 ## background thread from the start of the level, so the first bridge, tunnel
 ## or roadworks does not load them in the physics tick that builds it. A new
@@ -53,7 +60,11 @@ func _init() -> void:
 
 func _ready() -> void:
 	super()
+	_service_seed = _session_seed() if _session_seed() != 0 else int(_rng.seed)
+	_service_next_at = SERVICE_STOP.endless_next_at(_service_seed, 0, 0.0)
 	RouteSegment.warm_models(WARM_MODELS)
+	# The service station's borrowed depot props (N-110), loaded by path as its segment does.
+	(load("res://scripts/gameplay/route/service_stop.gd") as Script).call(&"warm_models")
 	# The bridge's river loop is synthesized the first time it is asked for
 	# (~55 ms): cached here, while the level loads, not under the first bridge.
 	SynthAudio.river_flow_loop()
@@ -85,6 +96,31 @@ func _pick_weight(script: Script, hard_weight: float) -> float:
 	if script == MudSegment:
 		return RoutePlanner.MUD_WEIGHT
 	return super(script, hard_weight)
+
+
+## The draw as always; once a station is due (and the road just behind is one
+## the crew can pull off from) it takes that draw's place.
+func _pick_next_script() -> Script:
+	var picked: Script = super()
+	if _next_distance >= _service_next_at \
+			and SERVICE_STOP.endless_can_start(_hard_streak, hard_segments.has(_last_script)):
+		# Counted as it is picked (the next spawn is this pick): the next one is
+		# then a full gap away, however often the pick is asked again.
+		_service_count += 1
+		_service_next_at = SERVICE_STOP.endless_next_at(_service_seed, _service_count, _next_distance)
+		return SERVICE_STOP.SEGMENT
+	return picked
+
+
+## Whether `world_point` is on a live station's lay-by (a truck pulled in to
+## shop): the level doesn't count a crew that parked there as stuck.
+func in_service_bay(world_point: Vector3) -> bool:
+	for segment: RouteSegment in _active:
+		if is_instance_valid(segment) and segment.get_script() == SERVICE_STOP.SEGMENT:
+			var stop: Node3D = segment.get(&"stop")
+			if stop != null and bool(stop.call(&"in_bay", world_point)):
+				return true
+	return false
 
 
 func _on_segment_spawned(segment: RouteSegment) -> void:
