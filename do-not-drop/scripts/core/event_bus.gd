@@ -116,6 +116,9 @@ signal depot_station_opened(station: StringName)
 ## client. `shop` is the station's ServiceStopShop, which the panel treats as
 ## its "depot".
 signal service_counter_opened(shop: Node)
+## Local-only: the shared repair kit's counts changed on this peer
+## (RunManager.care_supplies), so a screen that shows them can refresh.
+signal care_supplies_changed
 ## The supplies waiting for the next run, and the team's money after the
 ## purchase. The host decides; depot.gd hands it to every peer.
 signal depot_supplies_changed(supplies: Array, team_money: int)

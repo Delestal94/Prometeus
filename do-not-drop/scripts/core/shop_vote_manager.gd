@@ -39,6 +39,11 @@ func use_priority(peer_id: int, offer_id: StringName) -> StringName:
 	var crew: Node = _crew()
 	if crew == null or not crew.consume_card(peer_id, crew.Card.PRIORITY):
 		return &""
+	# A venue's offer (a service stop, N-110) is paid by that venue when it
+	# hears shop_resolved: closing on it, not buying here, charges it once.
+	if _has_venue(offer_id):
+		close_on(offer_id, offers[offer_id])
+		return offer_id
 	return buy(offer_id)
 
 
@@ -87,6 +92,15 @@ func use_discount(peer_id: int, offer_id: StringName) -> StringName:
 	var crew: Node = _crew()
 	if not active or not offers.has(offer_id) or crew == null:
 		return &""
+	# A venue charges its own offers, and spends the card itself (half price).
+	if _has_venue(offer_id):
+		if not crew.has_card(peer_id, crew.Card.DISCOUNT):
+			return &""
+		var marked: Dictionary = (offers[offer_id] as Dictionary).duplicate(true)
+		marked["discounted"] = true
+		marked["discount_peer"] = peer_id
+		close_on(offer_id, marked)
+		return offer_id
 	if not crew.consume_card(peer_id, crew.Card.DISCOUNT):
 		return &""
 	var offer: Dictionary = offers[offer_id].duplicate(true)
@@ -100,6 +114,11 @@ func reveal_offers(peer_id: int) -> Dictionary:
 	if crew == null or not crew.consume_card(peer_id, crew.Card.INFORMATION):
 		return {}
 	return offers.duplicate(true)
+
+
+## Whether an offer belongs to a venue that buys it itself (its "venue" key).
+func _has_venue(offer_id: StringName) -> bool:
+	return not String((offers.get(offer_id, {}) as Dictionary).get("venue", "")).is_empty()
 
 
 func _default_offers() -> Dictionary:

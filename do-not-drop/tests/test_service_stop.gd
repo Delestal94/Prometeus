@@ -21,7 +21,12 @@ extends SceneTree
 ##   - The purchase goes through the same vote as the depot (ShopVoteManager):
 ##     an offer resolved there is bought by the station's shop, stamped with
 ##     its venue, and never by the depot (CrewProgression.supplies untouched).
-##   - The panel's "service" face lists the station's offers.
+##   - The panel's "service" face lists the station's offers; the HUD opens it
+##     from the counter and closes it when Endless culls the station.
+##   - Online (follow-up to the network audit): a second player at the counter
+##     keeps the votes cast; after a purchase the vote opens again only while
+##     the crew is at the station, and the host closes it once the truck has
+##     left; a Priority card on a station offer charges it once.
 
 const Rules = preload("res://scripts/gameplay/route/service_stop_rules.gd")
 const Shop = preload("res://scripts/gameplay/route/service_stop_shop.gd")
@@ -314,14 +319,88 @@ func _check_shop_and_vote() -> void:
 	panel.call(&"close")
 	panel.free()
 
+	await _check_online_vote(shop, segment, full)
 	faults.free()
-	segment.free()
-	await process_frame
+	await _check_panel_follows_station(segment)
 	_votes.call(&"reset")
 	_manager.set(&"is_running", false)
 	_manager.set(&"care_supplies", start_kit)
 	_crew.set(&"team_money", start_money)
 	_crew.set(&"supplies", start_supplies)
+
+
+## Online, as the host (an ENet server with nobody else): a second use of the
+## counter keeps the votes already cast; the vote opens again after a purchase
+## only while the crew is at the station and closes once the truck leaves; a
+## Priority card on a station offer charges it once.
+func _check_online_vote(shop: Node, segment: Node3D, full: Dictionary) -> void:
+	var enet := ENetMultiplayerPeer.new()
+	_expect(enet.create_server(24610, 2) == OK, "The test can host an ENet session")
+	root.multiplayer.multiplayer_peer = enet
+	var kit: Dictionary = _manager.get(&"care_supplies")
+	kit[&"tape"] = 0
+	kit[&"rag"] = 0
+	shop.call(&"open_for_crew", 1)
+	_expect(bool(shop.call(&"vote_is_mine")), "Using the counter opens the crew's vote on the station")
+	_votes.call(&"vote", 1, &"tape")
+	shop.call(&"open_for_crew", 2)
+	_expect(StringName((_votes.get(&"votes") as Dictionary).get(1, &"")) == &"tape",
+			"A second player at the counter keeps the votes already cast (%s)" % [_votes.get(&"votes")])
+
+	var truck := Node3D.new()
+	truck.add_to_group(&"vehicle")
+	root.add_child(truck)
+	var stop: Node3D = segment.get(&"stop")
+	truck.global_position = stop.to_global(Vector3(9.0, float(stop.get(&"ground_y")) + 0.5, 0.0))
+	_votes.call(&"finish_vote", [1])
+	await process_frame
+	_expect(bool(shop.call(&"vote_is_mine")), "With the truck in the lay-by the vote opens again after a purchase")
+	truck.global_position = stop.to_global(Vector3(0.0, 0.0, -400.0))
+	await create_timer(0.8).timeout
+	_expect(not bool(_votes.get(&"active")), "The vote closes once the truck has left the station")
+	shop.call(&"_reopen_vote")
+	_expect(not bool(_votes.get(&"active")), "Away from the station the vote doesn't open again")
+
+	# Priority on a station offer: the station charges it, once.
+	truck.global_position = stop.to_global(Vector3(9.0, float(stop.get(&"ground_y")) + 0.5, 0.0))
+	shop.call(&"open_for_crew", 1)
+	(_crew.get(&"cards") as Dictionary)[1] = int((_crew.get(&"Card") as Dictionary)["PRIORITY"])
+	var money: int = int(_crew.get(&"team_money"))
+	var rag_cost: int = int((shop.call(&"offers") as Dictionary)[&"rag"].cost)
+	_votes.call(&"use_priority", 1, &"rag")
+	_expect(int(_crew.get(&"team_money")) == money - rag_cost,
+			"A Priority card on a station offer charges it once ($%d, paid $%d)" % [
+			rag_cost, money - int(_crew.get(&"team_money"))])
+	_expect(int(_manager.call(&"care_supply_count", &"rag")) == int(full[&"rag"]), "The rags were stocked")
+	await process_frame
+	_votes.call(&"reset")
+	truck.free()
+	root.multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	enet.close()
+
+
+## The HUD opens the service face from the counter, and Endless culling the
+## station closes it.
+func _check_panel_follows_station(segment: Node3D) -> void:
+	# Reloaded: this test's own compile met hud.gd before the autoloads existed
+	# and left a broken copy in the cache: compile it again now.
+	var hud_script: GDScript = load("res://scripts/ui/hud/hud.gd")
+	if not hud_script.can_instantiate():
+		hud_script.reload()
+	var hud: CanvasLayer = hud_script.new()
+	root.add_child(hud)
+	await process_frame
+	hud.set(&"overlay_mode", "run")
+	var shop: Node = (segment.get(&"stop") as Node).get_node(^"Shop")
+	root.get_node(^"/root/EventBus").emit_signal(&"service_counter_opened", shop)
+	var panel: Control = hud.get(&"depot_panel")
+	_expect(panel.visible, "The counter opens the service face")
+	segment.queue_free()
+	await process_frame
+	await process_frame
+	_expect(not panel.visible, "The station going closes its screen")
+	hud.free()
+	await process_frame
 
 
 func _expect(condition: bool, description: String) -> void:
