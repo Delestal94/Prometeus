@@ -23,6 +23,7 @@ const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_m
 const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
 const TRUCK_RADIO: Script = preload("res://scripts/gameplay/vehicle/truck_radio.gd")
 const RUN_CHRONICLE: Script = preload("res://scripts/presentation/newspaper/run_chronicle.gd")
+const NEWS_PHOTOGRAPHER: Script = preload("res://scripts/presentation/newspaper/news_photographer.gd")
 const RESCUE_HOOK: Script = preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
 const LOW_VISIBILITY: Script = preload("res://scripts/gameplay/route/low_visibility_event.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
@@ -44,6 +45,10 @@ var _depot_stocked: bool = false
 var _after_depot_steps: Array[Callable] = []
 ## Where someone who joins with the truck already on the road goes (N-228.7).
 var _late_join: LateJoinSeating
+## What someone who dropped out had, for when they come back (N-221).
+var _rejoin: RejoinKeepsake
+## A returner's spawn waits for its old player to be gone (_sync_players_soon()).
+var _resync_queued: bool = false
 
 
 func _ready() -> void:
@@ -88,6 +93,14 @@ func _ready() -> void:
 	_late_join.name = "LateJoinSeating"
 	_late_join.vehicle = vehicle
 	add_child(_late_join)
+	_rejoin = RejoinKeepsake.new()
+	_rejoin.name = "RejoinKeepsake"
+	_rejoin.vehicle = vehicle
+	_rejoin.late_join = _late_join
+	add_child(_rejoin)
+	# Before the roster drops them, while their player still stands (N-221).
+	NetworkManager.peer_removed.connect(_on_peer_removed)
+	NetworkManager.peer_returned.connect(_rejoin.on_returned)
 	$World/PlayerSpawner.spawned.connect(func(_player: Node) -> void: _refresh_local_player())
 	NetworkManager.roster_changed.connect(_on_roster_changed)
 	NetworkManager.peer_level_ready.connect(_on_peer_level_ready)
@@ -118,6 +131,8 @@ func _ready() -> void:
 	# them, the host writes the paper when the results are decided.
 	var chronicle: Node = RUN_CHRONICLE.new()
 	add_child(chronicle)
+	# Its photos (N-606.5): every peer takes its own still of the same moments.
+	add_child(NEWS_PHOTOGRAPHER.new())
 	# Mud over the windshield now and then (N-113): the host draws it from the
 	# world seed, every peer follows it; only the driver's view shows it.
 	var low_visibility: Node = LOW_VISIBILITY.new()
@@ -222,6 +237,14 @@ func _on_roster_changed(peer_ids: Array) -> void:
 		_sync_players(peer_ids)
 
 
+## Host: someone left the roster; its player is still here, so what it had is
+## noted for when it comes back (RejoinKeepsake).
+func _on_peer_removed(peer_id: int) -> void:
+	if not NetworkManager.is_host():
+		return
+	_rejoin.remember(peer_id, _world.get_node_or_null(NodePath(_player_name(peer_id))) as Node3D)
+
+
 ## The host is gone mid-run (N-222): stop this peer's copy of the run. With
 ## the session closed this peer counts as an offline host, and would go on
 ## to score and end the run itself, covering the disconnect screen (which
@@ -274,24 +297,53 @@ func _sync_players(peer_ids: Array) -> void:
 		# reloads at its own pace (NetworkManager.is_peer_ready()).
 		if not NetworkManager.is_peer_ready(id):
 			continue
+		# Someone back (N-221) waits for its old player -- a ghost dropped this
+		# frame -- to be gone: its seat and box are only free after that.
+		var note: Dictionary = _rejoin.note_for(id)
+		if not note.is_empty() and _rejoin.lingers(note):
+			_sync_players_soon()
+			continue
+		var back: Dictionary = _rejoin.place(note) if not note.is_empty() else {}
 		# The truck already out on the road: the depot is behind the crew, so
 		# the newcomer appears aboard (late_join_seating.gd).
 		var seat: Node = null
 		var data: Dictionary = {"peer_id": id, "position": _world.to_local(depot.spawn_position(index))}
-		if _late_join.underway():
-			var placed: Dictionary = _late_join.place()
+		var placed: Dictionary = back if not back.is_empty() else (_late_join.place() if _late_join.underway() else {})
+		if not placed.is_empty():
 			seat = placed.seat
 			data.position = _world.to_local(placed.position)
 			# In the truck's own space too: each peer draws its truck a little
 			# behind the host's (player_spawner.gd).
-			data.vehicle_position = placed.local
+			if placed.has("local"):
+				data.vehicle_position = placed.local
 		var player: Node = $World/PlayerSpawner.spawn(data)
+		# Its box first: a passenger boarding with it keeps it on the lap.
+		if not note.is_empty() and player != null:
+			_rejoin.give_back(player as Node3D, note)
 		if seat != null and player != null:
-			_late_join.seat_player(player, seat)
+			if back.is_empty():
+				_late_join.seat_player(player, seat)
+			else:
+				_rejoin.seat_back(player as Node3D, seat as SeatPoint)
 	for child: Node in _world.get_children():
 		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
 			child.queue_free()
 	_refresh_local_player()
+
+
+## Host: _sync_players() again next frame, once. A connection, not an await:
+## a level freed meanwhile takes it along instead of resuming.
+func _sync_players_soon() -> void:
+	if _resync_queued:
+		return
+	_resync_queued = true
+	get_tree().process_frame.connect(_sync_players_again, CONNECT_ONE_SHOT)
+
+
+func _sync_players_again() -> void:
+	_resync_queued = false
+	if is_inside_tree() and NetworkManager.is_host():
+		_sync_players(NetworkManager.peer_ids)
 
 
 ## The workshop and the lockers write the profile; the truck is the host's

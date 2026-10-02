@@ -8,8 +8,8 @@ const Kit = preload("res://scripts/gameplay/depot/depot_kit.gd")
 const Appearance = preload("res://scripts/gameplay/player/player_appearance.gd")
 const Face = preload("res://scripts/presentation/character_face.gd")
 const ThemeKit = preload("res://scripts/ui/ui_theme.gd")
-const STOCK_SHADER = preload("res://scripts/tools/newspaper_concept/newspaper_stock.gdshader")
-const PHOTO_SHADER = preload("res://scripts/tools/newspaper_concept/newspaper_photo.gdshader")
+const STOCK_SHADER = preload("res://scripts/presentation/newspaper/newspaper_stock.gdshader")
+const PHOTO_SHADER = preload("res://modules/press_photo/halftone.gdshader")
 ## Newsprint, not UI: warm grey stock and near-black ink instead of the
 ## interface's cream and navy.
 const NEWS_STOCK: Color = Color("e6dcc6")

@@ -31,6 +31,8 @@ const ALERT := Color("ff6b5b")
 const MAX_CODE_LINES: int = 1
 const ARROWS: Dictionary = {&"up": "↑", &"down": "↓", &"left": "←", &"right": "→"}
 const FONT: Font = preload("res://assets/fonts/LilitaOne-Regular.ttf")
+## The route's script (extends Node3D, no class_name).
+const ROUTE = preload("res://scripts/gameplay/route/route.gd")
 
 var distance_label: Label3D
 var detail_label: Label3D
@@ -71,25 +73,25 @@ func refresh() -> void:
 		_show_endless()
 		_show_bomb_code()
 		return
-	var houses: Array = route.get(&"houses")
+	var houses: Array[DeliveryHouse] = route.houses
 	target_house = -1
 	for index: int in range(houses.size()):
 		if not _done.has(index):
 			target_house = index
 			break
 	var stop: int = target_house if target_house >= 0 else houses.size()
-	var left: float = maxf(0.0, float(route.call(&"stop_road_distance", stop)) - float(route.call(&"road_distance", truck.global_position)))
+	var left: float = maxf(0.0, route.stop_road_distance(stop) - route.road_distance(truck.global_position))
 	distance_label.text = _metres(left)
 	var toward: Vector3
 	if target_house >= 0:
-		var house: DeliveryHouse = houses[target_house]
+		var house := houses[target_house]
 		var code: String = house.assigned_label.strip_edges().get_slice(" ", house.assigned_label.strip_edges().get_slice_count(" ") - 1) if not house.assigned_label.is_empty() else ""
 		detail_label.text = (tr("WORLD_GPS_HOUSE_CODE") % [target_house + 1, code.to_upper()]) if code != "" else tr("WORLD_HOUSE_NUMBER") % (target_house + 1)
 		toward = house.global_position
 	else:
 		# The base's free bay (N-116): "BAHÍA 7".
-		detail_label.text = tr("WORLD_GPS_PARK") % int(route.call(&"goal_bay_number"))
-		toward = route.call(&"goal_target")
+		detail_label.text = tr("WORLD_GPS_PARK") % route.goal_bay_number()
+		toward = route.goal_target()
 	_point_arrow(truck, toward)
 	_show_bomb_code()
 
@@ -134,8 +136,10 @@ static func bomb_codes(boxes: Array) -> Array[Dictionary]:
 	for box: Variant in boxes:
 		if not is_instance_valid(box):
 			continue
-		var state: Variant = (box as Object).get(&"care_state")
-		var sequence: Dictionary = (state as Dictionary).get("sequence", {}) if state is Dictionary else {}
+		var package := box as DeliveryPackage
+		if package == null:
+			continue
+		var sequence: Dictionary = package.care_state.get("sequence", {})
 		var steps: Array = sequence.get("steps", [])
 		if steps.is_empty() or StringName(sequence.get("reader", &"owner")) != &"driver" \
 				or int(sequence.get("index", 0)) >= steps.size() or float(sequence.get("seconds", 0.0)) <= 0.0:
@@ -154,6 +158,8 @@ static func code_text(steps: Array, from: int) -> String:
 
 
 func _show_endless() -> void:
+	# RunManager stays by name: preloading run_manager.gd from the truck's
+	# presentation pulls autoload names into a --script compile.
 	var manager: Node = get_node_or_null(^"/root/RunManager")
 	var driven: float = float(manager.get(&"current_distance")) if manager != null else 0.0
 	var best: int = int(manager.call(&"best_score", &"endless")) if manager != null else 0
@@ -187,9 +193,9 @@ func _truck() -> Node3D:
 	return node as Node3D
 
 
-func _route() -> Node3D:
+func _route() -> ROUTE:
 	var house: Node = get_tree().get_first_node_in_group(&"delivery_house")
-	return house.get_parent() as Node3D if house != null else null
+	return house.get_parent() as ROUTE if house != null else null
 
 
 func _build_screen() -> void:

@@ -338,3 +338,13 @@ WORLD_MUD_STORY_STRAP,Barro: se atascaron y salieron con la eslinga,Mud: bogged 
 WORLD_MUD_STORY_CRANE,Barro: los sacó una grúa (multa $%d),Mud: hauled out by a crane (fine $%d)
 WORLD_MUD_NOTICE_CRANE_FREE,La grúa sacó al camión del barro. Sin multa: acá solo se pierde tiempo.,The crane hauled the truck out of the mud. No fine: only time lost here.
 WORLD_MUD_STORY_CRANE_FREE,Barro: los sacó una grúa (sin multa),Mud: hauled out by a crane (no fine)
+WORLD_SERVICE_KIOSK_SIGN,KIOSCO,SHOP
+WORLD_SERVICE_TOTEM_TITLE,SERVICIO,SERVICE
+WORLD_SERVICE_TOTEM_TEXT,kit · repuestos,kit · spare parts
+WORLD_SERVICE_SIGN_TITLE,ESTACIÓN DE SERVICIO,SERVICE STATION
+WORLD_SERVICE_SIGN_FAR,a la derecha · más adelante,on the right · ahead
+WORLD_SERVICE_SIGN_NEAR,dársena a la derecha,pull in on the right
+WORLD_SERVICE_COUNTER_PROMPT,Mostrador: reponer el kit,Counter: restock the kit
+WORLD_SERVICE_NOTICE_BOUGHT,Compraron %s en la estación (-$%d),Bought %s at the station (-$%d)
+WORLD_SERVICE_NOTICE_FIXED,El repuesto arregló el camión en el lugar.,The spare part fixed the truck on the spot.
+WORLD_SERVICE_NOTICE_NO_MONEY,No alcanza la plata para %s ($%d),Not enough money for %s ($%d)

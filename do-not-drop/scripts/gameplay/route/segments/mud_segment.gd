@@ -409,6 +409,7 @@ func _physics_process(delta: float) -> void:
 	_follow_spots()
 	_poll_local_push(delta)
 	if not _is_host():
+		_hold_predicted_truck(delta)
 		return
 	var truck := _truck() as VehicleBody3D
 	if truck == null:
@@ -428,14 +429,7 @@ func _physics_process(delta: float) -> void:
 	if inside:
 		var flat := Vector3(truck.linear_velocity.x, 0.0, truck.linear_velocity.z)
 		var in_pit: bool = -local.z >= pit_start and -local.z <= pit_end
-		if state == State.BOGGED or state == State.CRANE_COMING:
-			truck.apply_central_force(-flat * truck.mass * HELD_DRAG)
-		elif state == State.IDLE and in_pit:
-			# Never more than it takes to stop: the mud holds, it doesn't reverse.
-			var pull: float = minf(pit_decel, flat.length() / delta)
-			truck.apply_central_force(-flat.normalized() * truck.mass * pull)
-		elif state == State.IDLE:
-			truck.apply_central_force(-flat * truck.mass * approach_drag)
+		_drag_truck(truck, flat, in_pit, delta)
 		match state:
 			State.IDLE:
 				_tick_sinking(truck, flat, in_pit, delta)
@@ -452,6 +446,40 @@ func _physics_process(delta: float) -> void:
 		_finish_haul(truck)
 	else:
 		_sink = 0.0
+
+
+## The mud's hold on the truck, from the state alone: the host's truck, and the
+## copy the client at the wheel predicts (N-218).
+func _drag_truck(truck: VehicleBody3D, flat: Vector3, in_pit: bool, delta: float) -> void:
+	if state == State.BOGGED or state == State.CRANE_COMING:
+		truck.apply_central_force(-flat * truck.mass * HELD_DRAG)
+	elif state == State.IDLE and in_pit:
+		# Never more than it takes to stop: the mud holds, it doesn't reverse.
+		var pull: float = minf(pit_decel, flat.length() / delta)
+		truck.apply_central_force(-flat.normalized() * truck.mass * pull)
+	elif state == State.IDLE:
+		truck.apply_central_force(-flat * truck.mass * approach_drag)
+
+
+## A client predicting the truck it drives (N-218, vehicle_prediction.gd): its
+## copy gets the same grip and drag from the replicated state, or it would
+## drive on through the mud and be pulled back to the host's every tick. The
+## host still decides everything (sinking, bogging, the haul, the pushes); those
+## reach the copy as corrections.
+func _hold_predicted_truck(delta: float) -> void:
+	var truck := _truck() as VehicleBody3D
+	if truck == null:
+		return
+	# A client's truck stays frozen unless it predicts it (vehicle.gd _ready,
+	# VehiclePrediction _start/_stop). Not preloaded: vehicle.gd names autoloads,
+	# and route.gd pulls this script in before they exist (see the note on top).
+	var predicted: bool = not truck.freeze
+	var local: Vector3 = to_local(truck.global_position)
+	var inside: bool = predicted and _inside(local)
+	_set_grip(truck, inside)
+	if inside:
+		var flat := Vector3(truck.linear_velocity.x, 0.0, truck.linear_velocity.z)
+		_drag_truck(truck, flat, -local.z >= pit_start and -local.z <= pit_end, delta)
 
 
 func _inside(local: Vector3) -> bool:

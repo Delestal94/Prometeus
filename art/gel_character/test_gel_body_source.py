@@ -15,6 +15,15 @@ class SourceBodyTests(unittest.TestCase):
         self.assertEqual(body.LOD_LEVELS, (2, 1, 0))
         self.assertEqual(body.BUDGETS, (6000, 2500, 800))
 
+    def test_morph_defaults_are_base_delgada(self):
+        """Authoring and export must start at Basis, not eleven +1 extremes."""
+        import build_gel_body as body
+        for level in body.LOD_LEVELS:
+            obj = body.make_body(level)
+            body.decorate(obj)
+            self.assertEqual([k.value for k in obj.data.shape_keys.key_blocks[1:]],
+                             [0.] * len(body.MORPHS), level)
+
     def test_geometry(self):
         import build_gel_body as body
         import bmesh

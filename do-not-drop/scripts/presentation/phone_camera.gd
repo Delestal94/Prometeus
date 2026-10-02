@@ -13,6 +13,9 @@ class_name PhoneCamera
 ## player_movement.gd apply_context_fov() lerps every physics frame and would fight it. Drop
 ## this node into a level and it works; nothing else has to know it exists.
 
+## The truck's script, as a type (N-224.4; vehicle.gd has no class name):
+## has_manual_gearbox and driver_peer_id fail to compile here if renamed.
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
 const PHONE_FOV: float = 52.0
 ## How far a door can be and still be the subject of the shot. Generous on
 ## purpose: you're standing on the porch when you take it, and being asked
@@ -138,9 +141,8 @@ func _open() -> void:
 		return
 	# The gamepad's bumpers change gear in the old manual van (N-114): the
 	# driver of that one doesn't get the phone out with them.
-	var truck: Node = get_tree().get_first_node_in_group(&"vehicle")
-	if truck != null and truck.has_method(&"has_manual_gearbox") and truck.has_manual_gearbox() \
-			and int(truck.get(&"driver_peer_id")) == NetworkManager.local_id():
+	var truck := get_tree().get_first_node_in_group(&"vehicle") as VehicleScript
+	if truck != null and truck.has_manual_gearbox() and truck.driver_peer_id == NetworkManager.local_id():
 		return
 	_previous_camera = get_viewport().get_camera_3d()
 	if _previous_camera == null:
@@ -206,16 +208,19 @@ func subject_house() -> int:
 	var best: int = -1
 	var best_distance: float = PHOTO_RANGE
 	var origin: Vector3 = _camera.global_position
-	for house: Node in get_tree().get_nodes_in_group(&"delivery_house"):
+	for node: Node in get_tree().get_nodes_in_group(&"delivery_house"):
+		var house := node as DeliveryHouse
+		if house == null:
+			continue
 		# A house's own `delivered` only flips on the host, where the doorbell
 		# is resolved; RunManager's record is relayed to every peer. Reading
 		# only the house told every client "no delivery here" at any door.
 		if not _was_delivered(house):
 			continue
-		var distance: float = origin.distance_to(house.call(&"porch_position"))
+		var distance: float = origin.distance_to(house.porch_position())
 		if distance < best_distance:
 			best_distance = distance
-			best = int(house.get(&"house_index"))
+			best = house.house_index
 	return best
 
 
@@ -232,12 +237,12 @@ func _refresh_status() -> void:
 
 ## A box was actually handed over there -- a house the run drove past is
 ## resolved as "missed", and there's nothing for a photo to prove.
-func _was_delivered(house: Node) -> bool:
-	var index: int = int(house.get(&"house_index"))
+func _was_delivered(house: DeliveryHouse) -> bool:
+	var index: int = house.house_index
 	for entry: Dictionary in RunManager.deliveries:
 		if int(entry["house"]) == index:
 			return RunManager.handed_over(StringName(entry["outcome"]))
-	return bool(house.get(&"delivered")) and RunManager.handed_over(StringName(house.get(&"outcome")))
+	return house.delivered and RunManager.handed_over(house.outcome)
 
 
 func _already_photographed(house_index: int) -> bool:

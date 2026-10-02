@@ -75,8 +75,11 @@
   solo no gasta cupo, como `_report_level_ready`).
 - **Lo que suelta un jugador que se va** (caja, asiento, voto) escucha `NetworkManager.peer_removed`, no
   `multiplayer.peer_disconnected`: un fantasma que se cae por la reconexión sale del roster enseguida y su
-  conexión se cierra 0,5-2 s después, cuando el nivel ya liberó a su jugador. `EventBus.request()`
-  solo acepta los eventos de `request_cooldowns`.
+  conexión se cierra 0,5-2 s después, cuando el nivel ya liberó a su jugador. Lo que hay que devolverle
+  si vuelve (dónde estaba, asiento, caja) se anota en esa misma señal y se le da con
+  `NetworkManager.peer_returned(id, anterior)`, que solo llega para la misma identidad
+  (`scripts/gameplay/rejoin_keepsake.gd`). `EventBus.request()` solo acepta los eventos de
+  `request_cooldowns`.
 - **El color de un jugador es `PlayerColorSlot.slot(peer_id, paleta.size())`**, nunca `peer_id % 5`: sale
   de `NetworkManager.color_slot()`, que el host reparte por orden de llegada (el host siempre el 0, también
   jugando solo), es igual en todos los peers y el que se cae y vuelve recupera el suyo (N-221). Los lectores

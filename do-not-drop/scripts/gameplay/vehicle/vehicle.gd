@@ -6,7 +6,9 @@ extends VehicleBody3D
 ## Godot default for a static, non-spawned node, never reassigned). On every
 ## other peer it's a synced puppet -- frozen so the physics engine doesn't
 ## fight the transform MultiplayerSynchronizer is about to hand it, driven
-## only by whatever the host broadcasts.
+## only by whatever the host broadcasts. The exception is the client at the
+## wheel (N-218, vehicle_prediction.gd): it simulates its copy with its own
+## input and eases it toward what the host says.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 
@@ -17,6 +19,8 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 	set(value):
 		var changed: bool = value != driver_peer_id
 		driver_peer_id = value
+		if changed and _prediction != null:
+			_prediction.driver_changed()
 		# The driver got in through the open door: it shuts behind them. When
 		# they get out it opens to let them climb down. Host decides, and the
 		# door state replicates like any other door toggle.
@@ -53,12 +57,66 @@ var net_rotation: Vector3:
 		_net_incoming_rotation = value
 		_net_received |= 4
 		_commit_net_pose()
+## The input the host's pose stands for (N-218): which of the driving
+## client's numbered inputs its last step used. The client at the wheel
+## compares the pose with its own after that input (vehicle_prediction.gd).
+var net_input_seq: int:
+	get:
+		return _prediction.applied_seq
+	set(value):
+		_net_incoming_seq = value
+		_net_received |= 8
+		_commit_net_pose()
+## The velocities, the steering and the engine force are replicated through
+## these instead of the body's own properties (N-218): a client drawing the
+## host's truck takes them as they come, as before; the client at the wheel
+## predicts its own and keeps the host's velocities only to compare.
+var net_linear_velocity: Vector3:
+	get:
+		return linear_velocity
+	set(value):
+		_net_incoming_velocity = value
+		if not _prediction.active:
+			linear_velocity = value
+		_net_received |= 16
+		_commit_net_pose()
+var net_angular_velocity: Vector3:
+	get:
+		return angular_velocity
+	set(value):
+		_net_incoming_spin = value
+		if not _prediction.active:
+			angular_velocity = value
+		_net_received |= 32
+		_commit_net_pose()
+var net_steering: float:
+	get:
+		return steering
+	set(value):
+		if not _prediction.active:
+			steering = value
+var net_engine_force: float:
+	get:
+		return engine_force
+	set(value):
+		if not _prediction.active:
+			engine_force = value
+## Host: whether its truck is simulated (not frozen for loading, parking or a
+## run's end), replicated on change: the client at the wheel predicts only
+## while it is.
+@export var net_simulating: bool = false
+## Every part of a pose packet: time, position, rotation, input, velocities.
+const NET_POSE_PARTS: int = 63
 var _host_clock: float = 0.0
 var _net_smoother := NetPoseSmoother.new()
 var _net_incoming_time: float = 0.0
 var _net_incoming_position: Vector3 = Vector3.ZERO
 var _net_incoming_rotation: Vector3 = Vector3.ZERO
+var _net_incoming_seq: int = 0
+var _net_incoming_velocity: Vector3 = Vector3.ZERO
+var _net_incoming_spin: Vector3 = Vector3.ZERO
 var _net_received: int = 0
+var _prediction := VehiclePrediction.new()
 @export var maximum_engine_force: float = 1700.0
 @export var maximum_speed_kmh: float = 72.0
 @export var reverse_speed_kmh: float = 18.0
@@ -528,13 +586,15 @@ func set_controls(throttle: float, steering_input: float, handbrake: bool) -> vo
 		sleeping = false
 
 
-## Whoever is driving calls this on their own client; it only actually
-## applies on the host, which is the only place set_controls() should take
-## effect. Unreliable and ordered: a dropped throttle sample just means the
-## next one (a 60th of a second later) supersedes it, same as UDP game input
-## anywhere else -- resending a stale one would be worse than skipping it.
+## The client at the wheel sends this every physics tick
+## (vehicle_prediction.gd), numbered by its own tick: the host plays the inputs
+## back one per tick (NetInputBuffer) and its pose says which one it stands for
+## (net_input_seq). Unreliable and ordered: a dropped sample just means the
+## last one is held a tick, same as UDP game input anywhere else -- resending
+## a stale one would be worse than skipping it. Called locally (sender 0) it
+## takes effect at once, unnumbered.
 @rpc("any_peer", "call_local", "unreliable_ordered")
-func submit_driver_input(throttle: float, steering_input: float, handbrake: bool) -> void:
+func submit_driver_input(seq: int, throttle: float, steering_input: float, handbrake: bool) -> void:
 	if not is_multiplayer_authority():
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
@@ -543,7 +603,16 @@ func submit_driver_input(throttle: float, steering_input: float, handbrake: bool
 	# clampf() lets a NaN through, and one NaN in the wheels breaks Jolt (N-221).
 	if not RpcGuard.finite_float(throttle) or not RpcGuard.finite_float(steering_input):
 		return
-	set_controls(throttle, steering_input, handbrake)
+	if sender_id == 0:
+		set_controls(throttle, steering_input, handbrake)
+	else:
+		receive_driver_input(seq, throttle, steering_input, handbrake)
+
+
+## Host: a numbered input from the client at the wheel, played on its tick
+## (VehiclePrediction.host_tick).
+func receive_driver_input(seq: int, throttle: float, steering_input: float, handbrake: bool) -> void:
+	_prediction.receive(seq, clampf(throttle, -1.0, 1.0), clampf(steering_input, -1.0, 1.0), handbrake)
 
 
 ## Whether this truck's variant is worked by a manual gearbox (N-114).
@@ -589,11 +658,12 @@ func get_cargo_spawn_transform() -> Transform3D:
 	return _package_spawn.global_transform
 
 
-## All three parts of a packet in (they travel together, in whatever order
-## they're applied): hand the pose to the smoother. The very first one also
-## puts the truck there at once, so a joining client doesn't see it slide in.
+## All the parts of a packet in (they travel together, in whatever order
+## they're applied): hand the pose to the smoother, and to the prediction
+## when this client drives (N-218). The very first one also puts the truck
+## there at once, so a joining client doesn't see it slide in.
 func _commit_net_pose() -> void:
-	if _net_received != 7:
+	if _net_received != NET_POSE_PARTS:
 		return
 	_net_received = 0
 	if is_inside_tree() and is_multiplayer_authority():
@@ -601,20 +671,27 @@ func _commit_net_pose() -> void:
 	var pose := Transform3D(Basis.from_euler(_net_incoming_rotation), _net_incoming_position)
 	var first: bool = _net_smoother.is_empty()
 	_net_smoother.push(_net_incoming_time, pose, Time.get_ticks_usec() / 1000000.0)
-	if first:
+	_prediction.host_state(_net_incoming_seq, pose, _net_incoming_velocity, _net_incoming_spin)
+	if first and not _prediction.active:
 		transform = pose
 
 
 ## A client draws the host's truck every frame from the smoother (N-208),
-## and its wheels.
+## and its wheels -- unless it is predicting its own (N-218): then physics
+## moves it and its wheels, as on the host.
 func _process(delta: float) -> void:
-	if is_multiplayer_authority():
+	if is_multiplayer_authority() or _prediction.active:
 		return
 	if not _net_smoother.is_empty():
 		var pose: Transform3D = _net_smoother.sample(Time.get_ticks_usec() / 1000000.0)
 		if pose != Transform3D.IDENTITY:
-			transform = pose
+			transform = _prediction.blend_exit(pose, delta)
 	_pose_remote_wheels(delta)
+
+
+## Whether this peer is the client predicting the truck it drives (N-218).
+func is_predicted() -> bool:
+	return _prediction.active
 
 
 ## A client's truck is frozen, so physics never moves its wheels: they are put
@@ -635,13 +712,22 @@ func _pose_remote_wheels(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	_match_interpolation_to_freeze()
 	if not is_multiplayer_authority():
+		# The client at the wheel (N-218): sends its input, and while the host's
+		# truck is simulated too, predicts its own copy with it.
+		if _prediction.client_tick(self, delta, _net_smoother, _net_incoming_velocity, _net_incoming_spin,
+				net_simulating):
+			_drive(delta, presentation_engine_running)
+		_match_interpolation_to_freeze()
 		return
+	_match_interpolation_to_freeze()
 	_host_clock += delta
 	if not _grounded_once:
 		_snap_to_ground()
+	# The remote driver's input for this tick (N-218).
+	_prediction.host_tick(self)
 	_update_parking()
+	net_simulating = not freeze
 	if freeze and not _parked:
 		_pose_frozen_wheels()
 	_follow_with_shell(delta)
@@ -651,6 +737,29 @@ func _physics_process(delta: float) -> void:
 		rear_ramp_deployed = true
 	var running: bool = RunManager.is_running
 	presentation_engine_running = running
+	_drive(delta, running)
+
+	_telemetry_time += delta
+	if _telemetry_time >= 0.1:
+		_telemetry_time = 0.0
+		EventBus.relay(&"vehicle_telemetry", [speed_kmh])
+
+	# Velocity discontinuities give the package system a tunable shake signal.
+	# Ignore the initial settling fall and continuous gravity while airborne.
+	_settling_time = maxf(0.0, _settling_time - delta)
+	_impact_cooldown = maxf(0.0, _impact_cooldown - delta)
+	var velocity_change: float = (linear_velocity - _previous_velocity).length()
+	if running and _settling_time <= 0.0 and _impact_cooldown <= 0.0 and velocity_change >= 3.0:
+		EventBus.relay(&"vehicle_impact", [velocity_change, global_position])
+		_impact_cooldown = 0.3
+	_previous_velocity = linear_velocity
+
+
+## The truck's own driving for this tick, from the controls: steering, engine
+## and brakes. Runs on the host's truck, and on the copy a client at the wheel
+## predicts (N-218), which takes `running` and the gear from what the host
+## replicates.
+func _drive(delta: float, running: bool) -> void:
 	var forward_speed: float = linear_velocity.dot(-global_basis.z)
 	var throttle: float = _throttle if running else 0.0
 	var steer_input: float = _steering_input if running else 0.0
@@ -673,27 +782,13 @@ func _physics_process(delta: float) -> void:
 		engine_force = -throttle * maximum_engine_force * 0.55
 	elif absf(throttle) < 0.01:
 		brake = 0.6
-	presentation_braking = running and brake > 3.0
-	if gearbox.enabled:
+	if is_multiplayer_authority():
+		presentation_braking = running and brake > 3.0
+	if gearbox.enabled and is_multiplayer_authority():
 		gearbox.tick(delta)
 		if not running:
 			gearbox.reset()
-		else:
-			# The engine holds the truck back when it is over its gear's limit;
-			# the brake lights stay off for that (decided above).
-			brake = maxf(brake, gearbox.engine_brake(forward_speed * 3.6, maximum_speed_kmh))
-
-	_telemetry_time += delta
-	if _telemetry_time >= 0.1:
-		_telemetry_time = 0.0
-		EventBus.relay(&"vehicle_telemetry", [speed_kmh])
-
-	# Velocity discontinuities give the package system a tunable shake signal.
-	# Ignore the initial settling fall and continuous gravity while airborne.
-	_settling_time = maxf(0.0, _settling_time - delta)
-	_impact_cooldown = maxf(0.0, _impact_cooldown - delta)
-	var velocity_change: float = (linear_velocity - _previous_velocity).length()
-	if running and _settling_time <= 0.0 and _impact_cooldown <= 0.0 and velocity_change >= 3.0:
-		EventBus.relay(&"vehicle_impact", [velocity_change, global_position])
-		_impact_cooldown = 0.3
-	_previous_velocity = linear_velocity
+	if gearbox.enabled and running:
+		# The engine holds the truck back when it is over its gear's limit;
+		# the brake lights stay off for that (decided above).
+		brake = maxf(brake, gearbox.engine_brake(forward_speed * 3.6, maximum_speed_kmh))

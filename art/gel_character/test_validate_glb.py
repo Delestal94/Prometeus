@@ -119,6 +119,10 @@ def fixture(path, change=None):
                        "primitives": [{"attributes": attrs, "indices": add(indices, "SCALAR", 5123),
                                        "targets": targets}]}],
            "buffers": [{"byteLength": len(binary)}], "bufferViews": views, "accessors": accessors}
+    if "mesh_weights" in state:
+        doc["meshes"][0]["weights"] = state["mesh_weights"]
+    if "node_weights" in state:
+        nodes[-1]["weights"] = state["node_weights"]
     encoded = json.dumps(doc).encode()
     encoded += b" " * (-len(encoded) % 4)
     binary.extend(b"\0" * (-len(binary) % 4))
@@ -155,6 +159,20 @@ class StrictBodyTests(unittest.TestCase):
     def test_generic_validation_remains_optional(self):
         path = fixture(self.path, lambda s: s.update(morph_names=[]))
         self.assertTrue(validate(path)["valid"])
+
+    def test_default_morph_weights_load_delgada(self):
+        for weights in ([1.] * 11, [-1.] + [0.] * 10,
+                        [0.] * 10, [float('nan')] + [0.] * 10):
+            for location in ('mesh_weights', 'node_weights'):
+                with self.subTest(location=location, weights=weights):
+                    self.invalid(lambda s: s.update({location: weights}), 'default morph')
+
+    def test_node_morph_defaults_override_mesh_defaults(self):
+        report = self.report(lambda s: s.update(mesh_weights=[1.] * 11,
+                                               node_weights=[0.] * 11))
+        self.assertTrue(report['valid'], report)
+        report = self.report(lambda s: s.update(mesh_weights=[0.] * 11))
+        self.assertTrue(report['valid'], report)
 
     def test_hole(self):
         self.invalid(lambda s: s["faces"].pop(), "watertight")

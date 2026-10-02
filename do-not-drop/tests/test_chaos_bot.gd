@@ -286,7 +286,9 @@ func _check_world() -> void:
 	if not is_instance_valid(_level):
 		return
 	var watched: Array[Node3D] = [_player as Node3D, _van as Node3D]
-	for package: Node in _level.get(&"packages"):
+	# Untyped: a box handed over at a door is freed but stays in the level's
+	# list, and a typed loop variable can't even hold a freed instance.
+	for package: Variant in _level.get(&"packages"):
 		if is_instance_valid(package):
 			watched.append(package as Node3D)
 	for body: Node3D in watched:
@@ -297,7 +299,7 @@ func _check_world() -> void:
 		if body is RigidBody3D or body is CharacterBody3D or body is VehicleBody3D:
 			var speed: Vector3 = body.get(&"linear_velocity") if body is RigidBody3D else body.get(&"velocity")
 			_expect(_finite(speed), "%s has a finite velocity at %s (got %s)" % [body.name, _where(), speed])
-	for package: Node in _level.get(&"packages"):
+	for package: Variant in _level.get(&"packages"):
 		if not is_instance_valid(package):
 			continue
 		var at: Vector3 = (package as Node3D).global_position

@@ -1,5 +1,5 @@
 shader_type spatial;
-// Newsprint for the newspaper study. Lit like the rest of the set, so folds,
+// Newsprint for the next-day newspaper (N-606.3, study N-606.6). Lit like the rest of the set, so folds,
 // droop and the lamp read on the sheet; part of the colour is emitted so the
 // type keeps its contrast in a dim office instead of turning grey.
 render_mode cull_back, diffuse_lambert, specular_disabled;

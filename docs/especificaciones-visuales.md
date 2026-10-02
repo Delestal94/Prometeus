@@ -101,7 +101,7 @@ dónde empezar, es por ahí.
 | 47 | ~~Música de tensión que sube con el riesgo acumulado.~~ **[x] Hecho (2026-09-23)** — `ingame_music.gd` ajusta la capa de tensión al riesgo de la carga. | **B** |
 | 48 | ~~Los faros no iluminan.~~ **[x] Hecho (2026-09-21)** — dos `SpotLight3D` reales por faro, que se apagan/encienden con `presentation_engine_running`. | **A** |
 | 49 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho (2026-09-21)** — rehecho en N-320 (2026-10-01): `wheel_dust.gd`, estela suave y clara detrás de las ruedas traseras solo en grava/tierra (nada en asfalto ni con lluvia), quad con degradé radial sin sombra. | **A** |
-| 50 | ~~Humo de escape en el caño trasero.~~ **[x] Hecho (2026-09-23)** — `vehicle_effects.gd` lo emite con el motor encendido. | **C** |
+| 50 | ~~Humo de escape en el caño trasero.~~ **[x] Hecho (2026-09-23)** — `vehicle_effects.gd` lo emite con el motor encendido. Rehecho en N-324 (2026-10-01): bocanadas claras de borde suave en vez de esferas oscuras, que dejan una estela visible desde atrás y desde la caja. | **C** |
 | 51 | ~~Marcas de neumático en el asfalto al frenar.~~ **[x] Ya existe** — `vehicle_effects.gd` `_update_skids()` (anillo de 600 tiras; anotado en N-320.3). | **C** |
 | 52 | **Props de banquina**: árboles, postes, carteles, cercas, tachos. Hoy solo hay 10 cajas grises como referencia de escala. | **B** |
 | 53 | Cableado eléctrico entre postes — barato y da muchísima lectura de profundidad y velocidad. | **B** |

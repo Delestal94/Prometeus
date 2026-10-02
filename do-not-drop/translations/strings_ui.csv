@@ -493,6 +493,10 @@ UI_OPT_FULLSCREEN,Pantalla completa  (F11),Full screen  (F11)
 UI_OPT_HELP_ALWAYS,Siempre,Always
 UI_OPT_HELP_BEGINNING,Al principio,At first
 UI_OPT_HELP_NEVER,Nunca,Never
+UI_OPT_NEWSPAPER,Diario al final,Newspaper at the end
+UI_OPT_NEWSPAPER_ALWAYS,Siempre,Always
+UI_OPT_NEWSPAPER_NEWS,Si pasó algo,If something happened
+UI_OPT_NEWSPAPER_NEVER,Nunca,Never
 UI_OPT_HUD_SIZE,Tamaño del HUD,HUD size
 UI_OPT_INVERT_Y,Invertir eje Y,Invert Y axis
 UI_OPT_MASTER_VOLUME,Volumen general,Master volume
@@ -1098,7 +1102,37 @@ HUD_NEWS_MASTHEAD,El Eco de %s,The %s Echo
 HUD_NEWS_MOTTO,Todas las noticias que llegan (casi) enteras,All the news that arrives (almost) intact
 HUD_NEWS_EDITION,Edición de la mañana siguiente · Precio: ridículo,Next-morning edition · Price: ridiculous
 HUD_NEWS_EXTRA,¡EXTRA!,EXTRA!
-HUD_NEWS_CONTINUE,Ver resultados,See results
+HUD_NEWS_NEXT_MORNING,A la mañana siguiente…,The next morning…
+HUD_NEWS_SKIP,Mantené %s para saltar,Hold %s to skip
+HUD_NEWS_FOLIO,%d   ·   %s,%d   ·   %s
+HUD_NEWS_ISSUE,Año XLI · N.º 12.408,"Vol. XLI · No. 12,408"
+HUD_NEWS_ADS_TITLE,AVISOS DEL PUEBLO,TOWN NOTICES
+HUD_NEWS_AD_1_T,TALLER EL REMIENDO,THE PATCH-UP GARAGE
+HUD_NEWS_AD_1_B,Reparamos casi todo. Casi.,We fix almost anything. Almost.
+HUD_NEWS_AD_2_T,ALMACÉN DON POZO,DON POZO'S STORE
+HUD_NEWS_AD_2_B,"Hoy: yerba, pan y buenas noticias.","Today: mate, bread and good news."
+HUD_NEWS_AD_3_T,GOMERÍA LA RUEDA,THE WHEEL TYRE SHOP
+HUD_NEWS_AD_3_B,Atendemos pinchaduras y pinchados.,Flat tyres and flat moods mended.
+HUD_NEWS_AD_4_T,CLASES DE MANEJO,DRIVING LESSONS
+HUD_NEWS_AD_4_B,Frene antes. Le va a ir mejor.,Brake earlier. It goes better.
+HUD_NEWS_SMALL_AD_1,"VENDO TERMO. Sin tapa, con historia.","FOR SALE: THERMOS. No lid, lots of history."
+HUD_NEWS_SMALL_AD_2,ALQUILO GALPÓN. Ideal camiones lentos.,SHED TO LET. Ideal for slow trucks.
+HUD_NEWS_FILLER_1,El concejo deliberante volvió a tratar el arreglo de la ruta provincial.,The town council once again discussed repairs to the provincial road.
+HUD_NEWS_FILLER_2,Vecinos del barrio norte reclaman por el camión que pasa a toda hora.,Residents of the north side complain about the truck that goes by at all hours.
+HUD_NEWS_FILLER_3,La cooperativa anunció cortes de luz programados para el jueves.,The cooperative announced scheduled power cuts for Thursday.
+HUD_NEWS_FILLER_4,El club local ganó por la mínima y sigue arriba en la tabla.,The local club won by a single goal and stays at the top of the table.
+HUD_NEWS_FILLER_5,La feria de los sábados suma puestos de dulces caseros y plantas.,The Saturday market adds stalls of homemade jam and plants.
+HUD_NEWS_FILLER_6,En la escuela técnica arrancan los talleres de soldadura para adultos.,Welding workshops for adults begin at the technical school.
+HUD_NEWS_FILLER_7,Desde el depósito aseguran que las demoras de la semana fueron excepcionales.,The depot insists this week's delays were exceptional.
+HUD_NEWS_FILLER_8,El intendente inauguró un semáforo que todavía nadie respeta.,The mayor opened a traffic light that nobody obeys yet.
+HUD_NEWS_FILLER_9,La biblioteca popular recibe donaciones de libros y revistas viejas.,The public library welcomes donations of old books and magazines.
+HUD_NEWS_FILLER_10,Se recuerda a los conductores que la balanza de la entrada sigue rota.,Drivers are reminded that the weighbridge at the entrance is still broken.
+HUD_NEWS_PHOTO_CAPTION_DEER,"El ciervo y el camión, un segundo después del encuentro. (Foto: el reparto)","The deer and the truck, one second after they met. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_SHEEP,"Las ovejas, dueñas de la ruta por un momento. (Foto: el reparto)","The sheep, owners of the road for a moment. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_DOOR,"La puerta de atrás, abierta de par en par en plena ruta. (Foto: el reparto)","The back door, wide open on the open road. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_MIRROR,"El espejo, en su último viaje con el camión. (Foto: el reparto)","The mirror, on its last trip with the truck. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_CARGO,"La carga, por su cuenta en la banquina. (Foto: el reparto)","The cargo, out on the roadside on its own. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_DELIVERY,"La entrega, documentada en la puerta. (Foto: el reparto)","The delivery, documented at the door. (Photo: the crew)"
 UI_COSM_NICKNAME,Apodo,Nickname
 UI_COSM_NICKNAME_HINT,Así te nombra el diario del día siguiente. Hasta 16 letras.,What the next-day newspaper calls you. Up to 16 characters.
 UI_COSM_NICKNAME_PLACEHOLDER,Vacío: te ponemos uno gracioso,Empty: we pick a funny one
@@ -1110,3 +1144,19 @@ UI_OPT_BIND_SHIFT_DOWN,Bajar marcha (furgón viejo),Shift down (old van)
 HUD_GEAR,MARCHA %s,GEAR %s
 HUD_GEAR_SHIFT_UP,¡SUBÍ! [%s],SHIFT UP! [%s]
 HUD_RESULT_PAY_BONUS,"  (incluye +$%d del furgón viejo)","  (includes +$%d from the old van)"
+UI_SERVICE_TITLE,Estación de servicio,Service station
+UI_SERVICE_HINT,"Reponen el kit del camión y venden un repuesto, más caro que en el depósito. El reloj de las entregas no se detiene mientras compran.","They restock the truck's kit and sell a spare part, dearer than at the depot. The delivery clock keeps running while you shop."
+UI_SERVICE_FULL,%s  ·  ya está completo,%s  ·  already full
+UI_SERVICE_TAPE,Cinta del kit,Kit tape
+UI_SERVICE_TAPE_DETAIL,Repone la cinta hasta lo que tenía al salir.,Tops the tape back up to what you left with.
+UI_SERVICE_REPAIR,Pegamento para recomponer,Repair glue
+UI_SERVICE_REPAIR_DETAIL,Repone lo que se usa para recomponer un contenido roto.,Restocks what you use to put broken contents back together.
+UI_SERVICE_FILLER,Relleno,Filler
+UI_SERVICE_FILLER_DETAIL,Repone el relleno que evita que el contenido baile en la caja.,Restocks the filler that stops the contents rattling in the box.
+UI_SERVICE_RAG,Trapos,Rags
+UI_SERVICE_RAG_DETAIL,Repone los trapos para contener un derrame.,Restocks the rags that hold back a spill.
+UI_SERVICE_STRAP,Cinchas,Straps
+UI_SERVICE_STRAP_DETAIL,Repone las cinchas (también atan la puerta trasera rota).,Restocks the straps (they also tie a broken rear door shut).
+UI_SERVICE_SUBSTITUTE,Gallina de juguete,Toy hen
+UI_SERVICE_SUBSTITUTE_DETAIL,Un sustituto de repuesto por si se pierde un contenido.,A spare substitute in case some contents are lost.
+UI_SERVICE_SPARE_DETAIL,"Si la puerta o el espejo están rotos, se arreglan ya; si no, viaja con ustedes.","If the door or the mirror is broken it gets fixed now; otherwise it rides along."

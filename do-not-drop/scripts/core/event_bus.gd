@@ -111,6 +111,14 @@ signal depot_orders_posted(orders: Array)
 ## station (lockers, workshop, supplies counter, board) and its screen should
 ## open on this client. station is DepotStation.station_id.
 signal depot_station_opened(station: StringName)
+## Local-only: this player used the counter of a service station on the road
+## (N-110, service_counter.gd) and its supplies screen should open on this
+## client. `shop` is the station's ServiceStopShop, which the panel treats as
+## its "depot".
+signal service_counter_opened(shop: Node)
+## Local-only: the shared repair kit's counts changed on this peer
+## (RunManager.care_supplies), so a screen that shows them can refresh.
+signal care_supplies_changed
 ## The supplies waiting for the next run, and the team's money after the
 ## purchase. The host decides; depot.gd hands it to every peer.
 signal depot_supplies_changed(supplies: Array, team_money: int)

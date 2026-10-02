@@ -17,9 +17,11 @@ const YARD_APRON: float = 10.0
 const WALL_CLEARANCE: float = 0.6
 const NOTICE_COOLDOWN: float = 4.0
 
-## The level (level_common.gd): its local_player, depot and road (`route`,
-## or `_streamer` in endless).
-var level: Node
+## The level: its local_player, depot and road (`route`, or `_streamer` in
+## endless). Those two stay by name: level_base.gd and level_endless.gd have
+## no class name, and preloading them here would loop back through
+## level_common.gd, which preloads this file.
+var level: LevelCommon
 var _notice_left: float = 0.0
 
 
@@ -27,11 +29,11 @@ func _physics_process(delta: float) -> void:
 	_notice_left = maxf(0.0, _notice_left - delta)
 	# Read before casting: while the host reloads the level, a client's
 	# player is despawned under a still-running old level.
-	var found: Variant = level.get(&"local_player")
+	var found: Variant = level.local_player
 	if not is_instance_valid(found):
 		return
-	var player := found as CharacterBody3D
-	if player == null or not String(player.get(&"seat_node_path")).is_empty():
+	var player := found as Player
+	if player == null or not player.seat_node_path.is_empty():
 		return
 	var kept: Vector3 = keep_inside(player.global_position)
 	if kept.is_equal_approx(player.global_position):
@@ -62,20 +64,19 @@ func keep_inside(point: Vector3) -> Vector3:
 ## The closest point on the road's centre line (world space, flat), or null
 ## when this level has no road built yet.
 func nearest_road_point(point: Vector3) -> Variant:
-	var streamer: Node = level.get(&"_streamer") as Node
-	if streamer != null and streamer.has_method(&"_nearest_on_path"):
-		var local: Vector3 = (streamer as Node3D).to_local(point)
-		var result: Dictionary = streamer.call(&"_nearest_on_path", local)
-		return (streamer as Node3D).to_global(result.position) if result.has("position") else null
+	var streamer := level.get(&"_streamer") as SegmentStreamer
+	if streamer != null:
+		var result: Dictionary = streamer._nearest_on_path(streamer.to_local(point))
+		return streamer.to_global(result.position) if result.has("position") else null
 	var route: Node3D = level.get(&"route") as Node3D
-	var terrain: Node3D = route.get(&"terrain") as Node3D if route != null else null
+	var terrain: TerrainField = route.get(&"terrain") as TerrainField if route != null else null
 	if terrain == null:
 		return null
 	var flat: Vector3 = terrain.to_local(point)
 	var p := Vector2(flat.x, flat.z)
 	var best := Vector2.ZERO
 	var best_distance: float = INF
-	for span: Dictionary in terrain.get(&"spans"):
+	for span: Dictionary in terrain.spans:
 		var a: Vector2 = span.a
 		var edge: Vector2 = (span.b as Vector2) - a
 		var t: float = clampf((p - a).dot(edge) / maxf(edge.length_squared(), 0.001), 0.0, 1.0)
@@ -90,7 +91,7 @@ func nearest_road_point(point: Vector3) -> Variant:
 
 
 func _in_depot(point: Vector3) -> bool:
-	var depot := level.get(&"depot") as Node3D
+	var depot: Depot = level.depot
 	if depot == null:
 		return false
 	var local: Vector3 = depot.to_local(point)

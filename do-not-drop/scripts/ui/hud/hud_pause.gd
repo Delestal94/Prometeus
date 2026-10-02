@@ -1,6 +1,7 @@
 class_name HudPause
 extends Node
-## Start, pause, restart-hold and disconnect screens, and the depot stations' panels.
+## Start, pause, restart-hold and disconnect screens, and the depot stations' panels
+## (and a service station's counter, N-110).
 
 const RUN_TALLY = preload("res://scripts/core/run_tally.gd")
 
@@ -11,6 +12,7 @@ var _restart_hold: float = 0.0
 
 func _ready() -> void:
 	EventBus.depot_station_opened.connect(_on_depot_station_opened)
+	EventBus.service_counter_opened.connect(_on_service_counter_opened)
 	NetworkManager.session_failed.connect(_on_connection_lost)
 	GameSettings.input_device_changed.connect(_on_input_device_changed)
 
@@ -164,6 +166,22 @@ func _on_depot_station_opened(station: StringName) -> void:
 		return
 	var level: Node = hud.get_parent()
 	hud.depot_panel.open(station, level.get(&"depot") if level != null and &"depot" in level else null)
+
+
+## A service station's counter on the road (N-110): the same panel, its
+## "service" face, selling from that station's shop. Only mid-run.
+func _on_service_counter_opened(shop: Node) -> void:
+	if hud.overlay_mode != "run" or not RunManager.is_running:
+		return
+	hud.depot_panel.open(&"service", shop)
+	# Endless frees the station behind the truck: its screen goes with it.
+	if not shop.tree_exiting.is_connected(_close_service_panel):
+		shop.tree_exiting.connect(_close_service_panel, CONNECT_ONE_SHOT)
+
+
+func _close_service_panel() -> void:
+	if is_instance_valid(hud) and is_instance_valid(hud.depot_panel) and hud.depot_panel.station == &"service":
+		hud.depot_panel.close()
 
 
 func _on_connection_lost(reason: String) -> void:

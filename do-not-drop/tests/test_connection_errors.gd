@@ -56,9 +56,10 @@ func _initialize() -> void:
 	_expect(String(network.call(&"_handshake_error", old_state)) == "version", "Old protocol is rejected as version")
 	old_state.erase("version")
 	_expect(String(network.call(&"_handshake_error", old_state)) == "version", "Missing protocol is rejected as version")
-	_expect(String(network.call(&"_ready_reply_error", {"ready": true, "version": protocol_version})).is_empty(),
+	_expect(NetAdmission.ready_reply_error({"ready": true, "version": protocol_version}, protocol_version).is_empty(),
 		"Host accepts a ready reply from its protocol")
-	_expect(String(network.call(&"_ready_reply_error", {"ready": true, "version": protocol_version - 1})) == "version",
+	_expect(NetAdmission.ready_reply_error({"ready": true, "version": protocol_version - 1}, protocol_version)
+		== "version",
 		"Host rejects a ready reply from an old client")
 
 	# A joiner's auth timeout is reported from inside SceneMultiplayer.poll():

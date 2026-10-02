@@ -13,7 +13,9 @@ extends SceneTree
 ##   the asked-for keys and only after dark;
 ## - DressingBatcher: identical static pieces in a group fold into one
 ##   MultiMesh with their transforms, pieces with a script or a knockable
-##   rule stay nodes, solid rules get a collider;
+##   rule stay nodes, solid rules get a collider; merge_segment_geometry()
+##   folds a segment's loose meshes into one MergedGeometry* node per shadow
+##   setting, each keeping that readable name;
 ## - ContactShadow: a band solid inside the footprint and gone `margin`
 ##   outside, every vertex on the ground callback;
 ## - FrameSlicer (N-408): tick() lets work through while the slice's budget
@@ -38,6 +40,7 @@ func _run() -> void:
 	await _test_world_quality(scene)
 	_test_detail_materials()
 	await _test_batcher(scene)
+	await _test_segment_merge(scene)
 	_test_contact_shadow()
 	await _test_frame_slicer(scene)
 	scene.queue_free()
@@ -249,6 +252,30 @@ func _test_batcher(scene: Node3D) -> void:
 	_expect(knockable != null and knockable.get_meta(&"rule", &"") == &"cone",
 		"The knockable rule became a rigid body that keeps its meta")
 	DressingBatcher.record_instances = false
+
+
+func _test_segment_merge(scene: Node3D) -> void:
+	var segment := Node3D.new()
+	scene.add_child(segment)
+	var material := StandardMaterial3D.new()
+	for index: int in range(3):
+		var part := MeshInstance3D.new()
+		part.mesh = BoxMesh.new()
+		part.material_override = material
+		part.position = Vector3(index * 2.0, 0.0, 0.0)
+		# A mud-like surface: one part that casts no shadow.
+		if index == 0:
+			part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		segment.add_child(part)
+	var merged: int = await DressingBatcher.merge_segment_geometry([segment])
+	_expect(merged == 3, "All three loose meshes were merged (got %d)" % merged)
+	var names: Array[String] = []
+	for child: Node in segment.get_children():
+		names.append(String(child.name))
+	_expect(names.size() == 2, "One merged node per shadow setting (got %s)" % [names])
+	_expect(names.all(func(child_name: String) -> bool: return child_name.begins_with("MergedGeometry")),
+		"Both merged nodes keep the MergedGeometry name, not @MeshInstance3D@N (got %s)" % [names])
+	segment.free()
 
 
 func _test_contact_shadow() -> void:

@@ -313,7 +313,10 @@ Sin encuadre, como medía el test viejo, el "antes" daba ≈123 KB/s. Lo que se 
   alternar el synchronizer, más un último envío "quedó aquí".
 - Validar con el perfil de 150 ms / 2 % que la cola de Steam queda en ~0.
 
-**Fase 2: que se vea suave (2-3 días).**
+**Fase 2: que se vea suave (2-3 días).** Hecha el 2026-10-01 (N-217): `NetPoseSmoother` genérico con reloj de
+quien manda y colchón adaptativo, jugadores y cajas a 30 Hz (host → cliente con 8 jugadores: 80,5 KB/s estable,
+107,1 con todo moviéndose; subida del host 4,6 Mbit/s), alcance por ping en el host, cajas en manos remotas
+dibujadas sobre el cuerpo del que las lleva.
 - Sacar de `NetPoseSmoother` un `NetSnapshotBuffer` genérico y usarlo en jugadores remotos y en cajas
   del cliente, marcados con el reloj del host.
 - Colchón adaptativo: 2 intervalos de envío + 2 × jitter medido, entre 50 y 200 ms.
@@ -329,6 +332,12 @@ Sin encuadre, como medía el test viejo, el "antes" daba ≈123 KB/s. Lo que se 
 - Descartada, salvo que la opción anterior fracase: **transferir la autoridad del camión al conductor**.
   El host terminaría simulando las cajas sobre un camión que llega por red y con atraso, y ya costó
   mucho que no atraviesen paredes (playtests del 25 y el 27/09).
+- **Hecho (N-218):** predicción con reconciliación (`vehicle_prediction.gd`, módulo `net_prediction`). El host
+  reproduce los inputs uno por tick detrás de un colchón de 2 para que su pose diga exactamente qué input
+  representa. Corregir solo posición y rumbo: la velocidad de un `VehicleBody3D` tiembla con la suspensión y
+  perseguirla con un viaje de ida y vuelta de atraso la hace oscilar (solo se corrige, lenta, pasado 0,5 m/s).
+  Escribir `linear_velocity` desde `_physics_process` borra los impulsos de suspensión de ese paso: hay que ir al
+  estado vivo del cuerpo.
 
 **Fase 4: defensivo y sesión (continuo).**
 - Validador genérico de RPC (NaN/inf, tamaños, rate limit) y un test que recorra todos los `any_peer`.

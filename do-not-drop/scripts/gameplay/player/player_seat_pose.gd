@@ -9,9 +9,15 @@ func _ready() -> void:
 	player = get_parent() as Player
 
 
+## On the host, a remote player on foot reaches from their newest pose, not
+## from where they're drawn a touch in the past (N-217, Ride.latest_position).
 func reach_origin() -> Vector3:
 	var seat: Node3D = player.get_node_or_null(player.seat_node_path) as Node3D if not player.seat_node_path.is_empty() else null
-	return seat.global_position if seat != null else player.global_position
+	if seat != null:
+		return seat.global_position
+	if player.is_inside_tree() and player.multiplayer.is_server():
+		return Player.Ride.latest_position(player)
+	return player.global_position
 
 
 func gather_package_input() -> Dictionary:
@@ -107,6 +113,16 @@ func pose_seated_body(delta: float) -> void:
 	configure_driver_ik(seat)
 
 
+## Where the rounded character's root goes, in the seat marker's space, so
+## its Sit pose rests on that seat's cushion. Measured in the truck by
+## tests/render_player_character.gd (2026-09-24): the wall cushions are
+## ~0.58 m under their eye markers, the rack jump seats ~0.55 m and only
+## 0.36 m deep, and the driver's cushion sits behind the wheel -- 0.37 m
+## forward keeps both wrists on the rim at full reach. The cab is too low for
+## this character fully on the cushion, so the driver sinks into it rather
+## than putting his head through the roof. Re-measured for the chubbier body
+## with hair (2026-09-27): the driver sinks 2 cm more (the cowlick is kept
+## low for him), the passengers sit 7 cm lower and 10 cm further forward.
 func seat_body_offset(seat_name: StringName) -> Vector3:
 	if seat_name == &"DriverEyePoint":
 		return Vector3(0.0, -0.75, -0.37)
@@ -172,9 +188,9 @@ func apply_board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	var bus: Node = player.get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.emit_signal(&"quick_fade_requested", 0.2)
-	var seat_camera: Node = player.get_node_or_null(seat_camera_path)
-	if seat_camera != null and seat_camera.has_method(&"activate"):
-		seat_camera.call(&"activate")
+	var seat_camera := player.get_node_or_null(seat_camera_path) as SeatCamera
+	if seat_camera != null:
+		seat_camera.activate()
 
 
 func apply_tend_package(package_path: NodePath) -> void:
@@ -196,9 +212,9 @@ func leave_seat() -> void:
 	if seat != null:
 		player.global_position = seat_exit_position(seat)
 		player.reset_physics_interpolation()
-	var seat_camera: Node = player.get_node_or_null(player._seat_camera_path)
-	if seat_camera != null and seat_camera.has_method(&"deactivate"):
-		seat_camera.call(&"deactivate")
+	var seat_camera := player.get_node_or_null(player._seat_camera_path) as SeatCamera
+	if seat_camera != null:
+		seat_camera.deactivate()
 	player._seated = false
 	player.tended_package = null
 	player.seat_node_path = NodePath()
@@ -219,12 +235,12 @@ func seat_exit_position(seat: Node3D) -> Vector3:
 func release_seat_occupant(seat: Node3D) -> void:
 	if seat == null:
 		return
-	var interaction: Node = seat.get_node_or_null(^"InteractionArea")
-	if interaction == null or not interaction.has_method(&"release_occupant"):
+	var interaction := seat.get_node_or_null(^"InteractionArea") as SeatPoint
+	if interaction == null:
 		return
 	var peer_id: int = player.get_multiplayer_authority()
-	var network: Node = player.get_node_or_null("/root/NetworkManager")
-	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
+	var network := player.get_node_or_null("/root/NetworkManager") as NetSession
+	if network != null and network.is_online() and not network.is_host():
 		interaction.rpc_id(1, &"release_occupant", peer_id)
 	else:
-		interaction.call(&"release_occupant", peer_id)
+		interaction.release_occupant(peer_id)

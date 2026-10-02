@@ -49,7 +49,7 @@
 | Íconos de acción del HUD (×9) | `ui/icons/tx_ui_action_*_128.png` | ✅ | Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja y usar carta; `UiTheme.action_icon()` los muestra junto a los avisos de interacción. |
 | Marco del celular / UI de cámara | `scripts/ui/phone_frame.gd` (por código) | ✅ | S-304: bisel, barra de estado y obturador armados como `Control`, sin imagen. |
 
-| Tipografías | `assets/fonts/LilitaOne-Regular.ttf`, `Nunito-Variable.ttf` | ✅ | OFL (licencias al lado). Sistema de UI en `docs/direccion-visual.md` §3. |
+| Tipografías | `assets/fonts/LilitaOne-Regular.ttf`, `Nunito-Variable.ttf`, `PTSerif-Regular.ttf`, `PTSerif-Italic.ttf` | ✅ | OFL (licencias al lado: `*-OFL.txt`). Sistema de UI en `docs/direccion-visual.md` §3. PT Serif (ParaType, Google Fonts) solo en el diario del día siguiente: texto chico de relleno y epígrafes de foto (N-606.5). |
 
 ## 2. Personajes y viewmodel (dominio Slatex)
 
@@ -123,6 +123,7 @@
 | Tractor | `models/vehicles/sm_vehicle_tractor.glb` | 🟡 | Creado, sin usar todavía: va en zona de campo con N-306. |
 | Grúa del tramo de barro | `models/vehicles/sm_vehicle_tow_crane.glb` | ✅ | 2.393 tris con AO (`tools/build_street_props.py -- crane` + `bake_vertex_ao.py`). La instancia `mud_crane.gd`; anima `Beacon` y cuelga el cable de `Hook`. N-321. |
 | Polvo de las ruedas (efecto) | `scripts/presentation/wheel_dust.gd` | ✅ | Por código, sin textura: quad con degradé radial, 2 emisores × 32 partículas, solo en grava/tierra, apagado con lluvia. Capturas: `tests/render_wheel_dust.gd`. N-320. |
+| Humo de escape (efecto) | `scripts/presentation/vehicle_effects.gd` | ✅ | Por código, sin textura: quad billboard de 0,44 m con degradé radial propio (`smoke_puff_material()`), 28 × 2,4 s, crece 0,22 → 1,3 m, gris por hora (0,78/0,68/0,5), alfa × 0,6 con lluvia/niebla. Caño en `exhaust_anchor()` (de `FloorCollision`, 0,6 m sobre la ruta). Se congela mientras ninguna cámara ve su `visibility_aabb` (comportamiento de `GPUParticles3D`). Capturas: `tests/render_exhaust.gd`. N-324. |
 
 ## 8. Audio (hoy todo sintetizado en `synth_audio.gd`)
 
