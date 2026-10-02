@@ -1132,6 +1132,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     2 → 1; también `.set(&` 1 → 0); en `scripts/`: `.call` 172 → 170, `.get(&` 155 → 150.
     `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`). Siguientes:
     `mud_segment.gd` (14), `package_rescue.gd` (13), `rejoin_keepsake.gd` (9), `run_tally.gd` (9).
+  - [x] `rejoin_keepsake.gd` (2026-10-02, rama `nacho/N-224-rejoin-keepsake-typed`): lo que se guarda de quien se
+    va y vuelve (N-221). El que se fue como `Player` (`seat_node_path`, `net_in_vehicle`, `net_position`,
+    `carried_package`), el camión por `preload` de `vehicle.gd` (`is_door_open`, `set_door_open`; se va el
+    `has_method`) y el anclaje del regazo por `preload` de `package_mount_point.gd` (`occupied_by`): ninguno tiene
+    `class_name`. Un `remember()` con algo que no es un `Player` se trata como "sin jugador". En el archivo: 9 → 0
+    usos (`.call` 4 → 0, `.get(&` 5 → 0); en `scripts/`: `.call` 170 → 166, `.get(&` 150 → 145.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`scripts/gameplay/` sin dueño y `tests/`).
+    Siguientes: `mud_segment.gd` (14), `package_rescue.gd` (13), `run_tally.gd` (9), `crew_progression.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
