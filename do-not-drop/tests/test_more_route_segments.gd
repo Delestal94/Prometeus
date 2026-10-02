@@ -309,7 +309,8 @@ func _check_railing(bridge: Node3D) -> void:
 		for surface: int in range(instance.mesh.get_surface_count()):
 			var arrays: Array = instance.mesh.surface_get_arrays(surface)
 			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-			tris += (indices.size() if not indices.is_empty() else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+			var vertices := arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array
+			tris += (indices.size() if not indices.is_empty() else vertices.size()) / 3
 		var to_model := Transform3D.IDENTITY
 		var walker: Node = instance
 		while walker != null and walker != model:
@@ -339,7 +340,8 @@ func _check_railing(bridge: Node3D) -> void:
 			left += 1
 		elif is_equal_approx(x, 3.05):
 			right += 1
-	_expect(left == 6 and right == 6, "The bridge lays 6 railing sections per side at x = +-3.05 (got %d left, %d right)" % [left, right])
+	_expect(left == 6 and right == 6,
+		"The bridge lays 6 railing sections per side at x = +-3.05 (got %d left, %d right)" % [left, right])
 
 
 func _expect(condition: bool, description: String) -> void:
