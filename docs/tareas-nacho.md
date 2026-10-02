@@ -1161,6 +1161,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     140 → 134. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Sin aviso (`presentation/` libre y
     `tests/`). Siguientes: `run_session.gd` (8), `vehicle_prediction.gd` (7), `truck_radio_knob.gd` (6),
     `run_scoring.gd` (6).
+  - [x] `vehicle_prediction.gd` (2026-10-02, rama `nacho/N-224-vehicle-prediction-typed`): la predicción del
+    cliente que maneja (N-218). El camión por `preload` de `vehicle.gd` (`driver_peer_id`, `set_controls()` y tres
+    accesores nuevos, `throttle_input()`, `steer_input()` y `handbrake_input()`, en vez de leer `_throttle`,
+    `_steering_input` y `_handbrake` por nombre). Sin cambios de red (`auditor-red`: OK, `PROTOCOL_VERSION` igual).
+    En el archivo: 7 → 0 usos (`.call` 2 → 0, `.get(&` 5 → 0); en `scripts/`: `.call` 161 → 159, `.get(&` 129 → 124.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. `test_vehicle_prediction.gd` lee `EXIT_BLEND_SECONDS` con
+    `load()`: `VehiclePrediction` ahora arrastra `vehicle.gd`, que nombra autoloads que un `--script` no tiene al
+    compilar (`net_pair.gd` la sigue nombrando: corre como escena, con autoloads). Sin aviso (`vehicle/` y `tests/`).
+    Siguientes: `run_session.gd` (8), `truck_radio_knob.gd` (5), `fault_repair_spot.gd` (5).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

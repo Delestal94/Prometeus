@@ -333,6 +333,10 @@ const BUDGETS: Dictionary = {
 	# set_door_open) and the lap bay by a preload of package_mount_point.gd (occupied_by): neither
 	# has a class name. Nothing left by name.
 	"res://scripts/gameplay/rejoin_keepsake.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The client-side prediction of the truck (N-224.4): the truck through vehicle.gd by preload (no
+	# class_name): driver_peer_id, set_controls() and the controls it numbers and sends (throttle_input(),
+	# steer_input(), handbrake_input()). Nothing left by name.
+	"res://scripts/gameplay/vehicle/vehicle_prediction.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The truck's small tells (N-224.4): the presentation through vehicle_presentation.gd by preload (vehicle,
 	# wheels(), is_seat_camera()), the truck through vehicle.gd (presentation_engine_running) and the camera
 	# shake through the GAME_SETTINGS handle (below). The two /root/ lookups are the null-safe accessors:

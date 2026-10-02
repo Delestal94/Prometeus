@@ -586,6 +586,19 @@ func set_controls(throttle: float, steering_input: float, handbrake: bool) -> vo
 		sleeping = false
 
 
+## The controls as set_controls left them, for VehiclePrediction to number and send to the host.
+func throttle_input() -> float:
+	return _throttle
+
+
+func steer_input() -> float:
+	return _steering_input
+
+
+func handbrake_input() -> bool:
+	return _handbrake
+
+
 ## The client at the wheel sends this every physics tick
 ## (vehicle_prediction.gd), numbered by its own tick: the host plays the inputs
 ## back one per tick (NetInputBuffer) and its pose says which one it stands for
