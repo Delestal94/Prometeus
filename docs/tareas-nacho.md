@@ -994,6 +994,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 13 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-seat-point-tipado.md`. Siguientes: `player.gd` (13), `spectator_camera.gd` (12),
     `package_pickup_point.gd` (12), `cargo_animal_view.gd` (11).
+  - [x] `phone_camera.gd` (2026-10-01, rama `nacho/N-224-phone-camera-typed`): la foto de entrega. Las casas como
+    `DeliveryHouse` (`porch_position`, `house_index`, `delivered`, `outcome`; lo que no es una se salta) y el camión
+    por `preload` de `vehicle.gd` (`has_manual_gearbox`, `driver_peer_id`; se va el `has_method`). En el archivo:
+    `.call` 1 → 0, `.get(&` 5 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0.
+    Sin aviso (`presentation/` libre y `tests/`).
   - [x] `player_seat_pose.gd` (2026-10-01, rama `nacho/N-224-seat-pose-typed`): subir y bajar de los asientos. La
     cámara del asiento como `SeatCamera` (`activate`/`deactivate`), el `InteractionArea` del asiento como `SeatPoint`
     (`release_occupant`) y la sesión como `NetSession` (`is_online`, `is_host`); lo que no es uno se salta, como hacían

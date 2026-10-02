@@ -268,6 +268,10 @@ const BUDGETS: Dictionary = {
 	# RunManager.is_running (preloading run_manager.gd from the truck's presentation breaks --script
 	# compiles) and the truck's driver_peer_id (vehicle.gd preloads the presentation that makes this camera).
 	"res://scripts/presentation/spectator_camera.gd": {"call": 0, "callv": 0, "get": 2, "root": 2},
+	# The delivery photo (N-224.4): the houses as DeliveryHouse (porch_position, house_index, delivered,
+	# outcome; what is not one is skipped) and the truck through vehicle.gd by preload (has_manual_gearbox,
+	# driver_peer_id; the has_method check goes). Nothing left by name.
+	"res://scripts/presentation/phone_camera.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The dashboard GPS (N-224.4): the route through route.gd by preload (houses, stop_road_distance,
 	# road_distance, goal_bay_number, goal_target) and the boxes as DeliveryPackage (care_state). By name
 	# stay RunManager's current_distance and best_score (same --script compile reason as the spectator
