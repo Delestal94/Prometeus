@@ -25,6 +25,8 @@ extends SceneTree
 ## (-- --write-golden) before and after, compare the two files and `git checkout` the real one.
 
 const GOLDEN_PATH := "res://tests/data/route_golden.txt"
+## Characters per "GOLDEN_GZ" line a CI mismatch prints (_print_for_ci()).
+const GOLDEN_CHUNK_SIZE: int = 4000
 const NETWORK_MANAGER: NodePath = ^"/root/NetworkManager"
 ## [seed, houses, start_yard, batch_dressing]
 const SETUPS: Array = [
@@ -386,6 +388,20 @@ func _compare(text: String) -> void:
 			_expect(false, "Line %d differs:\n  expected: %s\n  actual:   %s" % [
 				index + 1, expected[index].left(400), actual[index].left(400)])
 	_expect(false, "The route differs from the golden (%d lines expected, got %d)" % [expected.size(), actual.size()])
+	if not OS.get_environment("GITHUB_ACTIONS").is_empty():
+		_print_for_ci(text)
+
+
+## On CI (Linux, the platform the golden is written on) a mismatch prints the
+## whole new signature, gzip + base64 in GOLDEN_CHUNK_SIZE pieces that fit in
+## the failure's log tail, so a route that is meant to change can be
+## regenerated from a Windows PC: join the "GOLDEN_GZ i/n " lines of the run's
+## log in order, base64-decode and gunzip them into tests/data/route_golden.txt.
+func _print_for_ci(text: String) -> void:
+	var packed: String = Marshalls.raw_to_base64(text.to_utf8_buffer().compress(FileAccess.COMPRESSION_GZIP))
+	var count: int = ceili(float(packed.length()) / GOLDEN_CHUNK_SIZE)
+	for index: int in range(count):
+		print("GOLDEN_GZ %d/%d %s" % [index + 1, count, packed.substr(index * GOLDEN_CHUNK_SIZE, GOLDEN_CHUNK_SIZE)])
 
 
 func _expect(condition: bool, description: String) -> void:

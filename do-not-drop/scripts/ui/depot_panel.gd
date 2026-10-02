@@ -2,7 +2,8 @@ class_name DepotPanel
 extends Control
 ## The screen a depot station opens (depot_station.gd): one panel, five
 ## faces -- the order sheet, the lockers (uniform), the workshop (truck and
-## paint), the supplies counter and the team's progress. Same "shipping
+## paint), the supplies counter and the team's progress -- plus a sixth, a
+## service station's counter on the road (N-110, service_counter.gd). Same "shipping
 ## label" look as every other screen (UiTheme), full keyboard and gamepad.
 ##
 ## It doesn't pause anything: in co-op the world keeps going while you pick a
@@ -17,6 +18,8 @@ const SCREEN_MARGIN: float = 16.0
 const ORDERS_MIN_VIEW: float = 120.0
 ## Pixels one press of up / down scrolls the order list.
 const ORDERS_SCROLL_STEP: int = 64
+## A service station's shop (N-110): its offers carry its VENUE.
+const SERVICE_SHOP = preload("res://scripts/gameplay/route/service_stop_shop.gd")
 
 var station: StringName = &"orders"
 ## The level's depot, for its orders and to ask for a purchase. A Node, not a
@@ -59,25 +62,29 @@ func _ready() -> void:
 	UiTheme.apply(self)
 	hide()
 	EventBus.depot_supplies_changed.connect(func(_list: Array, _money: int) -> void:
-		if visible and station == &"shop":
+		if visible and _selling():
 			_rebuild())
 	EventBus.card_changed.connect(func(peer_id: int, _card_id: int) -> void:
-		if visible and station == &"shop" and peer_id == NetworkManager.local_id():
+		if visible and _selling() and peer_id == NetworkManager.local_id():
 			_rebuild())
 	EventBus.shop_opened.connect(func(_offers: Dictionary) -> void:
-		if visible and station == &"shop":
+		if visible and _selling():
 			_rebuild())
 	EventBus.shop_vote_changed.connect(func(_peer_id: int, _offer_id: StringName) -> void:
-		if visible and station == &"shop":
+		if visible and _selling():
 			UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.VOTE)
 			_rebuild())
 	EventBus.shop_resolved.connect(_on_shop_resolved)
 	# Somebody else took the wheel: the depot is behind us now.
 	EventBus.run_started.connect(func(_route: StringName, _players: Array) -> void: close())
+	# A service station's counter only sells while the run goes on (N-110).
+	EventBus.run_ended.connect(func(_score: int, _results: Dictionary) -> void:
+		if station == &"service":
+			close())
 	get_viewport().size_changed.connect(_fit_orders_scroll)
 	# The vote dots wear the host's colour slots, which change as people come and go.
 	NetworkManager.color_slots_changed.connect(func(_slots: Dictionary) -> void:
-		if visible and station == &"shop":
+		if visible and _selling():
 			_rebuild())
 	UnlockManager.progress_changed.connect(func() -> void:
 		# Not the lockers: their screen follows the profile itself, without
@@ -93,7 +100,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
-	if _vote_timer_label == null or not visible or station != &"shop":
+	if _vote_timer_label == null or not visible or not _selling():
 		return
 	_vote_timer_label.text = _vote_status_text()
 
@@ -122,6 +129,8 @@ func _rebuild() -> void:
 			_build_garage()
 		&"shop":
 			_build_shop()
+		&"service":
+			_build_service()
 		&"records":
 			_build_records()
 		_:
@@ -275,12 +284,47 @@ func _build_shop() -> void:
 	var live_depot: Depot = depot as Depot if is_instance_valid(depot) else null
 	var money: int = live_depot.team_money if live_depot != null else CrewProgression.team_money
 	var owned: Array = live_depot.supplies if live_depot != null else []
+	_header(tr("UI_DEPOT_SUPPLIES"), tr("UI_DEPOT_TEAM_CASH") % money, UiTheme.YELLOW, tr("UI_DEPOT_SUPPLIES_HINT"))
+	_offer_rows(CrewProgression.SUPPLIES, owned, "UI_DEPOT_SUPPLY_READY", money,
+		func(supply_id: StringName) -> void:
+			var depot_node: Depot = _depot_node()
+			if depot_node != null:
+				depot_node.buy_supply(supply_id),
+		func(supply_id: StringName) -> void:
+			var depot_node: Depot = _depot_node()
+			if depot_node != null:
+				depot_node.buy_supply_discounted(supply_id))
+
+
+## A service station's counter on the road (N-110): its shop (`depot` here is a
+## ServiceStopShop) sells kit refills and a spare part, dearer than the depot,
+## through the same vote. Solo, a press buys at once.
+func _build_service() -> void:
+	var shop: SERVICE_SHOP = depot as SERVICE_SHOP if is_instance_valid(depot) else null
+	if shop == null:
+		_header(tr("UI_SERVICE_TITLE"), "", UiTheme.MINT, "")
+		return
+	_header(tr("UI_SERVICE_TITLE"), tr("UI_DEPOT_TEAM_CASH") % shop.team_money, UiTheme.MINT, tr(shop.hint_key()))
+	_offer_rows(shop.offers(), shop.supplies, "UI_SERVICE_FULL", shop.team_money,
+		func(id: StringName) -> void:
+			if is_instance_valid(shop):
+				shop.buy_supply(id),
+		func(id: StringName) -> void:
+			if is_instance_valid(shop):
+				shop.buy_supply_discounted(id))
+
+
+## One row per offer (id -> {title, detail, cost}): a buy (or vote) button, its
+## detail, who voted for it and, with a Discount card, the half-price button.
+## `blocked` ids show `blocked_key` instead and can't be bought. Solo, `buy` and
+## `buy_discounted` take the id; online the press is a vote.
+func _offer_rows(offers: Dictionary, blocked: Array, blocked_key: String, money: int, buy: Callable,
+		buy_discounted: Callable) -> void:
 	var peer_id: int = NetworkManager.local_id()
 	var voting: bool = NetworkManager.is_online()
 	var has_discount: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.DISCOUNT)
 	var has_revote: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.REVOTE)
 	var current_winner: StringName = ShopVoteManager.resolve_winner(NetworkManager.peer_ids) if voting else &""
-	_header(tr("UI_DEPOT_SUPPLIES"), tr("UI_DEPOT_TEAM_CASH") % money, UiTheme.YELLOW, tr("UI_DEPOT_SUPPLIES_HINT"))
 	if voting:
 		_vote_timer_label = UiTheme.label(_body, _vote_status_text(), 17, UiTheme.GRAPE, true)
 	if has_revote and voting:
@@ -290,17 +334,17 @@ func _build_shop() -> void:
 		revote.pressed.connect(_use_revote)
 		if _first_focus == null and not revote.disabled:
 			_first_focus = revote
-	for supply_id: StringName in CrewProgression.SUPPLIES:
-		var item: Dictionary = CrewProgression.SUPPLIES[supply_id]
+	for supply_id: StringName in offers:
+		var item: Dictionary = offers[supply_id]
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override("separation", 4)
 		_body.add_child(row)
-		var have: bool = owned.has(supply_id)
+		var have: bool = blocked.has(supply_id)
 		var cost: int = int(item.cost)
 		var item_title: String = tr(String(item.title))
 		var label: String = "%s%s  ·  $%d" % [tr("UI_DEPOT_VOTE_PREFIX") if voting else "", item_title, cost]
 		if have:
-			label = tr("UI_DEPOT_SUPPLY_READY") % item_title
+			label = tr(blocked_key) % item_title
 		var enabled: bool = not have and money >= cost and (not voting or ShopVoteManager.active)
 		var button: Button = UiTheme.button(row, label, enabled, Vector2(0, 46))
 		button.disabled = not enabled
@@ -308,9 +352,7 @@ func _build_shop() -> void:
 			if voting:
 				_request_vote(supply_id)
 			else:
-				var depot_node: Depot = _depot_node()
-				if depot_node != null:
-					depot_node.buy_supply(supply_id))
+				buy.call(supply_id))
 		if _first_focus == null and not button.disabled:
 			_first_focus = button
 		var detail: Label = UiTheme.label(row, tr(String(item.detail)), 15, UiTheme.MUTED)
@@ -326,9 +368,7 @@ func _build_shop() -> void:
 				if voting:
 					_request_discount(supply_id)
 				else:
-					var depot_node: Depot = _depot_node()
-					if depot_node != null:
-						depot_node.buy_supply_discounted(supply_id))
+					buy_discounted.call(supply_id))
 			if _first_focus == null and not discount.disabled:
 				_first_focus = discount
 
@@ -397,6 +437,9 @@ func _add_voters(parent: Node, supply_id: StringName) -> void:
 func _on_shop_resolved(offer_id: StringName, offer: Dictionary) -> void:
 	var discounted: bool = bool(offer.get("discounted", false))
 	var should_purchase: bool = NetworkManager.local_id() == int(offer.get("discount_peer", 0)) if discounted else NetworkManager.is_host()
+	# A service station's offer is bought by that station's shop (N-110), never the depot.
+	if offer.get("venue") == SERVICE_SHOP.VENUE:
+		should_purchase = false
 	if should_purchase and not offer_id.is_empty():
 		var depot_node: Depot = _depot_node()
 		if depot_node != null:
@@ -404,8 +447,13 @@ func _on_shop_resolved(offer_id: StringName, offer: Dictionary) -> void:
 				depot_node.buy_supply_discounted(offer_id)
 			else:
 				depot_node.buy_supply(offer_id)
-	if visible and station == &"shop":
+	if visible and _selling():
 		_rebuild()
+
+
+## Whether this face sells (the depot's counter or a service station's).
+func _selling() -> bool:
+	return station == &"shop" or station == &"service"
 
 
 ## The depot that sells: the one the station handed over or, if that is gone,

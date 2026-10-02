@@ -82,7 +82,9 @@ func _physics_process(delta: float) -> void:
 	_check_lost_cargo()
 	_update_tipped(delta)
 	# A truck in the mud is the crew's to free, or the crane's (MudSegment, N-108).
-	if vehicle.linear_velocity.length() < STUCK_SPEED_THRESHOLD and not bool(vehicle.get_meta(&"in_mud", false)):
+	# Nor is a crew pulled into a service station's lay-by to shop (N-110).
+	if vehicle.linear_velocity.length() < STUCK_SPEED_THRESHOLD and not bool(vehicle.get_meta(&"in_mud", false)) \
+			and not _streamer.in_service_bay(vehicle.global_position):
 		_stuck_seconds += delta
 	else:
 		_stuck_seconds = 0.0

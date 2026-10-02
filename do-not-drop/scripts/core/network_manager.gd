@@ -45,11 +45,13 @@ const MAX_PLAYERS: int = 8
 ## (each rejoin claims the link before), and _report_level_ready only counts a
 ## report the host owes, N-221 follow-ups;
 ## 21: the player spawn data may carry vehicle_position, where a mid-run joiner
-## appears in the truck's own space, N-228.7).
+## appears in the truck's own space, N-228.7;
+## 22: the service stop's counter (_open_locally) and shop (_receive_state)
+## RPCs, and shop votes whose offers carry a venue, N-110).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 21
+const PROTOCOL_VERSION: int = 22
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

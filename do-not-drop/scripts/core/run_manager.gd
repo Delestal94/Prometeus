@@ -218,14 +218,14 @@ func care_supply_count(tool: StringName) -> int:
 	return int(care_supplies.get(tool, 0))
 
 
-## Host only: spends one unit, or says no if the last one is already gone
-## (two passengers finishing a repair on the same tick get one success).
-func consume_care_supply(tool: StringName) -> bool:
-	if NetworkManager.is_online() and not NetworkManager.is_host():
+## Host only: spends `amount` units (one by default), or says no if that
+## would go below zero (two passengers finishing a repair on the same tick get
+## one success). A negative amount puts units back: a service stop tops the
+## kit up that way (N-110). Mirrored to every peer.
+func consume_care_supply(tool: StringName, amount: int = 1) -> bool:
+	if (NetworkManager.is_online() and not NetworkManager.is_host()) or care_supply_count(tool) - amount < 0:
 		return false
-	if care_supply_count(tool) <= 0:
-		return false
-	care_supplies[tool] = care_supply_count(tool) - 1
+	care_supplies[tool] = care_supply_count(tool) - amount
 	if NetworkManager.is_online():
 		_sync_care_supplies.rpc(care_supplies)
 	return true

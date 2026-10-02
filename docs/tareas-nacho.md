@@ -2714,12 +2714,34 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 > Pendiente con la PC: modelo propio del cartel de barro (hoy el de ripio más el cartel del tramo) y el sonido.
 > Aviso: `docs/avisos/2026-09-30-n108-barro.md`.
 
-### N-110 · Paradas de servicio en la ruta — B · `Opus 5.5 · xhigh` · Aviso: sí (compra de suministros)
+### N-110 · Paradas de servicio en la ruta — B · `Opus 5.5 · xhigh` · Aviso: sí (compra de suministros) · **[x] rama `nacho/N-110-service-stops`**
 
-- [ ] En rutas largas y en Endless, una estación de servicio opcional: reponer consumibles del kit con
+- [x] En rutas largas y en Endless, una estación de servicio opcional: reponer consumibles del kit con
   dinero cooperativo, arreglar averías (N-214) y un cosmético escondido (N-311).
-- [ ] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
-- [ ] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
+- [x] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
+- [x] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
+- [ ] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
+  kiosco con mostrador, poste de precios, carteles de "estación de servicio"): hoy son cajas `DepotKit` con tres props
+  del depósito (timbre, pallet envuelto, matafuego). Después, captura con `revisor-visual` en entrega y en Endless.
+
+> **Hecho (2026-10-01), rama `nacho/N-110-service-stops`.** `ServiceStopRules` (`service_stop_rules.gd`, puro y
+> estático): una ruta de 3+ casas o 2000+ m lleva una estación (en la práctica todas las de 3-4 casas), en el borde
+> de tramos más cercano a la mitad que deje 150 m desde la salida, 40 m después de una casa, 110 m antes de la
+> próxima (más que la llegada tranquila) y 60 m antes de la meta, nunca al lado de puente, túnel, paso a nivel o
+> loma; `RoutePlanner.plan_spine()` la inserta como un tramo más (`ServiceStopSegment`, 110 m) y corre las
+> distancias de lo que sigue, así el plazo cuenta ese camino y parar es tiempo gastado (el reloj nunca se frena).
+> En Endless `RouteStreamer` la pone a 450-800 m y luego cada 900-1500 m, sorteado de la semilla y su número,
+> nunca justo después de un tramo difícil. El tramo trae dársena a la derecha, dos carteles y la estación
+> (`ServiceStop`: techo, surtidores, kiosco, poste de precios, punto `hidden_cosmetic_spot` para N-311); en la
+> entrega el terreno se nivela bajo ella con dos `pads` y no crecen árboles ni postes. El mostrador
+> (`ServiceCounter`) abre la tienda (`ServiceStopShop`): repone lo que falta del kit (cinta, pegamento, relleno,
+> trapos, cinchas, gallina) y vende el repuesto, que arregla en el acto la puerta o el espejo, un 40 % más caro
+> que el depósito. Online la compra pasa por la misma votación del depósito (`ShopVoteManager`, ofertas con
+> `venue`), solo se compra al toque; `DepotPanel` ganó la cara `service`. Parado en la dársena no cuenta como
+> trabado. `PROTOCOL_VERSION` 22. Test `test_service_stop.gd`; `tests/data/route_golden.txt` regenerado (las
+> rutas de 3 y 4 casas del golden ahora tienen estación). De paso: un cartel de pueblo cuyo lugar está ocupado se
+> corre al siguiente paso libre (`route_signage.gd`, antes quedaba un pueblo sin salida) y el chaos bot ya no se cae
+> leyendo una caja entregada (liberada). Aviso: `docs/avisos/2026-10-01-service-stops.md`.
 
 ### N-311 · Cosméticos para encontrar en el mundo — B · `Opus 5.5 · medium` · Aviso: sí (cosméticos del jugador)
 
