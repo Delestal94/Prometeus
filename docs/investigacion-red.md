@@ -313,7 +313,10 @@ Sin encuadre, como medía el test viejo, el "antes" daba ≈123 KB/s. Lo que se 
   alternar el synchronizer, más un último envío "quedó aquí".
 - Validar con el perfil de 150 ms / 2 % que la cola de Steam queda en ~0.
 
-**Fase 2: que se vea suave (2-3 días).**
+**Fase 2: que se vea suave (2-3 días).** Hecha el 2026-10-01 (N-217): `NetPoseSmoother` genérico con reloj de
+quien manda y colchón adaptativo, jugadores y cajas a 30 Hz (host → cliente con 8 jugadores: 80,5 KB/s estable,
+107,1 con todo moviéndose; subida del host 4,6 Mbit/s), alcance por ping en el host, cajas en manos remotas
+dibujadas sobre el cuerpo del que las lleva.
 - Sacar de `NetPoseSmoother` un `NetSnapshotBuffer` genérico y usarlo en jugadores remotos y en cajas
   del cliente, marcados con el reloj del host.
 - Colchón adaptativo: 2 intervalos de envío + 2 × jitter medido, entre 50 y 200 ms.

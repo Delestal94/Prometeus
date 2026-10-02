@@ -225,6 +225,53 @@ static func severity(metric: StringName, value: float) -> int:
 	return 1 if value < limits[1] else 2
 
 
+## The round trip to `peer_id` over `peer`, in seconds; 0 when it isn't known
+## (offline, not connected, this peer itself, another transport). ENet reads
+## its own peer's estimate; Steam its connection's ping (`steam_api`, or the
+## Steam singleton when there is one).
+static func round_trip_seconds(peer: Object, peer_id: int, steam_api: Object = null) -> float:
+	var real_peer := peer as MultiplayerPeer
+	if real_peer == null or real_peer is OfflineMultiplayerPeer \
+			or real_peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED \
+			or peer_id <= 0 or peer_id == real_peer.get_unique_id():
+		return 0.0
+	if real_peer is ENetMultiplayerPeer:
+		var packet_peer: ENetPacketPeer = (real_peer as ENetMultiplayerPeer).get_peer(peer_id)
+		return packet_peer.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME) / 1000.0 if packet_peer != null else 0.0
+	return steam_round_trip(peer, peer_id, steam_api)
+
+
+## round_trip_seconds() over a Steam peer (anything with get_peer(id) whose
+## peer has get_connection_handle()): its connection's ping, 0 when unknown --
+## no handle yet (0, still connecting), no Steam, no status.
+static func steam_round_trip(steam_peer: Object, peer_id: int, steam_api: Object = null) -> float:
+	if steam_peer == null or not steam_peer.has_method(&"get_peer"):
+		return 0.0
+	if steam_api == null and Engine.has_singleton(&"Steam"):
+		steam_api = Engine.get_singleton(&"Steam")
+	var packet: Object = steam_peer.call(&"get_peer", peer_id)
+	if steam_api == null or packet == null or not packet.has_method(&"get_connection_handle") \
+			or not steam_api.has_method(&"getConnectionRealTimeStatus"):
+		return 0.0
+	var handle: int = int(packet.call(&"get_connection_handle"))
+	if handle == 0:
+		return 0.0
+	var status: Variant = steam_api.call(&"getConnectionRealTimeStatus", handle, 0, true)
+	return maxf(float(from_steam_status(peer_id, status if status is Dictionary else {}).ping_ms), 0.0) / 1000.0
+
+
+## How much further than its reach a request from `peer_id` may land and
+## still count, on the host: what someone at `speed` (m/s) covers in a round
+## trip, at most `cap` metres. The client saw its target a round trip ago (and
+## a cushion more, NetPoseSmoother), and its target kept moving meanwhile.
+static func reach_slack(peer: Object, peer_id: int, speed: float = 5.0, cap: float = 1.5) -> float:
+	return slack_for_round_trip(round_trip_seconds(peer, peer_id), speed, cap)
+
+
+static func slack_for_round_trip(round_trip: float, speed: float = 5.0, cap: float = 1.5) -> float:
+	return clampf(speed * round_trip, 0.0, cap)
+
+
 ## KB/s in and out from the bytes counted since the previous call (ENet's
 ## host counters reset on every read). The first call only starts the clock
 ## and returns -1 for both.

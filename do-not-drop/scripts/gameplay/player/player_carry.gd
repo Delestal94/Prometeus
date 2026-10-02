@@ -29,13 +29,15 @@ func update_carried_package() -> void:
 		if player.locomotion_speed > 0.3:
 			lift = maxf(lift, smoothstep(0.16, 0.5, player._pickup_elapsed))
 		carry_transform = origin.interpolate_with(carry_transform, lift)
+	# The same pose in the body's space: the other peers draw it on this body as they draw it (N-217).
+	var in_hands: Transform3D = player.global_transform.affine_inverse() * carry_transform
 	# Use truck-local coordinates aboard so a client's trailing truck copy does
 	# not leave the host-authoritative package behind the hands at speed.
 	var vehicle: Node3D = player._find_vehicle()
 	var aboard: bool = vehicle != null and bool(vehicle.call(&"carries", carry_transform.origin, player.RIDE_MARGIN))
 	if aboard:
 		carry_transform = vehicle.global_transform.affine_inverse() * carry_transform
-	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard)
+	player.carried_package.rpc_id(1, &"submit_carry_transform", carry_transform, aboard, in_hands)
 	player.carried_package.predict_carry(carry_transform, aboard)
 	if player._package_focus != null:
 		player._package_focus.dof_blur_far_enabled = true
