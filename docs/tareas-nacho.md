@@ -576,7 +576,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -1935,6 +1935,58 @@ Fase 4 de `docs/investigacion-red.md`.
   en vuelo; N-221 suma §0.2, junto con `RpcGuard` y el color. Filas NET-07 y NET-08 en
   `matriz-comportamiento-cobertura.md`.
 - [ ] Antes de jugar con gente de afuera: AppID propio (N-901). ⏸ N-901 pospuesta (iteración de lanzamiento).
+### N-920 · Endless: parar no debe terminar la partida si no hay conductor acelerando — A · `Opus 5.5 · high` · Aviso: no · M8
+Origen: auditoría integral 2026-10-02, A-1.1 (P1). `level_endless.gd:86-97` cuenta como atascado cualquier velocidad
+< 0,3 m/s durante más de 6 s y solo exceptúa el barro y la bahía de servicio. La regla de la entrega
+(`level_base.gd:262-282`, S-203) exige además conductor sentado y acelerador apretado, y excluye el depósito y las
+casas. El comentario de `level_endless.gd:28-30` ("no hay razón para parar en endless") ya no es cierto. Casos que hoy
+cortan la partida: el arranque en el depósito con el camión quieto (`level_common.gd:404-408`), el rescate de una caja
+caída (ventana de 30 s), la reparación que exige detenerse y el relevo de conductor (si se baja, el camión se congela,
+`vehicle.gd:499`). Los bots de QA y `pc-build` no paran nunca, así que no lo ven.
+**Supuesto (conservador):** parar sin acelerar no termina la partida (como S-203); encajado con el acelerador apretado
+sí. Pregunta de diseño abierta, para el usuario: ¿parar para rescatar o reparar debe costar algo (distancia o tiempo)?
+No se implementa ningún costo hasta que responda.
+Hecho cuando un test de Endless prueba que 6+ s quieto sin acelerar (depósito, rescate, relevo de conductor) no termina
+la partida y que 6+ s encajado con acelerador sí, y `test_level_endless` / `test_stuck_detection` pasan sin dar por
+buena una partida cortada por "atascado" sin acelerador.
+- [ ] **N-920.1** Llevar `_should_count_as_stuck()` de `level_base.gd` a `level_common.gd` con un gancho por modo; Endless
+  la usa sumando el depósito y actualiza el comentario de `level_endless.gd:28-30`. Con `constructor-tramos`; tests
+  `stuck_detection`, `level_endless`.
+- [ ] **N-920.2** Casos Endless en `test_stuck_detection.gd` y corregir `test_level_endless.gd:49-61`. Con
+  `escritor-tests`; tests `stuck_detection`, `level_endless`.
+
+### N-921 · El nivel deja estado global sin restaurar al liberarse: 3D del diario y reverb del depósito — B · `Opus 5.5 · medium` · Aviso: sí (`hud_newspaper.gd` es de Slatex; `modules/acoustics/` es zona compartida) · M8
+Origen: auditoría integral 2026-10-02, A-1.2 (P1). `hud_newspaper.gd:66-68` pone `disable_3d = true` en el viewport raíz
+y solo lo devuelve `_on_finished()`; no hay `_exit_tree`. Si el host reinicia mientras un cliente todavía lee el diario
+(`level_common.gd:436-458` recarga en todos), ese cliente juega la partida siguiente sin 3D. `AcousticSpace.apply`
+(`modules/acoustics/acoustic_space.gd:42-58`) deja la reverb prendida en el bus `SFX`: quien sale al menú desde el
+depósito o un túnel oye el menú con eco.
+Hecho cuando un test libera el HUD con el diario abierto y `disable_3d` vuelve a `false`, y otro comprueba que salir del
+árbol del depósito o de la ruta devuelve el bus `SFX` a la reverb `open`.
+- [ ] **N-921.1** `HudNewspaper._exit_tree()` restaura `disable_3d`; test que libera el HUD con el diario abierto
+  (ampliar `test_newspaper_scene.gd`). Con `constructor-ui`; tests `newspaper_scene`.
+- [ ] **N-921.2** Volver a `open` al salir del árbol del depósito o la ruta (adaptador del juego, o `AcousticSpace` si
+  corresponde); test en `test_acoustics`/del módulo. Con `disenador-audio`; tests `acoustic`.
+- [ ] **N-921.3** Aviso nuevo en `docs/avisos/` en el mismo PR (hoy lo cubre `2026-10-02-auditoria-tareas.md`; uno
+  propio si cambia algo más). Con `documentador`.
+
+### N-922 · Auditar la red de N-218 (#239) y arreglar el número de protocolo — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, zona compartida) · M8
+Origen: auditoría integral 2026-10-02, A-D.1 y A-D.2 (P1) y los dos puntos "para auditor-red" de los P3. #239 (N-218,
+commit `c760998`) cambia la autoridad del camión, la firma de `submit_driver_input` (`vehicle.gd:610`) y 6 propiedades
+del sincronizador de `vehicle.tscn`, y entró sin pasar por `auditor-red`; su cuerpo lista "Riesgos para auditor-red" que
+nadie corrió (`construccion.md:98,106`). Además, `ff31ad5e` subía el protocolo a 25, pero el merge `27390a2c` se quedó
+con el lado de main: hoy es 26 (`network_manager.gd:61`) y la línea 55 sigue diciendo "25: reserved for N-218". Las
+builds de `b68207e`..`7496de3` llevan 26 sin N-218 y pueden desincronizarse en silencio.
+Fuera de alcance: hacer de `auditor-red` una compuerta dura del auto-merge (cambia CI y rutinas; decide el usuario).
+Hecho cuando hay un informe de `auditor-red` sobre `c760998` que cubre los riesgos del PR, `ServiceCounter._open_locally`
+(`service_counter.gd:46-51`, RPC en un nodo creado en tiempo de ejecución) y `mud_segment._hold_predicted_truck` con la
+predicción de #239, con cada hallazgo corregido o convertido en tarea; `PROTOCOL_VERSION` es 27 con la entrada de N-218,
+no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una entrada "reserved".
+- [ ] **N-922.1** Correr `auditor-red` sobre `c760998` con los riesgos del cuerpo del PR y los dos puntos sin
+  diagnosticar; devolver hallazgos. Con `auditor-red`; tests `network`, `rpc_guard`, `net_pair` (por la orquestadora).
+- [ ] **N-922.2** Subir `PROTOCOL_VERSION` a 27 con la entrada de N-218, borrar la línea "25: reserved" y que
+  `test_protocol_version` rechace entradas "reserved"; corregir lo que salga de N-922.1. Con `constructor-red`, seguido
+  de `auditor-red`; tests `protocol_version`, `network`.
 
 ## 3. Arte y dirección visual
 
