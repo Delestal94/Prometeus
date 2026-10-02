@@ -321,6 +321,11 @@ const BUDGETS: Dictionary = {
 	# (route_length, goal_transform, _path_points, houses, house_count) and the goal lot as RouteGoalLot
 	# (parking_pose). Nothing left by name.
 	"res://scripts/gameplay/route/route_smoke_check.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The delivery route (N-224.4): the session through the NETWORK_MANAGER handle (world_seed,
+	# world_house_count, peer_ids, is_host; rail_crossing_segment.gd already preloads network_manager.gd
+	# from this route) and the station as ServiceStop, read off its ServiceStopSegment (in_bay). The one
+	# /root/ lookup is the null-safe accessor _network().
+	"res://scripts/gameplay/route/route.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

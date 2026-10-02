@@ -27,6 +27,9 @@ const Houses = preload("res://scripts/gameplay/route/route_houses.gd")
 const PathLookup = preload("res://scripts/gameplay/route/route_path.gd")
 const Ground = preload("res://scripts/gameplay/route/route_ground.gd")
 const Reveal = preload("res://scripts/gameplay/route/route_reveal.gd")
+## The script the NetworkManager autoload runs, as a type (N-224.4): world_seed and
+## world_house_count live there, not in NetSession, so a rename fails to compile here.
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 
 signal delivery_entered
 signal delivery_exited
@@ -72,7 +75,7 @@ var is_built: bool = false
 var is_vehicle_in_delivery: bool = false
 var houses: Array[DeliveryHouse] = []
 ## The station on this road, if it is long enough for one (ServiceStop, N-110).
-var service_stop: Node3D
+var service_stop: ServiceStop
 ## Where the goal actually ended up -- with a curved, randomized-length road
 ## this is no longer reliably near world (0,0,something), so anything that
 ## needs the goal's real location (tests, mainly) reads this instead of
@@ -347,7 +350,7 @@ func _reserve_service_stop() -> void:
 	for segment: RouteSegment in _segments:
 		if segment.get_script() != RoutePlanner.SERVICE_STOP.SEGMENT:
 			continue
-		service_stop = segment.get(&"stop")
+		service_stop = (segment as ServiceStopSegment).stop as ServiceStop
 		for local: Vector3 in RoutePlanner.SERVICE_STOP.YARD_PADS:
 			var at: Vector3 = segment.transform * local
 			var road: Vector3 = segment.transform * Vector3(0.0, 0.0, local.z)
@@ -361,7 +364,7 @@ func _reserve_service_stop() -> void:
 ## Whether a world point is on the service station's lay-by (a truck pulled in
 ## to shop), so a crew that parked there isn't counted as stuck.
 func in_service_bay(world_point: Vector3) -> bool:
-	return is_instance_valid(service_stop) and bool(service_stop.call(&"in_bay", world_point))
+	return is_instance_valid(service_stop) and service_stop.in_bay(world_point)
 
 
 ## Deals the house models out like a deck so a route never repeats one until
@@ -660,14 +663,16 @@ func _on_delivery_body_exited(body: Node3D) -> void:
 const NEWLINE: String = "\n"
 
 
-## Looked up by node path rather than by the NetworkManager identifier on
-## purpose. A test that names this script's class_name compiles it before
-## the autoloads exist, and a bare `NetworkManager.world_seed` is a compile
-## error at that point -- the same node-path pattern the rest of the project
-## already uses for EventBus.
+## The session through the NETWORK_MANAGER handle (N-224.4): null when the
+## autoload is missing (a bare scene in a test), and a rename of world_seed,
+## world_house_count, peer_ids or is_host() fails to compile here.
+func _network() -> NETWORK_MANAGER:
+	return get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
+
+
 func _session_seed() -> int:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return int(network.get(&"world_seed")) if network != null else 0
+	var network: NETWORK_MANAGER = _network()
+	return network.world_seed if network != null else 0
 
 
 ## Every peer has to build the same number of houses, and a client's own
@@ -675,13 +680,12 @@ func _session_seed() -> int:
 ## decides once per session, joiners use what it sent. Solo play (seed 0)
 ## just counts the crew every time.
 func _session_house_count() -> int:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	var network: NETWORK_MANAGER = _network()
 	if network == null:
 		return 1
-	var decided: int = int(network.get(&"world_house_count"))
-	if decided > 0:
-		return decided
-	var count: int = RoutePlanner.crew_house_count((network.get(&"peer_ids") as Array).size())
-	if int(network.get(&"world_seed")) != 0 and bool(network.call(&"is_host")):
-		network.set(&"world_house_count", count)
+	if network.world_house_count > 0:
+		return network.world_house_count
+	var count: int = RoutePlanner.crew_house_count(network.peer_ids.size())
+	if network.world_seed != 0 and network.is_host():
+		network.world_house_count = count
 	return count
