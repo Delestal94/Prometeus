@@ -256,9 +256,14 @@ todos arreglados acá:
   → máx. 45-100 ms). Cuadro del swap 430-500 → 325-415 ms: lo que queda es el resto del nivel (HUD, vehículo,
   cajas, primer dibujo del mundo), sin partir. También: flechas del piso planas (parecían flotar: apuntaban en 3D),
   texturas del depósito con respaldo de color liso y `DepotAtmosphere` acotado (`test_depot_textures`).
-- [ ] Siguen en un cuadro grande: el swap (~110 ms de `_ready` del nivel + ~150 ms del primer dibujo del mundo) y
-  el primer dibujo de `World/Route` (150-220 ms; partirlo como el depósito). `test_route_golden` difiere en Windows
-  en el 4.º decimal (golden escrito en Linux): CI manda.
+- [ ] Siguen en un cuadro grande: el swap (~110 ms de `_ready` del nivel + ~150 ms del primer dibujo del mundo).
+  `test_route_golden` difiere en Windows en el 4.º decimal (golden escrito en Linux): CI manda. Medir con GPU
+  cuánto baja el cuadro de la ruta con N-408c (necesita PC: `perfilador-rendimiento`).
+- [x] **N-408c** El primer dibujo de `World/Route` (150-220 ms) partido como el depósito **[x] Hecho (2026-10-02, rama
+  `nacho/N-408c-route-reveal`)** — `Route.reveal_steps()` (helper `route_reveal.gd`): 12 pasos, uno por cuadro bajo la
+  tapa; las piezas son los hijos de la ruta en el orden en que se armaron, con las baldosas del terreno y las celdas de
+  `BatchedDressing` como piezas propias. Solo vuelve a mostrar lo que estaba visible. Test `test_route_async_build`
+  (`_test_reveal_steps`). Sin medir con GPU (la nube dibuja por software).
 
 ### N-407 · Pantalla de carga entre el menú y el nivel — B · `Opus 5.5 · medium` · Aviso: sí (`main_menu.gd`, `scripts/ui/` de Slatex; `modules/` compartida) · **[x] rama `nacho/N-407-loading-screen`**
 

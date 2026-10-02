@@ -18,6 +18,10 @@ extends SceneTree
 ##   digest for the same seed);
 ## - with a loading cover up (a SceneLoader under the root) it slices on its own, and
 ##   not when it is told not to (async_build off);
+## - reveal_steps() cuts its first draw into several steps (N-408c, like the depot's):
+##   the route stays hidden until the first one, the terrain tiles and the batched
+##   dressing's cells are pieces of their own, no step shows a big share of it, and
+##   after the last one it looks exactly as before (what was hidden stays hidden);
 ## - the delivery level waits for it: players are not spawned and the session is
 ##   not told "ready" until the road stands, and the houses get their orders then.
 
@@ -50,6 +54,7 @@ func _run() -> void:
 	route_script.set(&"always_slice", true)
 	await _test_sliced_build()
 	await _test_same_world()
+	await _test_reveal_steps()
 	await _test_bodies_hold()
 	await _test_level_waits()
 	route_script.set(&"always_slice", false)
@@ -255,6 +260,79 @@ func _test_level_waits() -> void:
 	level.free()
 	current_scene = null
 	await process_frame
+
+
+func _test_reveal_steps() -> void:
+	var route: Node3D = _new_route(2)
+	root.add_child(route)
+	var early: Array[Callable] = route.call(&"reveal_steps")
+	_expect(early.size() == 1, "Before it is built the route has one step: just showing itself (%d)" % early.size())
+	route.visible = false
+	await Signal(route, &"built")
+	await process_frame
+	route.visible = true
+	var before: Array[bool] = _visible_state(route)
+	route.visible = false
+	var steps: Array[Callable] = route.call(&"reveal_steps")
+	_expect(steps.size() >= 8, "Its first draw is cut into several steps (%d)" % steps.size())
+	_expect(not route.visible, "The route itself stays hidden until the first step")
+	var terrain: Node3D = route.get(&"terrain")
+	var tiles: int = 0
+	for tile: Node in terrain.get_children():
+		if tile is Node3D and not (tile as Node3D).visible:
+			tiles += 1
+	_expect(tiles > 1 and terrain.visible, "The terrain is cut by tile, not shown in one go (%d tiles waiting)" % tiles)
+	var cells: Node = route.get_node_or_null(^"BatchedDressing")
+	_expect(cells != null and cells.get_child_count() > 1, "The route has batched dressing cells to split")
+	if cells != null:
+		var waiting: int = 0
+		for cell: Node in cells.get_children():
+			if not (cell as Node3D).visible:
+				waiting += 1
+		_expect(waiting == cells.get_child_count(), "Every dressing cell waits for its own step (%d)" % waiting)
+	var growing: bool = true
+	var largest: int = 0
+	var shown_so_far: int = _count_shown(route)
+	var start: int = shown_so_far
+	for index: int in range(steps.size()):
+		steps[index].call()
+		if index == 0:
+			_expect(route.visible, "The first step shows the route")
+		var count: int = _count_shown(route)
+		if count < shown_so_far:
+			growing = false
+		largest = maxi(largest, count - shown_so_far)
+		shown_so_far = count
+	var total: int = shown_so_far - start
+	_expect(growing, "Each step only adds to what is shown")
+	_expect(largest * 4 <= total, "No step shows a big share of the route (%d of %d pieces)" % [largest, total])
+	_expect(_visible_state(route) == before, "After the last step the route looks exactly as before")
+	route.free()
+	await process_frame
+
+
+## Every node's own `visible` under (and including) `node`, in tree order.
+func _visible_state(node: Node) -> Array[bool]:
+	var state: Array[bool] = []
+	if node is Node3D:
+		state.append((node as Node3D).visible)
+	for child: Node in node.get_children():
+		state.append_array(_visible_state(child))
+	return state
+
+
+## The pieces showing: the route's children plus the terrain tiles and dressing cells.
+func _count_shown(route: Node3D) -> int:
+	var count: int = 0
+	var terrain: Node = route.get(&"terrain")
+	for child: Node in route.get_children():
+		var holders: Array[Node] = [child]
+		if child == terrain or child.name == &"BatchedDressing":
+			holders = child.get_children()
+		for piece: Node in holders:
+			if piece is Node3D and (piece as Node3D).visible:
+				count += 1
+	return count
 
 
 func _expect(condition: bool, description: String) -> void:
