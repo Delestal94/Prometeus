@@ -209,6 +209,13 @@ const BUDGETS: Dictionary = {
 	# connected by the signal) and the sounds through synth_audio_radio.gd by preload (warm, the loops and
 	# cues). Nothing left by name.
 	"res://scripts/presentation/truck_radio_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# Rain and mud on the windshield (N-224.4): the session as NetSession (local_id). One .call and two .get
+	# left, on the truck it sits in: driver_peer_id and presentation_engine_running, and the presentation's
+	# viewer_inside(). By name because vehicle.gd builds this node through reference_truck.gd and
+	# vehicle_presentation.gd reaches vehicle.gd through cargo_clutter.gd: preloading either is a cycle. The
+	# two /root/ lookups are the null-safe accessors (EventBus, connected by name because the tests load
+	# this before the autoloads; NetworkManager).
+	"res://scripts/presentation/windshield_rain.gd": {"call": 1, "callv": 0, "get": 2, "root": 2},
 	# The animals that go for the cargo (N-109) are typed: the truck through vehicle.gd by preload (no class
 	# name), the session through NETWORK_MANAGER (world_seed, is_host and peer_level_ready, below), the box
 	# (DeliveryPackage, its _has_previous_velocity too) and its contents (PackageContent). One .call left: the
