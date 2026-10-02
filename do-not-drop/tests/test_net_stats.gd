@@ -16,6 +16,7 @@ extends SceneTree
 ##   only starts the clock), ENet's loss scale, and a GodotSteam real-time
 ##   status turned into ping, loss, KB/s both ways and queued bytes; a Steam
 ##   host gets a row per client plus totals, a client only reads the host;
+##   a peer's round trip (steam_round_trip: 0 for a connection with no handle);
 ## - the overlay (net_stats_overlay.gd) hangs from NetworkManager, starts
 ##   hidden and idle, F3 (`toggle_net_stats`) shows it and hides it again,
 ##   solo it says so, it names the simulated profile, and a connected sample
@@ -232,6 +233,14 @@ func _check_steam_sample() -> void:
 	var client_sample: Dictionary = stats.sample(client, [1, 2, 3], 0)
 	_expect(not bool(client_sample.is_host) and client.asked == [1] and (client_sample.peers as Array).size() == 1,
 		"A client only reads its own connection, the host's (asked %s)" % [client.asked])
+
+	# The round trip the host's reach checks use (N-217, reach_slack).
+	steam.statuses[0] = {"response": 1, "connection_status": {"ping": 99}}
+	_expect(is_equal_approx(NetStats.steam_round_trip(host, 2, steam), 0.152), "A Steam peer's round trip is its ping")
+	_expect(is_zero_approx(NetStats.steam_round_trip(host, 4, steam)),
+		"A connection with no handle yet (0) has no round trip, and Steam isn't asked about handle 0")
+	_expect(is_zero_approx(NetStats.steam_round_trip(host, 9, steam)), "Nor has a peer with no connection")
+	_expect(is_zero_approx(NetStats.round_trip_seconds(OfflineMultiplayerPeer.new(), 2)), "Offline there's none")
 
 
 func _check_network_manager() -> void:

@@ -82,7 +82,7 @@ func _run() -> void:
 	print("net smoothing @ %.0f ms lag + %.0f ms jitter: raw worst %.1f cm/frame off smooth motion, smoothed %.1f cm, trailing the host by %.0f ms" % [LAG * 1000.0, JITTER * 1000.0, raw_jump * 100.0, smooth_jump * 100.0, worst_trail * 1000.0])
 	_expect(raw_jump > LIMIT, "Unsmoothed, the lagged truck jumps visibly (%.1f cm a frame)" % (raw_jump * 100.0))
 	_expect(smooth_jump < LIMIT, "Smoothed, it never jumps more than %.0f cm a frame (%.1f cm)" % [LIMIT * 100.0, smooth_jump * 100.0])
-	_expect(worst_trail < LAG + JITTER + NetPoseSmoother.DELAY + 0.02, "It trails the host by the lag plus the buffer, no more (%.0f ms)" % (worst_trail * 1000.0))
+	_expect(worst_trail < LAG + JITTER + smoother.delay() + 0.02, "It trails the host by the lag plus the buffer, no more (%.0f ms)" % (worst_trail * 1000.0))
 
 	# A respawn: snaps, doesn't slide.
 	var teleport := NetPoseSmoother.new()
