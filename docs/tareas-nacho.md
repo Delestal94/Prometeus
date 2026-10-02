@@ -950,6 +950,15 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `/root/` 3 → 3, `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
     `tests/`). Siguientes: `package_contents_view.gd` (13), `seat_point.gd` (13), `package_pickup_point.gd` (12),
     `cargo_animal_view.gd` (11), `player.gd` (13).
+  - [x] `play_area.gd` (2026-10-01, rama `nacho/N-224-play-area-typed`): el borde del mapa. El nivel como
+    `LevelCommon` (`local_player`, `depot` como `Depot`), el jugador como `Player` (`seat_node_path`), el camino del
+    infinito como `SegmentStreamer` (`_nearest_on_path` directo, sin `has_method`) y el terreno de la ruta como
+    `TerrainField` (`spans`). Quedan por nombre `_streamer` y `route` del nivel y `terrain` de la ruta
+    (`level_endless.gd`, `level_base.gd` y `route.gd` sin `class_name`; precargar los niveles vuelve por
+    `level_common.gd`, que precarga este archivo). En el archivo: `.call` 1 → 0, `.get(&` 6 → 3.
+    `test_play_area.gd` carga el script con `load()` (tipar a `LevelCommon` nombra autoloads sueltos bajo
+    `--script`) y prueba también el borde en el infinito. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin
+    aviso (`gameplay/` raíz y `tests/`).
   - [x] `package_contents_view.gd` (2026-10-01, rama `nacho/N-224-contents-view-typed`): la caja como
     `DeliveryPackage` (`package.gd` no carga la vista, sin ciclo; `package_id`, `trap_state`, `contents_spilled`,
     `is_open` y `content_definition()` directos) y el contenido como `PackageContent` (`localized_name`,

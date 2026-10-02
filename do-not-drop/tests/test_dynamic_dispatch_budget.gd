@@ -84,6 +84,13 @@ const BUDGETS: Dictionary = {
 	# camera, segments, deer crossing, house, player and boxes by class. The one
 	# /root/ lookup is the NetworkManager handle (NETWORK_MANAGER, below).
 	"res://scripts/tools/trailer_shot.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The play area (N-224.4) holds the level as LevelCommon (local_player, depot as Depot), the player as
+	# Player (seat_node_path), the endless road as SegmentStreamer and the route's terrain as TerrainField
+	# (spans). Three .get left: the level's `_streamer` and `route` and the route's `terrain`, by name because
+	# level_endless.gd, level_base.gd and route.gd have no class name and preloading the levels here loops
+	# back through level_common.gd, which preloads this file. The /root/ lookup is the null-safe EventBus
+	# handle of the edge notice.
+	"res://scripts/gameplay/play_area.gd": {"call": 0, "callv": 0, "get": 3, "root": 1},
 	# Three .call left, one .get and one /root/ (N-225.4 moved the rest to the files below). Two .call go to
 	# the truck, found through the "vehicle" group: needs_sweep and carries. vehicle.gd has no class name,
 	# and tests put plain Node fakes with those methods in the group (`as` a typed vehicle would drop them).
