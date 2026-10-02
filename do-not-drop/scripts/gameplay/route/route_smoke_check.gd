@@ -7,6 +7,10 @@ extends SceneTree
 ## exists under sampled points actually pulled from the generated path, and
 ## the goal lot's free bay still detects entry/exit at wherever the goal
 ## really ended up (route.goal_lot), not an assumed world position.
+## N-224.4: the route through route.gd by preload and the lot as RouteGoalLot,
+## so a renamed field fails to compile instead of reading null.
+
+const RouteScript = preload("res://scripts/gameplay/route/route.gd")
 
 
 func _initialize() -> void:
@@ -15,13 +19,13 @@ func _initialize() -> void:
 
 func _check_route() -> void:
 	var scene := load("res://scenes/gameplay/route/route.tscn") as PackedScene
-	var route := scene.instantiate() as Node3D
+	var route := scene.instantiate() as RouteScript
 	root.add_child(route)
 	await physics_frame
 
-	var route_length: float = float(route.get(&"route_length"))
+	var route_length: float = route.route_length
 	assert(route_length > 0.0, "route_length should be positive after building")
-	var goal_transform: Transform3D = route.get(&"goal_transform")
+	var goal_transform: Transform3D = route.goal_transform
 
 	assert(is_equal_approx(route.get_progress(route.to_global(Vector3.ZERO)), 0.0),
 		"Progress at the very start of the route is 0")
@@ -39,8 +43,9 @@ func _check_route() -> void:
 	# moving vehicle never actually experiences (it's always comfortably
 	# inside one box or the other) -- worth not conflating with an actual
 	# gap in the drivable surface.
-	var path_points: Array = route.get(&"_path_points")
-	assert(path_points.size() >= 20, "A route this long should have plenty of dense path points (got %d)" % path_points.size())
+	var path_points: Array[Vector3] = route._path_points
+	assert(path_points.size() >= 20,
+		"A route this long should have plenty of dense path points (got %d)" % path_points.size())
 	var state := root.world_3d.direct_space_state
 	var checked: int = 0
 	for i: int in range(0, path_points.size(), maxi(1, path_points.size() / 20)):
@@ -55,16 +60,17 @@ func _check_route() -> void:
 		checked += 1
 	assert(checked >= 10, "Should have actually checked several path points (got %d)" % checked)
 
-	var houses: Array = route.get(&"houses")
-	var house_count: int = int(route.get(&"house_count"))
-	assert(houses.size() == house_count, "Builds exactly house_count houses (got %d, expected %d)" % [houses.size(), house_count])
+	var houses: Array[DeliveryHouse] = route.houses
+	var house_count: int = route.house_count
+	assert(houses.size() == house_count,
+		"Builds exactly house_count houses (got %d, expected %d)" % [houses.size(), house_count])
 
 	var vehicle := CharacterBody3D.new()
 	vehicle.collision_layer = 2
 	vehicle.collision_mask = 1
-	var lot: Node3D = route.get(&"goal_lot")
+	var lot: RouteGoalLot = route.goal_lot
 	assert(lot != null, "The route ends in a goal lot")
-	vehicle.position = (lot.call(&"parking_pose") as Transform3D).origin
+	vehicle.position = lot.parking_pose().origin
 	vehicle.rotation = lot.global_rotation
 	var collider := CollisionShape3D.new()
 	var box := BoxShape3D.new()

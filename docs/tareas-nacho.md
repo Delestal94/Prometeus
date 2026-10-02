@@ -1113,6 +1113,13 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     En el archivo: 32 → 21 usos (`.call` 20 → 13, `.get(&` 11 → 7, `/root/` 1 → 1). `test_dynamic_dispatch_budget.gd`
     suma el archivo y exige que `ShopVoteManager` sea `CoopVote`. Sin aviso (`route/` es de Nacho y `tests/`).
     Siguientes: `mud_segment.gd` (14), `vehicle_presentation.gd` (9), `route.gd` (9), `run_tally.gd` (9).
+  - [x] `route_smoke_check.gd` (2026-10-02, rama `nacho/N-224-route-smoke-check-typed`, reserva retomada): el
+    chequeo de la ruta que corre `tools/run-tests.sh`. La ruta por `preload` de `route.gd` (`route_length`,
+    `goal_transform`, `_path_points`, `houses`, `house_count`) y el lote de la meta como `RouteGoalLot`
+    (`parking_pose()`). En el archivo: 7 → 0 usos (`.call` 1 → 0, `.get(&` 6 → 0); en `scripts/`: `.call` 170 → 169,
+    `.get(&` 156 → 150. Sus dos líneas largas se partieron (sale de la línea base del lint).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`). Siguientes:
+    `mud_segment.gd` (13), `package_rescue.gd` (13), `rejoin_keepsake.gd` (9), `sound_audit.gd` (8), `route.gd` (8).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
