@@ -968,6 +968,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 13 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-seat-point-tipado.md`. Siguientes: `player.gd` (13), `spectator_camera.gd` (12),
     `package_pickup_point.gd` (12), `cargo_animal_view.gd` (11).
+  - [x] `player_seat_pose.gd` (2026-10-01, rama `nacho/N-224-seat-pose-typed`): subir y bajar de los asientos. La
+    cámara del asiento como `SeatCamera` (`activate`/`deactivate`), el `InteractionArea` del asiento como `SeatPoint`
+    (`release_occupant`) y la sesión como `NetSession` (`is_online`, `is_host`); lo que no es uno se salta, como hacían
+    los `has_method`. Queda por nombre el RPC `release_occupant` al host (como todo RPC). En el archivo: `.call` 5 → 0,
+    `has_method` 3 → 0, `/root/` 2 → 2. `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso
+    `docs/avisos/2026-10-01-n224-seat-pose-tipado.md`. `route_smoke_check.gd` (7) no se puede tipar: es un
+    `--script` y nombrar `route.gd`, `DeliveryHouse` o `RouteGoalLot` compila scripts que nombran `NetworkManager`
+    antes de que existan los autoloads.
   - [x] `package_pickup_point.gd` (2026-10-01, rama `nacho/N-224-pickup-point-typed`): agarrar y ayudar a cargar una
     caja. La caja como `DeliveryPackage` (`is_held`, `is_loaded`, `trap_definition`, `assist_available`/`assist_prompt`/
     `can_assist`/`set_assistant`/`take_by` directos, sin `has_method`), el feedback como `PackageFeedback` y el jugador
