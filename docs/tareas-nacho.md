@@ -1154,7 +1154,7 @@ media medida); (4) la sombra de la loma con borde suave. Capturas antes/después
   un `DirectionalLight3D` pelado; el sol del juego (`level_base.tscn`) ya tiene `shadow_blur = 1,6` y
   `directional_shadow_blend_splits`. Primero comprobar si el borde duro es solo de la captura.
 
-### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[ ] rama `nacho/N-319-depot-redesign`**
+### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[x] ramas `nacho/N-319-depot-redesign` y `nacho/N-319-depot-finish` (#145 y el cierre)**
 Origen: pedido del usuario 2026-09-30 ("el galpón es muy genérico; que quede como el lobby de un juego profesional:
 distribución de espacios, áreas importantes, modelos genéricos"). El plan, el diagnóstico de la línea de base, la planta
 objetivo y el registro de cada iteración están en `docs/deposito-rediseno.md`; capturas de cada iteración en
@@ -1203,8 +1203,13 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   ventanal cálido, pictogramas de zona (celdas 12-15 del atlas), taller con media pared opaca y tableros del kit, isla con
   lámpara y corcho, pañol sin violeta, descanso con lockers entreabiertos, sombras de contacto en un lote, desgaste en un lote,
   polvo en los haces, portón de recepción y mural del fondo, flechas solo en bifurcaciones, nube y línea de salida de afuera,
-  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Falta la pasada de `director-arte` sobre `D:/tmp/depot_review/iter3/` y los
-  textos que el arte dejó vacíos (ver el registro en `docs/deposito-rediseno.md`). **Todavía sin PR.**
+  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Mezclado en el #145.
+- [x] **N-319.5** ~~Cierre: crítica final sobre las capturas y los textos que el arte dejó vacíos.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-319-depot-finish`)** — la crítica sobre `D:/tmp/depot_review/iter5/` ya no dice
+  "genérico" (cada zona se lee por forma, luz y color; ver "Cierre" en `docs/deposito-rediseno.md`). Textos: "COLORES DEL CAMIÓN"
+  en claro sobre la franja oscura del tablero de muestras (antes INK sobre INK, invisible), palabra bajo los cinco pictogramas de
+  seguridad (`WORLD_DEPOT_SAFETY_*`), título de "NUESTRAS ENTREGAS" sobre su franja. `test_depot_zones` ampliado; `bench_depot` sin
+  cambio. Detalles menores que quedan, sin tarea, en el registro.
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un

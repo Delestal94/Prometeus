@@ -30,6 +30,10 @@ const RECEIVING_DOOR_X: float = -11.0
 const RECEIVING_DOOR := Vector2(6.6, 4.8)
 const DOOR_SLAT: float = 0.3
 
+## The caption strip under a pictogram sign: its size and how far its centre hangs under the sign's.
+const CAPTION_STRIP := Vector2(0.62, 0.13)
+const CAPTION_DROP: float = 0.31
+
 var _root: Node3D
 
 
@@ -93,26 +97,37 @@ func _build_west_wall(kit: DepotKit) -> void:
 			Vector3(WEST_WALL_X, Layout.FLOOR_TOP, 12.75)))
 	# Pictogram signs: the way out above the cabinet, the hazard over the panel.
 	_safety_sign(kit, DepotLabels.ICON_EXIT, Vector3(WEST_WALL_X, 2.65, 11.35), PI * 0.5, Layout.BOARD_GREEN,
-			Layout.PAPER)
+			Layout.PAPER, tr("WORLD_DEPOT_SAFETY_EXIT"))
 	_safety_sign(kit, DepotLabels.ICON_ELECTRIC, Vector3(WEST_WALL_X, 2.65, 10.3), PI * 0.5, Layout.TRUCK_YELLOW,
-			Layout.INK)
+			Layout.INK, tr("WORLD_DEPOT_SAFETY_ELECTRIC"))
 	_safety_sign(kit, DepotLabels.ICON_FIRST_AID, Vector3(WEST_WALL_X, 2.2, 11.95), PI * 0.5, Layout.BOARD_GREEN,
-			Layout.PAPER)
+			Layout.PAPER, tr("WORLD_DEPOT_SAFETY_FIRST_AID"))
 
 
 ## Speed limit and helmets either side of the door, on the front wall inside.
 func _build_door_signs(kit: DepotKit) -> void:
-	_safety_sign(kit, DepotLabels.ICON_SPEED, Vector3(-4.7, 2.5, 0.07), 0.0, Layout.TRUCK_YELLOW, Layout.INK)
-	_safety_sign(kit, DepotLabels.ICON_HELMET, Vector3(4.7, 2.5, 0.07), 0.0, Layout.SHELVES_BLUE, Layout.PAPER)
+	_safety_sign(kit, DepotLabels.ICON_SPEED, Vector3(-4.7, 2.5, 0.07), 0.0, Layout.TRUCK_YELLOW, Layout.INK,
+			tr("WORLD_DEPOT_SAFETY_SPEED"))
+	_safety_sign(kit, DepotLabels.ICON_HELMET, Vector3(4.7, 2.5, 0.07), 0.0, Layout.SHELVES_BLUE, Layout.PAPER,
+			tr("WORLD_DEPOT_SAFETY_HELMET"))
 
 
 ## A small square pictogram sign on a wall (`at` is its centre, `yaw` turns its front
-## from +Z): a coloured plate and the atlas icon over it.
-func _safety_sign(kit: DepotKit, icon: int, at: Vector3, yaw: float, plate: Color, tint: Color) -> void:
+## from +Z): a coloured plate and the atlas icon over it, and under it a strip of the same
+## plate (same batch) with a word or two in the icon's colour (one Label3D, group `depot_safety_caption`).
+func _safety_sign(kit: DepotKit, icon: int, at: Vector3, yaw: float, plate: Color, tint: Color,
+		caption: String) -> void:
 	var basis := Basis(Vector3.UP, yaw)
 	kit.box_xf(Vector3(0.44, 0.44, 0.03), Transform3D(basis, at + basis * Vector3(0.0, 0.0, 0.015)),
 			DepotKit.unlit(plate))
 	DepotLabels.pictogram(kit, icon, Transform3D(basis, at + basis * Vector3(0.0, 0.0, 0.034)), 0.34, tint)
+	var strip_at: Vector3 = at + Vector3(0.0, -CAPTION_DROP, 0.0)
+	kit.box_xf(Vector3(CAPTION_STRIP.x, CAPTION_STRIP.y, 0.03), Transform3D(basis,
+			strip_at + basis * Vector3(0.0, 0.0, 0.015)), DepotKit.unlit(plate))
+	var label := DepotLabels.text(_root, caption, strip_at + basis * Vector3(0.0, 0.0, 0.032), yaw, 30, tint,
+			Layout.DISPLAY_FONT, 0.0025, 0)
+	DepotLabels.fit_label(label, CAPTION_STRIP.x - 0.06)
+	label.add_to_group(&"depot_safety_caption")
 
 
 ## A solid box for a prop standing on the floor at `at` (x/z), turned `yaw`.
