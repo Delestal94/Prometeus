@@ -1102,8 +1102,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     directos; las cajas del grupo `cargo` como `DeliveryPackage` (`is_loaded`, `mass`; lo que no es un paquete se
     saltea, como antes) y la cámara de espectador por su script (`stop()`). Queda por nombre solo el handle de
     EventBus. En el archivo: 9 → 1 uso (`.call` 1 → 0, `.get(&` 7 → 0, `/root/` 1 → 1); en `scripts/`: `.call`
-    170 → 169, `.get(&` 160 → 153. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/`
+    172 → 171, `.get(&` 163 → 156. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/`
     libre y `tests/`). Siguientes: `run_tally.gd` (8), `sound_audit.gd` (8), `vehicle_effects.gd` (7).
+  - [x] `service_stop_shop.gd` (2026-10-02, rama `nacho/N-224-service-stop-shop-typed`): el mostrador de la estación
+    de servicio (N-110 y su arreglo #236, el que más usos tenía: 32). La red como `NetSession` (`local_id`,
+    `is_online`, `is_host`, `peer_ids`, `is_peer_ready`) y la votación como `CoopVote` (`active`, `offers`, `close_on`,
+    `send_state_to`). Quedan por nombre `ShopVoteManager.open_shop` (del juego, sin `class_name`), `CrewProgression`,
+    `RunManager` y `VehicleFaults` (sus scripts nombran autoloads y tiparlos rompe la compilación bajo `--script`:
+    `test_service_stop` precarga el mostrador) y la estación y su mostrador (`service_stop.gd` precarga este script).
+    En el archivo: 32 → 21 usos (`.call` 20 → 13, `.get(&` 11 → 7, `/root/` 1 → 1). `test_dynamic_dispatch_budget.gd`
+    suma el archivo y exige que `ShopVoteManager` sea `CoopVote`. Sin aviso (`route/` es de Nacho y `tests/`).
+    Siguientes: `mud_segment.gd` (14), `vehicle_presentation.gd` (9), `route.gd` (9), `run_tally.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -1751,18 +1760,39 @@ Fase 4 de `docs/investigacion-red.md`.
   (`PlayerColorSlot`, host en 0) y de este PR solo la reserva de slots. Tests: `test_network_rejoin`,
   `net_session__test_net_session_rejoin` y la última etapa de `net_pair` (sale con la caja, vuelve desde el
   mismo juego y recupera slot y mérito). Aviso: `docs/avisos/2026-09-30-n221-rpc-y-reconexion.md`.
-  - [ ] Falta: no recupera posición, asiento ni caja (se sueltan al irse, S-209; aparece como cualquier join
-    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); en LAN un extraño a una sala llena
-    carga el nivel antes de oír "full" (quién es llega con su respuesta de listo); el fantasma de un crash con
-    Steam no está probado con sockets reales (por ENet sí: `net_pair`).
-  - [ ] Pedir la identidad antes del estado completo: con la sala llena en LAN, el host manda primero solo el
-    nonce, el que entra contesta su eslabón de la cadena y recién ahí (fantasma suyo o lugar libre) recibe el
-    estado y carga el nivel; si no, oye "full" sin cargar nada. Cambia el handshake (otro `PROTOCOL_VERSION`).
-    Lo dejó anotado la segunda pasada de `auditor-red` sobre `nacho/N-221-followups`.
+  - [x] Recupera posición, asiento y caja. **[x] 2026-10-01, rama `nacho/N-221-rejoin-restore`:** al irse se
+    sigue soltando todo en el acto (S-209), pero el host anota qué tenía (`RejoinKeepsake`,
+    `scripts/gameplay/rejoin_keepsake.gd`, en `peer_removed`) y, si vuelve la misma identidad (señal nueva
+    `NetSession.peer_returned(id, anterior)`, también con el mismo id), lo spawnea desde la nota: en el camión si
+    estaba (su asiento si sigue libre, abriéndole la puerta del chofer; si se lo tomaron, a mitad de corrida otro
+    asiento o la caja como un join tardío), a pie donde estaba si tiene sentido (antes de la corrida en el
+    depósito; a mitad, a menos de 40 m del camión) y con su caja en las manos si nadie la tocó (suelta, sin
+    estantear ni perder, sin otro que la haya levantado, a menos de 3 m). Un fantasma que se suelta en el mismo
+    frame: el que vuelve se spawnea el frame siguiente, cuando el viejo ya soltó asiento y caja. Sin RPC nuevo.
+    Tests: `test_rejoin_keepsake` y las dos etapas de rejoin de `net_pair` (vuelve donde estaba y con su caja,
+    también sobre un fantasma). Revisión de `auditor-red` (misma rama): la caja devuelta no cuenta como rescate
+    (`_rescue_pending` se conserva), antes de la corrida con su asiento ocupado aparece al lado y no encima, el
+    asiento se decide después de devolverle la caja y la puerta del chofer que se le abrió se cierra si el asiento
+    no lo toma, y el reintento del spawn es una conexión de una vez, no un `await` (un nivel liberado no sigue).
+    Sigue faltando: en LAN no se lo reconoce si reinició el juego (token nuevo); el fantasma de un crash con Steam
+    no está probado con sockets reales (por ENet sí: `net_pair`); vuelve mirando hacia adelante (el spawn no
+    lleva yaw: sumarlo cambia el protocolo); a pie a menos de 40 m del camión vuelve donde estaba aunque el
+    terreno de ese tramo todavía no esté armado en su copia (el rescate al suelo seguro lo cubre, sin probar).
+  - [x] Pedir la identidad antes del estado completo. **[x] misma rama:** con la sala llena en LAN el host manda
+    solo `{version, session, identify}`, el que entra contesta su eslabón (`NetAdmission.answer_identify()`) y recién ahí
+    (fantasma suyo o lugar libre: `NetAdmission.on_identity()`) recibe el estado y carga el nivel; si no, oye
+    "full" (o "connection" si repite un eslabón ajeno) sin cargar nada. Su respuesta de listo ya no trae
+    identidad y el host no la lee (`identified`). `PROTOCOL_VERSION` 24 → 26 (25 reservado para N-218, con una
+    entrada provisoria en el historial). Tests: `net_session__test_net_session_rejoin` (sin sockets
+    y por ENet: el que vuelve suelta al fantasma antes de cargar, extraño y ladrón sin estado),
+    `test_network_rejoin`. Un joiner preguntado que no contesta oye "connection" a los 5 s
+    (`NetAdmission.identify_timeout_seconds`) en vez de ocupar la conexión de sobra 45 s.
+    Aviso: `docs/avisos/2026-10-01-n221-rejoin-restore.md`.
   - [ ] Nota para cuando exista la UI de silenciar (`SteamVoice`): el silencio y el volumen se guardan por peer id
     (`_muted`, `_peer_volume`), así que el que vuelve con otro id llega sin silenciar; y para un fantasma no llega
     `peer_disconnected` (`SceneMultiplayer.disconnect_peer()` lo bloquea), así que sus entradas quedan hasta que
-    termina la sesión. Cuando haya UI: guardarlo por identidad (`peer_identity()`) y olvidarlo con `peer_removed`.
+    termina la sesión. Cuando haya UI: moverlo con `peer_returned(id, anterior)` (o guardarlo por
+    `peer_identity()`) y olvidarlo con `peer_removed`. Sin UI todavía, queda para entonces.
 - [x] Seguimiento de la auditoría de #125 (`auditor-red`), rama `nacho/N-221-followups`. La caja de un
   fantasma conserva su ventana de rescate: `NetSession.peer_removed` (antes de `roster_changed`, una vez por
   salida), que `package.gd` escucha en lugar de `multiplayer.peer_disconnected`. Sala llena: ENet acepta una
@@ -2750,6 +2780,10 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   dinero cooperativo, arreglar averías (N-214) y un cosmético escondido (N-311).
 - [x] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
 - [x] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
+- [x] **N-110.2** Arreglos de la auditoría de red (`auditor-red`): usar el mostrador otra vez ya no borra los votos,
+  la votación solo sigue abierta con el equipo en la estación (el host la cierra cuando se van), una carta de
+  Prioridad o Descuento cobra una vez, el panel se cierra al alejarse o si Endless borra la estación, aviso sin
+  plata, estado solo a peers con el nivel cargado. Aviso: `docs/avisos/2026-10-01-service-stop-vote-fixes.md`.
 - [ ] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
   kiosco con mostrador, poste de precios, carteles de "estación de servicio"): hoy son cajas `DepotKit` con tres props
   del depósito (timbre, pallet envuelto, matafuego). Después, captura con `revisor-visual` en entrega y en Endless.

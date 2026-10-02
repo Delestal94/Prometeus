@@ -76,6 +76,15 @@ deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 pos
 de morph (base, 22 extremos y 30 combinaciones con semilla 311018). Esa muestra
 **no demuestra todas las combinaciones continuas**, ni sustituye pruebas animadas.
 
+El estado inicial del `.blend` y de los tres GLB es Delgada: los once pesos de
+morph son cero, aunque sus rangos siguen siendo −1…+1. El generador los fija
+explícitamente porque Blender crea las nuevas shape keys con valor uno. El modo
+estricto comprueba los valores iniciales efectivos (los del nodo prevalecen
+sobre los de la malla; si faltan ambos, glTF define cero). Las pruebas también
+comprueban la carga en Godot antes de mover ningún morph. El importador actual
+ya devolvía cero con los GLB anteriores; la inconsistencia comprobada estaba en
+el estado de autoría y en los valores declarados del archivo exportado.
+
 Los mapas, el núcleo experimental y sus errores medidos están en
 `review_bloque_b/`. Los puntos 14 y 15 siguen pendientes de D/E. La métrica física
 de UV supera el 15 %: 16 no está aprobado y requiere resolver la compensación en

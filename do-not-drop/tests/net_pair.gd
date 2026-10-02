@@ -9,13 +9,17 @@ extends Node
 ## from the same running game and gets its colour slot and merit back under its
 ## new peer id. N-908: the host picked a box up while it was away, and the
 ## client back in sees it in the host's hands (the player repeats its pick_up to
-## a peer whose level is up: player_net_visibility.gd).
+## a peer whose level is up: player_net_visibility.gd). N-221 rejoin restore:
+## it comes back where it stood, with the box it dropped by leaving back in its
+## hands, on the host and in its own view (rejoin_keepsake.gd).
 ## Last stage (N-221 follow-up): the client vanishes without a word while
 ## carrying a box in crisis -- its link is left open but nobody polls it, a
 ## pulled cable -- and joins again before the host noticed. The host drops the
 ## old connection as a ghost when the new one says who it is; the box's rescue
 ## window is held right then (NetworkManager.peer_removed), not when the ghost's
-## connection closes 0.5-2 s later, once its player let go of the box.
+## connection closes 0.5-2 s later, once its player let go of the box; the one
+## who came back gets that box in its hands again once the ghost's player is
+## gone (rejoin_keepsake.gd), its window still held.
 ## N-228.5: a box left alone sends its pose twice a second (NetRestThrottle);
 ## moved, it goes out at once and at full rate again, not at the next slow
 ## send.
@@ -230,6 +234,7 @@ func _run_host() -> void:
 	await _pump(0.8)
 	_expect(client_player.carried_package == package and package.carrier == client_player,
 		"client holds the package before disconnecting")
+	var left_at: Vector3 = client_player.global_position
 	_print_network_metrics("host")
 	_expect(_overlay_reads_link("host"), "host's network overlay reads the client's ENet link")
 	rpc_id(_client_peer_id, &"_client_disconnect_while_carrying", package.get_path())
@@ -242,7 +247,7 @@ func _run_host() -> void:
 		"disconnected client's package is loose on the host")
 	var held: DeliveryPackage = _level.packages[1]
 	held.call(&"take_by", host_player)
-	await _check_rejoin(old_client, old_slot, old_merit, held)
+	await _check_rejoin(old_client, old_slot, old_merit, held, package, left_at)
 	if held.is_held:
 		held.call(&"request_drop", Transform3D(Basis.IDENTITY, held.global_position), false)
 	await _pump(0.7)
@@ -255,7 +260,8 @@ func _run_host() -> void:
 ## its ready reply) under a new peer id. The host gives it its slot back, and
 ## with it the merit CrewProgression keeps under that slot. The host holds
 ## `held` all along: the client has to see it in the host's hands (N-908).
-func _check_rejoin(old_client: int, old_slot: int, old_merit: int, held: DeliveryPackage) -> void:
+func _check_rejoin(old_client: int, old_slot: int, old_merit: int, held: DeliveryPackage,
+		dropped: DeliveryPackage, left_at: Vector3) -> void:
 	_client_peer_id = 0
 	var rejoins: Array = []
 	_network.connect(&"peer_rejoined", func(old_id: int, new_id: int) -> void: rejoins.append([old_id, new_id]))
@@ -276,9 +282,15 @@ func _check_rejoin(old_client: int, old_slot: int, old_merit: int, held: Deliver
 	_expect(merit == old_merit, "the rejoined client gets its merit back (%d, was %d)" % [merit, old_merit])
 	# Not its suit: this client wears a uniform on purpose (test_network_rejoin covers the suit).
 	_expect(_player(1).carried_package == held, "the host still holds the box it picked up while the client was away")
-	rpc_id(_client_peer_id, &"_client_check_rejoin", _client_peer_id, old_slot, held.get_path())
+	var back: Player = _player(_client_peer_id)
+	_expect(back.global_position.distance_to(left_at) < 1.0,
+		"the rejoined client comes back where it stood (at %s, left at %s)" % [back.global_position, left_at])
+	_expect(back.carried_package == dropped and dropped.carrier == back,
+		"the rejoined client has the box it dropped by leaving back in its hands")
+	rpc_id(_client_peer_id, &"_client_check_rejoin", _client_peer_id, old_slot, held.get_path(), dropped.get_path())
 	await _wait_for_report(&"rejoin")
 	await _wait_for_report(&"late_carry")
+	await _wait_for_report(&"own_box")
 
 
 ## N-221 follow-up: back from a pulled cable before the host noticed. The
@@ -327,10 +339,11 @@ func _check_ghost_rejoin(slot: int) -> void:
 	await _pump(0.3)  # The level frees the ghost's player at the end of the frame it was dropped in.
 	_expect(not (_network.get(&"peer_ids") as Array).has(ghost) and removed == [ghost],
 		"the host drops the ghost as the client comes back (removed %s)" % [removed])
-	_expect(not package.is_held and package.carrier == null, "the ghost's box is loose on the host")
+	_expect(package.is_held and package.carrier == _player(_client_peer_id),
+		"the box the ghost held is back in the hands of the one who came back")
 	var window: float = package.care.crisis_left
 	_expect(window >= DeliveryPackage.CareModel.CRISIS_SECONDS - 1.0,
-		"the box's rescue window was held when the ghost was dropped (%.1f s left)" % window)
+		"the box's rescue window was held when the ghost was dropped, and still is (%.1f s left)" % window)
 	# SceneMultiplayer lets go of it as it is dropped (disconnect_peer(), its
 	# signals blocked), not when its link closes: nothing more is sent to a
 	# closing link ("max channels: 0"; run-net-pair.sh greps for it), and the
@@ -342,7 +355,7 @@ func _check_ghost_rejoin(slot: int) -> void:
 	_expect(not disconnected.has(ghost),
 		"the ghost is let go of by the host itself, not when its link closes (no peer_disconnected for it)")
 	_expect(removed == [ghost], "the ghost's link closing removes nothing more (removed %s)" % [removed])
-	rpc_id(_client_peer_id, &"_client_check_ghost_rejoin", _client_peer_id, slot)
+	rpc_id(_client_peer_id, &"_client_check_ghost_rejoin", _client_peer_id, slot, package.get_path())
 	await _wait_for_report(&"ghost_rejoin")
 
 
@@ -523,17 +536,20 @@ func _client_vanish_and_rejoin() -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _client_check_ghost_rejoin(my_id: int, slot: int) -> void:
+func _client_check_ghost_rejoin(my_id: int, slot: int, box_path: NodePath) -> void:
 	await _pump(0.4)
 	var me: int = get_tree().root.multiplayer.get_unique_id()
 	var seen: int = int(_network.call(&"color_slot", me))
-	var ok: bool = me == my_id and seen == slot and _player(me) != null
+	var player: Player = _player(me)
+	var box: Node = get_node_or_null(box_path)
+	var ok: bool = me == my_id and seen == slot and player != null and box != null and player.carried_package == box
 	_report(&"ghost_rejoin", ok,
-		"the client back after vanishing wears its slot again (slot %d, sees %d)" % [slot, seen])
+		"the client back after vanishing wears its slot again (slot %d, sees %d) and holds its box again (holds %s)"
+		% [slot, seen, player.carried_package if player != null else null])
 
 
 @rpc("authority", "call_remote", "reliable")
-func _client_check_rejoin(my_id: int, slot: int, held_path: NodePath) -> void:
+func _client_check_rejoin(my_id: int, slot: int, held_path: NodePath, own_path: NodePath) -> void:
 	await _pump(0.4)
 	var me: int = get_tree().root.multiplayer.get_unique_id()
 	var seen: int = int(_network.call(&"color_slot", me))
@@ -545,6 +561,11 @@ func _client_check_rejoin(my_id: int, slot: int, held_path: NodePath) -> void:
 	_report(&"late_carry", held != null and in_hand == held,
 		"the rejoined client sees the box the host picked up while it was away in the host's hands (sees %s)"
 		% [in_hand])
+	var own: Node = get_node_or_null(own_path)
+	var mine: Player = _player(me)
+	_report(&"own_box", own != null and mine != null and mine.carried_package == own,
+		"the rejoined client holds the box it dropped by leaving again (holds %s)"
+		% [mine.carried_package if mine != null else null])
 
 
 func _report(stage: StringName, ok: bool, detail: String) -> void:

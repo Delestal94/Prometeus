@@ -7,7 +7,8 @@ extends SceneTree
 ## cheapest on a tie; finish_vote() announces without paying, resolve()
 ## pays through the game's hook and refuses when it can't; the first vote
 ## starts the clock and running it out resolves; restart_votes() clears
-## them; reset() empties everything.
+## them; reset() empties everything; send_state_to() leaves the votes and
+## the clock alone.
 
 var _failures: int = 0
 
@@ -83,6 +84,14 @@ func _run() -> void:
 		await process_frame
 	_expect(not vote.active and resolutions[-1][0] == &"tape",
 		"Running out of time resolves on the leader (got %s)" % [resolutions[-1]])
+	# send_state_to() hands one peer the vote as it stands: nobody's vote and
+	# the clock stay as they were (offline it sends nothing at all).
+	vote.open(vote._default_offers())
+	vote.vote(1, &"padding")
+	vote.timer_started = true
+	vote.send_state_to(2)
+	_expect(vote.active and vote.votes.get(1) == &"padding" and vote.timer_started,
+		"Sending a peer the state keeps the votes and the clock (%s)" % [vote.votes])
 	vote.free()
 	roster.free()
 	if _failures == 0:

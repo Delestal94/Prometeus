@@ -38,6 +38,9 @@ signal peer_level_ready(peer_id: int)
 ## new peer id. Emitted while the newcomer authenticates, before it is on
 ## the roster; if the old connection was still up, it has been dropped.
 signal peer_rejoined(old_id: int, new_id: int)
+## Host: `id` (authenticating) is `previous_id` back, after _peer_returned; also
+## with the same id. For what the game kept of the one who left.
+signal peer_returned(id: int, previous_id: int)
 ## A peer left the roster (every side), right before roster_changed; also a
 ## ghost (drop_peer()). For what a leaver held, rather than
 ## multiplayer.peer_disconnected: a ghost's comes 0.5-2 s late.
@@ -86,6 +89,8 @@ const ENET_PEER_TIMEOUT_MAX_MSEC: int = 45000
 ## both MIN and MAX, for the reason above (N-235).
 const ENET_PEER_TIMEOUT_SESSION_MSEC: int = 20000
 var _awaiting_handshake: bool = false
+## Joiner: already told the host who it is (NetAdmission.answer_identify()).
+var _identified_early: bool = false
 ## The ENet timeout this end applies to each peer, {peer_id: msec}: ENet has
 ## no getter for it (enet_timeout_msec()).
 var _enet_timeouts: Dictionary = {}
@@ -224,6 +229,7 @@ func host_session(port: int = DEFAULT_PORT) -> Error:
 ## the UI doesn't have to care which transport is live.
 func join_session(target: String, port: int = DEFAULT_PORT) -> Error:
 	_ensure_signals()
+	_identified_early = false
 	if chosen_transport() == Transport.STEAM:
 		return _join_steam(int(target))
 	return _join_enet(target, port)
@@ -244,6 +250,7 @@ func _end_session() -> void:
 	session_scene = ""
 	_reset_session_state()
 	_awaiting_handshake = false
+	_identified_early = false
 	_restart_pending = false
 	_restart_announced = false
 	_ready_peers = [HOST_ID]
@@ -563,10 +570,10 @@ func _peer_authenticating(id: int) -> void:
 		if not refusal.is_empty():
 			_admission.refuse(self, id, refusal)
 			return
-		var state: Dictionary = {"version": protocol_version, "scene": _current_level_scene(),
-			"session": _identities.nonce}
-		state.merge(_session_state())
-		multiplayer.send_auth(id, var_to_bytes(state))
+		if _admission.unplaced.has(id):
+			_admission.ask_identity(self, id)  # A full room, and who this is unknown (LAN).
+			return
+		_admission.send_state(self, id)
 	elif id != HOST_ID:
 		multiplayer.complete_auth(id)
 
@@ -703,16 +710,18 @@ func _handshake_error(state: Variant) -> String:
 	return _validate_session_state(state)
 
 
-func _ready_reply_error(reply: Variant) -> String:
-	if not reply is Dictionary or not bool(reply.get("ready", false)):
-		return "version"
-	return "" if int(reply.get("version", -1)) == protocol_version else "version"
-
-
-## What a joiner says once its level is up, with who it is
-## (NetPeerIdentities.claim(): hashed, never the token itself).
+## What a joiner says once its level is up, with who it is unless it said so
+## already.
 func _ready_reply() -> Dictionary:
-	return {"ready": true, "version": protocol_version, "identity": _identities.claim()}
+	var reply: Dictionary = {"ready": true, "version": protocol_version}
+	if not _identified_early:
+		reply.identity = _claim_identity()
+	return reply
+
+
+## Who this process says it is (NetPeerIdentities.claim(): hashed, never the token).
+func _claim_identity() -> String:
+	return _identities.claim()
 
 
 ## Host, from a joiner's ready reply (inside SceneMultiplayer's poll, before
@@ -724,20 +733,7 @@ func _identify_peer(id: int, reply: Dictionary) -> void:
 
 func _receive_auth(id: int, data: PackedByteArray) -> void:
 	if multiplayer.is_server():
-		# One ready reply per joiner: another, or one from a joiner turned away,
-		# isn't even read (NetAdmission.first_reply()).
-		if not _admission.first_reply(id):
-			return
-		# Protocol 0 sent the raw word "ready". Recognize it without asking
-		# bytes_to_var() to parse arbitrary UTF-8, then reject it explicitly.
-		var reply: Variant = bytes_to_var(data) if data.get_string_from_utf8() != "ready" else null
-		var refusal: String = _ready_reply_error(reply)
-		if refusal.is_empty():
-			refusal = _admission.on_identified(self, id, reply)
-		if refusal.is_empty():
-			multiplayer.complete_auth(id)
-		else:
-			_admission.refuse(self, id, refusal)
+		_admission.receive(self, id, data)  # An identity or a ready reply.
 		return
 	if id != HOST_ID:
 		return
@@ -746,6 +742,9 @@ func _receive_auth(id: int, data: PackedByteArray) -> void:
 	# failing here must not close the peer while it is being walked.
 	if state is Dictionary and state.has("failure"):
 		_fail_if_current.call_deferred(String(state.failure), multiplayer.multiplayer_peer)
+		return
+	if NetAdmission.is_identify(state):
+		_admission.answer_identify(self, state)
 		return
 	var handshake_error: String = _handshake_error(state)
 	if not handshake_error.is_empty():

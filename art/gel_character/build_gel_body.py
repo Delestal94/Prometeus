@@ -217,6 +217,9 @@ def decorate(obj):
     obj.shape_key_add(name='Basis')
     for name in MORPHS:
         key = obj.shape_key_add(name=name)
+        # Blender initializes a newly added relative key at one. Export Basis
+        # explicitly rather than leaving every authored extreme active.
+        key.value = 0.
         key.slider_min, key.slider_max = -1, 1
         for v, k in zip(obj.data.vertices, key.data):
             k.co = v.co + morph_delta(v.co, name)
@@ -434,7 +437,7 @@ def main():
             'foot_depth_design_m': .28, 'foot_depth_source': 'profile design, not inferred from frontal JPG',
             'reference_shape_targets': {'torso_waist_width_m': [.40,.43],
                 'foot_width_m': .57*(1.74/3.68), 'neck_visible_height_m': .11*(1.74/3.68)},
-            'reference_pose': 'static diagnostic A-pose, arms 15 degrees from vertical; eight animation clips preserve source rotations',
+            'reference_pose': f'static diagnostic A-pose, arms 15 degrees from vertical; {len(animation_report["durations"])} animation clips preserve source rotations',
             'morph_amplitudes': dict(zip(MORPHS,(.30,.18,.15,.12,.14,.18,.18,.15,.15,.08,.15)))}
     OUT.mkdir(parents=True, exist_ok=True)
     report = {'source_sha256':source_hash, 'animations':animation_report, 'lods':[]}

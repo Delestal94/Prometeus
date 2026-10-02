@@ -19,7 +19,12 @@ class_name ServiceStopShop
 ## while the crew shops, so the time the vote and the walk take is spent.
 ##
 ## Autoloads are looked up by path, not by name: this script is loaded through
-## a chain that a test may compile before the autoloads exist.
+## a chain that a test may compile before the autoloads exist. The network and
+## the vote are typed by their module classes (NetSession, CoopVote: neither
+## names an autoload). CrewProgression, RunManager and VehicleFaults stay plain
+## nodes: their scripts name autoloads, so typing them here would compile them
+## before the autoloads exist (see PackageAutoloads, N-224.4). The stop stays a
+## plain node too: ServiceStop preloads this script.
 
 ## Stamped on every offer, so the depot panel and other stops leave them alone.
 const VENUE: StringName = &"service_stop"
@@ -54,6 +59,13 @@ var team_money: int = 0
 var supplies: Array = []
 ## The stop's own name (its segment's), stamped on the offers it opens.
 var stop_key: String = ""
+## How near the counter a player has to be (or the truck in the lay-by) for
+## the crew to count as shopping here: the vote opens again after a purchase
+## only then, and the host closes it once nobody is.
+const CREW_REACH: float = 12.0
+## How often the host looks whether the crew is still at the station.
+const WATCH_SECONDS: float = 0.5
+var _watch: float = 0.0
 
 
 func _ready() -> void:
@@ -64,6 +76,55 @@ func _ready() -> void:
 	if bus != null:
 		bus.connect(&"shop_resolved", _on_shop_resolved)
 	refresh_state()
+
+
+## Host, online: a vote on this stop's offers closes on nothing once the crew
+## has left (the truck out of the lay-by and nobody near the counter), so the
+## kit can't be bought from kilometres down the road.
+func _process(delta: float) -> void:
+	_watch += delta
+	if _watch < WATCH_SECONDS:
+		return
+	_watch = 0.0
+	if _is_host() and _is_online() and vote_is_mine() and not crew_at_station():
+		_votes().close_on(&"", {})
+
+
+## Whether the crew's vote is open on this stop's offers.
+func vote_is_mine() -> bool:
+	var votes: CoopVote = _votes()
+	if votes == null or not votes.active:
+		return false
+	for offer: Variant in votes.offers.values():
+		if offer is Dictionary and offer.get("venue") == VENUE and offer.get("stop") == stop_key:
+			return true
+	return false
+
+
+## Whether the crew is shopping here: the truck in the lay-by or a player
+## within CREW_REACH of the counter.
+func crew_at_station() -> bool:
+	var stop: Node = get_parent()
+	var truck: Node3D = get_tree().get_first_node_in_group(&"vehicle") as Node3D
+	if stop != null and truck != null and bool(stop.call(&"in_bay", truck.global_position)):
+		return true
+	var counter: Node3D = _counter()
+	if counter == null:
+		return false
+	for player: Node in get_tree().get_nodes_in_group(&"player"):
+		if player is Node3D and (player as Node3D).global_position.distance_to(counter.global_position) <= CREW_REACH:
+			return true
+	return false
+
+
+## Whether this peer's own player has walked away from the counter (further
+## than `reach`): its open panel closes then.
+func local_player_away(reach: float) -> bool:
+	var counter: Node3D = _counter()
+	if counter == null or not counter.has_method(&"local_player"):
+		return false
+	var player: Node3D = counter.call(&"local_player") as Node3D
+	return player != null and player.global_position.distance_to(counter.global_position) > reach
 
 
 ## Every offer, id -> {title, detail, cost, venue, stop, amount}: the cost is
@@ -117,22 +178,29 @@ func buy_supply(supply_id: StringName) -> bool:
 
 ## The panel's discount button, solo: half price with the local player's card.
 func buy_supply_discounted(supply_id: StringName) -> bool:
-	var network: Node = _autoload(&"NetworkManager")
-	return _purchase(supply_id, int(network.call(&"local_id")) if network != null else 1)
+	var network: NetSession = _network()
+	return _purchase(supply_id, network.local_id() if network != null else 1)
 
 
-## Host, as a player uses the counter: everyone gets the fresh money and
+## Host, as player `peer` uses the counter: everyone gets the fresh money and
 ## availability (the panel opens on the next message), and online the crew's
-## vote opens on these offers.
-func open_for_crew() -> void:
+## vote opens on these offers -- unless it is already open on them: then only
+## `peer` is sent its state, so a second player at the counter (or a late
+## joiner) never wipes the votes cast or restarts the clock.
+func open_for_crew(peer: int = 0) -> void:
 	if not _is_host():
 		return
 	refresh_state()
 	_broadcast()
-	if _is_online():
-		var votes: Node = _autoload(&"ShopVoteManager")
-		if votes != null:
-			votes.call(&"open_shop", offers())
+	if not _is_online():
+		return
+	var votes: CoopVote = _votes()
+	if votes == null:
+		return
+	if not vote_is_mine():
+		votes.call(&"open_shop", offers())
+	elif peer > 0:
+		votes.send_state_to(peer)
 
 
 ## The panel's hint under the title.
@@ -161,6 +229,7 @@ func _purchase(id: StringName, discount_peer: int) -> bool:
 			return false
 		cost = maxi(0, roundi(cost * 0.5))
 	if not bool(crew.call(&"spend", cost)):
+		_notice(tr("WORLD_SERVICE_NOTICE_NO_MONEY") % [tr(String(offer["title"])).to_lower(), cost])
 		return false
 	if discount_peer > 0:
 		crew.call(&"consume_card", discount_peer, card)
@@ -203,24 +272,21 @@ func _on_shop_resolved(offer_id: StringName, offer: Dictionary) -> void:
 
 
 func _reopen_vote() -> void:
-	var votes: Node = _autoload(&"ShopVoteManager")
-	if votes != null and not bool(votes.get(&"active")) and _run_going():
+	var votes: CoopVote = _votes()
+	if votes != null and not votes.active and _run_going() and crew_at_station():
 		votes.call(&"open_shop", offers())
 
 
 ## The station goes (Endless culls it behind the truck): a vote still open on
 ## its offers closes on nothing, on every peer, so nobody votes on a shop that
-## is no longer there.
+## is no longer there. Only when its segment is culled: when the whole level
+## goes, the vote goes with the run and nothing is sent.
 func _exit_tree() -> void:
-	if not _is_host() or not _run_going():
+	var segment: Node = get_parent().get_parent() if get_parent() != null else null
+	if segment == null or not segment.is_queued_for_deletion():
 		return
-	var votes: Node = _autoload(&"ShopVoteManager")
-	if votes == null or not bool(votes.get(&"active")):
-		return
-	for offer: Variant in (votes.get(&"offers") as Dictionary).values():
-		if offer is Dictionary and offer.get("venue") == VENUE and offer.get("stop") == stop_key:
-			votes.call(&"close_on", &"", {})
-			return
+	if _is_host() and _run_going() and vote_is_mine():
+		_votes().close_on(&"", {})
 
 
 # --- State everyone shows --------------------------------------------------------------------
@@ -233,10 +299,16 @@ func refresh_state() -> void:
 	supplies = unavailable()
 
 
+## To every peer whose level is up: one still loading the route has no such
+## node yet, and gets the state when it next opens the counter.
 func _broadcast() -> void:
 	_apply_state(supplies, team_money)
-	if _is_online():
-		_receive_state.rpc(supplies, team_money)
+	if not _is_online():
+		return
+	var network: NetSession = _network()
+	for id: int in network.peer_ids:
+		if id != multiplayer.get_unique_id() and network.is_peer_ready(id):
+			_receive_state.rpc_id(id, supplies, team_money)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -286,13 +358,29 @@ func _notice(text: String) -> void:
 
 
 func _is_online() -> bool:
-	var network: Node = _autoload(&"NetworkManager")
-	return network != null and bool(network.call(&"is_online"))
+	var network: NetSession = _network()
+	return network != null and network.is_online()
 
 
 func _is_host() -> bool:
-	var network: Node = _autoload(&"NetworkManager")
-	return network == null or bool(network.call(&"is_host"))
+	var network: NetSession = _network()
+	return network == null or network.is_host()
+
+
+## The NetworkManager autoload as the session class it extends (null outside the tree).
+func _network() -> NetSession:
+	return _autoload(&"NetworkManager") as NetSession
+
+
+## The ShopVoteManager autoload as the vote class it extends; `open_shop` is the
+## game's own (ShopVoteManager has no class name), so it stays a call by name.
+func _votes() -> CoopVote:
+	return _autoload(&"ShopVoteManager") as CoopVote
+
+
+func _counter() -> Node3D:
+	var stop: Node = get_parent()
+	return stop.get(&"counter") as Node3D if stop != null else null
 
 
 func _autoload(autoload_name: StringName) -> Node:

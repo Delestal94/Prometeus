@@ -204,6 +204,13 @@ func _broadcast_state() -> void:
 		_sync_state.rpc(offers, votes, active, timer_started, seconds_left)
 
 
+## Host: hands one peer the vote as it stands (a player who just came to
+## it, a late joiner), without touching anybody's vote or the clock.
+func send_state_to(peer_id: int) -> void:
+	if is_online() and multiplayer.get_peers().has(peer_id):
+		_send_state(peer_id)
+
+
 func _send_state(peer_id: int) -> void:
 	if is_online() and is_host():
 		_sync_state.rpc_id(peer_id, offers, votes, active, timer_started, seconds_left)

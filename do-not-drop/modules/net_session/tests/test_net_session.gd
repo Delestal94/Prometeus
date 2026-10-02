@@ -185,8 +185,9 @@ func _test_session() -> void:
 	_expect(session._handshake_error(elsewhere) == "connection", "An unknown level is rejected as connection")
 	var incomplete: Dictionary = {"version": 7, "scene": "res://levels/one.tscn", "seed": 1}
 	_expect(session._handshake_error(incomplete) == "connection", "State the game's hook rejects is rejected")
-	_expect(session._ready_reply_error({"ready": true, "version": 7}).is_empty()
-		and session._ready_reply_error({"ready": true, "version": 6}) == "version", "Ready replies are versioned")
+	_expect(NetAdmission.ready_reply_error({"ready": true, "version": 7}, 7).is_empty()
+		and NetAdmission.ready_reply_error({"ready": true, "version": 6}, 7) == "version",
+		"Ready replies are versioned")
 	_expect(session._failure_text("port", [7811]) == "Port 7811 is taken", "A port failure is worded by the game")
 	session.leave_session()
 	_expect(not session.is_online() and session.world_seed == 0 and session.houses == 0,

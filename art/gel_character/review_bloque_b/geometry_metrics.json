@@ -2,7 +2,7 @@
   "object": "GelBodyLOD0",
   "triangles": 4704,
   "units": "metres",
-  "source_blend_sha256": "faf0150ff980e7df61799f86bffb81c91588966f25bc12b00c3875ae0d7931ba",
+  "source_blend_sha256": "e4fa85b04450cd7ebd2531e78aabcdd2f0b9a5474e991678a81cb50854aaf6ac",
   "blender_version": "5.2.2 LTS",
   "thickness_sampling": "all triangle centroids inward normal rays, not vertex baking",
   "basis": {
