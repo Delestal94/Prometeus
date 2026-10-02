@@ -71,7 +71,8 @@ static func next_step(state: Dictionary, kind: StringName, tool: StringName, too
 	# tilt with the primary held, Liquid scrubs side to side with nothing held.
 	if action == &"lean" and bool(state.get("need_hands", true)):
 		return _step(&"lean", _tr("HUD_CARE_LEAN"),
-			_tr("HUD_CARE_LEAN_DETAIL") % [keys.get("primary", _tr("HUD_CARE_KEY_LEFT_CLICK")), keys.get("sides", "WASD")])
+			_tr("HUD_CARE_LEAN_DETAIL") % [keys.get("primary", _tr("HUD_CARE_KEY_LEFT_CLICK")),
+				keys.get("sides", "WASD")])
 	if action == &"scrub" and bool(state.get("need_hands", true)):
 		var scrub: String = _tr("HUD_CARE_SCRUB_DETAIL") % keys.get("swing", "A / D")
 		if bool(state.get("on_foot", false)):

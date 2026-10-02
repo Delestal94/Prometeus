@@ -190,7 +190,8 @@ func _check_no_spanish_ui_literals() -> void:
 				var words: Array = word.search_all(found.get_string(1)).map(
 						func(m: RegExMatch) -> String: return m.get_string().to_lower())
 				_expect(words.size() < 2 or not words.any(func(w: String) -> bool: return w in SPANISH_WORDS),
-					"%s:%d has no untranslated Spanish literal (\"%s\")" % [file_path, line_number, found.get_string(1)])
+					"%s:%d has no untranslated Spanish literal (\"%s\")"
+						% [file_path, line_number, found.get_string(1)])
 
 
 ## The line up to a trailing "# comment" that sits outside any quotes.
@@ -276,7 +277,8 @@ func _check_content_keys(table: Dictionary) -> void:
 		for index: int in keys.size():
 			var key: String = String(keys[index])
 			_expect(table.has(key) and table[key][0] == spanish[index],
-				"%s: %s's Spanish is the .tres text (%s vs %s)" % [file_name, key, table.get(key, ["-"])[0], spanish[index]])
+				"%s: %s's Spanish is the .tres text (%s vs %s)"
+					% [file_name, key, table.get(key, ["-"])[0], spanish[index]])
 		_expect(String(content.call(&"localized_name")) == spanish[0],
 			"%s's name reads in Spanish by default" % file_name)
 		_expect(String(content.call(&"localized_handling")) == spanish[1],
