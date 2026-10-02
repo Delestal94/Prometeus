@@ -20,7 +20,7 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 		var changed: bool = value != driver_peer_id
 		driver_peer_id = value
 		if changed and _prediction != null:
-			_prediction.driver_changed()
+			_prediction.driver_changed(self)
 		# The driver got in through the open door: it shuts behind them. When
 		# they get out it opens to let them climb down. Host decides, and the
 		# door state replicates like any other door toggle.
@@ -705,6 +705,12 @@ func _process(delta: float) -> void:
 ## Whether this peer is the client predicting the truck it drives (N-218).
 func is_predicted() -> bool:
 	return _prediction.active
+
+
+## Stops this peer predicting its truck, frozen where it is (N-922): the level, when the host is gone mid-drive and
+## this peer, an offline host now, no longer stops on its own.
+func stop_prediction() -> void:
+	_prediction.halt(self)
 
 
 ## A client's truck is frozen, so physics never moves its wheels: they are put
