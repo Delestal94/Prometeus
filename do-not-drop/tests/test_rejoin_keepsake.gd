@@ -13,6 +13,12 @@ extends SceneTree
 ##   of when it left) back in its hands;
 ## - a box someone else picked up meanwhile isn't taken from the crew; nobody
 ##   back (no peer_returned) spawns at the depot as ever, empty-handed;
+## - before the run, its passenger seat taken meanwhile: beside that seat, not
+##   in whoever sits there;
+## - at the wheel with a box in hand (the wheel won't take it): standing by
+##   the cab with the box, the door opened for it shut again;
+## - a box taken back mid-run off the road is no rescue (_rescue_pending as it
+##   was);
 ## - mid-run, back to the driver's seat it left even with its door shut since
 ##   (opened for it, it shuts behind it as ever), the truck's wheel its again;
 ##   back to the passenger seat it left; that seat taken meanwhile: another
@@ -90,6 +96,28 @@ func _run() -> void:
 		"Without peer_returned it spawns at the depot (at %s)"
 		% [player.global_position if player != null else Vector3.ZERO])
 
+	# Before the run, its passenger seat taken meanwhile: beside it.
+	var pre_seat: Node = null
+	for candidate: Node in get_nodes_in_group(SEAT_GROUP):
+		if _truck.is_ancestor_of(candidate) and bool(candidate.call(&"can_interact", player)):
+			pre_seat = candidate
+			break
+	_expect(pre_seat != null, "A free passenger seat before the run")
+	if pre_seat != null:
+		pre_seat.call(&"interact", player)
+		_expect(not String(player.get(&"seat_node_path")).is_empty(), "The player sits before the run")
+		_leave(player)
+		pre_seat.set(&"occupant", _level)
+		network.peer_returned.emit(1, 1)
+		_level.call(&"_sync_players", [1])
+		player = _player()
+		var beside: Vector3 = _truck.to_global(_level.get_node(^"LateJoinSeating").call(&"standing_spot", pre_seat))
+		_expect(player != null and String(player.get(&"seat_node_path")).is_empty()
+			and player.global_position.distance_to(beside) < 0.3,
+			"Its seat taken before the run: standing beside it (at %s, want %s)"
+			% [player.global_position if player != null else Vector3.ZERO, beside])
+		pre_seat.set(&"occupant", null)
+
 	# Mid-run, at the wheel (the debug start seats this player as the driver).
 	_level.call(&"start_debug_delivery")
 	await physics_frame
@@ -107,6 +135,19 @@ func _run() -> void:
 		"Back at the wheel it left (seat %s)" % [player.get(&"seat_node_path") if player != null else ""])
 	_expect(not bool(_truck.call(&"is_door_open", &"cab_left")),
 		"...through its door, shut since: opened for it, it shuts behind it as ever")
+
+	# At the wheel with a box in hand: the wheel won't take it back with it.
+	var cab_box: Node3D = packages[2]
+	cab_box.call(&"take_by", player)
+	_leave(player)
+	_truck.call(&"set_door_open", &"cab_left", false)
+	network.peer_returned.emit(1, 1)
+	_level.call(&"_sync_players", [1])
+	player = _player()
+	_expect(player != null and player.get(&"carried_package") == cab_box
+		and String(player.get(&"seat_node_path")).is_empty() and int(_truck.get(&"driver_peer_id")) == 0,
+		"Back at the wheel with its box: the box in hand, standing by the cab")
+	_expect(not bool(_truck.call(&"is_door_open", &"cab_left")), "...and the door opened for it shut again")
 
 	# A passenger seat: a newcomer mid-run is seated by the late join.
 	_leave(player)
@@ -152,6 +193,9 @@ func _run() -> void:
 	var near: Vector3 = _truck.global_position + _truck.global_basis.x * 6.0
 	player.set(&"net_in_vehicle", false)
 	player.global_position = near
+	var road_box: Node3D = packages[3]
+	road_box.call(&"take_by", player)
+	road_box.set(&"_rescue_pending", false)  # As if it had never left the truck.
 	_leave(player)
 	network.peer_returned.emit(1, 1)
 	_level.call(&"_sync_players", [1])
@@ -159,6 +203,9 @@ func _run() -> void:
 	_expect(player != null and player.global_position.distance_to(near) < 0.5
 		and String(player.get(&"seat_node_path")).is_empty(),
 		"On foot near the truck mid-run: back where it stood")
+	_expect(player != null and player.get(&"carried_package") == road_box
+		and not bool(road_box.get(&"_rescue_pending")),
+		"...its box back in hand off the road, and that is no rescue (_rescue_pending as it was)")
 	player.global_position = _truck.global_position + Vector3(120.0, 0.0, 0.0)
 	_leave(player)
 	network.peer_returned.emit(1, 1)

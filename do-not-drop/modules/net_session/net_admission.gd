@@ -35,6 +35,11 @@ var admitted: Dictionary = {}
 ## Joiners still authenticating that found the room full and were asked who
 ## they are (LAN), {peer_id: true}: no place, no state yet.
 var unplaced: Dictionary = {}
+## How long an unplaced joiner has to say who it is before it hears
+## "connection" (refuse()): one that never answers would hold the transport's
+## spare connection until its authentication timed out (45 s). Answering takes
+## no level load, so a few seconds are plenty. A var so tests can shorten it.
+var identify_timeout_seconds: float = 5.0
 ## Joiners let in from their identity reply (on_identity()), {peer_id: true}:
 ## who they are is settled, so their ready reply's claim isn't read.
 var identified: Dictionary = {}
@@ -118,6 +123,19 @@ func send_state(session: NetSession, id: int) -> void:
 func ask_identity(session: NetSession, id: int) -> void:
 	session.multiplayer.send_auth(id, var_to_bytes({"version": session.protocol_version,
 		"session": _identities.nonce, "identify": true}))
+	if session.is_inside_tree():
+		session.get_tree().create_timer(identify_timeout_seconds).timeout.connect(
+			_identify_overdue.bind(weakref(session), id, session.multiplayer.multiplayer_peer))
+
+
+## Still unplaced after identify_timeout_seconds: it never said who it is.
+func _identify_overdue(session_ref: WeakRef, id: int, peer: MultiplayerPeer) -> void:
+	var session: NetSession = session_ref.get_ref() as NetSession
+	if session == null or not session.is_inside_tree() or session.multiplayer.multiplayer_peer != peer:
+		return
+	if unplaced.has(id) and not refused.has(id):
+		unplaced.erase(id)
+		refuse(session, id, "connection")
 
 
 ## Host: an unplaced joiner said who it is. With a place now (its ghost's, or

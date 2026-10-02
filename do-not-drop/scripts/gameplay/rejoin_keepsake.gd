@@ -115,6 +115,9 @@ func place(note: Dictionary) -> Dictionary:
 		if not NodePath(note.seat).is_empty() and underway and late_join != null:
 			return late_join.place()  # Their seat was taken: another, or the bay.
 		var local: Vector3 = note.local
+		var taken: SeatPoint = _seat_at(NodePath(note.seat))
+		if taken != null and late_join != null:
+			local = late_join.standing_spot(taken)  # Beside it, not in whoever sits there.
 		return {"position": vehicle.to_global(local), "seat": null, "local": local}
 	var position: Vector3 = note.position
 	if underway:
@@ -138,26 +141,53 @@ func give_back(player: Node3D, note: Dictionary) -> void:
 		return
 	if box.global_position.distance_to(player.global_position) > BOX_REACH:
 		return
+	# Taking it back is not a rescue: take_by() marks a box picked up off the
+	# road mid-run as one, and shelving it would credit "rescued".
+	var rescue_pending: bool = box._rescue_pending
 	box.take_by(player)
+	box._rescue_pending = rescue_pending
 	var lap: Node = get_node_or_null(NodePath(note.lap)) if not NodePath(note.lap).is_empty() else null
 	if lap != null and lap.get(&"occupied_by") == null:
 		SeatTending.bind_lap(box, lap)
 
 
-## The seat at the anchor `seat_path` if it would take someone now. A seat
-## behind a closed door (the driver's) gets its door opened first: whoever
-## comes back to the wheel needn't walk round to open it.
+## Host, after give_back(): sits `player` back at `seat`. A seat behind a
+## closed door (the driver's) gets it opened first -- whoever comes back to the
+## wheel needn't walk round -- and shut again if the seat turns them down (a
+## box in hand, say): they stand beside it instead.
+func seat_back(player: Node3D, seat: SeatPoint) -> void:
+	var opened: bool = _open_door(seat)
+	late_join.seat_player(player, seat)
+	if opened and seat.occupant != player:
+		vehicle.call(&"set_door_open", seat.required_door, false)
+
+
+## The seat at the anchor `seat_path` if it would take someone now, its door
+## (if it has one) aside: seat_back() opens it. Nothing changes here.
 func _free_seat(seat_path: NodePath) -> SeatPoint:
-	if seat_path.is_empty():
-		return null
-	var anchor: Node = get_node_or_null(seat_path)
-	var seat: SeatPoint = anchor.get_node_or_null(^"InteractionArea") as SeatPoint if anchor != null else null
+	var seat: SeatPoint = _seat_at(seat_path)
 	if seat == null or is_instance_valid(seat.occupant) or seat.is_occupied():
 		return null
-	if seat.required_door != &"" and vehicle.has_method(&"set_door_open") \
-			and not bool(vehicle.call(&"is_door_open", seat.required_door)):
-		vehicle.call(&"set_door_open", seat.required_door, true)
-	return seat if seat.can_interact(self) else null
+	var opened: bool = _open_door(seat)
+	var takes: bool = seat.can_interact(self)
+	if opened:
+		vehicle.call(&"set_door_open", seat.required_door, false)
+	return seat if takes else null
+
+
+## The seat at the anchor `seat_path`, free or not (null if none).
+func _seat_at(seat_path: NodePath) -> SeatPoint:
+	var anchor: Node = get_node_or_null(seat_path) if not seat_path.is_empty() else null
+	return anchor.get_node_or_null(^"InteractionArea") as SeatPoint if anchor != null else null
+
+
+## Opens `seat`'s door if it has one and it is shut; true if it did.
+func _open_door(seat: SeatPoint) -> bool:
+	if seat.required_door == &"" or not vehicle.has_method(&"set_door_open") \
+			or bool(vehicle.call(&"is_door_open", seat.required_door)):
+		return false
+	vehicle.call(&"set_door_open", seat.required_door, true)
+	return true
 
 
 static func _prune(notes: Dictionary) -> void:

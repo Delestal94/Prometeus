@@ -321,19 +321,26 @@ func _sync_players(peer_ids: Array) -> void:
 		if not note.is_empty() and player != null:
 			_rejoin.give_back(player as Node3D, note)
 		if seat != null and player != null:
-			_late_join.seat_player(player, seat)
+			if back.is_empty():
+				_late_join.seat_player(player, seat)
+			else:
+				_rejoin.seat_back(player as Node3D, seat as SeatPoint)
 	for child: Node in _world.get_children():
 		if child.name.begins_with("Player_") and not peer_ids.has(_id_from_name(child.name)):
 			child.queue_free()
 	_refresh_local_player()
 
 
-## Host: _sync_players() again next frame, once.
+## Host: _sync_players() again next frame, once. A connection, not an await:
+## a level freed meanwhile takes it along instead of resuming.
 func _sync_players_soon() -> void:
 	if _resync_queued:
 		return
 	_resync_queued = true
-	await get_tree().process_frame
+	get_tree().process_frame.connect(_sync_players_again, CONNECT_ONE_SHOT)
+
+
+func _sync_players_again() -> void:
 	_resync_queued = false
 	if is_inside_tree() and NetworkManager.is_host():
 		_sync_players(NetworkManager.peer_ids)

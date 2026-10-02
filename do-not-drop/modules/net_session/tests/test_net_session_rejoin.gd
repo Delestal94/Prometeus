@@ -43,7 +43,8 @@ extends SceneTree
 ##   answer drops the ghost before it gets the state; someone replaying its
 ##   claim hears "connection" and a stranger "full", both without ever getting
 ##   the state (no level load), and one that ignores "full" is cut off within
-##   the grace (REFUSED_GRACE_SECONDS); a joiner turned away as it
+##   the grace (REFUSED_GRACE_SECONDS); one asked that never answers hears
+##   "connection" after identify_timeout_seconds; a joiner turned away as it
 ##   authenticates that answers anyway never gets in; a joiner sending its
 ##   ready reply several times is read once (one replay check) and gets in once.
 
@@ -121,6 +122,14 @@ class CountingIdentities extends NetPeerIdentities:
 	func is_replay(identity: String) -> bool:
 		replay_checks += 1
 		return super(identity)
+
+
+## A joiner that never answers when the host asks who it is.
+class SilentSession extends StubbornSession:
+	func _receive_auth(id: int, data: PackedByteArray) -> void:
+		if NetAdmission.is_identify(bytes_to_var(data)):
+			return
+		super(id, data)
 
 
 ## A joiner that sends someone else's claim.
@@ -437,6 +446,7 @@ func _check_full_room_over_enet() -> void:
 			return not host._admission.unplaced.has(stranger_id) and not host._admission.refused.has(stranger_id)),
 			"The host forgets it once its link is gone")
 		_expect(host.peer_ids == [NetSession.HOST_ID, again_id], "The room is the host and the one who came back")
+	await _check_silent(host)
 	silent.multiplayer_peer.close()
 	first.free()  # Its multiplayer was taken off it already.
 	_free_sessions([host, again, stranger])
@@ -513,6 +523,30 @@ func _check_rogue(host: GameSession) -> void:
 		"...and it is cut off")
 	host.refuse_with = ""
 	_free_sessions([rogue])
+	await _pump(0.3)
+
+
+## A joiner asked who it is (the room full) that never answers hears
+## "connection" after identify_timeout_seconds and is let go of: it doesn't hold
+## the spare connection until its authentication times out.
+func _check_silent(host: GameSession) -> void:
+	host._admission.identify_timeout_seconds = 0.8
+	var silent := _enet_session("FullSilent", SilentSession.new()) as SilentSession
+	var knocked_at: int = Time.get_ticks_msec()
+	_expect(silent.join_session("127.0.0.1", FULL_ROOM_PORT) == OK, "A joiner that won't say who it is knocks")
+	var silent_id: int = silent.multiplayer.get_unique_id()
+	_expect(await _wait_for(func() -> bool: return host._admission.unplaced.has(silent_id)), "...and is asked")
+	_expect(await _wait_for(func() -> bool: return silent.refusals.has("connection")),
+		"...hears connection when it never answers (got %s)" % [silent.refusals])
+	var cut_off: bool = await _wait_for(func() -> bool:
+		return silent.multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_DISCONNECTED)
+	var took: int = Time.get_ticks_msec() - knocked_at
+	var limit: int = int((0.8 + NetAdmission.REFUSED_GRACE_SECONDS) * 1000.0) + 1500
+	_expect(cut_off and took < limit, "...and is let go of long before the auth timeout (%d ms, at most %d)"
+		% [took, limit])
+	_expect(not host._admission.unplaced.has(silent_id), "The host no longer waits for it")
+	host._admission.identify_timeout_seconds = 5.0
+	_free_sessions([silent])
 	await _pump(0.3)
 
 

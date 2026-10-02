@@ -1753,8 +1753,14 @@ Fase 4 de `docs/investigacion-red.md`.
     estantear ni perder, sin otro que la haya levantado, a menos de 3 m). Un fantasma que se suelta en el mismo
     frame: el que vuelve se spawnea el frame siguiente, cuando el viejo ya soltó asiento y caja. Sin RPC nuevo.
     Tests: `test_rejoin_keepsake` y las dos etapas de rejoin de `net_pair` (vuelve donde estaba y con su caja,
-    también sobre un fantasma). Sigue faltando: en LAN no se lo reconoce si reinició el juego (token nuevo); el
-    fantasma de un crash con Steam no está probado con sockets reales (por ENet sí: `net_pair`).
+    también sobre un fantasma). Revisión de `auditor-red` (misma rama): la caja devuelta no cuenta como rescate
+    (`_rescue_pending` se conserva), antes de la corrida con su asiento ocupado aparece al lado y no encima, el
+    asiento se decide después de devolverle la caja y la puerta del chofer que se le abrió se cierra si el asiento
+    no lo toma, y el reintento del spawn es una conexión de una vez, no un `await` (un nivel liberado no sigue).
+    Sigue faltando: en LAN no se lo reconoce si reinició el juego (token nuevo); el fantasma de un crash con Steam
+    no está probado con sockets reales (por ENet sí: `net_pair`); vuelve mirando hacia adelante (el spawn no
+    lleva yaw: sumarlo cambia el protocolo); a pie a menos de 40 m del camión vuelve donde estaba aunque el
+    terreno de ese tramo todavía no esté armado en su copia (el rescate al suelo seguro lo cubre, sin probar).
   - [x] Pedir la identidad antes del estado completo. **[x] misma rama:** con la sala llena en LAN el host manda
     solo `{version, session, identify}`, el que entra contesta su eslabón (`NetAdmission.answer_identify()`) y recién ahí
     (fantasma suyo o lugar libre: `NetAdmission.on_identity()`) recibe el estado y carga el nivel; si no, oye
@@ -1762,7 +1768,9 @@ Fase 4 de `docs/investigacion-red.md`.
     identidad y el host no la lee (`identified`). `PROTOCOL_VERSION` 23 → 26 (24 y 25 reservados para N-110 y
     N-218, con entradas provisorias en el historial). Tests: `net_session__test_net_session_rejoin` (sin sockets
     y por ENet: el que vuelve suelta al fantasma antes de cargar, extraño y ladrón sin estado),
-    `test_network_rejoin`. Aviso: `docs/avisos/2026-10-01-n221-rejoin-restore.md`.
+    `test_network_rejoin`. Un joiner preguntado que no contesta oye "connection" a los 5 s
+    (`NetAdmission.identify_timeout_seconds`) en vez de ocupar la conexión de sobra 45 s.
+    Aviso: `docs/avisos/2026-10-01-n221-rejoin-restore.md`.
   - [ ] Nota para cuando exista la UI de silenciar (`SteamVoice`): el silencio y el volumen se guardan por peer id
     (`_muted`, `_peer_volume`), así que el que vuelve con otro id llega sin silenciar; y para un fantasma no llega
     `peer_disconnected` (`SceneMultiplayer.disconnect_peer()` lo bloquea), así que sus entradas quedan hasta que
