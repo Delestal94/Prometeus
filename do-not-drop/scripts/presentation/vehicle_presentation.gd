@@ -306,6 +306,16 @@ func viewer_inside() -> bool:
 	return _viewer_inside()
 
 
+## The truck's wheels, for VehicleEffects' skid marks.
+func wheels() -> Array[VehicleWheel3D]:
+	return _wheels
+
+
+## Whether `camera` is one of this truck's seat cameras (someone riding inside).
+func is_seat_camera(camera: Camera3D) -> bool:
+	return camera in _seat_cameras
+
+
 func _viewer_inside() -> bool:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	if camera == null or camera == _dev_camera:

@@ -30,6 +30,8 @@ extends SceneTree
 ## - package_feedback.gd (the box's presentation) is no autoload either: its GAME_SETTINGS handle is
 ##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would give null and the box
 ##   would ignore the impact-effects and colorblind-palette options.
+## - vehicle_effects.gd (the truck's smoke, debris, skid marks and hit split) checks its GAME_SETTINGS handle
+##   the same way, or the hit's chromatic split would ignore the camera-shake setting.
 ## - player.gd (the player) holds the unlock profile through its UNLOCK_MANAGER handle: if that stopped being
 ##   the script the autoload runs, `as UNLOCK_MANAGER` would give null and the local player would lose their
 ##   picked uniform and face, and the first-trap tips would never show.
@@ -331,6 +333,11 @@ const BUDGETS: Dictionary = {
 	# set_door_open) and the lap bay by a preload of package_mount_point.gd (occupied_by): neither
 	# has a class name. Nothing left by name.
 	"res://scripts/gameplay/rejoin_keepsake.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The truck's small tells (N-224.4): the presentation through vehicle_presentation.gd by preload (vehicle,
+	# wheels(), is_seat_camera()), the truck through vehicle.gd (presentation_engine_running) and the camera
+	# shake through the GAME_SETTINGS handle (below). The two /root/ lookups are the null-safe accessors:
+	# EventBus, connected by name because a test may replace it with a plain Node, and GameSettings.
+	"res://scripts/presentation/vehicle_effects.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -382,6 +389,9 @@ const SCRIPT_HANDLES: Dictionary = {
 	},
 	"res://scripts/gameplay/player/player.gd": {
 		"UNLOCK_MANAGER": "/root/UnlockManager",
+	},
+	"res://scripts/presentation/vehicle_effects.gd": {
+		"GAME_SETTINGS": "/root/GameSettings",
 	},
 }
 
