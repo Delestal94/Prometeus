@@ -5,6 +5,8 @@ extends Node3D
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const SpectatorCameraScript = preload("res://scripts/presentation/spectator_camera.gd")
+## vehicle.gd has no class_name; cargo_clutter.gd already preloads it from here.
+const Vehicle = preload("res://scripts/gameplay/vehicle/vehicle.gd")
 @export var steering_ratio: float = 7.0
 @export var headlight_energy: float = 1.6
 ## However far the mood boosts the beams (world_mood.gd), their energy stops here.
@@ -40,10 +42,11 @@ const HEADLIGHT_ENERGY_BOOST_CAP: float = 1.6
 ## Reusable across vehicles (docs/tareas-nacho.md #87): everything this
 ## script needs from its parent is found by node name/pattern anywhere under
 ## it, not by a fixed path like "CabinInterior/SteeringWheel" -- a second
-## vehicle only needs to name its own nodes "SteeringWheel", "BodyVisuals",
-## and any number of "*Headlight"/"*TailLight" meshes; it doesn't need the
-## same folder structure as vehicle.tscn at all.
-@onready var vehicle: VehicleBody3D = get_parent()
+## vehicle runs vehicle.gd (its state is read typed) and only needs to name
+## its own nodes "SteeringWheel", "BodyVisuals", and any number of
+## "*Headlight"/"*TailLight" meshes; it doesn't need the same folder
+## structure as vehicle.tscn at all.
+@onready var vehicle: Vehicle = get_parent() as Vehicle
 @onready var steering_wheel: Node3D = vehicle.find_child("SteeringWheel", true, false)
 @onready var body_visuals: Node3D = vehicle.find_child("BodyVisuals", true, false)
 var headlights: Array[SpotLight3D] = []
@@ -104,7 +107,7 @@ var _roll: float = 0.0
 var _pitch: float = 0.0
 var _sink: float = 0.0
 ## Chase view for a passenger with nothing left to save (spectator_camera.gd).
-var spectator_camera: Camera3D
+var spectator_camera: SpectatorCameraScript
 ## The seated driver's right-hand IK target (player.gd hangs it on the wheel)
 ## and where it rests on the rim, and how much it's still pressing the horn
 ## (tareas de Slatex #11): the character's own hand leaves the rim for the hub
@@ -174,7 +177,7 @@ func _ready() -> void:
 		bus.horn_honked.connect(func(_peer_id: int) -> void: _horn_press = HORN_PRESS_SECONDS)
 		bus.run_ended.connect(func(_score: int, _results: Dictionary) -> void:
 			if spectator_camera != null and spectator_camera.current:
-				spectator_camera.call(&"stop")
+				spectator_camera.stop()
 			SpectatorCameraScript.orbit_results(vehicle))
 	update_presentation(0.0)
 
@@ -286,9 +289,10 @@ func _apply_body_lean(delta: float) -> void:
 ## "cargo" group directly rather than walking the vehicle's own children.
 func _apply_cargo_sink(delta: float) -> void:
 	var total_mass: float = 0.0
-	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
-		if bool(package.get(&"is_loaded")):
-			total_mass += float(package.get(&"mass"))
+	for node: Node in get_tree().get_nodes_in_group(&"cargo"):
+		var package := node as DeliveryPackage
+		if package != null and package.is_loaded:
+			total_mass += package.mass
 	var target_sink: float = clampf(total_mass * cargo_sink_per_kg, 0.0, cargo_sink_max)
 	if _viewer_inside():
 		target_sink = 0.0
@@ -326,16 +330,16 @@ func _engine_layer_player(node_name: String, stream: AudioStream) -> AudioStream
 
 
 func _engine_profile() -> Dictionary:
-	return ENGINE_PROFILES.get(StringName(vehicle.get(&"variant_id")), ENGINE_PROFILES[&"classic"])
+	return ENGINE_PROFILES.get(vehicle.variant_id, ENGINE_PROFILES[&"classic"])
 
 
 ## The gear (0 = first) the driver of a manual van has picked, from the truck's
 ## replicated gearbox; -1 when the truck is automatic (or has no gearbox).
 func _manual_gear(gear_count: int) -> int:
-	var gearbox: Object = vehicle.get(&"gearbox")
-	if gearbox == null or not bool(gearbox.get(&"enabled")):
+	var gearbox: VehicleGearbox = vehicle.gearbox
+	if gearbox == null or not gearbox.enabled:
 		return -1
-	return clampi(int(gearbox.get(&"gear")) - 1, 0, gear_count - 1)
+	return clampi(gearbox.gear - 1, 0, gear_count - 1)
 
 
 ## Revs from road speed through the current gear (top gear reaches just under
@@ -348,7 +352,7 @@ func update_rev_counter(delta: float, speed_kmh: float, load_amount: float) -> v
 	var ratios: Array = profile.ratios
 	var idle: float = profile.idle_rpm
 	var redline: float = profile.redline_rpm
-	var top_speed: float = maxf(float(vehicle.get(&"maximum_speed_kmh")), 1.0)
+	var top_speed: float = maxf(vehicle.maximum_speed_kmh, 1.0)
 	var per_kmh: float = float(profile.shift_up_rpm) * 0.96 / (top_speed * float(ratios[-1]))
 	engine_gear = clampi(engine_gear, 0, ratios.size() - 1)
 	# A manual van has the driver's gear, not one worked out here: a change of

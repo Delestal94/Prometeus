@@ -1096,6 +1096,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     EventBus. En el archivo: 10 → 4 usos (`.call` 5 → 1, `.get(&` 3 → 1, `/root/` 2 → 2).
     `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`). Siguientes:
     `vehicle_presentation.gd` (9), `run_tally.gd` (9).
+  - [x] `vehicle_presentation.gd` (2026-10-02, rama `nacho/N-224-vehicle-presentation-typed`): la presentación del
+    camión. El camión por `preload` de `vehicle.gd` (`Vehicle`; `cargo_clutter.gd` ya lo precarga desde acá, así que
+    no suma ciclo): `variant_id`, `maximum_speed_kmh` y la caja de cambios como `VehicleGearbox` (`enabled`, `gear`)
+    directos; las cajas del grupo `cargo` como `DeliveryPackage` (`is_loaded`, `mass`; lo que no es un paquete se
+    saltea, como antes) y la cámara de espectador por su script (`stop()`). Queda por nombre solo el handle de
+    EventBus. En el archivo: 9 → 1 uso (`.call` 1 → 0, `.get(&` 7 → 0, `/root/` 1 → 1); en `scripts/`: `.call`
+    172 → 171, `.get(&` 163 → 156. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/`
+    libre y `tests/`). Siguientes: `run_tally.gd` (8), `sound_audit.gd` (8), `vehicle_effects.gd` (7).
   - [x] `service_stop_shop.gd` (2026-10-02, rama `nacho/N-224-service-stop-shop-typed`): el mostrador de la estación
     de servicio (N-110 y su arreglo #236, el que más usos tenía: 32). La red como `NetSession` (`local_id`,
     `is_online`, `is_host`, `peer_ids`, `is_peer_ready`) y la votación como `CoopVote` (`active`, `offers`, `close_on`,

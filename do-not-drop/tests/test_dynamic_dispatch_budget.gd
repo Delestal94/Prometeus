@@ -305,6 +305,11 @@ const BUDGETS: Dictionary = {
 	# stay RunManager's current_distance and best_score (same --script compile reason as the spectator
 	# camera: the truck's presentation builds the GPS) and the EventBus handle.
 	"res://scripts/presentation/dashboard_gps.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
+	# The truck's presentation (N-224.4): the truck through vehicle.gd by preload (variant_id, gearbox as
+	# VehicleGearbox, maximum_speed_kmh; cargo_clutter.gd already preloads it from here), the boxes as
+	# DeliveryPackage (is_loaded, mass; what is not one is skipped) and the spectator camera through its
+	# script (stop). By name stays only the EventBus handle.
+	"res://scripts/presentation/vehicle_presentation.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 	# The service station's counter (N-224.4): the session as NetSession (local_id, is_online, is_host, peers) and the
 	# vote as CoopVote (active, offers, close_on, send_state_to). By name stay ShopVoteManager.open_shop (no
 	# class name), CrewProgression (spend, cards, SUPPLIES, team_money), RunManager (the kit, is_running) and
