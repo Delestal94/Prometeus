@@ -85,4 +85,4 @@ if [ "$status" -ne 0 ]; then
 	echo "FAIL: net pair"
 	exit 1
 fi
-echo "PASS: two-process cosmetics, gameplay races, rejoin and rejoin over a ghost"
+echo "PASS: two-process cosmetics, accessories, gameplay races, rejoin and rejoin over a ghost"

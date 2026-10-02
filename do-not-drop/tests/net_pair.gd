@@ -28,6 +28,15 @@ extends Node
 ## input), the host plays its numbered inputs and its truck moves with them, no
 ## correction moves the client's copy more than 10 cm a tick, and once the
 ## client gets out its copy is frozen again (DRIVE lines with the numbers).
+## N-923.5 (before the client drives): the client buys a cap by voting for its
+## own offer and the host charges the team once; a vote the wallet can't pay
+## buys nothing; asking to wear the host's hard hat changes nothing and the
+## client wears its cap; it drops the cap, the host picks it up (one copy, now
+## the host's), drops it again and the client walks up and takes it back. After
+## each step the client reads the host's inventory, ground and money. Before the
+## client leaves it drops the cap: the host gives it back to the client's colour,
+## and the client back in reads it as its own. The host saves its campaign to a
+## file of its own (NET_PAIR_CAMPAIGN), not the player's.
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -39,6 +48,15 @@ const NEWS_DESK: Script = preload("res://scripts/presentation/newspaper/news_des
 ## within this margin of the budget prints a WARNING (35 s today), a sign the
 ## pair is about to start failing on a slower runner.
 const SLOW_LOAD_MARGIN_SECONDS: float = 10.0
+## Where the host saves the crew's campaign during the pair: never the
+## player's own save (the accessory stage spends money and buys).
+const NET_PAIR_CAMPAIGN: String = "user://net_pair_campaign.json"
+## The accessory stage's share of the client's wait for the host (it adds
+## to TIMEOUT_SECONDS, the budget of every stage before the client leaves).
+const ACCESSORY_STAGE_SECONDS: float = 20.0
+## After stepping next to a pickup, how long the client waits for the host
+## to see it there before asking for it (its pose reaches the host at 30 Hz).
+const FETCH_SETTLE_SECONDS: float = 1.0
 
 var _network: Node
 var _level: Node
@@ -67,7 +85,9 @@ func _ready() -> void:
 	# Deliberately different local profiles: order difficulty must come from
 	# the host through the handshake, never from the joiner's save.
 	get_node(^"/root/UnlockManager").set(&"completed_runs", 6 if _host else 0)
-	if not _host:
+	if _host:
+		get_node(^"/root/CrewProgression").set(&"campaign_path", NET_PAIR_CAMPAIGN)
+	else:
 		# Starter cosmetic, but deliberately not the automatic team colour.
 		get_node(^"/root/UnlockManager").set(&"selected_cosmetic", CLIENT_COSMETIC)
 		get_node(^"/root/UnlockManager").set(&"nickname", CLIENT_NICKNAME)
@@ -213,6 +233,8 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_drop", package.get_path())
 	await _wait_for_report(&"drop")
 
+	# Before the client takes the wheel: with the run on, the depot sells nothing.
+	await _check_accessories(host_player, client_player)
 	await _check_client_drives(client_player)
 
 	# The host's next-day newspaper (N-606.2) reaches the client as the same ids and
@@ -237,6 +259,12 @@ func _run_host() -> void:
 	var crew: Node = get_node(^"/root/CrewProgression")
 	crew.call(&"award_action", old_client, &"net_pair:rejoin", 30)
 	var old_merit: int = int((crew.get(&"merit") as Dictionary).get(old_client, 0))
+	# N-923.5: it leaves its cap on the ground, which must go back to it.
+	var accessory_net: AccessoryNet = crew.get(&"accessory_net")
+	var client_colour: String = String(crew.call(&"player_color_key", old_client))
+	rpc_id(_client_peer_id, &"_client_accessory_request", &"drop", &"", &"cap", 0)
+	var lying: bool = await _wait_until(func() -> bool: return accessory_net.ground.pickup_of(&"cap") > 0)
+	_expect(lying, "the client's cap lies on the ground before it leaves")
 	package.call(&"take_by", client_player)
 	await _pump(0.8)
 	_expect(client_player.carried_package == package and package.carrier == client_player,
@@ -252,6 +280,9 @@ func _run_host() -> void:
 	_expect(is_instance_valid(package) and package.is_inside_tree(), "disconnected client's package remains in the world")
 	_expect(not package.is_held and package.carrier == null and package.collision_layer == 4,
 		"disconnected client's package is loose on the host")
+	_expect(accessory_net.ground.is_empty() and accessory_net.inventory.owner_of(&"cap") == client_colour,
+		"the cap the client left on the ground went back to its colour (%s, ground %s)"
+		% [accessory_net.inventory.owner_of(&"cap"), accessory_net.ground.ids()])
 	var held: DeliveryPackage = _level.packages[1]
 	held.call(&"take_by", host_player)
 	await _check_rejoin(old_client, old_slot, old_merit, held, package, left_at)
@@ -325,6 +356,96 @@ func _client_drive(vehicle_path: NodePath) -> void:
 			predicting, moved, worst_shift, frozen_again])
 
 
+## N-923.5: the accessories through the host, with the real client. Every step
+## ends with the client reading the host's inventory, ground and money.
+func _check_accessories(host_player: Player, client_player: Player) -> void:
+	var crew: Node = get_node(^"/root/CrewProgression")
+	var votes: Node = get_node(^"/root/ShopVoteManager")
+	var net: AccessoryNet = crew.get(&"accessory_net")
+	var accessories: AccessoryInventory = net.inventory
+	var client_colour: String = String(crew.call(&"player_color_key", _client_peer_id))
+	var host_colour: String = String(crew.call(&"player_color_key", 1))
+	accessories.clear()
+	crew.set(&"team_money", 1000)
+	crew.call(&"save_campaign")
+
+	# Bought by vote: both vote for the client's own cap, the host charges once.
+	var cap_offer: StringName = AccessoryOffers.offer_id(_client_peer_id, &"cap")
+	await _vote_both(votes, cap_offer)
+	_expect(accessories.owner_of(&"cap") == client_colour and int(crew.get(&"team_money")) == 940,
+		"the vote buys the client its cap, charging the team once (owner %s, $%d)"
+		% [accessories.owner_of(&"cap"), int(crew.get(&"team_money"))])
+	await _accessories_match(&"acc_bought", 940)
+
+	# A vote the wallet can't pay: nothing bought, nothing spent.
+	crew.set(&"team_money", 50)
+	crew.call(&"save_campaign")
+	await _vote_both(votes, AccessoryOffers.offer_id(_client_peer_id, &"thermal_backpack"))
+	_expect(accessories.owner_of(&"thermal_backpack") == "" and int(crew.get(&"team_money")) == 50,
+		"without the money the vote buys nothing and spends nothing ($%d)" % int(crew.get(&"team_money")))
+	await _accessories_match(&"acc_no_money", 50)
+
+	# Worn: asking to wear the host's hard hat changes nothing; the cap goes on.
+	crew.set(&"team_money", 940)
+	votes.call(&"settle_accessory_offer", AccessoryOffers.build([1])[AccessoryOffers.offer_id(1, &"hard_hat")])
+	rpc_id(_client_peer_id, &"_client_accessory_request", &"equip", &"head", &"hard_hat", 0)
+	rpc_id(_client_peer_id, &"_client_accessory_request", &"equip", &"head", &"cap", 0)
+	var worn: bool = await _wait_until(func() -> bool: return accessories.is_equipped(client_colour, &"cap"), 10.0)
+	_expect(worn and accessories.owner_of(&"hard_hat") == host_colour
+		and not accessories.is_equipped(client_colour, &"hard_hat"),
+		"the client wears its cap, and asking to wear the host's hard hat changed nothing")
+	await _accessories_match(&"acc_worn", 820)
+
+	# Dropped by the client: in front of it, taken off, still its own.
+	rpc_id(_client_peer_id, &"_client_accessory_request", &"drop", &"", &"cap", 0)
+	var dropped: bool = await _wait_until(func() -> bool: return net.ground.pickup_of(&"cap") > 0, 10.0)
+	var first: Dictionary = net.ground.get_pickup(net.ground.pickup_of(&"cap"))
+	var from_client: float = (first.get("position", Vector3.INF) as Vector3).distance_to(
+		AccessoryNet.reach_origin(client_player))
+	_expect(dropped and first.get("owner") == client_colour and accessories.owner_of(&"cap") == client_colour
+		and not accessories.is_equipped(client_colour, &"cap") and from_client < 2.0,
+		"the client's cap lies in front of it, taken off and still its own (%.1f m away)" % from_client)
+	await _accessories_match(&"acc_dropped", 820)
+
+	# The host picks it up: one copy, now the host's.
+	var host_at: Vector3 = host_player.global_position
+	host_player.global_position = (first.get("position", Vector3.ZERO) as Vector3) + Vector3(1.5, 0.0, 0.0)
+	net.pick_up(int(first.get("id", 0)))
+	_expect(accessories.owner_of(&"cap") == host_colour and net.ground.is_empty(),
+		"the host picks the client's cap up: the one copy is the host's now")
+	await _accessories_match(&"acc_host_took", 820)
+
+	# The host drops it again and the client walks up to it and takes it back.
+	net.drop(&"cap")
+	host_player.global_position = host_at
+	var second: Dictionary = net.ground.get_pickup(net.ground.pickup_of(&"cap"))
+	rpc_id(_client_peer_id, &"_client_accessory_fetch", int(second.get("id", 0)), second.get("position", Vector3.ZERO))
+	var fetched: bool = await _wait_until(func() -> bool:
+		return accessories.owner_of(&"cap") == client_colour and net.ground.is_empty(), 15.0)
+	_expect(fetched, "the client walks up to the host's cap and picks it up: the client's again")
+	await _wait_for_report(&"acc_fetch")
+	await _accessories_match(&"acc_client_took", 820)
+
+
+## Opens the depot's vote, the client votes `offer_id` and the host does too:
+## everybody voted, so it closes at once and the host settles it.
+func _vote_both(votes: Node, offer_id: StringName) -> void:
+	votes.call(&"request_open_shop")
+	rpc_id(_client_peer_id, &"_client_accessory_vote", offer_id)
+	var voted: bool = await _wait_until(func() -> bool:
+		return StringName((votes.get(&"votes") as Dictionary).get(_client_peer_id, &"")) == offer_id, 10.0)
+	_expect(voted, "the client's vote for %s reaches the host" % offer_id)
+	votes.call(&"request_vote", offer_id)
+
+
+## The host's accessories, ground and money (-1: not compared) as it reads them
+## now; the client must read the same.
+func _accessories_match(stage: StringName, money: int) -> void:
+	var net: AccessoryNet = get_node(^"/root/CrewProgression").get(&"accessory_net")
+	rpc_id(_client_peer_id, &"_client_check_accessories", stage, net.inventory.to_dict(), net.ground.to_array(), money)
+	await _wait_for_report(stage)
+
+
 ## N-221: the client comes back from the same running game (same identity in
 ## its ready reply) under a new peer id. The host gives it its slot back, and
 ## with it the merit CrewProgression keeps under that slot. The host holds
@@ -360,6 +481,8 @@ func _check_rejoin(old_client: int, old_slot: int, old_merit: int, held: Deliver
 	await _wait_for_report(&"rejoin")
 	await _wait_for_report(&"late_carry")
 	await _wait_for_report(&"own_box")
+	# N-923.5: back in, it reads the cap it left on the ground as its own (the late joiner's copy).
+	await _accessories_match(&"acc_rejoin", -1)
 
 
 ## N-221 follow-up: back from a pulled cable before the host noticed. The
@@ -506,6 +629,67 @@ func _client_check_drop(package_path: NodePath) -> void:
 	var ok: bool = package != null and not package.is_held and _players_holding(package).is_empty() \
 		and package.collision_layer == 4
 	_report(&"drop", ok, "client sees the loose package on the floor")
+
+
+## N-923.5: the client votes for an offer of the depot's shop. The first vote
+## opens the accessory stage, which gets its own share of the wait for the host.
+@rpc("authority", "call_remote", "reliable")
+func _client_accessory_vote(offer_id: StringName) -> void:
+	if offer_id == AccessoryOffers.offer_id(get_tree().root.multiplayer.get_unique_id(), &"cap"):
+		_deadline += int(ACCESSORY_STAGE_SECONDS * 1000.0)
+	var votes: Node = get_node(^"/root/ShopVoteManager")
+	# The host opened the vote; its state may still be on the way.
+	await _wait_until(func() -> bool: return bool(votes.get(&"active")), 5.0)
+	votes.rpc_id(1, &"request_vote", offer_id)
+
+
+## The client asks the host, as a player would: wear, drop or pick up.
+@rpc("authority", "call_remote", "reliable")
+func _client_accessory_request(action: StringName, slot: StringName, accessory: StringName, pickup_id: int) -> void:
+	var net: AccessoryNet = get_node(^"/root/CrewProgression").get(&"accessory_net")
+	match action:
+		&"equip":
+			net.equip(slot, accessory)
+		&"drop":
+			net.drop(accessory)
+		&"pickup":
+			net.pick_up(pickup_id)
+
+
+## The client walks up to a pickup the host dropped and takes it.
+@rpc("authority", "call_remote", "reliable")
+func _client_accessory_fetch(pickup_id: int, at: Vector3) -> void:
+	var net: AccessoryNet = get_node(^"/root/CrewProgression").get(&"accessory_net")
+	var me: int = get_tree().root.multiplayer.get_unique_id()
+	var player: Player = _player(me)
+	var seen: bool = await _wait_until(func() -> bool: return net.ground.has(pickup_id), 5.0)
+	if player == null or not seen:
+		_report(&"acc_fetch", false, "the client sees the host's cap on the ground (player %s, seen %s)"
+			% [player, seen])
+		return
+	var was: Vector3 = player.global_position
+	player.global_position = at + Vector3(0.6, 0.0, 0.0)
+	await _pump(FETCH_SETTLE_SECONDS)
+	net.pick_up(pickup_id)
+	var colour: String = String(get_node(^"/root/CrewProgression").call(&"player_color_key", me))
+	var mine: bool = await _wait_until(func() -> bool:
+		return net.inventory.owner_of(&"cap") == colour and not net.ground.has(pickup_id), 5.0)
+	player.global_position = was
+	_report(&"acc_fetch", mine, "the client picks up the cap the host dropped and reads it as its own (owner %s)"
+		% net.inventory.owner_of(&"cap"))
+
+
+## The client reads what the host does: the inventory, the ground and, unless
+## -1, the team's money.
+@rpc("authority", "call_remote", "reliable")
+func _client_check_accessories(stage: StringName, owned: Dictionary, pickups: Array, money: int) -> void:
+	var crew: Node = get_node(^"/root/CrewProgression")
+	var net: AccessoryNet = crew.get(&"accessory_net")
+	var same: bool = await _wait_until(func() -> bool:
+		return net.inventory.to_dict() == owned and net.ground.to_array() == pickups \
+			and (money < 0 or int(crew.get(&"team_money")) == money), 5.0)
+	_report(stage, same, "%s: the client reads the host's accessories (%s, ground %s, $%d; host %s, ground %s, $%d)"
+		% [stage, net.inventory.to_dict(), net.ground.to_array(), int(crew.get(&"team_money")), owned, pickups, money])
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -669,6 +853,9 @@ func _finish(ok: bool, detail: String) -> void:
 	print("PAIR role=host %s: %s" % ["PASS" if passed else "FAIL", detail])
 	await _pump(0.8)
 	_network.call(&"leave_session")
+	for file: String in [NET_PAIR_CAMPAIGN, NET_PAIR_CAMPAIGN + ".tmp", NET_PAIR_CAMPAIGN + ".bak"]:
+		if FileAccess.file_exists(file):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(file))
 	get_tree().quit(0 if passed else 1)
 
 
