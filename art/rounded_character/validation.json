@@ -11,5 +11,52 @@
     "shin.L": 3.6400966514756343e-06,
     "forearm.R": 2.6749555872404934e-07,
     "shin.R": 3.6400966514756343e-06
+  },
+  "clearance_check": {
+    "Idle": {
+      "worst_vertices": 17,
+      "worst_frame": 184,
+      "sum": 643
+    },
+    "Walk": {
+      "worst_vertices": 14,
+      "worst_frame": 12,
+      "sum": 58
+    },
+    "Stroll": {
+      "worst_vertices": 1,
+      "worst_frame": 36,
+      "sum": 5
+    },
+    "Run": {
+      "worst_vertices": 14,
+      "worst_frame": 16,
+      "sum": 52
+    },
+    "Jump": {
+      "worst_vertices": 31,
+      "worst_frame": 0,
+      "sum": 103
+    },
+    "PickUpPackage": {
+      "worst_vertices": 40,
+      "worst_frame": 4,
+      "sum": 114
+    },
+    "PickUpHigh": {
+      "worst_vertices": 31,
+      "worst_frame": 4,
+      "sum": 63
+    },
+    "Sit": {
+      "worst_vertices": 0,
+      "worst_frame": 240,
+      "sum": 0
+    },
+    "TurnInPlace": {
+      "worst_vertices": 15,
+      "worst_frame": 48,
+      "sum": 143
+    }
   }
 }

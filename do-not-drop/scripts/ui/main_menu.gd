@@ -111,6 +111,10 @@ var _page_title: Label
 var _card: Control
 var _frost: TextureRect
 var _page: Page = Page.HOME
+## The loading screen on its way to a level, until it swaps the menu out.
+var _loading: LoadingScreen
+## The session already put its own reason on screen for this attempt.
+var _failure_shown: bool = false
 ## One VBoxContainer per Page, and the button each one focuses on arrival.
 var _pages: Dictionary = {}
 var _page_focus: Dictionary = {}
@@ -322,6 +326,10 @@ func _build_play_page(column: VBoxContainer) -> void:
 	_label(play, tr("UI_MENU_WITH_FRIENDS"), 15, MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_entry_buttons.append(_button(play, tr("UI_MENU_HOST"), false))
 	_entry_buttons[-1].pressed.connect(_host_session)
+	# Endless with friends (N-408): the room loads Endless for everyone; the
+	# menu used to send every host to the delivery level.
+	_entry_buttons.append(_small_button(play, tr("UI_MENU_HOST_ENDLESS")))
+	_entry_buttons[-1].pressed.connect(_host_endless_session)
 	_entry_buttons.append(_button(play, tr("UI_MENU_JOIN"), false))
 	_entry_buttons[-1].pressed.connect(_show_page.bind(Page.JOIN))
 	_back_button(play)
@@ -531,26 +539,35 @@ func _quit_game() -> void:
 func _play_solo() -> void:
 	if _busy:
 		return
-	_go_to_level(LEVEL_SCENE)
+	_go_to_level(LEVEL_SCENE, tr("UI_MENU_SOLO"))
 
 
 func _play_endless() -> void:
 	if _busy:
 		return
-	_go_to_level(ENDLESS_LEVEL_SCENE)
+	_go_to_level(ENDLESS_LEVEL_SCENE, tr("UI_MENU_ENDLESS"))
 
 
-func _host_session(transport: int = NetworkManager.Transport.AUTO) -> void:
+func _host_session(transport: int = NetworkManager.Transport.AUTO, scene: String = LEVEL_SCENE) -> void:
 	if _busy:
 		return
 	_show_page(Page.PLAY, false)
 	_busy = true
 	_set_status(tr("UI_MENU_STATUS_HOSTING"), MUTED)
 	NetworkManager.transport = transport
+	_failure_shown = false
+	# Before host_session(): an ENet room is ready on the spot (session_ready
+	# picks the level from this), and a friend who joins while this host is
+	# still loading is sent to it as well.
+	NetworkManager.session_scene = scene
 	var error: Error = NetworkManager.host_session()
 	if error != OK:
 		_busy = false
-		_set_status(tr("UI_MENU_STATUS_HOST_FAILED") % error, RED)
+		_show_failure(tr("UI_MENU_STATUS_HOST_FAILED") % error)
+
+
+func _host_endless_session() -> void:
+	_host_session(NetworkManager.Transport.AUTO, ENDLESS_LEVEL_SCENE)
 
 
 ## A friend's Steam room, from an accepted invite or "Unirse a la partida".
@@ -558,14 +575,21 @@ func join_steam_lobby(lobby: int) -> void:
 	# Always taken, even mid-connection: NetworkManager already left whatever
 	# was in progress, and returning here left the menu stuck "Conectando…"
 	# with the invite thrown away.
+	var dropped: bool = _cancel_loading()
+	if not dropped:
+		# The level is being built; the loading screen brings us back to a
+		# new menu, which joins this lobby on arrival.
+		NetworkManager.defer_lobby(lobby)
+		return
 	_show_page(Page.JOIN, false)
 	_busy = true
 	_set_status(tr("UI_MENU_STATUS_JOINING_FRIEND"), MUTED)
 	NetworkManager.transport = NetworkManager.Transport.STEAM
+	_failure_shown = false
 	var error: Error = NetworkManager.join_session(str(lobby))
 	if error != OK:
 		_busy = false
-		_set_status(tr("UI_MENU_STATUS_JOIN_FAILED") % error, RED)
+		_show_failure(tr("UI_MENU_STATUS_JOIN_FAILED") % error)
 
 
 func _join_by_address() -> void:
@@ -584,10 +608,11 @@ func _join_by_address() -> void:
 	# by id, not by IP, so AUTO would be the wrong choice here even if Steam
 	# happens to be running.
 	NetworkManager.transport = NetworkManager.Transport.ENET
+	_failure_shown = false
 	var error: Error = NetworkManager.join_session(address, int(target["port"]))
 	if error != OK:
 		_busy = false
-		_set_status(tr("UI_MENU_STATUS_CONNECT_FAILED") % error, RED)
+		_show_failure(tr("UI_MENU_STATUS_CONNECT_FAILED") % error)
 
 
 ## The LAN address to share used to be printed here, one frame before the
@@ -597,7 +622,12 @@ func _on_session_ready(is_host: bool) -> void:
 	if not is_host:
 		GameSettings.last_join_address = _address_field.text
 	_set_status(tr("UI_MENU_STATUS_ENTERING"), MINT)
-	_go_to_level(NetworkManager.session_scene if not NetworkManager.session_scene.is_empty() else LEVEL_SCENE)
+	_go_to_level(NetworkManager.session_scene if not NetworkManager.session_scene.is_empty() else LEVEL_SCENE,
+		_host_tag() if is_host else tr("UI_LOADING_TAG_JOIN"))
+
+
+func _host_tag() -> String:
+	return tr("UI_MENU_HOST_ENDLESS") if NetworkManager.session_scene == ENDLESS_LEVEL_SCENE else tr("UI_MENU_HOST")
 
 
 func _cancel_connection() -> void:
@@ -609,21 +639,63 @@ func _cancel_connection() -> void:
 
 
 func _on_session_failed(reason: String) -> void:
+	if not _cancel_loading():
+		# The level is already being built: the loading screen comes back
+		# here instead, and this menu's next copy shows the reason.
+		return
 	NetworkManager.take_failure_message()  # Shown right here; not again later.
 	_busy = false
+	_failure_shown = true
 	_set_status(connection_error_text(reason), RED)
+
+
+## A start that failed on the spot: the session usually said why already
+## (port taken, Steam not running...) and its reason is the useful one, so
+## the generic "error %d" only shows when it didn't.
+func _show_failure(generic: String) -> void:
+	if not _failure_shown:
+		_set_status(generic, RED)
 
 
 static func connection_error_text(reason: String) -> String:
 	return TranslationServer.translate(String(CONNECTION_ERROR_TEXT.get(reason, reason)))
 
 
-func _go_to_level(scene_path: String) -> void:
-	# Deferred: this can be reached from _ready() (the --autostart/--host/
-	# --join shortcuts), and the tree is still mid-setup at that point --
-	# change_scene_to_file() removing this node right then errors ("Parent
-	# node is busy adding/removing children").
-	get_tree().change_scene_to_file.call_deferred(scene_path)
+## Through the loading screen (N-407): the level loads on a thread behind the
+## menu's art instead of freezing the menu on its last frame. The loader adds
+## itself deferred: this can be reached from _ready() (the --autostart/--host/
+## --join shortcuts), and the tree is still mid-setup at that point.
+func _go_to_level(scene_path: String, mode: String = "") -> void:
+	if _loading != null and is_instance_valid(_loading):
+		return
+	_busy = true
+	_loading = LoadingScreen.go(get_tree(), scene_path, mode)
+	_loading.failed.connect(_on_level_load_failed)
+	# The theme plays on under the loading screen and fades under the level
+	# (N-408): it used to die with the menu, mid-note.
+	_loading.carry_audio(get_node_or_null(^"MenuMusic") as AudioStreamPlayer)
+
+
+## A connection that fell through while its level loaded: the menu stays.
+## Too late to cancel (the level is being built), the loading screen goes
+## back to the menu instead; returns false then.
+func _cancel_loading() -> bool:
+	if _loading == null or not is_instance_valid(_loading):
+		_loading = null
+		return true
+	if _loading.cancel():
+		_loading = null
+		return true
+	_loading.redirect_to(scene_file_path)
+	return false
+
+
+func _on_level_load_failed(_path: String) -> void:
+	_loading = null
+	if NetworkManager.is_online():
+		NetworkManager.leave_session()
+	_busy = false
+	_set_status(tr("UI_LOADING_FAILED"), RED)
 
 
 func _set_status(text: String, color: Color) -> void:

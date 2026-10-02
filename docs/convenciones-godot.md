@@ -164,8 +164,8 @@ en `scripts/ui/ping_catalog.gd` y el envío en `Player._send_ping()`.
 > Actualizado 2026-09-21 para reflejar la estructura real del proyecto, no el plan
 > previo a programar. Dos diferencias de fondo con ese plan original: (1) no hay
 > escenas separadas para menú/HUD/resultados — `main_menu.tscn` es un wrapper mínimo
-> que arma toda la UI en código (`main_menu.gd`), y el HUD (`prototype_hud.gd`) y la
-> pantalla de resultados viven igual, sin `.tscn` propio; (2) los "componentes" de
+> que arma toda la UI en código (`main_menu.gd`), y el HUD (`scripts/ui/hud/hud.gd`, antes
+> `prototype_hud.gd`) y la pantalla de resultados viven igual, sin `.tscn` propio; (2) los "componentes" de
 > paquete/vehículo no se separaron en nodos/scripts independientes por responsabilidad
 > como sugería el plan — cada entidad (`package.gd`, `vehicle.gd`, `player.gd`) es un
 > único script que concentra su estado, networking e input. Fue la decisión pragmática
@@ -183,7 +183,7 @@ do-not-drop/
     render_budget/              # WorldQuality, DressingBatcher, DetailMaterials, ContactShadow
     acoustics/                  # AcousticSpace, AcousticZone
     ragdoll/                    # PlayerRagdoll
-    net_session/                # NetSession, NetEventBus, RpcGuard, SteamVoice, NetStats, NetStatsOverlay
+    net_session/                # NetSession, NetEventBus, RpcGuard, SteamVoice, VoicePlayback, NetStats, NetStatsOverlay
     interaction/                # Interactable, SeatPoint (genérico, con hooks)
     seat_camera/                # SeatCamera
     settings_store/             # SettingsStore
@@ -217,8 +217,9 @@ do-not-drop/
       game_settings.gd         # autoload, extiende SettingsStore (modules/settings_store)
     ui/
       main_menu.gd
-      prototype_hud.gd          # HUD + resultados, sin escena propia
+      hud/hud.gd                # HUD: arma y conecta hud_cargo_panel, hud_newspaper, hud_notices, hud_pause, hud_prompts, hud_results (antes prototype_hud.gd)
     presentation/
+      reference_truck.gd        # modelo de referencia del camión, partido en reference_truck_cab/_cargo/_props/_panel_lines (N-225.2)
       first_person_camera.gd    # extiende SeatCamera (modules/seat_camera)
       lowpoly_materials.gd      # adaptador: las tablas del juego para modules/render_budget
     gameplay/
@@ -226,9 +227,15 @@ do-not-drop/
       vehicle/
         vehicle.gd
         vehicle_input_component.gd
-      package/
+        vehicle_gearbox.gd      # caja manual de la camioneta clásica (N-114)
+        vehicle_faults.gd       # fallas y reparaciones (+ vehicle_fault_effects, fault_repair_spot)
+      package/                  # package.gd (estado y red) + piezas por responsabilidad (N-225.4/.5, 2026-10-01)
         package.gd
-        package_feedback.gd
+        package_feedback.gd     # coordina package_box_dressing, package_ruin_effects, package_trap_visuals, package_scribble, etc.
+        package_autoloads.gd    # package_care, package_handling, package_impacts, package_rescue,
+        package_salvage.gd      # package_tending, package_verb, package_run_shake...: ver la carpeta
+      depot/                    # depósito: depot_hall, depot_layout, depot_zones, depot_props, depot_lighting, etc. (N-319)
+      late_join_seating.gd      # quien entra con la partida en curso aparece sentado (N-228.7)
       player/
         player.gd
       interaction/              # las bases (Interactable, SeatPoint) están en modules/interaction
@@ -240,8 +247,11 @@ do-not-drop/
         growing_weight_trap_behavior.gd
         balance_trap_behavior.gd
         noisy_trap_behavior.gd
+        explosive_trap_behavior.gd, hostile_trap_behavior.gd, order_balancer.gd
       route/
-        route.gd                 # ruta curada a mano, la que se juega hoy
+        route.gd                 # ruta curada a mano; partido en route_*.gd (path, ground, houses, props, signage, sky...) en N-225.3
+        cargo_animals.gd         # animales de carga: gaviota, perro, abejas (N-109, cargo_*.gd y chasing_dog.gd)
+        mud_crane.gd             # barro y grúa del tramo mud_segment (N-108)
         route_smoke_check.gd
         route_planner.gd         # qué tramo va dónde en la ruta de entregas
         route_streamer.gd        # extiende SegmentStreamer (modules/route_gen): pools y semilla del juego
@@ -252,6 +262,7 @@ do-not-drop/
           construction_zone_segment.gd
           rail_crossing_segment.gd
           tunnel_segment.gd
+          mud_segment.gd        # barro: el camión se entierra y la tripulación empuja (N-108)
   data/
     traps/
       fragile.tres

@@ -14,6 +14,13 @@ extends RefCounted
 ##     someone seated right beside it.
 ## No RPC of its own: the new tender is told with the player's `tend_package`,
 ## as when sitting down, and a displaced one with an empty path.
+##
+## Typed (N-224.4): the box is a DeliveryPackage, the players a Player and the
+## seats a CargoSeatPoint (seat_point.gd, the one that joins SEAT_GROUP). Nodes
+## in the groups that are none of those (a test's stand-ins) are skipped; calling
+## them by name used to fail on them. The mounts stay plain Nodes:
+## package_mount_point.gd has no class name. The RPC to the player is still
+## rpc_id by name, like every RPC in the game.
 
 const SEAT_GROUP: StringName = &"cargo_seat"
 
@@ -21,52 +28,54 @@ const SEAT_GROUP: StringName = &"cargo_seat"
 ## Host: `seat` (just boarded by `peer_id`) wants to look after `package`.
 ## True when it becomes the tender (then the caller tells the player); false
 ## when someone sitting at another seat facing the same mount keeps it.
-static func claim(seat: Node, package: Node, peer_id: int) -> bool:
-	var current: int = int(package.get(&"tender_peer_id"))
+static func claim(seat: CargoSeatPoint, package: DeliveryPackage, peer_id: int) -> bool:
+	var current: int = package.tender_peer_id
 	if current > 0 and current != peer_id:
 		var tree: SceneTree = seat.get_tree()
 		var in_hands: bool = _carried_by(package, peer_id)
 		# A box the newcomer sits down with is theirs whoever minded it before.
 		var mount: Node = null if in_hands else mount_of(package)
-		var holder: Node = _seat_of_peer(tree, current, mount, seat, in_hands)
+		var holder: CargoSeatPoint = _seat_of_peer(tree, current, mount, seat, in_hands)
 		if holder != null:
-			if not in_hands and (not seat.call(&"owns_mount", mount) or holder.call(&"owns_mount", mount)):
+			if not in_hands and (not seat.owns_mount(mount) or holder.owns_mount(mount)):
 				return false
 			# The owner arrives after a neighbour took over (or the box came
 			# in someone's hands): the neighbour's HUD stops claiming a box
 			# whose input the host no longer reads.
-			var displaced: Node = holder.get(&"occupant")
-			if displaced.has_method(&"tend_package"):
+			var displaced: Node = holder.occupant
+			if displaced is Player:
 				displaced.rpc_id(current, &"tend_package", NodePath())
-	package.call(&"set_tender", peer_id)
+	package.set_tender(peer_id)
 	return true
 
 
 ## Host: `leaving` stopped tending `package` (got up, or dropped out). The
 ## best other sitter facing its mount, if any, takes it from here. Only a box
 ## still in its bay is handed over: not one in someone's hands or on the floor.
-static func hand_over(package: Node, leaving: int) -> void:
-	if not package.is_inside_tree() or bool(package.get(&"is_held")) or not bool(package.get(&"is_loaded")):
+static func hand_over(package: DeliveryPackage, leaving: int) -> void:
+	if not package.is_inside_tree() or package.is_held or not package.is_loaded:
 		return
-	var current: Variant = package.get(&"current_mount")
+	var current: Variant = package.current_mount
 	var mount: Node = current as Node if is_instance_valid(current) else null
 	if mount == null:
 		return
 	var tree: SceneTree = package.get_tree()
-	var best: Node = null
-	for seat: Node in tree.get_nodes_in_group(SEAT_GROUP):
-		var peer: int = int(seat.call(&"seated_peer"))
-		if peer <= 0 or peer == leaving or not seat.call(&"looks_at_mount", mount) \
-				or _tends_something(tree, peer):
+	var best: CargoSeatPoint = null
+	for node: Node in tree.get_nodes_in_group(SEAT_GROUP):
+		var seat: CargoSeatPoint = node as CargoSeatPoint
+		if seat == null:
 			continue
-		if best == null or (seat.call(&"owns_mount", mount) and not best.call(&"owns_mount", mount)):
+		var peer: int = seat.seated_peer()
+		if peer <= 0 or peer == leaving or not seat.looks_at_mount(mount) or _tends_something(tree, peer):
+			continue
+		if best == null or (seat.owns_mount(mount) and not best.owns_mount(mount)):
 			best = seat
 	if best == null:
 		return
-	var heir: int = int(best.call(&"seated_peer"))
-	var player: Node = best.get(&"occupant")
-	package.call(&"set_tender", heir)
-	if player.has_method(&"tend_package"):
+	var heir: int = best.seated_peer()
+	var player: Node = best.occupant
+	package.set_tender(heir)
+	if player is Player:
 		player.rpc_id(heir, &"tend_package", package.get_path())
 
 
@@ -79,19 +88,19 @@ static func hand_over(package: Node, leaving: int) -> void:
 ## store into a mount the tender looks at, so nothing changes for them. Not
 ## done when the box is taken out (take_by), or putting it back in the same
 ## mount would lose its tender.
-static func on_stored(package: Node, mount: Node) -> void:
+static func on_stored(package: DeliveryPackage, mount: Node) -> void:
 	if not package.is_multiplayer_authority() or not package.is_inside_tree():
 		return
-	var tender: int = int(package.get(&"tender_peer_id"))
+	var tender: int = package.tender_peer_id
 	var tree: SceneTree = package.get_tree()
 	if tender > 0:
 		if _seat_of_peer(tree, tender, mount, null) != null:
 			return
-		package.call(&"set_tender", 0)
-		var seat: Node = _seat_of_peer(tree, tender, null, null, true)
+		package.set_tender(0)
+		var seat: CargoSeatPoint = _seat_of_peer(tree, tender, null, null, true)
 		if seat != null:
-			var displaced: Node = seat.get(&"occupant")
-			if displaced.has_method(&"tend_package"):
+			var displaced: Node = seat.occupant
+			if displaced is Player:
 				displaced.rpc_id(tender, &"tend_package", NodePath())
 	hand_over(package, tender)
 
@@ -102,9 +111,11 @@ static func on_stored(package: Node, mount: Node) -> void:
 ## client has no occupants, only the replicated path.
 static func is_seated(tree: SceneTree, player: Node, is_server: bool) -> bool:
 	if not is_server:
-		return not NodePath(player.get(&"seat_node_path")).is_empty()
-	for seat: Node in tree.get_nodes_in_group(SEAT_GROUP):
-		if int(seat.call(&"seated_peer")) > 0 and seat.get(&"occupant") == player:
+		var typed: Player = player as Player
+		return typed != null and not typed.seat_node_path.is_empty()
+	for node: Node in tree.get_nodes_in_group(SEAT_GROUP):
+		var seat: CargoSeatPoint = node as CargoSeatPoint
+		if seat != null and seat.seated_peer() > 0 and seat.occupant == player:
 			return true
 	return false
 
@@ -113,10 +124,12 @@ static func is_seated(tree: SceneTree, player: Node, is_server: bool) -> bool:
 ## (`except` is the box about to be shelved there: its own reservation does not
 ## count). Works on every peer from replicated state: the box's lap_mount_path,
 ## its holder -- `carrier` on the host, otherwise the player whose
-## `carried_package` it is -- and whether that player sits (is_seated()).
+## `carried_package` it is or, failing that, its tender (_holder_of()) -- and
+## whether that player sits (is_seated()).
 static func lap_reserves(tree: SceneTree, mount: Node, except: Node, is_server: bool) -> bool:
-	for package: Node in tree.get_nodes_in_group(&"cargo"):
-		if package == except or not bool(package.get(&"is_held")) or lap_mount_of(package) != mount:
+	for node: Node in tree.get_nodes_in_group(&"cargo"):
+		var package: DeliveryPackage = node as DeliveryPackage
+		if package == null or package == except or not package.is_held or lap_mount_of(package) != mount:
 			continue
 		var carrier: Node = _holder_of(tree, package)
 		if carrier != null and is_seated(tree, carrier, is_server):
@@ -126,8 +139,8 @@ static func lap_reserves(tree: SceneTree, mount: Node, except: Node, is_server: 
 
 ## The mount the box sits in or, in a seated passenger's lap, the one it goes
 ## back to.
-static func mount_of(package: Node) -> Node:
-	var mount: Variant = package.get(&"current_mount")
+static func mount_of(package: DeliveryPackage) -> Node:
+	var mount: Variant = package.current_mount
 	if is_instance_valid(mount):
 		return mount as Node
 	return lap_mount_of(package)
@@ -135,15 +148,15 @@ static func mount_of(package: Node) -> Node:
 
 ## The mount a box on a seated tender's lap goes back to, from its replicated
 ## lap_mount_path (so on every peer); null when it is on no lap.
-static func lap_mount_of(package: Node) -> Node:
-	var path: NodePath = NodePath(package.get(&"lap_mount_path"))
+static func lap_mount_of(package: DeliveryPackage) -> Node:
+	var path: NodePath = package.lap_mount_path
 	return package.get_node_or_null(path) if not path.is_empty() and package.is_inside_tree() else null
 
 
 ## Host: `package` is on its holder's lap, bound for `mount` (null: for none).
-static func bind_lap(package: Node, mount: Node) -> void:
+static func bind_lap(package: DeliveryPackage, mount: Node) -> void:
 	var bound: bool = is_instance_valid(mount) and mount.is_inside_tree()
-	package.set(&"lap_mount_path", mount.get_path() if bound else NodePath())
+	package.lap_mount_path = mount.get_path() if bound else NodePath()
 
 
 ## Whether some seat owns `mount` (`required_mount_path`). The parasite event
@@ -152,44 +165,59 @@ static func bind_lap(package: Node, mount: Node) -> void:
 static func is_owned_mount(tree: SceneTree, mount: Node) -> bool:
 	if mount == null:
 		return false
-	for seat: Node in tree.get_nodes_in_group(SEAT_GROUP):
-		if seat.call(&"owns_mount", mount):
+	for node: Node in tree.get_nodes_in_group(SEAT_GROUP):
+		var seat: CargoSeatPoint = node as CargoSeatPoint
+		if seat != null and seat.owns_mount(mount):
 			return true
 	return false
 
 
 ## The seat `peer_id` sits in, other than `except`, that looks at `mount`
 ## (`any_mount`: whichever it is).
-static func _seat_of_peer(tree: SceneTree, peer_id: int, mount: Node, except: Node, any_mount: bool = false) -> Node:
-	for seat: Node in tree.get_nodes_in_group(SEAT_GROUP):
-		if seat != except and int(seat.call(&"seated_peer")) == peer_id \
-				and (any_mount or seat.call(&"looks_at_mount", mount)):
+static func _seat_of_peer(tree: SceneTree, peer_id: int, mount: Node, except: Node,
+		any_mount: bool = false) -> CargoSeatPoint:
+	for node: Node in tree.get_nodes_in_group(SEAT_GROUP):
+		var seat: CargoSeatPoint = node as CargoSeatPoint
+		if seat != null and seat != except and seat.seated_peer() == peer_id \
+				and (any_mount or seat.looks_at_mount(mount)):
 			return seat
 	return null
 
 
 ## Who holds `package`: `carrier` (host only) or, on a client, the player whose
-## hands it is in (broadcast by the player's pick_up).
-static func _holder_of(tree: SceneTree, package: Node) -> Node:
-	var carrier: Variant = package.get(&"carrier")
+## hands it is in (broadcast by the player's pick_up, and repeated to a peer
+## that joins late: player_net_visibility.gd). Until that pick_up lands, a held
+## box bound for a lap is held by its tender (N-908): its bay is bound
+## (bind_lap()) just as whoever holds it sits down with it, or takes it back
+## with the lap toggle, and becomes its tender (claim()); anyone else taking it
+## clears the bay (PackageHandling.take_by()). Not so for a box someone took
+## out of a seated tender's bay: that keeps its tender, but has no lap bay.
+static func _holder_of(tree: SceneTree, package: DeliveryPackage) -> Node:
+	var carrier: Variant = package.carrier
 	if is_instance_valid(carrier):
 		return carrier as Node
-	for player: Node in tree.get_nodes_in_group(&"player"):
-		if player.get(&"carried_package") == package:
+	var tender: Node = null
+	for node: Node in tree.get_nodes_in_group(&"player"):
+		var player: Player = node as Player
+		if player == null:
+			continue
+		if player.carried_package == package:
 			return player
-	return null
+		if package.tender_peer_id > 0 and player.get_multiplayer_authority() == package.tender_peer_id:
+			tender = player
+	return tender if package.is_held and not package.lap_mount_path.is_empty() else null
 
 
-static func _carried_by(package: Node, peer_id: int) -> bool:
-	var carrier: Variant = package.get(&"carrier")
-	return bool(package.get(&"is_held")) and is_instance_valid(carrier) \
-			and int((carrier as Node).get_multiplayer_authority()) == peer_id
+static func _carried_by(package: DeliveryPackage, peer_id: int) -> bool:
+	var carrier: Variant = package.carrier
+	return package.is_held and is_instance_valid(carrier) and (carrier as Node).get_multiplayer_authority() == peer_id
 
 
 ## A sitter already minding another box (a rack seat facing two bays) keeps
 ## to that one: the player only follows one `tended_package`.
 static func _tends_something(tree: SceneTree, peer_id: int) -> bool:
-	for other: Node in tree.get_nodes_in_group(&"cargo"):
-		if int(other.get(&"tender_peer_id")) == peer_id:
+	for node: Node in tree.get_nodes_in_group(&"cargo"):
+		var other: DeliveryPackage = node as DeliveryPackage
+		if other != null and other.tender_peer_id == peer_id:
 			return true
 	return false

@@ -43,11 +43,13 @@ const MAX_PLAYERS: int = 8
 ## ("departed"), a full room takes back a player whose ghost still holds its
 ## place (decided from its ready reply on LAN), a LAN identity is a hash chain
 ## (each rejoin claims the link before), and _report_level_ready only counts a
-## report the host owes, N-221 follow-ups).
+## report the host owes, N-221 follow-ups;
+## 21: the player spawn data may carry vehicle_position, where a mid-run joiner
+## appears in the truck's own space, N-228.7).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 20
+const PROTOCOL_VERSION: int = 21
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -153,7 +155,7 @@ func _ready() -> void:
 ## A peer who left keeps the last one it wore (_departed_slots). Outside a
 ## session, or for a peer the host hasn't announced yet, it is
 ## posmod(peer_id, MAX_PLAYERS); PlayerColorSlot pins the host to 0 either way. Readers wrap it to their own
-## palette size: posmod(color_slot(id), palette.size()).
+## palette size (Player.PLAYER_COLORS has MAX_PLAYERS colours): posmod(color_slot(id), palette.size()).
 func color_slot(peer_id: int) -> int:
 	if not _color_slots.has(peer_id) and _departed_slots.has(peer_id):
 		return int(_departed_slots[peer_id])
@@ -306,6 +308,22 @@ func _reset_session_state() -> void:
 
 ## The crew may have grown since the level was built, so the house count is
 ## decided afresh; the host's profile may have completed a run meanwhile.
+## An invite the menu can't take yet (its level is being built behind the
+## loading screen): the next menu joins it on arrival (take_pending_lobby()).
+func defer_lobby(lobby: int) -> void:
+	_pending_lobby = lobby
+
+
+## A host restart reloads the level behind the loading screen (N-408): a
+## bare reload_current_scene() froze the window while the road was rebuilt.
+func _reload_level() -> void:
+	var scene: Node = get_tree().current_scene
+	if scene == null or scene.scene_file_path.is_empty():
+		super._reload_level()
+		return
+	LoadingScreen.go(get_tree(), scene.scene_file_path, tr("UI_LOADING_TAG_RESTART"))
+
+
 func _before_restart() -> void:
 	world_house_count = 0
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")

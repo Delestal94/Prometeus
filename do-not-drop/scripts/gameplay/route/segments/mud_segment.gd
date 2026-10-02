@@ -37,14 +37,20 @@ class_name MudSegment
 enum State { IDLE, BOGGED, CRANE_COMING, HAULING }
 
 const MUD_BASE := Color("5a3e26")
-const MUD := Color("71492a")
-const MUD_WET := Color("4a2d1a")
-const PUDDLE := Color("3a281d")
-const RUT := Color("2a1a11")
-const MOUND := Color("6a4426")
-const SPOT_PUSH: Script = preload("res://scripts/gameplay/route/mud_spot.gd")
-const CRANE: Script = preload("res://scripts/gameplay/route/mud_crane.gd")
-const RUN_LOG: Script = preload("res://scripts/gameplay/route/mud_run_log.gd")
+const MUD_SHADER: Shader = preload("res://shaders/mud_ground.gdshader")
+const EARTH_DETAIL: String = "res://assets/textures/detail/tx_detail_earth_512.png"
+## How far the mud reaches either side of the road's centre (its ragged edge
+## wanders about a metre around this).
+const MUD_HALF_WIDTH: float = 5.6
+## The stake the strap is tied to.
+const STRAP_POST := Color("2a1a11")
+const SPOT_PUSH := preload("res://scripts/gameplay/route/mud_spot.gd")
+const CRANE := preload("res://scripts/gameplay/route/mud_crane.gd")
+const RUN_LOG := preload("res://scripts/gameplay/route/mud_run_log.gd")
+## CrewProgression and RunManager stay by name, never preloaded: route.gd pulls
+## this script in, and under --script a test compiles it before the autoloads
+## exist; run_manager.gd and crew_progression.gd name EventBus and the others,
+## fail to compile there and leave both autoloads as script-less Nodes.
 
 ## Where the pit is, metres from the entry (z = -this).
 @export var pit_start: float = 18.0
@@ -114,9 +120,9 @@ var crane_left: float = 0.0
 var haul_method: StringName = &""
 
 var _grip_on: bool = false
-var _push_spot: Interactable
-var _strap_spot: Interactable
-var _crane: Node3D
+var _push_spot: SPOT_PUSH
+var _strap_spot: SPOT_PUSH
+var _crane: CRANE
 var _cable: MeshInstance3D
 var _strap_anchor: Node3D
 var _crane_time: float = 0.0
@@ -146,7 +152,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	super()
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null and bus.has_signal(&"run_ended"):
 		bus.connect(&"run_ended", _on_run_ended)
 		bus.connect(&"run_started", _on_run_started)
@@ -203,40 +209,40 @@ func pit_length() -> float:
 func _build() -> void:
 	_box("Ground", Vector3(24.0, 1.0, length), Vector3(0.0, -0.8, -length * 0.5), SHOULDER, true)
 	_box("Road", Vector3(12.0, 0.4, length), Vector3(0.0, -0.2, -length * 0.5), MUD_BASE, true)
-	# The mud itself, drawn just over the road (the terrain's own surface on a
-	# delivery route): a churned strip, the wetter pit, two ruts and puddles.
-	_box("MudSurface", Vector3(11.0, 0.05, length - 2.0), Vector3(0.0, 0.03, -length * 0.5), MUD)
-	_box("MudPit", Vector3(10.2, 0.05, pit_length()), Vector3(0.0, 0.05, -(pit_start + pit_end) * 0.5), MUD_WET)
-	for side: float in [-1.0, 1.0]:
-		_box("MudRut", Vector3(0.7, 0.05, length - 6.0), Vector3(side * 1.7, 0.075, -length * 0.5), RUT)
-	# Wet, shiny puddles (flat discs) and lumps of churned mud at the edges.
-	var puddles: Array[Vector4] = [
-		Vector4(-3.2, -6.0, 1.6, 1.1), Vector4(2.8, -9.5, 1.3, 1.6), Vector4(-1.0, -19.0, 2.4, 1.6),
-		Vector4(3.4, -24.0, 1.9, 1.3), Vector4(-3.6, -27.0, 1.5, 1.9), Vector4(0.8, -41.0, 2.0, 1.3),
-		Vector4(-2.8, -50.0, 1.6, 1.2), Vector4(0.6, -14.0, 1.2, 0.9),
-	]
-	var puddle_mesh := CylinderMesh.new()
-	puddle_mesh.top_radius = 1.0
-	puddle_mesh.bottom_radius = 1.0
-	puddle_mesh.height = 0.03
-	puddle_mesh.radial_segments = 16
-	puddle_mesh.rings = 1
-	for index: int in range(puddles.size()):
-		var puddle := MeshInstance3D.new()
-		puddle.name = "MudPuddle%d" % index
-		puddle.mesh = puddle_mesh
-		puddle.material_override = _puddle_material()
-		puddle.position = Vector3(puddles[index].x, 0.1, puddles[index].y)
-		puddle.scale = Vector3(puddles[index].z, 1.0, puddles[index].w)
-		puddle.rotation.y = float(index) * 0.7
-		add_child(puddle)
+	# The mud itself, one surface just over the road (the terrain's own surface
+	# on a delivery route): mud_ground.gdshader draws the churned strip, the
+	# wetter pit, the ruts and the standing water, with a ragged outline.
+	var surface := MeshInstance3D.new()
+	surface.name = "MudSurface"
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(MUD_HALF_WIDTH * 2.0 + 3.0, length)
+	plane.center_offset = Vector3(0.0, 0.0, -length * 0.5)
+	# About a metre per quad, so it follows the ground (conform_geometry()).
+	plane.subdivide_width = int(plane.size.x)
+	plane.subdivide_depth = int(length)
+	surface.mesh = plane
+	surface.position.y = 0.05
+	surface.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	surface.material_override = _mud_material(false)
+	add_child(surface)
+	# Lumps of churned mud thrown up at the edges.
+	var lump_mesh := SphereMesh.new()
+	lump_mesh.is_hemisphere = true
+	lump_mesh.radius = 1.0
+	lump_mesh.height = 1.0
+	lump_mesh.radial_segments = 9
+	lump_mesh.rings = 3
 	for index: int in range(10):
 		var side: float = -1.0 if index % 2 == 0 else 1.0
-		var at := Vector3(side * (5.2 + float(index % 3) * 0.25), 0.12, -4.0 - float(index) * 5.5)
-		var size := Vector3(1.6 + float(index % 3) * 0.5, 0.3, 1.2 + float(index % 2) * 0.6)
-		var lump := _box("MudMound%d" % index, size, at, MOUND)
-		if lump != null:
-			lump.rotation.y = float(index) * 0.45
+		var lump := MeshInstance3D.new()
+		lump.name = "MudMound%d" % index
+		lump.mesh = lump_mesh
+		lump.material_override = _mud_material(true)
+		lump.position = Vector3(side * (5.3 + float(index % 3) * 0.3), -0.04, -4.0 - float(index) * 5.5)
+		lump.scale = Vector3(0.55 + float(index % 3) * 0.2, 0.16 + float(index % 2) * 0.06,
+				0.45 + float(index % 2) * 0.2)
+		lump.rotation.y = float(index) * 0.45
+		add_child(lump)
 	# The warning board on the driver's right, facing the traffic.
 	RouteProps.sign(self, "MudSign", tr("WORLD_MUD_SIGN"), Vector3(7.8, 0.0, -3.0), 0.0, WARNING)
 	_push_spot = _make_spot(&"push")
@@ -245,24 +251,31 @@ func _build() -> void:
 	# is bogged (see _follow_spots()).
 
 
-## One glossy material for every puddle of every mud segment.
-static var _puddle: StandardMaterial3D
+## The mud's materials, shared by every mud segment with the same layout:
+## the surface (keyed by length and pit) and the lumps.
+static var _mud_materials: Dictionary = {}
 
 
-static func _puddle_material() -> StandardMaterial3D:
-	if _puddle == null:
-		_puddle = StandardMaterial3D.new()
-		_puddle.albedo_color = PUDDLE
-		_puddle.roughness = 0.08
-		_puddle.metallic_specular = 0.9
-	return _puddle
+func _mud_material(lump: bool) -> ShaderMaterial:
+	var key: Variant = &"lump" if lump else Vector3(length, pit_start, pit_end)
+	if not _mud_materials.has(key):
+		var material := ShaderMaterial.new()
+		material.shader = MUD_SHADER
+		material.set_shader_parameter(&"earth_detail", load(EARTH_DETAIL))
+		material.set_shader_parameter(&"lump", 1.0 if lump else 0.0)
+		material.set_shader_parameter(&"stretch_length", length)
+		material.set_shader_parameter(&"pit_start", pit_start)
+		material.set_shader_parameter(&"pit_end", pit_end)
+		material.set_shader_parameter(&"mud_half_width", MUD_HALF_WIDTH)
+		_mud_materials[key] = material
+	return _mud_materials[key]
 
 
-func _make_spot(kind: StringName) -> Interactable:
-	var spot: Interactable = SPOT_PUSH.new()
+func _make_spot(kind: StringName) -> SPOT_PUSH:
+	var spot: SPOT_PUSH = SPOT_PUSH.new()
 	spot.name = "PushSpot" if kind == &"push" else "StrapSpot"
-	spot.set(&"kind", kind)
-	spot.set(&"mud", self)
+	spot.kind = kind
+	spot.mud = self
 	add_child(spot)
 	spot.position = Vector3(0.0, -40.0, 0.0)
 	return spot
@@ -280,7 +293,7 @@ func can_use_spot(kind: StringName, player: Node) -> bool:
 		return false
 	if kind == &"push":
 		return _may_push(player)
-	if player.get(&"carried_package") != null or not String(player.get(&"seat_node_path")).is_empty():
+	if _hands_busy(player):
 		return false
 	return strap_ready
 
@@ -350,9 +363,7 @@ func _may_push(player: Node, reach: float = PUSH_REACH) -> bool:
 	var truck: Node3D = _truck()
 	if truck == null or not player is Node3D:
 		return false
-	if player.get(&"carried_package") != null or player.get(&"_ragdolled") == true:
-		return false
-	if not String(player.get(&"seat_node_path")).is_empty():
+	if _hands_busy(player) or player.get(&"_ragdolled") == true:
 		return false
 	var at: Vector3 = (player as Node3D).global_position
 	if truck.to_local(at).z < PUSH_SPOT_LOCAL.z - PUSH_BEHIND_MARGIN:
@@ -361,6 +372,12 @@ func _may_push(player: Node, reach: float = PUSH_REACH) -> bool:
 	if Vector2(at.x - spot.x, at.z - spot.z).length() > reach:
 		return false
 	return not (truck.has_method(&"carries") and bool(truck.call(&"carries", at)))
+
+
+## Holding a box or sitting in a seat. By name, once for everyone: the tests put
+## FakePlayer Node3Ds in the "player" group, which `as Player` would drop.
+func _hands_busy(player: Node) -> bool:
+	return player.get(&"carried_package") != null or not String(player.get(&"seat_node_path")).is_empty()
 
 
 func _valid_pushers() -> int:
@@ -405,8 +422,8 @@ func _physics_process(delta: float) -> void:
 	# the crew or the crane are getting it out.
 	if state != State.IDLE:
 		truck.set_meta(&"keep_awake", true)
-		if bool(truck.get(&"freeze")) and not _run_over:
-			truck.set(&"freeze", false)
+		if truck.freeze and not _run_over:
+			truck.freeze = false
 	_set_grip(truck, inside)
 	if inside:
 		var flat := Vector3(truck.linear_velocity.x, 0.0, truck.linear_velocity.z)
@@ -545,7 +562,7 @@ func _begin_haul(method: StringName) -> void:
 ## The crane's fine: CRANE_FINE, or whatever the team has if that is less --
 ## the balance never goes negative. Saved with the campaign like any spend.
 func _charge_fine() -> int:
-	var crew: Node = get_node_or_null(^"/root/CrewProgression")
+	var crew: Node = _crew()
 	if crew == null:
 		return 0
 	var fine: int = mini(crane_fine, int(crew.get(&"team_money")))
@@ -661,7 +678,7 @@ func _show_status() -> void:
 		text = tr("WORLD_MUD_STATUS") % [roundi(progress * 100.0), ceili(crane_left)]
 	elif state == State.CRANE_COMING:
 		text = tr("WORLD_MUD_STATUS_CRANE")
-	_push_spot.call(&"show_status", text)
+	_push_spot.show_status(text)
 
 
 # --- Visuals (every peer) ------------------------------------------------------------
@@ -782,7 +799,7 @@ func _start_cable() -> void:
 		var post_mesh := BoxMesh.new()
 		post_mesh.size = Vector3(0.4, 1.6, 0.4)
 		post.mesh = post_mesh
-		post.material_override = _material(RUT)
+		post.material_override = _material(STRAP_POST)
 		post.position.y = 0.8
 		_strap_anchor.add_child(post)
 		var truck: Node3D = _truck()
@@ -808,7 +825,7 @@ func _place_cable() -> void:
 		return
 	var from: Vector3
 	if haul_method == &"crane" and _crane != null:
-		from = _crane.call(&"hook_position")
+		from = _crane.hook_position()
 	elif _strap_anchor != null:
 		from = _strap_anchor.global_position + Vector3.UP * 1.3
 	else:
@@ -834,7 +851,7 @@ func _truck() -> Node3D:
 
 
 func _notice(text: String) -> void:
-	var bus: Node = get_node_or_null(^"/root/EventBus")
+	var bus: Node = _bus()
 	if bus != null:
 		bus.call(&"relay", &"depot_notice", [text])
 
@@ -843,24 +860,41 @@ func _story(line: String) -> void:
 	var owner_node: Node = get_parent()
 	if owner_node == null:
 		return
-	var log_node: Node = owner_node.get_node_or_null(^"MudRunLog")
+	var log_node: RUN_LOG = owner_node.get_node_or_null(^"MudRunLog") as RUN_LOG
 	if log_node == null:
 		log_node = RUN_LOG.new()
 		log_node.name = "MudRunLog"
 		owner_node.add_child(log_node)
-	log_node.call(&"add_story", line)
+	log_node.add_story(line)
 
 
 func _is_endless() -> bool:
-	var manager: Node = get_node_or_null(^"/root/RunManager")
+	var manager: Node = _run_manager()
 	return manager != null and manager.get(&"current_mode") == &"endless"
 
 
 func _is_online() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return network != null and bool(network.call(&"is_online"))
+	var network: NetSession = _network()
+	return network != null and network.is_online()
 
 
 func _is_host() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return network == null or bool(network.call(&"is_host"))
+	var network: NetSession = _network()
+	return network == null or network.is_host()
+
+
+## EventBus by name, not typed: tests replace it with a plain Node.
+func _bus() -> Node:
+	return get_node_or_null(^"/root/EventBus")
+
+
+func _network() -> NetSession:
+	return get_node_or_null(^"/root/NetworkManager") as NetSession
+
+
+func _crew() -> Node:
+	return get_node_or_null(^"/root/CrewProgression")
+
+
+func _run_manager() -> Node:
+	return get_node_or_null(^"/root/RunManager")

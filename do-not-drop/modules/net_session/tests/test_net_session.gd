@@ -26,7 +26,10 @@ extends SceneTree
 ##   local host lands as `event(peer_id, args...)` subject to its cooldown;
 ## - NetStats parses --net-sim profiles and grades metrics;
 ## - SteamVoice never opens the microphone with the switch off, records with
-##   push-to-talk over a fake Steam, drops oversize packets, and mutes;
+##   push-to-talk over a fake Steam, drops oversize packets, and mutes; a peer
+##   flooding packets gets at most VOICE_PACKET_BURST decoded at once (its own
+##   budget: another peer still passes), refilled per second and reset when it
+##   leaves or the session ends;
 ## - NetStatsOverlay builds on first show with the default theme.
 
 const TIMEOUT_PORT: int = 7812
@@ -90,6 +93,7 @@ class FakeSteam extends Object:
 	var starts: int = 0
 	var stops: int = 0
 	var recording: bool = false
+	var decompressed: int = 0
 
 	func startVoiceRecording() -> void:
 		starts += 1
@@ -106,6 +110,7 @@ class FakeSteam extends Object:
 		return 24000
 
 	func decompressVoice(packet: PackedByteArray, _rate: int) -> Dictionary:
+		decompressed += 1
 		var pcm := PackedByteArray()
 		pcm.resize(packet.size() * 10)
 		return {"result": 0, "uncompressed": pcm, "size": pcm.size()}
@@ -470,8 +475,46 @@ func _test_voice() -> void:
 	huge.resize(SteamVoice.MAX_PACKET_BYTES + 1)
 	voice.receive_packet(3, huge)
 	_expect(received.size() == 1, "An oversize packet is dropped")
+	_check_voice_budget(voice, fake)
 	voice.free()
 	fake.free()
+
+
+## A peer flooding the voice channel must not cost a decoder call per packet.
+func _check_voice_budget(voice: TestVoice, fake: FakeSteam) -> void:
+	var burst: int = int(SteamVoice.VOICE_PACKET_BURST)
+	voice.clear_peers()
+	var before: int = fake.decompressed
+	var started: int = Time.get_ticks_msec()
+	for index: int in 500:
+		voice.receive_packet(4, PackedByteArray([1, 2]))
+	var elapsed: int = Time.get_ticks_msec() - started
+	var allowed: int = burst + ceili(elapsed * SteamVoice.VOICE_PACKETS_PER_SECOND / 1000.0) + 1
+	var decoded: int = fake.decompressed - before
+	_expect(decoded >= burst and decoded <= allowed,
+		"500 packets in one frame decode about a burst (%d, allowed %d in %d ms)" % [decoded, allowed, elapsed])
+	before = fake.decompressed
+	voice.receive_packet(5, PackedByteArray([1, 2]))
+	_expect(fake.decompressed == before + 1, "Another peer's packets still pass")
+	voice._forget_peer(4)
+	before = fake.decompressed
+	voice.receive_packet(4, PackedByteArray([1, 2]))
+	_expect(fake.decompressed == before + 1, "A peer that left and came back starts with a full budget")
+	# The bucket itself, on a fixed clock.
+	voice.clear_peers()
+	var taken: int = 0
+	for index: int in burst + 20:
+		if voice.take_voice_packet(6, 1000):
+			taken += 1
+	_expect(taken == burst, "A burst is cut at VOICE_PACKET_BURST (got %d)" % taken)
+	var refilled: int = 0
+	for index: int in burst:
+		if voice.take_voice_packet(6, 1100):
+			refilled += 1
+	var expected: int = int(SteamVoice.VOICE_PACKETS_PER_SECOND / 10.0)
+	_expect(refilled == expected, "100 ms later it has refilled %d (got %d)" % [expected, refilled])
+	voice.clear_peers()
+	_expect(voice.take_voice_packet(6, 1100), "Ending the session resets the budget")
 
 
 func _test_overlay() -> void:

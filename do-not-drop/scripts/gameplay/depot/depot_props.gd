@@ -41,8 +41,11 @@ func build(kit: DepotKit) -> void:
 	_build_center(kit)
 	_build_west_wall(kit)
 	_build_door_signs(kit)
+	await kit.tick()
 	_build_back_wall(kit)
+	await kit.tick()
 	_build_grounding(kit)
+	await kit.tick()
 	_build_wear(kit)
 
 

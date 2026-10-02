@@ -44,11 +44,62 @@ Si cambió un contrato usado por el bloque, revisarlo y verificar otra vez.
 Al cerrar cada bloque: verificar, subir la rama, abrir un PR hacia `main` y resolver
 los checks antes de integrarlo. Nunca forzar un push sobre el trabajo del otro.
 
-Desde la raíz del repositorio, con Blender disponible en `PATH`:
+### Cuerpo editable del bloque B (preparación, no aprobación visual E)
+
+Desde la raíz, con Blender en `PATH` (5.2.2 LTS comprobado):
+
+```powershell
+blender --background --factory-startup --python art/gel_character/build_gel_body.py
+blender --background --factory-startup --python art/gel_character/test_gel_body_source.py
+python -m unittest discover -s art/gel_character -p "test_*.py"
+python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod0.glb --gel-body
+python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod1.glb --gel-body
+python art/gel_character/validate_glb.py do-not-drop/assets/models/characters/gel/gel_body_lod2.glb --gel-body
+blender --background --factory-startup --python art/gel_character/analyze_gel_body.py -- --core-experiment
+```
+
+El generador carga el master redondeado por sí mismo en el proceso aislado, no lo
+sobrescribe y guarda `gel_body.blend`, `gel_body_spec.json`, un reporte y tres GLB
+en `do-not-drop/assets/models/characters/gel/`. El cuerpo de autoría y LOD1 tienen
+quads; LOD2 simplifica la superficie fiel de LOD1, no rehace la retopología ni
+suprime ramas anatómicas. Los límites son 6000/2500/800 triángulos.
+
+El rig de exportación conserva 20 nombres y los nueve clips actuales, incluido
+`Run` agregado en main por N-115. Los reposos nuevos
+acomodan la referencia; el retarget usa diferencias de rotación mundial y
+offsets jerárquicos del destino. **No conserva literalmente las posiciones del
+rig anterior**, que no tiene estas proporciones. Los 35 huesos de autoría del
+master permanecen intactos. No se reemplaza el personaje activo ni se agregan
+controles de proporciones del bloque C.
+
+`validate(path, max_triangles=None)` sigue siendo genérico. `--gel-body` exige el
+contrato específico y verifica el GLB real: costuras con posiciones y todos los
+deltas coincidentes, orientación exterior, pesos, UV, límites, pivote y 53 poses
+de morph (base, 22 extremos y 30 combinaciones con semilla 311018). Esa muestra
+**no demuestra todas las combinaciones continuas**, ni sustituye pruebas animadas.
+
+Los mapas, el núcleo experimental y sus errores medidos están en
+`review_bloque_b/`. Los puntos 14 y 15 siguen pendientes de D/E. La métrica física
+de UV supera el 15 %: 16 no está aprobado y requiere resolver la compensación en
+D, sin bajar el umbral. El núcleo experimental excede el presupuesto total, no
+está seleccionado y no se integra al juego. El ajuste lineal del grosor también
+es un candidato rechazado por su error, no un shader implementado.
+
+Para las capturas diagnósticas de LOD, el agente `revisor-visual` ejecuta
+`tests/render_gel_body_lods.gd` con GL Compatibility: 1920×1080, FOV vertical 60°,
+15 m, tres vistas, Delgada y extremos. `compare_lod_silhouettes.py` mide la
+diferencia de píxeles contra LOD0. El estado Flaca de esta prueba es **solo el
+morph de grosor**, no el preset de seis cabezas que necesita los huesos del bloque
+C; la aprobación completa de 17 debe incluir ese preset. Las capturas son opacas,
+no certifican el material de gelatina ni la coincidencia final de silueta de E.
+
+### Candidato histórico (solo comparación)
+
+Conservado para reproducir la comparación y la regresión del validador genérico:
 
 ```powershell
 python art/gel_character/measure_reference.py
-blender --background --python art/gel_character/build_gel_character.py
+blender --background art/rounded_character/personaje_redondeado.blend --python art/gel_character/build_gel_character.py
 python art/gel_character/validate_glb.py art/gel_character/gel_character_candidate.glb
 python art/gel_character/validate_glb.py art/gel_character/gel_character_candidate.glb --max-triangles 6000
 ```
@@ -57,9 +108,9 @@ El primer comando reproduce las medidas de la referencia. El segundo vuelve a
 escribir `gel_character_candidate.glb` y `gel_character_candidate.png`.
 El tercero comprueba la estructura actual sin abrir Blender y pasa.
 El cuarto aplica ya el presupuesto final y **falla de forma esperada**:
-el candidato tiene 46.552 triángulos, frente al límite LOD0 de 6.000. En el bloque B,
-`build_gel_body.py` reemplaza este generador y produce el cuerpo Delgada con morphs,
-LOD y mapas de grosor/zonas; recién ese resultado debe pasar el cuarto comando.
+el candidato tiene 46.552 triángulos, frente al límite LOD0 de 6.000. El flujo nuevo
+usa `build_gel_body.py` y la opción `--gel-body` sobre los GLB nuevos; nunca se da
+por aprobado el candidato histórico porque pase solamente la validación genérica.
 
 ## Rasgos visuales obligatorios
 

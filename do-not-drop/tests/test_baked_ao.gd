@@ -25,6 +25,7 @@ const BAKED: Array[String] = [
 	"res://assets/models/vehicles/sm_vehicle_parked_sedan_refined.glb",
 	"res://assets/models/vehicles/sm_vehicle_competitor_van.glb",
 	"res://assets/models/vehicles/sm_vehicle_tractor.glb",
+	"res://assets/models/vehicles/sm_vehicle_tow_crane.glb",
 	"res://assets/models/environment/props/sm_env_prop_bus_stop.glb",
 	"res://assets/models/environment/landmarks/sm_env_landmark_windmill.glb",
 	"res://assets/models/environment/landmarks/sm_env_landmark_water_tower.glb",

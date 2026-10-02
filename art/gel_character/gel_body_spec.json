@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "height_m": 1.74,
+  "head_diameter_m": 0.47282608695652173,
+  "arm_shoulder_to_hand_target_m": 0.6803400000000001,
+  "arm_length_scale": 1.124,
+  "proportion_tolerance_relative": 0.05,
+  "proportion_measurement": "head width above z=1.32; maximum hand x minus fixed shoulder x=0.225, base mesh meters",
+  "morph_names": [
+    "general_thickness",
+    "belly",
+    "chest",
+    "shoulders",
+    "hips",
+    "arm_thickness",
+    "leg_thickness",
+    "hand_size",
+    "foot_size",
+    "head_shape",
+    "neck_thickness"
+  ],
+  "required_joints": [
+    "pelvis",
+    "chest",
+    "neck",
+    "head",
+    "upper_arm.L",
+    "forearm.L",
+    "hand.L",
+    "thumb.L",
+    "grip.L",
+    "thigh.L",
+    "shin.L",
+    "foot.L",
+    "upper_arm.R",
+    "forearm.R",
+    "hand.R",
+    "thumb.R",
+    "grip.R",
+    "thigh.R",
+    "shin.R",
+    "foot.R"
+  ],
+  "morph_range": [
+    -1,
+    1
+  ],
+  "lod_triangle_budgets": [
+    6000,
+    2500,
+    800
+  ],
+  "flaca": {
+    "general_thickness": -1
+  },
+  "zones": {
+    "head": [
+      0,
+      0,
+      1
+    ],
+    "neck": [
+      0,
+      1,
+      1
+    ],
+    "arm": [
+      1,
+      0,
+      0
+    ],
+    "hand": [
+      1,
+      1,
+      1
+    ],
+    "foot": [
+      1,
+      1,
+      0
+    ],
+    "leg": [
+      0,
+      1,
+      0
+    ],
+    "torso": [
+      1,
+      0,
+      1
+    ]
+  },
+  "atlas": "independent quad islands, 10% cell inset",
+  "lod2_algorithm": "quadric-error collapse of faithful LOD1 to target 794 triangles, flat sole vertices protected, triangulated; morphs evaluated after simplification",
+  "foot_depth_design_m": 0.28,
+  "foot_depth_source": "profile design, not inferred from frontal JPG",
+  "reference_shape_targets": {
+    "torso_waist_width_m": [
+      0.4,
+      0.43
+    ],
+    "foot_width_m": 0.26951086956521736,
+    "neck_visible_height_m": 0.05201086956521739
+  },
+  "reference_pose": "static diagnostic A-pose, arms 15 degrees from vertical; eight animation clips preserve source rotations",
+  "morph_amplitudes": {
+    "general_thickness": 0.3,
+    "belly": 0.18,
+    "chest": 0.15,
+    "shoulders": 0.12,
+    "hips": 0.14,
+    "arm_thickness": 0.18,
+    "leg_thickness": 0.18,
+    "hand_size": 0.15,
+    "foot_size": 0.15,
+    "head_shape": 0.08,
+    "neck_thickness": 0.15
+  }
+}

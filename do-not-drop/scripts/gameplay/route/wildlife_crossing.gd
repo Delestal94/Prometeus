@@ -19,7 +19,9 @@ class_name WildlifeCrossing
 
 const DEER_MODEL: PackedScene = preload("res://assets/models/environment/wildlife/sm_env_animal_stag_rigged.glb")
 const SIGN_MODEL: PackedScene = preload("res://assets/models/environment/signs/sm_env_sign_animal_crossing.glb")
-const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
+## Inferred, not `: Script`, so it doubles as the deer's type: run(),
+## tumble() and the rest are checked when this compiles, not looked up by name.
+const ANIMAL_SCRIPT := preload("res://scripts/presentation/wildlife_animal.gd")
 
 enum State { WAITING, RUNNING_IN, FROZEN, BOLTING, TUMBLING, FLEEING, DONE }
 
@@ -62,7 +64,7 @@ const SIGN_LATERAL: float = 7.8
 @export var with_sign: bool = false
 
 var state: State = State.WAITING
-var deer: Node3D
+var deer: ANIMAL_SCRIPT
 var hit: bool = false
 var _lateral: float = 0.0
 var _timer: float = 0.0
@@ -73,11 +75,12 @@ var _vehicle_cache: Node3D
 
 
 func _ready() -> void:
-	deer = DEER_MODEL.instantiate() as Node3D
-	deer.name = "Deer"
-	deer.set_script(ANIMAL_SCRIPT)
+	var model := DEER_MODEL.instantiate() as Node3D
+	model.name = "Deer"
+	model.set_script(ANIMAL_SCRIPT)
+	deer = model as ANIMAL_SCRIPT
 	add_child(deer)
-	deer.set(&"steered", true)
+	deer.steered = true
 	_lateral = side * WAIT_LATERAL
 	_place_deer(-side)
 	if with_sign:
@@ -102,20 +105,20 @@ func _physics_process(delta: float) -> void:
 		State.WAITING:
 			if vehicle != null and _approaching(vehicle):
 				state = State.RUNNING_IN
-				deer.call(&"run")
+				deer.run()
 		State.RUNNING_IN:
 			_lateral = move_toward(_lateral, side * FREEZE_LATERAL, RUN_SPEED * delta)
 			_place_deer(-side)
 			if is_equal_approx(_lateral, side * FREEZE_LATERAL):
 				state = State.FROZEN
 				_timer = FREEZE_SECONDS
-				deer.call(&"freeze_in_headlights")
+				deer.freeze_in_headlights()
 		State.FROZEN:
 			_timer -= delta
 			_place_deer(-side, true)
 			if _timer <= 0.0:
 				state = State.BOLTING
-				deer.call(&"run")
+				deer.run()
 		State.BOLTING:
 			_lateral = move_toward(_lateral, -side * EXIT_LATERAL, BOLT_SPEED * delta)
 			_place_deer(-side)
@@ -164,7 +167,7 @@ func _check_hit(vehicle: VehicleBody3D) -> void:
 	var push: Vector3 = to_local(deer.global_position + vehicle.linear_velocity) - to_local(deer.global_position)
 	_tumble_velocity = Vector3(push.x * 0.4 - side * 3.0, 4.5, push.z * 0.35)
 	_tumble_offset = Vector3.ZERO
-	deer.call(&"tumble")
+	deer.tumble()
 	if vehicle.is_multiplayer_authority():
 		_apply_consequences(vehicle)
 
@@ -217,7 +220,7 @@ func _on_horn_honked(_peer_id: int) -> void:
 		_start_fleeing()
 	else:
 		state = State.BOLTING
-		deer.call(&"run")
+		deer.run()
 
 
 ## Whether a honk from this truck reaches the deer: ahead of its nose, close.
@@ -229,7 +232,7 @@ func horn_reaches(vehicle: Node3D) -> bool:
 
 func _start_fleeing() -> void:
 	state = State.FLEEING
-	deer.call(&"run")
+	deer.run()
 
 
 ## Stands the deer at `_lateral` across the road, on the ground there,

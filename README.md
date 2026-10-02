@@ -165,8 +165,11 @@ que `Jump` termine en el primer cuadro de `Idle` y el alcance real de las muñec
 **La forma normal:** `tools/run-tests.sh` corre toda la batería headless en paralelo (~1 minuto)
 y muestra solo el resumen y las fallas; `tools/run-tests.sh depot traps` corre solo los tests
 cuyo nombre contiene esos textos. Después de clonar, `tools/setup-hooks.sh` activa el hook
-`pre-push`: cada `git push` con cambios de código corre la batería y no sube nada si falla.
-GitHub Actions la corre también en cada push a `main` y en cada PR. Detalle en
+`pre-push`: cada `git push` con cambios de código corre el lint, `check_modules` y solo los tests
+afectados por lo que cambia la rama contra `main` (`FULL_TESTS=1 git push` corre la batería entera;
+`SKIP_TESTS=1` saltea los tests) y no sube nada si falla. GitHub Actions corre la batería completa
+repartida en cuatro runners en cada push a `main` y en cada PR (es la compuerta requerida); si un test
+falla en CI, `tools/run-tests.sh` anota el nombre con `::error`. Detalle en
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Los `render_*.gd` y `check_*.gd` necesitan pantalla y alguien que mire las capturas: no son
@@ -269,6 +272,55 @@ El atardecer es el caso más caro en los dos modos (más draw calls; lo más pro
 sombras largas del sol bajo, sin medir todavía). Una vez compilados los shaders no hay tirones; los que aparecen son de
 los primeros segundos o de cuando el piloto reubica el camión. La física promedia 0,55-0,75 ms
 por tick con picos de 12-19 ms. Falta medir el preset bajo en una PC modesta (N-205).
+
+**N-204 y N-220, 2026-10-01** (base `a6c56f6` + la rama `nacho/N-220-gpu-audit`; misma PC, 1920×1080 en
+ventana, vsync apagado, semilla 4242, 90 s por corrida, `--via-loader`). `bench_drive.gd` sumó:
+`--quality=low|medium|high` (fuerza el preset de N-205 solo para esa corrida, sin guardarlo), `--via-loader`
+(arma el nivel por la pantalla de carga del juego: modelos precargados, sonidos calientes, ruta por frames;
+sin esto mide un arranque "en frío" que da tirones de primer uso que el jugador no ve), `--players=5
+--cargo=full` (cuatro jugadores falsos sentados y siete cajas en el camión), `--render-scale=` (hasta 2,0, para
+estresar la GPU) y los experimentos `noparticles|nolights|notransp|nobatch`; el informe suma un censo de la
+escena, el costo de la física partido en scripts y paso de Jolt, y los cuerpos rígidos despiertos.
+`bench_load_times.gd` (nuevo) mide menú, carga de cada nivel y memoria. Preset **Alto** (el de fábrica) y
+**Bajo**; "1 % bajo" = 1000 / p99:
+
+| Modo | Clima / hora | Alto: FPS prom. | Alto: 1 % bajo (p99 ms) | Alto: draw calls | Bajo: FPS prom. | Bajo: 1 % bajo (p99 ms) | Bajo: draw calls |
+|---|---|---|---|---|---|---|---|
+| Reparto | día | 143 | 89 (11,3) | 2.644 | 166 | 98 (10,3) | 1.932 |
+| Reparto | atardecer | 117 | 71 (14,1) | 4.387 | 137 | 69 (14,5) | 3.322 |
+| Reparto | noche | 140 | 85 (11,7) | 2.740 | 152 | 90 (11,1) | 2.234 |
+| Reparto | lluvia (día) | 152 | 102 (9,8) | 2.497 | 172 | 115 (8,7) | 1.941 |
+| Endless | día | 376 | 231 (4,3) | 782 | 406 | 258 (3,9) | 432 |
+| Endless | atardecer | 332 | 187 (5,4) | 1.375 | 323 | 187 (5,4) | 1.277 |
+| Endless | noche | 390 | 243 (4,1) | 579 | 394 | 242 (4,1) | 558 |
+| Endless | lluvia (día) | 391 | 248 (4,0) | 453 | 396 | 239 (4,2) | 435 |
+
+Las 16 corridas: de 0 a 3 frames de más de 33 ms cada una (el peor, 72 ms) y ningún tirón de física (pico
+de 21 ms por tick). **Meta de N-204: se cumple en esta PC.** 60 FPS estables a 1080p con el preset de fábrica: el peor caso (Reparto al atardecer)
+promedia 117 y su 1 % bajo es 71; el preset Bajo no baja de 137 de promedio ni de 69 de 1 % bajo (la meta es
+45). En esta PC el Bajo sobra: el juego va limitado por la CPU (un núcleo: dibujar ~2.600 objetos con
+GL Compatibility y los scripts), así que el Bajo solo gana 9-17 % en Reparto y casi nada en Endless. **No hay PC
+modesta a mano**, y lo que sigue es una emulación, no un número de otra máquina: con `--render-scale=2.0`
+(4 veces los píxeles) el Reparto de día sigue en 146 FPS y, a 5.128×2.842 internos (7 veces los píxeles de
+1080p, Alto con MSAA 4×, al atardecer) en 109 FPS en Reparto y 197 en Endless; la GPU de esta PC tiene
+margen de más de 7× en relleno, y la memoria de video sube 258 → 774 MiB sin que el cuadro se mueva.
+Limitar a 2 núcleos físicos (afinidad) tampoco cambia nada (154 y 144 FPS en Reparto con Bajo y Alto): el
+juego usa ~1 núcleo. Lo que no se puede emular es una CPU de un solo hilo más lenta (reloj e IPC): ahí el
+costo de dibujo (~2.600 draw calls) es lo que pesa, ver oportunidades en `docs/rendimiento-pc.md`.
+
+Física con 5 jugadores y el camión lleno (Reparto de día, Alto, 60 s, 4 jugadores falsos sentados y siete cajas
+cargadas, una por soporte; mismo proceso, sin red): promedio 129-132 FPS y p99 11,4 ms contra 156 FPS y 9,4 ms
+con un jugador y una caja. Jolt no informa `PHYSICS_3D_ACTIVE_OBJECTS` / `COLLISION_PAIRS` / `ISLAND_COUNT`
+(valen 0), así que el bench cuenta los `RigidBody3D` despiertos (de 3 a 11-14, sobre 130-146 en total) y parte
+el tick: scripts 0,5 → 0,9 ms y paso de Jolt 0,4 → 0,7 ms de promedio, nunca más de 3 ms. Detalle y el tirón
+que apareció (derramar una caja ruinosa: 100 ms por tick) en `docs/rendimiento-pc.md`.
+
+Carga y memoria (`bench_load_times.gd`, ventana 1920×1080): del arranque del motor al menú dibujado, 3,6 s
+(3,2 s motor y autoloads, 0,4 s el menú). Desde el botón hasta que sube la cubierta de carga: Reparto 4,5 s la
+primera vez y 3,3 s con los cachés calientes; Endless 1,5 s y 0,9 s. Con el nivel a la vista, los primeros 120
+frames no pasan de 23 ms. Memoria estática: menú 136 MiB; Reparto listo 448 MiB (pico de la corrida 479);
+Endless listo 205 MiB solo y 351 MiB después de un Reparto (pico 266); al volver al menú quedan 340 MiB
+(los cachés `static`), sin crecer en cuatro idas y vueltas ni dejar huérfanos.
 
 `bench_depot.gd` (S-208) mide lo que cuestan por frame los paquetes y el HUD en el depósito:
 14 cajas, 5 jugadores, semilla 4242, 600 frames, headless (`--fixed-fps 60`, sin GPU). Llama a mano

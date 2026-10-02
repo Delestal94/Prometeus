@@ -4,8 +4,15 @@ extends SceneTree
 ## Opening a package: the lid is host state (package.gd), the flaps and the
 ## contents are presentation (package_contents_view.gd). Covers opening and
 ## closing, contents that follow the trap state, an open box spilling its
-## contents as real rigid bodies when it tips over, and the resident
+## contents as real rigid bodies when it tips over (and doing it cheaply: a
+## ruined box throws every shard in one physics tick, N-220), and the resident
 ## noticing a box handed over open.
+
+## What spilling a ruined box (a hen's eight shards plus the straw) may take, in
+## ms. With simplified convex shapes (simplify = true) it took 10-70 ms per
+## shard (150-250 ms for the hen) on a fast desktop; the plain hull takes
+## ~2 ms in all. Generous on purpose: only the old cost may fail it.
+const SPILL_BUDGET_MS: float = 60.0
 
 var failures: int = 0
 
@@ -20,6 +27,7 @@ func _run() -> void:
 	await _test_open_and_close()
 	await _test_contents_follow_state()
 	await _test_spill_on_tip()
+	await _test_spill_cost()
 	await _test_open_delivery_is_marked()
 	if failures == 0:
 		print("PASS: packages open, show their contents, spill when tipped open, and an open delivery is noticed")
@@ -156,6 +164,31 @@ func _test_spill_on_tip() -> void:
 		await physics_frame
 	_expect(not bool(closed.get(&"contents_spilled")), "A taped box keeps its contents when it tips")
 	closed.free()
+
+
+func _test_spill_cost() -> void:
+	var package := _make_package("noisy", &"unbox_spill_cost")
+	package.freeze = true
+	await process_frame
+	await process_frame
+	package.call(&"set_open", true)
+	var started: int = Time.get_ticks_usec()
+	root.get_node("EventBus").emit_signal(&"package_contents_spilled", &"unbox_spill_cost", Vector3.ZERO,
+		ITrapBehavior.TrapState.RUINED)
+	var spill_ms: float = float(Time.get_ticks_usec() - started) / 1000.0
+	var shards: int = 0
+	for node: Node in root.get_children():
+		if node is RigidBody3D and String(node.name).begins_with("SpilledContent"):
+			shards += 1
+	_expect(shards >= 8, "A ruined hen box throws its shards and the straw (got %d bodies)" % shards)
+	_expect(spill_ms < SPILL_BUDGET_MS,
+		"Spilling a ruined box stays under %.0f ms (took %.1f ms): convex shapes are not simplified"
+		% [SPILL_BUDGET_MS, spill_ms])
+	for node: Node in root.get_children():
+		if String(node.name).begins_with("SpilledContent"):
+			node.free()
+	package.free()
+	await process_frame
 
 
 func _test_open_delivery_is_marked() -> void:

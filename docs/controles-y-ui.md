@@ -47,15 +47,14 @@ Diseño unificado para que los 4 tipos de trampa usen el mismo lenguaje de contr
 | Pausa/menú | Esc / Start | — |
 | Tripulación (solo en el depósito) | **Mantener** Tab / Back | Lista de quién está, con uniforme, quién maneja y quién tiene caja; el anfitrión LAN ve además el código de sala |
 | Reiniciar | **Mantener** R / Y (en pausa o resultados, instantáneo) | Solo solo o anfitrión |
+| Hablar (voz por proximidad, solo Steam) | **Mantener** Z (reasignable; sin botón de mando) | Solo con "Chat de voz" prendido en Opciones; con "Pulsar para hablar" apagado el micrófono queda abierto |
 | Pantalla completa | F11 | — |
 
 ### Nota sobre comunicación entre jugadores
-Para el MVP **no se implementa voice chat propio** (agrega complejidad de red y de
-librerías externas no justificada para una v1) — se asume que los grupos usan Discord/
-voice chat externo, como la mayoría de los juegos coop chicos de este tipo. El juego sí
-incluye un **sistema simple de pings/emotes** (ej. "¡ayuda!", "¡cuidado!") para
-jugadores que jueguen sin voice chat externo. Voice chat propio queda como posible
-mejora post-launch, no bloqueante para el MVP.
+Hay **voz por proximidad solo por Steam** (N-212; en LAN no hay voz): apagada por defecto hasta probarla con
+Steam real, se prende en Opciones ("Chat de voz"), con pulsar para hablar por defecto (Z, reasignable) o micrófono
+abierto, y en "Voces de la tripulación" un silenciar y un volumen por compañero mientras dure la sesión. El juego
+sigue teniendo el **sistema simple de pings/emotes** (ej. "¡ayuda!", "¡cuidado!") para quien juega sin voz.
 
 ---
 
@@ -151,7 +150,7 @@ dinero del equipo se reserva para decisiones: depósito, pausa y resultados; no 
 ruta mientras se maneja.
 
 - **Conductor**: velocímetro simple, indicador de distancia/tiempo restante a destino.
-  **[x] Implementado** (`prototype_hud.gd`: `speed_label`, `distance_label`).
+  **[x] Implementado** (`scripts/ui/hud/hud.gd`, antes `prototype_hud.gd`: `speed_label`, `distance_label`).
 - **Pasajero**: su propio paquete en pantalla con el medidor de integridad/agitación
   visible (OK ✓, En riesgo ! con pulso, Arruinada ✕; paleta normal u Okabe-Ito), y el prompt de
   la acción correspondiente a su trampa. **[x] Implementado** (`cargo_hint_label`,
@@ -165,7 +164,7 @@ ruta mientras se maneja.
 
 ### Pantalla de resultados
 - Desglose de puntaje por paquete (según fórmula de `parametros-diseno.md`).
-  **[x] Implementado** (overlay de resultados de `prototype_hud.gd`).
+  **[x] Implementado** (overlay de resultados de `scripts/ui/hud/hud_results.gd`).
 - Récord local. **[x] Implementado** (no estaba en el plan original, se sumó después:
   "¡NUEVO RÉCORD!" o el récord actual, ver `RunManager` y README sección Tests /
   `test_leaderboard`).

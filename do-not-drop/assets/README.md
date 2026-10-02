@@ -352,6 +352,7 @@ modificarlo:
   FK, piernas con IK horneado): `Idle` 6 s en loop (respiración, cambio de peso,
   mirada), `Walk` 0,33 s en loop (trote corto a 6 pasos/s, autorado a 3,6 m/s),
   `Stroll` 0,6 s en loop (caminata real a 1,5 m/s, para el stick a medias),
+  `Run` 0,33 s en loop (la carrera, autorada a 6 m/s: 6 pasos/s de 1 m con vuelo, N-115),
   `Jump` 1,6 s (`player.gd` lo recorre según la velocidad vertical; aterriza en el
   primer cuadro de `Idle`), `PickUpPackage` 1,6 s (sincronizado con la caja:
   agarre a 0,42 s, sube hasta 1,3 s), `PickUpHigh` 1,6 s (la misma agarrada para una

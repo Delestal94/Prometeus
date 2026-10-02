@@ -16,7 +16,11 @@ const DELIVERY_MAX_SPEED: float = 1.5
 const STUCK_SPEED: float = 0.3
 const STUCK_SECONDS: float = 6.0
 const HOUSE_STOP_RADIUS: float = 18.0
-@onready var route: Node3D = $World/Route
+## route.gd and vehicle.gd have no class name: typed through their scripts
+## so a rename fails to compile instead of at run time (N-224).
+const RouteScript = preload("res://scripts/gameplay/route/route.gd")
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+@onready var route: RouteScript = $World/Route
 ## The HUD redraws its progress bar and hint at this rate, not every physics
 ## tick (N-223); the run's own logic below still runs every tick. Keep it under
 ## hud_prompts' 0.25 s hint flash or "hold still" flickers.
@@ -27,41 +31,96 @@ var _hud_signal_left: float = 0.0
 ## What delivery_status_changed last said, to send a change at once.
 var _hud_in_zone: bool = false
 var _hud_stopped: bool = false
+## Orders that came in before the houses were built.
+var _pending_assignments: Array = []
+## The pieces of handing the orders to the houses (_assign_orders()).
+var _orders_posted: bool = false
+var _route_stands: bool = false
+var _orders_assigned: bool = false
 
 
 func _prepare_mode() -> void:
-	# The dog waits at the doors, the bees in the meadows (N-109).
-	cargo_animals.houses = route.get(&"houses")
+	# The dog waits at the doors, the bees in the meadows (N-109). The houses
+	# list is filled as the route builds, so the same array serves.
+	cargo_animals.houses = route.houses
 	cargo_animals.zone_probe = _is_open_country
 	# The doors are where the run is actually won: route.gd owns the houses,
 	# RunManager owns the scoring, and this is the one place that knows both.
 	# Without this the houses resolved into nothing and every delivery was
 	# worth exactly as much as driving past (docs/colaboracion-equipo.md).
-	if route.has_signal(&"house_resolved"):
-		route.connect(&"house_resolved", _on_house_resolved)
-		RunManager.expected_houses = (route.get(&"houses") as Array).size()
-		EventBus.houses_assigned.connect(func(assignments: Array) -> void: route.call(&"assign_packages", assignments))
-		for house: Node in route.get(&"houses"):
-			var index: int = int(house.get(&"house_index"))
-			house.connect(&"wrong_package_offered", func(expected: String) -> void:
-				EventBus.relay(&"house_refused_package", [index, expected]))
-		# Today's orders: one specific box per house, posted on the depot's
-		# board and on each house's sign from the start (every peer draws the
-		# same ones from the session seed).
-		depot.post_orders((route.get(&"houses") as Array).size())
-		route.call(&"assign_packages", depot.assignments())
+	route.house_resolved.connect(_on_house_resolved)
+	RunManager.expected_houses = route.house_count
+	EventBus.houses_assigned.connect(_on_houses_assigned)
+	# Today's orders: one specific box per house, posted on the depot's
+	# board and on each house's sign from the start (every peer draws the
+	# same ones from the session seed).
+	# (The depot builds itself over frames too: once it is stocked.)
+	_after_depot(_post_orders)
+	# The houses themselves stand once the route has built (it takes several
+	# frames: route.gd, N-408); already built, as in a test, it's now.
+	if route.is_built:
+		_on_route_built()
+	else:
+		route.built.connect(_on_route_built, CONNECT_ONE_SHOT)
+
+
+## The depot is stocked: today's orders go on its board.
+func _post_orders() -> void:
+	depot.post_orders(route.house_count)
+	_orders_posted = true
+	_assign_orders()
+
+
+## What needs the houses to exist: what a refused box says, and their orders.
+func _on_route_built() -> void:
+	for house: DeliveryHouse in route.houses:
+		var index: int = house.house_index
+		house.wrong_package_offered.connect(func(expected: String) -> void:
+			EventBus.relay(&"house_refused_package", [index, expected]))
+	_route_stands = true
+	_assign_orders()
+
+
+## The houses take their orders once they stand and the board has them (the
+## host's, if it already sent them), whichever of the route and the depot is last.
+func _assign_orders() -> void:
+	if not _route_stands or _orders_assigned or not (_orders_posted or not _pending_assignments.is_empty()):
+		return
+	_orders_assigned = true
+	route.assign_packages(_pending_assignments if not _pending_assignments.is_empty() else depot.assignments())
+	_pending_assignments = []
+
+
+## The orders arrive from the host (EventBus.houses_assigned); the houses may
+## still be on their way up, and take them as soon as they are.
+func _on_houses_assigned(assignments: Array) -> void:
+	if route.is_built:
+		route.assign_packages(assignments)
+	else:
+		_pending_assignments = assignments
+
+
+## The level's world is complete once the route and the depot are (they build over frames).
+func _is_world_built() -> bool:
+	return route.is_built and depot.is_built
+
+
+func _wait_for_world() -> void:
+	await super()
+	if not route.is_built:
+		await route.built
 
 
 ## The village at the end of the road, which the newspaper is named after.
 func newspaper_town() -> String:
-	var goal: Object = route.get(&"goal_lot") as Object
-	return String(goal.get(&"town_name")) if goal != null else ""
+	var goal: RouteGoalLot = route.goal_lot
+	return goal.town_name if goal != null else ""
 
 
 ## Whether the road is running through open country at this point: where the
 ## bees come for a cake (cargo_animals.gd).
 func _is_open_country(world_position: Vector3) -> bool:
-	var dresser: RouteDresser = route.get(&"dresser") as RouteDresser
+	var dresser: RouteDresser = route.dresser
 	if dresser == null:
 		return false
 	var zone: int = dresser.zone_at(route.to_local(world_position), route.road_distance(world_position))
@@ -95,21 +154,21 @@ var _crew_restart_pending: bool = false
 
 
 func _wanted_houses() -> int:
-	return int(route.call(&"crew_house_count", NetworkManager.peer_ids.size()))
+	return RouteScript.crew_house_count(NetworkManager.peer_ids.size())
 
 
 ## More passengers than houses, and the run not started yet.
 func _crew_outgrew_route() -> bool:
 	if not NetworkManager.is_host() or RunManager.is_running or not RunManager.results.is_empty():
 		return false
-	return _wanted_houses() > (route.get(&"houses") as Array).size()
+	return _wanted_houses() > route.house_count
 
 
 ## Only the host resolves doors (Interactable.interact() is host-only), and
 ## RunManager relays the record to everyone from there.
 func _on_house_resolved(house_index: int, outcome: StringName, package_id: StringName) -> void:
-	var houses: Array = route.get(&"houses")
-	var opened: bool = house_index < houses.size() and bool((houses[house_index] as Object).get(&"handed_over_open"))
+	var houses: Array[DeliveryHouse] = route.houses
+	var opened: bool = house_index < houses.size() and houses[house_index].handed_over_open
 	RunManager.register_delivery(house_index, outcome, package_id, opened)
 
 
@@ -131,8 +190,8 @@ func start_delivery() -> void:
 ## How far along the road each house sits, in metres, in house order.
 func _house_distances() -> Array:
 	var distances: Array = []
-	for house: Node3D in route.get(&"houses"):
-		distances.append(float(route.call(&"get_progress", house.global_position)) * float(route.get(&"route_length")))
+	for house: DeliveryHouse in route.houses:
+		distances.append(route.get_progress(house.global_position) * route.route_length)
 	return distances
 
 
@@ -192,7 +251,8 @@ func _emit_hud_signals(delta: float, progress: float) -> void:
 		_hud_signal_left += HUD_SIGNAL_INTERVAL
 		# A long frame must not queue a burst of catch-up emissions.
 		_hud_signal_left = maxf(_hud_signal_left, 0.0)
-		EventBus.route_progress_changed.emit(progress, route.route_length * (1.0 - progress), route.get_section_name(vehicle.global_position))
+		EventBus.route_progress_changed.emit(progress, route.route_length * (1.0 - progress),
+				route.get_section_name(vehicle.global_position))
 	if due or in_zone != _hud_in_zone or holding != _hud_stopped:
 		_hud_in_zone = in_zone
 		_hud_stopped = holding
@@ -206,14 +266,14 @@ func _should_count_as_stuck() -> bool:
 		return false
 	if vehicle.linear_velocity.length() >= STUCK_SPEED or absf(vehicle.engine_force) <= 0.0:
 		return false
-	if int(vehicle.get(&"driver_peer_id")) == 0:
+	if (vehicle as VehicleScript).driver_peer_id == 0:
 		return false
 	var depot_position: Vector3 = depot.to_local(vehicle.global_position)
 	if absf(depot_position.x) <= Depot.HALF_WIDTH + 2.0 \
 			and depot_position.z > Depot.TRUCK_CLEAR_Z \
 			and depot_position.z < Depot.DEPTH + 2.0:
 		return false
-	for house: Node in route.get(&"houses"):
-		if is_instance_valid(house) and vehicle.global_position.distance_to((house as Node3D).global_position) <= HOUSE_STOP_RADIUS:
+	for house: DeliveryHouse in route.houses:
+		if is_instance_valid(house) and vehicle.global_position.distance_to(house.global_position) <= HOUSE_STOP_RADIUS:
 			return false
 	return true

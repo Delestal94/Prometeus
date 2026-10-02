@@ -11,7 +11,7 @@ func _run() -> void:
 	root.add_child(model)
 	var skeleton: Skeleton3D = _find(model, "Skeleton3D")
 	var animation: AnimationPlayer = _find(model, "AnimationPlayer")
-	for clip: String in ["Idle", "Walk", "Stroll", "Sit", "TurnInPlace"]:
+	for clip: String in ["Idle", "Walk", "Stroll", "Run", "Sit", "TurnInPlace"]:
 		var duration: float = animation.get_animation(clip).length
 		var first: Array[Transform3D] = _pose(animation, skeleton, clip, 0.0)
 		var last: Array[Transform3D] = _pose(animation, skeleton, clip, duration)
@@ -20,11 +20,11 @@ func _run() -> void:
 				"%s loop closes its bone positions: %s" % [clip, skeleton.get_bone_name(bone)])
 			_expect(first[bone].basis.get_rotation_quaternion().angle_to(last[bone].basis.get_rotation_quaternion()) < 0.005,
 				"%s loop closes its bone rotations: %s" % [clip, skeleton.get_bone_name(bone)])
-	# The gaits are in place, authored at player.gd's WALK/STROLL_AUTHORED_SPEED.
+	# The gaits are in place, authored at PlayerAnimator's WALK/STROLL/RUN_AUTHORED_SPEED.
 	# Add the forward travel: the ball of the planted foot (what stays on the
 	# floor while the heel lifts) must hold one world spot through the stance.
 	# Windows: from the flat foot to just before toe-off (animation_library.py).
-	for gait: Array in [["Walk", 3.6, 0.03, 0.105], ["Stroll", 1.5, 0.10, 0.36]]:
+	for gait: Array in [["Walk", 3.6, 0.03, 0.105], ["Stroll", 1.5, 0.10, 0.36], ["Run", 6.0, 0.02, 0.055]]:
 		var a: Vector3 = _ball(animation, skeleton, gait[0], gait[2])
 		var b: Vector3 = _ball(animation, skeleton, gait[0], gait[3])
 		var slip: float = (b + Vector3.FORWARD * float(gait[1]) * (float(gait[3]) - float(gait[2]))).distance_to(a)

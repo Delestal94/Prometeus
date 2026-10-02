@@ -131,9 +131,11 @@ func _initialize() -> void:
 	if bool(network.get(&"_steam_ready")):
 		_expect(bool(menu.get(&"_busy")), "The menu takes the invite over (shows it's joining)")
 	else:
-		_expect(not bool(menu.get(&"_busy"))
-				and (menu.get(&"_status_label") as Label).text.begins_with("No se pudo entrar"),
-			"Without Steam the menu takes the invite over and reports it couldn't join")
+		# N-408: the session's own reason ("Steam no está disponible."), not the
+		# generic "No se pudo entrar… (error %d)" written over it.
+		var status_text: String = (menu.get(&"_status_label") as Label).text
+		_expect(not bool(menu.get(&"_busy")) and status_text == tr("UI_NET_STEAM_UNAVAILABLE"),
+			"Without Steam the menu takes the invite over and says why it couldn't join (got %s)" % status_text)
 	network.call(&"leave_session")
 	network.set(&"transport", NetworkManager.Transport.AUTO)
 	# An invite accepted before the menu existed waits for it, once.

@@ -15,6 +15,14 @@ const SHOTS := [
 	["spawn_view_game", Vector3(0.0, 1.65, 17.4), Vector3(0.0, 1.5, 5.0), 82.0],
 	["spawn_view_left_end", Vector3(-1.2, 1.65, 18.0), Vector3(0.0, 1.5, 5.0), 82.0],
 	["spawn_floor_arrows",Vector3(0.6, 6.0, 22.5), Vector3(0.6, 0.0, 15.0)],
+	# The zone arrows on the green walkways (N-408b: they read as hovering): eye height from a few metres away
+	# (the game's field of view), and close up from the side.
+	["floor_arrow_teal_eye", Vector3(8.5, 1.65, 19.6), Vector3(8.5, 0.0, 16.4), 82.0],
+	["floor_arrow_teal_close", Vector3(9.3, 0.45, 17.4), Vector3(8.5, 0.0, 16.4), 60.0],
+	["floor_arrow_purple_eye", Vector3(-8.5, 1.65, 10.2), Vector3(-8.5, 0.0, 13.1), 82.0],
+	["floor_arrow_purple_close", Vector3(-9.2, 0.45, 12.0), Vector3(-8.5, 0.0, 13.1), 60.0],
+	["floor_arrow_purple_top", Vector3(-8.5, 2.0, 12.4), Vector3(-8.5, 0.0, 13.1), 60.0],
+	["floor_arrow_blue_eye", Vector3(-8.5, 1.65, 12.5), Vector3(-8.5, 0.0, 15.5), 82.0],
 	["spawn_turned_left", Vector3(0.0, 1.65, 17.4), Vector3(-8.0, 1.8, 18.5)],
 	["spawn_turned_right", Vector3(0.0, 1.65, 17.4), Vector3(8.0, 1.8, 18.5)],
 	["order_board", Vector3(-2.6, 1.7, 15.2), Vector3(-5.5, 2.0, 10.9)],

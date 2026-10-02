@@ -37,6 +37,14 @@ const FALLBACK_SAMPLE_RATE: int = 24000
 ## stopVoiceRecording(); drain it this many frames so the end of a phrase is
 ## sent instead of arriving stale at the start of the next one.
 const DRAIN_FRAMES: int = 12
+## Packets decoded per peer: each costs a decoder call before anything can
+## judge it, so a peer flooding the voice channel is cut here. Steam hands out
+## a packet per ~20 ms of speech at most (about 50 a second, however fast the
+## sender's frames are), so this is more than twice what a real voice needs.
+## Its own budget, not RpcGuard's: voice must never spend the one that lets
+## go of a box.
+const VOICE_PACKETS_PER_SECOND: float = 120.0
+const VOICE_PACKET_BURST: float = 30.0
 
 ## The Steam singleton, or a stand-in object in tests. null means no voice.
 var backend: Object = null
@@ -50,6 +58,8 @@ var talking: bool = false
 
 var _muted: Dictionary = {}  # peer_id -> true
 var _peer_volume: Dictionary = {}  # peer_id -> 0..1
+var _voice_tokens: Dictionary = {}  # peer_id -> packets left (float)
+var _voice_token_msec: Dictionary = {}  # peer_id -> when they were counted
 var _drain_frames: int = 0
 
 
@@ -111,11 +121,29 @@ func peer_volume(peer_id: int) -> float:
 func clear_peers() -> void:
 	_muted.clear()
 	_peer_volume.clear()
+	_voice_tokens.clear()
+	_voice_token_msec.clear()
+
+
+## Takes one packet from `peer_id`'s budget at `now_msec` (Time.get_ticks_msec());
+## false once the burst is spent, until it refills at VOICE_PACKETS_PER_SECOND.
+func take_voice_packet(peer_id: int, now_msec: int) -> bool:
+	var tokens: float = float(_voice_tokens.get(peer_id, VOICE_PACKET_BURST))
+	var since: int = maxi(0, now_msec - int(_voice_token_msec.get(peer_id, now_msec)))
+	tokens = minf(VOICE_PACKET_BURST, tokens + since * VOICE_PACKETS_PER_SECOND / 1000.0)
+	_voice_token_msec[peer_id] = now_msec
+	if tokens < 1.0:
+		_voice_tokens[peer_id] = tokens
+		return false
+	_voice_tokens[peer_id] = tokens - 1.0
+	return true
 
 
 func _forget_peer(peer_id: int) -> void:
 	_muted.erase(peer_id)
 	_peer_volume.erase(peer_id)
+	_voice_tokens.erase(peer_id)
+	_voice_token_msec.erase(peer_id)
 
 
 func _set_talking(value: bool) -> void:
@@ -163,6 +191,8 @@ func receive_packet(peer_id: int, packet: PackedByteArray) -> void:
 	if not _voice_enabled():
 		return
 	if backend == null or not backend.has_method(&"decompressVoice"):
+		return
+	if not take_voice_packet(peer_id, Time.get_ticks_msec()):
 		return
 	var rate: int = FALLBACK_SAMPLE_RATE
 	if backend.has_method(&"getVoiceOptimalSampleRate"):

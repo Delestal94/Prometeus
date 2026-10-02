@@ -7,7 +7,9 @@ extends Node
 ## 10 s of that budget prints a NETLOG WARNING line.
 ## Next to last stage (N-221): the client that left holding a box joins again
 ## from the same running game and gets its colour slot and merit back under its
-## new peer id.
+## new peer id. N-908: the host picked a box up while it was away, and the
+## client back in sees it in the host's hands (the player repeats its pick_up to
+## a peer whose level is up: player_net_visibility.gd).
 ## Last stage (N-221 follow-up): the client vanishes without a word while
 ## carrying a box in crisis -- its link is left open but nobody polls it, a
 ## pulled cable -- and joins again before the host noticed. The host drops the
@@ -65,6 +67,10 @@ func _ready() -> void:
 			_paper = paper
 			_order.append("paper"))
 		bus.connect(&"run_ended", func(_score: int, _results: Dictionary) -> void: _order.append("ended"))
+	# The route builds over several frames, as in the game, even headless (N-408): the host
+	# spawns nobody and the client reports no "ready" until its road stands.
+	var route_script: GDScript = load("res://scripts/gameplay/route/route.gd") as GDScript
+	route_script.set(&"always_slice", true)
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
 	# Without this a dropped join only showed up as a bare timeout 40 s later.
 	# NETLOG, not PAIR: run-net-pair.sh takes the first PAIR line as the result.
@@ -234,7 +240,12 @@ func _run_host() -> void:
 	_expect(is_instance_valid(package) and package.is_inside_tree(), "disconnected client's package remains in the world")
 	_expect(not package.is_held and package.carrier == null and package.collision_layer == 4,
 		"disconnected client's package is loose on the host")
-	await _check_rejoin(old_client, old_slot, old_merit)
+	var held: DeliveryPackage = _level.packages[1]
+	held.call(&"take_by", host_player)
+	await _check_rejoin(old_client, old_slot, old_merit, held)
+	if held.is_held:
+		held.call(&"request_drop", Transform3D(Basis.IDENTITY, held.global_position), false)
+	await _pump(0.7)
 	if _client_peer_id > 0:
 		await _check_ghost_rejoin(old_slot)
 	await _finish(not _failed, "all pair checks passed")
@@ -242,8 +253,9 @@ func _run_host() -> void:
 
 ## N-221: the client comes back from the same running game (same identity in
 ## its ready reply) under a new peer id. The host gives it its slot back, and
-## with it the merit CrewProgression keeps under that slot.
-func _check_rejoin(old_client: int, old_slot: int, old_merit: int) -> void:
+## with it the merit CrewProgression keeps under that slot. The host holds
+## `held` all along: the client has to see it in the host's hands (N-908).
+func _check_rejoin(old_client: int, old_slot: int, old_merit: int, held: DeliveryPackage) -> void:
 	_client_peer_id = 0
 	var rejoins: Array = []
 	_network.connect(&"peer_rejoined", func(old_id: int, new_id: int) -> void: rejoins.append([old_id, new_id]))
@@ -263,8 +275,10 @@ func _check_rejoin(old_client: int, old_slot: int, old_merit: int) -> void:
 	_expect(slot == old_slot, "the rejoined client gets its colour slot back (slot %d, was %d)" % [slot, old_slot])
 	_expect(merit == old_merit, "the rejoined client gets its merit back (%d, was %d)" % [merit, old_merit])
 	# Not its suit: this client wears a uniform on purpose (test_network_rejoin covers the suit).
-	rpc_id(_client_peer_id, &"_client_check_rejoin", _client_peer_id, old_slot)
+	_expect(_player(1).carried_package == held, "the host still holds the box it picked up while the client was away")
+	rpc_id(_client_peer_id, &"_client_check_rejoin", _client_peer_id, old_slot, held.get_path())
 	await _wait_for_report(&"rejoin")
+	await _wait_for_report(&"late_carry")
 
 
 ## N-221 follow-up: back from a pulled cable before the host noticed. The
@@ -283,7 +297,13 @@ func _check_ghost_rejoin(slot: int) -> void:
 	_expect(client_player.carried_package == package and package.carrier == client_player,
 		"client holds a box in crisis before vanishing")
 	# The host must not notice the silence before the client is back: that
-	# takes a level load.
+	# takes a level load. The host settles the previous rejoin
+	# settle_delay_seconds after it (session timeout, 20 s): wait that out
+	# first, or it overwrites the long timeout below and a slow load (CI) times
+	# the ghost out before the client is back to have it dropped.
+	var settled: bool = await _wait_until(func() -> bool:
+		return int(_network.call(&"enet_timeout_msec", ghost)) == _session_timeout_msec())
+	_expect(settled, "the rejoined client settles before it vanishes")
 	var enet := get_tree().root.multiplayer.multiplayer_peer as ENetMultiplayerPeer
 	enet.get_peer(ghost).set_timeout(32, 120000, 120000)
 	var removed: Array = []
@@ -513,12 +533,18 @@ func _client_check_ghost_rejoin(my_id: int, slot: int) -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _client_check_rejoin(my_id: int, slot: int) -> void:
+func _client_check_rejoin(my_id: int, slot: int, held_path: NodePath) -> void:
 	await _pump(0.4)
 	var me: int = get_tree().root.multiplayer.get_unique_id()
 	var seen: int = int(_network.call(&"color_slot", me))
 	var ok: bool = me == my_id and seen == slot and _player(me) != null
 	_report(&"rejoin", ok, "the rejoined client sees its own colour slot again (slot %d, sees %d)" % [slot, seen])
+	var held: Node = get_node_or_null(held_path)
+	var host_player: Player = _player(1)
+	var in_hand: Variant = host_player.carried_package if host_player != null else null
+	_report(&"late_carry", held != null and in_hand == held,
+		"the rejoined client sees the box the host picked up while it was away in the host's hands (sees %s)"
+		% [in_hand])
 
 
 func _report(stage: StringName, ok: bool, detail: String) -> void:

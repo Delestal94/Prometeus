@@ -16,7 +16,12 @@ extends SceneTree
 ## - every code-built segment builds without assets, exits where it says,
 ##   and CurveSegment's exit really turns;
 ## - a TerrainField with a span builds tiles with the default shader, is
-##   flat at its road, falls off outside, and conforms a node to the ground.
+##   flat at its road, falls off outside, and conforms a node to the ground;
+## - the sliced build (N-408): build_async() makes the very same tiles as
+##   build() (vertices, normals, paint, triangles, walls) with its numbers
+##   worked out on worker threads and its scene objects made a frame at a
+##   time, and conform_all() warps the very same meshes (and moves the same
+##   rigid parts) as conform_geometry() node by node.
 
 var _failures: int = 0
 
@@ -45,6 +50,8 @@ func _run() -> void:
 	await _test_hooks(scene)
 	_test_grip_zones(scene)
 	await _test_terrain(scene)
+	await _test_sliced_terrain(scene)
+	await _test_sliced_conform(scene)
 	scene.queue_free()
 	await process_frame
 	if _failures == 0:
@@ -278,6 +285,209 @@ func _test_terrain(scene: Node3D) -> void:
 		"A mesh conforms to the ground (top %.2f, ground %.2f)" % [top, ground])
 	prop.free()
 	terrain.free()
+
+
+## A bendy road with the lot: a river under a bridge, a crest, a pad, a flat zone,
+## a platform, a tunnel and a footpath, so every term of the height field is there.
+func _fill_terrain(terrain: TerrainField) -> void:
+	terrain.add_span(Vector3(0.0, 0.0, 20.0), Vector3(0.0, 0.0, -90.0))
+	terrain.add_span(Vector3(0.0, 0.0, -90.0), Vector3(60.0, 0.0, -170.0), true, 7.0)
+	terrain.add_span(Vector3(60.0, 0.0, -170.0), Vector3(70.0, 0.0, -300.0))
+	terrain.paths.append({"a": Vector2(3.0, -20.0), "b": Vector2(14.0, -34.0)})
+	terrain.paths.append({"a": Vector2(300.0, 300.0), "b": Vector2(310.0, 300.0)})  # Nowhere near.
+	terrain.rivers.append({"a": Vector2(-20.0, -50.0), "b": Vector2(20.0, -50.0), "depth": 2.0,
+		"full_width": 12.0, "bank_width": 30.0})
+	terrain.crests.append({"a": Vector2(60.0, -170.0), "b": Vector2(70.0, -250.0), "height": 4.0})
+	terrain.pads.append(Vector3(12.0, 0.7, -10.0))
+	terrain.flat_zones.append(Rect2(-15.0, 4.0, 30.0, 16.0))
+	terrain.platforms.append({"centre": Vector2(70.0, -300.0), "along": Vector2(0.0, -1.0),
+		"half": Vector2(10.0, 20.0), "height": 1.5})
+	terrain.tunnels.append({"at": Vector2(66.0, -230.0), "dir": Vector2(0.0, -1.0), "level": 0.5,
+		"bore_half": 3.0, "bore_length": 20.0, "crown": 5.0, "face_half": 6.0, "height": 9.0})
+
+
+## Every tile body of `terrain` by name, with its mesh's arrays and how many shapes it carries.
+func _tiles_of(terrain: TerrainField) -> Dictionary:
+	var tiles: Dictionary = {}
+	for body: Node in terrain.find_children("Terrain_*", "StaticBody3D", true, false):
+		var entry: Dictionary = {"shapes": 0}
+		for child: Node in body.get_children():
+			if child is MeshInstance3D:
+				entry["arrays"] = (child as MeshInstance3D).mesh.surface_get_arrays(0)
+			elif child is CollisionShape3D:
+				entry["shapes"] = int(entry["shapes"]) + 1
+		tiles[body.name] = entry
+	return tiles
+
+
+func _test_sliced_terrain(scene: Node3D) -> void:
+	var blocking := TerrainField.new()
+	var sliced := TerrainField.new()
+	scene.add_child(blocking)
+	scene.add_child(sliced)
+	_fill_terrain(blocking)
+	_fill_terrain(sliced)
+	blocking.build()
+	# A budget of nothing: every step gives the frame back, so this really is sliced.
+	var slicer := FrameSlicer.new(self, 0.0)
+	await sliced.build_async(slicer)
+	var expected: Dictionary = _tiles_of(blocking)
+	var got: Dictionary = _tiles_of(sliced)
+	_expect(expected.size() > 20, "The test field has tiles (%d)" % expected.size())
+	_expect(got.keys() == expected.keys(), "The sliced build makes the same tiles, in the same order")
+	_expect(slicer.frames_waited >= expected.size(),
+		"It gave the frame back between tiles (%d frames for %d tiles)" % [slicer.frames_waited, expected.size()])
+	var different: int = 0
+	var holes: int = 0
+	for tile_name: Variant in expected:
+		var a: Dictionary = expected[tile_name]
+		var b: Dictionary = got.get(tile_name, {})
+		if b.is_empty() or a.arrays != b.arrays or a.shapes != b.shapes:
+			different += 1
+		if (a.arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() < 16 * 16 * 6:
+			holes += 1
+	_expect(different == 0, "Every tile is identical to the blocking build's (%d differ)" % different)
+	_expect(holes > 0, "Some tiles have holes where the tunnel's bore is, so that path was compared too")
+	_expect(is_equal_approx(sliced.build_progress, 1.0), "build_progress ends at 1")
+	_expect(sliced.find_children("RiverWater", "MeshInstance3D", true, false).size() == 1,
+		"The river's water was built")
+	for point: Vector3 in [Vector3(0.0, 0.0, -40.0), Vector3(25.0, 0.0, -50.0), Vector3(31.3, 0.0, -140.7),
+			Vector3(70.0, 0.0, -220.0), Vector3(-45.0, 0.0, 12.0)]:
+		_expect(blocking.height_at(point) == sliced.height_at(point), "The same ground at %s" % point)
+	blocking.free()
+	sliced.free()
+	# Freed (queue_free, as a scene change does) while its workers still run: it
+	# waits for them instead of pulling the field from under their feet.
+	var dropped := TerrainField.new()
+	scene.add_child(dropped)
+	_fill_terrain(dropped)
+	dropped.build_async(FrameSlicer.new(self, 0.0))
+	await process_frame
+	dropped.queue_free()
+	await process_frame
+	await process_frame
+	_expect(not is_instance_valid(dropped), "A field dropped mid-build goes away")
+
+
+## A little of everything conform_geometry() meets under one parent.
+func _conform_props(parent: Node3D) -> void:
+	var board := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(5.0, 0.2, 9.0)
+	board.mesh = box
+	board.name = "Board"
+	board.transform = Transform3D(Basis(Vector3.UP, 0.4), Vector3(18.0, 0.3, -30.0))
+	parent.add_child(board)
+	# A solid with a collision shape, two meshes under it (the last one's shape stays).
+	var body := StaticBody3D.new()
+	body.name = "Solid"
+	parent.add_child(body)
+	for index: int in range(2):
+		var strip := MeshInstance3D.new()
+		var surface := PlaneMesh.new()
+		surface.size = Vector2(6.0, 11.0)
+		strip.mesh = surface
+		strip.name = "Strip%d" % index
+		strip.position = Vector3(10.0 + float(index) * 7.0, 0.0, -60.0)
+		body.add_child(strip)
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	body.add_child(shape)
+	# A bridge's furniture measures itself against the ground without the river.
+	var bridge := Node3D.new()
+	bridge.name = "Bridge"
+	bridge.set_meta(&"ignore_river", true)
+	bridge.position = Vector3(-4.0, 0.0, -50.0)
+	parent.add_child(bridge)
+	var deck := MeshInstance3D.new()
+	var deck_box := BoxMesh.new()
+	deck_box.size = Vector3(6.0, 0.3, 40.0)
+	deck.mesh = deck_box
+	deck.name = "Deck"
+	bridge.add_child(deck)
+	var trigger := Area3D.new()
+	trigger.name = "Trigger"
+	trigger.position = Vector3(8.0, 0.0, -25.0)
+	parent.add_child(trigger)
+	var label := Label3D.new()
+	label.position = Vector3(-9.0, 2.0, -75.0)
+	parent.add_child(label)
+	var rigid := Node3D.new()
+	rigid.name = "Rigid"
+	rigid.set_meta(&"rigid", true)
+	rigid.position = Vector3(25.0, 0.0, -100.0)
+	parent.add_child(rigid)
+	var rigid_part := MeshInstance3D.new()
+	rigid_part.mesh = BoxMesh.new()
+	rigid.add_child(rigid_part)  # Not warped: it rides with its parent.
+
+
+func _test_sliced_conform(scene: Node3D) -> void:
+	var one := TerrainField.new()
+	var other := TerrainField.new()
+	one.position = Vector3(3.0, 0.0, 0.0)
+	other.position = Vector3(3.0, 0.0, 0.0)
+	var left := Node3D.new()
+	var right := Node3D.new()
+	left.rotation.y = 0.2
+	right.rotation.y = 0.2
+	scene.add_child(one)
+	scene.add_child(other)
+	scene.add_child(left)
+	scene.add_child(right)
+	_fill_terrain(one)
+	_fill_terrain(other)
+	_conform_props(left)
+	_conform_props(right)
+	one.build()
+	other.build()
+	for child: Node in left.get_children():
+		one.conform_geometry(child)
+	var slicer := FrameSlicer.new(self, 0.0)
+	var roots: Array[Node] = []
+	for child: Node in right.get_children():
+		roots.append(child)
+	await other.conform_all(roots, slicer)
+	var meshes: int = 0
+	for path: String in ["Board", "Solid/Strip0", "Solid/Strip1", "Bridge/Deck"]:
+		var a: MeshInstance3D = left.get_node(path) as MeshInstance3D
+		var b: MeshInstance3D = right.get_node(path) as MeshInstance3D
+		_expect(a != null and b != null and a.mesh is ArrayMesh and b.mesh is ArrayMesh,
+			"%s was conformed on both sides" % path)
+		if a == null or b == null:
+			continue
+		_expect(a.mesh.surface_get_arrays(0) == b.mesh.surface_get_arrays(0),
+			"%s is warped to the very same vertices" % path)
+		meshes += 1
+	_expect(meshes == 4, "Four meshes were compared (%d)" % meshes)
+	var solid_shape: CollisionShape3D = left.get_node("Solid").find_children("*", "CollisionShape3D", false, false)[0]
+	_expect(solid_shape.shape is ConcavePolygonShape3D, "The solid got a trimesh shape")
+	solid_shape = right.get_node("Solid").find_children("*", "CollisionShape3D", false, false)[0]
+	_expect(solid_shape.shape is ConcavePolygonShape3D, "...on both sides")
+	for path: String in ["Trigger", "Rigid"]:
+		var moved: Vector3 = left.get_node(path).position
+		_expect(moved == right.get_node(path).position and absf(moved.y) > 0.01,
+			"%s moved up onto the ground, the same on both sides" % path)
+	var left_label: Node3D = left.find_children("*", "Label3D", false, false)[0] as Node3D
+	var right_label: Node3D = right.find_children("*", "Label3D", false, false)[0] as Node3D
+	_expect(left_label.position == right_label.position, "The label rides the ground the same")
+	var rigid_part: MeshInstance3D = right.get_node("Rigid").get_child(0) as MeshInstance3D
+	_expect(rigid_part.mesh is BoxMesh, "A rigid part's own meshes are not warped")
+	_expect(slicer.frames_waited >= meshes,
+		"conform_all() gave the frame back along the way (%d frames)" % slicer.frames_waited)
+	_expect(is_equal_approx(other.conform_progress, 1.0), "conform_progress ends at 1")
+	# With no slicer it is conform_geometry() over the roots.
+	var plain := Node3D.new()
+	scene.add_child(plain)
+	_conform_props(plain)
+	var plain_roots: Array[Node] = []
+	for child: Node in plain.get_children():
+		plain_roots.append(child)
+	await other.conform_all(plain_roots, null)
+	_expect((plain.get_node("Board") as MeshInstance3D).mesh is ArrayMesh,
+		"Without a slicer conform_all() conforms in one go")
+	for node: Node in [one, other, left, right, plain]:
+		node.free()
 
 
 func _expect(condition: bool, description: String) -> void:

@@ -7,6 +7,9 @@ extends SceneTree
 ## - the plan comes from the session seed alone: the same seed deals the same
 ##   legs, other seeds deal others; the first leg is quiet, no two legs in a
 ##   row have one, all three animals turn up;
+## - the director deals from a per-run seed (N-909): alone (world seed 0) two
+##   runs deal different legs; in a room the same world seed and run count deal
+##   the same legs, another run count deals others;
 ## - nothing acts without warning: the alert (EventBus.cargo_animal_alert, with
 ##   its cry, icon and HUD banner) comes WARN seconds before the animal starts,
 ##   and the horn already works during the warning;
@@ -22,6 +25,8 @@ extends SceneTree
 ## - the harm to the box happens only on the host: a peer that is not the host
 ##   never announces or hurts anything (but draws what the host relays), and
 ##   one that joins late is told again without restarting the animal;
+## - N-910: an end and the next alert in the same frame draw the new animal warning (not
+##   the old one leaving), and the new dog is still named "Dog" (stick point path);
 ## - rhythm: one animal per leg, at most MAX_PER_RUN a run, the pick among
 ##   boxes does not depend on the order of the list, and none is announced
 ##   while the last one is still leaving.
@@ -91,7 +96,9 @@ func _run() -> void:
 	await _test_dog(level, animals, view, vehicle, package, player, bus)
 	await _test_bees(level, animals, view, vehicle, package, bus)
 	await _test_client(level, animals, view, vehicle, package)
+	await _test_same_frame(level, view, vehicle, package)
 	_test_rhythm(level, animals, vehicle)
+	_test_run_seed(animals)
 
 	level.queue_free()
 	manager.call(&"reset_run")
@@ -512,6 +519,43 @@ func _test_client(level: Node, animals: Node, view: Node, vehicle: RigidBody3D,
 	animals.end_event(&"left", 0, true)
 
 
+## N-910: the director's cooldown (3.5 s) outlasts the dog's exit (3.0 s) by little, so
+## the end of one animal and the alert of the next can reach a client in one frame.
+func _test_same_frame(level: Node, view: Node, vehicle: RigidBody3D, package: Node) -> void:
+	_drive(vehicle, 15.0)
+	var bus: Node = root.get_node(^"/root/EventBus")
+	_tick_view(view, 4.0)
+	await process_frame
+	_expect(view.state == VIEW_NONE, "No animal is out before the same-frame cases")
+	var id: StringName = package.package_id
+	# Same animal, same box: the new alert is a new attack, not a repeat for a late joiner.
+	bus.emit_signal(&"cargo_animal_alert", CargoAnimalPlan.DOG, id, 1.0, 6.0)
+	_tick_view(view, 1.5)
+	_expect(view.state == VIEW_ACT, "The dog is on the box before it ends")
+	var first: Node = view.animal
+	bus.emit_signal(&"cargo_animal_ended", CargoAnimalPlan.DOG, id, &"left", 0)
+	bus.emit_signal(&"cargo_animal_alert", CargoAnimalPlan.DOG, id, 1.0, 6.0)
+	_expect(view.state == VIEW_WARN and view.animal != null and view.animal != first,
+		"An end and the next alert in the same frame draw a new animal warning, not the old one leaving")
+	_expect(view.animal.name == &"Dog", "The new dog keeps its name (got %s)" % view.animal.name)
+	# Another box, same frame: the old "Dog" is gone from the tree at once, so the new one
+	# is "Dog" too and its stick point has the path the host's throw names.
+	_tick_view(view, 1.5)
+	var other: Node = level.packages[1] if level.packages.size() > 1 else package
+	first = view.animal
+	bus.emit_signal(&"cargo_animal_ended", CargoAnimalPlan.DOG, id, &"left", 0)
+	bus.emit_signal(&"cargo_animal_alert", CargoAnimalPlan.DOG, other.package_id, 1.0, 6.0)
+	_expect(view.state == VIEW_WARN and view.animal != first, "The next dog is a new one")
+	_expect(view.animal.name == &"Dog", "The dog of the next alert is named Dog (got %s)" % view.animal.name)
+	_expect(view.dog_point != null and view.get_node_or_null(^"Dog/DistractPoint") == view.dog_point,
+		"Its stick point is where the host finds it: Dog/DistractPoint")
+	# Close it, so the rhythm test starts clean.
+	bus.emit_signal(&"cargo_animal_ended", CargoAnimalPlan.DOG, view.package_id, &"left", 0)
+	_tick_view(view, 4.0)
+	await process_frame
+	_expect(view.state == VIEW_NONE and view.animal == null, "The same-frame dogs are freed once gone")
+
+
 # --- Rhythm --------------------------------------------------------------------
 
 func _test_rhythm(_level: Node, animals: Node, vehicle: RigidBody3D) -> void:
@@ -550,6 +594,44 @@ func _test_rhythm(_level: Node, animals: Node, vehicle: RigidBody3D) -> void:
 		others = others or (not plan.is_empty() and StringName(plan["kind"]) != CargoAnimalPlan.GULL)
 	_expect(not others, "In Endless (no doors, no meadows) only the gull is planned")
 	animals.endless = false
+
+
+# --- Run seed ------------------------------------------------------------------
+
+## N-909: alone the world seed is 0, which used to deal the same animals every
+## run; now each run rolls its own, while a room stays reproducible.
+func _test_run_seed(animals: Node) -> void:
+	var network: Node = root.get_node(^"/root/NetworkManager")
+	var old_seed: Variant = network.get(&"world_seed")
+	var old_runs: Variant = network.get(&"world_completed_runs")
+	# Long enough that two independent runs coinciding is out of the question.
+	var legs: int = 40
+	network.set(&"world_seed", 0)
+	network.set(&"world_completed_runs", 0)
+	var alone_a: Array = _deal_run(animals, legs)
+	var alone_b: Array = _deal_run(animals, legs)
+	_expect(alone_a != alone_b, "Alone (world seed 0) two runs deal different legs")
+	network.set(&"world_seed", 4711)
+	network.set(&"world_completed_runs", 0)
+	var room_first: Array = _deal_run(animals, legs)
+	var room_again: Array = _deal_run(animals, legs)
+	_expect(room_first == room_again, "In a room the same world seed and run count deal the same legs")
+	network.set(&"world_completed_runs", 1)
+	var room_next: Array = _deal_run(animals, legs)
+	_expect(room_next != room_first, "In a room the next run deals other legs than the first")
+	network.set(&"world_seed", old_seed)
+	network.set(&"world_completed_runs", old_runs)
+	animals.call(&"_on_run_started", &"", [])
+
+
+## Starts a run on the director and returns the plans of its first `legs` legs.
+func _deal_run(animals: Node, legs: int) -> Array:
+	animals.call(&"_on_run_started", &"", [])
+	var plans: Array = []
+	for step: int in range(legs):
+		animals.call(&"_next_leg")
+		plans.append(animals.current_plan().duplicate())
+	return plans
 
 
 # --- Helpers -------------------------------------------------------------------

@@ -1,6 +1,9 @@
 extends SceneTree
 ## Independent selections, persistent profile migration, live preview, per-peer
-## face materials, and facial attachments that follow the animated head.
+## face materials, and facial attachments that follow the animated head. Every
+## face style has its sheets (brows on their own layer, N-506), and a blink
+## squashes the eyes but leaves the brows where they are; the sheet is laid on
+## the head as drawn, not mirrored.
 const Catalog = preload("res://scripts/core/face_catalog.gd")
 const Profile = preload("res://scripts/core/unlock_manager.gd")
 var _failures: int = 0
@@ -33,6 +36,17 @@ func _run() -> void:
 		var choices: Dictionary = Catalog.EYES if kind == "eyes" else Catalog.MOUTHS
 		for id: StringName in choices:
 			_expect(Catalog.texture(kind, id) != null, "Texture exists: %s/%s" % [kind, id])
+			if kind == "eyes":
+				var brows: Texture2D = Catalog.texture("brows", id)
+				_expect((brows == null) == (id == &"none"), "Brows sheet for every eye style but none: %s" % id)
+	# The sheet reads as drawn, not mirrored: its right half lands on the
+	# viewer's right of a model that faces -Z, i.e. on -X (N-506).
+	var face_script: GDScript = load("res://scripts/presentation/character_face.gd")
+	_expect(face_script.call(&"_patch_point", Vector2(0.8, 0.4)).x < 0.0
+			and face_script.call(&"_patch_point", Vector2(0.2, 0.4)).x > 0.0,
+			"The face sheet is not mirrored on the head")
+	_expect(Catalog.EYES.size() == 8 and Catalog.MOUTHS.size() == 8,
+			"Eight eyes and eight mouths fill one row each of the 8-wide grids")
 
 	var player_scene: PackedScene = load("res://scenes/gameplay/player/player.tscn")
 	var first: Node3D = player_scene.instantiate()
@@ -55,12 +69,17 @@ func _run() -> void:
 	_expect(material1 != material2, "Face materials are per player")
 	_expect(material1.albedo_texture == Catalog.texture("eyes", &"wink"), "Selected eyes reach the 3D material")
 	_expect(material2.albedo_texture == Catalog.texture("eyes", &"worried"), "Another player's expression does not leak")
+	var brows2 := face2.get_node("Brows") as MeshInstance3D
+	_expect((brows2.material_override as StandardMaterial3D).albedo_texture == Catalog.texture("brows", &"worried"),
+			"The eyes' brows reach their own layer")
 	# Blinks squash the eye texture onto its line and fully reopen; the
 	# already-closed ^^ eyes never blink. Driven by hand, not by waiting.
 	face2.blink()
 	face2._process(0.08)
 	var squashed: float = (material2 as StandardMaterial3D).uv1_scale.y
 	_expect(squashed > 5.0, "A blink shuts the eyes (uv scale %.2f)" % squashed)
+	_expect(is_equal_approx((brows2.material_override as StandardMaterial3D).uv1_scale.y, 1.0),
+			"A blink leaves the brows where they are")
 	face2._process(0.2)
 	_expect(is_equal_approx((material2 as StandardMaterial3D).uv1_scale.y, 1.0), "Eyes reopen after a blink")
 	face2.set_expression(&"joyful", &"pout")
@@ -75,18 +94,21 @@ func _run() -> void:
 	var panel: Control = load("res://scripts/ui/cosmetics_panel.gd").new()
 	root.add_child(panel)
 	await process_frame
-	var preview: Control = panel.find_child("FacePreview", true, false)
+	var preview_face: Node = panel.find_child("CharacterPreview", true, false).get(&"face")
 	panel.find_child("Eyes_lashes", true, false).pressed.emit()
 	panel.find_child("Mouth_grin", true, false).pressed.emit()
-	_expect(preview.eyes_id == &"lashes" and preview.mouth_id == &"grin", "2D preview combines the two clicked options")
+	_expect(preview_face.eyes_id == &"lashes" and preview_face.mouth_id == &"grin",
+			"The 3D preview's face combines the two clicked options")
 	_expect(first.face_eyes == &"lashes" and first.face_mouth == &"grin", "Wardrobe selection updates the live local player")
 	_expect(second.face_eyes == &"worried", "Local profile changes leave a remote player alone")
 	panel.find_child("Eyes_none", true, false).pressed.emit()
 	_expect(not face1.get_node("Eyes").visible and face1.get_node("Mouth").visible, "Blank eyes preserve the selected mouth")
+	_expect(not face1.get_node("Brows").visible, "Blank eyes take their brows with them")
 	panel.find_child("Mouth_none", true, false).pressed.emit()
 	_expect(not face1.get_node("Mouth").visible, "Original faceless look remains available")
 	panel.free(); first.free(); second.free()
-	if _failures == 0: print("PASS: independent eyes/mouth, persistence, live 2D/3D preview and replicated player face")
+	if _failures == 0:
+		print("PASS: independent eyes/mouth, brows layer, persistence, live 3D preview and replicated face")
 	quit(_failures)
 
 func _expect(condition: bool, message: String) -> void:

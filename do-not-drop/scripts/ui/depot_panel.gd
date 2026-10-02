@@ -19,7 +19,8 @@ const ORDERS_MIN_VIEW: float = 120.0
 const ORDERS_SCROLL_STEP: int = 64
 
 var station: StringName = &"orders"
-## The level's depot, for its orders and to ask for a purchase.
+## The level's depot, for its orders and to ask for a purchase. A Node, not a
+## Depot: the panel's test hands in a stand-in with only orders and boss_notes().
 var depot: Node = null
 var _body: VBoxContainer
 var _first_focus: Control = null
@@ -45,7 +46,9 @@ func open(station_id: StringName, depot_node: Node) -> void:
 func close() -> void:
 	if not visible:
 		return
-	UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
+	# The lockers' screen plays its own when it closes (CosmeticsPanel.close).
+	if station != &"wardrobe":
+		UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.PANEL_CLOSE)
 	hide()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	closed.emit()
@@ -55,34 +58,32 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	UiTheme.apply(self)
 	hide()
-	var bus: Node = get_node_or_null(^"/root/EventBus")
-	if bus != null:
-		bus.connect(&"depot_supplies_changed", func(_list: Array, _money: int) -> void:
-			if visible and station == &"shop":
-				_rebuild())
-		bus.connect(&"card_changed", func(peer_id: int, _card_id: int) -> void:
-			if visible and station == &"shop" and peer_id == NetworkManager.local_id():
-				_rebuild())
-		bus.connect(&"shop_opened", func(_offers: Dictionary) -> void:
-			if visible and station == &"shop":
-				_rebuild())
-		bus.connect(&"shop_vote_changed", func(_peer_id: int, _offer_id: StringName) -> void:
-			if visible and station == &"shop":
-				UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.VOTE)
-				_rebuild())
-		bus.connect(&"shop_resolved", _on_shop_resolved)
-		# Somebody else took the wheel: the depot is behind us now.
-		bus.connect(&"run_started", func(_route: StringName, _players: Array) -> void: close())
+	EventBus.depot_supplies_changed.connect(func(_list: Array, _money: int) -> void:
+		if visible and station == &"shop":
+			_rebuild())
+	EventBus.card_changed.connect(func(peer_id: int, _card_id: int) -> void:
+		if visible and station == &"shop" and peer_id == NetworkManager.local_id():
+			_rebuild())
+	EventBus.shop_opened.connect(func(_offers: Dictionary) -> void:
+		if visible and station == &"shop":
+			_rebuild())
+	EventBus.shop_vote_changed.connect(func(_peer_id: int, _offer_id: StringName) -> void:
+		if visible and station == &"shop":
+			UiTheme.UI_SOUNDS.play(self, UiTheme.UI_SOUNDS.VOTE)
+			_rebuild())
+	EventBus.shop_resolved.connect(_on_shop_resolved)
+	# Somebody else took the wheel: the depot is behind us now.
+	EventBus.run_started.connect(func(_route: StringName, _players: Array) -> void: close())
 	get_viewport().size_changed.connect(_fit_orders_scroll)
 	# The vote dots wear the host's colour slots, which change as people come and go.
 	NetworkManager.color_slots_changed.connect(func(_slots: Dictionary) -> void:
 		if visible and station == &"shop":
 			_rebuild())
-	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
-	if unlocks != null:
-		unlocks.connect(&"progress_changed", func() -> void:
-			if visible and station in [&"wardrobe", &"garage", &"records"]:
-				_rebuild())
+	UnlockManager.progress_changed.connect(func() -> void:
+		# Not the lockers: their screen follows the profile itself, without
+		# rebuilding (it would reset the character's turn on every pick).
+		if visible and station in [&"garage", &"records"]:
+			_rebuild())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -104,6 +105,9 @@ func _rebuild() -> void:
 	_vote_timer_label = null
 	_orders_scroll = null
 	_orders_list = null
+	if station == &"wardrobe":
+		_build_wardrobe()
+		return
 	var dim := ColorRect.new()
 	dim.color = Color(UiTheme.BACKDROP, 0.78)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -114,8 +118,6 @@ func _rebuild() -> void:
 	_body = UiTheme.panel(center, Vector2(620, 0), 28)
 	_body.add_theme_constant_override("separation", 12)
 	match station:
-		&"wardrobe":
-			_build_wardrobe()
 		&"garage":
 			_build_garage()
 		&"shop":
@@ -245,9 +247,18 @@ func _add_boss_note() -> void:
 		line.custom_minimum_size.x = 560
 
 
+## The lockers open the whole appearance screen (N-506): face, uniform and
+## nickname, with the character on show, in its depot mode (no truck: that is
+## the workshop's). Every pick reaches your player, and through it the crew,
+## while the screen is open. Closing it closes this panel.
 func _build_wardrobe() -> void:
-	_header(tr("UI_DEPOT_LOCKERS"), tr("UI_DEPOT_UNIFORM_TAG"), UiTheme.MINT, tr("UI_DEPOT_UNIFORM_HINT"))
-	_choices(UnlockManager.cosmetic_choices(), UnlockManager.selected_cosmetic, UnlockManager.select_cosmetic, true)
+	var wardrobe := CosmeticsPanel.new()
+	wardrobe.name = "Wardrobe"
+	wardrobe.mode = CosmeticsPanel.Mode.DEPOT
+	wardrobe.page = CosmeticsPanel.Page.FACE
+	add_child(wardrobe)
+	wardrobe.closed.connect(close)
+	wardrobe.focus_first()
 
 
 func _build_garage() -> void:
@@ -261,8 +272,9 @@ func _build_garage() -> void:
 
 
 func _build_shop() -> void:
-	var money: int = int(depot.get(&"team_money")) if depot != null else CrewProgression.team_money
-	var owned: Array = depot.get(&"supplies") if depot != null else []
+	var live_depot: Depot = depot as Depot if is_instance_valid(depot) else null
+	var money: int = live_depot.team_money if live_depot != null else CrewProgression.team_money
+	var owned: Array = live_depot.supplies if live_depot != null else []
 	var peer_id: int = NetworkManager.local_id()
 	var voting: bool = NetworkManager.is_online()
 	var has_discount: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.DISCOUNT)
@@ -296,9 +308,9 @@ func _build_shop() -> void:
 			if voting:
 				_request_vote(supply_id)
 			else:
-				var depot_node: Node = _depot_node()
+				var depot_node: Depot = _depot_node()
 				if depot_node != null:
-					depot_node.call(&"buy_supply", supply_id))
+					depot_node.buy_supply(supply_id))
 		if _first_focus == null and not button.disabled:
 			_first_focus = button
 		var detail: Label = UiTheme.label(row, tr(String(item.detail)), 15, UiTheme.MUTED)
@@ -314,9 +326,9 @@ func _build_shop() -> void:
 				if voting:
 					_request_discount(supply_id)
 				else:
-					var depot_node: Node = _depot_node()
+					var depot_node: Depot = _depot_node()
 					if depot_node != null:
-						depot_node.call(&"buy_supply_discounted", supply_id))
+						depot_node.buy_supply_discounted(supply_id))
 			if _first_focus == null and not discount.disabled:
 				_first_focus = discount
 
@@ -386,21 +398,23 @@ func _on_shop_resolved(offer_id: StringName, offer: Dictionary) -> void:
 	var discounted: bool = bool(offer.get("discounted", false))
 	var should_purchase: bool = NetworkManager.local_id() == int(offer.get("discount_peer", 0)) if discounted else NetworkManager.is_host()
 	if should_purchase and not offer_id.is_empty():
-		var depot_node: Node = _depot_node()
+		var depot_node: Depot = _depot_node()
 		if depot_node != null:
 			if discounted:
-				depot_node.call(&"buy_supply_discounted", offer_id)
+				depot_node.buy_supply_discounted(offer_id)
 			else:
-				depot_node.call(&"buy_supply", offer_id)
+				depot_node.buy_supply(offer_id)
 	if visible and station == &"shop":
 		_rebuild()
 
 
-func _depot_node() -> Node:
+## The depot that sells: the one the station handed over or, if that is gone,
+## the current level's. A stand-in that is no Depot (the panel's tests) sells nothing.
+func _depot_node() -> Depot:
 	if is_instance_valid(depot):
-		return depot
-	var scene: Node = get_tree().current_scene
-	return scene.get(&"depot") if scene != null and &"depot" in scene else null
+		return depot as Depot
+	var level: LevelCommon = get_tree().current_scene as LevelCommon
+	return level.depot if level != null else null
 
 
 func _build_records() -> void:
@@ -447,7 +461,8 @@ func _choices(choices: Array[Dictionary], selected: StringName, select: Callable
 
 
 func _is_loaded(package_id: StringName) -> bool:
-	for package: Node in get_tree().get_nodes_in_group(&"cargo"):
-		if StringName(package.get(&"package_id")) == package_id:
-			return bool(package.call(&"is_aboard"))
+	for node: Node in get_tree().get_nodes_in_group(&"cargo"):
+		var package: DeliveryPackage = node as DeliveryPackage
+		if package != null and package.package_id == package_id:
+			return package.is_aboard()
 	return false

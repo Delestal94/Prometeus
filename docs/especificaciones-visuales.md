@@ -100,9 +100,9 @@ dónde empezar, es por ahí.
 | 46 | ~~Reverb distinta dentro de la furgoneta vs. afuera.~~ **[x] Hecho (2026-09-21)** — buses "Interior" (`AudioEffectReverb` cerrado y húmedo) y "Exterior" (abierto y seco), `default_bus_layout.tres`. `VehiclePresentation` rutea motor/impacto/chirrido según si la cámara activa de cada cliente es un asiento propio de la furgoneta — cada cliente decide su propio ruteo, sin red. | **B** |
 | 47 | ~~Música de tensión que sube con el riesgo acumulado.~~ **[x] Hecho (2026-09-23)** — `ingame_music.gd` ajusta la capa de tensión al riesgo de la carga. | **B** |
 | 48 | ~~Los faros no iluminan.~~ **[x] Hecho (2026-09-21)** — dos `SpotLight3D` reales por faro, que se apagan/encienden con `presentation_engine_running`. | **A** |
-| 49 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho (2026-09-21)** — un emisor por rueda, anidado como hijo de cada `VehicleWheel3D` (sigue la suspensión y la dirección gratis), activo mientras hay velocidad o patinaje. Mismo truco sin textura que el confeti del paquete arruinado. | **A** |
+| 49 | ~~Partículas de polvo/tierra bajo las ruedas.~~ **[x] Hecho (2026-09-21)** — rehecho en N-320 (2026-10-01): `wheel_dust.gd`, estela suave y clara detrás de las ruedas traseras solo en grava/tierra (nada en asfalto ni con lluvia), quad con degradé radial sin sombra. | **A** |
 | 50 | ~~Humo de escape en el caño trasero.~~ **[x] Hecho (2026-09-23)** — `vehicle_effects.gd` lo emite con el motor encendido. | **C** |
-| 51 | Marcas de neumático en el asfalto al frenar. | **C** |
+| 51 | ~~Marcas de neumático en el asfalto al frenar.~~ **[x] Ya existe** — `vehicle_effects.gd` `_update_skids()` (anillo de 600 tiras; anotado en N-320.3). | **C** |
 | 52 | **Props de banquina**: árboles, postes, carteles, cercas, tachos. Hoy solo hay 10 cajas grises como referencia de escala. | **B** |
 | 53 | Cableado eléctrico entre postes — barato y da muchísima lectura de profundidad y velocidad. | **B** |
 | 54 | Edificios con ventanas, techos y puertas; hoy los "edificios" son cajas grises lisas. | **B** |
@@ -155,7 +155,7 @@ dónde empezar, es por ahí.
 | 87 | Si la puerta trasera está abierta, la carga suelta debería poder salirse. Excelente fuente de caos. | **B** |
 | 88 | Objetos sueltos en la zona de carga que traqueteen con los golpes (herramientas, un termo). | **B** |
 | 89 | La furgoneta debería poder voltear props de banquina (#52), no atravesarlos. | **B** |
-| 90 | Escombros y partículas al chocar contra algo sólido. | **B** |
+| 90 | ~~Escombros y partículas al chocar contra algo sólido.~~ **[x] Ya existe** — `vehicle_effects.gd` `_burst_debris()` en un golpe fuerte (anotado en N-320.3). | **B** |
 | 91 | Rayones y abolladuras acumuladas en la carrocería a lo largo de la entrega. | **C** |
 | 92 | Un paquete suelto debería poder golpear a un jugador y empujarlo (con ragdoll, #37, es humor gratis). | **B** |
 | 93 | Traspaso de paquete entre jugadores mano a mano, sin pasar por el piso. | **C** |

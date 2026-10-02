@@ -4,7 +4,7 @@ extends Node
 
 const STARTING_MONEY: int = 100
 const CAMPAIGN_PATH: String = "user://crew_campaign.json"
-## 2 (N-226.2): "players" is keyed by colour slot ("0".."4", PlayerColorSlot),
+## 2 (N-226.2): "players" is keyed by colour slot ("0".."7", PlayerColorSlot),
 ## not by colour name. A version-1 file (names, from peer_id modulo five) is
 ## migrated on load: LEGACY_COLOR_FOR_SLOT says which old name each slot takes.
 const CAMPAIGN_VERSION: int = 2
@@ -17,13 +17,18 @@ const ROUTE_EVENT_MANAGER := preload("res://scripts/core/route_event_manager.gd"
 ## Player.PLAYER_COLORS has the same order: the colour of slot i is entry i.
 ## The slot comes from PlayerColorSlot (host 0, then arrival order), not from
 ## the peer id.
-const PLAYER_COLOR_KEYS: Array[String] = ["mint", "yellow", "coral", "sky", "violet"]
+## Eight of them, one per seat of a full room (N-228.3).
+const PLAYER_COLOR_KEYS: Array[String] = [
+	"mint", "yellow", "coral", "sky", "violet", "white", "cobalt", "teal",
+]
 const PLAYER_COLOR_NAMES: Array[String] = [
 	"UI_COLOR_MINT", "UI_COLOR_YELLOW", "UI_COLOR_CORAL", "UI_COLOR_SKY", "UI_COLOR_VIOLET",
+	"UI_COLOR_WHITE", "UI_COLOR_COBALT", "UI_COLOR_TEAL",
 ]
 ## Version-1 saves named players by colour, and the host was always peer 1 =
 ## "yellow": it becomes slot 0, the host's slot, and "mint" (old 0) takes the
-## old yellow's place, so every old entry lands on a different slot.
+## old yellow's place, so every old entry lands on a different slot. Version 1
+## only ever had five colours: slots 5..7 have no legacy entry and start clean.
 const LEGACY_COLOR_FOR_SLOT: Array[String] = ["yellow", "mint", "coral", "sky", "violet"]
 const MAX_CARD_PER_PLAYER: int = 1
 const BASE_CARD_CHANCE: float = 0.20
@@ -176,7 +181,7 @@ func load_campaign() -> void:
 	_apply_campaign_data(data, true)
 
 
-## The colour slot of a peer (0..4): what merit, cards and the save are keyed
+## The colour slot of a peer (0..7): what merit, cards and the save are keyed
 ## by. It is the host's index, not the peer id (N-226.2).
 func player_slot(peer_id: int) -> int:
 	return PlayerColorSlot.slot(peer_id, PLAYER_COLOR_KEYS.size())
@@ -486,6 +491,8 @@ func _apply_campaign_data(data: Dictionary, remember_players: bool) -> void:
 func _normalized_players(raw_players: Dictionary, version: int = CAMPAIGN_VERSION) -> Dictionary:
 	var normalized: Dictionary = {}
 	for slot: int in PLAYER_COLOR_KEYS.size():
+		if version < 2 and slot >= LEGACY_COLOR_FOR_SLOT.size():
+			break
 		var key: String = LEGACY_COLOR_FOR_SLOT[slot] if version < 2 else str(slot)
 		var raw: Variant = raw_players.get(key, {})
 		if not raw is Dictionary:

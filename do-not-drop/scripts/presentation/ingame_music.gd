@@ -9,7 +9,9 @@ const TRACK: AudioStream = preload("res://assets/audio/music/mus_ingame_loop.ogg
 const VOLUME_DB: float = -14.0
 const FADE_IN_SECONDS: float = 5.0
 const FADE_OUT_SECONDS: float = 7.0
-const FIRST_PAUSE_SECONDS := Vector2(18.0, 35.0)
+## The first phrase comes in as the menu's theme fades under the loading
+## screen (N-408): 20-35 s of silence after "¡JUGAR!" read as broken audio.
+const FIRST_PAUSE_SECONDS := Vector2(1.5, 3.0)
 const PAUSE_SECONDS := Vector2(45.0, 85.0)
 const SILENT_DB: float = -80.0
 ## Tension (tareas de Nacho #22/#84): a restrained heartbeat layer for boxes

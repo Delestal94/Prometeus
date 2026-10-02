@@ -8,6 +8,7 @@ then bake the AO back into the ones that carry it (test_baked_ao.gd):
     blender --background --factory-startup --python do-not-drop/assets/tools/bake_vertex_ao.py -- \
         do-not-drop/assets/models/vehicles/sm_vehicle_parked_hatchback.glb \
         do-not-drop/assets/models/vehicles/sm_vehicle_parked_pickup.glb \
+        do-not-drop/assets/models/vehicles/sm_vehicle_tow_crane.glb \
         do-not-drop/assets/models/environment/landmarks/sm_env_landmark_windmill.glb \
         do-not-drop/assets/models/environment/landmarks/sm_env_landmark_water_tower.glb
 
@@ -27,6 +28,17 @@ pivot and orientation as before, so no scene or script changes:
       (LowpolyMaterials.light_up() and NightFlares look for exactly that and
       split its two lamps); the tail lights are "TailLights" in "danger" and
       stay off. The route turns their bounding box into the collider.
+  vehicles/sm_vehicle_tow_crane.glb (N-321, group "crane"): the mud tow
+      truck of mud_crane.gd, same size as its old primitives. Unlike the
+      parked cars it faces Godot -Z (Blender +Y), 2.6 x 6.0 m, wheels on
+      z = 0; the boom leans back over +Z. Named meshes for the script:
+      "Beacon" (amber dome, origin at its own centre (0, 2.55, -1.9) in
+      Godot, so it spins and pulses in place; material "beacon", emissive),
+      "Hook" (origin at its eye, (0, 2.05, 3.6) in Godot: HOOK_LOCAL hangs
+      the cable from just under it), "Light" (headlights, "lamp") and
+      "TailLights". The chassis sides stay flat and free at |x| = 1.30 around
+      y = 1.05 for the "GRUA" Label3D boards. Built so the AO bake's 1 m
+      subdivision doesn't blow it up (~2.0k tris, ~2.4k after the bake).
   environment/props/sm_env_prop_street_lamp_refined.glb (and the unused
       sm_env_prop_street_lamp.glb, same model): 4.6 m, arm toward +X.
       Materials "lamp_metal" and "lamp_glass" (the glass is one mesh: it glows
@@ -48,7 +60,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
-from mathutils import Vector  # noqa: E402
+from mathutils import Matrix, Vector  # noqa: E402
 from lowpoly_kit import (PALETTE, ROOT, blob, clear, cone, cube, cylinder,  # noqa: E402
                          export, flat_poly, mat, slab, triangle_count)
 
@@ -683,8 +695,297 @@ def doormat():
     done("environment/yard/sm_env_yard_doormat.glb")
 
 
+# =============================================================================
+# Tow crane (N-321.1): the comic wrecker that drags a bogged van out of the mud
+# =============================================================================
+
+PALETTE.update({
+    # The colours mud_crane.gd used for its primitives, so nothing shifts.
+    "crane_yellow": srgb("e0a526"), "crane_cream": srgb("f0efe6"),
+    "crane_dark": srgb("2b2f33"), "crane_red": srgb("c43b2b"),
+    "beacon": srgb("ffb020"),
+})
+
+## Godot frame of the crane (mud_crane.gd): HOOK_LOCAL is (0, 2.1, 3.6), the
+## script hangs the cable 0.5 lower. In Blender that is (0, -3.6, z).
+CRANE_HOOK_EYE = (0.0, -3.6, 2.05)
+CRANE_BEACON = (0.0, 1.9, 2.55)
+
+
+def _snapshot():
+    return set(o.name for o in bpy.context.scene.objects)
+
+
+def _group(before, name):
+    """Joins every object made since `before` into one mesh `name`, with its
+    transform applied (origin at the crane's base centre)."""
+    objs = [o for o in bpy.context.scene.objects if o.name not in before]
+    o = join(objs, name)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    return o
+
+
+def _pivot(o, point):
+    """Moves `o`'s origin to `point` without moving the mesh."""
+    p = Vector(point)
+    o.data.transform(Matrix.Translation(-p))
+    o.location = p
+
+
+def _pane_yz(name, p0, p1, width, material, inset=(0.1, 0.9), out=0.015):
+    """A thin pane (glass) along the line p0 -> p1 in the YZ plane, `width`
+    across X, nudged `out` along the normal that points up/forward."""
+    dy, dz = p1[0] - p0[0], p1[1] - p0[1]
+    length = math.hypot(dy, dz)
+    ny, nz = dz / length, -dy / length
+    if nz < 0.0 and ny < 0.0:
+        ny, nz = -ny, -nz
+    a = (p0[0] + dy * inset[0], p0[1] + dz * inset[0])
+    b = (p0[0] + dy * inset[1], p0[1] + dz * inset[1])
+    centre = (0.0, (a[0] + b[0]) / 2.0 + ny * out, (a[1] + b[1]) / 2.0 + nz * out)
+    return cube(name, centre, (width, length * (inset[1] - inset[0]), 0.03), material,
+                rot=(math.atan2(dz, dy), 0.0, 0.0))
+
+
+def _mesh(name, verts, faces, material, facing=None):
+    """A mesh straight from vertex and face lists. Closed meshes get outward
+    normals; a loose decal face is turned toward `facing` (Godot culls the
+    back of a face)."""
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(verts, [], faces)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if facing is not None:
+        for f in bm.faces:
+            if f.normal.dot(Vector(facing)) < 0.0:
+                f.normal_flip()
+    bm.to_mesh(mesh)
+    bm.free()
+    obj.data.materials.append(mat(material))
+    return obj
+
+
+def _drop_faces(obj, direction):
+    """Deletes the faces of `obj` that face `direction` (hidden caps)."""
+    rot = obj.matrix_world.to_3x3()
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    gone = [f for f in bm.faces if (rot @ f.normal).dot(Vector(direction)) > 0.9]
+    bmesh.ops.delete(bm, geom=gone, context="FACES")
+    bm.to_mesh(obj.data)
+    bm.free()
+
+
+def _chassis_block(name, columns, top, half, chamfer, strips, material):
+    """The chassis as rings swept along Y, one per (y, z_bottom) column, with
+    a chamfer on the two top edges. Built so no face or diagonal is longer
+    than bake_vertex_ao.py's SUBDIVIDE (1 m): a flat_poly side cap is
+    triangulated into long fans the baker then cuts into hundreds of
+    slivers. The flat underside (never seen) is left open; the wheel-arch
+    undersides stay closed."""
+    verts, faces, rings = [], [], []
+    for y, zb in columns:
+        ring = []
+        for i in range(strips + 1):
+            ring.append(len(verts))
+            verts.append((-half + 2.0 * half * i / strips, y, zb))
+        ring.append(len(verts))
+        verts.append((half, y, top - chamfer))
+        for i in range(strips + 1):
+            ring.append(len(verts))
+            verts.append((half - chamfer - 2.0 * (half - chamfer) * i / strips, y, top))
+        ring.append(len(verts))
+        verts.append((-half, y, top - chamfer))
+        rings.append(ring)
+    n = len(rings[0])
+    for (ya, za), (yb, zb), a, b in zip(columns, columns[1:], rings, rings[1:]):
+        open_bottom = za <= columns[0][1] + 1e-4 and zb <= columns[0][1] + 1e-4
+        for k in range(n):
+            if open_bottom and k < strips:
+                continue
+            j = (k + 1) % n
+            faces.append((a[k], a[j], b[j], b[k]))
+    for ring in (rings[0], rings[-1]):
+        bottom_pts = ring[:strips + 1]
+        top_pts = list(reversed(ring[strips + 2:2 * strips + 3]))
+        for i in range(strips):
+            faces.append((bottom_pts[i], bottom_pts[i + 1], top_pts[i + 1], top_pts[i]))
+        faces.append((bottom_pts[0], top_pts[0], ring[-1]))
+        faces.append((bottom_pts[-1], ring[strips + 1], top_pts[-1]))
+    return _mesh(name, verts, faces, material)
+
+
+def _disc(name, centre, radius, sides, material, facing, axis="x"):
+    """A single flat polygon (hubcap, lamp bezel) across `axis`, facing `facing`."""
+    cx, cy, cz = centre
+    pts = []
+    for k in range(sides):
+        a, b = math.cos(k * math.tau / sides) * radius, math.sin(k * math.tau / sides) * radius
+        pts.append((cx, cy + a, cz + b) if axis == "x" else (cx + a, cy, cz + b))
+    return _mesh(name, pts, [tuple(range(sides))], material, facing)
+
+
+def tow_crane():
+    """Cab-over wrecker in Blender coordinates: nose toward +Y (Godot -Z),
+    boom and hook toward -Y (Godot +Z), wheels on z = 0. The chassis sides
+    stay flat at |x| = 1.30 between y -1.25 and 1.25, z 0.55-1.2: Godot pins
+    the "GRUA" Label3D boards there."""
+    clear()
+    wheel_r, wheel_y, wheel_x = 0.5, 2.0, 1.3
+    bottom, top, half = 0.5, 1.28, 1.30
+
+    # --- Chassis: swept rings with both wheel arches, chamfered top ---------
+    before = _snapshot()
+    columns = [(-3.0, bottom)]
+    for cy in (-wheel_y, wheel_y):
+        columns += [(y, max(bottom, z)) for y, z in arc(cy, wheel_r, 0.6, math.pi, 0.0, 5)]
+        if cy < 0.0:
+            columns += [(-0.84, bottom), (-0.28, bottom), (0.28, bottom), (0.84, bottom)]
+    columns += [(3.0, bottom)]
+    _chassis_block("ChassisBody", columns, top, half, 0.07, 5, "crane_yellow")
+    # Dark mudguards over the arches.
+    for side in (-1.0, 1.0):
+        for cy in (-wheel_y, wheel_y):
+            ring = arc(cy, wheel_r, 0.7, math.pi, 0.0, 4) + arc(cy, wheel_r, 0.62, 0.0, math.pi, 4)
+            flat_poly("Mudguard", ring, 1.2 if side > 0 else -1.6, 0.4, "crane_dark", plane="yz")
+    # Front: red bumper, plate, smiling grille, lamp bezels (the face).
+    cube("Bumper", (0, 3.1, 0.6), (2.7, 0.3, 0.35), "crane_red")
+    cube("FrontPlate", (0, 3.255, 0.6), (0.4, 0.01, 0.12), "sign_white")
+    smile = [(0.38 * t, 1.05 + 0.04 * t * t) for t in (-1.0, -0.5, 0.0, 0.5, 1.0)]
+    smile += [(0.3 * t, 0.97 - 0.1 * (1.0 - t * t)) for t in (1.0, 0.5, 0.0, -0.5, -1.0)]
+    flat_poly("Grille", smile, 2.99, 0.03, "crane_dark", plane="xz")
+    for side in (-1.0, 1.0):
+        _disc("LampBezel", (side * 0.82, 3.005, 0.98), 0.17, 8, "guardrail", (0.0, 1.0, 0.0), axis="y")
+    # Rear: black bumper with yellow hazard stripes, tail-light housing, plate.
+    cube("RearBumper", (0, -3.1, 0.62), (2.5, 0.2, 0.28), "ink")
+    for i in range(6):
+        x0 = -1.12 + i * 0.38
+        _mesh("HazardStripe", [(x0, -3.205, 0.5), (x0 + 0.16, -3.205, 0.5), (x0 + 0.34, -3.205, 0.74),
+                               (x0 + 0.18, -3.205, 0.74)], [(0, 1, 2, 3)], "crane_yellow", (0.0, -1.0, 0.0))
+    cube("RearPlate", (0, -3.005, 1.02), (0.4, 0.01, 0.12), "sign_white")
+    # Folded stabiliser legs behind the rear wheels, mudflaps, a cab step.
+    for side in (-1.0, 1.0):
+        cube("OutriggerBeam", (side * 1.2, -2.72, 0.42), (0.5, 0.22, 0.18), "crane_dark")
+        cube("OutriggerLeg", (side * 1.42, -2.72, 0.6), (0.14, 0.14, 0.62), "crane_dark")
+        cube("OutriggerPad", (side * 1.42, -2.72, 0.22), (0.3, 0.3, 0.06), "crane_red")
+        cube("Mudflap", (side * 1.25, -2.56, 0.32), (0.36, 0.03, 0.38), "rubber")
+        cube("Step", (side * 1.26, 1.33, 0.4), (0.24, 0.26, 0.05), "guardrail")
+        rod("StepHanger", (side * 1.26, 1.33, 0.42), (side * 1.2, 1.33, 0.52), 0.02, "crane_dark", 4)
+    # The joke: a rubber duck on the tail, keeping an eye on whoever is towed.
+    lathe("DuckBody", [(0.0, 1.28), (0.12, 1.29), (0.14, 1.36), (0.09, 1.44), (0.0, 1.45)], 6, "ui_yellow",
+          centre=(-0.85, -2.68))
+    lathe("DuckHead", [(0.0, 1.44), (0.07, 1.47), (0.075, 1.54), (0.0, 1.6)], 6, "ui_yellow", centre=(-0.85, -2.8))
+    cone("DuckBeak", (-0.85, -2.9, 1.51), 0.035, 0.0, 0.08, "orange", 4, rot=(math.pi / 2.0, 0, 0))
+    for sx in (-1.0, 1.0):
+        cube("DuckEye", (-0.85 + sx * 0.035, -2.868, 1.55), (0.014, 0.01, 0.02), "ink")
+    _group(before, "Chassis")
+
+    # --- Cab: rounded cab-over box with raked windscreen ---------------------
+    before = _snapshot()
+    cab = [(0.95, 1.25), (2.92, 1.25), (2.92, 1.75), (2.6, 2.4), (0.95, 2.4)]
+    round_edges(flat_poly("CabShell", cab, -1.15, 2.3, "crane_cream", plane="yz"), 0.1, 1)
+    _pane_yz("Windshield", (2.92, 1.75), (2.6, 2.4), 1.9, "window", (0.08, 0.92))
+    for sx in (-1.0, 1.0):
+        rod("Wiper", (sx * 0.2 - 0.25, 2.9, 1.83), (sx * 0.2 - 0.05, 2.78, 2.07), 0.012, "ink", 4)
+    for x in (1.15, -1.165):
+        flat_poly("SideWindow", [(1.3, 1.82), (2.68, 1.82), (2.48, 2.28), (1.3, 2.28)], x, 0.015, "window", plane="yz")
+    cube("RearWindow", (0, 0.945, 1.98), (1.5, 0.02, 0.36), "window")
+    for side in (-1.0, 1.0):
+        cube("DoorSeam", (side * 1.152, 1.18, 1.75), (0.012, 0.015, 0.95), "crane_dark")
+        cube("DoorHandle", (side * 1.155, 1.35, 1.68), (0.02, 0.16, 0.04), "crane_dark")
+        rod("MirrorArm", (side * 1.12, 2.62, 2.0), (side * 1.4, 2.72, 2.04), 0.02, "crane_dark", 4)
+        cube("Mirror", (side * 1.42, 2.72, 1.94), (0.07, 0.12, 0.3), "crane_dark")
+        _mesh("CabStripe", [(side * 1.152, 1.0, 1.38), (side * 1.152, 2.9, 1.38), (side * 1.152, 2.9, 1.46),
+                            (side * 1.152, 1.0, 1.46)], [(0, 1, 2, 3)], "crane_red", (side, 0.0, 0.0))
+    cylinder("BeaconBase", (0, 1.9, 2.43), 0.25, 0.06, "crane_dark", 8)
+    _group(before, "Cab")
+
+    # --- Wheels -----------------------------------------------------------------
+    before = _snapshot()
+    for side in (-1.0, 1.0):
+        for y in (-wheel_y, wheel_y):
+            tyre = cylinder("Tyre", (side * wheel_x, y, wheel_r), wheel_r, 0.45, "rubber", 12, rot=ALONG_X)
+            _drop_faces(tyre, (-side, 0.0, 0.0))  # the inner side sits in the wheel well
+            _disc("Hub", (side * (wheel_x + 0.23), y, wheel_r), 0.26, 8, "crane_yellow", (side, 0.0, 0.0))
+            cylinder("HubNut", (side * (wheel_x + 0.25), y, wheel_r), 0.08, 0.04, "crane_dark", 4, rot=ALONG_X)
+    _group(before, "Wheels")
+
+    # --- Boom: turret, pivot tower, two-stage boom, ram, winch, sheave -------
+    before = _snapshot()
+    root, tip = Vector((0.0, 0.4, 1.75)), Vector((0.0, -3.36, 2.72))
+    cylinder("Turret", (0, 0.35, 1.33), 0.55, 0.12, "crane_yellow", 8)
+    cube("PivotTower", (0, 0.4, 1.5), (0.5, 0.5, 0.45), "crane_dark", 0.03)
+    rod("PivotPin", (-0.3, 0.4, 1.75), (0.3, 0.4, 1.75), 0.06, "guardrail", 6)
+    mid = root + (tip - root) * 0.62
+    bar("BoomOuter", root, mid, 0.42, "crane_dark")
+    bar("BoomInner", root + (tip - root) * 0.55, tip, 0.32, "guardrail")
+    # Hydraulic ram from the deck to the boom's belly.
+    ram_top = root + (tip - root) * 0.55 - Vector((0.0, 0.0, 0.2))
+    ram_base = Vector((0.0, -0.95, 1.3))
+    cube("RamMount", (0, -0.95, 1.31), (0.3, 0.3, 0.08), "crane_dark")
+    rod("RamBarrel", ram_base, ram_base + (ram_top - ram_base) * 0.6, 0.1, "crane_red", 8)
+    rod("RamRod", ram_base + (ram_top - ram_base) * 0.55, ram_top, 0.05, "guardrail", 6)
+    # Winch drum riding the boom root, cable wound on it.
+    drum = Vector((0.0, 0.15, 2.12))
+    for sx in (-1.0, 1.0):
+        bar("WinchCheek", (sx * 0.27, 0.15, 1.92), (sx * 0.27, 0.15, 2.2), 0.05, "crane_dark", 0.32)
+        cylinder("WinchFlange", (sx * 0.22, drum.y, drum.z), 0.2, 0.04, "crane_red", 8, rot=ALONG_X)
+    cylinder("WinchDrum", tuple(drum), 0.16, 0.4, "ink", 8, rot=ALONG_X)
+    # Sheave at the tip: the cable runs over it and drops to the hook.
+    sheave = Vector((0.0, -3.36, 2.78))
+    cylinder("Sheave", tuple(sheave), 0.24, 0.14, "crane_yellow", 10, rot=ALONG_X)
+    for sx in (-1.0, 1.0):
+        cube("SheavePlate", (sx * 0.1, -3.32, 2.72), (0.03, 0.4, 0.3), "crane_dark")
+    rod("SheavePin", (-0.13, -3.36, 2.78), (0.13, -3.36, 2.78), 0.05, "guardrail", 6)
+    rod("Cable", (0.0, drum.y, drum.z + 0.17), (0.0, sheave.y, sheave.z + 0.245), 0.02, "ink", 3)
+    eye = Vector(CRANE_HOOK_EYE)
+    rod("CableDrop", (0.0, eye.y, sheave.z), (0.0, eye.y, eye.z + 0.09), 0.02, "ink", 4)
+    _group(before, "Boom")
+
+    # --- Lights -----------------------------------------------------------------
+    # Headlights: ONE mesh "Light" in "lamp" (LowpolyMaterials lights it at night).
+    lamps = [cylinder("Lamp", (side * 0.82, 3.035, 0.98), 0.13, 0.04, "lamp", 8, rot=ALONG_Y) for side in (-1.0, 1.0)]
+    join(lamps, "Light")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    tails = [cube("Tail", (side * 0.95, -3.02, 1.02), (0.3, 0.04, 0.16), "danger") for side in (-1.0, 1.0)]
+    join(tails, "TailLights")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    # --- Beacon: amber dome, origin at its own centre so it spins in place ---
+    bx, by, bz = CRANE_BEACON
+    beacon = lathe("Beacon", [(0.0, bz - 0.12), (0.19, bz - 0.12), (0.19, bz + 0.04), (0.15, bz + 0.12),
+                              (0.08, bz + 0.17), (0.0, bz + 0.18)], 8, "beacon", centre=(bx, by))
+    principled = next(n for n in mat("beacon").node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    principled.inputs["Emission Color"].default_value = PALETTE["beacon"]
+    principled.inputs["Emission Strength"].default_value = 1.5
+    _pivot(beacon, CRANE_BEACON)
+
+    # --- Hook: red, origin at the eye it hangs from ---------------------------
+    before = _snapshot()
+    ex, ey, ez = CRANE_HOOK_EYE
+    bpy.ops.mesh.primitive_torus_add(major_segments=6, minor_segments=4, major_radius=0.07, minor_radius=0.025,
+                                     location=(ex, ey, ez), rotation=ALONG_Y)
+    bpy.context.object.data.materials.append(mat("crane_red"))
+    # A chunky flat "J" (cartoon hook) facing the towed van behind, so it
+    # reads as a hook from there; it opens toward -X.
+    cx, cz = ex - 0.13, ez - 0.37
+    tip = -math.pi - 0.55
+    outer = [(ex + 0.04, ez - 0.08), (ex + 0.04, cz)] + arc(cx, cz, 0.17, 0.0, tip, 5)[1:]
+    inner = arc(cx, cz, 0.09, tip, 0.0, 4)[:-1] + [(ex - 0.04, cz), (ex - 0.04, ez - 0.08)]
+    point = [(cx + 0.12 * math.cos(tip), cz + 0.12 * math.sin(tip) + 0.03)]
+    flat_poly("HookBody", outer + point + inner, ey - 0.04, 0.08, "crane_red", plane="xz")
+    hook = _group(before, "Hook")
+    _pivot(hook, CRANE_HOOK_EYE)
+
+    done("vehicles/sm_vehicle_tow_crane.glb")
+
+
 BUILDERS = {
     "cars": [hatchback, pickup],
+    "crane": [tow_crane],
     "lamp": [street_lamp],
     "landmarks": [windmill, water_tower],
     "roadside": [mailbox, milestone, wooden_crate, traffic_cone],

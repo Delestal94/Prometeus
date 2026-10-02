@@ -55,9 +55,13 @@ func _init(root: Node3D) -> void:
 func build(kit: DepotKit) -> void:
 	_build_island(kit)
 	_build_east_walls(kit)
+	await kit.tick()
 	_build_cage(kit)
+	await kit.tick()
 	_build_mezzanine(kit)
+	await kit.tick()
 	_build_office(kit)
+	await kit.tick()
 	_build_terrace(kit)
 
 

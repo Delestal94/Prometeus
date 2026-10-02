@@ -77,8 +77,8 @@ def patch(name, png, lift=0.):
     return o
 
 # Offset apart: two coincident alpha patches make Cycles skip one of them.
-for kind, name, lift in (('eyes', eyes, 0.), ('mouth', mouth, .003)):
-    if name != 'none':
+for kind, name, lift in (('eyes', eyes, 0.), ('brows', eyes, .0015), ('mouth', mouth, .003)):
+    if name != 'none' and (FACES / (kind + '_' + name + '.svg')).exists():
         patch('Cara_' + kind, raster(kind + '_' + name), lift)
 
 if pose:

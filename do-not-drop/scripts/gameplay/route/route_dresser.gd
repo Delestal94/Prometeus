@@ -58,6 +58,8 @@ var _seed: int
 ## Set by route.gd before dress(): whether this session's weather is rain,
 ## which is when storm debris lies on the road.
 var raining: bool = false
+## 0..1 how far dress() has got (a loading bar follows it).
+var progress: float = 0.0
 var _noise := FastNoiseLite.new()
 var _houses: Array = []
 var _rules: Array[Dictionary] = []
@@ -223,8 +225,12 @@ func _rule(fields: Dictionary) -> Dictionary:
 
 ## Runs everything, in priority order. `segments` must already sit on the
 ## finished terrain; `houses` are DeliveryHouse nodes whose yards were laid
-## out by route.gd and get validated here.
-func dress(segments: Array, houses: Array, clear_zones: Array[Vector3], sight_zones: Array[Vector3] = []) -> void:
+## out by route.gd and get validated here. With a `slicer` (FrameSlicer) the
+## work is cut into slices a frame apart each: `await` it; `progress` says how
+## far it got. The result is the same either way.
+func dress(segments: Array, houses: Array, clear_zones: Array[Vector3], sight_zones: Array[Vector3] = [],
+		slicer: FrameSlicer = null) -> void:
+	progress = 0.0
 	_houses = houses
 	_placement.clear_zones = clear_zones
 	_placement.sight_zones = sight_zones
@@ -234,23 +240,39 @@ func dress(segments: Array, houses: Array, clear_zones: Array[Vector3], sight_zo
 		_signage.settle_yard(house)
 	for house: Node3D in houses:
 		_placement.occupy(_route.to_local(house.global_position), 5.0)
+	if slicer != null:
+		await slicer.tick()
 	# Signs claim their corner before any guardrail: a warning matters more
 	# than one more metre of rail, and real rails have a gap at the post too.
 	for index: int in range(segments.size()):
 		_signage.dress_signs(segments[index])
+		if slicer != null:
+			await slicer.tick()
 	_signage.dress_town_signs(segments)
 	_signage.dress_roadside_stories(segments)
+	if slicer != null:
+		await slicer.tick()
 	for index: int in range(segments.size()):
 		_signage.dress_barriers(segments[index])
+		if slicer != null:
+			await slicer.tick()
 	_wildlife.dress_crossings(segments)
+	if slicer != null:
+		await slicer.tick()
 	_wildlife.dress_flock(segments)
 	_wildlife.dress_dog(segments)
 	if raining:
 		_wildlife.dress_storm_debris(segments)
+	if slicer != null:
+		await slicer.tick()
 	_power_lines.dress(segments)
-	for rule_index: int in _rule_order():
+	progress = 0.15
+	var order: Array[int] = _rule_order()
+	for step: int in range(order.size()):
 		for index: int in range(segments.size()):
-			_apply_rule(segments[index], index, rule_index)
+			await _apply_rule(segments[index], index, order[step], slicer)
+		progress = 0.15 + 0.85 * float(step + 1) / float(order.size())
+	progress = 1.0
 
 
 ## Rules run by "order" (their index unless they say otherwise), so a rule
@@ -287,7 +309,7 @@ func dress_storm_debris(segments: Array) -> void:
 
 # --- Rules ------------------------------------------------------------------
 
-func _apply_rule(segment: RouteSegment, segment_index: int, rule_index: int) -> void:
+func _apply_rule(segment: RouteSegment, segment_index: int, rule_index: int, slicer: FrameSlicer = null) -> void:
 	var rule: Dictionary = _rules[rule_index]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([_seed, segment_index, rule_index])
@@ -295,6 +317,8 @@ func _apply_rule(segment: RouteSegment, segment_index: int, rule_index: int) -> 
 	var slots: Array[Transform3D] = segment.get_dressing_slots(rule.spacing)
 	var sides: Array = rule.sides
 	for slot_index: int in range(slots.size()):
+		if slicer != null:
+			await slicer.tick()
 		var slot: Transform3D = slots[slot_index]
 		var road_point: Vector3 = segment.transform * slot.origin
 		var zone: int = zone_at(road_point, start_distance - slot.origin.z)

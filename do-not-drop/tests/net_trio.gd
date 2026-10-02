@@ -75,6 +75,9 @@ func _initialize() -> void:
 	for arg: String in args:
 		if arg.begins_with("--name="):
 			_name = arg.get_slice("=", 1)
+	# The route builds over several frames, as in the game, even headless (N-408): the host
+	# spawns nobody and the client reports no "ready" until its road stands.
+	_route_script().set(&"always_slice", true)
 	_network.connect(&"session_ready", func(_is_host: bool) -> void: _load_level.call_deferred())
 	# NETLOG, not TRIO: run-net-trio.sh takes the first TRIO line as the result.
 	_network.connect(&"session_failed", func(reason: String) -> void:

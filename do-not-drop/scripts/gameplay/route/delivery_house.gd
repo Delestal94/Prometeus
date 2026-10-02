@@ -15,6 +15,10 @@ class_name DeliveryHouse
 ## possible at all (currently isn't -- see the note in tareas-nacho.md).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+## The session as a type (N-224.4): the script the NetworkManager autoload
+## runs, which declares world_seed (NetSession does not). The box is read as
+## DeliveryPackage; EventBus stays by name (a test may swap it for a Node).
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 const ContactShadow = preload("res://modules/render_budget/contact_shadow.gd")
 const WALL := Color("9c8a6f")
 const ROOF := Color("6b4f3a")
@@ -207,10 +211,11 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 	if delivered:
 		return
 	_bell_player.play()
-	if carried_package == null:
+	var box: DeliveryPackage = carried_package as DeliveryPackage
+	if box == null:
 		_resolve(OUTCOME_MISSED, null)
 		return
-	if assigned_package_id != &"" and StringName(carried_package.get(&"package_id")) != assigned_package_id:
+	if assigned_package_id != &"" and box.package_id != assigned_package_id:
 		# Not theirs: the resident shakes their head and the box stays with
 		# whoever brought it -- the delivery isn't spent on a mix-up.
 		_reaction_player.stream = SynthAudio.creature_groan()
@@ -219,39 +224,33 @@ func _on_doorbell_rung(carried_package: Node) -> void:
 		wrong_package_offered.emit(assigned_label)
 		return
 	# The box's latest rescue record, so what the door inspects is current.
-	if carried_package.has_method(&"_publish_care") and carried_package.is_multiplayer_authority():
-		carried_package.call(&"_publish_care")
-	var state: int = int(carried_package.get(&"trap_state"))
-	match state:
+	if box.is_inside_tree() and box.is_multiplayer_authority():
+		box._publish_care()
+	match box.trap_state:
 		ITrapBehavior.TrapState.RUINED:
-			_resolve(OUTCOME_RUINED, carried_package)
+			_resolve(OUTCOME_RUINED, box)
 		ITrapBehavior.TrapState.AT_RISK:
-			_resolve(OUTCOME_AT_RISK, carried_package)
+			_resolve(OUTCOME_AT_RISK, box)
 		_:
 			# Whatever's inside may be perfect, but a box handed over open
 			# has obviously been gone through: it counts as delivered with
 			# reservations, same as a dented one.
-			var opened: bool = carried_package.get(&"is_open") == true
-			handed_over_open = opened
-			_resolve(OUTCOME_AT_RISK if opened else OUTCOME_OK, carried_package)
+			handed_over_open = box.is_open
+			_resolve(OUTCOME_AT_RISK if box.is_open else OUTCOME_OK, box)
 
 
-func _resolve(result: StringName, package: Node) -> void:
+func _resolve(result: StringName, package: DeliveryPackage) -> void:
 	delivered = true
 	outcome = result
 	if package != null:
-		var id: Variant = package.get(&"package_id")
-		delivered_package_id = StringName(id) if id != null else &""
+		delivered_package_id = package.package_id
 		# The resident takes the box, one way or another -- consumed either
 		# way, matching "se come la caja" for the good outcome; the ruined
 		# case still hands it off, just with a worse reaction. Deferred so
 		# this never frees a node mid-signal, while whoever is listening
 		# (level_base.gd -> RunManager) still sees a valid package. consume()
 		# also empties the carrier's hands, which a bare free never did.
-		if package.has_method(&"consume"):
-			package.call(&"consume", _resident.global_position)
-		else:
-			package.call_deferred(&"queue_free")
+		package.consume(_resident.global_position)
 	# The resident's reaction follows what they were actually handed: a groan
 	# for a wreck, the same groan quieter for something dented, a cheer for
 	# a box that made it.
@@ -405,8 +404,8 @@ func _on_refused_reaction(index: int, expected_label: String) -> void:
 
 
 func _session_seed() -> int:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return int(network.get(&"world_seed")) if network != null else 0
+	var network: NETWORK_MANAGER = get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
+	return network.world_seed if network != null else 0
 
 
 func _on_house_delivery_recorded(index: int, _outcome: StringName, _package_id: StringName) -> void:

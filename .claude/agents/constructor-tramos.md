@@ -39,5 +39,10 @@ Construís la ruta procedural de "Take My Package" (dominio de Nacho: `scripts/g
 
 - Si el tramo necesita algo del vehículo, leé sus propiedades públicas; si hace falta cambiar `vehicle.gd`, que lo haga `constructor-camion`.
 - Lo de `route/` que no es un tipo de tramo ni la generación (casas, clima, cielo, fauna, historias al costado, carteles, decorado general) es de `constructor-mundo`.
+- **Lo que se ve no queda como caja de color** (N-323): `_box()` sirve para colisión y para un primer
+  bloqueo, pero un suelo, charco o volumen que el jugador ve de cerca va con shader o textura
+  (como `route_terrain.gdshader` o `mud_ground.gdshader`, con los mapas de `assets/textures/detail/`) o
+  con modelo. Si no lo hacés vos, dejalo dicho en tu salida como subtarea para `artista-shaders` (corre en
+  la nube) o `modelador-blender` (PC), para que quede en la tarea y no se pierda.
 - Rendimiento: el endless genera tramos sin fin; todo nodo/material creado debe liberarse con el tramo. Reutilizá materiales en vez de crear uno por caja cuando sea posible.
 - Devolvé: archivos tocados, cómo se ve/juega el tramo en una frase, resultados de tests.

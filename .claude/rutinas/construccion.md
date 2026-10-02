@@ -97,7 +97,10 @@ Los subagentes no pueden lanzar otros: todo lo que sigue lo decide la rutina.
 5. **Falla sin causa clara**: `cazador-bugs` una vez; arreglá con su diagnóstico.
 6. **Red** (RPC, autoridad, `MultiplayerSynchronizer`, joins tardíos, semilla): `auditor-red` antes del
    PR; arreglá lo que marque BUG o RIESGO alto, el resto al cuerpo del PR.
-7. **Visual**: `revisor-visual`.
+7. **Visual**: `revisor-visual`, pidiéndole que compare contra lo que rodea (terreno, props vecinos) y
+   no solo que se vea. Si quedan superficies de color plano o cajas a la vista: suelo o material →
+   `artista-shaders` en esta misma sesión; modelo → subtarea de arte en la tarea (la toma la sesión de
+   arte de la PC). Nunca se cierra una tarea visible con placeholders sin esa subtarea (N-323).
 8. **Zona compartida o archivos de Slatex**: `revisor-gdscript` sobre el diff antes del PR.
 9. **Camión** (`vehicle.gd`/`vehicle.tscn`, se editan libremente desde el 2026-09-30): tests del camión
    (`ejecutor-tests` con los filtros `vehicle` y `truck`) y `auditor-red`, porque su sincronización es la
