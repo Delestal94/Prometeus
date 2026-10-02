@@ -167,7 +167,10 @@ func _run() -> void:
 		"The frame prediction stops the truck doesn't jump back to the pose buffer (%.2f m)" % [
 			_client.global_position.distance_to(predicted_at)])
 	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
-	_client.call(&"_process", VehiclePrediction.EXIT_BLEND_SECONDS)
+	# Loaded at run time: vehicle_prediction.gd preloads vehicle.gd, which names autoloads a --script
+	# doesn't have yet when it compiles.
+	var prediction_script: GDScript = load("res://scripts/gameplay/vehicle/vehicle_prediction.gd")
+	_client.call(&"_process", float(prediction_script.get_script_constant_map()["EXIT_BLEND_SECONDS"]))
 	_expect(_client.global_position.distance_to(smoother.sample(NetPoseSmoother.local_now()).origin) < 0.01,
 		"...and is drawn where the pose buffer has it once the blend is over")
 
