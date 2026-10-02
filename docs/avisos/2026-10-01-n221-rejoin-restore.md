@@ -13,12 +13,16 @@ por la suya al mezclar). Un cliente viejo con un host nuevo recibe "otra versió
   `peer_rejoined` no llega). Es la que usa el juego para devolver lo que anotó del que se fue.
 - **Identidad antes del estado (LAN, sala llena):** el host ya no le manda el estado completo a un joiner que
   no sabe quién es. Le manda solo `{version, session, identify: true}`; el joiner contesta
-  `{identify, version, identity}` (`_identity_reply()`, con el próximo eslabón de su cadena) y el host decide
+  `{identify, version, identity}` (`NetAdmission.answer_identify()`, con el próximo eslabón de su cadena) y el host decide
   ahí (`NetAdmission.on_identity()`): si es el de un fantasma (se suelta) o se liberó un lugar, recibe el
   estado y carga el nivel; si no, oye `"full"` (o `"connection"` si repite un eslabón ajeno) **sin haber
   cargado nada**. Su respuesta de listo no lleva identidad y el host no la vuelve a leer
   (`NetAdmission.identified`). En Steam no cambia nada (el Steam ID se sabe al autenticar).
-- `_claim_identity()` y `_identity_reply_error()` nuevos (virtuales chicos, para los tests).
+- El manejo de las respuestas en el host (identidad y "listo") y la respuesta del joiner pasan a
+  `NetAdmission` (`receive()`, `receive_identity()`, `send_state()`, `ask_identity()`, `answer_identify()`),
+  para que `net_session.gd` siga bajo las 1000 líneas. `NetSession._ready_reply_error()` pasa a ser
+  `NetAdmission.ready_reply_error(reply, version)` (estática; también `identity_reply_error()`), y
+  `NetSession._claim_identity()` es el virtual de quién dice ser el proceso.
 
 **Juego:**
 - `scripts/gameplay/rejoin_keepsake.gd` (`RejoinKeepsake`, nuevo, lo crea `level_common.gd`): el host anota en

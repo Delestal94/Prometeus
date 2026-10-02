@@ -1756,7 +1756,7 @@ Fase 4 de `docs/investigacion-red.md`.
     también sobre un fantasma). Sigue faltando: en LAN no se lo reconoce si reinició el juego (token nuevo); el
     fantasma de un crash con Steam no está probado con sockets reales (por ENet sí: `net_pair`).
   - [x] Pedir la identidad antes del estado completo. **[x] misma rama:** con la sala llena en LAN el host manda
-    solo `{version, session, identify}`, el que entra contesta su eslabón (`_identity_reply()`) y recién ahí
+    solo `{version, session, identify}`, el que entra contesta su eslabón (`NetAdmission.answer_identify()`) y recién ahí
     (fantasma suyo o lugar libre: `NetAdmission.on_identity()`) recibe el estado y carga el nivel; si no, oye
     "full" (o "connection" si repite un eslabón ajeno) sin cargar nada. Su respuesta de listo ya no trae
     identidad y el host no la lee (`identified`). `PROTOCOL_VERSION` 23 → 26 (24 y 25 reservados para N-110 y
