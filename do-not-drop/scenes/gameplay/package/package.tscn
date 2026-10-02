@@ -72,6 +72,9 @@ properties/16/replication_mode = 2
 properties/17/path = NodePath(".:lap_mount_path")
 properties/17/spawn = true
 properties/17/replication_mode = 2
+properties/18/path = NodePath(".:net_time")
+properties/18/spawn = true
+properties/18/replication_mode = 1
 
 [node name="Package" type="RigidBody3D" groups=["cargo"]]
 collision_layer = 4
@@ -87,7 +90,7 @@ script = ExtResource("1_package")
 trap_definition = ExtResource("3_trap")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
-replication_interval = 0.0167
+replication_interval = 0.0333
 replication_config = SubResource("Repl_package")
 
 [node name="NetRestThrottle" type="Node" parent="."]

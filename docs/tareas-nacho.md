@@ -1613,12 +1613,27 @@ Fase 0 de `docs/investigacion-red.md`: medir antes de seguir optimizando.
 Fase 2 de `docs/investigacion-red.md`. Hoy los jugadores remotos (`player.gd _apply_net_state`) y las cajas
 del cliente (`package.gd _process`) se colocan con el último valor que llegó, sin suavizar. Con el jitter
 de internet saltan.
-- [ ] Separar de `VehicleNetSmoother` un `NetSnapshotBuffer` genérico, con reloj del host, y usarlo en
-  jugadores y cajas.
-- [ ] Colchón adaptativo: 2 intervalos más 2 × el jitter medido, entre 50 y 200 ms.
-- [ ] Recién con eso, bajar `replication_interval` de caja y jugador a 1/30 s. `test_net_bandwidth_budget`
-  tiene que seguir pasando.
-- [ ] Tolerancia de alcance proporcional al ping en los chequeos del host (agarrar y usar cajas).
+**[x] Hecho (2026-10-01, rama `nacho/N-217-snapshot-smoothing`)** — `PROTOCOL_VERSION` 22. Aviso:
+`docs/avisos/2026-10-01-n217-suavizado-remoto.md`. Test: `test_remote_pose_smoothing` (nuevo),
+`test_net_pose_smoother` y `test_vehicle_net_smoothing` ampliados.
+- [x] El buffer genérico es `NetPoseSmoother` (`modules/net_pose_smoother`, ya separado del camión cuando se
+  hicieron los módulos; no se renombró). Ahora toma el reloj de quien manda (`clock_ms()`, tiempo de física),
+  calcula el desfasaje con la llegada menos demorada del último segundo, guarda poses `local` (en el espacio
+  del camión, se dibujan sobre el camión de este peer) y da `latest_pose()`. Lo usan el camión, los jugadores
+  remotos (`player_ride.gd push_net_pose/apply_net_state`) y las cajas del cliente (`package.gd _push_net_pose`).
+  El WIP de la sesión cortada (`scripts/core/net_snapshot_buffer.gd`, que buscaba `NetworkManager` desde
+  adentro) se pasó al módulo y se borró.
+- [x] Colchón adaptativo: `delay()` = 2 intervalos + 2 × jitter (RFC 3550), entre 50 y 200 ms, con cambios
+  suavizados al 5 %. Los huecos largos de una caja quieta (`NetRestThrottle`, 2 Hz) no cuentan como intervalo.
+- [x] Jugador y caja a 1/30 s. Cada pose lleva `net_time` (int, último en el `SceneReplicationConfig`, así su
+  setter ve el paquete entero); el jugador manda `net_yaw` (en el espacio del camión si viaja) en vez de
+  `rotation`. `test_net_bandwidth_budget`: host → cliente estable 117,7 → 67,7 KB/s, todo moviéndose
+  154 → 85,8; subida del host 6,8 → 3,9 Mbit/s.
+- [x] Alcance: el host juzga a un jugador remoto por su pose más nueva (`reach_origin()` en el servidor), no
+  por la dibujada en el pasado, y suma `NetStats.reach_slack()` (5 m/s × ida y vuelta, tope 1,5 m) en
+  `Interactable._within_reach`, abrir caja, asistir y pasar de mano.
+- [ ] Probar con dos PCs por Steam (con N-215): jugadores caminando y cajas en el camión con `--net-sim` en el
+  cliente, que no salten. **Necesita PC.**
 
 ### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: no
 

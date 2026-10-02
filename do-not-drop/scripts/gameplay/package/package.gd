@@ -103,7 +103,15 @@ var net_transform: Transform3D = Transform3D.IDENTITY:
 		net_transform = value
 		_has_net_state = true
 var net_in_vehicle: bool = false
+## The host's clock for this pose (NetPoseSmoother.clock_ms()). Replicated last in package.tscn, so when it's
+## set the rest of the packet already is: that's when a client files the pose into its buffer (N-217).
+var net_time: int = 0:
+	set(value):
+		net_time = value
+		_push_net_pose()
 var _has_net_state: bool = false
+## Client: the host's poses, drawn smoothly a touch in the past instead of jumping with the link's jitter.
+var _net_smoother: NetPoseSmoother = null
 var _vehicle: Node3D = null
 ## Host: the carrier's latest hold pose, in the truck's space when aboard. Re-applied every tick against the
 ## host's own truck, so a box carried in the moving bay rides with it between the carrier's updates.
@@ -246,13 +254,32 @@ func _process(_delta: float) -> void:
 	var pose: Transform3D = _predicted_pose if predicted else net_transform
 	var riding: bool = _predicted_in_vehicle if predicted else net_in_vehicle
 	var vehicle: Node3D = _find_vehicle()
+	# A client's truck is frozen, so not interpolated: its interpolated transform is then last frame's cached
+	# one, not where the network just put it, and the box would trail the truck by a frame.
+	var vehicle_pose: Transform3D = Transform3D.IDENTITY
+	if vehicle != null:
+		vehicle_pose = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
+	if not predicted and _net_smoother != null and not _net_smoother.is_empty():
+		var smoothed: Transform3D = _net_smoother.sample(NetPoseSmoother.local_now(), vehicle_pose)
+		if smoothed != Transform3D.IDENTITY:
+			global_transform = smoothed
+			return
 	if riding and vehicle != null:
-		# A client's truck is frozen, so not interpolated: its interpolated transform is then last frame's
-		# cached one, not where the network just put it, and the box would trail the truck by a frame.
-		var vehicle_pose: Transform3D = vehicle.get_global_transform_interpolated() if vehicle.is_physics_interpolated_and_enabled() else vehicle.global_transform
 		global_transform = vehicle_pose * pose
 	else:
 		global_transform = pose
+
+
+## Client: the host's pose into the buffer once net_time (the last of the packet) lands.
+func _push_net_pose() -> void:
+	if not is_inside_tree() or is_multiplayer_authority():
+		return
+	if _net_smoother == null:
+		_net_smoother = NetPoseSmoother.new()
+		var network: Node = get_node_or_null(^"/root/NetworkManager")
+		if network != null and network.has_method(&"pose_net_sim"):
+			_net_smoother.configure_sim(network.call(&"pose_net_sim"))
+	_net_smoother.push(net_time / 1000.0, net_transform, NetPoseSmoother.local_now(), net_in_vehicle)
 
 
 ## The carrier's own client, every physics tick next to submit_carry_transform: draw the box in its hands now
@@ -276,6 +303,7 @@ func _publish_net_state() -> void:
 	var riding: bool = vehicle != null and bool(vehicle.call(&"carries", global_position, RIDE_MARGIN if net_in_vehicle else 0.0))
 	net_in_vehicle = riding
 	net_transform = vehicle.global_transform.affine_inverse() * global_transform if riding else global_transform
+	net_time = NetPoseSmoother.clock_ms()
 
 
 func _find_vehicle() -> Node3D:
@@ -392,8 +420,14 @@ func spill_contents(velocity: Vector3 = Vector3.ZERO) -> void:
 func _peer_within_reach(peer_id: int) -> bool:
 	for player: Node in get_tree().get_nodes_in_group(&"player"):
 		if player.get_multiplayer_authority() == peer_id:
-			return _reach_origin(player).distance_to(global_position) <= OPEN_REACH
+			return _reach_origin(player).distance_to(global_position) <= OPEN_REACH + reach_slack(peer_id)
 	return false
+
+
+## Host: extra reach for a request from `peer_id`, by its round trip (N-217): the client saw this box a
+## round trip ago, and it may have moved since.
+func reach_slack(peer_id: int) -> float:
+	return NetStats.reach_slack(multiplayer.multiplayer_peer, peer_id) if is_inside_tree() else 0.0
 
 
 ## A seated player's body stays where they sat down; their seat is where they are.
