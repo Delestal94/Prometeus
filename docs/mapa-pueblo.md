@@ -22,6 +22,8 @@ progresión, tienda, tono.
 | D2 | Tamaño | Pueblo chico: 4×4 a 6×6 manzanas, 6-10 casas | Un generador chico se puede curar; uno grande sale vacío |
 | D3 | Qué es aleatorio | Trazado de calles, qué lotes son casa, dónde cae el depósito, la base y cada cliente | Lo memorable (depósito, casas de clientes) son piezas hechas a mano colocadas por semilla |
 | D4 | Orden de entrega | Libre (el GPS sugiere la más cercana) | Hoy es fijo 0,1,2… y los plazos asumen eso; en un pueblo el orden libre es el gancho |
+| D6 | Desbloqueo (decidido por el equipo) | Por **hito de campaña**; el vehículo desbloqueado define hasta dónde se puede llegar | Se siente como progreso real: un camión nuevo abre mapa nuevo |
+| D7 | Forma del mundo (decidido por el equipo) | **Un mundo gigante que se expande**, con barreras cerradas entre zonas, no mapas separados | Ver sección 4.7 |
 | D5 | Estilo de generación | **Piezas curadas + reglas** ("procgen liviano", ya anotado en `mecanicas-candidatas.md`), no ruido libre | Mejor legibilidad y barrio con identidad |
 
 ## 3. Lo que hoy impide hacerlo (del relevamiento)
@@ -113,10 +115,32 @@ semilla.
 - Cada distrito tiene tipo (residencial, comercial, rural, industrial) con su propio set de clientes,
   paquetes y trampas. Eso conecta con `narrativa.md`: cada cliente "vive" en su zona.
 
-**Qué desbloquea cada cosa:** la progresión ya existe (`CrewProgression`, `UnlockManager`,
-`ShopVoteManager`, campaña, `modules/unlock_profile`). Propuesta: distritos por hitos de campaña o por
-compra en la tienda de votación; ciudades nuevas por un hito mayor. Por decidir con
-`constructor-progresion` (la economía, ver `economia-y-contramedidas.md`).
+**Decidido por el equipo (2026-10-02):**
+- Se desbloquea **por hito de campaña**, y el vehículo es la llave: un camión desbloqueado permite
+  llegar más lejos (por ejemplo, uno todoterreno cruza el barro, uno con cadenas la nieve).
+- El mundo es **uno solo, gigante, que se expande**. Las zonas nuevas están detrás de **barreras
+  cerradas** (portón, puente cortado, nieve cerrada, obras) que se abren al cumplir el hito.
+
+**Qué implica (propuesta de arquitectura):**
+- **Mundo por campaña, no por partida.** Si el mundo se expande y el jugador recuerda dónde está cada
+  cosa, el mapa tiene que ser el mismo entre partidas de una misma campaña. La semilla del mundo pasa a
+  guardarse en la campaña (`modules/persistence`), y lo que varía por partida son los pedidos, el clima,
+  los eventos y la hora. "Dinámico" queda como: cada campaña nueva genera un mundo distinto.
+- **Streaming por chunks/distritos, no construcción de una vez.** Un mundo gigante no entra como hoy
+  (`route.gd` construye todo bajo pantalla de carga). El precedente es `SegmentStreamer` de Endless
+  (genera adelante, libera atrás). Hace falta un `DistrictStreamer`: el plan global (grafo y lotes) es
+  liviano y se calcula entero; la geometría de cada distrito se instancia y libera según la cercanía.
+- **Las barreras son datos del plan**, no geometría fija: cada arista del grafo tiene un
+  `gate: requirement` (hito o capacidad de vehículo). El pathfinding del GPS ignora las aristas
+  cerradas. Abrir una barrera cambia solo ese dato, no las calles.
+- **El requisito de vehículo** se expresa como capacidad (`offroad`, `snow`, `high_clearance`...), no
+  como nombre de camión, para que un vehículo nuevo se enchufe sin tocar el mapa. Ver
+  `docs/agregar-vehiculo.md`.
+- **Red:** el host manda semilla de campaña, `tier` y barreras abiertas en el handshake.
+
+**Qué desbloquea cada cosa en detalle:** por decidir con `constructor-progresion` (economía, ver
+`economia-y-contramedidas.md`; piezas existentes: `CrewProgression`, `UnlockManager`,
+`modules/unlock_profile`).
 
 **Biomas (`TownTheme`):** paleta y materiales, clima, reglas de agarre del camino y set de peligros.
 
@@ -159,7 +183,8 @@ Cada fase termina con algo que se puede jugar o medir, y ninguna rompe el modo a
 | F6 | Decorado, fauna, clima, farolas, personalidad de barrios | `constructor-mundo`, `artista-vfx`, `disenador-audio` | Captura de prensa del pueblo |
 | F7 | Rendimiento | `perfilador-rendimiento` | Presupuesto de draw calls y FPS dentro del actual |
 
-| F8 | Distritos desbloqueables (`tier`), zonas bloqueadas visibles y su desbloqueo por progresión | `constructor-progresion` + `constructor-mundo` | Abrir un distrito no cambia las calles ya conocidas |
+| F7b | `DistrictStreamer`: plan global liviano + instanciar y liberar distritos por cercanía, bajo `FrameSlicer` | `constructor-mundo` + `perfilador-rendimiento` | Recorrer el mundo entero sin picos de frame ni leaks de nodos |
+| F8 | Barreras (`gate`) en el grafo, GPS que las ignora, desbloqueo por hito de campaña y capacidad de vehículo | `constructor-progresion` + `constructor-mundo` | Abrir un distrito no cambia las calles ya conocidas |
 | F9 | Primer bioma nuevo (nieve): materiales, clima, hielo en el camión, 1-2 trampas | `artista-shaders`, `artista-vfx`, `constructor-camion`, `constructor-trampas` | Una partida completa en nieve, con captura |
 
 F8 y F9 van después de que el pueblo base se sienta bien (F0-F7).
@@ -182,9 +207,16 @@ F0 es el punto de control: si el pueblo generado no se siente bien al manejar, s
 3. ¿Hay endless en el pueblo (entregas infinitas) o solo reparto con fin?
 4. ¿Cuánto del imperio (flota, empleados, zonas) entra en la v1? Propuesta: nada; primero el mapa, con
    `tier` y `theme` ya en la firma del generador (sección 4.7).
-4b. ¿Cómo se desbloquea un distrito: hito de campaña, compra en la tienda o ambos?
-4c. ¿Una ciudad nueva es un mapa aparte que se elige al empezar, o el mismo mundo que se expande?
-4d. ¿El perfil de desbloqueos es del host o de cada jugador?
+4b. ~~¿Cómo se desbloquea un distrito?~~ **Decidido:** hito de campaña, con el vehículo como llave.
+4c. ~~¿Mapa aparte o mundo que se expande?~~ **Decidido:** un mundo gigante con barreras.
+4d. ¿El perfil de desbloqueos es del host o de cada jugador? (con mundo por campaña, probablemente
+    la campaña la guarda quien hostea; por confirmar)
+4e. **¿El mapa es el mismo en todas las partidas de una campaña, o cambia?** Propuesta: mismo mundo por
+    campaña (semilla guardada), que cambia al empezar una campaña nueva. Choca con la idea original de
+    "mapa distinto por partida".
+4f. ¿Qué tan grande es "gigante"? Define si alcanza con distritos de 4×4 manzanas o hace falta un
+    esquema de chunks de verdad.
+4g. ¿Se puede volver atrás (re-cerrar), o lo abierto queda abierto para siempre?
 5. ¿Edificios curados a mano (cuántos modelos) o ensamblados por módulos?
 6. ¿Qué pasa con el depósito actual? Hoy es una escena fija con puerta a -Z.
 
