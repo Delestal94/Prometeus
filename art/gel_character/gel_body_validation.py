@@ -227,6 +227,12 @@ def check(asset, lod):
     mesh = doc["meshes"][node["mesh"]]
     require(tuple(mesh.get("extras", {}).get("targetNames", [])) == MORPH_NAMES,
             "Gel body morph names/order must be the eleven prescribed shape morphs")
+    default_weights = node.get("weights", mesh.get("weights", [0.] * len(MORPH_NAMES)))
+    require(isinstance(default_weights, list)
+            and len(default_weights) == len(MORPH_NAMES)
+            and all(type(weight) in (int, float) and math.isfinite(weight) and weight == 0
+                    for weight in default_weights),
+            "Gel body default morph weights must load Delgada (eleven finite zeros)")
     m = world(node_id)
     skin_matrices = []
     if skins:

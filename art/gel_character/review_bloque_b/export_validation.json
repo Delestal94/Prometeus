@@ -43,7 +43,7 @@
     "animations": [
       {
         "name": "Idle",
-        "duration_seconds": 6.0,
+        "duration_seconds": 6,
         "channels": 60
       },
       {
@@ -68,7 +68,7 @@
       },
       {
         "name": "Sit",
-        "duration_seconds": 4.0,
+        "duration_seconds": 4,
         "channels": 60
       },
       {
@@ -89,7 +89,7 @@
     ],
     "optional_face_meshes": [],
     "weights": {
-      "max_sum_error": 1.341104507446289e-07,
+      "max_sum_error": 1.341104507446289e-7,
       "max_influences": 4,
       "unweighted_vertices": 0
     },
@@ -148,7 +148,7 @@
     "animations": [
       {
         "name": "Idle",
-        "duration_seconds": 6.0,
+        "duration_seconds": 6,
         "channels": 60
       },
       {
@@ -173,7 +173,7 @@
       },
       {
         "name": "Sit",
-        "duration_seconds": 4.0,
+        "duration_seconds": 4,
         "channels": 60
       },
       {
@@ -194,7 +194,7 @@
     ],
     "optional_face_meshes": [],
     "weights": {
-      "max_sum_error": 1.341104507446289e-07,
+      "max_sum_error": 1.341104507446289e-7,
       "max_influences": 4,
       "unweighted_vertices": 0
     },
@@ -253,7 +253,7 @@
     "animations": [
       {
         "name": "Idle",
-        "duration_seconds": 6.0,
+        "duration_seconds": 6,
         "channels": 60
       },
       {
@@ -278,7 +278,7 @@
       },
       {
         "name": "Sit",
-        "duration_seconds": 4.0,
+        "duration_seconds": 4,
         "channels": 60
       },
       {
@@ -299,7 +299,7 @@
     ],
     "optional_face_meshes": [],
     "weights": {
-      "max_sum_error": 1.341104507446289e-07,
+      "max_sum_error": 1.341104507446289e-7,
       "max_influences": 4,
       "unweighted_vertices": 0
     },

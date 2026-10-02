@@ -164,6 +164,11 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 > con revisión independiente PASS,53muestras porLOD y4/4testsGodot. No se marca
 > como terminado todo B ni se certifican combinaciones continuas no muestreadas.
 
+> Corrección posterior de preparación: se guardan/exportan los once morphs a cero
+> (Delgada), con regresiones de autoría, defaults GLB y carga Godot. No cambia la
+> geometría ni cierra los pendientes visuales; el ensayo de hombros fue retirado
+> al introducir pliegues. Ver `art/gel_character/review_bloque_b/ESTADO_ACTUAL.md`.
+
 ### C. Proporciones en el juego (19-26)
 
 - [ ] **S-311.19** Recurso `GelBodyProportions` (`scripts/gameplay/player/gel/`): cada parámetro con

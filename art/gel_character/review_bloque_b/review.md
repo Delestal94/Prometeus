@@ -21,3 +21,26 @@ La verificación de archivos modificados y los hooks/CI son responsabilidad del 
 Pendientes:10/12/13 visual/continuo;14/15D/E;16distorsiónUV excede15%;17Flaca
 completo dependeC. Corrección lineal error0,759955m y núcleo9408tri se rechazan.
 El shader, la apariencia final y costeGPU de cuatro personajes no están certificados.
+
+## Revisión independiente: defaults Delgada, 2026-10-01
+
+Dictamen: PASS, sin bloqueos ni advertencias, limitado a esta corrección.
+Base sincronizada con main `c29a526`; el cambio de tipado del otro desarrollador
+se conservó y se repitieron los cuatro tests Godot relacionados después del pull.
+
+El revisor ejecutó independientemente los 30 tests de fixtures, cuatro pruebas
+Blender y la suite Python de 44 tests (cuatro skips requieren Blender). Leyó el
+`.blend` guardado y los tres GLB: once defaults efectivos cero y rangos −1…+1.
+Comparó los payloads binarios con la base: posiciones, índices, todos los morphs,
+atributos, pesos del rig, skins y samplers de los nueve clips permanecen iguales.
+Comprobó el SHA del master y de las métricas, y repitió los barridos GLB de
+53 muestras por LOD sin errores. La API genérica del validador sigue intacta.
+
+Comparó los siete PNG de referencia conservados con las capturas actuales:
+idénticos píxel a píxel. Repitió 144 comparaciones LOD: todas pasan, máximo
+4,0143 %. El ejecutor independiente reportó Godot 4/4 PASS después del pull;
+el revisor no ejecutó Godot. La documentación distingue correctamente los
+defaults incorrectos de autoría/exportación de la carga anterior de Godot a cero.
+
+El ensayo de hombros fue retirado completamente. La revisión no aprueba nuevos
+ajustes visuales ni cierra 10/13/E, UV, núcleo o preset Flaca completo.
