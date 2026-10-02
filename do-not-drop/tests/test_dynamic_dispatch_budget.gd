@@ -342,6 +342,11 @@ const BUDGETS: Dictionary = {
 	# class_name): driver_peer_id, set_controls() and the controls it numbers and sends (throttle_input(),
 	# steer_input(), handbrake_input()). Nothing left by name.
 	"res://scripts/gameplay/vehicle/vehicle_prediction.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The radio's knob on the dash (N-224.4): the radio as TruckRadio (mode, cycle(), and next_mode and
+	# mode_key statically); only truck_radio.gd preloads this file, like truck_radio_view.gd. The one .get
+	# left is the player's carried_package: the interactable contract hands over any node in the player
+	# group and test_truck_radio's stand-in carries a box without being a Player.
+	"res://scripts/gameplay/vehicle/truck_radio_knob.gd": {"call": 0, "callv": 0, "get": 1, "root": 0},
 	# The truck's small tells (N-224.4): the presentation through vehicle_presentation.gd by preload (vehicle,
 	# wheels(), is_seat_camera()), the truck through vehicle.gd (presentation_engine_running) and the camera
 	# shake through the GAME_SETTINGS handle (below). The two /root/ lookups are the null-safe accessors:
