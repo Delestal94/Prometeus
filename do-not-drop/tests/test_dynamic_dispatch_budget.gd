@@ -317,6 +317,10 @@ const BUDGETS: Dictionary = {
 	# The stop (in_bay, counter) and the counter (local_player) stay by name too: service_stop.gd preloads this
 	# script. The /root/ lookup is the one null-safe accessor.
 	"res://scripts/gameplay/route/service_stop_shop.gd": {"call": 13, "callv": 0, "get": 7, "root": 1},
+	# The route smoke check (N-224.4, run by tools/run-tests.sh): the route through route.gd by preload
+	# (route_length, goal_transform, _path_points, houses, house_count) and the goal lot as RouteGoalLot
+	# (parking_pose). Nothing left by name.
+	"res://scripts/gameplay/route/route_smoke_check.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
