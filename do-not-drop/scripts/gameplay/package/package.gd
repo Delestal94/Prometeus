@@ -511,8 +511,7 @@ func _player_for_peer(peer_id: int) -> Node:
 ## is in the truck's space (see PackageHandling.accept_carry()).
 ## `in_hands`: the same pose in the carrier's body space (hold_offset, N-217).
 @rpc("any_peer", "call_local", "unreliable_ordered")
-func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false,
-		in_hands: Transform3D = Transform3D.IDENTITY) -> void:
+func submit_carry_transform(carry_transform: Transform3D, in_vehicle: bool = false, in_hands := Transform3D()) -> void:
 	if is_multiplayer_authority() and RpcGuard.finite_transform(carry_transform) \
 			and RpcGuard.finite_transform(in_hands):
 		PackageHandling.accept_carry(self, multiplayer.get_remote_sender_id(), carry_transform, in_vehicle, in_hands)
