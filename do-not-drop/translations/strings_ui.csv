@@ -352,6 +352,13 @@ HUD_TODAYS_ROUTE,Ruta de hoy: %s,Today's route: %s
 HUD_UNLOCKED,¡Desbloqueaste %s!,You unlocked %s!
 HUD_YOU,Vos,You
 HUD_ZERO_METERS,0 m recorridos,0 m travelled
+UI_ACCESSORY_CAP,Gorra,Cap
+UI_ACCESSORY_HARD_HAT,Casco de obra,Hard hat
+UI_ACCESSORY_HI_VIS_VEST,Chaleco reflectivo,Hi-vis vest
+UI_ACCESSORY_SLOT_BACK,Espalda,Back
+UI_ACCESSORY_SLOT_HEAD,Cabeza,Head
+UI_ACCESSORY_SLOT_TORSO,Torso,Torso
+UI_ACCESSORY_THERMAL_BACKPACK,Mochila térmica,Thermal backpack
 UI_APPEARANCE,Apariencia,Appearance
 UI_BACK,Volver,Back
 UI_CANCEL,Cancelar,Cancel
