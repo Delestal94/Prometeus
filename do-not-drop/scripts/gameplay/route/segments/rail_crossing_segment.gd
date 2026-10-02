@@ -35,6 +35,9 @@ class_name RailCrossingSegment
 ## while some of it is short of a bore's black end (_place_train()).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+## The script the NetworkManager autoload runs, as a type (N-224.4): world_seed
+## lives there, not in NetSession, so a rename fails to compile here.
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 const APPROACH_TRIGGER: float = 55.0
 const CLOSE_CHANCE: float = 0.6
 const ARM_SECONDS: float = 1.3
@@ -143,9 +146,9 @@ func _build() -> void:
 	_bell.position = Vector3(0.0, 2.5, track_z)
 	add_child(_bell)
 	var seed_value: int = 0
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	var network: NETWORK_MANAGER = _network()
 	if network != null:
-		seed_value = int(network.get(&"world_seed"))
+		seed_value = network.world_seed
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([seed_value, roundi(global_position.x), roundi(global_position.z), &"rail"])
 	will_close = rng.randf() < CLOSE_CHANCE
@@ -456,14 +459,19 @@ func _apply_state(new_state: int, timer: float, train_x: float) -> void:
 		_train_chug.stop()
 
 
+## The NetworkManager autoload, or null outside a running game.
+func _network() -> NETWORK_MANAGER:
+	return get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
+
+
 func _is_online() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return network != null and bool(network.call(&"is_online"))
+	var network: NETWORK_MANAGER = _network()
+	return network != null and network.is_online()
 
 
 func _is_host() -> bool:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return network == null or bool(network.call(&"is_host"))
+	var network: NETWORK_MANAGER = _network()
+	return network == null or network.is_host()
 
 
 ## Height of the (levelled) ground under a point of the track, in local

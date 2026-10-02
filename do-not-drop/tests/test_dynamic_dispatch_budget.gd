@@ -59,6 +59,9 @@ extends SceneTree
 ## - cargo_animal_view.gd (what the crew sees of the cargo animals) holds its director as CargoAnimals, the
 ##   truck by preload of vehicle.gd, the box as DeliveryPackage and the dog through wildlife_animal.gd; only
 ##   the EventBus connects stay by name.
+## - rail_crossing_segment.gd (the level crossing) rolls whether it closes from the session's world_seed
+##   through its NETWORK_MANAGER handle: if that stopped being the script the autoload runs, every crossing
+##   would roll from seed 0 and a client would start its own barrier cycle instead of asking the host.
 ## - mud_segment.gd (the mud stretch) holds its spot, crane, run log and session typed; the crew's money, the
 ##   run mode, the truck's `carries` and the tests' FakePlayers stay by name (see its budget).
 
@@ -192,6 +195,9 @@ const BUDGETS: Dictionary = {
 	# the null-safe accessors (EventBus, NetworkManager, CrewProgression,
 	# RunManager).
 	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 5, "root": 4},
+	# The level crossing (N-224.4) reaches the session through NETWORK_MANAGER (world_seed, is_online,
+	# is_host; below). The one /root/ lookup is that null-safe accessor (_network()).
+	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 	# The delivery level is typed: the route and the truck through their scripts
 	# (route.gd and vehicle.gd by preload, no class name), the houses as
 	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'
@@ -311,6 +317,9 @@ const SCRIPT_HANDLES: Dictionary = {
 		"GAME_SETTINGS": "/root/GameSettings",
 	},
 	"res://scripts/gameplay/route/cargo_animals.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
+	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 	"res://scripts/gameplay/route/delivery_house.gd": {

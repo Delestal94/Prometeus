@@ -908,6 +908,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     archivo: `.call` 10 → 5, `.get(&` 8 → 7, `/root/` 6 → 4, `.set(&` 3 → 0. `test_dynamic_dispatch_budget.gd` suma el
     archivo. Sin aviso (`route/` y `tests/`). Siguientes: `player.gd` (21), `package_feedback.gd` (21),
     `player_interaction.gd` (18), `level_base.gd` (18).
+  - [x] `rail_crossing_segment.gd` (2026-10-01, rama `nacho/N-224-rail-crossing-typed`): el paso a nivel. La sesión
+    por la constante `NETWORK_MANAGER` (preload de `network_manager.gd`, accesor `_network()`: `world_seed`,
+    `is_online`, `is_host` directos; `world_seed` no está en `NetSession`). En el archivo: 6 → 1 uso (`.call` 2 → 0,
+    `.get(&` 1 → 0, `/root/` 3 → 1). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle. Sin aviso
+    (`route/` y `tests/`).
   - [x] `player_interaction.gd` (2026-10-01, rama `nacho/N-224-player-interaction-typed`): lo apuntado como
     `Interactable` (`can_interact`/`interact` directos; la sonda junta solo `Interactable`), el `aim_bonus` del perro
     de `DogDistractPoint`, la red como `NetSession` (`_network()`) y la vista del contenido por preload
