@@ -274,6 +274,30 @@ orden libre. Se mide con `bench_drive`, `sim_trap_balance` y el bot de caos:
 
 Si falla el 2 o el 5, se ajusta el diseño antes de seguir; no se sigue a ciegas.
 
+## 8b. Ideas de expansión (propuestas del equipo, sin comprometer, 2026-10-02)
+
+Regiones lejanas del mundo, cada una con su bioma y su forma de llegar. Entran después de F8 (barreras
+e hitos) y comparten el mismo mecanismo: la barrera pide un **medio de transporte**.
+
+| Región | Cómo se llega | Qué cambia en el juego | Qué hay que construir (resumen) |
+|---|---|---|---|
+| Montaña | Avioneta | Altura, viento, frío, caminos de montaña | Un vehículo aéreo o un viaje en avioneta; arte y clima de montaña |
+| Volcán | Por tierra o aire, con hito | Calor, ceniza, suelo que se rompe, trampas térmicas (paquete que se derrite) | Shaders y VFX de lava y ceniza; nuevas trampas |
+| Isla | Barco o ferry | Agua, muelles, oleaje | Transporte marítimo; arte de costa |
+
+**Decisión de alcance pendiente (importa mucho):** ¿el medio de transporte se **maneja** o es un **viaje**?
+- *Manejable* (avioneta, barco): es un vehículo nuevo entero, con física, controles, cámara, arte,
+  sonido, red y balance. Es del tamaño de otro juego dentro del juego. Hoy hay un solo camión y
+  `vehicle.gd` está congelado.
+- *Viaje* (el paquete cruza en avioneta o ferry como un tramo de la entrega): el pasaje se juega como un
+  tramo corto donde el paquete sufre (turbulencia, oleaje) y el equipo cuida la carga, sin que nadie
+  pilote. Mucho más barato y mantiene el pilar de cuidar el paquete.
+- Propuesta: empezar por *viaje* para abrir las regiones, y dejar vehículos manejables para más
+  adelante si el modo funciona.
+
+Cada región es un distrito grande con sus propias reglas de generación (`theme`), así que el diseño de
+`tier` y `theme` de la sección 4.7 ya la cubre; lo nuevo es el tipo de barrera (transporte) y el arte.
+
 ## 9. Próximos pasos
 
 1. Confirmar D1-D5 y responder las preguntas abiertas.
