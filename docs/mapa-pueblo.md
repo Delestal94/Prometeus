@@ -234,7 +234,47 @@ F0 es el punto de control: si el pueblo generado no se siente bien al manejar, s
 5. ¿Edificios curados a mano (cuántos modelos) o ensamblados por módulos?
 6. ¿Qué pasa con el depósito actual? Hoy es una escena fija con puerta a -Z.
 
-## 8. Próximos pasos
+## 8. Decisión del equipo y ajustes tras la crítica (2026-10-02)
+
+`critico-diseno` recomendó postergar hasta después del Early Access (contenido cerrado 2026-10-30, EA
+2027-01-22, 37 tareas N- abiertas) y recortar D6/D7. **El equipo decidió seguir con la visión completa**:
+hay juegos competidores por salir y se apuesta a más grande, más contenido y más personalidad. Riesgo
+aceptado a conciencia: choca con el calendario del EA y con el congelado de `vehicle.gd`.
+
+Lo que se adopta de la crítica porque mejora el diseño sin contradecir la decisión:
+
+- **Plazos fijados una sola vez al salir del depósito**, por distancia de grafo depósito→casa. Calcularlos
+  "desde la posición" (4.4) se reinicia dando vueltas: es un exploit. Sin bono por ruta óptima.
+- **El GPS muestra la casa del paquete que peor está**, no la más cercana, así "¿a quién entregamos
+  primero?" es comunicación entre conductor y cargadores. Rol posible: el pasajero que navega.
+- **Cantidad de casas por entrega** sigue la regla actual (`crew_house_count`), no 6-10: mantiene
+  entregas de 2-5 min. Esas casas se sortean dentro de un mundo mayor.
+- **Contradicción resuelta:** D2 (barrio de 4×4 a 6×6 manzanas) es el tamaño de **un distrito**; los
+  ~6 distritos de 4f son el mundo completo.
+- **`generator_version` en el guardado y test dorado del pueblo** desde F1, porque el generador va a
+  seguir cambiando durante el EA.
+- **El host carga la colisión de todo distrito con un jugador o paquete.** Medir en F0 y F7b; la niebla
+  rinde menos en una grilla urbana, así que se prevé un presupuesto de visibilidad propio.
+- **Estresores en las calles** (cordones, lomos de burro, baches): una grilla plana a baja velocidad le
+  quita a la carga lo que la hace sufrir.
+- **Kit de edificios por módulos** (base + techo + puerta + color), con los 5 GLB actuales como casas de
+  clientes con identidad. Pendiente de modelar en la PC (no hay Blender en la nube).
+- **Perfil de desbloqueos del host**; cosméticos personales.
+
+### F0 reformulado como control con criterios objetivos
+
+Spike de 4-5 días (se descarta si se pasa) con F0 + F2 + F3 mínimos: depósito, 3 casas como cajas, A* y
+orden libre. Se mide con `bench_drive`, `sim_trap_balance` y el bot de caos:
+
+1. Una entrega de 3 casas dura 2 a 5 minutos.
+2. El daño a la carga por minuto es al menos el 70 % del de la ruta con las mismas trampas.
+3. El GPS no se equivoca en 100 semillas, incluidas calles sin salida.
+4. La casa destino se reconoce desde la cabina a 40 m o más (captura de `revisor-visual`).
+5. El costo de un distrito en draw calls y tiempo de construcción entra en el presupuesto actual.
+
+Si falla el 2 o el 5, se ajusta el diseño antes de seguir; no se sigue a ciegas.
+
+## 9. Próximos pasos
 
 1. Confirmar D1-D5 y responder las preguntas abiertas.
 2. Pasar este documento por `critico-diseno`.
