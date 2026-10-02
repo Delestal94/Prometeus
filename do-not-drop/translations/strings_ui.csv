@@ -1110,3 +1110,19 @@ UI_OPT_BIND_SHIFT_DOWN,Bajar marcha (furgón viejo),Shift down (old van)
 HUD_GEAR,MARCHA %s,GEAR %s
 HUD_GEAR_SHIFT_UP,¡SUBÍ! [%s],SHIFT UP! [%s]
 HUD_RESULT_PAY_BONUS,"  (incluye +$%d del furgón viejo)","  (includes +$%d from the old van)"
+UI_SERVICE_TITLE,Estación de servicio,Service station
+UI_SERVICE_HINT,"Reponen el kit del camión y venden un repuesto, más caro que en el depósito. El reloj de las entregas no se detiene mientras compran.","They restock the truck's kit and sell a spare part, dearer than at the depot. The delivery clock keeps running while you shop."
+UI_SERVICE_FULL,%s  ·  ya está completo,%s  ·  already full
+UI_SERVICE_TAPE,Cinta del kit,Kit tape
+UI_SERVICE_TAPE_DETAIL,Repone la cinta hasta lo que tenía al salir.,Tops the tape back up to what you left with.
+UI_SERVICE_REPAIR,Pegamento para recomponer,Repair glue
+UI_SERVICE_REPAIR_DETAIL,Repone lo que se usa para recomponer un contenido roto.,Restocks what you use to put broken contents back together.
+UI_SERVICE_FILLER,Relleno,Filler
+UI_SERVICE_FILLER_DETAIL,Repone el relleno que evita que el contenido baile en la caja.,Restocks the filler that stops the contents rattling in the box.
+UI_SERVICE_RAG,Trapos,Rags
+UI_SERVICE_RAG_DETAIL,Repone los trapos para contener un derrame.,Restocks the rags that hold back a spill.
+UI_SERVICE_STRAP,Cinchas,Straps
+UI_SERVICE_STRAP_DETAIL,Repone las cinchas (también atan la puerta trasera rota).,Restocks the straps (they also tie a broken rear door shut).
+UI_SERVICE_SUBSTITUTE,Gallina de juguete,Toy hen
+UI_SERVICE_SUBSTITUTE_DETAIL,Un sustituto de repuesto por si se pierde un contenido.,A spare substitute in case some contents are lost.
+UI_SERVICE_SPARE_DETAIL,"Si la puerta o el espejo están rotos, se arreglan ya; si no, viaja con ustedes.","If the door or the mirror is broken it gets fixed now; otherwise it rides along."

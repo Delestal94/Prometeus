@@ -268,6 +268,9 @@ func _should_count_as_stuck() -> bool:
 		return false
 	if (vehicle as VehicleScript).driver_peer_id == 0:
 		return false
+	# Pulled into the service station's lay-by to shop (N-110).
+	if route.call(&"in_service_bay", vehicle.global_position):
+		return false
 	var depot_position: Vector3 = depot.to_local(vehicle.global_position)
 	if absf(depot_position.x) <= Depot.HALF_WIDTH + 2.0 \
 			and depot_position.z > Depot.TRUCK_CLEAR_Z \

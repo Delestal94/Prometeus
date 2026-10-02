@@ -6,6 +6,8 @@ extends RefCounted
 ## every peer plans the same road and a test can check hundreds of seeds
 ## without building one. Route builds exactly what plan_spine() returns.
 
+## Where and when a long route gets its service station (N-110).
+const SERVICE_STOP = preload("res://scripts/gameplay/route/service_stop_rules.gd")
 const CURVE_TURN_MAX_DEG: float = 70.0
 const CURVE_TURN_MIN_DEG: float = 25.0
 ## How far before a house its "entrega adelante" sign goes up.
@@ -86,7 +88,9 @@ static func leg_target_length(houses: int) -> float:
 ## off the session seed so every peer plans the same road (and a test can
 ## check hundreds of seeds without building one). Returns
 ## {"segments": [{"script", "turn_deg", "length", "leg", "start", "hard",
-## "moment", "delivery_sign"}, ...], "house_distances": [...], "total"}.
+## "moment", "delivery_sign"}, ...], "house_distances": [...], "total"}. A long
+## route also has one ServiceStopSegment entry ("service_stop": true), see
+## ServiceStopRules.insert_into_plan().
 ##
 ## Rules: no repeat of the previous type; the first SAFE_START_LENGTH metres
 ## easy and straight; never two hard segments in a row; at most
@@ -171,7 +175,9 @@ static func plan_spine(session_seed: int, houses: int, avoid_tunnel_at_start: bo
 			stops.append(state.distance)
 			state.since_moment = 0.0
 			state.after_house = true
-	return {"segments": segments, "house_distances": stops, "total": state.distance}
+	# A long route gets its service station (N-110); every distance after it moves.
+	var plan := {"segments": segments, "house_distances": stops, "total": state.distance}
+	return SERVICE_STOP.insert_into_plan(plan, houses)
 
 
 static func _plan_pick(rng: RandomNumberGenerator, pool: Array[Script], hard: Array[Script], state: Dictionary,
