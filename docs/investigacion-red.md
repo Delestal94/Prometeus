@@ -332,6 +332,12 @@ dibujadas sobre el cuerpo del que las lleva.
 - Descartada, salvo que la opción anterior fracase: **transferir la autoridad del camión al conductor**.
   El host terminaría simulando las cajas sobre un camión que llega por red y con atraso, y ya costó
   mucho que no atraviesen paredes (playtests del 25 y el 27/09).
+- **Hecho (N-218):** predicción con reconciliación (`vehicle_prediction.gd`, módulo `net_prediction`). El host
+  reproduce los inputs uno por tick detrás de un colchón de 2 para que su pose diga exactamente qué input
+  representa. Corregir solo posición y rumbo: la velocidad de un `VehicleBody3D` tiembla con la suspensión y
+  perseguirla con un viaje de ida y vuelta de atraso la hace oscilar (solo se corrige, lenta, pasado 0,5 m/s).
+  Escribir `linear_velocity` desde `_physics_process` borra los impulsos de suspensión de ese paso: hay que ir al
+  estado vivo del cuerpo.
 
 **Fase 4: defensivo y sesión (continuo).**
 - Validador genérico de RPC (NaN/inf, tamaños, rate limit) y un test que recorra todos los `any_peer`.

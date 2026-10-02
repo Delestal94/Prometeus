@@ -125,6 +125,10 @@ func _run() -> void:
 	van.set(&"net_time", 10.0)
 	van.set(&"net_position", target)
 	van.set(&"net_rotation", Vector3(0.0, 0.4, 0.0))
+	# The rest of a pose packet (N-218): the input it stands for and the velocities.
+	van.set(&"net_input_seq", 0)
+	van.set(&"net_linear_velocity", Vector3.ZERO)
+	van.set(&"net_angular_velocity", Vector3.ZERO)
 	await process_frame
 	_expect(van.position.is_equal_approx(target) and is_equal_approx(van.rotation.y, 0.4), "A client's truck takes the replicated pose (%s)" % van.position)
 	van.set_multiplayer_authority(1)

@@ -23,6 +23,11 @@ extends Node
 ## N-228.5: a box left alone sends its pose twice a second (NetRestThrottle);
 ## moved, it goes out at once and at full rate again, not at the next slow
 ## send.
+## N-218: the client takes the wheel (which starts the run) and drives for two
+## seconds: its copy of the truck is predicted (unfrozen, simulated with its own
+## input), the host plays its numbered inputs and its truck moves with them, no
+## correction moves the client's copy more than 10 cm a tick, and once the
+## client gets out its copy is frozen again (DRIVE lines with the numbers).
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -208,6 +213,8 @@ func _run_host() -> void:
 	rpc_id(_client_peer_id, &"_client_check_drop", package.get_path())
 	await _wait_for_report(&"drop")
 
+	await _check_client_drives(client_player)
+
 	# The host's next-day newspaper (N-606.2) reaches the client as the same ids and
 	# slots, before the results, from the run really ending on the host.
 	var chronicle: Node = _level.get_node(^"RunChronicle")
@@ -254,6 +261,61 @@ func _run_host() -> void:
 	if _client_peer_id > 0:
 		await _check_ghost_rejoin(old_slot)
 	await _finish(not _failed, "all pair checks passed")
+
+
+## N-218: the client at the wheel predicts its truck; the host's still moves only with its inputs.
+func _check_client_drives(client_player: Player) -> void:
+	var vehicle: VehicleBody3D = _level.get(&"vehicle")
+	vehicle.call(&"set_door_open", &"cab_left", true)
+	_level.get_node(^"World/Vehicle/CabinInterior/DriverEyePoint/InteractionArea").call(&"interact", client_player)
+	var seated: bool = await _wait_until(func() -> bool: return int(vehicle.driver_peer_id) == _client_peer_id)
+	_expect(seated, "the client takes the wheel")
+	var start: Vector3 = vehicle.global_position
+	rpc_id(_client_peer_id, &"_client_drive", vehicle.get_path())
+	await _wait_for_report(&"drive")
+	var moved: float = vehicle.global_position.distance_to(start)
+	print("DRIVE role=host moved %.1f m, playing input %d" % [moved, int(vehicle.get(&"net_input_seq"))])
+	_expect(moved > 2.0, "the host's truck drives with the client's inputs (moved %.1f m)" % moved)
+	_expect(int(vehicle.get(&"net_input_seq")) > 0, "the host plays the client's numbered inputs")
+	var left: bool = await _wait_until(func() -> bool: return int(vehicle.driver_peer_id) == 0)
+	_expect(left, "the client gets out of the driver's seat")
+	await _pump(0.5)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _client_drive(vehicle_path: NodePath) -> void:
+	var vehicle: VehicleBody3D = get_node_or_null(vehicle_path) as VehicleBody3D
+	if vehicle == null:
+		_report(&"drive", false, "client has no truck to drive")
+		return
+	var predicting: bool = await _wait_until(func() -> bool: return bool(vehicle.call(&"is_predicted")), 10.0)
+	var prediction: VehiclePrediction = vehicle.get(&"_prediction")
+	var start: Vector3 = vehicle.global_position
+	var worst_shift: float = 0.0
+	var errors: Array[float] = []
+	Input.action_press(&"drive_accelerate")
+	var deadline: int = Time.get_ticks_msec() + 2000
+	while Time.get_ticks_msec() < deadline:
+		await get_tree().physics_frame
+		worst_shift = maxf(worst_shift, prediction.last_shift)
+		errors.append(prediction.reconciler.last_error)
+	Input.action_release(&"drive_accelerate")
+	var moved: float = vehicle.global_position.distance_to(start)
+	Input.action_press(&"drive_handbrake")
+	await _pump(1.0)
+	Input.action_release(&"drive_handbrake")
+	errors.sort()
+	var median: float = errors[errors.size() / 2] if not errors.is_empty() else INF
+	print("DRIVE role=client predicted %s moved %.1f m, worst correction %.3f m/tick, error median %.3f worst %.3f" % [
+		predicting, moved, worst_shift, median, errors[-1] if not errors.is_empty() else INF])
+	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
+	if player != null:
+		player.call(&"leave_seat")
+	var frozen_again: bool = await _wait_until(func() -> bool: return vehicle.freeze, 5.0)
+	var ok: bool = predicting and moved > 2.0 and worst_shift <= 0.1001 and frozen_again
+	_report(&"drive", ok,
+		"client at the wheel: predicted %s, moved %.1f m, worst correction %.3f m/tick, frozen again %s" % [
+			predicting, moved, worst_shift, frozen_again])
 
 
 ## N-221: the client comes back from the same running game (same identity in
