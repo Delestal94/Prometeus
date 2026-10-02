@@ -302,6 +302,43 @@ func _build_shop() -> void:
 			var depot_node: Depot = _depot_node()
 			if depot_node != null:
 				depot_node.buy_supply_discounted(supply_id))
+	# The accessory shelf (N-923.3): the catalogue's prices, bought for this
+	# player with the team's money; online it is voted like the supplies.
+	var shelf: Dictionary = AccessoryOffers.build([NetworkManager.local_id()])
+	_accessory_section(shelf, money,
+		func(offer_id: StringName) -> void:
+			_buy_accessory_now(shelf[offer_id], false),
+		func(offer_id: StringName) -> void:
+			_buy_accessory_now(shelf[offer_id], true))
+
+
+## Solo: the host settles the accessory offer at once (ShopVoteManager, the one
+## place that charges for it); a discounted one carries the local player's card.
+func _buy_accessory_now(offer: Dictionary, discounted: bool) -> void:
+	var offer_copy: Dictionary = offer.duplicate(true)
+	if discounted:
+		offer_copy["discounted"] = true
+		offer_copy["discount_peer"] = NetworkManager.local_id()
+	ShopVoteManager.settle_accessory_offer(offer_copy)
+	if visible and _selling():
+		_rebuild()
+
+
+## The accessory rows under a title: only this player's offers (`offers` holds
+## whoever the caller built them for), each blocked when somebody already has it.
+func _accessory_section(offers: Dictionary, money: int, buy: Callable, buy_discounted: Callable) -> void:
+	var color: String = CrewProgression.player_color_key(NetworkManager.local_id())
+	var blocked: Array = AccessoryOffers.blocked_ids(offers, CrewProgression.accessories)
+	var blocked_keys: Dictionary = {}
+	for offer_id: Variant in blocked:
+		var accessory: StringName = StringName((offers[offer_id] as Dictionary)["accessory"])
+		var reason: StringName = AccessoryOffers.block_reason(CrewProgression.accessories, color, accessory)
+		blocked_keys[offer_id] = "UI_ACCESSORY_ROW_OWNED" if reason == &"owned" else "UI_ACCESSORY_ROW_TAKEN"
+	UiTheme.label(_body, tr("UI_ACCESSORY_SECTION"), 20, UiTheme.INK, true)
+	var hint: Label = UiTheme.label(_body, tr("UI_ACCESSORY_SECTION_HINT"), 15, UiTheme.MUTED)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.custom_minimum_size.x = 560
+	_offer_rows(offers, blocked, "UI_ACCESSORY_ROW_TAKEN", money, buy, buy_discounted, false, blocked_keys)
 
 
 ## A service station's counter on the road (N-110): its shop (`depot` here is a
@@ -316,29 +353,43 @@ func _build_service() -> void:
 	# the host's wallet is its own, a client's the one the shop last sent.
 	var money: int = CrewProgression.team_money if NetworkManager.is_host() else shop.team_money
 	_header(tr("UI_SERVICE_TITLE"), tr("UI_DEPOT_TEAM_CASH") % money, UiTheme.MINT, tr(shop.hint_key()))
-	_offer_rows(shop.offers(), shop.unavailable(), "UI_SERVICE_FULL", money,
-		func(id: StringName) -> void:
-			if is_instance_valid(shop):
-				shop.buy_supply(id),
-		func(id: StringName) -> void:
-			if is_instance_valid(shop):
-				shop.buy_supply_discounted(id))
+	var all_offers: Dictionary = shop.offers()
+	var kit: Dictionary = {}
+	var shelf: Dictionary = {}
+	for offer_id: StringName in all_offers:
+		if AccessoryOffers.is_offer(all_offers[offer_id]):
+			# Only the shelf of the player at this panel; the others' rows are their own.
+			if int((all_offers[offer_id] as Dictionary).get("buyer", 0)) == NetworkManager.local_id():
+				shelf[offer_id] = all_offers[offer_id]
+		else:
+			kit[offer_id] = all_offers[offer_id]
+	var blocked: Array = shop.unavailable()
+	var buy := func(id: StringName) -> void:
+		if is_instance_valid(shop):
+			shop.buy_supply(id)
+	var buy_discounted := func(id: StringName) -> void:
+		if is_instance_valid(shop):
+			shop.buy_supply_discounted(id)
+	_offer_rows(kit, blocked, "UI_SERVICE_FULL", money, buy, buy_discounted)
+	_accessory_section(shelf, money, buy, buy_discounted)
 
 
 ## One row per offer (id -> {title, detail, cost}): a buy (or vote) button, its
 ## detail, who voted for it and, with a Discount card, the half-price button.
 ## `blocked` ids show `blocked_key` instead and can't be bought. Solo, `buy` and
 ## `buy_discounted` take the id; online the press is a vote.
+## `controls` false skips the vote clock and the revote button (a second list on
+## the same panel); `blocked_keys` gives an id its own "blocked" text.
 func _offer_rows(offers: Dictionary, blocked: Array, blocked_key: String, money: int, buy: Callable,
-		buy_discounted: Callable) -> void:
+		buy_discounted: Callable, controls: bool = true, blocked_keys: Dictionary = {}) -> void:
 	var peer_id: int = NetworkManager.local_id()
 	var voting: bool = NetworkManager.is_online()
 	var has_discount: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.DISCOUNT)
 	var has_revote: bool = CrewProgression.has_card(peer_id, CrewProgression.Card.REVOTE)
 	var current_winner: StringName = ShopVoteManager.resolve_winner(NetworkManager.peer_ids) if voting else &""
-	if voting:
+	if voting and controls:
 		_vote_timer_label = UiTheme.label(_body, _vote_status_text(), 17, UiTheme.GRAPE, true)
-	if has_revote and voting:
+	if has_revote and voting and controls:
 		var revote: Button = UiTheme.button(_body, tr("UI_DEPOT_USE_REVOTE"), false, Vector2(0, 42))
 		revote.disabled = not ShopVoteManager.active
 		revote.tooltip_text = tr("UI_DEPOT_REVOTE_TOOLTIP")
@@ -355,7 +406,7 @@ func _offer_rows(offers: Dictionary, blocked: Array, blocked_key: String, money:
 		var item_title: String = tr(String(item.title))
 		var label: String = "%s%s  ·  $%d" % [tr("UI_DEPOT_VOTE_PREFIX") if voting else "", item_title, cost]
 		if have:
-			label = tr(blocked_key) % item_title
+			label = tr(String(blocked_keys.get(supply_id, blocked_key))) % item_title
 		var enabled: bool = not have and money >= cost and (not voting or ShopVoteManager.active)
 		var button: Button = UiTheme.button(row, label, enabled, Vector2(0, 46))
 		button.disabled = not enabled
@@ -450,6 +501,10 @@ func _on_shop_resolved(offer_id: StringName, offer: Dictionary) -> void:
 	var should_purchase: bool = NetworkManager.local_id() == int(offer.get("discount_peer", 0)) if discounted else NetworkManager.is_host()
 	# A service station's offer is bought by that station's shop (N-110), never the depot.
 	if offer.get("venue") == SERVICE_SHOP.VENUE:
+		should_purchase = false
+	# An accessory is settled by the host's ShopVoteManager when the vote closes
+	# (N-923.3): the panel never charges it, nor spends the Discount card.
+	if AccessoryOffers.is_offer(offer):
 		should_purchase = false
 	if should_purchase and not offer_id.is_empty():
 		var depot_node: Depot = _depot_node()

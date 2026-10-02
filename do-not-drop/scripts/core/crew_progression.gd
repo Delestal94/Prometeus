@@ -336,6 +336,45 @@ func buy_supply_discounted(peer_id: int, supply_id: StringName) -> bool:
 	return true
 
 
+## Host-only (N-923.3): the accessory shop's one purchase, the team's money for
+## an accessory that stays with `buyer_color` (a PLAYER_COLOR_KEYS entry, not a
+## peer: it survives a change of peer id). Everything is checked before anything
+## moves, so money is spent only if the grant will succeed: an accessory that
+## somebody already has (the buyer included, there is one copy of each), an
+## unknown id or a bad buyer charge nothing, and neither does a wallet that
+## can't pay or a Discount card the player doesn't hold.
+##
+## `price_multiplier` is a surcharge (a service stop's, never below 1);
+## `discount_peer` > 0 pays half with that peer's Discount card, which is used
+## up only when the purchase goes through. No refunds exist, so a farmed route
+## or a thrown run can't turn this into money back.
+## Returns {ok, reason (&"" when ok: &"not_host", &"unknown", &"owned", &"taken",
+## &"no_card", &"no_money"), cost}: `cost` is what it costs (or would have).
+func buy_accessory(buyer_color: String, accessory_id: StringName, price_multiplier: float = 1.0,
+		discount_peer: int = 0) -> Dictionary:
+	var network := _network() if is_inside_tree() else null
+	var cost: int = AccessoryOffers.cost(accessory_id, price_multiplier, discount_peer > 0)
+	if network != null and network.is_online() and not network.is_host():
+		return {"ok": false, "reason": &"not_host", "cost": cost}
+	if not PLAYER_COLOR_KEYS.has(buyer_color):
+		return {"ok": false, "reason": &"unknown", "cost": cost}
+	var blocked: StringName = AccessoryOffers.block_reason(accessories, buyer_color, accessory_id)
+	if blocked != &"":
+		return {"ok": false, "reason": blocked, "cost": cost}
+	if discount_peer > 0 and not has_card(discount_peer, Card.DISCOUNT):
+		return {"ok": false, "reason": &"no_card", "cost": cost}
+	if not spend(cost):
+		return {"ok": false, "reason": &"no_money", "cost": cost}
+	if not accessories.grant(buyer_color, accessory_id):
+		# Can't happen after block_reason(); if it ever does, nobody pays for nothing.
+		add_team_money(cost)
+		return {"ok": false, "reason": &"taken", "cost": cost}
+	if discount_peer > 0:
+		consume_card(discount_peer, Card.DISCOUNT)
+	save_campaign()
+	return {"ok": true, "reason": &"", "cost": cost}
+
+
 ## Hands the waiting supplies to the run that's leaving, and clears them.
 func take_supplies() -> Array[StringName]:
 	var taken: Array[StringName] = []

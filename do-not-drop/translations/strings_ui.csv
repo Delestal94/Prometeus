@@ -359,6 +359,14 @@ UI_ACCESSORY_SLOT_BACK,Espalda,Back
 UI_ACCESSORY_SLOT_HEAD,Cabeza,Head
 UI_ACCESSORY_SLOT_TORSO,Torso,Torso
 UI_ACCESSORY_THERMAL_BACKPACK,Mochila térmica,Thermal backpack
+UI_ACCESSORY_NOTICE_BOUGHT,Compraron %s para %s (-$%d),Bought %s for %s (-$%d)
+UI_ACCESSORY_NOTICE_NO_MONEY,No alcanza la plata para %s ($%d),Not enough money for %s ($%d)
+UI_ACCESSORY_NOTICE_TAKEN,%s ya lo tiene alguien: no se cobró,%s is already taken: nothing was charged
+UI_ACCESSORY_NOTICE_NO_CARD,Esa carta de descuento ya no está: no se cobró,That discount card is gone: nothing was charged
+UI_ACCESSORY_ROW_OWNED,%s  ·  ya lo tenés,%s  ·  you already have it
+UI_ACCESSORY_ROW_TAKEN,%s  ·  ya lo tiene otro jugador,%s  ·  another player has it
+UI_ACCESSORY_SECTION,Accesorios,Accessories
+UI_ACCESSORY_SECTION_HINT,Se pagan con la plata del equipo y quedan para quien los pidió.,Paid with the team's money and kept by whoever asked for them.
 UI_APPEARANCE,Apariencia,Appearance
 UI_BACK,Volver,Back
 UI_CANCEL,Cancelar,Cancel
