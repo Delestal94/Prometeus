@@ -470,7 +470,10 @@ func _hold_predicted_truck(delta: float) -> void:
 	var truck := _truck() as VehicleBody3D
 	if truck == null:
 		return
-	var predicted: bool = truck.has_method(&"is_predicted") and bool(truck.call(&"is_predicted"))
+	# A client's truck stays frozen unless it predicts it (vehicle.gd _ready,
+	# VehiclePrediction _start/_stop). Not preloaded: vehicle.gd names autoloads,
+	# and route.gd pulls this script in before they exist (see the note on top).
+	var predicted: bool = not truck.freeze
 	var local: Vector3 = to_local(truck.global_position)
 	var inside: bool = predicted and _inside(local)
 	_set_grip(truck, inside)
