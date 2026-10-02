@@ -24,7 +24,9 @@ extends SceneTree
 ##   the cargo floor, more than 1.5 m from the cargo camera.
 
 const WheelDust = preload("res://scripts/presentation/wheel_dust.gd")
-const VehicleEffects = preload("res://scripts/presentation/vehicle_effects.gd")
+## Loaded at run time, not preloaded: vehicle_effects.gd preloads vehicle.gd, which names autoloads that a
+## --script does not have yet when it compiles (same as trailer_shot.gd in test_trailer_shots.gd).
+const VEHICLE_EFFECTS_PATH: String = "res://scripts/presentation/vehicle_effects.gd"
 
 var _failures: int = 0
 
@@ -183,7 +185,7 @@ func _test_exhaust(van: VehicleBody3D, effects: Node) -> void:
 		_expect(standard.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA, "The smoke is alpha-blended")
 		_expect(standard.disable_receive_shadows, "The smoke receives no shadow")
 		_expect(standard.albedo_texture != null, "The radial falloff texture softens the edge")
-		_expect(standard == VehicleEffects.smoke_puff_material(), "The puff material is static and cached")
+		_expect(standard == load(VEHICLE_EFFECTS_PATH).smoke_puff_material(), "The puff material is static and cached")
 		var disc := standard.albedo_texture as GradientTexture2D
 		_expect(disc != null and disc.fill == GradientTexture2D.FILL_RADIAL, "A radial disc")
 		if disc != null:
@@ -231,8 +233,8 @@ func _test_exhaust(van: VehicleBody3D, effects: Node) -> void:
 	for index: int in range(ramp.get_point_count()):
 		peak = maxf(peak, ramp.get_color(index).a)
 	_expect(peak >= 0.55 and peak <= 0.9, "A veil, not a solid ball of foam (peak alpha %.2f)" % peak)
-	_expect(VehicleEffects.SMOKE_COLOR.get_luminance() > 0.6, "The smoke is lighter than the asphalt (%.2f)"
-			% VehicleEffects.SMOKE_COLOR.get_luminance())
+	_expect(load(VEHICLE_EFFECTS_PATH).SMOKE_COLOR.get_luminance() > 0.6, "The smoke is lighter than the asphalt (%.2f)"
+			% load(VEHICLE_EFFECTS_PATH).SMOKE_COLOR.get_luminance())
 	_expect(smoke.visibility_aabb.end.z >= 25.0, "The culling box reaches the cloud left behind")
 
 	# A far camera, an idle engine, then a full throttle; the light and weather fixed.
@@ -267,7 +269,8 @@ func _test_exhaust(van: VehicleBody3D, effects: Node) -> void:
 	_expect(is_equal_approx(material.color.a, 1.0), "And its alpha is not lowered at night")
 	WorldMood.active = {"weather": WorldMood.Weather.RAIN, "time": WorldMood.TimeOfDay.DAY, "rain": true}
 	effects.call(&"sample_smoke_look")
-	_expect(is_equal_approx(material.color.a, VehicleEffects.SMOKE_WET_ALPHA), "Rain thins the smoke (alpha %.2f)"
+	var wet_alpha: float = load(VEHICLE_EFFECTS_PATH).SMOKE_WET_ALPHA
+	_expect(is_equal_approx(material.color.a, wet_alpha), "Rain thins the smoke (alpha %.2f)"
 			% material.color.a)
 	WorldMood.active = {"weather": WorldMood.Weather.FOG, "time": WorldMood.TimeOfDay.DAY, "rain": false}
 	effects.call(&"sample_smoke_look")
@@ -295,7 +298,7 @@ func _test_exhaust_anchor(van: VehicleBody3D, smoke: GPUParticles3D) -> void:
 	if floor_node == null:
 		return
 	var pipe: Vector3 = van.to_local(smoke.global_position)
-	var anchor: Vector3 = VehicleEffects.exhaust_anchor(van)
+	var anchor: Vector3 = load(VEHICLE_EFFECTS_PATH).exhaust_anchor(van)
 	_expect(pipe.distance_to(anchor) < 0.15, "The emitter sits on the anchor (%s vs %s)" % [pipe, anchor])
 	var tail: Dictionary = _art_rear_extent(van)
 	var box_tail: float = tail["box"]

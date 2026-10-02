@@ -1146,7 +1146,9 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     por `preload` de `vehicle.gd` (`presentation_engine_running`) y `GameSettings` por la constante `GAME_SETTINGS`
     (`camera_shake_scale`; el test comprueba que sea el script del autoload). Quedan los dos accesores `/root/`
     (EventBus, por nombre porque un test lo cambia por un `Node`, y GameSettings). En el archivo: 7 → 2 usos (`.get(&`
-    5 → 0); en `scripts/`: `.get(&` 145 → 140. `test_dynamic_dispatch_budget.gd` suma el archivo y su handle. Sin aviso
+    5 → 0); en `scripts/`: `.get(&` 145 → 140. `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
+    `test_dust_and_ambience.gd` y `render_exhaust.gd` cargan `vehicle_effects.gd` con `load()`: ahora precarga
+    `vehicle.gd`, que nombra autoloads que un `--script` no tiene al compilar. Sin aviso
     (`presentation/` sin dueño salvo `vehicle_presentation.gd`, que es de Nacho, y `tests/`). `run_tally.gd` se saltó:
     sus 9 usos son todos sobre `RunManager`, que no se puede precargar (nombra autoloads y lo carga `net_trio.gd` por
     `--script`); solo `handed_over` bajaría (por `run_deliveries.gd`). Siguientes: `sound_audit.gd` (8, reproductores
