@@ -1743,18 +1743,31 @@ Fase 4 de `docs/investigacion-red.md`.
   (`PlayerColorSlot`, host en 0) y de este PR solo la reserva de slots. Tests: `test_network_rejoin`,
   `net_session__test_net_session_rejoin` y la última etapa de `net_pair` (sale con la caja, vuelve desde el
   mismo juego y recupera slot y mérito). Aviso: `docs/avisos/2026-09-30-n221-rpc-y-reconexion.md`.
-  - [ ] Falta: no recupera posición, asiento ni caja (se sueltan al irse, S-209; aparece como cualquier join
-    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); en LAN un extraño a una sala llena
-    carga el nivel antes de oír "full" (quién es llega con su respuesta de listo); el fantasma de un crash con
-    Steam no está probado con sockets reales (por ENet sí: `net_pair`).
-  - [ ] Pedir la identidad antes del estado completo: con la sala llena en LAN, el host manda primero solo el
-    nonce, el que entra contesta su eslabón de la cadena y recién ahí (fantasma suyo o lugar libre) recibe el
-    estado y carga el nivel; si no, oye "full" sin cargar nada. Cambia el handshake (otro `PROTOCOL_VERSION`).
-    Lo dejó anotado la segunda pasada de `auditor-red` sobre `nacho/N-221-followups`.
+  - [x] Recupera posición, asiento y caja. **[x] 2026-10-01, rama `nacho/N-221-rejoin-restore`:** al irse se
+    sigue soltando todo en el acto (S-209), pero el host anota qué tenía (`RejoinKeepsake`,
+    `scripts/gameplay/rejoin_keepsake.gd`, en `peer_removed`) y, si vuelve la misma identidad (señal nueva
+    `NetSession.peer_returned(id, anterior)`, también con el mismo id), lo spawnea desde la nota: en el camión si
+    estaba (su asiento si sigue libre, abriéndole la puerta del chofer; si se lo tomaron, a mitad de corrida otro
+    asiento o la caja como un join tardío), a pie donde estaba si tiene sentido (antes de la corrida en el
+    depósito; a mitad, a menos de 40 m del camión) y con su caja en las manos si nadie la tocó (suelta, sin
+    estantear ni perder, sin otro que la haya levantado, a menos de 3 m). Un fantasma que se suelta en el mismo
+    frame: el que vuelve se spawnea el frame siguiente, cuando el viejo ya soltó asiento y caja. Sin RPC nuevo.
+    Tests: `test_rejoin_keepsake` y las dos etapas de rejoin de `net_pair` (vuelve donde estaba y con su caja,
+    también sobre un fantasma). Sigue faltando: en LAN no se lo reconoce si reinició el juego (token nuevo); el
+    fantasma de un crash con Steam no está probado con sockets reales (por ENet sí: `net_pair`).
+  - [x] Pedir la identidad antes del estado completo. **[x] misma rama:** con la sala llena en LAN el host manda
+    solo `{version, session, identify}`, el que entra contesta su eslabón (`_identity_reply()`) y recién ahí
+    (fantasma suyo o lugar libre: `NetAdmission.on_identity()`) recibe el estado y carga el nivel; si no, oye
+    "full" (o "connection" si repite un eslabón ajeno) sin cargar nada. Su respuesta de listo ya no trae
+    identidad y el host no la lee (`identified`). `PROTOCOL_VERSION` 23 → 26 (24 y 25 reservados para N-110 y
+    N-218, con entradas provisorias en el historial). Tests: `net_session__test_net_session_rejoin` (sin sockets
+    y por ENet: el que vuelve suelta al fantasma antes de cargar, extraño y ladrón sin estado),
+    `test_network_rejoin`. Aviso: `docs/avisos/2026-10-01-n221-rejoin-restore.md`.
   - [ ] Nota para cuando exista la UI de silenciar (`SteamVoice`): el silencio y el volumen se guardan por peer id
     (`_muted`, `_peer_volume`), así que el que vuelve con otro id llega sin silenciar; y para un fantasma no llega
     `peer_disconnected` (`SceneMultiplayer.disconnect_peer()` lo bloquea), así que sus entradas quedan hasta que
-    termina la sesión. Cuando haya UI: guardarlo por identidad (`peer_identity()`) y olvidarlo con `peer_removed`.
+    termina la sesión. Cuando haya UI: moverlo con `peer_returned(id, anterior)` (o guardarlo por
+    `peer_identity()`) y olvidarlo con `peer_removed`. Sin UI todavía, queda para entonces.
 - [x] Seguimiento de la auditoría de #125 (`auditor-red`), rama `nacho/N-221-followups`. La caja de un
   fantasma conserva su ventana de rescate: `NetSession.peer_removed` (antes de `roster_changed`, una vez por
   salida), que `package.gd` escucha en lugar de `multiplayer.peer_disconnected`. Sala llena: ENet acepta una

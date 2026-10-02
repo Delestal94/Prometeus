@@ -25,20 +25,25 @@ extends SceneTree
 ## - peer_removed comes once per leave, before roster_changed, for a ghost
 ##   when it is dropped and not again when its connection closes;
 ## - a full room (NetAdmission): a joiner who can't be told yet goes on
-##   unplaced, gets in once it turns out to be a ghost's player (or someone
-##   left meanwhile), and hears "full" otherwise -- before anything moves: no
+##   unplaced and is asked who it is before it gets the state (protocol 26);
+##   its identity reply gets it in once it turns out to be a ghost's player (or
+##   someone left meanwhile) -- its ready reply then claims nothing and moves
+##   nothing again -- and "full" otherwise -- before anything moves: no
 ##   peer_rejoined, no _peer_returned -- while the identity its claim continues
 ##   moves on to it, so that claim, overheard and sent again, is a replay and
-##   its owner's next one still gets in;
+##   its owner's next one still gets in; an identity reply from a joiner not
+##   asked, a ready reply from one still asked, or one of another version,
+##   gets nowhere; peer_returned comes with every return, same id or not;
 ## - the same over ENet in this process, in a room of two: a dropped ghost
 ##   leaves SceneMultiplayer at once, and a restart announced or begun in that
 ##   frame neither waits for it nor owes it a reload; the transport takes one
 ##   connection more than the room, so a joiner who went silent (nobody polls
 ##   its link: a pulled cable) and comes back from the same game reaches the
-##   host while its ghost still holds the place, gets in, and the ghost goes;
-##   someone replaying its claim hears "connection"; a stranger that ignores
-##   "full" hears it and is cut off within the grace (REFUSED_GRACE_SECONDS),
-##   however many ready replies it sends; a joiner turned away as it
+##   host while its ghost still holds the place, is asked who it is, and its
+##   answer drops the ghost before it gets the state; someone replaying its
+##   claim hears "connection" and a stranger "full", both without ever getting
+##   the state (no level load), and one that ignores "full" is cut off within
+##   the grace (REFUSED_GRACE_SECONDS); a joiner turned away as it
 ##   authenticates that answers anyway never gets in; a joiner sending its
 ##   ready reply several times is read once (one replay check) and gets in once.
 
@@ -122,8 +127,8 @@ class CountingIdentities extends NetPeerIdentities:
 class ThiefSession extends GameSession:
 	var stolen: String = ""
 
-	func _ready_reply() -> Dictionary:
-		return {"ready": true, "version": protocol_version, "identity": stolen}
+	func _claim_identity() -> String:
+		return stolen
 
 
 func _initialize() -> void:
@@ -147,7 +152,9 @@ func _run() -> void:
 	var rejoins: Array = []
 	var rosters: Array = []
 	var removed: Array = []
+	var returns: Array = []
 	session.peer_rejoined.connect(func(old_id: int, new_id: int) -> void: rejoins.append([old_id, new_id]))
+	session.peer_returned.connect(func(id: int, previous_id: int) -> void: returns.append([previous_id, id]))
 	session.roster_changed.connect(func(ids: Array) -> void: rosters.append(ids.duplicate()))
 	# What a listener sees when it hears: the roster still unannounced, and who it was.
 	session.peer_removed.connect(func(id: int) -> void:
@@ -192,6 +199,8 @@ func _run() -> void:
 	session._identify_peer(69, _reply("tok-b"))
 	_expect(session.returned[-1] == [69, 69] and rejoins.size() == 2,
 		"Back under the same id: _peer_returned(id, id), no peer_rejoined (got %s)" % [session.returned])
+	_expect(returns == session.returned,
+		"peer_returned follows _peer_returned every time, same id or not (got %s)" % [returns])
 	# No rejoin: nothing usable claimed.
 	for bad: Variant in [42, "", "x".repeat(RpcGuard.MAX_TEXT_LENGTH + 1), ["tok-a"], null]:
 		session._identify_peer(90, {"ready": true, "identity": bad})
@@ -300,12 +309,24 @@ func _check_full_room(session: GameSession) -> void:
 	_expect(admission.on_authenticating(session, 77).is_empty() and admission.unplaced.has(77),
 		"...as does a stranger")
 	_expect(not admission.admitted.has(58) and not admission.admitted.has(77), "...holding no place meanwhile")
-	_expect(admission.on_identified(session, 58, _reply("tok-a")).is_empty(),
-		"The one who turns out to be a ghost's player gets in")
+	_expect(admission.on_identified(session, 58, _reply("tok-a")) == "connection",
+		"A ready reply from a joiner still asked who it is gets nowhere")
+	_expect(admission.on_identity(session, 22, _reply("tok-a")) == "connection",
+		"An identity reply from a joiner nobody asked gets nowhere")
+	_expect(session._identity_reply_error({"identify": true, "version": 2}) == "version"
+		and session._identity_reply_error({"ready": true, "version": 3}) == "connection"
+		and session._identity_reply_error({"identify": true, "version": 3}).is_empty(),
+		"An identity reply must be one, of this version")
+	_expect(admission.on_identity(session, 58, _reply("tok-a")).is_empty(),
+		"The one who turns out to be a ghost's player gets in, before it gets the state")
 	_expect(not session.peer_ids.has(22) and rejoins == [[22, 58]], "...and the ghost goes (got %s, %s)"
 		% [session.peer_ids, rejoins])
+	var returned_count: int = session.returned.size()
+	_expect(admission.on_identified(session, 58, {"ready": true, "version": 3}).is_empty()
+		and session.returned.size() == returned_count and rejoins.size() == 1,
+		"Its ready reply, claiming nothing, lets it in and moves nothing again")
 	session._on_peer_connected(58)
-	_expect(admission.on_identified(session, 77, _reply("tok-z")) == "full",
+	_expect(admission.on_identity(session, 77, _reply("tok-z")) == "full",
 		"The stranger hears full once it says who it is")
 	session._auth_failed(77)
 	_expect(admission.unplaced.is_empty() and admission.admitted.is_empty(), "...and is forgotten")
@@ -313,7 +334,7 @@ func _check_full_room(session: GameSession) -> void:
 	# 44 comes back with no ghost to make room: "full" before anything moves.
 	var returned_before: int = session.returned.size()
 	_expect(admission.on_authenticating(session, 45).is_empty() and admission.unplaced.has(45), "Full again")
-	_expect(admission.on_identified(session, 45, _reply("tok-c")) == "full",
+	_expect(admission.on_identity(session, 45, _reply("tok-c")) == "full",
 		"Someone who left, back to a full room with no ghost of its own, hears full")
 	_expect(rejoins.size() == 1 and session.returned.size() == returned_before,
 		"...before anything moves: no peer_rejoined, no _peer_returned (rejoins %s)" % [rejoins])
@@ -324,15 +345,15 @@ func _check_full_room(session: GameSession) -> void:
 		"...but 44's identity moved on to it: it has been on the wire, so nobody can use it first")
 	session._auth_failed(45)
 	_expect(admission.on_authenticating(session, 47).is_empty() and admission.unplaced.has(47), "Full")
-	_expect(admission.on_identified(session, 47, {"ready": true, "identity": String(_last_claim["tok-c"])})
+	_expect(admission.on_identity(session, 47, {"identify": true, "identity": String(_last_claim["tok-c"])})
 		== "connection", "Whoever overheard the turned-away claim and sends it from elsewhere hears connection")
 	session._auth_failed(47)
 
-	# Someone leaves while an unplaced joiner loads: there's a place after all.
+	# Someone leaves before an unplaced joiner answers: there's a place after all.
 	_expect(admission.on_authenticating(session, 46).is_empty() and admission.unplaced.has(46), "Full again")
 	session._on_peer_disconnected(37)
-	_expect(admission.on_identified(session, 46, _reply("tok-c")).is_empty(),
-		"A joiner unplaced when the room was full gets in if someone left while it loaded")
+	_expect(admission.on_identity(session, 46, _reply("tok-c")).is_empty(),
+		"A joiner unplaced when the room was full gets in if someone left before it answered")
 	_expect(rejoins.size() == 2 and rejoins[1] == [44, 46],
 		"...and its owner's next link is still 44's (rejoins %s)" % [rejoins])
 	session.leave_session()
@@ -375,12 +396,15 @@ func _check_full_room_over_enet() -> void:
 	var again_id: int = await _enet_join(again, false)
 	_expect(again_id != 0, "Back while its ghost still holds the room's place, the transport lets it reach the host")
 	if again_id != 0:
-		_expect(host._admission.unplaced.has(again_id), "...unplaced: on LAN only its ready reply says who it is")
+		_expect(host._admission.identified.has(again_id) and again._identified_early,
+			"...asked who it is (LAN, full room), it answered before it got the state")
+		_expect(not host.peer_ids.has(first_id) and rejoins == [[first_id, again_id]],
+			"...and its answer dropped the ghost before it loaded anything (roster %s, rejoins %s)"
+			% [host.peer_ids, rejoins])
+		_expect(not again._ready_reply().has("identity"), "Its ready reply claims nothing more")
 		again.level_ready()
 		_expect(await _wait_for(func() -> bool: return host.peer_ids.has(again_id)),
-			"It gets in once it says who it is")
-		_expect(not host.peer_ids.has(first_id) and rejoins == [[first_id, again_id]],
-			"...and its ghost leaves the roster (roster %s, rejoins %s)" % [host.peer_ids, rejoins])
+			"It gets in once its level is up")
 		_expect(removed == [first_id], "The ghost is removed once, when dropped (got %s)" % [removed])
 		await process_frame
 		_expect(not host.multiplayer.get_peers().has(first_id), "SceneMultiplayer lets go of the ghost at once")
@@ -389,23 +413,24 @@ func _check_full_room_over_enet() -> void:
 		await _check_thief(host, again)
 
 	var stranger := _enet_session("FullStranger", StubbornSession.new()) as StubbornSession
-	stranger.replies_to_send = 3
-	var stranger_id: int = await _enet_join(stranger, false)
-	_expect(stranger_id != 0 and host._admission.unplaced.has(stranger_id),
-		"A stranger to the full room goes on unplaced too")
+	var stranger_states: Array = []
+	stranger.session_ready.connect(func(is_host: bool) -> void: stranger_states.append(is_host))
+	var knocked_at: int = Time.get_ticks_msec()
+	_expect(stranger.join_session("127.0.0.1", FULL_ROOM_PORT) == OK, "A stranger knocks at the full room")
+	var stranger_id: int = stranger.multiplayer.get_unique_id()
 	if stranger_id != 0:
-		var refused_at: int = Time.get_ticks_msec()
-		stranger.level_ready()
+		_expect(await _wait_for(func() -> bool: return stranger.refusals.has("full")),
+			"...is asked who it is and hears full (got %s)" % [stranger.refusals])
+		_expect(stranger_states.is_empty(), "...without ever getting the state: it loads no level")
 		var cut_off: bool = await _wait_for(func() -> bool:
 			var status: int = stranger.multiplayer.multiplayer_peer.get_connection_status()
 			return status == MultiplayerPeer.CONNECTION_DISCONNECTED)
-		var took: int = Time.get_ticks_msec() - refused_at
-		var grace_msec: int = int(NetAdmission.REFUSED_GRACE_SECONDS * 1000.0) + 500
-		_expect(stranger.refusals.has("full"), "...hears full once it says who it is (got %s)" % [stranger.refusals])
+		var took: int = Time.get_ticks_msec() - knocked_at
+		var grace_msec: int = int(NetAdmission.REFUSED_GRACE_SECONDS * 1000.0) + 1500
 		_expect(cut_off and took < grace_msec,
 			"...and, ignoring it, is let go of within the grace (%d ms, at most %d)" % [took, grace_msec])
 		_expect(not host.peer_ids.has(stranger_id) and not stranger.multiplayer.get_peers().has(NetSession.HOST_ID),
-			"Its two extra ready replies didn't get it in")
+			"It never got in")
 		_expect(await _wait_for(func() -> bool:
 			return not host._admission.unplaced.has(stranger_id) and not host._admission.refused.has(stranger_id)),
 			"The host forgets it once its link is gone")
@@ -495,13 +520,15 @@ func _check_thief(host: GameSession, victim: GameSession) -> void:
 	var thief := _enet_session("FullThief", ThiefSession.new()) as ThiefSession
 	thief.stolen = String((victim.replies[-1] as Dictionary).identity)
 	var failures: Array = []
+	var states: Array = []
 	thief.session_failed.connect(func(reason: String) -> void: failures.append(reason))
-	var thief_id: int = await _enet_join(thief, false)
-	_expect(thief_id != 0, "Someone replaying a claim reaches the host")
+	thief.session_ready.connect(func(is_host: bool) -> void: states.append(is_host))
+	_expect(thief.join_session("127.0.0.1", FULL_ROOM_PORT) == OK, "Someone replaying a claim reaches the host")
+	var thief_id: int = thief.multiplayer.get_unique_id()
 	if thief_id != 0:
-		thief.level_ready()
 		_expect(await _wait_for(func() -> bool: return failures.has("connection")),
-			"...and is turned away (got %s)" % [failures])
+			"...and is turned away when asked who it is (got %s)" % [failures])
+		_expect(states.is_empty(), "...without ever getting the state")
 		_expect(host.peer_ids.has(victim.multiplayer.get_unique_id()) and host.peer_ids.size() == 2,
 			"The one it copied stays (roster %s)" % [host.peer_ids])
 		_expect(await _wait_for(func() -> bool: return not host._admission.refused.has(thief_id)),

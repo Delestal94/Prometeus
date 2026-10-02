@@ -10,14 +10,18 @@ extends RefCounted
 ## noticed its drop -- the usual case, with timeouts that outlast a level load
 ## -- finds its old connection still there as a ghost, holding its place: the
 ## ghost goes (NetSession.drop_peer(), close_dropped()) and it gets the place.
-## On Steam who a joiner is is known as it authenticates; on LAN only from its
-## ready reply, so it loads the level unplaced and is decided then. The
-## transport takes one connection more than the room for it
+## On Steam who a joiner is is known as it authenticates. On LAN a joiner to a
+## full room is asked first (unplaced): the host sends it only the session's
+## nonce, it answers with its identity claim (on_identity()), and only once it
+## has a place -- its ghost's, or one freed meanwhile -- does it get the
+## session's state and load the level; otherwise it hears "full" having loaded
+## nothing. The transport takes one connection more than the room for it
 ## (NetSession._host_enet()). Whoever is turned away is let go of as soon as
 ## it has the refusal, and cut off soon after if not (refuse()), so it doesn't
 ## hold that spare connection. Each joiner's ready reply is read once
-## (first_reply()), and only from one let in or unplaced: a turned-away joiner
-## that answers anyway gets nowhere, and a flood of replies costs no hashing.
+## (first_reply()), and only from one let in: a turned-away joiner that answers
+## anyway gets nowhere, and a flood of replies costs no hashing. An unplaced
+## joiner's identity reply is read once too: it stops being unplaced with it.
 
 ## The latest a joiner turned away is cut off (refuse()). On ENet its link goes
 ## as soon as the refusal is acknowledged; this is for one whose
@@ -28,8 +32,12 @@ const REFUSED_GRACE_SECONDS: float = 3.0
 
 ## Joiners let in that are still authenticating, {peer_id: true}.
 var admitted: Dictionary = {}
-## Joiners still authenticating that found the room full, {peer_id: true}.
+## Joiners still authenticating that found the room full and were asked who
+## they are (LAN), {peer_id: true}: no place, no state yet.
 var unplaced: Dictionary = {}
+## Joiners let in from their identity reply (on_identity()), {peer_id: true}:
+## who they are is settled, so their ready reply's claim isn't read.
+var identified: Dictionary = {}
 ## Joiners turned away that haven't left yet, {peer_id: true}.
 var refused: Dictionary = {}
 ## Joiners whose ready reply was read, {peer_id: true}: one per joiner.
@@ -46,6 +54,7 @@ func reset() -> void:
 	unplaced.clear()
 	refused.clear()
 	answered.clear()
+	identified.clear()
 
 
 ## `id` connected, or never made it in.
@@ -54,6 +63,7 @@ func forget(id: int) -> void:
 	unplaced.erase(id)
 	refused.erase(id)
 	answered.erase(id)
+	identified.erase(id)
 
 
 ## Whether to read `id`'s ready reply: the first one from a joiner not turned
@@ -80,31 +90,50 @@ func on_authenticating(session: NetSession, id: int) -> String:
 	return admit(session, id)
 
 
-## From `id`'s ready reply, before the host completes its authentication. ""
-## lets it in, else the failure code it hears. Only a joiner let in or
-## unplaced as it authenticated may answer: any other was turned away (or was
-## never seen). A LAN claim the host already took is someone repeating what it
-## overheard: turned away, and the one it copied stays. One that found the room
-## full gets in if its ghost was here (its claim drops it) or someone left while
-## it loaded; else it hears "full" before anything moves -- no merit follows
-## it, no slot is handed to it -- and the identity it continues moves on to that
-## claim anyway (NetPeerIdentities.advance()): nobody who overheard it can use
-## it first.
-func on_identified(session: NetSession, id: int, reply: Dictionary) -> String:
-	var was_unplaced: bool = unplaced.erase(id)
-	if not was_unplaced and not admitted.has(id):
+## From an unplaced joiner's identity reply (NetSession asked it, the room
+## being full): "" gives it a place -- the host then sends it the state -- else
+## the failure code it hears, before it loaded anything. A LAN claim the host
+## already took is someone repeating what it overheard: turned away, and the
+## one it copied stays. It gets in if its ghost was here (its claim drops it)
+## or someone left since it knocked; else it hears "full" before anything moves
+## -- no merit follows it, no slot is handed to it -- and the identity it
+## continues moves on to that claim anyway (NetPeerIdentities.advance()):
+## nobody who overheard it can use it first.
+func on_identity(session: NetSession, id: int, reply: Dictionary) -> String:
+	if not unplaced.erase(id):
 		return "connection"
 	var identity: String = NetPeerIdentities.identity_of(session.multiplayer.multiplayer_peer, id, reply)
 	if _identities.is_replay(identity):
 		return "connection"
-	if was_unplaced and not _is_ghost(session, _identities.peer_of(identity), id):
+	var ghost: bool = _is_ghost(session, _identities.peer_of(identity), id)
+	if not ghost:
 		var refusal: String = admit(session, id)
 		if not refusal.is_empty():
 			_identities.advance(identity)
 			return refusal
-		was_unplaced = false
 	_take(session, id, identity)
-	return admit(session, id) if was_unplaced else ""
+	var refusal_after: String = admit(session, id) if ghost else ""
+	if refusal_after.is_empty():
+		identified[id] = true
+	return refusal_after
+
+
+## From `id`'s ready reply, before the host completes its authentication. ""
+## lets it in, else the failure code it hears. Only a joiner let in may answer:
+## any other was turned away, is still unplaced (it owes an identity reply,
+## not this) or was never seen. One let in from its identity reply is who it
+## said then; anyone else is identified now (a replayed LAN claim is turned
+## away, and the one it copied stays).
+func on_identified(session: NetSession, id: int, reply: Dictionary) -> String:
+	if not admitted.has(id):
+		return "connection"
+	if identified.has(id):
+		return ""
+	var identity: String = NetPeerIdentities.identity_of(session.multiplayer.multiplayer_peer, id, reply)
+	if _identities.is_replay(identity):
+		return "connection"
+	_take(session, id, identity)
+	return ""
 
 
 ## Who `id` is (its Steam id, or the claim in its ready reply). Someone who was
@@ -130,9 +159,11 @@ func _take(session: NetSession, id: int, identity: String) -> void:
 		# Back under the same id (Steam can hand it out again): nothing moves,
 		# but the game gives back what it kept.
 		session._peer_returned(id, id)
+		session.peer_returned.emit(id, id)
 		return
 	_drop_ghost(session, previous, id)
 	session._peer_returned(id, previous)
+	session.peer_returned.emit(id, previous)
 	session.peer_rejoined.emit(previous, id)
 
 
