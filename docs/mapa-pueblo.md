@@ -225,8 +225,11 @@ F0 es el punto de control: si el pueblo generado no se siente bien al manejar, s
 4e. ~~¿El mapa es el mismo en todas las partidas de una campaña?~~ **Decidido (2026-10-02):** el mundo se
     genera al crear la partida; después se guarda y se continúa con la misma semilla. Una partida nueva
     genera un mundo distinto.
-4f. ¿Qué tan grande es "gigante"? Define si alcanza con distritos de 4×4 manzanas o hace falta un
-    esquema de chunks de verdad.
+4f. ~~¿Qué tan grande es "gigante"?~~ **Decidido (provisorio, 2026-10-02):** referencia Schedule I
+    (una ciudad chica con 6 distritos que se abren por rango, sin pantallas de carga). Meta: unos 6
+    distritos de 4×4 manzanas (~100 manzanas, cifra de Claude, no de Schedule I). Se mide el costo de
+    un distrito en F0 antes de comprometer el total; si es chico, F7b puede cargar por distrito entero
+    en lugar de chunks finos.
 4g. ¿Se puede volver atrás (re-cerrar), o lo abierto queda abierto para siempre?
 5. ¿Edificios curados a mano (cuántos modelos) o ensamblados por módulos?
 6. ¿Qué pasa con el depósito actual? Hoy es una escena fija con puerta a -Z.
