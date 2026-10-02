@@ -2812,9 +2812,13 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   la votación solo sigue abierta con el equipo en la estación (el host la cierra cuando se van), una carta de
   Prioridad o Descuento cobra una vez, el panel se cierra al alejarse o si Endless borra la estación, aviso sin
   plata, estado solo a peers con el nivel cargado. Aviso: `docs/avisos/2026-10-01-service-stop-vote-fixes.md`.
-- [ ] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
+- [x] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
   kiosco con mostrador, poste de precios, carteles de "estación de servicio"): hoy son cajas `DepotKit` con tres props
   del depósito (timbre, pallet envuelto, matafuego). Después, captura con `revisor-visual` en entrega y en Endless.
+  **Hecho (2026-10-01), rama `arte/N-110.1-service-station`:** 6 GLB `sm_env_service_*` (`tools/build_service_station.py`,
+  ~5.900 tris en total) conectados en `service_stop.gd` con `DepotKit.model()`; colisiones, mostrador, textos y brillos
+  siguen en código, el cartel "KIOSCO" pasó a una marquesina sobre el frente y el pallet de cajones quedó al lado (no
+  encima) del punto del cosmético. Captura `tests/render_service_stop.gd` (entrega y Endless, 5 vistas cada uno).
 
 > **Hecho (2026-10-01), rama `nacho/N-110-service-stops`.** `ServiceStopRules` (`service_stop_rules.gd`, puro y
 > estático): una ruta de 3+ casas o 2000+ m lleva una estación (en la práctica todas las de 3-4 casas), en el borde
