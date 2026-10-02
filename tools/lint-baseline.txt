@@ -36,7 +36,7 @@ do-not-drop/scripts/gameplay/route/wildlife_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/vehicle/vehicle.gd|max-line-length 5
 do-not-drop/scripts/presentation/cargo_clutter.gd|max-line-length 1
 do-not-drop/scripts/presentation/character_face.gd|max-line-length 2
-do-not-drop/scripts/presentation/dashboard_gps.gd|max-line-length 3
+do-not-drop/scripts/presentation/dashboard_gps.gd|max-line-length 2
 do-not-drop/scripts/presentation/door_reaction.gd|max-line-length 2
 do-not-drop/scripts/presentation/house_waiting_marker.gd|max-line-length 1
 do-not-drop/scripts/presentation/night_flares.gd|max-line-length 2

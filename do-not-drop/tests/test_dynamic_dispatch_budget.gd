@@ -240,6 +240,11 @@ const BUDGETS: Dictionary = {
 	# RunManager.is_running (preloading run_manager.gd from the truck's presentation breaks --script
 	# compiles) and the truck's driver_peer_id (vehicle.gd preloads the presentation that makes this camera).
 	"res://scripts/presentation/spectator_camera.gd": {"call": 0, "callv": 0, "get": 2, "root": 2},
+	# The dashboard GPS (N-224.4): the route through route.gd by preload (houses, stop_road_distance,
+	# road_distance, goal_bay_number, goal_target) and the boxes as DeliveryPackage (care_state). By name
+	# stay RunManager's current_distance and best_score (same --script compile reason as the spectator
+	# camera: the truck's presentation builds the GPS) and the EventBus handle.
+	"res://scripts/presentation/dashboard_gps.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
