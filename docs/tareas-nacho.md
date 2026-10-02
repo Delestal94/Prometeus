@@ -17,7 +17,7 @@ tipos (por eso la camioneta terminaba OFF_ROAD o STUCK tan seguido). Pasaba igua
 `test_mud_segment.gd`. (2) Con un `MudSegment` en la ruta, `DressingBatcher.merge_segment_geometry()` crea dos
 `MergedGeometry` (sombra prendida y apagada), y el segundo quedaba con el nombre `@MeshInstance3D@N`, que el test
 contaba como pieza suelta. Ahora se agrega con `add_child(instance, true)` (queda `MergedGeometry2`), y los tres
-tests pasan la lista tipada. El módulo prueba el caso en `test_render_budget` (`_test_segment_merge`). Aviso
+tests pasan la lista tipada. `tests/data/route_golden.txt` regenerado: cambian solo 22 `hash=` de tramos (el nombre del nodo), ni posiciones ni conteos. El módulo prueba el caso en `test_render_budget` (`_test_segment_merge`). Aviso
 `docs/avisos/2026-10-02-merged-geometry-name.md`.
   **[x] Hecho (2026-10-02, rama `nacho/fix-main-endless-merged-name`)**.
 
