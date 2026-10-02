@@ -2026,6 +2026,13 @@ no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una e
   `maxf(EXIT_BLEND_SECONDS, 1.5 * gap / speed)`); al empezar, la cámara salta 1-2 m. Opcional: la caja manual no modela
   el embrague en la copia (`vehicle_gearbox.gd`, ~0,5 m/s, sin salto). Origen: construcción 2026-10-02. Con
   `constructor-camion`.
+- [ ] **N-922.8** Restos de la segunda pasada de `auditor-red` (2026-10-02, sobre el arreglo de N-922.2), riesgo bajo:
+  (a) al volver los inputs tras un corte de subida, `NetInputBuffer.consume()` juega ~2 ticks el input retenido de
+  hace más de 30 ticks entero antes de alcanzar uno nuevo (`net_input_buffer.gd:75-81`): con el input vencido, jugar
+  el más viejo que espera o seguir "vencido" hasta alcanzar uno recibido; test en `test_net_prediction`; (b) en el
+  cliente huérfano (host caído) el barro no-`IDLE` descongela y arrastra el camión detrás del overlay
+  (`mud_segment.gd:424-427`): que el segmento mire `RunManager.is_running` o abortarlo en `_stop_orphaned_run`; test
+  `mud`. Origen: construcción 2026-10-02. Con `constructor-red` y `constructor-tramos`.
 
 ## 3. Arte y dirección visual
 
