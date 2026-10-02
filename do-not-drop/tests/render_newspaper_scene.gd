@@ -4,6 +4,9 @@ extends SceneTree
 ## of a busy run in Spanish (office, approach, spread, each story's close-up,
 ## spread again, reaction), the results that follow, a skip hint, and the
 ## front close-up of the same paper in English and of a clean run.
+## The busy run's front story has its photo (N-606.5): a real PressPhoto
+## capture, framed by NewsPhotographer, of the truck and a stag staged on a
+## patch of road; the raw capture is saved too (00_raw_photo.png).
 ## Window size: pass --resolution WxH to see other shapes.
 
 const DESK: GDScript = preload("res://scripts/presentation/newspaper/news_desk.gd")
@@ -42,6 +45,7 @@ func _run() -> void:
 			"cargo_total": 5, "cargo_intact": 3, "houses_delivered": 3, "houses_missed": 2, "breakdown": [],
 			"deliveries": []}
 	var paper: Dictionary = DESK.compose(busy, context)
+	var photographer: Node = await _stage_photo(String(paper["front"]["id"]))
 
 	# Every shot of the busy run, in Spanish.
 	settings.call(&"set_language", "es")
@@ -77,8 +81,65 @@ func _run() -> void:
 		hud.newspaper.dismiss()
 		_close_results(hud)
 	settings.call(&"set_language", "es")
+	photographer.queue_free()
 	print("Saved to ", ProjectSettings.globalize_path(out_dir))
 	quit()
+
+
+## The truck on a patch of road with a stag at its nose, shot the way the
+## photographer shoots a deer hit; the photo is kept for `story`.
+func _stage_photo(story: String) -> Node:
+	var stage := Node3D.new()
+	root.add_child(stage)
+	var environment := WorldEnvironment.new()
+	environment.environment = Environment.new()
+	environment.environment.background_mode = Environment.BG_COLOR
+	environment.environment.background_color = Color("a9c4d6")
+	environment.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.environment.ambient_light_color = Color.WHITE
+	environment.environment.ambient_light_energy = 0.6
+	stage.add_child(environment)
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-40, -35, 0)
+	sun.shadow_enabled = true
+	stage.add_child(sun)
+	var ground := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(80, 80)
+	ground.mesh = plane
+	var grass := StandardMaterial3D.new()
+	grass.albedo_color = Color("6f8a4a")
+	ground.material_override = grass
+	stage.add_child(ground)
+	var road := MeshInstance3D.new()
+	var strip := PlaneMesh.new()
+	strip.size = Vector2(7, 80)
+	road.mesh = strip
+	var asphalt := StandardMaterial3D.new()
+	asphalt.albedo_color = Color("55524d")
+	road.material_override = asphalt
+	road.position.y = 0.01
+	stage.add_child(road)
+	var van := Node3D.new()
+	van.add_to_group(&"vehicle")
+	stage.add_child(van)
+	var truck: Node3D = (load("res://assets/models/truck_reference_lowpoly.glb") as PackedScene).instantiate()
+	van.add_child(truck)
+	var stag_model: PackedScene = load("res://assets/models/environment/wildlife/sm_env_animal_stag_rigged.glb")
+	var stag: Node3D = stag_model.instantiate()
+	stage.add_child(stag)
+	stag.position = Vector3(0.6, 0.0, -4.6)
+	stag.rotation_degrees = Vector3(0, 70, 12)
+	var photographer: Node = (load("res://scripts/presentation/newspaper/news_photographer.gd") as GDScript).new()
+	root.add_child(photographer)
+	for _i in range(3):
+		await process_frame
+	var photo: Texture2D = await PressPhoto.capture(photographer, photographer.call(&"pose_for", &"deer_hit"))
+	if photo != null:
+		photo.get_image().save_png(out_dir.path_join("00_raw_photo.png"))
+		photographer.get("photos")[story] = photo
+	stage.queue_free()
+	return photographer
 
 
 func _open(bus: Node, hud: CanvasLayer, paper: Dictionary, results: Dictionary) -> Control:
