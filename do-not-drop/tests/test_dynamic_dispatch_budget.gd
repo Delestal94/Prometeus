@@ -141,6 +141,11 @@ const BUDGETS: Dictionary = {
 	# finds the node). The two /root/ lookups are the null-safe GameSettings and
 	# UnlockManager accessors.
 	"res://scripts/gameplay/player/player_cargo_care.gd": {"call": 1, "callv": 0, "get": 4, "root": 2},
+	# Boarding and leaving seats (N-224.4): the seat camera is a SeatCamera (activate, deactivate), the seat's
+	# InteractionArea a SeatPoint (release_occupant) and the session a NetSession (is_online, is_host); what is
+	# not one is skipped, as the has_method checks did. The release RPC to the host stays rpc_id by name, like
+	# every RPC. The two /root/ lookups are the null-safe accessors (EventBus for the fade, NetworkManager).
+	"res://scripts/gameplay/player/player_seat_pose.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# Nothing by name: the box (DeliveryPackage), the players (Player) and the
 	# seats (CargoSeatPoint, seat_point.gd's class name) are typed. Group members
 	# of another type (a test's stand-ins) are skipped with `as`, not called.
