@@ -24,13 +24,10 @@ const OUT_OF_BOUNDS_X: float = 42.0
 ## that it lands wedged against route geometry -- upright (never trips the
 ## tip-over check) and inside bounds (never trips the out-of-bounds check),
 ## just permanently stopped with no way out and the run silently still
-## "running" forever. 6s of being effectively stationary is long enough that
-## no real player deliberately idles that long mid-drive (there's no reason
-## to stop in endless mode at all -- unlike level_base.gd's delivery zone,
-## there's no destination to sit still at).
-const STUCK_SPEED_THRESHOLD: float = 0.3
-const STUCK_SECONDS: float = 6.0
-var _stuck_seconds: float = 0.0
+## "running" forever. It only counts with a driver holding the pedal down
+## (level_common.gd's _should_count_as_stuck(), the same rule as the delivery,
+## N-920): stopping with nobody accelerating -- the depot, rescuing a fallen
+## box, a repair, a driver swap -- is part of the game and never ends the run.
 @onready var _streamer: RouteStreamer = $World/RouteStreamer
 var _streaming_started: bool = false
 ## Furthest along the road the truck has been (RouteStreamer.distance_along()).
@@ -61,7 +58,7 @@ func start_delivery() -> void:
 	depot.begin_run(vehicle, loaded)
 	_best_distance = 0.0
 	distance_traveled = 0.0
-	_stuck_seconds = 0.0
+	stuck_seconds = 0.0
 	_streamer.start(vehicle)
 	_streaming_started = true
 
@@ -81,17 +78,19 @@ func _physics_process(delta: float) -> void:
 		return
 	_check_lost_cargo()
 	_update_tipped(delta)
-	# A truck in the mud is the crew's to free, or the crane's (MudSegment, N-108).
-	# Nor is a crew pulled into a service station's lay-by to shop (N-110).
-	if vehicle.linear_velocity.length() < STUCK_SPEED_THRESHOLD and not bool(vehicle.get_meta(&"in_mud", false)) \
-			and not _streamer.in_service_bay(vehicle.global_position):
-		_stuck_seconds += delta
+	if _should_count_as_stuck():
+		stuck_seconds += delta
 	else:
-		_stuck_seconds = 0.0
+		stuck_seconds = 0.0
 	# The reason travels as a key: every peer's results screen translates it.
 	if tipped_seconds > 4.0:
 		RunManager.finish_run(false, "HUD_RUN_TIPPED")
 	elif vehicle.global_position.y < -8.0 or _streamer.distance_from_path(vehicle.global_position) > OUT_OF_BOUNDS_X:
 		RunManager.finish_run(false, "HUD_RUN_OFF_ROAD")
-	elif _stuck_seconds > STUCK_SECONDS:
+	elif stuck_seconds >= STUCK_SECONDS:
 		RunManager.finish_run(false, "HUD_RUN_STUCK_ROADSIDE")
+
+
+## Endless has no houses; the service station's lay-by is the one place to stop (N-110).
+func _stuck_exempt_here() -> bool:
+	return _streamer.in_service_bay(vehicle.global_position)

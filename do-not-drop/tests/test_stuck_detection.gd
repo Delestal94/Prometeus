@@ -7,6 +7,12 @@ extends SceneTree
 ## leaving the road does, instead of leaving the crew in a soft lock. And the
 ## rule doesn't fire on its own: parked at a house with nobody on the pedal,
 ## the run goes on.
+##
+## Endless (N-920) follows the same rule through level_common.gd: 6+ s still
+## without the pedal (depot, rescuing a fallen box, a repair, a driver swap)
+## never ends the run; 6+ s wedged with the pedal down does.
+
+const ENDLESS_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
 
 var _failures: int = 0
 
@@ -73,15 +79,79 @@ func _run() -> void:
 	_expect(ended_after >= 6.0 or ended_after < 0.0, "...and not before STUCK_SECONDS (%.1f s)" % ended_after)
 	await _free_level(level)
 
+	await _run_endless(manager, network)
+
 	network.set(&"world_seed", 0)
 	network.set(&"world_house_count", 0)
 	if _failures == 0:
-		print("PASS: a wedged truck with the pedal down ends the run; a parked one doesn't")
+		print("PASS: a wedged truck with the pedal down ends the run, in both modes; a parked one doesn't")
 	quit(_failures)
 
 
-func _start_level(start_outside_depot: bool = false) -> Node:
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+## Endless (N-920): the same rule, plus the depot exemption.
+func _run_endless(manager: Node, network: Node) -> void:
+	# Parked outside the depot with nobody on the pedal, well past STUCK_SECONDS
+	# (a rescue stop, a repair, a driver swap): the run goes on.
+	var level: Node = await _start_level(true, ENDLESS_SCENE)
+	var van: VehicleBody3D = level.get(&"vehicle")
+	for tick: int in range(60 * 9):
+		van.call(&"set_controls", 0.0, 0.0, true)
+		await physics_frame
+	_expect(bool(manager.get(&"is_running")),
+		"Endless: parked with nobody on the pedal, the run goes on (stuck %.1f s)" % float(level.get(&"stuck_seconds")))
+	_expect(float(level.get(&"stuck_seconds")) == 0.0, "Endless: no stuck time builds up without the pedal")
+
+	# Pedal requested but the stop is legitimate or nobody is driving.
+	van.set(&"controls_enabled", false)
+	van.set(&"engine_force", -100.0)
+	van.set(&"driver_peer_id", int(network.call(&"local_id")))
+	van.linear_velocity = Vector3.ZERO
+	_expect(bool(level.call(&"_should_count_as_stuck")),
+			"Endless: pedal down, nobody moving, on the road counts as stuck")
+	van.set(&"driver_peer_id", 0)
+	_expect(not bool(level.call(&"_should_count_as_stuck")),
+			"Endless: a stopped van with no driver (driver swap) does not count as stuck")
+	van.set(&"driver_peer_id", int(network.call(&"local_id")))
+	van.set_meta(&"in_mud", true)
+	_expect(not bool(level.call(&"_should_count_as_stuck")), "Endless: in the mud it does not count as stuck")
+	van.set_meta(&"in_mud", false)
+	var depot := level.get(&"depot") as Node3D
+	var depot_constants: Dictionary = (depot.get_script() as Script).get_script_constant_map()
+	var truck_bay: Vector3 = depot_constants["TRUCK_BAY"] as Vector3
+	van.global_position = depot.to_global(truck_bay)
+	_expect(not bool(level.call(&"_should_count_as_stuck")),
+			"Endless: trying to leave the depot does not count as stuck")
+	await _free_level(level)
+
+	# Pedal down against a wall it can't move: ends as stuck, after STUCK_SECONDS.
+	level = await _start_level(true, ENDLESS_SCENE)
+	van = level.get(&"vehicle")
+	var wall := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(12.0, 4.0, 1.0)
+	shape.shape = box
+	wall.add_child(shape)
+	wall.collision_layer = 1
+	level.add_child(wall)
+	wall.global_position = van.global_transform * Vector3(0.0, 1.5, -3.6)
+	var ended_after: float = -1.0
+	for tick: int in range(60 * 10):
+		van.call(&"set_controls", 1.0, 0.0, false)
+		await physics_frame
+		if not bool(manager.get(&"is_running")):
+			ended_after = float(tick) / 60.0
+			break
+	var reason: String = str((manager.get(&"results") as Dictionary).get("reason", ""))
+	_expect(ended_after > 0.0, "Endless: pedal down and not moving, the run ends (still running after 10 s, speed %.2f)"
+			% van.linear_velocity.length())
+	_expect(reason == "HUD_RUN_STUCK_ROADSIDE", "Endless: ...as stuck (reason '%s')" % reason)
+	_expect(ended_after >= 6.0 or ended_after < 0.0, "Endless: ...and not before STUCK_SECONDS (%.1f s)" % ended_after)
+	await _free_level(level)
+
+
+func _start_level(start_outside_depot: bool = false, scene: String = "res://scenes/gameplay/level_base.tscn") -> Node:
+	var level: Node = load(scene).instantiate()
 	root.add_child(level)
 	current_scene = level
 	await process_frame

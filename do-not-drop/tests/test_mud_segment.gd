@@ -945,7 +945,8 @@ func _check_level_stuck_rules() -> void:
 	await process_frame
 	_manager.call(&"reset_run")
 
-	# Endless: nothing to deliver, so being still is what ends it -- except in the mud.
+	# Endless: only wedged with the pedal down ends it (N-920, test_stuck_detection.gd);
+	# stopped without accelerating never does, mud or not.
 	_network.set(&"world_seed", 0)
 	level = load("res://scenes/gameplay/level_endless.tscn").instantiate()
 	root.add_child(level)
@@ -967,8 +968,8 @@ func _check_level_stuck_rules() -> void:
 	van.set_meta(&"in_mud", false)
 	for _i: int in range(60 * 8):
 		await physics_frame
-	_expect(not bool(_manager.get(&"is_running")),
-			"Endless: the same stop outside the mud does end it (the rule still works)")
+	_expect(bool(_manager.get(&"is_running")),
+			"Endless: the same stop outside the mud, with nobody on the pedal, does not end it either (N-920)")
 	level.queue_free()
 	await process_frame
 	_manager.call(&"reset_run")

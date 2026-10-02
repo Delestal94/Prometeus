@@ -12,6 +12,17 @@ class_name LevelCommon
 ## $World/PlayerSpawner), which is what makes this possible.
 
 const LOST_CARGO_DISTANCE: float = 8.0
+## Wedged: the pedal is down and the truck doesn't move (high-centred on an
+## obstacle with its driven wheels hanging, N-803). One rule for both modes
+## (N-920): stopping with nobody on the pedal -- the depot, rescuing a fallen
+## box, a repair, a driver swap -- never counts, as in the delivery.
+const STUCK_SPEED: float = 0.3
+const STUCK_SECONDS: float = 6.0
+## route.gd and vehicle.gd have no class name: typed through their scripts
+## so a rename fails to compile instead of at run time (N-224).
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+## Seconds the truck has been wedged (see _should_count_as_stuck()).
+var stuck_seconds: float = 0.0
 ## A box that leaves the van isn't written off on the spot (N-213.1): it lies
 ## on the road with a marker for this long, so someone can go fetch it and put
 ## it back on a shelf. Longer than the 8-15 s rescue inside the van, since it
@@ -376,6 +387,31 @@ func _player_name(id: int) -> String:
 
 func _id_from_name(value: String) -> int:
 	return int(value.trim_prefix("Player_"))
+
+
+## True while the wedge rule applies: counted by each level's _physics_process()
+## on the host. Not in the mud (MudSegment, N-108: the crew pushes or the crane
+## comes), not without a driver and the pedal down, not around the depot, and
+## not where the mode's own stops are (_stuck_exempt_here()).
+func _should_count_as_stuck() -> bool:
+	if bool(vehicle.get_meta(&"in_mud", false)):
+		return false
+	if vehicle.linear_velocity.length() >= STUCK_SPEED or absf(vehicle.engine_force) <= 0.0:
+		return false
+	if (vehicle as VehicleScript).driver_peer_id == 0:
+		return false
+	var depot_position: Vector3 = depot.to_local(vehicle.global_position)
+	if absf(depot_position.x) <= Depot.HALF_WIDTH + 2.0 \
+			and depot_position.z > Depot.TRUCK_CLEAR_Z \
+			and depot_position.z < Depot.DEPTH + 2.0:
+		return false
+	return not _stuck_exempt_here()
+
+
+## Hook: where else stopping is part of the mode (level_base.gd: the houses and
+## the service lay-by; level_endless.gd: the lay-by).
+func _stuck_exempt_here() -> bool:
+	return false
 
 
 func start_debug_delivery() -> void:
