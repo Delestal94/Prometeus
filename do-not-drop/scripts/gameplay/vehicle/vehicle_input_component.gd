@@ -3,8 +3,9 @@ extends Node
 ##
 ## This runs identically on every peer's copy of the (shared, non-spawned)
 ## Vehicle node -- so it has to work out on its own whether *this* peer is
-## the one currently driving, and if it isn't the host, forward the reading
-## to the host instead of touching the vehicle directly.
+## the one currently driving. On a client the reading goes into its own copy
+## too: the truck numbers it, sends it to the host and predicts with it
+## (N-218, vehicle_prediction.gd).
 
 @onready var _vehicle: VehicleBody3D = get_parent() as VehicleBody3D
 
@@ -30,10 +31,9 @@ func _physics_process(_delta: float) -> void:
 				_send_shift(1)
 			elif Input.is_action_just_pressed(&"drive_shift_down"):
 				_send_shift(-1)
-	if _vehicle.is_multiplayer_authority():
-		_vehicle.set_controls(throttle, steer, handbrake)
-	else:
-		_vehicle.rpc_id(1, &"submit_driver_input", throttle, steer, handbrake)
+	# On a client too: the truck numbers the input and sends it to the host on
+	# its own tick, and drives its predicted copy with it (vehicle_prediction.gd).
+	_vehicle.set_controls(throttle, steer, handbrake)
 
 
 func _is_local_driver() -> bool:

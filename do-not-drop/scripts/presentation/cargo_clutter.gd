@@ -53,9 +53,16 @@ func _spawn() -> void:
 ## On the host the real, moving truck carries it physically. Every frame, not
 ## every tick, and uninterpolated: the network moves the truck whenever an
 ## update lands, and anything following it only on ticks trailed behind.
+## The client at the wheel simulates its copy (N-218): that one moves on
+## ticks and is drawn interpolated, so there the clutter follows it on ticks
+## (_physics_process) and is drawn interpolated too.
 func _process(_delta: float) -> void:
-	if vehicle == null or vehicle.is_multiplayer_authority():
+	if vehicle == null or vehicle.is_multiplayer_authority() or vehicle.is_physics_interpolated_and_enabled():
 		return
+	_carry_by_hand()
+
+
+func _carry_by_hand() -> void:
 	var previous: Transform3D = _vehicle_last
 	_vehicle_last = vehicle.global_transform
 	if not _tracking:
@@ -74,9 +81,24 @@ func _process(_delta: float) -> void:
 func _physics_process(_delta: float) -> void:
 	if vehicle == null:
 		return
+	if not vehicle.is_multiplayer_authority():
+		var on_ticks: bool = vehicle.is_physics_interpolated_and_enabled()
+		_match_interpolation(on_ticks)
+		if on_ticks:
+			_carry_by_hand()
 	for item: RigidBody3D in _items:
 		if is_instance_valid(item):
 			item.continuous_cd = bool(vehicle.call(&"needs_sweep", item, 0.4))
+
+
+## On a client: drawn interpolated only while the truck is (a predicted copy).
+func _match_interpolation(on: bool) -> void:
+	var wanted: Node.PhysicsInterpolationMode = (Node.PHYSICS_INTERPOLATION_MODE_INHERIT if on
+			else Node.PHYSICS_INTERPOLATION_MODE_OFF)
+	for item: RigidBody3D in _items:
+		if is_instance_valid(item) and item.physics_interpolation_mode != wanted:
+			item.physics_interpolation_mode = wanted
+			item.reset_physics_interpolation()
 
 
 ## A rigid body with `shape` for collision and `model` (a GLB whose origin is
