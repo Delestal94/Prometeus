@@ -5,8 +5,10 @@ extends Interactable
 ## foot in the cab can turn it; the host cycles the mode through
 ## TruckRadio.cycle() and sends it to everyone.
 
-## The TruckRadio that owns the mode.
-var radio: Node
+## The TruckRadio that owns the mode. Typed like truck_radio_view.gd: only
+## truck_radio.gd preloads this file, so naming it here adds nothing to the
+## compile graph of a --script.
+var radio: TruckRadio
 
 
 func _ready() -> void:
@@ -21,12 +23,14 @@ func _ready() -> void:
 func get_prompt() -> String:
 	if radio == null:
 		return ""
-	var current: StringName = radio.get(&"mode")
-	var next: StringName = radio.call(&"next_mode", current)
-	var names: Array[String] = [tr(String(radio.call(&"mode_key", current))), tr(String(radio.call(&"mode_key", next)))]
+	var current: StringName = radio.mode
+	var next: StringName = TruckRadio.next_mode(current)
+	var names: Array[String] = [tr(TruckRadio.mode_key(current)), tr(TruckRadio.mode_key(next))]
 	return tr("WORLD_RADIO_PROMPT") % names
 
 
+## By name: the interactable contract hands over any node in the player group,
+## and the tests' stand-ins carry a box without being a Player.
 func can_interact(player: Node) -> bool:
 	return radio != null and player.get(&"carried_package") == null
 
@@ -34,5 +38,5 @@ func can_interact(player: Node) -> bool:
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
-	if radio.call(&"cycle") != &"":
+	if radio.cycle() != &"":
 		interacted.emit(player)

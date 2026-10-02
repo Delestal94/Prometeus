@@ -1210,6 +1210,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     el archivo; `test_session_sync.gd` comprueba la lectura del anfitrión (abierta y cerrada) y una escena sin nivel.
     Aviso `docs/avisos/2026-10-02-n224-run-session-tipado.md`. Siguientes: `truck_radio_knob.gd` (5),
     `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5). (`run_tally.gd` reclamada por otra corrida.)
+  - [x] `truck_radio_knob.gd` (2026-10-02, rama `nacho/N-224-radio-knob-typed`): la perilla de la radio. La radio
+    como `TruckRadio` (`mode`, `cycle()` y los estáticos `next_mode`/`mode_key`), como ya hacía `truck_radio_view.gd`:
+    solo `truck_radio.gd` precarga este archivo, así que no suma nada al grafo de un `--script`. Queda el `.get(&` de
+    `carried_package` del jugador: el contrato de interactuables recibe cualquier nodo y el `FakePlayer` de
+    `test_truck_radio.gd` lleva caja sin ser `Player`. En el archivo: 5 → 1 uso (`.call` 3 → 0, `.get(&` 2 → 1); en
+    `scripts/`: `.call` 158 → 155, `.get(&` 118 → 117. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso
+    (`vehicle/` y `tests/`). La reserva `nacho/N-224-run-tally-typed` (solo el claim) se dejó: `run_tally.gd` ya se
+    había saltado por `RunManager`. Siguientes: `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
