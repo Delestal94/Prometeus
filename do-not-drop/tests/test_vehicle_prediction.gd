@@ -18,6 +18,10 @@ extends SceneTree
 ##   (0) until the new driver's first one plays, not for the old driver's last number;
 ## - back at the wheel, the host's poses for no input are not compared with the new prediction; the wheel going
 ##   elsewhere and back between two ticks leaves the client's prediction and its history alone;
+## - the wheel changing hands at speed (N-922.7): the truck drawn eases into the pose buffer over a time that keeps
+##   it going forward, never backing up; back at the wheel at speed, the copy starts where it is drawn and is eased to
+##   the host's newest pose instead of jumping there with the camera;
+## - the old van's gearbox: the host's gear arriving puts the predicted copy's clutch in for the shift (N-922.7);
 ## - the driver's inputs cut off for more than NetInputBuffer.STALE_TICKS (no disconnect): the host lets go of the
 ##   pedal and keeps the wheel, and drives on once inputs arrive again; a brake is kept until the truck stops,
 ##   and doesn't turn into backing up;
@@ -186,10 +190,7 @@ func _run() -> void:
 		"The frame prediction stops the truck doesn't jump back to the pose buffer (%.2f m)" % [
 			_client.global_position.distance_to(predicted_at)])
 	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
-	# Loaded at run time: vehicle_prediction.gd preloads vehicle.gd, which names autoloads a --script
-	# doesn't have yet when it compiles.
-	var prediction_script: GDScript = load("res://scripts/gameplay/vehicle/vehicle_prediction.gd")
-	_client.call(&"_process", float(prediction_script.get_script_constant_map()["EXIT_BLEND_SECONDS"]))
+	_client.call(&"_process", float(_client.get(&"_prediction").get(&"exit_seconds")))
 	_expect(_client.global_position.distance_to(smoother.sample(NetPoseSmoother.local_now()).origin) < 0.01,
 		"...and is drawn where the pose buffer has it once the blend is over")
 	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
@@ -197,10 +198,12 @@ func _run() -> void:
 	_expect(int(_host.get(&"net_input_seq")) == 0, "Still no input while the new driver has sent none")
 
 	await _check_wheel_back()
+	await _check_exit_while_moving()
 	await _check_stale_inputs()
 	await _check_wall_only_here()
 	await _check_let_through()
 	await _check_no_ground()
+	await _check_remote_clutch()
 	await _check_net_sim()
 	await _check_host_gone()
 
@@ -233,6 +236,52 @@ func _check_wheel_back() -> void:
 	_expect(bool(_client.call(&"is_predicted")) and reconciler.history_size() > 1,
 		"The wheel away and back between two ticks: the prediction goes on with its history (%d states)" % [
 			reconciler.history_size()])
+
+
+## Someone else takes the wheel at speed (N-922.7): the gap between the predicted truck and the pose buffer (a round
+## trip and a cushion behind, metres at this speed) closes over a time that keeps the truck drawn going forward,
+## never backing up as it did closed in 0.3 s; then it is drawn where the buffer has it. The client drives again.
+func _check_exit_while_moving() -> void:
+	for _i: int in range(150):
+		await _step(1.0, 0.0)
+	var speed: float = _client.linear_velocity.length()
+	_client.set(&"driver_peer_id", 7)
+	_host.set(&"driver_peer_id", 7)
+	var prediction: Object = _client.get(&"_prediction")
+	var drawn: Array[Transform3D] = []
+	var started_at: int = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - started_at < 2500:
+		await _step_raw()
+		drawn.append(_client.global_transform)
+	var backward: float = 0.0
+	for index: int in range(1, drawn.size()):
+		var step: Vector3 = drawn[index].origin - drawn[index - 1].origin
+		backward = maxf(backward, -step.dot(-drawn[index].basis.z))
+	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
+	var left: float = drawn[-1].origin.distance_to(smoother.sample(NetPoseSmoother.local_now()).origin)
+	var blend: float = float(prediction.get(&"exit_seconds"))
+	print("exit at %.0f km/h: blend %.2f s, worst step back %.3f m, %.2f m from the buffer after" % [
+		speed * 3.6, blend, backward, left])
+	_expect(speed > 10.0 and blend > 0.3 and backward < 0.02,
+		"Let go of at %.0f km/h, the truck drawn eases into the pose buffer over %.2f s, never backing up (%.3f m)" % [
+			speed * 3.6, blend, backward])
+	_expect(left < 0.5, "...and is drawn where the buffer has it once that is over (%.2f m off)" % left)
+	# Back at the wheel at speed: the copy starts where it is drawn and is eased to the host's newest pose, a cushion
+	# ahead, instead of jumping there with the driver's camera. As _check_wheel_back left it afterwards: the host
+	# playing the client's flat-out inputs, the wheel a little turned.
+	_host.set(&"driver_peer_id", HOST_ID + 1)
+	_client.set(&"driver_peer_id", CLIENT_ID)
+	var was: Vector3 = _client.global_position
+	var jump: float = INF
+	var ahead: float = 0.0
+	for _i: int in range(2 * (LAG_TICKS + JITTER_TICKS) + NetInputBuffer.CUSHION + 4):
+		await _step(1.0, 0.2)
+		if jump == INF and bool(_client.call(&"is_predicted")):
+			jump = _client.global_position.distance_to(was) - _client.linear_velocity.length() / 60.0
+			ahead = smoother.latest_pose().origin.distance_to(was)
+		was = _client.global_position
+	print("restart at speed: %.2f m more than a tick's travel (the host's newest pose %.2f m ahead)" % [jump, ahead])
+	_expect(jump < 0.25, "Back at the wheel at speed: no jump to the host's newest pose (%.2f m)" % jump)
 
 
 ## The driver's inputs stop reaching the host, without it leaving (N-922.2).
@@ -400,6 +449,39 @@ func _check_net_sim() -> void:
 		await _step(1.0, 0.0)
 	_expect(uplink.pending() == 0 and downlink.pending() == 0 and int(prediction.get(&"host_seq")) > seen_seq,
 		"...and with it off, both go straight through again")
+
+
+## The old van's manual gearbox on the copy the client predicts (N-922.7): the host's gear arriving puts the copy's
+## clutch in for SHIFT_SECONDS, no pull, as the host's had, then lets it out. A copy not predicting keeps none.
+func _check_remote_clutch() -> void:
+	var world: Node3D = _world()
+	var copy: VehicleBody3D = _truck(world, HOST_ID)
+	copy.remove_from_group(&"vehicle")
+	copy.set(&"variant_id", &"vintage")
+	copy.set(&"presentation_engine_running", true)
+	var gearbox: Node = copy.get(&"gearbox")
+	var shift_seconds: float = float((gearbox.get_script() as GDScript).get_script_constant_map()["SHIFT_SECONDS"])
+	await physics_frame
+	gearbox.set(&"gear", 2)
+	var idle_clutch: float = float(gearbox.get(&"shift_left"))
+	copy.set(&"driver_peer_id", CLIENT_ID)
+	var host_pose := Transform3D(Basis.IDENTITY, Vector3(0.0, 0.666, 0.0))
+	for tick: int in range(10):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	gearbox.set(&"gear", 3)
+	var clutch_in: float = float(gearbox.get(&"shift_left"))
+	var pull: float = float(gearbox.call(&"drive_multiplier", 10.0, float(copy.get(&"maximum_speed_kmh"))))
+	for tick: int in range(10, 10 + ceili(shift_seconds * 60.0) + 3):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	var clutch_after: float = float(gearbox.get(&"shift_left"))
+	_expect(bool(copy.call(&"is_predicted")) and is_zero_approx(idle_clutch)
+			and is_equal_approx(clutch_in, shift_seconds) and pull == 0.0 and is_zero_approx(clutch_after),
+		"The host's shift reaching the predicted copy: clutch in for %.1f s, no pull, then out (%.2f, %.2f, %.2f)" % [
+			shift_seconds, clutch_in, pull, clutch_after])
+	world.get_parent().queue_free()
+	await physics_frame
 
 
 ## One whole pose packet from the host (the truck standing at `pose`), as the synchronizer applies it.

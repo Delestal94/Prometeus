@@ -269,6 +269,7 @@ func _ready() -> void:
 		# The pose buffer and the prediction simulate a bad link only where
 		# the transport doesn't (LAN under --net-sim); over Steam the sockets do it.
 		configure_net_sim(NetworkManager.pose_net_sim())
+		gearbox.gear_changed.connect(_on_remote_gear_changed)
 	# Runs on every peer's copy of the van -- horn_honked is already relayed
 	# to everyone (see EventBus.request_horn()), so whoever's driving doesn't
 	# need to be this peer, or the host, for it to be heard here too.
@@ -628,6 +629,14 @@ func receive_driver_input(seq: int, throttle: float, steering_input: float, hand
 	_prediction.receive(seq, clampf(throttle, -1.0, 1.0), clampf(steering_input, -1.0, 1.0), handbrake)
 
 
+## A client: the host's gear arrived. Predicting its truck (N-218), the copy has the clutch in for the shift as the
+## host's had, instead of pulling straight on in the new gear (N-922.7): the host times the clutch, which isn't
+## replicated, so the copy times its own from the gear arriving.
+func _on_remote_gear_changed(_gear: int) -> void:
+	if _prediction.active and gearbox.enabled:
+		gearbox.shift_left = VehicleGearbox.SHIFT_SECONDS
+
+
 ## Whether this truck's variant is worked by a manual gearbox (N-114).
 func has_manual_gearbox() -> bool:
 	return bool(VARIANTS[variant_id].get("manual", false))
@@ -815,6 +824,9 @@ func _drive(delta: float, running: bool) -> void:
 		gearbox.tick(delta)
 		if not running:
 			gearbox.reset()
+	elif gearbox.enabled:
+		# The predicting copy's own clutch (_on_remote_gear_changed) runs out; the shifts are the host's.
+		gearbox.shift_left = maxf(gearbox.shift_left - delta, 0.0)
 	if gearbox.enabled and running:
 		# The engine holds the truck back when it is over its gear's limit;
 		# the brake lights stay off for that (decided above).

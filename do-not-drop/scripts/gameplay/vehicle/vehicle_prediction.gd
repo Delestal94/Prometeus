@@ -33,7 +33,14 @@ extends RefCounted
 ## vehicle.gd has no class_name; this preloads it for the type (N-224.4). It names autoloads, so a `--script`
 ## test that names VehiclePrediction at compile time fails to build: load it at run time instead.
 const Vehicle = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+## How long the gap left when prediction stops is eased out, at least (_stop) ...
 const EXIT_BLEND_SECONDS: float = 0.3
+## ... and at most, however slow the truck.
+const EXIT_BLEND_MAX_SECONDS: float = 2.0
+## Moving, the blend lasts this many times what the truck takes to cover the gap ahead of it (N-922.7): drawn,
+## it keeps going forward at a third of its speed at least while the gap closes. Closed in EXIT_BLEND_SECONDS, a
+## 7 m gap at 50 km/h drew the truck backing up 9 m/s.
+const EXIT_BLEND_SPEED_FACTOR: float = 1.5
 const EXIT_BLEND_MAX_DISTANCE: float = 30.0
 ## Forward speed (m/s) above which a throttle against the motion brakes; below it, it backs up (vehicle.gd _drive).
 const BRAKING_SPEED: float = 0.7
@@ -71,6 +78,8 @@ var _held_off: bool = false
 var _exit_origin := Vector3.ZERO
 var _exit_rotation := Quaternion.IDENTITY
 var _exit_left: float = 0.0
+## How long the current exit blend lasts in all (s).
+var exit_seconds: float = EXIT_BLEND_SECONDS
 
 
 ## Whether this peer is a client holding the wheel of `vehicle` (the host never predicts its own truck).
@@ -251,10 +260,13 @@ func _start(vehicle: Vehicle, smoother: NetPoseSmoother, host_velocity: Vector3,
 	_exit_left = 0.0
 	reconciler.clear()
 	downlink.clear()
-	# From the newest pose the host sent, not the one drawn a cushion behind it.
+	# Toward the newest pose the host sent, from the one drawn a cushion behind it: eased there like any correction
+	# (at most 10 cm a tick, snapped past 3 m), not jumped there with the driver's camera, 1-2 m at speed (N-922.7).
 	var latest: Transform3D = smoother.latest_pose()
 	if latest != Transform3D.IDENTITY:
-		vehicle.global_transform = latest
+		var drawn: Transform3D = vehicle.global_transform
+		reconciler.nudge(latest.origin - drawn.origin, (latest.basis.get_rotation_quaternion()
+				* drawn.basis.get_rotation_quaternion().inverse()).normalized())
 	vehicle.freeze = false
 	vehicle.linear_velocity = host_velocity
 	vehicle.angular_velocity = host_spin
@@ -265,6 +277,8 @@ func _stop(vehicle: Vehicle, smoother: NetPoseSmoother) -> void:
 	active = false
 	reconciler.clear()
 	downlink.clear()
+	# Read before freezing: what the copy was doing as it stopped being predicted.
+	var velocity: Vector3 = vehicle.linear_velocity
 	vehicle.freeze = true
 	if smoother == null or smoother.is_empty():
 		return
@@ -275,9 +289,23 @@ func _stop(vehicle: Vehicle, smoother: NetPoseSmoother) -> void:
 	_exit_origin = vehicle.global_transform.origin - buffered.origin
 	_exit_rotation = (vehicle.global_basis.get_rotation_quaternion()
 			* buffered.basis.get_rotation_quaternion().inverse()).normalized()
-	# Moving, the buffer is a round trip and a cushion behind (7 m at 50 km/h on 150 ms): eased all the same.
-	# Only something much further (the host moved the truck) jumps.
-	_exit_left = EXIT_BLEND_SECONDS if _exit_origin.length() < EXIT_BLEND_MAX_DISTANCE else 0.0
+	# Moving, the buffer is a round trip and a cushion behind (7 m at 50 km/h on 150 ms): eased all the same, slowly
+	# enough that the truck drawn never goes backwards (exit_blend_seconds). Only something much further (the host
+	# moved the truck) jumps.
+	exit_seconds = exit_blend_seconds(_exit_origin, velocity)
+	_exit_left = exit_seconds if _exit_origin.length() < EXIT_BLEND_MAX_DISTANCE else 0.0
+
+
+## How long a gap of `gap` (predicted minus buffered position) is eased out over, the truck moving at `velocity`:
+## EXIT_BLEND_SPEED_FACTOR times what the truck takes to cover the part of the gap ahead of it, between
+## EXIT_BLEND_SECONDS and EXIT_BLEND_MAX_SECONDS. The drawn truck moves at its speed minus gap / time: at a third
+## of its speed at least, forward (N-922.7).
+static func exit_blend_seconds(gap: Vector3, velocity: Vector3) -> float:
+	var speed: float = velocity.length()
+	if speed < 0.01:
+		return EXIT_BLEND_SECONDS
+	var ahead: float = gap.dot(velocity / speed)
+	return clampf(EXIT_BLEND_SPEED_FACTOR * ahead / speed, EXIT_BLEND_SECONDS, EXIT_BLEND_MAX_SECONDS)
 
 
 ## Client, not predicting: the buffered pose with what is left of the gap from when prediction stopped.
@@ -285,6 +313,6 @@ func blend_exit(pose: Transform3D, delta: float) -> Transform3D:
 	if _exit_left <= 0.0:
 		return pose
 	_exit_left = maxf(_exit_left - delta, 0.0)
-	var share: float = _exit_left / EXIT_BLEND_SECONDS
+	var share: float = _exit_left / exit_seconds
 	return Transform3D(Basis(Quaternion.IDENTITY.slerp(_exit_rotation, share)) * pose.basis,
 			pose.origin + _exit_origin * share)

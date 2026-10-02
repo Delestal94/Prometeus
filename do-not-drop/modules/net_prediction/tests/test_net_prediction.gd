@@ -14,7 +14,9 @@ extends SceneTree
 ##   zone is left alone; a big jump snaps in one tick; the heading is corrected
 ##   too, and the velocity slowly once clearly off (not suspension shake);
 ##   states for unknown inputs are ignored, and a link that
-##   lost track for too long snaps to the host.
+##   lost track for too long snaps to the host. An error known before any
+##   host state (nudge(): a body started where it is drawn, N-922.7) is eased
+##   like a measured one, snapped when far, and replaced by the next measure.
 ## - NetDelayQueue (one way of a simulated link, N-922.5): inactive without a
 ##   profile; with one, each item comes out `lag` to `lag + jitter` later, in
 ##   the order it went in, about `loss` of them never; half the lag each way
@@ -29,6 +31,7 @@ func _initialize() -> void:
 	_input_buffer()
 	_reconciler_eases()
 	_reconciler_edges()
+	_reconciler_nudge()
 	_delay_queue()
 	if _failures == 0:
 		print("PASS: net_prediction")
@@ -179,6 +182,35 @@ func _reconciler_edges() -> void:
 	# The input numbers going back (a new prediction session) start the history over.
 	lost.record(5, Transform3D.IDENTITY, Vector3.ZERO, Vector3.ZERO)
 	_expect(lost.history_size() == 1, "Numbers going back start the history over")
+
+
+func _reconciler_nudge() -> void:
+	var reconciler := NetPredictionReconciler.new()
+	reconciler.nudge(Vector3(1.5, 0.0, 0.0), Quaternion(Vector3.UP, 0.1))
+	var moved := Vector3.ZERO
+	var turned: float = 0.0
+	var worst: float = 0.0
+	for _tick: int in range(60):
+		var step: Array = reconciler.step(TICK)
+		moved += step[0] as Vector3
+		turned += (step[1] as Quaternion).get_angle()
+		worst = maxf(worst, (step[0] as Vector3).length())
+	_expect(moved.distance_to(Vector3(1.5, 0.0, 0.0)) < NetPredictionReconciler.DEAD_POSITION + 0.005
+			and absf(turned - 0.1) < 0.01 and worst <= NetPredictionReconciler.MAX_STEP + 0.0001
+			and reconciler.snaps == 0 and reconciler.last_error == 0.0,
+		"A nudge is eased in, never more than MAX_STEP a tick (moved %s, turned %.3f, worst %.3f)" % [
+			moved, turned, worst])
+	var far := NetPredictionReconciler.new()
+	far.nudge(Vector3(0.0, 0.0, 5.0))
+	_expect((far.step(TICK)[0] as Vector3).is_equal_approx(Vector3(0.0, 0.0, 5.0)) and far.snaps == 1,
+		"A nudge past SNAP_DISTANCE is snapped")
+	# A host state measured later replaces what is left of it.
+	var measured := NetPredictionReconciler.new()
+	measured.record(1, Transform3D.IDENTITY, Vector3.ZERO, Vector3.ZERO)
+	measured.nudge(Vector3(2.0, 0.0, 0.0))
+	measured.reconcile(1, Transform3D(Basis(), Vector3(0.5, 0.0, 0.0)), Vector3.ZERO, Vector3.ZERO)
+	_expect(is_equal_approx(measured.pending_distance(), 0.5),
+		"...and a host state measured after it replaces it (%.2f m left)" % measured.pending_distance())
 
 
 func _delay_queue() -> void:

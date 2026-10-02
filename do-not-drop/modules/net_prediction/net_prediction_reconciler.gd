@@ -114,6 +114,18 @@ func reconcile(seq: int, pose: Transform3D, linear_velocity: Vector3, angular_ve
 	return true
 
 
+## An error known before any host state measures it: the body was put
+## somewhere else than where it should be (started where it is drawn, a
+## cushion behind the host's newest pose), and is eased there like a measured
+## error, snapped past SNAP_DISTANCE or SNAP_ANGLE. A host state measured later
+## replaces it: what is left of it is part of what that one measures.
+func nudge(position: Vector3, rotation: Quaternion = Quaternion.IDENTITY) -> void:
+	_position_error += position
+	_rotation_error = (rotation * _rotation_error).normalized()
+	if _position_error.length() > SNAP_DISTANCE or _rotation_error.get_angle() > SNAP_ANGLE:
+		_snap = true
+
+
 func _measure(ours: Array, pose: Transform3D, linear_velocity: Vector3, angular_velocity: Vector3) -> void:
 	var predicted: Transform3D = ours[1]
 	_position_error = pose.origin - predicted.origin
