@@ -337,7 +337,8 @@ static func merge_segment_geometry(segments: Array, slicer: FrameSlicer = null) 
 			instance.name = "MergedGeometry"
 			instance.mesh = by_shadow[shadow]
 			instance.cast_shadow = shadow
-			segment.add_child(instance)
+			# Readable when there are two (shadow on and off): MergedGeometry2, not @MeshInstance3D@N.
+			segment.add_child(instance, true)
 		for part: MeshInstance3D in merged_parts:
 			part.get_parent().remove_child(part)
 			part.free()
