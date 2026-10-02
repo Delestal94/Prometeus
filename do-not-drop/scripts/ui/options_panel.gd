@@ -26,6 +26,8 @@ var _colorblind_check: CheckBox
 var _menu_text_option: OptionButton
 var _sound_subtitles_check: CheckBox
 var _run_log_check: CheckBox
+## Diario al final: siempre / solo si pasó algo / nunca (N-606.3).
+var _newspaper_option: OptionButton
 var _invert_check: CheckBox
 var _fullscreen_check: CheckBox
 var _quality_slider: HSlider
@@ -153,6 +155,22 @@ func _build() -> void:
 
 	_sound_subtitles_check = UiTheme.check_box(column, tr("UI_OPT_SOUND_SUBTITLES"), GameSettings.sound_subtitles)
 	_sound_subtitles_check.toggled.connect(func(pressed: bool) -> void: GameSettings.sound_subtitles = pressed)
+
+	var paper_row := HBoxContainer.new()
+	paper_row.add_theme_constant_override("separation", 12)
+	column.add_child(paper_row)
+	UiTheme.label(paper_row, tr("UI_OPT_NEWSPAPER"), 16, UiTheme.PAPER).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_newspaper_option = OptionButton.new()
+	_newspaper_option.name = "NewspaperOption"
+	_newspaper_option.add_item(tr("UI_OPT_NEWSPAPER_ALWAYS"), GameSettings.NewspaperMode.ALWAYS)
+	_newspaper_option.add_item(tr("UI_OPT_NEWSPAPER_NEWS"), GameSettings.NewspaperMode.NEWS_ONLY)
+	_newspaper_option.add_item(tr("UI_OPT_NEWSPAPER_NEVER"), GameSettings.NewspaperMode.NEVER)
+	_newspaper_option.select(GameSettings.newspaper_mode)
+	_newspaper_option.custom_minimum_size = Vector2(170, 40)
+	paper_row.add_child(_newspaper_option)
+	UiTheme.register_font_size(_newspaper_option, 16)
+	_newspaper_option.item_selected.connect(func(index: int) -> void:
+		GameSettings.newspaper_mode = _newspaper_option.get_item_id(index))
 
 	# Local playtest log (run_telemetry.gd): off by default, never leaves the PC.
 	_run_log_check = UiTheme.check_box(column, tr("UI_OPT_RUN_LOG"), GameSettings.save_run_log)
@@ -290,6 +308,7 @@ func _sync_from_settings() -> void:
 	_menu_text_option.select(_menu_text_scale_index())
 	_sound_subtitles_check.set_pressed_no_signal(GameSettings.sound_subtitles)
 	_run_log_check.set_pressed_no_signal(GameSettings.save_run_log)
+	_newspaper_option.select(GameSettings.newspaper_mode)
 	_invert_check.set_pressed_no_signal(GameSettings.invert_look_y)
 	_fullscreen_check.set_pressed_no_signal(GameSettings.fullscreen)
 	_quality_slider.set_value_no_signal(GameSettings.graphics_quality)

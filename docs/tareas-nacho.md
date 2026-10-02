@@ -9,6 +9,18 @@
 
 ## QA — bugs abiertos
 
+### N-918 · `test_level_endless` falla a veces: "SegmentN's static boxes are merged as it spawns (1 left loose)" — C · `Opus 5.5 · medium` · Aviso: sí (`modules/render_budget/`, zona compartida) · **[x] rama `nacho/fix-main-endless-merged-name`**
+Origen: construcción 2026-10-02 (CI rojo del PR #212, que no tocaba nada de esto; ~1 de cada 24 corridas en `main`
+con la CPU cargada). Con `cazador-bugs`: dos causas juntas. (1) `streamer.set(&"segment_scripts", [Straight…])`
+pasaba un `Array` sin tipo a la propiedad `Array[Script]`; Godot lo descarta sin avisar y la ruta salía con los 11
+tipos (por eso la camioneta terminaba OFF_ROAD o STUCK tan seguido). Pasaba igual en `test_endless_multi_cargo.gd` y
+`test_mud_segment.gd`. (2) Con un `MudSegment` en la ruta, `DressingBatcher.merge_segment_geometry()` crea dos
+`MergedGeometry` (sombra prendida y apagada), y el segundo quedaba con el nombre `@MeshInstance3D@N`, que el test
+contaba como pieza suelta. Ahora se agrega con `add_child(instance, true)` (queda `MergedGeometry2`), y los tres
+tests pasan la lista tipada. `tests/data/route_golden.txt` regenerado: cambian solo 22 `hash=` de tramos (el nombre del nodo), ni posiciones ni conteos. El módulo prueba el caso en `test_render_budget` (`_test_segment_merge`). Aviso
+`docs/avisos/2026-10-02-merged-geometry-name.md`.
+  **[x] Hecho (2026-10-02, rama `nacho/fix-main-endless-merged-name`)**.
+
 ### N-917 · Aviso de Jolt "exceeded the maximum number of jobs" al cargar la entrega — C · `Opus 5.5 · medium` · Aviso: sí (`modules/route_gen/`, zona compartida) · **[x] rama `nacho/N-917-jolt-jobs`**
 Origen: QA 2026-10-01. Escenario: `godot --path do-not-drop -- --autostart --mood=nublado_dia` (o cualquier clima), o
 entrar a la entrega desde el menú; la consola muestra una vez `WARNING: Jolt Physics job system exceeded the maximum
@@ -896,6 +908,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     archivo: `.call` 10 → 5, `.get(&` 8 → 7, `/root/` 6 → 4, `.set(&` 3 → 0. `test_dynamic_dispatch_budget.gd` suma el
     archivo. Sin aviso (`route/` y `tests/`). Siguientes: `player.gd` (21), `package_feedback.gd` (21),
     `player_interaction.gd` (18), `level_base.gd` (18).
+  - [x] `rail_crossing_segment.gd` (2026-10-01, rama `nacho/N-224-rail-crossing-typed`): el paso a nivel. La sesión
+    por la constante `NETWORK_MANAGER` (preload de `network_manager.gd`, accesor `_network()`: `world_seed`,
+    `is_online`, `is_host` directos; `world_seed` no está en `NetSession`). En el archivo: 6 → 1 uso (`.call` 2 → 0,
+    `.get(&` 1 → 0, `/root/` 3 → 1). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle. Sin aviso
+    (`route/` y `tests/`).
   - [x] `player_interaction.gd` (2026-10-01, rama `nacho/N-224-player-interaction-typed`): lo apuntado como
     `Interactable` (`can_interact`/`interact` directos; la sonda junta solo `Interactable`), el `aim_bonus` del perro
     de `DogDistractPoint`, la red como `NetSession` (`_network()`) y la vista del contenido por preload
@@ -911,6 +928,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     lint bajó 1. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-level-base-tipado.md`. `run_manager.gd` ya no tiene usos por nombre tras N-225.5.
     Siguientes: `player.gd` (21), `cargo_animals.gd` (16).
+  - [x] `truck_radio_view.gd` (2026-10-01, rama `nacho/N-224-truck-radio-view-typed`): el dial y el programa de la
+    radio. La radio como `TruckRadio` (`mode`, `mode_key()` estático, `mode_changed`/`news_announced` conectadas por la
+    señal) y los sonidos por el `preload` inferido de `synth_audio_radio.gd` (antes tipado `Script`, que obligaba a
+    `.call`: `warm`, los dos loops, el clic y la cortina). En el archivo: `.call` 6 → 0, `.get(&` 1 → 0.
+    `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Sin aviso (`presentation/` libre y `tests/`).
+  - [x] `windshield_rain.gd` (2026-10-01, rama `nacho/N-224-windshield-rain-typed`): la lluvia y el barro del
+    parabrisas. Solo la sesión como `NetSession` (`local_id`). El resto queda por nombre con razón: `driver_peer_id`
+    y `presentation_engine_running` del camión y `viewer_inside()` de su presentación, porque `vehicle.gd` crea este
+    nodo por `reference_truck.gd` y `vehicle_presentation.gd` llega a `vehicle.gd` por `cargo_clutter.gd` (precargar
+    cualquiera de los dos es un ciclo). En el archivo: `.call` 2 → 1, `.get(&` 2 → 2, `/root/` 2 → 2.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`).
   - [x] `cargo_animals.gd` (2026-10-01, rama `nacho/N-224-cargo-animals-typed`): el camión por `preload` de
     `vehicle.gd` (`VehicleScript`, accesor `_truck()`: `carries`, `point_velocity`, `rear_cargo_open`), la red por la
     constante `NETWORK_MANAGER` (`world_seed`, `is_host`, la señal `peer_level_ready` sin `has_signal`), el contenido
@@ -919,6 +947,12 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 4 → 1, `/root/` 6 → 3, `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
     Sin aviso (`route/` y `tests/`). Siguientes: `package_feedback.gd` (14), `depot_panel.gd` (13), `player.gd` (13),
     `package_contents_view.gd` (13), `seat_point.gd` (13).
+  - [x] `low_visibility_event.gd` (2026-10-01, rama `nacho/N-224-low-visibility-typed`): el barro en el parabrisas. El
+    nivel como `LevelCommon`, el camión por `preload` de `vehicle.gd` (`driver_peer_id`; la velocidad sin el
+    `is RigidBody3D`) y la ruta por `preload` de `route.gd` (`houses`, `stop_road_distance`, `road_distance`; se van
+    los `has_method`). Queda por nombre el `route` del nivel (solo `level_base.gd` lo tiene y precargar los niveles
+    vuelve por `level_common.gd`, que precarga este archivo). En el archivo: `.call` 2 → 0, `.get(&` 4 → 1.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`).
   - [x] `package_feedback.gd` + `package_trap_visuals.gd` (2026-10-01, rama `nacho/N-224-package-feedback-typed`): el
     padre como `DeliveryPackage` (`package_id`, `trap_definition` como `TrapDefinition`, `content_definition()` como
     `PackageContent`, `_is_run_active()`), `GameSettings` por la constante `GAME_SETTINGS` (accesor `_settings()`) y
@@ -955,6 +989,20 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `/root/` 3 → 3, `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
     `tests/`). Siguientes: `package_contents_view.gd` (13), `seat_point.gd` (13), `package_pickup_point.gd` (12),
     `cargo_animal_view.gd` (11), `player.gd` (13).
+  - [x] `flock_crossing.gd` (2026-10-01, rama `nacho/N-224-flock-crossing-typed`): las ovejas con el tipo de
+    `wildlife_animal.gd` (`ANIMAL_SCRIPT` por preload inferido, `sheep: Array[ANIMAL_SCRIPT]`: `run`, `idle`,
+    `tumble`, `steered` directos), como el ciervo. Quedan por nombre `team_money`/`spend` de `CrewProgression` (ciclo
+    de compilación, como en `wildlife_crossing.gd`). En el archivo: `.call` 3 → 1, `.get(&` 1 → 1, `/root/` 2 → 2,
+    `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`).
+  - [x] `play_area.gd` (2026-10-01, rama `nacho/N-224-play-area-typed`): el borde del mapa. El nivel como
+    `LevelCommon` (`local_player`, `depot` como `Depot`), el jugador como `Player` (`seat_node_path`), el camino del
+    infinito como `SegmentStreamer` (`_nearest_on_path` directo, sin `has_method`) y el terreno de la ruta como
+    `TerrainField` (`spans`). Quedan por nombre `_streamer` y `route` del nivel y `terrain` de la ruta
+    (`level_endless.gd`, `level_base.gd` y `route.gd` sin `class_name`; precargar los niveles vuelve por
+    `level_common.gd`, que precarga este archivo). En el archivo: `.call` 1 → 0, `.get(&` 6 → 3.
+    `test_play_area.gd` carga el script con `load()` (tipar a `LevelCommon` nombra autoloads sueltos bajo
+    `--script`) y prueba también el borde en el infinito. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin
+    aviso (`gameplay/` raíz y `tests/`).
   - [x] `package_contents_view.gd` (2026-10-01, rama `nacho/N-224-contents-view-typed`): la caja como
     `DeliveryPackage` (`package.gd` no carga la vista, sin ciclo; `package_id`, `trap_state`, `contents_spilled`,
     `is_open` y `content_definition()` directos) y el contenido como `PackageContent` (`localized_name`,
@@ -968,6 +1016,19 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 13 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-seat-point-tipado.md`. Siguientes: `player.gd` (13), `spectator_camera.gd` (12),
     `package_pickup_point.gd` (12), `cargo_animal_view.gd` (11).
+  - [x] `phone_camera.gd` (2026-10-01, rama `nacho/N-224-phone-camera-typed`): la foto de entrega. Las casas como
+    `DeliveryHouse` (`porch_position`, `house_index`, `delivered`, `outcome`; lo que no es una se salta) y el camión
+    por `preload` de `vehicle.gd` (`has_manual_gearbox`, `driver_peer_id`; se va el `has_method`). En el archivo:
+    `.call` 1 → 0, `.get(&` 5 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0.
+    Sin aviso (`presentation/` libre y `tests/`).
+  - [x] `player_seat_pose.gd` (2026-10-01, rama `nacho/N-224-seat-pose-typed`): subir y bajar de los asientos. La
+    cámara del asiento como `SeatCamera` (`activate`/`deactivate`), el `InteractionArea` del asiento como `SeatPoint`
+    (`release_occupant`) y la sesión como `NetSession` (`is_online`, `is_host`); lo que no es uno se salta, como hacían
+    los `has_method`. Queda por nombre el RPC `release_occupant` al host (como todo RPC). En el archivo: `.call` 5 → 0,
+    `has_method` 3 → 0, `/root/` 2 → 2. `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso
+    `docs/avisos/2026-10-01-n224-seat-pose-tipado.md`. `route_smoke_check.gd` (7) no se puede tipar: es un
+    `--script` y nombrar `route.gd`, `DeliveryHouse` o `RouteGoalLot` compila scripts que nombran `NetworkManager`
+    antes de que existan los autoloads.
   - [x] `package_pickup_point.gd` (2026-10-01, rama `nacho/N-224-pickup-point-typed`): agarrar y ayudar a cargar una
     caja. La caja como `DeliveryPackage` (`is_held`, `is_loaded`, `trap_definition`, `assist_available`/`assist_prompt`/
     `can_assist`/`set_assistant`/`take_by` directos, sin `has_method`), el feedback como `PackageFeedback` y el jugador
@@ -1002,6 +1063,12 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     archivo y su handle; `test_delivery_houses.gd` toca el timbre con cajas reales (`package.tscn`) en vez de nodos
     con `trap_state` inventado. Sin aviso (`route/` y `tests/`). Siguientes: `spectator_camera.gd` (10), `play_area.gd` (9),
     `dashboard_gps.gd` (9), `vehicle_presentation.gd` (9).
+  - [x] `player_sprint.gd` (2026-10-01, rama `nacho/N-224-player-sprint-typed`): correr. La caja pesada por
+    `trap_definition.id` directo, la sesión por la constante `NETWORK_MANAGER` (preload de `network_manager.gd`:
+    `world_seed` no está en `NetSession`) y el perfil como `UnlockProfile` (`mark_tip_seen`). Queda por nombre
+    `ground_roughness` de la ruta (grupo `route`: `route.gd` sin `class_name` y los tests meten suelos falsos). En el
+    archivo: `.call` 2 → 1, `.get(&` 2 → 0, `/root/` 3 → 3. `test_dynamic_dispatch_budget.gd` suma el archivo y su
+    handle. Aviso `docs/avisos/2026-10-01-n224-player-sprint-tipado.md`.
   - [x] `mud_segment.gd` (2026-10-01, rama `nacho/N-224-mud-segment-typed`): ya estaba en `BUDGETS` desde N-108 y es el
     que más usos por nombre tiene en `scripts/` (16), pero casi todos son forzados. "Manos ocupadas" (`carried_package`,
     `seat_node_path`) se lee una sola vez en `_hands_busy()`. Quedan por nombre los `FakePlayer` de
@@ -1021,6 +1088,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     usos (`.call` 5 → 0, `.get(&` 5 → 2, `/root/` 2 → 2; también `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd`
     suma el archivo; `test_spectator.gd` prueba también la toma de resultados. Sin aviso (`presentation/` libre y
     `tests/`). Siguientes: `dashboard_gps.gd` (10), `vehicle_presentation.gd` (9), `play_area.gd` (9), `run_tally.gd` (9).
+  - [x] `dashboard_gps.gd` (2026-10-02, rama `nacho/N-224-dashboard-gps-typed`): el GPS del tablero. La ruta por
+    `preload` de `route.gd` (`ROUTE`: `houses`, `stop_road_distance`, `road_distance`, `goal_bay_number`, `goal_target`
+    directos) y las cajas de `bomb_codes()` como `DeliveryPackage` (`care_state`; lo que no es un paquete en el grupo
+    `cargo` se saltea, como antes sin `care_state`). Quedan por nombre `RunManager.current_distance` y `best_score` (la
+    presentación del camión crea el GPS: precargar `run_manager.gd` rompe la compilación bajo `--script`) y el handle de
+    EventBus. En el archivo: 10 → 4 usos (`.call` 5 → 1, `.get(&` 3 → 1, `/root/` 2 → 2).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`). Siguientes:
+    `vehicle_presentation.gd` (9), `run_tally.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -2924,15 +2999,22 @@ Origen de la pausa: auditoría integral 2026-09-30, A-102.
   (redacción pura, determinista por semilla), catálogo `data/newspaper/stories.json` con 3+ variantes por
   hecho, relay del host `newspaper_ready` (ids y casillas, no texto) y la página 2D mostrada antes de la
   tarjeta de resultados. Tests `test_news_desk.gd` y `test_run_chronicle.gd`.
-- [ ] **N-606.3** La escena: set propio en su `World3D`, el Jefe sentado, diario 3D con la página en un
-  `SubViewport`, cámara por rieles (`data/newspaper/shots.json`, formato de `TrailerCamera`), bandas
-  negras, saltar manteniendo el botón, opción en Opciones y la tarjeta de resultados esperando
-  `newspaper_finished`. Test headless del director y captura con `revisor-visual`.
+- [x] **N-606.3** La escena (2026-10-01): set propio en su `World3D`, el Jefe sentado, diario 3D con las
+  páginas en `SubViewport` (`NewspaperSpread`, diagramación del estudio N-606.6 con las noticias reales),
+  cámara por rieles (`data/newspaper/shots.json`, módulo nuevo `camera_rail`), un primer plano por noticia,
+  bandas en el general y la reacción, saltar manteniendo el botón 0,6 s, opción «Diario al final» en
+  Opciones y la tarjeta de resultados esperando `newspaper_finished`. Reemplaza a la página 2D. Test
+  `test_newspaper_scene.gd`, capturas con `tests/render_newspaper_scene.gd`. La serif OFL del relleno
+  llegó con N-606.5.
 - [ ] **N-606.4** ⏸ personajes en pausa (S-311) · Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
   `CirclePen`, `SipMate`), diario giratorio, curva de página, expresiones, audio (gallo, "¡extra!",
   papel, escupida) y hechos nuevos (vuelco, perro, tren).
-- [ ] **N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
-  puerta que se abre) que va al diario con trama de puntos.
+- [x] ~~**N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
+  puerta que se abre) que va al diario con trama de puntos.~~ **[x] Hecho (2026-10-01)** — `NewsPhotographer`
+  (cada jugador saca su foto del hecho, sin red) con el módulo nuevo `press_photo` (`PressPhoto`, trama de puntos);
+  `NewspaperSpread` la imprime bajo la tapa con epígrafe y primer plano propio; PT Serif OFL empaquetada para el
+  relleno; acercamiento sin la nariz del Jefe asomando. Test `test_newspaper_scene.gd` y
+  `modules/press_photo/tests/test_press_photo.gd`; detalle en `diario-final.md` («Fotos y tipografía»).
 - [x] **N-606.6** Estudio visual de la escena (2026-10-01): set, Jefe con camisa y bigote, diario de
   papel de diario con diagramación real (columnas, clasificados, foto con trama), hojas que se caen, y un
   primer plano legible por noticia. Prueba de dirección de arte para N-606.3, no la cinemática:

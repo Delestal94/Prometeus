@@ -172,9 +172,9 @@ func apply_board_seat(seat_camera_path: NodePath, seat_path: NodePath) -> void:
 	var bus: Node = player.get_node_or_null("/root/EventBus")
 	if bus != null:
 		bus.emit_signal(&"quick_fade_requested", 0.2)
-	var seat_camera: Node = player.get_node_or_null(seat_camera_path)
-	if seat_camera != null and seat_camera.has_method(&"activate"):
-		seat_camera.call(&"activate")
+	var seat_camera := player.get_node_or_null(seat_camera_path) as SeatCamera
+	if seat_camera != null:
+		seat_camera.activate()
 
 
 func apply_tend_package(package_path: NodePath) -> void:
@@ -196,9 +196,9 @@ func leave_seat() -> void:
 	if seat != null:
 		player.global_position = seat_exit_position(seat)
 		player.reset_physics_interpolation()
-	var seat_camera: Node = player.get_node_or_null(player._seat_camera_path)
-	if seat_camera != null and seat_camera.has_method(&"deactivate"):
-		seat_camera.call(&"deactivate")
+	var seat_camera := player.get_node_or_null(player._seat_camera_path) as SeatCamera
+	if seat_camera != null:
+		seat_camera.deactivate()
 	player._seated = false
 	player.tended_package = null
 	player.seat_node_path = NodePath()
@@ -219,12 +219,12 @@ func seat_exit_position(seat: Node3D) -> Vector3:
 func release_seat_occupant(seat: Node3D) -> void:
 	if seat == null:
 		return
-	var interaction: Node = seat.get_node_or_null(^"InteractionArea")
-	if interaction == null or not interaction.has_method(&"release_occupant"):
+	var interaction := seat.get_node_or_null(^"InteractionArea") as SeatPoint
+	if interaction == null:
 		return
 	var peer_id: int = player.get_multiplayer_authority()
-	var network: Node = player.get_node_or_null("/root/NetworkManager")
-	if network != null and network.call(&"is_online") and not network.call(&"is_host"):
+	var network := player.get_node_or_null("/root/NetworkManager") as NetSession
+	if network != null and network.is_online() and not network.is_host():
 		interaction.rpc_id(1, &"release_occupant", peer_id)
 	else:
-		interaction.call(&"release_occupant", peer_id)
+		interaction.release_occupant(peer_id)

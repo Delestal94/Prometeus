@@ -6,7 +6,7 @@ extends Node3D
 ## mode it shows is whatever the host decided. Hung by TruckRadio on the
 ## knob, in the van's frame (its screen faces +Z, toward the driver).
 
-const SOUNDS: Script = preload("res://modules/synth_audio/synth_audio_radio.gd")
+const SOUNDS = preload("res://modules/synth_audio/synth_audio_radio.gd")
 ## Dial angle around its axis (degrees) for each mode, turning clockwise.
 const DIAL_ANGLES: Dictionary = {&"calm": 60.0, &"loud": 20.0, &"news": -20.0, &"off": -60.0}
 ## Player level per mode (dB, on top of the loops' -24 dBFS RMS).
@@ -20,7 +20,7 @@ const LIT := Color("39c4c9")
 const DIM := Color("9fb3b8")
 
 ## The TruckRadio whose mode this shows. Set by it before the node enters the tree.
-var radio: Node
+var radio: TruckRadio
 var dial: Node3D
 var mode_label: Label3D
 var news_label: Label3D
@@ -31,12 +31,12 @@ var _news_left: float = 0.0
 
 func _ready() -> void:
 	_build()
-	SOUNDS.call(&"warm")
+	SOUNDS.warm()
 	if radio == null:
 		return
-	radio.connect(&"mode_changed", _show_mode)
-	radio.connect(&"news_announced", _on_news)
-	_show_mode(radio.get(&"mode"), true)
+	radio.mode_changed.connect(_show_mode)
+	radio.news_announced.connect(_on_news)
+	_show_mode(radio.mode, true)
 
 
 func _process(delta: float) -> void:
@@ -49,25 +49,25 @@ func _process(delta: float) -> void:
 
 func _show_mode(mode: StringName, silent: bool = false) -> void:
 	dial.rotation.z = deg_to_rad(float(DIAL_ANGLES.get(mode, DIAL_ANGLES[&"off"])))
-	mode_label.text = tr(String(radio.call(&"mode_key", mode)))
+	mode_label.text = tr(TruckRadio.mode_key(mode))
 	mode_label.modulate = DIM if mode == &"off" else LIT
 	if mode != &"news":
 		news_label.text = ""
 		_news_left = 0.0
 	if PROGRAM_DB.has(mode):
-		music_player.stream = SOUNDS.call(&"calm_loop") if mode == &"calm" else SOUNDS.call(&"loud_loop")
+		music_player.stream = SOUNDS.calm_loop() if mode == &"calm" else SOUNDS.loud_loop()
 		music_player.volume_db = float(PROGRAM_DB[mode])
 		music_player.play()
 	else:
 		music_player.stop()
 	if not silent:
-		_cue(SOUNDS.call(&"knob_click"), CLICK_DB)
+		_cue(SOUNDS.knob_click(), CLICK_DB)
 
 
 func _on_news(line: String) -> void:
 	news_label.text = line
 	_news_left = NEWS_SECONDS
-	_cue(SOUNDS.call(&"news_jingle"), JINGLE_DB)
+	_cue(SOUNDS.news_jingle(), JINGLE_DB)
 
 
 func _cue(stream: AudioStreamWAV, volume_db: float) -> void:
