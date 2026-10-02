@@ -300,19 +300,18 @@ func _build_shop() -> void:
 ## ServiceStopShop) sells kit refills and a spare part, dearer than the depot,
 ## through the same vote. Solo, a press buys at once.
 func _build_service() -> void:
-	var shop: Node = depot if is_instance_valid(depot) else null
+	var shop: SERVICE_SHOP = depot as SERVICE_SHOP if is_instance_valid(depot) else null
 	if shop == null:
 		_header(tr("UI_SERVICE_TITLE"), "", UiTheme.MINT, "")
 		return
-	var money: int = int(shop.get(&"team_money"))
-	_header(tr("UI_SERVICE_TITLE"), tr("UI_DEPOT_TEAM_CASH") % money, UiTheme.MINT, tr(String(shop.call(&"hint_key"))))
-	_offer_rows(shop.call(&"offers"), shop.get(&"supplies"), "UI_SERVICE_FULL", money,
+	_header(tr("UI_SERVICE_TITLE"), tr("UI_DEPOT_TEAM_CASH") % shop.team_money, UiTheme.MINT, tr(shop.hint_key()))
+	_offer_rows(shop.offers(), shop.supplies, "UI_SERVICE_FULL", shop.team_money,
 		func(id: StringName) -> void:
-			if is_instance_valid(depot):
-				depot.call(&"buy_supply", id),
+			if is_instance_valid(shop):
+				shop.buy_supply(id),
 		func(id: StringName) -> void:
-			if is_instance_valid(depot):
-				depot.call(&"buy_supply_discounted", id))
+			if is_instance_valid(shop):
+				shop.buy_supply_discounted(id))
 
 
 ## One row per offer (id -> {title, detail, cost}): a buy (or vote) button, its

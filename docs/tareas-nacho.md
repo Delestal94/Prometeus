@@ -2648,7 +2648,9 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 > que el depósito. Online la compra pasa por la misma votación del depósito (`ShopVoteManager`, ofertas con
 > `venue`), solo se compra al toque; `DepotPanel` ganó la cara `service`. Parado en la dársena no cuenta como
 > trabado. `PROTOCOL_VERSION` 22. Test `test_service_stop.gd`; `tests/data/route_golden.txt` regenerado (las
-> rutas de 3 y 4 casas del golden ahora tienen estación). Aviso: `docs/avisos/2026-10-01-service-stops.md`.
+> rutas de 3 y 4 casas del golden ahora tienen estación). De paso: un cartel de pueblo cuyo lugar está ocupado se
+> corre al siguiente paso libre (`route_signage.gd`, antes quedaba un pueblo sin salida) y el chaos bot ya no se cae
+> leyendo una caja entregada (liberada). Aviso: `docs/avisos/2026-10-01-service-stops.md`.
 
 ### N-311 · Cosméticos para encontrar en el mundo — B · `Opus 5.5 · medium` · Aviso: sí (cosméticos del jugador)
 
