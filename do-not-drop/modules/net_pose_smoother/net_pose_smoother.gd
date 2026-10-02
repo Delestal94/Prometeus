@@ -69,7 +69,7 @@ const MAX_SAMPLE_GAP: float = 0.5
 ## burst of loss), not a new interval.
 const MAX_INTERVAL_STRETCH: float = 3.0
 
-## [sender_time, Transform3D, local], oldest first.
+## [sender_time, Transform3D, local, extra], oldest first.
 var _snapshots: Array = []
 ## [arrival, sender_time - arrival] of the last CLOCK_WINDOW, oldest first.
 var _offsets: Array = []
@@ -82,7 +82,7 @@ var _interval: float = DEFAULT_INTERVAL
 var _interval_known: bool = false
 var _jitter: float = 0.0
 var _last_transit: float = INF
-## Arrived but held back by --fake-lag: [release_at, sender_time, Transform3D, local].
+## Arrived but held back by --fake-lag: [release_at, sender_time, Transform3D, local, extra].
 var _held: Array = []
 var fake_lag: float = 0.0
 ## Seconds of random extra hold per pose, 0..this; below 0, the old
@@ -91,6 +91,8 @@ var fake_jitter: float = -1.0
 ## Share of arriving poses dropped (0..1), like packets lost on the way.
 var fake_loss: float = 0.0
 var _rng := RandomNumberGenerator.new()
+var _drawn_extra := PackedFloat32Array()
+var _drawn_extra_before := PackedFloat32Array()
 
 
 func _init() -> void:
@@ -134,19 +136,22 @@ func is_empty() -> bool:
 
 ## A pose from its owner, stamped with the owner's clock (seconds), arriving
 ## at local time `now` (seconds, local_now()). `local`: it's in the space of
-## whatever sample() is given as `local_to_world`, not the world's.
-func push(sender_time: float, pose: Transform3D, now: float, local: bool = false) -> void:
+## whatever sample() is given as `local_to_world`, not the world's. `extra`:
+## numbers that should be drawn in step with the pose (an animation's
+## parameters), interpolated like it: see drawn_extra().
+func push(sender_time: float, pose: Transform3D, now: float, local: bool = false,
+		extra: PackedFloat32Array = PackedFloat32Array()) -> void:
 	if fake_loss > 0.0 and _rng.randf() < fake_loss:
 		return
 	if fake_lag > 0.0 or fake_jitter > 0.0:
 		var spread: float = fake_jitter if fake_jitter >= 0.0 else fake_lag / 3.0
-		_held.append([now + fake_lag + _rng.randf_range(0.0, spread), sender_time, pose, local])
+		_held.append([now + fake_lag + _rng.randf_range(0.0, spread), sender_time, pose, local, extra])
 		return
-	_accept(sender_time, pose, now, local)
+	_accept(sender_time, pose, now, local, extra)
 
 
-func _accept(sender_time: float, pose: Transform3D, now: float, local: bool) -> void:
-	_measure(sender_time, now)
+func _accept(sender_time: float, pose: Transform3D, now: float, local: bool,
+		extra: PackedFloat32Array = PackedFloat32Array()) -> void:
 	if not _snapshots.is_empty():
 		var last: Array = _snapshots[-1]
 		if sender_time > float(last[0]) and bool(last[2]) == local \
@@ -158,6 +163,9 @@ func _accept(sender_time: float, pose: Transform3D, now: float, local: bool) -> 
 		at -= 1
 	if at > 0 and is_equal_approx(float(_snapshots[at - 1][0]), sender_time):
 		return
+	# Measured after the repeat check: the same pose again (a resend, a sender
+	# that didn't step) says nothing about the link.
+	_measure(sender_time, now)
 	if at == _snapshots.size() and at > 0:
 		var gap: float = sender_time - float(_snapshots[at - 1][0])
 		var longest: float = MAX_SAMPLE_GAP
@@ -166,7 +174,7 @@ func _accept(sender_time: float, pose: Transform3D, now: float, local: bool) -> 
 		if gap > 0.0 and gap < longest:
 			_interval = gap if not _interval_known else lerpf(_interval, gap, 0.1)
 			_interval_known = true
-	_snapshots.insert(at, [sender_time, pose, local])
+	_snapshots.insert(at, [sender_time, pose, local, extra])
 	while _snapshots.size() > MAX_SNAPSHOTS:
 		_snapshots.pop_front()
 
@@ -240,6 +248,8 @@ func sample(now: float, local_to_world: Transform3D = Transform3D.IDENTITY) -> T
 	if _snapshots.is_empty():
 		return Transform3D.IDENTITY
 	if _snapshots.size() == 1:
+		_drawn_extra = _snapshots[0][3]
+		_drawn_extra_before = _drawn_extra
 		return _world(_snapshots[0], local_to_world)
 	var drawn_at: float = render_time(now)
 	# Poses already drawn past are done with (one is kept before the moment).
@@ -247,12 +257,16 @@ func sample(now: float, local_to_world: Transform3D = Transform3D.IDENTITY) -> T
 		_snapshots.pop_front()
 	var first: Array = _snapshots[0]
 	if drawn_at <= float(first[0]):
+		_drawn_extra = first[3]
+		_drawn_extra_before = _drawn_extra
 		return _world(first, local_to_world)
 	for index: int in range(_snapshots.size() - 1):
 		var a: Array = _snapshots[index]
 		var b: Array = _snapshots[index + 1]
 		if drawn_at <= float(b[0]):
 			var weight: float = (drawn_at - float(a[0])) / maxf(float(b[0]) - float(a[0]), 0.0001)
+			_drawn_extra = _lerp_extra(a[3], b[3], weight)
+			_drawn_extra_before = a[3]
 			if bool(a[2]) == bool(b[2]):
 				var between: Transform3D = (a[1] as Transform3D).interpolate_with(b[1], weight)
 				return local_to_world * between if bool(a[2]) else between
@@ -261,11 +275,35 @@ func sample(now: float, local_to_world: Transform3D = Transform3D.IDENTITY) -> T
 	var before: Array = _snapshots[-2]
 	var last: Array = _snapshots[-1]
 	var pose: Transform3D = last[1]
+	_drawn_extra = last[3]
+	_drawn_extra_before = _drawn_extra
 	if bool(before[2]) == bool(last[2]):
 		var step: float = maxf(float(last[0]) - float(before[0]), 0.0001)
 		var ahead: float = minf(drawn_at - float(last[0]), MAX_EXTRAPOLATION)
 		pose.origin += ((last[1] as Transform3D).origin - (before[1] as Transform3D).origin) / step * ahead
 	return local_to_world * pose if bool(last[2]) else pose
+
+
+## The `extra` numbers as of the last sample(): interpolated between the two
+## poses either side of the moment drawn (the nearest one's past the ends).
+## Empty when the poses carried none, or they changed length.
+func drawn_extra() -> PackedFloat32Array:
+	return _drawn_extra
+
+
+## The `extra` numbers of the pose just before the moment drawn, as sent: for
+## a number that restarts (a clip's time) and must not be interpolated back.
+func drawn_extra_before() -> PackedFloat32Array:
+	return _drawn_extra_before
+
+
+static func _lerp_extra(a: PackedFloat32Array, b: PackedFloat32Array, weight: float) -> PackedFloat32Array:
+	if a.size() != b.size():
+		return b if weight >= 0.5 else a
+	var out := PackedFloat32Array(a)
+	for index: int in range(out.size()):
+		out[index] = lerpf(a[index], b[index], weight)
+	return out
 
 
 static func _world(snapshot: Array, local_to_world: Transform3D) -> Transform3D:
@@ -278,10 +316,12 @@ func _release_held(now: float) -> void:
 	_held.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
 	while not _held.is_empty() and float(_held[0][0]) <= now:
 		var entry: Array = _held.pop_front()
-		_accept(float(entry[1]), entry[2], now, bool(entry[3]))
+		_accept(float(entry[1]), entry[2], now, bool(entry[3]), entry[4])
 
 
 func clear() -> void:
+	_drawn_extra = PackedFloat32Array()
+	_drawn_extra_before = PackedFloat32Array()
 	_snapshots.clear()
 	_held.clear()
 	_offsets.clear()

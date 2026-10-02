@@ -52,7 +52,9 @@ static func ride_frame_by_frame(p: Player) -> void:
 ## placed per frame it rammed the loose boxes at every step.
 ## The owner's poses come through a NetPoseSmoother (N-217): drawn a touch in
 ## the past, interpolated, so the jitter of the link (and the host's relay)
-## doesn't make them jump. Until the first one lands, the raw pair.
+## doesn't make them jump. Until the first one lands, the raw pair. The head's
+## turn, the gait speed and the jump clip ride in the same buffer (drawn_extra),
+## so the animation doesn't run ahead of the body.
 static func apply_net_state(p: Player, on_tick: bool = false) -> void:
 	if not p._has_net_state:
 		return
@@ -73,18 +75,23 @@ static func apply_net_state(p: Player, on_tick: bool = false) -> void:
 		var pose: Transform3D = p._net_smoother.sample(NetPoseSmoother.local_now(), truck)
 		if pose != Transform3D.IDENTITY:
 			p.global_position = pose.origin
-			p.rotation.y = yaw_of(pose.basis)
-		return
-	if riding:
+			p.rotation.y = yaw_on(truck.basis, truck.basis.inverse() * pose.basis) if p._net_smoother.latest_local() \
+					else yaw_of(pose.basis)
+			_apply_drawn_extra(p, p._net_smoother.drawn_extra(), p._net_smoother.drawn_extra_before())
+	elif riding:
 		p.global_position = truck * p.net_position
-		p.rotation.y = yaw_of(truck.basis * Basis(Vector3.UP, p.net_yaw))
+		p.rotation.y = yaw_of(truck.basis) + p.net_yaw
 	else:
 		p.global_position = p.net_position
 		p.rotation.y = p.net_yaw
+	# A box in this body's hands is drawn on it: now, not before or after the body moves (PackageNetPose).
+	if not on_tick and is_instance_valid(p.carried_package):
+		p.carried_package._net_view.follow(p.carried_package)
 
 
-## Everyone else's copy, when net_time lands (the last of a pose packet): the
-## owner's pose into the buffer, in the truck's space while they ride.
+## Everyone else's copy, when a synced packet has landed whole (the
+## synchronizer's `synchronized`): the owner's pose into the buffer, in the
+## truck's space while they ride, with what the animation needs in step.
 static func push_net_pose(p: Player) -> void:
 	if not p.is_inside_tree() or p.is_local():
 		return
@@ -93,8 +100,28 @@ static func push_net_pose(p: Player) -> void:
 		var network: Node = p.get_node_or_null(^"/root/NetworkManager")
 		if network != null and network.has_method(&"pose_net_sim"):
 			p._net_smoother.configure_sim(network.call(&"pose_net_sim"))
+	var head: Vector3 = p._head.rotation
 	p._net_smoother.push(p.net_time / 1000.0, Transform3D(Basis(Vector3.UP, p.net_yaw), p.net_position),
-			NetPoseSmoother.local_now(), p.net_in_vehicle)
+			NetPoseSmoother.local_now(), p.net_in_vehicle,
+			PackedFloat32Array([head.x, head.y, head.z, p.locomotion_speed, p.jump_anim_time]))
+
+
+## The synced animation numbers as of the moment drawn (push_net_pose()). The
+## jump clip restarts at 0: from a higher value it keeps the earlier one
+## instead of sliding back through the whole clip.
+static func _apply_drawn_extra(p: Player, extra: PackedFloat32Array, before: PackedFloat32Array) -> void:
+	if extra.size() != 5:
+		return
+	p._head.rotation = Vector3(extra[0], extra[1], extra[2])
+	p.locomotion_speed = extra[3]
+	p.jump_anim_time = maxf(extra[4], before[4]) if before.size() == 5 else extra[4]
+
+
+## A heading on a truck that may be tilted: the truck's own heading plus the
+## turn `relative` (in the truck's space) adds to it. yaw_of() of the tilted
+## product would be off by the tilt.
+static func yaw_on(truck: Basis, relative: Basis) -> float:
+	return yaw_of(truck) + yaw_of(relative)
 
 
 ## Where a remote player is by their newest pose, not where it's drawn: the
@@ -134,7 +161,8 @@ static func publish_net_state(p: Player) -> void:
 			Player.RIDE_MARGIN if p.net_in_vehicle else 0.0))
 	p.net_in_vehicle = riding
 	p.net_position = vehicle.to_local(p.global_position) if riding else p.global_position
-	p.net_yaw = yaw_of(vehicle.global_basis.inverse() * p.global_basis) if riding else yaw_of(p.global_basis)
+	p.net_yaw = angle_difference(yaw_of(vehicle.global_basis), yaw_of(p.global_basis)) if riding \
+			else yaw_of(p.global_basis)
 	p.net_time = NetPoseSmoother.clock_ms()
 
 

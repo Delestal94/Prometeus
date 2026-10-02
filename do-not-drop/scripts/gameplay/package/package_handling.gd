@@ -18,8 +18,11 @@ const TAKE_IN_SECONDS: float = 0.3
 
 ## The carrier's pose, applied on the host's copy: `in_vehicle` puts it on the host's own truck (each peer's
 ## copy of the truck is a little behind the host's, and a world pose put the box a metre behind the hands at
-## speed). `sender` is the remote sender (0: a genuine local call).
-static func accept_carry(p: DeliveryPackage, sender: int, carry_transform: Transform3D, in_vehicle: bool) -> void:
+## speed). `sender` is the remote sender (0: a genuine local call). `in_hands`: the same pose in the carrier's
+## body space; on foot the other peers draw the box there on the carrier's body as they draw it (N-217,
+## PackageNetPose), seated it rides on the truck as before.
+static func accept_carry(p: DeliveryPackage, sender: int, carry_transform: Transform3D, in_vehicle: bool,
+		in_hands: Transform3D = Transform3D.IDENTITY) -> void:
 	if sender != 0 and (not is_instance_valid(p.carrier) or sender != p.carrier.get_multiplayer_authority()):
 		return
 	if not p.is_held:
@@ -28,10 +31,20 @@ static func accept_carry(p: DeliveryPackage, sender: int, carry_transform: Trans
 	p._carry_in_vehicle = in_vehicle and vehicle != null
 	p._carry_pose = carry_transform
 	p.global_transform = vehicle.global_transform * carry_transform if p._carry_in_vehicle else carry_transform
+	var on_foot: bool = is_instance_valid(p.carrier) and (not p.carrier is Player
+			or (p.carrier as Player).seat_node_path.is_empty())
+	var follows: bool = on_foot and in_hands != Transform3D.IDENTITY
+	p.carrier_peer_id = int(p.carrier.get_multiplayer_authority()) if follows else 0
+	p.hold_offset = in_hands if p.carrier_peer_id > 0 else Transform3D.IDENTITY
 
 
 static func set_held(p: DeliveryPackage, held: bool) -> void:
 	p.is_held = held
+	p.carrier_peer_id = 0
+	p.hold_offset = Transform3D.IDENTITY
+	# Re-applied every tick while held (package.gd): until the carrier's first pose, where it is.
+	p._carry_pose = p.global_transform
+	p._carry_in_vehicle = false
 	p.freeze = held
 	# Disabled while carried: a held package following the hold point every
 	# frame shouldn't shove the player or clip weirdly through the world.

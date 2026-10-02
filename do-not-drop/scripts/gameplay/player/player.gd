@@ -190,13 +190,10 @@ var net_position: Vector3 = Vector3.ZERO:
 		net_position = value
 		_has_net_state = true
 var net_in_vehicle: bool = false
-## N-217: the facing (in the truck's space while net_in_vehicle, replicated instead of `rotation`) and the owner's
-## clock (ms), replicated last so its setter files the whole pose into everyone else's _net_smoother.
+## N-217: the facing (relative to the truck's heading while net_in_vehicle, replicated instead of `rotation`) and
+## the owner's clock (ms); each synced packet goes into everyone else's _net_smoother (Ride.push_net_pose).
 var net_yaw: float = 0.0
-var net_time: int = 0:
-	set(value):
-		net_time = value
-		Ride.push_net_pose(self)
+var net_time: int = 0
 var _has_net_state: bool = false
 var _net_smoother: NetPoseSmoother = null
 var _vehicle: Node3D = null
@@ -273,6 +270,7 @@ func _ready() -> void:
 	# everyone else's body is here to be seen, not driven.
 	if not is_local():
 		_camera.current = false
+		$MultiplayerSynchronizer.synchronized.connect(func() -> void: Ride.push_net_pose(self))
 		# Placed by the network every frame (_process), against the truck as
 		# it's drawn: interpolating between physics ticks on top of that
 		# only made riders trail behind it.
@@ -369,11 +367,11 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	_flinch_time = maxf(_flinch_time - delta, 0.0)
 	_ping_input.update(delta)
-	animator.animate()
 	if not is_local():
 		Ride.apply_net_state(self)
 	elif not _seated:
 		Ride.ride_frame_by_frame(self)
+	animator.animate()
 	if not is_physics_interpolated_and_enabled():
 		_seat_pose_component.pose_seated_body(delta)
 	if _carry_pose != null:

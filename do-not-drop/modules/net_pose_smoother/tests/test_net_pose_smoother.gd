@@ -8,7 +8,8 @@ extends SceneTree
 ## between MIN_DELAY and MAX_DELAY, and a sender pausing at rest doesn't
 ## inflate it. Out-of-order poses are sorted in; a far pose is a teleport that
 ## restarts the buffer; `local` poses ride on the moving space they're drawn
-## on; latest_pose() is the newest as sent; configure_sim() holds poses back
+## on; latest_pose() is the newest as sent; a repeated stamp doesn't move the
+## jitter; `extra` numbers (animation) are drawn interpolated in step; configure_sim() holds poses back
 ## and drops a share of them; clear() empties everything.
 
 var _failures: int = 0
@@ -75,6 +76,23 @@ func _initialize() -> void:
 		resting.push(sent, Transform3D.IDENTITY, sent)
 	_expect(absf(resting.interval() - 1.0 / 30.0) < 0.002,
 		"Half-second gaps at rest don't count as the interval (%.0f ms)" % (resting.interval() * 1000.0))
+
+	# The same pose again (a resend) says nothing about the link.
+	var before_repeats: float = jittery.jitter()
+	for repeat: int in range(10):
+		jittery.push(119.0 / 30.0, Transform3D.IDENTITY, 5.0 + repeat * 0.07)
+	_expect(is_equal_approx(jittery.jitter(), before_repeats),
+		"A repeated stamp leaves the jitter alone (%.1f ms, was %.1f)" % [
+			jittery.jitter() * 1000.0, before_repeats * 1000.0])
+
+	# Extra numbers ride with the poses, drawn in step with them.
+	var animated := NetPoseSmoother.new()
+	animated.push(0.0, Transform3D.IDENTITY, 0.0, false, PackedFloat32Array([0.0, 10.0]))
+	animated.push(0.1, Transform3D.IDENTITY, 0.1, false, PackedFloat32Array([1.0, 20.0]))
+	animated.sample(0.1 + animated.delay() - 0.05)
+	var halfway: PackedFloat32Array = animated.drawn_extra()
+	_expect(halfway.size() == 2 and is_equal_approx(halfway[0], 0.5) and is_equal_approx(halfway[1], 15.0),
+		"drawn_extra() is interpolated at the moment drawn (got %s)" % halfway)
 
 	var reordered := NetPoseSmoother.new()
 	reordered.push(0.0, Transform3D(Basis.IDENTITY, Vector3.ZERO), 0.0)
