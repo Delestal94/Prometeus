@@ -15,17 +15,24 @@ static func names(cargo: Dictionary, cargo_names: Dictionary) -> Dictionary:
 
 ## Whether the depot's door is open in this level (true when there is no depot to ask).
 static func depot_door_open(scene: Node) -> bool:
-	var depot: Node = scene.get(&"depot") as Node if scene != null else null
-	if depot != null and depot.get(&"door") != null:
-		return bool(depot.get(&"door").get(&"is_open"))
-	return true
+	var door: DepotRollerDoor = _depot_door(scene)
+	return door.is_open if door != null else true
 
 
 ## The host's door was already closed when this peer arrived: close it here too, without the sound.
 static func close_depot_door(scene: Node) -> void:
-	var depot: Node = scene.get(&"depot") as Node if scene != null else null
-	if depot != null and depot.get(&"door") != null:
-		depot.get(&"door").call(&"set_open", false, false)
+	var door: DepotRollerDoor = _depot_door(scene)
+	if door != null:
+		door.set_open(false, false)
+
+
+## The loaded level's depot door, typed (N-224.4): null when the scene is not a level (the menu, a test's bare
+## root) or its depot has no door yet.
+static func _depot_door(scene: Node) -> DepotRollerDoor:
+	var level: LevelCommon = scene as LevelCommon
+	if level == null or level.depot == null:
+		return null
+	return level.depot.door
 
 
 ## Frees the boxes already handed over at a door this run (paths relative to `from`): they're scene nodes, not
