@@ -17,7 +17,9 @@ class_name FlockCrossing
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const SHEEP_MODEL: String = "res://assets/models/environment/wildlife/sm_env_animal_sheep.glb"
-const ANIMAL_SCRIPT: Script = preload("res://scripts/presentation/wildlife_animal.gd")
+## The sheep's script, as a type (N-224.4; wildlife_animal.gd has no class
+## name): run, idle, tumble and steered fail to compile here if renamed.
+const ANIMAL_SCRIPT := preload("res://scripts/presentation/wildlife_animal.gd")
 const SIGN_MODEL: PackedScene = preload("res://assets/models/environment/signs/sm_env_sign_animal_crossing.glb")
 
 enum State { WAITING, CROSSING, SCATTERED, DONE }
@@ -56,7 +58,7 @@ const SIGN_LATERAL: float = 7.8
 
 var state: State = State.WAITING
 var hit: bool = false
-var sheep: Array[Node3D] = []
+var sheep: Array[ANIMAL_SCRIPT] = []
 ## Per sheep: {"lateral", "z", "speed", "delay", "hit", "tumble"}.
 var _flock: Array[Dictionary] = []
 var _clock: float = 0.0
@@ -70,7 +72,7 @@ func _ready() -> void:
 	rng.seed = flock_seed
 	var count: int = rng.randi_range(MIN_SHEEP, MAX_SHEEP)
 	for index: int in range(count):
-		var animal: Node3D = _make_sheep()
+		var animal: ANIMAL_SCRIPT = _make_sheep()
 		animal.name = "Sheep%d" % index
 		add_child(animal)
 		sheep.append(animal)
@@ -116,7 +118,7 @@ func _physics_process(delta: float) -> void:
 	var settled: int = 0
 	for index: int in range(_flock.size()):
 		var member: Dictionary = _flock[index]
-		var animal: Node3D = sheep[index]
+		var animal: ANIMAL_SCRIPT = sheep[index]
 		if float(member.tumble) > 0.0:
 			member.tumble = float(member.tumble) - delta
 			continue
@@ -134,7 +136,10 @@ func _physics_process(delta: float) -> void:
 		var before: float = member.lateral
 		member.lateral = move_toward(member.lateral, goal, speed * delta)
 		var moving: bool = not is_equal_approx(member.lateral, goal)
-		animal.call(&"run" if moving else &"idle")
+		if moving:
+			animal.run()
+		else:
+			animal.idle()
 		_place(index, signf(member.lateral - before) if moving else -side)
 		if not moving:
 			settled += 1
@@ -159,7 +164,7 @@ func _check_hit(vehicle: VehicleBody3D, index: int) -> void:
 	var member: Dictionary = _flock[index]
 	member.hit = true
 	member.tumble = 0.8
-	sheep[index].call(&"tumble")
+	sheep[index].tumble()
 	_baa(index)
 	if hit:
 		return  # One fine per flock: a second sheep in the same second is the same accident.
@@ -220,7 +225,7 @@ func _place(index: int, facing: float) -> void:
 	sheep[index].rotation = Vector3(0.0, facing * -PI * 0.5, 0.0)
 
 
-func _make_sheep() -> Node3D:
+func _make_sheep() -> ANIMAL_SCRIPT:
 	var animal: Node3D
 	if ResourceLoader.exists(SHEEP_MODEL):
 		animal = (load(SHEEP_MODEL) as PackedScene).instantiate() as Node3D
@@ -234,8 +239,9 @@ func _make_sheep() -> Node3D:
 		body.position.y = 0.55
 		animal.add_child(body)
 	animal.set_script(ANIMAL_SCRIPT)
-	animal.set(&"steered", true)
-	return animal
+	var sheep_animal := animal as ANIMAL_SCRIPT
+	sheep_animal.steered = true
+	return sheep_animal
 
 
 func _ground_height(local_point: Vector3) -> float:
