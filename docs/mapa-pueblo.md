@@ -298,6 +298,42 @@ e hitos) y comparten el mismo mecanismo: la barrera pide un **medio de transport
 Cada región es un distrito grande con sus propias reglas de generación (`theme`), así que el diseño de
 `tier` y `theme` de la sección 4.7 ya la cubre; lo nuevo es el tipo de barrera (transporte) y el arte.
 
+## 8c. Cambio de alcance del depósito: el equipo empaqueta (decisión del equipo, 2026-10-02)
+
+Hoy el depósito entrega cajas ya armadas: `Depot.post_orders()` genera pedidos con `package_id`, trampa y
+contenido, y las cajas salen listas para cargar. **Nuevo:** las cajas ya no vienen empaquetadas; el
+equipo recibe el pedido, elige y prepara el contenido, arma la caja y la deja lista para cargar.
+
+**Qué significa para el diseño (a decidir, nada construido):**
+
+- **El empaquetado pasa a ser un tramo del juego, antes de manejar.** Bucle completo: recibir pedido →
+  armar la caja → cargar → manejar por el pueblo → entregar. El pilar sigue siendo cuidar el paquete,
+  pero ahora el cuidado empieza en el depósito.
+- **La trampa nace en el empaquetado.** Hoy la trampa (frágil, explosiva, ruidosa...) la define el pedido.
+  Con empaquetado, la calidad de lo que se arma puede decidir cuánto resiste la caja en el camino:
+  una caja mal armada se rompe antes. Esto conecta el depósito con el manejo.
+- **Roles nuevos:** quien arma, quien carga, quien maneja. Más comunicación, que es el gancho coop.
+- **Presupuesto de tiempo:** una entrega dura hoy 2-5 min. Si empaquetar suma minutos, hay que decidir si
+  el empaquetado cuenta dentro de ese tiempo, o si es una fase aparte con su propio ritmo. Riesgo de
+  que el depósito se vuelva un minijuego largo antes de la acción.
+- **Cercanía a otro juego:** Packing Shift! (el informe que pasaste) tiene empaquetado como núcleo, así que
+  conviene que acá sea una *fase corta y con consecuencias en la ruta*, no el juego entero.
+- **Piezas del depósito que ya existen** y habría que reutilizar (según el relevamiento): estantes,
+  pizarra de pedidos (`DepotOrderBoard`), taller, jaula de suministros, cinta, autoelevador. Las cajas
+  y `DeliveryPackage`/`PackageCare` están en el dominio de `constructor-jugador`.
+
+**Preguntas abiertas del empaquetado:**
+1. ¿Cuánto dura empaquetar una caja (segundos)? ¿Cuenta dentro del tiempo de la entrega?
+2. ¿Qué se decide al empaquetar: contenido, tamaño de caja, relleno, sellado? ¿Todo o algo simple?
+3. ¿La calidad del empaquetado afecta la resistencia de la caja en el camino (sí es la propuesta)?
+4. ¿Es obligatorio hacerlo bien para poder salir, o se puede salir con cajas a medio armar y pagarlo
+   después?
+5. ¿Con 2 jugadores cómo se reparte, si uno maneja y el otro empaqueta?
+
+**Plan:** no se toca el spike N-950. Se agrega una tarea nueva de diseño del empaquetado en M10
+(`critico-diseno` + `pulidor-jugabilidad`), antes de construirlo; el depósito actual se rediseña en
+una tarea propia. Hasta decidirlo, el pueblo asume el depósito actual.
+
 ## 9. Próximos pasos
 
 1. Confirmar D1-D5 y responder las preguntas abiertas.
