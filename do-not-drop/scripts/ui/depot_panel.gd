@@ -77,6 +77,9 @@ func _ready() -> void:
 	EventBus.shop_resolved.connect(_on_shop_resolved)
 	# Somebody else took the wheel: the depot is behind us now.
 	EventBus.run_started.connect(func(_route: StringName, _players: Array) -> void: close())
+	EventBus.care_supplies_changed.connect(func() -> void:
+		if visible and station == &"service":
+			_rebuild())
 	# A service station's counter only sells while the run goes on (N-110).
 	EventBus.run_ended.connect(func(_score: int, _results: Dictionary) -> void:
 		if station == &"service":
@@ -100,6 +103,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
+	# Walked away from a service station's counter: its screen closes.
+	if visible and station == &"service" and is_instance_valid(depot) and depot is SERVICE_SHOP \
+			and (depot as SERVICE_SHOP).local_player_away(Interactable.REMOTE_REACH * 3.0):
+		close()
+		return
 	if _vote_timer_label == null or not visible or not _selling():
 		return
 	_vote_timer_label.text = _vote_status_text()
@@ -304,8 +312,11 @@ func _build_service() -> void:
 	if shop == null:
 		_header(tr("UI_SERVICE_TITLE"), "", UiTheme.MINT, "")
 		return
-	_header(tr("UI_SERVICE_TITLE"), tr("UI_DEPOT_TEAM_CASH") % shop.team_money, UiTheme.MINT, tr(shop.hint_key()))
-	_offer_rows(shop.offers(), shop.supplies, "UI_SERVICE_FULL", shop.team_money,
+	# What can't be bought comes from this peer's own synced kit, like the offers;
+	# the host's wallet is its own, a client's the one the shop last sent.
+	var money: int = CrewProgression.team_money if NetworkManager.is_host() else shop.team_money
+	_header(tr("UI_SERVICE_TITLE"), tr("UI_DEPOT_TEAM_CASH") % money, UiTheme.MINT, tr(shop.hint_key()))
+	_offer_rows(shop.offers(), shop.unavailable(), "UI_SERVICE_FULL", money,
 		func(id: StringName) -> void:
 			if is_instance_valid(shop):
 				shop.buy_supply(id),

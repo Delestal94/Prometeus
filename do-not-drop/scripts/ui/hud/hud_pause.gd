@@ -174,6 +174,14 @@ func _on_service_counter_opened(shop: Node) -> void:
 	if hud.overlay_mode != "run" or not RunManager.is_running:
 		return
 	hud.depot_panel.open(&"service", shop)
+	# Endless frees the station behind the truck: its screen goes with it.
+	if not shop.tree_exiting.is_connected(_close_service_panel):
+		shop.tree_exiting.connect(_close_service_panel, CONNECT_ONE_SHOT)
+
+
+func _close_service_panel() -> void:
+	if is_instance_valid(hud) and is_instance_valid(hud.depot_panel) and hud.depot_panel.station == &"service":
+		hud.depot_panel.close()
 
 
 func _on_connection_lost(reason: String) -> void:

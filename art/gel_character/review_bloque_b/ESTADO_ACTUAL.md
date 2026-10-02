@@ -1,5 +1,27 @@
 # Evidencia en curso, no aprobación B
 
+## Corrección del estado inicial, 2026-10-01
+
+Los tres GLB y el `.blend` guardado tienen ahora los once morphs en cero
+(Delgada). Antes declaraban todos en uno. El importador actual de Godot ya
+cargaba cero; el error confirmado era el estado de autoría/exportación.
+La API genérica del validador no cambió; el modo gel exige defaults efectivos
+finitos y cero, respetando precedencia nodo/malla y el cero implícito de glTF.
+
+Verificación actual: 44 tests Python OK (4 skips requieren Blender), 4/4 pruebas
+de fuente en Blender y 4/4 tests Godot PASS. Los tres GLB pasan 53 muestras;
+144 comparaciones LOD pasan, máximo 4,0143 %. La pose diagnóstica y las tres
+vistas cercanas son idénticas píxel a píxel a `corrected_captures/`.
+Se refrescaron las métricas dependientes de la fuente y la validación exportada.
+Los resultados UV/core y las dependencias pendientes descritas abajo no cambian.
+
+Un ensayo de suavizado de pesos del hombro introdujo pliegues visibles en las
+axilas y fue retirado por completo: el algoritmo de pesos, la geometría y los
+morphs finales son los anteriores. No se aprueban nuevos ajustes visuales ni
+se cierran los ítems 10/13/E por esta corrección.
+
+## Evidencia de preparación anterior
+
 2026-10-01. Entrega de preparación B, no cierre completo ni reemplazo del jugador.
 Rama sincronizada con origin/main7971e6d antes de publicar. La biblioteca añadió
 Run durante la sincronización: se regeneraron los nueve clips actuales; las

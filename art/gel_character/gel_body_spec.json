@@ -102,7 +102,7 @@
     "foot_width_m": 0.26951086956521736,
     "neck_visible_height_m": 0.05201086956521739
   },
-  "reference_pose": "static diagnostic A-pose, arms 15 degrees from vertical; eight animation clips preserve source rotations",
+  "reference_pose": "static diagnostic A-pose, arms 15 degrees from vertical; 9 animation clips preserve source rotations",
   "morph_amplitudes": {
     "general_thickness": 0.3,
     "belly": 0.18,

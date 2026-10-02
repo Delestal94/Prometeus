@@ -17,7 +17,7 @@ do-not-drop/scripts/gameplay/depot/depot_forklift.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_kit.gd|max-line-length 4
 do-not-drop/scripts/gameplay/depot/depot_mirror.gd|max-line-length 1
 do-not-drop/scripts/gameplay/depot/depot_roller_door.gd|max-line-length 2
-do-not-drop/scripts/gameplay/package/package.gd|max-line-length 2
+do-not-drop/scripts/gameplay/package/package.gd|max-line-length 1
 do-not-drop/scripts/gameplay/package/package.gd|max-public-methods 1
 do-not-drop/scripts/gameplay/player/player.gd|max-line-length 1
 do-not-drop/scripts/gameplay/player/player_carry.gd|max-line-length 1
@@ -28,7 +28,6 @@ do-not-drop/scripts/gameplay/route/flock_crossing.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/roadside_story.gd|max-line-length 8
 do-not-drop/scripts/gameplay/route/route.gd|max-line-length 4
 do-not-drop/scripts/gameplay/route/route_sky.gd|max-line-length 1
-do-not-drop/scripts/gameplay/route/route_smoke_check.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/segments/construction_zone_segment.gd|max-line-length 2
 do-not-drop/scripts/gameplay/route/segments/narrow_bridge_segment.gd|max-line-length 1
 do-not-drop/scripts/gameplay/route/segments/rail_crossing_segment.gd|max-line-length 1

@@ -64,6 +64,9 @@ extends SceneTree
 ## - rail_crossing_segment.gd (the level crossing) rolls whether it closes from the session's world_seed
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the autoload runs, every crossing
 ##   would roll from seed 0 and a client would start its own barrier cycle instead of asking the host.
+## - service_stop_shop.gd (a service station's counter) holds the session as NetSession and the vote as
+##   CoopVote: if ShopVoteManager stopped extending CoopVote, `as CoopVote` would give null and the station's
+##   offers would never open to the crew's vote.
 ## - mud_segment.gd (the mud stretch) holds its spot, crane, run log and session typed; the crew's money, the
 ##   run mode, the truck's `carries` and the tests' FakePlayers stay by name (see its budget).
 
@@ -302,6 +305,22 @@ const BUDGETS: Dictionary = {
 	# stay RunManager's current_distance and best_score (same --script compile reason as the spectator
 	# camera: the truck's presentation builds the GPS) and the EventBus handle.
 	"res://scripts/presentation/dashboard_gps.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
+	# The truck's presentation (N-224.4): the truck through vehicle.gd by preload (variant_id, gearbox as
+	# VehicleGearbox, maximum_speed_kmh; cargo_clutter.gd already preloads it from here), the boxes as
+	# DeliveryPackage (is_loaded, mass; what is not one is skipped) and the spectator camera through its
+	# script (stop). By name stays only the EventBus handle.
+	"res://scripts/presentation/vehicle_presentation.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The service station's counter (N-224.4): the session as NetSession (local_id, is_online, is_host, peers) and the
+	# vote as CoopVote (active, offers, close_on, send_state_to). By name stay ShopVoteManager.open_shop (no
+	# class name), CrewProgression (spend, cards, SUPPLIES, team_money), RunManager (the kit, is_running) and
+	# VehicleFaults (spares, repair): their scripts name autoloads, so typing them breaks --script compiles.
+	# The stop (in_bay, counter) and the counter (local_player) stay by name too: service_stop.gd preloads this
+	# script. The /root/ lookup is the one null-safe accessor.
+	"res://scripts/gameplay/route/service_stop_shop.gd": {"call": 13, "callv": 0, "get": 7, "root": 1},
+	# The route smoke check (N-224.4, run by tools/run-tests.sh): the route through route.gd by preload
+	# (route_length, goal_transform, _path_points, houses, house_count) and the goal lot as RouteGoalLot
+	# (parking_pose). Nothing left by name.
+	"res://scripts/gameplay/route/route_smoke_check.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -382,6 +401,8 @@ func _run() -> void:
 
 	var session: Node = root.get_node_or_null(^"/root/NetworkManager")
 	_expect(session is NetSession, "The NetworkManager autoload is a NetSession (the box types it so)")
+	var votes: Node = root.get_node_or_null(^"/root/ShopVoteManager")
+	_expect(votes is CoopVote, "The ShopVoteManager autoload is a CoopVote (the service counter types it so)")
 
 	for script_path: String in SCRIPT_HANDLES:
 		var script: Script = load(script_path) as Script

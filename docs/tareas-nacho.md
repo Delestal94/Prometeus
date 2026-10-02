@@ -1096,6 +1096,30 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     EventBus. En el archivo: 10 → 4 usos (`.call` 5 → 1, `.get(&` 3 → 1, `/root/` 2 → 2).
     `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`). Siguientes:
     `vehicle_presentation.gd` (9), `run_tally.gd` (9).
+  - [x] `vehicle_presentation.gd` (2026-10-02, rama `nacho/N-224-vehicle-presentation-typed`): la presentación del
+    camión. El camión por `preload` de `vehicle.gd` (`Vehicle`; `cargo_clutter.gd` ya lo precarga desde acá, así que
+    no suma ciclo): `variant_id`, `maximum_speed_kmh` y la caja de cambios como `VehicleGearbox` (`enabled`, `gear`)
+    directos; las cajas del grupo `cargo` como `DeliveryPackage` (`is_loaded`, `mass`; lo que no es un paquete se
+    saltea, como antes) y la cámara de espectador por su script (`stop()`). Queda por nombre solo el handle de
+    EventBus. En el archivo: 9 → 1 uso (`.call` 1 → 0, `.get(&` 7 → 0, `/root/` 1 → 1); en `scripts/`: `.call`
+    172 → 171, `.get(&` 163 → 156. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/`
+    libre y `tests/`). Siguientes: `run_tally.gd` (8), `sound_audit.gd` (8), `vehicle_effects.gd` (7).
+  - [x] `service_stop_shop.gd` (2026-10-02, rama `nacho/N-224-service-stop-shop-typed`): el mostrador de la estación
+    de servicio (N-110 y su arreglo #236, el que más usos tenía: 32). La red como `NetSession` (`local_id`,
+    `is_online`, `is_host`, `peer_ids`, `is_peer_ready`) y la votación como `CoopVote` (`active`, `offers`, `close_on`,
+    `send_state_to`). Quedan por nombre `ShopVoteManager.open_shop` (del juego, sin `class_name`), `CrewProgression`,
+    `RunManager` y `VehicleFaults` (sus scripts nombran autoloads y tiparlos rompe la compilación bajo `--script`:
+    `test_service_stop` precarga el mostrador) y la estación y su mostrador (`service_stop.gd` precarga este script).
+    En el archivo: 32 → 21 usos (`.call` 20 → 13, `.get(&` 11 → 7, `/root/` 1 → 1). `test_dynamic_dispatch_budget.gd`
+    suma el archivo y exige que `ShopVoteManager` sea `CoopVote`. Sin aviso (`route/` es de Nacho y `tests/`).
+    Siguientes: `mud_segment.gd` (14), `vehicle_presentation.gd` (9), `route.gd` (9), `run_tally.gd` (9).
+  - [x] `route_smoke_check.gd` (2026-10-02, rama `nacho/N-224-route-smoke-check-typed`, reserva retomada): el
+    chequeo de la ruta que corre `tools/run-tests.sh`. La ruta por `preload` de `route.gd` (`route_length`,
+    `goal_transform`, `_path_points`, `houses`, `house_count`) y el lote de la meta como `RouteGoalLot`
+    (`parking_pose()`). En el archivo: 7 → 0 usos (`.call` 1 → 0, `.get(&` 6 → 0); en `scripts/`: `.call` 170 → 169,
+    `.get(&` 156 → 150. Sus dos líneas largas se partieron (sale de la línea base del lint).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`). Siguientes:
+    `mud_segment.gd` (13), `package_rescue.gd` (13), `rejoin_keepsake.gd` (9), `sound_audit.gd` (8), `route.gd` (8).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -1613,23 +1637,66 @@ Fase 0 de `docs/investigacion-red.md`: medir antes de seguir optimizando.
 Fase 2 de `docs/investigacion-red.md`. Hoy los jugadores remotos (`player.gd _apply_net_state`) y las cajas
 del cliente (`package.gd _process`) se colocan con el último valor que llegó, sin suavizar. Con el jitter
 de internet saltan.
-- [ ] Separar de `VehicleNetSmoother` un `NetSnapshotBuffer` genérico, con reloj del host, y usarlo en
-  jugadores y cajas.
-- [ ] Colchón adaptativo: 2 intervalos más 2 × el jitter medido, entre 50 y 200 ms.
-- [ ] Recién con eso, bajar `replication_interval` de caja y jugador a 1/30 s. `test_net_bandwidth_budget`
-  tiene que seguir pasando.
-- [ ] Tolerancia de alcance proporcional al ping en los chequeos del host (agarrar y usar cajas).
+**[x] Hecho (2026-10-01, rama `nacho/N-217-snapshot-smoothing`, #224)** — `PROTOCOL_VERSION` 23 y 24 (el 22 es de N-110). Aviso:
+`docs/avisos/2026-10-01-n217-suavizado-remoto.md`. Tests: `test_remote_pose_smoothing` y
+`test_remote_carry_alignment` (nuevos); `test_net_pose_smoother`, `test_vehicle_net_smoothing`,
+`test_carry_prediction` y `test_net_stats` ampliados.
+- [x] El buffer genérico es `NetPoseSmoother` (`modules/net_pose_smoother`, ya separado del camión cuando se
+  hicieron los módulos; no se renombró). Ahora toma el reloj de quien manda (`clock_ms()`, tiempo de física),
+  calcula el desfasaje con la llegada menos demorada del último segundo, guarda poses `local` (en el espacio
+  del camión, se dibujan sobre el camión de este peer) y da `latest_pose()`. Lo usan el camión, los jugadores
+  remotos (`player_ride.gd push_net_pose/apply_net_state`) y las cajas del cliente (`package.gd _push_net_pose`).
+  El WIP de la sesión cortada (`scripts/core/net_snapshot_buffer.gd`, que buscaba `NetworkManager` desde
+  adentro) se pasó al módulo y se borró.
+- [x] Colchón adaptativo: `delay()` = 2 intervalos + 2 × jitter (RFC 3550), entre 50 y 200 ms, con cambios
+  suavizados al 5 %. Los huecos largos de una caja quieta (`NetRestThrottle`, 2 Hz) no cuentan como intervalo.
+- [x] Jugador y caja a 1/30 s. Cada pose lleva `net_time` (int, último en el `SceneReplicationConfig`, así su
+  setter ve el paquete entero); el jugador manda `net_yaw` (en el espacio del camión si viaja) en vez de
+  `rotation`; la pose entra al buffer con la señal `synchronized` del sincronizador (paquete entero), y la
+  cabeza, `locomotion_speed` y `jump_anim_time` viajan en el mismo buffer (`drawn_extra`). En un camión
+  inclinado el giro del pasajero se manda relativo al rumbo del camión. `test_net_bandwidth_budget`: host →
+  cliente estable 117,7 → 80,5 KB/s, todo moviéndose 154 → 107,1; subida del host 6,8 → 4,6 Mbit/s.
+- [x] Revisión de `auditor-red`: la caja en manos de un jugador remoto se dibuja sobre su cuerpo tal como se
+  lo dibuja (`carrier_peer_id`, `hold_offset`, `PackageNetPose`), en el host y en un tercer peer: de 27 cm a
+  menos de 1 cm caminando con 40 ms de lag. Al soltar, el que la llevaba la lleva de sus manos a la copia
+  del host en 0,25 s en vez de saltar 0,3-0,7 m para atrás.
+- [x] Alcance: el host juzga a un jugador remoto por su pose más nueva (`reach_origin()` en el servidor), no
+  por la dibujada en el pasado, y suma `NetStats.reach_slack()` (5 m/s × ida y vuelta, tope 1,5 m) en
+  `Interactable._within_reach`, abrir caja, asistir y pasar de mano.
+- [ ] Probar con dos PCs por Steam (con N-215): jugadores caminando y cajas en el camión con `--net-sim` en el
+  cliente, que no salten. **Necesita PC.**
 
-### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: no
+### N-218 · Predicción del camión para el conductor cliente — A · `Opus 5.5 · xhigh` · Aviso: sí (módulo nuevo, `network_manager.gd`) · **[x] rama `nacho/N-218-driver-prediction`**
 
 Fase 3 de `docs/investigacion-red.md`. Hoy el volante del conductor cliente tiene un ping más 100 ms de
 atraso.
-- [ ] El cliente que maneja descongela su copia del camión y la simula con sus inputs numerados.
-- [ ] El host devuelve su pose con el último input procesado. El cliente compara contra su historial y
-  corrige suave (posición en ~150 ms), sin re-simular.
-- [ ] Las cajas siguen en el host y se dibujan en el espacio del camión del cliente (`net_in_vehicle`).
-- [ ] Test con `--fake-lag`: el volante responde en el mismo tick, y la corrección no salta más de 10 cm
-  por frame.
+- [x] El cliente que maneja descongela su copia del camión y la simula con sus inputs numerados.
+  `scripts/gameplay/vehicle/vehicle_prediction.gd` (`VehiclePrediction`, uno por camión): el cliente al volante
+  numera el input de cada tick y lo manda (`submit_driver_input(seq, …)`) mientras maneja; mientras el camión del host
+  también se simula (`net_simulating`: no congelado por carga, estacionamiento o fin de corrida) descongela su copia y
+  le aplica las mismas fuerzas (`vehicle.gd _drive()`, compartido con el host). `--no-drive-prediction` la apaga.
+- [x] El host devuelve su pose con el último input procesado. El cliente compara contra su historial y
+  corrige suave (posición en ~150 ms), sin re-simular. Módulo nuevo `modules/net_prediction/`: el host reproduce los
+  inputs uno por tick (`NetInputBuffer`, colchón de 2, el último se sostiene si se pierde uno) y replica cuál
+  representa su pose (`net_input_seq`); el cliente (`NetPredictionReconciler`) corrige posición (~92 % en 150 ms, a
+  lo sumo 10 cm por tick, zona muerta 2 cm), rumbo (antes, 3° por tick) y, despacio y solo pasado 0,5 m/s, la
+  velocidad; salta pasados 3 m o 45°. Medido: corregir la velocidad rápido (como la posición) hace oscilar la
+  suspensión y deja las poses 30 veces más lejos. Las velocidades, el volante y la fuerza del motor viajan por
+  proxies `net_*` para que el sincronizador no pise lo que predice el cliente. El barro (`mud_segment.gd`) aplica su
+  agarre y su freno también a la copia predicha (con el estado replicado); empujes, grúa y choques con animales le
+  llegan como corrección. Al dejar de manejar, la copia se vuelve a congelar y la diferencia con el búfer de poses
+  se funde en 0,3 s. `PROTOCOL_VERSION` 25.
+- [x] Las cajas siguen en el host y se dibujan en el espacio del camión del cliente (`net_in_vehicle`). Sin cambios:
+  el camión predicho se dibuja interpolado, como el del host, y `PackageNetPose`/`Player.Ride` ya toman ese camino;
+  `cargo_clutter.gd` lo sigue por ticks en ese caso.
+- [x] Test con `--fake-lag`: el volante responde en el mismo tick, y la corrección no salta más de 10 cm
+  por frame. `tests/test_vehicle_prediction.gd` (dos camiones en dos mundos de física, enlace de 150 ms + jitter y
+  5 % de pérdida: error mediano 1,5 cm, peor corrección 1 cm por tick; un freno que solo siente el host, a 0,34 m;
+  reinicio del host → salto; cambio de conductor → se congela sin saltar), `modules/net_prediction/tests/` y una etapa
+  nueva de `tools/run-net-pair.sh` (dos procesos reales: el cliente maneja 2 s, error mediano 2 cm, peor corrección
+  6 mm por tick, líneas `DRIVE`).
+- [ ] Probar con Steam real entre dos PCs (y `--net-sim` en el cliente): que el volante se sienta inmediato y que
+  el camión no "tironee" en curvas ni en el barro. **Necesita PC** (junto con N-215).
 - Descartado: pasarle la autoridad del camión al conductor. El host terminaría simulando las cajas sobre
   un camión que llega atrasado, y volverían las cajas que atraviesan las paredes.
 
@@ -1721,18 +1788,39 @@ Fase 4 de `docs/investigacion-red.md`.
   (`PlayerColorSlot`, host en 0) y de este PR solo la reserva de slots. Tests: `test_network_rejoin`,
   `net_session__test_net_session_rejoin` y la última etapa de `net_pair` (sale con la caja, vuelve desde el
   mismo juego y recupera slot y mérito). Aviso: `docs/avisos/2026-09-30-n221-rpc-y-reconexion.md`.
-  - [ ] Falta: no recupera posición, asiento ni caja (se sueltan al irse, S-209; aparece como cualquier join
-    tardío); en LAN no se lo reconoce si reinició el juego (token nuevo); en LAN un extraño a una sala llena
-    carga el nivel antes de oír "full" (quién es llega con su respuesta de listo); el fantasma de un crash con
-    Steam no está probado con sockets reales (por ENet sí: `net_pair`).
-  - [ ] Pedir la identidad antes del estado completo: con la sala llena en LAN, el host manda primero solo el
-    nonce, el que entra contesta su eslabón de la cadena y recién ahí (fantasma suyo o lugar libre) recibe el
-    estado y carga el nivel; si no, oye "full" sin cargar nada. Cambia el handshake (otro `PROTOCOL_VERSION`).
-    Lo dejó anotado la segunda pasada de `auditor-red` sobre `nacho/N-221-followups`.
+  - [x] Recupera posición, asiento y caja. **[x] 2026-10-01, rama `nacho/N-221-rejoin-restore`:** al irse se
+    sigue soltando todo en el acto (S-209), pero el host anota qué tenía (`RejoinKeepsake`,
+    `scripts/gameplay/rejoin_keepsake.gd`, en `peer_removed`) y, si vuelve la misma identidad (señal nueva
+    `NetSession.peer_returned(id, anterior)`, también con el mismo id), lo spawnea desde la nota: en el camión si
+    estaba (su asiento si sigue libre, abriéndole la puerta del chofer; si se lo tomaron, a mitad de corrida otro
+    asiento o la caja como un join tardío), a pie donde estaba si tiene sentido (antes de la corrida en el
+    depósito; a mitad, a menos de 40 m del camión) y con su caja en las manos si nadie la tocó (suelta, sin
+    estantear ni perder, sin otro que la haya levantado, a menos de 3 m). Un fantasma que se suelta en el mismo
+    frame: el que vuelve se spawnea el frame siguiente, cuando el viejo ya soltó asiento y caja. Sin RPC nuevo.
+    Tests: `test_rejoin_keepsake` y las dos etapas de rejoin de `net_pair` (vuelve donde estaba y con su caja,
+    también sobre un fantasma). Revisión de `auditor-red` (misma rama): la caja devuelta no cuenta como rescate
+    (`_rescue_pending` se conserva), antes de la corrida con su asiento ocupado aparece al lado y no encima, el
+    asiento se decide después de devolverle la caja y la puerta del chofer que se le abrió se cierra si el asiento
+    no lo toma, y el reintento del spawn es una conexión de una vez, no un `await` (un nivel liberado no sigue).
+    Sigue faltando: en LAN no se lo reconoce si reinició el juego (token nuevo); el fantasma de un crash con Steam
+    no está probado con sockets reales (por ENet sí: `net_pair`); vuelve mirando hacia adelante (el spawn no
+    lleva yaw: sumarlo cambia el protocolo); a pie a menos de 40 m del camión vuelve donde estaba aunque el
+    terreno de ese tramo todavía no esté armado en su copia (el rescate al suelo seguro lo cubre, sin probar).
+  - [x] Pedir la identidad antes del estado completo. **[x] misma rama:** con la sala llena en LAN el host manda
+    solo `{version, session, identify}`, el que entra contesta su eslabón (`NetAdmission.answer_identify()`) y recién ahí
+    (fantasma suyo o lugar libre: `NetAdmission.on_identity()`) recibe el estado y carga el nivel; si no, oye
+    "full" (o "connection" si repite un eslabón ajeno) sin cargar nada. Su respuesta de listo ya no trae
+    identidad y el host no la lee (`identified`). `PROTOCOL_VERSION` 24 → 26 (25 reservado para N-218, con una
+    entrada provisoria en el historial). Tests: `net_session__test_net_session_rejoin` (sin sockets
+    y por ENet: el que vuelve suelta al fantasma antes de cargar, extraño y ladrón sin estado),
+    `test_network_rejoin`. Un joiner preguntado que no contesta oye "connection" a los 5 s
+    (`NetAdmission.identify_timeout_seconds`) en vez de ocupar la conexión de sobra 45 s.
+    Aviso: `docs/avisos/2026-10-01-n221-rejoin-restore.md`.
   - [ ] Nota para cuando exista la UI de silenciar (`SteamVoice`): el silencio y el volumen se guardan por peer id
     (`_muted`, `_peer_volume`), así que el que vuelve con otro id llega sin silenciar; y para un fantasma no llega
     `peer_disconnected` (`SceneMultiplayer.disconnect_peer()` lo bloquea), así que sus entradas quedan hasta que
-    termina la sesión. Cuando haya UI: guardarlo por identidad (`peer_identity()`) y olvidarlo con `peer_removed`.
+    termina la sesión. Cuando haya UI: moverlo con `peer_returned(id, anterior)` (o guardarlo por
+    `peer_identity()`) y olvidarlo con `peer_removed`. Sin UI todavía, queda para entonces.
 - [x] Seguimiento de la auditoría de #125 (`auditor-red`), rama `nacho/N-221-followups`. La caja de un
   fantasma conserva su ventana de rescate: `NetSession.peer_removed` (antes de `roster_changed`, una vez por
   salida), que `package.gd` escucha en lugar de `multiplayer.peer_disconnected`. Sala llena: ENet acepta una
@@ -2720,7 +2808,11 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   dinero cooperativo, arreglar averías (N-214) y un cosmético escondido (N-311).
 - [x] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
 - [x] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
-- [x] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
+- [x] **N-110.2** Arreglos de la auditoría de red (`auditor-red`): usar el mostrador otra vez ya no borra los votos,
+  la votación solo sigue abierta con el equipo en la estación (el host la cierra cuando se van), una carta de
+  Prioridad o Descuento cobra una vez, el panel se cierra al alejarse o si Endless borra la estación, aviso sin
+  plata, estado solo a peers con el nivel cargado. Aviso: `docs/avisos/2026-10-01-service-stop-vote-fixes.md`.
+- [ ] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
   kiosco con mostrador, poste de precios, carteles de "estación de servicio"): hoy son cajas `DepotKit` con tres props
   del depósito (timbre, pallet envuelto, matafuego). Después, captura con `revisor-visual` en entrega y en Endless.
   **Hecho (2026-10-01), rama `arte/N-110.1-service-station`:** 6 GLB `sm_env_service_*` (`tools/build_service_station.py`,

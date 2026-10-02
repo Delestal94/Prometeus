@@ -1,7 +1,7 @@
 extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_body_asset.gd
 ## Guards the isolated S-311 body exports, not the active rounded player:
-## three triangle budgets, identical eleven working morphs, twenty named bones,
+## three triangle budgets, eleven zero-default working morphs, twenty named bones,
 ## nine animation durations, finite vertex/UV data, zone colours and foot pivot.
 ## Closure, UV overlap and intersections are checked independently by validate_glb.py.
 
@@ -69,6 +69,8 @@ func _check_mesh(body: MeshInstance3D, lod: int) -> void:
 	for index: int in mini(mesh.get_blend_shape_count(), MORPHS.size()):
 		_expect(String(mesh.get_blend_shape_name(index)) == MORPHS[index],
 			"LOD%d morph%d matches contract (got %s)" % [lod, index, mesh.get_blend_shape_name(index)])
+		_expect(is_zero_approx(body.get_blend_shape_value(index)),
+			"LOD%d morph%d loads Delgada at zero weight (got %f)" % [lod, index, body.get_blend_shape_value(index)])
 		body.set_blend_shape_value(index, -1.0)
 		_expect(is_equal_approx(body.get_blend_shape_value(index), -1.0),
 			"LOD%d morph%d accepts negative weight" % [lod, index])
