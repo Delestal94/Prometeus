@@ -13,8 +13,19 @@ extends SceneTree
 ## - player_cargo_care.gd keeps a local EDGE_MARGIN instead of naming Hud; this
 ##   checks it equals Hud.EDGE_MARGIN (hud.gd is load()ed at runtime here so the
 ##   test does not create the static edge itself).
+## - It also reaches Depot statically (the _DEPOT const): depot.gd used to type
+##   RunManager, CrewProgression, RescueHook and VehicleFaults, which name the
+##   EventBus autoload, so they failed to compile and /root/RunManager ran with
+##   no script (N-919.2). Those scripts must still compile here.
 
 const _HOUSE := preload("res://scripts/gameplay/route/delivery_house.gd")
+const _DEPOT := preload("res://scripts/gameplay/depot/depot.gd")
+const EVENT_BUS_USERS: Array[String] = [
+	"res://scripts/core/run_manager.gd",
+	"res://scripts/core/crew_progression.gd",
+	"res://scripts/gameplay/vehicle/rescue_hook.gd",
+	"res://scripts/gameplay/vehicle/vehicle_faults.gd",
+]
 
 var _failures: int = 0
 
@@ -53,8 +64,19 @@ func _run() -> void:
 	# Never added to the tree: free it directly.
 	level.free()
 
+	# --- the Depot chain leaves the autoload scripts compilable ---
+	_expect(_DEPOT != null, "Depot is reached statically (got %s)" % _DEPOT)
+	for path: String in EVENT_BUS_USERS:
+		var script: Script = load(path)
+		_expect(script != null and script.can_instantiate(),
+			"%s compiles in a --script run that names Depot" % path.get_file())
+	var run_manager: Node = root.get_node_or_null(^"RunManager")
+	_expect(run_manager != null and run_manager.get_script() != null,
+		"The RunManager autoload keeps its script (got %s)"
+		% (run_manager.get_script() if run_manager != null else "no node"))
+
 	if _failures == 0:
-		print("PASS: HUD node keeps hud.gd in a --script run; care card EDGE_MARGIN matches the HUD's")
+		print("PASS: HUD and RunManager keep their scripts in a --script run; care card EDGE_MARGIN matches the HUD's")
 	quit(_failures)
 
 

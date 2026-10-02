@@ -25,16 +25,19 @@ después (todo lo que llega a `route.gd`, `DeliveryHouse` o `RouteStreamer`): `b
 muerto sin avisar. CI no lo ve: `run-tests.sh` decide por código de salida y el smoke de `release.yml` no usa `--script`.
 Hecho cuando `bench_drive` y `render_route_dressing` corren sin `SCRIPT ERROR` y el HUD de `level_base` existe con su
 script (comprobado por un test), y la serie de `docs/rendimiento-pc.md` anota desde qué fila vuelve a medir con HUD.
-- [ ] **N-919.1** Cortar la única dependencia de afuera hacia `Hud`: `player_cargo_care.gd:66-67,77-78` usan
+- [x] **N-919.1** Cortar la única dependencia de afuera hacia `Hud`: `player_cargo_care.gd:66-67,77-78` usan
   `Hud.EDGE_MARGIN`; reemplazar por una constante local `EDGE_MARGIN: int = 40` (como ya hace con `BASE_HEIGHT`, l.23),
   con comentario del motivo (un `--script` compila antes que los autoloads). Probado en un worktree: 56 de 57 scripts
   compilan sin `SCRIPT ERROR` y el HUD vuelve a tener `hud.gd`. Con `constructor-jugador`; tests `cargo_care`, `hud`.
-- [ ] **N-919.2** Identificar el `SCRIPT ERROR` que sigue en `tests/test_depot_mirror.gd` (ya afectado antes del #208) y
+  **[x] Hecho (2026-10-02, rama `nacho/N-919-hud-script-dep`)** — `EDGE_MARGIN` local en `player_cargo_care.gd`; `bench_drive` y `render_route_dressing` corren sin `SCRIPT ERROR` y el HUD de `level_base` vuelve a tener `hud.gd` (comprobado con y sin el arreglo). Aviso `docs/avisos/2026-10-02-regresion-208-hud-sin-script.md`.
+- [x] **N-919.2** Identificar el `SCRIPT ERROR` que sigue en `tests/test_depot_mirror.gd` (ya afectado antes del #208) y
   arreglarlo. Con `cazador-bugs`; tests `depot_mirror`.
-- [ ] **N-919.3** Tests: (a) `player_cargo_care.EDGE_MARGIN == Hud.EDGE_MARGIN`, cargando `hud.gd` con `load()` en
+  **[x] Hecho (2026-10-02, rama `nacho/N-919-hud-script-dep`)** — causa: `depot.gd` precargaba como tipo `run_manager.gd`, `crew_progression.gd`, `rescue_hook.gd` y `vehicle_faults.gd` (nombran `EventBus`; #202, N-224.3): todo `--script` que nombra `Depot` dejaba `/root/RunManager` sin script. Pasan a `Node` sin tipo, como en `PackageAutoloads`; `test_dynamic_dispatch_budget` ajustado. Ojo: un `.godot/` local viejo (caché de clases anterior a los módulos) da `Parse Error` falsos; `--import` lo arregla.
+- [x] **N-919.3** Tests: (a) `player_cargo_care.EDGE_MARGIN == Hud.EDGE_MARGIN`, cargando `hud.gd` con `load()` en
   runtime; (b) un chequeo que falle si un `--script` deja el HUD de `level_base` sin script, o que `run-tests.sh` y CI
   traten `SCRIPT ERROR: Compile Error` como falla (así la próxima dependencia estática no pasa en silencio). Con
   `escritor-tests`; tests `hud`, `run_tests`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-919-hud-script-dep`)** — `tests/test_hud_script_loads.gd`: llega a `DeliveryHouse` y `Depot` estáticamente y exige HUD con `hud.gd`, `RunManager` con script, los cuatro scripts compilables y los dos `EDGE_MARGIN` iguales; falla (9) con el código de antes. La opción de que `run-tests.sh` trate `SCRIPT ERROR` como falla queda sin hacer: el test cubre las dos cadenas conocidas; `level_common.gd` sigue precargando `vehicle_faults.gd` y `rescue_hook.gd` (un `--script` que nombre `LevelCommon` puede repetirlo).
 - [ ] **N-919.4** Correr `bench_drive` (reparto y Endless) y anotar en `docs/rendimiento-pc.md` desde qué fila mide de
   nuevo con HUD y que las filas desde el #208 hasta el arreglo no son comparables. Con `perfilador-rendimiento`
   (necesita PC); aviso `docs/avisos/2026-10-02-regresion-208-hud-sin-script.md` en el mismo PR que N-919.1.
