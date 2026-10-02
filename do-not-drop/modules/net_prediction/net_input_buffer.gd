@@ -20,6 +20,10 @@ class_name NetInputBuffer
 ## - **Ahead:** inputs flowing again but MAX_LEAD or more behind the counter
 ##   (the link slowed down for good), it steps back to the newest one, rather
 ##   than keep playing every input that many ticks late.
+## - **Stale:** the counter more than STALE_TICKS past the newest input (the
+##   peer stopped sending without leaving: a hitch, a Wi-Fi drop), is_stale()
+##   says so. The last input is still handed back; what holding it that long
+##   means is the game's to decide (a pedal let go, a button released).
 ## - Inputs at or below the newest one already in (a repeat, an old one from
 ##   before a reset) are ignored. Numbers only ever grow on the sending side.
 ##
@@ -30,6 +34,9 @@ class_name NetInputBuffer
 const CUSHION: int = 2
 const MAX_LAG: int = 8
 const MAX_LEAD: int = 6
+## Ticks the last input may be held past the newest one before it is stale:
+## half a second at 60 Hz, far past any jitter or single lost packet.
+const STALE_TICKS: int = 30
 ## Inputs kept at most (anything older than the counter is dropped sooner).
 const MAX_INPUTS: int = 64
 
@@ -82,6 +89,12 @@ func tick_seq() -> int:
 ## The newest input number that has landed (-1 before the first).
 func newest() -> int:
 	return _newest
+
+
+## Whether the last consume() played an input held more than STALE_TICKS past
+## the newest one: nothing new has landed for that long.
+func is_stale() -> bool:
+	return _newest >= 0 and _tick_seq - _newest > STALE_TICKS
 
 
 ## Somebody else took the controls, or nobody holds them: start over.

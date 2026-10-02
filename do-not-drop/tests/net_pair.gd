@@ -271,14 +271,21 @@ func _check_client_drives(client_player: Player) -> void:
 	var seated: bool = await _wait_until(func() -> bool: return int(vehicle.driver_peer_id) == _client_peer_id)
 	_expect(seated, "the client takes the wheel")
 	var start: Vector3 = vehicle.global_position
+	# The client gets out before it reports, and a change of driver puts the
+	# host's input number back to 0 (N-922): the highest one it played counts.
+	var played: Array[int] = [0]
+	var track_seq := func() -> void: played[0] = maxi(played[0], int(vehicle.get(&"net_input_seq")))
+	get_tree().physics_frame.connect(track_seq)
 	rpc_id(_client_peer_id, &"_client_drive", vehicle.get_path())
 	await _wait_for_report(&"drive")
+	get_tree().physics_frame.disconnect(track_seq)
 	var moved: float = vehicle.global_position.distance_to(start)
-	print("DRIVE role=host moved %.1f m, playing input %d" % [moved, int(vehicle.get(&"net_input_seq"))])
+	print("DRIVE role=host moved %.1f m, played up to input %d" % [moved, played[0]])
 	_expect(moved > 2.0, "the host's truck drives with the client's inputs (moved %.1f m)" % moved)
-	_expect(int(vehicle.get(&"net_input_seq")) > 0, "the host plays the client's numbered inputs")
+	_expect(played[0] > 0, "the host plays the client's numbered inputs")
 	var left: bool = await _wait_until(func() -> bool: return int(vehicle.driver_peer_id) == 0)
 	_expect(left, "the client gets out of the driver's seat")
+	_expect(int(vehicle.get(&"net_input_seq")) == 0, "with the client out, the host's pose stands for no input")
 	await _pump(0.5)
 
 

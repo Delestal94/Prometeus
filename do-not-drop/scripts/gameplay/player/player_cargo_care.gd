@@ -21,6 +21,12 @@ const InputLag = preload("res://scripts/gameplay/package/tender_input_lag.gd")
 const GAME_SETTINGS := preload("res://scripts/core/game_settings.gd")
 ## The logical height the card lays out for, like Hud.BASE_HEIGHT.
 const BASE_HEIGHT: float = 720.0
+## The HUD's edge margin (Hud.EDGE_MARGIN), so the right column lines up. Kept
+## local on purpose: naming Hud here pulls hud.gd into every script that
+## reaches Player, and a --script run compiles that chain before the autoloads
+## exist, so hud.gd fails on NetworkManager and the HUD loads without its script
+## (N-919, regression of #208). test_hud_script_loads checks both values match.
+const EDGE_MARGIN: int = 40
 ## The care card and the depot practice card are part of the dashboard, so they
 ## sit *under* the HUD's CanvasLayer (Hud, layer 1): the HUD's modals -- Options,
 ## pause, results, the depot and crew panels -- must always paint over them
@@ -62,9 +68,8 @@ func _ready() -> void:
 	card.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 	card.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	card.grow_vertical = Control.GROW_DIRECTION_BOTH
-	# The HUD's own margin (Hud.EDGE_MARGIN), so the right column lines up.
-	card.offset_right = -Hud.EDGE_MARGIN
-	card.offset_left = -Hud.EDGE_MARGIN - CareCard.WIDTH
+	card.offset_right = -EDGE_MARGIN
+	card.offset_left = -EDGE_MARGIN - CareCard.WIDTH
 	_root.add_child(card)
 	card.visible = false
 	var profile: UnlockProfile = _profile()
@@ -74,8 +79,8 @@ func _ready() -> void:
 		practice.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 		practice.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		practice.grow_vertical = Control.GROW_DIRECTION_BOTH
-		practice.offset_right = -Hud.EDGE_MARGIN
-		practice.offset_left = -Hud.EDGE_MARGIN - CarePractice.WIDTH
+		practice.offset_right = -EDGE_MARGIN
+		practice.offset_left = -EDGE_MARGIN - CarePractice.WIDTH
 		_root.add_child(practice)
 		practice.visible = false
 

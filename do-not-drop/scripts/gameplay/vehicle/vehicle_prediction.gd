@@ -12,7 +12,8 @@ extends RefCounted
 ##   into the truck (position in ~150 ms, heading sooner, at most 10 cm a tick, snapped past 3 m), without
 ##   re-simulating: Jolt can't step one body on its own.
 ## - **The host** plays the driver's inputs back one per physics tick from a NetInputBuffer (a cushion of two
-##   against jitter, the last one held through a loss), so its pose says exactly which input it stands for.
+##   against jitter, the last one held through a loss, its pedal let go once stale), so its pose says exactly which
+##   input it stands for.
 ##   The host stays the authority: its truck carries the boxes, the shell and every rule; nothing the client
 ##   predicts is believed.
 ## - **Everyone else** draws the host's truck from the pose buffer as before (NetPoseSmoother).
@@ -33,6 +34,8 @@ extends RefCounted
 const Vehicle = preload("res://scripts/gameplay/vehicle/vehicle.gd")
 const EXIT_BLEND_SECONDS: float = 0.3
 const EXIT_BLEND_MAX_DISTANCE: float = 30.0
+## Forward speed (m/s) above which a throttle against the motion brakes; below it, it backs up (vehicle.gd _drive).
+const BRAKING_SPEED: float = 0.7
 
 var enabled: bool = not OS.get_cmdline_user_args().has("--no-drive-prediction")
 ## Whether this peer's copy is the one predicting right now.
@@ -79,8 +82,22 @@ func host_tick(vehicle: Vehicle) -> void:
 	if entry.is_empty():
 		return
 	var data: Array = entry[1]
-	vehicle.set_controls(float(data[0]), float(data[1]), bool(data[2]))
+	var throttle: float = float(data[0])
+	if inputs.is_stale() and not _brakes(vehicle, throttle):
+		# The driver went quiet without leaving (a hitch, a Wi-Fi drop): its last input held for good would keep
+		# the truck flat out with the wheel turned. The pedal is let go -- unless it was braking, which goes on
+		# until the truck stops (freewheeling downhill would be worse) and never turns into backing up. The wheel
+		# and the handbrake stay as held.
+		throttle = 0.0
+	vehicle.set_controls(throttle, float(data[1]), bool(data[2]))
 	applied_seq = int(entry[0])
+
+
+## Whether `throttle` brakes the truck as it moves now: against the motion, while still rolling (vehicle.gd
+## _drive; slower than that it would back up).
+static func _brakes(vehicle: Vehicle, throttle: float) -> bool:
+	var forward_speed: float = vehicle.linear_velocity.dot(-vehicle.global_basis.z)
+	return throttle * forward_speed < 0.0 and absf(forward_speed) > BRAKING_SPEED
 
 
 ## Host: an input from the driver (already checked: sender, finite numbers).
@@ -88,9 +105,26 @@ func receive(seq: int, throttle: float, steering_input: float, handbrake: bool) 
 	inputs.push(seq, [throttle, steering_input, handbrake])
 
 
-## Host: the wheel changed hands.
-func driver_changed() -> void:
+## The wheel changed hands (called on every peer: driver_peer_id is replicated). Host: the old driver's inputs are
+## dropped, and until the new driver's first one plays the pose stands for no input (0; a client counts from 1),
+## not for the old driver's last number, which the new driver's own count may reach and be corrected against.
+## A client's applied_seq is its own count and goes on: reset there, a wheel that went elsewhere and back between
+## two ticks would have its next state recorded under 0, which wipes the reconciler's history.
+func driver_changed(vehicle: Vehicle) -> void:
+	if not vehicle.is_inside_tree() or not vehicle.is_multiplayer_authority():
+		return
 	inputs.clear()
+	applied_seq = 0
+
+
+## The level stopped the run under this peer's copy (the host is gone, N-922): frozen where it is, the prediction
+## over and not started again until it stops being wanted.
+func halt(vehicle: Vehicle) -> void:
+	active = false
+	_held_off = true
+	_exit_left = 0.0
+	reconciler.clear()
+	vehicle.freeze = true
 
 
 ## Client, each physics tick, before the truck's forces. Sends this tick's input while this peer drives,
