@@ -14,10 +14,12 @@ extends SceneTree
 ##   seeing the network, the route events and the delivery photos, or the route
 ##   events would stop paying and fining;
 ## - depot.gd is no autoload, so its handles (SCRIPT_HANDLES: NETWORK_MANAGER,
-##   RUN_MANAGER, CREW_PROGRESSION, UNLOCK_MANAGER) are checked against the
-##   script loaded from its path: each must be the script its autoload runs, or
-##   `as <handle>` would give null and the depot would stop seeing the
-##   network (host, seed), the crew's money and supplies, and the unlocks;
+##   UNLOCK_MANAGER) are checked against the script loaded from its path: each
+##   must be the script its autoload runs, or `as <handle>` would give null and
+##   the depot would stop seeing the network (host, seed) and the unlocks.
+##   RunManager and CrewProgression stay plain nodes there (N-919.2: their
+##   scripts name EventBus, and a --script that names Depot compiles them
+##   before the autoloads exist);
 ## - package.gd (the box), package_handling.gd (its hand-over) and
 ##   package_rescue.gd (its care simulation) reach the network through package_autoloads.gd as a NetSession (the class
 ##   NetworkManager extends): the NetworkManager autoload must be one, or
@@ -373,8 +375,6 @@ const HANDLES: Dictionary = {
 const SCRIPT_HANDLES: Dictionary = {
 	"res://scripts/gameplay/depot/depot.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
-		"RUN_MANAGER": "/root/RunManager",
-		"CREW_PROGRESSION": "/root/CrewProgression",
 		"UNLOCK_MANAGER": "/root/UnlockManager",
 	},
 	"res://scripts/tools/trailer_shot.gd": {
