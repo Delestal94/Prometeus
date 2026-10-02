@@ -32,6 +32,8 @@ class_name ServiceStopShop
 ## before the autoloads exist (see PackageAutoloads, N-224.4). The stop stays a
 ## plain node too: ServiceStop preloads this script.
 
+## The accessory shelf's side of the wallet (kept out of this file's by-name budget).
+const ACCESSORIES = preload("res://scripts/gameplay/route/service_stop_accessories.gd")
 ## Stamped on every offer, so the depot panel and other stops leave them alone.
 const VENUE: StringName = &"service_stop"
 ## Road prices over the depot's: the depot's spare part is $100, here $140.
@@ -181,10 +183,7 @@ func _spare_cost() -> int:
 ## when one is already aboard, an accessory somebody has already (one copy each).
 func unavailable() -> Array:
 	var blocked: Array = []
-	var crew: Node = _autoload(&"CrewProgression")
-	if crew != null:
-		var owned: AccessoryInventory = crew.get(&"accessories")
-		blocked.append_array(AccessoryOffers.blocked_ids(accessory_offers(), owned))
+	blocked.append_array(ACCESSORIES.blocked(_autoload(&"CrewProgression"), accessory_offers()))
 	var start: Dictionary = _kit_start()
 	for id: StringName in ITEMS:
 		if id == SPARE:
@@ -276,15 +275,11 @@ func _purchase(id: StringName, discount_peer: int) -> bool:
 ## when the grant will work, so nothing is paid for an accessory somebody has.
 func _purchase_accessory(offer: Dictionary, discount_peer: int) -> bool:
 	var crew: Node = _autoload(&"CrewProgression")
-	var accessory: StringName = StringName(offer["accessory"])
-	var peer: int = int(offer.get("buyer", 0))
-	var result: Dictionary = crew.call(&"buy_accessory", crew.call(&"player_color_key", peer), accessory,
-			float(offer.get("multiplier", PRICE_MARKUP)), discount_peer)
+	var result: Dictionary = ACCESSORIES.buy(crew, offer, discount_peer, PRICE_MARKUP)
 	var item: String = tr(String(offer["title"])).to_lower()
 	match StringName(result["reason"]):
 		&"":
-			var who: String = crew.call(&"player_color_name", peer)
-			_notice(tr("WORLD_SERVICE_NOTICE_ACCESSORY") % [item, who, int(result["cost"])])
+			_notice(tr("WORLD_SERVICE_NOTICE_ACCESSORY") % [item, result["who"], int(result["cost"])])
 		&"no_money":
 			_notice(tr("WORLD_SERVICE_NOTICE_NO_MONEY") % [item, int(result["cost"])])
 		&"owned", &"taken":
