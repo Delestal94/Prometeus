@@ -264,6 +264,42 @@ class StrictBodyTests(unittest.TestCase):
             [(0., 0., 0.), (1., 0., 0.), (0., 1., 0.)],
             [(.2, .2, -1.), (.2, .2, 1.), (.8, .2, 0.)]))
 
+    def test_near_plane_shared_endpoint_is_not_a_crossing(self):
+        """Independent coordinates captured from a valid segmented quad edge.
+
+        Skinning roundoff extended a plane hit 31 nm past the common vertex;
+        that point is outside the other triangle, not an interior crossing.
+        """
+        from gel_body_validation import triangle_intersection
+        a = [(0.1592371016740799, -0.11349065601825714, 0.8567417860031128),
+             (-2.7388122325611164e-10, -0.12859080731868744, 0.9732456803321838),
+             (-6.859862122787774e-10, -0.13005274534225464, 0.8773510456085205)]
+        b = [(0.14189526438713074, -0.11699701845645905, 0.9645093083381653),
+             (2.3351742761690275e-10, -0.12712886929512024, 1.0691403150558472),
+             a[1]]
+        c = [a[1], b[1],
+             (-0.12455340474843979, -0.12050338089466095, 1.0722767114639282)]
+        for first, second in ((a, b), (b, a), (c, a), (a, c)):
+            with self.subTest(first=first, second=second):
+                self.assertFalse(triangle_intersection(first, second))
+
+    def test_near_plane_and_shared_vertex_real_crossings_remain_detected(self):
+        from gel_body_validation import triangle_intersection
+        a = [(0., 0., 0.), (1., 0., 0.), (0., 1., 0.)]
+        for b in ([a[0], (.2, .2, -1.), (.2, .2, 1.)],
+                  [(.2, .2, -1e-7), (.2, .2, 1e-7), (.8, .2, 0.)]):
+            self.assertTrue(triangle_intersection(a, b))
+            self.assertTrue(triangle_intersection(b, a))
+
+    def test_shallow_crossing_with_endpoints_inside_plane_tolerance(self):
+        """A transverse segment remains real even when its z offsets are tiny."""
+        from gel_body_validation import triangle_intersection
+        a = [(-6., 2., 0.), (6., 2., 0.), (0., -100., 0.)]
+        b = [(-10., -1., -5e-9), (10., -1., -5e-9), (0., 3., 5e-9)]
+        # The actual segment [(-5, 1, 0), (5, 1, 0)] lies inside both triangles.
+        self.assertTrue(triangle_intersection(a, b))
+        self.assertTrue(triangle_intersection(b, a))
+
     def test_actual_glb_self_intersection(self):
         def change(s):
             # A closed quad tube follows a figure eight: its crossing is real

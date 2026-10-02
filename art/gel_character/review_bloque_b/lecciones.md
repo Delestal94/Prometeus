@@ -34,3 +34,19 @@ en este entorno, por lo que estas lecciones quedan junto a la evidencia revisabl
   pliegues usando materiales de doble cara ni rebajar umbrales para aprobar.
 - Una mejora numérica no reemplaza la comparación visual. Esta entrega corrige
   únicamente defaults; el ajuste visual del hombro sigue pendiente.
+
+## Contacto numérico en anillos de retopología
+
+- En una arista segmentada válida, el skinning en reposo desplazó posiciones
+  hasta 0,125 µm. Signos opuestos de distancias al plano, ambos dentro de la
+  tolerancia, generaban un falso cruce 31 nm más allá del vértice compartido.
+- Un producto cruzado mide área: su tolerancia debe escalarse por el largo de
+  la arista para conservar la tolerancia de distancia. No aumentar el epsilon
+  global ni excluir caras que comparten sólo un vértice: pueden cruzarse fuera
+  de él. Las regresiones conservan esos cruces reales y los casi coplanares.
+- No suprimir cruces sólo porque sus extremos estén cerca del plano: una
+  intersección transversal puede tener distancias menores que epsilon y un
+  segmento interior real. La corrección conserva el cálculo de signos opuestos.
+- Dividir anillos conservando las posiciones no resolvió los pliegues de los
+  LOD reducidos. Los candidatos quedaron locales y se descartaron: esta
+  corrección del predicado no aprueba la retopología ni los ítems 10/12/13.

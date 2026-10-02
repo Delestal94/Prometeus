@@ -86,7 +86,10 @@ def triangle_intersection(a, b):
         return overlap_area(aa, bb) > EPS * EPS
 
     def inside(p, tri, n):
-        return all(dot(cross(sub(q, v), sub(p, v)), n) >= -EPS
+        # Cross products are area units; scale the distance tolerance by edge
+        # length so a short edge does not admit a point beyond its endpoint.
+        return all(dot(cross(sub(q, v), sub(p, v)), n) >=
+                   -EPS * math.sqrt(dot(sub(q, v), sub(q, v)))
                    for v, q in zip(tri, tri[1:] + tri[:1]))
 
     common = [p for p in a if any(dot(sub(p, q), sub(p, q)) <= EPS * EPS for q in b)]

@@ -169,6 +169,12 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 > geometría ni cierra los pendientes visuales; el ensayo de hombros fue retirado
 > al introducir pliegues. Ver `art/gel_character/review_bloque_b/ESTADO_ACTUAL.md`.
 
+> Diagnóstico posterior: corregido un falso positivo de contacto en aristas
+> segmentadas por redondeo del skinning, con fixtures independientes y sin
+> ampliar tolerancias ni ocultar cruces reales. No cambia los assets ni aprueba
+> la retopología de hombros: 10/12/13 permanecen pendientes. Aviso:
+> `docs/avisos/2026-10-01-s311-contacto-numerico.md`.
+
 ### C. Proporciones en el juego (19-26)
 
 - [ ] **S-311.19** Recurso `GelBodyProportions` (`scripts/gameplay/player/gel/`): cada parámetro con
