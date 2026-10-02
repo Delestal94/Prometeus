@@ -322,13 +322,32 @@ equipo recibe el pedido, elige y prepara el contenido, arma la caja y la deja li
   pizarra de pedidos (`DepotOrderBoard`), taller, jaula de suministros, cinta, autoelevador. Las cajas
   y `DeliveryPackage`/`PackageCare` están en el dominio de `constructor-jugador`.
 
-**Preguntas abiertas del empaquetado:**
-1. ¿Cuánto dura empaquetar una caja (segundos)? ¿Cuenta dentro del tiempo de la entrega?
-2. ¿Qué se decide al empaquetar: contenido, tamaño de caja, relleno, sellado? ¿Todo o algo simple?
-3. ¿La calidad del empaquetado afecta la resistencia de la caja en el camino (sí es la propuesta)?
-4. ¿Es obligatorio hacerlo bien para poder salir, o se puede salir con cajas a medio armar y pagarlo
-   después?
-5. ¿Con 2 jugadores cómo se reparte, si uno maneja y el otro empaqueta?
+**Respuestas del equipo (2026-10-02):**
+1. **Tiempo:** generoso pero no infinito. Hay un límite de tiempo para empaquetar; no se puede quedar
+   toda la tarde. Cifra concreta por definir con `pulidor-jugabilidad`.
+2. **Qué se decide:** todo (contenido, tamaño de caja, relleno, sellado y lo que haga falta). Es un
+   sistema profundo, no un paso simple.
+3. **Salir a medio armar:** se puede. Las cajas incompletas se pagan en el camino (se rompen antes,
+   peor puntaje, reclamo del cliente).
+4. **Reparto de roles:** lo deciden los jugadores entre ellos; no hay roles fijos. **Se puede jugar solo**,
+   así que una sola persona tiene que poder empaquetar, cargar y manejar dentro del tiempo.
+
+**Consecuencias de diseño que salen de esas respuestas (propuestas, a validar):**
+- **El tiempo límite tiene que escalar con el equipo.** Con "se decide todo" y juego en solitario, el
+  mismo límite no sirve para 1 y para 6 jugadores. Propuesta: el tiempo del depósito se calcula con la
+  cantidad de cajas y de jugadores, como hoy `crew_house_count` y `RunDeadlines` calculan casas y plazos.
+- **Dar valor a salir apurado:** como se puede salir con cajas a medio armar, el límite de tiempo tiene
+  que pesar. Cada caja puede tener un nivel de armado visible, y el cliente reclama según ese nivel.
+- **Profundidad sin abrumar:** "se decide todo" es mucho para aprender. Conviene que haya un camino rápido
+  (opciones recomendadas por el contenido del pedido) y un camino experto (decidir cada cosa), con el
+  tutorial (`constructor-ui`) enseñando de a poco. Es una decisión de UX, no de reglas.
+- **En solitario**, el cargador, el empaquetador y el conductor son la misma persona; el
+  tiempo generoso es lo que hace jugable ese caso.
+
+**Preguntas que quedan abiertas:**
+- Cifra del límite (segundos por caja y por entrega) y cómo escala con jugadores.
+- Lista concreta de decisiones al empaquetar (la lista de "todo") y cuántas por caja.
+- Cómo se cobra una caja a medio armar (puntaje, rotura, plata).
 
 **Plan:** no se toca el spike N-950. Se agrega una tarea nueva de diseño del empaquetado en M10
 (`critico-diseno` + `pulidor-jugabilidad`), antes de construirlo; el depósito actual se rediseña en
