@@ -43,6 +43,9 @@ extends SceneTree
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the
 ##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
 ##   store stills) would set up.
+## - player_sprint.gd (running) rolls the trip from the session's world_seed through its NETWORK_MANAGER
+##   handle: if that stopped being the script the autoload runs, every runner would roll from a solo seed
+##   and the peers would stop agreeing on who trips.
 ## - vehicle_faults.gd (the truck's faults) holds its effects and repair spots by preload and the phone
 ##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
 ## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
@@ -153,6 +156,12 @@ const BUDGETS: Dictionary = {
 	# crew_progression.gd builds compile cycles, see package_autoloads.gd). The three /root/ lookups
 	# are the null-safe accessors (EventBus, NetworkManager, CrewProgression).
 	"res://scripts/gameplay/player/player_interaction.gd": {"call": 3, "callv": 0, "get": 0, "root": 3},
+	# Running (N-224.4): the heavy box's trap as TrapDefinition (id), the session through NETWORK_MANAGER
+	# (world_seed, below) and the profile as UnlockProfile (mark_tip_seen). The one .call left is the route's
+	# ground_roughness, found through the "route" group: route.gd has no class name and tests put plain
+	# ground stand-ins with that method in the group. The three /root/ lookups are the null-safe accessors
+	# (NetworkManager, UnlockManager, EventBus for the tip, by name because a test may replace it).
+	"res://scripts/gameplay/player/player_sprint.gd": {"call": 1, "callv": 0, "get": 0, "root": 3},
 	# The mud stretch (N-108) is typed: the push spot (mud_spot.gd), the crane
 	# (mud_crane.gd) and the run log (mud_run_log.gd) by preload, the session as
 	# NetSession and the truck's freeze as the VehicleBody3D property it is.
@@ -272,6 +281,9 @@ const SCRIPT_HANDLES: Dictionary = {
 		"UNLOCK_MANAGER": "/root/UnlockManager",
 	},
 	"res://scripts/tools/trailer_shot.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
+	"res://scripts/gameplay/player/player_sprint.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 	"res://scripts/gameplay/player/player_cargo_care.gd": {
