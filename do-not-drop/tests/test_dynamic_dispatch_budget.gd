@@ -338,6 +338,10 @@ const BUDGETS: Dictionary = {
 	# shake through the GAME_SETTINGS handle (below). The two /root/ lookups are the null-safe accessors:
 	# EventBus, connected by name because a test may replace it with a plain Node, and GameSettings.
 	"res://scripts/presentation/vehicle_effects.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
+	# The sound check's muting (N-224.4): the players as what they are (AudioStreamPlayer, 2D or 3D; no
+	# shared base has stream, playing, bus, volume_db or play), asked through small typed helpers.
+	# Nothing left by name.
+	"res://scripts/presentation/sound_audit.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

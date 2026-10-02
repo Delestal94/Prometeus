@@ -1153,6 +1153,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     sus 9 usos son todos sobre `RunManager`, que no se puede precargar (nombra autoloads y lo carga `net_trio.gd` por
     `--script`); solo `handed_over` bajaría (por `run_deliveries.gd`). Siguientes: `sound_audit.gd` (8, reproductores
     2D/3D sin base común), `run_session.gd` (8), `vehicle_prediction.gd` (7), `truck_radio_knob.gd` (6).
+  - [x] `sound_audit.gd` (2026-10-02, rama `nacho/N-224-sound-audit-typed`): el silenciador de "Sonidos del juego".
+    Los reproductores como lo que son (`AudioStreamPlayer`, `2D` o `3D`: no comparten una base con `stream`,
+    `playing`, `bus`, `volume_db` ni `play`) por helpers tipados chicos (`_stream`, `_set_stream`, `_is_playing`,
+    `_bus`, `_set_volume_db`, `_playback_position`, `_play`); `players()` ya junta solo esos tres tipos. En el archivo:
+    8 → 0 usos (`.call` 2 → 0, `.get(&` 6 → 0; también `.set(&` 2 → 0); en `scripts/`: `.call` 166 → 164, `.get(&`
+    140 → 134. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Sin aviso (`presentation/` libre y
+    `tests/`). Siguientes: `run_session.gd` (8), `vehicle_prediction.gd` (7), `truck_radio_knob.gd` (6),
+    `run_scoring.gd` (6).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

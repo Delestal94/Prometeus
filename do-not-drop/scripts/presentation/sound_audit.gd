@@ -62,9 +62,9 @@ static func groups(tree: SceneTree) -> Array[Dictionary]:
 	for player: Node in players(tree):
 		var key: String = key_of(player)
 		if not found.has(key):
-			found[key] = {"key": key, "label": label_of(player), "bus": String(player.get(&"bus")), "players": 0, "playing": 0}
+			found[key] = {"key": key, "label": label_of(player), "bus": String(_bus(player)), "players": 0, "playing": 0}
 		found[key]["players"] += 1
-		if bool(player.get(&"playing")) and not player.has_meta(ORIGINAL_META):
+		if _is_playing(player) and not player.has_meta(ORIGINAL_META):
 			found[key]["playing"] += 1
 	var list: Array[Dictionary] = []
 	list.assign(found.values())
@@ -132,7 +132,7 @@ static func apply(tree: SceneTree) -> void:
 		var silenced: bool = player.has_meta(ORIGINAL_META)
 		var want: bool = muted.has(key_of(player))
 		if want and not silenced:
-			var original: AudioStream = player.get(&"stream")
+			var original: AudioStream = _stream(player)
 			if original == null:
 				continue
 			player.set_meta(ORIGINAL_META, original)
@@ -141,9 +141,9 @@ static func apply(tree: SceneTree) -> void:
 			var original: AudioStream = player.get_meta(ORIGINAL_META)
 			player.remove_meta(ORIGINAL_META)
 			_swap(player, original)
-		elif silenced and not player.get(&"stream") is AudioStreamWAV:
+		elif silenced and not _stream(player) is AudioStreamWAV:
 			# Not a WAV (the music track): held down by volume instead.
-			player.set(&"volume_db", -80.0)
+			_set_volume_db(player, -80.0)
 
 
 ## While the sound list is open over a paused game, every player keeps
@@ -159,15 +159,76 @@ static func play_through_pause(tree: SceneTree, on: bool) -> void:
 
 
 static func _swap(player: Node, stream: AudioStream) -> void:
-	var was_playing: bool = bool(player.get(&"playing"))
-	var at: float = float(player.call(&"get_playback_position")) if was_playing else 0.0
-	player.set(&"stream", stream)
+	var was_playing: bool = _is_playing(player)
+	var at: float = _playback_position(player) if was_playing else 0.0
+	_set_stream(player, stream)
 	if was_playing:
-		player.call(&"play", at)
+		_play(player, at)
+
+
+# The three players share no base class with these, so each is asked as
+# what it is (players() finds only these three).
+static func _stream(player: Node) -> AudioStream:
+	if player is AudioStreamPlayer3D:
+		return (player as AudioStreamPlayer3D).stream
+	if player is AudioStreamPlayer2D:
+		return (player as AudioStreamPlayer2D).stream
+	return (player as AudioStreamPlayer).stream
+
+
+static func _set_stream(player: Node, stream: AudioStream) -> void:
+	if player is AudioStreamPlayer3D:
+		(player as AudioStreamPlayer3D).stream = stream
+	elif player is AudioStreamPlayer2D:
+		(player as AudioStreamPlayer2D).stream = stream
+	else:
+		(player as AudioStreamPlayer).stream = stream
+
+
+static func _is_playing(player: Node) -> bool:
+	if player is AudioStreamPlayer3D:
+		return (player as AudioStreamPlayer3D).playing
+	if player is AudioStreamPlayer2D:
+		return (player as AudioStreamPlayer2D).playing
+	return (player as AudioStreamPlayer).playing
+
+
+static func _bus(player: Node) -> StringName:
+	if player is AudioStreamPlayer3D:
+		return (player as AudioStreamPlayer3D).bus
+	if player is AudioStreamPlayer2D:
+		return (player as AudioStreamPlayer2D).bus
+	return (player as AudioStreamPlayer).bus
+
+
+static func _set_volume_db(player: Node, volume_db: float) -> void:
+	if player is AudioStreamPlayer3D:
+		(player as AudioStreamPlayer3D).volume_db = volume_db
+	elif player is AudioStreamPlayer2D:
+		(player as AudioStreamPlayer2D).volume_db = volume_db
+	else:
+		(player as AudioStreamPlayer).volume_db = volume_db
+
+
+static func _playback_position(player: Node) -> float:
+	if player is AudioStreamPlayer3D:
+		return (player as AudioStreamPlayer3D).get_playback_position()
+	if player is AudioStreamPlayer2D:
+		return (player as AudioStreamPlayer2D).get_playback_position()
+	return (player as AudioStreamPlayer).get_playback_position()
+
+
+static func _play(player: Node, from: float) -> void:
+	if player is AudioStreamPlayer3D:
+		(player as AudioStreamPlayer3D).play(from)
+	elif player is AudioStreamPlayer2D:
+		(player as AudioStreamPlayer2D).play(from)
+	else:
+		(player as AudioStreamPlayer).play(from)
 
 
 static func _original_stream(player: Node) -> AudioStream:
-	return player.get_meta(ORIGINAL_META) if player.has_meta(ORIGINAL_META) else player.get(&"stream")
+	return player.get_meta(ORIGINAL_META) if player.has_meta(ORIGINAL_META) else _stream(player)
 
 
 ## Same length, format and loop, all zeros. A non-WAV stream (the music)
