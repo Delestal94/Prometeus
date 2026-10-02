@@ -1030,6 +1030,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     usos (`.call` 5 → 0, `.get(&` 5 → 2, `/root/` 2 → 2; también `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd`
     suma el archivo; `test_spectator.gd` prueba también la toma de resultados. Sin aviso (`presentation/` libre y
     `tests/`). Siguientes: `dashboard_gps.gd` (10), `vehicle_presentation.gd` (9), `play_area.gd` (9), `run_tally.gd` (9).
+  - [x] `dashboard_gps.gd` (2026-10-02, rama `nacho/N-224-dashboard-gps-typed`): el GPS del tablero. La ruta por
+    `preload` de `route.gd` (`ROUTE`: `houses`, `stop_road_distance`, `road_distance`, `goal_bay_number`, `goal_target`
+    directos) y las cajas de `bomb_codes()` como `DeliveryPackage` (`care_state`; lo que no es un paquete en el grupo
+    `cargo` se saltea, como antes sin `care_state`). Quedan por nombre `RunManager.current_distance` y `best_score` (la
+    presentación del camión crea el GPS: precargar `run_manager.gd` rompe la compilación bajo `--script`) y el handle de
+    EventBus. En el archivo: 10 → 4 usos (`.call` 5 → 1, `.get(&` 3 → 1, `/root/` 2 → 2).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`). Siguientes:
+    `vehicle_presentation.gd` (9), `run_tally.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
