@@ -3056,7 +3056,7 @@ del equipo y solo el comprador lo tiene; que soltarlo y recogerlo lo pasa a otro
 se guarda y se carga por color; y `revisor-visual` + `director-arte` aprueban la captura de los cuatro accesorios puestos
 y de la fila de la tienda contra el resto del depósito (sin cajas de color plano ni placeholders a la vista).
 
-**Diseño propuesto (se corrige con las respuestas a las preguntas abiertas):**
+**Diseño (ajustado a lo decidido el 2026-10-02, abajo):**
 - *Catálogo*: `AccessoryCatalog` (puro, estático, `scripts/core/`): id → `{title, slot (head|torso|back), price,
   model, tags}`; slots como las categorías de S-305 (un accesorio equipado por slot). Sale de `UnlockManager.COSMETICS`
   la parte de accesorios (los uniformes siguen ahí). Los títulos van por `tr()`.
@@ -3096,8 +3096,8 @@ y de la fila de la tienda contra el resto del depósito (sin cajas de color plan
   `shop_vote`, `depot`. Esfuerzo `Opus 5.5 · high`.
 - [ ] **N-923.4** Venta en las paradas de servicio: `ServiceStopShop.offers()` suma los accesorios con el recargo de la
   parada (propuesta +40 %, igual que el repuesto) y `_hand_over` los entrega al comprador; `DepotPanel` cara `service`
-  los muestra. Un solo catálogo para las dos tiendas (el stock de la parada puede ser un subconjunto sorteado de la
-  semilla de la ruta, así cambia entre paradas; si el usuario prefiere todo siempre, se saca el sorteo). Con
+  los muestra. Un solo catálogo para las dos tiendas: la parada ofrece siempre el catálogo completo con el recargo,
+  sin sorteo (decidido 2026-10-02). Con
   `constructor-mundo`; tests `service_stop`. Esfuerzo `Opus 5.5 · high`.
 - [ ] **N-923.5** Red, host autoritativo (`PROTOCOL_VERSION` según `docs/convenciones-godot.md` §6: mirar los PRs
   abiertos que tocan `network_manager.gd`, tomar el siguiente al más alto, hoy 27, y sumar la línea al historial):
@@ -3138,23 +3138,19 @@ y de la fila de la tienda contra el resto del depósito (sin cajas de color plan
   (que 4 accesorios no vacíen la plata de suministros en una campaña), `documentador` actualiza `docs/colaboracion-equipo.md`
   y el aviso `docs/avisos/AAAA-MM-DD-tienda-accesorios.md`. Esfuerzo `Opus 5.5 · medium`.
 
-**Preguntas abiertas para el usuario (⏸ decide el usuario; issue `decide-usuario` "N-923 · decidir: reglas de la tienda
-de accesorios"). Las subtareas .1 a .4 pueden empezar con las suposiciones de abajo; los números se cambian en una tabla:**
-1. *Precios*: propuesta provisional, gorra 60, chaleco reflectivo 90, casco de obra 120, mochila térmica 150, contra
-   suministros de 15-50 y un reparto de 3-4 casas que paga unos 200-400 (verificar en `crew_progression.gd`). ¿Más
-   baratos (es un gusto, no ayuda) o más caros (para que sean una meta)?
-2. *¿Persisten entre partidas o solo dentro de la campaña/partida?* Recomendado: persisten en la campaña (junto a
-   `team_money`, que ya se guarda) y se pierden si se reinicia la campaña; no entre campañas ni como perfil global.
-3. *Reembolso*: recomendado **no** reembolsar (evita un bucle de comprar-vender); soltar no devuelve plata, solo
-   transfiere. Alternativa: devolver el 50 % al equipo al "vender" en el depósito.
-4. *Si alguien se va o su accesorio queda en el suelo*: recomendado que vuelva al inventario de su dueño (por color) y
-   siga ahí si el dueño se reconecta; si el dueño ya no vuelve, queda disponible para el equipo al final de la entrega.
-5. *Un ejemplar por accesorio* (el que se regala deja de ser tuyo) o *cada jugador puede tener una copia*. Recomendado:
-   un ejemplar, para que soltar tenga sentido; comprar una copia extra para un amigo se hace con la plata del equipo y
-   "regalar" = comprar y soltar.
-6. *¿Aparecen en la tienda siempre o hay stock rotativo?* (afecta N-923.4).
-7. *¿Los accesorios dan algún efecto de juego* (el chaleco se ve más de noche, la mochila cuida el paquete) *o solo son
-   cosméticos?* Recomendado: solo cosméticos, para no romper el balance ni tener que testearlo.
+**Decidido 2026-10-02** (el usuario delegó las 7 preguntas abiertas; ya no hay issue `decide-usuario` pendiente):
+1. *Precios*: como se propuso, gorra 60, chaleco reflectivo 90, casco de obra 120, mochila térmica 150. Provisionales:
+   `pulidor-jugabilidad` los contrasta con lo que paga una entrega (N-923.11) y los cambia en la tabla de
+   `AccessoryCatalog`.
+2. *Persistencia*: los accesorios persisten solo dentro de la campaña (junto a `team_money`); se pierden si se reinicia
+   la campaña; no hay perfil global ni paso entre campañas.
+3. *Reembolso*: no hay. Soltar no devuelve plata, solo transfiere.
+4. *Dueño desconectado con el accesorio en el suelo*: el accesorio vuelve al slot del inventario de su dueño (por color
+   de jugador) y no se pierde.
+5. *Un ejemplar por accesorio*: soltar o regalar lo mueve, nunca lo duplica.
+6. *Stock*: las paradas de servicio ofrecen siempre el catálogo completo, con el recargo (sin stock rotativo ni sorteo
+   por semilla; afecta N-923.4).
+7. *Efectos*: los accesorios son puramente cosméticos, sin efecto de juego.
 
 ### N-113 · Evento de visibilidad limitada para el conductor — C · `Opus 5.5 · high` · Aviso: sí (`event_bus.gd`, `network_manager.gd` y `hud_notices.gd`) · **[x] rama `nacho/N-113-low-visibility-event`**
 
