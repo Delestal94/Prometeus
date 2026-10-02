@@ -197,6 +197,7 @@ func _run() -> void:
 	await _check_stale_inputs()
 	await _check_wall_only_here()
 	await _check_let_through()
+	await _check_no_ground()
 	await _check_host_gone()
 
 	root.get_node(^"/root/RunManager").set(&"is_running", false)
@@ -331,6 +332,57 @@ func _check_let_through() -> void:
 	for node: Node in [worker, forklift, crossing]:
 		node.queue_free()
 	await _step(0.0, 0.0)
+
+
+## A client at the wheel whose world has no road yet under the host's truck (N-922.4: back from a drop, or late into
+## an endless run, before the streamer builds there): its copy waits frozen instead of falling, and starts once the
+## ground is in.
+func _check_no_ground() -> void:
+	var viewport := SubViewport.new()
+	viewport.own_world_3d = true
+	viewport.size = Vector2i(4, 4)
+	root.add_child(viewport)
+	var bare := Node3D.new()
+	viewport.add_child(bare)
+	var copy: VehicleBody3D = _truck(bare, HOST_ID)
+	copy.remove_from_group(&"vehicle")
+	copy.set(&"driver_peer_id", CLIENT_ID)
+	copy.set(&"presentation_engine_running", true)
+	await physics_frame
+	var host_pose := Transform3D(Basis(Vector3.UP, 0.4), Vector3(30.0, 0.666, -12.0))
+	for tick: int in range(20):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	_expect(copy.freeze and not bool(copy.call(&"is_predicted")) and copy.global_position.y > 0.5,
+		"No ground under the host's truck here yet: the copy waits frozen, drawn from the poses (y %.2f)" % [
+			copy.global_position.y])
+	var ground := StaticBody3D.new()
+	ground.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(200.0, 1.0, 200.0)
+	shape.shape = box
+	shape.position.y = -0.5
+	ground.add_child(shape)
+	bare.add_child(ground)
+	for tick: int in range(20, 80):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	_expect(bool(copy.call(&"is_predicted")) and not copy.freeze and copy.global_position.y > 0.3,
+		"...and once the road is built under it, it predicts, standing on it (y %.2f)" % copy.global_position.y)
+	viewport.queue_free()
+	await physics_frame
+
+
+## One whole pose packet from the host (the truck standing at `pose`), as the synchronizer applies it.
+func _send_pose(copy: VehicleBody3D, tick: int, pose: Transform3D) -> void:
+	copy.set(&"net_simulating", true)
+	copy.set(&"net_time", float(tick) / 60.0)
+	copy.set(&"net_position", pose.origin)
+	copy.set(&"net_rotation", pose.basis.get_euler())
+	copy.set(&"net_input_seq", 0)
+	copy.set(&"net_linear_velocity", Vector3.ZERO)
+	copy.set(&"net_angular_velocity", Vector3.ZERO)
 
 
 ## Loaded at run time: vehicle/ scripts sit next to ones that name autoloads.

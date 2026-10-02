@@ -24,8 +24,9 @@ extends RefCounted
 ## interpolated, so they take the host's path on it.
 ##
 ## Only while the host's truck is simulated too (`net_simulating`: not frozen for loading, parking or the end of
-## a run). When the client stops driving (left the seat, someone else took the wheel, the host froze the truck)
-## its copy is frozen again and drawn from the pose buffer, the gap eased out in EXIT_BLEND_SECONDS.
+## a run), and starting only once this peer has ground under it (has_ground, N-922.4). When the client stops
+## driving (left the seat, someone else took the wheel, the host froze the truck) its copy is frozen again and
+## drawn from the pose buffer, the gap eased out in EXIT_BLEND_SECONDS.
 ##
 ## `--no-drive-prediction` turns it off on that client (to compare, or if it misbehaves).
 
@@ -36,6 +37,11 @@ const EXIT_BLEND_SECONDS: float = 0.3
 const EXIT_BLEND_MAX_DISTANCE: float = 30.0
 ## Forward speed (m/s) above which a throttle against the motion brakes; below it, it backs up (vehicle.gd _drive).
 const BRAKING_SPEED: float = 0.7
+## Prediction starts only over ground (has_ground): a ray from this far above the host's newest pose to this far
+## below it (m), against the environment layer.
+const GROUND_PROBE_ABOVE: float = 0.5
+const GROUND_PROBE: float = 4.0
+const GROUND_MASK: int = 1
 
 var enabled: bool = not OS.get_cmdline_user_args().has("--no-drive-prediction")
 ## Whether this peer's copy is the one predicting right now.
@@ -144,7 +150,7 @@ func client_tick(vehicle: Vehicle, delta: float, smoother: NetPoseSmoother, host
 	if active and (not wanted or vehicle.freeze):
 		_held_off = wanted
 		_stop(vehicle, smoother)
-	elif not active and wanted and not _held_off:
+	elif not active and wanted and not _held_off and has_ground(vehicle, smoother.latest_pose()):
 		_start(vehicle, smoother, host_velocity, host_spin)
 		started = true
 	if not driving:
@@ -162,6 +168,19 @@ func client_tick(vehicle: Vehicle, delta: float, smoother: NetPoseSmoother, host
 	if peer != null and not peer is OfflineMultiplayerPeer:
 		vehicle.rpc_id(1, &"submit_driver_input", applied_seq, throttle, steering_input, handbrake)
 	return active
+
+
+## Whether this peer's world has ground under `pose` (the newest one the host sent), within GROUND_PROBE metres
+## (N-922.4). A client that takes the wheel as it comes back (N-221) or joins late into an endless run gets the
+## host's pose before its streamer has built the road there (60 m a tick): its copy, unfrozen on nothing, fell
+## through the world. Until there is ground it stays frozen and drawn from the pose buffer.
+static func has_ground(vehicle: Vehicle, pose: Transform3D) -> bool:
+	if not vehicle.is_inside_tree():
+		return false
+	var from: Vector3 = pose.origin + Vector3.UP * GROUND_PROBE_ABOVE
+	var query := PhysicsRayQueryParameters3D.create(from, pose.origin + Vector3.DOWN * GROUND_PROBE, GROUND_MASK)
+	query.exclude = [vehicle.get_rid()]
+	return not vehicle.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 ## Client: the host's state after input `seq` (a whole synced packet).
