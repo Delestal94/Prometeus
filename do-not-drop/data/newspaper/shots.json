@@ -1,0 +1,68 @@
+{
+ "about": "Planos del diario del día siguiente (N-606.3, docs/diario-final.md). Los lee NewspaperDirector. Cada plano dura 'seconds' y su 'rail' son poses (formato de TrailerCamera: at / look / t, más fov y up) en el espacio que dice 'space': 'set' (la oficina), 'paper' (corrimiento desde el centro del diario, en ejes del mundo; up 'paper' = el arriba de la hoja), 'reading' (la doble página entera) o 'current' (donde quedó la cámara). El plano 'stories' se abre en un primer plano por noticia, con los números de 'story'; la pausa de lectura se reparte para que todo dure 'length_seconds'.",
+ "length_seconds": 30.0,
+ "skip_hold_seconds": 0.6,
+ "skip_hint_after": 1.0,
+ "band_ratio": 2.35,
+ "reading": {"at": [0.0, 1.16, 0.18], "fov": 42.0},
+ "story": {
+  "move": 0.7,
+  "hold_min": 2.8,
+  "hold_max": 5.5,
+  "distance": 1.6,
+  "tilt_degrees": 28.0,
+  "margin": 1.14,
+  "ease": "smooth"
+ },
+ "shots": [
+  {
+   "id": "office",
+   "seconds": 3.0,
+   "title": "HUD_NEWS_NEXT_MORNING",
+   "bands": true,
+   "rail": [
+    {"space": "set", "at": [-1.85, 1.8, -2.95], "look": [0.0, 1.25, 0.05], "fov": 43.0, "t": 0.0},
+    {"space": "set", "at": [-1.7, 1.75, -2.7], "look": [0.0, 1.25, 0.05], "fov": 42.0, "t": 3.0}
+   ],
+   "ease": "linear"
+  },
+  {
+   "id": "approach",
+   "seconds": 3.2,
+   "rail": [
+    {"space": "current", "t": 0.0},
+    {"space": "set", "at": [-2.0, 1.9, -0.35], "look": [0.0, 1.2, -0.05], "fov": 43.0, "t": 1.1},
+    {"space": "set", "at": [-1.15, 2.24, 1.1], "look": [0.0, 1.18, -0.12], "fov": 42.0, "t": 2.2},
+    {"space": "reading", "t": 3.2}
+   ]
+  },
+  {
+   "id": "spread",
+   "seconds": 1.8,
+   "rail": [{"space": "reading", "t": 0.0}]
+  },
+  {"id": "stories"},
+  {
+   "id": "spread_again",
+   "seconds": 1.4,
+   "rail": [{"space": "current", "t": 0.0}, {"space": "reading", "t": 0.8}]
+  },
+  {
+   "id": "reaction",
+   "seconds": 3.0,
+   "bands": true,
+   "lower": [0.2, 1.4],
+   "react_at": 0.9,
+   "handheld": 0.006,
+   "ease": "cut",
+   "rail": [
+    {"space": "set", "at": [-0.65, 1.56, -1.9], "look": [0.0, 1.28, 0.48], "fov": 30.0, "t": 0.0}
+   ]
+  }
+ ],
+ "reactions": {
+  "news": ["worried", "surprised"],
+  "clean": ["joyful", "grin"],
+  "end": ["sleepy", "pout"]
+ }
+}
