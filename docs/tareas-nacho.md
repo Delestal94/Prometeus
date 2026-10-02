@@ -1974,12 +1974,16 @@ y solo lo devuelve `_on_finished()`; no hay `_exit_tree`. Si el host reinicia mi
 depósito o un túnel oye el menú con eco.
 Hecho cuando un test libera el HUD con el diario abierto y `disable_3d` vuelve a `false`, y otro comprueba que salir del
 árbol del depósito o de la ruta devuelve el bus `SFX` a la reverb `open`.
-- [ ] **N-921.1** `HudNewspaper._exit_tree()` restaura `disable_3d`; test que libera el HUD con el diario abierto
+- [x] **N-921.1** `HudNewspaper._exit_tree()` restaura `disable_3d`; test que libera el HUD con el diario abierto
   (ampliar `test_newspaper_scene.gd`). Con `constructor-ui`; tests `newspaper_scene`.
-- [ ] **N-921.2** Volver a `open` al salir del árbol del depósito o la ruta (adaptador del juego, o `AcousticSpace` si
+  **[x] Hecho (2026-10-02, `dbe1dc87`)** — `test_newspaper_scene.gd` libera el HUD con el diario abierto.
+- [x] **N-921.2** Volver a `open` al salir del árbol del depósito o la ruta (adaptador del juego, o `AcousticSpace` si
   corresponde); test en `test_acoustics`/del módulo. Con `disenador-audio`; tests `acoustic`.
-- [ ] **N-921.3** Aviso nuevo en `docs/avisos/` en el mismo PR (hoy lo cubre `2026-10-02-auditoria-tareas.md`; uno
+  **[x] Hecho (2026-10-02, `dbe1dc87`)** — `RouteSky` y `Depot` llaman `AcousticSpace.apply(&"open")` en
+  `_exit_tree`; `modules/acoustics` sin cambios; test en `test_acoustic_space.gd`.
+- [x] **N-921.3** Aviso nuevo en `docs/avisos/` en el mismo PR (hoy lo cubre `2026-10-02-auditoria-tareas.md`; uno
   propio si cambia algo más). Con `documentador`.
+  **[x] Hecho (2026-10-02, `dbe1dc87`)** — `docs/avisos/2026-10-02-n921-estado-global.md`.
 
 ### N-922 · Auditar la red de N-218 (#239) y arreglar el número de protocolo — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, zona compartida) · M8
 Origen: auditoría integral 2026-10-02, A-D.1 y A-D.2 (P1) y los dos puntos "para auditor-red" de los P3. #239 (N-218,
