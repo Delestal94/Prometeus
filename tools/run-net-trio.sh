@@ -3,7 +3,8 @@
 # ENet clients on localhost -- the second one joining late -- runs
 # do-not-drop/tests/net_trio.gd in each, and checks they all saw the same
 # world: session seed, house count, the depot's orders, the generated road
-# and the rail crossing's phase once the host set it off. Prints a WARNING
+# and the rail crossing's phase once the host set it off (its arms and train
+# solid for the truck on the host only, N-922.3). Prints a WARNING
 # line when a joiner's level load came within 10 s of the 45 s network load
 # budget (N-235.2): still a pass, but close to flaking.
 #
@@ -112,4 +113,4 @@ if [ "$status" -ne 0 ]; then
 	exit 1
 fi
 [ ${#unstable[@]} -gt 0 ] && echo "  cierre inestable (imprimieron, el motor crasheó al salir): ${unstable[*]}"
-echo "PASS: host and two clients (one late) see the same seed, houses, orders, road, crossing, bomb code, Fragile tap, Liquid scrub, a helper's sequence, the colour slots and the run's tally once the host leaves"
+echo "PASS: host and two clients (one late) see the same seed, houses, orders, road, crossing (solid for the truck on the host only), bomb code, Fragile tap, Liquid scrub, a helper's sequence, the colour slots and the run's tally once the host leaves"

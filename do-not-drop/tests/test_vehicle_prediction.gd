@@ -21,6 +21,9 @@ extends SceneTree
 ## - the driver's inputs cut off for more than NetInputBuffer.STALE_TICKS (no disconnect): the host lets go of the
 ##   pedal and keeps the wheel, and drives on once inputs arrive again; a brake is kept until the truck stops,
 ##   and doesn't turn into backing up;
+## - a wall only the client's world has, the truck one of its exceptions (TruckPassThrough), doesn't stop the copy
+##   the host's truck never met: no 3 m snap (N-922.3); the depot's staff and forklift let the truck through on every
+##   peer, a level crossing's arms and train cars only where it isn't the host's (get_collision_exceptions());
 ## - the host going mid-drive (the level's _stop_orphaned_run) freezes the copy where it is, no longer predicted.
 
 const LAG_TICKS: int = 9
@@ -192,6 +195,8 @@ func _run() -> void:
 
 	await _check_wheel_back()
 	await _check_stale_inputs()
+	await _check_wall_only_here()
+	await _check_let_through()
 	await _check_host_gone()
 
 	root.get_node(^"/root/RunManager").set(&"is_running", false)
@@ -259,6 +264,78 @@ func _check_stale_inputs() -> void:
 		"...until it stops, and then doesn't back up (throttle %.1f, %.2f m/s)" % [
 			float(_host.call(&"throttle_input")), _forward_speed(_host)])
 	await _restore_uplink(1.0)
+
+
+## A body only the client's world has, across the road (N-922.3): with the truck as its exception, the copy drives
+## through it, as the host's truck does where there is none, and isn't snapped back.
+func _check_wall_only_here() -> void:
+	var reconciler: NetPredictionReconciler = _client.get(&"_prediction").reconciler
+	for _i: int in range(60):
+		await _step(1.0, 0.0)
+	var forward: Vector3 = -_client.global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(30.0, 4.0, 1.0)
+	shape.shape = box
+	wall.add_child(shape)
+	_client.get_parent().add_child(wall)
+	var at: Vector3 = _client.global_position + forward * 6.0
+	wall.global_transform = Transform3D(Basis.looking_at(forward), Vector3(at.x, 2.0, at.z))
+	var let_through: bool = _pass_through_script().call(&"let_through", [wall], self)
+	var snaps_before: int = reconciler.snaps
+	_errors.clear()
+	var speed: float = _forward_speed(_client)
+	for _i: int in range(75):
+		await _step(1.0, 0.0)
+	var past: float = (_client.global_position - wall.global_position).dot(forward)
+	_expect(let_through and wall.get_collision_exceptions().has(_client) and speed > 5.0 and past > 3.0
+			and reconciler.snaps == snaps_before and _max(_errors) < 1.0,
+		("A wall only the client has, the truck its exception: the copy drives through (%.1f m past at %.0f km/h),"
+				+ " no snap (%d), worst %.2f m") % [past, speed * 3.6, reconciler.snaps - snaps_before, _max(_errors)])
+	wall.queue_free()
+
+
+## Who lets the truck through (N-922.3): the depot's staff and forklift, which every peer runs on its own clock, on
+## every peer; a crossing's arms and cars, which the host moves, only where this peer isn't the host.
+func _check_let_through() -> void:
+	var world: Node = _client.get_parent()
+	var worker: PhysicsBody3D = (load("res://scripts/gameplay/depot/depot_worker.gd") as GDScript).new()
+	worker.position = _client.global_position + Vector3(40.0, 0.0, 0.0)
+	world.add_child(worker)
+	var forklift: PhysicsBody3D = (load("res://scripts/gameplay/depot/depot_forklift.gd") as GDScript).new()
+	forklift.call(&"place", worker.position + Vector3(4.0, 0.0, 0.0), worker.position + Vector3(4.0, 0.0, 10.0))
+	world.add_child(forklift)
+	var crossing: Node3D = (load("res://scripts/gameplay/route/segments/rail_crossing_segment.gd") as GDScript).new()
+	crossing.position = _client.global_position + Vector3(-80.0, -0.8, 0.0)
+	world.add_child(crossing)
+	await _step(0.0, 0.0)
+	await _step(0.0, 0.0)
+	var crossing_bodies: Array = []
+	crossing_bodies.append_array(crossing.get(&"_arms"))
+	crossing_bodies.append_array(crossing.get(&"_train"))
+	_expect(worker.get_collision_exceptions().has(_client) and forklift.get_collision_exceptions().has(_client),
+		"The depot's staff and forklift let the truck through")
+	var solid := func(body: PhysicsBody3D) -> bool: return body.get_collision_exceptions().is_empty()
+	_expect(crossing_bodies.size() == 6 and not bool(crossing.get(&"lets_truck_through"))
+			and crossing_bodies.all(solid),
+		"On the host a crossing's arms and train cars stay solid for the truck")
+	crossing.set(&"lets_truck_through", true)
+	await _step(0.0, 0.0)
+	var through := func(body: PhysicsBody3D) -> bool: return body.get_collision_exceptions().has(_client)
+	_expect(crossing_bodies.all(through),
+		"...and on a client its truck drives through them, which reach it half a round trip late")
+	for node: Node in [worker, forklift, crossing]:
+		node.queue_free()
+	await _step(0.0, 0.0)
+
+
+## Loaded at run time: vehicle/ scripts sit next to ones that name autoloads.
+static func _pass_through_script() -> GDScript:
+	return load("res://scripts/gameplay/vehicle/truck_pass_through.gd")
 
 
 ## The host goes mid-drive (N-922.2): the session closes, this peer is an offline host and the copy is its own

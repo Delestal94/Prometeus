@@ -11,6 +11,9 @@ extends SceneTree
 ## number of houses, the depot's orders, a hash of the generated road (every
 ## segment and house, placed where it stands) and the phase of the first
 ## rail crossing once the host has set it off. All three lines must match.
+## N-922.3: `through=ok` says that crossing's arms and train cars stay solid for
+## the truck on the host and let it through on each client (they reach a client
+## half a round trip late, and its predicted truck would stop at them).
 ## Then both clients reach for the same box at once (N-213: two crew members
 ## going for the one that fell out): the host resolves it, so exactly one of
 ## them ends up holding it and every peer names the same holder.
@@ -148,9 +151,10 @@ func _report() -> void:
 	var orders: Array = []
 	for order: Dictionary in _level.get_node(^"World/Depot").get(&"orders"):
 		orders.append("%s:%s" % [order.package_id, order.code])
-	print(("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s grab=%s tap=%s scrub=%s assist=%s"
-		+ " code=%s slots=%s") % [_name, int(_network.get(&"world_seed")), (route.get(&"houses") as Array).size(),
-		",".join(orders), _route_hash(route), phase, grab, tap, scrub, assist, _code_of(code_box), _slots_text()])
+	print(("TRIO role=%s seed=%d houses=%d orders=%s route=%d crossing=%s through=%s grab=%s tap=%s scrub=%s"
+		+ " assist=%s code=%s slots=%s") % [_name, int(_network.get(&"world_seed")),
+		(route.get(&"houses") as Array).size(), ",".join(orders), _route_hash(route), phase,
+		_crossing_lets_through(crossing), grab, tap, scrub, assist, _code_of(code_box), _slots_text()])
 	# The host stays up a little so the clients' own reads aren't cut short.
 	await _pump(4.0 if _host else 1.0)
 	if _host:
@@ -158,6 +162,27 @@ func _report() -> void:
 	else:
 		await _report_host_gone()
 	quit(0)
+
+
+## N-922.3: "ok" when the crossing's arms and train cars have the truck as a collision exception on a client and
+## not on the host.
+func _crossing_lets_through(crossing: Node) -> String:
+	if crossing == null:
+		return "none"
+	var truck := get_first_node_in_group(&"vehicle") as PhysicsBody3D
+	if truck == null:
+		return "FAIL-no-truck"
+	var bodies: Array = []
+	bodies.append_array(crossing.get(&"_arms"))
+	bodies.append_array(crossing.get(&"_train"))
+	var excepting: int = 0
+	for body: PhysicsBody3D in bodies:
+		if body.get_collision_exceptions().has(truck):
+			excepting += 1
+	if _host:
+		return "ok" if excepting == 0 else "FAIL-host-lets-%d-through" % excepting
+	return "ok" if excepting == bodies.size() and not bodies.is_empty() else "FAIL-client-%d-of-%d" % [
+		excepting, bodies.size()]
 
 
 ## Each player's colour slot (NetworkManager.color_slot()), in peer id order.
