@@ -28,6 +28,12 @@ extends Node
 ## input), the host plays its numbered inputs and its truck moves with them, no
 ## correction moves the client's copy more than 10 cm a tick, and once the
 ## client gets out its copy is frozen again (DRIVE lines with the numbers).
+## N-922.5: then it drives two seconds more with the standard `--net-sim`
+## profile on its truck (Vehicle.configure_net_sim, what `--net-sim` does on a
+## LAN): its inputs and the host's states are held back half the lag each
+## (several of each on the way at any time, none on the clean link), the
+## host's states come in at least 3 ticks later than on the clean link, and
+## still no correction moves it more than 10 cm a tick.
 
 const PORT: int = 17992
 const TIMEOUT_SECONDS: float = 40.0
@@ -296,33 +302,79 @@ func _client_drive(vehicle_path: NodePath) -> void:
 		_report(&"drive", false, "client has no truck to drive")
 		return
 	var predicting: bool = await _wait_until(func() -> bool: return bool(vehicle.call(&"is_predicted")), 10.0)
-	var prediction: VehiclePrediction = vehicle.get(&"_prediction")
 	var start: Vector3 = vehicle.global_position
-	var worst_shift: float = 0.0
-	var errors: Array[float] = []
-	Input.action_press(&"drive_accelerate")
-	var deadline: int = Time.get_ticks_msec() + 2000
-	while Time.get_ticks_msec() < deadline:
-		await get_tree().physics_frame
-		worst_shift = maxf(worst_shift, prediction.last_shift)
-		errors.append(prediction.reconciler.last_error)
-	Input.action_release(&"drive_accelerate")
+	var clean: Dictionary = await _drive_for(vehicle, 2.0)
 	var moved: float = vehicle.global_position.distance_to(start)
-	Input.action_press(&"drive_handbrake")
-	await _pump(1.0)
-	Input.action_release(&"drive_handbrake")
-	errors.sort()
-	var median: float = errors[errors.size() / 2] if not errors.is_empty() else INF
 	print("DRIVE role=client predicted %s moved %.1f m, worst correction %.3f m/tick, error median %.3f worst %.3f" % [
-		predicting, moved, worst_shift, median, errors[-1] if not errors.is_empty() else INF])
+		predicting, moved, clean.worst_shift, clean.median_error, clean.worst_error]
+		+ ", host %d ticks behind" % clean.behind)
+	# N-922.5: the same drive with the standard --net-sim profile, which on a LAN only the game can simulate: the
+	# inputs out and the host's states back are held half its lag each (75-95 ms, 4-6 ticks), so the host's states
+	# come in later -- and the corrections still stay under 10 cm a tick. Switched on mid-drive, the host's input
+	# counter runs ahead through the first gap (NetInputBuffer), so "behind" grows by less than the whole lag.
+	vehicle.call(&"configure_net_sim", NetStats.STANDARD_SIM)
+	var simulated: Dictionary = await _drive_for(vehicle, 2.0)
+	vehicle.call(&"configure_net_sim", {"lag_ms": 0, "jitter_ms": 0, "loss_pct": 0.0})
+	var still_predicting: bool = bool(vehicle.call(&"is_predicted"))
+	print(("DRIVE role=client --net-sim %s: worst correction %.3f m/tick, error median %.3f worst %.3f,"
+		+ " host %d ticks behind, %d inputs and %d host states held") % [
+		NetStats.describe_sim(NetStats.STANDARD_SIM), simulated.worst_shift, simulated.median_error,
+		simulated.worst_error, simulated.behind, simulated.inputs_held, simulated.states_held])
 	var player: Player = _player(get_tree().root.multiplayer.get_unique_id())
 	if player != null:
 		player.call(&"leave_seat")
 	var frozen_again: bool = await _wait_until(func() -> bool: return vehicle.freeze, 5.0)
-	var ok: bool = predicting and moved > 2.0 and worst_shift <= 0.1001 and frozen_again
+	var sim_ok: bool = still_predicting and int(simulated.inputs_held) >= 3 and int(simulated.states_held) >= 1 \
+			and int(simulated.behind) - int(clean.behind) >= 3 and float(simulated.worst_shift) <= 0.1001 \
+			and int(clean.inputs_held) == 0 and int(clean.states_held) == 0
+	var ok: bool = predicting and moved > 2.0 and float(clean.worst_shift) <= 0.1001 and frozen_again and sim_ok
 	_report(&"drive", ok,
-		"client at the wheel: predicted %s, moved %.1f m, worst correction %.3f m/tick, frozen again %s" % [
-			predicting, moved, worst_shift, frozen_again])
+		("client at the wheel: predicted %s, moved %.1f m, worst correction %.3f m/tick, frozen again %s;"
+		+ " with --net-sim: predicted %s, %d inputs and %d host states held, host %d ticks behind (clean %d),"
+		+ " worst correction %.3f m/tick") % [predicting, moved, clean.worst_shift, frozen_again, still_predicting,
+			simulated.inputs_held, simulated.states_held, simulated.behind, clean.behind, simulated.worst_shift])
+
+
+## Client at the wheel: accelerates for `seconds`, then holds the handbrake for one. Returns the worst correction
+## in a tick, the median and worst error measured, and how many ticks behind the client's newest input the host's
+## newest state was (median).
+func _drive_for(vehicle: VehicleBody3D, seconds: float) -> Dictionary:
+	var prediction: VehiclePrediction = vehicle.get(&"_prediction")
+	var worst_shift: float = 0.0
+	var errors: Array[float] = []
+	var behind: Array[int] = []
+	var held_out: Array[int] = []
+	var held_back: Array[int] = []
+	Input.action_press(&"drive_accelerate")
+	var deadline: int = Time.get_ticks_msec() + int(seconds * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		await get_tree().physics_frame
+		worst_shift = maxf(worst_shift, prediction.last_shift)
+		errors.append(prediction.reconciler.last_error)
+		if prediction.host_seq > 0:
+			behind.append(prediction.applied_seq - prediction.host_seq)
+		held_out.append(prediction.uplink.pending())
+		held_back.append(prediction.downlink.pending())
+	Input.action_release(&"drive_accelerate")
+	Input.action_press(&"drive_handbrake")
+	await _pump(1.0)
+	Input.action_release(&"drive_handbrake")
+	return {
+		"worst_shift": worst_shift,
+		"median_error": _median(errors),
+		"worst_error": errors.max() if not errors.is_empty() else INF,
+		"behind": int(_median(behind)),
+		"inputs_held": int(_median(held_out)),
+		"states_held": int(_median(held_back)),
+	}
+
+
+static func _median(values: Array) -> float:
+	if values.is_empty():
+		return -1.0
+	var sorted: Array = values.duplicate()
+	sorted.sort()
+	return float(sorted[sorted.size() / 2])
 
 
 ## N-221: the client comes back from the same running game (same identity in

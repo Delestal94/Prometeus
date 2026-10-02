@@ -266,9 +266,9 @@ func _ready() -> void:
 		# the MultiplayerSynchronizer. Letting the physics engine run too would
 		# fight the incoming synced transform every frame.
 		freeze = true
-		# The pose buffer simulates a bad link only where the transport
-		# doesn't (LAN under --net-sim); over Steam the sockets do it.
-		_net_smoother.configure_sim(NetworkManager.pose_net_sim())
+		# The pose buffer and the prediction simulate a bad link only where
+		# the transport doesn't (LAN under --net-sim); over Steam the sockets do it.
+		configure_net_sim(NetworkManager.pose_net_sim())
 	# Runs on every peer's copy of the van -- horn_honked is already relayed
 	# to everyone (see EventBus.request_horn()), so whoever's driving doesn't
 	# need to be this peer, or the host, for it to be heard here too.
@@ -700,6 +700,14 @@ func _process(delta: float) -> void:
 		if pose != Transform3D.IDENTITY:
 			transform = _prediction.blend_exit(pose, delta)
 	_pose_remote_wheels(delta)
+
+
+## The bad link a `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}) simulates on this peer's copy: the host's
+## poses it draws, and, at the wheel, the inputs it sends and the host's states it compares with (N-922.5). The
+## smoother keeps what it had for an empty profile; one with zeros turns everything off.
+func configure_net_sim(sim: Dictionary) -> void:
+	_net_smoother.configure_sim(sim)
+	_prediction.configure_sim(sim)
 
 
 ## Whether this peer is the client predicting the truck it drives (N-218).

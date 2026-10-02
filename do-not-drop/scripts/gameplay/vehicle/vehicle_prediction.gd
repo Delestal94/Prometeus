@@ -56,6 +56,13 @@ var applied_seq: int = 0
 var last_sent: Array = []
 ## Client: how far the last tick's correction moved the truck (m), for tests and the network overlay.
 var last_shift: float = 0.0
+## Client: the input number of the newest host state compared with its own (0 before any), for tests.
+var host_seq: int = 0
+## Client, `--net-sim` on LAN (N-922.5): the inputs it sends and the host's states it compares with, each held back
+## half the profile's lag plus its jitter and lost at its rate, as the sockets would do it over Steam. Without them a
+## LAN test with `--net-sim` only delayed the pose buffer, which the driver doesn't use: the prediction looked perfect.
+var uplink := NetDelayQueue.new()
+var downlink := NetDelayQueue.new()
 var _next_seq: int = 0
 var _was_local_driver: bool = false
 ## Something on this peer froze the predicting copy (the level, at the end of a run): no starting again until
@@ -130,7 +137,16 @@ func halt(vehicle: Vehicle) -> void:
 	_held_off = true
 	_exit_left = 0.0
 	reconciler.clear()
+	downlink.clear()
+	uplink.clear()
 	vehicle.freeze = true
+
+
+## A `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}) for the inputs this client sends and the host's states it
+## compares with, half the lag each way; an empty one simulates nothing.
+func configure_sim(sim: Dictionary) -> void:
+	uplink.configure_sim(sim, 0.5)
+	downlink.configure_sim(sim, 0.5)
 
 
 ## Client, each physics tick, before the truck's forces. Sends this tick's input while this peer drives,
@@ -138,6 +154,10 @@ func halt(vehicle: Vehicle) -> void:
 ## True while predicting: the caller runs the truck's forces.
 func client_tick(vehicle: Vehicle, delta: float, smoother: NetPoseSmoother, host_velocity: Vector3,
 		host_spin: Vector3, host_simulating: bool) -> bool:
+	var now: float = NetPoseSmoother.local_now()
+	# Inputs held back by --net-sim go out once their time has come, driving or not (they were on their way).
+	for held: Variant in uplink.take(now):
+		_send(vehicle, held)
 	var driving: bool = is_remote_driver_here(vehicle)
 	if driving != _was_local_driver:
 		_was_local_driver = driving
@@ -157,17 +177,24 @@ func client_tick(vehicle: Vehicle, delta: float, smoother: NetPoseSmoother, host
 		return false
 	if active and not started:
 		reconciler.record(applied_seq, vehicle.global_transform, vehicle.linear_velocity, vehicle.angular_velocity)
+		for state: Variant in downlink.take(now):
+			_reconcile(state)
 		_correct(vehicle, delta)
 	_next_seq += 1
 	applied_seq = _next_seq
-	var throttle: float = vehicle.throttle_input()
-	var steering_input: float = vehicle.steer_input()
-	var handbrake: bool = vehicle.handbrake_input()
-	last_sent = [applied_seq, throttle, steering_input, handbrake]
-	var peer: MultiplayerPeer = vehicle.multiplayer.multiplayer_peer
-	if peer != null and not peer is OfflineMultiplayerPeer:
-		vehicle.rpc_id(1, &"submit_driver_input", applied_seq, throttle, steering_input, handbrake)
+	last_sent = [applied_seq, vehicle.throttle_input(), vehicle.steer_input(), vehicle.handbrake_input()]
+	if uplink.is_active():
+		uplink.push(last_sent, now)
+	else:
+		_send(vehicle, last_sent)
 	return active
+
+
+## Client: one input, [seq, throttle, steering, handbrake], to the host (nobody to send it to offline).
+static func _send(vehicle: Vehicle, input: Array) -> void:
+	var peer: MultiplayerPeer = vehicle.multiplayer.multiplayer_peer
+	if peer != null and not peer is OfflineMultiplayerPeer and vehicle.is_inside_tree():
+		vehicle.rpc_id(1, &"submit_driver_input", int(input[0]), float(input[1]), float(input[2]), bool(input[3]))
 
 
 ## Whether this peer's world has ground under `pose` (the newest one the host sent), within GROUND_PROBE metres
@@ -183,10 +210,20 @@ static func has_ground(vehicle: Vehicle, pose: Transform3D) -> bool:
 	return not vehicle.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
-## Client: the host's state after input `seq` (a whole synced packet).
+## Client: the host's state after input `seq` (a whole synced packet). Held back with --net-sim (downlink).
 func host_state(seq: int, pose: Transform3D, linear_velocity: Vector3, angular_velocity: Vector3) -> void:
-	if active:
-		reconciler.reconcile(seq, pose, linear_velocity, angular_velocity)
+	if not active:
+		return
+	var state: Array = [seq, pose, linear_velocity, angular_velocity]
+	if downlink.is_active():
+		downlink.push(state, NetPoseSmoother.local_now())
+	else:
+		_reconcile(state)
+
+
+func _reconcile(state: Array) -> void:
+	host_seq = int(state[0])
+	reconciler.reconcile(int(state[0]), state[1], state[2], state[3])
 
 
 func _correct(vehicle: Vehicle, delta: float) -> void:
@@ -213,6 +250,7 @@ func _start(vehicle: Vehicle, smoother: NetPoseSmoother, host_velocity: Vector3,
 	active = true
 	_exit_left = 0.0
 	reconciler.clear()
+	downlink.clear()
 	# From the newest pose the host sent, not the one drawn a cushion behind it.
 	var latest: Transform3D = smoother.latest_pose()
 	if latest != Transform3D.IDENTITY:
@@ -226,6 +264,7 @@ func _start(vehicle: Vehicle, smoother: NetPoseSmoother, host_velocity: Vector3,
 func _stop(vehicle: Vehicle, smoother: NetPoseSmoother) -> void:
 	active = false
 	reconciler.clear()
+	downlink.clear()
 	vehicle.freeze = true
 	if smoother == null or smoother.is_empty():
 		return

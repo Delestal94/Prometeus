@@ -15,6 +15,10 @@ extends SceneTree
 ##   too, and the velocity slowly once clearly off (not suspension shake);
 ##   states for unknown inputs are ignored, and a link that
 ##   lost track for too long snaps to the host.
+## - NetDelayQueue (one way of a simulated link, N-922.5): inactive without a
+##   profile; with one, each item comes out `lag` to `lag + jitter` later, in
+##   the order it went in, about `loss` of them never; half the lag each way
+##   for a predicted body's two ways; clear() drops what is on the way.
 
 const TICK: float = 1.0 / 60.0
 
@@ -25,6 +29,7 @@ func _initialize() -> void:
 	_input_buffer()
 	_reconciler_eases()
 	_reconciler_edges()
+	_delay_queue()
 	if _failures == 0:
 		print("PASS: net_prediction")
 	quit(_failures)
@@ -174,6 +179,49 @@ func _reconciler_edges() -> void:
 	# The input numbers going back (a new prediction session) start the history over.
 	lost.record(5, Transform3D.IDENTITY, Vector3.ZERO, Vector3.ZERO)
 	_expect(lost.history_size() == 1, "Numbers going back start the history over")
+
+
+func _delay_queue() -> void:
+	var queue := NetDelayQueue.new()
+	queue.set_seed(922)
+	_expect(not queue.is_active(), "No profile: nothing simulated")
+	queue.configure_sim({"lag_ms": 150, "jitter_ms": 20, "loss_pct": 0.0}, 0.5)
+	_expect(queue.is_active() and is_equal_approx(queue.lag, 0.075) and is_equal_approx(queue.jitter, 0.02),
+		"Half of a 150 ms lag this way, the whole jitter (lag %.3f, jitter %.3f)" % [queue.lag, queue.jitter])
+	# One item a tick for a second; read every tick.
+	var sent_at: Dictionary = {}
+	var delays: Array[float] = []
+	var order: Array[int] = []
+	for tick: int in range(120):
+		var now: float = tick * TICK
+		if tick < 60:
+			queue.push(tick, now)
+			sent_at[tick] = now
+		for item: Variant in queue.take(now):
+			delays.append(now - float(sent_at[int(item)]))
+			order.append(int(item))
+	var in_order: bool = true
+	for index: int in range(1, order.size()):
+		in_order = in_order and order[index] > order[index - 1]
+	delays.sort()
+	_expect(order.size() == 60 and in_order, "Every item comes out, in the order it went in (%d)" % order.size())
+	_expect(delays[0] >= 0.075 - 0.0001 and delays[-1] <= 0.075 + 0.02 + TICK + 0.0001,
+		"...each 75 ms to 95 ms later, read a tick at a time (%.3f..%.3f s)" % [delays[0], delays[-1]])
+	_expect(queue.take(10.0).is_empty() and queue.pending() == 0, "Nothing is left on the way")
+	# Loss.
+	var lossy := NetDelayQueue.new()
+	lossy.set_seed(5)
+	lossy.configure_sim({"lag_ms": 0, "jitter_ms": 0, "loss_pct": 10.0})
+	for index: int in range(1000):
+		lossy.push(index, 0.0)
+	var arrived: int = lossy.take(0.0).size()
+	_expect(lossy.is_active() and arrived > 860 and arrived < 940, "About 10 %% lost (%d of 1000 arrive)" % arrived)
+	# Turned off again, and cleared.
+	queue.push(1, 0.0)
+	queue.clear()
+	_expect(queue.pending() == 0 and queue.take(10.0).is_empty(), "clear() drops what is on the way")
+	queue.configure_sim({})
+	_expect(not queue.is_active(), "An empty profile turns it off")
 
 
 func _expect(condition: bool, description: String) -> void:

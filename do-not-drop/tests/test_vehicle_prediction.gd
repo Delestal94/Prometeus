@@ -24,6 +24,9 @@ extends SceneTree
 ## - a wall only the client's world has, the truck one of its exceptions (TruckPassThrough), doesn't stop the copy
 ##   the host's truck never met: no 3 m snap (N-922.3); the depot's staff and forklift let the truck through on every
 ##   peer, a level crossing's arms and train cars only where it isn't the host's (get_collision_exceptions());
+## - with no ground under the host's truck in the client's world yet, the copy waits frozen instead of falling, and
+##   predicts once the road is built (N-922.4);
+## - `--net-sim` on a LAN (configure_net_sim) holds the driver's inputs and the host's states back (N-922.5);
 ## - the host going mid-drive (the level's _stop_orphaned_run) freezes the copy where it is, no longer predicted.
 
 const LAG_TICKS: int = 9
@@ -198,6 +201,7 @@ func _run() -> void:
 	await _check_wall_only_here()
 	await _check_let_through()
 	await _check_no_ground()
+	await _check_net_sim()
 	await _check_host_gone()
 
 	root.get_node(^"/root/RunManager").set(&"is_running", false)
@@ -372,6 +376,30 @@ func _check_no_ground() -> void:
 		"...and once the road is built under it, it predicts, standing on it (y %.2f)" % copy.global_position.y)
 	viewport.queue_free()
 	await physics_frame
+
+
+## `--net-sim` on a LAN (N-922.5, Vehicle.configure_net_sim): the client at the wheel holds back the inputs it sends
+## and the host's states it compares with, instead of only the pose buffer it doesn't draw from. A 2 s lag: nothing
+## gets through in these few ticks. Turned off again, both ways go straight through.
+func _check_net_sim() -> void:
+	var prediction: Object = _client.get(&"_prediction")
+	var seen_seq: int = int(prediction.get(&"host_seq"))
+	_client.call(&"configure_net_sim", {"lag_ms": 2000, "jitter_ms": 0, "loss_pct": 0.0})
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
+		await _step(1.0, 0.0)
+	var uplink: NetDelayQueue = prediction.get(&"uplink")
+	var downlink: NetDelayQueue = prediction.get(&"downlink")
+	_expect(bool(_client.call(&"is_predicted")) and uplink.pending() > LAG_TICKS and downlink.pending() > 0
+			and int(prediction.get(&"host_seq")) == seen_seq,
+		"--net-sim holds the driver's inputs (%d) and the host's states (%d) back; none compared yet" % [
+			uplink.pending(), downlink.pending()])
+	_client.call(&"configure_net_sim", {"lag_ms": 0, "jitter_ms": 0, "loss_pct": 0.0})
+	uplink.clear()
+	downlink.clear()
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
+		await _step(1.0, 0.0)
+	_expect(uplink.pending() == 0 and downlink.pending() == 0 and int(prediction.get(&"host_seq")) > seen_seq,
+		"...and with it off, both go straight through again")
 
 
 ## One whole pose packet from the host (the truck standing at `pose`), as the synchronizer applies it.
