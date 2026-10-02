@@ -1120,6 +1120,13 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 156 → 150. Sus dos líneas largas se partieron (sale de la línea base del lint).
     `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`). Siguientes:
     `mud_segment.gd` (13), `package_rescue.gd` (13), `rejoin_keepsake.gd` (9), `sound_audit.gd` (8), `route.gd` (8).
+  - [x] `route.gd` (2026-10-02, rama `nacho/N-224-route-typed`): la ruta de la entrega. La sesión por la constante
+    `NETWORK_MANAGER` con un accesor `_network()` (`world_seed`, `world_house_count`, `peer_ids`, `is_host()`;
+    `rail_crossing_segment.gd` ya precarga `network_manager.gd` desde esta ruta) y la estación como `ServiceStop`,
+    leída de su `ServiceStopSegment` (`in_bay`). En el archivo: 9 → 1 uso (`.call` 2 → 0, `.get(&` 5 → 0, `/root/`
+    2 → 1; también `.set(&` 1 → 0); en `scripts/`: `.call` 172 → 170, `.get(&` 155 → 150.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`). Siguientes:
+    `mud_segment.gd` (14), `package_rescue.gd` (13), `rejoin_keepsake.gd` (9), `run_tally.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
