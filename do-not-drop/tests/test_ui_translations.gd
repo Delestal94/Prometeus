@@ -36,8 +36,9 @@ extends SceneTree
 
 const CSV_PATH: String = "res://translations/strings_ui.csv"
 const SCAN_DIRS: Array[String] = ["res://scripts", "res://modules"]
-## Data files that name keys: the newspaper's stories (N-606.2) are asked for by the catalogue, not by a script.
-const SCAN_DATA: Array[String] = ["res://data/newspaper/stories.json"]
+## Data files that name keys: the newspaper's stories (N-606.2) are asked for by the catalogue, and the
+## scene's title card (N-606.3) by its shot list, not by a script.
+const SCAN_DATA: Array[String] = ["res://data/newspaper/stories.json", "res://data/newspaper/shots.json"]
 ## Where a quoted accented literal means text shown untranslated.
 const LITERAL_SCAN_DIRS: Array[String] = [
 	"res://scripts/ui",
