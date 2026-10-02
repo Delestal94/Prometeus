@@ -19,7 +19,11 @@ class_name ServiceStopShop
 ## while the crew shops, so the time the vote and the walk take is spent.
 ##
 ## Autoloads are looked up by path, not by name: this script is loaded through
-## a chain that a test may compile before the autoloads exist.
+## a chain that a test may compile before the autoloads exist. The network and
+## the vote are typed by their module classes (NetSession, CoopVote: neither
+## names an autoload). CrewProgression, RunManager and VehicleFaults stay plain
+## nodes: their scripts name autoloads, so typing them here would compile them
+## before the autoloads exist (see PackageAutoloads, N-224.4).
 
 ## Stamped on every offer, so the depot panel and other stops leave them alone.
 const VENUE: StringName = &"service_stop"
@@ -117,8 +121,8 @@ func buy_supply(supply_id: StringName) -> bool:
 
 ## The panel's discount button, solo: half price with the local player's card.
 func buy_supply_discounted(supply_id: StringName) -> bool:
-	var network: Node = _autoload(&"NetworkManager")
-	return _purchase(supply_id, int(network.call(&"local_id")) if network != null else 1)
+	var network: NetSession = _network()
+	return _purchase(supply_id, network.local_id() if network != null else 1)
 
 
 ## Host, as a player uses the counter: everyone gets the fresh money and
@@ -130,7 +134,7 @@ func open_for_crew() -> void:
 	refresh_state()
 	_broadcast()
 	if _is_online():
-		var votes: Node = _autoload(&"ShopVoteManager")
+		var votes: CoopVote = _votes()
 		if votes != null:
 			votes.call(&"open_shop", offers())
 
@@ -203,8 +207,8 @@ func _on_shop_resolved(offer_id: StringName, offer: Dictionary) -> void:
 
 
 func _reopen_vote() -> void:
-	var votes: Node = _autoload(&"ShopVoteManager")
-	if votes != null and not bool(votes.get(&"active")) and _run_going():
+	var votes: CoopVote = _votes()
+	if votes != null and not votes.active and _run_going():
 		votes.call(&"open_shop", offers())
 
 
@@ -214,12 +218,12 @@ func _reopen_vote() -> void:
 func _exit_tree() -> void:
 	if not _is_host() or not _run_going():
 		return
-	var votes: Node = _autoload(&"ShopVoteManager")
-	if votes == null or not bool(votes.get(&"active")):
+	var votes: CoopVote = _votes()
+	if votes == null or not votes.active:
 		return
-	for offer: Variant in (votes.get(&"offers") as Dictionary).values():
+	for offer: Variant in votes.offers.values():
 		if offer is Dictionary and offer.get("venue") == VENUE and offer.get("stop") == stop_key:
-			votes.call(&"close_on", &"", {})
+			votes.close_on(&"", {})
 			return
 
 
@@ -286,13 +290,24 @@ func _notice(text: String) -> void:
 
 
 func _is_online() -> bool:
-	var network: Node = _autoload(&"NetworkManager")
-	return network != null and bool(network.call(&"is_online"))
+	var network: NetSession = _network()
+	return network != null and network.is_online()
 
 
 func _is_host() -> bool:
-	var network: Node = _autoload(&"NetworkManager")
-	return network == null or bool(network.call(&"is_host"))
+	var network: NetSession = _network()
+	return network == null or network.is_host()
+
+
+## The NetworkManager autoload as the session class it extends (null outside the tree).
+func _network() -> NetSession:
+	return _autoload(&"NetworkManager") as NetSession
+
+
+## The ShopVoteManager autoload as the vote class it extends; `open_shop` is the
+## game's own (ShopVoteManager has no class name), so it stays a call by name.
+func _votes() -> CoopVote:
+	return _autoload(&"ShopVoteManager") as CoopVote
 
 
 func _autoload(autoload_name: StringName) -> Node:

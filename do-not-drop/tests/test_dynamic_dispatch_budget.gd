@@ -64,6 +64,9 @@ extends SceneTree
 ## - rail_crossing_segment.gd (the level crossing) rolls whether it closes from the session's world_seed
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the autoload runs, every crossing
 ##   would roll from seed 0 and a client would start its own barrier cycle instead of asking the host.
+## - service_stop_shop.gd (a service station's counter) holds the session as NetSession and the vote as
+##   CoopVote: if ShopVoteManager stopped extending CoopVote, `as CoopVote` would give null and the station's
+##   offers would never open to the crew's vote.
 ## - mud_segment.gd (the mud stretch) holds its spot, crane, run log and session typed; the crew's money, the
 ##   run mode, the truck's `carries` and the tests' FakePlayers stay by name (see its budget).
 
@@ -302,6 +305,12 @@ const BUDGETS: Dictionary = {
 	# stay RunManager's current_distance and best_score (same --script compile reason as the spectator
 	# camera: the truck's presentation builds the GPS) and the EventBus handle.
 	"res://scripts/presentation/dashboard_gps.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
+	# The service station's counter (N-224.4): the session as NetSession (local_id, is_online, is_host) and the
+	# vote as CoopVote (active, offers, close_on). By name stay ShopVoteManager.open_shop (the game's own, no
+	# class name), CrewProgression (spend, cards, SUPPLIES, team_money), RunManager (the kit, is_running) and
+	# VehicleFaults (spares, repair): their scripts name autoloads, so typing them breaks --script compiles.
+	# The /root/ lookup is the one null-safe accessor.
+	"res://scripts/gameplay/route/service_stop_shop.gd": {"call": 11, "callv": 0, "get": 6, "root": 1},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -382,6 +391,8 @@ func _run() -> void:
 
 	var session: Node = root.get_node_or_null(^"/root/NetworkManager")
 	_expect(session is NetSession, "The NetworkManager autoload is a NetSession (the box types it so)")
+	var votes: Node = root.get_node_or_null(^"/root/ShopVoteManager")
+	_expect(votes is CoopVote, "The ShopVoteManager autoload is a CoopVote (the service counter types it so)")
 
 	for script_path: String in SCRIPT_HANDLES:
 		var script: Script = load(script_path) as Script

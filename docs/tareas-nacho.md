@@ -1096,6 +1096,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     EventBus. En el archivo: 10 → 4 usos (`.call` 5 → 1, `.get(&` 3 → 1, `/root/` 2 → 2).
     `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`). Siguientes:
     `vehicle_presentation.gd` (9), `run_tally.gd` (9).
+  - [x] `service_stop_shop.gd` (2026-10-02, rama `nacho/N-224-service-stop-shop-typed`): el mostrador de la estación
+    de servicio (N-110, el que más usos tenía: 25). La red como `NetSession` (`local_id`, `is_online`, `is_host`) y la
+    votación como `CoopVote` (`active`, `offers`, `close_on`). Quedan por nombre `ShopVoteManager.open_shop` (del juego,
+    sin `class_name`), `CrewProgression`, `RunManager` y `VehicleFaults`: sus scripts nombran autoloads y tiparlos rompe
+    la compilación bajo `--script` (`test_service_stop` precarga el mostrador). En el archivo: 25 → 18 usos (`.call`
+    15 → 11, `.get(&` 9 → 6, `/root/` 1 → 1). `test_dynamic_dispatch_budget.gd` suma el archivo y exige que
+    `ShopVoteManager` sea `CoopVote`. Sin aviso (`route/` es de Nacho y `tests/`). Siguientes: `mud_segment.gd` (14),
+    `vehicle_presentation.gd` (9), `route.gd` (9), `run_tally.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
