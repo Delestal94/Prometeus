@@ -3135,7 +3135,7 @@ y de la fila de la tienda contra el resto del depósito (sin cajas de color plan
   adentro de la compra atómica). `DepotPanel` cara `service` lista las filas del kit y la sección de accesorios del
   jugador local. `docs/economia-y-contramedidas.md` con las líneas y las contramedidas. Tests: `test_service_stop.gd`
   ampliado (`_check_accessory_shelf`).
-- [ ] **N-923.5** Red, host autoritativo (`PROTOCOL_VERSION` según `docs/convenciones-godot.md` §6: mirar los PRs
+- [x] **N-923.5** Red, host autoritativo (`PROTOCOL_VERSION` según `docs/convenciones-godot.md` §6: mirar los PRs
   abiertos que tocan `network_manager.gd`, tomar el siguiente al más alto, hoy 27, y sumar la línea al historial):
   RPCs `request_buy_accessory(id)` / `request_equip_accessory(slot, id)` / `request_drop_accessory(id)` /
   `request_pickup_accessory(pickup_id)` (`any_peer` hacia el host, cada uno valida peer, plata, dueño y distancia; el
@@ -3145,11 +3145,42 @@ y de la fila de la tienda contra el resto del depósito (sin cajas de color plan
   Esfuerzo `xhigh`. Tests `network` / `net_accessories` (nuevo, host y cliente reales como en `test_service_stop`):
   doble compra simultánea de dos peers cobra una vez, comprar sin plata, equipar lo que no es tuyo, soltar y recoger
   desde otro peer, desconexión del dueño con el pickup en el suelo.
+  **[x] Hecho (2026-10-02, rama `nacho/N-923-accessory-shop`, `b592db1c`, tests `d702f5cd`)** — `PROTOCOL_VERSION` 28
+  (el más alto en `main` y en los PRs abiertos era 27). `scripts/core/accessory_net.gd` (`AccessoryNet`, hijo
+  "AccessoryNet" de `CrewProgression`, misma ruta en todos los peers): `request_equip_accessory(slot, id)` (id `&""`
+  quita lo del slot), `request_drop_accessory(id)` y `request_pickup_accessory(pickup_id)` son `any_peer`,
+  `call_remote`, `reliable`, con `RpcGuard.allow_request`, `name_ok`, remitente en el roster y la acción atribuida a
+  quien la pidió (su color); el host valida id del catálogo, slot, dueño, que no esté en el suelo, que haya un cuerpo
+  en el nivel y el alcance de recogida (`Interactable.REMOTE_REACH` + `NetStats.reach_slack`, desde
+  `reach_origin()`, o sea el asiento si está sentado). `_receive_accessories(owned, pickups)` (`authority`,
+  `call_remote`, `reliable`, canal 0 como `_receive_campaign`) manda el inventario entero y el suelo después de cada
+  cambio (uno por frame) y a todos en cada cambio del roster: así le llega al que entra tarde (el inventario también
+  viaja con la campaña). Para la UI: `equip()`, `drop()`, `pick_up()` del jugador local (RPC o directo en el host).
+  **Sin `request_buy_accessory`**: online se compra votando la oferta propia (`request_vote` de `ShopVoteManager`, ya
+  existente), que el host liquida con `buy_accessory`; un RPC de compra directa se saltearía la votación decidida.
+  `ShopVoteManager` liquida el accesorio antes de emitir `shop_resolved` (el panel del host se reconstruía con el
+  inventario viejo); al cliente la campaña ya le llegaba antes que `_sync_resolution`. `scripts/core/accessory_ground.gd`
+  (`AccessoryGround`, puro): lo soltado sigue siendo del dueño hasta que otro lo recoge (la tienda lo ve tomado, el
+  guardado lo deja con el dueño: nunca se pierde ni se vende dos veces) y no se puede poner mientras está en el suelo;
+  vuelve al dueño si este se va (`peer_removed`), al terminar la entrega (`run_ended`), a los 120 s o si el dueño ya no
+  lo tiene (campaña reiniciada); un pickup por jugador a la vez; cerrar la sesión limpia el suelo. El guardado se
+  escribe una vez por ráfaga (0,5 s). Tests: `tests/test_net_accessories.gd` (nuevo) y una etapa de accesorios en
+  `tests/net_pair.gd` (el cliente compra votando y el host cobra una vez, sin plata no compra, pedir ponerse el casco
+  del host no cambia nada, soltar / recoge el host / recoge el cliente mueven la única copia, y la gorra que deja en el
+  suelo al irse vuelve a su color y la ve suya al volver; el host guarda en `user://net_pair_campaign.json`, no en la
+  campaña del jugador). La "doble compra simultánea" queda cubierta por la votación (cierra sobre una sola oferta) y
+  por `buy_accessory` (valida antes de cobrar; `test_accessory_shop`). `run-net-pair.sh` y `run-net-trio.sh` pasan.
 - [ ] **N-923.6** Soltar y recoger: `AccessoryPickup` (nodo con `Area3D`, modelo, brillo suave, texto "Recoger gorra
   de <color>"), spawner replicado, devolución al dueño tras 120 s o al terminar la entrega, tope de un pickup por jugador
   y no soltar con el camión rápido. Con `constructor-jugador` (interacción) y `constructor-mundo` si hace falta el
   spawner; tests `accessory_pickup`. Esfuerzo `Opus 5.5 · high`. Depende de N-923.5. Es el mismo nodo que usará
   N-311 para lo que se encuentra en el mundo.
+  *Ya hecho en N-923.5 (lado host, en `AccessoryNet`)*: la devolución tras 120 s, al terminar la entrega o al irse el
+  dueño, el tope de uno por jugador y el estado del suelo igual en todos los peers (`CrewProgression.accessory_net.ground`,
+  señales `pickup_added` / `pickup_removed`, ids del host): no hace falta spawner replicado, cada peer arma el nodo desde
+  ahí. Queda: el nodo con el modelo y el texto, pedir con `accessory_net.pick_up(id)` (o, como `Interactable` en el
+  host, `pick_up_as(peer, id)`), la regla del camión rápido en `AccessoryNet._drop_block()`, dónde cae (hoy 0,9 m
+  delante del jugador, sin buscar el piso) y qué pasa si se suelta dentro del camión.
 - [ ] **N-923.7** Panel de cosméticos: página "Accesorios" con los tres slots, los poseídos y los bloqueados con precio,
   equipar/quitar y "Soltar" (con confirmación); maniquí que muestra el accesorio puesto en el acto; navegación por mando
   (`_wire_focus`). `cosmetics_panel.gd` (zona de Slatex) con `constructor-ui`; aviso en el PR. Tests `cosmetics_panel`
