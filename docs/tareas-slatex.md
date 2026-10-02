@@ -175,6 +175,15 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 > la retopología de hombros: 10/12/13 permanecen pendientes. Aviso:
 > `docs/avisos/2026-10-01-s311-contacto-numerico.md`.
 
+> Corrección de axila (2026-10-02): loops cruzados curvos y pesos de superficie
+> eliminan los pliegues de A0/A30/A60/A75 en los tres LOD. LOD2 conserva la
+> transición cadera-muslo en contracciones combinadas. Exportados 4704/2248/794
+> triángulos, 53 muestras por LOD válidas y 144 comparaciones de silueta bajo 5 %.
+> No reemplaza al jugador ni certifica A90, todas las animaciones o el continuo;
+> 10/12/13 permanecen pendientes en su alcance completo. Evidencia actual en
+> `art/gel_character/review_bloque_b/ESTADO_ACTUAL.md` y aviso
+> `docs/avisos/2026-10-02-s311-axila-retopologia.md`.
+
 ### C. Proporciones en el juego (19-26)
 
 - [ ] **S-311.19** Recurso `GelBodyProportions` (`scripts/gameplay/player/gel/`): cada parámetro con

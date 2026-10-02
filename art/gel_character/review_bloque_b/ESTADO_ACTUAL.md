@@ -1,5 +1,38 @@
 # Evidencia en curso, no aprobación B
 
+## Estado actual: axila reconstruida, 2026-10-02
+
+Esta sección sustituye los estados históricos de abajo. Se corrigieron los
+pliegues de axila en A0/A30/A60/A75 con pesos de superficie normalizados a cuatro
+influencias y loops cruzados curvos en LOD1. El dihedro problemático de A75 pasa
+de 143,17° a 72,80°. LOD2 deriva esa superficie y protege la transición
+cadera-muslo: la regresión de muestra 30/cara 9 pasó de RED a GREEN.
+
+Fuente: siete tests Blender PASS, incluida la regresión de poses que falla en
+13 subpruebas con el builder anterior. Python: 50 tests OK, siete skips que
+requieren Blender y que se ejecutaron aparte. Los tres GLB reales pasan las
+53 muestras cada uno sin errores; límites 4704/2248/794 triángulos. Se conservan
+los once morphs, sus rangos y defaults cero, veinte huesos y nueve clips.
+Reposos, inverse binds y datos de animación decodificados son idénticos a main
+`e383ed5`; master original SHA256 `14763003da303779d38725530d78bc7a71baa83318d5b892ed5c5e610e3bb178`.
+
+Godot 4.7.2/GL Compatibility, RX7800XT: cuatro tests relacionados PASS, lint
+PASS, 216 capturas nuevas y 144 comparaciones bajo el 5 %. Con el denominador
+más estricto de área de LOD0, máximos LOD1=3,1003 % y LOD2=4,4195 %.
+`lod_silhouette_report.json` usa la métrica original XOR/unión.
+Las 18 vistas cercanas opacas A60/A75 no muestran aberturas ni pliegues
+transversales invertidos; persiste el facetado propio de LOD2 distante.
+Las hojas actuales están en `axilla_captures/`; las demás carpetas de capturas
+son históricas y no certifican estos archivos.
+
+`export_validation.json`, métricas y experimento de núcleo fueron regenerados.
+El núcleo sigue fuera de presupuesto y no seleccionado; UV sigue fallando 15 %,
+y la corrección lineal de grosor no está aprobada. No cambia el jugador activo.
+No se certifican A90, todas las animaciones ni el continuo de morphs+poses.
+10/12/13 siguen pendientes en su alcance total; C/D/E y Flaca completo también.
+
+## Historial (no evidencia del export actual)
+
 ## Corrección del estado inicial, 2026-10-01
 
 Los tres GLB y el `.blend` guardado tienen ahora los once morphs en cero

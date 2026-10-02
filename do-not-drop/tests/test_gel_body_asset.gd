@@ -2,7 +2,8 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_gel_body_asset.gd
 ## Guards the isolated S-311 body exports, not the active rounded player:
 ## three triangle budgets, eleven zero-default working morphs, twenty named bones,
-## nine animation durations, finite vertex/UV data, zone colours and foot pivot.
+## nine animation durations, finite vertex/UV data, normalized four-slot skinning,
+## zone colours and foot pivot.
 ## Closure, UV overlap and intersections are checked independently by validate_glb.py.
 
 const BASE: String = "res://assets/models/characters/gel/gel_body_lod%d.glb"
@@ -88,6 +89,27 @@ func _check_mesh(body: MeshInstance3D, lod: int) -> void:
 		triangles += indices.size() / 3 if not indices.is_empty() else vertices.size() / 3
 		var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
 		var zones: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		_expect(bones.size() == vertices.size() * 4 and weights.size() == bones.size(),
+			"LOD%d skin has four slots per vertex (got %d bones, %d weights, %d vertices)"
+			% [lod, bones.size(), weights.size(), vertices.size()])
+		var bad_skin: int = 0
+		if bones.size() == vertices.size() * 4 and weights.size() == bones.size():
+			for vertex_index: int in vertices.size():
+				var total: float = 0.0
+				var invalid: bool = false
+				for slot: int in range(4):
+					var index: int = vertex_index * 4 + slot
+					var weight: float = weights[index]
+					invalid = invalid or not is_finite(weight) or weight < 0.0
+					invalid = invalid or (weight > 0.0 and (bones[index] < 0 or bones[index] >= 20))
+					total += weight
+				# Fresh Godot imports lose up to 4.581e-5 from normalized GLB weights.
+				# Bound the four-slot import error by four 16-bit steps, not float epsilon.
+				if invalid or absf(total - 1.0) > 4.0 / 65535.0:
+					bad_skin += 1
+		_expect(bad_skin == 0, "LOD%d skin weights are finite, positive and normalized (got %d bad)" % [lod, bad_skin])
 		_expect(uv.size() == vertices.size(),
 			"LOD%d has UV0 for every vertex (got %d/%d)" % [lod, uv.size(), vertices.size()])
 		_expect(zones.size() == vertices.size(),

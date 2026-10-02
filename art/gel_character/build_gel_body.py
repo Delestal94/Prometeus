@@ -12,6 +12,7 @@ from pathlib import Path
 import bpy
 import bmesh
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -50,6 +51,86 @@ def measured_proportions(obj):
             'flat_sole_depth_m': max(p.y for p in sole)-min(p.y for p in sole)}
 
 
+def rebuild_axilla(obj):
+    """Reconstruct crossed quad loops against the curved LOD0 shoulder surface.
+
+    Skin's lower thoracic poles span the shoulder in long diagonal faces.
+    Splitting only their longitudinal edges retains the transverse crease.
+    Opposite-edge rings in both directions keep a conforming closed quad mesh;
+    curved surface samples replace the planar patch, not merely its density.
+    Rings propagate outside the patch to avoid hanging vertices. Only shoulder
+    positions and newly added arm/hand samples move; original extremities stay.
+    """
+    reference = make_body(2)
+    surface = BVHTree.FromPolygons(
+        [v.co.copy() for v in reference.data.vertices],
+        [tuple(f.vertices) for f in reference.data.polygons])
+    reference_mesh = reference.data
+    bpy.data.objects.remove(reference, do_unlink=True)
+    bpy.data.meshes.remove(reference_mesh)
+    points = [v.co.copy() for v in obj.data.vertices]
+    original_count = len(points)
+    faces = [tuple(f.vertices) for f in obj.data.polygons]
+
+    def edge(a, b):
+        return tuple(sorted((a, b)))
+
+    linked = {}
+    for index, face in enumerate(faces):
+        for a, b in zip(face, face[1:]+face[:1]):
+            linked.setdefault(edge(a, b), []).append(index)
+    seeds = [e for e in linked
+             if all(.1 < abs(points[i].x) < .24 and .85 < points[i].z < 1.11
+                    for i in e) and (points[e[0]]-points[e[1]]).length > .09]
+    assert seeds, 'Missing long axillary patch edges'
+    selected, pending = set(seeds), list(seeds)
+    while pending:
+        current = pending.pop()
+        for index in linked[current]:
+            face = faces[index]
+            edges = [edge(a, b) for a, b in zip(face, face[1:]+face[:1])]
+            opposite = edges[(edges.index(current)+2) % 4]
+            if opposite not in selected:
+                selected.add(opposite)
+                pending.append(opposite)
+    splits = {}
+    for current in sorted(selected):
+        splits[current] = len(points)
+        points.append((points[current[0]]+points[current[1]])*.5)
+    rebuilt = []
+    for face in faces:
+        edges = [edge(a, b) for a, b in zip(face, face[1:]+face[:1])]
+        chosen = [i for i, current in enumerate(edges) if current in selected]
+        if not chosen:
+            rebuilt.append(face)
+        elif len(chosen) == 4:
+            center = len(points)
+            points.append(sum((points[i] for i in face), Vector())*.25)
+            for i in range(4):
+                rebuilt.append((face[i], splits[edges[i]], center,
+                                splits[edges[(i-1) % 4]]))
+        else:
+            assert len(chosen) == 2 and chosen[1]-chosen[0] == 2
+            start = chosen[0]
+            a, b, c, d = face[start:]+face[:start]
+            middle_a, middle_b = splits[edge(a, b)], splits[edge(c, d)]
+            rebuilt.extend(((a, middle_a, middle_b, d),
+                            (middle_a, b, c, middle_b)))
+    for index, point in enumerate(points):
+        shoulder = .08 < abs(point.x) < .42 and .91 < point.z < 1.27
+        new_arm = index >= original_count and .85 < point.z < 1.27 and abs(point.x) > .08
+        if shoulder or new_arm:
+            target, _, _, _ = surface.find_nearest(point)
+            points[index] = target
+    assert len(rebuilt)*2 <= BUDGETS[1], 'Axillary patch exceeds LOD1 budget'
+    old_mesh = obj.data
+    mesh = bpy.data.meshes.new('GelAxillaryQuadLoops')
+    mesh.from_pydata(points, [], rebuilt)
+    mesh.update()
+    obj.data = mesh
+    bpy.data.meshes.remove(old_mesh)
+
+
 def make_body(level):
     """A tree Skin surface is sewn at every branch, then subdivided as quads."""
     if level == 0:
@@ -63,9 +144,12 @@ def make_body(level):
         # Flat soles have zero plane error, so unconstrained quadric collapse
         # can fold their boundary across neighboring sole triangles. Preserve
         # those existing vertices while spending the distant-LOD budget on the
-        # curved surface; this changes simplification, not the source silhouette.
-        sole = obj.vertex_groups.new(name='LOD2 flat sole protection')
-        sole.add([v.index for v in obj.data.vertices if abs(v.co.z) < 1e-6], 1., 'REPLACE')
+        # curved surface. Hip/thigh morph-transition loops also need protection:
+        # joining across them forms long thin triangles that reverse under the
+        # existing thickness/hips/leg morphs (seeded sample 30).
+        sole = obj.vertex_groups.new(name='LOD2 sole and hip transition protection')
+        sole.add([v.index for v in obj.data.vertices
+                  if abs(v.co.z) < 1e-6 or .52 < v.co.z < .72], 1., 'REPLACE')
         decimate.vertex_group = sole.name
         decimate.invert_vertex_group = True
         decimate.vertex_group_factor = 1000.
@@ -135,6 +219,8 @@ def make_body(level):
     for v in obj.data.vertices:
         v.co *= scale
         v.co.z -= low*scale
+    if level == 1:
+        rebuild_axilla(obj)
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
@@ -288,21 +374,35 @@ def create_rig(source):
 
 
 def assign_weights(obj, rig):
-    """Inverse-distance capsule weights, smoothly blending the nearest four bones."""
+    """Surface-connected bone heat, normalized to four influences per vertex.
+
+    A spatial zone cutoff excluded the arm from adjacent torso vertices and
+    folded the shoulder when lowered. Heat considers the sewn surface instead.
+    The regression samples A0/A30/A60/A75; A90 is not certified by this change.
+    """
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    heat = []
+    for vertex in obj.data.vertices:
+        scores = [(obj.vertex_groups[g.group].name, g.weight)
+                  for g in vertex.groups
+                  if obj.vertex_groups[g.group].name in JOINTS and g.weight > 0.]
+        scores = sorted(scores, key=lambda item: (-item[1], JOINTS.index(item[0])))[:4]
+        total = sum(weight for _, weight in scores)
+        assert total > 0., ('Bone heat left vertex unweighted', obj.name, vertex.index)
+        heat.append([(name, weight/total) for name, weight in scores])
+    # The LOD2 sole-protection group has served its simplification purpose.
+    # Rebuild only the twenty deform groups, in the same export order as before.
+    obj.vertex_groups.clear()
     for name in JOINTS:
         obj.vertex_groups.new(name=name)
-    for vertex in obj.data.vertices:
+    for vertex, scores in zip(obj.data.vertices, heat):
         p = vertex.co
         zone, _ = zones(p)
         side = 'L' if p.x >= 0 else 'R'
-        candidates = {
-            'head': ('head','neck'), 'neck': ('neck','head','chest'),
-            'torso': ('pelvis','chest','neck','thigh.'+side),
-            'arm': ('upper_arm.'+side,'forearm.'+side,'hand.'+side,'chest'),
-            'hand': ('hand.'+side,'forearm.'+side,'thumb.'+side),
-            'leg': ('thigh.'+side,'shin.'+side,'pelvis','foot.'+side),
-            'foot': ('foot.'+side,'shin.'+side),
-        }[zone]
         if zone == 'foot':
             # Preserve the planted sole and forward toe as a foot, rather than
             # bending the lower boot back toward the vertical shin capsule.
@@ -311,19 +411,9 @@ def assign_weights(obj, rig):
             if shin_blend:
                 obj.vertex_groups['shin.'+side].add([vertex.index], shin_blend, 'REPLACE')
             continue
-        scores = []
-        for name in candidates:
-            b = rig.data.bones[name]
-            a, d = b.head_local, b.tail_local-b.head_local
-            t = max(0., min(1., (p-a).dot(d)/d.length_squared))
-            distance = (p-a-d*t).length
-            scores.append((name, 1./(distance+.012)**4))
-        total = sum(weight for _, weight in scores)
         for name, weight in scores:
-            obj.vertex_groups[name].add([vertex.index], weight/total, 'REPLACE')
-    obj.parent = rig
-    mod = obj.modifiers.new('Gel skin', 'ARMATURE')
-    mod.object = rig
+            obj.vertex_groups[name].add([vertex.index], weight, 'REPLACE')
+    next(mod for mod in obj.modifiers if mod.type == 'ARMATURE').name = 'Gel skin'
 
 
 def bake_clips(source, target):
@@ -433,7 +523,7 @@ def main():
             'zones': {'head':[0,0,1], 'neck':[0,1,1], 'arm':[1,0,0], 'hand':[1,1,1],
                       'foot':[1,1,0], 'leg':[0,1,0], 'torso':[1,0,1]},
             'atlas': 'independent quad islands, 10% cell inset',
-            'lod2_algorithm': 'quadric-error collapse of faithful LOD1 to target 794 triangles, flat sole vertices protected, triangulated; morphs evaluated after simplification',
+            'lod2_algorithm': 'quadric-error collapse of faithful LOD1 to target 794 triangles, flat sole vertices and hip/thigh morph transition loops protected, triangulated; morphs evaluated after simplification',
             'foot_depth_design_m': .28, 'foot_depth_source': 'profile design, not inferred from frontal JPG',
             'reference_shape_targets': {'torso_waist_width_m': [.40,.43],
                 'foot_width_m': .57*(1.74/3.68), 'neck_visible_height_m': .11*(1.74/3.68)},

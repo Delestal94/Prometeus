@@ -91,7 +91,7 @@
     ]
   },
   "atlas": "independent quad islands, 10% cell inset",
-  "lod2_algorithm": "quadric-error collapse of faithful LOD1 to target 794 triangles, flat sole vertices protected, triangulated; morphs evaluated after simplification",
+  "lod2_algorithm": "quadric-error collapse of faithful LOD1 to target 794 triangles, flat sole vertices and hip/thigh morph transition loops protected, triangulated; morphs evaluated after simplification",
   "foot_depth_design_m": 0.28,
   "foot_depth_source": "profile design, not inferred from frontal JPG",
   "reference_shape_targets": {

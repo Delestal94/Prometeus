@@ -1,5 +1,21 @@
 # Lecciones de la preparación B
 
+## Axila reconstruida y simplificación, 2026-10-02
+
+- Dividir sólo longitudinalmente un quad largo conserva su pliegue transversal.
+  Reconstruir loops en ambas direcciones y sus posiciones curvas redujo el
+  dihedro A75 de 143,17° a 72,80°; comprobar también la superficie animada real.
+- Una corrección que pasa las poses base puede fallar en morphs combinados.
+  LOD2 había borrado la transición cadera-muslo: la muestra 30 invertía una cara.
+  Proteger esos loops y repetir el barrido, sin alterar rangos ni tolerancias.
+- Los pesos normalizados del GLB sufren cuantización al importarse en Godot.
+  Se midió un déficit máximo de 4,581e-5, compatible con pasos de 1/65535.
+  La prueba de importación permite cuatro pasos por los cuatro slots; mantiene
+  estrictas las comprobaciones de finitud, signo e índices de huesos.
+- Guardar evidencia nueva sin presentar capturas antiguas como actuales.
+  A60/A75 sin aberturas y LOD dentro del 5 % no prueban A90, todo el continuo
+  ni la aprobación final del material y de los ítems corporales completos.
+
 - Incidencia de dos caras por arista no demuestra una superficie manifold:
   verificar también que el enlace de cada vértice sea un único ciclo.
 - No soldar costuras por tolerancia espacial, ni solo por posición evaluada:
