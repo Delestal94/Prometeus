@@ -2387,6 +2387,36 @@ precarga de 2,5 s con la cámara a ~70 m mirando a otro lado y la ponía sobre e
 - Límite conocido: como toda `GPUParticles3D`, el humo se congela mientras ninguna cámara ve su `visibility_aabb` (p. ej.
   la cabina mirando adelante) y sigue desde ahí. En ralentí, desde la caja, solo se ven 2-3 puffs tenues.
 
+### N-325 · Baranda del puente angosto con modelo del mismo lote — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-325-bridge-railing`**
+
+`do-not-drop/assets/models/environment/props/sm_env_prop_bridge_railing.glb` (352 tris, `assets/tools/build_lowpoly_glb_assets_batch2.py`
+`bridge_railing()`) son 8 cubos gris liso: 5 postes, 2 barras cuadradas y cordón, sin pasamanos. Se ve a 1-3 m del camión y de
+la caja en el puente angosto y ocupa ~1/4 de la captura de Steam `art/marketing/capturas/2026-09-30_puente_lluvia.png`; al lado
+de `bridge_post` (tapa, reflector amarillo) y el tablero de `build_route_pieces.py` se ve de otro lote. El inventario la
+nombraba como "N-132" en §10.1/§10.2 pero no había tarea. **Necesita PC** (Blender; la toma la sesión de arte). Origen:
+sesión de arte 2026-10-02 (`director-arte`, área decorado de ruta y tramos).
+Propuesta: moverla a `build_route_pieces.py` junto a los otros `bridge_*`, con el mismo archivo de salida (mismo camino y
+nombre): postes chaflanados con base y tapa piramidal como `bridge_post`, pasamanos superior de sección redondeada (6-8
+lados) en `guardrail`, barra media, cordón biselado con 2 desagües, un reflector cada 2 postes; mismos 6 m de largo, pivote en
+la base, misma orientación que el actual, materiales de la paleta (`concrete`, `concrete.light`, `guardrail`, `reflector`);
+~700-900 tris, ≤ 1.100 con AO.
+Hecho cuando el GLB está reemplazado dentro del presupuesto y generado por script; las colisiones y la lógica de
+`narrow_bridge_segment.gd` no cambian; `check_pivots.gd` y la captura del puente están revisadas con `revisor-visual` y
+`director-arte` contra el tablero y `bridge_post` (sin superficies de color plano ni cajas de placeholder a la vista); un test
+carga el GLB (ampliar el que ya cubra el puente) y fija presupuesto de tris y nodos/materiales; y el inventario §10.1/§10.2
+está al día.
+- [x] **N-325.1** Rehacer la baranda en `build_route_pieces.py` (sacar `bridge_railing()` del batch2), exportar al mismo
+  camino y aplicar el AO. Con `modelador-blender`.
+- [x] **N-325.2** Ampliar el test del puente para cargar el GLB, verificar con `revisor-visual` (`check_pivots.gd` y captura
+  del puente) y actualizar el inventario §10.1/§10.2. Con `escritor-tests` y `revisor-visual`; tests `bridge`.
+  **[x] Hecho (2026-10-02, sesión de arte)** — `bridge_railing()` nueva en `build_route_pieces.py` (grupo `bridge`; `done()` acepta
+  carpeta para exportar a `props/`), sale del batch2. 352 → 708 tris con AO, GLB 31 → 71 kB, bbox 6 × 0,36 × 1,08 m, pivote en la
+  base (`check_pivots`: min_y 0, centro 0). 3 postes propios en x 0 / ±2 en vez de 5, porque los `bridge_post` del segmento caen
+  en ±1 / ±3 de cada tramo de 6 m; reflector y banda solo en el poste central (uno cada 6 m: con 3 postes por tramo "uno cada 2"
+  dejaba dos pegados en cada junta). `test_baked_ao` (la suma a `BAKED`) y `test_more_route_segments` (`_check_railing`: tris
+  600-1.100, `Handrail`/`MidRail`, AABB, 6 tramos por lado en x ±3,05). `revisor-visual`: mismo lote que `bridge_post`, sin
+  z-fighting ni juntas visibles, en `puente_lluvia` de día con lluvia; de noche no se capturó.
+
 ## 4. Audio y diseño sonoro
 
 ### N-401 · Motor con más vida — B · `Opus 5.5 · high` · Aviso: sí (`synth_audio.gd`, solo funciones nuevas) · **[x] `8081c75`**
