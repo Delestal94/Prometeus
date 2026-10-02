@@ -713,9 +713,11 @@ func _process(delta: float) -> void:
 
 ## The bad link a `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}) simulates on this peer's copy: the host's
 ## poses it draws, and, at the wheel, the inputs it sends and the host's states it compares with (N-922.5). The
-## smoother keeps what it had for an empty profile; one with zeros turns everything off.
+## poses and the states come the same way, half the lag as over Steam (N-922.9): with the whole lag on the poses,
+## the newest one a prediction starts toward was half a lag older than the host's states it is then compared with.
+## The smoother keeps what it had for an empty profile; one with zeros turns everything off.
 func configure_net_sim(sim: Dictionary) -> void:
-	_net_smoother.configure_sim(sim)
+	_net_smoother.configure_sim(sim, 0.5)
 	_prediction.configure_sim(sim)
 
 

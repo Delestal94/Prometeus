@@ -20,7 +20,9 @@ extends SceneTree
 ##   elsewhere and back between two ticks leaves the client's prediction and its history alone;
 ## - the wheel changing hands at speed (N-922.7): the truck drawn eases into the pose buffer over a time that keeps
 ##   it going forward, never backing up; back at the wheel at speed, the copy starts where it is drawn and is eased to
-##   the host's newest pose instead of jumping there with the camera;
+##   the host's newest pose instead of jumping there with the camera; taken back a tenth of a second after letting go
+##   at ~70 km/h, more than 3 m from that pose, the start is snapped and counted as one (start_snaps), not as a
+##   prediction gone wrong (snaps, N-922.9);
 ## - the old van's gearbox: the host's gear arriving puts the predicted copy's clutch in for the shift (N-922.7);
 ## - the driver's inputs cut off for more than NetInputBuffer.STALE_TICKS (no disconnect): the host lets go of the
 ##   pedal and keeps the wheel, and drives on once inputs arrive again; a brake is kept until the truck stops,
@@ -30,7 +32,8 @@ extends SceneTree
 ##   peer, a level crossing's arms and train cars only where it isn't the host's (get_collision_exceptions());
 ## - with no ground under the host's truck in the client's world yet, the copy waits frozen instead of falling, and
 ##   predicts once the road is built (N-922.4);
-## - `--net-sim` on a LAN (configure_net_sim) holds the driver's inputs and the host's states back (N-922.5);
+## - `--net-sim` on a LAN (configure_net_sim) holds the driver's inputs and the host's states back (N-922.5), and the
+##   host's poses as long as its states, half the lag each way (N-922.9);
 ## - the host going mid-drive (the level's _stop_orphaned_run) freezes the copy where it is, no longer predicted.
 
 const LAG_TICKS: int = 9
@@ -72,7 +75,8 @@ func _world() -> Node3D:
 	ground.collision_layer = 1
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(800.0, 1.0, 800.0)
+	# Wide enough for every drive below (the truck goes over 450 m out at 90 km/h).
+	box.size = Vector3(4000.0, 1.0, 4000.0)
 	shape.shape = box
 	shape.position.y = -0.5
 	ground.add_child(shape)
@@ -204,6 +208,7 @@ func _run() -> void:
 	await _check_let_through()
 	await _check_no_ground()
 	await _check_remote_clutch()
+	await _check_quick_handback()
 	await _check_net_sim()
 	await _check_host_gone()
 
@@ -282,6 +287,38 @@ func _check_exit_while_moving() -> void:
 		was = _client.global_position
 	print("restart at speed: %.2f m more than a tick's travel (the host's newest pose %.2f m ahead)" % [jump, ahead])
 	_expect(jump < 0.25, "Back at the wheel at speed: no jump to the host's newest pose (%.2f m)" % jump)
+
+
+## N-922.9: the wheel let go of at ~70 km/h and taken back a tenth of a second later, the truck still drawn metres
+## ahead of the pose buffer (the exit blend): the copy starts there, a round trip ahead of the host's newest pose
+## (~6 m, more than SNAP_DISTANCE), and the nudge to it is snapped. No prediction went wrong: it counts in
+## start_snaps, not in snaps, which say the prediction went wrong.
+func _check_quick_handback() -> void:
+	var ticks: int = 0
+	while _client.linear_velocity.length() < 19.0 and ticks < 300:
+		await _step(1.0, 0.0)
+		ticks += 1
+	var speed: float = _client.linear_velocity.length()
+	var reconciler: NetPredictionReconciler = _client.get(&"_prediction").reconciler
+	var snaps_before: int = reconciler.snaps
+	var starts_before: int = reconciler.start_snaps
+	_client.set(&"driver_peer_id", 7)
+	_host.set(&"driver_peer_id", 7)
+	for _i: int in range(6):
+		await _step_raw()
+	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
+	var gap: float = _client.global_position.distance_to(smoother.latest_pose().origin)
+	_host.set(&"driver_peer_id", HOST_ID + 1)
+	_client.set(&"driver_peer_id", CLIENT_ID)
+	for _i: int in range(3):
+		await _step(1.0, 0.0)
+	print("quick handback at %.0f km/h: %.1f m from the host's newest pose, %d start snaps, %d snaps" % [
+		speed * 3.6, gap, reconciler.start_snaps - starts_before, reconciler.snaps - snaps_before])
+	_expect(speed > 18.0 and gap > NetPredictionReconciler.SNAP_DISTANCE and bool(_client.call(&"is_predicted"))
+			and reconciler.start_snaps == starts_before + 1 and reconciler.snaps == snaps_before,
+		("Taken back at %.0f km/h %.1f m from the host's newest pose: the start is snapped, counted as a start's (%d),"
+				+ " not as a prediction gone wrong (%d)") % [speed * 3.6, gap, reconciler.start_snaps - starts_before,
+			reconciler.snaps - snaps_before])
 
 
 ## The driver's inputs stop reaching the host, without it leaving (N-922.2).
@@ -433,11 +470,20 @@ func _check_no_ground() -> void:
 func _check_net_sim() -> void:
 	var prediction: Object = _client.get(&"_prediction")
 	var seen_seq: int = int(prediction.get(&"host_seq"))
+	var uplink: NetDelayQueue = prediction.get(&"uplink")
+	var downlink: NetDelayQueue = prediction.get(&"downlink")
+	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
+	# N-922.9: the host's poses and its states come the same way, so they are held back alike (half the lag each,
+	# as over Steam): latest_pose(), which a prediction starts toward, is as old as the states it is compared with.
+	_client.call(&"configure_net_sim", NetStats.STANDARD_SIM)
+	_expect(is_equal_approx(smoother.fake_lag, downlink.lag) and is_equal_approx(smoother.fake_jitter, downlink.jitter)
+			and is_equal_approx(smoother.fake_loss, downlink.loss) and is_equal_approx(uplink.lag, downlink.lag)
+			and is_equal_approx(downlink.lag, float(NetStats.STANDARD_SIM.lag_ms) / 2000.0),
+		"--net-sim: the host's poses held back as its states are, half the lag each way (poses %.3f s, states %.3f s)"
+			% [smoother.fake_lag, downlink.lag])
 	_client.call(&"configure_net_sim", {"lag_ms": 2000, "jitter_ms": 0, "loss_pct": 0.0})
 	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
 		await _step(1.0, 0.0)
-	var uplink: NetDelayQueue = prediction.get(&"uplink")
-	var downlink: NetDelayQueue = prediction.get(&"downlink")
 	_expect(bool(_client.call(&"is_predicted")) and uplink.pending() > LAG_TICKS and downlink.pending() > 0
 			and int(prediction.get(&"host_seq")) == seen_seq,
 		"--net-sim holds the driver's inputs (%d) and the host's states (%d) back; none compared yet" % [

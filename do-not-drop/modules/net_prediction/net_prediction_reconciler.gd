@@ -26,7 +26,8 @@ class_name NetPredictionReconciler
 ## the same error twice.
 ##
 ## - **Snap:** an error past SNAP_DISTANCE or SNAP_ANGLE (a reset, a rescue,
-##   something only the host knows moved it) is corrected whole, in one tick.
+##   something only the host knows moved it) is corrected whole, in one tick,
+##   and counted in `snaps`; a nudge() that far, in `start_snaps`.
 ## - **Lost track:** host states for inputs older than anything kept, the
 ##   history full, UNMATCHED_LIMIT times in a row (a link stalled for seconds):
 ##   it snaps to the host's state as it is, against the newest one kept.
@@ -62,12 +63,20 @@ var _rotation_error := Quaternion.IDENTITY
 var _velocity_error := Vector3.ZERO
 var _spin_error := Vector3.ZERO
 var _snap: bool = false
+## The snap pending is a nudge()'s, not a measured error's.
+var _snap_nudged: bool = false
 var _unmatched: int = 0
 var _matched_seq: int = -1
 ## The size of the last error measured (m), for tests and the network overlay.
 var last_error: float = 0.0
-## How many corrections were snapped instead of eased.
+## How many measured errors were snapped instead of eased: the prediction went
+## wrong by that much (or the host moved the body).
 var snaps: int = 0
+## How many nudge()s were snapped instead of eased (a start far from where the
+## body should be: the controls taken back at speed while it is still drawn
+## ahead of the host's poses, a jittery link). No prediction went wrong there,
+## so they don't count as `snaps` (N-922.9).
+var start_snaps: int = 0
 
 
 ## The state the last step left, after the input numbered `seq`.
@@ -96,6 +105,7 @@ func reconcile(seq: int, pose: Transform3D, linear_velocity: Vector3, angular_ve
 				_unmatched = 0
 				_measure(_history[-1], pose, linear_velocity, angular_velocity)
 				_snap = true
+				_snap_nudged = false
 		return false
 	if seq > int(_history[-1][0]):
 		return false
@@ -108,6 +118,10 @@ func reconcile(seq: int, pose: Transform3D, linear_velocity: Vector3, angular_ve
 	for _drop: int in range(at):
 		_history.pop_front()
 	_matched_seq = seq
+	if _snap_nudged:
+		# The error a nudge() put in is replaced by this one, and so is its snap.
+		_snap = false
+		_snap_nudged = false
 	_measure(_history[0], pose, linear_velocity, angular_velocity)
 	if _position_error.length() > SNAP_DISTANCE or _rotation_error.get_angle() > SNAP_ANGLE:
 		_snap = true
@@ -117,13 +131,15 @@ func reconcile(seq: int, pose: Transform3D, linear_velocity: Vector3, angular_ve
 ## An error known before any host state measures it: the body was put
 ## somewhere else than where it should be (started where it is drawn, a
 ## cushion behind the host's newest pose), and is eased there like a measured
-## error, snapped past SNAP_DISTANCE or SNAP_ANGLE. A host state measured later
-## replaces it: what is left of it is part of what that one measures.
+## error, snapped past SNAP_DISTANCE or SNAP_ANGLE (counted in start_snaps, not
+## snaps). A host state measured later replaces it: what is left of it is part
+## of what that one measures.
 func nudge(position: Vector3, rotation: Quaternion = Quaternion.IDENTITY) -> void:
 	_position_error += position
 	_rotation_error = (rotation * _rotation_error).normalized()
-	if _position_error.length() > SNAP_DISTANCE or _rotation_error.get_angle() > SNAP_ANGLE:
+	if not _snap and (_position_error.length() > SNAP_DISTANCE or _rotation_error.get_angle() > SNAP_ANGLE):
 		_snap = true
+		_snap_nudged = true
 
 
 func _measure(ours: Array, pose: Transform3D, linear_velocity: Vector3, angular_velocity: Vector3) -> void:
@@ -146,7 +162,11 @@ func step(delta: float) -> Array:
 	var spin := Vector3.ZERO
 	if _snap:
 		_snap = false
-		snaps += 1
+		if _snap_nudged:
+			start_snaps += 1
+		else:
+			snaps += 1
+		_snap_nudged = false
 		shift = _position_error
 		turn = _rotation_error
 		push = _velocity_error
@@ -195,6 +215,7 @@ func clear() -> void:
 	_velocity_error = Vector3.ZERO
 	_spin_error = Vector3.ZERO
 	_snap = false
+	_snap_nudged = false
 	_unmatched = 0
 	_matched_seq = -1
 	last_error = 0.0
