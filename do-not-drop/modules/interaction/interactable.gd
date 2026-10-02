@@ -61,7 +61,8 @@ func request_interact() -> void:
 
 ## How far from a player's feet (or seat) something can be and still be
 ## used: the reach of their interaction probe, plus room for the time the
-## request took to arrive. A client can't work a door across the map.
+## request took to arrive. A client can't work a door across the map. On top,
+## what a walker covers in that peer's round trip (NetStats.reach_slack, N-217).
 const REMOTE_REACH: float = 4.5
 
 
@@ -69,7 +70,8 @@ func _within_reach(player: Node) -> bool:
 	var origin: Vector3 = (player as Node3D).global_position
 	if player.has_method(&"reach_origin"):
 		origin = player.call(&"reach_origin")
-	return origin.distance_to(global_position) <= REMOTE_REACH
+	return origin.distance_to(global_position) <= REMOTE_REACH \
+			+ NetStats.reach_slack(multiplayer.multiplayer_peer, player.get_multiplayer_authority())
 
 
 ## The player node a peer controls, or null.
