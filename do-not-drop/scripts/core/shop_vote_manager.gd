@@ -20,9 +20,12 @@ func _ready() -> void:
 	opened.connect(func(new_offers: Dictionary) -> void: _emit_event(&"shop_opened", [new_offers]))
 	vote_changed.connect(
 		func(peer_id: int, offer_id: StringName) -> void: _emit_event(&"shop_vote_changed", [peer_id, offer_id]))
+	# The accessory is settled before the crew hears shop_resolved (N-923.5): the
+	# host's own depot panel rebuilds on it, and must already see who owns what.
+	# A client gets the campaign first too: it is sent before _sync_resolution.
+	resolved.connect(_settle_accessory_on_close)
 	resolved.connect(
 		func(offer_id: StringName, offer: Dictionary) -> void: _emit_event(&"shop_resolved", [offer_id, offer]))
-	resolved.connect(_settle_accessory_on_close)
 	var bus: Node = event_bus if event_bus != null else get_node_or_null(^"/root/EventBus")
 	if bus != null and bus.has_signal(&"run_started") and not bus.is_connected(&"run_started", _on_run_started):
 		bus.connect(&"run_started", _on_run_started)
@@ -174,8 +177,11 @@ func accessory_block(offer: Dictionary) -> String:
 	return ""
 
 
-## Host-callable, no RPC (the network layer wraps it later): buys the accessory
-## `offer` names for the offer's buyer and says what happened to the crew.
+## Host-callable, no RPC: buys the accessory `offer` names for the offer's buyer
+## and says what happened to the crew. Online a client buys by voting for its
+## own offer (request_vote): no RPC buys past the vote (N-923.5); the result
+## reaches the clients with the campaign (buy_accessory saves and broadcasts it)
+## and with CrewProgression.accessory_net's sync.
 ## `offer` may carry "discounted"/"discount_peer" (a Discount card closed the
 ## vote). Returns CrewProgression.buy_accessory()'s {ok, reason, cost}; a depot
 ## offer is refused while a run is on or its results are up, like the supplies.

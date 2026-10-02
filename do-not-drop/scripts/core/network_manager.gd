@@ -59,11 +59,13 @@ const MAX_PLAYERS: int = 8
 ## identity reply) before it gets the state and loads the level, N-221;
 ## 27: the client driver predicts the truck: submit_driver_input carries an input
 ## sequence, the van replicates net_simulating, net_input_seq and its
-## velocities, steering and engine force through net_* proxies, N-218 / N-922).
+## velocities, steering and engine force through net_* proxies, N-218 / N-922;
+## 28: CrewProgression gets an AccessoryNet child with request_equip_accessory,
+## request_drop_accessory, request_pickup_accessory and _receive_accessories, N-923.5).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 27
+const PROTOCOL_VERSION: int = 28
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480

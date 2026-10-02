@@ -105,8 +105,13 @@ var event_bus: Node
 var supplies: Dictionary = {}
 ## Who owns and wears which accessory (N-923), keyed by colour key (PLAYER_COLOR_KEYS),
 ## not by peer id: it is saved with the campaign and survives a new peer id.
-## The host changes it; clients get it with the campaign. Cosmetic only.
+## The host changes it; clients get it with the campaign and from
+## accessory_net. Cosmetic only.
 var accessories := AccessoryInventory.new()
+## The accessories over the network (N-923.5): wearing, dropping and picking
+## up through the host, the ground, and the clients' copy. Our child
+## "AccessoryNet", added in _ready (null on a crew outside the tree).
+var accessory_net: AccessoryNet
 var campaign_path: String = CAMPAIGN_PATH
 ## Saved progress by colour slot: slot (int) -> {merit, card, dry_deliveries}.
 var _saved_players_by_slot: Dictionary = {}
@@ -149,6 +154,18 @@ func _ready() -> void:
 		network.color_slots_changed.connect(_on_color_slots_changed)
 	if network != null and not network.peer_rejoined.is_connected(_on_peer_rejoined):
 		network.peer_rejoined.connect(_on_peer_rejoined)
+	_add_accessory_net(bus, network)
+
+
+## The accessories' network side as our child "AccessoryNet": the same path on
+## every peer, for its RPCs (N-923.5).
+func _add_accessory_net(bus: Node, network: NETWORK_MANAGER) -> void:
+	if accessory_net != null:
+		return
+	accessory_net = AccessoryNet.new()
+	accessory_net.name = "AccessoryNet"
+	accessory_net.setup(accessories, PLAYER_COLOR_KEYS, player_color_key, save_campaign, network, bus)
+	add_child(accessory_net)
 
 
 func reset_campaign(persist: bool = false) -> bool:
