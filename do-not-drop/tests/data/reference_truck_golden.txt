@@ -317,7 +317,6 @@ BodyVisuals/RampVisual/@MeshInstance3D@ | MeshInstance3D | pos(0.5300 0.0300 0.0
 BodyVisuals/WindshieldRain | Node3D | script=windshield_rain.gd | pos(0.0000 1.5939 -2.2037) | basis(1.0000 0.0000 0.0000 0.0000 0.8602 0.5099 0.0000 -0.5099 0.8602)
 BodyVisuals/HeadlightLensBeam | SpotLight3D | pos(0.7520 0.5260 -2.8916) | basis(1.0000 0.0000 0.0000 0.0000 0.9976 -0.0698 0.0000 0.0698 0.9976)
 BodyVisuals/HeadlightLens_001Beam | SpotLight3D | pos(-0.7520 0.5260 -2.8916) | basis(1.0000 0.0000 0.0000 0.0000 0.9976 -0.0698 0.0000 0.0698 0.9976)
-BodyVisuals/ExhaustSmoke | GPUParticles3D | pos(-0.9797 -0.3329 5.9590) | basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | meta quality_base_amount=18
 ReferenceTruck | Node3D | script=reference_truck.gd | pos(0.0000 0.0000 0.0000) | basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000)
 ReferenceTruck/DoorAudio_rear | AudioStreamPlayer3D | pos(-1.0160 0.2620 4.4880) | basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | audio unit=6.0000 max=30.0000 volume=0.0000 pitch=1.0000 stream=9702 bytes
 ReferenceTruck/DoorAudio_cab_left | AudioStreamPlayer3D | pos(-0.9920 0.2860 -2.3160) | basis(1.0000 0.0000 0.0000 0.0000 1.0000 0.0000 0.0000 0.0000 1.0000) | audio unit=6.0000 max=30.0000 volume=0.0000 pitch=1.0000 stream=9702 bytes
