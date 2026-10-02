@@ -234,7 +234,10 @@ func _throw_piece(world: Node, source: MeshInstance3D, velocity: Vector3) -> voi
 		mesh.set_surface_override_material(surface, source.get_surface_override_material(surface))
 	body.add_child(mesh)
 	var collider := CollisionShape3D.new()
-	collider.shape = source.mesh.create_convex_shape(true, true)
+	# Not simplified: simplify=true cost 10-70 ms per piece (even a 4-face shard)
+	# in the physics tick that spilled the box, and padded small pieces to 32
+	# points; the plain hull of the same piece takes < 2 ms (N-220).
+	collider.shape = source.mesh.create_convex_shape(true, false)
 	body.add_child(collider)
 	body.mass = 1.0
 	body.linear_velocity = velocity + _pop(1.6)

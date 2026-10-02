@@ -22,6 +22,7 @@ const SAVED_KEYS: Array[StringName] = [
 	&"camera_shake_scale", &"impact_effects", &"look_sensitivity", &"invert_look_y", &"fullscreen",
 	&"graphics_quality", &"hud_scale", &"control_help_mode", &"colorblind_palette", &"menu_text_scale",
 	&"sound_subtitles", &"voice_chat_enabled", &"voice_push_to_talk", &"save_run_log", &"last_join_address",
+	&"newspaper_mode",
 ]
 
 ## 0.0 mutes, 1.0 is the unmodified mix the game was balanced at.
@@ -173,6 +174,14 @@ var sound_subtitles: bool = false:
 		sound_subtitles_changed.emit(sound_subtitles)
 		_save()
 signal sound_subtitles_changed(enabled: bool)
+
+## The next-day newspaper at the end of a delivery (N-606.3): always, only
+## when the run gave news (not the "everything arrived" scandal), or never.
+enum NewspaperMode { ALWAYS, NEWS_ONLY, NEVER }
+var newspaper_mode: int = NewspaperMode.ALWAYS:
+	set(value):
+		newspaper_mode = clampi(value, NewspaperMode.ALWAYS, NewspaperMode.NEVER)
+		_save()
 
 ## The last address typed into "Unirse", so rejoining the same friend's LAN
 ## game doesn't mean typing their IP again every session.

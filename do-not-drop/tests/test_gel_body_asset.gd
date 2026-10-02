@@ -92,13 +92,21 @@ func _check_mesh(body: MeshInstance3D, lod: int) -> void:
 			"LOD%d has UV0 for every vertex (got %d/%d)" % [lod, uv.size(), vertices.size()])
 		_expect(zones.size() == vertices.size(),
 			"LOD%d has zone colours (got %d/%d)" % [lod, zones.size(), vertices.size()])
+		# One report per LOD, not one per vertex: a broken export would print thousands.
+		var bad_vertices: int = 0
 		for vertex: Vector3 in vertices:
-			_expect(vertex.is_finite(), "LOD%d positions are finite (got %s)" % [lod, vertex])
+			if not vertex.is_finite():
+				bad_vertices += 1
+				continue
 			var world: Vector3 = body.to_global(vertex)
 			bottom = minf(bottom, world.y)
 			top = maxf(top, world.y)
+		_expect(bad_vertices == 0, "LOD%d positions are finite (got %d bad)" % [lod, bad_vertices])
+		var bad_uvs: int = 0
 		for point: Vector2 in uv:
-			_expect(point.is_finite(), "LOD%d UVs are finite (got %s)" % [lod, point])
+			if not point.is_finite():
+				bad_uvs += 1
+		_expect(bad_uvs == 0, "LOD%d UVs are finite (got %d bad)" % [lod, bad_uvs])
 	_expect(triangles <= BUDGETS[lod], "LOD%d stays within budget (got %d/%d)" % [lod, triangles, BUDGETS[lod]])
 	_expect(absf(bottom) < 0.005, "LOD%d soles sit at world zero (got %.4f)" % [lod, bottom])
 	_expect(absf(top - 1.74) < 0.03, "LOD%d keeps the target height (got %.4f)" % [lod, top])

@@ -22,7 +22,9 @@ func _initialize() -> void:
 	# Real steering around them is docs/tareas-nacho.md #55's playtesting,
 	# not something to fake here.
 	var streamer: Node = level.get_node(^"World/RouteStreamer")
-	streamer.set(&"segment_scripts", [StraightSegment, SpeedBumpSegment])
+	# Typed: a plain Array into the Array[Script] property is silently dropped.
+	var pool: Array[Script] = [StraightSegment, SpeedBumpSegment]
+	streamer.set(&"segment_scripts", pool)
 
 	level.call(&"start_debug_delivery")
 	await process_frame

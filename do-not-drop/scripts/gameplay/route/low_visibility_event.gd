@@ -30,6 +30,11 @@ class_name LowVisibilityEvent
 ## Cost: one comparison per physics tick while nothing happens, a dictionary
 ## of context twice a second during a run; the rest is the shader, only while it runs.
 
+## The truck's and the route's scripts, as types (N-224.4; neither has a class
+## name): driver_peer_id, houses, stop_road_distance and road_distance fail to
+## compile here if renamed. level_common.gd preloads this file, never these back.
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+const RouteScript = preload("res://scripts/gameplay/route/route.gd")
 ## How often the host re-reads the truck and the road.
 const CONTEXT_REFRESH_SECONDS: float = 0.5
 ## A peer that never hears the end lets go this long after it should have.
@@ -224,30 +229,30 @@ func _context() -> Dictionary:
 	var context: Dictionary = {"running": RunManager.is_running, "driver": false, "speed": 0.0,
 			"stop_gap": INF, "route_event": not RouteEventManager.active_event_id.is_empty(),
 			"endless": RunManager.current_mode == RunManager.MODE_ENDLESS}
-	var vehicle: Node3D = level.get(&"vehicle") as Node3D if level != null else null
+	var common := level as LevelCommon
+	var vehicle := common.vehicle as VehicleScript if common != null else null
 	if vehicle == null:
 		return context
-	context.driver = int(vehicle.get(&"driver_peer_id")) != 0
-	if vehicle is RigidBody3D:
-		context.speed = (vehicle as RigidBody3D).linear_velocity.length()
+	context.driver = vehicle.driver_peer_id != 0
+	context.speed = vehicle.linear_velocity.length()
 	# Only the delivery has stops (the houses, then the goal), and only its
 	# route can say how far along the road each one is. Measured a few times a
 	# second at most: the nearest-sample lookup is not free.
-	var route: Node = level.get(&"route") as Node
-	if route != null and route.has_method(&"stop_road_distance") and route.has_method(&"road_distance"):
+	# Only level_base.gd has a `route` (by name: preloading the levels here would
+	# loop back through level_common.gd, which preloads this file).
+	var route := level.get(&"route") as RouteScript
+	if route != null:
 		context.stop_gap = _gap_to_next_stop(route, vehicle)
 	return context
 
 
-func _gap_to_next_stop(route: Node, vehicle: Node3D) -> float:
+func _gap_to_next_stop(route: RouteScript, vehicle: Node3D) -> float:
 	if _stops.is_empty():
 		# Every house, then the goal (an index past the last house): fixed once
 		# the route is built.
-		var houses: Variant = route.get(&"houses")
-		var count: int = (houses as Array).size() if houses is Array else 0
-		for index: int in range(count + 1):
-			_stops.append(float(route.call(&"stop_road_distance", index)))
-	var here: float = float(route.call(&"road_distance", vehicle.global_position))
+		for index: int in range(route.houses.size() + 1):
+			_stops.append(route.stop_road_distance(index))
+	var here: float = route.road_distance(vehicle.global_position)
 	var gap: float = INF
 	for stop: float in _stops:
 		var ahead: float = stop - here

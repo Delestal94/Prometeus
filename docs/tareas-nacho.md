@@ -9,6 +9,37 @@
 
 ## QA — bugs abiertos
 
+### N-918 · `test_level_endless` falla a veces: "SegmentN's static boxes are merged as it spawns (1 left loose)" — C · `Opus 5.5 · medium` · Aviso: sí (`modules/render_budget/`, zona compartida) · **[x] rama `nacho/fix-main-endless-merged-name`**
+Origen: construcción 2026-10-02 (CI rojo del PR #212, que no tocaba nada de esto; ~1 de cada 24 corridas en `main`
+con la CPU cargada). Con `cazador-bugs`: dos causas juntas. (1) `streamer.set(&"segment_scripts", [Straight…])`
+pasaba un `Array` sin tipo a la propiedad `Array[Script]`; Godot lo descarta sin avisar y la ruta salía con los 11
+tipos (por eso la camioneta terminaba OFF_ROAD o STUCK tan seguido). Pasaba igual en `test_endless_multi_cargo.gd` y
+`test_mud_segment.gd`. (2) Con un `MudSegment` en la ruta, `DressingBatcher.merge_segment_geometry()` crea dos
+`MergedGeometry` (sombra prendida y apagada), y el segundo quedaba con el nombre `@MeshInstance3D@N`, que el test
+contaba como pieza suelta. Ahora se agrega con `add_child(instance, true)` (queda `MergedGeometry2`), y los tres
+tests pasan la lista tipada. `tests/data/route_golden.txt` regenerado: cambian solo 22 `hash=` de tramos (el nombre del nodo), ni posiciones ni conteos. El módulo prueba el caso en `test_render_budget` (`_test_segment_merge`). Aviso
+`docs/avisos/2026-10-02-merged-geometry-name.md`.
+  **[x] Hecho (2026-10-02, rama `nacho/fix-main-endless-merged-name`)**.
+
+### N-917 · Aviso de Jolt "exceeded the maximum number of jobs" al cargar la entrega — C · `Opus 5.5 · medium` · Aviso: sí (`modules/route_gen/`, zona compartida) · **[x] rama `nacho/N-917-jolt-jobs`**
+Origen: QA 2026-10-01. Escenario: `godot --path do-not-drop -- --autostart --mood=nublado_dia` (o cualquier clima), o
+entrar a la entrega desde el menú; la consola muestra una vez `WARNING: Jolt Physics job system exceeded the maximum
+number of jobs. This should not happen. Please report this.` No se repite cada frame ni rompe nada; no aparecía en la
+corrida de la mañana (e033559), así que probablemente lo trajo el depósito que se arma por frames (#195, N-408b) o el
+precalentado de shaders (#205, N-409), que agregan muchos cuerpos o colisiones en pocos frames. Con `cazador-bugs`
+(confirmar qué PR y qué paso de la carga) y `constructor-mundo`. Hecho cuando: el escenario de QA pasa sin el aviso
+(repartir la creación de cuerpos en más frames, o ajustar los límites de Jolt en `project.godot` si corresponde) y hay
+un test que carga la entrega y falla con ese aviso (un `Logger` que cuente warnings de Jolt).
+  **[x] Hecho (2026-10-01, rama `nacho/N-917-jolt-jobs`)** — con `cazador-bugs`: no era #195 ni #205 sino #191
+  (`4140b19`, N-408): `TerrainField.build_async()` y `conform_all()` (`modules/route_gen/terrain_field.gd`) lanzaban
+  su `add_group_task` con `tasks_needed = -1` y prioridad alta, que ocupa todo el `WorkerThreadPool` 1,5–3 s. Jolt
+  corre sus jobs en ese pool y solo los libera cuando un hilo los ejecuta: se acumulaban ~24 por paso hasta agotar
+  los 2048 fijos, y el paso de física esperaba en el hilo principal (cuadros de 0,4–1,8 s bajo la pantalla de
+  carga; aparecía ~3 de cada 4 corridas). Los límites de Jolt de `project.godot` no influyen (el tope es de
+  compilación). Arreglo: los dos grupos usan `TerrainField.worker_tasks()` = núcleos − 1 (mínimo 1). Test
+  `test_jolt_job_budget` (un `Logger` cuenta el aviso durante una ruta por rebanadas con un cuerpo despierto, y
+  `worker_tasks()` deja un hilo libre). Aviso `docs/avisos/2026-10-01-n917-terreno-deja-hilo-a-jolt.md`.
+
 
 ### S-908 · Nodos huérfanos de `package_salvage.gd` al liberar el nivel (heredada de Slatex) — B · `Opus 5.5 · medium` · Aviso: sí (`scripts/gameplay/package/package_salvage.gd`) · **[x] rama `nacho/S-908-salvage-orphans`**
 Origen: QA 2026-10-01. Escenario: instanciar `level_endless.tscn`, `start_debug_delivery`, `reset_run` y
@@ -877,6 +908,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     archivo: `.call` 10 → 5, `.get(&` 8 → 7, `/root/` 6 → 4, `.set(&` 3 → 0. `test_dynamic_dispatch_budget.gd` suma el
     archivo. Sin aviso (`route/` y `tests/`). Siguientes: `player.gd` (21), `package_feedback.gd` (21),
     `player_interaction.gd` (18), `level_base.gd` (18).
+  - [x] `rail_crossing_segment.gd` (2026-10-01, rama `nacho/N-224-rail-crossing-typed`): el paso a nivel. La sesión
+    por la constante `NETWORK_MANAGER` (preload de `network_manager.gd`, accesor `_network()`: `world_seed`,
+    `is_online`, `is_host` directos; `world_seed` no está en `NetSession`). En el archivo: 6 → 1 uso (`.call` 2 → 0,
+    `.get(&` 1 → 0, `/root/` 3 → 1). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle. Sin aviso
+    (`route/` y `tests/`).
   - [x] `player_interaction.gd` (2026-10-01, rama `nacho/N-224-player-interaction-typed`): lo apuntado como
     `Interactable` (`can_interact`/`interact` directos; la sonda junta solo `Interactable`), el `aim_bonus` del perro
     de `DogDistractPoint`, la red como `NetSession` (`_network()`) y la vista del contenido por preload
@@ -892,6 +928,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     lint bajó 1. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-level-base-tipado.md`. `run_manager.gd` ya no tiene usos por nombre tras N-225.5.
     Siguientes: `player.gd` (21), `cargo_animals.gd` (16).
+  - [x] `truck_radio_view.gd` (2026-10-01, rama `nacho/N-224-truck-radio-view-typed`): el dial y el programa de la
+    radio. La radio como `TruckRadio` (`mode`, `mode_key()` estático, `mode_changed`/`news_announced` conectadas por la
+    señal) y los sonidos por el `preload` inferido de `synth_audio_radio.gd` (antes tipado `Script`, que obligaba a
+    `.call`: `warm`, los dos loops, el clic y la cortina). En el archivo: `.call` 6 → 0, `.get(&` 1 → 0.
+    `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Sin aviso (`presentation/` libre y `tests/`).
+  - [x] `windshield_rain.gd` (2026-10-01, rama `nacho/N-224-windshield-rain-typed`): la lluvia y el barro del
+    parabrisas. Solo la sesión como `NetSession` (`local_id`). El resto queda por nombre con razón: `driver_peer_id`
+    y `presentation_engine_running` del camión y `viewer_inside()` de su presentación, porque `vehicle.gd` crea este
+    nodo por `reference_truck.gd` y `vehicle_presentation.gd` llega a `vehicle.gd` por `cargo_clutter.gd` (precargar
+    cualquiera de los dos es un ciclo). En el archivo: `.call` 2 → 1, `.get(&` 2 → 2, `/root/` 2 → 2.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`).
   - [x] `cargo_animals.gd` (2026-10-01, rama `nacho/N-224-cargo-animals-typed`): el camión por `preload` de
     `vehicle.gd` (`VehicleScript`, accesor `_truck()`: `carries`, `point_velocity`, `rear_cargo_open`), la red por la
     constante `NETWORK_MANAGER` (`world_seed`, `is_host`, la señal `peer_level_ready` sin `has_signal`), el contenido
@@ -900,6 +947,12 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 4 → 1, `/root/` 6 → 3, `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
     Sin aviso (`route/` y `tests/`). Siguientes: `package_feedback.gd` (14), `depot_panel.gd` (13), `player.gd` (13),
     `package_contents_view.gd` (13), `seat_point.gd` (13).
+  - [x] `low_visibility_event.gd` (2026-10-01, rama `nacho/N-224-low-visibility-typed`): el barro en el parabrisas. El
+    nivel como `LevelCommon`, el camión por `preload` de `vehicle.gd` (`driver_peer_id`; la velocidad sin el
+    `is RigidBody3D`) y la ruta por `preload` de `route.gd` (`houses`, `stop_road_distance`, `road_distance`; se van
+    los `has_method`). Queda por nombre el `route` del nivel (solo `level_base.gd` lo tiene y precargar los niveles
+    vuelve por `level_common.gd`, que precarga este archivo). En el archivo: `.call` 2 → 0, `.get(&` 4 → 1.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`).
   - [x] `package_feedback.gd` + `package_trap_visuals.gd` (2026-10-01, rama `nacho/N-224-package-feedback-typed`): el
     padre como `DeliveryPackage` (`package_id`, `trap_definition` como `TrapDefinition`, `content_definition()` como
     `PackageContent`, `_is_run_active()`), `GameSettings` por la constante `GAME_SETTINGS` (accesor `_settings()`) y
@@ -924,6 +977,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-depot-panel-tipado.md`.
     Siguientes: `cargo_animal_view.gd` (13), `wildlife_crossing.gd` (13), `seat_point.gd` (13),
     `package_contents_view.gd` (13); después `hud_pause.gd` (`level.get(&"depot")`, tipar a `LevelCommon`).
+  - [x] `order_balancer.gd` (2026-10-01, rama `nacho/N-224-order-balancer-typed`): el sorteo de pedidos del depósito.
+    Las trampas como `TrapDefinition` (`id`, `difficulty`; arrays internos `Array[TrapDefinition]`) y las cajas como
+    `DeliveryPackage` (`trap_definition`); lo que no es una trampa (un hueco nulo) se salta como antes. En el archivo:
+    `.get(&` 8 → 0, nada por nombre; en `scripts/`: `.get(&` 175 → 167. `test_dynamic_dispatch_budget.gd` suma el
+    archivo con todo en 0. Aviso `docs/avisos/2026-10-01-n224-order-balancer-tipado.md`.
   - [x] `wildlife_crossing.gd` (2026-10-01, rama `nacho/N-224-wildlife-crossing-typed`): el ciervo con el tipo de
     `wildlife_animal.gd` (`ANIMAL_SCRIPT` por preload inferido, sin `class_name`: `steered`, `run`,
     `freeze_in_headlights`, `tumble` directos). Quedan por nombre `team_money`/`spend` de `CrewProgression` (ciclo de
@@ -931,6 +989,20 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `/root/` 3 → 3, `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y
     `tests/`). Siguientes: `package_contents_view.gd` (13), `seat_point.gd` (13), `package_pickup_point.gd` (12),
     `cargo_animal_view.gd` (11), `player.gd` (13).
+  - [x] `flock_crossing.gd` (2026-10-01, rama `nacho/N-224-flock-crossing-typed`): las ovejas con el tipo de
+    `wildlife_animal.gd` (`ANIMAL_SCRIPT` por preload inferido, `sheep: Array[ANIMAL_SCRIPT]`: `run`, `idle`,
+    `tumble`, `steered` directos), como el ciervo. Quedan por nombre `team_money`/`spend` de `CrewProgression` (ciclo
+    de compilación, como en `wildlife_crossing.gd`). En el archivo: `.call` 3 → 1, `.get(&` 1 → 1, `/root/` 2 → 2,
+    `.set(&` 1 → 0. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`).
+  - [x] `play_area.gd` (2026-10-01, rama `nacho/N-224-play-area-typed`): el borde del mapa. El nivel como
+    `LevelCommon` (`local_player`, `depot` como `Depot`), el jugador como `Player` (`seat_node_path`), el camino del
+    infinito como `SegmentStreamer` (`_nearest_on_path` directo, sin `has_method`) y el terreno de la ruta como
+    `TerrainField` (`spans`). Quedan por nombre `_streamer` y `route` del nivel y `terrain` de la ruta
+    (`level_endless.gd`, `level_base.gd` y `route.gd` sin `class_name`; precargar los niveles vuelve por
+    `level_common.gd`, que precarga este archivo). En el archivo: `.call` 1 → 0, `.get(&` 6 → 3.
+    `test_play_area.gd` carga el script con `load()` (tipar a `LevelCommon` nombra autoloads sueltos bajo
+    `--script`) y prueba también el borde en el infinito. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin
+    aviso (`gameplay/` raíz y `tests/`).
   - [x] `package_contents_view.gd` (2026-10-01, rama `nacho/N-224-contents-view-typed`): la caja como
     `DeliveryPackage` (`package.gd` no carga la vista, sin ciclo; `package_id`, `trap_state`, `contents_spilled`,
     `is_open` y `content_definition()` directos) y el contenido como `PackageContent` (`localized_name`,
@@ -944,6 +1016,19 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 13 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Aviso
     `docs/avisos/2026-10-01-n224-seat-point-tipado.md`. Siguientes: `player.gd` (13), `spectator_camera.gd` (12),
     `package_pickup_point.gd` (12), `cargo_animal_view.gd` (11).
+  - [x] `phone_camera.gd` (2026-10-01, rama `nacho/N-224-phone-camera-typed`): la foto de entrega. Las casas como
+    `DeliveryHouse` (`porch_position`, `house_index`, `delivered`, `outcome`; lo que no es una se salta) y el camión
+    por `preload` de `vehicle.gd` (`has_manual_gearbox`, `driver_peer_id`; se va el `has_method`). En el archivo:
+    `.call` 1 → 0, `.get(&` 5 → 0, nada por nombre. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0.
+    Sin aviso (`presentation/` libre y `tests/`).
+  - [x] `player_seat_pose.gd` (2026-10-01, rama `nacho/N-224-seat-pose-typed`): subir y bajar de los asientos. La
+    cámara del asiento como `SeatCamera` (`activate`/`deactivate`), el `InteractionArea` del asiento como `SeatPoint`
+    (`release_occupant`) y la sesión como `NetSession` (`is_online`, `is_host`); lo que no es uno se salta, como hacían
+    los `has_method`. Queda por nombre el RPC `release_occupant` al host (como todo RPC). En el archivo: `.call` 5 → 0,
+    `has_method` 3 → 0, `/root/` 2 → 2. `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso
+    `docs/avisos/2026-10-01-n224-seat-pose-tipado.md`. `route_smoke_check.gd` (7) no se puede tipar: es un
+    `--script` y nombrar `route.gd`, `DeliveryHouse` o `RouteGoalLot` compila scripts que nombran `NetworkManager`
+    antes de que existan los autoloads.
   - [x] `package_pickup_point.gd` (2026-10-01, rama `nacho/N-224-pickup-point-typed`): agarrar y ayudar a cargar una
     caja. La caja como `DeliveryPackage` (`is_held`, `is_loaded`, `trap_definition`, `assist_available`/`assist_prompt`/
     `can_assist`/`set_assistant`/`take_by` directos, sin `has_method`), el feedback como `PackageFeedback` y el jugador
@@ -969,6 +1054,48 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.call` 177 → 172, `.get(&` 186 → 185, `/root/` 109 → 106. La baseline del lint bajó 1.
     `test_dynamic_dispatch_budget.gd` suma el archivo y su handle. Aviso `docs/avisos/2026-10-01-n224-player-tipado.md`.
     Siguientes: `spectator_camera.gd` (11), `level_common.gd` (11).
+  - [x] `delivery_house.gd` (2026-10-01, rama `nacho/N-224-delivery-house-typed`): la caja que llega al timbre como
+    `DeliveryPackage` (`package_id`, `trap_state`, `is_open`, `_publish_care()` y `consume()` directos; se van los
+    `has_method` y el `queue_free` de respaldo, que ninguna caja real usaba) y la sesión por la constante
+    `NETWORK_MANAGER` (preload de `network_manager.gd`: `world_seed` no está en `NetSession`). Queda por nombre el
+    EventBus (dos `connect`: un test puede reemplazarlo por un Node). En el archivo: `.call` 2 → 0, `.get(&` 5 → 0,
+    `/root/` 3 → 3; en `scripts/`: `.call` 172 → 170, `.get(&` 185 → 180. `test_dynamic_dispatch_budget.gd` suma el
+    archivo y su handle; `test_delivery_houses.gd` toca el timbre con cajas reales (`package.tscn`) en vez de nodos
+    con `trap_state` inventado. Sin aviso (`route/` y `tests/`). Siguientes: `spectator_camera.gd` (10), `play_area.gd` (9),
+    `dashboard_gps.gd` (9), `vehicle_presentation.gd` (9).
+  - [x] `player_sprint.gd` (2026-10-01, rama `nacho/N-224-player-sprint-typed`): correr. La caja pesada por
+    `trap_definition.id` directo, la sesión por la constante `NETWORK_MANAGER` (preload de `network_manager.gd`:
+    `world_seed` no está en `NetSession`) y el perfil como `UnlockProfile` (`mark_tip_seen`). Queda por nombre
+    `ground_roughness` de la ruta (grupo `route`: `route.gd` sin `class_name` y los tests meten suelos falsos). En el
+    archivo: `.call` 2 → 1, `.get(&` 2 → 0, `/root/` 3 → 3. `test_dynamic_dispatch_budget.gd` suma el archivo y su
+    handle. Aviso `docs/avisos/2026-10-01-n224-player-sprint-tipado.md`.
+  - [x] `mud_segment.gd` (2026-10-01, rama `nacho/N-224-mud-segment-typed`): ya estaba en `BUDGETS` desde N-108 y es el
+    que más usos por nombre tiene en `scripts/` (16), pero casi todos son forzados. "Manos ocupadas" (`carried_package`,
+    `seat_node_path`) se lee una sola vez en `_hands_busy()`. Quedan por nombre los `FakePlayer` de
+    `test_mud_segment.gd` (`as Player` los dejaría fuera y nadie empujaría), `carries` del camión y `CrewProgression`/
+    `RunManager` (precargar `vehicle.gd`, `crew_progression.gd` o `run_manager.gd` desde acá rompe la compilación bajo
+    `--script`: `route.gd` lo carga y esos scripts nombran autoloads sueltos) y el relay de EventBus. En el archivo:
+    `.get(&` 7 → 5; en `scripts/`: `.get(&` 180 → 178. Presupuesto ajustado en `test_dynamic_dispatch_budget.gd`. Sin
+    aviso (`route/` y `tests/`). Para bajar más hay que pasar `test_mud_segment.gd` a jugadores reales. Siguientes (fuera
+    de `BUDGETS`): `spectator_camera.gd` (12), `dashboard_gps.gd` (10), `vehicle_presentation.gd` (9), `play_area.gd` (9).
+  - [x] `spectator_camera.gd` (2026-10-01, rama `nacho/N-224-spectator-camera-typed`): la vista de espectador y la toma
+    de resultados. La sesión como `NetSession` (`local_id()`), el jugador local como `Player` (`_seated`,
+    `tended_package`), la caja como `DeliveryPackage` (`trap_state`), la toma de resultados por `preload` de
+    `results_orbit.gd` (`RESULTS_ORBIT.new()`: `target`, `frame_parked` directos, se va el `set_script`) y la meta como
+    `RouteGoalLot` (`is_bay_occupied`, `results_direction`, `results_focus`). Quedan por nombre `RunManager.is_running`
+    (precargar `run_manager.gd` desde la presentación del camión rompe la compilación bajo `--script`) y
+    `driver_peer_id` del camión (`vehicle.gd` precarga la presentación que crea esta cámara). En el archivo: 12 → 4
+    usos (`.call` 5 → 0, `.get(&` 5 → 2, `/root/` 2 → 2; también `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd`
+    suma el archivo; `test_spectator.gd` prueba también la toma de resultados. Sin aviso (`presentation/` libre y
+    `tests/`). Siguientes: `dashboard_gps.gd` (10), `vehicle_presentation.gd` (9), `play_area.gd` (9), `run_tally.gd` (9).
+  - [x] `dashboard_gps.gd` (2026-10-02, rama `nacho/N-224-dashboard-gps-typed`): el GPS del tablero. La ruta por
+    `preload` de `route.gd` (`ROUTE`: `houses`, `stop_road_distance`, `road_distance`, `goal_bay_number`, `goal_target`
+    directos) y las cajas de `bomb_codes()` como `DeliveryPackage` (`care_state`; lo que no es un paquete en el grupo
+    `cargo` se saltea, como antes sin `care_state`). Quedan por nombre `RunManager.current_distance` y `best_score` (la
+    presentación del camión crea el GPS: precargar `run_manager.gd` rompe la compilación bajo `--script`) y el handle de
+    EventBus. En el archivo: 10 → 4 usos (`.call` 5 → 1, `.get(&` 3 → 1, `/root/` 2 → 2).
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`presentation/` libre y `tests/`). Siguientes:
+    `vehicle_presentation.gd` (9), `run_tally.gd` (9).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -1107,7 +1234,7 @@ media medida); (4) la sombra de la loma con borde suave. Capturas antes/después
   un `DirectionalLight3D` pelado; el sol del juego (`level_base.tscn`) ya tiene `shadow_blur = 1,6` y
   `directional_shadow_blend_splits`. Primero comprobar si el borde duro es solo de la captura.
 
-### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[ ] rama `nacho/N-319-depot-redesign`**
+### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[x] ramas `nacho/N-319-depot-redesign` y `nacho/N-319-depot-finish` (#145 y el cierre)**
 Origen: pedido del usuario 2026-09-30 ("el galpón es muy genérico; que quede como el lobby de un juego profesional:
 distribución de espacios, áreas importantes, modelos genéricos"). El plan, el diagnóstico de la línea de base, la planta
 objetivo y el registro de cada iteración están en `docs/deposito-rediseno.md`; capturas de cada iteración en
@@ -1156,8 +1283,13 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   ventanal cálido, pictogramas de zona (celdas 12-15 del atlas), taller con media pared opaca y tableros del kit, isla con
   lámpara y corcho, pañol sin violeta, descanso con lockers entreabiertos, sombras de contacto en un lote, desgaste en un lote,
   polvo en los haces, portón de recepción y mural del fondo, flechas solo en bifurcaciones, nube y línea de salida de afuera,
-  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Falta la pasada de `director-arte` sobre `D:/tmp/depot_review/iter3/` y los
-  textos que el arte dejó vacíos (ver el registro en `docs/deposito-rediseno.md`). **Todavía sin PR.**
+  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Mezclado en el #145.
+- [x] **N-319.5** ~~Cierre: crítica final sobre las capturas y los textos que el arte dejó vacíos.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-319-depot-finish`)** — la crítica sobre `D:/tmp/depot_review/iter5/` ya no dice
+  "genérico" (cada zona se lee por forma, luz y color; ver "Cierre" en `docs/deposito-rediseno.md`). Textos: "COLORES DEL CAMIÓN"
+  en claro sobre la franja oscura del tablero de muestras (antes INK sobre INK, invisible), palabra bajo los cinco pictogramas de
+  seguridad (`WORLD_DEPOT_SAFETY_*`), título de "NUESTRAS ENTREGAS" sobre su franja. `test_depot_zones` ampliado; `bench_depot` sin
+  cambio. Detalles menores que quedan, sin tarea, en el registro.
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
@@ -1309,9 +1441,19 @@ El #93 viejo midió CPU/física en headless; el costo de dibujado nunca se midi�
 - [x] Correr `tests/bench_drive.gd` **con ventana** (agente `revisor-visual`) en la PC de desarrollo, en las
   tres horas del día y con lluvia, en entrega y Endless. Anotar FPS promedio, 1 % más bajo y draw calls
   (`Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`).
-- [ ] Meta: 60 FPS estables a 1080p en la PC de desarrollo y ≥ 45 FPS con el preset bajo (N-205).
+- [x] Meta: 60 FPS estables a 1080p en la PC de desarrollo y ≥ 45 FPS con el preset bajo (N-205). **[x] 2026-10-01
+  (base `a6c56f6` + rama `nacho/N-220-gpu-audit`)** — 16 corridas de 90 s por la pantalla de carga del juego
+  (`--via-loader`), Reparto y Endless × día / atardecer / noche / lluvia × preset Alto y Bajo. Alto: el peor caso
+  (Reparto al atardecer) promedia 117 FPS y su 1 % bajo es 71 (p99 14,1 ms); el resto, 140-152 en Reparto y 332-391 en
+  Endless. Bajo: promedio mínimo 137 y 1 % bajo mínimo 69 (la meta es 45). 0-3 frames de más de 33 ms por corrida, el
+  peor de 72 ms. Tabla en README → Rendimiento.
 - [x] Resultado en README → Rendimiento, con la PC usada.
 - Medido el 2026-09-24 (tabla en README → Rendimiento): reparto 139-164 FPS, 1 % más bajo 85-104; Endless 312-393. Queda abierto medir el preset bajo en una PC modesta (no hay una a mano).
+- [ ] Medir el preset Bajo en una PC modesta de verdad. No hay una a mano. En esta PC el Bajo solo gana 9-17 % en Reparto
+  (el juego va limitado por la CPU, ~1 núcleo, no por la GPU); con 4× los píxeles (`--render-scale=2.0`) y con 7× al
+  atardecer el cuadro no se mueve (146 / 109 FPS en Reparto, 197 en Endless), y con 2 núcleos físicos tampoco, así
+  que lo que queda sin cubrir es una CPU de un hilo más lenta. `bench_drive.gd --quality=low` (nuevo) lo mide el día que
+  haya una (un playtester con una PC modesta, o la rutina en otra máquina).
 
 ### N-205 · Presets de calidad gráfica — B · `Opus 5.5 · high` · Aviso: sí (`game_settings.gd` y `options_panel.gd` de Slatex, una fila) · **[x] `7151f84`**
 
@@ -1403,10 +1545,14 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
   ciervo) ahora cachean el camión en `_vehicle()`. La de `reference_truck` recorre los jugadores (≤5) y queda.
 - [x] **Fase 7a · i18n de la UI:** los textos de `scripts/ui/**` a `translations/strings_ui.csv`
   (es = texto de siempre, en = primera traducción), con `test_ui_translations`.
-- [ ] **Fase 7b · i18n del resto:** textos visibles en `core/` (eventos de ruta, desbloqueos, cartas,
+- [x] ~~**Fase 7b · i18n del resto:** textos visibles en `core/` (eventos de ruta, desbloqueos, cartas,
   suministros, caras), `gameplay/` (contenidos de paquetes, avisos del depósito, historias) y los
-  `display_name` de los `.tres` de trampas/contenidos. Ojo: `hud_prompts` y `ui_theme` indexan por
-  nombre visible de trampa (`"FRÁGIL"`...); pasarlos a id antes de traducir esos nombres.
+  `display_name` de los `.tres` de trampas/contenidos.~~ **[x] Hecho (2026-10-01)**: casi todo ya había
+  salido con N-805 (claves en `core/`, nombres de trampa y contenidos por clave, `ui_theme.trap_icon()` por
+  clave). Quedaban la nota de la práctica de cuidado y el respaldo "Clic izq./der." (`care_practice`,
+  `care_guide`) y el manejo de la torre de copas desalineado con su clave. `test_ui_translations` ahora
+  ve literales sin tilde (dos o más palabras con una de `SPANISH_WORDS`), barre `modules/` y compara cada
+  `data/contents/*.tres` con sus claves. Aviso: `docs/avisos/2026-10-01-n211-7b-i18n.md`.
 - [x] **Fase 8 · Responsividad:** capturas del HUD y el menú en 16:9, 16:10 (Steam Deck), 21:9 y 4:3.
   16:9/16:10/21:9 bien. Arreglado: en 4:3 todo el HUD se dibujaba al 75% (letra de 6-7 px) — ahora
   `Hud.layout_scale()` maqueta siempre en 720 de alto lógico (HUD y tarjeta); el aviso de interacción
@@ -1511,15 +1657,41 @@ no toca la física.
   `tests/test_endless_physics_spike.gd` (modelos y loop calientes, tramo pesado < 30 ms, construir y unir nunca en el
   mismo tick, cola vacía a los 3 ticks) y ampliación de `modules/route_gen/tests/test_route_gen.gd`.
 
-### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no
+### N-220 · Auditoría gráfica con ventana real y física con el camión lleno — B · `Opus 5.5 · high` · Aviso: no · **[x] rama `nacho/N-220-gpu-audit` (salvo el opcional de los cachés)**
 
 Lo que la auditoría headless no pudo medir (`revisor-visual` o `perfilador-rendimiento` con pantalla).
-- [ ] Draw calls, sombras, transparencias y partículas en Reparto y en Endless: comparar antes y después del
-  PR #35.
-- [ ] Física de Jolt con 5 jugadores y el camión lleno (objetos activos y pares de colisión).
-- [ ] Tiempo de carga del menú y del nivel, y memoria.
+- [x] Draw calls, sombras, transparencias y partículas en Reparto y en Endless: comparar antes y después del
+  PR #35. **[x] 2026-10-01** — experimentos `nodress|nosegvis|noshadow|nolights|noparticles|notransp|nobatch|...`
+  del bench (nuevos: `noparticles`, `nolights`, `notransp`, `nobatch`) y un censo de la escena; tablas en
+  `docs/rendimiento-pc.md`. El costo es de CPU y de cuántos objetos se dibujan: el decorado vale 50 % del frame del
+  Reparto (1.297 multimeshes de 2,6 instancias), las mallas de tramos 33 %, camión 12 %, casas 10 %, luces 9 %, sombras
+  8 % (36 % al atardecer, que es por qué es el caso caro); partículas y las 74 mallas transparentes, ruido. El PR #35
+  (Endless, 45 s en frío, `b1ff656` → `96c353a`): draw calls 1.079 → 442 (−59 %), 294 → 376 FPS; el Reparto no cambia
+  (2.644 → 2.641). Contra la referencia del 09-24 (`f5d50dd`): el Reparto pasó de 1.927 a 2.644 draw calls (+37 %) y
+  de 195 a 143 FPS por un mundo más grande (mallas 2.992 → 5.210, 8 → 26 `SpotLight3D`, ruta 1.412 → 2.086 m);
+  Endless 464 → 445 draw calls (plano).
+- [x] Física de Jolt con 5 jugadores y el camión lleno (objetos activos y pares de colisión). **[x] 2026-10-01** —
+  `bench_drive.gd --players=5 --cargo=full` (cuatro `Player_<peer>` falsos sentados y siete cajas, en un proceso). Jolt no
+  informa los monitores `PHYSICS_3D_*` (valen 0): el bench cuenta `RigidBody3D` despiertos (3 → 11-14 de 147) y parte el
+  tick en scripts y paso de Jolt (0,50 + 0,40 ms → 0,91 + 0,70 ms, el paso nunca pasa de 3 ms); 156 → 130 FPS, p99 9,4 →
+  11,4 ms. Los pares de colisión no se pueden leer con Jolt (queda dicho). Detalle en `docs/rendimiento-pc.md`.
+- [x] Hallazgo de esa medición, arreglado: derramar una caja arruinada costaba 40-110 ms en un tick de física (picos de
+  101 ms por tick con el camión lleno) por `create_convex_shape(true, true)` en `package_contents_view.gd`; con
+  `(true, false)` son < 2 ms. Pico por tick 101 → 28-42 ms, frame máximo 109 → 36 ms. Test en `test_package_unboxing`
+  (falla con el código viejo: 227 ms). Aviso `docs/avisos/2026-10-01-spill-convex-hull.md`.
+- [x] Tiempo de carga del menú y del nivel, y memoria. **[x] 2026-10-01** — `tests/bench_load_times.gd` (nuevo): motor →
+  menú dibujado 3,6 s; botón → cubierta arriba 4,5 s en Reparto la primera vez (3,3 s con cachés calientes) y 1,5 / 0,9 s en
+  Endless; sin frames de más de 23 ms en los primeros 120 después; memoria estática 136 MiB en el menú, 448 con el Reparto
+  (pico 479), 205 con Endless solo; al volver al menú 340 MiB estables en cuatro idas y vueltas, 0 huérfanos.
 - [ ] Opcional: vaciar los cachés `static` de mallas al volver al menú. No es un leak: el "1693 Mesh
-  leaked at exit" son cachés acotados.
+  leaked at exit" son cachés acotados. **Medido y no hecho (2026-10-01):** son ~200 MiB estáticos y ~150 MiB de video
+  sobre el menú, repartidos en más de 25 `static var` de `depot_kit.gd`, `dressing_batcher.gd`, `route_segment.gd`,
+  `synth_audio*.gd`... sin un registro común (no es trivial), y vaciarlos haría la segunda carga del Reparto pasar de
+  3,3 a 4,5 s. No crecen entre idas y vueltas. Si algún día hace falta, un `static func clear_caches()` por módulo y un
+  llamado desde el menú.
+- Observación: la corrida diaria de `pc-build` mide en frío (sin la pantalla de carga) y marca como tirones de 300-500 ms
+  lo que el jugador no ve (8 de 16 corridas contra 0 de 16 con `--via-loader`). Conviene sumar `--via-loader` a esa
+  corrida; es de la rutina (`.claude/rutinas/pc-build.md`), no se tocó.
 
 ### N-221 · Red defensiva: validación de RPC y reconexión — B · `Opus 5.5 · xhigh` · Aviso: sí (zona compartida) · **[x] rama `nacho/N-221-rpc-guard-rejoin`** (salvo el AppID, ⏸ N-901)
 
@@ -2805,15 +2977,27 @@ Origen de la pausa: auditoría integral 2026-09-30, A-102.
   (redacción pura, determinista por semilla), catálogo `data/newspaper/stories.json` con 3+ variantes por
   hecho, relay del host `newspaper_ready` (ids y casillas, no texto) y la página 2D mostrada antes de la
   tarjeta de resultados. Tests `test_news_desk.gd` y `test_run_chronicle.gd`.
-- [ ] **N-606.3** La escena: set propio en su `World3D`, el Jefe sentado, diario 3D con la página en un
-  `SubViewport`, cámara por rieles (`data/newspaper/shots.json`, formato de `TrailerCamera`), bandas
-  negras, saltar manteniendo el botón, opción en Opciones y la tarjeta de resultados esperando
-  `newspaper_finished`. Test headless del director y captura con `revisor-visual`.
+- [x] **N-606.3** La escena (2026-10-01): set propio en su `World3D`, el Jefe sentado, diario 3D con las
+  páginas en `SubViewport` (`NewspaperSpread`, diagramación del estudio N-606.6 con las noticias reales),
+  cámara por rieles (`data/newspaper/shots.json`, módulo nuevo `camera_rail`), un primer plano por noticia,
+  bandas en el general y la reacción, saltar manteniendo el botón 0,6 s, opción «Diario al final» en
+  Opciones y la tarjeta de resultados esperando `newspaper_finished`. Reemplaza a la página 2D. Test
+  `test_newspaper_scene.gd`, capturas con `tests/render_newspaper_scene.gd`. La serif OFL del relleno
+  llegó con N-606.5.
 - [ ] **N-606.4** ⏸ personajes en pausa (S-311) · Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
   `CirclePen`, `SipMate`), diario giratorio, curva de página, expresiones, audio (gallo, "¡extra!",
   papel, escupida) y hechos nuevos (vuelco, perro, tren).
-- [ ] **N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
-  puerta que se abre) que va al diario con trama de puntos.
+- [x] ~~**N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
+  puerta que se abre) que va al diario con trama de puntos.~~ **[x] Hecho (2026-10-01)** — `NewsPhotographer`
+  (cada jugador saca su foto del hecho, sin red) con el módulo nuevo `press_photo` (`PressPhoto`, trama de puntos);
+  `NewspaperSpread` la imprime bajo la tapa con epígrafe y primer plano propio; PT Serif OFL empaquetada para el
+  relleno; acercamiento sin la nariz del Jefe asomando. Test `test_newspaper_scene.gd` y
+  `modules/press_photo/tests/test_press_photo.gd`; detalle en `diario-final.md` («Fotos y tipografía»).
+- [x] **N-606.6** Estudio visual de la escena (2026-10-01): set, Jefe con camisa y bigote, diario de
+  papel de diario con diagramación real (columnas, clasificados, foto con trama), hojas que se caen, y un
+  primer plano legible por noticia. Prueba de dirección de arte para N-606.3, no la cinemática:
+  `scripts/tools/newspaper_concept/`, capturas en `art/newspaper/review/`, decisiones en
+  `diario-final.md` («Estudio visual de la escena»).
 - Hecho cuando: cada entrega termina con el diario de esa partida, igual para todos los jugadores, y se
   puede saltar.
 

@@ -2,7 +2,9 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://tests/test_spectator.gd
 ## Spectator view (docs/tareas-slatex.md #20): only a seated passenger with
 ## no box left to save gets the chase camera; it follows the truck, and it
-## hands the view straight back once the player no longer qualifies.
+## hands the view straight back once the player no longer qualifies. The
+## results shot (orbit_results) is a results_orbit.gd camera aimed at the
+## truck that takes over the view.
 
 var _failures: int = 0
 
@@ -61,11 +63,19 @@ func _run() -> void:
 	_expect(not spectator.current and not spectator.available, "Getting up ends spectating on its own")
 	_expect(root.get_viewport().get_camera_3d() != spectator, "The view goes back to the player (was %s)" % seat_camera)
 
+	var orbit: Camera3D = (spectator.get_script() as GDScript).orbit_results(van)
+	await process_frame
+	_expect(orbit.get_script() == preload("res://scripts/presentation/results_orbit.gd"),
+			"The results shot runs results_orbit.gd")
+	_expect(orbit.get(&"target") == van, "The results shot circles the truck")
+	_expect(root.get_viewport().get_camera_3d() == orbit, "The results shot takes over the view")
+	orbit.queue_free()
+
 	manager.call(&"reset_run")
 	level.queue_free()
 	await process_frame
 	if _failures == 0:
-		print("PASS: only a passenger with nothing left to save spectates, and the view comes back on its own")
+		print("PASS: only a passenger with nothing to save spectates; the view comes back; the results shot takes over")
 	quit(_failures)
 
 
