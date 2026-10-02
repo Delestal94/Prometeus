@@ -26,9 +26,10 @@ extends SceneTree
 ##   the rescue window is held right then (NetworkManager.peer_removed), and
 ##   its connection closing later holds nothing again;
 ## - a room full with eight, one of them a ghost: its player coming back is
-##   let in once it says who it is, with the ghost's slot and merit, and a
-##   stranger hears "full" (NetAdmission; the transport's spare connection is
-##   in modules/net_session/tests/test_net_session_rejoin.gd);
+##   let in once it says who it is (its identity reply, before it gets the
+##   state; its ready reply then claims nothing), with the ghost's slot and
+##   merit, and a stranger hears "full" (NetAdmission; the transport's spare
+##   connection is in modules/net_session/tests/test_net_session_rejoin.gd);
 ## - a newcomer who takes the slot kept for someone who left doesn't overwrite
 ##   their campaign entry: it is set aside and given back when they return;
 ## - a joiner handed the slot kept for someone else gives the reservation back
@@ -232,7 +233,8 @@ func _check_ghost_holds_box(network: Node) -> void:
 
 
 ## Host and seven, one of them a ghost: the transport let one more reach the
-## host (NetSession._host_enet), and NetAdmission decides from its ready reply.
+## host (NetSession._host_enet), and NetAdmission decides from its identity
+## reply, before it gets the state (N-221, protocol 26).
 func _check_full_room(network: Node, crew: Node) -> void:
 	network.call(&"leave_session")
 	crew.call(&"reset_campaign")
@@ -250,12 +252,14 @@ func _check_full_room(network: Node, crew: Node) -> void:
 	var back: int = 1_310_000_000
 	var stranger: int = 1_320_000_000
 	_expect(String(admission.call(&"on_authenticating", network, back)).is_empty(),
-		"Back while its ghost holds a place, a joiner goes on unplaced")
+		"Back while its ghost holds a place, a joiner goes on unplaced (asked who it is)")
 	_expect(not (network.get(&"_color_slots") as Dictionary).has(back), "...without a slot of its own yet")
 	_expect(String(admission.call(&"on_authenticating", network, stranger)).is_empty(), "...and so does a stranger")
 	var reply: Dictionary = _reply("tok-full-3")
-	_expect(String(admission.call(&"on_identified", network, back, reply)).is_empty(),
-		"Its ready reply says it is the ghost's player: it is let in")
+	_expect(String(admission.call(&"on_identity", network, back, reply)).is_empty(),
+		"Its identity reply says it is the ghost's player: it is let in")
+	_expect(String(admission.call(&"on_identified", network, back, {"ready": true})).is_empty(),
+		"...and its ready reply, with no claim of its own, lets it in")
 	crew.call(&"_capture_player", ghost)  # The online host captures a leaver at roster_changed.
 	network.call(&"_on_peer_connected", back)
 	var roster: Array = network.get(&"peer_ids")
@@ -265,8 +269,8 @@ func _check_full_room(network: Node, crew: Node) -> void:
 		"It wears the ghost's slot and inherits it (slot %d, was %d)" % [_slot(network, back), ghost_slot])
 	crew.call(&"_apply_saved_player", back)
 	_expect(int((crew.get(&"merit") as Dictionary).get(back, 0)) == 25, "...and its merit comes back with it")
-	_expect(String(admission.call(&"on_identified", network, stranger, _reply("tok-z"))) == "full",
-		"The stranger hears full once it says who it is")
+	_expect(String(admission.call(&"on_identity", network, stranger, _reply("tok-z"))) == "full",
+		"The stranger hears full once it says who it is, before it gets the state")
 	network.call(&"_auth_failed", stranger)
 	_expect(not (network.get(&"_color_slots") as Dictionary).has(stranger), "...holding no slot")
 	network.call(&"leave_session")
@@ -291,7 +295,7 @@ func _check_turned_away_before_anything_moves(network: Node, crew: Node) -> void
 	network.connect(&"peer_rejoined", on_rejoined)
 	var back: int = 1_420_000_002
 	_expect(String(admission.call(&"on_authenticating", network, back)).is_empty(), "Back to a full room: unplaced")
-	_expect(String(admission.call(&"on_identified", network, back, _reply("tok-away-2"))) == "full",
+	_expect(String(admission.call(&"on_identity", network, back, _reply("tok-away-2"))) == "full",
 		"With no ghost of its own to make room it hears full")
 	var run_merit: Dictionary = crew.get(&"_run_merit")
 	_expect(rejoins.is_empty() and int(run_merit.get(gone, 0)) == 30 and not run_merit.has(back),
