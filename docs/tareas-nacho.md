@@ -2955,13 +2955,17 @@ Origen de la pausa: auditoría integral 2026-09-30, A-102.
   cámara por rieles (`data/newspaper/shots.json`, módulo nuevo `camera_rail`), un primer plano por noticia,
   bandas en el general y la reacción, saltar manteniendo el botón 0,6 s, opción «Diario al final» en
   Opciones y la tarjeta de resultados esperando `newspaper_finished`. Reemplaza a la página 2D. Test
-  `test_newspaper_scene.gd`, capturas con `tests/render_newspaper_scene.gd`. Pendiente fuera de esta
-  subtarea: serif OFL empaquetada para el relleno.
+  `test_newspaper_scene.gd`, capturas con `tests/render_newspaper_scene.gd`. La serif OFL del relleno
+  llegó con N-606.5.
 - [ ] **N-606.4** ⏸ personajes en pausa (S-311) · Pulido: clips del Jefe (`SitRead`, `OpenPaper`, `TurnPage`, `LowerPaper`, `SpitTake`,
   `CirclePen`, `SipMate`), diario giratorio, curva de página, expresiones, audio (gallo, "¡extra!",
   papel, escupida) y hechos nuevos (vuelco, perro, tren).
-- [ ] **N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
-  puerta que se abre) que va al diario con trama de puntos.
+- [x] ~~**N-606.5** Fotos reales: captura chica en el momento de un hecho (ciervo, gallina que salta,
+  puerta que se abre) que va al diario con trama de puntos.~~ **[x] Hecho (2026-10-01)** — `NewsPhotographer`
+  (cada jugador saca su foto del hecho, sin red) con el módulo nuevo `press_photo` (`PressPhoto`, trama de puntos);
+  `NewspaperSpread` la imprime bajo la tapa con epígrafe y primer plano propio; PT Serif OFL empaquetada para el
+  relleno; acercamiento sin la nariz del Jefe asomando. Test `test_newspaper_scene.gd` y
+  `modules/press_photo/tests/test_press_photo.gd`; detalle en `diario-final.md` («Fotos y tipografía»).
 - [x] **N-606.6** Estudio visual de la escena (2026-10-01): set, Jefe con camisa y bigote, diario de
   papel de diario con diagramación real (columnas, clasificados, foto con trama), hojas que se caen, y un
   primer plano legible por noticia. Prueba de dirección de arte para N-606.3, no la cinemática:

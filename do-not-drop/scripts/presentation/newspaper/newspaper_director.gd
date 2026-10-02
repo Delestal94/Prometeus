@@ -94,7 +94,9 @@ func play(new_paper: Dictionary) -> bool:
 	paper = new_paper
 	spread = SPREAD.new()
 	add_child(spread)
-	if not spread.print_paper(paper):
+	# This peer's own photos of the run, if the level took any (N-606.5).
+	var photographer: NewsPhotographer = NewsPhotographer.find(get_tree()) if is_inside_tree() else null
+	if not spread.print_paper(paper, photographer.photos_for(paper) if photographer != null else {}):
 		return false
 	_container = SubViewportContainer.new()
 	_container.name = "Screen"

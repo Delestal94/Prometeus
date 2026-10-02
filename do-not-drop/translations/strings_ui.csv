@@ -1127,6 +1127,12 @@ HUD_NEWS_FILLER_7,Desde el depósito aseguran que las demoras de la semana fuero
 HUD_NEWS_FILLER_8,El intendente inauguró un semáforo que todavía nadie respeta.,The mayor opened a traffic light that nobody obeys yet.
 HUD_NEWS_FILLER_9,La biblioteca popular recibe donaciones de libros y revistas viejas.,The public library welcomes donations of old books and magazines.
 HUD_NEWS_FILLER_10,Se recuerda a los conductores que la balanza de la entrada sigue rota.,Drivers are reminded that the weighbridge at the entrance is still broken.
+HUD_NEWS_PHOTO_CAPTION_DEER,"El ciervo y el camión, un segundo después del encuentro. (Foto: el reparto)","The deer and the truck, one second after they met. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_SHEEP,"Las ovejas, dueñas de la ruta por un momento. (Foto: el reparto)","The sheep, owners of the road for a moment. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_DOOR,"La puerta de atrás, abierta de par en par en plena ruta. (Foto: el reparto)","The back door, wide open on the open road. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_MIRROR,"El espejo, en su último viaje con el camión. (Foto: el reparto)","The mirror, on its last trip with the truck. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_CARGO,"La carga, por su cuenta en la banquina. (Foto: el reparto)","The cargo, out on the roadside on its own. (Photo: the crew)"
+HUD_NEWS_PHOTO_CAPTION_DELIVERY,"La entrega, documentada en la puerta. (Foto: el reparto)","The delivery, documented at the door. (Photo: the crew)"
 UI_COSM_NICKNAME,Apodo,Nickname
 UI_COSM_NICKNAME_HINT,Así te nombra el diario del día siguiente. Hasta 16 letras.,What the next-day newspaper calls you. Up to 16 characters.
 UI_COSM_NICKNAME_PLACEHOLDER,Vacío: te ponemos uno gracioso,Empty: we pick a funny one

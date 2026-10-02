@@ -14,8 +14,17 @@ extends Node
 ## (test_newspaper_scene checks that every story of the catalogue fits in
 ## both languages). `blocks` says where each story sits on `inner`, for the
 ## director's close-ups.
+##
+## A photo of the run (N-606.5, NewsPhotographer: this peer's own stills)
+## goes under the front story with a halftone screen and its caption, over two
+## of the three filler columns: the front story's photo if there is one, else
+## the first story under it that has one; the same picture goes on the front
+## page the office sees. It gets its own close-up block ("photo") after the
+## front story's. The small copy and the captions are PT Serif (OFL, bundled).
 
 const NEWS_DESK = preload("res://scripts/presentation/newspaper/news_desk.gd")
+const SERIF_REGULAR: FontFile = preload("res://assets/fonts/PTSerif-Regular.ttf")
+const SERIF_ITALIC: FontFile = preload("res://assets/fonts/PTSerif-Italic.ttf")
 const PAGE_SIZE: Vector2i = Vector2i(2048, 1448)
 ## Newsprint, not UI: warm grey stock and near-black ink.
 const STOCK: Color = Color("e6dcc6")
@@ -46,6 +55,22 @@ const AD_KEYS: Array[Array] = [
 const SMALL_AD_KEYS: Array[String] = ["HUD_NEWS_SMALL_AD_1", "HUD_NEWS_SMALL_AD_2"]
 const FILLER_SIZE: int = 21
 const FILLER_SPACING: int = -3
+## A photo across two columns, 16:9 like the capture, and its caption under it.
+const PHOTO_SIZE: Vector2 = Vector2(598, 336)
+const CAPTION_SIZES: Array[int] = [28, 26, 24]
+const CAPTION_HEIGHT: float = 72.0
+## The caption under each story's photo.
+const PHOTO_CAPTIONS: Dictionary = {
+	"deer_hit": "HUD_NEWS_PHOTO_CAPTION_DEER", "sheep_hit": "HUD_NEWS_PHOTO_CAPTION_SHEEP",
+	"fault_rear_door": "HUD_NEWS_PHOTO_CAPTION_DOOR", "fault_mirror": "HUD_NEWS_PHOTO_CAPTION_MIRROR",
+	"cargo_fell": "HUD_NEWS_PHOTO_CAPTION_CARGO", "cargo_recovered": "HUD_NEWS_PHOTO_CAPTION_CARGO",
+	"photo": "HUD_NEWS_PHOTO_CAPTION_DELIVERY", "delivered_ok": "HUD_NEWS_PHOTO_CAPTION_DELIVERY",
+	"complaint": "HUD_NEWS_PHOTO_CAPTION_DELIVERY", "delivered_ruined": "HUD_NEWS_PHOTO_CAPTION_DELIVERY",
+}
+## Halftone dots every this many page pixels.
+const PHOTO_PITCH: float = 6.0
+## Where the columns under a story end.
+const COLUMN_BOTTOM: float = 1400.0
 
 var paper: Dictionary = {}
 var inner: SubViewport
@@ -54,18 +79,26 @@ var outer: SubViewport
 var blocks: Array[Dictionary] = []
 ## Every story label that didn't fit its box even at its smallest size.
 var overflowing: Array[Label] = []
+## The run's photos this peer has: story id -> Texture2D.
+var photos: Dictionary = {}
+## The story whose photo is printed ("" none).
+var photo_story: String = ""
 var _serif: Font
+var _serif_italic: Font
 
 
 func _init() -> void:
 	name = "NewspaperSpread"
 
 
-## Prints `new_paper`; false (and nothing printed) when it can't be read.
-func print_paper(new_paper: Dictionary) -> bool:
+## Prints `new_paper`, with `new_photos` (story id -> Texture2D) where they
+## fit; false (and nothing printed) when it can't be read.
+func print_paper(new_paper: Dictionary, new_photos: Dictionary = {}) -> bool:
 	if not NEWS_DESK.is_valid(new_paper):
 		return false
 	paper = new_paper
+	photos = new_photos
+	photo_story = chosen_photo(paper, photos)
 	blocks.clear()
 	overflowing.clear()
 	for page: SubViewport in [inner, outer]:
@@ -106,6 +139,21 @@ static func fitted_size(font: Font, text: String, box: Vector2, sizes: Array[int
 	return sizes[-1]
 
 
+## The caption key of a story's photo.
+static func caption_of(story_id: String) -> String:
+	return String(PHOTO_CAPTIONS.get(story_id, "HUD_NEWS_PHOTO_CAPTION_DELIVERY"))
+
+
+## Which story's photo to print: the front story's, else the first one under it
+## with a photo ("" when none has one).
+static func chosen_photo(for_paper: Dictionary, with_photos: Dictionary) -> String:
+	for entry: Variant in [for_paper.get("front", {})] + Array(for_paper.get("stories", [])):
+		var id: String = String((entry as Dictionary).get("id", "")) if entry is Dictionary else ""
+		if not id.is_empty() and with_photos.get(id) is Texture2D:
+			return id
+	return ""
+
+
 func _page(page_name: String) -> SubViewport:
 	var page := SubViewport.new()
 	page.name = page_name
@@ -138,11 +186,12 @@ func _print_inner() -> void:
 	labels.append(_story_text(inner, String(front.get("body", "")), body_box, FRONT_BODY, false))
 	blocks.append({"id": "front", "rect": Rect2(LEFT_X, 112, COLUMN_WIDTH, 640), "labels": labels})
 	_rule(inner, Vector2(LEFT_X, 764), Vector2(COLUMN_WIDTH, 3))
-	for column: int in 3:
-		var x: float = LEFT_X + column * 307.0
-		_filler(inner, Rect2(x, 780, 290, 620), column * 3)
-		if column > 0:
-			_rule(inner, Vector2(x - 9, 780), Vector2(1, 620))
+	if photo_story.is_empty():
+		_columns(inner, LEFT_X, 780, 0)
+	else:
+		var photo: Dictionary = _photo(inner, LEFT_X, 780, 0)
+		var caption: Array[Label] = [photo["caption"]]
+		blocks.append({"id": "photo", "rect": photo["rect"], "labels": caption})
 	# Page 3: the stories under it, one per band, then the classified.
 	var stories: Array = paper.get("stories", [])
 	for index: int in 3:
@@ -232,11 +281,10 @@ func _print_outer() -> void:
 			fitted_size(UiTheme.display_font(), headline, Vector2(COLUMN_WIDTH, 360), COVER_HEADLINE))
 	cover.clip_text = true
 	_rule(outer, Vector2(RIGHT_X, 730), Vector2(COLUMN_WIDTH, 2))
-	for column: int in 3:
-		var x: float = RIGHT_X + column * 307.0
-		_filler(outer, Rect2(x, 748, 290, 652), 2 + column * 2)
-		if column > 0:
-			_rule(outer, Vector2(x - 9, 748), Vector2(1, 652))
+	if photo_story.is_empty():
+		_columns(outer, RIGHT_X, 748, 2)
+	else:
+		_photo(outer, RIGHT_X, 748, 2)
 	# The back page: the town's ads.
 	_text(outer, tr("HUD_NEWS_ADS_TITLE"), Rect2(LEFT_X, 44, COLUMN_WIDTH, 90), 64, true)
 	_rule(outer, Vector2(LEFT_X, 146), Vector2(COLUMN_WIDTH, 4))
@@ -309,6 +357,47 @@ func _text(page: SubViewport, text: String, box: Rect2, font_size: int, display:
 	return label
 
 
+## Three columns of filler from `top` down to the foot of the page.
+func _columns(page: SubViewport, x: float, top: float, first: int) -> void:
+	for column: int in 3:
+		var left: float = x + column * 307.0
+		_filler(page, Rect2(left, top, 290, COLUMN_BOTTOM - top), first + column * 3)
+		if column > 0:
+			_rule(page, Vector2(left - 9, top), Vector2(1, COLUMN_BOTTOM - top))
+
+
+## The chosen photo over the first two columns at `top`, halftoned, with its
+## caption; filler under it and in the third column. {rect, caption}.
+func _photo(page: SubViewport, x: float, top: float, first: int) -> Dictionary:
+	var picture := TextureRect.new()
+	picture.name = "Photo"
+	picture.position = Vector2(x, top)
+	picture.size = PHOTO_SIZE
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	picture.texture = photos[photo_story]
+	picture.material = PressPhoto.halftone_material(STOCK, INK, PHOTO_PITCH)
+	page.add_child(picture)
+	_box(page, Rect2(picture.position - Vector2(2, 2), PHOTO_SIZE + Vector2(4, 4)))
+	var text: String = tr(caption_of(photo_story))
+	var box := Rect2(x, top + PHOTO_SIZE.y + 8, PHOTO_SIZE.x, CAPTION_HEIGHT)
+	var caption: Label = _text(page, text, box, fitted_size(serif_italic(), text, box.size, CAPTION_SIZES), false)
+	caption.name = "Caption"
+	caption.add_theme_font_override("font", serif_italic())
+	caption.set_meta(&"story", true)
+	if not fits(serif_italic(), text, box.size, caption.get_theme_font_size("font_size")):
+		overflowing.append(caption)
+		caption.clip_text = true
+	var under: float = box.end.y + 12.0
+	_rule(page, Vector2(x, under - 6), Vector2(PHOTO_SIZE.x, 1))
+	_filler(page, Rect2(x, under, 290, COLUMN_BOTTOM - under), first)
+	_filler(page, Rect2(x + 307, under, 290, COLUMN_BOTTOM - under), first + 3)
+	_rule(page, Vector2(x + 298, under), Vector2(1, COLUMN_BOTTOM - under))
+	_filler(page, Rect2(x + 614, top, 290, COLUMN_BOTTOM - top), first + 6)
+	_rule(page, Vector2(x + 605, top), Vector2(1, COLUMN_BOTTOM - top))
+	return {"rect": Rect2(x, top, PHOTO_SIZE.x, box.end.y - top), "caption": caption}
+
+
 func _rule(page: SubViewport, at: Vector2, size: Vector2) -> void:
 	var line := ColorRect.new()
 	line.position = at
@@ -348,12 +437,23 @@ func _filler(page: SubViewport, area: Rect2, first: int) -> void:
 	page.add_child(label)
 
 
-## A system serif for the filler (the game ships only Lilita and Nunito; a
-## bundled OFL serif is pending), Nunito where the system has none.
+## PT Serif for the small copy (bundled, OFL: assets/fonts/PTSerif-OFL.txt),
+## Nunito for any glyph it lacks.
 func serif() -> Font:
 	if _serif == null:
-		var font := SystemFont.new()
-		font.font_names = PackedStringArray(["Georgia", "Times New Roman", "DejaVu Serif", "Liberation Serif", "serif"])
-		font.fallbacks = [UiTheme.body_font(600)]
-		_serif = font
+		_serif = _with_fallback(SERIF_REGULAR)
 	return _serif
+
+
+## PT Serif Italic, for the photo captions.
+func serif_italic() -> Font:
+	if _serif_italic == null:
+		_serif_italic = _with_fallback(SERIF_ITALIC)
+	return _serif_italic
+
+
+static func _with_fallback(base: FontFile) -> Font:
+	var font := FontVariation.new()
+	font.base_font = base
+	font.fallbacks = [UiTheme.body_font(600)]
+	return font

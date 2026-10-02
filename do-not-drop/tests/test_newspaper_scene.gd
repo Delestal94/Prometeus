@@ -20,7 +20,15 @@ extends SceneTree
 ## - Opciones > Diario al final: never, or only with news, keeps it off;
 ## - with no paper, or one that can't be read, the results come up as always;
 ##   a paper is shown once and a new run forgets one nobody watched;
-## - losing the host during the scene ends it and leaves the results (greyed retry).
+## - losing the host during the scene ends it and leaves the results (greyed retry);
+## - the run's photos (N-606.5, news_photographer.gd): with this peer's photo of
+##   the front story the page prints it halftoned under that story, with its
+##   caption, on the inner spread and the front page, and it gets its own
+##   close-up after the front story's; else the first story under it with a
+##   photo; none, no photo; every caption fits in both languages; the
+##   photographer frames the deer from ahead of the van and the back door from
+##   behind, takes nothing headless (once per fact), and a door's story takes
+##   the phone's delivery photo of that door; the filler is the bundled PT Serif.
 
 const DESK: GDScript = preload("res://scripts/presentation/newspaper/news_desk.gd")
 const SPREAD: GDScript = preload("res://scripts/presentation/newspaper/newspaper_spread.gd")
@@ -106,7 +114,7 @@ func _run() -> void:
 	_expect(duration >= 26.0 and duration <= 32.0, "The scene lasts about 30 s (%.1f)" % duration)
 	var camera: Camera3D = director.get("camera")
 	for shot: Dictionary in timeline:
-		if not String(shot["id"]).begins_with("story_") and shot["id"] != "front" and shot["id"] != "filler":
+		if not String(shot["id"]).begins_with("story_") and shot["id"] not in ["front", "photo", "filler"]:
 			continue
 		director.call(&"_apply", float(shot["start"]) + float(shot["seconds"]) - 0.05, 0.0)
 		var block: Dictionary = blocks[blocks.find_custom(func(b: Dictionary) -> bool: return b["id"] == shot["id"])]
@@ -225,6 +233,7 @@ func _run() -> void:
 	_expect(hud.action_button.disabled, "The retry is greyed out, as on any results screen without its host")
 	_expect(not root.disable_3d, "And the world is drawn again")
 
+	await _check_photos(bus, hud, paper, results, settings)
 	_check_catalogue_fits(settings)
 	settings.set(&"newspaper_mode", mode_before)
 	hud.queue_free()
@@ -254,6 +263,100 @@ func _check_close_up(stage: Node3D, camera: Camera3D, viewport: SubViewport, blo
 		var bottom: Vector2 = camera.unproject_position(stage.call(&"paper_point", foot / page))
 		smallest = minf(smallest, top.distance_to(bottom) * 720.0 / screen.size.y)
 	_expect(smallest >= 24.0, "The text of %s reads at %.1f px at 720p (24 or more)" % [block["id"], smallest])
+
+
+## The run's photos on the page, the photographer's framing and its fallbacks.
+func _check_photos(bus: Node, hud: CanvasLayer, paper: Dictionary, results: Dictionary, settings: Node) -> void:
+	var image := Image.create(64, 36, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.4, 0.5, 0.3))
+	var photo := ImageTexture.create_from_image(image)
+	# Loaded here, not preloaded: it uses EventBus, which a --script can't name at compile time.
+	var photographer: Node = (load("res://scripts/presentation/newspaper/news_photographer.gd") as GDScript).new()
+	root.add_child(photographer)
+	var front_id: String = String(paper["front"]["id"])
+	photographer.get("photos")[front_id] = photo
+	bus.newspaper_ready.emit(paper)
+	bus.run_ended.emit(120, results)
+	var director: Control = hud.newspaper.director
+	var spread: Node = director.get("spread")
+	_expect(spread.get("photo_story") == front_id,
+			"The front story's photo is printed (%s)" % spread.get("photo_story"))
+	var printed: Array = spread.find_children("Photo", "TextureRect", true, false)
+	_expect(printed.size() == 2 and printed.all(func(rect: TextureRect) -> bool:
+			return rect.texture == photo and rect.material is ShaderMaterial \
+					and (rect.material as ShaderMaterial).shader == PressPhoto.HALFTONE),
+			"Halftoned on the spread and on the front page (%d)" % printed.size())
+	var caption_text: String = tr(SPREAD.caption_of(front_id))
+	_expect(_texts(spread).has(caption_text) and caption_text != SPREAD.caption_of(front_id),
+			"With its caption, translated (%s)" % caption_text)
+	var blocks: Array = spread.get("blocks")
+	_expect(blocks.size() >= 2 and blocks[1]["id"] == "photo", "The photo's block comes after the front story's")
+	_expect((spread.get("overflowing") as Array).is_empty(), "The caption fits")
+	var timeline: Array = director.get("timeline")
+	var ids: Array = timeline.map(func(shot: Dictionary) -> String: return shot["id"])
+	_expect(ids.find("photo") == ids.find("front") + 1, "Its close-up follows the front story's (%s)" % str(ids))
+	_expect(float(director.get("duration")) <= 32.0,
+			"And the scene still lasts about 30 s (%.1f)" % director.get("duration"))
+	for shot: Dictionary in timeline:
+		if shot["id"] == "photo":
+			director.call(&"_apply", float(shot["start"]) + float(shot["seconds"]) - 0.05, 0.0)
+			_check_close_up(director.get("stage"), director.get("camera"), director.get("viewport"), blocks[1])
+	hud.newspaper.dismiss()
+	_close_results(hud)
+
+	# A photo of a story under the front one; none at all.
+	var second: String = String(paper["stories"][0]["id"])
+	_expect(SPREAD.chosen_photo(paper, {second: photo}) == second, "Without the front's, the first story with one")
+	_expect(SPREAD.chosen_photo(paper, {"not_printed": photo}).is_empty(), "A photo of a story not printed isn't used")
+	var plain: Node = SPREAD.new()
+	root.add_child(plain)
+	plain.call(&"print_paper", paper)
+	_expect(plain.find_children("Photo", "TextureRect", true, false).is_empty() \
+			and (plain.get("blocks") as Array).all(func(block: Dictionary) -> bool: return block["id"] != "photo"),
+			"No photos, no photo block")
+	_expect((plain.call(&"serif") as FontVariation).base_font == SPREAD.SERIF_REGULAR, "The filler is PT Serif")
+	var bad: Array = []
+	for language: String in ["es", "en"]:
+		settings.call(&"set_language", language)
+		for key: String in SPREAD.PHOTO_CAPTIONS.values():
+			var font: Font = plain.call(&"serif_italic")
+			var size: int = SPREAD.fitted_size(font, tr(key), Vector2(SPREAD.PHOTO_SIZE.x, SPREAD.CAPTION_HEIGHT),
+					SPREAD.CAPTION_SIZES)
+			if not SPREAD.fits(font, tr(key), Vector2(SPREAD.PHOTO_SIZE.x, SPREAD.CAPTION_HEIGHT), size):
+				bad.append("%s %s" % [language, key])
+	settings.call(&"set_language", "es")
+	_expect(bad.is_empty(), "Every caption fits under its photo: %s" % str(bad))
+	plain.queue_free()
+
+	# The photographer: framing around the van, nothing headless, the phone's photo for a door.
+	var van := Node3D.new()
+	van.add_to_group(&"vehicle")
+	root.add_child(van)
+	van.global_position = Vector3(5, 0, 20)
+	var deer: Dictionary = photographer.call(&"pose_for", &"deer_hit")
+	var door: Dictionary = photographer.call(&"pose_for", &"rear_door")
+	_expect((deer["at"] as Vector3).z < 20.0 - 5.0 and (deer["look"] as Vector3).z < 20.0,
+			"The deer is shot from ahead of the van, looking at its nose (%s)" % deer["at"])
+	_expect((door["at"] as Vector3).z > 20.0 + 5.0, "The back door from behind (%s)" % door["at"])
+	var box: Dictionary = photographer.call(&"pose_for", &"box", Vector3(5, 0, 40))
+	_expect((box["at"] as Vector3).z > 40.0, "A box on the road from beyond it, the van behind (%s)" % box["at"])
+	photographer.get("photos").clear()
+	bus.run_started.emit(&"test_route", [1])
+	photographer.call(&"shoot", &"deer_hit")
+	photographer.call(&"shoot", &"deer_hit")
+	_expect((photographer.get("asked") as Dictionary).size() == 1 \
+			and (photographer.get("photos") as Dictionary).is_empty(),
+			"Headless a fact is noted once and no photo is taken")
+	var run_manager: Node = root.get_node(^"/root/RunManager")
+	run_manager.get("delivery_photos")[2] = photo
+	var door_paper: Dictionary = {"front": {"id": "photo", "variant": 0, "slots": {"house": 3}}, "stories": [
+			{"id": "deer_hit", "variant": 0, "slots": {}}]}
+	var found: Dictionary = photographer.call(&"photos_for", door_paper)
+	_expect(found.get("photo") == photo and not found.has("deer_hit"), "A door's story takes the phone's photo of it")
+	run_manager.get("delivery_photos").erase(2)
+	van.queue_free()
+	photographer.queue_free()
+	await process_frame
 
 
 ## Every story of the catalogue, in both languages and with long names, fits

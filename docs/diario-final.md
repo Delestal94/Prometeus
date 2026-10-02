@@ -7,7 +7,7 @@
 > son `{town}`, `{house}`, `{neighbor}`, `{player}`, `{km}`, `{minutes}` y `{count}`; `test_news_desk` y
 > `test_run_chronicle` las cubren.
 > **Fase 2 hecha (2026-10-01, N-606.3)**: la escena reemplaza a la página 2D. Ver «La escena (N-606.3)» al final.
-> Falta el pulido de cine (N-606.4, en pausa con S-311) y las fotos (N-606.5).
+> Falta el pulido de cine (N-606.4, en pausa con S-311).
 
 ## La idea en una línea
 
@@ -280,5 +280,26 @@ Lo que quedó construido sobre el estudio:
 - **Pruebas**: `test_newspaper_scene.gd` (flujo, contenido, encuadre y tamaño de letra de cada primer plano a
   720p, saltar, opción, todo el catálogo entrando en sus cajas en los dos idiomas) y
   `modules/camera_rail/tests/test_camera_rail.gd`. Capturas: `tests/render_newspaper_scene.gd`.
-- **Pendiente**: tipografía serif OFL empaquetada para el relleno (hoy una del sistema, con Nunito de respaldo),
-  audio, giro de tapa, paso de página y birome, clips del Jefe (N-606.4, en pausa con S-311) y fotos (N-606.5).
+- **Pendiente**: audio, giro de tapa, paso de página y birome, clips del Jefe (N-606.4, en pausa con S-311).
+
+## Fotos y tipografía (N-606.5, 2026-10-01)
+
+- **Cómo se sacan**: `NewsPhotographer` (hijo del nivel, al lado de `RunChronicle`) escucha los hechos que ya
+  viajan por `EventBus` a todos: ciervo u ovejas atropellados (`route_event_started` con `incident`), la puerta de
+  atrás que se abre y el espejo que se cae (`vehicle_fault_started`) y una caja que queda en la ruta
+  (`cargo_overboard`). Tras una demora corta (que la puerta ya se haya abierto) saca una foto de 384×216 con
+  `PressPhoto` (módulo nuevo `press_photo`): una cámara propia en un `SubViewport` que comparte el mundo de la
+  partida, dibujada una sola vez y leída de vuelta. Los ángulos están en `NewsPhotographer.SHOTS` (ciervo desde
+  adelante del camión, puerta desde atrás, espejo desde el costado, caja desde más allá con el camión detrás).
+  Una por hecho y como mucho seis por partida.
+- **Red**: nada nuevo. Cada jugador saca su propia foto del mismo momento; el diario (ids y casillas) sigue
+  siendo del host. En headless no se saca ninguna.
+- **En el diario**: la foto de la noticia de tapa si la hay, si no la de la primera noticia de abajo que tenga.
+  Va con trama de puntos (`halftone.gdshader`, puntos cada 6 px de página) debajo de la noticia principal, a dos
+  columnas, con epígrafe en PT Serif cursiva (`HUD_NEWS_PHOTO_CAPTION_*`), y la misma foto en la tapa que ve la
+  oficina. Tiene su primer plano propio después del de la tapa. Las noticias de una casa (foto de entrega,
+  reclamo) usan la foto del celular de esa puerta (`RunManager.delivery_photos`) si la sacó este jugador.
+- **Tipografía**: el relleno y los epígrafes usan PT Serif (OFL, `assets/fonts/PTSerif-*.ttf` con su licencia),
+  con Nunito de respaldo para glifos que falten.
+- **Encuadre**: el acercamiento pasa por detrás de la cabeza del Jefe, así la nariz y el bigote ya no asoman por
+  el borde del diario.

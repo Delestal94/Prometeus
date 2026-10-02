@@ -23,6 +23,7 @@ const OVERBOARD_MARKER: Script = preload("res://scripts/presentation/overboard_m
 const VEHICLE_FAULTS: Script = preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
 const TRUCK_RADIO: Script = preload("res://scripts/gameplay/vehicle/truck_radio.gd")
 const RUN_CHRONICLE: Script = preload("res://scripts/presentation/newspaper/run_chronicle.gd")
+const NEWS_PHOTOGRAPHER: Script = preload("res://scripts/presentation/newspaper/news_photographer.gd")
 const RESCUE_HOOK: Script = preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
 const LOW_VISIBILITY: Script = preload("res://scripts/gameplay/route/low_visibility_event.gd")
 const TRAILER_CAMERA: String = "res://scripts/tools/trailer_camera.gd"
@@ -118,6 +119,8 @@ func _ready() -> void:
 	# them, the host writes the paper when the results are decided.
 	var chronicle: Node = RUN_CHRONICLE.new()
 	add_child(chronicle)
+	# Its photos (N-606.5): every peer takes its own still of the same moments.
+	add_child(NEWS_PHOTOGRAPHER.new())
 	# Mud over the windshield now and then (N-113): the host draws it from the
 	# world seed, every peer follows it; only the driver's view shows it.
 	var low_visibility: Node = LOW_VISIBILITY.new()
