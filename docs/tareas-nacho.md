@@ -3080,15 +3080,31 @@ y de la fila de la tienda contra el resto del depósito (sin cajas de color plan
   `cosmetic_id` en el estado del jugador (`level_common.gd:366`, `crew_panel.gd`) y `player.tscn` los engancha con
   `BoneAttachment3D`.
 
-- [ ] **N-923.1** Catálogo e inventario puros, sin red ni escena: `AccessoryCatalog` (4 accesorios de S-305, slots,
+- [x] **N-923.1** Catálogo e inventario puros, sin red ni escena: `AccessoryCatalog` (4 accesorios de S-305, slots,
   precios provisionales en una tabla), `AccessoryInventory` (`grant`, `remove`, `owns`, `equip` con regla de un solo
   accesorio por slot, `to_dict`/`from_dict`). Con `constructor-progresion`; tests `accessory` (nuevo, `escritor-tests`):
   no se compra dos veces, equipar uno que no tenés falla, el guardado ida y vuelta es igual, ids desconocidos al cargar
   se descartan sin romper. Esfuerzo `Opus 5.5 · medium`. Va primero: lo demás se apoya en esto.
-- [ ] **N-923.2** Persistencia en la campaña: `owned` y `equipped` por color en `CrewProgression._campaign_data()` /
+  **[x] Hecho (2026-10-02, rama `nacho/N-923-accessory-shop`, `6a577cf6`)** — `scripts/core/accessory_catalog.gd`
+  (`AccessoryCatalog`: `cap` 60 / `hi_vis_vest` 90 / `hard_hat` 120 / `thermal_backpack` 150, slots `head`/`torso`/`back`,
+  `price_of` = -1 para un id desconocido, claves `UI_ACCESSORY_*` en `strings_ui.csv`) y `scripts/core/accessory_inventory.gd`
+  (`AccessoryInventory`, dueño = clave de color: `grant`, `remove`, `give`, `owns`, `owner_of`, `equip`, `unequip`,
+  `take_entry`/`merge_entry`, `to_dict`/`load_dict`, señal `changed`). Un solo ejemplar por accesorio y por slot; lo que
+  se da o se quita se desequipa antes. `UnlockManager.COSMETICS` no tenía accesorios que sacar (solo uniformes).
+  `tests/test_accessory.gd`.
+- [x] **N-923.2** Persistencia en la campaña: `owned` y `equipped` por color en `CrewProgression._campaign_data()` /
   `_apply_campaign_data()` junto a `team_money`; subir `CAMPAIGN_VERSION` con migración (campañas viejas = sin accesorios)
   y respetar `_keep_displaced` (quien se va y vuelve con otro color/peer conserva sus cosas, como el mérito). Con
   `constructor-progresion`; tests `crew_progression`, `persistence`. Esfuerzo `Opus 5.5 · high`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-923-accessory-shop`, `cf663000`)** — `CrewProgression.accessories` (un
+  `AccessoryInventory` por clave de color); `CAMPAIGN_VERSION` 3 agrega `"accessories": {color: {owned, equipped}}`
+  arriba de `players` (se viaja con `_receive_campaign` a los clientes). Una campaña v1/v2 carga sin accesorios y el
+  próximo guardado escribe v3; `reset_campaign()` los borra; datos corruptos (ids desconocidos, copias repetidas, colores
+  que no existen, tipos mal) se descartan sin romper. `_keep_displaced`: los accesorios del color que un recién llegado
+  le sacó a un ausente se guardan con su entrada y vuelven con él, puestos, al color que lleve entonces (límite: como el
+  mérito desplazado, es de sesión; si se cierra el juego antes de que vuelva, se pierden). Los accesorios de quien se
+  desconecta quedan en su color. Tests: `test_crew_campaign_save.gd` y `test_network_rejoin.gd` ampliados;
+  `test_crew_progression.gd` espera la versión 3.
 - [ ] **N-923.3** Compra con la plata del equipo: las ofertas de accesorios se suman a las de `ShopVoteManager` /
   `Depot` (cara `shop` de `depot_panel.gd`) con `buyer`; el host cobra con `CrewProgression.spend()` una vez y hace
   `grant()` al comprador; la misma compra al toque en solitario. Respeta Prioridad/Descuento y el fallo sin plata.
