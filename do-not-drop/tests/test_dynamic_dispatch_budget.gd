@@ -305,12 +305,13 @@ const BUDGETS: Dictionary = {
 	# stay RunManager's current_distance and best_score (same --script compile reason as the spectator
 	# camera: the truck's presentation builds the GPS) and the EventBus handle.
 	"res://scripts/presentation/dashboard_gps.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
-	# The service station's counter (N-224.4): the session as NetSession (local_id, is_online, is_host) and the
-	# vote as CoopVote (active, offers, close_on). By name stay ShopVoteManager.open_shop (the game's own, no
+	# The service station's counter (N-224.4): the session as NetSession (local_id, is_online, is_host, peers) and the
+	# vote as CoopVote (active, offers, close_on, send_state_to). By name stay ShopVoteManager.open_shop (no
 	# class name), CrewProgression (spend, cards, SUPPLIES, team_money), RunManager (the kit, is_running) and
 	# VehicleFaults (spares, repair): their scripts name autoloads, so typing them breaks --script compiles.
-	# The /root/ lookup is the one null-safe accessor.
-	"res://scripts/gameplay/route/service_stop_shop.gd": {"call": 11, "callv": 0, "get": 6, "root": 1},
+	# The stop (in_bay, counter) and the counter (local_player) stay by name too: service_stop.gd preloads this
+	# script. The /root/ lookup is the one null-safe accessor.
+	"res://scripts/gameplay/route/service_stop_shop.gd": {"call": 13, "callv": 0, "get": 7, "root": 1},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
