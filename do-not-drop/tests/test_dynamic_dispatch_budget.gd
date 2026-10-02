@@ -217,6 +217,11 @@ const BUDGETS: Dictionary = {
 	# package_autoloads.gd). The three /root/ lookups are the null-safe accessors (EventBus, NetworkManager,
 	# RunManager).
 	"res://scripts/gameplay/route/cargo_animals.gd": {"call": 1, "callv": 0, "get": 1, "root": 3},
+	# The mud on the windshield (N-224.4): the level as LevelCommon, its truck through vehicle.gd by preload
+	# (driver_peer_id) and the route through route.gd by preload (houses, stop_road_distance, road_distance).
+	# The one .get left is the level's `route`: only level_base.gd has it, and preloading the levels here
+	# loops back through level_common.gd, which preloads this file.
+	"res://scripts/gameplay/route/low_visibility_event.gd": {"call": 0, "callv": 0, "get": 1, "root": 0},
 	# The box's presentation (N-224.4) is typed: the box (DeliveryPackage), its trap (TrapDefinition,
 	# HostileTrapBehavior, ExplosiveTrapBehavior, LiquidTrapBehavior), its contents (PackageContent) and the
 	# settings (GAME_SETTINGS, below). Nothing left by name but two /root/ lookups: the null-safe GameSettings

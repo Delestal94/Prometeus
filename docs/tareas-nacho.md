@@ -941,6 +941,12 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 4 → 1, `/root/` 6 → 3, `.set(&` 1 → 0). `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
     Sin aviso (`route/` y `tests/`). Siguientes: `package_feedback.gd` (14), `depot_panel.gd` (13), `player.gd` (13),
     `package_contents_view.gd` (13), `seat_point.gd` (13).
+  - [x] `low_visibility_event.gd` (2026-10-01, rama `nacho/N-224-low-visibility-typed`): el barro en el parabrisas. El
+    nivel como `LevelCommon`, el camión por `preload` de `vehicle.gd` (`driver_peer_id`; la velocidad sin el
+    `is RigidBody3D`) y la ruta por `preload` de `route.gd` (`houses`, `stop_road_distance`, `road_distance`; se van
+    los `has_method`). Queda por nombre el `route` del nivel (solo `level_base.gd` lo tiene y precargar los niveles
+    vuelve por `level_common.gd`, que precarga este archivo). En el archivo: `.call` 2 → 0, `.get(&` 4 → 1.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`route/` y `tests/`).
   - [x] `package_feedback.gd` + `package_trap_visuals.gd` (2026-10-01, rama `nacho/N-224-package-feedback-typed`): el
     padre como `DeliveryPackage` (`package_id`, `trap_definition` como `TrapDefinition`, `content_definition()` como
     `PackageContent`, `_is_run_active()`), `GameSettings` por la constante `GAME_SETTINGS` (accesor `_settings()`) y
