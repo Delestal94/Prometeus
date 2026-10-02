@@ -8,6 +8,123 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 @unittest.skipUnless(importlib.util.find_spec('bpy'), 'requires Blender')
 class SourceBodyTests(unittest.TestCase):
+    def _weighted_bodies(self):
+        import bpy
+        import build_gel_body as body
+        bpy.ops.wm.open_mainfile(filepath=str(
+            body.ROOT/'art/rounded_character/personaje_redondeado.blend'))
+        source = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
+        for obj in list(bpy.data.objects):
+            if obj != source:
+                bpy.data.objects.remove(obj, do_unlink=True)
+        objects = [body.make_body(level) for level in body.LOD_LEVELS]
+        rig = body.create_rig(source)
+        for obj in objects:
+            body.assign_weights(obj, rig)
+        return source, rig, objects
+
+    def _pose_failures(self, obj, rig):
+        """Check actual evaluated geometry against transported local normals."""
+        import bpy
+        from mathutils import Matrix, Vector
+        from gel_body_validation import candidate_pairs, triangle_intersection
+        obj.data.calc_loop_triangles()
+        faces = [tuple(f.vertices) for f in obj.data.loop_triangles]
+        base = [v.co.copy() for v in obj.data.vertices]
+        evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        points = [v.co.copy() for v in evaluated.data.vertices]
+        triangles = [[tuple(points[i]) for i in f] for f in faces]
+        contacts = [(i, j) for i, j in candidate_pairs(triangles)
+                    if len(set(faces[i]) & set(faces[j])) < 2
+                    and triangle_intersection(triangles[i], triangles[j])]
+        transforms = {}
+        for bone in rig.pose.bones:
+            transforms[bone.name] = bone.matrix @ bone.bone.matrix_local.inverted()
+        normals = []
+        for vertex in obj.data.vertices:
+            blend = Matrix.Identity(4)*0
+            for group in vertex.groups:
+                name = obj.vertex_groups[group.group].name
+                if name in transforms:
+                    blend += transforms[name]*group.weight
+            normals.append(blend.to_3x3().inverted().transposed())
+        flipped = []
+        for index, face in enumerate(faces):
+            # The transported-normal regression concerns the shoulder junction;
+            # contacts above cover the entire surface, including hands/boots.
+            if not any(.1 < abs(base[i].x) < .42 and .95 < base[i].z < 1.27
+                       for i in face):
+                continue
+            a, b, c = [base[i] for i in face]
+            rest_normal = (b-a).cross(c-a)
+            expected = sum((normals[i] @ rest_normal for i in face), Vector())
+            a, b, c = [points[i] for i in face]
+            actual = (b-a).cross(c-a)
+            if actual.length < 1e-10 or actual.dot(expected) <= 0:
+                flipped.append(index)
+        return contacts, flipped
+
+    def test_shoulder_pose_surface_does_not_fold(self):
+        """All LODs must retain a noncrossing shoulder through reference A75.
+
+        These four sampled poses do not certify arms straight down at A90,
+        all animations, or the continuous morph/pose parameter space.
+        """
+        import bpy
+        import math
+        from mathutils import Matrix
+        import build_gel_body as body
+        _, rig, objects = self._weighted_bodies()
+        for angle in (0, 30, 60, 75):
+            for bone in rig.pose.bones:
+                bone.matrix_basis = Matrix.Identity(4)
+            bpy.context.view_layer.update()
+            for side, sign in (('L', 1), ('R', -1)):
+                bone = rig.pose.bones['upper_arm.'+side]
+                pivot = bone.bone.head_local
+                bone.matrix = (Matrix.Translation(pivot)
+                    @ Matrix.Rotation(math.radians(angle)*sign, 4, 'Y')
+                    @ Matrix.Translation(-pivot) @ bone.bone.matrix_local)
+            bpy.context.view_layer.update()
+            for level, obj in zip(body.LOD_LEVELS, objects):
+                contacts, flipped = self._pose_failures(obj, rig)
+                with self.subTest(level=level, angle=angle, criterion='contact'):
+                    self.assertFalse(contacts, contacts[:8])
+                with self.subTest(level=level, angle=angle, criterion='orientation'):
+                    self.assertFalse(flipped, flipped[:8])
+
+    def test_weights_repeat_normalize_and_preserve_boots(self):
+        """Heat weights must repeat, fit four slots, and retain sole ownership."""
+        import build_gel_body as body
+        _, rig, objects = self._weighted_bodies()
+        for level, first in zip(body.LOD_LEVELS, objects):
+            second = body.make_body(level)
+            body.assign_weights(second, rig)
+            self.assertEqual([tuple(v.co) for v in first.data.vertices],
+                             [tuple(v.co) for v in second.data.vertices])
+            self.assertEqual([tuple(f.vertices) for f in first.data.polygons],
+                             [tuple(f.vertices) for f in second.data.polygons])
+            for a, b in zip(first.data.vertices, second.data.vertices):
+                left = {first.vertex_groups[g.group].name: g.weight for g in a.groups
+                        if first.vertex_groups[g.group].name in body.JOINTS}
+                right = {second.vertex_groups[g.group].name: g.weight for g in b.groups
+                         if second.vertex_groups[g.group].name in body.JOINTS}
+                self.assertEqual(left.keys(), right.keys())
+                self.assertLessEqual(len(left), 4)
+                self.assertAlmostEqual(sum(left.values()), 1., places=6)
+                for name in left:
+                    self.assertAlmostEqual(left[name], right[name], places=6)
+                    self.assertGreater(left[name], 0.)
+                if a.co.z < .21:
+                    side = 'L' if a.co.x >= 0 else 'R'
+                    shin = max(0., min(1., (a.co.z-.14)/.07))*.25
+                    expected = {'foot.'+side: 1-shin}
+                    if shin:
+                        expected['shin.'+side] = shin
+                    self.assertEqual(left.keys(), expected.keys())
+                    for name in expected:
+                        self.assertAlmostEqual(left[name], expected[name], places=6)
+
     def test_contract(self):
         import build_gel_body as body
         self.assertEqual(len(body.MORPHS), 11)
@@ -82,6 +199,36 @@ class SourceBodyTests(unittest.TestCase):
                 continue
             if any(abs(p[2]) < 1e-6 for p in triangles[i] + triangles[j]):
                 self.assertFalse(triangle_intersection(triangles[i], triangles[j]), (i, j))
+
+    def test_lod2_morph_orientation_survives_collapse(self):
+        """Keep hip transition loops through the same 53 exported morph samples.
+
+        The former collapse formed a long thin thigh triangle that reversed at
+        seeded sample 30. This conservative normal criterion matches the GLB
+        validator; it does not certify continuous morphs or all contacts.
+        """
+        import random
+        import build_gel_body as body
+        obj = body.make_body(0)
+        obj.data.calc_loop_triangles()
+        points = [v.co.copy() for v in obj.data.vertices]
+        deltas = [[body.morph_delta(p, name) for p in points] for name in body.MORPHS]
+        samples = [[0.] * len(body.MORPHS)]
+        for index in range(len(body.MORPHS)):
+            for extreme in (-1., 1.):
+                weights = [0.] * len(body.MORPHS)
+                weights[index] = extreme
+                samples.append(weights)
+        rng = random.Random(311018)
+        samples.extend([[rng.uniform(-1., 1.) for _ in body.MORPHS] for _ in range(30)])
+        for sample, weights in enumerate(samples):
+            posed = [p + sum((ds[i]*w for ds, w in zip(deltas, weights)), p*0)
+                     for i, p in enumerate(points)]
+            for face in obj.data.loop_triangles:
+                a, b, c = [points[i] for i in face.vertices]
+                x, y, z = [posed[i] for i in face.vertices]
+                self.assertGreater((b-a).cross(c-a).dot((y-x).cross(z-x)), 0.,
+                                   (sample, face.index, tuple(face.vertices)))
 
 
 if __name__ == '__main__':

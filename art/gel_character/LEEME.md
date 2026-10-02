@@ -62,6 +62,14 @@ en `do-not-drop/assets/models/characters/gel/`. El cuerpo de autoría y LOD1 tie
 quads; LOD2 simplifica la superficie fiel de LOD1, no rehace la retopología ni
 suprime ramas anatómicas. Los límites son 6000/2500/800 triángulos.
 
+La axila de LOD1 reconstruye loops cruzados de quads y los proyecta a la
+superficie curva de LOD0; LOD2 se deriva de esa superficie corregida. El skinning
+usa pesos de superficie de Blender, normalizados a cuatro influencias, y mantiene
+la asignación de las botas plantadas. La regresión comprueba A0/A30/A60/A75 en
+los tres LOD: no certifica A90 ni todas las poses y combinaciones continuas.
+La simplificación protege también los loops de transición cadera-muslo: el
+barrido de 53 muestras de morphs comprueba que no se plieguen al combinar contracciones.
+
 El rig de exportación conserva 20 nombres y los nueve clips actuales, incluido
 `Run` agregado en main por N-115. Los reposos nuevos
 acomodan la referencia; el retarget usa diferencias de rotación mundial y
