@@ -1999,9 +1999,10 @@ no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una e
   **[x] Hecho (2026-10-02, rama `nacho/N-922-n218-net-audit`)** — 27 con la entrada de N-218; la 25 queda como
   "skipped" y explica qué builds llevan 26 con y sin N-218. `test_protocol_version` falla si una entrada dice
   "reserved". De la auditoría, arreglados acá: el host deja de repetir un input del conductor de más de 30 ticks
-  (suelta el pedal; volante y freno de mano quedan; hitch o Wi-Fi sin desconexión), `driver_changed()` reinicia `applied_seq` (el conductor
-  nuevo no se corrige contra el `seq` del anterior) y `_stop_orphaned_run` congela el camión si el host se va mientras
-  el cliente predice.
+  (suelta el acelerador, pero sigue frenando hasta parar si frenaba; volante y freno de mano quedan; hitch o Wi-Fi sin desconexión), `driver_changed()` reinicia `applied_seq` (el conductor
+  nuevo no se corrige contra el `seq` del anterior) y `_stop_orphaned_run` congela el camión y corta la predicción (`stop_prediction()`) si el host se va mientras
+  el cliente predice. Segunda pasada de `auditor-red` sobre el arreglo: el freno vencido no se suelta y el reinicio de
+  `applied_seq` es solo en el host (en el cliente borraba el historial si el volante iba y volvía entre dos ticks).
 - [ ] **N-922.3** Colisionadores que existen distinto en cada peer frenan a la copia predicha y terminan en salto de 3 m:
   barreras y vagones del paso a nivel (`rail_crossing_segment.gd:213,281`, llegan RTT/2 tarde al cliente) y operarios y
   autoelevador del depósito (`depot_worker.gd:42-44`, `depot_forklift.gd:32-34`, cada peer en su fase; hoy también

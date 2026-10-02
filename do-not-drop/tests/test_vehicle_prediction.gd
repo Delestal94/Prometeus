@@ -16,10 +16,12 @@ extends SceneTree
 ## - someone else taking the wheel stops the prediction: frozen again, drawn from the pose buffer, the gap
 ##   eased out instead of jumping back; the host forgets the old driver's inputs, and its pose stands for no input
 ##   (0) until the new driver's first one plays, not for the old driver's last number;
-## - back at the wheel, the host's poses for no input are not compared with the new prediction;
+## - back at the wheel, the host's poses for no input are not compared with the new prediction; the wheel going
+##   elsewhere and back between two ticks leaves the client's prediction and its history alone;
 ## - the driver's inputs cut off for more than NetInputBuffer.STALE_TICKS (no disconnect): the host lets go of the
-##   pedal and keeps the wheel, and drives on once inputs arrive again;
-## - the host going mid-drive (the level's _stop_orphaned_run) freezes the predicted copy where it is.
+##   pedal and keeps the wheel, and drives on once inputs arrive again; a brake is kept until the truck stops,
+##   and doesn't turn into backing up;
+## - the host going mid-drive (the level's _stop_orphaned_run) freezes the copy where it is, no longer predicted.
 
 const LAG_TICKS: int = 9
 const JITTER_TICKS: int = 2
@@ -188,7 +190,9 @@ func _run() -> void:
 		await _step_raw()
 	_expect(int(_host.get(&"net_input_seq")) == 0, "Still no input while the new driver has sent none")
 
-	await _check_wheel_back_and_host_gone()
+	await _check_wheel_back()
+	await _check_stale_inputs()
+	await _check_host_gone()
 
 	root.get_node(^"/root/RunManager").set(&"is_running", false)
 	if _failures == 0:
@@ -196,8 +200,8 @@ func _run() -> void:
 	quit(_failures)
 
 
-## The client takes the wheel back and drives off; then the host goes mid-drive (N-922.2).
-func _check_wheel_back_and_host_gone() -> void:
+## The client takes the wheel back and drives off (N-922.2).
+func _check_wheel_back() -> void:
 	_host.set(&"driver_peer_id", HOST_ID + 1)
 	_client.set(&"driver_peer_id", CLIENT_ID)
 	var reconciler: NetPredictionReconciler = _client.get(&"_prediction").reconciler
@@ -210,23 +214,59 @@ func _check_wheel_back_and_host_gone() -> void:
 	for _i: int in range(90):
 		await _step(1.0, 0.2)
 	_expect(int(_host.get(&"net_input_seq")) > 0, "...and once the host plays its inputs, its pose stands for them")
-	# The driver's inputs stop reaching the host, without it leaving: past STALE_TICKS the host lets go of the
-	# pedal instead of driving on flat out for good; the wheel stays where it was.
+	# The wheel goes elsewhere and back between two ticks; driver_peer_id's setter runs on the client too.
+	_host.set(&"driver_peer_id", 7)
+	_host.set(&"driver_peer_id", HOST_ID + 1)
+	_client.set(&"driver_peer_id", 7)
+	_client.set(&"driver_peer_id", CLIENT_ID)
+	await _step(1.0, 0.2)
+	_expect(bool(_client.call(&"is_predicted")) and reconciler.history_size() > 1,
+		"The wheel away and back between two ticks: the prediction goes on with its history (%d states)" % [
+			reconciler.history_size()])
+
+
+## The driver's inputs stop reaching the host, without it leaving (N-922.2).
+func _check_stale_inputs() -> void:
+	# Flat out: past STALE_TICKS the host lets go of the pedal instead of driving on for good; the wheel stays.
 	var throttle_before: float = float(_host.call(&"throttle_input"))
-	_uplink_cut = true
-	for _i: int in range(LAG_TICKS + JITTER_TICKS + NetInputBuffer.STALE_TICKS + 4):
-		await _step(1.0, 0.2)
+	await _cut_uplink_until_stale(1.0, 0.2)
 	_expect(throttle_before == 1.0 and float(_host.call(&"throttle_input")) == 0.0
 			and is_equal_approx(float(_host.call(&"steer_input")), 0.2),
 		"A driver silent for more than STALE_TICKS: the host lets go of the pedal, keeps the wheel (%.1f -> %.1f)" % [
 			throttle_before, float(_host.call(&"throttle_input"))])
-	_uplink_cut = false
-	for _i: int in range(LAG_TICKS + JITTER_TICKS + NetInputBuffer.CUSHION + 2):
-		await _step(1.0, 0.0)
+	await _restore_uplink(1.0)
 	_expect(float(_host.call(&"throttle_input")) == 1.0, "...and drives on with the inputs once they arrive again")
+	# Braking: the brake goes on while the truck rolls (freewheeling downhill would be worse), and doesn't turn into
+	# backing up once it has stopped.
+	var brake: float = -0.5
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
+		await _step(brake, 0.0)
+	await _cut_uplink_until_stale(brake, 0.0)
+	var rolling: float = _forward_speed(_host)
+	for _i: int in range(30):
+		await _step(brake, 0.0)
+	var slowed: float = _forward_speed(_host)
+	_expect(rolling > 5.0 and is_equal_approx(float(_host.call(&"throttle_input")), brake) and slowed < rolling - 2.5,
+		"A driver silent while braking: the host keeps braking (throttle %.1f, %.1f -> %.1f m/s in 0.5 s)" % [
+			float(_host.call(&"throttle_input")), rolling, slowed])
+	var ticks: int = 0
+	while _forward_speed(_host) > 0.7 and ticks < 300:
+		await _step(brake, 0.0)
+		ticks += 1
+	for _i: int in range(60):
+		await _step(brake, 0.0)
+	_expect(float(_host.call(&"throttle_input")) == 0.0 and _forward_speed(_host) > -0.5,
+		"...until it stops, and then doesn't back up (throttle %.1f, %.2f m/s)" % [
+			float(_host.call(&"throttle_input")), _forward_speed(_host)])
+	await _restore_uplink(1.0)
+
+
+## The host goes mid-drive (N-922.2): the session closes, this peer is an offline host and the copy is its own
+## (authority 1). The level stops the run; loaded at run time like vehicle_prediction.gd (it names autoloads).
+func _check_host_gone() -> void:
+	for _i: int in range(60):
+		await _step(1.0, 0.0)
 	var speed: float = _client.linear_velocity.length() * 3.6
-	# The host goes: the session closes, this peer is an offline host and the copy is its own (authority 1). The
-	# level stops the run; loaded at run time like vehicle_prediction.gd below (it names autoloads).
 	_client.set_multiplayer_authority(1)
 	var level: Node = (load("res://scripts/gameplay/level_common.gd") as GDScript).new()
 	level.set(&"vehicle", _client)
@@ -236,9 +276,31 @@ func _check_wheel_back_and_host_gone() -> void:
 	for _i: int in range(60):
 		await physics_frame
 	var moved := Vector2(_client.global_position.x - left_at.x, _client.global_position.z - left_at.z)
-	_expect(speed > 5.0 and _client.freeze and moved.length() < 0.05,
-		"The host gone mid-drive: the predicted truck stays put behind the overlay (was at %.0f km/h, moved %.2f m)" % [
+	_expect(speed > 5.0 and _client.freeze and moved.length() < 0.05 and not bool(_client.call(&"is_predicted")),
+		"The host gone mid-drive: the truck stays put, not predicted (was at %.0f km/h, moved %.2f m)" % [
 			speed, moved.length()])
+
+
+## Cuts the driver's inputs off the host, the driver holding these controls, until the host's input is stale.
+func _cut_uplink_until_stale(throttle: float, steer: float) -> void:
+	var buffer: NetInputBuffer = _host.get(&"_prediction").inputs
+	_uplink_cut = true
+	var ticks: int = 0
+	while not buffer.is_stale() and ticks < 120:
+		await _step(throttle, steer)
+		ticks += 1
+
+
+## The driver's inputs reach the host again, until it plays them.
+func _restore_uplink(throttle: float) -> void:
+	_uplink_cut = false
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + NetInputBuffer.CUSHION + 2):
+		await _step(throttle, 0.0)
+
+
+## Speed along the truck's front (local -Z); negative backing up.
+static func _forward_speed(truck: VehicleBody3D) -> float:
+	return truck.linear_velocity.dot(-truck.global_basis.z)
 
 
 ## A box the host has riding in the bay (net_in_vehicle), drawn on the client: on the predicted truck.
