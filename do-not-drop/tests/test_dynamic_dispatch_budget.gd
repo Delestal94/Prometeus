@@ -326,6 +326,11 @@ const BUDGETS: Dictionary = {
 	# from this route) and the station as ServiceStop, read off its ServiceStopSegment (in_bay). The one
 	# /root/ lookup is the null-safe accessor _network().
 	"res://scripts/gameplay/route/route.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The rejoin keepsake (N-224.4): the one who left as Player (seat_node_path, net_in_vehicle,
+	# net_position, carried_package), the truck by a preload of vehicle.gd (is_door_open,
+	# set_door_open) and the lap bay by a preload of package_mount_point.gd (occupied_by): neither
+	# has a class name. Nothing left by name.
+	"res://scripts/gameplay/rejoin_keepsake.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

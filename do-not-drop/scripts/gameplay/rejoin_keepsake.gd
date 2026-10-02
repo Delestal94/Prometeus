@@ -27,6 +27,10 @@ extends Node
 ## anyway. Nothing here travels: the spawn data, the seat and the pick_up are
 ## those of any join.
 
+## vehicle.gd and package_mount_point.gd have no class name.
+const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+const PackageMountPoint = preload("res://scripts/gameplay/interaction/package_mount_point.gd")
+
 ## Mid-run, someone who was on foot comes back where they stood only this
 ## close to the truck; further, the road there may have been streamed away.
 const RETURN_RADIUS: float = 40.0
@@ -48,25 +52,26 @@ var _returned: Dictionary = {}
 ## had none yet: someone back who left again before being spawned keeps the
 ## note it came back to).
 func remember(peer_id: int, player: Node3D) -> void:
-	if player == null or not is_instance_valid(player):
+	var body: Player = player as Player if is_instance_valid(player) else null
+	if body == null:
 		if _returned.has(peer_id):
 			_kept[peer_id] = _returned[peer_id]
 			_returned.erase(peer_id)
 			_prune(_kept)
 		return
 	_returned.erase(peer_id)
-	var seat_path: NodePath = NodePath(player.get(&"seat_node_path"))
-	var riding: bool = bool(player.get(&"net_in_vehicle"))
+	var seat_path: NodePath = body.seat_node_path
+	var riding: bool = body.net_in_vehicle
 	var aboard: bool = is_instance_valid(vehicle) and (not seat_path.is_empty() or riding)
 	var local: Vector3 = Vector3.ZERO
 	if aboard:
-		local = player.get(&"net_position") if riding and seat_path.is_empty() \
-				else vehicle.to_local(player.global_position)
-	var box: DeliveryPackage = player.get(&"carried_package") as DeliveryPackage
-	if box != null and (not is_instance_valid(box) or box.carrier != player):
+		local = body.net_position if riding and seat_path.is_empty() \
+				else vehicle.to_local(body.global_position)
+	var box: DeliveryPackage = body.carried_package
+	if box != null and (not is_instance_valid(box) or box.carrier != body):
 		box = null
 	var note: Dictionary = {
-		"peer": peer_id, "player": weakref(player), "position": player.global_position,
+		"peer": peer_id, "player": weakref(body), "position": body.global_position,
 		"aboard": aboard, "local": local, "seat": seat_path,
 		"underway": late_join != null and late_join.underway(),
 		"box": box.get_path() if box != null else NodePath(),
@@ -146,8 +151,9 @@ func give_back(player: Node3D, note: Dictionary) -> void:
 	var rescue_pending: bool = box._rescue_pending
 	box.take_by(player)
 	box._rescue_pending = rescue_pending
-	var lap: Node = get_node_or_null(NodePath(note.lap)) if not NodePath(note.lap).is_empty() else null
-	if lap != null and lap.get(&"occupied_by") == null:
+	var lap: PackageMountPoint = get_node_or_null(NodePath(note.lap)) as PackageMountPoint \
+			if not NodePath(note.lap).is_empty() else null
+	if lap != null and lap.occupied_by == null:
 		SeatTending.bind_lap(box, lap)
 
 
@@ -159,7 +165,7 @@ func seat_back(player: Node3D, seat: SeatPoint) -> void:
 	var opened: bool = _open_door(seat)
 	late_join.seat_player(player, seat)
 	if opened and seat.occupant != player:
-		vehicle.call(&"set_door_open", seat.required_door, false)
+		(vehicle as VehicleScript).set_door_open(seat.required_door, false)
 
 
 ## The seat at the anchor `seat_path` if it would take someone now, its door
@@ -171,7 +177,7 @@ func _free_seat(seat_path: NodePath) -> SeatPoint:
 	var opened: bool = _open_door(seat)
 	var takes: bool = seat.can_interact(self)
 	if opened:
-		vehicle.call(&"set_door_open", seat.required_door, false)
+		(vehicle as VehicleScript).set_door_open(seat.required_door, false)
 	return seat if takes else null
 
 
@@ -183,10 +189,10 @@ func _seat_at(seat_path: NodePath) -> SeatPoint:
 
 ## Opens `seat`'s door if it has one and it is shut; true if it did.
 func _open_door(seat: SeatPoint) -> bool:
-	if seat.required_door == &"" or not vehicle.has_method(&"set_door_open") \
-			or bool(vehicle.call(&"is_door_open", seat.required_door)):
+	var truck: VehicleScript = vehicle as VehicleScript
+	if seat.required_door == &"" or truck == null or truck.is_door_open(seat.required_door):
 		return false
-	vehicle.call(&"set_door_open", seat.required_door, true)
+	truck.set_door_open(seat.required_door, true)
 	return true
 
 
