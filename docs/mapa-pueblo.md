@@ -137,6 +137,17 @@ semilla.
   como nombre de camión, para que un vehículo nuevo se enchufe sin tocar el mapa. Ver
   `docs/agregar-vehiculo.md`.
 - **Red:** el host manda semilla de campaña, `tier` y barreras abiertas en el handshake.
+- **Guardado de la partida** (decidido): el archivo de guardado lleva `world_seed`, `params` del
+  generador (tamaño, `theme`), `tier`, barreras abiertas, hitos cumplidos y vehículos desbloqueados.
+  Todo lo demás se **regenera** desde la semilla al cargar, igual que hoy, así que el guardado es chico
+  y no hace falta guardar geometría. Reglas:
+  - Cargar la misma partida con la misma versión del generador debe dar el mismo mundo. Si el
+    generador cambia entre versiones, el guardado necesita un `generator_version` y una migración o un
+    aviso; es un riesgo que hoy el test dorado (`test_route_golden`) cubre para la ruta y habría que
+    replicar para el pueblo.
+  - Quien hostea carga la partida; los clientes reciben semilla y estado en el handshake. Un jugador que
+    entra tarde reconstruye desde esos datos.
+  - Usar `modules/persistence` y `modules/unlock_profile` en lugar de un guardado nuevo.
 
 **Qué desbloquea cada cosa en detalle:** por decidir con `constructor-progresion` (economía, ver
 `economia-y-contramedidas.md`; piezas existentes: `CrewProgression`, `UnlockManager`,
@@ -211,9 +222,9 @@ F0 es el punto de control: si el pueblo generado no se siente bien al manejar, s
 4c. ~~¿Mapa aparte o mundo que se expande?~~ **Decidido:** un mundo gigante con barreras.
 4d. ¿El perfil de desbloqueos es del host o de cada jugador? (con mundo por campaña, probablemente
     la campaña la guarda quien hostea; por confirmar)
-4e. **¿El mapa es el mismo en todas las partidas de una campaña, o cambia?** Propuesta: mismo mundo por
-    campaña (semilla guardada), que cambia al empezar una campaña nueva. Choca con la idea original de
-    "mapa distinto por partida".
+4e. ~~¿El mapa es el mismo en todas las partidas de una campaña?~~ **Decidido (2026-10-02):** el mundo se
+    genera al crear la partida; después se guarda y se continúa con la misma semilla. Una partida nueva
+    genera un mundo distinto.
 4f. ¿Qué tan grande es "gigante"? Define si alcanza con distritos de 4×4 manzanas o hace falta un
     esquema de chunks de verdad.
 4g. ¿Se puede volver atrás (re-cerrar), o lo abierto queda abierto para siempre?
