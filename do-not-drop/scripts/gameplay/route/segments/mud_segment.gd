@@ -429,7 +429,7 @@ func _physics_process(delta: float) -> void:
 	if inside:
 		var flat := Vector3(truck.linear_velocity.x, 0.0, truck.linear_velocity.z)
 		var in_pit: bool = -local.z >= pit_start and -local.z <= pit_end
-		_drag_truck(truck, flat, in_pit, delta)
+		_drag_truck(truck, local, flat, delta)
 		match state:
 			State.IDLE:
 				_tick_sinking(truck, flat, in_pit, delta)
@@ -438,7 +438,7 @@ func _physics_process(delta: float) -> void:
 			State.CRANE_COMING:
 				_tick_crane_coming(delta)
 			State.HAULING:
-				_tick_hauling(truck, local, flat, delta)
+				_tick_hauling(truck, local, delta)
 	elif state == State.BOGGED or state == State.CRANE_COMING:
 		# Shoved out of the mud by something else (a test, a teleport): done.
 		_finish_haul(truck)
@@ -448,24 +448,38 @@ func _physics_process(delta: float) -> void:
 		_sink = 0.0
 
 
-## The mud's hold on the truck, from the state alone: the host's truck, and the
-## copy the client at the wheel predicts (N-218).
-func _drag_truck(truck: VehicleBody3D, flat: Vector3, in_pit: bool, delta: float) -> void:
+## Every force the mud puts on the truck, from the replicated state alone
+## (`state`, `pushers`, `haul_method`): the host's truck, and the copy the client
+## at the wheel predicts (N-218). The hold, the pit's pull and the approach's
+## drag; the crew's shove while bogged; the haul out along the road, until the
+## truck is HAUL_PAST_PIT past the pit (the host ends the haul there too).
+## `local`: the truck in this segment's space.
+func _drag_truck(truck: VehicleBody3D, local: Vector3, flat: Vector3, delta: float) -> void:
+	var in_pit: bool = -local.z >= pit_start and -local.z <= pit_end
 	if state == State.BOGGED or state == State.CRANE_COMING:
 		truck.apply_central_force(-flat * truck.mass * HELD_DRAG)
-	elif state == State.IDLE and in_pit:
+		if state == State.BOGGED and pushers > 0:
+			var forward: Vector3 = -truck.global_basis.z
+			forward.y = 0.0
+			truck.apply_central_force(forward.normalized() * PUSH_FORCE * float(pushers))
+	elif state == State.HAULING:
+		if -local.z < pit_end + HAUL_PAST_PIT:
+			var wanted: Vector3 = _road_forward() * float(HAUL_SPEEDS.get(haul_method, 3.0))
+			truck.apply_central_force((wanted - flat) * truck.mass * HAUL_GAIN)
+	elif in_pit:
 		# Never more than it takes to stop: the mud holds, it doesn't reverse.
 		var pull: float = minf(pit_decel, flat.length() / delta)
 		truck.apply_central_force(-flat.normalized() * truck.mass * pull)
-	elif state == State.IDLE:
+	else:
 		truck.apply_central_force(-flat * truck.mass * approach_drag)
 
 
 ## A client predicting the truck it drives (N-218, vehicle_prediction.gd): its
-## copy gets the same grip and drag from the replicated state, or it would
-## drive on through the mud and be pulled back to the host's every tick. The
-## host still decides everything (sinking, bogging, the haul, the pushes); those
-## reach the copy as corrections.
+## copy gets the same grip and forces from the replicated state, or it would
+## drive on through the mud and be pulled back to the host's every tick -- and
+## sit still while the host's is shoved or hauled out (N-922.6). The host still
+## decides everything (sinking, bogging, who pushes, the haul); what the copy
+## gets wrong from the state arriving late reaches it as corrections.
 func _hold_predicted_truck(delta: float) -> void:
 	var truck := _truck() as VehicleBody3D
 	if truck == null:
@@ -478,8 +492,7 @@ func _hold_predicted_truck(delta: float) -> void:
 	var inside: bool = predicted and _inside(local)
 	_set_grip(truck, inside)
 	if inside:
-		var flat := Vector3(truck.linear_velocity.x, 0.0, truck.linear_velocity.z)
-		_drag_truck(truck, flat, -local.z >= pit_start and -local.z <= pit_end, delta)
+		_drag_truck(truck, local, Vector3(truck.linear_velocity.x, 0.0, truck.linear_velocity.z), delta)
 
 
 func _inside(local: Vector3) -> bool:
@@ -519,10 +532,8 @@ func _tick_bogged(truck: VehicleBody3D, delta: float) -> void:
 	var pedal: bool = absf(truck.engine_force) > 1.0
 	progress = minf(1.0, progress + delta * (ENGINE_RATE * float(pedal) + PUSH_RATE * float(count)))
 	if count > 0:
+		# Their shove on the body is _drag_truck's, from `pushers` (set below).
 		_had_pushers = true
-		var forward: Vector3 = -truck.global_basis.z
-		forward.y = 0.0
-		truck.apply_central_force(forward.normalized() * PUSH_FORCE * float(count))
 	_bogged_seconds += delta
 	crane_left = maxf(0.0, crane_delay - _bogged_seconds)
 	_sync_timer -= delta
@@ -600,13 +611,9 @@ func _charge_fine() -> int:
 	return 0
 
 
-func _tick_hauling(truck: VehicleBody3D, local: Vector3, flat: Vector3, delta: float) -> void:
+## The haul's pull is _drag_truck's; this only says when it is over.
+func _tick_hauling(truck: VehicleBody3D, local: Vector3, delta: float) -> void:
 	_haul_seconds += delta
-	var along: Vector3 = -global_basis.z
-	along.y = 0.0
-	along = along.normalized()
-	var wanted: Vector3 = along * float(HAUL_SPEEDS.get(haul_method, 3.0))
-	truck.apply_central_force((wanted - flat) * truck.mass * HAUL_GAIN)
 	if -local.z >= pit_end + HAUL_PAST_PIT or _haul_seconds >= HAUL_MAX_SECONDS:
 		_finish_haul(truck)
 
