@@ -30,6 +30,14 @@ func _ready() -> void:
 	EventBus.run_started.connect(func(_route: StringName, _players: Array) -> void: _paper = {})
 
 
+## The scene must not outlive the HUD with the 3D world switched off: the root
+## viewport is the game's, and the next run (the host restarting under a client
+## still reading) would be drawn without a world (N-921.1).
+func _exit_tree() -> void:
+	if is_open() and hud != null and is_instance_valid(hud) and hud.get_viewport() != null:
+		hud.get_viewport().disable_3d = _world_3d_was_disabled
+
+
 func is_open() -> bool:
 	return director != null and is_instance_valid(director)
 

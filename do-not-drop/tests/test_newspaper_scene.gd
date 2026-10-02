@@ -20,6 +20,7 @@ extends SceneTree
 ## - Opciones > Diario al final: never, or only with news, keeps it off;
 ## - with no paper, or one that can't be read, the results come up as always;
 ##   a paper is shown once and a new run forgets one nobody watched;
+## - freeing the HUD with the scene open gives the 3D world back (N-921.1);
 ## - losing the host during the scene ends it and leaves the results (greyed retry);
 ## - the run's photos (N-606.5, news_photographer.gd): with this peer's photo of
 ##   the front story the page prints it halftoned under that story, with its
@@ -235,9 +236,16 @@ func _run() -> void:
 
 	await _check_photos(bus, hud, paper, results, settings)
 	_check_catalogue_fits(settings)
-	settings.set(&"newspaper_mode", mode_before)
-	hud.queue_free()
+	# N-921.1: the HUD going away under the open scene (the host restarts while this
+	# client still reads) gives the 3D world back to the next run.
+	_close_results(hud)
+	bus.newspaper_ready.emit(paper)
+	bus.run_ended.emit(120, results)
+	_expect(hud.newspaper.is_open() and root.disable_3d, "The scene is open and the 3D world off")
+	hud.free()
+	_expect(not root.disable_3d, "Freeing the HUD with the newspaper open draws the world again")
 	await process_frame
+	settings.set(&"newspaper_mode", mode_before)
 	if _failures == 0:
 		print("PASS: the next-day scene plays the run's paper, frames every story, skips on a hold",
 				" and hands over to the results")

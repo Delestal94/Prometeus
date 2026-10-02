@@ -91,6 +91,12 @@ func _ready() -> void:
 	wind = get_parent().get_node_or_null(^"AmbientWind") as AudioStreamPlayer
 
 
+func _exit_tree() -> void:
+	# The echo is a global bus effect: leaving the level (menu, restart) must
+	# not carry the tunnel's or the hall's reverb along (N-921.2).
+	AcousticSpace.apply(&"open")
+
+
 func _process(delta: float) -> void:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	if camera != null:
