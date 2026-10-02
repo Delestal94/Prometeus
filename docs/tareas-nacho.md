@@ -1465,10 +1465,14 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
   ciervo) ahora cachean el camión en `_vehicle()`. La de `reference_truck` recorre los jugadores (≤5) y queda.
 - [x] **Fase 7a · i18n de la UI:** los textos de `scripts/ui/**` a `translations/strings_ui.csv`
   (es = texto de siempre, en = primera traducción), con `test_ui_translations`.
-- [ ] **Fase 7b · i18n del resto:** textos visibles en `core/` (eventos de ruta, desbloqueos, cartas,
+- [x] ~~**Fase 7b · i18n del resto:** textos visibles en `core/` (eventos de ruta, desbloqueos, cartas,
   suministros, caras), `gameplay/` (contenidos de paquetes, avisos del depósito, historias) y los
-  `display_name` de los `.tres` de trampas/contenidos. Ojo: `hud_prompts` y `ui_theme` indexan por
-  nombre visible de trampa (`"FRÁGIL"`...); pasarlos a id antes de traducir esos nombres.
+  `display_name` de los `.tres` de trampas/contenidos.~~ **[x] Hecho (2026-10-01)**: casi todo ya había
+  salido con N-805 (claves en `core/`, nombres de trampa y contenidos por clave, `ui_theme.trap_icon()` por
+  clave). Quedaban la nota de la práctica de cuidado y el respaldo "Clic izq./der." (`care_practice`,
+  `care_guide`) y el manejo de la torre de copas desalineado con su clave. `test_ui_translations` ahora
+  ve literales sin tilde (dos o más palabras con una de `SPANISH_WORDS`), barre `modules/` y compara cada
+  `data/contents/*.tres` con sus claves. Aviso: `docs/avisos/2026-10-01-n211-7b-i18n.md`.
 - [x] **Fase 8 · Responsividad:** capturas del HUD y el menú en 16:9, 16:10 (Steam Deck), 21:9 y 4:3.
   16:9/16:10/21:9 bien. Arreglado: en 4:3 todo el HUD se dibujaba al 75% (letra de 6-7 px) — ahora
   `Hud.layout_scale()` maqueta siempre en 720 de alto lógico (HUD y tarjeta); el aviso de interacción

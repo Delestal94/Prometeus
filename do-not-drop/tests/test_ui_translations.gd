@@ -8,10 +8,13 @@ extends SceneTree
 ##   (a "%d" missing in one language breaks the string at runtime);
 ## - every UI_* / HUD_* key the code asks for is in the table, and every key
 ##   in the table is used somewhere (no dead rows);
-## - no script under ui/, gameplay/, core/ or presentation/ draws a Spanish
-##   literal straight on screen (N-805: in English the player read Spanish
-##   care messages, run-end reasons and connection errors), except the files
-##   in SPANISH_LITERAL_FILES and debug output (print/push_warning/push_error);
+## - no script under ui/, gameplay/, core/, presentation/ or modules/ (their
+##   tests aside) draws a Spanish literal straight on screen (N-805: in English
+##   the player read Spanish care messages, run-end reasons and connection
+##   errors), except the files in SPANISH_LITERAL_FILES and debug output
+##   (print/push_warning/push_error); a literal is Spanish when it has an
+##   accent or a ¿/¡, or (N-211 7b) when it has two or more words and one of
+##   them is a Spanish-only word ("Cargar la caja", "Listo para salir");
 ##   nor sets a .text to a plain word ("PAUSA", "GARAJE") that is not in
 ##   SAME_IN_BOTH (a literal assigned on the same line, or after an inline
 ##   "else"; constants and helper arguments aren't seen), and the main menu's
@@ -19,7 +22,11 @@ extends SceneTree
 ## - trap names travel as keys (TrapDefinition.name_key()), each one in the
 ##   table with the .tres display_name as its Spanish text, and no script
 ##   draws a .tres display_name straight on screen: each peer translates the
-##   name into its own language, not the host's.
+##   name into its own language, not the host's;
+## - the same for the package contents (N-211 7b): each data/contents/*.tres
+##   has its name, handling and condition keys (PackageContent.TEXT_KEYS) in
+##   the table, with the .tres texts as their Spanish, and reads in Spanish by
+##   default (localized_name(), localized_handling(), condition_text()).
 ## - S-605: the warnings read while driving are short: every trap hint
 ##   (HUD_HINT_<TRAP>_*) and every route-event prompt (HUD_EVENT_*_PROMPT,
 ##   *_HOUSE, *_REVEALED, *_SWAPPED) has at most 6 words, in Spanish and in
@@ -37,6 +44,16 @@ const LITERAL_SCAN_DIRS: Array[String] = [
 	"res://scripts/gameplay",
 	"res://scripts/core",
 	"res://scripts/presentation",
+	"res://modules",
+]
+## Spanish-only words: a literal of two or more words with one of these is
+## Spanish text even without an accent ("de", "no", "a" are English too).
+const SPANISH_WORDS: Array[String] = [
+	"el", "la", "los", "las", "del", "una", "unos", "unas", "con", "por", "para", "que", "sin", "hay",
+	"esta", "este", "esto", "listo", "lista", "nadie", "todos", "ahora", "caja", "cajas", "paquete",
+	"paquetes", "camion", "casa", "casas", "ruta", "entrega", "entregas", "jugador", "jugadores",
+	"conductor", "pasajero", "equipo", "puerta", "cargar", "abrir", "cerrar", "agarrar", "soltar",
+	"subir", "bajar", "salir", "volver", "partida", "sala", "plata", "clic", "izq", "der", "cuando",
 ]
 ## Files whose Spanish literals are legitimately never drawn as they are.
 const SPANISH_LITERAL_FILES: Array[String] = [
@@ -103,6 +120,7 @@ func _run() -> void:
 	_check_no_spanish_ui_literals()
 	_check_no_plain_word_texts()
 	_check_trap_name_keys(table)
+	_check_content_keys(table)
 	_check_short_warnings(table)
 	var menu_constants: Dictionary = load("res://scripts/ui/main_menu.gd").get_script_constant_map()
 	var page_titles: Dictionary = menu_constants.get("PAGE_TITLES", {})
@@ -145,12 +163,18 @@ func _run() -> void:
 
 func _check_no_spanish_ui_literals() -> void:
 	var accented := RegEx.create_from_string('"[^"\\n]*[áéíóúñÁÉÍÓÚÑ¿¡][^"\\n]*"')
+	var quoted := RegEx.create_from_string('"([^"\\n]*)"')
+	# Words split by spaces: file names ("casa%d.png", "hay_bale.glb") are one word.
+	var word := RegEx.create_from_string("[A-Za-z]+")
 	var files: Array[String] = []
 	for dir_path: String in LITERAL_SCAN_DIRS:
 		files.append_array(_scripts(dir_path))
-	_expect(files.size() > 100, "The literal scan reads ui, gameplay, core and presentation (%d files)" % files.size())
+	_expect(files.size() > 100,
+		"The literal scan reads ui, gameplay, core, presentation and modules (%d files)" % files.size())
+	_expect(files.any(func(path: String) -> bool: return path.begins_with("res://modules/")),
+		"The literal scan reads the portable modules too")
 	for file_path: String in files:
-		if file_path in SPANISH_LITERAL_FILES:
+		if file_path in SPANISH_LITERAL_FILES or file_path.contains("/tests/"):
 			continue
 		var line_number: int = 0
 		for line: String in FileAccess.get_file_as_string(file_path).split("\n"):
@@ -160,6 +184,26 @@ func _check_no_spanish_ui_literals() -> void:
 				continue
 			_expect(accented.search(line) == null,
 				"%s:%d has no untranslated Spanish literal" % [file_path, line_number])
+			for found: RegExMatch in quoted.search_all(_without_comment(line)):
+				if not found.get_string(1).contains(" "):
+					continue
+				var words: Array = word.search_all(found.get_string(1)).map(
+						func(m: RegExMatch) -> String: return m.get_string().to_lower())
+				_expect(words.size() < 2 or not words.any(func(w: String) -> bool: return w in SPANISH_WORDS),
+					"%s:%d has no untranslated Spanish literal (\"%s\")"
+						% [file_path, line_number, found.get_string(1)])
+
+
+## The line up to a trailing "# comment" that sits outside any quotes.
+func _without_comment(line: String) -> String:
+	var inside: bool = false
+	for index: int in line.length():
+		var character: String = line[index]
+		if character == "\"":
+			inside = not inside
+		elif character == "#" and not inside:
+			return line.substr(0, index)
+	return line
 
 
 func _check_no_plain_word_texts() -> void:
@@ -205,10 +249,43 @@ func _check_trap_name_keys(table: Dictionary) -> void:
 	var reads := RegEx.create_from_string('\\.display_name\\b|&"display_name"')
 	for dir_path: String in LITERAL_SCAN_DIRS:
 		for file_path: String in _scripts(dir_path):
-			if file_path in DISPLAY_NAME_FILES:
+			if file_path in DISPLAY_NAME_FILES or file_path.contains("/tests/"):
 				continue
 			_expect(reads.search(FileAccess.get_file_as_string(file_path)) == null,
 				"%s doesn't draw a .tres display_name (localized_name() / name_key())" % file_path)
+
+
+## N-211 7b: what a box says it holds is a key per content, and its Spanish
+## is the .tres text (a .tres edited alone would show the old text on screen).
+func _check_content_keys(table: Dictionary) -> void:
+	var content_script: Script = load("res://scripts/gameplay/package/package_content.gd")
+	var text_keys: Dictionary = content_script.get_script_constant_map().get("TEXT_KEYS", {})
+	var checked: int = 0
+	for file_name: String in DirAccess.get_files_at("res://data/contents"):
+		if not file_name.ends_with(".tres"):
+			continue
+		var content: Resource = load("res://data/contents/" + file_name)
+		var keys: Array = text_keys.get(content.get(&"id"), [])
+		checked += 1
+		var conditions: PackedStringArray = content.get(&"condition_texts")
+		_expect(keys.size() == 2 + conditions.size(),
+			"%s has a name, a handling and one condition key per state (%s)" % [file_name, keys])
+		if keys.size() != 2 + conditions.size():
+			continue
+		var spanish: Array = [String(content.get(&"display_name")), String(content.get(&"handling"))]
+		spanish.append_array(Array(conditions))
+		for index: int in keys.size():
+			var key: String = String(keys[index])
+			_expect(table.has(key) and table[key][0] == spanish[index],
+				"%s: %s's Spanish is the .tres text (%s vs %s)"
+					% [file_name, key, table.get(key, ["-"])[0], spanish[index]])
+		_expect(String(content.call(&"localized_name")) == spanish[0],
+			"%s's name reads in Spanish by default" % file_name)
+		_expect(String(content.call(&"localized_handling")) == spanish[1],
+			"%s's handling reads in Spanish by default" % file_name)
+		_expect(String(content.call(&"condition_text", 0)) == spanish[2],
+			"%s's condition reads in Spanish by default" % file_name)
+	_expect(checked >= 10, "Every package content is checked (%d)" % checked)
 
 
 ## S-605: trap hints and route-event prompts are read while driving: 6 words
