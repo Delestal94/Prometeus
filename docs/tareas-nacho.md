@@ -9,6 +9,18 @@
 
 ## QA — bugs abiertos
 
+### N-918 · `test_level_endless` falla a veces: "SegmentN's static boxes are merged as it spawns (1 left loose)" — C · `Opus 5.5 · medium` · Aviso: sí (`modules/render_budget/`, zona compartida) · **[x] rama `nacho/fix-main-endless-merged-name`**
+Origen: construcción 2026-10-02 (CI rojo del PR #212, que no tocaba nada de esto; ~1 de cada 24 corridas en `main`
+con la CPU cargada). Con `cazador-bugs`: dos causas juntas. (1) `streamer.set(&"segment_scripts", [Straight…])`
+pasaba un `Array` sin tipo a la propiedad `Array[Script]`; Godot lo descarta sin avisar y la ruta salía con los 11
+tipos (por eso la camioneta terminaba OFF_ROAD o STUCK tan seguido). Pasaba igual en `test_endless_multi_cargo.gd` y
+`test_mud_segment.gd`. (2) Con un `MudSegment` en la ruta, `DressingBatcher.merge_segment_geometry()` crea dos
+`MergedGeometry` (sombra prendida y apagada), y el segundo quedaba con el nombre `@MeshInstance3D@N`, que el test
+contaba como pieza suelta. Ahora se agrega con `add_child(instance, true)` (queda `MergedGeometry2`), y los tres
+tests pasan la lista tipada. El módulo prueba el caso en `test_render_budget` (`_test_segment_merge`). Aviso
+`docs/avisos/2026-10-02-merged-geometry-name.md`.
+  **[x] Hecho (2026-10-02, rama `nacho/fix-main-endless-merged-name`)**.
+
 ### N-917 · Aviso de Jolt "exceeded the maximum number of jobs" al cargar la entrega — C · `Opus 5.5 · medium` · Aviso: sí (`modules/route_gen/`, zona compartida) · **[x] rama `nacho/N-917-jolt-jobs`**
 Origen: QA 2026-10-01. Escenario: `godot --path do-not-drop -- --autostart --mood=nublado_dia` (o cualquier clima), o
 entrar a la entrega desde el menú; la consola muestra una vez `WARNING: Jolt Physics job system exceeded the maximum

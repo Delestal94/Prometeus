@@ -951,7 +951,9 @@ func _check_level_stuck_rules() -> void:
 	root.add_child(level)
 	current_scene = level
 	await process_frame
-	level.get_node(^"World/RouteStreamer").set(&"segment_scripts", [StraightSegment])
+	# Typed: a plain Array into the Array[Script] property is silently dropped.
+	var straight_only: Array[Script] = [StraightSegment]
+	level.get_node(^"World/RouteStreamer").set(&"segment_scripts", straight_only)
 	level.call(&"start_debug_delivery")
 	await physics_frame
 	van = level.get(&"vehicle")
