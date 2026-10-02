@@ -576,7 +576,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320, N-325 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -2279,6 +2279,36 @@ precarga de 2,5 s con la cámara a ~70 m mirando a otro lado y la ponía sobre e
 - [x] **N-324.3** ~~Actualizar inventario §7 y `docs/especificaciones-visuales.md` #50.~~ **[x] Hecho (2026-10-01)**.
 - Límite conocido: como toda `GPUParticles3D`, el humo se congela mientras ninguna cámara ve su `visibility_aabb` (p. ej.
   la cabina mirando adelante) y sigue desde ahí. En ralentí, desde la caja, solo se ven 2-3 puffs tenues.
+
+### N-325 · Baranda del puente angosto con modelo del mismo lote — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-325-bridge-railing`**
+
+`do-not-drop/assets/models/environment/props/sm_env_prop_bridge_railing.glb` (352 tris, `assets/tools/build_lowpoly_glb_assets_batch2.py`
+`bridge_railing()`) son 8 cubos gris liso: 5 postes, 2 barras cuadradas y cordón, sin pasamanos. Se ve a 1-3 m del camión y de
+la caja en el puente angosto y ocupa ~1/4 de la captura de Steam `art/marketing/capturas/2026-09-30_puente_lluvia.png`; al lado
+de `bridge_post` (tapa, reflector amarillo) y el tablero de `build_route_pieces.py` se ve de otro lote. El inventario la
+nombraba como "N-132" en §10.1/§10.2 pero no había tarea. **Necesita PC** (Blender; la toma la sesión de arte). Origen:
+sesión de arte 2026-10-02 (`director-arte`, área decorado de ruta y tramos).
+Propuesta: moverla a `build_route_pieces.py` junto a los otros `bridge_*`, con el mismo archivo de salida (mismo camino y
+nombre): postes chaflanados con base y tapa piramidal como `bridge_post`, pasamanos superior de sección redondeada (6-8
+lados) en `guardrail`, barra media, cordón biselado con 2 desagües, un reflector cada 2 postes; mismos 6 m de largo, pivote en
+la base, misma orientación que el actual, materiales de la paleta (`concrete`, `concrete.light`, `guardrail`, `reflector`);
+~700-900 tris, ≤ 1.100 con AO.
+Hecho cuando el GLB está reemplazado dentro del presupuesto y generado por script; las colisiones y la lógica de
+`narrow_bridge_segment.gd` no cambian; `check_pivots.gd` y la captura del puente están revisadas con `revisor-visual` y
+`director-arte` contra el tablero y `bridge_post` (sin superficies de color plano ni cajas de placeholder a la vista); un test
+carga el GLB (ampliar el que ya cubra el puente) y fija presupuesto de tris y nodos/materiales; y el inventario §10.1/§10.2
+está al día.
+- [x] **N-325.1** Rehacer la baranda en `build_route_pieces.py` (sacar `bridge_railing()` del batch2), exportar al mismo
+  camino y aplicar el AO. Con `modelador-blender`.
+- [x] **N-325.2** Ampliar el test del puente para cargar el GLB, verificar con `revisor-visual` (`check_pivots.gd` y captura
+  del puente) y actualizar el inventario §10.1/§10.2. Con `escritor-tests` y `revisor-visual`; tests `bridge`.
+  **[x] Hecho (2026-10-02, sesión de arte)** — `bridge_railing()` nueva en `build_route_pieces.py` (grupo `bridge`; `done()` acepta
+  carpeta para exportar a `props/`), sale del batch2. 352 → 708 tris con AO, GLB 31 → 71 kB, bbox 6 × 0,36 × 1,08 m, pivote en la
+  base (`check_pivots`: min_y 0, centro 0). 3 postes propios en x 0 / ±2 en vez de 5, porque los `bridge_post` del segmento caen
+  en ±1 / ±3 de cada tramo de 6 m; reflector y banda solo en el poste central (uno cada 6 m: con 3 postes por tramo "uno cada 2"
+  dejaba dos pegados en cada junta). `test_baked_ao` (la suma a `BAKED`) y `test_more_route_segments` (`_check_railing`: tris
+  600-1.100, `Handrail`/`MidRail`, AABB, 6 tramos por lado en x ±3,05). `revisor-visual`: mismo lote que `bridge_post`, sin
+  z-fighting ni juntas visibles, en `puente_lluvia` de día con lluvia; de noche no se capturó.
 
 ## 4. Audio y diseño sonoro
 

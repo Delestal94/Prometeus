@@ -9,7 +9,11 @@ extends SceneTree
 ##     exactly at both of the segment's own edges (no seam with the straight
 ##     road on either side), and the deck floats over the drop instead of
 ##     sinking into it; it also has its own flowing-water loop (positioned,
-##     Exterior bus, playtest polish 2026-09-27);
+##     Exterior bus, playtest polish 2026-09-27); its railing GLB (N-325,
+##     sm_env_prop_bridge_railing, 708 tris) loads, stays between 600 and 1100
+##     tris, keeps its Handrail and MidRail meshes, measures ~6 m long, <= 1.15 m
+##     high and <= 0.4 m wide, and the segment still lays it as 6 sections per
+##     side at x = +-3.05;
 ##   - a TunnelSegment has solid walls and roof, and light inside that dies
 ##     out at the mouths instead of spilling a hard-edged disc outside (N-317);
 ##   - a RailCrossingSegment that's due to close runs the whole cycle when the
@@ -61,6 +65,7 @@ func _run() -> void:
 	_expect(bridge.get_node_or_null(^"BridgeGuardRailCollision") != null,
 			"Guard rail collision is still there with the river carved in")
 	_expect(bridge.has_meta(&"ignore_river"), "The whole segment is flagged so its own furniture floats over the drop")
+	_check_railing(bridge)
 	# The river's own sound (playtest polish 2026-09-27, docs/tareas-nacho.md #178
 	# warns against the depot's old zumbido: a flat drone the whole floor got at
 	# the same volume): positioned, on Exterior, and a modest unit_size so it
@@ -281,6 +286,60 @@ func _run() -> void:
 				+ " tunnels are solid and lit, crossings close for a passing train (its own horn and chugging)"
 				+ " and reopen")
 	quit(_failures)
+
+
+## The authored bridge railing (N-325): size and parts of the GLB, and where
+## the segment puts it. Lengths are in Godot axes (Blender y becomes -z).
+func _check_railing(bridge: Node3D) -> void:
+	var path := "res://assets/models/environment/props/sm_env_prop_bridge_railing.glb"
+	var scene := load(path) as PackedScene
+	_expect(scene != null, "The bridge railing GLB loads")
+	if scene == null:
+		return
+	var model: Node3D = scene.instantiate()
+	var tris: int = 0
+	var box := AABB()
+	var first: bool = true
+	var names: Array[String] = []
+	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var instance := node as MeshInstance3D
+		if instance.mesh == null:
+			continue
+		names.append(String(instance.name))
+		for surface: int in range(instance.mesh.get_surface_count()):
+			var arrays: Array = instance.mesh.surface_get_arrays(surface)
+			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			tris += (indices.size() if not indices.is_empty() else (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+		var to_model := Transform3D.IDENTITY
+		var walker: Node = instance
+		while walker != null and walker != model:
+			to_model = (walker as Node3D).transform * to_model
+			walker = walker.get_parent()
+		var part: AABB = to_model * instance.mesh.get_aabb()
+		box = part if first else box.merge(part)
+		first = false
+	var has_handrail: bool = false
+	var has_midrail: bool = false
+	for mesh_name: String in names:
+		has_handrail = has_handrail or mesh_name.begins_with("Handrail")
+		has_midrail = has_midrail or mesh_name.begins_with("MidRail")
+	_expect(tris >= 600 and tris <= 1100, "The railing stays between 600 and 1100 triangles (got %d)" % tris)
+	_expect(has_handrail and has_midrail, "The railing keeps its Handrail and MidRail meshes (got %s)" % str(names))
+	_expect(absf(box.size.x - 6.0) < 0.3, "The railing is ~6 m long (got %.2f)" % box.size.x)
+	_expect(box.size.y <= 1.15, "The railing is at most 1.15 m high (got %.2f)" % box.size.y)
+	_expect(box.size.z <= 0.4, "The railing is at most 0.4 m wide (got %.2f)" % box.size.z)
+	model.free()
+	var left: int = 0
+	var right: int = 0
+	for node: Node in bridge.get_children():
+		if node.scene_file_path != path:
+			continue
+		var x: float = (node as Node3D).position.x
+		if is_equal_approx(x, -3.05):
+			left += 1
+		elif is_equal_approx(x, 3.05):
+			right += 1
+	_expect(left == 6 and right == 6, "The bridge lays 6 railing sections per side at x = +-3.05 (got %d left, %d right)" % [left, right])
 
 
 func _expect(condition: bool, description: String) -> void:
