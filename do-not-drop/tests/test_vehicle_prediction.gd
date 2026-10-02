@@ -14,7 +14,12 @@ extends SceneTree
 ## - a drag only the host's truck feels (mud, an animal hit) pulls the copy back to it without swinging;
 ## - the host moving its truck (a reset) snaps the client's copy there instead of easing across 20 m;
 ## - someone else taking the wheel stops the prediction: frozen again, drawn from the pose buffer, the gap
-##   eased out instead of jumping back; the host forgets the old driver's inputs.
+##   eased out instead of jumping back; the host forgets the old driver's inputs, and its pose stands for no input
+##   (0) until the new driver's first one plays, not for the old driver's last number;
+## - back at the wheel, the host's poses for no input are not compared with the new prediction;
+## - the driver's inputs cut off for more than NetInputBuffer.STALE_TICKS (no disconnect): the host lets go of the
+##   pedal and keeps the wheel, and drives on once inputs arrive again;
+## - the host going mid-drive (the level's _stop_orphaned_run) freezes the predicted copy where it is.
 
 const LAG_TICKS: int = 9
 const JITTER_TICKS: int = 2
@@ -31,6 +36,8 @@ var _tick: int = 0
 var _uplink: Array = []
 var _downlink: Array = []
 var _loss: float = 0.0
+## The driver's inputs stop reaching the host, the poses still come back (a hitch, a Wi-Fi drop one way).
+var _uplink_cut: bool = false
 ## A braking force only the host's truck feels (N of it per kg per m/s).
 var _drag: float = 0.0
 var _worst_shift: float = 0.0
@@ -155,10 +162,14 @@ func _run() -> void:
 
 	# Someone else takes the wheel.
 	var predicted_at: Vector3 = _client.global_position
+	var old_driver_seq: int = int(_host.get(&"net_input_seq"))
 	_client.set(&"driver_peer_id", 7)
 	_host.set(&"driver_peer_id", 7)
 	_expect((_host.get(&"_prediction").inputs as NetInputBuffer).newest() == -1,
 		"The host forgets the old driver's inputs when the wheel changes hands")
+	_expect(old_driver_seq > 0 and int(_host.get(&"net_input_seq")) == 0,
+		"...and its pose stands for no input (0), not the old driver's last one (%d) (got %d)" % [
+			old_driver_seq, int(_host.get(&"net_input_seq"))])
 	await _step_raw()
 	_expect(_client.freeze and not bool(_client.call(&"is_predicted")),
 		"Not driving any more: the copy is frozen again, drawn from the host's poses")
@@ -173,11 +184,61 @@ func _run() -> void:
 	_client.call(&"_process", float(prediction_script.get_script_constant_map()["EXIT_BLEND_SECONDS"]))
 	_expect(_client.global_position.distance_to(smoother.sample(NetPoseSmoother.local_now()).origin) < 0.01,
 		"...and is drawn where the pose buffer has it once the blend is over")
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
+		await _step_raw()
+	_expect(int(_host.get(&"net_input_seq")) == 0, "Still no input while the new driver has sent none")
+
+	await _check_wheel_back_and_host_gone()
 
 	root.get_node(^"/root/RunManager").set(&"is_running", false)
 	if _failures == 0:
 		print("PASS: the client at the wheel predicts its truck and is eased to the host's")
 	quit(_failures)
+
+
+## The client takes the wheel back and drives off; then the host goes mid-drive (N-922.2).
+func _check_wheel_back_and_host_gone() -> void:
+	_host.set(&"driver_peer_id", HOST_ID + 1)
+	_client.set(&"driver_peer_id", CLIENT_ID)
+	var reconciler: NetPredictionReconciler = _client.get(&"_prediction").reconciler
+	var snaps_before: int = reconciler.snaps
+	for _i: int in range(LAG_TICKS):
+		await _step(0.0, 0.0)
+	_expect(bool(_client.call(&"is_predicted")) and reconciler.history_size() > 0 and reconciler.last_error == 0.0
+			and reconciler.snaps == snaps_before,
+		"Back at the wheel, the host's poses for no input yet are not compared with the new prediction")
+	for _i: int in range(90):
+		await _step(1.0, 0.2)
+	_expect(int(_host.get(&"net_input_seq")) > 0, "...and once the host plays its inputs, its pose stands for them")
+	# The driver's inputs stop reaching the host, without it leaving: past STALE_TICKS the host lets go of the
+	# pedal instead of driving on flat out for good; the wheel stays where it was.
+	var throttle_before: float = float(_host.call(&"throttle_input"))
+	_uplink_cut = true
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + NetInputBuffer.STALE_TICKS + 4):
+		await _step(1.0, 0.2)
+	_expect(throttle_before == 1.0 and float(_host.call(&"throttle_input")) == 0.0
+			and is_equal_approx(float(_host.call(&"steer_input")), 0.2),
+		"A driver silent for more than STALE_TICKS: the host lets go of the pedal, keeps the wheel (%.1f -> %.1f)" % [
+			throttle_before, float(_host.call(&"throttle_input"))])
+	_uplink_cut = false
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + NetInputBuffer.CUSHION + 2):
+		await _step(1.0, 0.0)
+	_expect(float(_host.call(&"throttle_input")) == 1.0, "...and drives on with the inputs once they arrive again")
+	var speed: float = _client.linear_velocity.length() * 3.6
+	# The host goes: the session closes, this peer is an offline host and the copy is its own (authority 1). The
+	# level stops the run; loaded at run time like vehicle_prediction.gd below (it names autoloads).
+	_client.set_multiplayer_authority(1)
+	var level: Node = (load("res://scripts/gameplay/level_common.gd") as GDScript).new()
+	level.set(&"vehicle", _client)
+	level.call(&"_stop_orphaned_run", "host_lost")
+	level.free()
+	var left_at: Vector3 = _client.global_position
+	for _i: int in range(60):
+		await physics_frame
+	var moved := Vector2(_client.global_position.x - left_at.x, _client.global_position.z - left_at.z)
+	_expect(speed > 5.0 and _client.freeze and moved.length() < 0.05,
+		"The host gone mid-drive: the predicted truck stays put behind the overlay (was at %.0f km/h, moved %.2f m)" % [
+			speed, moved.length()])
 
 
 ## A box the host has riding in the bay (net_in_vehicle), drawn on the client: on the predicted truck.
@@ -210,7 +271,7 @@ func _step_raw() -> void:
 	_tick += 1
 	# What the last tick sent each way, onto the link.
 	var sent: Array = _client.get(&"_prediction").last_sent
-	if not sent.is_empty() and (_uplink.is_empty() or int(_uplink[-1][1][0]) < int(sent[0])):
+	if not sent.is_empty() and not _uplink_cut and (_uplink.is_empty() or int(_uplink[-1][1][0]) < int(sent[0])):
 		_send(_uplink, sent.duplicate())
 	_host.set(&"net_simulating", not _host.freeze)
 	_send(_downlink, [
@@ -219,7 +280,10 @@ func _step_raw() -> void:
 		bool(_host.get(&"net_simulating"))])
 	while not _uplink.is_empty() and int(_uplink[0][0]) <= _tick:
 		var input: Array = _uplink.pop_front()[1]
-		_host.call(&"receive_driver_input", int(input[0]), float(input[1]), float(input[2]), bool(input[3]))
+		# As submit_driver_input: only while this client is the host's driver (inputs still on the way when the
+		# wheel changed hands are dropped).
+		if int(_host.get(&"driver_peer_id")) == HOST_ID + 1:
+			_host.call(&"receive_driver_input", int(input[0]), float(input[1]), float(input[2]), bool(input[3]))
 	while not _downlink.is_empty() and int(_downlink[0][0]) <= _tick:
 		var state: Array = _downlink.pop_front()[1]
 		_client.set(&"net_simulating", state[6])

@@ -12,7 +12,8 @@ extends RefCounted
 ##   into the truck (position in ~150 ms, heading sooner, at most 10 cm a tick, snapped past 3 m), without
 ##   re-simulating: Jolt can't step one body on its own.
 ## - **The host** plays the driver's inputs back one per physics tick from a NetInputBuffer (a cushion of two
-##   against jitter, the last one held through a loss), so its pose says exactly which input it stands for.
+##   against jitter, the last one held through a loss, its pedal let go once stale), so its pose says exactly which
+##   input it stands for.
 ##   The host stays the authority: its truck carries the boxes, the shell and every rule; nothing the client
 ##   predicts is believed.
 ## - **Everyone else** draws the host's truck from the pose buffer as before (NetPoseSmoother).
@@ -79,7 +80,12 @@ func host_tick(vehicle: Vehicle) -> void:
 	if entry.is_empty():
 		return
 	var data: Array = entry[1]
-	vehicle.set_controls(float(data[0]), float(data[1]), bool(data[2]))
+	if inputs.is_stale():
+		# The driver went quiet without leaving (a hitch, a Wi-Fi drop): its last input held for good would keep
+		# the truck flat out with the wheel turned. The pedal is let go; the wheel and the handbrake stay as held.
+		vehicle.set_controls(0.0, float(data[1]), bool(data[2]))
+	else:
+		vehicle.set_controls(float(data[0]), float(data[1]), bool(data[2]))
 	applied_seq = int(entry[0])
 
 
@@ -88,9 +94,12 @@ func receive(seq: int, throttle: float, steering_input: float, handbrake: bool) 
 	inputs.push(seq, [throttle, steering_input, handbrake])
 
 
-## Host: the wheel changed hands.
+## The wheel changed hands. Host: the old driver's inputs are dropped, and until the new driver's first one plays
+## the pose stands for no input (0; a client counts from 1), not for the old driver's last number, which the new
+## driver's own count may reach and be corrected against.
 func driver_changed() -> void:
 	inputs.clear()
+	applied_seq = 0
 
 
 ## Client, each physics tick, before the truck's forces. Sends this tick's input while this peer drives,

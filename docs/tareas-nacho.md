@@ -1999,7 +1999,7 @@ no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una e
   **[x] Hecho (2026-10-02, rama `nacho/N-922-n218-net-audit`)** — 27 con la entrada de N-218; la 25 queda como
   "skipped" y explica qué builds llevan 26 con y sin N-218. `test_protocol_version` falla si una entrada dice
   "reserved". De la auditoría, arreglados acá: el host deja de repetir un input del conductor de más de 30 ticks
-  (acelerador y freno a 0; hitch o Wi-Fi sin desconexión), `driver_changed()` reinicia `applied_seq` (el conductor
+  (suelta el pedal; volante y freno de mano quedan; hitch o Wi-Fi sin desconexión), `driver_changed()` reinicia `applied_seq` (el conductor
   nuevo no se corrige contra el `seq` del anterior) y `_stop_orphaned_run` congela el camión si el host se va mientras
   el cliente predice.
 - [ ] **N-922.3** Colisionadores que existen distinto en cada peer frenan a la copia predicha y terminan en salto de 3 m:

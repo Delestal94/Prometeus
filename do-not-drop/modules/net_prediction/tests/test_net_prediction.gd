@@ -5,7 +5,8 @@ extends SceneTree
 ## - NetInputBuffer (host): plays numbered inputs one per tick, CUSHION behind
 ##   the newest; holds the last one through a loss; skips ahead when too many
 ##   wait, steps back when the link slowed for good; ignores repeats and old
-##   ones; starts over on clear().
+##   ones; says the input is stale once nothing new landed for more than
+##   STALE_TICKS, and not once one does; starts over on clear().
 ## - NetPredictionReconciler (client): a host state matching the prediction
 ##   leaves nothing to correct; an offset is eased out (most of it within
 ##   150 ms, never more than MAX_STEP a tick) and never corrected twice even
@@ -62,8 +63,19 @@ func _input_buffer() -> void:
 	var back: Array = buffer.consume()
 	_expect(int(back[0]) == 40 and int(back[1][0]) == 40,
 		"Inputs flowing again far behind the counter: it steps back to the newest (got %s)" % [back])
+	_expect(not buffer.is_stale(), "Inputs flowing: the one played is not stale")
+	# The peer goes quiet without leaving (a hitch, a Wi-Fi drop).
+	for _tick: int in range(NetInputBuffer.STALE_TICKS):
+		buffer.consume()
+	_expect(not buffer.is_stale(), "Held up to STALE_TICKS past the newest: not stale yet")
+	var stale: Array = buffer.consume()
+	_expect(buffer.is_stale() and int(stale[1][0]) == 40,
+		"Nothing new for more than STALE_TICKS: stale, the last input still handed back (got %s)" % [stale])
+	buffer.push(41, [41])
+	buffer.consume()
+	_expect(not buffer.is_stale(), "A new input lands: not stale any more")
 	buffer.clear()
-	_expect(buffer.consume().is_empty() and buffer.tick_seq() == -1, "clear() starts over")
+	_expect(buffer.consume().is_empty() and buffer.tick_seq() == -1 and not buffer.is_stale(), "clear() starts over")
 
 
 ## A body moving along +X at 20 m/s, predicted with an error the host doesn't have.
