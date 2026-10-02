@@ -9,6 +9,36 @@
 
 ## QA — bugs abiertos
 
+### N-919 · Regresión de #208: los `--script` que llegan a `DeliveryHouse` cargan el HUD sin script — B · `Opus 5.5 · high` · Aviso: sí (`scripts/gameplay/player/player_cargo_care.gd` es de Slatex) · M8
+Origen: PC build 2026-10-02 (bisect confirmado con `cazador-bugs`). El PR #208 (`6a7c408`, N-224 tipó la caja como
+`DeliveryPackage` en `delivery_house.gd`) agregó la dependencia estática `DeliveryHouse → DeliveryPackage →
+package_rescue → Player → player_cargo_care → Hud`. `hud.gd:154` nombra `NetworkManager`; en un `--script` el árbol
+compila antes que los autoloads y da `SCRIPT ERROR: Identifier not found: NetworkManager`. El resto de la cadena
+recompila bien después, pero `hud.gd` no: el nodo `HUD` de `level_base.tscn` queda como `CanvasLayer` con
+`script=<null>`. El juego normal y el exportado no se afectan.
+Alcance: scripts `extends SceneTree` afectados, 25 antes del #208 (los que nombran `Player`/`DeliveryPackage`) y 57
+después (todo lo que llega a `route.gd`, `DeliveryHouse` o `RouteStreamer`): `bench_drive`, `render_route_dressing`,
+`render_goal_lot`, `render_house_waiting`, `render_mud_segment`, `render_wheel_dust` y ~25 `test_*` (lista completa en
+`D:\tmp\nm-probe\hits.txt` de la PC, fuera del repo). Consecuencias: `bench_drive` (serie diaria de la PC y paso
+"Measure rendered performance" de CI) mide sin HUD desde el #208 (objects 2542 → 2255, FPS de reparto 153 → 173 el
+2026-10-02: no comparables); las capturas `render_*` salen sin HUD; los tests que necesitan HUD vivo reciben un nodo
+muerto sin avisar. CI no lo ve: `run-tests.sh` decide por código de salida y el smoke de `release.yml` no usa `--script`.
+Hecho cuando `bench_drive` y `render_route_dressing` corren sin `SCRIPT ERROR` y el HUD de `level_base` existe con su
+script (comprobado por un test), y la serie de `docs/rendimiento-pc.md` anota desde qué fila vuelve a medir con HUD.
+- [ ] **N-919.1** Cortar la única dependencia de afuera hacia `Hud`: `player_cargo_care.gd:66-67,77-78` usan
+  `Hud.EDGE_MARGIN`; reemplazar por una constante local `EDGE_MARGIN: int = 40` (como ya hace con `BASE_HEIGHT`, l.23),
+  con comentario del motivo (un `--script` compila antes que los autoloads). Probado en un worktree: 56 de 57 scripts
+  compilan sin `SCRIPT ERROR` y el HUD vuelve a tener `hud.gd`. Con `constructor-jugador`; tests `cargo_care`, `hud`.
+- [ ] **N-919.2** Identificar el `SCRIPT ERROR` que sigue en `tests/test_depot_mirror.gd` (ya afectado antes del #208) y
+  arreglarlo. Con `cazador-bugs`; tests `depot_mirror`.
+- [ ] **N-919.3** Tests: (a) `player_cargo_care.EDGE_MARGIN == Hud.EDGE_MARGIN`, cargando `hud.gd` con `load()` en
+  runtime; (b) un chequeo que falle si un `--script` deja el HUD de `level_base` sin script, o que `run-tests.sh` y CI
+  traten `SCRIPT ERROR: Compile Error` como falla (así la próxima dependencia estática no pasa en silencio). Con
+  `escritor-tests`; tests `hud`, `run_tests`.
+- [ ] **N-919.4** Correr `bench_drive` (reparto y Endless) y anotar en `docs/rendimiento-pc.md` desde qué fila mide de
+  nuevo con HUD y que las filas desde el #208 hasta el arreglo no son comparables. Con `perfilador-rendimiento`
+  (necesita PC); aviso `docs/avisos/2026-10-02-regresion-208-hud-sin-script.md` en el mismo PR que N-919.1.
+
 ### N-918 · `test_level_endless` falla a veces: "SegmentN's static boxes are merged as it spawns (1 left loose)" — C · `Opus 5.5 · medium` · Aviso: sí (`modules/render_budget/`, zona compartida) · **[x] rama `nacho/fix-main-endless-merged-name`**
 Origen: construcción 2026-10-02 (CI rojo del PR #212, que no tocaba nada de esto; ~1 de cada 24 corridas en `main`
 con la CPU cargada). Con `cazador-bugs`: dos causas juntas. (1) `streamer.set(&"segment_scripts", [Straight…])`
@@ -546,7 +576,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
