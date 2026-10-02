@@ -581,6 +581,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
 | **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
+| **M10 — Pueblo dinámico (modo "Pueblo")** ⏸ | Un mundo de pueblo generado por campaña, con GPS por calles, que se expande por hitos. Diseño en `docs/mapa-pueblo.md`; el equipo eligió la visión completa (2026-10-02) aun con el choque con el calendario del EA. Va **después de M8**; arranca solo por el spike N-950 y el resto depende de que pase sus 5 criterios. | N-950 (F0) → N-951 (F1) → N-952 (F2) → N-953 (F3) → N-954 (F4) → N-955 (F5, red) → N-961 (arte, PC, en paralelo desde N-952) → N-956 (F6) → N-957 (F7) → N-958 (F7b) → N-959 (F8, red) → N-962 (arte, PC) → N-960 (F9) |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
 Dentro de un hito, el orden de la tabla es el recomendado.
@@ -4246,6 +4247,244 @@ S-805 y los objetivos de S-108.
 | 104 | Rehacer el celular (`sm_prop_phone.glb`, 92 triángulos) e integrarlo en `phone_camera.gd`, que hoy no carga ningún modelo. | B | Pendiente |
 | 105 | Borrar las cajas viejas `models/cargo/sm_cargo_package_*.glb`: sin uso desde las cajas por trampa. | A | Pendiente |
 | 106 | Revisar los ojos/tentáculos del paquete Hostil (esferas y barras en `package_feedback.gd`): ¿alcanzan como chiste o merecen un modelo? | C | Pendiente |
+
+---
+
+## M10 — Pueblo dinámico (modo "Pueblo", 2026-10-02) ⏸
+
+Origen: diseño `docs/mapa-pueblo.md` (relevamiento de código, `critico-diseno` y decisión del equipo en su sección 8).
+Modo nuevo; Reparto y Endless no se tocan (el test dorado de la ruta y ~10 tests de ruta siguen intactos). Un mundo por
+campaña, generado al crear la partida desde la semilla, guardado y continuado con la misma semilla; el pedido, el clima,
+los eventos y la hora varían por partida.
+
+**Dependencias.** F0 (N-950) decide si todo lo demás existe: si falla un criterio, se ajusta el diseño o se corta ahí.
+Cadena: N-950 → N-951 → N-952 → N-953 → N-954 → N-955 → N-956 → N-957 → N-958 → N-959 → N-960. N-961 (arte, PC) se
+pide desde N-952 y debe estar antes de N-956; N-962 (arte, PC) antes de N-960.
+**Zona compartida y riesgos aceptados.** Choca con el congelado de `vehicle.gd` (Early Access 2027-01-22; contenido
+cerrado 2026-10-30): ningún paso de M10 toca `vehicle.gd` antes de que se levante el congelado, y la capacidad de hielo de
+N-960 se pide como tarea aparte cuando corresponda. Todo lo que sea personajes o cuerpos (S-311) **no se asume**: si un paso
+lo necesita, se frena y se deja aviso en `docs/avisos/`.
+**`PROTOCOL_VERSION`.** Solo cambia en N-955 (F5) y N-959 (F8); elegir el número como dice `docs/convenciones-godot.md` §6
+(siguiente al más alto entre `main` y los PRs abiertos, línea `## N: ...` en el historial de la constante, que
+`test_protocol_version` exige consecutivo). **N-955 y N-959 siempre se cierran con `auditor-red`.** Las demás no tocan RPC
+ni replicación; si alguna lo hiciera, se frena y se agrega a este tramo.
+
+### N-950 · F0 — Spike de control: ¿el pueblo se siente bien al manejar? — B · `Opus 5.5 · xhigh` · Aviso: sí (modo nuevo en el menú y escena de nivel: zona compartida) · M10 ⏸
+Contexto: `docs/mapa-pueblo.md` §8. Es una **prueba descartable, de 4-5 días como máximo (si se pasa de 5 se descarta y se
+decide con lo medido)**: grilla de calles + terreno plano + camión conducible + depósito + 3 casas como cajas + A* + orden
+libre, sin red, sin módulo, sin decorado. Rama y reclamo `nacho/N-950-pueblo-spike` como pide `CLAUDE.md`; todo en
+`scripts/gameplay/town_spike/` y una escena aparte (no se mezcla con `route.gd`). Se mide con `bench_drive`,
+`sim_trap_balance` y el bot de caos. Hecho cuando los **5 criterios** quedan medidos y escritos en
+`docs/decisiones/2026-10-pueblo-f0.md` con su número y la decisión seguir/ajustar/cortar: (1) una entrega de 3 casas dura
+2 a 5 minutos; (2) el daño a la carga por minuto es al menos el 70 % del de la ruta con las mismas trampas; (3) el GPS no se
+equivoca en 100 semillas, incluidas calles sin salida; (4) la casa destino se reconoce desde la cabina a 40 m o más (captura
+de `revisor-visual`); (5) el costo de un distrito en draw calls y tiempo de construcción entra en el presupuesto actual
+(`docs/rendimiento-pc.md`). Si falla el 2 o el 5, se ajusta el diseño antes de seguir. Mide además el costo de colisión de
+un distrito para el host (insumo de N-958) y cuánto rinde la niebla en una grilla urbana.
+- [ ] **N-950.1** Generador mínimo de grilla (descartable) y terreno plano con calles conducibles, depósito y 3 casas como
+  cajas con dirección calle+número. Con `constructor-mundo`; tests `town_spike`.
+- [ ] **N-950.2** A* sobre la grilla y GPS provisorio (distancia por calles + giro) y orden de entrega libre. Con
+  `constructor-camion` y `constructor-ui`; tests `town_spike`.
+- [ ] **N-950.3** Mediciones 1 y 2: `bench_drive`, `sim_trap_balance` y el bot de caos en pueblo contra ruta con las mismas
+  trampas (daño por minuto, duración). Con `pulidor-jugabilidad` y `probador-qa`.
+- [ ] **N-950.4** Mediciones 3, 4 y 5: GPS en 100 semillas con callejones; captura desde cabina a 40 m con
+  `revisor-visual` (el recorte de la casa es legible); draw calls, tiempo de construcción y colisión de un distrito con
+  `perfilador-rendimiento`.
+- [ ] **N-950.5** Informe de decisión en `docs/decisiones/` y, si se sigue, ajustar `docs/mapa-pueblo.md`; si se corta,
+  anotarlo y dejar M10 cerrado sin borrar nada. Con `documentador`. **No se arranca N-951 sin esta decisión.**
+
+### N-951 · F1 — Módulo `town_gen`: plan de pueblo puro, determinista y versionado — B · `Opus 5.5 · high` · Aviso: sí (`modules/` es zona compartida) · M10 ⏸ · depende de N-950
+Contexto: `docs/mapa-pueblo.md` §4.1 y §4.7. `modules/town_gen/` (con `module.cfg` y `tests/` propios; nada del juego
+adentro, `python tools/check_modules.py` y `tools/portability-check.sh`). `TownPlan.generate(seed, params)` pura, sin nodos,
+con `params.tier` y `params.theme` ya en la firma; los distritos se generan siempre completos y los cerrados quedan
+marcados, así abrir uno no cambia calles ya vistas. Salida: grafo de calles (cruces, aristas con largo y ancho),
+manzanas, lotes (rect, frente, calle, número) y `address` por lote. Los roles de lote salen de otra sub-semilla
+(`hash([seed, &"lots"])`). Depende solo de `seed` + `params`, nunca del roster. Lleva `GENERATOR_VERSION` (entero que se
+sube con cada cambio de salida) y un test dorado, porque el generador va a cambiar durante el EA. Hecho cuando, en 100
+semillas, misma semilla y params ⇒ mismo plan, el grafo es conexo, los lotes no se solapan ni cortan calles, un tier mayor
+no cambia calles ni lotes del tier menor, el resultado no cambia con otro roster, `test_town_golden` falla si la firma
+cambia sin subir `GENERATOR_VERSION`, y `check_modules` y la portabilidad quedan verdes.
+- [ ] **N-951.1** Esqueleto del módulo (`module.cfg`, `town_plan.gd`, parámetros con `tier` y `theme`) y entrada en
+  `docs/modulos.md`. Con `constructor-mundo`; tests `town_gen`.
+- [ ] **N-951.2** Calles, manzanas, lotes y direcciones; distritos completos con marca de cerrado. Con `constructor-mundo`;
+  tests `town_gen`.
+- [ ] **N-951.3** Propiedades: determinismo en 100 semillas, conectividad, lotes sin solapar, independencia del roster,
+  estabilidad entre tiers. Con `escritor-tests`; tests `town_gen`.
+- [ ] **N-951.4** `GENERATOR_VERSION` y **test dorado del pueblo** (`tests/test_town_golden.gd` en el juego, con las firmas
+  de varias semillas y tiers, como `test_route_golden`); documentar cómo regenerar firmas y que se sube la versión. Con
+  `escritor-tests`; tests `town_golden`.
+- [ ] **N-951.5** `bench_town_gen` (tiempo de generar el mundo completo, objetivo de ~6 distritos de 4×4 manzanas).
+  Con `perfilador-rendimiento`.
+
+### N-952 · F2 — Lotes con roles: depósito, base y casas con dirección — B · `Opus 5.5 · high` · Aviso: sí (menú y nivel compartidos; si toca el depósito, `docs/avisos/`) · M10 ⏸ · depende de N-951
+Contexto: `docs/mapa-pueblo.md` §4.2 y pregunta 6 (hoy el depósito es una escena fija en (0,0,8) con puerta a -Z; la
+estación de servicio y el cruce de tren quedan fuera de la v1). Adaptador `scripts/gameplay/town/` que arma nodos desde el
+`TownPlan`: calles con `TerrainField.spans`, manzanas y lotes con `flat_zones`/`platforms`, depósito y base como lotes,
+casas con `address`; construcción bajo `FrameSlicer` y pantalla de carga, edificios en MultiMesh por modelo con
+`visibility_range` (nunca "colocar menos" según calidad). Las casas de entrega se sortean con la regla actual
+(`crew_house_count`), no 6-10. El modo "Pueblo" aparece como modo nuevo; Reparto y Endless no cambian. Hecho cuando un test
+arma un pueblo de una semilla y entrega un paquete en un lote de casa (con depósito y base ubicados por rol), los pedidos
+muestran la dirección calle+número, y `test_route_golden` y los tests de ruta siguen verdes sin tocarlos.
+- [ ] **N-952.1** Adaptador `TownBuilder` (calles, lotes, roles) bajo `FrameSlicer`. Con `constructor-mundo`; tests `town`.
+- [ ] **N-952.2** Depósito y base como lotes (escena de depósito reubicable con su orientación) y modo "Pueblo" en el menú.
+  Con `constructor-mundo` y `constructor-ui`; tests `town`, `depot`.
+- [ ] **N-952.3** Casas de entrega con dirección y pedido en la pizarra; entrega completa en un lote. Con
+  `constructor-mundo`; tests `town`, `delivery`.
+- [ ] **N-952.4** Primeros edificios: las casas actuales como casas de clientes con identidad y cajas provisorias para el
+  resto; **sin cajas de color plano a la vista antes de N-956** (se reemplazan con el kit de N-961). Con `constructor-mundo`.
+- [ ] **N-952.5** Si el plano de clientes o sus cuerpos necesitan cambios, frenar y dejar aviso por S-311; no se asume.
+
+### N-953 · F3 — `TownNav` y GPS por calles — B · `Opus 5.5 · high` · Aviso: sí (`dashboard_gps.gd` y UI compartida) · M10 ⏸ · depende de N-952
+Contexto: `docs/mapa-pueblo.md` §4.3 y §8. `dashboard_gps.gd` apunta hoy en línea recta a la casa. `TownNav`: distancia por
+el camino más corto (A*/Dijkstra sobre el grafo) y próxima maniobra, ignorando aristas cerradas (previsto para N-959). El GPS
+muestra **la casa del paquete que peor está** (menos tiempo o más daño), no la más cercana, para que "¿a quién entregamos
+primero?" sea comunicación entre conductor y cargadores; deja la flecha recta. Mapa/tablet de pasajero queda como idea
+posterior. Hecho cuando un test de caminos cubre callejones sin salida y calles cortadas en 100 semillas (el GPS nunca manda
+a un camino imposible ni a uno más largo que el óptimo), el GPS elige la casa del paquete que peor está, y `revisor-visual`
+confirma el giro y la distancia legibles en la pantalla del camión.
+- [ ] **N-953.1** `TownNav` (A*, próxima maniobra, aristas bloqueadas) en el adaptador del juego o en `town_gen` si es
+  genérico. Con `constructor-mundo`; tests `town_nav`.
+- [ ] **N-953.2** GPS del camión con distancia por calles y giro; objetivo = paquete que peor está. Con `constructor-ui`;
+  tests `gps`, `town_nav`.
+- [ ] **N-953.3** Tests de caminos en 100 semillas con callejones y captura de la pantalla. Con `escritor-tests` y
+  `revisor-visual`.
+
+### N-954 · F4 — Reglas de partida del pueblo: progreso, límites, plazos y orden libre — B · `Opus 5.5 · high` · Aviso: sí (`level_base.gd`: zona compartida) · M10 ⏸ · depende de N-953
+Contexto: `docs/mapa-pueblo.md` §4.4 y §8; hoy `level_base.gd:206-240` mide progreso por proyección sobre una polilínea,
+"fuera del camino" a 42 m y plazos `_house_distances`. Cambios solo en el modo Pueblo (sin tocar el comportamiento de
+Reparto): progreso = distancia acumulada recorrida; "fuera de camino" = borde del mundo; **plazos fijados una sola vez al
+salir del depósito** por distancia de grafo depósito→casa (nunca "desde la posición", que se reinicia dando vueltas) y sin
+bono por ruta óptima; exenciones de atasco y estacionado por lote de depósito y de cada casa; orden de entrega libre; la
+cantidad de casas sigue `crew_house_count` (entregas de 2-5 min). Los estresores de calle (cordones, lomos de burro, baches)
+entran acá porque una grilla plana a baja velocidad le quita a la carga lo que la hace sufrir. Hecho cuando una entrega de
+3 casas en orden libre termina con puntaje y plazos, un test prueba que dar vueltas no reinicia el plazo, el bot de caos
+mide daño por minuto en pueblo con estresores >= 70 % del de la ruta, y los tests de Reparto no cambian.
+- [ ] **N-954.1** Progreso, borde del mundo y exenciones por lote tras una interfaz que Reparto no usa. Con
+  `constructor-progresion`; tests `level_rules`, `town_rules`.
+- [ ] **N-954.2** Plazos por distancia de grafo fijados al salir del depósito y orden libre en pedidos, puntaje y resumen.
+  Con `constructor-progresion`; tests `town_rules`, `scoring`.
+- [ ] **N-954.3** Estresores de calle (cordones, lomos de burro, baches) como tramos de calle, sin tocar `vehicle.gd`. Con
+  `constructor-trampas`; tests `town_hazards`.
+- [ ] **N-954.4** Medición con `bench_drive`, `sim_trap_balance` y el bot de caos. Con `pulidor-jugabilidad`.
+
+### N-955 · F5 — Red: semilla y parámetros del pueblo en el handshake — B · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `net_session.gd`; zona compartida) · M10 ⏸ · depende de N-954 · **cambia `PROTOCOL_VERSION`**
+Contexto: `docs/mapa-pueblo.md` §4.6 y §4.7. El host decide `seed` y `town_params` (tamaño, `theme`, `tier`) una vez y
+viajan en el estado de sesión del handshake; `restart_delivery` sortea pedidos nuevos (en pueblo por campaña no se cambia el
+mundo); el que entra tarde reconstruye desde esos datos. Subir `PROTOCOL_VERSION` según `docs/convenciones-godot.md` §6
+(hoy 27 según el diseño; verificar el valor en `main` y en los PRs abiertos antes de elegir). **Siempre seguida de
+`auditor-red`.** Hecho cuando una prueba de par y de trío (`net_pair.gd`/probes) ve el mismo plan de pueblo (firma de
+`TownPlan` igual en host y clientes), incluido un join tardío, `test_protocol_version` pasa con el número nuevo y su línea
+en el historial, y `auditor-red` no reporta BUG.
+- [ ] **N-955.1** Semilla y `town_params` en el handshake y en el estado de sesión; adaptador sin depender del roster.
+  Con `constructor-red`; tests `net_session`, `protocol_version`.
+- [ ] **N-955.2** Test de par/trío y de join tardío con firma del plan. Con `escritor-tests`; tests `town_net`,
+  `late_join`.
+- [ ] **N-955.3** Subir `PROTOCOL_VERSION` con su línea de historial. Con `constructor-red`.
+- [ ] **N-955.4** Revisión de red. Con `auditor-red` (obligatoria, después de .1-.3).
+
+### N-956 · F6 — Decorado, fauna, clima, farolas y personalidad de barrios — B · `Opus 5.5 · high` · Aviso: no · M10 ⏸ · depende de N-955 y N-961
+Contexto: `docs/mapa-pueblo.md` §4.5. `WorldMood` sirve tal cual; el decorado se arma por barrio con `RoadsideStory` y
+`DressingBatcher` (MultiMesh por celda); perro, ovejas y ciervos pasan a eventos de calle y plaza; farolas con luz de noche
+(`NightFlares`); sonido ambiente por barrio. Con nuevos props o texturas, **N-323**: lo que se ve va revisado por
+`director-arte` con la captura de `revisor-visual` contra el terreno y los props vecinos, sin superficies de color plano ni
+cajas de placeholder. Hecho cuando hay una captura de prensa del pueblo (dos barrios distintos, de día y de noche)
+revisada por `director-arte` sin cajas de placeholder, un test confirma que el decorado sale igual para la misma semilla en
+dos corridas, y los edificios provisorios de N-952.4 fueron reemplazados por el kit de N-961.
+- [ ] **N-956.1** Decorado por barrio y farolas, con el kit de N-961. Con `constructor-mundo`; tests `town_dressing`.
+- [ ] **N-956.2** Fauna y eventos de calle (perro, rebaño, plaza). Con `constructor-mundo`; tests `town_events`.
+- [ ] **N-956.3** Partículas (humo, hojas) y ambiente sonoro por barrio. Con `artista-vfx` y `disenador-audio`.
+- [ ] **N-956.4** Captura de prensa y revisión de calidad visual. Con `revisor-visual` y `director-arte`.
+
+### N-957 · F7 — Rendimiento del pueblo contra el presupuesto actual — B · `Opus 5.5 · high` · Aviso: no · M10 ⏸ · depende de N-956
+Contexto: `docs/mapa-pueblo.md` §6 (ya hay ~2.256 draw calls en Reparto) y §8 (la niebla rinde menos en una grilla urbana:
+presupuesto de visibilidad propio; el host carga la colisión de todo distrito con un jugador o paquete). Hecho cuando
+`bench_drive` en pueblo queda con draw calls y FPS dentro del presupuesto de Reparto (`docs/rendimiento-pc.md`), el tiempo
+de construcción de un distrito entra en el presupuesto de N-950, y el costo de colisión del host está medido y documentado.
+- [ ] **N-957.1** `bench_town` (extensión de `bench_drive`) y fila en `docs/rendimiento-pc.md` (la PC la mide con
+  `.claude/rutinas/pc-build.md`). Con `perfilador-rendimiento`.
+- [ ] **N-957.2** Optimizar lo que exceda (instancias compartidas, `visibility_range`, presupuesto de visibilidad urbano,
+  colisión por distrito). Con `perfilador-rendimiento` y `constructor-mundo`.
+
+### N-958 · F7b — `DistrictStreamer`: cargar y liberar distritos por cercanía — B · `Opus 5.5 · xhigh` · Aviso: sí (usa `FrameSlicer` y la construcción compartida de nivel) · M10 ⏸ · depende de N-957
+Contexto: `docs/mapa-pueblo.md` §4.7 y 4f. El plan global (grafo y lotes) es liviano y se calcula entero; la geometría de
+cada distrito se instancia y libera por cercanía bajo `FrameSlicer` (precedente: `SegmentStreamer` de Endless). Si N-950
+mostró que un distrito es chico, cargar por distrito entero en vez de chunks finos. Nunca depender de la calidad gráfica
+para decidir qué existe (rompería la igualdad entre peers); el host mantiene la colisión de todo distrito con un jugador o
+paquete. Hecho cuando una pasada del bot por todo el mundo (~6 distritos de 4×4 manzanas) no supera el pico de frame
+objetivo de `docs/rendimiento-pc.md`, el conteo de nodos al final es igual al del inicio (sin leaks), y un test de dos
+peers muestra los mismos distritos cargados cerca de un mismo jugador.
+- [ ] **N-958.1** `DistrictStreamer` con carga y liberación por cercanía bajo `FrameSlicer`. Con `constructor-mundo`; tests
+  `district_streamer`.
+- [ ] **N-958.2** Recorrido completo midiendo picos de frame y nodos (leaks). Con `perfilador-rendimiento` y
+  `probador-qa`.
+- [ ] **N-958.3** Jugador o paquete en un distrito liberado en el cliente: la colisión del host sigue. Con
+  `escritor-tests`; tests `district_streamer`, `town_net`.
+
+### N-959 · F8 — Barreras (`gate`), desbloqueo por hito de campaña y capacidad de vehículo — B · `Opus 5.5 · xhigh` · Aviso: sí (`modules/persistence`, `modules/unlock_profile`, `network_manager.gd`; zona compartida) · M10 ⏸ · depende de N-958 · **cambia `PROTOCOL_VERSION`**
+Contexto: `docs/mapa-pueblo.md` §4.7 y §8. Cada arista del grafo tiene `gate: requirement` (hito o capacidad del vehículo:
+`offroad`, `snow`, `high_clearance`; nunca nombre de camión, para enchufar vehículos nuevos sin tocar el mapa, ver
+`docs/agregar-vehiculo.md`); portón, puente cortado, obras o cinta como geometría de barrera. El pathfinding de `TownNav`
+ignora las cerradas. El mundo es por campaña: el guardado (con `modules/persistence`) lleva `world_seed`, `params`,
+`tier`, barreras abiertas, hitos cumplidos, vehículos desbloqueados y **`generator_version`**, y lo demás se regenera; si la
+versión no coincide, migración o aviso. El host manda semilla de campaña, `tier` y barreras abiertas en el handshake; el
+perfil de desbloqueos es el del host y los cosméticos son personales (`modules/unlock_profile`). La economía (qué
+desbloquea cada hito) la define `constructor-progresion` con `docs/economia-y-contramedidas.md`, `CrewProgression` y
+`UnlockManager`. Pregunta abierta 4g (¿se puede re-cerrar?): se asume que **no**; decidirlo si cambia. Subir
+`PROTOCOL_VERSION` (§6). **Siempre seguida de `auditor-red`.** Hecho cuando un test prueba que abrir una barrera o subir de
+`tier` no cambia las calles ya conocidas (firma del plan), el GPS ignora lo cerrado y cruza lo abierto, cargar un guardado
+con otra `generator_version` avisa o migra sin romper, host y clientes ven las mismas barreras (par, trío y join tardío),
+`test_protocol_version` pasa y `auditor-red` no reporta BUG.
+- [ ] **N-959.1** `gate` en las aristas, barreras como geometría y bloqueo en `TownNav`; capacidades de vehículo
+  (`docs/agregar-vehiculo.md`, sin tocar `vehicle.gd`). Con `constructor-mundo` y `constructor-camion`; tests
+  `town_gates`, `town_nav`.
+- [ ] **N-959.2** Hitos de campaña que abren barreras y economía de desbloqueos. Con `constructor-progresion`; tests
+  `unlock`, `campaign`.
+- [ ] **N-959.3** Guardado de campaña con semilla, `params`, `tier`, barreras e hitos y `generator_version`, con migración
+  o aviso. Con `constructor-progresion` (módulos `persistence` y `unlock_profile`); tests `persistence`, `town_save`.
+- [ ] **N-959.4** Handshake: semilla de campaña, `tier` y barreras abiertas; subir `PROTOCOL_VERSION` con su línea de
+  historial. Con `constructor-red`; tests `net_session`, `protocol_version`.
+- [ ] **N-959.5** Prueba de par/trío y join tardío con barreras. Con `escritor-tests`; tests `town_net`, `late_join`.
+- [ ] **N-959.6** Revisión de red. Con `auditor-red` (obligatoria, después de .4-.5).
+
+### N-960 · F9 — Primer bioma nuevo: nieve — B · `Opus 5.5 · high` · Aviso: sí (zona de agarre en el vehículo; coordinar con el congelado de `vehicle.gd`) · M10 ⏸ · depende de N-959 y N-962
+Contexto: `docs/mapa-pueblo.md` §4.7 (`TownTheme`). Nieve: hielo y poca tracción (`GripZones`, barro), nieve que tapa carteles
+y cunetas, noche temprana (`WorldMood`, `LowVisibilityEvent`), 1-2 trampas o contenidos nuevos (por ejemplo, un paquete que
+se congela). La zona de hielo en el vehículo se pide con la capacidad `snow` de N-959 y **no toca `vehicle.gd` mientras
+rija el congelado**. Con nuevos materiales, props o efectos, **N-323** (director-arte con captura de `revisor-visual`, sin
+planos de color ni cajas de placeholder). Hecho cuando una partida completa del bot en el bioma nieve termina con puntaje,
+hay una captura revisada por `director-arte`, un test prueba que `theme` distinto cambia materiales y agarre pero no el
+trazado del plan, y las trampas nuevas tienen su corrida de `sim_trap_balance`.
+- [ ] **N-960.1** `TownTheme` nieve: paleta, clima y noche temprana. Con `constructor-mundo`; tests `town_theme`,
+  `world_mood`.
+- [ ] **N-960.2** Hielo y poca tracción como zona de agarre (capacidad `snow`). Con `constructor-camion`; tests `grip`.
+- [ ] **N-960.3** Nieve en el aire y el suelo: partículas y cubierta. Con `artista-vfx`.
+- [ ] **N-960.4** 1-2 trampas o contenidos de nieve y su balance. Con `constructor-trampas` y `pulidor-jugabilidad`;
+  tests `traps`, `sim_trap_balance`.
+- [ ] **N-960.5** Partida completa en nieve con captura y revisión. Con `probador-qa`, `revisor-visual` y `director-arte`.
+
+### N-961 · Arte (PC): kit de edificios por módulos — B · `Opus 5.5 · medium` · Aviso: no · M10 ⏸ · **necesita PC** (rutina `sesion-arte`) · se pide desde N-952, antes de N-956
+Contexto: `docs/mapa-pueblo.md` §8 (pregunta 5). Base + techo + puerta + color combinables, para que los edificios
+generados no sean cajas ni se repitan; los 5 GLB de casas actuales quedan como casas de clientes con identidad. No hay
+Blender en la nube: lo corre `.claude/rutinas/sesion-arte.md` (lanzada con `tools/pc/rutina-pc.ps1`). Hecho cuando hay al
+menos 3 bases, 3 techos, 2 puertas y una paleta de colores en `assets/` con presupuesto de triángulos, importados y
+agrupados para MultiMesh, y una captura de 6 combinaciones revisada por `director-arte` con la de `revisor-visual` contra
+los edificios vecinos, sin superficies de color plano ni cajas de placeholder.
+- [ ] **N-961.1** Modelar bases, techos y puertas con presupuesto de triángulos y puntos de encastre. Con
+  `modelador-blender` (PC, `sesion-arte`).
+- [ ] **N-961.2** Materiales y variantes de color. Con `artista-shaders`; texturas con `artista-conceptual` (PC).
+- [ ] **N-961.3** Integrar el kit en `TownBuilder` (ensamblado por semilla, MultiMesh por modelo) y captura de
+  combinaciones. Con `constructor-mundo` y `revisor-visual`; tests `town_kit`.
+
+### N-962 · Arte (PC): materiales y shaders de nieve — B · `Opus 5.5 · medium` · Aviso: no · M10 ⏸ · **necesita PC para las texturas** (rutina `sesion-arte`) · antes de N-960
+Contexto: `docs/mapa-pueblo.md` §4.7. Suelo de nieve, nieve acumulada sobre techos y bordes, hielo en calzada y nieve que
+tapa cunetas, para el tema nieve; el shader del suelo se hace en la nube con `artista-shaders` y las texturas en la PC
+(`.claude/rutinas/sesion-arte.md`). Hecho cuando los materiales de nieve existen con variante para el kit de N-961 y para
+el terreno (`route_terrain.gdshader` o su equivalente del pueblo), y una captura revisada por `director-arte` con la de
+`revisor-visual` muestra calle y fachada nevadas legibles, sin planos de color ni cajas de placeholder.
+- [ ] **N-962.1** Shader y materiales de nieve y hielo para suelo, techos y bordes. Con `artista-shaders`.
+- [ ] **N-962.2** Texturas y props de nieve que lo necesiten. Con `artista-conceptual` y `modelador-blender` (PC,
+  `sesion-arte`).
+- [ ] **N-962.3** Captura de verificación y revisión. Con `revisor-visual` y `director-arte`.
 
 ---
 
