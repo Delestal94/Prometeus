@@ -1960,11 +1960,13 @@ No se implementa ningún costo hasta que responda.
 Hecho cuando un test de Endless prueba que 6+ s quieto sin acelerar (depósito, rescate, relevo de conductor) no termina
 la partida y que 6+ s encajado con acelerador sí, y `test_level_endless` / `test_stuck_detection` pasan sin dar por
 buena una partida cortada por "atascado" sin acelerador.
-- [ ] **N-920.1** Llevar `_should_count_as_stuck()` de `level_base.gd` a `level_common.gd` con un gancho por modo; Endless
+- [x] **N-920.1** Llevar `_should_count_as_stuck()` de `level_base.gd` a `level_common.gd` con un gancho por modo; Endless
   la usa sumando el depósito y actualiza el comentario de `level_endless.gd:28-30`. Con `constructor-tramos`; tests
   `stuck_detection`, `level_endless`.
-- [ ] **N-920.2** Casos Endless en `test_stuck_detection.gd` y corregir `test_level_endless.gd:49-61`. Con
+  **[x] Hecho (2026-10-02, rama `nacho/N-920-endless-stuck`, 2a9ffffb)** — la regla (`STUCK_SPEED`, `STUCK_SECONDS`, `stuck_seconds`, depósito, barro, conductor y acelerador) vive en `level_common.gd`; el gancho `_stuck_exempt_here()` suma casas y bahía en `level_base.gd` y solo la bahía en `level_endless.gd`. Sin costo por parar (pregunta de diseño abierta).
+- [x] **N-920.2** Casos Endless en `test_stuck_detection.gd` y corregir `test_level_endless.gd:49-61`. Con
   `escritor-tests`; tests `stuck_detection`, `level_endless`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-920-endless-stuck`, 2a9ffffb)** — `test_stuck_detection` prueba en Endless 9 s quieto sin acelerador (sigue), sin conductor, en barro y en el depósito (no cuenta) y 6+ s encajado con acelerador (termina con `HUD_RUN_STUCK_ROADSIDE`); `test_level_endless` exige acelerador apretado para aceptar un corte por atascado y suma 7 s quieto en el depósito; `test_mud_segment` ajustado (parar sin acelerador ya no termina Endless).
 
 ### N-921 · El nivel deja estado global sin restaurar al liberarse: 3D del diario y reverb del depósito — B · `Opus 5.5 · medium` · Aviso: sí (`hud_newspaper.gd` es de Slatex; `modules/acoustics/` es zona compartida) · M8
 Origen: auditoría integral 2026-10-02, A-1.2 (P1). `hud_newspaper.gd:66-68` pone `disable_3d = true` en el viewport raíz
