@@ -1,8 +1,8 @@
 # Aviso: N-221, el que vuelve recupera lugar, asiento y caja; identidad antes del estado (2026-10-01)
 
-Rama `nacho/N-221-rejoin-restore`. **Cambia el protocolo**: `NetworkManager.PROTOCOL_VERSION` pasa de 23 a 26
-(24 y 25 quedan reservados para N-110 y N-218, con entradas provisorias en el historial que cada uno reemplaza
-por la suya al mezclar). Un cliente viejo con un host nuevo recibe "otra versión": actualicen los dos.
+Rama `nacho/N-221-rejoin-restore`. **Cambia el protocolo**: `NetworkManager.PROTOCOL_VERSION` pasa de 24 a 26
+(25 queda reservado para N-218, con una entrada provisoria en el historial que reemplaza por la suya al
+mezclar). Un cliente viejo con un host nuevo recibe "otra versión": actualicen los dos.
 **Ninguna firma pública cambia de forma incompatible**: se agregan una señal, funciones y una clase del juego.
 
 ## Qué cambió

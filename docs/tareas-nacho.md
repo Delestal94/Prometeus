@@ -1765,8 +1765,8 @@ Fase 4 de `docs/investigacion-red.md`.
     solo `{version, session, identify}`, el que entra contesta su eslabón (`NetAdmission.answer_identify()`) y recién ahí
     (fantasma suyo o lugar libre: `NetAdmission.on_identity()`) recibe el estado y carga el nivel; si no, oye
     "full" (o "connection" si repite un eslabón ajeno) sin cargar nada. Su respuesta de listo ya no trae
-    identidad y el host no la lee (`identified`). `PROTOCOL_VERSION` 23 → 26 (24 y 25 reservados para N-110 y
-    N-218, con entradas provisorias en el historial). Tests: `net_session__test_net_session_rejoin` (sin sockets
+    identidad y el host no la lee (`identified`). `PROTOCOL_VERSION` 24 → 26 (25 reservado para N-218, con una
+    entrada provisoria en el historial). Tests: `net_session__test_net_session_rejoin` (sin sockets
     y por ENet: el que vuelve suelta al fantasma antes de cargar, extraño y ladrón sin estado),
     `test_network_rejoin`. Un joiner preguntado que no contesta oye "connection" a los 5 s
     (`NetAdmission.identify_timeout_seconds`) en vez de ocupar la conexión de sobra 45 s.
