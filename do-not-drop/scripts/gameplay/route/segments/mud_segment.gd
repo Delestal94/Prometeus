@@ -110,6 +110,8 @@ const HAUL_GAIN: float = 8.0
 const HAUL_PAST_PIT: float = 6.0
 const HAUL_MAX_SECONDS: float = 10.0
 const SYNC_INTERVAL: float = 0.5
+## What the level tells when the host is gone mid-run (stop_orphaned_run()).
+const ORPHANED_RUN_GROUP: StringName = &"stops_with_orphaned_run"
 
 ## Every peer.
 var state: int = State.IDLE
@@ -152,6 +154,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	super()
+	add_to_group(ORPHANED_RUN_GROUP)
 	var bus: Node = _bus()
 	if bus != null and bus.has_signal(&"run_ended"):
 		bus.connect(&"run_ended", _on_run_ended)
@@ -187,6 +190,15 @@ func _on_run_ended(_score: int, _results: Dictionary) -> void:
 	_run_over = true
 	if _is_host():
 		_abort()
+
+
+## The run stopped without ending: the host is gone mid-run and the level stopped it here (level_common.gd
+## _stop_orphaned_run calls the ORPHANED_RUN_GROUP). As at its end, a rescue in progress is dropped and nothing sinks
+## or is hauled any more: this peer is an offline host now and would otherwise go on with the host's rescue, unfreeze
+## the truck and drag it behind the disconnect overlay (N-922.8).
+func stop_orphaned_run() -> void:
+	_run_over = true
+	_abort()
 
 
 func _abort() -> void:

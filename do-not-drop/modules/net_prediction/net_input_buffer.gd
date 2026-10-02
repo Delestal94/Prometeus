@@ -23,7 +23,10 @@ class_name NetInputBuffer
 ## - **Stale:** the counter more than STALE_TICKS past the newest input (the
 ##   peer stopped sending without leaving: a hitch, a Wi-Fi drop), is_stale()
 ##   says so. The last input is still handed back; what holding it that long
-##   means is the game's to decide (a pedal let go, a button released).
+##   means is the game's to decide (a pedal let go, a button released). It
+##   stays stale until an input that landed since is played: inputs flowing
+##   again come in a cushion ahead of the counter, and for those ticks the old
+##   one would otherwise have been handed back as if fresh (N-922.8).
 ## - Inputs at or below the newest one already in (a repeat, an old one from
 ##   before a reset) are ignored. Numbers only ever grow on the sending side.
 ##
@@ -46,6 +49,7 @@ var _newest: int = -1
 var _tick_seq: int = -1
 var _last: Variant = null
 var _fresh: bool = false
+var _stale: bool = false
 
 
 ## An input from the controlling peer, numbered by its own physics tick.
@@ -72,12 +76,19 @@ func consume() -> Array:
 	elif _fresh and _tick_seq - _newest >= MAX_LEAD:
 		_tick_seq = _newest
 	_fresh = false
+	var played_new: bool = false
 	while not _inputs.is_empty() and int(_inputs[0][0]) <= _tick_seq:
 		_last = _inputs.pop_front()[1]
+		played_new = true
 	if _last == null:
 		# Started with only inputs ahead of the counter: play the oldest early
 		# rather than nothing.
 		_last = _inputs[0][1]
+		played_new = true
+	if played_new:
+		_stale = false
+	elif _tick_seq - _newest > STALE_TICKS:
+		_stale = true
 	return [_tick_seq, _last]
 
 
@@ -92,9 +103,10 @@ func newest() -> int:
 
 
 ## Whether the last consume() played an input held more than STALE_TICKS past
-## the newest one: nothing new has landed for that long.
+## the newest one (nothing new had landed for that long), and none of the
+## inputs landed since has been played yet.
 func is_stale() -> bool:
-	return _newest >= 0 and _tick_seq - _newest > STALE_TICKS
+	return _stale
 
 
 ## Somebody else took the controls, or nobody holds them: start over.
@@ -104,3 +116,4 @@ func clear() -> void:
 	_tick_seq = -1
 	_last = null
 	_fresh = false
+	_stale = false

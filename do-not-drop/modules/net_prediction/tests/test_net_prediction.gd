@@ -6,7 +6,9 @@ extends SceneTree
 ##   the newest; holds the last one through a loss; skips ahead when too many
 ##   wait, steps back when the link slowed for good; ignores repeats and old
 ##   ones; says the input is stale once nothing new landed for more than
-##   STALE_TICKS, and not once one does; starts over on clear().
+##   STALE_TICKS, and not once one that landed since plays (inputs back a
+##   cushion ahead of the counter keep it stale until then, N-922.8); starts
+##   over on clear().
 ## - NetPredictionReconciler (client): a host state matching the prediction
 ##   leaves nothing to correct; an offset is eased out (most of it within
 ##   150 ms, never more than MAX_STEP a tick) and never corrected twice even
@@ -82,6 +84,24 @@ func _input_buffer() -> void:
 	buffer.push(41, [41])
 	buffer.consume()
 	_expect(not buffer.is_stale(), "A new input lands: not stale any more")
+	# N-922.8: the peer's own count went on while its inputs were cut off, so they come back a cushion ahead of the
+	# counter. Until the counter reaches them the held input stays stale (not handed back as if fresh).
+	for _tick: int in range(NetInputBuffer.STALE_TICKS + 5):
+		buffer.consume()
+	_expect(buffer.is_stale(), "Cut off again for longer than STALE_TICKS: stale")
+	var resumed_at: int = buffer.tick_seq() + NetInputBuffer.CUSHION + 1
+	var waiting: Array = []
+	for tick: int in range(NetInputBuffer.CUSHION + 3):
+		buffer.push(resumed_at + tick, [resumed_at + tick])
+		var played: Array = buffer.consume()
+		waiting.append([played[0], played[1][0], buffer.is_stale()])
+	var caught_up: Array = waiting[-1]
+	var still_stale: bool = true
+	for entry: Array in waiting:
+		if int(entry[0]) < resumed_at:
+			still_stale = still_stale and bool(entry[2]) and int(entry[1]) == 41
+	_expect(still_stale and int(caught_up[1]) == int(caught_up[0]) and not bool(caught_up[2]),
+		"Inputs back a cushion ahead: stale until the counter reaches them, then the new ones play (%s)" % [waiting])
 	buffer.clear()
 	_expect(buffer.consume().is_empty() and buffer.tick_seq() == -1 and not buffer.is_stale(), "clear() starts over")
 

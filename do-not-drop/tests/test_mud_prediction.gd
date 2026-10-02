@@ -7,7 +7,10 @@ extends SceneTree
 ##   - bogged with the two pushers the host counts (`pushers`): shoved forward along the truck;
 ##   - hauled by the strap (`haul_method`): along the road at the strap's speed;
 ##   - past the pit (HAUL_PAST_PIT, where the host ends the haul): let go.
-## The segment's own tick (the host's) is off: only the client's hold runs, on the van as its predicted copy.
+## The segment's own tick (the host's) is off for those: only the client's hold runs, on the van as its predicted copy.
+## Then the host goes mid-rescue (N-922.8): this peer, an offline host now, has its level stop the run
+## (level_common.gd _stop_orphaned_run); the segment drops the rescue instead of going on with it as the host's,
+## and the frozen truck stays frozen where it is, not unfrozen and hauled behind the disconnect overlay.
 
 const TICK: float = 1.0 / 60.0
 
@@ -31,6 +34,7 @@ func _run() -> void:
 	await _check_hauled()
 	_segment._apply_state(MudSegment.State.IDLE, 1.0, 0, false, 0.0, &"strap", 0.0)
 	_van.set_meta(&"keep_awake", false)
+	await _check_orphaned_run()
 	manager.set(&"is_running", false)
 	if _failures == 0:
 		print("PASS: the predicted truck is held, shoved and hauled by the mud as the host's is")
@@ -89,6 +93,29 @@ func _check_hauled() -> void:
 		await _hold_tick()
 	_expect(_van.linear_velocity.length() < 1.0,
 		"...and lets go of it past the pit, where the host ends the haul (%.2f m/s)" % _van.linear_velocity.length())
+
+
+## Hauled out by the crane when the host goes: the level stops the run, and with it the rescue.
+func _check_orphaned_run() -> void:
+	_put_van(_segment.pit_start + 2.0)
+	_segment._apply_state(MudSegment.State.HAULING, 1.0, 0, false, 0.0, &"crane", 0.0)
+	_van.set_meta(&"keep_awake", true)
+	for _i: int in range(5):
+		await _hold_tick()
+	# Loaded at run time: level_common.gd names autoloads.
+	var level: Node = (load("res://scripts/gameplay/level_common.gd") as GDScript).new()
+	level.set(&"vehicle", _van)
+	level.call(&"_stop_orphaned_run", "host_lost")
+	level.free()
+	_segment.set_physics_process(true)
+	var left_at: Vector3 = _van.global_position
+	for _i: int in range(60):
+		await physics_frame
+	var moved: float = _van.global_position.distance_to(left_at)
+	_expect(_segment.state == MudSegment.State.IDLE and _van.freeze and moved < 0.05
+			and not bool(_van.get_meta(&"keep_awake", false)),
+		"The host gone mid-haul: the rescue is dropped, the truck stays frozen in place (state %d, moved %.2f m)" % [
+			_segment.state, moved])
 
 
 ## The van at rest `along` metres into the segment.
