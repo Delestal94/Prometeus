@@ -397,3 +397,15 @@ configura una vez en el editor, seleccionando `Idle`/`Walk` en el
 `AnimationPlayer` y tildando *Loop*). Fuente editable en
 `tools/char_player_lowpoly_source.blend` (Blender 5.2) para ajustar poses o
 sumar más animaciones sin rehacer el rig desde cero.
+
+## Estación de servicio (2026-10-01, N-110.1)
+
+`tools/build_service_station.py` arma la estación que pone `ServiceStopSegment` (N-110) en rutas
+largas y en Endless, en `models/environment/service/`: `sm_env_service_canopy` (playa y techo),
+`_pump` (surtidor, cara hacia −X), `_kiosk` (kiosco con mostrador y toldo), `_totem` (poste de
+precios), `_crates` y `_drum`. Cada uno en el espacio local de la parte de `service_stop.gd` que lo
+pone, origen en la base. Colisiones, textos y brillos siguen en el script.
+
+```
+"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe" --background --factory-startup     --python do-not-drop/assets/tools/build_service_station.py
+```

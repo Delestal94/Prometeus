@@ -2720,9 +2720,13 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
   dinero cooperativo, arreglar averías (N-214) y un cosmético escondido (N-311).
 - [x] Parar cuesta tiempo de plazo: es una decisión, no un respiro gratis.
 - [x] Test: aparece según las reglas de ritmo y la compra usa la misma votación que el depósito.
-- [ ] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
+- [x] **N-110.1 (necesita PC)** Modelo propio de la estación con `modelador-blender` (techo de surtidores, surtidores,
   kiosco con mostrador, poste de precios, carteles de "estación de servicio"): hoy son cajas `DepotKit` con tres props
   del depósito (timbre, pallet envuelto, matafuego). Después, captura con `revisor-visual` en entrega y en Endless.
+  **Hecho (2026-10-01), rama `arte/N-110.1-service-station`:** 6 GLB `sm_env_service_*` (`tools/build_service_station.py`,
+  ~5.900 tris en total) conectados en `service_stop.gd` con `DepotKit.model()`; colisiones, mostrador, textos y brillos
+  siguen en código, el cartel "KIOSCO" pasó a una marquesina sobre el frente y el pallet de cajones quedó al lado (no
+  encima) del punto del cosmético. Captura `tests/render_service_stop.gd` (entrega y Endless, 5 vistas cada uno).
 
 > **Hecho (2026-10-01), rama `nacho/N-110-service-stops`.** `ServiceStopRules` (`service_stop_rules.gd`, puro y
 > estático): una ruta de 3+ casas o 2000+ m lleva una estación (en la práctica todas las de 3-4 casas), en el borde
