@@ -76,39 +76,39 @@
     },
     {
       "name": "GelBodyLOD1",
-      "vertices": 590,
+      "vertices": 1126,
       "measured_proportions": {
         "height_m": 1.7399998903779352,
         "head_diameter_m": 0.4796769320964813,
-        "arm_shoulder_to_hand_m": 0.6810359001159668,
-        "torso_waist_width_m": 0.4189249873161316,
+        "arm_shoulder_to_hand_m": 0.6821987271308899,
+        "torso_waist_width_m": 0.4253242164850235,
         "foot_width_m": 0.2581904027611017,
         "foot_forward_reach_m": 0.19561457633972168,
         "foot_depth_m": 0.2505808658897877,
-        "flat_sole_vertices": 9,
+        "flat_sole_vertices": 12,
         "flat_sole_depth_m": 0.15655286610126495
       },
-      "triangles": 1176,
-      "geometry_sha256": "33341b284b2904535c28158d9018244b32bd47eec00bda8a25f454addc8bc103",
-      "morph_sha256": "20acdde5f027dd7e2135fd0ad4f8248c334cac4c40bb16d89cb8e117abd033b9"
+      "triangles": 2248,
+      "geometry_sha256": "8698768c7daee4238974dc28782c177fbba40a23827c902d792573ce38f57b0e",
+      "morph_sha256": "dac4371b7e11e7f0ef27d3457cd292cd1a4afa10eeb41b34865b88fa4b3b729a"
     },
     {
       "name": "GelBodyLOD2",
       "vertices": 399,
       "measured_proportions": {
         "height_m": 1.7399998903779352,
-        "head_diameter_m": 0.4796769320964813,
-        "arm_shoulder_to_hand_m": 0.6810359001159668,
-        "torso_waist_width_m": 0.4189249873161316,
-        "foot_width_m": 0.2581904027611017,
-        "foot_forward_reach_m": 0.19561457633972168,
-        "foot_depth_m": 0.2505808658897877,
-        "flat_sole_vertices": 9,
+        "head_diameter_m": 0.4797493815422058,
+        "arm_shoulder_to_hand_m": 0.682033383846283,
+        "torso_waist_width_m": 0.4053887873888016,
+        "foot_width_m": 0.2563420832157135,
+        "foot_forward_reach_m": 0.19500835239887238,
+        "foot_depth_m": 0.23620115220546722,
+        "flat_sole_vertices": 12,
         "flat_sole_depth_m": 0.15655286610126495
       },
       "triangles": 794,
-      "geometry_sha256": "6a467cb05f8664070c75c69059a6c32bd7de35a2e84312489bc83a58b461cc72",
-      "morph_sha256": "36fb1fcaa93e09ae5da2edaab57f2ce179e584c2c1082be55e534d1504f4bec5"
+      "geometry_sha256": "cfdd47ef9b8e0a7d2917c8c7d1f3c4587432bc49a51367c794256bc677793c39",
+      "morph_sha256": "a0fc8e26a5da220a9ae294aaa354983b0c518c11002b1550df792ba5d615bbe6"
     }
   ]
 }
