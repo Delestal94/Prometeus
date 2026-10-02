@@ -6,6 +6,12 @@ class_name ServiceStopShop
 ## on the spot (VehicleFaults). Paid with the team's money, a bit dearer than
 ## the depot's counter (PRICE_MARKUP).
 ##
+## It also sells the whole accessory catalogue (N-923.4, AccessoryCatalog) at the
+## same markup, with no draw: one catalogue for both shops, the road just dearer.
+## An accessory offer is one accessory for one buyer (AccessoryOffers); the stop
+## charges it like the rest (host, team money, Discount card) but through
+## CrewProgression.buy_accessory(), which spends only if the grant works.
+##
 ## It reuses the depot's purchase flow instead of a new one: the offers go to
 ## ShopVoteManager, the crew votes there exactly as at the depot (one player
 ## buys straight away), and the depot panel (DepotPanel, station &"service")
@@ -130,7 +136,8 @@ func local_player_away(reach: float) -> bool:
 ## Every offer, id -> {title, detail, cost, venue, stop, amount}: the cost is
 ## what buying it now would charge (a refill of what's missing), or one unit's
 ## price for something that can't be bought now. Same on every peer, from the
-## synced kit and spares.
+## synced kit and spares. The accessory offers (one per player as buyer, with an
+## "accessory" key and the surcharge in "cost") come last.
 func offers() -> Dictionary:
 	var result: Dictionary = {}
 	var start: Dictionary = _kit_start()
@@ -144,7 +151,23 @@ func offers() -> Dictionary:
 			"title": TEXTS[id]["title"], "detail": TEXTS[id]["detail"], "venue": VENUE, "stop": stop_key,
 			"amount": amount, "cost": roundi(unit * maxi(amount, 1)),
 		}
+	result.merge(accessory_offers(), true)
 	return result
+
+
+## The accessory shelf at the road's price: every accessory for every player who
+## could be the buyer (the room's peers online, the local player alone).
+func accessory_offers() -> Dictionary:
+	return AccessoryOffers.build(_buyer_peers(), PRICE_MARKUP, {"venue": VENUE, "stop": stop_key})
+
+
+func _buyer_peers() -> Array:
+	var network: NetSession = _network()
+	if network == null:
+		return [1]
+	if network.is_online():
+		return network.peer_ids.duplicate()
+	return [network.local_id()]
 
 
 ## What the depot charges for the spare part, with the road's markup.
@@ -155,9 +178,13 @@ func _spare_cost() -> int:
 
 
 ## Ids that can't be bought: a kit item at its starting stock, a spare part
-## when one is already aboard.
+## when one is already aboard, an accessory somebody has already (one copy each).
 func unavailable() -> Array:
 	var blocked: Array = []
+	var crew: Node = _autoload(&"CrewProgression")
+	if crew != null:
+		var owned: AccessoryInventory = crew.get(&"accessories")
+		blocked.append_array(AccessoryOffers.blocked_ids(accessory_offers(), owned))
 	var start: Dictionary = _kit_start()
 	for id: StringName in ITEMS:
 		if id == SPARE:
@@ -222,6 +249,8 @@ func _purchase(id: StringName, discount_peer: int) -> bool:
 	var offer: Dictionary = offers().get(id, {})
 	if offer.is_empty():
 		return false
+	if AccessoryOffers.is_offer(offer):
+		return _purchase_accessory(offer, discount_peer)
 	var cost: int = int(offer["cost"])
 	var card: int = int((crew.get(&"Card") as Dictionary)["DISCOUNT"])
 	if discount_peer > 0:
@@ -240,6 +269,32 @@ func _purchase(id: StringName, discount_peer: int) -> bool:
 	refresh_state()
 	_broadcast()
 	return true
+
+
+## An accessory for the offer's buyer: CrewProgression checks the owner, the
+## wallet and the card first and charges (surcharge, half with the card) only
+## when the grant will work, so nothing is paid for an accessory somebody has.
+func _purchase_accessory(offer: Dictionary, discount_peer: int) -> bool:
+	var crew: Node = _autoload(&"CrewProgression")
+	var accessory: StringName = StringName(offer["accessory"])
+	var peer: int = int(offer.get("buyer", 0))
+	var result: Dictionary = crew.call(&"buy_accessory", crew.call(&"player_color_key", peer), accessory,
+			float(offer.get("multiplier", PRICE_MARKUP)), discount_peer)
+	var item: String = tr(String(offer["title"])).to_lower()
+	match StringName(result["reason"]):
+		&"":
+			var who: String = crew.call(&"player_color_name", peer)
+			_notice(tr("WORLD_SERVICE_NOTICE_ACCESSORY") % [item, who, int(result["cost"])])
+		&"no_money":
+			_notice(tr("WORLD_SERVICE_NOTICE_NO_MONEY") % [item, int(result["cost"])])
+		&"owned", &"taken":
+			_notice(tr("UI_ACCESSORY_NOTICE_TAKEN") % item)
+		&"no_card":
+			_notice(tr("UI_ACCESSORY_NOTICE_NO_CARD"))
+	if bool(result["ok"]):
+		refresh_state()
+		_broadcast()
+	return bool(result["ok"])
 
 
 ## The item itself: a kit refill, or a spare part (which fixes an active fault

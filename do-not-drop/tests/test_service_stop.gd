@@ -21,6 +21,11 @@ extends SceneTree
 ##   - The purchase goes through the same vote as the depot (ShopVoteManager):
 ##     an offer resolved there is bought by the station's shop, stamped with
 ##     its venue, and never by the depot (CrewProgression.supplies untouched).
+##   - N-923.4 the accessory shelf: the whole catalogue, no draw, at the road's
+##     markup (cap $60 -> $84), one offer per player as buyer; solo a press buys
+##     it for that player and charges the team once; an accessory somebody has is
+##     blocked and a second purchase charges nothing; no money buys nothing; the
+##     vote buys it for its buyer and a Discount card halves the surcharged price.
 ##   - The panel's "service" face lists the station's offers; the HUD opens it
 ##     from the counter and closes it when Endless culls the station.
 ##   - Online (follow-up to the network audit): a second player at the counter
@@ -305,6 +310,8 @@ func _check_shop_and_vote() -> void:
 	_expect(not (_crew.get(&"supplies") as Dictionary).has(&"spare_part") or start_supplies.has(&"spare_part"),
 			"The depot didn't buy a spare part for the next run off the station's vote")
 
+	await _check_accessory_shelf(shop)
+
 	# The panel's service face lists the station's offers.
 	var panel: Control = (load("res://scripts/ui/depot_panel.gd") as Script).new()
 	root.add_child(panel)
@@ -327,6 +334,61 @@ func _check_shop_and_vote() -> void:
 	_manager.set(&"care_supplies", start_kit)
 	_crew.set(&"team_money", start_money)
 	_crew.set(&"supplies", start_supplies)
+
+
+## N-923.4: the accessory shelf at the counter, bought on a test campaign file.
+func _check_accessory_shelf(shop: Node) -> void:
+	var old_path: String = String(_crew.get(&"campaign_path"))
+	var test_path: String = "user://service_shelf_%d.json" % Time.get_ticks_usec()
+	_crew.set(&"campaign_path", test_path)
+	var accessories: AccessoryInventory = _crew.get(&"accessories")
+	accessories.clear()
+	_crew.set(&"team_money", 1000)
+	var offers: Dictionary = shop.call(&"offers")
+	var cap_id: StringName = AccessoryOffers.offer_id(1, &"cap")
+	for id: StringName in AccessoryCatalog.ids():
+		_expect(offers.has(AccessoryOffers.offer_id(1, id)), "The station sells the whole catalogue (%s)" % id)
+	_expect(int(offers[cap_id].cost) == 84 and int(offers[AccessoryOffers.offer_id(1, &"hard_hat")].cost) == 168,
+			"The road charges the 40%% surcharge over the depot's price (cap $84, got $%d)" % int(offers[cap_id].cost))
+	_expect(offers[cap_id].get("venue") == Shop.VENUE and String(offers[cap_id].get("stop")) == "Segment9",
+			"An accessory offer carries the station's venue and its own stop")
+	_expect(not (shop.call(&"unavailable") as Array).has(cap_id), "A free accessory can be bought")
+
+	var money: int = int(_crew.get(&"team_money"))
+	_expect(bool(shop.call(&"buy_supply", cap_id)), "Solo, a press buys the cap")
+	_expect(accessories.owns("mint", &"cap"), "The cap is the player's (mint, the host)")
+	_expect(int(_crew.get(&"team_money")) == money - 84, "The team paid $84 once (had $%d)" % money)
+	_expect((shop.call(&"unavailable") as Array).has(cap_id), "An accessory somebody has is blocked")
+	money = int(_crew.get(&"team_money"))
+	_expect(not bool(shop.call(&"buy_supply", cap_id)) and int(_crew.get(&"team_money")) == money,
+			"A second purchase of the same accessory charges nothing")
+
+	_crew.set(&"team_money", 50)
+	var backpack_id: StringName = AccessoryOffers.offer_id(1, &"thermal_backpack")
+	_expect(not bool(shop.call(&"buy_supply", backpack_id)) and not accessories.owns("mint", &"thermal_backpack")
+			and int(_crew.get(&"team_money")) == 50, "Without the money nothing is bought or spent")
+
+	# The vote buys it for the offer's buyer; a Discount card halves the road's price.
+	_crew.set(&"team_money", 1000)
+	var vest_id: StringName = AccessoryOffers.offer_id(1, &"hi_vis_vest")
+	_votes.call(&"open_shop", shop.call(&"offers"))
+	_votes.call(&"vote", 1, vest_id)
+	_votes.call(&"finish_vote", [1])
+	_expect(accessories.owns("mint", &"hi_vis_vest") and int(_crew.get(&"team_money")) == 1000 - 126,
+			"The vote bought the vest at $126 (has $%d)" % int(_crew.get(&"team_money")))
+	(_crew.get(&"cards") as Dictionary)[1] = int((_crew.get(&"Card") as Dictionary)["DISCOUNT"])
+	_votes.call(&"open_shop", shop.call(&"offers"))
+	_votes.call(&"use_discount", 1, AccessoryOffers.offer_id(1, &"hard_hat"))
+	_expect(accessories.owns("mint", &"hard_hat") and int(_crew.get(&"team_money")) == 1000 - 126 - 84
+			and not bool(_crew.call(&"has_card", 1, int((_crew.get(&"Card") as Dictionary)["DISCOUNT"]))),
+			"A Discount card pays half the road's $168 and is used up (has $%d)" % int(_crew.get(&"team_money")))
+	_votes.call(&"reset")
+	accessories.clear()
+	_crew.set(&"campaign_path", old_path)
+	for path: String in [test_path, test_path + ".tmp", test_path + ".bak"]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	_crew.set(&"team_money", 1000)
 
 
 ## Online, as the host (an ENet server with nobody else): a second use of the
