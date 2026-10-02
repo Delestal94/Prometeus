@@ -75,6 +75,91 @@ func first_reply(id: int) -> bool:
 	return true
 
 
+## Host, from SceneMultiplayer's auth callback (inside its poll): `id`'s answer.
+## An unplaced joiner's is its identity reply (receive_identity()), read once;
+## anyone else's its ready reply, read once too (first_reply()). Let in, its
+## authentication completes; else it hears why (refuse()).
+func receive(session: NetSession, id: int, data: PackedByteArray) -> void:
+	if unplaced.has(id) and not refused.has(id):
+		receive_identity(session, id, data)
+		return
+	if not first_reply(id):
+		return
+	# Protocol 0 sent the raw word "ready". Recognize it without asking
+	# bytes_to_var() to parse arbitrary UTF-8, then reject it explicitly.
+	var reply: Variant = bytes_to_var(data) if data.get_string_from_utf8() != "ready" else null
+	var refusal: String = ready_reply_error(reply, session.protocol_version)
+	if refusal.is_empty():
+		refusal = on_identified(session, id, reply)
+	if refusal.is_empty():
+		session.multiplayer.complete_auth(id)
+	else:
+		refuse(session, id, refusal)
+
+
+## "" when `reply` is a ready reply of `version`, else the failure code.
+static func ready_reply_error(reply: Variant, version: int) -> String:
+	if not reply is Dictionary or not bool(reply.get("ready", false)):
+		return "version"
+	return "" if int(reply.get("version", -1)) == version else "version"
+
+
+## Host: the session's state (NetSession._session_state() and the level), for
+## a joiner with a place: it loads the level with it and says ready.
+func send_state(session: NetSession, id: int) -> void:
+	var state: Dictionary = {"version": session.protocol_version, "scene": session._current_level_scene(),
+		"session": _identities.nonce}
+	state.merge(session._session_state())
+	session.multiplayer.send_auth(id, var_to_bytes(state))
+
+
+## Host: asks the unplaced `id` who it is, sending only the session's nonce
+## (for its claim) and the version; the state follows once it has a place.
+func ask_identity(session: NetSession, id: int) -> void:
+	session.multiplayer.send_auth(id, var_to_bytes({"version": session.protocol_version,
+		"session": _identities.nonce, "identify": true}))
+
+
+## Host: an unplaced joiner said who it is. With a place now (its ghost's, or
+## one freed since) it gets the state; else it hears why, having loaded nothing.
+func receive_identity(session: NetSession, id: int, data: PackedByteArray) -> void:
+	var reply: Variant = bytes_to_var(data) if data.get_string_from_utf8() != "ready" else null
+	var refusal: String = identity_reply_error(reply, session.protocol_version)
+	if refusal.is_empty():
+		refusal = on_identity(session, id, reply)
+	if refusal.is_empty():
+		send_state(session, id)
+	else:
+		refuse(session, id, refusal)
+
+
+## "" when `reply` is an identity reply of `version`, else the failure code.
+static func identity_reply_error(reply: Variant, version: int) -> String:
+	if not reply is Dictionary or int(reply.get("version", -1)) != version:
+		return "version"
+	return "" if is_identify(reply) else "connection"
+
+
+## Whether what the host sent (or a joiner answered) is about who it is.
+static func is_identify(message: Variant) -> bool:
+	var identify: Variant = message.get("identify", false) if message is Dictionary else false
+	return identify is bool and identify
+
+
+## Joiner: the host asks who this is before anything else (its room is full),
+## and gets the next link of its chain. A host on another version gets
+## nothing: it is the wrong game.
+func answer_identify(session: NetSession, request: Dictionary) -> void:
+	if int(request.get("version", -1)) != session.protocol_version:
+		session._fail_if_current.call_deferred("version", session.multiplayer.multiplayer_peer)
+		return
+	var nonce: Variant = request.get("session", "")
+	_identities.nonce = String(nonce) if nonce is String and RpcGuard.text_ok(nonce) else ""
+	session._identified_early = true
+	session.multiplayer.send_auth(NetSession.HOST_ID, var_to_bytes({"identify": true,
+		"version": session.protocol_version, "identity": session._claim_identity()}))
+
+
 ## As `id` starts authenticating: "" lets the handshake go on, else the
 ## failure code it hears.
 func on_authenticating(session: NetSession, id: int) -> String:

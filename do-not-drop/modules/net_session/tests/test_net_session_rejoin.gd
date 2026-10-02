@@ -248,7 +248,8 @@ func _check_joiner_claims(session: GameSession) -> void:
 	var second: Dictionary = session._ready_reply()
 	_expect(String(second.identity) != first and String(second.identity).sha256_text() == first,
 		"Each rejoin claims the link before: hashed once, it is the last one")
-	_expect(session._ready_reply_error(second).is_empty(), "...and is still a valid ready reply")
+	_expect(NetAdmission.ready_reply_error(second, session.protocol_version).is_empty(),
+		"...and is still a valid ready reply")
 	session._identities.nonce = "other"
 	var elsewhere: String = String(session._ready_reply().identity)
 	_expect(elsewhere != first and elsewhere.sha256_text() != first, "...and another session has another chain")
@@ -313,9 +314,10 @@ func _check_full_room(session: GameSession) -> void:
 		"A ready reply from a joiner still asked who it is gets nowhere")
 	_expect(admission.on_identity(session, 22, _reply("tok-a")) == "connection",
 		"An identity reply from a joiner nobody asked gets nowhere")
-	_expect(session._identity_reply_error({"identify": true, "version": 2}) == "version"
-		and session._identity_reply_error({"ready": true, "version": 3}) == "connection"
-		and session._identity_reply_error({"identify": true, "version": 3}).is_empty(),
+	_expect(NetAdmission.identity_reply_error({"identify": true, "version": 2}, 3) == "version"
+		and NetAdmission.identity_reply_error({"ready": true, "version": 3}, 3) == "connection"
+		and NetAdmission.identity_reply_error({"identify": "yes", "version": 3}, 3) == "connection"
+		and NetAdmission.identity_reply_error({"identify": true, "version": 3}, 3).is_empty(),
 		"An identity reply must be one, of this version")
 	_expect(admission.on_identity(session, 58, _reply("tok-a")).is_empty(),
 		"The one who turns out to be a ghost's player gets in, before it gets the state")

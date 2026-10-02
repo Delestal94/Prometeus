@@ -87,7 +87,8 @@ func _run() -> void:
 	_level.call(&"_sync_players", [1])
 	player = _player()
 	_expect(player != null and player.global_position.distance_to(depot_spawn) < 0.5,
-		"Without peer_returned it spawns at the depot (at %s)" % [player.global_position if player != null else Vector3.ZERO])
+		"Without peer_returned it spawns at the depot (at %s)"
+		% [player.global_position if player != null else Vector3.ZERO])
 
 	# Mid-run, at the wheel (the debug start seats this player as the driver).
 	_level.call(&"start_debug_delivery")
@@ -155,7 +156,8 @@ func _run() -> void:
 	network.peer_returned.emit(1, 1)
 	_level.call(&"_sync_players", [1])
 	player = _player()
-	_expect(player != null and player.global_position.distance_to(near) < 0.5 and String(player.get(&"seat_node_path")).is_empty(),
+	_expect(player != null and player.global_position.distance_to(near) < 0.5
+		and String(player.get(&"seat_node_path")).is_empty(),
 		"On foot near the truck mid-run: back where it stood")
 	player.global_position = _truck.global_position + Vector3(120.0, 0.0, 0.0)
 	_leave(player)

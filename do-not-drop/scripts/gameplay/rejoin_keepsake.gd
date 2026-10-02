@@ -109,7 +109,8 @@ func place(note: Dictionary) -> Dictionary:
 	if bool(note.aboard) and is_instance_valid(vehicle):
 		var seat: SeatPoint = _free_seat(NodePath(note.seat))
 		if seat != null:
-			var at: Vector3 = late_join.standing_spot(seat) if late_join != null else vehicle.to_local(seat.global_position)
+			var at: Vector3 = late_join.standing_spot(seat) if late_join != null \
+					else vehicle.to_local(seat.global_position)
 			return {"position": vehicle.to_global(at), "seat": seat, "local": at}
 		if not NodePath(note.seat).is_empty() and underway and late_join != null:
 			return late_join.place()  # Their seat was taken: another, or the bay.
