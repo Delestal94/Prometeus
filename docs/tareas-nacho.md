@@ -578,7 +578,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
-| **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
+| **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606, N-923 (tienda de accesorios: va después de S-305 y N-311 en ese orden o las absorbe) |
 | **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
@@ -3038,6 +3038,123 @@ Extiende N-106 y N-107: los animales ahora amenazan paquetes, no solo el camino.
 - [ ] Además de los que se desbloquean con mérito, algunos gorros aparecen en el depósito, en las paradas
   (N-110) o en el jardín de un cliente. Recogerlos exige bajarse o desviarse unos metros.
 - [ ] Se guardan en la campaña por color de jugador, como el mérito. Test de guardado y carga.
+
+### N-923 · Tienda de accesorios: comprarlos con la plata del equipo, en el depósito y en las paradas, y compartirlos soltándolos — B · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, `shop_vote_manager.gd`, `unlock_manager.gd`, `crew_progression.gd`, `cosmetics_panel.gd`, `depot_panel.gd`, jugador; zona compartida y archivos de Slatex) · M7
+Pedido del usuario (2026-10-02). Hoy los accesorios (S-305: gorra, chaleco reflectivo, casco de obra, mochila térmica
+con `BoneAttachment3D`; hoy `UnlockManager.COSMETICS` solo tiene uniformes, todos gratis o por mérito) no cuestan nada y
+no hay tienda. Se integran a las tiendas que ya existen: depósito (`depot_panel.gd`, cara `shop`) y paradas de servicio
+(`service_stop_shop.gd`, ofertas con `venue`, N-110), con la plata compartida de la partida (`CrewProgression.team_money`,
+`spend()`), la misma que gasta la votación (`ShopVoteManager`). Decisiones del usuario: (1) cada jugador tiene sus
+propios accesorios, pero el gasto es del grupo: al comprar se descuenta la plata común y el objeto queda guardado para el
+comprador; (2) se pueden soltar/regalar para compartirlos; (3) se equipan en el panel de cosméticos y los demás los ven.
+Relación con otras tareas: **S-305** hace los modelos y el enganche (esta tarea le pone dueño, precio y red; no se
+duplica el arte: S-305.1/.2 de abajo son los mismos modelos); **N-311** (cosméticos hallados en el mundo, punto
+`hidden_cosmetic_spot` de `service_stop.gd`) usa el mismo inventario y el mismo objeto soltado: un accesorio encontrado
+entra por `AccessoryInventory.grant()` igual que uno comprado o recogido del suelo.
+Hecho cuando: un test de red con host y cliente prueba que el cliente compra, el host descuenta una sola vez la plata
+del equipo y solo el comprador lo tiene; que soltarlo y recogerlo lo pasa a otro dueño sin duplicarlo ni perderlo; que
+se guarda y se carga por color; y `revisor-visual` + `director-arte` aprueban la captura de los cuatro accesorios puestos
+y de la fila de la tienda contra el resto del depósito (sin cajas de color plano ni placeholders a la vista).
+
+**Diseño propuesto (se corrige con las respuestas a las preguntas abiertas):**
+- *Catálogo*: `AccessoryCatalog` (puro, estático, `scripts/core/`): id → `{title, slot (head|torso|back), price,
+  model, tags}`; slots como las categorías de S-305 (un accesorio equipado por slot). Sale de `UnlockManager.COSMETICS`
+  la parte de accesorios (los uniformes siguen ahí). Los títulos van por `tr()`.
+- *Inventario*: `AccessoryInventory` en `CrewProgression` (host manda): `owned[color_key] -> Array[StringName]` (más
+  `equipped[color_key] -> {slot: id}`), igual que mérito y cartas, por **color de jugador** y no por peer (así sobrevive
+  a un cambio de peer id, `_on_peer_rejoined`). Un mismo accesorio puede estar en un solo dueño a la vez (ejemplares, no
+  licencias): comprar uno que ya tenés no se permite; soltarlo lo saca del inventario.
+- *Compra*: las ofertas de accesorios entran como un grupo más de `ShopVoteManager` (con `venue` y `stop` en la parada,
+  precio con el recargo de la parada) y llevan `buyer = peer` en la oferta. Se vota como los suministros (online) o se
+  compra al toque (solo). Cuando el voto cierra, el host hace `spend(cost)` y `grant(buyer_color, id)`; si no hay plata o
+  el comprador ya lo tiene, aviso y no se cobra. Quién compra es **quien pidió esa oferta**, no el ganador de la
+  votación de otro ítem; Prioridad y Descuento valen igual que con los suministros.
+- *Soltar*: nueva acción en el panel de cosméticos y en el menú de objetos del jugador ("Soltar accesorio"); el host
+  quita el accesorio del dueño y spawnea un `AccessoryPickup` (nodo del mundo, `Node3D` con el modelo, `Area3D` de
+  recogida, sin colisión con el camión) delante del jugador con `PackageNetSync`-style spawner. Cualquiera que lo
+  mire y apriete interactuar se lo queda (`request_pickup(pickup_id)` al host); si nadie lo toma en 120 s o termina la
+  entrega, vuelve a su dueño original (nunca se pierde plata gastada). Reglas anti-abuso: un pickup por jugador a la vez,
+  no se puede soltar con el camión andando por encima de 5 m/s (se tiraría por la ruta), el equipado se desequipa antes.
+- *Equipar y ver*: `cosmetics_panel.gd` gana la página "Accesorios" (3 slots, los que tenés + los que te faltan
+  bloqueados con precio y "se compra en el depósito o en las paradas"); el equipado viaja como `accessory_ids` junto a
+  `cosmetic_id` en el estado del jugador (`level_common.gd:366`, `crew_panel.gd`) y `player.tscn` los engancha con
+  `BoneAttachment3D`.
+
+- [ ] **N-923.1** Catálogo e inventario puros, sin red ni escena: `AccessoryCatalog` (4 accesorios de S-305, slots,
+  precios provisionales en una tabla), `AccessoryInventory` (`grant`, `remove`, `owns`, `equip` con regla de un solo
+  accesorio por slot, `to_dict`/`from_dict`). Con `constructor-progresion`; tests `accessory` (nuevo, `escritor-tests`):
+  no se compra dos veces, equipar uno que no tenés falla, el guardado ida y vuelta es igual, ids desconocidos al cargar
+  se descartan sin romper. Esfuerzo `Opus 5.5 · medium`. Va primero: lo demás se apoya en esto.
+- [ ] **N-923.2** Persistencia en la campaña: `owned` y `equipped` por color en `CrewProgression._campaign_data()` /
+  `_apply_campaign_data()` junto a `team_money`; subir `CAMPAIGN_VERSION` con migración (campañas viejas = sin accesorios)
+  y respetar `_keep_displaced` (quien se va y vuelve con otro color/peer conserva sus cosas, como el mérito). Con
+  `constructor-progresion`; tests `crew_progression`, `persistence`. Esfuerzo `Opus 5.5 · high`.
+- [ ] **N-923.3** Compra con la plata del equipo: las ofertas de accesorios se suman a las de `ShopVoteManager` /
+  `Depot` (cara `shop` de `depot_panel.gd`) con `buyer`; el host cobra con `CrewProgression.spend()` una vez y hace
+  `grant()` al comprador; la misma compra al toque en solitario. Respeta Prioridad/Descuento y el fallo sin plata.
+  Con `constructor-progresion` + `constructor-ui` (fila de la tienda con vista previa, precio y "ya lo tenés"); tests
+  `shop_vote`, `depot`. Esfuerzo `Opus 5.5 · high`.
+- [ ] **N-923.4** Venta en las paradas de servicio: `ServiceStopShop.offers()` suma los accesorios con el recargo de la
+  parada (propuesta +40 %, igual que el repuesto) y `_hand_over` los entrega al comprador; `DepotPanel` cara `service`
+  los muestra. Un solo catálogo para las dos tiendas (el stock de la parada puede ser un subconjunto sorteado de la
+  semilla de la ruta, así cambia entre paradas; si el usuario prefiere todo siempre, se saca el sorteo). Con
+  `constructor-mundo`; tests `service_stop`. Esfuerzo `Opus 5.5 · high`.
+- [ ] **N-923.5** Red, host autoritativo (`PROTOCOL_VERSION` según `docs/convenciones-godot.md` §6: mirar los PRs
+  abiertos que tocan `network_manager.gd`, tomar el siguiente al más alto, hoy 27, y sumar la línea al historial):
+  RPCs `request_buy_accessory(id)` / `request_equip_accessory(slot, id)` / `request_drop_accessory(id)` /
+  `request_pickup_accessory(pickup_id)` (`any_peer` hacia el host, cada uno valida peer, plata, dueño y distancia; el
+  cliente nunca cambia su inventario solo) y `_receive_accessories(owned, equipped)` con `authority`/`call_remote` para
+  espejar el inventario propio y el equipado de todos (los demás solo necesitan `equipped` para dibujarlos). Quien entra
+  tarde recibe el estado completo (`_receive_campaign`). Con `constructor-red`, después `auditor-red` (obligatorio).
+  Esfuerzo `xhigh`. Tests `network` / `net_accessories` (nuevo, host y cliente reales como en `test_service_stop`):
+  doble compra simultánea de dos peers cobra una vez, comprar sin plata, equipar lo que no es tuyo, soltar y recoger
+  desde otro peer, desconexión del dueño con el pickup en el suelo.
+- [ ] **N-923.6** Soltar y recoger: `AccessoryPickup` (nodo con `Area3D`, modelo, brillo suave, texto "Recoger gorra
+  de <color>"), spawner replicado, devolución al dueño tras 120 s o al terminar la entrega, tope de un pickup por jugador
+  y no soltar con el camión rápido. Con `constructor-jugador` (interacción) y `constructor-mundo` si hace falta el
+  spawner; tests `accessory_pickup`. Esfuerzo `Opus 5.5 · high`. Depende de N-923.5. Es el mismo nodo que usará
+  N-311 para lo que se encuentra en el mundo.
+- [ ] **N-923.7** Panel de cosméticos: página "Accesorios" con los tres slots, los poseídos y los bloqueados con precio,
+  equipar/quitar y "Soltar" (con confirmación); maniquí que muestra el accesorio puesto en el acto; navegación por mando
+  (`_wire_focus`). `cosmetics_panel.gd` (zona de Slatex) con `constructor-ui`; aviso en el PR. Tests `cosmetics_panel`
+  (existente: ampliar). Esfuerzo `Opus 5.5 · high`. Depende de N-923.1 y N-923.5.
+- [ ] **N-923.8** Se ven puestos: `accessory_ids` replicado junto a `cosmetic_id` (estado del jugador en
+  `level_common.gd:366`) y `player.tscn` con `BoneAttachment3D` de cabeza, torso y espalda; el `crew_panel.gd` puede mostrar
+  el ícono. Comparte trabajo con **S-305**: si S-305 ya está hecha, solo se conecta; si no, esta subtarea la absorbe y
+  se marca S-305 como cumplida por aquí (sin cambiar su alcance). Con `constructor-jugador`; tests `player_accessories`.
+  Esfuerzo `Opus 5.5 · high`.
+- [ ] **N-923.9 (necesita PC)** Arte de los 4 accesorios y del cartel/estante de la tienda con `modelador-blender`
+  (`models/characters/accessories/`, script de Blender en `tools/`, ~300-800 tris cada uno, estilo del personaje rubber
+  hose, bien posicionado en `BoneAttachment3D`) y materiales con `artista-shaders` (que no sean un color plano: borde,
+  tela con textura chica). Sin esto la compra no tiene qué mostrar. Es el mismo trabajo que S-305.1/S-305.2; la rutina
+  de arte lo toma una sola vez. Revisión `director-arte` con la captura de `revisor-visual` contra el personaje y el
+  depósito.
+- [ ] **N-923.10** Integración con N-311: los accesorios hallados (en `hidden_cosmetic_spot`, jardines) se entregan con
+  `AccessoryInventory.grant()` al que los recoge y reusan `AccessoryPickup`; N-311 deja de definir su propio guardado.
+  Cuando N-311 se construya, citar esta tarea en su `Hecho`. Con `constructor-mundo`; tests `service_stop`, `accessory`.
+  Esfuerzo `Opus 5.5 · medium`.
+- [ ] **N-923.11** Cierre: `escritor-tests` revisa cobertura de todo lo anterior, `probador-qa` juega solo y en red una
+  partida con compra, equipado, soltar y recoger, `pulidor-jugabilidad` ajusta precios con `sim_trap_balance`/economía
+  (que 4 accesorios no vacíen la plata de suministros en una campaña), `documentador` actualiza `docs/colaboracion-equipo.md`
+  y el aviso `docs/avisos/AAAA-MM-DD-tienda-accesorios.md`. Esfuerzo `Opus 5.5 · medium`.
+
+**Preguntas abiertas para el usuario (⏸ decide el usuario; issue `decide-usuario` "N-923 · decidir: reglas de la tienda
+de accesorios"). Las subtareas .1 a .4 pueden empezar con las suposiciones de abajo; los números se cambian en una tabla:**
+1. *Precios*: propuesta provisional, gorra 60, chaleco reflectivo 90, casco de obra 120, mochila térmica 150, contra
+   suministros de 15-50 y un reparto de 3-4 casas que paga unos 200-400 (verificar en `crew_progression.gd`). ¿Más
+   baratos (es un gusto, no ayuda) o más caros (para que sean una meta)?
+2. *¿Persisten entre partidas o solo dentro de la campaña/partida?* Recomendado: persisten en la campaña (junto a
+   `team_money`, que ya se guarda) y se pierden si se reinicia la campaña; no entre campañas ni como perfil global.
+3. *Reembolso*: recomendado **no** reembolsar (evita un bucle de comprar-vender); soltar no devuelve plata, solo
+   transfiere. Alternativa: devolver el 50 % al equipo al "vender" en el depósito.
+4. *Si alguien se va o su accesorio queda en el suelo*: recomendado que vuelva al inventario de su dueño (por color) y
+   siga ahí si el dueño se reconecta; si el dueño ya no vuelve, queda disponible para el equipo al final de la entrega.
+5. *Un ejemplar por accesorio* (el que se regala deja de ser tuyo) o *cada jugador puede tener una copia*. Recomendado:
+   un ejemplar, para que soltar tenga sentido; comprar una copia extra para un amigo se hace con la plata del equipo y
+   "regalar" = comprar y soltar.
+6. *¿Aparecen en la tienda siempre o hay stock rotativo?* (afecta N-923.4).
+7. *¿Los accesorios dan algún efecto de juego* (el chaleco se ve más de noche, la mochila cuida el paquete) *o solo son
+   cosméticos?* Recomendado: solo cosméticos, para no romper el balance ni tener que testearlo.
 
 ### N-113 · Evento de visibilidad limitada para el conductor — C · `Opus 5.5 · high` · Aviso: sí (`event_bus.gd`, `network_manager.gd` y `hud_notices.gd`) · **[x] rama `nacho/N-113-low-visibility-event`**
 
