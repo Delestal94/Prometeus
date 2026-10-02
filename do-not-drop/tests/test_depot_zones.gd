@@ -24,7 +24,9 @@ extends SceneTree
 ##   - the signs hang smaller over their zones; everything static is batched;
 ##   - the finishing pass (N-319.3/4): ONE contact-shadow batch and ONE wear batch, the shaft dust (none at
 ##     night), the mural only when its art is in the project, no hanging sign over the board, the lit
-##     office window, the order board in bold, the flicker no faster than 3 Hz;
+##     office window, the order board in bold, the flicker no faster than 3 Hz; the texts the art left
+##     blank are filled (a word under each safety pictogram, a light header on the swatch board, the photo
+##     wall's title on its own band);
 ##   - the modelled kit is connected (N-319.2): the door's signal light follows the
 ##     door (green open, red shut), the middle of the hall has its cages, table and
 ##     pallet (solid, clear of the walkways and the truck), the left wall its
@@ -331,6 +333,20 @@ func _test_finish(depot: Node3D) -> void:
 	_expect(ambience_source.contains("randf_range(0.36, 0.7)"),
 			"The tube's flicker keeps under three stutters a second")
 	_expect(DepotLayout.body_bold() is FontVariation, "The order board's items are in bold")
+	# The texts the art left blank (N-319 close): every pictogram safety sign carries its word under it, and
+	# the swatch board's dark header band is written in a light colour (INK letters vanished into it).
+	var captions: Array[Node] = get_nodes_in_group(&"depot_safety_caption")
+	_expect(captions.size() == 5, "The five pictogram safety signs carry a caption (%d)" % captions.size())
+	for caption: Node in captions:
+		var words: String = (caption as Label3D).text
+		_expect(not words.is_empty() and not words.begins_with("WORLD_"), "A safety caption has its words (%s)" % words)
+	var swatches := depot.find_child("SwatchesLabel", true, false) as Label3D
+	_expect(swatches != null and swatches.modulate.get_luminance() > 0.7,
+			"The swatch board's header reads light on its dark band")
+	var photo_band := depot.find_child("TitleBand", true, false) as MeshInstance3D
+	var photo_title := photo_band.get_parent().get_node_or_null(^"Title") as Label3D if photo_band != null else null
+	_expect(photo_title != null and photo_title.modulate.get_luminance() > 0.7,
+			"The photo wall's title sits light on its own dark band")
 	# The workshop's tyre stack and tool boards are the kit's when their models are in.
 	if ResourceLoader.exists(DepotKit.depot_model("sm_env_depot_tire_stack")):
 		_expect(true, "The tyre stack is the kit's")

@@ -79,6 +79,9 @@ const BUDGETS: Dictionary = {
 	# are the null-safe autoload accessors (NetworkManager, CrewProgression,
 	# UnlockManager, RunManager, EventBus).
 	"res://scripts/gameplay/depot/depot.gd": {"call": 1, "callv": 0, "get": 1, "root": 5},
+	# The depot's order draw (N-224.4) reads the traps as TrapDefinition (id, difficulty) and the boxes as
+	# DeliveryPackage (trap_definition): what is not one (a null slot) is skipped, as before. Nothing by name.
+	"res://scripts/gameplay/traps/order_balancer.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The trailer tool (N-902) drives the real level: level_base.gd, route.gd,
 	# vehicle.gd and package_mount_point.gd by preload (no class name), the
 	# camera, segments, deer crossing, house, player and boxes by class. The one

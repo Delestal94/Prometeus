@@ -196,7 +196,10 @@ func _build_photo_wall() -> void:
 		_art.mesh = quad
 		_art.position = Vector3(0.0, 0.0, 0.017)
 		wall.add_child(_art)
-	_label(wall, "Title", tr("WORLD_DEPOT_PHOTOS_TITLE"), Vector3(0.0, size.y * 0.5 + 0.12, 0.02), 30, INK, DISPLAY_FONT)
+	# The title on its own INK band over the frame: INK letters straight on the dark wall did not read.
+	var title_y: float = size.y * 0.5 + 0.17
+	_box(wall, "TitleBand", Vector3(size.x, 0.22, 0.02), Vector3(0.0, title_y, 0.0), INK)
+	_label(wall, "Title", tr("WORLD_DEPOT_PHOTOS_TITLE"), Vector3(0.0, title_y, 0.015), 32, PAPER, DISPLAY_FONT)
 	_empty_note = _label(wall, "Empty", tr("WORLD_DEPOT_PHOTOS_EMPTY"), Vector3(0.0, 0.0, 0.03), 26, INK, BODY_FONT)
 	# Four across, two rows, slightly askew like pinned photos.
 	for index: int in range(MAX_PHOTOS):

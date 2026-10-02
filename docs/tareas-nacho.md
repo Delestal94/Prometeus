@@ -943,6 +943,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-depot-panel-tipado.md`.
     Siguientes: `cargo_animal_view.gd` (13), `wildlife_crossing.gd` (13), `seat_point.gd` (13),
     `package_contents_view.gd` (13); después `hud_pause.gd` (`level.get(&"depot")`, tipar a `LevelCommon`).
+  - [x] `order_balancer.gd` (2026-10-01, rama `nacho/N-224-order-balancer-typed`): el sorteo de pedidos del depósito.
+    Las trampas como `TrapDefinition` (`id`, `difficulty`; arrays internos `Array[TrapDefinition]`) y las cajas como
+    `DeliveryPackage` (`trap_definition`); lo que no es una trampa (un hueco nulo) se salta como antes. En el archivo:
+    `.get(&` 8 → 0, nada por nombre; en `scripts/`: `.get(&` 175 → 167. `test_dynamic_dispatch_budget.gd` suma el
+    archivo con todo en 0. Aviso `docs/avisos/2026-10-01-n224-order-balancer-tipado.md`.
   - [x] `wildlife_crossing.gd` (2026-10-01, rama `nacho/N-224-wildlife-crossing-typed`): el ciervo con el tipo de
     `wildlife_animal.gd` (`ANIMAL_SCRIPT` por preload inferido, sin `class_name`: `steered`, `run`,
     `freeze_in_headlights`, `tumble` directos). Quedan por nombre `team_money`/`spend` de `CrewProgression` (ciclo de
@@ -1162,7 +1167,7 @@ media medida); (4) la sombra de la loma con borde suave. Capturas antes/después
   un `DirectionalLight3D` pelado; el sol del juego (`level_base.tscn`) ya tiene `shadow_blur = 1,6` y
   `directional_shadow_blend_splits`. Primero comprobar si el borde duro es solo de la captura.
 
-### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[ ] rama `nacho/N-319-depot-redesign`**
+### N-319 · Depósito de nivel profesional (rediseño en iteraciones) — A · `Opus 5.5 · xhigh` · Aviso: sí (`level_base.tscn` compartida si tocás la niebla) · **[x] ramas `nacho/N-319-depot-redesign` y `nacho/N-319-depot-finish` (#145 y el cierre)**
 Origen: pedido del usuario 2026-09-30 ("el galpón es muy genérico; que quede como el lobby de un juego profesional:
 distribución de espacios, áreas importantes, modelos genéricos"). El plan, el diagnóstico de la línea de base, la planta
 objetivo y el registro de cada iteración están en `docs/deposito-rediseno.md`; capturas de cada iteración en
@@ -1211,8 +1216,13 @@ crítica de `director-arte` sobre las capturas finales ya no dice "genérico".
   ventanal cálido, pictogramas de zona (celdas 12-15 del atlas), taller con media pared opaca y tableros del kit, isla con
   lámpara y corcho, pañol sin violeta, descanso con lockers entreabiertos, sombras de contacto en un lote, desgaste en un lote,
   polvo en los haces, portón de recepción y mural del fondo, flechas solo en bifurcaciones, nube y línea de salida de afuera,
-  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Falta la pasada de `director-arte` sobre `D:/tmp/depot_review/iter3/` y los
-  textos que el arte dejó vacíos (ver el registro en `docs/deposito-rediseno.md`). **Todavía sin PR.**
+  tubo parpadeante bajo 3 Hz. Lotes 182, 7 luces. Mezclado en el #145.
+- [x] **N-319.5** ~~Cierre: crítica final sobre las capturas y los textos que el arte dejó vacíos.~~
+  **[x] Hecho (2026-10-01, rama `nacho/N-319-depot-finish`)** — la crítica sobre `D:/tmp/depot_review/iter5/` ya no dice
+  "genérico" (cada zona se lee por forma, luz y color; ver "Cierre" en `docs/deposito-rediseno.md`). Textos: "COLORES DEL CAMIÓN"
+  en claro sobre la franja oscura del tablero de muestras (antes INK sobre INK, invisible), palabra bajo los cinco pictogramas de
+  seguridad (`WORLD_DEPOT_SAFETY_*`), título de "NUESTRAS ENTREGAS" sobre su franja. `test_depot_zones` ampliado; `bench_depot` sin
+  cambio. Detalles menores que quedan, sin tarea, en el registro.
 
 ### N-706 · Docs a dieta — C · `Opus 5.5 · low` · Aviso: sí (`colaboracion-equipo.md`) · **[x]**
 - [x] Los 68 avisos de `colaboracion-equipo.md` a `docs/avisos/archivo-2026-09.md`; cada aviso nuevo es un
@@ -1468,10 +1478,14 @@ en cada una, API pública y nombres de nodos intactos. Detalle para Slatex en `d
   ciervo) ahora cachean el camión en `_vehicle()`. La de `reference_truck` recorre los jugadores (≤5) y queda.
 - [x] **Fase 7a · i18n de la UI:** los textos de `scripts/ui/**` a `translations/strings_ui.csv`
   (es = texto de siempre, en = primera traducción), con `test_ui_translations`.
-- [ ] **Fase 7b · i18n del resto:** textos visibles en `core/` (eventos de ruta, desbloqueos, cartas,
+- [x] ~~**Fase 7b · i18n del resto:** textos visibles en `core/` (eventos de ruta, desbloqueos, cartas,
   suministros, caras), `gameplay/` (contenidos de paquetes, avisos del depósito, historias) y los
-  `display_name` de los `.tres` de trampas/contenidos. Ojo: `hud_prompts` y `ui_theme` indexan por
-  nombre visible de trampa (`"FRÁGIL"`...); pasarlos a id antes de traducir esos nombres.
+  `display_name` de los `.tres` de trampas/contenidos.~~ **[x] Hecho (2026-10-01)**: casi todo ya había
+  salido con N-805 (claves en `core/`, nombres de trampa y contenidos por clave, `ui_theme.trap_icon()` por
+  clave). Quedaban la nota de la práctica de cuidado y el respaldo "Clic izq./der." (`care_practice`,
+  `care_guide`) y el manejo de la torre de copas desalineado con su clave. `test_ui_translations` ahora
+  ve literales sin tilde (dos o más palabras con una de `SPANISH_WORDS`), barre `modules/` y compara cada
+  `data/contents/*.tres` con sus claves. Aviso: `docs/avisos/2026-10-01-n211-7b-i18n.md`.
 - [x] **Fase 8 · Responsividad:** capturas del HUD y el menú en 16:9, 16:10 (Steam Deck), 21:9 y 4:3.
   16:9/16:10/21:9 bien. Arreglado: en 4:3 todo el HUD se dibujaba al 75% (letra de 6-7 px) — ahora
   `Hud.layout_scale()` maqueta siempre en 720 de alto lógico (HUD y tarjeta); el aviso de interacción

@@ -265,6 +265,7 @@ HUD_PLAYERS_MANY,%d jugadores,%d players
 HUD_PLAYERS_ONE,%d jugador,%d player
 HUD_POINTS,%d PTS,%d PTS
 HUD_PRACTICE_DONE,¡LISTO! YA SABÉS,DONE! YOU'VE GOT IT
+HUD_PRACTICE_NOTE,"Cuando quieras, subite a manejar para salir.","Whenever you're ready, get in the driver's seat to leave."
 HUD_PRACTICE_STEP_GRAB,Agarrá una caja,Grab a box
 HUD_PRACTICE_STEP_HOLD,Mantené %s: la cuidás,Hold %s: you look after it
 HUD_PRACTICE_STEP_LOAD,Subila al estante o sentate con ella,Put it on the rack or sit down with it
