@@ -228,12 +228,14 @@ func consume_care_supply(tool: StringName, amount: int = 1) -> bool:
 	care_supplies[tool] = care_supply_count(tool) - amount
 	if NetworkManager.is_online():
 		_sync_care_supplies.rpc(care_supplies)
+	EventBus.care_supplies_changed.emit()
 	return true
 
 
 @rpc("authority", "call_remote", "reliable")
 func _sync_care_supplies(supplies: Dictionary) -> void:
 	care_supplies = supplies.duplicate()
+	EventBus.care_supplies_changed.emit()
 
 
 ## What DeliveryPackage.delivery_assessment() last said about a box: kept with

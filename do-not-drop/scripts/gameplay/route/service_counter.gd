@@ -32,8 +32,8 @@ func get_prompt() -> String:
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
-	shop.call(&"open_for_crew")
 	var peer: int = int(player.get_multiplayer_authority())
+	shop.call(&"open_for_crew", peer)
 	if multiplayer.multiplayer_peer == null or peer == multiplayer.get_unique_id():
 		_open_locally()
 	else:

@@ -347,3 +347,4 @@ WORLD_SERVICE_SIGN_NEAR,dársena a la derecha,pull in on the right
 WORLD_SERVICE_COUNTER_PROMPT,Mostrador: reponer el kit,Counter: restock the kit
 WORLD_SERVICE_NOTICE_BOUGHT,Compraron %s en la estación (-$%d),Bought %s at the station (-$%d)
 WORLD_SERVICE_NOTICE_FIXED,El repuesto arregló el camión en el lugar.,The spare part fixed the truck on the spot.
+WORLD_SERVICE_NOTICE_NO_MONEY,No alcanza la plata para %s ($%d),Not enough money for %s ($%d)
