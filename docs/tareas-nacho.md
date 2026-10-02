@@ -3105,16 +3105,36 @@ y de la fila de la tienda contra el resto del depósito (sin cajas de color plan
   mérito desplazado, es de sesión; si se cierra el juego antes de que vuelva, se pierden). Los accesorios de quien se
   desconecta quedan en su color. Tests: `test_crew_campaign_save.gd` y `test_network_rejoin.gd` ampliados;
   `test_crew_progression.gd` espera la versión 3.
-- [ ] **N-923.3** Compra con la plata del equipo: las ofertas de accesorios se suman a las de `ShopVoteManager` /
+- [x] **N-923.3** Compra con la plata del equipo: las ofertas de accesorios se suman a las de `ShopVoteManager` /
   `Depot` (cara `shop` de `depot_panel.gd`) con `buyer`; el host cobra con `CrewProgression.spend()` una vez y hace
   `grant()` al comprador; la misma compra al toque en solitario. Respeta Prioridad/Descuento y el fallo sin plata.
   Con `constructor-progresion` + `constructor-ui` (fila de la tienda con vista previa, precio y "ya lo tenés"); tests
   `shop_vote`, `depot`. Esfuerzo `Opus 5.5 · high`.
-- [ ] **N-923.4** Venta en las paradas de servicio: `ServiceStopShop.offers()` suma los accesorios con el recargo de la
+  **[x] Hecho (2026-10-02, rama `nacho/N-923-accessory-shop`, `7a0e8747`)** — `scripts/core/accessory_offers.gd`
+  (`AccessoryOffers`, puro: una oferta por accesorio y comprador, id `accessory:<peer>:<id>`, `cost()` = precio x
+  recargo (nunca menos de 1) y mitad con Descuento, `blocked_ids`, `block_reason`). `CrewProgression.buy_accessory(
+  buyer_color, id, price_multiplier, discount_peer) -> {ok, reason, cost}`: valida todo antes de mover nada, así que
+  solo gasta si el `grant` va a salir (copia ya tenida, id/comprador desconocido, sin plata o sin carta no cobran; una
+  compra fallida no gasta la carta); es la función de host que N-923.5 envolverá en un RPC (sin RPCs nuevos acá).
+  `ShopVoteManager`: las ofertas por defecto suman el estante por jugador conectado; el voto que cierra sobre una oferta
+  de accesorio la liquida el host (`settle_accessory_offer(offer)`, también llamable directo) para **su comprador**, no
+  para quien votó; `buy`/`use_priority`/`use_discount` cierran sin cobrar y la liquidación gasta una sola vez (Prioridad
+  no se come la carta si no se puede comprar; el depósito no vende con la corrida en marcha o con los resultados).
+  `depot_panel.gd`: sección "Accesorios" en la cara `shop` (solo las ofertas del jugador local, "ya lo tenés" / "ya lo
+  tiene otro jugador", compra al toque en solitario, voto online). Textos `UI_ACCESSORY_NOTICE_*`/`_ROW_*`/`_SECTION*`.
+  Tests: `tests/test_accessory_shop.gd` (nuevo). Pendiente de la fila: vista previa del modelo (depende de N-923.9).
+- [x] **N-923.4** Venta en las paradas de servicio: `ServiceStopShop.offers()` suma los accesorios con el recargo de la
   parada (propuesta +40 %, igual que el repuesto) y `_hand_over` los entrega al comprador; `DepotPanel` cara `service`
   los muestra. Un solo catálogo para las dos tiendas: la parada ofrece siempre el catálogo completo con el recargo,
   sin sorteo (decidido 2026-10-02). Con
   `constructor-mundo`; tests `service_stop`. Esfuerzo `Opus 5.5 · high`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-923-accessory-shop`, `980b2d69`)** — `ServiceStopShop.offers()` suma todo el
+  catálogo x `PRICE_MARKUP` 1,4 (gorra 84, chaleco 126, casco 168, mochila 210), una oferta por jugador, con `venue` y
+  `stop`; `unavailable()` bloquea lo que ya tiene alguien; `_purchase` entrega por `buy_accessory` (valida y cobra el
+  recargo, o la mitad con la carta, solo si el otorgamiento sale; no usa `_hand_over` a propósito, porque el gasto va
+  adentro de la compra atómica). `DepotPanel` cara `service` lista las filas del kit y la sección de accesorios del
+  jugador local. `docs/economia-y-contramedidas.md` con las líneas y las contramedidas. Tests: `test_service_stop.gd`
+  ampliado (`_check_accessory_shelf`).
 - [ ] **N-923.5** Red, host autoritativo (`PROTOCOL_VERSION` según `docs/convenciones-godot.md` §6: mirar los PRs
   abiertos que tocan `network_manager.gd`, tomar el siguiente al más alto, hoy 27, y sumar la línea al historial):
   RPCs `request_buy_accessory(id)` / `request_equip_accessory(slot, id)` / `request_drop_accessory(id)` /

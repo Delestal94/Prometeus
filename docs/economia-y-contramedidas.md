@@ -18,6 +18,8 @@ para empezar una partida.
 | Pago de la entrega | puntos de puerta + de carga (típico 300-450) | Línea "Pago del equipo" de los resultados |
 | Recompensa / multa de evento de ruta | +10..25 / -15..30 | Aviso del evento |
 | Suministros del depósito | -100 a -160 (acolchado 160, seguro 140, gancho 120, repuesto 100) | Votación de la tienda, cobra el depósito |
+| Accesorios (depósito) | -60 a -150 (gorra 60, chaleco 90, casco 120, mochila 150; todo el estante 420) | Fila de la tienda, aviso "Compraron X para <color>" |
+| Accesorios (parada de servicio) | -84 a -210 (precio del depósito x1,4, sin sorteo: todo el catálogo) | Fila de la parada, aviso de la estación |
 | Seguro de envío | +50 por caja arruinada entregada | Aviso del depósito |
 | Multa de fauna | -20 / -30 | Aviso en ruta |
 
@@ -42,6 +44,19 @@ para empezar una partida.
   nunca deja menos de 10 s y nunca se aplica al cerrar la corrida.
 - **Votar en bloque.** Sin cambios: la tienda la resuelve el anfitrión, el empate va al más barato
   y solo el depósito cobra, una vez por suministro.
+- **Accesorios (N-923.3/.4).** Son cosméticos: no cambian nada de la entrega. Solo se
+  cobran si el otorgamiento va a funcionar (`CrewProgression.buy_accessory` valida dueño,
+  plata y carta antes de gastar): ni una copia ya comprada, ni un id desconocido, ni sin plata
+  ni sin la carta de Descuento cobran, y una compra fallida no gasta la carta. Hay un solo
+  ejemplar de cada uno: quien lo tiene lo bloquea para todos. Solo, uno puede comprarse el
+  estante entero; online hace falta que la votación lo apruebe (votar en bloque no abre nada
+  nuevo: la plata es del grupo igual). No hay
+  reembolso ni venta: farmear una ruta fácil o tirar la corrida no devuelve plata
+  gastada en accesorios. La parada cuesta x1,4 el depósito, así que comprar en ruta nunca
+  conviene más que antes de salir. El comprador es quien pidió la oferta (id con su peer),
+  no el ganador de la votación; Prioridad y Descuento valen igual que con los suministros
+  y la carta solo se gasta si la compra se hizo. Pendiente de N-923.11: contrastar los
+  precios con lo que paga una entrega (el estante entero, 420, es una entrega típica).
 - **Pendiente:** premios y multas de eventos (10..30) y las multas de fauna (20/30) quedaron
   iguales; frente a un pago de 300+ pesan poco y conviene revisarlos con `critico-diseno`.
 
