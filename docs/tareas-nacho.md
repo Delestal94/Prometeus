@@ -2071,7 +2071,7 @@ no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una e
   viejo como fresco: acelerador a fondo otra vez); test en `test_net_prediction`. (b) `_stop_orphaned_run` llama al
   grupo `stops_with_orphaned_run`; `MudSegment.stop_orphaned_run()` suelta el rescate como al fin de la partida. Test en
   `test_mud_prediction` (sin el arreglo, el camión congelado era arrastrado 2,2 m).
-- [ ] **N-922.9** El contador de `NetInputBuffer` se adelanta cuando la latencia de subida crece menos de
+- [x] **N-922.9** El contador de `NetInputBuffer` se adelanta cuando la latencia de subida crece menos de
   `MAX_LEAD + CUSHION` ticks (~115 ms): durante el hueco sigue contando, y cuando los inputs vuelven juega cada uno al
   llegar pero lo rotula con el contador, unos ticks más adelante (`net_input_buffer.gd` `consume()`, regla "Ahead").
   El cliente compara entonces el estado del host "después del input L" con el suyo después de L, cuando el host jugó
@@ -2083,6 +2083,34 @@ no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una e
   perder la tolerancia al jitter. Test en `test_net_prediction` (subida que pasa de 2 a 7 ticks a mitad de camino: el
   input jugado es el del rótulo). Origen: construcción 2026-10-02 (N-922.5). Con `constructor-red`, después
   `auditor-red`.
+  **[x] Hecho (2026-10-02, `cf558086`)** — según `auditor-red` (2026-10-02): (1, medio) reanclar con histéresis:
+  `REANCHOR_TICKS` (15) inputs seguidos que llegan detrás del contador, ninguno a tiempo en el medio, y el contador
+  vuelve una vez a `CUSHION` detrás del más nuevo; una pérdida o un tick sin llegadas no cuentan. El rótulo sigue siendo
+  el contador (no el input jugado: un tick de input retenido mediría mal); los rótulos repetidos tras reanclar los
+  ignora el reconciliador. Agregado `played_seq()`. Test en `test_net_prediction` (subida de 2 a 7 ticks con el input
+  distinto cada tick: sin el arreglo el rótulo quedaba 3 adelante para siempre; con él, vuelve a ser el input jugado
+  ~20 ticks después del cambio; jitter dentro del colchón y 10 % de pérdida no mueven el contador). `net_pair`: la etapa `--net-sim` mueve
+  el volante todo el tiempo y prende el perfil a 1 s de arrancar; el host cuenta ticks seguidos con la pose rotulada
+  adelante del input jugado (20-28 con el arreglo, ~200 sin él; tope 60) y el cliente mide el error medio (1,6 cm antes,
+  2,4-7 cm desde 1 s después; tope +15 cm). Host 14-16 ticks atrás con `--net-sim` (antes 9: el adelanto). (2, bajo)
+  `NetPredictionReconciler.start_snaps`: un `nudge()` lejano salta y cuenta ahí, no en `snaps`; si un estado medido lo
+  reemplaza, reemplaza también su salto. Test en `test_vehicle_prediction` (`_check_quick_handback`: soltar a ~70 km/h
+  y retomar 0,1 s después, a 5-6 m de la pose más nueva del host). (3, bajo) `NetPoseSmoother.configure_sim(sim,
+  lag_share)` (opcional); el camión usa 0,5 en LAN como los estados que predice; test de igualdad en `_check_net_sim`
+  y de `lag_share` en `test_net_pose_smoother`. `PROTOCOL_VERSION` sigue en 27 (sin cambios de RPC ni de
+  replicación). Notas que quedan (bajo/info, sin tarea):
+  - Info: una subida de latencia de d ticks cuesta una corrección única de unos d ticks de recorrido (0,6-1 m a
+    ~12 m/s en `net_pair`, suavizada a ≤ 10 cm/tick; pasados 3 m a alta velocidad sería un salto). Es real: el host
+    retuvo un input esos ticks. Sin el arreglo no había corrección pero quedaba el volante 3 ticks tarde.
+  - Info: si la latencia baja, el contador queda hasta `MAX_LAG` detrás del más nuevo (más demora de input en el host,
+    rótulos correctos); no se reancla hacia adelante antes de eso.
+  - Bajo: retomar el volante mientras el camión dibujado sigue en la mezcla de salida lo lleva de golpe a la pose más
+    nueva del host, un viaje de ida y vuelta atrás (5-6 m a 70 km/h; ahora en `start_snaps`). Extrapolar esa pose
+    medio RTT lo achicaría.
+  - Info: jugadores y cajas (`player_ride.gd`, `package_net_pose.gd`) y `tender_input_lag.gd` siguen con el lag
+    entero de `--net-sim` en LAN (Steam: la mitad por sentido); solo el camión se alineó.
+  - Info (herramienta de prueba): apagar `--net-sim` a mitad de manejo deja en la cola las poses e inputs retenidos;
+    salen tarde (los inputs, ignorados por viejos) y el búfer de poses infla su jitter un rato.
 
 ## 3. Arte y dirección visual
 

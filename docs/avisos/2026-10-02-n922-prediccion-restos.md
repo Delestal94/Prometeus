@@ -1,4 +1,4 @@
-# Predicción del camión: restos de la auditoría de red (N-922.3 a N-922.8)
+# Predicción del camión: restos de la auditoría de red (N-922.3 a N-922.9)
 
 **Fecha:** 2026-10-02 · **De:** Nacho (red) · **Para:** Slatex
 
@@ -17,6 +17,15 @@ en 27 y un cliente de antes de este cambio se entiende con un host nuevo (y al r
     salto de la cámara.
   - `NetInputBuffer.is_stale()` (mismo nombre, otro alcance): sigue verdadero hasta que se juega un input llegado
     después del corte, no solo hasta que llega uno.
+  - `NetInputBuffer.consume()` (misma firma, otra regla, N-922.9): si la latencia de subida crece y los inputs llegan
+    detrás del contador `REANCHOR_TICKS` (15) veces seguidas, el contador vuelve a `CUSHION` detrás del más nuevo. El
+    número que devuelve `consume()` puede repetirse unos ticks justo después (el reconciliador ya ignora los que dejó
+    atrás). Agregados: `REANCHOR_TICKS` y `played_seq()` (número del input entregado).
+  - `NetPredictionReconciler.start_snaps` (agregado, N-922.9): los saltos de un `nudge()` lejano se cuentan ahí y ya
+    no en `snaps`, que queda para errores de predicción medidos.
+- **Zona compartida, `modules/net_pose_smoother/`:** `NetPoseSmoother.configure_sim(sim, lag_share = 1.0)` (parámetro
+  agregado, opcional). El camión usa 0,5: con `--net-sim` en LAN sus poses llegan con la mitad del lag, como los
+  estados del host contra los que predice (antes, el lag entero). Jugadores y cajas siguen igual.
 - **Zona compartida, comentarios:** `modules/net_session/net_stats.gd` (qué simula `--net-sim` en LAN) y
   `docs/modulos.md` (catálogo de `net_prediction`).
 - **Mío (camión, ruta, depósito):** `TruckPassThrough` (`scripts/gameplay/vehicle/truck_pass_through.gd`, nuevo): los
@@ -27,8 +36,10 @@ en 27 y un cliente de antes de este cambio se entiende con un host nuevo (y al r
   predicha; `MudSegment.stop_orphaned_run()`.
 - **`scripts/gameplay/level_common.gd` `_stop_orphaned_run`:** además de congelar el camión, llama al grupo
   `stops_with_orphaned_run` (`stop_orphaned_run()`): el barro suelta el rescate en vez de seguirlo como host huérfano.
-- **Pruebas:** `net_trio` agrega `through=` a la línea TRIO; `net_pair` maneja 2 s más con el perfil `--net-sim`
-  estándar e imprime una segunda línea `DRIVE` (`tools/run-net-pair.sh` muestra todas). Nuevo `test_mud_prediction`.
+- **Pruebas:** `net_trio` agrega `through=` a la línea TRIO; `net_pair` maneja con el perfil `--net-sim` estándar e
+  imprime una segunda línea `DRIVE` (`tools/run-net-pair.sh` muestra todas). Desde N-922.9 esa etapa mueve el volante
+  todo el tiempo y prende el perfil a mitad de manejo; la línea `DRIVE role=host` agrega cuántos ticks seguidos la pose
+  salió rotulada adelante del input jugado. Nuevo `test_mud_prediction`.
 
 ## Qué tiene que hacer Slatex
 
