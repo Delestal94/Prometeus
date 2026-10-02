@@ -75,7 +75,9 @@ func _initialize() -> void:
 	# here is whether four simultaneous traps keep working during real
 	# sustained streaming, not obstacle navigation (that's test_vehicle_stress.gd).
 	var streamer: Node = level.get_node(^"World/RouteStreamer")
-	streamer.set(&"segment_scripts", [StraightSegment, SpeedBumpSegment])
+	# Typed: a plain Array into the Array[Script] property is silently dropped.
+	var pool: Array[Script] = [StraightSegment, SpeedBumpSegment]
+	streamer.set(&"segment_scripts", pool)
 
 	var van: VehicleBody3D = level.vehicle
 	van.controls_enabled = false

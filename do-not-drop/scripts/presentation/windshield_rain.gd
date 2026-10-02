@@ -136,12 +136,18 @@ func _on_low_visibility_changed(is_starting: bool, _kind: StringName, duration: 
 		mud_material.set_shader_parameter(&"brightness", MUD_LIGHT[time_of_day])
 
 
+## The session as the module's NetSession (N-224.4): a class, not the
+## autoload's name, so it compiles before the autoloads are up.
 func _local_peer_id() -> int:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return int(network.call(&"local_id")) if network != null else 1
+	var network := get_node_or_null(^"/root/NetworkManager") as NetSession
+	return network.local_id() if network != null else 1
 
 
 ## Whether this client is the one at the wheel: the only one the mud is on.
+## The truck's driver_peer_id and presentation_engine_running and its
+## presentation's viewer_inside() stay by name (N-224.4): vehicle.gd builds
+## this node through reference_truck.gd, and vehicle_presentation.gd reaches
+## vehicle.gd through cargo_clutter.gd, so preloading either here is a cycle.
 func _local_is_driving() -> bool:
 	return vehicle != null and int(vehicle.get(&"driver_peer_id")) == _local_peer_id()
 

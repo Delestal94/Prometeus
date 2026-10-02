@@ -5,7 +5,9 @@
 > **Fase 1 hecha (2026-09-30, N-606.1 y N-606.2)**: apodo, `RunChronicle`, `NewsDesk`, catálogo y la página 2D
 > antes de los resultados (`scripts/presentation/newspaper/`, `hud_newspaper.gd`). Las casillas del catálogo
 > son `{town}`, `{house}`, `{neighbor}`, `{player}`, `{km}`, `{minutes}` y `{count}`; `test_news_desk` y
-> `test_run_chronicle` las cubren. Falta la escena 3D (N-606.3) y el resto.
+> `test_run_chronicle` las cubren.
+> **Fase 2 hecha (2026-10-01, N-606.3)**: la escena reemplaza a la página 2D. Ver «La escena (N-606.3)» al final.
+> Falta el pulido de cine (N-606.4, en pausa con S-311).
 
 ## La idea en una línea
 
@@ -148,7 +150,7 @@ baches"), pronóstico ("Mañana: nublado con probabilidad de cajas").
 ## Cómo se construye (técnica)
 
 - **Carpeta**: `scripts/presentation/newspaper/` (dominio de Nacho: ambientación/presentación).
-  `newspaper_director.gd` (la secuencia), `newspaper_page.gd` (la página como `Control`),
+  `newspaper_director.gd` (la secuencia), `newspaper_spread.gd` (las páginas como UI),
   `news_desk.gd` (redacción pura), `run_chronicle.gd` (hechos). Escena del set en
   `scenes/presentation/newspaper_set.tscn` armada por código como el resto.
 - **Cámara**: reusar el formato de rieles de `TrailerCamera` (`data/trailer_shots.json`: puntos `at` /
@@ -206,3 +208,98 @@ Agentes por pieza: `modelador-blender` (set, diario, clips), `artista-shaders` (
   - Viaja a los demás como el resto de la apariencia (`player_appearance.gd`), para que el host lo meta en
     las casillas del diario.
   - Toca jugador y UI (dominio de Slatex): lleva aviso en `colaboracion-equipo.md`.
+
+## Estudio visual de la escena (2026-10-01)
+
+Prueba de dirección de arte en Godot con assets del juego, **no** la cinemática N-606.3: no toca
+la página 2D de entonces, `NewsDesk`, `HudResults`, la red ni el flujo de resultados. Script, shaders y forma
+de correrlo: `scripts/tools/newspaper_concept/` y `art/newspaper/LEEME.md`. Capturas en
+`art/newspaper/review/`.
+
+### Decisiones
+
+- **Set**: réplica aislada de la oficina del depósito N-319 (escritorio, lámpara, reloj, persianas y
+  corcho del kit), fondo con menos contraste que la cara y el diario. Luz cálida, sin post.
+- **El Jefe**: el cuerpo redondeado actual con `CharacterFace`, pero con **camisa celeste de oficina y
+  bigote** para que no se confunda con la tripulación (mismo cuerpo, en naranja). No se crea otro cuerpo.
+- **El diario es papel de diario, no UI**: papel gris cálido y tinta casi negra (no la crema y el azul
+  de `UiTheme`), iluminado como el resto del set, con fibra, pliegues, bordes amarillentos y el reverso
+  apenas transparentado. Cuatro pliegos con pliegue central en V; sostenido solo por abajo, las puntas
+  de afuera se caen.
+- **Diagramación de diario**: folio con fecha arriba de cada página, etiqueta de sección, titular,
+  bajada, foto con trama de puntos y pie, columnas con filetes, recuadro de clasificados y avisos chicos.
+  Las noticias de la partida van grandes; alrededor, columnas de texto chico justificado de relleno que
+  dan la textura de un diario de verdad sin competir con ellas. La tapa (el lado que ve la oficina
+  mientras el Jefe lee) tiene cabezal, fecha, número y precio.
+- **Tipografías**: Lilita One en titulares, Nunito en bajadas y cuerpos grandes. El relleno y los pies
+  usan una serif del sistema en el estudio; **producción lleva una serif OFL empaquetada** (como ya
+  pedía la sección de arquitectura).
+- **Legibilidad**: la doble página orienta; cada bloque tiene su primer plano casi perpendicular al
+  papel, del lado opuesto a la cabeza del Jefe, con el texto de la noticia a 24 px o más a 720p. Las
+  manos sostienen las esquinas sin tapar noticias. Si un texto real no entra, se pagina; nunca se achica.
+- **Ritmo (30 s, salteable)**: general con rótulo → recorrido por el costado hasta la doble página →
+  primer plano de cada noticia con pausa de lectura (5–5,5 s) → doble página → el Jefe baja el diario y
+  reacciona → resultados con la cara despejada. La cámara se detiene antes de leer; no orbita sobre el
+  texto. La reacción va según la partida; escupir el mate queda para desastres excepcionales.
+- **Formato**: 16:9 sin bandas (revisa la propuesta de 2,35:1), para no perder superficie de lectura.
+
+### Pendiente para producción
+
+Integrarlo con `NewsDesk` (3–5 noticias y sus textos reales, con traducciones), audio, paso de
+página, birome, saltar y resultados reales, contacto fino de los dedos y los clips del Jefe. Las
+noticias, el pueblo y "3 de 5" del estudio son de ejemplo.
+
+## La escena (N-606.3, 2026-10-01)
+
+Lo que quedó construido sobre el estudio:
+
+- **Piezas** (`scripts/presentation/newspaper/`): `NewspaperSpread` imprime el diario de la partida en dos
+  `SubViewport` de 2048×1448 (`inner`: páginas 2 y 3 que lee el Jefe; `outer`: la tapa con el cabezal hacia la
+  oficina y la contratapa de avisos). Cada noticia tiene su caja fija y toma el tamaño más grande de su lista que
+  entra; la bajada va pegada al titular. `NewspaperSet` arma la oficina, el Jefe (cuerpo redondeado tal cual,
+  camisa celeste y bigote) y las cuatro hojas con el shader de papel (`newspaper_stock.gdshader`, que salió de
+  `tools/`). `NewspaperDirector` es el `Control` a pantalla completa: su `SubViewport` con `World3D` propio, la
+  cámara, el rótulo, las bandas, el aviso de saltar y el reloj.
+- **Planos en datos** (`data/newspaper/shots.json`): general con rótulo «A la mañana siguiente…» y bandas →
+  acercamiento por el costado → doble página → un primer plano por noticia (tapa, cada secundaria y el
+  clasificado), encuadrado para que entre el bloque entero → doble página → el Jefe baja el diario y reacciona
+  (espanto si hubo noticias; contento con el «escándalo» de la partida limpia), con bandas y un poco de cámara
+  en mano. Las poses son rieles del módulo nuevo `camera_rail` (`CameraRail`: el formato de `TrailerCamera`
+  más `fov` y `up`, con un solo suavizado por movimiento). La pausa de lectura se reparte para que todo dure
+  `length_seconds` (30 s; entre 2,8 y 5,5 s por noticia).
+- **Bandas**: solo en el plano general y en la reacción; los primeros planos van en 16:9 enteros, como pidió el
+  estudio, para no perder superficie de lectura.
+- **Saltar**: mantener Interactuar, Saltar o Atrás 0,6 s (anillo que se llena; el aviso aparece al segundo). Un
+  botón que ya estaba apretado cuando empezó (el salto que terminó la partida) no cuenta hasta soltarlo.
+- **Opción**: Opciones → «Diario al final»: siempre / si pasó algo (sin el «escándalo» de la partida limpia) /
+  nunca (`GameSettings.newspaper_mode`).
+- **Resultados**: `HudNewspaper.present()` arranca la escena; al terminar o saltarla emite `newspaper_finished`
+  y la tarjeta de siempre aparece (con su ilustración de fondo, S-307: la escena no queda detrás). Mientras
+  dura, el mundo de la partida no se dibuja (`disable_3d` en la ventana) para que el set no cueste el doble.
+- **Red**: sin cambios: el host reparte el diario (`newspaper_ready`) y cada uno ve y salta la escena por su cuenta.
+- **Pruebas**: `test_newspaper_scene.gd` (flujo, contenido, encuadre y tamaño de letra de cada primer plano a
+  720p, saltar, opción, todo el catálogo entrando en sus cajas en los dos idiomas) y
+  `modules/camera_rail/tests/test_camera_rail.gd`. Capturas: `tests/render_newspaper_scene.gd`.
+- **Pendiente**: audio, giro de tapa, paso de página y birome, clips del Jefe (N-606.4, en pausa con S-311).
+
+## Fotos y tipografía (N-606.5, 2026-10-01)
+
+- **Cómo se sacan**: `NewsPhotographer` (hijo del nivel, al lado de `RunChronicle`) escucha los hechos que ya
+  viajan por `EventBus` a todos: ciervo u ovejas atropellados (`route_event_started` con `incident`), la puerta de
+  atrás que se abre y el espejo que se cae (`vehicle_fault_started`) y una caja que queda en la ruta
+  (`cargo_overboard`). Tras una demora corta (que la puerta ya se haya abierto) saca una foto de 384×216 con
+  `PressPhoto` (módulo nuevo `press_photo`): una cámara propia en un `SubViewport` que comparte el mundo de la
+  partida, dibujada una sola vez y leída de vuelta. Los ángulos están en `NewsPhotographer.SHOTS` (ciervo desde
+  adelante del camión, puerta desde atrás, espejo desde el costado, caja desde más allá con el camión detrás).
+  Una por hecho y como mucho seis por partida.
+- **Red**: nada nuevo. Cada jugador saca su propia foto del mismo momento; el diario (ids y casillas) sigue
+  siendo del host. En headless no se saca ninguna.
+- **En el diario**: la foto de la noticia de tapa si la hay, si no la de la primera noticia de abajo que tenga.
+  Va con trama de puntos (`halftone.gdshader`, puntos cada 6 px de página) debajo de la noticia principal, a dos
+  columnas, con epígrafe en PT Serif cursiva (`HUD_NEWS_PHOTO_CAPTION_*`), y la misma foto en la tapa que ve la
+  oficina. Tiene su primer plano propio después del de la tapa. Las noticias de una casa (foto de entrega,
+  reclamo) usan la foto del celular de esa puerta (`RunManager.delivery_photos`) si la sacó este jugador.
+- **Tipografía**: el relleno y los epígrafes usan PT Serif (OFL, `assets/fonts/PTSerif-*.ttf` con su licencia),
+  con Nunito de respaldo para glifos que falten.
+- **Encuadre**: el acercamiento pasa por detrás de la cabeza del Jefe, así la nariz y el bigote ya no asoman por
+  el borde del diario.

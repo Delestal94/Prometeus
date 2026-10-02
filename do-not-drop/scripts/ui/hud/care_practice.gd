@@ -81,7 +81,7 @@ func _init() -> void:
 		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text.custom_minimum_size.x = WIDTH - 32 - 30
 		_rows.append(text)
-	var note: Label = UiThemeScript.label(column, "Cuando quieras, subite a manejar para salir.", 16,
+	var note: Label = UiThemeScript.label(column, tr("HUD_PRACTICE_NOTE"), 16,
 		UiThemeScript.MUTED)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size.x = WIDTH - 32
@@ -164,9 +164,9 @@ func _refresh(keys: Dictionary) -> void:
 	for i: int in _rows.size():
 		var text: String = tr(STEP_TEXTS[i])
 		if i == 1 or i == 3:
-			text = text % keys.get("primary", "Clic izq.")
+			text = text % keys.get("primary", tr("HUD_CARE_KEY_LEFT_CLICK"))
 		elif i == 2:
-			text = text % keys.get("tool", "Clic der.")
+			text = text % keys.get("tool", tr("HUD_CARE_KEY_RIGHT_CLICK"))
 		elif i == 0:
 			text += " (%s)" % keys.get("interact", "E")
 		_rows[i].text = text

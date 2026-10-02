@@ -20,6 +20,8 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 const TutorialData = preload("res://scripts/ui/tutorial_catalog.gd")
 const RunShake = preload("res://scripts/gameplay/package/package_run_shake.gd")
 const SynthAudioSteps = preload("res://modules/synth_audio/synth_audio_steps.gd")
+## What the NetworkManager autoload runs (world_seed is not on NetSession).
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 
 ## Ground speeds, m/s. Walking is Player.WALK_SPEED (3.6).
 const RUN_SPEED: float = 6.0
@@ -120,7 +122,7 @@ static func speed_for(is_running: bool, package: DeliveryPackage) -> float:
 
 static func is_heavy(package: DeliveryPackage) -> bool:
 	return package != null and package.trap_definition != null \
-			and StringName(package.trap_definition.get(&"id")) == HEAVY_TRAP
+			and package.trap_definition.id == HEAVY_TRAP
 
 
 ## True while the crew member is in a state that allows running at all.
@@ -265,8 +267,8 @@ static func stumble_chance(hazard: float) -> float:
 func run_seed() -> int:
 	if seed_override != 0:
 		return seed_override
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	var world_seed: int = int(network.get(&"world_seed")) if network != null else 0
+	var network := get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
+	var world_seed: int = network.world_seed if network != null else 0
 	return hash([world_seed, player.get_multiplayer_authority()]) if world_seed != 0 else _solo_seed
 
 
@@ -338,8 +340,8 @@ func play_stumble() -> void:
 
 
 func _show_first_run_tip() -> void:
-	var profile: Node = get_node_or_null(^"/root/UnlockManager")
-	if profile == null or not bool(profile.call(&"mark_tip_seen", TIP_ID)):
+	var profile := get_node_or_null(^"/root/UnlockManager") as UnlockProfile
+	if profile == null or not profile.mark_tip_seen(TIP_ID):
 		return
 	var bus: Node = get_node_or_null(^"/root/EventBus")
 	if bus != null:

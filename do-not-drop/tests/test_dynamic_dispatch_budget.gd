@@ -43,10 +43,15 @@ extends SceneTree
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the
 ##   autoload runs, `as NETWORK_MANAGER` would give null and no shot (nor the
 ##   store stills) would set up.
+## - player_sprint.gd (running) rolls the trip from the session's world_seed through its NETWORK_MANAGER
+##   handle: if that stopped being the script the autoload runs, every runner would roll from a solo seed
+##   and the peers would stop agreeing on who trips.
 ## - vehicle_faults.gd (the truck's faults) holds its effects and repair spots by preload and the phone
 ##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
 ## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
 ##   the crew's money and the incident relay stay by name.
+## - flock_crossing.gd (the sheep crossing) drives its sheep through the wildlife_animal.gd type; only the
+##   crew's money (the fine) stays by name.
 ## - package_contents_view.gd (the box's flaps and contents) holds its box as DeliveryPackage and the
 ##   contents as PackageContent; only the EventBus connects stay by name.
 ## - seat_point.gd (the cargo seats) holds the player as Player, the boxes as DeliveryPackage and the mounts
@@ -56,6 +61,9 @@ extends SceneTree
 ## - cargo_animal_view.gd (what the crew sees of the cargo animals) holds its director as CargoAnimals, the
 ##   truck by preload of vehicle.gd, the box as DeliveryPackage and the dog through wildlife_animal.gd; only
 ##   the EventBus connects stay by name.
+## - rail_crossing_segment.gd (the level crossing) rolls whether it closes from the session's world_seed
+##   through its NETWORK_MANAGER handle: if that stopped being the script the autoload runs, every crossing
+##   would roll from seed 0 and a client would start its own barrier cycle instead of asking the host.
 ## - mud_segment.gd (the mud stretch) holds its spot, crane, run log and session typed; the crew's money, the
 ##   run mode, the truck's `carries` and the tests' FakePlayers stay by name (see its budget).
 
@@ -79,11 +87,21 @@ const BUDGETS: Dictionary = {
 	# are the null-safe autoload accessors (NetworkManager, CrewProgression,
 	# UnlockManager, RunManager, EventBus).
 	"res://scripts/gameplay/depot/depot.gd": {"call": 1, "callv": 0, "get": 1, "root": 5},
+	# The depot's order draw (N-224.4) reads the traps as TrapDefinition (id, difficulty) and the boxes as
+	# DeliveryPackage (trap_definition): what is not one (a null slot) is skipped, as before. Nothing by name.
+	"res://scripts/gameplay/traps/order_balancer.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The trailer tool (N-902) drives the real level: level_base.gd, route.gd,
 	# vehicle.gd and package_mount_point.gd by preload (no class name), the
 	# camera, segments, deer crossing, house, player and boxes by class. The one
 	# /root/ lookup is the NetworkManager handle (NETWORK_MANAGER, below).
 	"res://scripts/tools/trailer_shot.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The play area (N-224.4) holds the level as LevelCommon (local_player, depot as Depot), the player as
+	# Player (seat_node_path), the endless road as SegmentStreamer and the route's terrain as TerrainField
+	# (spans). Three .get left: the level's `_streamer` and `route` and the route's `terrain`, by name because
+	# level_endless.gd, level_base.gd and route.gd have no class name and preloading the levels here loops
+	# back through level_common.gd, which preloads this file. The /root/ lookup is the null-safe EventBus
+	# handle of the edge notice.
+	"res://scripts/gameplay/play_area.gd": {"call": 0, "callv": 0, "get": 3, "root": 1},
 	# Three .call left, one .get and one /root/ (N-225.4 moved the rest to the files below). Two .call go to
 	# the truck, found through the "vehicle" group: needs_sweep and carries. vehicle.gd has no class name,
 	# and tests put plain Node fakes with those methods in the group (`as` a typed vehicle would drop them).
@@ -131,6 +149,11 @@ const BUDGETS: Dictionary = {
 	# finds the node). The two /root/ lookups are the null-safe GameSettings and
 	# UnlockManager accessors.
 	"res://scripts/gameplay/player/player_cargo_care.gd": {"call": 1, "callv": 0, "get": 4, "root": 2},
+	# Boarding and leaving seats (N-224.4): the seat camera is a SeatCamera (activate, deactivate), the seat's
+	# InteractionArea a SeatPoint (release_occupant) and the session a NetSession (is_online, is_host); what is
+	# not one is skipped, as the has_method checks did. The release RPC to the host stays rpc_id by name, like
+	# every RPC. The two /root/ lookups are the null-safe accessors (EventBus for the fade, NetworkManager).
+	"res://scripts/gameplay/player/player_seat_pose.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
 	# Nothing by name: the box (DeliveryPackage), the players (Player) and the
 	# seats (CargoSeatPoint, seat_point.gd's class name) are typed. Group members
 	# of another type (a test's stand-ins) are skipped with `as`, not called.
@@ -150,6 +173,12 @@ const BUDGETS: Dictionary = {
 	# crew_progression.gd builds compile cycles, see package_autoloads.gd). The three /root/ lookups
 	# are the null-safe accessors (EventBus, NetworkManager, CrewProgression).
 	"res://scripts/gameplay/player/player_interaction.gd": {"call": 3, "callv": 0, "get": 0, "root": 3},
+	# Running (N-224.4): the heavy box's trap as TrapDefinition (id), the session through NETWORK_MANAGER
+	# (world_seed, below) and the profile as UnlockProfile (mark_tip_seen). The one .call left is the route's
+	# ground_roughness, found through the "route" group: route.gd has no class name and tests put plain
+	# ground stand-ins with that method in the group. The three /root/ lookups are the null-safe accessors
+	# (NetworkManager, UnlockManager, EventBus for the tip, by name because a test may replace it).
+	"res://scripts/gameplay/player/player_sprint.gd": {"call": 1, "callv": 0, "get": 0, "root": 3},
 	# The mud stretch (N-108) is typed: the push spot (mud_spot.gd), the crane
 	# (mud_crane.gd) and the run log (mud_run_log.gd) by preload, the session as
 	# NetSession and the truck's freeze as the VehicleBody3D property it is.
@@ -168,11 +197,25 @@ const BUDGETS: Dictionary = {
 	# the null-safe accessors (EventBus, NetworkManager, CrewProgression,
 	# RunManager).
 	"res://scripts/gameplay/route/segments/mud_segment.gd": {"call": 5, "callv": 0, "get": 5, "root": 4},
+	# The level crossing (N-224.4) reaches the session through NETWORK_MANAGER (world_seed, is_online,
+	# is_host; below). The one /root/ lookup is that null-safe accessor (_network()).
+	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
 	# The delivery level is typed: the route and the truck through their scripts
 	# (route.gd and vehicle.gd by preload, no class name), the houses as
 	# DeliveryHouse and the goal as RouteGoalLot; the route's and the houses'
 	# signals are connected by the signal. Nothing left by name.
 	"res://scripts/gameplay/level_base.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The truck radio's dial and program (N-224.4): the radio as TruckRadio (mode, mode_key, its signals
+	# connected by the signal) and the sounds through synth_audio_radio.gd by preload (warm, the loops and
+	# cues). Nothing left by name.
+	"res://scripts/presentation/truck_radio_view.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# Rain and mud on the windshield (N-224.4): the session as NetSession (local_id). One .call and two .get
+	# left, on the truck it sits in: driver_peer_id and presentation_engine_running, and the presentation's
+	# viewer_inside(). By name because vehicle.gd builds this node through reference_truck.gd and
+	# vehicle_presentation.gd reaches vehicle.gd through cargo_clutter.gd: preloading either is a cycle. The
+	# two /root/ lookups are the null-safe accessors (EventBus, connected by name because the tests load
+	# this before the autoloads; NetworkManager).
+	"res://scripts/presentation/windshield_rain.gd": {"call": 1, "callv": 0, "get": 2, "root": 2},
 	# The animals that go for the cargo (N-109) are typed: the truck through vehicle.gd by preload (no class
 	# name), the session through NETWORK_MANAGER (world_seed, is_host and peer_level_ready, below), the box
 	# (DeliveryPackage, its _has_previous_velocity too) and its contents (PackageContent). One .call left: the
@@ -181,6 +224,11 @@ const BUDGETS: Dictionary = {
 	# package_autoloads.gd). The three /root/ lookups are the null-safe accessors (EventBus, NetworkManager,
 	# RunManager).
 	"res://scripts/gameplay/route/cargo_animals.gd": {"call": 1, "callv": 0, "get": 1, "root": 3},
+	# The mud on the windshield (N-224.4): the level as LevelCommon, its truck through vehicle.gd by preload
+	# (driver_peer_id) and the route through route.gd by preload (houses, stop_road_distance, road_distance).
+	# The one .get left is the level's `route`: only level_base.gd has it, and preloading the levels here
+	# loops back through level_common.gd, which preloads this file.
+	"res://scripts/gameplay/route/low_visibility_event.gd": {"call": 0, "callv": 0, "get": 1, "root": 0},
 	# The box's presentation (N-224.4) is typed: the box (DeliveryPackage), its trap (TrapDefinition,
 	# HostileTrapBehavior, ExplosiveTrapBehavior, LiquidTrapBehavior), its contents (PackageContent) and the
 	# settings (GAME_SETTINGS, below). Nothing left by name but two /root/ lookups: the null-safe GameSettings
@@ -209,6 +257,11 @@ const BUDGETS: Dictionary = {
 	# by name because a test may replace EventBus with a plain Node. The three /root/ lookups are the
 	# null-safe accessors (EventBus twice, CrewProgression).
 	"res://scripts/gameplay/route/wildlife_crossing.gd": {"call": 2, "callv": 0, "get": 1, "root": 3},
+	# The sheep crossing (N-224.4) drives its flock through wildlife_animal.gd by preload, like the deer (run,
+	# idle, tumble, steered). One .call and one .get left: CrewProgression's spend and team_money, by name for
+	# the compile reason in wildlife_crossing.gd. The two /root/ lookups are the null-safe accessors (EventBus
+	# for the horn, connected by name because a test may replace it with a plain Node; CrewProgression).
+	"res://scripts/gameplay/route/flock_crossing.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
 	# The box's flaps and contents (N-224.4) read the box as DeliveryPackage (package.gd never loads this
 	# view, so no cycle) and its content as PackageContent. The one /root/ lookup is the null-safe EventBus
 	# handle: it connects by name because a test may replace EventBus with a plain Node, as in
@@ -234,6 +287,21 @@ const BUDGETS: Dictionary = {
 	# /root/ lookups are the null-safe accessors: NetworkManager and EventBus twice (the reaction and the
 	# doorbell light connect by name because a test may replace EventBus with a plain Node).
 	"res://scripts/gameplay/route/delivery_house.gd": {"call": 0, "callv": 0, "get": 0, "root": 3},
+	# The spectator and results cameras (N-224.4): the session as NetSession (local_id), the local player as
+	# Player (_seated, tended_package), the box as DeliveryPackage (trap_state), the results shot through
+	# results_orbit.gd by preload (target, frame_parked) and the goal lot as RouteGoalLot. By name stay
+	# RunManager.is_running (preloading run_manager.gd from the truck's presentation breaks --script
+	# compiles) and the truck's driver_peer_id (vehicle.gd preloads the presentation that makes this camera).
+	"res://scripts/presentation/spectator_camera.gd": {"call": 0, "callv": 0, "get": 2, "root": 2},
+	# The delivery photo (N-224.4): the houses as DeliveryHouse (porch_position, house_index, delivered,
+	# outcome; what is not one is skipped) and the truck through vehicle.gd by preload (has_manual_gearbox,
+	# driver_peer_id; the has_method check goes). Nothing left by name.
+	"res://scripts/presentation/phone_camera.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The dashboard GPS (N-224.4): the route through route.gd by preload (houses, stop_road_distance,
+	# road_distance, goal_bay_number, goal_target) and the boxes as DeliveryPackage (care_state). By name
+	# stay RunManager's current_distance and best_score (same --script compile reason as the spectator
+	# camera: the truck's presentation builds the GPS) and the EventBus handle.
+	"res://scripts/presentation/dashboard_gps.gd": {"call": 1, "callv": 0, "get": 1, "root": 2},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -265,10 +333,16 @@ const SCRIPT_HANDLES: Dictionary = {
 	"res://scripts/tools/trailer_shot.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
+	"res://scripts/gameplay/player/player_sprint.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
 	"res://scripts/gameplay/player/player_cargo_care.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",
 	},
 	"res://scripts/gameplay/route/cargo_animals.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
+	"res://scripts/gameplay/route/segments/rail_crossing_segment.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 	"res://scripts/gameplay/route/delivery_house.gd": {

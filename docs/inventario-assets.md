@@ -49,7 +49,7 @@
 | Íconos de acción del HUD (×9) | `ui/icons/tx_ui_action_*_128.png` | ✅ | Agarrar, soltar, sentarse, timbre, foto, bocina, ping, abrir caja y usar carta; `UiTheme.action_icon()` los muestra junto a los avisos de interacción. |
 | Marco del celular / UI de cámara | `scripts/ui/phone_frame.gd` (por código) | ✅ | S-304: bisel, barra de estado y obturador armados como `Control`, sin imagen. |
 
-| Tipografías | `assets/fonts/LilitaOne-Regular.ttf`, `Nunito-Variable.ttf` | ✅ | OFL (licencias al lado). Sistema de UI en `docs/direccion-visual.md` §3. |
+| Tipografías | `assets/fonts/LilitaOne-Regular.ttf`, `Nunito-Variable.ttf`, `PTSerif-Regular.ttf`, `PTSerif-Italic.ttf` | ✅ | OFL (licencias al lado: `*-OFL.txt`). Sistema de UI en `docs/direccion-visual.md` §3. PT Serif (ParaType, Google Fonts) solo en el diario del día siguiente: texto chico de relleno y epígrafes de foto (N-606.5). |
 
 ## 2. Personajes y viewmodel (dominio Slatex)
 

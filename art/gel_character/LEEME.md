@@ -21,11 +21,8 @@ independientes.
 | Archivo | Estado y uso |
 |---|---|
 | `referencia/referencia_frente.jpg` | Fuente de verdad de silueta, material y luz. |
-| `referencia/proporciones.png` | Copia anotada; las cifras vienen del análisis reproducible de la imagen original. |
+| `referencia/proporciones.png` | La foto original sin retoque con las cotas de la tabla dibujadas en sus píxeles; la genera `annotate_reference.py`. |
 | `referencia/material_objetivo.md` | Muestras sRGB, reflejos, motas, sombra y tolerancias. |
-| `build_gel_character.py` | Genera el candidato histórico sobre el rig redondeado. Sirve como prueba de pipeline, no como forma final. |
-| `gel_character_candidate.glb` | Candidato opaco y regordete. Conserva valor histórico; no es el objetivo. |
-| `gel_character_candidate.png` | Render del candidato para comparar por qué debe reemplazarse. |
 | `validate_glb.py` | Validador glTF actual; el bloque B lo amplía para morphs, malla cerrada y barridos. |
 | `../rounded_character/` | Fuente del rig, nombres de huesos, animaciones y validaciones ya probadas. |
 | `concept/concept_sheet_imagegen_draft.png` | Borrador exploratorio; no reemplaza la hoja final exigida con ComfyUI. |
@@ -34,6 +31,7 @@ independientes.
 | `concept/generate_guided.py` | Reproduce el estudio img2img local; no genera ni modifica modelos del juego. |
 | `referencias.md` | Referencias externas y límites de qué se estudia sin copiar. |
 | `measure_reference.py` | Reproduce máscara, caja corporal y muestras RGB; requiere Pillow y NumPy. |
+| `annotate_reference.py` | Dibuja `referencia/proporciones.png` sobre la foto sin reescalarla; requiere Pillow ≥ 10.1. |
 
 ## Construcción reproducible actual
 
@@ -93,24 +91,20 @@ morph de grosor**, no el preset de seis cabezas que necesita los huesos del bloq
 C; la aprobación completa de 17 debe incluir ese preset. Las capturas son opacas,
 no certifican el material de gelatina ni la coincidencia final de silueta de E.
 
-### Candidato histórico (solo comparación)
-
-Conservado para reproducir la comparación y la regresión del validador genérico:
+### Referencia
 
 ```powershell
 python art/gel_character/measure_reference.py
-blender --background art/rounded_character/personaje_redondeado.blend --python art/gel_character/build_gel_character.py
-python art/gel_character/validate_glb.py art/gel_character/gel_character_candidate.glb
-python art/gel_character/validate_glb.py art/gel_character/gel_character_candidate.glb --max-triangles 6000
+python art/gel_character/annotate_reference.py
 ```
 
-El primer comando reproduce las medidas de la referencia. El segundo vuelve a
-escribir `gel_character_candidate.glb` y `gel_character_candidate.png`.
-El tercero comprueba la estructura actual sin abrir Blender y pasa.
-El cuarto aplica ya el presupuesto final y **falla de forma esperada**:
-el candidato tiene 46.552 triángulos, frente al límite LOD0 de 6.000. El flujo nuevo
-usa `build_gel_body.py` y la opción `--gel-body` sobre los GLB nuevos; nunca se da
-por aprobado el candidato histórico porque pase solamente la validación genérica.
+El primero reproduce las medidas de la referencia; el segundo vuelve a dibujar
+`referencia/proporciones.png` con esas cotas sobre la foto original.
+
+El candidato histórico (`build_gel_character.py`, `gel_character_candidate.glb` y su
+render, 46.552 triángulos y 35 joints) se quitó del árbol el 2026-10-01 como pide
+S-311.9: lo reemplaza `build_gel_body.py` y queda en el historial de git
+(`git show 7a3e211:art/gel_character/gel_character_candidate.glb`).
 
 ## Rasgos visuales obligatorios
 
@@ -184,17 +178,19 @@ checker; no se inventan a partir del JPG.
 | LOD1 | ≤ 2500 triángulos |
 | LOD2 | ≤ 800 triángulos |
 | Morphs de proporción | ≤ 16 |
-| Huesos de juego + jiggle | ≤ 20 huesos exportados en total, incluidos los de jiggle |
+| Huesos exportados | ≤ 26: los 20 de juego + hasta 6 de jiggle (cabeza, panza, antebrazos y pantorrillas, S-311.44) |
 | Texturas | ≤ 1024 × 1024 por mapa |
 | Personaje vestido | ≤ 3 draw calls |
 | GPU, 4 personajes | ≤ +0,5 ms frente al personaje actual, misma escena/cámara/calidad |
 
 La medición de GPU se hace en una GPU real, no con render por software. Cada cifra
 es una compuerta: el bloque que la exceda debe simplificar antes de integrarse.
-El rig histórico exporta 35 joints (incluye controles) y tampoco cumple este
-objetivo. El bloque B debe definir la reducción/retarget sin prometer que conservar
-todos los huesos históricos entra en veinte; cualquier cambio de presupuesto
-requiere una decisión explícita, no reinterpretar el límite como veinte adicionales.
+El rig histórico exporta 35 joints (incluye controles) y no cumple este objetivo;
+el bloque B lo redujo a 20 huesos de juego. El límite era 20 en total, pero eso no
+dejaba lugar para el jiggle del bloque F: el 2026-10-01 se decidió subirlo a 26
+(20 de juego + 6 de jiggle). Con skinning de cuatro pesos por vértice, seis huesos
+más no cambian el costo de forma medible; el presupuesto de GPU sigue siendo la
+compuerta. Cualquier otro cambio de presupuesto requiere una decisión explícita.
 
 ## Plan de archivos y dominios
 
