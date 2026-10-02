@@ -134,8 +134,8 @@ func _print_inner() -> void:
 	labels.append(_story_text(inner, String(front.get("headline", "")), Rect2(LEFT_X, 168, COLUMN_WIDTH, 272),
 			FRONT_HEADLINE, true))
 	var body_top: float = _below(labels[0], 12.0)
-	labels.append(_story_text(inner, String(front.get("body", "")), Rect2(LEFT_X, body_top, COLUMN_WIDTH, 748 - body_top),
-			FRONT_BODY, false))
+	var body_box := Rect2(LEFT_X, body_top, COLUMN_WIDTH, 748 - body_top)
+	labels.append(_story_text(inner, String(front.get("body", "")), body_box, FRONT_BODY, false))
 	blocks.append({"id": "front", "rect": Rect2(LEFT_X, 112, COLUMN_WIDTH, 640), "labels": labels})
 	_rule(inner, Vector2(LEFT_X, 764), Vector2(COLUMN_WIDTH, 3))
 	for column: int in 3:
@@ -163,8 +163,8 @@ func _secondary(story: Dictionary, index: int, top: float) -> void:
 	labels.append(_story_text(inner, String(story.get("headline", "")), Rect2(RIGHT_X, top + 50, COLUMN_WIDTH, 112),
 			STORY_HEADLINE, true))
 	var body_top: float = _below(labels[0], 6.0)
-	labels.append(_story_text(inner, String(story.get("body", "")), Rect2(RIGHT_X, body_top, COLUMN_WIDTH, top + 276 - body_top),
-			STORY_BODY, false))
+	var body_box := Rect2(RIGHT_X, body_top, COLUMN_WIDTH, top + 276 - body_top)
+	labels.append(_story_text(inner, String(story.get("body", "")), body_box, STORY_BODY, false))
 	blocks.append({"id": "story_%d" % index, "rect": Rect2(RIGHT_X, top, COLUMN_WIDTH, 278), "labels": labels})
 
 
@@ -178,7 +178,9 @@ func _classifieds() -> void:
 	strip.size = Vector2(COLUMN_WIDTH, 52)
 	strip.color = INK
 	inner.add_child(strip)
-	var title: String = String(filler.get("section_text", "")) if not filler.is_empty() else tr("HUD_NEWS_SECTION_CLASSIFIED")
+	var title: String = tr("HUD_NEWS_SECTION_CLASSIFIED")
+	if not filler.is_empty():
+		title = String(filler.get("section_text", ""))
 	var strip_label: Label = _text(inner, title.to_upper(), Rect2(RIGHT_X, TOP + 4, COLUMN_WIDTH, 48), 36, true)
 	strip_label.add_theme_color_override("font_color", STOCK)
 	strip_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -194,7 +196,8 @@ func _classifieds() -> void:
 	for index: int in SMALL_AD_KEYS.size():
 		var box := Rect2(RIGHT_X + 624, TOP + 66 + index * 172, 280, 158)
 		_box(inner, box)
-		_text(inner, tr(SMALL_AD_KEYS[index]), Rect2(box.position + Vector2(12, 8), box.size - Vector2(24, 16)), 22, false)
+		var text_box := Rect2(box.position + Vector2(12, 8), box.size - Vector2(24, 16))
+		_text(inner, tr(SMALL_AD_KEYS[index]), text_box, 22, false)
 
 
 # --- Outer sheet: front page (right) and back page (left) ---------------------

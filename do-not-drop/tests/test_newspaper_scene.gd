@@ -85,11 +85,13 @@ func _run() -> void:
 	var texts: Array = _texts(spread)
 	_expect(texts.has(tr("HUD_NEWS_MASTHEAD") % "Villa Frágil"), "The front page names the town")
 	var front: Dictionary = DESK.read(paper["front"])
-	_expect(texts.has(front["headline"]) and texts.has(front["body"]), "The front story is printed (%s)" % front["headline"])
+	_expect(texts.has(front["headline"]) and texts.has(front["body"]),
+			"The front story is printed (%s)" % front["headline"])
 	for entry: Dictionary in paper["stories"]:
 		_expect(texts.has(DESK.read(entry)["headline"]), "A story under it is printed (%s)" % entry["id"])
 	var blocks: Array = spread.get("blocks")
-	_expect(blocks.size() == 1 + (paper["stories"] as Array).size() + 1, "One block per story and the classified (%d)" % blocks.size())
+	_expect(blocks.size() == 1 + (paper["stories"] as Array).size() + 1,
+			"One block per story and the classified (%d)" % blocks.size())
 	_expect((spread.get("overflowing") as Array).is_empty(), "Every story fits its box")
 
 	# The timeline: shots in order, one close-up per block, ~30 s.
@@ -120,7 +122,8 @@ func _run() -> void:
 			saw_reaction = true
 	_expect(saw_reaction, "The Boss lowers the paper in the reaction shot")
 	var face: Node = stage.get("face")
-	_expect(face == null or face.get("mouth_id") == &"surprised", "With bad news he is shocked (%s)" % (face.get("mouth_id") if face else ""))
+	_expect(face == null or face.get("mouth_id") == &"surprised",
+			"With bad news he is shocked (%s)" % (face.get("mouth_id") if face else ""))
 	_expect(not hud.newspaper.is_open() and hud.overlay_mode == "results" and hud.overlay.visible,
 			"At the end the results come up (mode %s)" % hud.overlay_mode)
 	_expect(_finished_signals == 1, "newspaper_finished told the results (%d)" % _finished_signals)
@@ -227,7 +230,8 @@ func _run() -> void:
 	hud.queue_free()
 	await process_frame
 	if _failures == 0:
-		print("PASS: the next-day scene plays the run's paper, frames every story, skips on a hold and hands over to the results")
+		print("PASS: the next-day scene plays the run's paper, frames every story, skips on a hold",
+				" and hands over to the results")
 	quit(_failures)
 
 
@@ -236,7 +240,8 @@ func _check_close_up(stage: Node3D, camera: Camera3D, viewport: SubViewport, blo
 	var page: Vector2 = Vector2(SPREAD.PAGE_SIZE)
 	var rect: Rect2 = block["rect"]
 	var screen := Rect2(Vector2.ZERO, Vector2(viewport.size))
-	for corner: Vector2 in [rect.position, rect.position + Vector2(rect.size.x, 0), rect.end, rect.position + Vector2(0, rect.size.y)]:
+	for corner: Vector2 in [rect.position, rect.position + Vector2(rect.size.x, 0), rect.end,
+			rect.position + Vector2(0, rect.size.y)]:
 		var point: Vector3 = stage.call(&"paper_point", corner / page)
 		var projected: Vector2 = camera.unproject_position(point)
 		_expect(not camera.is_position_behind(point) and screen.has_point(projected),
@@ -245,7 +250,8 @@ func _check_close_up(stage: Node3D, camera: Camera3D, viewport: SubViewport, blo
 	for label: Label in block["labels"]:
 		var font_size: float = label.get_theme_font_size("font_size")
 		var top: Vector2 = camera.unproject_position(stage.call(&"paper_point", label.position / page))
-		var bottom: Vector2 = camera.unproject_position(stage.call(&"paper_point", (label.position + Vector2(0, font_size)) / page))
+		var foot: Vector2 = label.position + Vector2(0, font_size)
+		var bottom: Vector2 = camera.unproject_position(stage.call(&"paper_point", foot / page))
 		smallest = minf(smallest, top.distance_to(bottom) * 720.0 / screen.size.y)
 	_expect(smallest >= 24.0, "The text of %s reads at %.1f px at 720p (24 or more)" % [block["id"], smallest])
 
@@ -271,7 +277,8 @@ func _check_catalogue_fits(settings: Node) -> void:
 				var sizes: Array = [[SPREAD.STORY_HEADLINE, SPREAD.STORY_BODY]] if filler \
 						else [[SPREAD.FRONT_HEADLINE, SPREAD.FRONT_BODY], [SPREAD.STORY_HEADLINE, SPREAD.STORY_BODY]]
 				for index: int in boxes.size():
-					var headline_size: int = SPREAD.fitted_size(display, story["headline"], boxes[index][0], sizes[index][0])
+					var headline_size: int = SPREAD.fitted_size(display, story["headline"], boxes[index][0],
+							sizes[index][0])
 					var body_size: int = SPREAD.fitted_size(body, story["body"], boxes[index][1], sizes[index][1])
 					if not SPREAD.fits(display, story["headline"], boxes[index][0], headline_size) \
 							or not SPREAD.fits(body, story["body"], boxes[index][1], body_size) \

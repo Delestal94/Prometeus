@@ -50,7 +50,9 @@ func _run() -> void:
 	var duration: float = director.get("duration")
 	for index: int in timeline.size():
 		var shot: Dictionary = timeline[index]
-		var at: float = float(shot["start"]) + float(shot["seconds"]) * (0.5 if shot["id"] in ["office", "approach"] else 0.97)
+		# Mid-move for the travelling shots, else just before the cut.
+		var share: float = 0.5 if shot["id"] in ["office", "approach"] else 0.97
+		var at: float = float(shot["start"]) + float(shot["seconds"]) * share
 		await _seek(director, at)
 		await _shot("%02d_%s" % [index + 1, shot["id"]])
 		if shot["id"] == "spread":

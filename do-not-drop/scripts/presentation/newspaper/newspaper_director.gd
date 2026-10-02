@@ -281,7 +281,8 @@ func _resolve(point: Dictionary, current: Dictionary) -> Dictionary:
 			resolved = _reading_pose()
 		"paper":
 			var centre: Vector3 = stage.paper.global_position
-			resolved = {"at": centre + _vector(point.get("at", [0, 0, 1])), "look": centre + _vector(point.get("look", [0, 0, 0])),
+			resolved = {"at": centre + _vector(point.get("at", [0, 0, 1])),
+					"look": centre + _vector(point.get("look", [0, 0, 0])),
 					"up": stage.paper_up() if String(point.get("up", "paper")) == "paper" else Vector3.UP,
 					"fov": float(point.get("fov", current.get("fov", 42.0)))}
 		_:
@@ -306,7 +307,8 @@ func _story_shot(block: Dictionary, current: Dictionary, story: Dictionary, move
 	var page: Vector2 = Vector2(SPREAD.PAGE_SIZE)
 	var target: Vector3 = stage.paper_point(rect.get_center() / page)
 	var distance: float = float(story.get("distance", 1.6))
-	var away: Vector3 = stage.paper_normal().rotated(stage.paper_right(), -deg_to_rad(float(story.get("tilt_degrees", 28.0))))
+	var away: Vector3 = stage.paper_normal().rotated(stage.paper_right(),
+			-deg_to_rad(float(story.get("tilt_degrees", 28.0))))
 	var aspect: float = size.x / size.y if size.x > 0.0 and size.y > 0.0 else 16.0 / 9.0
 	var width: float = rect.size.x / page.x * SET.SHEET_WIDTH
 	var height: float = rect.size.y / page.y * SET.SHEET_HEIGHT
