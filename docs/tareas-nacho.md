@@ -1200,6 +1200,13 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `load()`: `VehiclePrediction` ahora arrastra `vehicle.gd`, que nombra autoloads que un `--script` no tiene al
     compilar (`net_pair.gd` la sigue nombrando: corre como escena, con autoloads). Sin aviso (`vehicle/` y `tests/`).
     Siguientes: `run_session.gd` (8), `truck_radio_knob.gd` (5), `fault_repair_spot.gd` (5).
+  - [x] `run_session.gd` (2026-10-02, rama `nacho/N-224-run-session-typed`): la parte de escena del ingreso tardío
+    (N-225.5). La escena como `LevelCommon`, el depósito como `Depot` y la persiana como `DepotRollerDoor` (`is_open`,
+    `set_open()`) en un helper `_depot_door()`; una escena que no es un nivel sigue contando como puerta abierta. Sin
+    cambios de red. En el archivo: 8 → 0 usos (`.get(&` 7 → 0, `.call` 1 → 0). `test_dynamic_dispatch_budget.gd` suma
+    el archivo; `test_session_sync.gd` comprueba la lectura del anfitrión (abierta y cerrada) y una escena sin nivel.
+    Aviso `docs/avisos/2026-10-02-n224-run-session-tipado.md`. Siguientes: `truck_radio_knob.gd` (5),
+    `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5). (`run_tally.gd` reclamada por otra corrida.)
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

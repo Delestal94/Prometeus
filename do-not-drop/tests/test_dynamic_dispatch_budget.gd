@@ -85,6 +85,9 @@ const BUDGETS: Dictionary = {
 	# by name for the same reason. The /root/ lookups are the null-safe handles
 	# (EventBus, NetworkManager, RunManager, CrewProgression).
 	"res://scripts/core/route_event_manager.gd": {"call": 2, "callv": 0, "get": 0, "root": 4},
+	# The level side of a late join (N-224.4): the scene as LevelCommon, its depot as Depot and the door as
+	# DepotRollerDoor (is_open, set_open()). Nothing left by name.
+	"res://scripts/core/run_session.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# One .call left: the EventBus relay of the depot notices, by name because
 	# a test may replace EventBus with a plain Node (_bus()). One .get left: the
 	# seat_node_path of the players in the "player" group, because tests put
