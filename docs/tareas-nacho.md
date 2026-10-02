@@ -943,6 +943,11 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `test_dynamic_dispatch_budget.gd` suma el archivo. Aviso `docs/avisos/2026-10-01-n224-depot-panel-tipado.md`.
     Siguientes: `cargo_animal_view.gd` (13), `wildlife_crossing.gd` (13), `seat_point.gd` (13),
     `package_contents_view.gd` (13); después `hud_pause.gd` (`level.get(&"depot")`, tipar a `LevelCommon`).
+  - [x] `order_balancer.gd` (2026-10-01, rama `nacho/N-224-order-balancer-typed`): el sorteo de pedidos del depósito.
+    Las trampas como `TrapDefinition` (`id`, `difficulty`; arrays internos `Array[TrapDefinition]`) y las cajas como
+    `DeliveryPackage` (`trap_definition`); lo que no es una trampa (un hueco nulo) se salta como antes. En el archivo:
+    `.get(&` 8 → 0, nada por nombre; en `scripts/`: `.get(&` 175 → 167. `test_dynamic_dispatch_budget.gd` suma el
+    archivo con todo en 0. Aviso `docs/avisos/2026-10-01-n224-order-balancer-tipado.md`.
   - [x] `wildlife_crossing.gd` (2026-10-01, rama `nacho/N-224-wildlife-crossing-typed`): el ciervo con el tipo de
     `wildlife_animal.gd` (`ANIMAL_SCRIPT` por preload inferido, sin `class_name`: `steered`, `run`,
     `freeze_in_headlights`, `tumble` directos). Quedan por nombre `team_money`/`spend` de `CrewProgression` (ciclo de
