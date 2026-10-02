@@ -1613,7 +1613,7 @@ Fase 0 de `docs/investigacion-red.md`: medir antes de seguir optimizando.
 Fase 2 de `docs/investigacion-red.md`. Hoy los jugadores remotos (`player.gd _apply_net_state`) y las cajas
 del cliente (`package.gd _process`) se colocan con el último valor que llegó, sin suavizar. Con el jitter
 de internet saltan.
-**[x] Hecho (2026-10-01, rama `nacho/N-217-snapshot-smoothing`, #224)** — `PROTOCOL_VERSION` 22 y 23. Aviso:
+**[x] Hecho (2026-10-01, rama `nacho/N-217-snapshot-smoothing`, #224)** — `PROTOCOL_VERSION` 23 y 24 (el 22 es de N-110). Aviso:
 `docs/avisos/2026-10-01-n217-suavizado-remoto.md`. Tests: `test_remote_pose_smoothing` y
 `test_remote_carry_alignment` (nuevos); `test_net_pose_smoother`, `test_vehicle_net_smoothing`,
 `test_carry_prediction` y `test_net_stats` ampliados.

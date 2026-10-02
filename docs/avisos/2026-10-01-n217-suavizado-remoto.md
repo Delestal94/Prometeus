@@ -6,7 +6,7 @@
 
 - `scenes/gameplay/player/player.tscn`: el `MultiplayerSynchronizer` manda a 1/30 s (antes 1/60), replica
   `net_yaw` (relativo al rumbo del camión si viaja) en vez de `rotation` y suma `net_time`. Las copias
-  remotas guardan cada pose al recibir el paquete entero (señal `synchronized`). `PROTOCOL_VERSION` 23.
+  remotas guardan cada pose al recibir el paquete entero (señal `synchronized`). `PROTOCOL_VERSION` 24.
 - `scripts/gameplay/player/player.gd` (tu dominio): variables nuevas `net_yaw`, `net_time` y `_net_smoother`;
   en `_process` el jugador remoto se ubica **antes** de `animator.animate()`, porque la cabeza,
   `locomotion_speed` y `jump_anim_time` ahora salen del buffer, del mismo instante que el cuerpo. El comentario largo de las medidas de los asientos pasó de `_seat_body_offset()` a
