@@ -7,7 +7,10 @@ const CAMPAIGN_PATH: String = "user://crew_campaign.json"
 ## 2 (N-226.2): "players" is keyed by colour slot ("0".."7", PlayerColorSlot),
 ## not by colour name. A version-1 file (names, from peer_id modulo five) is
 ## migrated on load: LEGACY_COLOR_FOR_SLOT says which old name each slot takes.
-const CAMPAIGN_VERSION: int = 2
+## 3 (N-923.2): adds "accessories" ({colour key: {owned, equipped}}, the shop's
+## AccessoryInventory). Older files have none, so they load with no accessories
+## and the next save writes version 3.
+const CAMPAIGN_VERSION: int = 3
 const SAFE_JSON = preload("res://modules/persistence/safe_json.gd")
 ## Typed handles on the autoloads this file talks to (N-224): a renamed
 ## method or property fails when the script compiles, not mid-run.
@@ -100,6 +103,10 @@ var _run_milestones: Dictionary = {}
 var event_bus: Node
 ## Supplies bought and waiting in the depot for the next run: id -> true.
 var supplies: Dictionary = {}
+## Who owns and wears which accessory (N-923), keyed by colour key (PLAYER_COLOR_KEYS),
+## not by peer id: it is saved with the campaign and survives a new peer id.
+## The host changes it; clients get it with the campaign. Cosmetic only.
+var accessories := AccessoryInventory.new()
 var campaign_path: String = CAMPAIGN_PATH
 ## Saved progress by colour slot: slot (int) -> {merit, card, dry_deliveries}.
 var _saved_players_by_slot: Dictionary = {}
@@ -153,6 +160,7 @@ func reset_campaign(persist: bool = false) -> bool:
 	_run_merit.clear()
 	_run_milestones.clear()
 	supplies.clear()
+	accessories.clear()
 	_saved_players_by_slot.clear()
 	_displaced_players.clear()
 	_last_host_data.clear()
@@ -417,6 +425,7 @@ func _default_campaign() -> Dictionary:
 		"version": CAMPAIGN_VERSION,
 		"team_money": STARTING_MONEY,
 		"supplies": [],
+		"accessories": {},
 		"players": {},
 	}
 
@@ -429,6 +438,7 @@ func _campaign_data() -> Dictionary:
 		"version": CAMPAIGN_VERSION,
 		"team_money": team_money,
 		"supplies": supply_ids,
+		"accessories": accessories.to_dict(),
 		"players": _players_for_file(),
 	}
 
@@ -460,6 +470,8 @@ func _apply_campaign_data(data: Dictionary, remember_players: bool) -> void:
 		var supply_id := StringName(raw_id)
 		if SUPPLIES.has(supply_id):
 			supplies[supply_id] = true
+	# Version 2 and older never had accessories: they start with none.
+	accessories.load_dict(data.get("accessories", {}) if version >= 3 else {}, PLAYER_COLOR_KEYS)
 	var raw_players: Variant = data.get("players", {})
 	var normalized_players := _normalized_players(raw_players if raw_players is Dictionary else {}, version)
 	if remember_players:
@@ -517,6 +529,9 @@ func _apply_entry(peer_id: int, entry: Dictionary) -> void:
 	var card_id: int = int(entry.get("card", -1))
 	if card_id >= 0 and card_id < Card.size():
 		cards[peer_id] = card_id
+	# Only a displaced entry carries accessories (see _apply_saved_player): they
+	# join the colour this peer wears now, next to what it already has.
+	accessories.merge_entry(player_color_key(peer_id), entry.get("accessories", {}))
 
 
 func _apply_saved_player(peer_id: int) -> void:
@@ -529,8 +544,14 @@ func _apply_saved_player(peer_id: int) -> void:
 		# player's own is captured over it -- so this player starts clean.
 		var owner: int = network.slot_kept_for(peer_id)
 		var slot: int = player_slot(peer_id)
-		if owner > 0 and _saved_players_by_slot.has(slot):
-			_keep_displaced(owner, _saved_players_by_slot[slot])
+		# The accessories of that colour are theirs too: they go with the kept
+		# entry (taken out of the inventory, so the newcomer starts bare).
+		var kept_accessories: Dictionary = accessories.take_entry(player_color_key(peer_id))
+		var kept: Dictionary = _saved_players_by_slot.get(slot, {}).duplicate(true) if owner > 0 else {}
+		if owner > 0 and not kept_accessories.is_empty():
+			kept["accessories"] = kept_accessories
+		if owner > 0 and not kept.is_empty():
+			_keep_displaced(owner, kept)
 		_apply_entry(peer_id, displaced)
 		return
 	if not displaced.is_empty():

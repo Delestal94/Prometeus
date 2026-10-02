@@ -17,7 +17,7 @@ extends SceneTree
 ##   roster as a ghost and the new one takes its slot;
 ## - with the room full a newcomer takes a kept slot but starts clean, without
 ##   that player's merit and card -- unless it is that player, back under the
-##   same id (Steam);
+##   same id (Steam); its accessories (N-923.2) are set aside and come back with it;
 ## - however many come and go, reservations and remembered slots stay bounded;
 ## - the suit follows the host's map, also when it arrives after the spawn;
 ##   leaving the session forgets all of it.
@@ -317,6 +317,11 @@ func _check_displaced_entry(network: Node, crew: Node) -> void:
 	var gone_slot: int = _slot(network, gone)
 	crew.call(&"award_action", gone, &"test:displaced", 40)
 	(crew.get(&"cards") as Dictionary)[gone] = 2
+	# N-923.2: its accessories are kept for it like its merit.
+	var accessories: AccessoryInventory = crew.get(&"accessories")
+	var gone_colour: String = crew.call(&"player_color_key", gone)
+	accessories.grant(gone_colour, &"hard_hat")
+	accessories.equip(gone_colour, &"hard_hat")
 	network.call(&"_on_peer_disconnected", gone)
 	crew.call(&"_capture_player", gone)
 	var newcomer: int = 1_410_000_001
@@ -333,6 +338,12 @@ func _check_displaced_entry(network: Node, crew: Node) -> void:
 	var displaced: Dictionary = (crew.get(&"_displaced_players") as Dictionary).get(gone, {})
 	_expect(int(displaced.get("merit", 0)) == 40 and int(displaced.get("card", -1)) == 2,
 		"The one it pushed out is set aside, merit and card (got %s)" % [displaced])
+	var newcomer_colour: String = crew.call(&"player_color_key", newcomer)
+	_expect(newcomer_colour == gone_colour and not accessories.owns(newcomer_colour, &"hard_hat")
+		and accessories.owner_of(&"hard_hat") == "",
+		"The newcomer on that colour starts without the one it pushed out's accessories")
+	_expect(AccessoryInventory.new().merge_entry("x", displaced.get("accessories", {})) == 1,
+		"...which are set aside with its entry (got %s)" % [displaced])
 	# The newcomer leaves; the one who left comes back.
 	network.call(&"_on_peer_disconnected", newcomer)
 	crew.call(&"_capture_player", newcomer)
@@ -343,6 +354,9 @@ func _check_displaced_entry(network: Node, crew: Node) -> void:
 		and int((crew.get(&"cards") as Dictionary).get(back, -1)) == 2,
 		"Back again, it gets its own merit and card, not the slot's (merit %s)"
 		% (crew.get(&"merit") as Dictionary).get(back))
+	var back_colour: String = crew.call(&"player_color_key", back)
+	_expect(accessories.owns(back_colour, &"hard_hat") and accessories.is_equipped(back_colour, &"hard_hat"),
+		"...and its accessories, worn as they were, under the colour it wears now (colour %s)" % back_colour)
 	network.call(&"leave_session")
 	crew.call(&"reset_campaign")
 

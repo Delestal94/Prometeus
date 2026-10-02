@@ -20,7 +20,7 @@ extends SceneTree
 ##   wrapped to the eight-colour palette (N-228.3), never posmod(peer_id, 5): with
 ##   ENet-sized ids (> 1.8e9) the five of a crew all differ, the host is slot 0
 ##   playing solo and in a room, and slots 5..7 have colours of their own;
-## - the campaign is saved by slot ("players": {"0": ...}, CAMPAIGN_VERSION 2):
+## - the campaign is saved by slot ("players": {"0": ...}, CAMPAIGN_VERSION 3 since N-923.2):
 ##   a new session with other random ids but the same slots gets the same merit
 ##   and cards back, and swapped slots swap them;
 ## - a leaver's progress is saved under the slot it wore when the roster last
@@ -218,8 +218,8 @@ func _check_color_slots(crew: Node) -> void:
 	_expect(crew.call(&"save_campaign"), "The campaign saves to the test path")
 	var saved: Dictionary = _read_save()
 	var players: Dictionary = saved.get("players", {})
-	_expect(int(saved.get("version", 0)) == int(constants["CAMPAIGN_VERSION"]) and int(saved.get("version", 0)) == 2,
-			"The save is version 2 (got %s)" % saved.get("version"))
+	_expect(int(saved.get("version", 0)) == int(constants["CAMPAIGN_VERSION"]) and int(saved.get("version", 0)) == 3,
+			"The save is version 3 (got %s)" % saved.get("version"))
 	_expect(players.has("1") and players.has("2") and players.has("0") and players.size() == 3,
 			"The save is keyed by slot (got %s)" % [players.keys()])
 	_expect(int(Dictionary(players.get("1", {})).get("merit", -1)) == 25
@@ -273,8 +273,8 @@ func _check_color_slots(crew: Node) -> void:
 			"...with its card and dry deliveries")
 	crew.call(&"save_campaign")
 	var migrated: Dictionary = _read_save()
-	_expect(int(migrated.get("version", 0)) == 2 and Dictionary(migrated.get("players", {})).has("0"),
-			"The next save writes version 2 (got %s)" % [migrated])
+	_expect(int(migrated.get("version", 0)) == 3 and Dictionary(migrated.get("players", {})).has("0"),
+			"The next save writes version 3 (got %s)" % [migrated])
 
 	# Slots 5..7 (N-228.3) save and load like the rest; a five-slot file still loads.
 	_seat(network, {1: 0, BIG_IDS[0]: 7})
