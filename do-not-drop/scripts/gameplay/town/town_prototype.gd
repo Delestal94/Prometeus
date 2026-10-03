@@ -9,6 +9,7 @@ const NAVIGATION := preload("res://modules/town_gen/town_navigation.gd")
 const ART := preload("res://scripts/gameplay/town/town_art.gd")
 const TOWN_ENVIRONMENT := preload("res://scripts/gameplay/town/town_environment.gd")
 const TOWN_DRESSER := preload("res://scripts/gameplay/town/town_dresser.gd")
+const LANDMARKS := preload("res://scripts/gameplay/town/town_landmarks.gd")
 const DISTRICT_NAMES: Array[String] = [
 	"WORLD_TOWN_DISTRICT_DEPOT",
 	"WORLD_TOWN_DISTRICT_CENTER",
@@ -64,6 +65,7 @@ func _ready() -> void:
 	for green: Dictionary in plan.green_areas:
 		if green.district in built_districts:
 			_build_green(green)
+	LANDMARKS.build(self, plan, built_districts, pedestrian_plan)
 	_build_trees()
 	dresser = TOWN_DRESSER.new(self, terrain, world_seed)
 	await dresser.dress_town(street_segments, plan, built_districts, pedestrian_plan)

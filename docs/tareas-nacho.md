@@ -47,7 +47,11 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   y reparto verifican integración sin cambiar el plano ni sus direcciones.
 - [x] Completar frentes libres de Barrio y Centro con parcelas compactas; generador
   v2 compatible con v1, calles/clientes intactos y accesos verdes reservados.
-- [ ] Completar manzanas cerradas y distinguir la arquitectura de los otros distritos.
+- [x] Escenas de ciudad completa (2026-10-03): seis distritos, siete conectores
+  abiertos, doce entradas verdes y mismos seis pedidos. Almacenes Industrial/Puerto,
+  farmhouses/molino en Campo, cabañas/pinos en Sierra y torre de agua.
+  Suelo continuo entre zonas e índice de plataformas que conserva alturas.
+- [ ] Completar manzanas interiores, litoral/muelles y biomas de Sierra.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos

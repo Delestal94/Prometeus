@@ -3,6 +3,7 @@ extends RouteDresser
 ## parcels, plazas and walking paths. No linear-route hazards or delivery logic.
 
 var _outlines: Array[PackedVector2Array] = []
+var _zones: Array[int] = []
 
 
 func _init(route: Node3D, terrain: Node, seed_value: int) -> void:
@@ -23,12 +24,29 @@ func dress_town(
 	for district: Dictionary in plan.districts:
 		if district.id in districts:
 			_outlines.append(district.outline)
+			_zones.append(
+				(
+					Zone.COUNTRYSIDE
+					if district.id == 3
+					else (Zone.FOREST if district.id == 5 else Zone.VILLAGE)
+				)
+			)
 	for lot: Dictionary in plan.lots:
 		_placement.clear_zones.append(
 			Vector3(lot.position.x, lot.position.y, lot.size.length() * .5 + 2)
 		)
 	for green: Dictionary in plan.green_areas:
 		_placement.clear_zones.append(Vector3(green.position.x, green.position.y, green.radius + 3))
+	for landmark: Node3D in _route.get_node(^"DistrictLandmarks").get_children():
+		if not landmark.has_meta(&"clearance_radius"):
+			continue
+		_placement.clear_zones.append(
+			Vector3(
+				landmark.position.x,
+				landmark.position.z,
+				float(landmark.get_meta(&"clearance_radius")) + 2
+			)
+		)
 	for key: String in ["lot_paths", "green_paths"]:
 		for path: Dictionary in pedestrian[key]:
 			for i: int in range(1, path.points.size()):
@@ -39,7 +57,13 @@ func dress_town(
 					var at: Vector2 = a.lerp(b, float(step) / count)
 					_placement.clear_zones.append(Vector3(at.x, at.y, path.width * .5 + 2))
 	var selected: Array[StringName] = [
-		&"parked_vehicle", &"village_furniture", &"bus_stop", &"tree", &"ground_plant"
+		&"parked_vehicle",
+		&"village_furniture",
+		&"bus_stop",
+		&"tree",
+		&"ground_plant",
+		&"farm_props",
+		&"tractor"
 	]
 	for index: int in range(_rules.size()):
 		var rule: Dictionary = _rules[index]
@@ -57,7 +81,7 @@ func dress_town(
 
 
 func zone_at(route_point: Vector3, _distance: float) -> int:
-	for outline: PackedVector2Array in _outlines:
-		if Geometry2D.is_point_in_polygon(Vector2(route_point.x, route_point.z), outline):
-			return Zone.VILLAGE
+	for i: int in range(_outlines.size()):
+		if Geometry2D.is_point_in_polygon(Vector2(route_point.x, route_point.z), _outlines[i]):
+			return _zones[i]
 	return Zone.FOREST

@@ -1,4 +1,4 @@
-# Ciudad procedural — barrio y Centro jugables del spike
+# Ciudad procedural — seis distritos construidos del spike
 
 Decisiones del equipo, 2026-10-02: una ciudad continua con seis distritos;
 contorno asimétrico que varía por semilla, calles diagonales y manzanas de
@@ -16,8 +16,10 @@ tendrá otra semilla. El guardado y la campaña todavía no están conectados.
 6. Sierra: pendientes, bosque y nieve.
 
 Conexiones previstas: 1–2, 1–4, 2–3, 3–5, 5–4, 4–6, 6–3.
-En la prueba offline están abiertos Barrio y Centro. Los accesos restantes
-se abrirán por progresión/capacidad del vehículo en un paso posterior.
+La prueba por pasos conserva Barrio y Centro abiertos. Las nuevas escenas
+`town_city.tscn` y `town_city_delivery.tscn` construyen los seis distritos y
+abren los siete conectores para inspección/exploración offline. La campaña
+aún no aplica progresión/capacidad del vehículo a estos accesos.
 El trazado completo se genera antes de abrir distritos: desbloquear una zona
 no debe cambiar las calles ni mover las casas existentes.
 
@@ -119,10 +121,48 @@ Sobre 100 semillas, Barrio pasa de 23,70 a 33,74 parcelas en promedio y
 Centro de 23,77 a 33,84; la semilla 4242 pasa de 49 a 69 parcelas construidas.
 Las pruebas de escena y reparto, portabilidad y capturas GPU verifican
 modelos a escala nativa, circulación y conservación de los seis destinos.
-La identidad de los otros cuatro distritos y las manzanas completamente
-cerradas siguen pendientes: todavía es una escena de prueba.
-Desde arriba se ven límites de teselas y el decorado se oculta por distancia;
+Los perfiles de los cuatro distritos restantes se construyen en las escenas
+completas. Las manzanas completamente cerradas y biomas específicos todavía
+necesitan trabajo: sigue siendo una escena de prueba.
+La escena completa rellena los huecos de suelo entre distritos. Desde arriba
+se ve el borde exterior del terreno y el decorado se oculta por distancia;
 la continuidad del horizonte y el presupuesto de render necesitan trabajo.
+
+### Ciudad completa para inspección y conducción
+
+Abrir `scenes/gameplay/town/town_city.tscn` y pulsar **F6** para inspeccionar
+los seis distritos con cámara libre. `town_city_delivery.tscn` permite recorrer
+la misma ciudad con el jugador, camión y los seis pedidos existentes. Ambos
+usan la misma semilla/plano de las escenas anteriores; no aparecen barreras
+entre distritos. La semilla 4242 construye 163 parcelas, y 90210 construye 164:
+61 segmentos de calle y doce entradas a plazas/parques en ambas.
+
+Industrial y Puerto tienen almacenes con las piezas/materiales del depósito,
+con paletas diferenciadas. Campo favorece las farmhouses originales y suma
+el molino existente; Sierra favorece cabañas, pinos y el perfil de bosque.
+El decorador original aplica reglas rurales de fardos/cajones y tractores
+en Campo. Industrial reutiliza la torre de agua. Los landmarks se colocan
+solo en huecos que no invaden calles, lotes, verdes ni accesos, a escala nativa,
+y quedan reservados antes de la ambientación de carretera.
+
+`town_delivery.built_districts` configura tanto la construcción como el GPS:
+la escena de dos distritos mantiene su selección `[0, 1]`, mientras la completa
+selecciona los seis. Conducir a otras zonas conserva destinos/pedidos A–F.
+Abrirlas en esta prueba no simula desbloqueos ni agrega clientes de campaña.
+
+El suelo cubre la envolvente irregular completa y su margen exterior, sin
+crear carreteras ficticias para rellenar huecos. `TownTerrain.index_profile()`
+indexa las plataformas antes del build; solo lee las candidatas de cada tesela,
+conservando orden y banda de mezcla. Los interiores retornan altura cero antes
+de calcular un paisaje que luego se descartaría. Pruebas comparan el índice
+contra muestras exhaustivas, con rotación, solapamiento y coordenadas negativas.
+La prueba de ciudad pasó de 63 s a 43 s al evitar el cálculo descartado y
+a 9 s con el índice, incluso cubriendo ahora toda la envolvente de suelo.
+Son tiempos locales de construcción/prueba, no una medición de FPS.
+
+La ambientación actual del Puerto usa almacenes: litoral/muelles y el bioma
+de nieve/pendientes de Sierra siguen pendientes, al igual que el horizonte
+lejano y presupuesto de render. Las calles transitables permanecen niveladas.
 
 ### Abrir y recorrer
 
@@ -180,6 +220,17 @@ y conserva los resultados en memoria: no guarda campaña, no paga recompensas
 ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal.
 
 ## Validación
+
+- `tests/test_town_city.gd`: construcción de los seis distritos, todas las
+  direcciones, siete conectores abiertos, doce entradas verdes, modelos a
+  escala nativa, perfiles de almacenes/farmhouses/cabañas/pinos y dos landmarks.
+  Asfalto físico en cada segmento y GPS desde todas las zonas a los pedidos.
+- `tests/test_town_terrain.gd` y `modules/route_gen/tests/test_terrain_platforms.gd`:
+  alturas de plataformas indexadas iguales a la búsqueda exhaustiva, incluyendo
+  solapamientos, rotaciones, bordes de tesela y coordenadas negativas. Cobertura
+  entre distritos sin carreteras inventadas. El hook mantiene el resultado original.
+- `tests/render_town_city.gd`: dos semillas, mapa completo y frentes/vistas
+  de Industrial, Campo, Puerto y Sierra para revisar escala, apoyo y circulación.
 
 - `modules/town_gen/tests/test_town_plan.gd`: 100 semillas, conectividad de
   los seis distritos, variación, determinismo, roles iniciales, parques y

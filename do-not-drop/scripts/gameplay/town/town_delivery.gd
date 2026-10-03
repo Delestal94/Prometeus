@@ -8,6 +8,7 @@ const ART := preload("res://scripts/gameplay/town/town_art.gd")
 const OPEN_DISTRICTS: Array[int] = [0, 1]
 
 @export var world_seed: int = 0
+@export var built_districts: PackedInt32Array = PackedInt32Array(OPEN_DISTRICTS)
 
 var town: Node3D
 var vehicle: Node3D
@@ -37,7 +38,7 @@ func _ready() -> void:
 	town = TOWN.instantiate()
 	town.set(&"world_seed", world_seed)
 	town.set(&"enable_camera", false)
-	town.set(&"built_districts", PackedInt32Array(OPEN_DISTRICTS))
+	town.set(&"built_districts", built_districts)
 	add_child(town)
 	world_seed = int(town.get(&"world_seed"))
 	_build_center_destination()
@@ -288,9 +289,7 @@ func guidance() -> Dictionary:
 	if exploring_center:
 		target = center_frontage
 	var start := Vector2(vehicle.global_position.x, vehicle.global_position.z)
-	var route: Dictionary = NAVIGATION.route(
-		town.get(&"plan"), start, target, PackedInt32Array(OPEN_DISTRICTS)
-	)
+	var route: Dictionary = NAVIGATION.route(town.get(&"plan"), start, target, built_districts)
 	if route.is_empty():
 		return {}
 	var waypoint: Vector2 = target

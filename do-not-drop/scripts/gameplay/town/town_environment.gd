@@ -49,6 +49,9 @@ static func build_ground(
 		for path: Dictionary in pedestrian[key]:
 			for i: int in range(1, path.points.size()):
 				_level_strip(terrain, path.points[i - 1], path.points[i], path.width * .5 + 2)
+	terrain.index_profile()
+	if districts.size() == 6:
+		terrain.complete_surface()
 	terrain.build()
 	return terrain
 

@@ -17,6 +17,7 @@ const TREES: Array[String] = [
 ]
 const BENCH := "res://assets/models/environment/props/sm_env_prop_bench.glb"
 const LAMP := "res://assets/models/environment/props/sm_env_prop_street_lamp_refined.glb"
+const PINE := "res://assets/models/environment/forest/sm_env_forest_pine_tall.glb"
 
 
 static func customer_variant(seed_value: int, index: int) -> int:
@@ -32,6 +33,11 @@ static func build_lot(parcel: Node3D, lot: Dictionary, seed_value: int) -> void:
 	var side: float = signf(front.y)
 	building.rotation.y = PI if side > 0 else 0.0
 	building.position = Vector3(0, .08, -side * float(lot.size.y) * .12)
+	building.set_meta(&"district_profile", lot.district)
+	if lot.district in [2, 4] and lot.role == &"shop":
+		_service(building, lot)
+		building.set_meta(&"architecture", &"warehouse")
+		return
 	if lot.role in [&"depot", &"workshop"]:
 		_service(building, lot)
 		return
@@ -41,6 +47,14 @@ static func build_lot(parcel: Node3D, lot: Dictionary, seed_value: int) -> void:
 	if lot.district == 1:
 		# Taller fronts and shop awnings distinguish the center using existing art.
 		variant = 3 if lot.role == &"shop" or rng.randf() < .65 else 2
+	elif lot.district == 3:
+		variant = 4
+	elif lot.district == 5:
+		variant = 1
+	elif lot.district == 2:
+		variant = 2
+	elif lot.district == 4:
+		variant = 3
 	if lot.role == &"house":
 		variant = customer_variant(seed_value, int(lot.address.y) - 2)
 	var kit := KIT.new(building, "Colliders", building)
@@ -57,6 +71,7 @@ static func build_lot(parcel: Node3D, lot: Dictionary, seed_value: int) -> void:
 		variant = 0
 		bounds = kit.model_bounds(HOUSE_MODELS[variant])
 	building.set_meta(&"house_variant", variant)
+	building.set_meta(&"architecture", &"housing")
 	model(building, "HouseVisual", HOUSE_MODELS[variant], Vector3.ZERO)
 	kit.collider(bounds.size, Transform3D(Basis.IDENTITY, bounds.get_center()))
 	if lot.role == &"shop":
@@ -71,7 +86,12 @@ static func _service(building: StaticBody3D, lot: Dictionary) -> void:
 	var width: float = float(lot.size.x) * .74
 	var depth: float = float(lot.size.y) * .48
 	var height: float = 6.2
-	var wall := KIT.ribbed(Color("3f6f7a") if lot.role == &"depot" else Color("68777a"), .8)
+	var color := Color("3f6f7a") if lot.role == &"depot" else Color("68777a")
+	if lot.district == 2:
+		color = Color("8b6951")
+	elif lot.district == 4:
+		color = Color("426b87")
+	var wall := KIT.ribbed(color, .8)
 	var trim := KIT.flat(Color("24363d"), .6, .3)
 	var floor := KIT.detailed(Color("6f7272"), "plaster", 4, .5)
 	kit.box(Vector3(width, .08, depth), Vector3(0, 0, 0), floor, true)
@@ -165,6 +185,9 @@ static func build_trees(town: Node3D, positions: PackedVector2Array, seed_value:
 	var kit := KIT.new(forest)
 	for index: int in range(positions.size()):
 		var path: String = TREES[index % TREES.size()]
+		var town_plan: Dictionary = town.get(&"plan")
+		if Geometry2D.is_point_in_polygon(positions[index], town_plan.districts[5].outline):
+			path = PINE
 		var tree: Node3D = (load(path) as PackedScene).instantiate()
 		LowpolyMaterials.apply(tree)
 		var scale_value: float = rng.randf_range(.8, 1.0)
