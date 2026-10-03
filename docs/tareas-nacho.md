@@ -35,6 +35,11 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   clientes iniciales y tres del Centro con timbre/modelo original. Estante
   de dos niveles accesibles, F1–F6 clientes y F7 plaza. Direcciones estables
   sobre 100 semillas; final exige resolver ambos distritos y volver al depósito.
+- [x] Aceras y accesos peatonales (2026-10-03): calles diagonales/cruces,
+  rampas, entradas a cada lote y caminos a plazas/parques que rodean edificios.
+  Pavimento agrupado con colisión y árboles/muebles fuera del paso. Cinco
+  semillas del módulo, módulo aislado y jugador real cruzando sin saltar,
+  tanto en headless (componente de movimiento) como con pantalla.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos

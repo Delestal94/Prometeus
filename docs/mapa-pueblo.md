@@ -61,8 +61,23 @@ y mantiene cerradas Campo e Industrial. `town_art.gd` viste los lotes con el art
   colisión de troncos; bancos y farolas originales apoyados sobre el terreno.
 
 Esta integración conserva los assets originales. El monumento, pavimentos
-y suelo amplio siguen siendo geometría del prototipo; faltan terreno, aceras,
+y suelo amplio siguen siendo geometría del prototipo; faltan terreno,
 ambientación de los cuatro distritos restantes y medición del presupuesto de render.
+
+### Aceras y accesos peatonales
+
+`modules/town_gen/town_walkways.gd` deriva las superficies de los distritos
+abiertos sin consumir RNG ni modificar calles, lotes o áreas verdes. Devuelve
+polígonos con altura, accesos de lotes y recorridos de entrada a plazas/parques.
+Las aceras de 2 m siguen también calles diagonales y se unen en los cruces;
+se recortan contra el asfalto y tienen rampas exteriores hacia el terreno.
+
+Cada lote recibe un acceso desde su frente de calle: 2 m para viviendas y
+comercios, 5 m para depósito/taller. Los caminos verdes rodean los lotes que
+interponen edificios y llegan al centro pavimentado. La escena reúne el
+pavimento en una malla con colisión, añade suelo físico a césped/plazas y
+rampas en su borde interior. Árboles y mobiliario dejan libres las entradas.
+El jugador puede pasar del asfalto a la acera y al acceso sin saltar.
 
 ### Abrir y recorrer
 
@@ -128,13 +143,18 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   tres especies de árboles agrupadas y centros de calle despejados. Abrir el
   Centro conserva el plano y verifica sus edificios a escala nativa, áreas
   verdes, barreras restantes y soporte de asfalto a lo largo del corredor.
+  Comprueba colisión continua de las entradas verdes y árboles alejados de ellas.
 - `tests/render_town_prototype.gd`: dos semillas desde arriba y plaza a
   altura de calle para revisión visual, además de vistas de los dos distritos
-  conectados y del Centro con sus comercios.
+  conectados y del Centro con sus comercios, aceras y entrada a la plaza.
 - `modules/town_gen/tests/test_town_navigation.gd`: tramos parciales,
   desvíos entre calles paralelas, rutas inaccesibles y 300 recorridos de
   clientes y 100 rutas al Centro sobre 100 semillas. Comprueba conectores
   divididos y accesos cerrados. También corre en un proyecto vacío.
+- `modules/town_gen/tests/test_town_walkways.gd`: cinco semillas, repetición
+  exacta, plano sin mutaciones, superficies triangulables fuera del asfalto,
+  alturas de rampas y entrada a las cuatro áreas verdes. Incluye un desvío
+  alrededor de un lote rotado y selección vacía de distritos. Portable.
 - `tests/test_town_delivery.gd`: carga real, conducción sobre asfalto,
   seis pedidos/cajas, selección/GPS, rechazo de una caja equivocada, entregas
   de ambos distritos en orden 3/1/2/6/4/5,
@@ -142,7 +162,8 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   con tres modelos distintos y estante de carga original. La exploración del
   Centro cambia solo la guía GPS y permite volver a los pedidos pendientes.
   Verifica cajas sin interpenetración y seleccionables apuntando en ambos
-  niveles del estante, F4/F7, seis registros únicos y regreso prematuro sin
+  niveles del estante, marcha real desde asfalto por acera/acceso sin saltar,
+  F4/F7, seis registros únicos y regreso prematuro sin
   finalizar. Sobre 100 semillas comprueba seis destinos únicos, orden estable
   al invertir los lotes y 300 recorridos específicos a los clientes del Centro.
 - `tests/render_town_delivery.gd`: depósito/camión, estante con seis cajas, cabina/GPS, casa de cliente,

@@ -6,6 +6,8 @@ extends SceneTree
 ## from asphalt. Art varies independently of the planned street geometry.
 ## Opening the center preserves the plan, adds its native models and parks,
 ## removes only the open gate, and gives the connecting road continuous collision.
+## Pedestrian surfaces are batched/collidable, match the road at entries,
+## reach parks without blocked centers, and clear trees/benches from their paths.
 
 const SCENE := preload("res://scenes/gameplay/town/town_prototype.tscn")
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
@@ -85,7 +87,10 @@ func _run() -> void:
 		"Park bench rests on the lawn and has physical collision (got %s)" % bounds
 	)
 	var trees: PackedVector2Array = town.get(&"tree_positions")
-	_expect(trees.size() == 24, "Plaza and park get their tree rings (got %d)" % trees.size())
+	_expect(
+		trees.size() >= 16 and trees.size() <= 24,
+		"Plaza and park retain trees around their clear entries (got %d)" % trees.size()
+	)
 	for at: Vector2 in trees:
 		_expect(PLAN.road_clearance(plan, at) > 3, "Tree crowns leave streets clear")
 	var batches: Array[Node] = town.get_node(^"BatchedDressing").find_children(
@@ -229,6 +234,40 @@ func _run() -> void:
 					% [edge, at]
 				)
 			)
+	var pedestrian: Dictionary = expanded.get(&"pedestrian_plan")
+	_expect(
+		expanded.has_node(^"PedestrianSurfaces/CollisionShape3D"),
+		"Walkways share one batched mesh and physical surface"
+	)
+	for path: Dictionary in pedestrian.green_paths:
+		for i: int in range(1, path.points.size()):
+			for fraction: float in [.25, .5, .75]:
+				var at: Vector2 = (path.points[i - 1] as Vector2).lerp(path.points[i], fraction)
+				var query := PhysicsRayQueryParameters3D.create(
+					Vector3(at.x, 20, at.y), Vector3(at.x, -2, at.y)
+				)
+				var hit: Dictionary = expanded.get_world_3d().direct_space_state.intersect_ray(
+					query
+				)
+				var body: Node = hit.get("collider")
+				_expect(
+					(
+						body != null
+						and (
+							bool(body.get_meta(&"pedestrian_surface", false))
+							or bool(body.get_meta(&"road_surface", false))
+						)
+					),
+					(
+						"Park entry has continuous unblocked walking support (got %s)"
+						% (body.get_path() if body != null else "none")
+					)
+				)
+	for at: Vector2 in expanded.get(&"tree_positions"):
+		_expect(
+			float(expanded.call(&"_path_clearance", at)) > 4,
+			"Tree crowns stay clear of green-area entries"
+		)
 	expanded.queue_free()
 	await process_frame
 	if _failures == 0:

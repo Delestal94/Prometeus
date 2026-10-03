@@ -4,6 +4,7 @@ extends Node3D
 ## built_districts selects geometry without regenerating the town's layout.
 
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
+const WALKWAYS := preload("res://modules/town_gen/town_walkways.gd")
 const NAVIGATION := preload("res://modules/town_gen/town_navigation.gd")
 const ART := preload("res://scripts/gameplay/town/town_art.gd")
 const DISTRICT_NAMES: Array[String] = [
@@ -24,6 +25,7 @@ const WOOD := Color("8b6650")
 @export var built_districts: PackedInt32Array = PackedInt32Array([0])
 
 var plan: Dictionary = {}
+var pedestrian_plan: Dictionary = {}
 var tree_positions: PackedVector2Array = PackedVector2Array()
 var _materials: Dictionary = {}
 var _camera: Camera3D
@@ -46,6 +48,8 @@ func _ready() -> void:
 	plan = PLAN.generate(world_seed)
 	_build_ground()
 	_build_roads()
+	pedestrian_plan = WALKWAYS.generate(plan, built_districts)
+	_build_walkways()
 	for lot: Dictionary in plan.lots:
 		if lot.district in built_districts:
 			_build_lot(lot)
@@ -203,11 +207,11 @@ func _build_lot(lot: Dictionary) -> void:
 		PAVING if service else GRASS.lightened(.12)
 	)
 	ART.build_lot(parcel, lot, world_seed)
-	var frontage: Vector2 = lot.frontage
-	var driveway_start: Vector2 = (
-		lot.position + (frontage - lot.position).normalized() * size.y * .5
-	)
-	_road(self, driveway_start, frontage, 5.0 if service else 2.0)
+	if service:
+		var apron := _box(
+			parcel, "ApronFloor", Vector3(size.x, .08, size.y), Vector3(0, .04, 0), PAVING, true
+		)
+		apron.set_meta(&"pedestrian_surface", true)
 	if lot.role in [&"depot", &"house", &"workshop", &"shop"]:
 		var titles: Dictionary = {
 			&"depot": "TAKE MY PACKAGE",
@@ -244,14 +248,21 @@ func _build_green(green: Dictionary) -> void:
 	add_child(area)
 	_disc(area, "Lawn", Vector2.ZERO, green.radius, GRASS.darkened(.08))
 	var plaza: bool = green.kind == &"plaza"
-	_disc(area, "Walkway", Vector2.ZERO, 10 if plaza else 5, PAVING, .22)
+	_disc(area, "Walkway", Vector2.ZERO, 10 if plaza else 5, PAVING, .20)
+	_green_floor(area, "LawnFloor", green.radius, .08)
+	_green_floor(area, "WalkwayFloor", 10 if plaza else 5, .20)
+	var entrance_angle: float = 0.0
+	for path: Dictionary in pedestrian_plan.green_paths:
+		if path.district == green.district and path.kind == green.kind and path.points.size() >= 2:
+			entrance_angle = (path.points[-2] - green.position).angle()
+			break
 	if plaza:
 		_box(area, "MonumentBase", Vector3(4, .7, 4), Vector3(0, .43, 0), PAVING, true)
 		_box(area, "Monument", Vector3(1.2, 4.8, 1.2), Vector3(0, 3.1, 0), Color("9f9778"), true)
 		_box(area, "PackageSculpture", Vector3(2.2, 1.8, 2.2), Vector3(0, 6.2, 0), WOOD, true)
 		_sign(area, tr("WORLD_TOWN_PLAZA"), Vector3(0, 9, 0))
 	for i: int in range(4):
-		var angle: float = TAU * i / 4
+		var angle: float = entrance_angle + PI * .25 + TAU * i / 4
 		var at := Vector3(cos(angle) * 12, .08, sin(angle) * 12)
 		ART.model(area, "Bench", ART.BENCH, at, -angle + PI * .5, true)
 		ART.model(area, "Lamp", ART.LAMP, at + Vector3(2, 0, 0), -angle, true)
@@ -267,8 +278,90 @@ func _build_green(green: Dictionary) -> void:
 				* rng.randf_range(green.radius - 5, green.radius - 2)
 			)
 		)
-		if PLAN.road_clearance(plan, at) > 3:
+		if PLAN.road_clearance(plan, at) > 3 and _path_clearance(at) > 4:
 			tree_positions.append(at)
+
+
+func _build_walkways() -> void:
+	var surfaces: Array = pedestrian_plan.surfaces.duplicate()
+	for green: Dictionary in plan.green_areas:
+		if green.district not in built_districts:
+			continue
+		var radius: float = 10 if green.kind == &"plaza" else 5
+		for i: int in range(24):
+			var a: Vector2 = Vector2.from_angle(TAU * i / 24.0)
+			var b: Vector2 = Vector2.from_angle(TAU * (i + 1) / 24.0)
+			var at: Vector2 = green.position
+			surfaces.append(
+				PackedVector3Array(
+					[
+						Vector3(at.x + a.x * radius, .20, at.y + a.y * radius),
+						Vector3(at.x + b.x * radius, .20, at.y + b.y * radius),
+						Vector3(at.x + b.x * (radius + .8), .08, at.y + b.y * (radius + .8)),
+						Vector3(at.x + a.x * (radius + .8), .08, at.y + a.y * (radius + .8))
+					]
+				)
+			)
+	var builder := SurfaceTool.new()
+	builder.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for points: PackedVector3Array in surfaces:
+		var polygon := PackedVector2Array()
+		for point: Vector3 in points:
+			polygon.append(Vector2(point.x, point.z))
+		var indices: PackedInt32Array = Geometry2D.triangulate_polygon(polygon)
+		for i: int in range(0, indices.size(), 3):
+			var a: Vector3 = points[indices[i]]
+			var b: Vector3 = points[indices[i + 1]]
+			var c: Vector3 = points[indices[i + 2]]
+			if (b - a).cross(c - a).y > 0:
+				var swap: Vector3 = b
+				b = c
+				c = swap
+			for point: Vector3 in [a, b, c]:
+				builder.set_normal(Vector3.UP)
+				builder.add_vertex(point)
+	var mesh: ArrayMesh = builder.commit()
+	if mesh.get_surface_count() == 0:
+		return
+	var body := StaticBody3D.new()
+	body.name = "PedestrianSurfaces"
+	body.set_meta(&"pedestrian_surface", true)
+	add_child(body)
+	var view := MeshInstance3D.new()
+	view.mesh = mesh
+	view.material_override = _material(PAVING)
+	body.add_child(view)
+	var collision := CollisionShape3D.new()
+	collision.name = "CollisionShape3D"
+	collision.shape = mesh.create_trimesh_shape()
+	body.add_child(collision)
+
+
+func _green_floor(area: Node3D, title: String, radius: float, surface: float) -> void:
+	var body := StaticBody3D.new()
+	body.name = title
+	body.set_meta(&"pedestrian_surface", true)
+	area.add_child(body)
+	var collision := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = radius
+	shape.height = .08
+	collision.shape = shape
+	collision.position.y = surface - .04
+	body.add_child(collision)
+
+
+func _path_clearance(at: Vector2) -> float:
+	var distance: float = INF
+	for path: Dictionary in pedestrian_plan.green_paths:
+		for i: int in range(1, path.points.size()):
+			distance = minf(
+				distance,
+				at.distance_to(
+					Geometry2D.get_closest_point_to_segment(at, path.points[i - 1], path.points[i])
+				)
+			)
+	return distance
 
 
 func _build_trees() -> void:

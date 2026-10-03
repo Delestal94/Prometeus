@@ -3,6 +3,7 @@ extends SceneTree
 ## Captures district overhead and its plaza at street height for seed 4242,
 ## then another seed overhead and two connected districts with center street
 ## views. Images: user://town_<seed>_<view>.png.
+## Includes sidewalks along a center street and the pedestrian plaza entry.
 
 const SCENE := preload("res://scenes/gameplay/town/town_prototype.tscn")
 
@@ -75,6 +76,26 @@ func _center_shots() -> void:
 					var to := Vector3(lot.position.x, 3, lot.position.y)
 					await _shot(camera, from, to, seed_value, "center_shop")
 					break
+			for edge: Dictionary in plan.edges:
+				if edge.district != 1:
+					continue
+				var middle: Vector2 = (plan.nodes[edge.a] + plan.nodes[edge.b]) * .5
+				var direction: Vector2 = (plan.nodes[edge.b] - plan.nodes[edge.a]).normalized()
+				var from := Vector3(middle.x - direction.x * 15, 2.5, middle.y - direction.y * 15)
+				var to := Vector3(middle.x + direction.x * 20, 1.5, middle.y + direction.y * 20)
+				await _shot(camera, from, to, seed_value, "center_sidewalk")
+				break
+			var pedestrian: Dictionary = town.get(&"pedestrian_plan")
+			for path: Dictionary in pedestrian.green_paths:
+				if path.district != 1 or path.kind != &"plaza" or path.points.size() < 2:
+					continue
+				var entry: Vector2 = path.points[0]
+				var next: Vector2 = path.points[1]
+				var direction: Vector2 = (next - entry).normalized()
+				var from := Vector3(entry.x - direction.x * 3, 3, entry.y - direction.y * 3)
+				var to := Vector3(next.x, 1, next.y)
+				await _shot(camera, from, to, seed_value, "plaza_entry")
+				break
 		town.queue_free()
 		await process_frame
 

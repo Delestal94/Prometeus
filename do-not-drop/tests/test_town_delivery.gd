@@ -8,6 +8,8 @@ extends SceneTree
 ## Six coded orders cover both districts; the seed fixes their addresses.
 ## Native boxes fit and can be aimed at on both rack levels. F1-F6 selects
 ## customers; F7 explores the center. Completing only one district stays open.
+## The real on-foot controller walks from asphalt over the sidewalk and
+## reaches a front path using collision surfaces, without jumping.
 
 var _failures: int = 0
 
@@ -62,6 +64,46 @@ func _run() -> void:
 		"The frozen truck rests on asphalt before loading (got %f)" % vehicle.global_position.y
 	)
 	var player_start: Transform3D = player.global_transform
+	var parcel_path: Dictionary = level.get(&"town").get(&"pedestrian_plan").lot_paths[1]
+	var first: Vector2 = parcel_path.points[0]
+	var last: Vector2 = parcel_path.points[-1]
+	var direction: Vector2 = (last - first).normalized()
+	player.global_position = Vector3(first.x - direction.x * 1.0, .21, first.y - direction.y * 1.0)
+	player.rotation.y = atan2(-direction.x, -direction.y)
+	player.set(&"_pitch", 0.0)
+	var walking_start: Vector3 = player.global_position
+	var previous_mouse_mode: Input.MouseMode = Input.mouse_mode
+	var manual_step: bool = DisplayServer.get_name() == "headless"
+	var movement: Script = load("res://scripts/gameplay/player/player_movement.gd")
+	# The dummy display cannot capture a mouse. Exercise the same movement
+	# component against real physics instead of Player's menu/input gate.
+	if manual_step:
+		player.set_physics_process(false)
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	Input.action_press(&"walk_forward")
+	for frame: int in range(120):
+		await physics_frame
+		if manual_step:
+			movement.on_foot_step(player, 1.0 / Engine.physics_ticks_per_second)
+	Input.action_release(&"walk_forward")
+	Input.mouse_mode = previous_mouse_mode
+	player.set_physics_process(true)
+	var progress: float = (
+		Vector2(
+			player.global_position.x - walking_start.x, player.global_position.z - walking_start.z
+		)
+		. dot(direction)
+	)
+	_expect(
+		progress > 5.0 and player.global_position.y >= .06 and player.global_position.y <= .25,
+		(
+			"The actual player walks from road to its front path without a curb blocking it (got %f m, y %f)"
+			% [progress, player.global_position.y]
+		)
+	)
+	player.global_transform = player_start
+	player.set(&"velocity", Vector3.ZERO)
 	var front: Vector2 = (
 		(depot.get_meta(&"lot").frontage - depot.get_meta(&"lot").position)
 		. rotated(-float(depot.get_meta(&"lot").angle))
