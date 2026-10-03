@@ -2,6 +2,7 @@ extends SceneTree
 ## Run: Godot --headless --path do-not-drop --script res://modules/town_gen/tests/test_town_walkways.gd
 ## town_walkways.gd: deterministic sidewalks/ramp heights outside asphalt,
 ## parcel access and green-area paths that detour around buildings. Empty
+## Reserved version-two green routes match the original accesses;
 ## district selection builds nothing; planning never mutates the town. Portable.
 
 const WALK := preload("res://modules/town_gen/town_walkways.gd")
@@ -25,6 +26,11 @@ func _run() -> void:
 	_check_path(fixture, detour)
 	for seed_value: int in [1, 17, 77, 4242, 90210]:
 		var plan: Dictionary = PLAN.generate(seed_value)
+		var old: Dictionary = PLAN.generate(seed_value, 1)
+		_expect(
+			plan.reserved_green_paths == WALK.green_access(old, PackedInt32Array([0, 1])),
+			"Version-two reservations retain all original green entrances"
+		)
 		var original: Dictionary = plan.duplicate(true)
 		var districts := PackedInt32Array([0, 1])
 		var result: Dictionary = WALK.generate(plan, districts)

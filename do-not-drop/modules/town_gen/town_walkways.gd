@@ -83,8 +83,26 @@ static func generate(plan: Dictionary, districts: PackedInt32Array) -> Dictionar
 		)
 		result.lot_paths.append({"address": lot.address, "points": points, "width": width})
 		_path(result, points, width, roads, .08)
+	for path: Dictionary in green_access(plan, districts):
+		result.green_paths.append(path)
+		_path(result, path.points, path.width, roads, STREET_HEIGHT)
+	return result
+
+
+## Access routes can be reserved before infill, independently of surface meshes.
+static func green_access(plan: Dictionary, districts: PackedInt32Array) -> Array[Dictionary]:
+	var paths: Array[Dictionary] = []
+	var edges: Array[Dictionary] = NAV.accessible_edges(plan, districts)
 	for green: Dictionary in plan.green_areas:
 		if green.district not in districts:
+			continue
+		var reserved: Dictionary = {}
+		for path: Dictionary in plan.get("reserved_green_paths", []):
+			if path.position == green.position:
+				reserved = path
+				break
+		if not reserved.is_empty():
+			paths.append(reserved.duplicate(true))
 			continue
 		var nearest: Vector2
 		var distance: float = INF
@@ -102,7 +120,7 @@ static func generate(plan: Dictionary, districts: PackedInt32Array) -> Dictionar
 		var start: Vector2 = nearest + direction * 7.5
 		var end: Vector2 = green.position - direction * (radius - .5)
 		var points: PackedVector2Array = _clear_path(plan, start, end)
-		result.green_paths.append(
+		paths.append(
 			{
 				"district": green.district,
 				"kind": green.kind,
@@ -111,8 +129,7 @@ static func generate(plan: Dictionary, districts: PackedInt32Array) -> Dictionar
 				"width": PATH_WIDTH
 			}
 		)
-		_path(result, points, PATH_WIDTH, roads, STREET_HEIGHT)
-	return result
+	return paths
 
 
 static func _strip(a: Vector2, b: Vector2, half_width: float) -> PackedVector2Array:
