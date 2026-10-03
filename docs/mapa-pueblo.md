@@ -64,8 +64,8 @@ y mantiene cerradas Campo e Industrial. `town_art.gd` viste los lotes con el art
 
 Esta integración conserva los assets originales. El monumento, pavimentos
 y aceras siguen siendo geometría del prototipo. El terreno ahora reutiliza
-la base de carretera del juego; faltan manzanas cerradas, ambientación de
-los cuatro distritos restantes y medición del presupuesto de render.
+la base de carretera del juego; faltan manzanas cerradas, los biomas finales
+de los distritos y medición del presupuesto de render.
 
 ### Aceras y accesos peatonales
 
