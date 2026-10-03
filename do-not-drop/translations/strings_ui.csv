@@ -1165,6 +1165,6 @@ HUD_TOWN_INSPECT_CONTROLS,WASD: mover · Q/E: bajar/subir · botón derecho: mir
 HUD_TOWN_PLAY_SEED,TAKE MY PACKAGE · Barrio y Centro · semilla %d,TAKE MY PACKAGE · Neighborhood and center · seed %d
 HUD_TOWN_COMPLETE,Reparto terminado,Delivery complete
 HUD_TOWN_DISTANCE,%s · %d m por calles,%s · %d m along streets
-HUD_TOWN_CONTROLS,F1–F3: casa · F4: Centro · E: interactuar / bajar · WASD: mover · Esc: mouse,F1–F3: house · F4: City center · E: interact / leave seat · WASD: move · Esc: mouse
+HUD_TOWN_CONTROLS,F1–F3: Barrio · F4–F6: Centro · F7: plaza · E: interactuar / bajar · WASD: mover · Esc: mouse,F1–F3: Neighborhood · F4–F6: Center · F7: square · E: interact / leave seat · WASD: move · Esc: mouse
 HUD_TOWN_DAMAGED,DAÑADO,DAMAGED
 HUD_TOWN_MISSING,SIN CAJA,NO PACKAGE

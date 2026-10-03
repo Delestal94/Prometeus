@@ -53,8 +53,10 @@ y mantiene cerradas Campo e Industrial. `town_art.gd` viste los lotes con el art
 - Depósito y taller compactos con materiales de `DepotKit`, marcos/piezas
   de portón originales, pallets, jaulas de carga y herramientas. Se adapta
   el conjunto al lote; no se reduce el edificio completo del depósito original.
-- Estante de carga con los modelos originales de marcos y bandejas, tres
-  pedidos separados y sus colisiones.
+- Estante de carga con los modelos originales de marcos y bandejas: seis
+  pedidos separados en dos niveles, códigos A–F y sus colisiones. Las cajas
+  inferiores quedan adelantadas dentro de la bandeja para que el borde del
+  nivel superior no bloquee la interacción desde delante.
 - Robles, abedules y arces originales agrupados por `DressingBatcher`, con
   colisión de troncos; bancos y farolas originales apoyados sobre el terreno.
 
@@ -73,22 +75,30 @@ sesión si existe y genera una nueva en una prueba independiente.
 La escena de inspección conserva la cámara libre. Para jugar, abrir
 `scenes/gameplay/town/town_delivery.tscn` y pulsar **F6**, sin sesión online:
 
-1. Tomar los paquetes A/B/C del estante frente al depósito y cargarlos en
+1. Tomar los seis paquetes A–F del estante frente al depósito y cargarlos en
    los soportes del camión usando **E**. El cartel y el prompt muestran su código.
 2. Subir al asiento del conductor con **E**: empieza el reparto. **WASD**
    mueve al jugador o conduce; los controles habituales del camión siguen activos.
-3. **F1/F2/F3** eligen cualquiera de las casas pendientes. El GPS de la cabina
-   indica distancia por calles y el siguiente cruce, además de casa/código.
-4. **F4** dirige el GPS al Centro, a un punto de calle junto a su plaza.
-   Recorrerlo es opcional: conserva los tres pedidos. **F1/F2/F3** vuelven a
+3. **F1–F3** eligen clientes del barrio (A–C), **F4–F6** clientes del Centro
+   (D–F). El GPS de la cabina indica distancia por calles y el siguiente cruce,
+   además de casa/código. Tras resolver un pedido, elige el siguiente pendiente.
+4. **F7** dirige el GPS a un punto de calle junto a la plaza del Centro.
+   Esa visita es opcional y conserva los seis pedidos; **F1–F6** vuelven a
    la navegación del cliente. El Centro tiene comercios con toldos, predominio
    de viviendas de dos plantas, plaza/monumento, parque y mobiliario original.
 5. Bajar con **E**, sacar el paquete y tocar el timbre de la casa correcta.
    Una caja equivocada deja el pedido pendiente; el estado de la caja afecta
    la entrega como en el juego. Los pedidos pueden resolverse en cualquier orden.
-6. Tras cerrar los tres pedidos, volver al depósito y detener el camión.
+6. Tras cerrar los seis pedidos de ambos distritos, volver al depósito y
+   detener el camión. Regresar con pedidos pendientes no termina el reparto.
    El regreso al depósito tiene prioridad sobre la exploración del Centro.
    **Esc** libera o vuelve a capturar el mouse.
+
+Las tres direcciones iniciales se conservan. `town_delivery.delivery_lots`
+selecciona las primeras tres viviendas residenciales del Centro por dirección,
+independientemente del orden de construcción. Cada semilla fija seis destinos
+y códigos; convertirlos en clientes no mueve el plano ni elimina los comercios.
+Las casas del Centro conservan su modelo ya elegido y reciben timbre/marcador.
 
 Este adaptador usa el jugador, camión, paquetes, casas y timbres reales.
 Asfalto y cruces tienen colisión. Los edificios y muebles del barrio usan
@@ -126,11 +136,18 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   clientes y 100 rutas al Centro sobre 100 semillas. Comprueba conectores
   divididos y accesos cerrados. También corre en un proyecto vacío.
 - `tests/test_town_delivery.gd`: carga real, conducción sobre asfalto,
-  selección/GPS, rechazo de una caja equivocada, entregas en orden 3/1/2,
+  seis pedidos/cajas, selección/GPS, rechazo de una caja equivocada, entregas
+  de ambos distritos en orden 3/1/2/6/4/5,
   posibilidad de volver al asiento y final al regresar al depósito; clientes
   con tres modelos distintos y estante de carga original. La exploración del
   Centro cambia solo la guía GPS y permite volver a los pedidos pendientes.
-- `tests/render_town_delivery.gd`: depósito/camión, cabina/GPS, casa de cliente y GPS dirigido al Centro.
+  Verifica cajas sin interpenetración y seleccionables apuntando en ambos
+  niveles del estante, F4/F7, seis registros únicos y regreso prematuro sin
+  finalizar. Sobre 100 semillas comprueba seis destinos únicos, orden estable
+  al invertir los lotes y 300 recorridos específicos a los clientes del Centro.
+- `tests/render_town_delivery.gd`: depósito/camión, estante con seis cajas, cabina/GPS, casa de cliente,
+  cliente del Centro y su ruta GPS. Algunas capturas GPU conservan una omisión
+  intermitente de letras en el título; destinos, distancias y controles completos.
 
 ## Siguientes pasos del spike N-950
 

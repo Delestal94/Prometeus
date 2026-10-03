@@ -14,6 +14,7 @@ var vehicle: Node3D
 var local_player: Node3D
 var houses: Array[Node3D] = []
 var packages: Array[Node3D] = []
+var order_lots: Array[Dictionary] = []
 var destinations: PackedVector2Array = PackedVector2Array()
 var depot_frontage: Vector2
 var center_frontage: Vector2
@@ -40,6 +41,7 @@ func _ready() -> void:
 	add_child(town)
 	world_seed = int(town.get(&"world_seed"))
 	_build_center_destination()
+	order_lots = delivery_lots(town.get(&"plan"))
 	_build_customers()
 	_build_vehicle()
 	_settle_vehicle.call_deferred()
@@ -49,47 +51,81 @@ func _ready() -> void:
 	_refresh_status()
 
 
+## Keep the first three orders stable and add three existing center homes.
+## Selection is data-only, independent of node construction or player order.
+static func delivery_lots(plan: Dictionary) -> Array[Dictionary]:
+	var initial: Array[Dictionary] = []
+	var center: Array[Dictionary] = []
+	for lot: Dictionary in plan.lots:
+		if lot.district == 0 and lot.role == &"house":
+			initial.append(lot)
+		elif lot.district == 1 and lot.role == &"residential":
+			center.append(lot)
+	initial.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool: return a.address.y < b.address.y
+	)
+	center.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.address.y < b.address.y)
+	for index: int in range(mini(3, center.size())):
+		initial.append(center[index])
+	return initial
+
+
 func _build_customers() -> void:
-	var house_script: Script = load("res://scripts/gameplay/route/delivery_house.gd")
+	var parcels: Dictionary = {}
+	var depot: Node3D
+	var depot_lot: Dictionary
 	for parcel: Node in town.get_children():
 		if not parcel.has_meta(&"lot"):
 			continue
 		var lot: Dictionary = parcel.get_meta(&"lot")
+		parcels[lot.address] = parcel
 		if lot.role == &"depot":
 			depot_frontage = lot.frontage
-			_build_packages(parcel, lot)
-		elif lot.role == &"house":
-			for child: Node in parcel.get_children():
-				if child.name != &"Yard":
-					child.free()
-			var index: int = houses.size()
-			var house := Node3D.new()
-			house.set_script(house_script)
-			house.name = "Customer_%d" % (index + 1)
-			house.set(&"house_index", index)
-			house.set(&"assigned_package_id", StringName("town_%d" % (index + 1)))
-			house.set(
-				&"assigned_label", "%s %s" % [tr("HUD_HANDLING_FRAGILE"), String.chr(65 + index)]
-			)
-			house.set(&"visual_variant", ART.customer_variant(world_seed, index))
-			var direction: Vector2 = (lot.frontage - lot.position).normalized()
-			var front: Vector2 = (lot.frontage - lot.position).rotated(-float(lot.angle))
-			house.position = Vector3(0, .08, -signf(front.y) * float(lot.size.y) * .12)
-			# Authored house fronts face local -Z, toward their street frontage.
-			house.rotation.y = atan2(-direction.x, -direction.y) - parcel.rotation.y
-			parcel.add_child(house)
-			# Smaller city lots need compact order markers beside their porches.
-			var marker: Node3D = house.get(&"waiting_marker")
-			marker.get_node(^"OrderSign").scale = Vector3.ONE * .7
-			var balloon: MeshInstance3D = marker.get_node(^"Balloon/BalloonBall")
-			var sphere: SphereMesh = balloon.mesh
-			sphere.radius *= .6
-			sphere.height *= .6
-			balloon.get_node(^"Knot").position.y *= .6
-			house.connect(&"resolved", _on_resolved.bind(index))
-			town.call(&"_sign", house, tr("WORLD_HOUSE_NUMBER") % (index + 1), Vector3(0, 6, 0))
-			houses.append(house)
-			destinations.append(lot.frontage)
+			depot = parcel as Node3D
+			depot_lot = lot
+	for index: int in range(order_lots.size()):
+		var lot: Dictionary = order_lots[index]
+		_build_customer(parcels[lot.address], lot, index)
+	_build_packages(depot, depot_lot)
+
+
+func _build_customer(parcel: Node3D, lot: Dictionary, index: int) -> void:
+	var house_script: Script = load("res://scripts/gameplay/route/delivery_house.gd")
+	var variant: int = ART.customer_variant(world_seed, index)
+	if lot.district == 1:
+		# Retain the already fitted center model when activating its doorbell.
+		variant = int(parcel.get_node(^"Building").get_meta(&"house_variant"))
+	for child: Node in parcel.get_children():
+		if child.name != &"Yard":
+			child.free()
+	var house := Node3D.new()
+	house.set_script(house_script)
+	house.name = "Customer_%d" % (index + 1)
+	house.set(&"house_index", index)
+	house.set(&"assigned_package_id", StringName("town_%d" % (index + 1)))
+	house.set(&"assigned_label", "%s %s" % [tr("HUD_HANDLING_FRAGILE"), String.chr(65 + index)])
+	house.set(&"visual_variant", variant)
+	house.set_meta(&"district", lot.district)
+	house.set_meta(&"address", lot.address)
+	var direction: Vector2 = (lot.frontage - lot.position).normalized()
+	var front: Vector2 = (lot.frontage - lot.position).rotated(-float(lot.angle))
+	house.position = Vector3(0, .08, -signf(front.y) * float(lot.size.y) * .12)
+	# Authored house fronts face local -Z, toward their street frontage.
+	house.rotation.y = atan2(-direction.x, -direction.y) - parcel.rotation.y
+	parcel.add_child(house)
+	# Smaller city lots need compact order markers beside their porches.
+	var marker: Node3D = house.get(&"waiting_marker")
+	marker.get_node(^"OrderSign").scale = Vector3.ONE * .7
+	var balloon: MeshInstance3D = marker.get_node(^"Balloon/BalloonBall")
+	var sphere: SphereMesh = balloon.mesh
+	sphere.radius *= .6
+	sphere.height *= .6
+	balloon.get_node(^"Knot").position.y *= .6
+	house.connect(&"resolved", _on_resolved.bind(index))
+	var sign_height: float = 9.2 if variant == 3 else 6.0
+	town.call(&"_sign", house, tr("WORLD_HOUSE_NUMBER") % (index + 1), Vector3(0, sign_height, 0))
+	houses.append(house)
+	destinations.append(lot.frontage)
 
 
 func _build_packages(parcel: Node3D, lot: Dictionary) -> void:
@@ -98,10 +134,14 @@ func _build_packages(parcel: Node3D, lot: Dictionary) -> void:
 	ART.loading_rack(parcel, z)
 	var package_scene: PackedScene = load("res://scenes/gameplay/package/package.tscn")
 	var mount_script: Script = load("res://scripts/gameplay/interaction/package_mount_point.gd")
-	for index: int in range(3):
+	for index: int in range(houses.size()):
 		var marker := Marker3D.new()
 		marker.name = "OrderMount_%d" % index
-		marker.position = Vector3((index - 1) * 2.0, 1.5, z)
+		var height: float = 1.515 if index < 3 else .665
+		marker.position = Vector3((index % 3 - 1) * 2.0, height, z)
+		if index >= 3:
+			# Keep lower boxes within the deck, forward of the upper shelf's lip.
+			marker.position.z += signf(front.y) * .15
 		parcel.add_child(marker)
 		var mount := Area3D.new()
 		mount.set_script(mount_script)
@@ -118,12 +158,13 @@ func _build_packages(parcel: Node3D, lot: Dictionary) -> void:
 		package.name = "Order_%d" % (index + 1)
 		package.set(&"package_id", StringName("town_%d" % (index + 1)))
 		package.set_meta(&"dispatch_code", String.chr(65 + index))
+		package.set_meta(&"district", order_lots[index].district)
 		add_child(package)
 		mount.call(&"store", package)
 		packages.append(package)
 		var code := Label3D.new()
 		code.text = "%d · %s" % [index + 1, String.chr(65 + index)]
-		code.position = Vector3(0, .7, 0)
+		code.position = Vector3(0, .4, signf(front.y) * .7)
 		code.font_size = 32
 		code.pixel_size = .01
 		code.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -349,10 +390,10 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _owns_run or not event is InputEventKey or not event.pressed or event.echo:
 		return
-	if event.physical_keycode in [KEY_F1, KEY_F2, KEY_F3]:
+	if event.physical_keycode in [KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6]:
 		select_house(int(event.physical_keycode) - KEY_F1)
 		get_viewport().set_input_as_handled()
-	elif event.physical_keycode == KEY_F4:
+	elif event.physical_keycode == KEY_F7:
 		select_center()
 		get_viewport().set_input_as_handled()
 	elif event.physical_keycode == KEY_ESCAPE:

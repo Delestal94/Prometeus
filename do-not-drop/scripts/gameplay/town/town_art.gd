@@ -196,7 +196,8 @@ static func loading_rack(parcel: Node3D, z: float) -> void:
 				Vector3(.08, 2.7, .08), Transform3D(Basis.IDENTITY, Vector3(x, 1.35, side * .5))
 			)
 	for x: float in [-2, 0, 2]:
-		for height: float in [.35, 1.1, 2.6]:
+		# Lower bay clears a full-size box beneath the middle shelf.
+		for height: float in [.25, 1.1, 2.6]:
 			kit.model(deck, Transform3D(basis, Vector3(x, height, 0)))
 			kit.collider(
 				Vector3(1.92, .12, 1.01), Transform3D(Basis.IDENTITY, Vector3(x, height - .06, 0))

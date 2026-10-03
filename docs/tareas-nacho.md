@@ -31,6 +31,10 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   original de dos plantas, comercios, plaza/parque y corredor transitable.
   F4 guía al Centro; F1–F3 vuelven a pedidos. Campo e Industrial siguen cerrados.
   Apertura sin mover el plano; rutas entre distritos sobre 100 semillas.
+- [x] Reparto entre dos distritos (2026-10-03): seis pedidos A–F, tres
+  clientes iniciales y tres del Centro con timbre/modelo original. Estante
+  de dos niveles accesibles, F1–F6 clientes y F7 plaza. Direcciones estables
+  sobre 100 semillas; final exige resolver ambos distritos y volver al depósito.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos
