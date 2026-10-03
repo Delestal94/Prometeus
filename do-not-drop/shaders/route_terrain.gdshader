@@ -2,6 +2,7 @@ shader_type spatial;
 render_mode diffuse_burley;
 
 varying vec3 world_position;
+varying vec3 world_normal;
 
 // Greyscale grain maps (art/tools/make_detail_textures.py): each multiplies
 // its surface's palette colour, so they add texture without changing the
@@ -29,6 +30,27 @@ uniform float autumn : hint_range(0.0, 1.0) = 0.0;
 uniform float night_road : hint_range(0.0, 1.0) = 0.0;
 // How much lighter the asphalt gets at full night (x albedo).
 uniform float night_road_lift : hint_range(0.0, 2.0) = 0.4;
+// Optional local mountain biome. Disabled on the original linear routes.
+uniform bool snow_enabled = false;
+uniform vec2 snow_outline[7];
+
+float mountain_mask(vec2 p) {
+	bool inside = false;
+	float distance_to_edge = 10000.0;
+	for (int i = 0; i < 7; i++) {
+		vec2 a = snow_outline[i];
+		vec2 b = snow_outline[(i + 1) % 7];
+		vec2 edge = b - a;
+		vec2 nearest = a + edge * clamp(dot(p - a, edge) / max(dot(edge, edge), 0.001), 0.0, 1.0);
+		distance_to_edge = min(distance_to_edge, length(p - nearest));
+		if ((a.y > p.y) != (b.y > p.y)) {
+			if (p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) {
+				inside = !inside;
+			}
+		}
+	}
+	return inside ? smoothstep(0.0, 15.0, distance_to_edge) : 0.0;
+}
 
 float noise2(vec2 p) {
 	return sin(p.x * 1.17 + sin(p.y * 0.83)) * 0.5 + sin(p.y * 1.61 - p.x * 0.71) * 0.25;
@@ -36,6 +58,7 @@ float noise2(vec2 p) {
 
 void vertex() {
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	world_normal = normalize(MODEL_NORMAL_MATRIX * NORMAL);
 }
 
 void fragment() {
@@ -66,6 +89,11 @@ void fragment() {
 	float wet_road = wetness * road * mix(0.65, 1.0, puddles) * (1.0 - gravel_mix * 0.6);
 	float wet_ground = wetness * (1.0 - road) * 0.35;
 	ground *= 1.0 - wet_road * 0.32 - wet_ground * 0.25;
+	if (snow_enabled) {
+		float snow = mountain_mask(p) * smoothstep(1.8, 4.5, world_position.y);
+		snow *= smoothstep(0.3, 0.75, normalize(world_normal).y) * grass;
+		ground = mix(ground, vec3(0.88, 0.93, 0.96) + grain * 0.012, snow);
+	}
 	ALBEDO = ground;
 	ROUGHNESS = mix(0.96, 0.16, wet_road);
 	SPECULAR = mix(0.5, 0.75, wet_road);
