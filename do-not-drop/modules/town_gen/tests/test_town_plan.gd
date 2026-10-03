@@ -5,6 +5,8 @@ extends SceneTree
 ## Planning is repeatable, independent of global RNG and future unlock state;
 ## Version-two infill preserves version-one addresses and reserved green accesses;
 ## compact parcels have two metres between yards and clear sidewalks.
+## Version three adds connected interior streets while keeping all original
+## parcels, roads and green entrances; versions one and two remain reproducible.
 ## Street crossings become graph junctions. Runs without game autoloads/assets.
 
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
@@ -109,10 +111,13 @@ func _check_lots(plan: Dictionary, seed_value: int) -> void:
 			lot.get("urban_infill", false) or PLAN.road_clearance(plan, lot.position) >= radius + 2,
 			"Buildings/yard leave the road clear (seed %d)" % seed_value
 		)
-		_expect(
-			absf(PLAN.road_clearance(plan, lot.frontage) + PLAN.ROAD_WIDTH * .5) < .01,
-			"Each address has real street frontage (seed %d)" % seed_value
-		)
+		var has_frontage: bool = false
+		for edge: Dictionary in plan.edges:
+			var near: Vector2 = Geometry2D.get_closest_point_to_segment(
+				lot.frontage, plan.nodes[edge.a], plan.nodes[edge.b]
+			)
+			has_frontage = has_frontage or lot.frontage.distance_to(near) < .01
+		_expect(has_frontage, "Each address has real street frontage (seed %d)" % seed_value)
 		for green: Dictionary in plan.green_areas:
 			_expect(
 				(
@@ -166,16 +171,48 @@ func _footprint(lot: Dictionary, margin: float = 0) -> PackedVector2Array:
 
 func _check_infill(plan: Dictionary, seed_value: int) -> void:
 	var old: Dictionary = PLAN.generate(seed_value, 1)
+	var second: Dictionary = PLAN.generate(seed_value, 2)
 	for key: String in ["nodes", "edges", "districts", "gates", "green_areas"]:
 		_expect(
-			plan[key] == old[key], "Infill preserves version-one %s (seed %d)" % [key, seed_value]
+			second[key] == old[key],
+			"Version-two preserves version-one %s (seed %d)" % [key, seed_value]
 		)
+	for key: String in ["districts", "gates", "green_areas"]:
+		_expect(plan[key] == old[key], "Interior streets preserve %s (seed %d)" % [key, seed_value])
+	_expect(
+		plan.nodes.slice(0, old.nodes.size()) == old.nodes,
+		"Interior streets keep every original junction (seed %d)" % seed_value
+	)
+	for edge: Dictionary in old.edges:
+		var a: Vector2 = old.nodes[edge.a]
+		var b: Vector2 = old.nodes[edge.b]
+		var covered: float = 0
+		for child: Dictionary in plan.edges:
+			if child.district != edge.district or child.get("block_street", false):
+				continue
+			var first: Vector2 = plan.nodes[child.a]
+			var last: Vector2 = plan.nodes[child.b]
+			if (
+				first.distance_to(Geometry2D.get_closest_point_to_segment(first, a, b)) < .001
+				and last.distance_to(Geometry2D.get_closest_point_to_segment(last, a, b)) < .001
+			):
+				covered += first.distance_to(last)
+		_expect(
+			absf(covered - a.distance_to(b)) < .01,
+			"Every original street survives junction splitting (seed %d)" % seed_value
+		)
+	for street: Dictionary in plan.block_streets:
+		for point: Vector2 in [street.a, street.b]:
+			_expect(
+				absf(PLAN.road_clearance(old, point) + 6) < .001,
+				"Interior streets join existing roads at both ends (seed %d)" % seed_value
+			)
 	_expect(
 		plan.lots.slice(0, old.lots.size()) == old.lots,
 		"Infill preserves every existing lot/address (seed %d)" % seed_value
 	)
 	var addresses: Dictionary = {}
-	var counts := [0, 0]
+	var counts := [0, 0, 0, 0, 0, 0]
 	for lot: Dictionary in plan.lots:
 		_expect(not addresses.has(lot.address), "Addresses remain unique (seed %d)" % seed_value)
 		addresses[lot.address] = true
@@ -217,7 +254,7 @@ func _check_streets(plan: Dictionary, seed_value: int) -> void:
 	for edge: Dictionary in plan.edges:
 		var vector: Vector2 = plan.nodes[edge.b] - plan.nodes[edge.a]
 		_expect(
-			vector.length() > .01 and edge.width >= 12,
+			vector.length() > .01 and edge.width >= 8,
 			"Streets have positive length and truck-width space (seed %d)" % seed_value
 		)
 		if absf(vector.x) > 1 and absf(vector.y) > 1:

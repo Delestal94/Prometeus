@@ -4,13 +4,16 @@ extends RefCounted
 
 const NAV := preload("res://modules/town_gen/town_navigation.gd")
 const SIDEWALK_WIDTH: float = 2.0
-const RAMP_WIDTH: float = .8
+const CURB_RAMP_LENGTH: float = 1.6
 const PATH_WIDTH: float = 2.0
 const STREET_HEIGHT: float = .20
+const SIDEWALK_HEIGHT: float = .36
 
 
 static func generate(plan: Dictionary, districts: PackedInt32Array) -> Dictionary:
-	var result: Dictionary = {"surfaces": [], "lot_paths": [], "green_paths": []}
+	var result: Dictionary = {
+		"surfaces": [], "lot_paths": [], "green_paths": [], "corner_paths": []
+	}
 	if districts.is_empty():
 		return result
 	var edges: Array[Dictionary] = NAV.accessible_edges(plan, districts)
@@ -18,44 +21,154 @@ static func generate(plan: Dictionary, districts: PackedInt32Array) -> Dictionar
 	var junctions: Dictionary = {}
 	for edge: Dictionary in edges:
 		roads.append(_strip(plan.nodes[edge.a], plan.nodes[edge.b], edge.width * .5))
-		junctions[edge.a] = true
-		junctions[edge.b] = true
+		junctions[edge.a] = maxf(junctions.get(edge.a, 0), edge.width * .5)
+		junctions[edge.b] = maxf(junctions.get(edge.b, 0), edge.width * .5)
 	for id: int in junctions:
-		roads.append(_circle(plan.nodes[id], 6.0 / cos(PI / 24.0) + .01, 24))
+		roads.append(_circle(plan.nodes[id], float(junctions[id]) / cos(PI / 24.0) + .01, 24))
 	for gate: Dictionary in plan.gates:
-		var pair: Vector2i = gate.districts
-		var first_open: bool = pair.x in districts
-		if first_open == (pair.y in districts):
+		var first_open: bool = gate.districts.x in districts
+		if first_open == (gate.districts.y in districts):
 			continue
 		var a: Vector2 = plan.nodes[gate.a if first_open else gate.b]
 		var b: Vector2 = plan.nodes[gate.b if first_open else gate.a]
 		roads.append(_strip(a, a.move_toward(b, minf(35, a.distance_to(b) * .5)), 6))
+	# Localized curb cuts beside intersections, with a 10% approach slope.
+	for edge: Dictionary in edges:
+		var a: Vector2 = plan.nodes[edge.a]
+		var b: Vector2 = plan.nodes[edge.b]
+		var direction: Vector2 = (b - a).normalized()
+		if a.distance_to(b) < 24:
+			continue
+		for end: Vector2 in [a + direction * 10, b - direction * 10]:
+			for side: float in [-1, 1]:
+				var normal: Vector2 = direction.orthogonal() * side
+				var half: float = edge.width * .5
+				var points := PackedVector2Array(
+					[
+						end + normal * half,
+						end + normal * (half + CURB_RAMP_LENGTH),
+						end + normal * (half + SIDEWALK_WIDTH)
+					]
+				)
+				var heights := PackedFloat32Array([STREET_HEIGHT, SIDEWALK_HEIGHT, SIDEWALK_HEIGHT])
+				result.corner_paths.append({"points": points, "width": 2.4, "heights": heights})
+				_path(result, points, 2.4, roads, SIDEWALK_HEIGHT, heights, true)
+	var access_roads: Array[PackedVector2Array] = roads.duplicate()
+	for path: Dictionary in result.corner_paths:
+		for i: int in range(1, path.points.size()):
+			access_roads.append(_strip(path.points[i - 1], path.points[i], path.width * .5 + .5))
+	for lot: Dictionary in plan.lots:
+		if lot.district not in districts:
+			continue
+		var direction: Vector2 = (lot.position - lot.frontage).normalized()
+		var service: bool = lot.role in [&"depot", &"workshop"]
+		var width: float = 5.0 if service else PATH_WIDTH
+		var end: Vector2 = (
+			lot.position - direction * (lot.size.y * .5 if service else (4.4 - lot.size.y * .12))
+		)
+		var half: float = frontage_half_width(plan, lot.frontage)
+		var points := PackedVector2Array(
+			[
+				lot.frontage + direction * half,
+				lot.frontage + direction * (half + 2),
+				lot.frontage + direction * (half + 2),
+				end
+			]
+		)
+		var heights := PackedFloat32Array([SIDEWALK_HEIGHT, SIDEWALK_HEIGHT, .08, .08])
+		if service:
+			points = PackedVector2Array(
+				[
+					lot.frontage + direction * half,
+					lot.frontage + direction * (half + CURB_RAMP_LENGTH),
+					lot.frontage + direction * (half + 2),
+					lot.frontage + direction * (half + 3.6),
+					end
+				]
+			)
+			heights = PackedFloat32Array(
+				[STREET_HEIGHT, SIDEWALK_HEIGHT, SIDEWALK_HEIGHT, .08, .08]
+			)
+		result.lot_paths.append(
+			{
+				"address": lot.address,
+				"points": points,
+				"width": width,
+				"heights": heights,
+				"vehicle_access": service
+			}
+		)
+		_path(result, points, width, access_roads, .08, heights, service)
+	for original: Dictionary in green_access(plan, districts):
+		var path: Dictionary = original.duplicate(true)
+		var points: PackedVector2Array = path.points
+		var heights := PackedFloat32Array()
+		heights.resize(points.size())
+		heights.fill(STREET_HEIGHT)
+		if not points.is_empty():
+			var nearest := Vector2.ZERO
+			var distance: float = INF
+			var half: float = 6
+			for edge: Dictionary in edges:
+				var at: Vector2 = Geometry2D.get_closest_point_to_segment(
+					points[0], plan.nodes[edge.a], plan.nodes[edge.b]
+				)
+				if at.distance_squared_to(points[0]) < distance:
+					distance = at.distance_squared_to(points[0])
+					nearest = at
+					half = edge.width * .5
+			if nearest.distance_to(points[0]) > half + .01:
+				var direction: Vector2 = (points[0] - nearest).normalized()
+				points.remove_at(0)
+				heights.remove_at(0)
+				var outer: Vector2 = nearest + direction * (half + SIDEWALK_WIDTH)
+				points.insert(0, outer)
+				points.insert(0, outer)
+				points.insert(0, nearest + direction * half)
+				heights.insert(0, STREET_HEIGHT)
+				heights.insert(0, SIDEWALK_HEIGHT)
+				heights.insert(0, SIDEWALK_HEIGHT)
+		path.points = points
+		path["heights"] = heights
+		result.green_paths.append(path)
+		_path(result, points, path.width, access_roads, STREET_HEIGHT, heights)
+	var cuts: Array[PackedVector2Array] = roads.duplicate()
+	for key: String in ["lot_paths", "green_paths", "corner_paths"]:
+		for path: Dictionary in result[key]:
+			for i: int in range(1, path.points.size()):
+				if path.points[i - 1].distance_squared_to(path.points[i]) < .000001:
+					continue
+				var margin: float = (
+					.5 if key == "corner_paths" or path.get("vehicle_access", false) else 0
+				)
+				cuts.append(_strip(path.points[i - 1], path.points[i], path.width * .5 + margin))
 	for edge: Dictionary in edges:
 		var a: Vector2 = plan.nodes[edge.a]
 		var b: Vector2 = plan.nodes[edge.b]
 		var normal: Vector2 = (b - a).normalized().orthogonal()
+		var half: float = edge.width * .5
 		for side: float in [-1, 1]:
-			for radii: Vector2 in [Vector2(6, 8), Vector2(8, 8.8)]:
-				var polygon := PackedVector2Array(
-					[
-						a + normal * radii.x * side,
-						b + normal * radii.x * side,
-						b + normal * radii.y * side,
-						a + normal * radii.y * side
-					]
-				)
+			for radii: Vector2 in [Vector2(half, half + SIDEWALK_WIDTH)]:
 				_surface(
 					result,
-					polygon,
-					roads,
+					PackedVector2Array(
+						[
+							a + normal * radii.x * side,
+							b + normal * radii.x * side,
+							b + normal * radii.y * side,
+							a + normal * radii.y * side
+						]
+					),
+					cuts,
 					func(at: Vector2) -> float: return _street_height(plan.nodes, edges, at)
 				)
 	for id: int in junctions:
 		var center: Vector2 = plan.nodes[id]
+		var half: float = junctions[id]
 		for i: int in range(24):
 			var a: Vector2 = Vector2.from_angle(TAU * i / 24.0)
 			var b: Vector2 = Vector2.from_angle(TAU * (i + 1) / 24.0)
-			for radii: Vector2 in [Vector2(6, 8), Vector2(8, 8.8)]:
+			for radii: Vector2 in [Vector2(half, half + SIDEWALK_WIDTH)]:
 				_surface(
 					result,
 					PackedVector2Array(
@@ -66,27 +179,22 @@ static func generate(plan: Dictionary, districts: PackedInt32Array) -> Dictionar
 							center + a * radii.y
 						]
 					),
-					roads,
+					cuts,
 					func(at: Vector2) -> float: return _street_height(plan.nodes, edges, at)
 				)
-	for lot: Dictionary in plan.lots:
-		if lot.district not in districts:
-			continue
-		var direction: Vector2 = (lot.position - lot.frontage).normalized()
-		var service: bool = lot.role in [&"depot", &"workshop"]
-		var width: float = 5.0 if service else PATH_WIDTH
-		var end: Vector2 = (
-			lot.position - direction * (lot.size.y * .5 if service else (4.4 - lot.size.y * .12))
-		)
-		var points := PackedVector2Array(
-			[lot.frontage + direction * 6, lot.frontage + direction * 8.8, end]
-		)
-		result.lot_paths.append({"address": lot.address, "points": points, "width": width})
-		_path(result, points, width, roads, .08)
-	for path: Dictionary in green_access(plan, districts):
-		result.green_paths.append(path)
-		_path(result, path.points, path.width, roads, STREET_HEIGHT)
 	return result
+
+
+## The widest road meeting the frontage determines the height/ramp connection.
+static func frontage_half_width(plan: Dictionary, point: Vector2) -> float:
+	var half: float = 0.0
+	for edge: Dictionary in plan.edges:
+		var near: Vector2 = Geometry2D.get_closest_point_to_segment(
+			point, plan.nodes[edge.a], plan.nodes[edge.b]
+		)
+		if point.distance_to(near) < .01:
+			half = maxf(half, edge.width * .5)
+	return half
 
 
 ## Access routes can be reserved before infill, independently of surface meshes.
@@ -145,20 +253,9 @@ static func _circle(center: Vector2, radius: float, count: int) -> PackedVector2
 
 
 static func _street_height(
-	nodes: PackedVector2Array, edges: Array[Dictionary], at: Vector2
+	_nodes: PackedVector2Array, _edges: Array[Dictionary], _at: Vector2
 ) -> float:
-	var clearance: float = INF
-	for edge: Dictionary in edges:
-		clearance = minf(
-			clearance,
-			(
-				at.distance_to(
-					Geometry2D.get_closest_point_to_segment(at, nodes[edge.a], nodes[edge.b])
-				)
-				- edge.width * .5
-			)
-		)
-	return STREET_HEIGHT * clampf((SIDEWALK_WIDTH + RAMP_WIDTH - clearance) / RAMP_WIDTH, 0, 1)
+	return SIDEWALK_HEIGHT
 
 
 static func _surface(
@@ -195,17 +292,27 @@ static func _path(
 	points: PackedVector2Array,
 	width: float,
 	roads: Array[PackedVector2Array],
-	end_height: float
+	end_height: float,
+	heights: PackedFloat32Array = PackedFloat32Array(),
+	lateral_transition: bool = false
 ) -> void:
 	for i: int in range(1, points.size()):
 		var a: Vector2 = points[i - 1]
 		var b: Vector2 = points[i]
-		var first_height: float = STREET_HEIGHT
-		var last_height: float = end_height if i == points.size() - 1 else STREET_HEIGHT
+		if a.distance_squared_to(b) < .000001:
+			continue
+		var first_height: float = heights[i - 1] if not heights.is_empty() else STREET_HEIGHT
+		var last_height: float = (
+			heights[i]
+			if not heights.is_empty()
+			else (end_height if i == points.size() - 1 else STREET_HEIGHT)
+		)
 		var height_at := func(at: Vector2) -> float:
 			var fraction: float = clampf((at - a).dot(b - a) / a.distance_squared_to(b), 0, 1)
 			return lerpf(first_height, last_height, fraction)
 		_surface(result, _strip(a, b, width * .5), roads, height_at)
+		if not lateral_transition:
+			continue
 		var normal: Vector2 = (b - a).normalized().orthogonal()
 		for side: float in [-1, 1]:
 			var polygon := PackedVector2Array(
@@ -222,9 +329,10 @@ static func _path(
 				roads,
 				func(at: Vector2) -> float:
 					var across: float = absf((at - a).dot(normal)) - width * .5
-					return maxf(
+					return lerpf(
+						height_at.call(at),
 						_street_height_from_roads(roads, at),
-						height_at.call(at) * clampf(1 - across / .5, 0, 1)
+						clampf(across / .5, 0, 1)
 					)
 			)
 
@@ -241,7 +349,7 @@ static func _street_height_from_roads(roads: Array[PackedVector2Array], at: Vect
 					)
 				)
 			)
-	return STREET_HEIGHT * clampf((2.8 - distance) / .8, 0, 1)
+	return SIDEWALK_HEIGHT if distance < SIDEWALK_WIDTH + .01 else 0.0
 
 
 ## Visibility graph around inflated parcel rectangles; no path cuts a building.

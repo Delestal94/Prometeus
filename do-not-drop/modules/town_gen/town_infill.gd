@@ -4,7 +4,12 @@ const WALK := preload("res://modules/town_gen/town_walkways.gd")
 
 
 static func populate(plan: Dictionary, districts: PackedInt32Array) -> void:
-	plan.reserved_green_paths = WALK.green_access(plan, districts)
+	var reserved: Array[Dictionary] = []
+	reserved.assign(plan.get("reserved_green_paths", []))
+	for path: Dictionary in WALK.green_access(plan, districts):
+		if not reserved.any(func(old: Dictionary) -> bool: return old.position == path.position):
+			reserved.append(path)
+	plan.reserved_green_paths = reserved
 	var occupied: Array[Dictionary] = []
 	for lot: Dictionary in plan.lots:
 		occupied.append(_obstacle(_parcel(lot, 1.0)))
@@ -28,7 +33,14 @@ static func _fill_district(
 	for lot: Dictionary in plan.lots:
 		if lot.district == id:
 			address = maxi(address, lot.address.y + 1)
+	var edges: Array[Dictionary] = []
 	for edge: Dictionary in plan.edges:
+		if edge.get("block_street", false):
+			edges.append(edge)
+	for edge: Dictionary in plan.edges:
+		if not edge.get("block_street", false):
+			edges.append(edge)
+	for edge: Dictionary in edges:
 		if edge.district != id:
 			continue
 		var a: Vector2 = plan.nodes[edge.a]
@@ -42,12 +54,18 @@ static func _fill_district(
 					"district": id,
 					"size": size,
 					"frontage": frontage,
-					"position": frontage + direction.orthogonal() * side * (10.6 + size.y * .5),
+					"position":
+					(
+						frontage
+						+ direction.orthogonal() * side * (edge.width * .5 + 4.6 + size.y * .5)
+					),
 					"angle": direction.angle(),
 					"address": Vector2i(id + 1, address),
-					"role": &"shop" if id == 1 and address % 3 == 0 else &"residential",
+					"role": &"shop" if id in [1, 2, 4] and address % 3 == 0 else &"residential",
 					"urban_infill": true,
 				}
+				if edge.get("block_street", false):
+					lot["block_infill"] = true
 				var footprint: PackedVector2Array = _parcel(lot, 0)
 				var obstacle: Dictionary = _obstacle(_parcel(lot, 1))
 				if not _fits(plan, id, footprint) or _overlaps(obstacle, occupied):

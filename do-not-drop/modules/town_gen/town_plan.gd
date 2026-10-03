@@ -3,9 +3,11 @@ extends RefCounted
 ## Coordinates are metres in the horizontal plane. Version changes are explicit
 ## so a future campaign save can keep the generator that made its world.
 
-const GENERATOR_VERSION: int = 2
+const GENERATOR_VERSION: int = 3
 const BASE_LAYOUT_VERSION: int = 1
 const INFILL := preload("res://modules/town_gen/town_infill.gd")
+const BLOCKS := preload("res://modules/town_gen/town_blocks.gd")
+const WALK := preload("res://modules/town_gen/town_walkways.gd")
 const ROAD_WIDTH: float = 12.0
 const DISTRICT_LINKS: Array[Vector2i] = [
 	Vector2i(0, 1),
@@ -27,7 +29,7 @@ const CENTRES: Array[Vector2] = [
 
 
 static func generate(seed_value: int, generator_version: int = GENERATOR_VERSION) -> Dictionary:
-	if generator_version not in [1, 2]:
+	if generator_version not in [1, 2, 3]:
 		return {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([seed_value, &"town_shape", BASE_LAYOUT_VERSION])
@@ -59,6 +61,11 @@ static func generate(seed_value: int, generator_version: int = GENERATOR_VERSION
 		_place_lots(plan, district, seed_value)
 	if generator_version == 2:
 		INFILL.populate(plan, PackedInt32Array([0, 1]))
+	elif generator_version == 3:
+		plan.reserved_green_paths = WALK.green_access(plan, PackedInt32Array([0, 1, 2, 3, 4, 5]))
+		BLOCKS.populate(plan)
+		_split_crossings(plan)
+		INFILL.populate(plan, PackedInt32Array(BLOCKS.DENSE_DISTRICTS))
 	return plan
 
 
@@ -165,6 +172,9 @@ static func _split_crossings(plan: Dictionary) -> void:
 				edge.connector,
 				edge.get("district_pair", Vector2i(-1, -1))
 			)
+			if edge.get("block_street", false):
+				plan.edges[-1]["block_street"] = true
+				plan.edges[-1]["width"] = edge.width
 
 
 static func _junction(plan: Dictionary, position: Vector2) -> int:
