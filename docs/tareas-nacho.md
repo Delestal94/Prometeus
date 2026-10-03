@@ -20,7 +20,9 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   taller, parque, plaza/monumento, mobiliario y dos salidas cerradas.
   Validación del primer paso: 100 semillas en `test_town_plan`, escena en
   `test_town_prototype`, módulo aislado portable, lint y revisión visual.
-- [ ] Camión, pedidos de orden libre y navegación/GPS por calles.
+- [x] Camión, pedidos de orden libre y navegación/GPS por calles: escena
+  offline `town_delivery.tscn` con jugador, carga y timbres reales, selección
+  de tres clientes y regreso al depósito. Sin progreso persistente todavía.
 - [ ] Medición del spike: duración, esfuerzo de carga, visibilidad y render.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 

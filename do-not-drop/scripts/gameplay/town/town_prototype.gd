@@ -5,7 +5,8 @@ extends Node3D
 
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
 const DISTRICT_NAMES: Array[String] = [
-	"Barrio del depósito", "Centro", "Industrial", "Campo", "Puerto", "Sierra",
+	"WORLD_TOWN_DISTRICT_DEPOT", "WORLD_TOWN_DISTRICT_CENTER", "WORLD_TOWN_DISTRICT_INDUSTRIAL",
+	"WORLD_TOWN_DISTRICT_COUNTRY", "WORLD_TOWN_DISTRICT_PORT", "WORLD_TOWN_DISTRICT_HILLS",
 ]
 const ASPHALT := Color("394a50")
 const GRASS := Color("71885a")
@@ -82,7 +83,7 @@ func _box(parent: Node3D, title: String, size: Vector3, at: Vector3,
 
 
 func _disc(parent: Node3D, title: String, at: Vector2, radius: float,
-		color: Color, surface: float = .08) -> void:
+		color: Color, surface: float = .08, solid: bool = false) -> void:
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = radius
 	mesh.bottom_radius = radius
@@ -93,7 +94,20 @@ func _disc(parent: Node3D, title: String, at: Vector2, radius: float,
 	view.mesh = mesh
 	view.material_override = _material(color)
 	view.position = Vector3(at.x, surface - .04, at.y)
-	parent.add_child(view)
+	if solid:
+		var body := StaticBody3D.new()
+		body.name = title
+		parent.add_child(body)
+		body.add_child(view)
+		var collision := CollisionShape3D.new()
+		var shape := CylinderShape3D.new()
+		shape.radius = radius
+		shape.height = mesh.height
+		collision.shape = shape
+		collision.position = view.position
+		body.add_child(collision)
+	else:
+		parent.add_child(view)
 
 
 func _build_ground() -> void:
@@ -111,7 +125,7 @@ func _build_roads() -> void:
 			continue
 		_road(roads, plan.nodes[edge.a], plan.nodes[edge.b], edge.width)
 	for node_id: int in plan.districts[0].node_ids:
-		_disc(roads, "Junction", plan.nodes[node_id], PLAN.ROAD_WIDTH * .5, ASPHALT, .20)
+		_disc(roads, "Junction", plan.nodes[node_id], PLAN.ROAD_WIDTH * .5, ASPHALT, .20, true)
 	var exits := Node3D.new()
 	exits.name = "ClosedExits"
 	add_child(exits)
@@ -131,13 +145,13 @@ func _build_roads() -> void:
 		exits.add_child(barrier)
 		_box(barrier, "Barrier", Vector3(.6, 1.3, PLAN.ROAD_WIDTH),
 			Vector3(0, .65, 0), Color("e7be51"), true)
-		_sign(barrier, DISTRICT_NAMES[pair.y if pair.x == 0 else pair.x], Vector3(0, 3, 0))
+		_sign(barrier, tr(DISTRICT_NAMES[pair.y if pair.x == 0 else pair.x]), Vector3(0, 3, 0))
 
 
 func _road(parent: Node3D, a: Vector2, b: Vector2, width: float) -> void:
 	var middle: Vector2 = (a + b) * .5
 	var piece: Node3D = _box(parent, "Street", Vector3(a.distance_to(b), .04, width),
-		Vector3(middle.x, .18, middle.y), ASPHALT)
+		Vector3(middle.x, .18, middle.y), ASPHALT, true)
 	piece.rotation.y = -(b - a).angle()
 
 
@@ -176,8 +190,9 @@ func _build_lot(lot: Dictionary) -> void:
 	var driveway_start: Vector2 = lot.position + (frontage - lot.position).normalized() * size.y * .5
 	_road(self, driveway_start, frontage, 5.0 if service else 2.0)
 	if lot.role in [&"depot", &"house", &"workshop", &"shop"]:
-		var titles: Dictionary = {&"depot": "TAKE MY PACKAGE", &"workshop": "TALLER", &"shop": "ALMACÉN"}
-		var title: String = titles.get(lot.role, "CASA %d" % lot.address.y)
+		var titles: Dictionary = {&"depot": "TAKE MY PACKAGE",
+			&"workshop": tr("WORLD_DEPOT_WORKSHOP"), &"shop": tr("WORLD_TOWN_SHOP")}
+		var title: String = titles.get(lot.role, tr("WORLD_HOUSE_NUMBER") % lot.address.y)
 		_sign(parcel, title, Vector3(0, height + 1.2, 0))
 
 
@@ -205,7 +220,7 @@ func _build_green(green: Dictionary) -> void:
 		_box(area, "MonumentBase", Vector3(4, .7, 4), Vector3(0, .43, 0), PAVING, true)
 		_box(area, "Monument", Vector3(1.2, 4.8, 1.2), Vector3(0, 3.1, 0), Color("9f9778"), true)
 		_box(area, "PackageSculpture", Vector3(2.2, 1.8, 2.2), Vector3(0, 6.2, 0), WOOD, true)
-		_sign(area, "PLAZA DEL FUNDADOR", Vector3(0, 9, 0))
+		_sign(area, tr("WORLD_TOWN_PLAZA"), Vector3(0, 9, 0))
 	for i: int in range(4):
 		var angle: float = TAU * i / 4
 		var at := Vector3(cos(angle) * 12, .55, sin(angle) * 12)
@@ -282,8 +297,8 @@ func _build_camera() -> void:
 	add_child(overlay)
 	_label = Label.new()
 	_label.position = Vector2(16, 16)
-	_label.text = ("Prototipo de barrio · semilla %d\n" % world_seed
-		+ "WASD: mover · Q/E: bajar/subir · botón derecho: mirar · Shift: acelerar")
+	_label.text = (tr("HUD_TOWN_INSPECT_SEED") % world_seed
+		+ "\n" + tr("HUD_TOWN_INSPECT_CONTROLS"))
 	overlay.add_child(_label)
 
 

@@ -1160,3 +1160,11 @@ UI_SERVICE_STRAP_DETAIL,Repone las cinchas (también atan la puerta trasera rota
 UI_SERVICE_SUBSTITUTE,Gallina de juguete,Toy hen
 UI_SERVICE_SUBSTITUTE_DETAIL,Un sustituto de repuesto por si se pierde un contenido.,A spare substitute in case some contents are lost.
 UI_SERVICE_SPARE_DETAIL,"Si la puerta o el espejo están rotos, se arreglan ya; si no, viaja con ustedes.","If the door or the mirror is broken it gets fixed now; otherwise it rides along."
+HUD_TOWN_INSPECT_SEED,Prototipo de barrio · semilla %d,Neighborhood prototype · seed %d
+HUD_TOWN_INSPECT_CONTROLS,WASD: mover · Q/E: bajar/subir · botón derecho: mirar · Shift: acelerar,WASD: move · Q/E: down/up · right mouse: look · Shift: speed up
+HUD_TOWN_PLAY_SEED,TAKE MY PACKAGE · Barrio · semilla %d,TAKE MY PACKAGE · Neighborhood · seed %d
+HUD_TOWN_COMPLETE,Reparto terminado,Delivery complete
+HUD_TOWN_DISTANCE,%s · %d m por calles,%s · %d m along streets
+HUD_TOWN_CONTROLS,F1 / F2 / F3: elegir casa · E: interactuar / bajar · WASD: mover · Esc: mouse,F1 / F2 / F3: choose house · E: interact / leave seat · WASD: move · Esc: mouse
+HUD_TOWN_DAMAGED,DAÑADO,DAMAGED
+HUD_TOWN_MISSING,SIN CAJA,NO PACKAGE

@@ -42,6 +42,10 @@ var arrow: MeshInstance3D
 ## Which house the screen points at (-1 once it points at the goal, or in
 ## Endless).
 var target_house: int = 0
+## Optional level adapter: {distance, label, waypoint: Vector3, house}.
+## Town navigation guides to the next street waypoint; absent, the existing
+## delivery/Endless screen keeps its own behavior.
+var guidance_provider: Callable
 var _done: Dictionary = {}
 var _refresh: float = 0.0
 
@@ -68,6 +72,16 @@ func refresh() -> void:
 	var truck := _truck()
 	var route := _route()
 	if truck == null:
+		return
+	if guidance_provider.is_valid():
+		var guidance: Dictionary = guidance_provider.call()
+		target_house = int(guidance.get("house", -1))
+		distance_label.text = _metres(float(guidance.distance)) if not guidance.is_empty() else "—"
+		detail_label.text = String(guidance.get("label", ""))
+		arrow.visible = not guidance.is_empty()
+		if not guidance.is_empty():
+			_point_arrow(truck, guidance.waypoint)
+		_show_bomb_code()
 		return
 	if route == null:
 		_show_endless()

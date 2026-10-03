@@ -1,4 +1,4 @@
-# Ciudad procedural — primer paso de desarrollo
+# Ciudad procedural — barrio jugable del spike
 
 Decisiones del equipo, 2026-10-02: una ciudad continua con seis distritos;
 contorno asimétrico que varía por semilla, calles diagonales y manzanas de
@@ -50,8 +50,34 @@ altura, botón derecho permite mirar y Shift acelera. La escena acepta
 fijarse `world_seed` en el inspector. Con valor cero toma la semilla de la
 sesión si existe y genera una nueva en una prueba independiente.
 
-No está todavía en el menú ni sustituye Reparto/Endless. Es una escena de
-inspección del mapa; no ejecuta pedidos, conducción, GPS ni progresión.
+La escena de inspección conserva la cámara libre. Para jugar, abrir
+`scenes/gameplay/town/town_delivery.tscn` y pulsar **F6**, sin sesión online:
+
+1. Tomar los paquetes A/B/C del estante frente al depósito y cargarlos en
+   los soportes del camión usando **E**. El cartel y el prompt muestran su código.
+2. Subir al asiento del conductor con **E**: empieza el reparto. **WASD**
+   mueve al jugador o conduce; los controles habituales del camión siguen activos.
+3. **F1/F2/F3** eligen cualquiera de las casas pendientes. El GPS de la cabina
+   indica distancia por calles y el siguiente cruce, además de casa/código.
+4. Bajar con **E**, sacar el paquete y tocar el timbre de la casa correcta.
+   Una caja equivocada deja el pedido pendiente; el estado de la caja afecta
+   la entrega como en el juego. Los pedidos pueden resolverse en cualquier orden.
+5. Tras cerrar los tres pedidos, volver al depósito y detener el camión.
+   **Esc** libera o vuelve a capturar el mouse.
+
+Este adaptador usa el jugador, camión, paquetes, casas y timbres reales.
+Asfalto y cruces tienen colisión. El resto de los edificios conserva volúmenes
+de prototipo; plaza, parque y salidas cerradas permanecen en el barrio.
+
+`modules/town_gen/town_navigation.gd` calcula caminos mínimos con proyecciones
+sobre segmentos: incluye el tramo de calle desde la posición actual, sin
+obligar a pasar por el cruce más cercano. El filtro de distritos excluye
+calles cerradas; este paso solo navega por las construidas en el distrito 0.
+`DashboardGps.guidance_provider` conecta el adaptador al GPS existente.
+
+No está todavía en el menú ni sustituye Reparto/Endless. La prueba es offline
+y conserva los resultados en memoria: no guarda campaña, no paga recompensas
+ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal.
 
 ## Validación
 
@@ -62,11 +88,17 @@ inspección del mapa; no ejecuta pedidos, conducción, GPS ni progresión.
   barreras, plaza/monumento, árboles agrupados y centros de calle despejados.
 - `tests/render_town_prototype.gd`: dos semillas desde arriba y plaza a
   altura de calle para revisión visual.
+- `modules/town_gen/tests/test_town_navigation.gd`: tramos parciales,
+  desvíos entre calles paralelas, rutas inaccesibles y 300 recorridos de
+  clientes sobre 100 semillas. También corre en un proyecto vacío.
+- `tests/test_town_delivery.gd`: carga real, conducción sobre asfalto,
+  selección/GPS, rechazo de una caja equivocada, entregas en orden 3/1/2,
+  posibilidad de volver al asiento y final al regresar al depósito.
+- `tests/render_town_delivery.gd`: depósito/camión, cabina/GPS y casa de cliente.
 
 ## Siguientes pasos del spike N-950
 
-Conectar el camión y entregas de orden libre; navegación por el grafo y GPS;
-medir duración, esfuerzo de carga, visibilidad de las casas y presupuesto de
+Medir duración, esfuerzo de carga, visibilidad de las casas y presupuesto de
 render. Luego conectar campaña/guardado con semilla y versión del generador,
 accesos desbloqueables y ambientación específica de los demás distritos.
 El arroyo/corredor de ribera del diseño visual requiere terreno y geometría

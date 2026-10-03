@@ -68,8 +68,9 @@ func _run() -> void:
 		var at: Vector2 = (plan.nodes[edge.a] + plan.nodes[edge.b]) * .5
 		var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, 20, at.y), Vector3(at.x, -2, at.y))
 		var hit: Dictionary = town.get_world_3d().direct_space_state.intersect_ray(query)
-		_expect(not hit.is_empty() and hit.get("collider") == town.get_node(^"Ground"),
-			"Street center is supported by ground with no building or prop blocking it")
+		var road_support: Node = hit.get("collider")
+		_expect(road_support != null and road_support.get_parent() == town.get_node(^"Roads"),
+			"Street center has an asphalt collider with no building or prop blocking it")
 	town.queue_free()
 	await process_frame
 	if _failures == 0:
