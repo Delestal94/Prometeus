@@ -56,6 +56,16 @@ func dress_town(
 				for step: int in range(count + 1):
 					var at: Vector2 = a.lerp(b, float(step) / count)
 					_placement.clear_zones.append(Vector3(at.x, at.y, path.width * .5 + 2))
+	var coast: Dictionary = _terrain.get(&"coast")
+	if not coast.is_empty():
+		var access: PackedVector2Array = coast.access
+		for i: int in range(1, access.size()):
+			var a: Vector2 = access[i - 1]
+			var b: Vector2 = access[i]
+			var count: int = maxi(1, ceili(a.distance_to(b) / 3))
+			for step: int in range(count + 1):
+				var at: Vector2 = a.lerp(b, float(step) / count)
+				_placement.clear_zones.append(Vector3(at.x, at.y, 4))
 	var selected: Array[StringName] = [
 		&"parked_vehicle",
 		&"village_furniture",

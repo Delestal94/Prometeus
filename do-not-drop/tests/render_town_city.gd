@@ -34,6 +34,12 @@ func _run() -> void:
 			center += district.center / 6
 		var aim := Vector3(center.x, 0, center.y)
 		await _shot(camera, aim + Vector3(180, 1000, 600), aim, seed_value, "overview")
+		var coast: Dictionary = town.get(&"terrain").get(&"coast")
+		var shore: Vector2 = coast.shore
+		var direction: Vector2 = coast.direction
+		aim = Vector3(shore.x + direction.x * 25, 0, shore.y + direction.y * 25)
+		await _shot(camera, aim + Vector3(60, 90, 70), aim, seed_value, "harbour")
+		await _shot(camera, Vector3(shore.x, 2.5, shore.y), aim, seed_value, "dock")
 		for id: int in [2, 3, 4, 5]:
 			var at: Vector2 = plan.districts[id].center
 			aim = Vector3(at.x, 0, at.y)

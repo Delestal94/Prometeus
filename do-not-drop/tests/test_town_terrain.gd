@@ -3,8 +3,12 @@ extends SceneTree
 ## town_terrain.gd: indexed city platforms match exhaustive heights at tile
 ## boundaries/negative coordinates; filling the envelope preserves an irregular
 ## outline and covers the gap between separated districts without fake roads.
+## Port's seeded bay/approach avoid all parcels, parks and streets; Sierra
+## retains natural relief while its rotated road/lot platforms stay level.
 
 const TERRAIN := preload("res://scripts/gameplay/town/town_terrain.gd")
+const BIOMES := preload("res://scripts/gameplay/town/town_biomes.gd")
+const PLAN := preload("res://modules/town_gen/town_plan.gd")
 var _failures: int = 0
 
 
@@ -49,11 +53,103 @@ func _run() -> void:
 	_expect(indexed.spans.is_empty(), "Coverage adds no phantom streets to terrain placement")
 	reference.free()
 	indexed.free()
+	_test_biomes()
 	if _failures == 0:
 		print(
 			"PASS: city platform index preserves heights and fills the irregular district envelope"
 		)
 	quit(_failures)
+
+
+func _test_biomes() -> void:
+	var seeds: Array[int] = [4242, 90210]
+	for seed_value: int in range(18):
+		seeds.append(seed_value)
+	for seed_value: int in seeds:
+		var plan: Dictionary = PLAN.generate(seed_value)
+		var original: Dictionary = plan.duplicate(true)
+		var terrain: TERRAIN = TERRAIN.new()
+		BIOMES.configure(terrain, plan, PackedInt32Array([0, 1, 2, 3, 4, 5]))
+		var coast: Dictionary = terrain.coast
+		_expect(plan == original, "Biomes preserve the seeded plan (seed %d)" % seed_value)
+		_expect(
+			coast.access.size() >= 2, "Port has a reachable dock approach (seed %d)" % seed_value
+		)
+		for node: Vector2 in plan.nodes:
+			var gap: float = (node - (coast.shore as Vector2)).dot(coast.direction)
+			_expect(gap <= -40, "The bay stays beyond every road (gap %s)" % gap)
+		for lot: Dictionary in plan.lots:
+			var gap: float = (lot.position - (coast.shore as Vector2)).dot(coast.direction)
+			_expect(gap < -40, "The bay stays beyond every parcel (gap %s)" % gap)
+			for i: int in range(1, coast.access.size()):
+				var a: Vector2 = (coast.access[i - 1] - lot.position).rotated(-lot.angle)
+				var b: Vector2 = (coast.access[i] - lot.position).rotated(-lot.angle)
+				var rect := Rect2(-lot.size * .5, lot.size).grow(1.5)
+				var corners := PackedVector2Array(
+					[
+						rect.position,
+						Vector2(rect.end.x, rect.position.y),
+						rect.end,
+						Vector2(rect.position.x, rect.end.y)
+					]
+				)
+				var mid: Vector2 = (a + b) * .5
+				_expect(
+					not Geometry2D.is_point_in_polygon(mid, corners),
+					"The dock approach avoids parcel footprints (seed %d)" % seed_value
+				)
+		var submerged: Vector2 = coast.shore + coast.direction * 40
+		var clipped: PackedVector2Array = BIOMES._wet_polygon(
+			terrain,
+			PackedVector2Array(
+				[coast.shore, submerged, submerged + (coast.direction as Vector2).orthogonal() * 2]
+			)
+		)
+		_expect(clipped.size() == 4, "Crossing water triangles are clipped at the shore")
+		for point: Vector2 in clipped:
+			_expect(
+				terrain.height_at(Vector3(point.x, 0, point.y)) < BIOMES.WATER_LEVEL,
+				"Clipped water vertices stay over submerged ground"
+			)
+		_expect(
+			terrain.river_depth_at(submerged) > 2, "The dresser rejects submerged harbour ground"
+		)
+		_expect(
+			terrain.river_depth_at(coast.shore - coast.direction * 40) == 0,
+			"Dry harbour approach remains available for scenery"
+		)
+		terrain.free()
+	var mountain: TERRAIN = TERRAIN.new()
+	var outline := PackedVector2Array()
+	for i: int in range(7):
+		outline.append(Vector2.from_angle(TAU * i / 7) * 100)
+	mountain.city_outlines = [outline]
+	mountain.mountain_outline = outline
+	mountain.platforms.append(
+		{
+			"centre": Vector2.ZERO,
+			"along": Vector2.from_angle(.7),
+			"half": Vector2(10, 70),
+			"height": 0.0
+		}
+	)
+	mountain.index_profile()
+	_expect(
+		mountain._natural_height_from(Vector2(50, -40), Vector3(60, 0, 6)) > 4,
+		"Sierra has real hills between its level parcels"
+	)
+	_expect(
+		mountain._natural_height_from(Vector2.ZERO, Vector3(60, 0, 6)) == 0,
+		"Sierra road and parcel platforms remain exactly level"
+	)
+	mountain.free()
+	var old: TERRAIN = TERRAIN.new()
+	BIOMES.configure(old, PLAN.generate(4242), PackedInt32Array([0, 1]))
+	_expect(
+		old.coast.is_empty() and old.mountain_outline.is_empty(),
+		"The existing two-district scene retains its terrain profile"
+	)
+	old.free()
 
 
 func _expect(condition: bool, description: String) -> void:

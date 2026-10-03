@@ -3,6 +3,8 @@ extends "res://scripts/gameplay/route/route_terrain.gd"
 ## blend into its natural landscape outside the irregular city boundaries.
 
 var city_outlines: Array[PackedVector2Array] = []
+var mountain_outline := PackedVector2Array()
+var coast: Dictionary = {}
 var _platform_index: Dictionary = {}
 var _profile_indexed: bool = false
 
@@ -65,14 +67,72 @@ func complete_surface() -> void:
 
 
 func _natural_height_from(p: Vector2, road: Vector3, with_ridge: bool = true) -> float:
+	var height: float = _urban_height(p, road, with_ridge)
+	if coast.is_empty():
+		return height
+	var offset: Vector2 = p - (coast.shore as Vector2)
+	var signed_side: float = offset.dot((coast.direction as Vector2).orthogonal())
+	var along: float = (
+		offset.dot(coast.direction) - sin(signed_side * .035) * 8 - sin(signed_side * .083) * 3
+	)
+	var side: float = absf(signed_side)
+	var curve: float = sqrt(maxf(.01, 1.0 - pow((along - 55) / 100, 2)))
+	var weight: float = (
+		(1.0 - smoothstep(120 * curve, 175 * curve, side))
+		* smoothstep(-24, -12, along)
+		* (1.0 - smoothstep(90, 140, along))
+	)
+	return lerpf(height, -5.0 * smoothstep(-4, 26, along), weight)
+
+
+func river_depth_at(p: Vector2) -> float:
+	# The original dresser rejects submerged locations through this query.
+	if coast.is_empty():
+		return super(p)
+	var offset: Vector2 = p - (coast.shore as Vector2)
+	var along: float = offset.dot(coast.direction)
+	var side: float = absf(offset.dot((coast.direction as Vector2).orthogonal()))
+	if along < -24 or along > 160 or side > 210:
+		return super(p)
+	return super(p) + maxf(0, -1.4 - _natural_height(p))
+
+
+## Extra coastal tiles belong to the height field, never to the road graph.
+func cover_coast() -> void:
+	if coast.is_empty():
+		return
+	var direction: Vector2 = coast.direction
+	var across: Vector2 = direction.orthogonal()
+	var shore: Vector2 = coast.shore
+	var bounds := Rect2(shore, Vector2.ZERO)
+	for side: float in [-210, 210]:
+		for along: float in [-40, 160]:
+			bounds = bounds.expand(shore + across * side + direction * along)
+	for x: int in range(floori(bounds.position.x / TILE), floori(bounds.end.x / TILE) + 1):
+		for z: int in range(floori(bounds.position.y / TILE), floori(bounds.end.y / TILE) + 1):
+			_tiles[Vector2i(x, z)] = true
+
+
+func _configure_material(material: ShaderMaterial) -> void:
+	super(material)
+	if mountain_outline.size() == 7:
+		material.set_shader_parameter("snow_enabled", true)
+		material.set_shader_parameter("snow_outline", mountain_outline)
+
+
+func _urban_height(p: Vector2, road: Vector3, with_ridge: bool) -> float:
 	# Interiors are exactly zero. Avoid evaluating every inherited platform
 	# and then discarding the result for each terrain vertex in the city.
 	for outline: PackedVector2Array in city_outlines:
+		if outline == mountain_outline:
+			continue
 		if Geometry2D.is_point_in_polygon(p, outline):
 			return 0.0
-	var original: float = super(p, road, with_ridge)
+	var original: float = super._natural_height_from(p, road, with_ridge)
 	var distance: float = INF
 	for outline: PackedVector2Array in city_outlines:
+		if outline == mountain_outline:
+			continue
 		for i: int in range(outline.size()):
 			distance = minf(
 				distance,

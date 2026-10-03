@@ -10,6 +10,7 @@ const ART := preload("res://scripts/gameplay/town/town_art.gd")
 const TOWN_ENVIRONMENT := preload("res://scripts/gameplay/town/town_environment.gd")
 const TOWN_DRESSER := preload("res://scripts/gameplay/town/town_dresser.gd")
 const LANDMARKS := preload("res://scripts/gameplay/town/town_landmarks.gd")
+const BIOMES := preload("res://scripts/gameplay/town/town_biomes.gd")
 const DISTRICT_NAMES: Array[String] = [
 	"WORLD_TOWN_DISTRICT_DEPOT",
 	"WORLD_TOWN_DISTRICT_CENTER",
@@ -59,6 +60,7 @@ func _ready() -> void:
 	_build_roads()
 	street_segments = TOWN_ENVIRONMENT.build_segments(self, plan, built_districts)
 	_build_walkways()
+	BIOMES.build(self, terrain)
 	for lot: Dictionary in plan.lots:
 		if lot.district in built_districts:
 			_build_lot(lot)

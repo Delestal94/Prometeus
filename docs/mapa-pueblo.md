@@ -153,16 +153,27 @@ Abrirlas en esta prueba no simula desbloqueos ni agrega clientes de campaña.
 El suelo cubre la envolvente irregular completa y su margen exterior, sin
 crear carreteras ficticias para rellenar huecos. `TownTerrain.index_profile()`
 indexa las plataformas antes del build; solo lee las candidatas de cada tesela,
-conservando orden y banda de mezcla. Los interiores retornan altura cero antes
-de calcular un paisaje que luego se descartaría. Pruebas comparan el índice
+conservando orden y banda de mezcla. Los cinco distritos llanos retornan altura cero antes
+de calcular un paisaje que luego se descartaría. Sierra conserva el perfil
+natural original, con plataformas niveladas en calles, lotes y accesos. Pruebas comparan el índice
 contra muestras exhaustivas, con rotación, solapamiento y coordenadas negativas.
 La prueba de ciudad pasó de 63 s a 43 s al evitar el cálculo descartado y
 a 9 s con el índice, incluso cubriendo ahora toda la envolvente de suelo.
 Son tiempos locales de construcción/prueba, no una medición de FPS.
 
-La ambientación actual del Puerto usa almacenes: litoral/muelles y el bioma
-de nieve/pendientes de Sierra siguen pendientes, al igual que el horizonte
-lejano y presupuesto de render. Las calles transitables permanecen niveladas.
+Puerto tiene una bahía tallada en el mismo terreno físico, orientada hacia
+el exterior según la ciudad generada. Su orilla queda más allá de todos
+los lotes, calles y parques. Un camino calculado con el grafo de visibilidad
+existente esquiva parcelas y verdes hasta un muelle de madera con colisión,
+pilotes, barandas, cajones y bolardos originales. El agua se recorta contra
+el lecho real y tiene ondas de color; no agrega carreteras al GPS. La
+ambientación reserva el acceso y descarta posiciones sumergidas.
+
+Sierra conserva colinas entre parcelas, cabañas y pinos. La nieve del shader
+se limita al polígono irregular de Sierra y a terreno alto con poca pendiente.
+Calles, lotes y accesos verdes mantienen altura cero. Este relieve no convierte
+las calles en carreteras de montaña ni implementa clima/estaciones de campaña.
+El horizonte lejano y el presupuesto de render siguen pendientes.
 
 ### Abrir y recorrer
 
@@ -225,12 +236,16 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   direcciones, siete conectores abiertos, doce entradas verdes, modelos a
   escala nativa, perfiles de almacenes/farmhouses/cabañas/pinos y dos landmarks.
   Asfalto físico en cada segmento y GPS desde todas las zonas a los pedidos.
+  Bahía con lecho sumergido, muelle físico, plataformas niveladas y nieve local.
 - `tests/test_town_terrain.gd` y `modules/route_gen/tests/test_terrain_platforms.gd`:
   alturas de plataformas indexadas iguales a la búsqueda exhaustiva, incluyendo
   solapamientos, rotaciones, bordes de tesela y coordenadas negativas. Cobertura
   entre distritos sin carreteras inventadas. El hook mantiene el resultado original.
+  Veinte semillas de biomas conservan plano, acceso al muelle y distancias seguras
+  de costa; Sierra conserva relieve entre plataformas.
 - `tests/render_town_city.gd`: dos semillas, mapa completo y frentes/vistas
   de Industrial, Campo, Puerto y Sierra para revisar escala, apoyo y circulación.
+  Añade vistas de bahía y muelle, nieve y las orillas de ambas semillas.
 
 - `modules/town_gen/tests/test_town_plan.gd`: 100 semillas, conectividad de
   los seis distritos, variación, determinismo, roles iniciales, parques y
@@ -275,6 +290,7 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
 
 Medir duración, esfuerzo de carga, visibilidad de las casas y presupuesto de
 render. Luego conectar campaña/guardado con semilla y versión del generador,
-accesos desbloqueables y ambientación específica de los demás distritos.
+accesos desbloqueables y completar las manzanas interiores. Refinar el litoral
+y el relieve con la medición del presupuesto de render.
 El arroyo/corredor de ribera del diseño visual requiere registrar cauces y
 construir sus pasos con los tramos existentes; todavía no está construido en la escena.

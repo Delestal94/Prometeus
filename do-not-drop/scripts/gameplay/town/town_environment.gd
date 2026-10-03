@@ -5,6 +5,7 @@ extends RefCounted
 const TERRAIN := preload("res://scripts/gameplay/town/town_terrain.gd")
 const STRAIGHT := preload("res://modules/route_gen/straight_segment.gd")
 const NAV := preload("res://modules/town_gen/town_navigation.gd")
+const BIOMES := preload("res://scripts/gameplay/town/town_biomes.gd")
 
 
 static func build_ground(
@@ -49,6 +50,7 @@ static func build_ground(
 		for path: Dictionary in pedestrian[key]:
 			for i: int in range(1, path.points.size()):
 				_level_strip(terrain, path.points[i - 1], path.points[i], path.width * .5 + 2)
+	BIOMES.configure(terrain, plan, districts)
 	terrain.index_profile()
 	if districts.size() == 6:
 		terrain.complete_surface()

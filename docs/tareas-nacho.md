@@ -51,7 +51,11 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   abiertos, doce entradas verdes y mismos seis pedidos. Almacenes Industrial/Puerto,
   farmhouses/molino en Campo, cabañas/pinos en Sierra y torre de agua.
   Suelo continuo entre zonas e índice de plataformas que conserva alturas.
-- [ ] Completar manzanas interiores, litoral/muelles y biomas de Sierra.
+- [x] Biomas de Puerto/Sierra (2026-10-03): bahía exterior con lecho físico,
+  agua, muelle transitable y acceso que esquiva lotes/parques; relieve original
+  en Sierra y nieve local en altura. Calles, parcelas y accesos permanecen nivelados.
+  `town_biomes.gd`, `town_terrain.gd`; pruebas de 20 semillas y escena completa.
+- [ ] Completar manzanas interiores, horizonte y presupuesto de render.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos
