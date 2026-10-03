@@ -1,5 +1,38 @@
 # Evidencia en curso, no aprobación B
 
+## Estado actual: deformación A90 y exportación endurecidas, 2026-10-03
+
+Esta sección sustituye los estados históricos de abajo. El pulgar descansa ahora
+por delante de la mano y conserva separación respecto al muslo en A90. Un campo
+local de pesos, limitado a hombro/pecho superior, corrige los seis contactos
+dirigidos que quedaban sin mover la piel más de 0,948 mm ni cambiar los demás
+propietarios. La adaptación de los nueve clips usa objetivos finitos de manos y
+tobillos; no modifica nombres ni duraciones y mantiene cada objetivo por debajo
+de 1e-5 m.
+
+LOD2 se genera con QEM protegido por 53 estados estáticos y 52 poses, heredando
+exactamente posiciones, pesos y morphs de los vértices retenidos. Una cara cuyo
+promedio suave cruzaba su hemisferio geométrico se deja plana de forma local;
+las demás siguen suaves. Los tres GLB quedan en 4704/2248/794 triángulos y el
+master original conserva SHA256
+`14763003da303779d38725530d78bc7a71baa83318d5b892ed5c5e610e3bb178`.
+
+La puerta de producto recorre cada LOD en base, grosor general +1 y grosor de
+piernas +1, para los nueve clips y cinco instantes: 405 muestras animadas, además
+de 53 estados estáticos por export. Comprueba también la lista y duración exactas
+de los clips. Los tests de fuente cubren A90, cierre del pulgar, objetivos IK,
+pesos, LOD y normales; Godot pasa gel_body_asset, player_character,
+player_sprint y character_motion. La revisión visual comprende 216 capturas de
+protocolo y cuatro diagnósticas: no se observan aberturas ni pliegues invertidos;
+la peor diferencia medida de perfil es 4,373368 %, bajo el límite de 5 %.
+
+Esto endurece la evidencia finita de 10/12/13/17, pero no certifica el continuo
+infinito de morphs+poses ni sustituye la comparación completa de Flaca y material.
+El núcleo continúa descartado por presupuesto; UV sigue excediendo 15 % y la
+corrección lineal de grosor no está aprobada. Por eso 10/12/13/14/15/16/17 se
+mantienen pendientes en su alcance total. No cambia el jugador activo, red ni
+colisiones.
+
 ## Estado actual: axila reconstruida, 2026-10-02
 
 Esta sección sustituye los estados históricos de abajo. Se corrigieron los

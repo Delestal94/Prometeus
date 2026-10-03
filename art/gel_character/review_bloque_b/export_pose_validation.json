@@ -1,0 +1,102 @@
+{
+  "static": [
+    {
+      "lod": 0,
+      "valid": true,
+      "errors": [],
+      "triangles": 4704,
+      "morph_samples": 53
+    },
+    {
+      "lod": 1,
+      "valid": true,
+      "errors": [],
+      "triangles": 2248,
+      "morph_samples": 53
+    },
+    {
+      "lod": 2,
+      "valid": true,
+      "errors": [],
+      "triangles": 794,
+      "morph_samples": 53
+    }
+  ],
+  "animated": [
+    {
+      "lod": 0,
+      "state": "base",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 0,
+      "state": "general_thickness+1",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 0,
+      "state": "leg_thickness+1",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 1,
+      "state": "base",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 1,
+      "state": "general_thickness+1",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 1,
+      "state": "leg_thickness+1",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 2,
+      "state": "base",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 2,
+      "state": "general_thickness+1",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    },
+    {
+      "lod": 2,
+      "state": "leg_thickness+1",
+      "samples": 45,
+      "errors": [],
+      "max_contacts": 0,
+      "max_orientation_failures": 0
+    }
+  ],
+  "sample_count": 405,
+  "errors": [],
+  "valid": true
+}
