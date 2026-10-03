@@ -184,6 +184,15 @@ referencia, pasale a ChatGPT **las dos imágenes** y el reporte del ítem 39, no
 > `art/gel_character/review_bloque_b/ESTADO_ACTUAL.md` y aviso
 > `docs/avisos/2026-10-02-s311-axila-retopologia.md`.
 
+> Endurecimiento posterior (2026-10-03): pulgar adelantado, pesos locales de
+> hombro/pecho, adaptación IK de los nueve clips y LOD2 protegido por estados
+> estáticos y poses. La puerta sobre los GLB reales cubre 3 LOD × 3 estados de
+> morph × 9 clips × 5 instantes = 405 muestras animadas, además de 53 estáticas
+> por LOD; Godot y la revisión visual pasan, con máximo 4,373368 % frente al
+> límite de 5 %. Esto incorpora A90 y todos los clips a la evidencia finita, pero
+> no certifica el continuo completo, el preset Flaca/material ni resuelve núcleo,
+> grosor o UV. 10/12/13/14/15/16/17 siguen pendientes en su alcance total.
+
 ### C. Proporciones en el juego (19-26)
 
 - [ ] **S-311.19** Recurso `GelBodyProportions` (`scripts/gameplay/player/gel/`): cada parámetro con
