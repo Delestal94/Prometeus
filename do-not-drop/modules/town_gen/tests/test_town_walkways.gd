@@ -1,0 +1,116 @@
+extends SceneTree
+## Run: Godot --headless --path do-not-drop --script res://modules/town_gen/tests/test_town_walkways.gd
+## town_walkways.gd: deterministic sidewalks/ramp heights outside asphalt,
+## parcel access and green-area paths that detour around buildings. Empty
+## district selection builds nothing; planning never mutates the town. Portable.
+
+const WALK := preload("res://modules/town_gen/town_walkways.gd")
+const PLAN := preload("res://modules/town_gen/town_plan.gd")
+const NAV := preload("res://modules/town_gen/town_navigation.gd")
+var _failures: int = 0
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
+	var fixture: Dictionary = {
+		"lots": [{"position": Vector2.ZERO, "size": Vector2(4, 4), "angle": .2}]
+	}
+	var detour: PackedVector2Array = WALK._clear_path(fixture, Vector2(-10, 0), Vector2(10, 0))
+	_expect(
+		detour.size() >= 4, "A green path detours around the intervening parcel (got %s)" % detour
+	)
+	_check_path(fixture, detour)
+	for seed_value: int in [1, 17, 77, 4242, 90210]:
+		var plan: Dictionary = PLAN.generate(seed_value)
+		var original: Dictionary = plan.duplicate(true)
+		var districts := PackedInt32Array([0, 1])
+		var result: Dictionary = WALK.generate(plan, districts)
+		_expect(
+			result == WALK.generate(plan, districts), "Walkways repeat exactly for the same plan"
+		)
+		_expect(plan == original, "Adding pedestrian access leaves the seeded layout unchanged")
+		_expect(not result.surfaces.is_empty(), "Open districts have pedestrian surfaces")
+		_expect(result.green_paths.size() == 4, "Both districts connect their plaza and park")
+		var lots: int = 0
+		for lot: Dictionary in plan.lots:
+			if lot.district in districts:
+				lots += 1
+		_expect(result.lot_paths.size() == lots, "Every built parcel has its own frontage access")
+		var edges: Array[Dictionary] = NAV.accessible_edges(plan, districts)
+		for surface: PackedVector3Array in result.surfaces:
+			var polygon := PackedVector2Array()
+			for vertex: Vector3 in surface:
+				_expect(
+					vertex.y >= -.001 and vertex.y <= .201,
+					"Ramp and walkway heights stay in the ground-to-street range"
+				)
+				polygon.append(Vector2(vertex.x, vertex.z))
+			var indices: PackedInt32Array = Geometry2D.triangulate_polygon(polygon)
+			_expect(not indices.is_empty(), "Each clipped walkway surface triangulates")
+			for i: int in range(0, indices.size(), 3):
+				var at: Vector2 = (
+					(polygon[indices[i]] + polygon[indices[i + 1]] + polygon[indices[i + 2]]) / 3.0
+				)
+				var distance: float = INF
+				for edge: Dictionary in edges:
+					distance = minf(
+						distance,
+						at.distance_to(
+							Geometry2D.get_closest_point_to_segment(
+								at, plan.nodes[edge.a], plan.nodes[edge.b]
+							)
+						)
+					)
+				_expect(
+					distance >= 5.99,
+					(
+						"Pedestrian paving leaves the asphalt lane uncovered (seed %d, at %s, got %f)"
+						% [seed_value, at, distance]
+					)
+				)
+		for path: Dictionary in result.green_paths:
+			_expect(
+				path.points.size() >= 2,
+				"Every green area has a reachable entry (seed %d)" % seed_value
+			)
+			_check_path(plan, path.points)
+			var radius: float = 10 if path.kind == &"plaza" else 5
+			if not path.points.is_empty():
+				_expect(
+					path.points[-1].distance_to(path.position) < radius,
+					"Entry reaches the green area's paved center"
+				)
+		var empty: Dictionary = WALK.generate(plan, PackedInt32Array())
+		_expect(
+			(
+				empty.surfaces.is_empty()
+				and empty.lot_paths.is_empty()
+				and empty.green_paths.is_empty()
+			),
+			"No district selection creates no pedestrian geometry"
+		)
+	if _failures == 0:
+		print("PASS: seeded sidewalks, ramps, parcel entrances, green paths and building detours")
+	quit(_failures)
+
+
+func _check_path(plan: Dictionary, points: PackedVector2Array) -> void:
+	for i: int in range(1, points.size()):
+		for fraction: float in [0.0, .25, .5, .75, 1.0]:
+			var at: Vector2 = points[i - 1].lerp(points[i], fraction)
+			for lot: Dictionary in plan.lots:
+				var local: Vector2 = (at - lot.position).rotated(-float(lot.angle))
+				var half: Vector2 = lot.size * .5 + Vector2.ONE
+				_expect(
+					absf(local.x) >= half.x or absf(local.y) >= half.y,
+					"Green access keeps its full walking width clear of parcels"
+				)
+
+
+func _expect(condition: bool, description: String) -> void:
+	if not condition:
+		push_error(description)
+		_failures += 1
