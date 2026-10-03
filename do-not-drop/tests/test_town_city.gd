@@ -7,6 +7,8 @@ extends SceneTree
 ## from every district. Inspection and delivery scenes share the same layout.
 ## Port has physical dock/access above carved water; Sierra snow is local and
 ## natural relief never lifts streets, customer lots or green access paths.
+## Ordinary curb collision is 16 cm above asphalt; vehicle entrances and
+## localized accessible corner cuts keep their actual sloping collision.
 
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
 const NAV := preload("res://modules/town_gen/town_navigation.gd")
@@ -94,6 +96,25 @@ func _run() -> void:
 	_expect(pedestrian.green_paths.size() == 12, "All six districts have park and plaza entries")
 	for path: Dictionary in pedestrian.green_paths:
 		_expect(path.points.size() >= 2, "Green entry is reachable in district %d" % path.district)
+	var ordinary: Dictionary = pedestrian.lot_paths[1]
+	var at_curb: Vector2 = ordinary.points[0].lerp(ordinary.points[1], .4)
+	_expect(
+		absf(_floor_height(town, at_curb) - .36) < .015,
+		"Ordinary entrance has physical paving 16 cm above street height"
+	)
+	var vehicle_entry: Dictionary = pedestrian.lot_paths[0]
+	var ramp_mid: Vector2 = vehicle_entry.points[0].lerp(vehicle_entry.points[1], .5)
+	_expect(
+		absf(_floor_height(town, ramp_mid) - .28) < .025,
+		"Depot curb cut has sloping collision, without a flat sidewalk covering it"
+	)
+	var accessible: bool = false
+	for corner: Dictionary in pedestrian.corner_paths:
+		var midpoint: Vector2 = corner.points[0].lerp(corner.points[1], .5)
+		if absf(_floor_height(town, midpoint) - .28) < .025:
+			accessible = true
+			break
+	_expect(accessible, "Street corners include physical accessible curb cuts")
 	var edges: Array[Dictionary] = NAV.accessible_edges(plan, town.get(&"built_districts"))
 	_expect(
 		edges.size() == plan.edges.size(), "Every local road and interdistrict connector is open"
@@ -177,6 +198,15 @@ func _run() -> void:
 	if _failures == 0:
 		print("PASS: complete six-district city, authored profiles, open streets and six-order GPS")
 	quit(_failures)
+
+
+func _floor_height(town: Node3D, at: Vector2) -> float:
+	var query := PhysicsRayQueryParameters3D.create(
+		Vector3(at.x, 1, at.y), Vector3(at.x, -.1, at.y)
+	)
+	query.collision_mask = 1
+	var hit: Dictionary = town.get_world_3d().direct_space_state.intersect_ray(query)
+	return hit.position.y if not hit.is_empty() else -INF
 
 
 func _expect(condition: bool, description: String) -> void:

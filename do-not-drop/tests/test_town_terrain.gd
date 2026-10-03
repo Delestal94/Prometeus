@@ -5,6 +5,8 @@ extends SceneTree
 ## outline and covers the gap between separated districts without fake roads.
 ## Port's seeded bay/approach avoid all parcels, parks and streets; Sierra
 ## retains natural relief while its rotated road/lot platforms stay level.
+## Urban ground also undulates asymmetrically between reserved platforms,
+## with continuous heights across irregular district boundaries.
 
 const TERRAIN := preload("res://scripts/gameplay/town/town_terrain.gd")
 const BIOMES := preload("res://scripts/gameplay/town/town_biomes.gd")
@@ -143,6 +145,23 @@ func _test_biomes() -> void:
 		"Sierra road and parcel platforms remain exactly level"
 	)
 	mountain.free()
+	var urban: TERRAIN = TERRAIN.new()
+	urban.city_outlines = [outline]
+	var positive: float = urban._natural_height_from(Vector2(50, -40), Vector3(60, 0, 6))
+	var opposite: float = urban._natural_height_from(Vector2(-50, 40), Vector3(60, 0, 6))
+	_expect(
+		absf(positive) > .1 and absf(positive - opposite) > .1,
+		(
+			"Urban relief is neither a flat plane nor a mirrored hill (got %s/%s)"
+			% [positive, opposite]
+		)
+	)
+	var edge: Vector2 = (outline[0] + outline[1]) * .5
+	var outward: Vector2 = edge.normalized()
+	var before: float = urban._natural_height_from(edge - outward * .01, Vector3(60, 0, 6))
+	var after: float = urban._natural_height_from(edge + outward * .01, Vector3(60, 0, 6))
+	_expect(absf(before - after) < .02, "Natural urban relief has no height step at its boundary")
+	urban.free()
 	var old: TERRAIN = TERRAIN.new()
 	BIOMES.configure(old, PLAN.generate(4242), PackedInt32Array([0, 1]))
 	_expect(

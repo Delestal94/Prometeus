@@ -27,10 +27,10 @@ no debe cambiar las calles ni mover las casas existentes.
 
 `modules/town_gen/town_plan.gd` devuelve datos, sin escenas ni autoloads:
 
-- Semilla y `generator_version = 2` por defecto; versión 1 reproducible.
+- Semilla y `generator_version = 3` por defecto; versiones 1 y 2 reproducibles.
 - Seis distritos de contorno irregular, con escala, orientación y vértices
   variados por semilla. Las conexiones funcionales son estables.
-- Grafo de cruces y calles de 12 m: circuitos locales, diagonales y conexiones
+- Grafo de cruces, principales de 12 m y secundarias de 8 m: circuitos locales, diagonales y conexiones
   entre distritos. Las calles que se cruzan comparten un nodo del grafo.
 - Lotes con frente a una calle, posición, tamaño, orientación y dirección.
 - Plaza y parque reservados antes de colocar edificios. Lotes y vegetación
@@ -73,23 +73,29 @@ de los distritos y medición del presupuesto de render.
 abiertos sin consumir RNG ni modificar calles, lotes o áreas verdes. Devuelve
 polígonos con altura, accesos de lotes y recorridos de entrada a plazas/parques.
 Las aceras de 2 m siguen también calles diagonales y se unen en los cruces;
-se recortan contra el asfalto y tienen rampas exteriores hacia el terreno.
+se recortan contra el asfalto y tienen un cordón vertical de 16 cm.
+Asfalto a 0,20 m y acera a 0,36 m, sin pendientes continuas en los bordes.
 
 Cada lote recibe un acceso desde su frente de calle: 2 m para viviendas y
 comercios, 5 m para depósito/taller. Los caminos verdes rodean los lotes que
 interponen edificios y llegan al centro pavimentado. La escena reúne el
-pavimento en una malla con colisión, añade suelo físico a césped/plazas y
-rampas en su borde interior. Árboles y mobiliario dejan libres las entradas.
-El jugador puede pasar del asfalto a la acera y al acceso sin saltar.
+pavimento en una malla con colisión y añade suelo físico a césped/plazas.
+Solo depósito/taller tienen rebaje vehicular de 5 m. Las esquinas reciben
+rebajes de accesibilidad de 2,4 m con 1,6 m de desarrollo. No hay rampas
+delante de cada vivienda ni alrededor de plazas. Árboles/mobiliario dejan
+libres las entradas. `character_step` permite subir cordones de hasta 22 cm
+sin saltar, comprobando cuerpo completo, techo, pared y apoyo. No actúa
+durante saltos o caídas.
 
 ### Reutilización de la carretera existente
 
 `town_environment.gd` conecta el grafo de ciudad con `route_terrain.gd`
 (`TerrainField`), el mismo terreno continuo con colisión, relieve, shader y
 cuatro mapas de detalle del juego. Reemplaza el cubo plano de 4000 m.
-El perfil `town_terrain.gd` hereda ese sistema y mantiene el interior de los
-contornos urbanos nivelado; mezcla el relieve original por fuera en 24 m,
-evita montañas entre las casas y conserva un límite irregular.
+El perfil `town_terrain.gd` conserva ondulaciones naturales entre las bases
+reservadas de calles, edificios, verdes, accesos y monumentos. No aplana
+distritos completos. Mezcla el perfil exterior en 40 m; Sierra conserva
+su relieve completo. Los desniveles son irregulares y varían según semilla.
 Registra las calles abiertas y los extremos cerrados; plataformas nivelan
 calles, lotes, zonas verdes y accesos para conservar sus alturas y el reparto.
 Fuera de esas reservas reaparece el relieve original. Las calles usan además
@@ -115,8 +121,8 @@ agrega comercios y viviendas con los modelos originales. `town_infill.gd`
 reserva primero los accesos a todas las direcciones existentes y las cuatro
 áreas verdes: la densidad adicional no consume entradas, parques ni plazas.
 Las calles, lotes originales y seis clientes conservan sus datos de versión 1.
-`town_plan.generate(seed, 1)` reproduce el plano anterior; la versión 2 es
-el valor por defecto. Una versión desconocida devuelve un diccionario vacío.
+`town_plan.generate(seed, 1)` y `generate(seed, 2)` reproducen los planos
+anteriores; la versión 3 es el valor por defecto. Una versión desconocida devuelve un diccionario vacío.
 Sobre 100 semillas, Barrio pasa de 23,70 a 33,74 parcelas en promedio y
 Centro de 23,77 a 33,84; la semilla 4242 pasa de 49 a 69 parcelas construidas.
 Las pruebas de escena y reparto, portabilidad y capturas GPU verifican
@@ -128,14 +134,27 @@ La escena completa rellena los huecos de suelo entre distritos. Desde arriba
 se ve el borde exterior del terreno y el decorado se oculta por distancia;
 la continuidad del horizonte y el presupuesto de render necesitan trabajo.
 
+### Calles interiores en versión 3
+
+`town_blocks.gd` añade hasta dos secundarias de 8 m por distrito urbano
+(0/1/2/4), conectando calles existentes y creando cruces reales. Conserva
+parcelas base y verdes, reserva las doce entradas verdes y prueba frentes
+secundarios antes de rellenar frentes principales.
+
+Las semillas 1/17/77/4242/90210 generan 7–8 secundarias y 165–179 lotes.
+Muchos frentes nuevos todavía están sobre las principales: las manzanas
+interiores completas necesitan otra iteración. Los modelos originales
+conservan escala y la pintura de los tramos se adapta a sus 8/12 m.
+
 ### Ciudad completa para inspección y conducción
 
 Abrir `scenes/gameplay/town/town_city.tscn` y pulsar **F6** para inspeccionar
 los seis distritos con cámara libre. `town_city_delivery.tscn` permite recorrer
 la misma ciudad con el jugador, camión y los seis pedidos existentes. Ambos
 usan la misma semilla/plano de las escenas anteriores; no aparecen barreras
-entre distritos. La semilla 4242 construye 163 parcelas, y 90210 construye 164:
-61 segmentos de calle y doce entradas a plazas/parques en ambas.
+entre distritos. La versión 2 construye 163/164 parcelas en las semillas 4242/90210.
+La versión 3 añade calles secundarias y parcelas compactas, conservando
+las doce entradas verdes y los seis clientes originales.
 
 Industrial y Puerto tienen almacenes con las piezas/materiales del depósito,
 con paletas diferenciadas. Campo favorece las farmhouses originales y suma
@@ -153,13 +172,11 @@ Abrirlas en esta prueba no simula desbloqueos ni agrega clientes de campaña.
 El suelo cubre la envolvente irregular completa y su margen exterior, sin
 crear carreteras ficticias para rellenar huecos. `TownTerrain.index_profile()`
 indexa las plataformas antes del build; solo lee las candidatas de cada tesela,
-conservando orden y banda de mezcla. Los cinco distritos llanos retornan altura cero antes
-de calcular un paisaje que luego se descartaría. Sierra conserva el perfil
-natural original, con plataformas niveladas en calles, lotes y accesos. Pruebas comparan el índice
-contra muestras exhaustivas, con rotación, solapamiento y coordenadas negativas.
-La prueba de ciudad pasó de 63 s a 43 s al evitar el cálculo descartado y
-a 9 s con el índice, incluso cubriendo ahora toda la envolvente de suelo.
-Son tiempos locales de construcción/prueba, no una medición de FPS.
+conservando orden y banda de mezcla. Los distritos urbanos conservan relieve entre plataformas.
+Las bases de torre/molino se reservan antes de muestrear el campo; los saltos
+de altura de los caminos no generan plataformas de orientación nula.
+Pruebas comparan el índice contra muestras exhaustivas. Los tiempos locales
+de construcción/prueba se registran por versión y no son mediciones de FPS.
 
 Puerto tiene una bahía tallada en el mismo terreno físico, orientada hacia
 el exterior según la ciudad generada. Su orilla queda más allá de todos
@@ -237,6 +254,7 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   escala nativa, perfiles de almacenes/farmhouses/cabañas/pinos y dos landmarks.
   Asfalto físico en cada segmento y GPS desde todas las zonas a los pedidos.
   Bahía con lecho sumergido, muelle físico, plataformas niveladas y nieve local.
+  Raycasts verifican acera a 0,36 m y colisión inclinada en los rebajes.
 - `tests/test_town_terrain.gd` y `modules/route_gen/tests/test_terrain_platforms.gd`:
   alturas de plataformas indexadas iguales a la búsqueda exhaustiva, incluyendo
   solapamientos, rotaciones, bordes de tesela y coordenadas negativas. Cobertura
@@ -249,7 +267,7 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
 
 - `modules/town_gen/tests/test_town_plan.gd`: 100 semillas, conectividad de
   los seis distritos, variación, determinismo, roles iniciales, parques y
-  lotes fuera de las calles y cruces unidos en el grafo. Compara las dos
+  lotes fuera de las calles y cruces unidos en el grafo. Compara las tres
   versiones, conserva todas las direcciones originales y comprueba parcelas
   compactas, separación entre patios, aceras y espacios verdes. Portable.
 - `tests/test_town_prototype.gd`: escena real, edificios con colisión,
@@ -269,7 +287,7 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   divididos y accesos cerrados. También corre en un proyecto vacío.
 - `modules/town_gen/tests/test_town_walkways.gd`: cinco semillas, repetición
   exacta, plano sin mutaciones, superficies triangulables fuera del asfalto,
-  alturas de rampas y entrada a las cuatro áreas verdes. Incluye un desvío
+  cordones elevados, rebajes vehiculares/de esquina y entradas verdes. Incluye un desvío
   alrededor de un lote rotado y selección vacía de distritos. Portable.
 - `tests/test_town_delivery.gd`: carga real, conducción sobre asfalto,
   seis pedidos/cajas, selección/GPS, rechazo de una caja equivocada, entregas

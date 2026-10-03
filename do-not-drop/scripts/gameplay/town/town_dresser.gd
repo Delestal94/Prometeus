@@ -47,7 +47,7 @@ func dress_town(
 				float(landmark.get_meta(&"clearance_radius")) + 2
 			)
 		)
-	for key: String in ["lot_paths", "green_paths"]:
+	for key: String in ["lot_paths", "green_paths", "corner_paths"]:
 		for path: Dictionary in pedestrian[key]:
 			for i: int in range(1, path.points.size()):
 				var a: Vector2 = path.points[i - 1]
@@ -86,6 +86,8 @@ func dress_town(
 		if rule.id == &"ground_plant":
 			rule.spacing = 3.0
 		for segment_index: int in range(segments.size()):
+			if segments[segment_index].get_meta(&"block_street", false):
+				continue
 			await _apply_rule(segments[segment_index], segment_index, index)
 	progress = 1.0
 

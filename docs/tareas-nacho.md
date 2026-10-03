@@ -42,7 +42,7 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   tanto en headless (componente de movimiento) como con pantalla.
 - [x] Reutilización de carretera (2026-10-03): TerrainField/shader/texturas,
   StraightSegment/pintura y RouteDresser/RoutePlacement originales. Perfil
-  urbano nivelado y relieve exterior; vegetación, autos, mobiliario/paradas
+  urbano con bases niveladas y relieve natural entre ellas; vegetación, autos, mobiliario/paradas
   respetan lotes/accesos y se agrupan con DressingBatcher. Pruebas de escena
   y reparto verifican integración sin cambiar el plano ni sus direcciones.
 - [x] Completar frentes libres de Barrio y Centro con parcelas compactas; generador
@@ -55,6 +55,15 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   agua, muelle transitable y acceso que esquiva lotes/parques; relieve original
   en Sierra y nieve local en altura. Calles, parcelas y accesos permanecen nivelados.
   `town_biomes.gd`, `town_terrain.gd`; pruebas de 20 semillas y escena completa.
+- [x] Aceras realistas (2026-10-03): 16 cm sobre asfalto, cordón vertical;
+  rebajes sólo vehiculares y de accesibilidad en esquinas. `town_walkways.gd`
+  y `town_prototype.gd`; `character_step` permite subir cordones sin saltar,
+  comprobando cuerpo completo, techo, pared y superficie de apoyo.
+- [x] Relieve urbano natural (2026-10-03): ondulaciones asimétricas entre
+  plataformas; bases de torre/molino reservadas antes de generar el suelo.
+- [x] Primeras calles interiores (2026-10-03): generador v3, secundarias de
+  8 m en 0/1/2/4, clientes originales y generadores v1/v2 conservados.
+  Sigue faltando mayor ocupación de sus interiores y manzanas completas.
 - [ ] Completar manzanas interiores, horizonte y presupuesto de render.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 

@@ -1,6 +1,6 @@
 extends "res://scripts/gameplay/route/route_terrain.gd"
-## Urban profile of the original terrain: keep district interiors level,
-## blend into its natural landscape outside the irregular city boundaries.
+## Natural urban relief: level only reserved foundations, keep irregular hills
+## between them and blend into the original landscape outside city boundaries.
 
 var city_outlines: Array[PackedVector2Array] = []
 var mountain_outline := PackedVector2Array()
@@ -121,13 +121,15 @@ func _configure_material(material: ShaderMaterial) -> void:
 
 
 func _urban_height(p: Vector2, road: Vector3, with_ridge: bool) -> float:
-	# Interiors are exactly zero. Avoid evaluating every inherited platform
-	# and then discarding the result for each terrain vertex in the city.
+	# Keep the existing irregular landscape; only actual roads, lots and paths
+	# are level platforms. Blend the exterior ridge into gentler urban relief.
 	for outline: PackedVector2Array in city_outlines:
 		if outline == mountain_outline:
+			if Geometry2D.is_point_in_polygon(p, outline):
+				return super._natural_height_from(p, road, with_ridge)
 			continue
 		if Geometry2D.is_point_in_polygon(p, outline):
-			return 0.0
+			return super._natural_height_from(p, road, false)
 	var original: float = super._natural_height_from(p, road, with_ridge)
 	var distance: float = INF
 	for outline: PackedVector2Array in city_outlines:
@@ -142,4 +144,7 @@ func _urban_height(p: Vector2, road: Vector3, with_ridge: bool) -> float:
 					)
 				)
 			)
-	return original * smoothstep(0, 24, distance)
+	if distance >= 40:
+		return original
+	var gentle: float = super._natural_height_from(p, road, false)
+	return lerpf(gentle, original, smoothstep(0, 40, distance))

@@ -96,7 +96,7 @@ func _run() -> void:
 		. dot(direction)
 	)
 	_expect(
-		progress > 5.0 and player.global_position.y >= .06 and player.global_position.y <= .25,
+		progress > 5.0 and player.global_position.y >= .06 and player.global_position.y <= .4,
 		(
 			"The actual player walks from road to its front path without a curb blocking it (got %f m, y %f)"
 			% [progress, player.global_position.y]

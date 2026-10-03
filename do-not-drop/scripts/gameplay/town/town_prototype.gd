@@ -25,7 +25,7 @@ const PAVING := Color("abb0a1")
 const WOOD := Color("8b6650")
 
 @export var world_seed: int = 0
-@export_range(1, 2) var generator_version: int = PLAN.GENERATOR_VERSION
+@export_range(1, 3) var generator_version: int = PLAN.GENERATOR_VERSION
 @export var enable_camera: bool = true
 @export var built_districts: PackedInt32Array = PackedInt32Array([0])
 
@@ -162,10 +162,10 @@ func _build_roads() -> void:
 	var junctions: Dictionary = {}
 	for edge: Dictionary in NAVIGATION.accessible_edges(plan, built_districts):
 		_road(roads, plan.nodes[edge.a], plan.nodes[edge.b], edge.width)
-		junctions[edge.a] = true
-		junctions[edge.b] = true
+		junctions[edge.a] = maxf(junctions.get(edge.a, 0), edge.width * .5)
+		junctions[edge.b] = maxf(junctions.get(edge.b, 0), edge.width * .5)
 	for node_id: int in junctions:
-		_disc(roads, "Junction", plan.nodes[node_id], PLAN.ROAD_WIDTH * .5, ASPHALT, .20, true)
+		_disc(roads, "Junction", plan.nodes[node_id], junctions[node_id], ASPHALT, .20, true)
 	var exits := Node3D.new()
 	exits.name = "ClosedExits"
 	add_child(exits)
@@ -318,24 +318,29 @@ func _build_green(green: Dictionary) -> void:
 
 func _build_walkways() -> void:
 	var surfaces: Array = pedestrian_plan.surfaces.duplicate()
-	for green: Dictionary in plan.green_areas:
-		if green.district not in built_districts:
-			continue
-		var radius: float = 10 if green.kind == &"plaza" else 5
-		for i: int in range(24):
-			var a: Vector2 = Vector2.from_angle(TAU * i / 24.0)
-			var b: Vector2 = Vector2.from_angle(TAU * (i + 1) / 24.0)
-			var at: Vector2 = green.position
-			surfaces.append(
-				PackedVector3Array(
-					[
-						Vector3(at.x + a.x * radius, .20, at.y + a.y * radius),
-						Vector3(at.x + b.x * radius, .20, at.y + b.y * radius),
-						Vector3(at.x + b.x * (radius + .8), .08, at.y + b.y * (radius + .8)),
-						Vector3(at.x + a.x * (radius + .8), .08, at.y + a.y * (radius + .8))
-					]
-				)
-			)
+	var surface_index: Dictionary = {}
+	var geometry: Array[Dictionary] = []
+	for points: PackedVector3Array in surfaces:
+		var polygon := PackedVector2Array()
+		var bounds := Rect2(Vector2(points[0].x, points[0].z), Vector2.ZERO)
+		for point: Vector3 in points:
+			var at := Vector2(point.x, point.z)
+			polygon.append(at)
+			bounds = bounds.expand(at)
+		var id: int = geometry.size()
+		geometry.append(
+			{
+				"polygon": polygon,
+				"points": points,
+				"indices": Geometry2D.triangulate_polygon(polygon)
+			}
+		)
+		for x: int in range(floori(bounds.position.x / 16), floori(bounds.end.x / 16) + 1):
+			for z: int in range(floori(bounds.position.y / 16), floori(bounds.end.y / 16) + 1):
+				var cell := Vector2i(x, z)
+				if not surface_index.has(cell):
+					surface_index[cell] = []
+				surface_index[cell].append(id)
 	var builder := SurfaceTool.new()
 	builder.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for points: PackedVector3Array in surfaces:
@@ -354,6 +359,29 @@ func _build_walkways() -> void:
 			for point: Vector3 in [a, b, c]:
 				builder.set_normal(Vector3.UP)
 				builder.add_vertex(point)
+		# The raised pavement has visible, physical curb faces down to its base.
+		var clockwise: bool = Geometry2D.is_polygon_clockwise(polygon)
+		for i: int in range(points.size()):
+			var a: Vector3 = points[i]
+			var b: Vector3 = points[(i + 1) % points.size()]
+			if maxf(a.y, b.y) <= WALKWAYS.STREET_HEIGHT + .005:
+				continue
+			var normal: Vector3 = Vector3(b.z - a.z, 0, a.x - b.x).normalized()
+			if clockwise:
+				normal = -normal
+			var mid: Vector3 = (a + b) * .5 + normal * .01
+			var floor_height: float = _paving_height(Vector2(mid.x, mid.z), geometry, surface_index)
+			# Adjacent polygons share a floor, not an internal vertical barrier.
+			if floor_height >= (a.y + b.y) * .5 - .005:
+				continue
+			var bottom_a := Vector3(a.x, minf(a.y, floor_height), a.z)
+			var bottom_b := Vector3(b.x, minf(b.y, floor_height), b.z)
+			var faces: Array[Vector3] = [a, bottom_b, b, a, bottom_a, bottom_b]
+			if clockwise:
+				faces = [a, b, bottom_b, a, bottom_b, bottom_a]
+			for point: Vector3 in faces:
+				builder.set_normal(normal)
+				builder.add_vertex(point)
 	var mesh: ArrayMesh = builder.commit()
 	if mesh.get_surface_count() == 0:
 		return
@@ -369,6 +397,28 @@ func _build_walkways() -> void:
 	collision.name = "CollisionShape3D"
 	collision.shape = mesh.create_trimesh_shape()
 	body.add_child(collision)
+
+
+func _paving_height(at: Vector2, geometry: Array[Dictionary], index: Dictionary) -> float:
+	var height: float = 0
+	for id: int in index.get(Vector2i(floori(at.x / 16), floori(at.y / 16)), []):
+		var surface: Dictionary = geometry[id]
+		if not Geometry2D.is_point_in_polygon(at, surface.polygon):
+			continue
+		for i: int in range(0, surface.indices.size(), 3):
+			var a: Vector3 = surface.points[surface.indices[i]]
+			var b: Vector3 = surface.points[surface.indices[i + 1]]
+			var c: Vector3 = surface.points[surface.indices[i + 2]]
+			var triangle := PackedVector2Array(
+				[Vector2(a.x, a.z), Vector2(b.x, b.z), Vector2(c.x, c.z)]
+			)
+			if Geometry2D.is_point_in_polygon(at, triangle):
+				var normal: Vector3 = (b - a).cross(c - a)
+				if absf(normal.y) > .000001:
+					height = maxf(
+						height, a.y - (normal.x * (at.x - a.x) + normal.z * (at.y - a.z)) / normal.y
+					)
+	return height
 
 
 func _green_floor(area: Node3D, title: String, radius: float, surface: float) -> void:

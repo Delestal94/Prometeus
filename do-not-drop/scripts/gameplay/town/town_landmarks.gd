@@ -14,7 +14,29 @@ static func build(
 	var holder := Node3D.new()
 	holder.name = "DistrictLandmarks"
 	town.add_child(holder)
-	var kit := ART.KIT.new(holder)
+	var plots: Array = town.get_meta(&"landmark_plots", [])
+	if not town.has_meta(&"landmark_plots"):
+		plots = prepare(town, plan, districts, pedestrian)
+	for plot: Dictionary in plots:
+		var landmark: Node3D = ART.model(
+			holder,
+			"District_%d" % plot.id,
+			plot.model,
+			Vector3(plot.position.x, .08, plot.position.y),
+			0,
+			true
+		)
+		landmark.set_meta(&"district", plot.id)
+		landmark.set_meta(&"clearance_radius", plot.radius)
+
+
+## Reserve a small foundation before terrain sampling so native models keep
+## all their feet supported when the surrounding ground has natural relief.
+static func prepare(
+	town: Node3D, plan: Dictionary, districts: PackedInt32Array, pedestrian: Dictionary
+) -> Array[Dictionary]:
+	var plots: Array[Dictionary] = []
+	var kit := ART.KIT.new(town)
 	for id: int in SOURCES:
 		if id not in districts:
 			continue
@@ -27,11 +49,8 @@ static func build(
 		var plot: Variant = _find_plot(plan, pedestrian, id, radius)
 		if plot == null:
 			continue
-		var landmark: Node3D = ART.model(
-			holder, "District_%d" % id, path, Vector3(plot.x, .08, plot.y), 0, true
-		)
-		landmark.set_meta(&"district", id)
-		landmark.set_meta(&"clearance_radius", radius)
+		plots.append({"id": id, "model": path, "position": plot, "radius": radius})
+	return plots
 
 
 static func _find_plot(plan: Dictionary, pedestrian: Dictionary, id: int, radius: float) -> Variant:

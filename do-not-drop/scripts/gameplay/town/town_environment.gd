@@ -6,6 +6,7 @@ const TERRAIN := preload("res://scripts/gameplay/town/town_terrain.gd")
 const STRAIGHT := preload("res://modules/route_gen/straight_segment.gd")
 const NAV := preload("res://modules/town_gen/town_navigation.gd")
 const BIOMES := preload("res://scripts/gameplay/town/town_biomes.gd")
+const LANDMARKS := preload("res://scripts/gameplay/town/town_landmarks.gd")
 
 
 static func build_ground(
@@ -18,7 +19,7 @@ static func build_ground(
 		if district.id in districts:
 			terrain.city_outlines.append(district.outline)
 	for edge: Dictionary in NAV.accessible_edges(plan, districts):
-		_register_road(terrain, plan.nodes[edge.a], plan.nodes[edge.b])
+		_register_road(terrain, plan.nodes[edge.a], plan.nodes[edge.b], edge.width * .5)
 	for gate: Dictionary in plan.gates:
 		var first: bool = gate.districts.x in districts
 		if first == (gate.districts.y in districts):
@@ -46,10 +47,21 @@ static func build_ground(
 					"height": 0.0
 				}
 			)
-	for key: String in ["lot_paths", "green_paths"]:
+	for key: String in ["lot_paths", "green_paths", "corner_paths"]:
 		for path: Dictionary in pedestrian[key]:
 			for i: int in range(1, path.points.size()):
 				_level_strip(terrain, path.points[i - 1], path.points[i], path.width * .5 + 2)
+	var plots: Array[Dictionary] = LANDMARKS.prepare(town, plan, districts, pedestrian)
+	town.set_meta(&"landmark_plots", plots)
+	for plot: Dictionary in plots:
+		terrain.platforms.append(
+			{
+				"centre": plot.position,
+				"along": Vector2.DOWN,
+				"half": Vector2.ONE * (plot.radius + 2),
+				"height": 0.0
+			}
+		)
 	BIOMES.configure(terrain, plan, districts)
 	terrain.index_profile()
 	if districts.size() == 6:
@@ -58,12 +70,14 @@ static func build_ground(
 	return terrain
 
 
-static func _register_road(terrain: TerrainField, a: Vector2, b: Vector2) -> void:
-	terrain.add_span(Vector3(a.x, 0, a.y), Vector3(b.x, 0, b.y))
-	_level_strip(terrain, a, b, 11)
+static func _register_road(terrain: TerrainField, a: Vector2, b: Vector2, half: float = 6) -> void:
+	terrain.add_span(Vector3(a.x, 0, a.y), Vector3(b.x, 0, b.y), false, half)
+	_level_strip(terrain, a, b, half + 5)
 
 
 static func _level_strip(terrain: TerrainField, a: Vector2, b: Vector2, width: float) -> void:
+	if a.distance_squared_to(b) < .000001:
+		return
 	terrain.platforms.append(
 		{
 			"centre": (a + b) * .5,
@@ -93,9 +107,11 @@ static func build_segments(
 		var segment: RouteSegment = STRAIGHT.new()
 		segment.length = a.distance_to(b) - 20
 		segment.continuous_terrain = true
+		segment.scale.x = edge.width / 12.0
 		segment.position = Vector3(a.x + direction.x * 10, .20, a.y + direction.y * 10)
 		segment.rotation.y = atan2(-direction.x, -direction.y)
 		segment.set_meta(&"district", edge.district)
+		segment.set_meta(&"block_street", edge.get("block_street", false))
 		holder.add_child(segment)
 		# Original paint must end where any other branch crosses this street.
 		for marking: Node3D in segment.get_children():
@@ -113,7 +129,7 @@ static func build_segments(
 						var closest: Vector2 = Geometry2D.get_closest_point_to_segment(
 							point, branch.a, branch.b
 						)
-						clear = clear and point.distance_to(closest) > 6.3
+						clear = clear and point.distance_to(closest) > float(branch.width) + .3
 			if not clear:
 				marking.free()
 		segments.append(segment)
