@@ -25,7 +25,7 @@ no debe cambiar las calles ni mover las casas existentes.
 
 `modules/town_gen/town_plan.gd` devuelve datos, sin escenas ni autoloads:
 
-- Semilla y `generator_version = 1`.
+- Semilla y `generator_version = 2` por defecto; versión 1 reproducible.
 - Seis distritos de contorno irregular, con escala, orientación y vértices
   variados por semilla. Las conexiones funcionales son estables.
 - Grafo de cruces y calles de 12 m: circuitos locales, diagonales y conexiones
@@ -62,7 +62,7 @@ y mantiene cerradas Campo e Industrial. `town_art.gd` viste los lotes con el art
 
 Esta integración conserva los assets originales. El monumento, pavimentos
 y aceras siguen siendo geometría del prototipo. El terreno ahora reutiliza
-la base de carretera del juego; faltan manzanas más densas, ambientación de
+la base de carretera del juego; faltan manzanas cerradas, ambientación de
 los cuatro distritos restantes y medición del presupuesto de render.
 
 ### Aceras y accesos peatonales
@@ -107,9 +107,20 @@ de las aceras/rampas. Dentro del contorno usa la zona urbana; fuera, bosque.
 `DressingBatcher` agrupa estos modelos y las marcas de los tramos. No activa
 los eventos, peligros ni la progresión del recorrido lineal.
 
-Esta conexión mejora el suelo y la ambientación. La densidad de viviendas,
-las manzanas cerradas y la identidad de los otros cuatro distritos siguen
-pendientes: todavía es una escena de prueba, no una ciudad terminada.
+La versión 2 completa los frentes libres de Barrio y Centro con parcelas
+más cercanas a la acera, separadas al menos dos metros entre sí. Centro
+agrega comercios y viviendas con los modelos originales. `town_infill.gd`
+reserva primero los accesos a todas las direcciones existentes y las cuatro
+áreas verdes: la densidad adicional no consume entradas, parques ni plazas.
+Las calles, lotes originales y seis clientes conservan sus datos de versión 1.
+`town_plan.generate(seed, 1)` reproduce el plano anterior; la versión 2 es
+el valor por defecto. Una versión desconocida devuelve un diccionario vacío.
+Sobre 100 semillas, Barrio pasa de 23,70 a 33,74 parcelas en promedio y
+Centro de 23,77 a 33,84; la semilla 4242 pasa de 49 a 69 parcelas construidas.
+Las pruebas de escena y reparto, portabilidad y capturas GPU verifican
+modelos a escala nativa, circulación y conservación de los seis destinos.
+La identidad de los otros cuatro distritos y las manzanas completamente
+cerradas siguen pendientes: todavía es una escena de prueba.
 Desde arriba se ven límites de teselas y el decorado se oculta por distancia;
 la continuidad del horizonte y el presupuesto de render necesitan trabajo.
 
@@ -118,7 +129,8 @@ la continuidad del horizonte y el presupuesto de render necesitan trabajo.
 Abrir la escena en Godot y pulsar **F6**. Cámara libre: WASD mueve, Q/E cambia
 altura, botón derecho permite mirar y Shift acelera. La escena acepta
 `--town-seed=4242` después de `--` para repetir un mundo. También puede
-fijarse `world_seed` en el inspector. Con valor cero toma la semilla de la
+fijarse `world_seed` en el inspector. `generator_version` permite comparar
+las versiones 1 y 2 en la escena de inspección. Con valor cero toma la semilla de la
 sesión si existe y genera una nueva en una prueba independiente.
 
 La escena de inspección conserva la cámara libre. Para jugar, abrir
@@ -171,7 +183,9 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
 
 - `modules/town_gen/tests/test_town_plan.gd`: 100 semillas, conectividad de
   los seis distritos, variación, determinismo, roles iniciales, parques y
-  lotes fuera de las calles y cruces unidos en el grafo. Portable.
+  lotes fuera de las calles y cruces unidos en el grafo. Compara las dos
+  versiones, conserva todas las direcciones originales y comprueba parcelas
+  compactas, separación entre patios, aceras y espacios verdes. Portable.
 - `tests/test_town_prototype.gd`: escena real, edificios con colisión,
   barreras, plaza/monumento, modelos existentes, viviendas que caben en su lote,
   tres especies de árboles agrupadas y centros de calle despejados. Abrir el

@@ -23,6 +23,7 @@ const PAVING := Color("abb0a1")
 const WOOD := Color("8b6650")
 
 @export var world_seed: int = 0
+@export_range(1, 2) var generator_version: int = PLAN.GENERATOR_VERSION
 @export var enable_camera: bool = true
 @export var built_districts: PackedInt32Array = PackedInt32Array([0])
 
@@ -51,7 +52,7 @@ func _ready() -> void:
 		var rng := RandomNumberGenerator.new()
 		rng.randomize()
 		world_seed = rng.randi_range(1, 2147483647)
-	plan = PLAN.generate(world_seed)
+	plan = PLAN.generate(world_seed, generator_version)
 	pedestrian_plan = WALKWAYS.generate(plan, built_districts)
 	_build_ground()
 	_build_roads()
@@ -88,8 +89,9 @@ func _material(color: Color) -> StandardMaterial3D:
 	return _materials[color]
 
 
-func _box(parent: Node3D, title: String, size: Vector3, at: Vector3,
-		color: Color, solid: bool = false) -> Node3D:
+func _box(
+	parent: Node3D, title: String, size: Vector3, at: Vector3, color: Color, solid: bool = false
+) -> Node3D:
 	var part: Node3D = StaticBody3D.new() if solid else Node3D.new()
 	part.name = title
 	part.position = at
@@ -109,8 +111,15 @@ func _box(parent: Node3D, title: String, size: Vector3, at: Vector3,
 	return part
 
 
-func _disc(parent: Node3D, title: String, at: Vector2, radius: float,
-		color: Color, surface: float = .08, solid: bool = false) -> void:
+func _disc(
+	parent: Node3D,
+	title: String,
+	at: Vector2,
+	radius: float,
+	color: Color,
+	surface: float = .08,
+	solid: bool = false
+) -> void:
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = radius
 	mesh.bottom_radius = radius
@@ -197,8 +206,14 @@ func _build_roads() -> void:
 
 func _road(parent: Node3D, a: Vector2, b: Vector2, width: float) -> void:
 	var middle: Vector2 = (a + b) * .5
-	var piece: Node3D = _box(parent, "Street", Vector3(a.distance_to(b), .04, width),
-		Vector3(middle.x, .18, middle.y), ASPHALT, true)
+	var piece: Node3D = _box(
+		parent,
+		"Street",
+		Vector3(a.distance_to(b), .04, width),
+		Vector3(middle.x, .18, middle.y),
+		ASPHALT,
+		true
+	)
 	piece.set_meta(&"road_surface", true)
 	piece.rotation.y = -(b - a).angle()
 
@@ -414,8 +429,9 @@ func _build_camera() -> void:
 	add_child(overlay)
 	_label = Label.new()
 	_label.position = Vector2(16, 16)
-	_label.text = (tr("HUD_TOWN_INSPECT_SEED") % world_seed
-		+ "\n" + tr("HUD_TOWN_INSPECT_CONTROLS"))
+	_label.text = (
+		tr("HUD_TOWN_INSPECT_SEED") % world_seed + "\n" + tr("HUD_TOWN_INSPECT_CONTROLS")
+	)
 	overlay.add_child(_label)
 
 
@@ -436,7 +452,8 @@ func _process(delta: float) -> void:
 	var direction := Vector3(
 		float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)),
 		float(Input.is_physical_key_pressed(KEY_E)) - float(Input.is_physical_key_pressed(KEY_Q)),
-		float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W)))
+		float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W))
+	)
 	var speed: float = 65 if Input.is_physical_key_pressed(KEY_SHIFT) else 25
 	_camera.position += (_camera.basis * direction.normalized()) * speed * delta
 

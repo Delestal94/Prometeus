@@ -339,6 +339,11 @@ func _check_manifests() -> void:
 		var plan: Dictionary = planner.call(&"generate", seed_value)
 		var original: Dictionary = plan.duplicate(true)
 		var orders: Array = adapter.call(&"delivery_lots", plan)
+		var legacy: Dictionary = planner.call(&"generate", seed_value, 1)
+		_expect(
+			orders == adapter.call(&"delivery_lots", legacy),
+			"Urban infill preserves all six original delivery destinations"
+		)
 		_expect(
 			orders.size() == 6,
 			(

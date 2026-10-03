@@ -45,7 +45,9 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   urbano nivelado y relieve exterior; vegetación, autos, mobiliario/paradas
   respetan lotes/accesos y se agrupan con DressingBatcher. Pruebas de escena
   y reparto verifican integración sin cambiar el plano ni sus direcciones.
-- [ ] Densificar manzanas urbanas y distinguir la arquitectura de cada distrito.
+- [x] Completar frentes libres de Barrio y Centro con parcelas compactas; generador
+  v2 compatible con v1, calles/clientes intactos y accesos verdes reservados.
+- [ ] Completar manzanas cerradas y distinguir la arquitectura de los otros distritos.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos

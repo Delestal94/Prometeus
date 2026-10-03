@@ -74,6 +74,10 @@ func _center_shots() -> void:
 		center = plan.districts[1].center
 		aim = Vector3(center.x, 0, center.y)
 		await _shot(camera, aim + Vector3(60, 185, 125), aim, seed_value, "center")
+		print(
+			"Town lots: ",
+			plan.lots.filter(func(lot: Dictionary) -> bool: return lot.district in [0, 1]).size()
+		)
 		print("Town route reuse: ", town.get(&"dresser").get(&"placed_counts"))
 		if seed_value == 4242:
 			for lot: Dictionary in plan.lots:
