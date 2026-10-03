@@ -7,6 +7,23 @@
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
 
+## Mapa dinámico — desarrollo por pasos
+
+### N-950 · Spike de ciudad procedural — A · Aviso: sí (módulo portable) · **[ ] en desarrollo**
+Pedido directo del equipo (2026-10-02): seis distritos, ciudad asimétrica y
+variable por semilla, calles diagonales, plazas, parques y monumentos.
+Rama reservada `nacho/N-950-town-spike` retomada tras más de dos horas sin
+implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
+- [x] Base del plano versionado y determinista, seis distritos conectados,
+  lotes con frente de calle y áreas verdes fuera del asfalto.
+- [x] Escena independiente del barrio inicial con depósito, tres casas,
+  taller, parque, plaza/monumento, mobiliario y dos salidas cerradas.
+  Validación del primer paso: 100 semillas en `test_town_plan`, escena en
+  `test_town_prototype`, módulo aislado portable, lint y revisión visual.
+- [ ] Camión, pedidos de orden libre y navegación/GPS por calles.
+- [ ] Medición del spike: duración, esfuerzo de carga, visibilidad y render.
+- [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
+
 ## QA — bugs abiertos
 
 ### N-919 · Regresión de #208: los `--script` que llegan a `DeliveryHouse` cargan el HUD sin script — B · `Opus 5.5 · high` · Aviso: sí (`scripts/gameplay/player/player_cargo_care.gd` es de Slatex) · M8
