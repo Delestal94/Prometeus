@@ -1,7 +1,7 @@
 extends SceneTree
 ## Run with a display (revisor-visual): Godot --path do-not-drop --script res://tests/render_town_delivery.gd
 ## Captures seeded street/depot with the real truck, the driver's GPS and a
-## customer's porch. Output: user://town_delivery_<view>.png.
+## customer's porch, plus the GPS guiding to the center. Output: user://town_delivery_<view>.png.
 
 
 func _initialize() -> void:
@@ -40,6 +40,9 @@ func _run() -> void:
 	for frame: int in range(10):
 		await physics_frame
 	await _shot("driver")
+	level.call(&"select_center")
+	await _shot("center_gps")
+	level.call(&"select_house", 2)
 	player.call(&"leave_seat")
 	var houses: Array = level.get(&"houses")
 	var house: Node3D = houses[2]

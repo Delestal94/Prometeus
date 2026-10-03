@@ -38,6 +38,9 @@ static func build_lot(parcel: Node3D, lot: Dictionary, seed_value: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([seed_value, &"town_houses", lot.address])
 	var variant: int = rng.randi_range(0, HOUSE_MODELS.size() - 1)
+	if lot.district == 1:
+		# Taller fronts and shop awnings distinguish the center using existing art.
+		variant = 3 if lot.role == &"shop" or rng.randf() < .65 else 2
 	if lot.role == &"house":
 		variant = customer_variant(seed_value, int(lot.address.y) - 2)
 	var kit := KIT.new(building, "Colliders", building)

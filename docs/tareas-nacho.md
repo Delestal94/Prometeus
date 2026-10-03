@@ -27,6 +27,10 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
 - [x] Integración del arte existente (2026-10-03): viviendas variadas a escala
   nativa, clientes distintos, piezas/materiales del depósito y taller,
   estante original y árboles/bancos/farolas existentes (`town_art.gd`).
+- [x] Segundo distrito construido (2026-10-03): Centro con arquitectura
+  original de dos plantas, comercios, plaza/parque y corredor transitable.
+  F4 guía al Centro; F1–F3 vuelven a pedidos. Campo e Industrial siguen cerrados.
+  Apertura sin mover el plano; rutas entre distritos sobre 100 semillas.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos

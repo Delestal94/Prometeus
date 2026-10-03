@@ -5,7 +5,7 @@ extends Node3D
 const TOWN := preload("res://scenes/gameplay/town/town_prototype.tscn")
 const NAVIGATION := preload("res://modules/town_gen/town_navigation.gd")
 const ART := preload("res://scripts/gameplay/town/town_art.gd")
-const OPEN_DISTRICTS: Array[int] = [0]
+const OPEN_DISTRICTS: Array[int] = [0, 1]
 
 @export var world_seed: int = 0
 
@@ -16,6 +16,8 @@ var houses: Array[Node3D] = []
 var packages: Array[Node3D] = []
 var destinations: PackedVector2Array = PackedVector2Array()
 var depot_frontage: Vector2
+var center_frontage: Vector2
+var exploring_center: bool = false
 var selected_house: int = 0
 var finished: bool = false
 var gps: Node3D
@@ -34,8 +36,10 @@ func _ready() -> void:
 	town = TOWN.instantiate()
 	town.set(&"world_seed", world_seed)
 	town.set(&"enable_camera", false)
+	town.set(&"built_districts", PackedInt32Array(OPEN_DISTRICTS))
 	add_child(town)
 	world_seed = int(town.get(&"world_seed"))
+	_build_center_destination()
 	_build_customers()
 	_build_vehicle()
 	_settle_vehicle.call_deferred()
@@ -64,7 +68,9 @@ func _build_customers() -> void:
 			house.name = "Customer_%d" % (index + 1)
 			house.set(&"house_index", index)
 			house.set(&"assigned_package_id", StringName("town_%d" % (index + 1)))
-			house.set(&"assigned_label", "%s %s" % [tr("HUD_HANDLING_FRAGILE"), String.chr(65 + index)])
+			house.set(
+				&"assigned_label", "%s %s" % [tr("HUD_HANDLING_FRAGILE"), String.chr(65 + index)]
+			)
 			house.set(&"visual_variant", ART.customer_variant(world_seed, index))
 			var direction: Vector2 = (lot.frontage - lot.position).normalized()
 			var front: Vector2 = (lot.frontage - lot.position).rotated(-float(lot.angle))
@@ -186,6 +192,7 @@ func _on_boarded(_player: Node) -> void:
 
 
 func _on_resolved(outcome: StringName, package_id: StringName, index: int) -> void:
+	exploring_center = false
 	RunManager.register_delivery(
 		index, outcome, package_id, bool(houses[index].get(&"handed_over_open"))
 	)
@@ -200,8 +207,36 @@ func _on_resolved(outcome: StringName, package_id: StringName, index: int) -> vo
 
 func select_house(index: int) -> void:
 	if index >= 0 and index < houses.size() and not bool(houses[index].get(&"delivered")):
+		exploring_center = false
 		selected_house = index
 		_refresh_status()
+
+
+## A stop on the center's street nearest its plaza, never a route over the lawn.
+func _build_center_destination() -> void:
+	var plan: Dictionary = town.get(&"plan")
+	var target: Vector2 = plan.districts[1].center
+	for green: Dictionary in plan.green_areas:
+		if green.district == 1 and green.kind == &"plaza":
+			target = green.position
+			break
+	var nearest: float = INF
+	for edge: Dictionary in plan.edges:
+		if edge.district != 1:
+			continue
+		var at: Vector2 = Geometry2D.get_closest_point_to_segment(
+			target, plan.nodes[edge.a], plan.nodes[edge.b]
+		)
+		if at.distance_squared_to(target) < nearest:
+			nearest = at.distance_squared_to(target)
+			center_frontage = at
+
+
+func select_center() -> void:
+	if finished or selected_house < 0:
+		return
+	exploring_center = true
+	_refresh_status()
 
 
 ## Shared by the real dashboard and the on-foot order display.
@@ -209,6 +244,8 @@ func guidance() -> Dictionary:
 	if vehicle == null or finished:
 		return {}
 	var target: Vector2 = destinations[selected_house] if selected_house >= 0 else depot_frontage
+	if exploring_center:
+		target = center_frontage
 	var start := Vector2(vehicle.global_position.x, vehicle.global_position.z)
 	var route: Dictionary = NAVIGATION.route(
 		town.get(&"plan"), start, target, PackedInt32Array(OPEN_DISTRICTS)
@@ -223,12 +260,16 @@ func guidance() -> Dictionary:
 	return {
 		"distance": route.distance,
 		"waypoint": Vector3(waypoint.x, .2, waypoint.y),
-		"house": selected_house,
+		"house": -1 if exploring_center else selected_house,
 		"label":
 		(
-			(tr("WORLD_GPS_HOUSE_CODE") % [selected_house + 1, String.chr(65 + selected_house)])
-			if selected_house >= 0
-			else tr("WORLD_TOWN_DEPOT")
+			tr("WORLD_TOWN_DISTRICT_CENTER")
+			if exploring_center
+			else (
+				(tr("WORLD_GPS_HOUSE_CODE") % [selected_house + 1, String.chr(65 + selected_house)])
+				if selected_house >= 0
+				else tr("WORLD_TOWN_DEPOT")
+			)
 		)
 	}
 
@@ -310,6 +351,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.physical_keycode in [KEY_F1, KEY_F2, KEY_F3]:
 		select_house(int(event.physical_keycode) - KEY_F1)
+		get_viewport().set_input_as_handled()
+	elif event.physical_keycode == KEY_F4:
+		select_center()
 		get_viewport().set_input_as_handled()
 	elif event.physical_keycode == KEY_ESCAPE:
 		Input.mouse_mode = (

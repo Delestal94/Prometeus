@@ -1,4 +1,4 @@
-# Ciudad procedural — barrio jugable del spike
+# Ciudad procedural — barrio y Centro jugables del spike
 
 Decisiones del equipo, 2026-10-02: una ciudad continua con seis distritos;
 contorno asimétrico que varía por semilla, calles diagonales y manzanas de
@@ -16,7 +16,8 @@ tendrá otra semilla. El guardado y la campaña todavía no están conectados.
 6. Sierra: pendientes, bosque y nieve.
 
 Conexiones previstas: 1–2, 1–4, 2–3, 3–5, 5–4, 4–6, 6–3.
-Se abren por progresión/capacidad del vehículo en un paso posterior.
+En la prueba offline están abiertos Barrio y Centro. Los accesos restantes
+se abrirán por progresión/capacidad del vehículo en un paso posterior.
 El trazado completo se genera antes de abrir distritos: desbloquear una zona
 no debe cambiar las calles ni mover las casas existentes.
 
@@ -39,8 +40,10 @@ ni el roster de jugadores. Mismo generador y semilla producen el mismo plano.
 
 `scenes/gameplay/town/town_prototype.tscn` construye **solo el primer barrio**:
 calles, patios, edificios con colisión, árboles agrupados en MultiMesh,
-bancos, farolas y una plaza con monumento de paquetes. Las salidas a Centro
-y Campo tienen barreras. `town_art.gd` viste los lotes con el arte existente:
+bancos, farolas y una plaza con monumento de paquetes. Por defecto las salidas
+a Centro y Campo tienen barreras. `built_districts` permite construir más zonas
+del mismo plano; el adaptador jugable usa `[0, 1]`, abre el corredor al Centro
+y mantiene cerradas Campo e Industrial. `town_art.gd` viste los lotes con el arte existente:
 
 - Las cinco viviendas originales, elegidas por semilla y espacio disponible,
   orientadas hacia su calle y conservando la escala del modelo. Una vivienda
@@ -57,7 +60,7 @@ y Campo tienen barreras. `town_art.gd` viste los lotes con el arte existente:
 
 Esta integración conserva los assets originales. El monumento, pavimentos
 y suelo amplio siguen siendo geometría del prototipo; faltan terreno, aceras,
-ambientación de los otros distritos y medición del presupuesto de render.
+ambientación de los cuatro distritos restantes y medición del presupuesto de render.
 
 ### Abrir y recorrer
 
@@ -76,10 +79,15 @@ La escena de inspección conserva la cámara libre. Para jugar, abrir
    mueve al jugador o conduce; los controles habituales del camión siguen activos.
 3. **F1/F2/F3** eligen cualquiera de las casas pendientes. El GPS de la cabina
    indica distancia por calles y el siguiente cruce, además de casa/código.
-4. Bajar con **E**, sacar el paquete y tocar el timbre de la casa correcta.
+4. **F4** dirige el GPS al Centro, a un punto de calle junto a su plaza.
+   Recorrerlo es opcional: conserva los tres pedidos. **F1/F2/F3** vuelven a
+   la navegación del cliente. El Centro tiene comercios con toldos, predominio
+   de viviendas de dos plantas, plaza/monumento, parque y mobiliario original.
+5. Bajar con **E**, sacar el paquete y tocar el timbre de la casa correcta.
    Una caja equivocada deja el pedido pendiente; el estado de la caja afecta
    la entrega como en el juego. Los pedidos pueden resolverse en cualquier orden.
-5. Tras cerrar los tres pedidos, volver al depósito y detener el camión.
+6. Tras cerrar los tres pedidos, volver al depósito y detener el camión.
+   El regreso al depósito tiene prioridad sobre la exploración del Centro.
    **Esc** libera o vuelve a capturar el mouse.
 
 Este adaptador usa el jugador, camión, paquetes, casas y timbres reales.
@@ -89,7 +97,11 @@ los modelos/piezas descritos arriba; plaza, parque y salidas cerradas permanecen
 `modules/town_gen/town_navigation.gd` calcula caminos mínimos con proyecciones
 sobre segmentos: incluye el tramo de calle desde la posición actual, sin
 obligar a pasar por el cruce más cercano. El filtro de distritos excluye
-calles cerradas; este paso solo navega por las construidas en el distrito 0.
+calles cerradas. `accessible_edges(plan, districts)` es el filtro común de
+geometría y navegación: un conector requiere ambos distritos abiertos.
+Cada segmento conserva `district_pair`, incluso tras dividirse en un cruce.
+La prueba navega por los distritos 0 y 1 y su corredor, con colisión de asfalto
+y cruces. No cambia los lotes, calles ni áreas verdes al abrir el Centro.
 `DashboardGps.guidance_provider` conecta el adaptador al GPS existente.
 
 No está todavía en el menú ni sustituye Reparto/Endless. La prueba es offline
@@ -103,17 +115,22 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   lotes fuera de las calles y cruces unidos en el grafo. Portable.
 - `tests/test_town_prototype.gd`: escena real, edificios con colisión,
   barreras, plaza/monumento, modelos existentes, viviendas que caben en su lote,
-  tres especies de árboles agrupadas y centros de calle despejados.
+  tres especies de árboles agrupadas y centros de calle despejados. Abrir el
+  Centro conserva el plano y verifica sus edificios a escala nativa, áreas
+  verdes, barreras restantes y soporte de asfalto a lo largo del corredor.
 - `tests/render_town_prototype.gd`: dos semillas desde arriba y plaza a
-  altura de calle para revisión visual.
+  altura de calle para revisión visual, además de vistas de los dos distritos
+  conectados y del Centro con sus comercios.
 - `modules/town_gen/tests/test_town_navigation.gd`: tramos parciales,
   desvíos entre calles paralelas, rutas inaccesibles y 300 recorridos de
-  clientes sobre 100 semillas. También corre en un proyecto vacío.
+  clientes y 100 rutas al Centro sobre 100 semillas. Comprueba conectores
+  divididos y accesos cerrados. También corre en un proyecto vacío.
 - `tests/test_town_delivery.gd`: carga real, conducción sobre asfalto,
   selección/GPS, rechazo de una caja equivocada, entregas en orden 3/1/2,
   posibilidad de volver al asiento y final al regresar al depósito; clientes
-  con tres modelos distintos y estante de carga original.
-- `tests/render_town_delivery.gd`: depósito/camión, cabina/GPS y casa de cliente.
+  con tres modelos distintos y estante de carga original. La exploración del
+  Centro cambia solo la guía GPS y permite volver a los pedidos pendientes.
+- `tests/render_town_delivery.gd`: depósito/camión, cabina/GPS, casa de cliente y GPS dirigido al Centro.
 
 ## Siguientes pasos del spike N-950
 

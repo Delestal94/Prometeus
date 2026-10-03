@@ -1,13 +1,18 @@
 extends Node3D
 ## N-950: inspectable geometry prototype, not the campaign/reparto level yet.
 ## Run town_prototype.tscn with F6. A world seed plans all six districts;
-## only the starting district and its closed exits are built in this step.
+## built_districts selects geometry without regenerating the town's layout.
 
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
+const NAVIGATION := preload("res://modules/town_gen/town_navigation.gd")
 const ART := preload("res://scripts/gameplay/town/town_art.gd")
 const DISTRICT_NAMES: Array[String] = [
-	"WORLD_TOWN_DISTRICT_DEPOT", "WORLD_TOWN_DISTRICT_CENTER", "WORLD_TOWN_DISTRICT_INDUSTRIAL",
-	"WORLD_TOWN_DISTRICT_COUNTRY", "WORLD_TOWN_DISTRICT_PORT", "WORLD_TOWN_DISTRICT_HILLS",
+	"WORLD_TOWN_DISTRICT_DEPOT",
+	"WORLD_TOWN_DISTRICT_CENTER",
+	"WORLD_TOWN_DISTRICT_INDUSTRIAL",
+	"WORLD_TOWN_DISTRICT_COUNTRY",
+	"WORLD_TOWN_DISTRICT_PORT",
+	"WORLD_TOWN_DISTRICT_HILLS",
 ]
 const ASPHALT := Color("394a50")
 const GRASS := Color("71885a")
@@ -16,6 +21,7 @@ const WOOD := Color("8b6650")
 
 @export var world_seed: int = 0
 @export var enable_camera: bool = true
+@export var built_districts: PackedInt32Array = PackedInt32Array([0])
 
 var plan: Dictionary = {}
 var tree_positions: PackedVector2Array = PackedVector2Array()
@@ -41,10 +47,10 @@ func _ready() -> void:
 	_build_ground()
 	_build_roads()
 	for lot: Dictionary in plan.lots:
-		if lot.district == 0:
+		if lot.district in built_districts:
 			_build_lot(lot)
 	for green: Dictionary in plan.green_areas:
-		if green.district == 0:
+		if green.district in built_districts:
 			_build_green(green)
 	_build_trees()
 	_build_lighting()
@@ -113,7 +119,7 @@ func _disc(parent: Node3D, title: String, at: Vector2, radius: float,
 
 func _build_ground() -> void:
 	var center: Vector2 = plan.districts[0].center
-	_box(self, "Ground", Vector3(2000, 1, 2000),
+	_box(self, "Ground", Vector3(4000, 1, 4000),
 		Vector3(center.x, -.5, center.y), GRASS, true)
 
 
@@ -121,32 +127,53 @@ func _build_roads() -> void:
 	var roads := Node3D.new()
 	roads.name = "Roads"
 	add_child(roads)
-	for edge: Dictionary in plan.edges:
-		if edge.district != 0:
-			continue
+	var junctions: Dictionary = {}
+	for edge: Dictionary in NAVIGATION.accessible_edges(plan, built_districts):
 		_road(roads, plan.nodes[edge.a], plan.nodes[edge.b], edge.width)
-	for node_id: int in plan.districts[0].node_ids:
+		junctions[edge.a] = true
+		junctions[edge.b] = true
+	for node_id: int in junctions:
 		_disc(roads, "Junction", plan.nodes[node_id], PLAN.ROAD_WIDTH * .5, ASPHALT, .20, true)
 	var exits := Node3D.new()
 	exits.name = "ClosedExits"
 	add_child(exits)
 	for gate: Dictionary in plan.gates:
 		var pair: Vector2i = gate.districts
-		if pair.x != 0 and pair.y != 0:
+		var first_open: bool = pair.x in built_districts
+		var second_open: bool = pair.y in built_districts
+		if first_open == second_open:
 			continue
-		var start: Vector2 = plan.nodes[gate.a if pair.x == 0 else gate.b]
-		var end: Vector2 = plan.nodes[gate.b if pair.x == 0 else gate.a]
+		var start: Vector2 = plan.nodes[gate.a if first_open else gate.b]
+		var end: Vector2 = plan.nodes[gate.b if first_open else gate.a]
 		var direction: Vector2 = (end - start).normalized()
 		var stop: Vector2 = start + direction * minf(35.0, start.distance_to(end) * .5)
 		_road(roads, start, stop, PLAN.ROAD_WIDTH)
 		var barrier := Node3D.new()
-		barrier.name = "Gate_%d" % (pair.y if pair.x == 0 else pair.x)
+		barrier.name = "Gate_%d" % (pair.y if first_open else pair.x)
+		barrier.set_meta(&"district_pair", pair)
 		barrier.position = Vector3(stop.x, 0, stop.y)
 		barrier.rotation.y = -direction.angle()
 		exits.add_child(barrier)
-		_box(barrier, "Barrier", Vector3(.6, 1.3, PLAN.ROAD_WIDTH),
-			Vector3(0, .65, 0), Color("e7be51"), true)
-		_sign(barrier, tr(DISTRICT_NAMES[pair.y if pair.x == 0 else pair.x]), Vector3(0, 3, 0))
+		_box(
+			barrier,
+			"Barrier",
+			Vector3(.6, 1.3, PLAN.ROAD_WIDTH),
+			Vector3(0, .65, 0),
+			Color("e7be51"),
+			true
+		)
+		_sign(barrier, tr(DISTRICT_NAMES[pair.y if first_open else pair.x]), Vector3(0, 3, 0))
+	# Signs sit beside the open corridor, outside the driving lane.
+	for gate: Dictionary in plan.gates:
+		var pair: Vector2i = gate.districts
+		if pair.x not in built_districts or pair.y not in built_districts:
+			continue
+		var direction: Vector2 = (plan.nodes[gate.b] - plan.nodes[gate.a]).normalized()
+		for endpoint: Vector2i in [Vector2i(gate.a, pair.y), Vector2i(gate.b, pair.x)]:
+			var at: Vector2 = (
+				plan.nodes[endpoint.x] + direction.orthogonal() * (PLAN.ROAD_WIDTH * .5 + 3)
+			)
+			_sign(roads, tr(DISTRICT_NAMES[endpoint.y]), Vector3(at.x, 4, at.y))
 
 
 func _road(parent: Node3D, a: Vector2, b: Vector2, width: float) -> void:
@@ -160,23 +187,40 @@ func _road(parent: Node3D, a: Vector2, b: Vector2, width: float) -> void:
 func _build_lot(lot: Dictionary) -> void:
 	var parcel := Node3D.new()
 	parcel.name = "%s_%d" % [lot.role, lot.address.y]
+	if lot.district != 0:
+		parcel.name = "District_%d_%s" % [lot.district, parcel.name]
 	parcel.set_meta(&"lot", lot)
 	parcel.position = Vector3(lot.position.x, 0, lot.position.y)
 	parcel.rotation.y = -float(lot.angle)
 	add_child(parcel)
 	var size: Vector2 = lot.size
 	var service: bool = lot.role in [&"depot", &"workshop"]
-	_box(parcel, "Yard", Vector3(size.x, .08, size.y), Vector3(0, .04, 0),
-		PAVING if service else GRASS.lightened(.12))
+	_box(
+		parcel,
+		"Yard",
+		Vector3(size.x, .08, size.y),
+		Vector3(0, .04, 0),
+		PAVING if service else GRASS.lightened(.12)
+	)
 	ART.build_lot(parcel, lot, world_seed)
 	var frontage: Vector2 = lot.frontage
-	var driveway_start: Vector2 = lot.position + (frontage - lot.position).normalized() * size.y * .5
+	var driveway_start: Vector2 = (
+		lot.position + (frontage - lot.position).normalized() * size.y * .5
+	)
 	_road(self, driveway_start, frontage, 5.0 if service else 2.0)
 	if lot.role in [&"depot", &"house", &"workshop", &"shop"]:
-		var titles: Dictionary = {&"depot": "TAKE MY PACKAGE",
-			&"workshop": tr("WORLD_DEPOT_WORKSHOP"), &"shop": tr("WORLD_TOWN_SHOP")}
+		var titles: Dictionary = {
+			&"depot": "TAKE MY PACKAGE",
+			&"workshop": tr("WORLD_DEPOT_WORKSHOP"),
+			&"shop": tr("WORLD_TOWN_SHOP")
+		}
 		var title: String = titles.get(lot.role, tr("WORLD_HOUSE_NUMBER") % lot.address.y)
-		_sign(parcel, title, Vector3(0, 7.3 if service else 6.5, 0))
+		var sign_at := Vector3(0, 7.3 if service else 6.5, 0)
+		if lot.role == &"shop":
+			var front: Vector2 = (lot.frontage - lot.position).rotated(-float(lot.angle))
+			# Place storefront signs in the front yard, clear of the upper floor.
+			sign_at = Vector3(0, 2.8, signf(front.y) * size.y * .42)
+		_sign(parcel, title, sign_at)
 
 
 func _sign(parent: Node3D, text: String, at: Vector3) -> void:
@@ -193,6 +237,8 @@ func _sign(parent: Node3D, text: String, at: Vector3) -> void:
 func _build_green(green: Dictionary) -> void:
 	var area := Node3D.new()
 	area.name = "Green_%s" % green.kind
+	if green.district != 0:
+		area.name = "District_%d_%s" % [green.district, area.name]
 	area.position = Vector3(green.position.x, 0, green.position.y)
 	area.set_meta(&"green_area", green)
 	add_child(area)
@@ -211,9 +257,16 @@ func _build_green(green: Dictionary) -> void:
 		ART.model(area, "Lamp", ART.LAMP, at + Vector3(2, 0, 0), -angle, true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([world_seed, &"town_trees", green.kind])
+	if green.district != 0:
+		rng.seed = hash([world_seed, &"town_trees", green.kind, green.district])
 	for i: int in range(12):
-		var at: Vector2 = green.position + Vector2.from_angle(TAU * i / 12.0
-			+ rng.randf_range(-.1, .1)) * rng.randf_range(green.radius - 5, green.radius - 2)
+		var at: Vector2 = (
+			green.position
+			+ (
+				Vector2.from_angle(TAU * i / 12.0 + rng.randf_range(-.1, .1))
+				* rng.randf_range(green.radius - 5, green.radius - 2)
+			)
+		)
 		if PLAN.road_clearance(plan, at) > 3:
 			tree_positions.append(at)
 

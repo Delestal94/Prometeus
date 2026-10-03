@@ -4,9 +4,12 @@ extends SceneTree
 ## buildings, accessible streets, two closed exits, plaza monument, park furniture
 ## and existing house/depot/furniture models with batched authored trees away
 ## from asphalt. Art varies independently of the planned street geometry.
+## Opening the center preserves the plan, adds its native models and parks,
+## removes only the open gate, and gives the connecting road continuous collision.
 
 const SCENE := preload("res://scenes/gameplay/town/town_prototype.tscn")
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
+const NAV := preload("res://modules/town_gen/town_navigation.gd")
 var _failures: int = 0
 
 
@@ -150,6 +153,83 @@ func _run() -> void:
 			)
 		)
 	town.queue_free()
+	await process_frame
+	var expanded: Node3D = SCENE.instantiate()
+	expanded.set(&"world_seed", 4242)
+	expanded.set(&"enable_camera", false)
+	expanded.set(&"built_districts", PackedInt32Array([0, 1]))
+	root.add_child(expanded)
+	current_scene = expanded
+	await process_frame
+	await physics_frame
+	_expect(expanded.get(&"plan") == plan, "Opening a district never moves the existing town")
+	var center_lots: int = 0
+	var planned_lots: int = 0
+	var tall_shops: int = 0
+	for lot: Dictionary in plan.lots:
+		if lot.district == 1:
+			planned_lots += 1
+	for node: Node in expanded.get_children():
+		if not node.has_meta(&"lot"):
+			continue
+		var parcel := node as Node3D
+		var lot: Dictionary = parcel.get_meta(&"lot")
+		_expect(lot.district in [0, 1], "Only the two requested districts are constructed")
+		if lot.district != 1:
+			continue
+		center_lots += 1
+		var building: Node3D = parcel.get_node(^"Building")
+		if lot.role == &"shop" and building.get_meta(&"house_variant") == 3:
+			tall_shops += 1
+		var half: Vector2 = lot.size * .5
+		for mesh: MeshInstance3D in building.get_node(^"HouseVisual").find_children(
+			"*", "MeshInstance3D", true, false
+		):
+			var bounds_in_lot: AABB = (
+				(parcel.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
+			)
+			_expect(
+				(
+					bounds_in_lot.position.x >= -half.x
+					and bounds_in_lot.end.x <= half.x
+					and bounds_in_lot.position.z >= -half.y
+					and bounds_in_lot.end.z <= half.y
+				),
+				"Center buildings fit the original lot at native scale (got %s)" % bounds_in_lot
+			)
+	_expect(
+		center_lots == planned_lots and center_lots > 0,
+		"All planned center lots are built (got %d/%d)" % [center_lots, planned_lots]
+	)
+	_expect(tall_shops > 0, "The center uses taller existing architecture for its shops")
+	_expect(
+		(
+			expanded.has_node(^"District_1_Green_plaza/Monument")
+			and expanded.has_node(^"District_1_Green_park/Bench")
+		),
+		"The center includes its plaza, monument and furnished park"
+	)
+	var exits: Node = expanded.get_node(^"ClosedExits")
+	_expect(
+		exits.get_child_count() == 2 and exits.has_node(^"Gate_2") and exits.has_node(^"Gate_3"),
+		"Center access opens while Industrial and Country stay gated"
+	)
+	for edge: Dictionary in NAV.accessible_edges(plan, PackedInt32Array([0, 1])):
+		for fraction: float in [.05, .25, .5, .75, .95]:
+			var at: Vector2 = (plan.nodes[edge.a] as Vector2).lerp(plan.nodes[edge.b], fraction)
+			var query := PhysicsRayQueryParameters3D.create(
+				Vector3(at.x, 20, at.y), Vector3(at.x, -2, at.y)
+			)
+			var hit: Dictionary = expanded.get_world_3d().direct_space_state.intersect_ray(query)
+			var body: Node = hit.get("collider")
+			_expect(
+				body != null and bool(body.get_meta(&"road_surface", false)),
+				(
+					"Open streets and the entire corridor have unobstructed asphalt support (edge %s, at %s)"
+					% [edge, at]
+				)
+			)
+	expanded.queue_free()
 	await process_frame
 	if _failures == 0:
 		print("PASS: starting district geometry, green areas, gates and unobstructed streets")

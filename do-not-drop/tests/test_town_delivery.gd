@@ -5,6 +5,8 @@ extends SceneTree
 ## package, hand over in arbitrary order, reboard and return to the depot.
 ## DashboardGps follows street waypoints; completion does not save a campaign.
 ## Authored client houses vary, keep their frontage and use the depot's rack.
+## F4 guides along the opened center corridor and returning to a pending house
+## restores delivery guidance without changing orders or package identities.
 
 var _failures: int = 0
 
@@ -89,7 +91,28 @@ func _run() -> void:
 	)
 	vehicle.set(&"linear_velocity", Vector3.ZERO)
 	vehicle.set(&"angular_velocity", Vector3.ZERO)
+	level.call(&"select_center")
+	var center_guide: Dictionary = level.call(&"guidance")
+	_expect(
+		(
+			center_guide.get("label") == tr("WORLD_TOWN_DISTRICT_CENTER")
+			and center_guide.get("house") == -1
+			and center_guide.get("distance", 0) > 100
+		),
+		"Center exploration provides a real cross-district GPS destination (got %s)" % center_guide
+	)
+	var center: Vector2 = level.get(&"center_frontage")
+	var before: Vector3 = vehicle.global_position
+	vehicle.global_position = Vector3(center.x, before.y, center.y)
+	_expect(
+		float(level.call(&"guidance").get("distance", -1)) < .01,
+		"Center GPS arrives at a point on asphalt"
+	)
+	vehicle.global_position = before
 	level.call(&"select_house", 2)
+	_expect(
+		not bool(level.get(&"exploring_center")), "Choosing a customer exits center exploration"
+	)
 	var guide: Dictionary = level.call(&"guidance")
 	_expect(
 		guide.house == 2 and guide.distance > 0,
