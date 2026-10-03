@@ -4,6 +4,7 @@ extends Node3D
 ## only the starting district and its closed exits are built in this step.
 
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
+const ART := preload("res://scripts/gameplay/town/town_art.gd")
 const DISTRICT_NAMES: Array[String] = [
 	"WORLD_TOWN_DISTRICT_DEPOT", "WORLD_TOWN_DISTRICT_CENTER", "WORLD_TOWN_DISTRICT_INDUSTRIAL",
 	"WORLD_TOWN_DISTRICT_COUNTRY", "WORLD_TOWN_DISTRICT_PORT", "WORLD_TOWN_DISTRICT_HILLS",
@@ -12,7 +13,6 @@ const ASPHALT := Color("394a50")
 const GRASS := Color("71885a")
 const PAVING := Color("abb0a1")
 const WOOD := Color("8b6650")
-const LEAVES := Color("4f7953")
 
 @export var world_seed: int = 0
 @export var enable_camera: bool = true
@@ -97,6 +97,7 @@ func _disc(parent: Node3D, title: String, at: Vector2, radius: float,
 	if solid:
 		var body := StaticBody3D.new()
 		body.name = title
+		body.set_meta(&"road_surface", title == "Junction")
 		parent.add_child(body)
 		body.add_child(view)
 		var collision := CollisionShape3D.new()
@@ -152,6 +153,7 @@ func _road(parent: Node3D, a: Vector2, b: Vector2, width: float) -> void:
 	var middle: Vector2 = (a + b) * .5
 	var piece: Node3D = _box(parent, "Street", Vector3(a.distance_to(b), .04, width),
 		Vector3(middle.x, .18, middle.y), ASPHALT, true)
+	piece.set_meta(&"road_surface", true)
 	piece.rotation.y = -(b - a).angle()
 
 
@@ -163,29 +165,10 @@ func _build_lot(lot: Dictionary) -> void:
 	parcel.rotation.y = -float(lot.angle)
 	add_child(parcel)
 	var size: Vector2 = lot.size
-	var front: Vector2 = (lot.frontage - lot.position).rotated(-float(lot.angle))
-	var side: float = signf(front.y)
 	var service: bool = lot.role in [&"depot", &"workshop"]
 	_box(parcel, "Yard", Vector3(size.x, .08, size.y), Vector3(0, .04, 0),
 		PAVING if service else GRASS.lightened(.12))
-	var height: float = 5.5 if service else 4.0
-	var building_size := Vector3(size.x * .65, height, size.y * .45)
-	var color := Color("bfc4ab")
-	if lot.role == &"depot":
-		color = Color("367d83")
-	elif lot.role == &"shop":
-		color = Color("bf9b77")
-	elif lot.role == &"workshop":
-		color = Color("909b93")
-	var z: float = -side * size.y * .19
-	_box(parcel, "Building", building_size, Vector3(0, height * .5, z), color, true)
-	_box(parcel, "Roof", Vector3(building_size.x + .8, .5, building_size.z + .8),
-		Vector3(0, height + .25, z), Color("735747"))
-	_box(parcel, "Door", Vector3(2.2 if service else 1.2, 2.4, .1),
-		Vector3(0, 1.2, z + side * (building_size.z * .5 + .06)), WOOD)
-	for x: float in [-building_size.x * .3, building_size.x * .3]:
-		_box(parcel, "Window", Vector3(1.3, 1.2, .1),
-			Vector3(x, 2.1, z + side * (building_size.z * .5 + .07)), Color("628d99"))
+	ART.build_lot(parcel, lot, world_seed)
 	var frontage: Vector2 = lot.frontage
 	var driveway_start: Vector2 = lot.position + (frontage - lot.position).normalized() * size.y * .5
 	_road(self, driveway_start, frontage, 5.0 if service else 2.0)
@@ -193,7 +176,7 @@ func _build_lot(lot: Dictionary) -> void:
 		var titles: Dictionary = {&"depot": "TAKE MY PACKAGE",
 			&"workshop": tr("WORLD_DEPOT_WORKSHOP"), &"shop": tr("WORLD_TOWN_SHOP")}
 		var title: String = titles.get(lot.role, tr("WORLD_HOUSE_NUMBER") % lot.address.y)
-		_sign(parcel, title, Vector3(0, height + 1.2, 0))
+		_sign(parcel, title, Vector3(0, 7.3 if service else 6.5, 0))
 
 
 func _sign(parent: Node3D, text: String, at: Vector3) -> void:
@@ -223,14 +206,9 @@ func _build_green(green: Dictionary) -> void:
 		_sign(area, tr("WORLD_TOWN_PLAZA"), Vector3(0, 9, 0))
 	for i: int in range(4):
 		var angle: float = TAU * i / 4
-		var at := Vector3(cos(angle) * 12, .55, sin(angle) * 12)
-		var bench: Node3D = _box(area, "Bench", Vector3(2.4, .25, .7), at, WOOD, true)
-		bench.rotation.y = -angle + PI * .5
-		_box(bench, "Back", Vector3(2.4, .75, .12), Vector3(0, .5, .3), WOOD)
-		for x: float in [-.85, .85]:
-			_box(bench, "Support", Vector3(.16, .4, .55), Vector3(x, -.325, 0), ASPHALT)
-		_box(area, "Lamp", Vector3(.12, 4.5, .12), at + Vector3(2, 1.7, 0), ASPHALT, true)
-		_box(area, "Lantern", Vector3(.6, .5, .6), at + Vector3(2, 4.1, 0), Color("e7d6a0"))
+		var at := Vector3(cos(angle) * 12, .08, sin(angle) * 12)
+		ART.model(area, "Bench", ART.BENCH, at, -angle + PI * .5, true)
+		ART.model(area, "Lamp", ART.LAMP, at + Vector3(2, 0, 0), -angle, true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([world_seed, &"town_trees", green.kind])
 	for i: int in range(12):
@@ -241,29 +219,7 @@ func _build_green(green: Dictionary) -> void:
 
 
 func _build_trees() -> void:
-	var trunk_mesh := CylinderMesh.new()
-	trunk_mesh.top_radius = .25
-	trunk_mesh.bottom_radius = .35
-	trunk_mesh.height = 3
-	trunk_mesh.radial_segments = 6
-	var crown_mesh := SphereMesh.new()
-	crown_mesh.radius = 2.5
-	crown_mesh.height = 5
-	crown_mesh.radial_segments = 8
-	crown_mesh.rings = 4
-	for crown: bool in [false, true]:
-		var batch := MultiMesh.new()
-		batch.transform_format = MultiMesh.TRANSFORM_3D
-		batch.mesh = crown_mesh if crown else trunk_mesh
-		batch.instance_count = tree_positions.size()
-		for i: int in range(tree_positions.size()):
-			var at: Vector2 = tree_positions[i]
-			batch.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(at.x, 4.4 if crown else 1.5, at.y)))
-		var view := MultiMeshInstance3D.new()
-		view.name = "TreeCrowns" if crown else "TreeTrunks"
-		view.multimesh = batch
-		view.material_override = _material(LEAVES if crown else WOOD)
-		add_child(view)
+	ART.build_trees(self, tree_positions, world_seed)
 
 
 func _build_lighting() -> void:

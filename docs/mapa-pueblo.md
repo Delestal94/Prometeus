@@ -40,7 +40,24 @@ ni el roster de jugadores. Mismo generador y semilla producen el mismo plano.
 `scenes/gameplay/town/town_prototype.tscn` construye **solo el primer barrio**:
 calles, patios, edificios con colisión, árboles agrupados en MultiMesh,
 bancos, farolas y una plaza con monumento de paquetes. Las salidas a Centro
-y Campo tienen barreras. Los edificios son volúmenes de prototipo, no arte final.
+y Campo tienen barreras. `town_art.gd` viste los lotes con el arte existente:
+
+- Las cinco viviendas originales, elegidas por semilla y espacio disponible,
+  orientadas hacia su calle y conservando la escala del modelo. Una vivienda
+  grande que no cabe se sustituye por la cottage.
+- Tres casas de entrega distintas (cottage, cabin y bungalow), cuya variante
+  se mantiene entre la escena de inspección y la escena jugable.
+- Depósito y taller compactos con materiales de `DepotKit`, marcos/piezas
+  de portón originales, pallets, jaulas de carga y herramientas. Se adapta
+  el conjunto al lote; no se reduce el edificio completo del depósito original.
+- Estante de carga con los modelos originales de marcos y bandejas, tres
+  pedidos separados y sus colisiones.
+- Robles, abedules y arces originales agrupados por `DressingBatcher`, con
+  colisión de troncos; bancos y farolas originales apoyados sobre el terreno.
+
+Esta integración conserva los assets originales. El monumento, pavimentos
+y suelo amplio siguen siendo geometría del prototipo; faltan terreno, aceras,
+ambientación de los otros distritos y medición del presupuesto de render.
 
 ### Abrir y recorrer
 
@@ -66,8 +83,8 @@ La escena de inspección conserva la cámara libre. Para jugar, abrir
    **Esc** libera o vuelve a capturar el mouse.
 
 Este adaptador usa el jugador, camión, paquetes, casas y timbres reales.
-Asfalto y cruces tienen colisión. El resto de los edificios conserva volúmenes
-de prototipo; plaza, parque y salidas cerradas permanecen en el barrio.
+Asfalto y cruces tienen colisión. Los edificios y muebles del barrio usan
+los modelos/piezas descritos arriba; plaza, parque y salidas cerradas permanecen.
 
 `modules/town_gen/town_navigation.gd` calcula caminos mínimos con proyecciones
 sobre segmentos: incluye el tramo de calle desde la posición actual, sin
@@ -85,7 +102,8 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   los seis distritos, variación, determinismo, roles iniciales, parques y
   lotes fuera de las calles y cruces unidos en el grafo. Portable.
 - `tests/test_town_prototype.gd`: escena real, edificios con colisión,
-  barreras, plaza/monumento, árboles agrupados y centros de calle despejados.
+  barreras, plaza/monumento, modelos existentes, viviendas que caben en su lote,
+  tres especies de árboles agrupadas y centros de calle despejados.
 - `tests/render_town_prototype.gd`: dos semillas desde arriba y plaza a
   altura de calle para revisión visual.
 - `modules/town_gen/tests/test_town_navigation.gd`: tramos parciales,
@@ -93,7 +111,8 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   clientes sobre 100 semillas. También corre en un proyecto vacío.
 - `tests/test_town_delivery.gd`: carga real, conducción sobre asfalto,
   selección/GPS, rechazo de una caja equivocada, entregas en orden 3/1/2,
-  posibilidad de volver al asiento y final al regresar al depósito.
+  posibilidad de volver al asiento y final al regresar al depósito; clientes
+  con tres modelos distintos y estante de carga original.
 - `tests/render_town_delivery.gd`: depósito/camión, cabina/GPS y casa de cliente.
 
 ## Siguientes pasos del spike N-950

@@ -4,6 +4,7 @@ extends Node3D
 
 const TOWN := preload("res://scenes/gameplay/town/town_prototype.tscn")
 const NAVIGATION := preload("res://modules/town_gen/town_navigation.gd")
+const ART := preload("res://scripts/gameplay/town/town_art.gd")
 const OPEN_DISTRICTS: Array[int] = [0]
 
 @export var world_seed: int = 0
@@ -64,9 +65,11 @@ func _build_customers() -> void:
 			house.set(&"house_index", index)
 			house.set(&"assigned_package_id", StringName("town_%d" % (index + 1)))
 			house.set(&"assigned_label", "%s %s" % [tr("HUD_HANDLING_FRAGILE"), String.chr(65 + index)])
-			house.set(&"visual_variant", 0)
+			house.set(&"visual_variant", ART.customer_variant(world_seed, index))
 			var direction: Vector2 = (lot.frontage - lot.position).normalized()
-			# The cottage fronts local -Z. Keep its porch facing the street.
+			var front: Vector2 = (lot.frontage - lot.position).rotated(-float(lot.angle))
+			house.position = Vector3(0, .08, -signf(front.y) * float(lot.size.y) * .12)
+			# Authored house fronts face local -Z, toward their street frontage.
 			house.rotation.y = atan2(-direction.x, -direction.y) - parcel.rotation.y
 			parcel.add_child(house)
 			# Smaller city lots need compact order markers beside their porches.
@@ -86,21 +89,13 @@ func _build_customers() -> void:
 func _build_packages(parcel: Node3D, lot: Dictionary) -> void:
 	var front: Vector2 = (lot.frontage - lot.position).rotated(-float(lot.angle))
 	var z: float = signf(front.y) * float(lot.size.y) * .35
-	town.call(
-		&"_box",
-		parcel,
-		"LoadingRack",
-		Vector3(4.5, 1.1, 1.2),
-		Vector3(0, .55, z),
-		Color("8b6650"),
-		true
-	)
+	ART.loading_rack(parcel, z)
 	var package_scene: PackedScene = load("res://scenes/gameplay/package/package.tscn")
 	var mount_script: Script = load("res://scripts/gameplay/interaction/package_mount_point.gd")
 	for index: int in range(3):
 		var marker := Marker3D.new()
 		marker.name = "OrderMount_%d" % index
-		marker.position = Vector3((index - 1) * 1.4, 1.45, z)
+		marker.position = Vector3((index - 1) * 2.0, 1.5, z)
 		parcel.add_child(marker)
 		var mount := Area3D.new()
 		mount.set_script(mount_script)

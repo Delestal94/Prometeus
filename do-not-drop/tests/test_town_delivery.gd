@@ -4,6 +4,7 @@ extends SceneTree
 ## player and houses. Load, board, choose a different customer, reject a wrong
 ## package, hand over in arbitrary order, reboard and return to the depot.
 ## DashboardGps follows street waypoints; completion does not save a campaign.
+## Authored client houses vary, keep their frontage and use the depot's rack.
 
 var _failures: int = 0
 
@@ -32,6 +33,18 @@ func _run() -> void:
 	)
 	_expect(not bool(manager.get(&"is_running")), "Preparation waits for the driver to board")
 	var mounts: Array[String] = ["LeftShelf", "RightShelf", "LeftSeat1"]
+	var variants: Dictionary = {}
+	for house: Node3D in houses:
+		variants[int(house.get(&"visual_variant"))] = true
+	_expect(
+		variants.size() == 3,
+		"Each starting client uses a different authored house (got %s)" % variants
+	)
+	var depot: Node3D = level.get(&"town").get_node(^"depot_1")
+	_expect(
+		depot.get_node(^"LoadingRack").get_meta(&"model_sources").size() == 2,
+		"Packages load from the original depot shelf pieces"
+	)
 	_expect(
 		absf(vehicle.global_position.y - .866) < .03,
 		"The frozen truck rests on asphalt before loading (got %f)" % vehicle.global_position.y

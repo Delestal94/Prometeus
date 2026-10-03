@@ -24,6 +24,9 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   offline `town_delivery.tscn` con jugador, carga y timbres reales, selección
   de tres clientes y regreso al depósito. Sin progreso persistente todavía.
 - [ ] Medición del spike: duración, esfuerzo de carga, visibilidad y render.
+- [x] Integración del arte existente (2026-10-03): viviendas variadas a escala
+  nativa, clientes distintos, piezas/materiales del depósito y taller,
+  estante original y árboles/bancos/farolas existentes (`town_art.gd`).
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos
