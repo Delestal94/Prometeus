@@ -3,12 +3,29 @@ extends RefCounted
 ## filters the already generated graph; it never moves a street or a lot.
 
 
-static func route(plan: Dictionary, start: Vector2, destination: Vector2,
-		districts: PackedInt32Array = PackedInt32Array()) -> Dictionary:
+## Shared by navigation and geometry: a connector opens only when both ends do.
+static func accessible_edges(
+	plan: Dictionary, districts: PackedInt32Array = PackedInt32Array()
+) -> Array[Dictionary]:
 	var edges: Array[Dictionary] = []
 	for edge: Dictionary in plan.get("edges", []):
-		if districts.is_empty() or int(edge.district) in districts:
+		var pair: Vector2i = edge.get("district_pair", Vector2i(-1, -1))
+		if (
+			districts.is_empty()
+			or int(edge.district) in districts
+			or (pair.x >= 0 and pair.y >= 0 and pair.x in districts and pair.y in districts)
+		):
 			edges.append(edge)
+	return edges
+
+
+static func route(
+	plan: Dictionary,
+	start: Vector2,
+	destination: Vector2,
+	districts: PackedInt32Array = PackedInt32Array()
+) -> Dictionary:
+	var edges: Array[Dictionary] = accessible_edges(plan, districts)
 	if edges.is_empty():
 		return {}
 	var nodes: PackedVector2Array = plan.nodes.duplicate()
@@ -64,7 +81,9 @@ static func route(plan: Dictionary, start: Vector2, destination: Vector2,
 			points.append(nodes[id])
 	if points[-1].distance_squared_to(destination) > .0001:
 		points.append(destination)
-	var distance: float = start.distance_to(from.point) + distances[end_id] + destination.distance_to(to.point)
+	var distance: float = (
+		start.distance_to(from.point) + distances[end_id] + destination.distance_to(to.point)
+	)
 	return {"points": points, "distance": distance}
 
 

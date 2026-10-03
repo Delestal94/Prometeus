@@ -59,9 +59,12 @@ static func _make_district(plan: Dictionary, district_id: int, center: Vector2,
 
 
 static func _add_edge(plan: Dictionary, a: int, b: int, district: int,
-		connector: bool = false) -> void:
-	plan.edges.append({"a": a, "b": b, "district": district,
-		"width": ROAD_WIDTH, "connector": connector})
+		connector: bool = false, pair: Vector2i = Vector2i(-1, -1)) -> void:
+	var edge: Dictionary = {"a": a, "b": b, "district": district,
+		"width": ROAD_WIDTH, "connector": connector}
+	if connector:
+		edge["district_pair"] = pair
+	plan.edges.append(edge)
 
 
 static func _connect_districts(plan: Dictionary) -> void:
@@ -74,7 +77,7 @@ static func _connect_districts(plan: Dictionary) -> void:
 				if candidate < distance:
 					distance = candidate
 					closest = Vector2i(a, b)
-		_add_edge(plan, closest.x, closest.y, -1, true)
+		_add_edge(plan, closest.x, closest.y, -1, true, pair)
 		plan.gates.append({"districts": pair, "a": closest.x, "b": closest.y,
 			"position": (plan.nodes[closest.x] + plan.nodes[closest.y]) * .5})
 
@@ -108,7 +111,8 @@ static func _split_crossings(plan: Dictionary) -> void:
 		cuts[i].sort_custom(func(a: int, b: int) -> bool:
 			return start.distance_squared_to(plan.nodes[a]) < start.distance_squared_to(plan.nodes[b]))
 		for j: int in range(cuts[i].size() - 1):
-			_add_edge(plan, cuts[i][j], cuts[i][j + 1], edge.district, edge.connector)
+			_add_edge(plan, cuts[i][j], cuts[i][j + 1], edge.district, edge.connector,
+				edge.get("district_pair", Vector2i(-1, -1)))
 
 
 static func _junction(plan: Dictionary, position: Vector2) -> int:
