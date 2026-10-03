@@ -61,8 +61,9 @@ y mantiene cerradas Campo e Industrial. `town_art.gd` viste los lotes con el art
   colisión de troncos; bancos y farolas originales apoyados sobre el terreno.
 
 Esta integración conserva los assets originales. El monumento, pavimentos
-y suelo amplio siguen siendo geometría del prototipo; faltan terreno,
-ambientación de los cuatro distritos restantes y medición del presupuesto de render.
+y aceras siguen siendo geometría del prototipo. El terreno ahora reutiliza
+la base de carretera del juego; faltan manzanas más densas, ambientación de
+los cuatro distritos restantes y medición del presupuesto de render.
 
 ### Aceras y accesos peatonales
 
@@ -78,6 +79,39 @@ interponen edificios y llegan al centro pavimentado. La escena reúne el
 pavimento en una malla con colisión, añade suelo físico a césped/plazas y
 rampas en su borde interior. Árboles y mobiliario dejan libres las entradas.
 El jugador puede pasar del asfalto a la acera y al acceso sin saltar.
+
+### Reutilización de la carretera existente
+
+`town_environment.gd` conecta el grafo de ciudad con `route_terrain.gd`
+(`TerrainField`), el mismo terreno continuo con colisión, relieve, shader y
+cuatro mapas de detalle del juego. Reemplaza el cubo plano de 4000 m.
+El perfil `town_terrain.gd` hereda ese sistema y mantiene el interior de los
+contornos urbanos nivelado; mezcla el relieve original por fuera en 24 m,
+evita montañas entre las casas y conserva un límite irregular.
+Registra las calles abiertas y los extremos cerrados; plataformas nivelan
+calles, lotes, zonas verdes y accesos para conservar sus alturas y el reparto.
+Fuera de esas reservas reaparece el relieve original. Las calles usan además
+el mapa de detalle de asfalto existente.
+
+Cada tramo abierto utiliza `StraightSegment` en su orientación real. Su
+modo `continuous_terrain` evita duplicar suelo/carretera y conserva la pintura
+original; se retiran marcas que invadirían otra rama de un cruce. El grafo
+urbano sigue determinando conexiones: no se vuelve al único recorrido
+encadenado del generador anterior.
+
+`town_dresser.gd` extiende `RouteDresser`: reutiliza su catálogo y
+`RoutePlacement` (ocupación, pendientes, asentamiento y separación del camino)
+para árboles, plantas, autos estacionados, mobiliario y paradas. El perfil
+urbano reserva parcelas, plazas y caminos peatonales, y deja los objetos fuera
+de las aceras/rampas. Dentro del contorno usa la zona urbana; fuera, bosque.
+`DressingBatcher` agrupa estos modelos y las marcas de los tramos. No activa
+los eventos, peligros ni la progresión del recorrido lineal.
+
+Esta conexión mejora el suelo y la ambientación. La densidad de viviendas,
+las manzanas cerradas y la identidad de los otros cuatro distritos siguen
+pendientes: todavía es una escena de prueba, no una ciudad terminada.
+Desde arriba se ven límites de teselas y el decorado se oculta por distancia;
+la continuidad del horizonte y el presupuesto de render necesitan trabajo.
 
 ### Abrir y recorrer
 
@@ -144,6 +178,8 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
   Centro conserva el plano y verifica sus edificios a escala nativa, áreas
   verdes, barreras restantes y soporte de asfalto a lo largo del corredor.
   Comprueba colisión continua de las entradas verdes y árboles alejados de ellas.
+  Verifica reutilización del campo de terreno, alturas de calles estables,
+  relieve exterior, tramos originales y ambientación agrupada del catálogo.
 - `tests/render_town_prototype.gd`: dos semillas desde arriba y plaza a
   altura de calle para revisión visual, además de vistas de los dos distritos
   conectados y del Centro con sus comercios, aceras y entrada a la plaza.
@@ -175,5 +211,5 @@ ni sincroniza el nuevo barrio en cooperativo. Al salir limpia su estado temporal
 Medir duración, esfuerzo de carga, visibilidad de las casas y presupuesto de
 render. Luego conectar campaña/guardado con semilla y versión del generador,
 accesos desbloqueables y ambientación específica de los demás distritos.
-El arroyo/corredor de ribera del diseño visual requiere terreno y geometría
-adicional; todavía no está construido en la escena.
+El arroyo/corredor de ribera del diseño visual requiere registrar cauces y
+construir sus pasos con los tramos existentes; todavía no está construido en la escena.

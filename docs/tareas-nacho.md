@@ -40,6 +40,12 @@ implementación ni PR. Documentación: `docs/mapa-pueblo.md`.
   Pavimento agrupado con colisión y árboles/muebles fuera del paso. Cinco
   semillas del módulo, módulo aislado y jugador real cruzando sin saltar,
   tanto en headless (componente de movimiento) como con pantalla.
+- [x] Reutilización de carretera (2026-10-03): TerrainField/shader/texturas,
+  StraightSegment/pintura y RouteDresser/RoutePlacement originales. Perfil
+  urbano nivelado y relieve exterior; vegetación, autos, mobiliario/paradas
+  respetan lotes/accesos y se agrupan con DressingBatcher. Pruebas de escena
+  y reparto verifican integración sin cambiar el plano ni sus direcciones.
+- [ ] Densificar manzanas urbanas y distinguir la arquitectura de cada distrito.
 - [ ] Campaña persistente, guardado versionado y desbloqueo de distritos.
 
 ## QA — bugs abiertos

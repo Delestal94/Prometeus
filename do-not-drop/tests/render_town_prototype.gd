@@ -4,6 +4,7 @@ extends SceneTree
 ## then another seed overhead and two connected districts with center street
 ## views. Images: user://town_<seed>_<view>.png.
 ## Includes sidewalks along a center street and the pedestrian plaza entry.
+## Reviews the original route terrain, road paint and dressing on the city graph.
 
 const SCENE := preload("res://scenes/gameplay/town/town_prototype.tscn")
 
@@ -23,6 +24,8 @@ func _run() -> void:
 		town.set(&"enable_camera", false)
 		root.add_child(town)
 		current_scene = town
+		while not bool(town.get(&"is_built")):
+			await process_frame
 		var camera := Camera3D.new()
 		camera.far = 1000
 		camera.near = 1
@@ -38,7 +41,7 @@ func _run() -> void:
 					var plaza := Vector3(green.position.x, 2.3, green.position.y)
 					await _shot(
 						camera,
-						plaza + Vector3(10, 0, 10),
+						plaza + Vector3(8, 0, 8),
 						plaza + Vector3(0, 1.5, 0),
 						seed_value,
 						"plaza"
@@ -57,6 +60,8 @@ func _center_shots() -> void:
 		town.set(&"built_districts", PackedInt32Array([0, 1]))
 		root.add_child(town)
 		current_scene = town
+		while not bool(town.get(&"is_built")):
+			await process_frame
 		var camera := Camera3D.new()
 		camera.far = 2000
 		camera.near = .2
@@ -69,6 +74,7 @@ func _center_shots() -> void:
 		center = plan.districts[1].center
 		aim = Vector3(center.x, 0, center.y)
 		await _shot(camera, aim + Vector3(60, 185, 125), aim, seed_value, "center")
+		print("Town route reuse: ", town.get(&"dresser").get(&"placed_counts"))
 		if seed_value == 4242:
 			for lot: Dictionary in plan.lots:
 				if lot.district == 1 and lot.role == &"shop":
@@ -103,8 +109,8 @@ func _center_shots() -> void:
 func _shot(camera: Camera3D, at: Vector3, aim: Vector3, seed_value: int, title: String) -> void:
 	camera.position = at
 	camera.look_at(aim)
-	await process_frame
-	await process_frame
+	for frame: int in range(8):
+		await process_frame
 	await RenderingServer.frame_post_draw
 	var path: String = "user://town_%d_%s.png" % [seed_value, title]
 	var error: Error = root.get_texture().get_image().save_png(path)

@@ -8,6 +8,8 @@ extends SceneTree
 ## removes only the open gate, and gives the connecting road continuous collision.
 ## Pedestrian surfaces are batched/collidable, match the road at entries,
 ## reach parks without blocked centers, and clear trees/benches from their paths.
+## Reuses route_terrain.gd, StraightSegment and RouteDresser: physical/textured
+## terrain with exterior relief, original road paint and batched city scenery.
 
 const SCENE := preload("res://scenes/gameplay/town/town_prototype.tscn")
 const PLAN := preload("res://modules/town_gen/town_plan.gd")
@@ -235,6 +237,7 @@ func _run() -> void:
 				)
 			)
 	var pedestrian: Dictionary = expanded.get(&"pedestrian_plan")
+	_check_route_reuse(expanded)
 	_expect(
 		expanded.has_node(^"PedestrianSurfaces/CollisionShape3D"),
 		"Walkways share one batched mesh and physical surface"
@@ -279,3 +282,72 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
+
+func _check_route_reuse(town: Node3D) -> void:
+	var terrain: TerrainField = town.get(&"terrain")
+	_expect(
+		(
+			terrain.get_script().get_base_script().resource_path
+			== "res://scripts/gameplay/route/route_terrain.gd"
+		),
+		"Town uses the existing game terrain shader and physical height field"
+	)
+	_expect(
+		not town.has_node(^"Ground") and terrain.build_progress == 1.0,
+		"Continuous terrain replaces the oversized flat ground box"
+	)
+	_expect(terrain.get_child_count() > 0, "The terrain has physical mesh tiles")
+	var segments: Array = town.get(&"street_segments")
+	_expect(not segments.is_empty(), "Open streets reuse the original road segment builder")
+	var painted: int = 0
+	for segment: RouteSegment in segments:
+		if segment.has_node(^"MergedGeometry"):
+			painted += 1
+		_expect(
+			segment is StraightSegment and segment.continuous_terrain,
+			"The original straight segment supplies road paint without duplicate ground"
+		)
+		_expect(
+			not segment.has_node(^"Road") and not segment.has_node(^"Ground"),
+			"Route segments do not overlay a second physical road/ground"
+		)
+	_expect(painted > 0, "The original paint is retained in merged segment geometry")
+	var plan: Dictionary = town.get(&"plan")
+	for lot: Dictionary in plan.lots:
+		if lot.district in [0, 1]:
+			_expect(
+				absf(terrain.height_at(Vector3(lot.position.x, 0, lot.position.y))) < .001,
+				"Urban lots stay level instead of sitting between countryside ridges"
+			)
+	var highest: float = 0
+	for edge: Dictionary in NAV.accessible_edges(plan, PackedInt32Array([0, 1])):
+		var a: Vector2 = plan.nodes[edge.a]
+		var b: Vector2 = plan.nodes[edge.b]
+		var middle: Vector2 = (a + b) * .5
+		_expect(
+			absf(terrain.height_at(Vector3(middle.x, 0, middle.y))) < .001,
+			"The reused terrain keeps existing city roads and delivery levels stable"
+		)
+		for side: float in [-1, 1]:
+			var at: Vector2 = middle + (b - a).normalized().orthogonal() * side * 60
+			highest = maxf(highest, terrain.height_at(Vector3(at.x, 0, at.y)))
+	_expect(highest > 2, "Ground outside the city has real height variation (got %f)" % highest)
+	var dresser: RefCounted = town.get(&"dresser")
+	_expect(
+		(
+			dresser.get_script().get_base_script().resource_path
+			== "res://scripts/gameplay/route/route_dresser.gd"
+		),
+		"Town adapts the original placement engine"
+	)
+	var counts: Dictionary = dresser.get(&"placed_counts")
+	_expect(
+		int(counts.get(&"tree", 0)) > 0 and int(counts.get(&"ground_plant", 0)) > 0,
+		"Original scenery rules populate the city surroundings (got %s)" % counts
+	)
+	var holder: Node = town.get_node(^"RouteStreets/BatchedDressing")
+	_expect(
+		not holder.find_children("*", "MultiMeshInstance3D", true, false).is_empty(),
+		"Reused route scenery is batched for rendering"
+	)

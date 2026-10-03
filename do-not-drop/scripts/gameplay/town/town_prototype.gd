@@ -7,6 +7,8 @@ const PLAN := preload("res://modules/town_gen/town_plan.gd")
 const WALKWAYS := preload("res://modules/town_gen/town_walkways.gd")
 const NAVIGATION := preload("res://modules/town_gen/town_navigation.gd")
 const ART := preload("res://scripts/gameplay/town/town_art.gd")
+const TOWN_ENVIRONMENT := preload("res://scripts/gameplay/town/town_environment.gd")
+const TOWN_DRESSER := preload("res://scripts/gameplay/town/town_dresser.gd")
 const DISTRICT_NAMES: Array[String] = [
 	"WORLD_TOWN_DISTRICT_DEPOT",
 	"WORLD_TOWN_DISTRICT_CENTER",
@@ -26,6 +28,10 @@ const WOOD := Color("8b6650")
 
 var plan: Dictionary = {}
 var pedestrian_plan: Dictionary = {}
+var terrain: TerrainField
+var street_segments: Array[RouteSegment] = []
+var dresser: TOWN_DRESSER
+var is_built: bool = false
 var tree_positions: PackedVector2Array = PackedVector2Array()
 var _materials: Dictionary = {}
 var _camera: Camera3D
@@ -46,9 +52,10 @@ func _ready() -> void:
 		rng.randomize()
 		world_seed = rng.randi_range(1, 2147483647)
 	plan = PLAN.generate(world_seed)
+	pedestrian_plan = WALKWAYS.generate(plan, built_districts)
 	_build_ground()
 	_build_roads()
-	pedestrian_plan = WALKWAYS.generate(plan, built_districts)
+	street_segments = TOWN_ENVIRONMENT.build_segments(self, plan, built_districts)
 	_build_walkways()
 	for lot: Dictionary in plan.lots:
 		if lot.district in built_districts:
@@ -57,9 +64,14 @@ func _ready() -> void:
 		if green.district in built_districts:
 			_build_green(green)
 	_build_trees()
+	dresser = TOWN_DRESSER.new(self, terrain, world_seed)
+	await dresser.dress_town(street_segments, plan, built_districts, pedestrian_plan)
+	DressingBatcher.bake(get_node(^"RouteStreets"), street_segments)
+	await DressingBatcher.merge_segment_geometry(street_segments)
 	_build_lighting()
 	if enable_camera:
 		_build_camera()
+	is_built = true
 
 
 func _material(color: Color) -> StandardMaterial3D:
@@ -67,6 +79,11 @@ func _material(color: Color) -> StandardMaterial3D:
 		var material := StandardMaterial3D.new()
 		material.albedo_color = color
 		material.roughness = .92
+		if color == ASPHALT:
+			material.albedo_texture = load("res://assets/textures/detail/tx_detail_asphalt_512.png")
+			material.uv1_triplanar = true
+			material.uv1_world_triplanar = true
+			material.uv1_scale = Vector3.ONE / 4
 		_materials[color] = material
 	return _materials[color]
 
@@ -122,9 +139,7 @@ func _disc(parent: Node3D, title: String, at: Vector2, radius: float,
 
 
 func _build_ground() -> void:
-	var center: Vector2 = plan.districts[0].center
-	_box(self, "Ground", Vector3(4000, 1, 4000),
-		Vector3(center.x, -.5, center.y), GRASS, true)
+	terrain = TOWN_ENVIRONMENT.build_ground(self, plan, built_districts, pedestrian_plan)
 
 
 func _build_roads() -> void:
