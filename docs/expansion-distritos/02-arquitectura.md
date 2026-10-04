@@ -13,7 +13,7 @@
 | D-0203 | `DayCycle`: estados del día (apertura, operación, cierre) con señales en `EventBus` | constructor-progresion | high | test `test_day_cycle` recorre los tres estados y emite las señales |
 | D-0204 | ✅ Recurso `ProductDefinition` (.tres): id, malla, tamaño, peso, fragilidad, temperatura, precio | constructor-negocio | medium | 5 productos de prueba cargan; test valida campos |
 | D-0205 | ✅ Recurso `DistrictDefinition` (.tres): id, escena, vehículos permitidos, peligros, condición de desbloqueo | constructor-mundo | medium | Barrio Centro y Campo definidos; test los carga |
-| D-0206 | Guardado de empresa sobre `modules/persistence` con versión de esquema y migraciones | constructor-progresion | xhigh | test guarda, carga y migra un save v1 → v2 sin perder datos |
+| D-0206 | ✅ Guardado de empresa sobre `modules/persistence` con versión de esquema y migraciones | constructor-progresion | xhigh | test guarda, carga y migra un save v1 → v2 sin perder datos |
 | D-0207 | Recurso `VehicleDefinition` (asientos, carga, escena, física, licencia requerida) | constructor-camion | high | la camioneta actual descrita por un `.tres` sin cambiar su manejo (`test_reference_truck` verde) |
 | D-0208 | Extraer de `vehicle.gd` una base común `FleetVehicle` (asientos, carga, red, presentación) para vehículos que no son de ruedas | constructor-camion | xhigh | camioneta hereda de la base; tests de vehículo verdes; documento `agregar-vehiculo.md` actualizado |
 | D-0209 | Interfaz de "movimiento" del vehículo (ruedas, casco, alas, pedal) para que asientos y carga no sepan cuál es | constructor-camion | xhigh | test con un vehículo falso de cada tipo usa la misma interfaz |
