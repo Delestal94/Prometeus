@@ -25,7 +25,8 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 | Desarrollador 1-5 | `desarrollador.md` (`Carril: 1`…`5`, expansión `docs/expansion-distritos/`) | cada hora, escalonados: :02, :14, :26, :38, :50 | `exp/D-xxxx-*` | una tarea `D-` → un PR |
 | Construcción A | `construccion.md` (prioridad `nacho`: `N-xxx` primero) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
 | Construcción B ⏸ | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | pausada desde 2026-10-04: su cupo pasó a los desarrolladores | idem | una tarea → un PR |
-| QA | `qa.md` | todos los días 09:00 | `rutina/qa-AAAA-MM-DD-HH` | hallazgos + tareas de bugs |
+| QA (juego actual) | `qa.md` | todos los días 09:00 | `rutina/qa-AAAA-MM-DD-HH` | hallazgos + tareas de bugs |
+| QA expansión A y B | `qa.md` con `Foco: expansión` (§4) | todos los días 13:00 y 01:00 | `rutina/qa-exp-AAAA-MM-DD-HH` | bugs en `docs/expansion-distritos/bugs/` |
 | Auditoría integral | `auditoria.md` | día por medio 07:00 | `rutina/auditoria-AAAA-MM-DD` | un pilar a fondo + últimas 48 h, ≤ 3 tareas |
 | Revisión (la contra) | `revision.md` | lunes 09:00 | `rutina/revision-AAAA-MM-DD` | auditoría + tareas nuevas |
 | Mantenimiento | `mantenimiento.md` | jueves 09:00 | `rutina/mant-AAAA-MM-DD` | docs al día + hallazgos |

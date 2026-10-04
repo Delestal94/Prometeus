@@ -36,7 +36,10 @@ contexto completo de la tarea (no ven el tuyo).
    - rojos: como `construccion.md` §1, con máximo 3 intentos. Al tercero, cerralo con el diagnóstico,
      marcá la tarea `⚠ Bloqueada` con el motivo en su archivo de detalle y seguí con otra.
    El carril 5 además arregla los PRs `exp/` rojos de **cualquier** carril que tengan más de 2 h.
-3. **Más de 10 PRs `exp/` abiertos en total**: no abras otro. Ayudá a ponerlos verdes y terminá.
+3. **Bugs de la expansión** (`docs/expansion-distritos/bugs/*.md`, menos el README): el más viejo con
+   gravedad `bloquea`, después los `molesta`. Se reclama como una tarea (`exp/bug-<tema>`). Los toma
+   cualquier carril; el carril 5, primero. El PR que lo arregla borra el archivo del bug.
+4. **Más de 10 PRs `exp/` abiertos en total**: no abras otro. Ayudá a ponerlos verdes y terminá.
 
 ## 2. Elegir la tarea
 
