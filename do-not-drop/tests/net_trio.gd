@@ -222,7 +222,7 @@ func _report_host_gone() -> void:
 	await process_frame
 	var run: Node = root.get_node(^"/root/RunManager")
 	var houses: int = (run.get(&"deliveries") as Array).size()
-	var tally: String = RUN_TALLY.describe(RUN_TALLY.of(run))
+	var tally: String = RUN_TALLY.describe(_tally(run))
 	# Under --script this file compiles before the autoloads exist, so hud.gd
 	# (which names them) can't compile here and the HUD runs scriptless: the
 	# screen itself is test_host_gone_tally.gd's. When it does run, check it.
@@ -231,7 +231,7 @@ func _report_host_gone() -> void:
 	if stats_label is Label:
 		screen = "ok" if (stats_label as Label).text.contains(tally) else "missing"
 	var ok: bool = _host_gone and houses == 1 and not bool(run.get(&"is_running")) \
-			and RUN_TALLY.has_unfinished_run(run) and tally.contains("1") and screen != "missing"
+			and not _tally(run).is_empty() and tally.contains("1") and screen != "missing"
 	print("GONE role=%s %s gone=%s houses=%d screen=%s tally=%s" % [_name, "ok" if ok else "FAIL", _host_gone,
 			houses, screen, tally])
 
@@ -503,3 +503,12 @@ func _pump(seconds: float) -> void:
 ## which read autoloads that --script hasn't registered yet while this compiles.
 func _package_rescue() -> Script:
 	return load("res://scripts/gameplay/package/package_rescue.gd")
+
+
+## RunTally over RunManager's record, as the disconnect screen reads it (hud_pause.gd): {} without an
+## unfinished run.
+func _tally(run: Node) -> Dictionary:
+	if not RUN_TALLY.unfinished(run.get(&"results"), float(run.get(&"elapsed_seconds"))):
+		return {}
+	return RUN_TALLY.count(run.get(&"deliveries"), run.get(&"cargo"), run.get(&"current_mode") == &"endless",
+			int(run.get(&"expected_houses")), float(run.get(&"current_distance")), float(run.get(&"elapsed_seconds")))

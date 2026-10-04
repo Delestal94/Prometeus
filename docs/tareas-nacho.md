@@ -1226,6 +1226,17 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `.get(&` 117 → 116 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`).
     Siguientes (fuera de `BUDGETS`): `run_tally.gd` (9, reserva `nacho/N-224-run-tally-typed` de solo el claim),
     `vehicle.gd` (7), `network_manager.gd` (7), `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
+  - [x] `run_tally.gd` (2026-10-04, rama `nacho/N-224-run-tally-typed`, reserva retomada): el resumen de la
+    pantalla de "se fue el anfitrión" (N-222). `run_manager.gd` no se puede precargar (nombra autoloads; `net_trio.gd`
+    carga este archivo por `--script`) ni sumar un método público (ya tiene 20, tope del lint), así que el registro
+    entra por argumentos tipados: `has_unfinished_run(run)`/`of(run)` pasan a `unfinished(results, elapsed_seconds)`
+    y `count(deliveries, cargo, endless, expected_houses, distance, elapsed_seconds)`, `handed_over()` sale de
+    `run_deliveries.gd` por `preload`, y `hud_pause.gd` arma el resumen con `_unfinished_tally()` sobre el autoload
+    `RunManager` tipado. En el archivo: 9 → 0 usos (`.call` 1 → 0, `.get(&` 8 → 0); en `scripts/`: `.call` 152 → 151,
+    `.get(&` 116 → 109 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo; `test_host_gone_tally.gd` suma
+    el caso "con resultados ya no está sin terminar". Aviso `docs/avisos/2026-10-04-n224-run-tally-tipado.md`
+    (`hud_pause.gd` es de Slatex). Siguientes (fuera de `BUDGETS`): `vehicle.gd` (7), `network_manager.gd` (7),
+    `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
