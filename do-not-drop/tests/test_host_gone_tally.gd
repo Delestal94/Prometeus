@@ -8,7 +8,8 @@ extends SceneTree
 ##   in (run_tally.gd).
 ## - In the real level, losing the host during a run puts the tally on the
 ##   disconnect screen (hud_pause.gd), in this peer's language; the level stops
-##   its copy of the run (level_common.gd) and no results cover the screen.
+##   its copy of the run (level_common.gd) and no results cover the screen;
+##   in Endless the line reads in meters.
 ## - level_base.gd keeps RunManager.current_distance at the furthest point
 ##   reached in a delivery run, not only in Endless.
 ## - If the run already ended and the host's results are up when the host
@@ -106,6 +107,10 @@ func _run() -> void:
 	run.set(&"current_mode", &"endless")
 	var endless: String = RUN_TALLY.describe(_tally(run))
 	_expect(endless.contains("250") and endless != spanish, "Endless has its own line, in meters (got '%s')" % endless)
+	network.session_failed.emit("host lost in Endless")
+	await process_frame
+	stats = (hud.get(&"overlay_stats") as Label).text
+	_expect(stats.contains(endless), "The disconnect screen reads Endless in meters too (got '%s')" % stats)
 
 	run.set(&"results", {"score": 1})
 	_expect(_tally(run).is_empty(), "Once results are in, the run isn't unfinished")
@@ -226,6 +231,7 @@ func _expect(condition: bool, description: String) -> void:
 	if not condition:
 		push_error(description)
 		_failures += 1
+
 
 ## RunTally over RunManager's record, as the disconnect screen reads it (hud_pause.gd): {} without an
 ## unfinished run.
