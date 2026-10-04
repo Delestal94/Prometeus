@@ -15,7 +15,10 @@
 # SLOW_TEST_TIMEOUT (seconds for the SLOW_TESTS below, twice TEST_TIMEOUT),
 # REPORT_FILE (optional CSV path for per-test status and duration),
 # SHARD (i/n: run only every n-th test from the i-th, 0-based),
-# TESTS_PROJECT (another Godot project dir; tools/test-run-tests.sh uses it).
+# TESTS_PROJECT (another Godot project dir; tools/test-run-tests.sh uses it),
+# STRICT_SCRIPT_ERRORS=1 (a test that exits 0 but printed a runtime
+# "SCRIPT ERROR" counts as FAIL; without it, it passes and the summary lists
+# it under "pasaron con SCRIPT ERROR", N-924.2).
 #
 # Filter "company" is the districts expansion (docs/expansion-distritos/,
 # D-2014): it keeps every test whose name starts with one of the
@@ -214,7 +217,13 @@ run_one() {
 			timeout "$limit" "$GODOT_BIN" --headless --path "$PROJECT" --script "res://$rel" >"$log" 2>&1
 		code=$?
 		if [ $code -eq 0 ]; then
-			status=PASS; break
+			status=PASS
+			# Exit 0 can hide a runtime SCRIPT ERROR that cut a check short (N-924).
+			if grep -E "^SCRIPT ERROR" "$log" | grep -qvE "$NOISE_RE"; then
+				status=HIDDEN
+				[ -n "${STRICT_SCRIPT_ERRORS:-}" ] && status=FAIL
+			fi
+			break
 		fi
 		if grep -q "needs a display\|needs a rendering display" "$log"; then
 			status=SKIP; break
@@ -235,6 +244,9 @@ run_one() {
 	fi
 }
 export -f run_one key_of
+# Engine noise from the dummy renderer, not the test's own failures.
+NOISE_RE='material" is null|resources still in use|unknown peer ID|is_inside_tree\(\)'
+export NOISE_RE STRICT_SCRIPT_ERRORS
 export WORK GODOT_BIN PROJECT TEST_TIMEOUT SLOW_TEST_TIMEOUT SLOW_NAMES
 # Per-test progress lines: on in CI (GitHub sets CI=true), off locally.
 PROGRESS="${PROGRESS:-${CI:-}}"
@@ -246,12 +258,13 @@ exec 3>&1
 printf '%s\n' "${TESTS[@]}" | xargs -P "$JOBS" -I{} bash -c 'run_one "$@"' _ {} 2>/dev/null
 
 pass=0; fail=0; skip=0; flaky=0
-failed=(); skipped=(); flakies=()
+failed=(); skipped=(); flakies=(); hidden=()
 for rel in "${TESTS[@]}"; do
 	name="$(key_of "$rel")"
 	read -r status code duration <"$WORK/$name.result" 2>/dev/null || { status=FAIL; code="?"; duration=0; }
 	case "$status" in
 		PASS) pass=$((pass + 1)) ;;
+		HIDDEN) pass=$((pass + 1)); hidden+=("$name") ;;
 		FLAKY) pass=$((pass + 1)); flaky=$((flaky + 1)); flakies+=("$name") ;;
 		SKIP) skip=$((skip + 1)); skipped+=("$name") ;;
 		*) fail=$((fail + 1)); failed+=("$name:$code") ;;
@@ -272,6 +285,7 @@ if [ -n "${REPORT_FILE:-}" ]; then
 fi
 
 echo "Tests: $pass/${#TESTS[@]} PASS, $fail FAIL, $skip SKIP  (${elapsed}s, $JOBS en paralelo)"
+[ ${#hidden[@]} -gt 0 ] && echo "  pasaron con SCRIPT ERROR (salieron con 0 pero un chequeo pudo no correr): ${hidden[*]}"
 [ $flaky -gt 0 ] && echo "  cierre inestable (pasaron, el motor crasheó al salir): ${flakies[*]}"
 [ $skip -gt 0 ] && echo "  necesitan pantalla (revisor-visual): ${skipped[*]}"
 for entry in "${failed[@]+"${failed[@]}"}"; do
@@ -282,7 +296,7 @@ for entry in "${failed[@]+"${failed[@]}"}"; do
 	echo "FAIL $name ($reason)"
 	# Only the test's own failures, not engine noise from the dummy renderer.
 	errors="$(grep -E "^(ERROR|SCRIPT ERROR|Parse Error)" "$WORK/$name.log" \
-		| grep -vE 'material" is null|resources still in use|unknown peer ID|is_inside_tree\(\)')"
+		| grep -vE "$NOISE_RE")"
 	[ -n "$errors" ] && printf '%s\n' "$errors" | sort | uniq | head -6 | sed 's/^/    /'
 	# On GitHub Actions, one annotation per failure: it names the test on
 	# the run's summary page, so an intermittent one can be told apart (N-240).
