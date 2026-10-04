@@ -255,7 +255,7 @@ hace `queue_free` del "Dog" viejo y en el mismo frame se agrega otro "Dog", Godo
 - [x] ~~**N-910.2** Test del mismo frame (casos a y b). Con `escritor-tests`; tests `cargo_animals`.~~
   **[x] Hecho (2026-10-01, rama `nacho/N-910-cargo-animal-same-frame`, `44be81e`)** — la rama de repetición de `_on_alert` saltea `LEAVE`, y un alerta nueva llama `_clear(true)`, que saca del árbol (`remove_child`) las piezas viejas antes del `queue_free` (desde `_exit_tree` sigue sin sacarlas). Test `_test_same_frame` en `test_cargo_animals`: (a) mismo perro y caja → animal nuevo en WARN; (b) otra caja → el perro nuevo se llama `Dog` y `Dog/DistractPoint` es su punto del palo.
 
-### N-911 · ⏸ decide el usuario: origen y licencia de `mus_ingame_loop.ogg` — C · `Opus 5.5 · low` · Aviso: no
+### N-911 · Origen y licencia de `mus_ingame_loop.ogg`: reemplazarla — C · `Opus 5.5 · low` · Aviso: no · necesita PC
 Origen: mantenimiento 2026-10-01. `do-not-drop/assets/audio/music/mus_ingame_loop.ogg` (la música de cada partida) no
 está en `assets/audio/music/LICENCIA.md`; entró con la importación inicial del repo (cc12c0e, 2026-09-25), no sale de
 `tools/audio/compose_music.py`; quizá derive de `art/audio/music1.m4a` (sin referencias ni procedencia). Ya lo marcó
@@ -264,8 +264,9 @@ usuario documenta origen y licencia en `LICENCIA.md` y en `art/ai-registro.md` s
 compuesta con `compose_music.py` (sesión de arte en la PC) y borrar `music1.m4a`. Recomendación: (b) si el origen no
 es 100 % propio. Hecho cuando la pista figura en `LICENCIA.md` con origen y licencia (o fue reemplazada y
 `music1.m4a` borrado).
-- [ ] **N-911.1** Decidir (a) o (b). Lo decide el usuario.
-- [ ] **N-911.2** Ejecutar la opción elegida. Con `disenador-audio` (b) o `documentador` (a).
+- [x] **N-911.1** Decidió el usuario (2026-10-04, issue #170): **(b)**, reemplazarla por una pista de `compose_music.py`.
+- [ ] **N-911.2** Componer la pista nueva con `tools/audio/compose_music.py` (sesión de arte en la PC), cargarla en
+  `LICENCIA.md` y borrar `art/audio/music1.m4a`. Con `disenador-audio`.
 Nota lanzamiento 2026-10: la página de Steam y su declaración de IA no pueden cerrarse hasta resolver esto
 (`docs/marketing/estado-steam.md` §1). La frase de "música sin IA" del borrador solo vale con la opción (b).
 
@@ -318,7 +319,7 @@ actuales, sin HUD salvo la 1, revisadas por `revisor-visual` (de noche el camió
 - [ ] **N-915.3** Sumar los planos de barro y de depósito con 8 al guion y grabar el tráiler. Con `revisor-visual`.
   Las cápsulas son S-903 (corregida).
 
-### N-916 · ⏸ decide el usuario: fecha, Steam Direct, precio, idiomas y promesa de la página — A (decisión) · `Opus 5.5 · low` · Aviso: no · ⏸ M5
+### N-916 · Fecha, Steam Direct, precio, idiomas y promesa de la página — A (decisión) · `Opus 5.5 · low` · Aviso: no
 Origen: lanzamiento 2026-10 (`docs/marketing/estado-steam.md` §2 y §6). Cinco decisiones juntas porque se condicionan:
 (1) fecha: Early Access 2027-01-22 sin Next Fest (A) o correrlo a 2027-03-12 para entrar al Next Fest 22-feb a 1-mar,
 inscripción hasta 2027-01-10 (B; recomendado, verificar que Next Fest exige juego sin lanzar); (2) pagar Steam Direct
@@ -326,8 +327,12 @@ inscripción hasta 2027-01-10 (B; recomendado, verificar que Next Fest exige jue
 ninguno hasta cerrar N-211 fase 7b; (5) qué promete la página: sin voz hasta N-212.2 y "hasta 8 jugadores" solo tras
 probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `docs/decisiones/` y las fechas de
 `docs/plan-desarrollo.md` coinciden.
-- [ ] **N-916.1** Decidir las cinco. Lo decide el usuario (issue `decide-usuario`).
-- [ ] **N-916.2** Aplicar: fechas en el plan, precio en S-904 y S-901. Con `documentador`.
+- [x] **N-916.1** Decidió el usuario (2026-10-04, issue #174): las cinco recomendaciones. Escritas en
+  `docs/decisiones/2026-10-04-lanzamiento-steam.md`.
+- [x] **N-916.2** Aplicar: fechas en el plan (`docs/plan-desarrollo.md`, Early Access 2027-03-12 y Next Fest de
+  febrero 2027). S-901 y S-904 toman el precio (≈ USD 9,99) del archivo de decisión cuando se retomen.
+- [ ] **N-916.3** ⏸ Pagar Steam Direct (USD 100) antes del 2026-10-16: lo hace el usuario con su cuenta de Steamworks
+  (es plata real). Después: N-901 (AppID propio).
 
 ## Orden de ataque (hitos)
 
@@ -337,7 +342,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M2 — Ritmo y guía del jugador** | Una entrega de 2-5 minutos donde siempre se sabe adónde ir. | N-103, N-104, N-105, N-501, N-502, N-503 |
 | **M3 — Base técnica** | Rendimiento medido en ventana real, red de 3+ jugadores probada, Endless con curvas. | N-204, N-205, N-206, N-207, N-208, N-209, N-801, N-802 |
 | **M4 — Vida y variedad** | IA ambiental, audio del mundo, narrativa ambiental, detalles del camión. | N-106, N-107, N-301 a N-308, N-401 a N-405, N-601 a N-604 |
-| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
+| **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911, N-916, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916.3 (pago, usuario), N-911, N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
 | **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
@@ -373,7 +378,8 @@ torso físico; lo ideal, `PhysicalBoneSimulator3D`. Captura con `revisor-visual`
 ### N-224 · Menos despacho dinámico — C · `Opus 5.5 · high` · Aviso: sí (varios)
 251 `.call(&"…")`, 233 `.get(&"…")` y 112 rutas `/root/`: un renombre rompe en runtime. Por archivo,
 empezando por `crew_progression.gd` y `route_event_manager.gd`: referencias tipadas (`class_name`) o
-dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
+dependencias por `setup()`. Desde 2026-10-04, **hasta 6 archivos por PR** (los siguientes por conteo): de a uno se
+gastaba una corrida entera y 9 trabajos de CI por archivo. El conteo baja en cada una.
 - [x] **N-224.1** `crew_progression.gd` (2026-09-30, rama `nacho/N-224-crew-progression-typed`): `NetworkManager`,
   `RunManager` y `RouteEventManager` por constantes tipadas (`NETWORK_MANAGER`…, `get_node_or_null(...) as`), así que un
   renombre falla al compilar. En el archivo: `.call` 15 → 1, `.get(&` 4 → 0, `/root/` 14 → 6; en `scripts/`: `.call`
@@ -393,7 +399,7 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
   falsos en el grupo `player`), `/root/` 1 → 5 (un accesor por autoload). En `scripts/`: `.call` 296 → 266,
   `.get(&` 287 → 255, `/root/` 128 → 132. `test_dynamic_dispatch_budget.gd` suma `depot.gd` a `BUDGETS` y comprueba
   sus handles (`SCRIPT_HANDLES`).
-- [ ] **N-224.4** El resto por conteo (`grep -c` de los patrones de `PATTERNS` en `scripts/`), un archivo por PR. Sumar
+- [ ] **N-224.4** El resto por conteo (`grep -c` de los patrones de `PATTERNS` en `scripts/`), hasta 6 archivos por PR. Sumar
   cada archivo a `BUDGETS` del test. Siguientes: `package_rescue.gd` (31), `player_cargo_care.gd` (24),
   `trailer_shot.gd` (24), `mud_segment.gd` (22).
   - [x] `trailer_shot.gd` (2026-10-01, rama `nacho/N-224-trailer-shot-typed`): la herramienta del tráiler y de las
@@ -741,6 +747,12 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     el caso "con resultados ya no está sin terminar". Aviso `docs/avisos/2026-10-04-n224-run-tally-tipado.md`
     (`hud_pause.gd` es de Slatex). Siguientes (fuera de `BUDGETS`): `vehicle.gd` (7), `network_manager.gd` (7),
     `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
+
+### N-321.4 · Borrar `forest_ground.gdshader` — C · `Sonnet 5.5 · low` · Aviso: no
+Origen: auditoría 2026-09-29 §5. Decidió el usuario (2026-10-04, issue #147): borrarlo. 0 referencias en
+`.gd`/`.tscn`/`.tres`. Hecho cuando `do-not-drop/shaders/forest_ground.gdshader` y su `.uid` no están y
+`.claude/agents/artista-shaders.md` ya no lo nombra.
+- [ ] **N-321.4** `git rm` del shader y su `.uid`; sacarlo de la lista de `artista-shaders.md`.
 
 ## 1. Game Design
 

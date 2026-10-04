@@ -37,6 +37,9 @@ con test, captura o medición, nunca "se siente bien">.
   Antecedente: el barro de N-108 salió con cajas naranjas porque solo se pidió la mecánica (lo arregló N-322).
 - **Sin playtesting**: todo "hecho cuando" se verifica con código (test, bot, benchmark, captura). Lo que solo se puede juzgar jugando va a la sección "Para cuando haya playtesting".
 - Tareas chicas: una rama y un PR cada una. Si algo pide más de ~3 días, partilo en subtareas `.1`, `.2`.
+- **Decisiones**: el usuario no quiere decidir. Elegí la opción recomendada y escribila en la tarea
+  ("Decidido (regla 3): <qué> porque <por qué>"). ⏸ "decide el usuario" queda solo para lo que solo él puede
+  hacer (regla 3 de `.claude/rutinas/README.md`: plata, sus cuentas, licencias de lo que trajo él).
 - **⏸ "decide el usuario"**: además de la tarea, un issue de GitHub para que le llegue al usuario
   (regla 12 de `.claude/rutinas/README.md`): `gh issue create --label decide-usuario --title "<ID> ·
   decidir: <qué>"` con las opciones, tu recomendación y dónde está la tarea. Antes buscá si ya existe
