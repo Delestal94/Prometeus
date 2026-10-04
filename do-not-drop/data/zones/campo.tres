@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ZoneDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/zone_definition.gd" id="1_zone"]
+
+[resource]
+script = ExtResource("1_zone")
+id = &"campo"
+display_key = "WORLD_ZONE_CAMPO"
+bounds = Rect2(-1280, 512, 2304, 1536)
+vehicles = Array[StringName]([&"van"])
+hazards = Array[StringName]([&"mud_spot", &"mud_crane", &"flock_crossing", &"chasing_dog", &"low_visibility_event", &"gravel", &"dip", &"bridge"])
+gates = Array[StringName]([&"gate_campo_obra"])
+mood_profiles = Array[StringName]([&"soleado", &"nublado", &"lluvia", &"niebla"])
+shipping_fee = 60
+houses_per_trip = Vector2i(3, 5)
+base_reputation_gain = 1.5

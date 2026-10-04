@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ZoneDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/zone_definition.gd" id="1_zone"]
+
+[resource]
+script = ExtResource("1_zone")
+id = &"parque_industrial"
+display_key = "WORLD_ZONE_PARQUE_INDUSTRIAL"
+bounds = Rect2(-256, -256, 512, 512)
+vehicles = Array[StringName]([&"pallet_jack", &"forklift"])
+hazards = Array[StringName]([])
+gates = Array[StringName]([])
+mood_profiles = Array[StringName]([&"soleado", &"nublado", &"lluvia"])
+shipping_fee = 0
+houses_per_trip = Vector2i(0, 0)
+base_reputation_gain = 0.0
