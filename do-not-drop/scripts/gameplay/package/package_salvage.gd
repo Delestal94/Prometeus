@@ -16,14 +16,14 @@ class SalvagePoint extends Interactable:
 		if not get_prompt().is_empty() and _within_reach(player):
 			package.collect_salvage(index, player, global_position)
 
-var package: Node3D
+var package: DeliveryPackage
 var points: Array[Area3D] = []
 var tape_mesh: MeshInstance3D
 var toy_mesh: Node3D
 
 
 func _ready() -> void:
-	package = get_parent() as Node3D
+	package = get_parent() as DeliveryPackage
 	tape_mesh = MeshInstance3D.new()
 	tape_mesh.name = "RepairTape"
 	var mesh := BoxMesh.new()
@@ -80,7 +80,7 @@ func _notification(what: int) -> void:
 
 
 func _process(_delta: float) -> void:
-	var half: Vector3 = package.call(&"get_half_extents")
+	var half: Vector3 = package.get_half_extents()
 	tape_mesh.position.y = half.y + 0.013
 	tape_mesh.scale.z = half.z * 2.0 / 0.67
 	tape_mesh.visible = package.care.tape > 0 and not package.is_open
@@ -89,7 +89,7 @@ func _process(_delta: float) -> void:
 	var parts: Array = data.get("parts", [])
 	while points.size() < parts.size():
 		_build_point(points.size())
-	var vehicle: Node3D = package.call(&"_find_vehicle")
+	var vehicle: Node3D = package._find_vehicle()
 	for index: int in points.size():
 		var point: Area3D = points[index]
 		var collected: bool = (data.get("collected", []) as Array).has(index)
@@ -100,7 +100,7 @@ func _process(_delta: float) -> void:
 			continue
 		var position: Vector3 = parts[index]
 		if StringName(data.get("kind", "")) in [&"noisy", &"hostile"]:
-			var run: Node = get_node_or_null(^"/root/RunManager")
+			var run: Node = PackageAutoloads.run_manager(self)
 			var time: float = float(run.get(&"elapsed_seconds")) if run != null else 0.0
 			position += Vector3(sin(time * 2.2) * 0.42, absf(sin(time * 4.0)) * 0.08, cos(time * 1.8) * 0.35)
 		var in_truck: bool = bool(data.get("aboard", false)) and vehicle != null
@@ -120,7 +120,7 @@ func _build_point(index: int) -> void:
 	sphere.radius = 0.23
 	shape.shape = sphere
 	point.add_child(shape)
-	var content: Resource = package.call(&"content_definition")
+	var content: Resource = package.content_definition()
 	if package._trap_kind() in [&"noisy", &"hostile"] and content != null and content.model != null:
 		var model: Node3D = content.model.instantiate()
 		for child: Node3D in model.get_children():

@@ -67,7 +67,7 @@ func _refresh_gear() -> void:
 	gear_label.visible = true
 	var gear: String = truck.gear_text()
 	gear_label.text = tr("HUD_GEAR") % gear
-	var top_kmh: float = float(truck.get(&"maximum_speed_kmh"))
+	var top_kmh: float = float(truck.maximum_speed_kmh)
 	var at_limit: bool = gear != "R" and truck.gearbox.at_limit(_last_speed_kmh, top_kmh)
 	shift_up_label.visible = at_limit
 	if at_limit:
@@ -193,11 +193,11 @@ func refresh_row(id: StringName) -> void:
 			if hud.route_event_active_id == &"mixed_labels" and not node.label_swapped_with.is_empty():
 				display_name += " ?"
 			if hud.route_event_active_id == &"mimetic_package" and not node.disguise_trap_id.is_empty() and not node.disguise_revealed:
-				var disguise: Resource = load("res://data/traps/%s.tres" % node.disguise_trap_id)
+				var disguise := load("res://data/traps/%s.tres" % node.disguise_trap_id) as TrapDefinition
 				if disguise != null:
-					display_name = String(disguise.call(&"localized_name")).to_upper()
+					display_name = disguise.localized_name().to_upper()
 					(row["icon"] as TextureRect).texture = UiTheme.trap_icon(
-						String(disguise.call(&"localized_name")))
+						disguise.localized_name())
 			break
 	label.text = "%s  ·  %d%%  ·  %s" % [display_name, roundi(integrity), tr(Hud.STATE_STATUS[state])]
 	label.add_theme_color_override("font_color", _state_text_color(state))
