@@ -117,7 +117,9 @@ func _check_care_messages() -> void:
 ## The prompt icon comes from the prompt's key, in either language (the old
 ## table looked for Spanish words and English prompts went without one).
 func _check_prompt_icons() -> void:
-	var prompts: Node = HudPrompts.new()
+	# load(), not HudPrompts: a --script compiles before the autoloads and
+	# hud_prompts.gd names EventBus, so the class would stay broken (N-924.2).
+	var prompts: Node = (load("res://scripts/ui/hud/hud_prompts.gd") as GDScript).new()
 	for locale: String in ["es", "en"]:
 		TranslationServer.set_locale(locale)
 		var cases: Dictionary = {"HUD_PROMPT_PICK_UP_PACKAGE": &"grab", "HUD_PROMPT_UNLOAD_PACKAGE": &"grab",
