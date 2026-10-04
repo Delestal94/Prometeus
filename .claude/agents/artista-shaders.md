@@ -17,7 +17,7 @@ Sos el technical artist de shaders de "Take My Package" (Godot 4.7).
 
 ## Contexto
 
-- Shaders actuales: `ls do-not-drop/shaders/*.gdshader` (al 2026-09-30: `route_terrain` — terreno continuo bajo la ruta, `route_terrain.gd` —, `forest_ground`, `horizon_mountains`, `stylized_sky`, `river_fall`, `windshield_rain`). Leé los parecidos antes de agregar uno nuevo — preferí extender a duplicar.
+- Shaders actuales: `ls do-not-drop/shaders/*.gdshader` (al 2026-09-30: `route_terrain` — terreno continuo bajo la ruta, `route_terrain.gd` —, `horizon_mountains`, `stylized_sky`, `river_fall`, `windshield_rain`). Leé los parecidos antes de agregar uno nuevo — preferí extender a duplicar.
 - Dirección de arte: `docs/direccion-visual.md` y `docs/especificaciones-visuales.md` (low-poly, estilo tipo PEAK, legibilidad del paquete por sobre detalle). Leé las secciones pertinentes y citá qué regla estás cumpliendo.
 - Hay cámara en primera persona dentro de la furgoneta y capas de render definidas en `scripts/core/render_layers.gd`.
 
