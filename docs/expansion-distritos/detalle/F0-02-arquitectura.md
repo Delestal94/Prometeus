@@ -133,6 +133,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa y los tests de carga actuales siguen verdes.
 
 ### D-0210 · `OrderBook` — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `order_book.gd` (Node, autoridad del host) con `add/mark_packed/mark_out/mark_delivered/mark_failed/cancel/expire/open_orders` y `to_dict/from_dict`; `test_order_book`.
 **Depende de:** D-0202, D-0204
 **Qué:** `scripts/gameplay/business/order_book.gd`, hijo del mundo, autoridad en el host.
 - **Pedido** = `Dictionary` con `id`, `customer`, `zone`, `house_id`, `items: Array[{product, qty}]`,
