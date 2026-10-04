@@ -142,3 +142,19 @@ petición: el host lo detecta o lo decide solo y emite el evento.
   qué señal emite.
 - Ningún campo de `data` que diga quién es el actor; ningún `NodePath` que mande un cliente.
 - Cambia `PROTOCOL_VERSION` (`docs/convenciones-godot.md` §6): el primero sube con D-2003 / D-2008.
+
+## 5. Lo construido (D-2003)
+
+- `scripts/core/company/company_net.gd` tiene `_request`, `_apply_event` y `_rejected` (protocolo 29) y los
+  `kind` `units_take`, `units_store` (filas 5 y 6) y `snapshot_request`. Una tarea que suma una acción agrega
+  su `kind` a `REQUEST_KINDS` (y a `CRITICAL_KINDS` si es crítica), lo valida en `_handle_request()` y aplica
+  su evento en `_apply_state()`.
+- **Estaciones (regla 4):** `CompanyNet.stations` es un `Callable(id) -> {location, spot, accepts?, capacity?}`
+  que pone el mundo que las coloca (D-0608, D-0609, D-0611); sin él toda estación es desconocida
+  (`no_station`). El alcance se mide hasta `spot` con `CompanyNet.within_reach()`.
+- **Motivos de `_rejected`:** `bad_data`, `no_station`, `out_of_reach`, `not_enough`, `hands_busy` (la mano
+  tiene otro producto), `hands_full` (`CompanyTuning.HAND_MAX_UNITS`), `wrong_product` (el hueco es de otro
+  producto), `no_room`. Un pedido de snapshot de más dentro de los 5 s se descarta sin `_rejected`.
+- **Pendiente:** el snapshot y `resume_after_snapshot()` del lado que lo recibe (D-2004; el host emite
+  `snapshot_requested`); guardar `seq` en el slot (D-0206 / D-2004); soltar lo de `hands:<peer>` al irse
+  (D-2006, con `last_known_position()`).

@@ -11,6 +11,9 @@ extends Node3D
 ##
 ## No vehicle, no route and no run: Delivery and Endless ignore all of this
 ## (level_base.gd / level_endless.gd are untouched).
+##
+## Its "CompanyNet" child carries the business events (D-2003): it starts from
+## the company's stock and, until stations exist, refuses every units request.
 
 const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
@@ -34,6 +37,8 @@ const ZONE_COLORS: Dictionary = {
 
 var zones: Array[ZoneDefinition] = []
 var player: Node3D
+## Requests and events of the company's business (D-2003, CompanyNet).
+var net: CompanyNet
 
 var _world: Node3D
 
@@ -42,6 +47,7 @@ func _ready() -> void:
 	var state: Node = get_node_or_null(^"/root/CompanyState")
 	if state != null and not state.call(&"is_active"):
 		state.call(&"new_company")
+	_add_net(state)
 	_world = Node3D.new()
 	_world.name = "World"
 	add_child(_world)
@@ -64,6 +70,16 @@ static func load_zones() -> Array[ZoneDefinition]:
 			if zone != null:
 				found.append(zone)
 	return found
+
+
+## Same name on every peer, so its RPCs reach the same node. The stock is the
+## company's (CompanyState.stock(): a copy that the events keep up to date).
+func _add_net(state: Node) -> void:
+	net = CompanyNet.new()
+	net.name = "CompanyNet"
+	if state != null:
+		net.inventory = state.call(&"stock")
+	add_child(net)
 
 
 func _add_environment() -> void:
