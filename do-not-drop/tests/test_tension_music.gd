@@ -3,7 +3,9 @@ extends SceneTree
 ## The in-game music's tension layer (docs/tareas-nacho.md #22/#84): silent
 ## while the cargo is fine or merely dented, gently swelling for at-risk boxes.
 ## Music leaves breathing room between tracks and never changes tuning; the
-## first phrase comes soon after arriving (N-408).
+## first phrase comes soon after arriving (N-408). The phrase (composed in
+## tools/audio/compose_music.py, N-911) is long enough to be heard at full level
+## between its fade-in and fade-out.
 
 var _failures: int = 0
 
@@ -33,6 +35,8 @@ func _run() -> void:
 	_expect(music.bus == &"Music" and layer.bus == &"Music", "Both layers respect the music volume setting")
 	_expect(not music.playing, "The world is heard first when entering the level")
 	_expect(not (music.stream as AudioStreamOggVorbis).loop, "The song can finish instead of looping forever")
+	var full_level: float = music.stream.get_length() - music_script.FADE_IN_SECONDS - music_script.FADE_OUT_SECONDS
+	_expect(full_level >= 15.0, "The phrase plays at full level for 15 s or more between its fades (%.1f s)" % full_level)
 	# N-408: the first phrase comes in as the menu's theme fades under the
 	# loading screen, not after 20-35 s of silence.
 	music.call(&"_process", 1.4)
