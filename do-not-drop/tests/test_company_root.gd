@@ -8,10 +8,17 @@ extends SceneTree
 ##   three walls, all with collision;
 ## - the local player stands inside the shed, on the floor;
 ## - it has a CompanyNet child (D-2003); solo is the host, so it switches the company on
-##   and holds its stock (a client would wait for the host's snapshot instead);
+##   and holds its stock (a client would wait for the host's snapshot instead); it hands
+##   CompanyNet the CompanyState node, whose to_dict() the snapshot carries (D-2004);
+## - on a client (a session that isn't the host) it waits for the snapshot without touching
+##   CompanyState; the snapshot loads the host's company there, and leaving the root puts back
+##   what the client had (switched off when it had none, its own company when it had one);
 ## - the main menu knows the scene, the --mode=company flag and has the button.
 
 const SCENE: String = "res://scenes/gameplay/company_root.tscn"
+const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
+## Nobody listens here: the client stays connecting, which is enough not to be the host.
+const CLOSED_PORT: int = 24639
 
 var _failures: int = 0
 
@@ -34,6 +41,7 @@ func _run() -> void:
 		var stock: Inventory = state.call(&"stock")
 		_expect(net.inventory.to_dict() == stock.to_dict() and not net.awaiting_snapshot(),
 			"Solo counts as host: CompanyNet starts from the company's stock, not waiting for a snapshot")
+		_expect(net.company == state, "CompanyNet gets the CompanyState node for the snapshot")
 
 	var zone_files: int = 0
 	for file: String in DirAccess.get_files_at("res://data/zones/"):
@@ -68,10 +76,60 @@ func _run() -> void:
 
 	level.queue_free()
 	await process_frame
+	await _check_client_restores(state)
 	state.call(&"reset")
 	if _failures == 0:
 		print("PASS: company root builds the shed and nine zones, company on, player inside, menu flag")
 	quit(_failures)
+
+
+## A client loads the host's company from the snapshot; leaving the root puts its own back.
+func _check_client_restores(state: Node) -> void:
+	var host_state: Node = (load(STATE_SCRIPT) as GDScript).new()
+	host_state.call(&"new_company", "Host SRL")
+	host_state.call(&"earn", 900, &"order_paid")
+	host_state.call(&"open_gate", &"gate_campo")
+	var host := CompanyNet.new()
+	host.company = host_state
+	host.inventory.receive(&"hen", 5, &"dock")
+	host.seq = 7
+	var snapshot: Dictionary = host.snapshot()
+	for own_name: String in ["", "Mine"]:
+		state.call(&"reset")
+		if own_name != "":
+			state.call(&"new_company", own_name)
+			state.call(&"earn", 15, &"order_paid")
+		var before: Dictionary = state.call(&"to_dict")
+		var was_active: bool = state.call(&"is_active")
+		var side := Node.new()
+		side.name = "ClientSide"
+		root.add_child(side)
+		set_multiplayer(SceneMultiplayer.new(), side.get_path())
+		var peer := ENetMultiplayerPeer.new()
+		_expect(peer.create_client("127.0.0.1", CLOSED_PORT) == OK, "A client session starts")
+		side.multiplayer.multiplayer_peer = peer
+		var level: Node = (load(SCENE) as PackedScene).instantiate()
+		side.add_child(level)
+		await process_frame
+		var net: CompanyNet = level.get(&"net")
+		var label: String = "with no company" if own_name == "" else "with its own company"
+		_expect(net != null and not net.is_host() and net.awaiting_snapshot()
+			and state.call(&"to_dict") == before,
+			"A client %s waits for the snapshot and leaves CompanyState as it was" % label)
+		if net != null:
+			_expect(net.apply_snapshot(snapshot) and state.get(&"company_name") == "Host SRL"
+				and bool(state.call(&"is_active")),
+				"The snapshot loads the host's company into the client's CompanyState (%s)" % label)
+		level.queue_free()
+		await process_frame
+		_expect(bool(state.call(&"is_active")) == was_active and state.call(&"to_dict") == before,
+			"Leaving the root puts back what the client had %s (active %s, name '%s')"
+			% [label, state.call(&"is_active"), state.get(&"company_name")])
+		peer.close()
+		set_multiplayer(null, side.get_path())
+		side.free()
+	host.free()
+	host_state.free()
 
 
 func _expect(condition: bool, message: String) -> void:

@@ -26,8 +26,9 @@ extends SceneTree
 ##   repeated seq changes nothing on the client;
 ## - 100 events in a row (host and client requests mixed) leave Inventory.to_dict() equal;
 ## - a skipped seq makes the client hold what comes and ask for a snapshot; the host lets one
-##   request through per 5 s per peer; while it waits the client asks again every 5 s
-##   (poll_snapshot()); resume_after_snapshot() applies what was held after it;
+##   request through per 5 s per peer and answers it with the snapshot (D-2004), which covers
+##   the held event and leaves the client equal to the host; while it waits the client asks
+##   again every 5 s (poll_snapshot()) and stops once a snapshot is in;
 ## - product ids match the catalog exactly (HEN is not hen);
 ## - solo (offline), a request applies at once and a refusal is heard at once.
 ## Expected errors in the log: the forged event ("RPC '_apply_event' is not allowed": Godot's
@@ -43,11 +44,10 @@ var _client_id: int = 0
 var _client_refusals: Array = []
 var _host_refusals: Array = []
 var _client_events: int = 0
-## Peers the host let a snapshot request through for, and what a D-2004 snapshot would carry
-## (the host's stock and seq when the first one came in).
+## Peers the host let a snapshot request through for, and the seqs of the snapshots the client
+## applied (company_state_restored).
 var _snapshot_asks: Array[int] = []
-var _snapshot: Dictionary = {}
-var _snapshot_seq: int = -1
+var _restored: Array[int] = []
 var _positions: Dictionary = {}
 var _host_poke: Poke
 
@@ -120,7 +120,7 @@ func _run() -> void:
 	RpcGuard.reset()
 	if _failures == 0:
 		print("PASS: CompanyNet requests checked by the host, events in order on both peers,"
-			+ " refusals to the requester, 100 events equal, gaps ask for a snapshot")
+			+ " refusals to the requester, 100 events equal, gaps recovered by the host's snapshot")
 	quit(_failures)
 
 
@@ -154,7 +154,8 @@ func _setup() -> void:
 		_host_refusals.append([rid, reason]))
 	_client_net.event_applied.connect(func(_seq: int, _kind: StringName, _data: Dictionary) -> void:
 		_client_events += 1)
-	_host_net.snapshot_requested.connect(_on_snapshot_requested)
+	_host_net.snapshot_requested.connect(func(peer: int) -> void: _snapshot_asks.append(peer))
+	_client_net.company_state_restored.connect(func(seq: int) -> void: _restored.append(seq))
 
 
 static func _stations() -> Dictionary:
@@ -173,13 +174,6 @@ static func _stations() -> Dictionary:
 		&"bin": {"location": &"cart:c1", "spot": Vector3(-1.0, 0.0, 1.0)},
 		&"far": {"location": &"pallet:p9", "spot": Vector3(80.0, 0.0, 0.0)},
 	}
-
-
-func _on_snapshot_requested(peer: int) -> void:
-	_snapshot_asks.append(peer)
-	if _snapshot_seq < 0:
-		_snapshot = _host_net.inventory.to_dict()
-		_snapshot_seq = _host_net.seq
 
 
 func _check_helpers() -> void:
@@ -244,7 +238,8 @@ func _check_join_waits_for_snapshot() -> void:
 		% [_client_net.seq, _client_events])
 	_expect(_snapshot_asks.is_empty(),
 		"...and doesn't ask for a snapshot at once: the host sends one when it is ready")
-	# D-2004's part, played here: the snapshot the host had at event 1.
+	# The snapshot's part played by hand (test_company_late_join sends the real one): the stock
+	# the host had at event 1.
 	_client_net.inventory.from_dict(at_one)
 	_client_net.resume_after_snapshot(1)
 	_expect(_client_net.seq == 2 and _host_net.seq == 2 and _client_events == 1 and _same()
@@ -509,48 +504,48 @@ func _check_hundred_events() -> void:
 
 func _check_gap_and_snapshot() -> void:
 	_snapshot_asks.clear()
-	_snapshot_seq = -1
-	var client_stock: Dictionary = _client_net.inventory.to_dict()
-	var client_seq: int = _client_net.seq
+	_restored.clear()
+	var client_events: int = _client_events
 	# An event this client never got (sent before its world was up): the next one skips it.
 	_host_net.seq += 1
 	_host_net.request(&"units_take", {"station": &"dock", "product": &"hen", "qty": 1})
 	var asked: bool = await _wait_for(func() -> bool: return not _snapshot_asks.is_empty())
 	_expect(asked and _snapshot_asks == [_client_id],
 		"A skipped seq makes the client ask the host for a snapshot (%s)" % [_snapshot_asks])
-	_expect(_client_net.inventory.to_dict() == client_stock and _client_net.seq == client_seq
-		and _client_net.awaiting_snapshot(),
-		"The event after the gap is held, not applied (client seq %d)" % _client_net.seq)
-	# Sent while the client waits: held too.
-	_host_net.request(&"units_store", {"station": &"bin", "product": &"hen", "qty": 1})
+	var restored: bool = await _wait_for(func() -> bool:
+		return _restored.size() == 1 and _client_net.seq == _host_net.seq)
+	_expect(restored and _restored == [_host_net.seq] and not _client_net.awaiting_snapshot(),
+		"The host answers with the snapshot at its seq (restored %s, client seq %d, host %d)"
+		% [_restored, _client_net.seq, _host_net.seq])
+	_expect(_client_events == client_events and _same(),
+		"The snapshot covers the held event (not applied on its own) and the stock is the host's")
 	_client_net.request(CompanyNet.SNAPSHOT_REQUEST)
 	var sentinel: int = _client_net.request(
 		&"units_take", {"station": &"nowhere", "product": &"hen", "qty": 1})
 	await _await_refusal(sentinel)
-	_expect(_snapshot_asks.size() == 1,
+	_expect(_snapshot_asks.size() == 1 and _restored.size() == 1,
 		"A second snapshot request within 5 s is dropped by the host (%d let through)"
 		% _snapshot_asks.size())
-	_expect(_client_net.inventory.to_dict() == client_stock,
-		"Nothing is applied while the client waits for the snapshot")
 	var later: int = Time.get_ticks_msec() + CompanyNet.SNAPSHOT_INTERVAL_MSEC
 	_expect(_host_net.grant_snapshot(_client_id, later),
 		"5 s later the host lets the next snapshot request through")
+	_expect(await _wait_for(func() -> bool: return _restored.size() == 2) and _same(),
+		"...and sends that snapshot too")
 	# The client's own retry, on a clock the test drives (the host drops these: too soon).
+	_expect(not _client_net.poll_snapshot(Time.get_ticks_msec() + 100000),
+		"In step with the host the client never asks")
+	_client_net.wait_for_snapshot()
 	var clock: int = Time.get_ticks_msec() + 100000
 	var interval: int = CompanyNet.SNAPSHOT_INTERVAL_MSEC
 	_expect(_client_net.poll_snapshot(clock), "While it waits, the client asks again after 5 s")
 	_expect(not _client_net.poll_snapshot(clock + interval - 1), "...not before 5 s more")
 	_expect(_client_net.poll_snapshot(clock + interval), "...and again once they passed")
-	# D-2004's part, played here: the snapshot the host had when asked, then what was held.
-	_client_net.inventory.from_dict(_snapshot)
-	_client_net.resume_after_snapshot(_snapshot_seq)
-	_expect(_snapshot_seq == client_seq + 2 and _client_net.seq == _host_net.seq
-		and not _client_net.awaiting_snapshot(),
-		"After the snapshot (seq %d) the held event is applied (client seq %d, host %d)"
-		% [_snapshot_seq, _client_net.seq, _host_net.seq])
-	_expect(_same(), "After the snapshot and the held event the stock is the host's")
+	_expect(_host_net.send_snapshot(_client_id), "The host can send a snapshot at any time")
+	var resumed: bool = await _wait_for(func() -> bool: return _restored.size() == 3)
+	_expect(resumed and not _client_net.awaiting_snapshot() and _same(),
+		"With the snapshot in the client stops waiting")
 	_expect(not _client_net.poll_snapshot(clock + 10 * interval),
-		"With the snapshot in, the client stops asking")
+		"...and stops asking")
 
 
 func _same() -> bool:

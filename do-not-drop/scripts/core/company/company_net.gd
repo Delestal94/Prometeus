@@ -12,13 +12,22 @@ extends Node
 ## Events carry `seq`. Reliable delivery loses nothing, so the only gap is an event sent
 ## before this peer's world was up: a peer that sees a number skipped holds what comes next
 ## and asks for a snapshot (snapshot_request, at most one per SNAPSHOT_INTERVAL_MSEC per peer
-## on the host). Sending the snapshot and applying it is D-2004: it answers
-## snapshot_requested and calls resume_after_snapshot() on the peer.
+## on the host).
+##
+## The snapshot (D-2004, the contract's section 3) is the whole business state at the host's
+## current seq (snapshot()). The host sends it to a peer when that peer's world comes up
+## (NetworkManager.peer_level_ready) and when it asks; it travels compressed, in chunks of at
+## most SNAPSHOT_CHUNK_BYTES (_snapshot), on the same reliable channel as the events, so it
+## lands before any event that comes after it. The peer holds every event until the last
+## chunk is in, puts the host's state in place of its own (apply_snapshot(): one
+## company_state_restored, no fact signal), drops the held events the snapshot covers and
+## applies the rest in order.
 ##
 ## Child of the company world (CompanyRoot today, CompanyWorld once it exists), always named
 ## "CompanyNet" so its RPC path is the same on every peer. The owner hands it the live
-## `inventory` and the `stations` lookup. It names no autoload (lesson N-919): NetworkManager
-## is reached by path, only to know which peers have their world up.
+## `inventory`, the `company` state, the `stations` lookup and any other snapshot part
+## (add_snapshot_part()). It names no autoload (lesson N-919): NetworkManager is reached by
+## path, only to know which peers have their world up and when one comes up.
 ##
 ## Kinds today: units_take and units_store (rows 5 and 6 of the contract's section 2) and
 ## snapshot_request. A task that adds an action appends its kind to REQUEST_KINDS (and to
@@ -35,9 +44,14 @@ signal event_applied(seq: int, kind: StringName, data: Dictionary)
 ## The requester only: the host refused request `rid` (what request() returned), and why
 ## (one of the REASON_* names). Only a notice: nothing changed anywhere.
 signal request_rejected(rid: int, reason: StringName)
-## Host: `peer` saw an event skipped and asked for the whole state, and the rate limit let
-## the request through. D-2004 answers with the snapshot.
+## Host: `peer` saw an event skipped and asked for the whole state, the rate limit let the
+## request through and the snapshot is on its way (send_snapshot()).
 signal snapshot_requested(peer: int)
+## Every peer but the host: the host's snapshot replaced the business state here (a late join
+## or a seq gap). The only signal applying it fires (no event_applied, no
+## Inventory.stock_changed): the presentation redraws everything from the state here.
+## `snapshot_seq` is the last event the snapshot covers.
+signal company_state_restored(snapshot_seq: int)
 
 const HOST_ID: int = 1
 const SNAPSHOT_REQUEST: StringName = &"snapshot_request"
@@ -55,6 +69,20 @@ const SNAPSHOT_INTERVAL_MSEC: int = 5000
 ## Events a peer holds while it waits for a snapshot. Past this the oldest go: a snapshot
 ## taken later covers them anyway.
 const MAX_HELD_EVENTS: int = 4096
+## A snapshot travels as var_to_bytes, compressed with this and cut into chunks of at most
+## SNAPSHOT_CHUNK_BYTES, so one _snapshot RPC stays under 64 KB with its own header.
+const SNAPSHOT_COMPRESSION: FileAccess.CompressionMode = FileAccess.COMPRESSION_ZSTD
+const SNAPSHOT_CHUNK_BYTES: int = 60 * 1024
+## The largest snapshot, uncompressed, that is built or taken: decompress() is told the size
+## up front and never gets more than this. 300 units with a full ledger: 34 KB, 2 KB compressed.
+const SNAPSHOT_MAX_BYTES: int = 4 * 1024 * 1024
+## Chunks one snapshot may take: 480 KB compressed, all queued at once, under the ~512 KB a
+## Steam connection buffers by default (a 300-unit shed takes 2 KB).
+const SNAPSHOT_MAX_CHUNKS: int = 8
+## Longest id (product, location, order) the stock of a snapshot may carry.
+const SNAPSHOT_MAX_ID_LENGTH: int = 256
+## Keys of the snapshot that CompanyNet fills itself (snapshot()); no part may take them.
+const SNAPSHOT_KEYS: Array[String] = ["seq", "inventory", "company"]
 const HANDS_PREFIX: String = "hands:"
 ## Where the product catalog lives: an id in a request must name one of its files.
 const PRODUCTS_DIR: String = "res://data/products/"
@@ -72,6 +100,13 @@ const REASON_NO_ROOM: StringName = &"no_room"
 ## the host and each client hold their own copy, kept equal by the events. Writing it back to
 ## CompanyState before a save is D-0206's.
 var inventory: Inventory = Inventory.new()
+## The CompanyState node (by reference, never by autoload name), or null. The host puts its
+## to_dict() in every snapshot; a client loads the host's into it, its only write there
+## (rule 1). The owner sets it on every peer (CompanyRoot).
+var company: Object = null
+## Host: size of the chunks a snapshot is cut into, up to SNAPSHOT_CHUNK_BYTES (a test forces
+## small ones to cut a snapshot in many).
+var snapshot_chunk_bytes: int = SNAPSHOT_CHUNK_BYTES
 ## Host: a station id -> what the host needs to check a request at it (rule 4), as
 ## Callable(station: StringName) -> Dictionary:
 ##   location  StringName  where its units are counted (pallet:<id>, shelf:<id>_<slot>...)
@@ -86,8 +121,8 @@ var stations: Callable = Callable()
 ## (Interactable.player_group), from its reach_origin() if it has one.
 var player_origin: Callable = Callable()
 ## The number of the last event applied here. The host applies each event as it sends it, so
-## there it is also the last one sent. Starts at 0; the first event is 1. Keeping it across a
-## loaded day (section 3) is D-0206 / D-2004.
+## there it is also the last one sent. Starts at 0; the first event is 1. A client takes the
+## snapshot's. Keeping it across a loaded day (section 3) is D-0206's.
 var seq: int = 0
 
 var _next_rid: int = 0
@@ -103,6 +138,19 @@ var _snapshot_granted: Dictionary = {}
 ## Host: {peer: Vector3}, where each peer stood at its last units request. D-2006 drops what
 ## a leaver held there when its player node is already gone (last_known_position()).
 var _last_origin: Dictionary = {}
+## Snapshot parts kept outside CompanyNet, {key: [take, put]} (add_snapshot_part()).
+var _parts: Dictionary = {}
+## Host: {peer: true} once a snapshot too big to send was reported for it (one error per peer).
+var _oversize_reported: Dictionary = {}
+## Host: id of the last snapshot sent. Each one takes the next, so a peer can tell an older
+## snapshot's chunks apart.
+var _snapshot_id: int = 0
+## Client: the newest snapshot id seen and, while that one is put together, its chunk count,
+## size uncompressed and {chunk index: bytes}. _rx_total is 0 once it is done or thrown away.
+var _rx_id: int = 0
+var _rx_total: int = 0
+var _rx_size: int = 0
+var _rx_chunks: Dictionary = {}
 
 ## Product ids of the catalog, read once from PRODUCTS_DIR ({StringName: true}).
 static var _known_products: Dictionary = {}
@@ -112,6 +160,13 @@ static var _catalog_read: bool = false
 func _ready() -> void:
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_disconnected):
 		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	var network: Node = get_node_or_null(^"/root/NetworkManager")
+	if network != null and network.has_signal(&"peer_level_ready"):
+		if not network.is_connected(&"peer_level_ready", _on_peer_level_ready):
+			network.connect(&"peer_level_ready", _on_peer_level_ready)
+	# Peers already up when this world came up won't fire peer_level_ready again. Deferred: the
+	# owner hands over the stock and the company right after adding this node.
+	_snapshot_ready_peers.call_deferred()
 	set_process(_awaiting_snapshot)
 
 
@@ -190,22 +245,185 @@ func last_known_position(peer: int) -> Variant:
 
 
 ## Host: lets a snapshot request from `peer` through at `now_msec` unless one already went
-## through less than SNAPSHOT_INTERVAL_MSEC before; then emits snapshot_requested. The host
-## never asks itself. True when it went through.
+## through less than SNAPSHOT_INTERVAL_MSEC before; then sends it the snapshot and emits
+## snapshot_requested. The host never asks itself. True when it went through; a snapshot that
+## could not be sent (send_snapshot()) doesn't count, so the next request may try again.
 func grant_snapshot(peer: int, now_msec: int) -> bool:
 	if peer == multiplayer.get_unique_id():
 		return false
 	var last: int = int(_snapshot_granted.get(peer, -1))
 	if last >= 0 and now_msec - last < SNAPSHOT_INTERVAL_MSEC:
 		return false
+	if not send_snapshot(peer):
+		return false
 	_snapshot_granted[peer] = now_msec
 	snapshot_requested.emit(peer)
 	return true
 
 
+## Adds a part to the snapshot under `key`: state an event of section 2 changes that lives
+## outside CompanyNet's stock and `company` (the order book, the day phase and clock anchor,
+## pallets, packing tables, live boxes, units on the floor). `take` (host) is
+## Callable() -> Variant and returns that part as plain data var_to_bytes keeps (no Object,
+## no Callable); `put` (client) is Callable(value: Variant) -> bool, puts the host's value in
+## place of what is there without firing fact signals, checks it like any data from the
+## network (rule 5) and returns false when it doesn't fit (the client then waits for another
+## snapshot). Every peer adds the same parts before its world is up. False, adding nothing,
+## when `key` is taken or a callable isn't valid.
+func add_snapshot_part(key: String, take: Callable, put: Callable) -> bool:
+	if key.is_empty() or SNAPSHOT_KEYS.has(key) or _parts.has(key):
+		return false
+	if not take.is_valid() or not put.is_valid():
+		return false
+	_parts[key] = [take, put]
+	return true
+
+
+## Host: the business state as a snapshot carries it (section 3), as plain data:
+##   seq        int: the last event it covers; the peer drops every event up to it
+##   inventory  the live stock with its reservations (Inventory.to_dict())
+##   company    CompanyState.to_dict() without its stored stock (the live one is `inventory`):
+##              money, day and clock, reputation, gates (the locks), fleet, employees,
+##              milestones, layout, ledger. Missing without a `company`
+##   <part>     one per add_snapshot_part()
+func snapshot() -> Dictionary:
+	var stock: Inventory = inventory if inventory != null else Inventory.new()
+	var data: Dictionary = {"seq": seq, "inventory": stock.to_dict()}
+	if company != null and company.has_method(&"to_dict"):
+		var state: Variant = company.call(&"to_dict")
+		if state is Dictionary:
+			var stored: Dictionary = state
+			stored.erase("inventory")
+			data["company"] = stored
+	for key: String in _parts:
+		var take: Callable = _parts[key][0]
+		data[key] = take.call()
+	return data
+
+
+## Host: sends `peer` the snapshot as it stands now, cut in chunks (_snapshot), on the events'
+## reliable channel: it reaches the peer after every event sent before it and before any sent
+## after it. Sent when the peer's world comes up (NetworkManager.peer_level_ready) and when it
+## asks (grant_snapshot()). False when this isn't the host, `peer` isn't connected, an event
+## is being applied (the state is half changed and its seq not yet counted) or the snapshot
+## is over SNAPSHOT_MAX_BYTES or SNAPSHOT_MAX_CHUNKS (an error, once per peer until one fits).
+func send_snapshot(peer: int) -> bool:
+	if not is_host() or peer == multiplayer.get_unique_id():
+		return false
+	if not multiplayer.get_peers().has(peer):
+		return false
+	if _applying:
+		push_error("CompanyNet: a snapshot for peer %d while an event is applied" % peer)
+		return false
+	var packed: Dictionary = pack_snapshot(snapshot(), snapshot_chunk_bytes)
+	if packed.is_empty():
+		if not _oversize_reported.has(peer):
+			_oversize_reported[peer] = true
+			push_error("CompanyNet: the snapshot for peer %d is over %d bytes or %d chunks; not sent"
+				% [peer, SNAPSHOT_MAX_BYTES, SNAPSHOT_MAX_CHUNKS])
+		return false
+	_oversize_reported.erase(peer)
+	_snapshot_id += 1
+	var chunks: Array[PackedByteArray] = packed["chunks"]
+	var size: int = packed["size"]
+	for index: int in range(chunks.size()):
+		_snapshot.rpc_id(peer, _snapshot_id, index, chunks.size(), size, chunks[index])
+	return true
+
+
+## A snapshot as _snapshot carries it: {size: its var_to_bytes size, chunks: the compressed
+## bytes cut every `chunk_bytes` (1 to SNAPSHOT_CHUNK_BYTES)}. {} when it is over
+## SNAPSHOT_MAX_BYTES or takes more than SNAPSHOT_MAX_CHUNKS.
+static func pack_snapshot(data: Dictionary, chunk_bytes: int = SNAPSHOT_CHUNK_BYTES) -> Dictionary:
+	var raw: PackedByteArray = var_to_bytes(data)
+	if raw.size() > SNAPSHOT_MAX_BYTES:
+		return {}
+	var packed: PackedByteArray = raw.compress(SNAPSHOT_COMPRESSION)
+	var step: int = clampi(chunk_bytes, 1, SNAPSHOT_CHUNK_BYTES)
+	var chunks: Array[PackedByteArray] = []
+	for start: int in range(0, packed.size(), step):
+		chunks.append(packed.slice(start, start + step))
+	if chunks.is_empty() or chunks.size() > SNAPSHOT_MAX_CHUNKS:
+		return {}
+	return {"size": raw.size(), "chunks": chunks}
+
+
+## The snapshot back from its joined chunks and its uncompressed `size`, or {} when they don't
+## make one: a size out of range, bytes that don't decompress to exactly `size`, or anything
+## but a Dictionary. Objects never come back (bytes_to_var, not bytes_to_var_with_objects).
+static func unpack_snapshot(packed: PackedByteArray, size: int) -> Dictionary:
+	if packed.is_empty() or size < 1 or size > SNAPSHOT_MAX_BYTES:
+		return {}
+	var raw: PackedByteArray = packed.decompress(size, SNAPSHOT_COMPRESSION)
+	if raw.size() != size:
+		return {}
+	var data: Variant = bytes_to_var(raw)
+	return data if data is Dictionary else {}
+
+
+## A stock in Inventory.to_dict() form that came over the network (rule 5): a Dictionary with
+## at most `stock` ({product: {location: qty}}) and `reserved` ({order: {product: qty}}), ids
+## as text up to SNAPSHOT_MAX_ID_LENGTH, quantities as positive ints.
+static func stock_ok(value: Variant) -> bool:
+	if not value is Dictionary:
+		return false
+	var stock: Dictionary = value
+	for part: Variant in stock:
+		if typeof(part) != TYPE_STRING or not ["stock", "reserved"].has(part):
+			return false
+		if not stock[part] is Dictionary:
+			return false
+		var outer: Dictionary = stock[part]
+		for id: Variant in outer:
+			if not _snapshot_name_ok(id) or not outer[id] is Dictionary:
+				return false
+			var inner: Dictionary = outer[id]
+			for sub: Variant in inner:
+				if not _snapshot_name_ok(sub) or typeof(inner[sub]) != TYPE_INT or int(inner[sub]) < 1:
+					return false
+	return true
+
+
+## Client: puts the host's snapshot (snapshot()) in place of the business state here: the
+## stock with its reservations, the company and every part, without a fact signal; emits
+## company_state_restored once, then drops the held events the snapshot covers and applies the
+## rest in order (resume_after_snapshot()). False, changing nothing, when it is malformed,
+## older than what is applied here or this is the host. A part that refuses its value comes
+## after the rest changed: then it is false too, and this peer waits for the next snapshot.
+func apply_snapshot(data: Dictionary) -> bool:
+	if is_host() or _applying:
+		return false
+	var snapshot_seq: Variant = data.get("seq")
+	if typeof(snapshot_seq) != TYPE_INT or int(snapshot_seq) < seq:
+		return false
+	var stock: Variant = data.get("inventory")
+	var state: Variant = data.get("company", {})
+	if not stock_ok(stock) or not state is Dictionary or inventory == null:
+		return false
+	_applying = true
+	inventory.from_dict(stock)
+	if company != null and company.has_method(&"from_dict") and not (state as Dictionary).is_empty():
+		var with_stock: Dictionary = (state as Dictionary).duplicate()
+		with_stock["inventory"] = inventory.to_dict()
+		company.call(&"from_dict", with_stock)
+	var whole: bool = true
+	for key: String in _parts:
+		if data.has(key):
+			var put: Callable = _parts[key][1]
+			whole = bool(put.call(data[key])) and whole
+	_applying = false
+	if not whole:
+		push_warning("CompanyNet: a part of the snapshot at seq %d does not fit" % snapshot_seq)
+		_start_waiting()
+		return false
+	company_state_restored.emit(int(snapshot_seq))
+	resume_after_snapshot(int(snapshot_seq))
+	return true
+
+
 ## Client, joining (CompanyRoot): its stock is not the host's until the snapshot comes, so
 ## every event is held until resume_after_snapshot(). The host sends that snapshot once this
-## peer is ready (D-2004); only if it hasn't come within SNAPSHOT_INTERVAL_MSEC is it asked for.
+## peer is ready; only if it hasn't come within SNAPSHOT_INTERVAL_MSEC is it asked for.
 func wait_for_snapshot() -> void:
 	_start_waiting()
 	_snapshot_asked_msec = Time.get_ticks_msec()
@@ -223,9 +441,9 @@ func poll_snapshot(now_msec: int) -> bool:
 	return request(SNAPSHOT_REQUEST) > 0
 
 
-## Client, for D-2004: a snapshot taken at `snapshot_seq` is in place here. Events up to it are
-## in the snapshot and dropped; those held since the gap are applied in order. If one is still
-## missing, the rest stay held and a snapshot is asked for again at once.
+## Client: a snapshot taken at `snapshot_seq` is in place here (apply_snapshot()). Events up to
+## it are in the snapshot and dropped; those held since the gap are applied in order. If one is
+## still missing, the rest stay held and a snapshot is asked for again at once.
 func resume_after_snapshot(snapshot_seq: int) -> void:
 	seq = snapshot_seq
 	_awaiting_snapshot = false
@@ -281,6 +499,16 @@ func _apply_event(event_seq: int, kind: StringName, data: Dictionary) -> void:
 	if not RpcGuard.from_host(self) or is_host() or not EVENT_KINDS.has(kind):
 		return
 	_receive(event_seq, kind, data)
+
+
+## Every peer but the host: chunk `chunk` of `total` of snapshot `id` (the host numbers them,
+## so a chunk of an older one is dropped), `size` bytes once joined and decompressed
+## (decompress() needs it). Same channel as _apply_event, so it is in order with the events.
+@rpc("authority", "call_remote", "reliable")
+func _snapshot(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> void:
+	if not RpcGuard.from_host(self) or is_host():
+		return
+	_take_chunk(id, chunk, total, size, bytes)
 
 
 ## The requester: the host refused request `rid`. Draws a notice at most; no state changes.
@@ -422,6 +650,43 @@ func _start_waiting() -> void:
 	set_process(true)
 
 
+## Client: keeps one chunk (checked first, rule 5: ids and counts in range, at most
+## SNAPSHOT_CHUNK_BYTES, the same total and size as the rest of its snapshot) and, with the
+## last one in, joins them and applies the snapshot. The first chunk of a newer snapshot drops
+## what was kept of the one before, starts holding events and restarts the wait before asking
+## again. A repeated chunk, or one of an older or finished snapshot, changes nothing. A
+## snapshot that doesn't unpack or apply leaves this peer waiting: it asks again
+## (poll_snapshot()).
+func _take_chunk(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray) -> void:
+	if id < 1 or total < 1 or total > SNAPSHOT_MAX_CHUNKS or chunk < 0 or chunk >= total:
+		return
+	if size < 1 or size > SNAPSHOT_MAX_BYTES:
+		return
+	if bytes.is_empty() or bytes.size() > SNAPSHOT_CHUNK_BYTES or id < _rx_id:
+		return
+	if id > _rx_id:
+		_rx_id = id
+		_rx_total = total
+		_rx_size = size
+		_rx_chunks = {}
+		_start_waiting()
+		_snapshot_asked_msec = Time.get_ticks_msec()
+	elif _rx_total == 0 or total != _rx_total or size != _rx_size or _rx_chunks.has(chunk):
+		return
+	_rx_chunks[chunk] = bytes
+	if _rx_chunks.size() < _rx_total:
+		return
+	var joined := PackedByteArray()
+	for index: int in range(_rx_total):
+		joined.append_array(_rx_chunks[index])
+	_rx_total = 0
+	_rx_chunks = {}
+	var data: Dictionary = unpack_snapshot(joined, _rx_size)
+	if data.is_empty() or not apply_snapshot(data):
+		push_warning("CompanyNet: snapshot %d could not be applied; waiting for another" % id)
+		_start_waiting()
+
+
 ## Host: tells the requester why nothing happened. The host's own request hears it here at once
 ## (_rejected is call_remote and would not reach it). A refusal spends no seq.
 func _refuse(peer: int, rid: int, reason: StringName) -> void:
@@ -524,10 +789,31 @@ func _units_at(location: StringName) -> int:
 
 func _on_peer_disconnected(peer: int) -> void:
 	_snapshot_granted.erase(peer)
+	_oversize_reported.erase(peer)
+
+
+## Host: `peer`'s world is up and it gets events from now on (is_peer_ready()); the snapshot
+## brings it to the current seq first.
+func _on_peer_level_ready(peer: int) -> void:
+	if is_host():
+		send_snapshot(peer)
+
+
+## Host, once this node is up: a snapshot to every peer that was ready before it (the events
+## reach them from now on, _event_targets()).
+func _snapshot_ready_peers() -> void:
+	if not is_inside_tree() or not is_host():
+		return
+	for peer: int in _event_targets():
+		send_snapshot(peer)
 
 
 static func _is_id(value: Variant) -> bool:
 	return typeof(value) == TYPE_STRING or typeof(value) == TYPE_STRING_NAME
+
+
+static func _snapshot_name_ok(value: Variant) -> bool:
+	return _is_id(value) and String(value).length() <= SNAPSHOT_MAX_ID_LENGTH
 
 
 static func _as_id(value: Variant) -> StringName:
