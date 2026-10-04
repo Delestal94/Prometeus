@@ -21,3 +21,14 @@
 `put_in_box` con sus tres negativas sin cambios, `take_box` y JSON.
 **Hecho cuando:** el test pasa. La escena de la mesa (placeholder gris sobre la huella 2×1 de
 `assembly_table`) y su captura quedan para la subtarea D-0701.b.
+
+### D-0702 · Dispensador de cajas — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — lógica: `BoxDispenser` (`scripts/gameplay/business/box_dispenser.gd`); `test_box_dispenser`. El objeto del dispensador y su menú de tamaños quedan para D-0702.b (ver `revisar/D-0702.md`).
+**Depende de:** D-0701 (`PackingStation`), D-0501 (billetera de `CompanyState`)
+**Qué:** `class_name BoxDispenser`, `RefCounted` con funciones estáticas. `dispense(station, size, wallet)`
+abre una caja vacía del tamaño elegido (S, M, L, XL) en el hueco de la mesa y cobra `CompanyTuning.BOX_COST`
+con el motivo `&"boxes"`. Rechaza sin cambiar nada: tamaño desconocido, mesa que ya tiene caja, billetera
+que no alcanza, mesa o billetera nulas. `can_dispense` es la misma comprobación sin efectos (para el menú).
+**Test** `test_box_dispenser`: caja abierta del tamaño pedido en la mesa, cobro y libro mayor, y las cuatro
+negativas sin cambios.
+**Hecho cuando:** el test pasa (caja aparece abierta en la mesa).
