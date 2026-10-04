@@ -363,9 +363,15 @@ CompanyState   (autoload, persistente)   plata, día, reloj, reputación, bloque
 |---|---|---|---|
 | `CompanyState` | `scripts/core/company/company_state.gd` (autoload, se registra después de `UnlockManager`) | toda la empresa; se guarda en `user://saves/company/<slot>.json` | solo el host |
 | `DayCycle` | `scripts/core/company/day_cycle.gd` (hijo de `CompanyWorld`, no autoload) | un día (08:00-20:00 de juego, 1 h = 90 s) | solo el host |
-| `WorldCells` | `modules/world_cells/` (genérico, sin nombrar nada del juego) | mientras el mundo está abierto | cada peer carga lo suyo; el trazado del mapa es fijo y el mismo para todos |
-| Salida | vehículo y cajas del mundo | desde el portón hasta volver al galpón | host (vehículo) y el que carga cada caja |
+| `WorldCells` | `modules/world_cells/` (genérico, sin nombrar nada del juego) | mientras el mundo está abierto | el **host** carga la colisión de las celdas alrededor de todo jugador, vehículo y caja suelta; cada cliente carga la presentación alrededor de lo suyo. El trazado del mapa es fijo y el mismo para todos |
+| Salida | vehículo y cajas del mundo | desde el portón hasta volver al galpón | host (vehículo y cajas); el que carga una caja solo propone su pose |
 
+- En un cliente, `CompanyState` es un **espejo** del host: no guarda ni toca el slot local (solo guarda el
+  host) y `DayCycle` es pasivo (cambia de fase solo con el evento del host).
+- Los nodos replicados (jugador, vehículo, `DeliveryPackage`) no son hijos de una celda: descargar una celda
+  no los libera ni los mueve de padre.
+- El decorado por semilla usa un RNG por celda, con semilla `hash([world_seed, cx, cz])`; la semilla de la
+  empresa se guarda en el slot y el host la pone en `NetworkManager.world_seed` antes de cargar `CompanyWorld`.
 - `CompanyState.is_active()` es falso fuera del modo Empresa: Entrega y Endless lo ignoran. La plata de la
   empresa vive ahí; `CrewProgression.team_money` sigue siendo la de Entrega y Endless (S8).
 - `RunManager` **no** arranca en modo Empresa: una salida no es una corrida, el día lo lleva `DayCycle`.
@@ -383,20 +389,32 @@ es válida, la aplica y difunde un **evento** (`_apply_event(seq, kind, data)`, 
 cambia `Inventory`, `OrderBook` o `CompanyState` igual en todos los peers. Una petición inválida se rechaza
 sin cambiar nada. Nada de estado de negocio viaja en un `MultiplayerSynchronizer` por tick.
 
+- `_request` es `@rpc("any_peer", "call_local", "reliable")` (así el host usa el mismo camino y las mismas
+  validaciones que un cliente). Guardas: `allow_request` y `name_ok(kind)` siempre, `dict_ok(data)` solo en
+  `_request`; soltar (manos → piso) va con `allow_critical_request`. **El actor es siempre
+  `RpcGuard.sender(self)`, nunca un campo de `data`**, y el alcance físico lo valida el host.
+- `_apply_event` es `@rpc("authority", "call_local", "reliable")`, enviado con `rpc_id` solo a los peers con
+  `NetworkManager.is_peer_ready()`.
+
 | Estado | Dueño | Cómo viaja |
 |---|---|---|
-| plata, día, reloj | host | evento; el reloj lo emite el host (D-0219) |
-| stock (`Inventory`) | host | evento |
+| plata, día, reloj | host | evento; el reloj es un ancla (minuto de inicio, tick, velocidad, pausa) que el host manda al cambiar y cada peer calcula la hora local (D-0219), no un evento por minuto |
+| stock (`Inventory`), con reservas | host | evento |
+| unidades en mano (`hands:<peer>`) y caja en armado (`table:<id>`) | host | evento; si el peer se va, el host libera sus reservas y emite manos → piso (D-2006) |
 | pedidos (`OrderBook`) | host | evento |
 | layout del galpón | host | evento |
 | bloqueos abiertos | host | evento; un bloqueo abierto no se vuelve a cerrar |
 | cajas sueltas (posición) | host | el sincronizador de `DeliveryPackage`, como hoy |
-| caja en mano | el que la lleva | predicción local (N-218), el host valida al soltar |
+| caja en mano | host | el que la lleva propone la pose (`submit_carry_transform`, unreliable) y la dibuja local (predicción N-217); soltar y pasar son peticiones (`request_drop`, crítica) |
 | vehículos | host | como hoy (el host simula todos; como máximo 2 lejos del galpón en F1-F3) |
 
-- Cada evento lleva un número de secuencia `seq`. Un hueco en `seq` pide un snapshot al host
-  (`CompanyState.to_dict()` + inventario + pedidos + layout + bloqueos); el mismo snapshot entra al que se
-  suma a mitad de día.
+- Cada evento lleva un número de secuencia `seq`. El hueco real no es de pérdida (es reliable) sino el
+  evento que llega antes de que el peer tenga `CompanyWorld`: por eso el snapshot (`CompanyState.to_dict()` +
+  inventario + pedidos + layout + bloqueos + **cajas vivas con todo lo que hace falta para crearlas** +
+  unidades sueltas) sale desde el gancho de peer listo y lleva `seq`; el cliente descarta eventos con `seq`
+  menor o igual. Pedir un snapshot tiene tope por peer (1 cada N segundos).
+- `box_sealed` lleva todo para que cada peer cree el `DeliveryPackage` idéntico (nombre de nodo estable,
+  `package_id`, trampa, contenido, absorción, `order_id`); un `set_meta` no viaja.
 - La tabla completa por acción del corte vertical (tomar, colocar, encintar, despachar, comprar…) es D-2001;
   esta sección fija el principio y D-2001 lo baja a las 20 acciones.
 - Cualquier cambio de RPC o replicación sube `PROTOCOL_VERSION` como dice `convenciones-godot.md` §6.
@@ -404,7 +422,9 @@ sin cambiar nada. Nada de estado de negocio viaja en un `MultiplayerSynchronizer
 ### 10.3 Señales nuevas en `EventBus`
 
 Se agregan **al final** de `event_bus.gd`, sin reordenar las existentes (D-0215). Las señales son hechos,
-en pasado, y las emite el host; los clientes las reciben del evento de red.
+en pasado. `EventBus` es local por proceso: **cada peer emite la señal al aplicar `_apply_event`**. Aplicar un
+snapshot no emite señales de hechos (si no, el que entra tarde repite todo el audio y el HUD del día): emite
+una sola de estado restaurado para que la UI se redibuje.
 
 | Señal | La emite | Cuándo |
 |---|---|---|
