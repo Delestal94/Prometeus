@@ -4,10 +4,12 @@ extends SceneTree
 ## it should be, its parts move (doors, ramp, wheels, steering wheel), and its
 ## physics matches what is drawn -- tires on the road, every package shape
 ## fits every rack bay, and the crew can walk from the ramp to the seats.
+## Left driverless it parks in place, level even right after a hard stop.
 
 const FLAT := Vector3(0.95, 0.42, 0.95)
 const TALL := Vector3(0.42, 0.98, 0.42)
 const CUBE := Vector3(0.65, 0.65, 0.65)
+const LEVEL_SCENE := "res://scenes/gameplay/level_base.tscn"
 const MOUNTS := ["LeftSeat1PackageMount", "LeftSeat2PackageMount", "RightSeat1PackageMount",
 	"RightSeat2PackageMount", "LeftShelfPackageMount", "RightShelfPackageMount", "RightSeat3PackageMount"]
 
@@ -63,6 +65,7 @@ func _run() -> void:
 	await _test_getting_up_lands_somewhere_clear()
 	await _test_only_what_is_in_reach()
 	await _test_parked_truck_stays_put()
+	await _test_parks_level_after_hard_stop()
 	if _failures == 0:
 		print("PASS: truck art, glass, doors, ramp, wheels, steering, rack fit, aisle and seats all line up")
 	quit(_failures)
@@ -342,7 +345,7 @@ func _test_boarding_swings_driver_door(van: VehicleBody3D, model: Node3D) -> voi
 ## Getting up from any seat lands the player on a floor they can stand on,
 ## never inside the truck's collision (that used to launch the truck).
 func _test_getting_up_lands_somewhere_clear() -> void:
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	var level: Node = load(LEVEL_SCENE).instantiate()
 	root.add_child(level)
 	await process_frame
 	await physics_frame
@@ -406,7 +409,7 @@ func _test_ramp(van: VehicleBody3D) -> void:
 ## In the real level: whatever its shape, a box put in a rack bay rests on
 ## that bay's deck.
 func _test_packages_rest_on_deck() -> void:
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	var level: Node = load(LEVEL_SCENE).instantiate()
 	root.add_child(level)
 	await process_frame
 	await physics_frame
@@ -435,7 +438,7 @@ func _test_packages_rest_on_deck() -> void:
 ## column, and boarding with a box in hand keeps it on the lap until drop (Q)
 ## shelves it there.
 func _test_sit_with_the_cargo() -> void:
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	var level: Node = load(LEVEL_SCENE).instantiate()
 	root.add_child(level)
 	await process_frame
 	await physics_frame
@@ -466,7 +469,7 @@ func _test_sit_with_the_cargo() -> void:
 ## Interactions need a clear line from the eyes: nothing through the truck's
 ## walls, the driver's seat only through its open door.
 func _test_only_what_is_in_reach() -> void:
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	var level: Node = load(LEVEL_SCENE).instantiate()
 	root.add_child(level)
 	await process_frame
 	await physics_frame
@@ -497,7 +500,7 @@ func _test_only_what_is_in_reach() -> void:
 ## A delivery in progress, nobody at the wheel: the truck holds still like a
 ## parked heavy vehicle, and drives off again once somebody takes the wheel.
 func _test_parked_truck_stays_put() -> void:
-	var level: Node = load("res://scenes/gameplay/level_base.tscn").instantiate()
+	var level: Node = load(LEVEL_SCENE).instantiate()
 	root.add_child(level)
 	for tick in range(10):
 		await physics_frame
@@ -512,7 +515,7 @@ func _test_parked_truck_stays_put() -> void:
 	for tick in range(90):
 		await physics_frame
 	player.call(&"leave_seat")
-	for tick in range(30):
+	for tick in range(60):
 		await physics_frame
 	var parked_at: Vector3 = van.global_position
 	for tick in range(180):
@@ -525,6 +528,63 @@ func _test_parked_truck_stays_put() -> void:
 		await physics_frame
 	_expect(not van.freeze and van.speed_kmh > 5.0, "Back at the wheel, it drives off again")
 	level.free()
+
+
+## Playtest 2026-10-01: stop hard, climb out at once, and the truck froze with
+## its nose still dipped from the braking -- the ramp hung off the road and the
+## crew had to jump onto it. It parks level, and the handbrake pulled on the
+## way out doesn't keep the brake lights on.
+func _test_parks_level_after_hard_stop() -> void:
+	var level: Node = load(LEVEL_SCENE).instantiate()
+	root.add_child(level)
+	for tick in range(10):
+		await physics_frame
+	var van: VehicleBody3D = level.vehicle
+	var player: Node = level.local_player
+	van.set_door_open(&"cab_left", true)
+	var seat: Node = van.get_node(^"CabinInterior/DriverEyePoint/InteractionArea")
+	seat.call(&"interact", player)
+	van.controls_enabled = false  # Scripted pedals instead of the keyboard.
+	for tick in range(90):
+		await physics_frame
+	var rest_tilt: float = _tilt_from_ground(van)
+	van.set_controls(1.0, 0.0, false)
+	for tick in range(120):
+		await physics_frame
+	van.set_controls(-1.0, 0.0, true)
+	for tick in range(240):
+		await physics_frame
+		if van.speed_kmh < 2.9:  # Out mid-dive, the moment it can park.
+			break
+	player.call(&"leave_seat")
+	for tick in range(240):
+		await physics_frame
+	_expect(not van.presentation_braking, "A parked truck has its brake lights off")
+	var shell: Node3D = van.get_node(^"BodyVisuals")
+	_expect(absf(shell.rotation.x) < 0.005,
+		"The exterior shell doesn't keep the braking dive once parked (%.3f rad)" % shell.rotation.x)
+	var tilt: float = _tilt_from_ground(van)
+	print("Parked pitch after a hard stop: %.2f deg (%.2f at rest)" % [tilt, rest_tilt])
+	_expect(van.freeze and absf(tilt - rest_tilt) < 0.15,
+		"After a hard stop the truck parks level, not nose-down (%.2f deg vs %.2f at rest)" % [tilt, rest_tilt])
+	level.free()
+
+
+## Nose-down pitch in degrees against the road under the axles: positive is
+## the front lower than the rear, measured from the wheel hubs to the ground.
+func _tilt_from_ground(van: VehicleBody3D) -> float:
+	var front: Vector3 = van.to_global(Vector3(0.0, 0.0, -1.5))  # Front axle.
+	var rear: Vector3 = van.to_global(Vector3(0.0, 0.0, 3.26))  # Rear axle.
+	var gap_front: float = front.y - _ground_y(van, front)
+	var gap_rear: float = rear.y - _ground_y(van, rear)
+	return rad_to_deg(atan2(gap_rear - gap_front, front.distance_to(rear)))
+
+
+func _ground_y(van: VehicleBody3D, at: Vector3) -> float:
+	var query := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 2.0, at + Vector3.DOWN * 4.0, 1)
+	query.exclude = [van.get_rid()]
+	var hit: Dictionary = van.get_world_3d().direct_space_state.intersect_ray(query)
+	return (hit[&"position"] as Vector3).y if not hit.is_empty() else at.y
 
 
 func _expect(condition: bool, message: String) -> void:
