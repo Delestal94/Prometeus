@@ -51,7 +51,7 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 | Construir código | `constructor-camion`, `constructor-tramos` (tipos de tramo y generación), `constructor-mundo` (depósito, casas, clima, fauna, decorado), `constructor-jugador` (jugador, paquete, interacción), `constructor-trampas`, `constructor-red` (red y Steam; siempre seguido de `auditor-red`), `constructor-progresion`, `constructor-ui` (incluye tutorial), `escritor-tests` |
 | Crear y refinar assets | `modelador-blender`* (3D), `artista-conceptual`* (imágenes, texturas), `artista-shaders`* (materiales), `artista-vfx` (partículas y efectos), `animador`* (clips y procedurales), `disenador-audio` (SFX y música compuesta por código) |
 | Pulir y balancear | `pulidor-jugabilidad` (tiempos, números, feedback, primera partida; balance con `sim_trap_balance` y `bench_*`) |
-| Verificar | `ejecutor-tests`, `probador-qa` (juego completo sin gente), `revisor-visual`, `cazador-bugs`, `revisor-gdscript`, `auditor-red`, `perfilador-rendimiento` |
+| Verificar | `vigilante-ci` (CI de cada PR recién creado; lo pide el hook `pr-ci-watch`), `ejecutor-tests`, `probador-qa` (juego completo sin gente), `revisor-visual`, `cazador-bugs`, `revisor-gdscript`, `auditor-red`, `perfilador-rendimiento` |
 | Cerrar y lanzar | `documentador`, skill `cerrar-cambio`, `empaquetador-release`, `estratega-steam` (página, cápsulas, features de Steam, calendario) |
 
 \* necesitan Blender o ComfyUI en la PC para la parte de assets; su parte de código corre en cualquier lado.
@@ -73,6 +73,9 @@ juego lo conecta desde un adaptador chico en `scripts/`. `modules/` es zona comp
 
 - Al editar un `.gd`, Godot lo carga con los autoloads y, si no compila, el error
   vuelve como feedback: arreglalo antes de correr tests.
+- Al crear un PR (`gh pr create` o la herramienta MCP de GitHub), el hook `pr-ci-watch` pide lanzar el
+  agente `vigilante-ci` con ese número: espera el CI, deja el auto-merge si queda verde y arregla lo obvio
+  si queda rojo. Así no se encolan PRs rojos.
 - No se editan a mano `*.uid`, `*.import`, `.godot/` ni `addons/godotsteam/` (el hook
   lo bloquea). Tocar un archivo del dominio del otro integrante está permitido sin
   confirmación: el hook recuerda que el mismo commit lleve el aviso de qué cambió, un
