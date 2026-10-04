@@ -76,8 +76,9 @@ const SNAPSHOT_CHUNK_BYTES: int = 60 * 1024
 ## The largest snapshot, uncompressed, that is built or taken: decompress() is told the size
 ## up front and never gets more than this. 300 units with a full ledger: 34 KB, 2 KB compressed.
 const SNAPSHOT_MAX_BYTES: int = 4 * 1024 * 1024
-## Chunks one snapshot may take: SNAPSHOT_MAX_BYTES even when compressing gains nothing.
-const SNAPSHOT_MAX_CHUNKS: int = 72
+## Chunks one snapshot may take: 480 KB compressed, all queued at once, under the ~512 KB a
+## Steam connection buffers by default (a 300-unit shed takes 2 KB).
+const SNAPSHOT_MAX_CHUNKS: int = 8
 ## Longest id (product, location, order) the stock of a snapshot may carry.
 const SNAPSHOT_MAX_ID_LENGTH: int = 256
 ## Keys of the snapshot that CompanyNet fills itself (snapshot()); no part may take them.
@@ -139,6 +140,8 @@ var _snapshot_granted: Dictionary = {}
 var _last_origin: Dictionary = {}
 ## Snapshot parts kept outside CompanyNet, {key: [take, put]} (add_snapshot_part()).
 var _parts: Dictionary = {}
+## Host: {peer: true} once a snapshot too big to send was reported for it (one error per peer).
+var _oversize_reported: Dictionary = {}
 ## Host: id of the last snapshot sent. Each one takes the next, so a peer can tell an older
 ## snapshot's chunks apart.
 var _snapshot_id: int = 0
@@ -161,6 +164,9 @@ func _ready() -> void:
 	if network != null and network.has_signal(&"peer_level_ready"):
 		if not network.is_connected(&"peer_level_ready", _on_peer_level_ready):
 			network.connect(&"peer_level_ready", _on_peer_level_ready)
+	# Peers already up when this world came up won't fire peer_level_ready again. Deferred: the
+	# owner hands over the stock and the company right after adding this node.
+	_snapshot_ready_peers.call_deferred()
 	set_process(_awaiting_snapshot)
 
 
@@ -240,15 +246,17 @@ func last_known_position(peer: int) -> Variant:
 
 ## Host: lets a snapshot request from `peer` through at `now_msec` unless one already went
 ## through less than SNAPSHOT_INTERVAL_MSEC before; then sends it the snapshot and emits
-## snapshot_requested. The host never asks itself. True when it went through.
+## snapshot_requested. The host never asks itself. True when it went through; a snapshot that
+## could not be sent (send_snapshot()) doesn't count, so the next request may try again.
 func grant_snapshot(peer: int, now_msec: int) -> bool:
 	if peer == multiplayer.get_unique_id():
 		return false
 	var last: int = int(_snapshot_granted.get(peer, -1))
 	if last >= 0 and now_msec - last < SNAPSHOT_INTERVAL_MSEC:
 		return false
+	if not send_snapshot(peer):
+		return false
 	_snapshot_granted[peer] = now_msec
-	send_snapshot(peer)
 	snapshot_requested.emit(peer)
 	return true
 
@@ -298,7 +306,7 @@ func snapshot() -> Dictionary:
 ## after it. Sent when the peer's world comes up (NetworkManager.peer_level_ready) and when it
 ## asks (grant_snapshot()). False when this isn't the host, `peer` isn't connected, an event
 ## is being applied (the state is half changed and its seq not yet counted) or the snapshot
-## is over SNAPSHOT_MAX_BYTES or SNAPSHOT_MAX_CHUNKS (an error).
+## is over SNAPSHOT_MAX_BYTES or SNAPSHOT_MAX_CHUNKS (an error, once per peer until one fits).
 func send_snapshot(peer: int) -> bool:
 	if not is_host() or peer == multiplayer.get_unique_id():
 		return false
@@ -309,9 +317,12 @@ func send_snapshot(peer: int) -> bool:
 		return false
 	var packed: Dictionary = pack_snapshot(snapshot(), snapshot_chunk_bytes)
 	if packed.is_empty():
-		push_error("CompanyNet: the snapshot is over %d bytes or %d chunks; not sent"
-			% [SNAPSHOT_MAX_BYTES, SNAPSHOT_MAX_CHUNKS])
+		if not _oversize_reported.has(peer):
+			_oversize_reported[peer] = true
+			push_error("CompanyNet: the snapshot for peer %d is over %d bytes or %d chunks; not sent"
+				% [peer, SNAPSHOT_MAX_BYTES, SNAPSHOT_MAX_CHUNKS])
 		return false
+	_oversize_reported.erase(peer)
 	_snapshot_id += 1
 	var chunks: Array[PackedByteArray] = packed["chunks"]
 	var size: int = packed["size"]
@@ -778,12 +789,22 @@ func _units_at(location: StringName) -> int:
 
 func _on_peer_disconnected(peer: int) -> void:
 	_snapshot_granted.erase(peer)
+	_oversize_reported.erase(peer)
 
 
 ## Host: `peer`'s world is up and it gets events from now on (is_peer_ready()); the snapshot
 ## brings it to the current seq first.
 func _on_peer_level_ready(peer: int) -> void:
 	if is_host():
+		send_snapshot(peer)
+
+
+## Host, once this node is up: a snapshot to every peer that was ready before it (the events
+## reach them from now on, _event_targets()).
+func _snapshot_ready_peers() -> void:
+	if not is_inside_tree() or not is_host():
+		return
+	for peer: int in _event_targets():
 		send_snapshot(peer)
 
 

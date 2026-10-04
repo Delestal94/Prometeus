@@ -14,11 +14,15 @@
   descartar trozos viejos, `bytes_to_var` sin objetos. Funciones nuevas: `snapshot()`, `send_snapshot(peer)`,
   `apply_snapshot(data)`, `add_snapshot_part(key, take, put)`, `pack_snapshot()`, `unpack_snapshot()`,
   `stock_ok()`; señal nueva `company_state_restored(snapshot_seq)`; variable `company` (el nodo
-  `CompanyState`). `grant_snapshot()` ahora además manda el snapshot. `CompanyNet` se conecta por camino a
-  `NetworkManager.peer_level_ready` (no nombra el autoload). Nada cambió en la firma de lo que ya existía.
-- **`scripts/gameplay/company_root.gd`**: le pasa `CompanyState` a `CompanyNet` (`net.company`).
+  `CompanyState`). `grant_snapshot()` ahora además manda el snapshot (y devuelve `false` si no pudo). `CompanyNet`
+  se conecta por camino a `NetworkManager.peer_level_ready` (no nombra el autoload) y, al entrar al árbol en el
+  host, manda el snapshot a los peers que ya estaban listos. Un snapshot ocupa a lo sumo 8 trozos de 60 KB.
+  Nada cambió en la firma de lo que ya existía.
+- **`scripts/gameplay/company_root.gd`**: le pasa `CompanyState` a `CompanyNet` (`net.company`). En un cliente
+  guarda lo que tenía `CompanyState` antes del snapshot y se lo devuelve en `_exit_tree()` (`reset()` si no
+  tenía empresa).
 - Tests: `test_company_late_join` (nuevo), `test_company_net` (la parte del hueco usa el snapshot real),
-  `test_company_root` (el `company` pasado).
+  `test_company_root` (el `company` pasado y la vuelta del `CompanyState` del cliente).
 
 ## Qué tiene que hacer Slatex
 

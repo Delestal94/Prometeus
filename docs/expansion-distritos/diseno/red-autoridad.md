@@ -181,12 +181,17 @@ petición: el host lo detecta o lo decide solo y emite el evento.
   **Decisión:** el RPC lleva `id` (el host numera cada snapshot que manda: un trozo de uno más viejo, o
   de uno ya armado, se descarta) y `size` (el tamaño sin comprimir, que `decompress()` necesita y que se
   acota a `SNAPSHOT_MAX_BYTES` = 4 MB); el `seq` va adentro del diccionario. Trozos de hasta
-  `SNAPSHOT_CHUNK_BYTES` = 60 KB (el RPC entero queda bajo 64 KB), a lo sumo `SNAPSHOT_MAX_CHUNKS` = 72,
+  `SNAPSHOT_CHUNK_BYTES` = 60 KB (el RPC entero queda bajo 64 KB), a lo sumo `SNAPSHOT_MAX_CHUNKS` = 8
+  (480 KB en total: todos los trozos se encolan juntos y tienen que entrar en el búfer de envío de
+  Steam, ~512 KB por defecto),
   `FileAccess.COMPRESSION_ZSTD`, `bytes_to_var` (nunca `_with_objects`) y el resultado tiene que ser un
   `Dictionary`.
 - **Cuándo lo manda el host** (`send_snapshot(peer)`): cuando ese peer queda listo
-  (`NetworkManager.peer_level_ready`, conectado por camino, sin nombrar el autoload) y cuando lo pide
-  (`grant_snapshot()`, el mismo tope de 5 s). Nunca mientras aplica un evento.
+  (`NetworkManager.peer_level_ready`, conectado por camino, sin nombrar el autoload), a cada peer que ya
+  estaba listo cuando el `CompanyNet` del host entra al árbol (diferido, después de que el dueño le da el
+  stock) y cuando lo pide (`grant_snapshot()`, el mismo tope de 5 s; un snapshot que no se pudo mandar no
+  cuenta como concedido). Nunca mientras aplica un evento. Uno demasiado grande no se manda y da un solo
+  error por peer.
 - **Qué lleva hoy** (`CompanyNet.snapshot()`): `seq`; `inventory` (el stock vivo con reservas);
   `company` (`CompanyState.to_dict()` sin su stock guardado: plata, día y hora, reputación, bloqueos
   abiertos, flota, empleados, hitos, layout, libro de caja). Un galpón de 300 unidades en 150 lugares con
@@ -201,7 +206,8 @@ petición: el host lo detecta o lo decide solo y emite el evento.
 - **Del lado del cliente** (`apply_snapshot()`): valida el `seq` (entero, no menor al aplicado) y el stock
   (`stock_ok()`: solo `stock` y `reserved`, ids de texto, cantidades enteras positivas) antes de tocar
   nada; reemplaza el stock y carga `company` en su `CompanyState` (su única escritura ahí, regla 1, con el
-  stock vivo en el espejo), aplica las partes, emite **una** `company_state_restored(seq)` y después
+  stock vivo en el espejo; `CompanyRoot._exit_tree()` le devuelve lo que tenía antes, o `reset()` si no
+  tenía empresa, así jugar solo o guardar después nunca toma la del host), aplica las partes, emite **una** `company_state_restored(seq)` y después
   `resume_after_snapshot()`: descarta lo guardado con `seq` ≤ y aplica el resto en orden. El primer trozo
   de un snapshot nuevo ya empieza a guardar eventos; un snapshot que no se arma o no se aplica deja al
   cliente esperando y vuelve a pedir a los 5 s.

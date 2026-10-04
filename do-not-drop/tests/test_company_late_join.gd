@@ -17,12 +17,16 @@ extends SceneTree
 ##   (no event_applied, no Inventory.stock_changed);
 ## - a seq gap is recovered with the same snapshot, asked for by the client and cut into many
 ##   chunks over the network;
+## - a snapshot too big to send (over SNAPSHOT_MAX_CHUNKS, 480 KB in all: Steam's send buffer)
+##   is refused by pack_snapshot() and is no grant: the next request that fits goes through;
+## - a host world that comes up after the client's (no peer_level_ready) sends the snapshot to
+##   every peer already ready;
 ## - chunks out of order, repeated, of an older or finished snapshot or malformed (id, index,
 ##   total, size, empty or oversized bytes) don't break it; events that arrive while chunks
 ##   are missing are held and applied in order after it; bytes that don't decompress, a value
 ##   that isn't a Dictionary or a stock of bad types leave the client waiting for another.
 ## Expected in the log: CompanyNet's warnings for the snapshots it refuses (a part that
-## doesn't fit, snapshots 6 to 8).
+## doesn't fit, snapshots 6 to 8) and its one error for the snapshot too big to send.
 
 const PORT: int = 24634
 const STATE_SCRIPT: String = "res://scripts/core/company/company_state.gd"
@@ -87,6 +91,7 @@ func _run() -> void:
 		await _check_late_join()
 		await _check_gap_recovery()
 		_check_chunks()
+		await _check_host_world_after_ready(host_side, client_side)
 
 	client.close()
 	server.close()
@@ -182,7 +187,7 @@ func _check_size_and_parts() -> void:
 		% host.inventory.total_units())
 	var data: Dictionary = host.snapshot()
 	var packed: Dictionary = CompanyNet.pack_snapshot(data)
-	var chunks: Array[PackedByteArray] = packed.get("chunks", [] as Array[PackedByteArray])
+	var chunks: Array[PackedByteArray] = _chunks_of(packed)
 	var weight: int = chunks[0].size() if chunks.size() == 1 else -1
 	_expect(chunks.size() == 1 and weight > 0 and weight < 64 * 1024,
 		"A snapshot of 300 units is one chunk under 64 KB (%d chunks, %d bytes, %d uncompressed)"
@@ -190,8 +195,10 @@ func _check_size_and_parts() -> void:
 	var company_part: Dictionary = data.get("company", {})
 	_expect(not company_part.is_empty() and not company_part.has("inventory"),
 		"The company in the snapshot leaves its stored stock out: the live one is `inventory`")
-	var back: Dictionary = CompanyNet.unpack_snapshot(chunks[0], int(packed.get("size", 0)))
-	_expect(back == data, "It unpacks to the same dictionary")
+	if chunks.size() == 1:
+		var back: Dictionary = CompanyNet.unpack_snapshot(chunks[0], int(packed.get("size", 0)))
+		_expect(back == data, "It unpacks to the same dictionary")
+	_check_size_limit()
 
 	var floor_units: Dictionary = {"floor:1": {"product": &"hen", "qty": 2, "pos": Vector3(1, 0, 2)}}
 	var take: Callable = func() -> Variant: return floor_units
@@ -314,9 +321,12 @@ func _check_late_join() -> void:
 
 ## An event the client never got: it asks, and a snapshot cut in many chunks puts it right.
 func _check_gap_recovery() -> void:
-	_host_net.snapshot_chunk_bytes = 512
-	var pieces: int = (CompanyNet.pack_snapshot(_host_net.snapshot(), 512)["chunks"] as Array).size()
-	_expect(pieces >= 3, "The host's snapshot takes %d chunks of 512 bytes" % pieces)
+	var step: int = _step_for(_host_net.snapshot(), 4)
+	var pieces: int = _chunks_of(CompanyNet.pack_snapshot(_host_net.snapshot(), step)).size()
+	_expect(pieces >= 3, "Cut every %d bytes the host's snapshot takes %d chunks" % [step, pieces])
+	if pieces < 3:
+		return
+	_host_net.snapshot_chunk_bytes = step
 	var events_before: int = _client_events.size()
 	_host_net.seq += 1
 	_host_net.request(&"units_take", {"station": &"dock", "product": &"hen", "qty": 1})
@@ -336,18 +346,34 @@ func _check_gap_recovery() -> void:
 	_expect(next and _client_events.size() == events_before + 1
 		and _client_net.inventory.to_dict() == _host_net.inventory.to_dict(),
 		"The next event applies as usual")
+	# A snapshot that can't be sent (chunks of 1 byte: far over SNAPSHOT_MAX_CHUNKS) is no grant:
+	# the next request goes through as soon as one fits. The error is logged once per peer.
+	var later: int = Time.get_ticks_msec() + 2 * CompanyNet.SNAPSHOT_INTERVAL_MSEC
+	_host_net.snapshot_chunk_bytes = 1
+	var refused: bool = not _host_net.grant_snapshot(_client_id, later)
+	refused = refused and not _host_net.grant_snapshot(_client_id, later)
+	_expect(refused and _snapshot_asks.size() == 1
+		and _host_net._oversize_reported.has(_client_id),
+		"A snapshot too big to send is not granted (asks %s)" % [_snapshot_asks])
 	_host_net.snapshot_chunk_bytes = CompanyNet.SNAPSHOT_CHUNK_BYTES
+	var granted: bool = _host_net.grant_snapshot(_client_id, later)
+	var sent: bool = await _wait_for(func() -> bool: return _restored.size() == 3)
+	_expect(granted and sent and not _host_net._oversize_reported.has(_client_id),
+		"...and the next request that fits goes through at once (restored %s)" % [_restored])
 
 
 ## The receiving side alone (a client CompanyNet out of the tree), chunk by chunk.
 func _check_chunks() -> void:
 	var data: Dictionary = _host_net.snapshot()
 	var snap_seq: int = data["seq"]
-	var packed: Dictionary = CompanyNet.pack_snapshot(data, 256)
-	var chunks: Array[PackedByteArray] = packed["chunks"]
-	var size: int = packed["size"]
+	var step: int = _step_for(data, 6)
+	var packed: Dictionary = CompanyNet.pack_snapshot(data, step)
+	var chunks: Array[PackedByteArray] = _chunks_of(packed)
+	var size: int = int(packed.get("size", 0))
 	var count: int = chunks.size()
-	_expect(count >= 4, "Cut every 256 bytes the snapshot takes %d chunks" % count)
+	_expect(count >= 4, "Cut every %d bytes the snapshot takes %d chunks" % [step, count])
+	if count < 4:
+		return
 	var state: Node = _new_state()
 	var rx := CompanyNet.new()
 	rx.company = state
@@ -423,18 +449,79 @@ func _check_chunks() -> void:
 		"A snapshot that isn't a Dictionary is refused")
 	var bad_stock: Dictionary = CompanyNet.pack_snapshot(
 		_with(_with(data, "seq", rx.seq), "inventory", {"stock": {&"hen": {&"dock": 1.5}}}))
-	rx._snapshot(8, 0, 1, bad_stock["size"], bad_stock["chunks"][0])
+	var bad_chunks: Array[PackedByteArray] = _chunks_of(bad_stock)
+	_expect(bad_chunks.size() == 1, "The float-qty snapshot packs into one chunk")
+	if bad_chunks.size() == 1:
+		rx._snapshot(8, 0, 1, int(bad_stock["size"]), bad_chunks[0])
 	_expect(restored.size() == 1 and rx.awaiting_snapshot(),
 		"A snapshot whose stock has a float qty is refused")
-	var good: Dictionary = CompanyNet.pack_snapshot(_with(data, "seq", rx.seq), 256)
-	var good_chunks: Array[PackedByteArray] = good["chunks"]
+	var good: Dictionary = CompanyNet.pack_snapshot(_with(data, "seq", rx.seq), step)
+	var good_chunks: Array[PackedByteArray] = _chunks_of(good)
 	for index: int in range(good_chunks.size()):
-		rx._snapshot(9, index, good_chunks.size(), good["size"], good_chunks[index])
+		rx._snapshot(9, index, good_chunks.size(), int(good["size"]), good_chunks[index])
 	_expect(restored.size() == 2 and not rx.awaiting_snapshot()
 		and rx.inventory.to_dict() == data["inventory"],
 		"The next good snapshot puts it right (restored %s)" % [restored])
 	rx.free()
 	state.free()
+
+
+## The host's world comes up after the client's was ready (both reloaded): no
+## peer_level_ready comes, so the host's CompanyNet sends the snapshot from its _ready.
+func _check_host_world_after_ready(host_side: Node, client_side: Node) -> void:
+	var seq: int = _host_net.seq
+	_host_net.free()
+	_client_net.free()
+	_client_state.call(&"reset")
+	_client_net = _add_net(client_side, _client_state)
+	_client_net.wait_for_snapshot()
+	var restored: Array[int] = []
+	_client_net.company_state_restored.connect(func(at: int) -> void: restored.append(at))
+	await process_frame
+	_host_net = _add_net(host_side, _host_state)
+	# As CompanyRoot does: the stock (and a loaded day's seq) come right after add_child().
+	_host_net.inventory = _host_state.call(&"stock")
+	_host_net.inventory.receive(&"puppy", 3, &"pallet:p7")
+	_host_net.seq = seq
+	var arrived: bool = await _wait_for(func() -> bool: return restored.size() == 1)
+	_expect(arrived and restored == [seq] and _client_net.seq == seq
+		and _client_net.inventory.to_dict() == _host_net.inventory.to_dict()
+		and not _client_net.awaiting_snapshot(),
+		"A host world that comes up after the client's sends it the snapshot (restored %s)"
+		% [restored])
+	_expect(_company(_client_state) == _company(_host_state),
+		"...with the host's company")
+
+
+## A snapshot of incompressible bytes over SNAPSHOT_MAX_CHUNKS full chunks is refused: all of a
+## snapshot is queued at once and must fit the ~512 KB a Steam connection buffers.
+func _check_size_limit() -> void:
+	var limit: int = CompanyNet.SNAPSHOT_MAX_CHUNKS * CompanyNet.SNAPSHOT_CHUNK_BYTES
+	_expect(limit <= 480 * 1024, "A whole snapshot is at most 480 KB on the wire (%d)" % limit)
+	var crypto := Crypto.new()
+	var fits: Dictionary = CompanyNet.pack_snapshot(
+		{"seq": 1, "noise": crypto.generate_random_bytes(limit - 32 * 1024)})
+	_expect(_chunks_of(fits).size() == CompanyNet.SNAPSHOT_MAX_CHUNKS,
+		"A snapshot just under the limit packs into %d chunks (got %d)"
+		% [CompanyNet.SNAPSHOT_MAX_CHUNKS, _chunks_of(fits).size()])
+	var over: Dictionary = CompanyNet.pack_snapshot(
+		{"seq": 1, "noise": crypto.generate_random_bytes(limit + 1024)})
+	_expect(over.is_empty(), "A snapshot over %d bytes compressed is refused" % limit)
+
+
+## The chunks of what pack_snapshot() returned, [] when it refused.
+static func _chunks_of(packed: Dictionary) -> Array[PackedByteArray]:
+	var chunks: Variant = packed.get("chunks")
+	if chunks is Array[PackedByteArray]:
+		return chunks
+	return [] as Array[PackedByteArray]
+
+
+## A chunk size that cuts `data` into about `pieces` chunks.
+static func _step_for(data: Dictionary, pieces: int) -> int:
+	var whole: Array[PackedByteArray] = _chunks_of(CompanyNet.pack_snapshot(data))
+	var size: int = whole[0].size() if whole.size() == 1 else CompanyNet.SNAPSHOT_CHUNK_BYTES
+	return maxi(ceili(size / float(pieces)), 1)
 
 
 ## CompanyState.to_dict() without its stored stock: what must match across peers.
