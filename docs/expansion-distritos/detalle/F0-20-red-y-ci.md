@@ -133,6 +133,7 @@ acelerados. Cuenta `Node.get_orphan_node_ids()` y `Performance.OBJECT_COUNT` al 
 **Hecho cuando:** los huérfanos son 0 y los objetos crecen < 2 % entre el día 2 y el 10.
 
 ### D-2014 · Filtros de tests de la expansión — A · Opus 5.5 · low · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `tools/run-tests.sh company` = prefijos `EXPANSION_PREFIXES` (incluye los nombres que ya dan las tareas: `test_day_cycle`, `test_order_book`, `test_road_graph`…); `test-run-tests.sh` lo prueba.
 **Depende de:** —
 **Qué:** convención de nombres. Todos los tests de la expansión empiezan con `test_company_`,
 `test_zone_`, `test_fleet_`, `test_order_`, `test_box_`, `test_inventory`, `test_product_`, `test_gate_`
