@@ -148,7 +148,8 @@ func _test_malformed(state: Node) -> void:
 	_expect(state.from_dict(nulls), "nulls and numbers as ids still load")
 	_expect(state.money == 500 and is_equal_approx(state.reputation, 50.0), "null numbers take the defaults")
 	_expect(state.district_reputation.size() == 1, "a null zone reputation is dropped")
-	_expect(state.opened_gates == [&"gate_puerto"] as Array[StringName], "a number is not a gate id")
+	var gates: Array[StringName] = [&"gate_puerto"]
+	_expect(state.opened_gates == gates, "a number is not a gate id")
 	_expect(state.milestones_done.is_empty(), "a null milestone is dropped")
 
 
