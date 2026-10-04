@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Composes the menu theme and the depot radio (tareas de Nacho N-403).
+"""Composes the menu theme, the depot radio and the in-game phrase (tareas de Nacho N-403, N-911).
 
-    python3 tools/audio/compose_music.py            # writes both .ogg files
+    python3 tools/audio/compose_music.py            # writes the three .ogg files
     pip install numpy soundfile                     # the only dependencies
 
 Everything is synthesized here, note by note, from fixed seeds: no samples, no
 third-party music, no AI generator -- the tracks are ours (see
 do-not-drop/assets/audio/music/LICENCIA.md). Rerunning gives the same files.
 
-Both tracks loop seamlessly: they're rendered for a whole number of bars and
+The menu and the radio loop seamlessly: they're rendered for a whole number of bars and
 every note's tail that rings past the end is folded back onto the start, so
 the seam sounds like any other beat.
 
@@ -17,9 +17,16 @@ the seam sounds like any other beat.
   mus_depot_radio_loop.ogg   the radio on the depot's break area (depot.gd).
                              88 BPM swing, F major ii-V-I-vi; played through a
                              small speaker (band-limited) with a bed of crackle.
+  mus_ingame_loop.ogg        the road music of every run (ingame_music.gd). NOT a
+                             loop: one calm phrase of ~32 s that the game fades in
+                             and out and repeats after a long silence. 80 BPM, G
+                             major, 10 bars; plucked arpeggios with a soft echo,
+                             a light bass, a road-shaker tick and a sparse whistle.
+                             Same instruments as the menu, a different, slower song.
 """
 import json
 import os
+import threading
 
 import numpy as np
 import soundfile as sf
@@ -52,6 +59,15 @@ class Track:
     def add(self, start_beat, samples):
         i = self.at(start_beat)
         self.buffer[i:i + len(samples)] += samples
+
+    def finish_once(self, tail_seconds=2.5, fade_seconds=0.8):
+        """For a track that is NOT a loop: keeps the tails ringing past the last
+        bar and ends on a short fade, so it stops without a click."""
+        n = self.length + int(tail_seconds * RATE)
+        out = self.buffer[:n].copy()
+        fade = int(fade_seconds * RATE)
+        out[-fade:] *= 0.5 * (1.0 + np.cos(np.linspace(0.0, np.pi, fade)))
+        return out
 
     def finish(self):
         loop = self.buffer[:self.length].copy()
@@ -126,6 +142,20 @@ def normalise(signal, peak=0.85):
     return signal * (peak / max(np.max(np.abs(signal)), 1e-6))
 
 
+def normalise_rms(signal, rms_db, peak_db=-1.2):
+    """Scales to an RMS level; if that would pass peak_db, the peaks are rounded
+    off with a soft knee instead of clipping (the RMS is then re-matched)."""
+    ceiling = 10.0 ** (peak_db / 20.0)
+    target = 10.0 ** (rms_db / 20.0)
+    out = signal * (target / np.sqrt(np.mean(signal ** 2)))
+    for _ in range(8):
+        if np.max(np.abs(out)) <= ceiling:
+            break
+        out = ceiling * np.tanh(out / ceiling)
+        out *= target / np.sqrt(np.mean(out ** 2))
+    return out
+
+
 def menu_theme():
     track = Track(bpm=112, bars=16)
     rng = np.random.default_rng(403)
@@ -162,6 +192,69 @@ def menu_theme():
             length = (phrase[i + 1][0] - step) if i + 1 < len(phrase) else 4 - step
             track.add(start + step, whistle(midi_hz(tone), track.beat * length * 0.9) * 0.11)
     return normalise(track.finish(), 0.8)
+
+
+def echo(signal, delay_seconds, feedback, taps):
+    """A soft repeat of the keys, to give them some air (no reverb needed)."""
+    out = signal.copy()
+    step = int(delay_seconds * RATE)
+    for k in range(1, taps + 1):
+        out[k * step:] += signal[:len(signal) - k * step] * feedback ** k
+    return out
+
+
+def ingame_phrase():
+    """Road music, calm and a bit playful: G major, 80 BPM, 10 bars (30 s)
+    and 2.5 s of ring-out. G Em Cmaj7 D / G Em Cmaj7 D / Cmaj7 G. The first two
+    bars are the keys alone, then the bass joins, then the whistle sings a
+    little four-note motif that answers itself and settles on the tonic."""
+    keys = Track(bpm=80, bars=10)
+    rest = Track(bpm=80, bars=10)
+    # (bass note, quality, chord root in the keys' register)
+    progression = [(43, "maj"), (40, "min"), (36, "maj7"), (38, "maj")] * 2 + [(36, "maj7"), (43, "maj")]
+    # Whistle: (bar, beat, midi note, beats). Bars 0-1 rest; bar 4 is a breath.
+    melody = [
+        (2, 0, 74, 1.5), (2, 1.5, 76, 0.5), (2, 2, 79, 2),
+        (3, 0, 78, 1.5), (3, 1.5, 76, 0.5), (3, 2, 74, 2),
+        (4, 0.5, 71, 1), (4, 1.5, 74, 0.5), (4, 2, 76, 1), (4, 3, 74, 1),
+        (5, 0, 76, 1.5), (5, 1.5, 74, 0.5), (5, 2, 71, 2),
+        (6, 1, 76, 1), (6, 2, 79, 1.5), (6, 3.5, 76, 0.5),
+        (7, 0, 78, 1.5), (7, 1.5, 81, 0.5), (7, 2, 78, 1), (7, 3, 74, 1),
+        (8, 0, 76, 2), (8, 2, 72, 2),
+        (9, 0, 71, 1), (9, 1, 67, 3),
+    ]
+    for bar, (bass_note, quality) in enumerate(progression):
+        start = bar * 4
+        tones = chord_tones(bass_note + 24, quality)
+        # Keys: a broken chord up and back down, eighth notes; the last bar rings.
+        if bar < 9:
+            order = [0, 1, 2, 1, 0, 1, 2, 1]
+            for i, idx in enumerate(order):
+                keys.add(start + i * 0.5, pluck(midi_hz(tones[idx]), keys.beat * 0.5, 0.5) * 0.085)
+            # The playful bit: a high answer on the "and" of 4.
+            keys.add(start + 3.5, pluck(midi_hz(tones[2] + 12), keys.beat * 0.5, 0.6) * 0.045)
+        else:
+            for tone in tones:
+                keys.add(start, pluck(midi_hz(tone), keys.beat * 3.0, 0.4) * 0.07)
+            keys.add(start, pluck(midi_hz(tones[0] + 12), keys.beat * 3.0, 0.4) * 0.05)
+        if bar >= 1:
+            # Bass: root, fifth, and a little octave skip before the next bar.
+            for step, interval, gain in [(0, 0, 0.2), (2, 7, 0.14), (3.5, 12, 0.08)]:
+                if bar == 9 and step > 0:
+                    continue
+                rest.add(start + step, bass(midi_hz(bass_note + interval), rest.beat * (3.5 if bar == 9 else 0.8)) * gain)
+        if bar < 9:
+            # A felt thump on 1 and 3, a shaker on the eighths: the road underneath.
+            for step in [0, 2]:
+                if bar >= 1:
+                    rest.add(start + step, kick() * 0.1)
+            for step in range(8):
+                rest.add(start + step * 0.5, noise_hit(0.05, 90, 700 + bar * 8 + step, 0.9) * (0.022 if step % 2 else 0.014))
+    for bar, beat, tone, length in melody:
+        gain = 0.1 if bar < 9 else 0.09
+        rest.add(bar * 4 + beat, whistle(midi_hz(tone), rest.beat * length * 0.92, vibrato=5.0) * gain)
+    mix = echo(keys.finish_once(), keys.beat * 0.75, 0.38, 3) + rest.finish_once()
+    return normalise_rms(mix, -15.84)
 
 
 def radio_program():
@@ -206,7 +299,7 @@ def radio_program():
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     loudness = {}
-    for name, build in [("mus_menu_loop.ogg", menu_theme), ("mus_depot_radio_loop.ogg", radio_program)]:
+    for name, build in [("mus_menu_loop.ogg", menu_theme), ("mus_depot_radio_loop.ogg", radio_program), ("mus_ingame_loop.ogg", ingame_phrase)]:
         audio = build()
         path = os.path.join(OUT_DIR, name)
         sf.write(path, audio.astype(np.float32), RATE, format="OGG", subtype="VORBIS")
@@ -227,4 +320,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # libvorbis recurses deep enough in sf.write to overflow the main thread's
+    # 1 MB stack on Windows (exit 127, truncated .ogg): run on a roomier thread.
+    threading.stack_size(64 * 1024 * 1024)
+    worker = threading.Thread(target=main)
+    worker.start()
+    worker.join()

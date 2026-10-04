@@ -130,6 +130,8 @@
 | Asset | Estado | Notas |
 |---|---|---|
 | Motor, golpes, neumáticos, trampas, bocina, viento, obturador | ✅ | Sintetizados en código. |
+| Música del menú y radio del depósito (`assets/audio/music/`) | ✅ | Compuestas por código en `tools/audio/compose_music.py` (N-403); niveles en `loudness.json`. |
+| Música de partida `mus_ingame_loop.ogg` | ✅ | Frase de 32,5 s (Sol mayor, 80 BPM, 10 compases; teclas con eco, bajo, silbido) de `tools/audio/compose_music.py` (N-911, 2026-10-04); reemplazó la pista sin origen. Suena con pausas y fades en `ingame_music.gd`. |
 | Música de tensión según el riesgo | ⬜ | Espec. #47. |
 | Pájaros y ruido lejano de ruta | ⬜ | Espec. #45 (parcial). |
 
