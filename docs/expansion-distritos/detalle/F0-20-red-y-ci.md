@@ -4,6 +4,7 @@
 > `network_manager.gd:68`) como dice `docs/convenciones-godot.md` §6. Siempre `auditor-red` antes del PR.
 
 ### D-2001 · Modelo de autoridad del modo Empresa — A · Opus 5.5 · xhigh · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — [`diseno/red-autoridad.md`](../diseno/red-autoridad.md): 4 RPC de `CompanyNet`, 10 reglas, las 20 acciones con petición, validación y evento, eventos del host, snapshot; aprobada por `auditor-red`.
 **Depende de:** D-0201
 **Qué:** subsección "Red" de la arquitectura de la expansión. Tabla por estado:
 
@@ -15,7 +16,7 @@
 | layout | host | eventos |
 | bloqueos | host | eventos |
 | posición de cajas sueltas | host | sincronizador de `DeliveryPackage` como hoy |
-| cajas en mano | el que la lleva | predicción N-218 |
+| cajas en mano | host (el que la lleva propone la pose) | predicción N-217 |
 | vehículos | host | como hoy |
 
 Cada acción de cliente (tomar producto, colocar en la caja, encintar, despachar, comprar) es una

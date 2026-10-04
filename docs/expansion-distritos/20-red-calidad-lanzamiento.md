@@ -8,7 +8,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-2001 | Modelo de autoridad de la expansión (host dueño de empresa, stock, pedidos, empleados) | auditor-red | xhigh | doc en `docs/arquitectura.md` |
+| D-2001 | ✅ Modelo de autoridad de la expansión (host dueño de empresa, stock, pedidos, empleados) | auditor-red | xhigh | doc en `docs/arquitectura.md` |
 | D-2002 | Presupuesto de ancho de banda del galpón (objetos, empleados, cintas) | constructor-red | high | número medido con 8 jugadores |
 | D-2003 | Sincronización por eventos en vez de por tick para stock y pedidos | constructor-red | xhigh | test de red |
 | D-2004 | Join tardío al galpón: el que entra recibe el estado completo | constructor-red | xhigh | test de join tardío a mitad de día |
