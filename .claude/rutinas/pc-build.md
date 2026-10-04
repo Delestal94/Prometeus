@@ -20,8 +20,10 @@ el día que se quiere jugar con amigos. La lanza el Programador de tareas
 1. **`empaquetador-release`**, pedido explícito de build de prueba (el hito M5 sigue en pausa, pero
    esta build no se publica): pasos 3 a 6 de su checklist (export release de "Windows Desktop" a
    `builds/windows/`, dependencias de Steam, smoke test del `.exe`, tamaño y archivos que no deberían
-   estar). Sin notas de versión, sin tags, sin subir nada. Conservá solo las 3 builds más nuevas en
-   `builds/` (está ignorada por git).
+   estar). Sin notas de versión, sin tags, sin subir nada (el repo es público: una build subida la baja
+   cualquiera). La carpeta de la build lleva la versión de `git describe --tags --always` (el tren de
+   releases etiqueta `main` cada lunes), así una regresión se acota entre dos builds con nombre.
+   Conservá solo las 3 builds más nuevas en `builds/` (está ignorada por git).
 2. **`perfilador-rendimiento`**, solo medir (no cambia código): `tests/bench_drive.gd` **con ventana**
    (sin `--headless`, ver README → Rendimiento), 150 s en reparto y 150 s en Endless, con la misma
    semilla que la última fila de `docs/rendimiento-pc.md`. Tomá ms por frame (promedio, p95, p99), FPS
