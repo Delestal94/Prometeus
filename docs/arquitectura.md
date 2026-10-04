@@ -416,8 +416,9 @@ sin cambiar nada. Nada de estado de negocio viaja en un `MultiplayerSynchronizer
   menor o igual. Pedir un snapshot tiene tope por peer (1 cada N segundos).
 - `box_sealed` lleva todo para que cada peer cree el `DeliveryPackage` idéntico (nombre de nodo estable,
   `package_id`, trampa, contenido, absorción, `order_id`); un `set_meta` no viaja.
-- La tabla completa por acción del corte vertical (tomar, colocar, encintar, despachar, comprar…) es D-2001;
-  esta sección fija el principio y D-2001 lo baja a las 20 acciones.
+- La tabla completa por acción del corte vertical (tomar, colocar, encintar, despachar, comprar…), con la
+  petición, lo que valida el host y el evento de cada una, está en
+  [`expansion-distritos/diseno/red-autoridad.md`](expansion-distritos/diseno/red-autoridad.md) (D-2001).
 - Cualquier cambio de RPC o replicación sube `PROTOCOL_VERSION` como dice `convenciones-godot.md` §6.
 
 ### 10.3 Señales nuevas en `EventBus`
