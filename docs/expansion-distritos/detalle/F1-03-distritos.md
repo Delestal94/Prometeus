@@ -67,6 +67,7 @@ y la mercadería vuelve al stock si la caja está sana.
 **Hecho cuando:** el test pasa.
 
 ### D-0306 · Bloqueos (`GateRequirement`) — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `GateRequirement` + `WorldGate` + 7 `.tres` en `data/gates/` (boceto del mapa); `CompanyState.open_gate/is_gate_open/gate_owned` y campo `equipment`; test `test_gate`. La replicación por evento queda en D-2003.
 **Depende de:** D-0205, D-0202
 **Qué:** `scripts/gameplay/districts/world_gate.gd` (`Node3D` con `StaticBody3D`) + recurso `GateRequirement`.
 - **Campos del recurso:** `id`, `kind` (`barrier|roadblock|water|equipment|altitude`),
