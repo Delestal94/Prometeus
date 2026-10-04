@@ -358,7 +358,7 @@ func _run() -> void:
 	host.set(&"seat_node_path", seat_path)
 	host.call(&"leave_seat")
 
-	for extra: Node in [stander, lapper, empty_handed, loaded]:
+	for extra: Node in [host, stander, lapper, empty_handed, loaded]:
 		extra.free()
 
 	courier.free()  # still holding a box that goes with the level

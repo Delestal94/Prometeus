@@ -85,6 +85,8 @@ jobs:
           TEST_TIMEOUT: 120
           REPORT_FILE: ${{ runner.temp }}/godot-headless-report.csv
           SHARD: ${{ matrix.shard }}/4
+          # A test that exits 0 after a runtime SCRIPT ERROR fails (N-924.2).
+          STRICT_SCRIPT_ERRORS: 1
         run: bash tools/run-tests.sh -v
 
       - name: Upload per-test audit report

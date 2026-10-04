@@ -39,14 +39,25 @@ func _run() -> void:
 	await process_frame
 	_test_input_and_settings()
 	_test_speeds()
-	await _test_no_running_seated_or_on_a_moving_truck()
 	await _test_every_trap_feels_the_steps()
-	await _test_trip_is_deterministic_and_drops_the_box()
-	await _test_first_run_tip_and_box_bounce()
-	await _test_animator_picks_run_or_the_fallback()
-	await _test_character_library_has_a_looping_run()
-	await _test_other_peer_sees_the_run()
-	await _test_remote_jog_and_the_hosts_step_bucket()
+	_test_trip_is_deterministic()
+	# Building level_base's route takes 4-10 s a time (more on a CI runner); loading it
+	# for every section put this test at 60-117 s against CI's 120 s limit (issue #291).
+	# Two levels: the driver seat leaves the player seated for good, so it gets its own.
+	var level: Node = await _load_level()
+	await _test_no_running_seated_or_on_a_moving_truck(level)
+	await _unload_level(level)
+	# The rest share one level, in an order where each leaves what the next needs:
+	# a fresh player for the animation, a box that never bounced for the tip's creak,
+	# the remote peers while the box is held, and the trip (it drops the box) last.
+	level = await _load_level()
+	await _test_animator_picks_run_or_the_fallback(level)
+	_test_character_library_has_a_looping_run(level)
+	await _test_first_run_tip_and_box_bounce(level)
+	await _test_other_peer_sees_the_run(level)
+	await _test_remote_jog_and_the_hosts_step_bucket(level)
+	_test_trip_drops_the_box(level)
+	await _unload_level(level)
 	if _failures == 0:
 		print("PASS: sprint speeds, no running seated/driving/on a moving truck, per-trap step shaking,"
 				+ " deterministic trip, tip, Run or Walk fallback with hysteresis, and the remote peer's run")
@@ -101,8 +112,7 @@ func _test_speeds() -> void:
 	heavy.free()
 
 
-func _test_no_running_seated_or_on_a_moving_truck() -> void:
-	var level: Node = await _load_level()
+func _test_no_running_seated_or_on_a_moving_truck(level: Node) -> void:
 	var player: Player = level.local_player
 	var sprint: Node = player.get_node(^"Sprint")
 	var forward := Vector2(0.0, -1.0)
@@ -126,7 +136,6 @@ func _test_no_running_seated_or_on_a_moving_truck() -> void:
 	vehicle.call(&"set_door_open", &"cab_left", true)
 	driver_seat.interact(player)
 	_expect(not player.seat_node_path.is_empty() and not sprint.wants_run(forward), "Nobody runs while driving")
-	await _unload_level(level)
 
 
 # --- Steps shake the box -----------------------------------------------------------------------
@@ -188,7 +197,7 @@ func _test_every_trap_feels_the_steps() -> void:
 # --- The trip -----------------------------------------------------------------------------------
 
 
-func _test_trip_is_deterministic_and_drops_the_box() -> void:
+func _test_trip_is_deterministic() -> void:
 	var first: Array[bool] = []
 	var second: Array[bool] = []
 	var other: Array[bool] = []
@@ -208,11 +217,15 @@ func _test_trip_is_deterministic_and_drops_the_box() -> void:
 			"Bad ground trips far more than a clear road (%d vs %d in 4000 steps)" % [bad_ground, clear_ground])
 	_expect(clear_ground > 0 and clear_ground < 120, "Even a clear road has a small chance (%d in 4000)" % clear_ground)
 
-	var level: Node = await _load_level()
+
+## On the host the trip drops the box. Runs last on the shared level: the trip locks
+## the runner out of running for STUMBLE_LOCKOUT and leaves the box loose.
+func _test_trip_drops_the_box(level: Node) -> void:
 	root.get_node(^"/root/RunManager").call(&"start_run")
 	var player: Player = level.local_player
 	var package: DeliveryPackage = level.get_node("World/Package")
-	package.get_node("InteractionArea").interact(player)
+	if player.carried_package != package:  # The tip's section already picked it up.
+		package.get_node("InteractionArea").interact(player)
 	_expect(player.carried_package == package and package.is_held, "The runner carries the box")
 	# A second peer's component with the same seed agrees on every step.
 	var mirror: Node = Sprint.new()
@@ -241,13 +254,12 @@ func _test_trip_is_deterministic_and_drops_the_box() -> void:
 			"...and it landed with a hit on top of the steps (%.1f -> %.1f)" % [before_tripping, package.integrity])
 	_expect(not package.freeze and package.collision_layer == 4, "...loose on the floor, a physical box again")
 	mirror.free()
-	await _unload_level(level)
 
 
 # --- The tip and the bounce --------------------------------------------------------------------
 
 
-func _test_first_run_tip_and_box_bounce() -> void:
+func _test_first_run_tip_and_box_bounce(level: Node) -> void:
 	var profile: Node = root.get_node(^"/root/UnlockManager")
 	var seen_before: Dictionary = profile.seen_tips.duplicate(true)
 	profile.seen_tips = {}
@@ -255,7 +267,6 @@ func _test_first_run_tip_and_box_bounce() -> void:
 	var bus: Node = root.get_node(^"/root/EventBus")
 	var listener := func(text: String) -> void: tips.append(text)
 	bus.tutorial_tip_requested.connect(listener)
-	var level: Node = await _load_level()
 	var player: Player = level.local_player
 	var package: DeliveryPackage = level.get_node("World/Package")
 	package.get_node("InteractionArea").interact(player)
@@ -264,6 +275,7 @@ func _test_first_run_tip_and_box_bounce() -> void:
 	await physics_frame
 	sprint.ground_speed(Vector2(0.0, -1.0))
 	sprint.ground_speed(Vector2(0.0, -1.0))
+	Input.action_release(&"sprint")
 	var tip: String = tr("UI_TUT_TIP_SPRINT_CARRY")
 	_expect(tips.count(tip) == 1, "The first run with a box shows the tip once (got %s)" % [tips])
 	_expect(tip.begins_with("Correr con la caja"), "The tip says running with the box shakes it (got %s)" % tip)
@@ -289,14 +301,12 @@ func _test_first_run_tip_and_box_bounce() -> void:
 	bus.tutorial_tip_requested.disconnect(listener)
 	profile.seen_tips = seen_before
 	profile.call(&"save_profile")
-	await _unload_level(level)
 
 
 # --- Animation -----------------------------------------------------------------------------------
 
 
-func _test_animator_picks_run_or_the_fallback() -> void:
-	var level: Node = await _load_level()
+func _test_animator_picks_run_or_the_fallback(level: Node) -> void:
 	var player: Player = level.local_player
 	# Headless has no captured mouse, so the controller never moves by itself:
 	# drop it onto the depot floor by hand.
@@ -331,20 +341,17 @@ func _test_animator_picks_run_or_the_fallback() -> void:
 			"...sped up past the walking cap (speed_scale %.2f)" % without_run.speed_scale)
 	with_run.free()
 	without_run.free()
-	await _unload_level(level)
 
 
 ## N-115.3: the Blender clip, not the fallback. Looping (the glTF importer drops the flag;
 ## PlayerAnimator.LOOPING sets it), as long as Walk so the phase-keeping switch lands on
 ## the same foot, and scaled by speed so the planted feet keep pace from 4 to 6 m/s.
-func _test_character_library_has_a_looping_run() -> void:
-	var level: Node = await _load_level()
+func _test_character_library_has_a_looping_run(level: Node) -> void:
 	var player: Player = level.local_player
 	var playing: AnimationPlayer = player.animator.anim_player
 	_expect(playing != null and playing.has_animation(Player.ANIM_RUN),
 			"The character's library has a Run clip (sm_char_player_rounded.glb)")
 	if playing == null or not playing.has_animation(Player.ANIM_RUN):
-		await _unload_level(level)
 		return
 	var run: Animation = playing.get_animation(Player.ANIM_RUN)
 	var walk_length: float = playing.get_animation(Player.ANIM_WALK).length
@@ -360,11 +367,9 @@ func _test_character_library_has_a_looping_run() -> void:
 				pace, playing.current_animation])
 		_expect(is_equal_approx(playing.speed_scale, pace / PlayerAnimator.RUN_AUTHORED_SPEED),
 				"...at speed / 6 m/s so the feet don't skate (%.1f m/s: x%.3f)" % [pace, playing.speed_scale])
-	await _unload_level(level)
 
 
-func _test_other_peer_sees_the_run() -> void:
-	var level: Node = await _load_level()
+func _test_other_peer_sees_the_run(level: Node) -> void:
 	var remote: Player = PLAYER_SCENE.instantiate()
 	remote.name = "Player_2"
 	level.get_node("World").add_child(remote)
@@ -400,11 +405,13 @@ func _test_other_peer_sees_the_run() -> void:
 	var footstep: AudioStreamWAV = SynthAudioSteps.footstep()
 	_expect(footstep.data.size() > 1000 and footstep == SynthAudioSteps.footstep(),
 			"The footfall is a shared synthesized sound")
-	await _unload_level(level)
+	remote.free()  # The next section adds its own Player_2.
+	await physics_frame
 
 
-func _test_remote_jog_and_the_hosts_step_bucket() -> void:
-	var level: Node = await _load_level()
+## The box is in the local runner's arms by now (the tip's section): held and frozen,
+## nothing but the remote's steps can shake it.
+func _test_remote_jog_and_the_hosts_step_bucket(level: Node) -> void:
 	var package: DeliveryPackage = level.get_node("World/Package")
 	var remote: Player = PLAYER_SCENE.instantiate()
 	remote.name = "Player_2"
@@ -457,7 +464,8 @@ func _test_remote_jog_and_the_hosts_step_bucket() -> void:
 	_expect(is_equal_approx(sprint.host_accepts_step(owner_peer, INF, 300400), 1.0),
 			"An infinite hazard is the worst too")
 	_expect(is_equal_approx(sprint.host_accepts_step(owner_peer, 7.0, 300800), 1.0), "A hazard past 1 is clamped")
-	await _unload_level(level)
+	remote.free()
+	await physics_frame
 
 
 # --- Helpers ---------------------------------------------------------------------------------

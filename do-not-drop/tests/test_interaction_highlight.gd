@@ -44,16 +44,16 @@ func _test_seat_indicator() -> void:
 	await process_frame
 
 	var seat: Node = vehicle.get_node(^"CabinInterior/DriverEyePoint/InteractionArea")
-	_expect(not bool(seat.call(&"_is_occupied")), "Empty seat reads as free")
+	_expect(not bool(seat.call(&"is_occupied")), "Empty seat reads as free")
 	var indicator_material: StandardMaterial3D = seat.get(&"_indicator_material")
 	var free_color: Color = indicator_material.albedo_color
 
-	# Same trick _is_occupied() itself uses (matching seat_node_path) --
+	# Same trick is_occupied() itself uses (matching seat_node_path) --
 	# doesn't need a real board_seat() RPC round trip to prove the indicator
 	# reacts to that replicated state.
 	player.set(&"seat_node_path", vehicle.get_node(^"CabinInterior/DriverEyePoint").get_path())
 	await process_frame
-	_expect(bool(seat.call(&"_is_occupied")), "Matching seat_node_path reads as occupied")
+	_expect(bool(seat.call(&"is_occupied")), "Matching seat_node_path reads as occupied")
 	_expect(indicator_material.albedo_color != free_color, "Occupied indicator visibly differs from the free one")
 
 	player.set(&"seat_node_path", NodePath())
