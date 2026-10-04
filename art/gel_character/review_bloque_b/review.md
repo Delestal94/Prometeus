@@ -1,5 +1,31 @@
 # Revisión independiente — preparación B, 2026-10-01
 
+## Corrección de axila, 2026-10-02
+
+Revisión independiente de código/assets y ejecución Godot: PASS para el alcance
+A0/A30/A60/A75. Cuatro tests PASS y lint PASS después del import final, 216
+capturas de silueta, 144 comparaciones bajo 5 %, dieciocho vistas cercanas A60/A75
+sin aberturas ni pliegue transversal invertido. LOD2 mantiene facetado distante.
+
+Verificados independientemente en los GLB finales los veinte reposos e inverse
+binds y los nueve clips: sus valores decodificados son idénticos a `e383ed5`.
+El master original no cambió. Root comprobó por separado los siete tests fuente
+y el barrido estricto de 53 muestras por LOD. Regresiones RED→GREEN cubren el
+pliegue de hombro y la pérdida de transición cadera-muslo al simplificar LOD2.
+
+No hay aprobación de todo B: A90, todas las animaciones y el continuo combinado
+siguen sin certificar, igual que los ítems completos 10/12/13 y el material E.
+El resultado actual y sus métricas están en `ESTADO_ACTUAL.md`.
+
+Una revisión final nueva, sin acceso al historial de revisiones, también dio
+PASS: ejecutó siete tests fuente en Blender, validación genérica de los tres
+GLB y las 53 muestras estrictas de LOD2, comparó reposos/binds/clips contra
+`f0a8a94` e inspeccionó ambas hojas de hombros. No volvió a correr Godot ni el
+barrido estricto LOD0/1; éstos corresponden a las comprobaciones separadas de
+ejecución y root. Tras el último pull, los cuatro tests Godot volvieron a pasar.
+
+## Historial de entregas anteriores
+
 Veredicto **PASS** del revisor nuevo `gel_preparation_fresh_gate`, sin acceso a
 revisiones anteriores. Aprobación de la preparación, no cierre completo de B/E.
 

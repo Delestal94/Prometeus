@@ -89,7 +89,7 @@
     ],
     "optional_face_meshes": [],
     "weights": {
-      "max_sum_error": 1.341104507446289e-7,
+      "max_sum_error": 1.1920928955078125e-7,
       "max_influences": 4,
       "unweighted_vertices": 0
     },
@@ -101,7 +101,7 @@
       "welded_vertices": 2354,
       "orientation_criterion": "sample triangle normal dot base normal > 0; rejects >90-degree reorientation",
       "scope": "base, 22 single extremes, 30 seeded combinations; not continuous proof",
-      "base_signed_volume_m3": 0.1660030712810498
+      "base_signed_volume_m3": 0.1660030698552772
     }
   },
   {
@@ -109,13 +109,13 @@
     "valid": true,
     "errors": [],
     "warnings": [],
-    "triangles": 1176,
+    "triangles": 2248,
     "meshes": [
       {
         "name": "GelBodyLOD1",
         "skinned": true,
-        "vertices": 2352,
-        "triangles": 1176
+        "vertices": 4496,
+        "triangles": 2248
       }
     ],
     "skins": [
@@ -194,7 +194,7 @@
     ],
     "optional_face_meshes": [],
     "weights": {
-      "max_sum_error": 1.341104507446289e-7,
+      "max_sum_error": 1.1175870895385742e-7,
       "max_influences": 4,
       "unweighted_vertices": 0
     },
@@ -203,10 +203,10 @@
       "triangle_budget": 2500,
       "random_seed": 311018,
       "sample_count": 53,
-      "welded_vertices": 590,
+      "welded_vertices": 1126,
       "orientation_criterion": "sample triangle normal dot base normal > 0; rejects >90-degree reorientation",
       "scope": "base, 22 single extremes, 30 seeded combinations; not continuous proof",
-      "base_signed_volume_m3": 0.15547369201440295
+      "base_signed_volume_m3": 0.15688722260068222
     }
   },
   {
@@ -311,7 +311,7 @@
       "welded_vertices": 399,
       "orientation_criterion": "sample triangle normal dot base normal > 0; rejects >90-degree reorientation",
       "scope": "base, 22 single extremes, 30 seeded combinations; not continuous proof",
-      "base_signed_volume_m3": 0.155331027850418
+      "base_signed_volume_m3": 0.15637090803337791
     }
   }
 ]
