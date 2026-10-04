@@ -11,6 +11,9 @@ extends SceneTree
 ## What this pins down: the same NetworkManager.world_seed builds the same
 ## route twice, a different seed builds a different one, and seed 0 (solo
 ## play) still gives a fresh route each time.
+## network_manager.gd also picks a nonzero seed for each hosted run, changes
+## it on restart (even if the first random draw repeats it), and sends that
+## same seed in the restart and late-join payloads before rebuilding.
 
 var failures: int = 0
 
@@ -21,7 +24,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var network: Node = root.get_node("NetworkManager")
-	var original_seed: int = int(network.world_seed)
+	var original_state: Dictionary = network.call(&"_session_state").duplicate(true)
+	_check_run_seeds(network)
 
 	network.world_seed = 12345
 	var first: Array = await _build_signature()
@@ -45,11 +49,57 @@ func _run() -> void:
 			all_identical = false
 	_expect(not all_identical, "Solo play still randomises the route between runs")
 
-	network.world_seed = original_seed
+	network.call(&"_apply_session_state", original_state)
 	await create_timer(0.1).timeout
 	if failures == 0:
-		print("PASS: one seed per session builds one world, and solo play still varies")
+		print("PASS: each run gets a fresh shared seed, equal seeds build equal worlds, and solo play varies")
 	quit(failures)
+
+
+func _check_run_seeds(network: Node) -> void:
+	# Force the first draw to repeat the previous seed: this must not leave
+	# two consecutive runs with the same world. Each test has its own process.
+	seed(314159)
+	var repeated: int = randi() | 1
+	network.world_seed = repeated
+	seed(314159)
+	network.call(&"_on_hosting")
+	_expect(int(network.world_seed) != repeated and int(network.world_seed) != 0,
+		"Hosting rejects a repeated seed and never picks zero (got %d)" % int(network.world_seed))
+	for index: int in range(32):
+		var previous: int = int(network.world_seed)
+		network.call(&"_on_hosting")
+		_expect(int(network.world_seed) != 0 and int(network.world_seed) != previous,
+			"A new room gets a different nonzero seed (room %d, got %d)" % [index, int(network.world_seed)])
+
+	for index: int in range(32):
+		var previous: int = int(network.world_seed)
+		network.world_house_count = 3
+		network.call(&"_before_restart")
+		var host_seed: int = int(network.world_seed)
+		_expect(host_seed != 0 and host_seed != previous,
+			"The next run changes the host seed (run %d, got %d)" % [index, host_seed])
+		_expect(int(network.world_house_count) == 0, "A new run decides its house count afresh")
+		# The rebuilt host has decided its houses before it sends the restart.
+		network.world_house_count = 3
+		var restart: Dictionary = network.call(&"_restart_state")
+		var late_join: Dictionary = network.call(&"_session_state").duplicate(true)
+		_expect(int(restart.get("seed", 0)) == host_seed,
+			"The restart carries the new host seed (got %s)" % restart)
+		_expect(int(late_join.seed) == host_seed and int(network.world_seed) == host_seed,
+			"A late join receives the current seed without rerolling the host")
+		# Apply the wire payload as a client still carrying the previous world.
+		network.world_seed = previous
+		network.call(&"_apply_restart_state", restart)
+		_expect(int(network.world_seed) == host_seed and int(network.world_house_count) == 3,
+			"A client applies the host seed before rebuilding (got %d)" % int(network.world_seed))
+		network.world_seed = previous
+		network.call(&"_apply_session_state", late_join)
+		_expect(int(network.world_seed) == host_seed,
+			"A late join rebuilds with the same seed as the restarted host (got %d)" % int(network.world_seed))
+
+	network.call(&"_reset_session_state")
+	_expect(int(network.world_seed) == 0, "Leaving the room restores solo randomisation")
 
 
 ## Where the goal and every house ended up -- the cheapest thing that changes

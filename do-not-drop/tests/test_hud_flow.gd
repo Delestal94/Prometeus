@@ -8,7 +8,8 @@ extends SceneTree
 ## results screen the results stay, with the retry greyed out (N-222); mid-run
 ## the disconnect screen opens, its "back to the menu" enabled. The results
 ## illustration (S-307) shows behind the card only on the results screen, in
-## delivery and endless alike, and every other screen puts it away again.
+## delivery and endless alike, and every other screen puts it away again. A
+## results card taller than the screen shrinks to fit, buttons included.
 
 var failures: int = 0
 var _restarts: int = 0
@@ -297,6 +298,22 @@ func _run() -> void:
 	_expect(String(hud.result_event_label.text).contains("RESUELTO"), "Delivery results show how the route event ended")
 	_expect(hud.result_progress_bar.visible and String(hud.result_progress_label.text).contains("Te falta"),
 		"Delivery results show progress toward the next unlock")
+	# A long card (stories, breakdown, complaints) shrinks to fit the screen
+	# instead of pushing its buttons off the bottom edge.
+	var complaints := PackedStringArray()
+	for i in range(30):
+		complaints.append("Queja %d" % i)
+	hud.complaints_label.text = "\n".join(complaints)
+	hud.complaints_label.visible = true
+	await process_frame
+	await process_frame
+	var card_panel: Control = hud.card.get_parent() as Control
+	_expect(card_panel.get_combined_minimum_size().y * hud.overlay_center.scale.y <= hud.root.size.y + 0.5,
+		"A long results card shrinks to fit the screen (%.0f px tall at %.2f, screen %.0f)" % [
+			card_panel.get_combined_minimum_size().y, hud.overlay_center.scale.y, hud.root.size.y])
+	_expect(is_equal_approx(hud.call(&"fit_scale", 500.0, 720.0), 1.0), "A card that fits keeps its size")
+	_expect(hud.call(&"fit_scale", 1400.0, 720.0) < 0.5, "A card twice the screen's height shrinks to half or less")
+	hud.complaints_label.visible = false
 	unlocks.total_score = original_score
 	unlocks.successful_deliveries = original_deliveries
 	unlocks.unlocked = original_unlocked

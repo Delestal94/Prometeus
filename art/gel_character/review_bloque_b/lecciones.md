@@ -1,5 +1,25 @@
 # Lecciones de la preparación B
 
+## A90, adaptación de clips y validación del export, 2026-10-03
+
+- En una mano manopla, separar el pulgar en planta no basta: su reposo debe quedar
+  por delante de la palma para que una rotación A90 no lo encierre contra el
+  muslo. Validar también el cierre sobre la caja y no sólo la pose abierta.
+- Un campo de pesos inferior a un punto porcentual puede convertir contactos
+  repetibles de RED a GREEN. Medir el desplazamiento real de piel y limitar la
+  edición a sus propietarios evita convertir una corrección local en un cambio
+  global de silueta.
+- Validar la fuente no prueba lo que recibe el juego. La puerta final debe abrir
+  los tres GLB reales, comprobar nombres y duraciones de clips, y muestrear
+  animación+morphs sobre cada LOD; aquí son 405 estados animados explícitos.
+- Las normales suaves de una reducción extrema pueden cruzar el hemisferio de
+  una cara geométricamente válida. Mantener suave la malla y dejar plana sólo la
+  cara inestable conserva el aspecto y convierte el defecto en una regla
+  verificable por esquina.
+- IK de dos huesos con objetivos explícitos evita depender de proporciones de
+  reposo implícitas. Comprobar longitud de huesos, unión de cadenas, manos y
+  tobillos en todos los keyframes antes de exportar.
+
 ## Axila reconstruida y simplificación, 2026-10-02
 
 - Dividir sólo longitudinalmente un quad largo conserva su pliegue transversal.

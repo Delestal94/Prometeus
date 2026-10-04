@@ -18,9 +18,22 @@ extends SceneTree
 ##   (0) until the new driver's first one plays, not for the old driver's last number;
 ## - back at the wheel, the host's poses for no input are not compared with the new prediction; the wheel going
 ##   elsewhere and back between two ticks leaves the client's prediction and its history alone;
+## - the wheel changing hands at speed (N-922.7): the truck drawn eases into the pose buffer over a time that keeps
+##   it going forward, never backing up; back at the wheel at speed, the copy starts where it is drawn and is eased to
+##   the host's newest pose instead of jumping there with the camera; taken back a tenth of a second after letting go
+##   at ~70 km/h, more than 3 m from that pose, the start is snapped and counted as one (start_snaps), not as a
+##   prediction gone wrong (snaps, N-922.9);
+## - the old van's gearbox: the host's gear arriving puts the predicted copy's clutch in for the shift (N-922.7);
 ## - the driver's inputs cut off for more than NetInputBuffer.STALE_TICKS (no disconnect): the host lets go of the
 ##   pedal and keeps the wheel, and drives on once inputs arrive again; a brake is kept until the truck stops,
 ##   and doesn't turn into backing up;
+## - a wall only the client's world has, the truck one of its exceptions (TruckPassThrough), doesn't stop the copy
+##   the host's truck never met: no 3 m snap (N-922.3); the depot's staff and forklift let the truck through on every
+##   peer, a level crossing's arms and train cars only where it isn't the host's (get_collision_exceptions());
+## - with no ground under the host's truck in the client's world yet, the copy waits frozen instead of falling, and
+##   predicts once the road is built (N-922.4);
+## - `--net-sim` on a LAN (configure_net_sim) holds the driver's inputs and the host's states back (N-922.5), and the
+##   host's poses as long as its states, half the lag each way (N-922.9);
 ## - the host going mid-drive (the level's _stop_orphaned_run) freezes the copy where it is, no longer predicted.
 
 const LAG_TICKS: int = 9
@@ -62,7 +75,8 @@ func _world() -> Node3D:
 	ground.collision_layer = 1
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(800.0, 1.0, 800.0)
+	# Wide enough for every drive below (the truck goes over 450 m out at 90 km/h).
+	box.size = Vector3(4000.0, 1.0, 4000.0)
 	shape.shape = box
 	shape.position.y = -0.5
 	ground.add_child(shape)
@@ -180,10 +194,7 @@ func _run() -> void:
 		"The frame prediction stops the truck doesn't jump back to the pose buffer (%.2f m)" % [
 			_client.global_position.distance_to(predicted_at)])
 	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
-	# Loaded at run time: vehicle_prediction.gd preloads vehicle.gd, which names autoloads a --script
-	# doesn't have yet when it compiles.
-	var prediction_script: GDScript = load("res://scripts/gameplay/vehicle/vehicle_prediction.gd")
-	_client.call(&"_process", float(prediction_script.get_script_constant_map()["EXIT_BLEND_SECONDS"]))
+	_client.call(&"_process", float(_client.get(&"_prediction").get(&"exit_seconds")))
 	_expect(_client.global_position.distance_to(smoother.sample(NetPoseSmoother.local_now()).origin) < 0.01,
 		"...and is drawn where the pose buffer has it once the blend is over")
 	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
@@ -191,7 +202,14 @@ func _run() -> void:
 	_expect(int(_host.get(&"net_input_seq")) == 0, "Still no input while the new driver has sent none")
 
 	await _check_wheel_back()
+	await _check_exit_while_moving()
 	await _check_stale_inputs()
+	await _check_wall_only_here()
+	await _check_let_through()
+	await _check_no_ground()
+	await _check_remote_clutch()
+	await _check_quick_handback()
+	await _check_net_sim()
 	await _check_host_gone()
 
 	root.get_node(^"/root/RunManager").set(&"is_running", false)
@@ -223,6 +241,84 @@ func _check_wheel_back() -> void:
 	_expect(bool(_client.call(&"is_predicted")) and reconciler.history_size() > 1,
 		"The wheel away and back between two ticks: the prediction goes on with its history (%d states)" % [
 			reconciler.history_size()])
+
+
+## Someone else takes the wheel at speed (N-922.7): the gap between the predicted truck and the pose buffer (a round
+## trip and a cushion behind, metres at this speed) closes over a time that keeps the truck drawn going forward,
+## never backing up as it did closed in 0.3 s; then it is drawn where the buffer has it. The client drives again.
+func _check_exit_while_moving() -> void:
+	for _i: int in range(150):
+		await _step(1.0, 0.0)
+	var speed: float = _client.linear_velocity.length()
+	_client.set(&"driver_peer_id", 7)
+	_host.set(&"driver_peer_id", 7)
+	var prediction: Object = _client.get(&"_prediction")
+	var drawn: Array[Transform3D] = []
+	var started_at: int = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - started_at < 2500:
+		await _step_raw()
+		drawn.append(_client.global_transform)
+	var backward: float = 0.0
+	for index: int in range(1, drawn.size()):
+		var step: Vector3 = drawn[index].origin - drawn[index - 1].origin
+		backward = maxf(backward, -step.dot(-drawn[index].basis.z))
+	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
+	var left: float = drawn[-1].origin.distance_to(smoother.sample(NetPoseSmoother.local_now()).origin)
+	var blend: float = float(prediction.get(&"exit_seconds"))
+	print("exit at %.0f km/h: blend %.2f s, worst step back %.3f m, %.2f m from the buffer after" % [
+		speed * 3.6, blend, backward, left])
+	_expect(speed > 10.0 and blend > 0.3 and backward < 0.02,
+		"Let go of at %.0f km/h, the truck drawn eases into the pose buffer over %.2f s, never backing up (%.3f m)" % [
+			speed * 3.6, blend, backward])
+	_expect(left < 0.5, "...and is drawn where the buffer has it once that is over (%.2f m off)" % left)
+	# Back at the wheel at speed: the copy starts where it is drawn and is eased to the host's newest pose, a cushion
+	# ahead, instead of jumping there with the driver's camera. As _check_wheel_back left it afterwards: the host
+	# playing the client's flat-out inputs, the wheel a little turned.
+	_host.set(&"driver_peer_id", HOST_ID + 1)
+	_client.set(&"driver_peer_id", CLIENT_ID)
+	var was: Vector3 = _client.global_position
+	var jump: float = INF
+	var ahead: float = 0.0
+	for _i: int in range(2 * (LAG_TICKS + JITTER_TICKS) + NetInputBuffer.CUSHION + 4):
+		await _step(1.0, 0.2)
+		if jump == INF and bool(_client.call(&"is_predicted")):
+			jump = _client.global_position.distance_to(was) - _client.linear_velocity.length() / 60.0
+			ahead = smoother.latest_pose().origin.distance_to(was)
+		was = _client.global_position
+	print("restart at speed: %.2f m more than a tick's travel (the host's newest pose %.2f m ahead)" % [jump, ahead])
+	_expect(jump < 0.25, "Back at the wheel at speed: no jump to the host's newest pose (%.2f m)" % jump)
+
+
+## N-922.9: the wheel let go of at ~70 km/h and taken back a tenth of a second later, the truck still drawn metres
+## ahead of the pose buffer (the exit blend): the copy starts there, a round trip ahead of the host's newest pose
+## (~6 m, more than SNAP_DISTANCE), and the nudge to it is snapped. No prediction went wrong: it counts in
+## start_snaps, not in snaps, which say the prediction went wrong.
+func _check_quick_handback() -> void:
+	var ticks: int = 0
+	while _client.linear_velocity.length() < 19.0 and ticks < 300:
+		await _step(1.0, 0.0)
+		ticks += 1
+	var speed: float = _client.linear_velocity.length()
+	var reconciler: NetPredictionReconciler = _client.get(&"_prediction").reconciler
+	var snaps_before: int = reconciler.snaps
+	var starts_before: int = reconciler.start_snaps
+	_client.set(&"driver_peer_id", 7)
+	_host.set(&"driver_peer_id", 7)
+	for _i: int in range(6):
+		await _step_raw()
+	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
+	var gap: float = _client.global_position.distance_to(smoother.latest_pose().origin)
+	_host.set(&"driver_peer_id", HOST_ID + 1)
+	_client.set(&"driver_peer_id", CLIENT_ID)
+	for _i: int in range(3):
+		await _step(1.0, 0.0)
+	print("quick handback at %.0f km/h: %.1f m from the host's newest pose, %d start snaps, %d snaps" % [
+		speed * 3.6, gap, reconciler.start_snaps - starts_before, reconciler.snaps - snaps_before])
+	_expect(speed > 18.0 and gap > NetPredictionReconciler.SNAP_DISTANCE and bool(_client.call(&"is_predicted"))
+			and reconciler.start_snaps == starts_before + 1 and reconciler.snaps == snaps_before,
+		("Taken back at %.0f km/h %.1f m from the host's newest pose: the start is snapped, counted as a start's (%d),"
+				+ " not as a prediction gone wrong (%d)") % [speed * 3.6, gap, reconciler.start_snaps - starts_before,
+			reconciler.snaps - snaps_before])
 
 
 ## The driver's inputs stop reaching the host, without it leaving (N-922.2).
@@ -259,6 +355,195 @@ func _check_stale_inputs() -> void:
 		"...until it stops, and then doesn't back up (throttle %.1f, %.2f m/s)" % [
 			float(_host.call(&"throttle_input")), _forward_speed(_host)])
 	await _restore_uplink(1.0)
+
+
+## A body only the client's world has, across the road (N-922.3): with the truck as its exception, the copy drives
+## through it, as the host's truck does where there is none, and isn't snapped back.
+func _check_wall_only_here() -> void:
+	var reconciler: NetPredictionReconciler = _client.get(&"_prediction").reconciler
+	for _i: int in range(60):
+		await _step(1.0, 0.0)
+	var forward: Vector3 = -_client.global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(30.0, 4.0, 1.0)
+	shape.shape = box
+	wall.add_child(shape)
+	_client.get_parent().add_child(wall)
+	var at: Vector3 = _client.global_position + forward * 6.0
+	wall.global_transform = Transform3D(Basis.looking_at(forward), Vector3(at.x, 2.0, at.z))
+	var let_through: bool = _pass_through_script().call(&"let_through", [wall], self)
+	var snaps_before: int = reconciler.snaps
+	_errors.clear()
+	var speed: float = _forward_speed(_client)
+	for _i: int in range(75):
+		await _step(1.0, 0.0)
+	var past: float = (_client.global_position - wall.global_position).dot(forward)
+	_expect(let_through and wall.get_collision_exceptions().has(_client) and speed > 5.0 and past > 3.0
+			and reconciler.snaps == snaps_before and _max(_errors) < 1.0,
+		("A wall only the client has, the truck its exception: the copy drives through (%.1f m past at %.0f km/h),"
+				+ " no snap (%d), worst %.2f m") % [past, speed * 3.6, reconciler.snaps - snaps_before, _max(_errors)])
+	wall.queue_free()
+
+
+## Who lets the truck through (N-922.3): the depot's staff and forklift, which every peer runs on its own clock, on
+## every peer; a crossing's arms and cars, which the host moves, only where this peer isn't the host.
+func _check_let_through() -> void:
+	var world: Node = _client.get_parent()
+	var worker: PhysicsBody3D = (load("res://scripts/gameplay/depot/depot_worker.gd") as GDScript).new()
+	worker.position = _client.global_position + Vector3(40.0, 0.0, 0.0)
+	world.add_child(worker)
+	var forklift: PhysicsBody3D = (load("res://scripts/gameplay/depot/depot_forklift.gd") as GDScript).new()
+	forklift.call(&"place", worker.position + Vector3(4.0, 0.0, 0.0), worker.position + Vector3(4.0, 0.0, 10.0))
+	world.add_child(forklift)
+	var crossing: Node3D = (load("res://scripts/gameplay/route/segments/rail_crossing_segment.gd") as GDScript).new()
+	crossing.position = _client.global_position + Vector3(-80.0, -0.8, 0.0)
+	world.add_child(crossing)
+	await _step(0.0, 0.0)
+	await _step(0.0, 0.0)
+	var crossing_bodies: Array = []
+	crossing_bodies.append_array(crossing.get(&"_arms"))
+	crossing_bodies.append_array(crossing.get(&"_train"))
+	_expect(worker.get_collision_exceptions().has(_client) and forklift.get_collision_exceptions().has(_client),
+		"The depot's staff and forklift let the truck through")
+	var solid := func(body: PhysicsBody3D) -> bool: return body.get_collision_exceptions().is_empty()
+	_expect(crossing_bodies.size() == 6 and not bool(crossing.get(&"lets_truck_through"))
+			and crossing_bodies.all(solid),
+		"On the host a crossing's arms and train cars stay solid for the truck")
+	crossing.set(&"lets_truck_through", true)
+	await _step(0.0, 0.0)
+	var through := func(body: PhysicsBody3D) -> bool: return body.get_collision_exceptions().has(_client)
+	_expect(crossing_bodies.all(through),
+		"...and on a client its truck drives through them, which reach it half a round trip late")
+	for node: Node in [worker, forklift, crossing]:
+		node.queue_free()
+	await _step(0.0, 0.0)
+
+
+## A client at the wheel whose world has no road yet under the host's truck (N-922.4: back from a drop, or late into
+## an endless run, before the streamer builds there): its copy waits frozen instead of falling, and starts once the
+## ground is in.
+func _check_no_ground() -> void:
+	var viewport := SubViewport.new()
+	viewport.own_world_3d = true
+	viewport.size = Vector2i(4, 4)
+	root.add_child(viewport)
+	var bare := Node3D.new()
+	viewport.add_child(bare)
+	var copy: VehicleBody3D = _truck(bare, HOST_ID)
+	copy.remove_from_group(&"vehicle")
+	copy.set(&"driver_peer_id", CLIENT_ID)
+	copy.set(&"presentation_engine_running", true)
+	await physics_frame
+	var host_pose := Transform3D(Basis(Vector3.UP, 0.4), Vector3(30.0, 0.666, -12.0))
+	for tick: int in range(20):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	_expect(copy.freeze and not bool(copy.call(&"is_predicted")) and copy.global_position.y > 0.5,
+		"No ground under the host's truck here yet: the copy waits frozen, drawn from the poses (y %.2f)" % [
+			copy.global_position.y])
+	var ground := StaticBody3D.new()
+	ground.collision_layer = 1
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(200.0, 1.0, 200.0)
+	shape.shape = box
+	shape.position.y = -0.5
+	ground.add_child(shape)
+	bare.add_child(ground)
+	for tick: int in range(20, 80):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	_expect(bool(copy.call(&"is_predicted")) and not copy.freeze and copy.global_position.y > 0.3,
+		"...and once the road is built under it, it predicts, standing on it (y %.2f)" % copy.global_position.y)
+	viewport.queue_free()
+	await physics_frame
+
+
+## `--net-sim` on a LAN (N-922.5, Vehicle.configure_net_sim): the client at the wheel holds back the inputs it sends
+## and the host's states it compares with, instead of only the pose buffer it doesn't draw from. A 2 s lag: nothing
+## gets through in these few ticks. Turned off again, both ways go straight through.
+func _check_net_sim() -> void:
+	var prediction: Object = _client.get(&"_prediction")
+	var seen_seq: int = int(prediction.get(&"host_seq"))
+	var uplink: NetDelayQueue = prediction.get(&"uplink")
+	var downlink: NetDelayQueue = prediction.get(&"downlink")
+	var smoother: NetPoseSmoother = _client.get(&"_net_smoother")
+	# N-922.9: the host's poses and its states come the same way, so they are held back alike (half the lag each,
+	# as over Steam): latest_pose(), which a prediction starts toward, is as old as the states it is compared with.
+	_client.call(&"configure_net_sim", NetStats.STANDARD_SIM)
+	_expect(is_equal_approx(smoother.fake_lag, downlink.lag) and is_equal_approx(smoother.fake_jitter, downlink.jitter)
+			and is_equal_approx(smoother.fake_loss, downlink.loss) and is_equal_approx(uplink.lag, downlink.lag)
+			and is_equal_approx(downlink.lag, float(NetStats.STANDARD_SIM.lag_ms) / 2000.0),
+		"--net-sim: the host's poses held back as its states are, half the lag each way (poses %.3f s, states %.3f s)"
+			% [smoother.fake_lag, downlink.lag])
+	_client.call(&"configure_net_sim", {"lag_ms": 2000, "jitter_ms": 0, "loss_pct": 0.0})
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
+		await _step(1.0, 0.0)
+	_expect(bool(_client.call(&"is_predicted")) and uplink.pending() > LAG_TICKS and downlink.pending() > 0
+			and int(prediction.get(&"host_seq")) == seen_seq,
+		"--net-sim holds the driver's inputs (%d) and the host's states (%d) back; none compared yet" % [
+			uplink.pending(), downlink.pending()])
+	_client.call(&"configure_net_sim", {"lag_ms": 0, "jitter_ms": 0, "loss_pct": 0.0})
+	uplink.clear()
+	downlink.clear()
+	for _i: int in range(LAG_TICKS + JITTER_TICKS + 4):
+		await _step(1.0, 0.0)
+	_expect(uplink.pending() == 0 and downlink.pending() == 0 and int(prediction.get(&"host_seq")) > seen_seq,
+		"...and with it off, both go straight through again")
+
+
+## The old van's manual gearbox on the copy the client predicts (N-922.7): the host's gear arriving puts the copy's
+## clutch in for SHIFT_SECONDS, no pull, as the host's had, then lets it out. A copy not predicting keeps none.
+func _check_remote_clutch() -> void:
+	var world: Node3D = _world()
+	var copy: VehicleBody3D = _truck(world, HOST_ID)
+	copy.remove_from_group(&"vehicle")
+	copy.set(&"variant_id", &"vintage")
+	copy.set(&"presentation_engine_running", true)
+	var gearbox: Node = copy.get(&"gearbox")
+	var shift_seconds: float = float((gearbox.get_script() as GDScript).get_script_constant_map()["SHIFT_SECONDS"])
+	await physics_frame
+	gearbox.set(&"gear", 2)
+	var idle_clutch: float = float(gearbox.get(&"shift_left"))
+	copy.set(&"driver_peer_id", CLIENT_ID)
+	var host_pose := Transform3D(Basis.IDENTITY, Vector3(0.0, 0.666, 0.0))
+	for tick: int in range(10):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	gearbox.set(&"gear", 3)
+	var clutch_in: float = float(gearbox.get(&"shift_left"))
+	var pull: float = float(gearbox.call(&"drive_multiplier", 10.0, float(copy.get(&"maximum_speed_kmh"))))
+	for tick: int in range(10, 10 + ceili(shift_seconds * 60.0) + 3):
+		_send_pose(copy, tick, host_pose)
+		await physics_frame
+	var clutch_after: float = float(gearbox.get(&"shift_left"))
+	_expect(bool(copy.call(&"is_predicted")) and is_zero_approx(idle_clutch)
+			and is_equal_approx(clutch_in, shift_seconds) and pull == 0.0 and is_zero_approx(clutch_after),
+		"The host's shift reaching the predicted copy: clutch in for %.1f s, no pull, then out (%.2f, %.2f, %.2f)" % [
+			shift_seconds, clutch_in, pull, clutch_after])
+	world.get_parent().queue_free()
+	await physics_frame
+
+
+## One whole pose packet from the host (the truck standing at `pose`), as the synchronizer applies it.
+func _send_pose(copy: VehicleBody3D, tick: int, pose: Transform3D) -> void:
+	copy.set(&"net_simulating", true)
+	copy.set(&"net_time", float(tick) / 60.0)
+	copy.set(&"net_position", pose.origin)
+	copy.set(&"net_rotation", pose.basis.get_euler())
+	copy.set(&"net_input_seq", 0)
+	copy.set(&"net_linear_velocity", Vector3.ZERO)
+	copy.set(&"net_angular_velocity", Vector3.ZERO)
+
+
+## Loaded at run time: vehicle/ scripts sit next to ones that name autoloads.
+static func _pass_through_script() -> GDScript:
+	return load("res://scripts/gameplay/vehicle/truck_pass_through.gd")
 
 
 ## The host goes mid-drive (N-922.2): the session closes, this peer is an offline host and the copy is its own

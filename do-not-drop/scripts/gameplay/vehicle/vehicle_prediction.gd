@@ -24,18 +24,31 @@ extends RefCounted
 ## interpolated, so they take the host's path on it.
 ##
 ## Only while the host's truck is simulated too (`net_simulating`: not frozen for loading, parking or the end of
-## a run). When the client stops driving (left the seat, someone else took the wheel, the host froze the truck)
-## its copy is frozen again and drawn from the pose buffer, the gap eased out in EXIT_BLEND_SECONDS.
+## a run), and starting only once this peer has ground under it (has_ground, N-922.4). When the client stops
+## driving (left the seat, someone else took the wheel, the host froze the truck) its copy is frozen again and
+## drawn from the pose buffer, the gap eased out in EXIT_BLEND_SECONDS.
 ##
 ## `--no-drive-prediction` turns it off on that client (to compare, or if it misbehaves).
 
 ## vehicle.gd has no class_name; this preloads it for the type (N-224.4). It names autoloads, so a `--script`
 ## test that names VehiclePrediction at compile time fails to build: load it at run time instead.
 const Vehicle = preload("res://scripts/gameplay/vehicle/vehicle.gd")
+## How long the gap left when prediction stops is eased out, at least (_stop) ...
 const EXIT_BLEND_SECONDS: float = 0.3
+## ... and at most, however slow the truck.
+const EXIT_BLEND_MAX_SECONDS: float = 2.0
+## Moving, the blend lasts this many times what the truck takes to cover the gap ahead of it (N-922.7): drawn,
+## it keeps going forward at a third of its speed at least while the gap closes. Closed in EXIT_BLEND_SECONDS, a
+## 7 m gap at 50 km/h drew the truck backing up 9 m/s.
+const EXIT_BLEND_SPEED_FACTOR: float = 1.5
 const EXIT_BLEND_MAX_DISTANCE: float = 30.0
 ## Forward speed (m/s) above which a throttle against the motion brakes; below it, it backs up (vehicle.gd _drive).
 const BRAKING_SPEED: float = 0.7
+## Prediction starts only over ground (has_ground): a ray from this far above the host's newest pose to this far
+## below it (m), against the environment layer.
+const GROUND_PROBE_ABOVE: float = 0.5
+const GROUND_PROBE: float = 4.0
+const GROUND_MASK: int = 1
 
 var enabled: bool = not OS.get_cmdline_user_args().has("--no-drive-prediction")
 ## Whether this peer's copy is the one predicting right now.
@@ -50,6 +63,13 @@ var applied_seq: int = 0
 var last_sent: Array = []
 ## Client: how far the last tick's correction moved the truck (m), for tests and the network overlay.
 var last_shift: float = 0.0
+## Client: the input number of the newest host state compared with its own (0 before any), for tests.
+var host_seq: int = 0
+## Client, `--net-sim` on LAN (N-922.5): the inputs it sends and the host's states it compares with, each held back
+## half the profile's lag plus its jitter and lost at its rate, as the sockets would do it over Steam. Without them a
+## LAN test with `--net-sim` only delayed the pose buffer, which the driver doesn't use: the prediction looked perfect.
+var uplink := NetDelayQueue.new()
+var downlink := NetDelayQueue.new()
 var _next_seq: int = 0
 var _was_local_driver: bool = false
 ## Something on this peer froze the predicting copy (the level, at the end of a run): no starting again until
@@ -58,6 +78,8 @@ var _held_off: bool = false
 var _exit_origin := Vector3.ZERO
 var _exit_rotation := Quaternion.IDENTITY
 var _exit_left: float = 0.0
+## How long the current exit blend lasts in all (s).
+var exit_seconds: float = EXIT_BLEND_SECONDS
 
 
 ## Whether this peer is a client holding the wheel of `vehicle` (the host never predicts its own truck).
@@ -124,7 +146,16 @@ func halt(vehicle: Vehicle) -> void:
 	_held_off = true
 	_exit_left = 0.0
 	reconciler.clear()
+	downlink.clear()
+	uplink.clear()
 	vehicle.freeze = true
+
+
+## A `--net-sim` profile ({lag_ms, jitter_ms, loss_pct}) for the inputs this client sends and the host's states it
+## compares with, half the lag each way; an empty one simulates nothing.
+func configure_sim(sim: Dictionary) -> void:
+	uplink.configure_sim(sim, 0.5)
+	downlink.configure_sim(sim, 0.5)
 
 
 ## Client, each physics tick, before the truck's forces. Sends this tick's input while this peer drives,
@@ -132,6 +163,10 @@ func halt(vehicle: Vehicle) -> void:
 ## True while predicting: the caller runs the truck's forces.
 func client_tick(vehicle: Vehicle, delta: float, smoother: NetPoseSmoother, host_velocity: Vector3,
 		host_spin: Vector3, host_simulating: bool) -> bool:
+	var now: float = NetPoseSmoother.local_now()
+	# Inputs held back by --net-sim go out once their time has come, driving or not (they were on their way).
+	for held: Variant in uplink.take(now):
+		_send(vehicle, held)
 	var driving: bool = is_remote_driver_here(vehicle)
 	if driving != _was_local_driver:
 		_was_local_driver = driving
@@ -144,30 +179,60 @@ func client_tick(vehicle: Vehicle, delta: float, smoother: NetPoseSmoother, host
 	if active and (not wanted or vehicle.freeze):
 		_held_off = wanted
 		_stop(vehicle, smoother)
-	elif not active and wanted and not _held_off:
+	elif not active and wanted and not _held_off and has_ground(vehicle, smoother.latest_pose()):
 		_start(vehicle, smoother, host_velocity, host_spin)
 		started = true
 	if not driving:
 		return false
 	if active and not started:
 		reconciler.record(applied_seq, vehicle.global_transform, vehicle.linear_velocity, vehicle.angular_velocity)
+		for state: Variant in downlink.take(now):
+			_reconcile(state)
 		_correct(vehicle, delta)
 	_next_seq += 1
 	applied_seq = _next_seq
-	var throttle: float = vehicle.throttle_input()
-	var steering_input: float = vehicle.steer_input()
-	var handbrake: bool = vehicle.handbrake_input()
-	last_sent = [applied_seq, throttle, steering_input, handbrake]
-	var peer: MultiplayerPeer = vehicle.multiplayer.multiplayer_peer
-	if peer != null and not peer is OfflineMultiplayerPeer:
-		vehicle.rpc_id(1, &"submit_driver_input", applied_seq, throttle, steering_input, handbrake)
+	last_sent = [applied_seq, vehicle.throttle_input(), vehicle.steer_input(), vehicle.handbrake_input()]
+	if uplink.is_active():
+		uplink.push(last_sent, now)
+	else:
+		_send(vehicle, last_sent)
 	return active
 
 
-## Client: the host's state after input `seq` (a whole synced packet).
+## Client: one input, [seq, throttle, steering, handbrake], to the host (nobody to send it to offline).
+static func _send(vehicle: Vehicle, input: Array) -> void:
+	var peer: MultiplayerPeer = vehicle.multiplayer.multiplayer_peer
+	if peer != null and not peer is OfflineMultiplayerPeer and vehicle.is_inside_tree():
+		vehicle.rpc_id(1, &"submit_driver_input", int(input[0]), float(input[1]), float(input[2]), bool(input[3]))
+
+
+## Whether this peer's world has ground under `pose` (the newest one the host sent), within GROUND_PROBE metres
+## (N-922.4). A client that takes the wheel as it comes back (N-221) or joins late into an endless run gets the
+## host's pose before its streamer has built the road there (60 m a tick): its copy, unfrozen on nothing, fell
+## through the world. Until there is ground it stays frozen and drawn from the pose buffer.
+static func has_ground(vehicle: Vehicle, pose: Transform3D) -> bool:
+	if not vehicle.is_inside_tree():
+		return false
+	var from: Vector3 = pose.origin + Vector3.UP * GROUND_PROBE_ABOVE
+	var query := PhysicsRayQueryParameters3D.create(from, pose.origin + Vector3.DOWN * GROUND_PROBE, GROUND_MASK)
+	query.exclude = [vehicle.get_rid()]
+	return not vehicle.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+## Client: the host's state after input `seq` (a whole synced packet). Held back with --net-sim (downlink).
 func host_state(seq: int, pose: Transform3D, linear_velocity: Vector3, angular_velocity: Vector3) -> void:
-	if active:
-		reconciler.reconcile(seq, pose, linear_velocity, angular_velocity)
+	if not active:
+		return
+	var state: Array = [seq, pose, linear_velocity, angular_velocity]
+	if downlink.is_active():
+		downlink.push(state, NetPoseSmoother.local_now())
+	else:
+		_reconcile(state)
+
+
+func _reconcile(state: Array) -> void:
+	host_seq = int(state[0])
+	reconciler.reconcile(int(state[0]), state[1], state[2], state[3])
 
 
 func _correct(vehicle: Vehicle, delta: float) -> void:
@@ -194,10 +259,14 @@ func _start(vehicle: Vehicle, smoother: NetPoseSmoother, host_velocity: Vector3,
 	active = true
 	_exit_left = 0.0
 	reconciler.clear()
-	# From the newest pose the host sent, not the one drawn a cushion behind it.
+	downlink.clear()
+	# Toward the newest pose the host sent, from the one drawn a cushion behind it: eased there like any correction
+	# (at most 10 cm a tick, snapped past 3 m), not jumped there with the driver's camera, 1-2 m at speed (N-922.7).
 	var latest: Transform3D = smoother.latest_pose()
 	if latest != Transform3D.IDENTITY:
-		vehicle.global_transform = latest
+		var drawn: Transform3D = vehicle.global_transform
+		reconciler.nudge(latest.origin - drawn.origin, (latest.basis.get_rotation_quaternion()
+				* drawn.basis.get_rotation_quaternion().inverse()).normalized())
 	vehicle.freeze = false
 	vehicle.linear_velocity = host_velocity
 	vehicle.angular_velocity = host_spin
@@ -207,6 +276,9 @@ func _start(vehicle: Vehicle, smoother: NetPoseSmoother, host_velocity: Vector3,
 func _stop(vehicle: Vehicle, smoother: NetPoseSmoother) -> void:
 	active = false
 	reconciler.clear()
+	downlink.clear()
+	# Read before freezing: what the copy was doing as it stopped being predicted.
+	var velocity: Vector3 = vehicle.linear_velocity
 	vehicle.freeze = true
 	if smoother == null or smoother.is_empty():
 		return
@@ -217,9 +289,23 @@ func _stop(vehicle: Vehicle, smoother: NetPoseSmoother) -> void:
 	_exit_origin = vehicle.global_transform.origin - buffered.origin
 	_exit_rotation = (vehicle.global_basis.get_rotation_quaternion()
 			* buffered.basis.get_rotation_quaternion().inverse()).normalized()
-	# Moving, the buffer is a round trip and a cushion behind (7 m at 50 km/h on 150 ms): eased all the same.
-	# Only something much further (the host moved the truck) jumps.
-	_exit_left = EXIT_BLEND_SECONDS if _exit_origin.length() < EXIT_BLEND_MAX_DISTANCE else 0.0
+	# Moving, the buffer is a round trip and a cushion behind (7 m at 50 km/h on 150 ms): eased all the same, slowly
+	# enough that the truck drawn never goes backwards (exit_blend_seconds). Only something much further (the host
+	# moved the truck) jumps.
+	exit_seconds = exit_blend_seconds(_exit_origin, velocity)
+	_exit_left = exit_seconds if _exit_origin.length() < EXIT_BLEND_MAX_DISTANCE else 0.0
+
+
+## How long a gap of `gap` (predicted minus buffered position) is eased out over, the truck moving at `velocity`:
+## EXIT_BLEND_SPEED_FACTOR times what the truck takes to cover the part of the gap ahead of it, between
+## EXIT_BLEND_SECONDS and EXIT_BLEND_MAX_SECONDS. The drawn truck moves at its speed minus gap / time: at a third
+## of its speed at least, forward (N-922.7).
+static func exit_blend_seconds(gap: Vector3, velocity: Vector3) -> float:
+	var speed: float = velocity.length()
+	if speed < 0.01:
+		return EXIT_BLEND_SECONDS
+	var ahead: float = gap.dot(velocity / speed)
+	return clampf(EXIT_BLEND_SPEED_FACTOR * ahead / speed, EXIT_BLEND_SECONDS, EXIT_BLEND_MAX_SECONDS)
 
 
 ## Client, not predicting: the buffered pose with what is left of the gap from when prediction stopped.
@@ -227,6 +313,6 @@ func blend_exit(pose: Transform3D, delta: float) -> Transform3D:
 	if _exit_left <= 0.0:
 		return pose
 	_exit_left = maxf(_exit_left - delta, 0.0)
-	var share: float = _exit_left / EXIT_BLEND_SECONDS
+	var share: float = _exit_left / exit_seconds
 	return Transform3D(Basis(Quaternion.IDENTITY.slerp(_exit_rotation, share)) * pose.basis,
 			pose.origin + _exit_origin * share)

@@ -7,9 +7,26 @@
 >
 > División de dominios y zona compartida: `docs/colaboracion-equipo.md`.
 
-## Mapa dinámico — desarrollo por pasos
+## Mapa dinámico — pasos solicitados por el equipo
 
-### N-950 · Spike de ciudad procedural — A · Aviso: sí (módulo portable) · **[ ] en desarrollo**
+### N-963 · Semilla dinámica por partida — A · Aviso: sí (`network_manager.gd`, zona compartida) · **[x] rama `nacho/N-963-dynamic-run-seeds`**
+Pedido del equipo (2026-10-02): empezar paso a paso por las semillas. En los modos actuales, cada
+nueva entrega elige una semilla distinta, estable durante esa entrega y compartida con quienes
+ya están conectados y quienes entran tarde. Solo ya genera rutas distintas; faltaba cambiar la
+semilla al reiniciar dentro de una sala. El mundo persistente por campaña del futuro modo Pueblo
+se conectará en otro paso: continuar un guardado deberá conservar la semilla de ese mundo.
+- [x] Elegir una semilla no nula al crear sala y al reiniciar; rechazar que repita la anterior.
+- [x] Enviar la semilla por el payload de reinicio antes de reconstruir en el cliente; subir
+  `PROTOCOL_VERSION` y conservar el handshake de entrada tardía.
+- [x] Ampliar `test_world_seed.gd`: repetición forzada, semillas por partida, reinicio y late join,
+  igualdad del mapa con semilla fija, variedad solo y limpieza al salir de sala.
+  **[x] Hecho (2026-10-02)** — `_roll_world_seed()`, `_before_restart()`, `_restart_state()` y
+  `_apply_restart_state()` en `network_manager.gd`; protocolo 28. La prueba ampliada falla 65
+  verificaciones con el código anterior y pasa con el cambio. `test_protocol_version`,
+  `test_menu_session_paths` y `test_net_session` pasan; lint y `check_modules` verdes.
+  Aviso: `docs/avisos/2026-10-02-semillas-por-partida.md`.
+
+### N-950 · Spike de ciudad procedural — A · Aviso: sí (módulo portable) · **[ ] en desarrollo (base mergeada en PR #260; faltan los [ ] de abajo)**
 Pedido directo del equipo (2026-10-02): seis distritos, ciudad asimétrica y
 variable por semilla, calles diagonales, plazas, parques y monumentos.
 Rama reservada `nacho/N-950-town-spike` retomada tras más de dos horas sin
@@ -180,7 +197,7 @@ agrega una llamada interna; subirla solo si cambia alguna firma o el orden de lo
   bajos que quedan: el presupuesto es compartido con bocina y demás (un cambio perdido se ve en el HUD y se
   reintenta; la marcha la replica el host) y los `"""` multilínea no llevan estado de comilla entre líneas.
 
-### N-239 · ⏸ decide el usuario: CI sin run en los commits del auto-merge — A · `Opus 5.5 · xhigh` · Aviso: no
+### N-239 · CI sin run en los commits del auto-merge — A · `Opus 5.5 · xhigh` · Aviso: no
 Origen: auditoría integral 2026-10-01, A-D.2 (P1). El auto-merge (`dependabot-auto-merge.yml` con
 `GITHUB_TOKEN`) no dispara CI: 19 de 49 commits de `main` no tienen run. `construccion.md:14` y
 `pc-build.md:13` miran `gh run list --branch main --limit 1` (el último run, no el de HEAD), así que una
@@ -191,8 +208,10 @@ HEAD de `main` cuando no tenga run; (c) solo cambiar las rutinas para consultar 
 rutinas, por eso espera decisión (issue `decide-usuario`). Hecho cuando (según la opción) un commit de
 `main` hecho por el auto-merge termina con un run de CI verde o rojo, y las rutinas miran el run del SHA de
 HEAD y tratan "sin run" como "no verificado".
-- [ ] **N-239.0** ⏸ Decisión del usuario entre (a), (b)+(c) o (c) sola.
-- [ ] **N-239.1** Implementar la opción elegida en `.github/workflows/` y `.claude/rutinas/construccion.md`
+- [x] **N-239.0** Decisión del usuario entre (a), (b)+(c) o (c) sola: **(b)+(c)** (2026-10-04, issue #155).
+- [x] **N-239.1** (2026-10-04) `main-head-tests.yml` dispara `tests.yml` cada 15 min si el HEAD de `main` no
+  tiene run; regla 16 del README de rutinas (run del SHA de HEAD, "sin run" = sin verificar), que usan
+  `construccion.md`, `desarrollador.md` y `pc-build.md`. Pedido original: implementar la opción elegida en `.github/workflows/` y `.claude/rutinas/construccion.md`
   / `pc-build.md`. Con la conversación principal; verificar con `gh run list --commit <sha>` sobre un commit
   de auto-merge.
 
@@ -639,7 +658,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -1278,6 +1297,25 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `scripts/`: `.call` 158 → 155, `.get(&` 118 → 117. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso
     (`vehicle/` y `tests/`). La reserva `nacho/N-224-run-tally-typed` (solo el claim) se dejó: `run_tally.gd` ya se
     había saltado por `RunManager`. Siguientes: `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5).
+  - [x] `fault_repair_spot.gd` (2026-10-04, rama `nacho/N-224-fault-repair-spot-typed`, reserva retomada): el punto
+    de arreglo de una avería. El dueño como `VehicleFaults` (`repair_prompt`, `repair_method`, `is_driver`, `fix`;
+    `vehicle_faults.gd` precarga este archivo y ya nombra `Player`, así que no suma nada al grafo de un `--script`) y el
+    jugador como `Player` para `carried_package`: el `Node3D` de `test_vehicle_faults.gd` no es `Player` y no carga nada,
+    igual que antes. En el archivo: 5 → 0 usos (`.call` 4 → 0, `.get(&` 1 → 0); en `scripts/`: `.call` 156 → 152,
+    `.get(&` 117 → 116 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`).
+    Siguientes (fuera de `BUDGETS`): `run_tally.gd` (9, reserva `nacho/N-224-run-tally-typed` de solo el claim),
+    `vehicle.gd` (7), `network_manager.gd` (7), `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
+  - [x] `run_tally.gd` (2026-10-04, rama `nacho/N-224-run-tally-typed`, reserva retomada): el resumen de la
+    pantalla de "se fue el anfitrión" (N-222). `run_manager.gd` no se puede precargar (nombra autoloads; `net_trio.gd`
+    carga este archivo por `--script`) ni sumar un método público (ya tiene 20, tope del lint), así que el registro
+    entra por argumentos tipados: `has_unfinished_run(run)`/`of(run)` pasan a `unfinished(results, elapsed_seconds)`
+    y `count(deliveries, cargo, endless, expected_houses, distance, elapsed_seconds)`, `handed_over()` sale de
+    `run_deliveries.gd` por `preload`, y `hud_pause.gd` arma el resumen con `_unfinished_tally()` sobre el autoload
+    `RunManager` tipado. En el archivo: 9 → 0 usos (`.call` 1 → 0, `.get(&` 8 → 0); en `scripts/`: `.call` 152 → 151,
+    `.get(&` 116 → 109 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo; `test_host_gone_tally.gd` suma
+    el caso "con resultados ya no está sin terminar". Aviso `docs/avisos/2026-10-04-n224-run-tally-tipado.md`
+    (`hud_pause.gd` es de Slatex). Siguientes (fuera de `BUDGETS`): `vehicle.gd` (7), `network_manager.gd` (7),
+    `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -2020,11 +2058,13 @@ No se implementa ningún costo hasta que responda.
 Hecho cuando un test de Endless prueba que 6+ s quieto sin acelerar (depósito, rescate, relevo de conductor) no termina
 la partida y que 6+ s encajado con acelerador sí, y `test_level_endless` / `test_stuck_detection` pasan sin dar por
 buena una partida cortada por "atascado" sin acelerador.
-- [ ] **N-920.1** Llevar `_should_count_as_stuck()` de `level_base.gd` a `level_common.gd` con un gancho por modo; Endless
+- [x] **N-920.1** Llevar `_should_count_as_stuck()` de `level_base.gd` a `level_common.gd` con un gancho por modo; Endless
   la usa sumando el depósito y actualiza el comentario de `level_endless.gd:28-30`. Con `constructor-tramos`; tests
   `stuck_detection`, `level_endless`.
-- [ ] **N-920.2** Casos Endless en `test_stuck_detection.gd` y corregir `test_level_endless.gd:49-61`. Con
+  **[x] Hecho (2026-10-02, rama `nacho/N-920-endless-stuck`, 2a9ffffb)** — la regla (`STUCK_SPEED`, `STUCK_SECONDS`, `stuck_seconds`, depósito, barro, conductor y acelerador) vive en `level_common.gd`; el gancho `_stuck_exempt_here()` suma casas y bahía en `level_base.gd` y solo la bahía en `level_endless.gd`. Sin costo por parar (pregunta de diseño abierta).
+- [x] **N-920.2** Casos Endless en `test_stuck_detection.gd` y corregir `test_level_endless.gd:49-61`. Con
   `escritor-tests`; tests `stuck_detection`, `level_endless`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-920-endless-stuck`, 2a9ffffb)** — `test_stuck_detection` prueba en Endless 9 s quieto sin acelerador (sigue), sin conductor, en barro y en el depósito (no cuenta) y 6+ s encajado con acelerador (termina con `HUD_RUN_STUCK_ROADSIDE`); `test_level_endless` exige acelerador apretado para aceptar un corte por atascado y suma 7 s quieto en el depósito; `test_mud_segment` ajustado (parar sin acelerador ya no termina Endless).
 
 ### N-921 · El nivel deja estado global sin restaurar al liberarse: 3D del diario y reverb del depósito — B · `Opus 5.5 · medium` · Aviso: sí (`hud_newspaper.gd` es de Slatex; `modules/acoustics/` es zona compartida) · M8
 Origen: auditoría integral 2026-10-02, A-1.2 (P1). `hud_newspaper.gd:66-68` pone `disable_3d = true` en el viewport raíz
@@ -2071,37 +2111,106 @@ no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una e
   nuevo no se corrige contra el `seq` del anterior) y `_stop_orphaned_run` congela el camión y corta la predicción (`stop_prediction()`) si el host se va mientras
   el cliente predice. Segunda pasada de `auditor-red` sobre el arreglo: el freno vencido no se suelta y el reinicio de
   `applied_seq` es solo en el host (en el cliente borraba el historial si el volante iba y volvía entre dos ticks).
-- [ ] **N-922.3** Colisionadores que existen distinto en cada peer frenan a la copia predicha y terminan en salto de 3 m:
+- [x] **N-922.3** Colisionadores que existen distinto en cada peer frenan a la copia predicha y terminan en salto de 3 m:
   barreras y vagones del paso a nivel (`rail_crossing_segment.gd:213,281`, llegan RTT/2 tarde al cliente) y operarios y
   autoelevador del depósito (`depot_worker.gd:42-44`, `depot_forklift.gd:32-34`, cada peer en su fase; hoy también
   frenan al camión del host). Arreglo: `add_collision_exception_with` del camión en los peers que no son host (paso a
   nivel) y en todos (depósito), o capa propia fuera de la máscara del camión. Test: muro solo en el mundo del cliente en
   `test_vehicle_prediction` y las excepciones en `get_collision_exceptions()`. Origen: construcción 2026-10-02
   (`auditor-red`, N-922.1). Con `constructor-red` (y `constructor-mundo` para el depósito), después `auditor-red`.
-- [ ] **N-922.4** Predecir sin suelo: quien vuelve (N-221) o entra tarde en Endless al volante arranca la predicción
+  **[x] Hecho (2026-10-02, `263460d5`, rama `nacho/N-922-net-audit`)** — excepción de colisión del lado del cuerpo
+  (`scripts/gameplay/vehicle/truck_pass_through.gd`, `TruckPassThrough.let_through()`, reintentada cada tick hasta que
+  el camión esté en el árbol): operarios (`DepotWorker`, también los del lote final) y autoelevador en todos los peers;
+  barreras y vagones del paso a nivel solo donde no es el host (`RailCrossingSegment.lets_truck_through`). Tests:
+  muro solo en el mundo del cliente (sin excepción, salto de 3,5 m; con ella, la copia pasa sin salto) y
+  `get_collision_exceptions()` en `test_vehicle_prediction`; `net_trio` imprime `through=ok` (host sólido, clientes
+  con la excepción). Regla en `docs/convenciones-godot.md` §2.
+- [x] **N-922.4** Predecir sin suelo: quien vuelve (N-221) o entra tarde en Endless al volante arranca la predicción
   antes de que el streamer arme el terreno (60 m por tick) y la copia cae. Arreglo: en `vehicle_prediction.gd`
   `_start`/`wanted`, un rayo de 4 m hacia abajo desde `latest_pose` (máscara 1, sin el camión); sin impacto no se
   predice. Test: mundo del cliente sin piso en `test_vehicle_prediction`. Origen: construcción 2026-10-02. Con
   `constructor-red`.
-- [ ] **N-922.5** `--net-sim` en LAN no retrasa ni los inputs del conductor ni el `host_state` del reconciliador
+  **[x] Hecho (2026-10-02, `12e7ccca`)** — `VehiclePrediction.has_ground()`: rayo de 0,5 m arriba a 4 m abajo de la pose
+  más nueva del host, máscara 1, sin el camión; sin impacto la copia sigue congelada y dibujada del búfer, y arranca
+  cuando aparece el piso. Test en `test_vehicle_prediction` (sin el arreglo, la copia caía a y 0,11).
+- [x] **N-922.5** `--net-sim` en LAN no retrasa ni los inputs del conductor ni el `host_state` del reconciliador
   (`vehicle.gd:674`, `vehicle_prediction.gd:129`): con LAN la predicción se ve perfecta. Arreglo: cola de retraso chica
   en `modules/net_prediction` con el perfil de `pose_net_sim()`; test del módulo y etapa de `net_pair` con `--net-sim`.
   Origen: construcción 2026-10-02. Con `constructor-red`.
-- [ ] **N-922.6** Barro: la copia predicha no recibe el empuje de la cuadrilla (BOGGED) ni el arrastre (HAULING, 3-5
+  **[x] Hecho (2026-10-02, `8c807e16`)** — `NetDelayQueue` (`modules/net_prediction`, nuevo): un sentido de un enlace
+  simulado (lag, jitter, pérdida, en orden). `VehiclePrediction` usa dos (`uplink`, `downlink`), la mitad del lag cada
+  uno como hace Steam, desde `Vehicle.configure_net_sim()` (lo llama `_ready` con `NetworkManager.pose_net_sim()`).
+  Tests: módulo (`test_net_prediction`), `test_vehicle_prediction` y una etapa de `net_pair` que maneja 2 s más con el
+  perfil estándar (6 inputs y 5 estados retenidos, host 9 ticks atrás contra 3, corrección máx. 0,007 m/tick).
+- [x] **N-922.6** Barro: la copia predicha no recibe el empuje de la cuadrilla (BOGGED) ni el arrastre (HAULING, 3-5
   m/s) (`mud_segment.gd:453-462` vs `:525,609`): efecto goma durante el arrastre, sin salto. Pasar las dos a
   `_drag_truck` con `pushers` y `haul_method` (ya replicados). Origen: construcción 2026-10-02. Con `constructor-tramos`.
-- [ ] **N-922.7** Presentación al dejar o tomar la predicción: al soltar el volante en movimiento el hueco de ~7 m se
+  **[x] Hecho (2026-10-02, `ef62cc6d`)** — empuje y arrastre en `_drag_truck` (host y copia predicha), el arrastre
+  soltado pasado `pit_end + HAUL_PAST_PIT` como lo termina el host. Test nuevo `test_mud_prediction` (sin el arreglo,
+  la copia quedaba quieta: 0 m empujada, 0 m/s arrastrada).
+- [x] **N-922.7** Presentación al dejar o tomar la predicción: al soltar el volante en movimiento el hueco de ~7 m se
   cierra en 0,3 s y el camión dibujado retrocede (`vehicle_prediction.gd:186-197`; usar
   `maxf(EXIT_BLEND_SECONDS, 1.5 * gap / speed)`); al empezar, la cámara salta 1-2 m. Opcional: la caja manual no modela
   el embrague en la copia (`vehicle_gearbox.gd`, ~0,5 m/s, sin salto). Origen: construcción 2026-10-02. Con
   `constructor-camion`.
-- [ ] **N-922.8** Restos de la segunda pasada de `auditor-red` (2026-10-02, sobre el arreglo de N-922.2), riesgo bajo:
+  **[x] Hecho (2026-10-02, `a8e11eed`)** — al soltar, el hueco se cierra en `clampf(1.5 * hueco_adelante / velocidad,
+  0,3 s, 2 s)` (`VehiclePrediction.exit_blend_seconds()`): a 72 km/h, 0,61 s y nunca para atrás (antes retrocedía
+  0,17 m por cuadro). Al tomar, la copia arranca donde se la dibuja y el reconciliador la lleva a la pose más nueva del
+  host (`NetPredictionReconciler.nudge()`, nuevo; ≤ 10 cm por tick, salto pasados 3 m): sin el salto de ~0,9 m de la
+  cámara. Embrague de la camioneta vieja: la marcha del host que llega pone el embrague de la copia predicha
+  `SHIFT_SECONDS` (`vehicle.gd _on_remote_gear_changed`). Tests en `test_vehicle_prediction` y `test_net_prediction`.
+- [x] **N-922.8** Restos de la segunda pasada de `auditor-red` (2026-10-02, sobre el arreglo de N-922.2), riesgo bajo:
   (a) al volver los inputs tras un corte de subida, `NetInputBuffer.consume()` juega ~2 ticks el input retenido de
   hace más de 30 ticks entero antes de alcanzar uno nuevo (`net_input_buffer.gd:75-81`): con el input vencido, jugar
   el más viejo que espera o seguir "vencido" hasta alcanzar uno recibido; test en `test_net_prediction`; (b) en el
   cliente huérfano (host caído) el barro no-`IDLE` descongela y arrastra el camión detrás del overlay
   (`mud_segment.gd:424-427`): que el segmento mire `RunManager.is_running` o abortarlo en `_stop_orphaned_run`; test
   `mud`. Origen: construcción 2026-10-02. Con `constructor-red` y `constructor-tramos`.
+  **[x] Hecho (2026-10-02, `8c3a52c7`)** — (a) `NetInputBuffer.is_stale()` sigue verdadero hasta que se juega un input
+  llegado después (antes, los ~2 ticks en que los inputs nuevos venían un colchón adelante del contador devolvían el
+  viejo como fresco: acelerador a fondo otra vez); test en `test_net_prediction`. (b) `_stop_orphaned_run` llama al
+  grupo `stops_with_orphaned_run`; `MudSegment.stop_orphaned_run()` suelta el rescate como al fin de la partida. Test en
+  `test_mud_prediction` (sin el arreglo, el camión congelado era arrastrado 2,2 m).
+- [x] **N-922.9** El contador de `NetInputBuffer` se adelanta cuando la latencia de subida crece menos de
+  `MAX_LEAD + CUSHION` ticks (~115 ms): durante el hueco sigue contando, y cuando los inputs vuelven juega cada uno al
+  llegar pero lo rotula con el contador, unos ticks más adelante (`net_input_buffer.gd` `consume()`, regla "Ahead").
+  El cliente compara entonces el estado del host "después del input L" con el suyo después de L, cuando el host jugó
+  L-3: con el input constante no se nota, con el volante en movimiento es un error sistemático que el reconciliador
+  corrige hacia un camión que reacciona tarde, hasta que la latencia baje o el adelanto llegue a `MAX_LEAD`. Se ve en
+  la etapa `--net-sim` de `net_pair` (encendida a mitad de manejo: el host queda 9 ticks atrás y no ~13). Decisión de
+  diseño: rotular con el número del input jugado (y cómo rotular un tick de input retenido) o reanclar el contador a
+  `newest - CUSHION` al volver los inputs tras un hueco (repite rótulos; el reconciliador ya ignora los viejos), sin
+  perder la tolerancia al jitter. Test en `test_net_prediction` (subida que pasa de 2 a 7 ticks a mitad de camino: el
+  input jugado es el del rótulo). Origen: construcción 2026-10-02 (N-922.5). Con `constructor-red`, después
+  `auditor-red`.
+  **[x] Hecho (2026-10-02, `cf558086`)** — según `auditor-red` (2026-10-02): (1, medio) reanclar con histéresis:
+  `REANCHOR_TICKS` (15) inputs seguidos que llegan detrás del contador, ninguno a tiempo en el medio, y el contador
+  vuelve una vez a `CUSHION` detrás del más nuevo; una pérdida o un tick sin llegadas no cuentan. El rótulo sigue siendo
+  el contador (no el input jugado: un tick de input retenido mediría mal); los rótulos repetidos tras reanclar los
+  ignora el reconciliador. Agregado `played_seq()`. Test en `test_net_prediction` (subida de 2 a 7 ticks con el input
+  distinto cada tick: sin el arreglo el rótulo quedaba 3 adelante para siempre; con él, vuelve a ser el input jugado
+  ~20 ticks después del cambio; jitter dentro del colchón y 10 % de pérdida no mueven el contador). `net_pair`: la etapa `--net-sim` mueve
+  el volante todo el tiempo y prende el perfil a 1 s de arrancar; el host cuenta ticks seguidos con la pose rotulada
+  adelante del input jugado (20-28 con el arreglo, ~200 sin él; tope 60) y el cliente mide el error medio (1,6 cm antes,
+  2,4-7 cm desde 1 s después; tope +15 cm). Host 14-16 ticks atrás con `--net-sim` (antes 9: el adelanto). (2, bajo)
+  `NetPredictionReconciler.start_snaps`: un `nudge()` lejano salta y cuenta ahí, no en `snaps`; si un estado medido lo
+  reemplaza, reemplaza también su salto. Test en `test_vehicle_prediction` (`_check_quick_handback`: soltar a ~70 km/h
+  y retomar 0,1 s después, a 5-6 m de la pose más nueva del host). (3, bajo) `NetPoseSmoother.configure_sim(sim,
+  lag_share)` (opcional); el camión usa 0,5 en LAN como los estados que predice; test de igualdad en `_check_net_sim`
+  y de `lag_share` en `test_net_pose_smoother`. `PROTOCOL_VERSION` sigue en 27 (sin cambios de RPC ni de
+  replicación). Notas que quedan (bajo/info, sin tarea):
+  - Info: una subida de latencia de d ticks cuesta una corrección única de unos d ticks de recorrido (0,6-1 m a
+    ~12 m/s en `net_pair`, suavizada a ≤ 10 cm/tick; pasados 3 m a alta velocidad sería un salto). Es real: el host
+    retuvo un input esos ticks. Sin el arreglo no había corrección pero quedaba el volante 3 ticks tarde.
+  - Info: si la latencia baja, el contador queda hasta `MAX_LAG` detrás del más nuevo (más demora de input en el host,
+    rótulos correctos); no se reancla hacia adelante antes de eso.
+  - Bajo: retomar el volante mientras el camión dibujado sigue en la mezcla de salida lo lleva de golpe a la pose más
+    nueva del host, un viaje de ida y vuelta atrás (5-6 m a 70 km/h; ahora en `start_snaps`). Extrapolar esa pose
+    medio RTT lo achicaría.
+  - Info: jugadores y cajas (`player_ride.gd`, `package_net_pose.gd`) y `tender_input_lag.gd` siguen con el lag
+    entero de `--net-sim` en LAN (Steam: la mitad por sentido); solo el camión se alineó.
+  - Info (herramienta de prueba): apagar `--net-sim` a mitad de manejo deja en la cola las poses e inputs retenidos;
+    salen tarde (los inputs, ignorados por viejos) y el búfer de poses infla su jitter un rato.
 
 ## 3. Arte y dirección visual
 
@@ -2446,6 +2555,36 @@ precarga de 2,5 s con la cámara a ~70 m mirando a otro lado y la ponía sobre e
 - [x] **N-324.3** ~~Actualizar inventario §7 y `docs/especificaciones-visuales.md` #50.~~ **[x] Hecho (2026-10-01)**.
 - Límite conocido: como toda `GPUParticles3D`, el humo se congela mientras ninguna cámara ve su `visibility_aabb` (p. ej.
   la cabina mirando adelante) y sigue desde ahí. En ralentí, desde la caja, solo se ven 2-3 puffs tenues.
+
+### N-325 · Baranda del puente angosto con modelo del mismo lote — B · `Opus 5.5 · medium` · Aviso: no · **[x] rama `arte/N-325-bridge-railing`**
+
+`do-not-drop/assets/models/environment/props/sm_env_prop_bridge_railing.glb` (352 tris, `assets/tools/build_lowpoly_glb_assets_batch2.py`
+`bridge_railing()`) son 8 cubos gris liso: 5 postes, 2 barras cuadradas y cordón, sin pasamanos. Se ve a 1-3 m del camión y de
+la caja en el puente angosto y ocupa ~1/4 de la captura de Steam `art/marketing/capturas/2026-09-30_puente_lluvia.png`; al lado
+de `bridge_post` (tapa, reflector amarillo) y el tablero de `build_route_pieces.py` se ve de otro lote. El inventario la
+nombraba como "N-132" en §10.1/§10.2 pero no había tarea. **Necesita PC** (Blender; la toma la sesión de arte). Origen:
+sesión de arte 2026-10-02 (`director-arte`, área decorado de ruta y tramos).
+Propuesta: moverla a `build_route_pieces.py` junto a los otros `bridge_*`, con el mismo archivo de salida (mismo camino y
+nombre): postes chaflanados con base y tapa piramidal como `bridge_post`, pasamanos superior de sección redondeada (6-8
+lados) en `guardrail`, barra media, cordón biselado con 2 desagües, un reflector cada 2 postes; mismos 6 m de largo, pivote en
+la base, misma orientación que el actual, materiales de la paleta (`concrete`, `concrete.light`, `guardrail`, `reflector`);
+~700-900 tris, ≤ 1.100 con AO.
+Hecho cuando el GLB está reemplazado dentro del presupuesto y generado por script; las colisiones y la lógica de
+`narrow_bridge_segment.gd` no cambian; `check_pivots.gd` y la captura del puente están revisadas con `revisor-visual` y
+`director-arte` contra el tablero y `bridge_post` (sin superficies de color plano ni cajas de placeholder a la vista); un test
+carga el GLB (ampliar el que ya cubra el puente) y fija presupuesto de tris y nodos/materiales; y el inventario §10.1/§10.2
+está al día.
+- [x] **N-325.1** Rehacer la baranda en `build_route_pieces.py` (sacar `bridge_railing()` del batch2), exportar al mismo
+  camino y aplicar el AO. Con `modelador-blender`.
+- [x] **N-325.2** Ampliar el test del puente para cargar el GLB, verificar con `revisor-visual` (`check_pivots.gd` y captura
+  del puente) y actualizar el inventario §10.1/§10.2. Con `escritor-tests` y `revisor-visual`; tests `bridge`.
+  **[x] Hecho (2026-10-02, sesión de arte)** — `bridge_railing()` nueva en `build_route_pieces.py` (grupo `bridge`; `done()` acepta
+  carpeta para exportar a `props/`), sale del batch2. 352 → 708 tris con AO, GLB 31 → 71 kB, bbox 6 × 0,36 × 1,08 m, pivote en la
+  base (`check_pivots`: min_y 0, centro 0). 3 postes propios en x 0 / ±2 en vez de 5, porque los `bridge_post` del segmento caen
+  en ±1 / ±3 de cada tramo de 6 m; reflector y banda solo en el poste central (uno cada 6 m: con 3 postes por tramo "uno cada 2"
+  dejaba dos pegados en cada junta). `test_baked_ao` (la suma a `BAKED`) y `test_more_route_segments` (`_check_railing`: tris
+  600-1.100, `Handrail`/`MidRail`, AABB, 6 tramos por lado en x ±3,05). `revisor-visual`: mismo lote que `bridge_post`, sin
+  z-fighting ni juntas visibles, en `puente_lluvia` de día con lluvia; de noche no se capturó.
 
 ## 4. Audio y diseño sonoro
 

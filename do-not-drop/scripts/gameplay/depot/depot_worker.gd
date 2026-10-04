@@ -10,8 +10,11 @@ extends AnimatableBody3D
 ##
 ## Purely local presentation: every peer runs its own, identically seeded, so
 ## nothing here is replicated. The capsule is an AnimatableBody3D so a walker
-## nudges players aside instead of walking through them.
+## nudges players aside instead of walking through them. Not the truck, which
+## drives through (N-922.3): each peer has the worker somewhere else, and a
+## client predicting its truck would be stopped where the host's drove on.
 
+const TruckPassThrough = preload("res://scripts/gameplay/vehicle/truck_pass_through.gd")
 const CHARACTER_SCENE: PackedScene = preload("res://assets/models/characters/sm_char_player_lowpoly.glb")
 const ANIM_IDLE: StringName = &"Idle"
 const ANIM_WALK: StringName = &"Walk"
@@ -36,6 +39,8 @@ var _line_left: float = 0.0
 var _line_cooldown: float = 0.0
 var _line_index: int = 0
 var _home_yaw: float = 0.0
+## The truck is one of this worker's collision exceptions (TruckPassThrough).
+var _truck_let_through: bool = false
 
 
 func _ready() -> void:
@@ -78,6 +83,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if not _truck_let_through:
+		_truck_let_through = TruckPassThrough.let_through([self], get_tree())
 	_line_cooldown = maxf(_line_cooldown - delta, 0.0)
 	if _line_left > 0.0:
 		_line_left -= delta

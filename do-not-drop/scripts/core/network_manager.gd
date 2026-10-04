@@ -59,11 +59,13 @@ const MAX_PLAYERS: int = 8
 ## identity reply) before it gets the state and loads the level, N-221;
 ## 27: the client driver predicts the truck: submit_driver_input carries an input
 ## sequence, the van replicates net_simulating, net_input_seq and its
-## velocities, steering and engine force through net_* proxies, N-218 / N-922).
+## velocities, steering and engine force through net_* proxies, N-218 / N-922;
+## 28: the restart payload carries the host's new world seed, applied before
+## the client reloads its level, N-963).
 ## Any change to an RPC, to what is replicated or to what a relayed payload
 ## means bumps it (docs/convenciones-godot.md 0.2).
 ## Both sides exchange it before either starts scene replication.
-const PROTOCOL_VERSION: int = 27
+const PROTOCOL_VERSION: int = 28
 ## Valve's sample app. Fine for development -- it gives us P2P and NAT
 ## punch-through without owning an app id -- but not for shipping.
 const APP_ID_SPACEWAR: int = 480
@@ -80,17 +82,18 @@ signal color_slots_changed(slots: Dictionary)
 ## the van's transform replicates from the host, so a client watched it
 ## drive through houses that weren't there and off a road that ran somewhere
 ## else entirely. Nothing caught it because both sides individually worked.
-## The host picks the seed and hands it to each joiner before they load the
-## level; 0 means "no session decided one", i.e. solo play, where randomize()
-## is exactly right.
+## The host picks a fresh seed when the room opens and on every restart,
+## and hands it to each client before they load the level. Joining a run
+## keeps its current seed. 0 means "no session decided one", i.e. solo play,
+## where randomize() is exactly right.
 var world_seed: int = 0
 ## How many delivery houses this session's route has (docs/tareas-nacho.md
 ## #104). The route used to work it out from each machine's own roster, but a
 ## client's roster starts as just [host, itself], so from three players up
 ## every peer built a different number of houses. The host's route decides it
-## once, the first time it builds, and each joiner gets it with the seed; a
-## host restart keeps it, since clients don't reload their world. 0 means
-## "not decided yet" (and always, playing solo).
+## once per run, the first time it builds, and each joiner gets it with the
+## seed. A host restart decides it afresh and clients rebuild with that
+## count. 0 means "not decided yet" (and always, playing solo).
 var world_house_count: int = 0
 ## Traps this session's depot leaves off the shelves: the ones the *host's*
 ## profile hasn't unlocked yet (UnlockManager.locked_traps()), fixed when the
@@ -194,11 +197,20 @@ func slot_kept_for(peer_id: int) -> int:
 ## Host: decided once, so every joiner gets the same world no matter which
 ## transport they arrive on. The seed is never 0: that value means "solo".
 func _on_hosting() -> void:
-	world_seed = randi() | 1
+	_roll_world_seed()
 	world_house_count = 0
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
 	world_locked_traps = unlocks.call(&"locked_traps") if unlocks != null else []
 	world_completed_runs = int(unlocks.get(&"completed_runs")) if unlocks != null else 0
+
+
+## Only when the host starts a new world: clients take its wire seed.
+## Zero is reserved for solo; reject a repeat of the immediately prior run.
+func _roll_world_seed() -> void:
+	var next_seed: int = randi() | 1
+	while next_seed == world_seed:
+		next_seed = randi() | 1
+	world_seed = next_seed
 
 
 ## Host, on creating the room: a fresh slot map with itself on slot 0.
@@ -338,20 +350,24 @@ func _reload_level() -> void:
 	LoadingScreen.go(get_tree(), scene.scene_file_path, tr("UI_LOADING_TAG_RESTART"))
 
 
+## Host only (NetSession.begin_restart): choose the next world before its
+## level builds. Existing clients get this seed when that level is ready.
 func _before_restart() -> void:
+	_roll_world_seed()
 	world_house_count = 0
 	var unlocks: Node = get_node_or_null(^"/root/UnlockManager")
 	world_completed_runs = int(unlocks.get(&"completed_runs")) if unlocks != null else world_completed_runs
 
 
 func _restart_state() -> Dictionary:
-	return {"houses": world_house_count, "runs": world_completed_runs}
+	return {"seed": world_seed, "houses": world_house_count, "runs": world_completed_runs}
 
 
 ## A client drops its run before reloading. Until this existed only the host
 ## reloaded: clients were left on the results screen, behind a depot door
 ## only their copy had closed, unable to drive.
 func _apply_restart_state(state: Dictionary) -> void:
+	world_seed = int(state.seed)
 	world_house_count = int(state.get("houses", world_house_count))
 	world_completed_runs = int(state.get("runs", world_completed_runs))
 	var run: Node = get_node_or_null(^"/root/RunManager")

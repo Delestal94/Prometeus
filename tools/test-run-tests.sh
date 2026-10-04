@@ -4,6 +4,8 @@
 # "::error title=FAIL <test> (<reason>)::<first ERROR line>" annotation (a
 # hang gets one too, with its timeout as the reason); without it there is no
 # annotation; and pass/fail (the exit code) is the same either way (N-240).
+# Filter "company" (D-2014) keeps the districts expansion's tests by prefix,
+# none of the current game's, and is not an error while there are none.
 # CI runs it in the lint job.
 #
 #   tools/test-run-tests.sh
@@ -71,6 +73,31 @@ code=$?
 expect "$code" "a passing suite exits 0 with GITHUB_ACTIONS (got $code)"
 ! grep -q '::error' "$WORK/out"
 expect $? "no annotation when everything passes"
+
+# Filter "company" on a fake project: the expansion's prefixes, also in a
+# module, and nothing of the current game's with a look-alike name.
+FAKE="$WORK/project"
+mkdir -p "$FAKE/tests" "$FAKE/modules/order_queue/tests" "$FAKE/.godot/imported"
+for name in test_company_net test_inventory test_zone_definitions test_reference_truck_4x4 \
+	test_world_seed test_order_balancer test_reference_truck test_world_mood; do
+	touch "$FAKE/tests/$name.gd"
+done
+touch "$FAKE/modules/order_queue/tests/test_order_queue.gd"
+GODOT="$WORK/godot" FAKE_FAIL=none FAKE_HANG=none TESTS_PROJECT="$FAKE" REPORT_FILE="$WORK/company.csv" TEST_TIMEOUT=5 JOBS=3 CI= PROGRESS= \
+	bash "$ROOT/tools/run-tests.sh" company >"$WORK/out" 2>&1
+expect $? "filter company passes on the fake project"
+picked="$(tail -n +2 "$WORK/company.csv" | cut -d, -f1 | sort | tr '\n' ' ')"
+[ "$picked" = "order_queue__test_order_queue test_company_net test_inventory test_reference_truck_4x4 test_zone_definitions " ]
+expect $? "filter company picks the expansion's tests only (got: $picked)"
+
+# On the real tree: no current-game test sneaks in, and no expansion test
+# yet is "0/0 PASS", not "no test matches".
+rm -f "$WORK/company.csv"
+GODOT="$WORK/godot" FAKE_FAIL=none FAKE_HANG=none REPORT_FILE="$WORK/company.csv" TEST_TIMEOUT=5 JOBS=3 CI= PROGRESS= \
+	bash "$ROOT/tools/run-tests.sh" company >"$WORK/out" 2>&1
+expect $? "filter company exits 0 on the real tree"
+! grep -qE '^(test_world_|test_order_balancer|test_reference_truck,)' "$WORK/company.csv" 2>/dev/null
+expect $? "filter company leaves the current game's look-alike tests out"
 
 if [ $failures -gt 0 ]; then
 	echo "--- last run-tests.sh output:"

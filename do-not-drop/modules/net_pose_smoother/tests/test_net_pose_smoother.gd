@@ -10,6 +10,7 @@ extends SceneTree
 ## restarts the buffer; `local` poses ride on the moving space they're drawn
 ## on; latest_pose() is the newest as sent; a repeated stamp doesn't move the
 ## jitter; `extra` numbers (animation) are drawn interpolated in step; configure_sim() holds poses back
+## (all of the profile's lag, or the share given: half for a truck whose other way is simulated too, N-922.9)
 ## and drops a share of them; clear() empties everything.
 
 var _failures: int = 0
@@ -131,6 +132,11 @@ func _initialize() -> void:
 		and is_equal_approx(simulated.fake_loss, 0.02), "configure_sim() reads lag, jitter and loss")
 	simulated.configure_sim({})
 	_expect(is_equal_approx(simulated.fake_lag, 0.15), "An empty profile leaves the buffer as it was")
+	var one_way := NetPoseSmoother.new()
+	one_way.configure_sim({"lag_ms": 150, "jitter_ms": 20, "loss_pct": 2.0}, 0.5)
+	_expect(is_equal_approx(one_way.fake_lag, 0.075) and is_equal_approx(one_way.fake_jitter, 0.02)
+			and is_equal_approx(one_way.fake_loss, 0.02),
+		"configure_sim() with half the lag this way: 75 ms, the whole jitter and loss (%.3f s)" % one_way.fake_lag)
 	var lagged := NetPoseSmoother.new()
 	lagged.configure_sim({"lag_ms": 200, "jitter_ms": 0, "loss_pct": 0.0})
 	lagged.push(0.0, Transform3D(Basis.IDENTITY, Vector3(5.0, 0.0, 0.0)), 0.0)
