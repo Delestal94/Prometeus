@@ -144,6 +144,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa.
 
 ### D-0211 · `Inventory` — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `inventory.gd` (RefCounted, solo datos) con `receive/consume/move/count/reserve/release`, `to_dict/from_dict`; `test_inventory`.
 **Depende de:** D-0204
 **Qué:** `scripts/gameplay/business/inventory.gd`.
 - **Stock** por `product_id` y ubicación (`&"dock"`, `&"shelf:<slot_id>"`, `&"cart:<id>"`,
