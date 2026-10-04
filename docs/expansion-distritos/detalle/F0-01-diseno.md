@@ -5,7 +5,7 @@
 > `decide-usuario` (regla 12) y mientras tanto rige [supuestos.md](supuestos.md).
 
 ### D-0101 · Documento de visión de la expansión — A · Opus 5.5 · high · Aviso: no · F0
-**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/vision.md`: bucle de 5 pasos, crecimiento, qué se conserva, 9 zonas, flota y "Qué NO es".
+**[x] Hecho (2026-10-04, PR #270)** — `diseno/vision.md`: bucle de 5 pasos, crecimiento, qué se conserva, 9 zonas, flota y "Qué NO es".
 **Depende de:** —
 **Qué:** `diseno/vision.md` (máx. 250 líneas) con: bucle del día en 5 pasos (README de la expansión),
 qué se conserva del juego actual (trampas, cuidado en el asiento, puerta del cliente, mérito/cartas),
