@@ -19,8 +19,8 @@ const DOUBLE_QTY_CHANCE: float = 0.15
 ## Houses per zone an order can name (house_id = "<zone>_house_<n>").
 const HOUSES_PER_ZONE: int = 12
 const CUSTOMER_NAMES: Array[String] = [
-	"Marta", "Gustavo", "Lucía", "Bruno", "Elena", "Tomás", "Rosa", "Hugo",
-	"Irene", "Julián", "Paula", "Ramiro", "Silvia", "Darío", "Nora", "Félix",
+	"Marta", "Gustavo", "Lucia", "Bruno", "Elena", "Tomas", "Rosa", "Hugo",
+	"Irene", "Julian", "Paula", "Ramiro", "Silvia", "Dario", "Nora", "Felix",
 ]
 
 
