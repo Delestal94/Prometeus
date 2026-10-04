@@ -72,9 +72,10 @@ extends SceneTree
 ## - rail_crossing_segment.gd (the level crossing) rolls whether it closes from the session's world_seed
 ##   through its NETWORK_MANAGER handle: if that stopped being the script the autoload runs, every crossing
 ##   would roll from seed 0 and a client would start its own barrier cycle instead of asking the host.
-## - service_stop_shop.gd (a service station's counter) holds the session as NetSession and the vote as
-##   CoopVote: if ShopVoteManager stopped extending CoopVote, `as CoopVote` would give null and the station's
-##   offers would never open to the crew's vote.
+## - service_stop_shop.gd (a service station's counter) holds the session as NetSession, the vote as
+##   CoopVote, its stop as ServiceStop and the stop's counter as ServiceCounter: if ShopVoteManager stopped
+##   extending CoopVote, `as CoopVote` would give null and the station's offers would never open to the
+##   crew's vote.
 ## - route_streamer.gd and route_sky.gd (the endless road and its sky) roll from the session's world_seed through
 ##   their NETWORK_MANAGER handle: if that stopped being the script the autoload runs, they would use seed 0.
 ## - mud_segment.gd (the mud stretch) holds its spot, crane, run log and session typed; the crew's money, the
@@ -334,13 +335,13 @@ const BUDGETS: Dictionary = {
 	# DeliveryPackage (is_loaded, mass; what is not one is skipped) and the spectator camera through its
 	# script (stop). By name stays only the EventBus handle.
 	"res://scripts/presentation/vehicle_presentation.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
-	# The service station's counter (N-224.4): the session as NetSession (local_id, is_online, is_host, peers) and the
-	# vote as CoopVote (active, offers, close_on, send_state_to). By name stay ShopVoteManager.open_shop (no
-	# class name), CrewProgression (spend, cards, SUPPLIES, team_money), RunManager (the kit, is_running) and
-	# VehicleFaults (spares, repair): their scripts name autoloads, so typing them breaks --script compiles.
-	# The stop (in_bay, counter) and the counter (local_player) stay by name too: service_stop.gd preloads this
-	# script. The /root/ lookup is the one null-safe accessor.
-	"res://scripts/gameplay/route/service_stop_shop.gd": {"call": 13, "callv": 0, "get": 7, "root": 1},
+	# The service station's counter (N-224.4): the session as NetSession (local_id, is_online, is_host, peers), the
+	# vote as CoopVote (active, offers, open, close_on, send_state_to), the stop as ServiceStop (in_bay) and its
+	# counter as ServiceCounter (local_player). By name stay CrewProgression (spend, cards, SUPPLIES, team_money),
+	# RunManager (the kit, is_running) and VehicleFaults (spares, stock_spares, is_broken, repair): their scripts
+	# name autoloads, so typing them breaks --script compiles (test_service_stop, route_smoke_check). The /root/
+	# lookup is the one null-safe accessor.
+	"res://scripts/gameplay/route/service_stop_shop.gd": {"call": 9, "callv": 0, "get": 6, "root": 1},
 	# The route smoke check (N-224.4, run by tools/run-tests.sh): the route through route.gd by preload
 	# (route_length, goal_transform, _path_points, houses, house_count) and the goal lot as RouteGoalLot
 	# (parking_pose). Nothing left by name.
