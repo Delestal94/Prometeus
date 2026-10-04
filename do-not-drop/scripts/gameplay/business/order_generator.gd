@@ -149,11 +149,9 @@ static func _add_requirement(out: Array[StringName], id: StringName, catalog: Di
 ## Shrinks the window to the tightest requirement and adds every bonus to the pay.
 static func _apply_requirements(order: Dictionary, reqs: Array[StringName], catalog: Dictionary) -> Dictionary:
 	var window := CompanyTuning.ORDER_WINDOW_MIN
-	var pay: int = int(order["pay"])
 	for id in reqs:
 		var req: OrderRequirement = catalog[id]
 		window = mini(window, req.window_min(CompanyTuning.ORDER_WINDOW_MIN))
-		pay = req.paid(pay)
 	order["due_min"] = int(order["created_min"]) + window
-	order["pay"] = pay
+	order["pay"] = OrderPricing.with_requirements(int(order["pay"]), reqs, catalog)
 	return order
