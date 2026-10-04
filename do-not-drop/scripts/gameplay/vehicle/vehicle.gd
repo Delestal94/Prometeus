@@ -200,6 +200,15 @@ var _grounded_once: bool = false
 ## _update_parking) instead of creeping downhill on its brakes.
 var _parked: bool = false
 const PARK_SPEED_KMH: float = 3.0
+## Right after a stop the body still rocks on its springs; frozen then, it
+## kept the nose dipped and the ramp hanging off the road for good. It parks
+## once it has stopped pitching and rolling for PARK_SETTLE_SECONDS, or after
+## PARK_MAX_WAIT_SECONDS whatever happens, so it never creeps off for long.
+const PARK_SETTLED_ANGULAR_SPEED: float = 0.03
+const PARK_SETTLE_SECONDS: float = 0.5
+const PARK_MAX_WAIT_SECONDS: float = 3.0
+var _park_settled_time: float = 0.0
+var _park_wait_time: float = 0.0
 ## Suspension attach points as authored; see _pose_frozen_wheels().
 var _wheel_mounts: Dictionary = {}
 ## Each wheel's height in the truck's space (front left, front right, rear
@@ -491,9 +500,11 @@ func _on_package_placed(package_id: StringName) -> void:
 ## climbed out of. Once it's slow and driverless it is frozen in place, and
 ## let go the moment somebody takes the wheel. Only during a delivery --
 ## before and after one, the level freezes and releases the truck itself.
-func _update_parking() -> void:
+func _update_parking(delta: float) -> void:
 	if not RunManager.is_running:
 		_parked = false
+		_park_settled_time = 0.0
+		_park_wait_time = 0.0
 		return
 	# A truck somebody is hauling out of the mud (MudSegment, N-108) sets this meta
 	# so it is not frozen under the crane's cable or the crew's shoves.
@@ -504,8 +515,19 @@ func _update_parking() -> void:
 			freeze = false
 			sleeping = false
 		return
-	if not commanded and not freeze and speed_kmh < PARK_SPEED_KMH:
+	if commanded or freeze or speed_kmh >= PARK_SPEED_KMH:
+		_park_settled_time = 0.0
+		_park_wait_time = 0.0
+		return
+	_park_wait_time += delta
+	if angular_velocity.length() < PARK_SETTLED_ANGULAR_SPEED:
+		_park_settled_time += delta
+	else:
+		_park_settled_time = 0.0
+	if _park_settled_time >= PARK_SETTLE_SECONDS or _park_wait_time >= PARK_MAX_WAIT_SECONDS:
 		_parked = true
+		_park_settled_time = 0.0
+		_park_wait_time = 0.0
 		linear_velocity = Vector3.ZERO
 		angular_velocity = Vector3.ZERO
 		freeze = true
@@ -764,7 +786,7 @@ func _physics_process(delta: float) -> void:
 		_snap_to_ground()
 	# The remote driver's input for this tick (N-218).
 	_prediction.host_tick(self)
-	_update_parking()
+	_update_parking(delta)
 	net_simulating = not freeze
 	if freeze and not _parked:
 		_pose_frozen_wheels()
@@ -820,8 +842,11 @@ func _drive(delta: float, running: bool) -> void:
 		engine_force = -throttle * maximum_engine_force * 0.55
 	elif absf(throttle) < 0.01:
 		brake = 0.6
+	# Climbing out pulls the handbrake (seat_point.gd); once parked nobody is
+	# on the pedal, so the brake lights go off. Not on driver_peer_id alone:
+	# scripted runs (vehicle_network_probe, trailer_shot) brake driverless.
 	if is_multiplayer_authority():
-		presentation_braking = running and brake > 3.0
+		presentation_braking = running and brake > 3.0 and not _parked
 	if gearbox.enabled and is_multiplayer_authority():
 		gearbox.tick(delta)
 		if not running:

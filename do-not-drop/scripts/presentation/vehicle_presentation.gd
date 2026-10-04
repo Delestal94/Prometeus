@@ -271,7 +271,9 @@ func _apply_body_lean(delta: float) -> void:
 	var speed_factor: float = clampf(vehicle.speed_kmh / maxf(vehicle.maximum_speed_kmh, 1.0), 0.0, 1.0)
 	var target_roll: float = -vehicle.steering * speed_factor
 	var target_pitch: float = 0.0
-	if vehicle.presentation_braking:
+	# The dive comes from slowing down: a truck held on its brakes at a
+	# standstill sits level, or its ramp lifts off the road.
+	if vehicle.presentation_braking and vehicle.speed_kmh > 1.0:
 		target_pitch = -1.0  # nose dips down under hard braking
 	elif vehicle.presentation_engine_running and vehicle.engine_force < -1.0:
 		target_pitch = 0.35  # slight nose-up squat while accelerating
