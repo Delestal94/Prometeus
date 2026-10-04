@@ -111,36 +111,11 @@ else
 	echo "pre-push: sin gdlint (pip install \"gdtoolkit==4.5.0\"), el lint queda para CI."
 fi
 
-# The tests this push touches, one name per line: every changed test (game or
-# module), and every test that names a changed .gd by file name or by its
-# class_name. More than PRE_PUSH_MAX_TESTS (default 25) means a wide change:
-# only the changed tests run here and CI covers the rest.
+# The tests this push touches (tools/affected-tests.sh): every changed test,
+# every test that names a changed .gd, and the filter "company" when the
+# districts expansion's folders changed (D-2015).
 affected_tests() {
-	local project="$ROOT/do-not-drop" selected="" direct="" file stem cls
-	while IFS= read -r file; do
-		case "$file" in
-			do-not-drop/*.gd) ;;
-			*) continue ;;
-		esac
-		[ -f "$ROOT/$file" ] || continue
-		stem="$(basename "$file" .gd)"
-		case "$stem" in
-			test_*) direct="$direct"$'\n'"$stem"; continue ;;
-		esac
-		selected="$selected"$'\n'"$(grep -lF "$stem.gd" "$project"/tests/test_*.gd "$project"/modules/*/tests/test_*.gd 2>/dev/null)"
-		cls="$(sed -n 's/^class_name[[:space:]]\{1,\}\([A-Za-z0-9_]*\).*/\1/p' "$ROOT/$file" | head -1)"
-		if [ -n "$cls" ]; then
-			selected="$selected"$'\n'"$(grep -lw "$cls" "$project"/tests/test_*.gd "$project"/modules/*/tests/test_*.gd 2>/dev/null)"
-		fi
-	done <<< "$CHANGED"
-	selected="$(echo "$selected" | sed '/^$/d' | xargs -r -n1 basename 2>/dev/null | sed 's/\.gd$//')"
-	local all
-	all="$(printf '%s\n%s\n' "$direct" "$selected" | sed '/^$/d' | sort -u)"
-	if [ "$(echo "$all" | sed '/^$/d' | wc -l)" -gt "${PRE_PUSH_MAX_TESTS:-25}" ]; then
-		echo "$direct" | sed '/^$/d' | sort -u
-	else
-		echo "$all"
-	fi
+	printf '%s\n' "$CHANGED" | bash "$ROOT/tools/affected-tests.sh"
 }
 
 if [ "${FULL_TESTS:-0}" = "1" ]; then
@@ -153,6 +128,9 @@ else
 		exit 0
 	fi
 	echo "pre-push: corriendo ${#TESTS_TO_RUN[@]} tests afectados (la batería completa la corre CI; FULL_TESTS=1 para correrla acá)..."
+	for t in "${TESTS_TO_RUN[@]}"; do
+		[ "$t" = company ] && echo "pre-push: tocaste carpetas de la expansión, entra el filtro company (tests de la expansión)."
+	done
 fi
 if ! bash "$ROOT/tools/run-tests.sh" "${TESTS_TO_RUN[@]}"; then
 	echo ""
