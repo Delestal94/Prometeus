@@ -128,6 +128,16 @@ func _initialize() -> void:
 	_expect((run.get(&"deliveries") as Array).size() == 1, "...and the deliveries already made")
 	_expect(not is_instance_valid(gone) or gone.is_queued_for_deletion(), "Boxes already handed over go away on the joiner")
 	_expect(not bool(level.depot.door.get(&"is_open")), "The depot door is shut if it's shut on the host")
+	# The host reads its own door through the typed level (N-224.4); a scene that isn't a level reads as open.
+	var run_session: GDScript = load("res://scripts/core/run_session.gd")
+	_expect(not bool(run_session.call(&"depot_door_open", level)), "The host reports its shut depot door")
+	level.depot.door.set_open(true, false)
+	_expect(bool(run_session.call(&"depot_door_open", level)), "...and its open one")
+	var bare := Node.new()
+	_expect(bool(run_session.call(&"depot_door_open", bare)) and bool(run_session.call(&"depot_door_open", null)),
+		"No level, no door: it reads as open")
+	run_session.call(&"close_depot_door", bare)
+	bare.free()
 	run.call(&"reset_run")
 	run.call(&"_receive_session_state", {"running": false, "results": {"score": 10}, "mode": &"delivery"})
 	_expect(not bool(run.get(&"is_running")) and not (run.get(&"results") as Dictionary).is_empty(),

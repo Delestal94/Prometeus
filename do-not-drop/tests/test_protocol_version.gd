@@ -7,7 +7,10 @@ extends SceneTree
 ## merges them without a conflict and two incompatible builds would share a
 ## version. This test reads the history and requires the entries to be
 ## unique, consecutive from the first one, and to end at PROTOCOL_VERSION:
-## the second branch to merge fails here and has to bump again.
+## the second branch to merge fails here and has to bump again. No entry may
+## say "reserved": a number held for a branch that has not merged is how 25
+## ended up skipped and 26 shipped without N-218 (N-922). A branch writes its
+## own entry when it bumps.
 
 const SOURCE: String = "res://scripts/core/network_manager.gd"
 
@@ -33,10 +36,15 @@ func _initialize() -> void:
 	# parenthesis of the first one ("(3: ...").
 	var entry := RegEx.create_from_string("(?:^## |\\()(\\d+): ")
 	var versions: Array[int] = []
+	var reserved: Array[int] = []
 	for line: String in block:
 		for found: RegExMatch in entry.search_all(line):
 			versions.append(int(found.get_string(1)))
+			if line.substr(found.get_end()).to_lower().begins_with("reserved"):
+				reserved.append(int(found.get_string(1)))
 	_expect(not versions.is_empty(), "The comment above PROTOCOL_VERSION lists its history")
+	_expect(reserved.is_empty(),
+		"No history entry is a reservation (%s): the branch that bumps writes its own entry" % [reserved])
 	var repeated: Array[int] = []
 	for version: int in versions:
 		if versions.count(version) > 1 and not repeated.has(version):

@@ -30,15 +30,14 @@ const Layout = preload("res://scripts/gameplay/depot/depot_layout.gd")
 const ORDER_BALANCER = preload("res://scripts/gameplay/traps/order_balancer.gd")
 const CAMPAIGN_BOARD: Script = preload("res://scripts/gameplay/depot/depot_campaign_board.gd")
 ## The autoloads' scripts, as types (N-224.3): a renamed method or property
-## fails to compile here instead of at runtime. depot.gd is no autoload, so
-## it can preload them (the accessors at the end give the nodes).
+## fails to compile here instead of at runtime (the accessors at the end give
+## the nodes). Only the ones whose scripts name no autoload: a test that names
+## Depot compiles this chain before the autoloads exist, so RunManager and
+## CrewProgression (run_manager.gd names EventBus; crew_progression.gd preloads
+## it) and the truck's RescueHook and VehicleFaults (both name EventBus) stay
+## plain nodes, like PackageAutoloads does (N-919.2).
 const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
-const RUN_MANAGER := preload("res://scripts/core/run_manager.gd")
-const CREW_PROGRESSION := preload("res://scripts/core/crew_progression.gd")
 const UNLOCK_MANAGER := preload("res://scripts/core/unlock_manager.gd")
-## The truck's rescue hook and faults, which begin_run() arms and stocks.
-const RESCUE_HOOK := preload("res://scripts/gameplay/vehicle/rescue_hook.gd")
-const VEHICLE_FAULTS := preload("res://scripts/gameplay/vehicle/vehicle_faults.gd")
 const BOSS_LINES = preload("res://scripts/gameplay/depot/boss_lines.gd")
 ## Seconds after the radio speaks before the toast shows, so the HUD is up.
 const BOSS_TOAST_DELAY: float = 1.5
@@ -324,7 +323,7 @@ func _open_the_radio() -> void:
 		var fresh := RandomNumberGenerator.new()
 		fresh.randomize()
 		session_seed = fresh.randi()
-	var crew: CREW_PROGRESSION = _crew()
+	var crew: Node = _crew()
 	var money: int = crew.team_money if crew != null else team_money
 	var context: Dictionary = BOSS_LINES.make_context(orders, _completed_runs(), money,
 			CAMPAIGN_BOARD.load_log(), _endless_best())
@@ -343,7 +342,7 @@ func _apply_boss_lines(lines: Array) -> void:
 		return
 	_boss_toasted = true
 	await get_tree().create_timer(BOSS_TOAST_DELAY).timeout
-	var manager: RUN_MANAGER = _run_manager()
+	var manager: Node = _run_manager()
 	if not is_inside_tree() or (manager != null and manager.is_running):
 		return
 	var spoken: Array[String] = boss_notes()
@@ -390,18 +389,18 @@ func spawn_position(index: int) -> Vector3:
 func begin_run(vehicle: Node3D, loaded: Array) -> void:
 	_vehicle = vehicle
 	_watching_exit = true
-	var crew: CREW_PROGRESSION = _crew()
+	var crew: Node = _crew()
 	var taken: Array = crew.take_supplies() if crew != null else []
 	if taken.has(&"padding"):
 		for package: DeliveryPackage in loaded:
 			package.impact_absorption = PADDING_ABSORPTION
 	_insured = taken.has(&"insurance")
-	var hook := vehicle.get_node_or_null(^"RescueHook") as RESCUE_HOOK
+	var hook: Node = vehicle.get_node_or_null(^"RescueHook")
 	if taken.has(&"rescue_hook") and hook != null:
 		hook.arm()
 	# The tow strap (N-108) is read by the mud segments off the truck itself.
 	vehicle.set_meta(&"tow_straps", 1 if taken.has(&"tow_strap") else 0)
-	var faults := get_tree().get_first_node_in_group(&"vehicle_faults") as VEHICLE_FAULTS
+	var faults: Node = get_tree().get_first_node_in_group(&"vehicle_faults")
 	if taken.has(&"spare_part") and faults != null:
 		faults.stock_spares(1)
 	_broadcast_supplies()
@@ -462,14 +461,14 @@ func request_supply(supply_id: StringName) -> void:
 		return
 	if not RpcGuard.allow_request(self) or not RpcGuard.name_ok(supply_id):
 		return
-	var manager: RUN_MANAGER = _run_manager()
+	var manager: Node = _run_manager()
 	if manager != null and (manager.is_running or not manager.results.is_empty()):
 		return
-	var crew: CREW_PROGRESSION = _crew()
+	var crew: Node = _crew()
 	if crew == null:
 		return
 	if crew.buy_supply(supply_id):
-		var item: Dictionary = CREW_PROGRESSION.SUPPLIES[supply_id]
+		var item: Dictionary = crew.SUPPLIES[supply_id]
 		_notice(tr("WORLD_DEPOT_NOTICE_BOUGHT") % [tr(String(item.title)).to_lower(), int(item.cost)])
 	_broadcast_supplies()
 
@@ -491,16 +490,16 @@ func request_discounted_supply(supply_id: StringName) -> void:
 		return
 	if not RpcGuard.allow_request(self) or not RpcGuard.name_ok(supply_id):
 		return
-	var manager: RUN_MANAGER = _run_manager()
+	var manager: Node = _run_manager()
 	if manager != null and (manager.is_running or not manager.results.is_empty()):
 		return
-	var crew: CREW_PROGRESSION = _crew()
+	var crew: Node = _crew()
 	if crew == null:
 		return
 	var sender_id: int = multiplayer.get_remote_sender_id()
 	var peer_id: int = sender_id if sender_id != 0 else network.local_id() if network != null else 1
 	if crew.buy_supply_discounted(peer_id, supply_id):
-		var item: Dictionary = CREW_PROGRESSION.SUPPLIES[supply_id]
+		var item: Dictionary = crew.SUPPLIES[supply_id]
 		var discounted_cost: int = maxi(0, roundi(int(item.cost) * 0.5))
 		_notice(tr("WORLD_DEPOT_NOTICE_DISCOUNT") % [tr(String(item.title)).to_lower(), discounted_cost])
 	_broadcast_supplies()
@@ -514,7 +513,7 @@ func buy_supply_discounted(supply_id: StringName) -> void:
 
 
 func _broadcast_supplies() -> void:
-	var crew: CREW_PROGRESSION = _crew()
+	var crew: Node = _crew()
 	if crew == null:
 		return
 	var list: Array = crew.supplies.keys()
@@ -545,7 +544,7 @@ func _on_house_delivery_recorded(house_index: int, outcome: StringName, _package
 	var network: NETWORK_MANAGER = _network()
 	var host: bool = network == null or network.is_host()
 	if host and _insured and outcome == &"delivered_ruined":
-		var crew: CREW_PROGRESSION = _crew()
+		var crew: Node = _crew()
 		if crew != null:
 			crew.add_team_money(INSURANCE_REFUND)
 			_notice(tr("WORLD_DEPOT_NOTICE_INSURANCE") % INSURANCE_REFUND)
@@ -560,8 +559,8 @@ func _notice(text: String) -> void:
 
 
 func _endless_best() -> int:
-	var manager: RUN_MANAGER = _run_manager()
-	return manager.best_score(RUN_MANAGER.MODE_ENDLESS) if manager != null else 0
+	var manager: Node = _run_manager()
+	return manager.best_score(manager.MODE_ENDLESS) if manager != null else 0
 
 
 # --- Building ----------------------------------------------------------------
@@ -647,7 +646,7 @@ func _build() -> void:
 	await _step()
 	if stock_extra_packages:
 		await _spawn_extra_stock()
-	var crew: CREW_PROGRESSION = _crew()
+	var crew: Node = _crew()
 	if crew != null:
 		supplies = crew.supplies.keys()
 		team_money = crew.team_money
@@ -800,24 +799,25 @@ func _solo_candidates(candidates: Array, house_count: int) -> Array:
 	return solo if solo.size() >= house_count else candidates
 
 
-## The autoloads by path, not by name, and as their script's type: a test that
-## names this class compiles it before the autoloads exist (same pattern as
-## route.gd's _session_seed()), and `as` gives null if the node isn't that script
-## (test_dynamic_dispatch_budget checks the constants above are the real ones).
+## The autoloads by path, not by name: a test that names this class compiles it
+## before the autoloads exist (same pattern as route.gd's _session_seed()). The
+## network and the unlocks as their script's type, so `as` gives null if the node
+## isn't that script (test_dynamic_dispatch_budget checks the constants above are
+## the real ones); the crew and the run as plain nodes (see the constants).
 func _network() -> NETWORK_MANAGER:
 	return (get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER) if is_inside_tree() else null
 
 
-func _crew() -> CREW_PROGRESSION:
-	return (get_node_or_null(^"/root/CrewProgression") as CREW_PROGRESSION) if is_inside_tree() else null
+func _crew() -> Node:
+	return get_node_or_null(^"/root/CrewProgression") if is_inside_tree() else null
 
 
 func _unlocks() -> UNLOCK_MANAGER:
 	return (get_node_or_null(^"/root/UnlockManager") as UNLOCK_MANAGER) if is_inside_tree() else null
 
 
-func _run_manager() -> RUN_MANAGER:
-	return (get_node_or_null(^"/root/RunManager") as RUN_MANAGER) if is_inside_tree() else null
+func _run_manager() -> Node:
+	return get_node_or_null(^"/root/RunManager") if is_inside_tree() else null
 
 
 ## EventBus by name, not typed: tests replace it with a plain Node.

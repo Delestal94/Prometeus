@@ -14,10 +14,12 @@ extends SceneTree
 ##   seeing the network, the route events and the delivery photos, or the route
 ##   events would stop paying and fining;
 ## - depot.gd is no autoload, so its handles (SCRIPT_HANDLES: NETWORK_MANAGER,
-##   RUN_MANAGER, CREW_PROGRESSION, UNLOCK_MANAGER) are checked against the
-##   script loaded from its path: each must be the script its autoload runs, or
-##   `as <handle>` would give null and the depot would stop seeing the
-##   network (host, seed), the crew's money and supplies, and the unlocks;
+##   UNLOCK_MANAGER) are checked against the script loaded from its path: each
+##   must be the script its autoload runs, or `as <handle>` would give null and
+##   the depot would stop seeing the network (host, seed) and the unlocks.
+##   RunManager and CrewProgression stay plain nodes there (N-919.2: their
+##   scripts name EventBus, and a --script that names Depot compiles them
+##   before the autoloads exist);
 ## - package.gd (the box), package_handling.gd (its hand-over) and
 ##   package_rescue.gd (its care simulation) reach the network through package_autoloads.gd as a NetSession (the class
 ##   NetworkManager extends): the NetworkManager autoload must be one, or
@@ -30,6 +32,8 @@ extends SceneTree
 ## - package_feedback.gd (the box's presentation) is no autoload either: its GAME_SETTINGS handle is
 ##   checked against the script GameSettings runs, or `as GAME_SETTINGS` would give null and the box
 ##   would ignore the impact-effects and colorblind-palette options.
+## - vehicle_effects.gd (the truck's smoke, debris, skid marks and hit split) checks its GAME_SETTINGS handle
+##   the same way, or the hit's chromatic split would ignore the camera-shake setting.
 ## - player.gd (the player) holds the unlock profile through its UNLOCK_MANAGER handle: if that stopped being
 ##   the script the autoload runs, `as UNLOCK_MANAGER` would give null and the local player would lose their
 ##   picked uniform and face, and the first-trap tips would never show.
@@ -48,6 +52,8 @@ extends SceneTree
 ##   and the peers would stop agreeing on who trips.
 ## - vehicle_faults.gd (the truck's faults) holds its effects and repair spots by preload and the phone
 ##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
+## - fault_repair_spot.gd (where a truck fault gets fixed) holds its VehicleFaults and the player as typed
+##   (a stand-in Node3D carries nothing); nothing stays by name.
 ## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
 ##   the crew's money and the incident relay stay by name.
 ## - flock_crossing.gd (the sheep crossing) drives its sheep through the wildlife_animal.gd type; only the
@@ -83,6 +89,9 @@ const BUDGETS: Dictionary = {
 	# by name for the same reason. The /root/ lookups are the null-safe handles
 	# (EventBus, NetworkManager, RunManager, CrewProgression).
 	"res://scripts/core/route_event_manager.gd": {"call": 2, "callv": 0, "get": 0, "root": 4},
+	# The level side of a late join (N-224.4): the scene as LevelCommon, its depot as Depot and the door as
+	# DepotRollerDoor (is_open, set_open()). Nothing left by name.
+	"res://scripts/core/run_session.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# One .call left: the EventBus relay of the depot notices, by name because
 	# a test may replace EventBus with a plain Node (_bus()). One .get left: the
 	# seat_node_path of the players in the "player" group, because tests put
@@ -246,6 +255,10 @@ const BUDGETS: Dictionary = {
 	# the van: is_door_open and set_rear_cargo_open (the pop of the rear door) and driver_peer_id. By name
 	# because the tests stand a FakeVan Node3D in (with only that API), which `as` a typed truck would drop.
 	"res://scripts/gameplay/vehicle/vehicle_faults.gd": {"call": 2, "callv": 0, "get": 1, "root": 0},
+	# The repair spot (N-224.4) holds its owner as VehicleFaults (repair_prompt, repair_method, is_driver, fix;
+	# vehicle_faults.gd preloads this script, a cycle Godot 4 accepts) and the player as Player (carried_package):
+	# the stand-in Node3D of test_vehicle_faults is no Player and carries nothing, as before. Nothing by name.
+	"res://scripts/gameplay/vehicle/fault_repair_spot.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The depot screen (N-224.4) is typed: the purchases go to the level's Depot (buy_supply,
 	# buy_supply_discounted, team_money, supplies), the boxes are DeliveryPackage (package_id, is_aboard),
 	# the level is a LevelCommon and the signals of EventBus and UnlockManager are connected directly (the
@@ -331,6 +344,24 @@ const BUDGETS: Dictionary = {
 	# set_door_open) and the lap bay by a preload of package_mount_point.gd (occupied_by): neither
 	# has a class name. Nothing left by name.
 	"res://scripts/gameplay/rejoin_keepsake.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The client-side prediction of the truck (N-224.4): the truck through vehicle.gd by preload (no
+	# class_name): driver_peer_id, set_controls() and the controls it numbers and sends (throttle_input(),
+	# steer_input(), handbrake_input()). Nothing left by name.
+	"res://scripts/gameplay/vehicle/vehicle_prediction.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The radio's knob on the dash (N-224.4): the radio as TruckRadio (mode, cycle(), and next_mode and
+	# mode_key statically); only truck_radio.gd preloads this file, like truck_radio_view.gd. The one .get
+	# left is the player's carried_package: the interactable contract hands over any node in the player
+	# group and test_truck_radio's stand-in carries a box without being a Player.
+	"res://scripts/gameplay/vehicle/truck_radio_knob.gd": {"call": 0, "callv": 0, "get": 1, "root": 0},
+	# The truck's small tells (N-224.4): the presentation through vehicle_presentation.gd by preload (vehicle,
+	# wheels(), is_seat_camera()), the truck through vehicle.gd (presentation_engine_running) and the camera
+	# shake through the GAME_SETTINGS handle (below). The two /root/ lookups are the null-safe accessors:
+	# EventBus, connected by name because a test may replace it with a plain Node, and GameSettings.
+	"res://scripts/presentation/vehicle_effects.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
+	# The sound check's muting (N-224.4): the players as what they are (AudioStreamPlayer, 2D or 3D; no
+	# shared base has stream, playing, bus, volume_db or play), asked through small typed helpers.
+	# Nothing left by name.
+	"res://scripts/presentation/sound_audit.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -355,8 +386,6 @@ const HANDLES: Dictionary = {
 const SCRIPT_HANDLES: Dictionary = {
 	"res://scripts/gameplay/depot/depot.gd": {
 		"NETWORK_MANAGER": "/root/NetworkManager",
-		"RUN_MANAGER": "/root/RunManager",
-		"CREW_PROGRESSION": "/root/CrewProgression",
 		"UNLOCK_MANAGER": "/root/UnlockManager",
 	},
 	"res://scripts/tools/trailer_shot.gd": {
@@ -382,6 +411,9 @@ const SCRIPT_HANDLES: Dictionary = {
 	},
 	"res://scripts/gameplay/player/player.gd": {
 		"UNLOCK_MANAGER": "/root/UnlockManager",
+	},
+	"res://scripts/presentation/vehicle_effects.gd": {
+		"GAME_SETTINGS": "/root/GameSettings",
 	},
 }
 

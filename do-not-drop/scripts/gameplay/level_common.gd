@@ -249,8 +249,15 @@ func _on_peer_removed(peer_id: int) -> void:
 ## the session closed this peer counts as an offline host, and would go on
 ## to score and end the run itself, covering the disconnect screen (which
 ## shows RunTally) with results. Not finish_run(): nothing is recorded or won.
+## The truck is frozen where it is and no longer predicted: a client at the
+## wheel was simulating its copy (N-218), and as the offline host it no longer
+## stops on its own -- it would roll on, braking and creeping, behind the
+## overlay.
 func _stop_orphaned_run(_reason: String) -> void:
 	RunManager.is_running = false
+	vehicle.linear_velocity = Vector3.ZERO
+	vehicle.angular_velocity = Vector3.ZERO
+	vehicle.call(&"stop_prediction")
 
 
 ## The host is gone. Godot frees everything the host's spawner made -- every

@@ -17,12 +17,12 @@
     },
     "general_thickness:1": {
       "outside_or_missing_vertices": 0,
-      "minimum_separation_m": 0.0007325346232391894,
+      "minimum_separation_m": 0.000726396101526916,
       "method": "nearest oriented surface per vertex; full global self-intersection certification deferred"
     },
     "general_thickness:-1": {
       "outside_or_missing_vertices": 0,
-      "minimum_separation_m": 0.000574848207179457,
+      "minimum_separation_m": 0.0005895584472455084,
       "method": "nearest oriented surface per vertex; full global self-intersection certification deferred"
     },
     "belly:1": {

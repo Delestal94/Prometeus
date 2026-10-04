@@ -9,6 +9,39 @@
 
 ## QA — bugs abiertos
 
+### N-919 · Regresión de #208: los `--script` que llegan a `DeliveryHouse` cargan el HUD sin script — B · `Opus 5.5 · high` · Aviso: sí (`scripts/gameplay/player/player_cargo_care.gd` es de Slatex) · M8
+Origen: PC build 2026-10-02 (bisect confirmado con `cazador-bugs`). El PR #208 (`6a7c408`, N-224 tipó la caja como
+`DeliveryPackage` en `delivery_house.gd`) agregó la dependencia estática `DeliveryHouse → DeliveryPackage →
+package_rescue → Player → player_cargo_care → Hud`. `hud.gd:154` nombra `NetworkManager`; en un `--script` el árbol
+compila antes que los autoloads y da `SCRIPT ERROR: Identifier not found: NetworkManager`. El resto de la cadena
+recompila bien después, pero `hud.gd` no: el nodo `HUD` de `level_base.tscn` queda como `CanvasLayer` con
+`script=<null>`. El juego normal y el exportado no se afectan.
+Alcance: scripts `extends SceneTree` afectados, 25 antes del #208 (los que nombran `Player`/`DeliveryPackage`) y 57
+después (todo lo que llega a `route.gd`, `DeliveryHouse` o `RouteStreamer`): `bench_drive`, `render_route_dressing`,
+`render_goal_lot`, `render_house_waiting`, `render_mud_segment`, `render_wheel_dust` y ~25 `test_*` (lista completa en
+`D:\tmp\nm-probe\hits.txt` de la PC, fuera del repo). Consecuencias: `bench_drive` (serie diaria de la PC y paso
+"Measure rendered performance" de CI) mide sin HUD desde el #208 (objects 2542 → 2255, FPS de reparto 153 → 173 el
+2026-10-02: no comparables); las capturas `render_*` salen sin HUD; los tests que necesitan HUD vivo reciben un nodo
+muerto sin avisar. CI no lo ve: `run-tests.sh` decide por código de salida y el smoke de `release.yml` no usa `--script`.
+Hecho cuando `bench_drive` y `render_route_dressing` corren sin `SCRIPT ERROR` y el HUD de `level_base` existe con su
+script (comprobado por un test), y la serie de `docs/rendimiento-pc.md` anota desde qué fila vuelve a medir con HUD.
+- [x] **N-919.1** Cortar la única dependencia de afuera hacia `Hud`: `player_cargo_care.gd:66-67,77-78` usan
+  `Hud.EDGE_MARGIN`; reemplazar por una constante local `EDGE_MARGIN: int = 40` (como ya hace con `BASE_HEIGHT`, l.23),
+  con comentario del motivo (un `--script` compila antes que los autoloads). Probado en un worktree: 56 de 57 scripts
+  compilan sin `SCRIPT ERROR` y el HUD vuelve a tener `hud.gd`. Con `constructor-jugador`; tests `cargo_care`, `hud`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-919-hud-script-dep`)** — `EDGE_MARGIN` local en `player_cargo_care.gd`; `bench_drive` y `render_route_dressing` corren sin `SCRIPT ERROR` y el HUD de `level_base` vuelve a tener `hud.gd` (comprobado con y sin el arreglo). Aviso `docs/avisos/2026-10-02-regresion-208-hud-sin-script.md`.
+- [x] **N-919.2** Identificar el `SCRIPT ERROR` que sigue en `tests/test_depot_mirror.gd` (ya afectado antes del #208) y
+  arreglarlo. Con `cazador-bugs`; tests `depot_mirror`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-919-hud-script-dep`)** — causa: `depot.gd` precargaba como tipo `run_manager.gd`, `crew_progression.gd`, `rescue_hook.gd` y `vehicle_faults.gd` (nombran `EventBus`; #202, N-224.3): todo `--script` que nombra `Depot` dejaba `/root/RunManager` sin script. Pasan a `Node` sin tipo, como en `PackageAutoloads`; `test_dynamic_dispatch_budget` ajustado. Ojo: un `.godot/` local viejo (caché de clases anterior a los módulos) da `Parse Error` falsos; `--import` lo arregla.
+- [x] **N-919.3** Tests: (a) `player_cargo_care.EDGE_MARGIN == Hud.EDGE_MARGIN`, cargando `hud.gd` con `load()` en
+  runtime; (b) un chequeo que falle si un `--script` deja el HUD de `level_base` sin script, o que `run-tests.sh` y CI
+  traten `SCRIPT ERROR: Compile Error` como falla (así la próxima dependencia estática no pasa en silencio). Con
+  `escritor-tests`; tests `hud`, `run_tests`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-919-hud-script-dep`)** — `tests/test_hud_script_loads.gd`: llega a `DeliveryHouse` y `Depot` estáticamente y exige HUD con `hud.gd`, `RunManager` con script, los cuatro scripts compilables y los dos `EDGE_MARGIN` iguales; falla (9) con el código de antes. La opción de que `run-tests.sh` trate `SCRIPT ERROR` como falla queda sin hacer: el test cubre las dos cadenas conocidas; `level_common.gd` sigue precargando `vehicle_faults.gd` y `rescue_hook.gd` (un `--script` que nombre `LevelCommon` puede repetirlo).
+- [ ] **N-919.4** Correr `bench_drive` (reparto y Endless) y anotar en `docs/rendimiento-pc.md` desde qué fila mide de
+  nuevo con HUD y que las filas desde el #208 hasta el arreglo no son comparables. Con `perfilador-rendimiento`
+  (necesita PC); aviso `docs/avisos/2026-10-02-regresion-208-hud-sin-script.md` en el mismo PR que N-919.1.
+
 ### N-918 · `test_level_endless` falla a veces: "SegmentN's static boxes are merged as it spawns (1 left loose)" — C · `Opus 5.5 · medium` · Aviso: sí (`modules/render_budget/`, zona compartida) · **[x] rama `nacho/fix-main-endless-merged-name`**
 Origen: construcción 2026-10-02 (CI rojo del PR #212, que no tocaba nada de esto; ~1 de cada 24 corridas en `main`
 con la CPU cargada). Con `cazador-bugs`: dos causas juntas. (1) `streamer.set(&"segment_scripts", [Straight…])`
@@ -546,7 +579,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 
@@ -1140,6 +1173,59 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     usos (`.call` 4 → 0, `.get(&` 5 → 0); en `scripts/`: `.call` 170 → 166, `.get(&` 150 → 145.
     `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`scripts/gameplay/` sin dueño y `tests/`).
     Siguientes: `mud_segment.gd` (14), `package_rescue.gd` (13), `run_tally.gd` (9), `crew_progression.gd` (9).
+  - [x] `vehicle_effects.gd` (2026-10-02, rama `nacho/N-224-vehicle-effects-typed`): humo, esquirlas, marcas de
+    frenada y el corte de color del golpe. La presentación por `preload` de `vehicle_presentation.gd` (`vehicle` y dos
+    accesores nuevos, `wheels()` e `is_seat_camera()`, en vez de leer `_wheels`/`_seat_cameras` por nombre), el camión
+    por `preload` de `vehicle.gd` (`presentation_engine_running`) y `GameSettings` por la constante `GAME_SETTINGS`
+    (`camera_shake_scale`; el test comprueba que sea el script del autoload). Quedan los dos accesores `/root/`
+    (EventBus, por nombre porque un test lo cambia por un `Node`, y GameSettings). En el archivo: 7 → 2 usos (`.get(&`
+    5 → 0); en `scripts/`: `.get(&` 145 → 140. `test_dynamic_dispatch_budget.gd` suma el archivo y su handle.
+    `test_dust_and_ambience.gd` y `render_exhaust.gd` cargan `vehicle_effects.gd` con `load()`: ahora precarga
+    `vehicle.gd`, que nombra autoloads que un `--script` no tiene al compilar. Sin aviso
+    (`presentation/` sin dueño salvo `vehicle_presentation.gd`, que es de Nacho, y `tests/`). `run_tally.gd` se saltó:
+    sus 9 usos son todos sobre `RunManager`, que no se puede precargar (nombra autoloads y lo carga `net_trio.gd` por
+    `--script`); solo `handed_over` bajaría (por `run_deliveries.gd`). Siguientes: `sound_audit.gd` (8, reproductores
+    2D/3D sin base común), `run_session.gd` (8), `vehicle_prediction.gd` (7), `truck_radio_knob.gd` (6).
+  - [x] `sound_audit.gd` (2026-10-02, rama `nacho/N-224-sound-audit-typed`): el silenciador de "Sonidos del juego".
+    Los reproductores como lo que son (`AudioStreamPlayer`, `2D` o `3D`: no comparten una base con `stream`,
+    `playing`, `bus`, `volume_db` ni `play`) por helpers tipados chicos (`_stream`, `_set_stream`, `_is_playing`,
+    `_bus`, `_set_volume_db`, `_playback_position`, `_play`); `players()` ya junta solo esos tres tipos. En el archivo:
+    8 → 0 usos (`.call` 2 → 0, `.get(&` 6 → 0; también `.set(&` 2 → 0); en `scripts/`: `.call` 166 → 164, `.get(&`
+    140 → 134. `test_dynamic_dispatch_budget.gd` suma el archivo con todo en 0. Sin aviso (`presentation/` libre y
+    `tests/`). Siguientes: `run_session.gd` (8), `vehicle_prediction.gd` (7), `truck_radio_knob.gd` (6),
+    `run_scoring.gd` (6).
+  - [x] `vehicle_prediction.gd` (2026-10-02, rama `nacho/N-224-vehicle-prediction-typed`): la predicción del
+    cliente que maneja (N-218). El camión por `preload` de `vehicle.gd` (`driver_peer_id`, `set_controls()` y tres
+    accesores nuevos, `throttle_input()`, `steer_input()` y `handbrake_input()`, en vez de leer `_throttle`,
+    `_steering_input` y `_handbrake` por nombre). Sin cambios de red (`auditor-red`: OK, `PROTOCOL_VERSION` igual).
+    En el archivo: 7 → 0 usos (`.call` 2 → 0, `.get(&` 5 → 0); en `scripts/`: `.call` 161 → 159, `.get(&` 129 → 124.
+    `test_dynamic_dispatch_budget.gd` suma el archivo. `test_vehicle_prediction.gd` lee `EXIT_BLEND_SECONDS` con
+    `load()`: `VehiclePrediction` ahora arrastra `vehicle.gd`, que nombra autoloads que un `--script` no tiene al
+    compilar (`net_pair.gd` la sigue nombrando: corre como escena, con autoloads). Sin aviso (`vehicle/` y `tests/`).
+    Siguientes: `run_session.gd` (8), `truck_radio_knob.gd` (5), `fault_repair_spot.gd` (5).
+  - [x] `run_session.gd` (2026-10-02, rama `nacho/N-224-run-session-typed`): la parte de escena del ingreso tardío
+    (N-225.5). La escena como `LevelCommon`, el depósito como `Depot` y la persiana como `DepotRollerDoor` (`is_open`,
+    `set_open()`) en un helper `_depot_door()`; una escena que no es un nivel sigue contando como puerta abierta. Sin
+    cambios de red. En el archivo: 8 → 0 usos (`.get(&` 7 → 0, `.call` 1 → 0). `test_dynamic_dispatch_budget.gd` suma
+    el archivo; `test_session_sync.gd` comprueba la lectura del anfitrión (abierta y cerrada) y una escena sin nivel.
+    Aviso `docs/avisos/2026-10-02-n224-run-session-tipado.md`. Siguientes: `truck_radio_knob.gd` (5),
+    `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5). (`run_tally.gd` reclamada por otra corrida.)
+  - [x] `truck_radio_knob.gd` (2026-10-02, rama `nacho/N-224-radio-knob-typed`): la perilla de la radio. La radio
+    como `TruckRadio` (`mode`, `cycle()` y los estáticos `next_mode`/`mode_key`), como ya hacía `truck_radio_view.gd`:
+    solo `truck_radio.gd` precarga este archivo, así que no suma nada al grafo de un `--script`. Queda el `.get(&` de
+    `carried_package` del jugador: el contrato de interactuables recibe cualquier nodo y el `FakePlayer` de
+    `test_truck_radio.gd` lleva caja sin ser `Player`. En el archivo: 5 → 1 uso (`.call` 3 → 0, `.get(&` 2 → 1); en
+    `scripts/`: `.call` 158 → 155, `.get(&` 118 → 117. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso
+    (`vehicle/` y `tests/`). La reserva `nacho/N-224-run-tally-typed` (solo el claim) se dejó: `run_tally.gd` ya se
+    había saltado por `RunManager`. Siguientes: `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5).
+  - [x] `fault_repair_spot.gd` (2026-10-04, rama `nacho/N-224-fault-repair-spot-typed`, reserva retomada): el punto
+    de arreglo de una avería. El dueño como `VehicleFaults` (`repair_prompt`, `repair_method`, `is_driver`, `fix`;
+    `vehicle_faults.gd` precarga este archivo y ya nombra `Player`, así que no suma nada al grafo de un `--script`) y el
+    jugador como `Player` para `carried_package`: el `Node3D` de `test_vehicle_faults.gd` no es `Player` y no carga nada,
+    igual que antes. En el archivo: 5 → 0 usos (`.call` 4 → 0, `.get(&` 1 → 0); en `scripts/`: `.call` 156 → 152,
+    `.get(&` 117 → 116 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`).
+    Siguientes (fuera de `BUDGETS`): `run_tally.gd` (9, reserva `nacho/N-224-run-tally-typed` de solo el claim),
+    `vehicle.gd` (7), `network_manager.gd` (7), `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`
@@ -1868,6 +1954,102 @@ Fase 4 de `docs/investigacion-red.md`.
   en vuelo; N-221 suma §0.2, junto con `RpcGuard` y el color. Filas NET-07 y NET-08 en
   `matriz-comportamiento-cobertura.md`.
 - [ ] Antes de jugar con gente de afuera: AppID propio (N-901). ⏸ N-901 pospuesta (iteración de lanzamiento).
+### N-920 · Endless: parar no debe terminar la partida si no hay conductor acelerando — A · `Opus 5.5 · high` · Aviso: no · M8
+Origen: auditoría integral 2026-10-02, A-1.1 (P1). `level_endless.gd:86-97` cuenta como atascado cualquier velocidad
+< 0,3 m/s durante más de 6 s y solo exceptúa el barro y la bahía de servicio. La regla de la entrega
+(`level_base.gd:262-282`, S-203) exige además conductor sentado y acelerador apretado, y excluye el depósito y las
+casas. El comentario de `level_endless.gd:28-30` ("no hay razón para parar en endless") ya no es cierto. Casos que hoy
+cortan la partida: el arranque en el depósito con el camión quieto (`level_common.gd:404-408`), el rescate de una caja
+caída (ventana de 30 s), la reparación que exige detenerse y el relevo de conductor (si se baja, el camión se congela,
+`vehicle.gd:499`). Los bots de QA y `pc-build` no paran nunca, así que no lo ven.
+**Supuesto (conservador):** parar sin acelerar no termina la partida (como S-203); encajado con el acelerador apretado
+sí. Pregunta de diseño abierta, para el usuario: ¿parar para rescatar o reparar debe costar algo (distancia o tiempo)?
+No se implementa ningún costo hasta que responda.
+Hecho cuando un test de Endless prueba que 6+ s quieto sin acelerar (depósito, rescate, relevo de conductor) no termina
+la partida y que 6+ s encajado con acelerador sí, y `test_level_endless` / `test_stuck_detection` pasan sin dar por
+buena una partida cortada por "atascado" sin acelerador.
+- [ ] **N-920.1** Llevar `_should_count_as_stuck()` de `level_base.gd` a `level_common.gd` con un gancho por modo; Endless
+  la usa sumando el depósito y actualiza el comentario de `level_endless.gd:28-30`. Con `constructor-tramos`; tests
+  `stuck_detection`, `level_endless`.
+- [ ] **N-920.2** Casos Endless en `test_stuck_detection.gd` y corregir `test_level_endless.gd:49-61`. Con
+  `escritor-tests`; tests `stuck_detection`, `level_endless`.
+
+### N-921 · El nivel deja estado global sin restaurar al liberarse: 3D del diario y reverb del depósito — B · `Opus 5.5 · medium` · Aviso: sí (`hud_newspaper.gd` es de Slatex; `modules/acoustics/` es zona compartida) · M8
+Origen: auditoría integral 2026-10-02, A-1.2 (P1). `hud_newspaper.gd:66-68` pone `disable_3d = true` en el viewport raíz
+y solo lo devuelve `_on_finished()`; no hay `_exit_tree`. Si el host reinicia mientras un cliente todavía lee el diario
+(`level_common.gd:436-458` recarga en todos), ese cliente juega la partida siguiente sin 3D. `AcousticSpace.apply`
+(`modules/acoustics/acoustic_space.gd:42-58`) deja la reverb prendida en el bus `SFX`: quien sale al menú desde el
+depósito o un túnel oye el menú con eco.
+Hecho cuando un test libera el HUD con el diario abierto y `disable_3d` vuelve a `false`, y otro comprueba que salir del
+árbol del depósito o de la ruta devuelve el bus `SFX` a la reverb `open`.
+- [ ] **N-921.1** `HudNewspaper._exit_tree()` restaura `disable_3d`; test que libera el HUD con el diario abierto
+  (ampliar `test_newspaper_scene.gd`). Con `constructor-ui`; tests `newspaper_scene`.
+- [ ] **N-921.2** Volver a `open` al salir del árbol del depósito o la ruta (adaptador del juego, o `AcousticSpace` si
+  corresponde); test en `test_acoustics`/del módulo. Con `disenador-audio`; tests `acoustic`.
+- [ ] **N-921.3** Aviso nuevo en `docs/avisos/` en el mismo PR (hoy lo cubre `2026-10-02-auditoria-tareas.md`; uno
+  propio si cambia algo más). Con `documentador`.
+
+### N-922 · Auditar la red de N-218 (#239) y arreglar el número de protocolo — A · `Opus 5.5 · xhigh` · Aviso: sí (`network_manager.gd`, zona compartida) · M8
+Origen: auditoría integral 2026-10-02, A-D.1 y A-D.2 (P1) y los dos puntos "para auditor-red" de los P3. #239 (N-218,
+commit `c760998`) cambia la autoridad del camión, la firma de `submit_driver_input` (`vehicle.gd:610`) y 6 propiedades
+del sincronizador de `vehicle.tscn`, y entró sin pasar por `auditor-red`; su cuerpo lista "Riesgos para auditor-red" que
+nadie corrió (`construccion.md:98,106`). Además, `ff31ad5e` subía el protocolo a 25, pero el merge `27390a2c` se quedó
+con el lado de main: hoy es 26 (`network_manager.gd:61`) y la línea 55 sigue diciendo "25: reserved for N-218". Las
+builds de `b68207e`..`7496de3` llevan 26 sin N-218 y pueden desincronizarse en silencio.
+Fuera de alcance: hacer de `auditor-red` una compuerta dura del auto-merge (cambia CI y rutinas; decide el usuario).
+Hecho cuando hay un informe de `auditor-red` sobre `c760998` que cubre los riesgos del PR, `ServiceCounter._open_locally`
+(`service_counter.gd:46-51`, RPC en un nodo creado en tiempo de ejecución) y `mud_segment._hold_predicted_truck` con la
+predicción de #239, con cada hallazgo corregido o convertido en tarea; `PROTOCOL_VERSION` es 27 con la entrada de N-218,
+no queda ninguna línea "reserved", y `test_protocol_version` falla si hay una entrada "reserved".
+- [x] **N-922.1** Correr `auditor-red` sobre `c760998` con los riesgos del cuerpo del PR y los dos puntos sin
+  diagnosticar; devolver hallazgos. Con `auditor-red`; tests `network`, `rpc_guard`, `net_pair` (por la orquestadora).
+  **[x] Hecho (2026-10-02, rama `nacho/N-922-n218-net-audit`)** — sin BUG ni RIESGO alto. OK: autoridad (el cliente
+  solo decide la pose de su copia), validación de `submit_driver_input` (remitente = conductor, `finite_float`, clamp,
+  buffer de 64), joins tardíos (`net_input_seq` ALWAYS, `net_simulating` ON_CHANGE con el mismo valor inicial), ancho
+  de banda (+~0,5 KB/s por cliente), `ServiceCounter._open_locally` (ruta determinista, RPC `authority`, solo al que
+  interactuó) y `mud_segment._hold_predicted_truck` (sin fuerza duplicada). Los riesgos medios y bajos, en N-922.2 a
+  N-922.7.
+- [x] **N-922.2** Subir `PROTOCOL_VERSION` a 27 con la entrada de N-218, borrar la línea "25: reserved" y que
+  `test_protocol_version` rechace entradas "reserved"; corregir lo que salga de N-922.1. Con `constructor-red`, seguido
+  de `auditor-red`; tests `protocol_version`, `network`.
+  **[x] Hecho (2026-10-02, rama `nacho/N-922-n218-net-audit`)** — 27 con la entrada de N-218; la 25 queda como
+  "skipped" y explica qué builds llevan 26 con y sin N-218. `test_protocol_version` falla si una entrada dice
+  "reserved". De la auditoría, arreglados acá: el host deja de repetir un input del conductor de más de 30 ticks
+  (suelta el acelerador, pero sigue frenando hasta parar si frenaba; volante y freno de mano quedan; hitch o Wi-Fi sin desconexión), `driver_changed()` reinicia `applied_seq` (el conductor
+  nuevo no se corrige contra el `seq` del anterior) y `_stop_orphaned_run` congela el camión y corta la predicción (`stop_prediction()`) si el host se va mientras
+  el cliente predice. Segunda pasada de `auditor-red` sobre el arreglo: el freno vencido no se suelta y el reinicio de
+  `applied_seq` es solo en el host (en el cliente borraba el historial si el volante iba y volvía entre dos ticks).
+- [ ] **N-922.3** Colisionadores que existen distinto en cada peer frenan a la copia predicha y terminan en salto de 3 m:
+  barreras y vagones del paso a nivel (`rail_crossing_segment.gd:213,281`, llegan RTT/2 tarde al cliente) y operarios y
+  autoelevador del depósito (`depot_worker.gd:42-44`, `depot_forklift.gd:32-34`, cada peer en su fase; hoy también
+  frenan al camión del host). Arreglo: `add_collision_exception_with` del camión en los peers que no son host (paso a
+  nivel) y en todos (depósito), o capa propia fuera de la máscara del camión. Test: muro solo en el mundo del cliente en
+  `test_vehicle_prediction` y las excepciones en `get_collision_exceptions()`. Origen: construcción 2026-10-02
+  (`auditor-red`, N-922.1). Con `constructor-red` (y `constructor-mundo` para el depósito), después `auditor-red`.
+- [ ] **N-922.4** Predecir sin suelo: quien vuelve (N-221) o entra tarde en Endless al volante arranca la predicción
+  antes de que el streamer arme el terreno (60 m por tick) y la copia cae. Arreglo: en `vehicle_prediction.gd`
+  `_start`/`wanted`, un rayo de 4 m hacia abajo desde `latest_pose` (máscara 1, sin el camión); sin impacto no se
+  predice. Test: mundo del cliente sin piso en `test_vehicle_prediction`. Origen: construcción 2026-10-02. Con
+  `constructor-red`.
+- [ ] **N-922.5** `--net-sim` en LAN no retrasa ni los inputs del conductor ni el `host_state` del reconciliador
+  (`vehicle.gd:674`, `vehicle_prediction.gd:129`): con LAN la predicción se ve perfecta. Arreglo: cola de retraso chica
+  en `modules/net_prediction` con el perfil de `pose_net_sim()`; test del módulo y etapa de `net_pair` con `--net-sim`.
+  Origen: construcción 2026-10-02. Con `constructor-red`.
+- [ ] **N-922.6** Barro: la copia predicha no recibe el empuje de la cuadrilla (BOGGED) ni el arrastre (HAULING, 3-5
+  m/s) (`mud_segment.gd:453-462` vs `:525,609`): efecto goma durante el arrastre, sin salto. Pasar las dos a
+  `_drag_truck` con `pushers` y `haul_method` (ya replicados). Origen: construcción 2026-10-02. Con `constructor-tramos`.
+- [ ] **N-922.7** Presentación al dejar o tomar la predicción: al soltar el volante en movimiento el hueco de ~7 m se
+  cierra en 0,3 s y el camión dibujado retrocede (`vehicle_prediction.gd:186-197`; usar
+  `maxf(EXIT_BLEND_SECONDS, 1.5 * gap / speed)`); al empezar, la cámara salta 1-2 m. Opcional: la caja manual no modela
+  el embrague en la copia (`vehicle_gearbox.gd`, ~0,5 m/s, sin salto). Origen: construcción 2026-10-02. Con
+  `constructor-camion`.
+- [ ] **N-922.8** Restos de la segunda pasada de `auditor-red` (2026-10-02, sobre el arreglo de N-922.2), riesgo bajo:
+  (a) al volver los inputs tras un corte de subida, `NetInputBuffer.consume()` juega ~2 ticks el input retenido de
+  hace más de 30 ticks entero antes de alcanzar uno nuevo (`net_input_buffer.gd:75-81`): con el input vencido, jugar
+  el más viejo que espera o seguir "vencido" hasta alcanzar uno recibido; test en `test_net_prediction`; (b) en el
+  cliente huérfano (host caído) el barro no-`IDLE` descongela y arrastra el camión detrás del overlay
+  (`mud_segment.gd:424-427`): que el segmento mire `RunManager.is_running` o abortarlo en `_stop_orphaned_run`; test
+  `mud`. Origen: construcción 2026-10-02. Con `constructor-red` y `constructor-tramos`.
 
 ## 3. Arte y dirección visual
 

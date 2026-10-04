@@ -20,7 +20,7 @@ const WorldMix = preload("res://scripts/presentation/world_mix.gd")
 		var changed: bool = value != driver_peer_id
 		driver_peer_id = value
 		if changed and _prediction != null:
-			_prediction.driver_changed()
+			_prediction.driver_changed(self)
 		# The driver got in through the open door: it shuts behind them. When
 		# they get out it opens to let them climb down. Host decides, and the
 		# door state replicates like any other door toggle.
@@ -586,6 +586,19 @@ func set_controls(throttle: float, steering_input: float, handbrake: bool) -> vo
 		sleeping = false
 
 
+## The controls as set_controls left them, for VehiclePrediction to number and send to the host.
+func throttle_input() -> float:
+	return _throttle
+
+
+func steer_input() -> float:
+	return _steering_input
+
+
+func handbrake_input() -> bool:
+	return _handbrake
+
+
 ## The client at the wheel sends this every physics tick
 ## (vehicle_prediction.gd), numbered by its own tick: the host plays the inputs
 ## back one per tick (NetInputBuffer) and its pose says which one it stands for
@@ -692,6 +705,12 @@ func _process(delta: float) -> void:
 ## Whether this peer is the client predicting the truck it drives (N-218).
 func is_predicted() -> bool:
 	return _prediction.active
+
+
+## Stops this peer predicting its truck, frozen where it is (N-922): the level, when the host is gone mid-drive and
+## this peer, an offline host now, no longer stops on its own.
+func stop_prediction() -> void:
+	_prediction.halt(self)
 
 
 ## A client's truck is frozen, so physics never moves its wheels: they are put
