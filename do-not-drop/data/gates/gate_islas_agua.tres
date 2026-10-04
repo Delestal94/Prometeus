@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="GateRequirement" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/gate_requirement.gd" id="1_gate"]
+
+[resource]
+script = ExtResource("1_gate")
+id = &"gate_islas_agua"
+kind = 2
+vehicle_key = &"boat"
+position_xz = Vector2(2048, 0)

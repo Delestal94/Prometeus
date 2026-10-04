@@ -20,6 +20,8 @@ var reputation: float = CompanyTuning.STARTING_REPUTATION
 ## zone id -> reputation 0-100 in that zone.
 var district_reputation: Dictionary = {}
 var opened_gates: Array[StringName] = []
+## Equipment the company owns (chains, winter coat, thermal suit...). GateRequirement reads it.
+var equipment: Array[StringName] = []
 var fleet: Array[Dictionary] = []
 var employees: Array[Dictionary] = []
 var milestones_done: Array[StringName] = []
@@ -64,6 +66,7 @@ func to_dict() -> Dictionary:
 		"reputation": reputation,
 		"district_reputation": district_reputation.duplicate(true),
 		"opened_gates": opened_gates.duplicate(),
+		"equipment": equipment.duplicate(),
 		"fleet": fleet.duplicate(true),
 		"employees": employees.duplicate(true),
 		"milestones_done": milestones_done.duplicate(),
@@ -95,6 +98,7 @@ func from_dict(data: Dictionary) -> bool:
 			if _is_id(zone) and _is_num(by_zone[zone]):
 				district_reputation[StringName(zone)] = _clamp_reputation(float(by_zone[zone]))
 	opened_gates = _ids(data.get("opened_gates", []))
+	equipment = _ids(data.get("equipment", []))
 	milestones_done = _ids(data.get("milestones_done", []))
 	fleet = _entries(data.get("fleet", []))
 	employees = _entries(data.get("employees", []))
@@ -106,6 +110,29 @@ func from_dict(data: Dictionary) -> bool:
 		inventory = stock_in.to_dict()
 	_active = true
 	return true
+
+
+## True once the gate was opened. An opened gate is never closed again (map decision, point 7).
+func is_gate_open(gate_id: StringName) -> bool:
+	return opened_gates.has(gate_id)
+
+
+## Opens a gate for good. False when it was already open.
+func open_gate(gate_id: StringName) -> bool:
+	if gate_id == &"" or opened_gates.has(gate_id):
+		return false
+	opened_gates.append(gate_id)
+	return true
+
+
+## What a GateRequirement needs to know about the company, as plain values.
+func gate_owned() -> Dictionary:
+	var vehicles: Array[StringName] = []
+	for entry: Dictionary in fleet:
+		var key: Variant = entry.get("vehicle", entry.get("key", ""))
+		if typeof(key) == TYPE_STRING or typeof(key) == TYPE_STRING_NAME:
+			vehicles.append(StringName(key))
+	return {"milestones": milestones_done, "equipment": equipment, "vehicles": vehicles}
 
 
 ## A copy of the stock as an Inventory, ready to use. Writes go back through
@@ -127,6 +154,7 @@ func _set_defaults() -> void:
 	reputation = CompanyTuning.STARTING_REPUTATION
 	district_reputation = {}
 	opened_gates = []
+	equipment = []
 	fleet = []
 	employees = []
 	milestones_done = []
