@@ -1,0 +1,37 @@
+name: Test main's head when nothing did
+
+# The auto-merge merges with GITHUB_TOKEN, and a push made with that token starts no workflow:
+# many commits on main had no Tests run at all (N-239). Every 15 minutes this looks at main's
+# head and, when no Tests run exists for that commit, dispatches one (workflow_dispatch is the
+# one event GITHUB_TOKEN may start). Routines read the run of the head's SHA, not the latest.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: main-head-tests
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch Tests for an untested main head
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Dispatch when main's head has no run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          runs=$(gh run list -R "$REPO" --workflow tests.yml --commit "$sha" --json databaseId --jq length)
+          echo "main is $sha, Tests runs for it: $runs"
+          if [ "$runs" = 0 ]; then
+            gh workflow run tests.yml -R "$REPO" --ref main
+            echo "Dispatched Tests on main ($sha)."
+          fi

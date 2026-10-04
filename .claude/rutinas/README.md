@@ -142,6 +142,16 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
     SKIP_TESTS=1 git push origin HEAD
     ```
     Limpiar ramas viejas no es trabajo de las rutinas.
+16. **Estado de `main`** (N-239): se mira el run de `tests.yml` **del SHA de HEAD**, no el último run de
+    la rama (el auto-merge no dispara CI y el último run puede ser de un commit viejo):
+    ```bash
+    gh run list --workflow tests.yml --commit "$(git rev-parse origin/main)" --json conclusion,status
+    ```
+    - `success` → verde. `failure` → **rojo**.
+    - Sin run, o en curso → **sin verificar**. `main-head-tests.yml` le dispara uno en ≤ 15 min. Mientras
+      tanto, el último run terminado de main (`gh run list --branch main --workflow tests.yml --status
+      completed --limit 1`) dice si sigue rojo de antes: rojo ahí cuenta como rojo. Verde ahí no prueba
+      HEAD: se puede trabajar, pero lo que exige un `main` probado (la build de la PC) espera.
 
 ## Límites de la nube
 

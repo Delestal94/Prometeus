@@ -120,7 +120,7 @@ agrega una llamada interna; subirla solo si cambia alguna firma o el orden de lo
   bajos que quedan: el presupuesto es compartido con bocina y demás (un cambio perdido se ve en el HUD y se
   reintenta; la marcha la replica el host) y los `"""` multilínea no llevan estado de comilla entre líneas.
 
-### N-239 · ⏸ decide el usuario: CI sin run en los commits del auto-merge — A · `Opus 5.5 · xhigh` · Aviso: no
+### N-239 · CI sin run en los commits del auto-merge — A · `Opus 5.5 · xhigh` · Aviso: no
 Origen: auditoría integral 2026-10-01, A-D.2 (P1). El auto-merge (`dependabot-auto-merge.yml` con
 `GITHUB_TOKEN`) no dispara CI: 19 de 49 commits de `main` no tienen run. `construccion.md:14` y
 `pc-build.md:13` miran `gh run list --branch main --limit 1` (el último run, no el de HEAD), así que una
@@ -131,8 +131,10 @@ HEAD de `main` cuando no tenga run; (c) solo cambiar las rutinas para consultar 
 rutinas, por eso espera decisión (issue `decide-usuario`). Hecho cuando (según la opción) un commit de
 `main` hecho por el auto-merge termina con un run de CI verde o rojo, y las rutinas miran el run del SHA de
 HEAD y tratan "sin run" como "no verificado".
-- [ ] **N-239.0** ⏸ Decisión del usuario entre (a), (b)+(c) o (c) sola.
-- [ ] **N-239.1** Implementar la opción elegida en `.github/workflows/` y `.claude/rutinas/construccion.md`
+- [x] **N-239.0** Decisión del usuario entre (a), (b)+(c) o (c) sola: **(b)+(c)** (2026-10-04, issue #155).
+- [x] **N-239.1** (2026-10-04) `main-head-tests.yml` dispara `tests.yml` cada 15 min si el HEAD de `main` no
+  tiene run; regla 16 del README de rutinas (run del SHA de HEAD, "sin run" = sin verificar), que usan
+  `construccion.md`, `desarrollador.md` y `pc-build.md`. Pedido original: implementar la opción elegida en `.github/workflows/` y `.claude/rutinas/construccion.md`
   / `pc-build.md`. Con la conversación principal; verificar con `gh run list --commit <sha>` sobre un commit
   de auto-merge.
 
@@ -579,7 +581,7 @@ probarlo con gente real por Steam. Hecho cuando las cinco quedan escritas en `do
 | **M5 — Preparación de lanzamiento** ⏸ | Builds, tienda, tráiler. N-901 pospuesta a la iteración de lanzamiento. | N-210, N-703, N-901 a N-906, N-911 ⏸, N-916 ⏸, N-912 ⏸, N-913 ⏸, N-914 ⏸, N-915 ⏸ (+ S-903 y S-907). Orden: N-916 y N-911 (decisiones), N-901, N-912, N-914, N-913, N-915 |
 | **M6 — Mecánicas de la competencia** | Lo que Backseat Drivers y RV There Yet? hacen bien, adaptado a la carga. | N-704, N-505, N-213, N-214, N-212, N-109, N-406, N-108, N-110, N-311, N-113, N-111, N-112, N-114 (N-907 ⏸) |
 | **M7 — Pedidos del usuario** | Correr, una meta que sea un lugar, un segundo cuerpo y el diario del día siguiente. | N-115, N-116, N-312, N-606 |
-| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239 ⏸, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
+| **M8 — Auditoría 2026-09-29** | Lo que la auditoría encontró roto o flojo: cada pasajero con su propia acción, puntaje y red honestos, textos traducibles, menos trabajo por frame, repo liviano. Va **antes** que lo que quede de M6/M7. | N-919, N-705, N-117, N-805, N-118, N-119, N-222, N-313 ⏸, N-314, N-223, N-315, N-224, N-225, N-316, N-317, N-318, N-319, N-706, N-226, N-227, N-228, N-229, N-238, N-240, N-239, N-321, N-908, N-909, N-910, N-320, N-922, N-920, N-921 |
 | **M9 — Módulos portables** | Lo genérico del juego en carpetas que se copian a otro proyecto y funcionan, garantizado por CI (`docs/modulos.md`). Pedido del usuario 2026-09-30. Va en paralelo a M8: cada fase es un PR chico. | N-230, N-231, N-232, N-233, N-234 |
 | **S — Heredadas de Slatex** | Todo lo que era de Slatex (jugador, paquetes, UI, progresión), con sus hitos S-M1 a S-M5. Va **después de M8**. | Ver "Heredadas de Slatex" más abajo |
 

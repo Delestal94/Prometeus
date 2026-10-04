@@ -11,7 +11,7 @@ Una corrida = **una** tarea, o arreglar PRs de rutina rojos o con conflicto.
 
 ## 1. Primero lo que está roto
 
-1. **`main` rojo**: `gh run list --branch main --workflow tests.yml --limit 1`. Si falló, arreglar main
+1. **`main` rojo**: el run del SHA de HEAD, según la regla 16 del README. Si está rojo, arreglar main
    es la tarea (rama `nacho/fix-main-<tema>`), con `ejecutor-tests` y `cazador-bugs`.
 2. **PRs de rutina abiertos**:
    `gh pr list --state open --json number,headRefName,statusCheckRollup,mergeable` y quedate con los
