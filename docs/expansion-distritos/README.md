@@ -13,6 +13,8 @@
 
 ## La idea en una pantalla
 
+> Versión larga, con qué se conserva del juego actual y qué **no** es: [diseno/vision.md](diseno/vision.md) (D-0101).
+
 **Bucle del día (un turno de juego, 15-25 min reales):**
 
 1. **Llega mercadería.** Camiones de proveedores entran al patio del galpón; hay que descargar

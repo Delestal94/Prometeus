@@ -8,7 +8,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0101 | Documento de visión de la expansión: bucle del día, crecimiento, distritos, flota, qué se mantiene del juego actual | documentador | high | `diseno/vision.md` existe, enlazado desde el README y `definicion-proyecto.md` |
+| D-0101 | ✅ Documento de visión de la expansión: bucle del día, crecimiento, distritos, flota, qué se mantiene del juego actual | documentador | high | `diseno/vision.md` existe, enlazado desde el README y `definicion-proyecto.md` |
 | D-0102 | ✅ Modo Empresa es el juego principal; Entrega y Endless quedan como "Partida rápida" | — | — | decidido (decidido 2026-10-04, `docs/decisiones/2026-10-04-expansion-decisiones-delegadas.md`) |
 | D-0103 | ✅ Carrito = eléctrico tipo golf; la zorra es herramienta del galpón | — | — | decidido |
 | D-0104 | ✅ Un solo mapa continuo que se desbloquea (usuario; `docs/decisiones/2026-10-04-mapa-continuo.md`) | — | — | decidido |
