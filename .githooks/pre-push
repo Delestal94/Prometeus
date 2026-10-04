@@ -35,8 +35,27 @@ check_modules() {
 	fi
 }
 
+# One file per task (docs/tareas/README.md): a task block written back into
+# docs/tareas-nacho.md, a file without its "Sección:" line... A second, and it
+# runs on docs-only pushes too, which are the ones that touch the list.
+check_tareas() {
+	local py=""
+	for candidate in python3 python; do
+		if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "" >/dev/null 2>&1; then
+			py="$candidate"; break
+		fi
+	done
+	[ -n "$py" ] || return 0
+	if ! "$py" "$ROOT/tools/tareas.py" revisar >/dev/null; then
+		"$py" "$ROOT/tools/tareas.py" revisar
+		echo "pre-push: la lista de tareas no tiene el formato de docs/tareas/README.md, no se sube nada."
+		exit 1
+	fi
+}
+
 if [ "${SKIP_TESTS:-0}" = "1" ]; then
 	check_modules
+	check_tareas
 	if command -v gdlint >/dev/null 2>&1 && ! bash "$ROOT/tools/lint.sh"; then
 		echo "pre-push: el lint encontró problemas nuevos, no se sube nada (SKIP_TESTS no saltea el lint)."
 		exit 1
@@ -72,6 +91,8 @@ done
 if [ $refs -eq 0 ]; then
 	exit 0
 fi
+
+check_tareas
 
 if [ $needs_tests -eq 0 ]; then
 	echo "pre-push: solo cambios de documentación, no hace falta correr los tests."

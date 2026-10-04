@@ -13,7 +13,7 @@ Ninguna rutina habla con otra: se comunican por archivos del repo y por PRs.
 ```
 revision (lunes) ──► docs/auditorias/AAAA-MM-DD-revision.md ──┐
 qa (diario) ───────► docs/qa-recorrido.md (Hallazgos) ────────┤
-auditoria (diaria) ► docs/auditorias/AAAA-MM-DD-integral.md ──┼─► planificador-tareas ─► docs/tareas-nacho.md
+auditoria (diaria) ► docs/auditorias/AAAA-MM-DD-integral.md ──┼─► planificador-tareas ─► docs/tareas/<ID>.md
 mantenimiento (jue) ► docs arreglados + hallazgos de código ──┤                              │
 lanzamiento (mes) ─► docs/marketing/ ─────────────────────────┤                              ▼
 pc-build (PC, diaria) ► docs/rendimiento-pc.md ───────────────┘  construccion (2 por hora) ─► PR ─► CI ─► main
@@ -117,7 +117,8 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 10. Cerrá todo proceso de Godot que hayas abierto.
 11. **Freno de tareas**: cada tarea que crea una rutina lleva `Origen: <rutina> AAAA-MM-DD` (auditoría
     integral, QA, revisión semanal, mantenimiento, lanzamiento, sesión de arte, PC build). Antes de
-    crear, contá las tareas abiertas (sin `[x]`) de `tareas-nacho.md` con el `Origen` de tu rutina: si
+    crear, contá las tareas abiertas de `docs/tareas/` (`python tools/tareas.py lista --abiertas --json`)
+    con el `Origen` de tu rutina: si
     pasan de **10**, no crees ninguna esa corrida; los hallazgos quedan solo en el informe o el PR, y
     en el cuerpo decís "freno de tareas: N abiertas". Siempre entran igual: bugs de QA "bloquea" y P0
     de la auditoría. Así lo que se planifica no le gana a lo que la construcción alcanza a hacer.
@@ -161,10 +162,16 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
     - Un run rojo en su **intento 1** con un job de Godot caído lo relanza solo `ci-flaky.yml` (una vez,
       solo lo fallido): mientras corre el intento 2 cuenta como **sin verificar**. Si pasa, era un test
       inestable y queda en un issue `test-inestable` (lo arregla `ingeniero-ci`, no la corrida).
-17. **Lista viva y archivo**: `docs/tareas-nacho.md` tiene solo lo pendiente; lo terminado está en
-    `docs/tareas-nacho-archivo.md` (lo mueve `tools/archivar-tareas.py` en el mantenimiento semanal). Para
-    saber si una dependencia o un hallazgo ya está hecho, `grep` del ID o del tema en los dos archivos: el
-    archivo no se lee entero ni se le agregan tareas.
+17. **Un archivo por tarea** (desde el 2026-10-04, `docs/tareas/README.md`): cada `N-xxx` / `S-xxx` es
+    `docs/tareas/<ID>.md`, con su línea `Sección:`; `docs/tareas-nacho.md` es la portada (cómo leer, "Orden
+    de ataque", intro de cada sección). Donde estas rutinas dicen "en `tareas-nacho.md`" para **crear,
+    marcar o leer una tarea**, es su archivo en `docs/tareas/`: un PR que trabaja una tarea solo toca ese
+    archivo. Listar: `python tools/tareas.py lista --abiertas` (o `--seccion "QA"`); siguiente ID:
+    `python tools/tareas.py libre N-9`. A `tareas-nacho.md` solo se le agrega el ID de una tarea nueva en
+    la fila de su hito de "Orden de ataque" (lo hace `planificador-tareas`). CI corre
+    `tools/tareas.py revisar`: un bloque de tarea escrito en `tareas-nacho.md` deja el PR rojo con el
+    archivo al que moverlo. Lo terminado está en `docs/tareas/hechas/` y, lo de antes del 2026-10-04, en
+    `docs/tareas-nacho-archivo.md` (`grep -rl <ID>` en los dos, sin leerlos enteros).
 
 ## Límites de la nube
 

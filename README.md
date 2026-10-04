@@ -529,7 +529,8 @@ así antes de darla por cerrada (`docs/investigacion-red.md`). `--net-sim` solo,
   flujo de trabajo.
 - `docs/avisos/` — un archivo por aviso de cambio en la zona compartida o en archivos del
   otro integrante (los anteriores al 2026-09-30, en `archivo-2026-09.md`).
-- `docs/tareas-nacho.md` / `docs/tareas-slatex.md` — 100 tareas cada una, repartidas
+- `docs/tareas/<ID>.md` (portada e hitos en `docs/tareas-nacho.md`; `python tools/tareas.py lista
+  --abiertas`) / `docs/tareas-slatex.md` — las tareas, repartidas
   por dominio (vehículo/ruta/ambientación vs. jugador/paquetes/interacción/UI/
   progresión) para minimizar conflictos al trabajar en paralelo.
 - `docs/agregar-vehiculo.md` — convención que `VehiclePresentation` espera de
