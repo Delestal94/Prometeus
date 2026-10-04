@@ -11,7 +11,7 @@ extends Interactable
 ## The fault this spot fixes (VehicleFaults.FAULTS).
 var fault_id: StringName
 ## The VehicleFaults that owns the list and the spares.
-var faults: Node
+var faults: VehicleFaults
 
 
 func _ready() -> void:
@@ -26,20 +26,21 @@ func _ready() -> void:
 func get_prompt() -> String:
 	if faults == null:
 		return ""
-	return tr(String(faults.call(&"repair_prompt", fault_id)))
+	return tr(faults.repair_prompt(fault_id))
 
 
 func can_interact(player: Node) -> bool:
-	if faults == null or player.get(&"carried_package") != null:
+	# Anything that is not a Player (a test's stand-in Node3D) carries nothing.
+	if faults == null or (player is Player and (player as Player).carried_package != null):
 		return false
-	var method: StringName = faults.call(&"repair_method", fault_id)
+	var method: StringName = faults.repair_method(fault_id)
 	if method == &"phone":
-		return not bool(faults.call(&"is_driver", player.get_multiplayer_authority()))
+		return not faults.is_driver(player.get_multiplayer_authority())
 	return not method.is_empty()
 
 
 func interact(player: Node) -> void:
 	if not can_interact(player):
 		return
-	if bool(faults.call(&"fix", fault_id, player)):
+	if faults.fix(fault_id, player):
 		interacted.emit(player)

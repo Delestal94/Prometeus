@@ -1218,6 +1218,14 @@ dependencias por `setup()`. Una PR por archivo; el conteo baja en cada una.
     `scripts/`: `.call` 158 → 155, `.get(&` 118 → 117. `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso
     (`vehicle/` y `tests/`). La reserva `nacho/N-224-run-tally-typed` (solo el claim) se dejó: `run_tally.gd` ya se
     había saltado por `RunManager`. Siguientes: `fault_repair_spot.gd` (5), `hud_cargo_panel.gd` (5).
+  - [x] `fault_repair_spot.gd` (2026-10-04, rama `nacho/N-224-fault-repair-spot-typed`, reserva retomada): el punto
+    de arreglo de una avería. El dueño como `VehicleFaults` (`repair_prompt`, `repair_method`, `is_driver`, `fix`;
+    `vehicle_faults.gd` precarga este archivo y ya nombra `Player`, así que no suma nada al grafo de un `--script`) y el
+    jugador como `Player` para `carried_package`: el `Node3D` de `test_vehicle_faults.gd` no es `Player` y no carga nada,
+    igual que antes. En el archivo: 5 → 0 usos (`.call` 4 → 0, `.get(&` 1 → 0); en `scripts/`: `.call` 156 → 152,
+    `.get(&` 117 → 116 (líneas). `test_dynamic_dispatch_budget.gd` suma el archivo. Sin aviso (`vehicle/` y `tests/`).
+    Siguientes (fuera de `BUDGETS`): `run_tally.gd` (9, reserva `nacho/N-224-run-tally-typed` de solo el claim),
+    `vehicle.gd` (7), `network_manager.gd` (7), `run_scoring.gd` (6), `proximity_voice.gd` (6), `hud_cargo_panel.gd` (5).
 
 ### N-225 · Partir los archivos que viven al borde del límite del lint — C · `Opus 5.5 · xhigh` · Aviso: sí
 `synth_audio.gd` 1000, `package.gd` 999, `player.gd` 991, `run_manager.gd` 970, `reference_truck.gd`

@@ -52,6 +52,8 @@ extends SceneTree
 ##   and the peers would stop agreeing on who trips.
 ## - vehicle_faults.gd (the truck's faults) holds its effects and repair spots by preload and the phone
 ##   holder as Player; only the van's own door API and driver_peer_id stay by name (FakeVan in the tests).
+## - fault_repair_spot.gd (where a truck fault gets fixed) holds its VehicleFaults and the player as typed
+##   (a stand-in Node3D carries nothing); nothing stays by name.
 ## - wildlife_crossing.gd (the deer crossing) drives its deer through the wildlife_animal.gd type; only
 ##   the crew's money and the incident relay stay by name.
 ## - flock_crossing.gd (the sheep crossing) drives its sheep through the wildlife_animal.gd type; only the
@@ -253,6 +255,10 @@ const BUDGETS: Dictionary = {
 	# the van: is_door_open and set_rear_cargo_open (the pop of the rear door) and driver_peer_id. By name
 	# because the tests stand a FakeVan Node3D in (with only that API), which `as` a typed truck would drop.
 	"res://scripts/gameplay/vehicle/vehicle_faults.gd": {"call": 2, "callv": 0, "get": 1, "root": 0},
+	# The repair spot (N-224.4) holds its owner as VehicleFaults (repair_prompt, repair_method, is_driver, fix;
+	# vehicle_faults.gd preloads this script, a cycle Godot 4 accepts) and the player as Player (carried_package):
+	# the stand-in Node3D of test_vehicle_faults is no Player and carries nothing, as before. Nothing by name.
+	"res://scripts/gameplay/vehicle/fault_repair_spot.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
 	# The depot screen (N-224.4) is typed: the purchases go to the level's Depot (buy_supply,
 	# buy_supply_discounted, team_money, supplies), the boxes are DeliveryPackage (package_id, is_aboard),
 	# the level is a LevelCommon and the signals of EventBus and UnlockManager are connected directly (the
