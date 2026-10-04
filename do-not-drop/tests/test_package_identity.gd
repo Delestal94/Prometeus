@@ -16,10 +16,14 @@ func _expect_label_texture() -> void:
 	_expect(tex != null, "shipping label texture loads")
 	if tex == null:
 		return
-	_expect(tex.get_width() == 512 and tex.get_height() == 320, "shipping label texture is 512x320 (got %dx%d)" % [tex.get_width(), tex.get_height()])
-	_expect(is_equal_approx(float(tex.get_height()) / float(tex.get_width()), ShippingLabel.ASPECT), "shipping label texture aspect matches ASPECT")
+	var w: int = tex.get_width()
+	var h: int = tex.get_height()
+	_expect(w == 512 and h == 320, "shipping label texture is 512x320 (got %dx%d)" % [w, h])
+	_expect(is_equal_approx(float(h) / float(w), ShippingLabel.ASPECT),
+		"shipping label texture aspect matches ASPECT")
 	var c: Vector2 = ShippingLabel.PARTIES_CENTER_UV
-	_expect(c.x >= 0.0 and c.x < tex.get_width() and c.y >= 0.0 and c.y < tex.get_height(), "parties block centre lies inside the label texture")
+	_expect(c.x >= 0.0 and c.x < w and c.y >= 0.0 and c.y < h,
+		"parties block centre lies inside the label texture")
 
 func _initialize() -> void:
 	_expect_label_texture()
