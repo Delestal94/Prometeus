@@ -17,6 +17,9 @@ const STARTING_REPUTATION: float = 50.0
 const REPUTATION_MIN: float = 0.0
 const REPUTATION_MAX: float = 100.0
 
+## Movements the wallet history keeps (D-0501); older ones are dropped.
+const LEDGER_MAX: int = 200
+
 # --- Day and clock (S3) ---
 ## 08:00 and 20:00. A trip out at closing time is not cut: the day waits for it.
 const DAY_START_MIN: int = 8 * 60

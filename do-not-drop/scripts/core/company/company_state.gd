@@ -30,6 +30,9 @@ var layout: Array[Dictionary] = []
 ## Stock, in the Inventory.to_dict() form (use stock() / store_stock()).
 var inventory: Dictionary = {}
 var company_name: String = ""
+## Wallet history (D-0501), oldest first, at most CompanyTuning.LEDGER_MAX entries:
+## {day, minute, amount (signed), reason, balance (after the movement)}.
+var ledger: Array[Dictionary] = []
 
 var _active: bool = false
 
@@ -72,6 +75,7 @@ func to_dict() -> Dictionary:
 		"milestones_done": milestones_done.duplicate(),
 		"layout": layout.duplicate(true),
 		"inventory": inventory.duplicate(true),
+		"ledger": ledger.duplicate(true),
 	}
 
 
@@ -108,8 +112,53 @@ func from_dict(data: Dictionary) -> bool:
 		var stock_in := Inventory.new()
 		stock_in.from_dict(saved_stock)
 		inventory = stock_in.to_dict()
+	ledger = _entries(data.get("ledger", []))
+	if ledger.size() > CompanyTuning.LEDGER_MAX:
+		ledger = ledger.slice(ledger.size() - CompanyTuning.LEDGER_MAX)
 	_active = true
 	return true
+
+
+## Adds money to the wallet and records it. A zero or negative amount does nothing
+## (returns false): use spend() to take money out.
+func earn(amount: int, reason: StringName) -> bool:
+	if amount <= 0:
+		return false
+	_record(amount, reason)
+	return true
+
+
+## True when the wallet covers the amount (a spend never leaves the money below zero).
+func can_afford(amount: int) -> bool:
+	return amount >= 0 and money >= amount
+
+
+## Takes money out and records it. False, and nothing changes, when the amount is
+## negative or the wallet does not cover it. Charges that must go through even into
+## the red (rent, penalties) use charge().
+func spend(amount: int, reason: StringName) -> bool:
+	if amount <= 0 or not can_afford(amount):
+		return false
+	_record(-amount, reason)
+	return true
+
+
+## Takes money out even if the balance goes negative (rent and penalties; what
+## happens with a negative balance is D-0510). A zero or negative amount does nothing.
+func charge(amount: int, reason: StringName) -> bool:
+	if amount <= 0:
+		return false
+	_record(-amount, reason)
+	return true
+
+
+## Sum of the movements still in the ledger that have this reason (signed).
+func ledger_total(reason: StringName) -> int:
+	var total: int = 0
+	for entry: Dictionary in ledger:
+		if StringName(str(entry.get("reason", ""))) == reason:
+			total += int(entry.get("amount", 0))
+	return total
 
 
 ## True once the gate was opened. An opened gate is never closed again (map decision, point 7).
@@ -147,6 +196,21 @@ func store_stock(stock_in: Inventory) -> void:
 	inventory = stock_in.to_dict()
 
 
+func _record(signed_amount: int, reason: StringName) -> void:
+	money += signed_amount
+	ledger.append(
+		{
+			"day": day,
+			"minute": clock_minutes,
+			"amount": signed_amount,
+			"reason": String(reason),
+			"balance": money,
+		}
+	)
+	if ledger.size() > CompanyTuning.LEDGER_MAX:
+		ledger.pop_front()
+
+
 func _set_defaults() -> void:
 	money = CompanyTuning.STARTING_MONEY
 	day = CompanyTuning.STARTING_DAY
@@ -160,6 +224,7 @@ func _set_defaults() -> void:
 	milestones_done = []
 	layout = []
 	inventory = Inventory.new().to_dict()
+	ledger = []
 	company_name = ""
 
 
