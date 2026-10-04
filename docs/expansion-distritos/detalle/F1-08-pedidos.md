@@ -41,3 +41,16 @@ Los ids son los que `Order.requirements` ya admite. `window_min(base)` y `paid(p
 **Test** `test_order_requirements`: los 6 archivos cargan con su id y clave, cada uno pide algo y paga un
 bonus, `urgent` parte la ventana al medio, y `Order.make` acepta los seis ids.
 **Hecho cuando:** el test pasa.
+
+### D-0803 · Ritmo de llegada de pedidos — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `OrderRhythm` (`scripts/gameplay/business/order_rhythm.gd`) + `ORDER_HOUR_WEIGHTS` en `CompanyTuning`; `test_order_rhythm`.
+**Depende de:** D-0202
+**Qué:** funciones estáticas sin nodos. `orders_for_day(players)` = 6 + 2 por jugador, tope 16 (números de
+`CompanyTuning`). `arrival_minutes(seed, players)` saca cada minuto de llegada de una curva por hora
+(`ORDER_HOUR_WEIGHTS`, 08:00 a 19:00: apertura lenta, hora pico 10-12, bache al almuerzo, repunte a la
+tarde, última hora fina) con un generador sembrado: misma semilla y tripulación, mismos minutos en todos los
+peers. Ninguno llega después de las 19:00. `hourly_histogram(minutes)` cuenta pedidos por hora para
+imprimir la curva; `weight_at(minute)` da el peso relativo de esa hora.
+**Test** `test_order_rhythm`: cuenta por jugadores (con tope), determinismo y orden, rango horario, y la
+curva sobre 400 días (pico 10-12, bache a las 13, última hora más fina que la apertura; imprime el histograma).
+**Hecho cuando:** el test pasa y muestra la curva.

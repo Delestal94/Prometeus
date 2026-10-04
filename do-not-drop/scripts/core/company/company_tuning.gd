@@ -64,6 +64,11 @@ const SHIPPING_FEE: Dictionary = {&"centro": 40, &"campo": 60}
 const ORDERS_BASE_PER_DAY: int = 6
 const ORDERS_PER_PLAYER: int = 2
 const ORDERS_MAX_PER_DAY: int = 16
+## Weight of each game hour (08:00 to 19:00) in the day's order arrivals (D-0803):
+## slow opening, rush at 10-12, lunch dip, afternoon bump, thin last hour.
+const ORDER_HOUR_WEIGHTS: Array[float] = [1.0, 2.0, 3.0, 3.0, 2.5, 1.0, 1.0, 2.0, 2.5, 2.0, 1.5, 0.5]
+## Orders do not arrive in the last hour of the day: the crew would have no time to ship them.
+const ORDER_LAST_ARRIVAL_MIN: int = 19 * 60
 ## Products an order may ask for (distinct products, any quantity each).
 const ORDER_ITEMS_MIN: int = 1
 const ORDER_ITEMS_MAX: int = 3
