@@ -95,6 +95,9 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
    (si dice que algo bajó, `bash tools/lint.sh --update-baseline` y commiteá la baseline). Sin `gdlint`
    instalado el hook no lo corre: instalalo (`pip install "gdtoolkit==4.5.0"`) antes del primer push,
    porque un PR que CI rechaza por una línea larga pierde una corrida entera (pasó en el #71).
+   **Después de abrir el PR** (lo recuerda el hook `pr-ci-watch`): `vigilante-ci` con su número, y la corrida
+   **espera su resultado antes de terminar**. Si queda rojo y no lo pudo arreglar, la causa va como comentario
+   del PR. La corrida siguiente lo toma en §1 de `construccion.md` o `desarrollador.md`.
 7. **Sin nada que hacer, sin PR**: si la corrida no encontró trabajo o hallazgos, termina sin abrir PR.
 8. **Nunca**: editar `*.uid`, `*.import`, `.godot/`, `addons/godotsteam/`; `--no-verify`; forzar sobre
    `main`; **borrar ramas** (ni propias ni ajenas: el control de permisos de la nube lo bloquea y la
