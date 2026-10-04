@@ -11,7 +11,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | ✅ D-0701 | Estación de armado (mesa) con huecos para caja, insumos y productos | constructor-negocio | high | captura y test de interacción |
-| D-0702 | Elegir tamaño de caja (S, M, L, XL) del dispensador | constructor-negocio | medium | test: caja aparece abierta en la mesa |
+| ✅ D-0702 | Elegir tamaño de caja (S, M, L, XL) del dispensador | constructor-negocio | medium | test: caja aparece abierta en la mesa |
 | D-0703 | Meter productos en la caja (físico simple o encastre en grilla) | constructor-negocio | xhigh | test: 3 productos dentro, la caja conoce su contenido |
 | D-0704 | ✅ Armado en grilla de celdas de 0,2 m | — | — | decidido |
 | D-0705 | Relleno (papel, burbuja, espuma) llena el hueco libre y da protección | constructor-negocio | high | test: % de hueco libre baja con relleno |
