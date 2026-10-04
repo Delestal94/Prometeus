@@ -5,6 +5,7 @@
 > Aviso en `docs/avisos/` cuando se toque `event_bus.gd`, `network_manager.gd`, `run_manager.gd` o `modules/`.
 
 ### D-0201 · Arquitectura de la expansión documentada — A · Opus 5.5 · xhigh · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — sección 10 "Modo Empresa" de `docs/arquitectura.md`: capas, autoridad, señales de `EventBus`, carpetas y flujo de una caja.
 **Depende de:** D-0119
 **Qué:** sección "Modo Empresa" en `docs/arquitectura.md`:
 - **Capas.** `CompanyState` (persistente, autoload) → `DayCycle` (día en curso) → `WorldCells` (qué
