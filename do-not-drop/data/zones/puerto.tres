@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ZoneDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/zone_definition.gd" id="1_zone"]
+
+[resource]
+script = ExtResource("1_zone")
+id = &"puerto"
+display_key = "WORLD_ZONE_PUERTO"
+bounds = Rect2(1024, -512, 1024, 2560)
+gates = Array[StringName]([&"gate_puerto"])

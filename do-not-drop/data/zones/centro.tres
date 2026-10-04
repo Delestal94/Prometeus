@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ZoneDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/zone_definition.gd" id="1_zone"]
+
+[resource]
+script = ExtResource("1_zone")
+id = &"centro"
+display_key = "WORLD_ZONE_CENTRO"
+bounds = Rect2(256, -512, 768, 1024)
+vehicles = Array[StringName]([&"bike", &"van"])
+hazards = Array[StringName]([&"chasing_dog", &"low_visibility_event"])
+gates = Array[StringName]([])
+mood_profiles = Array[StringName]([&"soleado", &"nublado", &"lluvia", &"niebla"])
+shipping_fee = 40
+houses_per_trip = Vector2i(4, 6)
+base_reputation_gain = 1.0

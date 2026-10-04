@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ZoneDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/districts/zone_definition.gd" id="1_zone"]
+
+[resource]
+script = ExtResource("1_zone")
+id = &"suburbio"
+display_key = "WORLD_ZONE_SUBURBIO"
+bounds = Rect2(-1280, -512, 1024, 1024)
+gates = Array[StringName]([&"gate_suburbio"])

@@ -64,6 +64,7 @@
 **Hecho cuando:** el test pasa.
 
 ### D-0205 · Recurso `ZoneDefinition` (antes "DistrictDefinition") — A · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `ZoneDefinition` + 9 `.tres` en `data/zones/` (bounds provisorios en grilla de 256 m hasta D-0301; gates `gate_*` que D-0306 crea); `test_zone_definitions`.
 **Depende de:** D-0114
 **Qué:** `scripts/gameplay/districts/zone_definition.gd`. En el mapa continuo un distrito es una **zona**
 del mapa.
