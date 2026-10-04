@@ -252,12 +252,16 @@ func _on_peer_removed(peer_id: int) -> void:
 ## The truck is frozen where it is and no longer predicted: a client at the
 ## wheel was simulating its copy (N-218), and as the offline host it no longer
 ## stops on its own -- it would roll on, braking and creeping, behind the
-## overlay.
+## overlay. Whatever would go on with the host's part of the run here is told
+## to stop too (group "stops_with_orphaned_run": the mud's rescue, which as the
+## offline host's would unfreeze the truck and haul it, N-922.8).
 func _stop_orphaned_run(_reason: String) -> void:
 	RunManager.is_running = false
 	vehicle.linear_velocity = Vector3.ZERO
 	vehicle.angular_velocity = Vector3.ZERO
 	vehicle.call(&"stop_prediction")
+	if vehicle.is_inside_tree():
+		vehicle.get_tree().call_group(&"stops_with_orphaned_run", &"stop_orphaned_run")
 
 
 ## The host is gone. Godot frees everything the host's spawner made -- every
