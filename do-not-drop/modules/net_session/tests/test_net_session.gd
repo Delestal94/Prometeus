@@ -30,12 +30,27 @@ extends SceneTree
 ##   flooding packets gets at most VOICE_PACKET_BURST decoded at once (its own
 ##   budget: another peer still passes), refilled per second and reset when it
 ##   leaves or the session ends;
+## - SteamVoice's bandwidth caps (N-212, voice with 5 players), on a clock the
+##   test drives: a microphone with a packet ready every frame, a minute at 144
+##   frames a second, sends at most VOICE_SEND_BYTES_PER_SECOND (packets of
+##   MAX_PACKET_BYTES) or VOICE_SEND_PACKETS_PER_SECOND (small ones) a second
+##   plus one burst, and gets close to that cap; what it holds back is counted
+##   in dropped_sends; a packet over MAX_PACKET_BYTES never leaves; the send
+##   budget is all or nothing and holds one packet of the largest size; what a
+##   capped sender lets out is decoded whole; 200 packets of MAX_PACKET_BYTES
+##   from one peer in a second decode at most a burst plus a second of
+##   VOICE_BYTES_PER_SECOND (another peer still passes);
 ## - NetStatsOverlay builds on first show with the default theme.
 
 const TIMEOUT_PORT: int = 7812
 ## The host's settle margin here (the default is seconds; the checks wait past it).
 const SETTLE_SECONDS: float = 0.4
 const SESSION_MSEC: int = NetSession.ENET_PEER_TIMEOUT_SESSION_MSEC
+## Voice bandwidth: a minute of open mic at a fast display's frame rate.
+const VOICE_FPS: int = 144
+const VOICE_SECONDS: int = 60
+## A small voice packet: with one every frame the packets a second run out first.
+const SMALL_VOICE_PACKET: int = 64
 
 var _failures: int = 0
 
@@ -94,6 +109,11 @@ class FakeSteam extends Object:
 	var stops: int = 0
 	var recording: bool = false
 	var decompressed: int = 0
+	## What every getVoice() hands out (a microphone that never runs dry), how
+	## often it was asked, and the bytes decompressVoice() took in all.
+	var voice_bytes: int = 4
+	var gets: int = 0
+	var decompressed_bytes: int = 0
 
 	func startVoiceRecording() -> void:
 		starts += 1
@@ -104,13 +124,17 @@ class FakeSteam extends Object:
 		recording = false
 
 	func getVoice() -> Dictionary:
-		return {"result": 0, "buffer": PackedByteArray([1, 2, 3, 4]), "written": 4}
+		gets += 1
+		var buffer := PackedByteArray()
+		buffer.resize(voice_bytes)
+		return {"result": 0, "buffer": buffer, "written": voice_bytes}
 
 	func getVoiceOptimalSampleRate() -> int:
 		return 24000
 
 	func decompressVoice(packet: PackedByteArray, _rate: int) -> Dictionary:
 		decompressed += 1
+		decompressed_bytes += packet.size()
 		var pcm := PackedByteArray()
 		pcm.resize(packet.size() * 10)
 		return {"result": 0, "uncompressed": pcm, "size": pcm.size()}
@@ -119,12 +143,19 @@ class FakeSteam extends Object:
 class TestVoice extends SteamVoice:
 	var enabled: bool = false
 	var ptt: bool = true
+	## What would have gone on the wire: each packet's size, and the clock then.
+	var sent: Array[int] = []
+	var sent_msec: Array[int] = []
 
 	func _voice_enabled() -> bool:
 		return enabled
 
 	func _push_to_talk() -> bool:
 		return ptt
+
+	func _send_packet(buffer: PackedByteArray) -> void:
+		sent.append(buffer.size())
+		sent_msec.append(_now_msec())
 
 
 func _initialize() -> void:
@@ -137,6 +168,7 @@ func _run() -> void:
 	_test_event_bus()
 	_test_net_stats()
 	_test_voice()
+	_test_voice_bandwidth()
 	await _test_overlay()
 	if _failures == 0:
 		print("PASS: a game session, bus, stats, voice and overlay work on the module alone")
@@ -516,6 +548,166 @@ func _check_voice_budget(voice: TestVoice, fake: FakeSteam) -> void:
 	_expect(refilled == expected, "100 ms later it has refilled %d (got %d)" % [expected, refilled])
 	voice.clear_peers()
 	_expect(voice.take_voice_packet(6, 1100), "Ending the session resets the budget")
+
+
+## N-212: what one peer sends and decodes is capped, so the host's uplink can
+## budget voice with everybody talking (each client's goes through the host).
+func _test_voice_bandwidth() -> void:
+	_expect(SteamVoice.VOICE_SEND_BYTE_BURST >= SteamVoice.MAX_PACKET_BYTES,
+		"The send burst holds one packet of the largest size")
+	_expect(SteamVoice.VOICE_BYTES_PER_SECOND >= SteamVoice.VOICE_SEND_BYTES_PER_SECOND
+		and SteamVoice.VOICE_BYTE_BURST >= SteamVoice.VOICE_SEND_BYTE_BURST
+		and SteamVoice.VOICE_PACKETS_PER_SECOND >= SteamVoice.VOICE_SEND_PACKETS_PER_SECOND
+		and SteamVoice.VOICE_PACKET_BURST >= SteamVoice.VOICE_SEND_PACKET_BURST,
+		"Each peer's decode budget is at least what a capped sender sends")
+	_check_voice_sending()
+	_check_send_budget()
+	_check_voice_decoding()
+
+
+func _check_voice_sending() -> void:
+	var seconds: float = float(VOICE_SECONDS)
+	var packet_cap: float = SteamVoice.VOICE_SEND_PACKETS_PER_SECOND * seconds + SteamVoice.VOICE_SEND_PACKET_BURST
+	var byte_cap: float = SteamVoice.VOICE_SEND_BYTES_PER_SECOND * seconds + SteamVoice.VOICE_SEND_BYTE_BURST
+	# The largest packet every frame: the bytes a second run out first.
+	var big: TestVoice = _talk(SteamVoice.MAX_PACKET_BYTES, VOICE_SECONDS)
+	var big_bytes: int = _total(big.sent)
+	var big_rates: String = "%.1f packets/s, %.0f B/s" % [big.sent.size() / seconds, big_bytes / seconds]
+	_expect(big.sent.size() <= packet_cap and big_bytes <= byte_cap,
+		"%d-byte packets at %d frames/s stay within the send caps (%s)" % [
+			SteamVoice.MAX_PACKET_BYTES, VOICE_FPS, big_rates])
+	_expect(big_bytes >= 0.9 * SteamVoice.VOICE_SEND_BYTES_PER_SECOND * seconds,
+		"...and reach the bytes a second, the cap that holds them back (%s)" % big_rates)
+	_expect(big.dropped_sends == (big.backend as FakeSteam).gets - big.sent.size(),
+		"Every packet held back is counted in dropped_sends (got %d)" % big.dropped_sends)
+	_check_heard_whole(big)
+	_free_voice(big)
+	# A small packet every frame: the packets a second run out first.
+	var small: TestVoice = _talk(SMALL_VOICE_PACKET, VOICE_SECONDS)
+	var small_bytes: int = _total(small.sent)
+	var small_rates: String = "%.1f packets/s, %.0f B/s" % [small.sent.size() / seconds, small_bytes / seconds]
+	_expect(small.sent.size() <= packet_cap and small_bytes <= byte_cap,
+		"%d-byte packets at %d frames/s stay within the send caps (%s)" % [SMALL_VOICE_PACKET, VOICE_FPS, small_rates])
+	_expect(small.sent.size() >= 0.9 * SteamVoice.VOICE_SEND_PACKETS_PER_SECOND * seconds,
+		"...and reach the packets a second, the cap that holds them back (%s)" % small_rates)
+	_check_heard_whole(small)
+	_free_voice(small)
+	# Past MAX_PACKET_BYTES nothing leaves, whatever the budget.
+	var huge: TestVoice = _talk(SteamVoice.MAX_PACKET_BYTES + 1, 1)
+	_expect(huge.sent.is_empty() and huge.dropped_sends == (huge.backend as FakeSteam).gets,
+		"A packet over MAX_PACKET_BYTES is never sent, and is counted (sent %d)" % huge.sent.size())
+	_free_voice(huge)
+
+
+## The send budget on a fixed clock: all or nothing, burst, refill.
+func _check_send_budget() -> void:
+	var voice := TestVoice.new()
+	var largest: int = SteamVoice.MAX_PACKET_BYTES
+	_expect(voice.take_send_budget(1000, largest), "A fresh send budget holds one packet of the largest size")
+	_expect(not voice.take_send_budget(1000, 1), "...and then not a byte more")
+	var refill_msec: int = roundi(largest * 1000.0 / SteamVoice.VOICE_SEND_BYTES_PER_SECOND)
+	_expect(voice.take_send_budget(1000 + refill_msec, largest),
+		"%d ms later it holds the largest packet again" % refill_msec)
+	voice.free()
+	voice = TestVoice.new()
+	var most: int = int(SteamVoice.VOICE_SEND_BYTE_BURST) - 100
+	_expect(voice.take_send_budget(0, most), "A packet within the byte burst is sent")
+	_expect(not voice.take_send_budget(0, 200), "One over the bytes left is held back")
+	_expect(voice.take_send_budget(0, 100), "...spending nothing: a smaller one after it still goes")
+	voice.free()
+	voice = TestVoice.new()
+	var burst: int = int(SteamVoice.VOICE_SEND_PACKET_BURST)
+	var taken: int = 0
+	for index: int in burst + 10:
+		if voice.take_send_budget(0, 1):
+			taken += 1
+	_expect(taken == burst, "A burst of packets is cut at VOICE_SEND_PACKET_BURST (got %d)" % taken)
+	taken = 0
+	for index: int in burst + 10:
+		if voice.take_send_budget(100, 1):
+			taken += 1
+	var expected: int = int(SteamVoice.VOICE_SEND_PACKETS_PER_SECOND / 10.0)
+	_expect(taken == expected, "100 ms later %d more go (got %d)" % [expected, taken])
+	voice.free()
+
+
+## 200 packets of the largest size from one peer within a second.
+func _check_voice_decoding() -> void:
+	var listener := TestVoice.new()
+	var fake := FakeSteam.new()
+	listener.backend = fake
+	listener.enabled = true
+	var packet := PackedByteArray()
+	packet.resize(SteamVoice.MAX_PACKET_BYTES)
+	for index: int in 200:
+		listener.override_clock_msec = 1000 + index * 5
+		listener.receive_packet(7, packet)
+	var cap: float = SteamVoice.VOICE_BYTE_BURST + SteamVoice.VOICE_BYTES_PER_SECOND
+	_expect(fake.decompressed_bytes >= SteamVoice.VOICE_BYTE_BURST and fake.decompressed_bytes <= cap,
+		"200 big packets in a second decode at most a burst plus a second's bytes (%d B in %d packets, cap %.0f)" % [
+			fake.decompressed_bytes, fake.decompressed, cap])
+	_expect(fake.decompressed < SteamVoice.VOICE_PACKET_BURST,
+		"...cut by the bytes long before the packets would (%d packets)" % fake.decompressed)
+	var before: int = fake.decompressed
+	listener.receive_packet(8, packet)
+	_expect(fake.decompressed == before + 1, "Another peer's big packet still passes")
+	# The decode budget on a fixed clock: all or nothing, and refilled.
+	listener.clear_peers()
+	var most: int = int(SteamVoice.VOICE_BYTE_BURST) - 100
+	_expect(listener.take_voice_packet(9, 5000, most), "A packet within the byte burst is decoded")
+	_expect(not listener.take_voice_packet(9, 5000, 200), "One over the bytes left is not")
+	_expect(listener.take_voice_packet(9, 5000, 100), "...spending nothing: a smaller one after it still is")
+	var quarter: int = int(SteamVoice.VOICE_BYTES_PER_SECOND / 4.0)
+	_expect(listener.take_voice_packet(9, 5250, quarter), "250 ms later a quarter second's bytes are back")
+	listener.free()
+	fake.free()
+
+
+## `seconds` of open mic at VOICE_FPS on the test's clock, getVoice() handing
+## out `size` bytes every frame. Free it with _free_voice().
+func _talk(size: int, seconds: int) -> TestVoice:
+	var voice := TestVoice.new()
+	var fake := FakeSteam.new()
+	fake.voice_bytes = size
+	voice.backend = fake
+	voice.override_steam_session = 1
+	voice.enabled = true
+	voice.ptt = false
+	for frame: int in VOICE_FPS * seconds:
+		voice.override_clock_msec = roundi(frame * 1000.0 / VOICE_FPS)
+		voice.tick(false)
+	return voice
+
+
+## What a capped sender lets out, arriving as it left, is all decoded: the
+## decode budget never cuts an honest peer.
+func _check_heard_whole(sender: TestVoice) -> void:
+	var listener := TestVoice.new()
+	var fake := FakeSteam.new()
+	listener.backend = fake
+	listener.enabled = true
+	for index: int in sender.sent.size():
+		listener.override_clock_msec = sender.sent_msec[index]
+		var packet := PackedByteArray()
+		packet.resize(sender.sent[index])
+		listener.receive_packet(2, packet)
+	_expect(fake.decompressed == sender.sent.size(),
+		"Everything a capped sender sends is decoded (%d of %d)" % [fake.decompressed, sender.sent.size()])
+	listener.free()
+	fake.free()
+
+
+func _free_voice(voice: TestVoice) -> void:
+	var fake: Object = voice.backend
+	voice.free()
+	fake.free()
+
+
+func _total(sizes: Array[int]) -> int:
+	var total: int = 0
+	for size: int in sizes:
+		total += size
+	return total
 
 
 func _test_overlay() -> void:

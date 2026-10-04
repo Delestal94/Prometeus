@@ -7,8 +7,20 @@ extends Node
 ## Steam's voice API (already compressed, Opus under the hood) and hands the
 ## packets to everybody else on an unreliable, ordered channel of its own, so
 ## a dropped packet is a dropped syllable and never a stall of the game's
-## reliable traffic. Received packets are decompressed and handed out through
-## `voice_received`; playback is the owner's business.
+## reliable traffic. Received packets are decompressed, within a budget per
+## peer, and handed out through `voice_received`; playback is the owner's
+## business (VoicePlayback).
+##
+## "Everybody else" is not peer to peer: a client is connected to the host
+## only, so its packets reach the other clients through the host
+## (server_relay), which forwards a copy to each one. With N peers all
+## talking, every client downloads N - 1 streams and the host uploads
+## (N - 1)^2 of them: its own to N - 1 clients, plus each of the N - 1
+## clients' to the N - 2 others. That square is why every peer's sending is
+## capped (VOICE_SEND_PACKETS_PER_SECOND, VOICE_SEND_BYTES_PER_SECOND) and
+## why a game should count voice in the host's uplink: at the caps a stream
+## is about 14 KB/s with its framing, so voice alone takes ~1.8 Mbit/s of the
+## host's upload with 5 talking and ~5.6 Mbit/s with 8.
 ##
 ## Steam is reached through Engine.get_singleton, never by name: this script
 ## has to compile where GodotSteam is absent (CI, headless tests). Tests swap
@@ -29,10 +41,24 @@ signal talking_changed(talking: bool)
 const VOICE_CHANNEL: int = 3
 ## Steam's k_EVoiceResultOK.
 const VOICE_RESULT_OK: int = 0
-## Steam packs a few tens of ms per getVoice(); anything this large is not a
-## voice packet and is dropped before it reaches the decoder.
-const MAX_PACKET_BYTES: int = 8192
+## Steam packs a few tens of ms of speech per getVoice(); a packet past this
+## is a long hitch's backlog (stale by then) or not voice at all, and is
+## dropped before it is sent or decoded. Was 8192 (N-212): one packet that
+## size is a whole second of VOICE_SEND_BYTES_PER_SECOND.
+const MAX_PACKET_BYTES: int = 2048
 const FALLBACK_SAMPLE_RATE: int = 24000
+## What this peer sends at most, whatever its frame rate (N-212): every
+## frame's getVoice() would otherwise be an RPC, and the host relays each
+## one (see the top). Steam hands out a packet per ~20 ms of speech (about 50
+## a second) and its compressed speech is a few KB a second, so a voice stays
+## under both; what goes over is a dropped syllable, counted in
+## `dropped_sends`. These are what a bandwidth budget should count.
+const VOICE_SEND_PACKETS_PER_SECOND: float = 60.0
+const VOICE_SEND_BYTES_PER_SECOND: float = 8192.0
+## The send budget's burst: a tenth of a second of packets, and room for one
+## packet of MAX_PACKET_BYTES (or one that size could never leave).
+const VOICE_SEND_PACKET_BURST: float = 6.0
+const VOICE_SEND_BYTE_BURST: float = 2048.0
 ## Steam keeps handing out recorded voice for a moment after
 ## stopVoiceRecording(); drain it this many frames so the end of a phrase is
 ## sent instead of arriving stale at the start of the next one.
@@ -45,6 +71,12 @@ const DRAIN_FRAMES: int = 12
 ## go of a box.
 const VOICE_PACKETS_PER_SECOND: float = 120.0
 const VOICE_PACKET_BURST: float = 30.0
+## Bytes decoded per peer, the same way: the decoder's work grows with the
+## packet, and 30 packets of MAX_PACKET_BYTES would still be a lot of it.
+## Twice what a capped sender sends, with a second of that as burst for
+## packets that arrive bunched after a stall.
+const VOICE_BYTES_PER_SECOND: float = 2.0 * VOICE_SEND_BYTES_PER_SECOND
+const VOICE_BYTE_BURST: float = VOICE_SEND_BYTES_PER_SECOND
 
 ## The Steam singleton, or a stand-in object in tests. null means no voice.
 var backend: Object = null
@@ -52,14 +84,25 @@ var backend: Object = null
 var session: NetSession = null
 ## Tests: 1 forces "over Steam", 0 forces "not over Steam", -1 asks the session.
 var override_steam_session: int = -1
+## Tests: >= 0 is the clock (msec) the send and decode budgets read; -1 is
+## Time.get_ticks_msec().
+var override_clock_msec: int = -1
 ## The input action held to talk (push-to-talk).
 var talk_action: StringName = &"voice_talk"
 var talking: bool = false
+## Packets recorded here that never left: larger than MAX_PACKET_BYTES, or
+## over the send budget. If it climbs while someone simply talks, the caps
+## are too tight for Steam's real voice.
+var dropped_sends: int = 0
 
 var _muted: Dictionary = {}  # peer_id -> true
 var _peer_volume: Dictionary = {}  # peer_id -> 0..1
 var _voice_tokens: Dictionary = {}  # peer_id -> packets left (float)
+var _voice_bytes: Dictionary = {}  # peer_id -> bytes left (float)
 var _voice_token_msec: Dictionary = {}  # peer_id -> when they were counted
+var _send_packets: float = VOICE_SEND_PACKET_BURST
+var _send_bytes: float = VOICE_SEND_BYTE_BURST
+var _send_msec: int = -1  # When the send budget was counted; -1: never.
 var _drain_frames: int = 0
 
 
@@ -122,27 +165,56 @@ func clear_peers() -> void:
 	_muted.clear()
 	_peer_volume.clear()
 	_voice_tokens.clear()
+	_voice_bytes.clear()
 	_voice_token_msec.clear()
 
 
-## Takes one packet from `peer_id`'s budget at `now_msec` (Time.get_ticks_msec());
-## false once the burst is spent, until it refills at VOICE_PACKETS_PER_SECOND.
-func take_voice_packet(peer_id: int, now_msec: int) -> bool:
-	var tokens: float = float(_voice_tokens.get(peer_id, VOICE_PACKET_BURST))
-	var since: int = maxi(0, now_msec - int(_voice_token_msec.get(peer_id, now_msec)))
-	tokens = minf(VOICE_PACKET_BURST, tokens + since * VOICE_PACKETS_PER_SECOND / 1000.0)
+## Takes one packet of `bytes` from `peer_id`'s decode budget at `now_msec`
+## (Time.get_ticks_msec()): false, spending nothing, while its packets
+## (VOICE_PACKET_BURST, refilled at VOICE_PACKETS_PER_SECOND) or its bytes
+## (VOICE_BYTE_BURST, at VOICE_BYTES_PER_SECOND) can't cover it. Without
+## `bytes` only the packets count.
+func take_voice_packet(peer_id: int, now_msec: int, bytes: int = 0) -> bool:
+	var since: int = now_msec - int(_voice_token_msec.get(peer_id, now_msec))
+	var packets: float = _refilled(float(_voice_tokens.get(peer_id, VOICE_PACKET_BURST)), since,
+		VOICE_PACKETS_PER_SECOND, VOICE_PACKET_BURST)
+	var budget: float = _refilled(float(_voice_bytes.get(peer_id, VOICE_BYTE_BURST)), since,
+		VOICE_BYTES_PER_SECOND, VOICE_BYTE_BURST)
 	_voice_token_msec[peer_id] = now_msec
-	if tokens < 1.0:
-		_voice_tokens[peer_id] = tokens
+	var allowed: bool = packets >= 1.0 and budget >= bytes
+	_voice_tokens[peer_id] = packets - 1.0 if allowed else packets
+	_voice_bytes[peer_id] = budget - bytes if allowed else budget
+	return allowed
+
+
+## Takes one packet of `bytes` from this peer's own send budget at `now_msec`
+## (Time.get_ticks_msec()): false, spending nothing, while its packets
+## (VOICE_SEND_PACKET_BURST, refilled at VOICE_SEND_PACKETS_PER_SECOND) or its
+## bytes (VOICE_SEND_BYTE_BURST, at VOICE_SEND_BYTES_PER_SECOND) can't cover
+## it, so a big packet held back never costs the smaller ones after it.
+func take_send_budget(now_msec: int, bytes: int) -> bool:
+	var since: int = now_msec - _send_msec if _send_msec >= 0 else 0
+	_send_msec = now_msec
+	_send_packets = _refilled(_send_packets, since, VOICE_SEND_PACKETS_PER_SECOND, VOICE_SEND_PACKET_BURST)
+	_send_bytes = _refilled(_send_bytes, since, VOICE_SEND_BYTES_PER_SECOND, VOICE_SEND_BYTE_BURST)
+	if _send_packets < 1.0 or _send_bytes < bytes:
 		return false
-	_voice_tokens[peer_id] = tokens - 1.0
+	_send_packets -= 1.0
+	_send_bytes -= bytes
 	return true
+
+
+## A token bucket's `level` after `since_msec` more: refilled at `rate` a
+## second, never past `burst` (a clock that went back refills nothing).
+static func _refilled(level: float, since_msec: int, rate: float, burst: float) -> float:
+	return minf(burst, level + maxi(0, since_msec) * rate / 1000.0)
 
 
 func _forget_peer(peer_id: int) -> void:
 	_muted.erase(peer_id)
 	_peer_volume.erase(peer_id)
 	_voice_tokens.erase(peer_id)
+	_voice_bytes.erase(peer_id)
 	_voice_token_msec.erase(peer_id)
 
 
@@ -168,10 +240,23 @@ func _send_pending_voice() -> void:
 	# The key moved between GodotSteam versions ("buffer" / "voice_data").
 	var buffer: PackedByteArray = voice.get("buffer", voice.get("voice_data", PackedByteArray()))
 	var written: int = int(voice.get("written", buffer.size()))
-	if written <= 0 or written > MAX_PACKET_BYTES:
+	if written <= 0 or buffer.is_empty():
+		return
+	if written > MAX_PACKET_BYTES:
+		dropped_sends += 1
 		return
 	if written < buffer.size():
 		buffer = buffer.slice(0, written)
+	if not take_send_budget(_now_msec(), buffer.size()):
+		dropped_sends += 1
+		return
+	_send_packet(buffer)
+
+
+## Where a recorded packet within the budget leaves: to every other peer,
+## through the host (see the top). Tests override it to count what would go
+## on the wire.
+func _send_packet(buffer: PackedByteArray) -> void:
 	if _connected():
 		_receive_voice.rpc(buffer)
 
@@ -192,7 +277,7 @@ func receive_packet(peer_id: int, packet: PackedByteArray) -> void:
 		return
 	if backend == null or not backend.has_method(&"decompressVoice"):
 		return
-	if not take_voice_packet(peer_id, Time.get_ticks_msec()):
+	if not take_voice_packet(peer_id, _now_msec(), packet.size()):
 		return
 	var rate: int = FALLBACK_SAMPLE_RATE
 	if backend.has_method(&"getVoiceOptimalSampleRate"):
@@ -223,6 +308,10 @@ func _connected() -> bool:
 	var peer: MultiplayerPeer = multiplayer.multiplayer_peer
 	return peer != null and peer is not OfflineMultiplayerPeer \
 		and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
+
+
+func _now_msec() -> int:
+	return override_clock_msec if override_clock_msec >= 0 else Time.get_ticks_msec()
 
 
 func _exit_tree() -> void:

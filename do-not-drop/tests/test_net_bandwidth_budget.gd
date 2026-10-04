@@ -25,6 +25,15 @@ extends SceneTree
 ## fits the budget, the pile-up Steam's send rate itself, and the host's
 ## upload in the steady case a modest home uplink.
 ##
+## Voice (N-212) on top of the steady case, with VOICE_CREW players all
+## talking at SteamVoice's send cap (VOICE_SEND_PACKETS_PER_SECOND packets
+## carrying VOICE_SEND_BYTES_PER_SECOND): a client's voice reaches the others
+## through the host (server_relay), so each client gets crew - 1 streams and
+## the host uploads (crew - 1)^2. Host -> one client still fits Steam's send
+## rate and the host's upload the uplink. Voice is tested for 5: for a full
+## crew of MAX_PLAYERS it doesn't fit the uplink, which is printed (with the
+## largest crew that fits), not failed.
+##
 ## The throttle itself, wired into a real box: one left alone drops to its
 ## rest interval, and moving it puts the full rate back the same tick.
 
@@ -56,6 +65,12 @@ const RELAY_HEADER: int = 6
 ## pack several messages in one datagram, and ENet (28 + 12) does, so this is
 ## a ceiling. Steam's own rate doesn't even count the 28 of IP and UDP.
 const PACKET_OVERHEAD_BYTES: int = 80
+## A voice RPC's own framing in its packet, a ceiling: SceneMultiplayer's
+## command byte, the node's and the method's ids, and the PackedByteArray's
+## header when it isn't sent raw.
+const VOICE_RPC_HEADER: int = 14
+## Voice is checked with this many players all talking at once (N-212).
+const VOICE_CREW: int = 5
 
 var _failures: int = 0
 var _sync_mtu: int = 1350
@@ -94,9 +109,13 @@ func _initialize() -> void:
 	print("Per send: box %d B, player %d B, truck %d B (net id and size included); box at rest every %.2f s" % [
 		box_entry, player_entry, van_entry, rest_interval])
 
-	var steady: Dictionary = _host_to_client(crew, [
-		[box_interval, box_entry, moving], [rest_interval, box_entry, cargo - moving],
-		[_interval(van), van_entry, 1], [_interval(player), player_entry, 1]], _interval(player), player_entry)
+	# The steady case for any crew: a box moving per player, the rest at rest.
+	var steady_for: Callable = func(players: int) -> Dictionary:
+		var carried: int = mini(players, cargo)
+		return _host_to_client(players, [
+			[box_interval, box_entry, carried], [rest_interval, box_entry, cargo - carried],
+			[_interval(van), van_entry, 1], [_interval(player), player_entry, 1]], _interval(player), player_entry)
+	var steady: Dictionary = steady_for.call(crew)
 	var pile_up: Dictionary = _host_to_client(crew, [
 		[box_interval, box_entry, cargo], [_interval(van), van_entry, 1],
 		[_interval(player), player_entry, 1]], _interval(player), player_entry)
@@ -123,6 +142,7 @@ func _initialize() -> void:
 		+ (crew - 2) * (RELAY_HEADER + SYNC_PACKET_HEADER + player_entry + PACKET_OVERHEAD_BYTES))
 	print("Each client uploads its own pose: %.1f KB/s (one copy to the host, %d relayed through it)" % [
 		client_upload / 1024.0, crew - 2])
+	_check_voice(steady_for, crew)
 
 	await _check_throttle(box)
 	if _failures == 0:
@@ -155,6 +175,39 @@ func _host_to_client(crew: int, groups: Array, player_interval: float, player_en
 		"host": data, "relayed": relay_data, "framing": framing, "datagrams": packets + relay_packets,
 		"total": data + relay_data + framing,
 	}
+
+
+## Everybody talking at once at SteamVoice's send cap, on top of the steady
+## case (N-212). A stream is a voice RPC per packet, relayed by the host; the
+## host's own voice carries no relay header, so counting it on every stream
+## is a ceiling. Each client gets players - 1 streams; the host uploads its
+## own to players - 1 clients and each client's to the players - 2 others,
+## (players - 1)^2 in all. VOICE_CREW must fit; the full crew is reported.
+func _check_voice(steady_for: Callable, crew: int) -> void:
+	var packets: float = SteamVoice.VOICE_SEND_PACKETS_PER_SECOND
+	var payload: float = SteamVoice.VOICE_SEND_BYTES_PER_SECOND / packets
+	var stream: float = packets * (payload + VOICE_RPC_HEADER + RELAY_HEADER + PACKET_OVERHEAD_BYTES)
+	print("Voice at its send cap: %.0f packets/s of %.0f B, %.1f KB/s a stream relayed on the wire" % [
+		packets, payload, stream / 1024.0])
+	var fits_up_to: int = 1
+	for players: int in range(2, maxi(crew, VOICE_CREW) + 1):
+		var steady: Dictionary = steady_for.call(players)
+		var to_client: float = float(steady.total) + (players - 1) * stream
+		var upload: float = float(steady.total) * (players - 1) + (players - 1) * (players - 1) * stream
+		var fits: bool = to_client < STEAM_SEND_RATE and upload < HOST_UPLINK_BYTES_PER_SECOND
+		if fits and fits_up_to == players - 1:
+			fits_up_to = players
+		var numbers: String = "host -> one client %.1f KB/s (Steam's %.0f), host upload %.1f Mbit/s (cap %.1f)" % [
+			to_client / 1024.0, STEAM_SEND_RATE / 1024.0, upload * 8.0 / 1e6, HOST_UPLINK_BYTES_PER_SECOND * 8.0 / 1e6]
+		if players == VOICE_CREW:
+			print("Voice, %d players all talking: %s" % [players, numbers])
+			_expect(to_client < STEAM_SEND_RATE,
+				"With %d players all talking, Steam doesn't queue the host's sends: %s" % [players, numbers])
+			_expect(upload < HOST_UPLINK_BYTES_PER_SECOND,
+				"With %d players all talking, the host's upload fits the uplink: %s" % [players, numbers])
+		elif players == crew and not fits:
+			print("NOTE: voice is tested for %d players; %d all talking don't fit: %s" % [VOICE_CREW, players, numbers])
+	print("Voice with everybody talking fits up to %d players" % fits_up_to)
 
 
 ## What SceneMultiplayer's _send_sync makes of these entries in one tick:
