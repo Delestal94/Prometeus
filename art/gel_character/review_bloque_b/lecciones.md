@@ -1,5 +1,41 @@
 # Lecciones de la preparación B
 
+## A90, adaptación de clips y validación del export, 2026-10-03
+
+- En una mano manopla, separar el pulgar en planta no basta: su reposo debe quedar
+  por delante de la palma para que una rotación A90 no lo encierre contra el
+  muslo. Validar también el cierre sobre la caja y no sólo la pose abierta.
+- Un campo de pesos inferior a un punto porcentual puede convertir contactos
+  repetibles de RED a GREEN. Medir el desplazamiento real de piel y limitar la
+  edición a sus propietarios evita convertir una corrección local en un cambio
+  global de silueta.
+- Validar la fuente no prueba lo que recibe el juego. La puerta final debe abrir
+  los tres GLB reales, comprobar nombres y duraciones de clips, y muestrear
+  animación+morphs sobre cada LOD; aquí son 405 estados animados explícitos.
+- Las normales suaves de una reducción extrema pueden cruzar el hemisferio de
+  una cara geométricamente válida. Mantener suave la malla y dejar plana sólo la
+  cara inestable conserva el aspecto y convierte el defecto en una regla
+  verificable por esquina.
+- IK de dos huesos con objetivos explícitos evita depender de proporciones de
+  reposo implícitas. Comprobar longitud de huesos, unión de cadenas, manos y
+  tobillos en todos los keyframes antes de exportar.
+
+## Axila reconstruida y simplificación, 2026-10-02
+
+- Dividir sólo longitudinalmente un quad largo conserva su pliegue transversal.
+  Reconstruir loops en ambas direcciones y sus posiciones curvas redujo el
+  dihedro A75 de 143,17° a 72,80°; comprobar también la superficie animada real.
+- Una corrección que pasa las poses base puede fallar en morphs combinados.
+  LOD2 había borrado la transición cadera-muslo: la muestra 30 invertía una cara.
+  Proteger esos loops y repetir el barrido, sin alterar rangos ni tolerancias.
+- Los pesos normalizados del GLB sufren cuantización al importarse en Godot.
+  Se midió un déficit máximo de 4,581e-5, compatible con pasos de 1/65535.
+  La prueba de importación permite cuatro pasos por los cuatro slots; mantiene
+  estrictas las comprobaciones de finitud, signo e índices de huesos.
+- Guardar evidencia nueva sin presentar capturas antiguas como actuales.
+  A60/A75 sin aberturas y LOD dentro del 5 % no prueban A90, todo el continuo
+  ni la aprobación final del material y de los ítems corporales completos.
+
 - Incidencia de dos caras por arista no demuestra una superficie manifold:
   verificar también que el enlace de cada vértice sea un único ciclo.
 - No soldar costuras por tolerancia espacial, ni solo por posición evaluada:
