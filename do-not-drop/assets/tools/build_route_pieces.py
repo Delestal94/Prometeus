@@ -36,6 +36,15 @@ are only what you see. Pieces, in `models/environment/route/`:
   sm_env_route_bridge_water.glb    36 m of river under the deck: water, banks,
                                    abutments, two piers, ripples and foam.
                                    Origin at the middle of the span.
+  ../props/sm_env_prop_bridge_railing.glb (N-325, kept in props/ under its
+                                   old name): 6 m along X, chamfered concrete
+                                   posts at x 0 / +-2 with plinths and
+                                   pyramid caps, an octagonal guardrail
+                                   handrail at 0.92 m, a mid rail, a bevelled
+                                   curb with two drains and a warning band
+                                   with reflectors on the middle post. Its
+                                   ends and x +-1 fall on bridge posts.
+                                   Bake its AO after building (bake_vertex_ao.py).
   sm_env_route_chicane_barrier.glb 4.4 x 1.0 x 0.8 m: two jersey sections with
                                    diagonal warning bands leaning toward +X
                                    (the gap to steer through) and a striped
@@ -62,8 +71,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bmesh  # noqa: E402
 import bpy  # noqa: E402
-from lowpoly_kit import (MATS, PALETTE, ROOT, blob, clear, cone, cube,  # noqa: E402
-                         cylinder, export, flat_poly, jitter, slab, triangle_count)
+from lowpoly_kit import (MATS, PALETTE, ROOT, blob, circle_points, clear, cone,  # noqa: E402
+                         cube, cylinder, export, flat_poly, jitter, slab, triangle_count)
 
 
 def srgb(hex_code):
@@ -112,12 +121,13 @@ import lowpoly_kit  # noqa: E402
 lowpoly_kit.mat = mat
 
 OUT = os.path.join(ROOT, "models", "environment", "route")
+PROPS = os.path.join(ROOT, "models", "environment", "props")
 REPORT = []
 ALONG_X = (0.0, math.pi / 2.0, 0.0)
 ALONG_Y = (math.pi / 2.0, 0.0, 0.0)
 
 
-def done(filename):
+def done(filename, folder=OUT):
     for o in bpy.context.scene.objects:
         if o.type == "MESH":
             # No n-gons in the files: triangulate the concave outlines here.
@@ -127,7 +137,7 @@ def done(filename):
             bm.to_mesh(o.data)
             bm.free()
     REPORT.append((filename, triangle_count()))
-    export(os.path.join(OUT, filename))
+    export(os.path.join(folder, filename))
 
 
 def prism_y(name, outline, y0, y1, material, rings=1):
@@ -155,9 +165,9 @@ def prism_y(name, outline, y0, y1, material, rings=1):
     return obj
 
 
-def prism_x(name, outline, x0, x1, material, shear=0.0, shear_from=0.0):
+def prism_x(name, outline, x0, x1, material, shear=0.0, shear_from=0.0, rings=1):
     """A (y, z) outline swept along X; `shear` leans it (x += (z - shear_from) * shear)."""
-    obj = prism_y(name, [(y, z) for y, z in outline], x0, x1, material)
+    obj = prism_y(name, [(y, z) for y, z in outline], x0, x1, material, rings)
     for v in obj.data.vertices:
         # prism_y built it as (a, y, z) with a = outline y; swap to (x, y, z).
         a, x, z = v.co.x, v.co.y, v.co.z
@@ -414,6 +424,38 @@ def bridge_post():
     done("sm_env_route_bridge_post.glb")
 
 
+# The railing (N-325): 6 m along X, laid by narrow_bridge_segment.gd a
+# quarter turn round at x = +-3.05 in sections centred every 6 m, so its ends
+# (x +-3) and local x +-1 always fall on a bridge_post (every 4 m): its own
+# posts stand at 0 and +-2, between them, and nothing is wider than the
+# post (y +-0.17). Long runs are cut every 6/7 m so bake_vertex_ao.py's 1 m
+# subdivision has nothing left to cut.
+RAIL_RUNS = 7
+CURB = [(-0.17, 0.0), (0.17, 0.0), (0.17, 0.12), (0.13, 0.16), (-0.13, 0.16), (-0.17, 0.12)]
+
+
+def bridge_railing():
+    clear()
+    prism_x("Curb", CURB, -3.0, 3.0, "concrete", rings=RAIL_RUNS)
+    for x in (-1.5, 1.5):
+        # Drains through the curb, dark on both faces.
+        cube("Drain", (x, 0, 0.035), (0.2, 0.36, 0.05), "sign_ink")
+    for x in (-2.0, 0.0, 2.0):
+        cube("PostBase", (x, 0, 0.2), (0.24, 0.24, 0.08), "concrete", 0.02)
+        cube("Post", (x, 0, 0.6), (0.16, 0.16, 0.8), "concrete.light", 0.025)
+        cone("PostCap", (x, 0, 1.04), 0.13, 0.02, 0.08, "concrete", 4, rot=(0, 0, math.pi / 4))
+        for z in (0.55, 0.92):
+            cube("RailCollar", (x, 0, z), (0.19, 0.19, 0.04), "guardrail")
+    # One reflector post per section: one every 6 m along the bridge.
+    cube("Band", (0, 0, 0.74), (0.18, 0.18, 0.12), "warning")
+    for y in (-0.091, 0.091):
+        cube("Reflector", (0, y, 0.74), (0.08, 0.012, 0.07), "reflector")
+    prism_x("Handrail", circle_points(0.0, 0.92, 0.05, 8, math.pi / 8), -3.0, 3.0, "guardrail", rings=RAIL_RUNS)
+    prism_x("MidRail", [(-0.03, 0.52), (0.03, 0.52), (0.03, 0.58), (-0.03, 0.58)], -3.0, 3.0, "guardrail",
+            rings=RAIL_RUNS)
+    done("sm_env_prop_bridge_railing.glb", PROPS)
+
+
 def bridge_water():
     clear()
     rng = random.Random(132)
@@ -547,7 +589,7 @@ def power_pole():
 
 BUILDERS = {
     "tunnel": (tunnel_module, tunnel_hill_props, tunnel_portal, tunnel_lamp),
-    "bridge": (bridge_deck, bridge_post, bridge_water),
+    "bridge": (bridge_deck, bridge_post, bridge_water, bridge_railing),
     "chicane": (chicane_barrier,),
     "pole": (power_pole,),
 }
