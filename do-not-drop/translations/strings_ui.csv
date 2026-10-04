@@ -410,6 +410,7 @@ UI_HOW_TO_PLAY,Cómo jugar,How to play
 UI_LEAD_EMPTY,Todavía no hay entregas registradas.,No deliveries recorded yet.
 UI_LEAD_ROW,%d.  %d pts  ·  %s  ·  %s,%d.  %d pts  ·  %s  ·  %s
 UI_LEAD_TITLE,Récords locales,Local records
+UI_MENU_COMPANY,Modo Empresa (en pruebas),Company mode (testing)
 UI_MENU_ENDLESS,Modo Endless,Endless mode
 UI_MENU_ERROR_CONNECTION,No se pudo completar la conexión. Revisá la dirección e intentá de nuevo.,Couldn't complete the connection. Check the address and try again.
 UI_MENU_ERROR_FULL,La sala está llena.,The room is full.

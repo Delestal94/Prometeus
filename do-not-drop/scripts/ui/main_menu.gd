@@ -31,6 +31,7 @@ const MINT: Color = UiTheme.MINT
 const RED: Color = UiTheme.RED
 const LEVEL_SCENE: String = "res://scenes/gameplay/level_base.tscn"
 const ENDLESS_LEVEL_SCENE: String = "res://scenes/gameplay/level_endless.tscn"
+const COMPANY_SCENE: String = "res://scenes/gameplay/company_root.tscn"
 const MENU_ART: Texture2D = preload("res://assets/ui/backgrounds/tx_ui_menu_background_1920.png")
 const MENU_LOGO: Texture2D = preload("res://assets/ui/logo/tx_ui_logo_wordmark_2048.png")
 const PROGRESS_PANEL_SCRIPT := preload("res://scripts/ui/progress_panel.gd")
@@ -161,6 +162,9 @@ func _handle_cmdline_args() -> void:
 		return
 	if "--autostart-endless" in args:
 		_play_endless()
+		return
+	if "--mode=company" in args:
+		_play_company()
 		return
 	if "--host" in args:
 		_host_session()
@@ -322,6 +326,9 @@ func _build_play_page(column: VBoxContainer) -> void:
 	_page_focus[Page.PLAY] = solo_button
 	_entry_buttons.append(_button(play, tr("UI_MENU_ENDLESS"), false))
 	_entry_buttons[-1].pressed.connect(_play_endless)
+	# Modo Empresa (D-0214): in testing, solo only, until it replaces the others (D-0102).
+	_entry_buttons.append(_button(play, tr("UI_MENU_COMPANY"), false))
+	_entry_buttons[-1].pressed.connect(_play_company)
 	_spacer(play, 4)
 	_label(play, tr("UI_MENU_WITH_FRIENDS"), 15, MUTED).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_entry_buttons.append(_button(play, tr("UI_MENU_HOST"), false))
@@ -546,6 +553,13 @@ func _play_endless() -> void:
 	if _busy:
 		return
 	_go_to_level(ENDLESS_LEVEL_SCENE, tr("UI_MENU_ENDLESS"))
+
+
+## Modo Empresa (D-0214): the Play page button and --mode=company.
+func _play_company() -> void:
+	if _busy:
+		return
+	_go_to_level(COMPANY_SCENE, tr("UI_MENU_COMPANY"))
 
 
 func _host_session(transport: int = NetworkManager.Transport.AUTO, scene: String = LEVEL_SCENE) -> void:
