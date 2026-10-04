@@ -300,7 +300,10 @@ func _run() -> void:
 		"Delivery results show progress toward the next unlock")
 	# A long card (stories, breakdown, complaints) shrinks to fit the screen
 	# instead of pushing its buttons off the bottom edge.
-	hud.complaints_label.text = "\n".join(PackedStringArray(range(30).map(func(i: int) -> String: return "Queja %d" % i)))
+	var complaints := PackedStringArray()
+	for i in range(30):
+		complaints.append("Queja %d" % i)
+	hud.complaints_label.text = "\n".join(complaints)
 	hud.complaints_label.visible = true
 	await process_frame
 	await process_frame
