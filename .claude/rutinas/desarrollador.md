@@ -102,7 +102,7 @@ Una reserva `exp/` abandonada se retoma con la regla 15 del README; nunca se bor
    verse) y "Decidir al final" (lo que el usuario podría querer cambiar, con la opción que elegiste).
    Un archivo por tarea, así los PRs no chocan.
 
-No se toca `docs/tareas-nacho.md` (es de la rutina de construcción). Los bugs que encuentres fuera de tu
+No se tocan `docs/tareas-nacho.md` ni `docs/tareas/` (son de la rutina de construcción). Los bugs que encuentres fuera de tu
 tarea van a `docs/expansion-distritos/revisar/<ID>.md` si son de la expansión. Si son del juego actual,
 van al cuerpo del PR, para la auditoría.
 

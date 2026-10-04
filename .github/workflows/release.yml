@@ -1,7 +1,7 @@
 name: Release builds
 
 # N-210: every v* tag exports Windows and Linux with tools/export/export_presets.cfg
-# and attaches both zips to the GitHub release of that tag. The tag (without the
+# and attaches both zips to a DRAFT release of that tag (public repo: never published by CI). The tag (without the
 # "v") becomes application/config/version, which the main menu shows.
 
 on:
@@ -128,5 +128,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="$GITHUB_REF_NAME"
-          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes
-          gh release upload "$tag" *.zip SHA256SUMS.txt --clobber
+          # The repo is public: a published release would let anyone download the game. Builds go to
+          # a DRAFT (only people with write access see it); publishing it is a person's decision.
+          # The weekly release train may already have drafted this tag's notes: reuse that draft.
+          if ! gh release list -R "$GITHUB_REPOSITORY" --limit 50 --json tagName --jq '.[].tagName' | grep -qx "$tag"; then
+            gh release create "$tag" -R "$GITHUB_REPOSITORY" --draft --verify-tag --title "$tag" --generate-notes
+          fi
+          gh release upload "$tag" -R "$GITHUB_REPOSITORY" *.zip SHA256SUMS.txt --clobber

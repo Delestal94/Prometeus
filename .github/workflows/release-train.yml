@@ -1,0 +1,86 @@
+name: Release train
+
+# Every Monday (07:00 Argentina) main's head gets the next version, if its own Tests run is green:
+# a tag v0.<N>.0 and a DRAFT release with the notes of tools/release/changelog.py (what went in
+# since the previous tag, grouped by type). The repo is public: a published release or a build
+# artifact would let anyone download the game, so this never builds nor publishes. Drafts are
+# only visible to people with write access; builds come from the PC routine (pc-build.md), and a
+# release with builds is published by a person (tag push -> release.yml, also as a draft).
+# The tag is created with GITHUB_TOKEN, so it does not start release.yml.
+on:
+  schedule:
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: release-train
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    name: Tag main's head and draft its notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pick the commit and the version
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          state=$(gh run list --workflow tests.yml --commit "$sha" --json conclusion --jq '[.[].conclusion] | if index("success") then "green" else "not-green" end')
+          if [ "$state" != green ]; then
+            echo "::warning::main's head ($sha) has no green Tests run: no version this week."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git tag --points-at "$sha" | grep -q '^v'; then
+            echo "main's head is already $(git tag --points-at "$sha" | head -1)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          last=$(git tag -l 'v0.*' --sort=-v:refname | head -1)
+          if [ -z "$last" ]; then
+            next="v0.1.0"
+          else
+            minor=$(echo "$last" | cut -d. -f2)
+            next="v0.$((minor + 1)).0"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "Next version: $next at $sha (previous: ${last:-none})"
+
+      - name: Notes
+        if: steps.pick.outputs.skip == 'false'
+        env:
+          LAST: ${{ steps.pick.outputs.last }}
+          SHA: ${{ steps.pick.outputs.sha }}
+        run: |
+          if [ -n "$LAST" ]; then
+            python3 tools/release/changelog.py --from "$LAST" --to "$SHA" > notes.md
+          else
+            python3 tools/release/changelog.py --to "$SHA" --since-days 7 > notes.md
+          fi
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tag and draft release
+        if: steps.pick.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT: ${{ steps.pick.outputs.next }}
+          SHA: ${{ steps.pick.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$NEXT" -f sha="$SHA" >/dev/null
+          gh release create "$NEXT" --draft --verify-tag --title "$NEXT" --notes-file notes.md
+          echo "::notice::$NEXT tagged at $SHA with a draft release."

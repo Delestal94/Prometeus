@@ -1,0 +1,14 @@
+Take My Package
+Copyright (c) 2026 Nacho (Miguel Ignacio Delestal) and Slatex. All rights reserved.
+
+This repository is public so that its development can be followed. That does not make it open source:
+no license is granted to copy, modify, distribute, sell, publish or build upon the game, its code, its
+art, its audio or its texts, in whole or in part, except as permitted by law or with written permission
+from the copyright holders.
+
+Third-party components keep their own licenses and are not covered by the notice above:
+- do-not-drop/addons/godotsteam/ (see its license.md);
+- the music listed in do-not-drop/assets/audio/music/LICENCIA.md;
+- the origin of AI-generated images is recorded in art/ai-registro.md.
+
+Godot Engine is MIT-licensed (https://godotengine.org/license); this notice does not cover it.

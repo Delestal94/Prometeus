@@ -79,5 +79,6 @@ en el mismo commit.
 Nacho: vehículo, ruta, ambientación, depósito. Slatex: jugador, paquetes, interacción, UI y
 progresión. Antes de tocar archivos del otro o la zona compartida, dejá un aviso como archivo nuevo en
 [docs/avisos/](docs/avisos/) (reglas en [docs/colaboracion-equipo.md](docs/colaboracion-equipo.md)). Las tareas pendientes de cada
-uno están en [docs/tareas-nacho.md](docs/tareas-nacho.md) y
+uno están en [docs/tareas/](docs/tareas/README.md) (una por archivo; portada e hitos en
+[docs/tareas-nacho.md](docs/tareas-nacho.md)) y
 [docs/tareas-slatex.md](docs/tareas-slatex.md).

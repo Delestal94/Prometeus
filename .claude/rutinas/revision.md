@@ -14,7 +14,7 @@ Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
   decide-usuario --state closed --search "closed:>=<fecha>" --json number,title,comments`) y **los abiertos
   con algún comentario de `Delestal94`** (`gh issue list --label decide-usuario --state open --json
   number,title,comments`): un comentario suyo es la respuesta aunque no haya cerrado el issue (regla 12).
-- **Las 10 tareas abiertas más viejas** de `tareas-nacho.md` (las de fecha o ID más bajo que ninguna
+- **Las 10 tareas abiertas más viejas** de `docs/tareas/` (`python tools/tareas.py lista --abiertas`; las de fecha o ID más bajo que ninguna
   rutina tomó), para decidir si todavía aplican.
 
 ## 2. Cuatro miradas, en este orden
@@ -28,7 +28,9 @@ Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
    - semana 1 — **primera partida**: `pulidor-jugabilidad` en modo "pasada de primera partida" (solo
      informe: pedile que no aplique cambios, la rutina de construcción los toma como tareas);
    - semana 2 — **accesibilidad y opciones**: `director-arte` con foco en su punto 7 más las opciones de
-     `ui/options_panel.gd` (subtítulos o texto para lo que solo suena, remapeo, color, sacudida);
+     `ui/options_panel.gd` (subtítulos o texto para lo que solo suena, remapeo, color, sacudida), y
+     **`localizador`** en modo informe sobre los textos nuevos del mes (glosario, inglés que suena traducido,
+     textos que no entran);
    - semana 3 — **red sin mirar un diff**: `auditor-red` sobre el flujo completo (crear sala, join tardío,
      desconexiones, host que se va) para encontrar lo que ningún PR tocó;
    - semana 4 — **rendimiento**: `perfilador-rendimiento` en modo medición (sin cambios) sobre endless y

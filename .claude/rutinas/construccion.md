@@ -1,6 +1,6 @@
 # Rutina: construcción → una tarea, un PR
 
-Trabaja **solo** `docs/tareas-nacho.md` sin nadie mirando: las `N-xxx` y las `S-xxx` de su sección
+Trabaja **solo** la lista de Nacho (`docs/tareas/<ID>.md`, portada `docs/tareas-nacho.md`; regla 17 del README) sin nadie mirando: las `N-xxx` y las `S-xxx` de su sección
 "Heredadas de Slatex" (desde el 2026-09-29 son de Nacho). `docs/tareas-slatex.md` (S-311, el personaje
 de gelatina) es de Slatex y no se toca nunca: ni se toman sus ítems ni se le agregan tareas. Corren dos
 triggers con este mismo archivo: **Prioridad: nacho** (`N-xxx` primero) y **Prioridad: slatex**
@@ -28,7 +28,8 @@ Una corrida = **una** tarea, o arreglar PRs de rutina rojos o con conflicto.
 
 ## 2. Elegir la tarea
 
-Para las dos prioridades, primero la sección **"QA — bugs abiertos"** de `tareas-nacho.md` (la llena la
+Listá las tomables con `python tools/tareas.py lista --abiertas` (ordenadas por sección como en
+`tareas-nacho.md`). Para las dos prioridades, primero la sección **"QA — bugs abiertos"** (la llena la
 rutina de QA), con gravedad "bloquea" antes que el resto; entre ellas, las `Regresión de #<PR>` primero
 (regla 14 del README: si el arreglo no sale en esta corrida, `git revert` de ese PR). Después:
 
@@ -81,6 +82,7 @@ Los subagentes no pueden lanzar otros: todo lo que sigue lo decide la rutina.
    | Red y Steam (`network_manager`, `proximity_voice`, relays, sincronizadores, lobby, logros, nube) | `constructor-red` (y siempre `auditor-red` después) |
    | Economía, progresión, eventos, puntaje, campaña | `constructor-progresion` |
    | UI, HUD, menús, tutorial y tips de primera vez (`scripts/ui/`) | `constructor-ui` |
+   | Textos, traducciones y glosario (`translations/`, `docs/glosario.md`) | `localizador` |
    | Sonido y música (`synth_audio*`, `tools/audio/`) | `disenador-audio` |
    | Partículas y efectos | `artista-vfx` (sin ComfyUI) |
    | Animación por código, `PlayerAnimator` | `animador` (sin Blender) |
@@ -113,8 +115,8 @@ rutina de revisión, no de esta.
 
 ## 4. Cerrar y subir
 
-1. Skill `cerrar-cambio` completa: test documentado, tarea marcada `[x]` con el hash en
-   `tareas-nacho.md`, aviso en `docs/avisos/` si tocó archivos de Slatex o la zona compartida (las
+1. Skill `cerrar-cambio` completa: test documentado, tarea marcada `[x]` con el hash en su archivo
+   `docs/tareas/<ID>.md` (nunca en `tareas-nacho.md`), aviso en `docs/avisos/` si tocó archivos de Slatex o la zona compartida (las
    heredadas casi siempre: son archivos de su dominio).
 2. Subida según el README (`SKIP_TESTS=1`, PR con prefijo, `--auto --squash`). Cuerpo: qué se hizo, cómo
    se verificó, agentes usados, supuestos, avisos. Si quedó a medias, "(partial)" en el título y las

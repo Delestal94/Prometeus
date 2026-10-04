@@ -16,7 +16,7 @@ https://delestal94.github.io/Prometeus/
 
 - `tools/panel/build_data.py` arma `panel/data.json` (no se versiona) desde los agentes, la tabla
   "Ciclo completo" de `CLAUDE.md`, la tabla de rutinas de `.claude/rutinas/README.md`, los carriles de
-  `desarrollador.md`, `docs/tareas-nacho.md`, `docs/expansion-distritos/` y `docs/avisos/`.
+  `desarrollador.md`, `docs/tareas/` (con `tools/tareas.py`), `docs/expansion-distritos/` y `docs/avisos/`.
 - `.github/workflows/panel.yml` lo genera con `--strict` (falla si una tabla cambió de forma) y publica
   `panel/` en Pages en cada push a main que toque esos archivos.
 - Lo en vivo lo pide el navegador a la API pública de GitHub (el repo es público): eventos, PRs,

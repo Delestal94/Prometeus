@@ -512,12 +512,13 @@ function decisions() {
     out.push({ id: t?.id || "#" + i.number, title: i.title.replace(/^[A-Z]-[\d.]+\s*·\s*decidir:\s*/i, ""), pillar: pillarOfTask(IDX.tasks.get(t?.id)), url: i.html_url, sub: "issue #" + i.number + " · abierto " + ago(i.created_at) + (i.comments ? " · " + i.comments + " comentarios" : ""), cta: "Responder" });
   }
   const all = [...S.data.tasks, ...(S.data.expansion.tasks || [])].filter((t) => t.status === "decide" && !seen.has(t.id));
-  for (const t of all) out.push({ id: t.id, title: t.title, pillar: t.pillar, url: t.id.startsWith("D-") ? GH + "/tree/main/docs/expansion-distritos/detalle" : GH + "/blob/main/docs/tareas-nacho.md", sub: S.issuesLoaded ? "sin issue todavía · rige el supuesto mientras tanto" : "en pausa hasta que decidan", cta: "Ver tarea" });
+  for (const t of all) out.push({ id: t.id, title: t.title, pillar: t.pillar, url: t.id.startsWith("D-") ? GH + "/tree/main/docs/expansion-distritos/detalle" : GH + "/blob/main/" + (t.path || "docs/tareas-nacho.md"), sub: S.issuesLoaded ? "sin issue todavía · rige el supuesto mientras tanto" : "en pausa hasta que decidan", cta: "Ver tarea" });
   return out;
 }
 function attention() {
   const out = [];
   if (S.data.paused) out.push({ lvl: "bad", t: "Freno de mano puesto: las rutinas no trabajan", sub: ".claude/rutinas/PAUSA está en main", url: GH + "/blob/main/.claude/rutinas/PAUSA" });
+  if (S.data.budget) out.push({ lvl: "warn", t: "Presupuesto en " + S.data.budget + ": algunas rutinas no corren", sub: ".claude/rutinas/PRESUPUESTO (regla 1 bis del README de rutinas)", url: GH + "/blob/main/.claude/rutinas/PRESUPUESTO" });
   const mainRun = S.runs.find((r) => r.head_branch === "main" && r.name === "Tests" && r.event === "push" && r.status === "completed");
   if (mainRun && mainRun.conclusion !== "success") out.push({ lvl: "bad", t: "main está rojo", sub: mainRun.display_title + " · " + ago(mainRun.updated_at), url: mainRun.html_url });
   for (const i of S.issues.filter((i) => i.labels.some((l) => l.name === "rutina-caida"))) out.push({ lvl: "bad", t: i.title, sub: "issue #" + i.number + " · " + ago(i.updated_at), url: i.html_url });
@@ -526,7 +527,7 @@ function attention() {
     if (st.k === "red") out.push({ lvl: "bad", t: "PR #" + p.number + " rojo", sub: p.title + " · " + ago(st.run.updated_at), url: p.html_url });
     else if (age > 6) out.push({ lvl: "warn", t: "PR #" + p.number + " abierto hace " + dur(age * 3600 | 0), sub: p.title, url: p.html_url });
   }
-  for (const t of S.data.tasks.filter((t) => t.status === "bloqueada")) out.push({ lvl: "warn", t: t.id + " bloqueada", sub: t.title, url: GH + "/blob/main/docs/tareas-nacho.md" });
+  for (const t of S.data.tasks.filter((t) => t.status === "bloqueada")) out.push({ lvl: "warn", t: t.id + " bloqueada", sub: t.title, url: GH + "/blob/main/" + (t.path || "docs/tareas-nacho.md") });
   for (const b of S.data.expansion.bugs || []) out.push({ lvl: "warn", t: "Bug de la expansión: " + b, sub: "docs/expansion-distritos/bugs/", url: GH + "/tree/main/docs/expansion-distritos/bugs" });
   for (const r of IDX.routines) { // le tocaba hace más de 70 min y no dejó rastro
     if (r.paused || !r.cronP || !eventsCover(routineStatus(r).last)) continue;
@@ -656,7 +657,7 @@ const FLOW = {
     { id: "d_pc", x: 230, y: 372, t: "rendimiento-pc.md", s: "FPS y capturas", k: "doc" },
     { id: "plan", x: 440, y: 200, t: "planificador-tareas", s: "hallazgos → tareas" },
     { id: "people", x: 440, y: 400, t: "Nacho y Slatex", s: "deciden los ⏸", k: "people" },
-    { id: "tn", x: 650, y: 150, t: "tareas-nacho.md", s: "N- y S- heredadas", k: "doc" },
+    { id: "tn", x: 650, y: 150, t: "docs/tareas/", s: "N- y S-, una por archivo", k: "doc" },
     { id: "te", x: 650, y: 290, t: "expansion-distritos/", s: "1000 tareas D-", k: "doc" },
     { id: "cons", x: 860, y: 150, t: "Construcción A", s: "cada hora · N-/S-", r: ["Construcción A", "Construcción B"] },
     { id: "dev", x: 860, y: 240, t: "Desarrolladores 1–5", s: "cada hora · 5 carriles", r: ["Desarrollador 1", "Desarrollador 2", "Desarrollador 3", "Desarrollador 4", "Desarrollador 5"] },

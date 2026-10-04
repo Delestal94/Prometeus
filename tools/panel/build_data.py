@@ -2,13 +2,14 @@
 
 Lee lo que el repo ya dice del equipo de agentes: frontmatter de .claude/agents/*.md, la tabla
 "Ciclo completo" de CLAUDE.md, la tabla de rutinas de .claude/rutinas/README.md, los carriles de
-desarrollador.md, docs/tareas-nacho.md, la expansión y los avisos. Lo en vivo (PRs, CI, ramas,
+desarrollador.md, docs/tareas/ (por tools/tareas.py), la expansión y los avisos. Lo en vivo (PRs, CI, ramas,
 eventos) lo trae la página de la API de GitHub.
 
 Uso: python tools/panel/build_data.py [--strict] [salida]   (por defecto panel/data.json)
 --strict sale con 1 si algo no se pudo leer (una rutina sin horario, una tabla que cambió de forma).
 """
 
+import importlib.util
 import json
 import re
 import subprocess
@@ -48,7 +49,7 @@ PILLARS = [
     ("arte", "Arte y animación", "Modelos, texturas, shaders, efectos y animaciones.",
      ["modelador-blender", "artista-conceptual", "artista-shaders", "artista-vfx", "animador", "director-arte"]),
     ("audio", "Audio", "Sonido sintetizado, mezcla y música.", ["disenador-audio"]),
-    ("ui", "Interfaz", "Menús, HUD, tutorial, celular y mando.", ["constructor-ui"]),
+    ("ui", "Interfaz", "Menús, HUD, tutorial, celular, mando e idiomas.", ["constructor-ui", "localizador"]),
     ("red", "Red y multijugador", "Host autoritativo, ENet, Steam, sincronización.", ["constructor-red", "auditor-red"]),
     ("calidad", "Calidad y rendimiento", "Tests, QA, CI, bugs y FPS.",
      ["ejecutor-tests", "escritor-tests", "probador-qa", "cazador-bugs", "revisor-gdscript", "revisor-visual",
@@ -221,30 +222,19 @@ def status_of(header, body):
 
 
 def build_tasks(agent_names):
-    text = read("docs/tareas-nacho.md")
-    tasks, milestone = [], ""
-    parts = re.split(r"^(#{2,3} .*)$", text, flags=re.M)
-    for i in range(1, len(parts), 2):
-        head, body = parts[i], parts[i + 1]
-        if head.startswith("## "):
-            milestone = plain(head[3:])
-            continue
-        m = re.match(r"### (~~)?\**([NS]-\d+(?:\.\d+)?)\** · (.*)", head)
-        if not m:
-            continue
-        rest = m.group(3)
-        title = plain(rest.split(" — ")[0])
-        meta = rest.split(" — ", 1)[1] if " — " in rest else ""
-        eff = re.search(r"(Opus|Sonnet) 5\.5 · (\w+)", meta)
-        agents = ordered_agents(body, agent_names)
+    """One file per task since 2026-10-04 (docs/tareas/README.md): read through tools/tareas.py."""
+    spec = importlib.util.spec_from_file_location("tareas", ROOT / "tools" / "tareas.py")
+    tareas = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tareas)
+    tasks = []
+    for t in tareas.load():
+        agents = ordered_agents(t["body"], agent_names)
         tasks.append({
-            "id": m.group(2), "title": title.replace("⏸ decide el usuario: ", ""),
-            "prio": (re.match(r"\s*([ABC])\b", plain(meta)) or [None, ""])[1],
-            "effort": eff.group(2) if eff else "", "section": milestone,
-            "status": status_of(head[4:], body),
-            "pc": "necesita PC" in head,
-            "subOpen": len(re.findall(r"^- \[ \]", body, re.M)), "subDone": len(re.findall(r"^- \[x\]", body, re.M)),
-            "agents": agents, "pillar": pillar_for(agents, title),
+            "id": t["id"], "title": t["title"], "prio": t["prio"], "effort": t["effort"],
+            "section": t["section"].split(" › ")[0], "status": t["status"], "pc": t["pc"],
+            "subOpen": t["subOpen"], "subDone": t["subDone"], "agents": agents,
+            "pillar": pillar_for(agents, t["title"]),
+            "path": str(t["file"].relative_to(ROOT)).replace("\\", "/"),
         })
     return tasks
 
@@ -291,6 +281,15 @@ def build_notes():
     return out
 
 
+def budget_level():
+    """First word of .claude/rutinas/PRESUPUESTO (README rule 1 bis), or "" when it is not there."""
+    f = ROOT / ".claude/rutinas/PRESUPUESTO"
+    if not f.exists():
+        return ""
+    words = f.read_text(encoding="utf-8").split()
+    return words[0].lower() if words else ""
+
+
 def git_head():
     try:
         return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True,
@@ -309,6 +308,7 @@ def main():
         "commit": git_head(),
         "repo": "Delestal94/Prometeus",
         "paused": (ROOT / ".claude/rutinas/PAUSA").exists(),
+        "budget": budget_level(),
         "pillars": [{"key": k, "title": t, "about": d, "agents": a} for k, t, d, a in PILLARS],
         "agents": agents,
         "routines": build_routines(names),
