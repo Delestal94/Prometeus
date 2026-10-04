@@ -50,13 +50,13 @@ func _test_curve() -> void:
 		all.append_array(OrderRhythm.arrival_minutes(seed_value, 4))
 	var histogram := OrderRhythm.hourly_histogram(all)
 	print("orders per hour from 08:00 (400 days): ", histogram)
-	_expect(histogram.size() == 12, "12 hourly buckets")
+	_expect(histogram.size() == 11, "11 hourly buckets")
 	_expect(histogram.max() == histogram[2] or histogram.max() == histogram[3], "rush at 10:00-12:00")
 	_expect(histogram[5] < histogram[3], "lunch dip below the rush")
-	_expect(histogram[11] < histogram[0], "last hour thinner than opening")
+	_expect(histogram[10] < histogram[0], "last hour thinner than opening")
 	_expect(OrderRhythm.weight_at(10 * 60) == 3.0, "weight at 10:00")
 	_expect(OrderRhythm.weight_at(7 * 60) == 0.0, "no weight before opening")
-	_expect(OrderRhythm.weight_at(20 * 60) == 0.0, "no weight after the order hours")
+	_expect(OrderRhythm.weight_at(19 * 60) == 0.0, "no weight after the order hours")
 
 
 func _expect(condition: bool, label: String) -> void:
