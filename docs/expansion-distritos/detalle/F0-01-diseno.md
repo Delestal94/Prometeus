@@ -65,6 +65,7 @@ en una línea y la tarea `D-` donde va.
 **Hecho cuando:** 5 juegos cubiertos, con fuentes.
 
 ### D-0109 · Tabla "lo que armás es la trampa" — A · Opus 5.5 · high · Aviso: sí (`data/traps/`, `package_content.gd`) · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/armado-y-trampas.md`: 10 contenidos, fórmula y 6 ejemplos.
 **Depende de:** —
 **Qué:** `diseno/armado-y-trampas.md`. Para cada uno de los 10 `data/contents/*.tres`:
 - su trampa actual;
