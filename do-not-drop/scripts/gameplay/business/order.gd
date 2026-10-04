@@ -28,15 +28,11 @@ const STATES: Array[StringName] = [
 	STATE_CANCELLED,
 ]
 
-## Delivery window from the moment the order comes in (assumption: 4 game
-## hours). D-0202's company_tuning.gd will own these numbers; until it exists
-## they live here, as ProductDefinition.SELL_MARKUP does.
-const WINDOW_MIN: int = 240
-## Share of the pay lost when the order arrives late.
-const LATE_PENALTY: float = 0.25
-## Shipping fee added to the pay, by zone id (unknown zones pay 0).
-const SHIPPING_FEE: Dictionary = {&"centro": 40, &"campo": 60}
-const MAX_ITEMS: int = 3
+## The numbers live in CompanyTuning (D-0202); these names stay as the Order API.
+const WINDOW_MIN: int = CompanyTuning.ORDER_WINDOW_MIN
+const LATE_PENALTY: float = CompanyTuning.LATE_PENALTY
+const SHIPPING_FEE: Dictionary = CompanyTuning.SHIPPING_FEE
+const MAX_ITEMS: int = CompanyTuning.ORDER_ITEMS_MAX
 
 
 ## Builds a valid order. items is [{product, qty}] and may repeat a product;

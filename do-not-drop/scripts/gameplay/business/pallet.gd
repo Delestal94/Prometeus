@@ -1,6 +1,6 @@
 class_name Pallet
 extends RefCounted
-## A supplier pallet: up to MAX_UNITS units of one product (expansion D-0604).
+## A supplier pallet: up to CompanyTuning.PALLET_MAX_UNITS units of one product (expansion D-0604).
 ##
 ## A pallet is a plain Dictionary (id, product, qty, state) so it can travel
 ## by network and live in a save. Its units sit in the Inventory under the
@@ -11,13 +11,11 @@ extends RefCounted
 const STATE_SEALED: StringName = &"sealed"
 const STATE_OPEN: StringName = &"open"
 const STATES: Array[StringName] = [STATE_SEALED, STATE_OPEN]
-## Assumption of supuestos.md: a pallet holds up to 24 units of one product.
-const MAX_UNITS: int = 24
 
 
-## Builds a sealed pallet, or {} when product is empty or qty is out of 1..MAX_UNITS.
+## Builds a sealed pallet, or {} when product is empty or qty is out of 1..CompanyTuning.PALLET_MAX_UNITS.
 static func make(id: StringName, product: StringName, qty: int) -> Dictionary:
-	if id == &"" or product == &"" or qty < 1 or qty > MAX_UNITS:
+	if id == &"" or product == &"" or qty < 1 or qty > CompanyTuning.PALLET_MAX_UNITS:
 		return {}
 	return {"id": id, "product": product, "qty": qty, "state": STATE_SEALED}
 
@@ -28,7 +26,7 @@ static func plan(prefix: StringName, product: StringName, qty: int) -> Array[Dic
 	var out: Array[Dictionary] = []
 	var left: int = qty
 	while left > 0 and product != &"":
-		var n: int = mini(left, MAX_UNITS)
+		var n: int = mini(left, CompanyTuning.PALLET_MAX_UNITS)
 		out.append(make(StringName("%s_%d" % [prefix, out.size() + 1]), product, n))
 		left -= n
 	return out
@@ -47,8 +45,8 @@ static func validate(pallet: Dictionary) -> Array[String]:
 	if StringName(pallet.get("product", &"")) == &"":
 		problems.append("product is empty")
 	var qty: int = int(pallet.get("qty", 0))
-	if qty < 1 or qty > MAX_UNITS:
-		problems.append("qty %d is out of 1..%d" % [qty, MAX_UNITS])
+	if qty < 1 or qty > CompanyTuning.PALLET_MAX_UNITS:
+		problems.append("qty %d is out of 1..%d" % [qty, CompanyTuning.PALLET_MAX_UNITS])
 	if not StringName(pallet.get("state", &"")) in STATES:
 		problems.append("unknown state")
 	return problems

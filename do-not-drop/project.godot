@@ -33,6 +33,7 @@ ShopVoteManager="*res://scripts/core/shop_vote_manager.gd"
 RouteEventManager="*res://scripts/core/route_event_manager.gd"
 GameSettings="*res://scripts/core/game_settings.gd"
 UnlockManager="*res://scripts/core/unlock_manager.gd"
+CompanyState="*res://scripts/core/company/company_state.gd"
 ProximityVoice="*res://scripts/core/proximity_voice.gd"
 RunTelemetry="*res://scripts/core/run_telemetry.gd"
 
