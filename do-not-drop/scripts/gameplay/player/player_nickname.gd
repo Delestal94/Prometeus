@@ -28,5 +28,5 @@ func _sync_from_profile() -> void:
 
 ## The nickname of a player node (empty when it has none, or it isn't a player).
 static func of(player: Node) -> String:
-	var component: Node = player.get_node_or_null(^"PlayerNickname") if player != null else null
-	return String(component.get(&"nickname")) if component != null else ""
+	var component := player.get_node_or_null(^"PlayerNickname") as PlayerNickname if player != null else null
+	return component.nickname if component != null else ""

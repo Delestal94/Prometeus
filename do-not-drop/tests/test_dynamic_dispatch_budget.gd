@@ -404,6 +404,16 @@ const BUDGETS: Dictionary = {
 	# The service counter (N-224.4) holds its shop as ServiceStopShop (open_for_crew). Left by name: the
 	# EventBus emit and RunManager.is_running (null-safe autoload lookups).
 	"res://scripts/gameplay/route/service_counter.gd": {"call": 0, "callv": 0, "get": 1, "root": 2},
+	# The late-join seating (N-224.4) holds the seats as CargoSeatPoint (can_interact, unminded_cargo,
+	# would_displace, interact, occupant). Nothing left by name.
+	"res://scripts/gameplay/late_join_seating.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# Walking and looking (N-224.4): the settings as GAME_SETTINGS (look_sensitivity, look_y_sign,
+	# preferred_fov) and the aimed thing as Interactable (get_prompt). The two /root/ lookups are the null-safe
+	# GameSettings accessors.
+	"res://scripts/gameplay/player/player_movement.gd": {"call": 0, "callv": 0, "get": 0, "root": 2},
+	# The nickname (N-224.4): of() reads the component as PlayerNickname. The UnlockManager lookups stay by
+	# path (the profile is only there for the local player).
+	"res://scripts/gameplay/player/player_nickname.gd": {"call": 1, "callv": 0, "get": 0, "root": 2},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -437,6 +447,9 @@ const SCRIPT_HANDLES: Dictionary = {
 		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 	"res://scripts/gameplay/player/player_cargo_care.gd": {
+		"GAME_SETTINGS": "/root/GameSettings",
+	},
+	"res://scripts/gameplay/player/player_movement.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",
 	},
 	"res://scripts/gameplay/route/cargo_animals.gd": {

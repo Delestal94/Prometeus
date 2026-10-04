@@ -328,7 +328,7 @@ func _sync_players(peer_ids: Array) -> void:
 		var back: Dictionary = _rejoin.place(note) if not note.is_empty() else {}
 		# The truck already out on the road: the depot is behind the crew, so
 		# the newcomer appears aboard (late_join_seating.gd).
-		var seat: Node = null
+		var seat: SeatPoint = null
 		var data: Dictionary = {"peer_id": id, "position": _world.to_local(depot.spawn_position(index))}
 		var placed: Dictionary = back if not back.is_empty() else (_late_join.place() if _late_join.underway() else {})
 		if not placed.is_empty():
