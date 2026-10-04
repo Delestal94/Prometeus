@@ -5,6 +5,7 @@
 > **reemplazan** el bloque Núcleo de `03-mapa-y-distritos.md`.
 
 ### D-0301 · Boceto del mapa del mundo — A · Opus 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/mapa.md`: 9 zonas en celdas de 256 m, 3 calles principales, 7 bloqueos con posición y chequeo de la regla de oro.
 **Depende de:** D-0114
 **Qué:** `docs/expansion-distritos/diseno/mapa.md` con un boceto en texto o SVG en grilla de 256 m:
 - dónde va cada una de las 9 zonas y la costa;
