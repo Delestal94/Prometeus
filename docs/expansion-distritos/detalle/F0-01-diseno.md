@@ -79,6 +79,7 @@ resueltos. Y las reglas de mezcla: dos productos en una caja → manda el de may
 (los repite el test de D-0709).
 
 ### D-0110 · Roles de la tripulación de 1 a 8 — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/roles-tripulacion.md`: regla de 2 min, 4 tablas (1, 2, 3-4, 5-8), qué hace el que se queda y cómo se mide.
 **Depende de:** D-0101
 **Qué:** `diseno/roles-tripulacion.md` con una tabla por cantidad de jugadores (1, 2, 3-4, 5-8): quién
 queda en el galpón, quién sale, cuántas salidas por día, y qué hace el que se queda mientras los otros
