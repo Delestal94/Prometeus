@@ -55,6 +55,7 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Rendimiento | QA (si hay leak) + revisión, semana 4 + build de la PC (diaria, FPS con GPU) | `perfilador-rendimiento` |
 | Verificar cada cambio | construcción | `ejecutor-tests`, `escritor-tests`, `cazador-bugs`, `revisor-gdscript`, `revisor-visual` |
 | Juego armado de punta a punta | QA (diario) | `probador-qa`, `cazador-bugs` |
+| Confiabilidad y costo del CI (tests inestables, shards, tiempos) | `ci-flaky.yml` (cada run rojo) + `ci-health.yml` (lunes, issue `salud-ci`) → mantenimiento (jueves) → construcción | `ingeniero-ci` |
 | Auditoría del proyecto entero | auditoría (diaria) | `auditor-integral` |
 | Docs, avisos, licencias | mantenimiento (jueves) | `documentador`, `guardian-dominios` |
 | Página de Steam, cápsulas, calendario, devlog | lanzamiento (mensual) → sesión de arte | `estratega-steam`, `artista-conceptual`, `revisor-visual` |
@@ -157,6 +158,9 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
       tanto, el último run terminado de main (`gh run list --branch main --workflow tests.yml --status
       completed --limit 1`) dice si sigue rojo de antes: rojo ahí cuenta como rojo. Verde ahí no prueba
       HEAD: se puede trabajar, pero lo que exige un `main` probado (la build de la PC) espera.
+    - Un run rojo en su **intento 1** con un job de Godot caído lo relanza solo `ci-flaky.yml` (una vez,
+      solo lo fallido): mientras corre el intento 2 cuenta como **sin verificar**. Si pasa, era un test
+      inestable y queda en un issue `test-inestable` (lo arregla `ingeniero-ci`, no la corrida).
 17. **Lista viva y archivo**: `docs/tareas-nacho.md` tiene solo lo pendiente; lo terminado está en
     `docs/tareas-nacho-archivo.md` (lo mueve `tools/archivar-tareas.py` en el mantenimiento semanal). Para
     saber si una dependencia o un hallazgo ya está hecho, `grep` del ID o del tema en los dos archivos: el

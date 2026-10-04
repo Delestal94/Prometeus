@@ -28,7 +28,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Version from tag
         id: version
@@ -46,32 +46,11 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Godot and export templates
-        id: cache-godot
-        uses: actions/cache@v6
+      - name: Godot and the release export templates (SHA-512 checked, cached)
+        uses: ./.github/actions/setup-godot
         with:
-          path: |
-            ~/godot
-            ~/.local/share/godot/export_templates
-          key: godot-export-${{ env.GODOT_VERSION }}-linux
-
-      - name: Download Godot and export templates
-        if: steps.cache-godot.outputs.cache-hit != 'true'
-        run: |
-          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
-          mkdir -p ~/godot
-          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
-          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
-          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-          mkdir -p "$dest"
-          # Only the two release templates we export with: the full .tpz is ~1 GB.
-          unzip -q -j /tmp/templates.tpz \
-            'templates/windows_release_x86_64.exe' \
-            'templates/linux_release.x86_64' \
-            'templates/version.txt' -d "$dest"
-          rm /tmp/templates.tpz
+          version: ${{ env.GODOT_VERSION }}
+          templates: "true"
 
       - name: Stamp version and presets
         env:
@@ -124,7 +103,7 @@ jobs:
           cat SHA256SUMS.txt
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: builds-${{ steps.version.outputs.version }}
           path: |
@@ -140,7 +119,7 @@ jobs:
       contents: write
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: builds-${{ needs.export.outputs.version }}
 

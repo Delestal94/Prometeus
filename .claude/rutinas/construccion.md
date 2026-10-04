@@ -87,6 +87,7 @@ Los subagentes no pueden lanzar otros: todo lo que sigue lo decide la rutina.
    | Shaders | `artista-shaders` (sin Blender/ComfyUI) |
    | Pulir o balancear algo que ya existe (con los simuladores) | `pulidor-jugabilidad` |
    | Tests que faltan | `escritor-tests` |
+   | Tests inestables, shards y tiempos del CI, workflows (`.github/`, `tools/run-*.sh`, `tools/ci/`) | `ingeniero-ci` |
    | Rendimiento medido | `perfilador-rendimiento` |
 
    Si la carpeta de la tarea no está en la tabla, hacela vos y anotá en el PR "área sin constructor:

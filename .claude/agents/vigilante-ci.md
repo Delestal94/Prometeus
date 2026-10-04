@@ -33,7 +33,7 @@ Confirmá que el auto-merge esté activado (`gh pr merge <n> --auto --squash`, o
    | **Lint** (`gdlint`, línea larga, baseline) | Arreglalo. Si dice que algo bajó, `bash tools/lint.sh --update-baseline` y commiteá la baseline. |
    | **`check_modules` / portabilidad** | Arreglá la referencia prohibida dentro del módulo. |
    | **Un test que toca lo que cambió el PR** | Reproducilo con `bash tools/run-tests.sh <filtro>` (solo ese filtro). Si la causa está en el diff del PR y el arreglo entra en ~30 líneas, arreglalo. Si no, no toques: devolvé la causa. |
-   | **Un test que no tiene nada que ver con el PR** | Probablemente intermitente (N-240) o `main` roto. Mirá si el mismo test está rojo en `main` (`gh run list --branch main --workflow tests.yml --limit 3`). Si `main` está verde, relanzá una vez solo lo fallido (`gh run rerun <run> --failed`). Si vuelve a fallar, devolvé la causa. |
+   | **Un test que no tiene nada que ver con el PR** | Probablemente intermitente o `main` roto. Si un job de Godot falló en el intento 1, `ci-flaky.yml` ya relanza solo lo fallido: esperá el intento 2 (no relances vos). Si el intento 2 pasa, queda anotado en un issue `test-inestable` y listo. Si vuelve a fallar, mirá si el mismo test está rojo en `main` (regla 16 del README de rutinas) y devolvé la causa. |
    | **Conflicto** (`mergeable: CONFLICTING`) | `git fetch origin && git rebase origin/main`. En `docs/` conservá las dos versiones. Después `git push --force-with-lease`, solo sobre la rama del PR. |
 
 3. Cada arreglo es un commit `fix: <qué>` (en inglés, con la línea `Co-Authored-By` que use la sesión) y

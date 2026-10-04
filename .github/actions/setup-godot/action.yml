@@ -1,0 +1,76 @@
+name: Set up Godot
+description: >-
+  Godot (and optionally the two release export templates) from the official godot-builds release,
+  checked against the SHA-512 pinned in tools/godot-sha512.txt and cached. Sets GODOT in the env.
+  To move to another Godot version: change GODOT_VERSION in the workflows and the hashes in that file
+  (the lines of the release's SHA512-SUMS.txt).
+
+inputs:
+  version:
+    description: Godot version, without "-stable"
+    required: true
+  templates:
+    description: Also install the Windows and Linux release export templates
+    required: false
+    default: "false"
+
+outputs:
+  godot:
+    description: Path of the Godot binary
+    value: ${{ steps.paths.outputs.godot }}
+
+runs:
+  using: composite
+  steps:
+    - id: paths
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        bin="$HOME/godot/Godot_v${VERSION}-stable_linux.x86_64"
+        echo "godot=$bin" >> "$GITHUB_OUTPUT"
+        echo "GODOT=$bin" >> "$GITHUB_ENV"
+
+    - id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: |
+          ~/godot
+          ~/.local/share/godot/export_templates
+        key: godot-${{ inputs.version }}-linux${{ inputs.templates == 'true' && '-templates' || '' }}-${{ hashFiles('tools/godot-sha512.txt') }}
+
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        TEMPLATES: ${{ inputs.templates }}
+        SUMS: ${{ github.workspace }}/tools/godot-sha512.txt
+      run: |
+        set -euo pipefail
+        base="https://github.com/godotengine/godot-builds/releases/download/${VERSION}-stable"
+        # Only a file whose SHA-512 matches the pinned one is ever unpacked.
+        fetch() {
+          local name="$1"
+          grep -q "  $name\$" "$SUMS" || { echo "::error::no pinned SHA-512 for $name in tools/godot-sha512.txt"; exit 1; }
+          curl -fsSL --retry 4 -o "/tmp/$name" "$base/$name"
+          (cd /tmp && grep "  $name\$" "$SUMS" | sha512sum -c --strict -) \
+            || { echo "::error::$name does not match its pinned SHA-512"; exit 1; }
+        }
+        zip="Godot_v${VERSION}-stable_linux.x86_64.zip"
+        fetch "$zip"
+        mkdir -p ~/godot
+        unzip -q "/tmp/$zip" -d ~/godot
+        chmod +x ~/godot/Godot_v${VERSION}-stable_linux.x86_64
+        rm "/tmp/$zip"
+        if [ "$TEMPLATES" = "true" ]; then
+          tpz="Godot_v${VERSION}-stable_export_templates.tpz"
+          fetch "$tpz"
+          dest=~/.local/share/godot/export_templates/${VERSION}.stable
+          mkdir -p "$dest"
+          # Only the two release templates we export with: the full .tpz is ~1 GB unpacked.
+          unzip -q -j "/tmp/$tpz" \
+            'templates/windows_release_x86_64.exe' \
+            'templates/linux_release.x86_64' \
+            'templates/version.txt' -d "$dest"
+          rm "/tmp/$tpz"
+        fi
