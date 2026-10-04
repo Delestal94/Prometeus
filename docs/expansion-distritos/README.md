@@ -7,7 +7,7 @@
 > automatiza** con empleados y máquinas (inspirado en *Schedule I*).
 >
 > **Estado: en construcción (desde 2026-10-04).** La trabajan cinco rutinas `desarrollador`
-> (`.claude/rutinas/desarrollador.md`), una por carril, cada hora y escalonadas. Las decisiones de cómo se
+> (`.claude/rutinas/desarrollador.md`), una por carril, cada 2 o 3 h y escalonadas (horarios en `.claude/rutinas/README.md`). Las decisiones de cómo se
 > hace las toman ellas y quedan en `docs/decisiones/`. Lo que hay que probar a mano o revisar queda en
 > `revisar/` para el final. El detalle de las tareas está en `detalle/`.
 

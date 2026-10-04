@@ -33,7 +33,8 @@ ROUTINES = {
     "Sesión de arte (PC)": {"kind": "pc", "cron": "30 1,3,5,7,9,11,13,15,17,19,21,23 * * *", "branch": r"^arte/"},
     "Build y rendimiento (PC)": {"kind": "pc", "cron": "15 6 * * *", "branch": r"^rutina/pc-"},
 }
-LANE_MINUTES = [2, 14, 26, 38, 50]
+# Carriles 1 y 5 (Opus) cada 3 h; 2, 3 y 4 cada 2 h, alternados (2026-10-04: repartir el cupo semanal).
+LANE_CRONS = ["2 */3 * * *", "14 */2 * * *", "26 1-23/2 * * *", "38 */2 * * *", "50 1-23/3 * * *"]
 
 # Pilares del desarrollo: el home del panel. Cada agente pertenece a uno; una tarea, al pilar de su
 # primer agente (o por palabras del título si no nombra ninguno).
@@ -188,7 +189,7 @@ def build_routines(agent_names):
         if meta.get("lanes"):
             for lane in build_lanes():
                 routines.append({**base, "name": f"Desarrollador {lane['n']}", "lane": lane["n"],
-                                 "laneTitle": lane["title"], "cron": f"{LANE_MINUTES[lane['n'] - 1]} * * * *",
+                                 "laneTitle": lane["title"], "cron": LANE_CRONS[lane['n'] - 1],
                                  "branch": r"^exp/D-(" + "|".join(lane["groups"]) + r")\d\d",
                                  "model": lane["model"], "agents": lane["agents"]})
         else:

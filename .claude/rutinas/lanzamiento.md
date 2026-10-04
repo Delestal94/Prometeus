@@ -31,9 +31,10 @@ Rama `rutina/lanzamiento-AAAA-MM`.
   e imágenes → "necesita PC" (las hace la sesión de arte con `artista-conceptual`); capturas y planos del
   tráiler → "necesita PC" (sesión de arte, con `revisor-visual`); features de plataforma (lobby,
   invitaciones, logros, nube, Remote Play) → `constructor-red`; mando y Steam Deck → `constructor-ui`.
-  Mientras M5 siga ⏸, estas tareas nacen en M5 con ⏸ y no las toma la construcción. Precio, fecha y
-  alcance de idiomas → ⏸
-  "decide el usuario".
+  Mientras M5 siga ⏸, estas tareas nacen en M5 con ⏸ y no las toma la construcción. Precio, fecha e
+  idiomas los fija `docs/decisiones/2026-10-04-lanzamiento-steam.md`; si hay que cambiarlos, se decide con
+  la recomendación (regla 3 del README). Lo que pide plata o la cuenta de Steamworks del usuario → ⏸
+  "decide el usuario" (regla 12).
 - PR `docs: launch status AAAA-MM` con auto-merge; sección "Para el usuario" con las decisiones pendientes.
 
 ## 3. Etapas que se encienden solas
