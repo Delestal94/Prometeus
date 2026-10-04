@@ -14,7 +14,8 @@ extends Node3D
 ##
 ## Its "CompanyNet" child carries the business events (D-2003): on the host it
 ## starts from the company's stock and, until stations exist, refuses every units
-## request; on a client it holds the events until the host's snapshot (D-2004).
+## request; on a client it holds the events until the host's snapshot (D-2004), which
+## also loads the host's company into this peer's CompanyState.
 
 const ZONE_DIR: String = "res://data/zones/"
 const PLAYER_SCENE: String = "res://scenes/gameplay/player/player.tscn"
@@ -74,10 +75,12 @@ static func load_zones() -> Array[ZoneDefinition]:
 ## counts) switches the company on if none is loaded and hands CompanyNet its
 ## stock (CompanyState.stock(): a copy the events keep up to date). A client
 ## writes nothing (rule 1 of red-autoridad.md): an empty stock, and every event
-## held until the host's snapshot puts the real one in place (D-2004).
+## held until the host's snapshot puts the real one, and the host's company, in
+## place (D-2004). Both hand CompanyNet the state: the host's goes in the snapshot.
 func _add_net(state: Node) -> void:
 	net = CompanyNet.new()
 	net.name = "CompanyNet"
+	net.company = state
 	add_child(net)
 	if not net.is_host():
 		net.wait_for_snapshot()

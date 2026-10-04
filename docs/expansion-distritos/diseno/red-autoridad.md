@@ -17,7 +17,7 @@
    |---|---|---|
    | `_request(kind: StringName, data: Dictionary)` | `@rpc("any_peer", "call_local", "reliable")`, cliente → host (`rpc_id(1, …)`); el host se llama a sí mismo por el mismo camino | descarta si no es el host; `RpcGuard.allow_request` (o `allow_critical_request` si la tabla dice **crítica**), `name_ok(kind)`, `dict_ok(data)`, `kind` dentro de la lista blanca de §2 |
    | `_apply_event(seq: int, kind: StringName, data: Dictionary)` | `@rpc("authority", "call_local", "reliable")`, host → cada peer con `is_peer_ready()` | `RpcGuard.from_host`; `seq` mayor que el último aplicado (si no, se ignora) |
-   | `_snapshot(seq: int, chunk: int, total: int, bytes: PackedByteArray)` | `@rpc("authority", "call_remote", "reliable")`, host → un peer (D-2004) | `RpcGuard.from_host`; `chunk < total ≤ tope`; ver §3 |
+   | `_snapshot(id: int, chunk: int, total: int, size: int, bytes: PackedByteArray)` | `@rpc("authority", "call_remote", "reliable")`, host → un peer (D-2004) | `RpcGuard.from_host`; `0 ≤ chunk < total ≤ SNAPSHOT_MAX_CHUNKS`, `size ≤ SNAPSHOT_MAX_BYTES`, `bytes` ≤ 60 KB; ver §3 y §6 |
    | `_rejected(rid: int, reason: StringName)` | `@rpc("authority", "call_remote", "reliable")`, host → solo el que pidió | `RpcGuard.from_host`; solo dibuja un aviso, no toca estado |
 
    - El host difunde así: sube `seq`, **aplica llamando directo** a la función y después hace `rpc_id` a
@@ -119,7 +119,8 @@ petición: el host lo detecta o lo decide solo y emite el evento.
   todo evento con `seq` ≤ el del snapshot.
 - Si un peer ve un salto (`seq` > último + 1), pide un snapshot con `_request(&"snapshot_request", {rid})` (como toda petición, lleva `rid`).
   Tope medido en el host: uno cada 5 s por peer (si no, un cliente roto pide un snapshot por evento).
-- El snapshot (`var_to_bytes` + `compress`) viaja en trozos de hasta 64 KB por `_snapshot` (D-2004).
+- El snapshot (`var_to_bytes` + `compress`) viaja en trozos de hasta 64 KB por `_snapshot` (D-2004). El `seq`
+  va adentro del snapshot; el RPC lleva el `id` del snapshot y su tamaño sin comprimir (§6).
   Mientras faltan trozos, el cliente **guarda** los eventos que llegan con `seq` mayor al del snapshot y
   los aplica en orden al terminar de armarlo.
 - Aplicar el snapshot **no** emite las señales de hechos; emite una sola `company_state_restored` para que la
@@ -164,11 +165,43 @@ petición: el host lo detecta o lo decide solo y emite el evento.
   stock vacío y `wait_for_snapshot()` (guarda los eventos y pide el snapshot si no llega en 5 s; lo reintenta
   cada 5 s mientras espera). En el host (y solo) arranca la empresa y le pasa `CompanyState.stock()`.
 - **Pendiente:**
-  - el snapshot y la llamada a `resume_after_snapshot()` del lado que lo recibe (D-2004; el host emite
-    `snapshot_requested`); guardar `seq` en el slot (D-0206 / D-2004);
+  - ~~el snapshot y la llamada a `resume_after_snapshot()` del lado que lo recibe~~ (hecho en D-2004, §6);
+    guardar `seq` en el slot (D-0206);
   - el modo Empresa todavía no es una sesión: `company_root.tscn` no está en `NetworkManager.LEVEL_SCENES` y
     `company_root.gd` no llama a `NetworkManager.level_ready()`. Lo cablea la tarea que lo ponga en línea
-    (D-2004 o la continuación de D-0214);
+    (la continuación de D-0214; D-2004 dejó el gancho listo, §6);
   - D-0206 escribe `CompanyNet.inventory` de vuelta en `CompanyState` **solo en el host** (en un cliente es un
     espejo y nunca se guarda);
   - soltar lo de `hands:<peer>` al irse (D-2006, con `last_known_position()`).
+
+## 6. Lo construido (D-2004)
+
+- **`_snapshot(id, chunk, total, size, bytes)`** (protocolo 30), en el mismo canal confiable que
+  `_apply_event`: llega después de todo evento mandado antes y antes de todo evento mandado después.
+  **Decisión:** el RPC lleva `id` (el host numera cada snapshot que manda: un trozo de uno más viejo, o
+  de uno ya armado, se descarta) y `size` (el tamaño sin comprimir, que `decompress()` necesita y que se
+  acota a `SNAPSHOT_MAX_BYTES` = 4 MB); el `seq` va adentro del diccionario. Trozos de hasta
+  `SNAPSHOT_CHUNK_BYTES` = 60 KB (el RPC entero queda bajo 64 KB), a lo sumo `SNAPSHOT_MAX_CHUNKS` = 72,
+  `FileAccess.COMPRESSION_ZSTD`, `bytes_to_var` (nunca `_with_objects`) y el resultado tiene que ser un
+  `Dictionary`.
+- **Cuándo lo manda el host** (`send_snapshot(peer)`): cuando ese peer queda listo
+  (`NetworkManager.peer_level_ready`, conectado por camino, sin nombrar el autoload) y cuando lo pide
+  (`grant_snapshot()`, el mismo tope de 5 s). Nunca mientras aplica un evento.
+- **Qué lleva hoy** (`CompanyNet.snapshot()`): `seq`; `inventory` (el stock vivo con reservas);
+  `company` (`CompanyState.to_dict()` sin su stock guardado: plata, día y hora, reputación, bloqueos
+  abiertos, flota, empleados, hitos, layout, libro de caja). Un galpón de 300 unidades en 150 lugares con
+  el libro lleno pesa 34 KB y 2 KB comprimido: un solo trozo.
+- **Partes que faltan**: `add_snapshot_part(key, take, put)` suma una parte con su clave; cada peer suma
+  las mismas antes de que su mundo esté listo. `take` (host) devuelve datos planos; `put` (cliente) los
+  pone en su lugar sin señales de hechos, los valida (regla 5) y devuelve `false` si no sirven (el
+  cliente espera otro snapshot). Las suman: `OrderBook` (D-0803 / D-0807, cuando el mundo lo tenga),
+  fase del día y ancla del reloj (D-0203 / D-0219), palets con estado y zona (D-0605 / D-0607), mesas de
+  armado (D-0701 en adelante), cajas vivas con lo de `box_sealed` y `update_visibility` después del
+  último trozo (regla 10, D-0709 / D-0711) y bultos en el piso con su posición (D-2006 / D-0611).
+- **Del lado del cliente** (`apply_snapshot()`): valida el `seq` (entero, no menor al aplicado) y el stock
+  (`stock_ok()`: solo `stock` y `reserved`, ids de texto, cantidades enteras positivas) antes de tocar
+  nada; reemplaza el stock y carga `company` en su `CompanyState` (su única escritura ahí, regla 1, con el
+  stock vivo en el espejo), aplica las partes, emite **una** `company_state_restored(seq)` y después
+  `resume_after_snapshot()`: descarta lo guardado con `seq` ≤ y aplica el resto en orden. El primer trozo
+  de un snapshot nuevo ya empieza a guardar eventos; un snapshot que no se arma o no se aplica deja al
+  cliente esperando y vuelve a pedir a los 5 s.

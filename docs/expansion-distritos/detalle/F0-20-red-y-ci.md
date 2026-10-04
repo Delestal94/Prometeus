@@ -49,6 +49,7 @@ los dos. Una petición inválida (más de lo que hay) se rechaza sin cambiar nad
 **Hecho cuando:** el test pasa y `auditor-red` no tiene BUG/RIESGO alto.
 
 ### D-2004 · Join tardío y snapshot — A · Opus 5.5 · xhigh · Aviso: sí (`network_manager.gd`) · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `CompanyNet`: `_snapshot` en trozos (protocolo 30), `snapshot()` / `send_snapshot()` / `apply_snapshot()`, envío al quedar listo el peer y al pedirlo, `company_state_restored`, partes con `add_snapshot_part()`; `test_company_late_join`. Faltan las partes de tareas que todavía no existen (`red-autoridad.md` §6).
 **Depende de:** D-2003
 **Qué:** al entrar un peer a mitad de día, el host manda `CompanyState.to_dict()` + `Inventory` +
 `OrderBook` + layout + bloqueos + `seq` actual en un solo RPC comprimido (`var_to_bytes` +
