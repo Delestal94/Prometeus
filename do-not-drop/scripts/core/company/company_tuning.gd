@@ -48,6 +48,12 @@ const TAPE_COST: int = 1
 const LABEL_COST: int = 0
 const STAMP_COST: int = 0
 
+# --- Warehouse grid (D-0904) ---
+## Side of one warehouse floor cell, in meters (placeable footprints are counted in these).
+const WAREHOUSE_GRID_M: float = 1.0
+## Selling a placed object gives back this share of its price.
+const PLACEABLE_REFUND_RATIO: float = 0.5
+
 # --- Products and pricing ---
 ## What the supplier charges per unit goes in each product's .tres, in this range.
 const BUY_PRICE_MIN: int = 20

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PlaceableDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/placeable_definition.gd" id="1_placeable"]
+
+[resource]
+script = ExtResource("1_placeable")
+id = &"dispatch_zone"
+display_key = "WORLD_PLACEABLE_DISPATCH_ZONE"
+footprint = Vector2i(3, 2)
+height_m = 0.05
+price = 60
+role = &"dispatch"
+slots = 0
+cold = false
+blocks_walking = false
+owned_at_start = true
