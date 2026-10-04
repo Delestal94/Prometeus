@@ -62,6 +62,8 @@ const BUY_PRICE_MAX: int = 80
 const SELL_MARKUP: float = 1.6
 ## One pallet holds up to this many units of one product.
 const PALLET_MAX_UNITS: int = 24
+## One labeled shelf slot holds up to this many units of its product (D-0608): one pallet.
+const SHELF_SLOT_CAPACITY: int = 24
 
 # --- Orders ---
 ## Shipping fee added to an order's pay, by zone id (unknown zones pay 0).
