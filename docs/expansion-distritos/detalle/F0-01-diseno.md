@@ -145,6 +145,7 @@ Los 10 primeros alcanzan para F1; los 30 nuevos son el pedido a `sesion-arte` (D
 **Hecho cuando:** 40 filas, y las 10 de F1 con todos los campos que pide `ProductDefinition` (D-0204).
 
 ### D-0117 · Modelo económico en papel — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/economia.md`: pedido medio (210 de ingreso, ≈102 de margen), curva de 20 días para 1/2/4 jugadores, precios de mejoras y lista de constantes para `company_tuning.gd`.
 **Depende de:** D-0116
 **Qué:** `diseno/economia.md` con:
 - ingresos por pedido promedio, costos de insumos, alquiler y precios de mejoras;
