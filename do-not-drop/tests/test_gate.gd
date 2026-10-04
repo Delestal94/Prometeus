@@ -9,7 +9,11 @@ extends SceneTree
 ##   emits gate_opened once and lets the body through;
 ## - an open gate stays open after to_dict() -> from_dict() (a save and a load);
 ## - an equipment gate does not open without the gear, nor for a milestone alone;
-## - water and altitude let only their vehicle through; a roadblock can be paid.
+## - water and altitude let only their vehicle through; a roadblock can be paid;
+## - every kind shows its GLB (a "Model" node with meshes, not the grey box) and
+##   the moving part opens: boom +-90 degrees, barricades +-5.5 m, ranger door
+##   90 degrees; refresh() twice leaves the same pose; coast and mountain signs are
+##   visible without collision and carry their text on the board.
 
 const GATE_DIR: String = "res://data/gates/"
 const ZONE_DIR: String = "res://data/zones/"
@@ -30,8 +34,9 @@ func _run() -> void:
 	_test_save_load(gates)
 	await _test_equipment(gates)
 	_test_vehicle_and_cost(gates)
+	_test_models(gates)
 	if _failures == 0:
-		print("PASS: gates block, open once by milestone, equipment, vehicle and cost rules, saved open")
+		print("PASS: gates block, open once by milestone, equipment, vehicle, cost rules, saved open, models")
 	quit(_failures)
 
 
@@ -165,6 +170,98 @@ func _test_vehicle_and_cost(gates: Dictionary) -> void:
 	water.queue_free()
 	works.queue_free()
 	state.free()
+
+
+func _first_mesh(node: Node) -> MeshInstance3D:
+	for child: Node in node.get_children():
+		if child is MeshInstance3D:
+			return child as MeshInstance3D
+		var nested: MeshInstance3D = _first_mesh(child)
+		if nested != null:
+			return nested
+	return null
+
+
+func _part(gate: WorldGate, part_name: String) -> Node3D:
+	return gate.get_node("Model").find_child(part_name, true, false) as Node3D
+
+
+func _snapshot(gate: WorldGate, names: Array[String]) -> Array:
+	var result: Array = []
+	for part_name: String in names:
+		var node: Node3D = _part(gate, part_name)
+		result.append([node.position, node.rotation])
+	return result
+
+
+func _test_models(gates: Dictionary) -> void:
+	var state: Object = _new_state()
+	state.set("money", 1000)
+	var parts: Dictionary = {
+		&"gate_suburbio": ["Boom"],
+		&"gate_campo_obra": ["BarricadeLeft", "BarricadeRight"],
+		&"gate_nieve_equipo": ["Boom", "Door"],
+		&"gate_islas_agua": [],
+		&"gate_montana_altura": [],
+	}
+	for id: StringName in parts:
+		var gate: WorldGate = _new_gate(gates, id, state)
+		var model: Node = gate.get_node_or_null("Model")
+		_expect(model is Node3D and not model is MeshInstance3D,
+				"%s instances its model, not the grey box" % id)
+		if model == null or _first_mesh(model) == null:
+			_expect(false, "%s model has a MeshInstance3D" % id)
+			gate.queue_free()
+			continue
+		_expect(gate.get_node_or_null("Body") != null, "%s keeps its Body" % id)
+		var names: Array[String] = []
+		names.assign(parts[id])
+		for part_name: String in names:
+			_expect(_part(gate, part_name) != null, "%s has the %s node" % [id, part_name])
+		if names.is_empty():
+			_check_sign_gate(gate, id)
+		else:
+			_check_moving_gate(gate, id, names, state)
+		gate.queue_free()
+	state.free()
+
+
+func _check_moving_gate(gate: WorldGate, id: StringName, names: Array[String], state: Object) -> void:
+	var closed: Array = _snapshot(gate, names)
+	gate.refresh()
+	gate.refresh()
+	_expect(_snapshot(gate, names) == closed, "%s: refresh() twice keeps the closed pose" % id)
+	(state.get("milestones_done") as Array).append(&"deliveries_25")
+	if id == &"gate_nieve_equipo":
+		(state.get("equipment") as Array).append_array([&"chains", &"winter_coat"])
+	_expect(gate.try_open(true), "%s opens" % id)
+	var open: Array = _snapshot(gate, names)
+	gate.refresh()
+	gate.refresh()
+	_expect(_snapshot(gate, names) == open, "%s: refresh() twice keeps the open pose" % id)
+	match id:
+		&"gate_suburbio":
+			_expect(is_equal_approx(open[0][1].z - closed[0][1].z, -PI * 0.5), "the barrier boom swings up -90 deg")
+		&"gate_campo_obra":
+			var left: float = open[0][0].x - closed[0][0].x
+			var right: float = open[1][0].x - closed[1][0].x
+			_expect(is_equal_approx(left, -5.5), "the left barricade slides -5.5 m (%.2f)" % left)
+			_expect(is_equal_approx(right, 5.5), "the right barricade slides +5.5 m (%.2f)" % right)
+		&"gate_nieve_equipo":
+			_expect(is_equal_approx(open[0][1].z - closed[0][1].z, PI * 0.5), "the checkpoint boom swings up +90 deg")
+			_expect(is_equal_approx(open[1][1].y - closed[1][1].y, PI * 0.5), "the ranger door opens +90 deg")
+
+
+func _check_sign_gate(gate: WorldGate, id: StringName) -> void:
+	var model: Node3D = gate.get_node("Model")
+	_expect(model.visible, "%s sign is visible even without collision" % id)
+	_expect(not gate.requirement.has_collision(), "%s has no collision" % id)
+	var board: Node3D = _part(gate, "Board")
+	_expect(board != null, "%s has its Board" % id)
+	_expect(gate.sign_label.billboard == BaseMaterial3D.BILLBOARD_DISABLED, "%s text is flat on the board" % id)
+	if board != null:
+		var offset: Vector3 = gate.sign_label.global_position - board.global_position
+		_expect(offset.length() < 0.1 and offset.z > 0.0, "%s text sits just in front of the board %s" % [id, offset])
 
 
 func _expect(cond: bool, label: String) -> void:

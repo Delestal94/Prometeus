@@ -96,6 +96,11 @@ const PATHS: Array[String] = [
 	"res://assets/models/environment/depot/sm_env_depot_hard_hat.glb",
 	"res://assets/models/environment/depot/sm_env_depot_safety_vest.glb",
 	"res://assets/models/environment/depot/sm_env_depot_fridge_magnets.glb",
+	"res://assets/models/environment/gates/sm_env_gate_barrier.glb",
+	"res://assets/models/environment/gates/sm_env_gate_roadblock.glb",
+	"res://assets/models/environment/gates/sm_env_gate_checkpoint.glb",
+	"res://assets/models/environment/gates/sm_env_gate_sign_coast.glb",
+	"res://assets/models/environment/gates/sm_env_gate_sign_mountain.glb",
 ]
 
 
