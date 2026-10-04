@@ -8,6 +8,14 @@ extends RefCounted
 const DELIVERIES = preload("res://scripts/core/run_deliveries.gd")
 const DEADLINES = preload("res://scripts/core/run_deadlines.gd")
 
+## The keys of the results screen's lines (outcomes and rescue kinds).
+const OUTCOME_OK: StringName = &"delivered_ok"
+const OUTCOME_AT_RISK: StringName = &"delivered_at_risk"
+const OUTCOME_RUINED: StringName = &"delivered_ruined"
+const RESCUE_REPAIRED: StringName = &"repaired"
+const RESCUE_UNCONVINCING: StringName = &"unconvincing"
+const RESCUE_SUBSTITUTED: StringName = &"substituted"
+
 const POINTS_INTACT: int = 100
 const POINTS_AT_RISK: int = 50
 const CHAOS_MULTIPLIER: float = 1.2
@@ -120,13 +128,13 @@ static func resolve_deliveries(deliveries: Array, house_assignments: Array, refu
 			continue
 		counts[StringName(entry["outcome"])] = int(counts.get(StringName(entry["outcome"]), 0)) + 1
 	var breakdown: Array = []
-	_add_line(breakdown, "HUD_SCORE_PERFECT", int(counts.get(&"delivered_ok", 0)), POINTS_DELIVERED_INTACT)
-	_add_line(breakdown, "HUD_SCORE_DENTED", int(counts.get(&"delivered_at_risk", 0)), POINTS_DELIVERED_AT_RISK)
-	_add_line(breakdown, "HUD_SCORE_RUINED", int(counts.get(&"delivered_ruined", 0)), POINTS_DELIVERED_RUINED)
-	_add_line(breakdown, "HUD_SCORE_REPAIRED", int(rescued.get(&"repaired", 0)), POINTS_DELIVERED_REPAIRED)
-	_add_line(breakdown, "HUD_SCORE_UNCONVINCING", int(rescued.get(&"unconvincing", 0)),
+	_add_line(breakdown, "HUD_SCORE_PERFECT", int(counts.get(OUTCOME_OK, 0)), POINTS_DELIVERED_INTACT)
+	_add_line(breakdown, "HUD_SCORE_DENTED", int(counts.get(OUTCOME_AT_RISK, 0)), POINTS_DELIVERED_AT_RISK)
+	_add_line(breakdown, "HUD_SCORE_RUINED", int(counts.get(OUTCOME_RUINED, 0)), POINTS_DELIVERED_RUINED)
+	_add_line(breakdown, "HUD_SCORE_REPAIRED", int(rescued.get(RESCUE_REPAIRED, 0)), POINTS_DELIVERED_REPAIRED)
+	_add_line(breakdown, "HUD_SCORE_UNCONVINCING", int(rescued.get(RESCUE_UNCONVINCING, 0)),
 			POINTS_DELIVERED_UNCONVINCING)
-	_add_line(breakdown, "HUD_SCORE_SUBSTITUTED", int(rescued.get(&"substituted", 0)), POINTS_DELIVERED_SUBSTITUTED)
+	_add_line(breakdown, "HUD_SCORE_SUBSTITUTED", int(rescued.get(RESCUE_SUBSTITUTED, 0)), POINTS_DELIVERED_SUBSTITUTED)
 	_add_line(breakdown, "HUD_SCORE_DEADLINE_MET", int(tally["met"]), DEADLINES.POINTS_DEADLINE_MET)
 	_add_line(breakdown, "HUD_SCORE_DEADLINE_MISSED", int(tally["missed"]), -DEADLINES.PENALTY_DEADLINE_MISSED)
 	_add_line(breakdown, "HUD_SCORE_PHOTOS", photos, POINTS_PHOTO_BONUS)

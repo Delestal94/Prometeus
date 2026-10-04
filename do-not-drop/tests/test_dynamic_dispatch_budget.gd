@@ -380,6 +380,20 @@ const BUDGETS: Dictionary = {
 	# parent's `mood` (Route has no class_name and a test's stand-in holds it) and the truck presentation's
 	# viewer_inside() (it reaches vehicle.gd and the autoloads: a cycle and a broken --script compile).
 	"res://scripts/gameplay/route/route_sky.gd": {"call": 1, "callv": 0, "get": 1, "root": 1},
+	# The results screen's lines (N-224.4): the dictionary keys are constants, so nothing reads as a call by name.
+	"res://scripts/core/run_scoring.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The recoverable pieces (N-224.4) hold the box as DeliveryPackage (get_half_extents, _find_vehicle,
+	# content_definition) and look RunManager up through PackageAutoloads. The one .get left is RunManager's
+	# elapsed_seconds, by name for the compile cycle package_autoloads.gd explains.
+	"res://scripts/gameplay/package/package_salvage.gd": {"call": 0, "callv": 0, "get": 1, "root": 0},
+	# The depot practice card (N-224.4) holds the profile as UnlockProfile (seen_tips, mark_tip_seen); the player
+	# and the boxes stay plain nodes (test_care_prompt_view stands in a FakePlayer and a FakeAboardBox), read by
+	# property. Nothing left by name.
+	"res://scripts/ui/hud/care_practice.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The cargo panel (N-224.4): the disguise as TrapDefinition (localized_name) and the truck's top speed by
+	# property. Two .get left: the level's local_player (no common base class) and the box's package_id of the
+	# player's hands.
+	"res://scripts/ui/hud/hud_cargo_panel.gd": {"call": 0, "callv": 0, "get": 2, "root": 0},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",

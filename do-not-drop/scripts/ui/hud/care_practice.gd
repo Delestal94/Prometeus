@@ -25,7 +25,7 @@ var step: int = 0
 var finished: bool = false
 ## Where "done" is remembered (UnlockManager); set by the owner, left empty
 ## in tests so they never touch a real profile.
-var profile: Node
+var profile: UnlockProfile
 var prompt_view: CarePromptView
 var _rows: Array[Label] = []
 var _marks: Array[StepMark] = []
@@ -88,8 +88,8 @@ func _init() -> void:
 
 
 ## Whether this profile still has the practice to do.
-static func pending(profile: Node) -> bool:
-	return profile != null and not bool((profile.get(&"seen_tips") as Dictionary).get(SEEN_ID, false))
+static func pending(profile: UnlockProfile) -> bool:
+	return profile != null and not bool(profile.seen_tips.get(SEEN_ID, false))
 
 
 ## One frame of practice. `player` is the local player; `keys` from
@@ -99,7 +99,7 @@ func advance(delta: float, player: Node, keys: Dictionary, gamepad: bool) -> boo
 		_farewell -= delta
 		prompt_view.show_step(&"load", {"pad": gamepad, "fixes": STEP_TEXTS.size()})
 		return _farewell > 0.0
-	var carried: Node = player.get(&"carried_package")
+	var carried: Node = player.carried_package
 	var holding_box: bool = is_instance_valid(carried)
 	var primary: bool = Input.is_action_pressed(&"package_action_primary")
 	var tool_held: bool = Input.is_action_pressed(&"care_work")
@@ -117,7 +117,7 @@ func advance(delta: float, player: Node, keys: Dictionary, gamepad: bool) -> boo
 				_next()
 		3:
 			# Same rule as on the road: on foot, taps count with the box held.
-			if primary or not String(player.get(&"seat_node_path")).is_empty():
+			if primary or not String(player.seat_node_path).is_empty():
 				_read_taps()
 			if _sequence_index >= PRACTICE_SEQUENCE.size():
 				_next()
@@ -157,7 +157,7 @@ func _next() -> void:
 		_farewell = FAREWELL_SECONDS
 		_title.text = tr("HUD_PRACTICE_DONE")
 		if profile != null:
-			profile.call(&"mark_tip_seen", SEEN_ID)
+			profile.mark_tip_seen(SEEN_ID)
 
 
 func _refresh(keys: Dictionary) -> void:
@@ -181,6 +181,6 @@ func _refresh(keys: Dictionary) -> void:
 
 static func _any_aboard(player: Node) -> bool:
 	for node: Node in player.get_tree().get_nodes_in_group(&"cargo"):
-		if node.has_method(&"is_aboard") and bool(node.call(&"is_aboard")):
+		if node.has_method(&"is_aboard") and bool(node.is_aboard()):
 			return true
 	return false
