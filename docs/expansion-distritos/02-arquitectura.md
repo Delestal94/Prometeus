@@ -21,7 +21,7 @@
 | D-0211 | ✅ `Inventory`: stock por producto y ubicación (estante, palet, caja abierta) con autoridad en el host | constructor-negocio | high | test `test_inventory` mueve unidades sin duplicar ni perder |
 | D-0212 | `PackedBox`: modelo de datos de un paquete armado (caja, contenido, relleno, cinta, etiqueta, sellos, pedido) | constructor-negocio | high | test serializa y compara contra el pedido |
 | D-0213 | Puente `PackedBox` → `DeliveryPackage` + trampa actual (la entrega sigue igual) | constructor-trampas | xhigh | una caja armada en el galpón aparece en la camioneta con la trampa calculada (test) |
-| D-0214 | Escena raíz del modo Empresa (`company_root.tscn`) que carga galpón y distritos con `scene_loader` | constructor-mundo | high | arranca con `--autostart --mode=company` sin errores |
+| D-0214 | ✅ Escena raíz del modo Empresa (`company_root.tscn`) que carga galpón y distritos con `scene_loader` | constructor-mundo | high | arranca con `--autostart --mode=company` sin errores |
 | D-0215 | Señales nuevas en `EventBus` para negocio (pedido_entrante, caja_armada, entrega_cobrada, empleado_contratado…) | constructor-progresion | medium | lista documentada; `test_event_bus_signals` las cubre |
 | D-0216 | Registro de distritos (`DistrictRegistry`) leído de `.tres`, sin listas a mano | constructor-mundo | medium | agregar un `.tres` suma el distrito sin tocar código (test) |
 | D-0217 | Registro de vehículos (`FleetRegistry`) leído de `.tres` | constructor-camion | medium | idem con vehículos |
