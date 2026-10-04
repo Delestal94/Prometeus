@@ -191,10 +191,10 @@ Agregar antes que cambiar: ninguna firma existente cambia.
 - **Hijos:** `WorldCells` (D-0303), `DayCycle`, `OrderBook`, `Inventory`, el galpón (D-0620), el
   vehículo inicial y los spawns de jugadores.
 - **Registro:** se suma a `NetworkManager.LEVEL_SCENES` (sin eso el cliente no la carga).
-- **Arranque:** `--autostart --mode=company [--slot=<n>]`.
+- **Arranque:** `--autostart-company [--slot=<n>]` (no `--autostart --mode=company`: decisión `docs/decisiones/2026-10-04-flag-modo-empresa.md`).
 - **Menú:** el botón "Empresa" arriba de "Partida rápida", según la decisión 1 de
   `2026-10-04-expansion-decisiones-delegadas.md`.
-**Test** `test_company_world_boot`: con `--mode=company` la escena carga, `CompanyState.is_active()` es
+**Test** `test_company_world_boot`: con `--autostart-company` la escena carga, `CompanyState.is_active()` es
 verdadero, hay `DayCycle` en `OPENING` y no hay `ERROR` en el log (Logger que cuenta errores, como N-917).
 **Hecho cuando:** el test pasa y Entrega/Endless arrancan igual que antes.
 
