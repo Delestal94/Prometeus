@@ -39,7 +39,8 @@ Si no hay ninguna:
   efectos), con los assets que ya pasaron por esta rutina en las últimas dos semanas
   (`git log origin/main --since="14 days ago" --format=%s | grep -i "art"`) para que no los repita.
   Tomá el primer REFINAR de su tabla; sumá como fuente el §10.2 del inventario. BORRAR o REHACER algo
-  grande no se ejecuta: va como tarea ⏸ "decide el usuario".
+  grande se decide con la recomendación de `director-arte` (regla 3 del README), en un PR propio que se
+  pueda revertir entero.
 
 Después de las de `tareas-nacho.md`, los pedidos de la expansión: cada archivo de
 `docs/expansion-distritos/arte-pendiente/<ID>.md` es un asset que una tarea `D-` dejó con placeholder gris

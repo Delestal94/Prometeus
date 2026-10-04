@@ -60,10 +60,10 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Página de Steam, cápsulas, calendario, devlog | lanzamiento (mensual) → sesión de arte | `estratega-steam`, `artista-conceptual`, `revisor-visual` |
 | Build de prueba | build de la PC (diaria; publicar sigue ⏸ con M5) | `empaquetador-release`, `perfilador-rendimiento`, `revisor-visual` |
 | Salud de las rutinas (fallas silenciosas, rutinas que dejaron de producir) | auditoría (diaria, "latido") + issue `rutina-caida` que abre la PC | `auditor-integral` |
-| Decisiones del usuario | toda rutina que crea un ⏸ abre un issue `decide-usuario` (regla 12); la revisión semanal junta las respuestas | `planificador-tareas` |
+| Decisiones | la rutina decide con su recomendación (regla 3); solo plata, cuentas y licencias abren un issue `decide-usuario` (regla 12); la revisión semanal aplica las respuestas | `planificador-tareas` |
 | Regresiones de lo ya mezclado | QA, build de la PC y auditoría → tarea `Regresión de #PR` → construcción (arreglo o `git revert`, regla 14) | `cazador-bugs`, constructor del área |
 | Dependencias del juego (Godot, GodotSteam, addons) | lanzamiento (mensual) → tarea | `estratega-steam`, `constructor-red` |
-| Tareas viejas u obsoletas | revisión (lunes) → ⏸ "decide el usuario" si ya no aplican | `abogado-del-diablo`, `planificador-tareas` |
+| Tareas viejas u obsoletas | revisión (lunes) → se tachan con el motivo si ya no aplican (regla 3) | `abogado-del-diablo`, `planificador-tareas` |
 | Post-lanzamiento (reseñas, parches) | lanzamiento, dormida hasta un tag `v1.*` | `estratega-steam`, `cazador-bugs`, `pulidor-jugabilidad`, `empaquetador-release` |
 | Playtesting con gente | ⏸ decisión del usuario (diferido al final): la lista vive en "Para cuando haya playtesting" de `tareas-nacho.md` | — |
 | Personajes (modelo y apariencia) | ⏸ decisión del usuario; S-311 es de Slatex | — |
@@ -81,12 +81,15 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
    Ramas siempre desde `origin/main` recién bajado. En la nube Godot está en `$GODOT`. **En la nube no
    hay `gh`**: cada `gh ...` de estas rutinas se hace con la herramienta `mcp__github__*` equivalente
    (runs y logs de CI, PRs, auto-merge, issues). En la PC sí hay `gh`.
-3. **Nadie contesta**: no hay revisión humana ni preguntas. Si algo es ambiguo, elegí lo más
-   conservador que encaje con `docs/` y escribilo como "Supuesto" en el PR. Las decisiones que solo
-   puede tomar el usuario (borrar o recortar una feature, cambiar el alcance) no se
-   ejecutan: se dejan como tarea ⏸ "decide el usuario" y van al cuerpo del PR. Excepción pedida por el
-   usuario el 2026-10-04: en la expansión (`D-xxxx`) las decisiones de cómo se hace las toma la rutina y
-   las documenta (`desarrollador.md` §3 y `docs/decisiones/2026-10-04-expansion-decisiones-delegadas.md`).
+3. **Nadie contesta: la rutina decide.** No hay revisión humana ni preguntas, y el usuario no quiere
+   decidir (2026-10-04: "quiero lo más recomendado"). Ante una decisión, elegí la opción que
+   recomendarías, ejecutala y documentala: "Decisión: <qué> porque <por qué>" en el PR y, si cambia
+   diseño, alcance o una tarea, también en `docs/decisiones/AAAA-MM-DD-<tema>.md` (archivo nuevo). Si algo
+   es ambiguo, lo más conservador que encaje con `docs/`. Borrar o recortar una feature también se decide
+   así, pero en un PR propio que se pueda revertir entero. Solo queda ⏸ "decide el usuario" (regla 12) lo
+   que **solo el usuario puede hacer**: gastar plata real, usar sus cuentas (Steamworks, pagos, publicar
+   la página o una build) o declarar el origen o la licencia de algo que trajo él. La expansión (`D-xxxx`)
+   ya trabajaba así (`desarrollador.md` §3).
 4. **Dominios**: se trabaja solo sobre `docs/tareas-nacho.md` (las `N-xxx` y las `S-xxx` heredadas),
    salvo la rutina `desarrollador`, que trabaja solo `docs/expansion-distritos/` (las `D-xxxx`).
    `docs/tareas-slatex.md` (S-311) es de Slatex: no se toman sus ítems ni se le agregan tareas; todo
@@ -117,11 +120,13 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
     pasan de **10**, no crees ninguna esa corrida; los hallazgos quedan solo en el informe o el PR, y
     en el cuerpo decís "freno de tareas: N abiertas". Siempre entran igual: bugs de QA "bloquea" y P0
     de la auditoría. Así lo que se planifica no le gana a lo que la construcción alcanza a hacer.
-12. **Decisiones del usuario, a la vista**: toda tarea ⏸ "decide el usuario" que crees o marques abre
+12. **Lo que solo puede hacer el usuario, a la vista**: toda tarea ⏸ "decide el usuario" (regla 3) que crees o marques abre
     también un issue de GitHub con la etiqueta `decide-usuario` (título `<ID> · decidir: <qué>`, cuerpo
     con las opciones, tu recomendación y el link a la tarea). Antes, `gh issue list --label
-    decide-usuario --state open --search "<ID>"`: si ya existe, comentá en ese. El usuario contesta
-    cerrándolo con un comentario; la revisión semanal lleva esa respuesta a la tarea. Los cuerpos de PR
+    decide-usuario --state open --search "<ID>"`: si ya existe, comentá en ese. El usuario contesta con un
+    comentario, cierre o no el issue: **todo comentario del dueño del repo (`Delestal94`) es la respuesta**
+    (el 2026-10-04 había tres contestados y abiertos que nadie aplicó). La revisión semanal la lleva a la
+    tarea y cierra el issue. Los cuerpos de PR
     que se mezclan solos no los lee nadie: el issue le llega como notificación.
 13. **Cupo del plan**: si la corrida se queda sin cupo (error de límite de uso, o `api_retry` con
     `rate_limit` que no se recupera), no reintentes en la misma corrida: terminá. No borres nada: una
