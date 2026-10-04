@@ -78,14 +78,14 @@ func floor_at(spot: Vector3) -> Vector3:
 ## A free passenger seat of this truck that takes someone with empty hands:
 ## the one facing the most unminded boxes, else one that displaces nobody,
 ## else the first free one.
-func pick_seat() -> Node:
-	var best: Node = null
+func pick_seat() -> CargoSeatPoint:
+	var best: CargoSeatPoint = null
 	var best_score: int = -1
-	for seat: Node in get_tree().get_nodes_in_group(SeatTending.SEAT_GROUP):
-		if not vehicle.is_ancestor_of(seat) or not seat.has_method(&"unminded_cargo") \
-				or not bool(seat.call(&"can_interact", self)):
+	for node: Node in get_tree().get_nodes_in_group(SeatTending.SEAT_GROUP):
+		var seat := node as CargoSeatPoint
+		if seat == null or not vehicle.is_ancestor_of(seat) or not seat.can_interact(self):
 			continue
-		var score: int = int(seat.call(&"unminded_cargo")) * 2 + (0 if bool(seat.call(&"would_displace")) else 1)
+		var score: int = seat.unminded_cargo() * 2 + (0 if seat.would_displace() else 1)
 		if score > best_score:
 			best = seat
 			best_score = score
@@ -98,7 +98,7 @@ func pick_seat() -> Node:
 ## when board_seat reaches it, a round trip later, and until then the copy
 ## would stand solid in the road while the truck drives on (player.gd turns
 ## its collision off and poses it at the seat as soon as the path is set).
-func seat_player(player: Node, seat: Node) -> void:
-	seat.call(&"interact", player)
-	if seat.get(&"occupant") == player:
+func seat_player(player: Node, seat: SeatPoint) -> void:
+	seat.interact(player)
+	if seat.occupant == player:
 		player.set(&"seat_node_path", seat.get_parent().get_path())

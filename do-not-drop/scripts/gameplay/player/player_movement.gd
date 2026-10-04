@@ -5,6 +5,7 @@ extends RefCounted
 ## tests call (`_apply_look`, `_update_ground_safety`) and the constants the rest of the project reads.
 
 const CHARACTER_STEP := preload("res://modules/character_step/character_step.gd")
+const GAME_SETTINGS := preload("res://scripts/core/game_settings.gd")  # What the GameSettings autoload runs.
 
 ## Three contexts, three frames -- walking, driving (FirstPersonCamera's own
 ## BASE_FOV) and carrying a package don't feel like the same view even
@@ -65,8 +66,8 @@ static func on_foot_step(p: Player, delta: float) -> void:
 	apply_context_fov(p, delta)
 	if p.carried_package != null:
 		p._carry_component.update_carried_package()
-	var target: Node = p._interaction_component.closest_interactable()
-	p._interaction_component.publish_prompt(str(target.call(&"get_prompt")) if target != null else "")
+	var target: Interactable = p._interaction_component.closest_interactable()
+	p._interaction_component.publish_prompt(target.get_prompt() if target != null else "")
 	p._interaction_component.update_highlight(target)
 	p._interaction_component.publish_lid_hint(p._lid_target(target))
 
@@ -86,9 +87,9 @@ static func apply_look(p: Player, motion: Vector2) -> void:
 	# both get applied in this one place so mouse and stick stay consistent
 	# with each other. 1.0 / not-inverted is exactly the tuning this shipped
 	# with, so the defaults change nothing.
-	var settings: Node = p.get_node_or_null("/root/GameSettings")
-	var sensitivity: float = float(settings.get("look_sensitivity")) if settings != null else 1.0
-	var y_sign: float = float(settings.call(&"look_y_sign")) if settings != null else 1.0
+	var settings: GAME_SETTINGS = p.get_node_or_null(^"/root/GameSettings") as GAME_SETTINGS
+	var sensitivity: float = settings.look_sensitivity if settings != null else 1.0
+	var y_sign: float = settings.look_y_sign() if settings != null else 1.0
 	motion.x *= sensitivity
 	motion.y *= sensitivity * y_sign
 	p.rotate_y(-motion.x)
@@ -117,8 +118,8 @@ static func apply_context_fov(p: Player, delta: float) -> void:
 	# The options FOV is the neutral reference. Carrying still narrows the
 	# view by the same readable amount, rather than silently ignoring a
 	# player's accessibility preference.
-	var settings: Node = p.get_node_or_null("/root/GameSettings")
-	var preferred_fov: float = float(settings.get("preferred_fov")) if settings != null else 82.0
+	var settings: GAME_SETTINGS = p.get_node_or_null(^"/root/GameSettings") as GAME_SETTINGS
+	var preferred_fov: float = settings.preferred_fov if settings != null else 82.0
 	var fov_offset: float = preferred_fov - 82.0
 	var target_fov: float = (CARRY_FOV if p.carried_package != null else WALK_FOV) + fov_offset + p._sprint.fov_bonus()
 	p._camera.fov = move_toward(p._camera.fov, target_fov, FOV_SMOOTH_SPEED * delta)
