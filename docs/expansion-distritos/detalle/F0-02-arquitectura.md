@@ -162,6 +162,7 @@ camioneta con la misma aceleración (±5 %).
 **Hecho cuando:** el test pasa.
 
 ### D-0212 · `PackedBox` — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `packed_box.gd` (`PackedBox`, RefCounted: grilla de la caja, `place`/`fill_free_cells`/`contents`/`free_ratio`/`fill_ratio`, `to_dict`/`from_dict` aptos para JSON); `test_packed_box`.
 **Depende de:** D-0204
 **Qué:** `scripts/gameplay/business/packed_box.gd` (`RefCounted`).
 - **Campos:** `box_size` (`&"S"`…`&"XL"`), `grid: Dictionary` (celda `Vector3i` → product id o
