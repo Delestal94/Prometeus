@@ -43,6 +43,8 @@ el dev hace el juego que él mismo quiere jugar (ver `docs/checklist-exito.md`).
 - `docs/parametros-diseno.md` — valores numéricos iniciales de cada trampa.
 - `docs/controles-y-ui.md` — controles y flujo de UI/lobby.
 - `docs/convenciones-godot.md` — convenciones técnicas concretas del proyecto Godot.
+- `docs/expansion-distritos/diseno/vision.md` — visión de la expansión (empresa de reparto,
+  distritos, flota, galpón): qué se conserva de este concepto y qué se suma.
 
 ## Estado de decisiones abiertas
 - Nombre definitivo: **cerrado el 2026-09-22 — "Take My Package"**. Reemplaza al nombre de
