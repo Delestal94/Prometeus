@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PlaceableDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/placeable_definition.gd" id="1_placeable"]
+
+[resource]
+script = ExtResource("1_placeable")
+id = &"assembly_table"
+display_key = "WORLD_PLACEABLE_ASSEMBLY_TABLE"
+footprint = Vector2i(2, 1)
+height_m = 0.9
+price = 120
+role = &"assembly"
+slots = 0
+cold = false
+blocks_walking = true
+owned_at_start = true

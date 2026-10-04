@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PlaceableDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/placeable_definition.gd" id="1_placeable"]
+
+[resource]
+script = ExtResource("1_placeable")
+id = &"shelf"
+display_key = "WORLD_PLACEABLE_SHELF"
+footprint = Vector2i(2, 1)
+height_m = 2.0
+price = 80
+role = &"storage"
+slots = 8
+cold = false
+blocks_walking = true
+owned_at_start = true

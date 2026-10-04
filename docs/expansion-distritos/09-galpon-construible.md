@@ -11,7 +11,7 @@
 | D-0901 | Modo construcción: activar, cámara elevada, grilla visible | constructor-negocio | high | test de entrada/salida del modo |
 | D-0902 | Colocar un objeto comprado con previsualización verde/roja | constructor-negocio | high | test: choque bloquea la colocación |
 | D-0903 | Rotar, mover y vender objetos colocados | constructor-negocio | medium | test de las 3 acciones |
-| D-0904 | Objetos colocables iniciales: mesa de armado, estante, heladera, zona de despacho | constructor-negocio | medium | 4 objetos `.tres` |
+| D-0904 | ✅ Objetos colocables iniciales: mesa de armado, estante, heladera, zona de despacho | constructor-negocio | medium | 4 objetos `.tres` |
 | D-0905 | Etapas del galpón (chico → mediano → grande → centro logístico) que amplían la grilla | constructor-mundo | xhigh | ampliar cambia paredes y grilla sin recargar el nivel |
 | D-0906 | Paredes y portones fijos que no se pueden tapar (dársena, salida) | constructor-negocio | medium | test |
 | D-0907 | Caminos libres: validación de que se puede llegar a cada estación | constructor-negocio | high | test de conectividad (navmesh) |

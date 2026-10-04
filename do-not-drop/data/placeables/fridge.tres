@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PlaceableDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/placeable_definition.gd" id="1_placeable"]
+
+[resource]
+script = ExtResource("1_placeable")
+id = &"fridge"
+display_key = "WORLD_PLACEABLE_FRIDGE"
+footprint = Vector2i(1, 1)
+height_m = 1.9
+price = 200
+role = &"storage"
+slots = 4
+cold = true
+blocks_walking = true
+owned_at_start = false
