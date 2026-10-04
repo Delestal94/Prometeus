@@ -21,3 +21,23 @@ estáticas). Un pedido sigue siendo un `Dictionary` (así lo guarda `OrderBook`,
 **Test** `test_order`: junta repetidos y calcula `due_min` y `pay`; `validate` acepta uno bueno y nombra
 cada problema de uno roto; JSON de ida y vuelta igual al original; `payout` a tiempo y tarde.
 **Hecho cuando:** el test pasa.
+
+### D-0806 · Requisitos de pedido — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `OrderRequirement` (`scripts/gameplay/business/order_requirement.gd`) + 6 `.tres` en `data/order_requirements/`; `test_order_requirements`.
+**Depende de:** D-0802
+**Qué:** recurso de datos (sin autoloads ni UI) con `id`, `display_key` (`WORLD_REQ_<ID>`), `required_seals`,
+`min_quality` (0-100), `window_factor` (multiplica la ventana de 4 h) y `pay_bonus` (suma a la paga).
+Los ids son los que `Order.requirements` ya admite. `window_min(base)` y `paid(pay)` aplican los dos números.
+
+| id | sellos | calidad mín. | ventana | bonus |
+|---|---|---|---|---|
+| `fragile` | `fragile` | 70 | ×1 | +15 % |
+| `cold` | `cold` | 0 | ×1 | +20 % |
+| `gift` | `gift` | 0 | ×1 | +25 % |
+| `urgent` | — | 0 | ×0,5 | +30 % |
+| `heavy` | `heavy` | 60 | ×1 | +20 % |
+| `no_bend` | `no_bend` | 0 | ×1 | +10 % |
+
+**Test** `test_order_requirements`: los 6 archivos cargan con su id y clave, cada uno pide algo y paga un
+bonus, `urgent` parte la ventana al medio, y `Order.make` acepta los seis ids.
+**Hecho cuando:** el test pasa.
