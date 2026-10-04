@@ -26,7 +26,7 @@
 | D-0116 | ✅ Catálogo inicial de productos: 40 productos con tamaño, peso, fragilidad, temperatura, precio y distrito | constructor-progresion | medium | `diseno/catalogo-productos.md` con los 40 |
 | D-0117 | ✅ Modelo económico en papel: ingresos por pedido, costos, sueldos, precios de máquinas; curva de 20 días | constructor-progresion | high | `diseno/economia.md` con hoja y curva; `sim_economy` (D-0540) la reproduce |
 | D-0118 | Lista de hitos (30) con condición, recompensa y qué desbloquean | constructor-progresion | medium | `diseno/hitos.md` |
-| D-0119 | Mapa de qué sistemas actuales se reutilizan (depósito, RouteStreamer, DeliveryHouse, CrewProgression, UnlockManager, trampas) y cuáles se reemplazan | Plan | high | `diseno/reutilizacion.md` con archivo por sistema |
+| D-0119 | ✅ Mapa de qué sistemas actuales se reutilizan (depósito, RouteStreamer, DeliveryHouse, CrewProgression, UnlockManager, trampas) y cuáles se reemplazan | Plan | high | `diseno/reutilizacion.md` con archivo por sistema |
 | D-0120 | Riesgos técnicos (red con muchos objetos en el galpón, agua, vuelo, guardado, rendimiento de empleados) con mitigación | auditor-integral | high | `diseno/riesgos.md` con P0-P3 |
 
 ## Ampliación

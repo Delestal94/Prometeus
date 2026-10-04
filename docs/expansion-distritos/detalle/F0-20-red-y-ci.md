@@ -1,7 +1,7 @@
 # F0 · Grupo 20 — Red, rendimiento, QA y CI (detalle)
 
-> Carril 5 de la rutina `desarrollador`. Todo cambio de RPC elige `PROTOCOL_VERSION` (hoy 27,
-> `network_manager.gd:66`) como dice `docs/convenciones-godot.md` §6. Siempre `auditor-red` antes del PR.
+> Carril 5 de la rutina `desarrollador`. Todo cambio de RPC elige `PROTOCOL_VERSION` (hoy 28,
+> `network_manager.gd:68`) como dice `docs/convenciones-godot.md` §6. Siempre `auditor-red` antes del PR.
 
 ### D-2001 · Modelo de autoridad del modo Empresa — A · Opus 5.5 · xhigh · Aviso: no · F0
 **Depende de:** D-0201
@@ -187,5 +187,5 @@ y `scenes/company/`; si filtra recursos, agregarlos. Pedido a la rutina `pc-buil
 ### D-2020 · Smoke del ejecutable en modo Empresa — B · Opus 5.5 · medium · Aviso: sí (`.github/workflows/release.yml`) · F0
 **Depende de:** D-2019
 **Qué:** el smoke de `release.yml` hoy arranca el juego. Agregar una segunda corrida con
-`--autostart --mode=company` 20 s que falle si el log tiene `SCRIPT ERROR` o `ERROR`.
+`--autostart-company` 20 s que falle si el log tiene `SCRIPT ERROR` o `ERROR`.
 **Hecho cuando:** el workflow tiene el paso y pasa en la siguiente release.
