@@ -25,3 +25,9 @@
 positivos, rol conocido, solo los estantes tienen huecos, solo la heladera es fría, solo el despacho se
 puede pisar, la rotación y el reembolso.
 **Hecho cuando:** 4 objetos `.tres` y el test pasa.
+
+### D-0912 · Electricidad como restricción de máquinas — A · Sonnet 5.5 · low · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — decidido **no**: sin enchufes ni tablero; `docs/decisiones/2026-10-04-sin-electricidad-en-galpon.md`.
+**Depende de:** nada
+**Qué:** decidir si las máquinas necesitan enchufe. Decisión: no, coherente con D-0505 (sin energía).
+**Test:** ninguno (decisión). **Hecho cuando:** decisión escrita y el detalle de D-0904 y D-0922 coherente.
