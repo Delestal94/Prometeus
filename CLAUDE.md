@@ -36,7 +36,7 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
   (crear y refinar assets) y `.claude/rutinas/pc-build.md` (build de Windows y FPS), lanzadas con
   `tools/pc/rutina-pc.ps1`. No hay revisión
   humana de PRs: los checks requeridos son la única compuerta. Las rutinas trabajan solo
-  `docs/tareas-nacho.md` (incluidas las `S-xxx` heredadas); `docs/tareas-slatex.md` (S-311) es
+  la lista de Nacho, `docs/tareas/<ID>.md` (incluidas las `S-xxx` heredadas); `docs/tareas-slatex.md` (S-311) es
   de Slatex y no se toca.
 - Los dominios que usan hooks y agentes salen de `file_domain` en
   `.claude/hooks/lib.sh`; si cambia la tabla de `docs/colaboracion-equipo.md`,
@@ -84,7 +84,7 @@ juego lo conecta desde un adaptador chico en `scripts/`. `modules/` es zona comp
 
 ## Antes de empezar una tarea
 
-Las rutinas trabajan `docs/tareas-nacho.md` a toda hora: una sesión a mano que toma una tarea sin
+Las rutinas trabajan la lista de Nacho (`docs/tareas/`, `python tools/tareas.py lista --abiertas`) a toda hora: una sesión a mano que toma una tarea sin
 avisar termina haciendo lo mismo que una rutina en paralelo (pasó con N-229.1, PRs #117 y #123).
 Antes de tocar código:
 - Saltá la tarea si ya tiene PR abierto o rama `origin/nacho/<ID>-*`.
@@ -100,7 +100,8 @@ Seguí la skill `cerrar-cambio` (y `nuevo-test` para escribir el test). En resum
 
 - Test nuevo o ampliado para lo que se cambió, con su descripción en el encabezado del test
   (`tools/list-tests.sh` arma el índice; no hay lista a mano que mantener).
-- Actualizar `docs/tareas-nacho.md` / `docs/tareas-slatex.md` y, si se tocó la zona
+- Actualizar la tarea en su archivo `docs/tareas/<ID>.md` (una por archivo, `docs/tareas/README.md`; nunca
+  en `docs/tareas-nacho.md`, que es la portada) o `docs/tareas-slatex.md` y, si se tocó la zona
   compartida o archivos del otro integrante, un aviso: un archivo nuevo en `docs/avisos/` (`AAAA-MM-DD-tema.md`).
   Nunca se edita un archivo que todos los PRs tocan (así no chocan entre sí).
 - Commits con prefijo (`feat:`, `fix:`, `docs:`…), en inglés.

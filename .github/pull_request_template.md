@@ -17,5 +17,5 @@
 
 ## Docs
 
-- [ ] `docs/tareas-nacho.md` / `docs/tareas-slatex.md` actualizados
+- [ ] Tarea marcada en su archivo `docs/tareas/<ID>.md` (o `docs/tareas-slatex.md`)
 - [ ] El test nuevo describe qué cubre en su encabezado (`tools/list-tests.sh --missing` vacío)

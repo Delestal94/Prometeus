@@ -40,8 +40,10 @@ saltearlo en silencio.
 
 ## 4. Tareas
 
-- En `docs/tareas-nacho.md` o `docs/tareas-slatex.md` (el del dueño del trabajo):
-  si la tarea está en la lista, tachala con el mismo formato que las hechas
+- Las de Nacho (`N-xxx` y heredadas `S-xxx`) son un archivo cada una: `docs/tareas/<ID>.md`
+  (`docs/tareas/README.md`). Marcala **ahí**, nunca en `docs/tareas-nacho.md` (CI lo rechaza:
+  `python tools/tareas.py revisar`). Las de Slatex siguen en `docs/tareas-slatex.md`.
+  Si la tarea está en la lista, tachala con el mismo formato que las hechas
   (`~~texto~~ **[x] Hecho (AAAA-MM-DD)** — qué se hizo, con el archivo/función`).
   Sin línea de "Última actualización" en el encabezado: la fecha la tiene git, y
   esa línea hacía chocar a todos los PRs.

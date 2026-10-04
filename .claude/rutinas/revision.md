@@ -14,7 +14,7 @@ Reglas comunes y sesión: `.claude/rutinas/README.md` (leelo primero).
   decide-usuario --state closed --search "closed:>=<fecha>" --json number,title,comments`) y **los abiertos
   con algún comentario de `Delestal94`** (`gh issue list --label decide-usuario --state open --json
   number,title,comments`): un comentario suyo es la respuesta aunque no haya cerrado el issue (regla 12).
-- **Las 10 tareas abiertas más viejas** de `tareas-nacho.md` (las de fecha o ID más bajo que ninguna
+- **Las 10 tareas abiertas más viejas** de `docs/tareas/` (`python tools/tareas.py lista --abiertas`; las de fecha o ID más bajo que ninguna
   rutina tomó), para decidir si todavía aplican.
 
 ## 2. Cuatro miradas, en este orden

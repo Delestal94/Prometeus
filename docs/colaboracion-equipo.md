@@ -2,7 +2,8 @@
 
 > Este documento define cómo se reparte el trabajo entre dos personas trabajando en
 > paralelo sobre el mismo repositorio, para que los cambios de uno no choquen con los
-> del otro. Las tareas en sí están en `docs/tareas-nacho.md` y `docs/tareas-slatex.md`
+> del otro. Las tareas en sí están en `docs/tareas/<ID>.md` (las de Nacho, una por archivo desde el
+> 2026-10-04; portada en `docs/tareas-nacho.md`) y `docs/tareas-slatex.md`
 > (las dos se reescribieron el 2026-09-24 por pilares, con IDs `N-xxx` y `S-xxx`). Este doc es el
 > manual de convivencia.
 

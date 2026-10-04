@@ -1,4 +1,8 @@
-"""Move finished work out of docs/tareas-nacho.md into docs/tareas-nacho-archivo.md.
+"""Archive finished work: task files -> docs/tareas/hechas/, finished sections -> tareas-nacho-archivo.md.
+
+Since 2026-10-04 each task is its own file (docs/tareas/README.md): finished ones (no "[ ]", "⏸" nor "⚠")
+are moved to docs/tareas/hechas/ by `tools/tareas.py archivar`, which this runs first. The rest of this
+script still moves whole finished "## " sections of docs/tareas-nacho.md, as before.
 
 Usage: python tools/archivar-tareas.py [repo root]   (default: the current directory)
 
@@ -121,4 +125,6 @@ def main(root):
 
 if __name__ == "__main__":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    import subprocess
+    subprocess.run([sys.executable, str(Path(__file__).with_name("tareas.py")), "archivar"], check=True)
     main(sys.argv[1] if len(sys.argv) > 1 else ".")

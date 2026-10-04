@@ -26,7 +26,8 @@ se sigue este mismo archivo. Reglas comunes, freno de mano, sesión y freno de t
 **Modo del turno**: `$(( 10#$(date +%H) / 2 % 2 ))` → `0` **crear**, `1` **refinar**. Si en ese modo no
 hay nada tomable, usá el otro.
 
-Primero, en cualquier modo: tareas abiertas de `docs/tareas-nacho.md` que digan **"necesita PC"** y sean
+Primero, en cualquier modo: tareas abiertas de `docs/tareas/` (`python tools/tareas.py lista --abiertas`
+las marca con "· necesita PC") que digan **"necesita PC"** y sean
 de arte (modelo, imagen, textura, ícono, cápsula, captura de tienda o tráiler, material, sprite, clip, música), en el orden de ataque.
 
 Si no hay ninguna:
@@ -100,7 +101,7 @@ AAAA-MM-DD: <qué no pasó>" en un PR chico de docs.
 
 1. Cada imagen conservada, en `art/ai-registro.md` (declaración de IA de Steam); cada asset, en
    `docs/inventario-assets.md` (estado, triángulos, script que lo genera).
-2. Skill `cerrar-cambio`: tarea `[x]` con el hash en `tareas-nacho.md`, aviso en `docs/avisos/` si tocó
+2. Skill `cerrar-cambio`: tarea `[x]` con el hash en `docs/tareas/<ID>.md`, aviso en `docs/avisos/` si tocó
    archivos de Slatex o la zona compartida.
 3. Subida según el README (`SKIP_TESTS=1`, `--auto --squash`). Título `feat: <ID> <asset> (art)`.
    Cuerpo: qué se creó o refinó, antes/después en triángulos y tamaño, capturas que miró

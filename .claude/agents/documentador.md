@@ -18,7 +18,7 @@ Nunca uses fechas relativas ("ayer", "la semana pasada").
 | Test nuevo | El encabezado del test (`## ...` bajo `## Run:`): qué protege y qué bug evita. `tools/list-tests.sh --missing` vacío |
 | Autoload, señal nueva de `EventBus`, sistema nuevo | `docs/arquitectura.md` (tabla de autoloads con columna Estado; marcá "Registrado" / "No existe aún") |
 | Input action, capa de física, estructura de carpetas, gotcha nuevo | `docs/convenciones-godot.md` (§0 gotchas, §1 Input Map, §2 capas, §3 escenas) |
-| Tarea completada | `docs/tareas-nacho.md` / `docs/tareas-slatex.md` (marcar hecho con fecha, no borrar) |
+| Tarea completada | su archivo `docs/tareas/<ID>.md` (Nacho) o `docs/tareas-slatex.md` (marcar hecho con fecha, no borrar) |
 | Cambio que afecta al otro integrante | Archivo nuevo `docs/avisos/AAAA-MM-DD-tema.md` (nunca editar uno existente) |
 | Avance de fase | `docs/plan-desarrollo.md` |
 | Cómo agregar un vehículo | `docs/agregar-vehiculo.md` |

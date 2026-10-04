@@ -44,6 +44,9 @@ jobs:
       - name: Portable modules name nothing of the game
         run: python3 tools/check_modules.py
 
+      - name: One file per task (docs/tareas/README.md)
+        run: python3 tools/tareas.py revisar
+
       - name: run-tests.sh annotates each failure (fake Godot)
         run: bash tools/test-run-tests.sh
 

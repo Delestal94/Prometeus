@@ -28,9 +28,10 @@ PRs mezclados en los últimos 7 días y su diff total:
    `do-not-drop/assets/audio/music/` tiene fila en su `LICENCIA.md` y cada imagen nueva de la semana en
    `art/` o `assets/` tiene línea en `art/ai-registro.md` (si falta, agregala con lo que diga el commit
    que la trajo; es la base de la declaración de IA de Steam).
-6. **Lista viva corta**: `python tools/archivar-tareas.py` mueve a `docs/tareas-nacho-archivo.md` los bloques
-   `###` ya terminados (sin `[ ]`, ⏸ ni ⚠). Va en el mismo PR. Chequeá con `grep -c '\[ \]'` que la
-   cantidad de abiertas de `tareas-nacho.md` no cambió.
+6. **Lista viva corta**: `python tools/archivar-tareas.py` mueve a `docs/tareas/hechas/` los archivos de
+   tareas ya terminadas (sin `[ ]`, ⏸ ni ⚠) y las secciones enteras terminadas de `tareas-nacho.md` a
+   `docs/tareas-nacho-archivo.md`. Va en el mismo PR. Chequeá que `python tools/tareas.py lista --abiertas`
+   dé la misma cantidad antes y después, y que `python tools/tareas.py revisar` pase.
 
 6. **`ingeniero-ci`** con el issue abierto "Salud del CI" (etiqueta `salud-ci`) y los `test-inestable`
    abiertos: en modo diagnóstico (sin arreglar acá). Cada inestable con causa encontrada, una shard
