@@ -90,6 +90,10 @@ const ORDER_ITEMS_MAX: int = 3
 const ORDER_WINDOW_MIN: int = 240
 ## Share of the pay lost when the order arrives late.
 const LATE_PENALTY: float = 0.25
+## A box delivered in at least this packing quality (0-100, D-0709) earns the condition
+## bonus: this share of the pay on top (D-0502).
+const CONDITION_BONUS_MIN_QUALITY: float = 90.0
+const CONDITION_BONUS: float = 0.10
 ## A broken product is not charged (its share of the pay is 0).
 const BROKEN_PRODUCT_PAY_FACTOR: float = 0.0
 const BROKEN_PRODUCT_REPUTATION: float = -5.0
