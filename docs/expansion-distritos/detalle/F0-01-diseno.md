@@ -88,6 +88,7 @@ o un vehículo que manejar (medible con el bot de D-0111).
 **Hecho cuando:** las 4 tablas están, y cada rol nombra las estaciones de D-0904.
 
 ### D-0111 · Definición exacta del corte vertical F1 — A · Opus 5.5 · high · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `diseno/corte-vertical.md`: 17 ítems de F1 con su tarea `D-`, lo que no entra, criterio de cierre del bot y umbrales.
 **Depende de:** D-0101, D-0110
 **Qué:** `diseno/corte-vertical.md` con la lista cerrada de lo que entra en F1:
 - galpón por defecto, 1 proveedor y los 10 productos de `data/contents/`;
