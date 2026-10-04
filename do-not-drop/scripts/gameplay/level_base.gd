@@ -10,23 +10,18 @@ extends "res://scripts/gameplay/level_common.gd"
 
 const STOP_SECONDS: float = 1.0
 const DELIVERY_MAX_SPEED: float = 1.5
-## Wedged: the pedal is down and the truck doesn't move (high-centred on an
-## obstacle with its driven wheels hanging, N-803). Same rule as Endless;
-## legitimate stops at the depot and houses never count.
-const STUCK_SPEED: float = 0.3
-const STUCK_SECONDS: float = 6.0
+## The stuck rule itself (N-803) lives in level_common.gd, shared with Endless
+## (N-920); here only the houses are exempt on top of it.
 const HOUSE_STOP_RADIUS: float = 18.0
-## route.gd and vehicle.gd have no class name: typed through their scripts
+## route.gd has no class name: typed through its script
 ## so a rename fails to compile instead of at run time (N-224).
 const RouteScript = preload("res://scripts/gameplay/route/route.gd")
-const VehicleScript = preload("res://scripts/gameplay/vehicle/vehicle.gd")
 @onready var route: RouteScript = $World/Route
 ## The HUD redraws its progress bar and hint at this rate, not every physics
 ## tick (N-223); the run's own logic below still runs every tick. Keep it under
 ## hud_prompts' 0.25 s hint flash or "hold still" flickers.
 const HUD_SIGNAL_INTERVAL: float = 0.125
 var stopped_seconds: float = 0.0
-var stuck_seconds: float = 0.0
 var _hud_signal_left: float = 0.0
 ## What delivery_status_changed last said, to send a change at once.
 var _hud_in_zone: bool = false
@@ -259,24 +254,12 @@ func _emit_hud_signals(delta: float, progress: float) -> void:
 		EventBus.delivery_status_changed.emit(in_zone, stopped_seconds)
 
 
-func _should_count_as_stuck() -> bool:
-	# In the mud (MudSegment, N-108) a truck that can't move is not a soft
-	# lock: the crew pushes it out or the crane comes.
-	if bool(vehicle.get_meta(&"in_mud", false)):
-		return false
-	if vehicle.linear_velocity.length() >= STUCK_SPEED or absf(vehicle.engine_force) <= 0.0:
-		return false
-	if (vehicle as VehicleScript).driver_peer_id == 0:
-		return false
-	# Pulled into the service station's lay-by to shop (N-110).
+## Stopping beside a delivery house is part of the loop (N-920 hook of
+## level_common.gd's stuck rule), and so is the service station's lay-by (N-110).
+func _stuck_exempt_here() -> bool:
 	if route.in_service_bay(vehicle.global_position):
-		return false
-	var depot_position: Vector3 = depot.to_local(vehicle.global_position)
-	if absf(depot_position.x) <= Depot.HALF_WIDTH + 2.0 \
-			and depot_position.z > Depot.TRUCK_CLEAR_Z \
-			and depot_position.z < Depot.DEPTH + 2.0:
-		return false
+		return true
 	for house: DeliveryHouse in route.houses:
 		if is_instance_valid(house) and vehicle.global_position.distance_to(house.global_position) <= HOUSE_STOP_RADIUS:
-			return false
-	return true
+			return true
+	return false

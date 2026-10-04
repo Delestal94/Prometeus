@@ -348,3 +348,12 @@ WORLD_SERVICE_COUNTER_PROMPT,Mostrador: reponer el kit,Counter: restock the kit
 WORLD_SERVICE_NOTICE_BOUGHT,Compraron %s en la estación (-$%d),Bought %s at the station (-$%d)
 WORLD_SERVICE_NOTICE_FIXED,El repuesto arregló el camión en el lugar.,The spare part fixed the truck on the spot.
 WORLD_SERVICE_NOTICE_NO_MONEY,No alcanza la plata para %s ($%d),Not enough money for %s ($%d)
+WORLD_TOWN_DISTRICT_DEPOT,Barrio del depósito,Depot neighborhood
+WORLD_TOWN_DISTRICT_CENTER,Centro,City center
+WORLD_TOWN_DISTRICT_INDUSTRIAL,Industrial,Industrial
+WORLD_TOWN_DISTRICT_COUNTRY,Campo,Countryside
+WORLD_TOWN_DISTRICT_PORT,Puerto,Harbor
+WORLD_TOWN_DISTRICT_HILLS,Sierra,Hills
+WORLD_TOWN_SHOP,ALMACÉN,STORE
+WORLD_TOWN_PLAZA,PLAZA DEL FUNDADOR,FOUNDER'S SQUARE
+WORLD_TOWN_DEPOT,DEPÓSITO,DEPOT

@@ -36,6 +36,14 @@ func _initialize() -> void:
 
 	var van: VehicleBody3D = level.vehicle
 	van.controls_enabled = false  # deterministic driver, same trick every vehicle test uses
+	# N-920: 7 s parked in the depot with nobody on the pedal (past the 6 s of
+	# STUCK_SECONDS) is the crew loading, repairing or swapping drivers, not a
+	# wedge: the run goes on.
+	van.set_controls(0.0, 0.0, true)
+	for _i: int in range(60 * 7):
+		await physics_frame
+	_expect(bool(run_manager.get(&"is_running")),
+		"7 s parked without accelerating does not end the run (stuck %.1f s)" % float(level.get(&"stuck_seconds")))
 	van.set_controls(0.9, 0.0, false)
 
 	# ~15 simulated seconds at 60Hz -- long enough to cross several segments
@@ -45,18 +53,23 @@ func _initialize() -> void:
 		await physics_frame
 		peak_active_count = maxi(peak_active_count, (streamer.get(&"_active") as Array).size())
 
-	# Usually still running with solid distance covered. The rare exception:
-	# level_endless.gd's own stuck-detection (added after this test's stress
-	# runs found the van can occasionally land wedged against a speed bump
-	# hard enough to stop dead) ends the run early instead of hanging
-	# forever -- also a pass, since that's the real regression being guarded
-	# against, not "did it drive exactly N meters."
+	# Usually still running with solid distance covered. The rare exception: the
+	# van landed wedged against a speed bump hard enough to stop dead with the
+	# pedal down, and the stuck rule (level_common.gd, N-920) ended the run
+	# instead of leaving it hanging. That is only a pass because the pedal is
+	# held here every frame: a run cut as stuck without anyone accelerating
+	# would be the bug N-920 fixed, so it fails below.
 	if bool(run_manager.get(&"is_running")):
 		_expect(float(level.get(&"distance_traveled")) > 30.0,
 			"distance_traveled actually tracks real movement while still running (got %.1f m)" % float(level.get(&"distance_traveled")))
 	else:
-		_expect(not (run_manager.get(&"results") as Dictionary).is_empty(),
+		var results: Dictionary = run_manager.get(&"results")
+		_expect(not results.is_empty(),
 			"If the run isn't going anymore, it's because a real end condition fired, not because it silently stalled")
+		var reason: String = str(results.get("reason", ""))
+		if reason.begins_with("HUD_RUN_STUCK"):
+			_expect(absf(van.engine_force) > 0.0,
+				"A run cut as stuck needs the accelerator held (engine_force %.1f)" % van.engine_force)
 		_expect(float(level.get(&"distance_traveled")) > 0.0,
 			"Even an early stuck-abort covered some real distance first, not zero (got %.1f m)" % float(level.get(&"distance_traveled")))
 

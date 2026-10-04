@@ -1,7 +1,7 @@
 #!/bin/bash
 # SessionStart (solo Claude Code en la web): deja la sesión en la nube lista para
 # correr la batería headless y el lint de GDScript, igual que en una PC o en CI.
-#   - Godot 4.7.2 (misma versión que .github/workflows/tests.yml) en ~/godot
+#   - Godot 4.7.2 (misma versión y SHA-512 que CI: tools/godot-sha512.txt) en ~/godot
 #   - gdtoolkit (gdlint/gdformat) para el hook de lint
 #   - el hook pre-push del repo (tools/setup-hooks.sh)
 #   - el import de recursos hecho una vez, así el primer test no lo paga
@@ -22,6 +22,14 @@ if [ ! -x "$GODOT_BIN" ]; then
 	zip="$(mktemp --suffix=.zip)"
 	curl -fsSL --retry 4 -o "$zip" \
 		"https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+	# Same pinned SHA-512 as CI (tools/godot-sha512.txt): a corrupt or swapped download never runs.
+	want="$(grep "  Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip\$" "$ROOT/tools/godot-sha512.txt" | cut -d' ' -f1)"
+	got="$(sha512sum "$zip" | cut -d' ' -f1)"
+	if [ -z "$want" ] || [ "$want" != "$got" ]; then
+		echo "session-start: el zip de Godot no coincide con tools/godot-sha512.txt; no se instala." >&2
+		rm -f "$zip"
+		exit 1
+	fi
 	python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$zip" "$GODOT_DIR"
 	rm -f "$zip"
 	chmod +x "$GODOT_BIN"

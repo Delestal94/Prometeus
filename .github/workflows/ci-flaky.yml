@@ -1,0 +1,107 @@
+name: Retry flaky Godot jobs
+
+# A Godot job that fails once and passes on a re-run is a flaky test, not a broken main or PR (the
+# Network pair of #254 turned main red for a commit that was fine). When a Tests run fails on its
+# first attempt, this re-runs only the failed Godot jobs once. If the second attempt passes, every
+# test that failed in the first is recorded in an open `test-inestable` issue (one per test), which
+# the weekly CI health report and the `ingeniero-ci` agent read. A second failure is a real failure:
+# nothing is recorded and the routines handle it as today (README rule 16).
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: ci-flaky-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  retry:
+    name: Re-run failed Godot jobs once
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Re-run when a Godot job failed (lint failures are deterministic)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          failed=$(gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/1/jobs?per_page=100" \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join("\n")')
+          echo "Failed jobs:"; echo "$failed"
+          if ! printf '%s\n' "$failed" | grep -q 'Godot'; then
+            echo "No Godot job failed: nothing to retry."; exit 0
+          fi
+          if printf '%s\n' "$failed" | grep -q 'lint'; then
+            echo "Lint failed too: the run is red regardless, no retry."; exit 0
+          fi
+          gh run rerun "$RUN_ID" -R "$REPO" --failed
+          echo "::notice::Re-running the failed jobs of run $RUN_ID once."
+
+  record:
+    name: Record the tests that passed on the retry
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.run_attempt == 2
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Find what failed in attempt 1
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          # Each headless shard uploads its per-test CSV, named with the attempt.
+          gh run download "$RUN_ID" -R "$REPO" -D reports -p "godot-headless-audit-$RUN_ID-attempt-1-*" || true
+          tests=$(cat reports/*/godot-headless-report.csv 2>/dev/null | awk -F, '$2 == "FAIL" {print $1}' | sort -u || true)
+          # Jobs without a per-test report (network pair/trio, modules) are recorded by job name.
+          jobs=$(gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/1/jobs?per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "failure") | .name' \
+            | grep -v -E '^Tests headless' || true)
+          { printf '%s\n' "$tests"; printf '%s\n' "$jobs"; } | sed '/^$/d' > flaky.txt
+          echo "Flaky:"; cat flaky.txt
+
+      - name: Open or update one issue per flaky test
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          gh label create test-inestable -R "$REPO" --color FBCA04 \
+            --description "Falló y pasó al reintentar (ci-flaky.yml)" 2>/dev/null || true
+          line="- $(date -u +%F) · \`$BRANCH\` @ \`${SHA:0:8}\` · [run]($RUN_URL)"
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            title="Test inestable: $name"
+            num=$(gh issue list -R "$REPO" --label test-inestable --state open --limit 100 \
+              --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -1)
+            if [ -n "$num" ]; then
+              gh issue comment "$num" -R "$REPO" --body "Otra vez: $line"
+            else
+              gh issue create -R "$REPO" --label test-inestable --title "$title" --body "$(cat <<EOF
+          Falló en el primer intento y pasó al reintentar solo lo fallido (\`.github/workflows/ci-flaky.yml\`).
+
+          $line
+
+          Cada repetición suma un comentario. Lo resume el informe semanal "Salud del CI" y lo arregla el
+          agente \`ingeniero-ci\` (causa raíz, no más reintentos). Se cierra con el PR que lo arregla.
+          EOF
+          )"
+            fi
+          done < flaky.txt

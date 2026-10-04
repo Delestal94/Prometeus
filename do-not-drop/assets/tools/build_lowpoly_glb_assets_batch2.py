@@ -119,14 +119,7 @@ def guardrail():
     done(os.path.join(PROPS, "sm_env_prop_guardrail.glb"))
 
 
-def bridge_railing():
-    clear()
-    for x in (-2.8, -1.4, 0.0, 1.4, 2.8):
-        cube("RailingPost", (x, 0, 0.5), (0.18, 0.18, 1.0), "concrete", 0.02)
-    for z in (0.45, 0.95):
-        cube("RailingBar", (0, 0, z), (6.0, 0.1, 0.1), "guardrail", 0.01)
-    cube("RailingCurb", (0, 0, 0.08), (6.0, 0.35, 0.16), "concrete", 0.02)
-    done(os.path.join(PROPS, "sm_env_prop_bridge_railing.glb"))
+# bridge_railing() moved to build_route_pieces.py (N-325, group "bridge").
 
 
 def roadside(kind):
@@ -344,7 +337,6 @@ def glove(side):
 # Signs, road furniture, yard pieces, the two extra houses and the barn moved
 # to build_lowpoly_refined.py (2026-09-23). The 3D clouds were retired: the
 # sky shader paints them now (shaders/stylized_sky.gdshader).
-bridge_railing()
 # water_tower() / windmill(): rebuilt by build_street_props.py (N-140, 2026-09-27).
 horizon()
 phone()

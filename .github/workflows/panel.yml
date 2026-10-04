@@ -1,0 +1,63 @@
+name: Panel
+
+# Publica la sala de control (panel/) en GitHub Pages. data.json sale del repo en cada push a main
+# que toque agentes, rutinas o docs; lo en vivo (PRs, CI, ramas) lo trae la página de la API de GitHub.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".claude/**"
+      - "docs/**"
+      - "CLAUDE.md"
+      - "panel/**"
+      - "tools/panel/**"
+      - ".github/workflows/panel.yml"
+  pull_request:
+    paths:
+      - "panel/**"
+      - "tools/panel/**"
+      - ".github/workflows/panel.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: panel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build panel data
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Generate panel/data.json (fails if a table changed shape)
+        run: python tools/panel/build_data.py --strict
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: panel
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

@@ -28,6 +28,13 @@ PRs mezclados en los últimos 7 días y su diff total:
    `do-not-drop/assets/audio/music/` tiene fila en su `LICENCIA.md` y cada imagen nueva de la semana en
    `art/` o `assets/` tiene línea en `art/ai-registro.md` (si falta, agregala con lo que diga el commit
    que la trajo; es la base de la declaración de IA de Steam).
+6. **Lista viva corta**: `python tools/archivar-tareas.py` mueve a `docs/tareas-nacho-archivo.md` los bloques
+   `###` ya terminados (sin `[ ]`, ⏸ ni ⚠). Va en el mismo PR. Chequeá con `grep -c '\[ \]'` que la
+   cantidad de abiertas de `tareas-nacho.md` no cambió.
+
+6. **`ingeniero-ci`** con el issue abierto "Salud del CI" (etiqueta `salud-ci`) y los `test-inestable`
+   abiertos: en modo diagnóstico (sin arreglar acá). Cada inestable con causa encontrada, una shard
+   desbalanceada (> 1,3×) o un job que se volvió > 20 % más lento que la semana anterior es un hallazgo.
 
 ## 3. Registrar
 
@@ -36,7 +43,8 @@ PRs mezclados en los últimos 7 días y su diff total:
   - docs y avisos arreglados directamente;
   - hallazgos de código (BUG / RIESGO de `auditor-red`, bugs reales de `revisor-gdscript`) →
     **`planificador-tareas`**, en `tareas-nacho.md`, prioridad según gravedad (los de red con
-    `constructor-red` como agente sugerido), con `Origen: mantenimiento AAAA-MM-DD` y sujetas al freno
+    `constructor-red` como agente sugerido; los del CI con `ingeniero-ci`, y el número de su issue
+    `test-inestable`), con `Origen: mantenimiento AAAA-MM-DD` y sujetas al freno
     de tareas (regla 11 del README);
   - PR `chore: weekly maintenance AAAA-MM-DD` con auto-merge; cuerpo con lo arreglado y las tareas creadas.
 - Esta rutina no arregla código del juego (salvo `.uid` faltantes y lint trivial).

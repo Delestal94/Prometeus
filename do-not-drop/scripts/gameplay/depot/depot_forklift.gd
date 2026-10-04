@@ -5,9 +5,11 @@ extends AnimatableBody3D
 ## up to where it started -- beeping as it reverses, beacon turning. It stops
 ## dead for anyone standing in its way, like a real one should.
 ##
-## Local presentation, same as the depot's staff: every peer runs its own.
+## Local presentation, same as the depot's staff: every peer runs its own, and
+## the truck drives through it like through them (N-922.3).
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+const TruckPassThrough = preload("res://scripts/gameplay/vehicle/truck_pass_through.gd")
 const BEACON := Color("ffb02e")
 const SPEED: float = 1.6
 const LIFT_SPEED: float = 0.55
@@ -26,6 +28,8 @@ var _beacon_light: OmniLight3D
 var _beeper: AudioStreamPlayer3D
 var _engine: AudioStreamPlayer3D
 var _time: float = 0.0
+## The truck is one of the forklift's collision exceptions (TruckPassThrough).
+var _truck_let_through: bool = false
 
 
 func _ready() -> void:
@@ -46,6 +50,8 @@ func place(lane_start: Vector3, lane_end: Vector3) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if not _truck_let_through:
+		_truck_let_through = TruckPassThrough.let_through([self], get_tree())
 	_time += delta
 	var blocked: bool = _someone_ahead()
 	match _phase:

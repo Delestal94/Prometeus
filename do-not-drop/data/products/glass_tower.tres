@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ProductDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/product_definition.gd" id="1_product"]
+[ext_resource type="Resource" path="res://data/contents/glass_tower.tres" id="2_content"]
+
+[resource]
+script = ExtResource("1_product")
+id = &"glass_tower"
+content = ExtResource("2_content")
+cells = Vector3i(2, 3, 2)
+weight_kg = 3.0
+fragile = true
+temperature = &"ambient"
+buy_price = 40
+trap_id = &"balance"
+districts = Array[StringName]([&"centro"])

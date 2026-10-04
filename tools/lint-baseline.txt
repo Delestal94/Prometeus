@@ -120,7 +120,6 @@ do-not-drop/tests/test_package_unboxing.gd|duplicated-load 1
 do-not-drop/tests/test_package_unboxing.gd|max-line-length 2
 do-not-drop/tests/test_phone_camera.gd|max-line-length 3
 do-not-drop/tests/test_player_character.gd|max-line-length 11
-do-not-drop/tests/test_reference_truck.gd|duplicated-load 4
 do-not-drop/tests/test_reference_truck.gd|max-line-length 32
 do-not-drop/tests/test_reference_truck.gd|unused-argument 1
 do-not-drop/tests/test_release_build.gd|max-line-length 1

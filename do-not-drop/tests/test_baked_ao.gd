@@ -3,7 +3,7 @@ extends SceneTree
 ##
 ## Ambient occlusion baked into vertex colours (N-308.1,
 ## assets/tools/bake_vertex_ao.py; GL Compatibility has no SSAO):
-## - the houses, the parked and depot vehicles and the big props carry it,
+## - the houses, the bridge railing (N-325), the parked and depot vehicles and the big props carry it,
 ##   on every surface, and LowpolyMaterials multiplies it into the albedo
 ##   (Godot's glTF importer doesn't);
 ## - vegetation never does: it's instanced by the thousand;
@@ -27,6 +27,7 @@ const BAKED: Array[String] = [
 	"res://assets/models/vehicles/sm_vehicle_tractor.glb",
 	"res://assets/models/vehicles/sm_vehicle_tow_crane.glb",
 	"res://assets/models/environment/props/sm_env_prop_bus_stop.glb",
+	"res://assets/models/environment/props/sm_env_prop_bridge_railing.glb",
 	"res://assets/models/environment/landmarks/sm_env_landmark_windmill.glb",
 	"res://assets/models/environment/landmarks/sm_env_landmark_water_tower.glb",
 ]

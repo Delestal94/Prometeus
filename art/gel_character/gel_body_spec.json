@@ -91,7 +91,7 @@
     ]
   },
   "atlas": "independent quad islands, 10% cell inset",
-  "lod2_algorithm": "quadric-error collapse of faithful LOD1 to target 794 triangles, flat sole vertices protected, triangulated; morphs evaluated after simplification",
+  "lod2_algorithm": "morph-aware endpoint quadric collapse of weighted LOD1 to target 794 triangles; 53 morphs, seven arm poses and five times per gel clip guard exact source positions/weights and flat sole vertices",
   "foot_depth_design_m": 0.28,
   "foot_depth_source": "profile design, not inferred from frontal JPG",
   "reference_shape_targets": {
@@ -102,7 +102,7 @@
     "foot_width_m": 0.26951086956521736,
     "neck_visible_height_m": 0.05201086956521739
   },
-  "reference_pose": "static diagnostic A-pose, arms 15 degrees from vertical; 9 animation clips preserve source rotations",
+  "reference_pose": "static diagnostic A-pose, arms 15 degrees from vertical; 9 source-timed clips adapted to gel limb proportions",
   "morph_amplitudes": {
     "general_thickness": 0.3,
     "belly": 0.18,

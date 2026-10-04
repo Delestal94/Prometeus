@@ -1,0 +1,51 @@
+name: CI health
+
+# Every Monday (08:00 Argentina, before the weekly review) tools/ci/ci_health.py measures the last
+# 7 days of CI: delivery (PRs, lead time, time main stayed red), reliability (first-attempt pass
+# rate, flaky rescues, open `test-inestable` issues), CI minutes, per-job times, shard balance and
+# the slowest tests. The report replaces the body of the issue "Salud del CI" (label `salud-ci`),
+# which the maintenance routine and the `ingeniero-ci` agent read. No model involved.
+on:
+  schedule:
+    - cron: "0 11 * * 1"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Days to look back
+        required: false
+        default: "7"
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  report:
+    name: Weekly CI health report
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Measure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DAYS: ${{ inputs.days || '7' }}
+        run: |
+          python3 tools/ci/ci_health.py --days "$DAYS" --repo "$GITHUB_REPOSITORY" > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to the "Salud del CI" issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create salud-ci --color 0E8A16 --description "Informe semanal de ci-health.yml" 2>/dev/null || true
+          num=$(gh issue list --label salud-ci --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$num" ]; then
+            gh issue edit "$num" --body-file report.md
+            gh issue comment "$num" --body "Informe actualizado: $(date -u +%F)."
+          else
+            gh issue create --title "Salud del CI" --label salud-ci --body-file report.md
+          fi
