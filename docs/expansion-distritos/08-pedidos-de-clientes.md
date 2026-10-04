@@ -8,7 +8,7 @@
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
 | D-0801 | Generador de pedidos por semilla, distrito desbloqueado y hora | constructor-progresion | high | test: misma semilla, mismos pedidos |
-| D-0802 | Estructura del pedido: cliente, dirección, productos, requisitos, ventana, paga | constructor-progresion | medium | test de serialización |
+| D-0802 | ✅ Estructura del pedido: cliente, dirección, productos, requisitos, ventana, paga | constructor-progresion | medium | test de serialización |
 | D-0803 | Ritmo de llegada de pedidos durante el día (curva) | constructor-progresion | medium | sim muestra la curva |
 | D-0804 | Tablero de pedidos en el galpón (lista con estado) | constructor-ui | high | captura legible |
 | D-0805 | Impresora de pedidos que escupe la hoja física (guiño Overcooked) | constructor-negocio | medium | hoja aparece y se puede llevar a la mesa |
