@@ -54,3 +54,19 @@ imprimir la curva; `weight_at(minute)` da el peso relativo de esa hora.
 **Test** `test_order_rhythm`: cuenta por jugadores (con tope), determinismo y orden, rango horario, y la
 curva sobre 400 días (pico 10-12, bache a las 13, última hora más fina que la apertura; imprime el histograma).
 **Hecho cuando:** el test pasa y muestra la curva.
+
+### D-0801 · Generador de pedidos del día — A · Sonnet 5.5 · high · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `OrderGenerator` (`scripts/gameplay/business/order_generator.gd`); `test_order_generator`.
+**Depende de:** D-0802, D-0803, D-0806, D-0205
+**Qué:** funciones estáticas sin nodos. `generate_day(day_seed, day, players, zones, products, requirements,
+max_items)` devuelve los pedidos del día ordenados por llegada. Los minutos de llegada salen de `OrderRhythm`;
+con el mismo generador sembrado cada pedido saca zona (entre las zonas abiertas con `shipping_fee > 0`),
+casa (`<zona>_house_1..12`), cliente (lista fija de 16 nombres hasta D-0840), 1 a `max_items` productos
+distintos (los de la zona, `districts`, pesan ×3; 15 % de pedir 2 unidades) y requisitos: los que implican los
+productos (frágil → `fragile`, frío → `cold`) y, con 20 % de chance, uno de capricho (`gift`, `urgent`,
+`no_bend`). La ventana se achica al requisito más justo (`urgent` = ×0,5) y la paga suma cada bono. El que
+llama pasa los catálogos ya cargados y las zonas abiertas hoy, así la clase no sabe de `CompanyState`.
+**Test** `test_order_generator`: determinismo (misma semilla igual, otra distinta, tripulación distinta),
+un pedido válido por minuto de llegada con ids únicos, solo zonas abiertas y ninguna sin entregas, requisitos
+por producto, ventana y paga con bono, tope `max_items` y casos vacíos.
+**Hecho cuando:** misma semilla, mismos pedidos; el test pasa.
