@@ -152,6 +152,10 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
       tanto, el último run terminado de main (`gh run list --branch main --workflow tests.yml --status
       completed --limit 1`) dice si sigue rojo de antes: rojo ahí cuenta como rojo. Verde ahí no prueba
       HEAD: se puede trabajar, pero lo que exige un `main` probado (la build de la PC) espera.
+17. **Lista viva y archivo**: `docs/tareas-nacho.md` tiene solo lo pendiente; lo terminado está en
+    `docs/tareas-nacho-archivo.md` (lo mueve `tools/archivar-tareas.py` en el mantenimiento semanal). Para
+    saber si una dependencia o un hallazgo ya está hecho, `grep` del ID o del tema en los dos archivos: el
+    archivo no se lee entero ni se le agregan tareas.
 
 ## Límites de la nube
 
