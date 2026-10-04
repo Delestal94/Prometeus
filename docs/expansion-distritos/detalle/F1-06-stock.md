@@ -20,3 +20,14 @@ camión es D-0601 / D-0605, que usan esta clase.
 **Test** `test_pallet`: límites de `make`, `plan` de 50 unidades, `receive` una sola vez sin duplicar,
 `validate` con 4 problemas, JSON de ida y vuelta.
 **Hecho cuando:** el test pasa. (La parte "aparece en la caja del camión" queda para D-0601.)
+
+### D-0607 · Abrir palet — A · Sonnet 5.5 · medium · Aviso: no · F1
+**[x] Hecho (2026-10-04, PR pendiente)** — `Pallet.open/take/is_depleted` en `pallet.gd`; ampliado `test_pallet`.
+**Depende de:** D-0604 (`Pallet`), D-0211 (`Inventory`)
+**Qué:** abrir es solo un cambio de estado: `open(inventory, pallet)` pasa `sealed` → `open` (en el mismo
+`Dictionary`) si el palet está recibido y tiene unidades; no las mueve. `take(inventory, pallet, qty, to)`
+pasa unidades de `pallet:<id>` a una mano, carrito o hueco, solo con el palet abierto. `is_depleted` avisa
+cuando queda vacío para sacarlo del patio. El objeto físico "caja tomable" lo arman D-0605 / D-0609 sobre esto.
+**Test** `test_pallet`: no se abre sin recibir; `take` falla cerrado; abre una vez; saca 3 de 5; no saca de más;
+vacío = agotado; no se pierde ni duplica ninguna unidad.
+**Hecho cuando:** el test pasa.

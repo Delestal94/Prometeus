@@ -5,6 +5,8 @@ extends SceneTree
 ## - make() builds a sealed pallet and refuses 0 or more than 24 units;
 ## - plan() splits an order into full pallets plus a remainder;
 ## - receive() puts the units in the Inventory at pallet:<id> once, and never twice;
+## - open() unlocks taking units (D-0607): take() fails while sealed, moves units
+##   once open, never more than the pallet holds, and is_depleted() flags an empty one;
 ## - validate() names each problem; the JSON round trip returns an equal pallet.
 
 var _failures: int = 0
@@ -18,6 +20,7 @@ func _run() -> void:
 	_test_make()
 	_test_plan()
 	_test_receive()
+	_test_open_and_take()
 	_test_validate_and_json()
 	quit(_failures)
 
@@ -59,6 +62,25 @@ func _test_receive() -> void:
 	_expect(inv.total_units() == 10, "no duplicated units")
 	inv.move(&"hen", 4, Pallet.location(&"p1"), &"shelf:a1")
 	_expect(Pallet.units_left(inv, p) == 6, "moving 4 leaves 6")
+
+
+func _test_open_and_take() -> void:
+	var inv := Inventory.new()
+	var p: Dictionary = Pallet.make(&"p2", &"hen", 5)
+	_expect(not Pallet.open(inv, p), "cannot open a pallet that was not received")
+	Pallet.receive(inv, p)
+	_expect(not Pallet.take(inv, p, 1, &"hands:1"), "cannot take from a sealed pallet")
+	_expect(Pallet.open(inv, p) and p["state"] == Pallet.STATE_OPEN, "open flips the state")
+	_expect(not Pallet.open(inv, p), "opening twice is refused")
+	_expect(Pallet.take(inv, p, 3, &"hands:1"), "take 3 from the open pallet")
+	_expect(
+		inv.count(&"hen", &"hands:1") == 3 and Pallet.units_left(inv, p) == 2, "3 moved, 2 left"
+	)
+	_expect(not Pallet.take(inv, p, 3, &"hands:1"), "cannot take more than it holds")
+	_expect(not Pallet.is_depleted(inv, p), "not depleted yet")
+	Pallet.take(inv, p, 2, &"cart:1")
+	_expect(Pallet.is_depleted(inv, p), "depleted when empty")
+	_expect(inv.total_units() == 5, "no unit lost or duplicated")
 
 
 func _test_validate_and_json() -> void:
