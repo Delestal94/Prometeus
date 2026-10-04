@@ -8,7 +8,7 @@
 
 | ID | Tarea | Agente | Esf. | Hecho cuando |
 |---|---|---|---|---|
-| D-0501 | Billetera de la empresa (reemplaza o envuelve la plata compartida actual) con historial de movimientos | constructor-progresion | high | test: movimientos suman el saldo |
+| D-0501 | ✅ Billetera de la empresa (reemplaza o envuelve la plata compartida actual) con historial de movimientos | constructor-progresion | high | test: movimientos suman el saldo |
 | D-0502 | Precio de un pedido = productos + envío por distrito + urgencia + bonus por estado | constructor-progresion | high | test con 10 pedidos contra la tabla de D-0117 |
 | D-0503 | Costo de compra de mercadería al proveedor | constructor-progresion | medium | test: recibir palet descuenta plata |
 | D-0504 | Costo de materiales de embalaje (cajas, cinta, relleno, etiquetas) | constructor-progresion | medium | test: armar una caja consume insumos |
