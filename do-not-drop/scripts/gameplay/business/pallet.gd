@@ -72,6 +72,34 @@ static func units_left(inventory: Inventory, pallet: Dictionary) -> int:
 	)
 
 
+## Opens a sealed pallet so its units can be taken (D-0607). The units stay at
+## pallet:<id>; open() only flips the state, in place. False, changing nothing,
+## if the pallet is invalid, already open or no longer holds its units.
+static func open(inventory: Inventory, pallet: Dictionary) -> bool:
+	if not validate(pallet).is_empty() or pallet["state"] != STATE_SEALED:
+		return false
+	if units_left(inventory, pallet) < 1:
+		return false
+	pallet["state"] = STATE_OPEN
+	return true
+
+
+## Takes qty units out of an open pallet into another location (a hand, a cart,
+## a shelf slot). False, changing nothing, while the pallet is sealed or if it
+## holds fewer than qty.
+static func take(inventory: Inventory, pallet: Dictionary, qty: int, to: StringName) -> bool:
+	if pallet.get("state") != STATE_OPEN:
+		return false
+	return inventory.move(
+		StringName(pallet["product"]), qty, location(StringName(pallet["id"])), to
+	)
+
+
+## True once an open pallet has been emptied and can be removed from the yard.
+static func is_depleted(inventory: Inventory, pallet: Dictionary) -> bool:
+	return pallet.get("state") == STATE_OPEN and units_left(inventory, pallet) == 0
+
+
 static func to_json(pallet: Dictionary) -> String:
 	return JSON.stringify(pallet)
 

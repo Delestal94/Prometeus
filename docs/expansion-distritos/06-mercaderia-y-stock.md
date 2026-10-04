@@ -14,7 +14,7 @@
 | D-0604 | ✅ Palet como objeto físico con N cajas de producto | constructor-negocio | high | palet aparece en la caja del camión con su contenido |
 | D-0605 | Descargar palet con la zorra (transpaleta manual) | constructor-jugador | high | jugador mueve un palet del camión al piso (test de interacción) |
 | D-0606 | Descargar con el autoelevador existente (`depot_forklift.gd`) manejado por un jugador | constructor-camion | xhigh | jugador maneja el autoelevador y deja un palet en un rack |
-| D-0607 | Abrir palet: las cajas del producto pasan a ser tomables | constructor-negocio | medium | test |
+| D-0607 | ✅ Abrir palet: las cajas del producto pasan a ser tomables | constructor-negocio | medium | test |
 | D-0608 | Estanterías con huecos etiquetados por producto | constructor-mundo | high | dejar producto en hueco lo suma al `Inventory` (test) |
 | D-0609 | Tomar productos de la estantería (picking) a mano | constructor-jugador | high | test: tomar 3 unidades baja el stock en 3 |
 | D-0610 | Carrito de picking empujable para llevar varios productos | constructor-jugador | high | carrito lleva 6 productos sin que se caigan en suelo plano |
