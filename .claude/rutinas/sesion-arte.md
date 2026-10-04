@@ -41,6 +41,11 @@ Si no hay ninguna:
   Tomá el primer REFINAR de su tabla; sumá como fuente el §10.2 del inventario. BORRAR o REHACER algo
   grande no se ejecuta: va como tarea ⏸ "decide el usuario".
 
+Después de las de `tareas-nacho.md`, los pedidos de la expansión: cada archivo de
+`docs/expansion-distritos/arte-pendiente/<ID>.md` es un asset que una tarea `D-` dejó con placeholder gris
+(qué modelo, medidas, pivote, dónde va). Al terminarlo, se reemplaza el placeholder en la escena, se borra
+ese archivo en el mismo PR y se marca la tarea de arte del grupo (D-18xx u otra) con `✅`.
+
 Si lo elegido no tiene tarea, creala con **`planificador-tareas`** en `tareas-nacho.md`, con "necesita
 PC" y `Origen: sesión de arte AAAA-MM-DD` (respetando el freno de tareas; si está activo, trabajá solo
 sobre tareas existentes).

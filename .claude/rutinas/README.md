@@ -22,10 +22,11 @@ sesion-arte (PC, cada 2 h) ◄── tareas "necesita PC" + inventario + directo
 
 | Rutina | Archivo | Cuándo (hora Argentina) | Rama | Qué produce |
 |---|---|---|---|---|
+| Desarrollador 1-5 | `desarrollador.md` (`Carril: 1`…`5`, expansión `docs/expansion-distritos/`) | cada hora, escalonados: :02, :14, :26, :38, :50 | `exp/D-xxxx-*` | una tarea `D-` → un PR |
 | Construcción A | `construccion.md` (prioridad `nacho`: `N-xxx` primero) | cada hora, :07 | `nacho/N-xxx-*`, `nacho/S-xxx-*` | una tarea → un PR |
-| Construcción B | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | cada hora, :37 | idem | una tarea → un PR |
-| QA | `qa.md` | todos los días 06:00 y 18:00 | `rutina/qa-AAAA-MM-DD-HH` | hallazgos + tareas de bugs |
-| Auditoría integral | `auditoria.md` | todos los días 04:00 | `rutina/auditoria-AAAA-MM-DD` | un pilar a fondo + últimas 24 h, ≤ 3 tareas |
+| Construcción B ⏸ | `construccion.md` (prioridad `slatex`: heredadas `S-xxx` primero) | pausada desde 2026-10-04: su cupo pasó a los desarrolladores | idem | una tarea → un PR |
+| QA | `qa.md` | todos los días 09:00 | `rutina/qa-AAAA-MM-DD-HH` | hallazgos + tareas de bugs |
+| Auditoría integral | `auditoria.md` | día por medio 07:00 | `rutina/auditoria-AAAA-MM-DD` | un pilar a fondo + últimas 48 h, ≤ 3 tareas |
 | Revisión (la contra) | `revision.md` | lunes 09:00 | `rutina/revision-AAAA-MM-DD` | auditoría + tareas nuevas |
 | Mantenimiento | `mantenimiento.md` | jueves 09:00 | `rutina/mant-AAAA-MM-DD` | docs al día + hallazgos |
 | Lanzamiento | `lanzamiento.md` | día 1 de cada mes, 10:00 | `rutina/lanzamiento-AAAA-MM` | estado de Steam + tareas |
@@ -42,7 +43,8 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 | Juzgar ideas antes de construirlas | revisión (lunes, antes de que construcción tome tareas `xhigh` o mecánicas nuevas) | `critico-diseno` |
 | Hacerle la contra a lo hecho | revisión (lunes) | `abogado-del-diablo`, `director-arte` |
 | Planificar | todas las que registran hallazgos | `planificador-tareas`, `guardian-dominios` |
-| Construir código | construcción (2 por hora) | `constructor-tramos`, `constructor-mundo`, `constructor-camion`, `constructor-jugador`, `constructor-trampas`, `constructor-red`, `constructor-progresion`, `constructor-ui` |
+| Construir la expansión (`D-xxxx`) | desarrollador 1-5 (cada hora, escalonados) | los de la tabla de carriles de `desarrollador.md` |
+| Construir código | construcción (1 por hora) | `constructor-tramos`, `constructor-mundo`, `constructor-camion`, `constructor-jugador`, `constructor-trampas`, `constructor-red`, `constructor-progresion`, `constructor-ui` |
 | Sonido, efectos, animación por código, shaders | construcción | `disenador-audio`, `artista-vfx`, `animador`, `artista-shaders` |
 | Assets con Blender o ComfyUI, música regenerada, capturas de tienda y tráiler | sesión de arte (PC, cada 2 h) | `modelador-blender`, `artista-conceptual`, `artista-shaders`, `artista-vfx`, `animador`, `disenador-audio` |
 | Pulir y balancear | construcción (tareas de revisión y QA) + QA de los domingos (simuladores) | `pulidor-jugabilidad`, `probador-qa` |
@@ -81,8 +83,11 @@ una carpeta de código sin fila, es un hallazgo del pilar 3 de la auditoría.
 3. **Nadie contesta**: no hay revisión humana ni preguntas. Si algo es ambiguo, elegí lo más
    conservador que encaje con `docs/` y escribilo como "Supuesto" en el PR. Las decisiones que solo
    puede tomar el usuario (borrar o recortar una feature, cambiar el alcance) no se
-   ejecutan: se dejan como tarea ⏸ "decide el usuario" y van al cuerpo del PR.
-4. **Dominios**: se trabaja solo sobre `docs/tareas-nacho.md` (las `N-xxx` y las `S-xxx` heredadas).
+   ejecutan: se dejan como tarea ⏸ "decide el usuario" y van al cuerpo del PR. Excepción pedida por el
+   usuario el 2026-10-04: en la expansión (`D-xxxx`) las decisiones de cómo se hace las toma la rutina y
+   las documenta (`desarrollador.md` §3 y `docs/decisiones/2026-10-04-expansion-decisiones-delegadas.md`).
+4. **Dominios**: se trabaja solo sobre `docs/tareas-nacho.md` (las `N-xxx` y las `S-xxx` heredadas),
+   salvo la rutina `desarrollador`, que trabaja solo `docs/expansion-distritos/` (las `D-xxxx`).
    `docs/tareas-slatex.md` (S-311) es de Slatex: no se toman sus ítems ni se le agregan tareas; todo
    hallazgo nuevo va a `tareas-nacho.md`. Tocar archivos de Slatex o la zona compartida exige un aviso
    nuevo en `docs/avisos/` en el mismo PR. No se pisa lo que Slatex tenga en curso (PR abierto o rama
@@ -145,7 +150,17 @@ valen; sombras y FPS no. Builds, FPS y luz real: `pc-build.md`; capturas de tien
 
 Los crea la conversación principal con la skill `schedule`. El prompt de cada uno es una línea:
 `Leé .claude/rutinas/<archivo>.md de origin/main y seguilo al pie de la letra.` (construcción suma
-`Prioridad: nacho` o `Prioridad: slatex`). Modelo: Opus 5.5.
+`Prioridad: nacho` o `Prioridad: slatex`; desarrollador, `Carril: N`). La API de triggers elige el
+**modelo** de la sesión que coordina; el **esfuerzo** está fijo en cada agente de `.claude/agents/`, que es
+quien hace el trabajo pesado. Modelos (2026-10-04, para estirar el cupo semanal, que se agotó el 2026-10-03):
+
+| Trigger | Modelo | Por qué |
+|---|---|---|
+| Desarrollador 1 (arquitectura) y 5 (red) | Opus 5.5 | decisiones de estructura y autoridad de red |
+| Desarrollador 2, 3 y 4 | Sonnet 5.5 | coordinan constructores (Sonnet high) y revisores (Opus) |
+| Construcción A | Sonnet 5.5 | idem; para el diagnóstico de bugs llama a `cazador-bugs` (Opus) |
+| QA, mantenimiento, lanzamiento | Sonnet 5.5 | corren agentes y resumen |
+| Auditoría integral, revisión semanal | Opus 5.5 | juicio sobre el proyecto entero |
 
 ## Las rutinas de la PC
 
