@@ -3,14 +3,23 @@
 Página para que Nacho y Slatex vean el desarrollo de un vistazo y decidan rápido:
 https://delestal94.github.io/Prometeus/
 
-- **Pilares** (home): diez áreas del desarrollo (diseño, sistemas, mundo, arte, audio, interfaz, red,
-  calidad, producción, lanzamiento) con su avance en el juego actual y en la expansión, qué agentes
-  las están trabajando y qué está trabado. Arriba, **Para decidir** (issues `decide-usuario` y tareas
-  ⏸) y **Atención** (main rojo, PRs rojos o viejos, rutinas caídas o sin rastro, bugs de la expansión).
-- **Flujo**: cómo se pasan el trabajo las rutinas (archivos y PRs), con lo activo en verde.
-- **Rutinas**: el día en una línea por rutina; qué corrió, qué no dejó rastro y qué viene.
-- **Agentes**: los de `.claude/agents/` por pilar, con modelo, esfuerzo y si están en uso.
-- **Actividad**: eventos del repo atribuidos a cada rutina, PRs abiertos, CI y avisos.
+- **Inicio**: un saludo con el resumen en una frase y cuatro números (rutinas trabajando, decisiones
+  para ustedes, cambios que entraron hoy, cosas para mirar). Después, **Esperan su decisión** (issues
+  `decide-usuario` y tareas ⏸ como tarjetas con su botón), **La cinta** (cada cambio en camino es un
+  paquete que avanza: tomada → probándose → lista → en el juego), **Para mirar** y los **diez pilares**
+  (diseño, sistemas, mundo, arte, audio, interfaz, red, calidad, producción, lanzamiento) con un círculo de
+  avance del juego actual, una barra de la expansión, quién trabaja ahí ahora y un cajón con el detalle.
+- **Cómo trabajan**: el diagrama de cómo se pasan el trabajo las rutinas, con lo activo en verde, y los
+  pasos adentro de una tarea.
+- **Horarios**: la agenda del día de cada rutina, agrupada (expansión, juego actual, control, PC).
+- **El equipo**: los agentes con nombre en criollo (Mecánico del camión, Economista…), qué hacen y si
+  están en uso.
+- **Actividad**: qué pasó, contado en palabras, más las pruebas automáticas y los avisos.
+- **¿Qué significa?**: glosario (PR, CI, rutina, carril, ⏸…); los `?` al lado de cada título abren la
+  palabra que corresponde. La primera visita muestra una tarjeta de "así se lee esta página".
+
+Los nombres en criollo de los agentes y las descripciones de las rutinas están en `AG` y `RT` de
+`panel/index.html`: un agente nuevo sin entrada ahí se muestra con su nombre técnico.
 
 ## Cómo funciona
 
@@ -29,6 +38,6 @@ https://delestal94.github.io/Prometeus/
 ## Mantenerlo
 
 - Un horario de rutina nuevo o cambiado: `ROUTINES` en `tools/panel/build_data.py` (cron en UTC).
-- Un agente nuevo: su pilar en `PILLARS` (si no, cae en Producción).
+- Un agente nuevo: su pilar en `PILLARS` (si no, cae en Producción) y su nombre en criollo en `AG`.
 - Probar local: `python tools/panel/build_data.py && python -m http.server -d panel 8765` y abrir
   http://localhost:8765/.
