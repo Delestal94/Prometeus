@@ -52,7 +52,7 @@ PILLARS = [
     ("red", "Red y multijugador", "Host autoritativo, ENet, Steam, sincronización.", ["constructor-red", "auditor-red"]),
     ("calidad", "Calidad y rendimiento", "Tests, QA, CI, bugs y FPS.",
      ["ejecutor-tests", "escritor-tests", "probador-qa", "cazador-bugs", "revisor-gdscript", "revisor-visual",
-      "perfilador-rendimiento", "vigilante-ci"]),
+      "perfilador-rendimiento", "vigilante-ci", "ingeniero-ci"]),
     ("produccion", "Producción", "Planificación, dominios, documentación y auditorías.",
      ["planificador-tareas", "guardian-dominios", "documentador", "auditor-integral"]),
     ("lanzamiento", "Lanzamiento", "Página de Steam, builds y calendario.", ["estratega-steam", "empaquetador-release"]),

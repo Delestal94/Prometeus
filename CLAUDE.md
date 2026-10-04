@@ -51,7 +51,7 @@ instala Godot 4.7.2 en `~/godot` y deja `GODOT` definido; las capturas corren co
 | Construir código | `constructor-camion`, `constructor-tramos` (tipos de tramo y generación), `constructor-mundo` (depósito, casas, clima, fauna, decorado), `constructor-jugador` (jugador, paquete, interacción), `constructor-trampas`, `constructor-red` (red y Steam; siempre seguido de `auditor-red`), `constructor-progresion`, `constructor-ui` (incluye tutorial), `escritor-tests` |
 | Crear y refinar assets | `modelador-blender`* (3D), `artista-conceptual`* (imágenes, texturas), `artista-shaders`* (materiales), `artista-vfx` (partículas y efectos), `animador`* (clips y procedurales), `disenador-audio` (SFX y música compuesta por código) |
 | Pulir y balancear | `pulidor-jugabilidad` (tiempos, números, feedback, primera partida; balance con `sim_trap_balance` y `bench_*`) |
-| Verificar | `vigilante-ci` (CI de cada PR recién creado; lo pide el hook `pr-ci-watch`), `ejecutor-tests`, `probador-qa` (juego completo sin gente), `revisor-visual`, `cazador-bugs`, `revisor-gdscript`, `auditor-red`, `perfilador-rendimiento` |
+| Verificar | `vigilante-ci` (CI de cada PR recién creado; lo pide el hook `pr-ci-watch`), `ingeniero-ci` (tendencias del CI: tests inestables, shards, tiempos; issue `salud-ci`), `ejecutor-tests`, `probador-qa` (juego completo sin gente), `revisor-visual`, `cazador-bugs`, `revisor-gdscript`, `auditor-red`, `perfilador-rendimiento` |
 | Cerrar y lanzar | `documentador`, skill `cerrar-cambio`, `empaquetador-release`, `estratega-steam` (página, cápsulas, features de Steam, calendario) |
 
 \* necesitan Blender o ComfyUI en la PC para la parte de assets; su parte de código corre en cualquier lado.

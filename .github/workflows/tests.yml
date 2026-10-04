@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # GitHub's merge queue tests the merged result before it lands (needs the repo in an organization).
+  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -12,7 +14,7 @@ permissions:
 concurrency:
   # Only a PR's older run is stale. On main each commit gets its own group, so no run is cancelled
   # or left pending behind another: every merged commit is tested whole.
-  group: tests-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  group: tests-${{ github.event_name == 'pull_request' && github.ref || github.event_name == 'merge_group' && github.event.merge_group.head_sha || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -24,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
 
@@ -57,23 +59,12 @@ jobs:
       matrix:
         shard: [0, 1, 2, 3]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Cache Godot
-        id: cache-godot
-        uses: actions/cache@v6
+      - name: Godot (SHA-512 checked, cached)
+        uses: ./.github/actions/setup-godot
         with:
-          path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux
-
-      - name: Download Godot
-        if: steps.cache-godot.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/godot
-          curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          version: ${{ env.GODOT_VERSION }}
 
       - name: Import project
         run: |
@@ -92,7 +83,7 @@ jobs:
 
       - name: Upload per-test audit report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: godot-headless-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/godot-headless-report.csv
@@ -116,23 +107,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Cache Godot
-        id: cache-godot
-        uses: actions/cache@v6
+      - name: Godot (SHA-512 checked, cached)
+        uses: ./.github/actions/setup-godot
         with:
-          path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux
-
-      - name: Download Godot
-        if: steps.cache-godot.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/godot
-          curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          version: ${{ env.GODOT_VERSION }}
 
       - name: Each module's tests, alone with its declared dependencies
         env:
@@ -145,23 +125,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Cache Godot
-        id: cache-godot
-        uses: actions/cache@v6
+      - name: Godot (SHA-512 checked, cached)
+        uses: ./.github/actions/setup-godot
         with:
-          path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux
-
-      - name: Download Godot
-        if: steps.cache-godot.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/godot
-          curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          version: ${{ env.GODOT_VERSION }}
 
       - name: Import project
         run: timeout 600 ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path do-not-drop --import
@@ -212,7 +181,7 @@ jobs:
 
       - name: Upload runtime audit
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: runtime-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/runtime-audit/
@@ -224,23 +193,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Cache Godot
-        id: cache-godot
-        uses: actions/cache@v6
+      - name: Godot (SHA-512 checked, cached)
+        uses: ./.github/actions/setup-godot
         with:
-          path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux
-
-      - name: Download Godot
-        if: steps.cache-godot.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/godot
-          curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          version: ${{ env.GODOT_VERSION }}
 
       - name: Import project
         run: |
@@ -255,7 +213,7 @@ jobs:
 
       - name: Upload network latency audit
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: network-pair-audit-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/network-pair-audit.log
@@ -267,23 +225,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Cache Godot
-        id: cache-godot
-        uses: actions/cache@v6
+      - name: Godot (SHA-512 checked, cached)
+        uses: ./.github/actions/setup-godot
         with:
-          path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux
-
-      - name: Download Godot
-        if: steps.cache-godot.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/godot
-          curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          chmod +x ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          version: ${{ env.GODOT_VERSION }}
 
       - name: Import project
         run: timeout 600 ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path do-not-drop --import
