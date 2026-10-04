@@ -200,6 +200,11 @@ func _tick() -> void:
 		await _slicer.tick()
 
 
+func _exit_tree() -> void:
+	# The hall's echo is a global bus effect: out of the tree means out of the hall (N-921.2).
+	AcousticSpace.apply(&"open")
+
+
 ## The depot's acoustics (N-402): a big roofed hall.
 var acoustic_space: StringName = &"roof"
 

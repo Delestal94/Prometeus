@@ -7,6 +7,7 @@ extends SceneTree
 ## - the depot's hall is a "roof";
 ## - the reverb switches on (tunnel: long and wet) on the world's buses while
 ##   the camera is in one, and off again outside -- RouteSky does it every frame;
+## - leaving the tree of the level, the depot or the sky puts the reverb back to "open" (N-921.2);
 ## - #68: a camera anchored to the truck from outside (the chase view) is
 ##   outdoors, not inside the cab: the rain isn't the drumming-on-the-roof one.
 
@@ -92,8 +93,24 @@ func _run() -> void:
 			_expect(bool(sky.call(&"_inside_vehicle", seat)), "A seat's camera is inside")
 	else:
 		_expect(false, "The truck has its chase camera and the level its sky")
+	# N-921.2: leaving the level (menu, restart) from inside the hall or a tunnel
+	# leaves the bus in the open: the menu doesn't ring.
+	AcousticSpace.apply(&"roof")
+	_expect(AcousticSpace.is_on(), "Before leaving, the hall's echo is on")
 	level.queue_free()
 	await process_frame
+	await process_frame
+	_expect(AcousticSpace.current == &"open" and not AcousticSpace.is_on(),
+		"Freeing the level leaves the SFX bus in the open (%s)" % AcousticSpace.current)
+	# The depot or the sky on their own do the same.
+	for scene_script: GDScript in [Depot, RouteSky]:
+		var lone: Node3D = scene_script.new()
+		root.add_child(lone)
+		AcousticSpace.apply(&"tunnel")
+		root.remove_child(lone)
+		_expect(AcousticSpace.current == &"open" and not AcousticSpace.is_on(),
+			"Leaving the tree of a %s returns to open" % scene_script.get_global_name())
+		lone.free()
 	AcousticSpace.apply(&"open")
 	network.set(&"world_seed", 0)
 	network.set(&"world_house_count", 0)
