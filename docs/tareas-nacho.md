@@ -28,6 +28,20 @@ se conectará en otro paso: continuar un guardado deberá conservar la semilla d
 
 ## QA — bugs abiertos
 
+### N-924 · `test_net_session_rejoin` pasaba con un `SCRIPT ERROR` y no probaba al ladrón por ENet — B · `Opus 5.5 · high` · Aviso: sí (`modules/net_session/tests/`, zona compartida)
+Origen: cuerpo del PR #259 (2026-10-02), diagnóstico con `cazador-bugs` (2026-10-04). `_check_thief` leía la clave del
+que volvió en `victim.replies[-1].identity`, pero desde #235 (protocolo 26, "identity before state") en sala llena esa
+clave viaja en el identity reply (`net_admission.gd:176-178`) y el ready reply ya no la trae (`net_session.gd:715-719`).
+El `SCRIPT ERROR` cortaba `_check_thief` antes de su primer `await`, el test seguía y salía con 0: la parte "alguien que
+repite una clave escucha connection y la víctima se queda" no se verificaba desde #235. El módulo estaba bien.
+- [x] **N-924.1** El test guarda cada clave que manda (`claims`, override de `_claim_identity()`) y el ladrón roba la
+  última. **[x] Hecho (2026-10-04, rama `nacho/N-924-rejoin-thief-check`)** — sin `SCRIPT ERROR`; el chequeo del
+  ladrón corre de verdad. Aviso: `docs/avisos/2026-10-04-rejoin-thief-check.md`.
+- [ ] **N-924.2** `tools/run-tests.sh` (`run_one`) decide solo por código de salida: un `SCRIPT ERROR` de ejecución
+  con exit 0 pasa como PASS. Marcarlo FAIL (con el mismo filtro de ruido que usa el resumen, l.284) y, antes, correr
+  la batería en CI para listar y arreglar los tests que hoy pasan con errores escondidos. Con `escritor-tests` /
+  `cazador-bugs`; aviso (tooling común).
+
 ### N-919 · Regresión de #208: los `--script` que llegan a `DeliveryHouse` cargan el HUD sin script — B · `Opus 5.5 · high` · Aviso: sí (`scripts/gameplay/player/player_cargo_care.gd` es de Slatex) · M8
 Origen: PC build 2026-10-02 (bisect confirmado con `cazador-bugs`). El PR #208 (`6a7c408`, N-224 tipó la caja como
 `DeliveryPackage` en `delivery_house.gd`) agregó la dependencia estática `DeliveryHouse → DeliveryPackage →

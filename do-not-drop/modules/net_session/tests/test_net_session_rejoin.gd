@@ -62,6 +62,8 @@ class GameSession extends NetSession:
 	var identities_when_left: Array = []
 	var returned: Array = []
 	var replies: Array = []
+	## Every claim it sent, in its ready reply or, asked first, its identity reply.
+	var claims: Array = []
 	## Host: what _admit_peer() answers ("" lets everyone in).
 	var refuse_with: String = ""
 	## Joiner: how many times it sends its ready reply.
@@ -82,6 +84,11 @@ class GameSession extends NetSession:
 		var reply: Dictionary = super()
 		replies.append(reply)
 		return reply
+
+	func _claim_identity() -> String:
+		var claimed: String = super()
+		claims.append(claimed)
+		return claimed
 
 	func _admit_peer(_id: int) -> String:
 		return refuse_with
@@ -554,7 +561,9 @@ func _check_silent(host: GameSession) -> void:
 ## away with "connection", and the victim stays.
 func _check_thief(host: GameSession, victim: GameSession) -> void:
 	var thief := _enet_session("FullThief", ThiefSession.new()) as ThiefSession
-	thief.stolen = String((victim.replies[-1] as Dictionary).identity)
+	# A full room asks first: the claim travels in the identity reply, not the ready reply.
+	_expect(victim.claims.size() == 1, "The one who came back claimed once (got %s)" % [victim.claims])
+	thief.stolen = String(victim.claims[-1]) if not victim.claims.is_empty() else ""
 	var failures: Array = []
 	var states: Array = []
 	thief.session_failed.connect(func(reason: String) -> void: failures.append(reason))
