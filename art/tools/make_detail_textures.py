@@ -25,6 +25,8 @@ the tile, so there is no cross at 256):
      so the copy's own border (the centre lines) is never visible. One 1-D
      pass per axis. Skipped (NO_BAND) for textures with real joints, where a
      cross-fade would ghost the joints: their border is a joint line anyway.
+Boards and shingles (STAGGER) then have each row rolled sideways by its own
+offset (stagger_rows), so their ends do not form one vertical line per tile.
 
 --check prints the seam metric (seam_ratio) plus mean and std of each map:
 mean absolute gradient across the centre line (col/row 255|256) and across
@@ -56,6 +58,8 @@ DETAIL_SPREAD = 0.28  # darkest-to-lightest range around that mean
 BLUR_SIGMA = SIZE / 10  # high-pass cut: patches wider than this are removed
 SEAM_BAND = SIZE // 16  # half-width of the cross-fade around the wrap border
 NO_BAND = {"wood_planks", "roof_shingles"}  # drawn joints: a cross-fade ghosts them
+STAGGER = {"wood_planks", "roof_shingles"}  # rows rolled apart so the joints do not line up
+STAGGER_GAP = 0.15  # minimum offset change between neighbouring rows (fraction of width)
 
 STYLE = ("Seamless tileable texture, perfectly flat top-down orthographic view, even flat lighting, "
          "no shadows, no perspective, no objects, no text. Stylized hand-painted game texture with "
@@ -134,7 +138,40 @@ def hide_border(grain: np.ndarray, band: int) -> np.ndarray:
     return grain
 
 
-def to_detail(raw: Image.Image, band: int = SEAM_BAND) -> Image.Image:
+def stagger_rows(grain: np.ndarray, seed: int) -> np.ndarray:
+    """Roll each board/shingle row sideways by its own offset.
+
+    The raw boards all end on the wrap border, so every tile showed one
+    vertical joint crossing all of them. Rows are cut at the horizontal joints
+    (local minima of the row mean, the wrap border included), so each cut lies
+    on a joint and the tile stays periodic. The offsets are spread evenly over
+    0.2-0.8 of the width (so no two board ends share a column) and shuffled
+    until neighbouring rows differ by STAGGER_GAP. Only a permutation of
+    pixels: mean and std do not change.
+    """
+    h, w = grain.shape
+    r = circular_blur(grain, 1.0).mean(axis=1)
+    win = max(2, h // 64)
+    near = np.stack([np.roll(r, k) for k in range(-win, win + 1)])
+    deep = r < np.median(r) - 0.5 * (np.median(r) - r.min())
+    cuts = np.flatnonzero((r <= near.min(axis=0)) & deep)
+    if len(cuts) < 2:
+        return grain
+    rng = np.random.default_rng(seed)
+    n = len(cuts)
+    offsets = 0.2 + 0.6 * (np.arange(n) + rng.uniform(0.25, 0.75, n)) / n
+    for _ in range(1000):
+        order = rng.permutation(offsets)
+        if np.abs(order - np.roll(order, 1)).min() >= STAGGER_GAP:
+            break
+    out = grain.copy()
+    for i, start in enumerate(cuts):
+        rows = np.arange(start, cuts[(i + 1) % n] + (h if i + 1 == n else 0)) % h
+        out[rows] = np.roll(grain[rows], round(order[i] * w), axis=1)
+    return out
+
+
+def to_detail(raw: Image.Image, band: int = SEAM_BAND, stagger: int = 0) -> Image.Image:
     """Greyscale, tileable grain from the raw (not yet seamless) generation."""
     grey = np.asarray(ImageOps.grayscale(raw), dtype=np.float64) / 255.0
     scale = grey.shape[0] / SIZE
@@ -145,6 +182,8 @@ def to_detail(raw: Image.Image, band: int = SEAM_BAND) -> Image.Image:
     grain -= grain.mean()
     if band:
         grain = hide_border(grain, max(1, round(band * scale)))
+    if stagger:
+        grain = stagger_rows(grain, stagger)
     # Same amount of detail for every texture: normalise by its own spread.
     grain = grain / max(float(grain.std()), 1e-4)
     detail = np.clip(DETAIL_MEAN + grain * (DETAIL_SPREAD / 4.0), 0.0, 1.0)
@@ -188,7 +227,8 @@ def raw_path(name: str) -> Path:
 def build(name: str, raw_file: Path) -> None:
     image = Image.open(raw_file).convert("RGB").resize((SIZE, SIZE), Image.LANCZOS)
     make_seamless(image).save(RAW / f"tex_{name}_seamless.png")  # colour preview only
-    to_detail(image, 0 if name in NO_BAND else SEAM_BAND).save(OUT / f"tx_detail_{name}_{SIZE}.png", optimize=True)
+    stagger = TEXTURES[name][1] if name in STAGGER else 0
+    to_detail(image, 0 if name in NO_BAND else SEAM_BAND, stagger).save(OUT / f"tx_detail_{name}_{SIZE}.png", optimize=True)
     print("detail", name, flush=True)
 
 

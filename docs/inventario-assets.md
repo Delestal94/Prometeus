@@ -111,7 +111,7 @@
 | Fauna: ciervo (con rig), conejo, rana, pájaro | `models/environment/wildlife/sm_env_animal_*.glb` | ✅ | Reglas de fauna en `route_dresser.gd`; el ciervo además cruza la ruta (`wildlife_crossing.gd`). |
 | Señal de cruce de animales | `models/environment/signs/sm_env_sign_animal_crossing.glb` | ✅ | Antes del cruce de fauna. |
 | Texturas de terreno | `textures/detail/tx_detail_{asphalt,earth,grass,gravel}_512.png` | ✅ | Reemplazan a `textures/terrain/*` (rayas procedurales con grilla visible, nunca se usaron). |
-| Texturas de modelos | `textures/detail/tx_detail_{wood_planks,roof_shingles,plaster,bark,foliage,stone}_512.png` | ✅ | Vía `LowpolyMaterials`; vidrios, pintura y señales quedan lisos a propósito. Los 10 mapas de detalle se rehicieron el 2026-10-04 (N-326) sin la cruz de corte en 256: `python art/tools/make_detail_textures.py --from-raw` (desde los crudos, sin ComfyUI) y `--check` mide la costura. |
+| Texturas de modelos | `textures/detail/tx_detail_{wood_planks,roof_shingles,plaster,bark,foliage,stone}_512.png` | ✅ | Vía `LowpolyMaterials`; vidrios, pintura y señales quedan lisos a propósito. Los 10 mapas de detalle se rehicieron el 2026-10-04 (N-326) sin la cruz de corte en 256: `python art/tools/make_detail_textures.py --from-raw` (desde los crudos, sin ComfyUI) y `--check` mide la costura. Tablas y tejas con cada hilera corrida en x (N-329, 2026-10-04: `stagger_rows()`), sin una junta vertical que cruce todo el mapa en cada repetición. |
 
 ## 7. Vehículos
 
