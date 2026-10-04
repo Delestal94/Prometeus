@@ -20,6 +20,9 @@ class_name RouteSky
 ## every client can build its own and follow its own camera.
 
 const WorldMix = preload("res://scripts/presentation/world_mix.gd")
+## The session as a type (N-224.4): the script the NetworkManager autoload runs, which declares
+## world_seed (NetSession does not). It names no autoload, so preloading it compiles under a --script.
+const NETWORK_MANAGER := preload("res://scripts/core/network_manager.gd")
 const HORIZON: PackedScene = preload("res://assets/models/environment/sky/sm_env_horizon_mountains.glb")
 const SKY_SHADER: Shader = preload("res://shaders/stylized_sky.gdshader")
 const HORIZON_SHADER: Shader = preload("res://shaders/horizon_mountains.gdshader")
@@ -67,6 +70,8 @@ const RAIN_FADE_PER_SECOND: float = 4.0
 func _ready() -> void:
 	# The route picks the session's mood once (its dressing depends on it);
 	# Endless's streamer has none, so the sky picks it there.
+	# By name (N-224.4): the parent is the Route (no class_name; preloading it drags the autoloads into
+	# every --script that names RouteSky), the endless streamer (no mood) or a test's stand-in.
 	var picked: Variant = get_parent().get(&"mood") if get_parent() != null else null
 	mood = picked as WorldMood if picked is WorldMood else WorldMood.pick(_session_seed())
 	var world_environment: WorldEnvironment = _world_environment()
@@ -202,10 +207,11 @@ func _build_rain() -> void:
 	add_child(_rain_sound)
 
 
-## Anything in the "roofed_area" group answers covers(point) -- the depot.
+## Anything in the "roofed_area" group answers covers(point) -- the depot (only it joins).
 func _under_roof(point: Vector3) -> bool:
 	for area: Node in get_tree().get_nodes_in_group(&"roofed_area"):
-		if bool(area.call(&"covers", point)):
+		var depot := area as Depot
+		if depot != null and depot.covers(point):
 			return true
 	return false
 
@@ -219,6 +225,8 @@ func _inside_vehicle(camera: Node) -> bool:
 	var node: Node = camera.get_parent()
 	while node != null:
 		if node is VehicleBody3D:
+			# By name (N-224.4): vehicle_presentation.gd reaches vehicle.gd (autoloads) through
+			# cargo_clutter.gd, so preloading it here would break the --scripts that name RouteSky.
 			var presentation: Node = node.get_node_or_null(^"VehiclePresentation")
 			return presentation == null or bool(presentation.call(&"viewer_inside"))
 		node = node.get_parent()
@@ -246,8 +254,8 @@ func _sun() -> DirectionalLight3D:
 
 
 func _session_seed() -> int:
-	var network: Node = get_node_or_null(^"/root/NetworkManager")
-	return int(network.get(&"world_seed")) if network != null else 0
+	var network: NETWORK_MANAGER = get_node_or_null(^"/root/NetworkManager") as NETWORK_MANAGER
+	return network.world_seed if network != null else 0
 
 
 ## Swaps the level's ProceduralSkyMaterial for the stylised sky, keeping its

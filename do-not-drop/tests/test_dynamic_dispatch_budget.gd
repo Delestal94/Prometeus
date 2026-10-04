@@ -75,6 +75,8 @@ extends SceneTree
 ## - service_stop_shop.gd (a service station's counter) holds the session as NetSession and the vote as
 ##   CoopVote: if ShopVoteManager stopped extending CoopVote, `as CoopVote` would give null and the station's
 ##   offers would never open to the crew's vote.
+## - route_streamer.gd and route_sky.gd (the endless road and its sky) roll from the session's world_seed through
+##   their NETWORK_MANAGER handle: if that stopped being the script the autoload runs, they would use seed 0.
 ## - mud_segment.gd (the mud stretch) holds its spot, crane, run log and session typed; the crew's money, the
 ##   run mode, the truck's `carries` and the tests' FakePlayers stay by name (see its budget).
 
@@ -368,6 +370,16 @@ const BUDGETS: Dictionary = {
 	# shared base has stream, playing, bus, volume_db or play), asked through small typed helpers.
 	# Nothing left by name.
 	"res://scripts/presentation/sound_audit.gd": {"call": 0, "callv": 0, "get": 0, "root": 0},
+	# The village dog (N-224.4) drives its model as the wildlife_animal.gd type (run, idle, steered,
+	# ground_speed). Only the /root/ lookup of EventBus is left, by name because a test may swap it for a Node.
+	"res://scripts/gameplay/route/chasing_dog.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The endless road (N-224.4): the station as ServiceStop / ServiceStopSegment (warm_models, stop, in_bay)
+	# and the seed through NETWORK_MANAGER. The one /root/ is the null-safe NetworkManager lookup.
+	"res://scripts/gameplay/route/route_streamer.gd": {"call": 0, "callv": 0, "get": 0, "root": 1},
+	# The sky (N-224.4): the depot as Depot (covers), the seed through NETWORK_MANAGER. Left by name: the
+	# parent's `mood` (Route has no class_name and a test's stand-in holds it) and the truck presentation's
+	# viewer_inside() (it reaches vehicle.gd and the autoloads: a cycle and a broken --script compile).
+	"res://scripts/gameplay/route/route_sky.gd": {"call": 1, "callv": 0, "get": 1, "root": 1},
 }
 const PATTERNS: Dictionary = {
 	"call": "\\.call\\(&?\"",
@@ -420,6 +432,12 @@ const SCRIPT_HANDLES: Dictionary = {
 	},
 	"res://scripts/presentation/vehicle_effects.gd": {
 		"GAME_SETTINGS": "/root/GameSettings",
+	},
+	"res://scripts/gameplay/route/route_streamer.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
+	},
+	"res://scripts/gameplay/route/route_sky.gd": {
+		"NETWORK_MANAGER": "/root/NetworkManager",
 	},
 }
 
