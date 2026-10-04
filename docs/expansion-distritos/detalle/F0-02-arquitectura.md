@@ -246,7 +246,7 @@ que vende los 10 productos, llega a las 08:30 y espera 180 min.
 juego, con adaptador.
 - **El host** avanza `clock_minutes` con `company_tuning.SECONDS_PER_GAME_HOUR = 90` y, solo cuando cambia
   la marcha (apertura, pausa, reanudación, cierre que espera a la salida), manda un **ancla**
-  `clock_anchor` `{minute, at_tick, speed, paused}` como evento de `CompanyNet` (D-2003).
+  `clock_anchor` `{minute, speed, paused}` (cada peer toma su propio tick al recibirlo, menos medio RTT) como evento de `CompanyNet` (D-2003).
 - **Los clientes** calculan la hora local desde el ancla; no hay envío periódico ni interpolación.
   Decisión de D-2001 ([red-autoridad.md](../diseno/red-autoridad.md) §2,
   `docs/decisiones/2026-10-04-reloj-por-ancla.md`); antes decía "cada 2 s, `unreliable_ordered`".

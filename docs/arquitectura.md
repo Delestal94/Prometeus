@@ -396,6 +396,8 @@ sin cambiar nada. Nada de estado de negocio viaja en un `MultiplayerSynchronizer
   `RpcGuard.sender(self)`, nunca un campo de `data`**, y el alcance físico lo valida el host.
 - `_apply_event` es `@rpc("authority", "call_local", "reliable")`, enviado con `rpc_id` solo a los peers con
   `NetworkManager.is_peer_ready()`.
+- Además, del host a un solo peer: `_snapshot` (join tardío y huecos, D-2004) y `_rejected(rid, reason)`
+  (aviso de por qué no pasó nada; no cambia estado). Detalle en `red-autoridad.md` (D-2001).
 
 | Estado | Dueño | Cómo viaja |
 |---|---|---|
@@ -437,6 +439,7 @@ una sola de estado restaurado para que la UI se redibuje.
 | `supply_arrived`, `box_sealed` | galpón | llega el camión del proveedor; se encinta una caja |
 | `gate_opened(gate_id)`, `milestone_reached(id)` | `CompanyState` | se abre un bloqueo; se cumple un hito |
 | `money_changed(amount, reason)` | `CompanyState` | cualquier movimiento de plata |
+| `company_state_restored` | `CompanyNet` | se aplicó un snapshot (join tardío o hueco de `seq`): la UI se redibuje entera |
 
 La UI y el audio escuchan estas señales; la simulación nunca depende de que alguien las escuche
 (separación simulación/presentación, `convenciones-godot.md`).

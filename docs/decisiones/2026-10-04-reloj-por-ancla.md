@@ -3,9 +3,9 @@
 Tomada por la rutina `desarrollador` (carril 5) al hacer D-2001
 ([red-autoridad.md](../expansion-distritos/diseno/red-autoridad.md)).
 
-**Decisión:** el host manda el reloj del día como un evento `clock_anchor` `{minute, at_tick, speed, paused}`
+**Decisión:** el host manda el reloj del día como un evento `clock_anchor` `{minute, speed, paused}`
 por `CompanyNet` (reliable, con `seq`) solo cuando cambia la marcha: apertura, pausa, reanudación y cierre
-que espera a la salida en curso. Cada peer calcula la hora local desde el ancla.
+que espera a la salida en curso. Cada peer toma como origen su propio tick al recibir el ancla (o al aplicar el snapshot), menos medio RTT de `NetStats`, y calcula la hora local desde ahí: el tick del host no vale en otra máquina.
 
 **Por qué:** es lo que ya fijaba `docs/arquitectura.md` §10.2; D-0219 decía otra cosa (un valor cada 2 s
 por `unreliable_ordered` con interpolación). El ancla no gasta ancho de banda con el día corriendo, no
