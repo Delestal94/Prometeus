@@ -49,6 +49,7 @@
 **Hecho cuando:** el test pasa.
 
 ### D-0204 · Recurso `ProductDefinition` — A · Opus 5.5 · medium · Aviso: no · F0
+**[x] Hecho (2026-10-04, PR pendiente)** — `ProductDefinition` + 10 `.tres` en `data/products/` (uno por contenido); `test_product_definitions`.
 **Depende de:** D-0116
 **Qué:** `scripts/gameplay/business/product_definition.gd` (`class_name ProductDefinition extends Resource`).
 - **Campos:**

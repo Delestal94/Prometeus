@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ProductDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/business/product_definition.gd" id="1_product"]
+[ext_resource type="Resource" path="res://data/contents/puppy.tres" id="2_content"]
+
+[resource]
+script = ExtResource("1_product")
+id = &"puppy"
+content = ExtResource("2_content")
+cells = Vector3i(2, 2, 2)
+weight_kg = 4.0
+fragile = false
+temperature = &"ambient"
+buy_price = 45
+trap_id = &"noisy"
+districts = Array[StringName]([&"centro"])
